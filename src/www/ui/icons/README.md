@@ -1,0 +1,13 @@
+https://thenounproject.com/browse/collection-icon/photo-editing-glyph-213068/
+https://thenounproject.com/browse/collection-icon/minima-design-office-solid-204353/
+https://thenounproject.com/icon/transparency-4487136/
+https://thenounproject.com/icon/design-undo-4316354/
+https://thenounproject.com/creator/delwar/
+https://thenounproject.com/icon/offline-2927850/
+https://thenounproject.com/icon/cloud-2908409/
+https://thenounproject.com/icon/squares-7111701/
+https://thenounproject.com/browse/collection-icon/pixel-art-2560/
+https://thenounproject.com/icon/paint-bucket-6852043/
+https://thenounproject.com/icon/check-7207258/
+https://thenounproject.com/browse/collection-icon/pixa-design-elements-64px-107324/
+https://thenounproject.com/icon/floppy-disk-257191/

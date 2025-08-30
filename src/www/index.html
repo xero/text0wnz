@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+		<link rel="icon" type="image/png" href="/ui/favicon-96x96.png" sizes="96x96" />
+		<link rel="icon" type="image/svg+xml" href="/ui/favicon.svg" />
+		<link rel="shortcut icon" href="/ui/favicon.ico" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/ui/apple-touch-icon.png" />
+		<meta name="apple-mobile-web-app-title" content="moebius" />
+		<link rel="manifest" href="/ui/site.webmanifest" />
+		<meta name="theme-color" content="#3f3f3f" />
+		<title>.:teXt0wnz:.</title>
+		<link rel="stylesheet" href="editor.min.css?x=build" />
+	</head>
+	<body>
+		<dialog id="msg">
+			<input type="file" id="fileUpload" name="fileUpload" />
+			<section id="splash">
+				<h1>Welcome to teXt0wnz</h1>
+				<blockquote>the online collaborative text art editor</blockquote>
+				<p><img src="/ui/logo.png" alt="logo"></p>
+				<nav>
+					<button id="splashJoint" class="cancel" tabindex="3">
+						<svg xmlns="http://www.w3.org/2000/svg" data-name="Layer 1" fill="currentColor" viewBox="0 0 24 30"><path d="m20.014 6.909-1.434-.364-1.123-1.122-.364-1.435L3.988 17.093l1.434.364 1.123 1.123.364 1.435zm-.877-2.566.523.523.936.238.07.022.636-1.97a.361.361 0 0 0-.455-.455l-1.968.636.021.072ZM4.865 19.66l-.523-.523-.936-.238-.071-.021-.636 1.968a.362.362 0 0 0 .455.455l1.97-.636-.022-.07ZM8.696 6.375l-.002-.002a.986.986 0 0 0-1.404-.009l-4.984 4.988.059-8.986 13.756-.072a.986.986 0 0 0 .981-.992.986.986 0 0 0-.992-.981L1.378.399a.987.987 0 0 0-.98.98L.317 13.742a.986.986 0 0 0 1.685.702L8.687 7.76a.986.986 0 0 0 .009-1.386m14.572 3.075a.99.99 0 0 0-1.269.107l-6.694 6.694a.986.986 0 1 0 1.395 1.395l4.995-4.995-.059 8.985-13.756.071a.986.986 0 0 0-.981.992.986.986 0 0 0 .991.981l14.731-.076a.986.986 0 0 0 .981-.98l.081-12.326a1.02 1.02 0 0 0-.414-.848" /></svg>
+						Join
+					</button>
+					<button id="splashOpen" tabindex="2">
+						<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 30" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M11.25 1.5a.75.75 0 0 0-.75.75v6h6.75A3.75 3.75 0 0 1 21 12h.75a.75.75 0 0 0 .75-.75v-9a.75.75 0 0 0-.75-.75zM21 3.439V3h-9v3.065l2.095-2.095a.75.75 0 0 1 1.06 0l2.657 2.657z" /><path d="M1.5 9.75A2.25 2.25 0 0 1 3.75 7.5h1.172a2.25 2.25 0 0 1 1.729.81l.975 1.17a.75.75 0 0 0 .577.27h9.047A2.25 2.25 0 0 1 19.5 12v8.25a2.25 2.25 0 0 1-2.25 2.25H3.75a2.25 2.25 0 0 1-2.25-2.25z" /></svg>
+						Open
+					</button>
+					<button id="splashDraw" class="cancel" tabindex="1">
+						<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-1 0 24 24" xml:space="preserve"><path d="M19.773 4.895c0 .525-.184 1.03-.525 1.425l-6.791 7.923a4.4 4.4 0 0 0-.811-1.152 4.5 4.5 0 0 0-1.091-.866 4.6 4.6 0 0 0-1.295-.511l5.399-8.639a2.17 2.17 0 0 1 1.855-1.03h.075c.436 0 .852.13 1.214.368l.995.661c.614.409.975 1.091.975 1.82m-8.182 11.47a3.41 3.41 0 0 1-3.409 3.409H2.727c-.375 0-.682-.307-.682-.682s.307-.682.682-.682a2.05 2.05 0 0 0 2.045-2.045 3.41 3.41 0 0 1 6.818 0" /></svg>
+						Draw
+					</button>
+				</nav>
+			</section>
+			<section id="file">
+				<h1>File 0ptionz</h1>
+        <div class="bg">
+          <article>
+            <button id="fileDraw">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 -1 24 30" width="24" height="30"><g><path d="M20.869.188h-2.006v4.856c0 .9-.731 1.65-1.65 1.65H6.525c-.9 0-1.65-.731-1.65-1.65V.188H.188v23.625h23.625V3.131zM5.137 22.069H2.119V19.05h3.019zM12 17.138c-2.231 0-4.05-1.819-4.05-4.05s1.819-4.05 4.05-4.05 4.05 1.819 4.05 4.05-1.819 4.05-4.05 4.05"/><path d="M5.85.188v4.856c0 .375.3.694.694.694h10.688c.375 0 .694-.3.694-.694V.188zm10.556 4.369a.485.485 0 0 1-.488.488.485.485 0 0 1-.488-.488V1.744c0-.262.206-.488.488-.488.262 0 .488.206.488.488z"/></g></svg>
+              Save
+            </button>
+          </article>
+          <article>
+            <!-- @TODO REMOVE CANCEL CLASS WHEN WIRED UP -->
+            <button id="fileDraw" class="cancel">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="1 2 11 9" xml:space="preserve"><path d="M165.847 164.454a1.4 1.4 0 0 0-.646.157c-.323.173-.567.482-.74.885a3.5 3.5 0 0 1-.719 1.034c-.331.322-.722.548-1.125.572a.397.397 0 0 0 .024.792h.023l1.7.002c.689.001 1.326-.103 1.855-.349s.958-.663 1.111-1.229a1.52 1.52 0 0 0-.114-1.093 1.4 1.4 0 0 0-.966-.729 2 2 0 0 0-.403-.042" transform="translate(-158.51 -157.252)"/><path d="M169.21 159.593a.94.94 0 0 0-.755.392 60 60 0 0 0-1.453 1.93 32 32 0 0 0-1.201 1.775c-.132.213-.027.357.223.375q.158.013.308.043a1.83 1.83 0 0 1 1.307 1.087c.083.201.218.237.336.053q.095-.15.194-.313a20 20 0 0 0 .922-1.768 43 43 0 0 0 1.016-2.366l.012-.039a.934.934 0 0 0-.909-1.17m-6.272 2.908-1.665 1.074a.397.397 0 0 0-.119.549.397.397 0 0 0 .55.117l1.38-.89.871.972a.397.397 0 0 0 .56.031l.612-.55a.397.397 0 0 0 .03-.56.397.397 0 0 0-.561-.03l-.317.285-.83-.93a.4.4 0 0 0-.512-.068" transform="translate(-158.51 -157.252)"/><path d="M6.748 4.64a.55.544 0 0 1-.55.544.55.544 0 0 1-.55-.544.55.544 0 0 1 .55-.543.55.544 0 0 1 .55.543"/><path d="M160.621 159.307a1.06 1.06 0 0 0-1.053 1.052v6.485c0 .576.477 1.051 1.053 1.05h.467a.397.397 0 0 0 .396-.396.397.397 0 0 0-.398-.396h-.465a.25.25 0 0 1-.258-.258v-6.485c0-.147.111-.257.258-.257h6.45a.397.397 0 0 0 .396-.399.397.397 0 0 0-.397-.396z" transform="translate(-158.51 -157.252)"/></svg>
+              New
+            </button>
+          </article>
+          <article>
+            <button id="fileOpen">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M11.25 1.5a.75.75 0 0 0-.75.75v6h6.75A3.75 3.75 0 0 1 21 12h.75a.75.75 0 0 0 .75-.75v-9a.75.75 0 0 0-.75-.75zM21 3.439V3h-9v3.065l2.095-2.095a.75.75 0 0 1 1.06 0l2.657 2.657z" /><path d="M1.5 9.75A2.25 2.25 0 0 1 3.75 7.5h1.172a2.25 2.25 0 0 1 1.729.81l.975 1.17a.75.75 0 0 0 .577.27h9.047A2.25 2.25 0 0 1 19.5 12v8.25a2.25 2.25 0 0 1-2.25 2.25H3.75a2.25 2.25 0 0 1-2.25-2.25z" /></svg>
+              Open
+            </button>
+          </article>
+          <article>
+            <button id="fileJoint" class="cancel">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 30"><path d="m20.014 6.909-1.434-.364-1.123-1.122-.364-1.435L3.988 17.093l1.434.364 1.123 1.123.364 1.435zm-.877-2.566.523.523.936.238.07.022.636-1.97a.361.361 0 0 0-.455-.455l-1.968.636.021.072ZM4.865 19.66l-.523-.523-.936-.238-.071-.021-.636 1.968a.362.362 0 0 0 .455.455l1.97-.636-.022-.07ZM8.696 6.375l-.002-.002a.986.986 0 0 0-1.404-.009l-4.984 4.988.059-8.986 13.756-.072a.986.986 0 0 0 .981-.992.986.986 0 0 0-.992-.981L1.378.399a.987.987 0 0 0-.98.98L.317 13.742a.986.986 0 0 0 1.685.702L8.687 7.76a.986.986 0 0 0 .009-1.386m14.572 3.075a.99.99 0 0 0-1.269.107l-6.694 6.694a.986.986 0 1 0 1.395 1.395l4.995-4.995-.059 8.985-13.756.071a.986.986 0 0 0-.981.992.986.986 0 0 0 .991.981l14.731-.076a.986.986 0 0 0 .981-.98l.081-12.326a1.02 1.02 0 0 0-.414-.848" /></svg>
+              Collab
+            </button>
+          </article>
+        </div>
+				<nav>
+					<button class="cancel">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-2 -2 24 30"><path d="M4.163 21.458a63.3 63.3 0 0 0 13.491 0c1.832-.213 3.591-1.97 3.803-3.803a63.3 63.3 0 0 0 0-13.491c-.213-1.832-1.97-3.59-3.803-3.803a63.3 63.3 0 0 0-13.491 0C2.33.572.572 2.33.36 4.163a63.3 63.3 0 0 0 0 13.491c.213 1.832 1.97 3.59 3.803 3.803zM5.314 7.665a1.66 1.66 0 0 1 0-2.35 1.663 1.663 0 0 1 2.35 0l3.245 3.245 3.245-3.245a1.66 1.66 0 0 1 2.35 0 1.663 1.663 0 0 1 0 2.35l-3.244 3.244 3.244 3.245a1.66 1.66 0 0 1 0 2.35c-.325.325-.75.487-1.175.487s-.851-.162-1.175-.487L10.91 13.26l-3.245 3.244a1.66 1.66 0 0 1-1.175.487 1.66 1.66 0 0 1-1.175-.487 1.66 1.66 0 0 1 0-2.35l3.244-3.245z"/></svg>
+            Cancel
+          </button>
+				</nav>
+			</section>
+			<section id="collab">
+				<p><img src="/ui/logo.png" alt="logo"></p>
+				<h1>A collab server is live!</h1>
+				<nav>
+					<button id="joint">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 30" xml:space="preserve"><path d="M1265.544 576.024v-.48c0-.672-1.2-.96-2.328-.96s-2.328.312-2.328.96v.48c0 .432.168.864.48 1.176l1.2 1.176a.3.3 0 0 1 .096.24v1.536c0 .096.048.168.144.192l.696.216c.12.024.24-.048.24-.192v-1.728c0-.096.048-.168.096-.24l1.224-1.2c.312-.312.48-.744.48-1.176m-2.328-.024c-1.152 0-1.776-.312-1.8-.432.024-.12.648-.432 1.8-.432s1.752.312 1.8.432c-.048.12-.648.432-1.8.432"/><path d="M1264.416 578.472c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24zm1.032.816h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24m0 .792h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24a.24.24 0 0 0-.24-.24M7.416 9.912h4.032v2.04H4.872a.543.543 0 0 0-.552.552v2.568c.168-.048.36-.072.552-.072s.384.024.552.072v-2.016h6v2.016c.168-.048.36-.072.552-.072s.384.024.552.072v-2.016h6v2.016c.168-.048.36-.072.552-.072s.384.024.552.072v-2.568a.543.543 0 0 0-.552-.552h-6.528v-2.04h4.032a3.216 3.216 0 0 0 0-6.432c-.6 0-1.2.168-1.704.504a.493.493 0 0 1-.672-.144.493.493 0 0 1 .144-.672c.456-.288.96-.48 1.488-.576A4.07 4.07 0 0 0 12.36.648 4.11 4.11 0 0 0 8.784 2.76a4.18 4.18 0 0 1 2.64 2.736c.072.264-.072.528-.336.6s-.528-.072-.6-.336c-.408-1.368-1.656-2.28-3.096-2.28-1.776 0-3.216 1.44-3.216 3.216s1.464 3.216 3.24 3.216m3.072 7.584v.624c0 .816.672 1.512 1.512 1.512.816 0 1.512-.672 1.512-1.512v-.624c0-.816-.672-1.512-1.512-1.512-.816 0-1.512.672-1.512 1.512m4.056 3.648a1.59 1.59 0 0 0-1.536-1.224c-.096 0-.168.048-.24.12l-.6.864a.18.18 0 0 1-.312 0l-.6-.864a.3.3 0 0 0-.24-.12c-.744 0-1.392.504-1.536 1.224l-.36 1.56a.573.573 0 0 0 .552.696h4.704c.36 0 .624-.336.552-.696zm-9.672-1.536c.816 0 1.512-.672 1.512-1.512v-.624c0-.816-.672-1.512-1.512-1.512-.816 0-1.512.672-1.512 1.512v.624c0 .84.696 1.512 1.512 1.512m2.544 1.536A1.59 1.59 0 0 0 5.88 19.92c-.096 0-.168.048-.24.12l-.6.864a.18.18 0 0 1-.312 0l-.6-.864a.3.3 0 0 0-.24-.12c-.744 0-1.392.504-1.536 1.224l-.36 1.56a.573.573 0 0 0 .552.696h4.704c.36 0 .624-.336.552-.696zm10.2-3.648v.624c0 .816.672 1.512 1.512 1.512.816 0 1.512-.672 1.512-1.512v-.624c0-.816-.672-1.512-1.512-1.512-.816 0-1.512.672-1.512 1.512m4.416 5.208-.36-1.56a1.59 1.59 0 0 0-1.536-1.224c-.096 0-.168.048-.24.12l-.6.864a.18.18 0 0 1-.312 0l-.6-.864a.3.3 0 0 0-.24-.12c-.744 0-1.392.504-1.536 1.224l-.36 1.56a.573.573 0 0 0 .552.696h4.704c.336 0 .6-.336.528-.696"/></svg>
+            <b>Join the collab</b></button>
+					<button id="offline" class="cancel">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 30" xml:space="preserve"><path d="M1265.544 576.024v-.48c0-.672-1.2-.96-2.328-.96s-2.328.312-2.328.96v.48c0 .432.168.864.48 1.176l1.2 1.176a.3.3 0 0 1 .096.24v1.536c0 .096.048.168.144.192l.696.216c.12.024.24-.048.24-.192v-1.728c0-.096.048-.168.096-.24l1.224-1.2c.312-.312.48-.744.48-1.176m-2.328-.024c-1.152 0-1.776-.312-1.8-.432.024-.12.648-.432 1.8-.432s1.752.312 1.8.432c-.048.12-.648.432-1.8.432"/><path d="M1264.416 578.472c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24zm1.032.816h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24m0 .792h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24a.24.24 0 0 0-.24-.24M12 3.192c-3.36 0-6.096 2.616-6.312 5.928A4.292 4.292 0 0 0 .6 13.344a4.28 4.28 0 0 0 3.12 4.128l12.6-12.576A6.3 6.3 0 0 0 12 3.192m6.648 4.848 2.688-2.688c.408-.408.408-1.056 0-1.44-.408-.408-1.056-.408-1.44 0L4.752 19.056c-.408.408-.408 1.056 0 1.44.192.192.456.312.72.312s.528-.096.72-.312l2.832-2.832h9.552A4.824 4.824 0 0 0 23.4 12.84c0-2.616-2.112-4.752-4.752-4.8"/></svg>
+            <b>Stay Offline</b>
+          </button>
+				</nav>
+			</section>
+			<section id="fonts">
+				<h1>Font:	<strong id="fontMeta"></strong></h1>
+				<article>
+					<aside>
+						<img id="fontPreview">
+					</aside>
+					<aside>
+						<select id="fontName" size="11">
+							<optgroup label="XBin">
+								<option value="XBIN">XBIN (embedded font)</option>
+							</optgroup>
+							<optgroup label="Modern">
+								<option value="C64_PETSCII_shifted">C64_PETSCII_shifted</option>
+								<option value="C64_PETSCII_unshifted">C64_PETSCII_unshifted</option>
+								<option value="NewSchool_hf">NewSchool_hf</option>
+								<option value="Structures">Structures</option>
+								<option value="TES-SYM5">TES-SYM5</option>
+								<option value="TES-SYM6">TES-SYM6</option>
+								<option value="TOPAZ_437">TOPAZ_437</option>
+							</optgroup>
+							<optgroup label="Amiga">
+								<option value="MicroKnight 8x16">MicroKnight (8x16)</option>
+								<option value="MicroKnight+ 8x16">MicroKnight+ (8x16)</option>
+								<option value="mO'sOul 8x16">mO'sOul (8x16)</option>
+								<option value="P0t-NOoDLE 8x16">P0t-NOoDLE (8x16)</option>
+								<option value="Topaz 1200 8x16">Topaz 1200 (8x16)</option>
+								<option value="Topaz 500 8x16">Topaz 500 (8x16)</option>
+								<option value="Topaz+ 1200 8x16">Topaz+ 1200 (8x16)</option>
+								<option value="Topaz+ 500 8x16">Topaz+ 500 (8x16)</option>
+							</optgroup>
+							<optgroup label="Arabic">
+								<option value="CP864 8x8">IBM PC Code page 864 (8x8)</option>
+								<option value="CP864 8x14">IBM PC Code page 864 (8x14)</option>
+								<option value="CP864 8x16">IBM PC Code page 864 (8x16)</option>
+							</optgroup>
+							<optgroup label="Baltic Rim">
+								<option value="CP775 8x8">IBM PC Code page 775 (8x8)</option>
+								<option value="CP775 8x14">IBM PC Code page 775 (8x14)</option>
+								<option value="CP775 8x16">IBM PC Code page 775 (8x16)</option>
+							</optgroup>
+							<optgroup label="Cyrillic">
+								<option value="CP855 8x8">IBM PC Code page 855 (8x8)</option>
+								<option value="CP855 8x14">IBM PC Code page 855 (8x14)</option>
+								<option value="CP855 8x16">IBM PC Code page 855 (8x16)</option>
+								<option value="CP866 8x8">IBM PC Code page 866 (8x8)</option>
+								<option value="CP866 8x14">IBM PC Code page 866 (8x14)</option>
+								<option value="CP866 8x16">IBM PC Code page 866 (8x16)</option>
+							</optgroup>
+							<optgroup label="French Canadian">
+								<option value="CP863 8x8">IBM PC Code page 863 (8x8)</option>
+								<option value="CP863 8x14">IBM PC Code page 863 (8x14)</option>
+								<option value="CP863 8x16">IBM PC Code page 863 (8x16)</option>
+								<option value="CP863 8x19">IBM PC Code page 863 (8x19)</option>
+							</optgroup>
+							<optgroup label="Greek">
+								<option value="CP737 8x8">IBM PC Code page 737 (8x8)</option>
+								<option value="CP737 8x14">IBM PC Code page 737 (8x14)</option>
+								<option value="CP737 8x16">IBM PC Code page 737 (8x16)</option>
+								<option value="CP851 8x8">IBM PC Code page 851 (8x8)</option>
+								<option value="CP851 8x14">IBM PC Code page 851 (8x14)</option>
+								<option value="CP851 8x16">IBM PC Code page 851 (8x16)</option>
+								<option value="CP851 8x19">IBM PC Code page 851 (8x19)</option>
+								<option value="CP869 8x8">IBM PC Code page 869 (8x8)</option>
+								<option value="CP869 8x14">IBM PC Code page 869 (8x14)</option>
+								<option value="CP869 8x16">IBM PC Code page 869 (8x16)</option>
+							</optgroup>
+							<optgroup label="Hebrew">
+								<option value="CP862 8x8">IBM PC Code page 862 (8x8)</option>
+								<option value="CP862 8x14">IBM PC Code page 862 (8x14)</option>
+								<option value="CP862 8x16">IBM PC Code page 862 (8x16)</option>
+							</optgroup>
+							<optgroup label="IBM PC">
+								<option value="CP437 8x8">IBM PC Code page 437 (8x8)</option>
+								<option value="CP437 8x14">IBM PC Code page 437 (8x14)</option>
+								<option value="CP437 8x16">IBM PC Code page 437 (8x16)</option>
+								<option value="CP437 8x19">IBM PC Code page 437 (8x19)</option>
+							</optgroup>
+							<optgroup label="Icelandic">
+								<option value="CP861 8x8">IBM PC Code page 861 (8x8)</option>
+								<option value="CP861 8x14">IBM PC Code page 861 (8x14)</option>
+								<option value="CP861 8x16">IBM PC Code page 861 (8x16)</option>
+								<option value="CP861 8x19">IBM PC Code page 861 (8x19)</option>
+							</optgroup>
+							<optgroup label="Latin-1 Western European">
+								<option value="CP850 8x8">IBM PC Code page 850 (8x8)</option>
+								<option value="CP850 8x14">IBM PC Code page 850 (8x14)</option>
+								<option value="CP850 8x16">IBM PC Code page 850 (8x16)</option>
+								<option value="CP850 8x19">IBM PC Code page 850 (8x19)</option>
+							</optgroup>
+							<optgroup label="Latin-2 Central European">
+								<option value="CP852 8x8">IBM PC Code page 852 (8x8)</option>
+								<option value="CP852 8x14">IBM PC Code page 852 (8x14)</option>
+								<option value="CP852 8x16">IBM PC Code page 852 (8x16)</option>
+								<option value="CP852 8x19">IBM PC Code page 852 (8x19)</option>
+							</optgroup>
+							<optgroup label="Latin-3 Multilingual">
+								<option value="CP853 8x8">IBM PC Code page 853 (8x8)</option>
+								<option value="CP853 8x14">IBM PC Code page 853 (8x14)</option>
+								<option value="CP853 8x16">IBM PC Code page 853 (8x16)</option>
+								<option value="CP853 8x19">IBM PC Code page 853 (8x19)</option>
+							</optgroup>
+							<optgroup label="Nordic">
+								<option value="CP865 8x8">IBM PC Code page 865 (8x8)</option>
+								<option value="CP865 8x14">IBM PC Code page 865 (8x14)</option>
+								<option value="CP865 8x16">IBM PC Code page 865 (8x16)</option>
+								<option value="CP865 8x19">IBM PC Code page 865 (8x19)</option>
+							</optgroup>
+							<optgroup label="Portuguese">
+								<option value="CP860 8x8">IBM PC Code page 860 (8x8)</option>
+								<option value="CP860 8x14">IBM PC Code page 860 (8x14)</option>
+								<option value="CP860 8x16">IBM PC Code page 860 (8x16)</option>
+								<option value="CP860 8x19">IBM PC Code page 860 (8x19)</option>
+							</optgroup>
+							<optgroup label="Turkish">
+								<option value="CP857 8x8">IBM PC Code page 857 (8x8)</option>
+								<option value="CP857 8x14">IBM PC Code page 857 (8x14)</option>
+								<option value="CP857 8x16">IBM PC Code page 857 (8x16)</option>
+							</optgroup>
+						</select>
+					</aside>
+				</article>
+				<nav>
+					<button class="cancel">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-2 -2 24 30"><path d="M4.163 21.458a63.3 63.3 0 0 0 13.491 0c1.832-.213 3.591-1.97 3.803-3.803a63.3 63.3 0 0 0 0-13.491c-.213-1.832-1.97-3.59-3.803-3.803a63.3 63.3 0 0 0-13.491 0C2.33.572.572 2.33.36 4.163a63.3 63.3 0 0 0 0 13.491c.213 1.832 1.97 3.59 3.803 3.803zM5.314 7.665a1.66 1.66 0 0 1 0-2.35 1.663 1.663 0 0 1 2.35 0l3.245 3.245 3.245-3.245a1.66 1.66 0 0 1 2.35 0 1.663 1.663 0 0 1 0 2.35l-3.244 3.244 3.244 3.245a1.66 1.66 0 0 1 0 2.35c-.325.325-.75.487-1.175.487s-.851-.162-1.175-.487L10.91 13.26l-3.245 3.244a1.66 1.66 0 0 1-1.175.487 1.66 1.66 0 0 1-1.175-.487 1.66 1.66 0 0 1 0-2.35l3.244-3.245z"/></svg>
+            Cancel
+          </button>
+					<button id="switchFont">
+            <svg  xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-2 -2 24 30"><path d="M4.163 21.458a63.3 63.3 0 0 0 13.491 0c1.832-.213 3.591-1.97 3.803-3.803a63.3 63.3 0 0 0 0-13.491c-.213-1.832-1.97-3.59-3.803-3.803a63.3 63.3 0 0 0-13.491 0C2.33.572.572 2.33.36 4.163a63.3 63.3 0 0 0 0 13.491c.213 1.832 1.97 3.59 3.803 3.803zM4.416 9.27a1.663 1.663 0 0 1 2.348.127l2.509 2.797 5.812-6.163a1.66 1.66 0 0 1 2.349-.069 1.66 1.66 0 0 1 .069 2.349l-7.052 7.478a1.66 1.66 0 0 1-1.209.521h-.02a1.67 1.67 0 0 1-1.217-.552l-3.716-4.141a1.663 1.663 0 0 1 .128-2.347z"/></svg>
+            Select
+          </button>
+				</nav>
+			</section>
+			<section id="error">
+        <h1>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-2 -2 24 30"><path d="M4.163 21.458a63.3 63.3 0 0 0 13.491 0c1.832-.213 3.591-1.97 3.803-3.803a63.3 63.3 0 0 0 0-13.491c-.213-1.832-1.97-3.59-3.803-3.803a63.3 63.3 0 0 0-13.491 0C2.33.572.572 2.33.36 4.163a63.3 63.3 0 0 0 0 13.491c.213 1.832 1.97 3.59 3.803 3.803zM5.314 7.665a1.66 1.66 0 0 1 0-2.35 1.663 1.663 0 0 1 2.35 0l3.245 3.245 3.245-3.245a1.66 1.66 0 0 1 2.35 0 1.663 1.663 0 0 1 0 2.35l-3.244 3.244 3.244 3.245a1.66 1.66 0 0 1 0 2.35c-.325.325-.75.487-1.175.487s-.851-.162-1.175-.487L10.91 13.26l-3.245 3.244a1.66 1.66 0 0 1-1.175.487 1.66 1.66 0 0 1-1.175-.487 1.66 1.66 0 0 1 0-2.35l3.244-3.245z"/></svg>
+          Error!
+        </h1>
+				<p id="modalError"></p>
+				<nav>
+					<button class="cancel">Continue</button>
+					<button id="restart">Restart</button>
+				</nav>
+			</section>
+		</dialog>
+    <aside id="chatz" class="hide">
+      <div id="chatRoom">
+        <header>
+          <kbd>A.M.i.S.H MEGAJOINT!</kbd>
+          <button id="chatLeave"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-3 4 25 20"><path d="M18.563 1.83c1.479.412 2.386 1.809 2.386 3.304v11.692c0 1.562-.999 2.999-2.558 3.358l-3.044.701a2.32 2.32 0 0 1-1.997-.453 2.3 2.3 0 0 1-.782-1.126H6.982a3.016 3.016 0 0 1-3.012-3.012v-2.257a.86.86 0 1 1 1.722 0v2.257c0 .71.58 1.29 1.29 1.29h5.476l-.001-13.11H6.981c-.71 0-1.291.58-1.291 1.291v2.258a.86.86 0 0 1-.861.861.86.86 0 0 1-.861-.861V5.766A3.016 3.016 0 0 1 6.98 2.754h5.523a2.39 2.39 0 0 1 1.87-1.842c.35-.067.713-.051 1.076.05zM7.366 8.604l1.44 1.565H1.73a.86.86 0 0 0-.861.861.86.86 0 0 0 .861.861h7.077l-1.44 1.565a.86.86 0 0 0 .05 1.214.86.86 0 0 0 1.214-.05c.911-.99 1.83-1.976 2.735-2.971.352-.363.35-.877-.004-1.239L8.63 7.441a.86.86 0 0 0-1.214-.05.86.86 0 0 0-.05 1.214zm8.542 1.705a.861.861 0 1 0-1.721 0v1.238a.86.86 0 0 0 1.722 0z" fill-rule="evenodd"/></svg></button>
+        </header>
+        <section>
+          <ul>
+            <li>FiLTH</li>
+            <li>MFSS</li>
+            <li>hellbeard</li>
+            <li>lordjazz</li>
+            <li>m00p</li>
+            <li>matt2</li>
+            <li>misfit</li>
+            <li>venam</li>
+            <li>x0</li>
+            <li class="me">xero</li>
+            <li>0123456789</li>
+          </ul>
+          <section id="log">
+            <article><kbd class="me">xero:</kbd> ayo!</article>
+            <article><kbd>FiLTH:</kbd> yo0o0o0o...</article>
+            <article><kbd>m00p:</kbd> this shit is tight x0!</article>
+          </section>
+        </section>
+        <nav>
+          <input type="text" id="handle" value="anonymous">
+          <input type="text" id="chatmsg" placeholder=">">
+          <button>send</button>
+        </nav>
+      </div>
+      <div id="chatJoints">
+        <header>
+          <kbd>Joints</kbd>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 -2 24 30" xml:space="preserve"><path d="M1265.544 576.024v-.48c0-.672-1.2-.96-2.328-.96s-2.328.312-2.328.96v.48c0 .432.168.864.48 1.176l1.2 1.176a.3.3 0 0 1 .096.24v1.536c0 .096.048.168.144.192l.696.216c.12.024.24-.048.24-.192v-1.728c0-.096.048-.168.096-.24l1.224-1.2c.312-.312.48-.744.48-1.176m-2.328-.024c-1.152 0-1.776-.312-1.8-.432.024-.12.648-.432 1.8-.432s1.752.312 1.8.432c-.048.12-.648.432-1.8.432"/><path d="M1264.416 578.472c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24zm1.032.816h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24m0 .792h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24a.24.24 0 0 0-.24-.24M7.416 9.912h4.032v2.04H4.872a.543.543 0 0 0-.552.552v2.568c.168-.048.36-.072.552-.072s.384.024.552.072v-2.016h6v2.016c.168-.048.36-.072.552-.072s.384.024.552.072v-2.016h6v2.016c.168-.048.36-.072.552-.072s.384.024.552.072v-2.568a.543.543 0 0 0-.552-.552h-6.528v-2.04h4.032a3.216 3.216 0 0 0 0-6.432c-.6 0-1.2.168-1.704.504a.493.493 0 0 1-.672-.144.493.493 0 0 1 .144-.672c.456-.288.96-.48 1.488-.576A4.07 4.07 0 0 0 12.36.648 4.11 4.11 0 0 0 8.784 2.76a4.18 4.18 0 0 1 2.64 2.736c.072.264-.072.528-.336.6s-.528-.072-.6-.336c-.408-1.368-1.656-2.28-3.096-2.28-1.776 0-3.216 1.44-3.216 3.216s1.464 3.216 3.24 3.216m3.072 7.584v.624c0 .816.672 1.512 1.512 1.512.816 0 1.512-.672 1.512-1.512v-.624c0-.816-.672-1.512-1.512-1.512-.816 0-1.512.672-1.512 1.512m4.056 3.648a1.59 1.59 0 0 0-1.536-1.224c-.096 0-.168.048-.24.12l-.6.864a.18.18 0 0 1-.312 0l-.6-.864a.3.3 0 0 0-.24-.12c-.744 0-1.392.504-1.536 1.224l-.36 1.56a.573.573 0 0 0 .552.696h4.704c.36 0 .624-.336.552-.696zm-9.672-1.536c.816 0 1.512-.672 1.512-1.512v-.624c0-.816-.672-1.512-1.512-1.512-.816 0-1.512.672-1.512 1.512v.624c0 .84.696 1.512 1.512 1.512m2.544 1.536A1.59 1.59 0 0 0 5.88 19.92c-.096 0-.168.048-.24.12l-.6.864a.18.18 0 0 1-.312 0l-.6-.864a.3.3 0 0 0-.24-.12c-.744 0-1.392.504-1.536 1.224l-.36 1.56a.573.573 0 0 0 .552.696h4.704c.36 0 .624-.336.552-.696zm10.2-3.648v.624c0 .816.672 1.512 1.512 1.512.816 0 1.512-.672 1.512-1.512v-.624c0-.816-.672-1.512-1.512-1.512-.816 0-1.512.672-1.512 1.512m4.416 5.208-.36-1.56a1.59 1.59 0 0 0-1.536-1.224c-.096 0-.168.048-.24.12l-.6.864a.18.18 0 0 1-.312 0l-.6-.864a.3.3 0 0 0-.24-.12c-.744 0-1.392.504-1.536 1.224l-.36 1.56a.573.573 0 0 0 .552.696h4.704c.336 0 .6-.336.528-.696"/></svg>
+        </header>
+        <section>
+          <div id="joints">
+            <article>
+              <kbd>barn burner #2</kbd> <i>@xero</i>, misfit
+            </article>
+            <article>
+              <kbd>A.M.i.S.H MEGAJOINT!</kbd> <i>@xero</i>, FiLTH, misfit, m00p, lordjazz, matt2, venam, MFSS, hellbeard, 01234567890
+            </article>
+            <article>
+              <kbd>untitled</kbd> <em>@xero</em>
+            </article>
+            <article>
+              <kbd>xbin testing</kbd> <em>@hellbeard</em>
+            </article>
+            <article>
+              <kbd>impure graff</kbd> <em>@xero</em> hellbeard
+            </article>
+          </div>
+        </section>
+        <nav>
+          <button id="jointNew">
+						<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 -2 24 30"><path d="m20.014 6.909-1.434-.364-1.123-1.122-.364-1.435L3.988 17.093l1.434.364 1.123 1.123.364 1.435zm-.877-2.566.523.523.936.238.07.022.636-1.97a.361.361 0 0 0-.455-.455l-1.968.636.021.072ZM4.865 19.66l-.523-.523-.936-.238-.071-.021-.636 1.968a.362.362 0 0 0 .455.455l1.97-.636-.022-.07ZM8.696 6.375l-.002-.002a.986.986 0 0 0-1.404-.009l-4.984 4.988.059-8.986 13.756-.072a.986.986 0 0 0 .981-.992.986.986 0 0 0-.992-.981L1.378.399a.987.987 0 0 0-.98.98L.317 13.742a.986.986 0 0 0 1.685.702L8.687 7.76a.986.986 0 0 0 .009-1.386m14.572 3.075a.99.99 0 0 0-1.269.107l-6.694 6.694a.986.986 0 1 0 1.395 1.395l4.995-4.995-.059 8.985-13.756.071a.986.986 0 0 0-.981.992.986.986 0 0 0 .991.981l14.731-.076a.986.986 0 0 0 .981-.98l.081-12.326a1.02 1.02 0 0 0-.414-.848" /></svg>
+						New Joint
+					</button>
+					<button id="jointCancel">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-1.091 -3 24 28"><path d="M4.163 21.458a63.3 63.3 0 0 0 13.491 0c1.832-.213 3.591-1.97 3.803-3.803a63.3 63.3 0 0 0 0-13.491c-.213-1.832-1.97-3.59-3.803-3.803a63.3 63.3 0 0 0-13.491 0C2.33.572.572 2.33.36 4.163a63.3 63.3 0 0 0 0 13.491c.213 1.832 1.97 3.59 3.803 3.803zM5.314 7.665a1.66 1.66 0 0 1 0-2.35 1.663 1.663 0 0 1 2.35 0l3.245 3.245 3.245-3.245a1.66 1.66 0 0 1 2.35 0 1.663 1.663 0 0 1 0 2.35l-3.244 3.244 3.244 3.245a1.66 1.66 0 0 1 0 2.35c-.325.325-.75.487-1.175.487s-.851-.162-1.175-.487L10.91 13.26l-3.245 3.244a1.66 1.66 0 0 1-1.175.487 1.66 1.66 0 0 1-1.175-.487 1.66 1.66 0 0 1 0-2.35l3.244-3.245z"/></svg>
+            Cancel
+          </button>
+        </nav>
+      </div>
+      <div id="chatNew">
+        <header>
+          <kbd>New Joint</kbd>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 -2 24 30" xml:space="preserve"><path d="M1265.544 576.024v-.48c0-.672-1.2-.96-2.328-.96s-2.328.312-2.328.96v.48c0 .432.168.864.48 1.176l1.2 1.176a.3.3 0 0 1 .096.24v1.536c0 .096.048.168.144.192l.696.216c.12.024.24-.048.24-.192v-1.728c0-.096.048-.168.096-.24l1.224-1.2c.312-.312.48-.744.48-1.176m-2.328-.024c-1.152 0-1.776-.312-1.8-.432.024-.12.648-.432 1.8-.432s1.752.312 1.8.432c-.048.12-.648.432-1.8.432"/><path d="M1264.416 578.472c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24zm1.032.816h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24m0 .792h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24a.24.24 0 0 0-.24-.24M7.416 9.912h4.032v2.04H4.872a.543.543 0 0 0-.552.552v2.568c.168-.048.36-.072.552-.072s.384.024.552.072v-2.016h6v2.016c.168-.048.36-.072.552-.072s.384.024.552.072v-2.016h6v2.016c.168-.048.36-.072.552-.072s.384.024.552.072v-2.568a.543.543 0 0 0-.552-.552h-6.528v-2.04h4.032a3.216 3.216 0 0 0 0-6.432c-.6 0-1.2.168-1.704.504a.493.493 0 0 1-.672-.144.493.493 0 0 1 .144-.672c.456-.288.96-.48 1.488-.576A4.07 4.07 0 0 0 12.36.648 4.11 4.11 0 0 0 8.784 2.76a4.18 4.18 0 0 1 2.64 2.736c.072.264-.072.528-.336.6s-.528-.072-.6-.336c-.408-1.368-1.656-2.28-3.096-2.28-1.776 0-3.216 1.44-3.216 3.216s1.464 3.216 3.24 3.216m3.072 7.584v.624c0 .816.672 1.512 1.512 1.512.816 0 1.512-.672 1.512-1.512v-.624c0-.816-.672-1.512-1.512-1.512-.816 0-1.512.672-1.512 1.512m4.056 3.648a1.59 1.59 0 0 0-1.536-1.224c-.096 0-.168.048-.24.12l-.6.864a.18.18 0 0 1-.312 0l-.6-.864a.3.3 0 0 0-.24-.12c-.744 0-1.392.504-1.536 1.224l-.36 1.56a.573.573 0 0 0 .552.696h4.704c.36 0 .624-.336.552-.696zm-9.672-1.536c.816 0 1.512-.672 1.512-1.512v-.624c0-.816-.672-1.512-1.512-1.512-.816 0-1.512.672-1.512 1.512v.624c0 .84.696 1.512 1.512 1.512m2.544 1.536A1.59 1.59 0 0 0 5.88 19.92c-.096 0-.168.048-.24.12l-.6.864a.18.18 0 0 1-.312 0l-.6-.864a.3.3 0 0 0-.24-.12c-.744 0-1.392.504-1.536 1.224l-.36 1.56a.573.573 0 0 0 .552.696h4.704c.36 0 .624-.336.552-.696zm10.2-3.648v.624c0 .816.672 1.512 1.512 1.512.816 0 1.512-.672 1.512-1.512v-.624c0-.816-.672-1.512-1.512-1.512-.816 0-1.512.672-1.512 1.512m4.416 5.208-.36-1.56a1.59 1.59 0 0 0-1.536-1.224c-.096 0-.168.048-.24.12l-.6.864a.18.18 0 0 1-.312 0l-.6-.864a.3.3 0 0 0-.24-.12c-.744 0-1.392.504-1.536 1.224l-.36 1.56a.573.573 0 0 0 .552.696h4.704c.336 0 .6-.336.528-.696"/></svg>
+        </header>
+        <section>
+          <article>
+            <label for="txtCols">Title:</label><div><input type="text" id="txtTitle"/></div>
+          </article>
+          <article>
+            <label for="txtRows">Public?</label><div><input type="checkbox" id="txtPublic" checked/></div>
+          </article>
+        </section>
+        <nav>
+          <button id="jointNew">
+						<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 -2 24 30"><path d="m20.014 6.909-1.434-.364-1.123-1.122-.364-1.435L3.988 17.093l1.434.364 1.123 1.123.364 1.435zm-.877-2.566.523.523.936.238.07.022.636-1.97a.361.361 0 0 0-.455-.455l-1.968.636.021.072ZM4.865 19.66l-.523-.523-.936-.238-.071-.021-.636 1.968a.362.362 0 0 0 .455.455l1.97-.636-.022-.07ZM8.696 6.375l-.002-.002a.986.986 0 0 0-1.404-.009l-4.984 4.988.059-8.986 13.756-.072a.986.986 0 0 0 .981-.992.986.986 0 0 0-.992-.981L1.378.399a.987.987 0 0 0-.98.98L.317 13.742a.986.986 0 0 0 1.685.702L8.687 7.76a.986.986 0 0 0 .009-1.386m14.572 3.075a.99.99 0 0 0-1.269.107l-6.694 6.694a.986.986 0 1 0 1.395 1.395l4.995-4.995-.059 8.985-13.756.071a.986.986 0 0 0-.981.992.986.986 0 0 0 .991.981l14.731-.076a.986.986 0 0 0 .981-.98l.081-12.326a1.02 1.02 0 0 0-.414-.848" /></svg>
+						Create
+					</button>
+					<button id="jointCancel">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-1.091 -3 24 28"><path d="M4.163 21.458a63.3 63.3 0 0 0 13.491 0c1.832-.213 3.591-1.97 3.803-3.803a63.3 63.3 0 0 0 0-13.491c-.213-1.832-1.97-3.59-3.803-3.803a63.3 63.3 0 0 0-13.491 0C2.33.572.572 2.33.36 4.163a63.3 63.3 0 0 0 0 13.491c.213 1.832 1.97 3.59 3.803 3.803zM5.314 7.665a1.66 1.66 0 0 1 0-2.35 1.663 1.663 0 0 1 2.35 0l3.245 3.245 3.245-3.245a1.66 1.66 0 0 1 2.35 0 1.663 1.663 0 0 1 0 2.35l-3.244 3.244 3.244 3.245a1.66 1.66 0 0 1 0 2.35c-.325.325-.75.487-1.175.487s-.851-.162-1.175-.487L10.91 13.26l-3.245 3.244a1.66 1.66 0 0 1-1.175.487 1.66 1.66 0 0 1-1.175-.487 1.66 1.66 0 0 1 0-2.35l3.244-3.245z"/></svg>
+            Cancel
+          </button>
+        </nav>
+      </div>
+      <div id="chatResolution">
+        <header>
+          <kbd>Resolution</kbd>
+        </header>
+        <section>
+          <article>
+            <label for="txtCols">Columns: <input type="number" id="txtCols" min="1" step="1" value="80"></label>
+            <label for="txtRows">Rows: <input type="number" id="txtRows" min="1" step="1" value="25"></label>
+          </article>
+        </section>
+        <header>
+          <kbd>Edit</kbd>
+        </header>
+        <section>
+          <button id="insert-row">Insert Row (Alt+Up)</button>
+          <button id="delete-row">Delete Row (Alt+Down)</button>
+          <button id="insert-column">Insert Column (Alt+Right)</button>
+          <button id="delete-column">Delete Column (Alt+Left)</button>
+          <button id="erase-row">Erase Row (Alt+E)</button>
+          <button id="erase-row-start">Erase to Start of Row (Alt+Home)</button>
+          <button id="erase-row-end">Erase to End of Row (Alt+End)</button>
+          <button id="erase-column">Erase Column (Alt+Shift+E)</button>
+          <button id="erase-column-start">Erase to Start of Column (Alt+Page Up)</button>
+          <button id="erase-column-end">Erase to End of Column (Alt+Page Down)</button>
+        </section>
+        <nav>
+          <button id="resSave">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 -1 24 30" width="24" height="30"><g><path d="M20.869.188h-2.006v4.856c0 .9-.731 1.65-1.65 1.65H6.525c-.9 0-1.65-.731-1.65-1.65V.188H.188v23.625h23.625V3.131zM5.137 22.069H2.119V19.05h3.019zM12 17.138c-2.231 0-4.05-1.819-4.05-4.05s1.819-4.05 4.05-4.05 4.05 1.819 4.05 4.05-1.819 4.05-4.05 4.05"/><path d="M5.85.188v4.856c0 .375.3.694.694.694h10.688c.375 0 .694-.3.694-.694V.188zm10.556 4.369a.485.485 0 0 1-.488.488.485.485 0 0 1-.488-.488V1.744c0-.262.206-.488.488-.488.262 0 .488.206.488.488z"/></g></svg>
+            Save
+          </button>
+          <button id="resCancel">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-1.091 -3 24 28"><path d="M4.163 21.458a63.3 63.3 0 0 0 13.491 0c1.832-.213 3.591-1.97 3.803-3.803a63.3 63.3 0 0 0 0-13.491c-.213-1.832-1.97-3.59-3.803-3.803a63.3 63.3 0 0 0-13.491 0C2.33.572.572 2.33.36 4.163a63.3 63.3 0 0 0 0 13.491c.213 1.832 1.97 3.59 3.803 3.803zM5.314 7.665a1.66 1.66 0 0 1 0-2.35 1.663 1.663 0 0 1 2.35 0l3.245 3.245 3.245-3.245a1.66 1.66 0 0 1 2.35 0 1.663 1.663 0 0 1 0 2.35l-3.244 3.244 3.244 3.245a1.66 1.66 0 0 1 0 2.35c-.325.325-.75.487-1.175.487s-.851-.162-1.175-.487L10.91 13.26l-3.245 3.244a1.66 1.66 0 0 1-1.175.487 1.66 1.66 0 0 1-1.175-.487 1.66 1.66 0 0 1 0-2.35l3.244-3.245z"/></svg>
+            Cancel
+          </button>
+        </nav>
+      </div>
+    </aside>
+    <aside id="charOpts" class="hide">
+      <canvas id="charmap">
+    </aside>
+		<header>
+      <section id="toolColors">
+        <canvas id="currentColors"></canvas>
+        <canvas id="paletteColors"></canvas>
+      </section>
+      <section id="toolOptions">
+        <article id="keebOpts">
+          <button>F1<canvas id="fkey1"></canvas></button>
+          <button>F2<canvas id="fkey2"></canvas></button>
+					<button>F3<canvas id="fkey3"></canvas></button>
+					<button>F4<canvas id="fkey4"></canvas></button>
+					<button>F5<canvas id="fkey5"></canvas></button>
+					<button>F6<canvas id="fkey6"></canvas></button>
+					<button>F7<canvas id="fkey7"></canvas></button>
+					<button>F8<canvas id="fkey8"></canvas></button>
+					<button>F9<canvas id="fkey9"></canvas></button>
+					<button>F10<canvas id="fkey10"></canvas></button>
+					<button>F11<canvas id="fkey11"></canvas></button>
+					<button>F12<canvas id="fkey12"></canvas></button>
+        </article>
+        <article id="brushOpts">
+          <button id="blockBrush">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M3.927 3.927h6.982v6.982H3.927zm6.982 6.982h6.982v6.982H10.909z"/></svg>
+            Half Block
+          </button>
+          <button id="shadeBrush">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-1.091 -2.182 24 29.455"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.091 1.364H1.364v2.727h2.727v2.727H1.364v2.727h2.727v2.727H1.364v2.727h2.727v2.727H1.364v2.727h2.727v-2.727h2.727v2.727h13.636V1.364H6.818v2.727H4.091zm5.455 2.727H6.818v2.727H4.091v2.727h2.727v2.727H4.091v2.727h2.727v2.727h2.727v-2.727H6.818V12.273h2.727V9.545H6.818V6.818h2.727z"/></svg>
+            Shade
+          </button>
+          <button id="characterBrush">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 30"><path fill-rule="evenodd" clip-rule="evenodd" d="M5 2a3 3 0 0 0-3 3v14a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V5a3 3 0 0 0-3-3zm1 5a1 1 0 0 1 1-1h10a1 1 0 1 1 0 2h-4v9a1 1 0 1 1-2 0V8H7a1 1 0 0 1-1-1"/></svg>
+            Character
+          </button>
+          <button id="colorBrush">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24.455"><path d="M17.045 4.091h-.682v-.682a2.05 2.05 0 0 0-2.045-2.045H4.773c-1.125 0-2.046.92-2.046 2.045v2.727a2.05 2.05 0 0 0 2.045 2.045h9.545a2.05 2.05 0 0 0 2.045-2.045v-.681h.682c.375 0 .682.307.682.682v2.727a.684.684 0 0 1-.682.682h-6.136a2.05 2.05 0 0 0-2.045 2.045v.682c-.75 0-1.364.614-1.364 1.364v5.455c0 .75.614 1.364 1.364 1.364h1.364c.75 0 1.364-.614 1.364-1.364v-5.455c0-.75-.614-1.364-1.364-1.364v-.682c0-.375.307-.682.682-.682h6.136a2.05 2.05 0 0 0 2.045-2.045V6.136a2.05 2.05 0 0 0-2.045-2.045" /></svg>
+            Colorize
+          </button>
+        </article>
+        <article id="shapeOpts">
+          <button id="line">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 10 30" xml:space="preserve"><path d="M15.508 2.787h2.339L7.78 20.075H5.441"/></svg>
+            Line
+          </button>
+          <button id="circles">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 30"><path d="M17.945 6.054C16.445 3.1 13.373 1.2 10.052 1.2 5.171 1.2 1.2 5.171 1.2 10.052c0 3.321 1.9 6.393 4.854 7.893 1.463 2.877 4.451 4.855 7.894 4.855 4.881 0 8.852-3.971 8.852-8.852 0-3.443-1.977-6.431-4.855-7.894m-4.012.243 3.77 3.77a7.7 7.7 0 0 1-.158 1.539l-5.151-5.151a7.7 7.7 0 0 1 1.539-.158M6.906 16.941a7.6 7.6 0 0 1-.362-1.063l1.582 1.582a7.6 7.6 0 0 1-1.169-.408q-.026-.055-.05-.111m3.161.763-3.77-3.77a7.7 7.7 0 0 1 .158-1.539l5.151 5.151a7.6 7.6 0 0 1-1.539.159m2.84-.554-6.056-6.056a8 8 0 0 1 .568-1.13l6.618 6.618a8 8 0 0 1-1.13.567m2.111-1.283L8.133 8.982a8 8 0 0 1 .849-.849l6.885 6.885a8 8 0 0 1-.849.849m1.564-1.83L9.964 7.418a8 8 0 0 1 1.13-.567l6.056 6.056a8 8 0 0 1-.567 1.13m-.705-7.493a7.6 7.6 0 0 1 1.174.413 7.6 7.6 0 0 1 .408 1.169zM13.948 21.6a7.64 7.64 0 0 1-6.038-2.959 8.8 8.8 0 0 0 2.142.264c4.881 0 8.852-3.971 8.852-8.852a8.8 8.8 0 0 0-.264-2.142 7.64 7.64 0 0 1 2.959 6.038c0 4.219-3.433 7.652-7.652 7.652"/></svg>
+           Circle
+          </button>
+          <button id="square">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 3 20 22"><path d="M17 7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7a3 3 0 0 0 3 3 3 3 0 0 0 3 3h7a3 3 0 0 0 3-3v-7a3 3 0 0 0-3-3m-5.293 9L16 11.707v1.586L13.293 16Zm-3 0L16 8.707v1.586L10.293 16Zm3.586-8L8 12.293v-1.586L10.707 8Zm3 0L8 15.293v-1.586L13.707 8ZM8.261 9.032a2 2 0 0 1 .771-.771Zm7.478 5.936a2 2 0 0 1-.771.771ZM19 17a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2h6a3 3 0 0 0 3-3V8a2 2 0 0 1 2 2Z"/></svg>
+           Square
+          </button>
+          <button id="isFilled">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 -2 22 33"><path d="M12.864.624c2.256.168 4.296.984 6 2.256h-6zm0 20.496h5.976a11.4 11.4 0 0 1-5.976 2.256zm0-8.28H23.4c-.072.84-.216 1.656-.456 2.448h-10.08zm0-1.704V8.712h10.08c.24.792.384 1.608.456 2.448H12.864zm9.408-4.128h-9.408V4.584h7.8c.648.72 1.176 1.536 1.608 2.424M.6 12C.6 6 5.28 1.056 11.16.624v22.752C5.28 22.944.6 18 .6 12m20.088 7.416h-7.824v-2.424h9.408a11 11 0 0 1-1.584 2.424"/></svg>
+            Filled
+          </button>
+        </article>
+        <article id="fillOpts">
+          <button id="fillFg">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 -2 22 33"><path d="M12.864.624c2.256.168 4.296.984 6 2.256h-6zm0 20.496h5.976a11.4 11.4 0 0 1-5.976 2.256zm0-8.28H23.4c-.072.84-.216 1.656-.456 2.448h-10.08zm0-1.704V8.712h10.08c.24.792.384 1.608.456 2.448H12.864zm9.408-4.128h-9.408V4.584h7.8c.648.72 1.176 1.536 1.608 2.424M.6 12C.6 6 5.28 1.056 11.16.624v22.752C5.28 22.944.6 18 .6 12m20.088 7.416h-7.824v-2.424h9.408a11 11 0 0 1-1.584 2.424"/></svg>
+            Fill Foreground
+          </button>
+        </article>
+        <article id="selectOpts">
+          <button id="move">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 30"><path d="M8.43 18.75H4.65c-.41 0-.75-.34-.75-.75s.34-.75.75-.75h3.78c.41 0 .75.34.75.75s-.34.75-.75.75m-6.43-2c-.41 0-.75-.33-.75-.75v-3.78c0-.41.34-.75.75-.75s.75.34.75.75V16c0 .41-.34.75-.75.75m0-7.57c-.41 0-.75-.34-.75-.75V4.65c0-.41.34-.75.75-.75s.75.34.75.75v3.78c0 .41-.34.75-.75.75m16-.67c-.41 0-.75-.34-.75-.75V3.99c0-.41.34-.76.75-.76s.75.33.75.74v3.78c0 .41-.34.75-.75.75Zm-2.66-5.77h-3.78c-.41 0-.75-.34-.75-.75s.34-.75.75-.75h3.78c.41 0 .75.34.75.75s-.34.75-.75.75m-7.57 0H4c-.41 0-.76-.34-.76-.75s.33-.75.74-.75h3.78c.41 0 .75.34.75.75s-.34.75-.75.75Zm14.42 12.53L11.74 8.88c-.42-.26-.94-.23-1.33.08-.39.3-.54.81-.4 1.28l3.67 11.69c.15.46.55.78 1.04.82h.08c.45 0 .86-.26 1.06-.67l1.81-3.81 4.14-.84c.48-.1.84-.47.92-.95s-.13-.95-.54-1.2Z" /></svg>
+            Move
+          </button>
+          <button id="fliph">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 30"><path d="M12.75 12.04v8c0 .41-.34.75-.75.75s-.75-.34-.75-.75v-8c0-.41.34-.75.75-.75s.75.34.75.75M2.48 10.46a.73.73 0 0 0-.8-.1c-.26.12-.43.39-.43.68v10c0 .29.17.56.43.68.1.05.21.07.32.07.17 0 .34-.06.48-.17l6-5a.76.76 0 0 0 0-1.16zm19.84-.1a.78.78 0 0 0-.8.1l-6 5a.76.76 0 0 0 0 1.16l6 5c.14.11.31.17.48.17.11 0 .22-.02.32-.07.26-.12.43-.39.43-.68v-10c0-.29-.17-.56-.43-.68m-3.59-4.41-.9-3.2a.75.75 0 0 0-.92-.52c-.4.11-.63.53-.52.92l.38 1.36c-3.29-1.65-7.29-1.53-10.49.45a.747.747 0 1 0 .79 1.27c2.77-1.72 6.24-1.79 9.09-.34l-1.55.44a.755.755 0 0 0 .2 1.48c.07 0 .14 0 .2-.03l3.2-.9c.4-.11.63-.53.52-.92Z" /></svg>
+            Flip Horizontal
+          </button>
+          <button id="flipv">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 30"><path d="M3.96 12.75c-.41 0-.75-.34-.75-.75s.34-.75.75-.75h8c.41 0 .75.34.75.75s-.34.75-.75.75zm9-11.5h-10c-.29 0-.56.17-.68.43s-.08.57.1.8l5 6a.76.76 0 0 0 1.16 0l5-6a.73.73 0 0 0 .1-.8.75.75 0 0 0-.68-.43M8.54 15.52c-.29-.34-.87-.34-1.15 0l-5 6a.73.73 0 0 0-.1.8c.12.26.39.43.68.43h10c.29 0 .56-.17.68-.43s.08-.57-.1-.8l-5-6Zm13.23 1.38a.75.75 0 0 0-.93-.52l-1.36.38c1.65-3.29 1.53-7.29-.45-10.49a.747.747 0 1 0-1.27.79c1.72 2.77 1.8 6.26.34 9.1l-.44-1.56a.75.75 0 0 0-.92-.52c-.4.11-.63.53-.52.93l.9 3.2c.05.19.18.35.36.45.11.06.24.1.37.1.07 0 .14 0 .2-.03l3.2-.9c.4-.11.63-.53.52-.93" /></svg>
+            Flip Vertical
+          </button>
+        </article>
+        <article id="zoomOpts">
+          <button>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 25.588"><path d="M3.176 10.235A8.824 8.824 0 0 0 12 19.059h.353c.193 0 .353.16.353.356v.699a.35.35 0 0 1-.351.356H12c-5.653.001-10.235-4.582-10.235-10.235v-.414l-.664.664a.354.354 0 0 1-.501-.003l-.494-.494a.354.354 0 0 1-.001-.503l1.866-1.866a.706.706 0 0 1 .998 0l1.866 1.866a.355.355 0 0 1-.001.503l-.494.494a.353.353 0 0 1-.501.003l-.663-.663zm17.647 0A8.82 8.82 0 0 0 12 1.412h-.351a.355.355 0 0 1-.355-.357V.356c0-.2.158-.356.353-.356H12c5.653 0 10.235 4.583 10.235 10.235v.414l.664-.664a.354.354 0 0 1 .501.003l.494.494c.141.141.14.365.001.503l-1.866 1.866a.706.706 0 0 1-.998 0l-1.866-1.866a.356.356 0 0 1 0-.503l.494-.494a.353.353 0 0 1 .501-.003l.664.664zm-6.206 5.441a.706.706 0 0 1-.998 0L6.56 8.617a.706.706 0 0 1 0-.998l2.824-2.824a.706.706 0 0 1 .998 0l7.059 7.059a.706.706 0 0 1 0 .998z"/></svg>
+            Rotate
+          </button>
+          <input id="xoom" type="range" value="100" step="5" min="25" max="200" />
+          <label for="xoom">Zoom</label>
+        </article>
+        <article id="clipOpts">
+          <button id="copy">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 30"><path d="M13.92 19.2H7.2a1.92 1.92 0 0 1-1.92-1.92v-6.72H7.2v6.72h6.72ZM9.12 5.76h1.92v1.92H9.12zm0 3.84h1.92v1.92H9.12zm7.68-3.84h1.92v1.92H16.8zm0 3.84h1.92v1.92H16.8z"/><path d="M9.12 13.44h1.92v1.92H9.12zm3.84 0h1.92v1.92h-1.92zm3.84 0h1.92v1.92H16.8zm-3.84-7.68h1.92v1.92h-1.92z"/></svg>
+            Copy
+          </button>
+          <button id="paste">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 30"><path d="M16.8 14.88h-5.76a1.92 1.92 0 0 1-1.92-1.92V7.2a1.92 1.92 0 0 1 1.92-1.92h5.76a1.92 1.92 0 0 1 1.92 1.92v5.76a1.92 1.92 0 0 1-1.92 1.92M11.04 7.2v5.76h5.76V7.2ZM5.28 9.12H7.2v1.92H5.28zm0 3.84H7.2v1.92H5.28zm0 3.84H7.2v1.92H5.28zm3.84 0h1.92v1.92H9.12zm3.84 0h1.92v1.92h-1.92z"/></svg>
+            Paste
+          </button>
+          <button id="syspaste">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="5 0 24 30"><path d="M20.64 14.88h-5.76a1.92 1.92 0 0 1-1.92-1.92V7.2a1.92 1.92 0 0 1 1.92-1.92h5.76a1.92 1.92 0 0 1 1.92 1.92v5.76a1.92 1.92 0 0 1-1.92 1.92M14.88 7.2v5.76h5.76V7.2ZM9.12 9.12h1.92v1.92H9.12zm0 3.84h1.92v1.92H9.12zm0 3.84h1.92v1.92H9.12zm3.84 0h1.92v1.92h-1.92zm3.84 0h1.92v1.92H16.8zM5.28 12.96H7.2v1.92H5.28zm0 3.84H7.2v1.92H5.28zm3.84 3.84h1.92v1.92H9.12zm3.84 0h1.92v1.92h-1.92zm-7.68 0H7.2v1.92H5.28z"/></svg>
+            OS Paste
+          </button>
+          <button>
+            <svg xmlns="http://www.w3.org/2000/svg"  fill="currentColor" viewBox="0 -4 24 30" transform="rotate(90)"><path d="M13.39 17.088a3.2 3.2 0 0 0-.823.106L3.708 6.115a3.65 3.65 0 0 0-1.5 3.6 5.2 5.2 0 0 0 1.469 2.827l2.518 2.479-1.735 2.16a3.242 3.242 0 1 0 2.196 1.958l1.858-1.836 1.858 1.836a3.24 3.24 0 1 0 3.019-2.064Zm-9.754 4.781a1.541 1.541 0 1 1 1.541-1.541 1.543 1.543 0 0 1-1.541 1.541m9.754 0a1.541 1.541 0 1 1 1.541-1.541 1.543 1.543 0 0 1-1.541 1.541M9.274 11.174l4.046-5.059a3.65 3.65 0 0 1 1.5 3.6 5.2 5.2 0 0 1-1.469 2.827l-1.68 1.651ZM23.602.432v2.242H21.36V.432Zm-4.685 0v2.242h-2.242V.432Zm-4.68 2.242H12V.432h2.242Zm-4.685 0H7.31V.432h2.242ZM7.308 4.889h2.244v2.244H7.31Zm9.36 8.914h2.244v2.242h-2.234Zm4.685 0h2.244v2.242H21.36Zm0-8.916h2.242v2.242H21.36Zm0 4.457h2.242v2.242H21.36Z"/></svg>
+            Cut
+          </button>
+          <button id="undo">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-4 -4 40 40" style="padding-left:0 !important"><path d="m17.597 18.418-.528 2.08-16.02-16.02.527-2.08L3.205.77l2.08-.528 16.02 16.02-2.08.528zm1.886 2.689.341-1.341.749-.749 1.341-.341a1 1 0 0 0 .101-.031l.911 2.823a.518.518 0 0 1-.652.652l-2.819-.911q.016-.05.029-.103M17.167 9.533l-1.415-1.412 2.537-2.537a1.66 1.66 0 0 0 .37-1.858 1.66 1.66 0 0 0-1.572-1.049h-6.779L8.309.679h8.778a3.65 3.65 0 0 1 3.42 2.284 3.64 3.64 0 0 1-.802 4.032Zm-8.238 5.414 1.412 1.412-2.494 2.494a1.703 1.703 0 0 0 1.202 2.907h9.086a2 2 0 0 0 .137.35 2.02 2.02 0 0 0 1.169 1.002l2.005.646H8.161a3.7 3.7 0 0 1-2.614-6.317Z" /></svg>
+            Undo
+          </button>
+          <button id="redo">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 34 34"><path d="m17.118 3.098-.242-.954a.84.84 0 0 0-.22-.387l-.867-.866a.84.84 0 0 0-.387-.22l-.954-.242a.63.63 0 0 0-.599.165L1.521 12.922l1.524.387 1.193 1.193.387 1.524L16.953 3.698a.63.63 0 0 0 .165-.599M2.173 15.804l-.43-.431-.771-.196-.058-.018-.523 1.622a.298.298 0 0 0 .375.375l1.62-.523-.017-.059Zm20.194-9.225h-5.184l-2.306 2.305h6.442v7.318h-4.245a.84.84 0 0 0-.839.839v4.244H8.918v-6.441l-2.305 2.305v5.184a1.26 1.26 0 0 0 1.258 1.258h9.348a1.68 1.68 0 0 0 1.187-.491l4.729-4.731a1.67 1.67 0 0 0 .49-1.187V7.837a1.26 1.26 0 0 0-1.258-1.258"/></svg>
+            Redo
+          </button>
+        </article>
+      </section>
+			<section id="btns">
+        <button id="open">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 30" width="24" height="30"><g><path d="M20.869.188h-2.006v4.856c0 .9-.731 1.65-1.65 1.65H6.525c-.9 0-1.65-.731-1.65-1.65V.188H.188v23.625h23.625V3.131zM5.137 22.069H2.119V19.05h3.019zM12 17.138c-2.231 0-4.05-1.819-4.05-4.05s1.819-4.05 4.05-4.05 4.05 1.819 4.05 4.05-1.819 4.05-4.05 4.05"/><path d="M5.85.188v4.856c0 .375.3.694.694.694h10.688c.375 0 .694-.3.694-.694V.188zm10.556 4.369a.485.485 0 0 1-.488.488.485.485 0 0 1-.488-.488V1.744c0-.262.206-.488.488-.488.262 0 .488.206.488.488z"/></g></svg>
+        </button>
+        <button id="zoom"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="2 5 18 18"><path d="M16.071 14.958c.042-.054.078-.108.117-.162s.114-.159.168-.24.075-.12.111-.177.099-.165.147-.249.066-.123.096-.186.087-.174.126-.264l.081-.189c.027-.063.042-.093.06-.141a6 6 0 0 0 .24-.75h-1.56a4.8 4.8 0 0 1-.681 1.323 5 5 0 0 1-.213.27l-.051.057q-.09.102-.183.201l-.072.072q-.09.087-.183.171l-.081.069a4 4 0 0 1-.198.156l-.081.06a4 4 0 0 1-.237.162l-.054.036q-.15.093-.3.177l-.042.021q-.134.069-.273.129l-.108.042-.222.084-.129.042-.216.063-.135.033-.222.045-.135.024-.246.03h-.117c-.123 0-.246.015-.369.015s-.3 0-.45-.024l-.132-.015c-.105 0-.21-.03-.3-.048l-.138-.027q-.162-.036-.318-.084l-.102-.03a5 5 0 0 1-.813-.348l-.051-.03q-.168-.093-.33-.201l-.075-.021q-.165-.114-.318-.24l-.03-.024a8 8 0 0 1-.333-.3L9.6 12.6H4.8v4.8l1.851-1.854a6.3 6.3 0 0 0 1.956 1.332l.108.045q.21.087.426.156l.165.051q.197.058.399.102l.189.042c.138.027.276.045.414.063l.18.024q.298.028.6.03c.302.002.351 0 .525-.024l.171-.021c.114 0 .228-.027.339-.045l.201-.039c.099-.021.198-.039.3-.066l.21-.057.276-.084.21-.075.258-.105.222-.075.243-.123.198-.108.231-.141.189-.123c.075-.051.15-.108.222-.162L15 16.05l4.2 4.2 1.056-1.05-4.2-4.2ZM6.42 10.05a5 5 0 0 1 .213-.69c0-.033.024-.066.036-.096a5 5 0 0 1 .357-.69l.072-.105c.048-.072.093-.144.144-.213l.096-.123c.048-.06.093-.12.144-.177l.114-.123q.073-.08.15-.156l.126-.117.159-.141.138-.108.168-.126.147-.099.18-.111.153-.087.189-.096.159-.075.201-.084.162-.063.213-.066.162-.048.234-.051.156-.033c.087 0 .177-.024.264-.036l.135-.018c.135 0 .27-.018.408-.018s.3 0 .45.024l.132.015c.105 0 .213.03.315.048l.135.027q.165.036.324.084l.096.027a5 5 0 0 1 .822.351h.024q.186.102.36.219l.036.024a5 5 0 0 1 .693.573L12.6 9.6h4.8V4.8l-1.845 1.848-.054-.048a5 5 0 0 0-.33-.3l-.093-.081a6.3 6.3 0 0 0-.96-.651l-.09-.045a7 7 0 0 0-.42-.204l-.168-.069c-.123-.048-.246-.096-.369-.135l-.198-.06a8 8 0 0 0-.369-.096l-.204-.042a9 9 0 0 0-.402-.063L11.7 4.83q-.298-.029-.6-.03c-.302-.001-.378 0-.564.027l-.186.024c-.123 0-.243.027-.363.051l-.219.048c-.105.024-.213.045-.315.072l-.228.069-.3.093-.228.093q-.136.052-.267.114l-.225.114a6 6 0 0 0-.246.132l-.219.135q-.116.073-.228.15l-.21.153-.213.165-.198.171-.195.18-.186.189-.177.195q-.086.1-.171.204c-.085.104-.108.138-.159.21s-.105.144-.153.216-.096.15-.141.225-.09.15-.135.228-.084.159-.123.24-.078.156-.114.237-.072.171-.105.258-.063.159-.093.24-.06.186-.087.282-.048.156-.069.237v.051c-.036.147-.072.3-.096.45Z"/></svg>
+        <button id="grid"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-2 0 24 28"><path d="M22.875.375h-4.8V3c0 .3-.225.6-.6.6s-.6-.3-.6-.6V.375H12.45V3c0 .3-.225.6-.6.6-.3 0-.6-.225-.6-.6V.375H6.9V3c0 .3-.225.6-.6.6-.3-.075-.525-.3-.525-.6V.375h-4.65c-.45 0-.75.375-.75.75V5.7H3c.3 0 .6.225.6.6 0 .3-.225.6-.6.6H.375v4.425H3c.3 0 .6.225.6.6 0 .3-.225.6-.6.6H.375v4.425H3c.3 0 .6.225.6.6 0 .3-.225.6-.6.6H.375v4.8c0 .45.375.75.75.75h4.95c.45 0 .75-.375.75-.75V7.65c0-.45.375-.75.75-.75H22.8c.45 0 .75-.375.75-.75V1.125c.075-.375-.3-.75-.675-.75"/></svg></button>
+        <button id="darkmode"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-1 2 26 24"><path d="m1.594 12.782 2.537 1.944a.99.99 0 0 1 .377.912l-.428 3.166a.99.99 0 0 0 1.116 1.116l3.166-.42a.99.99 0 0 1 .912.377l1.944 2.537a.984.984 0 0 0 1.565 0l1.944-2.537a.99.99 0 0 1 .912-.377l3.165.42a.99.99 0 0 0 1.116-1.116l-.427-3.166a.99.99 0 0 1 .377-.912l2.537-1.944a.984.984 0 0 0 0-1.565L19.87 9.273a.99.99 0 0 1-.377-.912l.427-3.165a.99.99 0 0 0-1.116-1.116l-3.166.427a.99.99 0 0 1-.912-.377l-1.944-2.537a.984.984 0 0 0-1.565 0L9.273 4.13a.99.99 0 0 1-.912.377L5.196 4.08A.99.99 0 0 0 4.08 5.196l.42 3.166a.99.99 0 0 1-.377.912l-2.53 1.944a.984.984 0 0 0 0 1.565M9.6 6.458a6.038 6.038 0 1 1 0 11.083 6.038 6.038 0 0 0 0-11.083" data-name="Layer 2" /></svg></button>
+			</section>
+		</header>
+		<main>
+			<aside>
+        <button id="keeb"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M20.087 5.013A2.207 2.207 0 0 1 17.88 7.22h-4.407a.73.73 0 0 0-.52.22.7.7 0 0 0-.213.513v.714h-1.473v-.713a2.2 2.2 0 0 1 2.207-2.207h4.413a.733.733 0 0 0 .733-.727.76.76 0 0 0-.733-.74H6.12a2.27 2.27 0 0 1-1.567-.667 2.2 2.2 0 0 1-.667-1.567v-.713h1.493v.733a.727.727 0 0 0 .733.733h11.767a2.233 2.233 0 0 1 2.207 2.213"/><path d="M21.427 11.027a2.93 2.93 0 0 0-2.094-.86H4.667a2.94 2.94 0 0 0-2.94 2.94v6.62a2.953 2.953 0 0 0 2.94 2.94h14.667a2.93 2.93 0 0 0 2.073-.867 2.9 2.9 0 0 0 .867-2.073v-6.62a2.9 2.9 0 0 0-.847-2.08M9.06 13.1h2.207v1.473H9.06Zm0 2.94h2.207v1.473H9.06Zm-1.473 1.473H5.38V16.04h2.207Zm0-2.94H5.38V13.1h2.207Zm7.333 5.88H9.06V18.98h5.88Zm0-2.94h-2.187V16.04h2.207Zm0-2.94h-2.187V13.1h2.207Zm3.68 2.94h-2.187V16.04h2.207Zm0-2.94h-2.187V13.1h2.207Z" fill-rule="evenodd"/></svg></button>
+				<button id="brush"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-1 0 24 24" xml:space="preserve"><path d="M19.773 4.895c0 .525-.184 1.03-.525 1.425l-6.791 7.923a4.4 4.4 0 0 0-.811-1.152 4.5 4.5 0 0 0-1.091-.866 4.6 4.6 0 0 0-1.295-.511l5.399-8.639a2.17 2.17 0 0 1 1.855-1.03h.075c.436 0 .852.13 1.214.368l.995.661c.614.409.975 1.091.975 1.82m-8.182 11.47a3.41 3.41 0 0 1-3.409 3.409H2.727c-.375 0-.682-.307-.682-.682s.307-.682.682-.682a2.05 2.05 0 0 0 2.045-2.045 3.41 3.41 0 0 1 6.818 0" /></svg></button>
+        <button id="bucket"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M10.43 1.639a1.85 1.85 0 0 0-.835.741c-2.014-1.047-3.881-1.156-4.67-.23-1.324 1.527.932 4.959 2.735 6.356A11 11 0 0 0 9.901 9.99a.526.526 0 0 1 .238.703.53.53 0 0 1-.703.238 12 12 0 0 1-2.455-1.623 12.4 12.4 0 0 1-1.788-1.853c-.437.432-1.38 1.384-1.823 1.823-3.457.609-2.02 5.006 1.072 8.092 2.78 2.78 6.065 3.85 7.477 2.438q.525-.526.615-1.367l5.897-5.898C24.644 11.12 14.984-.444 10.43 1.639m7.413 4.999-.065-.084zM6.694 5.954C5.596 4.46 5.409 3.212 5.727 2.828c.35-.409 1.741-.413 3.53.562zm5.063 4.974a2.05 2.05 0 0 1-2.43 1.577.53.53 0 0 1-.262-.144c-.369-.351-.021-1.001.481-.887 1.294.243 1.697-1.642.416-1.952-.671-.154-.456-1.159.221-1.028a2.05 2.05 0 0 1 1.575 2.432zm6.847.327c-.014.193-.042.235-.248.248-2.898.373-8.04-4.692-8.064-7.689a1.9 1.9 0 0 1 .064-.574c.396-.082.762-.057 1.246.052 1.174.278 2.747 1.147 4.26 2.661 1.826 1.826 2.933 3.978 2.742 5.304z"/><path d="M18.865 15.288a1.02 1.02 0 0 0-.852-.457c-.343 0-.661.17-.851.457-1.059 1.591-1.597 2.735-1.597 3.399 0 1.35 1.098 2.449 2.448 2.449s2.449-1.099 2.449-2.449c0-.664-.537-1.808-1.597-3.399"/></svg></button>
+				<button id="shapes"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 2 24 24"><path d="M18.359 8.8c.024.264.041.53.041.8 0 4.852-3.948 8.8-8.8 8.8q-.404-.002-.8-.041V21.6h12.8V8.8zM7.2 7.2h9.181A7.194 7.194 0 0 0 2.4 9.6a7.19 7.19 0 0 0 4.8 6.781z"/><path d="M8.8 16.752q.395.045.8.047A7.2 7.2 0 0 0 16.753 8.8H8.8z"/></svg></button>
+        <button id="select"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M6.75 22.5c0-.41-.34-.75-.75-.75H5c-1.24 0-2.25-1.01-2.25-2.25v-1c0-.41-.34-.75-.75-.75s-.75.34-.75.75v1c0 2.07 1.68 3.75 3.75 3.75h1c.41 0 .75-.34.75-.75m16-16V5c0-2.07-1.68-3.75-3.75-3.75h-1c-.41 0-.75.34-.75.75s.34.75.75.75h1c1.24 0 2.25 1.01 2.25 2.25v1c0 .41.34.75.75.75s.75-.34.75-.75m-20 0V5c0-1.24 1.01-2.25 2.25-2.25h1c.41 0 .75-.34.75-.75s-.34-.75-.75-.75H5C2.93 1.25 1.25 2.93 1.25 5v1c0 .41.34.75.75.75s.75-.34.75-.75m20 13v-1c0-.41-.34-.75-.75-.75s-.75.34-.75.75v1c0 1.24-1.01 2.25-2.25 2.25h-1c-.41 0-.75.34-.75.75s.34.75.75.75h1c2.07 0 3.75-1.68 3.75-3.75m0-5v-4c0-.41-.34-.75-.75-.75s-.75.34-.75.75v4c0 .41.34.75.75.75s.75-.34.75-.75m-20 0v-4c0-.41-.34-.75-.75-.75s-.75.34-.75.75v4c0 .41.34.75.75.75s.75-.34.75-.75m12 8c0-.41-.34-.75-.75-.75h-4c-.41 0-.75.34-.75.75s.34.75.75.75h4c.41 0 .75-.34.75-.75m0-20c0-.41-.34-.75-.75-.75h-4c-.41 0-.75.34-.75.75s.34.75.75.75h4c.41 0 .75-.34.75-.75" /></svg></button>
+        <button id="dropper"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="m20.079 6.859-4.711 4.705.559.559a.68.68 0 0 1 0 .962.69.69 0 0 1-.968 0L8.734 6.859a.687.687 0 0 1 0-.968.68.68 0 0 1 .962 0l.559.559 4.704-4.711A3.62 3.62 0 0 1 17.521.674a3.62 3.62 0 0 1 2.563 1.06 3.62 3.62 0 0 1 1.061 2.563 3.62 3.62 0 0 1-1.065 2.562zm-7.752 6.096H5.673l2.986-2.986a.68.68 0 0 0-.961-.961l-5.189 5.187a3.62 3.62 0 0 0-.954 3.417 8 8 0 0 1-.348.886c-.43.982-.798 1.827-.259 2.373a.95.95 0 0 0 .689.266 4.8 4.8 0 0 0 1.677-.525 9 9 0 0 1 .893-.348 3.6 3.6 0 0 0 3.416-.955l5.189-5.188a.68.68 0 0 0 .15-.743.69.69 0 0 0-.634-.423z" /></svg></button>
+        <button id="mirror"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M12.75 2v2c0 .41-.34.75-.75.75s-.75-.34-.75-.75V2c0-.41.34-.75.75-.75s.75.34.75.75M12 12.85c-.41 0-.75.34-.75.75v3.2c0 .41.34.75.75.75s.75-.34.75-.75v-3.2c0-.41-.34-.75-.75-.75m0-6.4c-.41 0-.75.34-.75.75v3.2c0 .41.34.75.75.75s.75-.34.75-.75V7.2c0-.41-.34-.75-.75-.75m0 12.8c-.41 0-.75.34-.75.75v2c0 .41.34.75.75.75s.75-.34.75-.75v-2c0-.41-.34-.75-.75-.75M22.32 6.32a.78.78 0 0 0-.8.1l-6 5a.76.76 0 0 0 0 1.16l6 5c.14.11.31.17.48.17.11 0 .22-.02.32-.07.26-.12.43-.39.43-.68V7c0-.29-.17-.56-.43-.68m-19.84.1a.73.73 0 0 0-.8-.1c-.26.12-.43.39-.43.68v10c0 .29.17.56.43.68.1.05.21.07.32.07.17 0 .34-.06.48-.17l6-5a.76.76 0 0 0 0-1.16z" /></svg></button>
+        <button id="clipboard"><svg xmlns="http://www.w3.org/2000/svg" data-name="Layer 1" fill="currentColor" viewBox="0 0 24 24"><path d="m17.597 18.418-.528 2.08-16.02-16.02.527-2.08L3.205.77l2.08-.528 16.02 16.02-2.08.528zm1.886 2.689.341-1.341.749-.749 1.341-.341a1 1 0 0 0 .101-.031l.911 2.823a.518.518 0 0 1-.652.652l-2.819-.911q.016-.05.029-.103M17.167 9.533l-1.415-1.412 2.537-2.537a1.66 1.66 0 0 0 .37-1.858 1.66 1.66 0 0 0-1.572-1.049h-6.779L8.309.679h8.778a3.65 3.65 0 0 1 3.42 2.284 3.64 3.64 0 0 1-.802 4.032Zm-8.238 5.414 1.412 1.412-2.494 2.494a1.703 1.703 0 0 0 1.202 2.907h9.086a2 2 0 0 0 .137.35 2.02 2.02 0 0 0 1.169 1.002l2.005.646H8.161a3.7 3.7 0 0 1-2.614-6.317Z" /></svg></button>
+			</aside>
+			<article><canvas id="art"></canvas></article>
+		</main>
+		<footer>
+      <section>
+        <button id="font">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 30"><path d="M20.25 5.25H21V6h-.75zm-12 0H9V6h-.75zm-1.5 3h.751V9H6.75zm1.5-1.5H9v.751h-.75zm12 0H21v.751h-.75zm-15 1.5H6V9h-.75zm1.5 4.125h.751v.75H6.75zm-1.5 0H6v.75h-.75zM6.75 21h.751v.75H6.75zm-1.5 0H6v.75h-.75zm1.5 1.5h.751v.75H6.75zm1.5 0H9v.75h-.75zM6 22.5v.75H4.875a.374.374 0 0 0 .375-.375V22.5ZM8.25 21H9v.75h-.75zm1.5 1.5h.751v.75H9.75zm0-1.5h.751v.75H9.75z" /><path d="M22.5 4.5h-.75V2.625H21V4.5h-1.5V2.625h-.75V4.5h-1.5V2.625h-.75V4.5H15V2.625h-.75V4.5h-1.5V2.625H12V4.5h-1.5V2.625h-.75V4.5H8.249V2.625h-.75V4.5h-1.5V2.625h-.75V4.5h-.375a.374.374 0 0 0-.375.375v.375H2.625V6H4.5v1.5H2.625v.75H4.5v1.5H2.625v.75H4.5V12H2.625v.75H4.5v1.5H2.625V15H4.5v1.5H2.625v.75H4.5v1.5H2.625v.75H4.5V21H2.625v.75H4.5v.75h-3v-21h21Z" /><path d="M21 8.625v4.125a.374.374 0 0 1-.375.375h-1.5a.374.374 0 0 1-.375-.375 1.126 1.126 0 0 0-1.125-1.125H16.5v8.25A1.126 1.126 0 0 0 17.625 21a.374.374 0 0 1 .375.375v1.5a.374.374 0 0 1-.375.375h-5.999a.374.374 0 0 1-.375-.375v-1.5a.374.374 0 0 1 .375-.375 1.126 1.126 0 0 0 1.125-1.125v-8.25h-1.125a1.126 1.126 0 0 0-1.125 1.125.374.374 0 0 1-.375.375H8.624a.374.374 0 0 1-.375-.375V8.625a.374.374 0 0 1 .375-.375h12a.374.374 0 0 1 .375.375" /></svg>
+          <strong>TOPAZ_437 (16x8)</strong>
+        </button>
+        <button id="spacing">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-2 0 24 24"><path d="M9.773 5.455v10.909a.682.682 0 1 1-1.364 0v-4.773H4.373l1.564 1.564h-.001a.681.681 0 0 1-.963.963l-2.727-2.727a.68.68 0 0 1 0-.963l2.727-2.727a.68.68 0 0 1 .947.016.68.68 0 0 1 .016.947l-1.563 1.564h4.036V5.455a.682.682 0 1 1 1.364 0m9.8 4.973-2.727-2.727h-.001a.68.68 0 0 0-.947.016.68.68 0 0 0-.016.947l1.564 1.564h-4.037V5.455a.682.682 0 1 0-1.364 0v10.909a.682.682 0 1 0 1.364 0v-4.773h4.036l-1.564 1.564h.001a.681.681 0 0 0 .963.963l2.727-2.727a.68.68 0 0 0 0-.963z"/></svg>
+          letter spacing</button>
+        <button id="ice">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-1 0 24 27"><path d="M15.75 3.375h-7.5a.376.376 0 0 0-.375.375v7.5c0 .206.169.375.375.375.619 0 1.125.506 1.125 1.125v.75c0 .206.169.375.375.375s.375-.169.375-.375v-.75c0-.619.506-1.125 1.125-1.125h2.25c.206 0 .375.169.375.375 0 .101.038.191.109.259a.35.35 0 0 0 .266.116h.375c.413 0 .75.338.75.75v.709c0 .214.154.398.341.416a.36.36 0 0 0 .292-.109.35.35 0 0 0 .116-.266v-.75c0-.413.338-.75.75-.75h1.084c.214 0 .398-.154.416-.341a.36.36 0 0 0-.109-.292.36.36 0 0 0-.265-.117h-.75a1.13 1.13 0 0 1-1.125-1.125V3.75a.376.376 0 0 0-.375-.375m-2.625 1.5H9.75a.376.376 0 0 0-.375.375v3h-.75v-3c0-.619.506-1.125 1.125-1.125h3.375z"/><path d="M3.375 12.75v7.5c0 .206.169.375.375.375h7.5a.376.376 0 0 0 .375-.375v-7.875h-.375a.376.376 0 0 0-.375.375v.75c0 .619-.506 1.125-1.125 1.125s-1.125-.506-1.125-1.125v-.75a.376.376 0 0 0-.375-.375h-4.5a.376.376 0 0 0-.375.375m.75 1.5c0-.619.506-1.125 1.125-1.125H7.5v.75H5.25a.376.376 0 0 0-.375.375v2.25h-.75zm16.5 6v-7.5a.376.376 0 0 0-.375-.375h-1.193c-.158.439-.596.75-1.099.75h-1.083v.75c0 .304-.12.589-.334.799a1.12 1.12 0 0 1-.791.326c-.034 0-.064 0-.098-.004-.578-.049-1.028-.559-1.028-1.163v-.708h-.375c-.304 0-.589-.12-.799-.334a1.1 1.1 0 0 1-.262-.416h-.813v7.875c0 .206.169.375.375.375h7.5a.376.376 0 0 0 .375-.375m-.75-1.5c0 .619-.506 1.125-1.125 1.125H16.5v-.75h2.25a.376.376 0 0 0 .375-.375v-2.625h.75z"/></svg>
+          ICE colors</button>
+      </section>
+      <section>
+        <button id="chat">
+            <svg id="jointCloud" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 -2 24 28" width="24" height="30"><path d="M1265.544 576.024v-.48c0-.672-1.2-.96-2.328-.96s-2.328.312-2.328.96v.48c0 .432.168.864.48 1.176l1.2 1.176a.3.3 0 0 1 .096.24v1.536c0 .096.048.168.144.192l.696.216c.12.024.24-.048.24-.192v-1.728c0-.096.048-.168.096-.24l1.224-1.2c.312-.312.48-.744.48-1.176m-2.328-.024c-1.152 0-1.776-.312-1.8-.432.024-.12.648-.432 1.8-.432s1.752.312 1.8.432c-.048.12-.648.432-1.8.432"/><path d="M1264.416 578.472c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24zm1.032.816h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24m0 .792h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24a.24.24 0 0 0-.24-.24M18.72 4.944c-.888 0-1.752.24-2.496.72-.36.216-.816.12-1.032-.24s-.12-.816.24-1.032a6.3 6.3 0 0 1 2.136-.84 5.92 5.92 0 0 0-5.04-2.784c-2.208 0-4.152 1.224-5.184 3.024 1.824.648 3.264 2.088 3.84 4.032.12.408-.096.816-.504.936s-.816-.096-.936-.504c-.6-1.992-2.4-3.312-4.488-3.312-2.592 0-4.68 2.112-4.68 4.68s2.136 4.704 4.704 4.704h5.64v3.048c.336-.096.696-.168 1.08-.168s.744.048 1.08.168v-3.048h5.64c2.592 0 4.68-2.112 4.68-4.68s-2.088-4.704-4.68-4.704M3.312 19.896c-.6 0-1.08.48-1.08 1.08s.48 1.08 1.08 1.08H8.4c-.096-.336-.168-.696-.168-1.08s.048-.744.168-1.08zm17.376 0h-5.064c.096.336.168.696.168 1.08s-.048.744-.168 1.08h5.064c.6 0 1.08-.48 1.08-1.08s-.48-1.08-1.08-1.08m-6.432 1.08A2.256 2.256 0 0 1 12 23.232a2.256 2.256 0 0 1-2.256-2.256 2.256 2.256 0 0 1 4.512 0"/></svg>
+            <svg id="offlineCloud" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 30"><path d="M1265.544 576.024v-.48c0-.672-1.2-.96-2.328-.96s-2.328.312-2.328.96v.48c0 .432.168.864.48 1.176l1.2 1.176a.3.3 0 0 1 .096.24v1.536c0 .096.048.168.144.192l.696.216c.12.024.24-.048.24-.192v-1.728c0-.096.048-.168.096-.24l1.224-1.2c.312-.312.48-.744.48-1.176m-2.328-.024c-1.152 0-1.776-.312-1.8-.432.024-.12.648-.432 1.8-.432s1.752.312 1.8.432c-.048.12-.648.432-1.8.432"/><path d="M1264.416 578.472c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24zm1.032.816h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24m0 .792h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24a.24.24 0 0 0-.24-.24M12 3.192c-3.36 0-6.096 2.616-6.312 5.928A4.292 4.292 0 0 0 .6 13.344a4.28 4.28 0 0 0 3.12 4.128l12.6-12.576A6.3 6.3 0 0 0 12 3.192m6.648 4.848 2.688-2.688c.408-.408.408-1.056 0-1.44-.408-.408-1.056-.408-1.44 0L4.752 19.056c-.408.408-.408 1.056 0 1.44.192.192.456.312.72.312s.528-.096.72-.312l2.832-2.832h9.552A4.824 4.824 0 0 0 23.4 12.84c0-2.616-2.112-4.752-4.752-4.8"/></svg>
+            <svg id="stormCloud" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 -2 24 28"><path d="M1265.544 576.024v-.48c0-.672-1.2-.96-2.328-.96s-2.328.312-2.328.96v.48c0 .432.168.864.48 1.176l1.2 1.176a.3.3 0 0 1 .096.24v1.536c0 .096.048.168.144.192l.696.216c.12.024.24-.048.24-.192v-1.728c0-.096.048-.168.096-.24l1.224-1.2c.312-.312.48-.744.48-1.176m-2.328-.024c-1.152 0-1.776-.312-1.8-.432.024-.12.648-.432 1.8-.432s1.752.312 1.8.432c-.048.12-.648.432-1.8.432"/><path d="M1264.416 578.472c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24zm1.032.816h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24m0 .792h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24a.24.24 0 0 0-.24-.24M18.72 5.496c-.888 0-1.752.24-2.496.72-.336.216-.792.12-1.032-.24-.216-.336-.12-.792.24-1.032.6-.36 1.224-.624 1.896-.792-.96-1.944-3-3.312-5.328-3.312S7.656 2.184 6.672 4.152c2.136.48 3.864 2.04 4.536 4.224a.75.75 0 0 1-.504.936.75.75 0 0 1-.936-.504c-.6-1.992-2.4-3.312-4.488-3.312-2.592 0-4.68 2.112-4.68 4.68s2.112 4.704 4.68 4.704h13.44c2.592 0 4.68-2.112 4.68-4.68s-2.112-4.704-4.68-4.704M7.728 18.408H5.904l1.104-2.064c.096-.192-.048-.432-.264-.432h-2.28c-.12 0-.24.072-.288.192L2.688 19.8a.305.305 0 0 0 .288.408h1.056l-.912 2.736c-.096.288.264.528.504.312l4.32-4.344c.168-.192.048-.504-.216-.504m6.36 0h-1.824l1.104-2.064c.096-.192-.048-.432-.264-.432H10.8c-.12 0-.24.072-.288.192L9.024 19.8a.305.305 0 0 0 .288.408h1.056l-.888 2.76c-.096.288.264.528.504.312l4.32-4.344c.168-.216.048-.528-.216-.528m6.36 0h-1.824l1.104-2.064c.096-.192-.048-.432-.264-.432h-2.28c-.12 0-.24.072-.288.192L15.408 19.8a.305.305 0 0 0 .288.408h1.056l-.912 2.736c-.096.288.264.528.504.312l4.32-4.344c.168-.192.048-.504-.216-.504"/></svg>
+            <svg id="theCloud" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 -2 24 28"><path d="M1265.544 576.024v-.48c0-.672-1.2-.96-2.328-.96s-2.328.312-2.328.96v.48c0 .432.168.864.48 1.176l1.2 1.176a.3.3 0 0 1 .096.24v1.536c0 .096.048.168.144.192l.696.216c.12.024.24-.048.24-.192v-1.728c0-.096.048-.168.096-.24l1.224-1.2c.312-.312.48-.744.48-1.176m-2.328-.024c-1.152 0-1.776-.312-1.8-.432.024-.12.648-.432 1.8-.432s1.752.312 1.8.432c-.048.12-.648.432-1.8.432"/><path d="M1264.416 578.472c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24zm1.032.816h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24m0 .792h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24a.24.24 0 0 0-.24-.24M18.72 5.496c-.888 0-1.752.24-2.496.72-.336.216-.792.12-1.032-.24-.216-.336-.12-.792.24-1.032.6-.36 1.224-.624 1.896-.792-.96-1.944-3-3.312-5.328-3.312S7.656 2.184 6.672 4.152c2.136.48 3.864 2.04 4.536 4.224a.75.75 0 0 1-.504.936.75.75 0 0 1-.936-.504c-.6-1.992-2.4-3.312-4.488-3.312-2.592 0-4.68 2.112-4.68 4.68s2.112 4.704 4.68 4.704h13.44c2.592 0 4.68-2.112 4.68-4.68s-2.112-4.704-4.68-4.704"/></svg>
+            <svg id="snowCloud" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 -2 24 28"><path d="M1265.544 576.024v-.48c0-.672-1.2-.96-2.328-.96s-2.328.312-2.328.96v.48c0 .432.168.864.48 1.176l1.2 1.176a.3.3 0 0 1 .096.24v1.536c0 .096.048.168.144.192l.696.216c.12.024.24-.048.24-.192v-1.728c0-.096.048-.168.096-.24l1.224-1.2c.312-.312.48-.744.48-1.176m-2.328-.024c-1.152 0-1.776-.312-1.8-.432.024-.12.648-.432 1.8-.432s1.752.312 1.8.432c-.048.12-.648.432-1.8.432"/><path d="M1264.416 578.472c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24zm1.032.816h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24m0 .792h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24a.24.24 0 0 0-.24-.24M18.72 5.496c-.888 0-1.752.24-2.496.72-.336.216-.792.12-1.032-.24-.216-.336-.12-.792.24-1.032.6-.36 1.224-.624 1.896-.792-.96-1.944-3-3.312-5.328-3.312S7.656 2.184 6.672 4.152c2.136.48 3.864 2.04 4.536 4.224a.75.75 0 0 1-.504.936.75.75 0 0 1-.936-.504c-.6-1.992-2.4-3.312-4.488-3.312-2.592 0-4.68 2.112-4.68 4.68s2.112 4.704 4.68 4.704h13.44c2.592 0 4.68-2.112 4.68-4.68s-2.112-4.704-4.68-4.704m-10.872 13.2a.585.585 0 0 0-.768-.216l-1.032.6v-1.176c0-.312-.264-.576-.576-.576s-.576.264-.576.576v1.176l-1.032-.6a.54.54 0 0 0-.768.216.54.54 0 0 0 .216.768l1.032.6-1.032.6a.585.585 0 0 0-.216.768c.096.192.288.288.504.288q.144 0 .288-.072l1.032-.6v1.176c0 .312.264.576.576.576s.576-.264.576-.576v-1.176l1.032.6q.144.072.288.072a.59.59 0 0 0 .504-.288.54.54 0 0 0-.216-.768l-1.032-.6 1.032-.6c.24-.144.336-.48.168-.768m6.528 0a.585.585 0 0 0-.768-.216l-1.032.6v-1.176c0-.312-.264-.576-.576-.576s-.576.264-.576.576v1.176l-1.032-.6a.54.54 0 0 0-.768.216.54.54 0 0 0 .216.768l1.032.6-1.032.6a.585.585 0 0 0-.216.768c.096.192.288.288.504.288q.144 0 .288-.072l1.032-.6v1.176c0 .312.264.576.576.576s.576-.264.576-.576v-1.176l1.032.6q.144.072.288.072a.59.59 0 0 0 .504-.288.54.54 0 0 0-.216-.768l-1.032-.6 1.032-.6c.216-.144.312-.48.168-.768m6.504 0a.585.585 0 0 0-.768-.216l-1.032.6v-1.176c0-.312-.264-.576-.576-.576s-.576.264-.576.576v1.176l-1.032-.6a.54.54 0 0 0-.768.216.54.54 0 0 0 .216.768l1.032.6-1.032.6a.585.585 0 0 0-.216.768c.096.192.288.288.504.288q.144 0 .288-.072l1.032-.6v1.176c0 .312.264.576.576.576s.576-.264.576-.576v-1.176l1.032.6q.144.072.288.072a.59.59 0 0 0 .504-.288.54.54 0 0 0-.216-.768l-1.032-.6 1.032-.6c.24-.144.336-.48.168-.768"/></svg>
+            <svg id="storageCloud" xmlns="http://www.w3.org/2000/svg" viewBox="0 -2 24 28" width="24" height="30"><path d="M1265.544 576.024v-.48c0-.672-1.2-.96-2.328-.96s-2.328.312-2.328.96v.48c0 .432.168.864.48 1.176l1.2 1.176a.3.3 0 0 1 .096.24v1.536c0 .096.048.168.144.192l.696.216c.12.024.24-.048.24-.192v-1.728c0-.096.048-.168.096-.24l1.224-1.2c.312-.312.48-.744.48-1.176m-2.328-.024c-1.152 0-1.776-.312-1.8-.432.024-.12.648-.432 1.8-.432s1.752.312 1.8.432c-.048.12-.648.432-1.8.432"/><path d="M1264.416 578.472c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24zm1.032.816h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24s-.096-.24-.24-.24m0 .792h-1.032c-.144 0-.24.096-.24.24s.096.24.24.24h1.032c.144 0 .24-.096.24-.24a.24.24 0 0 0-.24-.24M18.648 5.304a4.9 4.9 0 0 0-2.52.72c-.288.192-.696.096-.888-.192s-.096-.696.192-.888c.6-.384 1.248-.624 1.92-.792-.96-1.968-3-3.336-5.352-3.336s-4.392 1.368-5.376 3.36a5.98 5.98 0 0 1 4.488 4.128c.096.336-.096.696-.432.792S9.984 9 9.864 8.664c-.624-2.016-2.424-3.36-4.536-3.36C2.736 5.304.6 7.44.6 10.056s2.136 4.752 4.752 4.752H6V14.4c0-2.136 3.24-2.88 6-2.88 2.784 0 6 .744 6 2.88v.408h.648c2.616 0 4.752-2.136 4.752-4.752s-2.136-4.752-4.752-4.752M7.272 19.896v1.68c0 .888 2.112 1.584 4.728 1.584s4.728-.72 4.728-1.584v-1.68c-1.2.696-3.048.96-4.728.96s-3.528-.264-4.728-.96m0-3.6v1.68c0 .888 2.112 1.584 4.728 1.584s4.728-.72 4.728-1.584v-1.68c-1.2.696-3.048.96-4.728.96s-3.528-.264-4.728-.96"/><path d="M16.728 14.4A4.728 1.584 0 0 1 12 15.984 4.728 1.584 0 0 1 7.272 14.4a4.728 1.584 0 0 1 9.456 0"/></svg>
+          </button>
+        <article><input type="text" id="title" /></article>
+        <button id="resolution">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="-1.092 -2.184 24 29.46"><path d="M21.036 1.26a.36.36 0 0 0 0-.48.36.36 0 0 0-.48 0l-2.628 2.628H1.02a.36.36 0 0 0-.336.336v2.04c0 .192.156.336.336.336h14.172l-9.06 9.06V6.816H3.408v11.112L.78 20.556a.36.36 0 0 0 0 .48.36.36 0 0 0 .48 0l2.628-2.628H15v-2.724H6.624l9.06-9.06v14.172c0 .192.156.336.336.336h2.04a.36.36 0 0 0 .336-.336V3.888z"/><path d="M6.132 1.02a.36.36 0 0 0-.336-.336h-2.04a.36.36 0 0 0-.336.336v1.704h2.724zm14.664 14.664h-1.704v2.724h1.704a.36.36 0 0 0 .336-.336v-2.04a.36.36 0 0 0-.336-.336"/></svg>
+          80 cols x 25 rows
+        </button>
+        <article id="cursor">1,1</article>
+      </section>
+		</footer>
+		<script type="module" src="app.min.js?x=build"></script>
+	</body>
+</html>

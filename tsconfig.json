@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "baseUrl": "src",
+    "allowJs": true,
+    "lib": [
+      "esnext",
+      "dom"
+    ],
+    "types": [
+      "bun-types"
+    ]
+  },
+  "include": [
+    "CICaDa.ts",
+    "src",
+    "server"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
+  ]
+}

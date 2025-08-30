@@ -1,0 +1,43 @@
+{
+  "name": "moebius-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "make": "bun CICaDa.js",
+    "style": "bun CICaDa.js style",
+    "script": "bun CICaDa.js script",
+    "uncache": "bun CICaDa.js uncache",
+    "release": "bun CICaDa.js release",
+    "dbinit": "bun server/db-init.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "check": "vitest run",
+    "check:watch": "vitest",
+    "check:ui": "vitest --ui",
+    "check:e2e": "playwright test",
+    "check:e2e:headed": "playwright test --headed",
+    "check:e2e:debug": "playwright test --debug"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.33.0",
+    "@tailwindcss/postcss": "^4.1.12",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.7.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/bun": "^1.2.20",
+    "@vitest/coverage-v8": "3.2.4",
+    "cssnano": "^7.1.0",
+    "cssnano-preset-advanced": "^7.0.8",
+    "esbuild": "^0.25.9",
+    "eslint": "^9.33.0",
+    "jsdom": "^26.1.0",
+    "playwright": "^1.54.2",
+    "postcss": "^8.5.6",
+    "postcss-cli": "^11.0.1",
+    "tailwindcss": "^4.1.12",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.40.0",
+    "vitest": "^3.2.4"
+  }
+}
