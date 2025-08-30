@@ -35,7 +35,6 @@ export interface RoomSettings {
   // Extend for future per-room options
   maxUsers?: number;
   isPublic?: boolean;
-  // Add more as needed
 }
 
 export interface CanvasState {
@@ -70,6 +69,39 @@ export interface RoomState {
   settings: RoomSettings;
   updatedAt: string;              // ISO8601
 }
+export interface UndoRedoState {
+  undoStack: CanvasState[];
+  redoStack: CanvasState[];
+}
+
+export interface ToolState {
+  current: string; // e.g. 'brush', 'select', etc.
+  options: Record<string, any>; // tool-specific config
+}
+
+export interface SelectionState {
+  start: { x: number, y: number };
+  end: { x: number, y: number };
+  active: boolean;
+}
+
+export interface ClipboardState {
+  data: Uint8Array; // or a structure matching a region of CanvasState
+  width: number;
+  height: number;
+}
+
+export interface GlobalState {
+  network: NetworkState;
+  rooms: RoomSummary[];
+  currentRoom: RoomState | null;
+  user: UserState;
+  error?: string;
+  undoRedo: UndoRedoState;
+  tool: ToolState;
+  selection: SelectionState | null;
+  clipboard: ClipboardState | null;
+}
 
 export interface GlobalState {
   network: NetworkState;
@@ -95,5 +127,17 @@ export function createState(): GlobalState {
       roomId: null,
     },
     error: undefined,
+
+    // New fields:
+    undoRedo: {
+      undoStack: [],
+      redoStack: [],
+    },
+    tool: {
+      current: 'brush',
+      options: {},
+    },
+    selection: null,
+    clipboard: null,
   };
 }
