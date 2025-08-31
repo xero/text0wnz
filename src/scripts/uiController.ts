@@ -2,13 +2,19 @@
 // dialog logic, delegations to toolManager
 import type {GlobalState} from './state';
 import type {PubSub} from './eventBus';
+import type {FontType} from './fontManager';
+import {initCanvasRenderer} from './canvasRenderer';
+import {setFont, FontRenderer} from './fontManager';
+import {createDefaultPalette, Palette} from './paletteManager';
 
 /* <--//-----------------------------------------------------------[helpers] */
 const
   D = document,
   W = window,
   $ = (i: string)=>{ const e = D.getElementById(i); if (!e) throw new Error(`Element #${i} not found`); return e },
+  /* eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters */
   $$ = <T extends Element = HTMLElement>(q: string): T=>{ const e = D.querySelector(q); if (!e) throw new Error(`Element ${q} was not found`); return e as T; },
+  /* eslint-disable-next-line @typescript-eslint/no-deprecated */
   $$$ = D.querySelectorAll.bind(D),
   add = (t: HTMLElement, f: (ev: MouseEvent | KeyboardEvent) => void, k: number = 0)=>t.addEventListener(k ? 'keydown' : 'click', f as EventListener, false),
   has = (i: HTMLElement, c: string)=>i.classList.contains(c),
@@ -31,6 +37,7 @@ let
   chatJoints:HTMLElement,
   chatNew:HTMLElement,
   jointCancel:HTMLElement,
+  jointsCancel:HTMLElement,
   resCancel:HTMLElement,
   joint:HTMLElement,
   offline:HTMLElement,
@@ -42,6 +49,8 @@ let
   shapes:HTMLElement,
   dropper:HTMLElement,
   font:HTMLElement,
+  switchFont:HTMLElement,
+  fontLabel:HTMLElement,
   collab:HTMLElement,
   grid:HTMLElement,
   mirror:HTMLElement,
@@ -64,7 +73,8 @@ let
   fontPreview:HTMLImageElement,
   curColors:HTMLCanvasElement,
   palettePrev:HTMLCanvasElement,
-  art:HTMLCanvasElement;
+  art:HTMLCanvasElement,
+  palette: Palette;
 
 const getElements = ():void=>{
   html = $$('html');
@@ -77,8 +87,9 @@ const getElements = ():void=>{
   chatRoom = $('chatRoom');
   chatResolution = $('chatResolution');
   chatJoints = $('chatJoints');
-  chatNew= $('chatNew');
+  chatNew = $('chatNew');
   jointCancel = $('jointCancel');
+  jointsCancel = $('jointsCancel');
   resCancel = $('resCancel');
   joint = $('joint');
   offline = $('offline');
@@ -90,6 +101,8 @@ const getElements = ():void=>{
   shapes = $('shapes');
   dropper = $('dropper');
   font = $('font');
+  switchFont = $('switchFont');
+  fontLabel = $$('#font strong');
   collab = $('collab');
   grid = $('grid');
   mirror = $('mirror');
@@ -113,12 +126,27 @@ const getElements = ():void=>{
   curColors = $$<HTMLCanvasElement>('#currentColors');
   palettePrev = $$<HTMLCanvasElement>('#paletteColors');
   art = $$<HTMLCanvasElement>('#art');
+
+/* @TODO: remove linter fix */
+void sm;
+void joint;
+void offline;
+void collab;
+void grid;
+void circles;
+void fliph;
+void flipv;
+void move;
+void charmap;
+void ice;
+void spacing;
+void art;
 }
 
 /* <--//----------------------------------------------------------[internal] */
 
 const initCanvas = (canvas:HTMLCanvasElement, name:string):CanvasRenderingContext2D=>{
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d',{willReadFrequently: true});
   if (!ctx) throw new Error(`Canvas '${name}' not found`);
   // ensure canvas drawing buffer matches its rendered size
   canvas.width = canvas.clientWidth;
@@ -162,27 +190,27 @@ const clouds = [
   $('snowCloud'),
   $('storageCloud'),
 ];
-const cloudHide=():void=>clouds.forEach(i=>cl(i,'hide',true));
-const cloudShow=(cloud:string):void=>{
+const cloudHide = ():void=>clouds.forEach(i=>cl(i,'hide',true));
+const cloudShow = (cloud:string):void=>{
   cloudHide();
   cl($(`${cloud}Cloud`), 'hide', false);
 };
-const navChat=(screen:string)=>{
+const navChat = (screen:string)=>{
   [chatResolution,chatJoints,chatRoom,chatNew].forEach(s=>cl(s,'hide',true));
   cl($(`chat${screen.charAt(0).toUpperCase()}${screen.slice(1).toLowerCase()}`),'hide',false);
-  cl(screen==="resolution" ? resolution : chat, 'selected', true);
+  cl(screen === 'resolution' ? resolution : chat, 'selected', true);
   cl(chatz,'hide',false);
 };
-const toggleChatRes=(w:string):void=>{
+const toggleChatRes = (w:string):void=>{
   const
-    c:boolean=has(chat,'selected'),
-    r:boolean=has(resolution, 'selected');
+    c:boolean = has(chat,'selected'),
+    r:boolean = has(resolution, 'selected');
   [chat, resolution].forEach(s=>cl(s,'selected',false));
   if(
-    (w==='chat' && r)||(w==='resolution' && c)||
-    ((w==='chat'||w==='resolution') && (!r && !c))
+    (w === 'chat' && r) || (w === 'resolution' && c) ||
+    ((w === 'chat' || w === 'resolution') && (!r && !c))
   ){
-    if(w==="chat"){
+    if(w === 'chat'){
       cl(chat,'selected',true);
       navChat('room');
     }else{
@@ -207,106 +235,22 @@ const tools = [
 ];
 const toolOpsHide = ()=>tools.forEach(o=>cl(o,'hide',true));
 
-const toolOps = (tool:string, subtool:boolean=false)=>{
- if(subtool==false) toolOpsHide();
+const toolOps = (tool:string, subtool:boolean = false)=>{
+ if(!subtool) toolOpsHide();
   cl($(`${tool}Opts`), 'hide', false);
 };
 
-//---color palette
-type RGB6Bit = [number, number, number]; // values: 0–63
-type RGBA = Uint8Array; // [r, g, b, a], 0–255
-interface Palette {
-	getRGBAcolor: (index: number) => RGBA;
-	getForegroundcolor: () => number;
-	getBackgroundcolor: () => number;
-	setForegroundcolor: (newForeground: number) => void;
-	setBackgroundcolor: (newBackground: number) => void;
+const updateCurrentColorsPreview = ()=>{
+  const ctx = initCanvas(curColors, 'current colors');
+  const size = Math.min(curColors.width, curColors.height);
+  const swatch = Math.round(size * 0.6);
+  const offset = size - swatch;
+  ctx.clearRect(0, 0, size, size);
+  ctx.fillStyle = `rgba(${palette.getRGBAColor(palette.getBackgroundColor()).join(',')})`;
+  ctx.fillRect(offset, offset, swatch, swatch);
+  ctx.fillStyle = `rgba(${palette.getRGBAColor(palette.getForegroundColor()).join(',')})`;
+  ctx.fillRect(0, 0, swatch, swatch);
 }
-
-const createPalette = (RGB6Bit: RGB6Bit[]): Palette=>{
-  const RGBAcolors: RGBA[] = RGB6Bit.map((rgb: RGB6Bit): RGBA=>{
-    return new Uint8Array([
-      (rgb[0] << 2) | (rgb[0] >> 4),
-      (rgb[1] << 2) | (rgb[1] >> 4),
-      (rgb[2] << 2) | (rgb[2] >> 4),
-      255
-    ]);
-  });
-	let foreground = 7;
-	let background = 0;
-  const
-    getRGBAcolor = (index: number) :RGBA=>RGBAcolors[index],
-    getForegroundcolor = (): number=>foreground,
-    getBackgroundcolor = (): number=>background,
-    setForegroundcolor = (newForeground: number): void=>{
-      foreground = newForeground;
-      document.dispatchEvent(new CustomEvent<number>('onForegroundChange',
-        {detail: foreground}));
-    },
-    setBackgroundcolor = (newBackground: number): void=>{
-      background = newBackground;
-      document.dispatchEvent(new CustomEvent<number>('onBackgroundChange',
-        {detail: background}));
-    };
-	return {
-		getRGBAcolor,
-		getForegroundcolor,
-		getBackgroundcolor,
-		setForegroundcolor,
-		setBackgroundcolor
-	};
-}
-
-function createDefaultPalette(): Palette {
-	'use strict';
-	return createPalette([
-		[0, 0, 0],
-		[0, 0, 42],
-		[0, 42, 0],
-		[0, 42, 42],
-		[42, 0, 0],
-		[42, 0, 42],
-		[42, 21, 0],
-		[42, 42, 42],
-		[21, 21, 21],
-		[21, 21, 63],
-		[21, 63, 21],
-		[21, 63, 63],
-		[63, 21, 21],
-		[63, 21, 63],
-		[63, 63, 21],
-		[63, 63, 63]
-	]);
-}
-
-interface PalettePreview{
-	setForegroundcolor:()=>void;
-	setBackgroundcolor:()=>void;
-}
-
-const createCurrentColors = (canvas: HTMLCanvasElement, paletteObj: Palette): PalettePreview=>{
-  const updatePreview = (): void=>{
-    const
-      size = Math.min(canvas.clientWidth, canvas.clientHeight),
-      swatch = Math.round(size * 0.6),
-      offset = size - swatch,
-      ctx = initCanvas(canvas,'#currentColors');
-    ctx.clearRect(0, 0, size, size);
-    ctx.fillStyle = `rgba(${paletteObj.getRGBAcolor(paletteObj.getBackgroundcolor()).join(',')})`;
-    ctx.fillRect(offset, offset, swatch, swatch);
-    ctx.fillStyle = `rgba(${paletteObj.getRGBAcolor(paletteObj.getForegroundcolor()).join(',')})`;
-    ctx.fillRect(0, 0, swatch, swatch);
-  };
-	updatePreview();
-	document.addEventListener('onForegroundChange', updatePreview);
-	document.addEventListener('onBackgroundChange', updatePreview);
-
-	return {
-		setForegroundcolor: updatePreview,
-		setBackgroundcolor: updatePreview
-	};
-}
-
 interface PalettePicker {
 	updatePalette: () => void;
 }
@@ -322,7 +266,7 @@ const createPalettePicker = (canvas: HTMLCanvasElement, paletteObj: Palette): Pa
     imageData[i] = ctx.createImageData(swatchWidth + 1, swatchHeight);
   }
   const updateColor = (index: number): void=>{
-    const color = paletteObj.getRGBAcolor(index);
+    const color = paletteObj.getRGBAColor(index);
     if (!imageData[index]) return;
     for (let y = 0, i = 0; y < imageData[index].height; y++) {
       for (let x = 0; x < imageData[index].width; x++, i += 4) {
@@ -368,7 +312,7 @@ function setupFKeyCanvases(fontCellHeight: number, maxVisualHeight: number = 45)
 
 //
 /* <--//----------------------------------------------------------[external] */
-export function initUI(state:GlobalState, eventBus:PubSub) {
+export async function initUI(state:GlobalState, eventBus:PubSub) {
   void state;
 
   // listen for state changes (only error changes, for now)
@@ -389,39 +333,24 @@ export function initUI(state:GlobalState, eventBus:PubSub) {
   [resolution,resCancel].forEach(r=>add(r,_=>toggleChatRes('resolution')));
   add($('jointNew'),_=>navChat('new'));
 
-  //--------------- font config
-  fontSelect.addEventListener('change', e=>{
-    const name = (e.target as HTMLSelectElement).value;
-    $('fontMeta').innerText = name;
-    fontPreview.onload = ()=>{
-      fontPreview.style.width  = `${String(fontPreview.naturalWidth * 1.5)}px`;
-      fontPreview.style.height = `${String(fontPreview.naturalHeight * 1.5)}px`;
-      fontPreview.onload = null;
-    };
-    fontPreview.src = `/ui/fontz/${name}.png`;
-  })
-  add(font,_=>modalShow('fonts'));
-  /* @TODO: REMOVEPLACEHOLDER */
-  fontSelect.value = 'TOPAZ_437';
-  fontSelect.dispatchEvent(new Event('change', {bubbles: true}));
-
   //--------------- file config
   [fileOpen,splashOpen].forEach(
     b=>add(b,_=>fileUpload.click())
   );
   fileUpload.addEventListener('change', _=>{
-    alert(`got: ${fileUpload.files}`);
+    alert(`got it`);
   });
   add(fileJoint,_=>navChat('joints'));
   add(open,_=>modalShow('file'));
-  title.value="untitled";
+  title.value = 'untitled';
 
   //--------------- chatz
   cloudShow('offline');
   add(chat,_=>toggleChatRes('chat'));
   add(chatLeave,_=>navChat('joints'));
   /* @TODO: check if in a joint already before defaulting to chat */
-  add(jointCancel,_=>navChat('room'));
+  add(jointCancel,_=>navChat('joints'));
+  add(jointsCancel,_=>navChat('room'));
 
   //--------------- tools
 
@@ -444,20 +373,77 @@ export function initUI(state:GlobalState, eventBus:PubSub) {
   // brushes
   add(characterBrush, _=>toolOps('char',true));
 
+  //--------------- canvas
+  palette = createDefaultPalette();
+  const fontRenderer: FontRenderer = await setFont('TOPAZ_437', 'cp437', palette, false);
+  const canvasRenderer = initCanvasRenderer(state, palette, fontRenderer);
+
   //--------------- colors
-	const palette = createDefaultPalette();
-  const palettePicker = createPalettePicker(palettePrev, palette);
-  const paletteCurrent = createCurrentColors(curColors, palette);
-  add(curColors, ()=>{
-    const tempForeground = palette.getForegroundcolor();
-    palette.setForegroundcolor(palette.getBackgroundcolor());
-    palette.setBackgroundcolor(tempForeground);
+  updateCurrentColorsPreview();
+  curColors.addEventListener('click', ()=>{
+    const fg = palette.getForegroundColor();
+    palette.setForegroundColor(palette.getBackgroundColor());
+    palette.setBackgroundColor(fg);
+    updateCurrentColorsPreview();
   });
+  const palettePicker = createPalettePicker(palettePrev, palette);
   // Listen for palette changes and update picker
   document.addEventListener('onPaletteChange', ()=>{
     palettePicker.updatePalette();
+    canvasRenderer.setPalette(palette);
   });
   document.dispatchEvent(new CustomEvent('onPaletteChange'));
+
+  //--------------- font config
+  fontSelect.addEventListener('change',e=>{
+      const name = (e.target as HTMLSelectElement).value;
+      $('fontMeta').innerText = name;
+      fontPreview.onload = ()=>{
+        fontPreview.style.width  = `${String(fontPreview.naturalWidth * 1.5)}px`;
+        fontPreview.style.height = `${String(fontPreview.naturalHeight * 1.5)}px`;
+        fontPreview.onload = null;
+      };
+      fontPreview.src = `/ui/fontz/${name}.png`;
+    });
+
+    add(switchFont, _=>{
+    void (async()=>{
+      let fontRenderer: FontRenderer | null = null;
+      const fontName = fontSelect.value;
+      try {
+        // Determine font type
+        let fontType: FontType = 'cp437';
+        if (fontName === 'utf8-system') fontType = 'utf8';
+          else if (fontName === 'XBIN') fontType = 'cp437'; // XBIN is still cp437 style
+
+        /*
+    if (fontName === 'XBIN') {
+      // Get XBIN font data from state or wherever you store it
+      const xb = state.currentRoom?.canvas.xbFontData;
+      if (!xb) throw new Error('No XBIN font data loaded');
+      fontRenderer = await loadFontFromXBData(
+        xb.bytes, xb.width, xb.height, false, palette, fontType
+      );
+    } else {
+      fontRenderer = await setFont(fontName, fontType, palette, false);
+    }
+    */
+        fontRenderer = await setFont(fontName, fontType, palette, false);
+
+        canvasRenderer.setFont(fontRenderer);
+        // Update state so UI and serialization knows the current font
+        fontLabel.innerText = fontName;
+        eventBus.publish('ui:state:changed', {state});
+        modalClose();
+        if (!state.currentRoom) return;
+        state.currentRoom.canvas.font = fontName;
+        state.currentRoom.canvas.fontType = fontType;
+      } catch {
+        showError(`Failed to load font: ${fontName}`);
+      }
+    })();
+  });
+  add(font,_=>modalShow('fonts'));
 
   //--------------- modal
   $$$<HTMLButtonElement>('.cancel').forEach(

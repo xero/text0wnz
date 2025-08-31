@@ -1,6 +1,7 @@
 import {createState} from './state';
 import {eventBus} from './eventBus';
 import {initUI} from './uiController';
+
 const state = createState();
 // --- Global Error Handling ---
 window.addEventListener('error', (event)=>{
@@ -58,15 +59,17 @@ eventBus.subscribe('system:error', (err)=>{
 
 // UI initialization
 document.addEventListener('DOMContentLoaded', ()=>{
-  try {
-    initUI(state, eventBus);
-  } catch (e) {
-    eventBus.publish('system:error', {
-      type: 'uncaught',
-      message: e instanceof Error ? e.message : String(e),
-      error: e,
-    });
-  }
+  void (async()=>{
+    try {
+      await initUI(state, eventBus);
+    } catch (e) {
+      eventBus.publish('system:error', {
+        type: 'uncaught',
+        message: e instanceof Error ? e.message : String(e),
+        error: e,
+      });
+    }
+  })();
 });
 /*
 // 2. UI Shell/Menu

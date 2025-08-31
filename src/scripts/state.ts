@@ -1,5 +1,6 @@
 // Collaborative Editor State Definitions
 
+export type FontType = 'cp437' | 'utf8' | 'unicode';
 export type NetworkStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 export interface NetworkState {
@@ -42,12 +43,22 @@ export interface CanvasState {
   name: string;
   width: number;
   height: number;
-  font: string;
-  spacing: number;
+  font: string;          // font file or name (e.g. "CP437 8x16", "TOPAZ_437", "utf8-system")
+  fontType: FontType;    // new: type of font (cp437, utf8, unicode)
+  spacing: number;       // spacing in pixels or 0/1 for ANSI art spacing
   ice: boolean;
-  colors: number[];               // Palette as array of numbers
-  rawdata: Uint8Array;            // Canvas binary data
-  updatedAt: string;              // ISO8601
+  colors: number[];      // Palette as array of numbers
+  rawdata: Uint8Array;   // Canvas binary data (interpretation depends on fontType)
+  updatedAt: string;     // ISO8601
+}
+
+export interface FontState {
+  name: string;          // font name or id
+  type: FontType;
+  size: number;          // e.g. 16
+  bold?: boolean;
+  italic?: boolean;
+  // ...more as needed
 }
 
 export interface ChatMessage {
@@ -76,7 +87,7 @@ export interface UndoRedoState {
 
 export interface ToolState {
   current: string; // e.g. 'brush', 'select', etc.
-  options: Record<string, any>; // tool-specific config
+  options: Record<string, unknown>; // tool-specific config
 }
 
 export interface SelectionState {
@@ -127,8 +138,6 @@ export function createState(): GlobalState {
       roomId: null,
     },
     error: undefined,
-
-    // New fields:
     undoRedo: {
       undoStack: [],
       redoStack: [],

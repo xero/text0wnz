@@ -351,7 +351,10 @@
     }
   }
   #chatz {
-    @apply flex fixed z-40 bg-menu-bg border-8 border-[#666] border-double scale-y-100 opacity-100 w-[32vw] min-w-[320px] max-w-full h-[50vh] min-h-[300px] max-h-full bottom-[4vh] right-0;
+    @apply
+      flex fixed bottom-[6vh] right-0 z-40 bg-menu-bg scale-y-100 opacity-100
+      w-[45vw] min-w-[30vw] max-w-full min-h-[300px] max-h-full /*no height!*/
+      border-8 border-[#666] border-double;
     transform-origin: bottom;
     transition:
       scale 0.7s ease-out,

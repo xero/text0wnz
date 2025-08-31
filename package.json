@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "make": "bun CICaDa.js",
+    "bake": "bun CICaDa.js",
     "style": "bun CICaDa.js style",
     "script": "bun CICaDa.js script",
     "uncache": "bun CICaDa.js uncache",
