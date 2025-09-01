@@ -11,8 +11,11 @@ export class PenTool implements Tool {
 
   private lastPoint: { x: number; y: number } | null = null;
 
-  activate(ctx: ToolContext) {}
+  activate(ctx: ToolContext) {
+    void ctx;
+  }
   deactivate(ctx: ToolContext) {
+    void ctx;
     this.lastPoint = null;
   }
 
@@ -30,10 +33,14 @@ export class PenTool implements Tool {
     }
   }
 
-  onPointerUp(ev: ToolPointerEvent, ctx: ToolContext) {
+  onPointerUp(e: ToolPointerEvent, ctx: ToolContext) {
+    /* @TODO: remove voids */
+    void e; void ctx;
     this.lastPoint = null;
   }
-  onPointerLeave(ev: ToolPointerEvent, ctx: ToolContext) {
+  onPointerLeave(e: ToolPointerEvent, ctx: ToolContext) {
+    /* @TODO: remove voids */
+    void e; void ctx;
     this.lastPoint = null;
   }
 

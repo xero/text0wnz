@@ -3,11 +3,12 @@
 import type {GlobalState} from './state';
 import type {PubSub} from './eventBus';
 import type {FontType} from './fontManager';
+import {createDefaultUserState, createOfflineRoomState} from './state';
 import {initCanvasRenderer} from './canvasRenderer';
 import {setFont, FontRenderer} from './fontManager';
 import {createDefaultPalette, Palette} from './paletteManager';
-import { ToolManager } from './toolManager';
-import { PenTool } from './tools/pen';
+import {ToolManager} from './toolManager';
+import {PenTool} from './tools/pen';
 
 /* <--//-----------------------------------------------------------[helpers] */
 const
@@ -68,6 +69,7 @@ let
   spacing:HTMLElement,
   splashOpen:HTMLElement,
   splashJoint:HTMLElement,
+  splashDraw:HTMLElement,
   fileOpen:HTMLElement,
   fileUpload:HTMLInputElement,
   fileJoint:HTMLElement,
@@ -120,6 +122,7 @@ const getElements = ():void=>{
   spacing = $('spacing');
   splashOpen = $('splashOpen');
   splashJoint = $('splashJoint');
+  splashDraw = $('splashDraw');
   fileOpen = $('fileOpen');
   fileJoint = $('fileJoint');
   fileUpload = $$<HTMLInputElement>('#fileUpload');
@@ -303,7 +306,7 @@ const createPalettePicker = (canvas: HTMLCanvasElement, paletteObj: Palette): Pa
     const x = Math.floor((evt.clientX - rect.left) / swatchWidth);
     const y = Math.floor((evt.clientY - rect.top) / swatchHeight);
     const colorIndex = y * cols + x;
-    if (evt.altKey === false && evt.ctrlKey === false) {
+    if (!evt.altKey && !evt.ctrlKey) {
       paletteObj.setForegroundColor(colorIndex);
     } else {
       paletteObj.setBackgroundColor(colorIndex);
@@ -312,9 +315,9 @@ const createPalettePicker = (canvas: HTMLCanvasElement, paletteObj: Palette): Pa
   }
 
   function keydown(evt: KeyboardEvent) {
-    if (evt.key >= "1" && evt.key <= "8") {
+    if (evt.key >= '1' && evt.key <= '8') {
       const num = parseInt(evt.key, 10);
-      if (evt.ctrlKey === true) {
+      if (evt.ctrlKey) {
         evt.preventDefault();
         if (paletteObj.getForegroundColor() === num) {
           paletteObj.setForegroundColor(num + 8);
@@ -331,33 +334,33 @@ const createPalettePicker = (canvas: HTMLCanvasElement, paletteObj: Palette): Pa
       }
     }
     // Handle arrow keys with Ctrl
-    else if (evt.ctrlKey === true && (
-      evt.key === "ArrowLeft" ||
-        evt.key === "ArrowUp" ||
-        evt.key === "ArrowRight" ||
-        evt.key === "ArrowDown"
+    else if (evt.ctrlKey && (
+      evt.key === 'ArrowLeft' ||
+        evt.key === 'ArrowUp' ||
+        evt.key === 'ArrowRight' ||
+        evt.key === 'ArrowDown'
     )) {
       evt.preventDefault();
       switch (evt.key) {
-        case "ArrowLeft": {
+        case 'ArrowLeft': {
           let color = paletteObj.getBackgroundColor();
           color = (color === 0) ? 15 : (color - 1);
           paletteObj.setBackgroundColor(color);
           break;
         }
-        case "ArrowUp": {
+        case 'ArrowUp': {
           let color = paletteObj.getForegroundColor();
           color = (color === 0) ? 15 : (color - 1);
           paletteObj.setForegroundColor(color);
           break;
         }
-        case "ArrowRight": {
+        case 'ArrowRight': {
           let color = paletteObj.getBackgroundColor();
           color = (color === 15) ? 0 : (color + 1);
           paletteObj.setBackgroundColor(color);
           break;
         }
-        case "ArrowDown": {
+        case 'ArrowDown': {
           let color = paletteObj.getForegroundColor();
           color = (color === 15) ? 0 : (color + 1);
           paletteObj.setForegroundColor(color);
@@ -374,11 +377,11 @@ const createPalettePicker = (canvas: HTMLCanvasElement, paletteObj: Palette): Pa
     imageData[i] = ctx.createImageData(swatchWidth + 1, swatchHeight);
   }
   updatePalette();
-  canvas.addEventListener("touchend", touchEnd);
-  canvas.addEventListener("touchcancel", touchEnd);
-  canvas.addEventListener("mouseup", mouseEnd);
-  canvas.addEventListener("contextmenu", e=>e.preventDefault());
-  document.addEventListener("keydown", keydown);
+  canvas.addEventListener('touchend', touchEnd);
+  canvas.addEventListener('touchcancel', touchEnd);
+  canvas.addEventListener('mouseup', mouseEnd);
+  canvas.addEventListener('contextmenu', e=>e.preventDefault());
+  document.addEventListener('keydown', keydown);
 
   return {
     updatePalette
@@ -407,7 +410,7 @@ function getPointerXY(ev: PointerEvent, font: FontRenderer) {
   const rect = art.getBoundingClientRect();
   const x = Math.floor((ev.clientX - rect.left) / font.width);
   const y = Math.floor((ev.clientY - rect.top) / (font.height / 2));
-  return { x, y };
+  return {x, y};
 }
 
 //
@@ -486,10 +489,10 @@ export async function initUI(state:GlobalState, eventBus:PubSub) {
   const toolManager = new ToolManager(toolContext);
   toolManager.registerTool(new PenTool());
   add($('blockBrush'),_=>toolManager.setActiveTool('pen'));
-  ['pointerdown', 'pointermove', 'pointerup', 'pointerleave'].forEach(type => {
-    art.addEventListener(type, (ev: Event) => {
+  ['pointerdown', 'pointermove', 'pointerup', 'pointerleave'].forEach(type=>{
+    art.addEventListener(type, (ev: Event)=>{
       if (!(ev instanceof PointerEvent)) return;
-      const { x, y } = getPointerXY(ev, fontRenderer);
+      const {x, y} = getPointerXY(ev, fontRenderer);
       const common = {
         x,
         y,
@@ -580,6 +583,14 @@ export async function initUI(state:GlobalState, eventBus:PubSub) {
     c=>add(c,_=>modalClose()));
   add(modal, e=>{if(e.target === modal) modalClose()});
   add(splashJoint,_=>navChat('joints'));
+  add(splashDraw, _ => {
+    state.user = {
+      id: 'offline-user',
+      nickname: 'offline',
+      roomId: 0,
+    };
+    state.currentRoom = createOfflineRoomState(state.user);
+  });
   //--------------- show app landing screen
   modalShow('splash');
 

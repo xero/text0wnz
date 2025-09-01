@@ -3,6 +3,10 @@
 export type FontType = 'cp437' | 'utf8' | 'unicode';
 export type NetworkStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
+function nowISO() {
+  return new Date().toISOString();
+}
+
 export interface NetworkState {
   status: NetworkStatus;
   lastPing: number;               // ms timestamp of last heartbeat
@@ -120,6 +124,56 @@ export interface GlobalState {
   currentRoom: RoomState | null;  // Populated after joining/creating a room
   user: UserState;                // Client's own user info
   error?: string;                 // Last error (network, server, etc.)
+}
+
+// Utility to create a default offline canvas state
+function createOfflineCanvasState(): CanvasState {
+  return {
+    id: 0,
+    name: 'Offline Canvas',
+    width: 80,
+    height: 25,
+    font: 'CP437 8x16',
+    fontType: 'cp437',
+    spacing: 1,
+    ice: false,
+    colors: Array(16).fill(0), // Default palette, customize as needed
+    rawdata: new Uint8Array(80 * 25 * 2), // 2 bytes per cell for text+attr, or adjust for your format
+    updatedAt: nowISO(),
+  };
+}
+
+// Utility to create a default (offline) UserState
+export function createDefaultUserState(): UserState {
+  return {
+    id: 'offline-user',
+    nickname: 'offline',
+    roomId: null,
+  };
+}
+
+// Utility to create an offline room state for the given user
+export function createOfflineRoomState(user: UserState): RoomState {
+  const canvas = createOfflineCanvasState();
+  const userSummary: UserSummary = {
+    id: user.id || 'offline-user',
+    nickname: user.nickname || 'offline',
+    connectedAt: nowISO(),
+    lastSeen: nowISO(),
+  };
+  return {
+    id: 0,
+    name: 'Offline Room',
+    owner: user.nickname || 'offline',
+    users: [userSummary],
+    canvas,
+    chat: [],
+    settings: {
+      maxUsers: 1,
+      isPublic: false,
+    },
+    updatedAt: nowISO(),
+  };
 }
 
 export function createState(): GlobalState {
