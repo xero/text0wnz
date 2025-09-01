@@ -205,12 +205,12 @@ const navChat = (screen:string)=>{
 };
 const toggleChatRes = (w:string):void=>{
   const
-    c:boolean = has(chat,'selected'),
-    r:boolean = has(resolution, 'selected');
+  c:boolean = has(chat,'selected'),
+  r:boolean = has(resolution, 'selected');
   [chat, resolution].forEach(s=>cl(s,'selected',false));
   if(
     (w === 'chat' && r) || (w === 'resolution' && c) ||
-    ((w === 'chat' || w === 'resolution') && (!r && !c))
+      ((w === 'chat' || w === 'resolution') && (!r && !c))
   ){
     if(w === 'chat'){
       cl(chat,'selected',true);
@@ -238,7 +238,7 @@ const tools = [
 const toolOpsHide = ()=>tools.forEach(o=>cl(o,'hide',true));
 
 const toolOps = (tool:string, subtool:boolean = false)=>{
- if(!subtool) toolOpsHide();
+  if(!subtool) toolOpsHide();
   cl($(`${tool}Opts`), 'hide', false);
 };
 
@@ -254,20 +254,18 @@ const updateCurrentColorsPreview = ()=>{
   ctx.fillRect(0, 0, swatch, swatch);
 }
 interface PalettePicker {
-	updatePalette: () => void;
+  updatePalette: () => void;
 }
 
 const createPalettePicker = (canvas: HTMLCanvasElement, paletteObj: Palette): PalettePicker=>{
-  const ctx = initCanvas(canvas, 'paletteColors');
   const
+    ctx = initCanvas(canvas, 'paletteColors'),
     imageData: ImageData[] = [],
     cols = 8, rows = 2,
     swatchWidth = canvas.width / cols,
     swatchHeight = canvas.height / rows;
-  for (let i = 0; i < 16; i++) {
-    imageData[i] = ctx.createImageData(swatchWidth + 1, swatchHeight);
-  }
-  const updateColor = (index: number): void=>{
+
+  function updateColor(index: number): void {
     const color = paletteObj.getRGBAColor(index);
     if (!imageData[index]) return;
     for (let y = 0, i = 0; y < imageData[index].height; y++) {
@@ -276,24 +274,117 @@ const createPalettePicker = (canvas: HTMLCanvasElement, paletteObj: Palette): Pa
       }
     }
     const
-      col = index % cols,
-      row = Math.floor(index / cols);
+    col = index % cols,
+    row = Math.floor(index / cols);
     ctx.putImageData(
       imageData[index],
       col * swatchWidth,
       row * swatchHeight
     );
-  },
-	updatePalette = (): void=>{
-		for (let i = 0; i < 16; i++){
-			updateColor(i);
-		}
-	}
-	updatePalette();
-	return {
-		updatePalette
-	};
+  }
+
+  function updatePalette(): void {
+    for (let i = 0; i < 16; i++){
+      updateColor(i);
+    }
+    updateCurrentColorsPreview();
+  }
+
+  function touchEnd(evt: TouchEvent) {
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor((evt.changedTouches[0].pageX - rect.left) / swatchWidth);
+    const y = Math.floor((evt.changedTouches[0].pageY - rect.top) / swatchHeight);
+    const colorIndex = y * cols + x;
+    paletteObj.setForegroundColor(colorIndex);
+    updateCurrentColorsPreview();
+  }
+  function mouseEnd(evt: MouseEvent) {
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor((evt.clientX - rect.left) / swatchWidth);
+    const y = Math.floor((evt.clientY - rect.top) / swatchHeight);
+    const colorIndex = y * cols + x;
+    if (evt.altKey === false && evt.ctrlKey === false) {
+      paletteObj.setForegroundColor(colorIndex);
+    } else {
+      paletteObj.setBackgroundColor(colorIndex);
+    }
+    updateCurrentColorsPreview();
+  }
+
+  function keydown(evt: KeyboardEvent) {
+    if (evt.key >= "1" && evt.key <= "8") {
+      const num = parseInt(evt.key, 10);
+      if (evt.ctrlKey === true) {
+        evt.preventDefault();
+        if (paletteObj.getForegroundColor() === num) {
+          paletteObj.setForegroundColor(num + 8);
+        } else {
+          paletteObj.setForegroundColor(num);
+        }
+      } else if (evt.altKey) {
+        evt.preventDefault();
+        if (paletteObj.getBackgroundColor() === num) {
+          paletteObj.setBackgroundColor(num + 8);
+        } else {
+          paletteObj.setBackgroundColor(num);
+        }
+      }
+    }
+    // Handle arrow keys with Ctrl
+    else if (evt.ctrlKey === true && (
+      evt.key === "ArrowLeft" ||
+        evt.key === "ArrowUp" ||
+        evt.key === "ArrowRight" ||
+        evt.key === "ArrowDown"
+    )) {
+      evt.preventDefault();
+      switch (evt.key) {
+        case "ArrowLeft": {
+          let color = paletteObj.getBackgroundColor();
+          color = (color === 0) ? 15 : (color - 1);
+          paletteObj.setBackgroundColor(color);
+          break;
+        }
+        case "ArrowUp": {
+          let color = paletteObj.getForegroundColor();
+          color = (color === 0) ? 15 : (color - 1);
+          paletteObj.setForegroundColor(color);
+          break;
+        }
+        case "ArrowRight": {
+          let color = paletteObj.getBackgroundColor();
+          color = (color === 15) ? 0 : (color + 1);
+          paletteObj.setBackgroundColor(color);
+          break;
+        }
+        case "ArrowDown": {
+          let color = paletteObj.getForegroundColor();
+          color = (color === 15) ? 0 : (color + 1);
+          paletteObj.setForegroundColor(color);
+          break;
+        }
+        default:
+          break;
+      }
+    }
+    updateCurrentColorsPreview();
+  }
+
+  for (let i = 0; i < 16; i++) {
+    imageData[i] = ctx.createImageData(swatchWidth + 1, swatchHeight);
+  }
+  updatePalette();
+  canvas.addEventListener("touchend", touchEnd);
+  canvas.addEventListener("touchcancel", touchEnd);
+  canvas.addEventListener("mouseup", mouseEnd);
+  canvas.addEventListener("contextmenu", e=>e.preventDefault());
+  document.addEventListener("keydown", keydown);
+
+  return {
+    updatePalette
+  }
 }
+
 function setupFKeyCanvases(fontCellHeight: number, maxVisualHeight: number = 45): void {
   const fontCellWidth = 8;
   const scale = maxVisualHeight / fontCellHeight;
@@ -435,17 +526,17 @@ export async function initUI(state:GlobalState, eventBus:PubSub) {
 
   //--------------- font config
   fontSelect.addEventListener('change',e=>{
-      const name = (e.target as HTMLSelectElement).value;
-      $('fontMeta').innerText = name;
-      fontPreview.onload = ()=>{
-        fontPreview.style.width  = `${String(fontPreview.naturalWidth * 1.5)}px`;
-        fontPreview.style.height = `${String(fontPreview.naturalHeight * 1.5)}px`;
-        fontPreview.onload = null;
-      };
-      fontPreview.src = `/ui/fontz/${name}.png`;
-    });
+    const name = (e.target as HTMLSelectElement).value;
+    $('fontMeta').innerText = name;
+    fontPreview.onload = ()=>{
+      fontPreview.style.width  = `${String(fontPreview.naturalWidth * 1.5)}px`;
+      fontPreview.style.height = `${String(fontPreview.naturalHeight * 1.5)}px`;
+      fontPreview.onload = null;
+    };
+    fontPreview.src = `/ui/fontz/${name}.png`;
+  });
 
-    add(switchFont, _=>{
+  add(switchFont, _=>{
     void (async()=>{
       let fontRenderer: FontRenderer | null = null;
       const fontName = fontSelect.value;
