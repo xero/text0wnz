@@ -4,7 +4,7 @@ import type {GlobalState} from './state';
 import type {PubSub} from './eventBus';
 import type {FontType} from './fontManager';
 import {createDefaultUserState, createOfflineRoomState} from './state';
-import {initCanvasRenderer} from './canvasRenderer';
+import {initCanvasRenderer, createOfflineCanvasState} from './canvasRenderer';
 import {setFont, FontRenderer} from './fontManager';
 import {createDefaultPalette, Palette} from './paletteManager';
 import {ToolManager} from './toolManager';
@@ -590,6 +590,7 @@ export async function initUI(state:GlobalState, eventBus:PubSub) {
       roomId: 0,
     };
     state.currentRoom = createOfflineRoomState(state.user);
+    createOfflineCanvasState();
   });
   //--------------- show app landing screen
   modalShow('splash');

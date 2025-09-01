@@ -130,16 +130,71 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
   const charY = Math.floor(halfBlockY / 2);
   const isUpper = (halfBlockY % 2 === 0);
   const idx = (charY * c.width + x) * 3;
+  let charCode = c.rawdata[idx];
+  let fg = c.rawdata[idx + 1];
+  let bg = c.rawdata[idx + 2];
+
   if (isUpper) {
-    c.rawdata[idx] = 223; // ▀
-    c.rawdata[idx + 1] = color; // fg
-    // bg unchanged
+    // If already lower drawn, use full block
+    if (charCode === 220) { // already lower
+      charCode = 219; // full block
+      fg = color; // upper = fg
+      // keep bg as lower
+    } else if (charCode === 223) {
+      // already upper, just update fg
+      fg = color;
+    } else if (charCode === 219) {
+      fg = color;
+    } else {
+      charCode = 223; // upper only
+      fg = color;
+      // bg unchanged
+    }
   } else {
-    c.rawdata[idx] = 220; // ▄
-    // fg unchanged
-    c.rawdata[idx + 2] = color; // bg
+    // is lower
+    if (charCode === 223) { // already upper
+      charCode = 219; // full block
+      bg = color; // lower = bg
+      // keep fg as upper
+    } else if (charCode === 220) {
+      // already lower, just update bg
+      bg = color;
+    } else if (charCode === 219) {
+      bg = color;
+    } else {
+      charCode = 220; // lower only
+      bg = color;
+      // fg unchanged
+    }
   }
+
+  c.rawdata[idx] = charCode;
+  c.rawdata[idx + 1] = fg;
+  c.rawdata[idx + 2] = bg;
   redraw();
+}
+
+export function createOfflineCanvasState(): CanvasState {
+  const width = 80, height = 25;
+  const rawdata = new Uint8Array(width * height * 3);
+  for (let i = 0; i < width * height; ++i) {
+    rawdata[i * 3 + 0] = 32; // space
+    rawdata[i * 3 + 1] = 7;  // white fg
+    rawdata[i * 3 + 2] = 0;  // black bg
+  }
+  return {
+    id: 0,
+    name: 'Offline Canvas',
+    width,
+    height,
+    font: 'CP437 8x16',
+    fontType: 'cp437',
+    spacing: 1,
+    ice: false,
+    colors: Array(16).fill(0), // adjust as needed
+    rawdata,
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 // --- Utility for external mutation (e.g., after a draw op)

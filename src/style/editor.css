@@ -336,8 +336,7 @@
   article {
     @apply overflow-auto;
     canvas#art {
-                /* @TODO: REMOVE STATIC SIZE */
-      @apply bg-black w-[640px] h-[2000px];
+      @apply bg-black;
     }
   }
   main {
