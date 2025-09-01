@@ -6,6 +6,8 @@ import type {FontType} from './fontManager';
 import {initCanvasRenderer} from './canvasRenderer';
 import {setFont, FontRenderer} from './fontManager';
 import {createDefaultPalette, Palette} from './paletteManager';
+import { ToolManager } from './toolManager';
+import { PenTool } from './tools/pen';
 
 /* <--//-----------------------------------------------------------[helpers] */
 const
@@ -310,6 +312,13 @@ function setupFKeyCanvases(fontCellHeight: number, maxVisualHeight: number = 45)
   }
 }
 
+function getPointerXY(ev: PointerEvent, font: FontRenderer) {
+  const rect = art.getBoundingClientRect();
+  const x = Math.floor((ev.clientX - rect.left) / font.width);
+  const y = Math.floor((ev.clientY - rect.top) / (font.height / 2));
+  return { x, y };
+}
+
 //
 /* <--//----------------------------------------------------------[external] */
 export async function initUI(state:GlobalState, eventBus:PubSub) {
@@ -352,6 +361,11 @@ export async function initUI(state:GlobalState, eventBus:PubSub) {
   add(jointCancel,_=>navChat('joints'));
   add(jointsCancel,_=>navChat('room'));
 
+  //--------------- canvas
+  palette = createDefaultPalette();
+  const fontRenderer: FontRenderer = await setFont('TOPAZ_437', 'cp437', palette, false);
+  const canvasRenderer = initCanvasRenderer(state, palette, fontRenderer);
+
   //--------------- tools
 
   // keeb
@@ -373,10 +387,35 @@ export async function initUI(state:GlobalState, eventBus:PubSub) {
   // brushes
   add(characterBrush, _=>toolOps('char',true));
 
-  //--------------- canvas
-  palette = createDefaultPalette();
-  const fontRenderer: FontRenderer = await setFont('TOPAZ_437', 'cp437', palette, false);
-  const canvasRenderer = initCanvasRenderer(state, palette, fontRenderer);
+  const toolContext = {
+    state,
+    palette,
+    font: fontRenderer,
+  };
+  const toolManager = new ToolManager(toolContext);
+  toolManager.registerTool(new PenTool());
+  add($('blockBrush'),_=>toolManager.setActiveTool('pen'));
+  ['pointerdown', 'pointermove', 'pointerup', 'pointerleave'].forEach(type => {
+    art.addEventListener(type, (ev: Event) => {
+      if (!(ev instanceof PointerEvent)) return;
+      const { x, y } = getPointerXY(ev, fontRenderer);
+      const common = {
+        x,
+        y,
+        button: ev.button,
+        shiftKey: ev.shiftKey,
+        ctrlKey: ev.ctrlKey,
+        altKey: ev.altKey,
+        metaKey: ev.metaKey,
+      };
+      switch (type) {
+        case 'pointerdown': toolManager.handlePointerDown(common); break;
+        case 'pointermove': toolManager.handlePointerMove(common); break;
+        case 'pointerup': toolManager.handlePointerUp(common); break;
+        case 'pointerleave': toolManager.handlePointerLeave(common); break;
+      }
+    });
+  });
 
   //--------------- colors
   updateCurrentColorsPreview();

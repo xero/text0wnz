@@ -117,6 +117,31 @@ export function redraw() {
   }
 }
 
+/**
+ * Draws an ANSI half block cell at (x, halfBlockY) with color.
+ * - halfBlockY: 0..(height*2-1) (even=upper ▀, odd=lower ▄)
+ * - color: palette index
+ */
+export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
+  if (!state || !state.currentRoom) return;
+  const c = state.currentRoom.canvas;
+  if (x < 0 || x >= c.width) return;
+  if (halfBlockY < 0 || halfBlockY >= c.height * 2) return;
+  const charY = Math.floor(halfBlockY / 2);
+  const isUpper = (halfBlockY % 2 === 0);
+  const idx = (charY * c.width + x) * 3;
+  if (isUpper) {
+    c.rawdata[idx] = 223; // ▀
+    c.rawdata[idx + 1] = color; // fg
+    // bg unchanged
+  } else {
+    c.rawdata[idx] = 220; // ▄
+    // fg unchanged
+    c.rawdata[idx + 2] = color; // bg
+  }
+  redraw();
+}
+
 // --- Utility for external mutation (e.g., after a draw op)
 export function updateCanvasData(newCanvas: CanvasState) {
   if (state && state.currentRoom) {
