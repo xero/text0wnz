@@ -9,6 +9,7 @@ import {setFont, FontRenderer} from './fontManager';
 import {createDefaultPalette, Palette} from './paletteManager';
 import {ToolManager} from './toolManager';
 import {PenTool} from './tools/pen';
+import { ShadeBrushTool } from './tools/shade';
 
 /* <--//-----------------------------------------------------------[helpers] */
 const
@@ -488,7 +489,11 @@ export async function initUI(state:GlobalState, eventBus:PubSub) {
   };
   const toolManager = new ToolManager(toolContext);
   toolManager.registerTool(new PenTool());
+  toolManager.registerTool(new ShadeBrushTool());
   add($('blockBrush'),_=>toolManager.setActiveTool('pen'));
+  add($('shadeBrush'),_=>toolManager.setActiveTool('shade'));
+
+  //tool listeners
   ['pointerdown', 'pointermove', 'pointerup', 'pointerleave'].forEach(type=>{
     art.addEventListener(type, (ev: Event)=>{
       if (!(ev instanceof PointerEvent)) return;

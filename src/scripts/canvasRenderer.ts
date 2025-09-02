@@ -224,6 +224,59 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
   redraw();
 }
 
+//const SHADE_CYCLE = [176, 177, 178, 219]; // light to dark
+export function shadeCell(x: number, y: number, fg: number, bg: number, reduce: boolean) {
+  if (!state || !state.currentRoom) return;
+  const c = state.currentRoom?.canvas;
+  if (!c) return;
+  if (x < 0 || x >= c.width || y < 0 || y >= c.height) return;
+  const idx = (y * c.width + x) * 3;
+  let code = c.rawdata[idx];
+  let currentFg = c.rawdata[idx + 1];
+  //let currentBg = c.rawdata[idx + 2];
+
+  if (reduce) {
+    // lighten (backwards in the cycle, or erase if already lightest)
+    switch (code) {
+      case 176: // lightest shading
+        code = 32; // space
+        break;
+      case 177:
+        code = 176;
+        break;
+      case 178:
+        code = 177;
+        break;
+      case 219:
+        code = (currentFg === fg) ? 178 : 176;
+        break;
+      default:
+        code = 32;
+    }
+  } else {
+    // darken (forwards in the cycle)
+    switch (code) {
+      case 219:
+        code = (currentFg !== fg) ? 176 : 219; // overwrite with new fg if diff color
+        break;
+      case 178:
+        code = 219;
+        break;
+      case 177:
+        code = 178;
+        break;
+      case 176:
+        code = 177;
+        break;
+      default:
+        code = 176;
+    }
+  }
+  c.rawdata[idx] = code;
+  c.rawdata[idx + 1] = fg;
+  c.rawdata[idx + 2] = bg;
+}
+
 export function createOfflineCanvasState(): CanvasState {
   const width = 80, height = 25;
   const rawdata = new Uint8Array(width * height * 3);
