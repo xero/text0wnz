@@ -406,39 +406,25 @@ function setupFKeyCanvases(fontCellHeight: number, maxVisualHeight: number = 45)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 }
-
 function getPointerXY(e: PointerEvent, state: GlobalState, font: FontRenderer, halfBlock = false) {
   const c = state.currentRoom?.canvas;
   if(!c) return;
   const rect = art.getBoundingClientRect();
 
-  // Convert pointer coordinates to logical canvas coordinates
-  // No need to account for devicePixelRatio here since rect is already in CSS pixels
-  const logicalX = (e.clientX - rect.left) * (c.width * font.width) / rect.width;
-  const logicalY = (e.clientY - rect.top) * (c.height * font.height) / rect.height;
+  // Calculate cell width/height in CSS pixels
+  const cellWidth = rect.width / c.width;
+  const cellHeight = rect.height / c.height;
 
-  // Convert to grid coordinates
-  let x = Math.floor(logicalX / font.width);
+  let x = Math.floor((e.clientX - rect.left) / cellWidth);
   let y;
-
   if (halfBlock) {
-    y = Math.min(
-      Math.floor(logicalY / (font.height / 2)),
-      (c.height * 2) - 1
-    );
+    y = Math.floor((e.clientY - rect.top) / (cellHeight / 2));
+    y = Math.max(0, Math.min(y, c.height * 2 - 1));
   } else {
-    y = Math.min(
-      Math.floor(logicalY / font.height),
-      c.height - 1
-    );
+    y = Math.floor((e.clientY - rect.top) / cellHeight);
+    y = Math.max(0, Math.min(y, c.height - 1));
   }
-
-  // Clamp to grid bounds
   x = Math.max(0, Math.min(x, c.width - 1));
-  if (!halfBlock) {
-    y = Math.max(0, y);
-  }
-
   return {x, y};
 }
 

@@ -124,11 +124,11 @@ export async function loadFontFromImage(
         ctx.fillStyle = `rgba(${bgColor.join(',')})`;
         ctx.fillRect(x * (fontWidth + (spacing ? 1 : 0)), y * fontHeight, fontWidth, fontHeight);
 
-        // Paint FG using glyph mask
+        // Tint glyph with fg color
         ctx.save();
-        ctx.globalCompositeOperation = 'source-in';
-        ctx.fillStyle = `rgba(${fgColor.join(',')})`;
+        ctx.globalCompositeOperation = 'source-atop'; // fg color only where glyph alpha exists
         ctx.drawImage(glyphCanvas, x * (fontWidth + (spacing ? 1 : 0)), y * fontHeight, fontWidth, fontHeight);
+        ctx.fillStyle = `rgba(${fgColor.join(',')})`;
         ctx.fillRect(x * (fontWidth + (spacing ? 1 : 0)), y * fontHeight, fontWidth, fontHeight);
         ctx.restore();
       };
