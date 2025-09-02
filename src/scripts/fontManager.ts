@@ -28,21 +28,25 @@ export async function setFont(
   palette: Palette,
   letterSpacing: boolean = false
 ): Promise<FontRenderer> {
+  const match = fontName.match(/(\d+)x(\d+)$/i);
+  // Default to 16x16 if not found (legacy or fallback)
+  const fontWidth = match ? parseInt(match[1], 10) : 16;
+  const fontHeight = match ? parseInt(match[2], 10) : 16;
+
   if (fontType === 'utf8' && fontName === 'system') {
     let spacing = letterSpacing;
     return {
-      width: 16,
-      height: 16,
+      width: fontWidth,
+      height: fontHeight,
       fontType,
       setLetterSpacing(enabled: boolean) { spacing = enabled; },
       getLetterSpacing() { return spacing; },
       draw: (charCode, fg, bg, ctx, x, y)=>{
-        // If your buffer supports > 256 codepoints, use String.fromCodePoint
         const ch = String.fromCharCode(charCode);
-        ctx.font = '16px monospace';
+        ctx.font = `${fontHeight}px monospace`;
         ctx.textBaseline = 'top';
         ctx.fillStyle = `rgba(${palette.getRGBAColor(fg).join(',')})`;
-        ctx.fillText(ch, x * (16 + (spacing ? 1 : 0)), y * 16);
+        ctx.fillText(ch, x * (fontWidth + (spacing ? 1 : 0)), y * fontHeight);
       }
     };
   } else {
@@ -50,70 +54,94 @@ export async function setFont(
   }
 }
 
-type FontGlyphs = ImageData[][][]; // [fg][bg][charCode]
+type FontGlyphs = HTMLCanvasElement[]; // [charCode]
 
-/**
- * Loads a font from a PNG font sheet.
- */
 export async function loadFontFromImage(
   fontName: string,
   letterSpacing: boolean,
   palette: Palette,
   fontType: FontType
 ): Promise<FontRenderer> {
-  return new Promise((resolve, reject)=>{
+  return new Promise((resolve, reject) => {
     const img = new Image();
     img.src = `/ui/fontz/${fontName}.png`;
-    img.onload = ()=>{
-      // Parse the font sheet (16x16 grid)
-      const fontWidth = Math.floor(img.width / 16);
-      const fontHeight = Math.floor(img.height / 16);
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d',{willReadFrequently: true});
-      if(!ctx) throw new Error('Failing loading canvas context!');
-      ctx.drawImage(img, 0, 0);
+    img.onload = () => {
+      const match = fontName.match(/(\d+)x(\d+)$/i);
+      if (!match) throw new Error("Font PNG filename must end with WxH, e.g. 8x16.png");
+      const fontWidth = parseInt(match[1], 10);
+      const fontHeight = parseInt(match[2], 10);
+      if (img.width !== fontWidth * 16 || img.height !== fontHeight * 16) {
+        throw new Error(
+          `Font PNG dimensions (${img.width}x${img.height}) do not match expected grid for ${fontWidth}x${fontHeight} glyphs`
+        );
+      }
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = img.width;
+      tempCanvas.height = img.height;
+      const tempCtx = tempCanvas.getContext("2d", { willReadFrequently: true });
+      if (!tempCtx) throw new Error("Failing loading canvas context!");
+      tempCtx.drawImage(img, 0, 0);
 
-      // Parse bits for each glyph
+      // Only cache 256 monochrome glyphs
       const glyphs: FontGlyphs = [];
-      for (let fg = 0; fg < 16; fg++) {
-        glyphs[fg] = [];
-        for (let bg = 0; bg < 16; bg++) {
-          glyphs[fg][bg] = [];
-          for (let charCode = 0; charCode < 256; charCode++) {
-            // Extract bits for this char
-            const x = (charCode % 16) * fontWidth;
-            const y = Math.floor(charCode / 16) * fontHeight;
-            const imageData = ctx.getImageData(x, y, fontWidth, fontHeight);
-            // Convert monochrome image to colored glyph
-            for (let i = 0; i < imageData.data.length; i += 4) {
-              const isOn = imageData.data[i] > 120; // threshold for "on"
-              const color = palette.getRGBAColor(isOn ? fg : bg);
-              imageData.data.set(color, i);
-            }
-            glyphs[fg][bg][charCode] = imageData;
-          }
-        }
+      for (let charCode = 0; charCode < 256; charCode++) {
+        const sx = (charCode % 16) * fontWidth;
+        const sy = Math.floor(charCode / 16) * fontHeight;
+        const glyphCanvas = document.createElement("canvas");
+        glyphCanvas.width = fontWidth;
+        glyphCanvas.height = fontHeight;
+        const glyphCtx = glyphCanvas.getContext("2d")!;
+        // Get the image data for this char
+        const imageData = tempCtx.getImageData(sx, sy, fontWidth, fontHeight);
+        glyphCtx.putImageData(imageData, 0, 0);
+        glyphs[charCode] = glyphCanvas;
       }
       let spacing = letterSpacing;
+      const draw = (
+        charCode: number,
+        fg: number,
+        bg: number,
+        ctx: CanvasRenderingContext2D,
+        x: number,
+        y: number
+      ): void => {
+        const glyphCanvas = glyphs[charCode];
+        if (!glyphCanvas) return;
+
+        const fgColor = palette.getRGBAColor(fg);
+        const bgColor = palette.getRGBAColor(bg);
+
+        if (!Array.isArray(fgColor) || fgColor.length !== 4) {
+          console.warn("Invalid fg color", { fg, fgColor });
+          return;
+        }
+        if (!Array.isArray(bgColor) || bgColor.length !== 4) {
+          console.warn("Invalid bg color", { bg, bgColor });
+          return;
+        }
+
+        // Fill BG first
+        ctx.fillStyle = `rgba(${bgColor.join(',')})`;
+        ctx.fillRect(x * (fontWidth + (spacing ? 1 : 0)), y * fontHeight, fontWidth, fontHeight);
+
+        // Paint FG using glyph mask
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-in';
+        ctx.fillStyle = `rgba(${fgColor.join(',')})`;
+        ctx.drawImage(glyphCanvas, x * (fontWidth + (spacing ? 1 : 0)), y * fontHeight, fontWidth, fontHeight);
+        ctx.fillRect(x * (fontWidth + (spacing ? 1 : 0)), y * fontHeight, fontWidth, fontHeight);
+        ctx.restore();
+      };
       resolve({
         width: fontWidth,
         height: fontHeight,
         fontType: fontType,
         setLetterSpacing(v) { spacing = v; },
         getLetterSpacing() { return spacing; },
-        draw(charCode, fg, bg, ctx, x, y) {
-          if (
-            !glyphs[fg] ||
-            !glyphs[fg][bg] ||
-            !glyphs[fg][bg][charCode]
-          ) return;
-          ctx.putImageData(glyphs[fg][bg][charCode], x * fontWidth, y * fontHeight);
-        },
+        draw,
       });
     };
-    img.onerror = ()=>reject(new Error('Font image failed to load'));
+    img.onerror = () => reject(new Error("Font image failed to load"));
   });
 }
 

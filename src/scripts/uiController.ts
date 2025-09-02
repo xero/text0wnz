@@ -411,16 +411,16 @@ function getPointerXY(e: PointerEvent, state: GlobalState, font: FontRenderer, h
   const c = state.currentRoom?.canvas;
   if(!c) return;
   const rect = art.getBoundingClientRect();
-  
+
   // Convert pointer coordinates to logical canvas coordinates
   // No need to account for devicePixelRatio here since rect is already in CSS pixels
   const logicalX = (e.clientX - rect.left) * (c.width * font.width) / rect.width;
   const logicalY = (e.clientY - rect.top) * (c.height * font.height) / rect.height;
-  
+
   // Convert to grid coordinates
   let x = Math.floor(logicalX / font.width);
   let y;
-  
+
   if (halfBlock) {
     y = Math.min(
       Math.floor(logicalY / (font.height / 2)),
@@ -432,13 +432,13 @@ function getPointerXY(e: PointerEvent, state: GlobalState, font: FontRenderer, h
       c.height - 1
     );
   }
-  
+
   // Clamp to grid bounds
   x = Math.max(0, Math.min(x, c.width - 1));
   if (!halfBlock) {
     y = Math.max(0, y);
   }
-  
+
   return {x, y};
 }
 

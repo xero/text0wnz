@@ -86,7 +86,6 @@ export function initCanvasRenderer(
   };
 }
 
-
 function resizeCanvasToState() {
   if (!canvas || !state || !font) return;
   const c = state.currentRoom?.canvas;
@@ -95,21 +94,30 @@ function resizeCanvasToState() {
   // Calculate logical canvas size
   const logicalWidth = c.width * font.width;
   const logicalHeight = c.height * font.height;
-  
+
   // Set canvas buffer size (physical pixels for HiDPI)
-  canvas.width = Math.floor(logicalWidth * devicePixelRatio);
-  canvas.height = Math.floor(logicalHeight * devicePixelRatio);
-  
+  canvas.width = Math.round(logicalWidth * devicePixelRatio);
+  canvas.height = Math.round(logicalHeight * devicePixelRatio);
+
   // Set CSS size (logical pixels)
-  canvas.style.width = logicalWidth + "px";
-  canvas.style.height = logicalHeight + "px";
+  canvas.style.width = `${logicalWidth}px`;
+  canvas.style.height = `${logicalHeight}px`;
 
   // Reset and apply scale once
-  if(!ctx) console.log('no ctx');
   if(!ctx) return
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(devicePixelRatio, devicePixelRatio);
-  console.log('ctx updated - canvas buffer:', canvas.width, 'x', canvas.height, 'CSS:', logicalWidth, 'x', logicalHeight, 'DPR:', devicePixelRatio);
+  //debug
+  console.log({
+    cssWidth: canvas.style.width,
+    cssHeight: canvas.style.height,
+    bufferWidth: canvas.width,
+    bufferHeight: canvas.height,
+    expectedCssWidth: `${c.width * font.width}px`,
+    expectedCssHeight: `${c.height * font.height}px`,
+    logicalWidth: c.width * font.width,
+    logicalHeight: c.height * font.height
+  });
 }
 
 export function redraw() {
@@ -117,11 +125,14 @@ export function redraw() {
   const c = state.currentRoom?.canvas;
   if (!c) return;
   if(!canvas) throw new Error('Failing loading canvas context!');
-  
+
   // Clear the entire logical canvas area
   const logicalWidth = c.width * font.width;
   const logicalHeight = c.height * font.height;
   ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+
+  console.log('Grid size:', logicalWidth, logicalHeight);
+console.log('state.currentRoom?.canvas:', state.currentRoom?.canvas);
 
   // rawdata is Uint8Array: [char, fg, bg, char, fg, bg, ...]
   const {width, height, rawdata} = c;
@@ -131,6 +142,9 @@ export function redraw() {
       const charCode = rawdata[idx];
       const fg = rawdata[idx + 1];
       const bg = rawdata[idx + 2];
+      if (y === 0 && x < 5) {
+        console.log(`cell[${y},${x}]: char=${charCode} fg=${fg} bg=${bg}`);
+      }
       font.draw(charCode, fg, bg, ctx, x, y);
     }
   }
@@ -243,7 +257,7 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
   c.rawdata[idx] = charCode;
   c.rawdata[idx + 1] = fg;
   c.rawdata[idx + 2] = bg;
-  console.log('drawHalfBlock written', idx, c.rawdata[idx], c.rawdata[idx+1], c.rawdata[idx+2]);
+  console.log('drawHalfBlock written', idx, c.rawdata[idx], c.rawdata[idx + 1], c.rawdata[idx + 2]);
   redraw();
 }
 
