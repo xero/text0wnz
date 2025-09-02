@@ -134,37 +134,87 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
   let fg = c.rawdata[idx + 1];
   let bg = c.rawdata[idx + 2];
 
-  if (isUpper) {
-    // If already lower drawn, use full block
-    if (charCode === 220) { // already lower
-      charCode = 219; // full block
-      fg = color; // upper = fg
-      // keep bg as lower
-    } else if (charCode === 223) {
-      // already upper, just update fg
-      fg = color;
-    } else if (charCode === 219) {
-      fg = color;
+  // These are the classic ANSI block codes:
+  // ▀ = 223 (upper half), ▄ = 220 (lower half), █ = 219 (full block), space = 32
+
+  if (charCode === 0) charCode = 32; // treat NUL as space
+
+  if (charCode === 219) {
+    // Already full block. If the color matches one half, overwrite just that half.
+    // But classic logic: if fg != color, and we're drawing that half, convert to half-block.
+    if (isUpper) {
+      if (fg !== color) {
+        // Remove upper, keep lower
+        charCode = 220; // ▄
+        fg = color;
+        // bg = old lower color
+      }
     } else {
-      charCode = 223; // upper only
+      if (bg !== color) {
+        // Remove lower, keep upper
+        charCode = 223; // ▀
+        fg = fg; // keep
+        bg = color;
+      }
+    }
+  } else if (charCode !== 220 && charCode !== 223) {
+    // Neither half block, nor full. Blank or something else.
+    if (isUpper) {
+      charCode = 223; // ▀
       fg = color;
-      // bg unchanged
+      // bg stays
+    } else {
+      charCode = 220; // ▄
+      fg = color;
+      // bg stays
     }
   } else {
-    // is lower
-    if (charCode === 223) { // already upper
-      charCode = 219; // full block
-      bg = color; // lower = bg
-      // keep fg as upper
-    } else if (charCode === 220) {
-      // already lower, just update bg
-      bg = color;
-    } else if (charCode === 219) {
-      bg = color;
+    // char is either 223 (▀) or 220 (▄)
+    if (isUpper) {
+      if (charCode === 223) {
+        // upper is already drawn
+        if (bg === color) {
+          // If lower matches this color, make full block
+          charCode = 219;
+          fg = color;
+          bg = color;
+        } else {
+          fg = color;
+          // keep bg
+        }
+      } else if (fg === color) {
+        // lower is 220, but upper is now same color, full block
+        charCode = 219;
+        fg = color;
+        bg = color;
+      } else {
+        charCode = 223;
+        fg = color;
+        // keep bg
+      }
     } else {
-      charCode = 220; // lower only
-      bg = color;
-      // fg unchanged
+      // is lower
+      if (charCode === 220) {
+        // lower is already drawn
+        if (bg === color) {
+          // If upper matches this color, make full block
+          charCode = 219;
+          fg = color;
+          bg = color;
+        } else {
+          bg = color;
+          // keep fg
+        }
+      } else if (fg === color) {
+        // upper is 223, but lower is now same color, full block
+        charCode = 219;
+        fg = color;
+        bg = color;
+      } else {
+        charCode = 220;
+        bg = color;
+        // keep fg
+      }
     }
   }
 
