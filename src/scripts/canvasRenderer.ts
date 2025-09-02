@@ -92,17 +92,24 @@ function resizeCanvasToState() {
   const c = state.currentRoom?.canvas;
   if (!c) return;
 
-  canvas.width  = c.width  * font.width  * devicePixelRatio;
-  canvas.height = c.height * font.height * devicePixelRatio;
-  canvas.style.width  = (c.width * font.width) + "px";
-  canvas.style.height = (c.height * font.height) + "px";
+  // Calculate logical canvas size
+  const logicalWidth = c.width * font.width;
+  const logicalHeight = c.height * font.height;
+  
+  // Set canvas buffer size (physical pixels for HiDPI)
+  canvas.width = Math.floor(logicalWidth * devicePixelRatio);
+  canvas.height = Math.floor(logicalHeight * devicePixelRatio);
+  
+  // Set CSS size (logical pixels)
+  canvas.style.width = logicalWidth + "px";
+  canvas.style.height = logicalHeight + "px";
 
-  // Reset and apply scale
+  // Reset and apply scale once
   if(!ctx) console.log('no ctx');
   if(!ctx) return
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(devicePixelRatio, devicePixelRatio);
-  console.log('ctx updated');
+  console.log('ctx updated - canvas buffer:', canvas.width, 'x', canvas.height, 'CSS:', logicalWidth, 'x', logicalHeight, 'DPR:', devicePixelRatio);
 }
 
 export function redraw() {
@@ -110,7 +117,11 @@ export function redraw() {
   const c = state.currentRoom?.canvas;
   if (!c) return;
   if(!canvas) throw new Error('Failing loading canvas context!');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Clear the entire logical canvas area
+  const logicalWidth = c.width * font.width;
+  const logicalHeight = c.height * font.height;
+  ctx.clearRect(0, 0, logicalWidth, logicalHeight);
 
   // rawdata is Uint8Array: [char, fg, bg, char, fg, bg, ...]
   const {width, height, rawdata} = c;
