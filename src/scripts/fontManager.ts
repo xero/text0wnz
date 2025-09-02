@@ -1,5 +1,5 @@
 // font logic
-import type {Palette} from './canvasRenderer'; // Or define your own Palette type
+import type {Palette} from './canvasRenderer';
 
 export type FontType = 'cp437' | 'utf8';
 export interface FontRenderer {
@@ -62,12 +62,12 @@ export async function loadFontFromImage(
   palette: Palette,
   fontType: FontType
 ): Promise<FontRenderer> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve, reject)=>{
     const img = new Image();
     img.src = `/ui/fontz/${fontName}.png`;
-    img.onload = () => {
+    img.onload = ()=>{
       const match = fontName.match(/(\d+)x(\d+)$/i);
-      if (!match) throw new Error("Font PNG filename must end with WxH, e.g. 8x16.png");
+      if (!match) throw new Error('Font PNG filename must end with WxH, e.g. 8x16.png');
       const fontWidth = parseInt(match[1], 10);
       const fontHeight = parseInt(match[2], 10);
       if (img.width !== fontWidth * 16 || img.height !== fontHeight * 16) {
@@ -75,11 +75,11 @@ export async function loadFontFromImage(
           `Font PNG dimensions (${img.width}x${img.height}) do not match expected grid for ${fontWidth}x${fontHeight} glyphs`
         );
       }
-      const tempCanvas = document.createElement("canvas");
+      const tempCanvas = document.createElement('canvas');
       tempCanvas.width = img.width;
       tempCanvas.height = img.height;
-      const tempCtx = tempCanvas.getContext("2d", { willReadFrequently: true });
-      if (!tempCtx) throw new Error("Failing loading canvas context!");
+      const tempCtx = tempCanvas.getContext('2d', {willReadFrequently: true});
+      if (!tempCtx) throw new Error('Failing loading canvas context!');
       tempCtx.drawImage(img, 0, 0);
 
       // Only cache 256 monochrome glyphs
@@ -87,16 +87,23 @@ export async function loadFontFromImage(
       for (let charCode = 0; charCode < 256; charCode++) {
         const sx = (charCode % 16) * fontWidth;
         const sy = Math.floor(charCode / 16) * fontHeight;
-        const glyphCanvas = document.createElement("canvas");
+        const glyphCanvas = document.createElement('canvas');
         glyphCanvas.width = fontWidth;
         glyphCanvas.height = fontHeight;
-        const glyphCtx = glyphCanvas.getContext("2d")!;
+        const glyphCtx = glyphCanvas.getContext('2d')!;
         // Get the image data for this char
         const imageData = tempCtx.getImageData(sx, sy, fontWidth, fontHeight);
         glyphCtx.putImageData(imageData, 0, 0);
         glyphs[charCode] = glyphCanvas;
       }
       let spacing = letterSpacing;
+
+
+      const cellBuffer = document.createElement('canvas');
+      cellBuffer.width = fontWidth;
+      cellBuffer.height = fontHeight;
+      const cellCtx = cellBuffer.getContext('2d')!;
+
       const draw = (
         charCode: number,
         fg: number,
@@ -105,33 +112,43 @@ export async function loadFontFromImage(
         x: number,
         y: number
       ): void => {
+        // Ensure buffer is correct size
+        if (cellBuffer.width !== fontWidth || cellBuffer.height !== fontHeight) {
+          cellBuffer.width = fontWidth;
+          cellBuffer.height = fontHeight;
+        }
+
         const glyphCanvas = glyphs[charCode];
         if (!glyphCanvas) return;
 
         const fgColor = palette.getRGBAColor(fg);
         const bgColor = palette.getRGBAColor(bg);
 
-        if (!Array.isArray(fgColor) || fgColor.length !== 4) {
-          console.warn("Invalid fg color", { fg, fgColor });
-          return;
-        }
-        if (!Array.isArray(bgColor) || bgColor.length !== 4) {
-          console.warn("Invalid bg color", { bg, bgColor });
-          return;
-        }
+        // 1. Fill BG
+        cellCtx.globalCompositeOperation = 'source-over';
+        cellCtx.clearRect(0, 0, fontWidth, fontHeight);
+        cellCtx.fillStyle = `rgba(${bgColor.join(',')})`;
+        cellCtx.fillRect(0, 0, fontWidth, fontHeight);
 
-        // Fill BG first
-        ctx.fillStyle = `rgba(${bgColor.join(',')})`;
-        ctx.fillRect(x * (fontWidth + (spacing ? 1 : 0)), y * fontHeight, fontWidth, fontHeight);
+        // 2. Draw glyph as a mask
+        cellCtx.globalCompositeOperation = 'source-over';
+        cellCtx.drawImage(glyphCanvas, 0, 0, fontWidth, fontHeight);
 
-        // Tint glyph with fg color
-        ctx.save();
-        ctx.globalCompositeOperation = 'source-atop'; // fg color only where glyph alpha exists
-        ctx.drawImage(glyphCanvas, x * (fontWidth + (spacing ? 1 : 0)), y * fontHeight, fontWidth, fontHeight);
-        ctx.fillStyle = `rgba(${fgColor.join(',')})`;
-        ctx.fillRect(x * (fontWidth + (spacing ? 1 : 0)), y * fontHeight, fontWidth, fontHeight);
-        ctx.restore();
+        // 3. Tint with FG
+        cellCtx.globalCompositeOperation = 'source-in';
+        cellCtx.fillStyle = `rgba(${fgColor.join(',')})`;
+        cellCtx.fillRect(0, 0, fontWidth, fontHeight);
+
+        // 4. Reset composite mode
+        cellCtx.globalCompositeOperation = 'source-over';
+
+        // 5. Draw buffer to main canvas
+        const px = x * (fontWidth + (spacing ? 1 : 0));
+        const py = y * fontHeight;
+        ctx.drawImage(cellBuffer, px, py);
       };
+
+
       resolve({
         width: fontWidth,
         height: fontHeight,
@@ -141,13 +158,13 @@ export async function loadFontFromImage(
         draw,
       });
     };
-    img.onerror = () => reject(new Error("Font image failed to load"));
+    img.onerror = ()=>reject(new Error('Font image failed to load'));
   });
 }
 
 /**
  * Loads a font from XBIN font binary data.
- */
+
 export function loadFontFromXBData(
   fontBytes: Uint8Array,
   fontWidth: number,
@@ -201,3 +218,4 @@ export function loadFontFromXBData(
     });
   });
 }
+*/

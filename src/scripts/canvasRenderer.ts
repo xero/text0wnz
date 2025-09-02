@@ -107,17 +107,6 @@ function resizeCanvasToState() {
   if(!ctx) return
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(devicePixelRatio, devicePixelRatio);
-  //debug
-  console.log({
-    cssWidth: canvas.style.width,
-    cssHeight: canvas.style.height,
-    bufferWidth: canvas.width,
-    bufferHeight: canvas.height,
-    expectedCssWidth: `${c.width * font.width}px`,
-    expectedCssHeight: `${c.height * font.height}px`,
-    logicalWidth: c.width * font.width,
-    logicalHeight: c.height * font.height
-  });
 }
 
 export function redraw() {
@@ -131,9 +120,6 @@ export function redraw() {
   const logicalHeight = c.height * font.height;
   ctx.clearRect(0, 0, logicalWidth, logicalHeight);
 
-  console.log('Grid size:', logicalWidth, logicalHeight);
-console.log('state.currentRoom?.canvas:', state.currentRoom?.canvas);
-
   // rawdata is Uint8Array: [char, fg, bg, char, fg, bg, ...]
   const {width, height, rawdata} = c;
   for (let y = 0; y < height; ++y) {
@@ -142,7 +128,7 @@ console.log('state.currentRoom?.canvas:', state.currentRoom?.canvas);
       const charCode = rawdata[idx];
       const fg = rawdata[idx + 1];
       const bg = rawdata[idx + 2];
-      if (y === 0 && x < 5) {
+      if(charCode != 32) {
         console.log(`cell[${y},${x}]: char=${charCode} fg=${fg} bg=${bg}`);
       }
       font.draw(charCode, fg, bg, ctx, x, y);
@@ -311,6 +297,7 @@ export function shadeCell(x: number, y: number, fg: number, bg: number, reduce: 
   c.rawdata[idx] = code;
   c.rawdata[idx + 1] = fg;
   c.rawdata[idx + 2] = bg;
+  console.log('shadeCell written', idx, code, fg, bg);
 }
 
 export function createOfflineCanvasState(): CanvasState {
