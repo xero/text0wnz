@@ -21,10 +21,6 @@ export class GridOverlay {
     this.getRows = getRows;
     this.gridCanvas = document.createElement('canvas');
     this.gridCanvas.id = 'grid-overlay';
-    this.gridCanvas.style.position = 'absolute';
-    this.gridCanvas.style.left = '0';
-    this.gridCanvas.style.top = '0';
-    this.gridCanvas.style.pointerEvents = 'none';
     const ctx = this.gridCanvas.getContext('2d', {willReadFrequently: false});
     if (!ctx) throw new Error('Failed to get 2D context for grid overlay');
     this.ctx = ctx;

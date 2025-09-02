@@ -407,15 +407,27 @@ function setupFKeyCanvases(fontCellHeight: number, maxVisualHeight: number = 45)
   }
 }
 
-function getPointerXY(e: PointerEvent, font: FontRenderer, halfBlock: boolean = false) {
+function getPointerXY(e: PointerEvent, state: GlobalState, font: FontRenderer, halfBlock = false) {
+  const c = state.currentRoom?.canvas;
+  if(!c) return;
   const rect = art.getBoundingClientRect();
-  const x = Math.floor((e.clientX - rect.left) / font.width);
-  let y: number;
+  const scaleX = art.width / rect.width;
+  const scaleY = art.height / rect.height;
+  let x = Math.floor((e.clientX - rect.left) * scaleX / font.width);
+  const yRaw = (e.clientY - rect.top) * scaleY;
+  let y;
   if (halfBlock) {
-    y = Math.floor((e.clientY - rect.top) / (font.height / 2));
+    y = Math.min(
+      Math.floor(yRaw / (font.height / 2)),
+      (c.height * 2) - 1
+    );
   } else {
-    y = Math.floor((e.clientY - rect.top) / font.height);
+    y = Math.min(
+      Math.floor(yRaw / font.height),
+      c.height - 1
+    );
   }
+  x = Math.max(0, Math.min(x, c.width - 1));
   return {x, y};
 }
 
@@ -485,7 +497,7 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
   const fontRenderer: FontRenderer = await setFont(defaultFont, 'cp437', palette, false);
   fontSelect.value = defaultFont;
   fontPreview.src = `/ui/fontz/${defaultFont}.png`;
-  fontPreview.style='width: 192px; height: 384px';
+  fontPreview.style = 'width: 192px; height: 384px';
   const canvasRenderer = initCanvasRenderer(state, palette, fontRenderer);
 
   //--------------- tools
@@ -523,12 +535,10 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
   ['pointerdown', 'pointermove', 'pointerup', 'pointerleave'].forEach(type=>{
     art.addEventListener(type, (e: Event)=>{
       if (!(e instanceof PointerEvent)) return;
-      let x, y;
-      if (toolManager.getActiveTool()?.id === 'pen') {
-        ({x, y} = getPointerXY(e, fontRenderer, true));
-      } else {
-        ({x, y} = getPointerXY(e, fontRenderer));
-      }
+      const halfBlock = toolManager.getActiveTool()?.id === 'pen';
+      const pointer = getPointerXY(e, state, fontRenderer, halfBlock);
+      if (!pointer) return;
+      const {x, y} = pointer;
       const common = {
         x,
         y,

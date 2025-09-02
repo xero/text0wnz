@@ -66,8 +66,8 @@ export async function loadFontFromImage(
     img.src = `/ui/fontz/${fontName}.png`;
     img.onload = ()=>{
       // Parse the font sheet (16x16 grid)
-      const fontWidth = img.width / 16;
-      const fontHeight = img.height / 16;
+      const fontWidth = Math.floor(img.width / 16);
+      const fontHeight = Math.floor(img.height / 16);
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
       canvas.height = img.height;
@@ -108,13 +108,8 @@ export async function loadFontFromImage(
             !glyphs[fg] ||
             !glyphs[fg][bg] ||
             !glyphs[fg][bg][charCode]
-          )
-            return;
-          ctx.putImageData(
-            glyphs[fg][bg][charCode],
-            x * (fontWidth + (spacing ? 1 : 0)),
-            y * fontHeight
-          );
+          ) return;
+          ctx.putImageData(glyphs[fg][bg][charCode], x * fontWidth, y * fontHeight);
         },
       });
     };
@@ -172,13 +167,8 @@ export function loadFontFromXBData(
           !glyphs[fg] ||
           !glyphs[fg][bg] ||
           !glyphs[fg][bg][charCode]
-        )
-          return;
-        ctx.putImageData(
-          glyphs[fg][bg][charCode],
-          x * (fontWidth + (spacing ? 1 : 0)),
-          y * fontHeight
-        );
+        ) return;
+        ctx.putImageData(glyphs[fg][bg][charCode], x * fontWidth, y * fontHeight);
       },
     });
   });

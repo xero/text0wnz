@@ -337,44 +337,25 @@
     }
   }
 
-article#canvasArea {
-  @apply relative w-fit mx-auto;
-  /* Remove overflow-auto if you want them stacked and not scrolling */
-}
-#art,
-#grid-overlay {
-  @apply block;
-}
-#grid-overlay {
-  @apply pointer-events-none z-10 hidden;
-}
-#grid-overlay.enabled {
-  @apply block;
-}
-canvas#art {
-  @apply z-1;
-  box-shadow: 0 4px 32px rgba(0,0,0,0.7);
-}
-.canvas-stack {
-  @apply relative inline-block mx-auto;
-}
 
-
-
-
-  article#canvasArea {
-    canvas#art {
-      @apply bg-black;
-    }
-  }
   main {
     @apply flex flex-row flex-1 w-full m-0 p-0 min-h-0 bg-editor-bg;
-    article {
-      @apply w-full;
-      canvas {
-        @apply mx-auto my-6 relative cursor-crosshair;
-        box-shadow: 0px 4px 32px rgba(0, 0, 0, 0.7);
-      }
+    article#canvasArea {
+      @apply relative w-fit mx-auto;
+      /* Remove overflow-auto if you want them stacked and not scrolling */
+    }
+    #grid-overlay {
+      @apply absolute left-0 top-0 block;
+    }
+    #grid-overlay {
+      @apply pointer-events-none z-10 hidden;
+    }
+    #grid-overlay.enabled {
+      @apply block;
+    }
+    canvas#art {
+      @apply bg-emerald-400 z-1;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.7);
     }
   }
   #chatz {

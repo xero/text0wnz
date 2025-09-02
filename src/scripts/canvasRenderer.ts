@@ -86,15 +86,23 @@ export function initCanvasRenderer(
   };
 }
 
+
 function resizeCanvasToState() {
-  if (!canvas || !state) return;
+  if (!canvas || !state || !font) return;
   const c = state.currentRoom?.canvas;
   if (!c) return;
-  // Set canvas pixel buffer to match font * columns/rows
-  if (font) {
-    canvas.width = c.width * font.width;
-    canvas.height = c.height * font.height;
-  }
+
+  canvas.width  = c.width  * font.width  * devicePixelRatio;
+  canvas.height = c.height * font.height * devicePixelRatio;
+  canvas.style.width  = (c.width * font.width) + "px";
+  canvas.style.height = (c.height * font.height) + "px";
+
+  // Reset and apply scale
+  if(!ctx) console.log('no ctx');
+  if(!ctx) return
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  console.log('ctx updated');
 }
 
 export function redraw() {
@@ -123,13 +131,15 @@ export function redraw() {
  * - color: palette index
  */
 export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
-  if (!state || !state.currentRoom) return;
+ if (!state || !state.currentRoom) return;
   const c = state.currentRoom.canvas;
   if (x < 0 || x >= c.width) return;
   if (halfBlockY < 0 || halfBlockY >= c.height * 2) return;
   const charY = Math.floor(halfBlockY / 2);
-  const isUpper = (halfBlockY % 2 === 0);
+  if (charY < 0 || charY >= c.height) return;
   const idx = (charY * c.width + x) * 3;
+  if (idx < 0 || idx + 2 >= c.rawdata.length) return;
+  const isUpper = (halfBlockY % 2 === 0);
   let charCode = c.rawdata[idx];
   let fg = c.rawdata[idx + 1];
   let bg = c.rawdata[idx + 2];
@@ -222,6 +232,7 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
   c.rawdata[idx] = charCode;
   c.rawdata[idx + 1] = fg;
   c.rawdata[idx + 2] = bg;
+  console.log('drawHalfBlock written', idx, c.rawdata[idx], c.rawdata[idx+1], c.rawdata[idx+2]);
   redraw();
 }
 
