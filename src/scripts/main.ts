@@ -59,17 +59,15 @@ eventBus.subscribe('system:error', (err)=>{
 
 // UI initialization
 document.addEventListener('DOMContentLoaded', ()=>{
-  void (async()=>{
-    try {
-      await initUI(state, eventBus);
-    } catch (e) {
-      eventBus.publish('system:error', {
-        type: 'uncaught',
-        message: e instanceof Error ? e.message : String(e),
-        error: e,
-      });
-    }
-  })();
+  try {
+    initUI(state, eventBus);
+  } catch (e) {
+    eventBus.publish('system:error', {
+      type: 'uncaught',
+      message: e instanceof Error ? e.message : String(e),
+      error: e,
+    });
+  }
 });
 /*
 // 2. UI Shell/Menu

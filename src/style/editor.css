@@ -291,6 +291,9 @@
         svg {
           @apply icon-size;
         }
+        strong {
+          @apply pr-1.5;
+        }
       }
       article {
         @apply px-1 mx-1;
@@ -333,8 +336,33 @@
       }
     }
   }
-  article {
-    @apply overflow-auto;
+
+article#canvasArea {
+  @apply relative w-fit mx-auto;
+  /* Remove overflow-auto if you want them stacked and not scrolling */
+}
+#art,
+#grid-overlay {
+  @apply block;
+}
+#grid-overlay {
+  @apply pointer-events-none z-10 hidden;
+}
+#grid-overlay.enabled {
+  @apply block;
+}
+canvas#art {
+  @apply z-1;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.7);
+}
+.canvas-stack {
+  @apply relative inline-block mx-auto;
+}
+
+
+
+
+  article#canvasArea {
     canvas#art {
       @apply bg-black;
     }

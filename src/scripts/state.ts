@@ -137,7 +137,7 @@ function createOfflineCanvasState(): CanvasState {
     fontType: 'cp437',
     spacing: 1,
     ice: false,
-    colors: Array(16).fill(0), // Default palette, customize as needed
+    colors: new Array<number>(16).fill(0),
     rawdata: new Uint8Array(80 * 25 * 2), // 2 bytes per cell for text+attr, or adjust for your format
     updatedAt: nowISO(),
   };

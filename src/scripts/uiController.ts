@@ -7,6 +7,7 @@ import {createOfflineRoomState} from './state';
 import {initCanvasRenderer, createOfflineCanvasState} from './canvasRenderer';
 import {setFont, FontRenderer} from './fontManager';
 import {createDefaultPalette, Palette} from './paletteManager';
+import {GridOverlay} from './gridOverlay';
 import {ToolManager} from './toolManager';
 import {PenTool} from './tools/pen';
 import {ShadeBrushTool} from './tools/shade';
@@ -138,7 +139,6 @@ void sm;
 void joint;
 void offline;
 void collab;
-void grid;
 void circles;
 void fliph;
 void flipv;
@@ -421,9 +421,7 @@ function getPointerXY(e: PointerEvent, font: FontRenderer, halfBlock: boolean = 
 
 //
 /* <--//----------------------------------------------------------[external] */
-export async function initUI(state:GlobalState, eventBus:PubSub) {
-  void state;
-
+export function initUI(state: GlobalState, eventBus: PubSub) {
   // listen for state changes (only error changes, for now)
   eventBus.subscribe('ui:state:changed', ({state})=>{
     if (state.error) showError(state.error)
@@ -436,6 +434,7 @@ export async function initUI(state:GlobalState, eventBus:PubSub) {
   if (W.matchMedia('(prefers-color-scheme: dark)').matches) {
     html.classList.add('dark');
   }
+  toolOpsHide();
 
   //--------------- menus
   add($('darkmode'),_=>t(html, 'dark'));
@@ -461,9 +460,32 @@ export async function initUI(state:GlobalState, eventBus:PubSub) {
   add(jointCancel,_=>navChat('joints'));
   add(jointsCancel,_=>navChat('room'));
 
+  //--------------- welcome modal
+  modalShow('splash');
+  add(splashJoint,_=>navChat('joints'));
+  add(splashDraw,_=>{
+    state.user = {
+      id: 'offline-user',
+      nickname: 'offline',
+      roomId: 0,
+    };
+    state.currentRoom = createOfflineRoomState(state.user);
+    createOfflineCanvasState();
+    setupCanvasAndTools(state, eventBus).then(()=>{
+      modalClose();
+    }).catch(()=>{
+        throw new Error('Failed to initialize the interface');
+    });
+  });
+}
+async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
   //--------------- canvas
   palette = createDefaultPalette();
-  const fontRenderer: FontRenderer = await setFont('TOPAZ_437', 'cp437', palette, false);
+  const defaultFont = 'Topaz437 8x16';
+  const fontRenderer: FontRenderer = await setFont(defaultFont, 'cp437', palette, false);
+  fontSelect.value = defaultFont;
+  fontPreview.src = `/ui/fontz/${defaultFont}.png`;
+  fontPreview.style='width: 192px; height: 384px';
   const canvasRenderer = initCanvasRenderer(state, palette, fontRenderer);
 
   //--------------- tools
@@ -483,7 +505,6 @@ export async function initUI(state:GlobalState, eventBus:PubSub) {
   add(zoom, _=>toolOps('zoom'));
   add(dropper, _=>toolOpsHide());
   add(mirror, _=>toolOpsHide());
-  toolOpsHide();
   // brushes
   add(characterBrush, _=>toolOps('char',true));
 
@@ -593,30 +614,20 @@ export async function initUI(state:GlobalState, eventBus:PubSub) {
   });
   add(font,_=>modalShow('fonts'));
 
+  //--------------- grid
+  const artContainer = $('canvasArea');
+  const gridOverlay = new GridOverlay(
+    artContainer,
+    fontRenderer,
+    ()=>80,
+    ()=>25
+  );
+  initCanvas($$<HTMLCanvasElement>('#grid-overlay'),'Grid Overlay');
+  gridOverlay.show(false);
+  add(grid,_=>gridOverlay.show(!gridOverlay.isShown()));
+
   //--------------- modal
   $$$<HTMLButtonElement>('.cancel').forEach(
     c=>add(c,_=>modalClose()));
   add(modal, e=>{if(e.target === modal) modalClose()});
-  add(splashJoint,_=>navChat('joints'));
-  add(splashDraw, _=>{
-    state.user = {
-      id: 'offline-user',
-      nickname: 'offline',
-      roomId: 0,
-    };
-    state.currentRoom = createOfflineRoomState(state.user);
-    createOfflineCanvasState();
-  });
-  //--------------- show app landing screen
-  modalShow('splash');
-
-
-  // listen for other notifications
-  /*
-  eventBus.subscribe('ui:notification', ({ message, level }) => {
-    showToast(message, level);
-  });
-  $$$<HTMLDialogElement>('modal').forEach(m => m.close());
-  to(()=>sm() ? 750 : 1);
-  */
 }

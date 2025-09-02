@@ -294,7 +294,7 @@ export function createOfflineCanvasState(): CanvasState {
     fontType: 'cp437',
     spacing: 1,
     ice: false,
-    colors: Array(16).fill(0), // adjust as needed
+    colors: new Array<number>(16).fill(0),
     rawdata,
     updatedAt: new Date().toISOString(),
   };
