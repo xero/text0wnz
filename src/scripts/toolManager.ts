@@ -2,7 +2,7 @@
 // Copied and adapted from the architecture of the old moebius-web's freehand_tools.js
 // All tool logic (drawing, preview, drag math, etc.) will be ported into new-style tools as classes or objects conforming to this interface.
 
-import type {GlobalState, CanvasState} from './state';
+import type {GlobalState} from './state';
 import type {Palette} from './paletteManager';
 import type {FontRenderer} from './fontManager';
 
@@ -24,16 +24,16 @@ export interface Tool {
   /** Called when the tool is deactivated */
   deactivate(ctx: ToolContext): void;
   /** Pointer event: mouse/touch pressed */
-  onPointerDown?(ev: ToolPointerEvent, ctx: ToolContext): void;
+  onPointerDown?(e: ToolPointerEvent, ctx: ToolContext): void;
   /** Pointer event: mouse/touch moved */
-  onPointerMove?(ev: ToolPointerEvent, ctx: ToolContext): void;
+  onPointerMove?(e: ToolPointerEvent, ctx: ToolContext): void;
   /** Pointer event: mouse/touch released */
-  onPointerUp?(ev: ToolPointerEvent, ctx: ToolContext): void;
+  onPointerUp?(e: ToolPointerEvent, ctx: ToolContext): void;
   /** Pointer event: mouse/touch leaves canvas */
-  onPointerLeave?(ev: ToolPointerEvent, ctx: ToolContext): void;
+  onPointerLeave?(e: ToolPointerEvent, ctx: ToolContext): void;
   /** Keyboard event, if needed */
-  onKeyDown?(ev: KeyboardEvent, ctx: ToolContext): void;
-  onKeyUp?(ev: KeyboardEvent, ctx: ToolContext): void;
+  onKeyDown?(e: KeyboardEvent, ctx: ToolContext): void;
+  onKeyUp?(e: KeyboardEvent, ctx: ToolContext): void;
   /** Renders a tool preview, if applicable */
   renderPreview?(ctx: ToolContext): void;
   /** Clean up any overlays, previews, etc */
@@ -83,23 +83,23 @@ export class ToolManager {
     return this.activeTool;
   }
 
-  handlePointerDown(ev: ToolPointerEvent) {
-    this.activeTool?.onPointerDown?.(ev, this.ctx);
+  handlePointerDown(e: ToolPointerEvent) {
+    this.activeTool?.onPointerDown?.(e, this.ctx);
   }
-  handlePointerMove(ev: ToolPointerEvent) {
-    this.activeTool?.onPointerMove?.(ev, this.ctx);
+  handlePointerMove(e: ToolPointerEvent) {
+    this.activeTool?.onPointerMove?.(e, this.ctx);
   }
-  handlePointerUp(ev: ToolPointerEvent) {
-    this.activeTool?.onPointerUp?.(ev, this.ctx);
+  handlePointerUp(e: ToolPointerEvent) {
+    this.activeTool?.onPointerUp?.(e, this.ctx);
   }
-  handlePointerLeave(ev: ToolPointerEvent) {
-    this.activeTool?.onPointerLeave?.(ev, this.ctx);
+  handlePointerLeave(e: ToolPointerEvent) {
+    this.activeTool?.onPointerLeave?.(e, this.ctx);
   }
-  handleKeyDown(ev: KeyboardEvent) {
-    this.activeTool?.onKeyDown?.(ev, this.ctx);
+  handleKeyDown(e: KeyboardEvent) {
+    this.activeTool?.onKeyDown?.(e, this.ctx);
   }
-  handleKeyUp(ev: KeyboardEvent) {
-    this.activeTool?.onKeyUp?.(ev, this.ctx);
+  handleKeyUp(e: KeyboardEvent) {
+    this.activeTool?.onKeyUp?.(e, this.ctx);
   }
   renderToolPreview() {
     this.activeTool?.renderPreview?.(this.ctx);

@@ -153,6 +153,7 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
       if (bg !== color) {
         // Remove lower, keep upper
         charCode = 223; // ▀
+        /* eslint-disable-next-line no-self-assign */
         fg = fg; // keep
         bg = color;
       }
@@ -227,12 +228,11 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
 //const SHADE_CYCLE = [176, 177, 178, 219]; // light to dark
 export function shadeCell(x: number, y: number, fg: number, bg: number, reduce: boolean) {
   if (!state || !state.currentRoom) return;
-  const c = state.currentRoom?.canvas;
-  if (!c) return;
+  const c = state.currentRoom.canvas;
   if (x < 0 || x >= c.width || y < 0 || y >= c.height) return;
   const idx = (y * c.width + x) * 3;
   let code = c.rawdata[idx];
-  let currentFg = c.rawdata[idx + 1];
+  const currentFg = c.rawdata[idx + 1];
   //let currentBg = c.rawdata[idx + 2];
 
   if (reduce) {

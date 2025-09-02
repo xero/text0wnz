@@ -19,17 +19,17 @@ export class PenTool implements Tool {
     this.lastPoint = null;
   }
 
-  onPointerDown(ev: ToolPointerEvent, ctx: ToolContext) {
-    this.lastPoint = {x: ev.x, y: ev.y};
+  onPointerDown(e: ToolPointerEvent, ctx: ToolContext) {
+    this.lastPoint = {x: e.x, y: e.y};
     // @TODO: Begin undo group
     //ctx.state.currentRoom?.canvas?.startUndo?.();
-    this.drawPoint(ev, ctx);
+    this.drawPoint(e, ctx);
   }
 
-  onPointerMove(ev: ToolPointerEvent, ctx: ToolContext) {
+  onPointerMove(e: ToolPointerEvent, ctx: ToolContext) {
     if (this.lastPoint) {
-      this.drawLine(this.lastPoint.x, this.lastPoint.y, ev.x, ev.y, ev, ctx);
-      this.lastPoint = {x: ev.x, y: ev.y};
+      this.drawLine(this.lastPoint.x, this.lastPoint.y, e.x, e.y, e, ctx);
+      this.lastPoint = {x: e.x, y: e.y};
     }
   }
 
@@ -47,9 +47,9 @@ export class PenTool implements Tool {
   /**
    * Draws a single point (half block) at pointer position.
    */
-  private drawPoint(ev: ToolPointerEvent, ctx: ToolContext) {
-    const color = this.getDrawColor(ev, ctx);
-    drawHalfBlock(color, ev.x, ev.y);
+  private drawPoint(e: ToolPointerEvent, ctx: ToolContext) {
+    const color = this.getDrawColor(e, ctx);
+    drawHalfBlock(color, e.x, e.y);
   }
 
   /**
@@ -57,9 +57,9 @@ export class PenTool implements Tool {
    */
   private drawLine(
     x0: number, y0: number, x1: number, y1: number,
-    ev: ToolPointerEvent, ctx: ToolContext
+    e: ToolPointerEvent, ctx: ToolContext
   ) {
-    const color = this.getDrawColor(ev, ctx);
+    const color = this.getDrawColor(e, ctx);
     // Bresenham's line algorithm (integer math, handles all octants)
     const dx = Math.abs(x1 - x0);
     const sx = x0 < x1 ? 1 : -1;
@@ -81,9 +81,9 @@ export class PenTool implements Tool {
   /**
    * Determines draw color (foreground or background) based on button.
    */
-  private getDrawColor(ev: ToolPointerEvent, ctx: ToolContext): number {
+  private getDrawColor(e: ToolPointerEvent, ctx: ToolContext): number {
     // Left button (0) = foreground, right button (2) = background
-    if (ev.button === 2) {
+    if (e.button === 2) {
       return ctx.palette.getBackgroundColor();
     }
     return ctx.palette.getForegroundColor();

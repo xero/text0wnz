@@ -1,5 +1,5 @@
-import { Tool, ToolContext, ToolPointerEvent } from '../toolManager';
-import { shadeCell, redraw } from '../canvasRenderer';
+import {Tool, ToolContext, ToolPointerEvent} from '../toolManager';
+import {shadeCell, redraw} from '../canvasRenderer';
 
 export class ShadeBrushTool implements Tool {
   id = 'shade';
@@ -17,7 +17,7 @@ export class ShadeBrushTool implements Tool {
   }
 
   onPointerDown(e: ToolPointerEvent, ctx: ToolContext) {
-    this.lastPoint = { x: e.x, y: e.y };
+    this.lastPoint = {x: e.x, y: e.y};
     this.shade(e, ctx);
   }
 
@@ -26,7 +26,7 @@ export class ShadeBrushTool implements Tool {
       // @TODO: Begin undo group
       //ctx.state.currentRoom?.canvas?.startUndo?.();
       this.shade(e, ctx);
-      this.lastPoint = { x: e.x, y: e.y };
+      this.lastPoint = {x: e.x, y: e.y};
     }
   }
   onPointerUp(e: ToolPointerEvent, ctx: ToolContext) {
@@ -44,10 +44,10 @@ export class ShadeBrushTool implements Tool {
   private shade(e: ToolPointerEvent, ctx: ToolContext) {
     // Use right mouse or shift for reduce, left to darken
     let reduce = false;
-    if(e.button === 2 || e.shiftKey) reduce=true;
+    if(e.button === 2 || e.shiftKey) reduce = true;
     const fg = ctx.palette.getForegroundColor();
     const bg = ctx.palette.getBackgroundColor();
-    shadeCell(e.x, e.y-1, fg, bg, reduce);
+    shadeCell(e.x, e.y, fg, bg, reduce);
     redraw();
   }
 }

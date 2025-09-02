@@ -3,13 +3,13 @@
 import type {GlobalState} from './state';
 import type {PubSub} from './eventBus';
 import type {FontType} from './fontManager';
-import {createDefaultUserState, createOfflineRoomState} from './state';
+import {createOfflineRoomState} from './state';
 import {initCanvasRenderer, createOfflineCanvasState} from './canvasRenderer';
 import {setFont, FontRenderer} from './fontManager';
 import {createDefaultPalette, Palette} from './paletteManager';
 import {ToolManager} from './toolManager';
 import {PenTool} from './tools/pen';
-import { ShadeBrushTool } from './tools/shade';
+import {ShadeBrushTool} from './tools/shade';
 
 /* <--//-----------------------------------------------------------[helpers] */
 const
@@ -20,7 +20,7 @@ const
   $$ = <T extends Element = HTMLElement>(q: string): T=>{ const e = D.querySelector(q); if (!e) throw new Error(`Element ${q} was not found`); return e as T; },
   /* eslint-disable-next-line @typescript-eslint/no-deprecated */
   $$$ = D.querySelectorAll.bind(D),
-  add = (t: HTMLElement, f: (ev: MouseEvent | KeyboardEvent) => void, k: number = 0)=>t.addEventListener(k ? 'keydown' : 'click', f as EventListener, false),
+  add = (t: HTMLElement, f: (e: MouseEvent | KeyboardEvent) => void, k: number = 0)=>t.addEventListener(k ? 'keydown' : 'click', f as EventListener, false),
   has = (i: HTMLElement, c: string)=>i.classList.contains(c),
   cl = (i: HTMLElement, c: string, a:boolean = true)=>a ? i.classList.add(c) : i.classList.remove(c),
   t = (i: HTMLElement, c: string)=>i.classList.toggle(c),
@@ -407,10 +407,15 @@ function setupFKeyCanvases(fontCellHeight: number, maxVisualHeight: number = 45)
   }
 }
 
-function getPointerXY(ev: PointerEvent, font: FontRenderer) {
+function getPointerXY(e: PointerEvent, font: FontRenderer, halfBlock: boolean = false) {
   const rect = art.getBoundingClientRect();
-  const x = Math.floor((ev.clientX - rect.left) / font.width);
-  const y = Math.floor((ev.clientY - rect.top) / (font.height / 2));
+  const x = Math.floor((e.clientX - rect.left) / font.width);
+  let y: number;
+  if (halfBlock) {
+    y = Math.floor((e.clientY - rect.top) / (font.height / 2));
+  } else {
+    y = Math.floor((e.clientY - rect.top) / font.height);
+  }
   return {x, y};
 }
 
@@ -495,17 +500,22 @@ export async function initUI(state:GlobalState, eventBus:PubSub) {
 
   //tool listeners
   ['pointerdown', 'pointermove', 'pointerup', 'pointerleave'].forEach(type=>{
-    art.addEventListener(type, (ev: Event)=>{
-      if (!(ev instanceof PointerEvent)) return;
-      const {x, y} = getPointerXY(ev, fontRenderer);
+    art.addEventListener(type, (e: Event)=>{
+      if (!(e instanceof PointerEvent)) return;
+      let x, y;
+      if (toolManager.getActiveTool()?.id === 'pen') {
+        ({x, y} = getPointerXY(e, fontRenderer, true));
+      } else {
+        ({x, y} = getPointerXY(e, fontRenderer));
+      }
       const common = {
         x,
         y,
-        button: ev.button,
-        shiftKey: ev.shiftKey,
-        ctrlKey: ev.ctrlKey,
-        altKey: ev.altKey,
-        metaKey: ev.metaKey,
+        button: e.button,
+        shiftKey: e.shiftKey,
+        ctrlKey: e.ctrlKey,
+        altKey: e.altKey,
+        metaKey: e.metaKey,
       };
       switch (type) {
         case 'pointerdown': toolManager.handlePointerDown(common); break;
@@ -588,7 +598,7 @@ export async function initUI(state:GlobalState, eventBus:PubSub) {
     c=>add(c,_=>modalClose()));
   add(modal, e=>{if(e.target === modal) modalClose()});
   add(splashJoint,_=>navChat('joints'));
-  add(splashDraw, _ => {
+  add(splashDraw, _=>{
     state.user = {
       id: 'offline-user',
       nickname: 'offline',
