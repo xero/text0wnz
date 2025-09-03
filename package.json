@@ -20,7 +20,7 @@
     "check:e2e": "playwright test",
     "check:e2e:headed": "playwright test --headed",
     "check:e2e:debug": "playwright test --debug",
-    "playwright:install": "playwright install-deps && playwright install && playwright install chrome"
+    "playwright:install": "playwright install-deps && playwright install && playwright install chrome firefox webkit"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

@@ -8,12 +8,25 @@ export default defineConfig({
     headless: true,
     viewport: { width: 1280, height: 720 },
     ignoreHTTPSErrors: true,
-    baseURL: 'http://localhost:3000',
-    channel: 'chrome', // Use system Chrome
+    baseURL: 'http://localhost:4173',
   },
+  projects: [
+    {
+      name: 'Chrome',
+      use: { channel: 'chrome' },
+    },
+    {
+      name: 'Firefox',
+      use: { browserName: 'firefox' },
+    },
+    {
+      name: 'WebKit',
+      use: { browserName: 'webkit' },
+    },
+  ],
   webServer: {
-    command: 'npx serve dist -l 3000',
-    port: 3000,
+    command: 'bun serve dist -l 4173',
+    port: 4173,
     reuseExistingServer: !process.env.CI,
   },
 });
