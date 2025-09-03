@@ -1,4 +1,3 @@
-// font logic
 import type {Palette} from './canvasRenderer';
 
 export type FontType = 'cp437' | 'utf8';
@@ -54,8 +53,12 @@ export async function setFont(
   }
 }
 
-type FontGlyphs = HTMLCanvasElement[]; // [charCode]
+type FontGlyphs = ImageData[][][]; // [fg][bg][charCode]
 
+/**
+ * Loads a font from a PNG font sheet using fast thresholding & palette.
+ * Works for both white and gray glyphs on black.
+ */
 export async function loadFontFromImage(
   fontName: string,
   letterSpacing: boolean,
@@ -82,27 +85,28 @@ export async function loadFontFromImage(
       if (!tempCtx) throw new Error('Failing loading canvas context!');
       tempCtx.drawImage(img, 0, 0);
 
-      // Only cache 256 monochrome glyphs
+      // Precolor all glyphs for every fg/bg/pair (fastest, supports gray glyphs)
       const glyphs: FontGlyphs = [];
-      for (let charCode = 0; charCode < 256; charCode++) {
-        const sx = (charCode % 16) * fontWidth;
-        const sy = Math.floor(charCode / 16) * fontHeight;
-        const glyphCanvas = document.createElement('canvas');
-        glyphCanvas.width = fontWidth;
-        glyphCanvas.height = fontHeight;
-        const glyphCtx = glyphCanvas.getContext('2d')!;
-        // Get the image data for this char
-        const imageData = tempCtx.getImageData(sx, sy, fontWidth, fontHeight);
-        glyphCtx.putImageData(imageData, 0, 0);
-        glyphs[charCode] = glyphCanvas;
+      for (let fg = 0; fg < 16; fg++) {
+        glyphs[fg] = [];
+        for (let bg = 0; bg < 16; bg++) {
+          glyphs[fg][bg] = [];
+          for (let charCode = 0; charCode < 256; charCode++) {
+            const sx = (charCode % 16) * fontWidth;
+            const sy = Math.floor(charCode / 16) * fontHeight;
+            const imageData = tempCtx.getImageData(sx, sy, fontWidth, fontHeight);
+            // Threshold-based coloring: supports legacy gray or white fonts.
+            for (let i = 0; i < imageData.data.length; i += 4) {
+              // Use red channel as threshold (works for grayscale or white)
+              const isOn = imageData.data[i] > 120; // Adjust threshold as needed
+              const color = palette.getRGBAColor(isOn ? fg : bg);
+              imageData.data.set(color, i);
+            }
+            glyphs[fg][bg][charCode] = imageData;
+          }
+        }
       }
       let spacing = letterSpacing;
-
-
-      const cellBuffer = document.createElement('canvas');
-      cellBuffer.width = fontWidth;
-      cellBuffer.height = fontHeight;
-      const cellCtx = cellBuffer.getContext('2d')!;
 
       const draw = (
         charCode: number,
@@ -112,42 +116,17 @@ export async function loadFontFromImage(
         x: number,
         y: number
       ): void => {
-        // Ensure buffer is correct size
-        if (cellBuffer.width !== fontWidth || cellBuffer.height !== fontHeight) {
-          cellBuffer.width = fontWidth;
-          cellBuffer.height = fontHeight;
-        }
-
-        const glyphCanvas = glyphs[charCode];
-        if (!glyphCanvas) return;
-
-        const fgColor = palette.getRGBAColor(fg);
-        const bgColor = palette.getRGBAColor(bg);
-
-        // 1. Fill BG
-        cellCtx.globalCompositeOperation = 'source-over';
-        cellCtx.clearRect(0, 0, fontWidth, fontHeight);
-        cellCtx.fillStyle = `rgba(${bgColor.join(',')})`;
-        cellCtx.fillRect(0, 0, fontWidth, fontHeight);
-
-        // 2. Draw glyph as a mask
-        cellCtx.globalCompositeOperation = 'source-over';
-        cellCtx.drawImage(glyphCanvas, 0, 0, fontWidth, fontHeight);
-
-        // 3. Tint with FG
-        cellCtx.globalCompositeOperation = 'source-in';
-        cellCtx.fillStyle = `rgba(${fgColor.join(',')})`;
-        cellCtx.fillRect(0, 0, fontWidth, fontHeight);
-
-        // 4. Reset composite mode
-        cellCtx.globalCompositeOperation = 'source-over';
-
-        // 5. Draw buffer to main canvas
-        const px = x * (fontWidth + (spacing ? 1 : 0));
-        const py = y * fontHeight;
-        ctx.drawImage(cellBuffer, px, py);
+        if (
+          !glyphs[fg] ||
+          !glyphs[fg][bg] ||
+          !glyphs[fg][bg][charCode]
+        ) return;
+        ctx.putImageData(
+          glyphs[fg][bg][charCode],
+          x * (fontWidth + (spacing ? 1 : 0)),
+          y * fontHeight
+        );
       };
-
 
       resolve({
         width: fontWidth,
@@ -161,61 +140,3 @@ export async function loadFontFromImage(
     img.onerror = ()=>reject(new Error('Font image failed to load'));
   });
 }
-
-/**
- * Loads a font from XBIN font binary data.
-
-export function loadFontFromXBData(
-  fontBytes: Uint8Array,
-  fontWidth: number,
-  fontHeight: number,
-  letterSpacing: boolean,
-  palette: Palette,
-  fontType: FontType
-): Promise<FontRenderer> {
-  return new Promise((resolve, reject)=>{
-    // Assume fontBytes is [fontHeight * 256] bytes, 1 bit per pixel, 8px wide
-    if (fontBytes.length < fontHeight * 256) {
-      reject(new Error('Invalid font data'));
-      return;
-    }
-    // Convert to RGBA glyphs as in image loader
-    const glyphs: FontGlyphs = [];
-    for (let fg = 0; fg < 16; fg++) {
-      glyphs[fg] = [];
-      for (let bg = 0; bg < 16; bg++) {
-        glyphs[fg][bg] = [];
-        for (let charCode = 0; charCode < 256; charCode++) {
-          const imageData = new ImageData(fontWidth, fontHeight);
-          for (let row = 0; row < fontHeight; row++) {
-            const byte = fontBytes[charCode * fontHeight + row];
-            for (let col = 0; col < fontWidth; col++) {
-              const bit = (byte >> (7 - col)) & 1;
-              const color = palette.getRGBAColor(bit ? fg : bg);
-              const idx = (row * fontWidth + col) * 4;
-              imageData.data.set(color, idx);
-            }
-          }
-          glyphs[fg][bg][charCode] = imageData;
-        }
-      }
-    }
-    let spacing = letterSpacing;
-    resolve({
-      width: fontWidth,
-      height: fontHeight,
-      fontType: fontType,
-      setLetterSpacing(v) { spacing = v; },
-      getLetterSpacing() { return spacing; },
-      draw(charCode, fg, bg, ctx, x, y) {
-        if (
-          !glyphs[fg] ||
-          !glyphs[fg][bg] ||
-          !glyphs[fg][bg][charCode]
-        ) return;
-        ctx.putImageData(glyphs[fg][bg][charCode], x * fontWidth, y * fontHeight);
-      },
-    });
-  });
-}
-*/

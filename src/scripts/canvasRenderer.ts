@@ -115,12 +115,15 @@ export function redraw() {
   if (!c) return;
   if(!canvas) throw new Error('Failing loading canvas context!');
 
-  // Clear the entire logical canvas area
+  // Always recalculate current logical size!
   const logicalWidth = c.width * font.width;
   const logicalHeight = c.height * font.height;
-  ctx.clearRect(0, 0, logicalWidth, logicalHeight);
 
-  // rawdata is Uint8Array: [char, fg, bg, char, fg, bg, ...]
+  // Fill ENTIRE canvas with black
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+
+  // Now draw cells
   const {width, height, rawdata} = c;
   for (let y = 0; y < height; ++y) {
     for (let x = 0; x < width; ++x) {
@@ -128,9 +131,6 @@ export function redraw() {
       const charCode = rawdata[idx];
       const fg = rawdata[idx + 1];
       const bg = rawdata[idx + 2];
-      if(charCode != 32) {
-        console.log(`cell[${y},${x}]: char=${charCode} fg=${fg} bg=${bg}`);
-      }
       font.draw(charCode, fg, bg, ctx, x, y);
     }
   }
@@ -243,7 +243,6 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
   c.rawdata[idx] = charCode;
   c.rawdata[idx + 1] = fg;
   c.rawdata[idx + 2] = bg;
-  console.log('drawHalfBlock written', idx, c.rawdata[idx], c.rawdata[idx + 1], c.rawdata[idx + 2]);
   redraw();
 }
 
@@ -297,7 +296,6 @@ export function shadeCell(x: number, y: number, fg: number, bg: number, reduce: 
   c.rawdata[idx] = code;
   c.rawdata[idx + 1] = fg;
   c.rawdata[idx + 2] = bg;
-  console.log('shadeCell written', idx, code, fg, bg);
 }
 
 export function createOfflineCanvasState(): CanvasState {
