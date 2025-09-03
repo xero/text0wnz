@@ -115,7 +115,7 @@ export async function loadFontFromImage(
         ctx: CanvasRenderingContext2D,
         x: number,
         y: number
-      ): void => {
+      ): void=>{
         if (
           !glyphs[fg] ||
           !glyphs[fg][bg] ||

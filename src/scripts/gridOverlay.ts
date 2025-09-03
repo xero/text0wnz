@@ -1,4 +1,5 @@
 import type {FontRenderer} from './fontManager';
+import {eventBus} from './eventBus';
 
 export class GridOverlay {
   private gridCanvas: HTMLCanvasElement;
@@ -28,6 +29,11 @@ export class GridOverlay {
 
     // Listen for events to resize/redraw
     window.addEventListener('resize', ()=>this.resize());
+    // Listen for canvas:resized and update the grid
+    eventBus.subscribe('ui:canvas:resize', ()=>{
+      console.log('got resize');
+      this.resize();
+    });
   }
 
   resize() {
@@ -42,6 +48,11 @@ export class GridOverlay {
     this.gridCanvas.style.height = `${this.gridCanvas.height}px`;
 
     this.renderGrid();
+  }
+
+  setFont(font: FontRenderer) {
+    this.font = font;
+    this.resize();
   }
 
   renderGrid() {

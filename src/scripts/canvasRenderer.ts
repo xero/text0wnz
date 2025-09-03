@@ -107,6 +107,14 @@ function resizeCanvasToState() {
   if (!ctx) return;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(dpr, dpr);
+  eventBus.publish('ui:canvas:resize', {
+    width: logicalWidth,
+    height: logicalHeight,
+    font,
+    columns: c.width,
+    rows: c.height,
+    dpr,
+  });
 }
 
 export function redraw() {
@@ -115,15 +123,12 @@ export function redraw() {
   if (!c) return;
   if(!canvas) throw new Error('Failing loading canvas context!');
 
-  // Always recalculate current logical size!
   const logicalWidth = c.width * font.width;
   const logicalHeight = c.height * font.height;
 
-  // Fill ENTIRE canvas with black
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, logicalWidth, logicalHeight);
 
-  // Now draw cells
   const {width, height, rawdata} = c;
   for (let y = 0; y < height; ++y) {
     for (let x = 0; x < width; ++x) {

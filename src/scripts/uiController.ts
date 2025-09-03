@@ -571,6 +571,18 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
   });
   document.dispatchEvent(new CustomEvent('onPaletteChange'));
 
+  //--------------- grid
+  const artContainer = $('canvasArea');
+  const gridOverlay = new GridOverlay(
+    artContainer,
+    fontRenderer,
+    ()=>80,
+    ()=>25
+  );
+  initCanvas($$<HTMLCanvasElement>('#grid-overlay'),'Grid Overlay');
+  gridOverlay.show(false);
+  add(grid,_=>gridOverlay.show(!gridOverlay.isShown()));
+
   //--------------- font config
   fontSelect.addEventListener('change',e=>{
     const name = (e.target as HTMLSelectElement).value;
@@ -607,8 +619,8 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
     */
         fontRenderer = await setFont(fontName, fontType, palette, false);
 
-        canvasRenderer.setFont(fontRenderer);
-        // Update state so UI and serialization knows the current font
+        canvasRenderer.setFont(fontRenderer); // This resizes and redraws the main canvas
+        gridOverlay.setFont(fontRenderer);    // This updates the overlay to match
         fontLabel.innerText = fontName;
         eventBus.publish('ui:state:changed', {state});
         modalClose();
@@ -621,18 +633,6 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
     })();
   });
   add(font,_=>modalShow('fonts'));
-
-  //--------------- grid
-  const artContainer = $('canvasArea');
-  const gridOverlay = new GridOverlay(
-    artContainer,
-    fontRenderer,
-    ()=>80,
-    ()=>25
-  );
-  initCanvas($$<HTMLCanvasElement>('#grid-overlay'),'Grid Overlay');
-  gridOverlay.show(false);
-  add(grid,_=>gridOverlay.show(!gridOverlay.isShown()));
 
   //--------------- modal
   $$$<HTMLButtonElement>('.cancel').forEach(

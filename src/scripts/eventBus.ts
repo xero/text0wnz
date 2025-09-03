@@ -2,6 +2,7 @@
  * Define all event types and their payloads here.
  * Extend with more namespaces/events as needed.
  */
+import {FontRenderer} from './canvasRenderer';
 import type {GlobalState} from './state';
 export type EditorEventMap = {
   'local:tool:activated': { toolName: string };
@@ -13,6 +14,14 @@ export type EditorEventMap = {
   'ui:notification': { message: string; level: 'info' | 'warn' | 'error' };
   'ui:modal:open': { modalId: string; context?: unknown };
   'ui:state:changed': { state: GlobalState };
+  'ui:canvas:resize': {
+    width:number;
+    height:number;
+    font:FontRenderer;
+    columns:number;
+    rows:number;
+    dpr:number;
+  };
   'system:error': {
     type: 'uncaught' | 'unhandledrejection';
     message: string;
