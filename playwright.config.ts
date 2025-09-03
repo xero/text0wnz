@@ -4,6 +4,11 @@ export default defineConfig({
   testDir: './tests/e2e',
   timeout: 30000,
   retries: 1,
+  outputDir: 'tests/results/e2e',
+  reporter: [
+    ['html', { outputFolder: 'tests/results/playwright-report', open: 'never' }],
+    ['json', { outputFile: 'tests/results/e2e/results.json' }],
+  ],
   use: {
     headless: true,
     viewport: { width: 1280, height: 720 },
@@ -17,7 +22,7 @@ export default defineConfig({
     },
     {
       name: 'Firefox',
-      use: { 
+      use: {
         browserName: 'firefox',
         // Firefox-specific settings for CI environment
         launchOptions: {
@@ -29,12 +34,12 @@ export default defineConfig({
     },
     {
       name: 'WebKit',
-      use: { 
+      use: {
         browserName: 'webkit',
         // WebKit-specific settings to handle pointer event issues
         actionTimeout: 10000,
       },
-      timeout: 45000, // Increased timeout for WebKit due to interaction issues
+      timeout: 45000,
     },
   ],
   webServer: {

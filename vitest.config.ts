@@ -15,6 +15,7 @@ export default defineConfig({
     coverage: {
       enabled: true,
       reporter: ['text', 'html'],
+      reportsDirectory: 'tests/results/coverage',
     },
   },
 });

@@ -127,3 +127,6 @@ tags
 web_modules/
 yarn-debug.log*
 yarn-error.log*
+/test-results/
+!tests/results/
+!tests/results/**

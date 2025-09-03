@@ -1,9 +1,10 @@
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+  workflow_run:
+    workflows: ['Test Suite']
+    types:
+      - completed
 
 permissions:
   contents: read
@@ -11,11 +12,12 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: 'pages'
   cancel-in-progress: false
 
 jobs:
   build:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     name: Build Application
     steps:
@@ -43,6 +45,16 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+
+      - name: Copy coverage report into dist
+        run: |
+          mkdir -p dist/unit
+          cp -r tests/results/coverage/* dist/unit/ || true
+
+      - name: Copy Playwright HTML report into dist
+        run: |
+          mkdir -p dist/e2e
+          cp -r tests/results/playwright-report/* dist/e2e/ || true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
