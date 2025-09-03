@@ -41,7 +41,7 @@ jobs:
 
       - name: Inject dark theme into coverage report
         run: |
-          echo "@media (prefers-color-scheme:dark){.cover-empty,body{background:#000}body{color:#efefef}table{color:#000}table,td,th{border:1px solid #222!important}td.empty{color:#eee}.cbranch-no,.cstat-no,.fstat-no{background:#2a0000!important}.cbranch-yes,.cstat-yes,.fstat-yes{background:#002a00!important}}" >> tests/results/coverage/lcov-report/index.css
+          echo "@media (prefers-color-scheme:dark){.cover-empty,body{background:#000}body{color:#efefef}table{color:#000}table,td,th{border:1px solid #222!important}td.empty{color:#eee}.cbranch-no,.cstat-no,.fstat-no{background:#2a0000!important}.cbranch-yes,.cstat-yes,.fstat-yes{background:#002a00!important}}" >> tests/results/coverage/base.css
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3
