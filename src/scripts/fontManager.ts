@@ -67,7 +67,7 @@ export async function loadFontFromImage(
 ): Promise<FontRenderer> {
   return new Promise((resolve, reject)=>{
     const img = new Image();
-    img.src = `/ui/fontz/${fontName}.png`;
+    img.src = `./ui/fontz/${fontName}.png`;
     img.onload = ()=>{
       const match = fontName.match(/(\d+)x(\d+)$/i);
       if (!match) throw new Error('Font PNG filename must end with WxH, e.g. 8x16.png');

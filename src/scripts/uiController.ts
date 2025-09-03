@@ -493,7 +493,7 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
   const defaultFont = 'Topaz437 8x16';
   fontRenderer = await setFont(defaultFont, 'cp437', palette, false);
   fontSelect.value = defaultFont;
-  fontPreview.src = `/ui/fontz/${defaultFont}.png`;
+  fontPreview.src = `./ui/fontz/${defaultFont}.png`;
   fontPreview.style = 'width: 192px; height: 384px';
   const canvasRenderer = initCanvasRenderer(state, palette, fontRenderer);
   initCanvas(art, 'Art Drawing Canvas');
@@ -592,7 +592,7 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
       fontPreview.style.height = `${String(fontPreview.naturalHeight * 1.5)}px`;
       fontPreview.onload = null;
     };
-    fontPreview.src = `/ui/fontz/${name}.png`;
+    fontPreview.src = `./ui/fontz/${name}.png`;
   });
 
   add(switchFont, _=>{
