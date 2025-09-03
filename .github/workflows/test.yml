@@ -58,6 +58,9 @@ jobs:
       - name: Install project dependencies
         run: bun i
 
+      - name: Install playwright and it's dependencies
+        run: bun playwright:install
+
       - name: Build application
         run: bun bake
 
@@ -65,7 +68,7 @@ jobs:
         run: bun serve &
 
       - name: Wait for server to start
-        run: sleep 5
+        run: sleep 2
 
       - name: Run E2E tests
         run: bun check:e2e
