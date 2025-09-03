@@ -6,6 +6,36 @@
 
 ---
 
+## Testing Tools and Structure
+
+### Test Runners
+
+- **Unit tests:**
+  - Use [Vitest](https://vitest.dev/) (configured in `vitest.config.ts`).
+  - These run in a `jsdom` environment for DOM-like APIs.
+  - Unit tests go in `./tests/unit/` or any subfolder of `./tests/` except `./tests/e2e/`.
+  - Coverage is enabled and reported in both text and HTML.
+
+- **End-to-end (E2E) tests:**
+  - Use [Playwright](https://playwright.dev/) (configured in `playwright.config.ts`).
+  - E2E tests go in `./tests/e2e/`.
+
+### Directory Structure
+
+```
+tests/
+  unit/      # All Vitest unit tests
+  e2e/       # All Playwright E2E tests
+  setup/     # Shared setup files (e.g. ./tests/setup/test-setup.ts for Vitest)
+```
+
+- **Vitest** will automatically run all tests in `tests/unit/` and any other `tests/` subdirectory *except* `tests/e2e/`.
+- **Playwright** will only run tests inside `tests/e2e/`.
+
+> Please do **not** place any test files in `src/` or the project root—use `tests/unit/` and `tests/e2e/` as described above.
+
+---
+
 ## How to Test and Run the App
 
 **1. Install dependencies**
@@ -19,10 +49,32 @@ bun bake
 ```
 This creates the dist directory, bundles JS/CSS, and moves all assets (HTML, fonts, images) into ./ui.
 
-3. Serve the app
+3. Run Unit Tests
+```sh
+bun check
+```
+or
+```sh
+bunx vitest run
+```
+For coverage:
+```sh
+bunx vitest run --coverage
+```
+
+4. Run E2E Tests
+```sh
+bun check:e2e
+```
+or
+```sh
+bunx playwright test
+```
+
+5. Serve the app
 Point your web server to the dist directory.
 
-4. Manual Browser Testing
+6. Manual Browser Testing
 
 - Open the app in a modern browser.
 - Open the JS console; verify there are no errors.
@@ -41,6 +93,11 @@ Point your web server to the dist directory.
 - `bun bake` — Build assets and move them to dist
 - `bun run lint` — Run ESLint
 - `bun run lint:fix` — Run ESLint with auto-fix
+- `bun check` or `bunx vitest run` — Run unit tests
+- `bunx vitest run --coverage` — Run tests with coverage report
+- `bun check:e2e` or `bunx playwright test` — Run Playwright E2E tests
+
+review `package.json` for the full list of script commands.
 
 ## Supported Browsers
 - Chrome/Chromium 95+

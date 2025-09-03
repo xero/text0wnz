@@ -110,11 +110,6 @@ export class ToolManager {
   /** Update the font in the tool context, and notify tools */
   setFont(font: FontRenderer) {
     this.ctx.font = font;
-    for (const tool of this.tools.values()) {
-      if (typeof (tool as any).setFont === "function") {
-        (tool as any).setFont(font);
-      }
-    }
   }
   /** Utility: get a list of all registered tools for UI */
   getToolList(): { id: string; label: string }[] {
