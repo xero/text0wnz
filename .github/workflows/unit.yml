@@ -1,0 +1,62 @@
+name: Unit Tests
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    name: Unit Tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install Bun
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: bun i
+
+      - name: Run unit tests with coverage
+        run: bun check:coverage
+
+      - name: Inject dark theme into coverage report
+        run: |
+          echo "@media (prefers-color-scheme:dark){.cover-empty,body{background:#000}body{color:#efefef}table{color:#000}table,td,th{border:1px solid #222!important}td.empty{color:#eee}.cbranch-no,.cstat-no,.fstat-no{background:#2a0000!important}.cbranch-yes,.cstat-yes,.fstat-yes{background:#002a00!important}.cline-yes,.high{background:#f2bfff}.cline-no{background:#ffbfbf}.cline-neutral{background:#bfbfff}.cstat-skip,.fstat-skip{background:#bfbfbf}.cbranch-skip{background:#bfbfbf}.cstat-partial,.fstat-partial{background:#fffac8}.cbranch-partial{background:#fffac8}.cstat-unknown,.fstat-unknown{background:#bfbfbf}.cbranch-unknown{background:#bfbfbf}}" >> tests/results/coverage/base.css
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@ab904c41d6ece82784817410c45d8b8c02684457 # v3
+        if: success()
+        with:
+          directory: ./tests/results/coverage
+          fail_ci_if_error: false
+
+      - name: Upload all unit test results as artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: unit-test-results
+          path: tests/results/
+          retention-days: 3
+
+      - name: Add artifact download info to summary
+        run: |
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "### :package: Unit Test Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Artifacts for this run are available under the **Artifacts** section at [this workflow run]($RUN_URL)." >> $GITHUB_STEP_SUMMARY
+          echo "- Or use GitHub CLI: \`gh run download ${{ github.run_id }} -n unit-test-results\`" >> $GITHUB_STEP_SUMMARY
