@@ -23,7 +23,7 @@ jobs:
   e2e:
     uses: ./.github/workflows/e2e.yml
 
-  commit:
+  commit-results:
     needs: [lint, unit, build, e2e]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     uses: ./.github/workflows/commit-results.yml
