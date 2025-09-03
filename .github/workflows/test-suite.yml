@@ -31,6 +31,6 @@ jobs:
     uses: ./.github/workflows/commit-results.yml
 
   deploy:
-    needs: [lint, unit, build, e2e]
+    needs: commit-results
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     uses: ./.github/workflows/deploy-pages.yml
