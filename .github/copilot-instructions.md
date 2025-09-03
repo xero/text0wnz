@@ -59,6 +59,10 @@ bunx vitest run
 ```
 For coverage:
 ```sh
+bun check:coverage
+```
+or
+```sh
 bunx vitest run --coverage
 ```
 

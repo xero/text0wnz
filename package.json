@@ -15,6 +15,7 @@
     "check": "vitest run",
     "check:watch": "vitest",
     "check:ui": "vitest --ui",
+    "check:coverage": "vitest run --coverage",
     "check:e2e": "playwright test",
     "check:e2e:headed": "playwright test --headed",
     "check:e2e:debug": "playwright test --debug"
