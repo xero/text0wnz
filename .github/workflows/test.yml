@@ -2,9 +2,9 @@ name: Test Suite
 
 on:
   push:
-    branches: [ main ]
+    branches: [ '*' ]
   pull_request:
-    branches: [ main ]
+    branches: [ '*' ]
 
 jobs:
   unit-tests:
@@ -55,17 +55,14 @@ jobs:
           curl -fsSL https://bun.sh/install | bash
           echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
-      - name: Install dependencies
+      - name: Install project dependencies
         run: bun i
-
-      - name: Install Playwright Browsers
-        run: bunx playwright install --with-deps
 
       - name: Build application
         run: bun bake
 
       - name: Start Web Server
-        run: bunx vite preview --port 4173 &
+        run: bun serve
 
       - name: Wait for server to start
         run: sleep 5
@@ -137,6 +134,9 @@ jobs:
 
       - name: Check build artifacts
         run: |
+          test -f dist/index.html
           test -f dist/app.min.js
+          test -f dist/editor.min.css
+          test -d dist/ui
           echo "Build successful - artifact present"
 
