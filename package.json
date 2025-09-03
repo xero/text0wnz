@@ -34,7 +34,7 @@
     "cssnano": "^7.1.0",
     "cssnano-preset-advanced": "^7.0.8",
     "esbuild": "^0.25.9",
-    "eslint": "^9.33.0",
+    "eslint": "^9.34.0",
     "jsdom": "^26.1.0",
     "playwright": "^1.54.2",
     "postcss": "^8.5.6",
