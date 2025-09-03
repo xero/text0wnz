@@ -64,12 +64,6 @@ jobs:
       - name: Build application
         run: bun bake
 
-      - name: Start Web Server
-        run: bun serve &
-
-      - name: Wait for server to start
-        run: sleep 2
-
       - name: Run E2E tests
         run: bun check:e2e
         env:
