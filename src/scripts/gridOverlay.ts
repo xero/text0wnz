@@ -28,12 +28,9 @@ export class GridOverlay {
     this.container.appendChild(this.gridCanvas);
 
     // Listen for events to resize/redraw
-    window.addEventListener('resize', ()=>this.resize());
+    window.addEventListener('resize',_=>this.resize());
     // Listen for canvas:resized and update the grid
-    eventBus.subscribe('ui:canvas:resize', ()=>{
-      console.log('got resize');
-      this.resize();
-    });
+    eventBus.subscribe('ui:canvas:resize',_=>this.resize());
   }
 
   resize() {
@@ -42,10 +39,21 @@ export class GridOverlay {
     const columns = this.getColumns();
     const rows = this.getRows();
 
-    this.gridCanvas.width = fontWidth * columns;
-    this.gridCanvas.height = fontHeight * rows;
-    this.gridCanvas.style.width = `${this.gridCanvas.width}px`;
-    this.gridCanvas.style.height = `${this.gridCanvas.height}px`;
+    // Add this:
+    const dpr = window.devicePixelRatio || 1;
+    const logicalWidth = fontWidth * columns;
+    const logicalHeight = fontHeight * rows;
+
+    // Buffer size for HiDPI
+    this.gridCanvas.width = Math.round(logicalWidth * dpr);
+    this.gridCanvas.height = Math.round(logicalHeight * dpr);
+    // CSS size (logical)
+    this.gridCanvas.style.width = `${logicalWidth}px`;
+    this.gridCanvas.style.height = `${logicalHeight}px`;
+
+    // Scale the context
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.scale(dpr, dpr);
 
     this.renderGrid();
   }

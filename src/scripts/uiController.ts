@@ -621,6 +621,7 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
 
         canvasRenderer.setFont(fontRenderer); // This resizes and redraws the main canvas
         gridOverlay.setFont(fontRenderer);    // This updates the overlay to match
+        toolManager.setFont(fontRenderer);    // This update the tools to match
         fontLabel.innerText = fontName;
         eventBus.publish('ui:state:changed', {state});
         modalClose();

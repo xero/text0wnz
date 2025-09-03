@@ -97,16 +97,38 @@ function resizeCanvasToState() {
 
   // Buffer for HiDPI
   const dpr = window.devicePixelRatio || 1;
+
+console.log('[resizeCanvasToState]',
+  'font:', font.width, 'x', font.height,
+  'canvas logical:', logicalWidth, 'x', logicalHeight,
+  'dpr:', dpr,
+  'canvas.width:', Math.round(logicalWidth * dpr),
+  'canvas.height:', Math.round(logicalHeight * dpr)
+);
+
+
   canvas.width = Math.round(logicalWidth * dpr);
   canvas.height = Math.round(logicalHeight * dpr);
 
   // CSS size (logical pixels)
   canvas.style.width = `${logicalWidth}px`;
   canvas.style.height = `${logicalHeight}px`;
-
+console.log('[resizeCanvasToState post]',
+  'canvas.width:', canvas.width,
+  'canvas.height:', canvas.height,
+  'canvas.style.width:', canvas.style.width,
+  'canvas.style.height:', canvas.style.height
+);
   if (!ctx) return;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(dpr, dpr);
+console.log('[resizeCanvasToState after scale and transform]',
+  'canvas.width:', canvas.width,
+  'canvas.height:', canvas.height,
+  'canvas.style.width:', canvas.style.width,
+  'canvas.style.height:', canvas.style.height
+);
+
   eventBus.publish('ui:canvas:resize', {
     width: logicalWidth,
     height: logicalHeight,
