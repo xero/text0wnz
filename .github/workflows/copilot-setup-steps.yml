@@ -32,17 +32,17 @@ jobs:
           echo "$HOME/.bun/bin" >> $HOME/.profile
           export PATH="$HOME/.bun/bin:$PATH"
 
-      - name: Install Dev Tools
-        run: |
-          bun i -g playwright eslint prettier
-          bunx playwright install --with-deps
-          npx playwright install --with-deps
-
       - name: Install project dependencies (npm)
         run: npm install
 
       - name: Install project dependencies (bun)
         run: bun install
+
+      - name: Install Dev Tools
+        run: |
+          bun i -g playwright eslint prettier
+          bunx playwright install --with-deps
+          npx playwright install --with-deps
 
       - name: Force linting via pre-commit hook
         run: |
