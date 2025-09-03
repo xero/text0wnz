@@ -103,9 +103,11 @@
     scrollbar-width: auto;
     scrollbar-color: var(--color-menu-bg) var(--color-editor-bg);
   }
-  html,
-  body {
+  html, body {
+    @apply h-full min-h-full overflow-hidden;
     overscroll-behavior: none;
+    overflow-x: hidden;
+    overflow-x: clip;
   }
   img {
     user-select: none;
@@ -114,7 +116,7 @@
     -moz-user-select: none;
   }
   body {
-    @apply flex flex-col h-screen w-screen m-0 p-0;
+    @apply flex flex-col h-full w-screen m-0 p-0;
     * {
       @apply text-text font-ui transition-all ease-in-out;
       -webkit-font-smoothing: none;
@@ -204,7 +206,7 @@
   }
   header,
   footer {
-    @apply w-full m-0 flex flex-row items-center justify-between;
+    @apply w-full m-0 flex flex-row flex-shrink-0 items-center justify-between;
     article,
     button,
     section {
@@ -278,6 +280,7 @@
     }
   }
   footer {
+    @apply h-16;
     section {
       button {
         @apply pl-0 pr-2.5 pt-1 h-full flex items-center justify-center;
@@ -336,13 +339,13 @@
       }
     }
   }
-
-
   main {
-    @apply flex flex-row flex-1 w-full m-0 p-0 min-h-0 bg-editor-bg;
+    @apply flex flex-row flex-1 w-full m-0 p-0 min-h-0 h-full bg-editor-bg;
+    aside {
+      @apply flex flex-col min-h-0 h-full;
+    }
     article#canvasArea {
       @apply relative w-fit mx-auto;
-      /* Remove overflow-auto if you want them stacked and not scrolling */
     }
     #grid-overlay {
       @apply absolute left-0 top-0 block;
