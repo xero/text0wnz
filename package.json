@@ -10,6 +10,7 @@
     "uncache": "bun CICaDa.js uncache",
     "release": "bun CICaDa.js release",
     "dbinit": "bun server/db-init.ts",
+    "serve": "serve dist -l 4173",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check": "vitest run",
@@ -18,10 +19,12 @@
     "check:coverage": "vitest run --coverage",
     "check:e2e": "playwright test",
     "check:e2e:headed": "playwright test --headed",
-    "check:e2e:debug": "playwright test --debug"
+    "check:e2e:debug": "playwright test --debug",
+    "playwright:install": "playwright install-deps && playwright install && playwright install chrome firefox webkit"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
+    "@playwright/test": "^1.55.0",
     "@tailwindcss/postcss": "^4.1.12",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.7.0",
@@ -36,6 +39,7 @@
     "playwright": "^1.54.2",
     "postcss": "^8.5.6",
     "postcss-cli": "^11.0.1",
+    "serve": "^14.2.4",
     "tailwindcss": "^4.1.12",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.40.0",
