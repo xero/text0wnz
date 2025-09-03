@@ -86,23 +86,26 @@ export function initCanvasRenderer(
   };
 }
 
-
 function resizeCanvasToState() {
   if (!canvas || !state || !font) return;
   const c = state.currentRoom?.canvas;
   if (!c) return;
-
-  canvas.width  = c.width  * font.width  * devicePixelRatio;
-  canvas.height = c.height * font.height * devicePixelRatio;
-  canvas.style.width  = (c.width * font.width) + "px";
-  canvas.style.height = (c.height * font.height) + "px";
-
-  // Reset and apply scale
-  if(!ctx) console.log('no ctx');
-  if(!ctx) return
+  const logicalWidth = c.width * font.width;
+  const logicalHeight = c.height * font.height;
+  canvas.width = logicalWidth;
+  canvas.height = logicalHeight;
+  canvas.style.width = `${logicalWidth}px`;
+  canvas.style.height = `${logicalHeight}px`;
+  if (!ctx) return;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.scale(devicePixelRatio, devicePixelRatio);
-  console.log('ctx updated');
+  eventBus.publish('ui:canvas:resize', {
+    width: logicalWidth,
+    height: logicalHeight,
+    font,
+    columns: c.width,
+    rows: c.height,
+    dpr: 1
+  });
 }
 
 export function redraw() {
@@ -110,9 +113,13 @@ export function redraw() {
   const c = state.currentRoom?.canvas;
   if (!c) return;
   if(!canvas) throw new Error('Failing loading canvas context!');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // rawdata is Uint8Array: [char, fg, bg, char, fg, bg, ...]
+  const logicalWidth = c.width * font.width;
+  const logicalHeight = c.height * font.height;
+
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+
   const {width, height, rawdata} = c;
   for (let y = 0; y < height; ++y) {
     for (let x = 0; x < width; ++x) {
@@ -232,7 +239,6 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
   c.rawdata[idx] = charCode;
   c.rawdata[idx + 1] = fg;
   c.rawdata[idx + 2] = bg;
-  console.log('drawHalfBlock written', idx, c.rawdata[idx], c.rawdata[idx+1], c.rawdata[idx+2]);
   redraw();
 }
 

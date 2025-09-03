@@ -31,6 +31,7 @@ const
 /* <--//------------------------------------------------[interface elements] */
 let
   html:HTMLElement,
+  fontRenderer: FontRenderer,
   modal:HTMLDialogElement,
   title:HTMLInputElement,
   resolution:HTMLElement,
@@ -154,7 +155,6 @@ void art;
 const initCanvas = (canvas:HTMLCanvasElement, name:string):CanvasRenderingContext2D=>{
   const ctx = canvas.getContext('2d',{willReadFrequently: true});
   if (!ctx) throw new Error(`Canvas '${name}' not found`);
-  // ensure canvas drawing buffer matches its rendered size
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
   return ctx;
@@ -406,26 +406,23 @@ function setupFKeyCanvases(fontCellHeight: number, maxVisualHeight: number = 45)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 }
-
 function getPointerXY(e: PointerEvent, state: GlobalState, font: FontRenderer, halfBlock = false) {
   const c = state.currentRoom?.canvas;
   if(!c) return;
   const rect = art.getBoundingClientRect();
-  const scaleX = art.width / rect.width;
-  const scaleY = art.height / rect.height;
-  let x = Math.floor((e.clientX - rect.left) * scaleX / font.width);
-  const yRaw = (e.clientY - rect.top) * scaleY;
+
+  // Calculate cell width/height in CSS pixels
+  const cellWidth = rect.width / c.width;
+  const cellHeight = rect.height / c.height;
+
+  let x = Math.floor((e.clientX - rect.left) / cellWidth);
   let y;
   if (halfBlock) {
-    y = Math.min(
-      Math.floor(yRaw / (font.height / 2)),
-      (c.height * 2) - 1
-    );
+    y = Math.floor((e.clientY - rect.top) / (cellHeight / 2));
+    y = Math.max(0, Math.min(y, c.height * 2 - 1));
   } else {
-    y = Math.min(
-      Math.floor(yRaw / font.height),
-      c.height - 1
-    );
+    y = Math.floor((e.clientY - rect.top) / cellHeight);
+    y = Math.max(0, Math.min(y, c.height - 1));
   }
   x = Math.max(0, Math.min(x, c.width - 1));
   return {x, y};
@@ -494,11 +491,12 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
   //--------------- canvas
   palette = createDefaultPalette();
   const defaultFont = 'Topaz437 8x16';
-  const fontRenderer: FontRenderer = await setFont(defaultFont, 'cp437', palette, false);
+  fontRenderer = await setFont(defaultFont, 'cp437', palette, false);
   fontSelect.value = defaultFont;
   fontPreview.src = `/ui/fontz/${defaultFont}.png`;
   fontPreview.style = 'width: 192px; height: 384px';
   const canvasRenderer = initCanvasRenderer(state, palette, fontRenderer);
+  initCanvas(art, 'Art Drawing Canvas');
 
   //--------------- tools
 
@@ -573,6 +571,18 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
   });
   document.dispatchEvent(new CustomEvent('onPaletteChange'));
 
+  //--------------- grid
+  const artContainer = $('canvasArea');
+  const gridOverlay = new GridOverlay(
+    artContainer,
+    fontRenderer,
+    () => state.currentRoom?.canvas.width ?? 80,
+    () => state.currentRoom?.canvas.height ?? 25
+  );
+  initCanvas($$<HTMLCanvasElement>('#grid-overlay'),'Grid Overlay');
+  gridOverlay.show(false);
+  add(grid,_=>gridOverlay.show(!gridOverlay.isShown()));
+
   //--------------- font config
   fontSelect.addEventListener('change',e=>{
     const name = (e.target as HTMLSelectElement).value;
@@ -587,7 +597,6 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
 
   add(switchFont, _=>{
     void (async()=>{
-      let fontRenderer: FontRenderer | null = null;
       const fontName = fontSelect.value;
       try {
         // Determine font type
@@ -609,8 +618,9 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
     */
         fontRenderer = await setFont(fontName, fontType, palette, false);
 
-        canvasRenderer.setFont(fontRenderer);
-        // Update state so UI and serialization knows the current font
+        canvasRenderer.setFont(fontRenderer); // This resizes and redraws the main canvas
+        gridOverlay.setFont(fontRenderer);    // This updates the overlay to match
+        toolManager.setFont(fontRenderer);    // This update the tools to match
         fontLabel.innerText = fontName;
         eventBus.publish('ui:state:changed', {state});
         modalClose();
@@ -623,18 +633,6 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
     })();
   });
   add(font,_=>modalShow('fonts'));
-
-  //--------------- grid
-  const artContainer = $('canvasArea');
-  const gridOverlay = new GridOverlay(
-    artContainer,
-    fontRenderer,
-    ()=>80,
-    ()=>25
-  );
-  initCanvas($$<HTMLCanvasElement>('#grid-overlay'),'Grid Overlay');
-  gridOverlay.show(false);
-  add(grid,_=>gridOverlay.show(!gridOverlay.isShown()));
 
   //--------------- modal
   $$$<HTMLButtonElement>('.cancel').forEach(

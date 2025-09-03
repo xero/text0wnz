@@ -1,4 +1,5 @@
 import type {FontRenderer} from './fontManager';
+import {eventBus} from './eventBus';
 
 export class GridOverlay {
   private gridCanvas: HTMLCanvasElement;
@@ -27,7 +28,9 @@ export class GridOverlay {
     this.container.appendChild(this.gridCanvas);
 
     // Listen for events to resize/redraw
-    window.addEventListener('resize', ()=>this.resize());
+    window.addEventListener('resize',_=>this.resize());
+    // Listen for canvas:resized and update the grid
+    eventBus.subscribe('ui:canvas:resize',_=>this.resize());
   }
 
   resize() {
@@ -35,13 +38,19 @@ export class GridOverlay {
     const fontHeight = this.font.height;
     const columns = this.getColumns();
     const rows = this.getRows();
-
-    this.gridCanvas.width = fontWidth * columns;
-    this.gridCanvas.height = fontHeight * rows;
-    this.gridCanvas.style.width = `${this.gridCanvas.width}px`;
-    this.gridCanvas.style.height = `${this.gridCanvas.height}px`;
-
+    const logicalWidth = fontWidth * columns;
+    const logicalHeight = fontHeight * rows;
+    this.gridCanvas.width = logicalWidth;
+    this.gridCanvas.height = logicalHeight;
+    this.gridCanvas.style.width = `${logicalWidth}px`;
+    this.gridCanvas.style.height = `${logicalHeight}px`;
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.renderGrid();
+  }
+
+  setFont(font: FontRenderer) {
+    this.font = font;
+    this.resize();
   }
 
   renderGrid() {
