@@ -15,7 +15,7 @@ jobs:
       options: --user root
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
 
       - name: Install Bun
         run: |
@@ -40,7 +40,7 @@ jobs:
           PLAYWRIGHT_TEST_BASE_URL: http://localhost:4173
 
       - name: Upload Playwright HTML report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ always() }}
         with:
           name: playwright-report
@@ -48,7 +48,7 @@ jobs:
           retention-days: 3
 
       - name: Upload Playwright raw results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ always() }}
         with:
           name: playwright-raw
@@ -56,7 +56,7 @@ jobs:
           retention-days: 3
 
       - name: Upload all e2e test results as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: e2e-test-results
           path: tests/results/
