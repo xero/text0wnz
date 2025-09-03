@@ -87,14 +87,25 @@ export function initCanvasRenderer(
 }
 
 function resizeCanvasToState() {
-  if (!canvas || !state) return;
+  if (!canvas || !state || !font) return;
   const c = state.currentRoom?.canvas;
   if (!c) return;
-  // Set canvas pixel buffer to match font * columns/rows
-  if (font) {
-    canvas.width = c.width * font.width;
-    canvas.height = c.height * font.height;
-  }
+  const logicalWidth = c.width * font.width;
+  const logicalHeight = c.height * font.height;
+  canvas.width = logicalWidth;
+  canvas.height = logicalHeight;
+  canvas.style.width = `${logicalWidth}px`;
+  canvas.style.height = `${logicalHeight}px`;
+  if (!ctx) return;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  eventBus.publish('ui:canvas:resize', {
+    width: logicalWidth,
+    height: logicalHeight,
+    font,
+    columns: c.width,
+    rows: c.height,
+    dpr: 1
+  });
 }
 
 export function redraw() {
@@ -102,9 +113,13 @@ export function redraw() {
   const c = state.currentRoom?.canvas;
   if (!c) return;
   if(!canvas) throw new Error('Failing loading canvas context!');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // rawdata is Uint8Array: [char, fg, bg, char, fg, bg, ...]
+  const logicalWidth = c.width * font.width;
+  const logicalHeight = c.height * font.height;
+
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+
   const {width, height, rawdata} = c;
   for (let y = 0; y < height; ++y) {
     for (let x = 0; x < width; ++x) {
@@ -123,13 +138,15 @@ export function redraw() {
  * - color: palette index
  */
 export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
-  if (!state || !state.currentRoom) return;
+ if (!state || !state.currentRoom) return;
   const c = state.currentRoom.canvas;
   if (x < 0 || x >= c.width) return;
   if (halfBlockY < 0 || halfBlockY >= c.height * 2) return;
   const charY = Math.floor(halfBlockY / 2);
-  const isUpper = (halfBlockY % 2 === 0);
+  if (charY < 0 || charY >= c.height) return;
   const idx = (charY * c.width + x) * 3;
+  if (idx < 0 || idx + 2 >= c.rawdata.length) return;
+  const isUpper = (halfBlockY % 2 === 0);
   let charCode = c.rawdata[idx];
   let fg = c.rawdata[idx + 1];
   let bg = c.rawdata[idx + 2];

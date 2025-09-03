@@ -1,0 +1,58 @@
+name: "Copilot Environment Setup"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install Bun
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+          echo "$HOME/.bun/bin" >> $HOME/.profile
+          export PATH="$HOME/.bun/bin:$PATH"
+
+      - name: Install Dev Tools
+        run: |
+          bun i -g playwright eslint prettier
+          bunx playwright install --with-deps
+          npx playwright install --with-deps
+
+      - name: Install project dependencies (npm)
+        run: npm install
+
+      - name: Install project dependencies (bun)
+        run: bun install
+
+      - name: Force linting via pre-commit hook
+        run: |
+          cat > .git/hooks/pre-commit <<'EOF'
+          #!/bin/sh
+          bun run lint:fix
+          RESULT=$?
+          if [ $RESULT -ne 0 ]; then
+          echo "bun check:fix failed. Commit aborted."
+          exit 1
+          fi
+          EOF
+          chmod +x .git/hooks/pre-commit

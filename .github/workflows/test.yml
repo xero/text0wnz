@@ -1,0 +1,142 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    name: Unit Tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Bun
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: bun i
+
+      - name: Run unit tests with coverage
+        run: bun check:coverage
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@ab904c41d6ece82784817410c45d8b8c02684457 # v3
+        if: success()
+        with:
+          directory: ./coverage
+          fail_ci_if_error: false
+
+  # e2e-tests:
+  #   runs-on: ubuntu-latest
+  #   container:
+  #     image: mcr.microsoft.com/playwright:v1.55.0-jammy
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+  #
+  #     - name: Install Bun
+  #       run: |
+  #         apt-get update
+  #         apt-get install -y unzip
+  #         curl -fsSL https://bun.sh/install | bash
+  #         echo "$HOME/.bun/bin" >> $GITHUB_PATH
+  #
+  #     - name: Install dependencies
+  #       run: bun i
+  #
+  #     - name: Install Playwright Browsers
+  #       run: bunx playwright install --with-deps
+  #
+  #     - name: Build application
+  #       run: bun bake
+  #
+  #     - name: Start Web Server
+  #       run: bunx vite preview --port 4173 &
+  #
+  #     - name: Wait for server to start
+  #       run: sleep 5
+  #
+  #     - name: Run E2E tests
+  #       run: bun check:e2e
+  #       env:
+  #         PLAYWRIGHT_TEST_BASE_URL: http://localhost:4173
+  #
+  #     - name: Upload test results
+  #       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+  #       if: failure()
+  #       with:
+  #         name: playwright-report
+  #         path: playwright-report/
+  #         retention-days: 30
+  #
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint Code
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Bun
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: bun i
+
+      - name: Run linter
+        run: bun lint
+
+  build-test:
+    runs-on: ubuntu-latest
+    name: Build Test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Bun
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: bun i
+
+      - name: Build application
+        run: bun bake
+
+      - name: Check build artifacts
+        run: |
+          test -f dist/app.min.js
+          echo "Build successful - artifact present"
+

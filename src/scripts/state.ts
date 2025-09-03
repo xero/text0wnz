@@ -52,7 +52,7 @@ export interface CanvasState {
   spacing: number;       // spacing in pixels or 0/1 for ANSI art spacing
   ice: boolean;
   colors: number[];      // Palette as array of numbers
-  rawdata: Uint8Array;   // Canvas binary data (interpretation depends on fontType)
+  rawdata: Uint8Array;   // Canvas binary data [char, fg, bg, ...]
   updatedAt: string;     // ISO8601
 }
 
@@ -127,18 +127,25 @@ export interface GlobalState {
 }
 
 // Utility to create a default offline canvas state
-function createOfflineCanvasState(): CanvasState {
+export function createOfflineCanvasState(): CanvasState {
+  const width = 80, height = 25;
+  const rawdata = new Uint8Array(width * height * 3);
+  for (let i = 0; i < width * height; ++i) {
+    rawdata[i * 3 + 0] = 32; // space
+    rawdata[i * 3 + 1] = 7;  // white fg
+    rawdata[i * 3 + 2] = 0;  // black bg
+  }
   return {
     id: 0,
     name: 'Offline Canvas',
-    width: 80,
-    height: 25,
+    width,
+    height,
     font: 'CP437 8x16',
     fontType: 'cp437',
     spacing: 1,
     ice: false,
     colors: new Array<number>(16).fill(0),
-    rawdata: new Uint8Array(80 * 25 * 2), // 2 bytes per cell for text+attr, or adjust for your format
+    rawdata,
     updatedAt: nowISO(),
   };
 }
