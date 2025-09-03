@@ -38,23 +38,13 @@ export class GridOverlay {
     const fontHeight = this.font.height;
     const columns = this.getColumns();
     const rows = this.getRows();
-
-    // Add this:
-    const dpr = window.devicePixelRatio || 1;
     const logicalWidth = fontWidth * columns;
     const logicalHeight = fontHeight * rows;
-
-    // Buffer size for HiDPI
-    this.gridCanvas.width = Math.round(logicalWidth * dpr);
-    this.gridCanvas.height = Math.round(logicalHeight * dpr);
-    // CSS size (logical)
+    this.gridCanvas.width = logicalWidth;
+    this.gridCanvas.height = logicalHeight;
     this.gridCanvas.style.width = `${logicalWidth}px`;
     this.gridCanvas.style.height = `${logicalHeight}px`;
-
-    // Scale the context
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-    this.ctx.scale(dpr, dpr);
-
     this.renderGrid();
   }
 

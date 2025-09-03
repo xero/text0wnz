@@ -90,52 +90,21 @@ function resizeCanvasToState() {
   if (!canvas || !state || !font) return;
   const c = state.currentRoom?.canvas;
   if (!c) return;
-
-  // Logical size
   const logicalWidth = c.width * font.width;
   const logicalHeight = c.height * font.height;
-
-  // Buffer for HiDPI
-  const dpr = window.devicePixelRatio || 1;
-
-console.log('[resizeCanvasToState]',
-  'font:', font.width, 'x', font.height,
-  'canvas logical:', logicalWidth, 'x', logicalHeight,
-  'dpr:', dpr,
-  'canvas.width:', Math.round(logicalWidth * dpr),
-  'canvas.height:', Math.round(logicalHeight * dpr)
-);
-
-
-  canvas.width = Math.round(logicalWidth * dpr);
-  canvas.height = Math.round(logicalHeight * dpr);
-
-  // CSS size (logical pixels)
+  canvas.width = logicalWidth;
+  canvas.height = logicalHeight;
   canvas.style.width = `${logicalWidth}px`;
   canvas.style.height = `${logicalHeight}px`;
-console.log('[resizeCanvasToState post]',
-  'canvas.width:', canvas.width,
-  'canvas.height:', canvas.height,
-  'canvas.style.width:', canvas.style.width,
-  'canvas.style.height:', canvas.style.height
-);
   if (!ctx) return;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.scale(dpr, dpr);
-console.log('[resizeCanvasToState after scale and transform]',
-  'canvas.width:', canvas.width,
-  'canvas.height:', canvas.height,
-  'canvas.style.width:', canvas.style.width,
-  'canvas.style.height:', canvas.style.height
-);
-
   eventBus.publish('ui:canvas:resize', {
     width: logicalWidth,
     height: logicalHeight,
     font,
     columns: c.width,
     rows: c.height,
-    dpr,
+    dpr: 1
   });
 }
 

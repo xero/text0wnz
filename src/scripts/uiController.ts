@@ -155,7 +155,6 @@ void art;
 const initCanvas = (canvas:HTMLCanvasElement, name:string):CanvasRenderingContext2D=>{
   const ctx = canvas.getContext('2d',{willReadFrequently: true});
   if (!ctx) throw new Error(`Canvas '${name}' not found`);
-  // ensure canvas drawing buffer matches its rendered size
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
   return ctx;
