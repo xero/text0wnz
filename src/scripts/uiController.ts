@@ -31,6 +31,7 @@ const
 /* <--//------------------------------------------------[interface elements] */
 let
   html:HTMLElement,
+  fontRenderer: FontRenderer,
   modal:HTMLDialogElement,
   title:HTMLInputElement,
   resolution:HTMLElement,
@@ -491,7 +492,7 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
   //--------------- canvas
   palette = createDefaultPalette();
   const defaultFont = 'Topaz437 8x16';
-  const fontRenderer: FontRenderer = await setFont(defaultFont, 'cp437', palette, false);
+  fontRenderer = await setFont(defaultFont, 'cp437', palette, false);
   fontSelect.value = defaultFont;
   fontPreview.src = `/ui/fontz/${defaultFont}.png`;
   fontPreview.style = 'width: 192px; height: 384px';
@@ -597,7 +598,6 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
 
   add(switchFont, _=>{
     void (async()=>{
-      let fontRenderer: FontRenderer | null = null;
       const fontName = fontSelect.value;
       try {
         // Determine font type
