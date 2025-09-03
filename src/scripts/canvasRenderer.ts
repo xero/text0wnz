@@ -91,22 +91,22 @@ function resizeCanvasToState() {
   const c = state.currentRoom?.canvas;
   if (!c) return;
 
-  // Calculate logical canvas size
+  // Logical size
   const logicalWidth = c.width * font.width;
   const logicalHeight = c.height * font.height;
 
-  // Set canvas buffer size (physical pixels for HiDPI)
-  canvas.width = Math.round(logicalWidth * devicePixelRatio);
-  canvas.height = Math.round(logicalHeight * devicePixelRatio);
+  // Buffer for HiDPI
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(logicalWidth * dpr);
+  canvas.height = Math.round(logicalHeight * dpr);
 
-  // Set CSS size (logical pixels)
+  // CSS size (logical pixels)
   canvas.style.width = `${logicalWidth}px`;
   canvas.style.height = `${logicalHeight}px`;
 
-  // Reset and apply scale once
-  if(!ctx) return
+  if (!ctx) return;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.scale(devicePixelRatio, devicePixelRatio);
+  ctx.scale(dpr, dpr);
 }
 
 export function redraw() {

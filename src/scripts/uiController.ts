@@ -496,6 +496,7 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
   fontPreview.src = `/ui/fontz/${defaultFont}.png`;
   fontPreview.style = 'width: 192px; height: 384px';
   const canvasRenderer = initCanvasRenderer(state, palette, fontRenderer);
+  initCanvas(art, 'Art Drawing Canvas');
 
   //--------------- tools
 
