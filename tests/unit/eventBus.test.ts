@@ -1,5 +1,5 @@
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import {PubSub, EditorEventMap} from './eventBus';
+import {PubSub, EditorEventMap} from '../../src/scripts/eventBus';
 
 describe('PubSub', ()=>{
   let bus: PubSub;

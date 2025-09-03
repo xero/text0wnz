@@ -576,8 +576,8 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
   const gridOverlay = new GridOverlay(
     artContainer,
     fontRenderer,
-    () => state.currentRoom?.canvas.width ?? 80,
-    () => state.currentRoom?.canvas.height ?? 25
+    ()=>state.currentRoom?.canvas.width ?? 80,
+    ()=>state.currentRoom?.canvas.height ?? 25
   );
   initCanvas($$<HTMLCanvasElement>('#grid-overlay'),'Grid Overlay');
   gridOverlay.show(false);
