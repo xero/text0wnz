@@ -62,7 +62,7 @@ jobs:
         run: bun bake
 
       - name: Start Web Server
-        run: bun serve
+        run: bun serve &
 
       - name: Wait for server to start
         run: sleep 5
