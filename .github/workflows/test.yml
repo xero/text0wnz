@@ -67,6 +67,7 @@ jobs:
       - name: Run E2E tests
         run: bun check:e2e
         env:
+          HOME: /root
           PLAYWRIGHT_TEST_BASE_URL: http://localhost:4173
 
       - name: Upload test results
