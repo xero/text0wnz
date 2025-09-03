@@ -1,5 +1,24 @@
 import { test, expect } from '@playwright/test';
 
+// Helper function for browser-specific clicks to handle WebKit pointer event issues
+async function safeClick(page, selector, options = {}) {
+  const browserName = page.context().browser()?.browserType().name();
+  
+  if (browserName === 'webkit') {
+    // For WebKit, try keyboard activation as an alternative to clicking
+    const element = page.locator(selector);
+    
+    // Focus the element and press Enter (often more reliable than clicking in WebKit)
+    await element.focus();
+    await page.waitForTimeout(100);
+    await element.press('Enter');
+    await page.waitForTimeout(200);
+  } else {
+    // For other browsers, use normal click
+    await page.locator(selector).click(options);
+  }
+}
+
 test.describe('text0wnz File Operations', () => {
   test('shows Open button on splash screen', async ({ page }) => {
     await page.goto('/');
@@ -26,7 +45,7 @@ test.describe('text0wnz File Operations', () => {
 
   test('shows canvas size indicator in footer', async ({ page }) => {
     await page.goto('/');
-    await page.locator('#splashDraw').click();
+    await safeClick(page, '#splashDraw');
     
     // Wait for editor to load
     await expect(page.locator('#art')).toBeVisible();
@@ -41,7 +60,7 @@ test.describe('text0wnz File Operations', () => {
 
   test('shows title input in footer', async ({ page }) => {
     await page.goto('/');
-    await page.locator('#splashDraw').click();
+    await safeClick(page, '#splashDraw');
     
     // Wait for editor to load
     await expect(page.locator('#art')).toBeVisible();

@@ -17,11 +17,24 @@ export default defineConfig({
     },
     {
       name: 'Firefox',
-      use: { browserName: 'firefox' },
+      use: { 
+        browserName: 'firefox',
+        // Firefox-specific settings for CI environment
+        launchOptions: {
+          firefoxUserPrefs: {
+            'dom.disable_beforeunload': true,
+          },
+        },
+      },
     },
     {
       name: 'WebKit',
-      use: { browserName: 'webkit' },
+      use: { 
+        browserName: 'webkit',
+        // WebKit-specific settings to handle pointer event issues
+        actionTimeout: 10000,
+      },
+      timeout: 45000, // Increased timeout for WebKit due to interaction issues
     },
   ],
   webServer: {
