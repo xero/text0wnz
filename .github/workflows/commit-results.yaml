@@ -1,0 +1,141 @@
+name: Commit and Push All Test Results
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  commit-results:
+    name: Commit and Push All Test Results
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download unit test results
+        uses: actions/download-artifact@v4
+        with:
+          name: unit-test-results
+          path: tests/results/
+
+      - name: Download e2e test results
+        uses: actions/download-artifact@v4
+        with:
+          name: e2e-test-results
+          path: tests/results/
+
+      - name: Download Playwright HTML report
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-report
+          path: tests/results/playwright-report/
+
+      - name: Download Playwright raw results
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-raw
+          path: tests/results/e2e/
+
+      - name: Commit and push all test results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add tests/results/
+          git commit -m "chore(ci): update all test results [skip ci]" || echo "No changes to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.CICD_TOKEN }}
+
+      - name: Set artifact info output
+        id: artifact-info
+        run: |
+          {
+            echo 'summary<<EOF'
+            echo 'Test artifacts from this run are available under the **Artifacts** section at [this workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}):'
+            echo ''
+            echo '- unit-test-results'
+            echo '- e2e-test-results'
+            echo '- playwright-report'
+            echo '- playwright-raw'
+            echo ''
+            echo '#### Download via GitHub CLI:'
+            echo '- `gh run download ${{ github.run_id }} -n unit-test-results`'
+            echo '- `gh run download ${{ github.run_id }} -n e2e-test-results`'
+            echo '- `gh run download ${{ github.run_id }} -n playwright-report`'
+            echo '- `gh run download ${{ github.run_id }} -n playwright-raw`'
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
+
+      - name: Add artifact download info to summary
+        run: |
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "### :package: Test Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "Artifacts for this run are available under the **Artifacts** section at [this workflow run]($RUN_URL)." >> $GITHUB_STEP_SUMMARY
+          echo "#### Download via GitHub CLI:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`gh run download ${{ github.run_id }} -n unit-test-results\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`gh run download ${{ github.run_id }} -n e2e-test-results\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`gh run download ${{ github.run_id }} -n playwright-report\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`gh run download ${{ github.run_id }} -n playwright-raw\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment artifact download links on PR (edit or create)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.CICD_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const repo = `${context.repo.owner}/${context.repo.repo}`;
+            const runId = context.runId;
+            const runUrl = `https://github.com/${repo}/actions/runs/${runId}`;
+            const artifacts = [
+              "unit-test-results",
+              "e2e-test-results",
+              "playwright-report",
+              "playwright-raw"
+            ];
+            const commentHeader = "### :package: Download Test Artifacts for this PR";
+            const lines = [
+              commentHeader,
+              `Artifacts for this run are available under the **Artifacts** section at [this workflow run](${runUrl}).`,
+              "",
+              "#### Download via GitHub CLI:",
+              ...artifacts.map(a => `- \`gh run download ${runId} -n ${a}\``)
+            ];
+            const body = lines.join('\n');
+
+            // Get all comments on this PR
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            // Try to find a previous comment from this bot with our header
+            const previous = comments.find(
+              c =>
+                c.user.type === "Bot" &&
+                c.body &&
+                c.body.startsWith(commentHeader)
+            );
+
+            if (previous) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: previous.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: prNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body,
+              });
+            }

@@ -1,0 +1,65 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: ["*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    name: Unit Tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install Bun
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: bun i
+
+      - name: Run unit tests with coverage
+        run: bun check:coverage
+
+      - name: Inject dark theme into coverage report
+        run: |
+          echo "@media (prefers-color-scheme:dark){.cover-empty,body{background:#000}body{color:#efefef}table{color:#000}table,td,th{border:1px solid #222!important}td.empty{color:#eee}.cbranch-no,.cstat-no,.fstat-no{background:#2a0000!important}.cbranch-yes,.cstat-yes,.fstat-yes{background:#002a00!important}}" >> tests/results/coverage/lcov-report/index.css
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        if: success()
+        with:
+          directory: ./tests/results/coverage
+          fail_ci_if_error: false
+
+      - name: Upload all unit test results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: tests/results/
+          retention-days: 3
+
+      - name: Add artifact download info to summary
+        run: |
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "### :package: Unit Test Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Artifacts for this run are available under the **Artifacts** section at [this workflow run]($RUN_URL)." >> $GITHUB_STEP_SUMMARY
+          echo "- Or use GitHub CLI: \`gh run download ${{ github.run_id }} -n unit-test-results\`" >> $GITHUB_STEP_SUMMARY
