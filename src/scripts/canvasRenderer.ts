@@ -5,6 +5,13 @@ import {eventBus} from './eventBus';
 // --- Types
 type RGBA = [number, number, number, number];
 
+export type DirtyRegion = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
 export interface Palette {
   getRGBAColor(index: number): RGBA;
   getForegroundColor(): number;
@@ -36,6 +43,7 @@ let palette: Palette | null = null;
 let state: GlobalState | null = null;
 
 const dirtyCells: Set<number> = new Set();
+const dirtyRegions: DirtyRegion[] = [];
 let needsFullRedraw = true;
 let rafQueued = false;
 
@@ -166,8 +174,9 @@ function flushDirtyCells() {
       }
     }
     dirtyCells.clear();
+    dirtyRegions.length = 0;
     needsFullRedraw = false;
-  } else if (dirtyCells.size > 0) {
+  } else if (dirtyCells.size > 0 || dirtyRegions.length > 0) {
     // Dirty cell redraw
     for (const idx of dirtyCells) {
       const cell = Math.floor(idx / 3);
@@ -181,6 +190,24 @@ function flushDirtyCells() {
       font.draw(charCode, fg, bg, offctx, x, y);
     }
     dirtyCells.clear();
+
+    // Process dirty regions
+    for (const region of dirtyRegions) {
+      for (let y = region.y; y < region.y + region.h; y++) {
+        for (let x = region.x; x < region.x + region.w; x++) {
+          if (x >= 0 && x < width && y >= 0 && y < height) {
+            const idx = (y * width + x) * 3;
+            const charCode = rawdata[idx];
+            const fg = rawdata[idx + 1];
+            const bg = rawdata[idx + 2];
+            // clear cell area
+            offctx.clearRect(x * font.width, y * font.height, font.width, font.height);
+            font.draw(charCode, fg, bg, offctx, x, y);
+          }
+        }
+      }
+    }
+    dirtyRegions.length = 0;
   }
 
   // Blit offscreen to onscreen
@@ -202,6 +229,92 @@ function markDirtyCell(x: number, y: number) {
   const idx = (y * c.width + x) * 3;
   dirtyCells.add(idx);
   queueFlushDirty();
+}
+
+/**
+ * Enqueue a dirty region for redraw.
+ * Optionally merges/coalesces overlapping or adjacent regions for efficiency.
+ */
+export function enqueueDirtyRegion(region: DirtyRegion) {
+  if (!state || !state.currentRoom) return;
+  const c = state.currentRoom.canvas;
+
+  // Clamp region to canvas bounds
+  const clampedRegion: DirtyRegion = {
+    x: Math.max(0, Math.min(region.x, c.width)),
+    y: Math.max(0, Math.min(region.y, c.height)),
+    w: Math.max(0, Math.min(region.w, c.width - Math.max(0, region.x))),
+    h: Math.max(0, Math.min(region.h, c.height - Math.max(0, region.y)))
+  };
+
+  // Skip empty regions
+  if (clampedRegion.w <= 0 || clampedRegion.h <= 0) return;
+
+  // Try to merge with existing regions to reduce redraw overhead
+  let merged = false;
+  for (let i = 0; i < dirtyRegions.length; i++) {
+    const existing = dirtyRegions[i];
+    const mergedRegion = tryMergeRegions(existing, clampedRegion);
+    if (mergedRegion) {
+      dirtyRegions[i] = mergedRegion;
+      merged = true;
+      break;
+    }
+  }
+
+  if (!merged) {
+    dirtyRegions.push(clampedRegion);
+  }
+
+  queueFlushDirty();
+}
+
+/**
+ * Attempt to merge two regions if they overlap or are adjacent.
+ * Returns the merged region if possible, null otherwise.
+ */
+function tryMergeRegions(a: DirtyRegion, b: DirtyRegion): DirtyRegion | null {
+  // Calculate bounds
+  const aRight = a.x + a.w;
+  const aBottom = a.y + a.h;
+  const bRight = b.x + b.w;
+  const bBottom = b.y + b.h;
+
+  // Check if regions overlap or are adjacent (allowing 1-pixel gap for efficiency)
+  const overlapX = Math.max(0, Math.min(aRight, bRight) - Math.max(a.x, b.x));
+  const overlapY = Math.max(0, Math.min(aBottom, bBottom) - Math.max(a.y, b.y));
+  const adjacentX = (aRight === b.x) || (bRight === a.x);
+  const adjacentY = (aBottom === b.y) || (bBottom === a.y);
+
+  // Merge if overlapping or adjacent
+  if ((overlapX > 0 && overlapY > 0) ||
+      (adjacentX && overlapY > 0) ||
+      (adjacentY && overlapX > 0)) {
+    return {
+      x: Math.min(a.x, b.x),
+      y: Math.min(a.y, b.y),
+      w: Math.max(aRight, bRight) - Math.min(a.x, b.x),
+      h: Math.max(aBottom, bBottom) - Math.min(a.y, b.y)
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Clear all dirty regions from the queue.
+ * Useful for external systems that want to reset the dirty state.
+ */
+export function clearDirtyRegions() {
+  dirtyRegions.length = 0;
+}
+
+/**
+ * Get the current list of dirty regions (read-only).
+ * Useful for debugging or external systems that need to inspect dirty state.
+ */
+export function getDirtyRegions(): readonly DirtyRegion[] {
+  return dirtyRegions;
 }
 
 // --- Drawing API

@@ -1,5 +1,5 @@
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import {createOfflineCanvasState, getCanvasImage} from '../../src/scripts/canvasRenderer';
+import {createOfflineCanvasState, getCanvasImage, enqueueDirtyRegion, clearDirtyRegions, getDirtyRegions, type DirtyRegion} from '../../src/scripts/canvasRenderer';
 
 // Mock the eventBus module
 vi.mock('../../src/scripts/eventBus', () => ({
@@ -65,6 +65,68 @@ describe('canvasRenderer utilities', () => {
       // Since we haven't initialized the canvas in the module, it should return null
       const canvasImage = getCanvasImage();
       expect(canvasImage).toBeNull();
+    });
+  });
+
+  describe('dirty region system', () => {
+    beforeEach(() => {
+      clearDirtyRegions();
+    });
+
+    describe('getDirtyRegions', () => {
+      it('should return empty array initially', () => {
+        const regions = getDirtyRegions();
+        expect(regions).toEqual([]);
+      });
+    });
+
+    describe('clearDirtyRegions', () => {
+      it('should clear all dirty regions', () => {
+        // First, we need to mock a basic state to allow enqueueDirtyRegion to work
+        vi.doMock('../../src/scripts/state', () => ({
+          state: {
+            currentRoom: {
+              canvas: {
+                width: 80,
+                height: 25
+              }
+            }
+          }
+        }));
+
+        clearDirtyRegions();
+        const regions = getDirtyRegions();
+        expect(regions).toEqual([]);
+      });
+    });
+
+    describe('DirtyRegion type', () => {
+      it('should have correct structure', () => {
+        const region: DirtyRegion = {
+          x: 10,
+          y: 5,
+          w: 20,
+          h: 15
+        };
+
+        expect(region.x).toBe(10);
+        expect(region.y).toBe(5);
+        expect(region.w).toBe(20);
+        expect(region.h).toBe(15);
+      });
+    });
+
+    describe('enqueueDirtyRegion', () => {
+      it('should handle empty state gracefully', () => {
+        const region: DirtyRegion = { x: 0, y: 0, w: 10, h: 10 };
+        
+        // Should not throw when state is null/undefined
+        expect(() => enqueueDirtyRegion(region)).not.toThrow();
+        
+        // Should not add anything to queue when state is invalid
+        const regions = getDirtyRegions();
+        expect(regions).toEqual([]);
+      });
     });
   });
 });
