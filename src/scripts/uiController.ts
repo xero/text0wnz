@@ -30,6 +30,7 @@ const
 
 /* <--//------------------------------------------------[interface elements] */
 let
+  state:GlobalState,
   html:HTMLElement,
   fontRenderer: FontRenderer,
   modal:HTMLDialogElement,
@@ -78,6 +79,9 @@ let
   fileJoint:HTMLElement,
   fontSelect:HTMLSelectElement,
   fontPreview:HTMLImageElement,
+  resSave:HTMLElement,
+  txtCols:HTMLInputElement,
+  txtRows:HTMLInputElement,
   curColors:HTMLCanvasElement,
   palettePrev:HTMLCanvasElement,
   art:HTMLCanvasElement,
@@ -131,7 +135,10 @@ const getElements = ():void=>{
   fileUpload = $$<HTMLInputElement>('#fileUpload');
   fontSelect = $$<HTMLSelectElement>('#fontName');
   fontPreview = $$<HTMLImageElement>('#fontPreview');
+  resSave = $('resSave');
   curColors = $$<HTMLCanvasElement>('#currentColors');
+  txtCols = $$<HTMLInputElement>('#txtCols');
+  txtRows = $$<HTMLInputElement>('#txtRows');
   palettePrev = $$<HTMLCanvasElement>('#paletteColors');
   art = $$<HTMLCanvasElement>('#art');
 
@@ -206,6 +213,12 @@ const navChat = (screen:string)=>{
   cl($(`chat${screen.charAt(0).toUpperCase()}${screen.slice(1).toLowerCase()}`),'hide',false);
   cl(screen === 'resolution' ? resolution : chat, 'selected', true);
   cl(chatz,'hide',false);
+
+  //reset resolution form
+  if(!state.currentRoom) return;
+  const canvas = state.currentRoom.canvas;
+  txtRows.value = canvas.height.toString();
+  txtCols.value = canvas.width.toString();
 };
 const toggleChatRes = (w:string):void=>{
   const
@@ -487,7 +500,8 @@ export function initUI(state: GlobalState, eventBus: PubSub) {
     });
   });
 }
-async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
+async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
+  state = theState;
   //--------------- canvas
   palette = createDefaultPalette();
   const defaultFont = 'Topaz437 8x16';
@@ -633,6 +647,38 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
     })();
   });
   add(font,_=>modalShow('fonts'));
+
+  //-------------- resize canvas
+  add(resSave,_=>{
+    const cols = Number(txtCols.value);
+    const rows = Number(txtRows.value);
+    if (rows < 1 || cols < 1) throw new Error('Invalid canvas size');
+    if(!state.currentRoom) throw new Error('Missing room context');
+    const canvas = state.currentRoom.canvas;
+    const newRawData = new Uint8Array(cols * rows * 3);
+    const minCols = Math.min(cols, canvas.width);
+    const minRows = Math.min(rows, canvas.height);
+    for (let y = 0; y < minRows; ++y) {
+      for (let x = 0; x < minCols; ++x) {
+        const oldIdx = (y * canvas.width + x) * 3;
+        const newIdx = (y * cols + x) * 3;
+        newRawData[newIdx] = canvas.rawdata[oldIdx];
+        newRawData[newIdx + 1] = canvas.rawdata[oldIdx + 1];
+        newRawData[newIdx + 2] = canvas.rawdata[oldIdx + 2];
+      }
+    }
+    const newCanvas={
+      ...canvas,
+      width: cols,
+      height: rows,
+      rawdata: newRawData,
+      updatedAt: new Date().toISOString(),
+    };
+    state.currentRoom.canvas = newCanvas;
+    eventBus.publish('ui:state:changed', { state });
+    $$<HTMLElement>("#resolution label").innerText=`${cols} cols x ${rows} rows`;
+    toggleChatRes('');
+  });
 
   //--------------- modal
   $$$<HTMLButtonElement>('.cancel').forEach(
