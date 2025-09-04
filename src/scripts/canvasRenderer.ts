@@ -219,16 +219,6 @@ function forceFullRedraw() {
   queueFlushDirty();
 }
 
-// Call this to mark a cell as dirty (cellIdx is the *cell*, not the byte offset)
-function markDirtyCell(x: number, y: number) {
-  if (!state || !state.currentRoom) return;
-  const c = state.currentRoom.canvas;
-  if (x < 0 || x >= c.width || y < 0 || y >= c.height) return;
-  const idx = (y * c.width + x) * 3;
-  dirtyCells.add(idx);
-  queueFlushDirty();
-}
-
 /**
  * Enqueue a dirty region for redraw.
  * Optionally merges/coalesces overlapping or adjacent regions for efficiency.
@@ -471,7 +461,7 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
   c.rawdata[idx] = charCode;
   c.rawdata[idx + 1] = fg;
   c.rawdata[idx + 2] = bg;
-  markDirtyCell(x, charY);
+  enqueueDirtyRegion({x, y: charY, w: 1, h: 1});
 }
 
 /**
@@ -507,7 +497,7 @@ export function shadeCell(x: number, y: number, fg: number, bg: number, reduce: 
   c.rawdata[idx] = code;
   c.rawdata[idx + 1] = fg;
   c.rawdata[idx + 2] = bg;
-  markDirtyCell(x, y);
+  enqueueDirtyRegion({x, y, w: 1, h: 1});
 }
 
 /**
