@@ -392,11 +392,11 @@ const createPalettePicker = (canvas: HTMLCanvasElement, paletteObj: Palette): Pa
     imageData[i] = ctx.createImageData(swatchWidth + 1, swatchHeight);
   }
   updatePalette();
-  canvas.addEventListener('touchend', touchEnd);
-  canvas.addEventListener('touchcancel', touchEnd);
-  canvas.addEventListener('mouseup', mouseEnd);
+  canvas.addEventListener('touchend', touchEnd, { passive: false });
+  canvas.addEventListener('touchcancel', touchEnd, { passive: false });
+  canvas.addEventListener('mouseup', mouseEnd, { passive: false });
   canvas.addEventListener('contextmenu', e=>e.preventDefault());
-  document.addEventListener('keydown', keydown);
+  document.addEventListener('keydown', keydown, { passive: false });
 
   return {
     updatePalette
@@ -568,7 +568,7 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
         case 'pointerup': toolManager.handlePointerUp(common); break;
         case 'pointerleave': toolManager.handlePointerLeave(common); break;
       }
-    });
+    }, { passive: false });
   });
 
   //--------------- colors
