@@ -280,7 +280,7 @@
     }
   }
   footer {
-    @apply h-16;
+    @apply h-[52px];
     section {
       button {
         @apply pl-0 pr-2.5 pt-1 h-full flex items-center justify-center;
@@ -345,25 +345,25 @@
       @apply flex flex-col min-h-0 h-full;
     }
     article#canvasArea {
-      @apply relative w-fit mx-auto;
-    }
-    #grid-overlay {
-      @apply absolute left-0 top-0 block;
-    }
-    #grid-overlay {
-      @apply pointer-events-none z-10 hidden;
-    }
-    #grid-overlay.enabled {
-      @apply block;
-    }
-    canvas#art {
-      @apply block z-1 box-border;
-      box-shadow: 0 4px 32px rgba(0,0,0,0.7);
+      @apply
+        relative w-full min-w-1 h-full min-h-0 justify-items-center
+        flex justify-center overflow-y-scroll overflow-x-auto;
+      canvas#art {
+        @apply block z-1 box-border;
+        box-shadow: 0 4px 32px rgba(0,0,0,0.7);
+        touch-action: none;
+      }
+      #grid-overlay {
+        @apply absolute left-auto top-0 pointer-events-none z-10 hidden;
+      }
+      #grid-overlay.enabled {
+        @apply block;
+      }
     }
   }
   #chatz {
     @apply
-      flex fixed bottom-[6vh] right-0 z-40 bg-menu-bg scale-y-100 opacity-100
+      flex fixed bottom-[52px] right-0 z-40 bg-menu-bg scale-y-100 opacity-100
       w-[45vw] min-w-[30vw] max-w-full min-h-[300px] max-h-full /*no height!*/
       border-8 border-[#666] border-double;
     transform-origin: bottom;

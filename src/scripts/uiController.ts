@@ -30,6 +30,7 @@ const
 
 /* <--//------------------------------------------------[interface elements] */
 let
+  state:GlobalState,
   html:HTMLElement,
   fontRenderer: FontRenderer,
   modal:HTMLDialogElement,
@@ -78,6 +79,9 @@ let
   fileJoint:HTMLElement,
   fontSelect:HTMLSelectElement,
   fontPreview:HTMLImageElement,
+  resSave:HTMLElement,
+  txtCols:HTMLInputElement,
+  txtRows:HTMLInputElement,
   curColors:HTMLCanvasElement,
   palettePrev:HTMLCanvasElement,
   art:HTMLCanvasElement,
@@ -131,7 +135,10 @@ const getElements = ():void=>{
   fileUpload = $$<HTMLInputElement>('#fileUpload');
   fontSelect = $$<HTMLSelectElement>('#fontName');
   fontPreview = $$<HTMLImageElement>('#fontPreview');
+  resSave = $('resSave');
   curColors = $$<HTMLCanvasElement>('#currentColors');
+  txtCols = $$<HTMLInputElement>('#txtCols');
+  txtRows = $$<HTMLInputElement>('#txtRows');
   palettePrev = $$<HTMLCanvasElement>('#paletteColors');
   art = $$<HTMLCanvasElement>('#art');
 
@@ -206,6 +213,12 @@ const navChat = (screen:string)=>{
   cl($(`chat${screen.charAt(0).toUpperCase()}${screen.slice(1).toLowerCase()}`),'hide',false);
   cl(screen === 'resolution' ? resolution : chat, 'selected', true);
   cl(chatz,'hide',false);
+
+  //reset resolution form
+  if(!state.currentRoom) return;
+  const canvas = state.currentRoom.canvas;
+  txtRows.value = canvas.height.toString();
+  txtCols.value = canvas.width.toString();
 };
 const toggleChatRes = (w:string):void=>{
   const
@@ -294,20 +307,21 @@ const createPalettePicker = (canvas: HTMLCanvasElement, paletteObj: Palette): Pa
     updateCurrentColorsPreview();
   }
 
-  function touchEnd(evt: TouchEvent) {
+  function touchEnd(e: TouchEvent) {
+    e.preventDefault();
     const rect = canvas.getBoundingClientRect();
-    const x = Math.floor((evt.changedTouches[0].pageX - rect.left) / swatchWidth);
-    const y = Math.floor((evt.changedTouches[0].pageY - rect.top) / swatchHeight);
+    const x = Math.floor((e.changedTouches[0].pageX - rect.left) / swatchWidth);
+    const y = Math.floor((e.changedTouches[0].pageY - rect.top) / swatchHeight);
     const colorIndex = y * cols + x;
     paletteObj.setForegroundColor(colorIndex);
     updateCurrentColorsPreview();
   }
-  function mouseEnd(evt: MouseEvent) {
+  function mouseEnd(e: MouseEvent) {
     const rect = canvas.getBoundingClientRect();
-    const x = Math.floor((evt.clientX - rect.left) / swatchWidth);
-    const y = Math.floor((evt.clientY - rect.top) / swatchHeight);
+    const x = Math.floor((e.clientX - rect.left) / swatchWidth);
+    const y = Math.floor((e.clientY - rect.top) / swatchHeight);
     const colorIndex = y * cols + x;
-    if (!evt.altKey && !evt.ctrlKey) {
+    if (!e.altKey && !e.ctrlKey) {
       paletteObj.setForegroundColor(colorIndex);
     } else {
       paletteObj.setBackgroundColor(colorIndex);
@@ -315,18 +329,18 @@ const createPalettePicker = (canvas: HTMLCanvasElement, paletteObj: Palette): Pa
     updateCurrentColorsPreview();
   }
 
-  function keydown(evt: KeyboardEvent) {
-    if (evt.key >= '1' && evt.key <= '8') {
-      const num = parseInt(evt.key, 10);
-      if (evt.ctrlKey) {
-        evt.preventDefault();
+  function keydown(e: KeyboardEvent) {
+    if (e.key >= '1' && e.key <= '8') {
+      const num = parseInt(e.key, 10);
+      if (e.ctrlKey) {
+        e.preventDefault();
         if (paletteObj.getForegroundColor() === num) {
           paletteObj.setForegroundColor(num + 8);
         } else {
           paletteObj.setForegroundColor(num);
         }
-      } else if (evt.altKey) {
-        evt.preventDefault();
+      } else if (e.altKey) {
+        e.preventDefault();
         if (paletteObj.getBackgroundColor() === num) {
           paletteObj.setBackgroundColor(num + 8);
         } else {
@@ -335,14 +349,14 @@ const createPalettePicker = (canvas: HTMLCanvasElement, paletteObj: Palette): Pa
       }
     }
     // Handle arrow keys with Ctrl
-    else if (evt.ctrlKey && (
-      evt.key === 'ArrowLeft' ||
-        evt.key === 'ArrowUp' ||
-        evt.key === 'ArrowRight' ||
-        evt.key === 'ArrowDown'
+    else if (e.ctrlKey && (
+      e.key === 'ArrowLeft' ||
+        e.key === 'ArrowUp' ||
+        e.key === 'ArrowRight' ||
+        e.key === 'ArrowDown'
     )) {
-      evt.preventDefault();
-      switch (evt.key) {
+      e.preventDefault();
+      switch (e.key) {
         case 'ArrowLeft': {
           let color = paletteObj.getBackgroundColor();
           color = (color === 0) ? 15 : (color - 1);
@@ -378,11 +392,11 @@ const createPalettePicker = (canvas: HTMLCanvasElement, paletteObj: Palette): Pa
     imageData[i] = ctx.createImageData(swatchWidth + 1, swatchHeight);
   }
   updatePalette();
-  canvas.addEventListener('touchend', touchEnd);
-  canvas.addEventListener('touchcancel', touchEnd);
-  canvas.addEventListener('mouseup', mouseEnd);
+  canvas.addEventListener('touchend', touchEnd, {passive: false});
+  canvas.addEventListener('touchcancel', touchEnd, {passive: false});
+  canvas.addEventListener('mouseup', mouseEnd, {passive: false});
   canvas.addEventListener('contextmenu', e=>e.preventDefault());
-  document.addEventListener('keydown', keydown);
+  document.addEventListener('keydown', keydown, {passive: false});
 
   return {
     updatePalette
@@ -406,7 +420,7 @@ function setupFKeyCanvases(fontCellHeight: number, maxVisualHeight: number = 45)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 }
-function getPointerXY(e: PointerEvent, state: GlobalState, font: FontRenderer, halfBlock = false) {
+function getPointerXY(e: PointerEvent, state: GlobalState, halfBlock = false) {
   const c = state.currentRoom?.canvas;
   if(!c) return;
   const rect = art.getBoundingClientRect();
@@ -487,7 +501,8 @@ export function initUI(state: GlobalState, eventBus: PubSub) {
     });
   });
 }
-async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
+async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
+  state = theState;
   //--------------- canvas
   palette = createDefaultPalette();
   const defaultFont = 'Topaz437 8x16';
@@ -533,8 +548,9 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
   ['pointerdown', 'pointermove', 'pointerup', 'pointerleave'].forEach(type=>{
     art.addEventListener(type, (e: Event)=>{
       if (!(e instanceof PointerEvent)) return;
+      e.preventDefault();
       const halfBlock = toolManager.getActiveTool()?.id === 'pen';
-      const pointer = getPointerXY(e, state, fontRenderer, halfBlock);
+      const pointer = getPointerXY(e, state, halfBlock);
       if (!pointer) return;
       const {x, y} = pointer;
       const common = {
@@ -552,7 +568,7 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
         case 'pointerup': toolManager.handlePointerUp(common); break;
         case 'pointerleave': toolManager.handlePointerLeave(common); break;
       }
-    });
+    }, {passive: false});
   });
 
   //--------------- colors
@@ -633,6 +649,38 @@ async function setupCanvasAndTools(state: GlobalState, eventBus: PubSub) {
     })();
   });
   add(font,_=>modalShow('fonts'));
+
+  //-------------- resize canvas
+  add(resSave,_=>{
+    const cols = Number(txtCols.value);
+    const rows = Number(txtRows.value);
+    if (rows < 1 || cols < 1) throw new Error('Invalid canvas size');
+    if(!state.currentRoom) throw new Error('Missing room context');
+    const canvas = state.currentRoom.canvas;
+    const newRawData = new Uint8Array(cols * rows * 3);
+    const minCols = Math.min(cols, canvas.width);
+    const minRows = Math.min(rows, canvas.height);
+    for (let y = 0; y < minRows; ++y) {
+      for (let x = 0; x < minCols; ++x) {
+        const oldIdx = (y * canvas.width + x) * 3;
+        const newIdx = (y * cols + x) * 3;
+        newRawData[newIdx] = canvas.rawdata[oldIdx];
+        newRawData[newIdx + 1] = canvas.rawdata[oldIdx + 1];
+        newRawData[newIdx + 2] = canvas.rawdata[oldIdx + 2];
+      }
+    }
+    const newCanvas = {
+      ...canvas,
+      width: cols,
+      height: rows,
+      rawdata: newRawData,
+      updatedAt: new Date().toISOString(),
+    };
+    state.currentRoom.canvas = newCanvas;
+    eventBus.publish('ui:state:changed', {state});
+    $$('#resolution label').innerText = `${cols} cols x ${rows} rows`;
+    toggleChatRes('');
+  });
 
   //--------------- modal
   $$$<HTMLButtonElement>('.cancel').forEach(
