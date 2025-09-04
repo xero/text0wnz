@@ -2,9 +2,40 @@
 
 **text0wnz** is a collaborative, web-based text art editor and viewer. It supports classic ANSI text art, XBin files, and plain UTF-8 text. Editor state is synchronized between clients via WebSockets.
 
-> **Note:** Unit test coverage is currently very limited. Most testing is manual as we focus on delivering core features.
-
 ---
+
+## Directory structure and important files / locations
+
+```
+├── coverage/             // unit test coverage
+├── dist/                 // built version of the app
+│   ├── ui/               // static assets
+│   ├── app.min.js        // minified js
+│   ├── editor.min.css    // minified css
+│   └── index.html        // single page app dom
+├── docs/                 // various markdown docs to help you
+├── examples/             // test files
+│   ├── ansi/             // .ans art files to test with
+│   └── xbin/             // .xb files to test with
+├── server/               // future server side scripts (not implemented)
+├── src/                  // app source code
+│   ├── scripts/          // typescript
+│   ├── style/            // tailwindcss
+│   └── www/              // index.html and static ui folder with font images
+├── tests/                // all test related files
+│   ├── e2e/              // playwright tests
+│   ├── results/          // e2e and unit test results
+│   ├── setup/            // unit test globals
+│   └── unit/             // vitest unit files
+├── CICaDa.ts             // custom build script for the app
+├── eslint.config.js      // style guidelines
+├── package.json          // deps and scripts
+├── playwright.config.ts  // e2e configs
+├── postcss.config.js     // css minifier config
+├── tailwind.config.js    // css config
+├── tsconfig.json         // typescript build opts
+└── vitest.config.ts      // unit test opts
+```
 
 ## Testing Tools and Structure
 
