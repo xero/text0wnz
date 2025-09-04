@@ -1,5 +1,5 @@
 import {Tool, ToolContext, ToolPointerEvent} from '../toolManager';
-import {shadeCell, redraw} from '../canvasRenderer';
+import {shadeCell} from '../canvasRenderer';
 
 export class ShadeBrushTool implements Tool {
   id = 'shade';
@@ -48,6 +48,5 @@ export class ShadeBrushTool implements Tool {
     const fg = ctx.palette.getForegroundColor();
     const bg = ctx.palette.getBackgroundColor();
     shadeCell(e.x, e.y, fg, bg, reduce);
-    redraw();
   }
 }

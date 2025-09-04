@@ -162,8 +162,12 @@ void art;
 const initCanvas = (canvas:HTMLCanvasElement, name:string):CanvasRenderingContext2D=>{
   const ctx = canvas.getContext('2d',{willReadFrequently: true});
   if (!ctx) throw new Error(`Canvas '${name}' not found`);
-  canvas.width = canvas.clientWidth;
-  canvas.height = canvas.clientHeight;
+  const desiredWidth = canvas.clientWidth;
+  const desiredHeight = canvas.clientHeight;
+  if (canvas.width !== desiredWidth || canvas.height !== desiredHeight) {
+    canvas.width = desiredWidth;
+    canvas.height = desiredHeight;
+  }
   return ctx;
 }
 
@@ -600,7 +604,7 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   add(grid,_=>gridOverlay.show(!gridOverlay.isShown()));
 
   //--------------- font config
-  fontSelect.addEventListener('change',e=>{
+  fontSelect.addEventListener('change', e=>{
     const name = (e.target as HTMLSelectElement).value;
     $('fontMeta').innerText = name;
     fontPreview.onload = ()=>{
@@ -609,6 +613,9 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
       fontPreview.onload = null;
     };
     fontPreview.src = `./ui/fontz/${name}.png`;
+    if (fontPreview.complete) {
+      fontPreview.onload(new Event('load'));
+    }
   });
 
   add(switchFont, _=>{
@@ -661,13 +668,12 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
     const minCols = Math.min(cols, canvas.width);
     const minRows = Math.min(rows, canvas.height);
     for (let y = 0; y < minRows; ++y) {
-      for (let x = 0; x < minCols; ++x) {
-        const oldIdx = (y * canvas.width + x) * 3;
-        const newIdx = (y * cols + x) * 3;
-        newRawData[newIdx] = canvas.rawdata[oldIdx];
-        newRawData[newIdx + 1] = canvas.rawdata[oldIdx + 1];
-        newRawData[newIdx + 2] = canvas.rawdata[oldIdx + 2];
-      }
+      const oldRowStart = (y * canvas.width) * 3;
+      const newRowStart = (y * cols) * 3;
+      newRawData.set(
+        canvas.rawdata.subarray(oldRowStart, oldRowStart + minCols * 3),
+        newRowStart
+      );
     }
     const newCanvas = {
       ...canvas,
