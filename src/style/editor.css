@@ -351,6 +351,7 @@
       canvas#art {
         @apply block z-1 box-border;
         box-shadow: 0 4px 32px rgba(0,0,0,0.7);
+        touch-action: none;
       }
       #grid-overlay {
         @apply absolute left-auto top-0 pointer-events-none z-10 hidden;
