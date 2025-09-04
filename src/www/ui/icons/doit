@@ -1,5 +1,0 @@
-#!/bin/bash
-touch svg.html
-for f in *.svg; do
-  cat "$f" >> svg.html
-done

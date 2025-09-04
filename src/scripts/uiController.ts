@@ -307,20 +307,21 @@ const createPalettePicker = (canvas: HTMLCanvasElement, paletteObj: Palette): Pa
     updateCurrentColorsPreview();
   }
 
-  function touchEnd(evt: TouchEvent) {
+  function touchEnd(e: TouchEvent) {
+    e.preventDefault();
     const rect = canvas.getBoundingClientRect();
-    const x = Math.floor((evt.changedTouches[0].pageX - rect.left) / swatchWidth);
-    const y = Math.floor((evt.changedTouches[0].pageY - rect.top) / swatchHeight);
+    const x = Math.floor((e.changedTouches[0].pageX - rect.left) / swatchWidth);
+    const y = Math.floor((e.changedTouches[0].pageY - rect.top) / swatchHeight);
     const colorIndex = y * cols + x;
     paletteObj.setForegroundColor(colorIndex);
     updateCurrentColorsPreview();
   }
-  function mouseEnd(evt: MouseEvent) {
+  function mouseEnd(e: MouseEvent) {
     const rect = canvas.getBoundingClientRect();
-    const x = Math.floor((evt.clientX - rect.left) / swatchWidth);
-    const y = Math.floor((evt.clientY - rect.top) / swatchHeight);
+    const x = Math.floor((e.clientX - rect.left) / swatchWidth);
+    const y = Math.floor((e.clientY - rect.top) / swatchHeight);
     const colorIndex = y * cols + x;
-    if (!evt.altKey && !evt.ctrlKey) {
+    if (!e.altKey && !e.ctrlKey) {
       paletteObj.setForegroundColor(colorIndex);
     } else {
       paletteObj.setBackgroundColor(colorIndex);
@@ -328,18 +329,18 @@ const createPalettePicker = (canvas: HTMLCanvasElement, paletteObj: Palette): Pa
     updateCurrentColorsPreview();
   }
 
-  function keydown(evt: KeyboardEvent) {
-    if (evt.key >= '1' && evt.key <= '8') {
-      const num = parseInt(evt.key, 10);
-      if (evt.ctrlKey) {
-        evt.preventDefault();
+  function keydown(e: KeyboardEvent) {
+    if (e.key >= '1' && e.key <= '8') {
+      const num = parseInt(e.key, 10);
+      if (e.ctrlKey) {
+        e.preventDefault();
         if (paletteObj.getForegroundColor() === num) {
           paletteObj.setForegroundColor(num + 8);
         } else {
           paletteObj.setForegroundColor(num);
         }
-      } else if (evt.altKey) {
-        evt.preventDefault();
+      } else if (e.altKey) {
+        e.preventDefault();
         if (paletteObj.getBackgroundColor() === num) {
           paletteObj.setBackgroundColor(num + 8);
         } else {
@@ -348,14 +349,14 @@ const createPalettePicker = (canvas: HTMLCanvasElement, paletteObj: Palette): Pa
       }
     }
     // Handle arrow keys with Ctrl
-    else if (evt.ctrlKey && (
-      evt.key === 'ArrowLeft' ||
-        evt.key === 'ArrowUp' ||
-        evt.key === 'ArrowRight' ||
-        evt.key === 'ArrowDown'
+    else if (e.ctrlKey && (
+      e.key === 'ArrowLeft' ||
+        e.key === 'ArrowUp' ||
+        e.key === 'ArrowRight' ||
+        e.key === 'ArrowDown'
     )) {
-      evt.preventDefault();
-      switch (evt.key) {
+      e.preventDefault();
+      switch (e.key) {
         case 'ArrowLeft': {
           let color = paletteObj.getBackgroundColor();
           color = (color === 0) ? 15 : (color - 1);
@@ -419,7 +420,7 @@ function setupFKeyCanvases(fontCellHeight: number, maxVisualHeight: number = 45)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 }
-function getPointerXY(e: PointerEvent, state: GlobalState, font: FontRenderer, halfBlock = false) {
+function getPointerXY(e: PointerEvent, state: GlobalState, halfBlock = false) {
   const c = state.currentRoom?.canvas;
   if(!c) return;
   const rect = art.getBoundingClientRect();
@@ -547,8 +548,9 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   ['pointerdown', 'pointermove', 'pointerup', 'pointerleave'].forEach(type=>{
     art.addEventListener(type, (e: Event)=>{
       if (!(e instanceof PointerEvent)) return;
+      e.preventDefault();
       const halfBlock = toolManager.getActiveTool()?.id === 'pen';
-      const pointer = getPointerXY(e, state, fontRenderer, halfBlock);
+      const pointer = getPointerXY(e, state, halfBlock);
       if (!pointer) return;
       const {x, y} = pointer;
       const common = {
@@ -667,7 +669,7 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
         newRawData[newIdx + 2] = canvas.rawdata[oldIdx + 2];
       }
     }
-    const newCanvas={
+    const newCanvas = {
       ...canvas,
       width: cols,
       height: rows,
@@ -675,8 +677,8 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
       updatedAt: new Date().toISOString(),
     };
     state.currentRoom.canvas = newCanvas;
-    eventBus.publish('ui:state:changed', { state });
-    $$<HTMLElement>("#resolution label").innerText=`${cols} cols x ${rows} rows`;
+    eventBus.publish('ui:state:changed', {state});
+    $$('#resolution label').innerText = `${cols} cols x ${rows} rows`;
     toggleChatRes('');
   });
 
