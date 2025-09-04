@@ -76,12 +76,18 @@ export function initCanvasRenderer(
     forceFullRedraw();
   });
 
-  eventBus.subscribe('local:tool:activated', ()=>{
-    // Might need to redraw if tool overlays are needed
+  eventBus.subscribe('local:file:loaded', ()=>{
+    // Buffer reset: new file loaded, trigger full redraw
     forceFullRedraw();
   });
 
-  // Add more as needed: file load, undo/redo, etc.
+  eventBus.subscribe('local:canvas:cleared', ()=>{
+    // Buffer reset: canvas was cleared, trigger full redraw
+    forceFullRedraw();
+  });
+
+  // Note: Removed 'local:tool:activated' full redraw trigger as per Step 7.
+  // Tool activation should not require full canvas redraw - only use dirty regions.
 
   // Initial draw
   forceFullRedraw();
@@ -210,7 +216,23 @@ function flushDirtyCells() {
   }
 }
 
-// Use this to force a full redraw (e.g., on resize, font/palette change)
+/**
+ * Forces a full canvas redraw.
+ *
+ * STEP 7 - FULL REDRAW TRIGGERS:
+ * Full redraws should ONLY be triggered for:
+ * 1. Canvas resize (viewport or canvas dimensions change)
+ * 2. Font changes (affects all character rendering)
+ * 3. Palette changes (affects all color rendering)
+ * 4. Buffer reset operations:
+ *    - New file loaded (local:file:loaded)
+ *    - Canvas cleared/reset
+ *    - Canvas data replaced (updateCanvasData)
+ * 5. Initial render (application startup)
+ *
+ * All other rendering operations should use the dirty region system for efficiency.
+ * Tool activation, single cell edits, and network patches should NOT trigger full redraws.
+ */
 function forceFullRedraw() {
   needsFullRedraw = true;
   queueFlushDirty();
