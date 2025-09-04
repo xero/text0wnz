@@ -27,11 +27,17 @@ export interface FontRenderer {
 }
 
 // --- Globals
-let ctx: CanvasRenderingContext2D | null = null;
-let canvas: HTMLCanvasElement | null = null;
+let ctx: CanvasRenderingContext2D | null = null;           // onscreen ctx
+let canvas: HTMLCanvasElement | null = null;               // onscreen canvas
+let offscreen: HTMLCanvasElement | null = null;            // offscreen buffer
+let offctx: CanvasRenderingContext2D | null = null;        // offscreen ctx
 let font: FontRenderer | null = null;
 let palette: Palette | null = null;
 let state: GlobalState | null = null;
+
+const dirtyCells: Set<number> = new Set();
+let needsFullRedraw = true;
+let rafQueued = false;
 
 // --- Setup
 export function initCanvasRenderer(
@@ -43,8 +49,10 @@ export function initCanvasRenderer(
   palette = _palette;
   font = _font;
   canvas = document.getElementById('art') as HTMLCanvasElement;
-  ctx = canvas.getContext('2d',{willReadFrequently: true});
+  ctx = canvas.getContext('2d', {willReadFrequently: true});
   if (!ctx) throw new Error('2D context not available on #art');
+
+  setupOffscreen();
 
   resizeCanvasToState();
 
@@ -53,37 +61,50 @@ export function initCanvasRenderer(
     void state;
     // If canvas size or font changes, resize/redraw
     resizeCanvasToState();
-    redraw();
+    forceFullRedraw();
   });
 
   eventBus.subscribe('local:palette:changed', ()=>{
-    redraw();
+    forceFullRedraw();
   });
 
   eventBus.subscribe('local:tool:activated', ()=>{
     // Might need to redraw if tool overlays are needed
-    redraw();
+    forceFullRedraw();
   });
 
   // Add more as needed: file load, undo/redo, etc.
 
   // Initial draw
-  redraw();
+  forceFullRedraw();
 
   // --- Return mutator API for palette/font switching
   return {
     setFont(newFont: FontRenderer) {
       font = newFont;
       resizeCanvasToState();
-      redraw();
+      forceFullRedraw();
     },
     setPalette(newPalette: Palette) {
       palette = newPalette;
-      redraw();
+      forceFullRedraw();
     },
-    redraw,
+    redraw: forceFullRedraw,
     getCanvasImage,
   };
+}
+
+function setupOffscreen() {
+  if (!canvas) return;
+  if (offscreen) {
+    offscreen.width = canvas.width;
+    offscreen.height = canvas.height;
+  } else {
+    offscreen = document.createElement('canvas');
+    offscreen.width = canvas.width;
+    offscreen.height = canvas.height;
+  }
+  offctx = offscreen.getContext('2d', {willReadFrequently: false});
 }
 
 function resizeCanvasToState() {
@@ -96,8 +117,14 @@ function resizeCanvasToState() {
   canvas.height = logicalHeight;
   canvas.style.width = `${logicalWidth}px`;
   canvas.style.height = `${logicalHeight}px`;
-  if (!ctx) return;
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+  setupOffscreen();
+  if (offscreen) {
+    offscreen.width = logicalWidth;
+    offscreen.height = logicalHeight;
+  }
+  if (ctx) ctx.setTransform(1, 0, 0, 1, 0, 0);
+
   eventBus.publish('ui:canvas:resize', {
     width: logicalWidth,
     height: logicalHeight,
@@ -106,31 +133,78 @@ function resizeCanvasToState() {
     rows: c.height,
     dpr: 1
   });
+  needsFullRedraw = true;
+  queueFlushDirty();
 }
 
-export function redraw() {
-  if (!ctx || !state || !font || !palette) return;
+function queueFlushDirty() {
+  if (!rafQueued) {
+    rafQueued = true;
+    requestAnimationFrame(flushDirtyCells);
+  }
+}
+
+// --- Draws all cells, or just dirty ones if possible
+function flushDirtyCells() {
+  rafQueued = false;
+  if (!ctx || !offctx || !state || !font || !palette || !canvas || !offscreen) return;
   const c = state.currentRoom?.canvas;
   if (!c) return;
-  if(!canvas) throw new Error('Failing loading canvas context!');
-
-  const logicalWidth = c.width * font.width;
-  const logicalHeight = c.height * font.height;
-
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, logicalWidth, logicalHeight);
 
   const {width, height, rawdata} = c;
-  for (let y = 0; y < height; ++y) {
-    for (let x = 0; x < width; ++x) {
-      const idx = (y * width + x) * 3;
+
+  if (needsFullRedraw) {
+    // Full redraw: clear offscreen and re-render everything
+    offctx.clearRect(0, 0, offscreen.width, offscreen.height);
+    for (let y = 0; y < height; ++y) {
+      for (let x = 0; x < width; ++x) {
+        const idx = (y * width + x) * 3;
+        const charCode = rawdata[idx];
+        const fg = rawdata[idx + 1];
+        const bg = rawdata[idx + 2];
+        font.draw(charCode, fg, bg, offctx, x, y);
+      }
+    }
+    dirtyCells.clear();
+    needsFullRedraw = false;
+  } else if (dirtyCells.size > 0) {
+    // Dirty cell redraw
+    for (const idx of dirtyCells) {
+      const cell = Math.floor(idx / 3);
+      const x = cell % width;
+      const y = Math.floor(cell / width);
       const charCode = rawdata[idx];
       const fg = rawdata[idx + 1];
       const bg = rawdata[idx + 2];
-      font.draw(charCode, fg, bg, ctx, x, y);
+      // clear cell area
+      offctx.clearRect(x * font.width, y * font.height, font.width, font.height);
+      font.draw(charCode, fg, bg, offctx, x, y);
     }
+    dirtyCells.clear();
   }
+
+  // Blit offscreen to onscreen
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(offscreen, 0, 0);
 }
+
+// Use this to force a full redraw (e.g., on resize, font/palette change)
+function forceFullRedraw() {
+  needsFullRedraw = true;
+  queueFlushDirty();
+}
+
+// Call this to mark a cell as dirty (cellIdx is the *cell*, not the byte offset)
+function markDirtyCell(x: number, y: number) {
+  if (!state || !state.currentRoom) return;
+  const c = state.currentRoom.canvas;
+  if (x < 0 || x >= c.width || y < 0 || y >= c.height) return;
+  const idx = (y * c.width + x) * 3;
+  dirtyCells.add(idx);
+  queueFlushDirty();
+}
+
+// --- Drawing API
 
 /**
  * Draws an ANSI half block cell at (x, halfBlockY) with color.
@@ -138,7 +212,7 @@ export function redraw() {
  * - color: palette index
  */
 export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
- if (!state || !state.currentRoom) return;
+  if (!state || !state.currentRoom) return;
   const c = state.currentRoom.canvas;
   if (x < 0 || x >= c.width) return;
   if (halfBlockY < 0 || halfBlockY >= c.height * 2) return;
@@ -170,8 +244,6 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
       if (bg !== color) {
         // Remove lower, keep upper
         charCode = 223; // ▀
-        /* eslint-disable-next-line no-self-assign */
-        fg = fg; // keep
         bg = color;
       }
     }
@@ -198,7 +270,6 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
           bg = color;
         } else {
           fg = color;
-          // keep bg
         }
       } else if (fg === color) {
         // lower is 220, but upper is now same color, full block
@@ -208,20 +279,17 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
       } else {
         charCode = 223;
         fg = color;
-        // keep bg
       }
     } else {
       // is lower
       if (charCode === 220) {
         // lower is already drawn
         if (bg === color) {
-          // If upper matches this color, make full block
           charCode = 219;
           fg = color;
           bg = color;
         } else {
           bg = color;
-          // keep fg
         }
       } else if (fg === color) {
         // upper is 223, but lower is now same color, full block
@@ -231,7 +299,6 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
       } else {
         charCode = 220;
         bg = color;
-        // keep fg
       }
     }
   }
@@ -239,10 +306,12 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
   c.rawdata[idx] = charCode;
   c.rawdata[idx + 1] = fg;
   c.rawdata[idx + 2] = bg;
-  redraw();
+  markDirtyCell(x, charY);
 }
 
-//const SHADE_CYCLE = [176, 177, 178, 219]; // light to dark
+/**
+ * Shade a cell (ANSI shading block codes).
+ */
 export function shadeCell(x: number, y: number, fg: number, bg: number, reduce: boolean) {
   if (!state || !state.currentRoom) return;
   const c = state.currentRoom.canvas;
@@ -250,48 +319,47 @@ export function shadeCell(x: number, y: number, fg: number, bg: number, reduce: 
   const idx = (y * c.width + x) * 3;
   let code = c.rawdata[idx];
   const currentFg = c.rawdata[idx + 1];
-  //let currentBg = c.rawdata[idx + 2];
 
   if (reduce) {
     // lighten (backwards in the cycle, or erase if already lightest)
     switch (code) {
-      case 176: // lightest shading
-        code = 32; // space
-        break;
-      case 177:
-        code = 176;
-        break;
-      case 178:
-        code = 177;
-        break;
-      case 219:
-        code = (currentFg === fg) ? 178 : 176;
-        break;
-      default:
-        code = 32;
+      case 176: code = 32; break;
+      case 177: code = 176; break;
+      case 178: code = 177; break;
+      case 219: code = (currentFg === fg) ? 178 : 176; break;
+      default: code = 32;
     }
   } else {
     // darken (forwards in the cycle)
     switch (code) {
-      case 219:
-        code = (currentFg !== fg) ? 176 : 219; // overwrite with new fg if diff color
-        break;
-      case 178:
-        code = 219;
-        break;
-      case 177:
-        code = 178;
-        break;
-      case 176:
-        code = 177;
-        break;
-      default:
-        code = 176;
+      case 219: code = (currentFg !== fg) ? 176 : 219; break;
+      case 178: code = 219; break;
+      case 177: code = 178; break;
+      case 176: code = 177; break;
+      default: code = 176;
     }
   }
   c.rawdata[idx] = code;
   c.rawdata[idx + 1] = fg;
   c.rawdata[idx + 2] = bg;
+  markDirtyCell(x, y);
+}
+
+/**
+ * Utility for external mutation (e.g., after a draw op)
+ * Forces full redraw for now. (Optionally, could diff and dirty only changed cells.)
+ */
+export function updateCanvasData(newCanvas: CanvasState) {
+  if (state && state.currentRoom) {
+    state.currentRoom.canvas = newCanvas;
+    needsFullRedraw = true;
+    queueFlushDirty();
+  }
+}
+
+// --- Exposes a way to get the canvas image (for saving/exporting)
+export function getCanvasImage(): HTMLCanvasElement | null {
+  return canvas;
 }
 
 export function createOfflineCanvasState(): CanvasState {
@@ -315,18 +383,4 @@ export function createOfflineCanvasState(): CanvasState {
     rawdata,
     updatedAt: new Date().toISOString(),
   };
-}
-
-// --- Utility for external mutation (e.g., after a draw op)
-export function updateCanvasData(newCanvas: CanvasState) {
-  if (state && state.currentRoom) {
-    state.currentRoom.canvas = newCanvas;
-    eventBus.publish('ui:state:changed', {state});
-    redraw();
-  }
-}
-
-// --- Exposes a way to get the canvas image (for saving/exporting)
-export function getCanvasImage(): HTMLCanvasElement | null {
-  return canvas;
 }
