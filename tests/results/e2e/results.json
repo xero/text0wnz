@@ -1,7 +1,7 @@
 {
   "config": {
-    "configFile": "/__w/text0wnz/text0wnz/playwright.config.ts",
-    "rootDir": "/__w/text0wnz/text0wnz/tests/e2e",
+    "configFile": "/home/runner/work/text0wnz/text0wnz/playwright.config.ts",
+    "rootDir": "/home/runner/work/text0wnz/text0wnz/tests/e2e",
     "forbidOnly": false,
     "fullyParallel": false,
     "globalSetup": null,
@@ -12,9 +12,26 @@
     "maxFailures": 0,
     "metadata": {
       "ci": {
-        "commitHref": "https://github.com/xero/text0wnz/commit/19d77648477fa5f99a1adfb80d7046666984cabd",
-        "commitHash": "19d77648477fa5f99a1adfb80d7046666984cabd",
-        "buildHref": "https://github.com/xero/text0wnz/actions/runs/17468878286"
+        "commitHref": "https://github.com/xero/text0wnz/commit/11d896d18902ef6a47db75e38089976c3d128118",
+        "commitHash": "11d896d18902ef6a47db75e38089976c3d128118",
+        "buildHref": "https://github.com/xero/text0wnz/actions/runs/17471106729"
+      },
+      "gitCommit": {
+        "shortHash": "11d896d",
+        "hash": "11d896d18902ef6a47db75e38089976c3d128118",
+        "subject": "Implement dirty region system with DirtyRegion type, queue and enqueueDirtyRegion utility",
+        "body": "Implement dirty region system with DirtyRegion type, queue and enqueueDirtyRegion utility\n\nCo-authored-by: xero <227907+xero@users.noreply.github.com>\n",
+        "author": {
+          "name": "copilot-swe-agent[bot]",
+          "email": "198982749+Copilot@users.noreply.github.com",
+          "time": 1757003074000
+        },
+        "committer": {
+          "name": "copilot-swe-agent[bot]",
+          "email": "198982749+Copilot@users.noreply.github.com",
+          "time": 1757003074000
+        },
+        "branch": "copilot/fix-37bdcc98-ea15-4e3b-be0d-f0a261ebf776"
       },
       "actualWorkers": 2
     },
@@ -41,20 +58,37 @@
     "quiet": false,
     "projects": [
       {
-        "outputDir": "/__w/text0wnz/text0wnz/tests/results/e2e",
+        "outputDir": "/home/runner/work/text0wnz/text0wnz/tests/results/e2e",
         "repeatEach": 1,
         "retries": 1,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/xero/text0wnz/commit/19d77648477fa5f99a1adfb80d7046666984cabd",
-            "commitHash": "19d77648477fa5f99a1adfb80d7046666984cabd",
-            "buildHref": "https://github.com/xero/text0wnz/actions/runs/17468878286"
+            "commitHref": "https://github.com/xero/text0wnz/commit/11d896d18902ef6a47db75e38089976c3d128118",
+            "commitHash": "11d896d18902ef6a47db75e38089976c3d128118",
+            "buildHref": "https://github.com/xero/text0wnz/actions/runs/17471106729"
+          },
+          "gitCommit": {
+            "shortHash": "11d896d",
+            "hash": "11d896d18902ef6a47db75e38089976c3d128118",
+            "subject": "Implement dirty region system with DirtyRegion type, queue and enqueueDirtyRegion utility",
+            "body": "Implement dirty region system with DirtyRegion type, queue and enqueueDirtyRegion utility\n\nCo-authored-by: xero <227907+xero@users.noreply.github.com>\n",
+            "author": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757003074000
+            },
+            "committer": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757003074000
+            },
+            "branch": "copilot/fix-37bdcc98-ea15-4e3b-be0d-f0a261ebf776"
           },
           "actualWorkers": 2
         },
         "id": "Chrome",
         "name": "Chrome",
-        "testDir": "/__w/text0wnz/text0wnz/tests/e2e",
+        "testDir": "/home/runner/work/text0wnz/text0wnz/tests/e2e",
         "testIgnore": [],
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
@@ -62,20 +96,37 @@
         "timeout": 30000
       },
       {
-        "outputDir": "/__w/text0wnz/text0wnz/tests/results/e2e",
+        "outputDir": "/home/runner/work/text0wnz/text0wnz/tests/results/e2e",
         "repeatEach": 1,
         "retries": 1,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/xero/text0wnz/commit/19d77648477fa5f99a1adfb80d7046666984cabd",
-            "commitHash": "19d77648477fa5f99a1adfb80d7046666984cabd",
-            "buildHref": "https://github.com/xero/text0wnz/actions/runs/17468878286"
+            "commitHref": "https://github.com/xero/text0wnz/commit/11d896d18902ef6a47db75e38089976c3d128118",
+            "commitHash": "11d896d18902ef6a47db75e38089976c3d128118",
+            "buildHref": "https://github.com/xero/text0wnz/actions/runs/17471106729"
+          },
+          "gitCommit": {
+            "shortHash": "11d896d",
+            "hash": "11d896d18902ef6a47db75e38089976c3d128118",
+            "subject": "Implement dirty region system with DirtyRegion type, queue and enqueueDirtyRegion utility",
+            "body": "Implement dirty region system with DirtyRegion type, queue and enqueueDirtyRegion utility\n\nCo-authored-by: xero <227907+xero@users.noreply.github.com>\n",
+            "author": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757003074000
+            },
+            "committer": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757003074000
+            },
+            "branch": "copilot/fix-37bdcc98-ea15-4e3b-be0d-f0a261ebf776"
           },
           "actualWorkers": 2
         },
         "id": "Firefox",
         "name": "Firefox",
-        "testDir": "/__w/text0wnz/text0wnz/tests/e2e",
+        "testDir": "/home/runner/work/text0wnz/text0wnz/tests/e2e",
         "testIgnore": [],
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
@@ -83,20 +134,37 @@
         "timeout": 30000
       },
       {
-        "outputDir": "/__w/text0wnz/text0wnz/tests/results/e2e",
+        "outputDir": "/home/runner/work/text0wnz/text0wnz/tests/results/e2e",
         "repeatEach": 1,
         "retries": 1,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/xero/text0wnz/commit/19d77648477fa5f99a1adfb80d7046666984cabd",
-            "commitHash": "19d77648477fa5f99a1adfb80d7046666984cabd",
-            "buildHref": "https://github.com/xero/text0wnz/actions/runs/17468878286"
+            "commitHref": "https://github.com/xero/text0wnz/commit/11d896d18902ef6a47db75e38089976c3d128118",
+            "commitHash": "11d896d18902ef6a47db75e38089976c3d128118",
+            "buildHref": "https://github.com/xero/text0wnz/actions/runs/17471106729"
+          },
+          "gitCommit": {
+            "shortHash": "11d896d",
+            "hash": "11d896d18902ef6a47db75e38089976c3d128118",
+            "subject": "Implement dirty region system with DirtyRegion type, queue and enqueueDirtyRegion utility",
+            "body": "Implement dirty region system with DirtyRegion type, queue and enqueueDirtyRegion utility\n\nCo-authored-by: xero <227907+xero@users.noreply.github.com>\n",
+            "author": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757003074000
+            },
+            "committer": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757003074000
+            },
+            "branch": "copilot/fix-37bdcc98-ea15-4e3b-be0d-f0a261ebf776"
           },
           "actualWorkers": 2
         },
         "id": "WebKit",
         "name": "WebKit",
-        "testDir": "/__w/text0wnz/text0wnz/tests/e2e",
+        "testDir": "/home/runner/work/text0wnz/text0wnz/tests/e2e",
         "testIgnore": [],
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
@@ -116,6 +184,329 @@
     }
   },
   "suites": [
+    {
+      "title": "canvas-renderer.spec.ts",
+      "file": "canvas-renderer.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Canvas Renderer - Region Drawing",
+          "file": "canvas-renderer.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "canvas element is present and ready for drawing",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1968,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T17:11:16.485Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-17c05f6408e854f568cd",
+              "file": "canvas-renderer.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "canvas can be drawn on with tools (testing region updates)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3288,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T17:11:18.665Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-98527bb189f3275fb94e",
+              "file": "canvas-renderer.spec.ts",
+              "line": 26,
+              "column": 3
+            },
+            {
+              "title": "multiple tool interactions work without errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3691,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T17:11:21.972Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-84b28a25661a883cb843",
+              "file": "canvas-renderer.spec.ts",
+              "line": 71,
+              "column": 3
+            },
+            {
+              "title": "canvas element is present and ready for drawing",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2779,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T17:11:29.488Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-7633d2088be05091bd1b",
+              "file": "canvas-renderer.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "canvas can be drawn on with tools (testing region updates)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3839,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T17:11:32.714Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-7b43315fa74e9035e17d",
+              "file": "canvas-renderer.spec.ts",
+              "line": 26,
+              "column": 3
+            },
+            {
+              "title": "multiple tool interactions work without errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4005,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T17:11:36.575Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-934cea1b431a5afccad6",
+              "file": "canvas-renderer.spec.ts",
+              "line": 71,
+              "column": 3
+            },
+            {
+              "title": "canvas element is present and ready for drawing",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1340,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T17:11:46.229Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-eb22f5f5cf596a0aaa15",
+              "file": "canvas-renderer.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "canvas can be drawn on with tools (testing region updates)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2929,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T17:11:47.694Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-13cb17a76142d23b8f78",
+              "file": "canvas-renderer.spec.ts",
+              "line": 26,
+              "column": 3
+            },
+            {
+              "title": "multiple tool interactions work without errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3348,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T17:11:50.647Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-cd6c7a5fbe541f91cd34",
+              "file": "canvas-renderer.spec.ts",
+              "line": 71,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
     {
       "title": "collaboration.spec.ts",
       "file": "collaboration.spec.ts",
@@ -142,15 +533,15 @@
                   "projectName": "Chrome",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 406,
+                      "duration": 541,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:42.810Z",
+                      "startTime": "2025-09-04T17:11:16.483Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -176,15 +567,15 @@
                   "projectName": "Chrome",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 282,
+                      "duration": 208,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:43.525Z",
+                      "startTime": "2025-09-04T17:11:17.246Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -210,15 +601,15 @@
                   "projectName": "Firefox",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 0,
+                      "workerIndex": 3,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1231,
+                      "duration": 1151,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:47.801Z",
+                      "startTime": "2025-09-04T17:11:32.628Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -244,15 +635,15 @@
                   "projectName": "Firefox",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 0,
+                      "workerIndex": 3,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 465,
+                      "duration": 409,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:49.504Z",
+                      "startTime": "2025-09-04T17:11:34.259Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -278,15 +669,15 @@
                   "projectName": "WebKit",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 5,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 840,
+                      "duration": 417,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:06.292Z",
+                      "startTime": "2025-09-04T17:11:52.817Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -312,15 +703,15 @@
                   "projectName": "WebKit",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 5,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 858,
+                      "duration": 378,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:07.570Z",
+                      "startTime": "2025-09-04T17:11:53.347Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -366,12 +757,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 445,
+                      "duration": 219,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:42.818Z",
+                      "startTime": "2025-09-04T17:11:17.489Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -400,12 +791,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 2455,
+                      "duration": 2541,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:43.571Z",
+                      "startTime": "2025-09-04T17:11:17.723Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -434,12 +825,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 2535,
+                      "duration": 2481,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:46.067Z",
+                      "startTime": "2025-09-04T17:11:20.280Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -468,12 +859,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 2955,
+                      "duration": 2668,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:48.620Z",
+                      "startTime": "2025-09-04T17:11:22.774Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -502,12 +893,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 2514,
+                      "duration": 2547,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:51.590Z",
+                      "startTime": "2025-09-04T17:11:25.458Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -536,12 +927,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 2609,
+                      "duration": 2731,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:54.119Z",
+                      "startTime": "2025-09-04T17:11:28.020Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -570,12 +961,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1628,
+                      "duration": 1219,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:56.739Z",
+                      "startTime": "2025-09-04T17:11:30.772Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -601,15 +992,15 @@
                   "projectName": "Firefox",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 0,
+                      "workerIndex": 3,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 442,
+                      "duration": 394,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:50.012Z",
+                      "startTime": "2025-09-04T17:11:34.722Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -635,15 +1026,15 @@
                   "projectName": "Firefox",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 0,
+                      "workerIndex": 3,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 2741,
+                      "duration": 2728,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:50.474Z",
+                      "startTime": "2025-09-04T17:11:35.135Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -669,15 +1060,15 @@
                   "projectName": "Firefox",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 0,
+                      "workerIndex": 3,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 2765,
+                      "duration": 2734,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:53.228Z",
+                      "startTime": "2025-09-04T17:11:37.882Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -703,15 +1094,15 @@
                   "projectName": "Firefox",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 0,
+                      "workerIndex": 3,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 2758,
+                      "duration": 2855,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:56.006Z",
+                      "startTime": "2025-09-04T17:11:40.630Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -737,15 +1128,15 @@
                   "projectName": "Firefox",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 0,
+                      "workerIndex": 3,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 3065,
+                      "duration": 2789,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:58.782Z",
+                      "startTime": "2025-09-04T17:11:43.502Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -771,15 +1162,15 @@
                   "projectName": "Firefox",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 0,
+                      "workerIndex": 3,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 3005,
+                      "duration": 3245,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:01.859Z",
+                      "startTime": "2025-09-04T17:11:46.314Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -805,15 +1196,15 @@
                   "projectName": "Firefox",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 0,
+                      "workerIndex": 3,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1858,
+                      "duration": 2036,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:04.874Z",
+                      "startTime": "2025-09-04T17:11:49.577Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -840,14 +1231,14 @@
                   "results": [
                     {
                       "workerIndex": 5,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 821,
+                      "duration": 424,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:08.060Z",
+                      "startTime": "2025-09-04T17:11:53.769Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -874,14 +1265,14 @@
                   "results": [
                     {
                       "workerIndex": 5,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 2778,
+                      "duration": 2436,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:08.985Z",
+                      "startTime": "2025-09-04T17:11:54.209Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -908,14 +1299,14 @@
                   "results": [
                     {
                       "workerIndex": 5,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 2822,
+                      "duration": 2471,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:11.791Z",
+                      "startTime": "2025-09-04T17:11:56.677Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -942,14 +1333,14 @@
                   "results": [
                     {
                       "workerIndex": 5,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 2503,
+                      "duration": 2156,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:14.631Z",
+                      "startTime": "2025-09-04T17:11:59.177Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -976,14 +1367,14 @@
                   "results": [
                     {
                       "workerIndex": 5,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 2508,
+                      "duration": 2082,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:17.148Z",
+                      "startTime": "2025-09-04T17:12:01.354Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1010,14 +1401,14 @@
                   "results": [
                     {
                       "workerIndex": 5,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 3502,
+                      "duration": 3051,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:19.667Z",
+                      "startTime": "2025-09-04T17:12:03.452Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1044,14 +1435,14 @@
                   "results": [
                     {
                       "workerIndex": 5,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1611,
+                      "duration": 1179,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:23.181Z",
+                      "startTime": "2025-09-04T17:12:06.516Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1097,12 +1488,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 292,
+                      "duration": 206,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:43.844Z",
+                      "startTime": "2025-09-04T17:11:25.689Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1131,12 +1522,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 187,
+                      "duration": 211,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:44.149Z",
+                      "startTime": "2025-09-04T17:11:25.906Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1165,12 +1556,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1592,
+                      "duration": 1608,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:44.348Z",
+                      "startTime": "2025-09-04T17:11:26.131Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1199,12 +1590,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1144,
+                      "duration": 1095,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:45.955Z",
+                      "startTime": "2025-09-04T17:11:27.751Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1230,15 +1621,15 @@
                   "projectName": "Firefox",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 1,
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1164,
+                      "duration": 456,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:28:59.180Z",
+                      "startTime": "2025-09-04T17:11:40.605Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1264,15 +1655,15 @@
                   "projectName": "Firefox",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 1,
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 449,
+                      "duration": 378,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:00.748Z",
+                      "startTime": "2025-09-04T17:11:41.078Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1298,15 +1689,15 @@
                   "projectName": "Firefox",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 1,
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1873,
+                      "duration": 1784,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:01.217Z",
+                      "startTime": "2025-09-04T17:11:41.471Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1332,15 +1723,15 @@
                   "projectName": "Firefox",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 1,
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1933,
+                      "duration": 1817,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:03.114Z",
+                      "startTime": "2025-09-04T17:11:43.271Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1367,14 +1758,14 @@
                   "results": [
                     {
                       "workerIndex": 4,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 767,
+                      "duration": 497,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:08.467Z",
+                      "startTime": "2025-09-04T17:11:54.017Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1401,14 +1792,14 @@
                   "results": [
                     {
                       "workerIndex": 4,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 865,
+                      "duration": 541,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:09.250Z",
+                      "startTime": "2025-09-04T17:11:54.528Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1435,14 +1826,14 @@
                   "results": [
                     {
                       "workerIndex": 4,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1927,
+                      "duration": 1414,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:10.134Z",
+                      "startTime": "2025-09-04T17:11:55.094Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1469,14 +1860,14 @@
                   "results": [
                     {
                       "workerIndex": 4,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1900,
+                      "duration": 1471,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-09-04T15:29:12.083Z",
+                      "startTime": "2025-09-04T17:11:56.529Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1496,9 +1887,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-09-04T15:28:41.172Z",
-    "duration": 43678.134,
-    "expected": 39,
+    "startTime": "2025-09-04T17:11:15.272Z",
+    "duration": 52496.578,
+    "expected": 48,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0

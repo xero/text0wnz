@@ -1,5 +1,5 @@
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import {createOfflineCanvasState, getCanvasImage, enqueueDirtyRegion, clearDirtyRegions, getDirtyRegions, type DirtyRegion} from '../../src/scripts/canvasRenderer';
+import {createOfflineCanvasState, getCanvasImage, enqueueDirtyRegion, clearDirtyRegions, getDirtyRegions, drawRegion, type DirtyRegion} from '../../src/scripts/canvasRenderer';
 
 // Mock the eventBus module
 vi.mock('../../src/scripts/eventBus', () => ({
@@ -127,6 +127,40 @@ describe('canvasRenderer utilities', () => {
         const regions = getDirtyRegions();
         expect(regions).toEqual([]);
       });
+    });
+  });
+
+  describe('drawRegion', () => {
+    it('should handle empty state gracefully', () => {
+      // Should not throw when renderer is not initialized
+      expect(() => drawRegion(0, 0, 10, 10)).not.toThrow();
+    });
+
+    it('should handle empty regions gracefully', () => {
+      // Should not throw with zero or negative dimensions
+      expect(() => drawRegion(0, 0, 0, 10)).not.toThrow();
+      expect(() => drawRegion(0, 0, 10, 0)).not.toThrow();
+      expect(() => drawRegion(0, 0, -5, 10)).not.toThrow();
+      expect(() => drawRegion(0, 0, 10, -5)).not.toThrow();
+    });
+
+    it('should handle out-of-bounds regions gracefully', () => {
+      // Should not throw with coordinates outside canvas bounds
+      expect(() => drawRegion(-10, -10, 5, 5)).not.toThrow();
+      expect(() => drawRegion(1000, 1000, 10, 10)).not.toThrow();
+      expect(() => drawRegion(0, 0, 1000, 1000)).not.toThrow();
+    });
+
+    it('should handle partially out-of-bounds regions gracefully', () => {
+      // Should not throw with regions that extend beyond canvas bounds
+      expect(() => drawRegion(-5, -5, 15, 15)).not.toThrow();
+      expect(() => drawRegion(75, 20, 10, 10)).not.toThrow(); // Assuming 80x25 canvas
+    });
+
+    it('should accept valid region coordinates', () => {
+      // Should not throw with valid region within typical canvas bounds
+      expect(() => drawRegion(10, 5, 20, 15)).not.toThrow();
+      expect(() => drawRegion(0, 0, 1, 1)).not.toThrow();
     });
   });
 });

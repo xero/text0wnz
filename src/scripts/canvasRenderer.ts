@@ -160,6 +160,7 @@ function flushDirtyCells() {
   if (!c) return;
 
   const {width, height, rawdata} = c;
+  let needsFullBlit = false;
 
   if (needsFullRedraw) {
     // Full redraw: clear offscreen and re-render everything
@@ -176,7 +177,11 @@ function flushDirtyCells() {
     dirtyCells.clear();
     dirtyRegions.length = 0;
     needsFullRedraw = false;
+    needsFullBlit = true;
   } else if (dirtyCells.size > 0 || dirtyRegions.length > 0) {
+    // Track if we need full blit due to dirty cells
+    const hasDirtyCells = dirtyCells.size > 0;
+
     // Dirty cell redraw
     for (const idx of dirtyCells) {
       const cell = Math.floor(idx / 3);
@@ -191,28 +196,21 @@ function flushDirtyCells() {
     }
     dirtyCells.clear();
 
-    // Process dirty regions
+    // Process dirty regions using the drawRegion function
     for (const region of dirtyRegions) {
-      for (let y = region.y; y < region.y + region.h; y++) {
-        for (let x = region.x; x < region.x + region.w; x++) {
-          if (x >= 0 && x < width && y >= 0 && y < height) {
-            const idx = (y * width + x) * 3;
-            const charCode = rawdata[idx];
-            const fg = rawdata[idx + 1];
-            const bg = rawdata[idx + 2];
-            // clear cell area
-            offctx.clearRect(x * font.width, y * font.height, font.width, font.height);
-            font.draw(charCode, fg, bg, offctx, x, y);
-          }
-        }
-      }
+      drawRegion(region.x, region.y, region.w, region.h);
     }
     dirtyRegions.length = 0;
+
+    // Only need full blit for dirty cells (drawRegion handles its own partial blitting)
+    needsFullBlit = hasDirtyCells;
   }
 
-  // Blit offscreen to onscreen
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(offscreen, 0, 0);
+  // Do full canvas blit when needed
+  if (needsFullBlit) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(offscreen, 0, 0);
+  }
 }
 
 // Use this to force a full redraw (e.g., on resize, font/palette change)
@@ -315,6 +313,60 @@ export function clearDirtyRegions() {
  */
 export function getDirtyRegions(): readonly DirtyRegion[] {
   return dirtyRegions;
+}
+
+/**
+ * Draw a specific region of the canvas.
+ * Only updates the specified region, handling empty/out-of-bounds regions gracefully.
+ *
+ * @param x - Starting x coordinate in canvas cells
+ * @param y - Starting y coordinate in canvas cells
+ * @param w - Width in canvas cells
+ * @param h - Height in canvas cells
+ */
+export function drawRegion(x: number, y: number, w: number, h: number) {
+  if (!ctx || !offctx || !state || !font || !palette || !canvas || !offscreen) return;
+  const c = state.currentRoom?.canvas;
+  if (!c) return;
+
+  const {width, height, rawdata} = c;
+
+  // Handle empty or invalid regions gracefully
+  if (w <= 0 || h <= 0) return;
+
+  // Clamp region to canvas bounds
+  const clampedX = Math.max(0, Math.min(x, width));
+  const clampedY = Math.max(0, Math.min(y, height));
+  const clampedW = Math.max(0, Math.min(w, width - clampedX));
+  const clampedH = Math.max(0, Math.min(h, height - clampedY));
+
+  // Skip if clamped region is empty
+  if (clampedW <= 0 || clampedH <= 0) return;
+
+  // Draw each cell in the region
+  for (let cellY = clampedY; cellY < clampedY + clampedH; cellY++) {
+    for (let cellX = clampedX; cellX < clampedX + clampedW; cellX++) {
+      const idx = (cellY * width + cellX) * 3;
+      const charCode = rawdata[idx];
+      const fg = rawdata[idx + 1];
+      const bg = rawdata[idx + 2];
+
+      // Clear cell area on offscreen canvas
+      offctx.clearRect(cellX * font.width, cellY * font.height, font.width, font.height);
+
+      // Draw the character
+      font.draw(charCode, fg, bg, offctx, cellX, cellY);
+    }
+  }
+
+  // Copy the updated region from offscreen to onscreen canvas
+  const pixelX = clampedX * font.width;
+  const pixelY = clampedY * font.height;
+  const pixelW = clampedW * font.width;
+  const pixelH = clampedH * font.height;
+
+  ctx.clearRect(pixelX, pixelY, pixelW, pixelH);
+  ctx.drawImage(offscreen, pixelX, pixelY, pixelW, pixelH, pixelX, pixelY, pixelW, pixelH);
 }
 
 // --- Drawing API
