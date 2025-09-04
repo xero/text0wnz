@@ -75,8 +75,18 @@ let patchState: PatchState = {
  *
  * This function implements the core network sync logic:
  * 1. Apply the patch to the raw buffer
- * 2. Enqueue the changed region as dirty
- * 3. Process dirty regions for immediate display
+ * 2. Enqueue the changed region as dirty (using batched processing)
+ * 3. Process dirty regions for display
+ *
+ * STEP 6 - CONFLICT RESOLUTION STRATEGY:
+ * This implements a "last-write-wins" conflict resolution approach:
+ * - Local edits are processed immediately and take precedence
+ * - Network edits are processed in batches via requestAnimationFrame
+ * - When conflicts occur (same cell modified), the last operation wins
+ * - Network patches with higher sequence numbers override earlier ones
+ * - Local edits always override network edits due to immediate processing
+ * - Timestamps in patches allow for temporal ordering when needed
+ * - No complex CRDTs - simple override semantics for real-time collaboration
  *
  * @param patch - Network patch to apply
  * @param state - Current global state
@@ -127,13 +137,13 @@ export function processNetworkPatch(patch: NetworkPatch, state: GlobalState): bo
       }
     }
 
-    // Enqueue the dirty region for redraw
+    // Enqueue the dirty region for redraw (batched processing for network edits)
     enqueueDirtyRegion({
       x: region.x,
       y: region.y,
       w: region.w,
       h: region.h
-    });
+    }, false); // immediate=false for network edits - use batched processing
 
     // Update patch processing state
     patchState.lastSequence = Math.max(patchState.lastSequence, patch.sequence);

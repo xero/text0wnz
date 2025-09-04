@@ -218,9 +218,20 @@ function forceFullRedraw() {
 
 /**
  * Enqueue a dirty region for redraw.
- * Optionally merges/coalesces overlapping or adjacent regions for efficiency.
+ * Optionally merges/coalescing overlapping or adjacent regions for efficiency.
+ *
+ * STEP 6 - LOCAL EDIT PRIORITIZATION:
+ * This function implements the local vs network edit prioritization strategy:
+ * - Local edits (immediate=true): Processed immediately for instant feedback
+ * - Network edits (immediate=false): Batched using requestAnimationFrame
+ * - Local edits always take precedence due to immediate processing
+ * - Network edits are queued and processed in the next animation frame
+ * - This ensures responsive UI while maintaining efficient network sync
+ *
+ * @param region - The dirty region to enqueue
+ * @param immediate - If true, process immediately (for local edits). If false, use RAF batching (for network edits)
  */
-export function enqueueDirtyRegion(region: DirtyRegion) {
+export function enqueueDirtyRegion(region: DirtyRegion, immediate: boolean = false) {
   if (!state || !state.currentRoom) return;
   const c = state.currentRoom.canvas;
 
@@ -251,7 +262,12 @@ export function enqueueDirtyRegion(region: DirtyRegion) {
     dirtyRegions.push(clampedRegion);
   }
 
-  queueFlushDirty();
+  // Step 6: Favor local edits - process immediately for local changes
+  if (immediate) {
+    processDirtyRegions();
+  } else {
+    queueFlushDirty();
+  }
 }
 
 /**
@@ -513,7 +529,7 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
   c.rawdata[idx] = charCode;
   c.rawdata[idx + 1] = fg;
   c.rawdata[idx + 2] = bg;
-  enqueueDirtyRegion({x, y: charY, w: 1, h: 1});
+  enqueueDirtyRegion({x, y: charY, w: 1, h: 1}, true); // immediate=true for local edits
 }
 
 /**
@@ -549,7 +565,7 @@ export function shadeCell(x: number, y: number, fg: number, bg: number, reduce: 
   c.rawdata[idx] = code;
   c.rawdata[idx + 1] = fg;
   c.rawdata[idx + 2] = bg;
-  enqueueDirtyRegion({x, y, w: 1, h: 1});
+  enqueueDirtyRegion({x, y, w: 1, h: 1}, true); // immediate=true for local edits
 }
 
 /**

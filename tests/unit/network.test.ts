@@ -86,10 +86,10 @@ describe('network patch processing', () => {
       expect(canvas.rawdata[baseIndex + 4]).toBe(3);  // fg
       expect(canvas.rawdata[baseIndex + 5]).toBe(4);  // bg
 
-      // Check that dirty region was enqueued
+      // Check that dirty region was enqueued with batched processing for network edits
       expect(enqueueDirtyRegion).toHaveBeenCalledWith({
         x: 2, y: 3, w: 2, h: 1
-      });
+      }, false);
     });
 
     it('should reject patch with invalid format', () => {
@@ -481,7 +481,7 @@ describe('network patch processing', () => {
       expect(result).toBe(true); // Should succeed even with empty region
       expect(enqueueDirtyRegion).toHaveBeenCalledWith({
         x: 0, y: 0, w: 0, h: 0
-      });
+      }, false);
     });
 
     it('should handle patches with invalid data values', () => {
