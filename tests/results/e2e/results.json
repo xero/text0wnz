@@ -1,0 +1,622 @@
+{
+  "config": {
+    "configFile": "/home/runner/work/text0wnz/text0wnz/playwright.config.ts",
+    "rootDir": "/home/runner/work/text0wnz/text0wnz/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/xero/text0wnz/commit/b4a72fa9eaae5aa5b2cf208b1ee0e25ad09512f4",
+        "commitHash": "b4a72fa9eaae5aa5b2cf208b1ee0e25ad09512f4",
+        "buildHref": "https://github.com/xero/text0wnz/actions/runs/17474180362"
+      },
+      "gitCommit": {
+        "shortHash": "b4a72fa",
+        "hash": "b4a72fa9eaae5aa5b2cf208b1ee0e25ad09512f4",
+        "subject": "Changes before error encountered",
+        "body": "Changes before error encountered\n\nCo-authored-by: xero <227907+xero@users.noreply.github.com>\n",
+        "author": {
+          "name": "copilot-swe-agent[bot]",
+          "email": "198982749+Copilot@users.noreply.github.com",
+          "time": 1757012521000
+        },
+        "committer": {
+          "name": "copilot-swe-agent[bot]",
+          "email": "198982749+Copilot@users.noreply.github.com",
+          "time": 1757012521000
+        },
+        "branch": "copilot/fix-37bdcc98-ea15-4e3b-be0d-f0a261ebf776"
+      },
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "tests/results/playwright-report",
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "tests/results/e2e/results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/home/runner/work/text0wnz/text0wnz/tests/results/e2e",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/xero/text0wnz/commit/b4a72fa9eaae5aa5b2cf208b1ee0e25ad09512f4",
+            "commitHash": "b4a72fa9eaae5aa5b2cf208b1ee0e25ad09512f4",
+            "buildHref": "https://github.com/xero/text0wnz/actions/runs/17474180362"
+          },
+          "gitCommit": {
+            "shortHash": "b4a72fa",
+            "hash": "b4a72fa9eaae5aa5b2cf208b1ee0e25ad09512f4",
+            "subject": "Changes before error encountered",
+            "body": "Changes before error encountered\n\nCo-authored-by: xero <227907+xero@users.noreply.github.com>\n",
+            "author": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757012521000
+            },
+            "committer": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757012521000
+            },
+            "branch": "copilot/fix-37bdcc98-ea15-4e3b-be0d-f0a261ebf776"
+          },
+          "actualWorkers": 2
+        },
+        "id": "Chrome",
+        "name": "Chrome",
+        "testDir": "/home/runner/work/text0wnz/text0wnz/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/runner/work/text0wnz/text0wnz/tests/results/e2e",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/xero/text0wnz/commit/b4a72fa9eaae5aa5b2cf208b1ee0e25ad09512f4",
+            "commitHash": "b4a72fa9eaae5aa5b2cf208b1ee0e25ad09512f4",
+            "buildHref": "https://github.com/xero/text0wnz/actions/runs/17474180362"
+          },
+          "gitCommit": {
+            "shortHash": "b4a72fa",
+            "hash": "b4a72fa9eaae5aa5b2cf208b1ee0e25ad09512f4",
+            "subject": "Changes before error encountered",
+            "body": "Changes before error encountered\n\nCo-authored-by: xero <227907+xero@users.noreply.github.com>\n",
+            "author": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757012521000
+            },
+            "committer": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757012521000
+            },
+            "branch": "copilot/fix-37bdcc98-ea15-4e3b-be0d-f0a261ebf776"
+          },
+          "actualWorkers": 2
+        },
+        "id": "Firefox",
+        "name": "Firefox",
+        "testDir": "/home/runner/work/text0wnz/text0wnz/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/runner/work/text0wnz/text0wnz/tests/results/e2e",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/xero/text0wnz/commit/b4a72fa9eaae5aa5b2cf208b1ee0e25ad09512f4",
+            "commitHash": "b4a72fa9eaae5aa5b2cf208b1ee0e25ad09512f4",
+            "buildHref": "https://github.com/xero/text0wnz/actions/runs/17474180362"
+          },
+          "gitCommit": {
+            "shortHash": "b4a72fa",
+            "hash": "b4a72fa9eaae5aa5b2cf208b1ee0e25ad09512f4",
+            "subject": "Changes before error encountered",
+            "body": "Changes before error encountered\n\nCo-authored-by: xero <227907+xero@users.noreply.github.com>\n",
+            "author": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757012521000
+            },
+            "committer": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757012521000
+            },
+            "branch": "copilot/fix-37bdcc98-ea15-4e3b-be0d-f0a261ebf776"
+          },
+          "actualWorkers": 2
+        },
+        "id": "WebKit",
+        "name": "WebKit",
+        "testDir": "/home/runner/work/text0wnz/text0wnz/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 45000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.55.0",
+    "workers": 2,
+    "webServer": {
+      "command": "bunx serve dist -l 4173",
+      "port": 4173,
+      "reuseExistingServer": false
+    }
+  },
+  "suites": [
+    {
+      "title": "dirty-regions.spec.ts",
+      "file": "dirty-regions.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Dirty Region Processing",
+          "file": "dirty-regions.spec.ts",
+          "line": 22,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should process dirty regions when drawing with tools",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2858,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T19:23:46.855Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-1169c20512a36dd8630a",
+              "file": "dirty-regions.spec.ts",
+              "line": 37,
+              "column": 3
+            },
+            {
+              "title": "should handle rapid drawing actions without errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2859,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T19:23:49.912Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-b0bd36b285aa0c29a713",
+              "file": "dirty-regions.spec.ts",
+              "line": 87,
+              "column": 3
+            },
+            {
+              "title": "should maintain canvas state during tool switching",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2616,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T19:23:52.794Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-33824b10749c777c575e",
+              "file": "dirty-regions.spec.ts",
+              "line": 129,
+              "column": 3
+            },
+            {
+              "title": "should not have memory leaks with dirty region processing",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2708,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T19:23:55.426Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-1bb5702ffad9dbe3e3a6",
+              "file": "dirty-regions.spec.ts",
+              "line": 166,
+              "column": 3
+            },
+            {
+              "title": "should process dirty regions when drawing with tools",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 3812,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T19:23:46.859Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-d672399bba6d143e01a1",
+              "file": "dirty-regions.spec.ts",
+              "line": 37,
+              "column": 3
+            },
+            {
+              "title": "should handle rapid drawing actions without errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 3141,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T19:23:51.277Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-a822352cd9c91e0eef75",
+              "file": "dirty-regions.spec.ts",
+              "line": 87,
+              "column": 3
+            },
+            {
+              "title": "should maintain canvas state during tool switching",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2932,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T19:23:54.440Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-6c2463a173a2e2ce9faf",
+              "file": "dirty-regions.spec.ts",
+              "line": 129,
+              "column": 3
+            },
+            {
+              "title": "should not have memory leaks with dirty region processing",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 3502,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T19:23:57.389Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-924aca01ca0a0493d6ab",
+              "file": "dirty-regions.spec.ts",
+              "line": 166,
+              "column": 3
+            },
+            {
+              "title": "should process dirty regions when drawing with tools",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2512,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T19:23:58.790Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-c47d97843c7f2f517cf3",
+              "file": "dirty-regions.spec.ts",
+              "line": 37,
+              "column": 3
+            },
+            {
+              "title": "should handle rapid drawing actions without errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2498,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T19:24:01.416Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-b46ecbaf9e3f8d63c5e7",
+              "file": "dirty-regions.spec.ts",
+              "line": 87,
+              "column": 3
+            },
+            {
+              "title": "should maintain canvas state during tool switching",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2981,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T19:24:03.931Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-ce7c30867822252d1353",
+              "file": "dirty-regions.spec.ts",
+              "line": 129,
+              "column": 3
+            },
+            {
+              "title": "should not have memory leaks with dirty region processing",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2737,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-04T19:24:06.927Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-206a92680b1b1ae07cce",
+              "file": "dirty-regions.spec.ts",
+              "line": 166,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-09-04T19:23:45.604Z",
+    "duration": 24129.035,
+    "expected": 12,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

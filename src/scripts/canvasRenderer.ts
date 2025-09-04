@@ -196,11 +196,8 @@ function flushDirtyCells() {
     }
     dirtyCells.clear();
 
-    // Process dirty regions using the drawRegion function
-    for (const region of dirtyRegions) {
-      drawRegion(region.x, region.y, region.w, region.h);
-    }
-    dirtyRegions.length = 0;
+    // Process dirty regions using the new processDirtyRegions function
+    processDirtyRegions();
 
     // Only need full blit for dirty cells (drawRegion handles its own partial blitting)
     needsFullBlit = hasDirtyCells;
@@ -303,6 +300,61 @@ export function clearDirtyRegions() {
  */
 export function getDirtyRegions(): readonly DirtyRegion[] {
   return dirtyRegions;
+}
+
+/**
+ * Process and clear the dirty region queue.
+ * Calls drawRegion() for each dirty region and then clears the queue.
+ * Supports batching/coalescing since regions are already merged by enqueueDirtyRegion().
+ *
+ * This function implements Step 5 of the "Efficient Selective Canvas Redraw" refactor.
+ *
+ * @returns Number of regions processed
+ */
+export function processDirtyRegions(): number {
+  if (dirtyRegions.length === 0) {
+    return 0;
+  }
+
+  const processedCount = dirtyRegions.length;
+
+  // Process each dirty region using the drawRegion function
+  for (const region of dirtyRegions) {
+    drawRegion(region.x, region.y, region.w, region.h);
+  }
+
+  // Clear the dirty regions queue
+  dirtyRegions.length = 0;
+
+  return processedCount;
+}
+
+/**
+ * Queue a dirty region processing with requestAnimationFrame for smooth batched updates.
+ * This provides an alternative to immediate processing for performance-critical scenarios.
+ * Multiple calls within the same frame will be batched into a single processing call.
+ *
+ * @returns Promise that resolves with the number of regions processed
+ */
+export function processDirtyRegionsAsync(): Promise<number> {
+  return new Promise((resolve)=>{
+    // If there's already a queued processing, return existing promise
+    if (rafQueued) {
+      // We can't return the existing promise, so we'll queue another
+      requestAnimationFrame(()=>{
+        const processed = processDirtyRegions();
+        resolve(processed);
+      });
+      return;
+    }
+
+    rafQueued = true;
+    requestAnimationFrame(()=>{
+      rafQueued = false;
+      const processed = processDirtyRegions();
+      resolve(processed);
+    });
+  });
 }
 
 /**

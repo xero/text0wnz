@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">85.56% </span>
+                <span class="strong">85.71% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>160/187</span>
+                <span class='fraction'>162/189</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">93.75% </span>
+                <span class="strong">75.8% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>45/48</span>
+                <span class='fraction'>47/62</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">85.56% </span>
+                <span class="strong">85.71% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>160/187</span>
+                <span class='fraction'>162/189</span>
             </div>
         
             
@@ -440,7 +440,13 @@
 <a name='L375'></a><a href='#L375'>375</a>
 <a name='L376'></a><a href='#L376'>376</a>
 <a name='L377'></a><a href='#L377'>377</a>
-<a name='L378'></a><a href='#L378'>378</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L378'></a><a href='#L378'>378</a>
+<a name='L379'></a><a href='#L379'>379</a>
+<a name='L380'></a><a href='#L380'>380</a>
+<a name='L381'></a><a href='#L381'>381</a>
+<a name='L382'></a><a href='#L382'>382</a>
+<a name='L383'></a><a href='#L383'>383</a>
+<a name='L384'></a><a href='#L384'>384</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -692,6 +698,7 @@
 <span class="cline-any cline-yes">6x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -705,21 +712,26 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">16x</span>
 <span class="cline-any cline-yes">16x</span>
-<span class="cline-any cline-yes">16x</span>
-<span class="cline-any cline-yes">16x</span>
-<span class="cline-any cline-yes">16x</span>
-<span class="cline-any cline-yes">15x</span>
-<span class="cline-any cline-yes">15x</span>
-<span class="cline-any cline-yes">15x</span>
-<span class="cline-any cline-yes">15x</span>
-<span class="cline-any cline-yes">15x</span>
-<span class="cline-any cline-yes">15x</span>
-<span class="cline-any cline-yes">15x</span>
-<span class="cline-any cline-yes">15x</span>
-<span class="cline-any cline-yes">15x</span>
-<span class="cline-any cline-yes">15x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">15x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -818,14 +830,14 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// websocket logic and network patch processing
-import type { GlobalState } from './state';
-import { enqueueDirtyRegion } from './canvasRenderer';
-import { eventBus } from './eventBus';
+import type {GlobalState} from './state';
+import {enqueueDirtyRegion} from './canvasRenderer';
+import {eventBus} from './eventBus';
 &nbsp;
 /**
  * Network patch format for collaborative editing.
  * This defines the protocol that will be used by the future server implementation.
- * 
+ *
  * Protocol Assumptions:
  * - Patches are applied in the order they are received (FIFO)
  * - Each patch has a unique sequence number for ordering
@@ -836,16 +848,16 @@ import { eventBus } from './eventBus';
 export interface NetworkPatch {
   /** Patch type identifier */
   type: 'region-update';
-  
+&nbsp;
   /** Unique sequence number for ordering patches */
   sequence: number;
-  
+&nbsp;
   /** User ID who made the change */
   userId: string;
-  
+&nbsp;
   /** Timestamp when the patch was created (ISO8601) */
   timestamp: string;
-  
+&nbsp;
   /** Canvas region coordinates (in cells) */
   region: {
     x: number;
@@ -853,16 +865,16 @@ export interface NetworkPatch {
     w: number;
     h: number;
   };
-  
-  /** 
+&nbsp;
+  /**
    * Raw canvas data for the region.
    * Array of [charCode, fg, bg] triplets for each cell in the region.
    * Length should be region.w * region.h * 3
    */
   data: number[];
-  
-  /** 
-   * Optional checksum for data integrity verification 
+&nbsp;
+  /**
+   * Optional checksum for data integrity verification
    * Future enhancement for robust networking
    */
   checksum?: string;
@@ -874,10 +886,10 @@ export interface NetworkPatch {
 interface PatchState {
   /** Last processed sequence number */
   lastSequence: number;
-  
+&nbsp;
   /** Buffer for out-of-order patches */
   pendingPatches: Map&lt;number, NetworkPatch&gt;;
-  
+&nbsp;
   /** Current user's sequence counter for outgoing patches */
   localSequence: number;
 }
@@ -891,12 +903,12 @@ let patchState: PatchState = {
 &nbsp;
 /**
  * Process incoming network patch and apply it to the canvas.
- * 
+ *
  * This function implements the core network sync logic:
  * 1. Apply the patch to the raw buffer
  * 2. Enqueue the changed region as dirty
  * 3. Process dirty regions for immediate display
- * 
+ *
  * @param patch - Network patch to apply
  * @param state - Current global state
  * @returns true if patch was applied successfully, false otherwise
@@ -916,11 +928,11 @@ export function processNetworkPatch(patch: NetworkPatch, state: GlobalState): bo
     }
 &nbsp;
     const canvas = state.currentRoom.canvas;
-    const { region, data } = patch;
+    const {region, data} = patch;
 &nbsp;
     // Validate region bounds
-    if (region.x &lt; 0 || region.y &lt; 0 || 
-        region.x + region.w &gt; canvas.width || 
+    if (region.x &lt; 0 || region.y &lt; 0 ||
+        region.x + region.w &gt; canvas.width ||
         region.y + region.h &gt; canvas.height) {
       console.warn('Network patch region out of bounds:', region);
       return false;
@@ -938,7 +950,7 @@ export function processNetworkPatch(patch: NetworkPatch, state: GlobalState): bo
     for (let y = region.y; y &lt; region.y + region.h; y++) {
       for (let x = region.x; x &lt; region.x + region.w; x++) {
         const bufferIndex = (y * canvas.width + x) * 3;
-        
+&nbsp;
         // Apply the three values: charCode, fg, bg
         canvas.rawdata[bufferIndex] = data[dataIndex++];      // charCode
         canvas.rawdata[bufferIndex + 1] = data[dataIndex++];  // fg
@@ -977,7 +989,7 @@ export function processNetworkPatch(patch: NetworkPatch, state: GlobalState): bo
 /**
  * Create a network patch for a local change.
  * This function will be used when sending local edits to the server.
- * 
+ *
  * @param region - Canvas region that changed
  * @param state - Current global state
  * @returns Network patch ready to send to server
@@ -1015,7 +1027,7 @@ export function createNetworkPatch(
       sequence,
       userId: state.user.<span class="branch-0 cbranch-no" title="branch not covered" >id || 'unknown-user',</span>
       timestamp: new Date().toISOString(),
-      region: { ...region },
+      region: {...region},
       data
     };
 &nbsp;
@@ -1036,7 +1048,7 @@ export function createNetworkPatch(
 /**
  * Handle network patches with sequence ordering.
  * This function ensures patches are applied in the correct order.
- * 
+ *
  * @param patch - Incoming network patch
  * @param state - Current global state
  */
@@ -1067,9 +1079,10 @@ function processPendingPatches(state: GlobalState): void {
   let nextSequence = patchState.lastSequence + 1;
 &nbsp;
   while (patchState.pendingPatches.has(nextSequence)) {
-    const patch = patchState.pendingPatches.get(nextSequence)!;
+    const patch = patchState.pendingPatches.get(nextSequence);
+    if (!patch) <span class="branch-0 cbranch-no" title="branch not covered" >break; // Safety check, though this shouldn't happen</span>
     patchState.pendingPatches.delete(nextSequence);
-    
+&nbsp;
     processNetworkPatch(patch, state);
     nextSequence++;
   }
@@ -1080,22 +1093,27 @@ function processPendingPatches(state: GlobalState): void {
  * @param patch - Patch to validate
  * @returns true if patch is valid
  */
-function isValidPatch(patch: any): patch is NetworkPatch {
-  return (
-    patch &amp;&amp;
-    typeof patch === 'object' &amp;&amp;
-    patch.type === 'region-update' &amp;&amp;
-    typeof patch.sequence === 'number' &amp;&amp;
-    typeof patch.userId === 'string' &amp;&amp;
-    typeof patch.timestamp === 'string' &amp;&amp;
-    patch.region &amp;&amp;
-    typeof patch.region.x === 'number' &amp;&amp;
-    typeof patch.region.y === 'number' &amp;&amp;
-    typeof patch.region.w === 'number' &amp;&amp;
-    typeof patch.region.h === 'number' &amp;&amp;
-    Array.isArray(patch.data) &amp;&amp;
-    patch.data.every((val: any) =&gt; typeof val === 'number')
-  );
+function isValidPatch(patch: unknown): patch is NetworkPatch {
+  if (!patch || typeof patch !== 'object') <span class="branch-0 cbranch-no" title="branch not covered" >return false;</span>
+&nbsp;
+  const p = patch as Record&lt;string, unknown&gt;;
+&nbsp;
+  if (p.type !== 'region-update') return false;
+  if (typeof p.sequence !== 'number') <span class="branch-0 cbranch-no" title="branch not covered" >return false;</span>
+  if (typeof p.userId !== 'string') <span class="branch-0 cbranch-no" title="branch not covered" >return false;</span>
+  if (typeof p.timestamp !== 'string') <span class="branch-0 cbranch-no" title="branch not covered" >return false;</span>
+  if (!p.region || typeof p.region !== 'object') <span class="branch-0 cbranch-no" title="branch not covered" >return false;</span>
+&nbsp;
+  const region = p.region as Record&lt;string, unknown&gt;;
+  if (typeof region.x !== 'number') <span class="branch-0 cbranch-no" title="branch not covered" >return false;</span>
+  if (typeof region.y !== 'number') <span class="branch-0 cbranch-no" title="branch not covered" >return false;</span>
+  if (typeof region.w !== 'number') <span class="branch-0 cbranch-no" title="branch not covered" >return false;</span>
+  if (typeof region.h !== 'number') <span class="branch-0 cbranch-no" title="branch not covered" >return false;</span>
+&nbsp;
+  if (!Array.isArray(p.data)) <span class="branch-0 cbranch-no" title="branch not covered" >return false;</span>
+  if (!p.data.every((val: unknown)=&gt;typeof val === 'number')) <span class="branch-0 cbranch-no" title="branch not covered" >return false;</span>
+&nbsp;
+  return true;
 }
 &nbsp;
 /**
@@ -1133,7 +1151,7 @@ export function getPatchStats(): {
  */
 export function initializeNetworkSync(state: GlobalState): void {
   // Listen for network canvas updates and process them
-  eventBus.subscribe('network:canvas:update', ({ patch, userId }) =&gt; {
+  eventBus.subscribe('network:canvas:update', ({patch, userId})=&gt;{
 <span class="cstat-no" title="statement not covered" >    try {</span>
       // Convert the Uint8Array patch to our NetworkPatch format
       // This is a placeholder - actual implementation would depend on
@@ -1153,7 +1171,7 @@ export function initializeNetworkSync(state: GlobalState): void {
 /**
  * Placeholder function to deserialize patch data from network.
  * This would be implemented based on the actual server protocol.
- * 
+ *
  * @param patchData - Raw patch data from network
  * @param userId - User who sent the patch
  * @returns Parsed network patch or null if invalid
@@ -1165,12 +1183,12 @@ export function initializeNetworkSync(state: GlobalState): void {
     // For now, we'll assume the data is JSON-encoded
 <span class="cstat-no" title="statement not covered" >    const jsonStr = new TextDecoder().decode(patchData);</span>
 <span class="cstat-no" title="statement not covered" >    const patch = JSON.parse(jsonStr) as NetworkPatch;</span>
-    
+&nbsp;
     // Ensure userId matches
 <span class="cstat-no" title="statement not covered" >    if (patch.userId !== userId) {</span>
 <span class="cstat-no" title="statement not covered" >      patch.userId = userId; // Server-provided userId takes precedence</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
-    
+&nbsp;
 <span class="cstat-no" title="statement not covered" >    return isValidPatch(patch) ? patch : null;</span>
 <span class="cstat-no" title="statement not covered" >  } catch (error) {</span>
 <span class="cstat-no" title="statement not covered" >    console.error('Error deserializing network patch:', error);</span>
@@ -1181,7 +1199,7 @@ export function initializeNetworkSync(state: GlobalState): void {
 /**
  * Serialize a network patch for transmission.
  * This would be used when sending patches to the server.
- * 
+ *
  * @param patch - Network patch to serialize
  * @returns Serialized patch data
  */
@@ -1201,7 +1219,7 @@ export function serializeNetworkPatch(patch: NetworkPatch): Uint8Array {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-09-04T18:55:29.599Z
+                at 2025-09-04T19:24:36.391Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

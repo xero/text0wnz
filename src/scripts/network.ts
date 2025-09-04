@@ -248,7 +248,8 @@ function processPendingPatches(state: GlobalState): void {
   let nextSequence = patchState.lastSequence + 1;
 
   while (patchState.pendingPatches.has(nextSequence)) {
-    const patch = patchState.pendingPatches.get(nextSequence)!;
+    const patch = patchState.pendingPatches.get(nextSequence);
+    if (!patch) break; // Safety check, though this shouldn't happen
     patchState.pendingPatches.delete(nextSequence);
 
     processNetworkPatch(patch, state);
@@ -261,22 +262,27 @@ function processPendingPatches(state: GlobalState): void {
  * @param patch - Patch to validate
  * @returns true if patch is valid
  */
-function isValidPatch(patch: any): patch is NetworkPatch {
-  return (
-    patch &&
-    typeof patch === 'object' &&
-    patch.type === 'region-update' &&
-    typeof patch.sequence === 'number' &&
-    typeof patch.userId === 'string' &&
-    typeof patch.timestamp === 'string' &&
-    patch.region &&
-    typeof patch.region.x === 'number' &&
-    typeof patch.region.y === 'number' &&
-    typeof patch.region.w === 'number' &&
-    typeof patch.region.h === 'number' &&
-    Array.isArray(patch.data) &&
-    patch.data.every((val: any)=>typeof val === 'number')
-  );
+function isValidPatch(patch: unknown): patch is NetworkPatch {
+  if (!patch || typeof patch !== 'object') return false;
+
+  const p = patch as Record<string, unknown>;
+
+  if (p.type !== 'region-update') return false;
+  if (typeof p.sequence !== 'number') return false;
+  if (typeof p.userId !== 'string') return false;
+  if (typeof p.timestamp !== 'string') return false;
+  if (!p.region || typeof p.region !== 'object') return false;
+
+  const region = p.region as Record<string, unknown>;
+  if (typeof region.x !== 'number') return false;
+  if (typeof region.y !== 'number') return false;
+  if (typeof region.w !== 'number') return false;
+  if (typeof region.h !== 'number') return false;
+
+  if (!Array.isArray(p.data)) return false;
+  if (!p.data.every((val: unknown)=>typeof val === 'number')) return false;
+
+  return true;
 }
 
 /**
