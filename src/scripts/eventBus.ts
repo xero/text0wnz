@@ -8,6 +8,7 @@ export type EditorEventMap = {
   'local:tool:activated': { toolName: string };
   'local:file:loaded': { fileName: string; data: ArrayBuffer };
   'local:palette:changed': { colors: number[] };
+  'local:canvas:cleared': { reason: 'user' | 'reset' | 'new-file' };
   'network:canvas:update': { patch: Uint8Array; userId: string };
   'network:user:joined': { userId: string; nickname: string };
   'network:chat:message': { userId: string; message: string };

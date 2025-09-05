@@ -5,6 +5,13 @@ import {eventBus} from './eventBus';
 // --- Types
 type RGBA = [number, number, number, number];
 
+export type DirtyRegion = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
 export interface Palette {
   getRGBAColor(index: number): RGBA;
   getForegroundColor(): number;
@@ -36,6 +43,7 @@ let palette: Palette | null = null;
 let state: GlobalState | null = null;
 
 const dirtyCells: Set<number> = new Set();
+const dirtyRegions: DirtyRegion[] = [];
 let needsFullRedraw = true;
 let rafQueued = false;
 
@@ -68,12 +76,18 @@ export function initCanvasRenderer(
     forceFullRedraw();
   });
 
-  eventBus.subscribe('local:tool:activated', ()=>{
-    // Might need to redraw if tool overlays are needed
+  eventBus.subscribe('local:file:loaded', ()=>{
+    // Buffer reset: new file loaded, trigger full redraw
     forceFullRedraw();
   });
 
-  // Add more as needed: file load, undo/redo, etc.
+  eventBus.subscribe('local:canvas:cleared', ()=>{
+    // Buffer reset: canvas was cleared, trigger full redraw
+    forceFullRedraw();
+  });
+
+  // Note: Removed 'local:tool:activated' full redraw trigger as per Step 7.
+  // Tool activation should not require full canvas redraw - only use dirty regions.
 
   // Initial draw
   forceFullRedraw();
@@ -152,6 +166,7 @@ function flushDirtyCells() {
   if (!c) return;
 
   const {width, height, rawdata} = c;
+  let needsFullBlit = false;
 
   if (needsFullRedraw) {
     // Full redraw: clear offscreen and re-render everything
@@ -166,8 +181,13 @@ function flushDirtyCells() {
       }
     }
     dirtyCells.clear();
+    dirtyRegions.length = 0;
     needsFullRedraw = false;
-  } else if (dirtyCells.size > 0) {
+    needsFullBlit = true;
+  } else if (dirtyCells.size > 0 || dirtyRegions.length > 0) {
+    // Track if we need full blit due to dirty cells
+    const hasDirtyCells = dirtyCells.size > 0;
+
     // Dirty cell redraw
     for (const idx of dirtyCells) {
       const cell = Math.floor(idx / 3);
@@ -181,27 +201,252 @@ function flushDirtyCells() {
       font.draw(charCode, fg, bg, offctx, x, y);
     }
     dirtyCells.clear();
+
+    // Process dirty regions using the new processDirtyRegions function
+    processDirtyRegions();
+
+    // Only need full blit for dirty cells (drawRegion handles its own partial blitting)
+    needsFullBlit = hasDirtyCells;
   }
 
-  // Blit offscreen to onscreen
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(offscreen, 0, 0);
+  // Do full canvas blit when needed
+  if (needsFullBlit) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(offscreen, 0, 0);
+  }
 }
 
-// Use this to force a full redraw (e.g., on resize, font/palette change)
+/**
+ * Forces a full canvas redraw.
+ *
+ * STEP 7 - FULL REDRAW TRIGGERS:
+ * Full redraws should ONLY be triggered for:
+ * 1. Canvas resize (viewport or canvas dimensions change)
+ * 2. Font changes (affects all character rendering)
+ * 3. Palette changes (affects all color rendering)
+ * 4. Buffer reset operations:
+ *    - New file loaded (local:file:loaded)
+ *    - Canvas cleared/reset
+ *    - Canvas data replaced (updateCanvasData)
+ * 5. Initial render (application startup)
+ *
+ * All other rendering operations should use the dirty region system for efficiency.
+ * Tool activation, single cell edits, and network patches should NOT trigger full redraws.
+ */
 function forceFullRedraw() {
   needsFullRedraw = true;
   queueFlushDirty();
 }
 
-// Call this to mark a cell as dirty (cellIdx is the *cell*, not the byte offset)
-function markDirtyCell(x: number, y: number) {
+/**
+ * Enqueue a dirty region for redraw.
+ * Optionally merges/coalescing overlapping or adjacent regions for efficiency.
+ *
+ * STEP 6 - LOCAL EDIT PRIORITIZATION:
+ * This function implements the local vs network edit prioritization strategy:
+ * - Local edits (immediate=true): Processed immediately for instant feedback
+ * - Network edits (immediate=false): Batched using requestAnimationFrame
+ * - Local edits always take precedence due to immediate processing
+ * - Network edits are queued and processed in the next animation frame
+ * - This ensures responsive UI while maintaining efficient network sync
+ *
+ * @param region - The dirty region to enqueue
+ * @param immediate - If true, process immediately (for local edits). If false, use RAF batching (for network edits)
+ */
+export function enqueueDirtyRegion(region: DirtyRegion, immediate: boolean = false) {
   if (!state || !state.currentRoom) return;
   const c = state.currentRoom.canvas;
-  if (x < 0 || x >= c.width || y < 0 || y >= c.height) return;
-  const idx = (y * c.width + x) * 3;
-  dirtyCells.add(idx);
-  queueFlushDirty();
+
+  // Clamp region to canvas bounds
+  const clampedRegion: DirtyRegion = {
+    x: Math.max(0, Math.min(region.x, c.width)),
+    y: Math.max(0, Math.min(region.y, c.height)),
+    w: Math.max(0, Math.min(region.w, c.width - Math.max(0, region.x))),
+    h: Math.max(0, Math.min(region.h, c.height - Math.max(0, region.y)))
+  };
+
+  // Skip empty regions
+  if (clampedRegion.w <= 0 || clampedRegion.h <= 0) return;
+
+  // Try to merge with existing regions to reduce redraw overhead
+  let merged = false;
+  for (let i = 0; i < dirtyRegions.length; i++) {
+    const existing = dirtyRegions[i];
+    const mergedRegion = tryMergeRegions(existing, clampedRegion);
+    if (mergedRegion) {
+      dirtyRegions[i] = mergedRegion;
+      merged = true;
+      break;
+    }
+  }
+
+  if (!merged) {
+    dirtyRegions.push(clampedRegion);
+  }
+
+  // Step 6: Favor local edits - process immediately for local changes
+  if (immediate) {
+    processDirtyRegions();
+  } else {
+    queueFlushDirty();
+  }
+}
+
+/**
+ * Attempt to merge two regions if they overlap or are adjacent.
+ * Returns the merged region if possible, null otherwise.
+ */
+function tryMergeRegions(a: DirtyRegion, b: DirtyRegion): DirtyRegion | null {
+  // Calculate bounds
+  const aRight = a.x + a.w;
+  const aBottom = a.y + a.h;
+  const bRight = b.x + b.w;
+  const bBottom = b.y + b.h;
+
+  // Check if regions overlap or are adjacent (allowing 1-pixel gap for efficiency)
+  const overlapX = Math.max(0, Math.min(aRight, bRight) - Math.max(a.x, b.x));
+  const overlapY = Math.max(0, Math.min(aBottom, bBottom) - Math.max(a.y, b.y));
+  const adjacentX = (aRight === b.x) || (bRight === a.x);
+  const adjacentY = (aBottom === b.y) || (bBottom === a.y);
+
+  // Merge if overlapping or adjacent
+  if ((overlapX > 0 && overlapY > 0) ||
+      (adjacentX && overlapY > 0) ||
+      (adjacentY && overlapX > 0)) {
+    return {
+      x: Math.min(a.x, b.x),
+      y: Math.min(a.y, b.y),
+      w: Math.max(aRight, bRight) - Math.min(a.x, b.x),
+      h: Math.max(aBottom, bBottom) - Math.min(a.y, b.y)
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Clear all dirty regions from the queue.
+ * Useful for external systems that want to reset the dirty state.
+ */
+export function clearDirtyRegions() {
+  dirtyRegions.length = 0;
+}
+
+/**
+ * Get the current list of dirty regions (read-only).
+ * Useful for debugging or external systems that need to inspect dirty state.
+ */
+export function getDirtyRegions(): readonly DirtyRegion[] {
+  return dirtyRegions;
+}
+
+/**
+ * Process and clear the dirty region queue.
+ * Calls drawRegion() for each dirty region and then clears the queue.
+ * Supports batching/coalescing since regions are already merged by enqueueDirtyRegion().
+ *
+ * This function implements Step 5 of the "Efficient Selective Canvas Redraw" refactor.
+ *
+ * @returns Number of regions processed
+ */
+export function processDirtyRegions(): number {
+  if (dirtyRegions.length === 0) {
+    return 0;
+  }
+
+  const processedCount = dirtyRegions.length;
+
+  // Process each dirty region using the drawRegion function
+  for (const region of dirtyRegions) {
+    drawRegion(region.x, region.y, region.w, region.h);
+  }
+
+  // Clear the dirty regions queue
+  dirtyRegions.length = 0;
+
+  return processedCount;
+}
+
+/**
+ * Queue a dirty region processing with requestAnimationFrame for smooth batched updates.
+ * This provides an alternative to immediate processing for performance-critical scenarios.
+ * Multiple calls within the same frame will be batched into a single processing call.
+ *
+ * @returns Promise that resolves with the number of regions processed
+ */
+export function processDirtyRegionsAsync(): Promise<number> {
+  return new Promise((resolve)=>{
+    // If there's already a queued processing, return existing promise
+    if (rafQueued) {
+      // We can't return the existing promise, so we'll queue another
+      requestAnimationFrame(()=>{
+        const processed = processDirtyRegions();
+        resolve(processed);
+      });
+      return;
+    }
+
+    rafQueued = true;
+    requestAnimationFrame(()=>{
+      rafQueued = false;
+      const processed = processDirtyRegions();
+      resolve(processed);
+    });
+  });
+}
+
+/**
+ * Draw a specific region of the canvas.
+ * Only updates the specified region, handling empty/out-of-bounds regions gracefully.
+ *
+ * @param x - Starting x coordinate in canvas cells
+ * @param y - Starting y coordinate in canvas cells
+ * @param w - Width in canvas cells
+ * @param h - Height in canvas cells
+ */
+export function drawRegion(x: number, y: number, w: number, h: number) {
+  if (!ctx || !offctx || !state || !font || !palette || !canvas || !offscreen) return;
+  const c = state.currentRoom?.canvas;
+  if (!c) return;
+
+  const {width, height, rawdata} = c;
+
+  // Handle empty or invalid regions gracefully
+  if (w <= 0 || h <= 0) return;
+
+  // Clamp region to canvas bounds
+  const clampedX = Math.max(0, Math.min(x, width));
+  const clampedY = Math.max(0, Math.min(y, height));
+  const clampedW = Math.max(0, Math.min(w, width - clampedX));
+  const clampedH = Math.max(0, Math.min(h, height - clampedY));
+
+  // Skip if clamped region is empty
+  if (clampedW <= 0 || clampedH <= 0) return;
+
+  // Draw each cell in the region
+  for (let cellY = clampedY; cellY < clampedY + clampedH; cellY++) {
+    for (let cellX = clampedX; cellX < clampedX + clampedW; cellX++) {
+      const idx = (cellY * width + cellX) * 3;
+      const charCode = rawdata[idx];
+      const fg = rawdata[idx + 1];
+      const bg = rawdata[idx + 2];
+
+      // Clear cell area on offscreen canvas
+      offctx.clearRect(cellX * font.width, cellY * font.height, font.width, font.height);
+
+      // Draw the character
+      font.draw(charCode, fg, bg, offctx, cellX, cellY);
+    }
+  }
+
+  // Copy the updated region from offscreen to onscreen canvas
+  const pixelX = clampedX * font.width;
+  const pixelY = clampedY * font.height;
+  const pixelW = clampedW * font.width;
+  const pixelH = clampedH * font.height;
+
+  ctx.clearRect(pixelX, pixelY, pixelW, pixelH);
+  ctx.drawImage(offscreen, pixelX, pixelY, pixelW, pixelH, pixelX, pixelY, pixelW, pixelH);
 }
 
 // --- Drawing API
@@ -306,7 +551,7 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
   c.rawdata[idx] = charCode;
   c.rawdata[idx + 1] = fg;
   c.rawdata[idx + 2] = bg;
-  markDirtyCell(x, charY);
+  enqueueDirtyRegion({x, y: charY, w: 1, h: 1}, true); // immediate=true for local edits
 }
 
 /**
@@ -342,7 +587,7 @@ export function shadeCell(x: number, y: number, fg: number, bg: number, reduce: 
   c.rawdata[idx] = code;
   c.rawdata[idx + 1] = fg;
   c.rawdata[idx + 2] = bg;
-  markDirtyCell(x, y);
+  enqueueDirtyRegion({x, y, w: 1, h: 1}, true); // immediate=true for local edits
 }
 
 /**
