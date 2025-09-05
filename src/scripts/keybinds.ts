@@ -33,10 +33,10 @@ export function registerPaletteKeybinds(
       const num = parseInt(e.key, 10);
       if (e.ctrlKey) {
         e.preventDefault();
-        if (paletteObj.getForegroundColor() === num) {
+        if (paletteObj.getForegroundColor() === num - 1) {
           paletteObj.setForegroundColor(num + 8);
         } else {
-          paletteObj.setForegroundColor(num);
+          paletteObj.setForegroundColor(num - 1);
         }
       } else if (e.altKey) {
         e.preventDefault();
