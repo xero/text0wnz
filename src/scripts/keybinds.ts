@@ -86,5 +86,5 @@ export function registerPaletteKeybinds(
 
 // nuke it all
 export function unregisterAllKeybinds() {
-  Object.keys(keybindRegistry).forEach(unregisterKeybind);
+  Array.from(keybindRegistry.keys()).forEach(unregisterKeybind);
 }

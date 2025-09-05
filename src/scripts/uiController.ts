@@ -444,6 +444,13 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   });
 
   //--------------- colors
+  updateCurrentColorsPreview();
+  curColors.addEventListener('click', ()=>{
+    const fg = palette.getForegroundColor();
+    palette.setForegroundColor(palette.getBackgroundColor());
+    palette.setBackgroundColor(fg);
+    updateCurrentColorsPreview();
+  });
   const palettePicker = new PalettePicker({
     canvas: palettePrev,
     palette: palette,
