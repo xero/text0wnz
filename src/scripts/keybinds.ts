@@ -33,17 +33,17 @@ export function registerPaletteKeybinds(
       const num = parseInt(e.key, 10) - 1;
       if (e.ctrlKey) {
         e.preventDefault();
-        if (paletteObj.getForegroundColor() === num - 1) {
+        if (paletteObj.getForegroundColor() === num) {
           paletteObj.setForegroundColor(num + 8);
         } else {
-          paletteObj.setForegroundColor(num - 1);
+          paletteObj.setForegroundColor(num);
         }
       } else if (e.altKey) {
         e.preventDefault();
-        if (paletteObj.getBackgroundColor() === num - 1) {
+        if (paletteObj.getBackgroundColor() === num) {
           paletteObj.setBackgroundColor(num + 7);
         } else {
-          paletteObj.setBackgroundColor(num - 1);
+          paletteObj.setBackgroundColor(num);
         }
       }
     }
