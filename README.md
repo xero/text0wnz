@@ -2,14 +2,21 @@
 
 ![teXt0wnz text art editor preview](https://raw.githubusercontent.com/xero/text0wnz/main/docs/preview.png)
 
-[![Last Test Suite Results](https://github.com/xero/text0wnz/actions/workflows/test-suite.yml/badge.svg?branch=main)](https://github.com/xero/text0wnz/actions/workflows/test-suite.yml?query=branch%3Amain) [![Tests](https://github.com/xero/text0wnz/actions/workflows/deploy-pages.yml/badge.svg?branch=main)](https://xero.github.io/text0wnz) ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/xero/text0wnz?style=flat&color=#31c352) ![GitHub last commit](https://img.shields.io/github/last-commit/xero/text0wnz.svg?style=flat&color=#31c352) ![GitHub repo size](https://img.shields.io/github/repo-size/xero/text0wnz?style=flat&color=#31c352)
-
 **teXt0wnz** is a collaborative, web-based text art editor and viewer. It supports classic ANSI text art, XBin files, and plain UTF-8 text. The editor itself is a single-page-application that can run locally or on a web-server. The optional server-side components synchronize editor state between clients via WebSockets.
+
+## URLs
+
+| Domain                          | Status                                                      |
+| ------------------------------- | ----------------------------------------------------------- |
+| https://text.0w.nz              | The final prod domain. I dev here, so it will be broken lot |
+| https://xero.github.io/text0wnz | The github pages version of the site is guaranteed to work  |
 
 > [!WARNING]
 > _This project is under active development and is only semi-functional!_
 >
 > testing stats: [unit](https://xero.github.io/text0wnz/unit/) ░ [e2e](https://xero.github.io/text0wnz/e2e/) / [json](https://xero.github.io/text0wnz/e2e/results.json)
+
+[![Last Test Suite Results](https://github.com/xero/text0wnz/actions/workflows/test-suite.yml/badge.svg?branch=main)](https://github.com/xero/text0wnz/actions/workflows/test-suite.yml?query=branch%3Amain) [![Tests](https://github.com/xero/text0wnz/actions/workflows/deploy-pages.yml/badge.svg?branch=main)](https://xero.github.io/text0wnz) ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/xero/text0wnz?style=flat&color=#31c352) ![GitHub last commit](https://img.shields.io/github/last-commit/xero/text0wnz.svg?style=flat&color=#31c352) ![GitHub repo size](https://img.shields.io/github/repo-size/xero/text0wnz?style=flat&color=#31c352)
 
 ---
 
@@ -70,8 +77,7 @@ bun serve
 > [!TIP]
 > Review [package.json](https://github.com/xero/text0wnz/blob/main/package.json) for the full list of script commands.
 
-
-## Directory structure
+## Project Structure
 
 ```
 .
@@ -104,7 +110,7 @@ bun serve
 └── vitest.config.ts      # unit test options
 ```
 
-## Testing Tools and Structure
+## Testing
 
 ### Test Runners
 
@@ -125,7 +131,7 @@ bun serve
     - [playwright report](https://xero.github.io/text0wnz/e2e/)
     - [raw e2e results](https://xero.github.io/text0wnz/e2e/results.json)
 
-### Directory Structure
+### Tests Directory Structure
 
 ```
 tests/
@@ -139,23 +145,19 @@ tests/
 >- **Vitest** will automatically run all tests in `tests/unit/` and _any__ other `tests/` subdirectory *except* `tests/e2e/`.
 >- **Playwright** will only run tests inside `tests/e2e/`.
 
----
+### Testing Commands
 
-## How to Test and Run the App
+1. **Install dependencies Build the app**
+- `bun i` and `bun bake`
 
-1. Install dependencies Build the app
-`bun i` and `bun bake`
+2. **Run Unit Tests**
+- `bun check` or `bunx vitest run`
 
-2. Run Unit Tests
-`bun check` or `bunx vitest run`
-
-3. For Coverage Reports
-`bun check:coverage` or `bunx vitest run --coverage`
+3. **For Coverage Reports**
+- `bun check:coverage` or `bunx vitest run --coverage`
 
 4. Run E2E Tests
-`bun check:e2e` or `bunx playwright test`
-
----
+- `bun check:e2e` or `bunx playwright test`
 
 ##  Browser Support
 - Chrome/Chromium 95+
@@ -163,9 +165,8 @@ tests/
 - Safari 15+
 - Edge 95+
 
----
 
-## License, Inspo, & Greetz
+## License & Greetz
 
 <img src="https://gist.githubusercontent.com/xero/cbcd5c38b695004c848b73e5c1c0c779/raw/6b32899b0af238b17383d7a878a69a076139e72d/kopimi-sm.png" align="left" height="222">
 
