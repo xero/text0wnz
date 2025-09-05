@@ -30,7 +30,7 @@ export function registerPaletteKeybinds(
   const handler: KeyHandler = (e)=>{
     // Number keys 1-8: set foreground/background with Ctrl/Alt
     if (e.key >= '1' && e.key <= '8') {
-      const num = parseInt(e.key, 10);
+      const num = parseInt(e.key, 10) - 1;
       if (e.ctrlKey) {
         e.preventDefault();
         if (paletteObj.getForegroundColor() === num - 1) {
