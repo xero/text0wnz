@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 // Helper function for browser-specific clicks to handle WebKit pointer event issues
-async function safeClick(page, selector, options = {}) {
+async function safeClick(page: any, selector: string, options = {}) {
   const browserName = page.context().browser()?.browserType().name();
   
   if (browserName === 'webkit') {

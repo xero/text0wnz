@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 // Helper function for browser-specific clicks to handle WebKit pointer event issues
-async function safeClick(page, selector, options = {}) {
+async function safeClick(page: any, selector: string, options = {}) {
   const browserName = page.context().browser()?.browserType().name();
   
   if (browserName === 'webkit') {
@@ -29,13 +29,13 @@ test.describe('Palette and Keybind Functionality', () => {
     // Wait for the main interface to be ready
     await expect(page.locator('#art')).toBeVisible();
     await expect(page.locator('#paletteColors')).toBeVisible();
-    await expect(page.locator('#curColors')).toBeVisible();
+    await expect(page.locator('#currentColors')).toBeVisible();
   });
 
   test.describe('Palette Picker Mouse Interactions', () => {
     test('should change foreground color when clicking palette swatch', async ({ page }) => {
       const paletteCanvas = page.locator('#paletteColors');
-      const currentColors = page.locator('#curColors');
+      const currentColors = page.locator('#currentColors');
       
       // Get initial color state - should show current colors preview
       await expect(currentColors).toBeVisible();
@@ -76,10 +76,12 @@ test.describe('Palette and Keybind Functionality', () => {
         const greenX = paletteBox.x + (2 * swatchWidth) + (swatchWidth / 2);
         const greenY = paletteBox.y + (swatchHeight / 2);
         
-        await page.mouse.click(greenX, greenY, { modifiers: ['Control'] });
+        await page.keyboard.down('Control');
+        await page.mouse.click(greenX, greenY);
+        await page.keyboard.up('Control');
         
         await page.waitForTimeout(100);
-        await expect(page.locator('#curColors')).toBeVisible();
+        await expect(page.locator('#currentColors')).toBeVisible();
       }
     });
 
@@ -96,10 +98,12 @@ test.describe('Palette and Keybind Functionality', () => {
         const blueX = paletteBox.x + (1 * swatchWidth) + (swatchWidth / 2);
         const blueY = paletteBox.y + (swatchHeight / 2);
         
-        await page.mouse.click(blueX, blueY, { modifiers: ['Alt'] });
+        await page.keyboard.down('Alt');
+        await page.mouse.click(blueX, blueY);
+        await page.keyboard.up('Alt');
         
         await page.waitForTimeout(100);
-        await expect(page.locator('#curColors')).toBeVisible();
+        await expect(page.locator('#currentColors')).toBeVisible();
       }
     });
 
@@ -119,14 +123,14 @@ test.describe('Palette and Keybind Functionality', () => {
         await page.mouse.click(brightRedX, brightRedY);
         
         await page.waitForTimeout(100);
-        await expect(page.locator('#curColors')).toBeVisible();
+        await expect(page.locator('#currentColors')).toBeVisible();
       }
     });
   });
 
   test.describe('Current Colors Swap Functionality', () => {
     test('should swap foreground and background colors when clicking current colors preview', async ({ page }) => {
-      const currentColors = page.locator('#curColors');
+      const currentColors = page.locator('#currentColors');
       const paletteCanvas = page.locator('#paletteColors');
       
       // First, set different foreground and background colors
@@ -145,7 +149,9 @@ test.describe('Palette and Keybind Functionality', () => {
         // Set background to blue (index 1) with Ctrl+click
         const blueX = paletteBox.x + (1 * swatchWidth) + (swatchWidth / 2);
         const blueY = paletteBox.y + (swatchHeight / 2);
-        await page.mouse.click(blueX, blueY, { modifiers: ['Control'] });
+        await page.keyboard.down('Control');
+        await page.mouse.click(blueX, blueY);
+        await page.keyboard.up('Control');
         
         await page.waitForTimeout(100);
         
@@ -168,13 +174,13 @@ test.describe('Palette and Keybind Functionality', () => {
       await page.waitForTimeout(100);
       
       // Verify interface is still responsive
-      await expect(page.locator('#curColors')).toBeVisible();
+      await expect(page.locator('#currentColors')).toBeVisible();
       
       // Test Ctrl+5 for setting foreground to color 4 (red)
       await page.keyboard.press('Control+5');
       await page.waitForTimeout(100);
       
-      await expect(page.locator('#curColors')).toBeVisible();
+      await expect(page.locator('#currentColors')).toBeVisible();
     });
 
     test('should toggle between normal and bright colors with Ctrl+number', async ({ page }) => {
@@ -185,7 +191,7 @@ test.describe('Palette and Keybind Functionality', () => {
       await page.keyboard.press('Control+1');
       await page.waitForTimeout(100);
       
-      await expect(page.locator('#curColors')).toBeVisible();
+      await expect(page.locator('#currentColors')).toBeVisible();
     });
 
     test('should change background color with Alt+number keys', async ({ page }) => {
@@ -193,13 +199,13 @@ test.describe('Palette and Keybind Functionality', () => {
       await page.keyboard.press('Alt+2');
       await page.waitForTimeout(100);
       
-      await expect(page.locator('#curColors')).toBeVisible();
+      await expect(page.locator('#currentColors')).toBeVisible();
       
       // Test Alt+5 for setting background to color 4
       await page.keyboard.press('Alt+5');
       await page.waitForTimeout(100);
       
-      await expect(page.locator('#curColors')).toBeVisible();
+      await expect(page.locator('#currentColors')).toBeVisible();
     });
 
     test('should cycle foreground color with Ctrl+arrow keys', async ({ page }) => {
@@ -207,13 +213,13 @@ test.describe('Palette and Keybind Functionality', () => {
       await page.keyboard.press('Control+ArrowUp');
       await page.waitForTimeout(100);
       
-      await expect(page.locator('#curColors')).toBeVisible();
+      await expect(page.locator('#currentColors')).toBeVisible();
       
       // Test Ctrl+ArrowDown to increase foreground color
       await page.keyboard.press('Control+ArrowDown');
       await page.waitForTimeout(100);
       
-      await expect(page.locator('#curColors')).toBeVisible();
+      await expect(page.locator('#currentColors')).toBeVisible();
     });
 
     test('should cycle background color with Ctrl+arrow keys', async ({ page }) => {
@@ -221,13 +227,13 @@ test.describe('Palette and Keybind Functionality', () => {
       await page.keyboard.press('Control+ArrowLeft');
       await page.waitForTimeout(100);
       
-      await expect(page.locator('#curColors')).toBeVisible();
+      await expect(page.locator('#currentColors')).toBeVisible();
       
       // Test Ctrl+ArrowRight to increase background color
       await page.keyboard.press('Control+ArrowRight');
       await page.waitForTimeout(100);
       
-      await expect(page.locator('#curColors')).toBeVisible();
+      await expect(page.locator('#currentColors')).toBeVisible();
     });
 
     test('should wrap colors correctly at boundaries', async ({ page }) => {
@@ -239,20 +245,20 @@ test.describe('Palette and Keybind Functionality', () => {
       await page.keyboard.press('Control+ArrowUp');
       await page.waitForTimeout(100);
       
-      await expect(page.locator('#curColors')).toBeVisible();
+      await expect(page.locator('#currentColors')).toBeVisible();
       
       // Ctrl+ArrowDown should wrap from 15 to 0
       await page.keyboard.press('Control+ArrowDown');
       await page.waitForTimeout(100);
       
-      await expect(page.locator('#curColors')).toBeVisible();
+      await expect(page.locator('#currentColors')).toBeVisible();
     });
   });
 
   test.describe('Keybind Isolation and Context', () => {
     test('should not respond to number keys without modifiers', async ({ page }) => {
       // Store initial state
-      const currentColors = page.locator('#curColors');
+      const currentColors = page.locator('#currentColors');
       await expect(currentColors).toBeVisible();
       
       // Press number keys without modifiers - should not change palette
@@ -266,7 +272,7 @@ test.describe('Palette and Keybind Functionality', () => {
     });
 
     test('should not respond to arrow keys without Ctrl', async ({ page }) => {
-      const currentColors = page.locator('#curColors');
+      const currentColors = page.locator('#currentColors');
       await expect(currentColors).toBeVisible();
       
       // Press arrow keys without Ctrl - should not change palette
@@ -281,7 +287,7 @@ test.describe('Palette and Keybind Functionality', () => {
     });
 
     test('should not respond to keys outside 1-8 range', async ({ page }) => {
-      const currentColors = page.locator('#curColors');
+      const currentColors = page.locator('#currentColors');
       await expect(currentColors).toBeVisible();
       
       // Press Ctrl+number keys outside valid range
@@ -297,7 +303,7 @@ test.describe('Palette and Keybind Functionality', () => {
     test('should not interfere with other UI elements', async ({ page }) => {
       // Ensure palette keybinds don't interfere with other parts of the interface
       const artCanvas = page.locator('#art');
-      const toolsSection = page.locator('#tools');
+      const toolsSection = page.locator('#toolOptions');
       
       await expect(artCanvas).toBeVisible();
       await expect(toolsSection).toBeVisible();
@@ -323,7 +329,7 @@ test.describe('Palette and Keybind Functionality', () => {
 
   test.describe('UI Preview Updates', () => {
     test('should update current colors preview after palette changes', async ({ page }) => {
-      const currentColors = page.locator('#curColors');
+      const currentColors = page.locator('#currentColors');
       const paletteCanvas = page.locator('#paletteColors');
       
       // Verify initial state
@@ -346,7 +352,9 @@ test.describe('Palette and Keybind Functionality', () => {
         // Click on blue with Ctrl to set background
         const blueX = paletteBox.x + (1 * swatchWidth) + (swatchWidth / 2);
         const blueY = paletteBox.y + (swatchHeight / 2);
-        await page.mouse.click(blueX, blueY, { modifiers: ['Control'] });
+        await page.keyboard.down('Control');
+        await page.mouse.click(blueX, blueY);
+        await page.keyboard.up('Control');
         
         await page.waitForTimeout(100);
         await expect(currentColors).toBeVisible();
@@ -365,7 +373,7 @@ test.describe('Palette and Keybind Functionality', () => {
 
     test('should maintain consistency between palette state and UI', async ({ page }) => {
       // This test ensures that all palette operations maintain UI consistency
-      const currentColors = page.locator('#curColors');
+      const currentColors = page.locator('#currentColors');
       const paletteCanvas = page.locator('#paletteColors');
       
       // Perform a sequence of operations
@@ -413,7 +421,7 @@ test.describe('Palette and Keybind Functionality', () => {
         await page.waitForTimeout(100);
         
         // Verify interface responds to touch
-        await expect(page.locator('#curColors')).toBeVisible();
+        await expect(page.locator('#currentColors')).toBeVisible();
       }
     });
   });
