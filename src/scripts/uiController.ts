@@ -6,7 +6,7 @@ import type {FontType} from './fontManager';
 import {createOfflineRoomState} from './state';
 import {initCanvasRenderer, createOfflineCanvasState} from './canvasRenderer';
 import {setFont, FontRenderer} from './fontManager';
-import {createDefaultPalette, Palette} from './paletteManager';
+import {PalettePicker, createDefaultPalette, Palette} from './paletteManager';
 import {GridOverlay} from './gridOverlay';
 import {ToolManager} from './toolManager';
 import {PenTool} from './tools/pen';
@@ -274,138 +274,6 @@ const updateCurrentColorsPreview = ()=>{
   ctx.fillStyle = `rgba(${palette.getRGBAColor(palette.getForegroundColor()).join(',')})`;
   ctx.fillRect(0, 0, swatch, swatch);
 }
-interface PalettePicker {
-  updatePalette: () => void;
-}
-
-const createPalettePicker = (canvas: HTMLCanvasElement, paletteObj: Palette): PalettePicker=>{
-  const
-    ctx = initCanvas(canvas, 'paletteColors'),
-    imageData: ImageData[] = [],
-    cols = 8, rows = 2,
-    swatchWidth = canvas.width / cols,
-    swatchHeight = canvas.height / rows;
-
-  function updateColor(index: number): void {
-    const color = paletteObj.getRGBAColor(index);
-    if (!imageData[index]) return;
-    for (let y = 0, i = 0; y < imageData[index].height; y++) {
-      for (let x = 0; x < imageData[index].width; x++, i += 4) {
-        imageData[index].data.set(color, i);
-      }
-    }
-    const
-    col = index % cols,
-    row = Math.floor(index / cols);
-    ctx.putImageData(
-      imageData[index],
-      col * swatchWidth,
-      row * swatchHeight
-    );
-  }
-
-  function updatePalette(): void {
-    for (let i = 0; i < 16; i++){
-      updateColor(i);
-    }
-    updateCurrentColorsPreview();
-  }
-
-  function touchEnd(e: TouchEvent) {
-    e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-    const x = Math.floor((e.changedTouches[0].pageX - rect.left) / swatchWidth);
-    const y = Math.floor((e.changedTouches[0].pageY - rect.top) / swatchHeight);
-    const colorIndex = y * cols + x;
-    paletteObj.setForegroundColor(colorIndex);
-    updateCurrentColorsPreview();
-  }
-  function mouseEnd(e: MouseEvent) {
-    const rect = canvas.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) / swatchWidth);
-    const y = Math.floor((e.clientY - rect.top) / swatchHeight);
-    const colorIndex = y * cols + x;
-    if (!e.altKey && !e.ctrlKey) {
-      paletteObj.setForegroundColor(colorIndex);
-    } else {
-      paletteObj.setBackgroundColor(colorIndex);
-    }
-    updateCurrentColorsPreview();
-  }
-
-  function keydown(e: KeyboardEvent) {
-    if (e.key >= '1' && e.key <= '8') {
-      const num = parseInt(e.key, 10);
-      if (e.ctrlKey) {
-        e.preventDefault();
-        if (paletteObj.getForegroundColor() === num) {
-          paletteObj.setForegroundColor(num + 8);
-        } else {
-          paletteObj.setForegroundColor(num);
-        }
-      } else if (e.altKey) {
-        e.preventDefault();
-        if (paletteObj.getBackgroundColor() === num) {
-          paletteObj.setBackgroundColor(num + 8);
-        } else {
-          paletteObj.setBackgroundColor(num);
-        }
-      }
-    }
-    // Handle arrow keys with Ctrl
-    else if (e.ctrlKey && (
-      e.key === 'ArrowLeft' ||
-        e.key === 'ArrowUp' ||
-        e.key === 'ArrowRight' ||
-        e.key === 'ArrowDown'
-    )) {
-      e.preventDefault();
-      switch (e.key) {
-        case 'ArrowLeft': {
-          let color = paletteObj.getBackgroundColor();
-          color = (color === 0) ? 15 : (color - 1);
-          paletteObj.setBackgroundColor(color);
-          break;
-        }
-        case 'ArrowUp': {
-          let color = paletteObj.getForegroundColor();
-          color = (color === 0) ? 15 : (color - 1);
-          paletteObj.setForegroundColor(color);
-          break;
-        }
-        case 'ArrowRight': {
-          let color = paletteObj.getBackgroundColor();
-          color = (color === 15) ? 0 : (color + 1);
-          paletteObj.setBackgroundColor(color);
-          break;
-        }
-        case 'ArrowDown': {
-          let color = paletteObj.getForegroundColor();
-          color = (color === 15) ? 0 : (color + 1);
-          paletteObj.setForegroundColor(color);
-          break;
-        }
-        default:
-          break;
-      }
-    }
-    updateCurrentColorsPreview();
-  }
-
-  for (let i = 0; i < 16; i++) {
-    imageData[i] = ctx.createImageData(swatchWidth + 1, swatchHeight);
-  }
-  updatePalette();
-  canvas.addEventListener('touchend', touchEnd, {passive: false});
-  canvas.addEventListener('touchcancel', touchEnd, {passive: false});
-  canvas.addEventListener('mouseup', mouseEnd, {passive: false});
-  canvas.addEventListener('contextmenu', e=>e.preventDefault());
-  document.addEventListener('keydown', keydown, {passive: false});
-
-  return {
-    updatePalette
-  }
-}
 
 function setupFKeyCanvases(fontCellHeight: number, maxVisualHeight: number = 45): void {
   const fontCellWidth = 8;
@@ -576,14 +444,12 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   });
 
   //--------------- colors
-  updateCurrentColorsPreview();
-  curColors.addEventListener('click', ()=>{
-    const fg = palette.getForegroundColor();
-    palette.setForegroundColor(palette.getBackgroundColor());
-    palette.setBackgroundColor(fg);
-    updateCurrentColorsPreview();
+  const palettePicker = new PalettePicker({
+    canvas: palettePrev,
+    palette: palette,
+    initCanvas,
+    updateCurrentColorsPreview
   });
-  const palettePicker = createPalettePicker(palettePrev, palette);
   // Listen for palette changes and update picker
   document.addEventListener('onPaletteChange', ()=>{
     palettePicker.updatePalette();
