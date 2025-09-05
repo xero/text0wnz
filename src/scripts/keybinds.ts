@@ -40,10 +40,10 @@ export function registerPaletteKeybinds(
         }
       } else if (e.altKey) {
         e.preventDefault();
-        if (paletteObj.getBackgroundColor() === num) {
-          paletteObj.setBackgroundColor(num + 8);
+        if (paletteObj.getBackgroundColor() === num - 1) {
+          paletteObj.setBackgroundColor(num + 7);
         } else {
-          paletteObj.setBackgroundColor(num);
+          paletteObj.setBackgroundColor(num - 1);
         }
       }
     }
