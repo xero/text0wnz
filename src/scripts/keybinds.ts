@@ -3,11 +3,9 @@ export type KeyHandler = (e: KeyboardEvent) => void;
 
 const keybindRegistry = new Map<string, KeyHandler>();
 export function registerKeybind(context: string, handler: KeyHandler) {
-  const removed = unregisterKeybind(context);
-  if (removed || !keybindRegistry.has(context)) {
-    keybindRegistry.set(context, handler);
-    document.addEventListener('keydown', handler, {passive: false});
-  }
+  unregisterKeybind(context);
+  keybindRegistry.set(context, handler);
+  document.addEventListener('keydown', handler, {passive: false});
 }
 export function unregisterKeybind(context: string): boolean {
   const handler = keybindRegistry.get(context);
