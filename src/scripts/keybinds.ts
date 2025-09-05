@@ -38,7 +38,7 @@ export function registerPaletteKeybinds(
         } else {
           paletteObj.setForegroundColor(num);
         }
-      } else if (e.metaKey) {
+      } else if (e.altKey) {
         e.preventDefault();
         if (paletteObj.getBackgroundColor() === num) {
           paletteObj.setBackgroundColor(num + 8);
