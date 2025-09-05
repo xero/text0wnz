@@ -1,7 +1,8 @@
 // Palette and color utilities for teXt0wnz
+import {KEYBIND_PALETTE, registerPaletteKeybinds, unregisterKeybind} from './keybinds';
 
-export type RGB6Bit = [number, number, number]; // 0–63
-export type RGBA = [number, number, number, number]; // 0–255
+export type RGB6Bit = [number, number, number];         // 0–63
+export type RGBA    = [number, number, number, number]; // 0–255
 
 export interface Palette {
   getRGBAColor(index: number): RGBA;
@@ -58,4 +59,105 @@ export function createDefaultPalette(): Palette {
     [63, 63, 21],   // Yellow
     [63, 63, 63],   // White
   ]);
+}
+
+// Palette picker UI & keybinds
+export interface PalettePickerOptions {
+  canvas: HTMLCanvasElement;
+  palette: Palette;
+  initCanvas: (canvas: HTMLCanvasElement, name: string) => CanvasRenderingContext2D;
+  updateCurrentColorsPreview: () => void;
+}
+
+export class PalettePicker {
+  private ctx: CanvasRenderingContext2D;
+  private imageData: ImageData[] = [];
+  private cols = 8;
+  private rows = 2;
+  private swatchWidth: number;
+  private swatchHeight: number;
+  private palette: Palette;
+  private canvas: HTMLCanvasElement;
+  private updateCurrentColorsPreview: () => void;
+
+  constructor(opts: PalettePickerOptions) {
+    this.canvas = opts.canvas;
+    this.palette = opts.palette;
+    this.updateCurrentColorsPreview = opts.updateCurrentColorsPreview;
+    this.ctx = opts.initCanvas(this.canvas, 'paletteColors');
+    this.swatchWidth = this.canvas.width / this.cols;
+    this.swatchHeight = this.canvas.height / this.rows;
+
+    for (let i = 0; i < 16; i++) {
+      this.imageData[i] = this.ctx.createImageData(this.swatchWidth + 1, this.swatchHeight);
+    }
+
+    this.updatePalette();
+    this.attachEvents();
+
+    // Register keybinds for palette shortcuts
+    registerPaletteKeybinds(this.palette, this.updateCurrentColorsPreview);
+  }
+
+  // Draw the palette swatches
+  private updateColor(index: number): void {
+    const color = this.palette.getRGBAColor(index);
+    const img = this.imageData[index];
+    for (let y = 0, i = 0; y < img.height; y++) {
+      for (let x = 0; x < img.width; x++, i += 4) {
+        img.data.set(color, i);
+      }
+    }
+    const col = index % this.cols;
+    const row = Math.floor(index / this.cols);
+    this.ctx.putImageData(img, col * this.swatchWidth, row * this.swatchHeight);
+  }
+
+  public updatePalette(): void {
+    for (let i = 0; i < 16; i++) {
+      this.updateColor(i);
+    }
+    this.updateCurrentColorsPreview();
+  }
+
+  private attachEvents() {
+    this.canvas.addEventListener('touchend', this.touchEnd, {passive: false});
+    this.canvas.addEventListener('touchcancel', this.touchEnd, {passive: false});
+    this.canvas.addEventListener('mouseup', this.mouseEnd, {passive: false});
+    this.canvas.addEventListener('contextmenu', e=>e.preventDefault());
+  }
+
+  // Touch palette selection
+  private touchEnd = (e: TouchEvent)=>{
+    e.preventDefault();
+    const rect = this.canvas.getBoundingClientRect();
+    const x = Math.floor((e.changedTouches[0].pageX - rect.left) / this.swatchWidth);
+    const y = Math.floor((e.changedTouches[0].pageY - rect.top) / this.swatchHeight);
+    const colorIndex = y * this.cols + x;
+    this.palette.setForegroundColor(colorIndex);
+    this.updateCurrentColorsPreview();
+  };
+
+  // Mouse palette selection
+  private mouseEnd = (e: MouseEvent)=>{
+    const rect = this.canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / this.swatchWidth);
+    const y = Math.floor((e.clientY - rect.top) / this.swatchHeight);
+    const colorIndex = y * this.cols + x;
+    if (!e.altKey && !e.ctrlKey) {
+      this.palette.setForegroundColor(colorIndex);
+    } else {
+      this.palette.setBackgroundColor(colorIndex);
+    }
+    this.updateCurrentColorsPreview();
+  };
+
+  // Cleanup if needed
+  public destroy() {
+    // Remove listeners
+    this.canvas.removeEventListener('touchend', this.touchEnd);
+    this.canvas.removeEventListener('touchcancel', this.touchEnd);
+    this.canvas.removeEventListener('mouseup', this.mouseEnd);
+    unregisterKeybind(KEYBIND_PALETTE);
+  }
 }
