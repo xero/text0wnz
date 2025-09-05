@@ -4,7 +4,6 @@ export type KeyHandler = (e: KeyboardEvent) => void;
 const keybindRegistry = new Map<string, KeyHandler>();
 export function registerKeybind(context: string, handler: KeyHandler) {
   const removed = unregisterKeybind(context);
-  // Only add the new handler if the previous one was removed or did not exist
   if (removed || !keybindRegistry.has(context)) {
     keybindRegistry.set(context, handler);
     document.addEventListener('keydown', handler, {passive: false});
@@ -19,7 +18,7 @@ export function unregisterKeybind(context: string): boolean {
   }
   return false;
 }
-
+export const KEYBIND_PALETTE = 'palette';
 // palette picker keybinds registration
 export function registerPaletteKeybinds(
   paletteObj: {
@@ -30,7 +29,6 @@ export function registerPaletteKeybinds(
   },
   updateCurrentColorsPreview: () => void
 ) {
-  const context = 'palette';
   const handler: KeyHandler = (e)=>{
     // Number keys 1-8: set foreground/background with Ctrl/Alt
     if (e.key >= '1' && e.key <= '8') {
@@ -86,7 +84,7 @@ export function registerPaletteKeybinds(
     }
     updateCurrentColorsPreview();
   };
-  registerKeybind(context, handler);
+  registerKeybind(KEYBIND_PALETTE, handler);
 }
 
 // nuke it all

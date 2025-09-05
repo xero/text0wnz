@@ -1,5 +1,5 @@
 // Palette and color utilities for teXt0wnz
-import {registerPaletteKeybinds, unregisterKeybind} from './keybinds';
+import {KEYBIND_PALETTE, registerPaletteKeybinds, unregisterKeybind} from './keybinds';
 
 export type RGB6Bit = [number, number, number];         // 0–63
 export type RGBA    = [number, number, number, number]; // 0–255
@@ -158,6 +158,6 @@ export class PalettePicker {
     this.canvas.removeEventListener('touchend', this.touchEnd);
     this.canvas.removeEventListener('touchcancel', this.touchEnd);
     this.canvas.removeEventListener('mouseup', this.mouseEnd);
-    unregisterKeybind('palette');
+    unregisterKeybind(KEYBIND_PALETTE);
   }
 }
