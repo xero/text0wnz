@@ -222,3 +222,4 @@ pre.prettyprint {
 .footer, .push {
   height: 48px;
 }
+@media (prefers-color-scheme:dark){.cover-empty,body{background:#000}body{color:#efefef}table{color:#000}table,td,th{border:1px solid #222!important}td.empty{color:#eee}.cbranch-no,.cstat-no{background:#312}.cbranch-yes,.cstat-yes{background:#030}.cline-no{background:#900}.cline-yes{background:#060}}

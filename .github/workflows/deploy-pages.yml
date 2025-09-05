@@ -48,10 +48,15 @@ jobs:
           mkdir -p dist/unit
           cp -r tests/results/coverage/* dist/unit/ || true
 
-      - name: Copy Playwright HTML report into dist
+      - name: Inject dark theme into coverage report
+        run: |
+          echo "@media (prefers-color-scheme:dark){.cover-empty,body{background:#000}body{color:#efefef}table{color:#000}table,td,th{border:1px solid #222!important}td.empty{color:#eee}.cbranch-no,.cstat-no,.fstat-no{background:#afe9dc}.cline-yes,.high{background:#f2bfff}.cline-no,.low{background:#bbf2e8}.fraction,.quiet,table .chart,table .high,table .low,td.text,th.file,th.pct{-webkit-filter:invert(100%)}.footer{display:none!important}body>div.wrapper>div:first-child>p{background:#ddd;width:fit-content;padding:10px}}" >> dist/unit/base.css
+
+      - name: Copy Playwright reports into dist
         run: |
           mkdir -p dist/e2e
           cp -r tests/results/playwright-report/* dist/e2e/ || true
+          cp -r tests/results/e2e/* dist/e2e/ || true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3

@@ -286,18 +286,318 @@ This plan documents the evolving architecture, toolchain, and logic flow for the
 
 ---
 
-## Outstanding Decisions / TODOs
-
-- [x] Decide on vanilla JS vs TypeScript for core codebase (**TypeScript chosen**)
-- [ ] Define event/pubsub system API in `events.ts`
-- [ ] **Review and finalize the drafted tool interface before implementing all tools**
-- [ ] Structure for room/collab support in network & state
-- [ ] UI wireframes for menus, dialogs, and toolbars
-- [x] Add new room creation to collab flow
-- [x] Add error handling, user feedback for network/server errors
-- [x] Add heartbeats/presence for user list and session reliability
-- [x] Add chat join/leave system messages
-- [x] Add automatic nickname disambiguation to avoid collisions
+# Efficient Selective Canvas Redraw — Refactor/Implementation Plan
 
 ---
 
+## 1. Goals & Rationale
+
+- **Efficient Rendering:** Only redraw canvas regions (cells/pixels) that have changed, never the whole canvas except on full reset/resize.
+- **Unified Path:** Use the same rendering/patching logic for both local tool actions and remote/network sync events.
+- **Batch-Friendly:** Support both single-pixel edits and batched region edits (lines, shapes, fills, etc.).
+- **Extensible:** Easily add batching, dirty region coalescing, or CRDT/conflict handling later.
+- **Performance:** Favor immediate feedback for local edits, ensuring UI responsiveness even with large canvases and rapid edits.
+- **Scalability:** Architectural patterns should support future optimization for massive canvases or user counts.
+- **Protocol-Driven:** Client logic and patch format will naturally define the future server implementation and network protocol.
+
+---
+
+## 2. Architectural Overview
+
+- **Data Model:**
+  - Single source of truth: a buffer (`Uint8Array`, etc.) representing the canvas state.
+- **Renderer API:**
+  - Exposes functions to redraw only a subregion (`drawRegion(x, y, w, h)`).
+  - `drawRegion` must be robust to invalid/empty regions.
+- **Dirty Queue:**
+  - Maintain a queue/FIFO (or Set) of regions needing redraw.
+  - Optionally coalesce overlapping or adjacent regions for performance.
+  - Process dirty regions either immediately or in batches via animation frames.
+- **Unified Change Application:**
+  - Tools and network patches both call the same buffer/mutation code, and enqueue regions for redraw.
+  - Local edits and remote patches are handled identically at the render level.
+- **Networking/Collab-Ready:**
+  - All edits, local or remote, use the same data flow and queue.
+  - Patch/message format and queueing logic will be reused by the future server.
+
+---
+
+### Network Sync — Patch Buffer & Enqueue Dirty Regions
+
+- When a patch arrives from the network:
+  1. Apply the patch to the raw buffer.
+  2. Enqueue the changed region(s) as dirty.
+  3. Call the same function to process the queue.
+- If you expect out-of-order or overlapping patches, consider versioning or sequencing in the future.
+
+### Full Redraw Only as Fallback
+
+- Only call a full-canvas redraw when:
+  - The canvas is resized.
+  - The palette/font is changed.
+  - The buffer is reset (clear, new file, etc.).
+- Clearly define reset triggers and avoid accidental full redraws.
+
+### Optional/Advanced Additions
+
+- **Dirty Region Coalescing:** Merge overlapping/adjacent dirty regions for fewer redraws, especially after fills/rapid edits.
+- **Time-slicing:** For very large queues, break up processing over multiple animation frames for smooth UI.
+- **Conflict Resolution:** Add CRDTs or “last write wins” logic if multiple edits to the same cell can happen in one frame/network tick.
+- **Partial Invalidation:** For massive canvases, use a spatial index (e.g., grid) to make region coalescing and lookup faster.
+- **Performance Metrics:** Add profiling (e.g., regions processed per frame, draw time) to identify future bottlenecks.
+
+---
+
+## Notes on Client-Driven Protocol & Server Planning
+
+- **Client-First Design:**
+  By designing the client’s data flow, patch logic, and protocol first, you define the requirements and shape of the future server.
+- **Patch Format:**
+  Document your JSON (or binary) patch format as you go. Example:
+  ```json
+  {
+    "type": "patch",
+    "x": 10,
+    "y": 12,
+    "w": 4,
+    "h": 2,
+    "data": [/* color values or indices */],
+    "user": "xero",
+    "timestamp": 1693830400
+  }
+  ```
+- **Networking API Sketch:**
+  - Clients will send and receive patches over WebSockets, WebRTC, or polling.
+  - All local changes go through the same queue and renderer as remote/network patches.
+- **Testing Without Server:**
+  - Simulate incoming patches locally to test protocol handling and UI before implementing server logic.
+- **Server Implementation:**
+  - When ready, the server can simply pass patches between clients, enforce rules (auth, CRDT, validation), and persist state using the already-documented protocol.
+
+
+
+# Local Edit Prioritization and Conflict Resolution
+
+## Overview
+
+This ensures local edits are processed immediately while network edits can be batched, and establishing a "last-write-wins" conflict resolution strategy.
+
+## Implementation
+
+### Local Edit Prioritization
+
+The system now distinguishes between local edits (user interactions) and network edits (collaborative changes):
+
+#### Enhanced `enqueueDirtyRegion()` Function
+
+```typescript
+export function enqueueDirtyRegion(region: DirtyRegion, immediate: boolean = false)
+```
+
+- **Local edits**: Call with `immediate=true` → processed immediately via `processDirtyRegions()`
+- **Network edits**: Call with `immediate=false` → batched via `requestAnimationFrame`
+- **Backward compatibility**: Default `immediate=false` maintains existing behavior
+
+#### Tool Integration
+
+All drawing tools now use immediate processing:
+
+```typescript
+// drawHalfBlock and shadeCell both use:
+enqueueDirtyRegion({x, y, w: 1, h: 1}, true); // immediate=true for local edits
+```
+
+#### Network Integration
+
+Network patches continue using batched processing:
+
+```typescript
+// processNetworkPatch uses:
+enqueueDirtyRegion({...region}, false); // immediate=false for network edits - use batched processing
+```
+
+### Conflict Resolution Strategy
+
+The system implements a comprehensive "last-write-wins" conflict resolution approach:
+
+#### Temporal Prioritization
+
+1. **Local edits** are processed immediately and take precedence
+2. **Network edits** are processed in batches via requestAnimationFrame
+3. **When conflicts occur** (same cell modified), the last operation wins
+4. **Network patches** with higher sequence numbers override earlier ones
+5. **Local edits** always override network edits due to immediate processing
+
+#### Buffer-Based Resolution
+
+- All edits directly overwrite the raw canvas buffer
+- No complex conflict detection - simple override semantics
+- Timestamps in patches allow for temporal ordering when needed
+- Sequence numbering in network patches ensures proper ordering
+
+#### Benefits
+
+- **Immediate user feedback**: Local edits render instantly
+- **Smooth collaboration**: Network edits processed efficiently in batches
+- **Simple conflict model**: Easy to understand and debug
+- **Performance optimized**: No expensive conflict detection algorithms
+
+## Documentation
+
+The conflict resolution strategy is documented in multiple locations:
+
+1. **`network.ts`**: Comprehensive comment in `processNetworkPatch()` function
+2. **`canvasRenderer.ts`**: Documentation in `enqueueDirtyRegion()` function
+3. **This document**: High-level strategy overview
+
+## Testing
+
+- Parameter validation for immediate vs batched processing
+- Backward compatibility verification
+- Graceful handling of edge cases
+- Integration with existing dirty region system
+
+## Protocol Implications
+
+The local-first approach with last-write-wins semantics provides a solid foundation for:
+
+- Real-time collaborative editing
+- Server-side implementation
+- Future CRDT integration if needed
+- Performance-oriented conflict resolution
+
+This implementation ensures responsive user experience while maintaining efficient network synchronization and providing a clear, predictable conflict resolution model.
+
+---
+
+# Full Redraw Triggers - Implementation Documentation
+
+This describes the implementation which defines exactly when full canvas redraws should occur.
+
+## Full Redraw Triggers
+
+Full canvas redraws are ONLY triggered for the following scenarios:
+
+### 1. Canvas Resize
+- **Trigger**: Canvas viewport or logical dimensions change
+- **Event**: `ui:state:changed` when canvas size changes
+- **Reason**: Canvas resize affects the entire visible area and requires complete re-rendering
+- **Implementation**: `resizeCanvasToState()` → `forceFullRedraw()`
+
+### 2. Font Changes
+- **Trigger**: Font type, size, or renderer changes
+- **Event**: Font change via `setFont()` mutator
+- **Reason**: Font changes affect the rendering of every character on the canvas
+- **Implementation**: `canvasRenderer.setFont()` → `forceFullRedraw()`
+
+### 3. Palette Changes
+- **Trigger**: Color palette is modified
+- **Event**: `local:palette:changed`
+- **Reason**: Palette changes affect the color rendering of all canvas content
+- **Implementation**: Event listener → `forceFullRedraw()`
+
+### 4. Buffer Reset Operations
+- **Trigger**: Canvas data is completely replaced or reset
+- **Events**:
+  - `local:file:loaded` - New file loaded
+  - `local:canvas:cleared` - Canvas explicitly cleared
+  - `updateCanvasData()` - Canvas data replaced externally
+- **Reason**: Buffer resets invalidate all existing content
+- **Implementation**: Event listeners and function calls → `forceFullRedraw()`
+
+### 5. Initial Render
+- **Trigger**: Application startup
+- **Event**: Canvas renderer initialization
+- **Reason**: Initial state requires complete canvas setup
+- **Implementation**: `initCanvasRenderer()` → `forceFullRedraw()`
+
+## Operations That Do NOT Trigger Full Redraws
+
+The following operations use the dirty region system instead:
+
+### ❌ Tool Activation
+- **Previous Behavior**: `local:tool:activated` triggered full redraw
+- **New Behavior**: Removed event listener - tools only mark dirty regions
+- **Reason**: Tool activation should not affect existing canvas content
+
+### ❌ Single Cell Edits
+- **Behavior**: Use `enqueueDirtyRegion()` with 1x1 regions
+- **Reason**: Only the modified cell needs redraw
+
+### ❌ Network Patches
+- **Behavior**: Apply patch → enqueue dirty region → process region
+- **Reason**: Network changes affect only specific regions
+
+### ❌ Multi-Cell Drawing Operations
+- **Behavior**: Mark affected regions as dirty
+- **Reason**: Even large operations affect bounded regions, not the entire canvas
+
+## Implementation Details
+
+### Event Listeners
+```typescript
+// Full redraw triggers
+eventBus.subscribe('ui:state:changed', () => {
+  resizeCanvasToState();
+  forceFullRedraw();
+});
+
+eventBus.subscribe('local:palette:changed', () => {
+  forceFullRedraw();
+});
+
+eventBus.subscribe('local:file:loaded', () => {
+  forceFullRedraw();
+});
+
+eventBus.subscribe('local:canvas:cleared', () => {
+  forceFullRedraw();
+});
+
+// Removed: 'local:tool:activated' listener
+```
+
+### Function Flow
+1. **Full Redraw**: `forceFullRedraw()` → `needsFullRedraw = true` → `queueFlushDirty()`
+2. **Dirty Region**: `enqueueDirtyRegion()` → region queue → `processDirtyRegions()`
+
+### Performance Impact
+- **Full Redraw**: O(width × height) - renders every canvas cell
+- **Dirty Region**: O(dirty cells) - renders only changed cells
+- **Typical Improvement**: 100x-1000x faster for small edits
+
+## Testing
+
+### Unit Tests
+- Full redraw triggers are clearly defined
+- Tool activation no longer triggers full redraw
+- Behavior is consistent across the application
+
+### Validation
+1. Check that tool usage doesn't cause full canvas refresh
+2. Verify palette/font changes do cause full refresh
+3. Confirm file loading triggers full refresh
+4. Ensure single-cell edits only redraw affected areas
+
+## Future Considerations
+
+### Optimization Opportunities
+- **Partial Palette Updates**: If only specific colors change, could mark regions using those colors
+- **Smart Font Changes**: If font dimensions don't change, could avoid full redraw
+- **Incremental Resize**: For small resize operations, could extend canvas rather than full redraw
+
+### Monitoring
+Consider adding metrics to track:
+- Full redraw frequency
+- Dirty region processing performance
+- User operation response times
+
+## Benefits
+
+1. **Predictable Performance**: Clear rules for when expensive operations occur
+2. **User Responsiveness**: Tool actions remain fast regardless of canvas size
+3. **Efficient Collaboration**: Network updates don't trigger unnecessary redraws
+4. **Scalability**: Large canvases remain performant for local edits
+5. **Maintainability**: Clear separation between full redraw and incremental update logic
+
+This establishes a solid foundation for efficient canvas rendering that scales with both canvas size and user activity.
