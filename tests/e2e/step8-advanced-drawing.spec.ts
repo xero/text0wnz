@@ -164,23 +164,46 @@ test.describe('Step 8: Advanced Drawing Method Testing', () => {
     test('should maintain canvas state during rapid tool switching', async ({ page }) => {
       const browserName = page.context().browser()?.browserType().name();
       
-      const tools = ['#brush', '#shapes', '#pen', '#shade'];
+      const tools = ['#brush', '#shapes'];
+      const brushSubtools = ['#blockBrush', '#shadeBrush'];
       
       for (let i = 0; i < 3; i++) {
+        // Test main tools
         for (const tool of tools) {
           await safeClick(page, tool);
           await page.waitForTimeout(100);
           
-          // Make a quick edit if not WebKit
-          if (browserName !== 'webkit') {
-            const canvas = page.locator('#art');
-            const canvasBox = await canvas.boundingBox();
-            
-            if (canvasBox) {
-              await page.mouse.click(
-                canvasBox.x + 50 + i * 20,
-                canvasBox.y + 50 + i * 20
-              );
+          // Test brush sub-tools when brush is selected
+          if (tool === '#brush') {
+            for (const subtool of brushSubtools) {
+              await safeClick(page, subtool);
+              await page.waitForTimeout(100);
+              
+              // Make a quick edit if not WebKit
+              if (browserName !== 'webkit') {
+                const canvas = page.locator('#art');
+                const canvasBox = await canvas.boundingBox();
+                
+                if (canvasBox) {
+                  await page.mouse.click(
+                    canvasBox.x + 50 + i * 20,
+                    canvasBox.y + 50 + i * 20
+                  );
+                }
+              }
+            }
+          } else {
+            // Make a quick edit for other tools if not WebKit
+            if (browserName !== 'webkit') {
+              const canvas = page.locator('#art');
+              const canvasBox = await canvas.boundingBox();
+              
+              if (canvasBox) {
+                await page.mouse.click(
+                  canvasBox.x + 50 + i * 20,
+                  canvasBox.y + 50 + i * 20
+                );
+              }
             }
           }
         }

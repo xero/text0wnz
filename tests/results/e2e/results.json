@@ -1,0 +1,3706 @@
+{
+  "config": {
+    "configFile": "/home/runner/work/text0wnz/text0wnz/playwright.config.ts",
+    "rootDir": "/home/runner/work/text0wnz/text0wnz/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/xero/text0wnz/commit/13635b5bf2d9b55b5dc38f7fb726e58f5d09c527",
+        "commitHash": "13635b5bf2d9b55b5dc38f7fb726e58f5d09c527",
+        "buildHref": "https://github.com/xero/text0wnz/actions/runs/17482167475"
+      },
+      "gitCommit": {
+        "shortHash": "13635b5",
+        "hash": "13635b5bf2d9b55b5dc38f7fb726e58f5d09c527",
+        "subject": "Implement Complete Dirty Region System with Local-First Processing, Last-Write-Wins Conflict Resolution, Optimized Full Redraw Triggers, and Comprehensive Large Canvas Stress Testing",
+        "body": "Implement Complete Dirty Region System with Local-First Processing, Last-Write-Wins Conflict Resolution, Optimized Full Redraw Triggers, and Comprehensive Large Canvas Stress Testing\n\nCo-authored-by: xero <227907+xero@users.noreply.github.com>\n",
+        "author": {
+          "name": "copilot-swe-agent[bot]",
+          "email": "198982749+Copilot@users.noreply.github.com",
+          "time": 1757038657000
+        },
+        "committer": {
+          "name": "copilot-swe-agent[bot]",
+          "email": "198982749+Copilot@users.noreply.github.com",
+          "time": 1757038657000
+        },
+        "branch": "copilot/fix-37bdcc98-ea15-4e3b-be0d-f0a261ebf776"
+      },
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "tests/results/playwright-report",
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "tests/results/e2e/results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/home/runner/work/text0wnz/text0wnz/tests/results/e2e",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/xero/text0wnz/commit/13635b5bf2d9b55b5dc38f7fb726e58f5d09c527",
+            "commitHash": "13635b5bf2d9b55b5dc38f7fb726e58f5d09c527",
+            "buildHref": "https://github.com/xero/text0wnz/actions/runs/17482167475"
+          },
+          "gitCommit": {
+            "shortHash": "13635b5",
+            "hash": "13635b5bf2d9b55b5dc38f7fb726e58f5d09c527",
+            "subject": "Implement Complete Dirty Region System with Local-First Processing, Last-Write-Wins Conflict Resolution, Optimized Full Redraw Triggers, and Comprehensive Large Canvas Stress Testing",
+            "body": "Implement Complete Dirty Region System with Local-First Processing, Last-Write-Wins Conflict Resolution, Optimized Full Redraw Triggers, and Comprehensive Large Canvas Stress Testing\n\nCo-authored-by: xero <227907+xero@users.noreply.github.com>\n",
+            "author": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757038657000
+            },
+            "committer": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757038657000
+            },
+            "branch": "copilot/fix-37bdcc98-ea15-4e3b-be0d-f0a261ebf776"
+          },
+          "actualWorkers": 2
+        },
+        "id": "Chrome",
+        "name": "Chrome",
+        "testDir": "/home/runner/work/text0wnz/text0wnz/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/runner/work/text0wnz/text0wnz/tests/results/e2e",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/xero/text0wnz/commit/13635b5bf2d9b55b5dc38f7fb726e58f5d09c527",
+            "commitHash": "13635b5bf2d9b55b5dc38f7fb726e58f5d09c527",
+            "buildHref": "https://github.com/xero/text0wnz/actions/runs/17482167475"
+          },
+          "gitCommit": {
+            "shortHash": "13635b5",
+            "hash": "13635b5bf2d9b55b5dc38f7fb726e58f5d09c527",
+            "subject": "Implement Complete Dirty Region System with Local-First Processing, Last-Write-Wins Conflict Resolution, Optimized Full Redraw Triggers, and Comprehensive Large Canvas Stress Testing",
+            "body": "Implement Complete Dirty Region System with Local-First Processing, Last-Write-Wins Conflict Resolution, Optimized Full Redraw Triggers, and Comprehensive Large Canvas Stress Testing\n\nCo-authored-by: xero <227907+xero@users.noreply.github.com>\n",
+            "author": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757038657000
+            },
+            "committer": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757038657000
+            },
+            "branch": "copilot/fix-37bdcc98-ea15-4e3b-be0d-f0a261ebf776"
+          },
+          "actualWorkers": 2
+        },
+        "id": "Firefox",
+        "name": "Firefox",
+        "testDir": "/home/runner/work/text0wnz/text0wnz/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/runner/work/text0wnz/text0wnz/tests/results/e2e",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/xero/text0wnz/commit/13635b5bf2d9b55b5dc38f7fb726e58f5d09c527",
+            "commitHash": "13635b5bf2d9b55b5dc38f7fb726e58f5d09c527",
+            "buildHref": "https://github.com/xero/text0wnz/actions/runs/17482167475"
+          },
+          "gitCommit": {
+            "shortHash": "13635b5",
+            "hash": "13635b5bf2d9b55b5dc38f7fb726e58f5d09c527",
+            "subject": "Implement Complete Dirty Region System with Local-First Processing, Last-Write-Wins Conflict Resolution, Optimized Full Redraw Triggers, and Comprehensive Large Canvas Stress Testing",
+            "body": "Implement Complete Dirty Region System with Local-First Processing, Last-Write-Wins Conflict Resolution, Optimized Full Redraw Triggers, and Comprehensive Large Canvas Stress Testing\n\nCo-authored-by: xero <227907+xero@users.noreply.github.com>\n",
+            "author": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757038657000
+            },
+            "committer": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1757038657000
+            },
+            "branch": "copilot/fix-37bdcc98-ea15-4e3b-be0d-f0a261ebf776"
+          },
+          "actualWorkers": 2
+        },
+        "id": "WebKit",
+        "name": "WebKit",
+        "testDir": "/home/runner/work/text0wnz/text0wnz/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 45000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.55.0",
+    "workers": 2,
+    "webServer": {
+      "command": "bunx serve dist -l 4173",
+      "port": 4173,
+      "reuseExistingServer": false
+    }
+  },
+  "suites": [
+    {
+      "title": "canvas-renderer.spec.ts",
+      "file": "canvas-renderer.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Canvas Renderer - Region Drawing",
+          "file": "canvas-renderer.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "canvas element is present and ready for drawing",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2029,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:51:50.682Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-17c05f6408e854f568cd",
+              "file": "canvas-renderer.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "canvas can be drawn on with tools (testing region updates)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3465,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:51:52.940Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-98527bb189f3275fb94e",
+              "file": "canvas-renderer.spec.ts",
+              "line": 26,
+              "column": 3
+            },
+            {
+              "title": "multiple tool interactions work without errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3716,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:51:56.428Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-84b28a25661a883cb843",
+              "file": "canvas-renderer.spec.ts",
+              "line": 71,
+              "column": 3
+            },
+            {
+              "title": "canvas element is present and ready for drawing",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2764,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:16.275Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-7633d2088be05091bd1b",
+              "file": "canvas-renderer.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "canvas can be drawn on with tools (testing region updates)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3728,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:19.630Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-7b43315fa74e9035e17d",
+              "file": "canvas-renderer.spec.ts",
+              "line": 26,
+              "column": 3
+            },
+            {
+              "title": "multiple tool interactions work without errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4022,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:23.378Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-934cea1b431a5afccad6",
+              "file": "canvas-renderer.spec.ts",
+              "line": 71,
+              "column": 3
+            },
+            {
+              "title": "canvas element is present and ready for drawing",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2126,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:59.757Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-eb22f5f5cf596a0aaa15",
+              "file": "canvas-renderer.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "canvas can be drawn on with tools (testing region updates)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2882,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:02.912Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-13cb17a76142d23b8f78",
+              "file": "canvas-renderer.spec.ts",
+              "line": 26,
+              "column": 3
+            },
+            {
+              "title": "multiple tool interactions work without errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3393,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:05.816Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5744989df65d780b6bef-cd6c7a5fbe541f91cd34",
+              "file": "canvas-renderer.spec.ts",
+              "line": 71,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "collaboration.spec.ts",
+      "file": "collaboration.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "text0wnz Collaboration Features",
+          "file": "collaboration.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "shows collaboration UI elements on splash screen",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 573,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:51:50.689Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "960cd46fcfcce4c1b118-593a217e3f6866367367",
+              "file": "collaboration.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "collaboration elements exist in DOM but are hidden",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 235,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:51:51.484Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "960cd46fcfcce4c1b118-0051abdb9f8d94d9ff9c",
+              "file": "collaboration.spec.ts",
+              "line": 16,
+              "column": 3
+            },
+            {
+              "title": "shows collaboration UI elements on splash screen",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 373,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:27.421Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "960cd46fcfcce4c1b118-44377161eb4c1370bcf8",
+              "file": "collaboration.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "collaboration elements exist in DOM but are hidden",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 362,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:27.806Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "960cd46fcfcce4c1b118-6213c4ad1058ac3f30d0",
+              "file": "collaboration.spec.ts",
+              "line": 16,
+              "column": 3
+            },
+            {
+              "title": "shows collaboration UI elements on splash screen",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 360,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:09.239Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "960cd46fcfcce4c1b118-8c7ffb6bcd8a5c649ba6",
+              "file": "collaboration.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "collaboration elements exist in DOM but are hidden",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 360,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:09.615Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "960cd46fcfcce4c1b118-a876d670fbaf69c6ea27",
+              "file": "collaboration.spec.ts",
+              "line": 16,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "dirty-regions.spec.ts",
+      "file": "dirty-regions.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Dirty Region Processing",
+          "file": "dirty-regions.spec.ts",
+          "line": 22,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should process dirty regions when drawing with tools",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2771,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:51:51.752Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-1169c20512a36dd8630a",
+              "file": "dirty-regions.spec.ts",
+              "line": 37,
+              "column": 3
+            },
+            {
+              "title": "should handle rapid drawing actions without errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2642,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:51:54.539Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-b0bd36b285aa0c29a713",
+              "file": "dirty-regions.spec.ts",
+              "line": 87,
+              "column": 3
+            },
+            {
+              "title": "should maintain canvas state during tool switching",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2607,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:51:57.202Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-33824b10749c777c575e",
+              "file": "dirty-regions.spec.ts",
+              "line": 129,
+              "column": 3
+            },
+            {
+              "title": "should not have memory leaks with dirty region processing",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2883,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:51:59.823Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-1bb5702ffad9dbe3e3a6",
+              "file": "dirty-regions.spec.ts",
+              "line": 166,
+              "column": 3
+            },
+            {
+              "title": "should process dirty regions when drawing with tools",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3003,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:28.193Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-d672399bba6d143e01a1",
+              "file": "dirty-regions.spec.ts",
+              "line": 37,
+              "column": 3
+            },
+            {
+              "title": "should handle rapid drawing actions without errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3103,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:31.210Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-a822352cd9c91e0eef75",
+              "file": "dirty-regions.spec.ts",
+              "line": 87,
+              "column": 3
+            },
+            {
+              "title": "should maintain canvas state during tool switching",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3130,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:34.329Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-6c2463a173a2e2ce9faf",
+              "file": "dirty-regions.spec.ts",
+              "line": 129,
+              "column": 3
+            },
+            {
+              "title": "should not have memory leaks with dirty region processing",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3677,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:37.472Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-924aca01ca0a0493d6ab",
+              "file": "dirty-regions.spec.ts",
+              "line": 166,
+              "column": 3
+            },
+            {
+              "title": "should process dirty regions when drawing with tools",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2580,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:10.002Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-c47d97843c7f2f517cf3",
+              "file": "dirty-regions.spec.ts",
+              "line": 37,
+              "column": 3
+            },
+            {
+              "title": "should handle rapid drawing actions without errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2659,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:12.604Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-b46ecbaf9e3f8d63c5e7",
+              "file": "dirty-regions.spec.ts",
+              "line": 87,
+              "column": 3
+            },
+            {
+              "title": "should maintain canvas state during tool switching",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3271,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:15.283Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-ce7c30867822252d1353",
+              "file": "dirty-regions.spec.ts",
+              "line": 129,
+              "column": 3
+            },
+            {
+              "title": "should not have memory leaks with dirty region processing",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2882,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:18.571Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db8749094e597eb7877c-206a92680b1b1ae07cce",
+              "file": "dirty-regions.spec.ts",
+              "line": 166,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "editor.spec.ts",
+      "file": "editor.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "text0wnz Editor",
+          "file": "editor.spec.ts",
+          "line": 22,
+          "column": 6,
+          "specs": [
+            {
+              "title": "loads the homepage and shows splash dialog",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 253,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:00.174Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-2d4246c9a5db6cf29434",
+              "file": "editor.spec.ts",
+              "line": 23,
+              "column": 3
+            },
+            {
+              "title": "can start drawing by clicking Draw button",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2406,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:00.442Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-d489c58a21a4500b92dc",
+              "file": "editor.spec.ts",
+              "line": 49,
+              "column": 3
+            },
+            {
+              "title": "can select different tools and see tool options",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2695,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:02.868Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-411a29885c6d24703804",
+              "file": "editor.spec.ts",
+              "line": 72,
+              "column": 3
+            },
+            {
+              "title": "can change font selection",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2783,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:05.581Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-2f0d3bce2a984fa0d5e7",
+              "file": "editor.spec.ts",
+              "line": 109,
+              "column": 3
+            },
+            {
+              "title": "can interact with color palette",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2633,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:08.379Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-1f9c80c6eed78629422b",
+              "file": "editor.spec.ts",
+              "line": 150,
+              "column": 3
+            },
+            {
+              "title": "can simulate drawing on canvas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2753,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:11.026Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-f54c6a77e5d4c5c48ebe",
+              "file": "editor.spec.ts",
+              "line": 177,
+              "column": 3
+            },
+            {
+              "title": "shows cursor position in footer",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1800,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:13.795Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-285cd083c0702cc118ea",
+              "file": "editor.spec.ts",
+              "line": 224,
+              "column": 3
+            },
+            {
+              "title": "loads the homepage and shows splash dialog",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 426,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:41.177Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-2e87777761d69f79aff9",
+              "file": "editor.spec.ts",
+              "line": 23,
+              "column": 3
+            },
+            {
+              "title": "can start drawing by clicking Draw button",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2784,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:41.615Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-b316c1140f840c6ec523",
+              "file": "editor.spec.ts",
+              "line": 49,
+              "column": 3
+            },
+            {
+              "title": "can select different tools and see tool options",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2785,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:44.412Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-283f1bb4aa12d63ccf81",
+              "file": "editor.spec.ts",
+              "line": 72,
+              "column": 3
+            },
+            {
+              "title": "can change font selection",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3405,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:47.209Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-5c7d60da357033dade41",
+              "file": "editor.spec.ts",
+              "line": 109,
+              "column": 3
+            },
+            {
+              "title": "can interact with color palette",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2833,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:50.631Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-b6df612e8716e688565f",
+              "file": "editor.spec.ts",
+              "line": 150,
+              "column": 3
+            },
+            {
+              "title": "can simulate drawing on canvas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3087,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:53.483Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-26f13d16141e2117d2f5",
+              "file": "editor.spec.ts",
+              "line": 177,
+              "column": 3
+            },
+            {
+              "title": "shows cursor position in footer",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1957,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:56.589Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-6545bc2a7f42d14eee9a",
+              "file": "editor.spec.ts",
+              "line": 224,
+              "column": 3
+            },
+            {
+              "title": "loads the homepage and shows splash dialog",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 482,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:21.486Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-eabbe356f89a70285cbf",
+              "file": "editor.spec.ts",
+              "line": 23,
+              "column": 3
+            },
+            {
+              "title": "can start drawing by clicking Draw button",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2121,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:21.984Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-45688cfd22a671817fec",
+              "file": "editor.spec.ts",
+              "line": 49,
+              "column": 3
+            },
+            {
+              "title": "can select different tools and see tool options",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2201,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:24.119Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-60e87d92759378f37f48",
+              "file": "editor.spec.ts",
+              "line": 72,
+              "column": 3
+            },
+            {
+              "title": "can change font selection",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2240,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:26.333Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-8de5bff7aa5887ee9848",
+              "file": "editor.spec.ts",
+              "line": 109,
+              "column": 3
+            },
+            {
+              "title": "can interact with color palette",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2306,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:28.587Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-5e36c5e5ca95221b6830",
+              "file": "editor.spec.ts",
+              "line": 150,
+              "column": 3
+            },
+            {
+              "title": "can simulate drawing on canvas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3221,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:30.909Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-69bdab17301f52090ad5",
+              "file": "editor.spec.ts",
+              "line": 177,
+              "column": 3
+            },
+            {
+              "title": "shows cursor position in footer",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1363,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:34.145Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d2f56d7d370f0ba02e91-83816f1f58f6819e66ca",
+              "file": "editor.spec.ts",
+              "line": 224,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "file-operations.spec.ts",
+      "file": "file-operations.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "text0wnz File Operations",
+          "file": "file-operations.spec.ts",
+          "line": 22,
+          "column": 6,
+          "specs": [
+            {
+              "title": "shows Open button on splash screen",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 294,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:02.732Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a4b3ee99543417733053-1a539f0137f302d21239",
+              "file": "file-operations.spec.ts",
+              "line": 23,
+              "column": 3
+            },
+            {
+              "title": "file operation elements exist in DOM",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 291,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:03.047Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a4b3ee99543417733053-c58a0bf3f4740b0f4935",
+              "file": "file-operations.spec.ts",
+              "line": 32,
+              "column": 3
+            },
+            {
+              "title": "shows canvas size indicator in footer",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1650,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:03.356Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a4b3ee99543417733053-c8770ba87265000c19fa",
+              "file": "file-operations.spec.ts",
+              "line": 46,
+              "column": 3
+            },
+            {
+              "title": "shows title input in footer",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Chrome",
+                  "projectName": "Chrome",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1624,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:05.022Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a4b3ee99543417733053-bb1405d6904e2c18ac0b",
+              "file": "file-operations.spec.ts",
+              "line": 61,
+              "column": 3
+            },
+            {
+              "title": "shows Open button on splash screen",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1173,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:46.985Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a4b3ee99543417733053-5467c037d8f6a5afdc6d",
+              "file": "file-operations.spec.ts",
+              "line": 23,
+              "column": 3
+            },
+            {
+              "title": "file operation elements exist in DOM",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 506,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:48.705Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a4b3ee99543417733053-e2f363cc8e3d50e410db",
+              "file": "file-operations.spec.ts",
+              "line": 32,
+              "column": 3
+            },
+            {
+              "title": "shows canvas size indicator in footer",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2157,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:49.237Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a4b3ee99543417733053-edab76f3e47d2f13ad5b",
+              "file": "file-operations.spec.ts",
+              "line": 46,
+              "column": 3
+            },
+            {
+              "title": "shows title input in footer",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Firefox",
+                  "projectName": "Firefox",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1826,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:52:51.419Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a4b3ee99543417733053-89c7a0f4fbd8d401268a",
+              "file": "file-operations.spec.ts",
+              "line": 61,
+              "column": 3
+            },
+            {
+              "title": "shows Open button on splash screen",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 368,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:35.529Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a4b3ee99543417733053-a17963d6e6b3f1d47571",
+              "file": "file-operations.spec.ts",
+              "line": 23,
+              "column": 3
+            },
+            {
+              "title": "file operation elements exist in DOM",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 408,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:35.915Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a4b3ee99543417733053-495da7cd8ef36ac5d774",
+              "file": "file-operations.spec.ts",
+              "line": 32,
+              "column": 3
+            },
+            {
+              "title": "shows canvas size indicator in footer",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1370,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:36.340Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a4b3ee99543417733053-73ba53351c937714f1cd",
+              "file": "file-operations.spec.ts",
+              "line": 46,
+              "column": 3
+            },
+            {
+              "title": "shows title input in footer",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "WebKit",
+                  "projectName": "WebKit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1387,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-05T02:53:37.725Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a4b3ee99543417733053-e7179224de85d0932af7",
+              "file": "file-operations.spec.ts",
+              "line": 61,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "step8-advanced-drawing.spec.ts",
+      "file": "step8-advanced-drawing.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Step 8: Advanced Drawing Method Testing",
+          "file": "step8-advanced-drawing.spec.ts",
+          "line": 22,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "Single-pixel and shape drawing",
+              "file": "step8-advanced-drawing.spec.ts",
+              "line": 37,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should handle single-pixel edits with different tools",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Chrome",
+                      "projectName": "Chrome",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 2696,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:52:06.682Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-4e7dc5bed9ca6fee7219",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 38,
+                  "column": 5
+                },
+                {
+                  "title": "should handle line drawing simulation",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Chrome",
+                      "projectName": "Chrome",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 2908,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:52:09.394Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-a562ccbe2e824a3b5e07",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 75,
+                  "column": 5
+                },
+                {
+                  "title": "should handle rectangular shape drawing",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Chrome",
+                      "projectName": "Chrome",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 3044,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:52:12.322Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-b4884e7e5491a1f3d795",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 108,
+                  "column": 5
+                },
+                {
+                  "title": "should handle single-pixel edits with different tools",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Firefox",
+                      "projectName": "Firefox",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 3101,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:52:53.282Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-4f9a73f6a3c0e09d30f5",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 38,
+                  "column": 5
+                },
+                {
+                  "title": "should handle line drawing simulation",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Firefox",
+                      "projectName": "Firefox",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 3674,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:52:56.401Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-1550ccfde426e156485d",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 75,
+                  "column": 5
+                },
+                {
+                  "title": "should handle rectangular shape drawing",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Firefox",
+                      "projectName": "Firefox",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 3717,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:00.099Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-d18f1a2d9fd999952a54",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 108,
+                  "column": 5
+                },
+                {
+                  "title": "should handle single-pixel edits with different tools",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 45000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "WebKit",
+                      "projectName": "WebKit",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2634,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:39.135Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-fbdb3df1e8406a5127fd",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 38,
+                  "column": 5
+                },
+                {
+                  "title": "should handle line drawing simulation",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 45000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "WebKit",
+                      "projectName": "WebKit",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2812,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:41.784Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-579d6e37f9863d3d86ff",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 75,
+                  "column": 5
+                },
+                {
+                  "title": "should handle rectangular shape drawing",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 45000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "WebKit",
+                      "projectName": "WebKit",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2694,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:44.611Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-2abc3bf5a8cbe1991951",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 108,
+                  "column": 5
+                }
+              ]
+            },
+            {
+              "title": "Tool switching and state management",
+              "file": "step8-advanced-drawing.spec.ts",
+              "line": 163,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should maintain canvas state during rapid tool switching",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Chrome",
+                      "projectName": "Chrome",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 4333,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:52:15.384Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-d80becc6879d1f5bfe36",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 164,
+                  "column": 5
+                },
+                {
+                  "title": "should handle tool options without interfering with canvas",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Chrome",
+                      "projectName": "Chrome",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 2900,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:52:19.734Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-31c8abe09a0b8da13fbe",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 219,
+                  "column": 5
+                },
+                {
+                  "title": "should maintain canvas state during rapid tool switching",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Firefox",
+                      "projectName": "Firefox",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 5024,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:03.844Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-3cbed41c74b7faea90b8",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 164,
+                  "column": 5
+                },
+                {
+                  "title": "should handle tool options without interfering with canvas",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Firefox",
+                      "projectName": "Firefox",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 3481,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:08.894Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-c42697b756d3dd9805c3",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 219,
+                  "column": 5
+                },
+                {
+                  "title": "should maintain canvas state during rapid tool switching",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 45000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "WebKit",
+                      "projectName": "WebKit",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 7058,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:47.319Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-3b8e8302cd1b0efcbd3a",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 164,
+                  "column": 5
+                },
+                {
+                  "title": "should handle tool options without interfering with canvas",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 45000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "WebKit",
+                      "projectName": "WebKit",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2371,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:54.392Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-579547b7394f5e55b234",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 219,
+                  "column": 5
+                }
+              ]
+            },
+            {
+              "title": "Performance and responsiveness testing",
+              "file": "step8-advanced-drawing.spec.ts",
+              "line": 262,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should handle rapid clicking without freezing",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Chrome",
+                      "projectName": "Chrome",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 2758,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:52:22.653Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-9f0a5ddab7689389ec9e",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 263,
+                  "column": 5
+                },
+                {
+                  "title": "should maintain performance with canvas resizing",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Chrome",
+                      "projectName": "Chrome",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 3139,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:52:25.425Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-58a4aaef04c9ecda703f",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 302,
+                  "column": 5
+                },
+                {
+                  "title": "should handle multiple drawing sessions without memory issues",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Chrome",
+                      "projectName": "Chrome",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 4179,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:52:28.589Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-4e3ed0a6d773b05277aa",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 341,
+                  "column": 5
+                },
+                {
+                  "title": "should handle rapid clicking without freezing",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Firefox",
+                      "projectName": "Firefox",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 3548,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:12.388Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-ccec10affba589b3f72e",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 263,
+                  "column": 5
+                },
+                {
+                  "title": "should maintain performance with canvas resizing",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Firefox",
+                      "projectName": "Firefox",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 3791,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:15.952Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-704bc4508b3d8188023a",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 302,
+                  "column": 5
+                },
+                {
+                  "title": "should handle multiple drawing sessions without memory issues",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Firefox",
+                      "projectName": "Firefox",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 5266,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:19.778Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-600f613534d13f264f9a",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 341,
+                  "column": 5
+                },
+                {
+                  "title": "should handle rapid clicking without freezing",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 45000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "WebKit",
+                      "projectName": "WebKit",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2592,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:56.780Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-19519eace45c4cc78465",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 263,
+                  "column": 5
+                },
+                {
+                  "title": "should maintain performance with canvas resizing",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 45000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "WebKit",
+                      "projectName": "WebKit",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2985,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:59.388Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-b5b69e6934109ece0a4e",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 302,
+                  "column": 5
+                },
+                {
+                  "title": "should handle multiple drawing sessions without memory issues",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 45000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "WebKit",
+                      "projectName": "WebKit",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 3073,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:54:02.386Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-b7694652c8ec1d0df4e2",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 341,
+                  "column": 5
+                }
+              ]
+            },
+            {
+              "title": "Error handling and edge cases",
+              "file": "step8-advanced-drawing.spec.ts",
+              "line": 391,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should handle canvas interactions at boundaries",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Chrome",
+                      "projectName": "Chrome",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 2905,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:52:32.790Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-f927bc7dd4582898e079",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 392,
+                  "column": 5
+                },
+                {
+                  "title": "should handle clicks outside canvas gracefully",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Chrome",
+                      "projectName": "Chrome",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 2657,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:52:35.714Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-1f9a72324a5ad1d1afbe",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 427,
+                  "column": 5
+                },
+                {
+                  "title": "should recover from tool selection errors",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Chrome",
+                      "projectName": "Chrome",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 2502,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:52:38.386Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-af985540798f6e0217b9",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 455,
+                  "column": 5
+                },
+                {
+                  "title": "should handle canvas interactions at boundaries",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Firefox",
+                      "projectName": "Firefox",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 3450,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:25.061Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-ac3192da46793bd7472e",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 392,
+                  "column": 5
+                },
+                {
+                  "title": "should handle clicks outside canvas gracefully",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Firefox",
+                      "projectName": "Firefox",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 3220,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:28.530Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-b86a87e48a40365aef77",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 427,
+                  "column": 5
+                },
+                {
+                  "title": "should recover from tool selection errors",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Firefox",
+                      "projectName": "Firefox",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 2934,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:31.772Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-fd163ddbb81ee35bdafb",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 455,
+                  "column": 5
+                },
+                {
+                  "title": "should handle canvas interactions at boundaries",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 45000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "WebKit",
+                      "projectName": "WebKit",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2606,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:54:05.471Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-8183e57f55ddb92071b6",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 392,
+                  "column": 5
+                },
+                {
+                  "title": "should handle clicks outside canvas gracefully",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 45000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "WebKit",
+                      "projectName": "WebKit",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2403,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:54:08.090Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-a224a6fdfbfef2f7864d",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 427,
+                  "column": 5
+                },
+                {
+                  "title": "should recover from tool selection errors",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 45000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "WebKit",
+                      "projectName": "WebKit",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2482,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:54:10.505Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-02b994aff6e711539d9a",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 455,
+                  "column": 5
+                }
+              ]
+            },
+            {
+              "title": "Network simulation testing",
+              "file": "step8-advanced-drawing.spec.ts",
+              "line": 476,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should handle simulated collaborative editing",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Chrome",
+                      "projectName": "Chrome",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 2558,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:52:40.903Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-b644a0795aa2f5674ea5",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 477,
+                  "column": 5
+                },
+                {
+                  "title": "should maintain UI responsiveness during batched operations",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Chrome",
+                      "projectName": "Chrome",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 2806,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:52:43.488Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-f7a1324c01fbf96b4d4f",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 520,
+                  "column": 5
+                },
+                {
+                  "title": "should handle simulated collaborative editing",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Firefox",
+                      "projectName": "Firefox",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 3347,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:34.723Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-193246d0fff14b1013b1",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 477,
+                  "column": 5
+                },
+                {
+                  "title": "should maintain UI responsiveness during batched operations",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Firefox",
+                      "projectName": "Firefox",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 3364,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:53:38.087Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-142997fcd65be9940546",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 520,
+                  "column": 5
+                },
+                {
+                  "title": "should handle simulated collaborative editing",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 45000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "WebKit",
+                      "projectName": "WebKit",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2414,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:54:13.002Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-08ce8820ef2e49ecb7d2",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 477,
+                  "column": 5
+                },
+                {
+                  "title": "should maintain UI responsiveness during batched operations",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 45000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "WebKit",
+                      "projectName": "WebKit",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2477,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-05T02:54:15.428Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9862c81a44590fb2854b-7b15ae166b2c3c3ea925",
+                  "file": "step8-advanced-drawing.spec.ts",
+                  "line": 520,
+                  "column": 5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-09-05T02:51:49.637Z",
+    "duration": 148348.028,
+    "expected": 99,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
