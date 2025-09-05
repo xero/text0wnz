@@ -1,12 +1,15 @@
-import {describe, it, expect} from 'vitest';
+import {describe, it, expect, beforeEach, afterEach, vi} from 'vitest';
 import {
   rgb6bitToRgba,
   createPalette,
   createDefaultPalette,
+  PalettePicker,
   type RGB6Bit,
   type RGBA,
-  type Palette
+  type Palette,
+  type PalettePickerOptions
 } from '../../src/scripts/paletteManager';
+import {unregisterAllKeybinds} from '../../src/scripts/keybinds';
 
 describe('paletteManager', () => {
   describe('rgb6bitToRgba', () => {
@@ -180,6 +183,330 @@ describe('paletteManager', () => {
 
       expect(palette.getForegroundColor()).toBe(15);
       expect(palette.getBackgroundColor()).toBe(4);
+    });
+  });
+
+  describe('PalettePicker', () => {
+    let mockCanvas: HTMLCanvasElement;
+    let mockCtx: CanvasRenderingContext2D;
+    let mockPalette: Palette;
+    let mockInitCanvas: ReturnType<typeof vi.fn>;
+    let mockUpdateCallback: ReturnType<typeof vi.fn>;
+    let palettePicker: PalettePicker;
+
+    beforeEach(() => {
+      // Clean up any existing keybinds
+      unregisterAllKeybinds();
+
+      // Mock canvas and context
+      mockCanvas = {
+        width: 160,
+        height: 40,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        getBoundingClientRect: vi.fn(() => ({
+          left: 0,
+          top: 0,
+          width: 160,
+          height: 40
+        }))
+      } as unknown as HTMLCanvasElement;
+
+      mockCtx = {
+        createImageData: vi.fn((w, h) => ({
+          width: w,
+          height: h,
+          data: new Uint8ClampedArray(w * h * 4)
+        })),
+        putImageData: vi.fn(),
+        clearRect: vi.fn()
+      } as unknown as CanvasRenderingContext2D;
+
+      mockInitCanvas = vi.fn(() => mockCtx);
+      mockUpdateCallback = vi.fn();
+      mockPalette = createDefaultPalette();
+    });
+
+    afterEach(() => {
+      if (palettePicker) {
+        palettePicker.destroy();
+      }
+      unregisterAllKeybinds();
+    });
+
+    it('should initialize with correct properties', () => {
+      const options: PalettePickerOptions = {
+        canvas: mockCanvas,
+        palette: mockPalette,
+        initCanvas: mockInitCanvas,
+        updateCurrentColorsPreview: mockUpdateCallback
+      };
+
+      palettePicker = new PalettePicker(options);
+
+      expect(mockInitCanvas).toHaveBeenCalledWith(mockCanvas, 'paletteColors');
+      expect(mockCtx.createImageData).toHaveBeenCalledTimes(16); // For all 16 colors
+      expect(mockCanvas.addEventListener).toHaveBeenCalledWith('touchend', expect.any(Function), {passive: false});
+      expect(mockCanvas.addEventListener).toHaveBeenCalledWith('touchcancel', expect.any(Function), {passive: false});
+      expect(mockCanvas.addEventListener).toHaveBeenCalledWith('mouseup', expect.any(Function), {passive: false});
+      expect(mockCanvas.addEventListener).toHaveBeenCalledWith('contextmenu', expect.any(Function));
+    });
+
+    it('should render palette swatches on initialization', () => {
+      const options: PalettePickerOptions = {
+        canvas: mockCanvas,
+        palette: mockPalette,
+        initCanvas: mockInitCanvas,
+        updateCurrentColorsPreview: mockUpdateCallback
+      };
+
+      palettePicker = new PalettePicker(options);
+
+      // Should call putImageData for each of the 16 colors
+      expect(mockCtx.putImageData).toHaveBeenCalledTimes(16);
+      expect(mockUpdateCallback).toHaveBeenCalled();
+    });
+
+    it('should update all swatches when updatePalette is called', () => {
+      const options: PalettePickerOptions = {
+        canvas: mockCanvas,
+        palette: mockPalette,
+        initCanvas: mockInitCanvas,
+        updateCurrentColorsPreview: mockUpdateCallback
+      };
+
+      palettePicker = new PalettePicker(options);
+      
+      // Clear the mock calls from initialization
+      (mockCtx.putImageData as ReturnType<typeof vi.fn>).mockClear();
+      mockUpdateCallback.mockClear();
+
+      palettePicker.updatePalette();
+
+      expect(mockCtx.putImageData).toHaveBeenCalledTimes(16);
+      expect(mockUpdateCallback).toHaveBeenCalled();
+    });
+
+    describe('mouse interactions', () => {
+      beforeEach(() => {
+        const options: PalettePickerOptions = {
+          canvas: mockCanvas,
+          palette: mockPalette,
+          initCanvas: mockInitCanvas,
+          updateCurrentColorsPreview: mockUpdateCallback
+        };
+        palettePicker = new PalettePicker(options);
+        mockUpdateCallback.mockClear();
+      });
+
+      it('should set foreground color on normal mouse click', () => {
+        const mouseEvent = new MouseEvent('mouseup', {
+          clientX: 40, // Second column (40/20 = 2, but floor(40/20) = 2)
+          clientY: 10  // First row
+        });
+
+        // Mock getBoundingClientRect to return proper values
+        mockCanvas.getBoundingClientRect = vi.fn(() => ({
+          left: 0,
+          top: 0,
+          width: 160,
+          height: 40
+        })) as any;
+
+        // Simulate the mouseEnd event
+        const addEventListener = mockCanvas.addEventListener as ReturnType<typeof vi.fn>;
+        const mouseUpHandler = addEventListener.mock.calls.find(call => call[0] === 'mouseup')?.[1];
+        
+        expect(mouseUpHandler).toBeDefined();
+        mouseUpHandler(mouseEvent);
+
+        // Should set foreground color (colorIndex = row * 8 + col = 0 * 8 + 2 = 2)
+        expect(mockPalette.getForegroundColor()).toBe(2);
+        expect(mockUpdateCallback).toHaveBeenCalled();
+      });
+
+      it('should set background color on Ctrl+click', () => {
+        const mouseEvent = new MouseEvent('mouseup', {
+          clientX: 60, // Third column  
+          clientY: 10, // First row
+          ctrlKey: true
+        });
+
+        mockCanvas.getBoundingClientRect = vi.fn(() => ({
+          left: 0,
+          top: 0,
+          width: 160,
+          height: 40
+        })) as any;
+
+        const addEventListener = mockCanvas.addEventListener as ReturnType<typeof vi.fn>;
+        const mouseUpHandler = addEventListener.mock.calls.find(call => call[0] === 'mouseup')?.[1];
+        
+        mouseUpHandler(mouseEvent);
+
+        // Should set background color (colorIndex = 0 * 8 + 3 = 3)
+        expect(mockPalette.getBackgroundColor()).toBe(3);
+        expect(mockUpdateCallback).toHaveBeenCalled();
+      });
+
+      it('should set background color on Alt+click', () => {
+        const mouseEvent = new MouseEvent('mouseup', {
+          clientX: 80, // Fourth column
+          clientY: 10, // First row
+          altKey: true
+        });
+
+        mockCanvas.getBoundingClientRect = vi.fn(() => ({
+          left: 0,
+          top: 0,
+          width: 160,
+          height: 40
+        })) as any;
+
+        const addEventListener = mockCanvas.addEventListener as ReturnType<typeof vi.fn>;
+        const mouseUpHandler = addEventListener.mock.calls.find(call => call[0] === 'mouseup')?.[1];
+        
+        mouseUpHandler(mouseEvent);
+
+        // Should set background color (colorIndex = 0 * 8 + 4 = 4)
+        expect(mockPalette.getBackgroundColor()).toBe(4);
+        expect(mockUpdateCallback).toHaveBeenCalled();
+      });
+
+      it('should calculate correct color index for bottom row', () => {
+        const mouseEvent = new MouseEvent('mouseup', {
+          clientX: 20, // First column
+          clientY: 30  // Second row
+        });
+
+        mockCanvas.getBoundingClientRect = vi.fn(() => ({
+          left: 0,
+          top: 0,
+          width: 160,
+          height: 40
+        })) as any;
+
+        const addEventListener = mockCanvas.addEventListener as ReturnType<typeof vi.fn>;
+        const mouseUpHandler = addEventListener.mock.calls.find(call => call[0] === 'mouseup')?.[1];
+        
+        mouseUpHandler(mouseEvent);
+
+        // Should set foreground color (colorIndex = 1 * 8 + 1 = 9)
+        expect(mockPalette.getForegroundColor()).toBe(9);
+      });
+    });
+
+    describe('touch interactions', () => {
+      beforeEach(() => {
+        const options: PalettePickerOptions = {
+          canvas: mockCanvas,
+          palette: mockPalette,
+          initCanvas: mockInitCanvas,
+          updateCurrentColorsPreview: mockUpdateCallback
+        };
+        palettePicker = new PalettePicker(options);
+        mockUpdateCallback.mockClear();
+      });
+
+      it('should set foreground color on touch', () => {
+        const touchEvent = new TouchEvent('touchend', {
+          changedTouches: [
+            { pageX: 40, pageY: 10 }
+          ] as any
+        });
+
+        mockCanvas.getBoundingClientRect = vi.fn(() => ({
+          left: 0,
+          top: 0,
+          width: 160,
+          height: 40
+        })) as any;
+
+        const addEventListener = mockCanvas.addEventListener as ReturnType<typeof vi.fn>;
+        const touchEndHandler = addEventListener.mock.calls.find(call => call[0] === 'touchend')?.[1];
+        
+        expect(touchEndHandler).toBeDefined();
+        const preventDefaultSpy = vi.spyOn(touchEvent, 'preventDefault');
+        touchEndHandler(touchEvent);
+
+        expect(preventDefaultSpy).toHaveBeenCalled();
+        // Should set foreground color (colorIndex = 0 * 8 + 2 = 2)
+        expect(mockPalette.getForegroundColor()).toBe(2);
+        expect(mockUpdateCallback).toHaveBeenCalled();
+      });
+
+      it('should calculate correct color index with offset canvas position', () => {
+        const touchEvent = new TouchEvent('touchend', {
+          changedTouches: [
+            { pageX: 60, pageY: 30 } // Touch on position that maps to bottom row
+          ] as any
+        });
+
+        mockCanvas.getBoundingClientRect = vi.fn(() => ({
+          left: 20,
+          top: 10,
+          width: 160,
+          height: 40
+        })) as any;
+
+        const addEventListener = mockCanvas.addEventListener as ReturnType<typeof vi.fn>;
+        const touchEndHandler = addEventListener.mock.calls.find(call => call[0] === 'touchend')?.[1];
+        
+        touchEndHandler(touchEvent);
+
+        // pageX 60, rect.left 20, so relative X = 40
+        // pageY 30, rect.top 10, so relative Y = 20
+        // swatchWidth = 160/8 = 20, so x = floor(40/20) = 2
+        // swatchHeight = 40/2 = 20, so y = floor(20/20) = 1
+        // colorIndex = 1 * 8 + 2 = 10
+        expect(mockPalette.getForegroundColor()).toBe(10);
+      });
+    });
+
+    describe('cleanup', () => {
+      it('should remove event listeners and unregister keybinds on destroy', () => {
+        const options: PalettePickerOptions = {
+          canvas: mockCanvas,
+          palette: mockPalette,
+          initCanvas: mockInitCanvas,
+          updateCurrentColorsPreview: mockUpdateCallback
+        };
+
+        palettePicker = new PalettePicker(options);
+        palettePicker.destroy();
+
+        expect(mockCanvas.removeEventListener).toHaveBeenCalledWith('touchend', expect.any(Function));
+        expect(mockCanvas.removeEventListener).toHaveBeenCalledWith('touchcancel', expect.any(Function));
+        expect(mockCanvas.removeEventListener).toHaveBeenCalledWith('mouseup', expect.any(Function));
+      });
+    });
+
+    describe('integration with keybinds', () => {
+      beforeEach(() => {
+        const options: PalettePickerOptions = {
+          canvas: mockCanvas,
+          palette: mockPalette,
+          initCanvas: mockInitCanvas,
+          updateCurrentColorsPreview: mockUpdateCallback
+        };
+        palettePicker = new PalettePicker(options);
+        mockUpdateCallback.mockClear();
+      });
+
+      it('should register palette keybinds during initialization', () => {
+        // Test that palette keybinds are working by simulating a key event
+        const event = new KeyboardEvent('keydown', { key: '1', ctrlKey: true });
+        document.dispatchEvent(event);
+
+        expect(mockUpdateCallback).toHaveBeenCalled();
+      });
+
+      it('should update preview callback when palette keybinds are triggered', () => {
+        const event = new KeyboardEvent('keydown', { key: 'ArrowUp', ctrlKey: true });
+        document.dispatchEvent(event);
+
+        expect(mockUpdateCallback).toHaveBeenCalled();
+      });
     });
   });
 });
