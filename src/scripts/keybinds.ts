@@ -38,10 +38,10 @@ export function registerPaletteKeybinds(
         } else {
           paletteObj.setForegroundColor(num);
         }
-      } else if (e.altKey) {
+      } else if (e.metaKey) {
         e.preventDefault();
         if (paletteObj.getBackgroundColor() === num) {
-          paletteObj.setBackgroundColor(num + 7);
+          paletteObj.setBackgroundColor(num + 8);
         } else {
           paletteObj.setBackgroundColor(num);
         }
