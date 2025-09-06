@@ -545,25 +545,3 @@ export function getCanvasImage(): HTMLCanvasElement | null {
   return canvas;
 }
 
-export function createOfflineCanvasState(): CanvasState {
-  const width = 80, height = 25;
-  const rawdata = new Uint8Array(width * height * 3);
-  for (let i = 0; i < width * height; ++i) {
-    rawdata[i * 3 + 0] = 32; // space
-    rawdata[i * 3 + 1] = 7;  // white fg
-    rawdata[i * 3 + 2] = 0;  // black bg
-  }
-  return {
-    id: 0,
-    name: 'Offline Canvas',
-    width,
-    height,
-    font: 'CP437 8x16',
-    fontType: 'cp437',
-    spacing: 1,
-    ice: false,
-    colors: new Array<number>(16).fill(0),
-    rawdata,
-    updatedAt: new Date().toISOString(),
-  };
-}

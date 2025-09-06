@@ -1,5 +1,6 @@
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import {createOfflineCanvasState, getCanvasImage, enqueueDirtyRegion, clearDirtyRegions, getDirtyRegions, drawRegion, drawHalfBlock, shadeCell, processDirtyRegions, processDirtyRegionsAsync, type DirtyRegion} from '../../src/scripts/canvasRenderer';
+import {getCanvasImage, enqueueDirtyRegion, clearDirtyRegions, getDirtyRegions, drawRegion, drawHalfBlock, shadeCell, processDirtyRegions, processDirtyRegionsAsync, type DirtyRegion} from '../../src/scripts/canvasRenderer';
+import {createOfflineCanvasState} from '../../src/scripts/state';
 
 // Mock the eventBus module
 vi.mock('../../src/scripts/eventBus', () => ({
@@ -18,7 +19,7 @@ describe('canvasRenderer utilities', () => {
       expect(canvas.name).toBe('Offline Canvas');
       expect(canvas.width).toBe(80);
       expect(canvas.height).toBe(25);
-      expect(canvas.font).toBe('CP437 8x16');
+      expect(canvas.font).toBe('TOPAZ437 8x16');
       expect(canvas.fontType).toBe('cp437');
       expect(canvas.spacing).toBe(1);
       expect(canvas.ice).toBe(false);
@@ -119,10 +120,10 @@ describe('canvasRenderer utilities', () => {
     describe('enqueueDirtyRegion', () => {
       it('should handle empty state gracefully', () => {
         const region: DirtyRegion = { x: 0, y: 0, w: 10, h: 10 };
-        
+
         // Should not throw when state is null/undefined
         expect(() => enqueueDirtyRegion(region)).not.toThrow();
-        
+
         // Should not add anything to queue when state is invalid
         const regions = getDirtyRegions();
         expect(regions).toEqual([]);
@@ -185,10 +186,10 @@ describe('canvasRenderer utilities', () => {
         }));
 
         const originalRegionsLength = getDirtyRegions().length;
-        
+
         // Call drawHalfBlock (should now use enqueueDirtyRegion)
         drawHalfBlock(7, 10, 20); // color=7, x=10, halfBlockY=20
-        
+
         // Since this test environment doesn't have the full state setup,
         // and the function checks for state existence, we expect no change
         // This test verifies the function doesn't crash
@@ -238,12 +239,12 @@ describe('canvasRenderer utilities', () => {
         // Even without a canvas setup, the function should handle gracefully
         // Note: Since drawRegion returns early when no canvas is setup,
         // this tests the queue processing logic itself
-        
+
         // We can't easily mock enqueueDirtyRegion to add regions without state,
         // so this tests the empty case primarily
         const processed = processDirtyRegions();
         expect(processed).toBe(0);
-        
+
         const regionsAfter = getDirtyRegions();
         expect(regionsAfter).toHaveLength(0);
       });
@@ -258,10 +259,10 @@ describe('canvasRenderer utilities', () => {
         // we test the queue management behavior
         const initialRegions = getDirtyRegions();
         expect(initialRegions).toHaveLength(0);
-        
+
         const processed = processDirtyRegions();
         expect(processed).toBe(0);
-        
+
         const finalRegions = getDirtyRegions();
         expect(finalRegions).toHaveLength(0);
       });
@@ -289,7 +290,7 @@ describe('canvasRenderer utilities', () => {
         vi.stubGlobal('requestAnimationFrame', rafSpy);
 
         await processDirtyRegionsAsync();
-        
+
         expect(rafSpy).toHaveBeenCalledTimes(1);
         expect(rafSpy).toHaveBeenCalledWith(expect.any(Function));
 
@@ -313,7 +314,7 @@ describe('canvasRenderer utilities', () => {
         ];
 
         const results = await Promise.all(promises);
-        
+
         // All should resolve with numbers
         results.forEach(result => {
           expect(typeof result).toBe('number');
@@ -336,9 +337,9 @@ describe('canvasRenderer utilities', () => {
       it('should work with getDirtyRegions', () => {
         const regionsBefore = getDirtyRegions();
         expect(regionsBefore).toHaveLength(0);
-        
+
         processDirtyRegions();
-        
+
         const regionsAfter = getDirtyRegions();
         expect(regionsAfter).toHaveLength(0);
       });
@@ -348,7 +349,7 @@ describe('canvasRenderer utilities', () => {
         // Since we can't easily add regions without state, we test behavior with empty queue
         const processed1 = processDirtyRegions();
         const processed2 = processDirtyRegions();
-        
+
         expect(processed1).toBe(0);
         expect(processed2).toBe(0);
       });
@@ -375,7 +376,7 @@ describe('canvasRenderer utilities', () => {
       it('should handle immediate processing when no state exists gracefully', () => {
         // Since there's no state setup, immediate processing should not throw
         expect(() => enqueueDirtyRegion({ x: 0, y: 0, w: 1, h: 1 }, true)).not.toThrow();
-        
+
         // Should not have added any regions since no state
         const regions = getDirtyRegions();
         expect(regions).toEqual([]);
@@ -386,12 +387,12 @@ describe('canvasRenderer utilities', () => {
       it('should have documented last-write-wins strategy', () => {
         // This test validates that the conflict resolution strategy is documented
         // The actual strategy is documented in the network.ts processNetworkPatch function
-        
+
         // We can verify the strategy by checking that:
         // 1. Local edits are immediate (tested above)
-        // 2. Network edits are batched (tested above)  
+        // 2. Network edits are batched (tested above)
         // 3. Later operations override earlier ones (inherent in buffer overwrite)
-        
+
         expect(true).toBe(true); // Placeholder - the real test is in the documentation
       });
     });
@@ -407,7 +408,7 @@ describe('canvasRenderer utilities', () => {
       // 3. Palette changes (affects all color rendering)
       // 4. Buffer reset operations (file loaded, canvas cleared, data replaced)
       // 5. Initial render (application startup)
-      // 
+      //
       // All other operations should use dirty region system
       expect(true).toBe(true); // Documentation test
     });

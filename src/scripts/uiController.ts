@@ -3,8 +3,8 @@
 import type {GlobalState} from './state';
 import type {PubSub} from './eventBus';
 import type {FontType} from './fontManager';
-import {createOfflineRoomState} from './state';
-import {initCanvasRenderer, createOfflineCanvasState, resetCanvasRenderer} from './canvasRenderer';
+import {createOfflineRoomState, createOfflineCanvasState} from './state';
+import {initCanvasRenderer, resetCanvasRenderer} from './canvasRenderer';
 import {setFont, FontRenderer} from './fontManager';
 import {PalettePicker, createDefaultPalette, Palette} from './paletteManager';
 import {GridOverlay} from './gridOverlay';
@@ -51,8 +51,9 @@ let
   modals: HTMLElement[],
   clouds: HTMLElement[],
   tools: HTMLElement[],
-  title:HTMLInputElement,
+  navTitle:HTMLInputElement,
   resolution:HTMLElement,
+  lblRes:HTMLElement,
   chat:HTMLElement,
   chatz:HTMLElement,
   chatLeave:HTMLElement,
@@ -100,6 +101,12 @@ let
   resSave:HTMLElement,
   txtCols:HTMLInputElement,
   txtRows:HTMLInputElement,
+  sauceTitle:HTMLInputElement,
+  sauceAuthor:HTMLInputElement,
+  sauceGroup:HTMLInputElement,
+  sauceComments: HTMLTextAreaElement,
+  sauceBytes: HTMLInputElement,
+  sauceSave: HTMLElement,
   cursorPos:HTMLElement,
   curColors:HTMLCanvasElement,
   palettePrev:HTMLCanvasElement,
@@ -109,8 +116,9 @@ let
 const getElements = ():void=>{
   html = $$('html');
   modal = $$<HTMLDialogElement>('#msg');
-  title = $$<HTMLInputElement>('#title');
+  navTitle = $$<HTMLInputElement>('#title');
   resolution = $('resolution');
+  lblRes = $$('#resolution kbd');
   chat = $('chat');
   chatz = $('chatz');
   chatLeave = $('chatLeave');
@@ -157,6 +165,12 @@ const getElements = ():void=>{
   fontPreview = $$<HTMLImageElement>('#fontPreview');
   resSave = $('resSave');
   cursorPos = $('cursorPos');
+  sauceTitle = $$<HTMLInputElement>('#sauceTitle');
+  sauceAuthor = $$<HTMLInputElement>('#sauceAuthor');
+  sauceGroup = $$<HTMLInputElement>('#sauceGroup');
+  sauceComments = $$<HTMLTextAreaElement>('#sauceComments');
+  sauceBytes = $$<HTMLInputElement>('#sauceBytes');
+  sauceSave = $('sauceSave');
   curColors = $$<HTMLCanvasElement>('#currentColors');
   txtCols = $$<HTMLInputElement>('#txtCols');
   txtRows = $$<HTMLInputElement>('#txtRows');
@@ -341,6 +355,52 @@ export function setCursorPos(x :number, y :number){
   cursorPos.innerHTML = `${x},${y}`;
 }
 
+const SAUCE_MAX_BYTES = 16320;
+function getUtf8Bytes(str: string): number {
+  return new TextEncoder().encode(str).length;
+}
+function enforceMaxBytes() {
+  let val = sauceComments.value;
+  let bytes = getUtf8Bytes(val);
+  while (bytes > SAUCE_MAX_BYTES) {
+    // Remove last character until under max bytes
+    val = val.slice(0, -1);
+    bytes = getUtf8Bytes(val);
+  }
+  if (val !== sauceComments.value) {
+    sauceComments.value = val;
+  }
+  sauceBytes.value = `${bytes}/${SAUCE_MAX_BYTES} bytes`;
+}
+
+function updateSauce() {
+  if (!state.currentRoom) return;
+  const title = sauceTitle.value.trim();
+  const author = sauceAuthor.value.trim();
+  const group = sauceGroup.value.trim();
+  let comments = sauceComments.value;
+  while (getUtf8Bytes(comments) > SAUCE_MAX_BYTES) {
+    comments = comments.slice(0, -1);
+  }
+  navTitle.value = title;
+  state.currentRoom.canvas.sauce = {
+    title,
+    author,
+    group,
+    comments
+  };
+}
+
+function displayRes(cols:number, rows:number) {
+  lblRes.innerText = `${cols} cols x ${rows} rows`;
+}
+
+function sauceDefaults() {
+  navTitle.value = sauceTitle.value = 'untitled';
+  sauceAuthor.value = 'anonymous';
+  sauceGroup.value = sauceComments.value = '';
+}
+
 //
 /* <--//----------------------------------------------------------[external] */
 export function initUI(state: GlobalState, eventBus: PubSub) {
@@ -372,7 +432,6 @@ export function initUI(state: GlobalState, eventBus: PubSub) {
   });
   add(fileJoint,_=>navChat('joints'));
   add(open,_=>modalShow('file'));
-  title.value = 'untitled';
 
   //--------------- chatz
   cloudShow('offline');
@@ -411,6 +470,7 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   fontPreview.style = 'width: 192px; height: 384px';
   const canvasRenderer = initCanvasRenderer(state, palette, fontRenderer);
   initCanvas(art, 'Art Drawing Canvas');
+  sauceDefaults();
 
   //--------------- file opts
   add(fileDraw, async _=>{
@@ -418,10 +478,11 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
     state.currentRoom = createOfflineRoomState(state.user);
     state.currentRoom.canvas = createOfflineCanvasState();
     resetCanvasRenderer(state, palette, fontRenderer);
-    $$('#resolution label').innerText = `80 cols x 25 rows`;
+    displayRes(80, 25);
     fontSelect.value = defaultFont;
     fontPreview.src = `./ui/fontz/${defaultFont}.png`;
     fontLabel.innerText = defaultFont;
+    sauceDefaults();
     setCursorPos(1,1);
     modalClose();
   });
@@ -597,10 +658,15 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
     };
     state.currentRoom.canvas = newCanvas;
     eventBus.publish('ui:state:changed', {state});
-    $$('#resolution label').innerText = `${cols} cols x ${rows} rows`;
+    displayRes(cols, rows);
     toggleChatRes('');
   });
-  add($('title'),_=>{modalShow('sauce')});
+  add(navTitle,_=>{modalShow('sauce')});
+  sauceComments.addEventListener('input', enforceMaxBytes);
+  add(sauceSave,_=>{
+    updateSauce();
+    modalClose();
+  });
 
   //--------------- modal
   $$$<HTMLButtonElement>('.cancel').forEach(

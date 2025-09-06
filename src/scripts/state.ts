@@ -42,9 +42,17 @@ export interface RoomSettings {
   isPublic?: boolean;
 }
 
+export interface SauceMetadata {
+  title?: string;
+  author?: string;
+  group?: string;
+  comments?: string;
+}
+
 export interface CanvasState {
   id: number;
   name: string;
+  sauce?: SauceMetadata;
   width: number;
   height: number;
   font: string;          // font file or name (e.g. "CP437 8x16", "TOPAZ_437", "utf8-system")
@@ -138,9 +146,15 @@ export function createOfflineCanvasState(): CanvasState {
   return {
     id: 0,
     name: 'Offline Canvas',
+    sauce: {
+      title: 'untitled',
+      author: 'anonymous',
+      group: '',
+      comments: '',
+    },
     width,
     height,
-    font: 'CP437 8x16',
+    font: 'TOPAZ437 8x16',
     fontType: 'cp437',
     spacing: 1,
     ice: false,
