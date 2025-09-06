@@ -397,7 +397,7 @@ function displayRes(cols:number, rows:number) {
 
 function sauceDefaults() {
   navTitle.value = sauceTitle.value = 'untitled';
-  sauceAuthor.value = 'anonymous'
+  sauceAuthor.value = 'anonymous';
   sauceGroup.value = sauceComments.value = '';
 }
 
