@@ -154,7 +154,7 @@ export function createOfflineCanvasState(): CanvasState {
     },
     width,
     height,
-    font: 'CP437 8x16',
+    font: 'TOPAZ437 8x16',
     fontType: 'cp437',
     spacing: 1,
     ice: false,

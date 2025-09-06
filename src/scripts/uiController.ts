@@ -3,8 +3,8 @@
 import type {GlobalState} from './state';
 import type {PubSub} from './eventBus';
 import type {FontType} from './fontManager';
-import {createOfflineRoomState} from './state';
-import {initCanvasRenderer, createOfflineCanvasState, resetCanvasRenderer} from './canvasRenderer';
+import {createOfflineRoomState, createOfflineCanvasState} from './state';
+import {initCanvasRenderer, resetCanvasRenderer} from './canvasRenderer';
 import {setFont, FontRenderer} from './fontManager';
 import {PalettePicker, createDefaultPalette, Palette} from './paletteManager';
 import {GridOverlay} from './gridOverlay';
