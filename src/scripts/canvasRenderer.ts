@@ -64,10 +64,8 @@ export function initCanvasRenderer(
 
   resizeCanvasToState();
 
-  // Listen for relevant events
   eventBus.subscribe('ui:state:changed', ({state})=>{
     void state;
-    // If canvas size or font changes, resize/redraw
     resizeCanvasToState();
     forceFullRedraw();
   });
@@ -77,19 +75,12 @@ export function initCanvasRenderer(
   });
 
   eventBus.subscribe('local:file:loaded', ()=>{
-    // Buffer reset: new file loaded, trigger full redraw
     forceFullRedraw();
   });
 
   eventBus.subscribe('local:canvas:cleared', ()=>{
-    // Buffer reset: canvas was cleared, trigger full redraw
     forceFullRedraw();
   });
-
-  // Note: Removed 'local:tool:activated' full redraw trigger as per Step 7.
-  // Tool activation should not require full canvas redraw - only use dirty regions.
-
-  // Initial draw
   forceFullRedraw();
 
   // --- Return mutator API for palette/font switching
@@ -158,7 +149,6 @@ function queueFlushDirty() {
   }
 }
 
-// --- Draws all cells, or just dirty ones if possible
 function flushDirtyCells() {
   rafQueued = false;
   if (!ctx || !offctx || !state || !font || !palette || !canvas || !offscreen) return;
@@ -169,7 +159,6 @@ function flushDirtyCells() {
   let needsFullBlit = false;
 
   if (needsFullRedraw) {
-    // Full redraw: clear offscreen and re-render everything
     offctx.clearRect(0, 0, offscreen.width, offscreen.height);
     for (let y = 0; y < height; ++y) {
       for (let x = 0; x < width; ++x) {
@@ -185,10 +174,7 @@ function flushDirtyCells() {
     needsFullRedraw = false;
     needsFullBlit = true;
   } else if (dirtyCells.size > 0 || dirtyRegions.length > 0) {
-    // Track if we need full blit due to dirty cells
     const hasDirtyCells = dirtyCells.size > 0;
-
-    // Dirty cell redraw
     for (const idx of dirtyCells) {
       const cell = Math.floor(idx / 3);
       const x = cell % width;
@@ -201,56 +187,21 @@ function flushDirtyCells() {
       font.draw(charCode, fg, bg, offctx, x, y);
     }
     dirtyCells.clear();
-
-    // Process dirty regions using the new processDirtyRegions function
     processDirtyRegions();
-
-    // Only need full blit for dirty cells (drawRegion handles its own partial blitting)
     needsFullBlit = hasDirtyCells;
   }
-
-  // Do full canvas blit when needed
   if (needsFullBlit) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(offscreen, 0, 0);
   }
 }
 
-/**
- * Forces a full canvas redraw.
- *
- * STEP 7 - FULL REDRAW TRIGGERS:
- * Full redraws should ONLY be triggered for:
- * 1. Canvas resize (viewport or canvas dimensions change)
- * 2. Font changes (affects all character rendering)
- * 3. Palette changes (affects all color rendering)
- * 4. Buffer reset operations:
- *    - New file loaded (local:file:loaded)
- *    - Canvas cleared/reset
- *    - Canvas data replaced (updateCanvasData)
- * 5. Initial render (application startup)
- *
- * All other rendering operations should use the dirty region system for efficiency.
- * Tool activation, single cell edits, and network patches should NOT trigger full redraws.
- */
 function forceFullRedraw() {
   needsFullRedraw = true;
   queueFlushDirty();
 }
 
-/**
- * Enqueue a dirty region for redraw.
- * Optionally merges/coalescing overlapping or adjacent regions for efficiency.
- *
- * STEP 6 - LOCAL EDIT PRIORITIZATION:
- * This function implements the local vs network edit prioritization strategy:
- * - Local edits (immediate=true): Processed immediately for instant feedback
- * - Network edits (immediate=false): Batched using requestAnimationFrame
- * - Local edits always take precedence due to immediate processing
- * - Network edits are queued and processed in the next animation frame
- * - This ensures responsive UI while maintaining efficient network sync
- *
- * @param region - The dirty region to enqueue
+/* @param region - The dirty region to enqueue
  * @param immediate - If true, process immediately (for local edits). If false, use RAF batching (for network edits)
  */
 export function enqueueDirtyRegion(region: DirtyRegion, immediate: boolean = false) {
@@ -284,7 +235,6 @@ export function enqueueDirtyRegion(region: DirtyRegion, immediate: boolean = fal
     dirtyRegions.push(clampedRegion);
   }
 
-  // Step 6: Favor local edits - process immediately for local changes
   if (immediate) {
     processDirtyRegions();
   } else {
@@ -324,10 +274,6 @@ function tryMergeRegions(a: DirtyRegion, b: DirtyRegion): DirtyRegion | null {
   return null;
 }
 
-/**
- * Clear all dirty regions from the queue.
- * Useful for external systems that want to reset the dirty state.
- */
 export function clearDirtyRegions() {
   dirtyRegions.length = 0;
 }
@@ -340,30 +286,15 @@ export function getDirtyRegions(): readonly DirtyRegion[] {
   return dirtyRegions;
 }
 
-/**
- * Process and clear the dirty region queue.
- * Calls drawRegion() for each dirty region and then clears the queue.
- * Supports batching/coalescing since regions are already merged by enqueueDirtyRegion().
- *
- * This function implements Step 5 of the "Efficient Selective Canvas Redraw" refactor.
- *
- * @returns Number of regions processed
- */
 export function processDirtyRegions(): number {
   if (dirtyRegions.length === 0) {
     return 0;
   }
-
   const processedCount = dirtyRegions.length;
-
-  // Process each dirty region using the drawRegion function
   for (const region of dirtyRegions) {
     drawRegion(region.x, region.y, region.w, region.h);
   }
-
-  // Clear the dirty regions queue
   dirtyRegions.length = 0;
-
   return processedCount;
 }
 
@@ -376,16 +307,13 @@ export function processDirtyRegions(): number {
  */
 export function processDirtyRegionsAsync(): Promise<number> {
   return new Promise((resolve)=>{
-    // If there's already a queued processing, return existing promise
     if (rafQueued) {
-      // We can't return the existing promise, so we'll queue another
       requestAnimationFrame(()=>{
         const processed = processDirtyRegions();
         resolve(processed);
       });
       return;
     }
-
     rafQueued = true;
     requestAnimationFrame(()=>{
       rafQueued = false;
@@ -410,36 +338,22 @@ export function drawRegion(x: number, y: number, w: number, h: number) {
   if (!c) return;
 
   const {width, height, rawdata} = c;
-
-  // Handle empty or invalid regions gracefully
   if (w <= 0 || h <= 0) return;
-
-  // Clamp region to canvas bounds
   const clampedX = Math.max(0, Math.min(x, width));
   const clampedY = Math.max(0, Math.min(y, height));
   const clampedW = Math.max(0, Math.min(w, width - clampedX));
   const clampedH = Math.max(0, Math.min(h, height - clampedY));
-
-  // Skip if clamped region is empty
   if (clampedW <= 0 || clampedH <= 0) return;
-
-  // Draw each cell in the region
   for (let cellY = clampedY; cellY < clampedY + clampedH; cellY++) {
     for (let cellX = clampedX; cellX < clampedX + clampedW; cellX++) {
       const idx = (cellY * width + cellX) * 3;
       const charCode = rawdata[idx];
       const fg = rawdata[idx + 1];
       const bg = rawdata[idx + 2];
-
-      // Clear cell area on offscreen canvas
       offctx.clearRect(cellX * font.width, cellY * font.height, font.width, font.height);
-
-      // Draw the character
       font.draw(charCode, fg, bg, offctx, cellX, cellY);
     }
   }
-
-  // Copy the updated region from offscreen to onscreen canvas
   const pixelX = clampedX * font.width;
   const pixelY = clampedY * font.height;
   const pixelW = clampedW * font.width;
@@ -447,6 +361,27 @@ export function drawRegion(x: number, y: number, w: number, h: number) {
 
   ctx.clearRect(pixelX, pixelY, pixelW, pixelH);
   ctx.drawImage(offscreen, pixelX, pixelY, pixelW, pixelH, pixelX, pixelY, pixelW, pixelH);
+}
+
+export function resetCanvasRenderer(
+  newState?: GlobalState,
+  newPalette?: Palette,
+  newFont?: FontRenderer
+) {
+  ctx = null;
+  canvas = null;
+  offctx = null;
+  offscreen = null;
+  font = null;
+  palette = null;
+  state = null;
+  dirtyCells.clear();
+  dirtyRegions.length = 0;
+  needsFullRedraw = true;
+  rafQueued = false;
+  if (newState && newPalette && newFont) {
+    return initCanvasRenderer(newState, newPalette, newFont);
+  }
 }
 
 // --- Drawing API
