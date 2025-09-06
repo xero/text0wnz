@@ -4,7 +4,7 @@ import type {GlobalState} from './state';
 import type {PubSub} from './eventBus';
 import type {FontType} from './fontManager';
 import {createOfflineRoomState} from './state';
-import {initCanvasRenderer, createOfflineCanvasState} from './canvasRenderer';
+import {initCanvasRenderer, createOfflineCanvasState, resetCanvasRenderer} from './canvasRenderer';
 import {setFont, FontRenderer} from './fontManager';
 import {PalettePicker, createDefaultPalette, Palette} from './paletteManager';
 import {GridOverlay} from './gridOverlay';
@@ -16,17 +16,31 @@ import {ShadeBrushTool} from './tools/shade';
 const
   D = document,
   W = window,
+  to = setTimeout,
   $ = (i: string)=>{ const e = D.getElementById(i); if (!e) throw new Error(`Element #${i} not found`); return e },
   /* eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters */
   $$ = <T extends Element = HTMLElement>(q: string): T=>{ const e = D.querySelector(q); if (!e) throw new Error(`Element ${q} was not found`); return e as T; },
   /* eslint-disable-next-line @typescript-eslint/no-deprecated */
   $$$ = D.querySelectorAll.bind(D),
-  add = (t: HTMLElement, f: (e: MouseEvent | KeyboardEvent) => void, k: number = 0)=>t.addEventListener(k ? 'keydown' : 'click', f as EventListener, false),
   has = (i: HTMLElement, c: string)=>i.classList.contains(c),
   cl = (i: HTMLElement, c: string, a:boolean = true)=>a ? i.classList.add(c) : i.classList.remove(c),
   t = (i: HTMLElement, c: string)=>i.classList.toggle(c),
   sm = ()=>W.innerWidth <= 640,
-  to = setTimeout;
+  add = (
+    t: HTMLElement,
+    f: (e: MouseEvent | KeyboardEvent) => void | Promise<void>,
+    k: number = 0
+  )=>t.addEventListener(k ? 'keydown' : 'click', (e: Event)=> {
+    let result: Promise<void> | undefined;
+    if (k && e instanceof KeyboardEvent) {
+      const r = f(e);
+      if (r instanceof Promise) result = r;
+    } else if (!k && e instanceof MouseEvent) {
+      const r = f(e);
+      if (r instanceof Promise) result = r;
+    }
+    if (result) { result.catch(()=> { throw new Error('Async event handler failed')})}
+  },false);
 
 /* <--//------------------------------------------------[interface elements] */
 let
@@ -77,6 +91,7 @@ let
   fileOpen:HTMLElement,
   fileUpload:HTMLInputElement,
   fileJoint:HTMLElement,
+  fileDraw:HTMLElement,
   fontSelect:HTMLSelectElement,
   fontPreview:HTMLImageElement,
   resSave:HTMLElement,
@@ -132,6 +147,7 @@ const getElements = ():void=>{
   splashDraw = $('splashDraw');
   fileOpen = $('fileOpen');
   fileJoint = $('fileJoint');
+  fileDraw = $('fileDraw');
   fileUpload = $$<HTMLInputElement>('#fileUpload');
   fontSelect = $$<HTMLSelectElement>('#fontName');
   fontPreview = $$<HTMLImageElement>('#fontPreview');
@@ -385,6 +401,18 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   const canvasRenderer = initCanvasRenderer(state, palette, fontRenderer);
   initCanvas(art, 'Art Drawing Canvas');
 
+  //--------------- file opts
+  add(fileDraw, async _=> {
+    fontRenderer = await setFont(defaultFont, 'cp437', palette, false);
+    state.currentRoom = createOfflineRoomState(state.user);
+    createOfflineCanvasState();
+    resetCanvasRenderer(state, palette, fontRenderer);
+    $$('#resolution label').innerText = `80 cols x 25 rows`;
+    fontSelect.value = defaultFont;
+    fontPreview.src = `./ui/fontz/${defaultFont}.png`;
+    fontLabel.innerText = defaultFont;
+    modalClose();
+  });
   //--------------- tools
 
   // keeb
