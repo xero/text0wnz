@@ -48,6 +48,9 @@ let
   html:HTMLElement,
   fontRenderer: FontRenderer,
   modal:HTMLDialogElement,
+  modals: HTMLElement[],
+  clouds: HTMLElement[],
+  tools: HTMLElement[],
   title:HTMLInputElement,
   resolution:HTMLElement,
   chat:HTMLElement,
@@ -160,19 +163,45 @@ const getElements = ():void=>{
   palettePrev = $$<HTMLCanvasElement>('#paletteColors');
   art = $$<HTMLCanvasElement>('#art');
 
-/* @TODO: remove linter fix */
-void sm;
-void joint;
-void offline;
-void collab;
-void circles;
-void fliph;
-void flipv;
-void move;
-void charmap;
-void ice;
-void spacing;
-void art;
+  modals = [
+    $('splash'),
+    $('collab'),
+    $('fonts'),
+    $('file'),
+    $('sauce'),
+    $('error'),
+  ];
+
+  clouds = [
+    $('jointCloud'),
+    $('offlineCloud'),
+    $('stormCloud'),
+    $('theCloud'),
+    $('snowCloud'),
+    $('storageCloud'),
+  ];
+  tools = [
+    $('keebOpts'),
+    $('brushOpts'),
+    $('fillOpts'),
+    $('shapeOpts'),
+    $('selectOpts'),
+    $('clipOpts'),
+    $('zoomOpts'),
+    $('charOpts'),
+  ];
+
+  /* @TODO: remove linter fix */
+  void sm;
+  void joint;
+  void offline;
+  void circles;
+  void fliph;
+  void flipv;
+  void move;
+  void charmap;
+  void ice;
+  void spacing;
 }
 
 /* <--//----------------------------------------------------------[internal] */
@@ -203,14 +232,6 @@ const modalClose = ()=>{
     modal.close();
   }, 700);
 }
-const modals = [
-  $('splash'),
-  $('collab'),
-  $('fonts'),
-  $('file'),
-  $('sauce'),
-  $('error'),
-];
 const modalClear = ()=>modals.forEach(s=>cl(s, 'hide'));
 const showError = (message:string)=>{
   $('modalError').innerHTML = message;
@@ -218,14 +239,6 @@ const showError = (message:string)=>{
 };
 
 //---chat
-const clouds = [
-  $('jointCloud'),
-  $('offlineCloud'),
-  $('stormCloud'),
-  $('theCloud'),
-  $('snowCloud'),
-  $('storageCloud'),
-];
 const cloudHide = ():void=>clouds.forEach(i=>cl(i,'hide',true));
 const cloudShow = (cloud:string):void=>{
   cloudHide();
@@ -265,16 +278,6 @@ const toggleChatRes = (w:string):void=>{
 };
 
 //---tool options
-const tools = [
-  $('keebOpts'),
-  $('brushOpts'),
-  $('fillOpts'),
-  $('shapeOpts'),
-  $('selectOpts'),
-  $('clipOpts'),
-  $('zoomOpts'),
-  $('charOpts'),
-];
 const toolOpsHide = ()=>tools.forEach(o=>cl(o,'hide',true));
 
 const toolOps = (tool:string, subtool:boolean = false)=>{
