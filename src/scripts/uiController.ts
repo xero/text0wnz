@@ -616,31 +616,16 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   });
   add(font,_=>modalShow('fonts'));
 
-  add(spacing, _=>{
+  //-------------- 9pt font toggle
+  add(spacing,_=>{
     if (!state.currentRoom) return;
     const c = state.currentRoom.canvas;
-
-    // Toggle spacing (0 <-> 1)
-    const newValue = !c.spacing;
-    fontRenderer.setLetterSpacing(newValue);
-    c.spacing = newValue ? 1 : 0;
-
-    // Compute logical canvas size with new spacing
-    const cellWidth = fontRenderer.width + (fontRenderer.getLetterSpacing() ? 1 : 0);
-    const cellHeight = fontRenderer.height;
-    const logicalWidth = c.width * cellWidth;
-    const logicalHeight = c.height * cellHeight;
-
+    // flip current font spacing value
+    const spacing = !c.spacing;
+    fontRenderer.setLetterSpacing(spacing);
+    c.spacing = spacing ? 1 : 0;
     resizeCanvasToState();
     forceFullRedraw();
-    eventBus.publish('ui:canvas:resize', {
-      width: logicalWidth,
-      height: logicalHeight,
-      font: fontRenderer,
-      columns: c.width,
-      rows: c.height,
-      dpr: 1
-    });
   });
 
 
