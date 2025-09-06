@@ -30,7 +30,7 @@ const
     t: HTMLElement,
     f: (e: MouseEvent | KeyboardEvent) => void | Promise<void>,
     k: number = 0
-  )=>t.addEventListener(k ? 'keydown' : 'click', (e: Event)=> {
+  )=>t.addEventListener(k ? 'keydown' : 'click', (e: Event)=>{
     let result: Promise<void> | undefined;
     if (k && e instanceof KeyboardEvent) {
       const r = f(e);
@@ -39,7 +39,7 @@ const
       const r = f(e);
       if (r instanceof Promise) result = r;
     }
-    if (result) { result.catch(()=> { throw new Error('Async event handler failed')})}
+    if (result) { result.catch(()=>{ throw new Error('Async event handler failed')})}
   },false);
 
 /* <--//------------------------------------------------[interface elements] */
@@ -402,7 +402,7 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   initCanvas(art, 'Art Drawing Canvas');
 
   //--------------- file opts
-  add(fileDraw, async _=> {
+  add(fileDraw, async _=>{
     fontRenderer = await setFont(defaultFont, 'cp437', palette, false);
     state.currentRoom = createOfflineRoomState(state.user);
     createOfflineCanvasState();
