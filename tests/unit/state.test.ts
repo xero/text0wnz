@@ -68,7 +68,7 @@ describe('state', () => {
       expect(canvas.name).toBe('Offline Canvas');
       expect(canvas.width).toBe(80);
       expect(canvas.height).toBe(25);
-      expect(canvas.font).toBe('CP437 8x16');
+      expect(canvas.font).toBe('TOPAZ437 8x16');
       expect(canvas.fontType).toBe('cp437');
       expect(canvas.spacing).toBe(1);
       expect(canvas.ice).toBe(false);
@@ -200,9 +200,9 @@ describe('state', () => {
   describe('type definitions', () => {
     it('should support all network status types', () => {
       const state = createState();
-      
+
       const statuses: NetworkStatus[] = ['disconnected', 'connecting', 'connected', 'error'];
-      
+
       statuses.forEach(status => {
         state.network.status = status;
         expect(state.network.status).toBe(status);
