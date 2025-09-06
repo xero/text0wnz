@@ -97,6 +97,7 @@ let
   resSave:HTMLElement,
   txtCols:HTMLInputElement,
   txtRows:HTMLInputElement,
+  cursorPos:HTMLElement,
   curColors:HTMLCanvasElement,
   palettePrev:HTMLCanvasElement,
   art:HTMLCanvasElement,
@@ -152,6 +153,7 @@ const getElements = ():void=>{
   fontSelect = $$<HTMLSelectElement>('#fontName');
   fontPreview = $$<HTMLImageElement>('#fontPreview');
   resSave = $('resSave');
+  cursorPos = $('cursorPos');
   curColors = $$<HTMLCanvasElement>('#currentColors');
   txtCols = $$<HTMLInputElement>('#txtCols');
   txtRows = $$<HTMLInputElement>('#txtRows');
@@ -206,6 +208,7 @@ const modals = [
   $('collab'),
   $('fonts'),
   $('file'),
+  $('sauce'),
   $('error'),
 ];
 const modalClear = ()=>modals.forEach(s=>cl(s, 'hide'));
@@ -330,6 +333,10 @@ function getPointerXY(e: PointerEvent, state: GlobalState, halfBlock = false) {
   return {x, y};
 }
 
+export function setCursorPos(x :number, y :number){
+  cursorPos.innerHTML = `${x},${y}`;
+}
+
 //
 /* <--//----------------------------------------------------------[external] */
 export function initUI(state: GlobalState, eventBus: PubSub) {
@@ -348,7 +355,7 @@ export function initUI(state: GlobalState, eventBus: PubSub) {
   toolOpsHide();
 
   //--------------- menus
-  add($('darkmode'),_=>t(html, 'dark'));
+  add($('darkmode'),_=>{t(html, 'dark')});
   [resolution,resCancel].forEach(r=>add(r,_=>toggleChatRes('resolution')));
   add($('jointNew'),_=>navChat('new'));
 
@@ -411,6 +418,7 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
     fontSelect.value = defaultFont;
     fontPreview.src = `./ui/fontz/${defaultFont}.png`;
     fontLabel.innerText = defaultFont;
+    setCursorPos(1,1);
     modalClose();
   });
   //--------------- tools
@@ -588,6 +596,7 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
     $$('#resolution label').innerText = `${cols} cols x ${rows} rows`;
     toggleChatRes('');
   });
+  add($('title'),_=>{modalShow('sauce')});
 
   //--------------- modal
   $$$<HTMLButtonElement>('.cancel').forEach(

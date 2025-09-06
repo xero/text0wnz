@@ -1,6 +1,7 @@
 // canvas drawing, listens for state changes
 import type {GlobalState, CanvasState} from './state';
 import {eventBus} from './eventBus';
+import {setCursorPos} from './uiController';
 
 // --- Types
 type RGBA = [number, number, number, number];
@@ -486,6 +487,7 @@ export function drawHalfBlock(color: number, x: number, halfBlockY: number) {
   c.rawdata[idx] = charCode;
   c.rawdata[idx + 1] = fg;
   c.rawdata[idx + 2] = bg;
+  setCursorPos(x + 1,charY + 1);
   enqueueDirtyRegion({x, y: charY, w: 1, h: 1}, true); // immediate=true for local edits
 }
 
@@ -522,6 +524,7 @@ export function shadeCell(x: number, y: number, fg: number, bg: number, reduce: 
   c.rawdata[idx] = code;
   c.rawdata[idx + 1] = fg;
   c.rawdata[idx + 2] = bg;
+  setCursorPos(x + 1,y + 1);
   enqueueDirtyRegion({x, y, w: 1, h: 1}, true); // immediate=true for local edits
 }
 

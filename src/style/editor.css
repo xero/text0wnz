@@ -305,8 +305,8 @@
           padding: 5px 5px 5px 10px;
         }
       }
-      #cursor {
-        @apply mt-1.5 mr-5 bg-editor-bg;
+      #cursorPos {
+        @apply mt-1.5 mr-5 bg-editor-bg min-w-12 text-center;
       }
       #chat {
         @apply p-0 m-0 pt-1;
@@ -347,7 +347,7 @@
     article#canvasArea {
       @apply
         relative w-full min-w-1 h-full min-h-0 justify-items-center
-        flex justify-center overflow-y-scroll overflow-x-auto;
+        flex justify-center overflow-y-scroll overflow-x-auto pt-3;
       canvas#art {
         @apply block z-1 box-border;
         box-shadow: 0 4px 32px rgba(0,0,0,0.7);
@@ -470,69 +470,86 @@
         }
       }
     }
-    #chatNew,
-    #chatResolution {
-      @apply flex flex-col h-full min-h-0 w-full;
-      header,
-      section,
-      nav,
-      article {
-        @apply flex-shrink-0 w-full;
+  }
+  #sauce,
+  #chatNew,
+  #chatResolution {
+    @apply flex flex-col h-full min-h-0 w-full;
+    header,
+    section,
+    nav,
+    article {
+      @apply flex-shrink-0 w-full;
+    }
+    header {
+      @apply w-full flex-row pl-2 mt-1.5 place-content-between;
+      h1 {
+        @apply text-cyan;
       }
-      header {
-        @apply w-full flex-row pl-2 mt-1.5 place-content-between;
-        kbd {
-          @apply text-cyan text-2xl;
-        }
-        button {
-          @apply p-0 pb-0.5;
-          svg {
-            @apply text-text;
-          }
-        }
+      kbd {
+        @apply text-cyan text-2xl;
       }
-      section {
-        @apply flex min-h-0 flex-col;
-        button {
-          @apply bg-midnight w-3/4 text-left justify-start mb-2 mx-auto p-1.5 pl-8;
-        }
-      }
-      article {
-        @apply flex min-h-0 flex-row w-full bg-editor-bg justify-center;
-        label {
-          @apply m-2 p-0 h-fit;
-        }
-        #txtRows,
-        #txtCols {
-          @apply px-3 py-1 h-fit mr-2 my-2 bg-midnight;
-        }
-      }
-      nav {
-        @apply justify-end border-0 bg-editor-bg w-auto mt-0.5;
-        button {
-          @apply flex bg-midnight justify-center items-center m-2;
-          svg {
-            @apply mr-3.5;
-            width: 37px;
-            height: 37px;
-          }
+      button {
+        @apply p-0 pb-0.5;
+        svg {
+          @apply text-text;
         }
       }
     }
-    #chatNew {
-      @apply justify-between;
-      article {
-        @apply flex-row px-12;
-        label {
-          @apply flex w-1/5 justify-end p-3;
-        }
-        div {
-            @apply flex grow justify-start p-3;
-          input {
-            @apply bg-midnight text-text accent-cyan p-2;
-          }
+    section {
+      @apply flex min-h-0 flex-col;
+      button {
+        @apply bg-midnight w-3/4 text-left justify-start mb-2 mx-auto p-1.5 pl-8;
+      }
+    }
+    article {
+      @apply flex min-h-0 flex-row w-full bg-editor-bg justify-center;
+      label {
+        @apply m-2 p-0 h-fit;
+      }
+      input[type="text"],
+      input[type="number"],
+      textarea {
+        @apply px-3 py-1 h-fit mr-2 my-2 bg-midnight;
+      }
+    }
+    nav {
+      @apply justify-end border-0 bg-menu-bg w-auto mt-0.5;
+      button {
+        @apply flex bg-midnight justify-center items-center m-2;
+        svg {
+          @apply mr-3.5;
+          width: 37px;
+          height: 37px;
         }
       }
+    }
+  }
+  #sauce,
+  #chatNew {
+    @apply justify-between;
+    article {
+      @apply flex-row px-12;
+      label {
+        @apply flex w-1/5 justify-end p-3;
+      }
+      div {
+        @apply flex grow justify-start p-3;
+        input {
+          @apply bg-midnight text-text accent-cyan p-2;
+        }
+        &.lil {
+          @apply pt-0!;
+        }
+      }
+    }
+  }
+  #sauce {
+    label {
+      padding: 10px 0 0 10px !important;
+    }
+    #sauceBytes {
+      @apply bg-editor-bg text-chat border-0 p-0 m-0 text-lg;
     }
   }
   #charmap {
@@ -594,13 +611,13 @@
       }
       button {
         @apply 2xl:text-2xl 3xl:text-3xl uppercase flex justify-center
-          items-center text-text bg-gray-950 p-2 ml-6;
+          items-center text-text bg-gray-950 p-2 mr-6;
         svg {
           @apply shrink-0 w-[36px] h-[36px] mr-2 inline-flex overflow-hidden;
         }
       }
       nav button:last-of-type {
-        @apply ml-0!;
+        @apply mr-0!;
       }
     }
     #splash,
@@ -616,7 +633,7 @@
         @apply flex flex-row w-full h-auto p-1;
       }
       nav {
-        @apply flex-row-reverse;
+        @apply justify-end;
         button:hover,
         button:focus {
           @apply bg-purp;
@@ -636,6 +653,9 @@
       }
       img {
         @apply w-full pxl8;
+      }
+      nav {
+        @apply justify-center;
       }
     }
     #fonts {
