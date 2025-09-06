@@ -4,7 +4,7 @@ import type {GlobalState} from './state';
 import type {PubSub} from './eventBus';
 import type {FontType} from './fontManager';
 import {createOfflineRoomState, createOfflineCanvasState} from './state';
-import {initCanvasRenderer, resetCanvasRenderer} from './canvasRenderer';
+import {forceFullRedraw, initCanvasRenderer, resetCanvasRenderer, resizeCanvasToState} from './canvasRenderer';
 import {setFont, FontRenderer} from './fontManager';
 import {PalettePicker, createDefaultPalette, Palette} from './paletteManager';
 import {GridOverlay} from './gridOverlay';
@@ -216,7 +216,6 @@ const getElements = ():void=>{
   void move;
   void charmap;
   void ice;
-  void spacing;
 }
 
 /* <--//----------------------------------------------------------[internal] */
@@ -472,20 +471,6 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   initCanvas(art, 'Art Drawing Canvas');
   sauceDefaults();
 
-  //--------------- file opts
-  add(fileDraw, async _=>{
-    fontRenderer = await setFont(defaultFont, 'cp437', palette, false);
-    state.currentRoom = createOfflineRoomState(state.user);
-    state.currentRoom.canvas = createOfflineCanvasState();
-    resetCanvasRenderer(state, palette, fontRenderer);
-    displayRes(80, 25);
-    fontSelect.value = defaultFont;
-    fontPreview.src = `./ui/fontz/${defaultFont}.png`;
-    fontLabel.innerText = defaultFont;
-    sauceDefaults();
-    setCursorPos(1,1);
-    modalClose();
-  });
   //--------------- tools
 
   // keeb
@@ -631,6 +616,34 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   });
   add(font,_=>modalShow('fonts'));
 
+  add(spacing, _=>{
+    if (!state.currentRoom) return;
+    const c = state.currentRoom.canvas;
+
+    // Toggle spacing (0 <-> 1)
+    const newValue = !c.spacing;
+    fontRenderer.setLetterSpacing(newValue);
+    c.spacing = newValue ? 1 : 0;
+
+    // Compute logical canvas size with new spacing
+    const cellWidth = fontRenderer.width + (fontRenderer.getLetterSpacing() ? 1 : 0);
+    const cellHeight = fontRenderer.height;
+    const logicalWidth = c.width * cellWidth;
+    const logicalHeight = c.height * cellHeight;
+
+    resizeCanvasToState();
+    forceFullRedraw();
+    eventBus.publish('ui:canvas:resize', {
+      width: logicalWidth,
+      height: logicalHeight,
+      font: fontRenderer,
+      columns: c.width,
+      rows: c.height,
+      dpr: 1
+    });
+  });
+
+
   //-------------- resize canvas
   add(resSave,_=>{
     const cols = Number(txtCols.value);
@@ -665,6 +678,22 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   sauceComments.addEventListener('input', enforceMaxBytes);
   add(sauceSave,_=>{
     updateSauce();
+    modalClose();
+  });
+
+  //--------------- file opts
+  add(fileDraw, async _=>{
+    fontRenderer = await setFont(defaultFont, 'cp437', palette, false);
+    state.currentRoom = createOfflineRoomState(state.user);
+    state.currentRoom.canvas = createOfflineCanvasState();
+    resetCanvasRenderer(state, palette, fontRenderer);
+    displayRes(80, 25);
+    gridOverlay.setFont(fontRenderer);
+    fontSelect.value = defaultFont;
+    fontPreview.src = `./ui/fontz/${defaultFont}.png`;
+    fontLabel.innerText = defaultFont;
+    sauceDefaults();
+    setCursorPos(1,1);
     modalClose();
   });
 

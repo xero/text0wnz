@@ -156,7 +156,7 @@ export function createOfflineCanvasState(): CanvasState {
     height,
     font: 'TOPAZ437 8x16',
     fontType: 'cp437',
-    spacing: 1,
+    spacing: 0,
     ice: false,
     colors: new Array<number>(16).fill(0),
     rawdata,
