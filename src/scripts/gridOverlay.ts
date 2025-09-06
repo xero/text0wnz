@@ -46,8 +46,14 @@ export class GridOverlay {
     this._canvasResizeUnsub = eventBus.subscribe('ui:canvas:resize', this._resizeListener);
   }
 
+
+  // Return font cell width including spacing if enabled
+  private getFontCellWidth(): number {
+    return this.font.width + (this.font.getLetterSpacing() ? 1 : 0);
+  }
+
   private gridParamsChanged() {
-    const fontWidth = this.font.width;
+    const fontWidth = this.getFontCellWidth();
     const fontHeight = this.font.height;
     const columns = this.getColumns();
     const rows = this.getRows();
@@ -87,7 +93,7 @@ export class GridOverlay {
   }
 
   resize() {
-    const fontWidth = this.font.width;
+    const fontWidth = this.getFontCellWidth();
     const fontHeight = this.font.height;
     const columns = this.getColumns();
     const rows = this.getRows();
@@ -124,7 +130,7 @@ export class GridOverlay {
   }
 
   renderGrid(useCache: boolean) {
-    const fontWidth = this.font.width;
+    const fontWidth = this.getFontCellWidth();
     const fontHeight = this.font.height;
     const columns = this.getColumns();
     const rows = this.getRows();

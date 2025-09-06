@@ -2,6 +2,7 @@
 import type {GlobalState, CanvasState} from './state';
 import {eventBus} from './eventBus';
 import {setCursorPos} from './uiController';
+import {FontRenderer} from './fontManager';
 
 // --- Types
 type RGBA = [number, number, number, number];
@@ -21,24 +22,11 @@ export interface Palette {
   setBackgroundColor(n: number): void;
 }
 
-export interface FontRenderer {
-  width: number;
-  height: number;
-  draw(
-    charCode: number,
-    fg: number,
-    bg: number,
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number
-  ): void;
-}
-
 // --- Globals
-let ctx: CanvasRenderingContext2D | null = null;           // onscreen ctx
-let canvas: HTMLCanvasElement | null = null;               // onscreen canvas
-let offscreen: HTMLCanvasElement | null = null;            // offscreen buffer
-let offctx: CanvasRenderingContext2D | null = null;        // offscreen ctx
+let ctx: CanvasRenderingContext2D | null = null;    // onscreen ctx
+let canvas: HTMLCanvasElement | null = null;        // onscreen canvas
+let offscreen: HTMLCanvasElement | null = null;     // offscreen buffer
+let offctx: CanvasRenderingContext2D | null = null; // offscreen ctx
 let font: FontRenderer | null = null;
 let palette: Palette | null = null;
 let state: GlobalState | null = null;
@@ -113,12 +101,14 @@ function setupOffscreen() {
   offctx = offscreen.getContext('2d', {willReadFrequently: false});
 }
 
-function resizeCanvasToState() {
+export function resizeCanvasToState() {
   if (!canvas || !state || !font) return;
   const c = state.currentRoom?.canvas;
   if (!c) return;
-  const logicalWidth = c.width * font.width;
-  const logicalHeight = c.height * font.height;
+  const cellWidth = font.width + (font.getLetterSpacing() ? 1 : 0);
+  const cellHeight = font.height;
+  const logicalWidth = c.width * cellWidth;
+  const logicalHeight = c.height * cellHeight;
   canvas.width = logicalWidth;
   canvas.height = logicalHeight;
   canvas.style.width = `${logicalWidth}px`;
@@ -197,7 +187,7 @@ function flushDirtyCells() {
   }
 }
 
-function forceFullRedraw() {
+export function forceFullRedraw() {
   needsFullRedraw = true;
   queueFlushDirty();
 }

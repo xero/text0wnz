@@ -347,9 +347,9 @@
     article#canvasArea {
       @apply
         relative w-full min-w-1 h-full min-h-0 justify-items-center
-        flex justify-center overflow-y-scroll overflow-x-auto pt-3;
+        flex justify-center overflow-y-scroll overflow-x-auto;
       canvas#art {
-        @apply block z-1 box-border;
+        @apply block z-1 box-border bg-black;
         box-shadow: 0 4px 32px rgba(0,0,0,0.7);
         touch-action: none;
       }

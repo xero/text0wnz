@@ -70,7 +70,7 @@ describe('state', () => {
       expect(canvas.height).toBe(25);
       expect(canvas.font).toBe('TOPAZ437 8x16');
       expect(canvas.fontType).toBe('cp437');
-      expect(canvas.spacing).toBe(1);
+      expect(canvas.spacing).toBe(0);
       expect(canvas.ice).toBe(false);
       expect(canvas.colors).toHaveLength(16);
       expect(canvas.rawdata).toBeInstanceOf(Uint8Array);
