@@ -194,6 +194,7 @@ const getElements = ():void=>{
   /* @TODO: remove linter fix */
   void sm;
   void joint;
+  void collab;
   void offline;
   void circles;
   void fliph;
