@@ -142,10 +142,8 @@ tests/
 ```
 
 >[!IMPORTANT]
->- **Vitest** will automatically run all tests in `tests/unit/`
->  - and _any__ other `tests/` subdirectory *except* `tests/e2e/`
+>- **Vitest** will automatically run all tests in `tests/unit/` and _any_ other `tests/` subdirectory *except* `tests/e2e/`
 >- **Playwright** will only run tests inside `tests/e2e/`
->- all reports are written to `tests/results`
 
 ### Testing Commands
 
