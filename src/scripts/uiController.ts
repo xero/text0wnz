@@ -405,7 +405,7 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   add(fileDraw, async _=>{
     fontRenderer = await setFont(defaultFont, 'cp437', palette, false);
     state.currentRoom = createOfflineRoomState(state.user);
-    createOfflineCanvasState();
+    state.currentRoom.canvas = createOfflineCanvasState();
     resetCanvasRenderer(state, palette, fontRenderer);
     $$('#resolution label').innerText = `80 cols x 25 rows`;
     fontSelect.value = defaultFont;
