@@ -164,7 +164,7 @@ function flushDirtyCells() {
   const c = state.currentRoom?.canvas;
   if (!c) return;
 
-  const {width, height, rawdata} = c;
+  const {width, height, rawdata, ice} = c; // Get the ice setting from canvas
   let needsFullBlit = false;
 
   if (needsFullRedraw) {
@@ -175,8 +175,20 @@ function flushDirtyCells() {
         const charCode = rawdata[idx];
         const fg = rawdata[idx + 1];
         const bg = rawdata[idx + 2];
-        const effectiveColors = getEffectiveColors(fg, bg, c.ice);
-        font.draw(charCode, effectiveColors.fg, effectiveColors.bg, offctx, x, y);
+
+        if (ice) {
+          // In ICE colors mode, use colors as-is (bright colors are displayed, not blinking)
+          font.draw(charCode, fg, bg, offctx, x, y);
+        } else {
+          // In non-ICE mode, handle background colors >= 8 specially (blink state)
+          const actualBg = bg >= 8 ? bg - 8 : bg;
+          if (bg >= 8 && blinkVisible) {
+            // During blink-on phase, background color becomes foreground color
+            font.draw(charCode, fg, fg, offctx, x, y);
+          } else {
+            font.draw(charCode, fg, actualBg, offctx, x, y);
+          }
+        }
       }
     }
     dirtyCells.clear();
@@ -194,8 +206,20 @@ function flushDirtyCells() {
       const bg = rawdata[idx + 2];
       // clear cell area
       offctx.clearRect(x * font.width, y * font.height, font.width, font.height);
-      const effectiveColors = getEffectiveColors(fg, bg, c.ice);
-      font.draw(charCode, effectiveColors.fg, effectiveColors.bg, offctx, x, y);
+
+      if (ice) {
+        // In ICE colors mode, use colors as-is (bright colors are displayed, not blinking)
+        font.draw(charCode, fg, bg, offctx, x, y);
+      } else {
+        // In non-ICE mode, handle background colors >= 8 specially (blink state)
+        const actualBg = bg >= 8 ? bg - 8 : bg;
+        if (bg >= 8 && blinkVisible) {
+          // During blink-on phase, background color becomes foreground color
+          font.draw(charCode, fg, fg, offctx, x, y);
+        } else {
+          font.draw(charCode, fg, actualBg, offctx, x, y);
+        }
+      }
     }
     dirtyCells.clear();
     processDirtyRegions();
@@ -362,8 +386,20 @@ export function drawRegion(x: number, y: number, w: number, h: number) {
       const fg = rawdata[idx + 1];
       const bg = rawdata[idx + 2];
       offctx.clearRect(cellX * font.width, cellY * font.height, font.width, font.height);
-      const effectiveColors = getEffectiveColors(fg, bg, c.ice);
-      font.draw(charCode, effectiveColors.fg, effectiveColors.bg, offctx, cellX, cellY);
+
+      if (c.ice) {
+        // In ICE colors mode, use colors as-is (bright colors are displayed, not blinking)
+        font.draw(charCode, fg, bg, offctx, cellX, cellY);
+      } else {
+        // In non-ICE mode, handle background colors >= 8 specially (blink state)
+        const actualBg = bg >= 8 ? bg - 8 : bg;
+        if (bg >= 8 && blinkVisible) {
+          // During blink-on phase, background color becomes foreground color
+          font.draw(charCode, fg, fg, offctx, cellX, cellY);
+        } else {
+          font.draw(charCode, fg, actualBg, offctx, cellX, cellY);
+        }
+      }
     }
   }
   const pixelX = clampedX * font.width;
@@ -664,21 +700,6 @@ export function setIceColors(enabled: boolean) {
 
   // Notify UI of ICE state change
   eventBus.publish('ui:ice:changed', {ice: c.ice});
-}
-
-/**
- * Get the effective colors for rendering, handling ICE vs blinking mode
- */
-function getEffectiveColors(fg: number, bg: number, ice: boolean): { fg: number; bg: number } {
-  if (ice || bg < 8) {
-    // ICE mode or low background colors: use colors as-is
-    return {fg, bg};
-  } else {
-    // Non-ICE mode with high background (8-15): convert to blinking
-    const normalBg = bg - 8; // Map 8-15 to 0-7
-    const blinkBg = blinkVisible ? normalBg : fg; // Alternate between normal bg and character color
-    return {fg, bg: blinkBg};
-  }
 }
 
 // Initialize blinking support when canvas state changes
