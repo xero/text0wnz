@@ -69,6 +69,31 @@ export interface PalettePickerOptions {
   updateCurrentColorsPreview: () => void;
 }
 
+// Global palette instance
+let globalPalette: Palette | null = null;
+
+// Get or create global palette
+export function getGlobalPalette(): Palette {
+  if (!globalPalette) {
+    globalPalette = createDefaultPalette();
+  }
+  return globalPalette;
+}
+
+// Update palette with new colors
+export function updatePaletteColors(colors: RGB6Bit[]): void {
+  const palette = getGlobalPalette();
+  const newPalette = createPalette(colors,
+    palette.getForegroundColor(),
+    palette.getBackgroundColor());
+
+  // Copy all properties
+  Object.assign(palette, newPalette);
+
+  // Trigger any needed updates
+  document.dispatchEvent(new CustomEvent("onPaletteChange"));
+}
+
 export class PalettePicker {
   private ctx: CanvasRenderingContext2D;
   private imageData: ImageData[] = [];

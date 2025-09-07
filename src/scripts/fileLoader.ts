@@ -1,6 +1,9 @@
 // async file parsing, emits events
 import type {SauceMetadata, CanvasState, FontType} from './state';
 import {eventBus} from './eventBus';
+import {resizeCanvasToState, updateCanvasData} from './canvasRenderer';
+import {setFont} from './fontManager';
+import {createDefaultPalette} from './paletteManager';
 
 function readString(data: Uint8Array, offset: number, length: number): string {
   return new TextDecoder('latin1').decode(data.slice(offset, offset + length))
@@ -114,15 +117,12 @@ function mapSauceToFont(sauce: SauceMetadata | null): FontMapping {
 /**
  * Parse ANSI escape sequences and populate canvas rawdata
  */
-export async function parseAnsiToCanvas(data: Uint8Array, sauce: SauceMetadata | null): Promise<CanvasState> {
+export function parseAnsiToCanvas(data: Uint8Array, sauce: SauceMetadata | null): CanvasState {
   // Default to 80x25 or use SAUCE dimensions if available
   const width = 80, height = 25;
 
   // Map SAUCE font info to appropriate font
   const fontMapping = mapSauceToFont(sauce);
-
-  // TODO: Extract dimensions from SAUCE if available
-  // For now, detect from content or use defaults
 
   // Create canvas rawdata in teXt0wnz format: [charCode, fg, bg] triplets
   const rawdata = new Uint8Array(width * height * 3);
@@ -195,8 +195,6 @@ export async function parseAnsiToCanvas(data: Uint8Array, sauce: SauceMetadata |
             const n = parseInt(seq) || 1;
             x = Math.max(0, x - n);
           }
-          // Add other ANSI commands as needed
-
           break;
         } else {
           seq += String.fromCharCode(c);
@@ -230,31 +228,18 @@ export async function parseAnsiToCanvas(data: Uint8Array, sauce: SauceMetadata |
     i++;
   }
 
-  // Get proper palette colors using paletteManager
+  // Get default palette colors
+  const palette = createDefaultPalette();
+  const rgb6BitArray = palette.to6BitArray();
   const paletteColors: number[] = [];
-  try {
-    // Import and create default palette to get proper colors
-    const {createDefaultPalette} = await import('./paletteManager');
-    const palette = createDefaultPalette();
-    const rgb6BitArray = palette.to6BitArray();
 
-    // Convert RGB6Bit to hex colors for state
-    for (const [r, g, b] of rgb6BitArray) {
-      // Convert 6-bit to 8-bit and then to hex
-      const r8 = (r << 2) | (r >> 4);
-      const g8 = (g << 2) | (g >> 4);
-      const b8 = (b << 2) | (b >> 4);
-      paletteColors.push((r8 << 16) | (g8 << 8) | b8);
-    }
-  } catch (error) {
-    console.warn('Failed to get palette colors, using defaults:', error);
-    // Fallback to basic 16-color palette
-    paletteColors.push(
-      0x000000, 0x800000, 0x008000, 0x808000, // 0-3: black, red, green, yellow
-      0x000080, 0x800080, 0x008080, 0xC0C0C0, // 4-7: blue, magenta, cyan, white
-      0x808080, 0xFF0000, 0x00FF00, 0xFFFF00, // 8-11: bright versions
-      0x0000FF, 0xFF00FF, 0x00FFFF, 0xFFFFFF  // 12-15: bright blue, magenta, cyan, white
-    );
+  // Convert RGB6Bit to hex colors for state
+  for (const [r, g, b] of rgb6BitArray) {
+    // Convert 6-bit to 8-bit and then to hex
+    const r8 = (r << 2) | (r >> 4);
+    const g8 = (g << 2) | (g >> 4);
+    const b8 = (b << 2) | (b >> 4);
+    paletteColors.push((r8 << 16) | (g8 << 8) | b8);
   }
 
   return {
@@ -266,7 +251,7 @@ export async function parseAnsiToCanvas(data: Uint8Array, sauce: SauceMetadata |
     font: fontMapping.name,
     fontType: fontMapping.type,
     spacing: 0,
-    ice: false,
+    ice: false, // Start with ICE colors off
     colors: paletteColors,
     rawdata,
     updatedAt: new Date().toISOString()
@@ -278,10 +263,6 @@ export async function parseAnsiToCanvas(data: Uint8Array, sauce: SauceMetadata |
  */
 async function loadAppropriateFont(canvasState: CanvasState): Promise<void> {
   try {
-    // Import font manager and palette manager
-    const {setFont} = await import('./fontManager');
-    const {createDefaultPalette} = await import('./paletteManager');
-
     // Create default palette for font loading
     const palette = createDefaultPalette();
 
@@ -309,38 +290,45 @@ async function loadAppropriateFont(canvasState: CanvasState): Promise<void> {
  */
 export async function loadAnsiFile(file: File): Promise<void> {
   try {
+    console.log(`Loading ANSI file: ${file.name}`);
     const arrayBuffer = await file.arrayBuffer();
     const data = new Uint8Array(arrayBuffer);
 
     // Parse SAUCE metadata
     const sauce = parseSauce(data);
+    console.log('SAUCE metadata:', sauce);
 
     // Parse ANSI content to canvas format
-    const canvasState = await parseAnsiToCanvas(data, sauce);
+    const canvasState = parseAnsiToCanvas(data, sauce);
+    console.log(`Parsed ANSI dimensions: ${canvasState.width}x${canvasState.height}`);
 
     // Load appropriate font based on SAUCE metadata
     await loadAppropriateFont(canvasState);
 
-    // Update canvas data using existing architecture
-    const {updateCanvasData, resizeCanvasToState} = await import('./canvasRenderer');
+    // Update the canvas data
     updateCanvasData(canvasState);
 
     // Resize canvas to match the loaded file dimensions
+    // This ensures the canvas is properly sized
     resizeCanvasToState();
+    console.log('Canvas resized to match file dimensions');
 
-    // Populate SAUCE form
+    // Populate SAUCE form if needed
     eventBus.publish('local:sauce:populate', {sauce});
 
-    // Emit event that canvas renderer already listens for
+    // Emit event for other components that need to know a file was loaded
     eventBus.publish('local:file:loaded', {
       fileName: file.name,
       data: arrayBuffer
     });
 
+    // Force a full redraw to ensure colors are displayed correctly
+    eventBus.publish('local:canvas:cleared', { reason: "new-file" });
+
   } catch (error) {
     console.error('Failed to load ANSI file:', error);
     const message = error instanceof Error ? error.message : String(error);
-    // Emit error notification
+
     eventBus.publish('ui:notification', {
       message: `Failed to load ${file.name}: ${message}`,
       level: 'error'
