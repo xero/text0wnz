@@ -675,9 +675,9 @@ function getEffectiveColors(fg: number, bg: number, ice: boolean): { fg: number;
     return {fg, bg};
   } else {
     // Non-ICE mode with high background (8-15): convert to blinking
-    const effectiveBg = bg - 8; // Map 8-15 to 0-7
-    const effectiveFg = blinkVisible ? fg : effectiveBg; // Hide foreground when blinking off
-    return {fg: effectiveFg, bg: effectiveBg};
+    const normalBg = bg - 8; // Map 8-15 to 0-7
+    const blinkBg = blinkVisible ? normalBg : fg; // Alternate between normal bg and character color
+    return {fg, bg: blinkBg};
   }
 }
 

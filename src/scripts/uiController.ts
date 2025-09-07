@@ -491,9 +491,14 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
 
   // ICE colors toggle
   add(ice, _=>{
-    void import('./canvasRenderer').then(({toggleIceColors})=>{
-      toggleIceColors();
-    });
+    if (!state.currentRoom) return;
+    // Toggle ICE colors mode
+    const c = state.currentRoom.canvas;
+    c.ice = !c.ice;
+    forceFullRedraw(); // Redraw the canvas with new ICE setting
+
+    // Notify UI of ICE state change
+    eventBus.publish('ui:ice:changed', {ice: c.ice});
   });
 
   // brushes
