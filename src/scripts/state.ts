@@ -49,6 +49,7 @@ export interface SauceMetadata {
   comments?: string;
   width?: number;
   height?: number;
+  ice?: boolean;
 }
 
 export interface CanvasState {

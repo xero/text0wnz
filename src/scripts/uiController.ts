@@ -488,6 +488,14 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   add(zoom, _=>toolOps('zoom'));
   add(dropper, _=>toolOpsHide());
   add(mirror, _=>toolOpsHide());
+
+  // ICE colors toggle
+  add(ice, _=>{
+    void import('./canvasRenderer').then(({toggleIceColors})=>{
+      toggleIceColors();
+    });
+  });
+
   // brushes
   add(characterBrush, _=>toolOps('char',true));
 
@@ -698,6 +706,12 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   //--------------- Canvas resize event listener
   eventBus.subscribe('ui:canvas:resize', ({columns, rows})=>{
     displayRes(columns, rows);
+  });
+
+  //--------------- ICE colors state listener
+  eventBus.subscribe('ui:ice:changed', ({ice: iceEnabled})=>{
+    // Update ICE button appearance to show current state
+    cl(ice, 'selected', iceEnabled);
   });
 }
 

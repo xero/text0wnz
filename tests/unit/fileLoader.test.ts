@@ -127,6 +127,110 @@ describe('SAUCE Parser', () => {
     expect(sauce?.width).toBe(80);
     expect(sauce?.height).toBe(132);
   });
+
+  it('should parse ICE colors flag from TFlags for ANSI files', () => {
+    const fileData = new Uint8Array(256);
+    const sauceStart = fileData.length - 128;
+    
+    // Basic SAUCE header
+    const sauceData = new Uint8Array(128);
+    sauceData.set([0x53, 0x41, 0x55, 0x43, 0x45], 0); // "SAUCE"
+    sauceData.set([0x30, 0x30], 5); // "00"
+    
+    // Minimal metadata
+    const titleBytes = new Uint8Array(35);
+    titleBytes.set(new TextEncoder().encode('ICE Test'), 0);
+    sauceData.set(titleBytes, 7);
+    
+    // Binary fields for ANSI file with ICE colors enabled
+    sauceData[94] = 1;    // DataType = 1 (Character/ANSI)
+    sauceData[95] = 1;    // FileType = 1 (ANSI)
+    sauceData[100] = 0x01; // TFlags with bit 0 set (ICE colors enabled)
+    
+    fileData.set(sauceData, sauceStart);
+    
+    const sauce = parseSauce(fileData);
+    
+    expect(sauce?.ice).toBe(true);
+  });
+
+  it('should parse ICE colors flag as false when bit 0 is not set', () => {
+    const fileData = new Uint8Array(256);
+    const sauceStart = fileData.length - 128;
+    
+    // Basic SAUCE header
+    const sauceData = new Uint8Array(128);
+    sauceData.set([0x53, 0x41, 0x55, 0x43, 0x45], 0); // "SAUCE"
+    sauceData.set([0x30, 0x30], 5); // "00"
+    
+    // Minimal metadata
+    const titleBytes = new Uint8Array(35);
+    titleBytes.set(new TextEncoder().encode('No ICE Test'), 0);
+    sauceData.set(titleBytes, 7);
+    
+    // Binary fields for ANSI file with ICE colors disabled
+    sauceData[94] = 1;    // DataType = 1 (Character/ANSI)
+    sauceData[95] = 1;    // FileType = 1 (ANSI)
+    sauceData[100] = 0x00; // TFlags with bit 0 not set (ICE colors disabled)
+    
+    fileData.set(sauceData, sauceStart);
+    
+    const sauce = parseSauce(fileData);
+    
+    expect(sauce?.ice).toBe(false);
+  });
+
+  it('should parse ICE colors with other TFlags bits set', () => {
+    const fileData = new Uint8Array(256);
+    const sauceStart = fileData.length - 128;
+    
+    // Basic SAUCE header
+    const sauceData = new Uint8Array(128);
+    sauceData.set([0x53, 0x41, 0x55, 0x43, 0x45], 0); // "SAUCE"
+    sauceData.set([0x30, 0x30], 5); // "00"
+    
+    // Minimal metadata
+    const titleBytes = new Uint8Array(35);
+    titleBytes.set(new TextEncoder().encode('Mixed TFlags'), 0);
+    sauceData.set(titleBytes, 7);
+    
+    // Binary fields for ANSI file with multiple TFlags bits set
+    sauceData[94] = 1;    // DataType = 1 (Character/ANSI)
+    sauceData[95] = 1;    // FileType = 1 (ANSI)
+    sauceData[100] = 0x0F; // TFlags = 00001111 (ICE + letter spacing + aspect ratio bits)
+    
+    fileData.set(sauceData, sauceStart);
+    
+    const sauce = parseSauce(fileData);
+    
+    expect(sauce?.ice).toBe(true); // Should still extract ICE bit correctly
+  });
+
+  it('should not set ICE flag for non-ANSI files', () => {
+    const fileData = new Uint8Array(256);
+    const sauceStart = fileData.length - 128;
+    
+    // Basic SAUCE header
+    const sauceData = new Uint8Array(128);
+    sauceData.set([0x53, 0x41, 0x55, 0x43, 0x45], 0); // "SAUCE"
+    sauceData.set([0x30, 0x30], 5); // "00"
+    
+    // Minimal metadata
+    const titleBytes = new Uint8Array(35);
+    titleBytes.set(new TextEncoder().encode('Non-ANSI File'), 0);
+    sauceData.set(titleBytes, 7);
+    
+    // Binary fields for non-Character file (Bitmap, for example)
+    sauceData[94] = 2;    // DataType = 2 (Bitmap) - not Character
+    sauceData[95] = 0;    // FileType = 0 (GIF)
+    sauceData[100] = 0x01; // TFlags with ICE bit set (but shouldn't apply to non-ANSI)
+    
+    fileData.set(sauceData, sauceStart);
+    
+    const sauce = parseSauce(fileData);
+    
+    expect(sauce?.ice).toBeUndefined(); // ICE flag should not be set for non-ANSI files
+  });
 });
 
 describe('ANSI Parser', () => {
@@ -287,6 +391,43 @@ describe('ANSI Parser', () => {
     expect(canvas.height).toBe(50);
     expect(canvas.rawdata).toHaveLength(100 * 50 * 3);
     expect(canvas.sauce).toEqual(sauce);
+  });
+
+  it('should use ICE colors setting from SAUCE metadata', async () => {
+    const sauceWithIce = {
+      title: 'ICE Colors Art',
+      author: 'Test Artist',
+      group: 'Test Group',
+      comments: 'IBM VGA',
+      ice: true
+    };
+    
+    const ansiData = new Uint8Array([0x48, 0x69]); // "Hi"
+    const canvas = await parseAnsiToCanvas(ansiData, sauceWithIce);
+    
+    expect(canvas.ice).toBe(true);
+    expect(canvas.sauce).toEqual(sauceWithIce);
+  });
+
+  it('should default to ICE colors false when not specified in SAUCE', async () => {
+    const sauceWithoutIce = {
+      title: 'No ICE Art',
+      author: 'Test Artist',
+      group: 'Test Group',
+      comments: 'IBM VGA'
+    };
+    
+    const ansiData = new Uint8Array([0x48, 0x69]); // "Hi"
+    const canvas = await parseAnsiToCanvas(ansiData, sauceWithoutIce);
+    
+    expect(canvas.ice).toBe(false);
+  });
+
+  it('should default to ICE colors false when no SAUCE metadata', async () => {
+    const ansiData = new Uint8Array([0x48, 0x69]); // "Hi"
+    const canvas = await parseAnsiToCanvas(ansiData, null);
+    
+    expect(canvas.ice).toBe(false);
   });
 
   describe('font mapping', () => {

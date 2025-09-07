@@ -35,9 +35,11 @@ export function parseSauce(data: Uint8Array): SauceMetadata | null {
   // DataType (1 byte) at offset 94
   // TInfo1 (2 bytes LE) at offset 96 - width for ANSI
   // TInfo2 (2 bytes LE) at offset 98 - height for ANSI
+  // TFlags (1 byte) at offset 100 - ANSiFlags for ANSI files
   const dataType = data[sauceStart + 94];
   const tInfo1 = readLE16(data, sauceStart + 96); // width
   const tInfo2 = readLE16(data, sauceStart + 98); // height
+  const tFlags = data[sauceStart + 100]; // ANSiFlags
 
   const sauce: SauceMetadata = {
     title: readString(data, sauceStart + 7, 35).trim(),
@@ -46,10 +48,12 @@ export function parseSauce(data: Uint8Array): SauceMetadata | null {
     comments: readString(data, sauceStart + 104, 22).trim()
   };
 
-  // Add dimensions for ANSI files (DataType 1 = Character)
+  // Add dimensions and ICE colors for ANSI files (DataType 1 = Character)
   if (dataType === 1) {
     if (tInfo1 > 0) sauce.width = tInfo1;
     if (tInfo2 > 0) sauce.height = tInfo2;
+    // Extract ICE colors flag from bit 0 of TFlags (ANSiFlags)
+    sauce.ice = (tFlags & 0x01) !== 0;
   }
 
   return sauce;
@@ -274,7 +278,7 @@ export function parseAnsiToCanvas(data: Uint8Array, sauce: SauceMetadata | null)
     font: fontMapping.name,
     fontType: fontMapping.type,
     spacing: 0,
-    ice: false, // Start with ICE colors off
+    ice: sauce?.ice ?? false, // Use ICE setting from SAUCE metadata, default to false
     colors: paletteColors,
     rawdata,
     updatedAt: new Date().toISOString()

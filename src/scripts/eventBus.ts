@@ -24,6 +24,8 @@ export type EditorEventMap = {
     rows:number;
     dpr:number;
   };
+  'ui:ice:changed': { ice: boolean };
+  'canvas:state:changed': { state?: GlobalState };
   'system:error': {
     type: 'uncaught' | 'unhandledrejection';
     message: string;
