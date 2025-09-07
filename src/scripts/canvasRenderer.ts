@@ -36,6 +36,12 @@ const dirtyRegions: DirtyRegion[] = [];
 let needsFullRedraw = true;
 let rafQueued = false;
 
+// --- Blinking state
+const blinkingCells: Set<number> = new Set();
+let blinkOn = false;
+let blinkTimer: number | null = null;
+
+
 // --- Setup
 export function initCanvasRenderer(
   _state: GlobalState,
@@ -53,10 +59,21 @@ export function initCanvasRenderer(
 
   resizeCanvasToState();
 
-  eventBus.subscribe('ui:state:changed', ({state})=>{
-    void state;
-    resizeCanvasToState();
-    forceFullRedraw();
+  // This is the key change: The renderer now listens for state updates
+  // from the central state manager.
+   eventBus.subscribe('state:canvas:changed', ({canvas}) => {
+    if (state?.currentRoom) {
+      // Update the renderer's state with the new canvas data
+      state.currentRoom.canvas = canvas;
+
+      // Now that the state is correct, resize the canvas buffers
+      resizeCanvasToState();
+
+      // And finally, trigger the redraw with the correct iCE flag
+      updateBlinkTimer(canvas.ice);
+      forceFullRedraw();
+      eventBus.publish('ui:ice:changed', {ice: canvas.ice});
+    }
   });
 
   eventBus.subscribe('local:palette:changed', ()=>{
@@ -70,6 +87,15 @@ export function initCanvasRenderer(
   eventBus.subscribe('local:canvas:cleared', ()=>{
     forceFullRedraw();
   });
+
+  // Initialize ICE colors state and blinking
+  if (state.currentRoom?.canvas) {
+    const c = state.currentRoom.canvas;
+    updateBlinkTimer(c.ice);
+    // Notify UI of initial ICE state
+    eventBus.publish('ui:ice:changed', {ice: c.ice});
+  }
+
   forceFullRedraw();
 
   // --- Return mutator API for palette/font switching
@@ -146,18 +172,28 @@ function flushDirtyCells() {
   const c = state.currentRoom?.canvas;
   if (!c) return;
 
-  const {width, height, rawdata} = c;
+  const {width, height, rawdata, ice} = c;
   let needsFullBlit = false;
 
   if (needsFullRedraw) {
     offctx.clearRect(0, 0, offscreen.width, offscreen.height);
+    blinkingCells.clear();
     for (let y = 0; y < height; ++y) {
       for (let x = 0; x < width; ++x) {
         const idx = (y * width + x) * 3;
         const charCode = rawdata[idx];
         const fg = rawdata[idx + 1];
         const bg = rawdata[idx + 2];
-        font.draw(charCode, fg, bg, offctx, x, y);
+
+        // iCE colors OFF = blinking enabled (bg >= 8), bg color is LOW bit (0-7)
+        // iCE colors ON = blinking disabled, bg color is HIGH bit (8-15)
+        const isBlinking = !ice && bg >= 8;
+        if (isBlinking) blinkingCells.add(idx);
+
+        const effectiveBg = ice ? bg : (bg & 7);
+        const effectiveFg = (isBlinking && blinkOn) ? effectiveBg : fg;
+
+        font.draw(charCode, effectiveFg, effectiveBg, offctx, x, y);
       }
     }
     dirtyCells.clear();
@@ -173,9 +209,18 @@ function flushDirtyCells() {
       const charCode = rawdata[idx];
       const fg = rawdata[idx + 1];
       const bg = rawdata[idx + 2];
-      // clear cell area
-      offctx.clearRect(x * font.width, y * font.height, font.width, font.height);
-      font.draw(charCode, fg, bg, offctx, x, y);
+
+      const isBlinking = !ice && bg >= 8;
+      if (isBlinking) {
+        blinkingCells.add(idx);
+      } else {
+        blinkingCells.delete(idx);
+      }
+
+      const effectiveBg = ice ? bg : (bg & 7);
+      const effectiveFg = (isBlinking && blinkOn) ? effectiveBg : fg;
+
+      font.draw(charCode, effectiveFg, effectiveBg, offctx, x, y);
     }
     dirtyCells.clear();
     processDirtyRegions();
@@ -184,6 +229,57 @@ function flushDirtyCells() {
   if (needsFullBlit) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(offscreen, 0, 0);
+  }
+}
+
+function redrawBlinkingCells() {
+  if (!ctx || !offctx || !state || !font || !palette || !canvas || !offscreen) return;
+  const c = state.currentRoom?.canvas;
+  if (!c || blinkingCells.size === 0) return;
+
+  const {width, rawdata, ice} = c;
+
+  for (const idx of blinkingCells) {
+    const cell = Math.floor(idx / 3);
+    const x = cell % width;
+    const y = Math.floor(cell / width);
+    const charCode = rawdata[idx];
+    const fg = rawdata[idx + 1];
+    const bg = rawdata[idx + 2];
+
+    const effectiveBg = ice ? bg : (bg & 7);
+    const effectiveFg = blinkOn ? effectiveBg : fg;
+
+    // Draw to offscreen buffer
+    font.draw(charCode, effectiveFg, effectiveBg, offctx, x, y);
+
+    // Blit just the updated cell to the visible canvas
+    const cellWidth = font.width + (font.getLetterSpacing() ? 1 : 0);
+    const cellHeight = font.height;
+    const px = x * cellWidth;
+    const py = y * cellHeight;
+    ctx.clearRect(px, py, cellWidth, cellHeight);
+    ctx.drawImage(offscreen, px, py, cellWidth, cellHeight, px, py, cellWidth, cellHeight);
+  }
+}
+
+
+function blink() {
+  blinkOn = !blinkOn;
+  redrawBlinkingCells();
+}
+
+function updateBlinkTimer(ice: boolean) {
+  if (blinkTimer) {
+    clearInterval(blinkTimer);
+    blinkTimer = null;
+  }
+  if (!ice) {
+    blinkTimer = window.setInterval(blink, 500);
+  }
+  // If switching from non-iCE to iCE, ensure blink is off
+  if (ice && blinkOn) {
+    blinkOn = false;
   }
 }
 
@@ -328,7 +424,7 @@ export function drawRegion(x: number, y: number, w: number, h: number) {
   const c = state.currentRoom?.canvas;
   if (!c) return;
 
-  const {width, height, rawdata} = c;
+  const {width, height, rawdata, ice} = c;
   if (w <= 0 || h <= 0) return;
   const clampedX = Math.max(0, Math.min(x, width));
   const clampedY = Math.max(0, Math.min(y, height));
@@ -341,14 +437,26 @@ export function drawRegion(x: number, y: number, w: number, h: number) {
       const charCode = rawdata[idx];
       const fg = rawdata[idx + 1];
       const bg = rawdata[idx + 2];
-      offctx.clearRect(cellX * font.width, cellY * font.height, font.width, font.height);
-      font.draw(charCode, fg, bg, offctx, cellX, cellY);
+
+      const isBlinking = !ice && bg >= 8;
+      if (isBlinking) {
+        blinkingCells.add(idx);
+      } else {
+        blinkingCells.delete(idx);
+      }
+
+      const effectiveBg = ice ? bg : (bg & 7);
+      const effectiveFg = (isBlinking && blinkOn) ? effectiveBg : fg;
+
+      font.draw(charCode, effectiveFg, effectiveBg, offctx, cellX, cellY);
     }
   }
-  const pixelX = clampedX * font.width;
-  const pixelY = clampedY * font.height;
-  const pixelW = clampedW * font.width;
-  const pixelH = clampedH * font.height;
+  const cellWidth = font.width + (font.getLetterSpacing() ? 1 : 0);
+  const cellHeight = font.height;
+  const pixelX = clampedX * cellWidth;
+  const pixelY = clampedY * cellHeight;
+  const pixelW = clampedW * cellWidth;
+  const pixelH = clampedH * cellHeight;
 
   ctx.clearRect(pixelX, pixelY, pixelW, pixelH);
   ctx.drawImage(offscreen, pixelX, pixelY, pixelW, pixelH, pixelX, pixelY, pixelW, pixelH);
@@ -359,6 +467,10 @@ export function resetCanvasRenderer(
   newPalette?: Palette,
   newFont?: FontRenderer
 ) {
+  if (blinkTimer) {
+    clearInterval(blinkTimer);
+    blinkTimer = null;
+  }
   ctx = null;
   canvas = null;
   offctx = null;
@@ -368,6 +480,7 @@ export function resetCanvasRenderer(
   state = null;
   dirtyCells.clear();
   dirtyRegions.length = 0;
+  blinkingCells.clear();
   needsFullRedraw = true;
   rafQueued = false;
   if (newState && newPalette && newFont) {
@@ -519,15 +632,18 @@ export function shadeCell(x: number, y: number, fg: number, bg: number, reduce: 
 }
 
 /**
- * Utility for external mutation (e.g., after a draw op)
- * Forces full redraw for now. (Optionally, could diff and dirty only changed cells.)
+ * Utility for external mutation
  */
-export function updateCanvasData(newCanvas: CanvasState) {
-  if (state && state.currentRoom) {
-    state.currentRoom.canvas = newCanvas;
-    needsFullRedraw = true;
-    queueFlushDirty();
+export function updateCanvasData(canvasState: CanvasState): void {
+  if (!state || !state.currentRoom) {
+    console.warn('Cannot update canvas data: state or current room is not initialized.');
+    return;
   }
+  state.currentRoom.canvas = canvasState;
+  updateBlinkTimer(canvasState.ice);
+  needsFullRedraw = true;
+  queueFlushDirty();
+  eventBus.publish('ui:ice:changed', {ice: canvasState.ice});
 }
 
 // --- Exposes a way to get the canvas image (for saving/exporting)
@@ -535,3 +651,21 @@ export function getCanvasImage(): HTMLCanvasElement | null {
   return canvas;
 }
 
+/**
+ * Toggle ICE colors mode and update rendering
+ */
+export function toggleIceColors() {
+  if (!state || !state.currentRoom) return;
+  const c = state.currentRoom.canvas;
+
+  c.ice = !c.ice;
+
+  updateBlinkTimer(c.ice);
+
+  // Trigger full redraw to update all cells
+  needsFullRedraw = true;
+  queueFlushDirty();
+
+  // Notify UI of ICE state change
+  eventBus.publish('ui:ice:changed', {ice: c.ice});
+}

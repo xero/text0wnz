@@ -1,6 +1,7 @@
-import type {Palette} from './canvasRenderer';
+import type {Palette} from './paletteManager';
 
 export type FontType = 'cp437' | 'utf8';
+
 export interface FontRenderer {
   width: number;
   height: number;
@@ -28,8 +29,8 @@ export async function setFont(
   letterSpacing: boolean = false
 ): Promise<FontRenderer> {
   const match = fontName.match(/(\d+)x(\d+)$/i);
-  // Default to 16x16 if not found (legacy or fallback)
-  const fontWidth = match ? parseInt(match[1], 10) : 16;
+  // Default to 8x16 if not found in the name
+  const fontWidth = match ? parseInt(match[1], 10) : 8;
   const fontHeight = match ? parseInt(match[2], 10) : 16;
 
   if (fontType === 'utf8' && fontName === 'system') {
@@ -44,6 +45,13 @@ export async function setFont(
         const ch = String.fromCharCode(charCode);
         ctx.font = `${fontHeight}px monospace`;
         ctx.textBaseline = 'top';
+        ctx.fillStyle = `rgba(${palette.getRGBAColor(bg).join(',')})`;
+        ctx.fillRect(
+          x * (fontWidth + (spacing ? 1 : 0)),
+          y * fontHeight,
+          fontWidth,
+          fontHeight
+        );
         ctx.fillStyle = `rgba(${palette.getRGBAColor(fg).join(',')})`;
         ctx.fillText(ch, x * (fontWidth + (spacing ? 1 : 0)), y * fontHeight);
       }
@@ -53,8 +61,6 @@ export async function setFont(
   }
 }
 
-type FontGlyphs = ImageData[][][]; // [fg][bg][charCode]
-
 /**
  * Loads a font from a PNG font sheet using fast thresholding & palette.
  * Works for both white and gray glyphs on black.
@@ -63,16 +69,17 @@ export async function loadFontFromImage(
   fontName: string,
   letterSpacing: boolean,
   palette: Palette,
-  fontType: FontType
+  fontType: FontType,
 ): Promise<FontRenderer> {
   return new Promise((resolve, reject)=>{
     const img = new Image();
     img.src = `./ui/fontz/${fontName}.png`;
     img.onload = ()=>{
       const match = fontName.match(/(\d+)x(\d+)$/i);
-      if (!match) throw new Error('Font PNG filename must end with WxH, e.g. 8x16.png');
-      const fontWidth = parseInt(match[1], 10);
-      const fontHeight = parseInt(match[2], 10);
+      // Default to 8x16 if not found in the name
+      const fontWidth = match ? parseInt(match[1], 10) : 8;
+      const fontHeight = match ? parseInt(match[2], 10) : 16;
+
       if (img.width !== fontWidth * 16 || img.height !== fontHeight * 16) {
         throw new Error(
           `Font PNG dimensions (${img.width}x${img.height}) do not match expected grid for ${fontWidth}x${fontHeight} glyphs`
@@ -86,7 +93,7 @@ export async function loadFontFromImage(
       tempCtx.drawImage(img, 0, 0);
 
       // Precolor all glyphs for every fg/bg/pair (fastest, supports gray glyphs)
-      const glyphs: FontGlyphs = [];
+      const glyphs: ImageData[][][] = [];
       for (let fg = 0; fg < 16; fg++) {
         glyphs[fg] = [];
         for (let bg = 0; bg < 16; bg++) {
@@ -121,6 +128,7 @@ export async function loadFontFromImage(
           !glyphs[fg][bg] ||
           !glyphs[fg][bg][charCode]
         ) return;
+
         ctx.putImageData(
           glyphs[fg][bg][charCode],
           x * (fontWidth + (spacing ? 1 : 0)),

@@ -184,6 +184,110 @@ describe('paletteManager', () => {
       expect(palette.getForegroundColor()).toBe(15);
       expect(palette.getBackgroundColor()).toBe(4);
     });
+
+    describe('ANSI color specification compliance', () => {
+      // Standard ANSI color palette as specified
+      const ansiColors = [
+        {r: 0, g: 0, b: 0},       // 0: black
+        {r: 0, g: 0, b: 42},      // 1: blue
+        {r: 0, g: 42, b: 0},      // 2: green
+        {r: 0, g: 42, b: 42},     // 3: cyan
+        {r: 42, g: 0, b: 0},      // 4: red
+        {r: 42, g: 0, b: 42},     // 5: magenta
+        {r: 42, g: 21, b: 0},     // 6: yellow/brown
+        {r: 42, g: 42, b: 42},    // 7: white/light gray
+        {r: 21, g: 21, b: 21},    // 8: bright black/dark gray
+        {r: 21, g: 21, b: 63},    // 9: bright blue
+        {r: 21, g: 63, b: 21},    // 10: bright green
+        {r: 21, g: 63, b: 63},    // 11: bright cyan
+        {r: 63, g: 21, b: 21},    // 12: bright red
+        {r: 63, g: 21, b: 63},    // 13: bright magenta
+        {r: 63, g: 63, b: 21},    // 14: bright yellow
+        {r: 63, g: 63, b: 63},    // 15: bright white
+      ];
+
+      const colorNames = [
+        'black', 'blue', 'green', 'cyan', 'red', 'magenta', 'yellow', 'white',
+        'bright_black', 'bright_blue', 'bright_green', 'bright_cyan', 
+        'bright_red', 'bright_magenta', 'bright_yellow', 'bright_white'
+      ];
+
+      it('should match the ANSI specification for all 16 colors in 6-bit RGB', () => {
+        const palette = createDefaultPalette();
+        const colors = palette.to6BitArray();
+
+        ansiColors.forEach((expectedColor, index) => {
+          expect(colors[index], `Color ${index} (${colorNames[index]}) should match ANSI spec`).toEqual([
+            expectedColor.r,
+            expectedColor.g,
+            expectedColor.b
+          ]);
+        });
+      });
+
+      it('should convert ANSI colors to correct RGBA values', () => {
+        const palette = createDefaultPalette();
+
+        ansiColors.forEach((expectedColor, index) => {
+          const actualRgba = palette.getRGBAColor(index);
+          
+          // Convert expected 6-bit values to 8-bit using the same formula as rgb6bitToRgba
+          const expectedR = (expectedColor.r << 2) | (expectedColor.r >> 4);
+          const expectedG = (expectedColor.g << 2) | (expectedColor.g >> 4);
+          const expectedB = (expectedColor.b << 2) | (expectedColor.b >> 4);
+          
+          expect(actualRgba, `RGBA for color ${index} (${colorNames[index]}) should match converted ANSI spec`).toEqual([
+            expectedR,
+            expectedG,
+            expectedB,
+            255
+          ]);
+        });
+      });
+
+      it('should provide correct RGB values for standard color drawing', () => {
+        const palette = createDefaultPalette();
+
+        // Test key colors that are commonly used in drawing
+        
+        // Basic colors (0-7)
+        expect(palette.getRGBAColor(0)).toEqual([0, 0, 0, 255]); // Black
+        expect(palette.getRGBAColor(1)).toEqual([0, 0, 170, 255]); // Blue  
+        expect(palette.getRGBAColor(2)).toEqual([0, 170, 0, 255]); // Green
+        expect(palette.getRGBAColor(3)).toEqual([0, 170, 170, 255]); // Cyan
+        expect(palette.getRGBAColor(4)).toEqual([170, 0, 0, 255]); // Red
+        expect(palette.getRGBAColor(5)).toEqual([170, 0, 170, 255]); // Magenta
+        expect(palette.getRGBAColor(6)).toEqual([170, 85, 0, 255]); // Yellow/Brown
+        expect(palette.getRGBAColor(7)).toEqual([170, 170, 170, 255]); // Light Gray
+
+        // Bright colors (8-15)
+        expect(palette.getRGBAColor(8)).toEqual([85, 85, 85, 255]); // Dark Gray
+        expect(palette.getRGBAColor(9)).toEqual([85, 85, 255, 255]); // Bright Blue
+        expect(palette.getRGBAColor(10)).toEqual([85, 255, 85, 255]); // Bright Green
+        expect(palette.getRGBAColor(11)).toEqual([85, 255, 255, 255]); // Bright Cyan
+        expect(palette.getRGBAColor(12)).toEqual([255, 85, 85, 255]); // Bright Red
+        expect(palette.getRGBAColor(13)).toEqual([255, 85, 255, 255]); // Bright Magenta
+        expect(palette.getRGBAColor(14)).toEqual([255, 255, 85, 255]); // Bright Yellow
+        expect(palette.getRGBAColor(15)).toEqual([255, 255, 255, 255]); // White
+      });
+
+      it('should handle edge cases in color specification', () => {
+        const palette = createDefaultPalette();
+
+        // Test minimum intensity colors
+        expect(palette.getRGBAColor(0)).toEqual([0, 0, 0, 255]); // Pure black
+        
+        // Test maximum intensity colors  
+        expect(palette.getRGBAColor(15)).toEqual([255, 255, 255, 255]); // Pure white
+        
+        // Test colors with mixed intensities (like yellow/brown)
+        const yellowBrown = palette.getRGBAColor(6);
+        expect(yellowBrown[0]).toBe(170); // Red component
+        expect(yellowBrown[1]).toBe(85);  // Green component  
+        expect(yellowBrown[2]).toBe(0);   // Blue component
+        expect(yellowBrown[3]).toBe(255); // Alpha
+      });
+    });
   });
 
   describe('PalettePicker', () => {

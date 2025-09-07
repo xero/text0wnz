@@ -46,6 +46,10 @@ export interface SauceMetadata {
   title?: string;
   author?: string;
   group?: string;
+  date?: string;
+  width?: number;
+  height?: number;
+  ice?: boolean;
   comments?: string;
 }
 
@@ -55,7 +59,7 @@ export interface CanvasState {
   sauce?: SauceMetadata;
   width: number;
   height: number;
-  font: string;          // font file or name (e.g. "CP437 8x16", "TOPAZ_437", "utf8-system")
+  font: string;          // font file or name (e.g. "CP437 8x16", "Topaz_437", "utf8-system")
   fontType: FontType;    // new: type of font (cp437, utf8, unicode)
   spacing: number;       // spacing in pixels or 0/1 for ANSI art spacing
   ice: boolean;
@@ -154,7 +158,7 @@ export function createOfflineCanvasState(): CanvasState {
     },
     width,
     height,
-    font: 'TOPAZ437 8x16',
+    font: 'Topaz437 8x16',
     fontType: 'cp437',
     spacing: 0,
     ice: false,

@@ -1,16 +1,17 @@
 // top-level UI orchestrator: handles global UI events, tool switching,
 // dialog logic, delegations to toolManager
-import type {GlobalState} from './state';
+import type {GlobalState, SauceMetadata} from './state';
 import type {PubSub} from './eventBus';
 import type {FontType} from './fontManager';
 import {createOfflineRoomState, createOfflineCanvasState} from './state';
-import {forceFullRedraw, initCanvasRenderer, resetCanvasRenderer, resizeCanvasToState} from './canvasRenderer';
+import {forceFullRedraw, initCanvasRenderer, resizeCanvasToState, toggleIceColors} from './canvasRenderer';
 import {setFont, FontRenderer} from './fontManager';
 import {PalettePicker, createDefaultPalette, Palette} from './paletteManager';
 import {GridOverlay} from './gridOverlay';
 import {ToolManager} from './toolManager';
 import {PenTool} from './tools/pen';
 import {ShadeBrushTool} from './tools/shade';
+import {stateManager} from './stateManager';
 
 /* <--//-----------------------------------------------------------[helpers] */
 const
@@ -30,17 +31,20 @@ const
     t: HTMLElement,
     f: (e: MouseEvent | KeyboardEvent) => void | Promise<void>,
     k: number = 0
-  )=>t.addEventListener(k ? 'keydown' : 'click', (e: Event)=>{
-    let result: Promise<void> | undefined;
-    if (k && e instanceof KeyboardEvent) {
-      const r = f(e);
-      if (r instanceof Promise) result = r;
-    } else if (!k && e instanceof MouseEvent) {
-      const r = f(e);
-      if (r instanceof Promise) result = r;
+  )=>{
+  const eventHandler = (e: Event)=>{
+    let result: Promise<void> | void;
+    if ((k && e instanceof KeyboardEvent) || (!k && e instanceof MouseEvent)) {
+      result = f(e);
+      if (result instanceof Promise) {
+        result.catch((err: unknown)=>{
+          console.error('Async event handler failed', err);
+        });
+      }
     }
-    if (result) { result.catch(()=>{ throw new Error('Async event handler failed')})}
-  },false);
+  };
+  t.addEventListener(k ? 'keydown' : 'click', eventHandler, false);
+};
 
 /* <--//------------------------------------------------[interface elements] */
 let
@@ -215,7 +219,6 @@ const getElements = ():void=>{
   void flipv;
   void move;
   void charmap;
-  void ice;
 }
 
 /* <--//----------------------------------------------------------[internal] */
@@ -402,7 +405,10 @@ function sauceDefaults() {
 
 //
 /* <--//----------------------------------------------------------[external] */
-export function initUI(state: GlobalState, eventBus: PubSub) {
+export function initUI(_state: GlobalState, eventBus: PubSub) {
+  state = _state;
+  stateManager.setInitialState(state);
+
   // listen for state changes (only error changes, for now)
   eventBus.subscribe('ui:state:changed', ({state})=>{
     if (state.error) showError(state.error)
@@ -410,6 +416,7 @@ export function initUI(state: GlobalState, eventBus: PubSub) {
   // global error handler
   add($('restart'),_=>W.location.reload());
   getElements();
+  void setupCanvasAndTools(state, eventBus);
 
   //--------------- dark mode
   if (W.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -423,12 +430,8 @@ export function initUI(state: GlobalState, eventBus: PubSub) {
   add($('jointNew'),_=>navChat('new'));
 
   //--------------- file config
-  [fileOpen,splashOpen].forEach(
-    b=>add(b,_=>fileUpload.click())
-  );
-  fileUpload.addEventListener('change', _=>{
-    alert(`got it`);
-  });
+  initFileLoading();
+  add(fileOpen,_=>fileUpload.click())
   add(fileJoint,_=>navChat('joints'));
   add(open,_=>modalShow('file'));
 
@@ -441,32 +444,40 @@ export function initUI(state: GlobalState, eventBus: PubSub) {
   add(jointsCancel,_=>navChat('room'));
 
   //--------------- welcome modal
-  modalShow('splash');
-  add(splashJoint,_=>navChat('joints'));
-  add(splashDraw,_=>{
+  const h = (t: string)=>{
     state.user = {
       id: 'offline-user',
       nickname: 'offline',
       roomId: 0,
     };
     state.currentRoom = createOfflineRoomState(state.user);
-    createOfflineCanvasState();
-    setupCanvasAndTools(state, eventBus).then(()=>{
-      modalClose();
-    }).catch(()=>{
-        throw new Error('Failed to initialize the interface');
-    });
-  });
+    stateManager.setInitialState(state);
+    const canvasState = createOfflineCanvasState();
+    stateManager.updateCanvas(canvasState);
+
+    if(t === 'open'){
+      fileUpload.click();
+    }
+    modalClose();
+  }
+  modalShow('splash');
+  add(splashJoint,_=>navChat('joints'));
+  add(splashDraw,_=>h('new'));
+  add(splashOpen,_=>h('open'));
 }
+
 async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   state = theState;
   //--------------- canvas
   palette = createDefaultPalette();
-  const defaultFont = 'Topaz437 8x16';
-  fontRenderer = await setFont(defaultFont, 'cp437', palette, false);
-  fontSelect.value = defaultFont;
-  fontPreview.src = `./ui/fontz/${defaultFont}.png`;
-  fontPreview.style = 'width: 192px; height: 384px';
+  const canvasState = state.currentRoom?.canvas ?? createOfflineCanvasState();
+  // Map FontType from state ('unicode') to fontManager ('utf8')
+  const fontTypeForManager: FontType = canvasState.fontType === 'unicode' ? 'utf8' : canvasState.fontType;
+  fontRenderer = await setFont(canvasState.font, fontTypeForManager, palette, false);
+  fontSelect.value = canvasState.font;
+  fontPreview.src = `./ui/fontz/${canvasState.font}.png`;
+  fontPreview.style.width = '192px';
+  fontPreview.style.height = '384px';
   const canvasRenderer = initCanvasRenderer(state, palette, fontRenderer);
   initCanvas(art, 'Art Drawing Canvas');
   sauceDefaults();
@@ -488,6 +499,12 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   add(zoom, _=>toolOps('zoom'));
   add(dropper, _=>toolOpsHide());
   add(mirror, _=>toolOpsHide());
+
+  // ICE colors toggle
+  add(ice, _=>{
+    toggleIceColors();
+  });
+
   // brushes
   add(characterBrush, _=>toolOps('char',true));
 
@@ -573,32 +590,20 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
     };
     fontPreview.src = `./ui/fontz/${name}.png`;
     if (fontPreview.complete) {
-      fontPreview.onload(new Event('load'));
+      void fontPreview.onload(new Event('load'));
     }
   });
-
   add(switchFont, _=>{
     void (async()=>{
       const fontName = fontSelect.value;
       try {
-        // Determine font type
-        let fontType: FontType = 'cp437';
-        if (fontName === 'utf8-system') fontType = 'utf8';
-          else if (fontName === 'XBIN') fontType = 'cp437'; // XBIN is still cp437 style
+        // Determine font type and map it for the fontManager
+        let stateFontType: 'cp437' | 'unicode' = 'cp437';
+        if (fontName.includes('utf8') || fontName.includes('system')) stateFontType = 'unicode';
 
-        /*
-    if (fontName === 'XBIN') {
-      // Get XBIN font data from state or wherever you store it
-      const xb = state.currentRoom?.canvas.xbFontData;
-      if (!xb) throw new Error('No XBIN font data loaded');
-      fontRenderer = await loadFontFromXBData(
-        xb.bytes, xb.width, xb.height, false, palette, fontType
-      );
-    } else {
-      fontRenderer = await setFont(fontName, fontType, palette, false);
-    }
-    */
-        fontRenderer = await setFont(fontName, fontType, palette, false);
+        const fontTypeForManager: FontType = stateFontType === 'unicode' ? 'utf8' : 'cp437';
+
+        fontRenderer = await setFont(fontName, fontTypeForManager, palette, false);
 
         canvasRenderer.setFont(fontRenderer); // This resizes and redraws the main canvas
         gridOverlay.setFont(fontRenderer);    // This updates the overlay to match
@@ -608,7 +613,7 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
         modalClose();
         if (!state.currentRoom) return;
         state.currentRoom.canvas.font = fontName;
-        state.currentRoom.canvas.fontType = fontType;
+        state.currentRoom.canvas.fontType = stateFontType;
       } catch {
         showError(`Failed to load font: ${fontName}`);
       }
@@ -621,9 +626,9 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
     if (!state.currentRoom) return;
     const c = state.currentRoom.canvas;
     // flip current font spacing value
-    const spacing = !c.spacing;
-    fontRenderer.setLetterSpacing(spacing);
-    c.spacing = spacing ? 1 : 0;
+    const spacingVal = !c.spacing;
+    fontRenderer.setLetterSpacing(spacingVal);
+    c.spacing = spacingVal ? 1 : 0;
     resizeCanvasToState();
     forceFullRedraw();
   });
@@ -654,9 +659,7 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
       rawdata: newRawData,
       updatedAt: new Date().toISOString(),
     };
-    state.currentRoom.canvas = newCanvas;
-    eventBus.publish('ui:state:changed', {state});
-    displayRes(cols, rows);
+    stateManager.updateCanvas(newCanvas);
     toggleChatRes('');
   });
   add(navTitle,_=>{modalShow('sauce')});
@@ -667,16 +670,9 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   });
 
   //--------------- file opts
-  add(fileDraw, async _=>{
-    fontRenderer = await setFont(defaultFont, 'cp437', palette, false);
-    state.currentRoom = createOfflineRoomState(state.user);
-    state.currentRoom.canvas = createOfflineCanvasState();
-    resetCanvasRenderer(state, palette, fontRenderer);
-    displayRes(80, 25);
-    gridOverlay.setFont(fontRenderer);
-    fontSelect.value = defaultFont;
-    fontPreview.src = `./ui/fontz/${defaultFont}.png`;
-    fontLabel.innerText = defaultFont;
+  add(fileDraw, _=>{
+    const canvasState = createOfflineCanvasState();
+    stateManager.updateCanvas(canvasState);
     sauceDefaults();
     setCursorPos(1,1);
     modalClose();
@@ -686,4 +682,102 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   $$$<HTMLButtonElement>('.cancel').forEach(
     c=>add(c,_=>modalClose()));
   add(modal, e=>{if(e.target === modal) modalClose()});
+
+  //--------------- SAUCE population event listener
+  eventBus.subscribe('local:sauce:populate', ({sauce})=>{
+    populateSauceForm(sauce);
+  });
+
+  //--------------- Canvas resize event listener
+  eventBus.subscribe('ui:canvas:resize', ({columns, rows})=>{
+    displayRes(columns, rows);
+  });
+
+  //--------------- ICE colors state listener
+  eventBus.subscribe('ui:ice:changed', ({ice: iceEnabled})=>{
+    cl(ice, 'active', iceEnabled);
+    console.log('ice event toggle');
+  });
+}
+
+/**
+ * Initialize file loading functionality
+ */
+function initFileLoading() {
+  fileUpload.accept = '.ans,.xb,.bin,.txt';
+  fileUpload.addEventListener('change', (event)=>{
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file) {
+      void (async()=>{
+        const {loadAnsiFile} = await import('./fileLoader');
+        await loadAnsiFile(file);
+        // Clear the input so the same file can be loaded again
+        fileUpload.value = '';
+      })();
+    }
+  });
+
+  // Add keyboard shortcut (Ctrl+O/Cmd+O)
+  document.addEventListener('keydown', (event)=>{
+    if ((event.ctrlKey || event.metaKey) && event.key === 'o') {
+      event.preventDefault();
+      fileUpload.click();
+    }
+  });
+
+  // Add drag and drop support
+  let dragCounter = 0;
+
+  document.addEventListener('dragenter', (event)=>{
+    event.preventDefault();
+    dragCounter++;
+    document.body.classList.add('dragging');
+  });
+
+  document.addEventListener('dragleave', (event)=>{
+    event.preventDefault();
+    dragCounter--;
+    if (dragCounter === 0) {
+      document.body.classList.remove('dragging');
+    }
+  });
+
+  document.addEventListener('dragover', (event)=>{
+    event.preventDefault();
+  });
+
+  document.addEventListener('drop', (event)=>{
+    event.preventDefault();
+    dragCounter = 0;
+    document.body.classList.remove('dragging');
+
+    const files = event.dataTransfer?.files;
+    if (files?.[0]) {
+      void (async()=>{
+        const {loadAnsiFile} = await import('./fileLoader');
+        await loadAnsiFile(files[0]);
+      })();
+    }
+  });
+}
+
+/**
+ * Populate SAUCE form with metadata
+ */
+function populateSauceForm(sauce: SauceMetadata | null): void {
+  if (sauce) {
+    if (sauce.title) sauceTitle.value = sauce.title;
+    if (sauce.author) sauceAuthor.value = sauce.author;
+    if (sauce.group) sauceGroup.value = sauce.group;
+    if (sauce.comments) sauceComments.value = sauce.comments;
+
+    // Update navigation title to match
+    if (sauce.title) navTitle.value = sauce.title;
+
+    // Trigger existing byte count update
+    enforceMaxBytes();
+  } else {
+    // Use existing defaults function
+    sauceDefaults();
+  }
 }

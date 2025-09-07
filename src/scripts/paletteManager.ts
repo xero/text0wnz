@@ -22,6 +22,21 @@ export function rgb6bitToRgba(rgb: RGB6Bit): RGBA {
     255
   ];
 }
+//many ANSI files were created with the IBM CGA/EGA/VGA hardware in mind,
+//which had a different color ordering than the standard ANSI SGR color codes
+export function mapAnsiColor(ansiColor: number): number {
+  switch (ansiColor) {
+    case 4: return 1;     // Red → Blue
+    case 6: return 3;     // Brown/Yellow → Cyan
+    case 1: return 4;     // Blue → Red
+    case 3: return 6;     // Cyan → Brown/Yellow
+    case 12: return 9;    // Light Red → Light Blue
+    case 14: return 11;   // Light Yellow → Light Cyan
+    case 9: return 12;    // Light Blue → Light Red
+    case 11: return 14;   // Light Cyan → Light Yellow
+    default: return ansiColor;
+  }
+}
 
 // Create a palette from 6-bit array
 export function createPalette(colors: RGB6Bit[], fg = 7, bg = 0): Palette {
@@ -67,6 +82,31 @@ export interface PalettePickerOptions {
   palette: Palette;
   initCanvas: (canvas: HTMLCanvasElement, name: string) => CanvasRenderingContext2D;
   updateCurrentColorsPreview: () => void;
+}
+
+// Global palette instance
+let globalPalette: Palette | null = null;
+
+// Get or create global palette
+export function getGlobalPalette(): Palette {
+  if (!globalPalette) {
+    globalPalette = createDefaultPalette();
+  }
+  return globalPalette;
+}
+
+// Update palette with new colors
+export function updatePaletteColors(colors: RGB6Bit[]): void {
+  const palette = getGlobalPalette();
+  const newPalette = createPalette(colors,
+    palette.getForegroundColor(),
+    palette.getBackgroundColor());
+
+  // Copy all properties
+  Object.assign(palette, newPalette);
+
+  // Trigger any needed updates
+  document.dispatchEvent(new CustomEvent('onPaletteChange'));
 }
 
 export class PalettePicker {
