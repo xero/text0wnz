@@ -36,11 +36,6 @@ const dirtyRegions: DirtyRegion[] = [];
 let needsFullRedraw = true;
 let rafQueued = false;
 
-// ICE colors / blinking support
-let blinkTimer: ReturnType<typeof setInterval> | undefined = undefined;
-let blinkVisible = true;
-const blinkInterval = 500; // milliseconds
-
 // --- Setup
 export function initCanvasRenderer(
   _state: GlobalState,
@@ -79,11 +74,6 @@ export function initCanvasRenderer(
   // Initialize ICE colors state and blinking
   if (state.currentRoom?.canvas) {
     const c = state.currentRoom.canvas;
-    if (c.ice) {
-      stopBlinkTimer();
-    } else {
-      startBlinkTimer();
-    }
     // Notify UI of initial ICE state
     eventBus.publish('ui:ice:changed', {ice: c.ice});
   }
@@ -164,7 +154,7 @@ function flushDirtyCells() {
   const c = state.currentRoom?.canvas;
   if (!c) return;
 
-  const {width, height, rawdata, ice} = c; // Get the ice setting from canvas
+  const {width, height, rawdata, ice} = c; // Get ice setting from canvas state
   let needsFullBlit = false;
 
   if (needsFullRedraw) {
@@ -176,19 +166,10 @@ function flushDirtyCells() {
         const fg = rawdata[idx + 1];
         const bg = rawdata[idx + 2];
 
-        if (ice) {
-          // In ICE colors mode, use colors as-is (bright colors are displayed, not blinking)
-          font.draw(charCode, fg, bg, offctx, x, y);
-        } else {
-          // In non-ICE mode, handle background colors >= 8 specially (blink state)
-          const actualBg = bg >= 8 ? bg - 8 : bg;
-          if (bg >= 8 && blinkVisible) {
-            // During blink-on phase, background color becomes foreground color
-            font.draw(charCode, fg, fg, offctx, x, y);
-          } else {
-            font.draw(charCode, fg, actualBg, offctx, x, y);
-          }
-        }
+        // Keep high-intensity bit for bg color if ICE colors are enabled
+        const effectiveBg = ice ? bg : (bg >= 8 ? bg - 8 : bg);
+
+        font.draw(charCode, fg, effectiveBg, offctx, x, y);
       }
     }
     dirtyCells.clear();
@@ -196,6 +177,7 @@ function flushDirtyCells() {
     needsFullRedraw = false;
     needsFullBlit = true;
   } else if (dirtyCells.size > 0 || dirtyRegions.length > 0) {
+    // Similar modifications for the else branch
     const hasDirtyCells = dirtyCells.size > 0;
     for (const idx of dirtyCells) {
       const cell = Math.floor(idx / 3);
@@ -204,22 +186,14 @@ function flushDirtyCells() {
       const charCode = rawdata[idx];
       const fg = rawdata[idx + 1];
       const bg = rawdata[idx + 2];
+
       // clear cell area
       offctx.clearRect(x * font.width, y * font.height, font.width, font.height);
 
-      if (ice) {
-        // In ICE colors mode, use colors as-is (bright colors are displayed, not blinking)
-        font.draw(charCode, fg, bg, offctx, x, y);
-      } else {
-        // In non-ICE mode, handle background colors >= 8 specially (blink state)
-        const actualBg = bg >= 8 ? bg - 8 : bg;
-        if (bg >= 8 && blinkVisible) {
-          // During blink-on phase, background color becomes foreground color
-          font.draw(charCode, fg, fg, offctx, x, y);
-        } else {
-          font.draw(charCode, fg, actualBg, offctx, x, y);
-        }
-      }
+      // Keep high-intensity bit for bg color if ICE colors are enabled
+      const effectiveBg = ice ? bg : (bg >= 8 ? bg - 8 : bg);
+
+      font.draw(charCode, fg, effectiveBg, offctx, x, y);
     }
     dirtyCells.clear();
     processDirtyRegions();
@@ -387,19 +361,10 @@ export function drawRegion(x: number, y: number, w: number, h: number) {
       const bg = rawdata[idx + 2];
       offctx.clearRect(cellX * font.width, cellY * font.height, font.width, font.height);
 
-      if (c.ice) {
-        // In ICE colors mode, use colors as-is (bright colors are displayed, not blinking)
-        font.draw(charCode, fg, bg, offctx, cellX, cellY);
-      } else {
-        // In non-ICE mode, handle background colors >= 8 specially (blink state)
-        const actualBg = bg >= 8 ? bg - 8 : bg;
-        if (bg >= 8 && blinkVisible) {
-          // During blink-on phase, background color becomes foreground color
-          font.draw(charCode, fg, fg, offctx, cellX, cellY);
-        } else {
-          font.draw(charCode, fg, actualBg, offctx, cellX, cellY);
-        }
-      }
+      // Keep high-intensity bit for bg color if ICE colors are enabled
+      const effectiveBg = c.ice ? bg : (bg >= 8 ? bg - 8 : bg);
+
+      font.draw(charCode, fg, effectiveBg, offctx, cellX, cellY);
     }
   }
   const pixelX = clampedX * font.width;
@@ -416,9 +381,6 @@ export function resetCanvasRenderer(
   newPalette?: Palette,
   newFont?: FontRenderer
 ) {
-  // Clean up blinking timer
-  stopBlinkTimer();
-
   ctx = null;
   canvas = null;
   offctx = null;
@@ -598,61 +560,6 @@ export function getCanvasImage(): HTMLCanvasElement | null {
 // --- ICE Colors / Blinking Support
 
 /**
- * Start the blinking timer for non-ICE mode
- */
-function startBlinkTimer() {
-  if (blinkTimer) clearInterval(blinkTimer);
-
-  blinkTimer = setInterval(()=>{
-    blinkVisible = !blinkVisible;
-    // Re-render cells that have blinking characters (bg colors 8-15 in non-ICE mode)
-    triggerBlinkRedraw();
-  }, blinkInterval);
-}
-
-/**
- * Stop the blinking timer
- */
-function stopBlinkTimer() {
-  if (blinkTimer) {
-    clearInterval(blinkTimer);
-    blinkTimer = undefined;
-  }
-  blinkVisible = true; // Always show when not blinking
-}
-
-/**
- * Check if we need blinking based on canvas state and trigger redraw for blinking cells
- */
-function triggerBlinkRedraw() {
-  if (!state || !state.currentRoom) return;
-  const c = state.currentRoom.canvas;
-
-  // Only redraw if we're in non-ICE mode and have blinking characters
-  if (c.ice) return;
-
-  let hasBlinkingCells = false;
-  const {width, height, rawdata} = c;
-
-  // Check for cells with background colors 8-15 (blinking in non-ICE mode)
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = (y * width + x) * 3;
-      const bg = rawdata[idx + 2];
-
-      if (bg >= 8 && bg <= 15) {
-        hasBlinkingCells = true;
-        dirtyCells.add(idx);
-      }
-    }
-  }
-
-  if (hasBlinkingCells) {
-    queueFlushDirty();
-  }
-}
-
-/**
  * Toggle ICE colors mode and update rendering
  */
 export function toggleIceColors() {
@@ -660,13 +567,6 @@ export function toggleIceColors() {
   const c = state.currentRoom.canvas;
 
   c.ice = !c.ice;
-
-  // Update blinking timer based on new ICE state
-  if (c.ice) {
-    stopBlinkTimer();
-  } else {
-    startBlinkTimer();
-  }
 
   // Trigger full redraw to update all cells
   needsFullRedraw = true;
@@ -687,13 +587,6 @@ export function setIceColors(enabled: boolean) {
 
   c.ice = enabled;
 
-  // Update blinking timer based on new ICE state
-  if (c.ice) {
-    stopBlinkTimer();
-  } else {
-    startBlinkTimer();
-  }
-
   // Trigger full redraw to update all cells
   needsFullRedraw = true;
   queueFlushDirty();
@@ -702,15 +595,4 @@ export function setIceColors(enabled: boolean) {
   eventBus.publish('ui:ice:changed', {ice: c.ice});
 }
 
-// Initialize blinking support when canvas state changes
-eventBus.subscribe('canvas:state:changed', ()=>{
-  if (!state || !state.currentRoom) return;
-  const c = state.currentRoom.canvas;
-
-  if (c.ice) {
-    stopBlinkTimer();
-  } else {
-    startBlinkTimer();
-  }
-});
 
