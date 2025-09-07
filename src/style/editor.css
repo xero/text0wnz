@@ -743,5 +743,15 @@
   .hide {
     @apply hidden opacity-0;
   }
+  
+  /* File drag and drop styling */
+  body.dragging {
+    @apply bg-cyan-900/20;
+  }
+  
+  body.dragging::after {
+    content: "Drop ANSI files here";
+    @apply fixed inset-0 flex items-center justify-center text-4xl font-bold text-cyan-400 bg-black/80 z-50 pointer-events-none;
+  }
 }
 /* <--//---------------------------------------------------------------[eof] */

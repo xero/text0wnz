@@ -2,13 +2,14 @@
  * Define all event types and their payloads here.
  * Extend with more namespaces/events as needed.
  */
-import {FontRenderer} from './canvasRenderer';
-import type {GlobalState} from './state';
+import {FontRenderer} from './fontManager';
+import type {GlobalState, SauceMetadata} from './state';
 export type EditorEventMap = {
   'local:tool:activated': { toolName: string };
   'local:file:loaded': { fileName: string; data: ArrayBuffer };
   'local:palette:changed': { colors: number[] };
   'local:canvas:cleared': { reason: 'user' | 'reset' | 'new-file' };
+  'local:sauce:populate': { sauce: SauceMetadata | null };
   'network:canvas:update': { patch: Uint8Array; userId: string };
   'network:user:joined': { userId: string; nickname: string };
   'network:chat:message': { userId: string; message: string };
@@ -35,7 +36,7 @@ export type EditorEventMap = {
 type EventKey = keyof EditorEventMap;
 type Handler<K extends EventKey> = (payload: EditorEventMap[K])=>void;
 export class PubSub {
-  private handlers: Partial<{[K in EventKey]: Set<Handler<unknown>>}> = {};
+  private handlers: Partial<{[K in EventKey]: Set<Handler<any>>}> = {};
 
   subscribe<K extends EventKey>(event: K, handler: Handler<K>):()=>void{
     if (!this.handlers[event]) {
