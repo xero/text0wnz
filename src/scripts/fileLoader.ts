@@ -2,35 +2,6 @@
 import type {SauceMetadata, CanvasState, FontType} from './state';
 import {eventBus} from './eventBus';
 
-// SAUCE Record Interface - matches the 128-byte SAUCE record format
-interface SauceRecord {
-  id: string;           // "SAUCE00"
-  title: string;        // 35 chars
-  author: string;       // 20 chars
-  group: string;        // 20 chars
-  date: string;         // 8 chars CCYYMMDD
-  filesize: number;     // 4 bytes
-  datatype: number;     // 1 byte
-  filetype: number;     // 1 byte
-  tinfo1: number;       // 2 bytes (width)
-  tinfo2: number;       // 2 bytes (height)
-  tinfo3: number;       // 2 bytes (font width)
-  tinfo4: number;       // 2 bytes (font height)
-  comments: number;     // 1 byte
-  tflags: number;       // 1 byte
-  tinfos: string;       // 22 chars
-}
-
-// Binary reading utilities
-function readLE16(data: Uint8Array, offset: number): number {
-  return data[offset] | (data[offset + 1] << 8);
-}
-
-function readLE32(data: Uint8Array, offset: number): number {
-  return data[offset] | (data[offset + 1] << 8) |
-         (data[offset + 2] << 16) | (data[offset + 3] << 24);
-}
-
 function readString(data: Uint8Array, offset: number, length: number): string {
   return new TextDecoder('latin1').decode(data.slice(offset, offset + length))
     .replace(/\0+$/, ''); // trim null terminators
@@ -143,7 +114,7 @@ function mapSauceToFont(sauce: SauceMetadata | null): FontMapping {
 /**
  * Parse ANSI escape sequences and populate canvas rawdata
  */
-export function parseAnsiToCanvas(data: Uint8Array, sauce: SauceMetadata | null): CanvasState {
+export async function parseAnsiToCanvas(data: Uint8Array, sauce: SauceMetadata | null): Promise<CanvasState> {
   // Default to 80x25 or use SAUCE dimensions if available
   const width = 80, height = 25;
 
@@ -259,6 +230,33 @@ export function parseAnsiToCanvas(data: Uint8Array, sauce: SauceMetadata | null)
     i++;
   }
 
+  // Get proper palette colors using paletteManager
+  const paletteColors: number[] = [];
+  try {
+    // Import and create default palette to get proper colors
+    const {createDefaultPalette} = await import('./paletteManager');
+    const palette = createDefaultPalette();
+    const rgb6BitArray = palette.to6BitArray();
+
+    // Convert RGB6Bit to hex colors for state
+    for (const [r, g, b] of rgb6BitArray) {
+      // Convert 6-bit to 8-bit and then to hex
+      const r8 = (r << 2) | (r >> 4);
+      const g8 = (g << 2) | (g >> 4);
+      const b8 = (b << 2) | (b >> 4);
+      paletteColors.push((r8 << 16) | (g8 << 8) | b8);
+    }
+  } catch (error) {
+    console.warn('Failed to get palette colors, using defaults:', error);
+    // Fallback to basic 16-color palette
+    paletteColors.push(
+      0x000000, 0x800000, 0x008000, 0x808000, // 0-3: black, red, green, yellow
+      0x000080, 0x800080, 0x008080, 0xC0C0C0, // 4-7: blue, magenta, cyan, white
+      0x808080, 0xFF0000, 0x00FF00, 0xFFFF00, // 8-11: bright versions
+      0x0000FF, 0xFF00FF, 0x00FFFF, 0xFFFFFF  // 12-15: bright blue, magenta, cyan, white
+    );
+  }
+
   return {
     id: Date.now(), // temporary ID
     name: sauce?.title || 'Loaded ANSI',
@@ -269,12 +267,7 @@ export function parseAnsiToCanvas(data: Uint8Array, sauce: SauceMetadata | null)
     fontType: fontMapping.type,
     spacing: 0,
     ice: false,
-    colors: [
-      0x000000, 0x800000, 0x008000, 0x808000, // 0-3: black, red, green, yellow
-      0x000080, 0x800080, 0x008080, 0xC0C0C0, // 4-7: blue, magenta, cyan, white
-      0x808080, 0xFF0000, 0x00FF00, 0xFFFF00, // 8-11: bright versions
-      0x0000FF, 0xFF00FF, 0x00FFFF, 0xFFFFFF  // 12-15: bright blue, magenta, cyan, white
-    ],
+    colors: paletteColors,
     rawdata,
     updatedAt: new Date().toISOString()
   };
@@ -323,14 +316,17 @@ export async function loadAnsiFile(file: File): Promise<void> {
     const sauce = parseSauce(data);
 
     // Parse ANSI content to canvas format
-    const canvasState = parseAnsiToCanvas(data, sauce);
+    const canvasState = await parseAnsiToCanvas(data, sauce);
 
     // Load appropriate font based on SAUCE metadata
     await loadAppropriateFont(canvasState);
 
     // Update canvas data using existing architecture
-    const {updateCanvasData} = await import('./canvasRenderer');
+    const {updateCanvasData, resizeCanvasToState} = await import('./canvasRenderer');
     updateCanvasData(canvasState);
+
+    // Resize canvas to match the loaded file dimensions
+    resizeCanvasToState();
 
     // Populate SAUCE form
     eventBus.publish('local:sauce:populate', {sauce});

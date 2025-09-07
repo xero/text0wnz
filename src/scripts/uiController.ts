@@ -709,13 +709,15 @@ function initFileLoading() {
   document.body.appendChild(fileInput);
 
   // Handle file selection
-  fileInput.addEventListener('change', async(event)=>{
+  fileInput.addEventListener('change', (event)=>{
     const file = (event.target as HTMLInputElement).files?.[0];
     if (file) {
-      const {loadAnsiFile} = await import('./fileLoader');
-      await loadAnsiFile(file);
-      // Clear the input so the same file can be loaded again
-      fileInput.value = '';
+      void (async()=>{
+        const {loadAnsiFile} = await import('./fileLoader');
+        await loadAnsiFile(file);
+        // Clear the input so the same file can be loaded again
+        fileInput.value = '';
+      })();
     }
   });
 
@@ -748,15 +750,17 @@ function initFileLoading() {
     event.preventDefault();
   });
 
-  document.addEventListener('drop', async(event)=>{
+  document.addEventListener('drop', (event)=>{
     event.preventDefault();
     dragCounter = 0;
     document.body.classList.remove('dragging');
 
     const files = event.dataTransfer?.files;
-    if (files && files[0]) {
-      const {loadAnsiFile} = await import('./fileLoader');
-      await loadAnsiFile(files[0]);
+    if (files?.[0]) {
+      void (async()=>{
+        const {loadAnsiFile} = await import('./fileLoader');
+        await loadAnsiFile(files[0]);
+      })();
     }
   });
 }

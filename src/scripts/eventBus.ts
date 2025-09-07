@@ -36,31 +36,36 @@ export type EditorEventMap = {
 type EventKey = keyof EditorEventMap;
 type Handler<K extends EventKey> = (payload: EditorEventMap[K])=>void;
 export class PubSub {
-  private handlers: Partial<{[K in EventKey]: Set<Handler<any>>}> = {};
+  private handlers: Record<string, Set<(payload: unknown) => void> | undefined> = {};
 
   subscribe<K extends EventKey>(event: K, handler: Handler<K>):()=>void{
-    if (!this.handlers[event]) {
-      this.handlers[event] = new Set();
-    }
-    (this.handlers[event] as Set<Handler<K>>).add(handler);
+    const handlers = this.handlers[event] || new Set();
+    this.handlers[event] = handlers;
+    handlers.add(handler as (payload: unknown) => void);
     return ()=>{
       this.unsubscribe(event, handler);
     };
   }
 
   unsubscribe<K extends EventKey>(event: K, handler: Handler<K>) {
-    (this.handlers[event] as Set<Handler<K>>).delete(handler);
+    const handlers = this.handlers[event];
+    if (handlers) {
+      handlers.delete(handler as (payload: unknown) => void);
+    }
   }
 
   publish<K extends EventKey>(event: K, payload: EditorEventMap[K]) {
-    (this.handlers[event] as Set<Handler<K>> | undefined)?.forEach((handler)=>{
-      handler(payload);
-    });
+    const handlers = this.handlers[event];
+    if (handlers) {
+      handlers.forEach((handler)=>{
+        handler(payload);
+      });
+    }
   }
 
   clearAll() {
     Object.values(this.handlers).forEach((set)=>{
-      set.clear();
+      set?.clear();
     });
   }
 }

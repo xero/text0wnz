@@ -2,19 +2,19 @@ import { describe, it, expect } from 'vitest';
 import { parseSauce, parseAnsiToCanvas } from '../../src/scripts/fileLoader';
 
 describe('SAUCE Parser', () => {
-  it('should return null for files without SAUCE', () => {
+  it('should return null for files without SAUCE', async () => {
     const data = new Uint8Array([65, 66, 67]); // Simple text without SAUCE
     const sauce = parseSauce(data);
     expect(sauce).toBeNull();
   });
 
-  it('should return null for files too small to contain SAUCE', () => {
+  it('should return null for files too small to contain SAUCE', async () => {
     const data = new Uint8Array(100); // Less than 128 bytes
     const sauce = parseSauce(data);
     expect(sauce).toBeNull();
   });
 
-  it('should extract metadata from valid SAUCE record', () => {
+  it('should extract metadata from valid SAUCE record', async () => {
     // Create a minimal file with SAUCE record
     const fileData = new Uint8Array(256); // 128 bytes file + 128 bytes SAUCE
     
@@ -59,7 +59,7 @@ describe('SAUCE Parser', () => {
     expect(sauce?.comments).toBe('Test Comments');
   });
 
-  it('should handle SAUCE records with null terminators', () => {
+  it('should handle SAUCE records with null terminators', async () => {
     const fileData = new Uint8Array(256);
     const sauceStart = 128;
     const sauceData = new Uint8Array(128);
@@ -84,10 +84,10 @@ describe('SAUCE Parser', () => {
 });
 
 describe('ANSI Parser', () => {
-  it('should parse simple text without escape sequences', () => {
+  it('should parse simple text without escape sequences', async () => {
     const ansiData = new Uint8Array([0x48, 0x65, 0x6C, 0x6C, 0x6F]); // "Hello"
     
-    const canvas = parseAnsiToCanvas(ansiData, null);
+    const canvas = await parseAnsiToCanvas(ansiData, null);
     
     expect(canvas.width).toBe(80);
     expect(canvas.height).toBe(25);
@@ -104,14 +104,14 @@ describe('ANSI Parser', () => {
     expect(canvas.rawdata[5]).toBe(0);     // black background
   });
 
-  it('should parse ANSI color codes correctly', () => {
+  it('should parse ANSI color codes correctly', async () => {
     // Test with ANSI: ESC[31m (red) + "Hello"
     const ansiData = new Uint8Array([
       0x1B, 0x5B, 0x33, 0x31, 0x6D, // ESC[31m (red foreground)
       0x48, 0x65, 0x6C, 0x6C, 0x6F   // "Hello"
     ]);
     
-    const canvas = parseAnsiToCanvas(ansiData, null);
+    const canvas = await parseAnsiToCanvas(ansiData, null);
     
     // Check that text is red (color 1)
     expect(canvas.rawdata[0]).toBe(0x48); // 'H'
@@ -119,28 +119,28 @@ describe('ANSI Parser', () => {
     expect(canvas.rawdata[2]).toBe(0);     // black background
   });
 
-  it('should handle background color codes', () => {
+  it('should handle background color codes', async () => {
     // Test with ANSI: ESC[42m (green background) + "X"
     const ansiData = new Uint8Array([
       0x1B, 0x5B, 0x34, 0x32, 0x6D, // ESC[42m (green background)
       0x58                            // "X"
     ]);
     
-    const canvas = parseAnsiToCanvas(ansiData, null);
+    const canvas = await parseAnsiToCanvas(ansiData, null);
     
     expect(canvas.rawdata[0]).toBe(0x58); // 'X'
     expect(canvas.rawdata[1]).toBe(7);     // white foreground (default)
     expect(canvas.rawdata[2]).toBe(2);     // green background
   });
 
-  it('should handle cursor positioning', () => {
+  it('should handle cursor positioning', async () => {
     // Test with ANSI: ESC[2;5H (move to row 2, col 5) + "X"
     const ansiData = new Uint8Array([
       0x1B, 0x5B, 0x32, 0x3B, 0x35, 0x48, // ESC[2;5H
       0x58                                  // "X"
     ]);
     
-    const canvas = parseAnsiToCanvas(ansiData, null);
+    const canvas = await parseAnsiToCanvas(ansiData, null);
     
     // Character should be at position (4, 1) in 0-based indexing
     // Row 2 (1-based) = row 1 (0-based), Col 5 (1-based) = col 4 (0-based)
@@ -150,7 +150,7 @@ describe('ANSI Parser', () => {
     expect(canvas.rawdata[pos + 2]).toBe(0); // black background
   });
 
-  it('should handle carriage return and line feed', () => {
+  it('should handle carriage return and line feed', async () => {
     // Test with "AB\r\nCD" - should create two lines
     const ansiData = new Uint8Array([
       0x41, 0x42,       // "AB"
@@ -158,7 +158,7 @@ describe('ANSI Parser', () => {
       0x43, 0x44        // "CD"
     ]);
     
-    const canvas = parseAnsiToCanvas(ansiData, null);
+    const canvas = await parseAnsiToCanvas(ansiData, null);
     
     // First line: "AB"
     expect(canvas.rawdata[0]).toBe(0x41); // 'A' at (0,0)
@@ -170,7 +170,7 @@ describe('ANSI Parser', () => {
     expect(canvas.rawdata[secondLineStart + 3]).toBe(0x44); // 'D' at (1,1)
   });
 
-  it('should stop at EOF character', () => {
+  it('should stop at EOF character', async () => {
     // Test with "AB" + EOF + "CD" - should only process "AB"
     const ansiData = new Uint8Array([
       0x41, 0x42,       // "AB"
@@ -178,7 +178,7 @@ describe('ANSI Parser', () => {
       0x43, 0x44        // "CD" (should be ignored)
     ]);
     
-    const canvas = parseAnsiToCanvas(ansiData, null);
+    const canvas = await parseAnsiToCanvas(ansiData, null);
     
     // Should have "AB" but not "CD"
     expect(canvas.rawdata[0]).toBe(0x41); // 'A'
@@ -186,7 +186,7 @@ describe('ANSI Parser', () => {
     expect(canvas.rawdata[6]).toBe(32);   // Space (default), not 'C'
   });
 
-  it('should handle SAUCE metadata in canvas state', () => {
+  it('should handle SAUCE metadata in canvas state', async () => {
     const sauce = {
       title: 'Test Art',
       author: 'Test Artist',
@@ -196,16 +196,16 @@ describe('ANSI Parser', () => {
     
     const ansiData = new Uint8Array([0x48, 0x69]); // "Hi"
     
-    const canvas = parseAnsiToCanvas(ansiData, sauce);
+    const canvas = await parseAnsiToCanvas(ansiData, sauce);
     
     expect(canvas.name).toBe('Test Art');
     expect(canvas.sauce).toEqual(sauce);
   });
 
-  it('should initialize canvas with proper defaults', () => {
+  it('should initialize canvas with proper defaults', async () => {
     const ansiData = new Uint8Array([]);
     
-    const canvas = parseAnsiToCanvas(ansiData, null);
+    const canvas = await parseAnsiToCanvas(ansiData, null);
     
     expect(canvas.width).toBe(80);
     expect(canvas.height).toBe(25);
@@ -225,7 +225,7 @@ describe('ANSI Parser', () => {
   });
 
   describe('font mapping', () => {
-    it('should map IBM VGA to CP437 8x16', () => {
+    it('should map IBM VGA to CP437 8x16', async () => {
       const sauce = {
         title: 'Test Art',
         author: 'Test Artist',
@@ -234,13 +234,13 @@ describe('ANSI Parser', () => {
       };
       
       const ansiData = new Uint8Array([0x48, 0x69]); // "Hi"
-      const canvas = parseAnsiToCanvas(ansiData, sauce);
+      const canvas = await parseAnsiToCanvas(ansiData, sauce);
       
       expect(canvas.font).toBe('CP437 8x16');
       expect(canvas.fontType).toBe('cp437');
     });
 
-    it('should map IBM EGA to CP437 8x14', () => {
+    it('should map IBM EGA to CP437 8x14', async () => {
       const sauce = {
         title: 'Test Art',
         author: 'Test Artist',
@@ -249,13 +249,13 @@ describe('ANSI Parser', () => {
       };
       
       const ansiData = new Uint8Array([0x48, 0x69]); // "Hi"
-      const canvas = parseAnsiToCanvas(ansiData, sauce);
+      const canvas = await parseAnsiToCanvas(ansiData, sauce);
       
       expect(canvas.font).toBe('CP437 8x14');
       expect(canvas.fontType).toBe('cp437');
     });
 
-    it('should map Amiga Topaz to Topaz+ 1200', () => {
+    it('should map Amiga Topaz to Topaz+ 1200', async () => {
       const sauce = {
         title: 'Test Art',
         author: 'Test Artist',
@@ -264,13 +264,13 @@ describe('ANSI Parser', () => {
       };
       
       const ansiData = new Uint8Array([0x48, 0x69]); // "Hi"
-      const canvas = parseAnsiToCanvas(ansiData, sauce);
+      const canvas = await parseAnsiToCanvas(ansiData, sauce);
       
       expect(canvas.font).toBe('Topaz+ 1200 8x16');
       expect(canvas.fontType).toBe('cp437');
     });
 
-    it('should fallback to default font for unknown SAUCE info', () => {
+    it('should fallback to default font for unknown SAUCE info', async () => {
       const sauce = {
         title: 'Test Art',
         author: 'Test Artist',
@@ -279,7 +279,7 @@ describe('ANSI Parser', () => {
       };
       
       const ansiData = new Uint8Array([0x48, 0x69]); // "Hi"
-      const canvas = parseAnsiToCanvas(ansiData, sauce);
+      const canvas = await parseAnsiToCanvas(ansiData, sauce);
       
       expect(canvas.font).toBe('CP437 8x16');
       expect(canvas.fontType).toBe('cp437');
