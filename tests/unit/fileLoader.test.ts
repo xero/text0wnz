@@ -81,6 +81,52 @@ describe('SAUCE Parser', () => {
     
     expect(sauce?.title).toBe('Title'); // Should trim null terminators
   });
+
+  it('should parse SAUCE dimensions from binary fields', () => {
+    const fileData = new Uint8Array(256); // File with SAUCE record
+    const sauceStart = fileData.length - 128;
+    
+    // Basic SAUCE header
+    const sauceData = new Uint8Array(128);
+    sauceData.set([0x53, 0x41, 0x55, 0x43, 0x45], 0); // "SAUCE"
+    sauceData.set([0x30, 0x30], 5); // "00"
+    
+    // Title, author, group (minimal)
+    const titleBytes = new Uint8Array(35);
+    titleBytes.set(new TextEncoder().encode('Test File'), 0);
+    sauceData.set(titleBytes, 7);
+    
+    const authorBytes = new Uint8Array(20);
+    authorBytes.set(new TextEncoder().encode('Test Author'), 0);
+    sauceData.set(authorBytes, 42);
+    
+    const groupBytes = new Uint8Array(20);
+    groupBytes.set(new TextEncoder().encode('Test Group'), 0);
+    sauceData.set(groupBytes, 62);
+    
+    const commentsBytes = new Uint8Array(22);
+    commentsBytes.set(new TextEncoder().encode('IBM VGA'), 0);
+    sauceData.set(commentsBytes, 104);
+    
+    // Binary fields:
+    sauceData[94] = 1;    // DataType = 1 (Character/ANSI)
+    sauceData[95] = 1;    // FileType = 1 (ANSI)
+    sauceData[96] = 80;   // TInfo1 (width) low byte = 80
+    sauceData[97] = 0;    // TInfo1 high byte = 0
+    sauceData[98] = 132;  // TInfo2 (height) low byte = 132
+    sauceData[99] = 0;    // TInfo2 high byte = 0
+    
+    fileData.set(sauceData, sauceStart);
+    
+    const sauce = parseSauce(fileData);
+    
+    expect(sauce?.title).toBe('Test File');
+    expect(sauce?.author).toBe('Test Author');
+    expect(sauce?.group).toBe('Test Group');
+    expect(sauce?.comments).toBe('IBM VGA');
+    expect(sauce?.width).toBe(80);
+    expect(sauce?.height).toBe(132);
+  });
 });
 
 describe('ANSI Parser', () => {
@@ -222,6 +268,25 @@ describe('ANSI Parser', () => {
       expect(canvas.rawdata[i * 3 + 1]).toBe(7); // white fg
       expect(canvas.rawdata[i * 3 + 2]).toBe(0); // black bg
     }
+  });
+
+  it('should use dimensions from SAUCE metadata', async () => {
+    const sauce = {
+      title: 'Custom Size Art',
+      author: 'Test Artist',
+      group: 'Test Group',
+      comments: 'IBM VGA',
+      width: 100,
+      height: 50
+    };
+    
+    const ansiData = new Uint8Array([0x48, 0x69]); // "Hi"
+    const canvas = await parseAnsiToCanvas(ansiData, sauce);
+    
+    expect(canvas.width).toBe(100);
+    expect(canvas.height).toBe(50);
+    expect(canvas.rawdata).toHaveLength(100 * 50 * 3);
+    expect(canvas.sauce).toEqual(sauce);
   });
 
   describe('font mapping', () => {

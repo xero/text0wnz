@@ -47,6 +47,8 @@ export interface SauceMetadata {
   author?: string;
   group?: string;
   comments?: string;
+  width?: number;
+  height?: number;
 }
 
 export interface CanvasState {

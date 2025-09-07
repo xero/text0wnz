@@ -10,6 +10,10 @@ function readString(data: Uint8Array, offset: number, length: number): string {
     .replace(/\0+$/, ''); // trim null terminators
 }
 
+function readLE16(data: Uint8Array, offset: number): number {
+  return data[offset] | (data[offset + 1] << 8);
+}
+
 /**
  * Parse SAUCE metadata from the last 128 bytes of a file
  */
@@ -27,12 +31,28 @@ export function parseSauce(data: Uint8Array): SauceMetadata | null {
     console.warn(`Unsupported SAUCE version: ${version}`);
   }
 
-  return {
+  // Parse binary fields after text fields
+  // DataType (1 byte) at offset 94
+  // TInfo1 (2 bytes LE) at offset 96 - width for ANSI
+  // TInfo2 (2 bytes LE) at offset 98 - height for ANSI
+  const dataType = data[sauceStart + 94];
+  const tInfo1 = readLE16(data, sauceStart + 96); // width
+  const tInfo2 = readLE16(data, sauceStart + 98); // height
+
+  const sauce: SauceMetadata = {
     title: readString(data, sauceStart + 7, 35).trim(),
     author: readString(data, sauceStart + 42, 20).trim(),
     group: readString(data, sauceStart + 62, 20).trim(),
     comments: readString(data, sauceStart + 104, 22).trim()
   };
+
+  // Add dimensions for ANSI files (DataType 1 = Character)
+  if (dataType === 1) {
+    if (tInfo1 > 0) sauce.width = tInfo1;
+    if (tInfo2 > 0) sauce.height = tInfo2;
+  }
+
+  return sauce;
 }
 
 // Font mapping interface
@@ -118,8 +138,11 @@ function mapSauceToFont(sauce: SauceMetadata | null): FontMapping {
  * Parse ANSI escape sequences and populate canvas rawdata
  */
 export function parseAnsiToCanvas(data: Uint8Array, sauce: SauceMetadata | null): CanvasState {
-  // Default to 80x25 or use SAUCE dimensions if available
-  const width = 80, height = 25;
+  // Use SAUCE dimensions if available, otherwise default to 80x25
+  const width = sauce?.width || 80;
+  const height = sauce?.height || 25;
+
+  console.log(`Using canvas dimensions: ${width}x${height}`);
 
   // Map SAUCE font info to appropriate font
   const fontMapping = mapSauceToFont(sauce);
@@ -323,7 +346,7 @@ export async function loadAnsiFile(file: File): Promise<void> {
     });
 
     // Force a full redraw to ensure colors are displayed correctly
-    eventBus.publish('local:canvas:cleared', { reason: "new-file" });
+    eventBus.publish('local:canvas:cleared', {reason: 'new-file'});
 
   } catch (error) {
     console.error('Failed to load ANSI file:', error);

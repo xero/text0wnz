@@ -91,7 +91,7 @@ export function updatePaletteColors(colors: RGB6Bit[]): void {
   Object.assign(palette, newPalette);
 
   // Trigger any needed updates
-  document.dispatchEvent(new CustomEvent("onPaletteChange"));
+  document.dispatchEvent(new CustomEvent('onPaletteChange'));
 }
 
 export class PalettePicker {
