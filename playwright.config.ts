@@ -45,6 +45,6 @@ export default defineConfig({
   webServer: {
     command: 'bunx serve dist -l 4173',
     port: 4173,
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
   },
 });
