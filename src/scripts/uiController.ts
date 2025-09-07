@@ -694,6 +694,11 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   eventBus.subscribe('local:sauce:populate', ({sauce})=>{
     populateSauceForm(sauce);
   });
+
+  //--------------- Canvas resize event listener
+  eventBus.subscribe('ui:canvas:resize', ({columns, rows})=>{
+    displayRes(columns, rows);
+  });
 }
 
 /**
