@@ -26,6 +26,7 @@ export type EditorEventMap = {
   };
   'ui:ice:changed': { ice: boolean };
   'canvas:state:changed': { state?: GlobalState };
+  'state:canvas:changed': { state: GlobalState };
   'system:error': {
     type: 'uncaught' | 'unhandledrejection';
     message: string;
