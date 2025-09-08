@@ -53,8 +53,9 @@ export function initCanvasRenderer(
 
   resizeCanvasToState();
 
-  eventBus.subscribe('ui:state:changed', ({state})=>{
-    void state;
+  eventBus.subscribe('ui:state:changed', ({state: newState})=>{
+    // Update the renderer's state reference
+    state = newState;
     resizeCanvasToState();
     forceFullRedraw();
   });
@@ -68,6 +69,15 @@ export function initCanvasRenderer(
   });
 
   eventBus.subscribe('local:canvas:cleared', ()=>{
+    forceFullRedraw();
+  });
+
+  eventBus.subscribe('state:canvas:changed', ({state: newState})=>{
+    // Update the renderer's state reference
+    state = newState;
+    // Resize canvas to match the new state
+    resizeCanvasToState();
+    // Force full redraw to ensure all changes are applied
     forceFullRedraw();
   });
 
@@ -550,6 +560,8 @@ export function updateCanvasData(newCanvas: CanvasState) {
     needsFullRedraw = true;
     queueFlushDirty();
     eventBus.publish('ui:ice:changed', {ice: newCanvas.ice});
+    // Notify that canvas state has changed
+    eventBus.publish('state:canvas:changed', {state});
   }
 }
 

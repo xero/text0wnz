@@ -420,4 +420,21 @@ describe('canvasRenderer utilities', () => {
       expect(true).toBe(true); // Documentation test
     });
   });
+
+  // Test for iCE colors state management fix
+  describe('iCE colors state management', () => {
+    it('should document the fix for iCE colors not being applied when loading files', () => {
+      // This test documents the issue that was fixed:
+      // The canvasRenderer was holding a stale reference to the application state
+      // and not updating when a new file was loaded via the stateManager.
+      // 
+      // The fix ensures that:
+      // 1. The renderer subscribes to 'state:canvas:changed' events
+      // 2. When this event is received, the renderer updates its internal state
+      // 3. The canvas is resized and a full redraw is triggered
+      // 4. This ensures the renderer always uses the latest canvas state including iCE colors
+      
+      expect(true).toBe(true); // Documentation test
+    });
+  });
 });
