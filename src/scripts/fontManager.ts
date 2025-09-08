@@ -15,7 +15,8 @@ export interface FontRenderer {
     ctx: CanvasRenderingContext2D,
     x: number,
     y: number,
-    iceColors?: boolean
+    iceColors?: boolean,
+    blinkState?: boolean
   ): void;
 }
 
@@ -44,16 +45,28 @@ export async function setFont(
       fontType,
       setLetterSpacing(enabled: boolean) { spacing = enabled; },
       getLetterSpacing() { return spacing; },
-      draw: (charCode, fg, bg, ctx, x, y, iceColors = false)=>{
+      draw: (charCode, fg, bg, ctx, x, y, iceColors = false, blinkState = true)=>{
         // Validate inputs first
         if (fg < 0 || fg > 15 || bg < 0 || bg > 15 || charCode < 0 || charCode > 255) {
           return;
         }
-        
-        // If not using ice colors and bg >= 8, subtract 8 (treat as non-bright)
+
+        // Handle blinking logic for non-iCE mode
         if (!iceColors && bg >= 8) {
-          bg -= 8;
+          if (!blinkState) {
+            // During blink "off" phase, hide the character (make it invisible)
+            // or reduce background to non-bright version
+            bg -= 8;
+            // Option 1: Make character invisible by setting fg=bg
+            fg = bg;
+            // Option 2: Could also draw a space character instead
+            // charCode = 32;
+          } else {
+            // During blink "on" phase, show with reduced background
+            bg -= 8;
+          }
         }
+
         const ch = String.fromCharCode(charCode);
         ctx.font = `${fontHeight}px monospace`;
         ctx.textBaseline = 'top';
@@ -134,24 +147,38 @@ export async function loadFontFromImage(
         ctx: CanvasRenderingContext2D,
         x: number,
         y: number,
-        iceColors = false
+        iceColors = false,
+        blinkState = true
       ): void=>{
         // Validate inputs first
         if (fg < 0 || fg > 15 || bg < 0 || bg > 15 || charCode < 0 || charCode > 255) {
           return;
         }
-        
+
+        // Handle blinking logic for non-iCE mode
+        let effectiveFg = fg;
+        let effectiveBg = bg;
+
         if (!iceColors && bg >= 8) {
-          bg -= 8;
+          if (!blinkState) {
+            // During blink "off" phase, hide the character
+            effectiveBg = bg - 8;
+            effectiveFg = effectiveBg; // Make character invisible
+            // Could also use a space character: charCode = 32;
+          } else {
+            // During blink "on" phase, show with reduced background
+            effectiveBg = bg - 8;
+          }
         }
+
         if (
-          !glyphs[fg] ||
-          !glyphs[fg][bg] ||
-          !glyphs[fg][bg][charCode]
+          !glyphs[effectiveFg] ||
+          !glyphs[effectiveFg][effectiveBg] ||
+          !glyphs[effectiveFg][effectiveBg][charCode]
         ) return;
 
         ctx.putImageData(
-          glyphs[fg][bg][charCode],
+          glyphs[effectiveFg][effectiveBg][charCode],
           x * (fontWidth + (spacing ? 1 : 0)),
           y * fontHeight
         );

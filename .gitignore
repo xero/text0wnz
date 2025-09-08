@@ -130,3 +130,4 @@ yarn-error.log*
 /test-results/
 !tests/results/
 !tests/results/**
+tests/results/coverage/
