@@ -3,7 +3,7 @@ import type {SauceMetadata, CanvasState, FontType} from './state';
 import {eventBus} from './eventBus';
 import {resizeCanvasToState, updateCanvasData} from './canvasRenderer';
 import {setFont} from './fontManager';
-import {createDefaultPalette} from './paletteManager';
+import {createDefaultPalette, mapAnsiColor} from './paletteManager';
 
 function readString(data: Uint8Array, offset: number, length: number): string {
   return new TextDecoder('latin1').decode(data.slice(offset, offset + length))
@@ -186,18 +186,17 @@ export function parseAnsiToCanvas(data: Uint8Array, sauce: SauceMetadata | null)
           if (cmd === 'm') {
             // Color command - parse SGR parameters
             const params = seq ? seq.split(';').map(n=>parseInt(n) || 0) : [0];
-
             for (const param of params) {
               if (param === 0) {
                 fg = 7; bg = 0; // reset
               } else if (param >= 30 && param <= 37) {
-                fg = param - 30; // foreground
+                fg = mapAnsiColor(param - 30); // foreground
               } else if (param >= 40 && param <= 47) {
-                bg = param - 40; // background
+                bg = mapAnsiColor(param - 40); // background
               } else if (param >= 90 && param <= 97) {
-                fg = param - 90 + 8; // bright fg
+                fg = mapAnsiColor(param - 90 + 8); // bright fg
               } else if (param >= 100 && param <= 107) {
-                bg = param - 100 + 8; // bright bg
+                bg = mapAnsiColor(param - 100 + 8); // bright bg
               }
             }
           } else if (cmd === 'H' || cmd === 'f') {

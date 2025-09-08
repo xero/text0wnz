@@ -496,9 +496,12 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
     const c = state.currentRoom.canvas;
     c.ice = !c.ice;
     forceFullRedraw(); // Redraw the canvas with new ICE setting
-
-    // Notify UI of ICE state change
+    console.log('ice button event ');
     eventBus.publish('ui:ice:changed', {ice: c.ice});
+    eventBus.publish('ui:notification', {
+      message: state.currentRoom.canvas.ice ? 'ICE colors: ON' : 'ICE colors: OFF',
+      level: 'info'
+    });
   });
 
   // brushes
@@ -717,6 +720,7 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   eventBus.subscribe('ui:ice:changed', ({ice: iceEnabled})=>{
     // Update ICE button appearance to show current state
     cl(ice, 'selected', iceEnabled);
+    console.log('ice event toggle');
   });
 }
 

@@ -22,6 +22,21 @@ export function rgb6bitToRgba(rgb: RGB6Bit): RGBA {
     255
   ];
 }
+//many ANSI files were created with the IBM CGA/EGA/VGA hardware in mind,
+//which had a different color ordering than the standard ANSI SGR color codes
+export function mapAnsiColor(ansiColor: number): number {
+  switch (ansiColor) {
+    case 4: return 1;     // Red → Blue
+    case 6: return 3;     // Brown/Yellow → Cyan
+    case 1: return 4;     // Blue → Red
+    case 3: return 6;     // Cyan → Brown/Yellow
+    case 12: return 9;    // Light Red → Light Blue
+    case 14: return 11;   // Light Yellow → Light Cyan
+    case 9: return 12;    // Light Blue → Light Red
+    case 11: return 14;   // Light Cyan → Light Yellow
+    default: return ansiColor;
+  }
+}
 
 // Create a palette from 6-bit array
 export function createPalette(colors: RGB6Bit[], fg = 7, bg = 0): Palette {

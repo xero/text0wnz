@@ -169,7 +169,7 @@ function flushDirtyCells() {
         // Keep high-intensity bit for bg color if ICE colors are enabled
         const effectiveBg = ice ? bg : (bg >= 8 ? bg - 8 : bg);
 
-        font.draw(charCode, fg, effectiveBg, offctx, x, y);
+        font.draw(charCode, fg, effectiveBg, offctx, x, y, ice);
       }
     }
     dirtyCells.clear();
@@ -193,7 +193,7 @@ function flushDirtyCells() {
       // Keep high-intensity bit for bg color if ICE colors are enabled
       const effectiveBg = ice ? bg : (bg >= 8 ? bg - 8 : bg);
 
-      font.draw(charCode, fg, effectiveBg, offctx, x, y);
+      font.draw(charCode, fg, effectiveBg, offctx, x, y, ice);
     }
     dirtyCells.clear();
     processDirtyRegions();
@@ -346,7 +346,7 @@ export function drawRegion(x: number, y: number, w: number, h: number) {
   const c = state.currentRoom?.canvas;
   if (!c) return;
 
-  const {width, height, rawdata} = c;
+  const {width, height, rawdata, ice} = c;
   if (w <= 0 || h <= 0) return;
   const clampedX = Math.max(0, Math.min(x, width));
   const clampedY = Math.max(0, Math.min(y, height));
@@ -364,7 +364,7 @@ export function drawRegion(x: number, y: number, w: number, h: number) {
       // Keep high-intensity bit for bg color if ICE colors are enabled
       const effectiveBg = c.ice ? bg : (bg >= 8 ? bg - 8 : bg);
 
-      font.draw(charCode, fg, effectiveBg, offctx, cellX, cellY);
+      font.draw(charCode, fg, effectiveBg, offctx, cellX, cellY, ice);
     }
   }
   const pixelX = clampedX * font.width;

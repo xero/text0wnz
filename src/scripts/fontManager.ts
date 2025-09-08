@@ -13,7 +13,8 @@ export interface FontRenderer {
     bg: number,
     ctx: CanvasRenderingContext2D,
     x: number,
-    y: number
+    y: number,
+    iceColors?: boolean
   ): void;
 }
 
@@ -114,20 +115,20 @@ export async function loadFontFromImage(
         bg: number,
         ctx: CanvasRenderingContext2D,
         x: number,
-        y: number
+        y: number,
+        iceColors = false
       ): void=>{
-        if (
-          !glyphs[fg] ||
-          !glyphs[fg][bg] ||
-          !glyphs[fg][bg][charCode]
-        ) return;
+        if (!glyphs[fg] || !glyphs[fg][bg] || !glyphs[fg][bg][charCode]) return;
+        let renderBg = bg;
+        if (!iceColors && bg >= 8) {
+          renderBg = bg - 8;
+        }
         ctx.putImageData(
-          glyphs[fg][bg][charCode],
+          glyphs[fg][renderBg][charCode],
           x * (fontWidth + (spacing ? 1 : 0)),
           y * fontHeight
         );
       };
-
       resolve({
         width: fontWidth,
         height: fontHeight,
