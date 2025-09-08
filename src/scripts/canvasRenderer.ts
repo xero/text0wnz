@@ -61,7 +61,7 @@ export function initCanvasRenderer(
 
   // This is the key change: The renderer now listens for state updates
   // from the central state manager.
-   eventBus.subscribe('state:canvas:changed', ({canvas}) => {
+   eventBus.subscribe('state:canvas:changed', ({canvas})=>{
     if (state?.currentRoom) {
       // Update the renderer's state with the new canvas data
       state.currentRoom.canvas = canvas;
