@@ -36,6 +36,12 @@ const dirtyRegions: DirtyRegion[] = [];
 let needsFullRedraw = true;
 let rafQueued = false;
 
+// --- Blink state management
+let blinkState = true; // true = normal display, false = blink off (hidden)
+let blinkTimer: NodeJS.Timeout | number | null = null;
+const blinkInterval = 500; // milliseconds
+const blinkingCells: Set<number> = new Set(); // cells that should blink (y*width+x)
+
 // --- Setup
 export function initCanvasRenderer(
   _state: GlobalState,
@@ -109,6 +115,89 @@ function setupOffscreen() {
   offctx = offscreen.getContext('2d', {willReadFrequently: false});
 }
 
+// --- Blink Management Functions
+function startBlinkTimer() {
+  if (blinkTimer !== null) {
+    clearInterval(blinkTimer as NodeJS.Timeout);
+  }
+  blinkTimer = setInterval(()=>{
+    blinkState = !blinkState;
+    // Only redraw cells that are currently blinking
+    if (blinkingCells.size > 0) {
+      redrawBlinkingCells();
+    }
+  }, blinkInterval);
+}
+
+function stopBlinkTimer() {
+  if (blinkTimer !== null) {
+    clearInterval(blinkTimer as NodeJS.Timeout);
+    blinkTimer = null;
+  }
+}
+
+function updateBlinkingCells() {
+  blinkingCells.clear();
+  if (!state?.currentRoom?.canvas) return;
+
+  const c = state.currentRoom.canvas;
+  const {width, height, rawdata, ice} = c;
+
+  // Only track blinking cells when iCE colors are disabled
+  if (ice) return;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 3;
+      const bg = rawdata[idx + 2];
+      // Cell should blink if background >= 8 and iCE is off
+      if (bg >= 8) {
+        blinkingCells.add(y * width + x);
+      }
+    }
+  }
+
+  // Start/stop blink timer based on whether we have blinking cells
+  if (blinkingCells.size > 0) {
+    startBlinkTimer();
+  } else {
+    stopBlinkTimer();
+  }
+}
+
+function redrawBlinkingCells() {
+  if (!ctx || !offctx || !state || !font || !palette || !canvas || !offscreen) return;
+  const c = state.currentRoom?.canvas;
+  if (!c) return;
+
+  const {width, rawdata} = c;
+
+  for (const cellIndex of blinkingCells) {
+    const x = cellIndex % width;
+    const y = Math.floor(cellIndex / width);
+    const idx = (y * width + x) * 3;
+    const charCode = rawdata[idx];
+    const fg = rawdata[idx + 1];
+    const bg = rawdata[idx + 2];
+
+    // Clear the cell area on offscreen buffer
+    offctx.clearRect(x * font.width, y * font.height, font.width, font.height);
+
+    // Draw the cell with blink state
+    font.draw(charCode, fg, bg, offctx, x, y, c.ice, blinkState);
+  }
+
+  // Copy affected areas to main canvas
+  for (const cellIndex of blinkingCells) {
+    const x = cellIndex % width;
+    const y = Math.floor(cellIndex / width);
+    const pixelX = x * font.width;
+    const pixelY = y * font.height;
+    ctx.clearRect(pixelX, pixelY, font.width, font.height);
+    ctx.drawImage(offscreen, pixelX, pixelY, font.width, font.height, pixelX, pixelY, font.width, font.height);
+  }
+}
+
 export function resizeCanvasToState() {
   if (!canvas || !state || !font) return;
   const c = state.currentRoom?.canvas;
@@ -166,16 +255,15 @@ function flushDirtyCells() {
         const fg = rawdata[idx + 1];
         const bg = rawdata[idx + 2];
 
-        // Keep high-intensity bit for bg color if ICE colors are enabled
-        const effectiveBg = ice ? bg : (bg >= 8 ? bg - 8 : bg);
-
-        font.draw(charCode, fg, effectiveBg, offctx, x, y, ice);
+        font.draw(charCode, fg, bg, offctx, x, y, ice, blinkState);
       }
     }
     dirtyCells.clear();
     dirtyRegions.length = 0;
     needsFullRedraw = false;
     needsFullBlit = true;
+    // Update blinking cells after full redraw
+    updateBlinkingCells();
   } else if (dirtyCells.size > 0 || dirtyRegions.length > 0) {
     // Similar modifications for the else branch
     const hasDirtyCells = dirtyCells.size > 0;
@@ -190,10 +278,7 @@ function flushDirtyCells() {
       // clear cell area
       offctx.clearRect(x * font.width, y * font.height, font.width, font.height);
 
-      // Keep high-intensity bit for bg color if ICE colors are enabled
-      const effectiveBg = ice ? bg : (bg >= 8 ? bg - 8 : bg);
-
-      font.draw(charCode, fg, effectiveBg, offctx, x, y, ice);
+      font.draw(charCode, fg, bg, offctx, x, y, ice, blinkState);
     }
     dirtyCells.clear();
     processDirtyRegions();
@@ -361,10 +446,7 @@ export function drawRegion(x: number, y: number, w: number, h: number) {
       const bg = rawdata[idx + 2];
       offctx.clearRect(cellX * font.width, cellY * font.height, font.width, font.height);
 
-      // Keep high-intensity bit for bg color if ICE colors are enabled
-      const effectiveBg = c.ice ? bg : (bg >= 8 ? bg - 8 : bg);
-
-      font.draw(charCode, fg, effectiveBg, offctx, cellX, cellY, ice);
+      font.draw(charCode, fg, bg, offctx, cellX, cellY, ice, blinkState);
     }
   }
   const pixelX = clampedX * font.width;
@@ -381,6 +463,11 @@ export function resetCanvasRenderer(
   newPalette?: Palette,
   newFont?: FontRenderer
 ) {
+  // Clean up blink timer
+  stopBlinkTimer();
+  blinkingCells.clear();
+  blinkState = true;
+
   ctx = null;
   canvas = null;
   offctx = null;
