@@ -46,6 +46,10 @@ export interface SauceMetadata {
   title?: string;
   author?: string;
   group?: string;
+  date?: string;
+  width?: number;
+  height?: number;
+  ice?: boolean;
   comments?: string;
 }
 

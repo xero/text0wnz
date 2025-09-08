@@ -1,10 +1,10 @@
 // top-level UI orchestrator: handles global UI events, tool switching,
 // dialog logic, delegations to toolManager
-import type {GlobalState} from './state';
+import type {GlobalState, SauceMetadata} from './state';
 import type {PubSub} from './eventBus';
 import type {FontType} from './fontManager';
 import {createOfflineRoomState, createOfflineCanvasState} from './state';
-import {forceFullRedraw, initCanvasRenderer, resetCanvasRenderer, resizeCanvasToState} from './canvasRenderer';
+import {forceFullRedraw, initCanvasRenderer, resetCanvasRenderer, resizeCanvasToState, toggleIceColors} from './canvasRenderer';
 import {setFont, FontRenderer} from './fontManager';
 import {PalettePicker, createDefaultPalette, Palette} from './paletteManager';
 import {GridOverlay} from './gridOverlay';
@@ -488,6 +488,17 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   add(zoom, _=>toolOps('zoom'));
   add(dropper, _=>toolOpsHide());
   add(mirror, _=>toolOpsHide());
+
+  // ICE colors toggle
+  add(ice, _=>{
+    if (!state.currentRoom) return;
+    const canvas = state.currentRoom.canvas;
+    canvas.ice = !canvas.ice;
+    toggleIceColors();
+    cl(ice, 'active', canvas.ice);
+    console.log('click');
+  });
+
   // brushes
   add(characterBrush, _=>toolOps('char',true));
 
@@ -686,4 +697,114 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   $$$<HTMLButtonElement>('.cancel').forEach(
     c=>add(c,_=>modalClose()));
   add(modal, e=>{if(e.target === modal) modalClose()});
+
+  //--------------- file loading
+  initFileLoading();
+
+  //--------------- SAUCE population event listener
+  eventBus.subscribe('local:sauce:populate', ({sauce})=>{
+    populateSauceForm(sauce);
+  });
+
+  //--------------- Canvas resize event listener
+  eventBus.subscribe('ui:canvas:resize', ({columns, rows})=>{
+    displayRes(columns, rows);
+  });
+
+  //--------------- ICE colors state listener
+  eventBus.subscribe('ui:ice:changed', ({ice: iceEnabled})=>{
+    // Update ICE button appearance to show current state
+    cl(ice, 'selected', iceEnabled);
+    console.log('ice event toggle');
+  });
+}
+
+/**
+ * Initialize file loading functionality
+ */
+function initFileLoading() {
+  // Create hidden file input
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.ans,.xb,.bin,.txt';
+  fileInput.style.display = 'none';
+  fileInput.id = 'hiddenFileInput';
+  document.body.appendChild(fileInput);
+
+  // Handle file selection
+  fileInput.addEventListener('change', (event)=>{
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file) {
+      void (async()=>{
+        const {loadAnsiFile} = await import('./fileLoader');
+        await loadAnsiFile(file);
+        // Clear the input so the same file can be loaded again
+        fileInput.value = '';
+      })();
+    }
+  });
+
+  // Add keyboard shortcut (Ctrl+O/Cmd+O)
+  document.addEventListener('keydown', (event)=>{
+    if ((event.ctrlKey || event.metaKey) && event.key === 'o') {
+      event.preventDefault();
+      fileInput.click();
+    }
+  });
+
+  // Add drag and drop support
+  let dragCounter = 0;
+
+  document.addEventListener('dragenter', (event)=>{
+    event.preventDefault();
+    dragCounter++;
+    document.body.classList.add('dragging');
+  });
+
+  document.addEventListener('dragleave', (event)=>{
+    event.preventDefault();
+    dragCounter--;
+    if (dragCounter === 0) {
+      document.body.classList.remove('dragging');
+    }
+  });
+
+  document.addEventListener('dragover', (event)=>{
+    event.preventDefault();
+  });
+
+  document.addEventListener('drop', (event)=>{
+    event.preventDefault();
+    dragCounter = 0;
+    document.body.classList.remove('dragging');
+
+    const files = event.dataTransfer?.files;
+    if (files?.[0]) {
+      void (async()=>{
+        const {loadAnsiFile} = await import('./fileLoader');
+        await loadAnsiFile(files[0]);
+      })();
+    }
+  });
+}
+
+/**
+ * Populate SAUCE form with metadata
+ */
+function populateSauceForm(sauce: SauceMetadata | null): void {
+  if (sauce) {
+    if (sauce.title) sauceTitle.value = sauce.title;
+    if (sauce.author) sauceAuthor.value = sauce.author;
+    if (sauce.group) sauceGroup.value = sauce.group;
+    if (sauce.comments) sauceComments.value = sauce.comments;
+
+    // Update navigation title to match
+    if (sauce.title) navTitle.value = sauce.title;
+
+    // Trigger existing byte count update
+    enforceMaxBytes();
+  } else {
+    // Use existing defaults function
+    sauceDefaults();
+  }
 }

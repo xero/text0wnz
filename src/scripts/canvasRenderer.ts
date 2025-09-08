@@ -70,6 +70,14 @@ export function initCanvasRenderer(
   eventBus.subscribe('local:canvas:cleared', ()=>{
     forceFullRedraw();
   });
+
+  // Initialize ICE colors state and blinking
+  if (state.currentRoom?.canvas) {
+    const c = state.currentRoom.canvas;
+    // Notify UI of initial ICE state
+    eventBus.publish('ui:ice:changed', {ice: c.ice});
+  }
+
   forceFullRedraw();
 
   // --- Return mutator API for palette/font switching
@@ -146,7 +154,7 @@ function flushDirtyCells() {
   const c = state.currentRoom?.canvas;
   if (!c) return;
 
-  const {width, height, rawdata} = c;
+  const {width, height, rawdata, ice} = c; // Get ice setting from canvas state
   let needsFullBlit = false;
 
   if (needsFullRedraw) {
@@ -157,7 +165,11 @@ function flushDirtyCells() {
         const charCode = rawdata[idx];
         const fg = rawdata[idx + 1];
         const bg = rawdata[idx + 2];
-        font.draw(charCode, fg, bg, offctx, x, y);
+
+        // Keep high-intensity bit for bg color if ICE colors are enabled
+        const effectiveBg = ice ? bg : (bg >= 8 ? bg - 8 : bg);
+
+        font.draw(charCode, fg, effectiveBg, offctx, x, y, ice);
       }
     }
     dirtyCells.clear();
@@ -165,6 +177,7 @@ function flushDirtyCells() {
     needsFullRedraw = false;
     needsFullBlit = true;
   } else if (dirtyCells.size > 0 || dirtyRegions.length > 0) {
+    // Similar modifications for the else branch
     const hasDirtyCells = dirtyCells.size > 0;
     for (const idx of dirtyCells) {
       const cell = Math.floor(idx / 3);
@@ -173,9 +186,14 @@ function flushDirtyCells() {
       const charCode = rawdata[idx];
       const fg = rawdata[idx + 1];
       const bg = rawdata[idx + 2];
+
       // clear cell area
       offctx.clearRect(x * font.width, y * font.height, font.width, font.height);
-      font.draw(charCode, fg, bg, offctx, x, y);
+
+      // Keep high-intensity bit for bg color if ICE colors are enabled
+      const effectiveBg = ice ? bg : (bg >= 8 ? bg - 8 : bg);
+
+      font.draw(charCode, fg, effectiveBg, offctx, x, y, ice);
     }
     dirtyCells.clear();
     processDirtyRegions();
@@ -328,7 +346,7 @@ export function drawRegion(x: number, y: number, w: number, h: number) {
   const c = state.currentRoom?.canvas;
   if (!c) return;
 
-  const {width, height, rawdata} = c;
+  const {width, height, rawdata, ice} = c;
   if (w <= 0 || h <= 0) return;
   const clampedX = Math.max(0, Math.min(x, width));
   const clampedY = Math.max(0, Math.min(y, height));
@@ -342,7 +360,11 @@ export function drawRegion(x: number, y: number, w: number, h: number) {
       const fg = rawdata[idx + 1];
       const bg = rawdata[idx + 2];
       offctx.clearRect(cellX * font.width, cellY * font.height, font.width, font.height);
-      font.draw(charCode, fg, bg, offctx, cellX, cellY);
+
+      // Keep high-intensity bit for bg color if ICE colors are enabled
+      const effectiveBg = c.ice ? bg : (bg >= 8 ? bg - 8 : bg);
+
+      font.draw(charCode, fg, effectiveBg, offctx, cellX, cellY, ice);
     }
   }
   const pixelX = clampedX * font.width;
@@ -535,3 +557,19 @@ export function getCanvasImage(): HTMLCanvasElement | null {
   return canvas;
 }
 
+/**
+ * Toggle ICE colors mode and update rendering
+ */
+export function toggleIceColors() {
+  if (!state || !state.currentRoom) return;
+  const c = state.currentRoom.canvas;
+
+  c.ice = !c.ice;
+
+  // Trigger full redraw to update all cells
+  needsFullRedraw = true;
+  queueFlushDirty();
+
+  // Notify UI of ICE state change
+  eventBus.publish('ui:ice:changed', {ice: c.ice});
+}

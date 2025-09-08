@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>26/26</span>
+                <span class='fraction'>31/31</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>26/26</span>
+                <span class='fraction'>31/31</span>
             </div>
         
             
@@ -145,7 +145,18 @@
 <a name='L80'></a><a href='#L80'>80</a>
 <a name='L81'></a><a href='#L81'>81</a>
 <a name='L82'></a><a href='#L82'>82</a>
-<a name='L83'></a><a href='#L83'>83</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -182,34 +193,39 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">8x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-yes">8x</span>
 <span class="cline-any cline-yes">8x</span>
 <span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
 <span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-yes">8x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -231,13 +247,14 @@
  * Define all event types and their payloads here.
  * Extend with more namespaces/events as needed.
  */
-import {FontRenderer} from './canvasRenderer';
-import type {GlobalState} from './state';
+import {FontRenderer} from './fontManager';
+import type {GlobalState, SauceMetadata} from './state';
 export type EditorEventMap = {
   'local:tool:activated': { toolName: string };
   'local:file:loaded': { fileName: string; data: ArrayBuffer };
   'local:palette:changed': { colors: number[] };
   'local:canvas:cleared': { reason: 'user' | 'reset' | 'new-file' };
+  'local:sauce:populate': { sauce: SauceMetadata | null };
   'network:canvas:update': { patch: Uint8Array; userId: string };
   'network:user:joined': { userId: string; nickname: string };
   'network:chat:message': { userId: string; message: string };
@@ -252,6 +269,8 @@ export type EditorEventMap = {
     rows:number;
     dpr:number;
   };
+  'ui:ice:changed': { ice: boolean };
+  'canvas:state:changed': { state?: GlobalState };
   'system:error': {
     type: 'uncaught' | 'unhandledrejection';
     message: string;
@@ -264,31 +283,36 @@ export type EditorEventMap = {
 type EventKey = keyof EditorEventMap;
 type Handler&lt;K extends EventKey&gt; = (payload: EditorEventMap[K])=&gt;void;
 export class PubSub {
-  private handlers: Partial&lt;{[K in EventKey]: Set&lt;Handler&lt;unknown&gt;&gt;}&gt; = {};
+  private handlers: Record&lt;string, Set&lt;(payload: unknown) =&gt; void&gt; | undefined&gt; = {};
 &nbsp;
   subscribe&lt;K extends EventKey&gt;(event: K, handler: Handler&lt;K&gt;):()=&gt;void{
-    if (!this.handlers[event]) {
-      this.handlers[event] = new Set();
-    }
-    (this.handlers[event] as Set&lt;Handler&lt;K&gt;&gt;).add(handler);
+    const handlers = this.handlers[event] || new Set();
+    this.handlers[event] = handlers;
+    handlers.add(handler as (payload: unknown) =&gt; void);
     return ()=&gt;{
       this.unsubscribe(event, handler);
     };
   }
 &nbsp;
   unsubscribe&lt;K extends EventKey&gt;(event: K, handler: Handler&lt;K&gt;) {
-    (this.handlers[event] as Set&lt;Handler&lt;K&gt;&gt;).delete(handler);
+    const handlers = this.handlers[event];
+    if (handlers) {
+      handlers.delete(handler as (payload: unknown) =&gt; void);
+    }
   }
 &nbsp;
   publish&lt;K extends EventKey&gt;(event: K, payload: EditorEventMap[K]) {
-    (this.handlers[event] as Set&lt;Handler&lt;K&gt;&gt; | undefined)?.forEach((handler)=&gt;{
-      handler(payload);
-    });
+    const handlers = this.handlers[event];
+    if (handlers) {
+      handlers.forEach((handler)=&gt;{
+        handler(payload);
+      });
+    }
   }
 &nbsp;
   clearAll() {
     Object.values(this.handlers).forEach((set)=&gt;{
-      set.clear();
+      set?.clear();
     });
   }
 }
@@ -316,7 +340,7 @@ eventBus.publish("network:chat:message", { userId, message });
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-09-06T00:51:15.130Z
+                at 2025-09-07T22:28:12.178Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>
