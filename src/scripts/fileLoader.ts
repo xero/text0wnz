@@ -5,59 +5,91 @@ import {resizeCanvasToState, updateCanvasData} from './canvasRenderer';
 import {setFont} from './fontManager';
 import {createDefaultPalette, mapAnsiColor} from './paletteManager';
 
-function readString(data: Uint8Array, offset: number, length: number): string {
-  return new TextDecoder('latin1').decode(data.slice(offset, offset + length))
-    .replace(/\0+$/, ''); // trim null terminators
-}
-
-function readLE16(data: Uint8Array, offset: number): number {
-  return data[offset] | (data[offset + 1] << 8);
-}
-
-/**
- * Parse SAUCE metadata from the last 128 bytes of a file
- */
 export function parseSauce(data: Uint8Array): SauceMetadata | null {
-  console.log(`raw sauce: ${data}`);
   if (data.length < 128) return null;
 
   // SAUCE record is last 128 bytes
   const sauceStart = data.length - 128;
   const id = readString(data, sauceStart, 5);
-console.log('before');
+
   if (id !== 'SAUCE') return null;
 
-console.log('after');
   const version = readString(data, sauceStart + 5, 2);
   if (version !== '00') {
     console.warn(`Unsupported SAUCE version: ${version}`);
   }
 
-  // Parse binary fields after text fields
-  // DataType (1 byte) at offset 94
-  // TInfo1 (2 bytes LE) at offset 96 - width for ANSI
-  // TInfo2 (2 bytes LE) at offset 98 - height for ANSI
-  // TFlags (1 byte) at offset 100 - ANSiFlags for ANSI files
-  const dataType = data[sauceStart + 94];
-  const tInfo1 = readLE16(data, sauceStart + 96); // width
-  const tInfo2 = readLE16(data, sauceStart + 98); // height
-  const tFlags = data[sauceStart + 100]; // ANSiFlags
-
+  // Parse SAUCE record
+  // Basic text fields
   const sauce: SauceMetadata = {
     title: readString(data, sauceStart + 7, 35).trim(),
     author: readString(data, sauceStart + 42, 20).trim(),
     group: readString(data, sauceStart + 62, 20).trim(),
-    comments: readString(data, sauceStart + 104, 22).trim()
+    date: readString(data, sauceStart + 82, 8).trim(),
   };
 
-  // Add dimensions and ICE colors for ANSI files (DataType 1 = Character)
+  // Parse binary fields
+  const dataType = data[sauceStart + 94]; // DataType (1 byte)
+  const fileType = data[sauceStart + 95]; // FileType (1 byte)
+  const tInfo1 = readLE16(data, sauceStart + 96); // Width for ANSi
+  const tInfo2 = readLE16(data, sauceStart + 98); // Height for ANSi
+  const commentLines = data[sauceStart + 104]; // Number of COMNT lines
+  const tFlags = data[sauceStart + 105]; // ANSiFlags - bit 0 is ICEColors
+
+  // For character data (ANSi), extract width, height, and ICE colors
   if (dataType === 1) {
     if (tInfo1 > 0) sauce.width = tInfo1;
     if (tInfo2 > 0) sauce.height = tInfo2;
-    // Extract ICE colors flag from bit 0 of TFlags (ANSiFlags)
+
+    // ICE colors is bit 0 of tFlags
     sauce.ice = (tFlags & 0x01) !== 0;
+    console.log(`ICE colors flag: ${tFlags.toString(16)} & 0x01 = ${sauce.ice}`);
   }
+
+  // Parse COMNT block if present
+  if (commentLines > 0) {
+    // COMNT block starts before the SAUCE record
+    const comntStart = sauceStart - (commentLines * 64) - 5;
+
+    if (comntStart >= 0) {
+      const comntId = readString(data, comntStart, 5);
+
+      if (comntId === 'COMNT') {
+        // Read each comment line (64 bytes each)
+        let comments = '';
+        for (let i = 0; i < commentLines; i++) {
+          const lineStart = comntStart + 5 + (i * 64);
+          const line = readString(data, lineStart, 64).trim();
+          if (line) comments += line + '\n';
+        }
+        sauce.comments = comments.trim();
+      }
+    }
+  }
+
+  // If no COMNT block was found or parsed, use TInfoS as legacy comment
+  if (!sauce.comments) {
+    sauce.comments = readString(data, sauceStart + 106, 22).trim();
+  }
+
+  console.log('Parsed SAUCE metadata:', sauce);
   return sauce;
+}
+
+// Helper function to read a null-terminated string from a Uint8Array
+function readString(data: Uint8Array, offset: number, maxLength: number): string {
+  let result = '';
+  for (let i = 0; i < maxLength; i++) {
+    const charCode = data[offset + i];
+    if (charCode === 0) break; // Stop at null terminator
+    result += String.fromCharCode(charCode);
+  }
+  return result;
+}
+
+// Helper function to read a 16-bit little-endian value
+function readLE16(data: Uint8Array, offset: number): number {
+  return data[offset] | (data[offset + 1] << 8);
 }
 
 // Font mapping interface
