@@ -4,7 +4,7 @@ import type {GlobalState, SauceMetadata} from './state';
 import type {PubSub} from './eventBus';
 import type {FontType} from './fontManager';
 import {createOfflineRoomState, createOfflineCanvasState} from './state';
-import {forceFullRedraw, initCanvasRenderer, resetCanvasRenderer, resizeCanvasToState} from './canvasRenderer';
+import {forceFullRedraw, initCanvasRenderer, resetCanvasRenderer, resizeCanvasToState, toggleIceColors} from './canvasRenderer';
 import {setFont, FontRenderer} from './fontManager';
 import {PalettePicker, createDefaultPalette, Palette} from './paletteManager';
 import {GridOverlay} from './gridOverlay';
@@ -492,16 +492,11 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   // ICE colors toggle
   add(ice, _=>{
     if (!state.currentRoom) return;
-    // Toggle ICE colors mode
-    const c = state.currentRoom.canvas;
-    c.ice = !c.ice;
-    forceFullRedraw(); // Redraw the canvas with new ICE setting
-    console.log('ice button event ');
-    eventBus.publish('ui:ice:changed', {ice: c.ice});
-    eventBus.publish('ui:notification', {
-      message: state.currentRoom.canvas.ice ? 'ICE colors: ON' : 'ICE colors: OFF',
-      level: 'info'
-    });
+    const canvas = state.currentRoom.canvas;
+    canvas.ice = !canvas.ice;
+    toggleIceColors();
+    cl(ice, 'active', canvas.ice);
+    console.log('click');
   });
 
   // brushes

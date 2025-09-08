@@ -1,6 +1,7 @@
-import type {Palette} from './canvasRenderer';
+import type {Palette} from './paletteManager';
 
 export type FontType = 'cp437' | 'utf8';
+
 export interface FontRenderer {
   width: number;
   height: number;
@@ -29,8 +30,8 @@ export async function setFont(
   letterSpacing: boolean = false
 ): Promise<FontRenderer> {
   const match = fontName.match(/(\d+)x(\d+)$/i);
-  // Default to 16x16 if not found (legacy or fallback)
-  const fontWidth = match ? parseInt(match[1], 10) : 16;
+  // Default to 8x16 if not found in the name
+  const fontWidth = match ? parseInt(match[1], 10) : 8;
   const fontHeight = match ? parseInt(match[2], 10) : 16;
 
   if (fontType === 'utf8' && fontName === 'system') {
@@ -41,10 +42,21 @@ export async function setFont(
       fontType,
       setLetterSpacing(enabled: boolean) { spacing = enabled; },
       getLetterSpacing() { return spacing; },
-      draw: (charCode, fg, bg, ctx, x, y)=>{
+      draw: (charCode, fg, bg, ctx, x, y, iceColors = false)=>{
+        // If not using ice colors and bg >= 8, subtract 8 (treat as non-bright)
+        if (!iceColors && bg >= 8) {
+          bg -= 8;
+        }
         const ch = String.fromCharCode(charCode);
         ctx.font = `${fontHeight}px monospace`;
         ctx.textBaseline = 'top';
+        ctx.fillStyle = `rgba(${palette.getRGBAColor(bg).join(',')})`;
+        ctx.fillRect(
+          x * (fontWidth + (spacing ? 1 : 0)),
+          y * fontHeight,
+          fontWidth,
+          fontHeight
+        );
         ctx.fillStyle = `rgba(${palette.getRGBAColor(fg).join(',')})`;
         ctx.fillText(ch, x * (fontWidth + (spacing ? 1 : 0)), y * fontHeight);
       }
@@ -53,8 +65,6 @@ export async function setFont(
     return await loadFontFromImage(fontName, letterSpacing, palette, fontType);
   }
 }
-
-type FontGlyphs = ImageData[][][]; // [fg][bg][charCode]
 
 /**
  * Loads a font from a PNG font sheet using fast thresholding & palette.
@@ -71,9 +81,10 @@ export async function loadFontFromImage(
     img.src = `./ui/fontz/${fontName}.png`;
     img.onload = ()=>{
       const match = fontName.match(/(\d+)x(\d+)$/i);
-      if (!match) throw new Error('Font PNG filename must end with WxH, e.g. 8x16.png');
-      const fontWidth = parseInt(match[1], 10);
-      const fontHeight = parseInt(match[2], 10);
+      // Default to 8x16 if not found in the name
+      const fontWidth = match ? parseInt(match[1], 10) : 8;
+      const fontHeight = match ? parseInt(match[2], 10) : 16;
+
       if (img.width !== fontWidth * 16 || img.height !== fontHeight * 16) {
         throw new Error(
           `Font PNG dimensions (${img.width}x${img.height}) do not match expected grid for ${fontWidth}x${fontHeight} glyphs`
@@ -87,7 +98,7 @@ export async function loadFontFromImage(
       tempCtx.drawImage(img, 0, 0);
 
       // Precolor all glyphs for every fg/bg/pair (fastest, supports gray glyphs)
-      const glyphs: FontGlyphs = [];
+      const glyphs: ImageData[][][] = [];
       for (let fg = 0; fg < 16; fg++) {
         glyphs[fg] = [];
         for (let bg = 0; bg < 16; bg++) {
@@ -118,17 +129,24 @@ export async function loadFontFromImage(
         y: number,
         iceColors = false
       ): void=>{
-        if (!glyphs[fg] || !glyphs[fg][bg] || !glyphs[fg][bg][charCode]) return;
-        let renderBg = bg;
+        // Key ICE colors behavior: If not using ICE colors and bg >= 8, subtract 8
         if (!iceColors && bg >= 8) {
-          renderBg = bg - 8;
+          bg -= 8;
         }
+
+        if (
+          !glyphs[fg] ||
+          !glyphs[fg][bg] ||
+          !glyphs[fg][bg][charCode]
+        ) return;
+
         ctx.putImageData(
-          glyphs[fg][renderBg][charCode],
+          glyphs[fg][bg][charCode],
           x * (fontWidth + (spacing ? 1 : 0)),
           y * fontHeight
         );
       };
+
       resolve({
         width: fontWidth,
         height: fontHeight,

@@ -557,8 +557,6 @@ export function getCanvasImage(): HTMLCanvasElement | null {
   return canvas;
 }
 
-// --- ICE Colors / Blinking Support
-
 /**
  * Toggle ICE colors mode and update rendering
  */
@@ -575,24 +573,3 @@ export function toggleIceColors() {
   // Notify UI of ICE state change
   eventBus.publish('ui:ice:changed', {ice: c.ice});
 }
-
-/**
- * Set ICE colors mode explicitly
- */
-export function setIceColors(enabled: boolean) {
-  if (!state || !state.currentRoom) return;
-  const c = state.currentRoom.canvas;
-
-  if (c.ice === enabled) return; // No change needed
-
-  c.ice = enabled;
-
-  // Trigger full redraw to update all cells
-  needsFullRedraw = true;
-  queueFlushDirty();
-
-  // Notify UI of ICE state change
-  eventBus.publish('ui:ice:changed', {ice: c.ice});
-}
-
-

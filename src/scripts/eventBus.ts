@@ -58,6 +58,7 @@ export class PubSub {
 
   publish<K extends EventKey>(event: K, payload: EditorEventMap[K]) {
     const handlers = this.handlers[event];
+    console.log(event);
     if (handlers) {
       handlers.forEach((handler)=>{
         handler(payload);
@@ -72,19 +73,3 @@ export class PubSub {
   }
 }
 export const eventBus = new PubSub();
-
-/*
-// ==========================
-// 4. Usage Example
-// ==========================
-
-// In a tool module
-import { eventBus } from "./eventBus";
-eventBus.subscribe("local:file:loaded", ({ fileName, data }) => {
-  // handle file
-});
-eventBus.publish("local:tool:activated", { toolName: "brush" });
-
-// In network module
-eventBus.publish("network:chat:message", { userId, message });
-*/

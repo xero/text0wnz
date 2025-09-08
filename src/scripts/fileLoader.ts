@@ -18,14 +18,16 @@ function readLE16(data: Uint8Array, offset: number): number {
  * Parse SAUCE metadata from the last 128 bytes of a file
  */
 export function parseSauce(data: Uint8Array): SauceMetadata | null {
+  console.log(`raw sauce: ${data}`);
   if (data.length < 128) return null;
 
   // SAUCE record is last 128 bytes
   const sauceStart = data.length - 128;
   const id = readString(data, sauceStart, 5);
-
+console.log('before');
   if (id !== 'SAUCE') return null;
 
+console.log('after');
   const version = readString(data, sauceStart + 5, 2);
   if (version !== '00') {
     console.warn(`Unsupported SAUCE version: ${version}`);
@@ -55,7 +57,6 @@ export function parseSauce(data: Uint8Array): SauceMetadata | null {
     // Extract ICE colors flag from bit 0 of TFlags (ANSiFlags)
     sauce.ice = (tFlags & 0x01) !== 0;
   }
-
   return sauce;
 }
 
@@ -277,7 +278,7 @@ export function parseAnsiToCanvas(data: Uint8Array, sauce: SauceMetadata | null)
     font: fontMapping.name,
     fontType: fontMapping.type,
     spacing: 0,
-    ice: sauce?.ice ?? false, // Use ICE setting from SAUCE metadata, default to false
+    ice: sauce?.ice || false, // Use ICE setting from SAUCE metadata, default to false
     colors: paletteColors,
     rawdata,
     updatedAt: new Date().toISOString()
