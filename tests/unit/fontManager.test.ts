@@ -9,6 +9,7 @@ class MockCanvasRenderingContext2D {
   fillStyle = '';
 
   fillText = vi.fn();
+  fillRect = vi.fn();
   drawImage = vi.fn();
   getImageData = vi.fn();
   putImageData = vi.fn();
