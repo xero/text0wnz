@@ -106,8 +106,11 @@ or
 bunx playwright test
 ```
 
-5. Serve the app
-Point your web server to the dist directory.
+5. Serve the app for manual testing.
+built it first. then,
+run `bun serve &` - this will run the background. now visit http://localhost:4173`
+
+alternativly, just point a web server to the dist directory.
 
 6. Manual Browser Testing
 
