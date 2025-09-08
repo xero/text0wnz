@@ -27,7 +27,8 @@ export async function setFont(
   fontName: string,
   fontType: FontType,
   palette: Palette,
-  letterSpacing: boolean = false
+  letterSpacing: boolean = false,
+  iceColors: boolean = false
 ): Promise<FontRenderer> {
   const match = fontName.match(/(\d+)x(\d+)$/i);
   // Default to 8x16 if not found in the name
@@ -129,11 +130,9 @@ export async function loadFontFromImage(
         y: number,
         iceColors = false
       ): void=>{
-        // Key ICE colors behavior: If not using ICE colors and bg >= 8, subtract 8
         if (!iceColors && bg >= 8) {
           bg -= 8;
         }
-
         if (
           !glyphs[fg] ||
           !glyphs[fg][bg] ||
