@@ -549,6 +549,7 @@ export function updateCanvasData(newCanvas: CanvasState) {
     state.currentRoom.canvas = newCanvas;
     needsFullRedraw = true;
     queueFlushDirty();
+    eventBus.publish('ui:ice:changed', {ice: newCanvas.ice});
   }
 }
 

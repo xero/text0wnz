@@ -30,7 +30,7 @@ export function parseSauce(data: Uint8Array): SauceMetadata | null {
 
   // Parse binary fields
   const dataType = data[sauceStart + 94]; // DataType (1 byte)
-  const fileType = data[sauceStart + 95]; // FileType (1 byte)
+  //const fileType = data[sauceStart + 95]; // FileType (1 byte)
   const tInfo1 = readLE16(data, sauceStart + 96); // Width for ANSi
   const tInfo2 = readLE16(data, sauceStart + 98); // Height for ANSi
   const commentLines = data[sauceStart + 104]; // Number of COMNT lines
@@ -43,7 +43,7 @@ export function parseSauce(data: Uint8Array): SauceMetadata | null {
 
     // ICE colors is bit 0 of tFlags
     sauce.ice = (tFlags & 0x01) !== 0;
-    console.log(`ICE colors flag: ${tFlags.toString(16)} & 0x01 = ${sauce.ice}`);
+    console.log(`ICE colors flag: ${tFlags.toString(16)} & 0x01 = ${sauce.ice ? 'true' : 'false'}`);
   }
 
   // Parse COMNT block if present

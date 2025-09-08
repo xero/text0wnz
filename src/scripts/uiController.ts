@@ -491,12 +491,11 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
 
   // ICE colors toggle
   add(ice, _=>{
+    toggleIceColors();
     if (!state.currentRoom) return;
     const canvas = state.currentRoom.canvas;
     canvas.ice = !canvas.ice;
-    toggleIceColors();
     cl(ice, 'active', canvas.ice);
-    console.log('click');
   });
 
   // brushes

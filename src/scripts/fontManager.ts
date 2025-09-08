@@ -27,8 +27,7 @@ export async function setFont(
   fontName: string,
   fontType: FontType,
   palette: Palette,
-  letterSpacing: boolean = false,
-  iceColors: boolean = false
+  letterSpacing: boolean = false
 ): Promise<FontRenderer> {
   const match = fontName.match(/(\d+)x(\d+)$/i);
   // Default to 8x16 if not found in the name
@@ -75,7 +74,7 @@ export async function loadFontFromImage(
   fontName: string,
   letterSpacing: boolean,
   palette: Palette,
-  fontType: FontType
+  fontType: FontType,
 ): Promise<FontRenderer> {
   return new Promise((resolve, reject)=>{
     const img = new Image();
