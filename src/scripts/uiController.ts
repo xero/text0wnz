@@ -423,12 +423,8 @@ export function initUI(state: GlobalState, eventBus: PubSub) {
   add($('jointNew'),_=>navChat('new'));
 
   //--------------- file config
-  [fileOpen,splashOpen].forEach(
-    b=>add(b,_=>fileUpload.click())
-  );
-  fileUpload.addEventListener('change', _=>{
-    alert(`got it`);
-  });
+  initFileLoading();
+  add(fileOpen,_=>fileUpload.click())
   add(fileJoint,_=>navChat('joints'));
   add(open,_=>modalShow('file'));
 
@@ -441,9 +437,7 @@ export function initUI(state: GlobalState, eventBus: PubSub) {
   add(jointsCancel,_=>navChat('room'));
 
   //--------------- welcome modal
-  modalShow('splash');
-  add(splashJoint,_=>navChat('joints'));
-  add(splashDraw,_=>{
+  const h = (t: string)=>{
     state.user = {
       id: 'offline-user',
       nickname: 'offline',
@@ -452,11 +446,18 @@ export function initUI(state: GlobalState, eventBus: PubSub) {
     state.currentRoom = createOfflineRoomState(state.user);
     createOfflineCanvasState();
     setupCanvasAndTools(state, eventBus).then(()=>{
+      if(t === 'open'){
+        fileUpload.click();
+      }
       modalClose();
     }).catch(()=>{
         throw new Error('Failed to initialize the interface');
     });
-  });
+  }
+  modalShow('splash');
+  add(splashJoint,_=>navChat('joints'));
+  add(splashDraw,_=>h('new'));
+  add(splashOpen,_=>h('open'));
 }
 async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   state = theState;
@@ -492,10 +493,7 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
   // ICE colors toggle
   add(ice, _=>{
     toggleIceColors();
-    if (!state.currentRoom) return;
-    const canvas = state.currentRoom.canvas;
-    canvas.ice = !canvas.ice;
-    cl(ice, 'active', canvas.ice);
+    t(ice, 'active');
   });
 
   // brushes
@@ -697,9 +695,6 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
     c=>add(c,_=>modalClose()));
   add(modal, e=>{if(e.target === modal) modalClose()});
 
-  //--------------- file loading
-  initFileLoading();
-
   //--------------- SAUCE population event listener
   eventBus.subscribe('local:sauce:populate', ({sauce})=>{
     populateSauceForm(sauce);
@@ -722,23 +717,15 @@ async function setupCanvasAndTools(theState: GlobalState, eventBus: PubSub) {
  * Initialize file loading functionality
  */
 function initFileLoading() {
-  // Create hidden file input
-  const fileInput = document.createElement('input');
-  fileInput.type = 'file';
-  fileInput.accept = '.ans,.xb,.bin,.txt';
-  fileInput.style.display = 'none';
-  fileInput.id = 'hiddenFileInput';
-  document.body.appendChild(fileInput);
-
-  // Handle file selection
-  fileInput.addEventListener('change', (event)=>{
+  fileUpload.accept = '.ans,.xb,.bin,.txt';
+  fileUpload.addEventListener('change', (event)=>{
     const file = (event.target as HTMLInputElement).files?.[0];
     if (file) {
       void (async()=>{
         const {loadAnsiFile} = await import('./fileLoader');
         await loadAnsiFile(file);
         // Clear the input so the same file can be loaded again
-        fileInput.value = '';
+        fileUpload.value = '';
       })();
     }
   });
@@ -747,7 +734,7 @@ function initFileLoading() {
   document.addEventListener('keydown', (event)=>{
     if ((event.ctrlKey || event.metaKey) && event.key === 'o') {
       event.preventDefault();
-      fileInput.click();
+      fileUpload.click();
     }
   });
 

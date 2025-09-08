@@ -327,7 +327,6 @@ async function loadAppropriateFont(canvasState: CanvasState): Promise<void> {
 
     // Map font type to fontManager compatible type
     const fontType = canvasState.fontType === 'unicode' ? 'utf8' : canvasState.fontType;
-    const iceColors = canvasState.ice;
 
     // Load font using existing font manager
     await setFont(
@@ -335,7 +334,6 @@ async function loadAppropriateFont(canvasState: CanvasState): Promise<void> {
       fontType,
       palette,
       canvasState.spacing > 0,
-      iceColors
     );
 
     console.log(`Loaded font: ${canvasState.font} (${fontType})`);
