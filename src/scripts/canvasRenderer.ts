@@ -185,15 +185,20 @@ function flushDirtyCells() {
         const fg = rawdata[idx + 1];
         const bg = rawdata[idx + 2];
 
-        // iCE colors OFF = blinking enabled (bg >= 8), bg color is LOW bit (0-7)
-        // iCE colors ON = blinking disabled, bg color is HIGH bit (8-15)
-        const isBlinking = !ice && bg >= 8;
+        // iCE colors OFF = blinking enabled (fg/bg >= 8), colors use LOW bit (0-7)
+        // iCE colors ON = blinking disabled, colors use full range (0-15)
+        const fgIsBlinking = !ice && fg >= 8;
+        const bgIsBlinking = !ice && bg >= 8;
+        const isBlinking = fgIsBlinking || bgIsBlinking;
         if (isBlinking) blinkingCells.add(idx);
 
         const effectiveBg = ice ? bg : (bg & 7);
-        const effectiveFg = (isBlinking && blinkOn) ? effectiveBg : fg;
+        const effectiveFg = ice ? fg : (fg & 7);
 
-        font.draw(charCode, effectiveFg, effectiveBg, offctx, x, y);
+        // When blinking is on, use background color for foreground
+        const finalEffectiveFg = (isBlinking && blinkOn) ? effectiveBg : effectiveFg;
+
+        font.draw(charCode, finalEffectiveFg, effectiveBg, offctx, x, y);
       }
     }
     dirtyCells.clear();
@@ -210,7 +215,9 @@ function flushDirtyCells() {
       const fg = rawdata[idx + 1];
       const bg = rawdata[idx + 2];
 
-      const isBlinking = !ice && bg >= 8;
+      const fgIsBlinking = !ice && fg >= 8;
+      const bgIsBlinking = !ice && bg >= 8;
+      const isBlinking = fgIsBlinking || bgIsBlinking;
       if (isBlinking) {
         blinkingCells.add(idx);
       } else {
@@ -218,9 +225,10 @@ function flushDirtyCells() {
       }
 
       const effectiveBg = ice ? bg : (bg & 7);
-      const effectiveFg = (isBlinking && blinkOn) ? effectiveBg : fg;
+      const effectiveFg = ice ? fg : (fg & 7);
+      const finalEffectiveFg = (isBlinking && blinkOn) ? effectiveBg : effectiveFg;
 
-      font.draw(charCode, effectiveFg, effectiveBg, offctx, x, y);
+      font.draw(charCode, finalEffectiveFg, effectiveBg, offctx, x, y);
     }
     dirtyCells.clear();
     processDirtyRegions();
@@ -248,10 +256,11 @@ function redrawBlinkingCells() {
     const bg = rawdata[idx + 2];
 
     const effectiveBg = ice ? bg : (bg & 7);
-    const effectiveFg = blinkOn ? effectiveBg : fg;
+    const effectiveFg = ice ? fg : (fg & 7);
+    const finalEffectiveFg = blinkOn ? effectiveBg : effectiveFg;
 
     // Draw to offscreen buffer
-    font.draw(charCode, effectiveFg, effectiveBg, offctx, x, y);
+    font.draw(charCode, finalEffectiveFg, effectiveBg, offctx, x, y);
 
     // Blit just the updated cell to the visible canvas
     const cellWidth = font.width + (font.getLetterSpacing() ? 1 : 0);
@@ -438,7 +447,9 @@ export function drawRegion(x: number, y: number, w: number, h: number) {
       const fg = rawdata[idx + 1];
       const bg = rawdata[idx + 2];
 
-      const isBlinking = !ice && bg >= 8;
+      const fgIsBlinking = !ice && fg >= 8;
+      const bgIsBlinking = !ice && bg >= 8;
+      const isBlinking = fgIsBlinking || bgIsBlinking;
       if (isBlinking) {
         blinkingCells.add(idx);
       } else {
@@ -446,9 +457,10 @@ export function drawRegion(x: number, y: number, w: number, h: number) {
       }
 
       const effectiveBg = ice ? bg : (bg & 7);
-      const effectiveFg = (isBlinking && blinkOn) ? effectiveBg : fg;
+      const effectiveFg = ice ? fg : (fg & 7);
+      const finalEffectiveFg = (isBlinking && blinkOn) ? effectiveBg : effectiveFg;
 
-      font.draw(charCode, effectiveFg, effectiveBg, offctx, cellX, cellY);
+      font.draw(charCode, finalEffectiveFg, effectiveBg, offctx, cellX, cellY);
     }
   }
   const cellWidth = font.width + (font.getLetterSpacing() ? 1 : 0);
