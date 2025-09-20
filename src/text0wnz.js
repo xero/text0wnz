@@ -4,12 +4,16 @@ import { load, save } from './binary_text.js';
 let imageData;
 const userList = {};
 let chat = [];
+let debug = false;
 let sessionName = 'joint'; // Default session name
 
 // Initialize the module with configuration
 const initialize = config => {
 	sessionName = config.sessionName;
-	console.log('Initializing ansiedit with session name:', sessionName);
+	debug = config.debug || false;
+	if (debug) {
+		console.log('Initializing text0wnz with session name:', sessionName);
+	}
 
 	// Load or create session files
 	loadSession();
@@ -24,13 +28,17 @@ const loadSession = () => {
 		if (!err) {
 			try {
 				chat = JSON.parse(data).chat;
-				console.log('Loaded chat history from:', chatFile);
+				if (debug) {
+					console.log('Loaded chat history from:', chatFile);
+				}
 			} catch(parseErr) {
 				console.error('Error parsing chat file:', parseErr);
 				chat = [];
 			}
 		} else {
-			console.log('No existing chat file found, starting with empty chat');
+			if (debug) {
+				console.log('No existing chat file found, starting with empty chat');
+			}
 			chat = [];
 		}
 	});
@@ -39,35 +47,28 @@ const loadSession = () => {
 	load(binFile, loadedImageData => {
 		if (loadedImageData !== undefined) {
 			imageData = loadedImageData;
-			console.log('Loaded canvas data from:', binFile);
+			if (debug) {
+				console.log('Loaded canvas data from:', binFile);
+			}
 		} else {
-			// Check if joint.bin exists to use as template
-			load('joint.bin', templateData => {
-				if (templateData !== undefined) {
-					// Use joint.bin as template
-					imageData = templateData;
-					console.log('Created new session from joint.bin template');
-					// Save the new session file
-					save(binFile, imageData, () => {
-						console.log('Created new session file:', binFile);
-					});
-				} else {
-					// Create default canvas if no template exists
-					const c = 80;
-					const r = 50;
-					imageData = {
-						columns: c,
-						rows: r,
-						data: new Uint16Array(c * r),
-						iceColors: false,
-						letterSpacing: false,
-						fontName: 'CP437 8x16', // Default font
-					};
-					console.log(`Created default canvas: ${c}x${r}`);
-					// Save the new session file
-					save(binFile, imageData, () => {
-						console.log('Created new session file:', binFile);
-					});
+			// create default
+			const c = 80;
+			const r = 50;
+			imageData = {
+				columns: c,
+				rows: r,
+				data: new Uint16Array(c * r),
+				iceColors: false,
+				letterSpacing: false,
+				fontName: 'CP437 8x16', // Default font
+			};
+			if (debug) {
+				console.log(`Created default canvas: ${c}x${r}`);
+			}
+			// Save the new session file
+			save(binFile, imageData, () => {
+				if (debug) {
+					console.log('Created new session file:', binFile);
 				}
 			});
 		}
@@ -76,7 +77,9 @@ const loadSession = () => {
 
 const sendToAll = (clients, msg) => {
 	const message = JSON.stringify(msg);
-	console.log('Broadcasting message to', clients.size, 'clients:', msg[0]);
+	if (debug) {
+		console.log('Broadcasting message to', clients.size, 'clients:', msg[0]);
+	}
 
 	clients.forEach(client => {
 		try {
@@ -136,11 +139,12 @@ const message = (msg, sessionID, clients) => {
 
 	switch (msg[0]) {
 		case 'join':
-			console.log(msg[1] + ' has joined.');
+			console.log(`${msg[1]} has joined`);
 			userList[sessionID] = msg[1];
 			msg.push(sessionID);
 			break;
 		case 'nick':
+			console.log(`${userList[sessionID]} is now ${msg[1]}`);
 			userList[sessionID] = msg[1];
 			msg.push(sessionID);
 			break;
@@ -158,7 +162,9 @@ const message = (msg, sessionID, clients) => {
 			break;
 		case 'resize':
 			if (msg[1] && msg[1].columns && msg[1].rows) {
-				console.log('Server: Updating canvas size to', msg[1].columns, 'x', msg[1].rows);
+				if (debug) {
+					console.log('Server: Updating canvas size to', msg[1].columns, 'x', msg[1].rows);
+				}
 				imageData.columns = msg[1].columns;
 				imageData.rows = msg[1].rows;
 				// Resize the data array
@@ -173,19 +179,25 @@ const message = (msg, sessionID, clients) => {
 			break;
 		case 'fontChange':
 			if (msg[1] && Object.hasOwn(msg[1], 'fontName')) {
-				console.log('Server: Updating font to', msg[1].fontName);
+				if (debug) {
+					console.log('Server: Updating font to', msg[1].fontName);
+				}
 				imageData.fontName = msg[1].fontName;
 			}
 			break;
 		case 'iceColorsChange':
 			if (msg[1] && Object.hasOwn(msg[1], 'iceColors')) {
-				console.log('Server: Updating ice colors to', msg[1].iceColors);
+				if (debug) {
+					console.log('Server: Updating ice colors to', msg[1].iceColors);
+				}
 				imageData.iceColors = msg[1].iceColors;
 			}
 			break;
 		case 'letterSpacingChange':
 			if (msg[1] && Object.hasOwn(msg[1], 'letterSpacing')) {
-				console.log('Server: Updating letter spacing to', msg[1].letterSpacing);
+				if (debug) {
+					console.log('Server: Updating letter spacing to', msg[1].letterSpacing);
+				}
 				imageData.letterSpacing = msg[1].letterSpacing;
 			}
 			break;
@@ -197,7 +209,7 @@ const message = (msg, sessionID, clients) => {
 
 const closeSession = (sessionID, clients) => {
 	if (userList[sessionID] !== undefined) {
-		console.log(userList[sessionID] + ' is gone.');
+		console.log(`${userList[sessionID]} has quit.`);
 		delete userList[sessionID];
 	}
 	sendToAll(clients, ['part', sessionID]);

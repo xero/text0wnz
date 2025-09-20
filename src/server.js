@@ -29,6 +29,7 @@ function parseArgs() {
 		sslDir: '/etc/ssl/private',
 		saveInterval: 30 * 60 * 1000, // 30 minutes in milliseconds
 		sessionName: 'joint',
+		debug: false,
 		port: 1337,
 	};
 
@@ -37,6 +38,9 @@ function parseArgs() {
 		const nextArg = args[i + 1];
 
 		switch (arg) {
+			case '--debug':
+				config.debug = true;
+				break;
 			case '--ssl':
 				config.ssl = true;
 				break;
@@ -62,18 +66,19 @@ function parseArgs() {
 				}
 				break;
 			case '--help':
-				console.log(`Moebius Web Server
-Usage: node server.js [port] [options]
+				console.log(`teXt0wnz backend server
+Usage: {bun,node} server.js [port] [options]
 
 Options:
   --ssl                 Enable SSL (requires certificates in ssl-dir)
   --ssl-dir <path>      SSL certificate directory (default: /etc/ssl/private)
   --save-interval <min> Auto-save interval in minutes (default: 30)
   --session-name <name> Session file prefix (default: joint)
+  --debug               Enable verbose console messages
   --help                Show this help message
 
 Examples:
-  node server.js 8080 --ssl --session-name myart
+  bun server.js 8080 --ssl --session-name myart --debug
   node server.js --save-interval 60 --session-name collaborative
 `);
 				process.exit(0);
@@ -93,7 +98,9 @@ Examples:
 }
 
 const config = parseArgs();
-console.log('Server configuration:', config);
+if (config.debug) {
+	console.log('Server configuration:', config);
+}
 
 // Initialize text0wnz with configuration
 text0wnz.initialize(config);
@@ -137,11 +144,13 @@ expressWs(app, server);
 
 // Debugging middleware for WebSocket upgrade requests
 app.use('/server', (req, _res, next) => {
-	console.log(`Request to /server endpoint:
+	if (config.debug) {
+		console.log(`Request to /server endpoint:
   - Method: ${req.method}
   - Headers: ${JSON.stringify(cleanHeaders(req.headers))}
   - Connection header: ${req.headers.connection}
   - Upgrade header: ${req.headers.upgrade}`);
+	}
 	next();
 });
 
@@ -149,12 +158,12 @@ app.use('/server', (req, _res, next) => {
 function handleWebSocketConnection(ws, req) {
 	console.log('=== NEW WEBSOCKET CONNECTION ===');
 	console.log(`  - Timestamp: ${new Date().toISOString()}
-  - Session ID: ${req.sessionID}
-  - Remote address: ${req.connection.remoteAddress || req.ip}`);
+  - Session ID: ${req.sessionID}`);
+	if(config.debug) console.log(`- Remote address: ${req.connection.remoteAddress || req.ip}`);
 
 	allClients.add(ws);
 
-	// Send initial data with error handling
+	// Send initial data
 	try {
 		const startData = text0wnz.getStart(req.sessionID);
 		ws.send(startData);
@@ -193,7 +202,9 @@ app.ws('/', handleWebSocketConnection);
 app.ws('/server', handleWebSocketConnection);
 
 server.listen(config.port, () => {
-	console.log(`Server listening on port: ${config.port}`);
+	if (config.debug) {
+		console.log(`Server listening on port: ${config.port}`);
+	}
 });
 
 setInterval(() => {

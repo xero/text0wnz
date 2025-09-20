@@ -121,7 +121,7 @@ const convertUInt8ToUint16 = (uint8Array, start, size) => {
 const load = (filename, callback) => {
 	readFile(filename, (err, bytes) => {
 		if (err) {
-			console.log('File not found:', filename);
+			console.log('Error! File not found:', filename);
 			callback(undefined);
 		} else {
 			const sauce = getSauce(bytes, 160);
