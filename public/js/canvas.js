@@ -214,7 +214,13 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
+	let blinkTimerRunning = false;
+
 	const updateBlinkTimer = async() => {
+		if (blinkTimerRunning) {
+			return; // Prevent multiple timers from running
+		}
+		blinkTimerRunning = true;
 		blinkStop = false;
 		if (!iceColors) {
 			blinkOn = false;
@@ -227,10 +233,15 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				console.error('Blink timer error:', error);
 			}
 		}
+		blinkTimerRunning = false;
 	};
 
 	const stopBlinkTimer = () => {
 		blinkStop = true;
+		// Wait for timer to actually stop
+		setTimeout(() => {
+			blinkTimerRunning = false;
+		}, 10);
 	};
 
 	const createCanvases = () => {
