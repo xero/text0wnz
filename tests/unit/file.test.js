@@ -543,7 +543,7 @@ describe('File Module', () => {
 		});
 
 		it('should handle missing DOM elements gracefully', () => {
-			// Test with a mock that simulates missing createElement
+			// Mock a scenario where `document.createElement` is not available
 			const originalDocument = global.document;
 			global.document = {
 				createElement: vi.fn(() => {
@@ -551,17 +551,10 @@ describe('File Module', () => {
 				}),
 			};
 
-			// Should handle errors gracefully
-			expect(() => {
-				try {
-					Save.ans();
-				} catch(e) {
-					// Expected behavior - this is testing that we can catch the error
-					expect(e.message).toContain('createElement failed');
-				}
-			}).not.toThrow();
+			// Expect the Save.ans() function to throw an error
+			expect(() => Save.ans()).toThrow('createElement failed');
 
-			// Restore original document
+			// Restore the original document object
 			global.document = originalDocument;
 		});
 

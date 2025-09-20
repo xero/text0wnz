@@ -63,7 +63,7 @@ describe('Font Module - Basic Tests', () => {
 	});
 
 	describe('loadFontFromXBData', () => {
-		it('should reject with invalid font bytes', async() => {
+		it('should reject with null font bytes', async() => {
 			await expect(loadFontFromXBData(null, 8, 16, false, mockPalette)).rejects.toThrow('Failed to load XB font data');
 		});
 
