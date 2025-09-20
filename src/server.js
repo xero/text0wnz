@@ -159,7 +159,9 @@ function handleWebSocketConnection(ws, req) {
 	console.log('=== NEW WEBSOCKET CONNECTION ===');
 	console.log(`  - Timestamp: ${new Date().toISOString()}
   - Session ID: ${req.sessionID}`);
-	if(config.debug) console.log(`- Remote address: ${req.connection.remoteAddress || req.ip}`);
+	if (config.debug) {
+		console.log(`- Remote address: ${req.connection.remoteAddress || req.ip}`);
+	}
 
 	allClients.add(ws);
 
