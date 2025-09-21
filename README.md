@@ -184,14 +184,27 @@
 
 ## Server Architecture (Collaborative Mode)
 
-Moebius-web supports a collaborative server mode for real-time multi-user ANSI/ASCII art editing.
-The collaboration engine is implemented in `server.js` (entry point) and `src/ansiedit.js` (session/canvas management).
+Moebius-web supports a collaborative server mode for real-time multi-user ANSI/ASCII/XBIN art editing.
+The collaboration engine is implemented in the `src/` directory.
 
-### Key Points:
-- **Entry Point:** `server.js`
-  Starts an Express server, sets up session middleware, and configures WebSocket endpoints for both direct and proxied connections (`/ and `/server`).
-- **Collaboration Engine:** `src/ansiedit.js`
-  Handles all real-time session management, canvas state, and user synchronization.
+### Key Files
+
+- `main.js` **entry point**
+Creates and inits backend server components
+- `config.js` **Argument Parser**
+Converts command-line argument flags into application options
+- `text0wnz.js` **Collaboration engine**
+Handles all real-time session management, canvas state, and user synchronization.
+- `fileio.js` **File save and loading**
+Input/output features for textart files
+- `websockets.js` **WebSocket Sever**
+Configures WebSocket endpoints.
+- `server.js` **Middleware**
+'Handles direct and proxied connections (`/` and `/server`).
+- `utils.js` **helper functions**
+
+### Features
+
 - **Persistence:**
   Canvas and chat data are auto-saved to disk at configurable intervals, with timestamped backups for recovery.
 - **SSL/HTTP Support:**
@@ -201,10 +214,10 @@ The collaboration engine is implemented in `server.js` (entry point) and `src/an
 - **Minimal Overhead:**
   Designed for low resource usage—only manages collaborative drawing and session state.
 
-### How it Works:
+### How it Works
 1. **Start the server:**
    ```sh
-   node server.js [port] [options]
+   bun server [port] [options]
    ```
 2. **Clients connect via browser:**
    - Directly, or through a reverse proxy (e.g., nginx).
@@ -224,13 +237,20 @@ The collaboration engine is implemented in `server.js` (entry point) and `src/an
 | `--ssl-dir <path>`    | SSL certificate directory                                  | `/etc/ssl/private`  |
 | `--save-interval <n>` | Auto-save interval in minutes                              | `30` (minutes)      |
 | `--session-name <str>`| Session file prefix (for state and chat backups)           | `joint`             |
+| `--debug`             | Display verbose logs                                       | false               |
 | `--help`              | Show help message and usage examples                       | -                   |
 
-**Example:**
+### Examples:
+
 ```sh
-node server.js 8080 --ssl --ssl-dir /etc/letsencrypt --save-interval 15 --session-name myjam
+bun server
 ```
-- This starts the server on port 8080, enables SSL from `/etc/letsencrypt`, auto-saves every 15 minutes, and saves session files as `myjam.bin` and `myjam.json`.
+- Starts the server on port 1337 (default), with no SSL support
+
+```sh
+bun server 8080 --ssl --ssl-dir /etc/letsencrypt --save-interval 15 --session-name myjam
+```
+- Starts the server on port 8080, enables SSL from `/etc/letsencrypt`, auto-saves every 15 minutes, and saves session files as `myjam.bin` and `myjam.json`.
 
 ---
 
@@ -528,8 +548,8 @@ If you encounter unique issues, please open an issue on [GitHub](https://github.
 
 <img src="https://gist.githubusercontent.com/xero/cbcd5c38b695004c848b73e5c1c0c779/raw/6b32899b0af238b17383d7a878a69a076139e72d/kopimi-sm.png" align="left" height="222">
 
-mad respect to [Andy Herbert^67](http://github.com/andyherbert) - [Moebius](https://github.com/blocktronics/moebius) ░ [grmmxi^imp!](https://glyphdrawing.club/) - [MoebiusXBIN](https://github.com/hlotvonen/moebiusXBIN/) ░ [Curtis Wensley](https://github.com/cwensley) - [PabloDraw](https://github.com/cwensley/pablodraw) ░ [Skull Leader^ACiD](https://defacto2.net/p/skull-leader) - [ACiDDRAW](https://www.acid.org/apps/apps.html) ▒ _shade and disrespect to "TheDraw" and the thief roy^sac_ ;P
+mad love & respect to [Andy Herbert^67](http://github.com/andyherbert) - [Moebius](https://github.com/blocktronics/moebius) ░ [grmmxi^imp!](https://glyphdrawing.club/) - [MoebiusXBIN](https://github.com/hlotvonen/moebiusXBIN/) ░ [Curtis Wensley](https://github.com/cwensley) - [PabloDraw](https://github.com/cwensley/pablodraw) ░ [Skull Leader^ACiD](https://defacto2.net/p/skull-leader) - [ACiDDRAW](https://www.acid.org/apps/apps.html) ▒ _shade and disrespect to "TheDraw" and the thief roy^sac_ ;P
 
 ---
 
-All files and scripts in this repo are released [CC0](https://creativecommons.org/publicdomain/zero/1.0/) / [kopimi](https://kopimi.com)! In the spirit of _freedom of information_, I encourage you to fork, modify, change, share, or do whatever you like with this project! `^c^v`
+All files and scripts in this repo are released [MIT](https://github.com/xero/moebius-web/blob/main/LICENSE.txt) / [kopimi](https://kopimi.com)! In the spirit of _freedom of information_, I encourage you to fork, modify, change, share, or do whatever you like with this project! `^c^v`
