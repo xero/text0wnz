@@ -447,14 +447,14 @@ const createChatController = (
 	const addConversation = (handle, text, showNotification) => {
 		const div = document.createElement('DIV');
 		const spanHandle = document.createElement('SPAN');
-		const spanSeperator = document.createElement('SPAN');
+		const spanSeparator = document.createElement('SPAN');
 		const spanText = document.createElement('SPAN');
 		spanHandle.textContent = handle;
 		spanHandle.classList.add('handle');
-		spanSeperator.textContent = ' ';
+		spanSeparator.textContent = ' ';
 		spanText.textContent = text;
 		div.appendChild(spanHandle);
-		div.appendChild(spanSeperator);
+		div.appendChild(spanSeparator);
 		div.appendChild(spanText);
 		const rect = divMessageWindow.getBoundingClientRect();
 		const doScroll =

@@ -2,7 +2,7 @@ import State from './state.js';
 import Toolbar from './toolbar.js';
 import { $, createCanvas } from './ui.js';
 
-const createFKeyShorcut = (canvas, charCode) => {
+const createFKeyShortcut = (canvas, charCode) => {
 	const update = () => {
 		// Set actual canvas dimensions for proper rendering
 		canvas.width = State.font.getWidth();
@@ -28,10 +28,22 @@ const createFKeyShorcut = (canvas, charCode) => {
 };
 
 const createFKeysShortcut = () => {
-	const shortcuts = [176, 177, 178, 219, 223, 220, 221, 222, 254, 249, 7, 0];
-
+	const shortcuts = [
+		176, // Light shade (░)
+		177, // Medium shade (▒)
+		178, // Dark shade (▓)
+		219, // Full block (█)
+		223, // Lower half block (▄)
+		220, // Upper half block (▀)
+		221, // Left half block (▌)
+		222, // Right half block (▐)
+		254, // Solid (■)
+		249, // Middle dot (·)
+		7, // Bell (BEL)
+		0, // Null (NUL)
+	];
 	for (let i = 0; i < 12; i++) {
-		createFKeyShorcut($('fkey' + i), shortcuts[i]);
+		createFKeyShortcut($('fkey' + i), shortcuts[i]);
 	}
 
 	const keyDown = e => {
@@ -1161,7 +1173,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 };
 
 export {
-	createFKeyShorcut,
+	createFKeyShortcut,
 	createFKeysShortcut,
 	createCursor,
 	createSelectionCursor,

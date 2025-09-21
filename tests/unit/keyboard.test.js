@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-	createFKeyShorcut,
+	createFKeyShortcut,
 	createFKeysShortcut,
 	createCursor,
 	createSelectionCursor,
@@ -87,14 +87,14 @@ describe('Keyboard Utilities', () => {
 
 	describe('Module Exports', () => {
 		it('should export all expected keyboard functions', () => {
-			expect(createFKeyShorcut).toBeDefined();
+			expect(createFKeyShortcut).toBeDefined();
 			expect(createFKeysShortcut).toBeDefined();
 			expect(createCursor).toBeDefined();
 			expect(createSelectionCursor).toBeDefined();
 			expect(createKeyboardController).toBeDefined();
 			expect(createPasteTool).toBeDefined();
 
-			expect(typeof createFKeyShorcut).toBe('function');
+			expect(typeof createFKeyShortcut).toBe('function');
 			expect(typeof createFKeysShortcut).toBe('function');
 			expect(typeof createCursor).toBe('function');
 			expect(typeof createSelectionCursor).toBe('function');
@@ -103,20 +103,20 @@ describe('Keyboard Utilities', () => {
 		});
 	});
 
-	describe('createFKeyShorcut', () => {
+	describe('createFKeyShortcut', () => {
 		it('should create F-key shortcut with canvas and charCode', () => {
 			const canvas = document.createElement('canvas');
 			canvas.getContext = vi.fn(() => ({ clearRect: vi.fn() }));
 
 			// Should not throw
-			expect(() => createFKeyShorcut(canvas, 176)).not.toThrow();
+			expect(() => createFKeyShortcut(canvas, 176)).not.toThrow();
 		});
 
 		it('should add event listeners for palette and font changes', () => {
 			const canvas = document.createElement('canvas');
 			canvas.getContext = vi.fn(() => ({ clearRect: vi.fn() }));
 
-			createFKeyShorcut(canvas, 176);
+			createFKeyShortcut(canvas, 176);
 
 			expect(document.addEventListener).toHaveBeenCalledWith('onPaletteChange', expect.any(Function));
 			expect(document.addEventListener).toHaveBeenCalledWith('onForegroundChange', expect.any(Function));
