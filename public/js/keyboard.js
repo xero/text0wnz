@@ -864,30 +864,31 @@ const createKeyboardController = () => {
 	const keyPress = e => {
 		if (ignored === false) {
 			if (e.altKey === false && e.ctrlKey === false && e.metaKey === false) {
-				// For keypress events, we use charCode for printable characters
-				const charCode = e.charCode || e.which;
-				if (charCode >= 32) {
-					// Printable characters
+				// Check for printable characters
+				if (e.key.length === 1) {
+					// Single character keys (printable characters)
 					e.preventDefault();
-					draw(convertUnicode(charCode));
-				} else if (e.code === 'Enter') {
+					draw(convertUnicode(e.key.charCodeAt(0)));
+				} else if (e.key === 'Enter') {
 					// Enter key
 					e.preventDefault();
 					State.cursor.newLine();
-				} else if (e.code === 'Backspace') {
+				} else if (e.key === 'Backspace') {
 					// Backspace key
 					e.preventDefault();
 					if (State.cursor.getX() > 0) {
 						deleteText();
 					}
-				} else if (charCode === 167) {
-					// Section sign (§)
+				}
+
+				// Special case for section sign
+				if (e.key === '§') {
 					e.preventDefault();
 					draw(21);
 				}
 			} else if (e.ctrlKey === true) {
-				const charCode = e.charCode || e.which;
-				if (charCode === 21) {
+				// Handle Ctrl key combinations
+				if (e.key === 'u' || e.key === 'U') {
 					// Ctrl+U - Pick up colors from current position
 					e.preventDefault();
 					const block = State.textArtCanvas.getBlock(State.cursor.getX(), State.cursor.getY());

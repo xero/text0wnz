@@ -479,10 +479,10 @@ const createPalettePicker = canvas => {
 	}
 
 	const keydown = e => {
-		// {ctrl,alt} + digits (0-7) - Use keyCode for Alt combinations due to macOS Option key behavior
-		const keyCode = e.keyCode || e.which;
-		if (keyCode >= 48 && keyCode <= 55) {
-			const num = keyCode - 48;
+		// Handle digit keys (0-7) with ctrl or alt modifiers
+		if (e.code.startsWith('Digit') && ['0', '1', '2', '3', '4', '5', '6', '7'].includes(e.code.slice(-1))) {
+			const num = parseInt(e.code.slice(-1), 10); // Extract the digit from 'Digit0', etc.
+
 			if (e.ctrlKey === true) {
 				e.preventDefault();
 				if (State.palette.getForegroundColor() === num) {
@@ -491,6 +491,7 @@ const createPalettePicker = canvas => {
 					State.palette.setForegroundColor(num);
 				}
 			} else if (e.altKey) {
+				// Using e.code ensures we detect the physical key regardless of the character produced
 				e.preventDefault();
 				if (State.palette.getBackgroundColor() === num) {
 					State.palette.setBackgroundColor(num + 8);
