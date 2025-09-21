@@ -48,7 +48,7 @@ const loadSession = () => {
 				if (debug) {
 					console.log('Loaded chat history from:', chatFile);
 				}
-			} catch(parseErr) {
+			} catch (parseErr) {
 				console.error('Error parsing chat file:', parseErr);
 				chat = [];
 			}
@@ -104,7 +104,7 @@ const sendToAll = (clients, msg) => {
 				// WebSocket.OPEN
 				client.send(message);
 			}
-		} catch(err) {
+		} catch (err) {
 			console.error('Error sending to client:', err);
 		}
 	});

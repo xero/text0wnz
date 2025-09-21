@@ -363,7 +363,7 @@ describe('Worker Module Core Logic', () => {
 						return { success: true, data: parsed };
 					}
 					return { success: true, data: data };
-				} catch(error) {
+				} catch (error) {
 					return { success: false, error: error.message };
 				}
 			};

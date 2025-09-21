@@ -171,7 +171,11 @@ export default [
 			}],
 			'@stylistic/semi-style': ['error', 'last'],
 			'@stylistic/space-before-blocks': 'error',
-			'@stylistic/space-before-function-paren': ['error', 'never'],
+			'@stylistic/space-before-function-paren': ['error', {
+				"anonymous": "always",
+				"asyncArrow": "always",
+				"named": "never"
+			}],
 			'@stylistic/space-in-parens': ['error', 'never'],
 			'@stylistic/space-infix-ops': ['error', {
 				'ignoreTypes': true,

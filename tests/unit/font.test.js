@@ -63,17 +63,17 @@ describe('Font Module - Basic Tests', () => {
 	});
 
 	describe('loadFontFromXBData', () => {
-		it('should reject with null font bytes', async() => {
+		it('should reject with null font bytes', async () => {
 			await expect(loadFontFromXBData(null, 8, 16, false, mockPalette)).rejects.toThrow('Failed to load XB font data');
 		});
 
-		it('should reject with empty font bytes', async() => {
+		it('should reject with empty font bytes', async () => {
 			await expect(loadFontFromXBData(new Uint8Array(0), 8, 16, false, mockPalette)).rejects.toThrow(
 				'Failed to load XB font data',
 			);
 		});
 
-		it('should reject with missing palette', async() => {
+		it('should reject with missing palette', async () => {
 			const fontBytes = new Uint8Array(256);
 			fontBytes.fill(0x01);
 
@@ -104,7 +104,7 @@ describe('Font Module - Basic Tests', () => {
 			expect(mockImage.addEventListener).toHaveBeenCalledWith('error', expect.any(Function));
 		});
 
-		it('should handle image load error', async() => {
+		it('should handle image load error', async () => {
 			const loadPromise = loadFontFromImage('TestFont', false, mockPalette);
 
 			// Simulate image load error
@@ -128,7 +128,7 @@ describe('Font Module - Basic Tests', () => {
 			expect(mockImage.src).toBe('/ui/fonts/Custom Font.png');
 		});
 
-		it('should handle invalid dimensions rejection', async() => {
+		it('should handle invalid dimensions rejection', async () => {
 			mockImage.width = 100; // Invalid width (not divisible by 16)
 			mockImage.height = 200; // Invalid height
 
@@ -140,7 +140,7 @@ describe('Font Module - Basic Tests', () => {
 			await expect(loadPromise).rejects.toThrow();
 		});
 
-		it('should reject zero dimensions', async() => {
+		it('should reject zero dimensions', async () => {
 			mockImage.width = 0;
 			mockImage.height = 0;
 
@@ -152,7 +152,7 @@ describe('Font Module - Basic Tests', () => {
 			await expect(loadPromise).rejects.toThrow();
 		});
 
-		it('should handle palette dependencies', async() => {
+		it('should handle palette dependencies', async () => {
 			mockImage.width = 128;
 			mockImage.height = 256;
 
@@ -166,14 +166,14 @@ describe('Font Module - Basic Tests', () => {
 	});
 
 	describe('Error Handling', () => {
-		it('should handle corrupted XB font data gracefully', async() => {
+		it('should handle corrupted XB font data gracefully', async () => {
 			const corruptedBytes = new Uint8Array(10); // Too small
 			corruptedBytes.fill(0xff);
 
 			await expect(loadFontFromXBData(corruptedBytes, 8, 16, false, mockPalette)).rejects.toThrow();
 		});
 
-		it('should handle missing image files gracefully', async() => {
+		it('should handle missing image files gracefully', async () => {
 			const mockImage = {
 				addEventListener: vi.fn((event, handler) => {
 					if (event === 'error') {

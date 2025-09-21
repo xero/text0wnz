@@ -113,7 +113,7 @@ describe('Canvas Module', () => {
 	});
 
 	describe('createTextArtCanvas', () => {
-		it('should create text art canvas with default dimensions', async() => {
+		it('should create text art canvas with default dimensions', async () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
 			expect(canvas).toBeDefined();

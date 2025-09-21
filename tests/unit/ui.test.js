@@ -289,7 +289,7 @@ describe('UI Utilities', () => {
 	});
 
 	describe('undoAndRedo', () => {
-		it('should call undo on Ctrl+Z', async() => {
+		it('should call undo on Ctrl+Z', async () => {
 			const { default: State } = await import('../../public/js/state.js');
 
 			const ctrlZEvent = new window.KeyboardEvent('keydown', {
@@ -302,7 +302,7 @@ describe('UI Utilities', () => {
 			expect(State.textArtCanvas.undo).toHaveBeenCalled();
 		});
 
-		it('should call undo on Cmd+Z', async() => {
+		it('should call undo on Cmd+Z', async () => {
 			const { default: State } = await import('../../public/js/state.js');
 
 			const cmdZEvent = new window.KeyboardEvent('keydown', {
@@ -316,7 +316,7 @@ describe('UI Utilities', () => {
 			expect(State.textArtCanvas.undo).toHaveBeenCalled();
 		});
 
-		it('should call redo on Ctrl+Y', async() => {
+		it('should call redo on Ctrl+Y', async () => {
 			const { default: State } = await import('../../public/js/state.js');
 
 			const ctrlYEvent = new window.KeyboardEvent('keydown', {
@@ -329,7 +329,7 @@ describe('UI Utilities', () => {
 			expect(State.textArtCanvas.redo).toHaveBeenCalled();
 		});
 
-		it('should call redo on Cmd+Shift+Z', async() => {
+		it('should call redo on Cmd+Shift+Z', async () => {
 			const { default: State } = await import('../../public/js/state.js');
 
 			const cmdShiftZEvent = new window.KeyboardEvent('keydown', {
@@ -343,7 +343,7 @@ describe('UI Utilities', () => {
 			expect(State.textArtCanvas.redo).toHaveBeenCalled();
 		});
 
-		it('should not trigger on other key combinations', async() => {
+		it('should not trigger on other key combinations', async () => {
 			const { default: State } = await import('../../public/js/state.js');
 
 			const keyEvent = new window.KeyboardEvent('keydown', {

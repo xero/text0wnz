@@ -77,7 +77,7 @@ const mockFileReader = class {
 describe('File Module', () => {
 	let Load, Save;
 
-	beforeEach(async() => {
+	beforeEach(async () => {
 		// Reset all mocks
 		vi.clearAllMocks();
 

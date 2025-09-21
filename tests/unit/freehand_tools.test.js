@@ -720,7 +720,7 @@ describe('Freehand Tools', () => {
 			}).not.toThrow();
 		});
 
-		it('should handle blocky half-block sampling', async() => {
+		it('should handle blocky half-block sampling', async () => {
 			const tool = createSampleTool(mockShadeBrush, mockShadeElement, mockCharacterBrush, mockCharacterElement);
 
 			// Mock blocky half block with specific colors
@@ -737,7 +737,7 @@ describe('Freehand Tools', () => {
 			}).not.toThrow();
 		});
 
-		it('should handle non-blocky character sampling', async() => {
+		it('should handle non-blocky character sampling', async () => {
 			const tool = createSampleTool(mockShadeBrush, mockShadeElement, mockCharacterBrush, mockCharacterElement);
 
 			// Mock non-blocky character - need to import State and modify mock
@@ -762,7 +762,7 @@ describe('Freehand Tools', () => {
 			expect(mockCharacterElement.click).toHaveBeenCalled();
 		});
 
-		it('should handle shading character sampling', async() => {
+		it('should handle shading character sampling', async () => {
 			const tool = createSampleTool(mockShadeBrush, mockShadeElement, mockCharacterBrush, mockCharacterElement);
 
 			// Mock shading character

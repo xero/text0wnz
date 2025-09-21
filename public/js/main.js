@@ -63,7 +63,7 @@ let sauceAuthor;
 let sauceComments;
 let sauceBytes;
 
-document.addEventListener('DOMContentLoaded', async() => {
+document.addEventListener('DOMContentLoaded', async () => {
 	try {
 		State.startInitialization();
 		$$$();
@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', async() => {
 				},
 			);
 		});
-	} catch(error) {
+	} catch (error) {
 		console.error('Error during initialization:', error);
 		// Handle initialization failure gracefully
 		alert('Failed to initialize the application. Please refresh the page.');

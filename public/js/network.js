@@ -5,7 +5,7 @@ const createWorkerHandler = inputHandle => {
 	const workerPath = `${import.meta.env.BASE_URL}ui/worker.js`;
 	try {
 		State.worker = new Worker(workerPath);
-	} catch(error) {
+	} catch (error) {
 		console.error(`Failed to load worker from ${workerPath}:`, error);
 	}
 

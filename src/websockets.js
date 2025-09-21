@@ -8,13 +8,13 @@ const webSocketInit = (config, clients) => {
 	allClients = clients;
 };
 const onWebSocketConnection = (ws, req) => {
-	console.log('=== NEW WEBSOCKET CONNECTION ===');
-	console.log(`  - Timestamp: ${new Date().toISOString()}
-  - Session ID: ${req.sessionID}`);
+	console.log('╓───── New WebSocket Connection');
+	console.log('╙───────────────────────────────── ─ ─');
+	console.log(`- Timestamp: ${new Date().toISOString()}`);
+	console.log(`- Session ID: ${req.sessionID}`);
 	if (debug) {
 		console.log(`- Remote address: ${req.connection.remoteAddress || req.ip}`);
 	}
-
 	allClients.add(ws);
 
 	// Send initial data
@@ -26,7 +26,7 @@ const onWebSocketConnection = (ws, req) => {
 		if (imageData?.data) {
 			ws.send(imageData.data, { binary: true });
 		}
-	} catch(err) {
+	} catch (err) {
 		console.error('Error sending initial data:', err);
 		ws.close(1011, 'Server error during initialization');
 	}
@@ -35,7 +35,7 @@ const onWebSocketConnection = (ws, req) => {
 		try {
 			const parsedMsg = JSON.parse(msg);
 			text0wnz.message(parsedMsg, req.sessionID, allClients);
-		} catch(err) {
+		} catch (err) {
 			console.error('Error parsing message:', err, msg.toString());
 		}
 	});

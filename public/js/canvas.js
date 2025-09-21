@@ -216,7 +216,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	let blinkTimerRunning = false;
 
-	const updateBlinkTimer = async() => {
+	const updateBlinkTimer = async () => {
 		if (blinkTimerRunning) {
 			return; // Prevent multiple timers from running
 		}
@@ -229,7 +229,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					blink();
 					await new Promise(resolve => setTimeout(resolve, 500));
 				}
-			} catch(error) {
+			} catch (error) {
 				console.error('Blink timer error:', error);
 			}
 		}
@@ -312,7 +312,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	const setFont = async(fontName, callback) => {
+	const setFont = async (fontName, callback) => {
 		try {
 			if (fontName === 'XBIN' && xbFontData) {
 				const font = await loadFontFromXBData(
@@ -369,7 +369,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					callback();
 				}
 			}
-		} catch(error) {
+		} catch (error) {
 			console.error('Failed to load font:', error);
 
 			// Fallback to CP437 in case of failure
@@ -388,7 +388,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				if (callback) {
 					callback();
 				}
-			} catch(fallbackError) {
+			} catch (fallbackError) {
 				console.error('Failed to load fallback font:', fallbackError);
 			}
 		}

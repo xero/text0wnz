@@ -574,7 +574,7 @@ describe('Palette Utilities', () => {
 				// Don't crash on missing code property
 				try {
 					keyHandler(event);
-				} catch(e) {
+				} catch (e) {
 					// Ignore errors for invalid events
 					void e;
 				}

@@ -133,7 +133,7 @@ class StateManager {
 			callbacks.forEach((callback, idx) => {
 				try {
 					callback(data);
-				} catch(error) {
+				} catch (error) {
 					const callbackName = callback.name || 'anonymous';
 					console.error(
 						`Error in state listener for event "${event}" (listener ${idx + 1}/${callbacks.length}, function: ${callbackName}):`,
@@ -197,7 +197,7 @@ class StateManager {
 						return acc;
 					}, {});
 					waiter.callback(resolvedDeps);
-				} catch(error) {
+				} catch (error) {
 					console.error('Error in dependency wait callback:', error);
 				}
 				toRemove.push(waitId);
@@ -296,7 +296,7 @@ class StateManager {
 	safely(callback) {
 		try {
 			return callback(this.state);
-		} catch(error) {
+		} catch (error) {
 			console.error('Error accessing state:', error);
 			return null;
 		}

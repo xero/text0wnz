@@ -25,7 +25,7 @@ describe('UI Utilities', () => {
 			};
 		});
 
-		it('should create a canvas with specified dimensions', async() => {
+		it('should create a canvas with specified dimensions', async () => {
 			// Import the module after setting up mocks
 			const { createCanvas } = await import('../../public/js/ui.js');
 
@@ -36,7 +36,7 @@ describe('UI Utilities', () => {
 			expect(canvas.height).toBe(600);
 		});
 
-		it('should handle different dimensions', async() => {
+		it('should handle different dimensions', async () => {
 			const { createCanvas } = await import('../../public/js/ui.js');
 
 			const smallCanvas = createCanvas(100, 50);
@@ -90,7 +90,7 @@ describe('UI Utilities', () => {
 			global.document.querySelector.bind = vi.fn().mockReturnValue(global.document.querySelector);
 		});
 
-		it('should create shorthand selectors correctly', async() => {
+		it('should create shorthand selectors correctly', async () => {
 			const { $, $$ } = await import('../../public/js/ui.js');
 
 			const element = $('test-id');

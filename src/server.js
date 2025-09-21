@@ -27,7 +27,7 @@ const startServer = config => {
 			} else {
 				throw new Error(`SSL certificates not found in ${config.sslDir}`);
 			}
-		} catch(err) {
+		} catch (err) {
 			console.error('SSL Error:', err.message);
 			console.log('Falling back to HTTP server');
 			server = createHttpServer();

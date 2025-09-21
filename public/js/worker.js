@@ -80,7 +80,7 @@ const onMsg = e => {
 	} else {
 		try {
 			data = JSON.parse(data);
-		} catch(error) {
+		} catch (error) {
 			const dataInfo = typeof data === 'string' ? `string of length ${data.length}` : typeof data;
 			console.error('Invalid data received from server. Data type:', dataInfo, 'Error:', error);
 			return;
@@ -174,7 +174,7 @@ self.onmessage = msg => {
 						self.postMessage({ cmd: 'error', error: 'WebSocket connection failed.' });
 					}
 				});
-			} catch(error) {
+			} catch (error) {
 				if (data.silentCheck) {
 					self.postMessage({ cmd: 'silentCheckFailed' });
 				} else {
