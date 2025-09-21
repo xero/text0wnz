@@ -180,7 +180,7 @@ const initializeAppComponents = () => {
 			const indexOfPeriod = file.name.lastIndexOf('.');
 			let fileTitle;
 			if (indexOfPeriod !== -1) {
-				fileTitle = file.name.substr(0, indexOfPeriod);
+				fileTitle = file.name.substring(0, indexOfPeriod);
 			} else {
 				fileTitle = file.name;
 			}

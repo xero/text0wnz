@@ -513,7 +513,7 @@ describe('File Module', () => {
 
 			// Test the conversion logic
 			const base64Index = testDataUrl.indexOf(';base64,') + 8;
-			const base64Part = testDataUrl.substr(base64Index);
+			const base64Part = testDataUrl.slice(base64Index);
 			expect(base64Part).toBe('SGVsbG8=');
 		});
 

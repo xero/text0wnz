@@ -5,11 +5,8 @@ node_modules/
 dist/
 tests/results/
 test-results/
-joint.bin
-joint.json
-# Ignore all session files (named sessions create their own .bin and .json files)
-*.bin
-*.json
+sessions/*.bin
+sessions/*.json
 !package.json
 !jslint.json
 # os files

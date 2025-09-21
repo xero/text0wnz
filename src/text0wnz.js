@@ -1,9 +1,12 @@
+import path from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { readFile, writeFile } from 'fs';
 import { load, save } from './fileio.js';
 import { createTimestampedFilename } from './utils.js';
 
-let imageData;
+const SESSION_DIR = path.resolve('./sessions');
 const userList = {};
+let imageData;
 let chat = [];
 let debug = false;
 let sessionName = 'joint'; // Default session name
@@ -16,13 +19,26 @@ const initialize = config => {
 		console.log('Initializing text0wnz with session name:', sessionName);
 	}
 
+	if (!existsSync(SESSION_DIR)) {
+		mkdirSync(SESSION_DIR, { recursive: true });
+		if (debug) {
+			console.log('Creating session directory:', SESSION_DIR);
+		}
+	}
+
 	// Load or create session files
 	loadSession();
 };
 
 const loadSession = () => {
-	const chatFile = sessionName + '.json';
-	const binFile = sessionName + '.bin';
+	const chatFile = path.join(SESSION_DIR, `${sessionName}.json`);
+	const binFile = path.join(SESSION_DIR, `${sessionName}.bin`);
+
+	// Validate and sanitize file paths
+	if (!chatFile.startsWith(SESSION_DIR) || !binFile.startsWith(SESSION_DIR)) {
+		console.error('Invalid session file path');
+		return;
+	}
 
 	// Load chat history
 	readFile(chatFile, 'utf8', (err, data) => {
@@ -95,12 +111,15 @@ const sendToAll = (clients, msg) => {
 };
 
 const saveSessionWithTimestamp = callback => {
-	save(createTimestampedFilename(sessionName, 'bin'), imageData, callback);
+	const binTime = path.join(SESSION_DIR, createTimestampedFilename(sessionName, 'bin'));
+	save(binTime, imageData, callback);
 };
 
 const saveSession = callback => {
-	writeFile(sessionName + '.json', JSON.stringify({ chat: chat }), () => {
-		save(sessionName + '.bin', imageData, callback);
+	const chatFile = path.join(SESSION_DIR, `${sessionName}.json`);
+	const binFile = path.join(SESSION_DIR, `${sessionName}.bin`);
+	writeFile(chatFile, JSON.stringify({ chat: chat }), () => {
+		save(binFile, imageData, callback);
 	});
 };
 

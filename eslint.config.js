@@ -45,6 +45,8 @@ export default [
 				setInterval: 'readonly',
 				window: 'readonly',
 				process: 'readonly',
+				existsSync: 'readonly',
+				mkdirSync: 'readonly',
 				// vitest / jsdom
 				Buffer: 'readonly',
 				beforeEach: 'readonly',
