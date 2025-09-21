@@ -1,5 +1,5 @@
 import State from './state.js';
-import { $, showOverlay, hideOverlay, websocketUI } from './ui.js';
+import { $, $$, showOverlay, hideOverlay, websocketUI } from './ui.js';
 
 const createWorkerHandler = inputHandle => {
 	const workerPath = `${import.meta.env.BASE_URL}ui/worker.js`;
@@ -144,8 +144,8 @@ const createWorkerHandler = inputHandle => {
 		applyReceivedSettings = true; // Flag to prevent re-broadcasting
 		State.textArtCanvas.setFont(fontName, () => {
 			// Update the font display UI
-			if ($('current-font-display')) {
-				$('current-font-display').textContent = fontName;
+			if ($$('#current-font-display kbd')) {
+				$$('#current-font-display kbd').textContent = fontName;
 			}
 			if ($('font-select')) {
 				$('font-select').value = fontName;

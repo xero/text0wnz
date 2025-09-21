@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'fs';
-import { load, save } from './binary_text.js';
+import { load, save } from './fileio.js';
+import { createTimestampedFilename } from './utils.js';
 
 let imageData;
 const userList = {};
@@ -94,7 +95,7 @@ const sendToAll = (clients, msg) => {
 };
 
 const saveSessionWithTimestamp = callback => {
-	save(`${sessionName}-${new Date().toISOString().replace(/[:]/g, '-')}.bin`, imageData, callback);
+	save(createTimestampedFilename(sessionName, 'bin'), imageData, callback);
 };
 
 const saveSession = callback => {

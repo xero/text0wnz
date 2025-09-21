@@ -24,13 +24,13 @@
 		"url": "https://github.com/xero/moebius-web"
 	},
 	"type": "module",
-	"main": "src/server.js",
+	"main": "src/main.js",
 	"engines": {
 		"node": ">=22.19.0 <23"
 	},
 	"scripts": {
 		"bake": "cat banner; vite build",
-		"server": "cat banner; bun src/server.js",
+		"server": "cat banner; bun src/main.js",
 		"fix": "cat banner; prettier --write public/js/**/*.js tests/**/*.js src/* && eslint --fix public/js/*.js tests/**/*.js src/*",
 		"lint:check": "cat banner; eslint public/js/**/*.js tests/**/*.js src/*",
 		"lint:fix": "cat banner; eslint --fix public/js/**/*.js tests/**/*.js src/*",

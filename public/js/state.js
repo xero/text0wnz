@@ -164,7 +164,15 @@ class StateManager {
 				}, {}),
 			);
 		} else {
-			const waitId = `wait_${Date.now()}_${Math.random()}`;
+			let waitId;
+			if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+				waitId = `wait_${crypto.randomUUID()}`;
+			} else {
+				if (!this._waitIdCounter) {
+					this._waitIdCounter = 1;
+				}
+				waitId = `wait_${this._waitIdCounter++}`;
+			}
 			this.waitQueue.set(waitId, { dependencies: deps, callback });
 		}
 		return this;
