@@ -13,7 +13,7 @@ const loadModule = () => {
 
 			this.get = () => {
 				if (pos >= bytes.length) {
-					throw 'Unexpected end of file reached.';
+					throw new Error('Requested byte offset out of bounds.');
 				}
 				pos += 1;
 				return bytes[pos - 1];
