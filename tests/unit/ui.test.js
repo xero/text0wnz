@@ -17,10 +17,10 @@ import {
 	menuHover,
 	enforceMaxBytes,
 	websocketUI,
-} from '../../public/js/ui.js';
+} from '../../src/js/client/ui.js';
 
 // Mock the State module
-vi.mock('../../public/js/state.js', () => ({
+vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		textArtCanvas: {
 			undo: vi.fn(),
@@ -290,7 +290,7 @@ describe('UI Utilities', () => {
 
 	describe('undoAndRedo', () => {
 		it('should call undo on Ctrl+Z', async () => {
-			const { default: State } = await import('../../public/js/state.js');
+			const { default: State } = await import('../../src/js/client/state.js');
 
 			const ctrlZEvent = new window.KeyboardEvent('keydown', {
 				code: 'KeyZ',
@@ -303,7 +303,7 @@ describe('UI Utilities', () => {
 		});
 
 		it('should call undo on Cmd+Z', async () => {
-			const { default: State } = await import('../../public/js/state.js');
+			const { default: State } = await import('../../src/js/client/state.js');
 
 			const cmdZEvent = new window.KeyboardEvent('keydown', {
 				code: 'KeyZ',
@@ -317,7 +317,7 @@ describe('UI Utilities', () => {
 		});
 
 		it('should call redo on Ctrl+Y', async () => {
-			const { default: State } = await import('../../public/js/state.js');
+			const { default: State } = await import('../../src/js/client/state.js');
 
 			const ctrlYEvent = new window.KeyboardEvent('keydown', {
 				code: 'KeyY',
@@ -330,7 +330,7 @@ describe('UI Utilities', () => {
 		});
 
 		it('should call redo on Cmd+Shift+Z', async () => {
-			const { default: State } = await import('../../public/js/state.js');
+			const { default: State } = await import('../../src/js/client/state.js');
 
 			const cmdShiftZEvent = new window.KeyboardEvent('keydown', {
 				code: 'KeyZ',
@@ -344,7 +344,7 @@ describe('UI Utilities', () => {
 		});
 
 		it('should not trigger on other key combinations', async () => {
-			const { default: State } = await import('../../public/js/state.js');
+			const { default: State } = await import('../../src/js/client/state.js');
 
 			const keyEvent = new window.KeyboardEvent('keydown', {
 				code: 'KeyA',

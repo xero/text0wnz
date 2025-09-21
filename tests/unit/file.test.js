@@ -29,14 +29,14 @@ const mockUIElements = {
 	'sauce-comments': { value: 'Test comments\nLine 2' },
 };
 
-vi.mock('../../public/js/state.js', () => ({ default: mockState }));
+vi.mock('../../src/js/client/state.js', () => ({ default: mockState }));
 
-vi.mock('../../public/js/ui.js', () => ({
+vi.mock('../../src/js/client/ui.js', () => ({
 	$: vi.fn(id => mockUIElements[id] || { value: '' }),
 	enforceMaxBytes: vi.fn(),
 }));
 
-vi.mock('../../public/js/palette.js', () => ({
+vi.mock('../../src/js/client/palette.js', () => ({
 	getUTF8: vi.fn(charCode => {
 		if (charCode < 128) {
 			return [charCode];
@@ -93,7 +93,7 @@ describe('File Module', () => {
 		global.MouseEvent = vi.fn(() => ({ bubbles: true, cancelable: true }));
 
 		// Import the module fresh for each test
-		const fileModule = await import('../../public/js/file.js');
+		const fileModule = await import('../../src/js/client/file.js');
 		Load = fileModule.Load;
 		Save = fileModule.Save;
 	});

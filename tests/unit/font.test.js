@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { loadFontFromXBData, loadFontFromImage } from '../../public/js/font.js';
+import { loadFontFromXBData, loadFontFromImage } from '../../src/js/client/font.js';
 
 const imgDataCap = 256;
 
 // Mock the UI module
-vi.mock('../../public/js/ui.js', () => ({
+vi.mock('../../src/js/client/ui.js', () => ({
 	createCanvas: vi.fn(() => ({
 		getContext: vi.fn(() => ({
 			drawImage: vi.fn(),

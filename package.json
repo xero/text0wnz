@@ -24,18 +24,18 @@
 		"url": "https://github.com/xero/moebius-web"
 	},
 	"type": "module",
-	"main": "src/main.js",
+	"main": "src/js/server/main.js",
 	"engines": {
 		"node": ">=22.19.0 <23"
 	},
 	"scripts": {
 		"bake": "cat banner; vite build",
-		"server": "cat banner; bun src/main.js",
-		"fix": "cat banner; prettier --write public/js/**/*.js tests/**/*.js src/* && eslint --fix public/js/*.js tests/**/*.js src/*",
-		"lint:check": "cat banner; eslint public/js/**/*.js tests/**/*.js src/*",
-		"lint:fix": "cat banner; eslint --fix public/js/**/*.js tests/**/*.js src/*",
-		"format:fix": "cat banner; prettier --write public/js/**/*.js tests/**/*.js src/*",
-		"format:check": "cat banner; prettier --check public/js/**/*.js tests/**/*.js src/*",
+		"server": "cat banner; bun src/js/server/main.js",
+		"fix": "cat banner; prettier --write tests/**/*.js src/js/**/*.js && eslint --fix tests/**/*.js src/js/**/*.js",
+		"lint:check": "cat banner; eslint tests/**/*.js src/js/**/*.js",
+		"lint:fix": "cat banner; eslint --fix tests/**/*.js src/js/**/*.js",
+		"format:fix": "cat banner; prettier --write tests/**/*.js src/js/**/*.js",
+		"format:check": "cat banner; prettier --check tests/**/*.js src/js/**/*.js",
 		"test:unit": "cat banner; vitest run"
 	},
 	"dependencies": {

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { createTextArtCanvas } from '../../public/js/canvas.js';
+import { createTextArtCanvas } from '../../src/js/client/canvas.js';
 
 // Set up module mocks first - before importing canvas.js
-vi.mock('../../public/js/state.js', () => ({
+vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		font: {
 			draw: vi.fn(),
@@ -19,7 +19,7 @@ vi.mock('../../public/js/state.js', () => ({
 	},
 }));
 
-vi.mock('../../public/js/ui.js', () => ({
+vi.mock('../../src/js/client/ui.js', () => ({
 	$: vi.fn(_id => ({
 		style: {},
 		classList: { add: vi.fn(), remove: vi.fn() },
@@ -50,7 +50,7 @@ vi.mock('../../public/js/ui.js', () => ({
 	})),
 }));
 
-vi.mock('../../public/js/font.js', () => ({
+vi.mock('../../src/js/client/font.js', () => ({
 	loadFontFromImage: vi.fn((_name, _spacing, _palette) => {
 		return Promise.resolve({
 			draw: vi.fn(),
@@ -73,7 +73,7 @@ vi.mock('../../public/js/font.js', () => ({
 	}),
 }));
 
-vi.mock('../../public/js/palette.js', () => ({
+vi.mock('../../src/js/client/palette.js', () => ({
 	createPalette: vi.fn(() => ({ getRGBAColor: vi.fn(() => [255, 255, 255, 255]) })),
 	createDefaultPalette: vi.fn(() => ({ getRGBAColor: vi.fn(() => [255, 255, 255, 255]) })),
 }));

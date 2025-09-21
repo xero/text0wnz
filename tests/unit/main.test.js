@@ -141,8 +141,8 @@ global.Image = vi.fn(() => ({
 }));
 
 // Mock all the imported modules
-vi.mock('../../public/js/state.js', () => ({ default: mockState }));
-vi.mock('../../public/js/ui.js', () => ({
+vi.mock('../../src/js/client/state.js', () => ({ default: mockState }));
+vi.mock('../../src/js/client/ui.js', () => ({
 	$: global.document.getElementById,
 	$$: global.document.querySelector,
 	createCanvas: vi.fn(() => createMockElement()),
@@ -165,14 +165,14 @@ vi.mock('../../public/js/ui.js', () => ({
 	menuHover: vi.fn(),
 	enforceMaxBytes: vi.fn(),
 }));
-vi.mock('../../public/js/toolbar.js', () => ({
+vi.mock('../../src/js/client/toolbar.js', () => ({
 	default: {
 		add: vi.fn(() => ({ enable: vi.fn() })),
 		getCurrentTool: vi.fn(() => 'keyboard'),
 		switchTool: vi.fn(),
 	},
 }));
-vi.mock('../../public/js/file.js', () => ({
+vi.mock('../../src/js/client/file.js', () => ({
 	Load: {
 		file: vi.fn(),
 		sauceToAppFont: vi.fn(),
@@ -186,7 +186,7 @@ vi.mock('../../public/js/file.js', () => ({
 	},
 }));
 
-vi.mock('../../public/js/font.js', () => ({
+vi.mock('../../src/js/client/font.js', () => ({
 	loadFontFromImage: vi.fn((_name, _spacing, _palette) => {
 		return Promise.resolve({
 			draw: vi.fn(),
@@ -209,7 +209,7 @@ vi.mock('../../public/js/font.js', () => ({
 	}),
 }));
 
-vi.mock('../../public/js/canvas.js', () => ({
+vi.mock('../../src/js/client/canvas.js', () => ({
 	createTextArtCanvas: vi.fn((container, callback) => {
 		// Execute callback immediately to simulate successful creation
 		if (callback) {
@@ -248,21 +248,21 @@ describe('Main Application Module', () => {
 	describe('Module Structure', () => {
 		it('should import without throwing errors', async () => {
 			expect(async () => {
-				await import('../../public/js/main.js');
+				await import('../../src/js/client/main.js');
 			}).not.toThrow();
 		});
 
 		it('should handle CSS import without errors', async () => {
 			// The CSS import should not throw
 			expect(async () => {
-				await import('../../public/js/main.js');
+				await import('../../src/js/client/main.js');
 			}).not.toThrow();
 		});
 	});
 
 	describe('Application Initialization', () => {
 		it('should initialize State when DOMContentLoaded fires', async () => {
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			// Find the DOMContentLoaded listener
 			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
@@ -281,7 +281,7 @@ describe('Main Application Module', () => {
 				throw new Error('Initialization failed');
 			});
 
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
 
@@ -298,7 +298,7 @@ describe('Main Application Module', () => {
 		});
 
 		it('should wait for dependencies before initializing components', async () => {
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
 
@@ -316,9 +316,9 @@ describe('Main Application Module', () => {
 
 	describe('UI Event Handlers', () => {
 		it('should handle new button click with confirmation', async () => {
-			const { onClick } = await import('../../public/js/ui.js');
+			const { onClick } = await import('../../src/js/client/ui.js');
 
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			// Find the onClick call for the 'new' button
 			const newButtonCall = onClick.mock.calls.find(call => call[0] && call[0].id === 'new'); // This is a mock, so we check the mock element
@@ -333,9 +333,9 @@ describe('Main Application Module', () => {
 
 		it('should handle new button click cancellation', async () => {
 			global.confirm.mockReturnValue(false);
-			const { onClick } = await import('../../public/js/ui.js');
+			const { onClick } = await import('../../src/js/client/ui.js');
 
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			const newButtonCall = onClick.mock.calls.find(call => call[0] && typeof call[1] === 'function');
 
@@ -349,9 +349,9 @@ describe('Main Application Module', () => {
 		});
 
 		it('should handle font selection and preview updates', async () => {
-			const { onSelectChange } = await import('../../public/js/ui.js');
+			const { onSelectChange } = await import('../../src/js/client/ui.js');
 
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			// onSelectChange should be called during setup - just verify it's available
 			expect(onSelectChange).toBeDefined();
@@ -359,9 +359,9 @@ describe('Main Application Module', () => {
 		});
 
 		it('should handle resize operations with valid input', async () => {
-			const { onClick } = await import('../../public/js/ui.js');
+			const { onClick } = await import('../../src/js/client/ui.js');
 
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			// Test resize apply button
 			const resizeApplyCall = onClick.mock.calls.find(call => call[0] && typeof call[1] === 'function');
@@ -387,9 +387,9 @@ describe('Main Application Module', () => {
 		});
 
 		it('should handle invalid resize input gracefully', async () => {
-			const { onClick } = await import('../../public/js/ui.js');
+			const { onClick } = await import('../../src/js/client/ui.js');
 
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			const resizeApplyCall = onClick.mock.calls.find(call => call[0] && typeof call[1] === 'function');
 
@@ -427,9 +427,9 @@ describe('Main Application Module', () => {
 				sendFontChange: vi.fn(),
 			};
 
-			const { onClick } = await import('../../public/js/ui.js');
+			const { onClick } = await import('../../src/js/client/ui.js');
 
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			// Test resize broadcast
 			const resizeCall = onClick.mock.calls.find(call => call[0] && typeof call[1] === 'function');
@@ -457,9 +457,9 @@ describe('Main Application Module', () => {
 			// Remove network state
 			mockState.network = null;
 
-			const { onClick } = await import('../../public/js/ui.js');
+			const { onClick } = await import('../../src/js/client/ui.js');
 
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			// Operations should still work without network
 			expect(() => {
@@ -475,7 +475,7 @@ describe('Main Application Module', () => {
 
 	describe('Font Management', () => {
 		it('should handle font preview for regular PNG fonts', async () => {
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			// Mock Image constructor to test font preview
 			const mockImg = {
@@ -494,7 +494,7 @@ describe('Main Application Module', () => {
 		});
 
 		it('should handle font preview errors gracefully', async () => {
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			const mockImg = {
 				onload: null,
@@ -510,7 +510,7 @@ describe('Main Application Module', () => {
 		});
 
 		it('should handle XBIN font preview differently', async () => {
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			// Test that XBIN font handling is available
 			expect(mockState.textArtCanvas.getCurrentFontName).toBeDefined();
@@ -521,7 +521,7 @@ describe('Main Application Module', () => {
 		it('should successfully import all required modules', async () => {
 			// Test that all import statements resolve without errors
 			expect(async () => {
-				const module = await import('../../public/js/main.js');
+				const module = await import('../../src/js/client/main.js');
 				// Module should exist
 				expect(module).toBeDefined();
 			}).not.toThrow();
@@ -530,14 +530,14 @@ describe('Main Application Module', () => {
 		it('should have proper module structure', async () => {
 			// Since main.js is primarily about side effects (setting up event listeners, etc.)
 			// we mainly verify it can be imported without issues
-			const module = await import('../../public/js/main.js');
+			const module = await import('../../src/js/client/main.js');
 			expect(module).toBeDefined();
 		});
 	});
 
 	describe('Component Initialization', () => {
 		it('should initialize all required components in correct order', async () => {
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
 
@@ -553,16 +553,16 @@ describe('Main Application Module', () => {
 		});
 
 		it('should create drawing tools', async () => {
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			// Test that palette functions are available
 			expect(mockCreateFunctions.createDefaultPalette).toBeDefined();
 		});
 
 		it('should set up event handlers', async () => {
-			const { onClick, onSelectChange, onFileChange } = await import('../../public/js/ui.js');
+			const { onClick, onSelectChange, onFileChange } = await import('../../src/js/client/ui.js');
 
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			// Event handlers should be available
 			expect(onClick).toBeDefined();
@@ -571,7 +571,7 @@ describe('Main Application Module', () => {
 		});
 
 		it('should configure canvas settings', async () => {
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
 
@@ -585,7 +585,7 @@ describe('Main Application Module', () => {
 		});
 
 		it('should handle font configuration', async () => {
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			// Font handling should be available
 			expect(mockState.font.setLetterSpacing).toBeDefined();
@@ -593,7 +593,7 @@ describe('Main Application Module', () => {
 		});
 
 		it('should handle ICE colors configuration', async () => {
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			// ICE colors handling should be available
 			expect(mockState.textArtCanvas.setIceColors).toBeDefined();
@@ -603,25 +603,25 @@ describe('Main Application Module', () => {
 
 	describe('File Operations Integration', () => {
 		it('should handle file loading workflow', async () => {
-			const { Load } = await import('../../public/js/file.js');
+			const { Load } = await import('../../src/js/client/file.js');
 
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			// File loading should be configured
 			expect(Load.file).toBeDefined();
 		});
 
 		it('should handle SAUCE information', async () => {
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			// SAUCE handling functions should be available
 			expect(global.document.getElementById).toBeDefined();
 		});
 
 		it('should handle font file operations', async () => {
-			const { Load } = await import('../../public/js/file.js');
+			const { Load } = await import('../../src/js/client/file.js');
 
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			// Font operations should be available
 			expect(Load.sauceToAppFont).toBeDefined();
@@ -635,7 +635,7 @@ describe('Main Application Module', () => {
 				throw new Error('Canvas creation failed');
 			});
 
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
 
@@ -653,7 +653,7 @@ describe('Main Application Module', () => {
 		it('should handle missing DOM elements gracefully', async () => {
 			global.document.getElementById.mockReturnValue(null);
 
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
 
@@ -669,7 +669,7 @@ describe('Main Application Module', () => {
 
 	describe('State Management Integration', () => {
 		it('should properly integrate with state system', async () => {
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
 
@@ -695,7 +695,7 @@ describe('Main Application Module', () => {
 		});
 
 		it('should set up state properties correctly', async () => {
-			await import('../../public/js/main.js');
+			await import('../../src/js/client/main.js');
 
 			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
 

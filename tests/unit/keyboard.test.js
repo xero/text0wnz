@@ -6,10 +6,10 @@ import {
 	createSelectionCursor,
 	createKeyboardController,
 	createPasteTool,
-} from '../../public/js/keyboard.js';
+} from '../../src/js/client/keyboard.js';
 
 // Mock the State module and other dependencies
-vi.mock('../../public/js/state.js', () => ({
+vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		font: {
 			getWidth: vi.fn(() => 8),
@@ -49,14 +49,14 @@ vi.mock('../../public/js/state.js', () => ({
 	},
 }));
 
-vi.mock('../../public/js/toolbar.js', () => ({
+vi.mock('../../src/js/client/toolbar.js', () => ({
 	default: {
 		switchTool: vi.fn(),
 		returnToPreviousTool: vi.fn(),
 	},
 }));
 
-vi.mock('../../public/js/ui.js', () => ({
+vi.mock('../../src/js/client/ui.js', () => ({
 	$: vi.fn(id => {
 		const element = document.createElement('canvas');
 		element.id = id;

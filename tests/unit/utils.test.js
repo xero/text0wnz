@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock modules that UI depends on
-vi.mock('../../public/js/state.js', () => ({ default: {} }));
+vi.mock('../../src/js/client/state.js', () => ({ default: {} }));
 
-vi.mock('../../public/js/toolbar.js', () => ({ default: {} }));
+vi.mock('../../src/js/client/toolbar.js', () => ({ default: {} }));
 
 // We'll test pure utility functions from ui.js
 describe('UI Utilities', () => {
@@ -27,7 +27,7 @@ describe('UI Utilities', () => {
 
 		it('should create a canvas with specified dimensions', async () => {
 			// Import the module after setting up mocks
-			const { createCanvas } = await import('../../public/js/ui.js');
+			const { createCanvas } = await import('../../src/js/client/ui.js');
 
 			const canvas = createCanvas(800, 600);
 
@@ -37,7 +37,7 @@ describe('UI Utilities', () => {
 		});
 
 		it('should handle different dimensions', async () => {
-			const { createCanvas } = await import('../../public/js/ui.js');
+			const { createCanvas } = await import('../../src/js/client/ui.js');
 
 			const smallCanvas = createCanvas(100, 50);
 			expect(smallCanvas.width).toBe(100);
@@ -91,7 +91,7 @@ describe('UI Utilities', () => {
 		});
 
 		it('should create shorthand selectors correctly', async () => {
-			const { $, $$ } = await import('../../public/js/ui.js');
+			const { $, $$ } = await import('../../src/js/client/ui.js');
 
 			const element = $('test-id');
 			expect(element.id).toBe('test-id');

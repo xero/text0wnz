@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import State from '../../public/js/state.js';
+import State from '../../src/js/client/state.js';
 
 describe('State Management System', () => {
 	beforeEach(() => {

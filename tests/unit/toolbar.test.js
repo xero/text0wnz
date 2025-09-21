@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import Toolbar from '../../public/js/toolbar.js';
+import Toolbar from '../../src/js/client/toolbar.js';
 
 describe('Toolbar', () => {
 	beforeEach(() => {

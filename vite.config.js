@@ -3,17 +3,17 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 import path from 'node:path';
 
 export default defineConfig({
-	root: './public',
+	root: './src',
 	build: {
 		emptyOutDir: true,
 		outDir: '../dist',
 		assetsDir: '', // Place all assets in the root of `outDir`
 		assetsInlineLimit: 0, // Prevent inlined assets
-		target: 'es2022', // Target modern JavaScript environments
-		sourcemap: process.env.NODE_ENV !== 'production', // Disable source maps in production
+		target: 'es2022',
+		sourcemap: process.env.NODE_ENV !== 'production',
 		rollupOptions: {
 			input: {
-				index: path.resolve('./public', 'index.html'),
+				index: path.resolve('./src', 'index.html'),
 			},
 			output: {
 				entryFileNames: 'ui/editor-[hash].js',
@@ -55,7 +55,7 @@ export default defineConfig({
 	plugins: [
 		viteStaticCopy({
 			targets: [
-				{ src: 'js/worker.js', dest: 'ui' },
+				{ src: 'js/client/worker.js', dest: 'ui' },
 				{ src: 'fonts', dest: 'ui' },
 			],
 		}),

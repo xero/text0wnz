@@ -8,9 +8,8 @@ export default [
 			'@stylistic': stylistic,
 		},
 		files: [
-			'public/js/**/*.js',
 			'tests/**/*.js',
-			'src/**/*.js',
+			'src/js/**/*.js',
 		],
 		languageOptions: {
 			ecmaVersion: 2022,

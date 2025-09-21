@@ -1,31 +1,33 @@
-@import "tailwindcss";
-@custom-variant dark (&:where(.dark, .dark *)) {}
+@import 'tailwindcss';
+@custom-variant dark (&:where(.dark, .dark *)) {
+}
 :root {
-  --purp: #6e2aa5;
-  --indigo: #6366f1;
-  --cyber: #00bad7;
-  --cyan: #22d3ee;
-  --subtitle: #999;
-  --chat: #ababab;
-  --dark-grey: var(--menu-bg);
-  --midnight: #000;
-  --icon-size: 46px;
-  --icon-size-sm: 36px;
-  --palette-width: 200px;
-  --palette-height: 53px;
-  --breakpoint-xs: 30rem;
-  --breakpoint-2xl: 100rem;
-  --breakpoint-3xl: 120rem;
-  --text: #efefef;
-  --editor: #222;
-  --menu: #333;
-  --icon: #efefef;
-  --tools: #4e4e4e;
-  --hl: #000;
-  --dark-grey: #333;
-  --midnight: #000;
-  --purp: #6e2aa5;
-	--font-family: topaz, ui-monospace, Consolas, SFMono-Regular, Menlo, Monaco, "Liberation Mono", "Courier New", monospace;
+	--purp: #6e2aa5;
+	--indigo: #6366f1;
+	--cyber: #00bad7;
+	--cyan: #22d3ee;
+	--subtitle: #999;
+	--chat: #ababab;
+	--dark-grey: var(--menu-bg);
+	--midnight: #000;
+	--icon-size: 46px;
+	--icon-size-sm: 36px;
+	--palette-width: 200px;
+	--palette-height: 53px;
+	--breakpoint-xs: 30rem;
+	--breakpoint-2xl: 100rem;
+	--breakpoint-3xl: 120rem;
+	--text: #efefef;
+	--editor: #222;
+	--menu: #333;
+	--icon: #efefef;
+	--tools: #4e4e4e;
+	--hl: #000;
+	--dark-grey: #333;
+	--midnight: #000;
+	--purp: #6e2aa5;
+	--font-family:
+		topaz, ui-monospace, Consolas, SFMono-Regular, Menlo, Monaco, 'Liberation Mono', 'Courier New', monospace;
 	--bg-med: var(--menu);
 	--bg-dark: var(--editor);
 	overscroll-behavior: none;
@@ -33,7 +35,7 @@
 
 @font-face {
 	font-family: topaz;
-	src: url("/fonts/topazplus_1200.woff2") format("woff2");
+	src: url('/fonts/topazplus_1200.woff2') format('woff2');
 	font-weight: normal;
 	font-style: normal;
 }
@@ -525,7 +527,7 @@ canvas.fkey {
 	}
 
 	&.enabled {
-		background-image: url("/img/done.png");
+		background-image: url('/img/done.png');
 		background-position: 130px 0px;
 		background-repeat: no-repeat;
 		background-size: 20px 20px;
@@ -795,12 +797,12 @@ canvas {
 	&.selection-cursor {
 		position: absolute;
 		border: 1px solid;
-		border-image: url("/img/selection_border.gif") 1 repeat;
+		border-image: url('/img/selection_border.gif') 1 repeat;
 		border-image-width: 1px;
 		z-index: 1;
 
 		&.move-mode {
-			border-image: url("/img/move_border.gif") 1 repeat;
+			border-image: url('/img/move_border.gif') 1 repeat;
 		}
 	}
 }
@@ -845,5 +847,5 @@ header {
 	@apply m-auto;
 }
 .face {
-	background-image: url("/img/face.png");
+	background-image: url('/img/face.png');
 }

@@ -16,10 +16,10 @@ import {
 	createAttributeBrushController,
 	createSelectionTool,
 	createSampleTool,
-} from '../../public/js/freehand_tools.js';
+} from '../../src/js/client/freehand_tools.js';
 
 // Mock dependencies
-vi.mock('../../public/js/state.js', () => ({
+vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		palette: {
 			getRGBAColor: vi.fn(() => [255, 0, 0, 255]),
@@ -127,14 +127,14 @@ vi.mock('../../public/js/state.js', () => ({
 	},
 }));
 
-vi.mock('../../public/js/toolbar.js', () => ({
+vi.mock('../../src/js/client/toolbar.js', () => ({
 	default: {
 		add: vi.fn(() => ({ enable: vi.fn() })),
 		returnToPreviousTool: vi.fn(),
 	},
 }));
 
-vi.mock('../../public/js/ui.js', () => ({
+vi.mock('../../src/js/client/ui.js', () => ({
 	$: vi.fn(_ => {
 		// Create mock DOM elements
 		const mockElement = {
@@ -724,7 +724,7 @@ describe('Freehand Tools', () => {
 			const tool = createSampleTool(mockShadeBrush, mockShadeElement, mockCharacterBrush, mockCharacterElement);
 
 			// Mock blocky half block with specific colors
-			const State = (await import('../../public/js/state.js')).default;
+			const State = (await import('../../src/js/client/state.js')).default;
 			State.textArtCanvas.getHalfBlock.mockReturnValue({
 				isBlocky: true,
 				halfBlockY: 0,
@@ -741,7 +741,7 @@ describe('Freehand Tools', () => {
 			const tool = createSampleTool(mockShadeBrush, mockShadeElement, mockCharacterBrush, mockCharacterElement);
 
 			// Mock non-blocky character - need to import State and modify mock
-			const State = (await import('../../public/js/state.js')).default;
+			const State = (await import('../../src/js/client/state.js')).default;
 			State.textArtCanvas.getHalfBlock.mockReturnValue({
 				isBlocky: false,
 				x: 5,
@@ -766,7 +766,7 @@ describe('Freehand Tools', () => {
 			const tool = createSampleTool(mockShadeBrush, mockShadeElement, mockCharacterBrush, mockCharacterElement);
 
 			// Mock shading character
-			const State = (await import('../../public/js/state.js')).default;
+			const State = (await import('../../src/js/client/state.js')).default;
 			State.textArtCanvas.getHalfBlock.mockReturnValue({
 				isBlocky: false,
 				x: 5,

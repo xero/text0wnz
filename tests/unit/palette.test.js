@@ -6,10 +6,10 @@ import {
 	createDefaultPalette,
 	createPalettePreview,
 	createPalettePicker,
-} from '../../public/js/palette.js';
+} from '../../src/js/client/palette.js';
 
 // Mock the State module since these are unit tests
-vi.mock('../../public/js/state.js', () => ({
+vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		palette: {
 			getRGBAColor: vi.fn(() => [255, 0, 0, 255]),

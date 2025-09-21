@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { createWorkerHandler, createChatController } from '../../public/js/network.js';
+import { createWorkerHandler, createChatController } from '../../src/js/client/network.js';
 
 // Mock State module
-vi.mock('../../public/js/state.js', () => ({
+vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		worker: null,
 		textArtCanvas: {
@@ -27,7 +27,7 @@ vi.mock('../../public/js/state.js', () => ({
 }));
 
 // Mock UI module
-vi.mock('../../public/js/ui.js', () => ({
+vi.mock('../../src/js/client/ui.js', () => ({
 	$: vi.fn(_id => ({
 		value: '',
 		style: { display: 'block' },

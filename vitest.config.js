@@ -1,5 +1,15 @@
 import { defineConfig } from 'vitest/config';
 
+const ignore = [
+	'*.config.js',
+	'banner',
+	'dist',
+	'docs',
+	'session',
+	'node_modules',
+	'tests/e2e/**',
+];
+
 export default defineConfig({
 	test: {
 		environment: 'jsdom',
@@ -9,30 +19,12 @@ export default defineConfig({
 		threads: false, // Run tests sequentially to reduce memory pressure
 		isolate: true, // Ensure clean state between tests
 		maxThreads: 1, // Single thread to avoid memory multiplication
-		exclude: [
-			'*.config.js',
-			'banner',
-			'dist',
-			'docs',
-			'examples',
-			'node_modules',
-			'tests/e2e/**',
-		],
+		exclude: ignore,
 		coverage: {
 			enabled: true,
 			reporter: ['text', 'html'],
 			reportsDirectory: 'tests/results/coverage',
-			exclude: [
-				'*.config.js',
-				'banner',
-				'dist',
-				'docs',
-				'examples',
-				'node_modules',
-				/* for now */
-				'server.cjs',
-				'src/',
-			],
+			exclude: ignore,
 		},
 	},
 });
