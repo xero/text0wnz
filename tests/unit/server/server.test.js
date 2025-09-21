@@ -1,8 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Test server configuration and logic without complex mocking
-describe('Server Module Logic Tests', () => {
-	describe('SSL Certificate Detection Logic', () => {
+// Note: This module has complex dependencies (express, https, fs), limiting direct unit testing
+// These tests focus on testing exports and core logic patterns
+
+describe('Server Module Integration Tests', () => {
+	describe('Module Exports', () => {
+		it('should export the expected functions', async () => {
+			// Dynamic import to avoid issues with dependencies during module load
+			const module = await import('../../../src/js/server/server.js');
+			
+			expect(module.startServer).toBeDefined();
+			expect(typeof module.startServer).toBe('function');
+		});
+	});
+
+	describe('SSL Configuration Logic', () => {
 		it('should determine SSL usage based on certificate existence', () => {
 			// Simulate SSL certificate checking logic
 			const checkSSLConfig = (config, certExists, keyExists) => {
@@ -37,6 +49,7 @@ describe('Server Module Logic Tests', () => {
 		});
 
 		it('should construct proper certificate paths', () => {
+			// Test path construction logic
 			const constructCertPaths = (sslDir) => {
 				// Simulate path.join logic
 				return {
@@ -52,8 +65,31 @@ describe('Server Module Logic Tests', () => {
 	});
 
 	describe('Server Configuration Logic', () => {
+		it('should handle auto-save interval configuration', () => {
+			// Test interval configuration logic
+			const setupAutoSave = (config) => {
+				const intervalMs = config.saveInterval;
+				const intervalMinutes = intervalMs / 60000;
+				
+				return {
+					intervalMs,
+					intervalMinutes,
+					isValid: intervalMs > 0 && intervalMs <= 24 * 60 * 60 * 1000, // Max 24 hours
+				};
+			};
+
+			// Test 30 minute interval
+			const thirtyMin = setupAutoSave({ saveInterval: 30 * 60 * 1000 });
+			expect(thirtyMin.intervalMinutes).toBe(30);
+			expect(thirtyMin.isValid).toBe(true);
+
+			// Test invalid interval
+			const invalid = setupAutoSave({ saveInterval: -1000 });
+			expect(invalid.isValid).toBe(false);
+		});
+
 		it('should set up middleware in correct order', () => {
-			// Test middleware setup order
+			// Test middleware setup order logic
 			const middlewareOrder = [];
 			
 			const mockApp = {
@@ -82,32 +118,11 @@ describe('Server Module Logic Tests', () => {
 				'/server'
 			]);
 		});
-
-		it('should handle auto-save interval configuration', () => {
-			const setupAutoSave = (config) => {
-				const intervalMs = config.saveInterval;
-				const intervalMinutes = intervalMs / 60000;
-				
-				return {
-					intervalMs,
-					intervalMinutes,
-					isValid: intervalMs > 0 && intervalMs <= 24 * 60 * 60 * 1000, // Max 24 hours
-				};
-			};
-
-			// Test 30 minute interval
-			const thirtyMin = setupAutoSave({ saveInterval: 30 * 60 * 1000 });
-			expect(thirtyMin.intervalMinutes).toBe(30);
-			expect(thirtyMin.isValid).toBe(true);
-
-			// Test invalid interval
-			const invalid = setupAutoSave({ saveInterval: -1000 });
-			expect(invalid.isValid).toBe(false);
-		});
 	});
 
 	describe('WebSocket Route Setup', () => {
 		it('should register WebSocket routes correctly', () => {
+			// Test WebSocket route registration logic
 			const routes = [];
 			const mockApp = {
 				ws: vi.fn((path, handler) => {
@@ -127,6 +142,7 @@ describe('Server Module Logic Tests', () => {
 		});
 
 		it('should handle client tracking correctly', () => {
+			// Test client tracking logic
 			const allClients = new Set();
 			
 			// Simulate client connection
@@ -148,6 +164,7 @@ describe('Server Module Logic Tests', () => {
 
 	describe('Signal Handling Logic', () => {
 		it('should set up proper signal handlers', () => {
+			// Test signal handler setup logic
 			const signals = [];
 			const mockProcess = {
 				on: vi.fn((signal, handler) => {
@@ -166,6 +183,7 @@ describe('Server Module Logic Tests', () => {
 		});
 
 		it('should handle graceful shutdown sequence', () => {
+			// Test graceful shutdown logic
 			let shutdownCalled = false;
 			let exitCalled = false;
 			
@@ -186,6 +204,7 @@ describe('Server Module Logic Tests', () => {
 
 	describe('Server Error Handling', () => {
 		it('should handle SSL certificate errors gracefully', () => {
+			// Test SSL error handling logic
 			const handleSSLError = (error) => {
 				const isSSLError = error.message.includes('SSL') || 
 								 error.message.includes('certificate') ||
@@ -215,6 +234,7 @@ describe('Server Module Logic Tests', () => {
 		});
 
 		it('should validate port numbers correctly', () => {
+			// Test port validation logic
 			const validatePort = (port) => {
 				const numPort = parseInt(port);
 				return {
@@ -226,6 +246,70 @@ describe('Server Module Logic Tests', () => {
 			expect(validatePort('8080')).toEqual({ isValid: true, port: 8080 });
 			expect(validatePort('99999')).toEqual({ isValid: false, port: 99999 });
 			expect(validatePort('invalid')).toEqual({ isValid: false, port: NaN });
+		});
+	});
+
+	describe('Auto-save and Interval Management', () => {
+		it('should calculate save intervals correctly', () => {
+			// Test save interval calculation logic
+			const calculateInterval = (minutes) => {
+				const milliseconds = minutes * 60 * 1000;
+				return {
+					minutes,
+					milliseconds,
+					hours: minutes / 60,
+					isValidRange: minutes >= 1 && minutes <= 1440 // 1 minute to 24 hours
+				};
+			};
+
+			expect(calculateInterval(30)).toEqual({
+				minutes: 30,
+				milliseconds: 1800000,
+				hours: 0.5,
+				isValidRange: true
+			});
+
+			expect(calculateInterval(1440)).toEqual({
+				minutes: 1440,
+				milliseconds: 86400000,
+				hours: 24,
+				isValidRange: true
+			});
+
+			expect(calculateInterval(0)).toEqual({
+				minutes: 0,
+				milliseconds: 0,
+				hours: 0,
+				isValidRange: false
+			});
+		});
+
+		it('should handle process cleanup correctly', () => {
+			// Test process cleanup logic
+			const processCleanup = () => {
+				const cleanupTasks = [];
+				
+				const addCleanupTask = (name, task) => {
+					cleanupTasks.push({ name, executed: false });
+					// Simulate task execution
+					task(() => {
+						const taskItem = cleanupTasks.find(t => t.name === name);
+						if (taskItem) taskItem.executed = true;
+					});
+				};
+
+				addCleanupTask('saveSession', (callback) => callback());
+				addCleanupTask('closeConnections', (callback) => callback());
+				
+				return cleanupTasks;
+			};
+
+			const tasks = processCleanup();
+			expect(tasks).toHaveLength(2);
+			expect(tasks[0].name).toBe('saveSession');
+			expect(tasks[0].executed).toBe(true);
+			expect(tasks[1].name).toBe('closeConnections');
+			expect(tasks[1].executed).toBe(true);
 		});
 	});
 });

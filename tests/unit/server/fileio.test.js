@@ -1,23 +1,33 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Create simplified tests for fileio functions that test the logic without fs dependency
-describe('FileIO Module Logic Tests', () => {
-	// Test SAUCE parsing logic 
-	describe('SAUCE Data Parsing', () => {
-		it('should parse valid SAUCE signature', () => {
-			// Create a mock SAUCE record
+// Note: This module has fs dependencies, limiting direct unit testing
+// These tests focus on testing the exports and algorithms where possible
+
+describe('FileIO Module Integration Tests', () => {
+	describe('Module Exports', () => {
+		it('should export the expected functions', async () => {
+			// Dynamic import to avoid issues with fs dependencies during module load
+			const module = await import('../../../src/js/server/fileio.js');
+			
+			expect(module.load).toBeDefined();
+			expect(typeof module.load).toBe('function');
+			expect(module.save).toBeDefined();
+			expect(typeof module.save).toBe('function');
+			expect(module.default).toBeDefined();
+			expect(typeof module.default.load).toBe('function');
+			expect(typeof module.default.save).toBe('function');
+		});
+	});
+
+	describe('SAUCE Data Processing Logic', () => {
+		it('should parse SAUCE signature correctly', () => {
+			// Test SAUCE signature detection logic
 			const mockBytes = new Uint8Array(256);
 			
 			// Add SAUCE signature at position -128
 			const sauceStart = mockBytes.length - 128;
 			const sauceSignature = new TextEncoder().encode('SAUCE00');
 			mockBytes.set(sauceSignature, sauceStart);
-			
-			// Set test data: columns = 80, rows = 25
-			mockBytes[sauceStart + 96] = 80; // columns low byte
-			mockBytes[sauceStart + 97] = 0;  // columns high byte
-			mockBytes[sauceStart + 99] = 25; // rows low byte
-			mockBytes[sauceStart + 100] = 0; // rows high byte
 			
 			// Test signature detection (simulate the internal logic)
 			const sauceData = mockBytes.slice(-128);
@@ -27,6 +37,7 @@ describe('FileIO Module Logic Tests', () => {
 		});
 
 		it('should extract SAUCE metadata correctly', () => {
+			// Test metadata extraction logic
 			const mockSauceData = new Uint8Array(128);
 			
 			// Set SAUCE signature
@@ -60,6 +71,7 @@ describe('FileIO Module Logic Tests', () => {
 		});
 
 		it('should handle ICE colors and letter spacing flags', () => {
+			// Test flag parsing logic
 			const mockSauceData = new Uint8Array(128);
 			
 			// Set flags at offset 105
@@ -76,7 +88,7 @@ describe('FileIO Module Logic Tests', () => {
 		});
 	});
 
-	describe('Binary Data Conversion', () => {
+	describe('Binary Data Conversion Algorithms', () => {
 		it('should convert Uint16 to Uint8 arrays correctly', () => {
 			// Test the conversion logic used in save operations
 			const convertUint16ToUint8 = (uint16Array) => {
@@ -120,7 +132,7 @@ describe('FileIO Module Logic Tests', () => {
 
 	describe('SAUCE Creation Logic', () => {
 		it('should create SAUCE record with correct structure', () => {
-			// Test SAUCE creation logic without file system
+			// Test SAUCE creation logic
 			const createSauceRecord = (columns, rows, iceColors, letterSpacing) => {
 				const sauce = new Uint8Array(128);
 				
@@ -179,6 +191,7 @@ describe('FileIO Module Logic Tests', () => {
 
 	describe('File Format Validation', () => {
 		it('should detect SAUCE signature presence', () => {
+			// Test SAUCE signature detection algorithm
 			const hasSauceSignature = (bytes) => {
 				if (bytes.length < 128) return false;
 				const sauce = bytes.slice(-128);
@@ -200,6 +213,7 @@ describe('FileIO Module Logic Tests', () => {
 		});
 
 		it('should extract canvas dimensions from various sources', () => {
+			// Test dimension extraction logic
 			const extractDimensions = (bytes, defaultColumns = 80) => {
 				if (bytes.length >= 128) {
 					const sauce = bytes.slice(-128);
