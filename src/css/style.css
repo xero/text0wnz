@@ -144,8 +144,12 @@ header {
 }
 
 #chat-button {
+	&.enabled,
+	&.active {
+		@apply bg-indigo;
+	}
 	&.notification {
-		@apply bg-cyan;
+		@apply bg-purp!;
 	}
 	@apply float-right text-fg;
 	font-size: 10px;
@@ -233,7 +237,7 @@ header {
 			@apply flex flex-1 min-h-[284px] flex-row overflow-y-scroll;
 			#user-list,
 			#message-window {
-				@apply flex flex-col max-h-[40vh] h-full m-0 pt-2;
+				@apply flex flex-col max-h-[40vh] h-full m-0 pt-2 break-all;
 			}
 			#user-list {
 				@apply w-1/4 bg-menu text-fg pl-3 overflow-auto;
@@ -262,14 +266,18 @@ header {
 			#handle-input {
 				@apply flex w-1/4 text-cyber;
 			}
-			#message-input {
-				@apply flex grow text-fg;
-				&:focus::placeholder {
-					color: transparent;
+			.prompt {
+				@apply flex grow mr-1;
+				&::before {
+					content: '>';
+					color: var(--color-chat);
 				}
 			}
+			#message-input {
+				@apply flex grow text-fg;
+			}
 			button {
-				@apply flex bg-midnight px-2;
+				@apply flex text-fg bg-midnight px-2;
 			}
 		}
 	}

@@ -496,6 +496,7 @@ const initializeAppComponents = () => {
 		$('user-list'),
 		$('handle-input'),
 		$('message-input'),
+		$('message-send'),
 		$('notification-checkbox'),
 		() => {
 			keyboard.ignore();

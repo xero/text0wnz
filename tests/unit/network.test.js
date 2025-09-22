@@ -311,6 +311,7 @@ describe('Network Module', () => {
 				divUserList: { appendChild: vi.fn(), removeChild: vi.fn() },
 				inputHandle: { value: '', addEventListener: vi.fn(), focus: vi.fn() },
 				inputMessage: { value: '', addEventListener: vi.fn(), focus: vi.fn() },
+				inputButton: { addEventListener: vi.fn() },
 				inputNotificationCheckbox: { checked: false, addEventListener: vi.fn() },
 			};
 
@@ -333,6 +334,7 @@ describe('Network Module', () => {
 				mockElements.divUserList,
 				mockElements.inputHandle,
 				mockElements.inputMessage,
+				mockElements.inputButton,
 				mockElements.inputNotificationCheckbox,
 				onFocus,
 				onBlur,
@@ -361,6 +363,7 @@ describe('Network Module', () => {
 				mockElements.divUserList,
 				mockElements.inputHandle,
 				mockElements.inputMessage,
+				mockElements.inputButton,
 				mockElements.inputNotificationCheckbox,
 				onFocus,
 				onBlur,
@@ -372,11 +375,11 @@ describe('Network Module', () => {
 			expect(mockElements.inputMessage.addEventListener).toHaveBeenCalledWith('blur', expect.any(Function));
 			expect(mockElements.inputHandle.addEventListener).toHaveBeenCalledWith('keypress', expect.any(Function));
 			expect(mockElements.inputMessage.addEventListener).toHaveBeenCalledWith('keypress', expect.any(Function));
+			expect(mockElements.inputButton.addEventListener).toHaveBeenCalledWith('click', expect.any(Function));
 			expect(mockElements.inputNotificationCheckbox.addEventListener).toHaveBeenCalledWith(
 				'click',
 				expect.any(Function),
 			);
-			expect(global.document.addEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
 		});
 
 		it('should handle notification settings from localStorage', () => {
@@ -389,6 +392,7 @@ describe('Network Module', () => {
 				mockElements.divUserList,
 				mockElements.inputHandle,
 				mockElements.inputMessage,
+				mockElements.inputButton,
 				mockElements.inputNotificationCheckbox,
 				vi.fn(),
 				vi.fn(),
@@ -407,6 +411,7 @@ describe('Network Module', () => {
 				mockElements.divUserList,
 				mockElements.inputHandle,
 				mockElements.inputMessage,
+				mockElements.inputButton,
 				mockElements.inputNotificationCheckbox,
 				vi.fn(),
 				vi.fn(),
@@ -427,6 +432,7 @@ describe('Network Module', () => {
 				mockElements.divUserList,
 				mockElements.inputHandle,
 				mockElements.inputMessage,
+				mockElements.inputButton,
 				mockElements.inputNotificationCheckbox,
 				onFocus,
 				onBlur,
@@ -460,6 +466,7 @@ describe('Network Module', () => {
 				mockElements.divUserList,
 				mockElements.inputHandle,
 				mockElements.inputMessage,
+				mockElements.inputButton,
 				mockElements.inputNotificationCheckbox,
 				vi.fn(),
 				vi.fn(),
@@ -477,6 +484,7 @@ describe('Network Module', () => {
 				mockElements.divUserList,
 				mockElements.inputHandle,
 				mockElements.inputMessage,
+				mockElements.inputButton,
 				mockElements.inputNotificationCheckbox,
 				vi.fn(),
 				vi.fn(),
@@ -498,6 +506,7 @@ describe('Network Module', () => {
 				mockElements.divUserList,
 				mockElements.inputHandle,
 				mockElements.inputMessage,
+				mockElements.inputButton,
 				mockElements.inputNotificationCheckbox,
 				vi.fn(),
 				vi.fn(),
@@ -521,6 +530,7 @@ describe('Network Module', () => {
 				mockElements.divUserList,
 				mockElements.inputHandle,
 				mockElements.inputMessage,
+				mockElements.inputButton,
 				mockElements.inputNotificationCheckbox,
 				vi.fn(),
 				vi.fn(),
@@ -538,6 +548,7 @@ describe('Network Module', () => {
 				mockElements.divUserList,
 				mockElements.inputHandle,
 				mockElements.inputMessage,
+				mockElements.inputButton,
 				mockElements.inputNotificationCheckbox,
 				vi.fn(),
 				vi.fn(),

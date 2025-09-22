@@ -408,6 +408,7 @@ const createChatController = (
 	divUserList,
 	inputHandle,
 	inputMessage,
+	inputButton,
 	inputNotificationCheckbox,
 	onFocusCallback,
 	onBlurCallback,
@@ -480,14 +481,19 @@ const createChatController = (
 
 	const keypressHandle = e => {
 		if (e.code === 'Enter') {
-			// Enter key
 			inputMessage.focus();
 		}
 	};
 
+	const onClick = _ => {
+		if (inputMessage.value !== '') {
+			const text = inputMessage.value;
+			inputMessage.value = '';
+			State.network.sendChat(text);
+		}
+	};
 	const keypressMessage = e => {
 		if (e.code === 'Enter') {
-			// Enter key
 			if (inputMessage.value !== '') {
 				const text = inputMessage.value;
 				inputMessage.value = '';
@@ -496,6 +502,7 @@ const createChatController = (
 		}
 	};
 
+	inputButton.addEventListener('click', onClick);
 	inputHandle.addEventListener('focus', onFocus);
 	inputHandle.addEventListener('blur', onBlur);
 	inputMessage.addEventListener('focus', onFocus);
@@ -557,13 +564,6 @@ const createChatController = (
 		}
 	};
 
-	const globalToggleKeydown = e => {
-		if (e.code === 'Escape') {
-			// Escape key
-			toggle();
-		}
-	};
-
 	const notificationCheckboxClicked = _ => {
 		if (inputNotificationCheckbox.checked) {
 			if (Notification.permission !== 'granted') {
@@ -581,7 +581,6 @@ const createChatController = (
 		}
 	};
 
-	document.addEventListener('keydown', globalToggleKeydown);
 	inputNotificationCheckbox.addEventListener('click', notificationCheckboxClicked);
 
 	return {
