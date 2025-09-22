@@ -6,31 +6,43 @@
 	--indigo: #6366f1;
 	--cyber: #00bad7;
 	--cyan: #22d3ee;
+	--header: #5f5f5f;
 	--subtitle: #999;
 	--chat: #ababab;
-	--dark-grey: var(--menu-bg);
-	--midnight: #000;
-	--icon-size: 46px;
-	--icon-size-sm: 36px;
-	--palette-width: 200px;
-	--palette-height: 53px;
-	--breakpoint-xs: 30rem;
-	--breakpoint-2xl: 100rem;
-	--breakpoint-3xl: 120rem;
-	--text: #efefef;
+	--fg: #efefef;
 	--editor: #222;
 	--menu: #333;
 	--icon: #efefef;
 	--tools: #4e4e4e;
 	--hl: #000;
-	--dark-grey: #333;
 	--midnight: #000;
-	--purp: #6e2aa5;
+	--icon-size: 46px;
+	--icon-size-sm: 36px;
+	--palette-width: 200px;
+	--palette-height: 53px;
 	--font-family:
 		topaz, ui-monospace, Consolas, SFMono-Regular, Menlo, Monaco, 'Liberation Mono', 'Courier New', monospace;
-	--bg-med: var(--menu);
-	--bg-dark: var(--editor);
 	overscroll-behavior: none;
+}
+@theme {
+	--breakpoint-xs: 30rem;
+	--breakpoint-2xl: 100rem;
+	--breakpoint-3xl: 120rem;
+	--color-header: var(--header);
+	--color-cyan: var(--cyan);
+	--color-purp: var(--purp);
+	--color-indigo: var(--indigo);
+	--color-cyber: var(--cyber);
+	--color-cyan: var(--cyan);
+	--color-subtitle: var(--subtitle);
+	--color-chat: var(--chat);
+	--color-fg: var(--fg);
+	--color-editor: var(--editor);
+	--color-menu: var(--menu);
+	--color-icon: var(--icon);
+	--color-tools: var(--tools);
+	--color-hl: var(--hl);
+	--color-midnight: var(--midnight);
 }
 
 @font-face {
@@ -57,7 +69,7 @@
 
 .scrollable {
 	scrollbar-width: auto;
-	scrollbar-color: var(--bg-dark) var(--bg-med);
+	scrollbar-color: var(--menu) var(--editor);
 }
 
 html {
@@ -99,7 +111,7 @@ kbd {
 header,
 aside,
 #position-info {
-	background-color: var(--bg-med);
+	@apply bg-menu;
 }
 
 header {
@@ -121,84 +133,167 @@ header {
 }
 
 #artwork-title {
+	@apply flex w-auto min-w-[50px] max-w-[100px] text-center p-0 m-0 h-[25px] text-xs;
 	background-color: rgb(95, 95, 95);
 	border: 1px solid rgb(31, 31, 31);
 	color: rgb(200, 200, 200);
-	@apply flex w-auto min-w-[50px] text-center p-0 m-0 h-[25px] text-xs;
+	&:focus {
+		background-color: rgb(127, 127, 127);
+		color: white;
+	}
 }
 
 #chat-button {
 	&.notification {
-		background-color: rgb(96, 127, 127);
+		@apply bg-cyan;
 	}
-
+	@apply float-right text-fg;
 	font-size: 10px;
-	color: white;
 	line-height: 19px;
-	float: right;
 	padding: 0px 8px;
 }
 
 #chat-icon-close-text {
-	display: none;
+	@apply hidden;
 }
 
 #chat-button {
 	&.active {
 		#chat-icon-text {
-			display: none;
+			@apply hidden;
 		}
 
 		#chat-icon-close-text {
-			display: block;
+			@apply block;
 		}
 	}
 
 	img {
-		vertical-align: middle;
+		@apply align-middle;
 	}
 }
 
 #chat-window {
-	width: 640px;
-	height: 400px;
-	position: absolute;
-	right: 8px;
-	top: 20px;
-	border-bottom-left-radius: 3px;
-	border-bottom-right-radius: 3px;
-	z-index: 3;
-	box-shadow: 0px 1px 0px rgba(0, 0, 0, 0.7);
-	background: linear-gradient(to bottom, #eeeeee 0px, white 64px, white 369px, #eeeeee 370px, white 100%);
-	display: none;
-}
+	@apply flex fixed top-[35px] right-[35px] z-40 bg-menu scale-y-100 opacity-100
+      w-[45vw] min-w-[30vw] max-w-full min-h-[300px] max-h-screen /*no height!*/
+      border-8 border-[#666] border-double;
+	transform-origin: top;
+	transition:
+		scale 0.7s ease-out,
+		opacity 0.7s ease-out,
+		transform 0.7s ease-out;
+	&.hide {
+		@apply scale-y-0 opacity-0 flex! pointer-events-none;
+	}
+	#chatRoom {
+		@apply flex flex-col h-full min-h-0 w-full max-h-[50vh];
+		header,
+		section,
+		nav,
+		article {
+			@apply flex-shrink-0 w-full;
+		}
+		header {
+			@apply w-full flex-row pl-2 pr-0 place-content-between min-h-0 bg-header;
+			flex-wrap: balance;
+			h1 {
+				@apply text-cyan text-2xl;
+			}
+			button {
+				@apply p-0 pb-0.5;
+				svg {
+					@apply text-fg;
+				}
+			}
+			#notification-setting {
+				@apply float-end text-fg;
+				width: 140px;
+				height: 20px;
+				font-size: 10px;
+				line-height: 20px;
 
+				#notification-checkbox {
+					@apply mr-3;
+					&:before {
+						@apply relative block w-[17px] h-[17px] bg-midnight;
+						content: '';
+					}
+					&:after {
+						@apply relative block left-[2px] top-[-15px] w-[13px] h-[13px] bg-midnight;
+						content: '';
+					}
+					&:checked:after {
+						background: var(--cyber);
+						content: '';
+					}
+				}
+			}
+		}
+		section {
+			@apply flex flex-1 min-h-[284px] flex-row overflow-y-scroll;
+			#user-list,
+			#message-window {
+				@apply flex flex-col max-h-[40vh] h-full m-0 pt-2;
+			}
+			#user-list {
+				@apply w-1/4 bg-menu text-fg pl-3 overflow-auto;
+				.user-name {
+					max-height: 25px;
+				}
+			}
+			#message-window {
+				@apply w-3/4 bg-editor overflow-y-scroll;
+				div {
+					@apply inline-table px-2 text-chat;
+					.handle {
+						@apply text-white;
+						&:after {
+							content: ':';
+						}
+					}
+				}
+			}
+		}
+		nav {
+			@apply pl-2 border-t-4 border-hl bg-editor flex-row;
+			* {
+				@apply m-0;
+			}
+			#handle-input {
+				@apply flex w-1/4 text-cyber;
+			}
+			#message-input {
+				@apply flex grow text-fg;
+				&:focus::placeholder {
+					color: transparent;
+				}
+			}
+			button {
+				@apply flex bg-midnight px-2;
+			}
+		}
+	}
+}
+/*
 #user-list {
-	@apply flex flex-col;
+	@apply flex flex-col overflow-auto;
 	width: 140px;
 	height: 350px;
-	border-left: 1px solid var(--bg-med);
-	overflow: auto;
+	border-left: 1px solid var(--menu);
 
 	div {
+		@apply text-fg text-center m-1 p-1 bg-subtitle;
 		font-size: 12px;
-		text-align: center;
-		margin: 4px;
-		padding: 4px;
-		color: white;
-		background: linear-gradient(to bottom, #7c7 0%, #383 1px, #383 calc(100% - 1px), #040 100%);
 	}
 }
 
 #message-window {
-	@apply flex flex-col;
+	@apply flex flex-col overflow-auto;
 	width: 499px;
 	height: 370px;
-	overflow: auto;
 
 	span {
-		font-size: 12px;
-		margin: 4px;
+		@apply m-1;
 		font-size: 12px;
 		line-height: 20px;
 	}
@@ -206,20 +301,16 @@ header {
 
 #handle-input,
 #message-input {
+	@apply border-0 m-0;
 	font-size: 12px;
-	border: 0px;
-	margin: 0px;
 	height: 21px;
 	padding: 4px 9px;
-	border-top: 1px solid var(--bg-med);
+	border-top: 1px solid var(--menu);
 	line-height: 20px;
 }
 
 #handle-input {
-	text-align: center;
-	background: none;
-	background-color: rgb(95, 95, 95);
-	color: white;
+	@apply bg-chat text-fg text-center;
 	width: 82px;
 	height: 21px;
 }
@@ -228,7 +319,7 @@ header {
 	background: none;
 	width: 521px;
 	float: right;
-	border-left: 1px solid var(--bg-med);
+	border-left: 1px solid var(--menu);
 }
 
 #message-window {
@@ -256,12 +347,7 @@ header {
 		}
 	}
 }
-
-#artwork-title:focus {
-	background-color: rgb(127, 127, 127);
-	color: white;
-}
-
+*/
 aside {
 	float: left;
 	width: 40px;
@@ -284,7 +370,7 @@ aside {
 	margin-left: 40px;
 	width: calc(100% - 40px);
 	height: calc(100% - 30px);
-	background: var(--bg-dark);
+	@apply bg-editor;
 	text-align: center;
 	overflow: auto;
 	user-select: none;
@@ -317,7 +403,7 @@ header nav {
 	padding-right: 5px;
 
 	&.enabled {
-		background: var(--indigo);
+		@apply bg-indigo;
 	}
 
 	svg {
@@ -393,7 +479,7 @@ header kbd {
 	margin: 16px auto;
 	width: 640px;
 	box-shadow: 0px 4px 32px rgba(0, 0, 0, 0.7);
-	@apply relative cursor-crosshair;
+	@apply relative cursor-crosshair bg-black;
 
 	canvas {
 		@apply block;
@@ -443,13 +529,13 @@ aside {
 }
 
 .toolbar-displayed {
-	background-color: var(--indigo);
+	@apply bg-indigo;
 }
 
 aside > div {
 	&.enabled-parent,
 	&.enabled {
-		background-color: var(--indigo);
+		@apply bg-indigo;
 	}
 }
 
@@ -658,7 +744,7 @@ canvas.fkey {
 select {
 	font-size: 16px;
 	padding: 10px 4px;
-	background: var(--bg-dark);
+	@apply bg-editor;
 	color: #efefef;
 
 	option {
@@ -673,7 +759,7 @@ select {
 	}
 
 	optgroup {
-		color: var(--cyber);
+		@apply text-cyber;
 	}
 }
 
@@ -760,7 +846,7 @@ select {
 	width: 66px;
 	padding: 2px;
 	justify-content: center;
-	background-color: var(--bg-med);
+	@apply bg-menu;
 
 	&.enabled {
 		background-color: var(--purp);
@@ -809,16 +895,6 @@ canvas {
 
 .included-for-websocket {
 	display: none;
-}
-
-#notification-setting {
-	@apply fixed top-0 right-0;
-	width: 140px;
-	height: 20px;
-	font-size: 10px;
-	color: white;
-	line-height: 20px;
-	background-color: rgb(95, 95, 95);
 }
 
 .button,

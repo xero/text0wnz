@@ -2,6 +2,9 @@ import State from './state.js';
 import Toolbar from './toolbar.js';
 import { $, createCanvas } from './ui.js';
 
+// space character with white on black
+const blankCell = (32 << 8) + 7;
+
 const createFKeyShortcut = (canvas, charCode) => {
 	const update = () => {
 		// Set actual canvas dimensions for proper rendering
@@ -494,7 +497,7 @@ const createKeyboardController = () => {
 		}
 
 		for (let x = 0; x < currentColumns; x++) {
-			newImageData[cursorY * currentColumns + x] = (32 << 8) + 7; // space character with white on black
+			newImageData[cursorY * currentColumns + x] = blankCell;
 		}
 
 		for (let y = cursorY; y < currentRows; y++) {
@@ -556,7 +559,7 @@ const createKeyboardController = () => {
 				newImageData[y * (currentColumns + 1) + x] = oldImageData[y * currentColumns + x];
 			}
 
-			newImageData[y * (currentColumns + 1) + cursorX] = (32 << 8) + 7;
+			newImageData[y * (currentColumns + 1) + cursorX] = blankCell;
 
 			for (let x = cursorX; x < currentColumns; x++) {
 				newImageData[y * (currentColumns + 1) + x + 1] = oldImageData[y * currentColumns + x];

@@ -301,7 +301,7 @@ describe('Network Module', () => {
 		beforeEach(() => {
 			mockElements = {
 				divChatButton: { classList: { add: vi.fn(), remove: vi.fn(), contains: vi.fn(() => false) } },
-				divChatWindow: { style: { display: 'none' } },
+				divChatWindow: { classList: { add: vi.fn(), remove: vi.fn(), contains: vi.fn(() => false) } },
 				divMessageWindow: {
 					appendChild: vi.fn(),
 					getBoundingClientRect: vi.fn(() => ({ height: 100 })),
@@ -437,7 +437,7 @@ describe('Network Module', () => {
 
 			// Toggle on
 			controller.toggle();
-			expect(mockElements.divChatWindow.style.display).toBe('block');
+			expect(mockElements.divChatWindow.classList.remove).toHaveBeenCalledWith('hide');
 			expect(mockElements.inputMessage.focus).toHaveBeenCalled();
 			expect(mockElements.divChatButton.classList.add).toHaveBeenCalledWith('active');
 			expect(mockElements.divChatButton.classList.remove).toHaveBeenCalledWith('notification');
@@ -446,7 +446,7 @@ describe('Network Module', () => {
 
 			// Toggle off
 			controller.toggle();
-			expect(mockElements.divChatWindow.style.display).toBe('none');
+			expect(mockElements.divChatWindow.classList.add).toHaveBeenCalledWith('hide');
 			expect(mockElements.divChatButton.classList.remove).toHaveBeenCalledWith('active');
 			expect(onBlur).toHaveBeenCalled();
 			expect(controller.isEnabled()).toBe(false);

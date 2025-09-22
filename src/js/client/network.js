@@ -456,14 +456,8 @@ const createChatController = (
 		div.appendChild(spanHandle);
 		div.appendChild(spanSeparator);
 		div.appendChild(spanText);
-		const rect = divMessageWindow.getBoundingClientRect();
-		const doScroll =
-			rect.height > divMessageWindow.scrollHeight ||
-			divMessageWindow.scrollTop === divMessageWindow.scrollHeight - rect.height;
 		divMessageWindow.appendChild(div);
-		if (doScroll) {
-			scrollToBottom();
-		}
+		scrollToBottom();
 		if (showNotification === true && enabled === false && divChatButton.classList.contains('notification') === false) {
 			divChatButton.classList.add('notification');
 		}
@@ -512,12 +506,12 @@ const createChatController = (
 
 	const toggle = () => {
 		if (enabled === true) {
-			divChatWindow.style.display = 'none';
+			divChatWindow.classList.add('hide');
 			enabled = false;
 			onBlurCallback();
 			divChatButton.classList.remove('active');
 		} else {
-			divChatWindow.style.display = 'block';
+			divChatWindow.classList.remove('hide');
 			enabled = true;
 			scrollToBottom();
 			onFocusCallback();

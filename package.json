@@ -31,11 +31,11 @@
 	"scripts": {
 		"bake": "cat banner; vite build",
 		"server": "cat banner; bun src/js/server/main.js",
-		"fix": "cat banner; prettier --write tests/**/*.js src/js/**/*.js && eslint --fix tests/**/*.js src/js/**/*.js",
+		"fix": "cat banner; prettier --write tests/**/*.js src/css/*.css src/js/**/*.js && eslint --fix tests/**/*.js src/js/**/*.js",
 		"lint:check": "cat banner; eslint tests/**/*.js src/js/**/*.js",
 		"lint:fix": "cat banner; eslint --fix tests/**/*.js src/js/**/*.js",
-		"format:fix": "cat banner; prettier --write tests/**/*.js src/js/**/*.js",
-		"format:check": "cat banner; prettier --check tests/**/*.js src/js/**/*.js",
+		"format:fix": "cat banner; prettier --write tests/**/*.js src/css/*.css src/js/**/*.js",
+		"format:check": "cat banner; prettier --check tests/**/*.js src/css/*.css src/js/**/*.js",
 		"test:unit": "cat banner; vitest run"
 	},
 	"dependencies": {

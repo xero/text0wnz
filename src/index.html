@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 		<link rel="icon" type="image/png" href="/img/favicon-96x96.png" sizes="96x96" />
 		<link rel="icon" type="image/svg+xml" href="/img/favicon.svg" />
 		<link rel="shortcut icon" href="/img/favicon.ico" />
@@ -99,37 +99,33 @@
 						</div>
 					</div>
 					<div id="selection-toolbar">
-					<div id="flip-horizontal" class="tool-button">
-						<svg class="sm" title="Flip Horizontal ([)" alt="Flip Horizontal"><use href="img/icons.svg#fliph"></use></svg>
+						<div id="flip-horizontal" class="tool-button">
+							<svg class="sm" title="Flip Horizontal ([)" alt="Flip Horizontal">
+								<use href="img/icons.svg#fliph"></use>
+							</svg>
+						</div>
+						<div id="flip-vertical" class="tool-button">
+							<svg class="sm" title="Flip Vertical (])" alt="Flip Vertical"><use href="img/icons.svg#flipv"></use></svg>
+						</div>
+						<div id="move-blocks" class="tool-button">
+							<kbd>Move</kbd>
+						</div>
+						<div id="cut" class="tool-button">
+							<kbd>Cut</kbd>
+						</div>
+						<div id="copy" class="tool-button">
+							<kbd>Copy</kbd>
+						</div>
+						<div id="paste" class="tool-button">
+							<kbd>Paste</kbd>
+						</div>
+						<div id="system-paste" class="tool-button">
+							<kbd>OS Paste</kbd>
+						</div>
+						<div id="delete" class="tool-button">
+							<kbd>Delete</kbd>
+						</div>
 					</div>
-					<div id="flip-vertical" class="tool-button">
-						<svg class="sm" title="Flip Vertical (])" alt="Flip Vertical"><use href="img/icons.svg#flipv"></use></svg>
-					</div>
-					<div id="move-blocks" class="tool-button">
-						<svg title="Move Blocks (M)" alt="Move Blocks"><use href="img/icons.svg#move"></use></svg>
-						<kbd>Move</kbd>
-					</div>
-					<div id="cut" class="tool-button">
-						<svg title="Cut" alt="Cut"><use href="img/icons.svg#cut"></use></svg>
-						<kbd>Cut</kbd>
-					</div>
-					<div id="copy" class="tool-button">
-						<svg title="Copy" alt="Copy"><use href="img/icons.svg#copy"></use></svg>
-						<kbd>Copy</kbd>
-					</div>
-					<div id="paste" class="tool-button">
-						<svg title="Paste" alt="Paste"><use href="img/icons.svg#paste"></use></svg>
-						<kbd>Paste</kbd>
-					</div>
-					<div id="system-paste" class="tool-button">
-						<svg title="System Paste" alt="System Paste"><use href="img/icons.svg#syspaste"></use></svg>
-						<kbd>OS Paste</kbd>
-					</div>
-					<div id="delete" class="tool-button">
-						<svg title="Delete" alt="Delete"><use href="img/icons.svg#delete"></use></svg>
-						<kbd>Delete</kbd>
-					</div>
-				</div>
 					<div id="shapes-toolbar">
 						<div id="line" class="tool-button">
 							<svg title="Line" alt="Line"><use href="img/icons.svg#line"></use></svg>
@@ -174,20 +170,26 @@
 				<nav>
 					<div id="metamenu">
 						<div id="chat-button" class="included-for-websocket">
-							<span id="chat-icon-text">Chat</span><span id="chat-icon-close-text">(Escape) X</span>
-							<img src="img/chat.png" width="20" height="20" alt="Chat" />
+							<svg title="Toggle Chat" alt="Toggle Chat"><use href="img/icons.svg#group"></use></svg>
 						</div>
 					</div>
-					<div id="chat-window">
-						<div>
-							<div id="message-window"></div>
-							<div id="user-list"></div>
-							<div id="notification-setting">
-								<label><input id="notification-checkbox" type="checkbox" />Display Notifications</label>
-							</div>
+					<div id="chat-window" class="hide">
+						<div id="chatRoom">
+							<header>
+								<h1>chatz</h1>
+								<div id="notification-setting">
+									<label><input id="notification-checkbox" type="checkbox" />Display Notifications</label>
+								</div>
+							</header>
+							<section>
+								<div id="user-list"></div>
+								<div id="message-window"></div>
+							</section>
+							<nav>
+								<input id="handle-input" type="text" value="" spellcheck="false" autocomplete="off" maxlength="14" />
+								<input id="message-input" type="text" value="" spellcheck="false" autocomplete="off" maxlength="140" placeholder="&gt;" />
+							</nav>
 						</div>
-						<input id="handle-input" type="text" value="" spellcheck="false" autocomplete="off" maxlength="20" />
-						<input id="message-input" type="text" value="" spellcheck="false" autocomplete="off" maxlength="140" />
 					</div>
 					<div id="resolution">
 						<svg id="navRes" title="Change Resolution" alt="Change Resolution">
@@ -204,18 +206,38 @@
 			<aside>
 				<canvas id="palette-preview" width="40" height="40"></canvas>
 				<canvas id="palette-picker" width="40" height="160"></canvas>
-				<div id="keyboard"><svg title="Keyboard (k)" alt="Keyboard"><use href="img/icons.svg#keeb"></use></svg></div>
-				<div id="brushes"><svg title="Brushes" alt="Brushes"><use href="img/icons.svg#brush"></use></svg></div>
-				<div id="fill"><svg title="Fill (n)" alt="Fill"><use href="img/icons.svg#fill"></use></svg></div>
-				<div id="shapes"><svg title="Shapes" alt="Shapes"><use href="img/icons.svg#shapes"></use></svg></div>
+				<div id="keyboard">
+					<svg title="Keyboard (k)" alt="Keyboard"><use href="img/icons.svg#keeb"></use></svg>
+				</div>
+				<div id="brushes">
+					<svg title="Brushes" alt="Brushes"><use href="img/icons.svg#brush"></use></svg>
+				</div>
+				<div id="fill">
+					<svg title="Fill (n)" alt="Fill"><use href="img/icons.svg#fill"></use></svg>
+				</div>
+				<div id="shapes">
+					<svg title="Shapes" alt="Shapes"><use href="img/icons.svg#shapes"></use></svg>
+				</div>
 				<div class="seperator"></div>
-				<div id="selection"><svg title="Selection" alt="Selection"><use href="img/icons.svg#select"></use></svg></div>
-				<div id="sample"><svg title="Sample (alt)" alt="Sample"><use href="img/icons.svg#dropper"></use></svg></div>
-				<div id="mirror"><svg title="Mirror Mode (Ctrl+M)" alt="Mirror Mode"><use href="img/icons.svg#mirror"></use></svg></div>
+				<div id="selection">
+					<svg title="Selection" alt="Selection"><use href="img/icons.svg#select"></use></svg>
+				</div>
+				<div id="sample">
+					<svg title="Sample (alt)" alt="Sample"><use href="img/icons.svg#dropper"></use></svg>
+				</div>
+				<div id="mirror">
+					<svg title="Mirror Mode (Ctrl+M)" alt="Mirror Mode"><use href="img/icons.svg#mirror"></use></svg>
+				</div>
 				<div class="seperator"></div>
-				<div id="clipboard"><svg title="Undo" alt="Undo"><use href="img/icons.svg#history"></use></svg></div>
-				<div id="fonts"><svg title="Change Font" alt="Change Font"><use href="img/icons.svg#font"></use></svg></div>
-				<div id="navGrid"><svg title="Show Grid (Ctrl-G)" alt="Show Grid (Ctrl-G)"><use href="img/icons.svg#grid"></use></svg></div>
+				<div id="clipboard">
+					<svg title="Undo" alt="Undo"><use href="img/icons.svg#history"></use></svg>
+				</div>
+				<div id="fonts">
+					<svg title="Change Font" alt="Change Font"><use href="img/icons.svg#font"></use></svg>
+				</div>
+				<div id="navGrid">
+					<svg title="Show Grid (Ctrl-G)" alt="Show Grid (Ctrl-G)"><use href="img/icons.svg#grid"></use></svg>
+				</div>
 			</aside>
 			<div id="viewport">
 				<div id="canvas-container">
@@ -367,25 +389,25 @@
 			<div class="dialog">
 				<div>
 					<label
-					><kbd>Title: </kbd
+						><kbd>Title: </kbd
 						><input id="sauce-title" type="text" value="" spellcheck="false" autocomplete="off" maxlength="35"
-						/></label>
+					/></label>
 				</div>
 				<div>
 					<label
-					><kbd>Group: </kbd
+						><kbd>Group: </kbd
 						><input id="sauce-group" type="text" value="" spellcheck="false" autocomplete="off" maxlength="20"
-						/></label>
+					/></label>
 				</div>
 				<div>
 					<label
-					><kbd>Author: </kbd
+						><kbd>Author: </kbd
 						><input id="sauce-author" type="text" value="" spellcheck="false" autocomplete="off" maxlength="20"
-						/></label>
+					/></label>
 				</div>
 				<div>
 					<label
-					><kbd>Comments: </kbd><textarea id="sauce-comments" autocomplete="off" rows="5" cols="15"></textarea>
+						><kbd>Comments: </kbd><textarea id="sauce-comments" autocomplete="off" rows="5" cols="15"></textarea>
 					</label>
 				</div>
 				<div>
@@ -398,7 +420,7 @@
 		<div class="overlay" id="websocket-overlay">
 			<div class="dialog">
 				<p>
-					Please wait... Retrieving data from server.<br/><br/>
+					Please wait... Retrieving data from server.<br /><br />
 					<cite>If this hangs forever the port/server is down, disable the "network.js" file.</cite>
 				</p>
 			</div>
