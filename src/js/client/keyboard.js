@@ -22,10 +22,24 @@ const createFKeyShortcut = (canvas, charCode) => {
 			0,
 		);
 	};
+	const insert = () => {
+		State.textArtCanvas.startUndo();
+		State.textArtCanvas.draw(callback => {
+			callback(
+				charCode,
+				State.palette.getForegroundColor(),
+				State.palette.getBackgroundColor(),
+				State.cursor.getX(),
+				State.cursor.getY(),
+			);
+		}, false);
+		State.cursor.right();
+	};
 	document.addEventListener('onPaletteChange', update);
 	document.addEventListener('onForegroundChange', update);
 	document.addEventListener('onBackgroundChange', update);
 	document.addEventListener('onFontChange', update);
+	canvas.addEventListener('click', insert);
 
 	update();
 };
