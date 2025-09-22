@@ -62,6 +62,7 @@ let sauceGroup;
 let sauceAuthor;
 let sauceComments;
 let sauceBytes;
+let navSauce;
 
 document.addEventListener('DOMContentLoaded', async () => {
 	try {
@@ -115,6 +116,7 @@ const $$$ = () => {
 	sauceAuthor = $('sauce-author');
 	sauceComments = $('sauce-comments');
 	sauceBytes = $('sauce-bytes');
+	navSauce = $('navSauce');
 };
 
 const initializeAppComponents = () => {
@@ -207,13 +209,15 @@ const initializeAppComponents = () => {
 		});
 	});
 
-	onClick(artworkTitle, () => {
-		showOverlay(sauceOverlay);
-		keyboard.ignore();
-		paintShortcuts.ignore();
-		sauceTitle.focus();
-		shadeBrush.ignore();
-		characterBrush.ignore();
+	[artworkTitle, navSauce].forEach(e => {
+		onClick(e, () => {
+			showOverlay(sauceOverlay);
+			keyboard.ignore();
+			paintShortcuts.ignore();
+			sauceTitle.focus();
+			shadeBrush.ignore();
+			characterBrush.ignore();
+		});
 	});
 
 	onClick(sauceDone, () => {

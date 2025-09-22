@@ -1,7 +1,12 @@
+/* Important Note:
+ * Asset urls must be relative to their src paths, not dist!
+ * Vite will set them to their final locations at build time
+ */
 @import 'tailwindcss';
 @custom-variant dark (&:where(.dark, .dark *)) {
 }
 :root {
+	overscroll-behavior: none;
 	--purp: #6e2aa5;
 	--indigo: #6366f1;
 	--cyber: #00bad7;
@@ -15,6 +20,7 @@
 	--icon: #efefef;
 	--tools: #4e4e4e;
 	--hl: #000;
+	--silver: #c0c0c0;
 	--midnight: #000;
 	--icon-size: 46px;
 	--icon-size-sm: 36px;
@@ -22,7 +28,6 @@
 	--palette-height: 53px;
 	--font-family:
 		topaz, ui-monospace, Consolas, SFMono-Regular, Menlo, Monaco, 'Liberation Mono', 'Courier New', monospace;
-	overscroll-behavior: none;
 }
 @theme {
 	--breakpoint-xs: 30rem;
@@ -104,6 +109,7 @@ kbd {
 #body-container {
 	@apply w-full h-full overflow-auto;
 }
+
 .loading * {
 	@apply cursor-wait!;
 }
@@ -115,28 +121,36 @@ aside,
 }
 
 header {
-	@apply w-full flex justify-between h-[30px];
+	@apply w-full flex justify-between h-[40px];
 
 	nav div {
 		@apply flex;
 	}
-
 	* {
 		@apply my-auto;
 	}
-
 	svg {
-		fill: #efefef;
-		height: 30px;
-		width: 30px;
+		@apply fill-fg h-[30px] w-[30px];
+	}
+	button,
+	#resolution,
+	#current-font-display {
+		@apply h-[40px];
+		&:hover {
+			@apply bg-hl;
+			* {
+				@apply bg-midnight;
+			}
+		}
 	}
 }
 
 #artwork-title {
-	@apply flex w-auto min-w-[50px] max-w-[100px] text-center p-0 m-0 h-[25px] text-xs;
+	@apply flex w-auto min-w-[50px] max-w-[100px] text-center p-0 m-auto h-[25px] text-xs;
 	background-color: rgb(95, 95, 95);
 	border: 1px solid rgb(31, 31, 31);
 	color: rgb(200, 200, 200);
+
 	&:focus {
 		background-color: rgb(127, 127, 127);
 		color: white;
@@ -144,6 +158,11 @@ header {
 }
 
 #chat-button {
+	@apply float-right text-fg;
+	font-size: 10px;
+	line-height: 19px;
+	padding: 0px 8px;
+
 	&.enabled,
 	&.active {
 		@apply bg-indigo;
@@ -151,34 +170,22 @@ header {
 	&.notification {
 		@apply bg-purp!;
 	}
-	@apply float-right text-fg;
-	font-size: 10px;
-	line-height: 19px;
-	padding: 0px 8px;
+	&.active {
+		#chat-icon-text {
+			@apply hidden;
+		}
+		#chat-icon-close-text {
+			@apply block;
+		}
+	}
 }
 
 #chat-icon-close-text {
 	@apply hidden;
 }
 
-#chat-button {
-	&.active {
-		#chat-icon-text {
-			@apply hidden;
-		}
-
-		#chat-icon-close-text {
-			@apply block;
-		}
-	}
-
-	img {
-		@apply align-middle;
-	}
-}
-
 #chat-window {
-	@apply flex fixed top-[35px] right-[35px] z-40 bg-menu scale-y-100 opacity-100
+	@apply flex fixed top-[40px] right-0 z-50 bg-menu scale-y-100 opacity-100
       w-[45vw] min-w-[30vw] max-w-full min-h-[300px] max-h-screen /*no height!*/
       border-8 border-[#666] border-double;
 	transform-origin: top;
@@ -186,11 +193,13 @@ header {
 		scale 0.7s ease-out,
 		opacity 0.7s ease-out,
 		transform 0.7s ease-out;
+
 	&.hide {
 		@apply scale-y-0 opacity-0 flex! pointer-events-none;
 	}
 	#chatRoom {
 		@apply flex flex-col h-full min-h-0 w-full max-h-[50vh];
+
 		header,
 		section,
 		nav,
@@ -218,6 +227,7 @@ header {
 
 				#notification-checkbox {
 					@apply mr-3;
+
 					&:before {
 						@apply relative block w-[17px] h-[17px] bg-midnight;
 						content: '';
@@ -235,6 +245,7 @@ header {
 		}
 		section {
 			@apply flex flex-1 min-h-[284px] flex-row overflow-y-scroll;
+
 			#user-list,
 			#message-window {
 				@apply flex flex-col max-h-[40vh] h-full m-0 pt-2 break-all;
@@ -268,6 +279,7 @@ header {
 			}
 			.prompt {
 				@apply flex grow mr-1;
+
 				&::before {
 					content: '>';
 					color: var(--color-chat);
@@ -282,92 +294,15 @@ header {
 		}
 	}
 }
-/*
-#user-list {
-	@apply flex flex-col overflow-auto;
-	width: 140px;
-	height: 350px;
-	border-left: 1px solid var(--menu);
 
-	div {
-		@apply text-fg text-center m-1 p-1 bg-subtitle;
-		font-size: 12px;
-	}
-}
-
-#message-window {
-	@apply flex flex-col overflow-auto;
-	width: 499px;
-	height: 370px;
-
-	span {
-		@apply m-1;
-		font-size: 12px;
-		line-height: 20px;
-	}
-}
-
-#handle-input,
-#message-input {
-	@apply border-0 m-0;
-	font-size: 12px;
-	height: 21px;
-	padding: 4px 9px;
-	border-top: 1px solid var(--menu);
-	line-height: 20px;
-}
-
-#handle-input {
-	@apply bg-chat text-fg text-center;
-	width: 82px;
-	height: 21px;
-}
-
-#message-input {
-	background: none;
-	width: 521px;
-	float: right;
-	border-left: 1px solid var(--menu);
-}
-
-#message-window {
-	div {
-		&:first-child {
-			margin-top: 16px;
-		}
-
-		&:last-child {
-			margin-bottom: 16px;
-			border-bottom: none;
-		}
-
-		margin: 1px 16px 1px 24px;
-		text-indent: -8px;
-		padding-bottom: 2px;
-		border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-	}
-
-	span {
-		color: black;
-
-		&.handle {
-			color: red;
-		}
-	}
-}
-*/
 aside {
 	float: left;
 	width: 40px;
-	height: calc(100% - 30px);
+	height: calc(100% - 40px);
 
 	> canvas {
 		vertical-align: bottom;
 	}
-}
-
-#palette-preview {
-	margin-top: 4px;
 }
 
 #palette-picker {
@@ -375,10 +310,10 @@ aside {
 }
 
 #viewport {
+	@apply bg-editor;
 	margin-left: 40px;
 	width: calc(100% - 40px);
-	height: calc(100% - 30px);
-	@apply bg-editor;
+	height: calc(100% - 40px);
 	text-align: center;
 	overflow: auto;
 	user-select: none;
@@ -433,14 +368,14 @@ header nav {
 }
 
 #keyboard-toolbar {
-	@apply inline-block;
-	font-size: 14px;
-	color: rgb(200, 200, 200);
+	@apply flex text-fg text-xs;
+
 	span {
-		@apply block float-left;
+		@apply flex flex-col mx-1 my-auto;
+		margin-top: -5px;
 		canvas {
-			display: inline-block;
-			margin-top: -6px;
+			scale: 1.5;
+			margin: 3px auto auto auto;
 		}
 	}
 }
@@ -452,16 +387,10 @@ header nav {
 
 #resolution {
 	@apply flex flex-row;
-	height: 20px;
 	line-height: 20px;
-}
-
-#position-info {
-	@apply flex flex-row;
-	height: 20px;
-	color: rgb(200, 200, 200);
-	font-size: 14px;
-	line-height: 20px;
+	svg {
+		margin-top: 10px;
+	}
 }
 
 header kbd {
@@ -478,16 +407,15 @@ header kbd {
 }
 
 #position-info {
-	min-width: 50px;
-	text-align: right;
-	font-size: 12px;
+	@apply flex flex-row text-right text-fg text-xs min-w-[50px];
+	line-height: 20px;
 }
 
 #canvas-container {
+	@apply relative cursor-crosshair bg-black;
 	margin: 16px auto;
 	width: 640px;
 	box-shadow: 0px 4px 32px rgba(0, 0, 0, 0.7);
-	@apply relative cursor-crosshair bg-black;
 
 	canvas {
 		@apply block;
@@ -509,10 +437,7 @@ canvas {
 }
 
 header > div > div.button {
-	font-size: 12px;
-	color: rgb(200, 200, 200);
-	background-color: rgb(96, 96, 96);
-	text-align: center;
+	@apply text-xs text-fg text-center;
 	box-shadow: 0px 1px 0px rgba(0, 0, 0, 0.7);
 }
 
@@ -520,14 +445,12 @@ aside {
 	> div {
 		@apply text-center h-fit flex justify-center items-center my-2 mx-auto;
 	}
-
 	svg {
 		width: 30px;
 		height: 30px;
 		fill: #efefef;
 	}
-
-	div.seperator {
+	.seperator {
 		height: 1px;
 		padding: 0px;
 		margin: 4px auto;
@@ -547,14 +470,9 @@ aside > div {
 	}
 }
 
-canvas.fkey {
-	margin: 0px 4px;
-	vertical-align: middle;
-}
-
 .menu-title {
 	width: auto;
-	height: 30px;
+	height: 35px;
 	display: inline-block;
 	position: relative;
 	vertical-align: top;
@@ -564,23 +482,19 @@ canvas.fkey {
 	line-height: 20px;
 	overflow: hidden;
 
-	svg {
-		padding-right: 3px;
+	button {
+		@apply h-[40px] w-[40px] pr-1 border-none bg-menu;
 	}
 }
 
 .menu-list {
-	display: block;
-	cursor: default;
-	position: absolute;
-	width: 300px;
-	margin-top: -5px;
+	@apply z-40 block cursor-default absolute w-[300px];
+	margin-top: -6px;
 	background-color: rgb(64, 64, 64);
-	border-right: 1px solid rgb(127, 127, 127);
-	border-bottom: 1px solid rgb(127, 127, 127);
-	border-left: 1px solid rgb(127, 127, 127);
-	box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.7);
-	z-index: 2;
+	border-right: 4px solid var(--menu);
+	border-bottom: 4px solid var(--menu);
+	border-left: 4px solid var(--menu);
+	box-shadow: 0px 4px 32px rgba(0, 0, 0, 0.7);
 }
 
 .hover,
@@ -602,10 +516,8 @@ canvas.fkey {
 	}
 }
 
-.menu-list div.seperator {
-	height: 1px;
-	background-color: rgb(127, 127, 127);
-	margin: 2px;
+.menu-list .seperator {
+	@apply m-0.5 bg-menu h-[4px];
 }
 
 .menu-item {
@@ -615,9 +527,12 @@ canvas.fkey {
 	}
 
 	&.disabled {
+		@apply text-editor;
 		cursor: default;
 		background-color: inherit;
-		color: inherit;
+		kbd {
+			@apply text-tools;
+		}
 	}
 
 	&.enabled {
@@ -629,13 +544,7 @@ canvas.fkey {
 }
 
 .overlay {
-	position: fixed;
-	left: 0px;
-	top: 0px;
-	width: 100%;
-	height: 100%;
-	display: none;
-	z-index: 4;
+	@apply z-60 fixed left-0 top-0 right-0 bottom-0 w-full h-full hidden;
 	background: linear-gradient(
 		to bottom,
 		rgba(0, 0, 0, 0) 0px,
@@ -645,7 +554,7 @@ canvas.fkey {
 	);
 
 	&.enabled {
-		display: block;
+		@apply block;
 	}
 }
 
@@ -685,11 +594,8 @@ canvas.fkey {
 }
 
 /* Font dialog specific styling */
-
 #font-preview-info {
-	margin-bottom: 5px;
-	font-size: 12px;
-	color: rgb(200, 200, 200);
+	@apply text-fg text-xs mb-1.5;
 }
 
 #font-preview-image {
@@ -713,14 +619,13 @@ canvas.fkey {
 		margin-inline: auto;
 		justify-content: end;
 
+		&:has(textarea) kbd {
+			padding-top: 5px;
+		}
 		kbd {
 			display: inline-flex;
 			font-size: 14px;
 			padding-top: 7px;
-		}
-
-		&:has(textarea) kbd {
-			padding-top: 5px;
 		}
 	}
 
@@ -750,10 +655,9 @@ canvas.fkey {
 }
 
 select {
+	@apply bg-editor text-fg;
 	font-size: 16px;
 	padding: 10px 4px;
-	@apply bg-editor;
-	color: #efefef;
 
 	option {
 		padding-inline: 14px;
@@ -765,7 +669,6 @@ select {
 			background: var(--purp);
 		}
 	}
-
 	optgroup {
 		@apply text-cyber;
 	}
@@ -809,11 +712,13 @@ select {
 	cursor: move;
 	box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
 
+	&.enabled {
+		display: block;
+	}
 	div {
 		position: relative;
 		display: block;
 	}
-
 	.hidePanel {
 		display: block;
 		position: absolute;
@@ -828,11 +733,6 @@ select {
 			background: #000;
 		}
 	}
-
-	&.enabled {
-		display: block;
-	}
-
 	canvas {
 		cursor: crosshair;
 		vertical-align: bottom;
@@ -840,60 +740,42 @@ select {
 }
 
 .toggle-button-container {
-	width: 120px;
+	@apply w-[120px] text-center flex flex-row;
 	margin: 0px auto;
 	color: rgb(200, 200, 200);
 	font-size: 14px;
-	text-align: center;
-	display: flex;
-	flex-direction: row;
 }
 
 .toggle-button {
-	display: inline-flex;
-	width: 66px;
-	padding: 2px;
-	justify-content: center;
-	@apply bg-menu;
+	@apply bg-menu inline-flex justify-center p-[2px] w-[66px];
 
 	&.enabled {
-		background-color: var(--purp);
-		border: 1px solid black;
+		@apply bg-purp;
 	}
-
 	&.left {
-		border-top: 1px solid black;
-		border-left: 1px solid black;
-		border-bottom: 1px solid black;
+		@apply border-black border-t-2 border-l-2 border-b-2 border-r-0;
 	}
-
 	&.right {
-		border-top: 1px solid black;
-		border-right: 1px solid black;
-		border-bottom: 1px solid black;
+		@apply border-black border-t-2 border-r-2 border-b-2 border-l-0;
 	}
 }
 
 @keyframes blink {
 	50% {
-		border: 1px solid rgb(192, 192, 192);
+		border: 1px solid var(--silver);
 	}
 }
 
 canvas {
 	&.cursor {
-		position: absolute;
-		border: 1px solid white;
+		@apply absolute border border-solid border-white z-20;
 		animation: blink 1.5s steps(1) infinite;
-		z-index: 1;
 	}
 
 	&.selection-cursor {
-		position: absolute;
-		border: 1px solid;
+		@apply absolute z-20 border border-solid;
 		border-image: url('/img/selection_border.gif') 1 repeat;
 		border-image-width: 1px;
-		z-index: 1;
 
 		&.move-mode {
 			border-image: url('/img/move_border.gif') 1 repeat;
@@ -902,34 +784,27 @@ canvas {
 }
 
 .included-for-websocket {
-	display: none;
+	@apply hidden;
 }
 
 .button,
 .hover,
 .toggle-button,
 .menu-item:hover,
-.menu-title:hover {
-	cursor: pointer;
-}
-
-header {
-	nav img,
-	> div > div.button {
-		cursor: pointer;
-	}
-}
-
+.menu-title:hover,
+aside svg,
+button,
 #resolution,
 #selection-toolbar .tool-button,
 #current-font-display,
 #chat-button {
-	cursor: pointer;
+	@apply cursor-pointer;
 }
 
 #freedom {
 	@apply m-auto;
 }
+
 .face {
 	background-image: url('/img/face.png');
 }
