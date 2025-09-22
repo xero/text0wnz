@@ -272,7 +272,7 @@ header {
 		nav {
 			@apply pl-2 border-t-4 border-hl bg-editor flex-row;
 			* {
-				@apply m-0;
+				@apply m-0 h-[25px];
 			}
 			#handle-input {
 				@apply flex w-1/4 text-cyber;

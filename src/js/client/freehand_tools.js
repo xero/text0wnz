@@ -2,6 +2,7 @@ import State from './state.js';
 import Toolbar from './toolbar.js';
 import { $, createCanvas, createToggleButton } from './ui.js';
 
+// Multiplier to calculate panel width based on item count.
 const PANEL_WIDTH_MULTIPLIER = 20;
 
 const createPanelCursor = el => {
