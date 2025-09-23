@@ -293,7 +293,7 @@ const loadModule = () => {
 
 		const getValues = () => {
 			return escapeCode
-				.substring(1, escapeCode.length - 2)
+				.slice(1, -1)
 				.split(';')
 				.map(value => {
 					const parsedValue = parseInt(value, 10);
@@ -1281,7 +1281,7 @@ const saveModule = () => {
 
 	const dataUrlToBytes = dataURL => {
 		const base64Index = dataURL.indexOf(';base64,') + 8;
-		const byteChars = atob(dataURL.substring(base64Index, dataURL.length - base64Index));
+		const byteChars = atob(dataURL.slice(base64Index));
 		const bytes = new Uint8Array(byteChars.length);
 		for (let i = 0; i < bytes.length; i++) {
 			bytes[i] = byteChars.charCodeAt(i);

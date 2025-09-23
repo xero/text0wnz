@@ -354,9 +354,7 @@ const createWorkerHandler = inputHandle => {
 		State.worker.postMessage({ cmd: 'chat', text: text });
 	};
 
-	const isConnected = () => {
-		return connected;
-	};
+	const isConnected = () => connected;
 
 	if (State.worker) {State.worker.addEventListener('message', onMessage);}
 
