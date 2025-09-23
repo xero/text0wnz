@@ -672,14 +672,32 @@ const createShadingPanel = () => {
 		fontChangeAbortController = new AbortController();
 		const { signal } = fontChangeAbortController;
 		return new Promise((resolve, reject) => {
+			let settled = false;
 			const handler = () => {
-				clearTimeout(timer);
-				resolve();
+				if (!settled) {
+					settled = true;
+					clearTimeout(timer);
+					signal.removeEventListener('abort', abortHandler);
+					resolve();
+				}
+			};
+			const abortHandler = () => {
+				if (!settled) {
+					settled = true;
+					clearTimeout(timer);
+					document.removeEventListener('onFontChange', handler, { signal });
+					reject(new Error('Aborted: onFontChange listener was aborted.'));
+				}
 			};
 			const timer = setTimeout(() => {
-				fontChangeAbortController.abort();
-				reject(new Error('Timeout: onFontChange event did not fire.'));
+				if (!settled) {
+					settled = true;
+					signal.removeEventListener('abort', abortHandler);
+					fontChangeAbortController.abort();
+					reject(new Error('Timeout: onFontChange event did not fire.'));
+				}
 			}, timeout);
+			signal.addEventListener('abort', abortHandler);
 			document.addEventListener('onFontChange', handler, { signal });
 		});
 	};

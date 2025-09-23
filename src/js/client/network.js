@@ -357,7 +357,11 @@ const createWorkerHandler = inputHandle => {
 	const isConnected = () => connected;
 
 	if (State.worker) {
-		State.worker.addEventListener('message', onMessage);
+		try {
+			State.worker.addEventListener('message', onMessage);
+		} catch (error) {
+			console.error('Failed to add message event listener to worker:', error);
+		}
 	}
 
 	// Set up collaboration choice dialog handlers

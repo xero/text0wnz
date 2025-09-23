@@ -287,9 +287,7 @@ const initializeAppComponents = () => {
 		if (!isNaN(columnsValue) && !isNaN(rowsValue)) {
 			State.textArtCanvas.resize(columnsValue, rowsValue);
 			// Broadcast resize to other users if in collaboration mode
-			if (State.network && State.network.sendResize) {
-				State.network.sendResize(columnsValue, rowsValue);
-			}
+			State.network?.sendResize?.(columnsValue, rowsValue);
 			hideOverlay(resizeOverlay);
 		}
 		keyboard.unignore();
@@ -337,17 +335,13 @@ const initializeAppComponents = () => {
 	const navICE = createSettingToggle($('navICE'), State.textArtCanvas.getIceColors, newIceColors => {
 		State.textArtCanvas.setIceColors(newIceColors);
 		// Broadcast ice colors change to other users if in collaboration mode
-		if (State.network && State.network.sendIceColorsChange) {
-			State.network.sendIceColorsChange(newIceColors);
-		}
+		State.network?.sendIceColorsChange?.(newIceColors);
 	});
 
 	const nav9pt = createSettingToggle($('nav9pt'), State.font.getLetterSpacing, newLetterSpacing => {
 		State.font.setLetterSpacing(newLetterSpacing);
 		// Broadcast letter spacing change to other users if in collaboration mode
-		if (State.network && State.network.sendLetterSpacingChange) {
-			State.network.sendLetterSpacingChange(newLetterSpacing);
-		}
+		State.network?.sendLetterSpacingChange?.(newLetterSpacing);
 	});
 
 	const updateFontDisplay = () => {
@@ -438,9 +432,7 @@ const initializeAppComponents = () => {
 		const selectedFont = fontSelect.value;
 		State.textArtCanvas.setFont(selectedFont, () => {
 			updateFontDisplay();
-			if (State.network && State.network.sendFontChange) {
-				State.network.sendFontChange(selectedFont);
-			}
+			State.network?.sendFontChange?.(selectedFont);
 			hideOverlay(fontsOverlay);
 			keyboard.unignore();
 		});

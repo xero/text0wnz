@@ -888,6 +888,14 @@ const createKeyboardController = () => {
 		0x25a0: 254,
 		0x00a0: 255,
 	};
+	/**
+	 * Converts a Unicode code point to the corresponding code in the custom code page.
+	 * If the code point exists in the unicodeMapping object, returns the mapped value.
+	 * Otherwise, returns the original code point.
+	 *
+	 * @param {number} keyCode - The Unicode code point to convert.
+	 * @returns {number} The mapped code page value or the original code point.
+	 */
 	const convertUnicode = keyCode => unicodeMapping[keyCode] ?? keyCode;
 
 	const keyPress = e => {

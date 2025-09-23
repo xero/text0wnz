@@ -115,6 +115,11 @@ const undoAndRedo = e => {
 const createPaintShortcuts = keyPair => {
 	let ignored = false;
 
+	const isConnected = e =>
+		!State.network ||
+		State.network.isConnected() === false ||
+		keyPair[e.key].classList.contains('excluded-for-websocket') === false;
+
 	const keyDown = e => {
 		if (ignored === false) {
 			if (e.ctrlKey === false && e.altKey === false && e.shiftKey === false && e.metaKey === false) {
@@ -130,11 +135,7 @@ const createPaintShortcuts = keyPair => {
 				} else {
 					// Use the actual key character for lookup
 					if (keyPair[e.key] !== undefined) {
-						if (
-							!State.network ||
-							State.network.isConnected() === false ||
-							keyPair[e.key].classList.contains('excluded-for-websocket') === false
-						) {
+						if (isConnected(e)) {
 							e.preventDefault();
 							keyPair[e.key].click();
 						}
@@ -149,11 +150,7 @@ const createPaintShortcuts = keyPair => {
 			if (e.ctrlKey === true && e.altKey === false && e.shiftKey === false && e.metaKey === false) {
 				// Use the actual key character for lookup
 				if (keyPair[e.key] !== undefined) {
-					if (
-						!State.network ||
-						State.network.isConnected() === false ||
-						keyPair[e.key].classList.contains('excluded-for-websocket') === false
-					) {
+					if (isConnected(e)) {
 						e.preventDefault();
 						keyPair[e.key].click();
 					}
