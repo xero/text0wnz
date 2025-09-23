@@ -74,15 +74,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 		State.positionInfo = createPositionInfo($('position-info'));
 
 		// Initialize canvas and wait for completion state
-		State.textArtCanvas = createTextArtCanvas(canvasContainer, () => {
+		State.textArtCanvas = createTextArtCanvas(canvasContainer, async () => {
 			State.selectionCursor = createSelectionCursor(canvasContainer);
 			State.cursor = createCursor(canvasContainer);
 			State.toolPreview = createToolPreview($('tool-preview'));
 
 			State.waitFor(
 				['palette', 'textArtCanvas', 'font', 'cursor', 'selectionCursor', 'positionInfo', 'toolPreview', 'pasteTool'],
-				_deps => {
-					initializeAppComponents();
+				async _deps => {
+					await initializeAppComponents();
 				},
 			);
 		});
@@ -119,17 +119,17 @@ const $$$ = () => {
 	navSauce = $('navSauce');
 };
 
-const initializeAppComponents = () => {
+const initializeAppComponents = async () => {
 	document.addEventListener('keydown', undoAndRedo);
 	createResolutionController($('resolution-label'), $('columns-input'), $('rows-input'));
-	onClick($('new'), () => {
+	onClick($('new'), async () => {
 		if (confirm('All changes will be lost. Are you sure?') === true) {
 			bodyContainer.classList.add('loading');
-			State.textArtCanvas.clearXBData(_ => {
+			State.textArtCanvas.clearXBData(async _ => {
 				State.palette = createDefaultPalette();
 				palettePicker.updatePalette();
 				palettePreview.updatePreview();
-				State.textArtCanvas.setFont('CP437 8x16', () => {
+				await State.textArtCanvas.setFont('CP437 8x16', () => {
 					State.font.setLetterSpacing(false);
 					State.textArtCanvas.resize(80, 25);
 					State.textArtCanvas.clear();
@@ -178,7 +178,7 @@ const initializeAppComponents = () => {
 		bodyContainer.classList.add('loading');
 		State.textArtCanvas.clearXBData();
 		State.textArtCanvas.clear();
-		Load.file(file, (columns, rows, imageData, iceColors, letterSpacing, fontName) => {
+		Load.file(file, async (columns, rows, imageData, iceColors, letterSpacing, fontName) => {
 			const indexOfPeriod = file.name.lastIndexOf('.');
 			let fileTitle;
 			if (indexOfPeriod !== -1) {
@@ -200,7 +200,7 @@ const initializeAppComponents = () => {
 				// Only handle non-XB files here, as XB files handle font loading internally
 				const appFontName = Load.sauceToAppFont(fontName.trim());
 				if (appFontName) {
-					State.textArtCanvas.setFont(appFontName, applyData);
+					await State.textArtCanvas.setFont(appFontName, applyData);
 					return; // Exit early since callback will be called from setFont
 				}
 			}
@@ -428,9 +428,9 @@ const initializeAppComponents = () => {
 	onSelectChange(fontSelect, () => {
 		updateFontPreview(fontSelect.value);
 	});
-	onClick($('fonts-apply'), () => {
+	onClick($('fonts-apply'), async () => {
 		const selectedFont = fontSelect.value;
-		State.textArtCanvas.setFont(selectedFont, () => {
+		await State.textArtCanvas.setFont(selectedFont, () => {
 			updateFontDisplay();
 			State.network?.sendFontChange?.(selectedFont);
 			hideOverlay(fontsOverlay);

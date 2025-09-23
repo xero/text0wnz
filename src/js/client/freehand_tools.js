@@ -703,10 +703,12 @@ const createShadingPanel = () => {
 	};
 
 	const fontChange = async () => {
-		if (State.textArtCanvas.getCurrentFontName() === currentFont) {
+		if (
+			State.textArtCanvas.getDefaultFontName() !== currentFont &&
+			State.textArtCanvas.getCurrentFontName() === currentFont
+		) {
 			try {
 				await waitForFontChange(15000); // Adding a 15-second timeout
-				await new Promise(resolve => setTimeout(resolve, 10));
 			} catch (error) {
 				console.error('Font loading error: ', error);
 			}

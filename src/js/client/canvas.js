@@ -5,6 +5,7 @@ import { loadFontFromImage, loadFontFromXBData } from './font.js';
 import { createPalette, createDefaultPalette } from './palette.js';
 
 const createTextArtCanvas = (canvasContainer, callback) => {
+	const defaultFont = 'CP437 8x16';
 	let columns = 80,
 			rows = 25,
 			iceColors = false,
@@ -1076,9 +1077,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		processDirtyRegions();
 	};
 
-	const getCurrentFontName = () => {
-		return currentFontName;
-	};
+	const getDefaultFontName = () => defaultFont;
+	const getCurrentFontName = () => currentFontName;
 
 	const setXBFontData = (fontBytes, fontWidth, fontHeight) => {
 		if (!fontWidth || fontWidth <= 0) {
@@ -1225,6 +1225,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		getMirrorMode: getMirrorMode,
 		getMirrorX: getMirrorX,
 		getCurrentFontName: getCurrentFontName,
+		getDefaultFontName: getDefaultFontName,
 		setXBFontData: setXBFontData,
 		setXBPaletteData: setXBPaletteData,
 		clearXBData: clearXBData,

@@ -81,7 +81,7 @@ const createWorkerHandler = inputHandle => {
 		State.textArtCanvas.quickDraw(blocks);
 	};
 
-	const onCanvasSettings = settings => {
+	const onCanvasSettings = async settings => {
 		if (silentCheck) {
 			// Store settings during silent check instead of applying them
 			pendingCanvasSettings = settings;
@@ -100,7 +100,7 @@ const createWorkerHandler = inputHandle => {
 			State.textArtCanvas.resize(settings.columns, settings.rows);
 		}
 		if (settings.fontName !== undefined) {
-			State.textArtCanvas.setFont(settings.fontName, () => {});
+			await State.textArtCanvas.setFont(settings.fontName, () => {});
 		}
 		if (settings.iceColors !== undefined) {
 			State.textArtCanvas.setIceColors(settings.iceColors);
@@ -140,9 +140,9 @@ const createWorkerHandler = inputHandle => {
 		applyReceivedSettings = false;
 	};
 
-	const onFontChange = fontName => {
+	const onFontChange = async fontName => {
 		applyReceivedSettings = true; // Flag to prevent re-broadcasting
-		State.textArtCanvas.setFont(fontName, () => {
+		await State.textArtCanvas.setFont(fontName, () => {
 			// Update the font display UI
 			if ($$('#current-font-display kbd')) {
 				$$('#current-font-display kbd').textContent = fontName;
@@ -184,7 +184,7 @@ const createWorkerHandler = inputHandle => {
 		applyReceivedSettings = false;
 	};
 
-	const onMessage = msg => {
+	const onMessage = async msg => {
 		const data = msg.data;
 		switch (data.cmd) {
 			case 'connected':
@@ -237,7 +237,7 @@ const createWorkerHandler = inputHandle => {
 				onResize(data.columns, data.rows);
 				break;
 			case 'fontChange':
-				onFontChange(data.fontName);
+				await onFontChange(data.fontName);
 				break;
 			case 'iceColorsChange':
 				onIceColorsChange(data.iceColors);
@@ -295,7 +295,7 @@ const createWorkerHandler = inputHandle => {
 		}
 	};
 
-	const joinCollaboration = () => {
+	const joinCollaboration = async () => {
 		hideOverlay($('collaboration-choice-overlay'));
 		showOverlay($('websocket-overlay'));
 		collaborationMode = true;
@@ -315,7 +315,7 @@ const createWorkerHandler = inputHandle => {
 
 		// Apply pending canvas settings if available
 		if (pendingCanvasSettings) {
-			onCanvasSettings(pendingCanvasSettings);
+			await onCanvasSettings(pendingCanvasSettings);
 			pendingCanvasSettings = null;
 		}
 
