@@ -1090,7 +1090,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 					// Check multi-line height
 					if (lines.length > rows * MAX_COPY_LINES) {
 						alert(
-							`Paste buffer too large. Content exceeds $(rows * MAX_COPY_LINES} lines. Please copy smaller blocks.`,
+							`Paste buffer too large. Content exceeds ${rows * MAX_COPY_LINES} lines. Please copy smaller blocks.`,
 						);
 						return;
 					}
