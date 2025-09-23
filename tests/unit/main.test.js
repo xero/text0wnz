@@ -58,6 +58,7 @@ const createMockElement = (overrides = {}) => ({
 	click: vi.fn(),
 	appendChild: vi.fn(),
 	focus: vi.fn(),
+	insertBefore: vi.fn(),
 	value: 'mock',
 	innerText: 'mock',
 	textContent: 'mock',
