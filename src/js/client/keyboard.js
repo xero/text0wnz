@@ -2,15 +2,20 @@ import State from './state.js';
 import Toolbar from './toolbar.js';
 import { $, createCanvas } from './ui.js';
 
-// space character with white on black
-const blankCell = (32 << 8) + 7;
+// ≈ Magic Numbers ≈
+const BLANK_CELL = (32 << 8) + 7;
+const CHAR_NULL = 0;
+const CHAR_SPACE = 32;
+const COLOR_WHITE = 7;
+const COLOR_BLACK = 0;
+const MAX_COPY_LINES = 3;
 
 const createFKeyShortcut = (canvas, charCode) => {
 	const update = () => {
 		// Set actual canvas dimensions for proper rendering
 		canvas.width = State.font.getWidth();
 		canvas.height = State.font.getHeight();
-		// Set CSS dimensions for display
+		// Set CSS dimensions for proper display
 		canvas.style.width = State.font.getWidth() + 'px';
 		canvas.style.height = State.font.getHeight() + 'px';
 		State.font.draw(
@@ -488,7 +493,7 @@ const createKeyboardController = () => {
 	const deleteText = () => {
 		State.textArtCanvas.startUndo();
 		State.textArtCanvas.draw(callback => {
-			callback(0, 7, 0, State.cursor.getX() - 1, State.cursor.getY());
+			callback(CHAR_NULL, COLOR_WHITE, COLOR_BLACK, State.cursor.getX() - 1, State.cursor.getY());
 		}, false);
 		State.cursor.left();
 	};
@@ -511,7 +516,7 @@ const createKeyboardController = () => {
 		}
 
 		for (let x = 0; x < currentColumns; x++) {
-			newImageData[cursorY * currentColumns + x] = blankCell;
+			newImageData[cursorY * currentColumns + x] = BLANK_CELL;
 		}
 
 		for (let y = cursorY; y < currentRows; y++) {
@@ -573,7 +578,7 @@ const createKeyboardController = () => {
 				newImageData[y * (currentColumns + 1) + x] = oldImageData[y * currentColumns + x];
 			}
 
-			newImageData[y * (currentColumns + 1) + cursorX] = blankCell;
+			newImageData[y * (currentColumns + 1) + cursorX] = BLANK_CELL;
 
 			for (let x = cursorX; x < currentColumns; x++) {
 				newImageData[y * (currentColumns + 1) + x + 1] = oldImageData[y * currentColumns + x];
@@ -623,7 +628,7 @@ const createKeyboardController = () => {
 
 		for (let x = 0; x < currentColumns; x++) {
 			State.textArtCanvas.draw(callback => {
-				callback(32, 7, 0, x, cursorY);
+				callback(CHAR_SPACE, COLOR_WHITE, COLOR_BLACK, x, cursorY);
 			}, false);
 		}
 	};
@@ -636,7 +641,7 @@ const createKeyboardController = () => {
 
 		for (let x = 0; x <= cursorX; x++) {
 			State.textArtCanvas.draw(callback => {
-				callback(32, 7, 0, x, cursorY);
+				callback(CHAR_SPACE, COLOR_WHITE, COLOR_BLACK, x, cursorY);
 			}, false);
 		}
 	};
@@ -650,7 +655,7 @@ const createKeyboardController = () => {
 
 		for (let x = cursorX; x < currentColumns; x++) {
 			State.textArtCanvas.draw(callback => {
-				callback(32, 7, 0, x, cursorY);
+				callback(CHAR_SPACE, COLOR_WHITE, COLOR_BLACK, x, cursorY);
 			}, false);
 		}
 	};
@@ -663,7 +668,7 @@ const createKeyboardController = () => {
 
 		for (let y = 0; y < currentRows; y++) {
 			State.textArtCanvas.draw(callback => {
-				callback(32, 7, 0, cursorX, y);
+				callback(CHAR_SPACE, COLOR_WHITE, COLOR_BLACK, cursorX, y);
 			}, false);
 		}
 	};
@@ -676,7 +681,7 @@ const createKeyboardController = () => {
 
 		for (let y = 0; y <= cursorY; y++) {
 			State.textArtCanvas.draw(callback => {
-				callback(32, 7, 0, cursorX, y);
+				callback(CHAR_SPACE, COLOR_WHITE, COLOR_BLACK, cursorX, y);
 			}, false);
 		}
 	};
@@ -690,7 +695,7 @@ const createKeyboardController = () => {
 
 		for (let y = cursorY; y < currentRows; y++) {
 			State.textArtCanvas.draw(callback => {
-				callback(32, 7, 0, cursorX, y);
+				callback(CHAR_SPACE, COLOR_WHITE, COLOR_BLACK, cursorX, y);
 			}, false);
 		}
 	};
@@ -1075,18 +1080,18 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 					const lines = text.split(/\r\n|\r|\n/);
 
 					// Check single line width
-					if (lines.length === 1 && lines[0].length > columns * 3) {
+					if (lines.length === 1 && lines[0].length > columns * MAX_COPY_LINES) {
 						alert(
-							'Paste buffer too large. Single line content exceeds ' +
-							columns * 3 +
-							' characters. Please copy smaller blocks.',
+							`Paste buffer too large. Single line content exceeds ${columns * MAX_COPY_LINES} characters. Please copy smaller blocks.`,
 						);
 						return;
 					}
 
 					// Check multi-line height
-					if (lines.length > rows * 3) {
-						alert('Paste buffer too large. Content exceeds ' + rows * 3 + ' lines. Please copy smaller blocks.');
+					if (lines.length > rows * MAX_COPY_LINES) {
+						alert(
+							`Paste buffer too large. Content exceeds $(rows * MAX_COPY_LINES} lines. Please copy smaller blocks.`,
+						);
 						return;
 					}
 
@@ -1129,7 +1134,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 
 							// Convert tabs and other whitespace/non-printable characters to space
 							if (char === '\t' || charCode < 32 || charCode === 127) {
-								charCode = 32; // space
+								charCode = CHAR_SPACE;
 							}
 
 							// Draw the character

@@ -5,7 +5,9 @@ import { loadFontFromImage, loadFontFromXBData } from './font.js';
 import { createPalette, createDefaultPalette } from './palette.js';
 
 const createTextArtCanvas = (canvasContainer, callback) => {
-	const defaultFont = 'CP437 8x16';
+	const DEFAULT_FONT = 'CP437 8x16';
+	const DEFAULT_FONT_WIDTH = 8;
+	const DEFAULT_FONT_HEIGHT = 16;
 	let columns = 80,
 			rows = 25,
 			iceColors = false,
@@ -24,7 +26,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			redoBuffer = [],
 			drawHistory = [],
 			mirrorMode = false,
-			currentFontName = 'CP437 8x16',
+			currentFontName = DEFAULT_FONT,
 			dirtyRegions = [],
 			processingDirtyRegions = false,
 			xbFontData = null;
@@ -262,12 +264,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		let fontHeight = State.font.getHeight();
 
 		if (!fontWidth || fontWidth <= 0) {
-			console.warn('Invalid font width detected, falling back to 8px');
-			fontWidth = 8;
+			console.warn(`Invalid font width detected, falling back to ${DEFAULT_FONT_WIDTH}px`);
+			fontWidth = DEFAULT_FONT_WIDTH;
 		}
 		if (!fontHeight || fontHeight <= 0) {
-			console.warn('Invalid font height detected, falling back to 16px');
-			fontHeight = 16;
+			console.warn(`Invalid font height detected, falling back to ${DEFAULT_FONT_HEIGHT}px`);
+			fontHeight = DEFAULT_FONT_HEIGHT;
 		}
 
 		const canvasWidth = fontWidth * columns;
@@ -336,10 +338,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					callback();
 				}
 			} else if (fontName === 'XBIN' && !xbFontData) {
-				console.log('XBIN selected but no embedded font data available, falling back to CP437 8x16');
+				console.log(`XBIN selected but no embedded font data available, falling back to: ${DEFAULT_FONT}`);
 
 				// Fallback to CP437 font
-				const fallbackFont = 'CP437 8x16';
+				const fallbackFont = DEFAULT_FONT;
 				const font = await loadFontFromImage(fallbackFont, false, State.palette);
 				State.font = font;
 				currentFontName = fallbackFont;
@@ -374,7 +376,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			console.error('Failed to load font:', error);
 
 			// Fallback to CP437 in case of failure
-			const fallbackFont = 'CP437 8x16';
+			const fallbackFont = DEFAULT_FONT;
 			try {
 				const font = await loadFontFromImage(fallbackFont, false, State.palette);
 				State.font = font;
@@ -1077,17 +1079,18 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		processDirtyRegions();
 	};
 
-	const getDefaultFontName = () => defaultFont;
+	const getDefaultFontName = () => DEFAULT_FONT;
 	const getCurrentFontName = () => currentFontName;
 
 	const setXBFontData = (fontBytes, fontWidth, fontHeight) => {
 		if (!fontWidth || fontWidth <= 0) {
-			console.warn('Invalid XB font width:', fontWidth, 'defaulting to 8');
-			fontWidth = 8;
+			console.warn(`Invalid XB font width: ${fontWidth} , defaulting to ${DEFAULT_FONT_WIDTH}px`);
+			fontWidth = DEFAULT_FONT_WIDTH;
 		}
 		if (!fontHeight || fontHeight <= 0) {
-			console.warn('Invalid XB font height:', fontHeight, 'defaulting to 16');
-			fontHeight = 16;
+			console.warn(`Invalid XB font height: ${fontHeight} , defaulting to ${DEFAULT_FONT_HEIGHT}px`);
+
+			fontHeight = DEFAULT_FONT_HEIGHT;
 		}
 		if (!fontBytes || fontBytes.length === 0) {
 			console.error('No XB font data provided');
@@ -1165,7 +1168,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 						);
 					});
 				} else {
-					const fallbackFont = 'CP437 8x16';
+					const fallbackFont = DEFAULT_FONT;
 					setFont(fallbackFont, () => {
 						finalCallback(
 							imageData.columns,
@@ -1178,7 +1181,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					});
 				}
 			} else {
-				const fallbackFont = 'CP437 8x16';
+				const fallbackFont = DEFAULT_FONT;
 				setFont(fallbackFont, () => {
 					finalCallback(
 						imageData.columns,
