@@ -29,7 +29,7 @@
 		"node": ">=22.19.0 <23"
 	},
 	"scripts": {
-		"bake": "cat banner; vite build",
+		"bake": "cat banner; vite build --mode production",
 		"server": "cat banner; bun src/js/server/main.js",
 		"fix": "cat banner; prettier --write src/css/*.css src/js/**/*.js tests/**/*.js && eslint --fix tests/**/*.js src/js/**/*.js",
 		"lint:check": "cat banner; eslint tests/**/*.js src/js/**/*.js",

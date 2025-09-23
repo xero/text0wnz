@@ -298,7 +298,7 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 			}
 		};
 
-		loadImageAndGetImageData(`${import.meta.env.BASE_URL}ui/fonts/${fontName}.png`)
+		loadImageAndGetImageData(`${import.meta.env.BASE_URL}${import.meta.env.VITE_FONT_DIR}${fontName}.png`)
 			.then(imageData => {
 				const newFontData = parseFontData(imageData);
 

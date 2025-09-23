@@ -408,7 +408,7 @@ const initializeAppComponents = async () => {
 				previewImage.style.display = 'none';
 				previewImage.src = '';
 			};
-			img.src = `${import.meta.env.BASE_URL}ui/fonts/${fontName}.png`;
+			img.src = `${import.meta.env.BASE_URL}${import.meta.env.VITE_FONT_DIR}${fontName}.png`;
 		}
 	};
 
@@ -511,5 +511,6 @@ const initializeAppComponents = async () => {
 	State.network = createWorkerHandler($('handle-input'));
 };
 
-// inject css for building
+// Inject style sheets into the build pipeline for processing
+// and proper inclusion in the resulting build
 import '../../css/style.css';

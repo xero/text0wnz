@@ -911,7 +911,7 @@ const loadModule = () => {
 				default:
 					// Clear any previous XB data to avoid palette persistence
 					State.textArtCanvas.clearXBData(() => {
-						imageData = loadAnsi(data, file.name.toLowerCase().endsWith('.utf8.ans') ? true : false);
+						imageData = loadAnsi(data, file.name.toLowerCase().endsWith('.utf8.ans'));
 						$('sauce-title').value = imageData.title;
 						$('sauce-group').value = imageData.group;
 						$('sauce-author').value = imageData.author;

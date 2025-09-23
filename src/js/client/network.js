@@ -2,7 +2,7 @@ import State from './state.js';
 import { $, $$, showOverlay, hideOverlay, websocketUI } from './ui.js';
 
 const createWorkerHandler = inputHandle => {
-	const workerPath = `${import.meta.env.BASE_URL}ui/worker.js`;
+	const workerPath = `${import.meta.env.BASE_URL}${import.meta.env.VITE_UI_DIR}${import.meta.env.VITE_WORKER_FILE}`;
 	try {
 		State.worker = new Worker(workerPath);
 	} catch (error) {
@@ -436,7 +436,7 @@ const createChatController = (
 	const newNotification = text => {
 		const notification = new Notification($('artwork-title').value + ' - text.0w.nz', {
 			body: text,
-			icon: `${import.meta.env.BASE_URL}ui/face.png`,
+			icon: `${import.meta.env.BASE_URL}${import.meta.env.VITE_UI_DIR}face.png`,
 		});
 		// Auto-close notification after 7 seconds
 		const notificationTimer = setTimeout(() => {
