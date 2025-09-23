@@ -356,7 +356,9 @@ const createWorkerHandler = inputHandle => {
 
 	const isConnected = () => connected;
 
-	if (State.worker) {State.worker.addEventListener('message', onMessage);}
+	if (State.worker) {
+		State.worker.addEventListener('message', onMessage);
+	}
 
 	// Set up collaboration choice dialog handlers
 	$('join-collaboration').addEventListener('click', joinCollaboration);

@@ -338,33 +338,48 @@ header nav {
 #selection-toolbar {
 	@apply hidden w-auto flex-row justify-start;
 }
-
 .tool-button {
-	@apply text-white flex text-sm;
+	@apply text-white flex text-sm h-[40px];
 	line-height: 20px;
-	margin-right: 5px;
 	padding-right: 5px;
 
+	&:not(.toolbar-displayed):hover {
+		@apply bg-hl;
+	}
 	&.enabled {
 		@apply bg-indigo;
 	}
-
 	svg {
 		margin-inline-end: 5px;
 	}
-
 	kbd {
 		@apply my-auto;
 	}
+}
+
+#cut {
+	margin-left: 4px !important;
 }
 
 #shapes-toolbar {
 	min-width: 370px;
 }
 
-#selection-toolbar .tool-button svg {
-	width: 24px;
-	margin-inline-end: 0;
+#selection-toolbar {
+	.tool-button {
+		@apply flex flex-col m-0 h-[40px] px-[5px];
+
+		kbd,
+		svg {
+			@apply flex my-0 mx-auto;
+		}
+		kbd {
+			@apply text-xs w-full text-center;
+		}
+		svg {
+			width: 24px;
+		}
+	}
 }
 
 #keyboard-toolbar {
@@ -376,6 +391,10 @@ header nav {
 		canvas {
 			scale: 1.5;
 			margin: 3px auto auto auto;
+
+			&:hover {
+				border: 1px solid var(--indigo);
+			}
 		}
 	}
 }
@@ -443,7 +462,11 @@ header > div > div.button {
 
 aside {
 	> div {
-		@apply text-center h-fit flex justify-center items-center my-2 mx-auto;
+		@apply text-center h-fit flex justify-center items-center py-1 mx-auto;
+
+		&:hover {
+			@apply bg-hl;
+		}
 	}
 	svg {
 		width: 30px;
@@ -790,6 +813,7 @@ canvas {
 .button,
 .hover,
 .toggle-button,
+.tool-button,
 .menu-item:hover,
 .menu-title:hover,
 aside svg,
