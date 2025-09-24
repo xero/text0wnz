@@ -139,8 +139,8 @@ const loadModule = () => {
 		constructor(width) {
 			let imageData, maxY, pos;
 
-			const binColor = magicNumbersColor => {
-				switch (magicNumbersColor) {
+			const binColor = ansiColor => {
+				switch (ansiColor) {
 					case 4:
 						return 1;
 					case 6:
@@ -158,7 +158,7 @@ const loadModule = () => {
 					case 11:
 						return 14;
 					default:
-						return magicNumbersColor;
+						return ansiColor;
 				}
 			};
 
@@ -221,7 +221,7 @@ const loadModule = () => {
 		}
 	}
 
-	const loadmagicNumbers = (bytes, encoding = 'magicNumbers') => {
+	const loadAnsi = (bytes, isUTF8 = false) => {
 		let escaped,
 				escapeCode,
 				j,
@@ -305,7 +305,7 @@ const loadModule = () => {
 		while (!file.eof()) {
 			code = file.get();
 			let bytesConsumed = 1;
-			if (encoding === 'utf8') {
+			if (isUTF8) {
 				const decoded = decodeUtf8(bytes, file.getPos() - 1);
 				code = decoded.charCode;
 				bytesConsumed = decoded.bytesConsumed;
@@ -883,7 +883,7 @@ const loadModule = () => {
 			switch (file.name.split('.').pop().toLowerCase()) {
 				case 'xb':
 					imageData = loadXBin(data);
-					// Update SAUCE UI fields like magicNumbers files do
+					// Update SAUCE UI fields like ANSI files do
 					$('sauce-title').value = imageData.title || '';
 					$('sauce-group').value = imageData.group || '';
 					$('sauce-author').value = imageData.author || '';
@@ -912,7 +912,7 @@ const loadModule = () => {
 				default:
 					// Clear any previous XB data to avoid palette persistence
 					State.textArtCanvas.clearXBData(() => {
-						imageData = loadmagicNumbers(data, file.name.toLowerCase().endsWith('.utf8.ans'));
+						imageData = loadAnsi(data, file.name.toLowerCase().endsWith('.utf8.ans'));
 						$('sauce-title').value = imageData.title;
 						$('sauce-group').value = imageData.group;
 						$('sauce-author').value = imageData.author;
@@ -1063,8 +1063,8 @@ const saveModule = () => {
 		return sauce;
 	};
 
-	const encodemagicNumbers = (useUTF8, blinkers = true) => {
-		const magicNumbersColor = binColor => {
+	const encodeANSi = (useUTF8, blinkers = true) => {
+		const ansiColor = binColor => {
 			switch (binColor) {
 				case 1:
 					return 4;
@@ -1159,11 +1159,11 @@ const saveModule = () => {
 
 				// Change foreground or background colors if necessary
 				if (foreground !== lineForeground) {
-					attribs.push([51, 48 + magicNumbersColor(foreground)]); // Set foreground color (ESC[3Xm)
+					attribs.push([51, 48 + ansiColor(foreground)]); // Set foreground color (ESC[3Xm)
 					lineForeground = foreground;
 				}
 				if (background !== lineBackground) {
-					attribs.push([52, 48 + magicNumbersColor(background)]); // Set background color (ESC[4Xm)
+					attribs.push([52, 48 + ansiColor(background)]); // Set background color (ESC[4Xm)
 					lineBackground = background;
 				}
 
@@ -1219,15 +1219,15 @@ const saveModule = () => {
 		saveFile(new Uint8Array(output), sauce, fname);
 	};
 	const ans = () => {
-		encodemagicNumbers(false);
+		encodeANSi(false);
 	};
 
 	const utf8 = () => {
-		encodemagicNumbers(true);
+		encodeANSi(true);
 	};
 
 	const utf8noBlink = () => {
-		encodemagicNumbers(true, false);
+		encodeANSi(true, false);
 	};
 
 	const convert16BitArrayTo8BitArray = Uint16s => {

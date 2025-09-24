@@ -491,7 +491,6 @@ const createShadingPanel = () => {
 	let y = 0;
 	let ignored = false;
 	let currentFont;
-	let fontChangeAbortController = null;
 
 	const updateCursor = () => {
 		const width = canvases[0].width / 5;
@@ -662,60 +661,14 @@ const createShadingPanel = () => {
 		halfBlockMode = true;
 	};
 
-	const waitForFontChange = async (timeout = 15000) => {
-		// Abort any previous listener
-		if (fontChangeAbortController) {
-			fontChangeAbortController.abort();
+	const fontChange = () => {
+		if (currentFont === 'XBIN' || currentFont !== State.textArtCanvas.getCurrentFontName()) {
+			panelWidth = State.font.getWidth() * magicNumbers.PANEL_WIDTH_MULTIPLIER;
+			generateCanvases();
+			updateCursor();
+			canvasContainer.removeChild(canvasContainer.firstChild);
+			canvasContainer.insertBefore(canvases[State.palette.getForegroundColor()], canvasContainer.firstChild);
 		}
-		fontChangeAbortController = new AbortController();
-		const { signal } = fontChangeAbortController;
-		return new Promise((resolve, reject) => {
-			let settled = false;
-			const handler = () => {
-				if (!settled) {
-					settled = true;
-					clearTimeout(timer);
-					signal.removeEventListener('abort', abortHandler);
-					resolve();
-				}
-			};
-			const abortHandler = () => {
-				if (!settled) {
-					settled = true;
-					clearTimeout(timer);
-					document.removeEventListener('onFontChange', handler, { signal });
-					reject(new Error('Aborted: onFontChange listener was aborted.'));
-				}
-			};
-			const timer = setTimeout(() => {
-				if (!settled) {
-					settled = true;
-					signal.removeEventListener('abort', abortHandler);
-					fontChangeAbortController.abort();
-					reject(new Error('Timeout: onFontChange event did not fire.'));
-				}
-			}, timeout);
-			signal.addEventListener('abort', abortHandler);
-			document.addEventListener('onFontChange', handler, { signal });
-		});
-	};
-
-	const fontChange = async () => {
-		if (
-			State.textArtCanvas.getDefaultFontName() !== currentFont &&
-			State.textArtCanvas.getCurrentFontName() === currentFont
-		) {
-			try {
-				await waitForFontChange(15000); // Adding a 15-second timeout
-			} catch (error) {
-				console.error('Font loading error: ', error);
-			}
-		}
-		panelWidth = State.font.getWidth() * magicNumbers.PANEL_WIDTH_MULTIPLIER;
-		generateCanvases();
-		updateCursor();
-		canvasContainer.removeChild(canvasContainer.firstChild);
-		canvasContainer.insertBefore(canvases[State.palette.getForegroundColor()], canvasContainer.firstChild);
 	};
 
 	const onPaletteChange = e => {
