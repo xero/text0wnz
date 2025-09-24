@@ -4,7 +4,7 @@
 const DEFAULT_FONT = 'CP437 8x16';
 const DEFAULT_FONT_WIDTH = 8;
 const DEFAULT_FONT_HEIGHT = 16;
-const NFO_FONT = 'TOPAZ_437';
+const NFO_FONT = 'Topaz-437 8x16';
 // ANSI & XBIN files
 const DEFAULT_FOREGROUND = 7;
 const DEFAULT_BACKGROUND = 0;

@@ -422,7 +422,7 @@ const initializeAppComponents = async () => {
 	});
 	onClick(changeFont, () => {
 		showOverlay(fontsOverlay);
-		keyboard.ignore();
+		keyboard.disable();
 		updateFontPreview(fontSelect.value);
 	});
 	onSelectChange(fontSelect, () => {
@@ -434,7 +434,7 @@ const initializeAppComponents = async () => {
 			updateFontDisplay();
 			State.network?.sendFontChange?.(selectedFont);
 			hideOverlay(fontsOverlay);
-			keyboard.unignore();
+			keyboard.enable();
 		});
 	});
 	onClick($('fonts-cancel'), () => {

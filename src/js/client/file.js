@@ -551,13 +551,77 @@ const loadModule = () => {
 
 			// C64 fonts
 			case 'C64 PETSCII unshifted':
-				return 'C64_PETSCII_unshifted';
+				return 'C64 PETSCII unshifted 8x8';
 			case 'C64 PETSCII shifted':
-				return 'C64_PETSCII_shifted';
+				return 'C64 PETSCII shifted 8x8';
 
-			// Modern fonts
+			// Modern XBIN fonts
 			case 'TOPAZ_437':
-				return 'TOPAZ_437';
+			case 'Topaz-437':
+			case 'Topaz_437':
+			case 'Topaz 437':
+				return 'Topaz-437 8x16';
+			case 'Human Fossil':
+			case 'NewSchool_hf':
+				return 'Human Fossil 8x16';
+			case 'Structures':
+				return 'Structures 8x16';
+			case 'TES-SYM5':
+				return 'TES-SYM5 8x16';
+			case 'TES-SYM6':
+				return 'TES-SYM6 8x16';
+			case 'Calce':
+				return 'Calce 8x32';
+			case 'FrogBlock':
+				return 'FrogBlock 8x8';
+			case 'Blobz+':
+				return 'Blobz+ 8x16';
+			case 'BLOODY':
+				return 'BLOODY 8x16';
+			case 'C64-DiskMaster':
+				return 'C64-DiskMaster 8x16';
+			case 'DSS8_2x':
+				return 'DSS8 8x16';
+			case 'DSS8':
+				return 'DSS8 8x8';
+			case 'FM-TOWNS_2x':
+				return 'FM-TOWNS 8x16';
+			case 'FM-TOWNSx':
+				return 'FM-TOWNS 8x8';
+			case 'GJSCI-X':
+				return 'GJSCI-X 8x16';
+			case 'Hack_2x':
+				return 'Hack 8x16';
+			case 'Hack':
+				return 'Hack 8x8';
+			case 'Line_2x':
+				return 'Line 8x16';
+			case 'Line':
+				return 'Line 8x8';
+			case 'Megaball':
+				return 'Megaball 8x16';
+			case 'NIMBUS':
+				return 'NIMBUS 8x20';
+			case 'p0t-noodle_2x':
+				return 'p0t-noodle 8x20';
+			case 'DOS_J700C-V':
+				return 'DOS_J700C-V 8x19';
+			case 'Perihelion':
+				return 'Perihelion 8x16';
+			case 'Song_Logo_2x':
+				return 'Song_Logo 8x16';
+			case 'Song_Logo':
+				return 'Song_Logo 8x8';
+			case 'Teletext_2x':
+				return 'Teletext 8x18';
+			case 'Teletext':
+				return 'Teletext 8x9';
+			case 'TES-GIGR':
+				return 'TES-GIGR 8x16';
+			case 'Zoids_2x':
+				return 'Zoids 8x16';
+			case 'Zoids 8x8':
+				return 'Zoids 8x8';
 
 			// XBin embedded font
 			case 'XBIN':
@@ -621,14 +685,74 @@ const loadModule = () => {
 				return 'Amiga mOsOul';
 
 			// C64 fonts
-			case 'C64_PETSCII_unshifted':
+			case 'C64 PETSCII unshifted 8x8':
 				return 'C64 PETSCII unshifted';
-			case 'C64_PETSCII_shifted':
+			case 'C64 PETSCII shifted 8x8':
 				return 'C64 PETSCII shifted';
 
-			// Modern fonts
-			case 'TOPAZ_437':
-				return 'TOPAZ_437';
+			// Modern XBIN fonts
+			case 'Topaz_437 8x16':
+				return 'Topaz-437';
+			case 'Human Fossil 8x16':
+				return 'NewSchool_hf';
+			case 'Structures 8x16':
+				return 'Structures';
+			case 'TES-SYM5 8x16':
+				return 'TES-SYM5';
+			case 'TES-SYM6 8x16':
+				return 'TES-SYM6';
+			case 'Calce 8x32':
+				return 'Calce';
+			case 'FrogBlock 8x8':
+				return 'FrogBlock';
+			case 'Blobz+ 8x16':
+				return 'Blobz+';
+			case 'BLOODY 8x16':
+				return 'BLOODY 8x16';
+			case 'C64-DiskMaster':
+				return 'C64-DiskMaster 8x16';
+			case 'DSS8 8x16':
+				return 'DSS8_2x';
+			case 'DSS8 8x8':
+				return 'DSS8';
+			case 'FM-TOWNS 8x16':
+				return 'FM-TOWNS_2x';
+			case 'FM-TOWNS 8x8':
+				return 'FM-TOWNS';
+			case 'GJSCI-X x-16':
+				return 'GJSCI-X';
+			case 'Hack 8x16':
+				return 'Hack';
+			case 'Hack 8x8':
+				return 'Hack_2x';
+			case 'Line 8x16':
+				return 'Line_2x';
+			case 'Line 8x8':
+				return 'Line';
+			case 'Megaball 8x16':
+				return 'Megaball';
+			case 'NIMBUS 8x20':
+				return 'NIMBUS';
+			case 'p0t-noodle 8x20':
+				return 'p0t-noodle_2x';
+			case 'DOS-J700C-V 8x19':
+				return 'DOS-J700C-V';
+			case 'Perihelion 8x16':
+				return 'Perihelion';
+			case 'Song_Logo 8x16':
+				return 'Song_Logo_2x';
+			case 'Song_Logo 8x8':
+				return 'Song_Logo';
+			case 'Teletext 8x18':
+				return 'Teletext_2x';
+			case 'Teletext 8x9':
+				return 'Teletext';
+			case 'TES-GIGR 8x16':
+				return 'TES-GIGR';
+			case 'Zoids 8x16':
+				return 'Zoids';
+			case 'Zoids 8x8':
+				return 'Zoids_2x';
 
 			// XBin embedded font
 			case 'XBIN':

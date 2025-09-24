@@ -123,8 +123,8 @@ describe('File Module', () => {
 				expect(Load.sauceToAppFont('Amiga P0T-NOoDLE')).toBe('P0t-NOoDLE 8x16');
 
 				// C64 fonts
-				expect(Load.sauceToAppFont('C64 PETSCII unshifted')).toBe('C64_PETSCII_unshifted');
-				expect(Load.sauceToAppFont('C64 PETSCII shifted')).toBe('C64_PETSCII_shifted');
+				expect(Load.sauceToAppFont('C64 PETSCII unshifted')).toBe('C64 PETSCII unshifted 8x8');
+				expect(Load.sauceToAppFont('C64 PETSCII shifted')).toBe('C64 PETSCII shifted 8x8');
 
 				// XBIN embedded font
 				expect(Load.sauceToAppFont('XBIN')).toBe('XBIN');
@@ -153,8 +153,8 @@ describe('File Module', () => {
 				expect(Load.appToSauceFont('mO\'sOul 8x16')).toBe('Amiga mOsOul');
 
 				// C64 fonts
-				expect(Load.appToSauceFont('C64_PETSCII_unshifted')).toBe('C64 PETSCII unshifted');
-				expect(Load.appToSauceFont('C64_PETSCII_shifted')).toBe('C64 PETSCII shifted');
+				expect(Load.appToSauceFont('C64 PETSCII unshifted 8x8')).toBe('C64 PETSCII unshifted');
+				expect(Load.appToSauceFont('C64 PETSCII shifted 8x8')).toBe('C64 PETSCII shifted');
 
 				// XBIN embedded font
 				expect(Load.appToSauceFont('XBIN')).toBe('XBIN');
