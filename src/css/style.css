@@ -356,6 +356,12 @@ header nav {
 		@apply my-auto;
 	}
 }
+#clipboard-toolbar,
+#font-toolbar {
+	.tool-button {
+		@apply mr-1;
+	}
+}
 
 #cut {
 	margin-left: 4px !important;

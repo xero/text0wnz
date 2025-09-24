@@ -197,6 +197,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const redrawEntireImage = () => {
 		dirtyRegions = [];
 		drawRegion(0, 0, columns, rows);
+		processDirtyRegions();
 	};
 
 	let blinkStop = false;

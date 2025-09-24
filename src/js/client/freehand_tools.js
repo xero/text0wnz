@@ -1084,6 +1084,7 @@ const createSquareController = () => {
 	let startXY;
 	let endXY;
 	let outlineMode = true;
+
 	const outlineToggle = createToggleButton(
 		'Outline',
 		'Filled',
@@ -1094,7 +1095,6 @@ const createSquareController = () => {
 			outlineMode = false;
 		},
 	);
-	outlineToggle.id = 'squareOpts';
 
 	const canvasDown = e => {
 		startXY = e.detail;
@@ -1220,6 +1220,7 @@ const createCircleController = () => {
 	let startXY;
 	let endXY;
 	let outlineMode = true;
+
 	const outlineToggle = createToggleButton(
 		'Outline',
 		'Filled',
@@ -1230,7 +1231,6 @@ const createCircleController = () => {
 			outlineMode = false;
 		},
 	);
-	outlineToggle.id = 'circleOps';
 
 	const canvasDown = e => {
 		startXY = e.detail;

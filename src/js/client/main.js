@@ -417,7 +417,7 @@ const initializeAppComponents = async () => {
 		document.addEventListener(e, updateFontDisplay);
 	});
 
-	onClick($('current-font-display'), () => {
+	onClick(fontDisplay, () => {
 		changeFont.click();
 	});
 	onClick(changeFont, () => {
