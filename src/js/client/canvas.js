@@ -1099,11 +1099,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const setXBFontData = (fontBytes, fontWidth, fontHeight) => {
 		if (!fontWidth || fontWidth <= 0) {
-			console.warn(`Invalid XB font width: ${fontWidth} , defaulting to ${magicNumbers.DEFAULT_FONT_WIDTH}px`);
+			console.warn(`Invalid XB font width: ${fontWidth}, defaulting to ${magicNumbers.DEFAULT_FONT_WIDTH}px`);
 			fontWidth = magicNumbers.DEFAULT_FONT_WIDTH;
 		}
 		if (!fontHeight || fontHeight <= 0) {
-			console.warn(`Invalid XB font height: ${fontHeight} , defaulting to ${magicNumbers.DEFAULT_FONT_HEIGHT}px`);
+			console.warn(`Invalid XB font height: ${fontHeight}, defaulting to ${magicNumbers.DEFAULT_FONT_HEIGHT}px`);
 
 			fontHeight = magicNumbers.DEFAULT_FONT_HEIGHT;
 		}
