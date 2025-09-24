@@ -215,27 +215,44 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	let blinkTimerRunning = false;
+	let blinkTimerMutex = Promise.resolve();
+
+	const acquireBlinkTimerMutex = async () => {
+		await blinkTimerMutex;
+		let release;
+		const hold = new Promise(resolve => (release = resolve));
+		blinkTimerMutex = hold;
+		return release;
+	};
 
 	const updateBlinkTimer = async () => {
-		if (blinkTimerRunning) {
-			return; // Prevent multiple timers from running
-		}
-		blinkTimerRunning = true;
-		blinkStop = false;
-		if (!iceColors) {
-			blinkOn = false;
-			try {
-				while (!blinkStop) {
-					blink();
-					await new Promise(resolve => setTimeout(resolve, 500));
-				}
-			} catch (error) {
-				console.error('Blink timer error:', error);
+		const releaseMutex = await acquireBlinkTimerMutex(); // Acquire the mutex
+
+		try {
+			if (blinkTimerRunning) {
+				return; // Prevent multiple timers from running
 			}
+			blinkTimerRunning = true;
+			blinkStop = false;
+
+			if (!iceColors) {
+				blinkOn = false;
+				try {
+					while (!blinkStop) {
+						blink();
+						await new Promise(resolve => setTimeout(resolve, 500));
+					}
+				} catch (error) {
+					console.error('Blink timer error:', error);
+				}
+			}
+		} finally {
+			blinkTimerRunning = false;
+			releaseMutex(); // Release the mutex
 		}
-		blinkTimerRunning = false;
 	};
+
+	let blinkTimerRunning = false;
 
 	const stopBlinkTimer = () => {
 		blinkStop = true;

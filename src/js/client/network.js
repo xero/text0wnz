@@ -7,6 +7,7 @@ const createWorkerHandler = inputHandle => {
 		State.worker = new Worker(workerPath);
 	} catch (error) {
 		console.error(`Failed to load worker from ${workerPath}:`, error);
+		return;
 	}
 
 	let handle = localStorage.getItem('handle');
