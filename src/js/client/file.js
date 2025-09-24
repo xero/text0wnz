@@ -1,6 +1,7 @@
 import State from './state.js';
 import { $, enforceMaxBytes } from './ui.js';
 import { getUTF8, getUnicode } from './palette.js';
+import magicNumbers from './magicNumbers.js';
 
 // Load module implementation
 const loadModule = () => {
@@ -138,8 +139,8 @@ const loadModule = () => {
 		constructor(width) {
 			let imageData, maxY, pos;
 
-			const binColor = ansiColor => {
-				switch (ansiColor) {
+			const binColor = magicNumbersColor => {
+				switch (magicNumbersColor) {
 					case 4:
 						return 1;
 					case 6:
@@ -157,7 +158,7 @@ const loadModule = () => {
 					case 11:
 						return 14;
 					default:
-						return ansiColor;
+						return magicNumbersColor;
 				}
 			};
 
@@ -220,7 +221,7 @@ const loadModule = () => {
 		}
 	}
 
-	const loadAnsi = (bytes, encoding = 'ansi') => {
+	const loadmagicNumbers = (bytes, encoding = 'magicNumbers') => {
 		let escaped,
 				escapeCode,
 				j,
@@ -269,8 +270,8 @@ const loadModule = () => {
 		const file = new File(bytes);
 
 		const resetAttributes = () => {
-			foreground = 7;
-			background = 0;
+			foreground = magicNumbers.DEFAULT_FOREGROUND;
+			background = magicNumbers.DEFAULT_BACKGROUND;
 			bold = false;
 			blink = false;
 			inverse = false;
@@ -882,7 +883,7 @@ const loadModule = () => {
 			switch (file.name.split('.').pop().toLowerCase()) {
 				case 'xb':
 					imageData = loadXBin(data);
-					// Update SAUCE UI fields like ANSI files do
+					// Update SAUCE UI fields like magicNumbers files do
 					$('sauce-title').value = imageData.title || '';
 					$('sauce-group').value = imageData.group || '';
 					$('sauce-author').value = imageData.author || '';
@@ -911,7 +912,7 @@ const loadModule = () => {
 				default:
 					// Clear any previous XB data to avoid palette persistence
 					State.textArtCanvas.clearXBData(() => {
-						imageData = loadAnsi(data, file.name.toLowerCase().endsWith('.utf8.ans'));
+						imageData = loadmagicNumbers(data, file.name.toLowerCase().endsWith('.utf8.ans'));
 						$('sauce-title').value = imageData.title;
 						$('sauce-group').value = imageData.group;
 						$('sauce-author').value = imageData.author;
@@ -1062,8 +1063,8 @@ const saveModule = () => {
 		return sauce;
 	};
 
-	const encodeANSi = (useUTF8, blinkers = true) => {
-		const ansiColor = binColor => {
+	const encodemagicNumbers = (useUTF8, blinkers = true) => {
+		const magicNumbersColor = binColor => {
 			switch (binColor) {
 				case 1:
 					return 4;
@@ -1084,8 +1085,8 @@ const saveModule = () => {
 		let output = [27, 91, 48, 109]; // Start with a full reset (ESC[0m)
 		let bold = false;
 		let blink = false;
-		let currentForeground = 7;
-		let currentBackground = 0;
+		let currentForeground = magicNumbers.DEFAULT_FOREGROUND;
+		let currentBackground = magicNumbers.DEFAULT_BACKGROUND;
 		let currentBold = false;
 		let currentBlink = false;
 
@@ -1138,8 +1139,8 @@ const saveModule = () => {
 				// Reset attributes if necessary
 				if ((lineBold && !bold) || (lineBlink && !blink)) {
 					attribs.push([48]); // Reset attributes (ESC[0m)
-					lineForeground = 7;
-					lineBackground = 0;
+					lineForeground = magicNumbers.DEFAULT_FOREGROUND;
+					lineBackground = magicNumbers.DEFAULT_BACKGROUND;
 					lineBold = false;
 					lineBlink = false;
 				}
@@ -1158,11 +1159,11 @@ const saveModule = () => {
 
 				// Change foreground or background colors if necessary
 				if (foreground !== lineForeground) {
-					attribs.push([51, 48 + ansiColor(foreground)]); // Set foreground color (ESC[3Xm)
+					attribs.push([51, 48 + magicNumbersColor(foreground)]); // Set foreground color (ESC[3Xm)
 					lineForeground = foreground;
 				}
 				if (background !== lineBackground) {
-					attribs.push([52, 48 + ansiColor(background)]); // Set background color (ESC[4Xm)
+					attribs.push([52, 48 + magicNumbersColor(background)]); // Set background color (ESC[4Xm)
 					lineBackground = background;
 				}
 
@@ -1218,15 +1219,15 @@ const saveModule = () => {
 		saveFile(new Uint8Array(output), sauce, fname);
 	};
 	const ans = () => {
-		encodeANSi(false);
+		encodemagicNumbers(false);
 	};
 
 	const utf8 = () => {
-		encodeANSi(true);
+		encodemagicNumbers(true);
 	};
 
 	const utf8noBlink = () => {
-		encodeANSi(true, false);
+		encodemagicNumbers(true, false);
 	};
 
 	const convert16BitArrayTo8BitArray = Uint16s => {

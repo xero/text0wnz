@@ -3,11 +3,9 @@ import State from './state.js';
 import { $, createCanvas } from './ui.js';
 import { loadFontFromImage, loadFontFromXBData } from './font.js';
 import { createPalette, createDefaultPalette } from './palette.js';
+import magicNumbers from './magicNumbers.js';
 
 const createTextArtCanvas = (canvasContainer, callback) => {
-	const DEFAULT_FONT = 'CP437 8x16';
-	const DEFAULT_FONT_WIDTH = 8;
-	const DEFAULT_FONT_HEIGHT = 16;
 	let columns = 80,
 			rows = 25,
 			iceColors = false,
@@ -26,7 +24,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			redoBuffer = [],
 			drawHistory = [],
 			mirrorMode = false,
-			currentFontName = DEFAULT_FONT,
+			currentFontName = magicNumbers.DEFAULT_FONT,
 			dirtyRegions = [],
 			processingDirtyRegions = false,
 			xbFontData = null;
@@ -264,12 +262,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		let fontHeight = State.font.getHeight();
 
 		if (!fontWidth || fontWidth <= 0) {
-			console.warn(`Invalid font width detected, falling back to ${DEFAULT_FONT_WIDTH}px`);
-			fontWidth = DEFAULT_FONT_WIDTH;
+			console.warn(`Invalid font width detected, falling back to ${magicNumbers.DEFAULT_FONT_WIDTH}px`);
+			fontWidth = magicNumbers.DEFAULT_FONT_WIDTH;
 		}
 		if (!fontHeight || fontHeight <= 0) {
-			console.warn(`Invalid font height detected, falling back to ${DEFAULT_FONT_HEIGHT}px`);
-			fontHeight = DEFAULT_FONT_HEIGHT;
+			console.warn(`Invalid font height detected, falling back to ${magicNumbers.DEFAULT_FONT_HEIGHT}px`);
+			fontHeight = magicNumbers.DEFAULT_FONT_HEIGHT;
 		}
 
 		const canvasWidth = fontWidth * columns;
@@ -338,10 +336,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					callback();
 				}
 			} else if (fontName === 'XBIN' && !xbFontData) {
-				console.log(`XBIN selected but no embedded font data available, falling back to: ${DEFAULT_FONT}`);
+				console.log(`XBIN selected but no embedded font data available, falling back to: ${magicNumbers.DEFAULT_FONT}`);
 
 				// Fallback to CP437 font
-				const fallbackFont = DEFAULT_FONT;
+				const fallbackFont = magicNumbers.DEFAULT_FONT;
 				const font = await loadFontFromImage(fallbackFont, false, State.palette);
 				State.font = font;
 				currentFontName = fallbackFont;
@@ -376,7 +374,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			console.error('Failed to load font:', error);
 
 			// Fallback to CP437 in case of failure
-			const fallbackFont = DEFAULT_FONT;
+			const fallbackFont = magicNumbers.DEFAULT_FONT;
 			try {
 				const font = await loadFontFromImage(fallbackFont, false, State.palette);
 				State.font = font;
@@ -1079,18 +1077,18 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		processDirtyRegions();
 	};
 
-	const getDefaultFontName = () => DEFAULT_FONT;
+	const getDefaultFontName = () => magicNumbers.DEFAULT_FONT;
 	const getCurrentFontName = () => currentFontName;
 
 	const setXBFontData = (fontBytes, fontWidth, fontHeight) => {
 		if (!fontWidth || fontWidth <= 0) {
-			console.warn(`Invalid XB font width: ${fontWidth} , defaulting to ${DEFAULT_FONT_WIDTH}px`);
-			fontWidth = DEFAULT_FONT_WIDTH;
+			console.warn(`Invalid XB font width: ${fontWidth} , defaulting to ${magicNumbers.DEFAULT_FONT_WIDTH}px`);
+			fontWidth = magicNumbers.DEFAULT_FONT_WIDTH;
 		}
 		if (!fontHeight || fontHeight <= 0) {
-			console.warn(`Invalid XB font height: ${fontHeight} , defaulting to ${DEFAULT_FONT_HEIGHT}px`);
+			console.warn(`Invalid XB font height: ${fontHeight} , defaulting to ${magicNumbers.DEFAULT_FONT_HEIGHT}px`);
 
-			fontHeight = DEFAULT_FONT_HEIGHT;
+			fontHeight = magicNumbers.DEFAULT_FONT_HEIGHT;
 		}
 		if (!fontBytes || fontBytes.length === 0) {
 			console.error('No XB font data provided');
@@ -1168,7 +1166,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 						);
 					});
 				} else {
-					const fallbackFont = DEFAULT_FONT;
+					const fallbackFont = magicNumbers.DEFAULT_FONT;
 					setFont(fallbackFont, () => {
 						finalCallback(
 							imageData.columns,
@@ -1181,7 +1179,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					});
 				}
 			} else {
-				const fallbackFont = DEFAULT_FONT;
+				const fallbackFont = magicNumbers.DEFAULT_FONT;
 				setFont(fallbackFont, () => {
 					finalCallback(
 						imageData.columns,

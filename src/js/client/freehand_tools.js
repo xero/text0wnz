@@ -1,9 +1,7 @@
 import State from './state.js';
 import Toolbar from './toolbar.js';
 import { $, createCanvas, createToggleButton } from './ui.js';
-
-// Multiplier to calculate panel width based on item count.
-const PANEL_WIDTH_MULTIPLIER = 20;
+import magicNumbers from './magicNumbers.js';
 
 const createPanelCursor = el => {
 	const cursor = createCanvas(0, 0);
@@ -482,7 +480,7 @@ const createShadingController = (panel, charMode) => {
 };
 
 const createShadingPanel = () => {
-	let panelWidth = State.font.getWidth() * PANEL_WIDTH_MULTIPLIER;
+	let panelWidth = State.font.getWidth() * magicNumbers.PANEL_WIDTH_MULTIPLIER;
 	const panel = createFloatingPanel(50, 50);
 	const canvasContainer = document.createElement('div');
 	const cursor = createPanelCursor(canvasContainer);
@@ -713,7 +711,7 @@ const createShadingPanel = () => {
 				console.error('Font loading error: ', error);
 			}
 		}
-		panelWidth = State.font.getWidth() * PANEL_WIDTH_MULTIPLIER;
+		panelWidth = State.font.getWidth() * magicNumbers.PANEL_WIDTH_MULTIPLIER;
 		generateCanvases();
 		updateCursor();
 		canvasContainer.removeChild(canvasContainer.firstChild);
