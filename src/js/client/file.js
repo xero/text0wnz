@@ -989,16 +989,9 @@ const saveModule = () => {
 			}
 		};
 
-		const addCommentText = (text, maxlength, index, commentBlock) => {
-			let i;
-			for (i = 0; i < maxlength; i += 1) {
-				commentBlock[i + index] = i < text.length ? text.charCodeAt(i) : 0x20;
-			}
-		};
-
 		const commentsText = $('sauce-comments').value.trim();
 		const commentLines = commentsText ? commentsText.split('\n') : [];
-		
+
 		// Process comment lines to match desktop implementation
 		let processedComments = '';
 		let commentsCount = 0;
@@ -1006,7 +999,7 @@ const saveModule = () => {
 			let s = 0;
 			while (commentLines[i].length > 0) {
 				const line = commentLines[i].substr(s * 64, 64).trim();
-				if (line.length === 0) break;
+				if (line.length === 0) {break;}
 				s++;
 				commentsCount++;
 				processedComments += line.padEnd(64, ' ');
@@ -1028,43 +1021,43 @@ const saveModule = () => {
 
 		// Create 128-byte SAUCE record (matching desktop implementation)
 		const sauce = new Uint8Array(128);
-		
+
 		// SAUCE signature and version
 		addText('SAUCE00', 7, 0);
-		
+
 		// Title, Author, Group (using pad-style filling like desktop)
 		const titleBytes = new TextEncoder().encode($('sauce-title').value);
 		const authorBytes = new TextEncoder().encode($('sauce-author').value);
 		const groupBytes = new TextEncoder().encode($('sauce-group').value);
-		
+
 		sauce.fill(0x20, 7, 42); // Clear title field
 		sauce.set(titleBytes.slice(0, 35), 7);
-		
-		sauce.fill(0x20, 42, 62); // Clear author field  
+
+		sauce.fill(0x20, 42, 62); // Clear author field
 		sauce.set(authorBytes.slice(0, 20), 42);
-		
+
 		sauce.fill(0x20, 62, 82); // Clear group field
 		sauce.set(groupBytes.slice(0, 20), 62);
-		
+
 		// Date (CCYYMMDD format)
 		const date = new Date();
 		const year = date.getFullYear().toString(10);
 		const month = (date.getMonth() + 1).toString(10).padStart(2, '0');
 		const day = date.getDate().toString(10).padStart(2, '0');
 		addText(`${year}${month}${day}`, 8, 82);
-		
+
 		// File size (bytes 90-93)
 		sauce[90] = filesize & 0xff;
 		sauce[91] = (filesize >> 8) & 0xff;
 		sauce[92] = (filesize >> 16) & 0xff;
 		sauce[93] = filesize >> 24;
-		
+
 		// Data type
 		sauce[94] = datatype;
-		
+
 		const columns = State.textArtCanvas.getColumns();
 		const rows = State.textArtCanvas.getRows();
-		
+
 		// File type and dimensions - different handling for BIN format
 		if (datatype === 5) { // BIN format
 			sauce[95] = columns / 2;
@@ -1076,10 +1069,10 @@ const saveModule = () => {
 			sauce[98] = rows & 0xff;
 			sauce[99] = rows >> 8;
 		}
-		
+
 		// Comments count (byte 104)
 		sauce[104] = commentsCount;
-		
+
 		// Flags and font info (only for non-XBIN formats)
 		if (datatype !== 6 && doFlagsAndTInfoS) { // Not XBIN
 			let flags = 0;
@@ -1093,7 +1086,7 @@ const saveModule = () => {
 			}
 			flags += 1 << 4; // Set aspect ratio flag like desktop
 			sauce[105] = flags;
-			
+
 			// Font name (bytes 106-127)
 			const currentAppFontName = State.textArtCanvas.getCurrentFontName();
 			const sauceFontName = Load.appToSauceFont(currentAppFontName);
