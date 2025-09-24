@@ -1,9 +1,10 @@
 /* ≈ Magic Numbers ≈ shared application constants */
 
-// Editor
+// Fonts
 const DEFAULT_FONT = 'CP437 8x16';
 const DEFAULT_FONT_WIDTH = 8;
 const DEFAULT_FONT_HEIGHT = 16;
+const NFO_FONT = 'TOPAZ_437';
 // ANSI & XBIN files
 const DEFAULT_FOREGROUND = 7;
 const DEFAULT_BACKGROUND = 0;
@@ -19,6 +20,7 @@ const PANEL_WIDTH_MULTIPLIER = 20;
 
 export default {
 	DEFAULT_FONT,
+	NFO_FONT,
 	DEFAULT_FONT_WIDTH,
 	DEFAULT_FONT_HEIGHT,
 	DEFAULT_FOREGROUND,

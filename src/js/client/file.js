@@ -555,6 +555,10 @@ const loadModule = () => {
 			case 'C64 PETSCII shifted':
 				return 'C64_PETSCII_shifted';
 
+			// Modern fonts
+			case 'TOPAZ_437':
+				return 'TOPAZ_437';
+
 			// XBin embedded font
 			case 'XBIN':
 				return 'XBIN';
@@ -621,6 +625,10 @@ const loadModule = () => {
 				return 'C64 PETSCII unshifted';
 			case 'C64_PETSCII_shifted':
 				return 'C64 PETSCII shifted';
+
+			// Modern fonts
+			case 'TOPAZ_437':
+				return 'TOPAZ_437';
 
 			// XBin embedded font
 			case 'XBIN':
@@ -875,6 +883,8 @@ const loadModule = () => {
 		};
 	};
 
+	const checkUTF8 = file => file.endsWith('.utf8.ans') || file.endsWith('.txt');
+
 	const file = (file, callback) => {
 		const reader = new FileReader();
 		reader.addEventListener('load', _e => {
@@ -912,7 +922,7 @@ const loadModule = () => {
 				default:
 					// Clear any previous XB data to avoid palette persistence
 					State.textArtCanvas.clearXBData(() => {
-						imageData = loadAnsi(data, file.name.toLowerCase().endsWith('.utf8.ans'));
+						imageData = loadAnsi(data, checkUTF8(file.name.toLowerCase()));
 						$('sauce-title').value = imageData.title;
 						$('sauce-group').value = imageData.group;
 						$('sauce-author').value = imageData.author;
@@ -925,7 +935,7 @@ const loadModule = () => {
 							convertData(imageData.data),
 							imageData.noblink,
 							imageData.letterSpacing,
-							imageData.fontName,
+							file.name.toLowerCase().endsWith('nfo') ? magicNumbers.NFO_FONT : imageData.fontName,
 						);
 					});
 					break;
