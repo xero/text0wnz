@@ -1105,6 +1105,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const getDefaultFontName = () => magicNumbers.DEFAULT_FONT;
+
 	const getCurrentFontName = () => currentFontName;
 
 	const setXBFontData = (fontBytes, fontWidth, fontHeight) => {

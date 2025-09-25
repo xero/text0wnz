@@ -679,12 +679,12 @@ const createShadingPanel = () => {
 	};
 
 	const onPaletteChange = () => {
-		setTimeout(() => {
+		const w8 = setTimeout(() => {
 			generateCanvases();
 			updateCursor();
 			canvasContainer.removeChild(canvasContainer.firstChild);
 			canvasContainer.insertBefore(canvases[State.palette.getForegroundColor()], canvasContainer.firstChild);
-			clearTimeout(this);
+			clearTimeout(w8);
 		}, 500);
 	};
 

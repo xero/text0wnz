@@ -719,7 +719,7 @@ const loadModule = () => {
 				return 'FM-TOWNS_2x';
 			case 'FM-TOWNS 8x8':
 				return 'FM-TOWNS';
-			case 'GJSCI-X x-16':
+			case 'GJSCI-X 8x16':
 				return 'GJSCI-X';
 			case 'Hack 8x16':
 				return 'Hack';
