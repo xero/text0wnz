@@ -225,7 +225,6 @@ const createPalette = RGB6Bit => {
 	const setRGBAColor = (index, newColor) => {
 		const expandedColor = xbinToRgba(newColor); // Expand 6-bit to 8-bit
 		RGBAColors[index] = new Uint8Array(expandedColor);
-
 		document.dispatchEvent(
 			new CustomEvent('onPaletteChange', {
 				detail: State.palette,
@@ -233,10 +232,10 @@ const createPalette = RGB6Bit => {
 				cancelable: false,
 			}),
 		);
-
-		State.textArtCanvas.setIceColors(true);
-		State.font.setLetterSpacing(State.font.getLetterSpacing());
 		setForegroundColor(index);
+		// @TODO: this is a hack, but i cant fix is bug any other way
+		State.font.setLetterSpacing(!State.font.getLetterSpacing());
+		State.font.setLetterSpacing(!State.font.getLetterSpacing());
 	};
 
 	const setForegroundColor = newForeground => {

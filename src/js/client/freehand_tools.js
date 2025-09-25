@@ -34,6 +34,90 @@ const createPanelCursor = el => {
 	};
 };
 
+const createFloatingPanel = (x, y) => {
+	const panel = document.createElement('DIV');
+	const hide = document.createElement('DIV');
+	panel.classList.add('floating-panel');
+	hide.classList.add('hidePanel');
+	hide.innerText = 'X';
+	panel.appendChild(hide);
+	$('body-container').appendChild(panel);
+	hide.addEventListener('click', _ => panel.classList.remove('enabled'));
+	let prev;
+
+	const setPos = (newX, newY) => {
+		panel.style.left = newX + 'px';
+		x = newX;
+		panel.style.top = newY + 'px';
+		y = newY;
+	};
+
+	const mousedown = e => {
+		prev = [e.clientX, e.clientY];
+	};
+
+	const touchstart = e => {
+		prev = [e.touches[0].pageX, e.touches[0].pageY];
+	};
+
+	const touchMove = e => {
+		if (e.buttons === 1 && prev !== undefined) {
+			// Left mouse button pressed
+			e.preventDefault();
+			e.stopPropagation();
+			const rect = panel.getBoundingClientRect();
+			setPos(rect.left + (e.touches[0].pageX - prev[0]), rect.top + (e.touches[0].pageY - prev[1]));
+			prev = [e.touches[0].pageX, e.touches[0].pageY];
+		}
+	};
+
+	const mouseMove = e => {
+		if (e.buttons === 1 && prev !== undefined) {
+			// Left mouse button pressed
+			e.preventDefault();
+			e.stopPropagation();
+			const rect = panel.getBoundingClientRect();
+			setPos(rect.left + (e.clientX - prev[0]), rect.top + (e.clientY - prev[1]));
+			prev = [e.clientX, e.clientY];
+		}
+	};
+
+	const mouseUp = () => {
+		prev = undefined;
+	};
+
+	const enable = () => {
+		panel.classList.add('enabled');
+		document.addEventListener('touchmove', touchMove);
+		document.addEventListener('mousemove', mouseMove);
+		document.addEventListener('mouseup', mouseUp);
+		document.addEventListener('touchend', mouseUp);
+	};
+
+	const disable = () => {
+		panel.classList.remove('enabled');
+		document.removeEventListener('touchmove', touchMove);
+		document.removeEventListener('mousemove', mouseMove);
+		document.removeEventListener('mouseup', mouseUp);
+		document.removeEventListener('touchend', mouseUp);
+	};
+
+	const append = element => {
+		panel.appendChild(element);
+	};
+
+	setPos(x, y);
+	panel.addEventListener('touchstart', touchstart);
+	panel.addEventListener('mousedown', mousedown);
+
+	return {
+		setPos: setPos,
+		enable: enable,
+		disable: disable,
+		append: append,
+	};
+};
+
 const createFloatingPanelPalette = (width, height) => {
 	const canvasContainer = document.createElement('DIV');
 	const cursor = createPanelCursor(canvasContainer);
@@ -132,83 +216,6 @@ const createFloatingPanelPalette = (width, height) => {
 		showCursor: cursor.show,
 		hideCursor: cursor.hide,
 		resize: resize,
-	};
-};
-
-const createFloatingPanel = (x, y) => {
-	const panel = document.createElement('DIV');
-	const hide = document.createElement('DIV');
-	panel.classList.add('floating-panel');
-	hide.classList.add('hidePanel');
-	hide.innerText = 'X';
-	panel.appendChild(hide);
-	$('body-container').appendChild(panel);
-	hide.addEventListener('click', _ => panel.classList.remove('enabled'));
-	let prev;
-
-	const setPos = (newX, newY) => {
-		panel.style.left = newX + 'px';
-		x = newX;
-		panel.style.top = newY + 'px';
-		y = newY;
-	};
-
-	const mousedown = e => {
-		prev = [e.clientX, e.clientY];
-	};
-
-	const touchMove = e => {
-		if (e.buttons === 1 && prev !== undefined) {
-			// Left mouse button pressed
-			e.preventDefault();
-			e.stopPropagation();
-			const rect = panel.getBoundingClientRect();
-			setPos(rect.left + (e.touches[0].pageX - prev[0]), rect.top + (e.touches[0].pageY - prev[1]));
-			prev = [e.touches[0].pageX, e.touches[0].pageY];
-		}
-	};
-
-	const mouseMove = e => {
-		if (e.buttons === 1 && prev !== undefined) {
-			// Left mouse button pressed
-			e.preventDefault();
-			e.stopPropagation();
-			const rect = panel.getBoundingClientRect();
-			setPos(rect.left + (e.clientX - prev[0]), rect.top + (e.clientY - prev[1]));
-			prev = [e.clientX, e.clientY];
-		}
-	};
-
-	const mouseUp = () => {
-		prev = undefined;
-	};
-
-	const enable = () => {
-		panel.classList.add('enabled');
-		document.addEventListener('touchmove', touchMove);
-		document.addEventListener('mousemove', mouseMove);
-		document.addEventListener('mouseup', mouseUp);
-	};
-
-	const disable = () => {
-		panel.classList.remove('enabled');
-		document.removeEventListener('touchmove', touchMove);
-		document.removeEventListener('mousemove', mouseMove);
-		document.removeEventListener('mouseup', mouseUp);
-	};
-
-	const append = element => {
-		panel.appendChild(element);
-	};
-
-	setPos(x, y);
-	panel.addEventListener('mousedown', mousedown);
-
-	return {
-		setPos: setPos,
-		enable: enable,
-		disable: disable,
-		append: append,
 	};
 };
 
@@ -825,8 +832,10 @@ const createCharacterBrushPanel = () => {
 	};
 
 	const redrawGlyphs = () => {
-		resizeCanvas();
-		redrawCanvas();
+		setTimeout(() => {
+			resizeCanvas();
+			redrawCanvas();
+		}, 500);
 	};
 
 	document.addEventListener('onForegroundChange', redrawCanvas);
@@ -1983,8 +1992,8 @@ const createAttributeBrushController = () => {
 
 export {
 	createPanelCursor,
-	createFloatingPanelPalette,
 	createFloatingPanel,
+	createFloatingPanelPalette,
 	createBrushController,
 	createHalfBlockController,
 	createShadingController,

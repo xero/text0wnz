@@ -123,6 +123,7 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 		}
 		generateNewFontGlyphs();
 		resolve({
+			getData: () => fontData,
 			getWidth: () => fontData.width,
 			getHeight: () => fontData.height,
 			setLetterSpacing: newLetterSpacing => {
@@ -309,6 +310,7 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 					generateNewFontGlyphs();
 
 					resolve({
+						getData: () => fontData,
 						getWidth: () => (letterSpacing ? fontData.width + 1 : fontData.width),
 						getHeight: () => fontData.height,
 						setLetterSpacing: newLetterSpacing => {

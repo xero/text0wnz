@@ -1431,18 +1431,45 @@ const saveModule = () => {
 		const columns = State.textArtCanvas.getColumns();
 		const rows = State.textArtCanvas.getRows();
 		const iceColors = State.textArtCanvas.getIceColors();
+
+		// Get current palette and font data for embedding
+		const xbPaletteData = State.textArtCanvas.getXBPaletteData();
+		const xbFontData = State.font.getData();
+
+		// Initialize flags and calculate additional data size
 		let flags = 0;
-		if (iceColors === true) {
-			flags += 1 << 3;
+		let additionalDataSize = 0;
+
+		// Always embed palette data
+		flags |= 1; // Set palette flag (bit 0)
+		additionalDataSize += 48; // Palette data size (16 colors * 3 bytes each)
+
+		// Embed font data if available
+		if (xbFontData && xbFontData.data) {
+			console.log('embedding font');
+			flags |= 1 << 1; // Set font flag (bit 1)
+			additionalDataSize += xbFontData.data.length;
+		} else {
+			console.log(' NOT embedding font');
 		}
-		const output = new Uint8Array(11 + imageData.length);
+
+		// Set ice colors flag if enabled
+		if (iceColors === true) {
+			flags |= 1 << 3;
+		}
+
+		// Create output array with space for header, additional data, and image data
+		const totalSize = 11 + additionalDataSize + imageData.length;
+		const output = new Uint8Array(totalSize);
+
+		// Set XBIN header
 		output.set(
 			new Uint8Array([
-				88,
-				66,
-				73,
-				78,
-				26,
+				88, // 'X'
+				66, // 'B'
+				73, // 'I'
+				78, // 'N'
+				26, // EOF marker
 				columns & 255,
 				columns >> 8,
 				rows & 255,
@@ -1452,7 +1479,25 @@ const saveModule = () => {
 			]),
 			0,
 		);
-		output.set(imageData, 11);
+
+		let dataOffset = 11;
+
+		// Add palette data (always included)
+		if (xbPaletteData) {
+			output.set(xbPaletteData, dataOffset);
+			dataOffset += 48;
+		}
+
+		// Add font data if available
+		if (xbFontData && xbFontData.data) {
+			output.set(xbFontData.data, dataOffset);
+			dataOffset += xbFontData.data.length;
+		}
+
+		// Add image data
+		output.set(imageData, dataOffset);
+
+		// Create SAUCE data
 		const sauce = createSauce(6, 0, imageData.length, false);
 		const fname = $('artwork-title').value;
 		saveFile(output, sauce, fname + '.xb');

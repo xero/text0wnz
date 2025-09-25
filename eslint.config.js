@@ -42,6 +42,7 @@ export default [
 				setTimeout: 'readonly',
 				clearTimeout: 'readonly',
 				setInterval: 'readonly',
+				clearInterval: 'readonly',
 				window: 'readonly',
 				process: 'readonly',
 				existsSync: 'readonly',

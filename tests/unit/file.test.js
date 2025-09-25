@@ -14,10 +14,12 @@ const mockState = {
 		clearXBData: vi.fn(),
 		redrawEntireImage: vi.fn(),
 		getImage: vi.fn(() => ({ toDataURL: vi.fn(() => canvasDataURL) })),
+		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)), // Mock 6-bit palette data
 	},
 	font: {
 		getHeight: vi.fn(() => 16),
 		getLetterSpacing: vi.fn(() => false),
+		getData: vi.fn(() => null), // No font data by default
 	},
 };
 

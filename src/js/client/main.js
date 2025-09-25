@@ -1,3 +1,4 @@
+import magicNumbers from './magicNumbers.js';
 import State from './state.js';
 import { $, $$, createCanvas } from './ui.js';
 import { createTextArtCanvas } from './canvas.js';
@@ -195,6 +196,12 @@ const initializeAppComponents = async () => {
 				palettePicker.updatePalette(); // ANSi
 				openFile.value = '';
 			};
+
+			const isNFOFile = file.name.toLowerCase().endsWith('.nfo');
+			if (isNFOFile) {
+				await State.textArtCanvas.setFont(magicNumbers.NFO_FONT, applyData);
+				return; // Exit early since callback will be called from setFont
+			}
 			const isXBFile = file.name.toLowerCase().endsWith('.xb');
 			if (fontName && !isXBFile) {
 				// Only handle non-XB files here, as XB files handle font loading internally

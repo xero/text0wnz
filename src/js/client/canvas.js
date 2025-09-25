@@ -446,11 +446,19 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	const onCriticalChange = _ => {
-		if (!redrawing) {
-			createCanvases();
-			updateTimer();
-		}
+	const onCriticalChange = async _ => {
+		const waitForRedrawing = () =>
+			new Promise(resolve => {
+				const intervalId = setInterval(() => {
+					if (!redrawing) {
+						clearInterval(intervalId);
+						resolve();
+					}
+				}, 50);
+			});
+		await waitForRedrawing();
+		updateTimer();
+		redrawEntireImage();
 	};
 
 	const getImage = () => {
@@ -1162,6 +1170,24 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
+	const getXBPaletteData = () => {
+		if (!State.palette) {
+			return null;
+		}
+
+		// Convert current palette to XB format (6-bit RGB values)
+		const paletteBytes = new Uint8Array(48);
+		for (let i = 0; i < 16; i++) {
+			const rgba = State.palette.getRGBAColor(i);
+			const offset = i * 3;
+			// Convert 8-bit to 6-bit RGB values
+			paletteBytes[offset] = Math.min(rgba[0] >> 2, 63);
+			paletteBytes[offset + 1] = Math.min(rgba[1] >> 2, 63);
+			paletteBytes[offset + 2] = Math.min(rgba[2] >> 2, 63);
+		}
+		return paletteBytes;
+	};
+
 	const loadXBFileSequential = (imageData, finalCallback) => {
 		clearXBData(() => {
 			if (imageData.paletteData) {
@@ -1249,6 +1275,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		setXBFontData: setXBFontData,
 		setXBPaletteData: setXBPaletteData,
 		clearXBData: clearXBData,
+		getXBPaletteData: getXBPaletteData,
 		loadXBFileSequential: loadXBFileSequential,
 		drawRegion: drawRegion,
 		enqueueDirtyRegion: enqueueDirtyRegion,
