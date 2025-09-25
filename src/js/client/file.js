@@ -708,9 +708,9 @@ const loadModule = () => {
 			case 'Blobz+ 8x16':
 				return 'Blobz+';
 			case 'BLOODY 8x16':
-				return 'BLOODY 8x16';
-			case 'C64-DiskMaster':
-				return 'C64-DiskMaster 8x16';
+				return 'BLOODY';
+			case 'C64-DiskMaster 8x16':
+				return 'C64-DiskMaster';
 			case 'DSS8 8x16':
 				return 'DSS8_2x';
 			case 'DSS8 8x8':
