@@ -1162,6 +1162,33 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
+	const getXBFontData = () => {
+		if (currentFontName === 'XBIN' && xbFontData) {
+			return {
+				bytes: xbFontData.bytes,
+				width: xbFontData.width,
+				height: xbFontData.height,
+			};
+		}
+		return null;
+	};
+
+	const getXBPaletteData = () => {
+		if (!State.palette) {return null;}
+
+		// Convert current palette to XB format (6-bit RGB values)
+		const paletteBytes = new Uint8Array(48);
+		for (let i = 0; i < 16; i++) {
+			const rgba = State.palette.getRGBAColor(i);
+			const offset = i * 3;
+			// Convert 8-bit to 6-bit RGB values
+			paletteBytes[offset] = Math.min(rgba[0] >> 2, 63);
+			paletteBytes[offset + 1] = Math.min(rgba[1] >> 2, 63);
+			paletteBytes[offset + 2] = Math.min(rgba[2] >> 2, 63);
+		}
+		return paletteBytes;
+	};
+
 	const loadXBFileSequential = (imageData, finalCallback) => {
 		clearXBData(() => {
 			if (imageData.paletteData) {
@@ -1249,6 +1276,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		setXBFontData: setXBFontData,
 		setXBPaletteData: setXBPaletteData,
 		clearXBData: clearXBData,
+		getXBFontData: getXBFontData,
+		getXBPaletteData: getXBPaletteData,
 		loadXBFileSequential: loadXBFileSequential,
 		drawRegion: drawRegion,
 		enqueueDirtyRegion: enqueueDirtyRegion,
