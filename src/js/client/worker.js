@@ -82,7 +82,7 @@ const onMsg = e => {
 			data = JSON.parse(data);
 		} catch (error) {
 			const dataInfo = typeof data === 'string' ? `string of length ${data.length}` : typeof data;
-			console.error('Invalid data received from server. Data type:', dataInfo, 'Error:', error);
+			console.error('[Worker] Invalid data received from server. Data type:', dataInfo, 'Error:', error);
 			return;
 		}
 
@@ -127,7 +127,7 @@ const onMsg = e => {
 				self.postMessage({ cmd: 'letterSpacingChange', letterSpacing: data[1].letterSpacing });
 				break;
 			default:
-				console.warn('Unknown command:', data[0]);
+				console.warn('[Worker] Unknown command:', data[0]);
 				break;
 		}
 	}
@@ -163,7 +163,7 @@ self.onmessage = msg => {
 					if (data.silentCheck) {
 						self.postMessage({ cmd: 'silentCheckFailed' });
 					} else {
-						console.info('Worker: WebSocket connection closed. Code:', e.code, 'Reason:', e.reason);
+						console.info('[Worker] WebSocket connection closed. Code:', e.code, 'Reason:', e.reason);
 						self.postMessage({ cmd: 'disconnected' });
 					}
 				});

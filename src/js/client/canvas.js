@@ -227,8 +227,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const updateBlinkTimer = async () => {
-		const releaseMutex = await acquireBlinkTimerMutex(); // Acquire the mutex
-
+		const releaseMutex = await acquireBlinkTimerMutex();
 		try {
 			if (blinkTimerRunning) {
 				return; // Prevent multiple timers from running
@@ -244,12 +243,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 						await new Promise(resolve => setTimeout(resolve, 500));
 					}
 				} catch (error) {
-					console.error('Blink timer error:', error);
+					console.error('[Canvas] Blink timer error:', error);
 				}
 			}
 		} finally {
 			blinkTimerRunning = false;
-			releaseMutex(); // Release the mutex
+			releaseMutex();
 		}
 	};
 
@@ -280,11 +279,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		let fontHeight = State.font.getHeight();
 
 		if (!fontWidth || fontWidth <= 0) {
-			console.warn(`Invalid font width detected, falling back to ${magicNumbers.DEFAULT_FONT_WIDTH}px`);
+			console.warn(`[Canvas] Invalid font width detected, falling back to ${magicNumbers.DEFAULT_FONT_WIDTH}px`);
 			fontWidth = magicNumbers.DEFAULT_FONT_WIDTH;
 		}
 		if (!fontHeight || fontHeight <= 0) {
-			console.warn(`Invalid font height detected, falling back to ${magicNumbers.DEFAULT_FONT_HEIGHT}px`);
+			console.warn(`[Canvas] Invalid font height detected, falling back to ${magicNumbers.DEFAULT_FONT_HEIGHT}px`);
 			fontHeight = magicNumbers.DEFAULT_FONT_HEIGHT;
 		}
 
@@ -349,12 +348,13 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				redrawEntireImage();
 				document.dispatchEvent(new CustomEvent('onFontChange', { detail: fontName }));
 
-				// Execute callback if provided
 				if (callback) {
 					callback();
 				}
 			} else if (fontName === 'XBIN' && !xbFontData) {
-				console.log(`XBIN selected but no embedded font data available, falling back to: ${magicNumbers.DEFAULT_FONT}`);
+				console.log(
+					`[Canvas] XBIN selected but no embedded font data available, falling back to: ${magicNumbers.DEFAULT_FONT}`,
+				);
 
 				// Fallback to CP437 font
 				const fallbackFont = magicNumbers.DEFAULT_FONT;
@@ -367,7 +367,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				redrawEntireImage();
 				document.dispatchEvent(new CustomEvent('onFontChange', { detail: fallbackFont }));
 
-				// Execute callback if provided
 				if (callback) {
 					callback();
 				}
@@ -383,13 +382,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				redrawEntireImage();
 				document.dispatchEvent(new CustomEvent('onFontChange', { detail: fontName }));
 
-				// Execute callback if provided
 				if (callback) {
 					callback();
 				}
 			}
 		} catch (error) {
-			console.error('Failed to load font:', error);
+			console.error('[Canvas] Failed to load font:', error);
 
 			// Fallback to CP437 in case of failure
 			const fallbackFont = magicNumbers.DEFAULT_FONT;
@@ -403,12 +401,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				redrawEntireImage();
 				document.dispatchEvent(new CustomEvent('onFontChange', { detail: fallbackFont }));
 
-				// Execute callback if provided
 				if (callback) {
 					callback();
 				}
 			} catch (fallbackError) {
-				console.error('Failed to load fallback font:', fallbackError);
+				console.error('[Canvas] Failed to load fallback font:', fallbackError);
 			}
 		}
 	};
@@ -1110,16 +1107,18 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const setXBFontData = (fontBytes, fontWidth, fontHeight) => {
 		if (!fontWidth || fontWidth <= 0) {
-			console.warn(`Invalid XB font width: ${fontWidth}, defaulting to ${magicNumbers.DEFAULT_FONT_WIDTH}px`);
+			console.warn(`[Canvas] Invalid XB font width: ${fontWidth}, defaulting to ${magicNumbers.DEFAULT_FONT_WIDTH}px`);
 			fontWidth = magicNumbers.DEFAULT_FONT_WIDTH;
 		}
 		if (!fontHeight || fontHeight <= 0) {
-			console.warn(`Invalid XB font height: ${fontHeight}, defaulting to ${magicNumbers.DEFAULT_FONT_HEIGHT}px`);
+			console.warn(
+				`[Canvas] Invalid XB font height: ${fontHeight}, defaulting to ${magicNumbers.DEFAULT_FONT_HEIGHT}px`,
+			);
 
 			fontHeight = magicNumbers.DEFAULT_FONT_HEIGHT;
 		}
 		if (!fontBytes || fontBytes.length === 0) {
-			console.error('No XB font data provided');
+			console.error('[Canvas] No XB font data provided');
 			return false;
 		}
 
@@ -1181,7 +1180,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		for (let i = 0; i < 16; i++) {
 			const rgba = State.palette.getRGBAColor(i);
 			const offset = i * 3;
-			// Convert 8-bit to 6-bit RGB values
+			// Convert and clamp 8-bit to 6-bit RGB values
 			paletteBytes[offset] = Math.min(rgba[0] >> 2, 63);
 			paletteBytes[offset + 1] = Math.min(rgba[1] >> 2, 63);
 			paletteBytes[offset + 2] = Math.min(rgba[2] >> 2, 63);

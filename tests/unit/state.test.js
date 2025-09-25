@@ -264,7 +264,7 @@ describe('State Management System', () => {
 			State.waitFor('palette', errorCallback);
 			State.palette = { test: 'palette' };
 
-			expect(consoleSpy).toHaveBeenCalledWith('Error in dependency wait callback:', expect.any(Error));
+			expect(consoleSpy).toHaveBeenCalledWith('[State] Error in dependency wait callback:', expect.any(Error));
 			consoleSpy.mockRestore();
 		});
 
@@ -307,7 +307,7 @@ describe('State Management System', () => {
 			State.startInitialization();
 			State.startInitialization();
 
-			expect(consoleSpy).toHaveBeenCalledWith('Initialization already in progress or complete');
+			expect(consoleSpy).toHaveBeenCalledWith('[State] Initialization already in progress or complete');
 			consoleSpy.mockRestore();
 		});
 
@@ -474,12 +474,10 @@ describe('State Management System', () => {
 			});
 
 			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
 			const result = State.safely(errorCallback);
 
-			expect(consoleSpy).toHaveBeenCalledWith('Error accessing state:', expect.any(Error));
+			expect(consoleSpy).toHaveBeenCalledWith('[State] Error accessing:', new Error('Test error'));
 			expect(result).toBeNull();
-
 			consoleSpy.mockRestore();
 		});
 

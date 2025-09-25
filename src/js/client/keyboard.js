@@ -1065,7 +1065,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 
 	const systemPaste = () => {
 		if (!navigator.clipboard || !navigator.clipboard.readText) {
-			console.log('Clipboard API not available');
+			console.log('[Keyboard] Clipboard API not available');
 			return;
 		}
 
@@ -1146,7 +1146,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 				}
 			})
 			.catch(err => {
-				console.log('Failed to read clipboard:', err);
+				console.log('[Keyboard] Failed to read clipboard:', err);
 			});
 	};
 

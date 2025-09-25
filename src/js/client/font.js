@@ -26,9 +26,8 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 
 		const parseXBFontData = (fontBytes, fontWidth, fontHeight) => {
 			if (!fontBytes || fontBytes.length === 0) {
-				console.error(
-					`Invalid fontBytes provided to parseXBFontData: got ${fontBytes ? `type ${typeof fontBytes}, length ${fontBytes.length}` : String(fontBytes)}; expected a non-empty Uint8Array or Buffer`,
-				);
+				console.error(`[Font] Invalid fontBytes provided to parseXBFontData. Expected: a non-empty Uint8Array or Buffer;
+				Recieved: ${fontBytes ? `type ${typeof fontBytes}, length ${fontBytes.length}` : String(fontBytes)}`);
 				return null;
 			}
 			if (!fontWidth || fontWidth <= 0) {
@@ -39,7 +38,8 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 			}
 			const expectedDataSize = fontHeight * 256;
 			if (fontBytes.length < expectedDataSize) {
-				console.warn('XB font data too small. Expected:', expectedDataSize, 'Got:', fontBytes.length);
+				console.error('[Font] XB font data too small. Expected:', expectedDataSize, ' Recieved:', fontBytes.length);
+				return null;
 			}
 			const internalDataSize = (fontWidth * fontHeight * 256) / 8;
 			const data = new Uint8Array(internalDataSize);
@@ -117,7 +117,7 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 
 		fontData = parseXBFontData(fontBytes, fontWidth, fontHeight);
 		if (!fontData || !fontData.width || fontData.width <= 0 || !fontData.height || fontData.height <= 0) {
-			console.error('Invalid XB font data:', fontData);
+			console.error('[Font] Invalid XB font data:', fontData);
 			reject(new Error('Failed to load XB font data'));
 			return;
 		}
@@ -141,7 +141,7 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 					!fontGlyphs[foreground][background] ||
 					!fontGlyphs[foreground][background][charCode]
 				) {
-					console.warn('XB Font glyph not available:', {
+					console.warn('[Font] XB Font glyph not available:', {
 						foreground,
 						background,
 						charCode,
@@ -326,7 +326,7 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 								!fontGlyphs[foreground][background] ||
 								!fontGlyphs[foreground][background][charCode]
 							) {
-								console.warn('Font glyph not available:', {
+								console.warn('[Font] Font glyph not available:', {
 									foreground,
 									background,
 									charCode,

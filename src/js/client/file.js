@@ -1446,11 +1446,8 @@ const saveModule = () => {
 
 		// Embed font data if available
 		if (xbFontData && xbFontData.data) {
-			console.log('embedding font');
 			flags |= 1 << 1; // Set font flag (bit 1)
 			additionalDataSize += xbFontData.data.length;
-		} else {
-			console.log(' NOT embedding font');
 		}
 
 		// Set ice colors flag if enabled

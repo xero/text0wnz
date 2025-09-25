@@ -136,7 +136,7 @@ class StateManager {
 				} catch (error) {
 					const callbackName = callback.name || 'anonymous';
 					console.error(
-						`Error in state listener for event "${event}" (listener ${idx + 1}/${callbacks.length}, function: ${callbackName}):`,
+						`[State] Error in state listener for event "${event}" (listener ${idx + 1}/${callbacks.length}, function: ${callbackName}):`,
 						error,
 					);
 				}
@@ -198,7 +198,7 @@ class StateManager {
 					}, {});
 					waiter.callback(resolvedDeps);
 				} catch (error) {
-					console.error('Error in dependency wait callback:', error);
+					console.error('[State] Error in dependency wait callback:', error);
 				}
 				toRemove.push(waitId);
 			}
@@ -234,7 +234,7 @@ class StateManager {
 	 */
 	startInitialization() {
 		if (this.state.initializing || this.state.initialized) {
-			console.warn('Initialization already in progress or complete');
+			console.warn('[State] Initialization already in progress or complete');
 			return;
 		}
 
@@ -297,7 +297,7 @@ class StateManager {
 		try {
 			return callback(this.state);
 		} catch (error) {
-			console.error('Error accessing state:', error);
+			console.error('[State] Error accessing:', error);
 			return null;
 		}
 	}

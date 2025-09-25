@@ -2,11 +2,22 @@ import State from './state.js';
 import { $, $$, showOverlay, hideOverlay, websocketUI } from './ui.js';
 
 const createWorkerHandler = inputHandle => {
+	const btnJoin = $('join-collaboration');
+	const btnLocal = $('stay-local');
+	const lblFont = $$('#current-font-display kbd');
+	const txtTitle = $('artwork-title');
+	const selFont = $('font-select');
+	const btn9pt = $('nav9pt');
+	const btnIce = $('navICE');
+	const btnNet = $('network-button');
+	const ovrCollab = $('collaboration-choice-overlay');
+	const ovrSocket = $('websocket-overlay');
+
 	const workerPath = `${import.meta.env.BASE_URL}${import.meta.env.VITE_UI_DIR}${import.meta.env.VITE_WORKER_FILE}`;
 	try {
 		State.worker = new Worker(workerPath);
 	} catch (error) {
-		console.error(`Failed to load worker from ${workerPath}:`, error);
+		console.error(`[Network] Failed to load worker from ${workerPath}:`, error);
 		return;
 	}
 
@@ -28,7 +39,7 @@ const createWorkerHandler = inputHandle => {
 
 	const onConnected = () => {
 		websocketUI(true);
-		$('artwork-title').value = window.location.hostname;
+		txtTitle.value = window.location.hostname;
 		State.worker.postMessage({ cmd: 'join', handle: handle });
 		connected = true;
 	};
@@ -37,7 +48,7 @@ const createWorkerHandler = inputHandle => {
 		if (connected === true) {
 			alert('You were disconnected from the server, try refreshing the page to try again.');
 		} else if (!silentCheck) {
-			hideOverlay($('websocket-overlay'));
+			hideOverlay(ovrSocket);
 		}
 		websocketUI(false);
 		// If this was a silent check and it failed, just stay in local mode
@@ -58,7 +69,7 @@ const createWorkerHandler = inputHandle => {
 		} else if (collaborationMode) {
 			// Apply image data immediately only in collaboration mode
 			State.textArtCanvas.setImageData(columns, rows, data, iceColors, letterSpacing);
-			hideOverlay($('websocket-overlay'));
+			hideOverlay(ovrSocket);
 		}
 	};
 
@@ -106,25 +117,19 @@ const createWorkerHandler = inputHandle => {
 		if (settings.iceColors !== undefined) {
 			State.textArtCanvas.setIceColors(settings.iceColors);
 			// Update the ice colors toggle UI
-			if ($('navICE')) {
-				const iceColorsToggle = $('navICE');
-				if (settings.iceColors) {
-					iceColorsToggle.classList.add('enabled');
-				} else {
-					iceColorsToggle.classList.remove('enabled');
-				}
+			if (settings.iceColors) {
+				btnIce.classList.add('enabled');
+			} else {
+				btnIce.classList.remove('enabled');
 			}
 		}
 		if (settings.letterSpacing !== undefined) {
 			State.font.setLetterSpacing(settings.letterSpacing);
 			// Update the letter spacing toggle UI
-			if ($('nav9pt')) {
-				const letterSpacingToggle = $('nav9pt');
-				if (settings.letterSpacing) {
-					letterSpacingToggle.classList.add('enabled');
-				} else {
-					letterSpacingToggle.classList.remove('enabled');
-				}
+			if (settings.letterSpacing) {
+				btn9pt.classList.add('enabled');
+			} else {
+				btn9pt.classList.remove('enabled');
 			}
 		}
 		applyReceivedSettings = false;
@@ -145,12 +150,8 @@ const createWorkerHandler = inputHandle => {
 		applyReceivedSettings = true; // Flag to prevent re-broadcasting
 		await State.textArtCanvas.setFont(fontName, () => {
 			// Update the font display UI
-			if ($$('#current-font-display kbd')) {
-				$$('#current-font-display kbd').textContent = fontName;
-			}
-			if ($('font-select')) {
-				$('font-select').value = fontName;
-			}
+			lblFont.textContent = fontName;
+			selFont.value = fontName;
 		});
 		applyReceivedSettings = false;
 	};
@@ -159,13 +160,10 @@ const createWorkerHandler = inputHandle => {
 		applyReceivedSettings = true; // Flag to prevent re-broadcasting
 		State.textArtCanvas.setIceColors(iceColors);
 		// Update the ice colors toggle UI
-		if ($('navICE')) {
-			const iceColorsToggle = $('navICE');
-			if (iceColors) {
-				iceColorsToggle.classList.add('enabled');
-			} else {
-				iceColorsToggle.classList.remove('enabled');
-			}
+		if (iceColors) {
+			btnIce.classList.add('enabled');
+		} else {
+			btnIce.classList.remove('enabled');
 		}
 		applyReceivedSettings = false;
 	};
@@ -174,13 +172,10 @@ const createWorkerHandler = inputHandle => {
 		applyReceivedSettings = true; // Flag to prevent re-broadcasting
 		State.font.setLetterSpacing(letterSpacing);
 		// Update the letter spacing toggle UI
-		if ($('nav9pt')) {
-			const letterSpacingToggle = $('nav9pt');
-			if (letterSpacing) {
-				letterSpacingToggle.classList.add('enabled');
-			} else {
-				letterSpacingToggle.classList.remove('enabled');
-			}
+		if (letterSpacing) {
+			btn9pt.classList.add('enabled');
+		} else {
+			btn9pt.classList.remove('enabled');
 		}
 		applyReceivedSettings = false;
 	};
@@ -208,7 +203,7 @@ const createWorkerHandler = inputHandle => {
 				break;
 			case 'error':
 				if (silentCheck) {
-					console.log('Failed to connect to server: ' + data.error);
+					console.log('[Network] Failed to connect to server: ' + data.error);
 				} else {
 					alert('Failed to connect to server: ' + data.error);
 				}
@@ -285,8 +280,15 @@ const createWorkerHandler = inputHandle => {
 		}
 	};
 
+	const reinit = () => {
+		State.worker.removeEventListener('message', onMessage);
+		btnJoin.removeEventListener('click', joinCollaboration);
+		btnLocal.removeEventListener('click', stayLocal);
+		State.network = createWorkerHandler(inputHandle);
+	};
+
 	const showCollaborationChoice = () => {
-		showOverlay($('collaboration-choice-overlay'));
+		showOverlay(ovrCollab);
 		// Reset silent check flag since we're now in interactive mode
 		silentCheck = false;
 		// Clear any remaining timer
@@ -297,8 +299,8 @@ const createWorkerHandler = inputHandle => {
 	};
 
 	const joinCollaboration = async () => {
-		hideOverlay($('collaboration-choice-overlay'));
-		showOverlay($('websocket-overlay'));
+		hideOverlay(ovrCollab);
+		showOverlay(ovrSocket);
 		collaborationMode = true;
 		initializing = true; // Set flag to prevent broadcasting during initial setup
 
@@ -320,27 +322,28 @@ const createWorkerHandler = inputHandle => {
 			pendingCanvasSettings = null;
 		}
 
-		// The connection is already established and we already sent join during silent check
-		// Just need to apply the UI changes for collaboration mode
+		// Apply UI changes for collaboration mode
+		btnNet.classList.add('hide');
 		websocketUI(true);
-		$('artwork-title').value = window.location.hostname;
+		txtTitle.value = window.location.hostname;
 		connected = true;
 
-		// Settings will be received automatically from the start message
-		// through the canvasSettings mechanism we implemented in the worker
-
 		// Hide the overlay since we're ready
-		hideOverlay($('websocket-overlay'));
+		hideOverlay(ovrSocket);
 	};
 
 	const stayLocal = () => {
-		hideOverlay($('collaboration-choice-overlay'));
+		hideOverlay(ovrCollab);
 		collaborationMode = false;
 		pendingImageData = null; // Clear any pending server data
 		pendingCanvasSettings = null; // Clear any pending server settings
 		websocketUI(false);
 		// Disconnect the websocket since user wants local mode
 		State.worker.postMessage({ cmd: 'disconnect' });
+		btnNet.classList.remove('hide');
+		btnNet.addEventListener('click', _ => {
+			reinit();
+		});
 	};
 
 	const setHandle = newHandle => {
@@ -361,13 +364,13 @@ const createWorkerHandler = inputHandle => {
 		try {
 			State.worker.addEventListener('message', onMessage);
 		} catch (error) {
-			console.error('Failed to add message event listener to worker:', error);
+			console.error('[Network] Failed to add message event listener to worker:', error);
 		}
 	}
 
 	// Set up collaboration choice dialog handlers
-	$('join-collaboration').addEventListener('click', joinCollaboration);
-	$('stay-local').addEventListener('click', stayLocal);
+	btnJoin.addEventListener('click', joinCollaboration);
+	btnLocal.addEventListener('click', stayLocal);
 
 	// Use ws:// for HTTP server, wss:// for HTTPS server
 	const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
@@ -380,11 +383,11 @@ const createWorkerHandler = inputHandle => {
 	if (isProxied) {
 		// Running through proxy (nginx) - use /server path
 		wsUrl = protocol + window.location.host + '/server';
-		console.info('Network: Detected proxy setup, checking server at:', wsUrl);
+		console.info('[Network] Detected proxy setup, checking server at:', wsUrl);
 	} else {
 		// Direct connection - use port 1337
 		wsUrl = protocol + window.location.hostname + ':1337' + window.location.pathname;
-		console.info('Network: Direct connection mode, checking server at:', wsUrl);
+		console.info('[Network] Direct connection mode, checking server at:', wsUrl);
 	}
 
 	// Start with a silent connection check
@@ -420,6 +423,7 @@ const createChatController = (
 ) => {
 	let enabled = false;
 	const userList = {};
+	const txtTitle = $('artwork-title');
 	let notifications = localStorage.getItem('notifications');
 	if (notifications === null) {
 		notifications = false;
@@ -435,7 +439,7 @@ const createChatController = (
 	};
 
 	const newNotification = text => {
-		const notification = new Notification($('artwork-title').value + ' - text.0w.nz', {
+		const notification = new Notification(txtTitle.value + ' - text.0w.nz', {
 			body: text,
 			icon: `${import.meta.env.BASE_URL}${import.meta.env.VITE_UI_DIR}face.png`,
 		});

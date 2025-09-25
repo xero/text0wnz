@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			);
 		});
 	} catch (error) {
-		console.error('Error during initialization:', error);
+		console.error('[Main] Error during initialization:', error);
 		// Handle initialization failure gracefully
 		alert('Failed to initialize the application. Please refresh the page.');
 	}
