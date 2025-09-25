@@ -702,6 +702,9 @@ select {
 		@apply text-cyber;
 	}
 }
+#custom-color {
+	@apply fixed top-[60px] left-[40px] h-0 w-0;
+}
 
 #font-preview-image {
 	border: 12px solid #000;

@@ -671,12 +671,14 @@ const createShadingPanel = () => {
 		}
 	};
 
-	const onPaletteChange = e => {
-		State.palette = e.detail;
-		canvasContainer.removeChild(canvasContainer.firstChild);
-		generateCanvases();
-		updateCursor();
-		canvasContainer.insertBefore(canvases[State.palette.getForegroundColor()], canvasContainer.firstChild);
+	const onPaletteChange = () => {
+		setTimeout(() => {
+			generateCanvases();
+			updateCursor();
+			canvasContainer.removeChild(canvasContainer.firstChild);
+			canvasContainer.insertBefore(canvases[State.palette.getForegroundColor()], canvasContainer.firstChild);
+			clearTimeout(this);
+		}, 500);
 	};
 
 	const select = charCode => {

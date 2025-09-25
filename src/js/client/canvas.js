@@ -446,7 +446,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	const onLetterSpacingChange = _letterSpacing => {
+	const onCriticalChange = _ => {
 		if (!redrawing) {
 			createCanvases();
 			updateTimer();
@@ -743,7 +743,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	document.addEventListener('onLetterSpacingChange', onLetterSpacingChange);
+	document.addEventListener('onLetterSpacingChange', onCriticalChange);
+	document.addEventListener('onPaletteChange', onCriticalChange);
 
 	const getXYCoords = (clientX, clientY, callback) => {
 		const rect = canvasContainer.getBoundingClientRect();

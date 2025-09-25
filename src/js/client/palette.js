@@ -1,333 +1,172 @@
 /* Color related methods */
 import State from './state.js';
+import { $ } from './ui.js';
 
-const getUnicode = charCode => {
-	switch (charCode) {
-		case 1:
-			return 0x263a;
-		case 2:
-			return 0x263b;
-		case 3:
-			return 0x2665;
-		case 4:
-			return 0x2666;
-		case 5:
-			return 0x2663;
-		case 6:
-			return 0x2660;
-		case 7:
-			return 0x2022;
-		case 8:
-			return 0x25d8;
-		case 9:
-			return 0x25cb;
-		case 10:
-			return 0x25d9;
-		case 11:
-			return 0x2642;
-		case 12:
-			return 0x2640;
-		case 13:
-			return 0x266a;
-		case 14:
-			return 0x266b;
-		case 15:
-			return 0x263c;
-		case 16:
-			return 0x25ba;
-		case 17:
-			return 0x25c4;
-		case 18:
-			return 0x2195;
-		case 19:
-			return 0x203c;
-		case 20:
-			return 0x00b6;
-		case 21:
-			return 0x00a7;
-		case 22:
-			return 0x25ac;
-		case 23:
-			return 0x21a8;
-		case 24:
-			return 0x2191;
-		case 25:
-			return 0x2193;
-		case 26:
-			return 0x2192;
-		case 27:
-			return 0x2190;
-		case 28:
-			return 0x221f;
-		case 29:
-			return 0x2194;
-		case 30:
-			return 0x25b2;
-		case 31:
-			return 0x25bc;
-		case 127:
-			return 0x2302;
-		case 128:
-			return 0x00c7;
-		case 129:
-			return 0x00fc;
-		case 130:
-			return 0x00e9;
-		case 131:
-			return 0x00e2;
-		case 132:
-			return 0x00e4;
-		case 133:
-			return 0x00e0;
-		case 134:
-			return 0x00e5;
-		case 135:
-			return 0x00e7;
-		case 136:
-			return 0x00ea;
-		case 137:
-			return 0x00eb;
-		case 138:
-			return 0x00e8;
-		case 139:
-			return 0x00ef;
-		case 140:
-			return 0x00ee;
-		case 141:
-			return 0x00ec;
-		case 142:
-			return 0x00c4;
-		case 143:
-			return 0x00c5;
-		case 144:
-			return 0x00c9;
-		case 145:
-			return 0x00e6;
-		case 146:
-			return 0x00c6;
-		case 147:
-			return 0x00f4;
-		case 148:
-			return 0x00f6;
-		case 149:
-			return 0x00f2;
-		case 150:
-			return 0x00fb;
-		case 151:
-			return 0x00f9;
-		case 152:
-			return 0x00ff;
-		case 153:
-			return 0x00d6;
-		case 154:
-			return 0x00dc;
-		case 155:
-			return 0x00a2;
-		case 156:
-			return 0x00a3;
-		case 157:
-			return 0x00a5;
-		case 158:
-			return 0x20a7;
-		case 159:
-			return 0x0192;
-		case 160:
-			return 0x00e1;
-		case 161:
-			return 0x00ed;
-		case 162:
-			return 0x00f3;
-		case 163:
-			return 0x00fa;
-		case 164:
-			return 0x00f1;
-		case 165:
-			return 0x00d1;
-		case 166:
-			return 0x00aa;
-		case 167:
-			return 0x00ba;
-		case 168:
-			return 0x00bf;
-		case 169:
-			return 0x2310;
-		case 170:
-			return 0x00ac;
-		case 171:
-			return 0x00bd;
-		case 172:
-			return 0x00bc;
-		case 173:
-			return 0x00a1;
-		case 174:
-			return 0x00ab;
-		case 175:
-			return 0x00bb;
-		case 176:
-			return 0x2591;
-		case 177:
-			return 0x2592;
-		case 178:
-			return 0x2593;
-		case 179:
-			return 0x2502;
-		case 180:
-			return 0x2524;
-		case 181:
-			return 0x2561;
-		case 182:
-			return 0x2562;
-		case 183:
-			return 0x2556;
-		case 184:
-			return 0x2555;
-		case 185:
-			return 0x2563;
-		case 186:
-			return 0x2551;
-		case 187:
-			return 0x2557;
-		case 188:
-			return 0x255d;
-		case 189:
-			return 0x255c;
-		case 190:
-			return 0x255b;
-		case 191:
-			return 0x2510;
-		case 192:
-			return 0x2514;
-		case 193:
-			return 0x2534;
-		case 194:
-			return 0x252c;
-		case 195:
-			return 0x251c;
-		case 196:
-			return 0x2500;
-		case 197:
-			return 0x253c;
-		case 198:
-			return 0x255e;
-		case 199:
-			return 0x255f;
-		case 200:
-			return 0x255a;
-		case 201:
-			return 0x2554;
-		case 202:
-			return 0x2569;
-		case 203:
-			return 0x2566;
-		case 204:
-			return 0x2560;
-		case 205:
-			return 0x2550;
-		case 206:
-			return 0x256c;
-		case 207:
-			return 0x2567;
-		case 208:
-			return 0x2568;
-		case 209:
-			return 0x2564;
-		case 210:
-			return 0x2565;
-		case 211:
-			return 0x2559;
-		case 212:
-			return 0x2558;
-		case 213:
-			return 0x2552;
-		case 214:
-			return 0x2553;
-		case 215:
-			return 0x256b;
-		case 216:
-			return 0x256a;
-		case 217:
-			return 0x2518;
-		case 218:
-			return 0x250c;
-		case 219:
-			return 0x2588;
-		case 220:
-			return 0x2584;
-		case 221:
-			return 0x258c;
-		case 222:
-			return 0x2590;
-		case 223:
-			return 0x2580;
-		case 224:
-			return 0x03b1;
-		case 225:
-			return 0x00df;
-		case 226:
-			return 0x0393;
-		case 227:
-			return 0x03c0;
-		case 228:
-			return 0x03a3;
-		case 229:
-			return 0x03c3;
-		case 230:
-			return 0x00b5;
-		case 231:
-			return 0x03c4;
-		case 232:
-			return 0x03a6;
-		case 233:
-			return 0x0398;
-		case 234:
-			return 0x03a9;
-		case 235:
-			return 0x03b4;
-		case 236:
-			return 0x221e;
-		case 237:
-			return 0x03c6;
-		case 238:
-			return 0x03b5;
-		case 239:
-			return 0x2229;
-		case 240:
-			return 0x2261;
-		case 241:
-			return 0x00b1;
-		case 242:
-			return 0x2265;
-		case 243:
-			return 0x2264;
-		case 244:
-			return 0x2320;
-		case 245:
-			return 0x2321;
-		case 246:
-			return 0x00f7;
-		case 247:
-			return 0x2248;
-		case 248:
-			return 0x00b0;
-		case 249:
-			return 0x2219;
-		case 250:
-			return 0x00b7;
-		case 251:
-			return 0x221a;
-		case 252:
-			return 0x207f;
-		case 253:
-			return 0x00b2;
-		case 254:
-			return 0x25a0;
-		case 0:
-		case 255:
-			return 0x00a0;
-		default:
-			return charCode;
-	}
-};
+const charCodeToUnicode = new Map([
+	[1, 0x263a],
+	[2, 0x263b],
+	[3, 0x2665],
+	[4, 0x2666],
+	[5, 0x2663],
+	[6, 0x2660],
+	[7, 0x2022],
+	[8, 0x25d8],
+	[9, 0x25cb],
+	[10, 0x25d9],
+	[11, 0x2642],
+	[12, 0x2640],
+	[13, 0x266a],
+	[14, 0x266b],
+	[15, 0x263c],
+	[16, 0x25ba],
+	[17, 0x25c4],
+	[18, 0x2195],
+	[19, 0x203c],
+	[20, 0x00b6],
+	[21, 0x00a7],
+	[22, 0x25ac],
+	[23, 0x21a8],
+	[24, 0x2191],
+	[25, 0x2193],
+	[26, 0x2192],
+	[27, 0x2190],
+	[28, 0x221f],
+	[29, 0x2194],
+	[30, 0x25b2],
+	[31, 0x25bc],
+	[127, 0x2302],
+	[128, 0x00c7],
+	[129, 0x00fc],
+	[130, 0x00e9],
+	[131, 0x00e2],
+	[132, 0x00e4],
+	[133, 0x00e0],
+	[134, 0x00e5],
+	[135, 0x00e7],
+	[136, 0x00ea],
+	[137, 0x00eb],
+	[138, 0x00e8],
+	[139, 0x00ef],
+	[140, 0x00ee],
+	[141, 0x00ec],
+	[142, 0x00c4],
+	[143, 0x00c5],
+	[144, 0x00c9],
+	[145, 0x00e6],
+	[146, 0x00c6],
+	[147, 0x00f4],
+	[148, 0x00f6],
+	[149, 0x00f2],
+	[150, 0x00fb],
+	[151, 0x00f9],
+	[152, 0x00ff],
+	[153, 0x00d6],
+	[154, 0x00dc],
+	[155, 0x00a2],
+	[156, 0x00a3],
+	[157, 0x00a5],
+	[158, 0x20a7],
+	[159, 0x0192],
+	[160, 0x00e1],
+	[161, 0x00ed],
+	[162, 0x00f3],
+	[163, 0x00fa],
+	[164, 0x00f1],
+	[165, 0x00d1],
+	[166, 0x00aa],
+	[167, 0x00ba],
+	[168, 0x00bf],
+	[169, 0x2310],
+	[170, 0x00ac],
+	[171, 0x00bd],
+	[172, 0x00bc],
+	[173, 0x00a1],
+	[174, 0x00ab],
+	[175, 0x00bb],
+	[176, 0x2591],
+	[177, 0x2592],
+	[178, 0x2593],
+	[179, 0x2502],
+	[180, 0x2524],
+	[181, 0x2561],
+	[182, 0x2562],
+	[183, 0x2556],
+	[184, 0x2555],
+	[185, 0x2563],
+	[186, 0x2551],
+	[187, 0x2557],
+	[188, 0x255d],
+	[189, 0x255c],
+	[190, 0x255b],
+	[191, 0x2510],
+	[192, 0x2514],
+	[193, 0x2534],
+	[194, 0x252c],
+	[195, 0x251c],
+	[196, 0x2500],
+	[197, 0x253c],
+	[198, 0x255e],
+	[199, 0x255f],
+	[200, 0x255a],
+	[201, 0x2554],
+	[202, 0x2569],
+	[203, 0x2566],
+	[204, 0x2560],
+	[205, 0x2550],
+	[206, 0x256c],
+	[207, 0x2567],
+	[208, 0x2568],
+	[209, 0x2564],
+	[210, 0x2565],
+	[211, 0x2559],
+	[212, 0x2558],
+	[213, 0x2552],
+	[214, 0x2553],
+	[215, 0x256b],
+	[216, 0x256a],
+	[217, 0x2518],
+	[218, 0x250c],
+	[219, 0x2588],
+	[220, 0x2584],
+	[221, 0x258c],
+	[222, 0x2590],
+	[223, 0x2580],
+	[224, 0x03b1],
+	[225, 0x00df],
+	[226, 0x0393],
+	[227, 0x03c0],
+	[228, 0x03a3],
+	[229, 0x03c3],
+	[230, 0x00b5],
+	[231, 0x03c4],
+	[232, 0x03a6],
+	[233, 0x0398],
+	[234, 0x03a9],
+	[235, 0x03b4],
+	[236, 0x221e],
+	[237, 0x03c6],
+	[238, 0x03b5],
+	[239, 0x2229],
+	[240, 0x2261],
+	[241, 0x00b1],
+	[242, 0x2265],
+	[243, 0x2264],
+	[244, 0x2320],
+	[245, 0x2321],
+	[246, 0x00f7],
+	[247, 0x2248],
+	[248, 0x00b0],
+	[249, 0x2219],
+	[250, 0x00b7],
+	[251, 0x221a],
+	[252, 0x207f],
+	[253, 0x00b2],
+	[254, 0x25a0],
+	[0, 0x00a0],
+	[255, 0x00a0],
+]);
+
+const getUnicode = charCode => charCodeToUnicode.get(charCode) || charCode;
 
 const unicodeToArray = unicode => {
 	if (unicode < 0x80) {
@@ -338,8 +177,37 @@ const unicodeToArray = unicode => {
 	return [(unicode >> 12) | 224, ((unicode >> 6) & 63) | 128, (unicode & 63) | 128];
 };
 
-const getUTF8 = charCode => {
-	return unicodeToArray(getUnicode(charCode));
+const getUTF8 = charCode => unicodeToArray(getUnicode(charCode));
+
+const rgbaToXbin = ({ r, g, b, a }) => [
+	// Ensure the values don't exceed 63
+	Math.min(r >> 2, 63),
+	Math.min(g >> 2, 63),
+	Math.min(b >> 2, 63),
+	a, // Alpha remains unchanged
+];
+
+const xbinToRgba = ([r, g, b, a]) => [
+	// Scale 6-bit to 8-bit
+	Math.round((r / 63) * 255),
+	Math.round((g / 63) * 255),
+	Math.round((b / 63) * 255),
+	a, // Alpha remains unchanged
+];
+
+const hexToRbga = hex => {
+	const m = (/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i).exec(hex);
+	if (!m) {
+		console.error(`Invalid hex color: ${hex}`);
+		return { r: 0, g: 0, b: 0, a: 255 };
+	}
+	return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16), a: 255 };
+};
+
+const rgbaToHex = rgbColor => {
+	const [r, g, b] = rgbColor.split(',').map(num => parseInt(num.trim(), 10));
+	const toHex = value => value.toString(16).padStart(2, '0');
+	return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 };
 
 const createPalette = RGB6Bit => {
@@ -354,30 +222,64 @@ const createPalette = RGB6Bit => {
 	let foreground = 7;
 	let background = 0;
 
-	const getRGBAColor = index => {
-		return RGBAColors[index];
-	};
+	const setRGBAColor = (index, newColor) => {
+		const expandedColor = xbinToRgba(newColor); // Expand 6-bit to 8-bit
+		RGBAColors[index] = new Uint8Array(expandedColor);
 
-	const getForegroundColor = () => {
-		return foreground;
-	};
+		document.dispatchEvent(
+			new CustomEvent('onPaletteChange', {
+				detail: State.palette,
+				bubbles: true,
+				cancelable: false,
+			}),
+		);
 
-	const getBackgroundColor = () => {
-		return background;
+		State.textArtCanvas.setIceColors(true);
+		State.font.setLetterSpacing(State.font.getLetterSpacing());
+		setForegroundColor(index);
 	};
 
 	const setForegroundColor = newForeground => {
 		foreground = newForeground;
-		document.dispatchEvent(new CustomEvent('onForegroundChange', { detail: foreground }));
+		document.dispatchEvent(
+			new CustomEvent('onForegroundChange', {
+				bubbles: true,
+				cancelable: false,
+				detail: foreground,
+			}),
+		);
 	};
 
 	const setBackgroundColor = newBackground => {
 		background = newBackground;
-		document.dispatchEvent(new CustomEvent('onBackgroundChange', { detail: background }));
+		document.dispatchEvent(
+			new CustomEvent('onBackgroundChange', {
+				bubbles: true,
+				cancelable: false,
+				detail: background,
+			}),
+		);
 	};
 
+	const hexToXbin = hex => rgbaToXbin(hexToRbga(hex));
+	const getRGBColor = index => rgbaToHex(RGBAColors[index].toString());
+	const getRGBAColor = index => RGBAColors[index];
+	const getForegroundColor = () => foreground;
+	const getBackgroundColor = () => background;
+	const getPalette = () => RGBAColors;
+
 	return {
+		getUTF8: getUTF8,
+		getUnicode: getUnicode,
+		rgbToXbin: rgbaToXbin,
+		rgbaToHex: rgbaToHex,
+		hexToRbga: hexToRbga,
+		hexToXbin: hexToXbin,
+		xbinToRgba: xbinToRgba,
+		getPalette: getPalette,
+		getRGBColor: getRGBColor,
 		getRGBAColor: getRGBAColor,
+		setRGBAColor: setRGBAColor,
 		getForegroundColor: getForegroundColor,
 		getBackgroundColor: getBackgroundColor,
 		setForegroundColor: setForegroundColor,
@@ -435,6 +337,11 @@ const createPalettePreview = canvas => {
 
 const createPalettePicker = canvas => {
 	const imageData = [];
+	const doubleTapThreshold = 300; // Time in ms to detect double-tap/click
+	let lastTouchTime = 0;
+	let lastMouseTime = 0;
+	let cc = null;
+	let colorEdited;
 
 	const updateColor = index => {
 		const color = State.palette.getRGBAColor(index);
@@ -453,30 +360,6 @@ const createPalettePicker = canvas => {
 			updateColor(i);
 		}
 	};
-
-	const touchEnd = e => {
-		const rect = canvas.getBoundingClientRect();
-		const x = Math.floor((e.touches[0].pageX - rect.left) / (canvas.width / 2));
-		const y = Math.floor((e.touches[0].pageY - rect.top) / (canvas.height / 8));
-		const colorIndex = y + (x === 0 ? 0 : 8);
-		State.palette.setForegroundColor(colorIndex);
-	};
-
-	const mouseEnd = e => {
-		const rect = canvas.getBoundingClientRect();
-		const x = Math.floor((e.clientX - rect.left) / (canvas.width / 2));
-		const y = Math.floor((e.clientY - rect.top) / (canvas.height / 8));
-		const colorIndex = y + (x === 0 ? 0 : 8);
-		if (e.altKey === false && e.ctrlKey === false) {
-			State.palette.setForegroundColor(colorIndex);
-		} else {
-			State.palette.setBackgroundColor(colorIndex);
-		}
-	};
-
-	for (let i = 0; i < 16; i++) {
-		imageData[i] = canvas.getContext('2d').createImageData(canvas.width / 2, canvas.height / 8);
-	}
 
 	const keydown = e => {
 		// Handle digit keys (0-7) with ctrl or alt modifiers
@@ -530,10 +413,80 @@ const createPalettePicker = canvas => {
 		}
 	};
 
-	updatePalette();
+	const handleInteraction = (x, y, isDoubleClick, _isTouch) => {
+		const colorIndex = y + (x === 0 ? 0 : 8);
+		if (isDoubleClick) {
+			if (cc !== null) {
+				cc.classList.remove('hide');
+				cc.value = State.palette.getRGBColor(colorIndex);
+				cc.click();
+				colorEdited = colorIndex;
+			} else {
+				State.palette.setForegroundColor(colorIndex);
+			}
+		} else {
+			State.palette.setForegroundColor(colorIndex);
+		}
+	};
+
+	const processEvent = (e, isTouch) => {
+		const rect = canvas.getBoundingClientRect();
+		const coords = isTouch ? { x: e.touches[0].pageX, y: e.touches[0].pageY } : { x: e.clientX, y: e.clientY };
+
+		const x = Math.floor((coords.x - rect.left) / (canvas.width / 2));
+		const y = Math.floor((coords.y - rect.top) / (canvas.height / 8));
+
+		const currentTime = new Date().getTime();
+		const lastTime = isTouch ? lastTouchTime : lastMouseTime;
+
+		if (currentTime - lastTime < doubleTapThreshold) {
+			handleInteraction(x, y, true, isTouch);
+		} else {
+			handleInteraction(x, y, false, isTouch);
+		}
+
+		if (isTouch) {
+			lastTouchTime = currentTime;
+		} else {
+			lastMouseTime = currentTime;
+		}
+	};
+
+	const touchEnd = e => {
+		if (e.touches.length === 0) {
+			processEvent(e, true);
+		}
+	};
+
+	const mouseEnd = e => {
+		processEvent(e, false);
+	};
+
+	const arraysEqual = (a, b) => a.length === b.length && a.every((value, index) => value === b[index]);
+
+	const colorChange = e => {
+		const oldColor = State.palette.hexToXbin(State.palette.getRGBColor(colorEdited));
+		const newColor = State.palette.hexToXbin(e.target.value);
+		if (!arraysEqual(oldColor, newColor)) {
+			State.palette.setRGBAColor(colorEdited, newColor);
+		}
+	};
+
+	// Create canvases
+	for (let i = 0; i < 16; i++) {
+		imageData[i] = canvas.getContext('2d').createImageData(canvas.width / 2, canvas.height / 8);
+	}
+	// Custom colors
+	if ($('custom-color')) {
+		cc = $('custom-color');
+		cc.addEventListener('change', colorChange);
+		cc.addEventListener('blur', colorChange);
+	}
+	// Add event listeners
 	canvas.addEventListener('touchend', touchEnd);
 	canvas.addEventListener('touchcancel', touchEnd);
 	canvas.addEventListener('mouseup', mouseEnd);
+	updatePalette();
 	canvas.addEventListener('contextmenu', e => {
 		e.preventDefault();
 	});
