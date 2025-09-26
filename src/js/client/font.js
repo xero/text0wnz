@@ -25,13 +25,18 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 		let letterSpacingImageData;
 
 		const parseXBFontData = (fontBytes, fontWidth, fontHeight) => {
-			if (!fontBytes || fontBytes.length === 0) {
+			if (!fontBytes) {
+				console.error(
+					`[Font] Invalid fontBytes provided to parseXBFontData. ` +
+					`Expected: a non-empty Uint8Array or Buffer; Received: ${String(fontBytes)}`,
+				);
+				throw new Error('Failed to load XB font data');
+			}
+			if (fontBytes.length === 0) {
 				console.error(
 					`[Font] Invalid fontBytes provided to parseXBFontData. ` +
 					`Expected: a non-empty Uint8Array or Buffer; Received: ` +
-					fontBytes
-						? `type ${typeof fontBytes}, length ${fontBytes.length}`
-						: String(fontBytes),
+					`type ${typeof fontBytes}, length ${fontBytes.length}`,
 				);
 				throw new Error('Failed to load XB font data');
 			}
