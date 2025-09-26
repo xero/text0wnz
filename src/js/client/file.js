@@ -246,14 +246,33 @@ const loadModule = () => {
 			} else if ((charCode & 0xe0) === 0xc0) {
 				// 2-byte sequence
 				const secondByte = bytes[startIndex + 1];
+				if ((secondByte & 0xc0) !== 0x80) {
+					throw new Error(`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1}`);
+				}
 				charCode = ((charCode & 0x1f) << 6) | (secondByte & 0x3f);
 				return { charCode, bytesConsumed: 2 };
 			} else if ((charCode & 0xf0) === 0xe0) {
 				// 3-byte sequence
 				const secondByte = bytes[startIndex + 1];
 				const thirdByte = bytes[startIndex + 2];
+				if ((secondByte & 0xc0) !== 0x80 || (thirdByte & 0xc0) !== 0x80) {
+					throw new Error(`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1} or ${startIndex + 2}`);
+				}
 				charCode = ((charCode & 0x0f) << 12) | ((secondByte & 0x3f) << 6) | (thirdByte & 0x3f);
 				return { charCode, bytesConsumed: 3 };
+			} else if ((charCode & 0xf8) === 0xf0) {
+				// 4-byte sequence
+				const secondByte = bytes[startIndex + 1];
+				const thirdByte = bytes[startIndex + 2];
+				const fourthByte = bytes[startIndex + 3];
+				if ((secondByte & 0xc0) !== 0x80 || (thirdByte & 0xc0) !== 0x80 || (fourthByte & 0xc0) !== 0x80) {
+					throw new Error(
+						`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1}, ${startIndex + 2}, or ${startIndex + 3}`,
+					);
+				}
+				charCode =
+					((charCode & 0x07) << 18) | ((secondByte & 0x3f) << 12) | ((thirdByte & 0x3f) << 6) | (fourthByte & 0x3f);
+				return { charCode, bytesConsumed: 4 };
 			}
 			throw new Error(
 				`[File] Invalid UTF-8 byte sequence at position ${startIndex}: 0x${bytes[startIndex].toString(16).padStart(2, '0')}`,
@@ -1134,18 +1153,16 @@ const saveModule = () => {
 		let processedComments = '';
 		let commentsCount = 0;
 		for (let i = 0; i < commentLines.length; i++) {
-			let s = 0;
 			while (commentLines[i].length > 0) {
-				const line = commentLines[i].substr(s * 64, 64).trim();
+				const line = commentLines[i].substr(0, 64).trim();
+				commentLines[i] = commentLines[i].slice(64);
 				if (line.length === 0) {
 					break;
 				}
-				s++;
 				commentsCount++;
 				processedComments += line.padEnd(64, ' ');
 			}
 		}
-		commentsCount = Math.min(commentsCount, 255); // Max 255 comment lines per SAUCE spec
 
 		let commentBlock = null;
 		if (commentsCount > 0) {

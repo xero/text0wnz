@@ -61,8 +61,7 @@ const createFloatingPanel = (x, y) => {
 	};
 
 	const touchMove = e => {
-		if (e.buttons === 1 && prev !== undefined) {
-			// Left mouse button pressed
+		if (prev !== undefined) {
 			e.preventDefault();
 			e.stopPropagation();
 			const rect = panel.getBoundingClientRect();
@@ -72,8 +71,8 @@ const createFloatingPanel = (x, y) => {
 	};
 
 	const mouseMove = e => {
+		// Left mouse pressed only
 		if (e.buttons === 1 && prev !== undefined) {
-			// Left mouse button pressed
 			e.preventDefault();
 			e.stopPropagation();
 			const rect = panel.getBoundingClientRect();

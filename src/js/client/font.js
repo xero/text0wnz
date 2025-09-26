@@ -189,7 +189,7 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 					ctx.drawImage(alphaGlyphs[foreground][charCode], x * fontData.width, y * fontData.height);
 				}
 			},
-			redraw: () => generateNewFontGlyphs,
+			redraw: () => generateNewFontGlyphs(),
 		});
 	});
 };
@@ -379,7 +379,7 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 								ctx.drawImage(alphaGlyphs[foreground][charCode], x * fontData.width, y * fontData.height);
 							}
 						},
-						redraw: () => generateNewFontGlyphs,
+						redraw: () => generateNewFontGlyphs(),
 					});
 				}
 			})

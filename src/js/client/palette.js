@@ -232,10 +232,8 @@ const createPalette = RGB6Bit => {
 				cancelable: false,
 			}),
 		);
+		State.font.redraw();
 		setForegroundColor(index);
-		// @TODO: this is a hack, but i cant fix is bug any other way
-		State.font.setLetterSpacing(!State.font.getLetterSpacing());
-		State.font.setLetterSpacing(!State.font.getLetterSpacing());
 	};
 
 	const setForegroundColor = newForeground => {

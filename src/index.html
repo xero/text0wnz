@@ -15,10 +15,8 @@
 		<meta name="apple-mobile-web-app-title" content="text.0w.nz"/>
 		<link rel="manifest" href="/img/site.webmanifest"/>
 		<meta name="theme-color" content="#3f3f3f"/>
-		<link rel="preconnect" href="https://text.0w.nz"/>
-		<meta http-equiv="Content-Security-Policy" content="default-src 'self'"/>
 		<title>text.0w.nz</title>
-		<script type="module" src="js/client/main.js"></script>
+		<script type="module" blocking="render" src="js/client/main.js"></script>
 	</head>
 	<body>
 		<div id="body-container">
@@ -84,7 +82,8 @@
 							<use href="img/icons.svg#sauce"></use>
 						</svg>
 					</button>
-					<label>
+					<label for="artwork-title">
+						<kbd>Artwork Title</kbd>
 						<input
 							id="artwork-title"
 							type="text"
@@ -259,7 +258,7 @@
 							<header>
 								<h1>chatz</h1>
 								<div id="notification-setting">
-									<label>
+									<label for="notification-checkbox">
 										<input id="notification-checkbox" type="checkbox"/>
 										Display Notifications
 									</label>
@@ -270,11 +269,13 @@
 								<div id="message-window"></div>
 							</section>
 							<nav>
-								<label>
+								<label for="handle-input">
+									<kbd>Handle</kbd>
 									<input id="handle-input" type="text" autocomplete="off" maxlength="14" spellcheck="false"/>
 								</label>
 								<div class="prompt">
-									<label>
+									<label for="message-input">
+										<kbd>Chat message</kbd>
 										<input id="message-input" type="text" autocomplete="off" maxlength="140" spellcheck="false"/>
 									</label>
 								</div>
@@ -357,22 +358,22 @@
 				</div>
 			</div>
 		</div>
-		<label>
+		<label for="open-file">
 			<input id="open-file" class="hide" type="file" accept=".ans,.ansi,.xb,.xbin,.bin,.txt,.nfo,.utf8ans"/>
 		</label>
-		<label>
+		<label for="custom-color">
 			<input id="custom-color" class="hide" type="color"/>
 		</label>
 		<div id="resize-overlay" class="overlay">
 			<div class="dialog">
 				<div>
-					<label>
+					<label for="columns-input">
 						Columns:
 						<input id="columns-input" type="number" min="1"/>
 					</label>
 				</div>
 				<div>
-					<label>
+					<label for="rows-input">
 						Rows:
 						<input id="rows-input" type="number" min="1"/>
 					</label>

@@ -345,6 +345,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 				// Trigger updates after font is loaded
 				createCanvases();
+				updateTimer();
 				redrawEntireImage();
 				document.dispatchEvent(new CustomEvent('onFontChange', { detail: fontName }));
 
@@ -364,6 +365,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 				// Trigger updates after fallback font is loaded
 				createCanvases();
+				updateTimer();
 				redrawEntireImage();
 				document.dispatchEvent(new CustomEvent('onFontChange', { detail: fallbackFont }));
 
@@ -398,6 +400,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 				// Trigger updates after fallback font is loaded
 				createCanvases();
+				updateTimer();
 				redrawEntireImage();
 				document.dispatchEvent(new CustomEvent('onFontChange', { detail: fallbackFont }));
 
@@ -453,9 +456,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					}
 				}, 50);
 			});
+		stopBlinkTimer();
 		await waitForRedrawing();
-		updateTimer();
+		createCanvases();
 		redrawEntireImage();
+		updateTimer();
+		console.log('crit called');
 	};
 
 	const getImage = () => {
@@ -534,6 +540,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	// Transform characters for horizontal mirroring
 	const getMirrorCharCode = charCode => {
 		switch (charCode) {
+			// Mirror half blocks
 			case 221: // LEFT_HALF_BLOCK
 				return 222; // RIGHT_HALF_BLOCK
 			case 222: // RIGHT_HALF_BLOCK
@@ -541,6 +548,45 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			// Upper and lower half blocks stay the same for horizontal mirroring
 			case 223: // UPPER_HALF_BLOCK
 			case 220: // LOWER_HALF_BLOCK
+				return charCode;
+
+			// Brackets and braces
+			case 40: // LEFT PARENTHESIS '('
+				return 41; // RIGHT PARENTHESIS ')'
+			case 41: // RIGHT PARENTHESIS ')'
+				return 40; // LEFT PARENTHESIS '('
+			case 91: // LEFT SQUARE BRACKET '['
+				return 93; // RIGHT SQUARE BRACKET ']'
+			case 93: // RIGHT SQUARE BRACKET ']'
+				return 91; // LEFT SQUARE BRACKET '['
+			case 123: // LEFT CURLY BRACE '{'
+				return 125; // RIGHT CURLY BRACE '}'
+			case 125: // RIGHT CURLY BRACE '}'
+				return 123; // LEFT CURLY BRACE '{'
+
+			// Slashes and backslashes
+			case 47: // FORWARD SLASH '/'
+				return 92; // BACKSLASH '\'
+			case 92: // BACKSLASH '\'
+				return 47; // FORWARD SLASH '/'
+
+			// Quotation marks
+			case 96: // GRAVE ACCENT '`'
+				return 39; // APOSTROPHE "'"
+			case 39: // APOSTROPHE "'"
+				return 96; // GRAVE ACCENT '`'
+
+			// Arrows
+			case 60: // LESS-THAN SIGN '<'
+				return 62; // GREATER-THAN SIGN '>'
+			case 62: // GREATER-THAN SIGN '>'
+				return 60; // LESS-THAN SIGN '<'
+
+			// Additional characters
+			case 57: // DIGIT '9'
+				return 80; // CAPITAL LETTER 'P'
+			case 80: // CAPITAL LETTER 'P'
+				return 57; // DIGIT '9'
 			default:
 				return charCode;
 		}
@@ -665,77 +711,77 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		let newCharCode, newForeground, newBackground;
 		let shouldUpdate = false;
 
-		if (charCode === 219) {
+		if (charCode === magicNumbers.FULL_BLOCK) {
 			if (currentForeground !== foreground) {
 				if (halfBlockY === 0) {
-					newCharCode = 223;
+					newCharCode = magicNumbers.LOWER_HALFBLOCK;
 					newForeground = foreground;
 					newBackground = currentForeground;
 					shouldUpdate = true;
 				} else {
-					newCharCode = 220;
+					newCharCode = magicNumbers.UPPER_HALFBLOCK;
 					newForeground = foreground;
 					newBackground = currentForeground;
 					shouldUpdate = true;
 				}
 			}
-		} else if (charCode !== 220 && charCode !== 223) {
+		} else if (charCode !== magicNumbers.UPPER_HALFBLOCK && charCode !== magicNumbers.LOWER_HALFBLOCK) {
 			if (halfBlockY === 0) {
-				newCharCode = 223;
+				newCharCode = magicNumbers.LOWER_HALFBLOCK;
 				newForeground = foreground;
 				newBackground = currentBackground;
 				shouldUpdate = true;
 			} else {
-				newCharCode = 220;
+				newCharCode = magicNumbers.UPPER_HALFBLOCK;
 				newForeground = foreground;
 				newBackground = currentBackground;
 				shouldUpdate = true;
 			}
 		} else {
 			if (halfBlockY === 0) {
-				if (charCode === 223) {
+				if (charCode === magicNumbers.LOWER_HALFBLOCK) {
 					if (currentBackground === foreground) {
-						newCharCode = 219;
+						newCharCode = magicNumbers.FULL_BLOCK;
 						newForeground = foreground;
 						newBackground = 0;
 						shouldUpdate = true;
 					} else {
-						newCharCode = 223;
+						newCharCode = magicNumbers.LOWER_HALFBLOCK;
 						newForeground = foreground;
 						newBackground = currentBackground;
 						shouldUpdate = true;
 					}
 				} else if (currentForeground === foreground) {
-					newCharCode = 219;
+					newCharCode = magicNumbers.FULL_BLOCK;
 					newForeground = foreground;
 					newBackground = 0;
 					shouldUpdate = true;
 				} else {
-					newCharCode = 223;
+					newCharCode = magicNumbers.LOWER_HALFBLOCK;
 					newForeground = foreground;
 					newBackground = currentForeground;
 					shouldUpdate = true;
 				}
 			} else {
-				if (charCode === 220) {
+				if (charCode === magicNumbers.UPPER_HALFBLOCK) {
 					if (currentBackground === foreground) {
-						newCharCode = 219;
+						newCharCode = magicNumbers.FULL_BLOCK;
 						newForeground = foreground;
 						newBackground = 0;
 						shouldUpdate = true;
 					} else {
-						newCharCode = 220;
+						newCharCode = magicNumbers.UPPER_HALFBLOCK;
 						newForeground = foreground;
 						newBackground = currentBackground;
 						shouldUpdate = true;
 					}
 				} else if (currentForeground === foreground) {
-					newCharCode = 219;
+					newCharCode = magicNumbers.FULL_BLOCK;
 					newForeground = foreground;
 					newBackground = 0;
 					shouldUpdate = true;
 				} else {
-					newCharCode = 220;
+					newCharCode = magicNumbers.UPPER_HALFBLOCK;
 					newForeground = foreground;
 					newBackground = currentForeground;
 					shouldUpdate = true;
@@ -953,36 +999,36 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			let foreground;
 			if (background >= 8) {
 				switch (attribute >> 8) {
-					case 0:
-					case 32:
-					case 255:
-						draw(index, 219, background, 0, block[1], block[2]);
+					case magicNumbers.CHAR_NULL:
+					case magicNumbers.CHAR_SPACE:
+					case magicNumbers.CHAR_NBSP:
+						draw(index, magicNumbers.FULL_BLOCK, background, 0, block[1], block[2]);
 						break;
-					case 219:
-						draw(index, 219, attribute & 15, 0, block[1], block[2]);
+					case magicNumbers.FULL_BLOCK:
+						draw(index, magicNumbers.FULL_BLOCK, attribute & 15, 0, block[1], block[2]);
 						break;
-					case 221:
+					case magicNumbers.LEFT_HALFBLOCK:
 						foreground = attribute & 15;
 						if (foreground < 8) {
-							draw(index, 222, background, foreground, block[1], block[2]);
+							draw(index, magicNumbers.RIGHT_HALFBLOCK, background, foreground, block[1], block[2]);
 						}
 						break;
-					case 222:
+					case magicNumbers.RIGHT_HALFBLOCK:
 						foreground = attribute & 15;
 						if (foreground < 8) {
-							draw(index, 221, background, foreground, block[1], block[2]);
+							draw(index, magicNumbers.LEFT_HALFBLOCK, background, foreground, block[1], block[2]);
 						}
 						break;
-					case 223:
+					case magicNumbers.LOWER_HALFBLOCK:
 						foreground = attribute & 15;
 						if (foreground < 8) {
-							draw(index, 220, background, foreground, block[1], block[2]);
+							draw(index, magicNumbers.UPPER_HALFBLOCK, background, foreground, block[1], block[2]);
 						}
 						break;
-					case 220:
+					case magicNumbers.UPPER_HALFBLOCK:
 						foreground = attribute & 15;
 						if (foreground < 8) {
-							draw(index, 223, background, foreground, block[1], block[2]);
+							draw(index, magicNumbers.LOWER_HALFBLOCK, background, foreground, block[1], block[2]);
 						}
 						break;
 					default:

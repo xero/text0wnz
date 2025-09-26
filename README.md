@@ -11,13 +11,46 @@
 | https://text.0w.nz                 | The final prod domain. I dev here, so it will be broken lot |
 | https://xero.github.io/moebius-web | The github pages version of the site is guaranteed to work  |
 
-[![Last Test Suite Results](https://github.com/xero/moebius-web/actions/workflows/test-suite.yml/badge.svg?branch=main)](https://github.com/xero/moebius-web/actions/workflows/test-suite.yml?query=branch%3Amain) [![Latest Deployment](https://github.com/xero/moebius-web/actions/workflows/pages-build-deployment/badge.svg?branch=main)](https://xero.github.io/moebius-web) ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/xero/moebius-web?style=flat&color=#31c352) ![GitHub last commit](https://img.shields.io/github/last-commit/xero/moebius-web.svg?style=flat&color=#31c352) ![GitHub repo size](https://img.shields.io/github/repo-size/xero/moebius-web?style=flat&color=#31c352)
+![Version](https://img.shields.io/github/package-json/version/xero/moebius-web?labelColor=%2333383e&logo=npm&&logoColor=%23979da4&color=#5db85b)
+![GitHub repo size](https://img.shields.io/github/repo-size/xero/moebius-web?labelColor=%23262a2e&logo=googlecontaineroptimizedos&logoColor=%23979da4&color=#5db85b)
+[![Last Test Suite Results](https://github.com/xero/moebius-web/actions/workflows/test-suite.yml/badge.svg?branch=main)](https://github.com/xero/moebius-web/actions/workflows/test-suite.yml?query=branch%3Amain)
+[![pages-build-deployment](https://github.com/xero/moebius-web/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/xero/moebius-web/actions/workflows/pages/pages-build-deployment)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/w/xero/moebius-web?labelColor=%23262a2e&logo=stagetimer&logoColor=%23979da4&color=#5db85b)
+![GitHub last commit](https://img.shields.io/github/last-commit/xero/moebius-web.svg?labelColor=%23262a2e&logo=git&logoColor=%23979da4&color=#5db85b)
+![OSS Lifecycle](https://img.shields.io/osslifecycle?file_url=https%3A%2F%2Fraw.githubusercontent.com%2Fxero%2Fmoebius-web%2Frefs%2Fheads%2Fmain%2FOSSMETADATA&-square&labelColor=%23262a2e&logo=checkmarx&logoColor=%23979da4)
+![CII Best Practices](https://img.shields.io/cii/summary/1?logo=asciinema&labelColor=%23262a2e&)
+![Schema](https://img.shields.io/badge/Valid-Valid?logo=semanticscholar&logoColor=%23979da4a&labelColor=%23262a2e&&label=Schema&color=%235db85b&link=https%3A%2F%2Fvalidator.schema.org%2F%23url%3Dhttps%253A%252F%252Ftext.0w.nz%252F)
+![Schema](https://img.shields.io/badge/Valid-Valid?logo=semanticweb&logoColor=%23979da4a&labelColor=%23262a2e&&label=Schema&color=%235db85b&link=https%3A%2F%2Fvalidator.schema.org%2F%23url%3Dhttps%253A%252F%252Fraw.githubusercontent.com%252Fxero%252Fmoebius-web%252Frefs%252Fheads%252Fmain%252Fsrc%252Findex.html)
+![MIT License](https://img.shields.io/github/license/xero/moebius-web?logo=internetarchive&logoColor=%23979da4&labelColor=%23262a2e&&color=#5db85b)
+![Powered by Bun](https://img.shields.io/badge/Bun-Bun?labelColor=%23262a2e&logo=bun&logoColor=%23f9f1e1&label=Powered%20by&color=%23e47ab4&link=https%3A%2F%2Fbun.js)
+![16colors](https://img.shields.io/badge/16colors-16colors?logo=renovate&logoColor=%23979da4&logoSize=auto&label=Text%20Mode&labelColor=%23262a2e&color=%238afcfd&link=https%3A%2F%2F16colo.rs)
+![Eslint](https://img.shields.io/badge/Eslint-Eslint?logo=eslint&logoColor=%23979da4&label=Linting&labelColor=%23262a2e&color=%2300AAAA&link=https%3A%2F%2Fgithub.com%2Fxero%2Fmoebius-web%2Fblob%2Fmain%2Feslint.config.js)
+![Prettier](https://img.shields.io/badge/Prettier-Prettier?logo=prettier&logoColor=%23979da4&label=Formatter&labelColor=%23262a2e&color=%2300AAAA&link=https%3A%2F%2Fgithub.com%2Fxero%2Fmoebius-web%2Fblob%2Fmain%2F.prettierrc)
+
+
 
 # Client Usage
 
-**teXt0wnz** is a comprehensive web-based ANSI/ASCII art editor that operates entirely in the browser. This client-side application provides a full suite of drawing tools, color management, and file operations for creating text-based artwork.
+**teXt0wnz** is a comprehensive web-based textmode art editor that operates entirely in the browser. This client-side application provides a full suite of drawing tools, color management, and file operations for creating text-based artwork.
 
 ## Features Overview
+
+### Supported File Types/Extensions
+
+- `*.ans`: The standard **ANSI** file format
+- `*.utf8.ans`: **UTF8 ANSI** files encoded for terminial output
+- `*.bin`: The vintage DOS era **BIN** format
+- `*.xbin`: The modern **XBIN** file format
+- `*.nfo`: Scene / release **NFO** files
+- `*.txt`: Vanilla Plain Text files for **ASCII** art
+
+### Fonts
+
+- All the classic ANSI art fonts
+- Popular modern and vintage XBIN fonts
+
+> [!NOTE]
+> View them all in the [src/fonts](https://github.com/xero/moebius-web/tree/main/src/fonts) directory.
 
 ### Drawing Tools
 

@@ -819,6 +819,9 @@ canvas {
 	}
 }
 
+label[for='artwork-title'] kbd,
+label[for='handle-input'] kbd,
+label[for='message-input-input'] kbd,
 .included-for-websocket {
 	@apply hidden;
 }
@@ -839,10 +842,7 @@ button,
 	@apply cursor-pointer;
 }
 
-#freedom {
-	@apply m-auto;
-}
-
+/* force vite to include the img for use in notifications */
 .face {
 	background-image: url('/img/face.png');
 }

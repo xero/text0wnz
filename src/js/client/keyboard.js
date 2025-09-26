@@ -44,18 +44,18 @@ const createFKeyShortcut = (canvas, charCode) => {
 
 const createFKeysShortcut = () => {
 	const shortcuts = [
-		176, // Light shade (░)
-		177, // Medium shade (▒)
-		178, // Dark shade (▓)
-		219, // Full block (█)
-		223, // Lower half block (▄)
-		220, // Upper half block (▀)
-		221, // Left half block (▌)
-		222, // Right half block (▐)
-		254, // Solid (■)
-		249, // Middle dot (·)
-		7, // Bell (BEL)
-		0, // Null (NUL)
+		magicNumbers.LIGHT_BLOCK, // (░)
+		magicNumbers.MEDIUM_BLOCK, // (▒)
+		magicNumbers.DARK_BLOCK, // (▓)
+		magicNumbers.FULL_BLOCK, // (█)
+		magicNumbers.LOWER_HALFBLOCK, // (▄)
+		magicNumbers.UPPER_HALFBLOCK, // (▀)
+		magicNumbers.LEFT_HALFBLOCK, // (▌)
+		magicNumbers.RIGHT_HALFBLOCK, // (▐)
+		magicNumbers.MIDDLE_BLOCK, // (■)
+		magicNumbers.MIDDLE_DOT, // (·)
+		magicNumbers.CHAR_BELL, // (BEL)
+		magicNumbers.CHAR_NULL, // (NUL)
 	];
 	for (let i = 0; i < 12; i++) {
 		createFKeyShortcut($('fkey' + i), shortcuts[i]);
@@ -260,27 +260,27 @@ const createCursor = canvasContainer => {
 						e.preventDefault();
 						newLine();
 						break;
-					case 'End': // End key
+					case 'End':
 						e.preventDefault();
 						endOfCurrentRow();
 						break;
-					case 'Home': // Home key
+					case 'Home':
 						e.preventDefault();
 						startOfCurrentRow();
 						break;
-					case 'ArrowLeft': // Left arrow
+					case 'ArrowLeft':
 						e.preventDefault();
 						left();
 						break;
-					case 'ArrowUp': // Up arrow
+					case 'ArrowUp':
 						e.preventDefault();
 						up();
 						break;
-					case 'ArrowRight': // Right arrow
+					case 'ArrowRight':
 						e.preventDefault();
 						right();
 						break;
-					case 'ArrowDown': // Down arrow
+					case 'ArrowDown':
 						e.preventDefault();
 						down();
 						break;
@@ -707,7 +707,6 @@ const createKeyboardController = () => {
 					e.preventDefault();
 					draw(9); // Tab character code
 				} else if (e.code === 'Backspace') {
-					// Backspace key
 					e.preventDefault();
 					if (State.cursor.getX() > 0) {
 						deleteText();
@@ -762,135 +761,135 @@ const createKeyboardController = () => {
 	};
 
 	const unicodeMapping = new Map([
-		[0x2302, 127],
-		[0x00c7, 128],
-		[0x00fc, 129],
-		[0x00e9, 130],
-		[0x00e2, 131],
-		[0x00e4, 132],
-		[0x00e0, 133],
-		[0x00e5, 134],
-		[0x00e7, 135],
-		[0x00ea, 136],
-		[0x00eb, 137],
-		[0x00e8, 138],
-		[0x00ef, 139],
-		[0x00ee, 140],
-		[0x00ec, 141],
-		[0x00c4, 142],
-		[0x00c5, 143],
-		[0x00c9, 144],
-		[0x00e6, 145],
-		[0x00c6, 146],
-		[0x00f4, 147],
-		[0x00f6, 148],
-		[0x00f2, 149],
-		[0x00fb, 150],
-		[0x00f9, 151],
-		[0x00ff, 152],
-		[0x00d6, 153],
-		[0x00dc, 154],
-		[0x00a2, 155],
-		[0x00a3, 156],
-		[0x00a5, 157],
-		[0x20a7, 158],
-		[0x0192, 159],
-		[0x00e1, 160],
-		[0x00ed, 161],
-		[0x00f3, 162],
-		[0x00fa, 163],
-		[0x00f1, 164],
-		[0x00d1, 165],
-		[0x00aa, 166],
-		[0x00ba, 167],
-		[0x00bf, 168],
-		[0x2310, 169],
-		[0x00ac, 170],
-		[0x00bd, 171],
-		[0x00bc, 172],
-		[0x00a1, 173],
-		[0x00ab, 174],
-		[0x00bb, 175],
-		[0x2591, 176],
-		[0x2592, 177],
-		[0x2593, 178],
-		[0x2502, 179],
-		[0x2524, 180],
-		[0x2561, 181],
-		[0x2562, 182],
-		[0x2556, 183],
-		[0x2555, 184],
-		[0x2563, 185],
-		[0x2551, 186],
-		[0x2557, 187],
-		[0x255d, 188],
-		[0x255c, 189],
-		[0x255b, 190],
-		[0x2510, 191],
-		[0x2514, 192],
-		[0x2534, 193],
-		[0x252c, 194],
-		[0x251c, 195],
-		[0x2500, 196],
-		[0x253c, 197],
-		[0x255e, 198],
-		[0x255f, 199],
-		[0x255a, 200],
-		[0x2554, 201],
-		[0x2569, 202],
-		[0x2566, 203],
-		[0x2560, 204],
-		[0x2550, 205],
-		[0x256c, 206],
-		[0x2567, 207],
-		[0x2568, 208],
-		[0x2564, 209],
-		[0x2565, 210],
-		[0x2559, 211],
-		[0x2558, 212],
-		[0x2552, 213],
-		[0x2553, 214],
-		[0x256b, 215],
-		[0x256a, 216],
-		[0x2518, 217],
-		[0x250c, 218],
-		[0x2588, 219],
-		[0x2584, 220],
-		[0x258c, 221],
-		[0x2590, 222],
-		[0x2580, 223],
-		[0x03b1, 224],
-		[0x00df, 225],
-		[0x0393, 226],
-		[0x03c0, 227],
-		[0x03a3, 228],
-		[0x03c3, 229],
-		[0x00b5, 230],
-		[0x03c4, 231],
-		[0x03a6, 232],
-		[0x0398, 233],
-		[0x03a9, 234],
-		[0x03b4, 235],
-		[0x221e, 236],
-		[0x03c6, 237],
-		[0x03b5, 238],
-		[0x2229, 239],
-		[0x2261, 240],
-		[0x00b1, 241],
-		[0x2265, 242],
-		[0x2264, 243],
-		[0x2320, 244],
-		[0x2321, 245],
-		[0x00f7, 246],
-		[0x2248, 247],
-		[0x00b0, 248],
-		[0x2219, 249],
-		[0x00b7, 250],
-		[0x221a, 251],
-		[0x207f, 252],
-		[0x00b2, 253],
-		[0x25a0, 254],
-		[0x00a0, 255],
+		[0x2302, 127], // HOUSE (⌂)
+		[0x00c7, 128], // CAPITAL LETTER C WITH CEDILLA (Ç)
+		[0x00fc, 129], // SMALL LETTER U WITH DIAERESIS (ü)
+		[0x00e9, 130], // SMALL LETTER E WITH ACUTE (é)
+		[0x00e2, 131], // SMALL LETTER A WITH CIRCUMFLEX (â)
+		[0x00e4, 132], // SMALL LETTER A WITH DIAERESIS (ä)
+		[0x00e0, 133], // SMALL LETTER A WITH GRAVE (à)
+		[0x00e5, 134], // SMALL LETTER A WITH RING ABOVE (å)
+		[0x00e7, 135], // SMALL LETTER C WITH CEDILLA (ç)
+		[0x00ea, 136], // SMALL LETTER E WITH CIRCUMFLEX (ê)
+		[0x00eb, 137], // SMALL LETTER E WITH DIAERESIS (ë)
+		[0x00e8, 138], // SMALL LETTER E WITH GRAVE (è)
+		[0x00ef, 139], // SMALL LETTER I WITH DIAERESIS (ï)
+		[0x00ee, 140], // SMALL LETTER I WITH CIRCUMFLEX (î)
+		[0x00ec, 141], // SMALL LETTER I WITH GRAVE (ì)
+		[0x00c4, 142], // CAPITAL LETTER A WITH DIAERESIS (Ä)
+		[0x00c5, 143], // CAPITAL LETTER A WITH RING ABOVE (Å)
+		[0x00c9, 144], // CAPITAL LETTER E WITH ACUTE (É)
+		[0x00e6, 145], // SMALL LETTER AE (æ)
+		[0x00c6, 146], // CAPITAL LETTER AE (Æ)
+		[0x00f4, 147], // SMALL LETTER O WITH CIRCUMFLEX (ô)
+		[0x00f6, 148], // SMALL LETTER O WITH DIAERESIS (ö)
+		[0x00f2, 149], // SMALL LETTER O WITH GRAVE (ò)
+		[0x00fb, 150], // SMALL LETTER U WITH CIRCUMFLEX (û)
+		[0x00f9, 151], // SMALL LETTER U WITH GRAVE (ù)
+		[0x00ff, 152], // SMALL LETTER Y WITH DIAERESIS (ÿ)
+		[0x00d6, 153], // CAPITAL LETTER O WITH DIAERESIS (Ö)
+		[0x00dc, 154], // CAPITAL LETTER U WITH DIAERESIS (Ü)
+		[0x00a2, 155], // CENT SIGN (¢)
+		[0x00a3, 156], // POUND SIGN (£)
+		[0x00a5, 157], // YEN SIGN (¥)
+		[0x20a7, 158], // PESETA SIGN (₧)
+		[0x0192, 159], // SMALL LETTER F WITH HOOK (ƒ)
+		[0x00e1, 160], // SMALL LETTER A WITH ACUTE (á)
+		[0x00ed, 161], // SMALL LETTER I WITH ACUTE (í)
+		[0x00f3, 162], // SMALL LETTER O WITH ACUTE (ó)
+		[0x00fa, 163], // SMALL LETTER U WITH ACUTE (ú)
+		[0x00f1, 164], // SMALL LETTER N WITH TILDE (ñ)
+		[0x00d1, 165], // CAPITAL LETTER N WITH TILDE (Ñ)
+		[0x00aa, 166], // FEMININE ORDINAL INDICATOR (ª)
+		[0x00ba, 167], // MASCULINE ORDINAL INDICATOR (º)
+		[0x00bf, 168], // INVERTED QUESTION MARK (¿)
+		[0x2310, 169], // REVERSED NOT SIGN (⌐)
+		[0x00ac, 170], // NOT SIGN (¬)
+		[0x00bd, 171], // VULGAR FRACTION ONE HALF (½)
+		[0x00bc, 172], // VULGAR FRACTION ONE QUARTER (¼)
+		[0x00a1, 173], // INVERTED EXCLAMATION MARK (¡)
+		[0x00ab, 174], // LEFT-POINTING DOUBLE ANGLE QUOTATION MARK («)
+		[0x00bb, 175], // RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK (»)
+		[0x2591, 176], // LIGHT SHADE (░)
+		[0x2592, 177], // MEDIUM SHADE (▒)
+		[0x2593, 178], // DARK SHADE (▓)
+		[0x2502, 179], // BOX DRAWINGS LIGHT VERTICAL (│)
+		[0x2524, 180], // BOX DRAWINGS LIGHT VERTICAL AND LEFT (┤)
+		[0x2561, 181], // BOX DRAWINGS VERTICAL SINGLE AND LEFT DOUBLE (╡)
+		[0x2562, 182], // BOX DRAWINGS VERTICAL DOUBLE AND LEFT SINGLE (╢)
+		[0x2556, 183], // BOX DRAWINGS DOWN DOUBLE AND LEFT SINGLE (╖)
+		[0x2555, 184], // BOX DRAWINGS DOWN SINGLE AND LEFT DOUBLE (╕)
+		[0x2563, 185], // BOX DRAWINGS DOUBLE VERTICAL AND LEFT (╣)
+		[0x2551, 186], // BOX DRAWINGS DOUBLE VERTICAL (║)
+		[0x2557, 187], // BOX DRAWINGS DOUBLE DOWN AND LEFT (╗)
+		[0x255d, 188], // BOX DRAWINGS DOUBLE UP AND LEFT (╝)
+		[0x255c, 189], // BOX DRAWINGS UP DOUBLE AND LEFT SINGLE (╜)
+		[0x255b, 190], // BOX DRAWINGS UP SINGLE AND LEFT DOUBLE (╛)
+		[0x2510, 191], // BOX DRAWINGS LIGHT DOWN AND LEFT (┐)
+		[0x2514, 192], // BOX DRAWINGS LIGHT UP AND RIGHT (└)
+		[0x2534, 193], // BOX DRAWINGS LIGHT UP AND HORIZONTAL (┴)
+		[0x252c, 194], // BOX DRAWINGS LIGHT DOWN AND HORIZONTAL (┬)
+		[0x251c, 195], // BOX DRAWINGS LIGHT VERTICAL AND RIGHT (├)
+		[0x2500, 196], // BOX DRAWINGS LIGHT HORIZONTAL (─)
+		[0x253c, 197], // BOX DRAWINGS LIGHT VERTICAL AND HORIZONTAL (┼)
+		[0x255e, 198], // BOX DRAWINGS VERTICAL SINGLE AND RIGHT DOUBLE (╞)
+		[0x255f, 199], // BOX DRAWINGS VERTICAL DOUBLE AND RIGHT SINGLE (╟)
+		[0x255a, 200], // BOX DRAWINGS DOUBLE UP AND RIGHT (╚)
+		[0x2554, 201], // BOX DRAWINGS DOUBLE DOWN AND RIGHT (╔)
+		[0x2569, 202], // BOX DRAWINGS DOUBLE UP AND HORIZONTAL (╩)
+		[0x2566, 203], // BOX DRAWINGS DOUBLE DOWN AND HORIZONTAL (╦)
+		[0x2560, 204], // BOX DRAWINGS DOUBLE VERTICAL AND RIGHT (╠)
+		[0x2550, 205], // BOX DRAWINGS DOUBLE HORIZONTAL (═)
+		[0x256c, 206], // BOX DRAWINGS DOUBLE VERTICAL AND HORIZONTAL (╬)
+		[0x2567, 207], // BOX DRAWINGS UP SINGLE AND HORIZONTAL DOUBLE (╧)
+		[0x2568, 208], // BOX DRAWINGS UP DOUBLE AND HORIZONTAL SINGLE (╨)
+		[0x2564, 209], // BOX DRAWINGS DOWN SINGLE AND HORIZONTAL DOUBLE (╤)
+		[0x2565, 210], // BOX DRAWINGS DOWN DOUBLE AND HORIZONTAL SINGLE (╥)
+		[0x2559, 211], // BOX DRAWINGS UP DOUBLE AND RIGHT SINGLE (╙)
+		[0x2558, 212], // BOX DRAWINGS UP SINGLE AND RIGHT DOUBLE (╘)
+		[0x2552, 213], // BOX DRAWINGS DOWN SINGLE AND RIGHT DOUBLE (╒)
+		[0x2553, 214], // BOX DRAWINGS DOWN DOUBLE AND RIGHT SINGLE (╓)
+		[0x256b, 215], // BOX DRAWINGS VERTICAL DOUBLE AND HORIZONTAL SINGLE (╫)
+		[0x256a, 216], // BOX DRAWINGS VERTICAL SINGLE AND HORIZONTAL DOUBLE (╪)
+		[0x2518, 217], // BOX DRAWINGS LIGHT UP AND LEFT (┘)
+		[0x250c, 218], // BOX DRAWINGS LIGHT DOWN AND RIGHT (┌)
+		[0x2588, 219], // FULL BLOCK (█)
+		[0x2584, 220], // LOWER HALF BLOCK (▄)
+		[0x258c, 221], // LEFT HALF BLOCK (▌)
+		[0x2590, 222], // RIGHT HALF BLOCK (▐)
+		[0x2580, 223], // UPPER HALF BLOCK (▀)
+		[0x03b1, 224], // GREEK SMALL LETTER ALPHA (α)
+		[0x00df, 225], // SMALL LETTER SHARP S (ß)
+		[0x0393, 226], // GREEK CAPITAL LETTER GAMMA (Γ)
+		[0x03c0, 227], // GREEK SMALL LETTER PI (π)
+		[0x03a3, 228], // GREEK CAPITAL LETTER SIGMA (Σ)
+		[0x03c3, 229], // GREEK SMALL LETTER SIGMA (σ)
+		[0x00b5, 230], // MICRO SIGN (µ)
+		[0x03c4, 231], // GREEK SMALL LETTER TAU (τ)
+		[0x03a6, 232], // GREEK CAPITAL LETTER PHI (Φ)
+		[0x0398, 233], // GREEK CAPITAL LETTER THETA (Θ)
+		[0x03a9, 234], // GREEK CAPITAL LETTER OMEGA (Ω)
+		[0x03b4, 235], // GREEK SMALL LETTER DELTA (δ)
+		[0x221e, 236], // INFINITY (∞)
+		[0x03c6, 237], // GREEK SMALL LETTER PHI (φ)
+		[0x03b5, 238], // GREEK SMALL LETTER EPSILON (ε)
+		[0x2229, 239], // INTERSECTION (∩)
+		[0x2261, 240], // IDENTICAL TO (≡)
+		[0x00b1, 241], // PLUS-MINUS SIGN (±)
+		[0x2265, 242], // GREATER-THAN OR EQUAL TO (≥)
+		[0x2264, 243], // LESS-THAN OR EQUAL TO (≤)
+		[0x2320, 244], // TOP HALF INTEGRAL (⌠)
+		[0x2321, 245], // BOTTOM HALF INTEGRAL (⌡)
+		[0x00f7, 246], // DIVISION SIGN (÷)
+		[0x2248, 247], // ALMOST EQUAL TO (≈)
+		[0x00b0, 248], // DEGREE SIGN (°)
+		[0x2219, 249], // BULLET OPERATOR (∙)
+		[0x00b7, 250], // MIDDLE DOT (·)
+		[0x221a, 251], // SQUARE ROOT (√)
+		[0x207f, 252], // SUPERSCRIPT SMALL LETTER N (ⁿ)
+		[0x00b2, 253], // SUPERSCRIPT TWO (²)
+		[0x25a0, 254], // BLACK SQUARE (■)
+		[0x00a0, 255], // NO-BREAK SPACE ( )
 	]);
 
 	/**
