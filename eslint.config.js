@@ -1,5 +1,7 @@
 import js from '@eslint/js';
 import stylistic from '@stylistic/eslint-plugin';
+import html from "@html-eslint/eslint-plugin";
+import parser from '@html-eslint/parser';
 
 export default [
 	js.configs.recommended,
@@ -201,6 +203,56 @@ export default [
 			'@stylistic/type-annotation-spacing': 'error',
 			'@stylistic/type-generic-spacing': ['error'],
 			'@stylistic/type-named-tuple-spacing': ['error'],
+		}
+	},
+	{
+		files: ["src/*.html"],
+		plugins: {
+			html,
+		},
+		languageOptions: {
+			parser: parser,
+		},
+		rules: {
+			...html.configs.recommended.rules,
+			"html/use-baseline": "off",
+			"html/attrs-newline": "off",
+			"html/element-newline": ["error", {
+				"inline": ["$inline", 'canvas']
+			}],
+			"html/no-duplicate-class": "error",
+			"html/no-duplicate-attrs": "error",
+			"html/no-duplicate-id": "error",
+			"html/no-inline-styles": "error",
+			"html/no-obsolete-tags": "error",
+			"html/indent": ["error", "tab"],
+			"html/lowercase": "error",
+			"html/no-extra-spacing-attrs": "error",
+			"html/quotes": ["error", "double"],
+			"html/no-trailing-spaces": "error",
+			"html/require-closing-tags": ["error", {
+				"selfClosing": "always",
+				"selfClosingCustomPatterns": ['meta', 'link'],
+			}],
+			"html/sort-attrs": ["error", {
+				"priority": [
+					"id",
+					"class",
+					"rel",
+					"type",
+					"http-equiv",
+					"title",
+					"alt",
+					"name",
+					"content",
+					"size",
+					"sizes",
+					"cols",
+					"row",
+					"value",
+					"href",
+				]
+			}],
 		}
 	},
 	{

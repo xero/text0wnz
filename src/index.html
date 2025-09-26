@@ -1,22 +1,22 @@
 <!doctype html>
-<html>
-<!--
- _/ _ \)_/ /\    _ __
- /‾(-'(\/‾ \/\))/ ) /
-    ‾   teXt0wnz    ‾‾
--->
+<html lang="en">
+	<!--
+		_/ _ \)_/ /\    _ __
+		/‾(-'(\/‾ \/\))/ ) /
+		‾   teXt0wnz    ‾‾
+	-->
 	<head>
-		<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5.0" />
-		<link rel="icon" type="image/png" href="/img/favicon-96x96.png" sizes="96x96" />
-		<link rel="icon" type="image/svg+xml" href="/img/favicon.svg" />
-		<link rel="shortcut icon" href="/img/favicon.ico" />
-		<link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png" />
-		<meta name="apple-mobile-web-app-title" content="text.0w.nz" />
-		<link rel="manifest" href="/img/site.webmanifest" />
-		<meta name="theme-color" content="#3f3f3f" />
+		<meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5.0"/>
+		<link rel="icon" type="image/png" sizes="96x96" href="/img/favicon-96x96.png"/>
+		<link rel="icon" type="image/svg+xml" href="/img/favicon.svg"/>
+		<link rel="shortcut icon" href="/img/favicon.ico"/>
+		<link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png"/>
+		<meta name="apple-mobile-web-app-title" content="text.0w.nz"/>
+		<link rel="manifest" href="/img/site.webmanifest"/>
+		<meta name="theme-color" content="#3f3f3f"/>
 		<title>text.0w.nz</title>
-		<script src="js/client/main.js" type="module"></script>
+		<script type="module" src="js/client/main.js"></script>
 	</head>
 	<body>
 		<div id="body-container">
@@ -25,7 +25,9 @@
 					<div id="file-nav">
 						<div id="file-menu" class="menu-title">
 							<button id="File">
-								<svg title="File" alt="File"><use href="img/icons.svg#save"></use></svg>
+								<svg title="File" alt="File">
+									<use href="img/icons.svg#save"></use>
+								</svg>
 							</button>
 							<div class="menu-list">
 								<article id="new" class="menu-item excluded-for-websocket">New</article>
@@ -41,7 +43,9 @@
 						</div>
 						<div id="edit-menu" class="menu-title">
 							<button id="Edit">
-								<svg title="Edit" alt="Edit"><use href="img/icons.svg#settings"></use></svg>
+								<svg title="Edit" alt="Edit">
+									<use href="img/icons.svg#settings"></use>
+								</svg>
 							</button>
 							<div class="menu-list">
 								<article id="nav-cut" class="menu-item disabled">Cut <kbd>Ctrl-X</kbd></article>
@@ -61,8 +65,12 @@
 								<article id="erase-row-start" class="menu-item">Erase to Start of Row <kbd>Alt+Home</kbd></article>
 								<article id="erase-row-end" class="menu-item">Erase to End of Row <kbd>Alt+End</kbd></article>
 								<article id="erase-column" class="menu-item">Erase Column <kbd>Alt+Shift+E</kbd></article>
-								<article id="erase-column-start" class="menu-item">Erase to Start of Column <kbd>Alt+Page Up</kbd></article>
-								<article id="erase-column-end" class="menu-item">Erase to End of Column <kbd>Alt+Page Down</kbd></article>
+								<article id="erase-column-start" class="menu-item">
+									Erase to Start of Column <kbd>Alt+Page Up</kbd>
+								</article>
+								<article id="erase-column-end" class="menu-item">
+									Erase to End of Column <kbd>Alt+Page Down</kbd>
+								</article>
 								<article class="seperator"></article>
 								<article id="default-color" class="menu-item">Default Color <kbd>Ctrl-D</kbd></article>
 								<article id="swap-colors" class="menu-item">Swap Colors <kbd>Ctrl-Q</kbd></article>
@@ -70,40 +78,50 @@
 						</div>
 					</div>
 					<button id="navSauce">
-						<svg><use href="img/icons.svg#sauce"></use></svg>
+						<svg>
+							<use href="img/icons.svg#sauce"></use>
+						</svg>
 					</button>
-					<input id="artwork-title" type="text" value="Untitled" spellcheck="false" autocomplete="off" maxlength="40" />
+					<input id="artwork-title" type="text" value="Untitled" autocomplete="off" maxlength="40" spellcheck="false"/>
 				</nav>
 				<nav>
 					<div id="keyboard-toolbar">
-						<span>F1<canvas id="fkey0" class="fkey" width="0" height="0"></canvas></span>
-						<span>F2<canvas id="fkey1" class="fkey" width="0" height="0"></canvas></span>
-						<span>F3<canvas id="fkey2" class="fkey" width="0" height="0"></canvas></span>
-						<span>F4<canvas id="fkey3" class="fkey" width="0" height="0"></canvas></span>
-						<span>F5<canvas id="fkey4" class="fkey" width="0" height="0"></canvas></span>
-						<span>F6<canvas id="fkey5" class="fkey" width="0" height="0"></canvas></span>
-						<span>F7<canvas id="fkey6" class="fkey" width="0" height="0"></canvas></span>
-						<span>F8<canvas id="fkey7" class="fkey" width="0" height="0"></canvas></span>
-						<span>F9<canvas id="fkey8" class="fkey" width="0" height="0"></canvas></span>
-						<span>F10<canvas id="fkey9" class="fkey" width="0" height="0"></canvas></span>
-						<span>F11<canvas id="fkey10" class="fkey" width="0" height="0"></canvas></span>
-						<span>F12<canvas id="fkey11" class="fkey" width="0" height="0"></canvas></span>
+						<span>F1<canvas id="fkey0" class="fkey" height="0" width="0"></canvas></span>
+						<span>F2<canvas id="fkey1" class="fkey" height="0" width="0"></canvas></span>
+						<span>F3<canvas id="fkey2" class="fkey" height="0" width="0"></canvas></span>
+						<span>F4<canvas id="fkey3" class="fkey" height="0" width="0"></canvas></span>
+						<span>F5<canvas id="fkey4" class="fkey" height="0" width="0"></canvas></span>
+						<span>F6<canvas id="fkey5" class="fkey" height="0" width="0"></canvas></span>
+						<span>F7<canvas id="fkey6" class="fkey" height="0" width="0"></canvas></span>
+						<span>F8<canvas id="fkey7" class="fkey" height="0" width="0"></canvas></span>
+						<span>F9<canvas id="fkey8" class="fkey" height="0" width="0"></canvas></span>
+						<span>F10<canvas id="fkey9" class="fkey" height="0" width="0"></canvas></span>
+						<span>F11<canvas id="fkey10" class="fkey" height="0" width="0"></canvas></span>
+						<span>F12<canvas id="fkey11" class="fkey" height="0" width="0"></canvas></span>
 					</div>
 					<div id="brush-toolbar">
 						<div id="halfblock" class="tool-button">
-							<svg title="Block (f)" alt="Block"><use href="img/icons.svg#blockBrush"></use></svg>
+							<svg title="Block (f)" alt="Block">
+								<use href="img/icons.svg#blockBrush"></use>
+							</svg>
 							<kbd>Block</kbd>
 						</div>
 						<div id="shading-brush" class="tool-button">
-							<svg title="Shading (f)" alt="Shading"><use href="img/icons.svg#shadeBrush"></use></svg>
+							<svg title="Shading (f)" alt="Shading">
+								<use href="img/icons.svg#shadeBrush"></use>
+							</svg>
 							<kbd>Shading</kbd>
 						</div>
 						<div id="character-brush" class="tool-button">
-							<svg title="Character Brush (b)" alt="Character Brush"><use href="img/icons.svg#character"></use></svg>
+							<svg title="Character Brush (b)" alt="Character Brush">
+								<use href="img/icons.svg#character"></use>
+							</svg>
 							<kbd>Character</kbd>
 						</div>
 						<div id="attrib" class="tool-button">
-							<svg alt="Colorize" title="Colorize"><use href="img/icons.svg#roller"></use></svg>
+							<svg title="Colorize" alt="Colorize">
+								<use href="img/icons.svg#roller"></use>
+							</svg>
 							<kbd>Colorize</kbd>
 						</div>
 					</div>
@@ -116,44 +134,64 @@
 						</div>
 						<div id="flip-vertical" class="tool-button">
 							<kbd>Flip</kbd>
-							<svg class="sm" title="Flip Vertical (])" alt="Flip Vertical"><use href="img/icons.svg#flipv"></use></svg>
+							<svg class="sm" title="Flip Vertical (])" alt="Flip Vertical">
+								<use href="img/icons.svg#flipv"></use>
+							</svg>
 						</div>
 						<div id="move-blocks" class="tool-button">
 							<kbd>Move</kbd>
-							<svg><use href="img/icons.svg#move"></use></svg>
+							<svg>
+								<use href="img/icons.svg#move"></use>
+							</svg>
 						</div>
 						<div id="cut" class="tool-button">
 							<kbd>Cut</kbd>
-							<svg transform="matrix(-1,0,0,1,0,0)"><use href="img/icons.svg#cut"></use></svg>
+							<svg transform="matrix(-1,0,0,1,0,0)">
+								<use href="img/icons.svg#cut"></use>
+							</svg>
 						</div>
 						<div id="delete" class="tool-button">
 							<kbd>Delete</kbd>
-							<svg><use href="img/icons.svg#delete"></use></svg>
+							<svg>
+								<use href="img/icons.svg#delete"></use>
+							</svg>
 						</div>
 						<div id="copy" class="tool-button">
 							<kbd>Copy</kbd>
-							<svg><use href="img/icons.svg#copy"></use></svg>
+							<svg>
+								<use href="img/icons.svg#copy"></use>
+							</svg>
 						</div>
 						<div id="paste" class="tool-button">
 							<kbd>Paste</kbd>
-							<svg><use href="img/icons.svg#paste"></use></svg>
+							<svg>
+								<use href="img/icons.svg#paste"></use>
+							</svg>
 						</div>
 						<div id="system-paste" class="tool-button">
 							<kbd>System</kbd>
-							<svg transform="rotate(90)"><use href="img/icons.svg#paste"></use></svg>
+							<svg transform="rotate(90)">
+								<use href="img/icons.svg#paste"></use>
+							</svg>
 						</div>
 					</div>
 					<div id="shapes-toolbar">
 						<div id="line" class="tool-button">
-							<svg title="Line" alt="Line"><use href="img/icons.svg#line"></use></svg>
+							<svg title="Line" alt="Line">
+								<use href="img/icons.svg#line"></use>
+							</svg>
 							<kbd>Line</kbd>
 						</div>
 						<div id="square" class="tool-button">
-							<svg title="Square" alt="Square"><use href="img/icons.svg#square"></use></svg>
+							<svg title="Square" alt="Square">
+								<use href="img/icons.svg#square"></use>
+							</svg>
 							<kbd>Square</kbd>
 						</div>
 						<div id="circle" class="tool-button">
-							<svg title="Circle" alt="Circle"><use href="img/icons.svg#circle"></use></svg>
+							<svg title="Circle" alt="Circle">
+								<use href="img/icons.svg#circle"></use>
+							</svg>
 							<kbd>Circle</kbd>
 						</div>
 						<div id="circle-toolbar" class="hide"></div>
@@ -161,42 +199,59 @@
 					</div>
 					<div id="clipboard-toolbar">
 						<div id="undo" class="tool-button">
-							<svg title="Undo" alt="Undo"><use href="img/icons.svg#undo"></use></svg>
+							<svg title="Undo" alt="Undo">
+								<use href="img/icons.svg#undo"></use>
+							</svg>
 							<kbd>Undo</kbd>
 						</div>
 						<div id="redo" class="tool-button">
-							<svg title="Redo" alt="Redo"><use href="img/icons.svg#redo"></use></svg>
+							<svg title="Redo" alt="Redo">
+								<use href="img/icons.svg#redo"></use>
+							</svg>
 							<kbd>Redo</kbd>
 						</div>
 					</div>
 					<div id="font-toolbar">
 						<div id="change-font" class="tool-button">
-							<svg title="Change Font" alt="Change Font"><use href="img/icons.svg#font"></use></svg>
+							<svg title="Change Font" alt="Change Font">
+								<use href="img/icons.svg#font"></use>
+							</svg>
 							<kbd>Change Font</kbd>
 						</div>
 						<div id="navICE" class="tool-button">
-							<svg title="Toggle iCE Colors" alt="Use iCE Colors"><use href="img/icons.svg#ice"></use></svg>
+							<svg title="Toggle iCE Colors" alt="Use iCE Colors">
+								<use href="img/icons.svg#ice"></use>
+							</svg>
 							<kbd>ICE Colors</kbd>
 						</div>
 						<div id="nav9pt" class="tool-button">
-							<svg title="Toggle 9px Font" alt="Use 9px Font"><use href="img/icons.svg#spacing"></use></svg>
+							<svg title="Toggle 9px Font" alt="Use 9px Font">
+								<use href="img/icons.svg#spacing"></use>
+							</svg>
 							<kbd>9pt Font</kbd>
 						</div>
 					</div>
 				</nav>
 				<nav>
 					<button id="network-button" class="hide">
-						<svg title="Join Collab" alt="Join Collab"><use href="img/icons.svg#group"></use></svg>
+						<svg title="Join Collab" alt="Join Collab">
+							<use href="img/icons.svg#group"></use>
+						</svg>
 					</button>
 					<button id="chat-button" class="included-for-websocket">
-						<svg title="Toggle Chat" alt="Toggle Chat"><use href="img/icons.svg#group"></use></svg>
+						<svg title="Toggle Chat" alt="Toggle Chat">
+							<use href="img/icons.svg#group"></use>
+						</svg>
 					</button>
 					<div id="chat-window" class="hide">
 						<div id="chatRoom">
 							<header>
 								<h1>chatz</h1>
 								<div id="notification-setting">
-									<label><input id="notification-checkbox" type="checkbox" />Display Notifications</label>
+									<label>
+										<input id="notification-checkbox" type="checkbox"/>
+										Display Notifications
+									</label>
 								</div>
 							</header>
 							<section>
@@ -204,8 +259,10 @@
 								<div id="message-window"></div>
 							</section>
 							<nav>
-								<input id="handle-input" type="text" value="" spellcheck="false" autocomplete="off" maxlength="14" />
-								<div class="prompt"><input id="message-input" type="text" value="" spellcheck="false" autocomplete="off" maxlength="140" /></div>
+								<input id="handle-input" type="text" autocomplete="off" maxlength="14" spellcheck="false"/>
+								<div class="prompt">
+									<input id="message-input" type="text" autocomplete="off" maxlength="140" spellcheck="false"/>
+								</div>
 								<button id="message-send">send</button>
 							</nav>
 						</div>
@@ -223,39 +280,59 @@
 				</nav>
 			</header>
 			<aside>
-				<canvas id="palette-preview" width="40" height="40"></canvas>
-				<canvas id="palette-picker" width="40" height="160"></canvas>
+				<canvas id="palette-preview" height="40" width="40"></canvas>
+				<canvas id="palette-picker" height="160" width="40"></canvas>
 				<div id="keyboard">
-					<svg title="Keyboard (k)" alt="Keyboard"><use href="img/icons.svg#keeb"></use></svg>
+					<svg title="Keyboard (k)" alt="Keyboard">
+						<use href="img/icons.svg#keeb"></use>
+					</svg>
 				</div>
 				<div id="brushes">
-					<svg title="Brushes" alt="Brushes"><use href="img/icons.svg#brush"></use></svg>
+					<svg title="Brushes" alt="Brushes">
+						<use href="img/icons.svg#brush"></use>
+					</svg>
 				</div>
 				<div id="fill">
-					<svg title="Fill (n)" alt="Fill"><use href="img/icons.svg#fill"></use></svg>
+					<svg title="Fill (n)" alt="Fill">
+						<use href="img/icons.svg#fill"></use>
+					</svg>
 				</div>
 				<div id="shapes">
-					<svg title="Shapes" alt="Shapes"><use href="img/icons.svg#shapes"></use></svg>
+					<svg title="Shapes" alt="Shapes">
+						<use href="img/icons.svg#shapes"></use>
+					</svg>
 				</div>
 				<div class="seperator"></div>
 				<div id="selection">
-					<svg title="Selection" alt="Selection"><use href="img/icons.svg#select"></use></svg>
+					<svg title="Selection" alt="Selection">
+						<use href="img/icons.svg#select"></use>
+					</svg>
 				</div>
 				<div id="sample">
-					<svg title="Sample (alt)" alt="Sample"><use href="img/icons.svg#dropper"></use></svg>
+					<svg title="Sample (alt)" alt="Sample">
+						<use href="img/icons.svg#dropper"></use>
+					</svg>
 				</div>
 				<div id="mirror">
-					<svg title="Mirror Mode (Ctrl+M)" alt="Mirror Mode"><use href="img/icons.svg#mirror"></use></svg>
+					<svg title="Mirror Mode (Ctrl+M)" alt="Mirror Mode">
+						<use href="img/icons.svg#mirror"></use>
+					</svg>
 				</div>
 				<div class="seperator"></div>
 				<div id="clipboard">
-					<svg title="Undo" alt="Undo"><use href="img/icons.svg#history"></use></svg>
+					<svg title="Undo" alt="Undo">
+						<use href="img/icons.svg#history"></use>
+					</svg>
 				</div>
 				<div id="fonts">
-					<svg title="Change Font" alt="Change Font"><use href="img/icons.svg#font"></use></svg>
+					<svg title="Change Font" alt="Change Font">
+						<use href="img/icons.svg#font"></use>
+					</svg>
 				</div>
 				<div id="navGrid">
-					<svg title="Show Grid (Ctrl-G)" alt="Show Grid (Ctrl-G)"><use href="img/icons.svg#grid"></use></svg>
+					<svg title="Show Grid (Ctrl-G)" alt="Show Grid (Ctrl-G)">
+						<use href="img/icons.svg#grid"></use>
+					</svg>
 				</div>
 			</aside>
 			<div id="viewport">
@@ -265,21 +342,27 @@
 				</div>
 			</div>
 		</div>
-		<input type="file" accept=".ans,.ansi,.xb,.xbin,.bin,.txt,.nfo,.utf8ans" id="open-file" class="hide" />
-		<input type="color" id="custom-color" class="hide" />
-		<div class="overlay" id="resize-overlay">
+		<input id="open-file" class="hide" type="file" accept=".ans,.ansi,.xb,.xbin,.bin,.txt,.nfo,.utf8ans"/>
+		<input id="custom-color" class="hide" type="color"/>
+		<div id="resize-overlay" class="overlay">
 			<div class="dialog">
 				<div>
-					<label>Columns: <input type="number" id="columns-input" min="1" /></label>
+					<label>
+						Columns:
+						<input id="columns-input" type="number" min="1"/>
+					</label>
 				</div>
 				<div>
-					<label>Rows: <input type="number" id="rows-input" min="1" /></label>
+					<label>
+						Rows:
+						<input id="rows-input" type="number" min="1"/>
+					</label>
 				</div>
-				<div class="button" id="resize-apply">Resize</div>
-				<div class="button" id="resize-cancel">Cancel</div>
+				<div id="resize-apply" class="button">Resize</div>
+				<div id="resize-cancel" class="button">Cancel</div>
 			</div>
 		</div>
-		<div class="overlay" id="fonts-overlay">
+		<div id="fonts-overlay" class="overlay">
 			<div class="dialog font-dialog">
 				<div class="font-dialog-left">
 					<select id="font-select" size="10">
@@ -422,65 +505,68 @@
 							<option value="CP857 8x16">IBM PC Code page 857 (8x16)</option>
 						</optgroup>
 					</select>
-					<div class="button" id="fonts-cancel">Cancel</div>
-					<div class="button" id="fonts-apply">Change Font</div>
+					<div id="fonts-cancel" class="button">Cancel</div>
+					<div id="fonts-apply" class="button">Change Font</div>
 				</div>
 				<div class="font-dialog-right">
 					<div id="font-preview-container">
 						<div id="font-preview-info"></div>
-						<img id="font-preview-image" />
+						<img id="font-preview-image" alt="Font Preview"/>
 					</div>
 				</div>
 			</div>
 		</div>
-		<div class="overlay" id="sauce-overlay">
+		<div id="sauce-overlay" class="overlay">
 			<div class="dialog">
 				<div>
-					<label
-						><kbd>Title: </kbd
-						><input id="sauce-title" type="text" value="" spellcheck="false" autocomplete="off" maxlength="35"
-					/></label>
-				</div>
-				<div>
-					<label
-						><kbd>Group: </kbd
-						><input id="sauce-group" type="text" value="" spellcheck="false" autocomplete="off" maxlength="20"
-					/></label>
-				</div>
-				<div>
-					<label
-						><kbd>Author: </kbd
-						><input id="sauce-author" type="text" value="" spellcheck="false" autocomplete="off" maxlength="20"
-					/></label>
-				</div>
-				<div>
-					<label
-						><kbd>Comments: </kbd><textarea id="sauce-comments" autocomplete="off" rows="5" cols="15"></textarea>
+					<label>
+						<kbd>Title: </kbd>
+						<input id="sauce-title" type="text" autocomplete="off" maxlength="35" spellcheck="false"/>
 					</label>
 				</div>
 				<div>
-					<label><input tab-index="0" id="sauce-bytes" type="text" value="0/16320 bytes" readonly /></label>
+					<label>
+						<kbd>Group: </kbd>
+						<input id="sauce-group" type="text" autocomplete="off" maxlength="20" spellcheck="false"
+						/></label>
 				</div>
-				<div class="button" id="sauce-done">Save</div>
-				<div class="button" id="sauce-cancel">Cancel</div>
+				<div>
+					<label>
+						<kbd>Author: </kbd>
+						<input id="sauce-author" type="text" autocomplete="off" maxlength="20" spellcheck="false"
+						/></label>
+				</div>
+				<div>
+					<label>
+						<kbd>Comments: </kbd>
+						<textarea id="sauce-comments" cols="15" autocomplete="off" rows="5"></textarea>
+					</label>
+				</div>
+				<div>
+					<label>
+						<input id="sauce-bytes" type="text" value="0/16320 bytes" readonly tab-index="0"/>
+					</label>
+				</div>
+				<div id="sauce-done" class="button">Save</div>
+				<div id="sauce-cancel" class="button">Cancel</div>
 			</div>
 		</div>
-		<div class="overlay" id="websocket-overlay">
+		<div id="websocket-overlay" class="overlay">
 			<div class="dialog">
 				<p>
-					Please wait... Retrieving data from server.<br /><br />
+					Please wait... Retrieving data from server.<br/><br/>
 					<cite>If this hangs forever the port/server is down, disable the "network.js" file.</cite>
 				</p>
 			</div>
 		</div>
-		<div class="overlay" id="collaboration-choice-overlay">
+		<div id="collaboration-choice-overlay" class="overlay">
 			<div class="dialog">
 				<p>
 					A collaboration server is available. Would you like to join the collaborative session or continue in local
 					mode?
 				</p>
-				<div class="button" id="join-collaboration">Join Collaboration</div>
-				<div class="button" id="stay-local">Stay Local</div>
+				<div id="join-collaboration" class="button">Join Collaboration</div>
+				<div id="stay-local" class="button">Stay Local</div>
 			</div>
 		</div>
 	</body>

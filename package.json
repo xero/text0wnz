@@ -31,14 +31,16 @@
 	"scripts": {
 		"bake": "cat banner; vite build --mode production",
 		"server": "cat banner; bun src/js/server/main.js",
-		"fix": "cat banner; prettier --write src/css/*.css src/js/**/*.js tests/**/*.js && eslint --fix tests/**/*.js src/js/**/*.js",
-		"lint:check": "cat banner; eslint tests/**/*.js src/js/**/*.js",
-		"lint:fix": "cat banner; eslint --fix tests/**/*.js src/js/**/*.js",
-		"format:fix": "cat banner; prettier --write src/css/*.css src/js/**/*.js tests/**/*.js",
-		"format:check": "cat banner; prettier --check src/css/*.css src/js/**/*.js tests/**/*.js",
+		"fix": "cat banner; prettier --write src/*.html src/css/*.css src/js/**/*.js tests/**/*.js && eslint --fix src/*.html src/js/**/*.js tests/**/*.js",
+		"lint:check": "cat banner; eslint src/*.html src/js/**/*.js tests/**/*.js",
+		"lint:fix": "cat banner; eslint --fix src/*.html tests/**/*.js src/js/**/*.js",
+		"format:fix": "cat banner; prettier --write src/*.html src/css/*.css src/js/**/*.js tests/**/*.js",
+		"format:check": "cat banner; prettier --check src/*.html src/css/*.css src/js/**/*.js tests/**/*.js",
 		"test:unit": "cat banner; vitest run"
 	},
 	"dependencies": {
+		"@html-eslint/eslint-plugin": "^0.46.2",
+		"@html-eslint/parser": "^0.46.2",
 		"@stylistic/eslint-plugin": "^5.3.1",
 		"@tailwindcss/postcss": "^4.1.13",
 		"@testing-library/jest-dom": "^6.8.0",
