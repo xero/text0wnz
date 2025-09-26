@@ -27,7 +27,7 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 		const parseXBFontData = (fontBytes, fontWidth, fontHeight) => {
 			if (!fontBytes || fontBytes.length === 0) {
 				console.error(`[Font] Invalid fontBytes provided to parseXBFontData. Expected: a non-empty Uint8Array or Buffer;
-				Recieved: ${fontBytes ? `type ${typeof fontBytes}, length ${fontBytes.length}` : String(fontBytes)}`);
+				Received: ${fontBytes ? `type ${typeof fontBytes}, length ${fontBytes.length}` : String(fontBytes)}`);
 				return null;
 			}
 			if (!fontWidth || fontWidth <= 0) {
@@ -38,7 +38,7 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 			}
 			const expectedDataSize = fontHeight * 256;
 			if (fontBytes.length < expectedDataSize) {
-				console.error('[Font] XB font data too small. Expected:', expectedDataSize, ' Recieved:', fontBytes.length);
+				console.error('[Font] XB font data too small. Expected:', expectedDataSize, ' Received:', fontBytes.length);
 				return null;
 			}
 			const internalDataSize = (fontWidth * fontHeight * 256) / 8;
