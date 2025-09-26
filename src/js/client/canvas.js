@@ -1131,6 +1131,13 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const setXBPaletteData = paletteBytes => {
+		if (!paletteBytes || !(paletteBytes instanceof Uint8Array) || paletteBytes.length < 48) {
+			console.error(
+				`[Canvas] Invalid data sent to setXBPaletteData; Expected: Uint8Array of 48 bytes; Received:` +
+				`${paletteBytes?.constructor?.name || 'null'} with length ${paletteBytes?.length || 0}`,
+			);
+			return;
+		}
 		// Convert XB palette (6-bit RGB values)
 		const rgb6BitPalette = [];
 		for (let i = 0; i < 16; i++) {

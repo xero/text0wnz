@@ -244,6 +244,7 @@ export default [
 					"title",
 					"alt",
 					"name",
+					'aria-label',
 					"content",
 					"size",
 					"sizes",

@@ -15,6 +15,8 @@
 		<meta name="apple-mobile-web-app-title" content="text.0w.nz"/>
 		<link rel="manifest" href="/img/site.webmanifest"/>
 		<meta name="theme-color" content="#3f3f3f"/>
+		<link rel="preconnect" href="https://text.0w.nz"/>
+		<meta http-equiv="Content-Security-Policy" content="default-src 'self'"/>
 		<title>text.0w.nz</title>
 		<script type="module" src="js/client/main.js"></script>
 	</head>
@@ -24,8 +26,8 @@
 				<nav>
 					<div id="file-nav">
 						<div id="file-menu" class="menu-title">
-							<button id="File">
-								<svg title="File" alt="File">
+							<button id="File" aria-label="File Menu">
+								<svg alt="File" aria-label="File">
 									<use href="img/icons.svg#save"></use>
 								</svg>
 							</button>
@@ -42,8 +44,8 @@
 							</div>
 						</div>
 						<div id="edit-menu" class="menu-title">
-							<button id="Edit">
-								<svg title="Edit" alt="Edit">
+							<button id="Edit" aria-label="Edit Menu">
+								<svg alt="Edit" aria-label="Edit">
 									<use href="img/icons.svg#settings"></use>
 								</svg>
 							</button>
@@ -77,12 +79,21 @@
 							</div>
 						</div>
 					</div>
-					<button id="navSauce">
+					<button id="navSauce" aria-label="Sauce Menu">
 						<svg>
 							<use href="img/icons.svg#sauce"></use>
 						</svg>
 					</button>
-					<input id="artwork-title" type="text" value="Untitled" autocomplete="off" maxlength="40" spellcheck="false"/>
+					<label>
+						<input
+							id="artwork-title"
+							type="text"
+							value="Untitled"
+							autocomplete="off"
+							maxlength="40"
+							spellcheck="false"
+						/>
+					</label>
 				</nav>
 				<nav>
 					<div id="keyboard-toolbar">
@@ -101,25 +112,25 @@
 					</div>
 					<div id="brush-toolbar">
 						<div id="halfblock" class="tool-button">
-							<svg title="Block (f)" alt="Block">
+							<svg alt="Block" aria-label="Block (f)">
 								<use href="img/icons.svg#blockBrush"></use>
 							</svg>
 							<kbd>Block</kbd>
 						</div>
 						<div id="shading-brush" class="tool-button">
-							<svg title="Shading (f)" alt="Shading">
+							<svg alt="Shading" aria-label="Shading (f)">
 								<use href="img/icons.svg#shadeBrush"></use>
 							</svg>
 							<kbd>Shading</kbd>
 						</div>
 						<div id="character-brush" class="tool-button">
-							<svg title="Character Brush (b)" alt="Character Brush">
+							<svg alt="Character Brush" aria-label="Character Brush (b)">
 								<use href="img/icons.svg#character"></use>
 							</svg>
 							<kbd>Character</kbd>
 						</div>
 						<div id="attrib" class="tool-button">
-							<svg title="Colorize" alt="Colorize">
+							<svg alt="Colorize" aria-label="Colorize">
 								<use href="img/icons.svg#roller"></use>
 							</svg>
 							<kbd>Colorize</kbd>
@@ -128,13 +139,13 @@
 					<div id="selection-toolbar">
 						<div id="flip-horizontal" class="tool-button">
 							<kbd>Mirror</kbd>
-							<svg class="sm" title="Flip Horizontal ([)" alt="Flip Horizontal">
+							<svg class="sm" alt="Flip Horizontal" aria-label="Flip Horizontal ([)">
 								<use href="img/icons.svg#fliph"></use>
 							</svg>
 						</div>
 						<div id="flip-vertical" class="tool-button">
 							<kbd>Flip</kbd>
-							<svg class="sm" title="Flip Vertical (])" alt="Flip Vertical">
+							<svg class="sm" alt="Flip Vertical" aria-label="Flip Vertical (])">
 								<use href="img/icons.svg#flipv"></use>
 							</svg>
 						</div>
@@ -177,19 +188,19 @@
 					</div>
 					<div id="shapes-toolbar">
 						<div id="line" class="tool-button">
-							<svg title="Line" alt="Line">
+							<svg alt="Line" aria-label="Line">
 								<use href="img/icons.svg#line"></use>
 							</svg>
 							<kbd>Line</kbd>
 						</div>
 						<div id="square" class="tool-button">
-							<svg title="Square" alt="Square">
+							<svg alt="Square" aria-label="Square">
 								<use href="img/icons.svg#square"></use>
 							</svg>
 							<kbd>Square</kbd>
 						</div>
 						<div id="circle" class="tool-button">
-							<svg title="Circle" alt="Circle">
+							<svg alt="Circle" aria-label="Circle">
 								<use href="img/icons.svg#circle"></use>
 							</svg>
 							<kbd>Circle</kbd>
@@ -199,13 +210,13 @@
 					</div>
 					<div id="clipboard-toolbar">
 						<div id="undo" class="tool-button">
-							<svg title="Undo" alt="Undo">
+							<svg alt="Undo" aria-label="Undo">
 								<use href="img/icons.svg#undo"></use>
 							</svg>
 							<kbd>Undo</kbd>
 						</div>
 						<div id="redo" class="tool-button">
-							<svg title="Redo" alt="Redo">
+							<svg alt="Redo" aria-label="Redo">
 								<use href="img/icons.svg#redo"></use>
 							</svg>
 							<kbd>Redo</kbd>
@@ -213,19 +224,19 @@
 					</div>
 					<div id="font-toolbar">
 						<div id="change-font" class="tool-button">
-							<svg title="Change Font" alt="Change Font">
+							<svg alt="Change Font" aria-label="Change Font">
 								<use href="img/icons.svg#font"></use>
 							</svg>
 							<kbd>Change Font</kbd>
 						</div>
 						<div id="navICE" class="tool-button">
-							<svg title="Toggle iCE Colors" alt="Use iCE Colors">
+							<svg alt="Use iCE Colors" aria-label="Toggle iCE Colors">
 								<use href="img/icons.svg#ice"></use>
 							</svg>
 							<kbd>ICE Colors</kbd>
 						</div>
 						<div id="nav9pt" class="tool-button">
-							<svg title="Toggle 9px Font" alt="Use 9px Font">
+							<svg alt="Use 9px Font" aria-label="Toggle 9px Font">
 								<use href="img/icons.svg#spacing"></use>
 							</svg>
 							<kbd>9pt Font</kbd>
@@ -233,13 +244,13 @@
 					</div>
 				</nav>
 				<nav>
-					<button id="network-button" class="hide">
-						<svg title="Join Collab" alt="Join Collab">
+					<button id="network-button" class="hide" aria-label="Join Collab">
+						<svg alt="Join Collab" aria-label="Join Collab">
 							<use href="img/icons.svg#group"></use>
 						</svg>
 					</button>
-					<button id="chat-button" class="included-for-websocket">
-						<svg title="Toggle Chat" alt="Toggle Chat">
+					<button id="chat-button" class="included-for-websocket" aria-label="Chat">
+						<svg alt="Toggle Chat" aria-label="Toggle Chat">
 							<use href="img/icons.svg#group"></use>
 						</svg>
 					</button>
@@ -259,16 +270,20 @@
 								<div id="message-window"></div>
 							</section>
 							<nav>
-								<input id="handle-input" type="text" autocomplete="off" maxlength="14" spellcheck="false"/>
+								<label>
+									<input id="handle-input" type="text" autocomplete="off" maxlength="14" spellcheck="false"/>
+								</label>
 								<div class="prompt">
-									<input id="message-input" type="text" autocomplete="off" maxlength="140" spellcheck="false"/>
+									<label>
+										<input id="message-input" type="text" autocomplete="off" maxlength="140" spellcheck="false"/>
+									</label>
 								</div>
-								<button id="message-send">send</button>
+								<button id="message-send" aria-label="Send Chat">send</button>
 							</nav>
 						</div>
 					</div>
 					<div id="resolution">
-						<svg id="navRes" title="Change Resolution" alt="Change Resolution">
+						<svg id="navRes" alt="Change Resolution" aria-label="Change Resolution">
 							<use href="img/icons.svg#resolution"></use>
 						</svg>
 						<kbd id="resolution-label">80x25</kbd>
@@ -283,54 +298,54 @@
 				<canvas id="palette-preview" height="40" width="40"></canvas>
 				<canvas id="palette-picker" height="160" width="40"></canvas>
 				<div id="keyboard">
-					<svg title="Keyboard (k)" alt="Keyboard">
+					<svg alt="Keyboard" aria-label="Keyboard (k)">
 						<use href="img/icons.svg#keeb"></use>
 					</svg>
 				</div>
 				<div id="brushes">
-					<svg title="Brushes" alt="Brushes">
+					<svg alt="Brushes" aria-label="Brushes">
 						<use href="img/icons.svg#brush"></use>
 					</svg>
 				</div>
 				<div id="fill">
-					<svg title="Fill (n)" alt="Fill">
+					<svg alt="Fill" aria-label="Fill (n)">
 						<use href="img/icons.svg#fill"></use>
 					</svg>
 				</div>
 				<div id="shapes">
-					<svg title="Shapes" alt="Shapes">
+					<svg alt="Shapes" aria-label="Shapes">
 						<use href="img/icons.svg#shapes"></use>
 					</svg>
 				</div>
 				<div class="seperator"></div>
 				<div id="selection">
-					<svg title="Selection" alt="Selection">
+					<svg alt="Selection" aria-label="Selection">
 						<use href="img/icons.svg#select"></use>
 					</svg>
 				</div>
 				<div id="sample">
-					<svg title="Sample (alt)" alt="Sample">
+					<svg alt="Sample" aria-label="Sample (alt)">
 						<use href="img/icons.svg#dropper"></use>
 					</svg>
 				</div>
 				<div id="mirror">
-					<svg title="Mirror Mode (Ctrl+M)" alt="Mirror Mode">
+					<svg alt="Mirror Mode" aria-label="Mirror Mode (Ctrl+M)">
 						<use href="img/icons.svg#mirror"></use>
 					</svg>
 				</div>
 				<div class="seperator"></div>
 				<div id="clipboard">
-					<svg title="Undo" alt="Undo">
+					<svg alt="Undo" aria-label="Undo">
 						<use href="img/icons.svg#history"></use>
 					</svg>
 				</div>
 				<div id="fonts">
-					<svg title="Change Font" alt="Change Font">
+					<svg alt="Change Font" aria-label="Change Font">
 						<use href="img/icons.svg#font"></use>
 					</svg>
 				</div>
 				<div id="navGrid">
-					<svg title="Show Grid (Ctrl-G)" alt="Show Grid (Ctrl-G)">
+					<svg alt="Show Grid (Ctrl-G)" aria-label="Show Grid (Ctrl-G)">
 						<use href="img/icons.svg#grid"></use>
 					</svg>
 				</div>
@@ -342,8 +357,12 @@
 				</div>
 			</div>
 		</div>
-		<input id="open-file" class="hide" type="file" accept=".ans,.ansi,.xb,.xbin,.bin,.txt,.nfo,.utf8ans"/>
-		<input id="custom-color" class="hide" type="color"/>
+		<label>
+			<input id="open-file" class="hide" type="file" accept=".ans,.ansi,.xb,.xbin,.bin,.txt,.nfo,.utf8ans"/>
+		</label>
+		<label>
+			<input id="custom-color" class="hide" type="color"/>
+		</label>
 		<div id="resize-overlay" class="overlay">
 			<div class="dialog">
 				<div>
@@ -358,8 +377,8 @@
 						<input id="rows-input" type="number" min="1"/>
 					</label>
 				</div>
-				<div id="resize-apply" class="button">Resize</div>
-				<div id="resize-cancel" class="button">Cancel</div>
+				<div id="resize-apply" class="button" aria-label="Resize Canvas">Resize</div>
+				<div id="resize-cancel" class="button" aria-label="Cancel">Cancel</div>
 			</div>
 		</div>
 		<div id="fonts-overlay" class="overlay">
@@ -379,6 +398,7 @@
 							<option value="FM-TOWNS 8x16">FM-TOWNS (8x16)</option>
 							<option value="FM-TOWNS 8x8">FM-TOWNS (8x8)</option>
 							<option value="FrogBlock 8x8">FrogBlock (8x8)</option>
+							<option value="Glitch 8x20">Glitch (8x20)</option>
 							<option value="GJSCI-X 8x16">GJSCI-X (8x16)</option>
 							<option value="Hack 8x16">Hack (8x16)</option>
 							<option value="Hack 8x8">Hack (8x8)</option>
@@ -505,8 +525,8 @@
 							<option value="CP857 8x16">IBM PC Code page 857 (8x16)</option>
 						</optgroup>
 					</select>
-					<div id="fonts-cancel" class="button">Cancel</div>
-					<div id="fonts-apply" class="button">Change Font</div>
+					<div id="fonts-cancel" class="button" aria-label="Cancel">Cancel</div>
+					<div id="fonts-apply" class="button" aria-label="Change Font">Change Font</div>
 				</div>
 				<div class="font-dialog-right">
 					<div id="font-preview-container">
@@ -547,8 +567,8 @@
 						<input id="sauce-bytes" type="text" value="0/16320 bytes" readonly tab-index="0"/>
 					</label>
 				</div>
-				<div id="sauce-done" class="button">Save</div>
-				<div id="sauce-cancel" class="button">Cancel</div>
+				<div id="sauce-done" class="button" aria-label="Save Sauce">Save</div>
+				<div id="sauce-cancel" class="button" aria-label="Cancel">Cancel</div>
 			</div>
 		</div>
 		<div id="websocket-overlay" class="overlay">
@@ -565,8 +585,8 @@
 					A collaboration server is available. Would you like to join the collaborative session or continue in local
 					mode?
 				</p>
-				<div id="join-collaboration" class="button">Join Collaboration</div>
-				<div id="stay-local" class="button">Stay Local</div>
+				<div id="join-collaboration" class="button" aria-label="Join Collaboration">Join Collaboration</div>
+				<div id="stay-local" class="button" aria-label="Stay Local">Stay Local</div>
 			</div>
 		</div>
 	</body>

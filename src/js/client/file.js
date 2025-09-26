@@ -255,7 +255,9 @@ const loadModule = () => {
 				charCode = ((charCode & 0x0f) << 12) | ((secondByte & 0x3f) << 6) | (thirdByte & 0x3f);
 				return { charCode, bytesConsumed: 3 };
 			}
-			throw new Error('Invalid UTF-8 byte sequence');
+			throw new Error(
+				`[File] Invalid UTF-8 byte sequence at position ${startIndex}: 0x${bytes[startIndex].toString(16).padStart(2, '0')}`,
+			);
 		};
 
 		// Parse SAUCE metadata
@@ -588,6 +590,8 @@ const loadModule = () => {
 				return 'FM-TOWNS 8x16';
 			case 'FM-TOWNSx':
 				return 'FM-TOWNS 8x8';
+			case 'Glitch':
+				return 'Glitch 8x20';
 			case 'GJSCI-X':
 				return 'GJSCI-X 8x16';
 			case 'Hack_2x':
@@ -719,6 +723,8 @@ const loadModule = () => {
 				return 'FM-TOWNS_2x';
 			case 'FM-TOWNS 8x8':
 				return 'FM-TOWNS';
+			case 'Glitch 8x20':
+				return 'Glitch';
 			case 'GJSCI-X 8x16':
 				return 'GJSCI-X';
 			case 'Hack 8x16':

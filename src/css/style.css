@@ -55,6 +55,7 @@
 	src: url('/fonts/topazplus_1200.woff2') format('woff2');
 	font-weight: normal;
 	font-style: normal;
+	font-display: swap;
 }
 
 * {
@@ -113,7 +114,10 @@ kbd {
 .loading * {
 	@apply cursor-wait!;
 }
-
+h1,
+section h1 {
+	@apply text-2xl;
+}
 header,
 aside,
 #position-info {
