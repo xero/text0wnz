@@ -264,7 +264,6 @@ const createHalfBlockController = () => {
 	};
 	const draw = coords => {
 		if (prev.x !== coords.x || prev.y !== coords.y || prev.halfBlockY !== coords.halfBlockY) {
-			// const color = (coords.leftMouseButton === true) ? State.palette.getForegroundColor() : State.palette.getBackgroundColor();
 			const color = State.palette.getForegroundColor();
 			if (Math.abs(prev.x - coords.x) > 1 || Math.abs(prev.halfBlockY - coords.halfBlockY) > 1) {
 				State.textArtCanvas.drawHalfBlock(callback => {

@@ -747,9 +747,9 @@ const loadModule = () => {
 			case 'GJSCI-X 8x16':
 				return 'GJSCI-X';
 			case 'Hack 8x16':
-				return 'Hack';
+				return 'Hack_2';
 			case 'Hack 8x8':
-				return 'Hack_2x';
+				return 'Hack';
 			case 'Line 8x16':
 				return 'Line_2x';
 			case 'Line 8x8':
