@@ -87,6 +87,12 @@ const mockCreateFunctions = {
 		down: vi.fn(),
 	})),
 	createToolPreview: vi.fn(() => ({ clear: vi.fn() })),
+	createModalController: vi.fn(() => ({
+		isOpen: vi.fn(() => false),
+		open: vi.fn(),
+		close: vi.fn(),
+		error: vi.fn(),
+	})),
 	createDefaultPalette: vi.fn(() => mockState.palette),
 	createPalettePreview: vi.fn(() => ({ updatePreview: vi.fn() })),
 	createPalettePicker: vi.fn(() => ({ updatePalette: vi.fn() })),
@@ -152,8 +158,6 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	onReturn: vi.fn(),
 	onFileChange: vi.fn(),
 	onSelectChange: vi.fn(),
-	showOverlay: vi.fn(),
-	hideOverlay: vi.fn(),
 	undoAndRedo: vi.fn(),
 	createPaintShortcuts: vi.fn(() => ({
 		enable: vi.fn(),
