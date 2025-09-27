@@ -321,6 +321,7 @@ describe('State Management System', () => {
 			State.palette = { test: 'palette' };
 			State.textArtCanvas = { test: 'canvas' };
 			State.font = { test: 'font' };
+			State.modal = { test: 'modal' };
 			State.cursor = { test: 'cursor' };
 			State.selectionCursor = { test: 'selectionCursor' };
 			State.positionInfo = { test: 'positionInfo' };
@@ -379,7 +380,7 @@ describe('State Management System', () => {
 
 			const status = State.getInitializationStatus();
 			expect(status.readyCount).toBe(2);
-			expect(status.totalCount).toBe(8);
+			expect(status.totalCount).toBe(9);
 		});
 
 		it('should return deep copy of dependencies ready in status', () => {

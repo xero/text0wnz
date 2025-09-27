@@ -9,8 +9,7 @@ import {
 	onFileChange,
 	onSelectChange,
 	createPositionInfo,
-	showOverlay,
-	hideOverlay,
+	createModalController,
 	undoAndRedo,
 	createGenericController,
 	createToggleButton,
@@ -273,18 +272,53 @@ describe('UI Utilities', () => {
 		});
 	});
 
-	describe('Overlay Functions', () => {
-		it('should add enabled class on showOverlay', () => {
-			const div = document.createElement('div');
-			showOverlay(div);
-			expect(div.classList.contains('enabled')).toBe(true);
+	describe('Modal Functions', () => {
+		it('should create modal controller with proper methods', () => {
+			const mockModal = {
+				open: false,
+				showModal: vi.fn(),
+				close: vi.fn(),
+			};
+
+			// Create required modal sections
+			document.body.innerHTML = `
+				<div id="resize-modal" class="hide"></div>
+				<div id="fonts-modal" class="hide"></div>
+				<div id="sauce-modal" class="hide"></div>
+				<div id="websocket-modal" class="hide"></div>
+				<div id="choice-modal" class="hide"></div>
+				<div id="modalError"></div>
+			`;
+
+			const modalController = createModalController(mockModal);
+
+			expect(typeof modalController.isOpen).toBe('function');
+			expect(typeof modalController.open).toBe('function');
+			expect(typeof modalController.close).toBe('function');
+			expect(typeof modalController.error).toBe('function');
 		});
 
-		it('should remove enabled class on hideOverlay', () => {
-			const div = document.createElement('div');
-			div.classList.add('enabled');
-			hideOverlay(div);
-			expect(div.classList.contains('enabled')).toBe(false);
+		it('should show modal when opening', () => {
+			const mockModal = {
+				open: false,
+				showModal: vi.fn(),
+				close: vi.fn(),
+			};
+
+			document.body.innerHTML = `
+				<div id="resize-modal" class="hide"></div>
+				<div id="fonts-modal" class="hide"></div>
+				<div id="sauce-modal" class="hide"></div>
+				<div id="websocket-modal" class="hide"></div>
+				<div id="choice-modal" class="hide"></div>
+				<div id="modalError"></div>
+			`;
+
+			const modalController = createModalController(mockModal);
+			modalController.open('resize');
+
+			expect(mockModal.showModal).toHaveBeenCalled();
+			expect(document.getElementById('resize-modal').classList.contains('hide')).toBe(false);
 		});
 	});
 
