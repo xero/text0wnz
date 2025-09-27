@@ -461,7 +461,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		createCanvases();
 		redrawEntireImage();
 		updateTimer();
-		console.log('crit called');
 	};
 
 	const getImage = () => {

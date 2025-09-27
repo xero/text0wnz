@@ -3,7 +3,8 @@ import State from './state.js';
 // Utilities for DOM manipulation
 const D = document,
 			$ = D.getElementById.bind(D),
-			$$ = D.querySelector.bind(D);
+			$$ = D.querySelector.bind(D),
+			classList = (el, className, add = true) => (add ? el.classList.add(className) : el.classList.remove(className));
 
 const createCanvas = (width, height) => {
 	const canvas = document.createElement('canvas');
@@ -12,8 +13,49 @@ const createCanvas = (width, height) => {
 	return canvas;
 };
 
+// Modal
+const createModalController = modal => {
+	const modals = [$('resize-modal'), $('fonts-modal'), $('sauce-modal'), $('websocket-modal'), $('choice-modal')];
+
+	const isOpen = () => modal.open;
+
+	const clear = () => modals.forEach(s => classList(s, 'hide'));
+
+	const open = name => {
+		const section = name + '-modal';
+		if ($(section)) {
+			clear();
+			classList($(section), 'hide', false);
+			void (!isOpen() && modal.showModal());
+		} else {
+			error(`Unknown modal: <kbd>#{section}</kbd>`);
+			console.error(`Unknown modal: <kbd>#{section}</kbd>`);
+		}
+	};
+
+	const close = () => {
+		classList(modal, 'closing');
+		setTimeout(() => {
+			classList(modal, 'closing', false);
+			modal.close();
+		}, 700);
+	};
+
+	const error = message => {
+		$('modalError').innerHTML = message;
+		open('error');
+	};
+
+	return {
+		isOpen: isOpen,
+		open: open,
+		close: close,
+		error: error,
+	};
+};
+
 // Toggles
-const createSettingToggle = (divButton, getter, setter) => {
+const createSettingToggle = (el, getter, setter) => {
 	let currentSetting;
 	let g = getter;
 	let s = setter;
@@ -21,9 +63,9 @@ const createSettingToggle = (divButton, getter, setter) => {
 	const update = () => {
 		currentSetting = g();
 		if (currentSetting === true) {
-			divButton.classList.add('enabled');
+			el.classList.add('enabled');
 		} else {
-			divButton.classList.remove('enabled');
+			el.classList.remove('enabled');
 		}
 	};
 
@@ -40,7 +82,7 @@ const createSettingToggle = (divButton, getter, setter) => {
 		update();
 	};
 
-	divButton.addEventListener('click', changeSetting);
+	el.addEventListener('click', changeSetting);
 	update();
 
 	return {
@@ -49,52 +91,44 @@ const createSettingToggle = (divButton, getter, setter) => {
 	};
 };
 
-const onReturn = (divElement, divTarget) => {
-	divElement.addEventListener('keypress', e => {
+const onReturn = (el, target) => {
+	el.addEventListener('keypress', e => {
 		if (!e.altKey && !e.ctrlKey && !e.metaKey && e.code === 'Enter') {
 			// Enter key
 			e.preventDefault();
 			e.stopPropagation();
-			divTarget.click();
+			target.click();
 		}
 	});
 };
 
-const onClick = (divElement, func) => {
-	divElement.addEventListener('click', e => {
+const onClick = (el, func) => {
+	el.addEventListener('click', e => {
 		e.preventDefault();
-		func(divElement);
+		func(el);
 	});
 };
 
-const onFileChange = (divElement, func) => {
-	divElement.addEventListener('change', e => {
+const onFileChange = (el, func) => {
+	el.addEventListener('change', e => {
 		if (e.target.files.length > 0) {
 			func(e.target.files[0]);
 		}
 	});
 };
 
-const onSelectChange = (divElement, func) => {
-	divElement.addEventListener('change', _ => {
-		func(divElement.value);
+const onSelectChange = (el, func) => {
+	el.addEventListener('change', _ => {
+		func(el.value);
 	});
 };
 
-const createPositionInfo = divElement => {
+const createPositionInfo = el => {
 	const update = (x, y) => {
-		divElement.textContent = x + 1 + ', ' + (y + 1);
+		el.textContent = x + 1 + ', ' + (y + 1);
 	};
 
 	return { update: update };
-};
-
-const showOverlay = divElement => {
-	divElement.classList.add('enabled');
-};
-
-const hideOverlay = divElement => {
-	divElement.classList.remove('enabled');
 };
 
 const undoAndRedo = e => {
@@ -188,8 +222,8 @@ const createPaintShortcuts = keyPair => {
 };
 
 const createToggleButton = (stateOneName, stateTwoName, stateOneClick, stateTwoClick) => {
-	const divContainer = document.createElement('DIV');
-	divContainer.classList.add('toggle-button-container');
+	const container = document.createElement('DIV');
+	container.classList.add('toggle-button-container');
 	const stateOne = document.createElement('DIV');
 	stateOne.classList.add('toggle-button');
 	stateOne.classList.add('left');
@@ -198,11 +232,11 @@ const createToggleButton = (stateOneName, stateTwoName, stateOneClick, stateTwoC
 	stateTwo.classList.add('toggle-button');
 	stateTwo.classList.add('right');
 	stateTwo.textContent = stateTwoName;
-	divContainer.appendChild(stateOne);
-	divContainer.appendChild(stateTwo);
+	container.appendChild(stateOne);
+	container.appendChild(stateTwo);
 
 	const getElement = () => {
-		return divContainer;
+		return container;
 	};
 
 	const setStateOne = () => {
@@ -232,7 +266,7 @@ const createToggleButton = (stateOneName, stateTwoName, stateOneClick, stateTwoC
 	};
 };
 
-const createGrid = divElement => {
+const createGrid = el => {
 	let canvases = [];
 	let enabled = false;
 
@@ -279,16 +313,16 @@ const createGrid = divElement => {
 	const createGrid = () => {
 		createCanvases();
 		renderGrid(canvases[0]);
-		divElement.appendChild(canvases[0]);
+		el.appendChild(canvases[0]);
 		for (let i = 1; i < canvases.length; i++) {
 			canvases[i].getContext('2d').drawImage(canvases[0], 0, 0);
-			divElement.appendChild(canvases[i]);
+			el.appendChild(canvases[i]);
 		}
 	};
 
 	const resize = () => {
 		canvases.forEach(canvas => {
-			divElement.removeChild(canvas);
+			el.removeChild(canvas);
 		});
 		createGrid();
 	};
@@ -306,10 +340,10 @@ const createGrid = divElement => {
 
 	const show = turnOn => {
 		if (enabled === true && turnOn === false) {
-			divElement.classList.remove('enabled');
+			el.classList.remove('enabled');
 			enabled = false;
 		} else if (enabled === false && turnOn === true) {
-			divElement.classList.add('enabled');
+			el.classList.add('enabled');
 			enabled = true;
 		}
 	};
@@ -320,7 +354,7 @@ const createGrid = divElement => {
 	};
 };
 
-const createToolPreview = divElement => {
+const createToolPreview = el => {
 	let canvases = [];
 	let ctxs = [];
 
@@ -344,13 +378,13 @@ const createToolPreview = divElement => {
 			ctxs.push(canvas.getContext('2d'));
 		}
 		canvases.forEach(canvas => {
-			divElement.appendChild(canvas);
+			el.appendChild(canvas);
 		});
 	};
 
 	const resize = () => {
 		canvases.forEach(canvas => {
-			divElement.removeChild(canvas);
+			el.removeChild(canvas);
 		});
 		createCanvases();
 	};
@@ -371,7 +405,7 @@ const createToolPreview = divElement => {
 	};
 
 	createCanvases();
-	divElement.classList.add('enabled');
+	el.classList.add('enabled');
 
 	document.addEventListener('onTextCanvasSizeChange', resize);
 	document.addEventListener('onLetterSpacingChange', resize);
@@ -447,14 +481,13 @@ export {
 	$,
 	$$,
 	createCanvas,
+	createModalController,
 	createSettingToggle,
 	onClick,
 	onReturn,
 	onFileChange,
 	onSelectChange,
 	createPositionInfo,
-	showOverlay,
-	hideOverlay,
 	undoAndRedo,
 	createGenericController,
 	createPaintShortcuts,

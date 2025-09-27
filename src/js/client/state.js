@@ -16,6 +16,7 @@ const EditorState = {
 	selectionCursor: null,
 
 	// UI components
+	modal: null,
 	positionInfo: null,
 	toolPreview: null,
 	pasteTool: null,
@@ -38,6 +39,7 @@ const EditorState = {
 		palette: false,
 		textArtCanvas: false,
 		font: false,
+		modal: false,
 		cursor: false,
 		selectionCursor: false,
 		positionInfo: false,
@@ -215,6 +217,7 @@ class StateManager {
 			'palette',
 			'textArtCanvas',
 			'font',
+			'modal',
 			'cursor',
 			'selectionCursor',
 			'positionInfo',
@@ -251,6 +254,7 @@ class StateManager {
 			textArtCanvas: null,
 			palette: null,
 			font: null,
+			modal: null,
 			cursor: null,
 			selectionCursor: null,
 			positionInfo: null,
@@ -267,6 +271,7 @@ class StateManager {
 				palette: false,
 				textArtCanvas: false,
 				font: false,
+				modal: false,
 				cursor: false,
 				selectionCursor: false,
 				positionInfo: false,
@@ -355,6 +360,12 @@ const State = {
 	},
 	set font(value) {
 		stateManager.set('font', value);
+	},
+	get modal() {
+		return stateManager.state.modal;
+	},
+	set modal(value) {
+		stateManager.set('modal', value);
 	},
 	get network() {
 		return stateManager.state.network;

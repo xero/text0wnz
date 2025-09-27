@@ -1,5 +1,5 @@
 import State from './state.js';
-import { $, $$, showOverlay, hideOverlay, websocketUI } from './ui.js';
+import { $, $$, websocketUI } from './ui.js';
 
 const createWorkerHandler = inputHandle => {
 	const btnJoin = $('join-collaboration');
@@ -10,8 +10,6 @@ const createWorkerHandler = inputHandle => {
 	const btn9pt = $('nav9pt');
 	const btnIce = $('navICE');
 	const btnNet = $('network-button');
-	const ovrCollab = $('collaboration-choice-overlay');
-	const ovrSocket = $('websocket-overlay');
 
 	const workerPath = `${import.meta.env.BASE_URL}${import.meta.env.VITE_UI_DIR}${import.meta.env.VITE_WORKER_FILE}`;
 	try {
@@ -36,6 +34,7 @@ const createWorkerHandler = inputHandle => {
 	let applyReceivedSettings = false; // Flag to prevent broadcasting when applying settings from server
 	let initializing = false; // Flag to prevent broadcasting during initial collaboration setup
 	State.worker.postMessage({ cmd: 'handle', handle: handle });
+	$('websocket-cancel').addEventListener('click', () => State.modal.close());
 
 	const onConnected = () => {
 		websocketUI(true);
@@ -48,7 +47,7 @@ const createWorkerHandler = inputHandle => {
 		if (connected === true) {
 			alert('You were disconnected from the server, try refreshing the page to try again.');
 		} else if (!silentCheck) {
-			hideOverlay(ovrSocket);
+			State.modal.close();
 		}
 		websocketUI(false);
 		// If this was a silent check and it failed, just stay in local mode
@@ -69,7 +68,7 @@ const createWorkerHandler = inputHandle => {
 		} else if (collaborationMode) {
 			// Apply image data immediately only in collaboration mode
 			State.textArtCanvas.setImageData(columns, rows, data, iceColors, letterSpacing);
-			hideOverlay(ovrSocket);
+			State.modal.close();
 		}
 	};
 
@@ -288,7 +287,7 @@ const createWorkerHandler = inputHandle => {
 	};
 
 	const showCollaborationChoice = () => {
-		showOverlay(ovrCollab);
+		State.modal.open('choice');
 		// Reset silent check flag since we're now in interactive mode
 		silentCheck = false;
 		// Clear any remaining timer
@@ -299,8 +298,7 @@ const createWorkerHandler = inputHandle => {
 	};
 
 	const joinCollaboration = async () => {
-		hideOverlay(ovrCollab);
-		showOverlay(ovrSocket);
+		State.modal.open('websocket');
 		collaborationMode = true;
 		initializing = true; // Set flag to prevent broadcasting during initial setup
 
@@ -329,11 +327,11 @@ const createWorkerHandler = inputHandle => {
 		connected = true;
 
 		// Hide the overlay since we're ready
-		hideOverlay(ovrSocket);
+		State.modal.close();
 	};
 
 	const stayLocal = () => {
-		hideOverlay(ovrCollab);
+		State.modal.close();
 		collaborationMode = false;
 		pendingImageData = null; // Clear any pending server data
 		pendingCanvasSettings = null; // Clear any pending server settings

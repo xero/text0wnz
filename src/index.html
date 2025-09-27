@@ -1,10 +1,11 @@
 <!doctype html>
+<!--
+
+	_/ _ \)_/ /\    _ __
+	/‾(-'(\/‾ \/\))/ ) /
+	‾   teXt0wnz    ‾‾
+-->
 <html lang="en">
-	<!--
-		_/ _ \)_/ /\    _ __
-		/‾(-'(\/‾ \/\))/ ) /
-		‾   teXt0wnz    ‾‾
-	-->
 	<head>
 		<meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5.0"/>
@@ -82,17 +83,8 @@
 							<use href="img/icons.svg#sauce"></use>
 						</svg>
 					</button>
-					<label for="artwork-title">
-						<kbd>Artwork Title</kbd>
-						<input
-							id="artwork-title"
-							type="text"
-							value="Untitled"
-							autocomplete="off"
-							maxlength="40"
-							spellcheck="false"
-						/>
-					</label>
+					<label for="artwork-title">Artwork Title</label>
+					<input id="artwork-title" type="text" value="Untitled" maxlength="40" spellcheck="false"/>
 				</nav>
 				<nav>
 					<div id="keyboard-toolbar">
@@ -256,7 +248,7 @@
 					<div id="chat-window" class="hide">
 						<div id="chatRoom">
 							<header>
-								<h1>chatz</h1>
+								<h2>chatz</h2>
 								<div id="notification-setting">
 									<label for="notification-checkbox">
 										<input id="notification-checkbox" type="checkbox"/>
@@ -269,15 +261,11 @@
 								<div id="message-window"></div>
 							</section>
 							<nav>
-								<label for="handle-input">
-									<kbd>Handle</kbd>
-									<input id="handle-input" type="text" autocomplete="off" maxlength="14" spellcheck="false"/>
-								</label>
+								<label for="handle-input">Handle</label>
+								<input id="handle-input" type="text" autocomplete="off" maxlength="14" spellcheck="false"/>
 								<div class="prompt">
-									<label for="message-input">
-										<kbd>Chat message</kbd>
-										<input id="message-input" type="text" autocomplete="off" maxlength="140" spellcheck="false"/>
-									</label>
+									<label for="message-input">Chat message</label>
+									<input id="message-input" type="text" autocomplete="off" maxlength="140" spellcheck="false"/>
 								</div>
 								<button id="message-send" aria-label="Send Chat">send</button>
 							</nav>
@@ -364,231 +352,289 @@
 		<label for="custom-color">
 			<input id="custom-color" class="hide" type="color"/>
 		</label>
-		<div id="resize-overlay" class="overlay">
-			<div class="dialog">
-				<div>
-					<label for="columns-input">
-						Columns:
-						<input id="columns-input" type="number" min="1"/>
-					</label>
-				</div>
-				<div>
-					<label for="rows-input">
-						Rows:
-						<input id="rows-input" type="number" min="1"/>
-					</label>
-				</div>
-				<div id="resize-apply" class="button" aria-label="Resize Canvas">Resize</div>
-				<div id="resize-cancel" class="button" aria-label="Cancel">Cancel</div>
-			</div>
-		</div>
-		<div id="fonts-overlay" class="overlay">
-			<div class="dialog font-dialog">
-				<div class="font-dialog-left">
-					<select id="font-select" size="10">
-						<optgroup label="XBin">
-							<option value="XBIN">XBIN (embedded)</option>
-						</optgroup>
-						<optgroup label="Modern">
-							<option value="Topaz-437 8x16">Topaz 437 (8x16)</option>
-							<option value="BLOODY 8x16">BLOODY (8x16)</option>
-							<option value="Blobz+ 8x16">Blobz+ (8x16)</option>
-							<option value="Calce 8x32">calce (8x32)</option>
-							<option value="DSS8 8x16">DSS8 (8x16)</option>
-							<option value="DSS8 8x8">DSS8 (8x8)</option>
-							<option value="FM-TOWNS 8x16">FM-TOWNS (8x16)</option>
-							<option value="FM-TOWNS 8x8">FM-TOWNS (8x8)</option>
-							<option value="FrogBlock 8x8">FrogBlock (8x8)</option>
-							<option value="Glitch 8x20">Glitch (8x20)</option>
-							<option value="GJSCI-X 8x16">GJSCI-X (8x16)</option>
-							<option value="Hack 8x16">Hack (8x16)</option>
-							<option value="Hack 8x8">Hack (8x8)</option>
-							<option value="Human Fossil 8x16">Human Fossil (8x16)</option>
-							<option value="Line 8x16">Line (8x16)</option>
-							<option value="Line 8x8">Line (8x8)</option>
-							<option value="Megaball 8x16">Megaball (8x16)</option>
-							<option value="NIMBUS 8x20">NIMBUS (8x20)</option>
-							<option value="DOS-J700C-V 8x19">DOS-J700C-V (8x19)</option>
-							<option value="Perihelion 8x16">Perihelion (8x16)</option>
-							<option value="Song_Logo 8x16">Song_Logo (8x16)</option>
-							<option value="Song_Logo 8x8">Song_Logo (8x8)</option>
-							<option value="Structures 8x16">Structures (8x16)</option>
-							<option value="TES-GIGR 8x16">TES-GIGR (8x16)</option>
-							<option value="TES-SYM5 8x16">TES-SYM5 (8x16)</option>
-							<option value="TES-SYM6 8x16">TES-SYM6 (8x16)</option>
-							<option value="Teletext 8x18">Teletext (8x18)</option>
-							<option value="Teletext 8x9">Teletext (8x9)</option>
-							<option value="Zoids 8x16">Zoids (8x16)</option>
-							<option value="Zoids 8x8">Zoids (8x8)</option>
-						</optgroup>
-						<optgroup label="Commodore 64">
-							<option value="C64 PETSCII shifted 8x8">C64 PETSCII shifted (8x8)</option>
-							<option value="C64 PETSCII unshifted 8x8">C64 PETSCII unshifted (8x8)</option>
-							<option value="C64-DiskMaster 8x16">C64-DiskMaster (8x16)</option>
-						</optgroup>
-						<optgroup label="Amiga">
-							<option value="MicroKnight 8x16">MicroKnight (8x16)</option>
-							<option value="MicroKnight+ 8x16">MicroKnight+ (8x16)</option>
-							<option value="mO'sOul 8x16">mO'sOul (8x16)</option>
-							<option value="P0t-NOoDLE 8x16">P0t-NOoDLE (8x16)</option>
-							<option value="p0t-noodle 8x20">p0t-noodle (8x20)</option>
-							<option value="Topaz 1200 8x16">Topaz 1200 (8x16)</option>
-							<option value="Topaz 500 8x16">Topaz 500 (8x16)</option>
-							<option value="Topaz+ 1200 8x16">Topaz+ 1200 (8x16)</option>
-							<option value="Topaz+ 500 8x16">Topaz+ 500 (8x16)</option>
-						</optgroup>
-						<optgroup label="Arabic">
-							<option value="CP864 8x8">IBM PC Code page 864 (8x8)</option>
-							<option value="CP864 8x14">IBM PC Code page 864 (8x14)</option>
-							<option value="CP864 8x16">IBM PC Code page 864 (8x16)</option>
-						</optgroup>
-						<optgroup label="Baltic Rim">
-							<option value="CP775 8x8">IBM PC Code page 775 (8x8)</option>
-							<option value="CP775 8x14">IBM PC Code page 775 (8x14)</option>
-							<option value="CP775 8x16">IBM PC Code page 775 (8x16)</option>
-						</optgroup>
-						<optgroup label="Cyrillic">
-							<option value="CP855 8x8">IBM PC Code page 855 (8x8)</option>
-							<option value="CP855 8x14">IBM PC Code page 855 (8x14)</option>
-							<option value="CP855 8x16">IBM PC Code page 855 (8x16)</option>
-							<option value="CP866 8x8">IBM PC Code page 866 (8x8)</option>
-							<option value="CP866 8x14">IBM PC Code page 866 (8x14)</option>
-							<option value="CP866 8x16">IBM PC Code page 866 (8x16)</option>
-						</optgroup>
-						<optgroup label="French Canadian">
-							<option value="CP863 8x8">IBM PC Code page 863 (8x8)</option>
-							<option value="CP863 8x14">IBM PC Code page 863 (8x14)</option>
-							<option value="CP863 8x16">IBM PC Code page 863 (8x16)</option>
-							<option value="CP863 8x19">IBM PC Code page 863 (8x19)</option>
-						</optgroup>
-						<optgroup label="Greek">
-							<option value="CP737 8x8">IBM PC Code page 737 (8x8)</option>
-							<option value="CP737 8x14">IBM PC Code page 737 (8x14)</option>
-							<option value="CP737 8x16">IBM PC Code page 737 (8x16)</option>
-							<option value="CP851 8x8">IBM PC Code page 851 (8x8)</option>
-							<option value="CP851 8x14">IBM PC Code page 851 (8x14)</option>
-							<option value="CP851 8x16">IBM PC Code page 851 (8x16)</option>
-							<option value="CP851 8x19">IBM PC Code page 851 (8x19)</option>
-							<option value="CP869 8x8">IBM PC Code page 869 (8x8)</option>
-							<option value="CP869 8x14">IBM PC Code page 869 (8x14)</option>
-							<option value="CP869 8x16">IBM PC Code page 869 (8x16)</option>
-						</optgroup>
-						<optgroup label="Hebrew">
-							<option value="CP862 8x8">IBM PC Code page 862 (8x8)</option>
-							<option value="CP862 8x14">IBM PC Code page 862 (8x14)</option>
-							<option value="CP862 8x16">IBM PC Code page 862 (8x16)</option>
-						</optgroup>
-						<optgroup label="IBM PC">
-							<option value="CP437 8x8">IBM PC Code page 437 (8x8)</option>
-							<option value="CP437 8x14">IBM PC Code page 437 (8x14)</option>
-							<option value="CP437 8x16" selected>IBM PC Code page 437 (8x16)</option>
-							<option value="CP437 8x19">IBM PC Code page 437 (8x19)</option>
-						</optgroup>
-						<optgroup label="Icelandic">
-							<option value="CP861 8x8">IBM PC Code page 861 (8x8)</option>
-							<option value="CP861 8x14">IBM PC Code page 861 (8x14)</option>
-							<option value="CP861 8x16">IBM PC Code page 861 (8x16)</option>
-							<option value="CP861 8x19">IBM PC Code page 861 (8x19)</option>
-						</optgroup>
-						<optgroup label="Latin-1 Western European">
-							<option value="CP850 8x8">IBM PC Code page 850 (8x8)</option>
-							<option value="CP850 8x14">IBM PC Code page 850 (8x14)</option>
-							<option value="CP850 8x16">IBM PC Code page 850 (8x16)</option>
-							<option value="CP850 8x19">IBM PC Code page 850 (8x19)</option>
-						</optgroup>
-						<optgroup label="Latin-2 Central European">
-							<option value="CP852 8x8">IBM PC Code page 852 (8x8)</option>
-							<option value="CP852 8x14">IBM PC Code page 852 (8x14)</option>
-							<option value="CP852 8x16">IBM PC Code page 852 (8x16)</option>
-							<option value="CP852 8x19">IBM PC Code page 852 (8x19)</option>
-						</optgroup>
-						<optgroup label="Latin-3 Multilingual">
-							<option value="CP853 8x8">IBM PC Code page 853 (8x8)</option>
-							<option value="CP853 8x14">IBM PC Code page 853 (8x14)</option>
-							<option value="CP853 8x16">IBM PC Code page 853 (8x16)</option>
-							<option value="CP853 8x19">IBM PC Code page 853 (8x19)</option>
-						</optgroup>
-						<optgroup label="Nordic">
-							<option value="CP865 8x8">IBM PC Code page 865 (8x8)</option>
-							<option value="CP865 8x14">IBM PC Code page 865 (8x14)</option>
-							<option value="CP865 8x16">IBM PC Code page 865 (8x16)</option>
-							<option value="CP865 8x19">IBM PC Code page 865 (8x19)</option>
-						</optgroup>
-						<optgroup label="Portuguese">
-							<option value="CP860 8x8">IBM PC Code page 860 (8x8)</option>
-							<option value="CP860 8x14">IBM PC Code page 860 (8x14)</option>
-							<option value="CP860 8x16">IBM PC Code page 860 (8x16)</option>
-							<option value="CP860 8x19">IBM PC Code page 860 (8x19)</option>
-						</optgroup>
-						<optgroup label="Turkish">
-							<option value="CP857 8x8">IBM PC Code page 857 (8x8)</option>
-							<option value="CP857 8x14">IBM PC Code page 857 (8x14)</option>
-							<option value="CP857 8x16">IBM PC Code page 857 (8x16)</option>
-						</optgroup>
-					</select>
-					<div id="fonts-cancel" class="button" aria-label="Cancel">Cancel</div>
-					<div id="fonts-apply" class="button" aria-label="Change Font">Change Font</div>
-				</div>
-				<div class="font-dialog-right">
-					<div id="font-preview-container">
-						<div id="font-preview-info"></div>
+		<dialog id="modal">
+			<section id="resize-modal">
+				<header>
+					<h2>Resolution</h2>
+				</header>
+				<section>
+					<article>
+						<label for="columns-input">
+							Columns:
+							<input id="columns-input" type="number" min="1"/>
+						</label>
+						<label for="rows-input">
+							Rows:
+							<input id="rows-input" type="number" min="1"/>
+						</label>
+					</article>
+				</section>
+				<nav>
+					<button id="resize-apply" aria-label="Resize Canvas">
+						<svg>
+							<use href="img/icons.svg#save"></use>
+						</svg>
+						Save
+					</button>
+					<button id="resize-cancel" aria-label="Cancel">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Cancel
+					</button>
+				</nav>
+			</section>
+			<section id="fonts-modal">
+				<h2>Font: <strong id="font-preview-info"></strong></h2>
+				<article>
+					<aside>
 						<img id="font-preview-image" alt="Font Preview"/>
-					</div>
-				</div>
-			</div>
-		</div>
-		<div id="sauce-overlay" class="overlay">
-			<div class="dialog">
-				<div>
-					<label>
-						<kbd>Title: </kbd>
-						<input id="sauce-title" type="text" autocomplete="off" maxlength="35" spellcheck="false"/>
-					</label>
-				</div>
-				<div>
-					<label>
-						<kbd>Group: </kbd>
-						<input id="sauce-group" type="text" autocomplete="off" maxlength="20" spellcheck="false"
-						/></label>
-				</div>
-				<div>
-					<label>
-						<kbd>Author: </kbd>
-						<input id="sauce-author" type="text" autocomplete="off" maxlength="20" spellcheck="false"
-						/></label>
-				</div>
-				<div>
-					<label>
-						<kbd>Comments: </kbd>
-						<textarea id="sauce-comments" cols="15" autocomplete="off" rows="5"></textarea>
-					</label>
-				</div>
-				<div>
-					<label>
-						<input id="sauce-bytes" type="text" value="0/16320 bytes" readonly tab-index="0"/>
-					</label>
-				</div>
-				<div id="sauce-done" class="button" aria-label="Save Sauce">Save</div>
-				<div id="sauce-cancel" class="button" aria-label="Cancel">Cancel</div>
-			</div>
-		</div>
-		<div id="websocket-overlay" class="overlay">
-			<div class="dialog">
-				<p>
-					Please wait... Retrieving data from server.<br/><br/>
-					<cite>If this hangs forever the port/server is down, disable the "network.js" file.</cite>
-				</p>
-			</div>
-		</div>
-		<div id="collaboration-choice-overlay" class="overlay">
-			<div class="dialog">
-				<p>
-					A collaboration server is available. Would you like to join the collaborative session or continue in local
-					mode?
-				</p>
-				<div id="join-collaboration" class="button" aria-label="Join Collaboration">Join Collaboration</div>
-				<div id="stay-local" class="button" aria-label="Stay Local">Stay Local</div>
-			</div>
-		</div>
+					</aside>
+					<aside>
+						<select id="font-select" size="10">
+							<optgroup label="XBin">
+								<option value="XBIN">XBIN (embedded)</option>
+							</optgroup>
+							<optgroup label="Modern">
+								<option value="Topaz-437 8x16">Topaz 437 (8x16)</option>
+								<option value="BLOODY 8x16">BLOODY (8x16)</option>
+								<option value="Blobz+ 8x16">Blobz+ (8x16)</option>
+								<option value="Calce 8x32">calce (8x32)</option>
+								<option value="DSS8 8x16">DSS8 (8x16)</option>
+								<option value="DSS8 8x8">DSS8 (8x8)</option>
+								<option value="FM-TOWNS 8x16">FM-TOWNS (8x16)</option>
+								<option value="FM-TOWNS 8x8">FM-TOWNS (8x8)</option>
+								<option value="FrogBlock 8x8">FrogBlock (8x8)</option>
+								<option value="Glitch 8x20">Glitch (8x20)</option>
+								<option value="GJSCI-X 8x16">GJSCI-X (8x16)</option>
+								<option value="Hack 8x16">Hack (8x16)</option>
+								<option value="Hack 8x8">Hack (8x8)</option>
+								<option value="Human Fossil 8x16">Human Fossil (8x16)</option>
+								<option value="Line 8x16">Line (8x16)</option>
+								<option value="Line 8x8">Line (8x8)</option>
+								<option value="Megaball 8x16">Megaball (8x16)</option>
+								<option value="NIMBUS 8x20">NIMBUS (8x20)</option>
+								<option value="DOS-J700C-V 8x19">DOS-J700C-V (8x19)</option>
+								<option value="Perihelion 8x16">Perihelion (8x16)</option>
+								<option value="Song_Logo 8x16">Song_Logo (8x16)</option>
+								<option value="Song_Logo 8x8">Song_Logo (8x8)</option>
+								<option value="Structures 8x16">Structures (8x16)</option>
+								<option value="TES-GIGR 8x16">TES-GIGR (8x16)</option>
+								<option value="TES-SYM5 8x16">TES-SYM5 (8x16)</option>
+								<option value="TES-SYM6 8x16">TES-SYM6 (8x16)</option>
+								<option value="Teletext 8x18">Teletext (8x18)</option>
+								<option value="Teletext 8x9">Teletext (8x9)</option>
+								<option value="Zoids 8x16">Zoids (8x16)</option>
+								<option value="Zoids 8x8">Zoids (8x8)</option>
+							</optgroup>
+							<optgroup label="Commodore 64">
+								<option value="C64 PETSCII shifted 8x8">C64 PETSCII shifted (8x8)</option>
+								<option value="C64 PETSCII unshifted 8x8">C64 PETSCII unshifted (8x8)</option>
+								<option value="C64-DiskMaster 8x16">C64-DiskMaster (8x16)</option>
+							</optgroup>
+							<optgroup label="Amiga">
+								<option value="MicroKnight 8x16">MicroKnight (8x16)</option>
+								<option value="MicroKnight+ 8x16">MicroKnight+ (8x16)</option>
+								<option value="mO'sOul 8x16">mO'sOul (8x16)</option>
+								<option value="P0t-NOoDLE 8x16">P0t-NOoDLE (8x16)</option>
+								<option value="p0t-noodle 8x20">p0t-noodle (8x20)</option>
+								<option value="Topaz 1200 8x16">Topaz 1200 (8x16)</option>
+								<option value="Topaz 500 8x16">Topaz 500 (8x16)</option>
+								<option value="Topaz+ 1200 8x16">Topaz+ 1200 (8x16)</option>
+								<option value="Topaz+ 500 8x16">Topaz+ 500 (8x16)</option>
+							</optgroup>
+							<optgroup label="Arabic">
+								<option value="CP864 8x8">IBM PC Code page 864 (8x8)</option>
+								<option value="CP864 8x14">IBM PC Code page 864 (8x14)</option>
+								<option value="CP864 8x16">IBM PC Code page 864 (8x16)</option>
+							</optgroup>
+							<optgroup label="Baltic Rim">
+								<option value="CP775 8x8">IBM PC Code page 775 (8x8)</option>
+								<option value="CP775 8x14">IBM PC Code page 775 (8x14)</option>
+								<option value="CP775 8x16">IBM PC Code page 775 (8x16)</option>
+							</optgroup>
+							<optgroup label="Cyrillic">
+								<option value="CP855 8x8">IBM PC Code page 855 (8x8)</option>
+								<option value="CP855 8x14">IBM PC Code page 855 (8x14)</option>
+								<option value="CP855 8x16">IBM PC Code page 855 (8x16)</option>
+								<option value="CP866 8x8">IBM PC Code page 866 (8x8)</option>
+								<option value="CP866 8x14">IBM PC Code page 866 (8x14)</option>
+								<option value="CP866 8x16">IBM PC Code page 866 (8x16)</option>
+							</optgroup>
+							<optgroup label="French Canadian">
+								<option value="CP863 8x8">IBM PC Code page 863 (8x8)</option>
+								<option value="CP863 8x14">IBM PC Code page 863 (8x14)</option>
+								<option value="CP863 8x16">IBM PC Code page 863 (8x16)</option>
+								<option value="CP863 8x19">IBM PC Code page 863 (8x19)</option>
+							</optgroup>
+							<optgroup label="Greek">
+								<option value="CP737 8x8">IBM PC Code page 737 (8x8)</option>
+								<option value="CP737 8x14">IBM PC Code page 737 (8x14)</option>
+								<option value="CP737 8x16">IBM PC Code page 737 (8x16)</option>
+								<option value="CP851 8x8">IBM PC Code page 851 (8x8)</option>
+								<option value="CP851 8x14">IBM PC Code page 851 (8x14)</option>
+								<option value="CP851 8x16">IBM PC Code page 851 (8x16)</option>
+								<option value="CP851 8x19">IBM PC Code page 851 (8x19)</option>
+								<option value="CP869 8x8">IBM PC Code page 869 (8x8)</option>
+								<option value="CP869 8x14">IBM PC Code page 869 (8x14)</option>
+								<option value="CP869 8x16">IBM PC Code page 869 (8x16)</option>
+							</optgroup>
+							<optgroup label="Hebrew">
+								<option value="CP862 8x8">IBM PC Code page 862 (8x8)</option>
+								<option value="CP862 8x14">IBM PC Code page 862 (8x14)</option>
+								<option value="CP862 8x16">IBM PC Code page 862 (8x16)</option>
+							</optgroup>
+							<optgroup label="IBM PC">
+								<option value="CP437 8x8">IBM PC Code page 437 (8x8)</option>
+								<option value="CP437 8x14">IBM PC Code page 437 (8x14)</option>
+								<option value="CP437 8x16" selected>IBM PC Code page 437 (8x16)</option>
+								<option value="CP437 8x19">IBM PC Code page 437 (8x19)</option>
+							</optgroup>
+							<optgroup label="Icelandic">
+								<option value="CP861 8x8">IBM PC Code page 861 (8x8)</option>
+								<option value="CP861 8x14">IBM PC Code page 861 (8x14)</option>
+								<option value="CP861 8x16">IBM PC Code page 861 (8x16)</option>
+								<option value="CP861 8x19">IBM PC Code page 861 (8x19)</option>
+							</optgroup>
+							<optgroup label="Latin-1 Western European">
+								<option value="CP850 8x8">IBM PC Code page 850 (8x8)</option>
+								<option value="CP850 8x14">IBM PC Code page 850 (8x14)</option>
+								<option value="CP850 8x16">IBM PC Code page 850 (8x16)</option>
+								<option value="CP850 8x19">IBM PC Code page 850 (8x19)</option>
+							</optgroup>
+							<optgroup label="Latin-2 Central European">
+								<option value="CP852 8x8">IBM PC Code page 852 (8x8)</option>
+								<option value="CP852 8x14">IBM PC Code page 852 (8x14)</option>
+								<option value="CP852 8x16">IBM PC Code page 852 (8x16)</option>
+								<option value="CP852 8x19">IBM PC Code page 852 (8x19)</option>
+							</optgroup>
+							<optgroup label="Latin-3 Multilingual">
+								<option value="CP853 8x8">IBM PC Code page 853 (8x8)</option>
+								<option value="CP853 8x14">IBM PC Code page 853 (8x14)</option>
+								<option value="CP853 8x16">IBM PC Code page 853 (8x16)</option>
+								<option value="CP853 8x19">IBM PC Code page 853 (8x19)</option>
+							</optgroup>
+							<optgroup label="Nordic">
+								<option value="CP865 8x8">IBM PC Code page 865 (8x8)</option>
+								<option value="CP865 8x14">IBM PC Code page 865 (8x14)</option>
+								<option value="CP865 8x16">IBM PC Code page 865 (8x16)</option>
+								<option value="CP865 8x19">IBM PC Code page 865 (8x19)</option>
+							</optgroup>
+							<optgroup label="Portuguese">
+								<option value="CP860 8x8">IBM PC Code page 860 (8x8)</option>
+								<option value="CP860 8x14">IBM PC Code page 860 (8x14)</option>
+								<option value="CP860 8x16">IBM PC Code page 860 (8x16)</option>
+								<option value="CP860 8x19">IBM PC Code page 860 (8x19)</option>
+							</optgroup>
+							<optgroup label="Turkish">
+								<option value="CP857 8x8">IBM PC Code page 857 (8x8)</option>
+								<option value="CP857 8x14">IBM PC Code page 857 (8x14)</option>
+								<option value="CP857 8x16">IBM PC Code page 857 (8x16)</option>
+							</optgroup>
+						</select>
+					</aside>
+				</article>
+				<nav>
+					<button id="fonts-apply" aria-label="Change Font">
+						<svg>
+							<use href="img/icons.svg#check"></use>
+						</svg>
+						Select
+					</button>
+					<button id="fonts-cancel" aria-label="Cancel">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Cancel
+					</button>
+				</nav>
+			</section>
+			<section id="sauce-modal">
+				<header>
+					<h2>Sauce Inf0</h2>
+				</header>
+				<section>
+					<article>
+						<label for="sauce-title">Title:</label>
+						<div>
+							<input id="sauce-title" type="text" autocomplete="off" maxlength="35" spellcheck="false"/>
+						</div>
+					</article>
+					<article>
+						<label for="sauce-author">Author:</label>
+						<div>
+							<input id="sauce-author" type="text" autocomplete="off" maxlength="20" spellcheck="false"/>
+						</div>
+					</article>
+					<article>
+						<label for="sauce-group">Group:</label>
+						<div>
+							<input id="sauce-group" type="text" autocomplete="off" maxlength="20" spellcheck="false"/>
+						</div>
+					</article>
+					<article>
+						<label for="sauce-comments">Comments:</label>
+						<div>
+							<textarea id="sauce-comments" cols="19" autocomplete="off" rows="5"></textarea>
+						</div>
+					</article>
+					<article class="lil">
+						<label for="sauce-bytes"></label>
+						<div class="lil">
+							<input id="sauce-bytes" type="text" value="0/16320 bytes" readonly tab-index="0"/>
+						</div>
+					</article>
+				</section>
+				<nav>
+					<button id="sauce-done" aria-label="Save Sauce">
+						<svg>
+							<use href="img/icons.svg#save"></use>
+						</svg>
+						Save
+					</button>
+					<button id="sauce-cancel" aria-label="Cancel">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Cancel
+					</button>
+				</nav>
+			</section>
+			<section id="choice-modal">
+				<header>
+					<h2>Time to collab!</h2>
+				</header>
+				<section>
+					<p>
+						The collaboration server is available! Would you like to join the session in progress, or continue offline?
+					</p>
+				</section>
+				<nav>
+					<button id="join-collaboration" aria-label="Join Collaboration">
+						<svg>
+							<use href="img/icons.svg#collab"></use>
+						</svg>
+						Join
+					</button>
+					<button id="stay-local" aria-label="Stay Local">
+						<svg>
+							<use href="img/icons.svg#chatLeave"></use>
+						</svg>
+						Stay Local
+					</button>
+				</nav>
+			</section>
+			<section id="websocket-modal">
+				<p>Please wait... Retrieving data from server.</p>
+				<nav>
+					<button id="websocket-cancel" aria-label="Cancel">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Cancel
+					</button>
+				</nav>
+			</section>
+		</dialog>
 	</body>
 </html>

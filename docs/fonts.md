@@ -13,7 +13,7 @@
 ![C64 PETSCII shifted](https://raw.githubusercontent.com/xero/moebius-web/refs/heads/new_ui/src/fonts/C64%20PETSCII%20shifted%208x8.png)
 
 ### C64 PETSCII unshifted (8x8)
-![C64 PETSCII unshifted](https://raw.githubusercontent.com/xero/moebius-web/refs/heads/new_ui/src/fonts/C64%20PETSCI%20unshifted%208x8.png)
+![C64 PETSCII unshifted](https://raw.githubusercontent.com/xero/moebius-web/refs/heads/new_ui/src/fonts/C64%20PETSCII%20unshifted%208x8.png)
 
 ### Calce (8x32)
 ![Calce](https://raw.githubusercontent.com/xero/moebius-web/refs/heads/new_ui/src/fonts/Calce%208x32.png)

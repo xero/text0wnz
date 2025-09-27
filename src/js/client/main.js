@@ -5,14 +5,13 @@ import { createTextArtCanvas } from './canvas.js';
 import { Load, Save } from './file.js';
 import Toolbar from './toolbar.js';
 import {
+	createModalController,
 	createSettingToggle,
 	onClick,
 	onReturn,
 	onFileChange,
 	onSelectChange,
 	createPositionInfo,
-	showOverlay,
-	hideOverlay,
 	undoAndRedo,
 	createPaintShortcuts,
 	createGenericController,
@@ -46,12 +45,9 @@ let bodyContainer;
 let canvasContainer;
 let columnsInput;
 let fontSelect;
-let fontsOverlay;
 let openFile;
 let resizeApply;
-let resizeOverlay;
 let sauceDone;
-let sauceOverlay;
 let sauceTitle;
 let swapColors;
 let rowsInput;
@@ -73,6 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		State.title = artworkTitle;
 		State.pasteTool = createPasteTool($('cut'), $('copy'), $('paste'), $('delete'));
 		State.positionInfo = createPositionInfo($('position-info'));
+		State.modal = createModalController($('modal'));
 
 		// Initialize canvas and wait for completion state
 		State.textArtCanvas = createTextArtCanvas(canvasContainer, async () => {
@@ -81,7 +78,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 			State.toolPreview = createToolPreview($('tool-preview'));
 
 			State.waitFor(
-				['palette', 'textArtCanvas', 'font', 'cursor', 'selectionCursor', 'positionInfo', 'toolPreview', 'pasteTool'],
+				[
+					'palette',
+					'textArtCanvas',
+					'font',
+					'modal',
+					'cursor',
+					'selectionCursor',
+					'positionInfo',
+					'toolPreview',
+					'pasteTool',
+				],
 				async _deps => {
 					await initializeAppComponents();
 				},
@@ -100,12 +107,9 @@ const $$$ = () => {
 	canvasContainer = $('canvas-container');
 	columnsInput = $('columns-input');
 	fontSelect = $('font-select');
-	fontsOverlay = $('fonts-overlay');
 	openFile = $('open-file');
 	resizeApply = $('resize-apply');
-	resizeOverlay = $('resize-overlay');
 	sauceDone = $('sauce-done');
-	sauceOverlay = $('sauce-overlay');
 	sauceTitle = $('sauce-title');
 	swapColors = $('swap-colors');
 	rowsInput = $('rows-input');
@@ -218,7 +222,7 @@ const initializeAppComponents = async () => {
 
 	[artworkTitle, navSauce].forEach(e => {
 		onClick(e, () => {
-			showOverlay(sauceOverlay);
+			State.modal.open('sauce');
 			keyboard.ignore();
 			paintShortcuts.ignore();
 			sauceTitle.focus();
@@ -230,7 +234,7 @@ const initializeAppComponents = async () => {
 	onClick(sauceDone, () => {
 		State.title.value = sauceTitle.value;
 		artworkTitle.value = State.title.value;
-		hideOverlay(sauceOverlay);
+		State.modal.close();
 		keyboard.unignore();
 		paintShortcuts.unignore();
 		shadeBrush.unignore();
@@ -238,7 +242,7 @@ const initializeAppComponents = async () => {
 	});
 
 	onClick($('sauce-cancel'), () => {
-		hideOverlay(sauceOverlay);
+		State.modal.close();
 		keyboard.unignore();
 		paintShortcuts.unignore();
 		shadeBrush.unignore();
@@ -279,7 +283,7 @@ const initializeAppComponents = async () => {
 	onClick($('undo'), State.textArtCanvas.undo);
 	onClick($('redo'), State.textArtCanvas.redo);
 	onClick($('resolution'), () => {
-		showOverlay(resizeOverlay);
+		State.modal.open('resize');
 		columnsInput.value = State.textArtCanvas.getColumns();
 		rowsInput.value = State.textArtCanvas.getRows();
 		keyboard.ignore();
@@ -295,7 +299,7 @@ const initializeAppComponents = async () => {
 			State.textArtCanvas.resize(columnsValue, rowsValue);
 			// Broadcast resize to other users if in collaboration mode
 			State.network?.sendResize?.(columnsValue, rowsValue);
-			hideOverlay(resizeOverlay);
+			State.modal.close();
 		}
 		keyboard.unignore();
 		paintShortcuts.unignore();
@@ -305,7 +309,7 @@ const initializeAppComponents = async () => {
 	onReturn(columnsInput, resizeApply);
 	onReturn(rowsInput, resizeApply);
 	onClick($('resize-cancel'), () => {
-		hideOverlay(resizeOverlay);
+		State.modal.close();
 		keyboard.unignore();
 		paintShortcuts.unignore();
 		shadeBrush.unignore();
@@ -384,36 +388,27 @@ const initializeAppComponents = async () => {
 				}
 
 				// Update info and display the rendered font
-				previewInfo.textContent = 'XBIN (embedded font) ' + fontWidth + 'x' + fontHeight;
+				previewInfo.textContent = 'XBIN: embedded ' + fontWidth + 'x' + fontHeight;
 				previewImage.src = previewCanvas.toDataURL();
-				previewImage.style.display = 'block';
 			} else {
 				// No embedded font currently loaded
-				previewInfo.textContent = 'XBIN (embedded font - not currently loaded)';
-				previewImage.style.display = 'none';
-				previewImage.src = '';
+				previewInfo.textContent = 'XBIN: none';
+				previewImage.src = `${import.meta.env.BASE_URL}${import.meta.env.VITE_FONT_DIR}XBIN.png`;
 			}
 		} else {
 			// Load regular PNG font for preview
 			const img = new Image();
 			img.onload = () => {
-				// Calculate font dimensions
-				const fontWidth = img.width / 16; // 16 characters per row
-				const fontHeight = img.height / 16; // 16 rows
-
 				// Update font info with name and size on same line
-				previewInfo.textContent = fontName + ' ' + fontWidth + 'x' + fontHeight;
-
+				previewInfo.textContent = fontName;
 				// Show the entire PNG font file
 				previewImage.src = img.src;
-				previewImage.style.display = 'block';
 			};
 
 			img.onerror = () => {
 				// Font loading failed
 				previewInfo.textContent = fontName + ' (not found)';
-				previewImage.style.display = 'none';
-				previewImage.src = '';
+				img.src = `${import.meta.env.BASE_URL}${import.meta.env.VITE_FONT_DIR}XBIN.png`;
 			};
 			img.src = `${import.meta.env.BASE_URL}${import.meta.env.VITE_FONT_DIR}${fontName}.png`;
 		}
@@ -428,7 +423,7 @@ const initializeAppComponents = async () => {
 		changeFont.click();
 	});
 	onClick(changeFont, () => {
-		showOverlay(fontsOverlay);
+		State.modal.open('fonts');
 		keyboard.disable();
 		updateFontPreview(fontSelect.value);
 	});
@@ -440,12 +435,12 @@ const initializeAppComponents = async () => {
 		await State.textArtCanvas.setFont(selectedFont, () => {
 			updateFontDisplay();
 			State.network?.sendFontChange?.(selectedFont);
-			hideOverlay(fontsOverlay);
+			State.modal.close();
 			keyboard.enable();
 		});
 	});
 	onClick($('fonts-cancel'), () => {
-		hideOverlay(fontsOverlay);
+		State.modal.close();
 	});
 	const grid = createGrid($('grid'));
 	createSettingToggle($('navGrid'), grid.isShown, grid.show);
