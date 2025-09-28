@@ -15,7 +15,14 @@ const createCanvas = (width, height) => {
 
 // Modal
 const createModalController = modal => {
-	const modals = [$('resize-modal'), $('fonts-modal'), $('sauce-modal'), $('websocket-modal'), $('choice-modal')];
+	const modals = [
+		$('about-modal'),
+		$('resize-modal'),
+		$('fonts-modal'),
+		$('sauce-modal'),
+		$('websocket-modal'),
+		$('choice-modal'),
+	];
 
 	const isOpen = () => modal.open;
 

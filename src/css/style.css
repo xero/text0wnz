@@ -119,12 +119,23 @@
 		font-family: var(--font-family);
 	}
 
+	a,
+	a:visited {
+		@apply decoration-0 text-cyan;
+		&:hover {
+			@apply bg-purp text-fg;
+		}
+	}
+
 	#body-container {
 		@apply w-full h-full overflow-auto;
 	}
 
 	.loading * {
 		@apply cursor-wait!;
+	}
+	h1 {
+		@apply text-3xl text-cyan;
 	}
 	h2,
 	section h2 {
@@ -619,6 +630,12 @@
 		section {
 			@apply 3xl:text-xl flex flex-col w-fit h-fit;
 
+			.logo {
+				@apply max-w-[350px] m-auto;
+			}
+			img {
+				@apply pxl8;
+			}
 			button:has(svg) {
 				@apply pt-2 pr-2 pb-1 pl-1;
 			}
@@ -667,18 +684,23 @@
 			}
 		}
 	}
+	#about-modal,
 	#resize-modal,
 	#sauce-modal,
 	#websocket-modal,
 	#choice-modal,
 	#fonts-modal {
 		@apply flex flex-col w-fit h-fit min-h-0;
-		p,
+		h1,
 		h2,
+		p,
 		nav,
 		article,
 		blockquote {
 			@apply flex flex-row w-full h-auto p-1;
+		}
+		p {
+			@apply inline text-fg p-4.5 max-w-[480px];
 		}
 		nav {
 			@apply justify-end bg-editor;
@@ -690,8 +712,9 @@
 		label {
 			@apply text-fg;
 		}
+		h1,
 		h2 {
-			@apply text-cyan;
+			@apply text-cyan text-2xl;
 		}
 		input[type='text'],
 		input[type='number'],
@@ -708,9 +731,6 @@
 		}
 		header {
 			@apply w-full flex-row pl-2 my-2.5 place-content-between;
-			h2 {
-				@apply text-cyan text-2xl;
-			}
 			button {
 				@apply p-0 pb-0.5;
 				svg {
@@ -814,11 +834,25 @@
 		}
 	}
 	#choice-modal {
-		header h2 {
-			@apply p-4.5;
+		nav {
+			@apply p-2;
+			button {
+				@apply mr-6!;
+			}
+		}
+	}
+	#about-modal {
+		header {
+			@apply h-fit flex-col bg-editor;
+			h1 {
+				@apply ml-2;
+			}
+			h4 {
+				@apply text-chat ml-3;
+			}
 		}
 		p {
-			@apply text-fg p-4.5;
+			@apply pb-2;
 		}
 		nav {
 			@apply p-2;

@@ -1,9 +1,17 @@
 <!doctype html>
 <!--
-
-	_/ _ \)_/ /\    _ __
-	/‾(-'(\/‾ \/\))/ ) /
-	‾   teXt0wnz    ‾‾
+	.   ______     .______   _____ ______  ____
+	.  _\    /__   |   __/___\    \)    /_/   /_
+	. (_    ___/---:  _)     :\_      _/__   __/---.
+	.   |   )      |  \      |    __     |   )     |
+	.   |___       |__       |    \|     :___      |
+	.      \______/  \______/l_____\     |  \______|
+	.   .------.  x0!        ______ \____!________
+	.  /   _    \----./\.----\     \)    |    _   \_
+	.  |   )     \   /  \    /      \    l___/     /
+	.  |         :           |           _/      _/__
+	.  |__       |           :   \       \       )  /
+	.    \______/l____/\_____j___/\______!\________/
 -->
 <html lang="en">
 	<head>
@@ -15,7 +23,13 @@
 		<link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png"/>
 		<meta name="apple-mobile-web-app-title" content="text.0w.nz"/>
 		<link rel="manifest" href="/img/site.webmanifest"/>
-		<meta name="theme-color" content="#3f3f3f"/>
+		<meta name="theme-color" content="#000000"/>
+		<meta name="author" content="https://github.com/xero/text0wnz/graphs/contributors"/>
+		<meta name="description" content="The online collaborative text art editor"/>
+		<meta
+			name="keywords"
+			content="ansi, ascii, xbin, art, textart, textmode, ansi-editor, ascii-editor, web, blocktronics, highrez, scene, sceneart"
+		/>
 		<title>text.0w.nz</title>
 		<script type="module" blocking="render" src="js/client/main.js"></script>
 	</head>
@@ -40,6 +54,8 @@
 								<article class="seperator"></article>
 								<article id="save-png" class="menu-item">Export as PNG</article>
 								<article id="save-utf8" class="menu-item">Export as ANSi (UTF-8)</article>
+								<article class="seperator"></article>
+								<article id="about" class="menu-item">About teXt0wnz</article>
 							</div>
 						</div>
 						<div id="edit-menu" class="menu-title">
@@ -601,10 +617,8 @@
 				</nav>
 			</section>
 			<section id="choice-modal">
-				<header>
-					<h2>Time to collab!</h2>
-				</header>
 				<section>
+					<img class="logo" title="logo" alt="logo" src="img/logo.png"/>
 					<p>
 						The collaboration server is available! Would you like to join the session in progress, or continue offline?
 					</p>
@@ -632,6 +646,33 @@
 							<use href="img/icons.svg#cancel"></use>
 						</svg>
 						Cancel
+					</button>
+				</nav>
+			</section>
+			<section id="about-modal">
+				<header>
+					<h1>teXt0wnz</h1>
+					<h4>The online collaborative text art editor</h4>
+				</header>
+				<img class="logo" title="logo" alt="logo" src="img/logo.png"/>
+				<p>
+					Licensed MIT 2018-2025 <a href="https://x-e.ro" target="_blank">xero</a>,
+					<a href="https://github.com/andyherbert" target="_blank">andy</a>, &amp; our
+					<a href="https://github.com/xero/text0wnz/graphs/contributors" target="_blank">contributors</a>. Source code
+					freely available on <a href="https://github.com/xero/text0wnz" target="_blank">Github</a>
+				</p>
+				<nav>
+					<button id="about-dl" aria-label="Download newest release">
+						<svg>
+							<use href="img/icons.svg#storageCloud"></use>
+						</svg>
+						Download
+					</button>
+					<button id="about-ok" aria-label="Close About Menu">
+						<svg>
+							<use href="img/icons.svg#check"></use>
+						</svg>
+						Close
 					</button>
 				</nav>
 			</section>

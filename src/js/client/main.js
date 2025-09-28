@@ -156,6 +156,7 @@ const initializeAppComponents = async () => {
 		openFile.click();
 	});
 	onClick($('file-menu'), menuHover);
+	onClick($('edit-menu'), menuHover);
 	onClick($('save-ansi'), Save.ans);
 	onClick($('save-utf8'), Save.utf8);
 	onClick($('save-bin'), Save.bin);
@@ -166,8 +167,6 @@ const initializeAppComponents = async () => {
 	onClick($('paste'), State.pasteTool.paste);
 	onClick($('system-paste'), State.pasteTool.systemPaste);
 	onClick($('delete'), State.pasteTool.deleteSelection);
-
-	onClick($('edit-menu'), menuHover);
 	onClick($('nav-cut'), State.pasteTool.cut);
 	onClick($('nav-copy'), State.pasteTool.copy);
 	onClick($('nav-paste'), State.pasteTool.paste);
@@ -175,6 +174,16 @@ const initializeAppComponents = async () => {
 	onClick($('nav-delete'), State.pasteTool.deleteSelection);
 	onClick($('nav-undo'), State.textArtCanvas.undo);
 	onClick($('nav-redo'), State.textArtCanvas.redo);
+
+	onClick($('about'), _ => {
+		State.modal.open('about');
+	});
+	onClick($('about-ok'), _ => {
+		State.modal.close();
+	});
+	onClick($('about-dl'), _ => {
+		window.location.href = 'https://github.com/xero/text0wnz/releases/latest';
+	});
 
 	const palettePreview = createPalettePreview($('palette-preview'));
 	const palettePicker = createPalettePicker($('palette-picker'));
@@ -253,7 +262,8 @@ const initializeAppComponents = async () => {
 	onReturn(sauceTitle, sauceDone);
 	onReturn(sauceGroup, sauceDone);
 	onReturn(sauceAuthor, sauceDone);
-	onReturn(sauceComments, sauceDone);
+	// @TODO: research if newlines valid in sauce comments
+	// onReturn(sauceComments, sauceDone);
 	const paintShortcuts = createPaintShortcuts({
 		d: $('default-color'),
 		q: swapColors,
