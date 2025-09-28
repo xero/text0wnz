@@ -116,15 +116,20 @@
 | `N` | Fill | Flood fill tool |
 | `A` | Attribute Brush | Paint colors only (no characters) |
 | `G` | Grid Toggle | Show/hide alignment grid |
+| `I` | iCE Colors Toggle | Enable/disable extended color palette |
+| `M` | Mirror Mode | Toggle horizontal mirror drawing |
 
 ### Color Shortcuts
 | Key | Action | Description |
 |-----|--------|-------------|
 | `D` | Default Colors | Reset to default foreground/background |
 | `Q` | Swap Colors | Exchange foreground and background colors |
-| `1`-`8` | Select Colors | Choose from basic color palette |
-| `Shift+1`-`8` | Bright Colors | Choose from highlighted palette |
-| `F1`-`F12` | Special Characters | Insert predefined special characters |
+| `0`-`7` | Select Colors | Choose from basic color palette (press again for bright) |
+
+### Special Character Insertion
+| Key | Character | Description |
+|-----|-----------|-------------|
+| `F1`-`F12` | Special Characters | Insert predefined special characters (see table below) |
 
 ### File Operations
 | Key Combination | Action | Description |
@@ -276,76 +281,157 @@ Configures WebSocket endpoints.
 ### Examples:
 
 ```sh
+# Basic start with defaults
 bun server
-```
-- Starts the server on port 1337 (default), with no SSL support
+# or
+npm run server
 
-```sh
-bun server 8080 --ssl --ssl-dir /etc/letsencrypt --save-interval 15 --session-name myjam
+# Start on custom port
+bun server 8080
+# or  
+npm run server 8080
+
+# Full example with all options
+bun server 8080 --ssl --ssl-dir /etc/letsencrypt --save-interval 15 --session-name myjam --debug
 ```
-- Starts the server on port 8080, enables SSL from `/etc/letsencrypt`, auto-saves every 15 minutes, and saves session files as `myjam.bin` and `myjam.json`.
 
 ---
 
-## Install & Run Instructions (Server / Collaborative Mode)
+## Build & Development Instructions
 
 ### Requirements
 
-- [Node.js](https://nodejs.org/) (v14+ recommended) or [Bun](https://bun.sh/)
-- [npm](https://www.npmjs.com/) or [bun](https://bun.sh/) package manager
-- (Optional) SSL certificates for HTTPS (see below)
-- (Recommended) Systemd, forever, or another process manager
+- [Node.js](https://nodejs.org/) (v22.19.0+ recommended, check `engines` in package.json)
+- [npm](https://www.npmjs.com/) package manager
+- (Optional) [Bun](https://bun.sh/) runtime for better performance
 
-### Install Dependencies
+### Quick Start (Local Development)
 
-> [!NOTE]
-> you can replace `bun` or `bunx` commands with `npm` and `npx` commands if you want. But you will need to add the `run` command into the short aliases in these examples. **e.g.** `bun bake` = `npm run bake`
+1. **Install dependencies:**
+   ```sh
+   npm install
+   ```
+
+2. **Build the application:**
+   ```sh
+   npm run bake
+   ```
+
+3. **Serve the built files:**
+   ```sh
+   # Any static web server pointed at the dist/ directory
+   cd dist
+   python3 -m http.server 8080
+   # Then open http://localhost:8080 in your browser
+   ```
+
+### Available Scripts
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| `bake` | `npm run bake` | Build the application for production (uses Vite) |
+| `server` | `npm run server` | Start the collaboration server |
+| `fix` | `npm run fix` | Auto-fix both linting and formatting issues |
+| `lint:check` | `npm run lint:check` | Check for linting issues only |
+| `lint:fix` | `npm run lint:fix` | Auto-fix linting issues |
+| `format:check` | `npm run format:check` | Check code formatting |
+| `format:fix` | `npm run format:fix` | Auto-fix formatting issues |
+| `test:unit` | `npm run test:unit` | Run unit tests with Vitest |
+
+### Building the Application
+
+The project uses **Vite** for building and bundling. The build process:
 
 ```sh
-# using bun (preferred for speed)
-bun i
-
-# or using npm
-npm install
-```
-
-### Building the Front-end
-
-```sh
-bun bake
-
-# or using npm
 npm run bake
 ```
 
-### Linting your code
+This creates optimized files in the `dist/` directory:
+- `index.html` - Main application entry point
+- `ui/editor-[hash].js` - Minified JavaScript bundle
+- `ui/stylez-[hash].css` - Minified CSS styles
+- `ui/fonts/` - Font assets
+- `ui/` - Other static assets (images, icons, etc.)
 
-```sh
-bun lint
-# or to autofix errors
-bun lint:fix
+### Project Structure
+
+```
+src/
+├── index.html          # Main HTML template
+├── css/style.css       # Tailwind CSS styles
+├── fonts/              # Font assets (PNG format)
+├── img/                # Static images and icons
+└── js/
+    ├── client/         # Client-side JavaScript modules
+    │   ├── main.js     # Application entry point
+    │   ├── canvas.js   # Canvas and drawing logic
+    │   ├── keyboard.js # Keyboard shortcuts and text input
+    │   ├── ui.js       # UI components and interactions
+    │   ├── palette.js  # Color palette management
+    │   ├── file.js     # File I/O operations
+    │   └── ...         # Other client modules
+    └── server/         # Server-side collaboration modules
+        ├── main.js     # Server entry point
+        ├── server.js   # Express server setup
+        ├── text0wnz.js # Collaboration engine
+        └── ...         # Other server modules
+
+dist/                   # Built application (generated)
+tests/                  # Unit tests
+docs/                   # Documentation
 ```
 
-### Running Unit Tests
+### Linting and Formatting
 
-The project includes comprehensive unit tests for utilities, palette logic, and core functions:
+The project uses ESLint for code linting and Prettier for code formatting:
 
 ```sh
-# Run unit tests
+# Check for linting issues
+npm run lint:check
+
+# Auto-fix linting issues
+npm run lint:fix
+
+# Check code format
+npm run format:check
+
+# Auto-fix formatting issues
+npm run format:fix
+
+# Fix both linting and formatting
+npm run fix
+```
+
+### Unit Testing
+
+The project includes comprehensive unit tests using **Vitest** with **jsdom** environment:
+
+```sh
+# Run all unit tests
 npm run test:unit
 
-# or using bun
-bun test:unit
+# Run tests in watch mode during development
+npx vitest
+
+# Run tests with coverage report
+npx vitest --coverage
 ```
 
-The unit tests cover:
-- Palette creation and color conversion utilities
-- Unicode and UTF-8 character handling
-- File format utilities and binary data processing
-- Canvas coordinate system and character encoding
-- DOM utility functions
+**Test Coverage Includes:**
+- Client-side modules (canvas, keyboard, palette, file I/O, UI components)
+- Server-side modules (configuration, WebSocket handling, file operations)
+- Utility functions and helper modules
+- State management and toolbar interactions
 
-Test files are located in `tests/unit/` and use **Vitest** with **jsdom** environment for testing isolated logic functions.
+Test files are organized in `tests/unit/` with separate files for each module. The test suite provides excellent coverage for core functionality and helps ensure code quality.
+
+**Test Environment:**
+- **Vitest** - Fast unit test runner with ES module support
+- **jsdom** - Browser environment simulation for DOM testing
+- **@testing-library/jest-dom** - Additional DOM matchers
+- **Coverage reporting** with v8 provider
+
+Tests run automatically in CI/CD and should be run locally before committing changes.
 
 ### Running the Server
 
@@ -411,15 +497,15 @@ You can set the following environment variables before starting the server (espe
 - Create a unit file for the server:
 ```INI
 [Unit]
-Description=TeXt0wnz Backend Server
+Description=teXt0wnz Collaboration Server
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/node /www/ansi/server.js <ops>
+ExecStart=/usr/bin/node /path/to/text0wnz/src/js/server/main.js 1337
 Restart=always
 User=youruser
 Environment=NODE_ENV=production
-WorkingDirectory=/www/ansi/
+WorkingDirectory=/path/to/text0wnz/
 StandardOutput=syslog
 StandardError=syslog
 
@@ -429,92 +515,125 @@ WantedBy=multi-user.target
 - Reload systemd and enable:
 ```sh
 sudo systemctl daemon-reload
-sudo systemctl enable --now moebius-web.service
+sudo systemctl enable --now text0wnz.service
 ```
 - Memory: Minimal—just your Node.js process.
-- Monitoring: Use `journalctl` or your system's logging.
+- Monitoring: Use `journalctl -u text0wnz.service` or your system's logging.
 
-### forever
-- Simple Node.js CLI tool for restarting scripts.
-- Install: npm install -g forever
-- Run: forever start server.js <ops>
-- Memory: Very low—almost just your script.
-- Downsides: Less robust than systemd
+### PM2 (Alternative Process Manager)
+```sh
+# Install PM2 globally
+npm install -g pm2
 
+# Start the server with PM2
+pm2 start src/js/server/main.js --name "text0wnz" -- 1337 --session-name myart
 
-The server runs on port `1337` by default. But you can override it via an argument to server.js. You will need to update the port the client uses in `public/js/network.js` on line #401.
+# Save PM2 configuration
+pm2 save
 
-Now you need to setup a webserver to actually serve up the `/dist` directory to the web. Here's an nginx example:
-
-Create or edit an nginx config: `/etc/nginx/sites-available/ansi`
-
+# Setup PM2 to start on boot
+pm2 startup
 ```
+
+
+## Web Server Configuration
+
+### Nginx Configuration
+
+The server runs on port `1337` by default. You need to setup a web server to serve the `/dist` directory and proxy WebSocket connections to the collaboration server.
+
+Create or edit an nginx config: `/etc/nginx/sites-available/text0wnz`
+
+```nginx
 server {
-	listen 80;
-	listen 443 ssl;
+    listen 80;
+    listen 443 ssl;
 
-	default_type text/plain;
+    root /path/to/text0wnz/dist;
+    index index.html;
 
-	root /www/ansi/dist;
-	index index.php index.html index.htm;
+    server_name text.0w.nz;  # Replace with your domain
+    
+    # Include your SSL configuration
+    include snippets/ssl.conf;
 
-	server_name text.0w.nz;
-	include snippets/ssl.conf;
+    location ~ /.well-known {
+        allow all;
+    }
 
-	location ~ /.well-known {
-		allow all;
-	}
-
-	location / {
-		try_files $uri $uri/;
-	}
-	location /server {
-		proxy_http_version 1.1;
-		proxy_set_header Upgrade $http_upgrade;
-		proxy_set_header Connection $connection_upgrade;
-		proxy_set_header Host $host;
-		proxy_set_header X-Real-IP $remote_addr;
-		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-		proxy_set_header X-Forwarded-Proto $scheme;
-		proxy_read_timeout 86400;
-		proxy_redirect off;
-		proxy_pass http://localhost:1337/;  # use the correct port, and note the trailing slash
-	}
+    # Serve static files
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+    
+    # Proxy WebSocket connections for collaboration
+    location /server {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 86400;
+        proxy_redirect off;
+        proxy_pass http://localhost:1337/;  # Note the trailing slash
+    }
 }
 ```
 
-> Note that the webroot should contain the `/dist` directory.
-> proxy_pass should be the correct port you specified with a trailing slash.
+**Key Points:**
+- The document root should point to the built `/dist` directory
+- The `proxy_pass` should match your server port with a trailing slash
+- WebSocket upgrade headers are required for real-time collaboration
 
-Make sure you define your SSL setting in `/etc/nginx/snippets/ssl.conf`. At minimum point to the cert and key:
+### SSL Configuration
 
-    ssl_certificate /etc/ssl/private/letsencrypt-domain.pem;
-    ssl_certificate_key /etc/ssl/private/letsencrypt-domain.key;
+Make sure you define your SSL settings in `/etc/nginx/snippets/ssl.conf`:
 
-Restart nginx and visit your domain. Time to draw some **rad ANSi!**
+```nginx
+ssl_certificate /etc/ssl/private/letsencrypt-domain.pem;
+ssl_certificate_key /etc/ssl/private/letsencrypt-domain.key;
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_ciphers HIGH:!aNULL:!MD5;
+```
+
+Enable the site and restart nginx:
+```sh
+sudo ln -s /etc/nginx/sites-available/text0wnz /etc/nginx/sites-enabled/
+sudo nginx -t  # Test configuration
+sudo systemctl reload nginx
+```
 
 ## Troubleshooting & Tips
 
 ### Common Issues
 
-#### 1. Server Fails to Start / Port Already in Use
+#### 1. Build Failures
+- **Symptom:** `npm run bake` fails with module or Vite errors.
+- **Solution:**
+  - Ensure you have Node.js v22.19.0+ (check `node --version`)
+  - Delete `node_modules` and `package-lock.json`, then run `npm install` again
+  - Check for any TypeScript or module resolution errors in the output
+
+#### 2. Server Fails to Start / Port Already in Use
 - **Symptom:** You see `EADDRINUSE` or "address already in use" errors.
 - **Solution:**
   - Make sure no other process is using the port (default: 1337).
   - Change the server port with a command-line argument:
     ```sh
-    bun server 8060
+    npm run server 8060
     ```
   - Or stop the other process occupying the port.
 
-#### 2. SSL/HTTPS Doesn't Work
+#### 3. SSL/HTTPS Doesn't Work
 - **Symptom:** Server crashes or browser reports "insecure" or "cannot connect" with SSL enabled.
 - **Solution:**
   - Ensure your SSL cert (`letsencrypt-domain.pem`) and key (`letsencrypt-domain.key`) are present in the specified `--ssl-dir`.
   - Double-check file permissions on the cert/key; they should be readable by the server process.
   - If issues persist, try running without `--ssl` to confirm the server works, then debug SSL config.
 
-#### 3. Cannot Connect to Server from Browser
+#### 4. Cannot Connect to Server from Browser
 - **Symptom:** Web client shows "Unable to connect" or no collaboration features appear.
 - **Solution:**
   - Make sure the Node.js server is running and accessible on the configured port.
@@ -522,25 +641,25 @@ Restart nginx and visit your domain. Time to draw some **rad ANSi!**
   - Check firewall (ufw, iptables, etc.) for blocked ports.
   - Review browser console and server logs for error details.
 
-#### 4. WebSocket Disconnects or Fails to Upgrade
+#### 5. WebSocket Disconnects or Fails to Upgrade
 - **Symptom:** Collaboration features drop out or never initialize.
 - **Solution:**
   - Confirm nginx config includes the correct WebSocket headers (`Upgrade`, `Connection`, etc.).
   - Make sure proxy_pass URL ends with a trailing slash (`proxy_pass http://localhost:1337/;`).
   - Try connecting directly to the Node.js server (bypassing nginx) for troubleshooting.
 
-#### 5. Session Not Saving / Data Loss
+#### 6. Session Not Saving / Data Loss
 - **Symptom:** Drawings/chat are not persisted or backups missing.
 - **Solution:**
   - Ensure the server process has write permissions in its working directory.
   - Check the value of `--save-interval` (defaults to 30 min); lower it for more frequent saves.
   - Watch for errors in server logs related to disk I/O.
 
-#### 6. Permissions Errors (systemd, forever, etc.)
+#### 7. Permissions Errors (systemd, PM2, etc.)
 - **Symptom:** Server fails to start as a service or can't access files.
 - **Solution:**
   - Make sure the `User` in your systemd service file has read/write access to the project directory and SSL keys.
-  - Review logs with `journalctl -u moebius-web` for detailed error output.
+  - Review logs with `journalctl -u text0wnz` for detailed error output.
 
 #### 7. Wrong Port on Client/Server
 - **Symptom:** Client can’t connect, even though the server is running.
@@ -558,13 +677,13 @@ Restart nginx and visit your domain. Time to draw some **rad ANSi!**
   Always use SSL in production! Free certs: [let’s encrypt](https://letsencrypt.org/).
   [Automate renewals](https://github.com/nginx/nginx-acme) and always restart the server/service after cert updates.
 - **Testing Locally:**
-  You can test the server locally with just `node server.js` and connect with `http{s,}://localhost:1337` (or your chosen port).
+  You can test the server locally with just `npm run server` and connect with `http{s,}://localhost:1337` (or your chosen port).
 - **WebSocket Debugging:**
   Use browser dev tools (Network tab) to inspect WebSocket connection details.
 - **Session Backups:**
   Periodic backups are written with timestamps. If you need to restore, simply rename the desired `.bin` and `.json` files as the main session.
 - **Logs:**
-  Review server logs for all connection, error, and save interval events. With systemd, use `journalctl -u moebius-web`.
+  Review server logs for all connection, error, and save interval events. With systemd, use `journalctl -u text0wnz`.
 - **Firewall:**
   Don’t forget to allow your chosen port through the firewall (`ufw allow 1337/tcp`, etc.).
 
