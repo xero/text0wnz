@@ -627,8 +627,8 @@ const loadModule = () => {
 				return 'NIMBUS 8x20';
 			case 'p0t-noodle_2x':
 				return 'p0t-noodle 8x20';
-			case 'DOS_J700C-V':
-				return 'DOS_J700C-V 8x19';
+			case 'DOS-J700C-V':
+				return 'DOS-J700C-V 8x19';
 			case 'Perihelion':
 				return 'Perihelion 8x16';
 			case 'Song_Logo_2x':
