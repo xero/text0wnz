@@ -1070,9 +1070,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			blocks.push([index, x, textY]);
 
 			currentUndo.push([index, imageData[index], x, textY]);
-			drawHistory.push((index << 16) + imageData[index]);
 
 			drawHalfBlock(index, foreground, x, y, textY);
+
+			// Add to drawHistory AFTER drawHalfBlock modifies imageData
+			drawHistory.push((index << 16) + imageData[index]);
 
 			if (mirrorMode) {
 				const mirrorX = getMirrorX(x);
@@ -1081,9 +1083,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					blocks.push([mirrorIndex, mirrorX, textY]);
 
 					currentUndo.push([mirrorIndex, imageData[mirrorIndex], mirrorX, textY]);
-					drawHistory.push((mirrorIndex << 16) + imageData[mirrorIndex]);
 
 					drawHalfBlock(mirrorIndex, foreground, mirrorX, y, textY);
+
+					// Add to drawHistory AFTER drawHalfBlock modifies imageData
+					drawHistory.push((mirrorIndex << 16) + imageData[mirrorIndex]);
 				}
 			}
 		});
