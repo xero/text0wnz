@@ -775,9 +775,9 @@ const loadModule = () => {
 			case 'TES-GIGR 8x16':
 				return 'TES-GIGR';
 			case 'Zoids 8x16':
-				return 'Zoids';
-			case 'Zoids 8x8':
 				return 'Zoids_2x';
+			case 'Zoids 8x8':
+				return 'Zoids';
 
 			// XBin embedded font
 			case 'XBIN':
