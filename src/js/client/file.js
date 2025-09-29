@@ -747,7 +747,7 @@ const loadModule = () => {
 			case 'GJSCI-X 8x16':
 				return 'GJSCI-X';
 			case 'Hack 8x16':
-				return 'Hack_2';
+				return 'Hack_2x';
 			case 'Hack 8x8':
 				return 'Hack';
 			case 'Line 8x16':
@@ -789,7 +789,14 @@ const loadModule = () => {
 	};
 
 	const getSauce = (bytes, defaultColumnValue) => {
-		let sauce, fileSize, dataType, columns, rows, flags, commentsCount, comments;
+		let sauce;
+		let fileSize;
+		let dataType;
+		let flags;
+		let comments;
+		let columns = 0;
+		let rows = 0;
+		let commentsCount = 0;
 
 		const removeTrailingWhitespace = text => {
 			return text.replace(/\s+$/, '');

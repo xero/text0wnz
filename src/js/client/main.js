@@ -86,7 +86,9 @@ const $$$ = () => {
 
 document.addEventListener('DOMContentLoaded', async () => {
 	// init service worker
-	if ('serviceWorker' in navigator) {navigator.serviceWorker.register('/service.js');}
+	if ('serviceWorker' in navigator) {
+		navigator.serviceWorker.register('/service.js');
+	}
 
 	try {
 		// init global state and vars
