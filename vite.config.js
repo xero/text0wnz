@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import { viteStaticCopy } from 'vite-plugin-static-copy';
+import { VitePWA } from 'vite-plugin-pwa';
 import path from 'node:path';
 
 export default ({ mode }) => {
@@ -55,6 +56,34 @@ export default ({ mode }) => {
 			},
 		},
 		plugins: [
+			VitePWA({
+				filename: 'service.js',
+				manifestFilename: 'ui/manifest.webmanifest',
+				registerType: 'autoUpdate',
+				injectRegister: false,
+				includeAssets: [
+					'apple-touch-icon.png',
+					'chat.png',
+					'done.png',
+					'face.png',
+					'favicon.ico',
+					'favicon.svg',
+					'favicon-96x96.png',
+					'icons.svg',
+					'logo.png',
+					'logo-sm.png',
+					'move_border.gif',
+					'selection_border.gif',
+					'site.webmanifest',
+					'web-app-manifest-192x192.png',
+					'web-app-manifest-512x512.png',
+					process.env.VITE_WORKER_FILE ? `js/client/${process.env.VITE_WORKER_FILE}` : undefined
+				].filter(Boolean),
+				manifest: 'ui/site.webmanifest', // reference to your manifest file in output
+				workbox: {
+					/* optional: runtimeCaching, etc. */
+				}
+			}),
 			viteStaticCopy({
 				targets: [
 					{ src: `js/client/${process.env.VITE_WORKER_FILE}`, dest: process.env.VITE_UI_DIR },

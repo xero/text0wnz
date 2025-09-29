@@ -61,8 +61,35 @@ let sauceComments;
 let sauceBytes;
 let navSauce;
 
+const $$$ = () => {
+	artworkTitle = $('artwork-title');
+	bodyContainer = $('body-container');
+	canvasContainer = $('canvas-container');
+	columnsInput = $('columns-input');
+	fontSelect = $('font-select');
+	openFile = $('open-file');
+	resizeApply = $('resize-apply');
+	sauceDone = $('sauce-done');
+	sauceTitle = $('sauce-title');
+	swapColors = $('swap-colors');
+	rowsInput = $('rows-input');
+	fontDisplay = $$('#current-font-display kbd');
+	changeFont = $('change-font');
+	previewInfo = $('font-preview-info');
+	previewImage = $('font-preview-image');
+	sauceGroup = $('sauce-group');
+	sauceAuthor = $('sauce-author');
+	sauceComments = $('sauce-comments');
+	sauceBytes = $('sauce-bytes');
+	navSauce = $('navSauce');
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
+	// init service worker
+	if ('serviceWorker' in navigator) {navigator.serviceWorker.register('/service.js');}
+
 	try {
+		// init global state and vars
 		State.startInitialization();
 		$$$();
 
@@ -96,33 +123,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 		});
 	} catch (error) {
 		console.error('[Main] Error during initialization:', error);
-		// Handle initialization failure gracefully
 		alert('Failed to initialize the application. Please refresh the page.');
 	}
 });
-
-const $$$ = () => {
-	artworkTitle = $('artwork-title');
-	bodyContainer = $('body-container');
-	canvasContainer = $('canvas-container');
-	columnsInput = $('columns-input');
-	fontSelect = $('font-select');
-	openFile = $('open-file');
-	resizeApply = $('resize-apply');
-	sauceDone = $('sauce-done');
-	sauceTitle = $('sauce-title');
-	swapColors = $('swap-colors');
-	rowsInput = $('rows-input');
-	fontDisplay = $$('#current-font-display kbd');
-	changeFont = $('change-font');
-	previewInfo = $('font-preview-info');
-	previewImage = $('font-preview-image');
-	sauceGroup = $('sauce-group');
-	sauceAuthor = $('sauce-author');
-	sauceComments = $('sauce-comments');
-	sauceBytes = $('sauce-bytes');
-	navSauce = $('navSauce');
-};
 
 const initializeAppComponents = async () => {
 	document.addEventListener('keydown', undoAndRedo);
