@@ -288,6 +288,7 @@ describe('UI Utilities', () => {
 				<div id="websocket-modal" class="hide"></div>
 				<div id="choice-modal" class="hide"></div>
 				<div id="about-modal" class="hide"></div>
+				<div id="update-modal" class="hide"></div>
 				<div id="modalError"></div>
 			`;
 
@@ -313,6 +314,7 @@ describe('UI Utilities', () => {
 				<div id="websocket-modal" class="hide"></div>
 				<div id="choice-modal" class="hide"></div>
 				<div id="about-modal" class="hide"></div>
+				<div id="update-modal" class="hide"></div>
 				<div id="modalError"></div>
 			`;
 

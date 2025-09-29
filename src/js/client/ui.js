@@ -22,6 +22,7 @@ const createModalController = modal => {
 		$('sauce-modal'),
 		$('websocket-modal'),
 		$('choice-modal'),
+		$('update-modal'),
 	];
 
 	const isOpen = () => modal.open;
@@ -476,6 +477,35 @@ const createResolutionController = (lbl, txtC, txtR) => {
 	});
 };
 
+const createDragDropController = () => {
+	let dragCounter = 0;
+	document.addEventListener('dragenter', e => {
+		e.preventDefault();
+		dragCounter++;
+		document.body.classList.add('drag-over');
+	});
+	document.addEventListener('dragover', e => {
+		e.preventDefault();
+	});
+	document.addEventListener('dragleave', e => {
+		e.preventDefault();
+		dragCounter--;
+		if (dragCounter === 0) {
+			document.body.classList.remove('drag-over');
+		}
+	});
+	document.addEventListener('drop', e => {
+		e.preventDefault();
+		dragCounter = 0;
+		document.body.classList.remove('drag-over');
+		const files = e.dataTransfer?.files;
+		if (files && files.length > 0) {
+			const file = files[0];
+			alert(`got: ${file}`);
+		}
+	});
+};
+
 const websocketUI = show => {
 	[
 		['excluded-for-websocket', !show],
@@ -504,5 +534,6 @@ export {
 	menuHover,
 	enforceMaxBytes,
 	createResolutionController,
+	createDragDropController,
 	websocketUI,
 };

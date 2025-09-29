@@ -379,6 +379,13 @@ const State = {
 	set worker(value) {
 		stateManager.set('worker', value);
 	},
+	get title() {
+		return stateManager.state.title;
+	},
+	set title(value) {
+		stateManager.set('title', value);
+		document.title = `${value} :teXt.0w.nz`;
+	},
 
 	// Utility methods
 	waitFor: stateManager.waitFor,

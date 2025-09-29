@@ -8,19 +8,30 @@
 /* <--//-------------------------------------------------------------[theme] */
 :root {
 	overscroll-behavior: none;
-	--purp: #6e2aa5;
+	--light-fg: #fff;
+	--dark-fg: #efefef;
+	--light-editor: #404040;
+	--dark-editor: #222;
+	--light-menu: #4f4f4f;
+	--dark-menu: #333;
+	--light-file: #5f5f5f;
+	--dark-file: #444;
+	--light-icon: #fff;
+	--dark-icon: #efefef;
+	--light-icon-hover: #efefef;
+	--dark-icon-hover: #fff;
+	--light-tools: #303030;
+	--dark-tools: #4e4e4e;
+	--light-hl: #222;
+	--dark-hl: #000;
+	--light-purp: #611896;
+	--dark-purp: #6e2aa5;
 	--indigo: #6366f1;
 	--cyber: #00bad7;
 	--cyan: #22d3ee;
 	--header: #5f5f5f;
 	--subtitle: #999;
 	--chat: #ababab;
-	--fg: #efefef;
-	--editor: #222;
-	--menu: #333;
-	--icon: #efefef;
-	--tools: #4e4e4e;
-	--hl: #000;
 	--silver: #c0c0c0;
 	--midnight: #000;
 	--icon-size: 46px;
@@ -34,23 +45,36 @@
 	--breakpoint-xs: 30rem;
 	--breakpoint-2xl: 100rem;
 	--breakpoint-3xl: 120rem;
+	--color-lbl: var(--light-tools);
 	--color-header: var(--header);
 	--color-cyan: var(--cyan);
-	--color-purp: var(--purp);
+	--color-purp: var(--light-purp);
 	--color-indigo: var(--indigo);
 	--color-cyber: var(--cyber);
 	--color-cyan: var(--cyan);
 	--color-subtitle: var(--subtitle);
 	--color-chat: var(--chat);
-	--color-fg: var(--fg);
-	--color-editor: var(--editor);
-	--color-menu: var(--menu);
-	--color-icon: var(--icon);
-	--color-tools: var(--tools);
-	--color-hl: var(--hl);
+	--color-fg: var(--light-fg);
+	--color-editor: var(--light-editor);
+	--color-menu: var(--light-menu);
+	--color-icon: var(--light-icon);
+	--color-icon-hover: var(--light-icon-hover);
+	--color-tools: var(--light-tools);
+	--color-hl: var(--light-hl);
 	--color-midnight: var(--midnight);
+	--color-file: var(--light-file);
 }
 .dark {
+	--color-lbl: var(--midnight);
+	--color-purp: var(--dark-purp);
+	--color-fg: var(--dark-fg);
+	--color-editor: var(--dark-editor);
+	--color-menu: var(--dark-menu);
+	--color-icon: var(--dark-icon);
+	--color-icon-hover: var(--dark-icon-hover);
+	--color-tools: var(--dark-tools);
+	--color-hl: var(--dark-hl);
+	--color-file: var(--dark-file);
 	dialog::backdrop {
 		background: radial-gradient(circle, rgba(0, 0, 0, 0.13) 0%, rgba(0, 0, 0, 0.23) 50%, rgba(0, 0, 0, 0.53) 100%);
 	}
@@ -89,6 +113,15 @@
 		}
 	}
 
+	@media (prefers-reduced-motion: no-preference) {
+		* {
+			@apply transition-all ease-in-out;
+		}
+		canvas {
+			@apply transition-none!;
+		}
+	}
+
 	.scrollable {
 		scrollbar-width: auto;
 		scrollbar-color: var(--menu) var(--editor);
@@ -123,7 +156,7 @@
 	a:visited {
 		@apply decoration-0 text-cyan;
 		&:hover {
-			@apply bg-purp text-fg;
+			@apply bg-cyan text-fg;
 		}
 	}
 
@@ -165,21 +198,7 @@
 			@apply h-[40px];
 			&:hover {
 				@apply bg-hl;
-				* {
-					@apply bg-midnight;
-				}
 			}
-		}
-	}
-
-	#artwork-title {
-		@apply flex w-auto min-w-[50px] max-w-[100px] text-center p-0 m-auto h-[25px] text-xs text-midnight;
-		background-color: rgb(95, 95, 95);
-		border: 1px solid rgb(31, 31, 31);
-
-		&:focus {
-			background-color: rgb(127, 127, 127);
-			color: white;
 		}
 	}
 
@@ -263,7 +282,7 @@
 							content: '';
 						}
 						&:checked:after {
-							background: var(--cyber);
+							@apply bg-cyber;
 							content: '';
 						}
 					}
@@ -308,7 +327,7 @@
 
 					&::before {
 						content: '>';
-						color: var(--color-chat);
+						@apply text-fg;
 					}
 				}
 				#message-input {
@@ -352,7 +371,7 @@
 	header nav {
 		@apply flex flex-row justify-start w-auto;
 
-		img.enabled {
+		.enabled {
 			@apply bg-black;
 		}
 	}
@@ -425,7 +444,7 @@
 				margin: 3px auto auto auto;
 
 				&:hover {
-					border: 1px solid var(--indigo);
+					outline: 1px solid var(--cyber);
 				}
 			}
 		}
@@ -452,9 +471,7 @@
 
 	#resolution kbd,
 	#current-font-display kbd {
-		background: #2b2b2b;
-		padding: 1px 8px;
-		margin-right: 5px;
+		@apply bg-lbl mr-[5px] px-[8px] py-[1px];
 	}
 
 	#position-info {
@@ -526,35 +543,22 @@
 	}
 
 	.menu-title {
-		width: auto;
-		height: 35px;
-		display: inline-block;
-		position: relative;
-		vertical-align: top;
 		font-size: 14px;
-		color: rgb(200, 200, 200);
-		background-color: rgb(64, 64, 64);
 		line-height: 20px;
-		overflow: hidden;
+		@apply w-auto h-[35px] text-fg bg-menu inline-block relative align-top overflow-hidden;
 
 		button {
-			@apply h-[40px] w-[40px] pr-1 border-none bg-menu;
+			@apply h-[40px] w-[40px] pr-1 border-none bg-transparent;
 		}
 	}
 
 	.menu-list {
-		@apply z-40 block cursor-default absolute w-[300px];
-		margin-top: -6px;
-		background-color: rgb(64, 64, 64);
-		border-right: 4px solid var(--menu);
-		border-bottom: 4px solid var(--menu);
-		border-left: 4px solid var(--menu);
-		box-shadow: 0px 4px 32px rgba(0, 0, 0, 0.7);
+		@apply z-40 block cursor-default absolute w-[300px] bg-file border-r-4 border-b-4 border-l-4 border-solid border-menu mt-[-6px];
+		box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
 	}
 
 	.hover,
 	.menu-title:hover {
-		background-color: rgb(96, 96, 96);
 		overflow: visible;
 	}
 
@@ -563,9 +567,12 @@
 		margin: 4px 2px;
 		font-size: 14px;
 		kbd {
-			@apply text-tools bg-editor ml-2.5 p-1;
+			@apply text-fg bg-editor ml-2.5 p-1;
 			font-size: 13px;
 		}
+	}
+	.dark .menu-item kbd {
+		@apply text-tools;
 	}
 
 	.menu-list .seperator {
@@ -574,8 +581,7 @@
 
 	.menu-item {
 		&:hover {
-			color: white;
-			background-color: rgba(255, 255, 255, 0.2);
+			@apply bg-indigo text-white;
 		}
 
 		&.disabled {
@@ -583,36 +589,28 @@
 			cursor: default;
 			background-color: inherit;
 		}
-
-		&.enabled {
-			background-image: url('/img/done.png');
-			background-position: 130px 0px;
-			background-repeat: no-repeat;
-			background-size: 20px 20px;
-		}
 	}
 	/* <--//-------------------------------------------------------------[modal] */
 	dialog {
 		@apply fixed top-1/2 left-1/2 z-50 bg-menu border-8 border-[#666]
-	border-double opacity-0 scale-y-0 w-fit h-fit;
+	border-double opacity-0 w-fit h-fit;
 		-webkit-transform: translateX(-50%) translateY(-50%);
 		-moz-transform: translateX(-50%) translateY(-50%);
 		-ms-transform: translateX(-50%) translateY(-50%);
 		transform: translateX(-50%) translateY(-50%);
 		transform-origin: top;
 		transition:
-			scale 0.7s ease-out,
 			opacity 0.7s ease-out,
 			transform 0.7s ease-out;
 
 		&[open] {
-			@apply opacity-100 scale-y-100 p-1.5 z-50 min-w-3xs pointer-events-auto;
+			@apply opacity-100 p-1.5 z-50 min-w-3xs pointer-events-auto;
 			@starting-style {
-				@apply opacity-1 scale-y-0;
+				@apply opacity-1;
 			}
 		}
 		&.closing {
-			@apply opacity-1 scale-y-0 pointer-events-none;
+			@apply opacity-1 pointer-events-none;
 			&::backdrop {
 				@apply opacity-1;
 			}
@@ -684,11 +682,30 @@
 			}
 		}
 	}
+	@media (prefers-reduced-motion: no-preference) {
+		dialog {
+			@apply scale-y-0;
+			transition:
+				scale 0.7s ease-out,
+				opacity 0.7s ease-out,
+				transform 0.7s ease-out;
+			&[open] {
+				@apply scale-y-100;
+				@starting-style {
+					@apply scale-y-0;
+				}
+			}
+			&.closing {
+				@apply scale-y-0;
+			}
+		}
+	}
 	#about-modal,
 	#resize-modal,
 	#sauce-modal,
 	#websocket-modal,
 	#choice-modal,
+	#update-modal,
 	#fonts-modal {
 		@apply flex flex-col w-fit h-fit min-h-0;
 		h1,
@@ -841,6 +858,7 @@
 			}
 		}
 	}
+	#update-modal,
 	#about-modal {
 		header {
 			@apply h-fit flex-col bg-editor;
@@ -856,6 +874,12 @@
 		}
 		nav {
 			@apply p-2;
+		}
+	}
+	#update-modal {
+		@apply text-center justify-self-center;
+		h4 {
+			@apply text-cyber mb-4;
 		}
 	}
 	#websocket-modal {
@@ -940,19 +964,13 @@
 	}
 
 	canvas {
-		&.cursor {
-			@apply absolute border border-solid border-white z-20;
-			animation: blink 1.5s steps(1) infinite;
-		}
-
+		&.cursor,
 		&.selection-cursor {
-			@apply absolute z-20 border border-solid;
-			border-image: url('/img/selection_border.gif') 1 repeat;
-			border-image-width: 1px;
-
-			&.move-mode {
-				border-image: url('/img/move_border.gif') 1 repeat;
-			}
+			@apply absolute z-20;
+		}
+		&.cursor {
+			border: 1px solid #555;
+			animation: blink 1.5s steps(1) infinite;
 		}
 	}
 
@@ -987,17 +1005,90 @@
 	}
 
 	/* File drag and drop styling */
-	body.dragging {
-		@apply bg-cyan-900/20;
-	}
-
 	body.dragging::after {
 		content: 'Drop ANSI files here';
-		@apply fixed inset-0 flex items-center justify-center text-4xl font-bold text-cyan-400 bg-black/80 z-50 pointer-events-none;
+		@apply fixed inset-0 block items-center justify-center text-4xl font-bold text-cyan bg-black/80 pointer-events-none top-0 left-0 bottom-0 right-0 w-full h-full;
+		z-index: 999;
 	}
-}
-/* force vite to include the img for use in notifications */
-.face {
-	background-image: url('/img/face.png');
+	/*  darkmode toggle */
+	.sun-and-moon {
+		> :is(.moon, .sun, .sun-beams) {
+			@apply origin-center;
+		}
+		> :is(.moon, .sun) {
+			@apply fill-icon;
+		}
+		> .sun-beams {
+			@apply stroke-icon;
+			stroke-width: 0.125rem;
+		}
+		@media (hover: hover) and (pointer: fine) {
+			> :is(.moon, .sun) {
+				.darkmode:is(:hover, :focus-visible) > & {
+					@apply fill-icon-hover;
+				}
+			}
+			> .sun-beams {
+				.darkmode:is(:hover, :focus-visible) & {
+					@apply stroke-icon-hover;
+				}
+			}
+		}
+		.dark & {
+			& > .sun {
+				transform: scale(1.75);
+			}
+			& > .sun-beams {
+				@apply opacity-0;
+			}
+			& > .moon > circle {
+				transform: translateX(7px);
+				@supports (cx: 1) {
+					transform: translateX(0);
+					cx: 7;
+				}
+			}
+		}
+		@media (prefers-reduced-motion: no-preference) {
+			> .sun {
+				transition: transform 0.5s var(--ease-elastic-1);
+			}
+			> .sun-beams {
+				transition:
+					transform 0.5s var(--ease-elastic-2),
+					opacity 0.5s var(--ease);
+			}
+			.moon > circle {
+				transition: transform 0.25s var(--ease-out);
+				@supports (cx: 1) {
+					transition: cx 0.25s var(--ease-out);
+				}
+			}
+			.dark & {
+				> .sun {
+					transform: scale(1.75);
+					transition-timing-function: var(--ease);
+					transition-duration: 0.25s;
+				}
+				> .sun-beams {
+					transform: rotateZ(-25deg);
+					transition-duration: 0.15s;
+				}
+				> .moon > circle {
+					transition-delay: 0.25s;
+					transition-duration: 0.5s;
+				}
+			}
+		}
+	}
+	#navDarkmode {
+		@apply bg-none cursor-pointer aspect-square;
+		-webkit-tap-highlight-color: transparent;
+		touch-action: manipulation;
+		transition: transform 1s linear !important;
+		svg {
+			stroke-linecap: round;
+		}
+	}
 }
 /* <--//---------------------------------------------------------------[eof] */

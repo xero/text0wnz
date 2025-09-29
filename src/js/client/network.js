@@ -5,7 +5,6 @@ const createWorkerHandler = inputHandle => {
 	const btnJoin = $('join-collaboration');
 	const btnLocal = $('stay-local');
 	const lblFont = $$('#current-font-display kbd');
-	const txtTitle = $('artwork-title');
 	const selFont = $('font-select');
 	const btn9pt = $('nav9pt');
 	const btnIce = $('navICE');
@@ -38,7 +37,7 @@ const createWorkerHandler = inputHandle => {
 
 	const onConnected = () => {
 		websocketUI(true);
-		txtTitle.value = window.location.hostname;
+		State.title = 'collab mode';
 		State.worker.postMessage({ cmd: 'join', handle: handle });
 		connected = true;
 	};
@@ -323,7 +322,7 @@ const createWorkerHandler = inputHandle => {
 		// Apply UI changes for collaboration mode
 		btnNet.classList.add('hide');
 		websocketUI(true);
-		txtTitle.value = window.location.hostname;
+		State.title = 'collab mode';
 		connected = true;
 
 		// Hide the overlay since we're ready
@@ -421,7 +420,6 @@ const createChatController = (
 ) => {
 	let enabled = false;
 	const userList = {};
-	const txtTitle = $('artwork-title');
 	let notifications = localStorage.getItem('notifications');
 	if (notifications === null) {
 		notifications = false;
@@ -437,9 +435,9 @@ const createChatController = (
 	};
 
 	const newNotification = text => {
-		const notification = new Notification(txtTitle.value + ' - text.0w.nz', {
+		const notification = new Notification('text.0w.nz', {
 			body: text,
-			icon: `${import.meta.env.BASE_URL}${import.meta.env.VITE_UI_DIR}face.png`,
+			icon: `${import.meta.env.BASE_URL}${import.meta.env.VITE_UI_DIR}favicon.svg`,
 		});
 		// Auto-close notification after 7 seconds
 		const notificationTimer = setTimeout(() => {

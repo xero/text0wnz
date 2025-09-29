@@ -22,7 +22,6 @@
 		<link rel="shortcut icon" href="/img/favicon.ico"/>
 		<link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png"/>
 		<meta name="apple-mobile-web-app-title" content="text.0w.nz"/>
-		<link rel="manifest" href="/img/site.webmanifest"/>
 		<meta name="theme-color" content="#000000"/>
 		<meta name="author" content="https://github.com/xero/text0wnz/graphs/contributors"/>
 		<meta name="description" content="The online collaborative text art editor"/>
@@ -99,8 +98,6 @@
 							<use href="img/icons.svg#sauce"></use>
 						</svg>
 					</button>
-					<label for="artwork-title">Artwork Title</label>
-					<input id="artwork-title" type="text" value="Untitled" maxlength="40" spellcheck="false"/>
 				</nav>
 				<nav>
 					<div id="keyboard-toolbar">
@@ -352,6 +349,25 @@
 				<div id="navGrid">
 					<svg alt="Show Grid (Ctrl-G)" aria-label="Show Grid (Ctrl-G)">
 						<use href="img/icons.svg#grid"></use>
+					</svg>
+				</div>
+				<div id="navDarkmode">
+					<svg class="sun-and-moon" aria-hidden="true" viewBox="1 0 24 24">
+						<mask id="moon-mask" class="moon">
+							<rect fill="white" height="100%" width="100%" x="0" y="0"/>
+							<circle cx="0" cy="10" fill="black" r="6"/>
+						</mask>
+						<circle class="sun" cx="12" cy="12" fill="currentColor" mask="url(#moon-mask)" r="6"/>
+						<g class="sun-beams" stroke="currentColor">
+							<line x1="12" x2="12" y1="1" y2="3"/>
+							<line x1="12" x2="12" y1="21" y2="23"/>
+							<line x1="4.22" x2="5.64" y1="4.22" y2="5.64"/>
+							<line x1="18.36" x2="19.78" y1="18.36" y2="19.78"/>
+							<line x1="1" x2="3" y1="12" y2="12"/>
+							<line x1="21" x2="23" y1="12" y2="12"/>
+							<line x1="4.22" x2="5.64" y1="19.78" y2="18.36"/>
+							<line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/>
+						</g>
 					</svg>
 				</div>
 			</aside>
@@ -642,6 +658,30 @@
 				<p>Please wait... Retrieving data from server.</p>
 				<nav>
 					<button id="websocket-cancel" aria-label="Cancel">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Cancel
+					</button>
+				</nav>
+			</section>
+			<section id="update-modal">
+				<header>
+					<h2>Update Available!</h2>
+				</header>
+				<p>
+					A new version of the editor is available. Press update to reload and apply it now, if you are currently
+					drawing press cancel and...
+				</p>
+				<h4>MAKE SURE YOU SAVE BEFORE UPDATING!</h4>
+				<nav>
+					<button id="update-reload" aria-label="Reload and Update">
+						<svg>
+							<use href="img/icons.svg#check"></use>
+						</svg>
+						Update
+					</button>
+					<button id="update-cancel" aria-label="Cancel Reload">
 						<svg>
 							<use href="img/icons.svg#cancel"></use>
 						</svg>

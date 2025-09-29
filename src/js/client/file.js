@@ -1422,7 +1422,7 @@ const saveModule = () => {
 		output.push(27, 91, 48, 109); // ESC[0m
 
 		const sauce = useUTF8 ? '' : createSauce(1, 1, output.length, true);
-		const fname = $('artwork-title').value + (useUTF8 ? '.utf8.ans' : '.ans');
+		const fname = State.title + (useUTF8 ? '.utf8.ans' : '.ans');
 		saveFile(new Uint8Array(output), sauce, fname);
 	};
 	const ans = () => {
@@ -1451,7 +1451,7 @@ const saveModule = () => {
 		if (columns % 2 === 0) {
 			const imageData = convert16BitArrayTo8BitArray(State.textArtCanvas.getImageData());
 			const sauce = createSauce(5, columns / 2, imageData.length, true);
-			const fname = $('artwork-title').value;
+			const fname = State.title;
 			saveFile(imageData, sauce, fname + '.bin');
 		}
 	};
@@ -1526,7 +1526,7 @@ const saveModule = () => {
 
 		// Create SAUCE data
 		const sauce = createSauce(6, 0, imageData.length, false);
-		const fname = $('artwork-title').value;
+		const fname = State.title;
 		saveFile(output, sauce, fname + '.xb');
 	};
 
@@ -1541,7 +1541,7 @@ const saveModule = () => {
 	};
 
 	const png = () => {
-		const fname = $('artwork-title').value;
+		const fname = State.title;
 		saveFile(dataUrlToBytes(State.textArtCanvas.getImage().toDataURL()), undefined, fname + '.png');
 	};
 

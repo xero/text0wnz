@@ -1,6 +1,6 @@
 import magicNumbers from './magicNumbers.js';
 import State from './state.js';
-import { $, $$, createCanvas } from './ui.js';
+import { $, $$, createCanvas, createDragDropController } from './ui.js';
 import { createTextArtCanvas } from './canvas.js';
 import { Load, Save } from './file.js';
 import Toolbar from './toolbar.js';
@@ -40,7 +40,7 @@ import {
 import { createWorkerHandler, createChatController } from './network.js';
 import { createCursor, createSelectionCursor, createKeyboardController, createPasteTool } from './keyboard.js';
 
-let artworkTitle;
+let htmlDoc;
 let bodyContainer;
 let canvasContainer;
 let columnsInput;
@@ -58,11 +58,11 @@ let previewImage;
 let sauceGroup;
 let sauceAuthor;
 let sauceComments;
-let sauceBytes;
 let navSauce;
+let navDarkmode;
 
 const $$$ = () => {
-	artworkTitle = $('artwork-title');
+	htmlDoc = $$('html');
 	bodyContainer = $('body-container');
 	canvasContainer = $('canvas-container');
 	columnsInput = $('columns-input');
@@ -80,14 +80,29 @@ const $$$ = () => {
 	sauceGroup = $('sauce-group');
 	sauceAuthor = $('sauce-author');
 	sauceComments = $('sauce-comments');
-	sauceBytes = $('sauce-bytes');
 	navSauce = $('navSauce');
+	navDarkmode = $('navDarkmode');
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
 	// init service worker
 	if ('serviceWorker' in navigator) {
-		navigator.serviceWorker.register('/service.js');
+		navigator.serviceWorker.register('/service.js').then(reg => {
+			if (reg.waiting) {
+				// New SW is waiting to activate
+				reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+			}
+			reg.onupdatefound = () => {
+				const installingWorker = reg.installing;
+				installingWorker.onstatechange = () => {
+					if (installingWorker.state === 'installed') {
+						if (navigator.serviceWorker.controller) {
+							State.modal.open('update');
+						}
+					}
+				};
+			};
+		});
 	}
 
 	try {
@@ -95,7 +110,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		State.startInitialization();
 		$$$();
 
-		State.title = artworkTitle;
+		State.title = 'Untitled';
 		State.pasteTool = createPasteTool($('cut'), $('copy'), $('paste'), $('delete'));
 		State.positionInfo = createPositionInfo($('position-info'));
 		State.modal = createModalController($('modal'));
@@ -130,7 +145,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 const initializeAppComponents = async () => {
+	window.matchMedia('(prefers-color-scheme: dark)').matches && htmlDoc.classList.add('dark');
 	document.addEventListener('keydown', undoAndRedo);
+	createDragDropController();
 	createResolutionController($('resolution-label'), $('columns-input'), $('rows-input'));
 	onClick($('new'), async () => {
 		if (confirm('All changes will be lost. Are you sure?') === true) {
@@ -144,13 +161,6 @@ const initializeAppComponents = async () => {
 					State.textArtCanvas.resize(80, 25);
 					State.textArtCanvas.clear();
 					State.textArtCanvas.setIceColors(false);
-					artworkTitle.value = 'untitled';
-					sauceTitle.value = 'untitled';
-					sauceGroup.value = '';
-					sauceAuthor.value = '';
-					sauceComments.value = '';
-					sauceBytes.value = '0/16320 bytes';
-					// Update font display last
 					updateFontDisplay();
 					bodyContainer.classList.remove('loading');
 				});
@@ -189,6 +199,20 @@ const initializeAppComponents = async () => {
 	onClick($('about-dl'), _ => {
 		window.location.href = 'https://github.com/xero/text0wnz/releases/latest';
 	});
+	onClick($('update-cancel'), _ => {
+		State.modal.close();
+	});
+	onClick($('update-reload'), _ => {
+		if ('caches' in window) {
+			window.caches.keys().then(keys => {
+				Promise.all(keys.map(key => window.caches.delete(key))).then(() => {
+					window.location.reload();
+				});
+			});
+		} else {
+			window.location.reload();
+		}
+	});
 
 	const palettePreview = createPalettePreview($('palette-preview'));
 	const palettePicker = createPalettePicker($('palette-picker'));
@@ -205,8 +229,7 @@ const initializeAppComponents = async () => {
 			} else {
 				fileTitle = file.name;
 			}
-			State.title.value = fileTitle;
-			document.title = `text.0w.nz: ${fileTitle}`;
+			State.title = fileTitle;
 			bodyContainer.classList.remove('loading');
 
 			const applyData = () => {
@@ -234,20 +257,17 @@ const initializeAppComponents = async () => {
 		});
 	});
 
-	[artworkTitle, navSauce].forEach(e => {
-		onClick(e, () => {
-			State.modal.open('sauce');
-			keyboard.ignore();
-			paintShortcuts.ignore();
-			sauceTitle.focus();
-			shadeBrush.ignore();
-			characterBrush.ignore();
-		});
+	onClick(navSauce, () => {
+		State.modal.open('sauce');
+		keyboard.ignore();
+		paintShortcuts.ignore();
+		sauceTitle.focus();
+		shadeBrush.ignore();
+		characterBrush.ignore();
 	});
 
 	onClick(sauceDone, () => {
-		State.title.value = sauceTitle.value;
-		artworkTitle.value = State.title.value;
+		State.title = sauceTitle.value;
 		State.modal.close();
 		keyboard.unignore();
 		paintShortcuts.unignore();
@@ -267,8 +287,6 @@ const initializeAppComponents = async () => {
 	onReturn(sauceTitle, sauceDone);
 	onReturn(sauceGroup, sauceDone);
 	onReturn(sauceAuthor, sauceDone);
-	// @TODO: research if newlines valid in sauce comments
-	// onReturn(sauceComments, sauceDone);
 	const paintShortcuts = createPaintShortcuts({
 		d: $('default-color'),
 		q: swapColors,
@@ -368,6 +386,11 @@ const initializeAppComponents = async () => {
 		State.font.setLetterSpacing(newLetterSpacing);
 		// Broadcast letter spacing change to other users if in collaboration mode
 		State.network?.sendLetterSpacingChange?.(newLetterSpacing);
+	});
+
+	onClick(navDarkmode, _ => {
+		htmlDoc.classList.toggle('dark');
+		navDarkmode.setAttribute('aria-pressed', htmlDoc.classList.contains('dark'));
 	});
 
 	const updateFontDisplay = () => {

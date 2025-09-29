@@ -380,6 +380,12 @@ const createSelectionCursor = divElement => {
 	let sx, sy, dx, dy, x, y, width, height;
 	let visible = false;
 
+	// Marching ants animation state
+	let dashOffset = 0;
+	let animationId = null;
+	const dashPattern = [4, 4]; // dash, gap length
+	const dashSpeed = 0.1; // px per frame
+
 	const processCoords = () => {
 		x = Math.min(sx, dx);
 		y = Math.min(sy, dy);
@@ -393,14 +399,40 @@ const createSelectionCursor = divElement => {
 		height = Math.min(height, rows - y);
 	};
 
+	const drawBorder = () => {
+		const ctx = cursor.getContext('2d');
+		ctx.clearRect(0, 0, cursor.width, cursor.height);
+		const antsColor = cursor.classList.contains('move-mode') ? '#ff7518' : '#fff';
+		ctx.save();
+		ctx.strokeStyle = antsColor;
+		ctx.lineWidth = 1;
+		ctx.setLineDash(dashPattern);
+		ctx.lineDashOffset = -dashOffset;
+		ctx.strokeRect(1, 1, cursor.width - 2, cursor.height - 2);
+		ctx.restore();
+	};
+
+	const animateBorder = () => {
+		dashOffset = (dashOffset + dashSpeed) % (dashPattern[0] + dashPattern[1]);
+		drawBorder();
+		animationId = requestAnimationFrame(animateBorder);
+	};
+
 	const show = () => {
 		cursor.style.display = 'block';
+		if (!animationId) {
+			animateBorder();
+		}
 	};
 
 	const hide = () => {
 		cursor.style.display = 'none';
 		visible = false;
 		State.pasteTool.disable();
+		if (animationId) {
+			cancelAnimationFrame(animationId);
+			animationId = null;
+		}
 	};
 
 	const updateCursor = () => {
@@ -410,6 +442,7 @@ const createSelectionCursor = divElement => {
 		cursor.style.top = y * fontHeight - 1 + 'px';
 		cursor.width = width * fontWidth + 1;
 		cursor.height = height * fontHeight + 1;
+		drawBorder();
 	};
 
 	const setStart = (startX, startY) => {
@@ -433,18 +466,11 @@ const createSelectionCursor = divElement => {
 		visible = true;
 	};
 
-	const isVisible = () => {
-		return visible;
-	};
+	const isVisible = () => visible;
 
 	const getSelection = () => {
 		if (visible) {
-			return {
-				x: x,
-				y: y,
-				width: width,
-				height: height,
-			};
+			return { x, y, width, height };
 		}
 		return null;
 	};
@@ -454,12 +480,12 @@ const createSelectionCursor = divElement => {
 	divElement.appendChild(cursor);
 
 	return {
-		show: show,
-		hide: hide,
-		setStart: setStart,
-		setEnd: setEnd,
-		isVisible: isVisible,
-		getSelection: getSelection,
+		show,
+		hide,
+		setStart,
+		setEnd,
+		isVisible,
+		getSelection,
 		getElement: () => cursor,
 	};
 };

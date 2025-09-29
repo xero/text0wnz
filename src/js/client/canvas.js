@@ -1,6 +1,6 @@
 // Global reference using state management
 import State from './state.js';
-import { $, createCanvas } from './ui.js';
+import { createCanvas } from './ui.js';
 import { loadFontFromImage, loadFontFromXBData } from './font.js';
 import { createPalette, createDefaultPalette } from './palette.js';
 import magicNumbers from './magicNumbers.js';
@@ -507,7 +507,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const clear = () => {
-		$('artwork-title').value = '';
+		State.title = '';
 		clearUndos();
 		imageData = new Uint16Array(columns * rows);
 		iceColors = false; // Reset ICE colors to disabled (default)
