@@ -549,6 +549,36 @@ const initializeAppComponents = async () => {
 	);
 	createSettingToggle($('chat-button'), State.chat.isEnabled, State.chat.toggle);
 	State.network = createWorkerHandler($('handle-input'));
+
+	// Set up event listeners to save state when things change
+	document.addEventListener('onTextCanvasUp', () => {
+		// Save after drawing
+		State.saveToLocalStorage();
+	});
+	document.addEventListener('onFontChange', () => {
+		State.saveToLocalStorage();
+	});
+	document.addEventListener('onPaletteChange', () => {
+		State.saveToLocalStorage();
+	});
+	document.addEventListener('onLetterSpacingChange', () => {
+		State.saveToLocalStorage();
+	});
+	document.addEventListener('onIceColorsChange', () => {
+		State.saveToLocalStorage();
+	});
+	document.addEventListener('onOpenedFile', () => {
+		State.saveToLocalStorage();
+	});
+	document.addEventListener('onForegroundChange', () => {
+		State.saveToLocalStorage();
+	});
+	document.addEventListener('onBackgroundChange', () => {
+		State.saveToLocalStorage();
+	});
+
+	// Restore state from localStorage after all components are initialized
+	State.restoreStateFromLocalStorage();
 };
 
 // Inject style sheets into the build pipeline for processing
