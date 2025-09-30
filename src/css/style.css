@@ -704,6 +704,7 @@
 	#resize-modal,
 	#sauce-modal,
 	#websocket-modal,
+	#loading-modal,
 	#choice-modal,
 	#update-modal,
 	#fonts-modal {
@@ -882,15 +883,32 @@
 			@apply text-cyber mb-4;
 		}
 	}
+	#loading-modal,
 	#websocket-modal {
 		nav {
 			@apply bg-transparent;
 			button {
 				@apply bg-tools text-midnight;
+
+				&:focus {
+					@apply bg-tools text-midnight;
+				}
+				&:hover {
+					@apply bg-purp text-fg;
+					svg {
+						@apply fill-fg;
+					}
+				}
 				svg {
 					@apply fill-midnight h-[25px];
 				}
 			}
+		}
+	}
+	#loading-modal {
+		@apply cursor-progress;
+		nav {
+			@apply bg-editor;
 		}
 	}
 

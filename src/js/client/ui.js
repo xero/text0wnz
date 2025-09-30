@@ -23,7 +23,10 @@ const createModalController = modal => {
 		$('websocket-modal'),
 		$('choice-modal'),
 		$('update-modal'),
+		$('loading-modal'),
 	];
+
+	let closingTimeout = null;
 
 	const isOpen = () => modal.open;
 
@@ -32,9 +35,14 @@ const createModalController = modal => {
 	const open = name => {
 		const section = name + '-modal';
 		if ($(section)) {
+			if (closingTimeout) {
+				clearTimeout(closingTimeout);
+				closingTimeout = null;
+				classList(modal, 'closing', false);
+			}
 			clear();
 			classList($(section), 'hide', false);
-			void (!isOpen() && modal.showModal());
+			modal.showModal();
 		} else {
 			error(`Unknown modal: <kbd>#{section}</kbd>`);
 			console.error(`Unknown modal: <kbd>#{section}</kbd>`);
@@ -43,9 +51,10 @@ const createModalController = modal => {
 
 	const close = () => {
 		classList(modal, 'closing');
-		setTimeout(() => {
+		closingTimeout = setTimeout(() => {
 			classList(modal, 'closing', false);
 			modal.close();
+			closingTimeout = null;
 		}, 700);
 	};
 

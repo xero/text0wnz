@@ -70,12 +70,12 @@ export default ({ mode }) => {
 					process.env.VITE_WORKER_FILE ? `js/client/${process.env.VITE_WORKER_FILE}` : undefined
 				].filter(Boolean),
 				manifest: {
-					name: 'teXt.0w.nz',
+					name: 'teXt0wnz',
 					short_name: 'teXt0wnz',
 					start_url: '/',
 					scope: '/',
 					display: 'standalone',
-					description: 'The online collaborative text art editor',
+					description: 'The online collaborative text art editor. Supporting CP437 ANSI/ASCII, Scene NFO, XBIN/BIN, & UTF8 TXT file types',
 					dir: 'ltr',
 					lang: 'en',
 					orientation: 'any',
@@ -107,12 +107,6 @@ export default ({ mode }) => {
 						type: 'image/png',
 						purpose: 'any',
 					}],
-					protocol_handlers: [
-						{
-							protocol: "ansi",
-							url: "/"
-						}
-					],
 					version: getBuildVersion(),
 				},
 				workbox: {

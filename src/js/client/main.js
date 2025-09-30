@@ -60,6 +60,7 @@ let sauceAuthor;
 let sauceComments;
 let navSauce;
 let navDarkmode;
+let saveTimeout;
 
 const $$$ = () => {
 	htmlDoc = $$('html');
@@ -82,6 +83,18 @@ const $$$ = () => {
 	sauceComments = $('sauce-comments');
 	navSauce = $('navSauce');
 	navDarkmode = $('navDarkmode');
+	saveTimeout = null;
+};
+
+// Debounce to avoid saving too frequently during drawing
+const save = () => {
+	if (saveTimeout) {
+		clearTimeout(saveTimeout);
+	}
+	saveTimeout = setTimeout(() => {
+		State.saveToLocalStorage();
+		saveTimeout = null;
+	}, 300);
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -146,6 +159,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 const initializeAppComponents = async () => {
 	window.matchMedia('(prefers-color-scheme: dark)').matches && htmlDoc.classList.add('dark');
+	State.restoreStateFromLocalStorage();
 	document.addEventListener('keydown', undoAndRedo);
 	createDragDropController();
 	createResolutionController($('resolution-label'), $('columns-input'), $('rows-input'));
@@ -549,6 +563,16 @@ const initializeAppComponents = async () => {
 	);
 	createSettingToggle($('chat-button'), State.chat.isEnabled, State.chat.toggle);
 	State.network = createWorkerHandler($('handle-input'));
+
+	// Set up event listeners to save editor state
+	document.addEventListener('onTextCanvasUp', save);
+	document.addEventListener('onFontChange', save);
+	document.addEventListener('onPaletteChange', save);
+	document.addEventListener('onLetterSpacingChange', save);
+	document.addEventListener('onIceColorsChange', save);
+	document.addEventListener('onOpenedFile', save);
+	document.addEventListener('onForegroundChange', save);
+	document.addEventListener('onBackgroundChange', save);
 };
 
 // Inject style sheets into the build pipeline for processing
