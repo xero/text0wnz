@@ -714,7 +714,7 @@ const loadModule = () => {
 				return 'C64 PETSCII shifted';
 
 			// Modern XBIN fonts
-			case 'Topaz_437 8x16':
+			case 'Topaz-437 8x16':
 				return 'Topaz-437';
 			case 'Human Fossil 8x16':
 				return 'NewSchool_hf';

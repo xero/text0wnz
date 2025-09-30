@@ -3,9 +3,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'node:path';
 
-// Utility to get a version string (timestamp or git commit hash)
 function getBuildVersion() {
-	// Use timestamp for simplicity, or uncomment for git commit hash
 	return Date.now().toString();
 	// return require('child_process').execSync('git rev-parse HEAD').toString().trim();
 }
@@ -55,7 +53,7 @@ export default ({ mode }) => {
 		plugins: [
 			VitePWA({
 				filename: 'service.js',
-				manifestFilename: 'ui/manifest.webmanifest',
+				manifestFilename: 'site.webmanifest',
 				registerType: 'autoUpdate',
 				injectRegister: false,
 				includeAssets: [
@@ -73,7 +71,8 @@ export default ({ mode }) => {
 				manifest: {
 					name: "teXt.0w.nz",
 					short_name: "teXt0wnz",
-					start_url: ".",
+					start_url: "/",
+					scope: "/",
 					display: "standalone",
 					background_color: "#000",
 					theme_color: "#000",
@@ -91,7 +90,7 @@ export default ({ mode }) => {
 						src: "ui/apple-touch-icon.png",
 						sizes: "180x180",
 						type: "image/png",
-						purpose: "maskable"
+						purpose: "any"
 					}],
 					version: getBuildVersion(),
 				},
@@ -110,15 +109,13 @@ export default ({ mode }) => {
 									maxAgeSeconds: 7 * 24 * 60 * 60,
 								},
 							},
-						},
-						{
+						}, {
 							urlPattern: /^\/ui\/.*\.(js|css)$/,
 							handler: 'NetworkFirst',
 							options: {
 								cacheName: 'dynamic-cache',
 							},
-						},
-						{
+						}, {
 							urlPattern: /^\/(index\.html)?$/,
 							handler: 'NetworkFirst',
 							options: {
@@ -132,6 +129,7 @@ export default ({ mode }) => {
 				targets: [
 					{ src: `js/client/${process.env.VITE_WORKER_FILE}`, dest: process.env.VITE_UI_DIR },
 					{ src: 'fonts', dest: process.env.VITE_UI_DIR },
+					{ src: 'img/favicon.ico', dest: '.' },
 				],
 			}),
 		],

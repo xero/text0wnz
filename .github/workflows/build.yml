@@ -28,8 +28,23 @@ jobs:
 
       - name: Check build artifacts
         run: |
-          test -f dist/index.html
           test -d dist/ui
-          test -f dist/ui/editor-*.js
-          test -f dist/ui/stylez-*.css
+          test -d dist/ui/fonts
+          test -f dist/ui/apple-touch-icon.png
+          test -f dist/ui/editor.js
+          test -f dist/ui/favicon-96x96.png
+          test -f dist/ui/favicon.ico
+          test -f dist/ui/favicon.svg
+          test -f dist/ui/icons.svg
+          test -f dist/ui/logo.png
+          test -f dist/ui/stylez.css
+          test -f dist/ui/topazplus_1200.woff2
+          test -f dist/ui/web-app-manifest-192x192.png
+          test -f dist/ui/web-app-manifest-512x512.png
+          test -f dist/ui/worker.js
+          test -f dist/favicon.ico
+          test -f dist/index.html
+          test -f dist/service.js
+          test -f dist/site.webmanifest
+          test -f dist/workbox-*.js
           echo "Build successful"

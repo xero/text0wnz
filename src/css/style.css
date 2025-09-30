@@ -1091,4 +1091,11 @@
 		}
 	}
 }
+#x1{
+	background: url('/img/web-app-manifest-192x192.png');
+}
+#x2{
+	background: url('/img/web-app-manifest-512x512.png');
+}
+
 /* <--//---------------------------------------------------------------[eof] */
