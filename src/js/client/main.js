@@ -167,6 +167,8 @@ const initializeAppComponents = async () => {
 	onClick($('new'), async () => {
 		if (confirm('All changes will be lost. Are you sure?') === true) {
 			bodyContainer.classList.add('loading');
+			// Clear localStorage when creating a new file
+			State.clearLocalStorage();
 			State.textArtCanvas.clearXBData(async _ => {
 				State.palette = createDefaultPalette();
 				palettePicker.updatePalette();

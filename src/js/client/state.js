@@ -92,6 +92,8 @@ class StateManager {
 		this.saveToLocalStorage = this.saveToLocalStorage.bind(this);
 		this.loadFromLocalStorage = this.loadFromLocalStorage.bind(this);
 		this.restoreStateFromLocalStorage = this.restoreStateFromLocalStorage.bind(this);
+		this.clearLocalStorage = this.clearLocalStorage.bind(this);
+		this.isDefaultState = this.isDefaultState.bind(this);
 	}
 
 	/**
@@ -399,14 +401,136 @@ class StateManager {
 	}
 
 	/**
-	 * Save state to localStorage
+	 * Check if current state is all defaults (blank canvas with default settings)
+	 */
+	isDefaultState() {
+		try {
+			// Check if canvas is default size (80x25)
+			if (this.state.textArtCanvas) {
+				const columns = this.state.textArtCanvas.getColumns();
+				const rows = this.state.textArtCanvas.getRows();
+				if (columns !== 80 || rows !== 25) {
+					return false;
+				}
+
+				// Check if canvas is blank (all cells are BLANK_CELL = (32 << 8) + 7)
+				const imageData = this.state.textArtCanvas.getImageData();
+				const BLANK_CELL = (32 << 8) + 7; // Space character with white foreground
+				for (let i = 0; i < imageData.length; i++) {
+					if (imageData[i] !== BLANK_CELL) {
+						return false; // Canvas has content
+					}
+				}
+
+				// Check if font is default (CP437 8x16)
+				const fontName = this.state.textArtCanvas.getCurrentFontName();
+				if (fontName !== 'CP437 8x16') {
+					return false;
+				}
+
+				// Check if ice colors is default (false)
+				const iceColors = this.state.textArtCanvas.getIceColors();
+				if (iceColors !== false) {
+					return false;
+				}
+
+				// Check if there's XBIN font data
+				if (typeof this.state.textArtCanvas.getXBFontData === 'function') {
+					const xbFontData = this.state.textArtCanvas.getXBFontData();
+					if (xbFontData && xbFontData.bytes) {
+						return false; // Has custom XBIN font
+					}
+				}
+			}
+
+			// Check if letter spacing is default (false)
+			if (this.state.font && this.state.font.getLetterSpacing) {
+				if (this.state.font.getLetterSpacing() !== false) {
+					return false;
+				}
+			}
+
+			// Check if palette is default
+			if (this.state.palette && this.state.palette.getPalette) {
+				const currentPalette = this.state.palette.getPalette();
+				const defaultPalette = [
+					[0, 0, 0, 255],
+					[0, 0, 170, 255],
+					[0, 170, 0, 255],
+					[0, 170, 170, 255],
+					[170, 0, 0, 255],
+					[170, 0, 170, 255],
+					[170, 85, 0, 255],
+					[170, 170, 170, 255],
+					[85, 85, 85, 255],
+					[85, 85, 255, 255],
+					[85, 255, 85, 255],
+					[85, 255, 255, 255],
+					[255, 85, 85, 255],
+					[255, 85, 255, 255],
+					[255, 255, 85, 255],
+					[255, 255, 255, 255],
+				];
+
+				// Compare each color in the palette
+				for (let i = 0; i < 16; i++) {
+					const current = currentPalette[i];
+					const defaultColor = defaultPalette[i];
+					for (let j = 0; j < 4; j++) {
+						if (current[j] !== defaultColor[j]) {
+							return false; // Palette has been modified
+						}
+					}
+				}
+
+				// Check if foreground/background are defaults (7 and 0)
+				if (this.state.palette.getForegroundColor && this.state.palette.getForegroundColor() !== 7) {
+					return false;
+				}
+				if (this.state.palette.getBackgroundColor && this.state.palette.getBackgroundColor() !== 0) {
+					return false;
+				}
+			}
+
+			// Check if title is default (empty or "Untitled")
+			if (this.state.title && this.state.title !== '' && this.state.title !== 'Untitled') {
+				return false;
+			}
+
+			return true; // All checks passed, state is default
+		} catch (error) {
+			console.error('[State] Error checking default state:', error);
+			return false; // If there's an error, assume it's not default to be safe
+		}
+	}
+
+	/**
+	 * Save state to localStorage (only if not default state)
 	 */
 	saveToLocalStorage() {
 		try {
+			// Don't save if the state is all defaults
+			if (this.isDefaultState()) {
+				console.log('[State] Skipping save - state is default');
+				return;
+			}
+
 			const serialized = this.serializeState();
 			localStorage.setItem('moebiusAppState', JSON.stringify(serialized));
 		} catch (error) {
 			console.error('[State] Failed to save state to localStorage:', error);
+		}
+	}
+
+	/**
+	 * Clear all state from localStorage
+	 */
+	clearLocalStorage() {
+		try {
+			localStorage.removeItem('moebiusAppState');
+			console.log('[State] Cleared localStorage');
+		} catch (error) {
+			console.error('[State] Failed to clear localStorage:', error);
 		}
 	}
 
@@ -623,6 +747,7 @@ const State = {
 	saveToLocalStorage: stateManager.saveToLocalStorage,
 	loadFromLocalStorage: stateManager.loadFromLocalStorage,
 	restoreStateFromLocalStorage: stateManager.restoreStateFromLocalStorage,
+	clearLocalStorage: stateManager.clearLocalStorage,
 
 	// Raw state access (for advanced use cases)
 	_manager: stateManager,
