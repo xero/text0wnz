@@ -990,7 +990,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		redoBuffer = [];
 	};
 
-	const optimiseBlocks = blocks => {
+	const optimizeBlocks = blocks => {
 		blocks.forEach(block => {
 			const index = block[0];
 			const attribute = imageData[index];
@@ -1055,7 +1055,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			}
 		});
 		if (optimise) {
-			optimiseBlocks(blocks);
+			optimizeBlocks(blocks);
 		}
 
 		processDirtyRegions();
@@ -1091,7 +1091,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				}
 			}
 		});
-		optimiseBlocks(blocks);
+		optimizeBlocks(blocks);
 		processDirtyRegions();
 		sendDrawHistory();
 	};

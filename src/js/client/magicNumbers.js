@@ -23,8 +23,11 @@ const MIDDLE_BLOCK = 254; // (■)
 const MIDDLE_DOT = 249; // (·)
 const CHAR_BELL = 7; // (BEL)
 const CHAR_NULL = 0; // (NUL)
-const CHAR_SPACE = 32;
-const CHAR_NBSP = 255;
+const CHAR_SPACE = 32; // ( )
+const CHAR_NBSP = 255; // ()
+const CHAR_SLASH = 47; // (/)
+const CHAR_PIPE = 124; // (|)
+const CHAR_CAPITAL_X = 88; // (X)
 // Browser clipboard limiter
 const MAX_COPY_LINES = 3;
 // Multiplier to calculate panel width
@@ -54,6 +57,9 @@ export default {
 	CHAR_NULL,
 	CHAR_NBSP,
 	CHAR_SPACE,
+	CHAR_SLASH,
+	CHAR_PIPE,
+	CHAR_CAPITAL_X,
 	MAX_COPY_LINES,
 	PANEL_WIDTH_MULTIPLIER,
 };

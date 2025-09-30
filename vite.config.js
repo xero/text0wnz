@@ -39,6 +39,7 @@ export default ({ mode }) => {
 							case 'logo.png': res = 'ui/logo.png'; break;
 							case 'topazplus_1200.woff2': res = 'ui/topazplus_1200.woff2'; break;
 							case 'apple-touch-icon.png': res = 'ui/apple-touch-icon.png'; break;
+							case 'android-launchericon-48-48.png': res = 'ui/android-launchericon-48-48.png'; break;
 							case 'web-app-manifest-192x192.png': res = 'ui/web-app-manifest-192x192.png'; break;
 							case 'web-app-manifest-512x512.png': res = 'ui/web-app-manifest-512x512.png'; break;
 						}
@@ -69,29 +70,49 @@ export default ({ mode }) => {
 					process.env.VITE_WORKER_FILE ? `js/client/${process.env.VITE_WORKER_FILE}` : undefined
 				].filter(Boolean),
 				manifest: {
-					name: "teXt.0w.nz",
-					short_name: "teXt0wnz",
-					start_url: "/",
-					scope: "/",
-					display: "standalone",
-					background_color: "#000",
-					theme_color: "#000",
+					name: 'teXt.0w.nz',
+					short_name: 'teXt0wnz',
+					start_url: '/',
+					scope: '/',
+					display: 'standalone',
+					description: 'The online collaborative text art editor',
+					dir: 'ltr',
+					lang: 'en',
+					orientation: 'any',
+					background_color: '#000',
+					theme_color: '#000',
 					icons: [{
-						src: "/ui/web-app-manifest-192x192.png",
-						sizes: "192x192",
-						type: "image/png",
-						purpose: "maskable"
+						src: '/ui/web-app-manifest-512x512.png',
+						sizes: '512x512',
+						type: 'image/png',
+						purpose: 'maskable'
 					}, {
-						src: "/ui/web-app-manifest-512x512.png",
-						sizes: "512x512",
-						type: "image/png",
-						purpose: "maskable"
+						src: '/ui/web-app-manifest-192x192.png',
+						sizes: '192x192',
+						type: 'image/png',
+						purpose: 'maskable'
 					}, {
-						src: "ui/apple-touch-icon.png",
-						sizes: "180x180",
-						type: "image/png",
-						purpose: "any"
+						src: 'ui/apple-touch-icon.png',
+						sizes: '180x180',
+						type: 'image/png',
+						purpose: 'maskable'
+					}, {
+						src: '/ui/favicon-96x96.png',
+						sizes: '96x96',
+						type: 'image/png',
+						purpose: 'any',
+					}, {
+						src: '/ui/android-launchericon-48-48.png',
+						sizes: '48x48',
+						type: 'image/png',
+						purpose: 'any',
 					}],
+					protocol_handlers: [
+						{
+							protocol: "ansi",
+							url: "/"
+						}
+					],
 					version: getBuildVersion(),
 				},
 				workbox: {
