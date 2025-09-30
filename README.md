@@ -51,8 +51,8 @@
 
 ### Drawing Tools
 
-| Tool Name                 | Discription and Use                                                                                                                                  |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tool Name                 | Description and Use                                                                                                                                  |
+| :------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Keyboard Mode**         | Text input mode that allows typing characters directly onto the canvas with full keyboard navigation support.                                        |
 | **Freehand/Half Block**   | Free drawing tool using half-block characters as large pixels. Supports pressure-sensitive drawing and straight lines when holding Shift.            |
 | **Shading Brush**         | Free drawing tool using full shading block characters. Supports pressure-sensitive drawing and _'reduce mode'_ when holding Shift.                   |
@@ -63,7 +63,7 @@
 | **Square Tool**           | Draw rectangles with outline or filled modes. Toggle between outline and filled using the floating panel.                                            |
 | **Circle Tool**           | Draw circles and ellipses with outline or filled modes. Includes real-time preview during drawing.                                                   |
 | **Selection Tool**        | Select rectangular areas for copying, cutting, and manipulation. Includes flip horizontal/vertical and move operations.                              |
-| **Sample Tool)**          | Color picker that samples colors from existing artwork. Works as a quick color selection method.                                                     |
+| **Sample Tool**          | Color picker that samples colors from existing artwork. Works as a quick color selection method.                                                     |
 
 ### Color Management
 
@@ -79,7 +79,6 @@
 - ANSI (.ans) files
 - Binary Text (.bin) files
 - XBin (.xb) files
-- Standard image formats (PNG, JPEG, GIF) with palette reduction
 
 **Supported Export Formats:**
 - Save as ANSI (.ans)
@@ -90,7 +89,7 @@
 
 ### Canvas Operations
 
-- **Unlimited undo/redo** (up to 1000 operations)
+- **Undo/Redo** (up to 1000 operations)
 - **Canvas resizing** with width/height controls
 - **Grid overlay** for precise alignment
 - **SAUCE metadata** editing (title, author, group)
@@ -213,7 +212,7 @@
 
 ## Server Architecture (Collaborative Mode)
 
-Moebius-web supports a collaborative server mode for real-time multi-user ANSI/ASCII/XBIN art editing.
+The editor supports a collaborative server mode for real-time multi-user ANSI/ASCII/XBIN art editing.
 The collaboration engine is implemented in the `src/js/server` directory.
 
 ### Key Files
