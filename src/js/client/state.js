@@ -364,8 +364,17 @@ class StateManager {
 			if (this.state.palette) {
 				if (typeof this.state.palette.getPalette === 'function') {
 					const paletteColors = this.state.palette.getPalette();
-					// Convert Uint8Arrays to regular arrays for JSON serialization
-					serialized[STATE_SYNC_KEYS.PALETTE_COLORS] = paletteColors.map(color => Array.from(color));
+					// Convert 8-bit RGBA to 6-bit RGB for storage (more efficient and correct)
+					serialized[STATE_SYNC_KEYS.PALETTE_COLORS] = paletteColors.map(color => {
+						// color is Uint8Array [r, g, b, a] in 8-bit (0-255)
+						// Convert to 6-bit (0-63) for consistency with XBIN format
+						return [
+							Math.min(color[0] >> 2, 63),
+							Math.min(color[1] >> 2, 63),
+							Math.min(color[2] >> 2, 63),
+							color[3],
+						];
+					});
 				}
 				if (typeof this.state.palette.getForegroundColor === 'function') {
 					serialized[STATE_SYNC_KEYS.FOREGROUND_COLOR] = this.state.palette.getForegroundColor();
@@ -458,9 +467,9 @@ class StateManager {
 				const paletteColors = savedState[STATE_SYNC_KEYS.PALETTE_COLORS];
 				if (typeof this.state.palette.setRGBAColor === 'function') {
 					paletteColors.forEach((color, index) => {
-						// Convert back to Uint8Array
-						const uint8Color = new Uint8Array(color);
-						this.state.palette.setRGBAColor(index, uint8Color);
+						// color is [r, g, b, a] in 6-bit format (0-63)
+						// setRGBAColor expects 6-bit and will expand to 8-bit
+						this.state.palette.setRGBAColor(index, color);
 					});
 				}
 			}
