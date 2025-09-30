@@ -11,20 +11,20 @@
 | https://text.0w.nz                 | The final prod domain. I dev here, so it will be broken lot |
 | https://xero.github.io/moebius-web | The github pages version of the site is guaranteed to work  |
 
-![Version](https://img.shields.io/github/package-json/version/xero/moebius-web?labelColor=%2333383e&logo=npm&&logoColor=%23979da4&color=#5db85b)
-![GitHub repo size](https://img.shields.io/github/repo-size/xero/moebius-web?labelColor=%23262a2e&logo=googlecontaineroptimizedos&logoColor=%23979da4&color=#5db85b)
+[![Version](https://img.shields.io/github/package-json/version/xero/moebius-web?labelColor=%2333383e&logo=npm&&logoColor=%23979da4&color=#5db85b)](https://github.com/xero/moebius-web/releases/latest)
+[![GitHub repo size](https://img.shields.io/github/repo-size/xero/moebius-web?labelColor=%23262a2e&logo=googlecontaineroptimizedos&logoColor=%23979da4&color=#5db85b)](https://github.com/xero/moebius-web/)
 [![Last Test Suite Results](https://github.com/xero/moebius-web/actions/workflows/test-suite.yml/badge.svg?branch=main)](https://github.com/xero/moebius-web/actions/workflows/test-suite.yml?query=branch%3Amain)
 [![pages-build-deployment](https://github.com/xero/moebius-web/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/xero/moebius-web/actions/workflows/pages/pages-build-deployment)
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/xero/moebius-web?labelColor=%23262a2e&logo=stagetimer&logoColor=%23979da4&color=#5db85b)
 ![GitHub last commit](https://img.shields.io/github/last-commit/xero/moebius-web.svg?labelColor=%23262a2e&logo=git&logoColor=%23979da4&color=#5db85b)
-![OSS Lifecycle](https://img.shields.io/osslifecycle?file_url=https%3A%2F%2Fraw.githubusercontent.com%2Fxero%2Fmoebius-web%2Frefs%2Fheads%2Fmain%2FOSSMETADATA&-square&labelColor=%23262a2e&logo=checkmarx&logoColor=%23979da4)
-![CII Best Practices](https://img.shields.io/cii/summary/1?logo=asciinema&labelColor=%23262a2e&)
-![Schema](https://img.shields.io/badge/Valid-Valid?logo=semanticweb&logoColor=%23979da4a&labelColor=%23262a2e&&label=Schema&color=%235db85b&link=https%3A%2F%2Fvalidator.schema.org%2F%23url%3Dhttps%253A%252F%252Fraw.githubusercontent.com%252Fxero%252Fmoebius-web%252Frefs%252Fheads%252Fmain%252Fsrc%252Findex.html)
-![Lighthouse Preformance](https://img.shields.io/badge/91%25-lighthouse?logo=lighthouse&logoColor=%23979da4&label=Lighthouse&labelColor=%23262a2e&link=https%3A%2F%2Fpagespeed%2Eweb%2Edev%2Fanalysis%2Fhttps%2Dtext%2D0w%2Dnz%2Fp2w1cpoqty%3Fhl%3Den%2DUS%26form%5Ffactor%3Dmobile)
-![Eslint](https://img.shields.io/badge/Eslint-Eslint?logo=eslint&logoColor=%23979da4&label=Linting&labelColor=%23262a2e&color=%2300AAAA&link=https%3A%2F%2Fgithub.com%2Fxero%2Fmoebius-web%2Fblob%2Fmain%2Feslint.config.js)
-![Prettier](https://img.shields.io/badge/Prettier-Prettier?logo=prettier&logoColor=%23979da4&label=Formatter&labelColor=%23262a2e&color=%2300AAAA&link=https%3A%2F%2Fgithub.com%2Fxero%2Fmoebius-web%2Fblob%2Fmain%2F.prettierrc)
-![Powered by Bun](https://img.shields.io/badge/Bun-Bun?labelColor=%23262a2e&logo=bun&logoColor=%23f9f1e1&label=Powered%20by&color=%23e47ab4&link=https%3A%2F%2Fbun.js)
-![16colors](https://img.shields.io/badge/16colors-16colors?logo=renovate&logoColor=%23979da4&logoSize=auto&label=Text%20Mode&labelColor=%23262a2e&color=%238afcfd&link=https%3A%2F%2F16colo.rs)
+[![OSS Lifecycle](https://img.shields.io/osslifecycle?file_url=https%3A%2F%2Fraw.githubusercontent.com%2Fxero%2Fmoebius-web%2Frefs%2Fheads%2Fmain%2FOSSMETADATA&-square&labelColor=%23262a2e&logo=checkmarx&logoColor=%23979da4)](https://github.com/xero/moebius-web/blob/new_ui/OSSMETADATA)
+![CII Best Practices](https://img.shields.io/cii/summary/1?logo=asciinema&labelColor=%23262a2e)
+[![Schema](https://img.shields.io/badge/Valid-Valid?logo=semanticweb&logoColor=%23979da4a&labelColor=%23262a2e&label=Schema&color=%235db85b)](https://validator.schema.org/#url=https%3A%2F%2Fraw.githubusercontent.com%2Fxero%2Fmoebius-web%2Frefs%2Fheads%2Fmain%2Fsrc%2Findex.html)
+[![Lighthouse Preformance](https://img.shields.io/badge/91%25-lighthouse?logo=lighthouse&logoColor=%23979da4&label=Lighthouse&labelColor=%23262a2e)](https://pagespeed.web.dev/analysis/https-text-0w-nz/p2w1cpoqty?hl=en-US&form_factor=mobile)
+[![Eslint](https://img.shields.io/badge/Eslint-Eslint?logo=eslint&logoColor=%23979da4&label=Linting&labelColor=%23262a2e&color=%2300AAAA)](https://github.com/xero/moebius-web/blob/main/eslint.config.js)
+[![Prettier](https://img.shields.io/badge/Prettier-Prettier?logo=prettier&logoColor=%23979da4&label=Formatter&labelColor=%23262a2e&color=%2300AAAA)](https://github.com/xero/moebius-web/blob/main/.prettierrc)
+[![Powered by Bun](https://img.shields.io/badge/Bun-Bun?labelColor=%23262a2e&logo=bun&logoColor=%23f9f1e1&label=Powered%20by&color=%23e47ab4&link=https%3A%2F%2Fbun.js)](https://bun.com)
+[![16colors](https://img.shields.io/badge/16colors-16colors?logo=renovate&logoColor=%23979da4&logoSize=auto&label=Text%20Mode&labelColor=%23262a2e&color=%238afcfd&link=https%3A%2F%2F16colo.rs)](https://16colo.rs)
 
 # Client Usage
 
@@ -47,29 +47,23 @@
 - Popular modern and vintage XBIN fonts
 
 > [!NOTE]
-> View them all in the [src/fonts](https://github.com/xero/moebius-web/tree/main/src/fonts) directory.
+> View them all in the [docs](https://github.com/xero/moebius-web/blob/main/docs/fonts.md) or the [src/fonts](https://github.com/xero/moebius-web/tree/main/src/fonts) directory.
 
 ### Drawing Tools
 
-**Keyboard Mode (K)** - Text input mode that allows typing characters directly onto the canvas with full keyboard navigation support.
-
-**Freestyle/Freehand (F)** - Free drawing tool using half-block characters as large pixels. Supports pressure-sensitive drawing and straight lines when holding Shift.
-
-**Character Brush (B)** - Draw with any character from the extended ASCII character set. Includes a character picker panel for easy selection.
-
-**Fill Tool (N)** - Flood fill that works on single-color text characters or half-block pixels. Respects color boundaries and handles attribute conflicts intelligently.
-
-**Attribute Brush (A)** - Paint-only tool that changes foreground/background colors without affecting the character itself. Hold Alt to paint background colors.
-
-**Line Tool** - Draw straight lines between two points with immediate preview. Supports color conflict resolution.
-
-**Square Tool** - Draw rectangles with outline or filled modes. Toggle between outline and filled using the floating panel.
-
-**Circle Tool** - Draw circles and ellipses with outline or filled modes. Includes real-time preview during drawing.
-
-**Selection Tool** - Select rectangular areas for copying, cutting, and manipulation. Includes flip horizontal/vertical and move operations.
-
-**Sample Tool (Alt)** - Color picker that samples colors from existing artwork. Works as a quick color selection method.
+| Tool Name                 | Discription and Use                                                                                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Keyboard Mode**         | Text input mode that allows typing characters directly onto the canvas with full keyboard navigation support.                                        |
+| **Freehand/Half Block**   | Free drawing tool using half-block characters as large pixels. Supports pressure-sensitive drawing and straight lines when holding Shift.            |
+| **Shading Brush**         | Free drawing tool using full shading block characters. Supports pressure-sensitive drawing and _'reduce mode'_ when holding Shift.                   |
+| **Character Brush**       | Draw with any character from the extended ASCII character set. Includes a character picker panel for easy selection.                                 |
+| **Fill Tool**             | Flood fill that works on single-color text characters or half-block pixels. Respects color boundaries and handles attribute conflicts intelligently. |
+| **Color/Attribute Brush** | Paint-only tool that changes foreground/background colors without affecting the character itself. Hold Alt to paint background colors.               |
+| **Line Tool**             | Draw straight lines between two points with immediate preview. Supports color conflict resolution.                                                   |
+| **Square Tool**           | Draw rectangles with outline or filled modes. Toggle between outline and filled using the floating panel.                                            |
+| **Circle Tool**           | Draw circles and ellipses with outline or filled modes. Includes real-time preview during drawing.                                                   |
+| **Selection Tool**        | Select rectangular areas for copying, cutting, and manipulation. Includes flip horizontal/vertical and move operations.                              |
+| **Sample Tool)**          | Color picker that samples colors from existing artwork. Works as a quick color selection method.                                                     |
 
 ### Color Management
 
