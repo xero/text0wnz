@@ -551,31 +551,26 @@ const initializeAppComponents = async () => {
 	State.network = createWorkerHandler($('handle-input'));
 
 	// Set up event listeners to save state when things change
-	document.addEventListener('onTextCanvasUp', () => {
-		// Save after drawing
-		State.saveToLocalStorage();
-	});
-	document.addEventListener('onFontChange', () => {
-		State.saveToLocalStorage();
-	});
-	document.addEventListener('onPaletteChange', () => {
-		State.saveToLocalStorage();
-	});
-	document.addEventListener('onLetterSpacingChange', () => {
-		State.saveToLocalStorage();
-	});
-	document.addEventListener('onIceColorsChange', () => {
-		State.saveToLocalStorage();
-	});
-	document.addEventListener('onOpenedFile', () => {
-		State.saveToLocalStorage();
-	});
-	document.addEventListener('onForegroundChange', () => {
-		State.saveToLocalStorage();
-	});
-	document.addEventListener('onBackgroundChange', () => {
-		State.saveToLocalStorage();
-	});
+	// Debounce save to avoid saving too frequently during drawing
+	let saveTimeout = null;
+	const debouncedSave = () => {
+		if (saveTimeout) {
+			clearTimeout(saveTimeout);
+		}
+		saveTimeout = setTimeout(() => {
+			State.saveToLocalStorage();
+			saveTimeout = null;
+		}, 300); // Wait 300ms after last change before saving
+	};
+
+	document.addEventListener('onTextCanvasUp', debouncedSave);
+	document.addEventListener('onFontChange', debouncedSave);
+	document.addEventListener('onPaletteChange', debouncedSave);
+	document.addEventListener('onLetterSpacingChange', debouncedSave);
+	document.addEventListener('onIceColorsChange', debouncedSave);
+	document.addEventListener('onOpenedFile', debouncedSave);
+	document.addEventListener('onForegroundChange', debouncedSave);
+	document.addEventListener('onBackgroundChange', debouncedSave);
 
 	// Restore state from localStorage after all components are initialized
 	State.restoreStateFromLocalStorage();
