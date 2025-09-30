@@ -3,6 +3,7 @@ import State from './state.js';
 import { $, $$, createCanvas, createDragDropController } from './ui.js';
 import { createTextArtCanvas } from './canvas.js';
 import { Load, Save } from './file.js';
+import { loadFontFromXBData } from './font.js';
 import Toolbar from './toolbar.js';
 import {
 	createModalController,
@@ -62,7 +63,7 @@ let navSauce;
 let navDarkmode;
 let saveTimeout;
 
-const $$$ = () => {
+const $$$$ = () => {
 	htmlDoc = $$('html');
 	bodyContainer = $('body-container');
 	canvasContainer = $('canvas-container');
@@ -121,7 +122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	try {
 		// init global state and vars
 		State.startInitialization();
-		$$$();
+		$$$$();
 
 		State.title = 'Untitled';
 		State.pasteTool = createPasteTool($('cut'), $('copy'), $('paste'), $('delete'));
@@ -213,9 +214,6 @@ const initializeAppComponents = async () => {
 	onClick($('about-dl'), _ => {
 		window.location.href = 'https://github.com/xero/text0wnz/releases/latest';
 	});
-	onClick($('update-cancel'), _ => {
-		State.modal.close();
-	});
 	onClick($('update-reload'), _ => {
 		if ('caches' in window) {
 			window.caches.keys().then(keys => {
@@ -290,7 +288,6 @@ const initializeAppComponents = async () => {
 	});
 
 	onClick($('sauce-cancel'), () => {
-		State.modal.close();
 		keyboard.unignore();
 		paintShortcuts.unignore();
 		shadeBrush.unignore();
@@ -356,7 +353,6 @@ const initializeAppComponents = async () => {
 	onReturn(columnsInput, resizeApply);
 	onReturn(rowsInput, resizeApply);
 	onClick($('resize-cancel'), () => {
-		State.modal.close();
 		keyboard.unignore();
 		paintShortcuts.unignore();
 		shadeBrush.unignore();
@@ -415,17 +411,22 @@ const initializeAppComponents = async () => {
 		navICE.update();
 	};
 
-	const updateFontPreview = fontName => {
+	const updateFontPreview = async fontName => {
 		// Load font for preview
 		if (fontName === 'XBIN') {
 			// Handle XB font preview - render embedded font if available
-			if (State.textArtCanvas.getCurrentFontName() === 'XBIN') {
-				// Current font is XBIN, render the embedded font
-				const fontWidth = State.font.getWidth();
-				const fontHeight = State.font.getHeight();
+			const xbFontData = State.textArtCanvas.getXBFontData();
+			if (xbFontData && xbFontData.bytes) {
+				const xbfont = await loadFontFromXBData(
+					xbFontData.bytes,
+					xbFontData.width,
+					xbFontData.height,
+					xbFontData.letterSpacing,
+					State.palette,
+				);
 
 				// Create a canvas to render the font preview
-				const previewCanvas = createCanvas(fontWidth * 16, fontHeight * 16);
+				const previewCanvas = createCanvas(xbFontData.width * 16, xbFontData.height * 16);
 				const previewCtx = previewCanvas.getContext('2d');
 
 				// Use white foreground on black background for clear visibility
@@ -435,17 +436,16 @@ const initializeAppComponents = async () => {
 				// Render all 256 characters in a 16x16 grid
 				for (let y = 0, charCode = 0; y < 16; y++) {
 					for (let x = 0; x < 16; x++, charCode++) {
-						State.font.draw(charCode, foreground, background, previewCtx, x, y);
+						xbfont.draw(charCode, foreground, background, previewCtx, x, y);
 					}
 				}
-
 				// Update info and display the rendered font
-				previewInfo.textContent = 'XBIN: embedded ' + fontWidth + 'x' + fontHeight;
+				previewInfo.textContent = 'XBIN: embedded ' + xbFontData.width + 'x' + xbFontData.height;
 				previewImage.src = previewCanvas.toDataURL();
 			} else {
 				// No embedded font currently loaded
 				previewInfo.textContent = 'XBIN: none';
-				previewImage.src = `${import.meta.env.BASE_URL}${import.meta.env.VITE_FONT_DIR}XBIN.png`;
+				previewImage.src = `${import.meta.env.BASE_URL}${import.meta.env.VITE_FONT_DIR}missing.png`;
 			}
 		} else {
 			// Load regular PNG font for preview
@@ -460,7 +460,7 @@ const initializeAppComponents = async () => {
 			img.onerror = () => {
 				// Font loading failed
 				previewInfo.textContent = fontName + ' (not found)';
-				img.src = `${import.meta.env.BASE_URL}${import.meta.env.VITE_FONT_DIR}XBIN.png`;
+				img.src = `${import.meta.env.BASE_URL}${import.meta.env.VITE_FONT_DIR}missing.png`;
 			};
 			img.src = `${import.meta.env.BASE_URL}${import.meta.env.VITE_FONT_DIR}${fontName}.png`;
 		}
@@ -474,13 +474,13 @@ const initializeAppComponents = async () => {
 	onClick(fontDisplay, () => {
 		changeFont.click();
 	});
-	onClick(changeFont, () => {
+	onClick(changeFont, async () => {
 		State.modal.open('fonts');
 		keyboard.disable();
-		updateFontPreview(fontSelect.value);
+		await updateFontPreview(fontSelect.value);
 	});
-	onSelectChange(fontSelect, () => {
-		updateFontPreview(fontSelect.value);
+	onSelectChange(fontSelect, async () => {
+		await updateFontPreview(fontSelect.value);
 	});
 	onClick($('fonts-apply'), async () => {
 		const selectedFont = fontSelect.value;
@@ -490,9 +490,6 @@ const initializeAppComponents = async () => {
 			State.modal.close();
 			keyboard.enable();
 		});
-	});
-	onClick($('fonts-cancel'), () => {
-		State.modal.close();
 	});
 	const grid = createGrid($('grid'));
 	createSettingToggle($('navGrid'), grid.isShown, grid.show);

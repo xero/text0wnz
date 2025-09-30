@@ -1244,9 +1244,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		return paletteBytes;
 	};
 
-	const getXBFontData = () => {
-		return xbFontData;
-	};
+	const getXBFontData = () => xbFontData;
 
 	const loadXBFileSequential = (imageData, finalCallback) => {
 		clearXBData(() => {
