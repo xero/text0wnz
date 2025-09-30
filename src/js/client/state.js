@@ -62,6 +62,7 @@ const STATE_SYNC_KEYS = {
 	ICE_COLORS: 'iceColors',
 	LETTER_SPACING: 'letterSpacing',
 	TITLE: 'title',
+	XBIN_FONT_DATA: 'xbinFontData',
 };
 
 /**
@@ -378,6 +379,18 @@ class StateManager {
 					serialized[STATE_SYNC_KEYS.BACKGROUND_COLOR] = this.state.palette.getBackgroundColor();
 				}
 			}
+
+			// Save XBIN font data if present
+			if (this.state.textArtCanvas && typeof this.state.textArtCanvas.getXBFontData === 'function') {
+				const xbFontData = this.state.textArtCanvas.getXBFontData();
+				if (xbFontData && xbFontData.bytes) {
+					serialized[STATE_SYNC_KEYS.XBIN_FONT_DATA] = {
+						bytes: Array.from(xbFontData.bytes), // Convert Uint8Array to regular array
+						width: xbFontData.width,
+						height: xbFontData.height,
+					};
+				}
+			}
 		} catch (error) {
 			console.error('[State] Error serializing state:', error);
 		}
@@ -478,6 +491,16 @@ class StateManager {
 			if (savedState[STATE_SYNC_KEYS.BACKGROUND_COLOR] !== undefined && this.state.palette) {
 				if (typeof this.state.palette.setBackgroundColor === 'function') {
 					this.state.palette.setBackgroundColor(savedState[STATE_SYNC_KEYS.BACKGROUND_COLOR]);
+				}
+			}
+
+			// Restore XBIN font data if present (must be done before restoring font)
+			if (savedState[STATE_SYNC_KEYS.XBIN_FONT_DATA] && this.state.textArtCanvas) {
+				if (typeof this.state.textArtCanvas.setXBFontData === 'function') {
+					const xbFontData = savedState[STATE_SYNC_KEYS.XBIN_FONT_DATA];
+					// Convert array back to Uint8Array
+					const fontBytes = new Uint8Array(xbFontData.bytes);
+					this.state.textArtCanvas.setXBFontData(fontBytes, xbFontData.width, xbFontData.height);
 				}
 			}
 
