@@ -1,7 +1,7 @@
 import State from './state.js';
-import { $, enforceMaxBytes } from './ui.js';
-import { getUTF8, getUnicode } from './palette.js';
 import magicNumbers from './magicNumbers.js';
+import { $, enforceMaxBytes } from './ui.js';
+import { getUTF8, getUnicodeReverseMap } from './palette.js';
 
 // Load module implementation
 const loadModule = () => {
@@ -330,7 +330,7 @@ const loadModule = () => {
 				const decoded = decodeUtf8(bytes, file.getPos() - 1);
 				code = decoded.charCode;
 				bytesConsumed = decoded.bytesConsumed;
-				code = Object.keys(getUnicode).find(key => getUnicode(key) === code) || code;
+				code = getUnicodeReverseMap.get(code) || code;
 			}
 
 			if (escaped) {

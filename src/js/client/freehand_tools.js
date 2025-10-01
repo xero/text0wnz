@@ -43,7 +43,59 @@ const createFloatingPanel = (x, y) => {
 	panel.appendChild(hide);
 	$('body-container').appendChild(panel);
 	hide.addEventListener('click', _ => panel.classList.remove('enabled'));
-	let prev;
+
+	let dragStartPointer = null; // [x, y]
+	let dragStartPanel = null; // [x, y]
+
+	const mousedown = e => {
+		dragStartPointer = [e.clientX, e.clientY];
+		const rect = panel.getBoundingClientRect();
+		dragStartPanel = [rect.left, rect.top];
+		document.addEventListener('mousemove', mouseMove);
+		document.addEventListener('mouseup', mouseUp);
+	};
+
+	const mouseMove = e => {
+		if (dragStartPointer && dragStartPanel) {
+			e.preventDefault();
+			e.stopPropagation();
+			const dx = e.clientX - dragStartPointer[0];
+			const dy = e.clientY - dragStartPointer[1];
+			setPos(dragStartPanel[0] + dx, dragStartPanel[1] + dy);
+		}
+	};
+
+	const mouseUp = () => {
+		dragStartPointer = null;
+		dragStartPanel = null;
+		document.removeEventListener('mousemove', mouseMove);
+		document.removeEventListener('mouseup', mouseUp);
+	};
+
+	const touchstart = e => {
+		dragStartPointer = [e.touches[0].pageX, e.touches[0].pageY];
+		const rect = panel.getBoundingClientRect();
+		dragStartPanel = [rect.left, rect.top];
+		document.addEventListener('touchmove', touchMove, { passive: false });
+		document.addEventListener('touchend', touchEnd, { passive: false });
+	};
+
+	const touchMove = e => {
+		if (dragStartPointer && dragStartPanel) {
+			e.preventDefault();
+			e.stopPropagation();
+			const dx = e.touches[0].pageX - dragStartPointer[0];
+			const dy = e.touches[0].pageY - dragStartPointer[1];
+			setPos(dragStartPanel[0] + dx, dragStartPanel[1] + dy);
+		}
+	};
+
+	const touchEnd = () => {
+		dragStartPointer = null;
+		dragStartPanel = null;
+		document.removeEventListener('touchmove', touchMove, { passive: false });
+		document.removeEventListener('touchend', touchEnd, { passive: false });
+	};
 
 	const setPos = (newX, newY) => {
 		panel.style.left = newX + 'px';
@@ -52,53 +104,20 @@ const createFloatingPanel = (x, y) => {
 		y = newY;
 	};
 
-	const mousedown = e => {
-		prev = [e.clientX, e.clientY];
-	};
-
-	const touchstart = e => {
-		prev = [e.touches[0].pageX, e.touches[0].pageY];
-	};
-
-	const touchMove = e => {
-		if (prev !== undefined) {
-			e.preventDefault();
-			e.stopPropagation();
-			const rect = panel.getBoundingClientRect();
-			setPos(rect.left + (e.touches[0].pageX - prev[0]), rect.top + (e.touches[0].pageY - prev[1]));
-			prev = [e.touches[0].pageX, e.touches[0].pageY];
-		}
-	};
-
-	const mouseMove = e => {
-		// Left mouse pressed only
-		if (e.buttons === 1 && prev !== undefined) {
-			e.preventDefault();
-			e.stopPropagation();
-			const rect = panel.getBoundingClientRect();
-			setPos(rect.left + (e.clientX - prev[0]), rect.top + (e.clientY - prev[1]));
-			prev = [e.clientX, e.clientY];
-		}
-	};
-
-	const mouseUp = () => {
-		prev = undefined;
-	};
-
 	const enable = () => {
 		panel.classList.add('enabled');
-		document.addEventListener('touchmove', touchMove);
+		document.addEventListener('touchmove', touchMove, { passive: false });
 		document.addEventListener('mousemove', mouseMove);
 		document.addEventListener('mouseup', mouseUp);
-		document.addEventListener('touchend', mouseUp);
+		document.addEventListener('touchend', mouseUp, { passive: false });
 	};
 
 	const disable = () => {
 		panel.classList.remove('enabled');
-		document.removeEventListener('touchmove', touchMove);
+		document.removeEventListener('touchmove', touchMove, { passive: false });
 		document.removeEventListener('mousemove', mouseMove);
 		document.removeEventListener('mouseup', mouseUp);
-		document.removeEventListener('touchend', mouseUp);
+		document.removeEventListener('touchend', mouseUp, { passive: false });
 	};
 
 	const append = element => {
@@ -106,7 +125,7 @@ const createFloatingPanel = (x, y) => {
 	};
 
 	setPos(x, y);
-	panel.addEventListener('touchstart', touchstart);
+	panel.addEventListener('touchstart', touchstart, { passive: false });
 	panel.addEventListener('mousedown', mousedown);
 
 	return {

@@ -179,6 +179,14 @@ const unicodeToArray = unicode => {
 
 const getUTF8 = charCode => unicodeToArray(getUnicode(charCode));
 
+const getUnicodeReverseMap = (() => {
+	const map = new Map();
+	for (const key of Object.keys(getUnicode)) {
+		map.set(getUnicode(key), key);
+	}
+	return map;
+})();
+
 const rgbaToXbin = ({ r, g, b, a }) => [
 	// Ensure the values don't exceed 63
 	Math.min(r >> 2, 63),
@@ -493,4 +501,12 @@ const createPalettePicker = canvas => {
 	return { updatePalette: updatePalette };
 };
 
-export { createPalette, createDefaultPalette, createPalettePreview, createPalettePicker, getUTF8, getUnicode };
+export {
+	createPalette,
+	createDefaultPalette,
+	createPalettePreview,
+	createPalettePicker,
+	getUTF8,
+	getUnicode,
+	getUnicodeReverseMap,
+};

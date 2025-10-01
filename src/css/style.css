@@ -16,6 +16,8 @@
 	--dark-menu: #333;
 	--light-file: #5f5f5f;
 	--dark-file: #444;
+	--light-panel: #3f3f3f;
+	--dark-panel: #444;
 	--light-icon: #fff;
 	--dark-icon: #efefef;
 	--light-icon-hover: #efefef;
@@ -57,6 +59,7 @@
 	--color-fg: var(--light-fg);
 	--color-editor: var(--light-editor);
 	--color-menu: var(--light-menu);
+	--color-panel: var(--light-panel);
 	--color-icon: var(--light-icon);
 	--color-icon-hover: var(--light-icon-hover);
 	--color-tools: var(--light-tools);
@@ -71,6 +74,7 @@
 	--color-editor: var(--dark-editor);
 	--color-menu: var(--dark-menu);
 	--color-icon: var(--dark-icon);
+	--color-panel: var(--dark-panel);
 	--color-icon-hover: var(--dark-icon-hover);
 	--color-tools: var(--dark-tools);
 	--color-hl: var(--dark-hl);
@@ -925,14 +929,7 @@
 	}
 
 	.floating-panel {
-		position: fixed;
-		background-color: #444;
-		display: none;
-		padding-top: 16px;
-		padding-bottom: 4px;
-		padding-left: 4px;
-		padding-right: 4px;
-		cursor: move;
+		@apply fixed hidden cursor-move bg-panel pr-1 pl-1 pb-1 pt-4 transition-none!;
 		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
 
 		&.enabled {
