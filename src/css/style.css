@@ -1109,14 +1109,4 @@
 		}
 	}
 }
-/* inject webmanifest images into build pipeline */
-#i1 {
-	background: url('/img/web-app-manifest-192x192.png');
-}
-#i2 {
-	background: url('/img/web-app-manifest-512x512.png');
-}
-#i3 {
-	background: url('/img/android-launchericon-48-48.png');
-}
 /* <--//---------------------------------------------------------------[eof] */

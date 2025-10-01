@@ -576,3 +576,18 @@ const initializeAppComponents = async () => {
 // Inject style sheets into the build pipeline for processing
 // and proper inclusion in the resulting build
 import '../../css/style.css';
+// inject manifest imagest into the build pipeline
+import '../../img/logo.png';
+import '../../img/manifest/android-launchericon-48-48.png';
+import '../../img/manifest/apple-touch-icon.png';
+import '../../img/manifest/favicon-96x96.png';
+import '../../img/manifest/favicon.ico';
+import '../../img/manifest/favicon.svg';
+import '../../img/manifest/screenshot-collab.png';
+import '../../img/manifest/screenshot-fonts.png';
+import '../../img/manifest/screenshot-full.png';
+import '../../img/manifest/screenshot-light.png';
+import '../../img/manifest/screenshot-tall.png';
+import '../../img/manifest/screenshot-wide-menu.png';
+import '../../img/manifest/web-app-manifest-192x192.png';
+import '../../img/manifest/web-app-manifest-512x512.png';
