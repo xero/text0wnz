@@ -22,7 +22,7 @@
 		<link rel="shortcut icon" href="/img/favicon.ico"/>
 		<link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png"/>
 		<meta name="apple-mobile-web-app-title" content="text.0w.nz"/>
-		<meta name="theme-color" content="#000000"/>
+		<meta name="theme-color" content="#4f4f4f"/>
 		<meta name="author" content="https://github.com/xero/text0wnz/graphs/contributors"/>
 		<meta name="description" content="The online collaborative text art editor"/>
 		<meta
@@ -34,7 +34,7 @@
 	</head>
 	<body>
 		<div id="body-container">
-			<header>
+			<header class="dynamic">
 				<nav>
 					<div id="file-nav">
 						<div id="file-menu" class="menu-title">
@@ -90,6 +90,7 @@
 								<article class="seperator"></article>
 								<article id="default-color" class="menu-item">Default Color <kbd>Ctrl-D</kbd></article>
 								<article id="swap-colors" class="menu-item">Swap Colors <kbd>Ctrl-Q</kbd></article>
+								<article id="fullscreen" class="menu-item">Toggle Fullscreen Mode</article>
 							</div>
 						</div>
 					</div>
@@ -264,7 +265,7 @@
 								<h2>chatz</h2>
 								<div id="notification-setting">
 									<label for="notification-checkbox">
-										<input id="notification-checkbox" type="checkbox"/>
+										<input id="notification-checkbox" type="checkbox" aria-label="Display Notifications"/>
 										Display Notifications
 									</label>
 								</div>
@@ -274,11 +275,23 @@
 								<div id="message-window"></div>
 							</section>
 							<nav>
-								<label for="handle-input">Handle</label>
-								<input id="handle-input" type="text" autocomplete="off" maxlength="14" spellcheck="false"/>
+								<input
+									id="handle-input"
+									type="text"
+									aria-label="Handle/Username"
+									autocomplete="off"
+									maxlength="14"
+									spellcheck="false"
+								/>
 								<div class="prompt">
-									<label for="message-input">Chat message</label>
-									<input id="message-input" type="text" autocomplete="off" maxlength="140" spellcheck="false"/>
+									<input
+										id="message-input"
+										type="text"
+										aria-label="Chat Message"
+										autocomplete="off"
+										maxlength="140"
+										spellcheck="false"
+									/>
 								</div>
 								<button id="message-send" aria-label="Send Chat">send</button>
 							</nav>
@@ -379,10 +392,16 @@
 			</div>
 		</div>
 		<label for="open-file">
-			<input id="open-file" class="hide" type="file" accept=".ans,.ansi,.xb,.xbin,.bin,.txt,.nfo,.utf8ans"/>
+			<input
+				id="open-file"
+				class="hide"
+				type="file"
+				aria-label="Open File"
+				accept=".ans,.ansi,.xb,.xbin,.bin,.txt,.nfo,.utf8ans"
+			/>
 		</label>
 		<label for="custom-color">
-			<input id="custom-color" class="hide" type="color"/>
+			<input id="custom-color" class="hide" type="color" aria-label="Select Color"/>
 		</label>
 		<dialog id="modal">
 			<section id="resize-modal">
@@ -404,7 +423,7 @@
 				<nav>
 					<button id="resize-apply" aria-label="Resize Canvas">
 						<svg>
-							<use href="img/icons.svg#save"></use>
+							<use href="img/icons.svg#check"></use>
 						</svg>
 						Save
 					</button>
@@ -423,7 +442,7 @@
 						<img id="font-preview-image" alt="Font Preview"/>
 					</aside>
 					<aside>
-						<select id="font-select" size="10">
+						<select id="font-select" aria-label="Select Font" size="10">
 							<optgroup label="XBin">
 								<option value="XBIN">XBIN (embedded)</option>
 							</optgroup>
@@ -613,14 +632,21 @@
 					<article class="lil">
 						<label for="sauce-bytes"></label>
 						<div class="lil">
-							<input id="sauce-bytes" type="text" value="0/16320 bytes" readonly tabindex="-1"/>
+							<input
+								id="sauce-bytes"
+								type="text"
+								aria-label="Comments Size"
+								value="0/16320 bytes"
+								readonly
+								tabindex="-1"
+							/>
 						</div>
 					</article>
 				</section>
 				<nav>
 					<button id="sauce-done" aria-label="Save Sauce">
 						<svg>
-							<use href="img/icons.svg#save"></use>
+							<use href="img/icons.svg#check"></use>
 						</svg>
 						Save
 					</button>

@@ -6,6 +6,7 @@ import { Load, Save } from './file.js';
 import { loadFontFromXBData } from './font.js';
 import Toolbar from './toolbar.js';
 import {
+	toggleFullscreen,
 	createModalController,
 	createSettingToggle,
 	onClick,
@@ -61,6 +62,7 @@ let sauceAuthor;
 let sauceComments;
 let navSauce;
 let navDarkmode;
+let metaTheme;
 let saveTimeout;
 
 const $$$$ = () => {
@@ -84,6 +86,7 @@ const $$$$ = () => {
 	sauceComments = $('sauce-comments');
 	navSauce = $('navSauce');
 	navDarkmode = $('navDarkmode');
+	metaTheme = $$('meta[name="theme-color"]');
 	saveTimeout = null;
 };
 
@@ -159,10 +162,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 const initializeAppComponents = async () => {
-	window.matchMedia('(prefers-color-scheme: dark)').matches && htmlDoc.classList.add('dark');
 	State.restoreStateFromLocalStorage();
 	document.addEventListener('keydown', undoAndRedo);
-	createDragDropController();
 	createResolutionController($('resolution-label'), $('columns-input'), $('rows-input'));
 	onClick($('new'), async () => {
 		if (confirm('All changes will be lost. Are you sure?') === true) {
@@ -231,7 +232,7 @@ const initializeAppComponents = async () => {
 	const palettePreview = createPalettePreview($('palette-preview'));
 	const palettePicker = createPalettePicker($('palette-picker'));
 
-	onFileChange(openFile, file => {
+	const openHandler = file => {
 		bodyContainer.classList.add('loading');
 		State.textArtCanvas.clearXBData();
 		State.textArtCanvas.clear();
@@ -269,7 +270,9 @@ const initializeAppComponents = async () => {
 			applyData(); // Apply data without font change
 			palettePicker.updatePalette(); // XB
 		});
-	});
+	};
+	onFileChange(openFile, openHandler);
+	createDragDropController(openHandler, bodyContainer);
 
 	onClick(navSauce, () => {
 		State.modal.open('sauce');
@@ -372,6 +375,7 @@ const initializeAppComponents = async () => {
 	onClick($('erase-column'), keyboard.eraseColumn);
 	onClick($('erase-column-start'), keyboard.eraseToStartOfColumn);
 	onClick($('erase-column-end'), keyboard.eraseToEndOfColumn);
+	onClick($('fullscreen'), toggleFullscreen);
 
 	onClick($('default-color'), () => {
 		State.palette.setForegroundColor(7);
@@ -400,10 +404,14 @@ const initializeAppComponents = async () => {
 		State.network?.sendLetterSpacingChange?.(newLetterSpacing);
 	});
 
-	onClick(navDarkmode, _ => {
+	const darkToggle = () => {
 		htmlDoc.classList.toggle('dark');
-		navDarkmode.setAttribute('aria-pressed', htmlDoc.classList.contains('dark'));
-	});
+		const isDark = htmlDoc.classList.contains('dark');
+		navDarkmode.setAttribute('aria-pressed', isDark);
+		metaTheme.setAttribute('content', isDark ? '#333333' : '#4f4f4f');
+	};
+	onClick(navDarkmode, darkToggle);
+	window.matchMedia('(prefers-color-scheme: dark)').matches && darkToggle();
 
 	const updateFontDisplay = () => {
 		const currentFont = State.textArtCanvas.getCurrentFontName();
@@ -447,7 +455,7 @@ const initializeAppComponents = async () => {
 			} else {
 				// No embedded font currently loaded
 				previewInfo.textContent = 'XBIN: none';
-				previewImage.src = `${import.meta.env.BASE_URL}${import.meta.env.VITE_FONT_DIR}missing.png`;
+				previewImage.src = `${State.fontDir}missing.png`;
 			}
 		} else {
 			// Load regular PNG font for preview
@@ -462,9 +470,9 @@ const initializeAppComponents = async () => {
 			img.onerror = () => {
 				// Font loading failed
 				previewInfo.textContent = fontName + ' (not found)';
-				img.src = `${import.meta.env.BASE_URL}${import.meta.env.VITE_FONT_DIR}missing.png`;
+				img.src = `${State.fontDir}missing.png`;
 			};
-			img.src = `${import.meta.env.BASE_URL}${import.meta.env.VITE_FONT_DIR}${fontName}.png`;
+			img.src = `${State.fontDir}${fontName}.png`;
 		}
 	};
 
@@ -583,11 +591,11 @@ import '../../img/manifest/apple-touch-icon.png';
 import '../../img/manifest/favicon-96x96.png';
 import '../../img/manifest/favicon.ico';
 import '../../img/manifest/favicon.svg';
-import '../../img/manifest/screenshot-collab.png';
-import '../../img/manifest/screenshot-fonts.png';
-import '../../img/manifest/screenshot-full.png';
-import '../../img/manifest/screenshot-light.png';
-import '../../img/manifest/screenshot-tall.png';
-import '../../img/manifest/screenshot-wide-menu.png';
+import '../../img/manifest/screenshot-dark-wide.png';
+import '../../img/manifest/screenshot-desktop.png';
+import '../../img/manifest/screenshot-font-tall.png';
+import '../../img/manifest/screenshot-light-wide.png';
+import '../../img/manifest/screenshot-mobile.png';
+import '../../img/manifest/screenshot-sauce-tall.png';
 import '../../img/manifest/web-app-manifest-192x192.png';
 import '../../img/manifest/web-app-manifest-512x512.png';

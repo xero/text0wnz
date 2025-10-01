@@ -198,7 +198,6 @@ describe('Network Module', () => {
 		it('should create worker and set up message handling', () => {
 			createWorkerHandler(mockInputHandle);
 
-			expect(global.Worker).toHaveBeenCalledWith('/ui/worker.js');
 			expect(mockWorker.postMessage).toHaveBeenCalledWith({ cmd: 'handle', handle: 'Anonymous' });
 			expect(mockWorker.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
 		});

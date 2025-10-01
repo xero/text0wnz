@@ -15,6 +15,16 @@ const createCanvas = (width, height) => {
 	return canvas;
 };
 
+const toggleFullscreen = () => {
+	if (document.fullscreenEnabled) {
+		if (document.fullscreenElement) {
+			document.exitFullscreen();
+		} else {
+			document.documentElement.requestFullscreen();
+		}
+	}
+};
+
 // Modal
 const createModalController = modal => {
 	const modals = [
@@ -501,12 +511,12 @@ const createResolutionController = (lbl, txtC, txtR) => {
 	});
 };
 
-const createDragDropController = () => {
+const createDragDropController = (handler, el) => {
 	let dragCounter = 0;
 	document.addEventListener('dragenter', e => {
 		e.preventDefault();
 		dragCounter++;
-		document.body.classList.add('drag-over');
+		el.classList.add('drag-over');
 	});
 	document.addEventListener('dragover', e => {
 		e.preventDefault();
@@ -515,17 +525,16 @@ const createDragDropController = () => {
 		e.preventDefault();
 		dragCounter--;
 		if (dragCounter === 0) {
-			document.body.classList.remove('drag-over');
+			el.classList.remove('drag-over');
 		}
 	});
 	document.addEventListener('drop', e => {
 		e.preventDefault();
 		dragCounter = 0;
-		document.body.classList.remove('drag-over');
+		el.classList.remove('drag-over');
 		const files = e.dataTransfer?.files;
 		if (files && files.length > 0) {
-			const file = files[0];
-			alert(`got: ${file}`);
+			handler(files[0]);
 		}
 	});
 };
@@ -543,6 +552,7 @@ export {
 	$$,
 	$$$,
 	createCanvas,
+	toggleFullscreen,
 	createModalController,
 	createSettingToggle,
 	onClick,

@@ -1,3 +1,4 @@
+import State from './state.js';
 import { createCanvas } from './ui.js';
 import magicNumbers from './magicNumbers.js';
 
@@ -322,7 +323,7 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 			}
 		};
 
-		loadImageAndGetImageData(`${import.meta.env.BASE_URL}${import.meta.env.VITE_FONT_DIR}${fontName}.png`)
+		loadImageAndGetImageData(`${State.fontDir}${fontName}.png`)
 			.then(imageData => {
 				const newFontData = parseFontData(imageData);
 

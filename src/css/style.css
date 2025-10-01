@@ -139,9 +139,9 @@
 		}
 	}
 
-	img {
+	img,
+	svg {
 		user-select: none;
-		user-drag: none;
 		-moz-user-drag: none;
 		-webkit-user-drag: none;
 		-webkit-user-select: none;
@@ -181,13 +181,21 @@
 	}
 
 	header {
-		@apply w-full flex justify-between h-[40px];
+		@apply w-full flex justify-between h-[43px];
 
-		nav div {
-			@apply flex;
+		&.dynamic {
+			app-region: drag;
+			padding-left: env(titlebar-area-x, 0px);
+			padding-right: calc(env(titlebar-area-x, 0px) * 1.6);
 		}
 		* {
 			@apply my-auto;
+		}
+		nav {
+			app-region: no-drag;
+			div {
+				@apply flex;
+			}
 		}
 		svg {
 			@apply fill-fg h-[30px] w-[30px];
@@ -545,7 +553,7 @@
 	.menu-title {
 		font-size: 14px;
 		line-height: 20px;
-		@apply w-auto h-[35px] text-fg bg-menu inline-block relative align-top overflow-hidden;
+		@apply w-auto h-[43px] text-fg bg-menu inline-block relative align-top overflow-hidden;
 
 		button {
 			@apply h-[40px] w-[40px] pr-1 border-none bg-transparent;
@@ -553,7 +561,7 @@
 	}
 
 	.menu-list {
-		@apply z-40 block cursor-default absolute w-[300px] bg-file border-r-4 border-b-4 border-l-4 border-solid border-menu mt-[-6px];
+		@apply z-40 block cursor-default absolute w-[300px] bg-file border-r-4 border-b-4 border-l-4 border-solid border-menu;
 		box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
 	}
 
@@ -992,10 +1000,6 @@
 		}
 	}
 
-	label[for='artwork-title'],
-	label[for='handle-input'],
-	label[for='message-input'],
-	label[for='sauceBytes'],
 	.included-for-websocket {
 		@apply hidden;
 	}
@@ -1023,7 +1027,7 @@
 	}
 
 	/* File drag and drop styling */
-	body.dragging::after {
+	.dragging::after {
 		content: 'Drop ANSI files here';
 		@apply fixed inset-0 block items-center justify-center text-4xl font-bold text-cyan bg-black/80 pointer-events-none top-0 left-0 bottom-0 right-0 w-full h-full;
 		z-index: 999;

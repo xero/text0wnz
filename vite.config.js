@@ -10,9 +10,11 @@ function getBuildVersion() {
 }
 
 export default ({ mode }) => {
+	// load settings from the .env file or use defaults
 	process.env = { ...process.env, ...loadEnv(mode, process.cwd()) };
 	const domain = process.env.VITE_DOMAIN || 'https://text.0w.nz';
-	console.log('Building for domain: ', domain);
+	const ui_dir = process.env.VITE_UI_DIR || 'ui/';
+	const worker = process.env.VITE_WORKER_FILE || 'worker.js';
 	return defineConfig({
 		root: './src',
 		build: {
@@ -35,7 +37,7 @@ export default ({ mode }) => {
 						let res = null;
 						switch (assetInfo.names[0]) {
 							case 'index.css': res = 'ui/stylez.css'; break;
-							case 'icons.svg': res = 'ui/icons-[hash].svg'; break;
+							case 'icons.svg': res = 'ui/icons.svg'; break;
 							case 'favicon-96x96.png': res = 'ui/favicon-96x96.png'; break;
 							case 'favicon.ico': res = 'ui/favicon.ico'; break;
 							case 'favicon.svg': res = 'ui/favicon.svg'; break;
@@ -45,12 +47,12 @@ export default ({ mode }) => {
 							case 'android-launchericon-48-48.png': res = 'ui/android-launchericon-48-48.png'; break;
 							case 'web-app-manifest-192x192.png': res = 'ui/web-app-manifest-192x192.png'; break;
 							case 'web-app-manifest-512x512.png': res = 'ui/web-app-manifest-512x512.png'; break;
-							case 'screenshot-collab.png':  res = 'ui/screenshot-collab.png'; break;
-							case 'screenshot-fonts.png':  res = 'ui/screenshot-fonts.png'; break;
-							case 'screenshot-full.png':  res = 'ui/screenshot-full.png'; break;
-							case 'screenshot-light.png':  res = 'ui/screenshot-light.png'; break;
-							case 'screenshot-tall.png':  res = 'ui/screenshot-tall.png'; break;
-							case 'screenshot-wide-menu.png':  res = 'ui/screenshot-wide-menu.png'; break;
+							case 'screenshot-desktop.png':  res = 'ui/screenshot-desktop.png'; break;
+							case 'screenshot-mobile.png':  res = 'ui/screenshot-mobile.png'; break;
+							case 'screenshot-font-tall.png':  res = 'ui/screenshot-font-tall.png'; break;
+							case 'screenshot-sauce-tall.png':  res = 'ui/screenshot-sauce-tall.png'; break;
+							case 'screenshot-dark-wide.png':  res = 'ui/screenshot-dark-wide.png'; break;
+							case 'screenshot-light-wide.png':  res = 'ui/screenshot-light-wide.png'; break;
 						}
 						if (res) {
 							return res;
@@ -61,135 +63,13 @@ export default ({ mode }) => {
 			},
 		},
 		plugins: [
-			VitePWA({
-				filename: 'service.js',
-				manifestFilename: 'site.webmanifest',
-				registerType: 'autoUpdate',
-				injectRegister: false,
-				includeAssets: [
-					'favicon.ico',
-					'favicon.svg',
-					'icons.svg',
-					'logo.png',
-					'topazplus_1200.woff2',
-					process.env.VITE_WORKER_FILE ? `js/client/${process.env.VITE_WORKER_FILE}` : undefined,
-				].filter(Boolean),
-				manifest: {
-					name: 'teXt0wnz',
-					short_name: 'teXt0wnz',
-					id: '/',
-					scope: '/',
-					start_url: '/',
-					display: 'standalone',
-					description: 'The online collaborative text art editor. Supporting CP437 ANSI/ASCII, Scene NFO, XBIN/BIN, & UTF8 TXT file types',
-					dir: 'ltr',
-					lang: 'en',
-					orientation: 'any',
-					background_color: '#000',
-					theme_color: '#000',
-					icons: [{
-							src: '/ui/web-app-manifest-512x512.png',
-							sizes: '512x512',
-							type: 'image/png',
-							purpose: 'any',
-						}, {
-							src: '/ui/web-app-manifest-512x512.png',
-							sizes: '512x512',
-							type: 'image/png',
-							purpose: 'maskable',
-						}, {
-							src: '/ui/web-app-manifest-192x192.png',
-							sizes: '192x192',
-							type: 'image/png',
-							purpose: 'maskable',
-						}, {
-							src: '/ui/apple-touch-icon.png',
-							sizes: '180x180',
-							type: 'image/png',
-							purpose: 'maskable',
-						}, {
-							src: '/ui/favicon-96x96.png',
-							sizes: '96x96',
-							type: 'image/png',
-							purpose: 'any',
-						}, {
-							src: '/ui/android-launchericon-48-48.png',
-							sizes: '48x48',
-							type: 'image/png',
-							purpose: 'any',
-						}],
-					screenshots : [{
-							src: '/ui/screenshot-collab.png',
-							sizes: '735x724',
-							type: 'image/jpg',
-							platform: 'any',
-						}, {
-							src: '/ui/screenshot-fonts.png',
-							sizes: '735x724',
-							type: 'image/jpg',
-							platform: 'any',
-						}, {
-							src: '/ui/screenshot-full.png',
-							sizes: '1512x911',
-							type: 'image/jpg',
-							platform: 'any',
-						}, {
-							src: '/ui/screenshot-light.png',
-							sizes: '727x699',
-							type: 'image/jpg',
-							platform: 'any',
-						}, {
-							src: '/ui/screenshot-tall.png',
-							sizes: '962x898',
-							type: 'image/jpg',
-							platform: 'any',
-							form_factor: 'narrow',
-						}, {
-							src: '/ui/screenshot-wide-menu.png',
-							sizes: '1512x752',
-							type: 'image/jpg',
-							platform: 'any',
-							form_factor: 'wide',
-						}],
-					version: getBuildVersion(),
-				},
-				workbox: {
-					cleanupOutdatedCaches: true,
-					clientsClaim: true,
-					skipWaiting: true,
-					navigateFallbackDenylist: [
-						/^\/humans.txt/,
-						/^\/robots.txt/,
-						/^\/sitemap.xml/,
-					],
-					runtimeCaching: [
-						{
-							urlPattern: /^\/ui\/.*\.(png|svg|gif|woff2?|ttf|otf)$/,
-							handler: 'StaleWhileRevalidate',
-							options: {
-								cacheName: 'asset-cache',
-								expiration: {
-									maxEntries: 50,
-									maxAgeSeconds: 7 * 24 * 60 * 60,
-								},
-							},
-						},
-						{
-							urlPattern: /^\/ui\/.*\.(js|css)$/,
-							handler: 'NetworkFirst',
-							options: {
-								cacheName: 'dynamic-cache',
-							},
-						},
-						{
-							urlPattern: /^\/(index\.html)?$/,
-							handler: 'NetworkFirst',
-							options: {
-								cacheName: 'html-cache',
-							},
-						},
-					],
-				},
+			viteStaticCopy({
+				targets: [
+					{ src: `js/client/${worker}`, dest: ui_dir },
+					{ src: 'fonts', dest: ui_dir },
+					{ src: 'img/manifest/favicon.ico', dest: '.' },
+					{ src: 'humans.txt', dest: '.' },
+				],
 			}),
 			Sitemap({
 				hostname: domain,
@@ -272,13 +152,145 @@ export default ({ mode }) => {
 					{ userAgent: 'wget', disallow: '/' },
 				],
 			}),
-			viteStaticCopy({
-				targets: [
-					{ src: `js/client/${process.env.VITE_WORKER_FILE}`, dest: process.env.VITE_UI_DIR },
-					{ src: 'fonts', dest: process.env.VITE_UI_DIR },
-					{ src: 'img/manifest/favicon.ico', dest: '.' },
-					{ src: 'humans.txt', dest: '.' },
-				],
+			{
+				name: 'log-sitemap-robots',
+				apply: 'build',
+				closeBundle() {
+					console.log(`\x1b[36m[vite-plugin-sitemap] \x1b[0mbuilding for domain: \x1b[34m${domain}\x1b[0m\n../dist/robots.txt\n../dist/sitemap.xml`);
+				}
+			},
+			VitePWA({
+				filename: 'service.js',
+				manifestFilename: 'site.webmanifest',
+				registerType: 'autoUpdate',
+				injectRegister: false,
+				includeAssets: [
+					'favicon.ico',
+					'favicon.svg',
+					'icons.svg',
+					'logo.png',
+					'topazplus_1200.woff2',
+					`js/client/${worker}`,
+				].filter(Boolean),
+				manifest: {
+					name: 'teXt0wnz',
+					short_name: 'teXt0wnz',
+					id: '/',
+					scope: '/',
+					start_url: '/',
+					display: 'standalone',
+					description: 'The online collaborative text art editor. Supporting CP437 ANSI/ASCII, Scene NFO, XBIN/BIN, & UTF8 TXT file types',
+					dir: 'ltr',
+					lang: 'en',
+					orientation: 'any',
+					background_color: '#000',
+					theme_color: '#000',
+					display_override: ['window-controls-overlay'],
+					icons: [{
+							src: '/ui/web-app-manifest-512x512.png',
+							sizes: '512x512',
+							type: 'image/png',
+							purpose: 'any',
+						}, {
+							src: '/ui/web-app-manifest-512x512.png',
+							sizes: '512x512',
+							type: 'image/png',
+							purpose: 'maskable',
+						}, {
+							src: '/ui/web-app-manifest-192x192.png',
+							sizes: '192x192',
+							type: 'image/png',
+							purpose: 'maskable',
+						}, {
+							src: '/ui/apple-touch-icon.png',
+							sizes: '180x180',
+							type: 'image/png',
+							purpose: 'maskable',
+						}, {
+							src: '/ui/favicon-96x96.png',
+							sizes: '96x96',
+							type: 'image/png',
+							purpose: 'any',
+						}, {
+							src: '/ui/android-launchericon-48-48.png',
+							sizes: '48x48',
+							type: 'image/png',
+							purpose: 'any',
+						}],
+					screenshots : [{
+							src: '/ui/screenshot-desktop.png',
+							sizes: '3024x1964',
+							type: 'image/png',
+							platform: 'any',
+						}, {
+							src: '/ui/screenshot-mobile.png',
+							sizes: '1140x1520',
+							type: 'image/png',
+							platform: 'any',
+						}, {
+							src: '/ui/screenshot-font-tall.png',
+							sizes: '910x1370',
+							type: 'image/png',
+							platform: 'any',
+							form_factor: 'narrow',
+						}, {
+							src: '/ui/screenshot-sauce-tall.png',
+							sizes: '910x1370',
+							type: 'image/png',
+							platform: 'any',
+							form_factor: 'narrow',
+						}, {
+							src: '/ui/screenshot-light-wide.png',
+							sizes: '1540x1158',
+							type: 'image/png',
+							platform: 'any',
+							form_factor: 'wide',
+						}, {
+							src: '/ui/screenshot-dark-wide.png',
+							sizes: '1540x1158',
+							type: 'image/png',
+							platform: 'any',
+							form_factor: 'wide',
+						}],
+					version: getBuildVersion(),
+				},
+				workbox: {
+					cleanupOutdatedCaches: true,
+					clientsClaim: true,
+					skipWaiting: true,
+					navigateFallbackDenylist: [
+						/^\/humans.txt/,
+						/^\/robots.txt/,
+						/^\/sitemap.xml/,
+					],
+					runtimeCaching: [
+						{
+							urlPattern: /^\/ui\/.*\.(png|svg|gif|woff2?|ttf|otf)$/,
+							handler: 'StaleWhileRevalidate',
+							options: {
+								cacheName: 'asset-cache',
+								expiration: {
+									maxEntries: 50,
+									maxAgeSeconds: 7 * 24 * 60 * 60,
+								},
+							},
+						},
+						{
+							urlPattern: /^\/ui\/.*\.(js|css)$/,
+							handler: 'NetworkFirst',
+							options: {
+								cacheName: 'dynamic-cache',
+							},
+						},
+						{
+							urlPattern: /^\/(index\.html)?$/,
+							handler: 'NetworkFirst',
+							options: {
+								cacheName: 'html-cache',
+							},
+						},
+					],
+				},
 			}),
 		],
 	});

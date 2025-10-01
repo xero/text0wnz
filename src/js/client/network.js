@@ -11,11 +11,10 @@ const createWorkerHandler = inputHandle => {
 	const btnIce = $('navICE');
 	const btnNet = $('network-button');
 
-	const workerPath = `${import.meta.env.BASE_URL}${import.meta.env.VITE_UI_DIR}${import.meta.env.VITE_WORKER_FILE}`;
 	try {
-		State.worker = new Worker(workerPath);
+		State.worker = new Worker(State.workerPath);
 	} catch (error) {
-		console.error(`[Network] Failed to load worker from ${workerPath}:`, error);
+		console.error(`[Network] Failed to load worker from ${State.workerPath}:`, error);
 		return;
 	}
 
@@ -445,7 +444,7 @@ const createChatController = (
 	const newNotification = text => {
 		const notification = new Notification('text.0w.nz', {
 			body: text,
-			icon: `${import.meta.env.BASE_URL}${import.meta.env.VITE_UI_DIR}favicon.svg`,
+			icon: `${State.uiDir}favicon.svg`,
 		});
 		// Auto-close notification after 7 seconds
 		const notificationTimer = setTimeout(() => {

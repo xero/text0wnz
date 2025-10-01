@@ -6,8 +6,13 @@
  * provide consistent state access across all components.
  */
 
-// State object to hold all application state
+// Object to hold application state
 const EditorState = {
+	urlPrefix: null,
+	uiDir: null,
+	fontDir: null,
+	workerPath: null,
+
 	// Core components
 	textArtCanvas: null,
 	palette: null,
@@ -72,6 +77,12 @@ class StateManager {
 		this.listeners = stateListeners;
 		this.waitQueue = dependencyWaitQueue;
 		this.loadingFromStorage = false;
+
+		// Environment var or defaults
+		this.urlPrefix = import.meta.env.BASE_URL || '/';
+		this.uiDir = this.urlPrefix + import.meta.env.VITE_UI_DIR || 'ui/';
+		this.fontDir = this.uiDir + import.meta.env.VITE_FONT_DIR || 'fonts/';
+		this.workerPath = this.uiDir + import.meta.env.VITE_WORKER_FILE || 'worker.js';
 
 		// Bind methods to ensure `this` is preserved when passed as callbacks
 		this.set = this.set.bind(this);
@@ -689,7 +700,28 @@ const State = {
 	},
 	set title(value) {
 		stateManager.set('title', value);
-		document.title = `${value} [teXt0wnz]`;
+		if (
+			['fullscreen', 'standalone', 'minimal-ui'].some(
+				displayMode => window.matchMedia(`(display-mode: ${displayMode})`).matches,
+			)
+		) {
+			document.title = value;
+		} else {
+			document.title = `${value} [teXt0wnz]`;
+		}
+	},
+	// URLs
+	get urlPrefix() {
+		return stateManager.urlPrefix;
+	},
+	get uiDir() {
+		return stateManager.uiDir;
+	},
+	get fontDir() {
+		return stateManager.fontDir;
+	},
+	get workerPath() {
+		return stateManager.workerPath;
 	},
 
 	// Utility methods
