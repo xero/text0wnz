@@ -570,8 +570,6 @@ const initializeAppComponents = async () => {
 	document.addEventListener('onLetterSpacingChange', save);
 	document.addEventListener('onIceColorsChange', save);
 	document.addEventListener('onOpenedFile', save);
-	document.addEventListener('onForegroundChange', save);
-	document.addEventListener('onBackgroundChange', save);
 };
 
 // Inject style sheets into the build pipeline for processing

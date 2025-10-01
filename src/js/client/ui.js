@@ -5,6 +5,7 @@ const D = document,
 			$ = D.getElementById.bind(D),
 			$$ = D.querySelector.bind(D),
 			$$$ = D.querySelectorAll.bind(D),
+			has = (i, c) => i.classList.contains(c),
 			classList = (el, className, add = true) => (add ? el.classList.add(className) : el.classList.remove(className));
 
 const createCanvas = (width, height) => {
@@ -48,13 +49,25 @@ const createModalController = modal => {
 		}
 	};
 
+	const queued = () => {
+		let i = 0;
+		modals.forEach(s => {
+			if (has(s, 'hide')) {
+				i++;
+			}
+		});
+		return i !== modals.length - 1 ? true : false;
+	};
+
 	const close = () => {
-		classList(modal, 'closing');
-		closingTimeout = setTimeout(() => {
-			classList(modal, 'closing', false);
-			modal.close();
-			closingTimeout = null;
-		}, 700);
+		if (!queued()) {
+			classList(modal, 'closing');
+			closingTimeout = setTimeout(() => {
+				classList(modal, 'closing', false);
+				modal.close();
+				closingTimeout = null;
+			}, 700);
+		}
 	};
 
 	const error = message => {

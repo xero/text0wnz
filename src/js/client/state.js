@@ -57,11 +57,8 @@ const STATE_SYNC_KEYS = {
 	CANVAS_DATA: 'canvasData',
 	FONT_NAME: 'fontName',
 	PALETTE_COLORS: 'paletteColors',
-	FOREGROUND_COLOR: 'foregroundColor',
-	BACKGROUND_COLOR: 'backgroundColor',
 	ICE_COLORS: 'iceColors',
 	LETTER_SPACING: 'letterSpacing',
-	TITLE: 'title',
 	XBIN_FONT_DATA: 'xbinFontData',
 };
 
@@ -333,11 +330,6 @@ class StateManager {
 		const serialized = {};
 
 		try {
-			// Save title
-			if (this.state.title) {
-				serialized[STATE_SYNC_KEYS.TITLE] = this.state.title;
-			}
-
 			// Save canvas data
 			if (this.state.textArtCanvas && typeof this.state.textArtCanvas.getImageData === 'function') {
 				const imageData = this.state.textArtCanvas.getImageData();
@@ -374,12 +366,6 @@ class StateManager {
 						return [Math.min(color[0] >> 2, 63), Math.min(color[1] >> 2, 63), Math.min(color[2] >> 2, 63), color[3]];
 					});
 				}
-				if (typeof this.state.palette.getForegroundColor === 'function') {
-					serialized[STATE_SYNC_KEYS.FOREGROUND_COLOR] = this.state.palette.getForegroundColor();
-				}
-				if (typeof this.state.palette.getBackgroundColor === 'function') {
-					serialized[STATE_SYNC_KEYS.BACKGROUND_COLOR] = this.state.palette.getBackgroundColor();
-				}
 			}
 
 			// Save XBIN font data if present
@@ -415,7 +401,7 @@ class StateManager {
 
 				// Check if canvas is blank (all cells are BLANK_CELL = (32 << 8) + 7)
 				const imageData = this.state.textArtCanvas.getImageData();
-				const BLANK_CELL = (32 << 8) + 7; // Space character with white foreground
+				const BLANK_CELL = 0;
 				for (let i = 0; i < imageData.length; i++) {
 					if (imageData[i] !== BLANK_CELL) {
 						return false; // Canvas has content
@@ -492,11 +478,6 @@ class StateManager {
 				}
 			}
 
-			// Check if title is default (empty or "Untitled")
-			if (this.state.title && this.state.title !== '' && this.state.title !== 'Untitled') {
-				return false;
-			}
-
 			return true; // All checks passed, state is default
 		} catch (error) {
 			console.error('[State] Error checking default state:', error);
@@ -505,16 +486,13 @@ class StateManager {
 	}
 
 	/**
-	 * Save state to localStorage (only if not default state)
+	 * Save non-default state to localStorage
 	 */
 	saveToLocalStorage() {
 		try {
-			// Don't save if the state is all defaults
-			if (this.isDefaultState()) {
-				console.log('[State] Skipping save - state is default');
+			if (this.isDefaultState() || stateManager.state.network.isConnected()) {
 				return;
 			}
-
 			const serialized = this.serializeState();
 			localStorage.setItem('moebiusAppState', JSON.stringify(serialized));
 		} catch (error) {
@@ -562,12 +540,6 @@ class StateManager {
 		this.loadingFromStorage = true;
 
 		try {
-			// Restore title
-			if (savedState[STATE_SYNC_KEYS.TITLE]) {
-				this.state.title = savedState[STATE_SYNC_KEYS.TITLE];
-				document.title = `${savedState[STATE_SYNC_KEYS.TITLE]} [teXt0wnz]`;
-			}
-
 			// Restore ice colors first (before canvas data)
 			if (savedState[STATE_SYNC_KEYS.ICE_COLORS] !== undefined && this.state.textArtCanvas) {
 				// Ice colors will be set when we restore canvas data
@@ -603,18 +575,6 @@ class StateManager {
 						// setRGBAColor expects 6-bit and will expand to 8-bit
 						this.state.palette.setRGBAColor(index, color);
 					});
-				}
-			}
-
-			// Restore foreground/background colors
-			if (savedState[STATE_SYNC_KEYS.FOREGROUND_COLOR] !== undefined && this.state.palette) {
-				if (typeof this.state.palette.setForegroundColor === 'function') {
-					this.state.palette.setForegroundColor(savedState[STATE_SYNC_KEYS.FOREGROUND_COLOR]);
-				}
-			}
-			if (savedState[STATE_SYNC_KEYS.BACKGROUND_COLOR] !== undefined && this.state.palette) {
-				if (typeof this.state.palette.setBackgroundColor === 'function') {
-					this.state.palette.setBackgroundColor(savedState[STATE_SYNC_KEYS.BACKGROUND_COLOR]);
 				}
 			}
 
