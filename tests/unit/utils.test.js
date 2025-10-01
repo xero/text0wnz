@@ -22,6 +22,10 @@ describe('UI Utilities', () => {
 				}),
 				getElementById: vi.fn(id => ({ id })),
 				querySelector: vi.fn(selector => ({ selector })),
+				querySelectorAll: vi.fn(selector => [
+					{ selector, idx: 0 },
+					{ selector, idx: 1 },
+				]),
 			};
 		});
 

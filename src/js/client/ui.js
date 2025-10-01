@@ -4,6 +4,8 @@ import State from './state.js';
 const D = document,
 			$ = D.getElementById.bind(D),
 			$$ = D.querySelector.bind(D),
+			$$$ = D.querySelectorAll.bind(D),
+			has = (i, c) => i.classList.contains(c),
 			classList = (el, className, add = true) => (add ? el.classList.add(className) : el.classList.remove(className));
 
 const createCanvas = (width, height) => {
@@ -25,16 +27,14 @@ const createModalController = modal => {
 		$('update-modal'),
 		$('loading-modal'),
 	];
-
 	let closingTimeout = null;
-
-	const isOpen = () => modal.open;
 
 	const clear = () => modals.forEach(s => classList(s, 'hide'));
 
 	const open = name => {
 		const section = name + '-modal';
 		if ($(section)) {
+			// cancel current close event
 			if (closingTimeout) {
 				clearTimeout(closingTimeout);
 				closingTimeout = null;
@@ -49,13 +49,25 @@ const createModalController = modal => {
 		}
 	};
 
+	const queued = () => {
+		let i = 0;
+		modals.forEach(s => {
+			if (has(s, 'hide')) {
+				i++;
+			}
+		});
+		return i !== modals.length - 1 ? true : false;
+	};
+
 	const close = () => {
-		classList(modal, 'closing');
-		closingTimeout = setTimeout(() => {
-			classList(modal, 'closing', false);
-			modal.close();
-			closingTimeout = null;
-		}, 700);
+		if (!queued()) {
+			classList(modal, 'closing');
+			closingTimeout = setTimeout(() => {
+				classList(modal, 'closing', false);
+				modal.close();
+				closingTimeout = null;
+			}, 700);
+		}
 	};
 
 	const error = message => {
@@ -63,8 +75,11 @@ const createModalController = modal => {
 		open('error');
 	};
 
+	// attach to all close buttons
+	$$$('.close').forEach(b => onClick(b, _ => close()));
+
 	return {
-		isOpen: isOpen,
+		isOpen: () => modal.open,
 		open: open,
 		close: close,
 		error: error,
@@ -526,6 +541,7 @@ const websocketUI = show => {
 export {
 	$,
 	$$,
+	$$$,
 	createCanvas,
 	createModalController,
 	createSettingToggle,

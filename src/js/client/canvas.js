@@ -1244,6 +1244,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		return paletteBytes;
 	};
 
+	const getXBFontData = () => xbFontData;
+
 	const loadXBFileSequential = (imageData, finalCallback) => {
 		clearXBData(() => {
 			if (imageData.paletteData) {
@@ -1332,6 +1334,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		setXBPaletteData: setXBPaletteData,
 		clearXBData: clearXBData,
 		getXBPaletteData: getXBPaletteData,
+		getXBFontData: getXBFontData,
 		loadXBFileSequential: loadXBFileSequential,
 		drawRegion: drawRegion,
 		enqueueDirtyRegion: enqueueDirtyRegion,

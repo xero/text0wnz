@@ -1,5 +1,6 @@
 import State from './state.js';
 import { $, $$, websocketUI } from './ui.js';
+import { createDefaultPalette } from './palette.js';
 
 const createWorkerHandler = inputHandle => {
 	const btnJoin = $('join-collaboration');
@@ -297,6 +298,14 @@ const createWorkerHandler = inputHandle => {
 
 	const joinCollaboration = async () => {
 		State.modal.open('websocket');
+		State.palette = createDefaultPalette();
+		document.dispatchEvent(
+			new CustomEvent('onPaletteChange', {
+				detail: State.palette,
+				bubbles: true,
+				cancelable: false,
+			}),
+		);
 		collaborationMode = true;
 		initializing = true; // Set flag to prevent broadcasting during initial setup
 
