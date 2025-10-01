@@ -173,7 +173,7 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 				}
 			},
 			drawWithAlpha: (charCode, foreground, ctx, x, y) => {
-				const fallbackCharCode = 88;
+				const fallbackCharCode = magicNumbers.CHAR_CAPITAL_X;
 				if (!alphaGlyphs[foreground] || !alphaGlyphs[foreground][charCode]) {
 					charCode = fallbackCharCode;
 				}
@@ -284,7 +284,13 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 			for (let foreground = 0; foreground < 16; foreground++) {
 				alphaGlyphs[foreground] = new Array(256);
 				for (let charCode = 0; charCode < 256; charCode++) {
-					if (charCode === 220 || charCode === 223 || charCode === 47 || charCode === 124 || charCode === 88) {
+					if (
+						charCode === magicNumbers.LOWER_HALFBLOCK ||
+						charCode === magicNumbers.UPPER_HALFBLOCK ||
+						charCode === magicNumbers.CHAR_SLASH ||
+						charCode === magicNumbers.CHAR_PIPE ||
+						charCode === magicNumbers.CHAR_CAPITAL_X
+					) {
 						const imageData = ctx.createImageData(fontData.width, fontData.height);
 						for (
 							let i = 0, j = charCode * fontData.width * fontData.height;
@@ -363,7 +369,7 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 							}
 						},
 						drawWithAlpha: (charCode, foreground, ctx, x, y) => {
-							const fallbackCharCode = 88;
+							const fallbackCharCode = magicNumbers.CHAR_CAPITAL_X;
 							if (!alphaGlyphs[foreground] || !alphaGlyphs[foreground][charCode]) {
 								charCode = fallbackCharCode;
 							}

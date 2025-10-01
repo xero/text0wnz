@@ -1161,7 +1161,7 @@ const saveModule = () => {
 		let commentsCount = 0;
 		for (let i = 0; i < commentLines.length; i++) {
 			while (commentLines[i].length > 0) {
-				const line = commentLines[i].substr(0, 64).trim();
+				const line = commentLines[i].slice(0, 64).trim();
 				commentLines[i] = commentLines[i].slice(64);
 				if (line.length === 0) {
 					break;

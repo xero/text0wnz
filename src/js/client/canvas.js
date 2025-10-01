@@ -955,6 +955,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			redoBuffer.push(currentRedo);
 			processDirtyRegions();
 			sendDrawHistory();
+			State.saveToLocalStorage();
 		}
 	};
 
@@ -979,6 +980,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			currentUndo = [];
 			processDirtyRegions();
 			sendDrawHistory();
+			State.saveToLocalStorage();
 		}
 	};
 

@@ -35,7 +35,7 @@ jobs:
           test -f dist/ui/favicon-96x96.png
           test -f dist/ui/favicon.ico
           test -f dist/ui/favicon.svg
-          test -f dist/ui/icons.svg
+          test -f dist/ui/icons*.svg
           test -f dist/ui/logo.png
           test -f dist/ui/stylez.css
           test -f dist/ui/topazplus_1200.woff2
@@ -43,8 +43,11 @@ jobs:
           test -f dist/ui/web-app-manifest-512x512.png
           test -f dist/ui/worker.js
           test -f dist/favicon.ico
+          test -f dist/humans.txt
           test -f dist/index.html
+          test -f dist/robots.txt
           test -f dist/service.js
           test -f dist/site.webmanifest
+          test -f dist/sitemap.xml
           test -f dist/workbox-*.js
           echo "Build successful"

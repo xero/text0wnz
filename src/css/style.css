@@ -231,7 +231,7 @@
 
 	#chat-window {
 		@apply flex fixed top-[40px] right-0 z-50 bg-menu scale-y-100 opacity-100
-      w-[45vw] min-w-[30vw] max-w-full min-h-[300px] max-h-screen /*no height!*/
+      w-[45vw] min-w-[30vw] max-w-full min-h-[300px] max-h-screen /*height intentionally omitted*/
       border-8 border-[#666] border-double;
 		transform-origin: top;
 		transition:
