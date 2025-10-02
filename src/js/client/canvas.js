@@ -1064,32 +1064,25 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		sendDrawHistory();
 	};
 
+	const drawWithUndo = (index, foreground, x, y, textY) => {
+		currentUndo.push([index, imageData[index], x, textY]);
+		drawHalfBlock(index, foreground, x, y, textY);
+		drawHistory.push((index << 16) + imageData[index]);
+	};
+
 	const drawHalfBlockEntryPoint = callback => {
 		const blocks = [];
 		callback((foreground, x, y) => {
 			const textY = Math.floor(y / 2);
 			const index = textY * columns + x;
 			blocks.push([index, x, textY]);
-
-			currentUndo.push([index, imageData[index], x, textY]);
-
-			drawHalfBlock(index, foreground, x, y, textY);
-
-			// Add to drawHistory AFTER drawHalfBlock modifies imageData
-			drawHistory.push((index << 16) + imageData[index]);
-
+			drawWithUndo(index, foreground, x, y, textY);
 			if (mirrorMode) {
 				const mirrorX = getMirrorX(x);
 				if (mirrorX >= 0 && mirrorX < columns) {
 					const mirrorIndex = textY * columns + mirrorX;
 					blocks.push([mirrorIndex, mirrorX, textY]);
-
-					currentUndo.push([mirrorIndex, imageData[mirrorIndex], mirrorX, textY]);
-
-					drawHalfBlock(mirrorIndex, foreground, mirrorX, y, textY);
-
-					// Add to drawHistory AFTER drawHalfBlock modifies imageData
-					drawHistory.push((mirrorIndex << 16) + imageData[mirrorIndex]);
+					drawWithUndo(mirrorIndex, foreground, mirrorX, y, textY);
 				}
 			}
 		});

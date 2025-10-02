@@ -338,9 +338,11 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 						getWidth: () => (letterSpacing ? fontData.width + 1 : fontData.width),
 						getHeight: () => fontData.height,
 						setLetterSpacing: newLetterSpacing => {
-							generateNewFontGlyphs();
-							letterSpacing = newLetterSpacing;
-							document.dispatchEvent(new CustomEvent('onLetterSpacingChange', { detail: letterSpacing }));
+							if (newLetterSpacing !== letterSpacing) {
+								letterSpacing = newLetterSpacing;
+								generateNewFontGlyphs();
+								document.dispatchEvent(new CustomEvent('onLetterSpacingChange', { detail: letterSpacing }));
+							}
 						},
 						getLetterSpacing: () => letterSpacing,
 						draw: (charCode, foreground, background, ctx, x, y) => {
