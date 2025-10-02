@@ -104,7 +104,7 @@ const createSettingToggle = (el, getter, setter) => {
 
 	const update = () => {
 		currentSetting = g();
-		if (currentSetting === true) {
+		if (currentSetting) {
 			el.classList.add('enabled');
 		} else {
 			el.classList.remove('enabled');
@@ -174,14 +174,11 @@ const createPositionInfo = el => {
 };
 
 const undoAndRedo = e => {
-	if ((e.ctrlKey === true || (e.metaKey === true && e.shiftKey === false)) && e.code === 'KeyZ') {
+	if ((e.ctrlKey || (e.metaKey && !e.shiftKey)) && e.code === 'KeyZ') {
 		// Ctrl/Cmd+Z - Undo
 		e.preventDefault();
 		State.textArtCanvas.undo();
-	} else if (
-		(e.ctrlKey === true && e.code === 'KeyY') ||
-		(e.metaKey === true && e.shiftKey === true && e.code === 'KeyZ')
-	) {
+	} else if ((e.ctrlKey && e.code === 'KeyY') || (e.metaKey && e.shiftKey && e.code === 'KeyZ')) {
 		// Ctrl+Y or Cmd+Shift+Z - Redo
 		e.preventDefault();
 		State.textArtCanvas.redo();
@@ -192,13 +189,11 @@ const createPaintShortcuts = keyPair => {
 	let ignored = false;
 
 	const isConnected = e =>
-		!State.network ||
-		State.network.isConnected() === false ||
-		keyPair[e.key].classList.contains('excluded-for-websocket') === false;
+		!State.network || !State.network.isConnected() || !keyPair[e.key].classList.contains('excluded-for-websocket');
 
 	const keyDown = e => {
-		if (ignored === false) {
-			if (e.ctrlKey === false && e.altKey === false && e.shiftKey === false && e.metaKey === false) {
+		if (!ignored) {
+			if (!e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
 				if (e.key >= '0' && e.key <= '7') {
 					// Number keys 0-7 for color shortcuts
 					const color = parseInt(e.key, 10);
@@ -222,8 +217,8 @@ const createPaintShortcuts = keyPair => {
 	};
 
 	const keyDownWithCtrl = e => {
-		if (ignored === false) {
-			if (e.ctrlKey === true && e.altKey === false && e.shiftKey === false && e.metaKey === false) {
+		if (!ignored) {
+			if (e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
 				// Use the actual key character for lookup
 				if (keyPair[e.key] !== undefined) {
 					if (isConnected(e)) {
@@ -381,10 +376,10 @@ const createGrid = el => {
 	};
 
 	const show = turnOn => {
-		if (enabled === true && turnOn === false) {
+		if (enabled && !turnOn) {
 			el.classList.remove('enabled');
 			enabled = false;
-		} else if (enabled === false && turnOn === true) {
+		} else if (!enabled && turnOn) {
 			el.classList.add('enabled');
 			enabled = true;
 		}

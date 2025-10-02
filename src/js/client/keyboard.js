@@ -64,14 +64,7 @@ const createFKeysShortcut = () => {
 	const keyDown = e => {
 		// Handle F1-F12 function keys (F1=112, F2=113, ..., F12=123)
 		const fKeyMatch = e.code.match(/^F(\d+)$/);
-		if (
-			e.altKey === false &&
-			e.ctrlKey === false &&
-			e.metaKey === false &&
-			fKeyMatch &&
-			fKeyMatch[1] >= 1 &&
-			fKeyMatch[1] <= 12
-		) {
+		if (!e.altKey && !e.ctrlKey && !e.metaKey && fKeyMatch && fKeyMatch[1] >= 1 && fKeyMatch[1] <= 12) {
 			e.preventDefault();
 			State.textArtCanvas.startUndo();
 			State.textArtCanvas.draw(callback => {
@@ -132,7 +125,7 @@ const createCursor = canvasContainer => {
 	};
 
 	const move = (newX, newY) => {
-		if (State.selectionCursor.isVisible() === true) {
+		if (State.selectionCursor.isVisible()) {
 			endSelection();
 		}
 		x = Math.min(Math.max(newX, 0), State.textArtCanvas.getColumns() - 1);
@@ -187,7 +180,7 @@ const createCursor = canvasContainer => {
 	};
 
 	const shiftLeft = () => {
-		if (State.selectionCursor.isVisible() === false) {
+		if (!State.selectionCursor.isVisible()) {
 			startSelection();
 			if (Toolbar.getCurrentTool() === 'keyboard') {
 				Toolbar.switchTool('selection');
@@ -198,7 +191,7 @@ const createCursor = canvasContainer => {
 	};
 
 	const shiftRight = () => {
-		if (State.selectionCursor.isVisible() === false) {
+		if (!State.selectionCursor.isVisible()) {
 			startSelection();
 			if (Toolbar.getCurrentTool() === 'keyboard') {
 				Toolbar.switchTool('selection');
@@ -209,7 +202,7 @@ const createCursor = canvasContainer => {
 	};
 
 	const shiftUp = () => {
-		if (State.selectionCursor.isVisible() === false) {
+		if (!State.selectionCursor.isVisible()) {
 			startSelection();
 			if (Toolbar.getCurrentTool() === 'keyboard') {
 				Toolbar.switchTool('selection');
@@ -220,7 +213,7 @@ const createCursor = canvasContainer => {
 	};
 
 	const shiftDown = () => {
-		if (State.selectionCursor.isVisible() === false) {
+		if (!State.selectionCursor.isVisible()) {
 			startSelection();
 			if (Toolbar.getCurrentTool() === 'keyboard') {
 				Toolbar.switchTool('selection');
@@ -231,7 +224,7 @@ const createCursor = canvasContainer => {
 	};
 
 	const shiftToStartOfRow = () => {
-		if (State.selectionCursor.isVisible() === false) {
+		if (!State.selectionCursor.isVisible()) {
 			startSelection();
 			if (Toolbar.getCurrentTool() === 'keyboard') {
 				Toolbar.switchTool('selection');
@@ -242,7 +235,7 @@ const createCursor = canvasContainer => {
 	};
 
 	const shiftToEndOfRow = () => {
-		if (State.selectionCursor.isVisible() === false) {
+		if (!State.selectionCursor.isVisible()) {
 			startSelection();
 			if (Toolbar.getCurrentTool() === 'keyboard') {
 				Toolbar.switchTool('selection');
@@ -253,8 +246,8 @@ const createCursor = canvasContainer => {
 	};
 
 	const keyDown = e => {
-		if (e.ctrlKey === false && e.altKey === false) {
-			if (e.shiftKey === false && e.metaKey === false) {
+		if (!e.ctrlKey && !e.altKey) {
+			if (!e.shiftKey && !e.metaKey) {
 				switch (e.code) {
 					case 'Enter': // Enter key
 						e.preventDefault();
@@ -287,7 +280,7 @@ const createCursor = canvasContainer => {
 					default:
 						break;
 				}
-			} else if (e.metaKey === true && e.shiftKey === false) {
+			} else if (e.metaKey && !e.shiftKey) {
 				switch (e.code) {
 					case 'ArrowLeft': // Cmd/Meta + Left arrow
 						e.preventDefault();
@@ -300,7 +293,7 @@ const createCursor = canvasContainer => {
 					default:
 						break;
 				}
-			} else if (e.shiftKey === true && e.metaKey === false) {
+			} else if (e.shiftKey && !e.metaKey) {
 				switch (e.code) {
 					case 'ArrowLeft': // Shift + Left arrow
 						e.preventDefault();
@@ -726,8 +719,8 @@ const createKeyboardController = () => {
 	};
 
 	const keyDown = e => {
-		if (ignored === false) {
-			if (e.altKey === false && e.ctrlKey === false && e.metaKey === false) {
+		if (!ignored) {
+			if (!e.altKey && !e.ctrlKey && !e.metaKey) {
 				if (e.code === 'Tab') {
 					// Tab key
 					e.preventDefault();
@@ -738,7 +731,7 @@ const createKeyboardController = () => {
 						deleteText();
 					}
 				}
-			} else if (e.altKey === true && e.ctrlKey === false && e.metaKey === false) {
+			} else if (e.altKey && !e.ctrlKey && !e.metaKey) {
 				// Alt key combinations for edit actions
 				switch (e.code) {
 					case 'ArrowUp': // Alt+Up Arrow - Insert Row
@@ -929,8 +922,8 @@ const createKeyboardController = () => {
 	const convertUnicode = keyCode => unicodeMapping.get(keyCode) ?? keyCode;
 
 	const keyPress = e => {
-		if (ignored === false) {
-			if (e.altKey === false && e.ctrlKey === false && e.metaKey === false) {
+		if (!ignored) {
+			if (!e.altKey && !e.ctrlKey && !e.metaKey) {
 				// Check for printable characters
 				if (e.key.length === 1) {
 					// Single character keys (printable characters)
@@ -953,7 +946,7 @@ const createKeyboardController = () => {
 					e.preventDefault();
 					draw(21);
 				}
-			} else if (e.ctrlKey === true) {
+			} else if (e.ctrlKey) {
 				// Handle Ctrl key combinations
 				if (e.key === 'u' || e.key === 'U') {
 					// Ctrl+U - Pick up colors from current position
@@ -1000,7 +993,7 @@ const createKeyboardController = () => {
 
 	const ignore = () => {
 		ignored = true;
-		if (enabled === true) {
+		if (enabled) {
 			State.cursor.disable();
 			fkeys.disable();
 		}
@@ -1008,7 +1001,7 @@ const createKeyboardController = () => {
 
 	const unignore = () => {
 		ignored = false;
-		if (enabled === true) {
+		if (enabled) {
 			State.cursor.enable();
 			fkeys.enable();
 		}
@@ -1177,7 +1170,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 
 	const keyDown = e => {
 		if (enabled) {
-			if ((e.ctrlKey === true || e.metaKey === true) && e.altKey === false && e.shiftKey === false) {
+			if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
 				switch (e.code) {
 					case 'KeyX': // Ctrl/Cmd+X - Cut
 						e.preventDefault();
@@ -1196,17 +1189,12 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 				}
 			}
 			// System paste with Ctrl+Shift+V
-			if (
-				(e.ctrlKey === true || e.metaKey === true) &&
-				e.shiftKey === true &&
-				e.altKey === false &&
-				e.code === 'KeyV'
-			) {
+			if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && e.code === 'KeyV') {
 				e.preventDefault();
 				systemPaste();
 			}
 		}
-		if ((e.ctrlKey === true || e.metaKey === true) && e.code === 'Backspace') {
+		if ((e.ctrlKey || e.metaKey) && e.code === 'Backspace') {
 			// Ctrl/Cmd+Backspace - Delete selection
 			e.preventDefault();
 			deleteSelection();

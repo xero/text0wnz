@@ -166,7 +166,7 @@ const initializeAppComponents = async () => {
 	document.addEventListener('keydown', undoAndRedo);
 	createResolutionController($('resolution-label'), $('columns-input'), $('rows-input'));
 	onClick($('new'), async () => {
-		if (confirm('All changes will be lost. Are you sure?') === true) {
+		if (confirm('All changes will be lost. Are you sure?')) {
 			bodyContainer.classList.add('loading');
 			// Clear localStorage when creating a new file
 			State.clearLocalStorage();

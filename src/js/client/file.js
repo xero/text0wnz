@@ -994,7 +994,7 @@ const loadModule = () => {
 
 			// Extract palette data if present
 			paletteData = null;
-			if (paletteFlag === true) {
+			if (paletteFlag) {
 				paletteData = new Uint8Array(48);
 				for (let i = 0; i < 48; i++) {
 					paletteData[i] = bytes[dataIndex + i];
@@ -1005,7 +1005,7 @@ const loadModule = () => {
 			// Extract font data if present
 			fontData = null;
 			const fontCharCount = font512Flag ? 512 : 256;
-			if (fontFlag === true) {
+			if (fontFlag) {
 				const fontDataSize = fontCharCount * fontHeight;
 				fontData = new Uint8Array(fontDataSize);
 				for (let i = 0; i < fontDataSize; i++) {
@@ -1014,7 +1014,7 @@ const loadModule = () => {
 				dataIndex += fontDataSize;
 			}
 
-			if (compressFlag === true) {
+			if (compressFlag) {
 				data = uncompress(bytes, dataIndex, sauce.fileSize, columns, rows);
 			} else {
 				data = convertUInt8ToUint16(bytes, dataIndex, columns * rows * 2);
@@ -1241,7 +1241,7 @@ const saveModule = () => {
 		if (datatype !== 6 && doFlagsAndTInfoS) {
 			// Not XBIN
 			let flags = 0;
-			if (State.textArtCanvas.getIceColors() === true) {
+			if (State.textArtCanvas.getIceColors()) {
 				flags += 1;
 			}
 			if (State.font.getLetterSpacing()) {
@@ -1481,7 +1481,7 @@ const saveModule = () => {
 		}
 
 		// Set ice colors flag if enabled
-		if (iceColors === true) {
+		if (iceColors) {
 			flags |= 1 << 3;
 		}
 

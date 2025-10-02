@@ -43,7 +43,7 @@ const createWorkerHandler = inputHandle => {
 	};
 
 	const onDisconnected = () => {
-		if (connected === true) {
+		if (connected) {
 			alert('You were disconnected from the server, try refreshing the page to try again.');
 		} else if (!silentCheck) {
 			State.modal.close();
@@ -471,7 +471,7 @@ const createChatController = (
 		div.appendChild(spanText);
 		divMessageWindow.appendChild(div);
 		scrollToBottom();
-		if (showNotification === true && enabled === false && divChatButton.classList.contains('notification') === false) {
+		if (showNotification && !enabled && !divChatButton.classList.contains('notification')) {
 			divChatButton.classList.add('notification');
 		}
 	};
@@ -524,7 +524,7 @@ const createChatController = (
 	inputMessage.addEventListener('keypress', keypressMessage);
 
 	const toggle = () => {
-		if (enabled === true) {
+		if (enabled) {
 			divChatWindow.classList.add('hide');
 			enabled = false;
 			onBlurCallback();
@@ -546,7 +546,7 @@ const createChatController = (
 
 	const join = (handle, sessionID, showNotification) => {
 		if (userList[sessionID] === undefined) {
-			if (notifications === true && showNotification === true) {
+			if (notifications && showNotification) {
 				newNotification(handle + ' has joined');
 			}
 			userList[sessionID] = { handle: handle, div: document.createElement('DIV') };
@@ -558,7 +558,7 @@ const createChatController = (
 
 	const nick = (handle, sessionID, showNotification) => {
 		if (userList[sessionID] !== undefined) {
-			if (showNotification === true && notifications === true) {
+			if (showNotification && notifications) {
 				newNotification(userList[sessionID].handle + ' has changed their name to ' + handle);
 			}
 			userList[sessionID].handle = handle;
@@ -568,7 +568,7 @@ const createChatController = (
 
 	const part = sessionID => {
 		if (userList[sessionID] !== undefined) {
-			if (notifications === true) {
+			if (notifications) {
 				newNotification(userList[sessionID].handle + ' has left');
 			}
 			divUserList.removeChild(userList[sessionID].div);

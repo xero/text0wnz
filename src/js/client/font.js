@@ -167,7 +167,7 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 					});
 					return;
 				}
-				if (letterSpacing === true) {
+				if (letterSpacing) {
 					ctx.putImageData(fontGlyphs[foreground][background][charCode], x * (fontData.width + 1), y * fontData.height);
 				} else {
 					ctx.putImageData(fontGlyphs[foreground][background][charCode], x * fontData.width, y * fontData.height);
@@ -178,7 +178,7 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 				if (!alphaGlyphs[foreground] || !alphaGlyphs[foreground][charCode]) {
 					charCode = fallbackCharCode;
 				}
-				if (letterSpacing === true) {
+				if (letterSpacing) {
 					ctx.drawImage(alphaGlyphs[foreground][charCode], x * (fontData.width + 1), y * fontData.height);
 					if (charCode >= 192 && charCode <= 223) {
 						ctx.drawImage(
@@ -374,7 +374,7 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 							if (!alphaGlyphs[foreground] || !alphaGlyphs[foreground][charCode]) {
 								charCode = fallbackCharCode;
 							}
-							if (letterSpacing === true) {
+							if (letterSpacing) {
 								ctx.drawImage(alphaGlyphs[foreground][charCode], x * (fontData.width + 1), y * fontData.height);
 								if (charCode >= 192 && charCode <= 223) {
 									ctx.drawImage(

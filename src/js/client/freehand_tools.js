@@ -175,7 +175,7 @@ const createFloatingPanelPalette = (width, height) => {
 		const mouseX = e.clientX - rect.left;
 		const mouseY = e.clientY - rect.top;
 		const color = Math.floor(mouseX / (width / 8)) + (mouseY < height / 2 ? 8 : 0);
-		if (e.ctrlKey === false && e.altKey === false) {
+		if (!e.ctrlKey && !e.altKey) {
 			State.palette.setForegroundColor(color);
 		} else {
 			State.palette.setBackgroundColor(color);
@@ -589,8 +589,8 @@ const createShadingPanel = () => {
 	};
 
 	const keyDown = e => {
-		if (ignored === false) {
-			if (halfBlockMode === false) {
+		if (!ignored) {
+			if (!halfBlockMode) {
 				switch (e.code) {
 					case 'ArrowLeft': // Left arrow
 						e.preventDefault();
@@ -767,7 +767,7 @@ const createCharacterBrushPanel = () => {
 	};
 
 	const keyDown = e => {
-		if (ignored === false) {
+		if (!ignored) {
 			switch (e.code) {
 				case 'ArrowLeft': // Left arrow
 					e.preventDefault();
@@ -1155,7 +1155,7 @@ const createSquareController = () => {
 		const foreground = State.palette.getForegroundColor();
 		State.textArtCanvas.startUndo();
 		State.textArtCanvas.drawHalfBlock(draw => {
-			if (outlineMode === true) {
+			if (outlineMode) {
 				for (let px = coords.x0; px <= coords.x1; px++) {
 					draw(foreground, px, coords.y0);
 					draw(foreground, px, coords.y1);
@@ -1191,7 +1191,7 @@ const createSquareController = () => {
 			endXY = e.detail;
 			const coords = processCoords();
 			const foreground = State.palette.getForegroundColor();
-			if (outlineMode === true) {
+			if (outlineMode) {
 				for (let px = coords.x0; px <= coords.x1; px++) {
 					State.toolPreview.drawHalfBlock(foreground, px, coords.y0);
 					State.toolPreview.drawHalfBlock(foreground, px, coords.y1);
@@ -1229,7 +1229,7 @@ const createSquareController = () => {
 	};
 
 	panel.append(outlineToggle.getElement());
-	if (outlineMode === true) {
+	if (outlineMode) {
 		outlineToggle.setStateOne();
 	} else {
 		outlineToggle.setStateTwo();
@@ -1353,7 +1353,7 @@ const createCircleController = () => {
 		const rows = State.textArtCanvas.getRows();
 		const doubleRows = rows * 2;
 		State.textArtCanvas.drawHalfBlock(draw => {
-			if (outlineMode === true) {
+			if (outlineMode) {
 				ellipseOutline(coords.sx, coords.sy, coords.width, coords.height, (px, py) => {
 					if (px >= 0 && px < columns && py >= 0 && py < doubleRows) {
 						draw(foreground, px, py);
@@ -1389,7 +1389,7 @@ const createCircleController = () => {
 			const columns = State.textArtCanvas.getColumns();
 			const rows = State.textArtCanvas.getRows();
 			const doubleRows = rows * 2;
-			if (outlineMode === true) {
+			if (outlineMode) {
 				ellipseOutline(coords.sx, coords.sy, coords.width, coords.height, (px, py) => {
 					if (px >= 0 && px < columns && py >= 0 && py < doubleRows) {
 						State.toolPreview.drawHalfBlock(foreground, px, py);
@@ -1424,7 +1424,7 @@ const createCircleController = () => {
 	};
 
 	panel.append(outlineToggle.getElement());
-	if (outlineMode === true) {
+	if (outlineMode) {
 		outlineToggle.setStateOne();
 	} else {
 		outlineToggle.setStateTwo();
@@ -1726,7 +1726,7 @@ const createSelectionTool = () => {
 	};
 
 	const keyDown = e => {
-		if (e.ctrlKey === false && e.altKey === false && e.shiftKey === false && e.metaKey === false) {
+		if (!e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
 			if (e.code === 'Escape') {
 				// Escape key - return to previous tool
 				e.preventDefault();
@@ -1799,7 +1799,7 @@ const createSelectionTool = () => {
 						break;
 				}
 			}
-		} else if (e.metaKey === true && e.shiftKey === false) {
+		} else if (e.metaKey && !e.shiftKey) {
 			// Handle Meta key combinations
 			switch (e.code) {
 				case 'ArrowLeft': // Meta+Left - expand selection to start of current row
@@ -1813,7 +1813,7 @@ const createSelectionTool = () => {
 				default:
 					break;
 			}
-		} else if (e.shiftKey === true && e.metaKey === false) {
+		} else if (e.shiftKey && !e.metaKey) {
 			// Handle Shift key combinations for selection
 			switch (e.code) {
 				case 'ArrowLeft': // Shift+Left

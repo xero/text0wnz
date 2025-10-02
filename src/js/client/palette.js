@@ -371,7 +371,7 @@ const createPalettePicker = canvas => {
 		if (e.code.startsWith('Digit') && ['0', '1', '2', '3', '4', '5', '6', '7'].includes(e.code.slice(-1))) {
 			const num = parseInt(e.code.slice(-1), 10); // Extract the digit from 'Digit0', etc.
 
-			if (e.ctrlKey === true) {
+			if (e.ctrlKey) {
 				e.preventDefault();
 				if (State.palette.getForegroundColor() === num) {
 					State.palette.setForegroundColor(num + 8);
@@ -388,7 +388,7 @@ const createPalettePicker = canvas => {
 				}
 			}
 			// ctrl + arrows
-		} else if (e.code.startsWith('Arrow') && e.ctrlKey === true) {
+		} else if (e.code.startsWith('Arrow') && e.ctrlKey) {
 			e.preventDefault();
 			let color;
 			switch (e.code) {

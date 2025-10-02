@@ -37,10 +37,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		let background = (imageData[dataIndex] >> 4) & 15;
 		const foreground = imageData[dataIndex] & 15;
 		const shifted = background >= 8;
-		if (shifted === true) {
+		if (shifted) {
 			background -= 8;
 		}
-		if (blinkOn === true && shifted) {
+		if (blinkOn && shifted) {
 			State.font.draw(charCode, background, background, ctxs[contextIndex], x, contextY);
 		} else {
 			State.font.draw(charCode, foreground, background, ctxs[contextIndex], x, contextY);
@@ -180,7 +180,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const charCode = imageData[index] >> 8;
 		let background = (imageData[index] >> 4) & 15;
 		const foreground = imageData[index] & 15;
-		if (iceColors === true) {
+		if (iceColors) {
 			State.font.draw(charCode, foreground, background, ctxs[contextIndex], x, contextY);
 		} else {
 			if (background >= 8) {
@@ -203,7 +203,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	let blinkStop = false;
 
 	const blink = () => {
-		if (blinkOn === false) {
+		if (!blinkOn) {
 			blinkOn = true;
 			for (let i = 0; i < ctxs.length; i++) {
 				ctxs[i].drawImage(onBlinkCanvases[i], 0, 0);
@@ -324,7 +324,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const updateTimer = () => {
 		stopBlinkTimer();
-		if (iceColors === false) {
+		if (!iceColors) {
 			blinkOn = false;
 			updateBlinkTimer().catch(console.error);
 		}
@@ -467,7 +467,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const completeCanvas = createCanvas(State.font.getWidth() * columns, State.font.getHeight() * rows);
 		let y = 0;
 		const ctx = completeCanvas.getContext('2d');
-		(iceColors === true ? canvases : offBlinkCanvases).forEach(canvas => {
+		(iceColors ? canvases : offBlinkCanvases).forEach(canvas => {
 			ctx.drawImage(canvas, 0, y);
 			y += canvas.height;
 		});
@@ -615,7 +615,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 		enqueueDirtyCell(x, y);
 
-		if (iceColors === false) {
+		if (!iceColors) {
 			updateBeforeBlinkFlip(x, y);
 		}
 	};
@@ -814,7 +814,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		} else {
 			mouseButton = true;
 			getXYCoords(e.touches[0].pageX, e.touches[0].pageY, (x, y, halfBlockY) => {
-				if (e.altKey === true) {
+				if (e.altKey) {
 					if (State.sampleTool && State.sampleTool.sample) {
 						State.sampleTool.sample(x, halfBlockY);
 					}
@@ -826,7 +826,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 								y: y,
 								halfBlockY: halfBlockY,
 								leftMouseButton: e.button === 0 && e.ctrlKey !== true,
-								rightMouseButton: e.button === 2 || e.ctrlKey === true,
+								rightMouseButton: e.button === 2 || e.ctrlKey,
 							},
 						}),
 					);
@@ -838,7 +838,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	canvasContainer.addEventListener('mousedown', e => {
 		mouseButton = true;
 		getXYCoords(e.clientX, e.clientY, (x, y, halfBlockY) => {
-			if (e.altKey === true) {
+			if (e.altKey) {
 				if (State.sampleTool && State.sampleTool.sample) {
 					State.sampleTool.sample(x, halfBlockY);
 				}
@@ -850,7 +850,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 							y: y,
 							halfBlockY: halfBlockY,
 							leftMouseButton: e.button === 0 && e.ctrlKey !== true,
-							rightMouseButton: e.button === 2 || e.ctrlKey === true,
+							rightMouseButton: e.button === 2 || e.ctrlKey,
 						},
 					}),
 				);
@@ -872,7 +872,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 						y: y,
 						halfBlockY: halfBlockY,
 						leftMouseButton: e.button === 0 && e.ctrlKey !== true,
-						rightMouseButton: e.button === 2 || e.ctrlKey === true,
+						rightMouseButton: e.button === 2 || e.ctrlKey,
 					},
 				}),
 			);
@@ -881,7 +881,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	canvasContainer.addEventListener('mousemove', e => {
 		e.preventDefault();
-		if (mouseButton === true) {
+		if (mouseButton) {
 			getXYCoords(e.clientX, e.clientY, (x, y, halfBlockY) => {
 				document.dispatchEvent(
 					new CustomEvent('onTextCanvasDrag', {
@@ -890,7 +890,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 							y: y,
 							halfBlockY: halfBlockY,
 							leftMouseButton: e.button === 0 && e.ctrlKey !== true,
-							rightMouseButton: e.button === 2 || e.ctrlKey === true,
+							rightMouseButton: e.button === 2 || e.ctrlKey,
 						},
 					}),
 				);
@@ -906,7 +906,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	canvasContainer.addEventListener('mouseup', e => {
 		e.preventDefault();
-		if (mouseButton === true) {
+		if (mouseButton) {
 			mouseButton = false;
 			document.dispatchEvent(new CustomEvent('onTextCanvasUp', {}));
 		}
@@ -919,7 +919,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	canvasContainer.addEventListener('mouseenter', e => {
 		e.preventDefault();
-		if (mouseButton === true && (e.which === 0 || e.buttons === 0)) {
+		if (mouseButton && (e.which === 0 || e.buttons === 0)) {
 			mouseButton = false;
 			document.dispatchEvent(new CustomEvent('onTextCanvasUp', {}));
 		}
@@ -944,7 +944,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					currentRedo.push([undo[0], imageData[undo[0]], undo[2], undo[3]]);
 					imageData[undo[0]] = undo[1];
 					drawHistory.push((undo[0] << 16) + undo[1]);
-					if (iceColors === false) {
+					if (!iceColors) {
 						updateBeforeBlinkFlip(undo[2], undo[3]);
 					}
 					// Use both immediate redraw AND dirty region system for undo
@@ -968,7 +968,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					currentUndo.push([redo[0], imageData[redo[0]], redo[2], redo[3]]);
 					imageData[redo[0]] = redo[1];
 					drawHistory.push((redo[0] << 16) + redo[1]);
-					if (iceColors === false) {
+					if (!iceColors) {
 						updateBeforeBlinkFlip(redo[2], redo[3]);
 					}
 					// Use both immediate redraw AND dirty region system for redo
@@ -1143,7 +1143,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		blocks.forEach(block => {
 			if (imageData[block[0]] !== block[1]) {
 				imageData[block[0]] = block[1];
-				if (iceColors === false) {
+				if (!iceColors) {
 					updateBeforeBlinkFlip(block[2], block[3]);
 				}
 				enqueueDirtyCell(block[2], block[3]);
