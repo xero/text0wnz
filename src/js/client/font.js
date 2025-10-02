@@ -43,10 +43,10 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 				throw new Error('Failed to load XB font data');
 			}
 			if (!fontWidth || fontWidth <= 0) {
-				fontWidth = 8;
+				fontWidth = magicNumbers.DEFAULT_FONT_WIDTH;
 			}
 			if (!fontHeight || fontHeight <= 0) {
-				fontHeight = 16;
+				fontHeight = magicNumbers.DEFAULT_FONT_HEIGHT;
 			}
 			const expectedDataSize = fontHeight * 256;
 			if (fontBytes.length < expectedDataSize) {

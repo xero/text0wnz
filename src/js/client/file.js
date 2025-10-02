@@ -334,12 +334,14 @@ const loadModule = () => {
 
 		while (!file.eof()) {
 			code = file.get();
-			let bytesConsumed = 1;
+			let bytesConsumed;
 			if (isUTF8) {
 				const decoded = decodeUtf8(bytes, file.getPos() - 1);
 				code = decoded.charCode;
 				bytesConsumed = decoded.bytesConsumed;
 				code = getUnicodeReverseMap.get(code) || code;
+			} else {
+				bytesConsumed = 1;
 			}
 
 			if (escaped) {
