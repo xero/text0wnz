@@ -332,18 +332,54 @@ bun server 8080 --ssl --ssl-dir /etc/letsencrypt --save-interval 15 --session-na
 | `format:fix` | `npm run format:fix` | Auto-fix formatting issues |
 | `test:unit` | `npm run test:unit` | Run unit tests with Vitest |
 
-### Building the Application
+### Build Process Overview
 
-The project uses **Vite** for building and bundling. The build process:
+This project uses [Vite](https://vitejs.dev/) as its build tool, with several plugins to enable a modern, flexible, and offline-capable web app.
+
+#### Steps
+
+1. **Environment Configuration**
+   - Environment variables are loaded via Vite’s `loadEnv()`.
+   - The UI asset directory (`uiDir`) is dynamically set using the `VITE_UI_DIR` environment variable, defaulting to `ui/`.
+   - Other variables like `VITE_DOMAIN` and `VITE_WORKER_FILE` are also utilized for domain and worker configuration.
+
+2. **Asset Output Structure**
+   - All built assets are placed in a custom UI directory, easily rebranded by changing the environment variable.
+   - Only `index.css` is renamed to `stylez.css` for clarity; other assets retain their original names.
+
+3. **Plugins Used**
+   - **vite-plugin-static-copy**: Copies worker scripts and fonts into the UI directory at build time, ensuring all necessary files are available offline.
+   - **vite-plugin-sitemap**: Generates `sitemap.xml` and `robots.txt` with custom rules for crawler exclusion.
+   - **vite-plugin-pwa**: Configures a Service Worker for offline capability, caching strategies, and generates a web app manifest with icon and screenshot references using the UI directory.
+
+4. **Build Targets and Output**
+   - Output is set to `dist` with all assets in its root or within the UI directory.
+   - No code-splitting or asset inlining is performed; all assets are separate for easier cache control.
+
+5. **Offline PWA Support**
+   - Service Worker caches critical assets (`js`, `css`, images, fonts, etc.) using "CacheFirst" strategies.
+   - The manifest and screenshots are referenced dynamically via the UI directory, supporting easy repo re-use and branding.
+   - The app is installable and works fully offline after the first load.
+
+##### Customization
+
+To change the UI asset directory, set `VITE_UI_DIR` in your `.env` file before building.
+Other branding or output customizations can be made by modifying environment variables or the build config.
+
+### Building the App
 
 ```sh
 bun bake
 ```
 
-This creates optimized files in the `dist/` directory:
+This generates optimized files in the `dist/` directory:
 - `index.html` - Main application entry point
-- `ui/editor-[hash].js` - Minified JavaScript bundle
-- `ui/stylez-[hash].css` - Minified CSS styles
+- `site.webmanifest` - PWA (Progressive Web App) configuration
+- `service.js` - Application service worker
+- `workbox-[hash].js` - Runtime/Offline asset management/caching
+- `robots.txt` and `sitemap.xml`
+- `ui/editor.js` - Minified JavaScript bundle
+- `ui/stylez.css` - Minified CSS styles
 - `ui/fonts/` - Font assets
 - `ui/` - Other static assets (images, icons, etc.)
 

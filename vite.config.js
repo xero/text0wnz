@@ -6,15 +6,16 @@ import path from 'node:path';
 
 function getBuildVersion() {
 	return Date.now().toString();
-	// return require('child_process').execSync('git rev-parse HEAD').toString().trim();
 }
 
 export default ({ mode }) => {
 	// load settings from the .env file or use defaults
 	process.env = { ...process.env, ...loadEnv(mode, process.cwd()) };
 	const domain = process.env.VITE_DOMAIN || 'https://text.0w.nz';
-	const ui_dir = process.env.VITE_UI_DIR || 'ui/';
 	const worker = process.env.VITE_WORKER_FILE || 'worker.js';
+	const uiDir = ((process.env.VITE_UI_DIR || 'ui').replace(/^\/|\/?$/g, '')) + '/';
+	const uiDirSafe = uiDir.slice(0, -1).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 	return defineConfig({
 		root: './src',
 		build: {
@@ -29,35 +30,16 @@ export default ({ mode }) => {
 					index: path.resolve('./src', 'index.html'),
 				},
 				output: {
-					entryFileNames: 'ui/editor.js',
+					entryFileNames: `${uiDir}editor.js`,
 					assetFileNames: assetInfo => {
-						if (!assetInfo.names || assetInfo.names.length < 1) return '';
-						const info = assetInfo.names[0].split('.');
+						const assetName = assetInfo.name || assetInfo.names?.[0];
+						if (!assetName) return '';
+						const info = assetName.split('.');
 						const ext = info[info.length - 1];
-						let res = null;
-						switch (assetInfo.names[0]) {
-							case 'index.css': res = 'ui/stylez.css'; break;
-							case 'icons.svg': res = 'ui/icons.svg'; break;
-							case 'favicon-96x96.png': res = 'ui/favicon-96x96.png'; break;
-							case 'favicon.ico': res = 'ui/favicon.ico'; break;
-							case 'favicon.svg': res = 'ui/favicon.svg'; break;
-							case 'logo.png': res = 'ui/logo.png'; break;
-							case 'topazplus_1200.woff2': res = 'ui/topazplus_1200.woff2'; break;
-							case 'apple-touch-icon.png': res = 'ui/apple-touch-icon.png'; break;
-							case 'android-launchericon-48-48.png': res = 'ui/android-launchericon-48-48.png'; break;
-							case 'web-app-manifest-192x192.png': res = 'ui/web-app-manifest-192x192.png'; break;
-							case 'web-app-manifest-512x512.png': res = 'ui/web-app-manifest-512x512.png'; break;
-							case 'screenshot-desktop.png':  res = 'ui/screenshot-desktop.png'; break;
-							case 'screenshot-mobile.png':  res = 'ui/screenshot-mobile.png'; break;
-							case 'screenshot-font-tall.png':  res = 'ui/screenshot-font-tall.png'; break;
-							case 'screenshot-sauce-tall.png':  res = 'ui/screenshot-sauce-tall.png'; break;
-							case 'screenshot-dark-wide.png':  res = 'ui/screenshot-dark-wide.png'; break;
-							case 'screenshot-light-wide.png':  res = 'ui/screenshot-light-wide.png'; break;
+						if (assetName === 'index.css') {
+							return `${uiDir}stylez.css`;
 						}
-						if (res) {
-							return res;
-						}
-						return `ui/[name]-[hash].${ext}`;
+						return `${uiDir}[name].${ext}`;
 					},
 				},
 			},
@@ -65,8 +47,8 @@ export default ({ mode }) => {
 		plugins: [
 			viteStaticCopy({
 				targets: [
-					{ src: `js/client/${worker}`, dest: ui_dir },
-					{ src: 'fonts', dest: ui_dir },
+					{ src: `js/client/${worker}`, dest: uiDir },
+					{ src: 'fonts', dest: uiDir },
 					{ src: 'img/manifest/favicon.ico', dest: '.' },
 					{ src: 'humans.txt', dest: '.' },
 				],
@@ -164,14 +146,8 @@ export default ({ mode }) => {
 				manifestFilename: 'site.webmanifest',
 				registerType: 'autoUpdate',
 				injectRegister: false,
-				includeAssets: [
-					'favicon.ico',
-					'favicon.svg',
-					'icons.svg',
-					'logo.png',
-					'topazplus_1200.woff2',
-					`js/client/${worker}`,
-				].filter(Boolean),
+				includeAssets: ['**/*'],
+				precache: ['**/*'],
 				manifest: {
 					name: 'teXt0wnz',
 					short_name: 'teXt0wnz',
@@ -187,107 +163,103 @@ export default ({ mode }) => {
 					theme_color: '#000',
 					display_override: ['window-controls-overlay'],
 					icons: [{
-							src: '/ui/web-app-manifest-512x512.png',
-							sizes: '512x512',
-							type: 'image/png',
-							purpose: 'any',
-						}, {
-							src: '/ui/web-app-manifest-512x512.png',
-							sizes: '512x512',
-							type: 'image/png',
-							purpose: 'maskable',
-						}, {
-							src: '/ui/web-app-manifest-192x192.png',
-							sizes: '192x192',
-							type: 'image/png',
-							purpose: 'maskable',
-						}, {
-							src: '/ui/apple-touch-icon.png',
-							sizes: '180x180',
-							type: 'image/png',
-							purpose: 'maskable',
-						}, {
-							src: '/ui/favicon-96x96.png',
-							sizes: '96x96',
-							type: 'image/png',
-							purpose: 'any',
-						}, {
-							src: '/ui/android-launchericon-48-48.png',
-							sizes: '48x48',
-							type: 'image/png',
-							purpose: 'any',
-						}],
-					screenshots : [{
-							src: '/ui/screenshot-desktop.png',
-							sizes: '3024x1964',
-							type: 'image/png',
-							platform: 'any',
-						}, {
-							src: '/ui/screenshot-mobile.png',
-							sizes: '1140x1520',
-							type: 'image/png',
-							platform: 'any',
-						}, {
-							src: '/ui/screenshot-font-tall.png',
-							sizes: '910x1370',
-							type: 'image/png',
-							platform: 'any',
-							form_factor: 'narrow',
-						}, {
-							src: '/ui/screenshot-sauce-tall.png',
-							sizes: '910x1370',
-							type: 'image/png',
-							platform: 'any',
-							form_factor: 'narrow',
-						}, {
-							src: '/ui/screenshot-light-wide.png',
-							sizes: '1540x1158',
-							type: 'image/png',
-							platform: 'any',
-							form_factor: 'wide',
-						}, {
-							src: '/ui/screenshot-dark-wide.png',
-							sizes: '1540x1158',
-							type: 'image/png',
-							platform: 'any',
-							form_factor: 'wide',
-						}],
+						src: `/${uiDir}web-app-manifest-512x512.png`,
+						sizes: '512x512',
+						type: 'image/png',
+						purpose: 'any',
+					}, {
+						src: `/${uiDir}web-app-manifest-512x512.png`,
+						sizes: '512x512',
+						type: 'image/png',
+						purpose: 'maskable',
+					}, {
+						src: `/${uiDir}web-app-manifest-192x192.png`,
+						sizes: '192x192',
+						type: 'image/png',
+						purpose: 'maskable',
+					}, {
+						src: `/${uiDir}apple-touch-icon.png`,
+						sizes: '180x180',
+						type: 'image/png',
+						purpose: 'maskable',
+					}, {
+						src: `/${uiDir}favicon-96x96.png`,
+						sizes: '96x96',
+						type: 'image/png',
+						purpose: 'any',
+					}, {
+						src: `/${uiDir}android-launchericon-48-48.png`,
+						sizes: '48x48',
+						type: 'image/png',
+						purpose: 'any',
+					}],
+					screenshots: [{
+						src: `/${uiDir}screenshot-desktop.png`,
+						sizes: '3024x1964',
+						type: 'image/png',
+						platform: 'any',
+					}, {
+						src: `/${uiDir}screenshot-mobile.png`,
+						sizes: '1140x1520',
+						type: 'image/png',
+						platform: 'any',
+					}, {
+						src: `/${uiDir}screenshot-font-tall.png`,
+						sizes: '910x1370',
+						type: 'image/png',
+						platform: 'any',
+						form_factor: 'narrow',
+					}, {
+						src: `/${uiDir}screenshot-sauce-tall.png`,
+						sizes: '910x1370',
+						type: 'image/png',
+						platform: 'any',
+						form_factor: 'narrow',
+					}, {
+						src: `/${uiDir}screenshot-light-wide.png`,
+						sizes: '1540x1158',
+						type: 'image/png',
+						platform: 'any',
+						form_factor: 'wide',
+					}, {
+						src: `/${uiDir}screenshot-dark-wide.png`,
+						sizes: '1540x1158',
+						type: 'image/png',
+						platform: 'any',
+						form_factor: 'wide',
+					}],
 					version: getBuildVersion(),
 				},
 				workbox: {
+					globPatterns: ['index.html', '**/*.{js,css,html,ico,png,svg,woff2}'],
 					cleanupOutdatedCaches: true,
 					clientsClaim: true,
 					skipWaiting: true,
+					navigateFallback: '/',
 					navigateFallbackDenylist: [
 						/^\/humans.txt/,
 						/^\/robots.txt/,
 						/^\/sitemap.xml/,
 					],
+					additionalManifestEntries: [
+						{ url: '/', revision: getBuildVersion() },
+					],
+					maximumFileSizeToCacheInBytes: 3000000,// 3mb max
 					runtimeCaching: [
 						{
-							urlPattern: /^\/ui\/.*\.(png|svg|gif|woff2?|ttf|otf)$/,
-							handler: 'StaleWhileRevalidate',
-							options: {
-								cacheName: 'asset-cache',
-								expiration: {
-									maxEntries: 50,
-									maxAgeSeconds: 7 * 24 * 60 * 60,
-								},
-							},
+							urlPattern: new RegExp(`^\\/${uiDirSafe}\\/.*\\.(png|svg|ico|woff2)$`),
+							handler: 'CacheFirst',
+							options: { cacheName: 'asset-cache' },
 						},
 						{
-							urlPattern: /^\/ui\/.*\.(js|css)$/,
-							handler: 'NetworkFirst',
-							options: {
-								cacheName: 'dynamic-cache',
-							},
+							urlPattern: new RegExp(`^\\/${uiDirSafe}\\/.*\\.(js|css)$`),
+							handler: 'CacheFirst',
+							options: { cacheName: 'dynamic-cache' },
 						},
 						{
 							urlPattern: /^\/(index\.html)?$/,
-							handler: 'NetworkFirst',
-							options: {
-								cacheName: 'html-cache',
-							},
+							handler: 'CacheFirst',
+							options: { cacheName: 'html-cache' },
 						},
 					],
 				},

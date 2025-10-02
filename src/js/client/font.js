@@ -146,8 +146,8 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 			getHeight: () => fontData.height,
 			setLetterSpacing: newLetterSpacing => {
 				if (newLetterSpacing !== letterSpacing) {
-					generateNewFontGlyphs();
 					letterSpacing = newLetterSpacing;
+					generateNewFontGlyphs();
 					document.dispatchEvent(new CustomEvent('onLetterSpacingChange', { detail: letterSpacing }));
 				}
 			},
