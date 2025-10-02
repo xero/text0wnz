@@ -11,23 +11,38 @@ const COLOR_BLACK = 0;
 const DEFAULT_FOREGROUND = 7;
 const DEFAULT_BACKGROUND = 0;
 const BLANK_CELL = (32 << 8) + 7;
-const LIGHT_BLOCK = 176; // (░)
-const MEDIUM_BLOCK = 177; // (▒)
-const DARK_BLOCK = 178; // (▓)
-const FULL_BLOCK = 219; // (█)
-const LOWER_HALFBLOCK = 223; // (▄)
-const UPPER_HALFBLOCK = 220; // (▀)
-const LEFT_HALFBLOCK = 221; // (▌)
-const RIGHT_HALFBLOCK = 222; // (▐)
-const MIDDLE_BLOCK = 254; // (■)
-const MIDDLE_DOT = 249; // (·)
+// CP437 Characters
+const LIGHT_BLOCK = 176; // ░
+const MEDIUM_BLOCK = 177; // ▒
+const DARK_BLOCK = 178; // ▓
+const FULL_BLOCK = 219; // █
+const UPPER_HALFBLOCK = 220; // ▀
+const LOWER_HALFBLOCK = 223; // ▄
+const LEFT_HALFBLOCK = 221; // ▌
+const RIGHT_HALFBLOCK = 222; // ▐
+const MIDDLE_BLOCK = 254; // ■
+const MIDDLE_DOT = 249; // ·
 const CHAR_BELL = 7; // (BEL)
 const CHAR_NULL = 0; // (NUL)
 const CHAR_SPACE = 32; // ( )
 const CHAR_NBSP = 255; // ()
-const CHAR_SLASH = 47; // (/)
-const CHAR_PIPE = 124; // (|)
-const CHAR_CAPITAL_X = 88; // (X)
+const CHAR_SLASH = 47; // /
+const CHAR_PIPE = 124; // |
+const CHAR_CAPITAL_X = 88; // X
+const CHAR_RIGHT_PARENTHESIS = 41; // )
+const CHAR_LEFT_PARENTHESIS = 40; // (
+const CHAR_RIGHT_SQUARE_BRACKET = 93; // ]
+const CHAR_LEFT_SQUARE_BRACKET = 91; // [
+const CHAR_RIGHT_CURLY_BRACE = 125; // }
+const CHAR_LEFT_CURLY_BRACE = 123; // {
+const CHAR_BACKSLASH = 92; // \
+const CHAR_FORWARD_SLASH = 47; // /
+const CHAR_APOSTROPHE = 39; // '
+const CHAR_GRAVE_ACCENT = 96; // `
+const CHAR_GREATER_THAN = 62; // >
+const CHAR_LESS_THAN = 60; // <
+const CHAR_CAPITAL_P = 80; // P
+const CHAR_DIGIT_9 = 57; // 9
 // Browser clipboard limiter
 const MAX_COPY_LINES = 3;
 // Multiplier to calculate panel width
@@ -60,6 +75,20 @@ export default {
 	CHAR_SLASH,
 	CHAR_PIPE,
 	CHAR_CAPITAL_X,
+	CHAR_RIGHT_PARENTHESIS,
+	CHAR_LEFT_PARENTHESIS,
+	CHAR_RIGHT_SQUARE_BRACKET,
+	CHAR_LEFT_SQUARE_BRACKET,
+	CHAR_RIGHT_CURLY_BRACE,
+	CHAR_LEFT_CURLY_BRACE,
+	CHAR_BACKSLASH,
+	CHAR_FORWARD_SLASH,
+	CHAR_APOSTROPHE,
+	CHAR_GRAVE_ACCENT,
+	CHAR_GREATER_THAN,
+	CHAR_LESS_THAN,
+	CHAR_CAPITAL_P,
+	CHAR_DIGIT_9,
 	MAX_COPY_LINES,
 	PANEL_WIDTH_MULTIPLIER,
 };

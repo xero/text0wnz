@@ -9,6 +9,8 @@ if [ $RESULT -ne 0 ]; then
 	printf "%s\n" "linting failed. commit aborted."
 	exit 1
 fi
+# update any tracked files that might have been formatted
+git add -u
 
 # git upstream
 git rev-parse --abbrev-ref --symbolic-full-name "@{u}" > /dev/null 2>&1

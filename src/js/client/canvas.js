@@ -540,52 +540,52 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const getMirrorCharCode = charCode => {
 		switch (charCode) {
 			// Mirror half blocks
-			case 221: // LEFT_HALF_BLOCK
-				return 222; // RIGHT_HALF_BLOCK
-			case 222: // RIGHT_HALF_BLOCK
-				return 221; // LEFT_HALF_BLOCK
+			case magicNumbers.LEFT_HALFBLOCK:
+				return magicNumbers.RIGHT_HALFBLOCK;
+			case magicNumbers.RIGHT_HALFBLOCK:
+				return magicNumbers.LEFT_HALFBLOCK;
 			// Upper and lower half blocks stay the same for horizontal mirroring
-			case 223: // UPPER_HALF_BLOCK
-			case 220: // LOWER_HALF_BLOCK
+			case magicNumbers.UPPER_HALFBLOCK:
+			case magicNumbers.LOWER_HALFBLOCK:
 				return charCode;
 
 			// Brackets and braces
-			case 40: // LEFT PARENTHESIS '('
-				return 41; // RIGHT PARENTHESIS ')'
-			case 41: // RIGHT PARENTHESIS ')'
-				return 40; // LEFT PARENTHESIS '('
-			case 91: // LEFT SQUARE BRACKET '['
-				return 93; // RIGHT SQUARE BRACKET ']'
-			case 93: // RIGHT SQUARE BRACKET ']'
-				return 91; // LEFT SQUARE BRACKET '['
-			case 123: // LEFT CURLY BRACE '{'
-				return 125; // RIGHT CURLY BRACE '}'
-			case 125: // RIGHT CURLY BRACE '}'
-				return 123; // LEFT CURLY BRACE '{'
+			case magicNumbers.CHAR_LEFT_PARENTHESIS:
+				return magicNumbers.CHAR_RIGHT_PARENTHESIS;
+			case magicNumbers.CHAR_RIGHT_PARENTHESIS:
+				return magicNumbers.CHAR_LEFT_PARENTHESIS;
+			case magicNumbers.CHAR_LEFT_SQUARE_BRACKET:
+				return magicNumbers.CHAR_RIGHT_SQUARE_BRACKET;
+			case magicNumbers.CHAR_RIGHT_SQUARE_BRACKET:
+				return magicNumbers.CHAR_LEFT_SQUARE_BRACKET;
+			case magicNumbers.CHAR_LEFT_CURLY_BRACE:
+				return magicNumbers.CHAR_RIGHT_CURLY_BRACE;
+			case magicNumbers.CHAR_RIGHT_CURLY_BRACE:
+				return magicNumbers.CHAR_LEFT_CURLY_BRACE;
 
 			// Slashes and backslashes
-			case 47: // FORWARD SLASH '/'
-				return 92; // BACKSLASH '\'
-			case 92: // BACKSLASH '\'
-				return 47; // FORWARD SLASH '/'
+			case magicNumbers.CHAR_FORWARD_SLASH:
+				return magicNumbers.CHAR_BACKSLASH;
+			case magicNumbers.CHAR_BACKSLASH:
+				return magicNumbers.CHAR_FORWARD_SLASH;
 
 			// Quotation marks
-			case 96: // GRAVE ACCENT '`'
-				return 39; // APOSTROPHE "'"
-			case 39: // APOSTROPHE "'"
-				return 96; // GRAVE ACCENT '`'
+			case magicNumbers.CHAR_GRAVE_ACCENT:
+				return magicNumbers.CHAR_APOSTROPHE;
+			case magicNumbers.CHAR_APOSTROPHE:
+				return magicNumbers.CHAR_GRAVE_ACCENT;
 
 			// Arrows
-			case 60: // LESS-THAN SIGN '<'
-				return 62; // GREATER-THAN SIGN '>'
-			case 62: // GREATER-THAN SIGN '>'
-				return 60; // LESS-THAN SIGN '<'
+			case magicNumbers.CHAR_LESS_THAN:
+				return magicNumbers.CHAR_GREATER_THAN;
+			case magicNumbers.CHAR_GREATER_THAN:
+				return magicNumbers.CHAR_LESS_THAN;
 
 			// Additional characters
-			case 57: // DIGIT '9'
-				return 80; // CAPITAL LETTER 'P'
-			case 80: // CAPITAL LETTER 'P'
-				return 57; // DIGIT '9'
+			case magicNumbers.CHAR_DIGIT_9:
+				return magicNumbers.CHAR_CAPITAL_P;
+			case magicNumbers.CHAR_CAPITAL_P:
+				return magicNumbers.CHAR_DIGIT_9;
 			default:
 				return charCode;
 		}
