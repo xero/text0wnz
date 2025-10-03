@@ -1171,17 +1171,18 @@ const saveModule = () => {
 		let processedComments = '';
 		let commentsCount = 0;
 		for (let i = 0; i < commentLines.length; i++) {
-			while (commentLines[i].length > 0) {
-				const line = commentLines[i].slice(0, 64).trim();
-				commentLines[i] = commentLines[i].slice(64);
+			const comment = commentLines[i];
+			let pos = 0;
+			while (pos < comment.length) {
+				const line = comment.substring(pos, pos + 64).trim();
 				if (line.length === 0) {
 					break;
 				}
 				commentsCount++;
 				processedComments += line.padEnd(64, ' ');
+				pos += 64;
 			}
 		}
-
 		let commentBlock = null;
 		if (commentsCount > 0) {
 			const commentBlockSize = 5 + commentsCount * 64; // "COMNT" + comment lines
