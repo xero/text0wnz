@@ -3,27 +3,40 @@ import { loadFontFromXBData, loadFontFromImage } from '../../src/js/client/font.
 
 const imgDataCap = 256;
 
+// Mock State module
+vi.mock('../../src/js/client/state.js', () => ({
+	default: {
+		zoom: 1,
+		fontDir: '/ui/fonts/',
+	},
+	State: {
+		zoom: 1,
+		fontDir: '/ui/fonts/',
+	},
+}));
+
 // Mock the UI module
 vi.mock('../../src/js/client/ui.js', () => ({
-	createCanvas: vi.fn(() => ({
+	createCanvas: vi.fn((width, height) => ({
 		getContext: vi.fn(() => ({
 			drawImage: vi.fn(),
-			getImageData: vi.fn(() => ({
-				data: new Uint8ClampedArray(64),
-				width: 8,
-				height: 8,
+			getImageData: vi.fn((x, y, w, h) => ({
+				data: new Uint8ClampedArray(Math.min((w || width) * (h || height) * 4, imgDataCap)),
+				width: w || width,
+				height: h || height,
 			})),
 			putImageData: vi.fn(),
 			clearRect: vi.fn(),
 			fillRect: vi.fn(),
-			createImageData: vi.fn((width, height) => ({
-				data: new Uint8ClampedArray(Math.min(width * height * 4, imgDataCap)), // Limit size
-				width: width,
-				height: height,
+			createImageData: vi.fn((w, h) => ({
+				data: new Uint8ClampedArray(Math.min(w * h * 4, imgDataCap)), // Limit size
+				width: w,
+				height: h,
 			})),
+			imageSmoothingEnabled: false,
 		})),
-		width: 128,
-		height: 256,
+		width: width || 128,
+		height: height || 256,
 	})),
 }));
 
