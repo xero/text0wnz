@@ -418,8 +418,26 @@ const initializeAppComponents = async () => {
 	window.matchMedia('(prefers-color-scheme: dark)').matches && darkToggle();
 
 	$('zoom-level').addEventListener('change', e => {
-		const scaleFactor = Number.isInteger(e.target.value) ? e.target.value.toFixed(1) : e.target.value;
+		const scaleFactor = parseFloat(e.target.value);
+		const slider = e.target;
+
+		// Disable slider during regeneration
+		slider.disabled = true;
 		State.zoom = scaleFactor;
+
+		// Regenerate glyphs and redraw
+		if (State.font && typeof State.font.redraw === 'function') {
+			State.font.redraw();
+			State.textArtCanvas.redrawEntireImage();
+		}
+
+		// Re-enable slider after a short delay
+		setTimeout(() => {
+			slider.disabled = false;
+		}, 100);
+
+		// Dispatch zoom change event
+		document.dispatchEvent(new CustomEvent('onZoomChange', { detail: scaleFactor }));
 	});
 
 	const updateFontDisplay = () => {

@@ -25,6 +25,8 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 		let fontGlyphs;
 		let alphaGlyphs;
 		let letterSpacingImageData;
+		let scaledGlyphs = {};
+		let scaledAlphaGlyphs = {};
 
 		const parseXBFontData = (fontBytes, fontWidth, fontHeight) => {
 			if (!fontBytes) {
@@ -66,6 +68,49 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 			};
 		};
 
+		const generateScaledGlyphs = zoom => {
+			const scaledWidth = Math.round(fontData.width * zoom);
+			const scaledHeight = Math.round(fontData.height * zoom);
+
+			// Create scaled versions of fontGlyphs
+			scaledGlyphs[zoom] = new Array(16);
+			for (let foreground = 0; foreground < 16; foreground++) {
+				scaledGlyphs[zoom][foreground] = new Array(16);
+				for (let background = 0; background < 16; background++) {
+					scaledGlyphs[zoom][foreground][background] = new Array(256);
+					for (let charCode = 0; charCode < 256; charCode++) {
+						if (fontGlyphs[foreground] && fontGlyphs[foreground][background] && fontGlyphs[foreground][background][charCode]) {
+							const sourceCanvas = createCanvas(fontData.width, fontData.height);
+							const sourceCtx = sourceCanvas.getContext('2d');
+							sourceCtx.putImageData(fontGlyphs[foreground][background][charCode], 0, 0);
+
+							const scaledCanvas = createCanvas(scaledWidth, scaledHeight);
+							const scaledCtx = scaledCanvas.getContext('2d');
+							scaledCtx.imageSmoothingEnabled = false;
+							scaledCtx.drawImage(sourceCanvas, 0, 0, fontData.width, fontData.height, 0, 0, scaledWidth, scaledHeight);
+
+							scaledGlyphs[zoom][foreground][background][charCode] = scaledCtx.getImageData(0, 0, scaledWidth, scaledHeight);
+						}
+					}
+				}
+			}
+
+			// Create scaled versions of alphaGlyphs
+			scaledAlphaGlyphs[zoom] = new Array(16);
+			for (let foreground = 0; foreground < 16; foreground++) {
+				scaledAlphaGlyphs[zoom][foreground] = new Array(256);
+				for (let charCode = 0; charCode < 256; charCode++) {
+					if (alphaGlyphs[foreground] && alphaGlyphs[foreground][charCode]) {
+						const scaledCanvas = createCanvas(scaledWidth, scaledHeight);
+						const scaledCtx = scaledCanvas.getContext('2d');
+						scaledCtx.imageSmoothingEnabled = false;
+						scaledCtx.drawImage(alphaGlyphs[foreground][charCode], 0, 0, fontData.width, fontData.height, 0, 0, scaledWidth, scaledHeight);
+						scaledAlphaGlyphs[zoom][foreground][charCode] = scaledCanvas;
+					}
+				}
+			}
+		};
+
 		const generateNewFontGlyphs = () => {
 			const canvas = createCanvas(fontData.width, fontData.height);
 			const ctx = canvas.getContext('2d');
@@ -131,6 +176,14 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 				}
 				letterSpacingImageData[i] = imageData;
 			}
+			// Clear scaled glyph cache when regenerating base glyphs
+			scaledGlyphs = {};
+			scaledAlphaGlyphs = {};
+			// Generate scaled glyphs for current zoom
+			const zoom = State.zoom || 1;
+			if (zoom !== 1) {
+				generateScaledGlyphs(zoom);
+			}
 		};
 
 		fontData = parseXBFontData(fontBytes, fontWidth, fontHeight);
@@ -142,8 +195,15 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 		generateNewFontGlyphs();
 		resolve({
 			getData: () => fontData,
-			getWidth: () => fontData.width,
-			getHeight: () => fontData.height,
+			getWidth: () => {
+				const zoom = State.zoom || 1;
+				const baseWidth = letterSpacing ? fontData.width + 1 : fontData.width;
+				return Math.round(baseWidth * zoom);
+			},
+			getHeight: () => {
+				const zoom = State.zoom || 1;
+				return Math.round(fontData.height * zoom);
+			},
 			setLetterSpacing: newLetterSpacing => {
 				if (newLetterSpacing !== letterSpacing) {
 					letterSpacing = newLetterSpacing;
@@ -153,48 +213,80 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 			},
 			getLetterSpacing: () => letterSpacing,
 			draw: (charCode, foreground, background, ctx, x, y) => {
+				const zoom = State.zoom || 1;
+				let glyphs = fontGlyphs;
+				let width = fontData.width;
+				let height = fontData.height;
+
+				// Use scaled glyphs if zoom is not 1
+				if (zoom !== 1) {
+					if (!scaledGlyphs[zoom]) {
+						generateScaledGlyphs(zoom);
+					}
+					glyphs = scaledGlyphs[zoom];
+					width = Math.round(fontData.width * zoom);
+					height = Math.round(fontData.height * zoom);
+				}
+
 				if (
-					!fontGlyphs ||
-					!fontGlyphs[foreground] ||
-					!fontGlyphs[foreground][background] ||
-					!fontGlyphs[foreground][background][charCode]
+					!glyphs ||
+					!glyphs[foreground] ||
+					!glyphs[foreground][background] ||
+					!glyphs[foreground][background][charCode]
 				) {
 					console.warn('[Font] XB Font glyph not available:', {
 						foreground,
 						background,
 						charCode,
-						fontGlyphsExists: !!fontGlyphs,
+						fontGlyphsExists: !!glyphs,
 					});
 					return;
 				}
-				if (letterSpacing) {
-					ctx.putImageData(fontGlyphs[foreground][background][charCode], x * (fontData.width + 1), y * fontData.height);
-				} else {
-					ctx.putImageData(fontGlyphs[foreground][background][charCode], x * fontData.width, y * fontData.height);
-				}
+
+				const effectiveWidth = letterSpacing ? width + Math.round(zoom) : width;
+				ctx.putImageData(glyphs[foreground][background][charCode], x * effectiveWidth, y * height);
 			},
 			drawWithAlpha: (charCode, foreground, ctx, x, y) => {
+				const zoom = State.zoom || 1;
+				let glyphs = alphaGlyphs;
+				let width = fontData.width;
+				let height = fontData.height;
+
+				// Use scaled glyphs if zoom is not 1
+				if (zoom !== 1) {
+					if (!scaledAlphaGlyphs[zoom]) {
+						generateScaledGlyphs(zoom);
+					}
+					glyphs = scaledAlphaGlyphs[zoom];
+					width = Math.round(fontData.width * zoom);
+					height = Math.round(fontData.height * zoom);
+				}
+
 				const fallbackCharCode = magicNumbers.CHAR_CAPITAL_X;
-				if (!alphaGlyphs[foreground] || !alphaGlyphs[foreground][charCode]) {
+				if (!glyphs[foreground] || !glyphs[foreground][charCode]) {
 					charCode = fallbackCharCode;
 				}
+
+				const effectiveWidth = letterSpacing ? width + Math.round(zoom) : width;
 				if (letterSpacing) {
-					ctx.drawImage(alphaGlyphs[foreground][charCode], x * (fontData.width + 1), y * fontData.height);
+					ctx.drawImage(glyphs[foreground][charCode], x * effectiveWidth, y * height);
 					if (charCode >= 192 && charCode <= 223) {
+						const srcWidth = zoom !== 1 ? width : fontData.width;
+						const srcHeight = zoom !== 1 ? height : fontData.height;
 						ctx.drawImage(
-							alphaGlyphs[foreground][charCode],
-							fontData.width - 1,
+							glyphs[foreground][charCode],
+							srcWidth - Math.round(zoom),
 							0,
-							1,
-							fontData.height,
-							x * (fontData.width + 1) + fontData.width,
-							y * fontData.height,
-							1,
-							fontData.height,
+							Math.round(zoom),
+							srcHeight,
+							x * effectiveWidth + width,
+							y * height,
+							Math.round(zoom),
+							srcHeight,
 						);
 					}
 				} else {
-					ctx.drawImage(alphaGlyphs[foreground][charCode], x * fontData.width, y * fontData.height);
+					ctx.drawImage(glyphs[foreground][charCode], x * effectiveWidth, y * height);
 				}
 			},
 			redraw: () => generateNewFontGlyphs(),
@@ -208,6 +300,8 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 		let fontGlyphs;
 		let alphaGlyphs;
 		let letterSpacingImageData;
+		let scaledGlyphs = {};
+		let scaledAlphaGlyphs = {};
 
 		const parseFontData = imageData => {
 			const fontWidth = imageData.width / 16;
@@ -248,6 +342,49 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 			return undefined;
 		};
 
+		const generateScaledGlyphs = zoom => {
+			const scaledWidth = Math.round(fontData.width * zoom);
+			const scaledHeight = Math.round(fontData.height * zoom);
+
+			// Create scaled versions of fontGlyphs
+			scaledGlyphs[zoom] = new Array(16);
+			for (let foreground = 0; foreground < 16; foreground++) {
+				scaledGlyphs[zoom][foreground] = new Array(16);
+				for (let background = 0; background < 16; background++) {
+					scaledGlyphs[zoom][foreground][background] = new Array(256);
+					for (let charCode = 0; charCode < 256; charCode++) {
+						if (fontGlyphs[foreground] && fontGlyphs[foreground][background] && fontGlyphs[foreground][background][charCode]) {
+							const sourceCanvas = createCanvas(fontData.width, fontData.height);
+							const sourceCtx = sourceCanvas.getContext('2d');
+							sourceCtx.putImageData(fontGlyphs[foreground][background][charCode], 0, 0);
+
+							const scaledCanvas = createCanvas(scaledWidth, scaledHeight);
+							const scaledCtx = scaledCanvas.getContext('2d');
+							scaledCtx.imageSmoothingEnabled = false;
+							scaledCtx.drawImage(sourceCanvas, 0, 0, fontData.width, fontData.height, 0, 0, scaledWidth, scaledHeight);
+
+							scaledGlyphs[zoom][foreground][background][charCode] = scaledCtx.getImageData(0, 0, scaledWidth, scaledHeight);
+						}
+					}
+				}
+			}
+
+			// Create scaled versions of alphaGlyphs
+			scaledAlphaGlyphs[zoom] = new Array(16);
+			for (let foreground = 0; foreground < 16; foreground++) {
+				scaledAlphaGlyphs[zoom][foreground] = new Array(256);
+				for (let charCode = 0; charCode < 256; charCode++) {
+					if (alphaGlyphs[foreground] && alphaGlyphs[foreground][charCode]) {
+						const scaledCanvas = createCanvas(scaledWidth, scaledHeight);
+						const scaledCtx = scaledCanvas.getContext('2d');
+						scaledCtx.imageSmoothingEnabled = false;
+						scaledCtx.drawImage(alphaGlyphs[foreground][charCode], 0, 0, fontData.width, fontData.height, 0, 0, scaledWidth, scaledHeight);
+						scaledAlphaGlyphs[zoom][foreground][charCode] = scaledCanvas;
+					}
+				}
+			}
+		};
+
 		const generateNewFontGlyphs = () => {
 			const canvas = createCanvas(fontData.width, fontData.height);
 			const ctx = canvas.getContext('2d');
@@ -321,6 +458,14 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 				}
 				letterSpacingImageData[i] = imageData;
 			}
+			// Clear scaled glyph cache when regenerating base glyphs
+			scaledGlyphs = {};
+			scaledAlphaGlyphs = {};
+			// Generate scaled glyphs for current zoom
+			const zoom = State.zoom || 1;
+			if (zoom !== 1) {
+				generateScaledGlyphs(zoom);
+			}
 		};
 
 		loadImageAndGetImageData(`${State.fontDir}${fontName}.png`)
@@ -335,8 +480,15 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 
 					resolve({
 						getData: () => fontData,
-						getWidth: () => (letterSpacing ? fontData.width + 1 : fontData.width),
-						getHeight: () => fontData.height,
+						getWidth: () => {
+							const zoom = State.zoom || 1;
+							const baseWidth = letterSpacing ? fontData.width + 1 : fontData.width;
+							return Math.round(baseWidth * zoom);
+						},
+						getHeight: () => {
+							const zoom = State.zoom || 1;
+							return Math.round(fontData.height * zoom);
+						},
 						setLetterSpacing: newLetterSpacing => {
 							if (newLetterSpacing !== letterSpacing) {
 								letterSpacing = newLetterSpacing;
@@ -346,53 +498,80 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 						},
 						getLetterSpacing: () => letterSpacing,
 						draw: (charCode, foreground, background, ctx, x, y) => {
+							const zoom = State.zoom || 1;
+							let glyphs = fontGlyphs;
+							let width = fontData.width;
+							let height = fontData.height;
+
+							// Use scaled glyphs if zoom is not 1
+							if (zoom !== 1) {
+								if (!scaledGlyphs[zoom]) {
+									generateScaledGlyphs(zoom);
+								}
+								glyphs = scaledGlyphs[zoom];
+								width = Math.round(fontData.width * zoom);
+								height = Math.round(fontData.height * zoom);
+							}
+
 							if (
-								!fontGlyphs ||
-								!fontGlyphs[foreground] ||
-								!fontGlyphs[foreground][background] ||
-								!fontGlyphs[foreground][background][charCode]
+								!glyphs ||
+								!glyphs[foreground] ||
+								!glyphs[foreground][background] ||
+								!glyphs[foreground][background][charCode]
 							) {
 								console.warn('[Font] Font glyph not available:', {
 									foreground,
 									background,
 									charCode,
-									fontGlyphsExists: !!fontGlyphs,
+									fontGlyphsExists: !!glyphs,
 								});
 								return;
 							}
 
-							if (letterSpacing) {
-								ctx.putImageData(
-									fontGlyphs[foreground][background][charCode],
-									x * (fontData.width + 1),
-									y * fontData.height,
-								);
-							} else {
-								ctx.putImageData(fontGlyphs[foreground][background][charCode], x * fontData.width, y * fontData.height);
-							}
+							const effectiveWidth = letterSpacing ? width + Math.round(zoom) : width;
+							ctx.putImageData(glyphs[foreground][background][charCode], x * effectiveWidth, y * height);
 						},
 						drawWithAlpha: (charCode, foreground, ctx, x, y) => {
+							const zoom = State.zoom || 1;
+							let glyphs = alphaGlyphs;
+							let width = fontData.width;
+							let height = fontData.height;
+
+							// Use scaled glyphs if zoom is not 1
+							if (zoom !== 1) {
+								if (!scaledAlphaGlyphs[zoom]) {
+									generateScaledGlyphs(zoom);
+								}
+								glyphs = scaledAlphaGlyphs[zoom];
+								width = Math.round(fontData.width * zoom);
+								height = Math.round(fontData.height * zoom);
+							}
+
 							const fallbackCharCode = magicNumbers.CHAR_CAPITAL_X;
-							if (!alphaGlyphs[foreground] || !alphaGlyphs[foreground][charCode]) {
+							if (!glyphs[foreground] || !glyphs[foreground][charCode]) {
 								charCode = fallbackCharCode;
 							}
+
+							const effectiveWidth = letterSpacing ? width + Math.round(zoom) : width;
 							if (letterSpacing) {
-								ctx.drawImage(alphaGlyphs[foreground][charCode], x * (fontData.width + 1), y * fontData.height);
+								ctx.drawImage(glyphs[foreground][charCode], x * effectiveWidth, y * height);
 								if (charCode >= 192 && charCode <= 223) {
+									const srcWidth = zoom !== 1 ? width : fontData.width;
+									const srcHeight = zoom !== 1 ? height : fontData.height;
 									ctx.drawImage(
-										alphaGlyphs[foreground][charCode],
-										fontData.width - 1,
+										glyphs[foreground][charCode],
+										srcWidth - Math.round(zoom),
 										0,
-										1,
-										fontData.height,
-										x * (fontData.width + 1) + fontData.width,
-										y * fontData.height,
-										1,
-										fontData.height,
+										Math.round(zoom),
+										srcHeight,
+										x * effectiveWidth + width,
+										y * height,
+										Math.round(zoom),
+										srcHeight,
 									);
 								}
 							} else {
-								ctx.drawImage(alphaGlyphs[foreground][charCode], x * fontData.width, y * fontData.height);
+								ctx.drawImage(glyphs[foreground][charCode], x * effectiveWidth, y * height);
 							}
 						},
 						redraw: () => generateNewFontGlyphs(),
