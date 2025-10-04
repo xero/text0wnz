@@ -28,18 +28,11 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 
 		const parseXBFontData = (fontBytes, fontWidth, fontHeight) => {
 			if (!fontBytes) {
-				console.error(
-					`[Font] Invalid fontBytes provided to parseXBFontData. ` +
-					`Expected: a non-empty Uint8Array or Buffer; Received: ${String(fontBytes)}`,
-				);
+				console.error(`[Font] Invalid fontBytes provided to parseXBFontData. Expected: a non-empty Uint8Array or Buffer; Received: ${String(fontBytes)}`);
 				throw new Error('Failed to load XB font data');
 			}
 			if (fontBytes.length === 0) {
-				console.error(
-					`[Font] Invalid fontBytes provided to parseXBFontData. ` +
-					`Expected: a non-empty Uint8Array or Buffer; Received: ` +
-					`type ${typeof fontBytes}, length ${fontBytes.length}`,
-				);
+				console.error(`[Font] Invalid fontBytes provided to parseXBFontData. Expected: a non-empty Uint8Array or Buffer; Received: type ${typeof fontBytes}, length ${fontBytes.length}`);
 				throw new Error('Failed to load XB font data');
 			}
 			if (!fontWidth || fontWidth <= 0) {
