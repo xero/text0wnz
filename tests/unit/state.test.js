@@ -494,6 +494,154 @@ describe('State Management System', () => {
 		});
 	});
 
+	describe('LocalStorage Optimization', () => {
+		it('should use base64 encoding for canvas data serialization', () => {
+			// Mock textArtCanvas with realistic data
+			const imageData = new Uint16Array(80 * 25);
+			for (let i = 0; i < imageData.length; i++) {
+				imageData[i] = Math.floor(Math.random() * 65536);
+			}
+
+			const mockCanvas = {
+				getImageData: () => imageData,
+				getColumns: () => 80,
+				getRows: () => 25,
+				getIceColors: () => false,
+				getCurrentFontName: () => 'CP437 8x16',
+				getXBFontData: () => null,
+			};
+
+			State.textArtCanvas = mockCanvas;
+			State.font = { getLetterSpacing: () => false };
+
+			const serialized = State._manager.serializeState();
+
+			// Check that imageData is a base64 string, not an array
+			expect(typeof serialized.canvasData.imageData).toBe('string');
+			expect(serialized.canvasData.imageData).not.toBeInstanceOf(Array);
+		});
+
+		it('should use base64 encoding for XBIN font data serialization', () => {
+			const fontBytes = new Uint8Array(4096);
+			for (let i = 0; i < fontBytes.length; i++) {
+				fontBytes[i] = Math.floor(Math.random() * 256);
+			}
+
+			const mockCanvas = {
+				getImageData: () => new Uint16Array(80 * 25),
+				getColumns: () => 80,
+				getRows: () => 25,
+				getIceColors: () => false,
+				getCurrentFontName: () => 'CP437 8x16',
+				getXBFontData: () => ({
+					bytes: fontBytes,
+					width: 8,
+					height: 16,
+				}),
+			};
+
+			State.textArtCanvas = mockCanvas;
+			State.font = { getLetterSpacing: () => false };
+
+			const serialized = State._manager.serializeState();
+
+			// Check that XBIN font data bytes is a base64 string, not an array
+			expect(typeof serialized.xbinFontData.bytes).toBe('string');
+			expect(serialized.xbinFontData.bytes).not.toBeInstanceOf(Array);
+		});
+
+		it('should correctly deserialize base64 canvas data', () => {
+			const originalData = new Uint16Array(80 * 25);
+			for (let i = 0; i < originalData.length; i++) {
+				originalData[i] = i % 65536;
+			}
+
+			// Serialize using the optimized method
+			const base64 = State._manager._uint16ArrayToBase64(originalData);
+
+			// Deserialize it back
+			const deserializedData = State._manager._base64ToUint16Array(base64);
+
+			// Check that data matches
+			expect(deserializedData.length).toBe(originalData.length);
+			for (let i = 0; i < originalData.length; i++) {
+				expect(deserializedData[i]).toBe(originalData[i]);
+			}
+		});
+
+		it('should correctly deserialize base64 XBIN font data', () => {
+			const originalBytes = new Uint8Array(4096);
+			for (let i = 0; i < originalBytes.length; i++) {
+				originalBytes[i] = i % 256;
+			}
+
+			// Serialize using the optimized method
+			const base64 = State._manager._uint8ArrayToBase64(originalBytes);
+
+			// Deserialize it back
+			const deserializedBytes = State._manager._base64ToUint8Array(base64);
+
+			// Check that data matches
+			expect(deserializedBytes.length).toBe(originalBytes.length);
+			for (let i = 0; i < originalBytes.length; i++) {
+				expect(deserializedBytes[i]).toBe(originalBytes[i]);
+			}
+		});
+
+		it('should handle backward compatibility with legacy array format', () => {
+			const legacyData = {
+				canvasData: {
+					imageData: [1, 2, 3, 4, 5],
+					columns: 5,
+					rows: 1,
+				},
+				iceColors: false,
+				fontName: 'CP437 8x16',
+			};
+
+			let capturedData = null;
+			const mockCanvas = {
+				setImageData: (cols, rows, data, ice) => {
+					capturedData = { cols, rows, data, ice };
+				},
+				setFont: vi.fn((fontName, callback) => callback && callback()),
+			};
+
+			State.textArtCanvas = mockCanvas;
+			State.modal = { open: vi.fn(), close: vi.fn() };
+
+			// Mock loadFromLocalStorage to return legacy format
+			State._manager.loadFromLocalStorage = () => legacyData;
+
+			State.restoreStateFromLocalStorage();
+
+			// Check that data was restored correctly
+			expect(capturedData).not.toBeNull();
+			expect(capturedData.cols).toBe(5);
+			expect(capturedData.rows).toBe(1);
+			expect(capturedData.data).toBeInstanceOf(Uint16Array);
+			expect(Array.from(capturedData.data)).toEqual([1, 2, 3, 4, 5]);
+		});
+
+		it('should produce smaller serialized data with base64 vs array', () => {
+			const imageData = new Uint16Array(80 * 25);
+			for (let i = 0; i < imageData.length; i++) {
+				imageData[i] = Math.floor(Math.random() * 65536);
+			}
+
+			// Base64 version
+			const base64String = State._manager._uint16ArrayToBase64(imageData);
+			const base64JsonSize = JSON.stringify({ imageData: base64String }).length;
+
+			// Array version (legacy)
+			const arrayVersion = Array.from(imageData);
+			const arrayJsonSize = JSON.stringify({ imageData: arrayVersion }).length;
+
+			// Base64 should be significantly smaller (approximately 33% smaller or better)
+			expect(base64JsonSize).toBeLessThan(arrayJsonSize * 0.5);
+		});
+	});
+
 	describe('Edge Cases and Error Handling', () => {
 		it('should handle undefined dependencies gracefully', () => {
 			expect(() => {

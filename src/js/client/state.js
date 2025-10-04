@@ -337,7 +337,40 @@ class StateManager {
 	}
 
 	/**
-	 * Serialize application state to a plain object for localStorage
+	 * Convert Uint16Array to base64 string (optimized for localStorage)
+	 */
+	_uint16ArrayToBase64(uint16Array) {
+		// Convert Uint16Array to Uint8Array (viewing the same buffer)
+		const uint8Array = new Uint8Array(uint16Array.buffer, uint16Array.byteOffset, uint16Array.byteLength);
+
+		// Convert to binary string in chunks to avoid stack overflow on large arrays
+		const chunkSize = 8192;
+		let binary = '';
+		for (let i = 0; i < uint8Array.length; i += chunkSize) {
+			const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+			binary += String.fromCharCode.apply(null, chunk);
+		}
+
+		return btoa(binary);
+	}
+
+	/**
+	 * Convert Uint8Array to base64 string (optimized for localStorage)
+	 */
+	_uint8ArrayToBase64(uint8Array) {
+		// Convert to binary string in chunks to avoid stack overflow on large arrays
+		const chunkSize = 8192;
+		let binary = '';
+		for (let i = 0; i < uint8Array.length; i += chunkSize) {
+			const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+			binary += String.fromCharCode.apply(null, chunk);
+		}
+
+		return btoa(binary);
+	}
+
+	/**
+	 * Serialize application state for localStorage
 	 */
 	serializeState() {
 		const serialized = {};
@@ -351,7 +384,7 @@ class StateManager {
 				const iceColors = this.state.textArtCanvas.getIceColors();
 
 				serialized[STATE_SYNC_KEYS.CANVAS_DATA] = {
-					imageData: Array.from(imageData), // Convert Uint16Array to regular array
+					imageData: this._uint16ArrayToBase64(imageData),
 					columns: columns,
 					rows: rows,
 				};
@@ -385,8 +418,9 @@ class StateManager {
 			if (this.state.textArtCanvas && typeof this.state.textArtCanvas.getXBFontData === 'function') {
 				const xbFontData = this.state.textArtCanvas.getXBFontData();
 				if (xbFontData && xbFontData.bytes) {
+					// Use base64 encoding instead of Array.from for much better performance
 					serialized[STATE_SYNC_KEYS.XBIN_FONT_DATA] = {
-						bytes: Array.from(xbFontData.bytes), // Convert Uint8Array to regular array
+						bytes: this._uint8ArrayToBase64(xbFontData.bytes),
 						width: xbFontData.width,
 						height: xbFontData.height,
 					};
@@ -442,7 +476,7 @@ class StateManager {
 				}
 			}
 
-			// Check if letter spacing is default (false)
+			// Check if letter spacing is default
 			if (this.state.font && this.state.font.getLetterSpacing) {
 				if (this.state.font.getLetterSpacing() !== false) {
 					return false;
@@ -540,8 +574,35 @@ class StateManager {
 	}
 
 	/**
+	 * Convert base64 string to Uint16Array (optimized deserialization)
+	 */
+	_base64ToUint16Array(base64String) {
+		const binaryString = atob(base64String);
+		const len = binaryString.length;
+		const bytes = new Uint8Array(len);
+		for (let i = 0; i < len; i++) {
+			bytes[i] = binaryString.charCodeAt(i);
+		}
+		return new Uint16Array(bytes.buffer);
+	}
+
+	/**
+	 * Convert base64 string to Uint8Array (optimized deserialization)
+	 */
+	_base64ToUint8Array(base64String) {
+		const binaryString = atob(base64String);
+		const len = binaryString.length;
+		const bytes = new Uint8Array(len);
+		for (let i = 0; i < len; i++) {
+			bytes[i] = binaryString.charCodeAt(i);
+		}
+		return bytes;
+	}
+
+	/**
 	 * Restore state from localStorage after components are initialized
 	 * This dispatches events to ensure UI updates properly
+	 * Supports both new base64 format and legacy array format for backward compatibility
 	 */
 	restoreStateFromLocalStorage() {
 		const savedState = this.loadFromLocalStorage();
@@ -562,8 +623,18 @@ class StateManager {
 				const { imageData, columns, rows } = savedState[STATE_SYNC_KEYS.CANVAS_DATA];
 				const iceColors = savedState[STATE_SYNC_KEYS.ICE_COLORS] || false;
 
-				// Convert array back to Uint16Array
-				const uint16Data = new Uint16Array(imageData);
+				let uint16Data;
+				// Support both new base64 format and legacy array format
+				if (typeof imageData === 'string') {
+					// New optimized base64 format
+					uint16Data = this._base64ToUint16Array(imageData);
+				} else if (Array.isArray(imageData)) {
+					// Legacy array format (for backward compatibility)
+					uint16Data = new Uint16Array(imageData);
+				} else {
+					console.error('[State] Invalid imageData format in localStorage');
+					return;
+				}
 
 				// Use setImageData to restore canvas
 				if (typeof this.state.textArtCanvas.setImageData === 'function') {
@@ -594,8 +665,20 @@ class StateManager {
 			if (savedState[STATE_SYNC_KEYS.XBIN_FONT_DATA] && this.state.textArtCanvas) {
 				if (typeof this.state.textArtCanvas.setXBFontData === 'function') {
 					const xbFontData = savedState[STATE_SYNC_KEYS.XBIN_FONT_DATA];
-					// Convert array back to Uint8Array
-					const fontBytes = new Uint8Array(xbFontData.bytes);
+
+					let fontBytes;
+					// Support both new base64 format and legacy array format
+					if (typeof xbFontData.bytes === 'string') {
+						// New optimized base64 format
+						fontBytes = this._base64ToUint8Array(xbFontData.bytes);
+					} else if (Array.isArray(xbFontData.bytes)) {
+						// Legacy array format (for backward compatibility)
+						fontBytes = new Uint8Array(xbFontData.bytes);
+					} else {
+						console.error('[State] Invalid XBIN font data format in localStorage');
+						return;
+					}
+
 					this.state.textArtCanvas.setXBFontData(fontBytes, xbFontData.width, xbFontData.height);
 				}
 			}
@@ -621,7 +704,7 @@ class StateManager {
 			const w8 = setTimeout(_ => {
 				stateManager.state.modal.close();
 				clearTimeout(w8);
-			}, 1500);
+			}, 1);
 		}
 	}
 }
