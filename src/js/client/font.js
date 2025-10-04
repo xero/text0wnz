@@ -25,6 +25,8 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 		let fontGlyphs;
 		let alphaGlyphs;
 		let letterSpacingImageData;
+		let scaledGlyphsCache = {};
+		let scaledAlphaGlyphsCache = {};
 
 		const parseXBFontData = (fontBytes, fontWidth, fontHeight) => {
 			if (!fontBytes) {
@@ -133,6 +135,51 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 			}
 		};
 
+		const generateScaledGlyphs = zoom => {
+			scaledGlyphsCache = {};
+			scaledAlphaGlyphsCache = {};
+
+			// Regular glyphs
+			for (let fg = 0; fg < 16; fg++) {
+				scaledGlyphsCache[fg] = [];
+				for (let bg = 0; bg < 16; bg++) {
+					scaledGlyphsCache[fg][bg] = [];
+					for (let cc = 0; cc < 256; cc++) {
+						const imageData = fontGlyphs[fg][bg][cc];
+						const srcW = imageData.width;
+						const srcH = imageData.height;
+						const dstW = Math.round(srcW * zoom);
+						const dstH = Math.round(srcH * zoom);
+						const glyphCanvas = createCanvas(dstW, dstH);
+						const ctx = glyphCanvas.getContext('2d');
+						const tempCanvas = createCanvas(srcW, srcH);
+						tempCanvas.getContext('2d').putImageData(imageData, 0, 0);
+						ctx.imageSmoothingEnabled = false;
+						ctx.drawImage(tempCanvas, 0, 0, srcW, srcH, 0, 0, dstW, dstH);
+						scaledGlyphsCache[fg][bg][cc] = glyphCanvas;
+					}
+				}
+			}
+
+			// Alpha glyphs
+			for (let fg = 0; fg < 16; fg++) {
+				scaledAlphaGlyphsCache[fg] = [];
+				for (let cc = 0; cc < 256; cc++) {
+					const alphaCanvas = alphaGlyphs[fg][cc];
+					if (!alphaCanvas) {continue;}
+					const srcW = alphaCanvas.width;
+					const srcH = alphaCanvas.height;
+					const dstW = Math.round(srcW * zoom);
+					const dstH = Math.round(srcH * zoom);
+					const scaledCanvas = createCanvas(dstW, dstH);
+					const ctx = scaledCanvas.getContext('2d');
+					ctx.imageSmoothingEnabled = false;
+					ctx.drawImage(alphaCanvas, 0, 0, srcW, srcH, 0, 0, dstW, dstH);
+					scaledAlphaGlyphsCache[fg][cc] = scaledCanvas;
+				}
+			}
+		};
+
 		fontData = parseXBFontData(fontBytes, fontWidth, fontHeight);
 		if (!fontData || !fontData.width || fontData.width <= 0 || !fontData.height || fontData.height <= 0) {
 			console.error('[Font] Invalid XB font data:', fontData);
@@ -140,64 +187,71 @@ const loadFontFromXBData = (fontBytes, fontWidth, fontHeight, letterSpacing, pal
 			return;
 		}
 		generateNewFontGlyphs();
+		generateScaledGlyphs(State.zoom || 1);
 		resolve({
 			getData: () => fontData,
-			getWidth: () => fontData.width,
-			getHeight: () => fontData.height,
+			getWidth: () => fontData.width * (State.zoom || 1),
+			getHeight: () => fontData.height * (State.zoom || 1),
 			setLetterSpacing: newLetterSpacing => {
 				if (newLetterSpacing !== letterSpacing) {
 					letterSpacing = newLetterSpacing;
 					generateNewFontGlyphs();
+					generateScaledGlyphs(State.zoom || 1);
 					document.dispatchEvent(new CustomEvent('onLetterSpacingChange', { detail: letterSpacing }));
 				}
 			},
 			getLetterSpacing: () => letterSpacing,
 			draw: (charCode, foreground, background, ctx, x, y) => {
-				if (
-					!fontGlyphs ||
-					!fontGlyphs[foreground] ||
-					!fontGlyphs[foreground][background] ||
-					!fontGlyphs[foreground][background][charCode]
-				) {
+				const glyphCanvas = scaledGlyphsCache[foreground]?.[background]?.[charCode];
+				if (!glyphCanvas) {
 					console.warn('[Font] XB Font glyph not available:', {
 						foreground,
 						background,
 						charCode,
-						fontGlyphsExists: !!fontGlyphs,
 					});
 					return;
 				}
-				if (letterSpacing) {
-					ctx.putImageData(fontGlyphs[foreground][background][charCode], x * (fontData.width + 1), y * fontData.height);
-				} else {
-					ctx.putImageData(fontGlyphs[foreground][background][charCode], x * fontData.width, y * fontData.height);
-				}
+				const zoom = State.zoom || 1;
+				const glyphW = Math.round(fontData.width * zoom);
+				const glyphH = Math.round(fontData.height * zoom);
+				const xPos = letterSpacing ? x * (glyphW + zoom) : x * glyphW;
+				const yPos = y * glyphH;
+				ctx.drawImage(glyphCanvas, xPos, yPos);
 			},
 			drawWithAlpha: (charCode, foreground, ctx, x, y) => {
 				const fallbackCharCode = magicNumbers.CHAR_CAPITAL_X;
-				if (!alphaGlyphs[foreground] || !alphaGlyphs[foreground][charCode]) {
+				if (!scaledAlphaGlyphsCache[foreground] || !scaledAlphaGlyphsCache[foreground][charCode]) {
 					charCode = fallbackCharCode;
 				}
-				if (letterSpacing) {
-					ctx.drawImage(alphaGlyphs[foreground][charCode], x * (fontData.width + 1), y * fontData.height);
-					if (charCode >= 192 && charCode <= 223) {
-						ctx.drawImage(
-							alphaGlyphs[foreground][charCode],
-							fontData.width - 1,
-							0,
-							1,
-							fontData.height,
-							x * (fontData.width + 1) + fontData.width,
-							y * fontData.height,
-							1,
-							fontData.height,
-						);
-					}
-				} else {
-					ctx.drawImage(alphaGlyphs[foreground][charCode], x * fontData.width, y * fontData.height);
+				const glyphCanvas = scaledAlphaGlyphsCache[foreground]?.[charCode];
+				if (!glyphCanvas) {return;}
+				const zoom = State.zoom || 1;
+				const glyphW = Math.round(fontData.width * zoom);
+				const glyphH = Math.round(fontData.height * zoom);
+				const xPos = letterSpacing ? x * (glyphW + zoom) : x * glyphW;
+				const yPos = y * glyphH;
+				ctx.drawImage(glyphCanvas, xPos, yPos);
+				if (letterSpacing && charCode >= 192 && charCode <= 223) {
+					ctx.drawImage(
+						glyphCanvas,
+						Math.round((fontData.width - 1) * zoom),
+						0,
+						zoom,
+						glyphH,
+						xPos + glyphW,
+						yPos,
+						zoom,
+						glyphH,
+					);
 				}
 			},
-			redraw: () => generateNewFontGlyphs(),
+			redraw: () => {
+				generateNewFontGlyphs();
+				generateScaledGlyphs(State.zoom || 1);
+			},
+			setZoom: newZoom => {
+				generateScaledGlyphs(newZoom);
+			},
 		});
 	});
 };
@@ -208,6 +262,8 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 		let fontGlyphs;
 		let alphaGlyphs;
 		let letterSpacingImageData;
+		let scaledGlyphsCache = {};
+		let scaledAlphaGlyphsCache = {};
 
 		const parseFontData = imageData => {
 			const fontWidth = imageData.width / 16;
@@ -323,6 +379,51 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 			}
 		};
 
+		const generateScaledGlyphs = zoom => {
+			scaledGlyphsCache = {};
+			scaledAlphaGlyphsCache = {};
+
+			// Regular glyphs
+			for (let fg = 0; fg < 16; fg++) {
+				scaledGlyphsCache[fg] = [];
+				for (let bg = 0; bg < 16; bg++) {
+					scaledGlyphsCache[fg][bg] = [];
+					for (let cc = 0; cc < 256; cc++) {
+						const imageData = fontGlyphs[fg][bg][cc];
+						const srcW = imageData.width;
+						const srcH = imageData.height;
+						const dstW = Math.round(srcW * zoom);
+						const dstH = Math.round(srcH * zoom);
+						const glyphCanvas = createCanvas(dstW, dstH);
+						const ctx = glyphCanvas.getContext('2d');
+						const tempCanvas = createCanvas(srcW, srcH);
+						tempCanvas.getContext('2d').putImageData(imageData, 0, 0);
+						ctx.imageSmoothingEnabled = false;
+						ctx.drawImage(tempCanvas, 0, 0, srcW, srcH, 0, 0, dstW, dstH);
+						scaledGlyphsCache[fg][bg][cc] = glyphCanvas;
+					}
+				}
+			}
+
+			// Alpha glyphs
+			for (let fg = 0; fg < 16; fg++) {
+				scaledAlphaGlyphsCache[fg] = [];
+				for (let cc = 0; cc < 256; cc++) {
+					const alphaCanvas = alphaGlyphs[fg][cc];
+					if (!alphaCanvas) {continue;}
+					const srcW = alphaCanvas.width;
+					const srcH = alphaCanvas.height;
+					const dstW = Math.round(srcW * zoom);
+					const dstH = Math.round(srcH * zoom);
+					const scaledCanvas = createCanvas(dstW, dstH);
+					const ctx = scaledCanvas.getContext('2d');
+					ctx.imageSmoothingEnabled = false;
+					ctx.drawImage(alphaCanvas, 0, 0, srcW, srcH, 0, 0, dstW, dstH);
+					scaledAlphaGlyphsCache[fg][cc] = scaledCanvas;
+				}
+			}
+		};
+
 		loadImageAndGetImageData(`${State.fontDir}${fontName}.png`)
 			.then(imageData => {
 				const newFontData = parseFontData(imageData);
@@ -332,70 +433,77 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 				} else {
 					fontData = newFontData;
 					generateNewFontGlyphs();
+					generateScaledGlyphs(State.zoom || 1);
 
 					resolve({
 						getData: () => fontData,
-						getWidth: () => (letterSpacing ? fontData.width + 1 : fontData.width),
-						getHeight: () => fontData.height,
+						getWidth: () => (letterSpacing ? fontData.width + 1 : fontData.width) * (State.zoom || 1),
+						getHeight: () => fontData.height * (State.zoom || 1),
 						setLetterSpacing: newLetterSpacing => {
 							if (newLetterSpacing !== letterSpacing) {
 								letterSpacing = newLetterSpacing;
 								generateNewFontGlyphs();
+								generateScaledGlyphs(State.zoom || 1);
 								document.dispatchEvent(new CustomEvent('onLetterSpacingChange', { detail: letterSpacing }));
 							}
 						},
 						getLetterSpacing: () => letterSpacing,
 						draw: (charCode, foreground, background, ctx, x, y) => {
-							if (
-								!fontGlyphs ||
-								!fontGlyphs[foreground] ||
-								!fontGlyphs[foreground][background] ||
-								!fontGlyphs[foreground][background][charCode]
-							) {
+							const glyphCanvas = scaledGlyphsCache[foreground]?.[background]?.[charCode];
+							if (!glyphCanvas) {
 								console.warn('[Font] Font glyph not available:', {
 									foreground,
 									background,
 									charCode,
-									fontGlyphsExists: !!fontGlyphs,
 								});
 								return;
 							}
 
-							if (letterSpacing) {
-								ctx.putImageData(
-									fontGlyphs[foreground][background][charCode],
-									x * (fontData.width + 1),
-									y * fontData.height,
-								);
-							} else {
-								ctx.putImageData(fontGlyphs[foreground][background][charCode], x * fontData.width, y * fontData.height);
-							}
+							const zoom = State.zoom || 1;
+							const baseWidth = letterSpacing ? fontData.width + 1 : fontData.width;
+							const glyphW = Math.round(baseWidth * zoom);
+							const glyphH = Math.round(fontData.height * zoom);
+							const xPos = x * glyphW;
+							const yPos = y * glyphH;
+							ctx.drawImage(glyphCanvas, xPos, yPos);
 						},
 						drawWithAlpha: (charCode, foreground, ctx, x, y) => {
 							const fallbackCharCode = magicNumbers.CHAR_CAPITAL_X;
-							if (!alphaGlyphs[foreground] || !alphaGlyphs[foreground][charCode]) {
+							if (!scaledAlphaGlyphsCache[foreground] || !scaledAlphaGlyphsCache[foreground][charCode]) {
 								charCode = fallbackCharCode;
 							}
-							if (letterSpacing) {
-								ctx.drawImage(alphaGlyphs[foreground][charCode], x * (fontData.width + 1), y * fontData.height);
-								if (charCode >= 192 && charCode <= 223) {
-									ctx.drawImage(
-										alphaGlyphs[foreground][charCode],
-										fontData.width - 1,
-										0,
-										1,
-										fontData.height,
-										x * (fontData.width + 1) + fontData.width,
-										y * fontData.height,
-										1,
-										fontData.height,
-									);
-								}
-							} else {
-								ctx.drawImage(alphaGlyphs[foreground][charCode], x * fontData.width, y * fontData.height);
+							const glyphCanvas = scaledAlphaGlyphsCache[foreground]?.[charCode];
+							if (!glyphCanvas) {return;}
+
+							const zoom = State.zoom || 1;
+							const baseWidth = letterSpacing ? fontData.width + 1 : fontData.width;
+							const glyphW = Math.round(baseWidth * zoom);
+							const glyphH = Math.round(fontData.height * zoom);
+							const xPos = x * glyphW;
+							const yPos = y * glyphH;
+							ctx.drawImage(glyphCanvas, xPos, yPos);
+
+							if (letterSpacing && charCode >= 192 && charCode <= 223) {
+								ctx.drawImage(
+									glyphCanvas,
+									Math.round((fontData.width - 1) * zoom),
+									0,
+									zoom,
+									glyphH,
+									xPos + Math.round(fontData.width * zoom),
+									yPos,
+									zoom,
+									glyphH,
+								);
 							}
 						},
-						redraw: () => generateNewFontGlyphs(),
+						redraw: () => {
+							generateNewFontGlyphs();
+							generateScaledGlyphs(State.zoom || 1);
+						},
+						setZoom: newZoom => {
+							generateScaledGlyphs(newZoom);
+						},
 					});
 				}
 			})
