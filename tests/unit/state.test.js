@@ -558,7 +558,7 @@ describe('State Management System', () => {
 
 			// Serialize using the optimized method
 			const base64 = State._manager._uint16ArrayToBase64(originalData);
-			
+
 			// Deserialize it back
 			const deserializedData = State._manager._base64ToUint16Array(base64);
 
@@ -577,7 +577,7 @@ describe('State Management System', () => {
 
 			// Serialize using the optimized method
 			const base64 = State._manager._uint8ArrayToBase64(originalBytes);
-			
+
 			// Deserialize it back
 			const deserializedBytes = State._manager._base64ToUint8Array(base64);
 
