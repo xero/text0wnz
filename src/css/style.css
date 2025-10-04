@@ -391,6 +391,7 @@
 		}
 	}
 
+	#viewport-toolbar,
 	#clipboard-toolbar,
 	#font-toolbar,
 	#brush-toolbar,
@@ -414,6 +415,59 @@
 		}
 		kbd {
 			@apply my-auto;
+		}
+	}
+	#viewport-toolbar {
+		#navZoom:focus,
+		#navZoom:focus-within {
+			@apply bg-transparent!;
+		}
+		input[type='range'] {
+			@apply appearance-none bg-transparent;
+		}
+		input[type='range']::-webkit-slider-thumb {
+			@apply appearance-none bg-transparent;
+		}
+		input[type='range']:focus {
+			outline: none;
+		}
+		input[type='range']::-webkit-slider-thumb {
+			@apply appearance-none bg-tools cursor-ew-resize rounded-bl-xs;
+			height: 26px;
+			width: 16px;
+			margin-top: -9px;
+
+			&:hover {
+				@apply bg-cyan;
+			}
+		}
+		input[type='range']::-moz-range-thumb {
+			@apply bg-tools cursor-ew-resize rounded-bl-xs;
+			height: 26px;
+			width: 16px;
+
+			&:hover {
+				@apply bg-cyan;
+			}
+		}
+		input[type='range']::-webkit-slider-runnable-track {
+			@apply bg-file cursor-ew-resize w-full;
+			height: 8.4px;
+		}
+		input[type='range']:focus::-webkit-slider-runnable-track {
+			@apply bg-file;
+		}
+		input[type='range']::-moz-range-track {
+			@apply bg-file cursor-ew-resize w-full;
+			height: 8.4px;
+		}
+		.tool-button {
+			svg {
+				margin-inline: 5px;
+			}
+			kbd {
+				margin-right: 8px;
+			}
 		}
 	}
 	#clipboard-toolbar,
@@ -1104,7 +1158,7 @@
 		}
 	}
 	#navDarkmode {
-		@apply bg-none cursor-pointer aspect-square;
+		@apply bg-none cursor-pointer aspect-square w-[123px];
 		-webkit-tap-highlight-color: transparent;
 		touch-action: manipulation;
 		transition: transform 1s linear !important;

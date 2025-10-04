@@ -8,6 +8,7 @@ import Toolbar from './toolbar.js';
 import {
 	toggleFullscreen,
 	createModalController,
+	createViewportController,
 	createSettingToggle,
 	onClick,
 	onReturn,
@@ -64,6 +65,7 @@ let navSauce;
 let navDarkmode;
 let metaTheme;
 let saveTimeout;
+let mode;
 
 const $$$$ = () => {
 	htmlDoc = $$('html');
@@ -88,6 +90,7 @@ const $$$$ = () => {
 	navDarkmode = $('navDarkmode');
 	metaTheme = $$('meta[name="theme-color"]');
 	saveTimeout = null;
+	mode = $$('#navDarkmode kbd');
 };
 
 // Debounce to avoid saving too frequently during drawing
@@ -409,9 +412,15 @@ const initializeAppComponents = async () => {
 		const isDark = htmlDoc.classList.contains('dark');
 		navDarkmode.setAttribute('aria-pressed', isDark);
 		metaTheme.setAttribute('content', isDark ? '#333333' : '#4f4f4f');
+		mode.innerText = (isDark ? 'Night' : 'Light') + ' Mode';
 	};
 	onClick(navDarkmode, darkToggle);
 	window.matchMedia('(prefers-color-scheme: dark)').matches && darkToggle();
+
+	$('zoom-level').addEventListener('change', e => {
+		const scaleFactor = Number.isInteger(e.target.value) ? e.target.value.toFixed(1) : e.target.value;
+		State.zoom = scaleFactor;
+	});
 
 	const updateFontDisplay = () => {
 		const currentFont = State.textArtCanvas.getCurrentFontName();
@@ -524,6 +533,8 @@ const initializeAppComponents = async () => {
 	Toolbar.add($('square'), square.enable, square.disable);
 	const circle = createCircleController();
 	Toolbar.add($('circle'), circle.enable, circle.disable);
+	const view = createViewportController($('viewport-toolbar'));
+	Toolbar.add($('navView'), view.enable, view.disable);
 	const fonts = createGenericController($('font-toolbar'), $('fonts'));
 	Toolbar.add($('fonts'), fonts.enable, fonts.disable);
 	const clipboard = createGenericController($('clipboard-toolbar'), $('clipboard'));

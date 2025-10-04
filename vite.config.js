@@ -39,6 +39,9 @@ export default ({ mode }) => {
 						if (assetName === 'index.css') {
 							return `${uiDir}stylez.css`;
 						}
+						if (assetName === 'icons.svg') {
+							return `${uiDir}icons-[hash].svg`;
+						}
 						return `${uiDir}[name].${ext}`;
 					},
 				},

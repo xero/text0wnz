@@ -115,6 +115,43 @@
 						<span>F11<canvas id="fkey10" class="fkey" height="0" width="0"></canvas></span>
 						<span>F12<canvas id="fkey11" class="fkey" height="0" width="0"></canvas></span>
 					</div>
+					<div id="viewport-toolbar">
+						<div id="navDarkmode" class="tool-button">
+							<svg class="sun-and-moon" aria-hidden="true" viewBox="1 0 24 24">
+								<mask id="moon-mask" class="moon">
+									<rect fill="white" height="100%" width="100%" x="0" y="0"/>
+									<circle cx="0" cy="10" fill="black" r="6"/>
+								</mask>
+								<circle class="sun" cx="12" cy="12" fill="currentColor" mask="url(#moon-mask)" r="6"/>
+								<g class="sun-beams" stroke="currentColor">
+									<line x1="12" x2="12" y1="1" y2="3"/>
+									<line x1="12" x2="12" y1="21" y2="23"/>
+									<line x1="4.22" x2="5.64" y1="4.22" y2="5.64"/>
+									<line x1="18.36" x2="19.78" y1="18.36" y2="19.78"/>
+									<line x1="1" x2="3" y1="12" y2="12"/>
+									<line x1="21" x2="23" y1="12" y2="12"/>
+									<line x1="4.22" x2="5.64" y1="19.78" y2="18.36"/>
+									<line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/>
+								</g>
+							</svg>
+							<kbd>Mode</kbd>
+						</div>
+						<div id="navGrid" class="tool-button">
+							<svg alt="Show Grid (Ctrl-G)" aria-label="Show Grid (Ctrl-G)">
+								<use href="img/icons.svg#grid"></use>
+							</svg>
+							<kbd>Show Grid</kbd>
+						</div>
+						<div id="navZoom" class="tool-button">
+							<svg alt="File" aria-label="File">
+								<use href="img/icons.svg#zoom"></use>
+							</svg>
+							<kbd>
+								<label for="zoom-level">Zoom</label>
+							</kbd>
+							<input id="zoom-level" type="range" value="1" max="2" min="0.5" step="0.5"/>
+						</div>
+					</div>
 					<div id="brush-toolbar">
 						<div id="halfblock" class="tool-button">
 							<svg alt="Block" aria-label="Block (f)">
@@ -359,28 +396,9 @@
 						<use href="img/icons.svg#font"></use>
 					</svg>
 				</div>
-				<div id="navGrid">
-					<svg alt="Show Grid (Ctrl-G)" aria-label="Show Grid (Ctrl-G)">
+				<div id="navView">
+					<svg alt="Viewport Options" aria-label="Viewport Options">
 						<use href="img/icons.svg#grid"></use>
-					</svg>
-				</div>
-				<div id="navDarkmode">
-					<svg class="sun-and-moon" aria-hidden="true" viewBox="1 0 24 24">
-						<mask id="moon-mask" class="moon">
-							<rect fill="white" height="100%" width="100%" x="0" y="0"/>
-							<circle cx="0" cy="10" fill="black" r="6"/>
-						</mask>
-						<circle class="sun" cx="12" cy="12" fill="currentColor" mask="url(#moon-mask)" r="6"/>
-						<g class="sun-beams" stroke="currentColor">
-							<line x1="12" x2="12" y1="1" y2="3"/>
-							<line x1="12" x2="12" y1="21" y2="23"/>
-							<line x1="4.22" x2="5.64" y1="4.22" y2="5.64"/>
-							<line x1="18.36" x2="19.78" y1="18.36" y2="19.78"/>
-							<line x1="1" x2="3" y1="12" y2="12"/>
-							<line x1="21" x2="23" y1="12" y2="12"/>
-							<line x1="4.22" x2="5.64" y1="19.78" y2="18.36"/>
-							<line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/>
-						</g>
 					</svg>
 				</div>
 			</aside>

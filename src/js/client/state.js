@@ -34,6 +34,7 @@ const EditorState = {
 
 	// Application metadata
 	title: null,
+	zoom: 1,
 
 	// Initialization state
 	initialized: false,
@@ -292,6 +293,7 @@ class StateManager {
 			network: null,
 			worker: null,
 			title: null,
+			zoom: 1,
 			initialized: false,
 			initializing: false,
 			dependenciesReady: {
@@ -694,6 +696,12 @@ const State = {
 	},
 	set worker(value) {
 		stateManager.set('worker', value);
+	},
+	get zoom() {
+		return stateManager.state.zoom;
+	},
+	set zoom(value) {
+		stateManager.set('zoom', value);
 	},
 	get title() {
 		return stateManager.state.title;

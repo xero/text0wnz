@@ -494,6 +494,20 @@ const createGenericController = (panel, nav) => {
 	};
 };
 
+const createViewportController = el => {
+	const panel = el;
+	const enable = () => {
+		panel.style.display = 'flex';
+	};
+	const disable = () => {
+		panel.style.display = 'none';
+	};
+	return {
+		enable: enable,
+		disable: disable,
+	};
+};
+
 const createResolutionController = (lbl, txtC, txtR) => {
 	['onTextCanvasSizeChange', 'onFontChange', 'onXBFontLoaded', 'onOpenedFile'].forEach(e => {
 		document.addEventListener(e, _ => {
@@ -557,6 +571,7 @@ export {
 	createPositionInfo,
 	undoAndRedo,
 	createGenericController,
+	createViewportController,
 	createPaintShortcuts,
 	createToggleButton,
 	createGrid,
