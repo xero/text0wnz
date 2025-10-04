@@ -417,23 +417,13 @@ const initializeAppComponents = async () => {
 	onClick(navDarkmode, darkToggle);
 	window.matchMedia('(prefers-color-scheme: dark)').matches && darkToggle();
 
-	const zoomSlider = $('zoom-level');
-	let isRegeneratingGlyphs = false;
-
-	zoomSlider.addEventListener('change', async e => {
-		if (isRegeneratingGlyphs) {return;} // Already running, ignore input
-		zoomSlider.disabled = true;
-		isRegeneratingGlyphs = true;
-
+	$('zoom-level').addEventListener('change', e => {
 		const scaleFactor = Number(e.target.value);
 		State.zoom = scaleFactor;
 		if (State.font?.setZoom) {
-			State.font.setZoom(scaleFactor);
+			State.font.setZoom();
 		}
 		State.textArtCanvas.redrawEntireImage();
-
-		zoomSlider.disabled = false;
-		isRegeneratingGlyphs = false;
 	});
 
 	const updateFontDisplay = () => {
