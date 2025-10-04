@@ -7,27 +7,27 @@ import magicNumbers from './magicNumbers.js';
 
 const createTextArtCanvas = (canvasContainer, callback) => {
 	let columns = 80,
-			rows = 25,
-			iceColors = false,
-			imageData = new Uint16Array(columns * rows),
-			canvases,
-			redrawing = false,
-			ctxs,
-			offBlinkCanvases,
-			onBlinkCanvases,
-			offBlinkCtxs,
-			onBlinkCtxs,
-			blinkOn = false,
-			mouseButton = false,
-			currentUndo = [],
-			undoBuffer = [],
-			redoBuffer = [],
-			drawHistory = [],
-			mirrorMode = false,
-			currentFontName = magicNumbers.DEFAULT_FONT,
-			dirtyRegions = [],
-			processingDirtyRegions = false,
-			xbFontData = null;
+		rows = 25,
+		iceColors = false,
+		imageData = new Uint16Array(columns * rows),
+		canvases,
+		redrawing = false,
+		ctxs,
+		offBlinkCanvases,
+		onBlinkCanvases,
+		offBlinkCtxs,
+		onBlinkCtxs,
+		blinkOn = false,
+		mouseButton = false,
+		currentUndo = [],
+		undoBuffer = [],
+		redoBuffer = [],
+		drawHistory = [],
+		mirrorMode = false,
+		currentFontName = magicNumbers.DEFAULT_FONT,
+		dirtyRegions = [],
+		processingDirtyRegions = false,
+		xbFontData = null;
 
 	const updateBeforeBlinkFlip = (x, y) => {
 		const dataIndex = y * columns + x;
@@ -1178,7 +1178,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		if (!paletteBytes || !(paletteBytes instanceof Uint8Array) || paletteBytes.length < 48) {
 			console.error(
 				`[Canvas] Invalid data sent to setXBPaletteData; Expected: Uint8Array of 48 bytes; Received:` +
-				`${paletteBytes?.constructor?.name || 'null'} with length ${paletteBytes?.length || 0}`,
+					`${paletteBytes?.constructor?.name || 'null'} with length ${paletteBytes?.length || 0}`,
 			);
 			return;
 		}

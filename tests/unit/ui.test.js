@@ -212,7 +212,7 @@ describe('UI Utilities', () => {
 
 				const mockFile = new window.File(['content'], 'test.txt', { type: 'text/plain' });
 				const changeEvent = new window.Event('change');
-				Object.defineProperty(changeEvent, 'target', { value: { files: [mockFile]} });
+				Object.defineProperty(changeEvent, 'target', { value: { files: [mockFile] } });
 
 				input.dispatchEvent(changeEvent);
 
@@ -227,7 +227,7 @@ describe('UI Utilities', () => {
 				onFileChange(input, mockFunc);
 
 				const changeEvent = new window.Event('change');
-				Object.defineProperty(changeEvent, 'target', { value: { files: []} });
+				Object.defineProperty(changeEvent, 'target', { value: { files: [] } });
 
 				input.dispatchEvent(changeEvent);
 

@@ -152,7 +152,7 @@ describe('File Module', () => {
 				expect(Load.appToSauceFont('Topaz+ 500 8x16')).toBe('Amiga Topaz 1+');
 				expect(Load.appToSauceFont('MicroKnight 8x16')).toBe('Amiga MicroKnight');
 				expect(Load.appToSauceFont('P0t-NOoDLE 8x16')).toBe('Amiga P0T-NOoDLE');
-				expect(Load.appToSauceFont('mO\'sOul 8x16')).toBe('Amiga mOsOul');
+				expect(Load.appToSauceFont("mO'sOul 8x16")).toBe('Amiga mOsOul');
 
 				// C64 fonts
 				expect(Load.appToSauceFont('C64 PETSCII unshifted 8x8')).toBe('C64 PETSCII unshifted');

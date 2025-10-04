@@ -2,11 +2,11 @@ import State from './state.js';
 
 // Utilities for DOM manipulation
 const D = document,
-			$ = D.getElementById.bind(D),
-			$$ = D.querySelector.bind(D),
-			$$$ = D.querySelectorAll.bind(D),
-			has = (i, c) => i.classList.contains(c),
-			classList = (el, className, add = true) => (add ? el.classList.add(className) : el.classList.remove(className));
+	$ = D.getElementById.bind(D),
+	$$ = D.querySelector.bind(D),
+	$$$ = D.querySelectorAll.bind(D),
+	has = (i, c) => i.classList.contains(c),
+	classList = (el, className, add = true) => (add ? el.classList.add(className) : el.classList.remove(className));
 
 const createCanvas = (width, height) => {
 	const canvas = document.createElement('canvas');
@@ -553,7 +553,8 @@ const websocketUI = show => {
 		['excluded-for-websocket', !show],
 		['included-for-websocket', show],
 	].forEach(([sel, prop]) =>
-		[...D.getElementsByClassName(sel)].forEach(el => (el.style.display = prop ? 'block' : 'none')));
+		[...D.getElementsByClassName(sel)].forEach(el => (el.style.display = prop ? 'block' : 'none')),
+	);
 };
 
 export {

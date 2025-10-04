@@ -916,7 +916,7 @@ const createFillController = () => {
 						if (
 							block.isBlocky &&
 							((block.halfBlockY === 0 && block.upperBlockColor === targetColor) ||
-							  (block.halfBlockY === 1 && block.lowerBlockColor === targetColor))
+								(block.halfBlockY === 1 && block.lowerBlockColor === targetColor))
 						) {
 							callback(fillColor, coord[0], coord[1]);
 							if (coord[0] > 0) {
