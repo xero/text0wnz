@@ -1495,6 +1495,8 @@ const createSelectionTool = () => {
 	let selectionStartY = 0;
 	let selectionEndX = 0;
 	let selectionEndY = 0;
+	// Pending initial action when switching from keyboard mode
+	let pendingInitialAction = null;
 
 	const canvasDown = e => {
 		if (moveMode) {
@@ -1925,6 +1927,28 @@ const createSelectionTool = () => {
 				selectionEndY = selection.y + selection.height - 1;
 			}
 		}
+
+		// Execute pending initial action if one was set from keyboard mode
+		if (pendingInitialAction) {
+			const action = pendingInitialAction;
+			pendingInitialAction = null; // Clear it immediately
+
+			// Execute the appropriate shift method based on the key code
+			switch (action) {
+				case 'ArrowLeft':
+					shiftLeft();
+					break;
+				case 'ArrowRight':
+					shiftRight();
+					break;
+				case 'ArrowUp':
+					shiftUp();
+					break;
+				case 'ArrowDown':
+					shiftDown();
+					break;
+			}
+		}
 	};
 
 	const disable = () => {
@@ -1967,6 +1991,14 @@ const createSelectionTool = () => {
 		flipVButton.removeEventListener('click', flipVertical);
 		moveButton.removeEventListener('click', toggleMoveMode);
 		State.pasteTool.disable();
+
+		// Clear any pending action when disabling
+		pendingInitialAction = null;
+	};
+
+	// Method to set pending initial action when switching from keyboard mode
+	const setPendingAction = keyCode => {
+		pendingInitialAction = keyCode;
 	};
 
 	return {
@@ -1974,6 +2006,7 @@ const createSelectionTool = () => {
 		disable: disable,
 		flipHorizontal: flipHorizontal,
 		flipVertical: flipVertical,
+		setPendingAction: setPendingAction,
 	};
 };
 

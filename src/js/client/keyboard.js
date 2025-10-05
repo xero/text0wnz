@@ -237,6 +237,10 @@ const createCursor = canvasContainer => {
 						e.preventDefault();
 						// Start selection from current cursor position
 						startSelection();
+						// Set pending action so selection tool can apply it immediately
+						if (State.selectionTool) {
+							State.selectionTool.setPendingAction(e.code);
+						}
 						// Switch to selection tool which will handle the shift+arrow event
 						Toolbar.switchTool('selection');
 						break;
