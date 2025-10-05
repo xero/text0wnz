@@ -250,7 +250,9 @@ const loadModule = () => {
 				}
 				const secondByte = bytes[startIndex + 1];
 				if ((secondByte & 0xc0) !== 0x80) {
-					throw new Error(`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1}`);
+					throw new Error(
+						`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1} for 2-byte UTF-8 sequence`,
+					);
 				}
 				charCode = ((charCode & 0x1f) << 6) | (secondByte & 0x3f);
 				return { charCode, bytesConsumed: 2 };
@@ -1052,6 +1054,14 @@ const loadModule = () => {
 
 	const checkUTF8 = file => file.endsWith('.utf8.ans') || file.endsWith('.txt');
 
+	const updateSauceModal = imageData => {
+		$('sauce-title').value = imageData.title || '';
+		$('sauce-group').value = imageData.group || '';
+		$('sauce-author').value = imageData.author || '';
+		$('sauce-comments').value = imageData.comments || '';
+		enforceMaxBytes();
+	};
+
 	const file = (file, callback) => {
 		const reader = new FileReader();
 		reader.addEventListener('load', _e => {
@@ -1060,12 +1070,7 @@ const loadModule = () => {
 			switch (file.name.split('.').pop().toLowerCase()) {
 				case 'xb':
 					imageData = loadXBin(data);
-					// Update SAUCE UI fields like ANSI files do
-					$('sauce-title').value = imageData.title || '';
-					$('sauce-group').value = imageData.group || '';
-					$('sauce-author').value = imageData.author || '';
-					$('sauce-comments').value = imageData.comments || '';
-					enforceMaxBytes();
+					updateSauceModal(imageData);
 
 					// Implement sequential waterfall loading for XB files to eliminate race conditions
 					State.textArtCanvas.loadXBFileSequential(
@@ -1090,11 +1095,7 @@ const loadModule = () => {
 					// Clear any previous XB data to avoid palette persistence
 					State.textArtCanvas.clearXBData(() => {
 						imageData = loadAnsi(data, checkUTF8(file.name.toLowerCase()));
-						$('sauce-title').value = imageData.title;
-						$('sauce-group').value = imageData.group;
-						$('sauce-author').value = imageData.author;
-						$('sauce-comments').value = imageData.comments || '';
-						enforceMaxBytes();
+						updateSauceModal(imageData);
 
 						callback(
 							imageData.width,
@@ -1123,7 +1124,7 @@ const Load = loadModule();
 
 // Save module implementation
 const saveModule = () => {
-	const saveFile = (bytes, sauce, filename) => {
+	const saveFile = async (bytes, sauce, filename) => {
 		let outputBytes;
 		if (sauce !== undefined) {
 			outputBytes = new Uint8Array(bytes.length + 1 + sauce.length);
@@ -1135,26 +1136,48 @@ const saveModule = () => {
 			outputBytes.set(bytes, 0);
 		}
 
-		const downloadLink = document.createElement('a');
-		if (navigator.userAgent.indexOf('Chrome') === -1 && navigator.userAgent.indexOf('Safari') !== -1) {
-			let base64String = '';
-			for (let i = 0; i < outputBytes.length; i += 1) {
-				base64String += String.fromCharCode(outputBytes[i]);
+		try {
+			if ('showSaveFilePicker' in window) {
+				// Use File System Access API
+				const handle = await window.showSaveFilePicker({
+					suggestedName: filename,
+					types: [
+						{
+							description: 'Text Art',
+							accept: { 'application/octet-stream': ['.ans', '.bin', '.png', '.xb']},
+						},
+					],
+				});
+				const writable = await handle.createWritable();
+				await writable.write(outputBytes);
+				await writable.close();
+			} else {
+				const isSafari = navigator.userAgent.indexOf('Chrome') === -1 && navigator.userAgent.indexOf('Safari') !== -1;
+				if (isSafari) {
+					let base64String = '';
+					for (let i = 0; i < outputBytes.length; i += 1) {
+						base64String += String.fromCharCode(outputBytes[i]);
+					}
+					const downloadLink = document.createElement('a');
+					downloadLink.href = 'data:application/octet-stream;base64,' + btoa(base64String);
+					downloadLink.download = filename;
+					downloadLink.click();
+				} else {
+					const downloadLink = document.createElement('a');
+					const blob = new Blob([outputBytes], { type: 'application/octet-stream' });
+					downloadLink.href = URL.createObjectURL(blob);
+					downloadLink.download = filename;
+					downloadLink.click();
+					setTimeout(() => URL.revokeObjectURL(downloadLink.href), 100);
+				}
 			}
-			downloadLink.href = 'data:application/octet-stream;base64,' + btoa(base64String);
-		} else {
-			const blob = new Blob([outputBytes], { type: 'application/octet-stream' });
-			downloadLink.href = URL.createObjectURL(blob);
+		} catch (error) {
+			if (error.name === 'AbortError') {
+				// Silently ignore user cancel
+			} else {
+				throw error;
+			}
 		}
-
-		downloadLink.download = filename;
-		const clickEvent = new MouseEvent('click', {
-			bubbles: true,
-			cancelable: true,
-			view: window,
-		});
-		downloadLink.dispatchEvent(clickEvent);
-		window.URL.revokeObjectURL(downloadLink.href);
 	};
 
 	const createSauce = (datatype, filetype, filesize, doFlagsAndTInfoS) => {
@@ -1282,7 +1305,7 @@ const saveModule = () => {
 		return sauce;
 	};
 
-	const encodeANSi = (useUTF8, blinkers = true) => {
+	const encodeANSi = async (useUTF8, blinkers = true) => {
 		const ansiColor = binColor => {
 			switch (binColor) {
 				case 1:
@@ -1435,14 +1458,14 @@ const saveModule = () => {
 
 		const sauce = useUTF8 ? '' : createSauce(1, 1, output.length, true);
 		const fname = State.title + (useUTF8 ? '.utf8.ans' : '.ans');
-		saveFile(new Uint8Array(output), sauce, fname);
+		await saveFile(new Uint8Array(output), sauce, fname);
 	};
-	const ans = () => {
-		encodeANSi(false);
+	const ans = async () => {
+		await encodeANSi(false);
 	};
 
-	const utf8 = () => {
-		encodeANSi(true);
+	const utf8 = async () => {
+		await encodeANSi(true);
 	};
 
 	const utf8noBlink = () => {
@@ -1458,17 +1481,17 @@ const saveModule = () => {
 		return Uint8s;
 	};
 
-	const bin = () => {
+	const bin = async () => {
 		const columns = State.textArtCanvas.getColumns();
 		if (columns % 2 === 0) {
 			const imageData = convert16BitArrayTo8BitArray(State.textArtCanvas.getImageData());
 			const sauce = createSauce(5, columns / 2, imageData.length, true);
 			const fname = State.title;
-			saveFile(imageData, sauce, fname + '.bin');
+			await saveFile(imageData, sauce, fname + '.bin');
 		}
 	};
 
-	const xb = () => {
+	const xb = async () => {
 		const imageData = convert16BitArrayTo8BitArray(State.textArtCanvas.getImageData());
 		const columns = State.textArtCanvas.getColumns();
 		const rows = State.textArtCanvas.getRows();
@@ -1539,7 +1562,7 @@ const saveModule = () => {
 		// Create SAUCE data
 		const sauce = createSauce(6, 0, imageData.length, false);
 		const fname = State.title;
-		saveFile(output, sauce, fname + '.xb');
+		await saveFile(output, sauce, fname + '.xb');
 	};
 
 	const dataUrlToBytes = dataURL => {
@@ -1552,9 +1575,9 @@ const saveModule = () => {
 		return bytes;
 	};
 
-	const png = () => {
+	const png = async () => {
 		const fname = State.title;
-		saveFile(dataUrlToBytes(State.textArtCanvas.getImage().toDataURL()), undefined, fname + '.png');
+		await saveFile(dataUrlToBytes(State.textArtCanvas.getImage().toDataURL()), undefined, fname + '.png');
 	};
 
 	return {

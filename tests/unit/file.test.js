@@ -544,7 +544,7 @@ describe('File Module', () => {
 			expect(() => Load.file(mockFile, callback)).not.toThrow();
 		});
 
-		it('should handle missing DOM elements gracefully', () => {
+		it('should handle missing DOM elements gracefully', async () => {
 			// Mock a scenario where `document.createElement` is not available
 			const originalDocument = global.document;
 			global.document = {
@@ -554,7 +554,7 @@ describe('File Module', () => {
 			};
 
 			// Expect the Save.ans() function to throw an error
-			expect(() => Save.ans()).toThrow('createElement failed');
+			await expect(Save.ans()).rejects.toThrow('createElement failed');
 
 			// Restore the original document object
 			global.document = originalDocument;
