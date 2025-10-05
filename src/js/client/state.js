@@ -27,6 +27,7 @@ const EditorState = {
 	pasteTool: null,
 	chat: null,
 	sampleTool: null,
+	selectionTool: null,
 
 	// Network/collaboration
 	network: null,

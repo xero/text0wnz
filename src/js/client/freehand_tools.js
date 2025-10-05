@@ -1490,6 +1490,13 @@ const createSelectionTool = () => {
 	let dragStartY = 0;
 	let originalPosition = null; // Original position when move mode started
 	let underlyingData = null; // Content currently underneath the moving blocks
+	// Selection expansion state
+	let selectionStartX = 0;
+	let selectionStartY = 0;
+	let selectionEndX = 0;
+	let selectionEndY = 0;
+	// Pending initial action when switching from keyboard mode
+	let pendingInitialAction = null;
 
 	const canvasDown = e => {
 		if (moveMode) {
@@ -1725,6 +1732,63 @@ const createSelectionTool = () => {
 		}
 	};
 
+	// Selection expansion methods - delegated from cursor
+	const startSelectionExpansion = () => {
+		if (!State.selectionCursor.isVisible()) {
+			// Start selection from current cursor position
+			selectionStartX = State.cursor.getX();
+			selectionStartY = State.cursor.getY();
+			selectionEndX = selectionStartX;
+			selectionEndY = selectionStartY;
+			State.selectionCursor.setStart(selectionStartX, selectionStartY);
+			State.cursor.hide();
+		}
+		// If selection already exists, keep using the current anchor (selectionStartX/Y)
+		// and end (selectionEndX/Y) coordinates. Don't reinitialize from bounds.
+	};
+
+	const shiftLeft = () => {
+		startSelectionExpansion();
+		selectionEndX = Math.max(selectionEndX - 1, 0);
+		State.selectionCursor.setStart(selectionStartX, selectionStartY);
+		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+	};
+
+	const shiftRight = () => {
+		startSelectionExpansion();
+		selectionEndX = Math.min(selectionEndX + 1, State.textArtCanvas.getColumns() - 1);
+		State.selectionCursor.setStart(selectionStartX, selectionStartY);
+		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+	};
+
+	const shiftUp = () => {
+		startSelectionExpansion();
+		selectionEndY = Math.max(selectionEndY - 1, 0);
+		State.selectionCursor.setStart(selectionStartX, selectionStartY);
+		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+	};
+
+	const shiftDown = () => {
+		startSelectionExpansion();
+		selectionEndY = Math.min(selectionEndY + 1, State.textArtCanvas.getRows() - 1);
+		State.selectionCursor.setStart(selectionStartX, selectionStartY);
+		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+	};
+
+	const shiftToStartOfRow = () => {
+		startSelectionExpansion();
+		selectionEndX = 0;
+		State.selectionCursor.setStart(selectionStartX, selectionStartY);
+		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+	};
+
+	const shiftToEndOfRow = () => {
+		startSelectionExpansion();
+		selectionEndX = State.textArtCanvas.getColumns() - 1;
+		State.selectionCursor.setStart(selectionStartX, selectionStartY);
+		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+	};
+
 	const keyDown = e => {
 		if (!e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
 			if (e.code === 'Escape') {
@@ -1804,33 +1868,33 @@ const createSelectionTool = () => {
 			switch (e.code) {
 				case 'ArrowLeft': // Meta+Left - expand selection to start of current row
 					e.preventDefault();
-					State.cursor.shiftToStartOfRow();
+					shiftToStartOfRow();
 					break;
 				case 'ArrowRight': // Meta+Right - expand selection to end of current row
 					e.preventDefault();
-					State.cursor.shiftToEndOfRow();
+					shiftToEndOfRow();
 					break;
 				default:
 					break;
 			}
 		} else if (e.shiftKey && !e.metaKey) {
-			// Handle Shift key combinations for selection
+			// Handle Shift key combinations for selection expansion
 			switch (e.code) {
 				case 'ArrowLeft': // Shift+Left
 					e.preventDefault();
-					State.cursor.shiftLeft();
+					shiftLeft();
 					break;
 				case 'ArrowUp': // Shift+Up
 					e.preventDefault();
-					State.cursor.shiftUp();
+					shiftUp();
 					break;
 				case 'ArrowRight': // Shift+Right
 					e.preventDefault();
-					State.cursor.shiftRight();
+					shiftRight();
 					break;
 				case 'ArrowDown': // Shift+Down
 					e.preventDefault();
-					State.cursor.shiftDown();
+					shiftDown();
 					break;
 				default:
 					break;
@@ -1849,6 +1913,40 @@ const createSelectionTool = () => {
 		flipHButton.addEventListener('click', flipHorizontal);
 		flipVButton.addEventListener('click', flipVertical);
 		moveButton.addEventListener('click', toggleMoveMode);
+
+		// If there's already a selection visible (switched from keyboard mode),
+		// initialize our selection expansion state
+		if (State.selectionCursor.isVisible()) {
+			const selection = State.selectionCursor.getSelection();
+			if (selection) {
+				selectionStartX = selection.x;
+				selectionStartY = selection.y;
+				selectionEndX = selection.x + selection.width - 1;
+				selectionEndY = selection.y + selection.height - 1;
+			}
+		}
+
+		// Execute pending initial action if one was set from keyboard mode
+		if (pendingInitialAction) {
+			const action = pendingInitialAction;
+			pendingInitialAction = null; // Clear it immediately
+
+			// Execute the appropriate shift method based on the key code
+			switch (action) {
+				case 'ArrowLeft':
+					shiftLeft();
+					break;
+				case 'ArrowRight':
+					shiftRight();
+					break;
+				case 'ArrowUp':
+					shiftUp();
+					break;
+				case 'ArrowDown':
+					shiftDown();
+					break;
+			}
+		}
 	};
 
 	const disable = () => {
@@ -1891,6 +1989,14 @@ const createSelectionTool = () => {
 		flipVButton.removeEventListener('click', flipVertical);
 		moveButton.removeEventListener('click', toggleMoveMode);
 		State.pasteTool.disable();
+
+		// Clear any pending action when disabling
+		pendingInitialAction = null;
+	};
+
+	// Method to set pending initial action when switching from keyboard mode
+	const setPendingAction = keyCode => {
+		pendingInitialAction = keyCode;
 	};
 
 	return {
@@ -1898,6 +2004,7 @@ const createSelectionTool = () => {
 		disable: disable,
 		flipHorizontal: flipHorizontal,
 		flipVertical: flipVertical,
+		setPendingAction: setPendingAction,
 	};
 };
 

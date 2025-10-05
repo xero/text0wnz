@@ -539,16 +539,16 @@ const initializeAppComponents = async () => {
 	Toolbar.add($('fonts'), fonts.enable, fonts.disable);
 	const clipboard = createGenericController($('clipboard-toolbar'), $('clipboard'));
 	Toolbar.add($('clipboard'), clipboard.enable, clipboard.disable);
-	const selection = createSelectionTool();
+	State.selectionTool = createSelectionTool();
 	Toolbar.add(
 		$('selection'),
 		() => {
 			paintShortcuts.disable();
-			selection.enable();
+			State.selectionTool.enable();
 		},
 		() => {
 			paintShortcuts.enable();
-			selection.disable();
+			State.selectionTool.disable();
 		},
 	);
 	State.sampleTool = createSampleTool(shadeBrush, $('shading-brush'), characterBrush, $('character-brush'));

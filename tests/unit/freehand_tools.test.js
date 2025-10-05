@@ -89,6 +89,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 			setStart: vi.fn(),
 			setEnd: vi.fn(),
 			hide: vi.fn(),
+			isVisible: vi.fn(() => false),
 			getElement: vi.fn(() => ({
 				classList: {
 					add: vi.fn(),
@@ -104,12 +105,9 @@ vi.mock('../../src/js/client/state.js', () => ({
 			newLine: vi.fn(),
 			endOfCurrentRow: vi.fn(),
 			startOfCurrentRow: vi.fn(),
-			shiftLeft: vi.fn(),
-			shiftRight: vi.fn(),
-			shiftUp: vi.fn(),
-			shiftDown: vi.fn(),
-			shiftToStartOfRow: vi.fn(),
-			shiftToEndOfRow: vi.fn(),
+			getX: vi.fn(() => 0),
+			getY: vi.fn(() => 0),
+			hide: vi.fn(),
 		},
 		pasteTool: { disable: vi.fn() },
 		worker: {
