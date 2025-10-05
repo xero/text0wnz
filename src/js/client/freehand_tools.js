@@ -1490,6 +1490,11 @@ const createSelectionTool = () => {
 	let dragStartY = 0;
 	let originalPosition = null; // Original position when move mode started
 	let underlyingData = null; // Content currently underneath the moving blocks
+	// Selection expansion state
+	let selectionStartX = 0;
+	let selectionStartY = 0;
+	let selectionEndX = 0;
+	let selectionEndY = 0;
 
 	const canvasDown = e => {
 		if (moveMode) {
@@ -1725,6 +1730,65 @@ const createSelectionTool = () => {
 		}
 	};
 
+	// Selection expansion methods - delegated from cursor
+	const startSelectionExpansion = () => {
+		if (!State.selectionCursor.isVisible()) {
+			// Start selection from current cursor position
+			selectionStartX = State.cursor.getX();
+			selectionStartY = State.cursor.getY();
+			selectionEndX = selectionStartX;
+			selectionEndY = selectionStartY;
+			State.selectionCursor.setStart(selectionStartX, selectionStartY);
+			State.cursor.hide();
+		} else {
+			// Selection already exists, get current bounds
+			const selection = State.selectionCursor.getSelection();
+			if (selection) {
+				// Use the current selection end point
+				selectionStartX = selection.x;
+				selectionStartY = selection.y;
+				selectionEndX = selection.x + selection.width - 1;
+				selectionEndY = selection.y + selection.height - 1;
+			}
+		}
+	};
+
+	const shiftLeft = () => {
+		startSelectionExpansion();
+		selectionEndX = Math.max(selectionEndX - 1, 0);
+		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+	};
+
+	const shiftRight = () => {
+		startSelectionExpansion();
+		selectionEndX = Math.min(selectionEndX + 1, State.textArtCanvas.getColumns() - 1);
+		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+	};
+
+	const shiftUp = () => {
+		startSelectionExpansion();
+		selectionEndY = Math.max(selectionEndY - 1, 0);
+		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+	};
+
+	const shiftDown = () => {
+		startSelectionExpansion();
+		selectionEndY = Math.min(selectionEndY + 1, State.textArtCanvas.getRows() - 1);
+		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+	};
+
+	const shiftToStartOfRow = () => {
+		startSelectionExpansion();
+		selectionEndX = 0;
+		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+	};
+
+	const shiftToEndOfRow = () => {
+		startSelectionExpansion();
+		selectionEndX = State.textArtCanvas.getColumns() - 1;
+		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+	};
+
 	const keyDown = e => {
 		if (!e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
 			if (e.code === 'Escape') {
@@ -1804,33 +1868,33 @@ const createSelectionTool = () => {
 			switch (e.code) {
 				case 'ArrowLeft': // Meta+Left - expand selection to start of current row
 					e.preventDefault();
-					State.cursor.shiftToStartOfRow();
+					shiftToStartOfRow();
 					break;
 				case 'ArrowRight': // Meta+Right - expand selection to end of current row
 					e.preventDefault();
-					State.cursor.shiftToEndOfRow();
+					shiftToEndOfRow();
 					break;
 				default:
 					break;
 			}
 		} else if (e.shiftKey && !e.metaKey) {
-			// Handle Shift key combinations for selection
+			// Handle Shift key combinations for selection expansion
 			switch (e.code) {
 				case 'ArrowLeft': // Shift+Left
 					e.preventDefault();
-					State.cursor.shiftLeft();
+					shiftLeft();
 					break;
 				case 'ArrowUp': // Shift+Up
 					e.preventDefault();
-					State.cursor.shiftUp();
+					shiftUp();
 					break;
 				case 'ArrowRight': // Shift+Right
 					e.preventDefault();
-					State.cursor.shiftRight();
+					shiftRight();
 					break;
 				case 'ArrowDown': // Shift+Down
 					e.preventDefault();
-					State.cursor.shiftDown();
+					shiftDown();
 					break;
 				default:
 					break;

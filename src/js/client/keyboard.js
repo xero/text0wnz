@@ -98,8 +98,6 @@ const createCursor = canvasContainer => {
 	const canvas = createCanvas(State.font.getWidth(), State.font.getHeight());
 	let x = 0;
 	let y = 0;
-	let dx = 0;
-	let dy = 0;
 	let visible = false;
 
 	const show = () => {
@@ -114,8 +112,6 @@ const createCursor = canvasContainer => {
 
 	const startSelection = () => {
 		State.selectionCursor.setStart(x, y);
-		dx = x;
-		dy = y;
 		hide();
 	};
 
@@ -179,71 +175,9 @@ const createCursor = canvasContainer => {
 		move(State.textArtCanvas.getColumns() - 1, y);
 	};
 
-	const shiftLeft = () => {
-		if (!State.selectionCursor.isVisible()) {
-			startSelection();
-			if (Toolbar.getCurrentTool() === 'keyboard') {
-				Toolbar.switchTool('selection');
-			}
-		}
-		dx = Math.max(dx - 1, 0);
-		State.selectionCursor.setEnd(dx, dy);
-	};
-
-	const shiftRight = () => {
-		if (!State.selectionCursor.isVisible()) {
-			startSelection();
-			if (Toolbar.getCurrentTool() === 'keyboard') {
-				Toolbar.switchTool('selection');
-			}
-		}
-		dx = Math.min(dx + 1, State.textArtCanvas.getColumns() - 1);
-		State.selectionCursor.setEnd(dx, dy);
-	};
-
-	const shiftUp = () => {
-		if (!State.selectionCursor.isVisible()) {
-			startSelection();
-			if (Toolbar.getCurrentTool() === 'keyboard') {
-				Toolbar.switchTool('selection');
-			}
-		}
-		dy = Math.max(dy - 1, 0);
-		State.selectionCursor.setEnd(dx, dy);
-	};
-
-	const shiftDown = () => {
-		if (!State.selectionCursor.isVisible()) {
-			startSelection();
-			if (Toolbar.getCurrentTool() === 'keyboard') {
-				Toolbar.switchTool('selection');
-			}
-		}
-		dy = Math.min(dy + 1, State.textArtCanvas.getRows() - 1);
-		State.selectionCursor.setEnd(dx, dy);
-	};
-
-	const shiftToStartOfRow = () => {
-		if (!State.selectionCursor.isVisible()) {
-			startSelection();
-			if (Toolbar.getCurrentTool() === 'keyboard') {
-				Toolbar.switchTool('selection');
-			}
-		}
-		dx = 0;
-		State.selectionCursor.setEnd(dx, dy);
-	};
-
-	const shiftToEndOfRow = () => {
-		if (!State.selectionCursor.isVisible()) {
-			startSelection();
-			if (Toolbar.getCurrentTool() === 'keyboard') {
-				Toolbar.switchTool('selection');
-			}
-		}
-		dx = State.textArtCanvas.getColumns() - 1;
-		State.selectionCursor.setEnd(dx, dy);
-	};
+	// Selection methods removed - delegated to selection tool
+	// When shift+arrow keys are pressed, the keyboard handler will
+	// switch to the selection tool which handles all selection logic
 
 	const keyDown = e => {
 		if (!e.ctrlKey && !e.altKey) {
@@ -294,22 +228,17 @@ const createCursor = canvasContainer => {
 						break;
 				}
 			} else if (e.shiftKey && !e.metaKey) {
+				// Shift + arrow keys trigger selection - switch to selection tool
 				switch (e.code) {
 					case 'ArrowLeft': // Shift + Left arrow
-						e.preventDefault();
-						shiftLeft();
-						break;
 					case 'ArrowUp': // Shift + Up arrow
-						e.preventDefault();
-						shiftUp();
-						break;
 					case 'ArrowRight': // Shift + Right arrow
-						e.preventDefault();
-						shiftRight();
-						break;
 					case 'ArrowDown': // Shift + Down arrow
 						e.preventDefault();
-						shiftDown();
+						// Start selection from current cursor position
+						startSelection();
+						// Switch to selection tool which will handle the shift+arrow event
+						Toolbar.switchTool('selection');
 						break;
 					default:
 						break;
@@ -356,12 +285,6 @@ const createCursor = canvasContainer => {
 		newLine: newLine,
 		startOfCurrentRow: startOfCurrentRow,
 		endOfCurrentRow: endOfCurrentRow,
-		shiftLeft: shiftLeft,
-		shiftRight: shiftRight,
-		shiftUp: shiftUp,
-		shiftDown: shiftDown,
-		shiftToStartOfRow: shiftToStartOfRow,
-		shiftToEndOfRow: shiftToEndOfRow,
 		enable: enable,
 		disable: disable,
 		isVisible: isVisible,
