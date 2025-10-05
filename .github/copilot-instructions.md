@@ -9,57 +9,155 @@ teXt0wnz is a web-based ANSI art editor that operates in two modes: server-side 
 
 This is a single-page application for creating ANSI/ASCII art with various drawing tools, color palettes, export capabilities, and real-time collaboration features.
 
-### Client-Side Implementation (Drawing Editor)
+### Building the App
 
-Important Files:
-
-#### Sources
-```
-public/
-├── css/
-│   └── style.css          # tailwindcss style sheet
-├── fonts/                 # folder of png format fonts
-├── img/                   # static assets
-├── js/
-│   ├── canvas.js          # textArtCanvas
-│   ├── file.js            # File open/save
-│   ├── font.js            # font management
-│   ├── freehand_tools.js  # drawing tool logic
-│   ├── keyboard.js        # keybind listeners/handlers
-│   ├── main.js            # main interypoint
-│   ├── network.js         # WebSocket handler
-│   ├── palette.js         # color palette logic
-│   ├── state.js           # global state machine
-│   ├── toolbar.js         # ui toolbar
-│   ├── ui.js              # ui helpers
-│   └── worker.js          # webworker hanlder (not built)
-└── index.html             # single page application
+```sh
+bun bake
 ```
 
-#### built files
+This generates optimized files in the `dist/` directory:
+- `index.html` - Main application entry point
+- `site.webmanifest` - PWA (Progressive Web App) configuration
+- `service.js` - Application service worker
+- `workbox-[hash].js` - Runtime/Offline asset management/caching
+- `robots.txt` and `sitemap.xml`
+- `ui/editor.js` - Minified JavaScript bundle
+- `ui/stylez.css` - Minified CSS styles
+- `ui/fonts/` - Font assets
+- `ui/` - Other static assets (images, icons, etc.)
+
+### Project Structure
+
 ```
-dist/
-├── ui/                    # all static assets moved into this dir
-│   ├── fonts/             # same as public/fonts
-│   ├── editor-[has].js    # minified js
-│   └── stylez-[hash].css  # minified css
-└── index.html             # single page app (vite updated)
+src/
+├── index.html          # Main HTML template
+├── css/style.css       # Tailwind CSS styles
+├── fonts/              # Font assets (PNG format)
+├── img/                # Static images and icons
+└── js/
+    ├── client/         # Client-side JavaScript modules
+    │   ├── main.js     # Application entry point
+    │   ├── canvas.js   # Canvas and drawing logic
+    │   ├── keyboard.js # Keyboard shortcuts and text input
+    │   ├── ui.js       # UI components and interactions
+    │   ├── palette.js  # Color palette management
+    │   ├── file.js     # File I/O operations
+    │   └── ...         # Other client modules
+    └── server/         # Server-side collaboration modules
+        ├── main.js     # Server entry point
+        ├── server.js   # Express server setup
+        ├── text0wnz.js # Collaboration engine
+        └── ...         # Other server modules
+
+dist/                   # Built application (generated)
+tests/                  # Unit tests
+docs/                   # Documentation
 ```
 
-**See the project `README.md` for more info about the frontend.**
+### Documentation
+
+Located in the [/docs](https://github.com/xero/moebius-web/tree/main/docs) folder of the project.
+
+### Linting and Formatting
+
+The project uses ESLint for code linting and Prettier for code formatting:
+
+```sh
+# Check for linting issues
+bun lint:check
+
+# Auto-fix linting issues
+bun lint:fix
+
+# Check code format
+bun format:check
+
+# Auto-fix formatting issues
+bun format:fix
+
+# Fix both linting and formatting
+bun fix
+```
+
+### Unit Testing
+
+The project includes comprehensive unit tests using **Vitest** with **jsdom** environment:
+
+```sh
+# Run all unit tests and generate coverage report
+bun test:unit
+
+# Run tests in watch mode during development
+bunx vitest
+# or
+npx vitest
+
+# Run tests with coverage report
+bunx vitest --coverage
+```
+
+**Test Coverage Includes:**
+- Client-side modules (canvas, keyboard, palette, file I/O, UI components)
+- Server-side modules (configuration, WebSocket handling, file operations)
+- Utility functions and helper modules
+- State management and toolbar interactions
+
+Test files are organized in `tests/unit/` with separate files for each module. The test suite provides excellent coverage for core functionality and helps ensure code quality.
+
+**Test Environment:**
+- **Vitest** - Fast unit test runner with ES module support
+- **jsdom** - Browser environment simulation for DOM testing
+- **@testing-library/jest-dom** - Additional DOM matchers
+- **Coverage reporting** with v8 provider
+
+Tests run automatically in CI/CD and should be run locally before committing changes.
+
+### Running the Server
+
+The collaboration server can be started with:
+
+```sh
+bun server [port] [options]
+```
+
+- `[port]` (optional): Port to run the server (default: `1337`)
+- See the **Command-Line Options** table above for available flags
+
+#### Example: Basic Start
+
+```sh
+bun server
+```
+
+#### Example: Custom Port, Session, and Save Interval
+
+```sh
+bun server 8060 --session-name myjam --save-interval 10
+```
+
+#### Example: With SSL
+
+```sh
+bun server 443 --ssl --ssl-dir /etc/letsencrypt
+```
+
+> The server will look for `letsencrypt-domain.pem` and `letsencrypt-domain.key` in the specified SSL directory.
+
+#### Example: All Options
+
+```sh
+bun server 9001 --ssl --ssl-dir /etc/ssl/private --save-interval 5 --session-name collab
+```
+
+**See the project `README.md` for more info
 
 ---
-
-### Server-Side Implementation (Collaboration Engine)
-- `server.js` - **Express server entry point**, WebSocket setup, SSL configuration, session management
-- `src/ansiedit.js` - **Core collaboration engine**, message handling, canvas state management, persistence
-- `src/binary_text.js` - **Binary format handler** for ANSI art storage and loading
 
 ## Development Guidelines
 
 ### 1. Code Structure Patterns
 
-**Tool Implementation Pattern** (see `public/js/freehand_tools.js`):
+**Tool Implementation Pattern** (see `src/js/client/freehand_tools.js`):
 ```javascript
 const createToolController = () => {
     "use strict";
@@ -149,7 +247,7 @@ function $(divName) {
 - Comprehensive logging and error handling
 - Configurable auto-save intervals and session naming
 
-**Collaboration Engine (`src/ansiedit.js`):**
+**Collaboration Engine (`src/text0wnz.js`):**
 - Centralized canvas state management (imageData object)
 - Real-time message broadcasting to all connected clients
 - Session persistence with both timestamped backups and current state
@@ -264,20 +362,6 @@ const onNewFeature = value => {
 - Settings broadcast loop prevention with flags
 - Silent connection check vs explicit connection handling
 
-### 7. Deployment Considerations
-
-**Dependencies:**
-- express ^4.15.3 - Web server framework
-- express-session ^1.18.2 - Session management
-- express-ws ^5.0.2 - WebSocket integration
-- pm2 ^5.3.0 - Process management
-
-**Production Setup:**
-- SSL certificate configuration with automatic fallback
-- Process management with PM2 for auto-restart
-- Configurable auto-save intervals to prevent data loss
-- Session naming for multiple concurrent art sessions
-
 ## Testing & Development
 
 ## How to Run
@@ -285,6 +369,7 @@ const onNewFeature = value => {
 ### build and install
 
 ```
+npm i -g bun
 bun i
 bun bake
 ```
@@ -330,37 +415,6 @@ await page.goto('http://localhost:8080'); // or 1337 for collaboration
 - **Collaboration mode selection and canvas settings sync**
 - **Multi-user drawing and real-time updates**
 - **Server connection handling and graceful fallback**
-
-## Common Tasks
-
-### Adding a New Drawing Tool
-2. Implement in `public/js/freehand_tools.js` or create new file
-3. Register with toolbar in `public/js/main.js`
-4. Add HTML elements to `public/index.html` if needed
-5. Add keyboard shortcut to paint shortcuts configuration
-
-### Modifying UI Components
-1. Edit `public/js/ui.js` for component logic
-2. Update `public/index.html` for structure
-3. Modify `public/css/style.css` for styling
-
-### File Format Support
-1. Add loader to `public/js/loaders.js`
-2. Add saver to `public/js/savers.js`
-3. Wire up in `public/js/document_onload.js`
-
-### Adding Collaboration Features
-1. Define WebSocket message protocol in both client and server
-2. Add message handler to `src/ansiedit.js` with proper state management
-3. Add client-side sync functions to `public/js/network.js`
-4. Hook into UI components in `public/js/document_onload.js`
-5. Test with multiple clients to ensure proper synchronization
-
-### Server Configuration & Deployment
-1. Configure session settings and auto-save intervals
-2. Set up SSL certificates for production deployment
-3. Use PM2 or similar for process management and auto-restart
-4. Monitor server logs for WebSocket connection issues and state synchronization
 
 ## Important Notes
 
