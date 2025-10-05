@@ -41,9 +41,23 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			background -= 8;
 		}
 		if (blinkOn && shifted) {
-			State.font.draw(charCode, background, background, ctxs[contextIndex], x, contextY);
+			State.font.draw(
+				charCode,
+				background,
+				background,
+				ctxs[contextIndex],
+				x,
+				contextY,
+			);
 		} else {
-			State.font.draw(charCode, foreground, background, ctxs[contextIndex], x, contextY);
+			State.font.draw(
+				charCode,
+				foreground,
+				background,
+				ctxs[contextIndex],
+				x,
+				contextY,
+			);
 		}
 	};
 
@@ -97,15 +111,21 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				const existing = coalesced[j];
 
 				// Check if regions overlap or are adjacent
-				const canMergeX = current.x <= existing.x + existing.w && existing.x <= current.x + current.w;
-				const canMergeY = current.y <= existing.y + existing.h && existing.y <= current.y + current.h;
+				const canMergeX =
+					current.x <= existing.x + existing.w &&
+					existing.x <= current.x + current.w;
+				const canMergeY =
+					current.y <= existing.y + existing.h &&
+					existing.y <= current.y + current.h;
 
 				if (canMergeX && canMergeY) {
 					// Merge regions
 					const newX = Math.min(existing.x, current.x);
 					const newY = Math.min(existing.y, current.y);
-					const newW = Math.max(existing.x + existing.w, current.x + current.w) - newX;
-					const newH = Math.max(existing.y + existing.h, current.y + current.h) - newY;
+					const newW =
+						Math.max(existing.x + existing.w, current.x + current.w) - newX;
+					const newH =
+						Math.max(existing.y + existing.h, current.y + current.h) - newY;
 					coalesced[j] = { x: newX, y: newY, w: newW, h: newH };
 					merged = true;
 					break;
@@ -181,15 +201,50 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		let background = (imageData[index] >> 4) & 15;
 		const foreground = imageData[index] & 15;
 		if (iceColors) {
-			State.font.draw(charCode, foreground, background, ctxs[contextIndex], x, contextY);
+			State.font.draw(
+				charCode,
+				foreground,
+				background,
+				ctxs[contextIndex],
+				x,
+				contextY,
+			);
 		} else {
 			if (background >= 8) {
 				background -= 8;
-				State.font.draw(charCode, foreground, background, offBlinkCtxs[contextIndex], x, contextY);
-				State.font.draw(charCode, background, background, onBlinkCtxs[contextIndex], x, contextY);
+				State.font.draw(
+					charCode,
+					foreground,
+					background,
+					offBlinkCtxs[contextIndex],
+					x,
+					contextY,
+				);
+				State.font.draw(
+					charCode,
+					background,
+					background,
+					onBlinkCtxs[contextIndex],
+					x,
+					contextY,
+				);
 			} else {
-				State.font.draw(charCode, foreground, background, offBlinkCtxs[contextIndex], x, contextY);
-				State.font.draw(charCode, foreground, background, onBlinkCtxs[contextIndex], x, contextY);
+				State.font.draw(
+					charCode,
+					foreground,
+					background,
+					offBlinkCtxs[contextIndex],
+					x,
+					contextY,
+				);
+				State.font.draw(
+					charCode,
+					foreground,
+					background,
+					onBlinkCtxs[contextIndex],
+					x,
+					contextY,
+				);
 			}
 		}
 	};
@@ -279,11 +334,15 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		let fontHeight = State.font.getHeight();
 
 		if (!fontWidth || fontWidth <= 0) {
-			console.warn(`[Canvas] Invalid font width detected, falling back to ${magicNumbers.DEFAULT_FONT_WIDTH}px`);
+			console.warn(
+				`[Canvas] Invalid font width detected, falling back to ${magicNumbers.DEFAULT_FONT_WIDTH}px`,
+			);
 			fontWidth = magicNumbers.DEFAULT_FONT_WIDTH;
 		}
 		if (!fontHeight || fontHeight <= 0) {
-			console.warn(`[Canvas] Invalid font height detected, falling back to ${magicNumbers.DEFAULT_FONT_HEIGHT}px`);
+			console.warn(
+				`[Canvas] Invalid font height detected, falling back to ${magicNumbers.DEFAULT_FONT_HEIGHT}px`,
+			);
 			fontHeight = magicNumbers.DEFAULT_FONT_HEIGHT;
 		}
 
@@ -347,7 +406,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				createCanvases();
 				updateTimer();
 				redrawEntireImage();
-				document.dispatchEvent(new CustomEvent('onFontChange', { detail: fontName }));
+				document.dispatchEvent(
+					new CustomEvent('onFontChange', { detail: fontName }),
+				);
 
 				if (callback) {
 					callback();
@@ -359,7 +420,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 				// Fallback to CP437 font
 				const fallbackFont = magicNumbers.DEFAULT_FONT;
-				const font = await loadFontFromImage(fallbackFont, false, State.palette);
+				const font = await loadFontFromImage(
+					fallbackFont,
+					false,
+					State.palette,
+				);
 				State.font = font;
 				currentFontName = fallbackFont;
 
@@ -367,7 +432,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				createCanvases();
 				updateTimer();
 				redrawEntireImage();
-				document.dispatchEvent(new CustomEvent('onFontChange', { detail: fallbackFont }));
+				document.dispatchEvent(
+					new CustomEvent('onFontChange', { detail: fallbackFont }),
+				);
 
 				if (callback) {
 					callback();
@@ -382,7 +449,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				createCanvases();
 				updateTimer();
 				redrawEntireImage();
-				document.dispatchEvent(new CustomEvent('onFontChange', { detail: fontName }));
+				document.dispatchEvent(
+					new CustomEvent('onFontChange', { detail: fontName }),
+				);
 
 				if (callback) {
 					callback();
@@ -394,7 +463,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			// Fallback to CP437 in case of failure
 			const fallbackFont = magicNumbers.DEFAULT_FONT;
 			try {
-				const font = await loadFontFromImage(fallbackFont, false, State.palette);
+				const font = await loadFontFromImage(
+					fallbackFont,
+					false,
+					State.palette,
+				);
 				State.font = font;
 				currentFontName = fallbackFont;
 
@@ -402,7 +475,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				createCanvases();
 				updateTimer();
 				redrawEntireImage();
-				document.dispatchEvent(new CustomEvent('onFontChange', { detail: fallbackFont }));
+				document.dispatchEvent(
+					new CustomEvent('onFontChange', { detail: fallbackFont }),
+				);
 
 				if (callback) {
 					callback();
@@ -414,7 +489,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const resize = (newColumnValue, newRowValue) => {
-		if ((newColumnValue !== columns || newRowValue !== rows) && newColumnValue > 0 && newRowValue > 0) {
+		if (
+			(newColumnValue !== columns || newRowValue !== rows) &&
+			newColumnValue > 0 &&
+			newRowValue > 0
+		) {
 			clearUndos();
 			const maxColumn = columns > newColumnValue ? newColumnValue : columns;
 			const maxRow = rows > newRowValue ? newRowValue : rows;
@@ -430,7 +509,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			createCanvases();
 			updateTimer();
 			redrawEntireImage();
-			document.dispatchEvent(new CustomEvent('onTextCanvasSizeChange', { detail: { columns: columns, rows: rows } }));
+			document.dispatchEvent(
+				new CustomEvent('onTextCanvasSizeChange', { detail: { columns: columns, rows: rows } }),
+			);
 		}
 	};
 
@@ -464,7 +545,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const getImage = () => {
-		const completeCanvas = createCanvas(State.font.getWidth() * columns, State.font.getHeight() * rows);
+		const completeCanvas = createCanvas(
+			State.font.getWidth() * columns,
+			State.font.getHeight() * rows,
+		);
 		let y = 0;
 		const ctx = completeCanvas.getContext('2d');
 		(iceColors ? canvases : offBlinkCanvases).forEach(canvas => {
@@ -478,7 +562,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		return imageData;
 	};
 
-	const setImageData = (newColumnValue, newRowValue, newImageData, newIceColors) => {
+	const setImageData = (
+		newColumnValue,
+		newRowValue,
+		newImageData,
+		newIceColors,
+	) => {
 		clearUndos();
 		columns = newColumnValue;
 		rows = newRowValue;
@@ -605,7 +694,15 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		drawHistory.push((index << 16) + imageData[index]);
 	};
 
-	const patchBufferAndEnqueueDirty = (index, charCode, foreground, background, x, y, addToUndo = true) => {
+	const patchBufferAndEnqueueDirty = (
+		index,
+		charCode,
+		foreground,
+		background,
+		x,
+		y,
+		addToUndo = true,
+	) => {
 		if (addToUndo) {
 			currentUndo.push([index, imageData[index], x, y]);
 		}
@@ -724,7 +821,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					shouldUpdate = true;
 				}
 			}
-		} else if (charCode !== magicNumbers.UPPER_HALFBLOCK && charCode !== magicNumbers.LOWER_HALFBLOCK) {
+		} else if (
+			charCode !== magicNumbers.UPPER_HALFBLOCK &&
+			charCode !== magicNumbers.LOWER_HALFBLOCK
+		) {
 			if (halfBlockY === 0) {
 				newCharCode = magicNumbers.LOWER_HALFBLOCK;
 				newForeground = foreground;
@@ -789,7 +889,15 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 
 		if (shouldUpdate) {
-			patchBufferAndEnqueueDirty(index, newCharCode, newForeground, newBackground, x, textY, false);
+			patchBufferAndEnqueueDirty(
+				index,
+				newCharCode,
+				newForeground,
+				newBackground,
+				x,
+				textY,
+				false,
+			);
 		}
 	};
 
@@ -800,7 +908,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const rect = canvasContainer.getBoundingClientRect();
 		const x = Math.floor((clientX - rect.left) / State.font.getWidth());
 		const y = Math.floor((clientY - rect.top) / State.font.getHeight());
-		const halfBlockY = Math.floor(((clientY - rect.top) / State.font.getHeight()) * 2);
+		const halfBlockY = Math.floor(
+			((clientY - rect.top) / State.font.getHeight()) * 2,
+		);
 		callback(x, y, halfBlockY);
 	};
 
@@ -813,25 +923,29 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			redo();
 		} else {
 			mouseButton = true;
-			getXYCoords(e.touches[0].pageX, e.touches[0].pageY, (x, y, halfBlockY) => {
-				if (e.altKey) {
-					if (State.sampleTool && State.sampleTool.sample) {
-						State.sampleTool.sample(x, halfBlockY);
+			getXYCoords(
+				e.touches[0].pageX,
+				e.touches[0].pageY,
+				(x, y, halfBlockY) => {
+					if (e.altKey) {
+						if (State.sampleTool && State.sampleTool.sample) {
+							State.sampleTool.sample(x, halfBlockY);
+						}
+					} else {
+						document.dispatchEvent(
+							new CustomEvent('onTextCanvasDown', {
+								detail: {
+									x: x,
+									y: y,
+									halfBlockY: halfBlockY,
+									leftMouseButton: e.button === 0 && e.ctrlKey !== true,
+									rightMouseButton: e.button === 2 || e.ctrlKey,
+								},
+							}),
+						);
 					}
-				} else {
-					document.dispatchEvent(
-						new CustomEvent('onTextCanvasDown', {
-							detail: {
-								x: x,
-								y: y,
-								halfBlockY: halfBlockY,
-								leftMouseButton: e.button === 0 && e.ctrlKey !== true,
-								rightMouseButton: e.button === 2 || e.ctrlKey,
-							},
-						}),
-					);
-				}
-			});
+				},
+			);
 		}
 	});
 
@@ -1003,33 +1117,75 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					case magicNumbers.CHAR_NULL:
 					case magicNumbers.CHAR_SPACE:
 					case magicNumbers.CHAR_NBSP:
-						draw(index, magicNumbers.FULL_BLOCK, background, 0, block[1], block[2]);
+						draw(
+							index,
+							magicNumbers.FULL_BLOCK,
+							background,
+							0,
+							block[1],
+							block[2],
+						);
 						break;
 					case magicNumbers.FULL_BLOCK:
-						draw(index, magicNumbers.FULL_BLOCK, attribute & 15, 0, block[1], block[2]);
+						draw(
+							index,
+							magicNumbers.FULL_BLOCK,
+							attribute & 15,
+							0,
+							block[1],
+							block[2],
+						);
 						break;
 					case magicNumbers.LEFT_HALFBLOCK:
 						foreground = attribute & 15;
 						if (foreground < 8) {
-							draw(index, magicNumbers.RIGHT_HALFBLOCK, background, foreground, block[1], block[2]);
+							draw(
+								index,
+								magicNumbers.RIGHT_HALFBLOCK,
+								background,
+								foreground,
+								block[1],
+								block[2],
+							);
 						}
 						break;
 					case magicNumbers.RIGHT_HALFBLOCK:
 						foreground = attribute & 15;
 						if (foreground < 8) {
-							draw(index, magicNumbers.LEFT_HALFBLOCK, background, foreground, block[1], block[2]);
+							draw(
+								index,
+								magicNumbers.LEFT_HALFBLOCK,
+								background,
+								foreground,
+								block[1],
+								block[2],
+							);
 						}
 						break;
 					case magicNumbers.LOWER_HALFBLOCK:
 						foreground = attribute & 15;
 						if (foreground < 8) {
-							draw(index, magicNumbers.UPPER_HALFBLOCK, background, foreground, block[1], block[2]);
+							draw(
+								index,
+								magicNumbers.UPPER_HALFBLOCK,
+								background,
+								foreground,
+								block[1],
+								block[2],
+							);
 						}
 						break;
 					case magicNumbers.UPPER_HALFBLOCK:
 						foreground = attribute & 15;
 						if (foreground < 8) {
-							draw(index, magicNumbers.LOWER_HALFBLOCK, background, foreground, block[1], block[2]);
+							draw(
+								index,
+								magicNumbers.LOWER_HALFBLOCK,
+								background,
+								foreground,
+								block[1],
+								block[2],
+							);
 						}
 						break;
 					default:
@@ -1044,7 +1200,15 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		callback((charCode, foreground, background, x, y) => {
 			const index = y * columns + x;
 			blocks.push([index, x, y]);
-			patchBufferAndEnqueueDirty(index, charCode, foreground, background, x, y, true);
+			patchBufferAndEnqueueDirty(
+				index,
+				charCode,
+				foreground,
+				background,
+				x,
+				y,
+				true,
+			);
 
 			if (mirrorMode) {
 				const mirrorX = getMirrorX(x);
@@ -1052,7 +1216,15 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					const mirrorIndex = y * columns + mirrorX;
 					const mirrorCharCode = getMirrorCharCode(charCode);
 					blocks.push([mirrorIndex, mirrorX, y]);
-					patchBufferAndEnqueueDirty(mirrorIndex, mirrorCharCode, foreground, background, mirrorX, y, true);
+					patchBufferAndEnqueueDirty(
+						mirrorIndex,
+						mirrorCharCode,
+						foreground,
+						background,
+						mirrorX,
+						y,
+						true,
+					);
 				}
 			}
 		});
@@ -1151,7 +1323,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const setXBFontData = (fontBytes, fontWidth, fontHeight) => {
 		if (!fontWidth || fontWidth <= 0) {
-			console.warn(`[Canvas] Invalid XB font width: ${fontWidth}, defaulting to ${magicNumbers.DEFAULT_FONT_WIDTH}px`);
+			console.warn(
+				`[Canvas] Invalid XB font width: ${fontWidth}, defaulting to ${magicNumbers.DEFAULT_FONT_WIDTH}px`,
+			);
 			fontWidth = magicNumbers.DEFAULT_FONT_WIDTH;
 		}
 		if (!fontHeight || fontHeight <= 0) {
@@ -1175,7 +1349,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const setXBPaletteData = paletteBytes => {
-		if (!paletteBytes || !(paletteBytes instanceof Uint8Array) || paletteBytes.length < 48) {
+		if (
+			!paletteBytes ||
+			!(paletteBytes instanceof Uint8Array) ||
+			paletteBytes.length < 48
+		) {
 			console.error(
 				`[Canvas] Invalid data sent to setXBPaletteData; Expected: Uint8Array of 48 bytes; Received:` +
 				`${paletteBytes?.constructor?.name || 'null'} with length ${paletteBytes?.length || 0}`,
@@ -1186,7 +1364,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const rgb6BitPalette = [];
 		for (let i = 0; i < 16; i++) {
 			const offset = i * 3;
-			rgb6BitPalette.push([paletteBytes[offset], paletteBytes[offset + 1], paletteBytes[offset + 2]]);
+			rgb6BitPalette.push([
+				paletteBytes[offset],
+				paletteBytes[offset + 1],
+				paletteBytes[offset + 2],
+			]);
 		}
 		State.palette = createPalette(rgb6BitPalette);
 

@@ -23,7 +23,10 @@ const startServer = config => {
 					cert: readFileSync(certPath),
 					key: readFileSync(keyPath),
 				});
-				console.log('Using HTTPS server with SSL certificates from:', config.sslDir);
+				console.log(
+					'Using HTTPS server with SSL certificates from:',
+					config.sslDir,
+				);
 			} else {
 				throw new Error(`SSL certificates not found in ${config.sslDir}`);
 			}

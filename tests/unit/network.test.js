@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { createWorkerHandler, createChatController } from '../../src/js/client/network.js';
+import {
+	createWorkerHandler,
+	createChatController,
+} from '../../src/js/client/network.js';
 
 // Mock State module
 vi.mock('../../src/js/client/state.js', () => ({
@@ -182,7 +185,10 @@ describe('Network Module', () => {
 			createWorkerHandler(mockInputHandle);
 
 			expect(global.localStorage.getItem).toHaveBeenCalledWith('handle');
-			expect(global.localStorage.setItem).toHaveBeenCalledWith('handle', 'Anonymous');
+			expect(global.localStorage.setItem).toHaveBeenCalledWith(
+				'handle',
+				'Anonymous',
+			);
 			expect(mockInputHandle.value).toBe('Anonymous');
 		});
 
@@ -198,8 +204,14 @@ describe('Network Module', () => {
 		it('should create worker and set up message handling', () => {
 			createWorkerHandler(mockInputHandle);
 
-			expect(mockWorker.postMessage).toHaveBeenCalledWith({ cmd: 'handle', handle: 'Anonymous' });
-			expect(mockWorker.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+			expect(mockWorker.postMessage).toHaveBeenCalledWith({
+				cmd: 'handle',
+				handle: 'Anonymous',
+			});
+			expect(mockWorker.addEventListener).toHaveBeenCalledWith(
+				'message',
+				expect.any(Function),
+			);
 		});
 
 		it('should determine WebSocket URL based on location', () => {
@@ -246,7 +258,10 @@ describe('Network Module', () => {
 			expect(handler.isConnected()).toBe(false);
 
 			// Test that message handlers would be called
-			expect(mockWorker.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+			expect(mockWorker.addEventListener).toHaveBeenCalledWith(
+				'message',
+				expect.any(Function),
+			);
 		});
 
 		it('should handle draw commands when connected', () => {
@@ -265,7 +280,10 @@ describe('Network Module', () => {
 			const handler = createWorkerHandler(mockInputHandle);
 
 			handler.setHandle('NewUser');
-			expect(global.localStorage.setItem).toHaveBeenCalledWith('handle', 'NewUser');
+			expect(global.localStorage.setItem).toHaveBeenCalledWith(
+				'handle',
+				'NewUser',
+			);
 			expect(mockWorker.postMessage).toHaveBeenCalledWith({
 				cmd: 'nick',
 				handle: 'NewUser',
@@ -307,8 +325,12 @@ describe('Network Module', () => {
 			handler.sendLetterSpacingChange(false);
 
 			// Should not have sent any canvas-related messages
-			expect(mockWorker.postMessage).not.toHaveBeenCalledWith(expect.objectContaining({ cmd: 'canvasSettings' }));
-			expect(mockWorker.postMessage).not.toHaveBeenCalledWith(expect.objectContaining({ cmd: 'resize' }));
+			expect(mockWorker.postMessage).not.toHaveBeenCalledWith(
+				expect.objectContaining({ cmd: 'canvasSettings' }),
+			);
+			expect(mockWorker.postMessage).not.toHaveBeenCalledWith(
+				expect.objectContaining({ cmd: 'resize' }),
+			);
 		});
 	});
 
@@ -317,8 +339,20 @@ describe('Network Module', () => {
 
 		beforeEach(() => {
 			mockElements = {
-				divChatButton: { classList: { add: vi.fn(), remove: vi.fn(), contains: vi.fn(() => false) } },
-				divChatWindow: { classList: { add: vi.fn(), remove: vi.fn(), contains: vi.fn(() => false) } },
+				divChatButton: {
+					classList: {
+						add: vi.fn(),
+						remove: vi.fn(),
+						contains: vi.fn(() => false),
+					},
+				},
+				divChatWindow: {
+					classList: {
+						add: vi.fn(),
+						remove: vi.fn(),
+						contains: vi.fn(() => false),
+					},
+				},
 				divMessageWindow: {
 					appendChild: vi.fn(),
 					getBoundingClientRect: vi.fn(() => ({ height: 100 })),
@@ -329,7 +363,10 @@ describe('Network Module', () => {
 				inputHandle: { value: '', addEventListener: vi.fn(), focus: vi.fn() },
 				inputMessage: { value: '', addEventListener: vi.fn(), focus: vi.fn() },
 				inputButton: { addEventListener: vi.fn() },
-				inputNotificationCheckbox: { checked: false, addEventListener: vi.fn() },
+				inputNotificationCheckbox: {
+					checked: false,
+					addEventListener: vi.fn(),
+				},
 			};
 
 			global.localStorage.getItem.mockImplementation(key => {
@@ -386,17 +423,37 @@ describe('Network Module', () => {
 				onBlur,
 			);
 
-			expect(mockElements.inputHandle.addEventListener).toHaveBeenCalledWith('focus', expect.any(Function));
-			expect(mockElements.inputHandle.addEventListener).toHaveBeenCalledWith('blur', expect.any(Function));
-			expect(mockElements.inputMessage.addEventListener).toHaveBeenCalledWith('focus', expect.any(Function));
-			expect(mockElements.inputMessage.addEventListener).toHaveBeenCalledWith('blur', expect.any(Function));
-			expect(mockElements.inputHandle.addEventListener).toHaveBeenCalledWith('keypress', expect.any(Function));
-			expect(mockElements.inputMessage.addEventListener).toHaveBeenCalledWith('keypress', expect.any(Function));
-			expect(mockElements.inputButton.addEventListener).toHaveBeenCalledWith('click', expect.any(Function));
-			expect(mockElements.inputNotificationCheckbox.addEventListener).toHaveBeenCalledWith(
+			expect(mockElements.inputHandle.addEventListener).toHaveBeenCalledWith(
+				'focus',
+				expect.any(Function),
+			);
+			expect(mockElements.inputHandle.addEventListener).toHaveBeenCalledWith(
+				'blur',
+				expect.any(Function),
+			);
+			expect(mockElements.inputMessage.addEventListener).toHaveBeenCalledWith(
+				'focus',
+				expect.any(Function),
+			);
+			expect(mockElements.inputMessage.addEventListener).toHaveBeenCalledWith(
+				'blur',
+				expect.any(Function),
+			);
+			expect(mockElements.inputHandle.addEventListener).toHaveBeenCalledWith(
+				'keypress',
+				expect.any(Function),
+			);
+			expect(mockElements.inputMessage.addEventListener).toHaveBeenCalledWith(
+				'keypress',
+				expect.any(Function),
+			);
+			expect(mockElements.inputButton.addEventListener).toHaveBeenCalledWith(
 				'click',
 				expect.any(Function),
 			);
+			expect(
+				mockElements.inputNotificationCheckbox.addEventListener,
+			).toHaveBeenCalledWith('click', expect.any(Function));
 		});
 
 		it('should handle notification settings from localStorage', () => {
@@ -434,7 +491,10 @@ describe('Network Module', () => {
 				vi.fn(),
 			);
 
-			expect(global.localStorage.setItem).toHaveBeenCalledWith('notifications', false);
+			expect(global.localStorage.setItem).toHaveBeenCalledWith(
+				'notifications',
+				false,
+			);
 			expect(mockElements.inputNotificationCheckbox.checked).toBe(false);
 		});
 
@@ -460,17 +520,27 @@ describe('Network Module', () => {
 
 			// Toggle on
 			controller.toggle();
-			expect(mockElements.divChatWindow.classList.remove).toHaveBeenCalledWith('hide');
+			expect(mockElements.divChatWindow.classList.remove).toHaveBeenCalledWith(
+				'hide',
+			);
 			expect(mockElements.inputMessage.focus).toHaveBeenCalled();
-			expect(mockElements.divChatButton.classList.add).toHaveBeenCalledWith('active');
-			expect(mockElements.divChatButton.classList.remove).toHaveBeenCalledWith('notification');
+			expect(mockElements.divChatButton.classList.add).toHaveBeenCalledWith(
+				'active',
+			);
+			expect(mockElements.divChatButton.classList.remove).toHaveBeenCalledWith(
+				'notification',
+			);
 			expect(onFocus).toHaveBeenCalled();
 			expect(controller.isEnabled()).toBe(true);
 
 			// Toggle off
 			controller.toggle();
-			expect(mockElements.divChatWindow.classList.add).toHaveBeenCalledWith('hide');
-			expect(mockElements.divChatButton.classList.remove).toHaveBeenCalledWith('active');
+			expect(mockElements.divChatWindow.classList.add).toHaveBeenCalledWith(
+				'hide',
+			);
+			expect(mockElements.divChatButton.classList.remove).toHaveBeenCalledWith(
+				'active',
+			);
 			expect(onBlur).toHaveBeenCalled();
 			expect(controller.isEnabled()).toBe(false);
 		});
@@ -573,7 +643,9 @@ describe('Network Module', () => {
 
 			// Chat is disabled, should add notification class
 			controller.addConversation('TestUser', 'Hello world', true);
-			expect(mockElements.divChatButton.classList.add).toHaveBeenCalledWith('notification');
+			expect(mockElements.divChatButton.classList.add).toHaveBeenCalledWith(
+				'notification',
+			);
 		});
 	});
 });

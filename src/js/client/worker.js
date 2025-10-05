@@ -41,11 +41,21 @@ const onJoin = (handle, joinSessionID, showNotification) => {
 	if (joinSessionID === sessionID) {
 		showNotification = false;
 	}
-	self.postMessage({ cmd: 'join', sessionID: joinSessionID, handle, showNotification });
+	self.postMessage({
+		cmd: 'join',
+		sessionID: joinSessionID,
+		handle,
+		showNotification,
+	});
 };
 
 const onNick = (handle, nickSessionID) => {
-	self.postMessage({ cmd: 'nick', sessionID: nickSessionID, handle, showNotification: nickSessionID !== sessionID });
+	self.postMessage({
+		cmd: 'nick',
+		sessionID: nickSessionID,
+		handle,
+		showNotification: nickSessionID !== sessionID,
+	});
 };
 
 const onPart = sessionID => {
@@ -57,7 +67,12 @@ const onDraw = blocks => {
 	let index;
 	blocks.forEach(block => {
 		index = block >> 16;
-		outputBlocks.push([index, block & 0xffff, index % joint.columns, Math.floor(index / joint.columns)]);
+		outputBlocks.push([
+			index,
+			block & 0xffff,
+			index % joint.columns,
+			Math.floor(index / joint.columns),
+		]);
 	});
 	self.postMessage({ cmd: 'draw', blocks: outputBlocks });
 };
@@ -81,8 +96,16 @@ const onMsg = e => {
 		try {
 			data = JSON.parse(data);
 		} catch (error) {
-			const dataInfo = typeof data === 'string' ? `string of length ${data.length}` : typeof data;
-			console.error('[Worker] Invalid data received from server. Data type:', dataInfo, 'Error:', error);
+			const dataInfo =
+				typeof data === 'string'
+					? `string of length ${data.length}`
+					: typeof data;
+			console.error(
+				'[Worker] Invalid data received from server. Data type:',
+				dataInfo,
+				'Error:',
+				error,
+			);
 			return;
 		}
 
@@ -115,16 +138,26 @@ const onMsg = e => {
 				self.postMessage({ cmd: 'canvasSettings', settings: data[1] });
 				break;
 			case 'resize':
-				self.postMessage({ cmd: 'resize', columns: data[1].columns, rows: data[1].rows });
+				self.postMessage({
+					cmd: 'resize',
+					columns: data[1].columns,
+					rows: data[1].rows,
+				});
 				break;
 			case 'fontChange':
 				self.postMessage({ cmd: 'fontChange', fontName: data[1].fontName });
 				break;
 			case 'iceColorsChange':
-				self.postMessage({ cmd: 'iceColorsChange', iceColors: data[1].iceColors });
+				self.postMessage({
+					cmd: 'iceColorsChange',
+					iceColors: data[1].iceColors,
+				});
 				break;
 			case 'letterSpacingChange':
-				self.postMessage({ cmd: 'letterSpacingChange', letterSpacing: data[1].letterSpacing });
+				self.postMessage({
+					cmd: 'letterSpacingChange',
+					letterSpacing: data[1].letterSpacing,
+				});
 				break;
 			default:
 				console.warn('[Worker] Unknown command:', data[0]);
@@ -163,7 +196,12 @@ self.onmessage = msg => {
 					if (data.silentCheck) {
 						self.postMessage({ cmd: 'silentCheckFailed' });
 					} else {
-						console.info('[Worker] WebSocket connection closed. Code:', e.code, 'Reason:', e.reason);
+						console.info(
+							'[Worker] WebSocket connection closed. Code:',
+							e.code,
+							'Reason:',
+							e.reason,
+						);
 						self.postMessage({ cmd: 'disconnected' });
 					}
 				});
@@ -171,14 +209,20 @@ self.onmessage = msg => {
 					if (data.silentCheck) {
 						self.postMessage({ cmd: 'silentCheckFailed' });
 					} else {
-						self.postMessage({ cmd: 'error', error: 'WebSocket connection failed.' });
+						self.postMessage({
+							cmd: 'error',
+							error: 'WebSocket connection failed.',
+						});
 					}
 				});
 			} catch (error) {
 				if (data.silentCheck) {
 					self.postMessage({ cmd: 'silentCheckFailed' });
 				} else {
-					self.postMessage({ cmd: 'error', error: `WebSocket initialization failed: ${error.message}` });
+					self.postMessage({
+						cmd: 'error',
+						error: `WebSocket initialization failed: ${error.message}`,
+					});
 				}
 			}
 			break;

@@ -444,18 +444,48 @@ describe('Freehand Tools', () => {
 			const controller = createShadingController(mockPanel, false);
 
 			controller.enable();
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('keyup', expect.any(Function));
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'keydown',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'keyup',
+				expect.any(Function),
+			);
 
 			controller.disable();
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('keyup', expect.any(Function));
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'keydown',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'keyup',
+				expect.any(Function),
+			);
 		});
 	});
 
@@ -539,10 +569,16 @@ describe('Freehand Tools', () => {
 			const controller = createFillController();
 
 			controller.enable();
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
 
 			controller.disable();
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
 		});
 	});
 
@@ -576,14 +612,32 @@ describe('Freehand Tools', () => {
 			const controller = createLineController();
 
 			controller.enable();
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
 
 			controller.disable();
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
 		});
 	});
 
@@ -599,14 +653,32 @@ describe('Freehand Tools', () => {
 			const controller = createSquareController();
 
 			controller.enable();
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
 
 			controller.disable();
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
 		});
 	});
 
@@ -622,14 +694,32 @@ describe('Freehand Tools', () => {
 			const controller = createCircleController();
 
 			controller.enable();
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
 
 			controller.disable();
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
 		});
 	});
 
@@ -645,14 +735,32 @@ describe('Freehand Tools', () => {
 			const controller = createAttributeBrushController();
 
 			controller.enable();
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
 
 			controller.disable();
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
 		});
 	});
 
@@ -670,16 +778,40 @@ describe('Freehand Tools', () => {
 			const tool = createSelectionTool();
 
 			tool.enable();
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'keydown',
+				expect.any(Function),
+			);
 
 			tool.disable();
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'keydown',
+				expect.any(Function),
+			);
 		});
 
 		it('should handle flip operations', () => {
@@ -693,7 +825,10 @@ describe('Freehand Tools', () => {
 	});
 
 	describe('createSampleTool', () => {
-		let mockShadeBrush, mockShadeElement, mockCharacterBrush, mockCharacterElement;
+		let mockShadeBrush,
+				mockShadeElement,
+				mockCharacterBrush,
+				mockCharacterElement;
 
 		beforeEach(() => {
 			mockShadeBrush = { select: vi.fn() };
@@ -703,7 +838,12 @@ describe('Freehand Tools', () => {
 		});
 
 		it('should create a sample tool with proper interface', () => {
-			const tool = createSampleTool(mockShadeBrush, mockShadeElement, mockCharacterBrush, mockCharacterElement);
+			const tool = createSampleTool(
+				mockShadeBrush,
+				mockShadeElement,
+				mockCharacterBrush,
+				mockCharacterElement,
+			);
 
 			expect(tool).toHaveProperty('enable');
 			expect(tool).toHaveProperty('disable');
@@ -711,7 +851,12 @@ describe('Freehand Tools', () => {
 		});
 
 		it('should handle sampling functionality', () => {
-			const tool = createSampleTool(mockShadeBrush, mockShadeElement, mockCharacterBrush, mockCharacterElement);
+			const tool = createSampleTool(
+				mockShadeBrush,
+				mockShadeElement,
+				mockCharacterBrush,
+				mockCharacterElement,
+			);
 
 			expect(() => {
 				tool.sample(10, 5);
@@ -719,7 +864,12 @@ describe('Freehand Tools', () => {
 		});
 
 		it('should handle blocky half-block sampling', async () => {
-			const tool = createSampleTool(mockShadeBrush, mockShadeElement, mockCharacterBrush, mockCharacterElement);
+			const tool = createSampleTool(
+				mockShadeBrush,
+				mockShadeElement,
+				mockCharacterBrush,
+				mockCharacterElement,
+			);
 
 			// Mock blocky half block with specific colors
 			const State = (await import('../../src/js/client/state.js')).default;
@@ -736,7 +886,12 @@ describe('Freehand Tools', () => {
 		});
 
 		it('should handle non-blocky character sampling', async () => {
-			const tool = createSampleTool(mockShadeBrush, mockShadeElement, mockCharacterBrush, mockCharacterElement);
+			const tool = createSampleTool(
+				mockShadeBrush,
+				mockShadeElement,
+				mockCharacterBrush,
+				mockCharacterElement,
+			);
 
 			// Mock non-blocky character - need to import State and modify mock
 			const State = (await import('../../src/js/client/state.js')).default;
@@ -761,7 +916,12 @@ describe('Freehand Tools', () => {
 		});
 
 		it('should handle shading character sampling', async () => {
-			const tool = createSampleTool(mockShadeBrush, mockShadeElement, mockCharacterBrush, mockCharacterElement);
+			const tool = createSampleTool(
+				mockShadeBrush,
+				mockShadeElement,
+				mockCharacterBrush,
+				mockCharacterElement,
+			);
 
 			// Mock shading character
 			const State = (await import('../../src/js/client/state.js')).default;
@@ -786,13 +946,24 @@ describe('Freehand Tools', () => {
 		});
 
 		it('should manage canvas down events', () => {
-			const tool = createSampleTool(mockShadeBrush, mockShadeElement, mockCharacterBrush, mockCharacterElement);
+			const tool = createSampleTool(
+				mockShadeBrush,
+				mockShadeElement,
+				mockCharacterBrush,
+				mockCharacterElement,
+			);
 
 			tool.enable();
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
 
 			tool.disable();
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
 		});
 	});
 
@@ -807,9 +978,18 @@ describe('Freehand Tools', () => {
 			controller.enable();
 
 			// The line algorithm is internal but we test the interface
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
 		});
 	});
 
@@ -931,7 +1111,8 @@ describe('Freehand Tools', () => {
 			const afterEnableCount = mockDocument.addEventListener.mock.calls.length;
 
 			controller.disable();
-			const afterDisableCount = mockDocument.removeEventListener.mock.calls.length;
+			const afterDisableCount =
+				mockDocument.removeEventListener.mock.calls.length;
 
 			// Should have called addEventListener when enabled
 			expect(afterEnableCount).toBeGreaterThan(initialCallCount);
@@ -973,17 +1154,35 @@ describe('Freehand Tools', () => {
 
 		it('should register event listeners when enabled', () => {
 			lineController.enable();
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
 		});
 
 		it('should remove event listeners when disabled', () => {
 			lineController.enable();
 			lineController.disable();
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
-			expect(mockDocument.removeEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
+			expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
 		});
 	});
 
@@ -1003,9 +1202,18 @@ describe('Freehand Tools', () => {
 
 		it('should register event listeners when enabled', () => {
 			squareController.enable();
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
 		});
 	});
 
@@ -1025,9 +1233,18 @@ describe('Freehand Tools', () => {
 
 		it('should register event listeners when enabled', () => {
 			halfBlockController.enable();
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDown', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasUp', expect.any(Function));
-			expect(mockDocument.addEventListener).toHaveBeenCalledWith('onTextCanvasDrag', expect.any(Function));
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDown',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasUp',
+				expect.any(Function),
+			);
+			expect(mockDocument.addEventListener).toHaveBeenCalledWith(
+				'onTextCanvasDrag',
+				expect.any(Function),
+			);
 		});
 	});
 

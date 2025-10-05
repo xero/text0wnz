@@ -182,7 +182,9 @@ const loadModule = () => {
 			};
 
 			const extendImageData = y => {
-				const newImageData = new Uint8Array(width * (y + 100) * 3 + imageData.length);
+				const newImageData = new Uint8Array(
+					width * (y + 100) * 3 + imageData.length,
+				);
 				newImageData.set(imageData, 0);
 				imageData = newImageData;
 			};
@@ -246,7 +248,9 @@ const loadModule = () => {
 			} else if ((charCode & 0xe0) === 0xc0) {
 				// 2-byte sequence
 				if (startIndex + 1 >= bytes.length) {
-					throw new Error(`[File] Unexpected end of data at position ${startIndex} for 2-byte UTF-8 sequence`);
+					throw new Error(
+						`[File] Unexpected end of data at position ${startIndex} for 2-byte UTF-8 sequence`,
+					);
 				}
 				const secondByte = bytes[startIndex + 1];
 				if ((secondByte & 0xc0) !== 0x80) {
@@ -259,30 +263,46 @@ const loadModule = () => {
 			} else if ((charCode & 0xf0) === 0xe0) {
 				// 3-byte sequence
 				if (startIndex + 2 >= bytes.length) {
-					throw new Error(`[File] Unexpected end of data at position ${startIndex} for 3-byte UTF-8 sequence`);
+					throw new Error(
+						`[File] Unexpected end of data at position ${startIndex} for 3-byte UTF-8 sequence`,
+					);
 				}
 				const secondByte = bytes[startIndex + 1];
 				const thirdByte = bytes[startIndex + 2];
 				if ((secondByte & 0xc0) !== 0x80 || (thirdByte & 0xc0) !== 0x80) {
-					throw new Error(`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1} or ${startIndex + 2}`);
+					throw new Error(
+						`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1} or ${startIndex + 2}`,
+					);
 				}
-				charCode = ((charCode & 0x0f) << 12) | ((secondByte & 0x3f) << 6) | (thirdByte & 0x3f);
+				charCode =
+					((charCode & 0x0f) << 12) |
+					((secondByte & 0x3f) << 6) |
+					(thirdByte & 0x3f);
 				return { charCode, bytesConsumed: 3 };
 			} else if ((charCode & 0xf8) === 0xf0) {
 				// 4-byte sequence
 				if (startIndex + 3 >= bytes.length) {
-					throw new Error(`[File] Unexpected end of data at position ${startIndex} for 4-byte UTF-8 sequence`);
+					throw new Error(
+						`[File] Unexpected end of data at position ${startIndex} for 4-byte UTF-8 sequence`,
+					);
 				}
 				const secondByte = bytes[startIndex + 1];
 				const thirdByte = bytes[startIndex + 2];
 				const fourthByte = bytes[startIndex + 3];
-				if ((secondByte & 0xc0) !== 0x80 || (thirdByte & 0xc0) !== 0x80 || (fourthByte & 0xc0) !== 0x80) {
+				if (
+					(secondByte & 0xc0) !== 0x80 ||
+					(thirdByte & 0xc0) !== 0x80 ||
+					(fourthByte & 0xc0) !== 0x80
+				) {
 					throw new Error(
 						`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1}, ${startIndex + 2}, or ${startIndex + 3}`,
 					);
 				}
 				charCode =
-					((charCode & 0x07) << 18) | ((secondByte & 0x3f) << 12) | ((thirdByte & 0x3f) << 6) | (fourthByte & 0x3f);
+					((charCode & 0x07) << 18) |
+					((secondByte & 0x3f) << 12) |
+					((thirdByte & 0x3f) << 6) |
+					(fourthByte & 0x3f);
 				return { charCode, bytesConsumed: 4 };
 			}
 			throw new Error(
@@ -820,7 +840,12 @@ const loadModule = () => {
 		};
 
 		const readLE32 = (data, offset) => {
-			return data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24);
+			return (
+				data[offset] |
+				(data[offset + 1] << 8) |
+				(data[offset + 2] << 16) |
+				(data[offset + 3] << 24)
+			);
 		};
 
 		if (defaultColumnValue) {
@@ -848,7 +873,10 @@ const loadModule = () => {
 
 		if (bytes.length >= 128) {
 			sauce = bytes.slice(-128);
-			if (bytesToString(sauce, 0, 5) === 'SAUCE' && bytesToString(sauce, 5, 2) === '00') {
+			if (
+				bytesToString(sauce, 0, 5) === 'SAUCE' &&
+				bytesToString(sauce, 5, 2) === '00'
+			) {
 				fileSize = readLE32(sauce, 90);
 				dataType = sauce[94];
 				commentsCount = sauce[104]; // Comments field at byte 104
@@ -877,7 +905,9 @@ const loadModule = () => {
 							const commentLines = [];
 							for (let i = 0; i < commentsCount; i++) {
 								const lineOffset = commentBlockStart + 5 + i * 64;
-								const line = removeTrailingWhitespace(bytesToString(bytes, lineOffset, 64));
+								const line = removeTrailingWhitespace(
+									bytesToString(bytes, lineOffset, 64),
+								);
 								commentLines.push(line);
 							}
 							comments = commentLines.join('\n');
@@ -1048,7 +1078,9 @@ const loadModule = () => {
 			comments: sauce.comments,
 			fontName: fontName,
 			paletteData: paletteData,
-			fontData: fontData ? { bytes: fontData, width: 8, height: fontHeight } : null,
+			fontData: fontData
+				? { bytes: fontData, width: 8, height: fontHeight }
+				: null,
 		};
 	};
 
@@ -1088,7 +1120,13 @@ const loadModule = () => {
 					// Clear any previous XB data to avoid palette persistence
 					State.textArtCanvas.clearXBData(() => {
 						imageData = loadBin(data);
-						callback(imageData.columns, imageData.rows, imageData.data, imageData.iceColors, imageData.letterSpacing);
+						callback(
+							imageData.columns,
+							imageData.rows,
+							imageData.data,
+							imageData.iceColors,
+							imageData.letterSpacing,
+						);
 					});
 					break;
 				default:
@@ -1103,7 +1141,9 @@ const loadModule = () => {
 							convertData(imageData.data),
 							imageData.noblink,
 							imageData.letterSpacing,
-							file.name.toLowerCase().endsWith('nfo') ? magicNumbers.NFO_FONT : imageData.fontName,
+							file.name.toLowerCase().endsWith('nfo')
+								? magicNumbers.NFO_FONT
+								: imageData.fontName,
 						);
 					});
 					break;
@@ -1144,7 +1184,10 @@ const saveModule = () => {
 					types: [
 						{
 							description: 'Text Art',
-							accept: { 'application/octet-stream': ['.ans', '.bin', '.png', '.xb']},
+							accept: {
+								'application/octet-stream': ['.ans', '.bin', '.xb'],
+								'image/png': ['.png'],
+							},
 						},
 					],
 				});
@@ -1152,14 +1195,17 @@ const saveModule = () => {
 				await writable.write(outputBytes);
 				await writable.close();
 			} else {
-				const isSafari = navigator.userAgent.indexOf('Chrome') === -1 && navigator.userAgent.indexOf('Safari') !== -1;
+				const isSafari =
+					navigator.userAgent.indexOf('Chrome') === -1 &&
+					navigator.userAgent.indexOf('Safari') !== -1;
 				if (isSafari) {
 					let base64String = '';
 					for (let i = 0; i < outputBytes.length; i += 1) {
 						base64String += String.fromCharCode(outputBytes[i]);
 					}
 					const downloadLink = document.createElement('a');
-					downloadLink.href = 'data:application/octet-stream;base64,' + btoa(base64String);
+					downloadLink.href =
+						'data:application/octet-stream;base64,' + btoa(base64String);
 					downloadLink.download = filename;
 					downloadLink.click();
 				} else {
@@ -1412,7 +1458,11 @@ const saveModule = () => {
 				// Apply attributes if there are changes
 				if (attribs.length) {
 					lineOutput.push(27, 91); // ESC[
-					for (let attribIndex = 0; attribIndex < attribs.length; attribIndex++) {
+					for (
+						let attribIndex = 0;
+						attribIndex < attribs.length;
+						attribIndex++
+					) {
 						lineOutput = lineOutput.concat(attribs[attribIndex]);
 						if (attribIndex !== attribs.length - 1) {
 							lineOutput.push(59); // ;
@@ -1484,7 +1534,9 @@ const saveModule = () => {
 	const bin = async () => {
 		const columns = State.textArtCanvas.getColumns();
 		if (columns % 2 === 0) {
-			const imageData = convert16BitArrayTo8BitArray(State.textArtCanvas.getImageData());
+			const imageData = convert16BitArrayTo8BitArray(
+				State.textArtCanvas.getImageData(),
+			);
 			const sauce = createSauce(5, columns / 2, imageData.length, true);
 			const fname = State.title;
 			await saveFile(imageData, sauce, fname + '.bin');
@@ -1492,7 +1544,9 @@ const saveModule = () => {
 	};
 
 	const xb = async () => {
-		const imageData = convert16BitArrayTo8BitArray(State.textArtCanvas.getImageData());
+		const imageData = convert16BitArrayTo8BitArray(
+			State.textArtCanvas.getImageData(),
+		);
 		const columns = State.textArtCanvas.getColumns();
 		const rows = State.textArtCanvas.getRows();
 		const iceColors = State.textArtCanvas.getIceColors();
@@ -1577,7 +1631,11 @@ const saveModule = () => {
 
 	const png = async () => {
 		const fname = State.title;
-		await saveFile(dataUrlToBytes(State.textArtCanvas.getImage().toDataURL()), undefined, fname + '.png');
+		await saveFile(
+			dataUrlToBytes(State.textArtCanvas.getImage().toDataURL()),
+			undefined,
+			fname + '.png',
+		);
 	};
 
 	return {

@@ -16,15 +16,33 @@
 <html lang="en">
 	<head>
 		<meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5.0"/>
-		<link rel="icon" type="image/png" sizes="96x96" href="/img/favicon-96x96.png"/>
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5.0"
+		/>
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="96x96"
+			href="/img/favicon-96x96.png"
+		/>
 		<link rel="icon" type="image/svg+xml" href="/img/favicon.svg"/>
 		<link rel="shortcut icon" href="/img/favicon.ico"/>
-		<link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png"/>
+		<link
+			rel="apple-touch-icon"
+			sizes="180x180"
+			href="/img/apple-touch-icon.png"
+		/>
 		<meta name="apple-mobile-web-app-title" content="text.0w.nz"/>
 		<meta name="theme-color" content="#4f4f4f"/>
-		<meta name="author" content="https://github.com/xero/text0wnz/graphs/contributors"/>
-		<meta name="description" content="The online collaborative text art editor"/>
+		<meta
+			name="author"
+			content="https://github.com/xero/text0wnz/graphs/contributors"
+		/>
+		<meta
+			name="description"
+			content="The online collaborative text art editor"
+		/>
 		<meta
 			name="keywords"
 			content="ansi, ascii, xbin, art, textart, textmode, ansi-editor, ascii-editor, web, blocktronics, highrez, scene, sceneart"
@@ -44,15 +62,23 @@
 								</svg>
 							</button>
 							<div class="menu-list">
-								<article id="new" class="menu-item excluded-for-websocket">New</article>
-								<article id="open" class="menu-item excluded-for-websocket">Open</article>
+								<article id="new" class="menu-item excluded-for-websocket">
+									New
+								</article>
+								<article id="open" class="menu-item excluded-for-websocket">
+									Open
+								</article>
 								<article class="seperator excluded-for-websocket"></article>
 								<article id="save-ansi" class="menu-item">Save as ANSi</article>
-								<article id="save-bin" class="menu-item">Save as Binary Text</article>
+								<article id="save-bin" class="menu-item">
+									Save as Binary Text
+								</article>
 								<article id="save-xbin" class="menu-item">Save as XBin</article>
 								<article class="seperator"></article>
 								<article id="save-png" class="menu-item">Export as PNG</article>
-								<article id="save-utf8" class="menu-item">Export as ANSi (UTF-8)</article>
+								<article id="save-utf8" class="menu-item">
+									Export as ANSi (UTF-8)
+								</article>
 								<article class="seperator"></article>
 								<article id="about" class="menu-item">About teXt0wnz</article>
 							</div>
@@ -64,23 +90,53 @@
 								</svg>
 							</button>
 							<div class="menu-list">
-								<article id="nav-cut" class="menu-item disabled">Cut <kbd>Ctrl-X</kbd></article>
-								<article id="nav-copy" class="menu-item disabled">Copy <kbd>Ctrl-C</kbd></article>
-								<article id="nav-paste" class="menu-item disabled">Paste <kbd>Ctrl-V</kbd></article>
-								<article id="nav-system-paste" class="menu-item">System Paste <kbd>Ctrl-Shift-V</kbd></article>
-								<article id="nav-delete" class="menu-item disabled">Delete <kbd>Ctrl-Delete</kbd></article>
+								<article id="nav-cut" class="menu-item disabled">
+									Cut <kbd>Ctrl-X</kbd>
+								</article>
+								<article id="nav-copy" class="menu-item disabled">
+									Copy <kbd>Ctrl-C</kbd>
+								</article>
+								<article id="nav-paste" class="menu-item disabled">
+									Paste <kbd>Ctrl-V</kbd>
+								</article>
+								<article id="nav-system-paste" class="menu-item">
+									System Paste <kbd>Ctrl-Shift-V</kbd>
+								</article>
+								<article id="nav-delete" class="menu-item disabled">
+									Delete <kbd>Ctrl-Delete</kbd>
+								</article>
 								<article class="seperator"></article>
-								<article id="nav-undo" class="menu-item">Undo <kbd>Ctrl-Z</kbd></article>
-								<article id="nav-redo" class="menu-item">Redo <kbd>Ctrl-Y</kbd></article>
+								<article id="nav-undo" class="menu-item">
+									Undo <kbd>Ctrl-Z</kbd>
+								</article>
+								<article id="nav-redo" class="menu-item">
+									Redo <kbd>Ctrl-Y</kbd>
+								</article>
 								<article class="seperator"></article>
-								<article id="insert-row" class="menu-item">Insert Row <kbd>Alt+Up</kbd></article>
-								<article id="delete-row" class="menu-item">Delete Row <kbd>Alt+Down</kbd></article>
-								<article id="insert-column" class="menu-item">Insert Column <kbd>Alt+Right</kbd></article>
-								<article id="delete-column" class="menu-item">Delete Column <kbd>Alt+Left</kbd></article>
-								<article id="erase-row" class="menu-item">Erase Row <kbd>Alt+E</kbd></article>
-								<article id="erase-row-start" class="menu-item">Erase to Start of Row <kbd>Alt+Home</kbd></article>
-								<article id="erase-row-end" class="menu-item">Erase to End of Row <kbd>Alt+End</kbd></article>
-								<article id="erase-column" class="menu-item">Erase Column <kbd>Alt+Shift+E</kbd></article>
+								<article id="insert-row" class="menu-item">
+									Insert Row <kbd>Alt+Up</kbd>
+								</article>
+								<article id="delete-row" class="menu-item">
+									Delete Row <kbd>Alt+Down</kbd>
+								</article>
+								<article id="insert-column" class="menu-item">
+									Insert Column <kbd>Alt+Right</kbd>
+								</article>
+								<article id="delete-column" class="menu-item">
+									Delete Column <kbd>Alt+Left</kbd>
+								</article>
+								<article id="erase-row" class="menu-item">
+									Erase Row <kbd>Alt+E</kbd>
+								</article>
+								<article id="erase-row-start" class="menu-item">
+									Erase to Start of Row <kbd>Alt+Home</kbd>
+								</article>
+								<article id="erase-row-end" class="menu-item">
+									Erase to End of Row <kbd>Alt+End</kbd>
+								</article>
+								<article id="erase-column" class="menu-item">
+									Erase Column <kbd>Alt+Shift+E</kbd>
+								</article>
 								<article id="erase-column-start" class="menu-item">
 									Erase to Start of Column <kbd>Alt+Page Up</kbd>
 								</article>
@@ -88,9 +144,15 @@
 									Erase to End of Column <kbd>Alt+Page Down</kbd>
 								</article>
 								<article class="seperator"></article>
-								<article id="default-color" class="menu-item">Default Color <kbd>Ctrl-D</kbd></article>
-								<article id="swap-colors" class="menu-item">Swap Colors <kbd>Ctrl-Q</kbd></article>
-								<article id="fullscreen" class="menu-item">Toggle Fullscreen Mode</article>
+								<article id="default-color" class="menu-item">
+									Default Color <kbd>Ctrl-D</kbd>
+								</article>
+								<article id="swap-colors" class="menu-item">
+									Swap Colors <kbd>Ctrl-Q</kbd>
+								</article>
+								<article id="fullscreen" class="menu-item">
+									Toggle Fullscreen Mode
+								</article>
 							</div>
 						</div>
 					</div>
@@ -102,18 +164,42 @@
 				</nav>
 				<nav>
 					<div id="keyboard-toolbar">
-						<span>F1<canvas id="fkey0" class="fkey" height="0" width="0"></canvas></span>
-						<span>F2<canvas id="fkey1" class="fkey" height="0" width="0"></canvas></span>
-						<span>F3<canvas id="fkey2" class="fkey" height="0" width="0"></canvas></span>
-						<span>F4<canvas id="fkey3" class="fkey" height="0" width="0"></canvas></span>
-						<span>F5<canvas id="fkey4" class="fkey" height="0" width="0"></canvas></span>
-						<span>F6<canvas id="fkey5" class="fkey" height="0" width="0"></canvas></span>
-						<span>F7<canvas id="fkey6" class="fkey" height="0" width="0"></canvas></span>
-						<span>F8<canvas id="fkey7" class="fkey" height="0" width="0"></canvas></span>
-						<span>F9<canvas id="fkey8" class="fkey" height="0" width="0"></canvas></span>
-						<span>F10<canvas id="fkey9" class="fkey" height="0" width="0"></canvas></span>
-						<span>F11<canvas id="fkey10" class="fkey" height="0" width="0"></canvas></span>
-						<span>F12<canvas id="fkey11" class="fkey" height="0" width="0"></canvas></span>
+						<span
+						>F1<canvas id="fkey0" class="fkey" height="0" width="0"></canvas
+						></span>
+						<span
+						>F2<canvas id="fkey1" class="fkey" height="0" width="0"></canvas
+						></span>
+						<span
+						>F3<canvas id="fkey2" class="fkey" height="0" width="0"></canvas
+						></span>
+						<span
+						>F4<canvas id="fkey3" class="fkey" height="0" width="0"></canvas
+						></span>
+						<span
+						>F5<canvas id="fkey4" class="fkey" height="0" width="0"></canvas
+						></span>
+						<span
+						>F6<canvas id="fkey5" class="fkey" height="0" width="0"></canvas
+						></span>
+						<span
+						>F7<canvas id="fkey6" class="fkey" height="0" width="0"></canvas
+						></span>
+						<span
+						>F8<canvas id="fkey7" class="fkey" height="0" width="0"></canvas
+						></span>
+						<span
+						>F9<canvas id="fkey8" class="fkey" height="0" width="0"></canvas
+						></span>
+						<span
+						>F10<canvas id="fkey9" class="fkey" height="0" width="0"></canvas
+						></span>
+						<span
+						>F11<canvas id="fkey10" class="fkey" height="0" width="0"></canvas
+						></span>
+						<span
+						>F12<canvas id="fkey11" class="fkey" height="0" width="0"></canvas
+						></span>
 					</div>
 					<div id="viewport-toolbar">
 						<div id="navDarkmode" class="tool-button">
@@ -122,7 +208,14 @@
 									<rect fill="white" height="100%" width="100%" x="0" y="0"/>
 									<circle cx="0" cy="10" fill="black" r="6"/>
 								</mask>
-								<circle class="sun" cx="12" cy="12" fill="currentColor" mask="url(#moon-mask)" r="6"/>
+								<circle
+									class="sun"
+									cx="12"
+									cy="12"
+									fill="currentColor"
+									mask="url(#moon-mask)"
+									r="6"
+								/>
 								<g class="sun-beams" stroke="currentColor">
 									<line x1="12" x2="12" y1="1" y2="3"/>
 									<line x1="12" x2="12" y1="21" y2="23"/>
@@ -149,7 +242,14 @@
 							<kbd>
 								<label for="zoom-level">Zoom</label>
 							</kbd>
-							<input id="zoom-level" type="range" value="1" max="2" min="0.5" step="0.5"/>
+							<input
+								id="zoom-level"
+								type="range"
+								value="1"
+								max="2"
+								min="0.5"
+								step="0.5"
+							/>
 						</div>
 					</div>
 					<div id="brush-toolbar">
@@ -181,13 +281,21 @@
 					<div id="selection-toolbar">
 						<div id="flip-horizontal" class="tool-button">
 							<kbd>Mirror</kbd>
-							<svg class="sm" alt="Flip Horizontal" aria-label="Flip Horizontal ([)">
+							<svg
+								class="sm"
+								alt="Flip Horizontal"
+								aria-label="Flip Horizontal ([)"
+							>
 								<use href="img/icons.svg#fliph"></use>
 							</svg>
 						</div>
 						<div id="flip-vertical" class="tool-button">
 							<kbd>Flip</kbd>
-							<svg class="sm" alt="Flip Vertical" aria-label="Flip Vertical (])">
+							<svg
+								class="sm"
+								alt="Flip Vertical"
+								aria-label="Flip Vertical (])"
+							>
 								<use href="img/icons.svg#flipv"></use>
 							</svg>
 						</div>
@@ -291,7 +399,11 @@
 							<use href="img/icons.svg#group"></use>
 						</svg>
 					</button>
-					<button id="chat-button" class="included-for-websocket" aria-label="Chat">
+					<button
+						id="chat-button"
+						class="included-for-websocket"
+						aria-label="Chat"
+					>
 						<svg alt="Toggle Chat" aria-label="Toggle Chat">
 							<use href="img/icons.svg#group"></use>
 						</svg>
@@ -302,7 +414,11 @@
 								<h2>chatz</h2>
 								<div id="notification-setting">
 									<label for="notification-checkbox">
-										<input id="notification-checkbox" type="checkbox" aria-label="Display Notifications"/>
+										<input
+											id="notification-checkbox"
+											type="checkbox"
+											aria-label="Display Notifications"
+										/>
 										Display Notifications
 									</label>
 								</div>
@@ -335,7 +451,11 @@
 						</div>
 					</div>
 					<div id="resolution">
-						<svg id="navRes" alt="Change Resolution" aria-label="Change Resolution">
+						<svg
+							id="navRes"
+							alt="Change Resolution"
+							aria-label="Change Resolution"
+						>
 							<use href="img/icons.svg#resolution"></use>
 						</svg>
 						<kbd id="resolution-label">80x25</kbd>
@@ -419,7 +539,12 @@
 			/>
 		</label>
 		<label for="custom-color">
-			<input id="custom-color" class="hide" type="color" aria-label="Select Color"/>
+			<input
+				id="custom-color"
+				class="hide"
+				type="color"
+				aria-label="Select Color"
+			/>
 		</label>
 		<dialog id="modal">
 			<section id="resize-modal">
@@ -497,9 +622,15 @@
 								<option value="Zoids 8x8">Zoids (8x8)</option>
 							</optgroup>
 							<optgroup label="Commodore 64">
-								<option value="C64 PETSCII shifted 8x8">C64 PETSCII shifted (8x8)</option>
-								<option value="C64 PETSCII unshifted 8x8">C64 PETSCII unshifted (8x8)</option>
-								<option value="C64-DiskMaster 8x16">C64-DiskMaster (8x16)</option>
+								<option value="C64 PETSCII shifted 8x8">
+									C64 PETSCII shifted (8x8)
+								</option>
+								<option value="C64 PETSCII unshifted 8x8">
+									C64 PETSCII unshifted (8x8)
+								</option>
+								<option value="C64-DiskMaster 8x16">
+									C64-DiskMaster (8x16)
+								</option>
 							</optgroup>
 							<optgroup label="Amiga">
 								<option value="MicroKnight 8x16">MicroKnight (8x16)</option>
@@ -556,7 +687,9 @@
 							<optgroup label="IBM PC">
 								<option value="CP437 8x8">IBM PC Code page 437 (8x8)</option>
 								<option value="CP437 8x14">IBM PC Code page 437 (8x14)</option>
-								<option value="CP437 8x16" selected>IBM PC Code page 437 (8x16)</option>
+								<option value="CP437 8x16" selected>
+									IBM PC Code page 437 (8x16)
+								</option>
 								<option value="CP437 8x19">IBM PC Code page 437 (8x19)</option>
 							</optgroup>
 							<optgroup label="Icelandic">
@@ -626,25 +759,48 @@
 					<article>
 						<label for="sauce-title">Title:</label>
 						<div>
-							<input id="sauce-title" type="text" autocomplete="off" maxlength="35" spellcheck="false"/>
+							<input
+								id="sauce-title"
+								type="text"
+								autocomplete="off"
+								maxlength="35"
+								spellcheck="false"
+							/>
 						</div>
 					</article>
 					<article>
 						<label for="sauce-author">Author:</label>
 						<div>
-							<input id="sauce-author" type="text" autocomplete="off" maxlength="20" spellcheck="false"/>
+							<input
+								id="sauce-author"
+								type="text"
+								autocomplete="off"
+								maxlength="20"
+								spellcheck="false"
+							/>
 						</div>
 					</article>
 					<article>
 						<label for="sauce-group">Group:</label>
 						<div>
-							<input id="sauce-group" type="text" autocomplete="off" maxlength="20" spellcheck="false"/>
+							<input
+								id="sauce-group"
+								type="text"
+								autocomplete="off"
+								maxlength="20"
+								spellcheck="false"
+							/>
 						</div>
 					</article>
 					<article>
 						<label for="sauce-comments">Comments:</label>
 						<div>
-							<textarea id="sauce-comments" cols="19" autocomplete="off" rows="5"></textarea>
+							<textarea
+								id="sauce-comments"
+								cols="19"
+								autocomplete="off"
+								rows="5"
+							></textarea>
 						</div>
 					</article>
 					<article class="lil">
@@ -678,9 +834,16 @@
 			</section>
 			<section id="choice-modal">
 				<section>
-					<img class="logo" title="logo" alt="logo" loading="lazy" src="img/logo.png"/>
+					<img
+						class="logo"
+						title="logo"
+						alt="logo"
+						loading="lazy"
+						src="img/logo.png"
+					/>
 					<p>
-						The collaboration server is available! Would you like to join the session in progress, or continue offline?
+						The collaboration server is available! Would you like to join the
+						session in progress, or continue offline?
 					</p>
 				</section>
 				<nav>
@@ -714,8 +877,8 @@
 					<h2>Update Available!</h2>
 				</header>
 				<p>
-					A new version of the editor is available. Press update to reload and apply it now, if you are currently
-					drawing press cancel and...
+					A new version of the editor is available. Press update to reload and
+					apply it now, if you are currently drawing press cancel and...
 				</p>
 				<h4>MAKE SURE YOU SAVE BEFORE UPDATING!</h4>
 				<nav>
@@ -740,11 +903,17 @@
 				</header>
 				<img class="logo" title="logo" alt="logo" src="img/logo.png"/>
 				<p>
-					Licensed MIT 2018-2025 <a href="https://x-e.ro" target="_blank">xeR0</a>,
-					<a href="https://github.com/andyherbert" target="_blank">andyh</a>, and
-					<a href="https://github.com/xero/text0wnz/graphs/contributors" target="_blank">contributors</a>. Source code
-					is freely available on <a href="https://github.com/xero/text0wnz" target="_blank">Github</a> /
-					<a href="https://git.sr.ht/~xero/text0wnz">SourceHut</a>
+					Licensed MIT 2018-2025
+					<a href="https://x-e.ro" target="_blank">xeR0</a>,
+					<a href="https://github.com/andyherbert" target="_blank">andyh</a>,
+					and
+					<a
+						href="https://github.com/xero/text0wnz/graphs/contributors"
+						target="_blank"
+					>contributors</a
+					>. Source code is freely available on
+					<a href="https://github.com/xero/text0wnz" target="_blank">Github</a>
+					/ <a href="https://git.sr.ht/~xero/text0wnz">SourceHut</a>
 				</p>
 				<nav>
 					<button id="about-dl" aria-label="Download newest release">

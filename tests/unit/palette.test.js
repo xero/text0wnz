@@ -245,9 +245,18 @@ describe('Palette Utilities', () => {
 		it('should add event listeners for color changes', () => {
 			createPalettePreview(mockCanvas);
 
-			expect(global.document.addEventListener).toHaveBeenCalledWith('onForegroundChange', expect.any(Function));
-			expect(global.document.addEventListener).toHaveBeenCalledWith('onBackgroundChange', expect.any(Function));
-			expect(global.document.addEventListener).toHaveBeenCalledWith('onPaletteChange', expect.any(Function));
+			expect(global.document.addEventListener).toHaveBeenCalledWith(
+				'onForegroundChange',
+				expect.any(Function),
+			);
+			expect(global.document.addEventListener).toHaveBeenCalledWith(
+				'onBackgroundChange',
+				expect.any(Function),
+			);
+			expect(global.document.addEventListener).toHaveBeenCalledWith(
+				'onPaletteChange',
+				expect.any(Function),
+			);
 		});
 	});
 
@@ -293,17 +302,35 @@ describe('Palette Utilities', () => {
 		it('should add canvas event listeners', () => {
 			createPalettePicker(mockCanvas);
 
-			expect(mockCanvas.addEventListener).toHaveBeenCalledWith('touchend', expect.any(Function));
-			expect(mockCanvas.addEventListener).toHaveBeenCalledWith('touchcancel', expect.any(Function));
-			expect(mockCanvas.addEventListener).toHaveBeenCalledWith('mouseup', expect.any(Function));
-			expect(mockCanvas.addEventListener).toHaveBeenCalledWith('contextmenu', expect.any(Function));
+			expect(mockCanvas.addEventListener).toHaveBeenCalledWith(
+				'touchend',
+				expect.any(Function),
+			);
+			expect(mockCanvas.addEventListener).toHaveBeenCalledWith(
+				'touchcancel',
+				expect.any(Function),
+			);
+			expect(mockCanvas.addEventListener).toHaveBeenCalledWith(
+				'mouseup',
+				expect.any(Function),
+			);
+			expect(mockCanvas.addEventListener).toHaveBeenCalledWith(
+				'contextmenu',
+				expect.any(Function),
+			);
 		});
 
 		it('should add document event listeners', () => {
 			createPalettePicker(mockCanvas);
 
-			expect(global.document.addEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
-			expect(global.document.addEventListener).toHaveBeenCalledWith('onPaletteChange', expect.any(Function));
+			expect(global.document.addEventListener).toHaveBeenCalledWith(
+				'keydown',
+				expect.any(Function),
+			);
+			expect(global.document.addEventListener).toHaveBeenCalledWith(
+				'onPaletteChange',
+				expect.any(Function),
+			);
 		});
 
 		it('should handle touch events for color selection', () => {
@@ -311,7 +338,9 @@ describe('Palette Utilities', () => {
 			createPalettePicker(mockCanvas);
 
 			// Verify touchend handler is registered
-			const touchHandlerCall = mockCanvas.addEventListener.mock.calls.find(call => call[0] === 'touchend');
+			const touchHandlerCall = mockCanvas.addEventListener.mock.calls.find(
+				call => call[0] === 'touchend',
+			);
 			expect(touchHandlerCall).toBeDefined();
 			expect(typeof touchHandlerCall[1]).toBe('function');
 		});
@@ -321,7 +350,9 @@ describe('Palette Utilities', () => {
 			createPalettePicker(mockCanvas);
 
 			// Verify mouseup handler is registered
-			const mouseHandlerCall = mockCanvas.addEventListener.mock.calls.find(call => call[0] === 'mouseup');
+			const mouseHandlerCall = mockCanvas.addEventListener.mock.calls.find(
+				call => call[0] === 'mouseup',
+			);
 			expect(mouseHandlerCall).toBeDefined();
 			expect(typeof mouseHandlerCall[1]).toBe('function');
 		});
@@ -331,7 +362,9 @@ describe('Palette Utilities', () => {
 			createPalettePicker(mockCanvas);
 
 			// Get the keydown handler from document.addEventListener
-			const keyHandlerCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'keydown');
+			const keyHandlerCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'keydown',
+			);
 			expect(keyHandlerCall).toBeDefined();
 			expect(typeof keyHandlerCall[1]).toBe('function');
 		});
@@ -340,7 +373,9 @@ describe('Palette Utilities', () => {
 			// This test verifies that the keydown handler exists and can process events
 			createPalettePicker(mockCanvas);
 
-			const keyHandlerCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'keydown');
+			const keyHandlerCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'keydown',
+			);
 			expect(keyHandlerCall).toBeDefined();
 			expect(typeof keyHandlerCall[1]).toBe('function');
 		});
@@ -349,7 +384,9 @@ describe('Palette Utilities', () => {
 			// This test verifies that arrow key handling is set up correctly
 			createPalettePicker(mockCanvas);
 
-			const keyHandlerCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'keydown');
+			const keyHandlerCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'keydown',
+			);
 			expect(keyHandlerCall).toBeDefined();
 			expect(typeof keyHandlerCall[1]).toBe('function');
 		});
@@ -363,7 +400,9 @@ describe('Palette Utilities', () => {
 			createPalettePicker(mockMenuCanvas);
 
 			// Get the context menu handler
-			const menuHandlerCall = mockMenuCanvas.addEventListener.mock.calls.find(call => call[0] === 'contextmenu');
+			const menuHandlerCall = mockMenuCanvas.addEventListener.mock.calls.find(
+				call => call[0] === 'contextmenu',
+			);
 			expect(menuHandlerCall).toBeDefined();
 
 			const menuHandler = menuHandlerCall[1];
@@ -513,19 +552,35 @@ describe('Palette Utilities', () => {
 		it('should handle mouse events with modifier keys for background color selection', () => {
 			// Test mouse event coordinate calculation and modifier key logic
 			expect(() => {
-				const calculateColor = (clientX, clientY, canvasWidth, canvasHeight, _modifierKeys) => {
+				const calculateColor = (
+					clientX,
+					clientY,
+					canvasWidth,
+					canvasHeight,
+					_modifierKeys,
+				) => {
 					const x = Math.floor(clientX / (canvasWidth / 2));
 					const y = Math.floor(clientY / (canvasHeight / 8));
 					const colorIndex = y + (x === 0 ? 0 : 8);
 
 					// Test the calculations
-					if (clientX === 50 && clientY === 40 && canvasWidth === 200 && canvasHeight === 160) {
+					if (
+						clientX === 50 &&
+						clientY === 40 &&
+						canvasWidth === 200 &&
+						canvasHeight === 160
+					) {
 						// x = floor(50 / 100) = 0, y = floor(40 / 20) = 2
 						// colorIndex = 2 + 0 = 2
 						expect(colorIndex).toBe(2);
 					}
 
-					if (clientX === 150 && clientY === 60 && canvasWidth === 200 && canvasHeight === 160) {
+					if (
+						clientX === 150 &&
+						clientY === 60 &&
+						canvasWidth === 200 &&
+						canvasHeight === 160
+					) {
 						// x = floor(150 / 100) = 1, y = floor(60 / 20) = 3
 						// colorIndex = 3 + 8 = 11
 						expect(colorIndex).toBe(11);
@@ -555,7 +610,9 @@ describe('Palette Utilities', () => {
 			createPalettePicker(mockCanvas);
 
 			// Get the keydown handler
-			const keyHandlerCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'keydown');
+			const keyHandlerCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'keydown',
+			);
 			const keyHandler = keyHandlerCall[1];
 
 			// Clear any existing calls

@@ -64,7 +64,14 @@ const createFKeysShortcut = () => {
 	const keyDown = e => {
 		// Handle F1-F12 function keys (F1=112, F2=113, ..., F12=123)
 		const fKeyMatch = e.code.match(/^F(\d+)$/);
-		if (!e.altKey && !e.ctrlKey && !e.metaKey && fKeyMatch && fKeyMatch[1] >= 1 && fKeyMatch[1] <= 12) {
+		if (
+			!e.altKey &&
+			!e.ctrlKey &&
+			!e.metaKey &&
+			fKeyMatch &&
+			fKeyMatch[1] >= 1 &&
+			fKeyMatch[1] <= 12
+		) {
 			e.preventDefault();
 			State.textArtCanvas.startUndo();
 			State.textArtCanvas.draw(callback => {
@@ -322,7 +329,9 @@ const createSelectionCursor = divElement => {
 	const drawBorder = () => {
 		const ctx = cursor.getContext('2d');
 		ctx.clearRect(0, 0, cursor.width, cursor.height);
-		const antsColor = cursor.classList.contains('move-mode') ? '#ff7518' : '#fff';
+		const antsColor = cursor.classList.contains('move-mode')
+			? '#ff7518'
+			: '#fff';
 		ctx.save();
 		ctx.strokeStyle = antsColor;
 		ctx.lineWidth = 1;
@@ -456,7 +465,8 @@ const createKeyboardController = () => {
 
 		for (let y = 0; y < cursorY; y++) {
 			for (let x = 0; x < currentColumns; x++) {
-				newImageData[y * currentColumns + x] = oldImageData[y * currentColumns + x];
+				newImageData[y * currentColumns + x] =
+					oldImageData[y * currentColumns + x];
 			}
 		}
 
@@ -466,11 +476,17 @@ const createKeyboardController = () => {
 
 		for (let y = cursorY; y < currentRows; y++) {
 			for (let x = 0; x < currentColumns; x++) {
-				newImageData[(y + 1) * currentColumns + x] = oldImageData[y * currentColumns + x];
+				newImageData[(y + 1) * currentColumns + x] =
+					oldImageData[y * currentColumns + x];
 			}
 		}
 
-		State.textArtCanvas.setImageData(currentColumns, currentRows + 1, newImageData, State.textArtCanvas.getIceColors());
+		State.textArtCanvas.setImageData(
+			currentColumns,
+			currentRows + 1,
+			newImageData,
+			State.textArtCanvas.getIceColors(),
+		);
 	};
 
 	const deleteRow = () => {
@@ -489,7 +505,8 @@ const createKeyboardController = () => {
 
 		for (let y = 0; y < cursorY; y++) {
 			for (let x = 0; x < currentColumns; x++) {
-				newImageData[y * currentColumns + x] = oldImageData[y * currentColumns + x];
+				newImageData[y * currentColumns + x] =
+					oldImageData[y * currentColumns + x];
 			}
 		}
 
@@ -497,11 +514,17 @@ const createKeyboardController = () => {
 		// Copy rows after cursor position
 		for (let y = cursorY + 1; y < currentRows; y++) {
 			for (let x = 0; x < currentColumns; x++) {
-				newImageData[(y - 1) * currentColumns + x] = oldImageData[y * currentColumns + x];
+				newImageData[(y - 1) * currentColumns + x] =
+					oldImageData[y * currentColumns + x];
 			}
 		}
 
-		State.textArtCanvas.setImageData(currentColumns, currentRows - 1, newImageData, State.textArtCanvas.getIceColors());
+		State.textArtCanvas.setImageData(
+			currentColumns,
+			currentRows - 1,
+			newImageData,
+			State.textArtCanvas.getIceColors(),
+		);
 
 		if (State.cursor.getY() >= currentRows - 1) {
 			State.cursor.move(State.cursor.getX(), currentRows - 2);
@@ -520,17 +543,25 @@ const createKeyboardController = () => {
 
 		for (let y = 0; y < currentRows; y++) {
 			for (let x = 0; x < cursorX; x++) {
-				newImageData[y * (currentColumns + 1) + x] = oldImageData[y * currentColumns + x];
+				newImageData[y * (currentColumns + 1) + x] =
+					oldImageData[y * currentColumns + x];
 			}
 
-			newImageData[y * (currentColumns + 1) + cursorX] = magicNumbers.BLANK_CELL;
+			newImageData[y * (currentColumns + 1) + cursorX] =
+				magicNumbers.BLANK_CELL;
 
 			for (let x = cursorX; x < currentColumns; x++) {
-				newImageData[y * (currentColumns + 1) + x + 1] = oldImageData[y * currentColumns + x];
+				newImageData[y * (currentColumns + 1) + x + 1] =
+					oldImageData[y * currentColumns + x];
 			}
 		}
 
-		State.textArtCanvas.setImageData(currentColumns + 1, currentRows, newImageData, State.textArtCanvas.getIceColors());
+		State.textArtCanvas.setImageData(
+			currentColumns + 1,
+			currentRows,
+			newImageData,
+			State.textArtCanvas.getIceColors(),
+		);
 	};
 
 	const deleteColumn = () => {
@@ -549,16 +580,23 @@ const createKeyboardController = () => {
 
 		for (let y = 0; y < currentRows; y++) {
 			for (let x = 0; x < cursorX; x++) {
-				newImageData[y * (currentColumns - 1) + x] = oldImageData[y * currentColumns + x];
+				newImageData[y * (currentColumns - 1) + x] =
+					oldImageData[y * currentColumns + x];
 			}
 
 			// Skip the column at cursor position (delete it)
 			for (let x = cursorX + 1; x < currentColumns; x++) {
-				newImageData[y * (currentColumns - 1) + x - 1] = oldImageData[y * currentColumns + x];
+				newImageData[y * (currentColumns - 1) + x - 1] =
+					oldImageData[y * currentColumns + x];
 			}
 		}
 
-		State.textArtCanvas.setImageData(currentColumns - 1, currentRows, newImageData, State.textArtCanvas.getIceColors());
+		State.textArtCanvas.setImageData(
+			currentColumns - 1,
+			currentRows,
+			newImageData,
+			State.textArtCanvas.getIceColors(),
+		);
 
 		if (State.cursor.getX() >= currentColumns - 1) {
 			State.cursor.move(currentColumns - 2, State.cursor.getY());
@@ -573,7 +611,13 @@ const createKeyboardController = () => {
 
 		for (let x = 0; x < currentColumns; x++) {
 			State.textArtCanvas.draw(callback => {
-				callback(magicNumbers.CHAR_SPACE, magicNumbers.COLOR_WHITE, magicNumbers.COLOR_BLACK, x, cursorY);
+				callback(
+					magicNumbers.CHAR_SPACE,
+					magicNumbers.COLOR_WHITE,
+					magicNumbers.COLOR_BLACK,
+					x,
+					cursorY,
+				);
 			}, false);
 		}
 	};
@@ -586,7 +630,13 @@ const createKeyboardController = () => {
 
 		for (let x = 0; x <= cursorX; x++) {
 			State.textArtCanvas.draw(callback => {
-				callback(magicNumbers.CHAR_SPACE, magicNumbers.COLOR_WHITE, magicNumbers.COLOR_BLACK, x, cursorY);
+				callback(
+					magicNumbers.CHAR_SPACE,
+					magicNumbers.COLOR_WHITE,
+					magicNumbers.COLOR_BLACK,
+					x,
+					cursorY,
+				);
 			}, false);
 		}
 	};
@@ -600,7 +650,13 @@ const createKeyboardController = () => {
 
 		for (let x = cursorX; x < currentColumns; x++) {
 			State.textArtCanvas.draw(callback => {
-				callback(magicNumbers.CHAR_SPACE, magicNumbers.COLOR_WHITE, magicNumbers.COLOR_BLACK, x, cursorY);
+				callback(
+					magicNumbers.CHAR_SPACE,
+					magicNumbers.COLOR_WHITE,
+					magicNumbers.COLOR_BLACK,
+					x,
+					cursorY,
+				);
 			}, false);
 		}
 	};
@@ -613,7 +669,13 @@ const createKeyboardController = () => {
 
 		for (let y = 0; y < currentRows; y++) {
 			State.textArtCanvas.draw(callback => {
-				callback(magicNumbers.CHAR_SPACE, magicNumbers.COLOR_WHITE, magicNumbers.COLOR_BLACK, cursorX, y);
+				callback(
+					magicNumbers.CHAR_SPACE,
+					magicNumbers.COLOR_WHITE,
+					magicNumbers.COLOR_BLACK,
+					cursorX,
+					y,
+				);
 			}, false);
 		}
 	};
@@ -626,7 +688,13 @@ const createKeyboardController = () => {
 
 		for (let y = 0; y <= cursorY; y++) {
 			State.textArtCanvas.draw(callback => {
-				callback(magicNumbers.CHAR_SPACE, magicNumbers.COLOR_WHITE, magicNumbers.COLOR_BLACK, cursorX, y);
+				callback(
+					magicNumbers.CHAR_SPACE,
+					magicNumbers.COLOR_WHITE,
+					magicNumbers.COLOR_BLACK,
+					cursorX,
+					y,
+				);
 			}, false);
 		}
 	};
@@ -640,7 +708,13 @@ const createKeyboardController = () => {
 
 		for (let y = cursorY; y < currentRows; y++) {
 			State.textArtCanvas.draw(callback => {
-				callback(magicNumbers.CHAR_SPACE, magicNumbers.COLOR_WHITE, magicNumbers.COLOR_BLACK, cursorX, y);
+				callback(
+					magicNumbers.CHAR_SPACE,
+					magicNumbers.COLOR_WHITE,
+					magicNumbers.COLOR_BLACK,
+					cursorX,
+					y,
+				);
 			}, false);
 		}
 	};
@@ -878,7 +952,10 @@ const createKeyboardController = () => {
 				if (e.key === 'u' || e.key === 'U') {
 					// Ctrl+U - Pick up colors from current position
 					e.preventDefault();
-					const block = State.textArtCanvas.getBlock(State.cursor.getX(), State.cursor.getY());
+					const block = State.textArtCanvas.getBlock(
+						State.cursor.getX(),
+						State.cursor.getY(),
+					);
 					State.palette.setForegroundColor(block.foregroundColor);
 					State.palette.setBackgroundColor(block.backgroundColor);
 				}
@@ -990,7 +1067,13 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 	const deleteSelection = () => {
 		if (State.selectionCursor.isVisible() || State.cursor.isVisible()) {
 			State.textArtCanvas.startUndo();
-			State.textArtCanvas.deleteArea(x, y, width, height, State.palette.getBackgroundColor());
+			State.textArtCanvas.deleteArea(
+				x,
+				y,
+				width,
+				height,
+				State.palette.getBackgroundColor(),
+			);
 		}
 	};
 
@@ -1002,7 +1085,10 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 	};
 
 	const paste = () => {
-		if (buffer !== undefined && (State.selectionCursor.isVisible() || State.cursor.isVisible())) {
+		if (
+			buffer !== undefined &&
+			(State.selectionCursor.isVisible() || State.cursor.isVisible())
+		) {
 			State.textArtCanvas.startUndo();
 			State.textArtCanvas.setArea(buffer, x, y);
 		}
@@ -1017,7 +1103,10 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 		navigator.clipboard
 			.readText()
 			.then(text => {
-				if (text && (State.selectionCursor.isVisible() || State.cursor.isVisible())) {
+				if (
+					text &&
+					(State.selectionCursor.isVisible() || State.cursor.isVisible())
+				) {
 					const columns = State.textArtCanvas.getColumns();
 					const rows = State.textArtCanvas.getRows();
 
@@ -1025,7 +1114,10 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 					const lines = text.split(/\r\n|\r|\n/);
 
 					// Check single line width
-					if (lines.length === 1 && lines[0].length > columns * magicNumbers.MAX_COPY_LINES) {
+					if (
+						lines.length === 1 &&
+						lines[0].length > columns * magicNumbers.MAX_COPY_LINES
+					) {
 						alert(
 							`Paste buffer too large. Single line content exceeds ${columns * magicNumbers.MAX_COPY_LINES} characters. Please copy smaller blocks.`,
 						);
@@ -1057,7 +1149,11 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 								currentY++;
 								currentX = startX;
 								// Skip \r\n combination
-								if (char === '\r' && i + 1 < text.length && text.charAt(i + 1) === '\n') {
+								if (
+									char === '\r' &&
+									i + 1 < text.length &&
+									text.charAt(i + 1) === '\n'
+								) {
 									i++;
 								}
 								continue;
@@ -1116,7 +1212,12 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 				}
 			}
 			// System paste with Ctrl+Shift+V
-			if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && e.code === 'KeyV') {
+			if (
+				(e.ctrlKey || e.metaKey) &&
+				e.shiftKey &&
+				!e.altKey &&
+				e.code === 'KeyV'
+			) {
 				e.preventDefault();
 				systemPaste();
 			}

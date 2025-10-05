@@ -90,8 +90,12 @@ describe('UI Utilities', () => {
 				querySelector: vi.fn(selector => ({ selector })),
 			};
 			// Ensure the functions have bind method
-			global.document.getElementById.bind = vi.fn().mockReturnValue(global.document.getElementById);
-			global.document.querySelector.bind = vi.fn().mockReturnValue(global.document.querySelector);
+			global.document.getElementById.bind = vi
+				.fn()
+				.mockReturnValue(global.document.getElementById);
+			global.document.querySelector.bind = vi
+				.fn()
+				.mockReturnValue(global.document.querySelector);
 		});
 
 		it('should create shorthand selectors correctly', async () => {

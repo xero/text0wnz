@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { loadFontFromXBData, loadFontFromImage } from '../../src/js/client/font.js';
+import {
+	loadFontFromXBData,
+	loadFontFromImage,
+} from '../../src/js/client/font.js';
 
 const imgDataCap = 256;
 
@@ -64,20 +67,24 @@ describe('Font Module - Basic Tests', () => {
 
 	describe('loadFontFromXBData', () => {
 		it('should reject with null font bytes', async () => {
-			await expect(loadFontFromXBData(null, 8, 16, false, mockPalette)).rejects.toThrow('Failed to load XB font data');
+			await expect(
+				loadFontFromXBData(null, 8, 16, false, mockPalette),
+			).rejects.toThrow('Failed to load XB font data');
 		});
 
 		it('should reject with empty font bytes', async () => {
-			await expect(loadFontFromXBData(new Uint8Array(0), 8, 16, false, mockPalette)).rejects.toThrow(
-				'Failed to load XB font data',
-			);
+			await expect(
+				loadFontFromXBData(new Uint8Array(0), 8, 16, false, mockPalette),
+			).rejects.toThrow('Failed to load XB font data');
 		});
 
 		it('should reject with missing palette', async () => {
 			const fontBytes = new Uint8Array(256);
 			fontBytes.fill(0x01);
 
-			await expect(loadFontFromXBData(fontBytes, 8, 16, false, null)).rejects.toThrow();
+			await expect(
+				loadFontFromXBData(fontBytes, 8, 16, false, null),
+			).rejects.toThrow();
 		});
 	});
 
@@ -100,15 +107,23 @@ describe('Font Module - Basic Tests', () => {
 			loadFontFromImage('TestFont', false, mockPalette);
 
 			expect(global.Image).toHaveBeenCalled();
-			expect(mockImage.addEventListener).toHaveBeenCalledWith('load', expect.any(Function));
-			expect(mockImage.addEventListener).toHaveBeenCalledWith('error', expect.any(Function));
+			expect(mockImage.addEventListener).toHaveBeenCalledWith(
+				'load',
+				expect.any(Function),
+			);
+			expect(mockImage.addEventListener).toHaveBeenCalledWith(
+				'error',
+				expect.any(Function),
+			);
 		});
 
 		it('should handle image load error', async () => {
 			const loadPromise = loadFontFromImage('TestFont', false, mockPalette);
 
 			// Simulate image load error
-			const errorHandler = mockImage.addEventListener.mock.calls.find(call => call[0] === 'error')[1];
+			const errorHandler = mockImage.addEventListener.mock.calls.find(
+				call => call[0] === 'error',
+			)[1];
 			errorHandler();
 
 			await expect(loadPromise).rejects.toThrow();
@@ -133,7 +148,9 @@ describe('Font Module - Basic Tests', () => {
 			mockImage.height = 200; // Invalid height
 
 			const loadPromise = loadFontFromImage('TestFont', false, mockPalette);
-			const loadHandler = mockImage.addEventListener.mock.calls.find(call => call[0] === 'load')[1];
+			const loadHandler = mockImage.addEventListener.mock.calls.find(
+				call => call[0] === 'load',
+			)[1];
 
 			loadHandler();
 
@@ -145,7 +162,9 @@ describe('Font Module - Basic Tests', () => {
 			mockImage.height = 0;
 
 			const loadPromise = loadFontFromImage('TestFont', false, mockPalette);
-			const loadHandler = mockImage.addEventListener.mock.calls.find(call => call[0] === 'load')[1];
+			const loadHandler = mockImage.addEventListener.mock.calls.find(
+				call => call[0] === 'load',
+			)[1];
 
 			loadHandler();
 
@@ -157,7 +176,9 @@ describe('Font Module - Basic Tests', () => {
 			mockImage.height = 256;
 
 			const loadPromise = loadFontFromImage('TestFont', false, null);
-			const loadHandler = mockImage.addEventListener.mock.calls.find(call => call[0] === 'load')[1];
+			const loadHandler = mockImage.addEventListener.mock.calls.find(
+				call => call[0] === 'load',
+			)[1];
 
 			loadHandler();
 
@@ -170,7 +191,9 @@ describe('Font Module - Basic Tests', () => {
 			const corruptedBytes = new Uint8Array(10); // Too small
 			corruptedBytes.fill(0xff);
 
-			await expect(loadFontFromXBData(corruptedBytes, 8, 16, false, mockPalette)).rejects.toThrow();
+			await expect(
+				loadFontFromXBData(corruptedBytes, 8, 16, false, mockPalette),
+			).rejects.toThrow();
 		});
 
 		it('should handle missing image files gracefully', async () => {
@@ -185,7 +208,9 @@ describe('Font Module - Basic Tests', () => {
 			};
 			global.Image = vi.fn(() => mockImage);
 
-			await expect(loadFontFromImage('NonExistentFont', false, mockPalette)).rejects.toThrow();
+			await expect(
+				loadFontFromImage('NonExistentFont', false, mockPalette),
+			).rejects.toThrow();
 		});
 	});
 });

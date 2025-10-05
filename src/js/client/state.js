@@ -84,7 +84,8 @@ class StateManager {
 		this.urlPrefix = import.meta.env.BASE_URL || '/';
 		this.uiDir = this.urlPrefix + import.meta.env.VITE_UI_DIR || 'ui/';
 		this.fontDir = this.uiDir + import.meta.env.VITE_FONT_DIR || 'fonts/';
-		this.workerPath = this.uiDir + import.meta.env.VITE_WORKER_FILE || 'worker.js';
+		this.workerPath =
+			this.uiDir + import.meta.env.VITE_WORKER_FILE || 'worker.js';
 
 		// Bind methods to ensure `this` is preserved when passed as callbacks
 		this.set = this.set.bind(this);
@@ -94,14 +95,16 @@ class StateManager {
 		this.emit = this.emit.bind(this);
 		this.waitFor = this.waitFor.bind(this);
 		this.checkDependencyQueue = this.checkDependencyQueue.bind(this);
-		this.checkInitializationComplete = this.checkInitializationComplete.bind(this);
+		this.checkInitializationComplete =
+			this.checkInitializationComplete.bind(this);
 		this.startInitialization = this.startInitialization.bind(this);
 		this.reset = this.reset.bind(this);
 		this.getInitializationStatus = this.getInitializationStatus.bind(this);
 		this.safely = this.safely.bind(this);
 		this.saveToLocalStorage = this.saveToLocalStorage.bind(this);
 		this.loadFromLocalStorage = this.loadFromLocalStorage.bind(this);
-		this.restoreStateFromLocalStorage = this.restoreStateFromLocalStorage.bind(this);
+		this.restoreStateFromLocalStorage =
+			this.restoreStateFromLocalStorage.bind(this);
 		this.clearLocalStorage = this.clearLocalStorage.bind(this);
 		this.isDefaultState = this.isDefaultState.bind(this);
 	}
@@ -113,7 +116,9 @@ class StateManager {
 		const oldValue = this.state[key];
 		this.state[key] = value;
 
-		if (Object.prototype.hasOwnProperty.call(this.state.dependenciesReady, key)) {
+		if (
+			Object.prototype.hasOwnProperty.call(this.state.dependenciesReady, key)
+		) {
 			this.state.dependenciesReady[key] = value !== null && value !== undefined;
 		}
 
@@ -196,7 +201,10 @@ class StateManager {
 			);
 		} else {
 			let waitId;
-			if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+			if (
+				typeof crypto !== 'undefined' &&
+				typeof crypto.randomUUID === 'function'
+			) {
 				waitId = `wait_${crypto.randomUUID()}`;
 			} else {
 				if (!this._waitIdCounter) {
@@ -217,7 +225,8 @@ class StateManager {
 
 		this.waitQueue.forEach((waiter, waitId) => {
 			const allReady = waiter.dependencies.every(dep => {
-				const isReady = this.state[dep] !== null && this.state[dep] !== undefined;
+				const isReady =
+					this.state[dep] !== null && this.state[dep] !== undefined;
 				return isReady;
 			});
 
@@ -320,7 +329,8 @@ class StateManager {
 			initialized: this.state.initialized,
 			initializing: this.state.initializing,
 			dependenciesReady: { ...this.state.dependenciesReady },
-			readyCount: Object.values(this.state.dependenciesReady).filter(Boolean).length,
+			readyCount: Object.values(this.state.dependenciesReady).filter(Boolean)
+				.length,
 			totalCount: Object.keys(this.state.dependenciesReady).length,
 		};
 	}
@@ -342,13 +352,20 @@ class StateManager {
 	 */
 	_uint16ArrayToBase64(uint16Array) {
 		// Convert Uint16Array to Uint8Array (viewing the same buffer)
-		const uint8Array = new Uint8Array(uint16Array.buffer, uint16Array.byteOffset, uint16Array.byteLength);
+		const uint8Array = new Uint8Array(
+			uint16Array.buffer,
+			uint16Array.byteOffset,
+			uint16Array.byteLength,
+		);
 
 		// Convert to binary string in chunks to avoid stack overflow on large arrays
 		const chunkSize = 8192;
 		let binary = '';
 		for (let i = 0; i < uint8Array.length; i += chunkSize) {
-			const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+			const chunk = uint8Array.subarray(
+				i,
+				Math.min(i + chunkSize, uint8Array.length),
+			);
 			binary += String.fromCharCode.apply(null, chunk);
 		}
 
@@ -363,7 +380,10 @@ class StateManager {
 		const chunkSize = 8192;
 		let binary = '';
 		for (let i = 0; i < uint8Array.length; i += chunkSize) {
-			const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+			const chunk = uint8Array.subarray(
+				i,
+				Math.min(i + chunkSize, uint8Array.length),
+			);
 			binary += String.fromCharCode.apply(null, chunk);
 		}
 
@@ -378,7 +398,10 @@ class StateManager {
 
 		try {
 			// Save canvas data
-			if (this.state.textArtCanvas && typeof this.state.textArtCanvas.getImageData === 'function') {
+			if (
+				this.state.textArtCanvas &&
+				typeof this.state.textArtCanvas.getImageData === 'function'
+			) {
 				const imageData = this.state.textArtCanvas.getImageData();
 				const columns = this.state.textArtCanvas.getColumns();
 				const rows = this.state.textArtCanvas.getRows();
@@ -393,13 +416,21 @@ class StateManager {
 			}
 
 			// Save font name
-			if (this.state.textArtCanvas && typeof this.state.textArtCanvas.getCurrentFontName === 'function') {
-				serialized[STATE_SYNC_KEYS.FONT_NAME] = this.state.textArtCanvas.getCurrentFontName();
+			if (
+				this.state.textArtCanvas &&
+				typeof this.state.textArtCanvas.getCurrentFontName === 'function'
+			) {
+				serialized[STATE_SYNC_KEYS.FONT_NAME] =
+					this.state.textArtCanvas.getCurrentFontName();
 			}
 
 			// Save letter spacing
-			if (this.state.font && typeof this.state.font.getLetterSpacing === 'function') {
-				serialized[STATE_SYNC_KEYS.LETTER_SPACING] = this.state.font.getLetterSpacing();
+			if (
+				this.state.font &&
+				typeof this.state.font.getLetterSpacing === 'function'
+			) {
+				serialized[STATE_SYNC_KEYS.LETTER_SPACING] =
+					this.state.font.getLetterSpacing();
 			}
 
 			// Save palette colors and selection
@@ -407,16 +438,26 @@ class StateManager {
 				if (typeof this.state.palette.getPalette === 'function') {
 					const paletteColors = this.state.palette.getPalette();
 					// Convert 8-bit RGBA to 6-bit RGB for storage (more efficient and correct)
-					serialized[STATE_SYNC_KEYS.PALETTE_COLORS] = paletteColors.map(color => {
-						// color is Uint8Array [r, g, b, a] in 8-bit (0-255)
-						// Convert to 6-bit (0-63) for consistency with XBIN format
-						return [Math.min(color[0] >> 2, 63), Math.min(color[1] >> 2, 63), Math.min(color[2] >> 2, 63), color[3]];
-					});
+					serialized[STATE_SYNC_KEYS.PALETTE_COLORS] = paletteColors.map(
+						color => {
+							// color is Uint8Array [r, g, b, a] in 8-bit (0-255)
+							// Convert to 6-bit (0-63) for consistency with XBIN format
+							return [
+								Math.min(color[0] >> 2, 63),
+								Math.min(color[1] >> 2, 63),
+								Math.min(color[2] >> 2, 63),
+								color[3],
+							];
+						},
+					);
 				}
 			}
 
 			// Save XBIN font data if present
-			if (this.state.textArtCanvas && typeof this.state.textArtCanvas.getXBFontData === 'function') {
+			if (
+				this.state.textArtCanvas &&
+				typeof this.state.textArtCanvas.getXBFontData === 'function'
+			) {
 				const xbFontData = this.state.textArtCanvas.getXBFontData();
 				if (xbFontData && xbFontData.bytes) {
 					// Use base64 encoding instead of Array.from for much better performance
@@ -607,13 +648,17 @@ class StateManager {
 
 		try {
 			// Restore ice colors first (before canvas data)
-			if (savedState[STATE_SYNC_KEYS.ICE_COLORS] !== undefined && this.state.textArtCanvas) {
+			if (
+				savedState[STATE_SYNC_KEYS.ICE_COLORS] !== undefined &&
+				this.state.textArtCanvas
+			) {
 				// Ice colors will be set when we restore canvas data
 			}
 
 			// Restore canvas data
 			if (savedState[STATE_SYNC_KEYS.CANVAS_DATA] && this.state.textArtCanvas) {
-				const { imageData, columns, rows } = savedState[STATE_SYNC_KEYS.CANVAS_DATA];
+				const { imageData, columns, rows } =
+					savedState[STATE_SYNC_KEYS.CANVAS_DATA];
 				const iceColors = savedState[STATE_SYNC_KEYS.ICE_COLORS] || false;
 
 				let uint16Data;
@@ -631,14 +676,24 @@ class StateManager {
 
 				// Use setImageData to restore canvas
 				if (typeof this.state.textArtCanvas.setImageData === 'function') {
-					this.state.textArtCanvas.setImageData(columns, rows, uint16Data, iceColors);
+					this.state.textArtCanvas.setImageData(
+						columns,
+						rows,
+						uint16Data,
+						iceColors,
+					);
 				}
 			}
 
 			// Restore letter spacing
-			if (savedState[STATE_SYNC_KEYS.LETTER_SPACING] !== undefined && this.state.font) {
+			if (
+				savedState[STATE_SYNC_KEYS.LETTER_SPACING] !== undefined &&
+				this.state.font
+			) {
 				if (typeof this.state.font.setLetterSpacing === 'function') {
-					this.state.font.setLetterSpacing(savedState[STATE_SYNC_KEYS.LETTER_SPACING]);
+					this.state.font.setLetterSpacing(
+						savedState[STATE_SYNC_KEYS.LETTER_SPACING],
+					);
 				}
 			}
 
@@ -655,7 +710,10 @@ class StateManager {
 			}
 
 			// Restore XBIN font data if present (must be done before restoring font)
-			if (savedState[STATE_SYNC_KEYS.XBIN_FONT_DATA] && this.state.textArtCanvas) {
+			if (
+				savedState[STATE_SYNC_KEYS.XBIN_FONT_DATA] &&
+				this.state.textArtCanvas
+			) {
 				if (typeof this.state.textArtCanvas.setXBFontData === 'function') {
 					const xbFontData = savedState[STATE_SYNC_KEYS.XBIN_FONT_DATA];
 
@@ -668,11 +726,17 @@ class StateManager {
 						// Legacy array format (for backward compatibility)
 						fontBytes = new Uint8Array(xbFontData.bytes);
 					} else {
-						console.error('[State] Invalid XBIN font data format in localStorage');
+						console.error(
+							'[State] Invalid XBIN font data format in localStorage',
+						);
 						return;
 					}
 
-					this.state.textArtCanvas.setXBFontData(fontBytes, xbFontData.width, xbFontData.height);
+					this.state.textArtCanvas.setXBFontData(
+						fontBytes,
+						xbFontData.width,
+						xbFontData.height,
+					);
 				}
 			}
 
@@ -680,10 +744,13 @@ class StateManager {
 			if (savedState[STATE_SYNC_KEYS.FONT_NAME] && this.state.textArtCanvas) {
 				if (typeof this.state.textArtCanvas.setFont === 'function') {
 					// Font loading is async, so we need to handle it carefully
-					this.state.textArtCanvas.setFont(savedState[STATE_SYNC_KEYS.FONT_NAME], () => {
-						// After font loads, emit that state was restored
-						this.emit('app:state-restored', { state: savedState });
-					});
+					this.state.textArtCanvas.setFont(
+						savedState[STATE_SYNC_KEYS.FONT_NAME],
+						() => {
+							// After font loads, emit that state was restored
+							this.emit('app:state-restored', { state: savedState });
+						},
+					);
 				}
 			} else {
 				// No font to restore, emit event immediately
@@ -786,7 +853,8 @@ const State = {
 		stateManager.set('title', value);
 		if (
 			['fullscreen', 'standalone', 'minimal-ui'].some(
-				displayMode => window.matchMedia(`(display-mode: ${displayMode})`).matches,
+				displayMode =>
+					window.matchMedia(`(display-mode: ${displayMode})`).matches,
 			)
 		) {
 			document.title = value;

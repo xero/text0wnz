@@ -174,7 +174,11 @@ const unicodeToArray = unicode => {
 	} else if (unicode < 0x800) {
 		return [(unicode >> 6) | 192, (unicode & 63) | 128];
 	}
-	return [(unicode >> 12) | 224, ((unicode >> 6) & 63) | 128, (unicode & 63) | 128];
+	return [
+		(unicode >> 12) | 224,
+		((unicode >> 6) & 63) | 128,
+		(unicode & 63) | 128,
+	];
 };
 
 const getUTF8 = charCode => unicodeToArray(getUnicode(charCode));
@@ -209,7 +213,12 @@ const hexToRbga = hex => {
 		console.error(`[Palette] Invalid hex color: ${hex}`);
 		return { r: 0, g: 0, b: 0, a: 255 };
 	}
-	return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16), a: 255 };
+	return {
+		r: parseInt(m[1], 16),
+		g: parseInt(m[2], 16),
+		b: parseInt(m[3], 16),
+		a: 255,
+	};
 };
 
 const rgbaToHex = rgbColor => {
@@ -357,7 +366,11 @@ const createPalettePicker = canvas => {
 		}
 		canvas
 			.getContext('2d')
-			.putImageData(imageData[index], index > 7 ? canvas.width / 2 : 0, (index % 8) * imageData[index].height);
+			.putImageData(
+				imageData[index],
+				index > 7 ? canvas.width / 2 : 0,
+				(index % 8) * imageData[index].height,
+			);
 	};
 
 	const updatePalette = _ => {
@@ -368,7 +381,10 @@ const createPalettePicker = canvas => {
 
 	const keydown = e => {
 		// Handle digit keys (0-7) with ctrl or alt modifiers
-		if (e.code.startsWith('Digit') && ['0', '1', '2', '3', '4', '5', '6', '7'].includes(e.code.slice(-1))) {
+		if (
+			e.code.startsWith('Digit') &&
+			['0', '1', '2', '3', '4', '5', '6', '7'].includes(e.code.slice(-1))
+		) {
 			const num = parseInt(e.code.slice(-1), 10); // Extract the digit from 'Digit0', etc.
 
 			if (e.ctrlKey) {
@@ -436,7 +452,9 @@ const createPalettePicker = canvas => {
 
 	const processEvent = (e, isTouch) => {
 		const rect = canvas.getBoundingClientRect();
-		const coords = isTouch ? { x: e.touches[0].pageX, y: e.touches[0].pageY } : { x: e.clientX, y: e.clientY };
+		const coords = isTouch
+			? { x: e.touches[0].pageX, y: e.touches[0].pageY }
+			: { x: e.clientX, y: e.clientY };
 
 		const x = Math.floor((coords.x - rect.left) / (canvas.width / 2));
 		const y = Math.floor((coords.y - rect.top) / (canvas.height / 8));
@@ -467,10 +485,13 @@ const createPalettePicker = canvas => {
 		processEvent(e, false);
 	};
 
-	const arraysEqual = (a, b) => a.length === b.length && a.every((value, index) => value === b[index]);
+	const arraysEqual = (a, b) =>
+		a.length === b.length && a.every((value, index) => value === b[index]);
 
 	const colorChange = e => {
-		const oldColor = State.palette.hexToXbin(State.palette.getRGBColor(colorEdited));
+		const oldColor = State.palette.hexToXbin(
+			State.palette.getRGBColor(colorEdited),
+		);
 		const newColor = State.palette.hexToXbin(e.target.value);
 		if (!arraysEqual(oldColor, newColor)) {
 			State.palette.setRGBAColor(colorEdited, newColor);
@@ -479,7 +500,9 @@ const createPalettePicker = canvas => {
 
 	// Create canvases
 	for (let i = 0; i < 16; i++) {
-		imageData[i] = canvas.getContext('2d').createImageData(canvas.width / 2, canvas.height / 8);
+		imageData[i] = canvas
+			.getContext('2d')
+			.createImageData(canvas.width / 2, canvas.height / 8);
 	}
 	// Custom colors
 	if ($('custom-color')) {

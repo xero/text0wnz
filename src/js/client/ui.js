@@ -6,7 +6,8 @@ const D = document,
 			$$ = D.querySelector.bind(D),
 			$$$ = D.querySelectorAll.bind(D),
 			has = (i, c) => i.classList.contains(c),
-			classList = (el, className, add = true) => (add ? el.classList.add(className) : el.classList.remove(className));
+			classList = (el, className, add = true) =>
+				add ? el.classList.add(className) : el.classList.remove(className);
 
 const createCanvas = (width, height) => {
 	const canvas = document.createElement('canvas');
@@ -178,7 +179,10 @@ const undoAndRedo = e => {
 		// Ctrl/Cmd+Z - Undo
 		e.preventDefault();
 		State.textArtCanvas.undo();
-	} else if ((e.ctrlKey && e.code === 'KeyY') || (e.metaKey && e.shiftKey && e.code === 'KeyZ')) {
+	} else if (
+		(e.ctrlKey && e.code === 'KeyY') ||
+		(e.metaKey && e.shiftKey && e.code === 'KeyZ')
+	) {
 		// Ctrl+Y or Cmd+Shift+Z - Redo
 		e.preventDefault();
 		State.textArtCanvas.redo();
@@ -189,7 +193,9 @@ const createPaintShortcuts = keyPair => {
 	let ignored = false;
 
 	const isConnected = e =>
-		!State.network || !State.network.isConnected() || !keyPair[e.key].classList.contains('excluded-for-websocket');
+		!State.network ||
+		!State.network.isConnected() ||
+		!keyPair[e.key].classList.contains('excluded-for-websocket');
 
 	const keyDown = e => {
 		if (!ignored) {
@@ -258,7 +264,12 @@ const createPaintShortcuts = keyPair => {
 	};
 };
 
-const createToggleButton = (stateOneName, stateTwoName, stateOneClick, stateTwoClick) => {
+const createToggleButton = (
+	stateOneName,
+	stateTwoName,
+	stateOneClick,
+	stateTwoClick,
+) => {
 	const container = document.createElement('DIV');
 	container.classList.add('toggle-button-container');
 	const stateOne = document.createElement('DIV');
@@ -335,12 +346,20 @@ const createGrid = el => {
 		const byteWidth = canvas.width * 4;
 		const darkGray = new Uint8Array([63, 63, 63, 255]);
 		for (let y = 0; y < rows; y += 1) {
-			for (let x = 0, i = y * fontHeight * byteWidth; x < canvas.width; x += 1, i += 4) {
+			for (
+				let x = 0, i = y * fontHeight * byteWidth;
+				x < canvas.width;
+				x += 1, i += 4
+			) {
 				imageData.data.set(darkGray, i);
 			}
 		}
 		for (let x = 0; x < columns; x += 1) {
-			for (let y = 0, i = x * fontWidth * 4; y < canvas.height; y += 1, i += byteWidth) {
+			for (
+				let y = 0, i = x * fontWidth * 4;
+				y < canvas.height;
+				y += 1, i += byteWidth
+			) {
 				imageData.data.set(darkGray, i);
 			}
 		}
@@ -431,7 +450,13 @@ const createToolPreview = el => {
 		const textY = Math.floor(y / 2);
 		const ctxIndex = Math.floor(textY / 25);
 		if (ctxIndex >= 0 && ctxIndex < ctxs.length) {
-			State.font.drawWithAlpha(halfBlockY === 0 ? 223 : 220, foreground, ctxs[ctxIndex], x, textY % 25);
+			State.font.drawWithAlpha(
+				halfBlockY === 0 ? 223 : 220,
+				foreground,
+				ctxs[ctxIndex],
+				x,
+				textY % 25,
+			);
 		}
 	};
 
@@ -509,7 +534,12 @@ const createViewportController = el => {
 };
 
 const createResolutionController = (lbl, txtC, txtR) => {
-	['onTextCanvasSizeChange', 'onFontChange', 'onXBFontLoaded', 'onOpenedFile'].forEach(e => {
+	[
+		'onTextCanvasSizeChange',
+		'onFontChange',
+		'onXBFontLoaded',
+		'onOpenedFile',
+	].forEach(e => {
 		document.addEventListener(e, _ => {
 			const cols = State.textArtCanvas.getColumns();
 			const rows = State.textArtCanvas.getRows();
@@ -553,7 +583,9 @@ const websocketUI = show => {
 		['excluded-for-websocket', !show],
 		['included-for-websocket', show],
 	].forEach(([sel, prop]) =>
-		[...D.getElementsByClassName(sel)].forEach(el => (el.style.display = prop ? 'block' : 'none')));
+		[...D.getElementsByClassName(sel)].forEach(
+			el => (el.style.display = prop ? 'block' : 'none'),
+		));
 };
 
 export {

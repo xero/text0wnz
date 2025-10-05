@@ -39,7 +39,8 @@
 	--palette-width: 200px;
 	--palette-height: 53px;
 	--font-family:
-		topaz, ui-monospace, Consolas, SFMono-Regular, Menlo, Monaco, 'Liberation Mono', 'Courier New', monospace;
+		TopazPlus, ui-monospace, Consolas, SFMono-Regular, Menlo, Monaco,
+		'Liberation Mono', 'Courier New', monospace;
 }
 @theme {
 	--breakpoint-xs: 30rem;
@@ -79,13 +80,18 @@
 	--color-hl: var(--dark-hl);
 	--color-file: var(--dark-file);
 	dialog::backdrop {
-		background: radial-gradient(circle, rgba(0, 0, 0, 0.13) 0%, rgba(0, 0, 0, 0.23) 50%, rgba(0, 0, 0, 0.53) 100%);
+		background: radial-gradient(
+			circle,
+			rgba(0, 0, 0, 0.13) 0%,
+			rgba(0, 0, 0, 0.23) 50%,
+			rgba(0, 0, 0, 0.53) 100%
+		);
 	}
 }
 
 /* <--//----------------------------------------------------------[document] */
 @font-face {
-	font-family: topaz;
+	font-family: TopazPlus;
 	src: url('topazplus_1200.woff2') format('woff2');
 	font-weight: normal;
 	font-style: normal;
@@ -683,7 +689,12 @@
 		&::backdrop {
 			@apply bg-black opacity-100;
 			background: #000000;
-			background: radial-gradient(circle, rgba(0, 0, 0, 0.33) 0%, rgba(0, 0, 0, 0.43) 50%, rgba(0, 0, 0, 0.73) 100%);
+			background: radial-gradient(
+				circle,
+				rgba(0, 0, 0, 0.33) 0%,
+				rgba(0, 0, 0, 0.43) 50%,
+				rgba(0, 0, 0, 0.73) 100%
+			);
 			transition: opacity 0.7s ease-out;
 			@starting-style {
 				@apply opacity-1;

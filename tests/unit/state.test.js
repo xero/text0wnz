@@ -151,7 +151,9 @@ describe('State Management System', () => {
 		it('should support method chaining for event operations', () => {
 			const listener = vi.fn();
 
-			const result = State.on('test', listener).emit('test', {}).off('test', listener);
+			const result = State.on('test', listener)
+				.emit('test', {})
+				.off('test', listener);
 
 			expect(result).toBe(State._manager);
 		});
@@ -171,7 +173,9 @@ describe('State Management System', () => {
 			});
 			const goodListener = vi.fn();
 
-			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+			const consoleSpy = vi
+				.spyOn(console, 'error')
+				.mockImplementation(() => {});
 
 			State.on('title:changed', errorListener);
 			State.on('title:changed', goodListener);
@@ -196,7 +200,9 @@ describe('State Management System', () => {
 			State.on('newEvent', vi.fn());
 
 			expect(State._manager.listeners.has('newEvent')).toBe(true);
-			expect(Array.isArray(State._manager.listeners.get('newEvent'))).toBe(true);
+			expect(Array.isArray(State._manager.listeners.get('newEvent'))).toBe(
+				true,
+			);
 		});
 	});
 
@@ -260,12 +266,17 @@ describe('State Management System', () => {
 				throw new Error('Dependency callback error');
 			});
 
-			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+			const consoleSpy = vi
+				.spyOn(console, 'error')
+				.mockImplementation(() => {});
 
 			State.waitFor('palette', errorCallback);
 			State.palette = { test: 'palette' };
 
-			expect(consoleSpy).toHaveBeenCalledWith('[State] Error in dependency wait callback:', expect.any(Error));
+			expect(consoleSpy).toHaveBeenCalledWith(
+				'[State] Error in dependency wait callback:',
+				expect.any(Error),
+			);
 			consoleSpy.mockRestore();
 		});
 
@@ -308,7 +319,9 @@ describe('State Management System', () => {
 			State.startInitialization();
 			State.startInitialization();
 
-			expect(consoleSpy).toHaveBeenCalledWith('[State] Initialization already in progress or complete');
+			expect(consoleSpy).toHaveBeenCalledWith(
+				'[State] Initialization already in progress or complete',
+			);
 			consoleSpy.mockRestore();
 		});
 
@@ -475,10 +488,15 @@ describe('State Management System', () => {
 				throw new Error('Test error');
 			});
 
-			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+			const consoleSpy = vi
+				.spyOn(console, 'error')
+				.mockImplementation(() => {});
 			const result = State.safely(errorCallback);
 
-			expect(consoleSpy).toHaveBeenCalledWith('[State] Error accessing:', new Error('Test error'));
+			expect(consoleSpy).toHaveBeenCalledWith(
+				'[State] Error accessing:',
+				new Error('Test error'),
+			);
 			expect(result).toBeNull();
 			consoleSpy.mockRestore();
 		});

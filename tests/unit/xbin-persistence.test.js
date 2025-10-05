@@ -13,7 +13,10 @@ describe('XBIN Font Data Persistence', () => {
 
 	beforeEach(() => {
 		// Read actual XBIN file for testing
-		const xbinPath = path.join(process.cwd(), 'docs/examples/xbin/xz-neuromancer.xb');
+		const xbinPath = path.join(
+			process.cwd(),
+			'docs/examples/xbin/xz-neuromancer.xb',
+		);
 		xbinFileBytes = new Uint8Array(fs.readFileSync(xbinPath));
 
 		// Create mock canvas with XBIN methods
@@ -44,7 +47,12 @@ describe('XBIN Font Data Persistence', () => {
 	});
 
 	it('should verify XBIN file has embedded font', () => {
-		const header = String.fromCharCode(xbinFileBytes[0], xbinFileBytes[1], xbinFileBytes[2], xbinFileBytes[3]);
+		const header = String.fromCharCode(
+			xbinFileBytes[0],
+			xbinFileBytes[1],
+			xbinFileBytes[2],
+			xbinFileBytes[3],
+		);
 		expect(header).toBe('XBIN');
 		expect(xbinFileBytes[4]).toBe(0x1a); // EOF marker
 
@@ -233,7 +241,11 @@ describe('XBIN Font Data Persistence', () => {
 		// Simulate restoration logic
 		if (savedState.xbinFontData) {
 			const fontBytes = new Uint8Array(savedState.xbinFontData.bytes);
-			mockCanvas.setXBFontData(fontBytes, savedState.xbinFontData.width, savedState.xbinFontData.height);
+			mockCanvas.setXBFontData(
+				fontBytes,
+				savedState.xbinFontData.width,
+				savedState.xbinFontData.height,
+			);
 		}
 
 		if (savedState.fontName) {

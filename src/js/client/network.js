@@ -14,7 +14,10 @@ const createWorkerHandler = inputHandle => {
 	try {
 		State.worker = new Worker(State.workerPath);
 	} catch (error) {
-		console.error(`[Network] Failed to load worker from ${State.workerPath}:`, error);
+		console.error(
+			`[Network] Failed to load worker from ${State.workerPath}:`,
+			error,
+		);
 		return;
 	}
 
@@ -44,7 +47,9 @@ const createWorkerHandler = inputHandle => {
 
 	const onDisconnected = () => {
 		if (connected) {
-			alert('You were disconnected from the server, try refreshing the page to try again.');
+			alert(
+				'You were disconnected from the server, try refreshing the page to try again.',
+			);
 		} else if (!silentCheck) {
 			State.modal.close();
 		}
@@ -66,7 +71,13 @@ const createWorkerHandler = inputHandle => {
 			showCollaborationChoice();
 		} else if (collaborationMode) {
 			// Apply image data immediately only in collaboration mode
-			State.textArtCanvas.setImageData(columns, rows, data, iceColors, letterSpacing);
+			State.textArtCanvas.setImageData(
+				columns,
+				rows,
+				data,
+				iceColors,
+				letterSpacing,
+			);
 			State.modal.close();
 		}
 	};
@@ -206,7 +217,13 @@ const createWorkerHandler = inputHandle => {
 				}
 				break;
 			case 'imageData':
-				onImageData(data.columns, data.rows, new Uint16Array(data.data), data.iceColors, data.letterSpacing);
+				onImageData(
+					data.columns,
+					data.rows,
+					new Uint16Array(data.data),
+					data.iceColors,
+					data.letterSpacing,
+				);
 				break;
 			case 'chat':
 				onChat(data.handle, data.text, data.showNotification);
@@ -248,32 +265,63 @@ const createWorkerHandler = inputHandle => {
 	};
 
 	const sendCanvasSettings = settings => {
-		if (collaborationMode && connected && !applyReceivedSettings && !initializing) {
+		if (
+			collaborationMode &&
+			connected &&
+			!applyReceivedSettings &&
+			!initializing
+		) {
 			State.worker.postMessage({ cmd: 'canvasSettings', settings: settings });
 		}
 	};
 
 	const sendResize = (columns, rows) => {
-		if (collaborationMode && connected && !applyReceivedSettings && !initializing) {
+		if (
+			collaborationMode &&
+			connected &&
+			!applyReceivedSettings &&
+			!initializing
+		) {
 			State.worker.postMessage({ cmd: 'resize', columns: columns, rows: rows });
 		}
 	};
 
 	const sendFontChange = fontName => {
-		if (collaborationMode && connected && !applyReceivedSettings && !initializing) {
+		if (
+			collaborationMode &&
+			connected &&
+			!applyReceivedSettings &&
+			!initializing
+		) {
 			State.worker.postMessage({ cmd: 'fontChange', fontName: fontName });
 		}
 	};
 
 	const sendIceColorsChange = iceColors => {
-		if (collaborationMode && connected && !applyReceivedSettings && !initializing) {
-			State.worker.postMessage({ cmd: 'iceColorsChange', iceColors: iceColors });
+		if (
+			collaborationMode &&
+			connected &&
+			!applyReceivedSettings &&
+			!initializing
+		) {
+			State.worker.postMessage({
+				cmd: 'iceColorsChange',
+				iceColors: iceColors,
+			});
 		}
 	};
 
 	const sendLetterSpacingChange = letterSpacing => {
-		if (collaborationMode && connected && !applyReceivedSettings && !initializing) {
-			State.worker.postMessage({ cmd: 'letterSpacingChange', letterSpacing: letterSpacing });
+		if (
+			collaborationMode &&
+			connected &&
+			!applyReceivedSettings &&
+			!initializing
+		) {
+			State.worker.postMessage({
+				cmd: 'letterSpacingChange',
+				letterSpacing: letterSpacing,
+			});
 		}
 	};
 
@@ -368,7 +416,10 @@ const createWorkerHandler = inputHandle => {
 		try {
 			State.worker.addEventListener('message', onMessage);
 		} catch (error) {
-			console.error('[Network] Failed to add message event listener to worker:', error);
+			console.error(
+				'[Network] Failed to add message event listener to worker:',
+				error,
+			);
 		}
 	}
 
@@ -381,7 +432,10 @@ const createWorkerHandler = inputHandle => {
 
 	// Check if we're running through a proxy (like nginx) by checking the port
 	// If we're on standard HTTP/HTTPS ports, use /server path, otherwise connect directly
-	const isProxied = window.location.port === '' || window.location.port === '80' || window.location.port === '443';
+	const isProxied =
+		window.location.port === '' ||
+		window.location.port === '80' ||
+		window.location.port === '443';
 	let wsUrl;
 
 	if (isProxied) {
@@ -390,8 +444,12 @@ const createWorkerHandler = inputHandle => {
 		console.info('[Network] Detected proxy setup, checking server at:', wsUrl);
 	} else {
 		// Direct connection - use port 1337
-		wsUrl = protocol + window.location.hostname + ':1337' + window.location.pathname;
-		console.info('[Network] Direct connection mode, checking server at:', wsUrl);
+		wsUrl =
+			protocol + window.location.hostname + ':1337' + window.location.pathname;
+		console.info(
+			'[Network] Direct connection mode, checking server at:',
+			wsUrl,
+		);
 	}
 
 	// Start with a silent connection check
@@ -471,7 +529,11 @@ const createChatController = (
 		div.appendChild(spanText);
 		divMessageWindow.appendChild(div);
 		scrollToBottom();
-		if (showNotification && !enabled && !divChatButton.classList.contains('notification')) {
+		if (
+			showNotification &&
+			!enabled &&
+			!divChatButton.classList.contains('notification')
+		) {
 			divChatButton.classList.add('notification');
 		}
 	};
@@ -549,7 +611,10 @@ const createChatController = (
 			if (notifications && showNotification) {
 				newNotification(handle + ' has joined');
 			}
-			userList[sessionID] = { handle: handle, div: document.createElement('DIV') };
+			userList[sessionID] = {
+				handle: handle,
+				div: document.createElement('DIV'),
+			};
 			userList[sessionID].div.classList.add('user-name');
 			userList[sessionID].div.textContent = handle;
 			divUserList.appendChild(userList[sessionID].div);
@@ -559,7 +624,9 @@ const createChatController = (
 	const nick = (handle, sessionID, showNotification) => {
 		if (userList[sessionID] !== undefined) {
 			if (showNotification && notifications) {
-				newNotification(userList[sessionID].handle + ' has changed their name to ' + handle);
+				newNotification(
+					userList[sessionID].handle + ' has changed their name to ' + handle,
+				);
 			}
 			userList[sessionID].handle = handle;
 			userList[sessionID].div.textContent = handle;
@@ -593,7 +660,10 @@ const createChatController = (
 		}
 	};
 
-	inputNotificationCheckbox.addEventListener('click', notificationCheckboxClicked);
+	inputNotificationCheckbox.addEventListener(
+		'click',
+		notificationCheckboxClicked,
+	);
 
 	return {
 		addConversation: addConversation,

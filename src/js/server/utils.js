@@ -20,7 +20,13 @@ Examples:
 
 // strips possibly sensitive headers
 const cleanHeaders = headers => {
-	const SENSITIVE_HEADERS = ['authorization', 'cookie', 'set-cookie', 'proxy-authorization', 'x-api-key'];
+	const SENSITIVE_HEADERS = [
+		'authorization',
+		'cookie',
+		'set-cookie',
+		'proxy-authorization',
+		'x-api-key',
+	];
 	const redacted = {};
 	for (const [key, value] of Object.entries(headers)) {
 		if (SENSITIVE_HEADERS.includes(key.toLowerCase())) {

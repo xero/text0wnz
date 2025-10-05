@@ -47,7 +47,11 @@ vi.mock('../../src/js/client/palette.js', () => ({
 		if (charCode < 0x800) {
 			return [0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f)];
 		}
-		return [0xe0 | (charCode >> 12), 0x80 | ((charCode >> 6) & 0x3f), 0x80 | (charCode & 0x3f)];
+		return [
+			0xe0 | (charCode >> 12),
+			0x80 | ((charCode >> 6) & 0x3f),
+			0x80 | (charCode & 0x3f),
+		];
 	}),
 	getUnicode: vi.fn(),
 }));
@@ -121,12 +125,18 @@ describe('File Module', () => {
 				// Amiga fonts
 				expect(Load.sauceToAppFont('Amiga Topaz 1')).toBe('Topaz 500 8x16');
 				expect(Load.sauceToAppFont('Amiga Topaz 1+')).toBe('Topaz+ 500 8x16');
-				expect(Load.sauceToAppFont('Amiga MicroKnight')).toBe('MicroKnight 8x16');
+				expect(Load.sauceToAppFont('Amiga MicroKnight')).toBe(
+					'MicroKnight 8x16',
+				);
 				expect(Load.sauceToAppFont('Amiga P0T-NOoDLE')).toBe('P0t-NOoDLE 8x16');
 
 				// C64 fonts
-				expect(Load.sauceToAppFont('C64 PETSCII unshifted')).toBe('C64 PETSCII unshifted 8x8');
-				expect(Load.sauceToAppFont('C64 PETSCII shifted')).toBe('C64 PETSCII shifted 8x8');
+				expect(Load.sauceToAppFont('C64 PETSCII unshifted')).toBe(
+					'C64 PETSCII unshifted 8x8',
+				);
+				expect(Load.sauceToAppFont('C64 PETSCII shifted')).toBe(
+					'C64 PETSCII shifted 8x8',
+				);
 
 				// XBIN embedded font
 				expect(Load.sauceToAppFont('XBIN')).toBe('XBIN');
@@ -150,13 +160,19 @@ describe('File Module', () => {
 				// Amiga fonts
 				expect(Load.appToSauceFont('Topaz 500 8x16')).toBe('Amiga Topaz 1');
 				expect(Load.appToSauceFont('Topaz+ 500 8x16')).toBe('Amiga Topaz 1+');
-				expect(Load.appToSauceFont('MicroKnight 8x16')).toBe('Amiga MicroKnight');
+				expect(Load.appToSauceFont('MicroKnight 8x16')).toBe(
+					'Amiga MicroKnight',
+				);
 				expect(Load.appToSauceFont('P0t-NOoDLE 8x16')).toBe('Amiga P0T-NOoDLE');
 				expect(Load.appToSauceFont('mO\'sOul 8x16')).toBe('Amiga mOsOul');
 
 				// C64 fonts
-				expect(Load.appToSauceFont('C64 PETSCII unshifted 8x8')).toBe('C64 PETSCII unshifted');
-				expect(Load.appToSauceFont('C64 PETSCII shifted 8x8')).toBe('C64 PETSCII shifted');
+				expect(Load.appToSauceFont('C64 PETSCII unshifted 8x8')).toBe(
+					'C64 PETSCII unshifted',
+				);
+				expect(Load.appToSauceFont('C64 PETSCII shifted 8x8')).toBe(
+					'C64 PETSCII shifted',
+				);
 
 				// XBIN embedded font
 				expect(Load.appToSauceFont('XBIN')).toBe('XBIN');
@@ -181,7 +197,10 @@ describe('File Module', () => {
 				const callback = vi.fn();
 				Load.file(mockFile, callback);
 
-				expect(mockFileReader.addEventListener).toHaveBeenCalledWith('load', expect.any(Function));
+				expect(mockFileReader.addEventListener).toHaveBeenCalledWith(
+					'load',
+					expect.any(Function),
+				);
 				expect(mockFileReader.readAsArrayBuffer).toHaveBeenCalledWith(mockFile);
 			});
 
@@ -421,7 +440,9 @@ describe('File Module', () => {
 			});
 
 			it('should handle different font names in SAUCE', () => {
-				mockState.textArtCanvas.getCurrentFontName.mockReturnValue('CP850 8x16');
+				mockState.textArtCanvas.getCurrentFontName.mockReturnValue(
+					'CP850 8x16',
+				);
 
 				Save.ans();
 
@@ -586,8 +607,13 @@ describe('File Module', () => {
 			Load.file(mockFile, callback);
 
 			// Verify FileReader setup
-			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith('load', expect.any(Function));
-			expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(mockFile);
+			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
+				'load',
+				expect.any(Function),
+			);
+			expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(
+				mockFile,
+			);
 		});
 
 		it('should test BIN file loading with proper width validation', () => {
@@ -605,8 +631,13 @@ describe('File Module', () => {
 			Load.file(mockFile, callback);
 
 			// Verify FileReader setup and clearXBData is called for BIN files
-			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith('load', expect.any(Function));
-			expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(mockFile);
+			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
+				'load',
+				expect.any(Function),
+			);
+			expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(
+				mockFile,
+			);
 		});
 
 		it('should test XB file loading setup', () => {
@@ -624,8 +655,13 @@ describe('File Module', () => {
 			Load.file(mockFile, callback);
 
 			// Verify FileReader setup - XB files use loadXBFileSequential
-			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith('load', expect.any(Function));
-			expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(mockFile);
+			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
+				'load',
+				expect.any(Function),
+			);
+			expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(
+				mockFile,
+			);
 		});
 
 		it('should test UTF-8 ANSI file loading setup', () => {
@@ -643,8 +679,13 @@ describe('File Module', () => {
 			Load.file(mockFile, callback);
 
 			// Verify FileReader setup for UTF-8 files
-			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith('load', expect.any(Function));
-			expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(mockFile);
+			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
+				'load',
+				expect.any(Function),
+			);
+			expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(
+				mockFile,
+			);
 		});
 	});
 
@@ -670,7 +711,9 @@ describe('File Module', () => {
 				global.FileReader = vi.fn(() => mockReaderInstance);
 
 				expect(() => Load.file(mockFile, callback)).not.toThrow();
-				expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(mockFile);
+				expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(
+					mockFile,
+				);
 			});
 		});
 
@@ -701,7 +744,10 @@ describe('File Module', () => {
 			Load.file(mockFile, callback);
 
 			// Verify setup
-			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith('load', expect.any(Function));
+			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
+				'load',
+				expect.any(Function),
+			);
 		});
 
 		it('should test control character mapping logic', () => {
@@ -742,7 +788,10 @@ describe('File Module', () => {
 			Load.file(mockFile, callback);
 
 			// Verify UTF-8 file setup
-			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith('load', expect.any(Function));
+			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
+				'load',
+				expect.any(Function),
+			);
 		});
 
 		it('should test UTF-8 decoding logic', () => {
@@ -765,7 +814,10 @@ describe('File Module', () => {
 					expect(charCode).toBe(seq.expected);
 				} else if ((charCode & 0xf0) === 0xe0 && seq.bytes.length >= 3) {
 					// 3-byte sequence
-					charCode = ((charCode & 0x0f) << 12) | ((seq.bytes[1] & 0x3f) << 6) | (seq.bytes[2] & 0x3f);
+					charCode =
+						((charCode & 0x0f) << 12) |
+						((seq.bytes[1] & 0x3f) << 6) |
+						(seq.bytes[2] & 0x3f);
 					expect(charCode).toBe(seq.expected);
 				}
 			});
@@ -955,8 +1007,13 @@ describe('File Module', () => {
 			Load.file(mockFile, callback);
 
 			// Verify FileReader setup
-			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith('load', expect.any(Function));
-			expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(mockFile);
+			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
+				'load',
+				expect.any(Function),
+			);
+			expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(
+				mockFile,
+			);
 		});
 
 		it('should handle very large files', () => {
@@ -974,8 +1031,13 @@ describe('File Module', () => {
 			Load.file(mockFile, callback);
 
 			// Verify setup for large files
-			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith('load', expect.any(Function));
-			expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(mockFile);
+			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
+				'load',
+				expect.any(Function),
+			);
+			expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(
+				mockFile,
+			);
 		});
 
 		it('should handle corrupted files gracefully', () => {
@@ -993,8 +1055,13 @@ describe('File Module', () => {
 			Load.file(mockFile, callback);
 
 			// Verify file loading setup
-			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith('load', expect.any(Function));
-			expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(mockFile);
+			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
+				'load',
+				expect.any(Function),
+			);
+			expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(
+				mockFile,
+			);
 		});
 
 		it('should handle various file extensions', () => {
@@ -1031,7 +1098,8 @@ describe('File Module', () => {
 			// Test conversion logic
 			const output = new Uint16Array(expectedLength);
 			for (let i = 0, j = 0; i < expectedLength; i += 1, j += 3) {
-				output[i] = (testData[j] << 8) + (testData[j + 2] << 4) + testData[j + 1];
+				output[i] =
+					(testData[j] << 8) + (testData[j + 2] << 4) + testData[j + 1];
 			}
 
 			expect(output.length).toBe(2);

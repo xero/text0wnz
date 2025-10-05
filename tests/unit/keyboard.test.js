@@ -118,10 +118,22 @@ describe('Keyboard Utilities', () => {
 
 			createFKeyShortcut(canvas, 176);
 
-			expect(document.addEventListener).toHaveBeenCalledWith('onPaletteChange', expect.any(Function));
-			expect(document.addEventListener).toHaveBeenCalledWith('onForegroundChange', expect.any(Function));
-			expect(document.addEventListener).toHaveBeenCalledWith('onBackgroundChange', expect.any(Function));
-			expect(document.addEventListener).toHaveBeenCalledWith('onFontChange', expect.any(Function));
+			expect(document.addEventListener).toHaveBeenCalledWith(
+				'onPaletteChange',
+				expect.any(Function),
+			);
+			expect(document.addEventListener).toHaveBeenCalledWith(
+				'onForegroundChange',
+				expect.any(Function),
+			);
+			expect(document.addEventListener).toHaveBeenCalledWith(
+				'onBackgroundChange',
+				expect.any(Function),
+			);
+			expect(document.addEventListener).toHaveBeenCalledWith(
+				'onFontChange',
+				expect.any(Function),
+			);
 		});
 	});
 
@@ -139,14 +151,20 @@ describe('Keyboard Utilities', () => {
 			const controller = createFKeysShortcut();
 			controller.enable();
 
-			expect(document.addEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
+			expect(document.addEventListener).toHaveBeenCalledWith(
+				'keydown',
+				expect.any(Function),
+			);
 		});
 
 		it('should remove keydown event listener on disable', () => {
 			const controller = createFKeysShortcut();
 			controller.disable();
 
-			expect(document.removeEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
+			expect(document.removeEventListener).toHaveBeenCalledWith(
+				'keydown',
+				expect.any(Function),
+			);
 		});
 	});
 
@@ -218,7 +236,8 @@ describe('Keyboard Utilities', () => {
 			const deleteItem = document.createElement('div');
 
 			// Should not throw during creation
-			expect(() => createPasteTool(cutItem, copyItem, pasteItem, deleteItem)).not.toThrow();
+			expect(() =>
+				createPasteTool(cutItem, copyItem, pasteItem, deleteItem)).not.toThrow();
 		});
 
 		it('should handle paste tool creation', () => {
@@ -227,7 +246,12 @@ describe('Keyboard Utilities', () => {
 			const pasteItem = document.createElement('div');
 			const deleteItem = document.createElement('div');
 
-			const pasteTool = createPasteTool(cutItem, copyItem, pasteItem, deleteItem);
+			const pasteTool = createPasteTool(
+				cutItem,
+				copyItem,
+				pasteItem,
+				deleteItem,
+			);
 
 			expect(pasteTool).toHaveProperty('setSelection');
 			expect(pasteTool).toHaveProperty('cut');
@@ -244,7 +268,12 @@ describe('Keyboard Utilities', () => {
 			const pasteItem = document.createElement('div');
 			const deleteItem = document.createElement('div');
 
-			const pasteTool = createPasteTool(cutItem, copyItem, pasteItem, deleteItem);
+			const pasteTool = createPasteTool(
+				cutItem,
+				copyItem,
+				pasteItem,
+				deleteItem,
+			);
 
 			expect(() => pasteTool.setSelection(0, 0, 10, 10)).not.toThrow();
 			expect(() => pasteTool.deleteSelection()).not.toThrow();
@@ -258,7 +287,10 @@ describe('Keyboard Utilities', () => {
 
 			createPasteTool(cutItem, copyItem, pasteItem, deleteItem);
 
-			expect(document.addEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
+			expect(document.addEventListener).toHaveBeenCalledWith(
+				'keydown',
+				expect.any(Function),
+			);
 		});
 	});
 
@@ -273,8 +305,12 @@ describe('Keyboard Utilities', () => {
 			const expectedFKeyChars = [176, 177, 178, 219, 223, 220, 221, 222, 254, 249, 7, 0];
 
 			expect(expectedFKeyChars).toHaveLength(12); // F1-F12
-			expect(expectedFKeyChars.every(char => typeof char === 'number')).toBe(true);
-			expect(expectedFKeyChars.every(char => char >= 0 && char <= 255)).toBe(true);
+			expect(expectedFKeyChars.every(char => typeof char === 'number')).toBe(
+				true,
+			);
+			expect(expectedFKeyChars.every(char => char >= 0 && char <= 255)).toBe(
+				true,
+			);
 		});
 	});
 
@@ -307,8 +343,12 @@ describe('Keyboard Utilities', () => {
 			const expectedFKeyChars = [176, 177, 178, 219, 223, 220, 221, 222, 254, 249, 7, 0];
 
 			expect(expectedFKeyChars).toHaveLength(12); // F1-F12
-			expect(expectedFKeyChars.every(char => typeof char === 'number')).toBe(true);
-			expect(expectedFKeyChars.every(char => char >= 0 && char <= 255)).toBe(true);
+			expect(expectedFKeyChars.every(char => typeof char === 'number')).toBe(
+				true,
+			);
+			expect(expectedFKeyChars.every(char => char >= 0 && char <= 255)).toBe(
+				true,
+			);
 		});
 
 		it('should handle keyboard navigation keys', () => {
@@ -373,9 +413,19 @@ describe('Keyboard Utilities', () => {
 			};
 
 			// Test selection normalization
-			expect(normalizeSelection(10, 8, 5, 3)).toEqual({ startX: 5, startY: 3, endX: 10, endY: 8 });
+			expect(normalizeSelection(10, 8, 5, 3)).toEqual({
+				startX: 5,
+				startY: 3,
+				endX: 10,
+				endY: 8,
+			});
 
-			expect(normalizeSelection(5, 3, 10, 8)).toEqual({ startX: 5, startY: 3, endX: 10, endY: 8 });
+			expect(normalizeSelection(5, 3, 10, 8)).toEqual({
+				startX: 5,
+				startY: 3,
+				endX: 10,
+				endY: 8,
+			});
 		});
 	});
 

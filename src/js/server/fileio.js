@@ -1,6 +1,15 @@
 import { readFile, writeFile } from 'fs';
 
-const createSauce = (columns, rows, datatype, filetype, filesize, doFlagsAndTInfoS, iceColors, letterSpacing) => {
+const createSauce = (
+	columns,
+	rows,
+	datatype,
+	filetype,
+	filesize,
+	doFlagsAndTInfoS,
+	iceColors,
+	letterSpacing,
+) => {
 	const addText = (text, maxlength, index) => {
 		let i;
 		for (i = 0; i < maxlength; i += 1) {
@@ -74,8 +83,12 @@ const getSauce = (bytes, defaultColumnValue) => {
 
 	if (bytes.length >= 128) {
 		sauce = bytes.slice(-128);
-		if (bytesToString(sauce, 0, 5) === 'SAUCE' && bytesToString(sauce, 5, 2) === '00') {
-			fileSize = (sauce[93] << 24) + (sauce[92] << 16) + (sauce[91] << 8) + sauce[90];
+		if (
+			bytesToString(sauce, 0, 5) === 'SAUCE' &&
+			bytesToString(sauce, 5, 2) === '00'
+		) {
+			fileSize =
+				(sauce[93] << 24) + (sauce[92] << 16) + (sauce[91] << 8) + sauce[90];
 			dataType = sauce[94];
 			if (dataType === 5) {
 				columns = sauce[95] * 2;
@@ -89,7 +102,8 @@ const getSauce = (bytes, defaultColumnValue) => {
 				title: removeTrailingWhitespace(bytesToString(sauce, 7, 35)),
 				author: removeTrailingWhitespace(bytesToString(sauce, 42, 20)),
 				group: removeTrailingWhitespace(bytesToString(sauce, 62, 20)),
-				fileSize: (sauce[93] << 24) + (sauce[92] << 16) + (sauce[91] << 8) + sauce[90],
+				fileSize:
+					(sauce[93] << 24) + (sauce[92] << 16) + (sauce[91] << 8) + sauce[90],
 				columns: columns,
 				rows: rows,
 				iceColors: (flags & 0x01) === 1,
@@ -125,7 +139,11 @@ const load = (filename, callback) => {
 			callback(undefined);
 		} else {
 			const sauce = getSauce(bytes, 160);
-			const data = convertUInt8ToUint16(bytes, 0, sauce.columns * sauce.rows * 2);
+			const data = convertUInt8ToUint16(
+				bytes,
+				0,
+				sauce.columns * sauce.rows * 2,
+			);
 			callback({
 				columns: sauce.columns,
 				rows: sauce.rows,

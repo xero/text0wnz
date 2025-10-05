@@ -140,7 +140,9 @@ describe('Toolbar', () => {
 
 			// If there's already a current tool from previous tests, we need to work with that
 			// In a real scenario, this would be null initially
-			expect(typeof currentTool === 'string' || currentTool === null).toBe(true);
+			expect(typeof currentTool === 'string' || currentTool === null).toBe(
+				true,
+			);
 		});
 
 		it('should return current tool ID when a tool is active', () => {

@@ -129,7 +129,12 @@ describe('Worker Module Core Logic', () => {
 				let index;
 				blocks.forEach(block => {
 					index = block >> 16;
-					outputBlocks.push([index, block & 0xffff, index % joint.columns, Math.floor(index / joint.columns)]);
+					outputBlocks.push([
+						index,
+						block & 0xffff,
+						index % joint.columns,
+						Math.floor(index / joint.columns),
+					]);
 				});
 				return outputBlocks;
 			};
@@ -161,7 +166,11 @@ describe('Worker Module Core Logic', () => {
 			expect(sameSession.showNotification).toBe(false);
 
 			// Different session - show notification
-			const differentSession = processJoin('User2', 'session456', currentSession);
+			const differentSession = processJoin(
+				'User2',
+				'session456',
+				currentSession,
+			);
 			expect(differentSession.showNotification).toBe(true);
 		});
 
@@ -183,7 +192,11 @@ describe('Worker Module Core Logic', () => {
 			expect(result.showNotification).toBe(true);
 
 			// Same session - no notification
-			const sameSessionResult = processNick('NewNick', 'session123', currentSession);
+			const sameSessionResult = processNick(
+				'NewNick',
+				'session123',
+				currentSession,
+			);
 			expect(sameSessionResult.showNotification).toBe(false);
 		});
 	});
@@ -195,11 +208,19 @@ describe('Worker Module Core Logic', () => {
 			};
 
 			expect(formatMessage('join', 'TestUser')).toBe('["join","TestUser"]');
-			expect(formatMessage('chat', 'Hello world')).toBe('["chat","Hello world"]');
+			expect(formatMessage('chat', 'Hello world')).toBe(
+				'["chat","Hello world"]',
+			);
 			expect(formatMessage('draw', [0x41, 0x42])).toBe('["draw",[65,66]]');
 
-			const settingsMessage = formatMessage('canvasSettings', { columns: 80, rows: 25 });
-			expect(JSON.parse(settingsMessage)).toEqual(['canvasSettings', { columns: 80, rows: 25 }]);
+			const settingsMessage = formatMessage('canvasSettings', {
+				columns: 80,
+				rows: 25,
+			});
+			expect(JSON.parse(settingsMessage)).toEqual([
+				'canvasSettings',
+				{ columns: 80, rows: 25 },
+			]);
 		});
 
 		it('should handle JSON parsing with error handling', () => {
@@ -318,7 +339,11 @@ describe('Worker Module Core Logic', () => {
 				return {
 					columns: data.columns,
 					rows: data.rows,
-					isValid: Number.isInteger(data.columns) && Number.isInteger(data.rows) && data.columns > 0 && data.rows > 0,
+					isValid:
+						Number.isInteger(data.columns) &&
+						Number.isInteger(data.rows) &&
+						data.columns > 0 &&
+						data.rows > 0,
 				};
 			};
 
@@ -331,7 +356,8 @@ describe('Worker Module Core Logic', () => {
 			const validateFontChange = data => {
 				return {
 					fontName: data.fontName,
-					isValid: typeof data.fontName === 'string' && data.fontName.length > 0,
+					isValid:
+						typeof data.fontName === 'string' && data.fontName.length > 0,
 				};
 			};
 
@@ -348,9 +374,16 @@ describe('Worker Module Core Logic', () => {
 				};
 			};
 
-			expect(validateBooleanSetting({ iceColors: true }, 'iceColors').isValid).toBe(true);
-			expect(validateBooleanSetting({ iceColors: 'true' }, 'iceColors').isValid).toBe(false);
-			expect(validateBooleanSetting({ letterSpacing: false }, 'letterSpacing').isValid).toBe(true);
+			expect(
+				validateBooleanSetting({ iceColors: true }, 'iceColors').isValid,
+			).toBe(true);
+			expect(
+				validateBooleanSetting({ iceColors: 'true' }, 'iceColors').isValid,
+			).toBe(false);
+			expect(
+				validateBooleanSetting({ letterSpacing: false }, 'letterSpacing')
+					.isValid,
+			).toBe(true);
 		});
 	});
 
@@ -395,7 +428,9 @@ describe('Worker Module Core Logic', () => {
 				return (
 					data instanceof ArrayBuffer ||
 					data instanceof Uint8Array ||
-					(typeof data === 'object' && data !== null && typeof data.byteLength === 'number')
+					(typeof data === 'object' &&
+					  data !== null &&
+					  typeof data.byteLength === 'number')
 				);
 			};
 

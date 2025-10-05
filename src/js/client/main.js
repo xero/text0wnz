@@ -24,7 +24,11 @@ import {
 	menuHover,
 	enforceMaxBytes,
 } from './ui.js';
-import { createDefaultPalette, createPalettePreview, createPalettePicker } from './palette.js';
+import {
+	createDefaultPalette,
+	createPalettePreview,
+	createPalettePicker,
+} from './palette.js';
 import {
 	createBrushController,
 	createHalfBlockController,
@@ -41,7 +45,12 @@ import {
 	createSampleTool,
 } from './freehand_tools.js';
 import { createWorkerHandler, createChatController } from './network.js';
-import { createCursor, createSelectionCursor, createKeyboardController, createPasteTool } from './keyboard.js';
+import {
+	createCursor,
+	createSelectionCursor,
+	createKeyboardController,
+	createPasteTool,
+} from './keyboard.js';
 
 let htmlDoc;
 let bodyContainer;
@@ -131,7 +140,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 		$$$$();
 
 		State.title = 'Untitled';
-		State.pasteTool = createPasteTool($('cut'), $('copy'), $('paste'), $('delete'));
+		State.pasteTool = createPasteTool(
+			$('cut'),
+			$('copy'),
+			$('paste'),
+			$('delete'),
+		);
 		State.positionInfo = createPositionInfo($('position-info'));
 		State.modal = createModalController($('modal'));
 
@@ -167,7 +181,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 const initializeAppComponents = async () => {
 	State.restoreStateFromLocalStorage();
 	document.addEventListener('keydown', undoAndRedo);
-	createResolutionController($('resolution-label'), $('columns-input'), $('rows-input'));
+	createResolutionController(
+		$('resolution-label'),
+		$('columns-input'),
+		$('rows-input'),
+	);
 	onClick($('new'), async () => {
 		if (confirm('All changes will be lost. Are you sure?')) {
 			bodyContainer.classList.add('loading');
@@ -239,40 +257,49 @@ const initializeAppComponents = async () => {
 		bodyContainer.classList.add('loading');
 		State.textArtCanvas.clearXBData();
 		State.textArtCanvas.clear();
-		Load.file(file, async (columns, rows, imageData, iceColors, letterSpacing, fontName) => {
-			const indexOfPeriod = file.name.lastIndexOf('.');
-			let fileTitle;
-			if (indexOfPeriod !== -1) {
-				fileTitle = file.name.substring(0, indexOfPeriod);
-			} else {
-				fileTitle = file.name;
-			}
-			State.title = fileTitle;
-			bodyContainer.classList.remove('loading');
+		Load.file(
+			file,
+			async (columns, rows, imageData, iceColors, letterSpacing, fontName) => {
+				const indexOfPeriod = file.name.lastIndexOf('.');
+				let fileTitle;
+				if (indexOfPeriod !== -1) {
+					fileTitle = file.name.substring(0, indexOfPeriod);
+				} else {
+					fileTitle = file.name;
+				}
+				State.title = fileTitle;
+				bodyContainer.classList.remove('loading');
 
-			const applyData = () => {
-				State.textArtCanvas.setImageData(columns, rows, imageData, iceColors, letterSpacing);
-				palettePicker.updatePalette(); // ANSi
-				openFile.value = '';
-			};
+				const applyData = () => {
+					State.textArtCanvas.setImageData(
+						columns,
+						rows,
+						imageData,
+						iceColors,
+						letterSpacing,
+					);
+					palettePicker.updatePalette(); // ANSi
+					openFile.value = '';
+				};
 
-			const isNFOFile = file.name.toLowerCase().endsWith('.nfo');
-			if (isNFOFile) {
-				await State.textArtCanvas.setFont(magicNumbers.NFO_FONT, applyData);
-				return; // Exit early since callback will be called from setFont
-			}
-			const isXBFile = file.name.toLowerCase().endsWith('.xb');
-			if (fontName && !isXBFile) {
-				// Only handle non-XB files here, as XB files handle font loading internally
-				const appFontName = Load.sauceToAppFont(fontName.trim());
-				if (appFontName) {
-					await State.textArtCanvas.setFont(appFontName, applyData);
+				const isNFOFile = file.name.toLowerCase().endsWith('.nfo');
+				if (isNFOFile) {
+					await State.textArtCanvas.setFont(magicNumbers.NFO_FONT, applyData);
 					return; // Exit early since callback will be called from setFont
 				}
-			}
-			applyData(); // Apply data without font change
-			palettePicker.updatePalette(); // XB
-		});
+				const isXBFile = file.name.toLowerCase().endsWith('.xb');
+				if (fontName && !isXBFile) {
+					// Only handle non-XB files here, as XB files handle font loading internally
+					const appFontName = Load.sauceToAppFont(fontName.trim());
+					if (appFontName) {
+						await State.textArtCanvas.setFont(appFontName, applyData);
+						return; // Exit early since callback will be called from setFont
+					}
+				}
+				applyData(); // Apply data without font change
+				palettePicker.updatePalette(); // XB
+			},
+		);
 	};
 	onFileChange(openFile, openHandler);
 	createDragDropController(openHandler, bodyContainer);
@@ -395,17 +422,25 @@ const initializeAppComponents = async () => {
 		State.palette.setBackgroundColor(tempForeground);
 	});
 
-	const navICE = createSettingToggle($('navICE'), State.textArtCanvas.getIceColors, newIceColors => {
-		State.textArtCanvas.setIceColors(newIceColors);
-		// Broadcast ice colors change to other users if in collaboration mode
-		State.network?.sendIceColorsChange?.(newIceColors);
-	});
+	const navICE = createSettingToggle(
+		$('navICE'),
+		State.textArtCanvas.getIceColors,
+		newIceColors => {
+			State.textArtCanvas.setIceColors(newIceColors);
+			// Broadcast ice colors change to other users if in collaboration mode
+			State.network?.sendIceColorsChange?.(newIceColors);
+		},
+	);
 
-	const nav9pt = createSettingToggle($('nav9pt'), State.font.getLetterSpacing, newLetterSpacing => {
-		State.font.setLetterSpacing(newLetterSpacing);
-		// Broadcast letter spacing change to other users if in collaboration mode
-		State.network?.sendLetterSpacingChange?.(newLetterSpacing);
-	});
+	const nav9pt = createSettingToggle(
+		$('nav9pt'),
+		State.font.getLetterSpacing,
+		newLetterSpacing => {
+			State.font.setLetterSpacing(newLetterSpacing);
+			// Broadcast letter spacing change to other users if in collaboration mode
+			State.network?.sendLetterSpacingChange?.(newLetterSpacing);
+		},
+	);
 
 	const darkToggle = () => {
 		htmlDoc.classList.toggle('dark');
@@ -418,7 +453,9 @@ const initializeAppComponents = async () => {
 	window.matchMedia('(prefers-color-scheme: dark)').matches && darkToggle();
 
 	$('zoom-level').addEventListener('change', e => {
-		const scaleFactor = Number.isInteger(e.target.value) ? e.target.value.toFixed(1) : e.target.value;
+		const scaleFactor = Number.isInteger(e.target.value)
+			? e.target.value.toFixed(1)
+			: e.target.value;
 		State.zoom = scaleFactor;
 	});
 
@@ -445,7 +482,10 @@ const initializeAppComponents = async () => {
 				);
 
 				// Create a canvas to render the font preview
-				const previewCanvas = createCanvas(xbFontData.width * 16, xbFontData.height * 16);
+				const previewCanvas = createCanvas(
+					xbFontData.width * 16,
+					xbFontData.height * 16,
+				);
 				const previewCtx = previewCanvas.getContext('2d');
 
 				// Use white foreground on black background for clear visibility
@@ -459,7 +499,8 @@ const initializeAppComponents = async () => {
 					}
 				}
 				// Update info and display the rendered font
-				previewInfo.textContent = 'XBIN: embedded ' + xbFontData.width + 'x' + xbFontData.height;
+				previewInfo.textContent =
+					'XBIN: embedded ' + xbFontData.width + 'x' + xbFontData.height;
 				previewImage.src = previewCanvas.toDataURL();
 			} else {
 				// No embedded font currently loaded
@@ -486,9 +527,11 @@ const initializeAppComponents = async () => {
 	};
 
 	// Listen for font changes and update display
-	['onPaletteChange', 'onFontChange', 'onXBFontLoaded', 'onOpenedFile'].forEach(e => {
-		document.addEventListener(e, updateFontDisplay);
-	});
+	['onPaletteChange', 'onFontChange', 'onXBFontLoaded', 'onOpenedFile'].forEach(
+		e => {
+			document.addEventListener(e, updateFontDisplay);
+		},
+	);
 
 	onClick(fontDisplay, () => {
 		changeFont.click();
@@ -519,8 +562,15 @@ const initializeAppComponents = async () => {
 	Toolbar.add($('halfblock'), halfblock.enable, halfblock.disable);
 	const shadeBrush = createShadingController(createShadingPanel(), false);
 	Toolbar.add($('shading-brush'), shadeBrush.enable, shadeBrush.disable);
-	const characterBrush = createShadingController(createCharacterBrushPanel(), true);
-	Toolbar.add($('character-brush'), characterBrush.enable, characterBrush.disable);
+	const characterBrush = createShadingController(
+		createCharacterBrushPanel(),
+		true,
+	);
+	Toolbar.add(
+		$('character-brush'),
+		characterBrush.enable,
+		characterBrush.disable,
+	);
 	const fill = createFillController();
 	Toolbar.add($('fill'), fill.enable, fill.disable);
 	const attributeBrush = createAttributeBrushController();
@@ -537,7 +587,10 @@ const initializeAppComponents = async () => {
 	Toolbar.add($('navView'), view.enable, view.disable);
 	const fonts = createGenericController($('font-toolbar'), $('fonts'));
 	Toolbar.add($('fonts'), fonts.enable, fonts.disable);
-	const clipboard = createGenericController($('clipboard-toolbar'), $('clipboard'));
+	const clipboard = createGenericController(
+		$('clipboard-toolbar'),
+		$('clipboard'),
+	);
 	Toolbar.add($('clipboard'), clipboard.enable, clipboard.disable);
 	State.selectionTool = createSelectionTool();
 	Toolbar.add(
@@ -551,9 +604,18 @@ const initializeAppComponents = async () => {
 			State.selectionTool.disable();
 		},
 	);
-	State.sampleTool = createSampleTool(shadeBrush, $('shading-brush'), characterBrush, $('character-brush'));
+	State.sampleTool = createSampleTool(
+		shadeBrush,
+		$('shading-brush'),
+		characterBrush,
+		$('character-brush'),
+	);
 	Toolbar.add($('sample'), State.sampleTool.enable, State.sampleTool.disable);
-	createSettingToggle($('mirror'), State.textArtCanvas.getMirrorMode, State.textArtCanvas.setMirrorMode);
+	createSettingToggle(
+		$('mirror'),
+		State.textArtCanvas.getMirrorMode,
+		State.textArtCanvas.setMirrorMode,
+	);
 	updateFontDisplay();
 
 	// Initialize chat before creating network handler
@@ -579,7 +641,11 @@ const initializeAppComponents = async () => {
 			characterBrush.unignore();
 		},
 	);
-	createSettingToggle($('chat-button'), State.chat.isEnabled, State.chat.toggle);
+	createSettingToggle(
+		$('chat-button'),
+		State.chat.isEnabled,
+		State.chat.toggle,
+	);
 	State.network = createWorkerHandler($('handle-input'));
 
 	// Set up event listeners to save editor state

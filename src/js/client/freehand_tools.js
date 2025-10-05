@@ -161,7 +161,11 @@ const createFloatingPanelPalette = (width, height) => {
 	};
 
 	const redrawSwatch = color => {
-		ctx.putImageData(imageData[color], (color % 8) * (width / 8), color > 7 ? 0 : height / 2);
+		ctx.putImageData(
+			imageData[color],
+			(color % 8) * (width / 8),
+			color > 7 ? 0 : height / 2,
+		);
 	};
 
 	const redrawSwatches = () => {
@@ -174,7 +178,8 @@ const createFloatingPanelPalette = (width, height) => {
 		const rect = canvas.getBoundingClientRect();
 		const mouseX = e.clientX - rect.left;
 		const mouseY = e.clientY - rect.top;
-		const color = Math.floor(mouseX / (width / 8)) + (mouseY < height / 2 ? 8 : 0);
+		const color =
+			Math.floor(mouseX / (width / 8)) + (mouseY < height / 2 ? 8 : 0);
 		if (!e.ctrlKey && !e.altKey) {
 			State.palette.setForegroundColor(color);
 		} else {
@@ -282,9 +287,16 @@ const createHalfBlockController = () => {
 		}
 	};
 	const draw = coords => {
-		if (prev.x !== coords.x || prev.y !== coords.y || prev.halfBlockY !== coords.halfBlockY) {
+		if (
+			prev.x !== coords.x ||
+			prev.y !== coords.y ||
+			prev.halfBlockY !== coords.halfBlockY
+		) {
 			const color = State.palette.getForegroundColor();
-			if (Math.abs(prev.x - coords.x) > 1 || Math.abs(prev.halfBlockY - coords.halfBlockY) > 1) {
+			if (
+				Math.abs(prev.x - coords.x) > 1 ||
+				Math.abs(prev.halfBlockY - coords.halfBlockY) > 1
+			) {
 				State.textArtCanvas.drawHalfBlock(callback => {
 					line(prev.x, prev.halfBlockY, coords.x, coords.halfBlockY, (x, y) => {
 						callback(color, x, y);
@@ -428,7 +440,11 @@ const createShadingController = (panel, charMode) => {
 	};
 
 	const draw = coords => {
-		if (prev.x !== coords.x || prev.y !== coords.y || prev.halfBlockY !== coords.halfBlockY) {
+		if (
+			prev.x !== coords.x ||
+			prev.y !== coords.y ||
+			prev.halfBlockY !== coords.halfBlockY
+		) {
 			if (Math.abs(prev.x - coords.x) > 1 || Math.abs(prev.y - coords.y) > 1) {
 				State.textArtCanvas.draw(callback => {
 					line(prev.x, prev.y, coords.x, coords.y, (x, y) => {
@@ -444,7 +460,9 @@ const createShadingController = (panel, charMode) => {
 			} else {
 				State.textArtCanvas.draw(callback => {
 					callback(
-						charMode ? drawMode.charCode : calculateShadingCharacter(coords.x, coords.y),
+						charMode
+							? drawMode.charCode
+							: calculateShadingCharacter(coords.x, coords.y),
 						drawMode.foreground,
 						drawMode.background,
 						coords.x,
@@ -680,18 +698,27 @@ const createShadingPanel = () => {
 
 	const foregroundChange = e => {
 		canvasContainer.removeChild(canvasContainer.firstChild);
-		canvasContainer.insertBefore(canvases[e.detail], canvasContainer.firstChild);
+		canvasContainer.insertBefore(
+			canvases[e.detail],
+			canvasContainer.firstChild,
+		);
 		cursor.hide();
 		halfBlockMode = true;
 	};
 
 	const fontChange = () => {
-		if (currentFont === 'XBIN' || currentFont !== State.textArtCanvas.getCurrentFontName()) {
+		if (
+			currentFont === 'XBIN' ||
+			currentFont !== State.textArtCanvas.getCurrentFontName()
+		) {
 			panelWidth = State.font.getWidth() * magicNumbers.PANEL_WIDTH_MULTIPLIER;
 			generateCanvases();
 			updateCursor();
 			canvasContainer.removeChild(canvasContainer.firstChild);
-			canvasContainer.insertBefore(canvases[State.palette.getForegroundColor()], canvasContainer.firstChild);
+			canvasContainer.insertBefore(
+				canvases[State.palette.getForegroundColor()],
+				canvasContainer.firstChild,
+			);
 		}
 	};
 
@@ -700,7 +727,10 @@ const createShadingPanel = () => {
 			generateCanvases();
 			updateCursor();
 			canvasContainer.removeChild(canvasContainer.firstChild);
-			canvasContainer.insertBefore(canvases[State.palette.getForegroundColor()], canvasContainer.firstChild);
+			canvasContainer.insertBefore(
+				canvases[State.palette.getForegroundColor()],
+				canvasContainer.firstChild,
+			);
 			clearTimeout(w8);
 		}, 500);
 	};
@@ -723,7 +753,10 @@ const createShadingPanel = () => {
 
 	generateCanvases();
 	updateCursor();
-	canvasContainer.insertBefore(canvases[State.palette.getForegroundColor()], canvasContainer.firstChild);
+	canvasContainer.insertBefore(
+		canvases[State.palette.getForegroundColor()],
+		canvasContainer.firstChild,
+	);
 	panel.append(canvasContainer);
 	cursor.hide();
 
@@ -882,9 +915,13 @@ const createCharacterBrushPanel = () => {
 
 const createFillController = () => {
 	const fillPoint = e => {
-		let block = State.textArtCanvas.getHalfBlock(e.detail.x, e.detail.halfBlockY);
+		let block = State.textArtCanvas.getHalfBlock(
+			e.detail.x,
+			e.detail.halfBlockY,
+		);
 		if (block.isBlocky) {
-			const targetColor = block.halfBlockY === 0 ? block.upperBlockColor : block.lowerBlockColor;
+			const targetColor =
+				block.halfBlockY === 0 ? block.upperBlockColor : block.lowerBlockColor;
 			const fillColor = State.palette.getForegroundColor();
 			if (targetColor !== fillColor) {
 				const columns = State.textArtCanvas.getColumns();
@@ -896,10 +933,15 @@ const createFillController = () => {
 				if (State.textArtCanvas.getMirrorMode()) {
 					const mirrorX = State.textArtCanvas.getMirrorX(e.detail.x);
 					if (mirrorX >= 0 && mirrorX < columns) {
-						const mirrorBlock = State.textArtCanvas.getHalfBlock(mirrorX, e.detail.halfBlockY);
+						const mirrorBlock = State.textArtCanvas.getHalfBlock(
+							mirrorX,
+							e.detail.halfBlockY,
+						);
 						if (mirrorBlock.isBlocky) {
 							const mirrorTargetColor =
-								mirrorBlock.halfBlockY === 0 ? mirrorBlock.upperBlockColor : mirrorBlock.lowerBlockColor;
+								mirrorBlock.halfBlockY === 0
+									? mirrorBlock.upperBlockColor
+									: mirrorBlock.lowerBlockColor;
 							if (mirrorTargetColor === targetColor) {
 								// Add mirror position to the queue so it gets filled too
 								queue.push([mirrorX, e.detail.halfBlockY]);
@@ -915,8 +957,10 @@ const createFillController = () => {
 						block = State.textArtCanvas.getHalfBlock(coord[0], coord[1]);
 						if (
 							block.isBlocky &&
-							((block.halfBlockY === 0 && block.upperBlockColor === targetColor) ||
-							  (block.halfBlockY === 1 && block.lowerBlockColor === targetColor))
+							((block.halfBlockY === 0 &&
+							  block.upperBlockColor === targetColor) ||
+							  (block.halfBlockY === 1 &&
+							    block.lowerBlockColor === targetColor))
 						) {
 							callback(fillColor, coord[0], coord[1]);
 							if (coord[0] > 0) {
@@ -934,7 +978,13 @@ const createFillController = () => {
 						} else if (block.isVerticalBlocky) {
 							if (coord[2] !== 0 && block.leftBlockColor === targetColor) {
 								State.textArtCanvas.draw(callback => {
-									callback(221, fillColor, block.rightBlockColor, coord[0], block.textY);
+									callback(
+										221,
+										fillColor,
+										block.rightBlockColor,
+										coord[0],
+										block.textY,
+									);
 								}, true);
 								if (coord[0] > 0) {
 									queue.push([coord[0] - 1, coord[1], 0]);
@@ -956,7 +1006,13 @@ const createFillController = () => {
 							}
 							if (coord[2] !== 1 && block.rightBlockColor === targetColor) {
 								State.textArtCanvas.draw(callback => {
-									callback(222, fillColor, block.leftBlockColor, coord[0], block.textY);
+									callback(
+										222,
+										fillColor,
+										block.leftBlockColor,
+										coord[0],
+										block.textY,
+									);
 								}, true);
 								if (coord[0] > 0) {
 									queue.push([coord[0] - 1, coord[1], 0]);
@@ -1053,9 +1109,15 @@ const createLineController = () => {
 		State.textArtCanvas.startUndo();
 		State.textArtCanvas.drawHalfBlock(draw => {
 			const endPoint = endXY || startXY;
-			line(startXY.x, startXY.halfBlockY, endPoint.x, endPoint.halfBlockY, (lineX, lineY) => {
-				draw(foreground, lineX, lineY);
-			});
+			line(
+				startXY.x,
+				startXY.halfBlockY,
+				endPoint.x,
+				endPoint.halfBlockY,
+				(lineX, lineY) => {
+					draw(foreground, lineX, lineY);
+				},
+			);
 		});
 		startXY = undefined;
 		endXY = undefined;
@@ -1065,7 +1127,11 @@ const createLineController = () => {
 		if (endPoint === undefined) {
 			return true;
 		}
-		return e.halfBlockY !== endPoint.halfBlockY || e.x !== endPoint.x || e.y !== endPoint.y;
+		return (
+			e.halfBlockY !== endPoint.halfBlockY ||
+			e.x !== endPoint.x ||
+			e.y !== endPoint.y
+		);
 	};
 
 	const canvasDrag = e => {
@@ -1076,9 +1142,15 @@ const createLineController = () => {
 				}
 				endXY = e.detail;
 				const foreground = State.palette.getForegroundColor();
-				line(startXY.x, startXY.halfBlockY, endXY.x, endXY.halfBlockY, (lineX, lineY) => {
-					State.toolPreview.drawHalfBlock(foreground, lineX, lineY);
-				});
+				line(
+					startXY.x,
+					startXY.halfBlockY,
+					endXY.x,
+					endXY.halfBlockY,
+					(lineX, lineY) => {
+						State.toolPreview.drawHalfBlock(foreground, lineX, lineY);
+					},
+				);
 			}
 		}
 	};
@@ -1180,7 +1252,11 @@ const createSquareController = () => {
 		if (startPoint === undefined) {
 			return true;
 		}
-		return e.halfBlockY !== startPoint.halfBlockY || e.x !== startPoint.x || e.y !== startPoint.y;
+		return (
+			e.halfBlockY !== startPoint.halfBlockY ||
+			e.x !== startPoint.x ||
+			e.y !== startPoint.y
+		);
 	};
 
 	const canvasDrag = e => {
@@ -1283,7 +1359,11 @@ const createCircleController = () => {
 		const b2 = height * height;
 		const fa2 = 4 * a2;
 		const fb2 = 4 * b2;
-		for (let px = 0, py = height, sigma = 2 * b2 + a2 * (1 - 2 * height); b2 * px <= a2 * py; px += 1) {
+		for (
+			let px = 0, py = height, sigma = 2 * b2 + a2 * (1 - 2 * height);
+			b2 * px <= a2 * py;
+			px += 1
+		) {
 			callback(sx + px, sy + py);
 			callback(sx - px, sy + py);
 			callback(sx + px, sy - py);
@@ -1294,7 +1374,11 @@ const createCircleController = () => {
 			}
 			sigma += b2 * (4 * px + 6);
 		}
-		for (let px = width, py = 0, sigma = 2 * a2 + b2 * (1 - 2 * width); a2 * py <= b2 * px; py += 1) {
+		for (
+			let px = width, py = 0, sigma = 2 * a2 + b2 * (1 - 2 * width);
+			a2 * py <= b2 * px;
+			py += 1
+		) {
 			callback(sx + px, sy + py);
 			callback(sx - px, sy + py);
 			callback(sx + px, sy - py);
@@ -1312,7 +1396,11 @@ const createCircleController = () => {
 		const b2 = height * height;
 		const fa2 = 4 * a2;
 		const fb2 = 4 * b2;
-		for (let px = 0, py = height, sigma = 2 * b2 + a2 * (1 - 2 * height); b2 * px <= a2 * py; px += 1) {
+		for (
+			let px = 0, py = height, sigma = 2 * b2 + a2 * (1 - 2 * height);
+			b2 * px <= a2 * py;
+			px += 1
+		) {
 			const amount = px * 2;
 			const start = sx - px;
 			const y0 = sy + py;
@@ -1327,7 +1415,11 @@ const createCircleController = () => {
 			}
 			sigma += b2 * (4 * px + 6);
 		}
-		for (let px = width, py = 0, sigma = 2 * a2 + b2 * (1 - 2 * width); a2 * py <= b2 * px; py += 1) {
+		for (
+			let px = width, py = 0, sigma = 2 * a2 + b2 * (1 - 2 * width);
+			a2 * py <= b2 * px;
+			py += 1
+		) {
 			const amount = px * 2;
 			const start = sx - px;
 			const y0 = sy + py;
@@ -1354,17 +1446,29 @@ const createCircleController = () => {
 		const doubleRows = rows * 2;
 		State.textArtCanvas.drawHalfBlock(draw => {
 			if (outlineMode) {
-				ellipseOutline(coords.sx, coords.sy, coords.width, coords.height, (px, py) => {
-					if (px >= 0 && px < columns && py >= 0 && py < doubleRows) {
-						draw(foreground, px, py);
-					}
-				});
+				ellipseOutline(
+					coords.sx,
+					coords.sy,
+					coords.width,
+					coords.height,
+					(px, py) => {
+						if (px >= 0 && px < columns && py >= 0 && py < doubleRows) {
+							draw(foreground, px, py);
+						}
+					},
+				);
 			} else {
-				ellipseFilled(coords.sx, coords.sy, coords.width, coords.height, (px, py) => {
-					if (px >= 0 && px < columns && py >= 0 && py < doubleRows) {
-						draw(foreground, px, py);
-					}
-				});
+				ellipseFilled(
+					coords.sx,
+					coords.sy,
+					coords.width,
+					coords.height,
+					(px, py) => {
+						if (px >= 0 && px < columns && py >= 0 && py < doubleRows) {
+							draw(foreground, px, py);
+						}
+					},
+				);
 			}
 		});
 		startXY = undefined;
@@ -1375,7 +1479,11 @@ const createCircleController = () => {
 		if (startPoint === undefined) {
 			return true;
 		}
-		return e.halfBlockY !== startPoint.halfBlockY || e.x !== startPoint.x || e.y !== startPoint.y;
+		return (
+			e.halfBlockY !== startPoint.halfBlockY ||
+			e.x !== startPoint.x ||
+			e.y !== startPoint.y
+		);
 	};
 
 	const canvasDrag = e => {
@@ -1390,17 +1498,29 @@ const createCircleController = () => {
 			const rows = State.textArtCanvas.getRows();
 			const doubleRows = rows * 2;
 			if (outlineMode) {
-				ellipseOutline(coords.sx, coords.sy, coords.width, coords.height, (px, py) => {
-					if (px >= 0 && px < columns && py >= 0 && py < doubleRows) {
-						State.toolPreview.drawHalfBlock(foreground, px, py);
-					}
-				});
+				ellipseOutline(
+					coords.sx,
+					coords.sy,
+					coords.width,
+					coords.height,
+					(px, py) => {
+						if (px >= 0 && px < columns && py >= 0 && py < doubleRows) {
+							State.toolPreview.drawHalfBlock(foreground, px, py);
+						}
+					},
+				);
 			} else {
-				ellipseFilled(coords.sx, coords.sy, coords.width, coords.height, (px, py) => {
-					if (px >= 0 && px < columns && py >= 0 && py < doubleRows) {
-						State.toolPreview.drawHalfBlock(foreground, px, py);
-					}
-				});
+				ellipseFilled(
+					coords.sx,
+					coords.sy,
+					coords.width,
+					coords.height,
+					(px, py) => {
+						if (px >= 0 && px < columns && py >= 0 && py < doubleRows) {
+							State.toolPreview.drawHalfBlock(foreground, px, py);
+						}
+					},
+				);
 			}
 		}
 	};
@@ -1436,7 +1556,12 @@ const createCircleController = () => {
 	};
 };
 
-const createSampleTool = (shadeBrush, shadeElement, characterBrush, characterElement) => {
+const createSampleTool = (
+	shadeBrush,
+	shadeElement,
+	characterBrush,
+	characterElement,
+) => {
 	const sample = (x, halfBlockY) => {
 		let block = State.textArtCanvas.getHalfBlock(x, halfBlockY);
 		if (block.isBlocky) {
@@ -1548,7 +1673,9 @@ const createSelectionTool = () => {
 		for (let y = 0; y < selection.height; y++) {
 			const blocks = [];
 			for (let x = 0; x < selection.width; x++) {
-				blocks.push(State.textArtCanvas.getBlock(selection.x + x, selection.y + y));
+				blocks.push(
+					State.textArtCanvas.getBlock(selection.x + x, selection.y + y),
+				);
 			}
 
 			// Flip the row horizontally
@@ -1569,7 +1696,13 @@ const createSelectionTool = () => {
 						default:
 							break;
 					}
-					callback(charCode, sourceBlock.foregroundColor, sourceBlock.backgroundColor, targetX, selection.y + y);
+					callback(
+						charCode,
+						sourceBlock.foregroundColor,
+						sourceBlock.backgroundColor,
+						targetX,
+						selection.y + y,
+					);
 				}
 			}, false);
 		}
@@ -1587,7 +1720,9 @@ const createSelectionTool = () => {
 		for (let x = 0; x < selection.width; x++) {
 			const blocks = [];
 			for (let y = 0; y < selection.height; y++) {
-				blocks.push(State.textArtCanvas.getBlock(selection.x + x, selection.y + y));
+				blocks.push(
+					State.textArtCanvas.getBlock(selection.x + x, selection.y + y),
+				);
 			}
 
 			// Flip the column vertically
@@ -1608,7 +1743,13 @@ const createSelectionTool = () => {
 						default:
 							break;
 					}
-					callback(charCode, sourceBlock.foregroundColor, sourceBlock.backgroundColor, selection.x + x, targetY);
+					callback(
+						charCode,
+						sourceBlock.foregroundColor,
+						sourceBlock.backgroundColor,
+						selection.x + x,
+						targetY,
+					);
 				}
 			}, false);
 		}
@@ -1628,11 +1769,23 @@ const createSelectionTool = () => {
 					// Only apply the source character if it's not a truly blank character
 					// Truly blank = char code 0, foreground 0, background 0 (attrib === 0)
 					if (sourceAttrib !== 0) {
-						draw(sourceAttrib >> 8, sourceAttrib & 15, (sourceAttrib >> 4) & 15, x + px, y + py);
+						draw(
+							sourceAttrib >> 8,
+							sourceAttrib & 15,
+							(sourceAttrib >> 4) & 15,
+							x + px,
+							y + py,
+						);
 					} else if (targetArea) {
 						// Keep the original target character for blank spaces
 						const targetAttrib = targetArea.data[py * targetArea.width + px];
-						draw(targetAttrib >> 8, targetAttrib & 15, (targetAttrib >> 4) & 15, x + px, y + py);
+						draw(
+							targetAttrib >> 8,
+							targetAttrib & 15,
+							(targetAttrib >> 4) & 15,
+							x + px,
+							y + py,
+						);
 					}
 					// If no targetArea and source is blank, do nothing
 				}
@@ -1646,8 +1799,20 @@ const createSelectionTool = () => {
 			return;
 		}
 
-		const newX = Math.max(0, Math.min(selection.x + deltaX, State.textArtCanvas.getColumns() - selection.width));
-		const newY = Math.max(0, Math.min(selection.y + deltaY, State.textArtCanvas.getRows() - selection.height));
+		const newX = Math.max(
+			0,
+			Math.min(
+				selection.x + deltaX,
+				State.textArtCanvas.getColumns() - selection.width,
+			),
+		);
+		const newY = Math.max(
+			0,
+			Math.min(
+				selection.y + deltaY,
+				State.textArtCanvas.getRows() - selection.height,
+			),
+		);
 
 		// Don't process if we haven't actually moved
 		if (newX === selection.x && newY === selection.y) {
@@ -1658,7 +1823,12 @@ const createSelectionTool = () => {
 
 		// Get the current selection data if we don't have it
 		if (!selectionData) {
-			selectionData = State.textArtCanvas.getArea(selection.x, selection.y, selection.width, selection.height);
+			selectionData = State.textArtCanvas.getArea(
+				selection.x,
+				selection.y,
+				selection.width,
+				selection.height,
+			);
 		}
 
 		// Restore what was underneath the current position (if any)
@@ -1667,14 +1837,22 @@ const createSelectionTool = () => {
 		}
 
 		// Store what's underneath the new position
-		underlyingData = State.textArtCanvas.getArea(newX, newY, selection.width, selection.height);
+		underlyingData = State.textArtCanvas.getArea(
+			newX,
+			newY,
+			selection.width,
+			selection.height,
+		);
 
 		// Apply the selection at the new position, but only non-blank characters
 		setAreaSelective(selectionData, underlyingData, newX, newY);
 
 		// Update the selection cursor to the new position
 		State.selectionCursor.setStart(newX, newY);
-		State.selectionCursor.setEnd(newX + selection.width - 1, newY + selection.height - 1);
+		State.selectionCursor.setEnd(
+			newX + selection.width - 1,
+			newY + selection.height - 1,
+		);
 	};
 
 	const createEmptyArea = (width, height) => {
@@ -1700,8 +1878,18 @@ const createSelectionTool = () => {
 			// Store selection data and original position when entering move mode
 			const selection = State.selectionCursor.getSelection();
 			if (selection) {
-				selectionData = State.textArtCanvas.getArea(selection.x, selection.y, selection.width, selection.height);
-				originalPosition = { x: selection.x, y: selection.y, width: selection.width, height: selection.height };
+				selectionData = State.textArtCanvas.getArea(
+					selection.x,
+					selection.y,
+					selection.width,
+					selection.height,
+				);
+				originalPosition = {
+					x: selection.x,
+					y: selection.y,
+					width: selection.width,
+					height: selection.height,
+				};
 				// What's underneath initially is empty space (what should be left when the selection moves away)
 				underlyingData = createEmptyArea(selection.width, selection.height);
 			}
@@ -1711,7 +1899,8 @@ const createSelectionTool = () => {
 			if (
 				originalPosition &&
 				currentSelection &&
-				(currentSelection.x !== originalPosition.x || currentSelection.y !== originalPosition.y)
+				(currentSelection.x !== originalPosition.x ||
+				  currentSelection.y !== originalPosition.y)
 			) {
 				// Only clear original position if we actually moved
 				State.textArtCanvas.startUndo();
@@ -1756,7 +1945,10 @@ const createSelectionTool = () => {
 
 	const shiftRight = () => {
 		startSelectionExpansion();
-		selectionEndX = Math.min(selectionEndX + 1, State.textArtCanvas.getColumns() - 1);
+		selectionEndX = Math.min(
+			selectionEndX + 1,
+			State.textArtCanvas.getColumns() - 1,
+		);
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
 	};
@@ -1770,7 +1962,10 @@ const createSelectionTool = () => {
 
 	const shiftDown = () => {
 		startSelectionExpansion();
-		selectionEndY = Math.min(selectionEndY + 1, State.textArtCanvas.getRows() - 1);
+		selectionEndY = Math.min(
+			selectionEndY + 1,
+			State.textArtCanvas.getRows() - 1,
+		);
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
 	};
@@ -1964,7 +2159,8 @@ const createSelectionTool = () => {
 			if (
 				originalPosition &&
 				currentSelection &&
-				(currentSelection.x !== originalPosition.x || currentSelection.y !== originalPosition.y)
+				(currentSelection.x !== originalPosition.x ||
+				  currentSelection.y !== originalPosition.y)
 			) {
 				State.textArtCanvas.startUndo();
 				State.textArtCanvas.deleteArea(
@@ -2022,7 +2218,8 @@ const createAttributeBrushController = () => {
 		if (altKey) {
 			// Alt+click modifies background color only
 			newForeground = block.foregroundColor;
-			newBackground = currentForeground > 7 ? currentForeground - 8 : currentForeground;
+			newBackground =
+				currentForeground > 7 ? currentForeground - 8 : currentForeground;
 		} else {
 			// Normal click modifies both foreground and background colors
 			newForeground = currentForeground;
@@ -2030,7 +2227,10 @@ const createAttributeBrushController = () => {
 		}
 
 		// Only update if something changes
-		if (block.foregroundColor !== newForeground || block.backgroundColor !== newBackground) {
+		if (
+			block.foregroundColor !== newForeground ||
+			block.backgroundColor !== newBackground
+		) {
 			State.textArtCanvas.draw(callback => {
 				callback(block.charCode, newForeground, newBackground, x, y);
 			}, true);
@@ -2072,7 +2272,13 @@ const createAttributeBrushController = () => {
 
 		if (e.detail.shiftKey && lastCoord) {
 			// Shift+click draws a line from last point
-			paintLine(lastCoord.x, lastCoord.y, e.detail.x, e.detail.y, e.detail.altKey);
+			paintLine(
+				lastCoord.x,
+				lastCoord.y,
+				e.detail.x,
+				e.detail.y,
+				e.detail.altKey,
+			);
 		} else {
 			// Normal click paints single point
 			paintAttribute(e.detail.x, e.detail.y, e.detail.altKey);
@@ -2083,7 +2289,13 @@ const createAttributeBrushController = () => {
 
 	const canvasDrag = e => {
 		if (isActive && lastCoord) {
-			paintLine(lastCoord.x, lastCoord.y, e.detail.x, e.detail.y, e.detail.altKey);
+			paintLine(
+				lastCoord.x,
+				lastCoord.y,
+				e.detail.x,
+				e.detail.y,
+				e.detail.altKey,
+			);
 			lastCoord = { x: e.detail.x, y: e.detail.y };
 		}
 	};

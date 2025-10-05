@@ -324,7 +324,9 @@ describe('UI Utilities', () => {
 			modalController.open('resize');
 
 			expect(mockModal.showModal).toHaveBeenCalled();
-			expect(document.getElementById('resize-modal').classList.contains('hide')).toBe(false);
+			expect(
+				document.getElementById('resize-modal').classList.contains('hide'),
+			).toBe(false);
 		});
 	});
 
@@ -403,7 +405,12 @@ describe('UI Utilities', () => {
 			const stateOneClick = vi.fn();
 			const stateTwoClick = vi.fn();
 
-			const toggle = createToggleButton('State One', 'State Two', stateOneClick, stateTwoClick);
+			const toggle = createToggleButton(
+				'State One',
+				'State Two',
+				stateOneClick,
+				stateTwoClick,
+			);
 
 			expect(toggle).toHaveProperty('getElement');
 			expect(toggle).toHaveProperty('setStateOne');
@@ -417,7 +424,12 @@ describe('UI Utilities', () => {
 			const stateOneClick = vi.fn();
 			const stateTwoClick = vi.fn();
 
-			const toggle = createToggleButton('State One', 'State Two', stateOneClick, stateTwoClick);
+			const toggle = createToggleButton(
+				'State One',
+				'State Two',
+				stateOneClick,
+				stateTwoClick,
+			);
 			const element = toggle.getElement();
 			const stateOneDiv = element.querySelector('.left');
 
@@ -430,7 +442,12 @@ describe('UI Utilities', () => {
 			const stateOneClick = vi.fn();
 			const stateTwoClick = vi.fn();
 
-			const toggle = createToggleButton('State One', 'State Two', stateOneClick, stateTwoClick);
+			const toggle = createToggleButton(
+				'State One',
+				'State Two',
+				stateOneClick,
+				stateTwoClick,
+			);
 			const element = toggle.getElement();
 			const stateTwoDiv = element.querySelector('.right');
 
@@ -440,7 +457,12 @@ describe('UI Utilities', () => {
 		});
 
 		it('should set visual state correctly', () => {
-			const toggle = createToggleButton('State One', 'State Two', vi.fn(), vi.fn());
+			const toggle = createToggleButton(
+				'State One',
+				'State Two',
+				vi.fn(),
+				vi.fn(),
+			);
 			const element = toggle.getElement();
 			const stateOneDiv = element.querySelector('.left');
 			const stateTwoDiv = element.querySelector('.right');

@@ -77,7 +77,11 @@ const mockCreateFunctions = {
 		callback && callback();
 		return mockState.textArtCanvas;
 	}),
-	createSelectionCursor: vi.fn(() => ({ hide: vi.fn(), setStart: vi.fn(), setEnd: vi.fn() })),
+	createSelectionCursor: vi.fn(() => ({
+		hide: vi.fn(),
+		setStart: vi.fn(),
+		setEnd: vi.fn(),
+	})),
 	createCursor: vi.fn(() => ({
 		getX: vi.fn(() => 0),
 		getY: vi.fn(() => 0),
@@ -270,7 +274,9 @@ describe('Main Application Module', () => {
 			await import('../../src/js/client/main.js');
 
 			// Find the DOMContentLoaded listener
-			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
+			const domReadyCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'DOMContentLoaded',
+			);
 
 			expect(domReadyCall).toBeDefined();
 
@@ -288,7 +294,9 @@ describe('Main Application Module', () => {
 
 			await import('../../src/js/client/main.js');
 
-			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
+			const domReadyCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'DOMContentLoaded',
+			);
 
 			if (domReadyCall) {
 				const domReadyHandler = domReadyCall[1];
@@ -298,21 +306,34 @@ describe('Main Application Module', () => {
 					await domReadyHandler();
 				}).not.toThrow();
 
-				expect(global.alert).toHaveBeenCalledWith('Failed to initialize the application. Please refresh the page.');
+				expect(global.alert).toHaveBeenCalledWith(
+					'Failed to initialize the application. Please refresh the page.',
+				);
 			}
 		});
 
 		it('should wait for dependencies before initializing components', async () => {
 			await import('../../src/js/client/main.js');
 
-			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
+			const domReadyCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'DOMContentLoaded',
+			);
 
 			if (domReadyCall) {
 				const domReadyHandler = domReadyCall[1];
 				await domReadyHandler();
 
 				expect(mockState.waitFor).toHaveBeenCalledWith(
-					['palette', 'textArtCanvas', 'font', 'cursor', 'selectionCursor', 'positionInfo', 'toolPreview', 'pasteTool'],
+					[
+						'palette',
+						'textArtCanvas',
+						'font',
+						'cursor',
+						'selectionCursor',
+						'positionInfo',
+						'toolPreview',
+						'pasteTool',
+					],
 					expect.any(Function),
 				);
 			}
@@ -326,13 +347,17 @@ describe('Main Application Module', () => {
 			await import('../../src/js/client/main.js');
 
 			// Find the onClick call for the 'new' button
-			const newButtonCall = onClick.mock.calls.find(call => call[0] && call[0].id === 'new'); // This is a mock, so we check the mock element
+			const newButtonCall = onClick.mock.calls.find(
+				call => call[0] && call[0].id === 'new',
+			); // This is a mock, so we check the mock element
 
 			if (newButtonCall) {
 				const newButtonHandler = newButtonCall[1];
 				newButtonHandler();
 
-				expect(global.confirm).toHaveBeenCalledWith('All changes will be lost. Are you sure?');
+				expect(global.confirm).toHaveBeenCalledWith(
+					'All changes will be lost. Are you sure?',
+				);
 			}
 		});
 
@@ -342,7 +367,9 @@ describe('Main Application Module', () => {
 
 			await import('../../src/js/client/main.js');
 
-			const newButtonCall = onClick.mock.calls.find(call => call[0] && typeof call[1] === 'function');
+			const newButtonCall = onClick.mock.calls.find(
+				call => call[0] && typeof call[1] === 'function',
+			);
 
 			if (newButtonCall) {
 				const newButtonHandler = newButtonCall[1];
@@ -369,7 +396,9 @@ describe('Main Application Module', () => {
 			await import('../../src/js/client/main.js');
 
 			// Test resize apply button
-			const resizeApplyCall = onClick.mock.calls.find(call => call[0] && typeof call[1] === 'function');
+			const resizeApplyCall = onClick.mock.calls.find(
+				call => call[0] && typeof call[1] === 'function',
+			);
 
 			if (resizeApplyCall) {
 				const resizeHandler = resizeApplyCall[1];
@@ -396,7 +425,9 @@ describe('Main Application Module', () => {
 
 			await import('../../src/js/client/main.js');
 
-			const resizeApplyCall = onClick.mock.calls.find(call => call[0] && typeof call[1] === 'function');
+			const resizeApplyCall = onClick.mock.calls.find(
+				call => call[0] && typeof call[1] === 'function',
+			);
 
 			if (resizeApplyCall) {
 				const resizeHandler = resizeApplyCall[1];
@@ -417,7 +448,10 @@ describe('Main Application Module', () => {
 				}).not.toThrow();
 
 				// Should not call resize with invalid values
-				expect(mockState.textArtCanvas.resize).not.toHaveBeenCalledWith(NaN, NaN);
+				expect(mockState.textArtCanvas.resize).not.toHaveBeenCalledWith(
+					NaN,
+					NaN,
+				);
 			}
 		});
 	});
@@ -437,7 +471,9 @@ describe('Main Application Module', () => {
 			await import('../../src/js/client/main.js');
 
 			// Test resize broadcast
-			const resizeCall = onClick.mock.calls.find(call => call[0] && typeof call[1] === 'function');
+			const resizeCall = onClick.mock.calls.find(
+				call => call[0] && typeof call[1] === 'function',
+			);
 
 			if (resizeCall) {
 				const resizeHandler = resizeCall[1];
@@ -544,7 +580,9 @@ describe('Main Application Module', () => {
 		it('should initialize all required components in correct order', async () => {
 			await import('../../src/js/client/main.js');
 
-			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
+			const domReadyCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'DOMContentLoaded',
+			);
 
 			if (domReadyCall) {
 				const domReadyHandler = domReadyCall[1];
@@ -565,7 +603,9 @@ describe('Main Application Module', () => {
 		});
 
 		it('should set up event handlers', async () => {
-			const { onClick, onSelectChange, onFileChange } = await import('../../src/js/client/ui.js');
+			const { onClick, onSelectChange, onFileChange } = await import(
+				'../../src/js/client/ui.js'
+			);
 
 			await import('../../src/js/client/main.js');
 
@@ -578,7 +618,9 @@ describe('Main Application Module', () => {
 		it('should configure canvas settings', async () => {
 			await import('../../src/js/client/main.js');
 
-			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
+			const domReadyCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'DOMContentLoaded',
+			);
 
 			if (domReadyCall) {
 				const domReadyHandler = domReadyCall[1];
@@ -642,7 +684,9 @@ describe('Main Application Module', () => {
 
 			await import('../../src/js/client/main.js');
 
-			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
+			const domReadyCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'DOMContentLoaded',
+			);
 
 			if (domReadyCall) {
 				const domReadyHandler = domReadyCall[1];
@@ -651,7 +695,9 @@ describe('Main Application Module', () => {
 					await domReadyHandler();
 				}).not.toThrow();
 
-				expect(global.alert).toHaveBeenCalledWith('Failed to initialize the application. Please refresh the page.');
+				expect(global.alert).toHaveBeenCalledWith(
+					'Failed to initialize the application. Please refresh the page.',
+				);
 			}
 		});
 
@@ -660,7 +706,9 @@ describe('Main Application Module', () => {
 
 			await import('../../src/js/client/main.js');
 
-			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
+			const domReadyCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'DOMContentLoaded',
+			);
 
 			if (domReadyCall) {
 				const domReadyHandler = domReadyCall[1];
@@ -676,7 +724,9 @@ describe('Main Application Module', () => {
 		it('should properly integrate with state system', async () => {
 			await import('../../src/js/client/main.js');
 
-			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
+			const domReadyCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'DOMContentLoaded',
+			);
 
 			if (domReadyCall) {
 				const domReadyHandler = domReadyCall[1];
@@ -702,7 +752,9 @@ describe('Main Application Module', () => {
 		it('should set up state properties correctly', async () => {
 			await import('../../src/js/client/main.js');
 
-			const domReadyCall = global.document.addEventListener.mock.calls.find(call => call[0] === 'DOMContentLoaded');
+			const domReadyCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'DOMContentLoaded',
+			);
 
 			if (domReadyCall) {
 				const domReadyHandler = domReadyCall[1];

@@ -111,7 +111,10 @@ const sendToAll = (clients, msg) => {
 };
 
 const saveSessionWithTimestamp = callback => {
-	const binTime = path.join(SESSION_DIR, createTimestampedFilename(sessionName, 'bin'));
+	const binTime = path.join(
+		SESSION_DIR,
+		createTimestampedFilename(sessionName, 'bin'),
+	);
 	save(binTime, imageData, callback);
 };
 
@@ -183,7 +186,12 @@ const message = (msg, sessionID, clients) => {
 		case 'resize':
 			if (msg[1] && msg[1].columns && msg[1].rows) {
 				if (debug) {
-					console.log('Server: Updating canvas size to', msg[1].columns, 'x', msg[1].rows);
+					console.log(
+						'Server: Updating canvas size to',
+						msg[1].columns,
+						'x',
+						msg[1].rows,
+					);
 				}
 				imageData.columns = msg[1].columns;
 				imageData.rows = msg[1].rows;
@@ -216,7 +224,10 @@ const message = (msg, sessionID, clients) => {
 		case 'letterSpacingChange':
 			if (msg[1] && Object.hasOwn(msg[1], 'letterSpacing')) {
 				if (debug) {
-					console.log('Server: Updating letter spacing to', msg[1].letterSpacing);
+					console.log(
+						'Server: Updating letter spacing to',
+						msg[1].letterSpacing,
+					);
 				}
 				imageData.letterSpacing = msg[1].letterSpacing;
 			}
@@ -234,7 +245,15 @@ const closeSession = (sessionID, clients) => {
 	}
 	sendToAll(clients, ['part', sessionID]);
 };
-export { initialize, saveSessionWithTimestamp, saveSession, getStart, getImageData, message, closeSession };
+export {
+	initialize,
+	saveSessionWithTimestamp,
+	saveSession,
+	getStart,
+	getImageData,
+	message,
+	closeSession,
+};
 export default {
 	initialize,
 	saveSessionWithTimestamp,
