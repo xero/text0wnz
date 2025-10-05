@@ -515,14 +515,6 @@ class StateManager {
 						}
 					}
 				}
-
-				// Check if foreground/background are defaults (7 and 0)
-				if (this.state.palette.getForegroundColor && this.state.palette.getForegroundColor() !== 7) {
-					return false;
-				}
-				if (this.state.palette.getBackgroundColor && this.state.palette.getBackgroundColor() !== 0) {
-					return false;
-				}
 			}
 
 			return true; // All checks passed, state is default

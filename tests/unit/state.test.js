@@ -5,6 +5,7 @@ describe('State Management System', () => {
 	beforeEach(() => {
 		// Reset state before each test
 		State.reset();
+		State.modal = { close: vi.fn(), open: vi.fn() };
 		// Clear all listeners to avoid interference between tests
 		State._manager.listeners.clear();
 		State._manager.waitQueue.clear();
@@ -379,7 +380,7 @@ describe('State Management System', () => {
 			State.font = { test: 'font' };
 
 			const status = State.getInitializationStatus();
-			expect(status.readyCount).toBe(2);
+			expect(status.readyCount).toBe(3);
 			expect(status.totalCount).toBe(9);
 		});
 
