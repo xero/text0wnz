@@ -1,7 +1,3 @@
-/* Important Note:
- * Asset urls must be relative to their src paths, not dist!
- * Vite will set them to their final locations at build time
- */
 @import 'tailwindcss';
 @custom-variant dark (&:where(.dark, .dark *)) {
 }
@@ -90,7 +86,7 @@
 /* <--//----------------------------------------------------------[document] */
 @font-face {
 	font-family: topaz;
-	src: url('/fonts/topazplus_1200.woff2') format('woff2');
+	src: url('topazplus_1200.woff2') format('woff2');
 	font-weight: normal;
 	font-style: normal;
 	font-display: swap;
