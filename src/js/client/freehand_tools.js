@@ -1913,6 +1913,18 @@ const createSelectionTool = () => {
 		flipHButton.addEventListener('click', flipHorizontal);
 		flipVButton.addEventListener('click', flipVertical);
 		moveButton.addEventListener('click', toggleMoveMode);
+
+		// If there's already a selection visible (switched from keyboard mode),
+		// initialize our selection expansion state
+		if (State.selectionCursor.isVisible()) {
+			const selection = State.selectionCursor.getSelection();
+			if (selection) {
+				selectionStartX = selection.x;
+				selectionStartY = selection.y;
+				selectionEndX = selection.x + selection.width - 1;
+				selectionEndY = selection.y + selection.height - 1;
+			}
+		}
 	};
 
 	const disable = () => {
