@@ -1742,52 +1742,50 @@ const createSelectionTool = () => {
 			selectionEndY = selectionStartY;
 			State.selectionCursor.setStart(selectionStartX, selectionStartY);
 			State.cursor.hide();
-		} else {
-			// Selection already exists, get current bounds
-			const selection = State.selectionCursor.getSelection();
-			if (selection) {
-				// Use the current selection end point
-				selectionStartX = selection.x;
-				selectionStartY = selection.y;
-				selectionEndX = selection.x + selection.width - 1;
-				selectionEndY = selection.y + selection.height - 1;
-			}
 		}
+		// If selection already exists, keep using the current anchor (selectionStartX/Y)
+		// and end (selectionEndX/Y) coordinates. Don't reinitialize from bounds.
 	};
 
 	const shiftLeft = () => {
 		startSelectionExpansion();
 		selectionEndX = Math.max(selectionEndX - 1, 0);
+		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
 	};
 
 	const shiftRight = () => {
 		startSelectionExpansion();
 		selectionEndX = Math.min(selectionEndX + 1, State.textArtCanvas.getColumns() - 1);
+		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
 	};
 
 	const shiftUp = () => {
 		startSelectionExpansion();
 		selectionEndY = Math.max(selectionEndY - 1, 0);
+		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
 	};
 
 	const shiftDown = () => {
 		startSelectionExpansion();
 		selectionEndY = Math.min(selectionEndY + 1, State.textArtCanvas.getRows() - 1);
+		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
 	};
 
 	const shiftToStartOfRow = () => {
 		startSelectionExpansion();
 		selectionEndX = 0;
+		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
 	};
 
 	const shiftToEndOfRow = () => {
 		startSelectionExpansion();
 		selectionEndX = State.textArtCanvas.getColumns() - 1;
+		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
 	};
 
