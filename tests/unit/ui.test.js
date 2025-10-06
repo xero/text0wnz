@@ -289,6 +289,7 @@ describe('UI Utilities', () => {
 				<div id="about-modal" class="hide"></div>
 				<div id="update-modal" class="hide"></div>
 				<div id="loading-modal" class="hide"></div>
+				<div id="warning-modal" class="hide"></div>
 				<div id="modalError"></div>
 			`;
 
@@ -316,6 +317,7 @@ describe('UI Utilities', () => {
 				<div id="about-modal" class="hide"></div>
 				<div id="update-modal" class="hide"></div>
 				<div id="loading-modal" class="hide"></div>
+				<div id="warning-modal" class="hide"></div>
 				<div id="modalError"></div>
 			`;
 

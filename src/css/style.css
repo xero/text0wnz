@@ -786,6 +786,7 @@
 	#loading-modal,
 	#choice-modal,
 	#update-modal,
+	#warning-modal,
 	#fonts-modal {
 		@apply flex flex-col w-fit h-fit min-h-0;
 		h1,
@@ -938,6 +939,7 @@
 			}
 		}
 	}
+	#warning-modal,
 	#update-modal,
 	#about-modal {
 		header {

@@ -198,25 +198,27 @@ const initializeAppComponents = async () => {
 		[$('file-menu'), $('edit-menu')],
 		canvasContainer,
 	);
-	onClick($('new'), async () => {
-		if (confirm('All changes will be lost. Are you sure?')) {
-			bodyContainer.classList.add('loading');
-			// Clear localStorage when creating a new file
-			State.clearLocalStorage();
-			State.textArtCanvas.clearXBData(async _ => {
-				State.palette = createDefaultPalette();
-				palettePicker.updatePalette();
-				palettePreview.updatePreview();
-				await State.textArtCanvas.setFont('CP437 8x16', () => {
-					State.font.setLetterSpacing(false);
-					State.textArtCanvas.resize(80, 25);
-					State.textArtCanvas.clear();
-					State.textArtCanvas.setIceColors(false);
-					updateFontDisplay();
-					bodyContainer.classList.remove('loading');
-				});
+	onClick($('new'), () => {
+		State.modal.open('warning');
+	});
+	onClick($('warning-yes'), async () => {
+		bodyContainer.classList.add('loading');
+		// Clear localStorage when creating a new file
+		State.clearLocalStorage();
+		State.textArtCanvas.clearXBData(async _ => {
+			State.palette = createDefaultPalette();
+			palettePicker.updatePalette();
+			palettePreview.updatePreview();
+			await State.textArtCanvas.setFont('CP437 8x16', () => {
+				State.font.setLetterSpacing(false);
+				State.textArtCanvas.resize(80, 25);
+				State.textArtCanvas.clear();
+				State.textArtCanvas.setIceColors(false);
+				updateFontDisplay();
+				bodyContainer.classList.remove('loading');
+				State.modal.close();
 			});
-		}
+		});
 	});
 	onClick($('open'), () => {
 		openFile.click();
@@ -251,6 +253,7 @@ const initializeAppComponents = async () => {
 
 	// Update service worker application
 	const updateClient = _ => {
+		State.clearLocalStorage();
 		if ('caches' in window) {
 			window.caches.keys().then(keys => {
 				Promise.all(keys.map(key => window.caches.delete(key))).then(() => {
@@ -261,7 +264,9 @@ const initializeAppComponents = async () => {
 			window.location.reload();
 		}
 	};
-	onClick($('update'), updateClient);
+	onClick($('update'), _ => {
+		State.modal.open('update');
+	});
 	onClick(reload, updateClient);
 	onReturn(reload, reload);
 

@@ -37,6 +37,7 @@ const createModalController = modal => {
 		$('choice-modal'),
 		$('update-modal'),
 		$('loading-modal'),
+		$('warning-modal'),
 	];
 	let closingTimeout = null;
 	let focus = () => {};
