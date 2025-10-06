@@ -55,8 +55,8 @@
 			<header class="dynamic">
 				<nav>
 					<div id="file-nav">
-						<div id="file-menu" class="menu-title">
-							<button id="File" aria-label="File Menu">
+						<div id="file-menu" class="menu-title" tabindex="1">
+							<button id="file" aria-label="File Menu">
 								<svg alt="File" aria-label="File">
 									<use href="img/icons.svg#save"></use>
 								</svg>
@@ -80,11 +80,12 @@
 									Export as ANSi (UTF-8)
 								</article>
 								<article class="seperator"></article>
+								<article id="update" class="menu-item">Update</article>
 								<article id="about" class="menu-item">About teXt0wnz</article>
 							</div>
 						</div>
-						<div id="edit-menu" class="menu-title">
-							<button id="Edit" aria-label="Edit Menu">
+						<div id="edit-menu" class="menu-title" tabindex="1">
+							<button id="edit" aria-label="Edit Menu">
 								<svg alt="Edit" aria-label="Edit">
 									<use href="img/icons.svg#settings"></use>
 								</svg>
@@ -546,6 +547,9 @@
 				aria-label="Select Color"
 			/>
 		</label>
+		<div id="dragdrop">
+			<kbd>Drop your file<br/>anywhere to load</kbd>
+		</div>
 		<dialog id="modal">
 			<section id="resize-modal">
 				<header>

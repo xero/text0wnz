@@ -336,7 +336,6 @@ const createWorkerHandler = inputHandle => {
 		State.modal.open('choice');
 		// Reset silent check flag since we're now in interactive mode
 		silentCheck = false;
-		// Clear any remaining timer
 		if (silentCheckTimer) {
 			clearTimeout(silentCheckTimer);
 			silentCheckTimer = null;
@@ -344,6 +343,7 @@ const createWorkerHandler = inputHandle => {
 	};
 
 	const joinCollaboration = async () => {
+		connected = true;
 		State.modal.open('websocket');
 		State.palette = createDefaultPalette();
 		document.dispatchEvent(
@@ -378,7 +378,6 @@ const createWorkerHandler = inputHandle => {
 		btnNet.classList.add('hide');
 		websocketUI(true);
 		State.title = 'collab mode';
-		connected = true;
 
 		// Hide the overlay since we're ready
 		State.modal.close();
@@ -472,14 +471,14 @@ const createWorkerHandler = inputHandle => {
 };
 
 const createChatController = (
-	divChatButton,
-	divChatWindow,
-	divMessageWindow,
-	divUserList,
-	inputHandle,
-	inputMessage,
-	inputButton,
-	inputNotificationCheckbox,
+	btnChat,
+	winChat,
+	winMsg,
+	winUsers,
+	txtHandle,
+	txtMsg,
+	btnInput,
+	checkNotifications,
 	onFocusCallback,
 	onBlurCallback,
 ) => {
@@ -492,11 +491,11 @@ const createChatController = (
 	} else {
 		notifications = JSON.parse(notifications);
 	}
-	inputNotificationCheckbox.checked = notifications;
+	checkNotifications.checked = notifications;
 
 	const scrollToBottom = () => {
-		const rect = divMessageWindow.getBoundingClientRect();
-		divMessageWindow.scrollTop = divMessageWindow.scrollHeight - rect.height;
+		const rect = winMsg.getBoundingClientRect();
+		winMsg.scrollTop = winMsg.scrollHeight - rect.height;
 	};
 
 	const newNotification = text => {
@@ -527,14 +526,14 @@ const createChatController = (
 		div.appendChild(spanHandle);
 		div.appendChild(spanSeparator);
 		div.appendChild(spanText);
-		divMessageWindow.appendChild(div);
+		winMsg.appendChild(div);
 		scrollToBottom();
 		if (
 			showNotification &&
 			!enabled &&
-			!divChatButton.classList.contains('notification')
+			!btnChat.classList.contains('notification')
 		) {
-			divChatButton.classList.add('notification');
+			btnChat.classList.add('notification');
 		}
 	};
 
@@ -547,58 +546,58 @@ const createChatController = (
 	};
 
 	const blurHandle = _ => {
-		if (inputHandle.value === '') {
-			inputHandle.value = 'Anonymous';
+		if (txtHandle.value === '') {
+			txtHandle.value = 'Anonymous';
 		}
-		State.network.setHandle(inputHandle.value);
+		State.network.setHandle(txtHandle.value);
 	};
 
 	const keypressHandle = e => {
 		if (e.code === 'Enter') {
-			inputMessage.focus();
+			txtMsg.focus();
 		}
 	};
 
 	const onClick = _ => {
-		if (inputMessage.value !== '') {
-			const text = inputMessage.value;
-			inputMessage.value = '';
+		if (txtMsg.value !== '') {
+			const text = txtMsg.value;
+			txtMsg.value = '';
 			State.network.sendChat(text);
 		}
 	};
 	const keypressMessage = e => {
 		if (e.code === 'Enter') {
-			if (inputMessage.value !== '') {
-				const text = inputMessage.value;
-				inputMessage.value = '';
+			if (txtMsg.value !== '') {
+				const text = txtMsg.value;
+				txtMsg.value = '';
 				State.network.sendChat(text);
 			}
 		}
 	};
 
-	inputButton.addEventListener('click', onClick);
-	inputHandle.addEventListener('focus', onFocus);
-	inputHandle.addEventListener('blur', onBlur);
-	inputMessage.addEventListener('focus', onFocus);
-	inputMessage.addEventListener('blur', onBlur);
-	inputHandle.addEventListener('blur', blurHandle);
-	inputHandle.addEventListener('keypress', keypressHandle);
-	inputMessage.addEventListener('keypress', keypressMessage);
+	btnInput.addEventListener('click', onClick);
+	txtHandle.addEventListener('focus', onFocus);
+	txtHandle.addEventListener('blur', onBlur);
+	txtMsg.addEventListener('focus', onFocus);
+	txtMsg.addEventListener('blur', onBlur);
+	txtHandle.addEventListener('blur', blurHandle);
+	txtHandle.addEventListener('keypress', keypressHandle);
+	txtMsg.addEventListener('keypress', keypressMessage);
 
 	const toggle = () => {
 		if (enabled) {
-			divChatWindow.classList.add('hide');
+			winChat.classList.add('hide');
 			enabled = false;
 			onBlurCallback();
-			divChatButton.classList.remove('active');
+			btnChat.classList.remove('active');
 		} else {
-			divChatWindow.classList.remove('hide');
+			winChat.classList.remove('hide');
 			enabled = true;
 			scrollToBottom();
 			onFocusCallback();
-			inputMessage.focus();
-			divChatButton.classList.remove('notification');
-			divChatButton.classList.add('active');
+			txtMsg.focus();
+			btnChat.classList.remove('notification');
+			btnChat.classList.add('active');
 		}
 	};
 
@@ -617,7 +616,7 @@ const createChatController = (
 			};
 			userList[sessionID].div.classList.add('user-name');
 			userList[sessionID].div.textContent = handle;
-			divUserList.appendChild(userList[sessionID].div);
+			winUsers.appendChild(userList[sessionID].div);
 		}
 	};
 
@@ -638,13 +637,13 @@ const createChatController = (
 			if (notifications) {
 				newNotification(userList[sessionID].handle + ' has left');
 			}
-			divUserList.removeChild(userList[sessionID].div);
+			winUsers.removeChild(userList[sessionID].div);
 			delete userList[sessionID];
 		}
 	};
 
 	const notificationCheckboxClicked = _ => {
-		if (inputNotificationCheckbox.checked) {
+		if (checkNotifications.checked) {
 			if (Notification.permission !== 'granted') {
 				Notification.requestPermission(_permission => {
 					notifications = true;
@@ -660,10 +659,7 @@ const createChatController = (
 		}
 	};
 
-	inputNotificationCheckbox.addEventListener(
-		'click',
-		notificationCheckboxClicked,
-	);
+	checkNotifications.addEventListener('click', notificationCheckboxClicked);
 
 	return {
 		addConversation: addConversation,

@@ -1,12 +1,15 @@
+import State from './state.js';
+
 const Toolbar = (() => {
 	let currentButton;
 	let currentOnBlur;
 	let previousButton;
 	const tools = {};
 
-	const add = (divButton, onFocus, onBlur) => {
+	const add = (button, onFocus, onBlur) => {
 		const enable = () => {
-			if (currentButton !== divButton) {
+			closeMenu();
+			if (currentButton !== button) {
 				// Store previous tool before switching
 				if (currentButton !== undefined) {
 					previousButton = currentButton;
@@ -15,8 +18,8 @@ const Toolbar = (() => {
 				if (currentOnBlur !== undefined) {
 					currentOnBlur();
 				}
-				divButton.classList.add('toolbar-displayed');
-				currentButton = divButton;
+				button.classList.add('toolbar-displayed');
+				currentButton = button;
 				currentOnBlur = onBlur;
 				if (onFocus !== undefined) {
 					onFocus();
@@ -26,14 +29,14 @@ const Toolbar = (() => {
 			}
 		};
 
-		divButton.addEventListener('click', e => {
+		button.addEventListener('click', e => {
 			e.preventDefault();
 			enable();
 		});
 
 		// Store tool reference for programmatic access
-		tools[divButton.id] = {
-			button: divButton,
+		tools[button.id] = {
+			button: button,
 			enable: enable,
 			onFocus: onFocus,
 			onBlur: onBlur,
@@ -46,16 +49,25 @@ const Toolbar = (() => {
 		if (tools[toolId]) {
 			tools[toolId].enable();
 		}
+		closeMenu();
 	};
 
 	const returnToPreviousTool = () => {
 		if (previousButton && tools[previousButton.id]) {
 			tools[previousButton.id].enable();
 		}
+		closeMenu();
 	};
 
 	const getCurrentTool = () => {
+		closeMenu();
 		return currentButton ? currentButton.id : null;
+	};
+
+	const closeMenu = () => {
+		if (State.menu) {
+			State.menu.close();
+		}
 	};
 
 	return {

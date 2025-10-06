@@ -28,6 +28,7 @@ const EditorState = {
 	chat: null,
 	sampleTool: null,
 	selectionTool: null,
+	menus: null,
 
 	// Network/collaboration
 	network: null,
@@ -303,6 +304,7 @@ class StateManager {
 			network: null,
 			worker: null,
 			title: null,
+			menus: null,
 			zoom: 1,
 			initialized: false,
 			initializing: false,
@@ -839,6 +841,12 @@ const State = {
 	},
 	set worker(value) {
 		stateManager.set('worker', value);
+	},
+	get menus() {
+		return stateManager.state.menus;
+	},
+	set menus(value) {
+		stateManager.set('menus', value);
 	},
 	get zoom() {
 		return stateManager.state.zoom;

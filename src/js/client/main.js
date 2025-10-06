@@ -1,11 +1,15 @@
 import magicNumbers from './magicNumbers.js';
 import State from './state.js';
-import { $, $$, createCanvas, createDragDropController } from './ui.js';
-import { createTextArtCanvas } from './canvas.js';
-import { Load, Save } from './file.js';
-import { loadFontFromXBData } from './font.js';
 import Toolbar from './toolbar.js';
+import { Load, Save } from './file.js';
+import { createTextArtCanvas } from './canvas.js';
+import { loadFontFromXBData } from './font.js';
+import { createWorkerHandler, createChatController } from './network.js';
 import {
+	$,
+	$$,
+	createCanvas,
+	createDragDropController,
 	toggleFullscreen,
 	createModalController,
 	createViewportController,
@@ -16,12 +20,13 @@ import {
 	onSelectChange,
 	createPositionInfo,
 	undoAndRedo,
+	viewportTap,
 	createPaintShortcuts,
 	createGenericController,
 	createResolutionController,
 	createGrid,
 	createToolPreview,
-	menuHover,
+	createMenuController,
 	enforceMaxBytes,
 } from './ui.js';
 import {
@@ -44,7 +49,6 @@ import {
 	createSelectionTool,
 	createSampleTool,
 } from './freehand_tools.js';
-import { createWorkerHandler, createChatController } from './network.js';
 import {
 	createCursor,
 	createSelectionCursor,
@@ -65,6 +69,7 @@ let swapColors;
 let rowsInput;
 let fontDisplay;
 let changeFont;
+let applyFont;
 let previewInfo;
 let previewImage;
 let sauceGroup;
@@ -75,6 +80,7 @@ let navDarkmode;
 let metaTheme;
 let saveTimeout;
 let mode;
+let reload;
 
 const $$$$ = () => {
 	htmlDoc = $$('html');
@@ -90,6 +96,7 @@ const $$$$ = () => {
 	rowsInput = $('rows-input');
 	fontDisplay = $$('#current-font-display kbd');
 	changeFont = $('change-font');
+	applyFont = $('fonts-apply');
 	previewInfo = $('font-preview-info');
 	previewImage = $('font-preview-image');
 	sauceGroup = $('sauce-group');
@@ -100,6 +107,7 @@ const $$$$ = () => {
 	metaTheme = $$('meta[name="theme-color"]');
 	saveTimeout = null;
 	mode = $$('#navDarkmode kbd');
+	reload = $('update-reload');
 };
 
 // Debounce to avoid saving too frequently during drawing
@@ -114,7 +122,7 @@ const save = () => {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-	// init service worker
+	// Initialize service worker
 	if ('serviceWorker' in navigator) {
 		navigator.serviceWorker.register('/service.js').then(reg => {
 			if (reg.waiting) {
@@ -135,7 +143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	}
 
 	try {
-		// init global state and vars
+		// Initialize global state and variables
 		State.startInitialization();
 		$$$$();
 
@@ -186,6 +194,10 @@ const initializeAppComponents = async () => {
 		$('columns-input'),
 		$('rows-input'),
 	);
+	State.menus = createMenuController(
+		[$('file-menu'), $('edit-menu')],
+		canvasContainer,
+	);
 	onClick($('new'), async () => {
 		if (confirm('All changes will be lost. Are you sure?')) {
 			bodyContainer.classList.add('loading');
@@ -209,8 +221,6 @@ const initializeAppComponents = async () => {
 	onClick($('open'), () => {
 		openFile.click();
 	});
-	onClick($('file-menu'), menuHover);
-	onClick($('edit-menu'), menuHover);
 	onClick($('save-ansi'), Save.ans);
 	onClick($('save-utf8'), Save.utf8);
 	onClick($('save-bin'), Save.bin);
@@ -238,7 +248,9 @@ const initializeAppComponents = async () => {
 	onClick($('about-dl'), _ => {
 		window.location.href = 'https://github.com/xero/text0wnz/releases/latest';
 	});
-	onClick($('update-reload'), _ => {
+
+	// Update service worker application
+	const updateClient = _ => {
 		if ('caches' in window) {
 			window.caches.keys().then(keys => {
 				Promise.all(keys.map(key => window.caches.delete(key))).then(() => {
@@ -248,7 +260,10 @@ const initializeAppComponents = async () => {
 		} else {
 			window.location.reload();
 		}
-	});
+	};
+	onClick($('update'), updateClient);
+	onClick(reload, updateClient);
+	onReturn(reload, reload);
 
 	const palettePreview = createPalettePreview($('palette-preview'));
 	const palettePicker = createPalettePicker($('palette-picker'));
@@ -302,31 +317,16 @@ const initializeAppComponents = async () => {
 		);
 	};
 	onFileChange(openFile, openHandler);
-	createDragDropController(openHandler, bodyContainer);
+	createDragDropController(openHandler, $('dragdrop'));
 
 	onClick(navSauce, () => {
+		State.menus.close();
 		State.modal.open('sauce');
-		keyboard.ignore();
-		paintShortcuts.ignore();
-		sauceTitle.focus();
-		shadeBrush.ignore();
-		characterBrush.ignore();
 	});
 
 	onClick(sauceDone, () => {
 		State.title = sauceTitle.value;
 		State.modal.close();
-		keyboard.unignore();
-		paintShortcuts.unignore();
-		shadeBrush.unignore();
-		characterBrush.unignore();
-	});
-
-	onClick($('sauce-cancel'), () => {
-		keyboard.unignore();
-		paintShortcuts.unignore();
-		shadeBrush.unignore();
-		characterBrush.unignore();
 	});
 
 	sauceComments.addEventListener('input', enforceMaxBytes);
@@ -350,25 +350,24 @@ const initializeAppComponents = async () => {
 		$('keyboard'),
 		() => {
 			paintShortcuts.disable();
+			State.menus.close();
 			keyboard.enable();
 			$('keyboard-toolbar').classList.remove('hide');
 		},
 		() => {
 			paintShortcuts.enable();
 			keyboard.disable();
+			State.menus.close();
 			$('keyboard-toolbar').classList.add('hide');
 		},
 	).enable();
 	onClick($('undo'), State.textArtCanvas.undo);
 	onClick($('redo'), State.textArtCanvas.redo);
 	onClick($('resolution'), () => {
+		State.menus.close();
 		State.modal.open('resize');
 		columnsInput.value = State.textArtCanvas.getColumns();
 		rowsInput.value = State.textArtCanvas.getRows();
-		keyboard.ignore();
-		paintShortcuts.ignore();
-		shadeBrush.ignore();
-		characterBrush.ignore();
 		columnsInput.focus();
 	});
 	onClick(resizeApply, () => {
@@ -380,19 +379,9 @@ const initializeAppComponents = async () => {
 			State.network?.sendResize?.(columnsValue, rowsValue);
 			State.modal.close();
 		}
-		keyboard.unignore();
-		paintShortcuts.unignore();
-		shadeBrush.unignore();
-		characterBrush.unignore();
 	});
 	onReturn(columnsInput, resizeApply);
 	onReturn(rowsInput, resizeApply);
-	onClick($('resize-cancel'), () => {
-		keyboard.unignore();
-		paintShortcuts.unignore();
-		shadeBrush.unignore();
-		characterBrush.unignore();
-	});
 
 	// Edit action menu items
 	onClick($('insert-row'), keyboard.insertRow);
@@ -441,16 +430,6 @@ const initializeAppComponents = async () => {
 			State.network?.sendLetterSpacingChange?.(newLetterSpacing);
 		},
 	);
-
-	const darkToggle = () => {
-		htmlDoc.classList.toggle('dark');
-		const isDark = htmlDoc.classList.contains('dark');
-		navDarkmode.setAttribute('aria-pressed', isDark);
-		metaTheme.setAttribute('content', isDark ? '#333333' : '#4f4f4f');
-		mode.innerText = (isDark ? 'Night' : 'Light') + ' Mode';
-	};
-	onClick(navDarkmode, darkToggle);
-	window.matchMedia('(prefers-color-scheme: dark)').matches && darkToggle();
 
 	$('zoom-level').addEventListener('change', e => {
 		const scaleFactor = Number.isInteger(e.target.value)
@@ -534,25 +513,26 @@ const initializeAppComponents = async () => {
 	);
 
 	onClick(fontDisplay, () => {
+		State.menus.close();
 		changeFont.click();
 	});
 	onClick(changeFont, async () => {
+		State.menus.close();
 		State.modal.open('fonts');
-		keyboard.disable();
 		await updateFontPreview(fontSelect.value);
 	});
 	onSelectChange(fontSelect, async () => {
 		await updateFontPreview(fontSelect.value);
 	});
-	onClick($('fonts-apply'), async () => {
+	onClick(applyFont, async () => {
 		const selectedFont = fontSelect.value;
 		await State.textArtCanvas.setFont(selectedFont, () => {
 			updateFontDisplay();
 			State.network?.sendFontChange?.(selectedFont);
 			State.modal.close();
-			keyboard.enable();
 		});
 	});
+	onReturn(fontSelect, applyFont);
 	const grid = createGrid($('grid'));
 	createSettingToggle($('navGrid'), grid.isShown, grid.show);
 
@@ -616,7 +596,25 @@ const initializeAppComponents = async () => {
 		State.textArtCanvas.getMirrorMode,
 		State.textArtCanvas.setMirrorMode,
 	);
+
+	State.modal.focusEvents(
+		() => {
+			keyboard.ignore();
+			paintShortcuts.ignore();
+			shadeBrush.ignore();
+			characterBrush.ignore();
+		},
+		() => {
+			keyboard.unignore();
+			paintShortcuts.unignore();
+			shadeBrush.unignore();
+			characterBrush.unignore();
+		},
+	);
+
 	updateFontDisplay();
+
+	viewportTap($('viewport'));
 
 	// Initialize chat before creating network handler
 	State.chat = createChatController(
@@ -647,6 +645,16 @@ const initializeAppComponents = async () => {
 		State.chat.toggle,
 	);
 	State.network = createWorkerHandler($('handle-input'));
+
+	const darkToggle = () => {
+		htmlDoc.classList.toggle('dark');
+		const isDark = htmlDoc.classList.contains('dark');
+		navDarkmode.setAttribute('aria-pressed', isDark);
+		metaTheme.setAttribute('content', isDark ? '#333333' : '#4f4f4f');
+		mode.innerText = (isDark ? 'Night' : 'Light') + ' Mode';
+	};
+	onClick(navDarkmode, darkToggle);
+	window.matchMedia('(prefers-color-scheme: dark)').matches && darkToggle();
 
 	// Set up event listeners to save editor state
 	document.addEventListener('onTextCanvasUp', save);

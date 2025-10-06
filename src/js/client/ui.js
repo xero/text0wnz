@@ -39,6 +39,13 @@ const createModalController = modal => {
 		$('loading-modal'),
 	];
 	let closingTimeout = null;
+	let focus = () => {};
+	let blur = () => {};
+
+	const focusEvents = (onFocus, onBlur) => {
+		focus = onFocus;
+		blur = onBlur;
+	};
 
 	const clear = () => modals.forEach(s => classList(s, 'hide'));
 
@@ -52,6 +59,7 @@ const createModalController = modal => {
 				classList(modal, 'closing', false);
 			}
 			clear();
+			focus();
 			classList($(section), 'hide', false);
 			modal.showModal();
 		} else {
@@ -74,6 +82,7 @@ const createModalController = modal => {
 		if (!queued()) {
 			classList(modal, 'closing');
 			closingTimeout = setTimeout(() => {
+				blur();
 				classList(modal, 'closing', false);
 				modal.close();
 				closingTimeout = null;
@@ -94,6 +103,7 @@ const createModalController = modal => {
 		open: open,
 		close: close,
 		error: error,
+		focusEvents: focusEvents,
 	};
 };
 
@@ -172,6 +182,35 @@ const createPositionInfo = el => {
 	};
 
 	return { update: update };
+};
+
+const viewportTap = view => {
+	const maxTapDuration = 300;
+	let touchStartTime = 0;
+	let activeTouches = 0;
+
+	view.addEventListener('touchstart', event => {
+		activeTouches = event.touches.length;
+		if (activeTouches === 2) {
+			touchStartTime = Date.now();
+		}
+		State.menus.close();
+	});
+
+	view.addEventListener('touchend', event => {
+		if (activeTouches === 2 && event.changedTouches.length === 2) {
+			const endTime = Date.now();
+			const tapDuration = endTime - touchStartTime;
+			if (tapDuration < maxTapDuration) {
+				State.textArtCanvas.undo();
+			}
+		}
+		activeTouches = 0;
+	});
+
+	view.addEventListener('touchcancel', _ => {
+		activeTouches = 0;
+	});
 };
 
 const undoAndRedo = e => {
@@ -480,11 +519,6 @@ const createToolPreview = el => {
 	};
 };
 
-const menuHover = () => {
-	$('file-menu').classList.remove('hover');
-	$('edit-menu').classList.remove('hover');
-};
-
 const getUtf8Bytes = str => {
 	return new TextEncoder().encode(str).length;
 };
@@ -555,7 +589,7 @@ const createDragDropController = (handler, el) => {
 	document.addEventListener('dragenter', e => {
 		e.preventDefault();
 		dragCounter++;
-		el.classList.add('drag-over');
+		el.style.display = 'flex';
 	});
 	document.addEventListener('dragover', e => {
 		e.preventDefault();
@@ -564,18 +598,49 @@ const createDragDropController = (handler, el) => {
 		e.preventDefault();
 		dragCounter--;
 		if (dragCounter === 0) {
-			el.classList.remove('drag-over');
+			el.style.display = 'none';
 		}
 	});
 	document.addEventListener('drop', e => {
 		e.preventDefault();
 		dragCounter = 0;
-		el.classList.remove('drag-over');
+		el.style.display = 'none';
 		const files = e.dataTransfer?.files;
 		if (files && files.length > 0) {
 			handler(files[0]);
 		}
 	});
+};
+
+const createMenuController = (menus, view) => {
+	const close = menu => {
+		setTimeout(_ => {
+			menu.classList.remove('menu-open');
+			view.focus();
+		}, 60);
+	};
+	const closeAll = () => {
+		menus.forEach(m => {
+			m.classList.remove('menu-open');
+		});
+		view.focus();
+	};
+	menus.forEach(menu => {
+		menu.addEventListener('click', e => {
+			e.stopPropagation();
+			e.preventDefault();
+			if (menu.classList.contains('menu-open')) {
+				close(menu);
+			} else {
+				menu.classList.add('menu-open');
+				menu.focus();
+			}
+		});
+		menu.addEventListener('blur', _ => {
+			close(menu);
+		});
+	});
+	return { close: closeAll };
 };
 
 const websocketUI = show => {
@@ -602,15 +667,16 @@ export {
 	onSelectChange,
 	createPositionInfo,
 	undoAndRedo,
+	viewportTap,
 	createGenericController,
 	createViewportController,
 	createPaintShortcuts,
 	createToggleButton,
 	createGrid,
 	createToolPreview,
-	menuHover,
 	enforceMaxBytes,
 	createResolutionController,
 	createDragDropController,
+	createMenuController,
 	websocketUI,
 };

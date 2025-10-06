@@ -4,6 +4,8 @@
 /* <--//-------------------------------------------------------------[theme] */
 :root {
 	overscroll-behavior: none;
+	overflow-x: clip;
+	overflow-x: hidden;
 	--light-fg: #fff;
 	--dark-fg: #efefef;
 	--light-editor: #404040;
@@ -105,6 +107,9 @@
 	width: var(--icon-size);
 	height: var(--icon-size);
 }
+@utility dialog-style {
+	@apply bg-menu border-8 border-iron border-double;
+}
 /* <--//-----------------------i-----------------------------------[globalz] */
 @layer base {
 	* {
@@ -170,7 +175,7 @@
 	}
 
 	#body-container {
-		@apply w-full h-full overflow-auto;
+		@apply w-full h-full overflow-y-hidden;
 	}
 
 	.loading * {
@@ -247,9 +252,9 @@
 	}
 
 	#chat-window {
-		@apply flex fixed top-[var(--header-size)] right-0 z-50 bg-menu scale-y-100 opacity-100
+		@apply flex fixed top-[var(--header-size)] right-0 z-50 scale-y-100 opacity-100
       w-[45vw] min-w-[30vw] max-w-full min-h-[300px] max-h-screen /*height intentionally omitted*/
-      border-8 border-iron border-double;
+      dialog-style;
 		transform-origin: top;
 		transition:
 			scale 0.7s ease-out,
@@ -623,14 +628,13 @@
 		}
 	}
 
-	.menu-list {
-		@apply z-40 block cursor-default absolute w-[300px] bg-file border-r-4 border-b-4 border-l-4 border-solid border-menu;
-		box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
+	.menu-open {
+		overflow: visible;
 	}
 
-	.hover,
-	.menu-title:hover {
-		overflow: visible;
+	.menu-list {
+		@apply z-40 block cursor-default absolute w-[300px] bg-file border-4 border-solid border-menu;
+		box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
 	}
 
 	.menu-item {
@@ -663,8 +667,7 @@
 	}
 	/* <--//-------------------------------------------------------------[modal] */
 	dialog {
-		@apply fixed top-1/2 left-1/2 z-50 bg-menu border-8 border-iron
-	border-double opacity-0 w-fit h-fit;
+		@apply fixed top-1/2 left-1/2 z-50 opacity-0 w-fit h-fit dialog-style;
 		-webkit-transform: translateX(-50%) translateY(-50%);
 		-moz-transform: translateX(-50%) translateY(-50%);
 		-ms-transform: translateX(-50%) translateY(-50%);
@@ -1061,6 +1064,14 @@
 		}
 	}
 
+	#dragdrop {
+		@apply fixed inset-0 hidden justify-center pointer-events-none top-0 left-0 bottom-0 right-0 w-full h-full bg-menu/90;
+		z-index: 999;
+		kbd {
+			@apply text-cyan text-center m-auto text-[4rem];
+		}
+	}
+
 	.included-for-websocket {
 		@apply hidden;
 	}
@@ -1087,12 +1098,6 @@
 		@apply hidden! pointer-events-none!;
 	}
 
-	/* File drag and drop styling */
-	.dragging::after {
-		content: 'Drop ANSI files here';
-		@apply fixed inset-0 block items-center justify-center text-4xl font-bold text-cyan bg-black/80 pointer-events-none top-0 left-0 bottom-0 right-0 w-full h-full;
-		z-index: 999;
-	}
 	/*  darkmode toggle */
 	.sun-and-moon {
 		> :is(.moon, .sun, .sun-beams) {

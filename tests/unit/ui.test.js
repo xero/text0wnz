@@ -13,7 +13,6 @@ import {
 	undoAndRedo,
 	createGenericController,
 	createToggleButton,
-	menuHover,
 	enforceMaxBytes,
 	websocketUI,
 } from '../../src/js/client/ui.js';
@@ -509,27 +508,6 @@ describe('UI Utilities', () => {
 
 			expect(panel.style.display).toBe('none');
 			expect(nav.classList.contains('enabled-parent')).toBe(false);
-		});
-	});
-
-	describe('menuHover', () => {
-		it('should remove hover class from menu elements', () => {
-			// Create mock elements
-			const fileMenu = document.createElement('div');
-			fileMenu.id = 'file-menu';
-			fileMenu.classList.add('hover');
-
-			const editMenu = document.createElement('div');
-			editMenu.id = 'edit-menu';
-			editMenu.classList.add('hover');
-
-			document.body.appendChild(fileMenu);
-			document.body.appendChild(editMenu);
-
-			menuHover();
-
-			expect(fileMenu.classList.contains('hover')).toBe(false);
-			expect(editMenu.classList.contains('hover')).toBe(false);
 		});
 	});
 

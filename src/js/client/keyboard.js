@@ -302,7 +302,7 @@ const createCursor = canvasContainer => {
 	};
 };
 
-const createSelectionCursor = divElement => {
+const createSelectionCursor = element => {
 	const cursor = createCanvas(0, 0);
 	let sx, sy, dx, dy, x, y, width, height;
 	let visible = false;
@@ -406,7 +406,7 @@ const createSelectionCursor = divElement => {
 
 	cursor.classList.add('selection-cursor');
 	cursor.style.display = 'none';
-	divElement.appendChild(cursor);
+	element.appendChild(cursor);
 
 	return {
 		show,
