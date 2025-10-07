@@ -5,9 +5,29 @@
 
 ## Project Overview
 
-teXt0wnz is a web-based ANSI art editor that operates in two modes: server-side (collaborative) and client-side (standalone).
+teXt0wnz is a web-based text art editor that operates in two modes: server-side (collaborative) and client-side (standalone).
 
 This is a single-page application for creating ANSI/ASCII art with various drawing tools, color palettes, export capabilities, and real-time collaboration features.
+
+# Install bun
+- this project uses bun over npm. make sure it's installed before you begin any work. there's a few ways you can install it:
+
+**NPM global install**
+```sh
+npm i -g bun
+```
+
+**NPM local install**
+```sh
+npm i bun
+```
+
+**Manual install**
+```sh
+curl -fsSL https://bun.sh/install | bash
+# or
+wget -qO- https://bun.sh/install | bash
+```
 
 ### Building the App
 
@@ -79,6 +99,23 @@ bun format:fix
 bun fix
 ```
 
+>![IMPORTANT]
+> Before committing, _ALWAYS_ format and lint your code, then fix any issues Eslint may have.
+
+## Testing
+
+Directory structure and organization
+
+```
+tests
+├── e2e      # playwright tests
+├── results  # all test results
+└── unit     # vitetests
+```
+
+>![NOTE]
+> never commit the `test/results` folder, as it's used for cicd. it's covered by the .gitignore file
+
 ### Unit Testing
 
 The project includes comprehensive unit tests using **Vitest** with **jsdom** environment:
@@ -112,6 +149,138 @@ Test files are organized in `tests/unit/` with separate files for each module. T
 
 Tests run automatically in CI/CD and should be run locally before committing changes.
 
+### E2E Testing
+
+### Prerequisites
+
+1. Build the application:
+```bash
+bun bake
+```
+
+2. Install Playwright browsers (first time only):
+```bash
+bun test:install
+```
+
+### Run All E2E Tests
+
+```bash
+bun test:e2e
+```
+
+### Run Tests for Specific Browser
+
+```bash
+# Chrome
+bunx playwright test --project=Chrome
+
+# Firefox
+bunx playwright test --project=Firefox
+
+# WebKit (Safari)
+bunx playwright test --project=WebKit
+```
+
+### Run Specific Test File
+
+```bash
+bunx playwright test tests/e2e/canvas.spec.js
+```
+
+### Run Tests in UI Mode (Interactive)
+
+```bash
+bunx playwright test --ui
+```
+
+### Run Tests in Headed Mode (See Browser)
+
+```bash
+bunx playwright test --headed
+```
+
+### Debug Tests
+
+```bash
+bunx playwright test --debug
+```
+
+## Test Configuration
+
+The test configuration is in `playwright.config.js` at the root of the project:
+
+- **Browsers**: Chrome, Firefox, WebKit (Safari)
+- **Viewport**: 1280x720
+- **Test timeout**: 30 seconds
+- **Retries**: 1 (on failure)
+- **Screenshots**: On failure
+- **Videos**: On failure
+- **Web server**: `bunx serve dist -l 8060`
+
+## Test Results
+
+Test results are saved to:
+- **HTML Report**: `tests/results/playwright-report/`
+- **JSON Results**: `tests/results/e2e/results.json`
+- **Videos/Screenshots**: `tests/results/e2e/`
+
+To view the HTML report after running tests:
+
+```bash
+npx playwright show-report tests/results/playwright-report
+```
+
+## Writing New Tests
+
+When adding new E2E tests:
+
+1. Create a new `.spec.js` file in `tests/e2e/`
+2. Import Playwright test utilities:
+   ```javascript
+   import { test, expect } from '@playwright/test';
+   ```
+3. Use `test.describe()` to group related tests
+4. Use `test.beforeEach()` for common setup (navigate to page, wait for load)
+5. Write tests using Playwright's API for user interactions
+6. Use flexible selectors that work even if IDs change
+7. Add appropriate waits (`waitForTimeout`, `waitForSelector`)
+8. Assert expected behaviors with `expect()`
+
+### Example Test
+
+```javascript
+import { test, expect } from '@playwright/test';
+
+test.describe('My Feature', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('#canvas-container', { timeout: 10000 });
+    await page.waitForTimeout(1000);
+  });
+
+  test('should do something', async ({ page }) => {
+    const element = page.locator('#my-element');
+    await element.click();
+    await page.waitForTimeout(300);
+
+    await expect(element).toBeVisible();
+  });
+});
+```
+
+## Best Practices
+
+1. **Wait for elements**: Always wait for elements to be visible/ready before interacting
+2. **Use timeouts**: Add small delays after interactions to allow the UI to update
+3. **Flexible selectors**: Use multiple selector strategies (ID, class, text, data attributes)
+4. **Test isolation**: Each test should be independent and not rely on previous tests
+5. **Error handling**: Tests should gracefully handle missing optional elements
+6. **Clean up**: Use `beforeEach` and `afterEach` for setup and teardown
+7. **Meaningful assertions**: Test actual user-visible behavior, not implementation details
+
+---
+
 ### Running the Server
 
 The collaboration server can be started with:
@@ -132,7 +301,7 @@ bun server
 #### Example: Custom Port, Session, and Save Interval
 
 ```sh
-bun server 8060 --session-name myjam --save-interval 10
+bun server 8080 --session-name myjam --save-interval 10
 ```
 
 #### Example: With SSL

@@ -10,7 +10,10 @@ vi.mock('../../../src/js/server/text0wnz.js', () => ({
 	},
 }));
 
-import { webSocketInit, onWebSocketConnection } from '../../../src/js/server/websockets.js';
+import {
+	webSocketInit,
+	onWebSocketConnection,
+} from '../../../src/js/server/websockets.js';
 import text0wnz from '../../../src/js/server/text0wnz.js';
 
 describe('WebSockets Module', () => {
@@ -81,23 +84,28 @@ describe('WebSockets Module', () => {
 		it('should log connection details on new connection', () => {
 			onWebSocketConnection(mockWs, mockReq);
 
-			expect(consoleLogSpy).toHaveBeenCalledWith('╓───── New WebSocket Connection');
 			expect(consoleLogSpy).toHaveBeenCalledWith(
-				expect.stringContaining(`- Session ID: ${mockReq.sessionID}`)
+				'╓───── New WebSocket Connection',
+			);
+			expect(consoleLogSpy).toHaveBeenCalledWith(
+				expect.stringContaining(`- Session ID: ${mockReq.sessionID}`),
 			);
 		});
 
 		it('should add client to clients set', () => {
 			expect(mockClients.size).toBe(0);
-			
+
 			onWebSocketConnection(mockWs, mockReq);
-			
+
 			expect(mockClients.has(mockWs)).toBe(true);
 			expect(mockClients.size).toBe(1);
 		});
 
 		it('should send initial start data to client', () => {
-			const mockStartData = JSON.stringify(['start', { columns: 80, rows: 25 }]);
+			const mockStartData = JSON.stringify([
+				'start',
+				{ columns: 80, rows: 25 },
+			]);
 			text0wnz.getStart.mockReturnValue(mockStartData);
 
 			onWebSocketConnection(mockWs, mockReq);
@@ -133,8 +141,14 @@ describe('WebSockets Module', () => {
 
 			onWebSocketConnection(mockWs, mockReq);
 
-			expect(consoleErrorSpy).toHaveBeenCalledWith('Error sending initial data:', expect.any(Error));
-			expect(mockWs.close).toHaveBeenCalledWith(1011, 'Server error during initialization');
+			expect(consoleErrorSpy).toHaveBeenCalledWith(
+				'Error sending initial data:',
+				expect.any(Error),
+			);
+			expect(mockWs.close).toHaveBeenCalledWith(
+				1011,
+				'Server error during initialization',
+			);
 		});
 
 		it('should set up message event handler', () => {
@@ -172,7 +186,7 @@ describe('WebSockets Module', () => {
 			expect(text0wnz.message).toHaveBeenCalledWith(
 				['draw', [1, 2, 3]],
 				mockReq.sessionID,
-				mockClients
+				mockClients,
 			);
 		});
 
@@ -193,7 +207,7 @@ describe('WebSockets Module', () => {
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
 				'Error parsing message:',
 				expect.any(Error),
-				malformedMessage
+				malformedMessage,
 			);
 			expect(text0wnz.message).not.toHaveBeenCalled();
 		});
@@ -207,7 +221,7 @@ describe('WebSockets Module', () => {
 			});
 
 			onWebSocketConnection(mockWs, mockReq);
-			
+
 			// Add to clients first
 			expect(mockClients.has(mockWs)).toBe(true);
 
@@ -215,7 +229,10 @@ describe('WebSockets Module', () => {
 			closeHandler(1000, 'Normal closure');
 
 			expect(mockClients.has(mockWs)).toBe(false);
-			expect(text0wnz.closeSession).toHaveBeenCalledWith(mockReq.sessionID, mockClients);
+			expect(text0wnz.closeSession).toHaveBeenCalledWith(
+				mockReq.sessionID,
+				mockClients,
+			);
 		});
 
 		it('should handle error events correctly', () => {
@@ -227,12 +244,15 @@ describe('WebSockets Module', () => {
 			});
 
 			onWebSocketConnection(mockWs, mockReq);
-			
+
 			// Simulate error event
 			const testError = new Error('WebSocket error');
 			errorHandler(testError);
 
-			expect(consoleErrorSpy).toHaveBeenCalledWith('WebSocket error:', testError);
+			expect(consoleErrorSpy).toHaveBeenCalledWith(
+				'WebSocket error:',
+				testError,
+			);
 			expect(mockClients.has(mockWs)).toBe(false);
 		});
 
@@ -243,7 +263,9 @@ describe('WebSockets Module', () => {
 			onWebSocketConnection(mockWs, mockReq);
 
 			expect(consoleLogSpy).toHaveBeenCalledWith(
-				expect.stringContaining(`- Remote address: ${mockReq.connection.remoteAddress}`)
+				expect.stringContaining(
+					`- Remote address: ${mockReq.connection.remoteAddress}`,
+				),
 			);
 		});
 

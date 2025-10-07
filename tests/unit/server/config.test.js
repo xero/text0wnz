@@ -99,7 +99,15 @@ describe('Config Module - parseArgs', () => {
 	});
 
 	it('should handle multiple flags correctly', () => {
-		process.argv = ['node', 'server.js', '8080', '--ssl', '--debug', '--session-name', 'test'];
+		process.argv = [
+			'node',
+			'server.js',
+			'8080',
+			'--ssl',
+			'--debug',
+			'--session-name',
+			'test',
+		];
 		const config = parseArgs();
 
 		expect(config).toEqual({
