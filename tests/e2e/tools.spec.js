@@ -8,6 +8,10 @@ test.describe('Drawing Tools', () => {
 	});
 
 	test('should activate halfblock drawing tool', async ({ page }) => {
+		// Click on brushes sidebar button to show brush toolbar
+		await page.locator('#brushes').click();
+		await page.waitForTimeout(300);
+		
 		const halfblockTool = page.locator('#halfblock');
 		await halfblockTool.click();
 
@@ -17,7 +21,11 @@ test.describe('Drawing Tools', () => {
 	});
 
 	test('should activate character brush tool', async ({ page }) => {
-		const characterBrushTool = page.locator('#character-brush-brush');
+		// Click on brushes sidebar button to show brush toolbar
+		await page.locator('#brushes').click();
+		await page.waitForTimeout(300);
+		
+		const characterBrushTool = page.locator('#character-brush');
 		await characterBrushTool.click();
 		await page.waitForTimeout(300);
 
@@ -27,12 +35,20 @@ test.describe('Drawing Tools', () => {
 	});
 
 	test('should activate shading brush tool', async ({ page }) => {
+		// Click on brushes sidebar button to show brush toolbar
+		await page.locator('#brushes').click();
+		await page.waitForTimeout(300);
+		
 		const shadingBrushTool = page.locator('#shading-brush');
 		await shadingBrushTool.click();
 		await page.waitForTimeout(300);
 	});
 
 	test('should activate line tool', async ({ page }) => {
+		// Click on shapes sidebar button to show shapes toolbar
+		await page.locator('#shapes').click();
+		await page.waitForTimeout(300);
+		
 		const lineTool = page.locator('#line');
 		await lineTool.click();
 		await page.waitForTimeout(300);
@@ -51,6 +67,10 @@ test.describe('Drawing Tools', () => {
 	});
 
 	test('should activate square tool', async ({ page }) => {
+		// Click on shapes sidebar button to show shapes toolbar
+		await page.locator('#shapes').click();
+		await page.waitForTimeout(300);
+		
 		const squareTool = page.locator('#square');
 		await squareTool.click();
 		await page.waitForTimeout(300);
@@ -69,6 +89,10 @@ test.describe('Drawing Tools', () => {
 	});
 
 	test('should activate circle tool', async ({ page }) => {
+		// Click on shapes sidebar button to show shapes toolbar
+		await page.locator('#shapes').click();
+		await page.waitForTimeout(300);
+		
 		const circleTool = page.locator('#circle');
 		await circleTool.click();
 		await page.waitForTimeout(300);
@@ -117,7 +141,9 @@ test.describe('Drawing Tools', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			// Halfblock
+			// Click brushes to show brush toolbar, then select halfblock
+			await page.locator('#brushes').click();
+			await page.waitForTimeout(200);
 			await page.locator('#halfblock').click();
 			await page.mouse.move(box.x + 20, box.y + 20);
 			await page.mouse.down();
@@ -125,7 +151,9 @@ test.describe('Drawing Tools', () => {
 			await page.mouse.up();
 			await page.waitForTimeout(200);
 
-			// Line
+			// Click shapes to show shapes toolbar, then select line
+			await page.locator('#shapes').click();
+			await page.waitForTimeout(200);
 			await page.locator('#line').click();
 			await page.mouse.move(box.x + 60, box.y + 60);
 			await page.mouse.down();
@@ -133,7 +161,7 @@ test.describe('Drawing Tools', () => {
 			await page.mouse.up();
 			await page.waitForTimeout(200);
 
-			// Square
+			// Square is also in shapes toolbar
 			await page.locator('#square').click();
 			await page.mouse.move(box.x + 120, box.y + 20);
 			await page.mouse.down();
@@ -157,6 +185,9 @@ test.describe('Tool Features', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
+			// Click brushes to show brush toolbar, then select halfblock
+			await page.locator('#brushes').click();
+			await page.waitForTimeout(200);
 			await page.locator('#halfblock').click();
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
@@ -178,6 +209,9 @@ test.describe('Tool Features', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
+			// Click brushes to show brush toolbar, then select halfblock
+			await page.locator('#brushes').click();
+			await page.waitForTimeout(200);
 			await page.locator('#halfblock').click();
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
@@ -206,7 +240,9 @@ test.describe('Tool Features', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			// Draw something
+			// Draw something - click brushes to show brush toolbar
+			await page.locator('#brushes').click();
+			await page.waitForTimeout(200);
 			await page.locator('#halfblock').click();
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();

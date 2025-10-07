@@ -15,19 +15,9 @@ test.describe('Color Palette', () => {
 	test('should have foreground and background color indicators', async ({
 		page,
 	}) => {
-		// Check for color indicators
-		const fgIndicator = page.locator(
-			'#current-foreground, .foreground-color, [data-testid="foreground-color"]',
-		);
-		const bgIndicator = page.locator(
-			'#current-background, .background-color, [data-testid="background-color"]',
-		);
-
-		// At least one should exist
-		const fgCount = await fgIndicator.count();
-		const bgCount = await bgIndicator.count();
-
-		expect(fgCount + bgCount).toBeGreaterThan(0);
+		// Check for palette preview canvas (shows current colors)
+		const palettePreview = page.locator('#palette-preview');
+		await expect(palettePreview).toBeVisible();
 	});
 
 	test('should change foreground color on left click', async ({ page }) => {
@@ -67,9 +57,11 @@ test.describe('Color Palette', () => {
 	});
 
 	test('should have ICE colors toggle', async ({ page }) => {
-		const iceToggle = page.locator(
-			'#navICE, #ice-toggle, [data-testid="ice-colors"]',
-		);
+		// Click fonts sidebar button to show font toolbar
+		await page.locator('#fonts').click();
+		await page.waitForTimeout(300);
+		
+		const iceToggle = page.locator('#navICE');
 		const count = await iceToggle.count();
 
 		if (count > 0) {
@@ -135,6 +127,9 @@ test.describe('Sample Tool (Color Picker)', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
+			// Click brushes to show brush toolbar, then select halfblock
+			await page.locator('#brushes').click();
+			await page.waitForTimeout(200);
 			await page.locator('#halfblock').click();
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
@@ -160,10 +155,12 @@ test.describe('Character Palette', () => {
 	});
 
 	test('should open character selection', async ({ page }) => {
+		// Click brushes to show brush toolbar first
+		await page.locator('#brushes').click();
+		await page.waitForTimeout(300);
+		
 		// Try to open character palette
-		const charButton = page.locator(
-			'#character-brush, #char-select, button:has-text("Character")',
-		);
+		const charButton = page.locator('#character-brush');
 		const count = await charButton.count();
 
 		if (count > 0) {

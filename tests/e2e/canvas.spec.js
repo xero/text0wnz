@@ -10,8 +10,17 @@ test.describe('Basic Canvas Functionality', () => {
 	test('should load the application successfully', async ({ page }) => {
 		// Check if main elements are present
 		await expect(page.locator('#canvas-container')).toBeVisible();
-		await expect(page.locator('aside')).toBeVisible(); // Sidebar with tools
-		await expect(page.locator('#palette-picker')).toBeVisible();
+		
+		// Wait for canvas to be ready
+		await page.waitForTimeout(500);
+		
+		// Check sidebar exists
+		const sidebar = page.locator('aside');
+		await expect(sidebar).toBeVisible();
+		
+		// Check palette elements exist
+		const palettePicker = page.locator('#palette-picker');
+		await expect(palettePicker).toBeVisible();
 	});
 
 	test('should have default canvas size', async ({ page }) => {
@@ -88,7 +97,11 @@ test.describe('Canvas Interaction', () => {
 	});
 
 	test('should support mouse drawing on canvas', async ({ page }) => {
-		// Select halfblock (block drawing) tool
+		// Click on brushes sidebar button to show brush toolbar
+		await page.locator('#brushes').click();
+		await page.waitForTimeout(300);
+		
+		// Select halfblock (block drawing) tool from the toolbar
 		const halfblockTool = page.locator('#halfblock');
 		await halfblockTool.click();
 
@@ -108,8 +121,8 @@ test.describe('Canvas Interaction', () => {
 	});
 
 	test('should allow tool switching', async ({ page }) => {
-		// Select different tools from sidebar
-		await page.locator('#halfblock').click();
+		// Select different tools from sidebar - these toggle toolbars
+		await page.locator('#brushes').click();
 		await page.waitForTimeout(200);
 
 		await page.locator('#keyboard').click();

@@ -13,6 +13,9 @@ test.describe('Keyboard Shortcuts', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
+			// Click brushes to show brush toolbar, then select halfblock
+			await page.locator('#brushes').click();
+			await page.waitForTimeout(200);
 			await page.locator('#halfblock').click();
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
@@ -32,6 +35,9 @@ test.describe('Keyboard Shortcuts', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
+			// Click brushes to show brush toolbar, then select halfblock
+			await page.locator('#brushes').click();
+			await page.waitForTimeout(200);
 			await page.locator('#halfblock').click();
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
