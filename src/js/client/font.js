@@ -33,15 +33,9 @@ const loadFontFromXBData = (
 		let letterSpacingImageData;
 
 		const parseXBFontData = (fontBytes, fontWidth, fontHeight) => {
-			if (!fontBytes) {
+			if (!fontBytes || fontBytes.length === 0) {
 				console.error(
-					`[Font] Invalid fontBytes provided to parseXBFontData. Expected: a non-empty Uint8Array; Received: ${String(fontBytes)}`,
-				);
-				throw new Error('Failed to load XB font data');
-			}
-			if (fontBytes.length === 0) {
-				console.error(
-					`[Font] Invalid fontBytes provided to parseXBFontData. Expected: a non-empty Uint8Array; Received: type ${typeof fontBytes}, length ${fontBytes.length}`,
+					`[Font] Invalid fontBytes provided to parseXBFontData. Expected: a non-empty Uint8Array; Received: type ${typeof fontBytes}, value: ${String(fontBytes)}, length: ${fontBytes && fontBytes.length}`,
 				);
 				throw new Error('Failed to load XB font data');
 			}
@@ -213,19 +207,19 @@ const loadFontFromXBData = (
 				}
 			},
 			drawWithAlpha: (charCode, foreground, ctx, x, y) => {
-				const fallbackCharCode = magicNumbers.CHAR_CAPITAL_X;
-				if (!alphaGlyphs[foreground] || !alphaGlyphs[foreground][charCode]) {
-					charCode = fallbackCharCode;
+				let char = charCode;
+				if (!alphaGlyphs[foreground] || !alphaGlyphs[foreground][char]) {
+					char = magicNumbers.CHAR_CAPITAL_X;
 				}
 				if (letterSpacing) {
 					ctx.drawImage(
-						alphaGlyphs[foreground][charCode],
+						alphaGlyphs[foreground][char],
 						x * (fontData.width + 1),
 						y * fontData.height,
 					);
-					if (charCode >= 192 && charCode <= 223) {
+					if (char >= 192 && char <= 223) {
 						ctx.drawImage(
-							alphaGlyphs[foreground][charCode],
+							alphaGlyphs[foreground][char],
 							fontData.width - 1,
 							0,
 							1,
@@ -238,7 +232,7 @@ const loadFontFromXBData = (
 					}
 				} else {
 					ctx.drawImage(
-						alphaGlyphs[foreground][charCode],
+						alphaGlyphs[foreground][char],
 						x * fontData.width,
 						y * fontData.height,
 					);
@@ -447,22 +441,19 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 							}
 						},
 						drawWithAlpha: (charCode, foreground, ctx, x, y) => {
-							const fallbackCharCode = magicNumbers.CHAR_CAPITAL_X;
-							if (
-								!alphaGlyphs[foreground] ||
-								!alphaGlyphs[foreground][charCode]
-							) {
-								charCode = fallbackCharCode;
+							let char = charCode;
+							if (!alphaGlyphs[foreground] || !alphaGlyphs[foreground][char]) {
+								char = magicNumbers.CHAR_CAPITAL_X;
 							}
 							if (letterSpacing) {
 								ctx.drawImage(
-									alphaGlyphs[foreground][charCode],
+									alphaGlyphs[foreground][char],
 									x * (fontData.width + 1),
 									y * fontData.height,
 								);
-								if (charCode >= 192 && charCode <= 223) {
+								if (char >= 192 && char <= 223) {
 									ctx.drawImage(
-										alphaGlyphs[foreground][charCode],
+										alphaGlyphs[foreground][char],
 										fontData.width - 1,
 										0,
 										1,
@@ -475,7 +466,7 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 								}
 							} else {
 								ctx.drawImage(
-									alphaGlyphs[foreground][charCode],
+									alphaGlyphs[foreground][char],
 									x * fontData.width,
 									y * fontData.height,
 								);

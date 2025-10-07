@@ -1355,8 +1355,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			paletteBytes.length < 48
 		) {
 			console.error(
-				`[Canvas] Invalid data sent to setXBPaletteData; Expected: Uint8Array of 48 bytes; Received:` +
-				`${paletteBytes?.constructor?.name || 'null'} with length ${paletteBytes?.length || 0}`,
+				`[Canvas] Invalid data sent to setXBPaletteData; Expected: Uint8Array of 48 bytes; Received: ${paletteBytes?.constructor?.name || 'null'} with length ${paletteBytes?.length || 0}`,
 			);
 			return;
 		}

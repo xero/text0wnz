@@ -493,9 +493,11 @@ const loadModule = () => {
 						}
 				}
 			}
-
 			// Advance file position for UTF-8 multi-byte sequences
-			file.seek(file.getPos() + bytesConsumed - 1);
+			if (bytesConsumed > 1) {
+				// Already consumed 1 byte with file.get(), so move forward remaining bytes
+				file.seek(file.getPos() + (bytesConsumed - 1));
+			}
 		}
 
 		return {
