@@ -1,8 +1,8 @@
 {
 	"name": "text0wnz",
 	"version": "2.0.0",
-	"author": "xero & Andy Herbert",
-	"description": "web based text art editor (ansi, ascii, xbin)",
+	"author": "xero & andy",
+	"description": "web based text art editor (ansi, ascii, xbin, nfo, txt)",
 	"license": "MIT",
 	"keywords": [
 		"ansi",

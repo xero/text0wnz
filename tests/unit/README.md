@@ -35,6 +35,7 @@ The unit tests validate individual modules and functions in isolation, ensuring 
   - Letter spacing handling
   - Alpha channel rendering
   - Error handling
+  - Font dimension validation
 
 - **freehand_tools.test.js** - Drawing tools tests
   - Halfblock/block drawing
@@ -101,8 +102,8 @@ The unit tests validate individual modules and functions in isolation, ensuring 
 - **worker.test.js** - Web Worker tests
   - Worker message handling
   - Data processing algorithms
-  - WebSocket communication logic
-  - Canvas synchronization
+  - Block deduplication logic
+  - Message processing
 
 - **xbin-persistence.test.js** - XBin format persistence tests
   - Embedded font handling
@@ -124,9 +125,17 @@ The unit tests validate individual modules and functions in isolation, ensuring 
   - Validation
 
 - **server/fileio.test.js** - Server file operations tests
-  - File reading/writing
-  - Session management
-  - Binary file handling
+  - SAUCE record creation and parsing
+  - Binary data conversions
+  - File format validation
+  - Canvas dimension extraction
+  - Data type conversions
+
+- **server/main.test.js** - Server main module tests
+  - Module structure validation
+  - Configuration integration
+  - Component exports
+  - Dependency integration
 
 - **server/server.test.js** - Express server tests
   - Server initialization
@@ -158,36 +167,46 @@ The unit tests validate individual modules and functions in isolation, ensuring 
 1. Install dependencies:
 ```bash
 npm install
+# or
+bun install
 ```
 
 ### Run All Tests
 
 ```bash
 npm run test:unit
+# or
+bun test:unit
 ```
 
 ### Run Tests with Coverage
 
 ```bash
 npm run test:unit -- --coverage
+# or
+npx vitest run --coverage
 ```
 
 ### Run Tests in Watch Mode
 
 ```bash
 npx vitest
+# or
+bunx vitest
 ```
 
 or with specific pattern:
 
 ```bash
 npx vitest canvas
+npx vitest server
 ```
 
 ### Run Specific Test File
 
 ```bash
 npx vitest tests/unit/canvas.test.js
+npx vitest tests/unit/server/config.test.js
 ```
 
 ### Run Tests with UI
@@ -200,9 +219,9 @@ npx vitest --ui
 
 Current coverage status:
 
-- **Overall**: ~44% statement coverage
+- **Overall**: ~45% statement coverage
 - **Client modules**: 45% average coverage
-- **Server modules**: 31% average coverage
+- **Server modules**: 51% average coverage
 
 ### Coverage Goals
 
@@ -216,10 +235,10 @@ Current coverage status:
 After running tests with `--coverage`, view the detailed HTML report:
 
 ```bash
-# Coverage report is generated in coverage/ directory
-open coverage/index.html  # macOS
-xdg-open coverage/index.html  # Linux
-start coverage/index.html  # Windows
+# Coverage report is generated in tests/results/coverage/ directory
+open tests/results/coverage/index.html  # macOS
+xdg-open tests/results/coverage/index.html  # Linux
+start tests/results/coverage/index.html  # Windows
 ```
 
 ## Writing New Tests
@@ -388,3 +407,4 @@ Aim for:
 - [Testing Library](https://testing-library.com/)
 - [Mocking Guide](https://vitest.dev/guide/mocking.html)
 - [Coverage Configuration](https://vitest.dev/guide/coverage.html)
+
