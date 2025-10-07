@@ -35,7 +35,7 @@ jobs:
         run: bun bake
 
       - name: Run E2E tests
-        run: bun test:e2e
+        run: bun test:e2e --workers 3
         env:
           HOME: /root
           PLAYWRIGHT_TEST_BASE_URL: http://localhost:4173

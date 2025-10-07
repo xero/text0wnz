@@ -16,13 +16,12 @@ export default defineConfig({
 		screenshot: 'only-on-failure',
 		video: 'retain-on-failure',
 	},
-	// Web server configuration for testing the built app
-	webServer: {
-		command: 'python3 -m http.server 8080 --directory dist',
-		port: 8080,
-		reuseExistingServer: !process.env.CI,
+	 webServer: {
+    command: 'bunx serve dist -l 4173',
+    port: 4173,
+    reuseExistingServer: !process.env.CI,
 		timeout: 120000,
-	},
+  },
 	projects: [
 		{
 			name: 'Chrome',
