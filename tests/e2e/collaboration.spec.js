@@ -235,7 +235,7 @@ test.describe('Collaboration Mode Detection', () => {
 		await expect(canvas).toBeVisible();
 
 		// Drawing tools should work
-		const freehandTool = page.locator('#freehand');
+		const freehandTool = page.locator('#halfblock');
 		await freehandTool.click();
 		await page.waitForTimeout(200);
 

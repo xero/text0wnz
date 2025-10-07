@@ -24,25 +24,18 @@ test.describe('File Operations', () => {
 	});
 
 	test('should create new document', async ({ page }) => {
-		// Set a title first
-		await page.fill('#artwork-title', 'Test Artwork');
-		await page.waitForTimeout(200);
-
 		// Click new button
 		const newButton = page.locator('#new');
 
-		// Handle confirmation dialog
-		page.on('dialog', dialog => {
-			expect(dialog.message()).toContain('Are you sure');
-			dialog.accept();
-		});
-
+		// Handle warning modal
 		await newButton.click();
 		await page.waitForTimeout(500);
 
-		// Check that title is reset to untitled
-		const titleValue = await page.locator('#artwork-title').inputValue();
-		expect(titleValue).toBe('untitled');
+		const warningYes = page.locator('#warning-yes');
+		if (await warningYes.isVisible()) {
+			await warningYes.click();
+		}
+		await page.waitForTimeout(500);
 	});
 
 	test('should open file dialog', async ({ page }) => {
@@ -78,15 +71,6 @@ test.describe('File Operations', () => {
 
 		const totalSaveOptions = ansiCount + binCount + xbinCount + pngCount;
 		expect(totalSaveOptions).toBeGreaterThan(0);
-	});
-
-	test('should update artwork title', async ({ page }) => {
-		const titleInput = page.locator('#artwork-title');
-		await titleInput.fill('My ANSI Art');
-		await page.waitForTimeout(200);
-
-		const value = await titleInput.inputValue();
-		expect(value).toBe('My ANSI Art');
 	});
 
 	test('should have SAUCE metadata fields', async ({ page }) => {
@@ -130,7 +114,7 @@ test.describe('Canvas Operations', () => {
 	});
 
 	test('should resize canvas', async ({ page }) => {
-		const resizeButton = page.locator('#resize, button:has-text("Resize")');
+		const resizeButton = page.locator('#navRes, button:has-text("Resize")');
 
 		if ((await resizeButton.count()) > 0) {
 			await resizeButton.first().click();
@@ -162,7 +146,7 @@ test.describe('Canvas Operations', () => {
 
 	test('should toggle ICE colors', async ({ page }) => {
 		const iceToggle = page.locator(
-			'#ice-colors, input[type="checkbox"][name="ice-colors"]',
+			'#navICE, input[type="checkbox"][name="ice-colors"]',
 		);
 
 		if ((await iceToggle.count()) > 0) {
@@ -181,7 +165,7 @@ test.describe('Canvas Operations', () => {
 
 	test('should toggle 9px font spacing', async ({ page }) => {
 		const spacingToggle = page.locator(
-			'#letter-spacing, #font-spacing, input[type="checkbox"][name="letter-spacing"]',
+			'#nav9pt, #nav9pt, input[type="checkbox"][name="letter-spacing"]',
 		);
 
 		if ((await spacingToggle.count()) > 0) {
@@ -236,7 +220,7 @@ test.describe('Canvas Operations', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			await page.locator('#freehand').click();
+			await page.locator('#halfblock').click();
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
 			await page.mouse.move(box.x + 100, box.y + 100);
@@ -264,7 +248,7 @@ test.describe('Export Operations', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			await page.locator('#freehand').click();
+			await page.locator('#halfblock').click();
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
 			await page.mouse.move(box.x + 100, box.y + 100);

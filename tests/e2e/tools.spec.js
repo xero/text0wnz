@@ -7,28 +7,28 @@ test.describe('Drawing Tools', () => {
 		await page.waitForTimeout(1000);
 	});
 
-	test('should activate freehand drawing tool', async ({ page }) => {
-		const freehandTool = page.locator('#freehand');
-		await freehandTool.click();
+	test('should activate halfblock drawing tool', async ({ page }) => {
+		const halfblockTool = page.locator('#halfblock');
+		await halfblockTool.click();
 
 		// Check if tool is selected (may have active class)
-		const classList = await freehandTool.getAttribute('class');
+		const classList = await halfblockTool.getAttribute('class');
 		expect(classList).toBeTruthy();
 	});
 
-	test('should activate character tool', async ({ page }) => {
-		const characterTool = page.locator('#character');
-		await characterTool.click();
+	test('should activate character brush tool', async ({ page }) => {
+		const characterBrushTool = page.locator('#character-brush-brush');
+		await characterBrushTool.click();
 		await page.waitForTimeout(300);
 
 		// Verify tool is active
-		const classList = await characterTool.getAttribute('class');
+		const classList = await characterBrushTool.getAttribute('class');
 		expect(classList).toBeTruthy();
 	});
 
-	test('should activate brush tool', async ({ page }) => {
-		const brushTool = page.locator('#brush');
-		await brushTool.click();
+	test('should activate shading brush tool', async ({ page }) => {
+		const shadingBrushTool = page.locator('#shading-brush');
+		await shadingBrushTool.click();
 		await page.waitForTimeout(300);
 	});
 
@@ -117,8 +117,8 @@ test.describe('Drawing Tools', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			// Freehand
-			await page.locator('#freehand').click();
+			// Halfblock
+			await page.locator('#halfblock').click();
 			await page.mouse.move(box.x + 20, box.y + 20);
 			await page.mouse.down();
 			await page.mouse.move(box.x + 40, box.y + 40);
@@ -157,7 +157,7 @@ test.describe('Tool Features', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			await page.locator('#freehand').click();
+			await page.locator('#halfblock').click();
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
 			await page.mouse.move(box.x + 100, box.y + 100);
@@ -178,7 +178,7 @@ test.describe('Tool Features', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			await page.locator('#freehand').click();
+			await page.locator('#halfblock').click();
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
 			await page.mouse.move(box.x + 100, box.y + 100);
@@ -199,13 +199,15 @@ test.describe('Tool Features', () => {
 		}
 	});
 
-	test('should support copy and paste with selection tool', async ({ page }) => {
+	test('should support copy and paste with selection tool', async ({
+		page,
+	}) => {
 		const canvas = page.locator('#canvas-container canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
 			// Draw something
-			await page.locator('#freehand').click();
+			await page.locator('#halfblock').click();
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
 			await page.mouse.move(box.x + 70, box.y + 70);

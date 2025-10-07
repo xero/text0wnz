@@ -8,11 +8,13 @@ test.describe('Color Palette', () => {
 	});
 
 	test('should display color palette', async ({ page }) => {
-		const palette = page.locator('#palette');
+		const palette = page.locator('#palette-picker');
 		await expect(palette).toBeVisible();
 	});
 
-	test('should have foreground and background color indicators', async ({ page }) => {
+	test('should have foreground and background color indicators', async ({
+		page,
+	}) => {
 		// Check for color indicators
 		const fgIndicator = page.locator(
 			'#current-foreground, .foreground-color, [data-testid="foreground-color"]',
@@ -66,7 +68,7 @@ test.describe('Color Palette', () => {
 
 	test('should have ICE colors toggle', async ({ page }) => {
 		const iceToggle = page.locator(
-			'#ice-colors, #ice-toggle, [data-testid="ice-colors"]',
+			'#navICE, #ice-toggle, [data-testid="ice-colors"]',
 		);
 		const count = await iceToggle.count();
 
@@ -94,7 +96,9 @@ test.describe('Color Palette', () => {
 		expect(errors).toBe(0);
 	});
 
-	test('should allow color selection from multiple positions', async ({ page }) => {
+	test('should allow color selection from multiple positions', async ({
+		page,
+	}) => {
 		const colorSwatches = page.locator(
 			'.palette-color, .color-swatch, [data-color]',
 		);
@@ -131,7 +135,7 @@ test.describe('Sample Tool (Color Picker)', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			await page.locator('#freehand').click();
+			await page.locator('#halfblock').click();
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
 			await page.mouse.move(box.x + 70, box.y + 70);
@@ -158,7 +162,7 @@ test.describe('Character Palette', () => {
 	test('should open character selection', async ({ page }) => {
 		// Try to open character palette
 		const charButton = page.locator(
-			'#character, #char-select, button:has-text("Character")',
+			'#character-brush, #char-select, button:has-text("Character")',
 		);
 		const count = await charButton.count();
 
@@ -168,7 +172,7 @@ test.describe('Character Palette', () => {
 
 			// Look for character grid or selector
 			const charGrid = page.locator(
-				'.character-grid, .char-selector, #character-selector',
+				'.character-grid, .char-selector, #character-brush-selector',
 			);
 			const gridCount = await charGrid.count();
 
@@ -181,7 +185,7 @@ test.describe('Character Palette', () => {
 
 	test('should allow character selection for drawing', async ({ page }) => {
 		// Activate character tool
-		const characterTool = page.locator('#character');
+		const characterTool = page.locator('#character-brush');
 		await characterTool.click();
 		await page.waitForTimeout(300);
 
