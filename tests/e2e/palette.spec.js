@@ -12,9 +12,7 @@ test.describe('Color Palette', () => {
 		await expect(palette).toBeVisible();
 	});
 
-	test('should have foreground and background color indicators', async ({
-		page,
-	}) => {
+	test('should have foreground and background color indicators', async ({ page }) => {
 		// Check for palette preview canvas (shows current colors)
 		const palettePreview = page.locator('#palette-preview');
 		await expect(palettePreview).toBeVisible();
@@ -60,7 +58,7 @@ test.describe('Color Palette', () => {
 		// Click fonts sidebar button to show font toolbar
 		await page.locator('#fonts').click();
 		await page.waitForTimeout(300);
-		
+
 		const iceToggle = page.locator('#navICE');
 		const count = await iceToggle.count();
 
@@ -88,9 +86,7 @@ test.describe('Color Palette', () => {
 		expect(errors).toBe(0);
 	});
 
-	test('should allow color selection from multiple positions', async ({
-		page,
-	}) => {
+	test('should allow color selection from multiple positions', async ({ page }) => {
 		const colorSwatches = page.locator(
 			'.palette-color, .color-swatch, [data-color]',
 		);
@@ -155,10 +151,9 @@ test.describe('Character Palette', () => {
 	});
 
 	test('should open character selection', async ({ page }) => {
-		// Click brushes to show brush toolbar first
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		
+
 		// Try to open character palette
 		const charButton = page.locator('#character-brush');
 		const count = await charButton.count();
@@ -181,6 +176,9 @@ test.describe('Character Palette', () => {
 	});
 
 	test('should allow character selection for drawing', async ({ page }) => {
+		await page.locator('#brushes').click();
+		await page.waitForTimeout(300);
+
 		// Activate character tool
 		const characterTool = page.locator('#character-brush');
 		await characterTool.click();

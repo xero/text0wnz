@@ -10,14 +10,14 @@ test.describe('Basic Canvas Functionality', () => {
 	test('should load the application successfully', async ({ page }) => {
 		// Check if main elements are present
 		await expect(page.locator('#canvas-container')).toBeVisible();
-		
+
 		// Wait for canvas to be ready
 		await page.waitForTimeout(500);
-		
+
 		// Check sidebar exists
-		const sidebar = page.locator('aside');
+		const sidebar = page.locator('#body-container aside');
 		await expect(sidebar).toBeVisible();
-		
+
 		// Check palette elements exist
 		const palettePicker = page.locator('#palette-picker');
 		await expect(palettePicker).toBeVisible();
@@ -100,7 +100,7 @@ test.describe('Canvas Interaction', () => {
 		// Click on brushes sidebar button to show brush toolbar
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		
+
 		// Select halfblock (block drawing) tool from the toolbar
 		const halfblockTool = page.locator('#halfblock');
 		await halfblockTool.click();

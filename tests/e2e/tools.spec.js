@@ -11,7 +11,7 @@ test.describe('Drawing Tools', () => {
 		// Click on brushes sidebar button to show brush toolbar
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		
+
 		const halfblockTool = page.locator('#halfblock');
 		await halfblockTool.click();
 
@@ -24,7 +24,7 @@ test.describe('Drawing Tools', () => {
 		// Click on brushes sidebar button to show brush toolbar
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		
+
 		const characterBrushTool = page.locator('#character-brush');
 		await characterBrushTool.click();
 		await page.waitForTimeout(300);
@@ -38,7 +38,7 @@ test.describe('Drawing Tools', () => {
 		// Click on brushes sidebar button to show brush toolbar
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		
+
 		const shadingBrushTool = page.locator('#shading-brush');
 		await shadingBrushTool.click();
 		await page.waitForTimeout(300);
@@ -48,7 +48,7 @@ test.describe('Drawing Tools', () => {
 		// Click on shapes sidebar button to show shapes toolbar
 		await page.locator('#shapes').click();
 		await page.waitForTimeout(300);
-		
+
 		const lineTool = page.locator('#line');
 		await lineTool.click();
 		await page.waitForTimeout(300);
@@ -70,7 +70,7 @@ test.describe('Drawing Tools', () => {
 		// Click on shapes sidebar button to show shapes toolbar
 		await page.locator('#shapes').click();
 		await page.waitForTimeout(300);
-		
+
 		const squareTool = page.locator('#square');
 		await squareTool.click();
 		await page.waitForTimeout(300);
@@ -92,7 +92,7 @@ test.describe('Drawing Tools', () => {
 		// Click on shapes sidebar button to show shapes toolbar
 		await page.locator('#shapes').click();
 		await page.waitForTimeout(300);
-		
+
 		const circleTool = page.locator('#circle');
 		await circleTool.click();
 		await page.waitForTimeout(300);
@@ -233,9 +233,7 @@ test.describe('Tool Features', () => {
 		}
 	});
 
-	test('should support copy and paste with selection tool', async ({
-		page,
-	}) => {
+	test('should support copy and paste with selection tool', async ({ page }) => {
 		const canvas = page.locator('#canvas-container canvas').first();
 		const box = await canvas.boundingBox();
 

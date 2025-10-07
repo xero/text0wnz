@@ -237,7 +237,7 @@ test.describe('Collaboration Mode Detection', () => {
 		// Drawing tools should work - click brushes to show toolbar
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		
+
 		const halfblockTool = page.locator('#halfblock');
 		await halfblockTool.click();
 		await page.waitForTimeout(200);

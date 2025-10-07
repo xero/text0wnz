@@ -9,15 +9,15 @@ test.describe('UI Elements', () => {
 
 	test('should display main UI elements', async ({ page }) => {
 		// Check for toolbar
-		const toolbar = page.locator('aside, .toolbar, nav');
+		const toolbar = page.locator('#body-container aside, .toolbar, nav');
 		await expect(toolbar.first()).toBeVisible();
 
 		// Check for canvas
 		const canvas = page.locator('#canvas-container');
 		await expect(canvas).toBeVisible();
 
-		// Check for palette
-		const palette = page.locator('#palette, .palette');
+		// Check for palettes
+		const palette = page.locator('#palette-preview, #palette-picker');
 		await expect(palette.first()).toBeVisible();
 	});
 
@@ -109,6 +109,9 @@ test.describe('Toolbar Interactions', () => {
 	});
 
 	test('should highlight selected tool', async ({ page }) => {
+		await page.locator('#brushes').click();
+		await page.waitForTimeout(300);
+
 		const freehandTool = page.locator('#halfblock');
 		await freehandTool.click();
 		await page.waitForTimeout(200);
@@ -119,16 +122,93 @@ test.describe('Toolbar Interactions', () => {
 	});
 
 	test('should switch between tools', async ({ page }) => {
-		// Click different tools
+		await page.locator('#brushes').click();
+		await page.waitForTimeout(300);
+
 		await page.locator('#halfblock').click();
 		await page.waitForTimeout(200);
 
 		await page.locator('#character-brush').click();
 		await page.waitForTimeout(200);
 
+		await page.locator('#shading-brush').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#shapes').click();
+		await page.waitForTimeout(300);
+
 		await page.locator('#line').click();
 		await page.waitForTimeout(200);
 
+		await page.locator('#circle').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#square').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#selection').click();
+		await page.waitForTimeout(300);
+
+		await page.locator('#flip-horizontal').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#flip-vertical').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#move-blocks').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#cut').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#delete').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#copy').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#paste').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#system-paste').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#clipboard').click();
+		await page.waitForTimeout(300);
+
+		await page.locator('#undo').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#redo').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#navView').click();
+		await page.waitForTimeout(300);
+
+		await page.locator('#navView').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#navDarkmode').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#navGrid').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#fonts').click();
+		await page.waitForTimeout(300);
+
+		await page.locator('#navICE').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#nav9pt').click();
+		await page.waitForTimeout(200);
+
+		await page.locator('#change-font').click();
+		await page.waitForTimeout(200);
+		await page.locator('#fonts-cancel').click();
+		await page.waitForTimeout(800);
+
+		//
 		// No errors should occur
 		const errors = await page.locator('.error, .error-message').count();
 		expect(errors).toBe(0);
@@ -154,9 +234,7 @@ test.describe('Toolbar Interactions', () => {
 		}
 	});
 
-	test('should show clipboard operations when selection is active', async ({
-		page,
-	}) => {
+	test('should show clipboard operations when selection is active', async ({ page }) => {
 		// Activate selection tool
 		await page.locator('#selection').click();
 		await page.waitForTimeout(200);
@@ -324,9 +402,7 @@ test.describe('Help and Information', () => {
 		}
 	});
 
-	test('should display keyboard shortcuts reference if available', async ({
-		page,
-	}) => {
+	test('should display keyboard shortcuts reference if available', async ({ page }) => {
 		const shortcutsButton = page.locator(
 			'#shortcuts, button:has-text("Shortcuts"), button:has-text("Keys")',
 		);

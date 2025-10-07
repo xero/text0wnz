@@ -148,7 +148,7 @@ test.describe('Canvas Operations', () => {
 		// Click fonts sidebar button to show font toolbar
 		await page.locator('#fonts').click();
 		await page.waitForTimeout(300);
-		
+
 		const iceToggle = page.locator('#navICE');
 
 		if ((await iceToggle.count()) > 0) {
@@ -162,7 +162,7 @@ test.describe('Canvas Operations', () => {
 		// Click fonts sidebar button to show font toolbar
 		await page.locator('#fonts').click();
 		await page.waitForTimeout(300);
-		
+
 		const spacingToggle = page.locator('#nav9pt');
 
 		if ((await spacingToggle.count()) > 0) {
