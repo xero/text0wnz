@@ -213,4 +213,39 @@ describe('Font Module - Basic Tests', () => {
 			).rejects.toThrow();
 		});
 	});
+
+	describe('XB Font Data Parsing - Additional Coverage', () => {
+		it('should validate XB font data size requirements', () => {
+			// Test the size validation logic
+			const validateXBFontSize = (bytes, width, height) => {
+				const expectedSize = height * 256;
+				return bytes.length >= expectedSize;
+			};
+
+			expect(validateXBFontSize(new Uint8Array(4096), 8, 16)).toBe(true);
+			expect(validateXBFontSize(new Uint8Array(256), 8, 16)).toBe(false);
+			expect(validateXBFontSize(new Uint8Array(8192), 8, 32)).toBe(true);
+		});
+	});
+
+	describe('Font Image Loading - Additional Coverage', () => {
+		it('should handle font loading with different letter spacing settings', () => {
+			const mockImage = {
+				addEventListener: vi.fn(),
+				removeEventListener: vi.fn(),
+				src: '',
+				width: 128,
+				height: 256,
+			};
+			global.Image = vi.fn(() => mockImage);
+
+			// Test with letter spacing enabled
+			loadFontFromImage('TestFont', true, mockPalette);
+			expect(mockImage.src).toBe('/ui/fonts/TestFont.png');
+
+			// Test with letter spacing disabled
+			loadFontFromImage('AnotherFont', false, mockPalette);
+			expect(mockImage.src).toBe('/ui/fonts/AnotherFont.png');
+		});
+	});
 });

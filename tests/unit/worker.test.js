@@ -71,6 +71,37 @@ describe('Worker Module Core Logic', () => {
 			const result = removeDuplicates(blocks);
 			expect(result).toEqual([(1 << 16) | 0x43]); // Last occurrence
 		});
+
+		it('should handle large arrays efficiently', () => {
+			const blocks = [];
+			for (let i = 0; i < 1000; i++) {
+				blocks.push((i << 16) | (i & 0xffff));
+			}
+			// Add duplicates
+			for (let i = 0; i < 100; i++) {
+				blocks.push((i << 16) | 0xabcd);
+			}
+
+			const result = removeDuplicates(blocks);
+			// Should have 1000 unique positions
+			expect(result.length).toBe(1000);
+		});
+
+		it('should correctly extract index from block', () => {
+			const blocks = [
+				(100 << 16) | 0x1234,
+				(200 << 16) | 0x5678,
+				(300 << 16) | 0x9abc,
+			];
+
+			const result = removeDuplicates(blocks);
+			expect(result.length).toBe(3);
+
+			// Verify indexes are correctly extracted
+			expect(result[0] >> 16).toBe(100);
+			expect(result[1] >> 16).toBe(200);
+			expect(result[2] >> 16).toBe(300);
+		});
 	});
 
 	describe('Message Processing Logic', () => {
