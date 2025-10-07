@@ -14,7 +14,7 @@ describe('WebSocket Worker', () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-		
+
 		// Create mock WebSocket instance
 		mockWebSocket = {
 			send: vi.fn(),
@@ -22,24 +22,24 @@ describe('WebSocket Worker', () => {
 			addEventListener: vi.fn(),
 			readyState: 1, // WebSocket.OPEN
 		};
-		
+
 		global.WebSocket.mockImplementation(() => mockWebSocket);
-		
+
 		// Mock FileReader
 		global.FileReader.mockImplementation(() => ({
 			addEventListener: vi.fn(),
 			readAsArrayBuffer: vi.fn(),
 		}));
-		
+
 		// Import and execute the worker code
 		// Since worker.js uses self.onmessage, we need to simulate loading it
 		workerCode = {
 			socket: null,
 			sessionID: null,
 			joint: null,
-			
+
 			// Copy of the removeDuplicates function from worker.js
-			removeDuplicates: (blocks) => {
+			removeDuplicates: blocks => {
 				const indexes = [];
 				let index;
 				blocks = blocks.reverse();
@@ -53,9 +53,9 @@ describe('WebSocket Worker', () => {
 				});
 				return blocks.reverse();
 			},
-			
+
 			// Simulate the main onmessage handler
-			handleMessage: (data) => {
+			handleMessage: data => {
 				switch (data.cmd) {
 					case 'connect':
 						try {
@@ -63,10 +63,10 @@ describe('WebSocket Worker', () => {
 							workerCode.socket.addEventListener('open', () => {
 								global.self.postMessage({ cmd: 'connected' });
 							});
-							workerCode.socket.addEventListener('message', (e) => {
+							workerCode.socket.addEventListener('message', e => {
 								workerCode.onMessage(e);
 							});
-							workerCode.socket.addEventListener('close', (e) => {
+							workerCode.socket.addEventListener('close', _ => {
 								if (data.silentCheck) {
 									global.self.postMessage({ cmd: 'silentCheckFailed' });
 								} else {
@@ -77,14 +77,20 @@ describe('WebSocket Worker', () => {
 								if (data.silentCheck) {
 									global.self.postMessage({ cmd: 'silentCheckFailed' });
 								} else {
-									global.self.postMessage({ cmd: 'error', error: 'WebSocket connection failed.' });
+									global.self.postMessage({
+										cmd: 'error',
+										error: 'WebSocket connection failed.',
+									});
 								}
 							});
 						} catch (error) {
 							if (data.silentCheck) {
 								global.self.postMessage({ cmd: 'silentCheckFailed' });
 							} else {
-								global.self.postMessage({ cmd: 'error', error: `WebSocket initialization failed: ${error.message}` });
+								global.self.postMessage({
+									cmd: 'error',
+									error: `WebSocket initialization failed: ${error.message}`,
+								});
 							}
 						}
 						break;
@@ -107,18 +113,18 @@ describe('WebSocket Worker', () => {
 						break;
 				}
 			},
-			
+
 			send: (cmd, msg) => {
 				if (workerCode.socket && workerCode.socket.readyState === 1) {
 					workerCode.socket.send(JSON.stringify([cmd, msg]));
 				}
 			},
-			
-			onMessage: (evt) => {
+
+			onMessage: evt => {
 				let data = evt.data;
 				if (typeof data === 'object') {
 					const fr = new FileReader();
-					fr.addEventListener('load', (e) => {
+					fr.addEventListener('load', e => {
 						global.self.postMessage({
 							cmd: 'imageData',
 							data: e.target.result,
@@ -136,14 +142,21 @@ describe('WebSocket Worker', () => {
 						console.error('Invalid data received from server:', error);
 						return;
 					}
-					
+
+					let userList;
+					const outputBlocks = [];
 					switch (data[0]) {
 						case 'start':
 							workerCode.sessionID = data[2];
 							workerCode.joint = data[1];
-							const userList = data[3];
-							Object.keys(userList).forEach((userSessionID) => {
-								global.self.postMessage({ cmd: 'join', sessionID: userSessionID, handle: userList[userSessionID], showNotification: false });
+							userList = data[3];
+							Object.keys(userList).forEach(userSessionID => {
+								global.self.postMessage({
+									cmd: 'join',
+									sessionID: userSessionID,
+									handle: userList[userSessionID],
+									showNotification: false,
+								});
 							});
 							global.self.postMessage({
 								cmd: 'canvasSettings',
@@ -157,22 +170,36 @@ describe('WebSocket Worker', () => {
 							});
 							break;
 						case 'join':
-							global.self.postMessage({ cmd: 'join', sessionID: data[2], handle: data[1], showNotification: true });
+							global.self.postMessage({
+								cmd: 'join',
+								sessionID: data[2],
+								handle: data[1],
+								showNotification: true,
+							});
 							break;
 						case 'chat':
-							global.self.postMessage({ cmd: 'chat', handle: data[1], text: data[2], showNotification: true });
+							global.self.postMessage({
+								cmd: 'chat',
+								handle: data[1],
+								text: data[2],
+								showNotification: true,
+							});
 							break;
 						case 'draw':
-							const outputBlocks = [];
 							data[1].forEach(block => {
 								const index = block >> 16;
-								outputBlocks.push([index, block & 0xffff, index % workerCode.joint.columns, Math.floor(index / workerCode.joint.columns)]);
+								outputBlocks.push([
+									index,
+									block & 0xffff,
+									index % workerCode.joint.columns,
+									Math.floor(index / workerCode.joint.columns),
+								]);
 							});
 							global.self.postMessage({ cmd: 'draw', blocks: outputBlocks });
 							break;
 					}
 				}
-			}
+			},
 		};
 	});
 
@@ -191,10 +218,22 @@ describe('WebSocket Worker', () => {
 			workerCode.handleMessage(connectData);
 
 			expect(WebSocket).toHaveBeenCalledWith('ws://localhost:1337');
-			expect(mockWebSocket.addEventListener).toHaveBeenCalledWith('open', expect.any(Function));
-			expect(mockWebSocket.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
-			expect(mockWebSocket.addEventListener).toHaveBeenCalledWith('close', expect.any(Function));
-			expect(mockWebSocket.addEventListener).toHaveBeenCalledWith('error', expect.any(Function));
+			expect(mockWebSocket.addEventListener).toHaveBeenCalledWith(
+				'open',
+				expect.any(Function),
+			);
+			expect(mockWebSocket.addEventListener).toHaveBeenCalledWith(
+				'message',
+				expect.any(Function),
+			);
+			expect(mockWebSocket.addEventListener).toHaveBeenCalledWith(
+				'close',
+				expect.any(Function),
+			);
+			expect(mockWebSocket.addEventListener).toHaveBeenCalledWith(
+				'error',
+				expect.any(Function),
+			);
 		});
 
 		it('should handle connection open event', () => {
@@ -208,7 +247,7 @@ describe('WebSocket Worker', () => {
 
 			// Get the open event handler and call it
 			const openHandler = mockWebSocket.addEventListener.mock.calls.find(
-				call => call[0] === 'open'
+				call => call[0] === 'open',
 			)[1];
 			openHandler();
 
@@ -226,7 +265,7 @@ describe('WebSocket Worker', () => {
 
 			// Get the error handler and call it
 			const errorHandler = mockWebSocket.addEventListener.mock.calls.find(
-				call => call[0] === 'error'
+				call => call[0] === 'error',
 			)[1];
 			errorHandler();
 
@@ -244,7 +283,7 @@ describe('WebSocket Worker', () => {
 
 			// Get the error handler and call it
 			const errorHandler = mockWebSocket.addEventListener.mock.calls.find(
-				call => call[0] === 'error'
+				call => call[0] === 'error',
 			)[1];
 			errorHandler();
 
@@ -289,7 +328,7 @@ describe('WebSocket Worker', () => {
 			workerCode.handleMessage(joinData);
 
 			expect(mockWebSocket.send).toHaveBeenCalledWith(
-				JSON.stringify(['join', 'testuser'])
+				JSON.stringify(['join', 'testuser']),
 			);
 		});
 
@@ -302,7 +341,7 @@ describe('WebSocket Worker', () => {
 			workerCode.handleMessage(nickData);
 
 			expect(mockWebSocket.send).toHaveBeenCalledWith(
-				JSON.stringify(['nick', 'newname'])
+				JSON.stringify(['nick', 'newname']),
 			);
 		});
 
@@ -315,7 +354,7 @@ describe('WebSocket Worker', () => {
 			workerCode.handleMessage(chatData);
 
 			expect(mockWebSocket.send).toHaveBeenCalledWith(
-				JSON.stringify(['chat', 'Hello world!'])
+				JSON.stringify(['chat', 'Hello world!']),
 			);
 		});
 
@@ -334,7 +373,7 @@ describe('WebSocket Worker', () => {
 			// The removeDuplicates function keeps the last occurrence
 			// Input: [65601, 131138, 65603] -> Output: [131138, 65603]
 			expect(mockWebSocket.send).toHaveBeenCalledWith(
-				JSON.stringify(['draw', [131138, 65603]])
+				JSON.stringify(['draw', [131138, 65603]]),
 			);
 		});
 
@@ -352,9 +391,7 @@ describe('WebSocket Worker', () => {
 		});
 
 		it('should handle disconnect command', () => {
-			const disconnectData = {
-				cmd: 'disconnect',
-			};
+			const disconnectData = { cmd: 'disconnect' };
 
 			workerCode.handleMessage(disconnectData);
 
@@ -386,7 +423,7 @@ describe('WebSocket Worker', () => {
 						chat: [['user1', 'hello']],
 					},
 					'session123',
-					{ 'user1': 'testuser' },
+					{ user1: 'testuser' },
 				]),
 			};
 
@@ -412,9 +449,7 @@ describe('WebSocket Worker', () => {
 		});
 
 		it('should handle join message', () => {
-			const messageEvent = {
-				data: JSON.stringify(['join', 'newuser', 'session456']),
-			};
+			const messageEvent = { data: JSON.stringify(['join', 'newuser', 'session456']) };
 
 			workerCode.onMessage(messageEvent);
 
@@ -427,9 +462,7 @@ describe('WebSocket Worker', () => {
 		});
 
 		it('should handle chat message', () => {
-			const messageEvent = {
-				data: JSON.stringify(['chat', 'user1', 'Hello everyone!']),
-			};
+			const messageEvent = { data: JSON.stringify(['chat', 'user1', 'Hello everyone!']) };
 
 			workerCode.onMessage(messageEvent);
 
@@ -442,9 +475,7 @@ describe('WebSocket Worker', () => {
 		});
 
 		it('should handle draw message', () => {
-			const messageEvent = {
-				data: JSON.stringify(['draw', [(1 << 16) | 0x41, (2 << 16) | 0x42]]),
-			};
+			const messageEvent = { data: JSON.stringify(['draw', [(1 << 16) | 0x41, (2 << 16) | 0x42]]) };
 
 			workerCode.onMessage(messageEvent);
 
@@ -465,13 +496,14 @@ describe('WebSocket Worker', () => {
 			global.FileReader.mockImplementation(() => mockFileReader);
 
 			const binaryData = new ArrayBuffer(100);
-			const messageEvent = {
-				data: binaryData,
-			};
+			const messageEvent = { data: binaryData };
 
 			workerCode.onMessage(messageEvent);
 
-			expect(mockFileReader.addEventListener).toHaveBeenCalledWith('load', expect.any(Function));
+			expect(mockFileReader.addEventListener).toHaveBeenCalledWith(
+				'load',
+				expect.any(Function),
+			);
 			expect(mockFileReader.readAsArrayBuffer).toHaveBeenCalledWith(binaryData);
 
 			// Simulate FileReader load event
@@ -489,11 +521,11 @@ describe('WebSocket Worker', () => {
 		});
 
 		it('should handle malformed JSON gracefully', () => {
-			const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-			
-			const messageEvent = {
-				data: 'invalid json',
-			};
+			const consoleErrorSpy = vi
+				.spyOn(console, 'error')
+				.mockImplementation(() => {});
+
+			const messageEvent = { data: 'invalid json' };
 
 			expect(() => {
 				workerCode.onMessage(messageEvent);
@@ -501,9 +533,9 @@ describe('WebSocket Worker', () => {
 
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
 				'Invalid data received from server:',
-				expect.any(Error)
+				expect.any(Error),
 			);
-			
+
 			consoleErrorSpy.mockRestore();
 		});
 	});
@@ -540,11 +572,7 @@ describe('WebSocket Worker', () => {
 		});
 
 		it('should handle blocks with no duplicates', () => {
-			const blocks = [
-				(1 << 16) | 0x41,
-				(2 << 16) | 0x42,
-				(3 << 16) | 0x43,
-			];
+			const blocks = [(1 << 16) | 0x41, (2 << 16) | 0x42, (3 << 16) | 0x43];
 			const result = workerCode.removeDuplicates(blocks);
 			// Since no duplicates, order should be preserved
 			expect(result).toEqual([
@@ -557,12 +585,12 @@ describe('WebSocket Worker', () => {
 		it('should preserve order of unique blocks', () => {
 			const blocks = [
 				(1 << 16) | 0x41, // Position 1
-				(3 << 16) | 0x43, // Position 3  
+				(3 << 16) | 0x43, // Position 3
 				(2 << 16) | 0x42, // Position 2
 				(1 << 16) | 0x44, // Position 1 again (duplicate)
 			];
 			const result = workerCode.removeDuplicates(blocks);
-			
+
 			// Should keep: position 3, position 2, position 1 (last occurrence)
 			// Input: [65601, 196675, 131138, 65604] -> Output: [196675, 131138, 65604]
 			expect(result).toEqual([

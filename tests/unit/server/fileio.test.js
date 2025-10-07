@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 // Note: This module has fs dependencies, limiting direct unit testing
 // These tests focus on testing the exports and algorithms where possible
@@ -63,8 +63,12 @@ describe('FileIO Module Integration Tests', () => {
 			mockSauceData.set(authorBytes, 42);
 
 			// Extract title and author (simulate internal logic)
-			const extractedTitle = String.fromCharCode(...mockSauceData.slice(7, 42)).replace(/\s+$/, '');
-			const extractedAuthor = String.fromCharCode(...mockSauceData.slice(42, 62)).replace(/\s+$/, '');
+			const extractedTitle = String.fromCharCode(
+				...mockSauceData.slice(7, 42),
+			).replace(/\s+$/, '');
+			const extractedAuthor = String.fromCharCode(
+				...mockSauceData.slice(42, 62),
+			).replace(/\s+$/, '');
 
 			expect(extractedTitle).toBe(title);
 			expect(extractedAuthor).toBe(author);
@@ -91,7 +95,7 @@ describe('FileIO Module Integration Tests', () => {
 	describe('Binary Data Conversion Algorithms', () => {
 		it('should convert Uint16 to Uint8 arrays correctly', () => {
 			// Test the conversion logic used in save operations
-			const convertUint16ToUint8 = (uint16Array) => {
+			const convertUint16ToUint8 = uint16Array => {
 				const uint8Array = new Uint8Array(uint16Array.length * 2);
 				for (let i = 0; i < uint16Array.length; i++) {
 					uint8Array[i * 2] = uint16Array[i] >> 8;
@@ -116,7 +120,8 @@ describe('FileIO Module Integration Tests', () => {
 			const convertUint8ToUint16 = (uint8Array, start, size) => {
 				const uint16Array = new Uint16Array(size / 2);
 				for (let i = 0, j = 0; i < size; i += 2, j++) {
-					uint16Array[j] = (uint8Array[start + i] << 8) + uint8Array[start + i + 1];
+					uint16Array[j] =
+						(uint8Array[start + i] << 8) + uint8Array[start + i + 1];
 				}
 				return uint16Array;
 			};
@@ -137,20 +142,24 @@ describe('FileIO Module Integration Tests', () => {
 				const sauce = new Uint8Array(128);
 
 				// SAUCE signature
-				sauce[0] = 0x1A; // EOF character
+				sauce[0] = 0x1a; // EOF character
 				const signature = new TextEncoder().encode('SAUCE00');
 				sauce.set(signature, 1);
 
 				// Set columns and rows
-				sauce[96] = columns & 0xFF;
-				sauce[97] = (columns >> 8) & 0xFF;
-				sauce[99] = rows & 0xFF;
-				sauce[100] = (rows >> 8) & 0xFF;
+				sauce[96] = columns & 0xff;
+				sauce[97] = (columns >> 8) & 0xff;
+				sauce[99] = rows & 0xff;
+				sauce[100] = (rows >> 8) & 0xff;
 
 				// Set flags
 				let flags = 0;
-				if (iceColors) flags |= 0x01;
-				if (!letterSpacing) flags |= 0x02; // Note: letterSpacing false = flag set
+				if (iceColors) {
+					flags |= 0x01;
+				}
+				if (!letterSpacing) {
+					flags |= 0x02;
+				} // Note: letterSpacing false = flag set
 				sauce[105] = flags;
 
 				return sauce;
@@ -159,7 +168,7 @@ describe('FileIO Module Integration Tests', () => {
 			const sauce = createSauceRecord(80, 25, true, false);
 
 			// Verify signature
-			expect(sauce[0]).toBe(0x1A);
+			expect(sauce[0]).toBe(0x1a);
 			expect(String.fromCharCode(...sauce.slice(1, 8))).toBe('SAUCE00');
 
 			// Verify dimensions
@@ -173,7 +182,7 @@ describe('FileIO Module Integration Tests', () => {
 
 		it('should handle date formatting in SAUCE records', () => {
 			// Test date handling logic
-			const formatSauceDate = (date) => {
+			const formatSauceDate = date => {
 				const year = date.getUTCFullYear().toString();
 				const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
 				const day = date.getUTCDate().toString().padStart(2, '0');
@@ -192,8 +201,10 @@ describe('FileIO Module Integration Tests', () => {
 	describe('File Format Validation', () => {
 		it('should detect SAUCE signature presence', () => {
 			// Test SAUCE signature detection algorithm
-			const hasSauceSignature = (bytes) => {
-				if (bytes.length < 128) return false;
+			const hasSauceSignature = bytes => {
+				if (bytes.length < 128) {
+					return false;
+				}
 				const sauce = bytes.slice(-128);
 				const signature = String.fromCharCode(...sauce.slice(0, 7));
 				return signature === 'SAUCE00';
@@ -230,7 +241,7 @@ describe('FileIO Module Integration Tests', () => {
 				return {
 					columns: defaultColumns,
 					rows: Math.floor(bytes.length / (defaultColumns * 2)),
-					source: 'calculated'
+					source: 'calculated',
 				};
 			};
 
@@ -240,7 +251,7 @@ describe('FileIO Module Integration Tests', () => {
 			const signature = new TextEncoder().encode('SAUCE00');
 			withSauce.set(signature, sauceStart);
 			withSauce[sauceStart + 96] = 160; // 160 columns
-			withSauce[sauceStart + 99] = 50;  // 50 rows
+			withSauce[sauceStart + 99] = 50; // 50 rows
 
 			const sauceDims = extractDimensions(withSauce);
 			expect(sauceDims.columns).toBe(160);
