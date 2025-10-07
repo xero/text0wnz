@@ -38,6 +38,7 @@
 		"format:fix": "cat banner; prettier --write src/**/*.html src/**/*.css src/js/**/*.js tests/**/*.js",
 		"format:check": "cat banner; prettier --check src/**/*.html src/**/*.css src/js/**/*.js tests/**/*.js",
 		"test:unit": "cat banner; vitest run",
+		"test:dom": "cat banner; vitest run tests/dom/",
 		"test:e2e": "cat banner; playwright test",
 		"test:install": "cat banner; playwright install-deps && playwright install && playwright install chrome firefox webkit"
 	},
