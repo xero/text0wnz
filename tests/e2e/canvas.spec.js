@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Basic Canvas Functionality', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:8080');
+		await page.goto('/');
 		// Wait for the canvas to be loaded
 		await page.waitForSelector('#canvas-container', { timeout: 10000 });
 	});
@@ -84,7 +84,7 @@ test.describe('Basic Canvas Functionality', () => {
 
 test.describe('Canvas Interaction', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:8080');
+		await page.goto('/');
 		await page.waitForSelector('#canvas-container', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});

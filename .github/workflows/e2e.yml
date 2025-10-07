@@ -38,7 +38,7 @@ jobs:
         run: bun test:e2e --workers 3
         env:
           HOME: /root
-          PLAYWRIGHT_TEST_BASE_URL: http://localhost:4173
+          PLAYWRIGHT_TEST_BASE_URL: http://localhost:8060
 
       - name: Upload Playwright HTML report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

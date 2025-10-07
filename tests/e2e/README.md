@@ -1,6 +1,6 @@
 # End-to-End (E2E) Tests
 
-This directory contains Playwright end-to-end tests for the teXt0wnz ANSI art editor.
+This directory contains Playwright end-to-end tests for the teXt0wnz text art editor.
 
 ## Overview
 
@@ -76,56 +76,56 @@ The E2E tests validate the application's functionality in a real browser environ
 ### Prerequisites
 
 1. Build the application:
-   ```bash
-   npm run bake
-   ```
+```bash
+bun bake
+```
 
 2. Install Playwright browsers (first time only):
-   ```bash
-   npx playwright install
-   ```
+```bash
+bun test:install
+```
 
 ### Run All E2E Tests
 
 ```bash
-npm run test:e2e
+bun test:e2e
 ```
 
 ### Run Tests for Specific Browser
 
 ```bash
 # Chrome
-npx playwright test --project=Chrome
+bunx playwright test --project=Chrome
 
 # Firefox
-npx playwright test --project=Firefox
+bunx playwright test --project=Firefox
 
 # WebKit (Safari)
-npx playwright test --project=WebKit
+bunx playwright test --project=WebKit
 ```
 
 ### Run Specific Test File
 
 ```bash
-npx playwright test tests/e2e/canvas.spec.js
+bunx playwright test tests/e2e/canvas.spec.js
 ```
 
 ### Run Tests in UI Mode (Interactive)
 
 ```bash
-npx playwright test --ui
+bunx playwright test --ui
 ```
 
 ### Run Tests in Headed Mode (See Browser)
 
 ```bash
-npx playwright test --headed
+bunx playwright test --headed
 ```
 
 ### Debug Tests
 
 ```bash
-npx playwright test --debug
+bunx playwright test --debug
 ```
 
 ## Test Configuration
@@ -138,7 +138,7 @@ The test configuration is in `playwright.config.js` at the root of the project:
 - **Retries**: 1 (on failure)
 - **Screenshots**: On failure
 - **Videos**: On failure
-- **Web server**: Python HTTP server on port 8080 serving the `dist` directory
+- **Web server**: `bunx serve dist -l 8060`
 
 ## Test Results
 
@@ -176,7 +176,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('My Feature', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:8080');
+    await page.goto('/');
     await page.waitForSelector('#canvas-container', { timeout: 10000 });
     await page.waitForTimeout(1000);
   });
@@ -185,7 +185,7 @@ test.describe('My Feature', () => {
     const element = page.locator('#my-element');
     await element.click();
     await page.waitForTimeout(300);
-    
+
     await expect(element).toBeVisible();
   });
 });
@@ -201,42 +201,16 @@ test.describe('My Feature', () => {
 6. **Clean up**: Use `beforeEach` and `afterEach` for setup and teardown
 7. **Meaningful assertions**: Test actual user-visible behavior, not implementation details
 
-## CI/CD Integration
-
-These tests can be integrated into CI/CD pipelines:
-
-```yaml
-# Example GitHub Actions workflow
-- name: Install dependencies
-  run: npm ci
-
-- name: Install Playwright browsers
-  run: npx playwright install --with-deps
-
-- name: Build application
-  run: npm run bake
-
-- name: Run E2E tests
-  run: npm run test:e2e
-
-- name: Upload test results
-  if: always()
-  uses: actions/upload-artifact@v3
-  with:
-    name: playwright-report
-    path: tests/results/playwright-report/
-```
-
 ## Troubleshooting
 
 ### Tests fail with "page.goto: net::ERR_CONNECTION_REFUSED"
 - Ensure the application is built: `npm run bake`
 - The web server should start automatically from the config
-- Check that port 8080 is available
+- Check that port 8060 is available
 
 ### Browsers not installed
-- Run: `npx playwright install`
-- Or with dependencies: `npx playwright install --with-deps`
+- Run: `bun test:install`
+- Or with dependencies: `bunx playwright install --with-deps`
 
 ### Tests timeout
 - Increase timeout in `playwright.config.js`

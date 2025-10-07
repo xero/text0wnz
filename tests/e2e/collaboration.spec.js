@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Collaboration and Chat Features', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:8080');
+		await page.goto('/');
 		await page.waitForSelector('#canvas-container', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
@@ -221,7 +221,7 @@ test.describe('Collaboration and Chat Features', () => {
 
 test.describe('Collaboration Mode Detection', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:8080');
+		await page.goto('/');
 		await page.waitForSelector('#canvas-container', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
@@ -265,7 +265,7 @@ test.describe('Collaboration Mode Detection', () => {
 
 test.describe('Network Features', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:8080');
+		await page.goto('/');
 		await page.waitForSelector('#canvas-container', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});

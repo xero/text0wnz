@@ -31,12 +31,12 @@
 	"scripts": {
 		"bake": "cat banner; vite build --mode production",
 		"server": "cat banner; bun src/js/server/main.js",
-		"www": "cat banner; serve dist -l 4173",
-		"fix": "cat banner; prettier --write src/*.html src/css/*.css src/js/**/*.js tests/**/**/*.js && eslint --fix src/*.html src/js/**/*.js tests/**/**/*.js",
-		"lint:check": "cat banner; eslint src/*.html src/js/**/*.js tests/**/*.js",
-		"lint:fix": "cat banner; eslint --fix src/*.html tests/**/*.js src/js/**/*.js",
-		"format:fix": "cat banner; prettier --write src/*.html src/css/*.css src/js/**/*.js tests/**/*.js",
-		"format:check": "cat banner; prettier --check src/*.html src/css/*.css src/js/**/*.js tests/**/*.js",
+		"www": "cat banner; serve dist -l 8060",
+		"fix": "cat banner; prettier --write src/**/*.html src/**/*.css src/js/**/*.js tests/**/*.js && eslint --fix src/**/*.html src/js/**/*.js tests/**/*.js",
+		"lint:check": "cat banner; eslint src/**/*.html src/js/**/*.js tests/**/*.js",
+		"lint:fix": "cat banner; eslint --fix  src/**/*.html src/js/**/*.js tests/**/*.js",
+		"format:fix": "cat banner; prettier --write src/**/*.html src/**/*.css src/js/**/*.js tests/**/*.js",
+		"format:check": "cat banner; prettier --check src/**/*.html src/**/*.css src/js/**/*.js tests/**/*.js",
 		"test:unit": "cat banner; vitest run",
 		"test:e2e": "cat banner; playwright test",
 		"test:install": "cat banner; playwright install-deps && playwright install && playwright install chrome firefox webkit"

@@ -17,8 +17,8 @@ export default defineConfig({
 		video: 'retain-on-failure',
 	},
 	 webServer: {
-    command: 'bunx serve dist -l 4173',
-    port: 4173,
+    command: 'bunx serve dist -l 8060',
+    port: 8060,
     reuseExistingServer: !process.env.CI,
 		timeout: 120000,
   },

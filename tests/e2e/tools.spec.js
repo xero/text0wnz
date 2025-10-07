@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Drawing Tools', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:8080');
+		await page.goto('/');
 		await page.waitForSelector('#canvas-container', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
@@ -146,7 +146,7 @@ test.describe('Drawing Tools', () => {
 
 test.describe('Tool Features', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:8080');
+		await page.goto('/');
 		await page.waitForSelector('#canvas-container', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});

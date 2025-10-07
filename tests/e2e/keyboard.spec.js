@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Keyboard Shortcuts', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:8080');
+		await page.goto('/');
 		await page.waitForSelector('#canvas-container', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
@@ -262,7 +262,7 @@ test.describe('Keyboard Shortcuts', () => {
 
 test.describe('Keyboard Mode', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:8080');
+		await page.goto('/');
 		await page.waitForSelector('#canvas-container', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
