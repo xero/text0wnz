@@ -10,14 +10,14 @@ export default defineConfig({
 		['json', { outputFile: 'tests/results/e2e/results.json' }],
 	],
 	use: {
+		baseURL: 'http://localhost:8060',
 		headless: true,
 		viewport: { width: 1280, height: 720 },
 		ignoreHTTPSErrors: true,
 		screenshot: 'only-on-failure',
-		video: 'retain-on-failure',
 	},
 	 webServer: {
-    command: 'bunx serve dist -l 8060',
+    command: 'bun www',
     port: 8060,
     reuseExistingServer: !process.env.CI,
 		timeout: 120000,
