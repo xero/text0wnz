@@ -709,6 +709,15 @@ sudo systemctl reload nginx
 > [!IMPORTANT]
 > If you encounter unique issues, please open an issue on [GitHub](https://github.com/xero/moebius-web/issues) with error logs and platform details!
 
+## Other Useful Tools
+
+- [pin-github-action](https://github.com/mheap/pin-github-action): Automatically pins actions dependencies to a specific SHA, _note:_ this repo requires pinned hashes in all workflows.
+  - install: `bun i -g pin-github-action`
+  - usage: `pin-github-action /path/to/.github/workflows/your-name.yml`
+- [npm-check-updates](https://github.com/raineorshine/npm-check-updates): Upgrades your package.json dependencies to the latest versions, ignoring the existing specified versions.
+  - install: `bun i npm-check-updates`
+  - usage: `ncu -u`
+
 ##  Browser Support
 >_Works on desktop and mobile devices!_
 - Chrome/Chromium 95+

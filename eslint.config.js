@@ -55,6 +55,8 @@ export default [
 				Buffer: 'readonly',
 				beforeEach: 'readonly',
 				global: 'readonly',
+				HTMLElement: 'readonly',
+				KeyboardEvent: 'readonly',
 			}
 		},
 		rules: {
