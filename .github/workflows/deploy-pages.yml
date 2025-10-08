@@ -1,45 +1,23 @@
 name: Deploy to GitHub Pages
-
 on:
   workflow_call:
-
 permissions:
   contents: read
   pages: write
   id-token: write
-
 concurrency:
   group: 'pages'
   cancel-in-progress: false
-
 jobs:
   build:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     name: Build Application
     steps:
-      - name: Checkout code
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
-
-      - name: Setup bun
-        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
+      - name: Download build artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          bun-version: "latest"
-
-      - name: Install dependencies
-        run: bun i
-
-      - name: Build application for production
-        run: bun bake
-
-      - name: Setup Pages
-        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
-        with:
-          path: dist/
-
+          name: unit-test-results
   deploy:
     environment:
       name: github-pages

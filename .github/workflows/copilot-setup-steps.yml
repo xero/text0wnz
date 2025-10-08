@@ -1,27 +1,23 @@
 name: 'Copilot Setup Steps'
-on: workflow_dispatch
-
+on:
+  workflow_call:
 jobs:
   copilot-setup-steps:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-
     steps:
       - name: Checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
-
       - name: Setup bun
         uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
         with:
           bun-version: "latest"
-
       - name: Install project dependencies (npm)
         run: npm install
-
       - name: Install project dependencies (bun)
         run: bun i
-
       - name: Install Dev Tools
-        run: |
-          bun i -g eslint prettier
+        run: bun i -g eslint prettier
+      - name: Install Playwright Browsers
+        run: bun test:install

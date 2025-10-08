@@ -1,46 +1,33 @@
 name: Deploy Coverage Reports
-
 on:
   workflow_call:
-  workflow_dispatch:
-
 permissions:
   contents: write
   pages: write
   id-token: write
-
 jobs:
   deploy-coverage:
     runs-on: ubuntu-latest
     name: Deploy Coverage Reports to GitHub Pages
     steps:
-      - name: Checkout code
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
-
-      - name: Setup bun
-        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
+      - name: Download build artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          bun-version: "latest"
-
-      - name: Install dependencies
-        run: bun i
-
-      - name: Generate coverage reports
-        run: bun test:unit
-
-      - name: Copy coverage reports
+          name: unit-test-results
+      - name: Download build artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: playwright-report
+      - name: Organize test results
         run: |
-          mkdir -p dist/coverage
-          cp -r tests/results/coverage/* dist/coverage/ || true
-
-      - name: Inject dark theme into coverage report
-        run: |
-          echo "@media (prefers-color-scheme:dark){.cover-empty,body{background:#000}body{color:#efefef}table{color:#000}table,td,th{border:1px solid #222!important}td.empty{color:#eee}.cbranch-no,.cstat-no,.fstat-no{background:#afe9dc}.cline-yes,.high{background:#f2bfff}.cline-no,.low{background:#bbf2e8}.fraction,.quiet,table .chart,table .high,table .low,td.text,th.file,th.pct{-webkit-filter:invert(100%)}.footer{display:none!important}body>div.wrapper>div:first-child>p{background:#ddd;width:fit-content;padding:10px}}" >> dist/coverage/base.css
-
+          mkdir -p test-results/unit
+          mkdir -p test-results/e2e
+          cp -r unit-test-results/* test-results/unit/ || true
+          cp -r playwright-report/* test-results/e2e/ || true
       - name: Deploy coverage to GitHub Pages
         uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847 # v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: dist/coverage
-          destination_dir: coverage
+          publish_dir: test-results
+          destination_dir: test-results
           publish_branch: gh-pages
