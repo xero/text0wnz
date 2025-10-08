@@ -1520,8 +1520,8 @@ const saveModule = () => {
 		await encodeANSi(true);
 	};
 
-	const utf8noBlink = () => {
-		encodeANSi(true, false);
+	const utf8noBlink = async () => {
+		await encodeANSi(true, false);
 	};
 
 	const convert16BitArrayTo8BitArray = Uint16s => {

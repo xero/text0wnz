@@ -280,7 +280,7 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 						if ((i += 1) % fontWidth === 0) {
 							pos += (imageData.width - fontWidth) * 4;
 						}
-						if (i % fontWidth === 0) {
+						if (i % 8 === 0) {
 							k += 1;
 						}
 						pos += 4;
