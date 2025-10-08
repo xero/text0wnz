@@ -7,7 +7,6 @@ import {
 	onClick,
 	onReturn,
 	onFileChange,
-	onSelectChange,
 	createPositionInfo,
 	createModalController,
 	undoAndRedo,
@@ -231,24 +230,6 @@ describe('UI Utilities', () => {
 				input.dispatchEvent(changeEvent);
 
 				expect(mockFunc).not.toHaveBeenCalled();
-			});
-		});
-
-		describe('onSelectChange', () => {
-			it('should call function with select value on change', () => {
-				const select = document.createElement('select');
-				const option = document.createElement('option');
-				option.value = 'option2';
-				select.appendChild(option);
-				select.value = 'option2';
-				const mockFunc = vi.fn();
-
-				onSelectChange(select, mockFunc);
-
-				const changeEvent = new window.Event('change');
-				select.dispatchEvent(changeEvent);
-
-				expect(mockFunc).toHaveBeenCalledWith('option2');
 			});
 		});
 	});

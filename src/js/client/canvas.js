@@ -1473,7 +1473,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		});
 	};
 
-	State.palette = createDefaultPalette();
 	setFont(currentFontName, _ => {
 		callback();
 	});

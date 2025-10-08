@@ -258,7 +258,14 @@ bun www      # or npm run www
 **Build Process:**
 - Uses Vite + plugins for static copy, sitemap, PWA/offline support
 - Output: `dist/`, `ui/`, `fonts/`, etc.
-- Customizable via `.env` variables (`VITE_UI_DIR`, etc.)
+- Customizable via `.env` variables
+    - `VITE_DOMAIN='https://text.0w.nz'`
+    - `VITE_UI_DIR='ui/'`
+    - `VITE_FONT_DIR='fonts/'`
+    - `VITE_WORKER_FILE='worker.js'`
+
+> [!NOTE]
+> `DOMAIN` is only used for robots.txt and sitemap.xml generation, all app urls are relative
 
 ---
 
@@ -304,7 +311,8 @@ bun server 8080 --ssl --ssl-dir /etc/letsencrypt --save-interval 15 --session-na
 | NODE_ENV      | Node environment                    | production       |
 | SESSION_KEY   | Session secret for express          | supersecretkey   |
 
-> By default, the session secret is set to `"sauce"`. For production use, set a strong value via `SESSION_KEY` or modify in `server.js`.
+> [!IMPORTANT]
+> By default, the session secret is set to `"sauce"`. For production use, set a strong value via `SESSION_KEY` or modify in `src/js/server/server.js`.
 
 ### Systemd Service
 

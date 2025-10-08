@@ -10,4 +10,12 @@
 	"bracketSameLine": false,
 	"arrowParens": "avoid",
 	"endOfLine": "lf",
+	"overrides": [
+    {
+      "files": "*.html",
+      "options": {
+        "printWidth": 400
+      }
+    }
+  ]
 }

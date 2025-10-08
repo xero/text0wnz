@@ -1,4 +1,5 @@
 import State from './state.js';
+import { loadFontFromXBData } from './font.js';
 
 // Utilities for DOM manipulation
 const D = document,
@@ -168,12 +169,6 @@ const onFileChange = (el, func) => {
 		if (e.target.files.length > 0) {
 			func(e.target.files[0]);
 		}
-	});
-};
-
-const onSelectChange = (el, func) => {
-	el.addEventListener('change', _ => {
-		func(el.value);
 	});
 };
 
@@ -644,6 +639,140 @@ const createMenuController = (menus, view) => {
 	return { close: closeAll };
 };
 
+const createFontSelect = (el, lbl, img, btn) => {
+	const listbox = el;
+	const previewInfo = lbl;
+	const previewImage = img;
+
+	function getOptions() {
+		return Array.from(listbox.querySelectorAll('[role="option"]'));
+	}
+	function getValue() {
+		const selected = getOptions().find(
+			opt => opt.getAttribute('aria-selected') === 'true',
+		);
+		return selected ? selected.dataset.value || selected.textContent : null;
+	}
+	function setValue(value) {
+		const options = getOptions();
+		const idx = options.findIndex(opt => opt.dataset.value === value);
+		if (idx === -1) {
+			return false;
+		}
+		updateSelection(idx);
+		return true;
+	}
+	function setFocus() {
+		const w8 = setTimeout(() => {
+			listbox.focus();
+			const options = getOptions();
+			const idx = options.findIndex(opt => opt.dataset.value === getValue());
+			options[idx].scrollIntoView({ block: 'nearest' });
+			clearTimeout(w8);
+		}, 100);
+	}
+	function updateSelection(idx) {
+		const options = getOptions();
+		options.forEach((opt, i) => {
+			const isSelected = i === idx;
+			opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+			opt.classList.toggle('focused', isSelected);
+		});
+		listbox.setAttribute('aria-activedescendant', options[idx].id);
+		options[idx].scrollIntoView({ block: 'nearest' });
+		focusedIdx = idx;
+		updateFontPreview(getValue());
+	}
+	async function updateFontPreview(fontName) {
+		if (fontName === 'XBIN') {
+			const xbFontData = State.textArtCanvas.getXBFontData();
+			if (xbFontData && xbFontData.bytes) {
+				const xbfont = await loadFontFromXBData(
+					xbFontData.bytes,
+					xbFontData.width,
+					xbFontData.height,
+					xbFontData.letterSpacing,
+					State.palette,
+				);
+				const previewCanvas = createCanvas(
+					xbFontData.width * 16,
+					xbFontData.height * 16,
+				);
+				const previewCtx = previewCanvas.getContext('2d');
+				const foreground = 15,
+							background = 0;
+				for (let y = 0, charCode = 0; y < 16; y++) {
+					for (let x = 0; x < 16; x++, charCode++) {
+						xbfont.draw(charCode, foreground, background, previewCtx, x, y);
+					}
+				}
+				previewInfo.textContent =
+					'XBIN: embedded ' + xbFontData.width + 'x' + xbFontData.height;
+				previewImage.src = previewCanvas.toDataURL();
+			} else {
+				previewInfo.textContent = 'XBIN: none';
+				previewImage.src = `${State.fontDir}missing.png`;
+			}
+		} else {
+			const image = new Image();
+			image.onload = () => {
+				previewInfo.textContent = fontName;
+				previewImage.src = image.src;
+			};
+			image.onerror = () => {
+				previewInfo.textContent = fontName + ' (not found)';
+				image.src = `${State.fontDir}missing.png`;
+			};
+			image.src = `${State.fontDir}${fontName}.png`;
+		}
+	}
+	// Listeners
+	listbox.addEventListener('keydown', e => {
+		const options = getOptions();
+		if (e.key === 'ArrowDown' && focusedIdx < options.length - 1) {
+			e.preventDefault();
+			updateSelection(++focusedIdx);
+		} else if (e.key === 'ArrowUp' && focusedIdx > 0) {
+			e.preventDefault();
+			updateSelection(--focusedIdx);
+		} else if (e.key === 'Home') {
+			e.preventDefault();
+			updateSelection((focusedIdx = 0));
+		} else if (e.key === 'End') {
+			e.preventDefault();
+			updateSelection((focusedIdx = options.length - 1));
+		} else if (e.key === ' ' || e.key === 'Enter') {
+			e.preventDefault();
+			btn.click();
+		}
+	});
+	getOptions().forEach((opt, i) => {
+		opt.addEventListener('click', () => {
+			updateSelection(i);
+			updateFontPreview(getValue());
+		});
+	});
+	listbox.addEventListener('focus', () => updateSelection(focusedIdx));
+	listbox.addEventListener('blur', () =>
+		getOptions().forEach(opt => opt.classList.remove('focused')));
+
+	// Init
+	let focusedIdx = getOptions().findIndex(
+		opt => opt.getAttribute('aria-selected') === 'true',
+	);
+	if (focusedIdx < 0) {
+		focusedIdx = 0;
+	}
+	updateSelection(focusedIdx);
+	updateFontPreview(getValue());
+
+	return {
+		focus: setFocus,
+		getValue: getValue,
+		setValue: setValue,
+	};
+};
+
 const websocketUI = show => {
 	[
 		['excluded-for-websocket', !show],
@@ -665,7 +794,6 @@ export {
 	onClick,
 	onReturn,
 	onFileChange,
-	onSelectChange,
 	createPositionInfo,
 	undoAndRedo,
 	viewportTap,
@@ -679,5 +807,6 @@ export {
 	createResolutionController,
 	createDragDropController,
 	createMenuController,
+	createFontSelect,
 	websocketUI,
 };

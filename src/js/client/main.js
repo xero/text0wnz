@@ -3,12 +3,10 @@ import State from './state.js';
 import Toolbar from './toolbar.js';
 import { Load, Save } from './file.js';
 import { createTextArtCanvas } from './canvas.js';
-import { loadFontFromXBData } from './font.js';
 import { createWorkerHandler, createChatController } from './network.js';
 import {
 	$,
 	$$,
-	createCanvas,
 	createDragDropController,
 	toggleFullscreen,
 	createModalController,
@@ -17,7 +15,6 @@ import {
 	onClick,
 	onReturn,
 	onFileChange,
-	onSelectChange,
 	createPositionInfo,
 	undoAndRedo,
 	viewportTap,
@@ -28,6 +25,7 @@ import {
 	createToolPreview,
 	createMenuController,
 	enforceMaxBytes,
+	createFontSelect,
 } from './ui.js';
 import {
 	createDefaultPalette,
@@ -87,7 +85,6 @@ const $$$$ = () => {
 	bodyContainer = $('body-container');
 	canvasContainer = $('canvas-container');
 	columnsInput = $('columns-input');
-	fontSelect = $('font-select');
 	openFile = $('open-file');
 	resizeApply = $('resize-apply');
 	sauceDone = $('sauce-done');
@@ -146,23 +143,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 		// Initialize global state and variables
 		State.startInitialization();
 		$$$$();
-
-		State.title = 'Untitled';
-		State.pasteTool = createPasteTool(
-			$('cut'),
-			$('copy'),
-			$('paste'),
-			$('delete'),
-		);
-		State.positionInfo = createPositionInfo($('position-info'));
+		// Core UI Components
 		State.modal = createModalController($('modal'));
-
-		// Initialize canvas and wait for completion state
+		State.palette = createDefaultPalette();
 		State.textArtCanvas = createTextArtCanvas(canvasContainer, async () => {
+			State.positionInfo = createPositionInfo($('position-info'));
+			State.pasteTool = createPasteTool(
+				$('cut'),
+				$('copy'),
+				$('paste'),
+				$('delete'),
+			);
 			State.selectionCursor = createSelectionCursor(canvasContainer);
 			State.cursor = createCursor(canvasContainer);
 			State.toolPreview = createToolPreview($('tool-preview'));
-
+			State.title = 'Untitled';
+			// Once everything is ready...
 			State.waitFor(
 				[
 					'palette',
@@ -214,7 +210,6 @@ const initializeAppComponents = async () => {
 				State.textArtCanvas.resize(80, 25);
 				State.textArtCanvas.clear();
 				State.textArtCanvas.setIceColors(false);
-				updateFontDisplay();
 				bodyContainer.classList.remove('loading');
 				State.modal.close();
 			});
@@ -338,6 +333,7 @@ const initializeAppComponents = async () => {
 	onReturn(sauceTitle, sauceDone);
 	onReturn(sauceGroup, sauceDone);
 	onReturn(sauceAuthor, sauceDone);
+	onReturn(sauceComments, sauceDone);
 	const paintShortcuts = createPaintShortcuts({
 		d: $('default-color'),
 		q: swapColors,
@@ -443,80 +439,25 @@ const initializeAppComponents = async () => {
 		State.zoom = scaleFactor;
 	});
 
+	fontSelect = createFontSelect(
+		$('font-select'),
+		previewInfo,
+		previewImage,
+		applyFont,
+	);
+
 	const updateFontDisplay = () => {
 		const currentFont = State.textArtCanvas.getCurrentFontName();
 		fontDisplay.textContent = currentFont.replace(/\s\d+x\d+$/, '');
-		fontSelect.value = currentFont;
+		fontSelect.setValue(currentFont);
 		nav9pt.sync(State.font.getLetterSpacing, State.font.setLetterSpacing);
 		navICE.update();
 	};
-
-	const updateFontPreview = async fontName => {
-		// Load font for preview
-		if (fontName === 'XBIN') {
-			// Handle XB font preview - render embedded font if available
-			const xbFontData = State.textArtCanvas.getXBFontData();
-			if (xbFontData && xbFontData.bytes) {
-				const xbfont = await loadFontFromXBData(
-					xbFontData.bytes,
-					xbFontData.width,
-					xbFontData.height,
-					xbFontData.letterSpacing,
-					State.palette,
-				);
-
-				// Create a canvas to render the font preview
-				const previewCanvas = createCanvas(
-					xbFontData.width * 16,
-					xbFontData.height * 16,
-				);
-				const previewCtx = previewCanvas.getContext('2d');
-
-				// Use white foreground on black background for clear visibility
-				const foreground = 15; // White
-				const background = 0; // Black
-
-				// Render all 256 characters in a 16x16 grid
-				for (let y = 0, charCode = 0; y < 16; y++) {
-					for (let x = 0; x < 16; x++, charCode++) {
-						xbfont.draw(charCode, foreground, background, previewCtx, x, y);
-					}
-				}
-				// Update info and display the rendered font
-				previewInfo.textContent =
-					'XBIN: embedded ' + xbFontData.width + 'x' + xbFontData.height;
-				previewImage.src = previewCanvas.toDataURL();
-			} else {
-				// No embedded font currently loaded
-				previewInfo.textContent = 'XBIN: none';
-				previewImage.src = `${State.fontDir}missing.png`;
-			}
-		} else {
-			// Load regular PNG font for preview
-			const img = new Image();
-			img.onload = () => {
-				// Update font info with name and size on same line
-				previewInfo.textContent = fontName;
-				// Show the entire PNG font file
-				previewImage.src = img.src;
-			};
-
-			img.onerror = () => {
-				// Font loading failed
-				previewInfo.textContent = fontName + ' (not found)';
-				img.src = `${State.fontDir}missing.png`;
-			};
-			img.src = `${State.fontDir}${fontName}.png`;
-		}
-	};
-
-	// Listen for font changes and update display
 	['onPaletteChange', 'onFontChange', 'onXBFontLoaded', 'onOpenedFile'].forEach(
 		e => {
 			document.addEventListener(e, updateFontDisplay);
 		},
 	);
-
 	onClick(fontDisplay, () => {
 		State.menus.close();
 		changeFont.click();
@@ -524,23 +465,18 @@ const initializeAppComponents = async () => {
 	onClick(changeFont, async () => {
 		State.menus.close();
 		State.modal.open('fonts');
-		await updateFontPreview(fontSelect.value);
-	});
-	onSelectChange(fontSelect, async () => {
-		await updateFontPreview(fontSelect.value);
+		fontSelect.focus();
 	});
 	onClick(applyFont, async () => {
-		const selectedFont = fontSelect.value;
+		const selectedFont = fontSelect.getValue();
 		await State.textArtCanvas.setFont(selectedFont, () => {
-			updateFontDisplay();
 			State.network?.sendFontChange?.(selectedFont);
 			State.modal.close();
 		});
 	});
-	onReturn(fontSelect, applyFont);
+
 	const grid = createGrid($('grid'));
 	createSettingToggle($('navGrid'), grid.isShown, grid.show);
-
 	const brushes = createBrushController();
 	Toolbar.add($('brushes'), brushes.enable, brushes.disable);
 	const halfblock = createHalfBlockController();
@@ -671,10 +607,9 @@ const initializeAppComponents = async () => {
 	document.addEventListener('onOpenedFile', save);
 };
 
-// Inject style sheets into the build pipeline for processing
-// and proper inclusion in the resulting build
+// Inject style sheets and manifest images into the build pipeline
+// for processing and proper inclusion in the resulting build
 import '../../css/style.css';
-// inject manifest imagest into the build pipeline
 import '../../img/logo.png';
 import '../../img/manifest/android-launchericon-48-48.png';
 import '../../img/manifest/apple-touch-icon.png';

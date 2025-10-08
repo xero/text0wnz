@@ -65,8 +65,8 @@ const Toolbar = (() => {
 	};
 
 	const closeMenu = () => {
-		if (State.menu) {
-			State.menu.close();
+		if (State.menus) {
+			State.menus.close();
 		}
 	};
 

@@ -873,20 +873,7 @@
 		article {
 			aside {
 				@apply flex flex-col min-w-[107px] w-fit h-auto;
-				select {
-					@apply bg-editor px-8 py-2;
-					option {
-						@apply py-2 text-fg;
-						&:checked,
-						&:active,
-						*:focus {
-							@apply text-black bg-purp;
-						}
-					}
-					optgroup {
-						@apply text-cyber;
-					}
-				}
+
 				img {
 					@apply border-8 border-black border-solid pxl8;
 					filter: brightness(1.5);
@@ -902,6 +889,41 @@
 		nav {
 			@apply mt-auto pt-5 bg-menu;
 		}
+	}
+	#font-select {
+		@apply bg-editor p-0 m-0 overflow-y-scroll;
+		max-height: 21em;
+		min-width: 8em;
+	}
+	#font-select::-webkit-scrollbar {
+		@apply w-5 h-5;
+	}
+	#font-select::-webkit-scrollbar-thumb {
+		@apply bg-menu rounded-none;
+	}
+	#font-select::-webkit-scrollbar-track {
+		@apply bg-editor;
+	}
+	#font-select::-webkit-scrollbar-thumb:hover {
+		@apply bg-file;
+	}
+	#font-select::-webkit-scrollbar-button {
+		@apply bg-editor w-5 h-5;
+	}
+	#font-select::-webkit-scrollbar-corner {
+		@apply bg-editor w-5 h-5;
+	}
+	#font-select [role='option'] {
+		@apply bg-editor text-fg m-0 cursor-pointer;
+		padding: 0.5em 1.55em;
+		cursor: pointer;
+	}
+	#font-select [role='option'][aria-selected='true'] {
+		@apply bg-cyber text-midnight;
+	}
+	.group-label {
+		@apply text-purp bg-midnight m-0 cursor-default;
+		padding: 0.5em 0.75em;
 	}
 	#font-preview-info {
 		@apply pl-4 text-chat;
