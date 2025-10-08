@@ -29,18 +29,18 @@
 		"node": ">=22.19.0 <23"
 	},
 	"scripts": {
-		"bake": "cat banner; vite build --mode production",
-		"server": "cat banner; bun src/js/server/main.js",
-		"www": "cat banner; serve dist -l 8060",
-		"fix": "cat banner; prettier --write src/**/*.html src/**/*.css src/js/**/*.js tests/**/*.js && eslint --fix src/**/*.html src/js/**/*.js tests/**/*.js",
-		"lint:check": "cat banner; eslint src/**/*.html src/js/**/*.js tests/**/*.js",
-		"lint:fix": "cat banner; eslint --fix  src/**/*.html src/js/**/*.js tests/**/*.js",
-		"format:fix": "cat banner; prettier --write src/**/*.html src/**/*.css src/js/**/*.js tests/**/*.js",
-		"format:check": "cat banner; prettier --check src/**/*.html src/**/*.css src/js/**/*.js tests/**/*.js",
-		"test:unit": "cat banner; vitest run",
-		"test:dom": "cat banner; vitest run tests/dom/",
-		"test:e2e": "cat banner; playwright test",
-		"test:install": "cat banner; playwright install-deps && playwright install && playwright install chrome firefox webkit"
+		"bake": "./banner; vite build --mode production",
+		"server": "./banner; bun src/js/server/main.js",
+		"www": "./banner; serve dist -l 8060",
+		"fix": "./banner; prettier --write src/**/*.html src/**/*.css src/js/**/*.js tests/**/*.js && eslint --fix src/**/*.html src/js/**/*.js tests/**/*.js",
+		"lint:check": "./banner; eslint src/**/*.html src/js/**/*.js tests/**/*.js",
+		"lint:fix": "./banner; eslint --fix  src/**/*.html src/js/**/*.js tests/**/*.js",
+		"format:fix": "./banner; prettier --write src/**/*.html src/**/*.css src/js/**/*.js tests/**/*.js",
+		"format:check": "./banner; prettier --check src/**/*.html src/**/*.css src/js/**/*.js tests/**/*.js",
+		"test:unit": "./banner; vitest run",
+		"test:dom": "./banner; vitest run tests/dom/",
+		"test:e2e": "./banner; playwright test",
+		"test:install": "./banner; playwright install-deps && playwright install && playwright install chrome firefox webkit"
 	},
 	"dependencies": {
 		"@html-eslint/eslint-plugin": "^0.47.0",
