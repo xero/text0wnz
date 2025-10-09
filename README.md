@@ -325,6 +325,14 @@ All tests run automatically in CI/CD.
 - Safari 15+
 - Edge 95+
 
+## Project History
+
+The story of this project traces back to 2018, when AndyH joined [Blocktronics](https://16colo.rs/group/blocktronics)—the legendary masters of the ANSI art scene. During his early days there, he created the original “ansiedit,” laying the groundwork for this application. However, his focus soon shifted to developing a desktop-only editor, which evolved into Moebius.
+
+Around that time, xeR0 (then a member of [Impure!ASCii](https://16colo.rs/group/impure) and a devoted PabloDraw user) joined Blocktronics shortly after ansiedit’s release. xeR0 played the role of testing and debugging the app alongside Andy as he learned the dark arts of the blocks.
+
+Fast forward a decade: xeR0 found himself sad he was still unable to use the new MoebiusXBIN fork to create text art on his iPad. With Andy’s blessing, xeR0 decided to revive the project—reimagining it from the ground up as a modern Progressive Web App. New features like optimized off-screen canvas', dirty pixel rendering, local storage sync, were added. But without Andy's core math this project would not be possible.
+
 ## License & Greetz
 
 <img src="https://gist.githubusercontent.com/xero/cbcd5c38b695004c848b73e5c1c0c779/raw/6b32899b0af238b17383d7a878a69a076139e72d/kopimi-sm.png" align="left" height="222">
