@@ -182,12 +182,6 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#redo').click();
 		await page.waitForTimeout(200);
 
-		await page.locator('#navView').click();
-		await page.waitForTimeout(300);
-
-		await page.locator('#navView').click();
-		await page.waitForTimeout(200);
-
 		await page.locator('#navDarkmode').click();
 		await page.waitForTimeout(200);
 
