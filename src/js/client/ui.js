@@ -549,20 +549,6 @@ const createGenericController = (panel, nav) => {
 	};
 };
 
-const createViewportController = el => {
-	const panel = el;
-	const enable = () => {
-		panel.style.display = 'flex';
-	};
-	const disable = () => {
-		panel.style.display = 'none';
-	};
-	return {
-		enable: enable,
-		disable: disable,
-	};
-};
-
 const createResolutionController = (lbl, txtC, txtR) => {
 	[
 		'onTextCanvasSizeChange',
@@ -798,7 +784,6 @@ export {
 	undoAndRedo,
 	viewportTap,
 	createGenericController,
-	createViewportController,
 	createPaintShortcuts,
 	createToggleButton,
 	createGrid,

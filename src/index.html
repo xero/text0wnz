@@ -109,43 +109,6 @@
 						<span>F11<canvas id="fkey10" class="fkey" height="0" width="0"></canvas></span>
 						<span>F12<canvas id="fkey11" class="fkey" height="0" width="0"></canvas></span>
 					</div>
-					<div id="viewport-toolbar">
-						<div id="navDarkmode" class="tool-button">
-							<svg class="sun-and-moon" aria-hidden="true" viewBox="1 0 24 24">
-								<mask id="moon-mask" class="moon">
-									<rect fill="white" height="100%" width="100%" x="0" y="0"/>
-									<circle cx="0" cy="10" fill="black" r="6"/>
-								</mask>
-								<circle class="sun" cx="12" cy="12" fill="currentColor" mask="url(#moon-mask)" r="6"/>
-								<g class="sun-beams" stroke="currentColor">
-									<line x1="12" x2="12" y1="1" y2="3"/>
-									<line x1="12" x2="12" y1="21" y2="23"/>
-									<line x1="4.22" x2="5.64" y1="4.22" y2="5.64"/>
-									<line x1="18.36" x2="19.78" y1="18.36" y2="19.78"/>
-									<line x1="1" x2="3" y1="12" y2="12"/>
-									<line x1="21" x2="23" y1="12" y2="12"/>
-									<line x1="4.22" x2="5.64" y1="19.78" y2="18.36"/>
-									<line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/>
-								</g>
-							</svg>
-							<kbd>Mode</kbd>
-						</div>
-						<div id="navGrid" class="tool-button">
-							<svg alt="Show Grid (Ctrl-G)" aria-label="Show Grid (Ctrl-G)">
-								<use href="img/icons.svg#grid"></use>
-							</svg>
-							<kbd>Show Grid</kbd>
-						</div>
-						<div id="navZoom" class="tool-button">
-							<svg alt="File" aria-label="File">
-								<use href="img/icons.svg#zoom"></use>
-							</svg>
-							<kbd>
-								<label for="zoom-level">Zoom</label>
-							</kbd>
-							<input id="zoom-level" type="range" value="1" max="2" min="0.5" step="0.5"/>
-						</div>
-					</div>
 					<div id="brush-toolbar">
 						<div id="halfblock" class="tool-button">
 							<svg alt="Block" aria-label="Block (f)">
@@ -376,9 +339,28 @@
 						<use href="img/icons.svg#font"></use>
 					</svg>
 				</div>
-				<div id="navView">
-					<svg alt="Viewport Options" aria-label="Viewport Options">
+				<div id="navGrid" class="tool-button">
+					<svg alt="Show Grid (Ctrl-G)" aria-label="Show Grid (Ctrl-G)">
 						<use href="img/icons.svg#grid"></use>
+					</svg>
+				</div>
+				<div id="navDarkmode" class="tool-button">
+					<svg class="sun-and-moon" aria-hidden="true" viewBox="1 0 24 24">
+						<mask id="moon-mask" class="moon">
+							<rect fill="white" height="100%" width="100%" x="0" y="0"/>
+							<circle cx="0" cy="10" fill="black" r="6"/>
+						</mask>
+						<circle class="sun" cx="12" cy="12" fill="currentColor" mask="url(#moon-mask)" r="6"/>
+						<g class="sun-beams" stroke="currentColor">
+							<line x1="12" x2="12" y1="1" y2="3"/>
+							<line x1="12" x2="12" y1="21" y2="23"/>
+							<line x1="4.22" x2="5.64" y1="4.22" y2="5.64"/>
+							<line x1="18.36" x2="19.78" y1="18.36" y2="19.78"/>
+							<line x1="1" x2="3" y1="12" y2="12"/>
+							<line x1="21" x2="23" y1="12" y2="12"/>
+							<line x1="4.22" x2="5.64" y1="19.78" y2="18.36"/>
+							<line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/>
+						</g>
 					</svg>
 				</div>
 			</aside>
@@ -663,8 +645,8 @@
 				<header>
 					<h2>Update Available!</h2>
 				</header>
-				<p>A new version of the editor is available. Press update to reload and apply it now, if you are currently drawing press cancel and...</p>
-				<h4>MAKE SURE YOU SAVE BEFORE UPDATING!</h4>
+				<p>A new version of the editor is available. This will clear your local storage. Press update to reload and apply it now, but if you are currently drawing press cancel...</p>
+				<h4>AND SAVE BEFORE UPDATING!</h4>
 				<nav>
 					<button id="update-reload" aria-label="Reload and Update">
 						<svg>
@@ -702,22 +684,27 @@
 			</section>
 			<section id="about-modal">
 				<header>
-					<h1>teXt0wnz</h1>
-					<h4>The online collaborative text art editor</h4>
+					<p>
+						Licensed MIT 2018-2025 <a href="https://x-e.ro" target="_blank">xeR0</a>, <a href="https://github.com/andyherbert" target="_blank">andyh</a>, and our <a href="https://github.com/xero/text0wnz/graphs/contributors" target="_blank">contributors</a>. The code is open-source and freely available on <a href="https://github.com/xero/text0wnz" target="_blank">Github</a> /
+						<a href="https://git.sr.ht/~xero/text0wnz">SourceHut</a>
+					</p>
 				</header>
 				<img class="logo" title="logo" alt="logo" src="img/logo.png"/>
-				<p>
-					Licensed MIT 2018-2025
-					<a href="https://x-e.ro" target="_blank">xeR0</a>, <a href="https://github.com/andyherbert" target="_blank">andyh</a>, and <a href="https://github.com/xero/text0wnz/graphs/contributors" target="_blank">contributors</a>. Source code is freely available on <a href="https://github.com/xero/text0wnz" target="_blank">Github</a> / <a href="https://git.sr.ht/~xero/text0wnz">SourceHut</a>
-				</p>
+				<p class="privacy"><a href="https://github.com/xero/teXt0wnz/blob/main/docs/privacy.md">Privacy Notice:</a> This application uses your device’s local storage to save artwork and editor state. We do not use cookies, analytics, or any tracking technologies.</p>
 				<nav>
+					<button id="about-privacy" aria-label="View the Privacy Policy">
+						<svg>
+							<use href="img/icons.svg#privacy"></use>
+						</svg>
+						Privacy
+					</button>
 					<button id="about-dl" aria-label="Download newest release">
 						<svg>
 							<use href="img/icons.svg#download"></use>
 						</svg>
 						Download
 					</button>
-					<button id="about-ok" aria-label="Close About Menu">
+					<button id="about-ok" class="close" aria-label="Close About Menu">
 						<svg>
 							<use href="img/icons.svg#check"></use>
 						</svg>

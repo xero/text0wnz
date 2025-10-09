@@ -10,7 +10,6 @@ import {
 	createDragDropController,
 	toggleFullscreen,
 	createModalController,
-	createViewportController,
 	createSettingToggle,
 	onClick,
 	onReturn,
@@ -77,7 +76,6 @@ let navSauce;
 let navDarkmode;
 let metaTheme;
 let saveTimeout;
-let mode;
 let reload;
 
 const $$$$ = () => {
@@ -103,7 +101,6 @@ const $$$$ = () => {
 	navDarkmode = $('navDarkmode');
 	metaTheme = $$('meta[name="theme-color"]');
 	saveTimeout = null;
-	mode = $$('#navDarkmode kbd');
 	reload = $('update-reload');
 };
 
@@ -236,14 +233,16 @@ const initializeAppComponents = async () => {
 	onClick($('nav-undo'), State.textArtCanvas.undo);
 	onClick($('nav-redo'), State.textArtCanvas.redo);
 
+	// Credz
 	onClick($('about'), _ => {
 		State.modal.open('about');
 	});
-	onClick($('about-ok'), _ => {
-		State.modal.close();
-	});
 	onClick($('about-dl'), _ => {
 		window.location.href = 'https://github.com/xero/text0wnz/releases/latest';
+	});
+	onClick($('about-privacy'), _ => {
+		window.location.href =
+			'https://github.com/xero/teXt0wnz/blob/main/docs/privacy.md';
 	});
 
 	// Update service worker application
@@ -432,13 +431,6 @@ const initializeAppComponents = async () => {
 		},
 	);
 
-	$('zoom-level').addEventListener('change', e => {
-		const scaleFactor = Number.isInteger(e.target.value)
-			? e.target.value.toFixed(1)
-			: e.target.value;
-		State.zoom = scaleFactor;
-	});
-
 	fontSelect = createFontSelect(
 		$('font-select'),
 		previewInfo,
@@ -504,8 +496,6 @@ const initializeAppComponents = async () => {
 	Toolbar.add($('square'), square.enable, square.disable);
 	const circle = createCircleController();
 	Toolbar.add($('circle'), circle.enable, circle.disable);
-	const view = createViewportController($('viewport-toolbar'));
-	Toolbar.add($('navView'), view.enable, view.disable);
 	const fonts = createGenericController($('font-toolbar'), $('fonts'));
 	Toolbar.add($('fonts'), fonts.enable, fonts.disable);
 	const clipboard = createGenericController(
@@ -592,7 +582,6 @@ const initializeAppComponents = async () => {
 		const isDark = htmlDoc.classList.contains('dark');
 		navDarkmode.setAttribute('aria-pressed', isDark);
 		metaTheme.setAttribute('content', isDark ? '#333333' : '#4f4f4f');
-		mode.innerText = (isDark ? 'Night' : 'Light') + ' Mode';
 	};
 	onClick(navDarkmode, darkToggle);
 	window.matchMedia('(prefers-color-scheme: dark)').matches && darkToggle();

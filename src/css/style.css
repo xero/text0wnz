@@ -425,10 +425,6 @@
 		}
 	}
 	#viewport-toolbar {
-		#navZoom:focus,
-		#navZoom:focus-within {
-			@apply bg-transparent!;
-		}
 		input[type='range'] {
 			@apply appearance-none bg-transparent;
 		}
@@ -717,7 +713,7 @@
 				@apply pt-2 pr-2 pb-1 pl-1;
 			}
 			button {
-				@apply 2xl:text-2xl 3xl:text-3xl uppercase flex justify-center
+				@apply 2xl:text-2xl text-xl uppercase flex justify-center
 			items-center text-fg bg-gray-950 p-2 mr-6;
 
 				svg {
@@ -922,7 +918,7 @@
 		@apply bg-cyber text-midnight;
 	}
 	.group-label {
-		@apply text-purp bg-midnight m-0 cursor-default;
+		@apply text-cyan bg-midnight m-0 cursor-default;
 		padding: 0.5em 0.75em;
 	}
 	#font-preview-info {
@@ -974,10 +970,10 @@
 			}
 		}
 		p {
-			@apply pb-2;
+			@apply pb-2 mb-2;
 		}
 		nav {
-			@apply p-2;
+			@apply p-2 justify-evenly;
 		}
 	}
 	#update-modal {
@@ -1194,7 +1190,7 @@
 		}
 	}
 	#navDarkmode {
-		@apply bg-none cursor-pointer aspect-square w-[123px];
+		@apply bg-none cursor-pointer aspect-square;
 		-webkit-tap-highlight-color: transparent;
 		touch-action: manipulation;
 		transition: transform 1s linear !important;

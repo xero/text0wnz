@@ -240,6 +240,12 @@ const loadModule = () => {
 				blink,
 				inverse;
 
+		const validate = (condition, message) => {
+			if (!condition) {
+				throw new Error(message);
+			}
+		};
+
 		const decodeUtf8 = (bytes, startIndex) => {
 			let charCode = bytes[startIndex];
 			if ((charCode & 0x80) === 0) {
@@ -247,33 +253,29 @@ const loadModule = () => {
 				return { charCode, bytesConsumed: 1 };
 			} else if ((charCode & 0xe0) === 0xc0) {
 				// 2-byte sequence
-				if (startIndex + 1 >= bytes.length) {
-					throw new Error(
-						`[File] Unexpected end of data at position ${startIndex} for 2-byte UTF-8 sequence`,
-					);
-				}
+				validate(
+					startIndex + 1 < bytes.length,
+					`[File] Unexpected end of data at position ${startIndex} for 2-byte UTF-8 sequence`,
+				);
 				const secondByte = bytes[startIndex + 1];
-				if ((secondByte & 0xc0) !== 0x80) {
-					throw new Error(
-						`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1} for 2-byte UTF-8 sequence`,
-					);
-				}
+				validate(
+					(secondByte & 0xc0) === 0x80,
+					`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1} for 2-byte UTF-8 sequence`,
+				);
 				charCode = ((charCode & 0x1f) << 6) | (secondByte & 0x3f);
 				return { charCode, bytesConsumed: 2 };
 			} else if ((charCode & 0xf0) === 0xe0) {
 				// 3-byte sequence
-				if (startIndex + 2 >= bytes.length) {
-					throw new Error(
-						`[File] Unexpected end of data at position ${startIndex} for 3-byte UTF-8 sequence`,
-					);
-				}
+				validate(
+					startIndex + 2 < bytes.length,
+					`[File] Unexpected end of data at position ${startIndex} for 3-byte UTF-8 sequence`,
+				);
 				const secondByte = bytes[startIndex + 1];
 				const thirdByte = bytes[startIndex + 2];
-				if ((secondByte & 0xc0) !== 0x80 || (thirdByte & 0xc0) !== 0x80) {
-					throw new Error(
-						`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1} or ${startIndex + 2}`,
-					);
-				}
+				validate(
+					(secondByte & 0xc0) === 0x80 && (thirdByte & 0xc0) === 0x80,
+					`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1} or ${startIndex + 2}`,
+				);
 				charCode =
 					((charCode & 0x0f) << 12) |
 					((secondByte & 0x3f) << 6) |
@@ -281,23 +283,19 @@ const loadModule = () => {
 				return { charCode, bytesConsumed: 3 };
 			} else if ((charCode & 0xf8) === 0xf0) {
 				// 4-byte sequence
-				if (startIndex + 3 >= bytes.length) {
-					throw new Error(
-						`[File] Unexpected end of data at position ${startIndex} for 4-byte UTF-8 sequence`,
-					);
-				}
+				validate(
+					startIndex + 3 < bytes.length,
+					`[File] Unexpected end of data at position ${startIndex} for 4-byte UTF-8 sequence`,
+				);
 				const secondByte = bytes[startIndex + 1];
 				const thirdByte = bytes[startIndex + 2];
 				const fourthByte = bytes[startIndex + 3];
-				if (
-					(secondByte & 0xc0) !== 0x80 ||
-					(thirdByte & 0xc0) !== 0x80 ||
-					(fourthByte & 0xc0) !== 0x80
-				) {
-					throw new Error(
-						`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1}, ${startIndex + 2}, or ${startIndex + 3}`,
-					);
-				}
+				validate(
+					(secondByte & 0xc0) === 0x80 &&
+					(thirdByte & 0xc0) === 0x80 &&
+					(fourthByte & 0xc0) === 0x80,
+					`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1}, ${startIndex + 2}, or ${startIndex + 3}`,
+				);
 				charCode =
 					((charCode & 0x07) << 18) |
 					((secondByte & 0x3f) << 12) |
