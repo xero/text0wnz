@@ -1,13 +1,12 @@
-
-
 # XB: eXtended BIN Format specification
 
-Written by Tasmanic Tasmaniac / ACiD 1996
-No rights reserved, No patent pending
-For comments/questions : Tas@acid.org
-http://uc2.unicall.be/tasmaniac/xbin.htm
+> Written by Olivier "Tasmaniac" Reubens / ACiD
+> No rights reserved, No patent pending
+> For comments/questions : Tas@acid.org
+> http://uc2.unicall.be/tasmaniac/xbin.htm
 
 ---
+
 ##  Introduction
 
   Out of a crying need from several ANSi artists, a new type of file is

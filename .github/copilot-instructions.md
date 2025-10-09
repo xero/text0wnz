@@ -1,52 +1,334 @@
 # GitHub Copilot Instructions for moebius-web
 
+>[!NOTE]
+>this project, `moebius-web` is being rebranded as `teXt0wnz` or `text.0w.nz`
+
 ## Project Overview
 
-Moebius-web is a web-based ANSI art editor that operates in two modes: server-side (collaborative) and client-side (standalone).
+teXt0wnz is a web-based text art editor that operates in two modes: server-side (collaborative) and client-side (standalone).
 
 This is a single-page application for creating ANSI/ASCII art with various drawing tools, color palettes, export capabilities, and real-time collaboration features.
 
-## Architecture & Key Files
+# Install bun
+- this project uses bun over npm. make sure it's installed before you begin any work. there's a few ways you can install it:
 
-### Client-Side Application (Primary Focus)
+**NPM global install**
+```sh
+npm i -g bun
+```
 
-**Entry Point & Core:**
-- `public/index.html` - Single HTML page, includes all necessary scripts
-- `public/js/document_onload.js` - **Main entry point**, initializes all tools and UI
-- `public/js/core.js` - **Core application logic**, canvas management, rendering
+**NPM local install**
+```sh
+npm i bun
+```
 
-**UI & Interaction:**
-- `public/js/ui.js` - UI components, overlays, toolbar management
-- `public/js/keyboard.js` - Keyboard event handlers and shortcuts
-- `public/js/elementhelper.js` - DOM utility functions
+**Manual install**
+```sh
+curl -fsSL https://bun.sh/install | bash
+# or
+wget -qO- https://bun.sh/install | bash
+```
 
-**Drawing & Tools:**
-- `public/js/freehand_tools.js` - **Drawing tools implementation** (freehand, line, circle, square)
-- `public/js/file.js` - File operations (load/save ANSI, PNG, etc.)
-- `public/js/savers.js` - Export functionality for different formats
-- `public/js/loaders.js` - Import functionality for various file types
+### Building the App
 
-**Collaboration & Networking:**
-- `public/js/network.js` - **Core collaboration logic**, WebSocket/server communication, canvas settings synchronization
-- `public/js/worker.js` - **WebSocket worker**, handles real-time collaboration protocol and message passing
+```sh
+bun bake
+```
 
-**Unused in Client Mode:**
+This generates optimized files in the `dist/` directory:
+- `index.html` - Main application entry point
+- `site.webmanifest` - PWA (Progressive Web App) configuration
+- `service.js` - Application service worker
+- `workbox-[hash].js` - Runtime/Offline asset management/caching
+- `robots.txt` and `sitemap.xml`
+- `ui/editor.js` - Minified JavaScript bundle
+- `ui/stylez.css` - Minified CSS styles
+- `ui/fonts/` - Font assets
+- `ui/` - Other static assets (images, icons, etc.)
 
-### Server-Side Implementation (Collaboration Engine)
-- `server.js` - **Express server entry point**, WebSocket setup, SSL configuration, session management
-- `src/ansiedit.js` - **Core collaboration engine**, message handling, canvas state management, persistence
-- `src/binary_text.js` - **Binary format handler** for ANSI art storage and loading
+### Project Structure
 
-### Reference Implementations
-- `tools/` - **Use as examples** when implementing new drawing tools or features
+```
+src/
+├── index.html          # Main HTML template
+├── css/style.css       # Tailwind CSS styles
+├── fonts/              # Font assets (PNG format)
+├── img/                # Static images and icons
+└── js/
+    ├── client/         # Client-side JavaScript modules
+    │   ├── main.js     # Application entry point
+    │   ├── canvas.js   # Canvas and drawing logic
+    │   ├── keyboard.js # Keyboard shortcuts and text input
+    │   ├── ui.js       # UI components and interactions
+    │   ├── palette.js  # Color palette management
+    │   ├── file.js     # File I/O operations
+    │   └── ...         # Other client modules
+    └── server/         # Server-side collaboration modules
+        ├── main.js     # Server entry point
+        ├── server.js   # Express server setup
+        ├── text0wnz.js # Collaboration engine
+        └── ...         # Other server modules
+
+dist/                   # Built application (generated)
+tests/                  # Unit tests
+docs/                   # Documentation
+```
+
+### Documentation
+
+Located in the [/docs](https://github.com/xero/moebius-web/tree/main/docs) folder of the project.
+
+### Linting and Formatting
+
+The project uses ESLint for code linting and Prettier for code formatting:
+
+```sh
+# Check for linting issues
+bun lint:check
+
+# Auto-fix linting issues
+bun lint:fix
+
+# Check code format
+bun format:check
+
+# Auto-fix formatting issues
+bun format:fix
+
+# Fix both linting and formatting
+bun fix
+```
+
+>![IMPORTANT]
+> Before committing, _ALWAYS_ format and lint your code, then fix any issues Eslint may have.
+
+## Testing
+
+Directory structure and organization
+
+```
+tests
+├── e2e      # playwright tests
+├── results  # all test results
+└── unit     # vitetests
+```
+
+>![NOTE]
+> never commit the `test/results` folder, as it's used for cicd. it's covered by the .gitignore file
+
+### Unit Testing
+
+The project includes comprehensive unit tests using **Vitest** with **jsdom** environment:
+
+```sh
+# Run all unit tests and generate coverage report
+bun test:unit
+
+# Run tests in watch mode during development
+bunx vitest
+# or
+npx vitest
+
+# Run tests with coverage report
+bunx vitest --coverage
+```
+
+**Test Coverage Includes:**
+- Client-side modules (canvas, keyboard, palette, file I/O, UI components)
+- Server-side modules (configuration, WebSocket handling, file operations)
+- Utility functions and helper modules
+- State management and toolbar interactions
+
+Test files are organized in `tests/unit/` with separate files for each module. The test suite provides excellent coverage for core functionality and helps ensure code quality.
+
+**Test Environment:**
+- **Vitest** - Fast unit test runner with ES module support
+- **jsdom** - Browser environment simulation for DOM testing
+- **@testing-library/jest-dom** - Additional DOM matchers
+- **Coverage reporting** with v8 provider
+
+Tests run automatically in CI/CD and should be run locally before committing changes.
+
+### E2E Testing
+
+### Prerequisites
+
+1. Build the application:
+```bash
+bun bake
+```
+
+2. Install Playwright browsers (first time only):
+```bash
+bun test:install
+```
+
+### Run All E2E Tests
+
+```bash
+bun test:e2e
+```
+
+### Run Tests for Specific Browser
+
+```bash
+# Chrome
+bunx playwright test --project=Chrome
+
+# Firefox
+bunx playwright test --project=Firefox
+
+# WebKit (Safari)
+bunx playwright test --project=WebKit
+```
+
+### Run Specific Test File
+
+```bash
+bunx playwright test tests/e2e/canvas.spec.js
+```
+
+### Run Tests in UI Mode (Interactive)
+
+```bash
+bunx playwright test --ui
+```
+
+### Run Tests in Headed Mode (See Browser)
+
+```bash
+bunx playwright test --headed
+```
+
+### Debug Tests
+
+```bash
+bunx playwright test --debug
+```
+
+## Test Configuration
+
+The test configuration is in `playwright.config.js` at the root of the project:
+
+- **Browsers**: Chrome, Firefox, WebKit (Safari)
+- **Viewport**: 1280x720
+- **Test timeout**: 30 seconds
+- **Retries**: 1 (on failure)
+- **Screenshots**: On failure
+- **Videos**: On failure
+- **Web server**: `bunx serve dist -l 8060`
+
+## Test Results
+
+Test results are saved to:
+- **HTML Report**: `tests/results/playwright-report/`
+- **JSON Results**: `tests/results/e2e/results.json`
+- **Videos/Screenshots**: `tests/results/e2e/`
+
+To view the HTML report after running tests:
+
+```bash
+npx playwright show-report tests/results/playwright-report
+```
+
+## Writing New Tests
+
+When adding new E2E tests:
+
+1. Create a new `.spec.js` file in `tests/e2e/`
+2. Import Playwright test utilities:
+   ```javascript
+   import { test, expect } from '@playwright/test';
+   ```
+3. Use `test.describe()` to group related tests
+4. Use `test.beforeEach()` for common setup (navigate to page, wait for load)
+5. Write tests using Playwright's API for user interactions
+6. Use flexible selectors that work even if IDs change
+7. Add appropriate waits (`waitForTimeout`, `waitForSelector`)
+8. Assert expected behaviors with `expect()`
+
+### Example Test
+
+```javascript
+import { test, expect } from '@playwright/test';
+
+test.describe('My Feature', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('#canvas-container', { timeout: 10000 });
+    await page.waitForTimeout(1000);
+  });
+
+  test('should do something', async ({ page }) => {
+    const element = page.locator('#my-element');
+    await element.click();
+    await page.waitForTimeout(300);
+
+    await expect(element).toBeVisible();
+  });
+});
+```
+
+## Best Practices
+
+1. **Wait for elements**: Always wait for elements to be visible/ready before interacting
+2. **Use timeouts**: Add small delays after interactions to allow the UI to update
+3. **Flexible selectors**: Use multiple selector strategies (ID, class, text, data attributes)
+4. **Test isolation**: Each test should be independent and not rely on previous tests
+5. **Error handling**: Tests should gracefully handle missing optional elements
+6. **Clean up**: Use `beforeEach` and `afterEach` for setup and teardown
+7. **Meaningful assertions**: Test actual user-visible behavior, not implementation details
+
+---
+
+### Running the Server
+
+The collaboration server can be started with:
+
+```sh
+bun server [port] [options]
+```
+
+- `[port]` (optional): Port to run the server (default: `1337`)
+- See the **Command-Line Options** table above for available flags
+
+#### Example: Basic Start
+
+```sh
+bun server
+```
+
+#### Example: Custom Port, Session, and Save Interval
+
+```sh
+bun server 8080 --session-name myjam --save-interval 10
+```
+
+#### Example: With SSL
+
+```sh
+bun server 443 --ssl --ssl-dir /etc/letsencrypt
+```
+
+> The server will look for `letsencrypt-domain.pem` and `letsencrypt-domain.key` in the specified SSL directory.
+
+#### Example: All Options
+
+```sh
+bun server 9001 --ssl --ssl-dir /etc/ssl/private --save-interval 5 --session-name collab
+```
+
+**See the project `README.md` for more info
+
+---
 
 ## Development Guidelines
 
 ### 1. Code Structure Patterns
 
-**Tool Implementation Pattern** (see `public/js/freehand_tools.js`):
+**Tool Implementation Pattern** (see `src/js/client/freehand_tools.js`):
 ```javascript
-function createToolController() {
+const createToolController = () => {
     "use strict";
 
     function enable() {
@@ -90,15 +372,11 @@ function $(divName) {
 
 ### 2. Adding New Features
 
-1. **For new drawing tools**: Use `tools/` directory examples as reference
-2. **Follow the factory pattern**: Create functions that return objects with enable/disable methods
 3. **Canvas interaction**: Use the established event system (`onTextCanvasDown`, etc.)
 4. **UI integration**: Register with `Toolbar.add()` and create corresponding HTML elements
 
 ### 3. Code Style
 
-- Use `"use strict";` in all functions
-- Prefer factory functions over classes
 - Use meaningful variable names (`textArtCanvas`, `characterBrush`, etc.)
 - Follow existing indentation (tabs)
 - Use explicit returns with named properties: `return { "enable": enable, "disable": disable };`
@@ -108,7 +386,7 @@ function $(divName) {
 **Canvas System:**
 - `textArtCanvas` - Main drawing surface
 - Uses character-based coordinates (not pixel-based)
-- Supports undo/redo operations via `textArtCanvas.startUndo()`
+- Supports undo/redo operations via `State.textArtCanvas.startUndo()`
 
 **Color Management:**
 - `palette` - Color palette management
@@ -138,7 +416,7 @@ function $(divName) {
 - Comprehensive logging and error handling
 - Configurable auto-save intervals and session naming
 
-**Collaboration Engine (`src/ansiedit.js`):**
+**Collaboration Engine (`src/text0wnz.js`):**
 - Centralized canvas state management (imageData object)
 - Real-time message broadcasting to all connected clients
 - Session persistence with both timestamped backups and current state
@@ -225,13 +503,13 @@ case "newFeature":
 **Client-Side Integration Pattern:**
 ```javascript
 // In public/js/network.js
-function sendNewFeature(value) {
+const sendNewFeature = value => {
   if (collaborationMode && connected && !applyReceivedSettings && !initializing) {
     worker.postMessage({ "cmd": "newFeature", "someProperty": value });
   }
 }
 
-function onNewFeature(value) {
+const onNewFeature = value => {
   if (applyReceivedSettings) return; // Prevent loops
   applyReceivedSettings = true;
   // Apply the change to UI/canvas
@@ -253,56 +531,40 @@ function onNewFeature(value) {
 - Settings broadcast loop prevention with flags
 - Silent connection check vs explicit connection handling
 
-### 7. Deployment Considerations
-
-**Dependencies:**
-- express ^4.15.3 - Web server framework
-- express-session ^1.18.2 - Session management
-- express-ws ^5.0.2 - WebSocket integration
-- pm2 ^5.3.0 - Process management
-
-**Production Setup:**
-- SSL certificate configuration with automatic fallback
-- Process management with PM2 for auto-restart
-- Configurable auto-save intervals to prevent data loss
-- Session naming for multiple concurrent art sessions
-
 ## Testing & Development
 
 ## How to Run
 
-This project **does not use Node.js or package.json**.
-**There is nothing to build.**
-All you need is a static web server pointed at the `public/` directory.
+### build and install
+
+```
+npm i -g bun
+bun i
+bun bake
+```
+
+- these commands will setup the node_modules and build the application to the `dist` folder
+- Now you need is a static web server pointed at the `dist/` directory.
 
 ### Fastest way to run (from the project root):
 
 ```sh
-cd public
+cd dist
 python3 -m http.server 8080
 ```
 
 Then open [http://localhost:8080/](http://localhost:8080/) in your browser.
 
 - **Any static web server will work** (e.g. Python, PHP, Ruby, `npx serve`, etc).
-- Just make sure your web server's root is the `public/` directory.
+- Just make sure your web server's root is the `dist/` directory.
 
 ## Summary
 
-- **No build step**
-- **No package.json**
-- **Just serve the `public/` folder as static files.**
-
-## For Copilot and Automation Agents
-
-- Do **not** look for `npm start`, `yarn`, or `package.json`.
-- The only requirement is to start a static server in the `public/` directory.
-- Example: `cd public && python3 -m http.server 8080`
-- For CI, simply check that all files are present in `public/`.
+- **Just build and serve the `dist/` folder as static files.**
 
 ### Local Development Setup
 1. **Client-only**: Start local server: `python3 -m http.server 8080` from `public/` directory
-2. **With collaboration**: Run `node server.js` then access at `http://localhost:1337`
+2. **With collaboration**: Run `bun server 1337` then access at `http://localhost:1337`
 3. Use browser dev tools for debugging
 4. Test collaboration with multiple browser tabs/windows
 
@@ -323,52 +585,18 @@ await page.goto('http://localhost:8080'); // or 1337 for collaboration
 - **Multi-user drawing and real-time updates**
 - **Server connection handling and graceful fallback**
 
-## Common Tasks
-
-### Adding a New Drawing Tool
-1. Study examples in `tools/` directory (e.g., `tools/freehand.js`)
-2. Implement in `public/js/freehand_tools.js` or create new file
-3. Register with toolbar in `public/js/document_onload.js`
-4. Add HTML elements to `public/index.html` if needed
-5. Add keyboard shortcut to paint shortcuts configuration
-
-### Modifying UI Components
-1. Edit `public/js/ui.js` for component logic
-2. Update `public/index.html` for structure
-3. Modify `public/css/style.css` for styling
-
-### File Format Support
-1. Add loader to `public/js/loaders.js`
-2. Add saver to `public/js/savers.js`
-3. Wire up in `public/js/document_onload.js`
-
-### Adding Collaboration Features
-1. Define WebSocket message protocol in both client and server
-2. Add message handler to `src/ansiedit.js` with proper state management
-3. Add client-side sync functions to `public/js/network.js`
-4. Hook into UI components in `public/js/document_onload.js`
-5. Test with multiple clients to ensure proper synchronization
-
-### Server Configuration & Deployment
-1. Configure session settings and auto-save intervals
-2. Set up SSL certificates for production deployment
-3. Use PM2 or similar for process management and auto-restart
-4. Monitor server logs for WebSocket connection issues and state synchronization
-
 ## Important Notes
 
 - **Always test changes locally** before committing
+- **Always run `bun lint:fix`** before committing
 - **Preserve existing functionality** - this is a working art editor used by artists
 - **Test both local and collaboration modes** when making changes that affect canvas or UI
-- **Use the tools/ directory** as reference for complex feature implementations
 - **Maintain the established patterns** for consistency and reliability
 - **Validate server message protocol changes** with multiple connected clients
-- **Consider backwards compatibility** when modifying server message formats
 
 ## Dependencies & Browser Support
 
-- Pure JavaScript (ES5 compatible) for client-side
+- Pure JavaScript for client-side
 - Node.js with Express framework for server-side collaboration
-- No external client libraries or frameworks
 - Works in modern browsers with Canvas, File API, and WebSocket support
 - Uses Web Workers for real-time collaboration communication

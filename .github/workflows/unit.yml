@@ -1,0 +1,37 @@
+name: Unit Tests
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    name: Unit Tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+        with:
+          fetch-depth: 0
+      - name: Setup bun
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
+        with:
+          bun-version: "latest"
+      - name: Install dependencies
+        run: bun i
+      - name: Run unit tests with coverage
+        run: bun test:unit
+      - name: Inject dark theme into coverage report
+        run: |
+          echo "@media (prefers-color-scheme:dark){.cover-empty,body{background:#000}body{color:#efefef}table{color:#000}table,td,th{border:1px solid #222!important}td.empty{color:#eee}.cbranch-no,.cstat-no,.fstat-no{background:#afe9dc}.cline-yes,.high{background:#f2bfff}.cline-no,.low{background:#bbf2e8}.fraction,.quiet,table .chart,table .high,table .low,td.text,th.file,th.pct{-webkit-filter:invert(100%)}.footer{display:none!important}body>div.wrapper>div:first-child>p{background:#ddd;width:fit-content;padding:10px}}" >> tests/results/coverage/base.css
+      - name: Upload all unit test results as artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: unit-test-results
+          path: tests/results/coverage/
+          retention-days: 3
+      - name: Add artifact download info to summary
+        run: |
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "### :package: Unit Test Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Artifacts for this run are available under the **Artifacts** section at [this workflow run]($RUN_URL)." >> $GITHUB_STEP_SUMMARY
+          echo "- Or use GitHub CLI: \`gh run download ${{ github.run_id }} -n unit-test-results\`" >> $GITHUB_STEP_SUMMARY

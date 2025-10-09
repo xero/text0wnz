@@ -1,0 +1,40 @@
+#!/bin/sh
+# cp .git/hooks/pre-commit && chmod +x
+printf "%s\n%s\n\n" "running pre commit hooks" "use --no-verify to skip"
+
+# formatting & linting
+bun fix
+RESULT=$?
+if [ $RESULT -ne 0 ]; then
+	printf "%s\n" "linting failed. commit aborted."
+	exit 1
+fi
+# update any tracked files that might have been formatted
+git add -u
+
+# git upstream
+git rev-parse --abbrev-ref --symbolic-full-name "@{u}" > /dev/null 2>&1
+RESULT=$?
+if [ $RESULT -ne 0 ]; then
+	printf "\n%s\n%s\n" "no upstream branch configured for the current branch." "configure an upstream using: \`git branch --set-upstream-to=origin/<branch> <branch>\`"
+	exit 1
+fi
+
+printf "\n%s\n\n" "fetching git upstreams..."
+git fetch
+
+LOCAL=$(git rev-parse @)
+REMOTE=$(git rev-parse "@{u}")
+BASE=$(git merge-base @ "@{u}")
+
+if [ "$LOCAL" = "$REMOTE" ]; then
+	# in sync
+	exit 0
+elif [ "$LOCAL" = "$BASE" ]; then
+	# local is behind
+	printf "\n%s\n%s\n" "your branch is behind the remote." "pull and resolve before committing."
+	exit 1
+else
+	# local is ahead or diverged
+	exit 0
+fi
