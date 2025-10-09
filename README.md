@@ -278,7 +278,7 @@ node src/js/server/main.js
 | `--help`              | Show help message and usage examples                       | -                   |
 
 > [!NOTE]
-> See: [docs/collaboration-server](docs/collaboration-server)) for more info.
+> See: [docs/collaboration-server](docs/collaboration-server) for more info.
 
 ---
 
@@ -312,6 +312,9 @@ All tests run automatically in CI/CD.
 - Permissions: Confirm systemd user access
 - Wrong port: Sync client/server configs
 
+**Still stuck?**
+[Open an issue](https://github.com/xero/teXt0wnz/issues) with error logs and platform details.
+
 **Tips:**
 - Always use a process manager (systemd, forever)
 - Lower save interval for busy sessions
@@ -319,9 +322,6 @@ All tests run automatically in CI/CD.
 - WebSocket debugging: browser dev tools
 - Restore session: rename backups as needed
 - Review logs for details
-
-**Still stuck?**
-[Open an issue](https://github.com/xero/teXt0wnz/issues) with error logs and platform details.
 
 > [!NOTE]
 > See: [docs/trouble_shooting](docs/webserver-configuration.md#troubleshooting) for more help.
@@ -341,9 +341,7 @@ All tests run automatically in CI/CD.
 
 <img src="https://gist.githubusercontent.com/xero/cbcd5c38b695004c848b73e5c1c0c779/raw/6b32899b0af238b17383d7a878a69a076139e72d/kopimi-sm.png" align="left" height="222">
 
-▒ mad love & respect to [Andy Herbert^67](http://github.com/andyherbert) - [Moebius](https://github.com/blocktronics/moebius) ░ [grmmxi^imp!](https://glyphdrawing.club/) - [MoebiusXBIN](https://github.com/hlotvonen/moebiusXBIN/)  ░
-
-░ [Curtis Wensley](https://github.com/cwensley) - [PabloDraw](https://github.com/cwensley/pablodraw) ░ [Skull Leader^ACiD](https://defacto2.net/p/skull-leader) - [ACiDDRAW](https://www.acid.org/apps/apps.html) ▒
+▒ mad love & respect to [Andy Herbert^67](http://github.com/andyherbert) - [Moebius](https://github.com/blocktronics/moebius) ░ [grmmxi^imp!](https://glyphdrawing.club/) - [MoebiusXBIN](https://github.com/hlotvonen/moebiusXBIN/) ░ [Curtis Wensley](https://github.com/cwensley) - [PabloDraw](https://github.com/cwensley/pablodraw) ░ [Skull Leader^ACiD](https://defacto2.net/p/skull-leader) - [ACiDDRAW](https://www.acid.org/apps/apps.html) ▒
 
 ---
 
