@@ -64,25 +64,31 @@
 - `*.png`: Image (export support only)
 
 ## [Project Documentation](docs/)
+
 **Application Guides**
 - [Editor Client](docs/editor-client.md) - Frontend text art editor application
 - [Collaboration Server](docs/collaboration-server.md) - Backend real-time collaboration server
 - [PWA Install](docs/install-pwa.md) - Guide to installing the app on multiple platforms
-- [Privacy Policy](docs/privacy.md) - Privacy policy and data handling
+- [Privacy Policy](docs/privacy.md) - Privacy and data handling policy
+
 **Development Guides**
 - [Building and Developing](docs/building-and-developing.md) - Development workflow and build process
 - [Testing](docs/testing.md) - Triple headed testing guide (unit, dom, & e2e)
 - [Webserver Configuration](docs/webserver-configuration.md) - Webserver setup and configuration
 - [Other Tools](docs/other-tools.md) - Additional development and deployment tools
+
 **Technical Specifications**
 - [SAUCE Format](docs/sauce-format.md) - SAUCE metadata format specification
 - [XBin Format](docs/xb-format.md) - XBin file format specification
+
 **Supplementals**
 - [Fonts](docs/fonts.md) - Complete font reference and previews
 - [Logos](docs/logos.txt) - ASCII art logos for the project
 - [Examples](docs/examples/) - Sample artwork to view and edit
   - ANSI artwork by [xeR0](https://16colo.rs/artist/xero)
   - XBin artwork by [Hellbeard](https://16colo.rs/artist/hellbeard)
+
+---
 
 ## Drawing & Editing Tools
 
@@ -103,7 +109,6 @@
 
 > [!NOTE]
 > See: [docs/editor-client](docs/editor-client.md) for more info.
-
 
 ### Main Shortcuts
 
@@ -207,7 +212,6 @@ bun www      # or npm run www
 
 > [!NOTE]
 > See: [docs//docs/building-and-developing](/docs/building-and-developing.md) for more info.
-
 
 **Scripts:**
 
