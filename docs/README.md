@@ -10,6 +10,7 @@ This directory contains comprehensive guides for using, developing, testing, and
 - Start here: [Editor Client](editor-client.md)
 - Learn keyboard shortcuts: [Editor Client - Key Bindings](editor-client.md#key-bindings--mouse-controls)
 - File formats: [Editor Client - File Operations](editor-client.md#file-operations)
+- [PWA Install](docs/install-pwa.md): Guide to installing the app on multiple platforms
 
 ### For Developers
 - Start here: [Building and Developing](building-and-developing.md)

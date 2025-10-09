@@ -30,19 +30,30 @@
 
 ## Features
 
-- **Web-based textmode art editing**—no install required!
-- **Classic and modern fonts** from IBM, Amiga, C64, and many more vintage and custom.
-- **Full suite of drawing tools:** keyboard, freehand, brush, fill, line, shapes, selection, color picker
-- **Advanced color management** (16-color ANSI, iCE colors, real-time preview, color conflict resolution)
-- **Import/export:** ANSI, BIN, XBIN, UTF-8 TXT, PNG
-- **Canvas operations:** undo/redo, resizing, grid overlay, font selection, and full SAUCE metadata support.
+- **Web-based textmode art editing, also works offline as a PWA**
+  - no install required!
 - **Comprehensive keyboard shortcuts and mouse controls**
-- **Auto Save/Restore** artwork saved to localstorage as you draw, and reloaded when the app is opened.
-- **Works offline as a PWA**
-- **Collaborative server mode** for real-time multi-user editing
-- **Build tools:** Vite, Bun, Npm
-- **Automated tests:** Playwright, Vitest, Testing Library
-- **Robust linting and formatting:** Eslint and Prettier
+  - Draw using the keyboard, mouse, or touch screen
+- **Classic and modern fonts**
+  - Over 100 fonts from IBM PCs, Amiga, C64, and many more vintage / custom.
+- **Full suite of drawing tools:**
+  - Keyboard, freehand brushes, fills, shapes, selection, and color picker
+- **Advanced color management**
+  - 16-color ANSI, iCE colors, real-time preview, color conflict resolution
+- **Import/export:**
+  - ANSI, BIN, XBIN, UTF-8 TXT, NFO, PNG
+- **Canvas operations:**
+  - Undo/redo, resizing, grid overlay, font selection, and full SAUCE metadata support.
+- **Auto Save/Restore**
+  - Artwork saved to localstorage as you draw, and reloaded when the app is opened.
+- **Collaborative server mode**
+  - For real-time multi-user editing
+- **Build tools:**
+  - Vite, Bun, Npm
+- **Automated tests:**
+  - Playwright, Vitest, Testing Library
+- **Robust linting and formatting:**
+  - Eslint and Prettier
 
 ## File Types
 
@@ -58,6 +69,7 @@
 
 ## [Project documentation](docs/)
 - **[Privacy Policy](docs/privacy.md)** - Privacy policy and data handling
+- **[PWA Install](docs/install-pwa.md)** - Guide to installing the app on multiple platforms
 - **[Editor Client](docs/editor-client.md)** - Frontend text art editor application
 - **[Collaboration Server](docs/collaboration-server.md)** - Backend real-time collaboration server
 - **[Building and Developing](docs/building-and-developing.md)** - Development workflow and build process
@@ -69,8 +81,8 @@
 - **[Fonts](docs/fonts.md)** - Complete font reference and previews
 - **[Logos](docs/logos.txt)** - ASCII art logos for the project
 - **[Examples](docs/examples/)** - Sample artwork to view and edit
-  - ANSI artwork by [xero](https://16colo.rs/artist/xero)
-  - XBin artwork by [hellbeard](https://16colo.rs/artist/hellbeard)
+  - ANSI artwork by [xeR0](https://16colo.rs/artist/xero)
+  - XBin artwork by [Hellbeard](https://16colo.rs/artist/hellbeard)
 
 ---
 
@@ -92,6 +104,10 @@
 ---
 
 ## Key Bindings & Mouse/Touch Controls
+
+> [!NOTE]
+> See: [docs/editor-client](docs/editor-client.md) for more info.
+
 
 ### Main Shortcuts
 
@@ -197,6 +213,10 @@ bun bake     # or npm run bake
 bun www      # or npm run www
 ```
 
+> [!NOTE]
+> See: [docs//docs/building-and-developing](/docs/building-and-developing.md) for more info.
+
+
 **Scripts:**
 
 | Script          | Purpose                              |
@@ -219,7 +239,7 @@ bun www      # or npm run www
     - `VITE_UI_DIR='ui/'`
     - `VITE_WORKER_FILE='worker.js'`
 
-> [!NOTE]
+> [!IMPORTANT]
 > `DOMAIN` is only used for robots.txt and sitemap.xml generation, all app urls are relative
 
 ---
@@ -257,6 +277,9 @@ node src/js/server/main.js
 | `--debug`             | Enable verbose logging                                     | `false`             |
 | `--help`              | Show help message and usage examples                       | -                   |
 
+> [!NOTE]
+> See: [docs/collaboration-server](docs/collaboration-server)) for more info.
+
 ---
 
 ## Testing Suite
@@ -271,6 +294,9 @@ bun test:unit    # Run unit tests
 bun test:e2e     # Run end2end tests
 ```
 All tests run automatically in CI/CD.
+
+> [!NOTE]
+> See: [docs/testing](docs/testing.md) for more info.
 
 ---
 
@@ -297,6 +323,9 @@ All tests run automatically in CI/CD.
 **Still stuck?**
 [Open an issue](https://github.com/xero/teXt0wnz/issues) with error logs and platform details.
 
+> [!NOTE]
+> See: [docs/trouble_shooting](docs/webserver-configuration.md#troubleshooting) for more help.
+
 ---
 
 ## Browser Support
@@ -312,7 +341,9 @@ All tests run automatically in CI/CD.
 
 <img src="https://gist.githubusercontent.com/xero/cbcd5c38b695004c848b73e5c1c0c779/raw/6b32899b0af238b17383d7a878a69a076139e72d/kopimi-sm.png" align="left" height="222">
 
-▒ mad love & respect to [Andy Herbert^67](http://github.com/andyherbert) - [Moebius](https://github.com/blocktronics/moebius) ░ [grmmxi^imp!](https://glyphdrawing.club/) - [MoebiusXBIN](https://github.com/hlotvonen/moebiusXBIN/) ░ [Curtis Wensley](https://github.com/cwensley) - [PabloDraw](https://github.com/cwensley/pablodraw) ░ [Skull Leader^ACiD](https://defacto2.net/p/skull-leader) - [ACiDDRAW](https://www.acid.org/apps/apps.html) ▒
+▒ mad love & respect to [Andy Herbert^67](http://github.com/andyherbert) - [Moebius](https://github.com/blocktronics/moebius) ░ [grmmxi^imp!](https://glyphdrawing.club/) - [MoebiusXBIN](https://github.com/hlotvonen/moebiusXBIN/)  ░
+
+░ [Curtis Wensley](https://github.com/cwensley) - [PabloDraw](https://github.com/cwensley/pablodraw) ░ [Skull Leader^ACiD](https://defacto2.net/p/skull-leader) - [ACiDDRAW](https://www.acid.org/apps/apps.html) ▒
 
 ---
 

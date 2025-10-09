@@ -594,7 +594,7 @@
 			height: 30px;
 			fill: #efefef;
 		}
-		.seperator {
+		.separator {
 			height: 1px;
 			padding: 0px;
 			margin: 4px auto;
@@ -646,7 +646,7 @@
 		@apply text-tools;
 	}
 
-	.menu-list .seperator {
+	.menu-list .separator {
 		@apply m-0.5 bg-menu h-[4px];
 	}
 
