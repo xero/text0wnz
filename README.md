@@ -6,12 +6,10 @@
 
 ## Draw in your browser now!
 
-| Domain                             | Status                                                |
-| ---------------------------------- | ----------------------------------------------------- |
-| https://text.0w.nz                 | The main prod domain. Collab server may be available  |
+| Domain                          | Status                                                   |
+|---------------------------------|----------------------------------------------------------|
+| https://text.0w.nz              | The main prod domain. Collab server may be available     |
 | https://xero.github.io/teXt0wnz | The github pages version of the site, offline mode only  |
-
----
 
 [![Version](https://img.shields.io/github/package-json/version/xero/teXt0wnz?labelColor=%2333383e&logo=npm&&logoColor=%23979da4&color=#5db85b)](https://github.com/xero/teXt0wnz/releases/latest)
 [![GitHub repo size](https://img.shields.io/github/repo-size/xero/teXt0wnz?labelColor=%23262a2e&logo=googlecontaineroptimizedos&logoColor=%23979da4&color=#5db85b)](https://github.com/xero/teXt0wnz/)
@@ -65,26 +63,26 @@
 - `*.txt`: ASCII or other plain text
 - `*.png`: Image (export support only)
 
----
-
-## [Project documentation](docs/)
-- **[Privacy Policy](docs/privacy.md)** - Privacy policy and data handling
-- **[PWA Install](docs/install-pwa.md)** - Guide to installing the app on multiple platforms
-- **[Editor Client](docs/editor-client.md)** - Frontend text art editor application
-- **[Collaboration Server](docs/collaboration-server.md)** - Backend real-time collaboration server
-- **[Building and Developing](docs/building-and-developing.md)** - Development workflow and build process
-- **[Testing](docs/testing.md)** - Comprehensive testing guide
-- **[Webserver Configuration](docs/webserver-configuration.md)** - Webserver setup and configuration
-- **[Other Tools](docs/other-tools.md)** - Additional development and deployment tools
-- **[SAUCE Format](docs/sauce-format.md)** - SAUCE metadata format specification
-- **[XBin Format](docs/xb-format.md)** - XBin file format specification
-- **[Fonts](docs/fonts.md)** - Complete font reference and previews
-- **[Logos](docs/logos.txt)** - ASCII art logos for the project
-- **[Examples](docs/examples/)** - Sample artwork to view and edit
+## [Project Documentation](docs/)
+**Application Guides**
+- [Editor Client](docs/editor-client.md) - Frontend text art editor application
+- [Collaboration Server](docs/collaboration-server.md) - Backend real-time collaboration server
+- [PWA Install](docs/install-pwa.md) - Guide to installing the app on multiple platforms
+- [Privacy Policy](docs/privacy.md) - Privacy policy and data handling
+**Development Guides**
+- [Building and Developing](docs/building-and-developing.md) - Development workflow and build process
+- [Testing](docs/testing.md) - Triple headed testing guide (unit, dom, & e2e)
+- [Webserver Configuration](docs/webserver-configuration.md) - Webserver setup and configuration
+- [Other Tools](docs/other-tools.md) - Additional development and deployment tools
+**Technical Specifications**
+- [SAUCE Format](docs/sauce-format.md) - SAUCE metadata format specification
+- [XBin Format](docs/xb-format.md) - XBin file format specification
+**Supplementals**
+- [Fonts](docs/fonts.md) - Complete font reference and previews
+- [Logos](docs/logos.txt) - ASCII art logos for the project
+- [Examples](docs/examples/) - Sample artwork to view and edit
   - ANSI artwork by [xeR0](https://16colo.rs/artist/xero)
   - XBin artwork by [Hellbeard](https://16colo.rs/artist/hellbeard)
-
----
 
 ## Drawing & Editing Tools
 
@@ -101,8 +99,6 @@
 | Selection Tool     | Select, move, copy, flip, manipulate rectangular areas                           |
 | Sample Tool        | Color picker for quick selection from artwork                                    |
 
----
-
 ## Key Bindings & Mouse/Touch Controls
 
 > [!NOTE]
@@ -113,22 +109,22 @@
 
 | Key      | Action/Tool                |
 |----------|----------------------------|
-| K        | Keyboard Mode              |
-| F        | Freestyle (half-block)     |
-| B        | Character Brush            |
-| N        | Fill                       |
-| A        | Attribute Brush            |
-| G        | Grid Toggle                |
-| I        | iCE Colors Toggle          |
-| M        | Mirror Mode                |
+| k        | Keyboard Mode              |
+| f        | Freestyle (half-block)     |
+| b        | Character Brush            |
+| n        | Fill                       |
+| a        | Attribute Brush            |
+| g        | Grid Toggle                |
+| i        | iCE Colors Toggle          |
+| m        | Mirror Mode                |
 
 ### Color & Character
 
 | Key/Combo        | Action                                     |
 |------------------|--------------------------------------------|
-| D                | Reset colors to default                    |
+| d                | Reset colors to default                    |
 | Q                | Swap foreground/background                 |
-| F1–F12           | Insert ASNI block chars                    |
+| f1–f12           | Insert ASNI block chars                    |
 | 0–7              | Select foreground color (again for bright) |
 | alt/option + 0–7 | Select background color (again for bright) |
 
@@ -157,11 +153,11 @@
 
 | Key              | Action                  |
 |------------------|-------------------------|
-| Arrow Keys       | Move cursor             |
-| Home/End         | Line start/end          |
-| Page Up/Down     | Page jump               |
-| Tab/Backspace    | Insert tab/delete left  |
-| Enter            | New line                |
+| arrow keys       | Move cursor             |
+| home/end         | Line start/end          |
+| page up/down     | Page jump               |
+| tab/backspace    | Insert tab/delete left  |
+| enter            | New line                |
 
 ### Selection Tool
 
@@ -176,8 +172,6 @@
 - **Drag:** Draw/Shape
 - **Alt+Click:** Sample color/alt draw
 
----
-
 ## Tips & Workflow
 
 1. Start with Keyboard Mode for layout
@@ -190,8 +184,6 @@
 8. F-keys for quick block chars
 9. Alt+Click to sample colors
 10. Undo/Redo freely (up to 1000 ops)
-
----
 
 ## Build & Development
 
@@ -242,8 +234,6 @@ bun www      # or npm run www
 > [!IMPORTANT]
 > `DOMAIN` is only used for robots.txt and sitemap.xml generation, all app urls are relative
 
----
-
 ## Collaborative Server
 
 Enable real-time multi-user editing with the built-in server.
@@ -280,8 +270,6 @@ node src/js/server/main.js
 > [!NOTE]
 > See: [docs/collaboration-server](docs/collaboration-server) for more info.
 
----
-
 ## Testing Suite
 
 **Triple-Headed:**
@@ -297,8 +285,6 @@ All tests run automatically in CI/CD.
 
 > [!NOTE]
 > See: [docs/testing](docs/testing.md) for more info.
-
----
 
 ## Troubleshooting
 
@@ -325,8 +311,6 @@ All tests run automatically in CI/CD.
 
 > [!NOTE]
 > See: [docs/trouble_shooting](docs/webserver-configuration.md#troubleshooting) for more help.
-
----
 
 ## Browser Support
 
