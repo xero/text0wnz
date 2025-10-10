@@ -56,4 +56,3 @@ jobs:
           echo "### :package: Build Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "- Artifacts for this run are available under the **Artifacts** section at [this workflow run]($RUN_URL)." >> $GITHUB_STEP_SUMMARY
           echo "- Or use GitHub CLI: \`gh run download ${{ github.run_id }} -n editor-build\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Editor Build: [Build]($RUN_URL)" >> $GITHUB_STEP_SUMMARY
