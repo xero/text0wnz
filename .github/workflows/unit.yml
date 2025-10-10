@@ -32,6 +32,6 @@ jobs:
       - name: Add artifact download info to summary
         run: |
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          echo "### :package: Unit Test Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "- Artifacts for this run are available under the **Artifacts** section at [this workflow run]($RUN_URL)." >> $GITHUB_STEP_SUMMARY
-          echo "- Or use GitHub CLI: \`gh run download ${{ github.run_id }} -n unit-test-results\`" >> $GITHUB_STEP_SUMMARY
+          echo "### :test_tube: unit test artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- artifacts for this run are available under the **Artifacts** section of [this workflow run]($RUN_URL)." >> $GITHUB_STEP_SUMMARY
+          echo "- or use the cli: \`gh run download ${{ github.run_id }} -n unit-test-results\`" >> $GITHUB_STEP_SUMMARY
