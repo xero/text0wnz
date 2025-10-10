@@ -9,45 +9,43 @@ concurrency:
   group: 'pages'
   cancel-in-progress: false
 jobs:
-  get-artifacts:
+  artifacts:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    name: Get Artifacts
+    name: artifacts
     steps:
-      - name: Download build artifact
+      - name: download build artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: editor-build
-          path: .
-      - name: Download unit artifact
+          path: release
+      - name: download unit artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: unit-test-results
           path: unit
-      - name: Download e2e artifact
+      - name: download e2e artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: playwright-report
           path: e2e
       - name: Organize
         run: |
-          mkdir -p dist/tests/e2e/
-          cp -r unit/* dist/tests/ || true
-          cp -r e2e/* dist/tests/e2e/ || true
-          rm -rf unit e2e
+          mv unit release/tests/ || true
+          mv e2e release/tests/e2e || true
       - name: Upload release build artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: github-pages
-          path: dist
+          path: release
           retention-days: 3
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: get-artifacts
-    name: Deploy to GitHub Pages
+    needs: artifacts
+    name: deploy editor
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     steps:
       - name: Deploy Editor
