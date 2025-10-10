@@ -31,9 +31,9 @@ jobs:
           path: e2e
       - name: Organize
         run: |
-          mkdir -p dist/tests/
-          mv unit/* dist/tests/
-          mv e2e/* dist/tests/e2e/
+          mkdir -p dist/tests/e2e/
+          cp -r unit/* dist/tests/ || true
+          cp -r e2e/* dist/tests/e2e/ || true
           rm -rf unit e2e
   deploy:
     environment:

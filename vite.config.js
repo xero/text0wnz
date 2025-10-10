@@ -243,6 +243,7 @@ export default ({ mode }) => {
 						/^\/humans.txt/,
 						/^\/robots.txt/,
 						/^\/sitemap.xml/,
+						/^\/tests/,
 					],
 					additionalManifestEntries: [
 						{ url: '/', revision: getBuildVersion() },
