@@ -21,8 +21,4 @@ jobs:
   deploy:
     needs: [lint, unit, build, e2e]
     if: github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/deploy-pages.yml
-  coverage:
-    needs: [lint, unit, build, e2e, deploy]
-    if: github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/deploy-coverage.yml
+    uses: ./.github/workflows/deploy.yml
