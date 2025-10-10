@@ -1,4 +1,4 @@
-name: E2E Tests
+name: e2e tests
 on:
   workflow_call:
 permissions:
@@ -10,46 +10,46 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.55.0-jammy
       options: --user root
     steps:
-      - name: Checkout code
+      - name: checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
       - name: Install unzip
         run: apt-get update && apt-get install -y unzip
-      - name: Setup bun
+      - name: setup bun
         uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
         with:
           bun-version: "latest"
-      - name: Install project dependencies
+      - name: install project dependencies
         run: bun i
-      - name: Install playwright and its dependencies
+      - name: install playwright and its dependencies
         run: bun test:install
       - name: Build application
         run: bun bake
-      - name: Run E2E tests
+      - name: run e2e tests
         run: bun test:e2e --workers 4
         env:
           HOME: /root
           PLAYWRIGHT_TEST_BASE_URL: http://localhost:8060
-      - name: Upload Playwright HTML report
+      - name: upload playwright html report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ always() }}
         with:
           name: playwright-report
           path: tests/results/playwright-report/
           retention-days: 3
-      - name: Upload Playwright raw results
+      - name: upload Playwright raw results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ always() }}
         with:
           name: playwright-raw
           path: tests/results/e2e/
           retention-days: 3
-      - name: Upload all e2e test results as artifact
+      - name: upload all e2e test results as artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: e2e-test-results
           path: tests/results/
           retention-days: 3
-      - name: Add artifact download info to summary
+      - name: add artifact download info to summary
         run: |
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           echo "### :dart: e2e test artifacts" >> $GITHUB_STEP_SUMMARY

@@ -1,4 +1,4 @@
-name: Build Test
+name: build test
 on:
   workflow_call:
 permissions:
@@ -6,19 +6,19 @@ permissions:
 jobs:
   build-test:
     runs-on: ubuntu-latest
-    name: Build Test
+    name: build test
     steps:
-      - name: Checkout code
+      - name: checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
-      - name: Setup bun
+      - name: setup bun
         uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
         with:
           bun-version: 'latest'
-      - name: Install dependencies
+      - name: install dependencies
         run: bun i
-      - name: Build application
+      - name: build application
         run: bun bake
-      - name: Check build artifacts
+      - name: check build artifacts
         run: |
           test -d dist/ui
           test -d dist/ui/fonts
@@ -43,16 +43,16 @@ jobs:
           test -f dist/sitemap.xml
           test -f dist/workbox-*.js
           echo "Build successful"
-      - name: Upload build results as artifact
+      - name: upload build results as artifact
         if: success() && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: editor-build
           path: dist
           retention-days: 3
-      - name: Add artifact download info to summary
+      - name: add artifact download info to summary
         run: |
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          echo "### :package: Build Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "### :package: build Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "- artifacts for this run are available under the **Artifacts** section of [this workflow run]($RUN_URL)." >> $GITHUB_STEP_SUMMARY
           echo "- or use the cli: \`gh run download ${{ github.run_id }} -n editor-build\`" >> $GITHUB_STEP_SUMMARY
