@@ -43,3 +43,17 @@ jobs:
           test -f dist/sitemap.xml
           test -f dist/workbox-*.js
           echo "Build successful"
+      - name: Upload build results as artifact
+        if: success() && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: editor-build
+          path: dist
+          retention-days: 3
+      - name: Add artifact download info to summary
+        run: |
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "### :package: Build Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Artifacts for this run are available under the **Artifacts** section at [this workflow run]($RUN_URL)." >> $GITHUB_STEP_SUMMARY
+          echo "- Or use GitHub CLI: \`gh run download ${{ github.run_id }} -n editor-build\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Editor Build: [Build]($RUN_URL)" >> $GITHUB_STEP_SUMMARY

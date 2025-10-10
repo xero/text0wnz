@@ -17,7 +17,24 @@ jobs:
       - name: Download build artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
+          name: editor-build
+          path: .
+      - name: Download unit artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
           name: unit-test-results
+          path: unit
+      - name: Download e2e artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: playwright-report
+          path: e2e
+      - name: Organize
+        run: |
+          mkdir -p dist/tests/
+          mv unit/* dist/tests/
+          mv e2e/* dist/tests/e2e/
+          rm -rf unit e2e
   deploy:
     environment:
       name: github-pages
@@ -30,3 +47,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+        with:
+          folder: dist
