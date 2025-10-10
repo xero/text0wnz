@@ -35,7 +35,7 @@ jobs:
           cp -r dist/* release
           mkdir dist/tests
           cp -r unit/* dist/tests
-          mkdir dists/tests/e2e
+          mkdir dist/tests/e2e
           cp e2e/index.html dist/tests/e2e
       - name: upload release build artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
