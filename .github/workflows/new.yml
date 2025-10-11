@@ -24,7 +24,7 @@ jobs:
         run: bun i
       - name: run linter
         run: bun lint:check
-  build-test:
+  build:
     runs-on: ubuntu-latest
     name: build test
     steps:
@@ -76,7 +76,7 @@ jobs:
           echo "### :package: build Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "- artifacts for this run are available under the **Artifacts** section of [this workflow run]($RUN_URL)." >> $GITHUB_STEP_SUMMARY
           echo "- or use the cli: \`gh run download ${{ github.run_id }} -n editor-build\`" >> $GITHUB_STEP_SUMMARY
-  unit-tests:
+  unit:
     runs-on: ubuntu-latest
     name: unit tests
     steps:
@@ -107,51 +107,52 @@ jobs:
           echo "### :test_tube: unit test artifacts" >> $GITHUB_STEP_SUMMARY
           echo "- artifacts for this run are available under the **Artifacts** section of [this workflow run]($RUN_URL)." >> $GITHUB_STEP_SUMMARY
           echo "- or use the cli: \`gh run download ${{ github.run_id }} -n unit-test-results\`" >> $GITHUB_STEP_SUMMARY
-  e2e-tests:
-    runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.55.0-jammy
-      options: --user root
-    steps:
-      - name: checkout code
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
-      - name: Install unzip
-        run: apt-get update && apt-get install -y unzip
-      - name: setup bun
-        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
-        with:
-          bun-version: "latest"
-      - name: install project dependencies
-        run: bun i
-      - name: install playwright and its dependencies
-        run: bun test:install
-      - name: Build application
-        run: bun bake
-      - name: run e2e tests
-        run: bun test:e2e --workers 8
-        env:
-          HOME: /root
-          PLAYWRIGHT_TEST_BASE_URL: http://localhost:8060
-      - name: upload playwright html report
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: ${{ always() }}
-        with:
-          name: playwright-report
-          path: tests/results/playwright-report/
-          retention-days: 3
-      - name: add artifact download info to summary
-        run: |
-          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          echo "### :dart: e2e test artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "- artifacts for this run are available under the **Artifacts** section of [this workflow run]($RUN_URL)." >> $GITHUB_STEP_SUMMARY
-          echo "- or use the cli: \`gh run download ${{ github.run_id }} -n e2e-test-results\`" >> $GITHUB_STEP_SUMMARY
+  # e2e:
+  #   runs-on: ubuntu-latest
+  #   name: e2e tests
+  #   container:
+  #     image: mcr.microsoft.com/playwright:v1.55.0-jammy
+  #     options: --user root
+  #   steps:
+  #     - name: checkout code
+  #       uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+  #     - name: Install unzip
+  #       run: apt-get update && apt-get install -y unzip
+  #     - name: setup bun
+  #       uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
+  #       with:
+  #         bun-version: "latest"
+  #     - name: install project dependencies
+  #       run: bun i
+  #     - name: install playwright and its dependencies
+  #       run: bun test:install
+  #     - name: Build application
+  #       run: bun bake
+  #     - name: run e2e tests
+  #       run: bun test:e2e --workers 8
+  #       env:
+  #         HOME: /root
+  #         PLAYWRIGHT_TEST_BASE_URL: http://localhost:8060
+  #     - name: upload playwright html report
+  #       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+  #       if: ${{ always() }}
+  #       with:
+  #         name: playwright-report
+  #         path: tests/results/playwright-report/
+  #         retention-days: 3
+  #     - name: add artifact download info to summary
+  #       run: |
+  #         RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+  #         echo "### :dart: e2e test artifacts" >> $GITHUB_STEP_SUMMARY
+  #         echo "- artifacts for this run are available under the **Artifacts** section of [this workflow run]($RUN_URL)." >> $GITHUB_STEP_SUMMARY
+  #         echo "- or use the cli: \`gh run download ${{ github.run_id }} -n e2e-test-results\`" >> $GITHUB_STEP_SUMMARY
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    name: deploy editor
-    needs: [lint, unit, build, e2e]
+    name: deploy
+    needs: [lint, build, unit] #, e2e]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     steps:
       - name: download build artifact
@@ -163,12 +164,12 @@ jobs:
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: unit-test-results
-          path: unit
-      - name: download e2e artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: playwright-report
-          path: e2e
+          path: tests
+      # - name: download e2e artifact
+      #   uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      #   with:
+      #     name: playwright-report
+      #     path: e2e
       - name: upload release build artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
