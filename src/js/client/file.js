@@ -225,20 +225,20 @@ const loadModule = () => {
 
 	const loadAnsi = (bytes, isUTF8 = false) => {
 		let escaped,
-			escapeCode,
-			j,
-			code,
-			values,
-			topOfScreen,
-			x,
-			y,
-			savedX,
-			savedY,
-			foreground,
-			background,
-			bold,
-			blink,
-			inverse;
+				escapeCode,
+				j,
+				code,
+				values,
+				topOfScreen,
+				x,
+				y,
+				savedX,
+				savedY,
+				foreground,
+				background,
+				bold,
+				blink,
+				inverse;
 
 		const validate = (condition, message) => {
 			if (!condition) {
@@ -292,8 +292,8 @@ const loadModule = () => {
 				const fourthByte = bytes[startIndex + 3];
 				validate(
 					(secondByte & 0xc0) === 0x80 &&
-						(thirdByte & 0xc0) === 0x80 &&
-						(fourthByte & 0xc0) === 0x80,
+					(thirdByte & 0xc0) === 0x80 &&
+					(fourthByte & 0xc0) === 0x80,
 					`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1}, ${startIndex + 2}, or ${startIndex + 3}`,
 				);
 				charCode =
@@ -522,7 +522,7 @@ const loadModule = () => {
 
 	const bytesToString = (bytes, offset, size) => {
 		let text = '',
-			i;
+				i;
 		for (i = 0; i < size; i++) {
 			const charCode = bytes[offset + i];
 			if (charCode === 0) {
@@ -601,7 +601,7 @@ const loadModule = () => {
 			case 'Amiga P0T-NOoDLE':
 				return 'P0t-NOoDLE 8x16';
 			case 'Amiga mOsOul':
-				return "mO'sOul 8x16";
+				return 'mO\'sOul 8x16';
 
 			// C64 fonts
 			case 'C64 PETSCII unshifted':
@@ -737,7 +737,7 @@ const loadModule = () => {
 				return 'Amiga MicroKnight+';
 			case 'P0t-NOoDLE 8x16':
 				return 'Amiga P0T-NOoDLE';
-			case "mO'sOul 8x16":
+			case 'mO\'sOul 8x16':
 				return 'Amiga mOsOul';
 
 			// C64 fonts
@@ -974,7 +974,7 @@ const loadModule = () => {
 	const uncompress = (bytes, dataIndex, fileSize, column, rows) => {
 		const data = new Uint16Array(column * rows);
 		let i, value, count, j, k, char, attribute;
-		for (i = dataIndex, j = 0; i < fileSize; ) {
+		for (i = dataIndex, j = 0; i < fileSize;) {
 			value = bytes[i++];
 			count = value & 0x3f;
 			switch (value >> 6) {
@@ -1010,19 +1010,19 @@ const loadModule = () => {
 	const loadXBin = bytes => {
 		const sauce = getSauce(bytes);
 		let columns,
-			rows,
-			fontHeight,
-			flags,
-			paletteData,
-			paletteFlag,
-			fontFlag,
-			compressFlag,
-			iceColorsFlag,
-			font512Flag,
-			dataIndex,
-			data,
-			fontData,
-			fontName;
+				rows,
+				fontHeight,
+				flags,
+				paletteData,
+				paletteFlag,
+				fontFlag,
+				compressFlag,
+				iceColorsFlag,
+				font512Flag,
+				dataIndex,
+				data,
+				fontData,
+				fontName;
 		if (bytesToString(bytes, 0, 4) === 'XBIN' && bytes[4] === 0x1a) {
 			columns = (bytes[6] << 8) + bytes[5];
 			rows = (bytes[8] << 8) + bytes[7];
@@ -1210,9 +1210,7 @@ const saveModule = () => {
 					downloadLink.click();
 				} else {
 					const downloadLink = document.createElement('a');
-					const blob = new Blob([outputBytes], {
-						type: 'application/octet-stream',
-					});
+					const blob = new Blob([outputBytes], { type: 'application/octet-stream' });
 					downloadLink.href = URL.createObjectURL(blob);
 					downloadLink.download = filename;
 					downloadLink.click();

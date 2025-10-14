@@ -18,6 +18,7 @@ const loadImageAndGetImageData = url => {
 				if (response) {
 					return response.blob().then(blob => {
 						const imgElement = new Image();
+						const blobUrl = URL.createObjectURL(blob);
 
 						imgElement.addEventListener('load', () => {
 							const canvas = createCanvas(imgElement.width, imgElement.height);
@@ -29,14 +30,16 @@ const loadImageAndGetImageData = url => {
 								canvas.width,
 								canvas.height,
 							);
+							URL.revokeObjectURL(blobUrl);
 							resolve(imageData);
 						});
 
 						imgElement.addEventListener('error', () => {
+							URL.revokeObjectURL(blobUrl);
 							reject(new Error(`Failed to load cached image: ${fontName}`));
 						});
 
-						imgElement.src = URL.createObjectURL(blob);
+						imgElement.src = blobUrl;
 					});
 				} else {
 					// Fall back to direct loading
@@ -240,9 +243,7 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 								letterSpacing = newLetterSpacing;
 								createLazyFontInstance();
 								document.dispatchEvent(
-									new CustomEvent('onLetterSpacingChange', {
-										detail: letterSpacing,
-									}),
+									new CustomEvent('onLetterSpacingChange', { detail: letterSpacing }),
 								);
 							}
 						},

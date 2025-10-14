@@ -958,9 +958,9 @@ const createFillController = () => {
 						if (
 							block.isBlocky &&
 							((block.halfBlockY === 0 &&
-								block.upperBlockColor === targetColor) ||
-								(block.halfBlockY === 1 &&
-									block.lowerBlockColor === targetColor))
+							  block.upperBlockColor === targetColor) ||
+							  (block.halfBlockY === 1 &&
+							    block.lowerBlockColor === targetColor))
 						) {
 							callback(fillColor, coord[0], coord[1]);
 							if (coord[0] > 0) {
@@ -1900,7 +1900,7 @@ const createSelectionTool = () => {
 				originalPosition &&
 				currentSelection &&
 				(currentSelection.x !== originalPosition.x ||
-					currentSelection.y !== originalPosition.y)
+				  currentSelection.y !== originalPosition.y)
 			) {
 				// Only clear original position if we actually moved
 				State.textArtCanvas.startUndo();
@@ -2160,7 +2160,7 @@ const createSelectionTool = () => {
 				originalPosition &&
 				currentSelection &&
 				(currentSelection.x !== originalPosition.x ||
-					currentSelection.y !== originalPosition.y)
+				  currentSelection.y !== originalPosition.y)
 			) {
 				State.textArtCanvas.startUndo();
 				State.textArtCanvas.deleteArea(

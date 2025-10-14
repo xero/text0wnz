@@ -3,12 +3,12 @@ import { loadFontFromXBData } from './font.js';
 
 // Utilities for DOM manipulation
 const D = document,
-	$ = D.getElementById.bind(D),
-	$$ = D.querySelector.bind(D),
-	$$$ = D.querySelectorAll.bind(D),
-	has = (i, c) => i.classList.contains(c),
-	classList = (el, className, add = true) =>
-		add ? el.classList.add(className) : el.classList.remove(className);
+			$ = D.getElementById.bind(D),
+			$$ = D.querySelector.bind(D),
+			$$$ = D.querySelectorAll.bind(D),
+			has = (i, c) => i.classList.contains(c),
+			classList = (el, className, add = true) =>
+				add ? el.classList.add(className) : el.classList.remove(className);
 
 const createCanvas = (width, height) => {
 	const canvas = document.createElement('canvas');
@@ -686,7 +686,7 @@ const createFontSelect = (el, lbl, img, btn) => {
 				);
 				const previewCtx = previewCanvas.getContext('2d');
 				const foreground = 15,
-					background = 0;
+							background = 0;
 				for (let y = 0, charCode = 0; y < 16; y++) {
 					for (let x = 0; x < 16; x++, charCode++) {
 						xbfont.draw(charCode, foreground, background, previewCtx, x, y);
@@ -740,8 +740,7 @@ const createFontSelect = (el, lbl, img, btn) => {
 	});
 	listbox.addEventListener('focus', () => updateSelection(focusedIdx));
 	listbox.addEventListener('blur', () =>
-		getOptions().forEach(opt => opt.classList.remove('focused')),
-	);
+		getOptions().forEach(opt => opt.classList.remove('focused')));
 
 	// Init
 	let focusedIdx = getOptions().findIndex(
@@ -767,8 +766,7 @@ const websocketUI = show => {
 	].forEach(([sel, prop]) =>
 		[...D.getElementsByClassName(sel)].forEach(
 			el => (el.style.display = prop ? 'block' : 'none'),
-		),
-	);
+		));
 };
 
 export {

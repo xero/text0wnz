@@ -156,17 +156,17 @@ describe('Font Module - Basic Tests', () => {
 
 		it('should handle different font names', async () => {
 			loadFontFromImage('CP437 8x8', false, mockPalette);
-			
+
 			// Wait for FontCache.getFont promise to resolve
 			await new Promise(resolve => setTimeout(resolve, 0));
-			
+
 			expect(mockImage.src).toBe('/ui/fonts/CP437 8x8.png');
 
 			loadFontFromImage('Custom Font', false, mockPalette);
-			
+
 			// Wait for FontCache.getFont promise to resolve
 			await new Promise(resolve => setTimeout(resolve, 0));
-			
+
 			expect(mockImage.src).toBe('/ui/fonts/Custom Font.png');
 		});
 
@@ -175,10 +175,10 @@ describe('Font Module - Basic Tests', () => {
 			mockImage.height = 200; // Invalid height
 
 			const loadPromise = loadFontFromImage('TestFont', false, mockPalette);
-			
+
 			// Wait for FontCache.getFont promise to resolve
 			await new Promise(resolve => setTimeout(resolve, 0));
-			
+
 			const loadHandler = mockImage.addEventListener.mock.calls.find(
 				call => call[0] === 'load',
 			)[1];
@@ -193,10 +193,10 @@ describe('Font Module - Basic Tests', () => {
 			mockImage.height = 0;
 
 			const loadPromise = loadFontFromImage('TestFont', false, mockPalette);
-			
+
 			// Wait for FontCache.getFont promise to resolve
 			await new Promise(resolve => setTimeout(resolve, 0));
-			
+
 			const loadHandler = mockImage.addEventListener.mock.calls.find(
 				call => call[0] === 'load',
 			)[1];
@@ -211,10 +211,10 @@ describe('Font Module - Basic Tests', () => {
 			mockImage.height = 256;
 
 			const loadPromise = loadFontFromImage('TestFont', false, null);
-			
+
 			// Wait for FontCache.getFont promise to resolve
 			await new Promise(resolve => setTimeout(resolve, 0));
-			
+
 			const loadHandler = mockImage.addEventListener.mock.calls.find(
 				call => call[0] === 'load',
 			)[1];
@@ -280,18 +280,18 @@ describe('Font Module - Basic Tests', () => {
 
 			// Test with letter spacing enabled
 			loadFontFromImage('TestFont', true, mockPalette);
-			
+
 			// Wait for FontCache.getFont promise to resolve
 			await new Promise(resolve => setTimeout(resolve, 0));
-			
+
 			expect(mockImage.src).toBe('/ui/fonts/TestFont.png');
 
 			// Test with letter spacing disabled
 			loadFontFromImage('AnotherFont', false, mockPalette);
-			
+
 			// Wait for FontCache.getFont promise to resolve
 			await new Promise(resolve => setTimeout(resolve, 0));
-			
+
 			expect(mockImage.src).toBe('/ui/fonts/AnotherFont.png');
 		});
 	});

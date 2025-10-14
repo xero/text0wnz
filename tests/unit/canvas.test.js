@@ -74,12 +74,8 @@ vi.mock('../../src/js/client/font.js', () => ({
 }));
 
 vi.mock('../../src/js/client/palette.js', () => ({
-	createPalette: vi.fn(() => ({
-		getRGBAColor: vi.fn(() => [255, 255, 255, 255]),
-	})),
-	createDefaultPalette: vi.fn(() => ({
-		getRGBAColor: vi.fn(() => [255, 255, 255, 255]),
-	})),
+	createPalette: vi.fn(() => ({ getRGBAColor: vi.fn(() => [255, 255, 255, 255]) })),
+	createDefaultPalette: vi.fn(() => ({ getRGBAColor: vi.fn(() => [255, 255, 255, 255]) })),
 }));
 
 describe('Canvas Module', () => {

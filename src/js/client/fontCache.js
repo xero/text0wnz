@@ -20,7 +20,7 @@ export const FontCache = {
 	 * Preload common fonts
 	 */
 	async preloadCommonFonts() {
-		// Read default fonts from magicNumber.js
+		// Read default fonts from magicNumbers.js
 		const commonFonts = [
 			magicNumbers.DEFAULT_FONT, // CP437 8x16 - ANSI/CBIN Default
 			magicNumbers.NFO_FONT, // Topaz-437 8x16 - NFO default

@@ -2,9 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { FontCache } from '../../src/js/client/fontCache.js';
 
 // Mock State module
-vi.mock('../../src/js/client/state.js', () => ({
-	default: { fontDir: '/ui/fonts/' },
-}));
+vi.mock('../../src/js/client/state.js', () => ({ default: { fontDir: '/ui/fonts/' } }));
 
 // Mock magicNumbers module
 vi.mock('../../src/js/client/magicNumbers.js', () => ({
@@ -97,9 +95,7 @@ describe('FontCache Module', () => {
 			delete globalThis.caches;
 
 			const mockBlob = new Blob(['font data']);
-			mockFetch.mockResolvedValue({
-				blob: vi.fn().mockResolvedValue(mockBlob),
-			});
+			mockFetch.mockResolvedValue({ blob: vi.fn().mockResolvedValue(mockBlob) });
 
 			FontCache.preloadCommonFonts();
 

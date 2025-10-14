@@ -164,7 +164,7 @@ describe('File Module', () => {
 					'Amiga MicroKnight',
 				);
 				expect(Load.appToSauceFont('P0t-NOoDLE 8x16')).toBe('Amiga P0T-NOoDLE');
-				expect(Load.appToSauceFont("mO'sOul 8x16")).toBe('Amiga mOsOul');
+				expect(Load.appToSauceFont('mO\'sOul 8x16')).toBe('Amiga mOsOul');
 
 				// C64 fonts
 				expect(Load.appToSauceFont('C64 PETSCII unshifted 8x8')).toBe(
@@ -1109,9 +1109,7 @@ describe('File Module', () => {
 
 		it('should test string processing utilities', () => {
 			// Test bytesToString functionality
-			const testBytes = new Uint8Array([
-				72, 101, 108, 108, 111, 0, 87, 111, 114, 108, 100,
-			]);
+			const testBytes = new Uint8Array([72, 101, 108, 108, 111, 0, 87, 111, 114, 108, 100]);
 			let result = '';
 
 			for (let i = 0; i < 5; i++) {
