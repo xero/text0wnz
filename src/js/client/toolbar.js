@@ -5,6 +5,7 @@ const Toolbar = (() => {
 	let currentOnBlur;
 	let previousButton;
 	const tools = {};
+	const lazyTools = {};
 
 	const add = (button, onFocus, onBlur) => {
 		const enable = () => {
@@ -45,16 +46,88 @@ const Toolbar = (() => {
 		return { enable: enable };
 	};
 
+	const addLazy = (button, toolLoader) => {
+		let toolLoaded = false;
+		let loadedTool = null;
+
+		const enable = async () => {
+			closeMenu();
+
+			// Load the tool on first use
+			if (!toolLoaded) {
+				try {
+					loadedTool = await toolLoader();
+					toolLoaded = true;
+
+					// Update the tools registry with the loaded tool
+					tools[button.id] = {
+						button: button,
+						enable: loadedTool.enable,
+						onFocus: loadedTool.onFocus,
+						onBlur: loadedTool.onBlur,
+					};
+				} catch (error) {
+					console.error(`Failed to load tool for ${button.id}:`, error);
+					return;
+				}
+			}
+
+			// Now enable the loaded tool
+			if (loadedTool && loadedTool.enable) {
+				if (currentButton !== button) {
+					// Store previous tool before switching
+					if (currentButton !== undefined) {
+						previousButton = currentButton;
+						currentButton.classList.remove('toolbar-displayed');
+					}
+					if (currentOnBlur !== undefined) {
+						currentOnBlur();
+					}
+					button.classList.add('toolbar-displayed');
+					currentButton = button;
+					currentOnBlur = loadedTool.onBlur;
+					if (loadedTool.onFocus !== undefined) {
+						loadedTool.onFocus();
+					}
+				} else if (loadedTool.onFocus) {
+					loadedTool.onFocus();
+				}
+			}
+		};
+
+		button.addEventListener('click', e => {
+			e.preventDefault();
+			enable();
+		});
+
+		// Store lazy tool reference
+		lazyTools[button.id] = {
+			button: button,
+			enable: enable,
+			loader: toolLoader,
+		};
+
+		return { enable: enable };
+	};
+
 	const switchTool = toolId => {
+		// Check both regular and lazy tools
 		if (tools[toolId]) {
 			tools[toolId].enable();
+		} else if (lazyTools[toolId]) {
+			lazyTools[toolId].enable();
 		}
 		closeMenu();
 	};
 
 	const returnToPreviousTool = () => {
-		if (previousButton && tools[previousButton.id]) {
-			tools[previousButton.id].enable();
+		if (previousButton) {
+			const toolId = previousButton.id;
+			if (tools[toolId]) {
+				tools[toolId].enable();
+			} else if (lazyTools[toolId]) {
+				lazyTools[toolId].enable();
+			}
 		}
 		closeMenu();
 	};
@@ -72,6 +145,7 @@ const Toolbar = (() => {
 
 	return {
 		add: add,
+		addLazy: addLazy,
 		switchTool: switchTool,
 		returnToPreviousTool: returnToPreviousTool,
 		getCurrentTool: getCurrentTool,

@@ -88,7 +88,7 @@ class StateManager {
 		this.uiDir = this.urlPrefix + import.meta.env.VITE_UI_DIR || 'ui/';
 		this.fontDir = this.uiDir + import.meta.env.VITE_FONT_DIR || 'fonts/';
 		this.workerPath =
-			this.uiDir + import.meta.env.VITE_WORKER_FILE || 'worker.js';
+			this.uiDir + 'js/' + import.meta.env.VITE_WORKER_FILE || 'worker.js';
 
 		// Bind methods to ensure `this` is preserved when passed as callbacks
 		this.set = this.set.bind(this);

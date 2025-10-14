@@ -32,21 +32,7 @@ import {
 	createPalettePreview,
 	createPalettePicker,
 } from './palette.js';
-import {
-	createBrushController,
-	createHalfBlockController,
-	createShadingController,
-	createShadingPanel,
-	createCharacterBrushPanel,
-	createFillController,
-	createLineController,
-	createSquareController,
-	createShapesController,
-	createCircleController,
-	createAttributeBrushController,
-	createSelectionTool,
-	createSampleTool,
-} from './freehand_tools.js';
+// Only import keyboard tools statically (default mode)
 import {
 	createCursor,
 	createSelectionCursor,
@@ -494,33 +480,122 @@ const initializeAppComponents = async () => {
 
 	const grid = createGrid($('grid'));
 	createSettingToggle($('navGrid'), grid.isShown, grid.show);
-	const brushes = createBrushController();
-	Toolbar.add($('brushes'), brushes.enable, brushes.disable);
-	const halfblock = createHalfBlockController();
-	Toolbar.add($('halfblock'), halfblock.enable, halfblock.disable);
-	const shadeBrush = createShadingController(createShadingPanel(), false);
-	Toolbar.add($('shading-brush'), shadeBrush.enable, shadeBrush.disable);
-	const characterBrush = createShadingController(
-		createCharacterBrushPanel(),
-		true,
-	);
-	Toolbar.add(
-		$('character-brush'),
-		characterBrush.enable,
-		characterBrush.disable,
-	);
-	const fill = createFillController();
-	Toolbar.add($('fill'), fill.enable, fill.disable);
-	const attributeBrush = createAttributeBrushController();
-	Toolbar.add($('attrib'), attributeBrush.enable, attributeBrush.disable);
-	const shapes = createShapesController();
-	Toolbar.add($('shapes'), shapes.enable, shapes.disable);
-	const line = createLineController();
-	Toolbar.add($('line'), line.enable, line.disable);
-	const square = createSquareController();
-	Toolbar.add($('square'), square.enable, square.disable);
-	const circle = createCircleController();
-	Toolbar.add($('circle'), circle.enable, circle.disable);
+
+	// Lazy load tools - they'll be loaded when first clicked
+	// Brushes are most common after keyboard, so we'll lazy load them
+	Toolbar.addLazy($('brushes'), async () => {
+		const { createBrushController } = await import('./freehand_tools.js');
+		const brushes = createBrushController();
+		return {
+			onFocus: brushes.enable,
+			onBlur: brushes.disable,
+			enable: brushes.enable,
+		};
+	});
+
+	Toolbar.addLazy($('halfblock'), async () => {
+		const { createHalfBlockController } = await import('./freehand_tools.js');
+		const halfblock = createHalfBlockController();
+		return {
+			onFocus: halfblock.enable,
+			onBlur: halfblock.disable,
+			enable: halfblock.enable,
+		};
+	});
+
+	// Track loaded brush tools for modal focus events
+	let shadeBrush = null;
+	let characterBrush = null;
+
+	Toolbar.addLazy($('shading-brush'), async () => {
+		const { createShadingController, createShadingPanel } = await import(
+			'./freehand_tools.js'
+		);
+		shadeBrush = createShadingController(createShadingPanel(), false);
+		return {
+			onFocus: shadeBrush.enable,
+			onBlur: shadeBrush.disable,
+			enable: shadeBrush.enable,
+			ignore: shadeBrush.ignore,
+			unignore: shadeBrush.unignore,
+		};
+	});
+
+	Toolbar.addLazy($('character-brush'), async () => {
+		const { createShadingController, createCharacterBrushPanel } = await import(
+			'./freehand_tools.js'
+		);
+		characterBrush = createShadingController(createCharacterBrushPanel(), true);
+		return {
+			onFocus: characterBrush.enable,
+			onBlur: characterBrush.disable,
+			enable: characterBrush.enable,
+			ignore: characterBrush.ignore,
+			unignore: characterBrush.unignore,
+		};
+	});
+
+	Toolbar.addLazy($('fill'), async () => {
+		const { createFillController } = await import('./freehand_tools.js');
+		const fill = createFillController();
+		return {
+			onFocus: fill.enable,
+			onBlur: fill.disable,
+			enable: fill.enable,
+		};
+	});
+
+	Toolbar.addLazy($('attrib'), async () => {
+		const { createAttributeBrushController } = await import(
+			'./freehand_tools.js'
+		);
+		const attributeBrush = createAttributeBrushController();
+		return {
+			onFocus: attributeBrush.enable,
+			onBlur: attributeBrush.disable,
+			enable: attributeBrush.enable,
+		};
+	});
+
+	Toolbar.addLazy($('shapes'), async () => {
+		const { createShapesController } = await import('./freehand_tools.js');
+		const shapes = createShapesController();
+		return {
+			onFocus: shapes.enable,
+			onBlur: shapes.disable,
+			enable: shapes.enable,
+		};
+	});
+
+	Toolbar.addLazy($('line'), async () => {
+		const { createLineController } = await import('./freehand_tools.js');
+		const line = createLineController();
+		return {
+			onFocus: line.enable,
+			onBlur: line.disable,
+			enable: line.enable,
+		};
+	});
+
+	Toolbar.addLazy($('square'), async () => {
+		const { createSquareController } = await import('./freehand_tools.js');
+		const square = createSquareController();
+		return {
+			onFocus: square.enable,
+			onBlur: square.disable,
+			enable: square.enable,
+		};
+	});
+
+	Toolbar.addLazy($('circle'), async () => {
+		const { createCircleController } = await import('./freehand_tools.js');
+		const circle = createCircleController();
+		return {
+			onFocus: circle.enable,
+			onBlur: circle.disable,
+			enable: circle.enable,
+		};
+	});
 	const fonts = createGenericController($('font-toolbar'), $('fonts'));
 	Toolbar.add($('fonts'), fonts.enable, fonts.disable);
 	const clipboard = createGenericController(
@@ -528,25 +603,55 @@ const initializeAppComponents = async () => {
 		$('clipboard'),
 	);
 	Toolbar.add($('clipboard'), clipboard.enable, clipboard.disable);
-	State.selectionTool = createSelectionTool();
-	Toolbar.add(
-		$('selection'),
-		() => {
-			paintShortcuts.disable();
-			State.selectionTool.enable();
-		},
-		() => {
-			paintShortcuts.enable();
-			State.selectionTool.disable();
-		},
-	);
-	State.sampleTool = createSampleTool(
-		shadeBrush,
-		$('shading-brush'),
-		characterBrush,
-		$('character-brush'),
-	);
-	Toolbar.add($('sample'), State.sampleTool.enable, State.sampleTool.disable);
+
+	Toolbar.addLazy($('selection'), async () => {
+		const { createSelectionTool } = await import('./freehand_tools.js');
+		State.selectionTool = createSelectionTool();
+		return {
+			onFocus: () => {
+				paintShortcuts.disable();
+				State.selectionTool.enable();
+			},
+			onBlur: () => {
+				paintShortcuts.enable();
+				State.selectionTool.disable();
+			},
+			enable: State.selectionTool.enable,
+		};
+	});
+
+	Toolbar.addLazy($('sample'), async () => {
+		// Sample tool depends on shading brushes, so we need to ensure they're loaded
+		const { createSampleTool } = await import('./freehand_tools.js');
+
+		// If brushes aren't loaded yet, we need to load them first
+		if (!shadeBrush) {
+			const { createShadingController, createShadingPanel } = await import(
+				'./freehand_tools.js'
+			);
+			shadeBrush = createShadingController(createShadingPanel(), false);
+		}
+		if (!characterBrush) {
+			const { createShadingController, createCharacterBrushPanel } =
+				await import('./freehand_tools.js');
+			characterBrush = createShadingController(
+				createCharacterBrushPanel(),
+				true,
+			);
+		}
+
+		State.sampleTool = createSampleTool(
+			shadeBrush,
+			$('shading-brush'),
+			characterBrush,
+			$('character-brush'),
+		);
+		return {
+			onFocus: State.sampleTool.enable,
+			onBlur: State.sampleTool.disable,
+			enable: State.sampleTool.enable,
+		};
+	});
 	createSettingToggle(
 		$('mirror'),
 		State.textArtCanvas.getMirrorMode,
@@ -557,14 +662,24 @@ const initializeAppComponents = async () => {
 		() => {
 			keyboard.ignore();
 			paintShortcuts.ignore();
-			shadeBrush.ignore();
-			characterBrush.ignore();
+			// Only ignore if the brushes are loaded
+			if (shadeBrush && shadeBrush.ignore) {
+				shadeBrush.ignore();
+			}
+			if (characterBrush && characterBrush.ignore) {
+				characterBrush.ignore();
+			}
 		},
 		() => {
 			keyboard.unignore();
 			paintShortcuts.unignore();
-			shadeBrush.unignore();
-			characterBrush.unignore();
+			// Only unignore if the brushes are loaded
+			if (shadeBrush && shadeBrush.unignore) {
+				shadeBrush.unignore();
+			}
+			if (characterBrush && characterBrush.unignore) {
+				characterBrush.unignore();
+			}
 		},
 	);
 
@@ -585,14 +700,24 @@ const initializeAppComponents = async () => {
 		() => {
 			keyboard.ignore();
 			paintShortcuts.ignore();
-			shadeBrush.ignore();
-			characterBrush.ignore();
+			// Only ignore if the brushes are loaded
+			if (shadeBrush && shadeBrush.ignore) {
+				shadeBrush.ignore();
+			}
+			if (characterBrush && characterBrush.ignore) {
+				characterBrush.ignore();
+			}
 		},
 		() => {
 			keyboard.unignore();
 			paintShortcuts.unignore();
-			shadeBrush.unignore();
-			characterBrush.unignore();
+			// Only unignore if the brushes are loaded
+			if (shadeBrush && shadeBrush.unignore) {
+				shadeBrush.unignore();
+			}
+			if (characterBrush && characterBrush.unignore) {
+				characterBrush.unignore();
+			}
 		},
 	);
 	createSettingToggle(
