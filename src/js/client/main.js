@@ -144,38 +144,59 @@ document.addEventListener('DOMContentLoaded', async () => {
 		// Initialize global state and variables
 		State.startInitialization();
 		$$$$();
-		// Core UI Components
+		bodyContainer.classList.add('loading');
+
+		// Tier 1: Core UI and Canvas (most critical)
 		State.modal = createModalController($('modal'));
 		State.palette = createDefaultPalette();
-		State.textArtCanvas = createTextArtCanvas(canvasContainer, async () => {
-			State.positionInfo = createPositionInfo($('position-info'));
-			State.pasteTool = createPasteTool(
-				$('cut'),
-				$('copy'),
-				$('paste'),
-				$('delete'),
-			);
-			State.selectionCursor = createSelectionCursor(canvasContainer);
-			State.cursor = createCursor(canvasContainer);
-			State.toolPreview = createToolPreview($('tool-preview'));
-			State.title = 'Untitled';
-			// Once everything is ready...
-			State.waitFor(
-				[
-					'palette',
-					'textArtCanvas',
-					'font',
-					'modal',
-					'cursor',
-					'selectionCursor',
-					'positionInfo',
-					'toolPreview',
-					'pasteTool',
-				],
-				async _deps => {
-					await initializeAppComponents();
-				},
-			);
+		State.pasteTool = createPasteTool(
+			$('cut'),
+			$('copy'),
+			$('paste'),
+			$('delete'),
+		);
+		// Create canvas but defer heavy initialization
+		State.textArtCanvas = createTextArtCanvas(canvasContainer, () => {
+			// Remove loading state immediately after canvas is minimally ready
+			bodyContainer.classList.remove('loading');
+
+			// Tier 2: use setTimeout to allow UI to respond
+			setTimeout(() => {
+				State.positionInfo = createPositionInfo($('position-info'));
+				State.selectionCursor = createSelectionCursor(canvasContainer);
+				State.cursor = createCursor(canvasContainer);
+
+				// Tier 3: Secondary tools - defer with requestIdleCallback
+				const initSecondaryTools = () => {
+					State.toolPreview = createToolPreview($('tool-preview'));
+					State.title = 'Untitled';
+
+					// Once everything is ready...
+					State.waitFor(
+						[
+							'palette',
+							'textArtCanvas',
+							'font',
+							'modal',
+							'cursor',
+							'selectionCursor',
+							'positionInfo',
+							'toolPreview',
+							'pasteTool',
+						],
+						async _deps => {
+							await initializeAppComponents();
+						},
+					);
+				};
+
+				// Use requestIdleCallback if available, otherwise defer with timeout
+				if ('requestIdleCallback' in window) {
+					requestIdleCallback(initSecondaryTools);
+				} else {
+					setTimeout(initSecondaryTools, 100);
+				}
+			}, 0);
 		});
 	} catch (error) {
 		console.error('[Main] Error during initialization:', error);

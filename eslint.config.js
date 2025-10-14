@@ -25,6 +25,7 @@ export default [
 				Image: 'readonly',
 				MouseEvent: 'readonly',
 				Notification: 'readonly',
+				requestIdleCallback: 'readonly',
 				TextEncoder: 'readonly',
 				URL: 'readonly',
 				Uint16Array: 'readonly',
