@@ -37,6 +37,7 @@ export default ({ mode }) => {
 				},
 				output: {
 					entryFileNames: `${uiDir}editor.js`,
+					chunkFileNames: `${uiDir}chunks/[name]-[hash].js`,
 					assetFileNames: assetInfo => {
 						const assetName = assetInfo.name || assetInfo.names?.[0];
 						if (!assetName) return '';
@@ -50,6 +51,35 @@ export default ({ mode }) => {
 						}
 						return `${uiDir}[name].${ext}`;
 					},
+					manualChunks: {
+						// Core functionality needed immediately
+						core: [
+							'src/js/client/state.js',
+							'src/js/client/magicNumbers.js',
+							'src/js/client/ui.js',
+							'src/js/client/storage.js',
+							'src/js/client/compression.js'
+						],
+						// Drawing functionality
+						canvas: [
+							'src/js/client/canvas.js',
+							'src/js/client/lazyFont.js',
+							'src/js/client/fontCache.js',
+							'src/js/client/font.js'
+						],
+						// Tools loaded after initial rendering
+						tools: [
+							'src/js/client/freehand_tools.js',
+							'src/js/client/keyboard.js',
+							'src/js/client/toolbar.js'
+						],
+						// File handling (only needed for open/save operations)
+						fileops: ['src/js/client/file.js'],
+						// Network features (collaboration mode)
+						network: ['src/js/client/network.js'],
+						// Palette functions
+						palette: ['src/js/client/palette.js']
+					}
 				},
 			},
 		},
