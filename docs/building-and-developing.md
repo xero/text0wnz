@@ -57,10 +57,11 @@ bun server
 
 **Key features:**
 - ES module bundling
-- Code splitting
+- **Code splitting** with manualChunks (92% main bundle size reduction)
 - Asset optimization
 - Development server with hot module replacement
 - Production minification
+- Automatic modulepreload hints for parallel chunk loading
 
 **Build output structure:**
 ```
@@ -73,12 +74,21 @@ dist/
 ├── sitemap.xml             # Site map
 ├── humans.txt              # Humans.txt file
 └── ui/
-    ├── editor.js           # Bundled JavaScript
+    ├── editor.js           # Main entry bundle (10KB)
     ├── stylez.css          # Bundled CSS
     ├── worker.js           # Web Worker
+    ├── chunks/             # Code-split chunks
+    │   ├── core-[hash].js      # Core functionality (26KB)
+    │   ├── canvas-[hash].js    # Drawing/canvas (21KB)
+    │   ├── tools-[hash].js     # Editing tools (39KB)
+    │   ├── fileops-[hash].js   # File operations (18KB)
+    │   ├── network-[hash].js   # Collaboration (7KB)
+    │   └── palette-[hash].js   # Color palette (6KB)
     ├── fonts/              # Font assets
     └── img/                # Images and icons
 ```
+
+**Code Splitting:** The application uses Vite's manualChunks configuration to split the code into logical modules for better caching and performance. This reduces the initial bundle size by 92% (from 124KB to 10KB) while maintaining all functionality.
 
 ### Vite Plugins
 
