@@ -6,6 +6,16 @@ import {
 
 const imgDataCap = 256;
 
+// Mock the FontCache module
+vi.mock('../../src/js/client/fontCache.js', () => ({
+	FontCache: {
+		getFont: vi.fn(() => Promise.resolve(null)), // Returns null by default (direct loading)
+		preloadCommonFonts: vi.fn(),
+		clearCache: vi.fn(),
+		memoryCache: new Map(),
+	},
+}));
+
 // Mock the UI module
 vi.mock('../../src/js/client/ui.js', () => ({
 	createCanvas: vi.fn(() => ({
@@ -103,8 +113,11 @@ describe('Font Module - Basic Tests', () => {
 			global.Image = vi.fn(() => mockImage);
 		});
 
-		it('should setup image loading correctly', () => {
+		it('should setup image loading correctly', async () => {
 			loadFontFromImage('TestFont', false, mockPalette);
+
+			// Wait for FontCache.getFont promise to resolve
+			await new Promise(resolve => setTimeout(resolve, 0));
 
 			expect(global.Image).toHaveBeenCalled();
 			expect(mockImage.addEventListener).toHaveBeenCalledWith(
@@ -120,6 +133,9 @@ describe('Font Module - Basic Tests', () => {
 		it('should handle image load error', async () => {
 			const loadPromise = loadFontFromImage('TestFont', false, mockPalette);
 
+			// Wait for FontCache.getFont promise to resolve
+			await new Promise(resolve => setTimeout(resolve, 0));
+
 			// Simulate image load error
 			const errorHandler = mockImage.addEventListener.mock.calls.find(
 				call => call[0] === 'error',
@@ -129,17 +145,28 @@ describe('Font Module - Basic Tests', () => {
 			await expect(loadPromise).rejects.toThrow();
 		});
 
-		it('should set image source path correctly', () => {
+		it('should set image source path correctly', async () => {
 			loadFontFromImage('CP437 8x16', false, mockPalette);
+
+			// Wait for FontCache.getFont promise to resolve
+			await new Promise(resolve => setTimeout(resolve, 0));
 
 			expect(mockImage.src).toBe('/ui/fonts/CP437 8x16.png');
 		});
 
-		it('should handle different font names', () => {
+		it('should handle different font names', async () => {
 			loadFontFromImage('CP437 8x8', false, mockPalette);
+			
+			// Wait for FontCache.getFont promise to resolve
+			await new Promise(resolve => setTimeout(resolve, 0));
+			
 			expect(mockImage.src).toBe('/ui/fonts/CP437 8x8.png');
 
 			loadFontFromImage('Custom Font', false, mockPalette);
+			
+			// Wait for FontCache.getFont promise to resolve
+			await new Promise(resolve => setTimeout(resolve, 0));
+			
 			expect(mockImage.src).toBe('/ui/fonts/Custom Font.png');
 		});
 
@@ -148,6 +175,10 @@ describe('Font Module - Basic Tests', () => {
 			mockImage.height = 200; // Invalid height
 
 			const loadPromise = loadFontFromImage('TestFont', false, mockPalette);
+			
+			// Wait for FontCache.getFont promise to resolve
+			await new Promise(resolve => setTimeout(resolve, 0));
+			
 			const loadHandler = mockImage.addEventListener.mock.calls.find(
 				call => call[0] === 'load',
 			)[1];
@@ -162,6 +193,10 @@ describe('Font Module - Basic Tests', () => {
 			mockImage.height = 0;
 
 			const loadPromise = loadFontFromImage('TestFont', false, mockPalette);
+			
+			// Wait for FontCache.getFont promise to resolve
+			await new Promise(resolve => setTimeout(resolve, 0));
+			
 			const loadHandler = mockImage.addEventListener.mock.calls.find(
 				call => call[0] === 'load',
 			)[1];
@@ -176,6 +211,10 @@ describe('Font Module - Basic Tests', () => {
 			mockImage.height = 256;
 
 			const loadPromise = loadFontFromImage('TestFont', false, null);
+			
+			// Wait for FontCache.getFont promise to resolve
+			await new Promise(resolve => setTimeout(resolve, 0));
+			
 			const loadHandler = mockImage.addEventListener.mock.calls.find(
 				call => call[0] === 'load',
 			)[1];
@@ -229,7 +268,7 @@ describe('Font Module - Basic Tests', () => {
 	});
 
 	describe('Font Image Loading - Additional Coverage', () => {
-		it('should handle font loading with different letter spacing settings', () => {
+		it('should handle font loading with different letter spacing settings', async () => {
 			const mockImage = {
 				addEventListener: vi.fn(),
 				removeEventListener: vi.fn(),
@@ -241,10 +280,18 @@ describe('Font Module - Basic Tests', () => {
 
 			// Test with letter spacing enabled
 			loadFontFromImage('TestFont', true, mockPalette);
+			
+			// Wait for FontCache.getFont promise to resolve
+			await new Promise(resolve => setTimeout(resolve, 0));
+			
 			expect(mockImage.src).toBe('/ui/fonts/TestFont.png');
 
 			// Test with letter spacing disabled
 			loadFontFromImage('AnotherFont', false, mockPalette);
+			
+			// Wait for FontCache.getFont promise to resolve
+			await new Promise(resolve => setTimeout(resolve, 0));
+			
 			expect(mockImage.src).toBe('/ui/fonts/AnotherFont.png');
 		});
 	});

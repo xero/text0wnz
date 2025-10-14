@@ -233,7 +233,9 @@ test.describe('Tool Features', () => {
 		}
 	});
 
-	test('should support copy and paste with selection tool', async ({ page }) => {
+	test('should support copy and paste with selection tool', async ({
+		page,
+	}) => {
 		const canvas = page.locator('#canvas-container canvas').first();
 		const box = await canvas.boundingBox();
 

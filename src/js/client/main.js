@@ -4,6 +4,7 @@ import Toolbar from './toolbar.js';
 import { Load, Save } from './file.js';
 import { createTextArtCanvas } from './canvas.js';
 import { createWorkerHandler, createChatController } from './network.js';
+import { FontCache } from './fontCache.js';
 import {
 	$,
 	$$,
@@ -137,6 +138,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 	}
 
 	try {
+		// Start preloading fonts in the background first
+		FontCache.preloadCommonFonts();
+
 		// Initialize global state and variables
 		State.startInitialization();
 		$$$$();

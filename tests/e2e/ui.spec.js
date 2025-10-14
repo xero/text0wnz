@@ -228,7 +228,9 @@ test.describe('Toolbar Interactions', () => {
 		}
 	});
 
-	test('should show clipboard operations when selection is active', async ({ page }) => {
+	test('should show clipboard operations when selection is active', async ({
+		page,
+	}) => {
 		// Activate selection tool
 		await page.locator('#selection').click();
 		await page.waitForTimeout(200);
@@ -396,7 +398,9 @@ test.describe('Help and Information', () => {
 		}
 	});
 
-	test('should display keyboard shortcuts reference if available', async ({ page }) => {
+	test('should display keyboard shortcuts reference if available', async ({
+		page,
+	}) => {
 		const shortcutsButton = page.locator(
 			'#shortcuts, button:has-text("Shortcuts"), button:has-text("Keys")',
 		);

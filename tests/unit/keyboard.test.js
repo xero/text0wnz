@@ -237,7 +237,8 @@ describe('Keyboard Utilities', () => {
 
 			// Should not throw during creation
 			expect(() =>
-				createPasteTool(cutItem, copyItem, pasteItem, deleteItem)).not.toThrow();
+				createPasteTool(cutItem, copyItem, pasteItem, deleteItem),
+			).not.toThrow();
 		});
 
 		it('should handle paste tool creation', () => {
@@ -302,7 +303,9 @@ describe('Keyboard Utilities', () => {
 
 		it('should handle F1-F12 key shortcuts', () => {
 			// Test F-key shortcut array - standard characters used in ANSI art
-			const expectedFKeyChars = [176, 177, 178, 219, 223, 220, 221, 222, 254, 249, 7, 0];
+			const expectedFKeyChars = [
+				176, 177, 178, 219, 223, 220, 221, 222, 254, 249, 7, 0,
+			];
 
 			expect(expectedFKeyChars).toHaveLength(12); // F1-F12
 			expect(expectedFKeyChars.every(char => typeof char === 'number')).toBe(
@@ -340,7 +343,9 @@ describe('Keyboard Utilities', () => {
 	describe('Keyboard Event Handling Architecture', () => {
 		it('should handle F-key shortcuts consistently', () => {
 			// Test F-key shortcut array - standard characters used in ANSI art
-			const expectedFKeyChars = [176, 177, 178, 219, 223, 220, 221, 222, 254, 249, 7, 0];
+			const expectedFKeyChars = [
+				176, 177, 178, 219, 223, 220, 221, 222, 254, 249, 7, 0,
+			];
 
 			expect(expectedFKeyChars).toHaveLength(12); // F1-F12
 			expect(expectedFKeyChars.every(char => typeof char === 'number')).toBe(

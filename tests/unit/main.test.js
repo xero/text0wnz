@@ -128,7 +128,7 @@ global.document = {
 		const mockElement = createMockElement();
 		// Special cases for specific elements
 		if (id === 'open-file') {
-			return { ...mockElement, files: [{ name: 'test.ans' }]}; // Use plain object instead of File constructor
+			return { ...mockElement, files: [{ name: 'test.ans' }] }; // Use plain object instead of File constructor
 		}
 		if (id === 'columns-input' || id === 'rows-input') {
 			return { ...mockElement, value: '80' };

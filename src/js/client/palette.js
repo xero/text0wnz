@@ -208,7 +208,7 @@ const xbinToRgba = ([r, g, b, a]) => [
 ];
 
 const hexToRbga = hex => {
-	const m = (/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i).exec(hex);
+	const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
 	if (!m) {
 		console.error(`[Palette] Invalid hex color: ${hex}`);
 		return { r: 0, g: 0, b: 0, a: 255 };
