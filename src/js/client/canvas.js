@@ -88,62 +88,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		enqueueDirtyRegion(x, y, 1, 1);
 	};
 
-	// merge overlapping and adjacent regions
-	// This is a basic implementation - could be optimized further with spatial indexing
-	const coalesceRegions = regions => {
-		if (regions.length <= 1) {
-			return regions;
-		}
-		const coalesced = [];
-		const sorted = regions.slice().sort((a, b) => {
-			if (a.y !== b.y) {
-				return a.y - b.y;
-			}
-			return a.x - b.x;
-		});
-
-		for (let i = 0; i < sorted.length; i++) {
-			const current = sorted[i];
-			let merged = false;
-
-			// Try to merge with existing coalesced regions
-			for (let j = 0; j < coalesced.length; j++) {
-				const existing = coalesced[j];
-
-				// Check if regions overlap or are adjacent
-				const canMergeX =
-					current.x <= existing.x + existing.w &&
-					existing.x <= current.x + current.w;
-				const canMergeY =
-					current.y <= existing.y + existing.h &&
-					existing.y <= current.y + current.h;
-
-				if (canMergeX && canMergeY) {
-					// Merge regions
-					const newX = Math.min(existing.x, current.x);
-					const newY = Math.min(existing.y, current.y);
-					const newW =
-						Math.max(existing.x + existing.w, current.x + current.w) - newX;
-					const newH =
-						Math.max(existing.y + existing.h, current.y + current.h) - newY;
-					coalesced[j] = { x: newX, y: newY, w: newW, h: newH };
-					merged = true;
-					break;
-				}
-			}
-			if (!merged) {
-				coalesced.push(current);
-			}
-		}
-
-		// If we reduced the number of regions, try coalescing again
-		if (coalesced.length < regions.length && coalesced.length > 1) {
-			return coalesceRegions(coalesced);
-		}
-
-		return coalesced;
-	};
-
 	const drawRegion = (x, y, w, h) => {
 		// Validate and clamp region to canvas bounds
 		if (x < 0) {
@@ -250,9 +194,112 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const redrawEntireImage = () => {
-		dirtyRegions = [];
-		drawRegion(0, 0, columns, rows);
-		processDirtyRegions();
+		// For small canvases, direct render is fine
+		if (rows * columns < 5000) {
+			drawRegion(0, 0, columns, rows);
+			return;
+		}
+		// For larger canvases, use progressive rendering
+		const batchSize = 5; // Rows per frame
+		progressiveRedraw(0, batchSize);
+	};
+
+	const progressiveRedraw = (startRow, batchSize) => {
+		const endRow = Math.min(startRow + batchSize, rows);
+		drawRegion(0, startRow, columns, endRow - startRow);
+
+		if (endRow < rows) {
+			requestAnimationFrame(() => progressiveRedraw(endRow, batchSize));
+		} else {
+			document.dispatchEvent(new CustomEvent('onCanvasRenderComplete'));
+		}
+	};
+
+	// dirty region coalescing algorithm
+	const coalesceRegions = regions => {
+		if (regions.length <= 1) {return regions;}
+
+		const gridCellSize = 10; // 10x10 cells
+		const gridWidth = Math.ceil(columns / gridCellSize);
+		const gridHeight = Math.ceil(rows / gridCellSize);
+		const grid = Array(gridHeight)
+			.fill()
+			.map(() => Array(gridWidth).fill(false));
+
+		// Mark all cells that contain dirty regions
+		regions.forEach(region => {
+			const startGridX = Math.floor(region.x / gridCellSize);
+			const startGridY = Math.floor(region.y / gridCellSize);
+			const endGridX = Math.min(
+				Math.floor((region.x + region.w - 1) / gridCellSize),
+				gridWidth - 1,
+			);
+			const endGridY = Math.min(
+				Math.floor((region.y + region.h - 1) / gridCellSize),
+				gridHeight - 1,
+			);
+
+			for (let y = startGridY; y <= endGridY; y++) {
+				for (let x = startGridX; x <= endGridX; x++) {
+					grid[y][x] = true;
+				}
+			}
+		});
+
+		// Create optimized regions from the grid
+		const result = [];
+		for (let y = 0; y < gridHeight; y++) {
+			let start = -1;
+			for (let x = 0; x < gridWidth; x++) {
+				if (grid[y][x] && start === -1) {
+					start = x;
+				} else if (!grid[y][x] && start !== -1) {
+					result.push({
+						x: start * gridCellSize,
+						y: y * gridCellSize,
+						w: (x - start) * gridCellSize,
+						h: gridCellSize,
+					});
+					start = -1;
+				}
+			}
+			if (start !== -1) {
+				result.push({
+					x: start * gridCellSize,
+					y: y * gridCellSize,
+					w: (gridWidth - start) * gridCellSize,
+					h: gridCellSize,
+				});
+			}
+		}
+		return combineVerticalRegions(result);
+	};
+
+	const combineVerticalRegions = regions => {
+		regions.sort((a, b) => (a.x !== b.x ? a.x - b.x : a.y - b.y));
+
+		const result = [];
+		for (let i = 0; i < regions.length; i++) {
+			const current = regions[i];
+			let combined = false;
+
+			for (let j = 0; j < result.length; j++) {
+				const existing = result[j];
+				if (
+					existing.x === current.x &&
+					existing.w === current.w &&
+					existing.y + existing.h === current.y
+				) {
+					existing.h += current.h;
+					combined = true;
+					break;
+				}
+			}
+			if (!combined) {
+				result.push({ ...current });
+			}
+		}
+		return result;
 	};
 
 	let blinkStop = false;
