@@ -664,9 +664,7 @@ describe('State Management System', () => {
 			// Create canvas with lots of repetition (typical for blank areas)
 			const imageData = new Uint16Array(80 * 25);
 			// Blank canvas (all same value)
-			for (let i = 0; i < imageData.length; i++) {
-				imageData[i] = 0;
-			}
+			imageData.fill(0);
 
 			const mockCanvas = {
 				getImageData: () => imageData,
@@ -690,9 +688,7 @@ describe('State Management System', () => {
 		it('should not use compression for random canvas data', () => {
 			// Create canvas with random data (won't compress well)
 			const imageData = new Uint16Array(80 * 25);
-			for (let i = 0; i < imageData.length; i++) {
-				imageData[i] = Math.floor(Math.random() * 65536);
-			}
+			crypto.getRandomValues(imageData);
 
 			const mockCanvas = {
 				getImageData: () => imageData,
