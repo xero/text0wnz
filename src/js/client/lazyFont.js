@@ -148,7 +148,7 @@ export const createLazyFont = (fontData, palette, letterSpacing = false) => {
 			}
 		}
 
-		// Also pre-generate alpha glyphs for common characters with all foreground colors
+		// Also pre-generate alpha glyphs for special drawing characters
 		const alphaChars = [
 			magicNumbers.LOWER_HALFBLOCK,
 			magicNumbers.UPPER_HALFBLOCK,
@@ -216,14 +216,12 @@ export const createLazyFont = (fontData, palette, letterSpacing = false) => {
 		 * @param {number} y - Y coordinate in character grid
 		 */
 		drawWithAlpha: (charCode, foreground, drawCtx, x, y) => {
-			let char = charCode;
-			const alphaGlyph = getAlphaGlyph(char, foreground);
+			// Use fallback character (X) if requested character has no alpha glyph
+			const effectiveCharCode = getAlphaGlyph(charCode, foreground)
+				? charCode
+				: magicNumbers.CHAR_CAPITAL_X;
 
-			if (!alphaGlyph) {
-				char = magicNumbers.CHAR_CAPITAL_X;
-			}
-
-			const canvasToUse = getAlphaGlyph(char, foreground);
+			const canvasToUse = getAlphaGlyph(effectiveCharCode, foreground);
 
 			if (letterSpacing) {
 				drawCtx.drawImage(
@@ -233,7 +231,7 @@ export const createLazyFont = (fontData, palette, letterSpacing = false) => {
 				);
 
 				// Handle special line drawing characters
-				if (char >= 192 && char <= 223) {
+				if (effectiveCharCode >= 192 && effectiveCharCode <= 223) {
 					drawCtx.drawImage(
 						canvasToUse,
 						fontData.width - 1,

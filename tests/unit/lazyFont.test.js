@@ -147,8 +147,6 @@ describe('Lazy Font Module', () => {
 		it('should cache alpha glyphs separately', () => {
 			const lazyFont = createLazyFont(fontData, mockPalette, false);
 
-			const initialAlphaCacheSize = lazyFont.getAlphaCacheSize();
-
 			// Upper half-block character (220)
 			const alphaGlyph1 = lazyFont.getAlphaGlyph(220, 5);
 			const alphaGlyph2 = lazyFont.getAlphaGlyph(220, 5);
@@ -174,9 +172,7 @@ describe('Lazy Font Module', () => {
 		it('should draw glyph without letter spacing', () => {
 			const lazyFont = createLazyFont(fontData, mockPalette, false);
 
-			const mockCtx = {
-				putImageData: vi.fn(),
-			};
+			const mockCtx = { putImageData: vi.fn() };
 
 			lazyFont.draw(65, 7, 0, mockCtx, 5, 10);
 
@@ -190,9 +186,7 @@ describe('Lazy Font Module', () => {
 		it('should draw glyph with letter spacing', () => {
 			const lazyFont = createLazyFont(fontData, mockPalette, true);
 
-			const mockCtx = {
-				putImageData: vi.fn(),
-			};
+			const mockCtx = { putImageData: vi.fn() };
 
 			lazyFont.draw(65, 7, 0, mockCtx, 5, 10);
 
@@ -206,9 +200,7 @@ describe('Lazy Font Module', () => {
 		it('should draw alpha glyph without letter spacing', () => {
 			const lazyFont = createLazyFont(fontData, mockPalette, false);
 
-			const mockCtx = {
-				drawImage: vi.fn(),
-			};
+			const mockCtx = { drawImage: vi.fn() };
 
 			lazyFont.drawWithAlpha(223, 7, mockCtx, 3, 5);
 
@@ -222,9 +214,7 @@ describe('Lazy Font Module', () => {
 		it('should draw alpha glyph with letter spacing', () => {
 			const lazyFont = createLazyFont(fontData, mockPalette, true);
 
-			const mockCtx = {
-				drawImage: vi.fn(),
-			};
+			const mockCtx = { drawImage: vi.fn() };
 
 			lazyFont.drawWithAlpha(220, 7, mockCtx, 3, 5);
 
