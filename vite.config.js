@@ -24,6 +24,12 @@ export default ({ mode }) => {
 			assetsDir: '', // Place all assets in the root of `outDir`
 			assetsInlineLimit: 0, // Prevent inlined assets
 			target: 'es2022',
+			minify: 'terser',
+			terserOptions: {
+				compress: {
+					drop_console: false
+				}
+			},
 			sourcemap: process.env.NODE_ENV !== 'production',
 			rollupOptions: {
 				input: {
