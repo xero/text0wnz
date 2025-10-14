@@ -7,19 +7,27 @@ Implemented code splitting strategy using Vite's `manualChunks` configuration to
 ## Performance Improvements
 
 ### Before Code Splitting
-- **Single Bundle**: `../dist/ui/editor.js` - 124.05 kB (gzip: 35.34 kB)
-- All code loaded at once, poor caching efficiency
+```
+../dist/ui/editor.js    124.05 kB │ gzip: 35.34 kB
+```
+- **Single Bundle**: All code in one file
+- Poor caching efficiency (change to any module invalidates entire bundle)
 - No opportunity for lazy loading
 
 ### After Code Splitting
-- **Main Bundle**: `../dist/ui/editor.js` - 10.12 kB (gzip: 3.65 kB) - **92% reduction!**
-- **6 Separate Chunks**:
-  - `core-*.js` - 26.03 kB (gzip: 7.78 kB) - Essential modules
-  - `tools-*.js` - 38.94 kB (gzip: 9.69 kB) - Editing tools
-  - `canvas-*.js` - 20.80 kB (gzip: 6.79 kB) - Drawing functionality
-  - `fileops-*.js` - 17.89 kB (gzip: 6.39 kB) - File operations
-  - `network-*.js` - 7.17 kB (gzip: 2.53 kB) - Collaboration features
-  - `palette-*.js` - 6.33 kB (gzip: 2.66 kB) - Color palette
+```
+../dist/ui/editor.js                 10.12 kB │ gzip:  3.65 kB  (main entry)
+../dist/ui/chunks/palette-*.js        6.33 kB │ gzip:  2.66 kB  (color palette)
+../dist/ui/chunks/network-*.js        7.17 kB │ gzip:  2.53 kB  (collaboration)
+../dist/ui/chunks/fileops-*.js       17.89 kB │ gzip:  6.39 kB  (file operations)
+../dist/ui/chunks/canvas-*.js        20.80 kB │ gzip:  6.79 kB  (drawing)
+../dist/ui/chunks/core-*.js          26.03 kB │ gzip:  7.78 kB  (essential modules)
+../dist/ui/chunks/tools-*.js         38.94 kB │ gzip:  9.69 kB  (editing tools)
+```
+- **Main Bundle**: 10.12 kB (gzip: 3.65 kB) - **92% reduction!**
+- **6 Separate Chunks** organized by functionality
+- Better caching (each chunk can be cached independently)
+- Foundation for future lazy loading optimizations
 
 ### Total Bundle Size Comparison
 - **Before**: 124.05 kB (35.34 kB gzipped)
@@ -60,6 +68,17 @@ Implemented code splitting strategy using Vite's `manualChunks` configuration to
    ```javascript
    chunkFileNames: `${uiDir}chunks/[name]-[hash].js`
    ```
+
+3. **Automatic Modulepreload Hints**: Vite automatically injects preload hints in the built HTML:
+   ```html
+   <link rel="modulepreload" crossorigin href="/ui/chunks/palette-Cezemwto.js">
+   <link rel="modulepreload" crossorigin href="/ui/chunks/canvas-CmPi7jdc.js">
+   <link rel="modulepreload" crossorigin href="/ui/chunks/core-D2AyqXqr.js">
+   <link rel="modulepreload" crossorigin href="/ui/chunks/tools-pjzvv1Y0.js">
+   <link rel="modulepreload" crossorigin href="/ui/chunks/fileops-pqUH_bp7.js">
+   <link rel="modulepreload" crossorigin href="/ui/chunks/network-BLqlhmN1.js">
+   ```
+   This tells the browser to preload critical chunks in parallel for faster page loads.
 
 ### Testing
 
