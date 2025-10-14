@@ -22,26 +22,40 @@ jobs:
         run: |
           test -d dist/ui
           test -d dist/ui/fonts
-          test -f dist/ui/apple-touch-icon.png
-          test -f dist/ui/editor.js
-          test -f dist/ui/favicon-96x96.png
-          test -f dist/ui/favicon.ico
-          test -f dist/ui/favicon.svg
-          test -f dist/ui/icons*.svg
-          test -f dist/ui/logo.png
-          test -f dist/ui/stylez.css
-          test -f dist/ui/topazplus_1200.woff2
-          test -f dist/ui/web-app-manifest-192x192.png
-          test -f dist/ui/web-app-manifest-512x512.png
-          test -f dist/ui/worker.js
+          test -d dist/ui/js
           test -f dist/favicon.ico
           test -f dist/humans.txt
           test -f dist/index.html
           test -f dist/robots.txt
           test -f dist/service.js
-          test -f dist/site.webmanifest
           test -f dist/sitemap.xml
+          test -f dist/site.webmanifest
           test -f dist/workbox-*.js
+          test -f dist/ui/android-launchericon-48-48.png
+          test -f dist/ui/apple-touch-icon.png
+          test -f dist/ui/editor.js
+          test -f dist/ui/favicon-96x96.png
+          test -f dist/ui/favicon.ico
+          test -f dist/ui/favicon.svg
+          test -f dist/ui/icons-*.svg
+          test -f dist/ui/logo.png
+          test -f dist/ui/screenshot-dark-wide.png
+          test -f dist/ui/screenshot-desktop.png
+          test -f dist/ui/screenshot-font-tall.png
+          test -f dist/ui/screenshot-light-wide.png
+          test -f dist/ui/screenshot-mobile.png
+          test -f dist/ui/screenshot-sauce-tall.png
+          test -f dist/ui/stylez.css
+          test -f dist/ui/topazplus_1200.woff2
+          test -f dist/ui/web-app-manifest-192x192.png
+          test -f dist/ui/web-app-manifest-512x512.png
+          test -f dist/ui/js/canvas-*.js
+          test -f dist/ui/js/core-*.js
+          test -f dist/ui/js/fileops-*.js
+          test -f dist/ui/js/network-*.js
+          test -f dist/ui/js/palette-*.js
+          test -f dist/ui/js/tools-*.js
+          test -f dist/ui/js/websocket.js
           echo "Build successful"
       - name: upload build results as artifact
         if: success() && github.ref == 'refs/heads/main'
