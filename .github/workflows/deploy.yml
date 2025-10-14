@@ -18,25 +18,24 @@ jobs:
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: editor-build
-          path: dist
+          path: editor-build
       - name: download unit artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: unit-test-results
-          path: unit
+          path: unit-test-results
       - name: download e2e artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: playwright-report
-          path: e2e
+          path: playwright-report
       - name: organize
         run: |
-          mkdir release
-          cp -r dist/* release
-          mkdir dist/tests
-          cp -r unit/* dist/tests
-          mkdir dist/tests/e2e
-          cp e2e/index.html dist/tests/e2e
+          mkdir -p ./release/tests/e2e || true
+          mv ./editor-build/* ./release || true
+          mv ./unit-test-results/* ./release/tests || true
+          mv ./playwright-report/* ./release/tests/e2e || true
+          rm -rf./editor-build ./unit-test-results ./playwright-report || true
       - name: upload release build artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

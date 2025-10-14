@@ -826,9 +826,9 @@ describe('Freehand Tools', () => {
 
 	describe('createSampleTool', () => {
 		let mockShadeBrush,
-			mockShadeElement,
-			mockCharacterBrush,
-			mockCharacterElement;
+				mockShadeElement,
+				mockCharacterBrush,
+				mockCharacterElement;
 
 		beforeEach(() => {
 			mockShadeBrush = { select: vi.fn() };

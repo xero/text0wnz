@@ -5,9 +5,7 @@ import '@testing-library/jest-dom';
 import Toolbar from '../../src/js/client/toolbar.js';
 
 // Mock State module
-vi.mock('../../src/js/client/state.js', () => ({
-	default: { menu: { close: vi.fn() } },
-}));
+vi.mock('../../src/js/client/state.js', () => ({ default: { menu: { close: vi.fn() } } }));
 
 describe('Toolbar DOM Tests', () => {
 	let user;
@@ -363,8 +361,7 @@ describe('Toolbar DOM Tests', () => {
 
 				// Count how many buttons have the active class
 				const activeButtons = buttons.filter(b =>
-					b.classList.contains('toolbar-displayed'),
-				);
+					b.classList.contains('toolbar-displayed'));
 				expect(activeButtons).toHaveLength(1);
 				expect(activeButtons[0]).toBe(button);
 			}

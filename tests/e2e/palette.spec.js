@@ -12,9 +12,7 @@ test.describe('Color Palette', () => {
 		await expect(palette).toBeVisible();
 	});
 
-	test('should have foreground and background color indicators', async ({
-		page,
-	}) => {
+	test('should have foreground and background color indicators', async ({ page }) => {
 		// Check for palette preview canvas (shows current colors)
 		const palettePreview = page.locator('#palette-preview');
 		await expect(palettePreview).toBeVisible();
@@ -88,9 +86,7 @@ test.describe('Color Palette', () => {
 		expect(errors).toBe(0);
 	});
 
-	test('should allow color selection from multiple positions', async ({
-		page,
-	}) => {
+	test('should allow color selection from multiple positions', async ({ page }) => {
 		const colorSwatches = page.locator(
 			'.palette-color, .color-swatch, [data-color]',
 		);

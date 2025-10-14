@@ -29,9 +29,7 @@ describe('Lazy Font Module', () => {
 
 	beforeEach(() => {
 		// Mock palette object
-		mockPalette = {
-			getRGBAColor: vi.fn(color => [color * 16, color * 8, color * 4, 255]),
-		};
+		mockPalette = { getRGBAColor: vi.fn(color => [color * 16, color * 8, color * 4, 255]) };
 
 		// Create minimal font data (8x16 font)
 		const width = 8;

@@ -67,7 +67,7 @@ const convert16BitArrayTo8BitArray = Uint16s => {
 
 const bytesToString = (bytes, offset, size) => {
 	let text = '',
-		i;
+			i;
 	for (i = 0; i < size; i++) {
 		text += String.fromCharCode(bytes[offset + i]);
 	}

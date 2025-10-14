@@ -193,9 +193,7 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 								letterSpacing = newLetterSpacing;
 								createLazyFontInstance();
 								document.dispatchEvent(
-									new CustomEvent('onLetterSpacingChange', {
-										detail: letterSpacing,
-									}),
+									new CustomEvent('onLetterSpacingChange', { detail: letterSpacing }),
 								);
 							}
 						},

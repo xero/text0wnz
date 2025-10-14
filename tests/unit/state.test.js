@@ -252,9 +252,7 @@ describe('State Management System', () => {
 			State.textArtCanvas = { test: 'canvas' };
 
 			expect(callback1).not.toHaveBeenCalled(); // Still waiting for font
-			expect(callback2).toHaveBeenCalledWith({
-				textArtCanvas: { test: 'canvas' },
-			});
+			expect(callback2).toHaveBeenCalledWith({ textArtCanvas: { test: 'canvas' } });
 
 			State.font = { test: 'font' };
 			expect(callback1).toHaveBeenCalledWith({
