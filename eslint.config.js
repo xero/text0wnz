@@ -43,6 +43,7 @@ export default [
 				crypto: 'readonly',
 				document: 'readonly',
 				existsSync: 'readonly',
+				indexedDB: 'readonly',
 				localStorage: 'readonly',
 				mkdirSync: 'readonly',
 				navigator: 'readonly',

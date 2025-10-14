@@ -659,6 +659,54 @@ describe('State Management System', () => {
 			// Base64 should be significantly smaller (approximately 33% smaller or better)
 			expect(base64JsonSize).toBeLessThan(arrayJsonSize * 0.5);
 		});
+
+		it('should use compression for repetitive canvas data', () => {
+			// Create canvas with lots of repetition (typical for blank areas)
+			const imageData = new Uint16Array(80 * 25);
+			// Blank canvas (all same value)
+			imageData.fill(0);
+
+			const mockCanvas = {
+				getImageData: () => imageData,
+				getColumns: () => 80,
+				getRows: () => 25,
+				getIceColors: () => false,
+				getCurrentFontName: () => 'CP437 8x16',
+				getXBFontData: () => null,
+			};
+
+			State.textArtCanvas = mockCanvas;
+			State.font = { getLetterSpacing: () => false };
+
+			const serialized = State._manager.serializeState();
+
+			// Check that compression was used
+			expect(serialized.canvasData.compressed).toBe(true);
+			expect(serialized.canvasData.originalLength).toBe(imageData.length);
+		});
+
+		it('should not use compression for random canvas data', () => {
+			// Create canvas with random data (won't compress well)
+			const imageData = new Uint16Array(80 * 25);
+			crypto.getRandomValues(imageData);
+
+			const mockCanvas = {
+				getImageData: () => imageData,
+				getColumns: () => 80,
+				getRows: () => 25,
+				getIceColors: () => false,
+				getCurrentFontName: () => 'CP437 8x16',
+				getXBFontData: () => null,
+			};
+
+			State.textArtCanvas = mockCanvas;
+			State.font = { getLetterSpacing: () => false };
+
+			const serialized = State._manager.serializeState();
+
+			// Check that compression was not used
+			expect(serialized.canvasData.compressed).toBe(false);
+		});
 	});
 
 	describe('Edge Cases and Error Handling', () => {
