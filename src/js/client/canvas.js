@@ -217,7 +217,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	// dirty region coalescing algorithm
 	const coalesceRegions = regions => {
-		if (regions.length <= 1) {return regions;}
+		if (regions.length <= 1) {
+			return regions;
+		}
 
 		const gridCellSize = 10; // 10x10 cells
 		const gridWidth = Math.ceil(columns / gridCellSize);

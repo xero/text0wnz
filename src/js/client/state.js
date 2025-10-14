@@ -6,6 +6,9 @@
  * provide consistent state access across all components.
  */
 
+import { Compression } from './compression.js';
+import { Storage } from './storage.js';
+
 // Object to hold application state
 const EditorState = {
 	urlPrefix: null,
@@ -407,11 +410,28 @@ class StateManager {
 				const rows = this.state.textArtCanvas.getRows();
 				const iceColors = this.state.textArtCanvas.getIceColors();
 
-				serialized[STATE_SYNC_KEYS.CANVAS_DATA] = {
-					imageData: this._uint16ArrayToBase64(imageData),
-					columns: columns,
-					rows: rows,
-				};
+				// Try to compress the image data
+				const compressed = Compression.compressUint16Array(imageData);
+
+				if (compressed) {
+					// Compression was effective
+					serialized[STATE_SYNC_KEYS.CANVAS_DATA] = {
+						imageData: Compression.compressedToBase64(compressed),
+						columns: columns,
+						rows: rows,
+						compressed: true,
+						originalLength: imageData.length,
+					};
+				} else {
+					// Compression wasn't effective, use regular encoding
+					serialized[STATE_SYNC_KEYS.CANVAS_DATA] = {
+						imageData: this._uint16ArrayToBase64(imageData),
+						columns: columns,
+						rows: rows,
+						compressed: false,
+					};
+				}
+
 				serialized[STATE_SYNC_KEYS.ICE_COLORS] = iceColors;
 			}
 
@@ -569,15 +589,60 @@ class StateManager {
 	/**
 	 * Save non-default state to localStorage
 	 */
-	saveToLocalStorage() {
+	async saveToLocalStorage() {
 		try {
+			// Skip saving if state is default or connected to network
 			if (this.isDefaultState() || stateManager.state.network.isConnected()) {
 				return;
 			}
-			const serialized = this.serializeState();
-			localStorage.setItem('editorState', JSON.stringify(serialized));
+
+			// Split data between localStorage and IndexedDB
+
+			// 1. Save heavy data to IndexedDB
+			if (
+				this.state.textArtCanvas &&
+				typeof this.state.textArtCanvas.getImageData === 'function'
+			) {
+				const imageData = this.state.textArtCanvas.getImageData();
+				const columns = this.state.textArtCanvas.getColumns();
+				const rows = this.state.textArtCanvas.getRows();
+
+				await Storage.saveCanvasData({
+					imageData,
+					columns,
+					rows,
+				});
+			}
+
+			// Save XBIN font data to IndexedDB if present
+			if (
+				this.state.textArtCanvas &&
+				typeof this.state.textArtCanvas.getXBFontData === 'function'
+			) {
+				const xbFontData = this.state.textArtCanvas.getXBFontData();
+				if (xbFontData && xbFontData.bytes) {
+					await Storage.saveFontData('XBIN', xbFontData);
+				}
+			}
+
+			// 2. Save lightweight settings to localStorage
+			const settings = {
+				fontName: this.state.textArtCanvas?.getCurrentFontName(),
+				iceColors: this.state.textArtCanvas?.getIceColors(),
+				letterSpacing: this.state.font?.getLetterSpacing(),
+				paletteColors: this.state.palette
+					?.getPalette()
+					.map(color => [
+						Math.min(color[0] >> 2, 63),
+						Math.min(color[1] >> 2, 63),
+						Math.min(color[2] >> 2, 63),
+						color[3],
+					]),
+			};
+
+			Storage.saveSettings(settings);
 		} catch (error) {
-			console.error('[State] Failed to save state to localStorage:', error);
+			console.error('[State] Failed to save state:', error);
 		}
 	}
 
@@ -585,11 +650,7 @@ class StateManager {
 	 * Clear all state from localStorage
 	 */
 	clearLocalStorage() {
-		try {
-			localStorage.removeItem('editorState');
-		} catch (error) {
-			console.error('[State] Failed to clear localStorage:', error);
-		}
+		Storage.clearAll();
 	}
 
 	/**
@@ -636,135 +697,211 @@ class StateManager {
 	/**
 	 * Restore state from localStorage after components are initialized
 	 * This dispatches events to ensure UI updates properly
-	 * Supports both new base64 format and legacy array format for backward compatibility
+	 * Supports compression, new storage format and legacy formats for backward compatibility
 	 */
-	restoreStateFromLocalStorage() {
-		const savedState = this.loadFromLocalStorage();
-		if (!savedState) {
+	async restoreStateFromLocalStorage() {
+		// Try loading from new storage system first
+		const settings = Storage.loadSettings();
+		const savedState = this.loadFromLocalStorage(); // Legacy format
+
+		if (!settings && !savedState) {
 			return;
 		}
+
 		stateManager.state.modal.open('loading');
 		this.loadingFromStorage = true;
 
 		try {
-			// Restore ice colors first (before canvas data)
-			if (
-				savedState[STATE_SYNC_KEYS.ICE_COLORS] !== undefined &&
-				this.state.textArtCanvas
-			) {
-				// Ice colors will be set when we restore canvas data
-			}
+			// Handle legacy format first (if present)
+			if (savedState) {
+				// Restore ice colors first (before canvas data)
+				if (
+					savedState[STATE_SYNC_KEYS.ICE_COLORS] !== undefined &&
+					this.state.textArtCanvas
+				) {
+					// Ice colors will be set when we restore canvas data
+				}
 
-			// Restore canvas data
-			if (savedState[STATE_SYNC_KEYS.CANVAS_DATA] && this.state.textArtCanvas) {
-				const { imageData, columns, rows } =
-					savedState[STATE_SYNC_KEYS.CANVAS_DATA];
-				const iceColors = savedState[STATE_SYNC_KEYS.ICE_COLORS] || false;
+				// Restore canvas data
+				if (
+					savedState[STATE_SYNC_KEYS.CANVAS_DATA] &&
+					this.state.textArtCanvas
+				) {
+					const canvasData = savedState[STATE_SYNC_KEYS.CANVAS_DATA];
+					const iceColors = savedState[STATE_SYNC_KEYS.ICE_COLORS] || false;
 
-				let uint16Data;
-				// Support both new base64 format and legacy array format
-				if (typeof imageData === 'string') {
-					// New optimized base64 format
-					uint16Data = this._base64ToUint16Array(imageData);
-				} else if (Array.isArray(imageData)) {
-					// Legacy array format (for backward compatibility)
-					uint16Data = new Uint16Array(imageData);
+					let uint16Data;
+
+					if (canvasData.compressed) {
+						// Handle compressed data
+						const compressed = Compression.base64ToCompressed(
+							canvasData.imageData,
+						);
+						uint16Data = Compression.decompressToUint16Array(
+							compressed,
+							canvasData.originalLength,
+						);
+					} else if (typeof canvasData.imageData === 'string') {
+						// Regular base64 data
+						uint16Data = this._base64ToUint16Array(canvasData.imageData);
+					} else if (Array.isArray(canvasData.imageData)) {
+						// Legacy array format
+						uint16Data = new Uint16Array(canvasData.imageData);
+					}
+
+					// Use setImageData to restore canvas
+					if (
+						uint16Data &&
+						typeof this.state.textArtCanvas.setImageData === 'function'
+					) {
+						this.state.textArtCanvas.setImageData(
+							canvasData.columns,
+							canvasData.rows,
+							uint16Data,
+							iceColors,
+						);
+					}
+				}
+
+				// Restore letter spacing
+				if (
+					savedState[STATE_SYNC_KEYS.LETTER_SPACING] !== undefined &&
+					this.state.font
+				) {
+					if (typeof this.state.font.setLetterSpacing === 'function') {
+						this.state.font.setLetterSpacing(
+							savedState[STATE_SYNC_KEYS.LETTER_SPACING],
+						);
+					}
+				}
+
+				// Restore palette colors
+				if (savedState[STATE_SYNC_KEYS.PALETTE_COLORS] && this.state.palette) {
+					const paletteColors = savedState[STATE_SYNC_KEYS.PALETTE_COLORS];
+					if (typeof this.state.palette.setRGBAColor === 'function') {
+						paletteColors.forEach((color, index) => {
+							// color is [r, g, b, a] in 6-bit format (0-63)
+							// setRGBAColor expects 6-bit and will expand to 8-bit
+							this.state.palette.setRGBAColor(index, color);
+						});
+					}
+				}
+
+				// Restore XBIN font data if present (must be done before restoring font)
+				if (
+					savedState[STATE_SYNC_KEYS.XBIN_FONT_DATA] &&
+					this.state.textArtCanvas
+				) {
+					if (typeof this.state.textArtCanvas.setXBFontData === 'function') {
+						const xbFontData = savedState[STATE_SYNC_KEYS.XBIN_FONT_DATA];
+
+						let fontBytes;
+						// Support both new base64 format and legacy array format
+						if (typeof xbFontData.bytes === 'string') {
+							// New optimized base64 format
+							fontBytes = this._base64ToUint8Array(xbFontData.bytes);
+						} else if (Array.isArray(xbFontData.bytes)) {
+							// Legacy array format (for backward compatibility)
+							fontBytes = new Uint8Array(xbFontData.bytes);
+						} else {
+							console.error(
+								'[State] Invalid XBIN font data format in localStorage',
+							);
+							return;
+						}
+
+						this.state.textArtCanvas.setXBFontData(
+							fontBytes,
+							xbFontData.width,
+							xbFontData.height,
+						);
+					}
+				}
+
+				// Restore font (must be done last and async)
+				if (savedState[STATE_SYNC_KEYS.FONT_NAME] && this.state.textArtCanvas) {
+					if (typeof this.state.textArtCanvas.setFont === 'function') {
+						// Font loading is async, so we need to handle it carefully
+						this.state.textArtCanvas.setFont(
+							savedState[STATE_SYNC_KEYS.FONT_NAME],
+							() => {
+								// After font loads, emit that state was restored
+								this.emit('app:state-restored', { state: savedState });
+							},
+						);
+					}
 				} else {
-					console.error('[State] Invalid imageData format in localStorage');
-					return;
+					// No font to restore, emit event immediately
+					this.emit('app:state-restored', { state: savedState });
 				}
 
-				// Use setImageData to restore canvas
-				if (typeof this.state.textArtCanvas.setImageData === 'function') {
-					this.state.textArtCanvas.setImageData(
-						columns,
-						rows,
-						uint16Data,
-						iceColors,
-					);
-				}
+				return; // Legacy format handled, don't continue to new format
 			}
 
-			// Restore letter spacing
-			if (
-				savedState[STATE_SYNC_KEYS.LETTER_SPACING] !== undefined &&
-				this.state.font
-			) {
-				if (typeof this.state.font.setLetterSpacing === 'function') {
-					this.state.font.setLetterSpacing(
-						savedState[STATE_SYNC_KEYS.LETTER_SPACING],
-					);
+			// Handle new storage format
+			if (settings) {
+				// Apply simple settings immediately
+				if (settings.iceColors !== undefined && this.state.textArtCanvas) {
+					this.state.textArtCanvas.setIceColors(settings.iceColors);
 				}
-			}
 
-			// Restore palette colors
-			if (savedState[STATE_SYNC_KEYS.PALETTE_COLORS] && this.state.palette) {
-				const paletteColors = savedState[STATE_SYNC_KEYS.PALETTE_COLORS];
-				if (typeof this.state.palette.setRGBAColor === 'function') {
-					paletteColors.forEach((color, index) => {
-						// color is [r, g, b, a] in 6-bit format (0-63)
-						// setRGBAColor expects 6-bit and will expand to 8-bit
+				if (settings.letterSpacing !== undefined && this.state.font) {
+					this.state.font.setLetterSpacing(settings.letterSpacing);
+				}
+
+				if (settings.paletteColors && this.state.palette) {
+					settings.paletteColors.forEach((color, index) => {
 						this.state.palette.setRGBAColor(index, color);
 					});
 				}
-			}
 
-			// Restore XBIN font data if present (must be done before restoring font)
-			if (
-				savedState[STATE_SYNC_KEYS.XBIN_FONT_DATA] &&
-				this.state.textArtCanvas
-			) {
-				if (typeof this.state.textArtCanvas.setXBFontData === 'function') {
-					const xbFontData = savedState[STATE_SYNC_KEYS.XBIN_FONT_DATA];
+				// Load XBIN font data if available
+				setTimeout(async () => {
+					const xbFontData = await Storage.loadFontData('XBIN');
 
-					let fontBytes;
-					// Support both new base64 format and legacy array format
-					if (typeof xbFontData.bytes === 'string') {
-						// New optimized base64 format
-						fontBytes = this._base64ToUint8Array(xbFontData.bytes);
-					} else if (Array.isArray(xbFontData.bytes)) {
-						// Legacy array format (for backward compatibility)
-						fontBytes = new Uint8Array(xbFontData.bytes);
-					} else {
-						console.error(
-							'[State] Invalid XBIN font data format in localStorage',
+					if (xbFontData && this.state.textArtCanvas) {
+						this.state.textArtCanvas.setXBFontData(
+							xbFontData.bytes,
+							xbFontData.width,
+							xbFontData.height,
 						);
-						return;
 					}
 
-					this.state.textArtCanvas.setXBFontData(
-						fontBytes,
-						xbFontData.width,
-						xbFontData.height,
-					);
-				}
-			}
+					// Load canvas data
+					setTimeout(async () => {
+						const canvasData = await Storage.loadCanvasData();
 
-			// Restore font (must be done last and async)
-			if (savedState[STATE_SYNC_KEYS.FONT_NAME] && this.state.textArtCanvas) {
-				if (typeof this.state.textArtCanvas.setFont === 'function') {
-					// Font loading is async, so we need to handle it carefully
-					this.state.textArtCanvas.setFont(
-						savedState[STATE_SYNC_KEYS.FONT_NAME],
-						() => {
-							// After font loads, emit that state was restored
-							this.emit('app:state-restored', { state: savedState });
-						},
-					);
-				}
-			} else {
-				// No font to restore, emit event immediately
-				this.emit('app:state-restored', { state: savedState });
+						if (canvasData && this.state.textArtCanvas) {
+							this.state.textArtCanvas.setImageData(
+								canvasData.columns,
+								canvasData.rows,
+								canvasData.imageData,
+								settings?.iceColors || false,
+							);
+						}
+
+						// Finally, set font
+						setTimeout(() => {
+							if (settings?.fontName && this.state.textArtCanvas) {
+								this.state.textArtCanvas.setFont(settings.fontName, () => {
+									this.loadingFromStorage = false;
+									stateManager.state.modal.close();
+									document.dispatchEvent(
+										new CustomEvent('onStateRestorationComplete'),
+									);
+								});
+							} else {
+								this.loadingFromStorage = false;
+								stateManager.state.modal.close();
+							}
+						}, 0);
+					}, 0);
+				}, 0);
 			}
 		} catch (error) {
 			console.error('[State] Error restoring state from localStorage:', error);
 			stateManager.state.modal.close();
-		} finally {
 			this.loadingFromStorage = false;
-			const w8 = setTimeout(_ => {
-				stateManager.state.modal.close();
-				clearTimeout(w8);
-			}, 1);
 		}
 	}
 }
