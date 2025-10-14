@@ -2,21 +2,71 @@ import State from './state.js';
 import { createCanvas } from './ui.js';
 import magicNumbers from './magicNumbers.js';
 import { createLazyFont } from './lazyFont.js';
+import { FontCache } from './fontCache.js';
 
 const loadImageAndGetImageData = url => {
 	return new Promise((resolve, reject) => {
-		const imgElement = new Image();
-		imgElement.addEventListener('load', () => {
-			const canvas = createCanvas(imgElement.width, imgElement.height);
-			const ctx = canvas.getContext('2d');
-			ctx.drawImage(imgElement, 0, 0);
-			const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-			resolve(imageData);
-		});
-		imgElement.addEventListener('error', () => {
-			reject(new Error(`Failed to load image: ${url}`));
-		});
-		imgElement.src = url;
+		// Extract font name from URL
+		const fontName = url.substring(
+			url.lastIndexOf('/') + 1,
+			url.lastIndexOf('.'),
+		);
+
+		// Try to get from cache first
+		FontCache.getFont(fontName)
+			.then(response => {
+				if (response) {
+					return response.blob().then(blob => {
+						const imgElement = new Image();
+						const blobUrl = URL.createObjectURL(blob);
+
+						imgElement.addEventListener('load', () => {
+							const canvas = createCanvas(imgElement.width, imgElement.height);
+							const ctx = canvas.getContext('2d');
+							ctx.drawImage(imgElement, 0, 0);
+							const imageData = ctx.getImageData(
+								0,
+								0,
+								canvas.width,
+								canvas.height,
+							);
+							URL.revokeObjectURL(blobUrl);
+							resolve(imageData);
+						});
+
+						imgElement.addEventListener('error', () => {
+							URL.revokeObjectURL(blobUrl);
+							reject(new Error(`Failed to load cached image: ${fontName}`));
+						});
+
+						imgElement.src = blobUrl;
+					});
+				} else {
+					// Fall back to direct loading
+					const imgElement = new Image();
+					imgElement.addEventListener('load', () => {
+						const canvas = createCanvas(imgElement.width, imgElement.height);
+						const ctx = canvas.getContext('2d');
+						ctx.drawImage(imgElement, 0, 0);
+						const imageData = ctx.getImageData(
+							0,
+							0,
+							canvas.width,
+							canvas.height,
+						);
+						resolve(imageData);
+					});
+
+					imgElement.addEventListener('error', () => {
+						reject(new Error(`Failed to load image: ${url}`));
+					});
+
+					imgElement.src = url;
+				}
+			})
+			.catch(error => {
+				reject(error);
+			});
 	});
 };
 

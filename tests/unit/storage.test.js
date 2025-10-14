@@ -56,7 +56,9 @@ describe('Storage Utilities', () => {
 		it('should handle invalid JSON gracefully', () => {
 			localStorage.setItem('text0wnz-settings', 'invalid json{');
 
-			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+			const consoleSpy = vi
+				.spyOn(console, 'error')
+				.mockImplementation(() => {});
 			const loaded = Storage.loadSettings();
 
 			expect(loaded).toBeNull();
