@@ -9,7 +9,6 @@
 | Domain                          | Status                                                   |
 |---------------------------------|----------------------------------------------------------|
 | https://text.0w.nz              | The main prod domain. Collab server may be available     |
-| https://xero.github.io/teXt0wnz | The github pages version of the site, offline mode only  |
 
 [![Version](https://img.shields.io/github/package-json/version/xero/teXt0wnz?labelColor=%2333383e&logo=npm&&logoColor=%23979da4&color=#5db85b)](https://github.com/xero/teXt0wnz/releases/latest)
 [![GitHub repo size](https://img.shields.io/github/repo-size/xero/teXt0wnz?labelColor=%23262a2e&logo=googlecontaineroptimizedos&logoColor=%23979da4&color=#5db85b)](https://github.com/xero/teXt0wnz/)
