@@ -460,8 +460,8 @@ describe('Worker Module Core Logic', () => {
 					data instanceof ArrayBuffer ||
 					data instanceof Uint8Array ||
 					(typeof data === 'object' &&
-					  data !== null &&
-					  typeof data.byteLength === 'number')
+						data !== null &&
+						typeof data.byteLength === 'number')
 				);
 			};
 

@@ -1,6 +1,7 @@
 import State from './state.js';
 import { createCanvas } from './ui.js';
 import magicNumbers from './magicNumbers.js';
+import { createLazyFont } from './lazyFont.js';
 
 const loadImageAndGetImageData = url => {
 	return new Promise((resolve, reject) => {
@@ -28,9 +29,7 @@ const loadFontFromXBData = (
 ) => {
 	return new Promise((resolve, reject) => {
 		let fontData = {};
-		let fontGlyphs;
-		let alphaGlyphs;
-		let letterSpacingImageData;
+		let lazyFont = null;
 
 		const parseXBFontData = (fontBytes, fontWidth, fontHeight) => {
 			if (!fontBytes || fontBytes.length === 0) {
@@ -68,86 +67,8 @@ const loadFontFromXBData = (
 			};
 		};
 
-		const generateNewFontGlyphs = () => {
-			const canvas = createCanvas(fontData.width, fontData.height);
-			const ctx = canvas.getContext('2d');
-			const bits = new Uint8Array(fontData.width * fontData.height * 256);
-			for (
-				let i = 0, k = 0;
-				i < (fontData.width * fontData.height * 256) / 8;
-				i += 1
-			) {
-				for (let j = 7; j >= 0; j -= 1, k += 1) {
-					bits[k] = (fontData.data[i] >> j) & 1;
-				}
-			}
-			fontGlyphs = new Array(16);
-			for (let foreground = 0; foreground < 16; foreground++) {
-				fontGlyphs[foreground] = new Array(16);
-				for (let background = 0; background < 16; background++) {
-					fontGlyphs[foreground][background] = new Array(256);
-					for (let charCode = 0; charCode < 256; charCode++) {
-						fontGlyphs[foreground][background][charCode] = ctx.createImageData(
-							fontData.width,
-							fontData.height,
-						);
-						for (
-							let i = 0, j = charCode * fontData.width * fontData.height;
-							i < fontData.width * fontData.height;
-							i += 1, j += 1
-						) {
-							const color = palette.getRGBAColor(
-								bits[j] === 1 ? foreground : background,
-							);
-							fontGlyphs[foreground][background][charCode].data.set(
-								color,
-								i * 4,
-							);
-						}
-					}
-				}
-			}
-			alphaGlyphs = new Array(16);
-			for (let foreground = 0; foreground < 16; foreground++) {
-				alphaGlyphs[foreground] = new Array(256);
-				for (let charCode = 0; charCode < 256; charCode++) {
-					if (
-						charCode === magicNumbers.LOWER_HALFBLOCK ||
-						charCode === magicNumbers.UPPER_HALFBLOCK ||
-						charCode === magicNumbers.CHAR_SLASH ||
-						charCode === magicNumbers.CHAR_PIPE ||
-						charCode === magicNumbers.CHAR_CAPITAL_X
-					) {
-						const imageData = ctx.createImageData(
-							fontData.width,
-							fontData.height,
-						);
-						for (
-							let i = 0, j = charCode * fontData.width * fontData.height;
-							i < fontData.width * fontData.height;
-							i += 1, j += 1
-						) {
-							if (bits[j] === 1) {
-								imageData.data.set(palette.getRGBAColor(foreground), i * 4);
-							}
-						}
-						const alphaCanvas = createCanvas(imageData.width, imageData.height);
-						alphaCanvas.getContext('2d').putImageData(imageData, 0, 0);
-						alphaGlyphs[foreground][charCode] = alphaCanvas;
-					}
-				}
-			}
-			letterSpacingImageData = new Array(16);
-			for (let i = 0; i < 16; i++) {
-				const canvas = createCanvas(1, fontData.height);
-				const ctx = canvas.getContext('2d');
-				const imageData = ctx.getImageData(0, 0, 1, fontData.height);
-				const color = palette.getRGBAColor(i);
-				for (let j = 0; j < fontData.height; j++) {
-					imageData.data.set(color, j * 4);
-				}
-				letterSpacingImageData[i] = imageData;
-			}
+		const createLazyFontInstance = () => {
+			lazyFont = createLazyFont(fontData, palette, letterSpacing);
 		};
 
 		fontData = parseXBFontData(fontBytes, fontWidth, fontHeight);
@@ -162,7 +83,9 @@ const loadFontFromXBData = (
 			reject(new Error('Failed to load XB font data'));
 			return;
 		}
-		generateNewFontGlyphs();
+
+		createLazyFontInstance();
+
 		resolve({
 			getData: () => fontData,
 			getWidth: () => fontData.width,
@@ -170,7 +93,7 @@ const loadFontFromXBData = (
 			setLetterSpacing: newLetterSpacing => {
 				if (newLetterSpacing !== letterSpacing) {
 					letterSpacing = newLetterSpacing;
-					generateNewFontGlyphs();
+					createLazyFontInstance();
 					document.dispatchEvent(
 						new CustomEvent('onLetterSpacingChange', { detail: letterSpacing }),
 					);
@@ -178,67 +101,20 @@ const loadFontFromXBData = (
 			},
 			getLetterSpacing: () => letterSpacing,
 			draw: (charCode, foreground, background, ctx, x, y) => {
-				if (
-					!fontGlyphs ||
-					!fontGlyphs[foreground] ||
-					!fontGlyphs[foreground][background] ||
-					!fontGlyphs[foreground][background][charCode]
-				) {
-					console.warn('[Font] XB Font glyph not available:', {
-						foreground,
-						background,
-						charCode,
-						fontGlyphsExists: !!fontGlyphs,
-					});
+				if (!lazyFont) {
+					console.warn('[Font] XB Lazy font not initialized');
 					return;
 				}
-				if (letterSpacing) {
-					ctx.putImageData(
-						fontGlyphs[foreground][background][charCode],
-						x * (fontData.width + 1),
-						y * fontData.height,
-					);
-				} else {
-					ctx.putImageData(
-						fontGlyphs[foreground][background][charCode],
-						x * fontData.width,
-						y * fontData.height,
-					);
-				}
+				lazyFont.draw(charCode, foreground, background, ctx, x, y);
 			},
 			drawWithAlpha: (charCode, foreground, ctx, x, y) => {
-				let char = charCode;
-				if (!alphaGlyphs[foreground] || !alphaGlyphs[foreground][char]) {
-					char = magicNumbers.CHAR_CAPITAL_X;
+				if (!lazyFont) {
+					console.warn('[Font] XB Lazy font not initialized');
+					return;
 				}
-				if (letterSpacing) {
-					ctx.drawImage(
-						alphaGlyphs[foreground][char],
-						x * (fontData.width + 1),
-						y * fontData.height,
-					);
-					if (char >= 192 && char <= 223) {
-						ctx.drawImage(
-							alphaGlyphs[foreground][char],
-							fontData.width - 1,
-							0,
-							1,
-							fontData.height,
-							x * (fontData.width + 1) + fontData.width,
-							y * fontData.height,
-							1,
-							fontData.height,
-						);
-					}
-				} else {
-					ctx.drawImage(
-						alphaGlyphs[foreground][char],
-						x * fontData.width,
-						y * fontData.height,
-					);
-				}
+				lazyFont.drawWithAlpha(charCode, foreground, ctx, x, y);
 			},
-			redraw: () => generateNewFontGlyphs(),
+			redraw: () => createLazyFontInstance(),
 		});
 	});
 };
@@ -246,9 +122,7 @@ const loadFontFromXBData = (
 const loadFontFromImage = (fontName, letterSpacing, palette) => {
 	return new Promise((resolve, reject) => {
 		let fontData = {};
-		let fontGlyphs;
-		let alphaGlyphs;
-		let letterSpacingImageData;
+		let lazyFont = null;
 
 		const parseFontData = imageData => {
 			const fontWidth = imageData.width / 16;
@@ -295,94 +169,8 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 			return undefined;
 		};
 
-		const generateNewFontGlyphs = () => {
-			const canvas = createCanvas(fontData.width, fontData.height);
-			const ctx = canvas.getContext('2d');
-			const bits = new Uint8Array(fontData.width * fontData.height * 256);
-
-			for (
-				let i = 0, k = 0;
-				i < (fontData.width * fontData.height * 256) / 8;
-				i += 1
-			) {
-				for (let j = 7; j >= 0; j -= 1, k += 1) {
-					bits[k] = (fontData.data[i] >> j) & 1;
-				}
-			}
-
-			fontGlyphs = new Array(16);
-			for (let foreground = 0; foreground < 16; foreground++) {
-				fontGlyphs[foreground] = new Array(16);
-
-				for (let background = 0; background < 16; background++) {
-					fontGlyphs[foreground][background] = new Array(256);
-
-					for (let charCode = 0; charCode < 256; charCode++) {
-						fontGlyphs[foreground][background][charCode] = ctx.createImageData(
-							fontData.width,
-							fontData.height,
-						);
-
-						for (
-							let i = 0, j = charCode * fontData.width * fontData.height;
-							i < fontData.width * fontData.height;
-							i += 1, j += 1
-						) {
-							const color = palette.getRGBAColor(
-								bits[j] === 1 ? foreground : background,
-							);
-							fontGlyphs[foreground][background][charCode].data.set(
-								color,
-								i * 4,
-							);
-						}
-					}
-				}
-			}
-
-			alphaGlyphs = new Array(16);
-			for (let foreground = 0; foreground < 16; foreground++) {
-				alphaGlyphs[foreground] = new Array(256);
-				for (let charCode = 0; charCode < 256; charCode++) {
-					if (
-						charCode === magicNumbers.LOWER_HALFBLOCK ||
-						charCode === magicNumbers.UPPER_HALFBLOCK ||
-						charCode === magicNumbers.CHAR_SLASH ||
-						charCode === magicNumbers.CHAR_PIPE ||
-						charCode === magicNumbers.CHAR_CAPITAL_X
-					) {
-						const imageData = ctx.createImageData(
-							fontData.width,
-							fontData.height,
-						);
-						for (
-							let i = 0, j = charCode * fontData.width * fontData.height;
-							i < fontData.width * fontData.height;
-							i += 1, j += 1
-						) {
-							if (bits[j] === 1) {
-								imageData.data.set(palette.getRGBAColor(foreground), i * 4);
-							}
-						}
-						const alphaCanvas = createCanvas(imageData.width, imageData.height);
-						alphaCanvas.getContext('2d').putImageData(imageData, 0, 0);
-						alphaGlyphs[foreground][charCode] = alphaCanvas;
-					}
-				}
-			}
-
-			letterSpacingImageData = new Array(16);
-			for (let i = 0; i < 16; i++) {
-				const canvas = createCanvas(1, fontData.height);
-				const ctx = canvas.getContext('2d');
-				const imageData = ctx.getImageData(0, 0, 1, fontData.height);
-				const color = palette.getRGBAColor(i);
-
-				for (let j = 0; j < fontData.height; j++) {
-					imageData.data.set(color, j * 4);
-				}
-				letterSpacingImageData[i] = imageData;
-			}
+		const createLazyFontInstance = () => {
+			lazyFont = createLazyFont(fontData, palette, letterSpacing);
 		};
 
 		loadImageAndGetImageData(`${State.fontDir}${fontName}.png`)
@@ -393,7 +181,7 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 					reject(new Error(`Failed to parse font data for ${fontName}`));
 				} else {
 					fontData = newFontData;
-					generateNewFontGlyphs();
+					createLazyFontInstance();
 
 					resolve({
 						getData: () => fontData,
@@ -403,76 +191,30 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 						setLetterSpacing: newLetterSpacing => {
 							if (newLetterSpacing !== letterSpacing) {
 								letterSpacing = newLetterSpacing;
-								generateNewFontGlyphs();
+								createLazyFontInstance();
 								document.dispatchEvent(
-									new CustomEvent('onLetterSpacingChange', { detail: letterSpacing }),
+									new CustomEvent('onLetterSpacingChange', {
+										detail: letterSpacing,
+									}),
 								);
 							}
 						},
 						getLetterSpacing: () => letterSpacing,
 						draw: (charCode, foreground, background, ctx, x, y) => {
-							if (
-								!fontGlyphs ||
-								!fontGlyphs[foreground] ||
-								!fontGlyphs[foreground][background] ||
-								!fontGlyphs[foreground][background][charCode]
-							) {
-								console.warn('[Font] Font glyph not available:', {
-									foreground,
-									background,
-									charCode,
-									fontGlyphsExists: !!fontGlyphs,
-								});
+							if (!lazyFont) {
+								console.warn('[Font] Lazy font not initialized');
 								return;
 							}
-
-							if (letterSpacing) {
-								ctx.putImageData(
-									fontGlyphs[foreground][background][charCode],
-									x * (fontData.width + 1),
-									y * fontData.height,
-								);
-							} else {
-								ctx.putImageData(
-									fontGlyphs[foreground][background][charCode],
-									x * fontData.width,
-									y * fontData.height,
-								);
-							}
+							lazyFont.draw(charCode, foreground, background, ctx, x, y);
 						},
 						drawWithAlpha: (charCode, foreground, ctx, x, y) => {
-							let char = charCode;
-							if (!alphaGlyphs[foreground] || !alphaGlyphs[foreground][char]) {
-								char = magicNumbers.CHAR_CAPITAL_X;
+							if (!lazyFont) {
+								console.warn('[Font] Lazy font not initialized');
+								return;
 							}
-							if (letterSpacing) {
-								ctx.drawImage(
-									alphaGlyphs[foreground][char],
-									x * (fontData.width + 1),
-									y * fontData.height,
-								);
-								if (char >= 192 && char <= 223) {
-									ctx.drawImage(
-										alphaGlyphs[foreground][char],
-										fontData.width - 1,
-										0,
-										1,
-										fontData.height,
-										x * (fontData.width + 1) + fontData.width,
-										y * fontData.height,
-										1,
-										fontData.height,
-									);
-								}
-							} else {
-								ctx.drawImage(
-									alphaGlyphs[foreground][char],
-									x * fontData.width,
-									y * fontData.height,
-								);
-							}
+							lazyFont.drawWithAlpha(charCode, foreground, ctx, x, y);
 						},
-						redraw: () => generateNewFontGlyphs(),
+						redraw: () => createLazyFontInstance(),
 					});
 				}
 			})
