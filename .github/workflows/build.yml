@@ -20,9 +20,21 @@ jobs:
         run: bun bake
       - name: check build artifacts
         run: |
+          # dirs
           test -d dist/ui
-          test -d dist/ui/fonts
           test -d dist/ui/js
+          test -d dist/ui/img
+          test -d dist/ui/fonts
+          # static files
+          test -f dist/ui/img/android-launchericon-48-48.png
+          test -f dist/ui/img/apple-touch-icon.png
+          test -f dist/ui/img/favicon-96x96.png
+          test -f dist/ui/img/favicon.ico
+          test -f dist/ui/img/favicon.svg
+          test -f dist/ui/img/logo.png
+          test -f dist/ui/img/web-app-manifest-192x192.png
+          test -f dist/ui/img/web-app-manifest-512x512.png
+          test -f dist/ui/topazplus_1200.woff2
           test -f dist/favicon.ico
           test -f dist/humans.txt
           test -f dist/index.html
@@ -30,38 +42,25 @@ jobs:
           test -f dist/service.js
           test -f dist/sitemap.xml
           test -f dist/site.webmanifest
-          test -f dist/workbox-*.js
-          test -f dist/ui/android-launchericon-48-48.png
-          test -f dist/ui/apple-touch-icon.png
-          test -f dist/ui/editor.js
-          test -f dist/ui/favicon-96x96.png
-          test -f dist/ui/favicon.ico
-          test -f dist/ui/favicon.svg
-          test -f dist/ui/icons-*.svg
-          test -f dist/ui/logo.png
-          test -f dist/ui/screenshot-dark-wide.png
-          test -f dist/ui/screenshot-desktop.png
-          test -f dist/ui/screenshot-font-tall.png
-          test -f dist/ui/screenshot-light-wide.png
-          test -f dist/ui/screenshot-mobile.png
-          test -f dist/ui/screenshot-sauce-tall.png
-          test -f dist/ui/stylez.css
-          test -f dist/ui/topazplus_1200.woff2
-          test -f dist/ui/web-app-manifest-192x192.png
-          test -f dist/ui/web-app-manifest-512x512.png
-          test -f dist/ui/js/canvas-*.js
-          test -f dist/ui/js/core-*.js
-          test -f dist/ui/js/fileops-*.js
-          test -f dist/ui/js/network-*.js
-          test -f dist/ui/js/palette-*.js
-          test -f dist/ui/js/tools-*.js
-          test -f dist/ui/js/websocket.js
+          # hashed files
+          [ -n "$(compgen -G "dist/ui/img/screenshot*.png")" ] || exit 1
+          [ -n "$(compgen -G "dist/ui/js/canvas*.js")" ] || exit 1
+          [ -n "$(compgen -G "dist/ui/js/core*.js")" ] || exit 1
+          [ -n "$(compgen -G "dist/ui/js/editor*.js")" ] || exit 1
+          [ -n "$(compgen -G "dist/ui/js/fileops*.js")" ] || exit 1
+          [ -n "$(compgen -G "dist/ui/js/network*.js")" ] || exit 1
+          [ -n "$(compgen -G "dist/ui/js/palette*.js")" ] || exit 1
+          [ -n "$(compgen -G "dist/ui/js/tools*.js")" ] || exit 1
+          [ -n "$(compgen -G "dist/ui/js/websocket.js")" ] || exit 1
+          [ -n "$(compgen -G "dist/ui/icons*.svg")" ] || exit 1
+          [ -n "$(compgen -G "dist/ui/stylez*.css")" ] || exit 1
+          [ -n "$(compgen -G "dist/workbox*.js")" ] || exit 1
           echo "Build successful"
       - name: upload build results as artifact
         if: success() && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: editor-build
+          name: github-pages
           path: dist
           retention-days: 3
       - name: add artifact download info to summary
