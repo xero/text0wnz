@@ -1,4 +1,4 @@
-name: 'Copilot Setup Steps'
+name: Copilot Setup Steps
 on:
   workflow_call:
 jobs:
@@ -7,17 +7,17 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout code
+      - name: checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
-      - name: Setup bun
+      - name: setup bun
         uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
         with:
           bun-version: "latest"
-      - name: Install project dependencies (npm)
+      - name: install project dependencies (npm)
         run: npm install
-      - name: Install project dependencies (bun)
+      - name: install project dependencies (bun)
         run: bun i
-      - name: Install Dev Tools
+      - name: install dev tools
         run: bun i -g eslint prettier
-      - name: Install Playwright Browsers
-        run: bun test:install
+      # - name: Install Playwright Browsers
+      #   run: bun test:install

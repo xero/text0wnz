@@ -23,7 +23,7 @@ jobs:
       - name: inject dark theme into coverage report
         run: |
           echo "@media (prefers-color-scheme:dark){.cover-empty,body{background:#000}body{color:#efefef}table{color:#000}table,td,th{border:1px solid #222!important}td.empty{color:#eee}.cbranch-no,.cstat-no,.fstat-no{background:#afe9dc}.cline-yes,.high{background:#f2bfff}.cline-no,.low{background:#bbf2e8}.fraction,.quiet,table .chart,table .high,table .low,td.text,th.file,th.pct{-webkit-filter:invert(100%)}.footer{display:none!important}body>div.wrapper>div:first-child>p{background:#ddd;width:fit-content;padding:10px}}" >> tests/results/coverage/base.css
-      - name: Upload all unit test results as artifact
+      - name: upload unit test artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: unit-test-results

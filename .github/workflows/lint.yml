@@ -16,5 +16,5 @@ jobs:
           bun-version: "latest"
       - name: install dependencies
         run: bun i
-      - name: run linter
+      - name: run linter tests
         run: bun lint:check
