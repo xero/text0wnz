@@ -218,7 +218,7 @@ bun www      # or npm run www
 ```
 
 > [!NOTE]
-> See: [docs//docs/building-and-developing](/docs/building-and-developing.md) for more info.
+> See: [docs/building-and-developing](docs/building-and-developing.md) for more info.
 
 **Scripts:**
 
