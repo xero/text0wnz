@@ -20,7 +20,6 @@ export const FontCache = {
 	 * Preload common fonts
 	 */
 	async preloadCommonFonts() {
-		// Read default fonts from magicNumbers.js
 		const commonFonts = [
 			magicNumbers.DEFAULT_FONT, // CP437 8x16 - ANSI/CBIN Default
 			magicNumbers.NFO_FONT, // Topaz-437 8x16 - NFO default
@@ -28,7 +27,7 @@ export const FontCache = {
 
 		if (this._hasCacheAPI()) {
 			try {
-				const cache = await globalThis.caches.open('text0wnz-fonts-v1');
+				const cache = await globalThis.caches.open('text0wnz-fonts');
 
 				// Preload all common fonts
 				await Promise.all(
@@ -78,7 +77,7 @@ export const FontCache = {
 
 		if (this._hasCacheAPI()) {
 			try {
-				const cache = await globalThis.caches.open('text0wnz-fonts-v1');
+				const cache = await globalThis.caches.open('text0wnz-fonts');
 				const response = await cache.match(fontUrl);
 
 				if (response) {
@@ -98,7 +97,7 @@ export const FontCache = {
 
 			if (response.ok) {
 				if (this._hasCacheAPI()) {
-					const cache = await globalThis.caches.open('text0wnz-fonts-v1');
+					const cache = await globalThis.caches.open('text0wnz-fonts');
 					cache.put(fontUrl, response.clone());
 				} else {
 					response
@@ -123,7 +122,7 @@ export const FontCache = {
 	async clearCache() {
 		if (this._hasCacheAPI()) {
 			try {
-				await globalThis.caches.delete('text0wnz-fonts-v1');
+				await globalThis.caches.delete('text0wnz-fonts');
 			} catch (error) {
 				console.error('[FontCache] Error clearing cache:', error);
 			}

@@ -36,7 +36,7 @@ export default ({ mode }) => {
 					index: path.resolve('./src', 'index.html'),
 				},
 				output: {
-					entryFileNames: `${uiDir}editor.js`,
+					entryFileNames: `${uiDir}js/editor-[hash].js`,
 					chunkFileNames: `${uiDir}js/[name]-[hash].js`,
 					assetFileNames: assetInfo => {
 						const assetName = assetInfo.name || assetInfo.names?.[0];
@@ -44,41 +44,38 @@ export default ({ mode }) => {
 						const info = assetName.split('.');
 						const ext = info[info.length - 1];
 						if (assetName === 'index.css') {
-							return `${uiDir}stylez.css`;
+							return `${uiDir}stylez-[hash].css`;
 						}
 						if (assetName === 'icons.svg') {
 							return `${uiDir}icons-[hash].svg`;
 						}
+						if (/\.(png|ico|svg)$/.test(assetName)) {
+							return `${uiDir}img/[name].${ext}`;
+						}
 						return `${uiDir}[name].${ext}`;
 					},
 					manualChunks: {
-						// Core functionality needed immediately
 						core: [
-							'src/js/client/state.js',
 							'src/js/client/magicNumbers.js',
-							'src/js/client/ui.js',
+							'src/js/client/state.js',
 							'src/js/client/storage.js',
-							'src/js/client/compression.js'
+							'src/js/client/compression.js',
+							'src/js/client/ui.js',
 						],
-						// Drawing functionality
 						canvas: [
 							'src/js/client/canvas.js',
+							'src/js/client/font.js',
 							'src/js/client/lazyFont.js',
 							'src/js/client/fontCache.js',
-							'src/js/client/font.js'
 						],
-						// Tools loaded after initial rendering
 						tools: [
 							'src/js/client/freehand_tools.js',
 							'src/js/client/keyboard.js',
-							'src/js/client/toolbar.js'
+							'src/js/client/toolbar.js',
 						],
-						// File handling (only needed for open/save operations)
 						fileops: ['src/js/client/file.js'],
-						// Network features (collaboration mode)
 						network: ['src/js/client/network.js'],
-						// Palette functions
-						palette: ['src/js/client/palette.js']
+						palette: ['src/js/client/palette.js'],
 					}
 				},
 			},
@@ -202,66 +199,66 @@ export default ({ mode }) => {
 					theme_color: '#000',
 					display_override: ['window-controls-overlay'],
 					icons: [{
-						src: `/${uiDir}web-app-manifest-512x512.png`,
+						src: `/${uiDir}img/web-app-manifest-512x512.png`,
 						sizes: '512x512',
 						type: 'image/png',
 						purpose: 'any',
 					}, {
-						src: `/${uiDir}web-app-manifest-512x512.png`,
+						src: `/${uiDir}img/web-app-manifest-512x512.png`,
 						sizes: '512x512',
 						type: 'image/png',
 						purpose: 'maskable',
 					}, {
-						src: `/${uiDir}web-app-manifest-192x192.png`,
+						src: `/${uiDir}img/web-app-manifest-192x192.png`,
 						sizes: '192x192',
 						type: 'image/png',
 						purpose: 'maskable',
 					}, {
-						src: `/${uiDir}apple-touch-icon.png`,
+						src: `/${uiDir}img/apple-touch-icon.png`,
 						sizes: '180x180',
 						type: 'image/png',
 						purpose: 'maskable',
 					}, {
-						src: `/${uiDir}favicon-96x96.png`,
+						src: `/${uiDir}img/favicon-96x96.png`,
 						sizes: '96x96',
 						type: 'image/png',
 						purpose: 'any',
 					}, {
-						src: `/${uiDir}android-launchericon-48-48.png`,
+						src: `/${uiDir}img/android-launchericon-48-48.png`,
 						sizes: '48x48',
 						type: 'image/png',
 						purpose: 'any',
 					}],
 					screenshots: [{
-						src: `/${uiDir}screenshot-desktop.png`,
+						src: `/${uiDir}img/screenshot-desktop.png`,
 						sizes: '3024x1964',
 						type: 'image/png',
 						platform: 'any',
 					}, {
-						src: `/${uiDir}screenshot-mobile.png`,
+						src: `/${uiDir}img/screenshot-mobile.png`,
 						sizes: '1140x1520',
 						type: 'image/png',
 						platform: 'any',
 					}, {
-						src: `/${uiDir}screenshot-font-tall.png`,
+						src: `/${uiDir}img/screenshot-font-tall.png`,
 						sizes: '910x1370',
 						type: 'image/png',
 						platform: 'any',
 						form_factor: 'narrow',
 					}, {
-						src: `/${uiDir}screenshot-sauce-tall.png`,
+						src: `/${uiDir}img/screenshot-sauce-tall.png`,
 						sizes: '910x1370',
 						type: 'image/png',
 						platform: 'any',
 						form_factor: 'narrow',
 					}, {
-						src: `/${uiDir}screenshot-light-wide.png`,
+						src: `/${uiDir}img/screenshot-light-wide.png`,
 						sizes: '1540x1158',
 						type: 'image/png',
 						platform: 'any',
 						form_factor: 'wide',
 					}, {
-						src: `/${uiDir}screenshot-dark-wide.png`,
+						src: `/${uiDir}img/screenshot-dark-wide.png`,
 						sizes: '1540x1158',
 						type: 'image/png',
 						platform: 'any',
@@ -287,14 +284,19 @@ export default ({ mode }) => {
 					maximumFileSizeToCacheInBytes: 3000000,// 3mb max
 					runtimeCaching: [
 						{
-							urlPattern: new RegExp(`^\\/${uiDirSafe}\\/.*\\.(png|svg|ico|woff2)$`),
+							urlPattern: new RegExp(`^\\/${uiDirSafe}\\/img\\/.*\\.(png|svg|ico)$`),
 							handler: 'CacheFirst',
 							options: { cacheName: 'asset-cache' },
 						},
 						{
-							urlPattern: new RegExp(`^\\/${uiDirSafe}\\/.*\\.(js|css)$`),
+							urlPattern: new RegExp(`^\\/${uiDirSafe}\\/js\\/.*\\.js$`),
 							handler: 'CacheFirst',
-							options: { cacheName: 'dynamic-cache' },
+							options: { cacheName: 'app-cache' },
+						},
+						{
+							urlPattern: new RegExp(`^\\/${uiDirSafe}\\/.*\\.(css|svg|woff2)$`),
+							handler: 'CacheFirst',
+							options: { cacheName: 'style-cache' },
 						},
 						{
 							urlPattern: /^\/(index\.html)?$/,
