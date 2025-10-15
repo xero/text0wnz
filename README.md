@@ -42,7 +42,8 @@
 - **Canvas operations:**
   - Undo/redo, resizing, grid overlay, font selection, and full SAUCE metadata support.
 - **Auto Save/Restore**
-  - Artwork saved to localstorage as you draw, and reloaded when the app is opened.
+  - Artwork saved to IndexedDB as you draw, and reloaded when the app is opened.
+  - Optimized storage using binary data for efficient canvas persistence
 - **Collaborative server mode**
   - For real-time multi-user editing
 - **Build tools:**
@@ -229,10 +230,39 @@ bun www      # or npm run www
 **Build Process:**
 - Uses Vite + plugins for static copy, sitemap, PWA/offline support
 - Output: `dist/`
+- Files are hashed for cache busting (e.g., `editor-[hash].js`, `stylez-[hash].css`)
 - Customizable options via `.env` variables:
     - `VITE_DOMAIN='https://text.0w.nz'`
     - `VITE_UI_DIR='ui/'`
-    - `VITE_WORKER_FILE='worker.js'`
+    - `VITE_WORKER_FILE='websocket.js'`
+
+**Build Output Structure:**
+```
+dist/
+├── index.html              # Main entry point
+├── site.webmanifest        # PWA manifest
+├── service.js              # Service worker
+├── workbox-[hash].js       # Workbox runtime for caching
+├── robots.txt              # Search engine directives
+├── sitemap.xml             # Site map
+├── humans.txt              # Humans.txt file
+├── favicon.ico             # Favicon
+└── ui/                     # UI assets directory
+    ├── stylez-[hash].css   # Minified CSS (hashed)
+    ├── icons-[hash].svg    # Icon sprite (hashed)
+    ├── topazplus_1200.woff2  # Font file
+    ├── fonts/              # Bitmap fonts (PNG format)
+    ├── img/                # Images and icons
+    └── js/                 # JavaScript bundles (all hashed)
+        ├── editor-[hash].js      # Main entry
+        ├── core-[hash].js        # Core modules (state, storage, compression)
+        ├── canvas-[hash].js      # Canvas rendering with lazy font loading
+        ├── tools-[hash].js       # Drawing tools
+        ├── fileops-[hash].js     # File operations
+        ├── network-[hash].js     # Collaboration
+        ├── palette-[hash].js     # Color palette
+        └── websocket.js          # Web Worker (not hashed)
+```
 
 > [!IMPORTANT]
 > `DOMAIN` is only used for robots.txt and sitemap.xml generation, all app urls are relative

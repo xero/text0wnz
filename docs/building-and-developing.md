@@ -56,11 +56,11 @@ bun server
 **Configuration:** `vite.config.js`
 
 **Key features:**
-- ES module bundling
-- Code splitting
-- Asset optimization
+- ES module bundling with code splitting
+- Automatic code splitting into logical chunks (core, canvas, tools, fileops, network, palette)
+- Asset optimization with cache-busting hashes
 - Development server with hot module replacement
-- Production minification
+- Production minification with Terser
 
 **Build output structure:**
 ```
@@ -68,16 +68,26 @@ dist/
 ├── index.html              # Main entry point
 ├── site.webmanifest        # PWA manifest
 ├── service.js              # Service worker
-├── workbox-[hash].js       # Workbox runtime
+├── workbox-[hash].js       # Workbox runtime for caching
 ├── robots.txt              # Search engine directives
 ├── sitemap.xml             # Site map
 ├── humans.txt              # Humans.txt file
+├── favicon.ico             # Favicon
 └── ui/
-    ├── editor.js           # Bundled JavaScript
-    ├── stylez.css          # Bundled CSS
-    ├── worker.js           # Web Worker
-    ├── fonts/              # Font assets
-    └── img/                # Images and icons
+    ├── stylez-[hash].css   # Minified CSS with cache-busting hash
+    ├── icons-[hash].svg    # SVG icon sprite (hashed)
+    ├── topazplus_1200.woff2  # Font file (UI font)
+    ├── fonts/              # Bitmap font assets (PNG format)
+    ├── img/                # Images and icons
+    └── js/                 # Code-split JavaScript bundles
+        ├── editor-[hash].js      # Main application entry
+        ├── core-[hash].js        # Core modules (state, storage, compression, UI)
+        ├── canvas-[hash].js      # Canvas rendering, fonts, lazy loading, font cache
+        ├── tools-[hash].js       # Drawing tools, keyboard, toolbar
+        ├── fileops-[hash].js     # File I/O operations
+        ├── network-[hash].js     # Collaboration/WebSocket
+        ├── palette-[hash].js     # Color palette management
+        └── websocket.js          # Web Worker (no hash for service worker caching)
 ```
 
 ### Vite Plugins
@@ -271,7 +281,7 @@ Configure the build with environment variables in `.env` file:
 VITE_DOMAIN='https://text.0w.nz'
 VITE_UI_DIR='ui/'
 VITE_FONT_DIR='fonts/'
-VITE_WORKER_FILE='worker.js'
+VITE_WORKER_FILE='websocket.js'
 ```
 
 ### Variable Reference
@@ -292,7 +302,7 @@ VITE_WORKER_FILE='worker.js'
 
 **`VITE_WORKER_FILE`**
 - Web Worker filename
-- Default: `worker.js`
+- Default: `websocket.js`
 
 ## Development Workflow
 
@@ -422,8 +432,13 @@ src/
     │   ├── freehand_tools.js
     │   ├── toolbar.js
     │   ├── state.js
-    │   ├── utils.js
-    │   ├── worker.js
+    │   ├── storage.js       # IndexedDB storage system
+    │   ├── compression.js   # RLE compression utilities
+    │   ├── font.js
+    │   ├── lazyFont.js      # Lazy glyph generation
+    │   ├── fontCache.js     # Font caching system
+    │   ├── magicNumbers.js
+    │   ├── websocket.js     # Web Worker for collaboration
     │   └── network.js
     └── server/         # Server-side modules
         ├── main.js
@@ -474,25 +489,34 @@ docs/
 
 ### 1. Asset Processing
 
+**Code Splitting:**
+- Automatic chunking into logical modules (core, canvas, tools, fileops, network, palette)
+- Lazy loading of non-critical code
+- Shared dependencies extracted to reduce duplication
+
 **Fonts:**
 - Copied from `src/fonts/` to `dist/ui/fonts/`
 - PNG format (bitmap fonts for text art)
 - No transformation applied
+- Lazy glyph generation (only creates character images when needed)
+- Font caching system for instant switching between common fonts
 
 **Images:**
 - Icons and manifest images
 - Optimized during build
 - Multiple sizes for different devices
+- Hashed filenames for cache busting
 
 **CSS:**
 - Processed with Tailwind CSS
-- Minified with cssnano
-- Output: `dist/ui/stylez.css`
+- Minified with cssnano advanced preset
+- Output: `dist/ui/stylez-[hash].css` (hashed for cache busting)
 
 **JavaScript:**
-- Bundled with Vite/Rollup
-- Minified for production
-- Output: `dist/ui/editor.js`
+- Bundled with Vite/Rollup into code-split chunks
+- Minified with Terser for production
+- Each chunk has a unique hash for cache invalidation
+- Main entry: `dist/ui/js/editor-[hash].js`
 
 ### 2. PWA Generation
 
@@ -566,17 +590,35 @@ This logs:
 
 ### Runtime Performance
 
-- Code splitting (automatic in Vite)
-- Asset lazy loading
-- Service worker caching
-- Minified output
+**Code Splitting:**
+- Automatic chunking into logical modules (core, canvas, tools, fileops, network, palette)
+- Lazy loading of non-critical code reduces initial bundle size
+- Shared dependencies extracted to minimize duplication
 
-### Asset Optimization
+**Font Optimization:**
+- Lazy glyph generation: Only creates character glyphs when first needed
+- Font caching system: Preloads common fonts (CP437, Topaz) for instant switching
+- In-memory glyph cache prevents regeneration
+- Significantly reduces memory footprint compared to pre-generating all 65,536 possible glyph combinations
 
+**Storage Optimization:**
+- IndexedDB for large binary canvas data (efficient storage of Uint16Array)
+- localStorage for small configuration settings
+- RLE compression for canvas data reduces storage size
+- Auto-save on canvas changes without blocking the UI
+
+**Asset Optimization:**
 - PNG fonts (small bitmap files)
-- CSS minification with cssnano
-- JavaScript minification with Rollup
+- CSS minification with cssnano advanced preset
+- JavaScript minification with Terser
 - Gzip/Brotli compression in nginx
+- Hashed filenames enable aggressive browser caching
+
+**Cache Strategy:**
+- Service worker caching with cache-first strategy
+- Workbox runtime for efficient offline support
+- Font cache for instant font switching
+- Precaching of critical assets for offline use
 
 ## Troubleshooting
 
