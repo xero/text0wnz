@@ -95,7 +95,7 @@ This directory contains comprehensive guides for using, developing, testing, and
 ## Additional Resources
 
 - **[Privacy Policy](privacy.md)** - Privacy policy and data handling
-- **[Logos](logos.txt)** - ASCII art logos for the project
+- **[Logos](logos.md)** - ASCII art logos for the project
 - **[Pre-commit Hook](pre-commit)** - Git pre-commit hook script
 - **[Examples](examples/)** - Sample artwork to view and edit
   - ANSI artwork by [xero](https://16colo.rs/artist/xero)
@@ -147,5 +147,3 @@ When contributing documentation:
 ## Getting Help
 
 - **Issues:** [GitHub Issues](https://github.com/xero/teXt0wnz/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/xero/teXt0wnz/discussions)
-- **Main README:** [../README.md](../README.md)

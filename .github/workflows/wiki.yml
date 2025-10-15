@@ -29,6 +29,7 @@ jobs:
           cp -r repo/docs/* wiki/
           cd wiki
           mv README.md Home.md
+          echo "## ▓▒▒░ &copy; 2018-$(date +"%Y") : [teXt0wnz](https://github.com/xero/text0wnz/graphs/contributors) ░▒▒▓" > _Footer
           # fix internal markdown links (remove .md extension)
           find . -name "*.md" -exec perl -pi -e 's/\]\((?!https?:\/\/)([^)]+)\.md([#][^)]+)?\)/](\1\2)/g' {} \;
           git add .
