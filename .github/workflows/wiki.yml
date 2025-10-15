@@ -30,8 +30,7 @@ jobs:
           cd wiki
           mv README.md Home.md
           # fix internal markdown links (remove .md extension)
-          find . -type f -name "*.md" -exec sed -i 's/\]\(([^:)]*)(\.md)(#[^)]*\?)?\)/](\1\3)/g' {} \;
-          find . -type f -name "*.md" -exec sed -i 's/\]\(([^:)]*)\/([^:)]*)\.md(#[^)]*\?)?\)/](\1\/\2\3)/g' {} \;
+          find . -name "*.md" -exec perl -pi -e 's/\]\((?!https?:\/\/)([^)]+)\.md([#][^)]+)?\)/](\1\2)/g' {} \;
           git add .
           if git diff --staged --quiet; then
             echo "nothing to commit"
