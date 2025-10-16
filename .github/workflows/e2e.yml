@@ -37,21 +37,7 @@ jobs:
         env:
           HOME: /root
           PLAYWRIGHT_TEST_BASE_URL: http://localhost:8060
-      - name: upload playwright html report
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: always()
-        with:
-          name: playwright-report
-          path: tests/results/playwright-report/
-          retention-days: 3
-      - name: upload playwright raw results
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: always()
-        with:
-          name: playwright-raw
-          path: tests/results/e2e/
-          retention-days: 3
-      - name: Upload blob report
+      - name: upload report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

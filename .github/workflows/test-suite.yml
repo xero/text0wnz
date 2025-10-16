@@ -26,11 +26,11 @@ jobs:
     uses: ./.github/workflows/e2e.yml
     with:
       shard: ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
-  merge-reports:
+  reports:
     if: ${{ !cancelled() }}
     needs: [e2e]
     uses: ./.github/workflows/merge-reports.yml
   deploy:
-    needs: [lint, unit, build, e2e]
+    needs: [lint, unit, build, reports]
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy.yml
