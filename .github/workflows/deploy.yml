@@ -27,7 +27,7 @@ jobs:
       - name: download e2e artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: playwright-report
+          name: merged-playwright-report
           path: e2e
       - name: organize
         run: |

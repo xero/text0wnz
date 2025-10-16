@@ -1,6 +1,11 @@
 name: e2e tests
 on:
   workflow_call:
+    inputs:
+      shard:
+        required: false
+        type: string
+        default: '1/1'
 permissions:
   contents: read
   packages: read
@@ -21,33 +26,28 @@ jobs:
       - name: build application
         run: bun bake
       - name: run e2e tests
-        run: bun test:e2e --workers 4
+        run: bun test:e2e --shard=${{ inputs.shard }}
         env:
           HOME: /root
           PLAYWRIGHT_TEST_BASE_URL: http://localhost:8060
       - name: upload playwright html report
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: playwright-report
           path: tests/results/playwright-report/
           retention-days: 3
       - name: upload playwright raw results
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: playwright-raw
           path: tests/results/e2e/
           retention-days: 3
-      - name: upload all e2e tests artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - name: Upload blob report
+        uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: e2e-test-results
-          path: tests/results/
+          name: blob-report-${{ inputs.shard || '1/1' | replace('/', '-') }}
+          path: blob-report
           retention-days: 3
-      - name: add artifact download info to summary
-        run: |
-          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          echo "### :dart: e2e test artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "- artifacts for this run are available under the **Artifacts** section of [this workflow run]($RUN_URL)." >> $GITHUB_STEP_SUMMARY
-          echo "- or use the cli: \`gh run download ${{ github.run_id }} -n e2e-test-results\`" >> $GITHUB_STEP_SUMMARY

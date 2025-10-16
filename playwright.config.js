@@ -1,27 +1,35 @@
 import { defineConfig } from '@playwright/test';
-
 export default defineConfig({
 	testDir: './tests/e2e',
 	timeout: 30000,
 	retries: 1,
 	outputDir: 'tests/results/e2e',
-	reporter: [
-		['html', { outputFolder: 'tests/results/playwright-report', open: 'never' }],
-		['json', { outputFile: 'tests/results/e2e/results.json' }],
-	],
+	fullyParallel: true,
+	workers: process.env.CI ? 6 : undefined,
+	reporter: process.env.CI
+		? [
+			['blob'],
+			['html', { outputFolder: 'tests/results/playwright-report', open: 'never' }],
+			['json', { outputFile: 'tests/results/e2e/results.json' }],
+		]
+		: [
+			['html', { outputFolder: 'tests/results/playwright-report', open: 'never' }],
+			['json', { outputFile: 'tests/results/e2e/results.json' }],
+		],
 	use: {
 		baseURL: 'http://localhost:8060',
 		headless: true,
 		viewport: { width: 1280, height: 720 },
 		ignoreHTTPSErrors: true,
 		screenshot: 'only-on-failure',
+		trace: 'on-first-retry',
 	},
-	 webServer: {
-    command: 'bun www',
-    port: 8060,
-    reuseExistingServer: !process.env.CI,
+	webServer: {
+		command: 'bun www',
+		port: 8060,
+		reuseExistingServer: !process.env.CI,
 		timeout: 120000,
-  },
+	},
 	projects: [
 		{
 			name: 'Chrome',
