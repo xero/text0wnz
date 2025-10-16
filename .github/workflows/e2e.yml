@@ -11,12 +11,6 @@ jobs:
       image: ghcr.io/xero/text0wnz/ci:latest
       options: --user root
     steps:
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.PKG_TOKEN }}
       - name: checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
       - name: install project dependencies
