@@ -146,7 +146,15 @@ Toggle grid with G key. Useful for alignment and precision work.
 
 ### Font Selection
 
-Access via View menu. Choose from classic ANSI fonts and modern XBIN fonts. See [fonts.md](fonts.md) for a complete list.
+Access via View menu. Choose from classic ANSI fonts and modern XBIN fonts. 
+
+**Font Loading:**
+- Lazy glyph generation: Character glyphs are only created when first needed
+- Font caching: Common fonts (CP437, Topaz) are preloaded for instant switching
+- In-memory cache prevents regenerating glyphs for better performance
+- Significantly reduces memory usage compared to pre-generating all possible character/color combinations
+
+See [fonts.md](fonts.md) for a complete list.
 
 ### SAUCE Metadata
 
@@ -180,7 +188,19 @@ Edit artwork metadata via File menu. Includes title, author, group, comments, an
 
 ### Auto Save/Restore
 
-Artwork is automatically saved to browser localStorage as you draw. When reopening the app, your work is automatically restored. Works even when offline.
+Artwork is automatically saved to browser IndexedDB as you draw. When reopening the app, your work is automatically restored. 
+
+**How it works:**
+- Canvas data stored in IndexedDB as binary Uint16Array for efficiency
+- RLE compression reduces storage size for repetitive patterns
+- Small configuration settings stored in localStorage
+- Auto-save triggers on canvas changes without blocking the UI
+- Works even when offline
+
+**Storage Details:**
+- IndexedDB for large binary canvas data (efficient for Uint16Array)
+- localStorage for small settings and preferences
+- Compression applied to canvas data to minimize storage footprint
 
 ## Progressive Web App (PWA)
 
@@ -228,8 +248,13 @@ src/js/client/
 ├── freehand_tools.js # Drawing tools implementation
 ├── toolbar.js        # Toolbar state management
 ├── state.js          # Global application state
-├── utils.js          # Utility functions
-├── worker.js         # Web Worker for background processing
+├── storage.js        # IndexedDB storage system
+├── compression.js    # RLE compression for canvas data
+├── font.js           # Font loading and rendering
+├── lazyFont.js       # Lazy glyph generation
+├── fontCache.js      # Font caching system
+├── magicNumbers.js   # Constants and configuration
+├── websocket.js      # Web Worker for background processing
 └── network.js        # Collaboration/network functionality
 ```
 
@@ -248,6 +273,22 @@ src/js/client/
 **file.js** - Handles file loading, saving, format detection, SAUCE metadata, and PNG export.
 
 **state.js** - Maintains global application state including current font, palette, tool, and canvas settings.
+
+**storage.js** - IndexedDB-based storage system for efficient binary canvas data persistence.
+
+**compression.js** - RLE compression utilities to reduce storage footprint for canvas data.
+
+**font.js** - Font loading from bitmap images and rendering to canvas.
+
+**lazyFont.js** - Lazy glyph generation system that creates character glyphs only when needed, reducing memory usage.
+
+**fontCache.js** - Font caching system that preloads common fonts for instant switching.
+
+**magicNumbers.js** - Application constants, default values, and configuration.
+
+**websocket.js** - Web Worker for handling collaboration WebSocket communication in the background.
+
+**network.js** - Manages network connections and real-time collaboration features.
 
 ## Standalone vs Collaborative Mode
 

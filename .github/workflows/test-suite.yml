@@ -2,6 +2,14 @@ name: test suite
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'LICENSE.txt'
+      - 'OSSMETADATA'
+      - '.gitattributes'
+      - '.gitignore'
+      - '.prettierignore'
   pull_request:
     branches: ["*"]
   workflow_dispatch:

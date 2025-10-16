@@ -1,14 +1,15 @@
 # teXt.0w.nz
 
-**teXt0wnz** is a web-based textmode art editor for ANSI, ASCII, XBIN, NFO and more. Create, edit, and share text-based artwork in your browser—with full support for auto-save/restore with local storage, real-time collaborative editing, modern build tools, and automated testing.
+**teXt0wnz** is a web-based text-mode art editor for ANSI, ASCII, XBIN, NFO and more. Create, edit, and share text-based artwork in your browser—with full support for auto-save/restore with local storage, real-time collaborative editing, modern build tools, and automated testing.
 
 ![preview](https://raw.githubusercontent.com/xero/teXt0wnz/refs/heads/main/docs/preview.png)
 
 ## Draw in your browser now!
 
-| Domain                          | Status                                                   |
-|---------------------------------|----------------------------------------------------------|
-| https://text.0w.nz              | The main prod domain. Collab server may be available     |
+| Domain                          | Status                                             |
+| :------------------------------ | :------------------------------------------------- |
+| https://text.0w.nz              | The main domain. Collab server may be available    |
+| https://xero.github.io/text0wnz | Github Pages version of the site. No collab server |
 
 [![Version](https://img.shields.io/github/package-json/version/xero/teXt0wnz?labelColor=%2333383e&logo=npm&&logoColor=%23979da4&color=#5db85b)](https://github.com/xero/teXt0wnz/releases/latest)
 [![GitHub repo size](https://img.shields.io/github/repo-size/xero/teXt0wnz?labelColor=%23262a2e&logo=googlecontaineroptimizedos&logoColor=%23979da4&color=#5db85b)](https://github.com/xero/teXt0wnz/)
@@ -27,8 +28,9 @@
 
 ## Features
 
-- **Web-based textmode art editing, also works offline as a PWA**
-  - no install required!
+- **Web-based text art drawing, also works offline as a PWA**
+  - No install required!
+  - But easily install the Progressive Web Application to your device
 - **Comprehensive keyboard shortcuts and mouse controls**
   - Draw using the keyboard, mouse, or touch screen
 - **Classic and modern fonts**
@@ -40,9 +42,11 @@
 - **Import/export:**
   - ANSI, BIN, XBIN, UTF-8 TXT, NFO, PNG
 - **Canvas operations:**
-  - Undo/redo, resizing, grid overlay, font selection, and full SAUCE metadata support.
+  - Undo/redo, resizing, grid overlay, font selection, and full SAUCE metadata support
 - **Auto Save/Restore**
-  - Artwork saved to localstorage as you draw, and reloaded when the app is opened.
+  - Editor Setting saved to local storage for a consistent drawing sessions
+  - Artwork saved to IndexedDB as you draw, auto-reloaded when the app is opened
+  - Optimized binary data storage algorithm for efficient canvas persistence
 - **Collaborative server mode**
   - For real-time multi-user editing
 - **Build tools:**
@@ -62,25 +66,31 @@
 - `*.txt`: ASCII or other plain text
 - `*.png`: Image (export support only)
 
-## [Project Documentation](docs/)
+## Project Documentation
+- The [docs](docs/) folder of this repo contains the raw markdown documentation files as well as example artwork to view and play around with.
+- The [wiki](https://github.com/xero/text0wnz/wiki) renders these files into easier to read webpages. The wiki also hosts the documentation images to keep the repo size more manageable.
 
 **Application Guides**
+
 - [Editor Client](docs/editor-client.md) - Frontend text art editor application
 - [Collaboration Server](docs/collaboration-server.md) - Backend real-time collaboration server
 - [PWA Install](docs/install-pwa.md) - Guide to installing the app on multiple platforms
 - [Privacy Policy](docs/privacy.md) - Privacy and data handling policy
 
 **Development Guides**
+
 - [Building and Developing](docs/building-and-developing.md) - Development workflow and build process
 - [Testing](docs/testing.md) - Triple headed testing guide (unit, dom, & e2e)
 - [Webserver Configuration](docs/webserver-configuration.md) - Webserver setup and configuration
 - [Other Tools](docs/other-tools.md) - Additional development and deployment tools
 
 **Technical Specifications**
+
 - [SAUCE Format](docs/sauce-format.md) - SAUCE metadata format specification
 - [XBin Format](docs/xb-format.md) - XBin file format specification
 
-**Supplementals**
+**Supplemental**
+
 - [Fonts](docs/fonts.md) - Complete font reference and previews
 - [Logos](docs/logos.txt) - ASCII art logos for the project
 - [Examples](docs/examples/) - Sample artwork to view and edit
@@ -91,18 +101,18 @@
 
 ## Drawing & Editing Tools
 
-| Tool Name          | Description                                                                      |
-|--------------------|----------------------------------------------------------------------------------|
-| Keyboard Mode      | Type characters onto the canvas, using full keyboard navigation                  |
-| Half Block Brush   | Draw half-blocks with the mouse or touchscreen, pressure-sensitive               |
-| Shading Brush      | Draw shading blocks with the mouse or touchscreen, 'reduce mode' with shift      |
-| Character Brush    | Draw any ASCII/extended character in the font using a mouse, includes a picker   |
-| Fill Tool          | Flood fill for color/text, smart attribute handling                              |
-| Colorizer          | Paint colors only, hold alt for background colors                                |
-| Line Tool          | Draw straight lines, with color conflict resolution                              |
-| Square/Circle Tool | Draw rectangles/circles/ellipses, outline or filled, with a real-time preview    |
-| Selection Tool     | Select, move, copy, flip, manipulate rectangular areas                           |
-| Sample Tool        | Color picker for quick selection from artwork                                    |
+| Tool Name          | Description                                                                    |
+| ------------------ | ------------------------------------------------------------------------------ |
+| Keyboard Mode      | Type characters onto the canvas, using full keyboard navigation                |
+| Half Block Brush   | Draw half-blocks with the mouse or touchscreen, pressure-sensitive             |
+| Shading Brush      | Draw shading blocks with the mouse or touchscreen, 'reduce mode' with shift    |
+| Character Brush    | Draw any ASCII/extended character in the font using a mouse, includes a picker |
+| Fill Tool          | Flood fill for color/text, smart attribute handling                            |
+| Colorizer          | Paint colors only, hold alt for background colors                              |
+| Line Tool          | Draw straight lines, with color conflict resolution                            |
+| Square/Circle Tool | Draw rectangles/circles/ellipses, outline or filled, with a real-time preview  |
+| Selection Tool     | Select, move, copy, flip, manipulate rectangular areas                         |
+| Sample Tool        | Color picker for quick selection from artwork                                  |
 
 ## Key Bindings & Mouse/Touch Controls
 
@@ -111,21 +121,21 @@
 
 ### Main Shortcuts
 
-| Key      | Action/Tool                |
-|----------|----------------------------|
-| k        | Keyboard Mode              |
-| f        | Freestyle (half-block)     |
-| b        | Character Brush            |
-| n        | Fill                       |
-| a        | Attribute Brush            |
-| g        | Grid Toggle                |
-| i        | iCE Colors Toggle          |
-| m        | Mirror Mode                |
+| Key | Action/Tool            |
+| --- | ---------------------- |
+| k   | Keyboard Mode          |
+| f   | Freestyle (half-block) |
+| b   | Character Brush        |
+| n   | Fill                   |
+| a   | Attribute Brush        |
+| g   | Grid Toggle            |
+| i   | iCE Colors Toggle      |
+| m   | Mirror Mode            |
 
 ### Color & Character
 
 | Key/Combo        | Action                                     |
-|------------------|--------------------------------------------|
+| ---------------- | ------------------------------------------ |
 | d                | Reset colors to default                    |
 | Q                | Swap foreground/background                 |
 | f1–f12           | Insert ASNI block chars                    |
@@ -134,41 +144,41 @@
 
 ### File & Canvas
 
-| Key Combo           | Action                      |
-|---------------------|-----------------------------|
-| ctrl+z / ctrl+y     | Undo / Redo                 |
-| ctrl+x              | Cut                         |
-| ctrl+c              | Copy                        |
-| ctrl+v              | Paste                       |
-| ctrl+shift+v        | Paste from system clipboard |
-| ctrl+delete         | Delete selection            |
+| Key Combo       | Action                      |
+| --------------- | --------------------------- |
+| ctrl+z / ctrl+y | Undo / Redo                 |
+| ctrl+x          | Cut                         |
+| ctrl+c          | Copy                        |
+| ctrl+v          | Paste                       |
+| ctrl+shift+v    | Paste from system clipboard |
+| ctrl+delete     | Delete selection            |
 
 ### Canvas Editing
 
-| Combo             | Action             |
-|-------------------|--------------------|
-| alt+up/down       | Insert/Delete row  |
-| alt+right/left    | Insert/Delete col  |
-| alt+e/shift+e     | Erase row/col      |
-| alt+home/end      | Erase to start/end |
-| alt+pgUp/pgDn     | Erase to top/bottom|
+| Combo          | Action              |
+| -------------- | ------------------- |
+| alt+up/down    | Insert/Delete row   |
+| alt+right/left | Insert/Delete col   |
+| alt+e/shift+e  | Erase row/col       |
+| alt+home/end   | Erase to start/end  |
+| alt+pgUp/pgDn  | Erase to top/bottom |
 
 ### Navigation (Keyboard Mode)
 
-| Key              | Action                  |
-|------------------|-------------------------|
-| arrow keys       | Move cursor             |
-| home/end         | Line start/end          |
-| page up/down     | Page jump               |
-| tab/backspace    | Insert tab/delete left  |
-| enter            | New line                |
+| Key           | Action                 |
+| ------------- | ---------------------- |
+| arrow keys    | Move cursor            |
+| home/end      | Line start/end         |
+| page up/down  | Page jump              |
+| tab/backspace | Insert tab/delete left |
+| enter         | New line               |
 
 ### Selection Tool
 
-| Key      | Action         |
-|----------|----------------|
-| [,]      | Flip selection |
-| M        | Move mode      |
+| Key | Action         |
+| --- | -------------- |
+| [,] | Flip selection |
+| M   | Move mode      |
 
 ### Mouse / Touch
 
@@ -192,17 +202,20 @@
 ## Build & Development
 
 **Requirements:**
+
 - node.js (v22.19+)
 - bun (recommended) or npm
 
 **Quick Start:**
 
 install [bun](https://bun.com)
+
 ```sh
 npm i -g bun
 ```
 
 install, build, and serve the app:
+
 ```sh
 bun i        # or npm install
 bun bake     # or npm run bake
@@ -210,29 +223,60 @@ bun www      # or npm run www
 ```
 
 > [!NOTE]
-> See: [docs//docs/building-and-developing](/docs/building-and-developing.md) for more info.
+> See: [docs/building-and-developing](docs/building-and-developing.md) for more info.
 
 **Scripts:**
 
-| Script          | Purpose                              |
-|-----------------|--------------------------------------|
-| bake            | Build for production (Vite)          |
-| server          | Start collaboration server           |
-| www             | Serve the `/dist` folder for testing |
-| fix             | Auto-fix lint and format             |
-| lint:check/fix  | Lint checking/fixing                 |
-| format:check/fix| Formatting check/fix                 |
-| test:unit       | Run unit tests (Vitest)              |
-| test:e2e        | Run end to end tests (Playwright)    |
-| test:install    | Install playwright browsers          |
+| Script           | Purpose                              |
+| ---------------- | ------------------------------------ |
+| bake             | Build for production (Vite)          |
+| server           | Start collaboration server           |
+| www              | Serve the `/dist` folder for testing |
+| fix              | Auto-fix lint and format             |
+| lint:check/fix   | Lint checking/fixing                 |
+| format:check/fix | Formatting check/fix                 |
+| test:unit        | Run unit tests (Vitest)              |
+| test:e2e         | Run end to end tests (Playwright)    |
+| test:install     | Install playwright browsers          |
 
 **Build Process:**
+
 - Uses Vite + plugins for static copy, sitemap, PWA/offline support
 - Output: `dist/`
+- Files are hashed for cache busting (e.g., `editor-[hash].js`, `stylez-[hash].css`)
 - Customizable options via `.env` variables:
-    - `VITE_DOMAIN='https://text.0w.nz'`
-    - `VITE_UI_DIR='ui/'`
-    - `VITE_WORKER_FILE='worker.js'`
+  - `VITE_DOMAIN='https://text.0w.nz'`
+  - `VITE_UI_DIR='ui/'`
+  - `VITE_WORKER_FILE='websocket.js'`
+
+**Build Output Structure:**
+
+```
+dist/
+├── index.html              # Main entry point
+├── site.webmanifest        # PWA manifest
+├── service.js              # Service worker
+├── workbox-[hash].js       # Workbox runtime for caching
+├── robots.txt              # Search engine directives
+├── sitemap.xml             # Site map
+├── humans.txt              # Humans.txt file
+├── favicon.ico             # Favicon
+└── ui/                     # UI assets directory
+    ├── stylez-[hash].css   # Minified CSS (hashed)
+    ├── icons-[hash].svg    # Icon sprite (hashed)
+    ├── topazplus_1200.woff2  # Font file
+    ├── fonts/              # Bitmap fonts (PNG format)
+    ├── img/                # Images and icons
+    └── js/                 # JavaScript bundles (all hashed)
+        ├── editor-[hash].js      # Main entry
+        ├── core-[hash].js        # Core modules (state, storage, compression)
+        ├── canvas-[hash].js      # Canvas rendering with lazy font loading
+        ├── tools-[hash].js       # Drawing tools
+        ├── fileops-[hash].js     # File operations
+        ├── network-[hash].js     # Collaboration
+        ├── palette-[hash].js     # Color palette
+        └── websocket.js          # Web Worker (not hashed)
+```
 
 > [!IMPORTANT]
 > `DOMAIN` is only used for robots.txt and sitemap.xml generation, all app urls are relative
@@ -242,6 +286,7 @@ bun www      # or npm run www
 Enable real-time multi-user editing with the built-in server.
 
 **Features:**
+
 - Canvas/chat persistence
 - SSL/HTTP support
 - Custom session names, save intervals
@@ -260,15 +305,15 @@ node src/js/server/main.js
 
 **Command-Line Options**
 
-| Option                | Description                                                | Default             |
-|-----------------------|------------------------------------------------------------|---------------------|
-| `[port]`              | Port to run the server on                                  | `1337`              |
-| `--ssl`               | Enable SSL (requires certificates in `ssl-dir`)            | Disabled            |
-| `--ssl-dir <path>`    | SSL certificate directory                                  | `/etc/ssl/private`  |
-| `--save-interval <n>` | Auto-save interval in minutes                              | `30` (minutes)      |
-| `--session-name <str>`| Session file prefix (for state and chat backups)           | `joint`             |
-| `--debug`             | Enable verbose logging                                     | `false`             |
-| `--help`              | Show help message and usage examples                       | -                   |
+| Option                 | Description                                      | Default            |
+| ---------------------- | ------------------------------------------------ | ------------------ |
+| `[port]`               | Port to run the server on                        | `1337`             |
+| `--ssl`                | Enable SSL (requires certificates in `ssl-dir`)  | Disabled           |
+| `--ssl-dir <path>`     | SSL certificate directory                        | `/etc/ssl/private` |
+| `--save-interval <n>`  | Auto-save interval in minutes                    | `30` (minutes)     |
+| `--session-name <str>` | Session file prefix (for state and chat backups) | `joint`            |
+| `--debug`              | Enable verbose logging                           | `false`            |
+| `--help`               | Show help message and usage examples             | -                  |
 
 > [!NOTE]
 > See: [docs/collaboration-server](docs/collaboration-server) for more info.
@@ -276,6 +321,7 @@ node src/js/server/main.js
 ## Testing Suite
 
 **Triple-Headed:**
+
 - **Vitest:** Unit/integration
 - **Testing Library:** DOM/component
 - **Playwright:** E2E/browser
@@ -284,6 +330,7 @@ node src/js/server/main.js
 bun test:unit    # Run unit tests
 bun test:e2e     # Run end2end tests
 ```
+
 All tests run automatically in CI/CD.
 
 > [!NOTE]
@@ -292,6 +339,7 @@ All tests run automatically in CI/CD.
 ## Troubleshooting
 
 **Common Issues:**
+
 - Build fails: Check Node.js version, reinstall deps
 - Port in use: Change server port or stop other process
 - SSL fails: Check cert/key files and permissions
@@ -305,6 +353,7 @@ All tests run automatically in CI/CD.
 [Open an issue](https://github.com/xero/teXt0wnz/issues) with error logs and platform details.
 
 **Tips:**
+
 - Always use a process manager (systemd, forever)
 - Lower save interval for busy sessions
 - Use SSL in production (Let's Encrypt via Certbot, ACME-nginx, etc)
