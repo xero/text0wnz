@@ -17,7 +17,7 @@ jobs:
       options: --user root
     steps:
       - name: checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
       - name: install project dependencies
         run: bun i
       - name: set localhost domain
@@ -37,21 +37,21 @@ jobs:
           HOME: /root
           PLAYWRIGHT_TEST_BASE_URL: http://localhost:8060
       - name: upload playwright html report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: playwright-report
           path: tests/results/playwright-report/
           retention-days: 3
       - name: upload playwright raw results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: playwright-raw
           path: tests/results/e2e/
           retention-days: 3
       - name: Upload blob report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact_name }}
