@@ -10,7 +10,7 @@ jobs:
       image: ghcr.io/xero/text0wnz/ci:latest
       credentials:
         username: ${{ github.actor }}
-        password: ${{ secrets.CICD_TOKEN }}
+        password: ${{ secrets.PKG_TOKEN }}
       options: --user root
     steps:
       - name: checkout code
