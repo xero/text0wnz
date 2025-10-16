@@ -1,6 +1,6 @@
 # teXt0wnz interface
 
-Quick Reference:
+## Quick Reference:
 
 ![overview](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/overview.png)
 
@@ -202,9 +202,9 @@ Toggles the visual grid. Useful for alignment and precision work.
 
 ![grid example](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/grid.png)
 
-## ![modeselect](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/modeselect.png) Mode Toggle
+## ![modeselect](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/modeselect.png) Light/Dark Mode
 
-This button toggles light / dark mode interface colors
+Toggles between light and dark mode interface colors.
 
 ![dark-mode](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/dark-mode.png)
 
