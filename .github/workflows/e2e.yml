@@ -17,7 +17,7 @@ jobs:
       options: --user root
     steps:
       - name: checkout code
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+        uses: actions/checkout@v4
       - name: install project dependencies
         run: bun i
       - name: set localhost domain
@@ -25,6 +25,12 @@ jobs:
           sed -i 's!text.0w.nz!localhost!' .env
       - name: build application
         run: bun bake
+      - name: set artifact name
+        id: set-artifact-name
+        run: |
+          SHARD="${{ inputs.shard || '1/1' }}"
+          ARTIFACT_NAME="blob-report-${SHARD//\//-}"
+          echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
       - name: run e2e tests
         run: bun test:e2e --shard=${{ inputs.shard }}
         env:
@@ -48,6 +54,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: blob-report-${{ inputs.shard || '1/1' | replace('/', '-') }}
+          name: ${{ steps.set-artifact-name.outputs.artifact_name }}
           path: blob-report
-          retention-days: 3
+          retention-days: 1
