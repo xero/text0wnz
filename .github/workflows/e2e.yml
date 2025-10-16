@@ -7,21 +7,16 @@ jobs:
   e2e-tests:
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.55.0-jammy
+      image: ghcr.io/xero/text0wnz/ci:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.CICD_TOKEN }}
       options: --user root
     steps:
       - name: checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
-      - name: Install unzip
-        run: apt-get update && apt-get install -y unzip
-      - name: setup bun
-        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
-        with:
-          bun-version: "latest"
       - name: install project dependencies
         run: bun i
-      - name: install playwright and its dependencies
-        run: bun test:install
       - name: build application
         run: bun bake
       - name: run e2e tests

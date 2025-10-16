@@ -84,7 +84,7 @@ class StateManager {
 		this.loadingFromStorage = false;
 
 		// Environment var or defaults
-		this.urlPrefix = import.meta.env.BASE_URL || '/';
+		this.urlPrefix = import.meta.env.BASE_URL || '';
 		this.uiDir = this.urlPrefix + import.meta.env.VITE_UI_DIR || 'ui/';
 		this.fontDir = this.uiDir + import.meta.env.VITE_FONT_DIR || 'fonts/';
 		this.workerPath =

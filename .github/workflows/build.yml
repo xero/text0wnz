@@ -16,6 +16,9 @@ jobs:
           bun-version: 'latest'
       - name: install dependencies
         run: bun i
+      - name: set pages domain
+        run: |
+          sed -i 's!text.0w.nz!xero.github.io/text0wnz!' .env
       - name: build application
         run: bun bake
       - name: check build artifacts

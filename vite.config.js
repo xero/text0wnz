@@ -4,11 +4,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 import Sitemap from 'vite-plugin-sitemap';
 import path from 'node:path';
 
-function getBuildVersion() {
-	return Date.now().toString();
-}
-
 export default ({ mode }) => {
+	const versionBump = () => Date.now().toString();
 	// load settings from the .env file or use defaults
 	process.env = { ...process.env, ...loadEnv(mode, process.cwd()) };
 	const domain = process.env.VITE_DOMAIN || 'https://text.0w.nz';
@@ -18,11 +15,12 @@ export default ({ mode }) => {
 
 	return defineConfig({
 		root: './src',
+		base: './', // output relative urls
 		build: {
 			emptyOutDir: true,
 			outDir: '../dist',
-			assetsDir: '', // Place all assets in the root of `outDir`
-			assetsInlineLimit: 0, // Prevent inlined assets
+			assetsDir: '', // place all assets relatively to the root of `outDir`
+			assetsInlineLimit: 0, // prevent inlined assets
 			target: 'es2022',
 			minify: 'terser',
 			terserOptions: {
@@ -36,6 +34,7 @@ export default ({ mode }) => {
 					index: path.resolve('./src', 'index.html'),
 				},
 				output: {
+					// hash core file names for cache busting
 					entryFileNames: `${uiDir}js/editor-[hash].js`,
 					chunkFileNames: `${uiDir}js/[name]-[hash].js`,
 					assetFileNames: assetInfo => {
@@ -43,6 +42,7 @@ export default ({ mode }) => {
 						if (!assetName) return '';
 						const info = assetName.split('.');
 						const ext = info[info.length - 1];
+						// explicit file placement
 						if (assetName === 'index.css') {
 							return `${uiDir}stylez-[hash].css`;
 						}
@@ -54,6 +54,7 @@ export default ({ mode }) => {
 						}
 						return `${uiDir}[name].${ext}`;
 					},
+					// progressively load features
 					manualChunks: {
 						core: [
 							'src/js/client/magicNumbers.js',
@@ -82,6 +83,7 @@ export default ({ mode }) => {
 		},
 		plugins: [
 			viteStaticCopy({
+				// move static assets into place
 				targets: [
 					{ src: `js/client/${worker}`, dest: uiDir+'js/' },
 					{ src: 'fonts', dest: uiDir },
@@ -90,9 +92,11 @@ export default ({ mode }) => {
 				],
 			}),
 			Sitemap({
+				// generate an xml sitemap and robots.txt file
 				hostname: domain,
-				generateRobotsTxt: true,
 				changefreq: 'monthly',
+				// block all these gross bots and scrapers
+				generateRobotsTxt: true,
 				robots: [
 					{ userAgent: 'Ai2Bot-Dolma', disallow: '/' },
 					{ userAgent: 'BLEXBot', disallow: '/' },
@@ -171,6 +175,7 @@ export default ({ mode }) => {
 				],
 			}),
 			{
+				// build output logging
 				name: 'log-sitemap-robots',
 				apply: 'build',
 				closeBundle() {
@@ -185,6 +190,7 @@ export default ({ mode }) => {
 				includeAssets: ['**/*'],
 				precache: ['**/*'],
 				manifest: {
+					// PWA configuration and metadata
 					name: 'teXt0wnz',
 					short_name: 'teXt0wnz',
 					id: '/',
@@ -197,113 +203,113 @@ export default ({ mode }) => {
 					orientation: 'any',
 					background_color: '#000',
 					theme_color: '#000',
-					display_override: ['window-controls-overlay'],
+					display_override: ['window-controls-overlay'], // removes window chrome
+					// fav/app icons
 					icons: [{
 						src: `/${uiDir}img/web-app-manifest-512x512.png`,
 						sizes: '512x512',
 						type: 'image/png',
 						purpose: 'any',
-					}, {
+					},{
 						src: `/${uiDir}img/web-app-manifest-512x512.png`,
 						sizes: '512x512',
 						type: 'image/png',
 						purpose: 'maskable',
-					}, {
+					},{
 						src: `/${uiDir}img/web-app-manifest-192x192.png`,
 						sizes: '192x192',
 						type: 'image/png',
 						purpose: 'maskable',
-					}, {
+					},{
 						src: `/${uiDir}img/apple-touch-icon.png`,
 						sizes: '180x180',
 						type: 'image/png',
 						purpose: 'maskable',
-					}, {
+					},{
 						src: `/${uiDir}img/favicon-96x96.png`,
 						sizes: '96x96',
 						type: 'image/png',
 						purpose: 'any',
-					}, {
+					},{
 						src: `/${uiDir}img/android-launchericon-48-48.png`,
 						sizes: '48x48',
 						type: 'image/png',
 						purpose: 'any',
 					}],
+					// PWA install previews
 					screenshots: [{
 						src: `/${uiDir}img/screenshot-desktop.png`,
 						sizes: '3024x1964',
 						type: 'image/png',
 						platform: 'any',
-					}, {
+					},{
 						src: `/${uiDir}img/screenshot-mobile.png`,
 						sizes: '1140x1520',
 						type: 'image/png',
 						platform: 'any',
-					}, {
+					},{
 						src: `/${uiDir}img/screenshot-font-tall.png`,
 						sizes: '910x1370',
 						type: 'image/png',
 						platform: 'any',
 						form_factor: 'narrow',
-					}, {
+					},{
 						src: `/${uiDir}img/screenshot-sauce-tall.png`,
 						sizes: '910x1370',
 						type: 'image/png',
 						platform: 'any',
 						form_factor: 'narrow',
-					}, {
+					},{
 						src: `/${uiDir}img/screenshot-light-wide.png`,
 						sizes: '1540x1158',
 						type: 'image/png',
 						platform: 'any',
 						form_factor: 'wide',
-					}, {
+					},{
 						src: `/${uiDir}img/screenshot-dark-wide.png`,
 						sizes: '1540x1158',
 						type: 'image/png',
 						platform: 'any',
 						form_factor: 'wide',
 					}],
-					version: getBuildVersion(),
+					version: versionBump(),
 				},
 				workbox: {
+					// version bump
+					additionalManifestEntries: [
+						{ url: '/', revision: versionBump() },
+					],
+					// cache all the things \o/
 					globPatterns: ['index.html', '**/*.{js,css,html,ico,png,svg,woff2}'],
 					cleanupOutdatedCaches: true,
 					clientsClaim: true,
 					skipWaiting: true,
 					navigateFallback: '/',
+					// ok, not all the things...
 					navigateFallbackDenylist: [
 						/^\/humans.txt/,
 						/^\/robots.txt/,
 						/^\/sitemap.xml/,
 						/^\/tests/,
 					],
-					additionalManifestEntries: [
-						{ url: '/', revision: getBuildVersion() },
-					],
 					maximumFileSizeToCacheInBytes: 3000000,// 3mb max
-					runtimeCaching: [
-						{
-							urlPattern: new RegExp(`^\\/${uiDirSafe}\\/img\\/.*\\.(png|svg|ico)$`),
-							handler: 'CacheFirst',
-							options: { cacheName: 'asset-cache' },
-						},
-						{
-							urlPattern: new RegExp(`^\\/${uiDirSafe}\\/js\\/.*\\.js$`),
-							handler: 'CacheFirst',
-							options: { cacheName: 'app-cache' },
-						},
-						{
-							urlPattern: new RegExp(`^\\/${uiDirSafe}\\/.*\\.(css|svg|woff2)$`),
-							handler: 'CacheFirst',
-							options: { cacheName: 'style-cache' },
-						},
-						{
-							urlPattern: /^\/(index\.html)?$/,
-							handler: 'CacheFirst',
-							options: { cacheName: 'html-cache' },
-						},
-					],
+					runtimeCaching: [{
+						urlPattern: new RegExp(`^\\/${uiDirSafe}\\/img\\/.*\\.(png|svg|ico)$`),
+						handler: 'CacheFirst',
+						options: { cacheName: 'asset-cache' },
+					},{
+						urlPattern: new RegExp(`^\\/${uiDirSafe}\\/js\\/.*\\.js$`),
+						handler: 'CacheFirst',
+						options: { cacheName: 'app-cache' },
+					},{
+						urlPattern: new RegExp(`^\\/${uiDirSafe}\\/.*\\.(css|svg|woff2)$`),
+						handler: 'CacheFirst',
+						options: { cacheName: 'style-cache' },
+					},{
+						urlPattern: /^\/(index\.html)?$/,
+						handler: 'CacheFirst',
+						options: { cacheName: 'html-cache' },
+					}],
 				},
 			}),
 		],
