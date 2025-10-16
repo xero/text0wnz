@@ -2,6 +2,10 @@
 
 teXt0wnz uses a comprehensive three-part testing strategy: unit tests with Vitest, DOM/component tests with Testing Library, and end-to-end tests with Playwright.
 
+> [!IMPORTANT]
+> view the latest [unit coverage report](https://xero.github.io/text0wnz/tests/)
+> view the latest [e2e testing report](https://xero.github.io/text0wnz/tests/e2e/)
+
 ## Testing Strategy Overview
 
 ### Triple-Headed Testing
@@ -382,9 +386,9 @@ it('should handle events', () => {
   const handler = vi.fn();
   const button = document.createElement('button');
   button.addEventListener('click', handler);
-  
+
   fireEvent.click(button);
-  
+
   expect(handler).toHaveBeenCalled();
 });
 ```

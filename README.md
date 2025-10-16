@@ -13,17 +13,17 @@
 
 [![Version](https://img.shields.io/github/package-json/version/xero/teXt0wnz?labelColor=%2333383e&logo=npm&&logoColor=%23979da4&color=#5db85b)](https://github.com/xero/teXt0wnz/releases/latest)
 [![GitHub repo size](https://img.shields.io/github/repo-size/xero/teXt0wnz?labelColor=%23262a2e&logo=googlecontaineroptimizedos&logoColor=%23979da4&color=#5db85b)](https://github.com/xero/teXt0wnz/)
-[![Last Test Suite Results](https://github.com/xero/teXt0wnz/actions/workflows/test-suite.yml/badge.svg?branch=main)](https://github.com/xero/teXt0wnz/actions/workflows/test-suite.yml?query=branch%3Amain)
-[![Last Deployment](https://img.shields.io/github/deployments/xero/text0wnz/github-pages?logo=githubactions&logoColor=%23979da4&label=deployment&labelColor=%23262a2e)](https://github.com/xero/text0wnz/deployments)
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/xero/teXt0wnz?labelColor=%23262a2e&logo=stagetimer&logoColor=%23979da4&color=#5db85b)
 ![GitHub last commit](https://img.shields.io/github/last-commit/xero/teXt0wnz.svg?labelColor=%23262a2e&logo=git&logoColor=%23979da4&color=#5db85b)
+[![Latest Test Suite Results](https://github.com/xero/teXt0wnz/actions/workflows/test-suite.yml/badge.svg?branch=main)](https://github.com/xero/teXt0wnz/actions/workflows/test-suite.yml?query=branch%3Amain)
+[![Latest Deployment](https://img.shields.io/github/deployments/xero/text0wnz/github-pages?logo=githubactions&logoColor=%23979da4&label=deployment&labelColor=%23262a2e)](https://github.com/xero/text0wnz/deployments)
 [![OSS Lifecycle](https://img.shields.io/osslifecycle?file_url=https%3A%2F%2Fraw.githubusercontent.com%2Fxero%2FteXt0wnz%2Frefs%2Fheads%2Fmain%2FOSSMETADATA&-square&labelColor=%23262a2e&logo=checkmarx&logoColor=%23979da4)](https://github.com/xero/teXt0wnz/blob/main/OSSMETADATA)
 [![Schema](https://img.shields.io/badge/Valid-Valid?logo=semanticweb&logoColor=%23979da4a&labelColor=%23262a2e&label=Schema&color=%235db85b)](https://validator.schema.org/#url=https%3A%2F%2Fraw.githubusercontent.com%2Fxero%2FteXt0wnz%2Frefs%2Fheads%2Fmain%2Fsrc%2Findex.html)
 [![Lighthouse Preformance](https://img.shields.io/badge/99%25-lighthouse?logo=lighthouse&logoColor=%23979da4&label=Lighthouse&labelColor=%23262a2e)](https://pagespeed.web.dev/analysis/https-text-0w-nz/p2w1cpoqty?hl=en-US&form_factor=mobile)
-![CII Best Practices](https://img.shields.io/cii/summary/1?logo=asciinema&labelColor=%23262a2e)
+![CII Best Practices](https://img.shields.io/cii/summary/1?logo=asciinema&labelColor=%23262a2e&label=cii%20level)
 [![Powered by Bun](https://img.shields.io/badge/Bun-Bun?labelColor=%23262a2e&logo=bun&logoColor=%23f9f1e1&label=Powered%20by&color=%23e47ab4&link=https%3A%2F%2Fbun.js)](https://bun.com)
 [![Eslint](https://img.shields.io/badge/Eslint-Eslint?logo=eslint&logoColor=%23979da4&label=Linting&labelColor=%23262a2e&color=%2300aaaa)](https://github.com/xero/teXt0wnz/blob/main/eslint.config.js)
-[![Prettier](https://img.shields.io/badge/Prettier-Prettier?logo=prettier&logoColor=%23979da4&label=Formatter&labelColor=%23262a2e&color=%2300aaaa)](https://github.com/xero/teXt0wnz/blob/main/.prettierrc)
+[![Prettier](https://img.shields.io/badge/Prettier-Prettier?logo=prettier&logoColor=%23979da4&label=Formatting&labelColor=%23262a2e&color=%2300aaaa)](https://github.com/xero/teXt0wnz/blob/main/.prettierrc)
 [![16colors](https://img.shields.io/badge/16colors-16colors?logo=renovate&logoColor=%23979da4&logoSize=auto&label=Text%20Mode%20Art&labelColor=%23262a2e&color=%2300aaaa&link=https%3A%2F%2F16colo.rs)](https://16colo.rs)
 
 ## Features
@@ -72,7 +72,7 @@
 
 **Application Guides**
 
-- [Interface](interface.md) - Visual guide to the user interface and options
+- [Interface](docs/interface.md) - Visual guide to the user interface and options
 - [Editor Client](docs/editor-client.md) - Frontend text art editor application
 - [Collaboration Server](docs/collaboration-server.md) - Backend real-time collaboration server
 - [PWA Install](docs/install-pwa.md) - Guide to installing the app on multiple platforms
@@ -218,9 +218,9 @@ npm i -g bun
 install, build, and serve the app:
 
 ```sh
-bun i        # or npm install
-bun bake     # or npm run bake
-bun www      # or npm run www
+bun i      # or npm install
+bun bake   # or npm run bake
+bun www    # or npm run www
 ```
 
 > [!NOTE]
@@ -327,12 +327,16 @@ node src/js/server/main.js
 - **Testing Library:** DOM/component
 - **Playwright:** E2E/browser
 
+> [!IMPORTANT]
+> view the latest [unit coverage report](https://xero.github.io/text0wnz/tests/)
+> view the latest [e2e testing report](https://xero.github.io/text0wnz/tests/e2e/)
+
 ```sh
-bun test:unit    # Run unit tests
-bun test:e2e     # Run end2end tests
+bun test:unit  # Run unit tests
+bun test:e2e   # Run end2end tests
 ```
 
-All tests run automatically in CI/CD.
+All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/main/.github/workflows).
 
 > [!NOTE]
 > See: [docs/testing](docs/testing.md) for more info.
