@@ -18,6 +18,4 @@ jobs:
       - name: install project dependencies (bun)
         run: bun i
       - name: install dev tools
-        run: bun i -g eslint prettier
-      # - name: Install Playwright Browsers
-      #   run: bun test:install
+        run: bun i -g eslint prettier playwright

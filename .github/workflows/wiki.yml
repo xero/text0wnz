@@ -1,9 +1,11 @@
 name: publish wiki
 on:
+  # runs on changes to the docs folder in the main branch
   push:
     branches: [ main ]
     paths:
       - 'docs/**'
+  # or manually
   workflow_dispatch:
 jobs:
   sync-docs:
@@ -25,12 +27,16 @@ jobs:
           git config --global user.email "actions@github.com"
       - name: sync docs to wiki
         run: |
+          # clear wiki
           find wiki -mindepth 1 -maxdepth 1 -not -name '.git' -exec rm -rf {} \;
+          # copy docs to wiki
           cp -r repo/docs/* wiki/
           cd wiki
+          # rename index file
           mv README.md Home.md
+          # update footer
           echo "## ▓▒▒░ &copy; 2018-$(date +"%Y") : [teXt0wnz](https://github.com/xero/text0wnz) ░▒▒▓" > _Footer.md
-          # fix internal markdown links (remove .md extension)
+          # fix internal markdown linx (remove .md extension)
           find . -name "*.md" -exec perl -pi -e 's/\]\((?!https?:\/\/)([^)]+)\.md([#][^)]+)?\)/](\1\2)/g' {} \;
           git add .
           if git diff --staged --quiet; then

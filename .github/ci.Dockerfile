@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y curl unzip
 RUN curl -fsSL https://bun.sh/install | bash
 ENV PATH="/root/.bun/bin:${PATH}"
 # Install tools
-RUN bun i -g eslint prettier
+RUN bun i -g playwright eslint prettier
 # Pre-install Playwright browsers
 RUN playwright install-deps && \
 		playwright install && \
