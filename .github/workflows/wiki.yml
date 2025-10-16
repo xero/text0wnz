@@ -23,12 +23,22 @@ jobs:
           token: ${{ secrets.CICD_TOKEN }}
       - name: configure git
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
+          # get the last commit author name and email
+          cd repo
+          COMMIT_NAME="${{ github.event.head_commit.author.name }}"
+          COMMIT_EMAIL="${{ github.event.head_commit.author.email }}"
+          # default to actor name if head_commit info is not available (e.g. onDispatch)
+          if [ -z "$COMMIT_NAME" ]; then
+            COMMIT_NAME="${{ github.actor }}"
+            COMMIT_EMAIL="${{ github.actor }}@users.noreply.github.com"
+          fi
+          git config --global user.name "$COMMIT_NAME"
+          git config --global user.email "$COMMIT_EMAIL"
+          cd ..
       - name: sync docs to wiki
         run: |
           # clear wiki
-          find wiki -mindepth 1 -maxdepth 1 -not -name '.git' -exec rm -rf {} \;
+          find wiki -mindepth 1 -maxdepth 1 -not -name '.git' -not -name 'img' -exec rm -rf {} \;
           # copy docs to wiki
           cp -r repo/docs/* wiki/
           cd wiki
