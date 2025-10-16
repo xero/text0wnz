@@ -27,6 +27,7 @@ jobs:
         run: bun bake
       - name: set artifact name
         id: set-artifact-name
+        shell: bash
         run: |
           SHARD="${{ inputs.shard || '1/1' }}"
           ARTIFACT_NAME="blob-report-${SHARD//\//-}"
