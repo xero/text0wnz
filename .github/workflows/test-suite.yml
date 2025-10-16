@@ -9,6 +9,7 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  packages: read
 jobs:
   lint:
     uses: ./.github/workflows/lint.yml
