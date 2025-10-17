@@ -1,4 +1,4 @@
-FROM oven/bun:alpine
+FROM alpine:3.22.2
 ## Building the Application
 # docker buildx build -t text0wnz:latest .
 #
@@ -25,15 +25,13 @@ LABEL org.opencontainers.image.authors="xero <x@xero.style>"
 LABEL org.opencontainers.image.description="Text-mode art editor for ANSI, ASCII, XBIN, NFO, & TXT files"
 LABEL org.opencontainers.image.source="https://github.com/xero/text0wnz"
 
-# Environment variables to override at runtime
 ENV DOMAIN="localhost"
 ENV PORT=1337
 ENV NODE_ENV="production"
-# Set Caddy's storage location via environment variable
 ENV XDG_DATA_HOME="/var/lib/caddy"
 ENV XDG_CONFIG_HOME="/etc/caddy"
 
-# Create non-root user
+# Create unprivileged user
 RUN addgroup -S textart && \
     adduser -S -G textart -h /app textart
 
@@ -41,10 +39,20 @@ WORKDIR /app
 COPY . .
 
 # Install dependencies
-RUN apk add --no-cache caddy=2.7.6-r7 gettext=0.22.5-r0 netcat-openbsd=1.226-r0
+RUN apk add --no-cache \
+    libstdc++=14.2.0-r6 \
+    libgcc=14.2.0-r6 \
+    curl=8.14.1-r2 \
+    ca-certificates \
+		npm=11.3.0-r1 \
+		caddy=2.10.0-r3 \
+		gettext=0.24.1-r0 \
+		netcat-openbsd=1.229.1-r0
+RUN npm i -g bun
 RUN bun i && bun bake
 
 # Cleanup
+RUN apk del npm
 RUN rm -rf \
     .env \
     .git \
@@ -66,7 +74,7 @@ RUN rm -rf \
     tests \
     /var/cache/apk/*
 
-# Create directory structure with proper permissions
+# Create directory structure w/ permissions for our user
 RUN mkdir -p /etc/caddy /var/log /var/lib/caddy /home/textart/.local/share && \
     chown -R textart:textart /app /var/log /var/lib/caddy /etc/caddy /home/textart && \
     chmod -R 755 /app
