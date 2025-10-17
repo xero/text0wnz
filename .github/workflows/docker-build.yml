@@ -35,11 +35,11 @@ jobs:
           images: |
             ghcr.io/${{ github.repository }}
             xerostyle/text0wnz
+          flavor: |
+            latest=true
           tags: |
             type=raw,value=latest
-            type=semver,pattern={{version}},enable={{is_tag}}
-            type=semver,pattern={{major}}.{{minor}},enable={{is_tag}}
-            type=sha,format=short
+            type=sha,format=short,prefix=sha-
       - name: build and push
         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
