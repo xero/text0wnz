@@ -52,3 +52,9 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          annotations: |
+            org.opencontainers.image.description=Text-mode art editor for ANSI, ASCII, XBIN, NFO, & TXT files. Modern web-based PWA w/ offline mode, local storage sync, & optional collaborative server
+            org.opencontainers.image.title=text0wnz
+            org.opencontainers.image.authors=xero <x@xero.style>
+            org.opencontainers.image.source=https://github.com/xero/text0wnz
+            org.opencontainers.image.licenses=MIT

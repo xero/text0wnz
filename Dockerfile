@@ -1,24 +1,6 @@
 FROM caddy:2-alpine AS caddy
 FROM oven/bun:alpine AS bun
 FROM alpine:3.22.2
-## Building the Application
-# docker buildx build -t text0wnz:latest .
-#
-## Running in Development Mode:
-# docker run \
-#		 --cap-add=NET_BIND_SERVICE \
-#		 -e NODE_ENV=development \
-#		 -p 80:80 \
-#		 text0wnz:latest
-#
-## Running in Production Mode:
-# docker run \
-#		 --cap-add=NET_BIND_SERVICE \
-#		 -e DOMAIN=your.cool.domain.tld \
-#		 -e SESSION_KEY=secure-production-key \
-#		 -e NODE_ENV=production \
-#		 -p 80:80 -p 443:443 \
-#		 text0wnz:latest
 
 LABEL org.opencontainers.image.title="text0wnz"
 LABEL org.opencontainers.image.authors="xero <x@xero.style>"
@@ -26,6 +8,7 @@ LABEL org.opencontainers.image.description="Text-mode art editor for ANSI, ASCII
 LABEL org.opencontainers.image.source="https://github.com/xero/text0wnz"
 LABEL org.opencontainers.image.created="2025-10-17"
 
+# Override me!
 ENV DOMAIN="localhost"
 ENV PORT=1337
 ENV NODE_ENV="production"
