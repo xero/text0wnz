@@ -1,3 +1,5 @@
+FROM caddy:2-alpine AS caddy
+FROM oven/bun:alpine AS bun
 FROM alpine:3.22.2
 ## Building the Application
 # docker buildx build -t text0wnz:latest .
@@ -6,8 +8,7 @@ FROM alpine:3.22.2
 # docker run \
 #		 --cap-add=NET_BIND_SERVICE \
 #		 -e NODE_ENV=development \
-#		 -p 80:80 -p 443:443 \
-#		 -p 1337:1337 \
+#		 -p 80:80 \
 #		 text0wnz:latest
 #
 ## Running in Production Mode:
@@ -17,13 +18,13 @@ FROM alpine:3.22.2
 #		 -e SESSION_KEY=secure-production-key \
 #		 -e NODE_ENV=production \
 #		 -p 80:80 -p 443:443 \
-#		 -p 1337:1337 \
 #		 text0wnz:latest
 
 LABEL org.opencontainers.image.title="text0wnz"
 LABEL org.opencontainers.image.authors="xero <x@xero.style>"
 LABEL org.opencontainers.image.description="Text-mode art editor for ANSI, ASCII, XBIN, NFO, & TXT files"
 LABEL org.opencontainers.image.source="https://github.com/xero/text0wnz"
+LABEL org.opencontainers.image.created="2025-10-17"
 
 ENV DOMAIN="localhost"
 ENV PORT=1337
@@ -31,28 +32,24 @@ ENV NODE_ENV="production"
 ENV XDG_DATA_HOME="/var/lib/caddy"
 ENV XDG_CONFIG_HOME="/etc/caddy"
 
-# Create unprivileged user
-RUN addgroup -S textart && \
-    adduser -S -G textart -h /app textart
-
-WORKDIR /app
-COPY . .
-
 # Install dependencies
 RUN apk add --no-cache \
     libstdc++=14.2.0-r6 \
     libgcc=14.2.0-r6 \
-    curl=8.14.1-r2 \
     ca-certificates \
-		npm=11.3.0-r1 \
-		caddy=2.10.0-r3 \
 		gettext=0.24.1-r0 \
 		netcat-openbsd=1.229.1-r0
-RUN npm i -g bun
+
+# Grab a caddy & toss in a bun
+COPY --from=caddy /usr/bin/caddy /usr/bin/caddy
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
+
+# Put the sources in the oven & bake
+WORKDIR /app
+COPY . .
 RUN bun i && bun bake
 
 # Cleanup
-RUN apk del npm
 RUN rm -rf \
     .env \
     .git \
@@ -74,7 +71,11 @@ RUN rm -rf \
     tests \
     /var/cache/apk/*
 
-# Create directory structure w/ permissions for our user
+# Create unprivileged user
+RUN addgroup -S textart && \
+		adduser -S -G textart -h /app textart
+
+# Create directory structure for our user
 RUN mkdir -p /etc/caddy /var/log /var/lib/caddy /home/textart/.local/share && \
     chown -R textart:textart /app /var/log /var/lib/caddy /etc/caddy /home/textart && \
     chmod -R 755 /app
@@ -252,15 +253,15 @@ RUN echo '#!/bin/sh' > /bootup && \
     chmod +x /bootup && \
     chown textart:textart /bootup
 
-# Expose ports
-EXPOSE 80 443 $PORT
+# Open ports
+EXPOSE 80 443
 
 # Add health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget -q --spider http://localhost/healthz || exit 1
+  CMD nc -z localhost 80 || exit 1
 
 # Switch to non-root user
 USER textart
 
-# Start services
+# Start drawing!
 CMD ["/bootup"]
