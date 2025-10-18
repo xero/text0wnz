@@ -97,6 +97,7 @@
 - [Interface](docs/interface.md) - Visual guide to the user interface and options
 - [Editor Client](docs/editor-client.md) - Frontend text art editor application
 - [Collaboration Server](docs/collaboration-server.md) - Backend real-time collaboration server
+- [Architecture](docs/architecture.md) - System architecture and design overview
 - [PWA Install](docs/install-pwa.md) - Guide to installing the app on multiple platforms
 - [Privacy Policy](docs/privacy.md) - Privacy and data handling policy
 
@@ -104,6 +105,7 @@
 
 - [Building and Developing](docs/building-and-developing.md) - Development workflow and build process
 - [Testing](docs/testing.md) - Triple headed testing guide (unit, dom, & e2e)
+- [CI/CD Pipeline](docs/cicd.md) - Continuous integration and deployment
 - [Webserver Configuration](docs/webserver-configuration.md) - Webserver setup and configuration
 - [Other Tools](docs/other-tools.md) - Additional development and deployment tools
 
@@ -428,7 +430,7 @@ bun test:unit  # Run unit tests
 bun test:e2e   # Run end2end tests
 ```
 
-All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/main/.github/workflows).
+All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/main/.github/workflows). See the [CI/CD Pipeline documentation](docs/cicd.md) for details on the automated testing, building, and deployment process.
 
 > [!NOTE]
 > See: [docs/testing](docs/testing.md) for more info.

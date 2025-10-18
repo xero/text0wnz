@@ -30,6 +30,8 @@ This directory contains comprehensive guides for using, developing, testing, and
 
 ### Application Guides
 
+- **[Interface](interface.md)** - Visual guide to the user interface and options
+
 - **[Editor Client](editor-client.md)** - Frontend text art editor application
   - Drawing tools and features
   - Keyboard shortcuts and mouse controls
@@ -46,6 +48,14 @@ This directory contains comprehensive guides for using, developing, testing, and
   - Session management
   - Process management (systemd, forever)
   - SSL configuration
+
+- **[Architecture](architecture.md)** - System architecture and design
+  - High-level overview and application modes
+  - Client and server architecture
+  - Data flow and module structure
+  - Build system and code splitting
+  - Storage and persistence strategies
+  - Design patterns and performance optimizations
 
 ### Development Guides
 
@@ -66,6 +76,15 @@ This directory contains comprehensive guides for using, developing, testing, and
   - Test coverage and metrics
   - Writing tests
   - Troubleshooting
+
+- **[CI/CD Pipeline](cicd.md)** - Continuous integration and deployment
+  - Workflow architecture and orchestration
+  - Core workflows (lint, build, test, deploy)
+  - Docker image builds and registry
+  - Documentation synchronization
+  - Artifacts and reports
+  - Security and permissions
+  - Monitoring and debugging
 
 ### Deployment Guides
 
@@ -109,17 +128,22 @@ This directory contains comprehensive guides for using, developing, testing, and
 ```
 docs/
 ├── README.md                      # This file
+├── interface.md                   # Visual UI guide
 ├── editor-client.md               # Frontend application guide
 ├── collaboration-server.md        # Backend server guide
+├── architecture.md                # System architecture
+├── install-pwa.md                 # PWA installation guide
 ├── building-and-developing.md     # Development workflow
 ├── testing.md                     # Testing guide
+├── cicd.md                        # CI/CD pipeline guide
+├── docker.md                      # Docker containerization
 ├── webserver-configuration.md     # Webserver setup
 ├── other-tools.md                 # Additional tools
 ├── sauce-format.md                # SAUCE specification
 ├── xb-format.md                   # XBin specification
 ├── fonts.md                       # Font reference
 ├── privacy.md                     # Privacy policy
-├── logos.txt                      # ASCII logos
+├── logos.md                       # ASCII logos
 ├── pre-commit                     # Git hook
 ├── preview.png                    # Application preview
 └── examples/                      # Sample artwork
