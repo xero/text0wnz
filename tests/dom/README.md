@@ -290,9 +290,9 @@ DOM tests should focus on:
 - Modal and overlay behavior
 - Dynamic content updates
 
-Current coverage: **5 test files, 327 tests**
-- toolbar.test.js: 75 tests
-- palette.test.js: 82 tests
-- modal.test.js: 71 tests
-- toggleButton.test.js: 62 tests
-- keyboard.test.js: 37 tests
+Current coverage: **5 test files, 121 tests**
+- toolbar.test.js: 18 tests
+- palette.test.js: 19 tests
+- modal.test.js: 33 tests
+- toggleButton.test.js: 25 tests
+- keyboard.test.js: 26 tests

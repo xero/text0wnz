@@ -195,11 +195,12 @@ npx vitest
 bunx vitest
 ```
 
-or with specific pattern:
+### Run Tests with Specific Pattern
 
 ```bash
 npx vitest canvas
 npx vitest server
+npx vitest dom
 ```
 
 ### Run Specific Test File
@@ -217,18 +218,51 @@ npx vitest --ui
 
 ## Test Coverage
 
-Current coverage status:
+Current coverage status (as of latest run):
 
-- **Overall**: ~45% statement coverage
-- **Client modules**: 45% average coverage
-- **Server modules**: 51% average coverage
+- **Overall**: ~50.62% statement coverage
+- **Client modules**: ~50.26% average coverage
+- **Server modules**: ~56.76% average coverage
+- **Total tests**: 852 tests across 33 test files
 
 ### Coverage Goals
 
-- Maintain minimum 60% statement coverage
+- Target minimum 60% statement coverage overall
 - Focus on critical paths and edge cases
 - Test error handling thoroughly
 - Cover all public APIs
+
+### Coverage by Module
+
+**High Coverage (>80%)**:
+- `compression.js`: 100%
+- `magicNumbers.js`: 100%
+- `config.js` (server): 100%
+- `utils.js` (server): 100%
+- `websockets.js` (server): 100%
+- `main.js` (server): 100%
+- `lazyFont.js`: 100%
+- `fontCache.js`: 98.31%
+- `websocket.js` (client): 96.4%
+- `storage.js`: 82.19%
+
+**Medium Coverage (50-80%)**:
+- `palette.js`: 72.59%
+- `state.js`: 68.75%
+- `ui.js`: 57.98%
+- `toolbar.js`: 55.88%
+- `server.js`: 55.4%
+- `fileio.js` (server): 53.75%
+
+**Needs Improvement (<50%)**:
+- `canvas.js`: 43.1%
+- `freehand_tools.js`: 42.35%
+- `file.js`: 41.39%
+- `keyboard.js`: 41.18%
+- `network.js`: 47.53%
+- `font.js`: 46.77%
+- `text0wnz.js` (server): 30.96%
+- `main.js` (client): 17.51%
 
 ### Coverage Reports
 
