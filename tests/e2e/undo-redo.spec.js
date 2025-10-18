@@ -253,7 +253,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 	});
 
 	test('should clear redo stack when new operation is performed', async ({ page }) => {
-		const canvas = page.locator('#text-canvas');
+		const canvas = page.locator('#canvas-container canvas').first();
 
 		// Activate halfblock tool
 		await page.locator('#brushes').click();
