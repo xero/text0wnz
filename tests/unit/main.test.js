@@ -5,6 +5,7 @@ const mockState = {
 	startInitialization: vi.fn(),
 	waitFor: vi.fn((deps, callback) => callback()),
 	title: { value: 'untitled' },
+	fontDir: 'ui/fonts/',
 	textArtCanvas: {
 		clearXBData: vi.fn(callback => callback && callback()),
 		clear: vi.fn(),
@@ -240,6 +241,14 @@ vi.mock('../../src/js/client/canvas.js', () => ({
 			getMirrorMode: vi.fn(() => false),
 		};
 	}),
+}));
+
+vi.mock('../../src/js/client/fontCache.js', () => ({
+	FontCache: {
+		preloadCommonFonts: vi.fn(() => Promise.resolve()),
+		loadFont: vi.fn(() => Promise.resolve()),
+		_hasCacheAPI: vi.fn(() => false),
+	},
 }));
 
 describe('Main Application Module', () => {
