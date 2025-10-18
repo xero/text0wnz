@@ -68,6 +68,15 @@ This directory contains comprehensive guides for using, developing, testing, and
   - Linting and formatting (ESLint, Prettier)
   - Project structure
 
+- **[Project Structure](project-structure.md)** - Comprehensive file and module organization
+  - Directory structure and file organization
+  - Client and server module descriptions
+  - Configuration files
+  - Test structure
+  - Build output
+  - Naming conventions
+  - Module import patterns
+
 - **[Testing](testing.md)** - Comprehensive testing guide
   - Testing strategy (Vitest, Testing Library, Playwright)
   - Unit testing with Vitest
@@ -132,6 +141,7 @@ docs/
 ├── editor-client.md               # Frontend application guide
 ├── collaboration-server.md        # Backend server guide
 ├── architecture.md                # System architecture
+├── project-structure.md           # File and module organization
 ├── install-pwa.md                 # PWA installation guide
 ├── building-and-developing.md     # Development workflow
 ├── testing.md                     # Testing guide
