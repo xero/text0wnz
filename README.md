@@ -11,6 +11,7 @@
 | https://text.0w.nz              | The main domain. Collab server may be available    |
 | https://xero.github.io/text0wnz | Github Pages version of the site. No collab server |
 
+
 [![MIT Licensed](https://img.shields.io/github/license/xero/text0wnz?logo=wikiversity&logoColor=979da4&labelColor=262a2e&color=gold)](https://github.com/xero/text0wnz/blob/main/LICENSE.txt)
 [![Version](https://img.shields.io/github/package-json/version/xero/teXt0wnz?labelColor=%2333383e&logo=npm&&logoColor=%23979da4&color=6e2aa5)](https://github.com/xero/teXt0wnz/releases/latest)
 [![GitHub repo size](https://img.shields.io/github/repo-size/xero/teXt0wnz?labelColor=%23262a2e&logo=googlecontaineroptimizedos&logoColor=%23979da4&color=6e2aa5)](https://github.com/xero/teXt0wnz/)
@@ -27,11 +28,31 @@
 [![Prettier](https://img.shields.io/badge/Prettier-Prettier?logo=prettier&logoColor=%23979da4&label=Formatting&labelColor=%23262a2e&color=%2300aaaa)](https://github.com/xero/teXt0wnz/blob/main/.prettierrc)
 [![16colors](https://img.shields.io/badge/16colors-16colors?logo=renovate&logoColor=%23979da4&logoSize=auto&label=Text%20Mode%20Art&labelColor=%23262a2e&color=%2300aaaa&link=https%3A%2F%2F16colo.rs)](https://16colo.rs)
 
+
+# Table o' Contents
+
+- [Features](#features)
+- [Supported File Types](#file-types)
+- [Project Documentation](#project-documentation)
+- [Drawing & Editing Tools](#drawing--editing-tools)
+- [Key-bindings & Mouse/Touch Controls](#key-bindings--mousetouch-controls)
+- [Tips & Workflow](#tips--workflow)
+- [Build & Development](#build--development)
+- [Collaborative Server](#collaborative-server)
+- [Docker Containerization](#docker-containerization)
+- [Testing Suite](#testing-suite)
+- [Troubleshooting](#troubleshooting)
+- [Browser Support](#browser-support)
+- [Project History](#project-history)
+- [License & Greetz](#license--greetz)
+
+---
+
 ## Features
 
 - **Web-based text art drawing, also works offline as a PWA**
   - No install required!
-  - But easily install the Progressive Web Application to your device
+  - But easily [installed as a Progressive Web Application](docs/install-pwa.md) to your device
 - **Comprehensive keyboard shortcuts and mouse controls**
   - Draw using the keyboard, mouse, or touch screen
 - **Classic and modern fonts**
@@ -399,9 +420,8 @@ This setup enables:
 - **Testing Library:** DOM/component
 - **Playwright:** E2E/browser
 
-> [!IMPORTANT]
-> view the latest [unit coverage report](https://xero.github.io/text0wnz/tests/)
-> view the latest [e2e testing report](https://xero.github.io/text0wnz/tests/e2e/)
+> [!TIP]
+> view the latest: [unit coverage report](https://xero.github.io/text0wnz/tests/) & [e2e testing report](https://xero.github.io/text0wnz/tests/e2e/)
 
 ```sh
 bun test:unit  # Run unit tests

@@ -21,6 +21,7 @@ This directory contains comprehensive guides for using, developing, testing, and
 ### For System Administrators
 - Start here: [Webserver Configuration](webserver-configuration.md)
 - Collaboration server: [Collaboration Server](collaboration-server.md)
+- Containerization: [Docker Containerization](docker.md)
 - Monitoring: [Other Tools - Monitoring Tools](other-tools.md#monitoring-tools)
 
 ---
