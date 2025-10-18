@@ -329,15 +329,15 @@ node src/js/server/main.js
 - Performance Optimization
 - Service Orchestration
 
-### Container Registry Support
+### Registry Support
 
-Prebuilt images are avalable in linux/amd64 & linux/arm64 flavors from multiple repositories:
+Prebuilt images are avalable in **linux/amd64** & **linux/arm64** flavors from multiple repositories:
 
-**from [DockerHub](https://hub.docker.com/r/xerostyle/text0wnz):**
+**[DockerHub](https://hub.docker.com/r/xerostyle/text0wnz):**
 ```sh
 docker pull xerostyle/text0wnz:latest
 ```
-**From [GitHub Container Registry](https://github.com/xero/text0wnz/pkgs/container/text0wnz)::**
+**[GitHub Container Registry](https://github.com/xero/text0wnz/pkgs/container/text0wnz):**
 ```sh
 docker pull ghcr.io/xero/text0wnz:latest
 ```
@@ -355,9 +355,7 @@ docker buildx create --name mybuilder --use
 docker buildx build --platform linux/amd64,linux/arm64 -t yourname/text0wnz:latest --push .
 ```
 
-### Running
-
-**Development Mode**:
+### Running in Development Mode
 
 Development mode provides hot-reloading and detailed logging for an optimized development experience:
 
@@ -371,7 +369,7 @@ docker run \
 
 The application will be available at http://localhost with WebSocket collaboration features enabled.
 
-**Production Mode**:
+### Running in Production Mode
 
 For production deployments, use this configuration with your domain and a secure session key:
 
@@ -391,7 +389,7 @@ This setup enables:
 - Stricter security headers and content policies
 
 > [!NOTE]
-> See: our [docs/docker](docs/docker.md) for more info and advanced setup examples.
+> See: [docs/docker](docs/docker.md) for more info and advanced setup examples.
 
 ## Testing Suite
 

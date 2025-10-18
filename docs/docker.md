@@ -37,15 +37,15 @@ Container services are carefully managed with:
 - Clean shutdown handling with proper signal propagation
 - Structured logging for observability
 
-## Container Registry Support
+### Registry Support
 
-Prebuilt images are avalable in linux/amd64 & linux/arm64 flavors from multiple repositories:
+Prebuilt images are avalable in **linux/amd64** & **linux/arm64** flavors from multiple repositories:
 
-**from [DockerHub](https://hub.docker.com/r/xerostyle/text0wnz):**
+**[DockerHub](https://hub.docker.com/r/xerostyle/text0wnz):**
 ```sh
 docker pull xerostyle/text0wnz:latest
 ```
-**From [GitHub Container Registry](https://github.com/xero/text0wnz/pkgs/container/text0wnz)::**
+**[GitHub Container Registry](https://github.com/xero/text0wnz/pkgs/container/text0wnz):**
 ```sh
 docker pull ghcr.io/xero/text0wnz:latest
 ```
