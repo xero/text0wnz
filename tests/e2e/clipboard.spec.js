@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 test.describe('Advanced Clipboard Operations', () => {
 	test.beforeEach(async ({ page }) => {

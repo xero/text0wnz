@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 test.describe('Advanced Undo/Redo Operations', () => {
 	test.beforeEach(async ({ page }) => {
@@ -340,8 +340,6 @@ test.describe('Advanced Undo/Redo Operations', () => {
 	});
 
 	test('should handle undo with keyboard mode text input', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
-
 		// Enter keyboard mode
 		await page.keyboard.press('k');
 		await page.waitForTimeout(300);

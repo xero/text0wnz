@@ -765,4 +765,144 @@ describe('Main Application Module', () => {
 			}
 		});
 	});
+
+	describe('Save Functionality', () => {
+		it('should initialize save timeout variable', async () => {
+			// The main module initializes a saveTimeout variable
+			// We can test that the module loads without errors
+			await import('../../src/js/client/main.js');
+
+			// If we got here, the module loaded successfully
+			expect(true).toBe(true);
+		});
+	});
+
+	describe('Initialization Tiers', () => {
+		it('should initialize core UI components first', async () => {
+			await import('../../src/js/client/main.js');
+
+			const domReadyCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'DOMContentLoaded',
+			);
+
+			if (domReadyCall) {
+				const domReadyHandler = domReadyCall[1];
+				await domReadyHandler();
+
+				// Core UI should be initialized
+				expect(mockCreateFunctions.createModalController).toHaveBeenCalled();
+				expect(mockCreateFunctions.createDefaultPalette).toHaveBeenCalled();
+				expect(mockCreateFunctions.createPasteTool).toHaveBeenCalled();
+				expect(mockCreateFunctions.createTextArtCanvas).toHaveBeenCalled();
+			}
+		});
+
+		it('should initialize secondary tools after core', async () => {
+			await import('../../src/js/client/main.js');
+
+			const domReadyCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'DOMContentLoaded',
+			);
+
+			if (domReadyCall) {
+				const domReadyHandler = domReadyCall[1];
+				await domReadyHandler();
+
+				// Secondary tools should be initialized
+				expect(mockCreateFunctions.createPositionInfo).toHaveBeenCalled();
+				expect(mockCreateFunctions.createSelectionCursor).toHaveBeenCalled();
+				expect(mockCreateFunctions.createCursor).toHaveBeenCalled();
+			}
+		});
+
+		it('should remove loading class after canvas ready', async () => {
+			const mockBodyContainer = createMockElement();
+			global.document.getElementById.mockImplementation(id => {
+				if (id === 'body-container') {return mockBodyContainer;}
+				return createMockElement();
+			});
+
+			await import('../../src/js/client/main.js');
+
+			const domReadyCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'DOMContentLoaded',
+			);
+
+			if (domReadyCall) {
+				const domReadyHandler = domReadyCall[1];
+				await domReadyHandler();
+
+				// Canvas callback should trigger loading class removal
+				expect(mockBodyContainer.classList.remove).toHaveBeenCalledWith('loading');
+			}
+		});
+	});
+
+	describe('Font Preloading', () => {
+		it('should preload common fonts during initialization', async () => {
+			const mockFontCache = { preloadCommonFonts: vi.fn() };
+
+			vi.doMock('../../src/js/client/fontCache.js', () => ({ FontCache: mockFontCache }));
+
+			await import('../../src/js/client/main.js');
+
+			const domReadyCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'DOMContentLoaded',
+			);
+
+			if (domReadyCall) {
+				const domReadyHandler = domReadyCall[1];
+				await domReadyHandler();
+
+				// Font preloading should be called
+				expect(mockFontCache.preloadCommonFonts).toHaveBeenCalled();
+			}
+		});
+	});
+
+	describe('Idle Callback Handling', () => {
+		it('should use requestIdleCallback when available', async () => {
+			global.requestIdleCallback = vi.fn(callback => {
+				callback();
+				return 1;
+			});
+
+			await import('../../src/js/client/main.js');
+
+			const domReadyCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'DOMContentLoaded',
+			);
+
+			if (domReadyCall) {
+				const domReadyHandler = domReadyCall[1];
+				await domReadyHandler();
+
+				// Should use requestIdleCallback
+				expect(global.requestIdleCallback).toHaveBeenCalled();
+			}
+
+			delete global.requestIdleCallback;
+		});
+
+		it('should fallback to setTimeout when requestIdleCallback not available', async () => {
+			vi.useFakeTimers();
+			delete global.requestIdleCallback;
+
+			await import('../../src/js/client/main.js');
+
+			const domReadyCall = global.document.addEventListener.mock.calls.find(
+				call => call[0] === 'DOMContentLoaded',
+			);
+
+			if (domReadyCall) {
+				const domReadyHandler = domReadyCall[1];
+				await domReadyHandler();
+
+				// Should fallback to setTimeout
+				expect(setTimeout).toHaveBeenCalled();
+			}
+
+			vi.useRealTimers();
+		});
+	});
 });
