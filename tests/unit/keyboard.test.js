@@ -483,7 +483,9 @@ describe('Keyboard Utilities', () => {
 
 	describe('Selection Cursor', () => {
 		it('should create selection cursor with required methods', () => {
-			const selectionCursor = createSelectionCursor(document.createElement('div'));
+			const selectionCursor = createSelectionCursor(
+				document.createElement('div'),
+			);
 
 			expect(selectionCursor).toBeDefined();
 			expect(typeof selectionCursor.setStart).toBe('function');
@@ -492,7 +494,9 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('should handle visibility state', () => {
-			const selectionCursor = createSelectionCursor(document.createElement('div'));
+			const selectionCursor = createSelectionCursor(
+				document.createElement('div'),
+			);
 
 			expect(typeof selectionCursor.isVisible).toBe('function');
 		});

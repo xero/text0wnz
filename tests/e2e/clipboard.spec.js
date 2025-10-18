@@ -13,7 +13,9 @@ test.describe('Advanced Clipboard Operations', () => {
 		// Select a foreground color
 		const colorPalette = page.locator('#fg-palette, .color-palette');
 		if (await colorPalette.isVisible()) {
-			const colorSwatch = colorPalette.locator('.color-swatch, [data-color]').first();
+			const colorSwatch = colorPalette
+				.locator('.color-swatch, [data-color]')
+				.first();
 			if (await colorSwatch.isVisible()) {
 				await colorSwatch.click();
 				await page.waitForTimeout(200);
@@ -78,7 +80,9 @@ test.describe('Advanced Clipboard Operations', () => {
 		// Select a background color
 		const colorPalette = page.locator('#bg-palette, .color-palette');
 		if (await colorPalette.isVisible()) {
-			const colorSwatch = colorPalette.locator('.color-swatch, [data-color]').nth(2);
+			const colorSwatch = colorPalette
+				.locator('.color-swatch, [data-color]')
+				.nth(2);
 			if (await colorSwatch.isVisible()) {
 				await colorSwatch.click();
 				await page.waitForTimeout(200);
@@ -431,7 +435,9 @@ test.describe('Advanced Clipboard Operations', () => {
 
 		const colorPalette = page.locator('.color-palette, #fg-palette');
 		if (await colorPalette.isVisible()) {
-			const brightColor = colorPalette.locator('.color-swatch, [data-color]').nth(10);
+			const brightColor = colorPalette
+				.locator('.color-swatch, [data-color]')
+				.nth(10);
 			if (await brightColor.isVisible()) {
 				await brightColor.click();
 				await page.waitForTimeout(200);

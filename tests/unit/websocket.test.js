@@ -490,7 +490,9 @@ describe('WebSocket Worker Module', () => {
 		});
 
 		it('should warn on unknown command', () => {
-			const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			const consoleWarnSpy = vi
+				.spyOn(console, 'warn')
+				.mockImplementation(() => {});
 			const messageHandler = mockWebSocket.addEventListener.mock.calls.find(
 				call => call[0] === 'message',
 			)?.[1];
@@ -678,7 +680,9 @@ describe('WebSocket Worker Module', () => {
 		});
 
 		it('should handle close event with reason', async () => {
-			const consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+			const consoleInfoSpy = vi
+				.spyOn(console, 'info')
+				.mockImplementation(() => {});
 
 			await import('../../src/js/client/websocket.js');
 

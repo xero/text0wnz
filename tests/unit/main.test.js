@@ -818,7 +818,9 @@ describe('Main Application Module', () => {
 		it('should remove loading class after canvas ready', async () => {
 			const mockBodyContainer = createMockElement();
 			global.document.getElementById.mockImplementation(id => {
-				if (id === 'body-container') {return mockBodyContainer;}
+				if (id === 'body-container') {
+					return mockBodyContainer;
+				}
 				return createMockElement();
 			});
 
@@ -833,7 +835,9 @@ describe('Main Application Module', () => {
 				await domReadyHandler();
 
 				// Canvas callback should trigger loading class removal
-				expect(mockBodyContainer.classList.remove).toHaveBeenCalledWith('loading');
+				expect(mockBodyContainer.classList.remove).toHaveBeenCalledWith(
+					'loading',
+				);
 			}
 		});
 	});
