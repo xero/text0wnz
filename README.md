@@ -104,6 +104,7 @@
 **Development Guides**
 
 - [Building and Developing](docs/building-and-developing.md) - Development workflow and build process
+- [Project Structure](docs/project-structure.md) - File and module organization guide
 - [Testing](docs/testing.md) - Triple headed testing guide (unit, dom, & e2e)
 - [CI/CD Pipeline](docs/cicd.md) - Continuous integration and deployment
 - [Webserver Configuration](docs/webserver-configuration.md) - Webserver setup and configuration
@@ -116,8 +117,9 @@
 
 **Supplemental**
 
+- [Docker](docs/docker.md) - Container deployment guide
 - [Fonts](docs/fonts.md) - Complete font reference and previews
-- [Logos](docs/logos.txt) - ASCII art logos for the project
+- [Logos](docs/logos.md) - ASCII art logos for the project
 - [Examples](docs/examples/) - Sample artwork to view and edit
   - ANSI artwork by [xeR0](https://16colo.rs/artist/xero)
   - XBin artwork by [Hellbeard](https://16colo.rs/artist/hellbeard)

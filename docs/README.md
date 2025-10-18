@@ -77,6 +77,13 @@ This directory contains comprehensive guides for using, developing, testing, and
   - Naming conventions
   - Module import patterns
 
+- **[Environment Variables](environment-variables.md)** - Configuration and environment setup
+  - Build-time variables (Vite)
+  - Runtime variables (Server)
+  - CI/CD secrets (GitHub Actions)
+  - Docker environment configuration
+  - Security best practices
+
 - **[Testing](testing.md)** - Comprehensive testing guide
   - Testing strategy (Vitest, Testing Library, Playwright)
   - Unit testing with Vitest
@@ -142,6 +149,7 @@ docs/
 ├── collaboration-server.md        # Backend server guide
 ├── architecture.md                # System architecture
 ├── project-structure.md           # File and module organization
+├── environment-variables.md       # Configuration and environment setup
 ├── install-pwa.md                 # PWA installation guide
 ├── building-and-developing.md     # Development workflow
 ├── testing.md                     # Testing guide
