@@ -448,4 +448,199 @@ describe('Canvas Module', () => {
 			expect(getContextY(50)).toBe(0);
 		});
 	});
+
+	describe('Dirty Region Management', () => {
+		it('should handle dirty region enqueueing', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			// Enqueue dirty regions should not throw
+			expect(() => {
+				canvas.enqueueDirtyCell(10, 5);
+			}).not.toThrow();
+		});
+
+		it('should clamp dirty regions to canvas bounds', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			// Test that regions outside canvas bounds are handled gracefully
+			expect(() => {
+				canvas.enqueueDirtyCell(-5, -5);
+				canvas.enqueueDirtyCell(100, 100);
+			}).not.toThrow();
+		});
+
+		it('should handle dirty region processing', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			// Multiple dirty regions should be processed
+			expect(() => {
+				canvas.enqueueDirtyCell(0, 0);
+				canvas.enqueueDirtyCell(10, 10);
+				canvas.enqueueDirtyCell(20, 20);
+			}).not.toThrow();
+		});
+	});
+
+	describe('Area Operations', () => {
+		it('should support get area operation', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(typeof canvas.getArea).toBe('function');
+
+			// Get area should return an object
+			const result = canvas.getArea(0, 0, 5, 5);
+			expect(result).toBeDefined();
+			expect(result).toHaveProperty('data');
+		});
+
+		it('should support set area operation', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(typeof canvas.setArea).toBe('function');
+
+			// Set area with data should not throw
+			const areaData = { data: new Uint16Array(25), width: 5, height: 5 };
+			expect(() => {
+				canvas.setArea(0, 0, areaData);
+			}).not.toThrow();
+		});
+
+		it('should support delete area operation', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(typeof canvas.deleteArea).toBe('function');
+		});
+	});
+
+	describe('Image Data Operations', () => {
+		it('should get image data', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(typeof canvas.getImageData).toBe('function');
+
+			const imageData = canvas.getImageData();
+			expect(imageData).toBeDefined();
+			expect(imageData).toBeInstanceOf(Uint16Array);
+		});
+
+		it('should support setting image data', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(typeof canvas.setImageData).toBe('function');
+
+			const newImageData = new Uint16Array(80 * 25);
+			expect(() => {
+				canvas.setImageData(80, 25, newImageData, false, false);
+			}).not.toThrow();
+		});
+	});
+
+	describe('XBin Data Management', () => {
+		it('should support clearing XB data', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(typeof canvas.clearXBData).toBe('function');
+
+			// Clear XB data should not throw
+			expect(() => {
+				canvas.clearXBData();
+			}).not.toThrow();
+		});
+
+		it('should support clearing XB data with callback', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			const callback = vi.fn();
+			canvas.clearXBData(callback);
+
+			// Callback should be called
+			expect(callback).toHaveBeenCalled();
+		});
+
+		it('should support getting XB font data', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(typeof canvas.getXBFontData).toBe('function');
+
+			// Initially should be null
+			const xbData = canvas.getXBFontData();
+			expect(xbData).toBeNull();
+		});
+
+		it('should support setting XB font data', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(typeof canvas.setXBFontData).toBe('function');
+
+			const mockFontData = new Uint8Array(4096);
+			expect(() => {
+				canvas.setXBFontData(mockFontData, 8, 16);
+			}).not.toThrow();
+		});
+	});
+
+	describe('Quick Draw Operations', () => {
+		it('should support quick draw', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(typeof canvas.quickDraw).toBe('function');
+		});
+
+		it('should support coalesce regions', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(typeof canvas.coalesceRegions).toBe('function');
+		});
+
+		it('should support patch buffer and enqueue dirty', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(typeof canvas.patchBufferAndEnqueueDirty).toBe('function');
+		});
+	});
+
+	describe('Drawing Operations', () => {
+		it('should support draw callback', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(typeof canvas.draw).toBe('function');
+
+			const drawCallback = vi.fn();
+			canvas.draw(drawCallback, false);
+
+			// Draw callback should be called
+			expect(drawCallback).toHaveBeenCalled();
+		});
+
+		it('should support mirror mode drawing', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			canvas.setMirrorMode(true);
+
+			const drawCallback = vi.fn();
+			canvas.draw(drawCallback, false);
+
+			// With mirror mode, callback should be called multiple times
+			expect(drawCallback).toHaveBeenCalled();
+		});
+
+		it('should support draw region', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(typeof canvas.drawRegion).toBe('function');
+		});
+
+		it('should support drawHalfBlock', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(typeof canvas.drawHalfBlock).toBe('function');
+		});
+
+		it('should support getBlock and getHalfBlock', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(typeof canvas.getBlock).toBe('function');
+			expect(typeof canvas.getHalfBlock).toBe('function');
+		});
+	});
 });

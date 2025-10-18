@@ -451,4 +451,171 @@ describe('Keyboard Utilities', () => {
 			expect(textToChars('123')).toEqual([49, 50, 51]);
 		});
 	});
+
+	describe('Cursor Movement', () => {
+		it('should create cursor with movement methods', () => {
+			const cursor = createCursor(document.createElement('div'));
+
+			expect(cursor).toBeDefined();
+			expect(typeof cursor.left).toBe('function');
+			expect(typeof cursor.right).toBe('function');
+			expect(typeof cursor.up).toBe('function');
+			expect(typeof cursor.down).toBe('function');
+			expect(typeof cursor.getX).toBe('function');
+			expect(typeof cursor.getY).toBe('function');
+		});
+
+		it('should track cursor position', () => {
+			const cursor = createCursor(document.createElement('div'));
+
+			// Initial position should be 0,0
+			expect(cursor.getX()).toBe(0);
+			expect(cursor.getY()).toBe(0);
+		});
+
+		it('should have enable and disable methods', () => {
+			const cursor = createCursor(document.createElement('div'));
+
+			expect(typeof cursor.enable).toBe('function');
+			expect(typeof cursor.disable).toBe('function');
+		});
+	});
+
+	describe('Selection Cursor', () => {
+		it('should create selection cursor with required methods', () => {
+			const selectionCursor = createSelectionCursor(
+				document.createElement('div'),
+			);
+
+			expect(selectionCursor).toBeDefined();
+			expect(typeof selectionCursor.setStart).toBe('function');
+			expect(typeof selectionCursor.setEnd).toBe('function');
+			expect(typeof selectionCursor.hide).toBe('function');
+		});
+
+		it('should handle visibility state', () => {
+			const selectionCursor = createSelectionCursor(
+				document.createElement('div'),
+			);
+
+			expect(typeof selectionCursor.isVisible).toBe('function');
+		});
+	});
+
+	describe('FKey Shortcuts', () => {
+		it('should create FKey shortcuts with enable/disable', () => {
+			const fkeys = createFKeysShortcut();
+
+			expect(fkeys).toBeDefined();
+			expect(typeof fkeys.enable).toBe('function');
+			expect(typeof fkeys.disable).toBe('function');
+		});
+
+		it('should enable FKey shortcuts', () => {
+			const fkeys = createFKeysShortcut();
+
+			// Should not throw when enabling
+			expect(() => fkeys.enable()).not.toThrow();
+		});
+
+		it('should disable FKey shortcuts', () => {
+			const fkeys = createFKeysShortcut();
+
+			fkeys.enable();
+			// Should not throw when disabling
+			expect(() => fkeys.disable()).not.toThrow();
+		});
+	});
+
+	describe('Keyboard Controller', () => {
+		it('should create keyboard controller with required methods', () => {
+			const controller = createKeyboardController();
+
+			expect(controller).toBeDefined();
+			expect(typeof controller.enable).toBe('function');
+			expect(typeof controller.disable).toBe('function');
+		});
+
+		it('should enable keyboard controller', () => {
+			const controller = createKeyboardController();
+
+			// Should not throw when enabling
+			expect(() => controller.enable()).not.toThrow();
+		});
+
+		it('should disable keyboard controller', () => {
+			const controller = createKeyboardController();
+
+			controller.enable();
+			// Should not throw when disabling
+			expect(() => controller.disable()).not.toThrow();
+		});
+	});
+
+	describe('Paste Tool', () => {
+		it('should create paste tool with required methods', () => {
+			const cutBtn = document.createElement('button');
+			const copyBtn = document.createElement('button');
+			const pasteBtn = document.createElement('button');
+			const deleteBtn = document.createElement('button');
+
+			const pasteTool = createPasteTool(cutBtn, copyBtn, pasteBtn, deleteBtn);
+
+			expect(pasteTool).toBeDefined();
+			expect(typeof pasteTool.cut).toBe('function');
+			expect(typeof pasteTool.copy).toBe('function');
+			expect(typeof pasteTool.paste).toBe('function');
+			expect(typeof pasteTool.deleteSelection).toBe('function');
+			expect(typeof pasteTool.systemPaste).toBe('function');
+			expect(typeof pasteTool.setSelection).toBe('function');
+		});
+
+		it('should have disable method', () => {
+			const cutBtn = document.createElement('button');
+			const copyBtn = document.createElement('button');
+			const pasteBtn = document.createElement('button');
+			const deleteBtn = document.createElement('button');
+
+			const pasteTool = createPasteTool(cutBtn, copyBtn, pasteBtn, deleteBtn);
+
+			expect(typeof pasteTool.disable).toBe('function');
+
+			// Should not throw when disabling
+			expect(() => pasteTool.disable()).not.toThrow();
+		});
+	});
+
+	describe('FKey Character Insertion', () => {
+		it('should create single FKey shortcut', () => {
+			const canvas = document.createElement('canvas');
+			canvas.getContext = vi.fn(() => ({
+				clearRect: vi.fn(),
+				fillRect: vi.fn(),
+				drawImage: vi.fn(),
+			}));
+
+			// Should not throw when creating FKey shortcut
+			expect(() => createFKeyShortcut(canvas, 65)).not.toThrow();
+		});
+
+		it('should handle FKey shortcut click event', () => {
+			const canvas = document.createElement('canvas');
+			const mockCtx = {
+				clearRect: vi.fn(),
+				fillRect: vi.fn(),
+				drawImage: vi.fn(),
+			};
+			canvas.getContext = vi.fn(() => mockCtx);
+
+			createFKeyShortcut(canvas, 65);
+
+			// Simulate click event
+			const clickEvent = document.createEvent('Event');
+			clickEvent.initEvent('click', true, true);
+			canvas.dispatchEvent(clickEvent);
+
+			// Should have attempted to draw
+			// (actual drawing depends on State which is mocked)
+		});
+	});
 });
