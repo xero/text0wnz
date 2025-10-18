@@ -320,6 +320,79 @@ node src/js/server/main.js
 > [!NOTE]
 > See: [docs/collaboration-server](docs/collaboration-server) for more info.
 
+## Docker Containerization
+
+**text0wnz** is fully containerized, offering a streamlined deployment experience across different environments and architectures. Our containerization approach focuses on several key areas:
+
+- Multi-Stage Build Architecture
+- Security Hardening
+- Performance Optimization
+- Service Orchestration
+
+### Container Registry Support
+
+Prebuilt images are avalable in linux/amd64 & linux/arm64 flavors from multiple repositories:
+
+**from [DockerHub](https://hub.docker.com/r/xerostyle/text0wnz):**
+```sh
+docker pull xerostyle/text0wnz:latest
+```
+**From [GitHub Container Registry](https://github.com/xero/text0wnz/pkgs/container/text0wnz)::**
+```sh
+docker pull ghcr.io/xero/text0wnz:latest
+```
+
+### Building Locally
+
+To build the container locally, you'll need [Docker](https://docs.docker.com/get-docker/) with [Buildx](https://docs.docker.com/buildx/working-with-buildx/) support:
+
+```sh
+# Standard build for your local architecture
+docker buildx build -t text0wnz:latest .
+
+# Multi-architecture build (requires buildx setup)
+docker buildx create --name mybuilder --use
+docker buildx build --platform linux/amd64,linux/arm64 -t yourname/text0wnz:latest --push .
+```
+
+### Running
+
+**Development Mode**:
+
+Development mode provides hot-reloading and detailed logging for an optimized development experience:
+
+```sh
+docker run \
+    --cap-add=NET_BIND_SERVICE \
+    -e NODE_ENV=development \
+    -p 80:80 \
+    text0wnz:latest
+```
+
+The application will be available at http://localhost with WebSocket collaboration features enabled.
+
+**Production Mode**:
+
+For production deployments, use this configuration with your domain and a secure session key:
+
+```sh
+docker run \
+    --cap-add=NET_BIND_SERVICE \
+    -e DOMAIN=your.cool.domain.tld \
+    -e SESSION_KEY=secure-production-key \
+    -e NODE_ENV=production \
+    -p 80:80 -p 443:443 \
+    text0wnz:latest
+```
+This setup enables:
+
+- Automatic HTTPS via Caddy's built-in certificate management
+- Production-optimized performance settings
+- Stricter security headers and content policies
+
+> [!NOTE]
+> See: our [docs/docker](docs/docker.md) for more info and advanced setup examples.
+
 ## Testing Suite
 
 **Triple-Headed:**
