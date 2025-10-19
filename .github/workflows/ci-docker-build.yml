@@ -29,4 +29,11 @@ jobs:
           context: .
           file: .github/ci.Dockerfile
           push: true
+          labels: ${{ steps.meta.outputs.labels }}
           tags: ghcr.io/${{ github.repository }}/ci:latest
+          annotations: |
+            org.opencontainers.image.description=CI worker base image for vitetest & playwright, unit & e2e testing
+            org.opencontainers.image.title=text0wnz
+            org.opencontainers.image.authors=https://github.com/xero/text0wnz/graphs/contributors
+            org.opencontainers.image.source=https://github.com/xero/text0wnz
+            org.opencontainers.image.licenses=MIT
