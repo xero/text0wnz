@@ -2,6 +2,11 @@
 
 This directory contains Playwright end-to-end tests for the teXt0wnz text art editor.
 
+> [!INFO]
+> View the latest [e2e testing report](https://xero.github.io/text0wnz/tests/e2e/)
+
+---
+
 ## Overview
 
 The E2E tests validate the application's functionality in a real browser environment, testing user interactions and workflows.
@@ -25,8 +30,22 @@ The E2E tests validate the application's functionality in a real browser environ
   - Circle tool
   - Selection tool
   - Fill tool
-  - Undo/redo operations
+
+- **clipboard.spec.js** - Clipboard operations tests
   - Copy/paste operations
+  - Cut operations
+  - System clipboard integration
+
+- **undo-redo.spec.js** - Undo/redo functionality tests
+  - Undo operations
+  - Redo operations
+  - History management
+
+- **collaboration.spec.js** - Collaboration features tests
+  - Multi-user editing
+  - Real-time synchronization
+  - Chat functionality
+  - User presence
 
 - **palette.spec.js** - Color palette and character selection tests
   - Color palette visibility

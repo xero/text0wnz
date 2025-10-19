@@ -12,7 +12,7 @@ This guide covers the build process, development workflow, tooling, and scripts 
 
 ### Installing Bun
 
-This project uses Bun as the preferred package manager and runtime for better performance.
+This project uses [Bun](https://bun.com) as the preferred package manager and runtime for better performance.
 
 **NPM global install:**
 ```bash

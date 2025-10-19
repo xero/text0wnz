@@ -2,6 +2,11 @@
 
 This directory contains DOM/component-level tests for the teXt0wnz editor using [@testing-library/dom](https://testing-library.com/docs/dom-testing-library/intro/), [@testing-library/user-event](https://testing-library.com/docs/user-event/intro/), and [@testing-library/jest-dom](https://github.com/testing-library/jest-dom).
 
+> [!INFO]
+> View the latest [report](https://xero.github.io/text0wnz/tests/)
+
+---
+
 ## Overview
 
 DOM tests validate user interface behavior at the component level, bridging the gap between unit tests (pure logic) and E2E tests (full application flows). These tests ensure that:
@@ -290,9 +295,9 @@ DOM tests should focus on:
 - Modal and overlay behavior
 - Dynamic content updates
 
-Current coverage: **5 test files, 327 tests**
-- toolbar.test.js: 75 tests
-- palette.test.js: 82 tests
-- modal.test.js: 71 tests
-- toggleButton.test.js: 62 tests
-- keyboard.test.js: 37 tests
+Current coverage: **5 test files, 121 tests**
+- toolbar.test.js: 18 tests
+- palette.test.js: 19 tests
+- modal.test.js: 33 tests
+- toggleButton.test.js: 25 tests
+- keyboard.test.js: 26 tests

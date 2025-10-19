@@ -63,7 +63,7 @@ Install required Node.js modules:
 ```bash
 npm install
 # or
-bun install
+bun i
 ```
 
 Required packages:
@@ -257,7 +257,7 @@ Simple Node.js CLI tool for process management:
 
 ```bash
 # Install
-npm install -g forever
+bun i -g forever
 
 # Start server
 forever start src/js/server/main.js 1337
@@ -427,7 +427,7 @@ Debug mode logs:
 1. **Use strong session secrets** - Set `SESSION_KEY` environment variable
 2. **Enable SSL in production** - Use Let's Encrypt certificates
 3. **Run as non-root user** - Use systemd with dedicated user account
-4. **Keep dependencies updated** - Regular `npm update` or `bun update`
+4. **Keep dependencies updated** - Regular `bun update` or `npm update`
 5. **Use firewall rules** - Restrict access to collaboration port
 6. **Monitor logs** - Watch for suspicious activity
 7. **Backup session files** - Regular backups of session directory

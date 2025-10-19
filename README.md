@@ -46,8 +46,6 @@
 - [Project History](#project-history)
 - [License & Greetz](#license--greetz)
 
----
-
 ## Features
 
 - **Web-based text art drawing, also works offline as a PWA**
@@ -56,7 +54,7 @@
 - **Comprehensive keyboard shortcuts and mouse controls**
   - Draw using the keyboard, mouse, or touch screen
 - **Classic and modern fonts**
-  - Over 100 fonts from IBM PCs, Amiga, C64, and many more vintage / custom.
+  - Over 100 fonts from IBM PCs, Amiga, C64, and many more vintage/custom
 - **Full suite of drawing tools:**
   - Keyboard, freehand brushes, fills, shapes, selection, and color picker
 - **Advanced color management**
@@ -68,11 +66,12 @@
 - **Auto Save/Restore**
   - Editor Setting saved to local storage for a consistent drawing sessions
   - Artwork saved to IndexedDB as you draw, auto-reloaded when the app is opened
-  - Optimized binary data storage algorithm for efficient canvas persistence
+  - Optimized binary data storage packing for efficient canvas persistence
 - **Collaborative server mode**
   - For real-time multi-user editing
+  - Optional and opt-in by users. See: [Privacy](docs/privacy.md)
 - **Build tools:**
-  - Vite, Bun, Npm
+  - Bun, Vite, PostCSS
 - **Automated tests:**
   - Playwright, Vitest, Testing Library
 - **Robust linting and formatting:**
@@ -96,15 +95,20 @@
 
 - [Interface](docs/interface.md) - Visual guide to the user interface and options
 - [Editor Client](docs/editor-client.md) - Frontend text art editor application
+  - [Hotkeys](docs/editor-client.md#key-bindings--mouse-controls) - Editor shortcuts reference
 - [Collaboration Server](docs/collaboration-server.md) - Backend real-time collaboration server
+- [Architecture](docs/architecture.md) - System architecture and design overview
 - [PWA Install](docs/install-pwa.md) - Guide to installing the app on multiple platforms
 - [Privacy Policy](docs/privacy.md) - Privacy and data handling policy
 
 **Development Guides**
 
+- [Project Structure](docs/project-structure.md) - File and module organization guide
 - [Building and Developing](docs/building-and-developing.md) - Development workflow and build process
 - [Testing](docs/testing.md) - Triple headed testing guide (unit, dom, & e2e)
+- [CI/CD Pipeline](docs/cicd.md) - Continuous integration and deployment
 - [Webserver Configuration](docs/webserver-configuration.md) - Webserver setup and configuration
+- [Docker](docs/docker.md) - Container deployment guide
 - [Other Tools](docs/other-tools.md) - Additional development and deployment tools
 
 **Technical Specifications**
@@ -115,12 +119,10 @@
 **Supplemental**
 
 - [Fonts](docs/fonts.md) - Complete font reference and previews
-- [Logos](docs/logos.txt) - ASCII art logos for the project
+- [Logos](docs/logos.md) - ASCII art logos for the project
 - [Examples](docs/examples/) - Sample artwork to view and edit
   - ANSI artwork by [xeR0](https://16colo.rs/artist/xero)
   - XBin artwork by [Hellbeard](https://16colo.rs/artist/hellbeard)
-
----
 
 ## Drawing & Editing Tools
 
@@ -428,7 +430,7 @@ bun test:unit  # Run unit tests
 bun test:e2e   # Run end2end tests
 ```
 
-All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/main/.github/workflows).
+All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/main/.github/workflows). See the [CI/CD Pipeline documentation](docs/cicd.md) for details on the automated testing, building, and deployment process.
 
 > [!NOTE]
 > See: [docs/testing](docs/testing.md) for more info.

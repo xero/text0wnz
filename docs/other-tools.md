@@ -2,6 +2,9 @@
 
 This document covers additional tools and utilities that are useful for developing, deploying, and maintaining teXt0wnz.
 
+> [!NOTE]
+> Use `bun` and `npm` interchangeably.
+
 ## Development Tools
 
 ### pin-github-action
@@ -59,8 +62,6 @@ Upgrades package.json dependencies to the latest versions, ignoring existing ver
 **Installation:**
 ```bash
 bun i npm-check-updates
-# or
-npm install -g npm-check-updates
 ```
 
 **Usage:**
@@ -72,9 +73,7 @@ ncu
 ncu -u
 
 # Install updated packages
-bun install
-# or
-npm install
+bun i
 
 # Update specific packages
 ncu -u eslint vitest
@@ -116,8 +115,6 @@ chmod +x .git/hooks/pre-commit
 - Prevents commits with issues
 - Ensures code quality standards
 
-**Customize:**
-Edit `.git/hooks/pre-commit` to add/remove checks:
 ```bash
 #!/bin/sh
 # kopimi mmxxv x0
@@ -240,7 +237,7 @@ Automated performance, accessibility, and SEO testing.
 
 **Installation:**
 ```bash
-npm install -g @lhci/cli
+bun i -g @lhci/cli
 ```
 
 **Usage:**
@@ -298,36 +295,13 @@ bun bake
 
 ## Deployment Tools
 
-### serve (Static File Server)
-
-Simple static file server for testing builds.
-
-**Installation:**
-```bash
-npm install -g serve
-```
-
-**Usage:**
-```bash
-# Serve dist directory
-serve dist -l 8060
-
-# With custom port
-serve dist -p 3000
-
-# With HTTPS
-serve dist -l 8060 --ssl-cert cert.pem --ssl-key key.pem
-```
-
-**Used in:** `bun www` script
-
 ### PM2 (Process Manager)
 
 Advanced process manager for Node.js applications.
 
 **Installation:**
 ```bash
-npm install -g pm2
+bun i -g pm2
 ```
 
 **Usage:**
@@ -384,68 +358,6 @@ Run with:
 pm2 start ecosystem.config.js
 ```
 
-### Docker
-
-Containerize the application for easy deployment.
-
-**Dockerfile:**
-```dockerfile
-FROM node:22-alpine
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-COPY bun.lock ./
-
-# Install bun
-RUN npm install -g bun
-
-# Install dependencies
-RUN bun install
-
-# Copy source
-COPY . .
-
-# Build
-RUN bun bake
-
-# Expose ports
-EXPOSE 8060 1337
-
-# Start command
-CMD ["bun", "server", "1337"]
-```
-
-**docker-compose.yml:**
-```yaml
-version: '3.8'
-services:
-  text0wnz:
-    build: .
-    ports:
-      - "8060:8060"
-      - "1337:1337"
-    environment:
-      - NODE_ENV=production
-      - SESSION_KEY=your-secret-key
-    volumes:
-      - ./session:/app/session
-    restart: unless-stopped
-```
-
-**Usage:**
-```bash
-# Build image
-docker build -t text0wnz .
-
-# Run container
-docker run -p 8060:8060 -p 1337:1337 text0wnz
-
-# With docker-compose
-docker-compose up -d
-```
-
 ## Monitoring Tools
 
 ### Uptime Kuma
@@ -481,23 +393,23 @@ bash <(curl -Ss https://my-netdata.io/kickstart.sh)
 
 ## Security Tools
 
-### npm audit
+### bun / npm audit
 
 Check for vulnerabilities in dependencies.
 
 **Usage:**
 ```bash
 # Run audit
-npm audit
+bun audit
 
 # Fix vulnerabilities automatically
-npm audit fix
+bun audit fix
 
 # Force fix (may break things)
-npm audit fix --force
+bun audit fix --force
 
 # Detailed report
-npm audit --json
+bun audit --json
 ```
 
 ### Snyk
@@ -506,7 +418,7 @@ Advanced security scanning for dependencies.
 
 **Installation:**
 ```bash
-npm install -g snyk
+bun i -g snyk
 snyk auth
 ```
 
@@ -530,7 +442,7 @@ GitHub's automated dependency updates.
 ```yaml
 version: 2
 updates:
-  - package-ecosystem: "npm"
+  - package-ecosystem: "bun"
     directory: "/"
     schedule:
       interval: "weekly"
@@ -586,7 +498,7 @@ act -n
 
 **markdownlint-cli:**
 ```bash
-npm install -g markdownlint-cli
+bun i -g markdownlint-cli
 
 # Check markdown files
 markdownlint '**/*.md'
@@ -601,7 +513,7 @@ Generate API documentation from code comments.
 
 **Installation:**
 ```bash
-npm install -g jsdoc
+bun i -g jsdoc
 ```
 
 **Usage:**
@@ -635,7 +547,7 @@ Automated accessibility testing.
 
 **Installation:**
 ```bash
-npm install -g pa11y
+bun i -g pa11y
 ```
 
 **Usage:**
