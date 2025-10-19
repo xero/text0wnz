@@ -279,7 +279,8 @@ describe('FileIO Module Integration Tests', () => {
 				return { year, month, day };
 			};
 
-			const testDate = new Date('2023-12-25');
+			// Use explicit date components to avoid timezone issues
+			const testDate = new Date(2023, 11, 25); // Year, Month (0-indexed), Day
 			const formatted = formatSauceDate(testDate);
 
 			expect(formatted.year).toBe('2023');
@@ -300,7 +301,8 @@ describe('FileIO Module Integration Tests', () => {
 				};
 			};
 
-			const testDate = new Date('2023-01-05');
+			// Use explicit date components to avoid timezone issues
+			const testDate = new Date(2023, 0, 5); // Year, Month (0-indexed), Day
 			const formatted = formatSauceDate(testDate);
 
 			expect(formatted.month).toBe('01');
