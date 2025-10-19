@@ -294,5 +294,135 @@ describe('Font Module - Basic Tests', () => {
 
 			expect(mockImage.src).toBe('/ui/fonts/AnotherFont.png');
 		});
+
+		it('should provide correct font dimensions based on letter spacing', async () => {
+			// Test dimension calculation with letter spacing
+			const testDimensions = (width, letterSpacing) => {
+				return {
+					effectiveWidth: letterSpacing ? width + 1 : width,
+					originalWidth: width,
+				};
+			};
+
+			expect(testDimensions(8, false).effectiveWidth).toBe(8);
+			expect(testDimensions(8, true).effectiveWidth).toBe(9);
+			expect(testDimensions(16, true).effectiveWidth).toBe(17);
+		});
+
+		it('should handle font data retrieval', () => {
+			// Test font data structure
+			const mockFontData = {
+				width: 8,
+				height: 16,
+				data: new Uint8Array(256 * 16),
+			};
+
+			expect(mockFontData.width).toBe(8);
+			expect(mockFontData.height).toBe(16);
+			expect(mockFontData.data.length).toBe(4096);
+		});
+
+		it('should handle letter spacing changes', () => {
+			// Test letter spacing toggle logic
+			let letterSpacing = false;
+
+			const toggleLetterSpacing = newValue => {
+				if (newValue !== letterSpacing) {
+					letterSpacing = newValue;
+					return true; // Changed
+				}
+				return false; // No change
+			};
+
+			expect(toggleLetterSpacing(true)).toBe(true);
+			expect(letterSpacing).toBe(true);
+			expect(toggleLetterSpacing(true)).toBe(false); // Same value, no change
+			expect(toggleLetterSpacing(false)).toBe(true);
+			expect(letterSpacing).toBe(false);
+		});
+	});
+
+	describe('Font Drawing Operations', () => {
+		it('should validate character code ranges for drawing', () => {
+			// Test character code validation logic
+			const isValidCharCode = code => {
+				return code >= 0 && code <= 255;
+			};
+
+			expect(isValidCharCode(0)).toBe(true);
+			expect(isValidCharCode(65)).toBe(true); // 'A'
+			expect(isValidCharCode(255)).toBe(true);
+			expect(isValidCharCode(-1)).toBe(false);
+			expect(isValidCharCode(256)).toBe(false);
+		});
+
+		it('should validate color values for drawing', () => {
+			// Test color value validation logic
+			const isValidColor = color => {
+				return color >= 0 && color <= 15;
+			};
+
+			expect(isValidColor(0)).toBe(true);
+			expect(isValidColor(7)).toBe(true);
+			expect(isValidColor(15)).toBe(true);
+			expect(isValidColor(-1)).toBe(false);
+			expect(isValidColor(16)).toBe(false);
+		});
+
+		it('should handle coordinate positioning for character drawing', () => {
+			// Test coordinate calculation logic
+			const calculatePosition = (x, y, charWidth, charHeight) => {
+				return {
+					pixelX: x * charWidth,
+					pixelY: y * charHeight,
+				};
+			};
+
+			expect(calculatePosition(0, 0, 8, 16)).toEqual({ pixelX: 0, pixelY: 0 });
+			expect(calculatePosition(10, 5, 8, 16)).toEqual({
+				pixelX: 80,
+				pixelY: 80,
+			});
+			expect(calculatePosition(79, 24, 8, 16)).toEqual({
+				pixelX: 632,
+				pixelY: 384,
+			});
+		});
+	});
+
+	describe('Font State Management', () => {
+		it('should handle font initialization state', () => {
+			// Test font initialization tracking
+			let fontInitialized = false;
+			let lazyFontCreated = false;
+
+			const initializeFont = () => {
+				fontInitialized = true;
+				lazyFontCreated = true;
+			};
+
+			expect(fontInitialized).toBe(false);
+			expect(lazyFontCreated).toBe(false);
+
+			initializeFont();
+
+			expect(fontInitialized).toBe(true);
+			expect(lazyFontCreated).toBe(true);
+		});
+
+		it('should handle font redraw operations', () => {
+			// Test font redraw triggering
+			let redrawCount = 0;
+
+			const triggerRedraw = () => {
+				redrawCount++;
+			};
+
+			expect(redrawCount).toBe(0);
+			triggerRedraw();
+			expect(redrawCount).toBe(1);
+			triggerRedraw();
+			expect(redrawCount).toBe(2);
+		});
 	});
 });

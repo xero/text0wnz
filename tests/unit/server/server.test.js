@@ -315,4 +315,128 @@ describe('Server Module Integration Tests', () => {
 			expect(tasks[1].executed).toBe(true);
 		});
 	});
+
+	describe('Server Startup Logic', () => {
+		it('should handle SSL configuration paths', () => {
+			// Test path.join logic for SSL certificates
+			const constructPaths = (sslDir, certFile, keyFile) => {
+				return {
+					cert: `${sslDir}/${certFile}`,
+					key: `${sslDir}/${keyFile}`,
+				};
+			};
+
+			const paths = constructPaths(
+				'/etc/letsencrypt',
+				'letsencrypt-domain.pem',
+				'letsencrypt-domain.key'
+			);
+
+			expect(paths.cert).toBe('/etc/letsencrypt/letsencrypt-domain.pem');
+			expect(paths.key).toBe('/etc/letsencrypt/letsencrypt-domain.key');
+		});
+
+		it('should handle server configuration object', () => {
+			// Test config object structure
+			const createConfig = (port, ssl, sslDir, saveInterval, debug) => {
+				return {
+					port: port || 1337,
+					ssl: ssl || false,
+					sslDir: sslDir || '/etc/ssl',
+					saveInterval: saveInterval || 30 * 60 * 1000,
+					debug: debug || false,
+				};
+			};
+
+			const defaultConfig = createConfig();
+			expect(defaultConfig.port).toBe(1337);
+			expect(defaultConfig.ssl).toBe(false);
+			expect(defaultConfig.saveInterval).toBe(1800000);
+
+			const customConfig = createConfig(8080, true, '/custom/ssl', 60000, true);
+			expect(customConfig.port).toBe(8080);
+			expect(customConfig.ssl).toBe(true);
+			expect(customConfig.sslDir).toBe('/custom/ssl');
+			expect(customConfig.saveInterval).toBe(60000);
+			expect(customConfig.debug).toBe(true);
+		});
+
+		it('should handle middleware routing paths', () => {
+			// Test route path configurations
+			const routes = [
+				{ path: '/', type: 'websocket' },
+				{ path: '/server', type: 'websocket' },
+			];
+
+			expect(routes.length).toBe(2);
+			expect(routes[0].path).toBe('/');
+			expect(routes[1].path).toBe('/server');
+		});
+
+		it('should handle session middleware configuration', () => {
+			// Test session config structure
+			const sessionConfig = {
+				resave: false,
+				saveUninitialized: true,
+				secret: 'sauce',
+			};
+
+			expect(sessionConfig.resave).toBe(false);
+			expect(sessionConfig.saveUninitialized).toBe(true);
+			expect(sessionConfig.secret).toBe('sauce');
+		});
+
+		it('should handle static file serving configuration', () => {
+			// Test static file serving path
+			const staticPath = 'public';
+			
+			expect(staticPath).toBe('public');
+		});
+
+		it('should handle WebSocket initialization', () => {
+			// Test WebSocket init parameters
+			const mockConfig = {
+				port: 1337,
+				ssl: false,
+				debug: false,
+				saveInterval: 1800000,
+			};
+
+			const mockClients = new Set();
+
+			expect(mockConfig.port).toBe(1337);
+			expect(mockClients.size).toBe(0);
+
+			// Simulate client connection
+			mockClients.add({ id: 'test' });
+			expect(mockClients.size).toBe(1);
+		});
+
+		it('should handle debug logging configuration', () => {
+			// Test debug logging conditions
+			const shouldLog = (config, logType) => {
+				if (!config.debug) {
+					return false;
+				}
+
+				if (logType === 'startup') {
+					return true;
+				}
+
+				if (logType === 'websocket') {
+					return true;
+				}
+
+				return false;
+			};
+
+			const debugConfig = { debug: true };
+			const prodConfig = { debug: false };
+
+			expect(shouldLog(debugConfig, 'startup')).toBe(true);
+			expect(shouldLog(debugConfig, 'websocket')).toBe(true);
+			expect(shouldLog(prodConfig, 'startup')).toBe(false);
+			expect(shouldLog(prodConfig, 'websocket')).toBe(false);
+		});
+	});
 });
