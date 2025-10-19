@@ -352,7 +352,11 @@ describe('Toolbar', () => {
 			const onBlurRegular = vi.fn();
 			const onFocusLazy = vi.fn();
 
-			const regularTool = Toolbar.add(regularButton, onFocusRegular, onBlurRegular);
+			const regularTool = Toolbar.add(
+				regularButton,
+				onFocusRegular,
+				onBlurRegular,
+			);
 			const lazyTool = Toolbar.addLazy(lazyButton, async () => ({
 				enable: vi.fn(),
 				onFocus: onFocusLazy,

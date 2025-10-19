@@ -379,8 +379,14 @@ describe('Font Module - Basic Tests', () => {
 			};
 
 			expect(calculatePosition(0, 0, 8, 16)).toEqual({ pixelX: 0, pixelY: 0 });
-			expect(calculatePosition(10, 5, 8, 16)).toEqual({ pixelX: 80, pixelY: 80 });
-			expect(calculatePosition(79, 24, 8, 16)).toEqual({ pixelX: 632, pixelY: 384 });
+			expect(calculatePosition(10, 5, 8, 16)).toEqual({
+				pixelX: 80,
+				pixelY: 80,
+			});
+			expect(calculatePosition(79, 24, 8, 16)).toEqual({
+				pixelX: 632,
+				pixelY: 384,
+			});
 		});
 	});
 

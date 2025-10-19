@@ -79,6 +79,55 @@ Tests for keyboard shortcuts and navigation:
 - Global vs local shortcuts
 - Edge cases (special characters, rapid keys, non-character keys)
 
+### Menu Tests (`menu.test.js`) ⬆ NEW
+Tests for menu system (file-menu, edit-menu):
+- Menu opening and closing on click
+- Menu blur events and focus management
+- Menu item rendering and display
+- Menu accessibility (tabindex, aria-labels)
+- Event handling (stopPropagation, preventDefault)
+- Multiple menu management
+- Focus restoration to view after menu closes
+- Menu button ARIA attributes
+
+### Canvas and Cursor Tests (`canvas.test.js`) ⬆ NEW
+Tests for canvas interaction and cursor positioning:
+- Position info display and updates
+- 1-indexed coordinate display (0-based internally)
+- Canvas container element and focusability
+- Cursor element positioning
+- Click event handling on canvas
+- Position calculation from click coordinates
+- Cursor synchronization with position info
+- Focus management on canvas element
+- Coordinate calculations for different character sizes
+
+### Font Preview Tests (`fontPreview.test.js`) ⬆ NEW
+Tests for font selection modal and preview:
+- Font preview image display and updates
+- Font selection via click, touch, and keyboard
+- Font listbox with ARIA attributes
+- Arrow key navigation (Up, Down, Home, End)
+- Enter and Space key selection
+- Font controller API (getValue, setValue, focus)
+- Font option accessibility (role="option", aria-selected)
+- scrollIntoView on selection
+- Preview info text updates
+- Touch event handling
+
+### Fullscreen Tests (`fullscreen.test.js`) ⬆ NEW
+Tests for fullscreen mode toggle:
+- Fullscreen button rendering and display
+- Toggle between fullscreen states
+- Fullscreen API detection (fullscreenEnabled)
+- Enter fullscreen (requestFullscreen)
+- Exit fullscreen (exitFullscreen)
+- Browser compatibility handling
+- Click and touch event handling
+- Rapid toggle support
+- Integration with menu structure
+- Fullscreen state detection
+
 ## Running the Tests
 
 ### Run all DOM tests
@@ -295,11 +344,15 @@ DOM tests should focus on:
 - Modal and overlay behavior
 - Dynamic content updates
 
-Current coverage: **5 test files, 121+ tests**
+Current coverage: **9 test files, 205 tests**
 - toolbar.test.js: 18 tests
 - palette.test.js: 19 tests
 - modal.test.js: 33 tests
 - toggleButton.test.js: 25 tests
 - keyboard.test.js: 26 tests
+- **menu.test.js: 14 tests** ⬆ (NEW)
+- **canvas.test.js: 22 tests** ⬆ (NEW)
+- **fontPreview.test.js: 32 tests** ⬆ (NEW)
+- **fullscreen.test.js: 16 tests** ⬆ (NEW)
 
 **Note**: DOM tests focus on user-visible behavior and accessibility, complementing the unit tests that cover business logic and state management.

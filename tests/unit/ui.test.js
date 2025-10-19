@@ -1097,19 +1097,19 @@ describe('UI Utilities', () => {
 	describe('createGrid', () => {
 		it('should be a function that creates grid controller', async () => {
 			const { createGrid } = await import('../../src/js/client/ui.js');
-			
+
 			expect(typeof createGrid).toBe('function');
-			
+
 			// Test that calling the function with a div doesn't throw before canvas operations
 			// We can't fully test it without proper State mock and canvas support
 			const container = document.createElement('div');
 			document.body.appendChild(container);
-			
+
 			// The function will fail during rendering but we're just verifying the structure
 			expect(() => {
 				try {
 					createGrid(container);
-				} catch (e) {
+				} catch {
 					// Expected to fail due to mocking limitations, but we verified it's callable
 				}
 			}).not.toThrow();
@@ -1134,12 +1134,12 @@ describe('UI Utilities', () => {
 	describe('createFontSelect', () => {
 		it('should create font select controller with focus/getValue/setValue methods', async () => {
 			const { createFontSelect } = await import('../../src/js/client/ui.js');
-			
+
 			// Create minimal DOM structure for font select
 			const listbox = document.createElement('div');
 			listbox.setAttribute('role', 'listbox');
 			listbox.focus = vi.fn();
-			
+
 			const option1 = document.createElement('div');
 			option1.setAttribute('role', 'option');
 			option1.setAttribute('id', 'font-opt-1');
@@ -1170,11 +1170,11 @@ describe('UI Utilities', () => {
 
 		it('should get current font value', async () => {
 			const { createFontSelect } = await import('../../src/js/client/ui.js');
-			
+
 			const listbox = document.createElement('div');
 			listbox.setAttribute('role', 'listbox');
 			listbox.focus = vi.fn();
-			
+
 			const option1 = document.createElement('div');
 			option1.setAttribute('role', 'option');
 			option1.setAttribute('id', 'font-opt-1');
@@ -1197,11 +1197,11 @@ describe('UI Utilities', () => {
 
 		it('should set font value', async () => {
 			const { createFontSelect } = await import('../../src/js/client/ui.js');
-			
+
 			const listbox = document.createElement('div');
 			listbox.setAttribute('role', 'listbox');
 			listbox.focus = vi.fn();
-			
+
 			const option1 = document.createElement('div');
 			option1.setAttribute('role', 'option');
 			option1.setAttribute('id', 'font-opt-1');
@@ -1209,7 +1209,7 @@ describe('UI Utilities', () => {
 			option1.setAttribute('aria-selected', 'true');
 			option1.textContent = 'CP437 8x16';
 			option1.scrollIntoView = vi.fn();
-			
+
 			const option2 = document.createElement('div');
 			option2.setAttribute('role', 'option');
 			option2.setAttribute('id', 'font-opt-2');
@@ -1217,7 +1217,7 @@ describe('UI Utilities', () => {
 			option2.setAttribute('aria-selected', 'false');
 			option2.textContent = 'Amiga Topaz';
 			option2.scrollIntoView = vi.fn();
-			
+
 			listbox.appendChild(option1);
 			listbox.appendChild(option2);
 
@@ -1238,11 +1238,11 @@ describe('UI Utilities', () => {
 
 		it('should return false when setting invalid font value', async () => {
 			const { createFontSelect } = await import('../../src/js/client/ui.js');
-			
+
 			const listbox = document.createElement('div');
 			listbox.setAttribute('role', 'listbox');
 			listbox.focus = vi.fn();
-			
+
 			const option1 = document.createElement('div');
 			option1.setAttribute('role', 'option');
 			option1.setAttribute('id', 'font-opt-1');
