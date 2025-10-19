@@ -2,7 +2,7 @@
 
 ## Summary
 
-This document outlines the test coverage improvements made to the teXt0wnz project.
+This document outlines the test coverage improvements made to the text0wnz project.
 
 ### Overall Progress
 
