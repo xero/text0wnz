@@ -1,6 +1,6 @@
 {
   "name": "teXt0wnz",
-  "version": "1.6.7",
+  "version": "2.0.0",
   "author": "xeR0, andyh, & our contributors https://github.com/xero/teXt0wnz/graphs/contributors",
   "description": "Text-mode art editor for ANSI, ASCII, XBIN, & NFO files. Modern web-based PWA w/ offline mode, local storage sync, & optional collaborative server",
   "license": "MIT",
