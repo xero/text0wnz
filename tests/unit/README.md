@@ -88,10 +88,15 @@ The unit tests validate individual modules and functions in isolation, ensuring 
   - Canvas state
 
 - **toolbar.test.js** - Toolbar interaction tests
-  - Tool selection
-  - Tool switching
-  - Toolbar state management
-  - UI updates
+  - Tool registration and selection
+  - Tool switching and state management
+  - Previous tool tracking and restoration
+  - Lazy-loaded tools support
+  - Click event handling and prevention
+  - Rapid tool switching scenarios
+  - Multiple tool management
+  - getCurrentTool and switchTool APIs
+  - Edge cases (empty IDs, undefined callbacks)
 
 - **ui.test.js** - User interface tests
   - UI element creation
@@ -130,11 +135,14 @@ The unit tests validate individual modules and functions in isolation, ensuring 
   - Validation
 
 - **server/fileio.test.js** - Server file operations tests
-  - SAUCE record creation and parsing
-  - Binary data conversions
-  - File format validation
-  - Canvas dimension extraction
-  - Data type conversions
+  - SAUCE record creation and parsing algorithms
+  - Binary data conversion algorithms (Uint16 ↔ Uint8)
+  - File format validation and signature detection
+  - Canvas dimension extraction from SAUCE
+  - Data type conversions and metadata parsing
+  - Edge cases (empty files, invalid SAUCE, large dimensions)
+  - Date formatting and flag bit operations
+  - Path traversal security validation
 
 - **server/main.test.js** - Server main module tests
   - Module structure validation
@@ -149,10 +157,15 @@ The unit tests validate individual modules and functions in isolation, ensuring 
   - SSL configuration
 
 - **server/text0wnz.test.js** - Collaboration engine tests
-  - Session management
-  - User tracking
-  - Canvas state synchronization
-  - Message broadcasting
+  - Session management and file path validation
+  - User tracking (join, nick, disconnect)
+  - Canvas state synchronization and resizing
+  - Message broadcasting and formatting
+  - Chat message limiting algorithms
+  - Draw command processing
+  - Setting changes (font, ice colors, letter spacing)
+  - Start message generation
+  - WebSocket client state handling
 
 - **server/utils.test.js** - Server utility tests
   - Helper functions
@@ -217,10 +230,10 @@ bunx vitest --ui
 
 Current coverage status (as of latest run):
 
-- **Overall**: ~50.62% statement coverage
-- **Client modules**: ~50.26% average coverage
-- **Server modules**: ~56.76% average coverage
-- **Total tests**: 852 tests across 33 test files
+- **Overall**: ~50.23% statement coverage
+- **Client modules**: ~50.75% average coverage
+- **Server modules**: ~41.36% average coverage
+- **Total tests**: 861+ tests across 33 test files
 
 ### Coverage Goals
 
@@ -230,35 +243,39 @@ Current coverage status (as of latest run):
 
 ### Coverage by Module
 
-**High Coverage (>80%)**:
+**High Coverage (≥80%)**:
 - `compression.js`: 100%
 - `magicNumbers.js`: 100%
+- `lazyFont.js`: 100%
 - `config.js` (server): 100%
 - `utils.js` (server): 100%
 - `websockets.js` (server): 100%
 - `main.js` (server): 100%
-- `lazyFont.js`: 100%
 - `fontCache.js`: 98.31%
 - `websocket.js` (client): 96.4%
+- `toolbar.js`: 95.58% ⬆ (improved from 55.88%)
 - `storage.js`: 82.19%
 
-**Medium Coverage (50-80%)**:
+**Good Coverage (60-79%)**:
 - `palette.js`: 72.59%
 - `state.js`: 68.75%
+
+**Medium Coverage (50-59%)**:
 - `ui.js`: 57.98%
-- `toolbar.js`: 55.88%
 - `server.js`: 55.4%
-- `fileio.js` (server): 53.75%
 
 **Needs Improvement (<50%)**:
+- `network.js`: 47.53%
+- `font.js`: 46.77%
 - `canvas.js`: 43.1%
 - `freehand_tools.js`: 42.35%
 - `file.js`: 41.39%
 - `keyboard.js`: 41.18%
-- `network.js`: 47.53%
-- `font.js`: 46.77%
-- `text0wnz.js` (server): 30.96%
+- `text0wnz.js` (server): 22.17%
 - `main.js` (client): 17.51%
+- `fileio.js` (server): 8.67% (primarily algorithm tests due to fs dependencies)
+
+**Note**: Some modules like `main.js` (client) and `fileio.js` (server) have lower coverage due to extensive DOM/file system dependencies that are difficult to mock in unit tests. These modules are better tested through E2E tests.
 
 ### Coverage Reports
 

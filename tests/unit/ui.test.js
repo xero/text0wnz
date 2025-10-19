@@ -1076,4 +1076,64 @@ describe('UI Utilities', () => {
 			vi.useRealTimers();
 		});
 	});
+
+	describe('Additional DOM Utilities', () => {
+		it('should provide $$$ function for querySelectorAll', async () => {
+			// Need to import $$$ separately
+			const { $$$ } = await import('../../src/js/client/ui.js');
+
+			const div1 = document.createElement('div');
+			div1.className = 'test-class-multi';
+			const div2 = document.createElement('div');
+			div2.className = 'test-class-multi';
+			document.body.appendChild(div1);
+			document.body.appendChild(div2);
+
+			const results = $$$('.test-class-multi');
+			expect(results.length).toBe(2);
+		});
+	});
+
+	describe('Additional Exported Functions', () => {
+		it('should test createGrid function existence', async () => {
+			const module = await import('../../src/js/client/ui.js');
+			expect(module.createGrid).toBeDefined();
+			expect(typeof module.createGrid).toBe('function');
+		});
+
+		it('should test createToolPreview function existence', async () => {
+			const module = await import('../../src/js/client/ui.js');
+			expect(module.createToolPreview).toBeDefined();
+			expect(typeof module.createToolPreview).toBe('function');
+		});
+
+		it('should test createFontSelect function existence', async () => {
+			const module = await import('../../src/js/client/ui.js');
+			expect(module.createFontSelect).toBeDefined();
+			expect(typeof module.createFontSelect).toBe('function');
+		});
+
+		it('should test websocketUI function', async () => {
+			const { websocketUI } = await import('../../src/js/client/ui.js');
+
+			// Create elements with the specific classes
+			const excludedDiv = document.createElement('div');
+			excludedDiv.className = 'excluded-for-websocket';
+			const includedDiv = document.createElement('div');
+			includedDiv.className = 'included-for-websocket';
+
+			document.body.appendChild(excludedDiv);
+			document.body.appendChild(includedDiv);
+
+			// Test showing websocket UI
+			websocketUI(true);
+			expect(includedDiv.style.display).toBe('block');
+			expect(excludedDiv.style.display).toBe('none');
+
+			// Test hiding websocket UI
+			websocketUI(false);
+			expect(includedDiv.style.display).toBe('none');
+			expect(excludedDiv.style.display).toBe('block');
+		});
+	});
 });
