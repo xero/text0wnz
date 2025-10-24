@@ -227,9 +227,7 @@ describe('FontCache Module', () => {
 		it('should clear Cache API', async () => {
 			await FontCache.clearCache();
 
-			expect(globalThis.caches.delete).toHaveBeenCalledWith(
-				'text0wnz-fonts',
-			);
+			expect(globalThis.caches.delete).toHaveBeenCalledWith('text0wnz-fonts');
 		});
 
 		it('should handle Cache API delete errors', async () => {

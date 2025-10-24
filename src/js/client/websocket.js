@@ -2,6 +2,7 @@
 let socket;
 let sessionID;
 let joint;
+let trustedOrigin;
 
 const send = (cmd, msg) => {
 	if (socket && socket.readyState === WebSocket.OPEN) {
@@ -183,6 +184,23 @@ const removeDuplicates = blocks => {
 
 // Main Handler
 self.onmessage = msg => {
+	// First message received will establish trust
+	if (!trustedOrigin) {
+		trustedOrigin = msg.origin;
+	}
+
+	// In same-origin contexts, origin can be "" or "null"
+	if (
+		msg.origin !== trustedOrigin &&
+		msg.origin !== '' &&
+		msg.origin !== 'null'
+	) {
+		console.warn(
+			`[Worker] Discarding message from untrusted origin: ${msg.origin}`,
+		);
+		return;
+	}
+
 	const data = msg.data;
 	switch (data.cmd) {
 		case 'connect':
@@ -257,6 +275,8 @@ self.onmessage = msg => {
 			if (socket) {
 				socket.close();
 			}
+			break;
+		case 'init':
 			break;
 		default:
 			break;

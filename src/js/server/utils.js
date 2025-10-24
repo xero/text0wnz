@@ -1,4 +1,4 @@
-// usage flags
+// Usage flags
 const printHelp = () => {
 	console.log(`teXt0wnz backend server
 Usage: {bun,node} server.js [port] [options]
@@ -18,7 +18,7 @@ Examples:
 	process.exit(0);
 };
 
-// strips possibly sensitive headers
+// Strips possibly sensitive headers
 const cleanHeaders = headers => {
 	const SENSITIVE_HEADERS = [
 		'authorization',
@@ -39,7 +39,7 @@ const cleanHeaders = headers => {
 };
 
 const createTimestampedFilename = (sessionName, extension) => {
-	// windows safe name
+	// Windows safe file names
 	const timestamp = new Date().toISOString().replace(/[:]/g, '-');
 	return `${sessionName}-${timestamp}.${extension}`;
 };
