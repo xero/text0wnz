@@ -2,7 +2,7 @@ import path from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { readFile, writeFile } from 'fs';
 import { load, save } from './fileio.js';
-import { createTimestampedFilename } from './utils.js';
+import { callout, sanitize, createTimestampedFilename } from './utils.js';
 
 const SESSION_DIR = path.resolve('./sessions');
 const userList = {};
@@ -11,23 +11,23 @@ let chat = [];
 let debug = false;
 let sessionName = 'joint'; // Default session name
 
-// Initialize the module with configuration
 const initialize = config => {
 	sessionName = config.sessionName;
 	debug = config.debug || false;
 	if (debug) {
-		console.log('Initializing text0wnz with session name:', sessionName);
+		console.log('* Initializing text0wnz with session name:', sessionName);
 	}
-
 	if (!existsSync(SESSION_DIR)) {
 		mkdirSync(SESSION_DIR, { recursive: true });
 		if (debug) {
-			console.log('Creating session directory:', SESSION_DIR);
+			console.log('* Creating session directory:', SESSION_DIR);
 		}
 	}
-
-	// Load or create session files
 	loadSession();
+};
+
+const log = msg => {
+	debug ? callout(msg) : console.log(`* ${msg}`);
 };
 
 const loadSession = () => {
@@ -36,7 +36,7 @@ const loadSession = () => {
 
 	// Validate and sanitize file paths
 	if (!chatFile.startsWith(SESSION_DIR) || !binFile.startsWith(SESSION_DIR)) {
-		console.error('Invalid session file path');
+		console.error('Error] Invalid session file path');
 		return;
 	}
 
@@ -46,15 +46,15 @@ const loadSession = () => {
 			try {
 				chat = JSON.parse(data).chat;
 				if (debug) {
-					console.log('Loaded chat history from:', chatFile);
+					console.log('* Loaded chat history from:', chatFile);
 				}
 			} catch (parseErr) {
-				console.error('Error parsing chat file:', parseErr);
+				console.error('[Error] parsing chat file:', sanitize(parseErr));
 				chat = [];
 			}
 		} else {
 			if (debug) {
-				console.log('No existing chat file found, starting with empty chat');
+				console.log('* No existing chat file found, starting with empty chat');
 			}
 			chat = [];
 		}
@@ -65,7 +65,7 @@ const loadSession = () => {
 		if (loadedImageData !== undefined) {
 			imageData = loadedImageData;
 			if (debug) {
-				console.log('Loaded canvas data from:', binFile);
+				console.log('* Loaded canvas data from:', binFile);
 			}
 		} else {
 			// create default
@@ -80,12 +80,12 @@ const loadSession = () => {
 				fontName: 'CP437 8x16', // Default font
 			};
 			if (debug) {
-				console.log(`Created default canvas: ${c}x${r}`);
+				console.log(`* Created default canvas: ${c}x${r}`);
 			}
 			// Save the new session file
 			save(binFile, imageData, () => {
 				if (debug) {
-					console.log('Created new session file:', binFile);
+					console.log('* Created new session file:', binFile);
 				}
 			});
 		}
@@ -95,7 +95,13 @@ const loadSession = () => {
 const sendToAll = (clients, msg) => {
 	const message = JSON.stringify(msg);
 	if (debug) {
-		console.log('Broadcasting message to', clients.size, 'clients:', msg[0]);
+		console.log(
+			'[Broadcasting]',
+			sanitize(msg[0]),
+			'to',
+			clients.size,
+			'clients',
+		);
 	}
 
 	clients.forEach(client => {
@@ -104,8 +110,8 @@ const sendToAll = (clients, msg) => {
 				// WebSocket.OPEN
 				client.send(message);
 			}
-		} catch (err) {
-			console.error('Error sending to client:', err);
+		} catch (e) {
+			console.error('[Error] sending to client:', sanitize(e));
 		}
 	});
 };
@@ -128,7 +134,7 @@ const saveSession = callback => {
 
 const getStart = sessionID => {
 	if (!imageData) {
-		console.error('ImageData not initialized');
+		console.error('! ImageData not initialized');
 		return JSON.stringify(['error', 'Server not ready']);
 	}
 	return JSON.stringify([
@@ -148,7 +154,7 @@ const getStart = sessionID => {
 
 const getImageData = () => {
 	if (!imageData) {
-		console.error('ImageData not initialized');
+		console.error('! ImageData not initialized');
 		return { data: new Uint16Array(0) };
 	}
 	return imageData;
@@ -156,28 +162,39 @@ const getImageData = () => {
 
 const message = (msg, sessionID, clients) => {
 	if (!imageData) {
-		console.error('ImageData not initialized, ignoring message');
+		console.error('! ImageData not initialized, ignoring message');
 		return;
 	}
 
 	switch (msg[0]) {
-		case 'join':
-			console.log(`${msg[1]} has joined`);
-			userList[sessionID] = msg[1];
+		case 'join': {
+			const handle = sanitize(msg[1]);
+			log(`${handle} has joined`);
+			userList[sessionID] = handle;
+			msg[1] = handle;
 			msg.push(sessionID);
 			break;
-		case 'nick':
-			console.log(`${userList[sessionID]} is now ${msg[1]}`);
-			userList[sessionID] = msg[1];
+		}
+		case 'nick': {
+			const oldHandle = userList[sessionID] || 'Anonymous';
+			const newHandle = sanitize(msg[1]);
+			console.log(`> ${oldHandle} is now ${newHandle}`);
+			userList[sessionID] = newHandle;
+			msg[1] = newHandle;
 			msg.push(sessionID);
 			break;
-		case 'chat':
-			msg.splice(1, 0, userList[sessionID]);
-			chat.push([msg[1], msg[2]]);
+		}
+		case 'chat': {
+			const handle = userList[sessionID] || 'Anonymous';
+			const chatText = sanitize(msg[1]);
+			msg.splice(1, 0, handle);
+			msg[2] = chatText;
+			chat.push([handle, chatText]);
 			if (chat.length > 128) {
 				chat.shift();
 			}
 			break;
+		}
 		case 'draw':
 			msg[1].forEach(block => {
 				imageData.data[block >> 16] = block & 0xffff;
@@ -185,14 +202,10 @@ const message = (msg, sessionID, clients) => {
 			break;
 		case 'resize':
 			if (msg[1] && msg[1].columns && msg[1].rows) {
-				if (debug) {
-					console.log(
-						'Server: Updating canvas size to',
-						msg[1].columns,
-						'x',
-						msg[1].rows,
-					);
-				}
+				console.log(
+					'[Server] Set canvas size:',
+					`${sanitize(msg[1].columns)}x${sanitize(msg[1].rows)}`,
+				);
 				imageData.columns = msg[1].columns;
 				imageData.rows = msg[1].rows;
 				// Resize the data array
@@ -207,28 +220,19 @@ const message = (msg, sessionID, clients) => {
 			break;
 		case 'fontChange':
 			if (msg[1] && Object.hasOwn(msg[1], 'fontName')) {
-				if (debug) {
-					console.log('Server: Updating font to', msg[1].fontName);
-				}
+				console.log('[Server] set font:', sanitize(msg[1].fontName));
 				imageData.fontName = msg[1].fontName;
 			}
 			break;
 		case 'iceColorsChange':
 			if (msg[1] && Object.hasOwn(msg[1], 'iceColors')) {
-				if (debug) {
-					console.log('Server: Updating ice colors to', msg[1].iceColors);
-				}
+				console.log('[Server] ice colors:', sanitize(msg[1].iceColors));
 				imageData.iceColors = msg[1].iceColors;
 			}
 			break;
 		case 'letterSpacingChange':
 			if (msg[1] && Object.hasOwn(msg[1], 'letterSpacing')) {
-				if (debug) {
-					console.log(
-						'Server: Updating letter spacing to',
-						msg[1].letterSpacing,
-					);
-				}
+				console.log('[Server] letter spacing:', sanitize(msg[1].letterSpacing));
 				imageData.letterSpacing = msg[1].letterSpacing;
 			}
 			break;
@@ -240,7 +244,7 @@ const message = (msg, sessionID, clients) => {
 
 const closeSession = (sessionID, clients) => {
 	if (userList[sessionID] !== undefined) {
-		console.log(`${userList[sessionID]} has quit.`);
+		log(`${sanitize(userList[sessionID])} has quit.`);
 		delete userList[sessionID];
 	}
 	sendToAll(clients, ['part', sessionID]);

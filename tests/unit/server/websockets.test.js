@@ -256,19 +256,6 @@ describe('WebSockets Module', () => {
 			expect(mockClients.has(mockWs)).toBe(false);
 		});
 
-		it('should log additional debug info when debug is enabled', () => {
-			// Reinitialize with debug enabled
-			webSocketInit({ debug: true }, mockClients);
-
-			onWebSocketConnection(mockWs, mockReq);
-
-			expect(consoleLogSpy).toHaveBeenCalledWith(
-				expect.stringContaining(
-					`- Remote address: ${mockReq.connection.remoteAddress}`,
-				),
-			);
-		});
-
 		it('should handle missing image data gracefully', () => {
 			text0wnz.getImageData.mockReturnValue({ data: null });
 

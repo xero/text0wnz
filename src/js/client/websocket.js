@@ -96,17 +96,8 @@ const onMsg = e => {
 	} else {
 		try {
 			data = JSON.parse(data);
-		} catch (error) {
-			const dataInfo =
-				typeof data === 'string'
-					? `string of length ${data.length}`
-					: typeof data;
-			console.error(
-				'[Worker] Invalid data received from server. Data type:',
-				dataInfo,
-				'Error:',
-				error,
-			);
+		} catch {
+			console.error('[Worker] Invalid data received from server');
 			return;
 		}
 
@@ -161,7 +152,7 @@ const onMsg = e => {
 				});
 				break;
 			default:
-				console.warn('[Worker] Unknown command:', data[0]);
+				console.warn('[Worker] Ignoring unknown command');
 				break;
 		}
 	}

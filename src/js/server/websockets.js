@@ -1,4 +1,5 @@
 import text0wnz from './text0wnz.js';
+import { callout, sanitize, anonymizeIp } from './utils.js';
 
 let debug;
 let allClients;
@@ -8,12 +9,16 @@ const webSocketInit = (config, clients) => {
 	allClients = clients;
 };
 const onWebSocketConnection = (ws, req) => {
-	console.log('╓───── New WebSocket Connection');
-	console.log('╙───────────────────────────────── ─ ─');
+	const anonID = req.sessionID.slice(0, req.sessionID.length * 0.5) + 'XXXXXX';
+	callout('New WebSocket Connection');
 	console.log(`- Timestamp: ${new Date().toISOString()}`);
-	console.log(`- Session ID: ${req.sessionID}`);
+	console.log(`- Session ID: ${anonID}`);
 	if (debug) {
-		console.log(`- Remote address: ${req.connection.remoteAddress || req.ip}`);
+		const ip = req.connection.remoteAddress || req.ip;
+		console.log(`- Remote IP: ${anonymizeIp(ip)}`);
+		console.log(`- User-Agent: ${req.headers['user-agent']}`);
+		console.log(`- Origin: ${req.headers['origin']}`);
+		console.log(`- URL: ${req.url}`);
 	}
 	allClients.add(ws);
 
@@ -36,7 +41,7 @@ const onWebSocketConnection = (ws, req) => {
 			const parsedMsg = JSON.parse(msg);
 			text0wnz.message(parsedMsg, req.sessionID, allClients);
 		} catch (err) {
-			console.error('Error parsing message:', err, msg.toString());
+			console.error('Error parsing message:', err, sanitize(msg.toString()));
 		}
 	});
 

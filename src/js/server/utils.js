@@ -18,6 +18,16 @@ Examples:
 	process.exit(0);
 };
 
+const callout = msg => {
+	console.log(`╓─────  ${msg}\n╙───────────────────────────────── ─ ─`);
+};
+
+const createTimestampedFilename = (sessionName, extension) => {
+	// Windows safe file names
+	const timestamp = new Date().toISOString().replace(/[:]/g, '-');
+	return `${sessionName}-${timestamp}.${extension}`;
+};
+
 // Strips possibly sensitive headers
 const cleanHeaders = headers => {
 	const SENSITIVE_HEADERS = [
@@ -38,10 +48,45 @@ const cleanHeaders = headers => {
 	return redacted;
 };
 
-const createTimestampedFilename = (sessionName, extension) => {
-	// Windows safe file names
-	const timestamp = new Date().toISOString().replace(/[:]/g, '-');
-	return `${sessionName}-${timestamp}.${extension}`;
+// Strip Unicode control characters (incl. newlines) and limit length
+const sanitize = input => {
+	if (input === null || input === undefined) {
+		return '';
+	}
+	const str = String(input).trim();
+	return str.replace(/\p{C}/gu, '').substring(0, 100);
 };
 
-export { printHelp, cleanHeaders, createTimestampedFilename };
+const anonymizeIp = ip => {
+	if (!ip) {
+		return 'unknown';
+	}
+	// Reverse proxy v4-mapped v6 addresses
+	if (ip.includes('::ffff:')) {
+		ip = ip.split(':').pop();
+	}
+	// X out final octets
+	if (ip.includes('.')) {
+		const parts = ip.split('.');
+		parts[3] = 'X';
+		return parts.join('.');
+	}
+	if (ip.includes(':')) {
+		const parts = ip.split(':');
+		const anonymizedParts = parts.slice(0, 4);
+		while (anonymizedParts.length < 8) {
+			anonymizedParts.push('X');
+		}
+		return anonymizedParts.join(':');
+	}
+	return 'unknown';
+};
+
+export {
+	printHelp,
+	callout,
+	createTimestampedFilename,
+	cleanHeaders,
+	sanitize,
+	anonymizeIp,
+};
