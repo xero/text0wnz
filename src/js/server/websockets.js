@@ -9,7 +9,7 @@ const webSocketInit = (config, clients) => {
 	allClients = clients;
 };
 const onWebSocketConnection = (ws, req) => {
-	const anonID = req.sessionID.slice(0, req.sessionID.length * 0.5) + 'XXXXXX';
+	const anonID = req.sessionID.slice(0, req.sessionID.length / 2) + 'XXXXXX';
 	callout('New WebSocket Connection');
 	console.log(`- Timestamp: ${new Date().toISOString()}`);
 	console.log(`- Session ID: ${anonID}`);
@@ -41,7 +41,11 @@ const onWebSocketConnection = (ws, req) => {
 			const parsedMsg = JSON.parse(msg);
 			text0wnz.message(parsedMsg, req.sessionID, allClients);
 		} catch (err) {
-			console.error('Error parsing message:', err, sanitize(msg.toString()));
+			console.error(
+				'Error parsing message:',
+				err,
+				`[User message: ${sanitize(msg.toString())}]`,
+			);
 		}
 	});
 

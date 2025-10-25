@@ -19,7 +19,9 @@ Examples:
 };
 
 const callout = msg => {
-	console.log(`╓─────  ${msg}\n╙───────────────────────────────── ─ ─`);
+	console.log(
+		`╓─────  ${sanitize(msg)}\n╙───────────────────────────────── ─ ─`,
+	);
 };
 
 const createTimestampedFilename = (sessionName, extension) => {
@@ -48,13 +50,17 @@ const cleanHeaders = headers => {
 	return redacted;
 };
 
-// Strip Unicode control characters (incl. newlines) and limit length
+// Strips Unicode control characters, newlines, limist length, and add quotes
 const sanitize = input => {
 	if (input === null || input === undefined) {
 		return '';
 	}
-	const str = String(input).trim();
-	return str.replace(/\p{C}/gu, '').substring(0, 100);
+	const str = String(input)
+		.trim()
+		.replace(/\p{C}/gu, '')
+		.replace(/[\n\r]/g, '')
+		.substring(0, 100);
+	return `'${str}'`;
 };
 
 const anonymizeIp = ip => {

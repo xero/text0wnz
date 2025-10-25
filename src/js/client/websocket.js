@@ -200,12 +200,11 @@ self.onmessage = msg => {
 					throw new Error('Invalid or missing WebSocket URL.');
 				}
 				const wsUrl = new URL(data.url);
-
+				// trust check
 				const trustedHostname = self.location.hostname;
 				if (wsUrl.hostname !== trustedHostname) {
-					throw new Error(`WebSocket connection to untrusted host (${wsUrl.hostname}) is forbidden.`);
+					throw new Error(`Blocked webSocket connection to untrusted host`);
 				}
-
 				socket = new WebSocket(data.url);
 
 				// Attach event listeners to the WebSocket

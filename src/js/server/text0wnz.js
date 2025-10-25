@@ -27,7 +27,7 @@ const initialize = config => {
 };
 
 const log = msg => {
-	debug ? callout(msg) : console.log(`* ${msg}`);
+	debug ? callout(msg) : console.log(`* ${sanitize(msg)}`);
 };
 
 const loadSession = () => {
@@ -36,7 +36,7 @@ const loadSession = () => {
 
 	// Validate and sanitize file paths
 	if (!chatFile.startsWith(SESSION_DIR) || !binFile.startsWith(SESSION_DIR)) {
-		console.error('Error] Invalid session file path');
+		console.error('[Error] Invalid session file path');
 		return;
 	}
 
@@ -80,7 +80,7 @@ const loadSession = () => {
 				fontName: 'CP437 8x16', // Default font
 			};
 			if (debug) {
-				console.log(`* Created default canvas: ${c}x${r}`);
+				console.log(`* Created default canvas: `, sanitize(c + 'x' + r));
 			}
 			// Save the new session file
 			save(binFile, imageData, () => {
@@ -176,7 +176,7 @@ const message = (msg, sessionID, clients) => {
 			break;
 		}
 		case 'nick': {
-			const oldHandle = userList[sessionID] || 'Anonymous';
+			const oldHandle = sanitize(userList[sessionID] || 'Anonymous');
 			const newHandle = sanitize(msg[1]);
 			console.log(`> ${oldHandle} is now ${newHandle}`);
 			userList[sessionID] = newHandle;
@@ -185,7 +185,7 @@ const message = (msg, sessionID, clients) => {
 			break;
 		}
 		case 'chat': {
-			const handle = userList[sessionID] || 'Anonymous';
+			const handle = sanitize(userList[sessionID] || 'Anonymous');
 			const chatText = sanitize(msg[1]);
 			msg.splice(1, 0, handle);
 			msg[2] = chatText;
