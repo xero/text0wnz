@@ -50,7 +50,7 @@ const cleanHeaders = headers => {
 	return redacted;
 };
 
-// Strips Unicode control characters, newlines, limist length, and add quotes
+// Strips Unicode control characters, newlines, limits length, and adds quotes
 const sanitize = input => {
 	if (input === null || input === undefined) {
 		return '';
@@ -67,11 +67,11 @@ const anonymizeIp = ip => {
 	if (!ip) {
 		return 'unknown';
 	}
-	// Reverse proxy v4-mapped v6 addresses
+	// Handle IPv4-mapped IPv6 addresses (e.g. reverse proxy)
 	if (ip.includes('::ffff:')) {
 		ip = ip.split(':').pop();
 	}
-	// X out final octets
+	// Mask the final octet
 	if (ip.includes('.')) {
 		const parts = ip.split('.');
 		parts[3] = 'X';
