@@ -1,12 +1,86 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Storage } from '../../src/js/client/storage.js';
 
+// Mock IndexedDB for testing
+const mockIndexedDB = () => {
+	const mockStore = {
+		put: vi.fn((value, _key) => {
+			const request = {
+				result: value,
+				onsuccess: null,
+				onerror: null,
+			};
+			// Immediately trigger success
+			setTimeout(() => {
+				if (request.onsuccess) {
+					request.onsuccess({ target: request });
+				}
+			}, 0);
+			return request;
+		}),
+		get: vi.fn(_key => {
+			const request = {
+				result: null,
+				onsuccess: null,
+				onerror: null,
+			};
+			// Immediately trigger success
+			setTimeout(() => {
+				if (request.onsuccess) {
+					request.onsuccess({ target: request });
+				}
+			}, 0);
+			return request;
+		}),
+		clear: vi.fn(() => {
+			const request = {
+				onsuccess: null,
+				onerror: null,
+			};
+			setTimeout(() => {
+				if (request.onsuccess) {
+					request.onsuccess({ target: request });
+				}
+			}, 0);
+			return request;
+		}),
+	};
+
+	const mockDB = {
+		transaction: vi.fn(() => ({ objectStore: vi.fn(() => mockStore) })),
+		objectStoreNames: { contains: vi.fn(() => true) },
+		createObjectStore: vi.fn(),
+	};
+
+	const mockRequest = {
+		result: mockDB,
+		error: null,
+		onsuccess: null,
+		onerror: null,
+		onupgradeneeded: null,
+	};
+
+	global.indexedDB = {
+		open: vi.fn(() => {
+			// Simulate successful opening immediately
+			setTimeout(() => {
+				if (mockRequest.onsuccess) {
+					mockRequest.onsuccess({ target: mockRequest });
+				}
+			}, 0);
+			return mockRequest;
+		}),
+	};
+};
+
 // Note: These tests are limited because IndexedDB is not fully available in jsdom
 // Full integration tests would need to run in a real browser environment
 describe('Storage Utilities', () => {
 	beforeEach(() => {
 		// Clear localStorage before each test
 		localStorage.clear();
+		// Mock IndexedDB
+		mockIndexedDB();
 	});
 
 	describe('Settings Storage (localStorage)', () => {

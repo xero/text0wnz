@@ -11,6 +11,7 @@
 | https://text.0w.nz              | The main domain. Collab server may be available    |
 | https://xero.github.io/text0wnz | Github Pages version of the site. No collab server |
 
+
 [![MIT Licensed](https://img.shields.io/github/license/xero/text0wnz?logo=wikiversity&logoColor=979da4&labelColor=262a2e&color=gold)](https://github.com/xero/text0wnz/blob/main/LICENSE.txt)
 [![Version](https://img.shields.io/github/package-json/version/xero/teXt0wnz?labelColor=%2333383e&logo=npm&&logoColor=%23979da4&color=6e2aa5)](https://github.com/xero/teXt0wnz/releases/latest)
 [![GitHub repo size](https://img.shields.io/github/repo-size/xero/teXt0wnz?labelColor=%23262a2e&logo=googlecontaineroptimizedos&logoColor=%23979da4&color=6e2aa5)](https://github.com/xero/teXt0wnz/)
@@ -27,15 +28,33 @@
 [![Prettier](https://img.shields.io/badge/Prettier-Prettier?logo=prettier&logoColor=%23979da4&label=Formatting&labelColor=%23262a2e&color=%2300aaaa)](https://github.com/xero/teXt0wnz/blob/main/.prettierrc)
 [![16colors](https://img.shields.io/badge/16colors-16colors?logo=renovate&logoColor=%23979da4&logoSize=auto&label=Text%20Mode%20Art&labelColor=%23262a2e&color=%2300aaaa&link=https%3A%2F%2F16colo.rs)](https://16colo.rs)
 
+
+# Table o' Contents
+
+- [Features](#features)
+- [Supported File Types](#file-types)
+- [Project Documentation](#project-documentation)
+- [Drawing & Editing Tools](#drawing--editing-tools)
+- [Key-bindings & Mouse/Touch Controls](#key-bindings--mousetouch-controls)
+- [Tips & Workflow](#tips--workflow)
+- [Build & Development](#build--development)
+- [Collaborative Server](#collaborative-server)
+- [Docker Containerization](#docker-containerization)
+- [Testing Suite](#testing-suite)
+- [Troubleshooting](#troubleshooting)
+- [Browser Support](#browser-support)
+- [Project History](#project-history)
+- [License & Greetz](#license--greetz)
+
 ## Features
 
 - **Web-based text art drawing, also works offline as a PWA**
   - No install required!
-  - But easily install the Progressive Web Application to your device
+  - But easily [installed as a Progressive Web Application](docs/install-pwa.md) to your device
 - **Comprehensive keyboard shortcuts and mouse controls**
   - Draw using the keyboard, mouse, or touch screen
 - **Classic and modern fonts**
-  - Over 100 fonts from IBM PCs, Amiga, C64, and many more vintage / custom.
+  - Over 100 fonts from IBM PCs, Amiga, C64, and many more vintage/custom
 - **Full suite of drawing tools:**
   - Keyboard, freehand brushes, fills, shapes, selection, and color picker
 - **Advanced color management**
@@ -47,11 +66,12 @@
 - **Auto Save/Restore**
   - Editor Setting saved to local storage for a consistent drawing sessions
   - Artwork saved to IndexedDB as you draw, auto-reloaded when the app is opened
-  - Optimized binary data storage algorithm for efficient canvas persistence
+  - Optimized binary data storage packing for efficient canvas persistence
 - **Collaborative server mode**
   - For real-time multi-user editing
+  - Optional and opt-in by users. See: [Privacy](docs/privacy.md)
 - **Build tools:**
-  - Vite, Bun, Npm
+  - Bun, Vite, PostCSS
 - **Automated tests:**
   - Playwright, Vitest, Testing Library
 - **Robust linting and formatting:**
@@ -75,15 +95,20 @@
 
 - [Interface](docs/interface.md) - Visual guide to the user interface and options
 - [Editor Client](docs/editor-client.md) - Frontend text art editor application
+  - [Hotkeys](docs/editor-client.md#key-bindings--mouse-controls) - Editor shortcuts reference
 - [Collaboration Server](docs/collaboration-server.md) - Backend real-time collaboration server
+- [Architecture](docs/architecture.md) - System architecture and design overview
 - [PWA Install](docs/install-pwa.md) - Guide to installing the app on multiple platforms
 - [Privacy Policy](docs/privacy.md) - Privacy and data handling policy
 
 **Development Guides**
 
+- [Project Structure](docs/project-structure.md) - File and module organization guide
 - [Building and Developing](docs/building-and-developing.md) - Development workflow and build process
 - [Testing](docs/testing.md) - Triple headed testing guide (unit, dom, & e2e)
+- [CI/CD Pipeline](docs/cicd.md) - Continuous integration and deployment
 - [Webserver Configuration](docs/webserver-configuration.md) - Webserver setup and configuration
+- [Docker](docs/docker.md) - Container deployment guide
 - [Other Tools](docs/other-tools.md) - Additional development and deployment tools
 
 **Technical Specifications**
@@ -94,12 +119,10 @@
 **Supplemental**
 
 - [Fonts](docs/fonts.md) - Complete font reference and previews
-- [Logos](docs/logos.txt) - ASCII art logos for the project
+- [Logos](docs/logos.md) - ASCII art logos for the project
 - [Examples](docs/examples/) - Sample artwork to view and edit
   - ANSI artwork by [xeR0](https://16colo.rs/artist/xero)
   - XBin artwork by [Hellbeard](https://16colo.rs/artist/hellbeard)
-
----
 
 ## Drawing & Editing Tools
 
@@ -320,6 +343,77 @@ node src/js/server/main.js
 > [!NOTE]
 > See: [docs/collaboration-server](docs/collaboration-server) for more info.
 
+## Docker Containerization
+
+**text0wnz** is fully containerized, offering a streamlined deployment experience across different environments and architectures. Our containerization approach focuses on several key areas:
+
+- Multi-Stage Build Architecture
+- Security Hardening
+- Performance Optimization
+- Service Orchestration
+
+### Registry Support
+
+Prebuilt images are avalable in **linux/amd64** & **linux/arm64** flavors from multiple repositories:
+
+**[DockerHub](https://hub.docker.com/r/xerostyle/text0wnz):**
+```sh
+docker pull xerostyle/text0wnz:latest
+```
+**[GitHub Container Registry](https://github.com/xero/text0wnz/pkgs/container/text0wnz):**
+```sh
+docker pull ghcr.io/xero/text0wnz:latest
+```
+
+### Building Locally
+
+To build the container locally, you'll need [Docker](https://docs.docker.com/get-docker/) with [Buildx](https://docs.docker.com/buildx/working-with-buildx/) support:
+
+```sh
+# Standard build for your local architecture
+docker buildx build -t text0wnz:latest .
+
+# Multi-architecture build (requires buildx setup)
+docker buildx create --name mybuilder --use
+docker buildx build --platform linux/amd64,linux/arm64 -t yourname/text0wnz:latest --push .
+```
+
+### Running in Development Mode
+
+Development mode provides hot-reloading and detailed logging for an optimized development experience:
+
+```sh
+docker run \
+    --cap-add=NET_BIND_SERVICE \
+    -e NODE_ENV=development \
+    -p 80:80 \
+    text0wnz:latest
+```
+
+The application will be available at http://localhost with WebSocket collaboration features enabled.
+
+### Running in Production Mode
+
+For production deployments, use this configuration with your domain and a secure session key:
+
+```sh
+docker run \
+    --cap-add=NET_BIND_SERVICE \
+    -e DOMAIN=your.cool.domain.tld \
+    -e SESSION_KEY=secure-production-key \
+    -e NODE_ENV=production \
+    -p 80:80 -p 443:443 \
+    text0wnz:latest
+```
+This setup enables:
+
+- Automatic HTTPS via Caddy's built-in certificate management
+- Production-optimized performance settings
+- Stricter security headers and content policies
+
+> [!NOTE]
+> See: [docs/docker](docs/docker.md) for more info and advanced setup examples.
+
 ## Testing Suite
 
 **Triple-Headed:**
@@ -328,16 +422,15 @@ node src/js/server/main.js
 - **Testing Library:** DOM/component
 - **Playwright:** E2E/browser
 
-> [!IMPORTANT]
-> view the latest [unit coverage report](https://xero.github.io/text0wnz/tests/)
-> view the latest [e2e testing report](https://xero.github.io/text0wnz/tests/e2e/)
+> [!TIP]
+> view the latest: [unit coverage report](https://xero.github.io/text0wnz/tests/) & [e2e testing report](https://xero.github.io/text0wnz/tests/e2e/)
 
 ```sh
 bun test:unit  # Run unit tests
 bun test:e2e   # Run end2end tests
 ```
 
-All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/main/.github/workflows).
+All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/main/.github/workflows). See the [CI/CD Pipeline documentation](docs/cicd.md) for details on the automated testing, building, and deployment process.
 
 > [!NOTE]
 > See: [docs/testing](docs/testing.md) for more info.

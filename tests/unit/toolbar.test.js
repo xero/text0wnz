@@ -258,6 +258,147 @@ describe('Toolbar', () => {
 		});
 	});
 
+	describe('Toolbar.addLazy', () => {
+		it('should add lazy-loaded tool to toolbar', async () => {
+			const button = document.createElement('div');
+			button.id = 'lazy-tool-test';
+
+			const onFocus = vi.fn();
+			const onBlur = vi.fn();
+
+			const toolLoader = vi.fn(async () => ({
+				enable: vi.fn(),
+				onFocus: onFocus,
+				onBlur: onBlur,
+			}));
+
+			const tool = Toolbar.addLazy(button, toolLoader);
+
+			expect(tool).toHaveProperty('enable');
+			expect(typeof tool.enable).toBe('function');
+		});
+
+		it('should load tool on first enable call', async () => {
+			const button = document.createElement('div');
+			button.id = 'lazy-load-test';
+
+			const onFocus = vi.fn();
+			const toolLoader = vi.fn(async () => ({
+				enable: vi.fn(),
+				onFocus: onFocus,
+				onBlur: vi.fn(),
+			}));
+
+			const tool = Toolbar.addLazy(button, toolLoader);
+
+			// Tool loader should not have been called yet
+			expect(toolLoader).not.toHaveBeenCalled();
+
+			// Enable the tool - this should trigger loading
+			await tool.enable();
+
+			// Now tool loader should have been called
+			expect(toolLoader).toHaveBeenCalled();
+			expect(onFocus).toHaveBeenCalled();
+		});
+
+		it('should not reload tool on subsequent enable calls', async () => {
+			const button = document.createElement('div');
+			button.id = 'lazy-no-reload-test';
+
+			const onFocus = vi.fn();
+			const toolLoader = vi.fn(async () => ({
+				enable: vi.fn(),
+				onFocus: onFocus,
+				onBlur: vi.fn(),
+			}));
+
+			const tool = Toolbar.addLazy(button, toolLoader);
+
+			// Enable twice
+			await tool.enable();
+			await tool.enable();
+
+			// Tool loader should only be called once
+			expect(toolLoader).toHaveBeenCalledOnce();
+			// But onFocus should be called twice
+			expect(onFocus).toHaveBeenCalledTimes(2);
+		});
+
+		it('should handle tool loader errors gracefully', async () => {
+			const button = document.createElement('div');
+			button.id = 'lazy-error-test';
+
+			const toolLoader = vi.fn(async () => {
+				throw new Error('Failed to load tool');
+			});
+
+			const tool = Toolbar.addLazy(button, toolLoader);
+
+			// Should not throw
+			await expect(tool.enable()).resolves.not.toThrow();
+
+			// Subsequent enable should also not throw
+			await expect(tool.enable()).resolves.not.toThrow();
+		});
+
+		it('should switch from regular tool to lazy tool', async () => {
+			const regularButton = document.createElement('div');
+			regularButton.id = 'regular-for-lazy-test';
+			const lazyButton = document.createElement('div');
+			lazyButton.id = 'lazy-for-switch-test';
+
+			const onFocusRegular = vi.fn();
+			const onBlurRegular = vi.fn();
+			const onFocusLazy = vi.fn();
+
+			const regularTool = Toolbar.add(
+				regularButton,
+				onFocusRegular,
+				onBlurRegular,
+			);
+			const lazyTool = Toolbar.addLazy(lazyButton, async () => ({
+				enable: vi.fn(),
+				onFocus: onFocusLazy,
+				onBlur: vi.fn(),
+			}));
+
+			// Enable regular tool first
+			regularTool.enable();
+			expect(onFocusRegular).toHaveBeenCalled();
+
+			vi.clearAllMocks();
+
+			// Switch to lazy tool
+			await lazyTool.enable();
+
+			expect(onBlurRegular).toHaveBeenCalled();
+			expect(onFocusLazy).toHaveBeenCalled();
+			expect(regularButton.classList.contains('toolbar-displayed')).toBe(false);
+			expect(lazyButton.classList.contains('toolbar-displayed')).toBe(true);
+		});
+
+		it('should support switchTool with lazy tools', async () => {
+			const button = document.createElement('div');
+			button.id = 'lazy-switch-tool-test';
+
+			const onFocus = vi.fn();
+			const toolLoader = vi.fn(async () => ({
+				enable: vi.fn(),
+				onFocus: onFocus,
+				onBlur: vi.fn(),
+			}));
+
+			Toolbar.addLazy(button, toolLoader);
+
+			// Switch to the lazy tool using switchTool
+			await Toolbar.switchTool('lazy-switch-tool-test');
+
+			expect(toolLoader).toHaveBeenCalled();
+			expect(onFocus).toHaveBeenCalled();
+		});
+	});
+
 	describe('Edge Cases', () => {
 		it('should handle rapid tool switching', () => {
 			const button1 = document.createElement('div');
@@ -297,6 +438,45 @@ describe('Toolbar', () => {
 
 			const currentTool = Toolbar.getCurrentTool();
 			expect(currentTool).toBe('');
+		});
+
+		it('should handle returnToPreviousTool between different tools', () => {
+			const button1 = document.createElement('div');
+			button1.id = 'previous-tool-test-1';
+			const button2 = document.createElement('div');
+			button2.id = 'previous-tool-test-2';
+
+			const onFocus1 = vi.fn();
+			const onFocus2 = vi.fn();
+
+			const tool1 = Toolbar.add(button1, onFocus1, vi.fn());
+			const tool2 = Toolbar.add(button2, onFocus2, vi.fn());
+
+			// Enable first tool
+			tool1.enable();
+
+			// Enable second tool (makes first tool the "previous" tool)
+			tool2.enable();
+			vi.clearAllMocks();
+
+			// Return to previous tool
+			Toolbar.returnToPreviousTool();
+
+			expect(onFocus1).toHaveBeenCalled();
+		});
+
+		it('should handle closeMenu calls', () => {
+			const button = document.createElement('div');
+			button.id = 'close-menu-test';
+			const onFocus = vi.fn();
+
+			Toolbar.add(button, onFocus, vi.fn());
+
+			// getCurrentTool should trigger closeMenu
+			const current = Toolbar.getCurrentTool();
+
+			// Should not throw
+			expect(typeof current).toBe('string');
 		});
 	});
 });

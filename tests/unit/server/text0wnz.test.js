@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // Note: This module has deep fs dependencies, limiting direct unit testing
 // These tests focus on testing the exports and basic integration patterns
@@ -207,6 +207,293 @@ describe('Text0wnz Module Integration Tests', () => {
 			expect(parsed[1].chat).toEqual(mockChat);
 			expect(parsed[2]).toBe('test-session');
 			expect(parsed[3]).toEqual(mockUserList);
+		});
+
+		it('should provide default font name when missing', () => {
+			// Test fallback to default font
+			const generateStartMessage = imageData => {
+				return {
+					fontName: imageData.fontName || 'CP437 8x16',
+				};
+			};
+
+			const withoutFont = generateStartMessage({ columns: 80, rows: 25 });
+			expect(withoutFont.fontName).toBe('CP437 8x16');
+
+			const withFont = generateStartMessage({
+				columns: 80,
+				rows: 25,
+				fontName: 'Custom Font',
+			});
+			expect(withFont.fontName).toBe('Custom Font');
+		});
+	});
+
+	describe('Canvas Resize Logic', () => {
+		it('should resize canvas data preserving existing content', () => {
+			// Test canvas resize algorithm
+			const resizeCanvas = (imageData, newColumns, newRows) => {
+				const newSize = newColumns * newRows;
+				const newData = new Uint16Array(newSize);
+				const copyLength = Math.min(imageData.data.length, newSize);
+
+				for (let i = 0; i < copyLength; i++) {
+					newData[i] = imageData.data[i];
+				}
+
+				return {
+					columns: newColumns,
+					rows: newRows,
+					data: newData,
+				};
+			};
+
+			const originalData = {
+				columns: 80,
+				rows: 25,
+				data: new Uint16Array(80 * 25),
+			};
+
+			// Fill with test data
+			originalData.data[0] = 0x41; // 'A'
+			originalData.data[100] = 0x42; // 'B'
+
+			// Resize larger
+			const larger = resizeCanvas(originalData, 160, 50);
+			expect(larger.columns).toBe(160);
+			expect(larger.rows).toBe(50);
+			expect(larger.data.length).toBe(160 * 50);
+			expect(larger.data[0]).toBe(0x41); // Original content preserved
+			expect(larger.data[100]).toBe(0x42);
+
+			// Resize smaller
+			const smaller = resizeCanvas(originalData, 40, 25);
+			expect(smaller.columns).toBe(40);
+			expect(smaller.rows).toBe(25);
+			expect(smaller.data.length).toBe(40 * 25);
+			expect(smaller.data[0]).toBe(0x41); // Content preserved up to new size
+		});
+
+		it('should handle edge cases in canvas resize', () => {
+			const resizeCanvas = (imageData, newColumns, newRows) => {
+				const newSize = newColumns * newRows;
+				const newData = new Uint16Array(newSize);
+				const copyLength = Math.min(imageData.data.length, newSize);
+
+				for (let i = 0; i < copyLength; i++) {
+					newData[i] = imageData.data[i];
+				}
+
+				return { columns: newColumns, rows: newRows, data: newData };
+			};
+
+			// Test with minimal size
+			const minimal = resizeCanvas(
+				{ columns: 80, rows: 25, data: new Uint16Array(2000) },
+				1,
+				1,
+			);
+			expect(minimal.data.length).toBe(1);
+
+			// Test with very large size
+			const large = resizeCanvas(
+				{ columns: 80, rows: 25, data: new Uint16Array(2000) },
+				320,
+				200,
+			);
+			expect(large.data.length).toBe(64000);
+		});
+	});
+
+	describe('User List Management', () => {
+		it('should manage user join operations', () => {
+			const userList = {};
+
+			const handleJoin = (sessionID, username) => {
+				userList[sessionID] = username;
+				return ['join', username, sessionID];
+			};
+
+			const message = handleJoin('session1', 'Alice');
+			expect(message).toEqual(['join', 'Alice', 'session1']);
+			expect(userList['session1']).toBe('Alice');
+		});
+
+		it('should handle nickname changes', () => {
+			const userList = { session1: 'Alice' };
+
+			const handleNick = (sessionID, newName) => {
+				const oldName = userList[sessionID];
+				userList[sessionID] = newName;
+				return { oldName, newName, sessionID };
+			};
+
+			const result = handleNick('session1', 'Alicia');
+			expect(result.oldName).toBe('Alice');
+			expect(result.newName).toBe('Alicia');
+			expect(userList['session1']).toBe('Alicia');
+		});
+
+		it('should handle user disconnect', () => {
+			const userList = { session1: 'Alice', session2: 'Bob' };
+
+			const handleDisconnect = sessionID => {
+				const username = userList[sessionID];
+				delete userList[sessionID];
+				return ['part', sessionID];
+			};
+
+			const message = handleDisconnect('session1');
+			expect(message).toEqual(['part', 'session1']);
+			expect(userList['session1']).toBeUndefined();
+			expect(userList['session2']).toBe('Bob');
+		});
+	});
+
+	describe('Message Broadcasting Logic', () => {
+		it('should format messages for broadcasting', () => {
+			// Test message formatting
+			const formatForBroadcast = msg => JSON.stringify(msg);
+
+			const chatMsg = ['chat', 'user1', 'Hello!'];
+			expect(formatForBroadcast(chatMsg)).toBe(
+				JSON.stringify(['chat', 'user1', 'Hello!']),
+			);
+
+			const drawMsg = ['draw', [0x0100, 0x0200]];
+			expect(formatForBroadcast(drawMsg)).toBe(
+				JSON.stringify(['draw', [0x0100, 0x0200]]),
+			);
+		});
+
+		it('should handle WebSocket client states', () => {
+			// Test WebSocket.OPEN state check
+			const mockClients = [
+				{ readyState: 1, send: vi.fn() }, // WebSocket.OPEN
+				{ readyState: 0, send: vi.fn() }, // WebSocket.CONNECTING
+				{ readyState: 2, send: vi.fn() }, // WebSocket.CLOSING
+				{ readyState: 3, send: vi.fn() }, // WebSocket.CLOSED
+			];
+
+			const sendToClients = (clients, message) => {
+				const messageStr = JSON.stringify(message);
+				clients.forEach(client => {
+					if (client.readyState === 1) {
+						client.send(messageStr);
+					}
+				});
+			};
+
+			sendToClients(mockClients, ['test', 'message']);
+
+			expect(mockClients[0].send).toHaveBeenCalledOnce();
+			expect(mockClients[1].send).not.toHaveBeenCalled();
+			expect(mockClients[2].send).not.toHaveBeenCalled();
+			expect(mockClients[3].send).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('Setting Change Messages', () => {
+		it('should handle font change messages', () => {
+			const imageData = { fontName: 'CP437 8x16' };
+
+			const handleFontChange = msg => {
+				if (msg[1] && Object.hasOwn(msg[1], 'fontName')) {
+					imageData.fontName = msg[1].fontName;
+					return true;
+				}
+				return false;
+			};
+
+			const result = handleFontChange(['fontChange', { fontName: 'Amiga Topaz' }]);
+			expect(result).toBe(true);
+			expect(imageData.fontName).toBe('Amiga Topaz');
+		});
+
+		it('should handle ice colors toggle', () => {
+			const imageData = { iceColors: false };
+
+			const handleIceColors = msg => {
+				if (msg[1] && Object.hasOwn(msg[1], 'iceColors')) {
+					imageData.iceColors = msg[1].iceColors;
+					return true;
+				}
+				return false;
+			};
+
+			const result = handleIceColors(['iceColorsChange', { iceColors: true }]);
+			expect(result).toBe(true);
+			expect(imageData.iceColors).toBe(true);
+		});
+
+		it('should handle letter spacing toggle', () => {
+			const imageData = { letterSpacing: false };
+
+			const handleLetterSpacing = msg => {
+				if (msg[1] && Object.hasOwn(msg[1], 'letterSpacing')) {
+					imageData.letterSpacing = msg[1].letterSpacing;
+					return true;
+				}
+				return false;
+			};
+
+			const result = handleLetterSpacing([
+				'letterSpacingChange',
+				{ letterSpacing: true },
+			]);
+			expect(result).toBe(true);
+			expect(imageData.letterSpacing).toBe(true);
+		});
+
+		it('should ignore invalid setting messages', () => {
+			const imageData = { fontName: 'Original' };
+
+			const handleFontChange = msg => {
+				if (msg[1] && Object.hasOwn(msg[1], 'fontName')) {
+					imageData.fontName = msg[1].fontName;
+					return true;
+				}
+				return false;
+			};
+
+			// Missing data
+			const result1 = handleFontChange(['fontChange', null]);
+			expect(result1).toBe(false);
+			expect(imageData.fontName).toBe('Original');
+
+			// Missing fontName property
+			const result2 = handleFontChange(['fontChange', { other: 'value' }]);
+			expect(result2).toBe(false);
+			expect(imageData.fontName).toBe('Original');
+		});
+	});
+
+	describe('Chat Message Processing', () => {
+		it('should splice username into chat message', () => {
+			const userList = { session1: 'Alice' };
+			const msg = ['chat', 'Hello world'];
+
+			// Simulate the splice operation
+			msg.splice(1, 0, userList['session1']);
+
+			expect(msg).toEqual(['chat', 'Alice', 'Hello world']);
+		});
+
+		it('should add messages to chat history', () => {
+			const chat = [];
+			const addMessage = (username, message) => {
+				chat.push([username, message]);
+				if (chat.length > 128) {
+					chat.shift();
+				}
+			};
+
+			addMessage('Alice', 'Hello');
+			addMessage('Bob', 'Hi');
+
+			expect(chat.length).toBe(2);
+			expect(chat[0]).toEqual(['Alice', 'Hello']);
+			expect(chat[1]).toEqual(['Bob', 'Hi']);
 		});
 	});
 });

@@ -1,0 +1,60 @@
+name: build and publish editor docker image
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Dockerfile'
+    branches:
+      - main
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+      - name: set up QEMU
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3
+      - name: set up docker buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+      - name: login to github container registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: login to docker hub
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: extract metadata
+        id: meta
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+            xerostyle/text0wnz
+          flavor: |
+            latest=true
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short,prefix=sha-
+      - name: build and push
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          annotations: |
+            org.opencontainers.image.description=Text-mode art editor for ANSI, ASCII, XBIN, NFO, & TXT files. Modern web-based PWA w/ offline mode, local storage sync, & optional collaborative server
+            org.opencontainers.image.title=text0wnz
+            org.opencontainers.image.authors=https://github.com/xero/text0wnz/graphs/contributors
+            org.opencontainers.image.source=https://github.com/xero/text0wnz
+            org.opencontainers.image.licenses=MIT
