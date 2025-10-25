@@ -24,20 +24,20 @@ const startServer = config => {
 					key: readFileSync(keyPath),
 				});
 				console.log(
-					'Using HTTPS server with SSL certificates from:',
+					'* Using HTTPS server with SSL certificates from:',
 					config.sslDir,
 				);
 			} else {
-				throw new Error(`SSL certificates not found in ${config.sslDir}`);
+				throw new Error(`! SSL certificates not found in: ${config.sslDir}`);
 			}
 		} catch (err) {
-			console.error('SSL Error:', err.message);
-			console.log('Falling back to HTTP server');
+			console.error('! SSL Error:', err.message);
+			console.log('* Falling back to HTTP server');
 			server = createHttpServer();
 		}
 	} else {
 		server = createHttpServer();
-		console.log('Using HTTP server (SSL disabled)');
+		console.log('* Using HTTP server (SSL disabled)');
 	}
 
 	const app = express();
@@ -53,7 +53,7 @@ const startServer = config => {
 	// Debugging middleware for WebSocket upgrade requests
 	app.use('/server', (req, _res, next) => {
 		if (config.debug) {
-			console.log(`Request to /server endpoint:
+			console.log(`* Request to /server endpoint:
   - Method: ${req.method}
   - Headers: ${JSON.stringify(cleanHeaders(req.headers))}
   - Connection header: ${req.headers.connection}
@@ -70,7 +70,7 @@ const startServer = config => {
 
 	server.listen(config.port, () => {
 		if (config.debug) {
-			console.log(`Server listening on port: ${config.port}`);
+			console.log(`* Server listening on port: ${config.port}`);
 		}
 	});
 

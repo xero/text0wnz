@@ -9,6 +9,8 @@ on:
   workflow_dispatch:
 jobs:
   sync-docs:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository

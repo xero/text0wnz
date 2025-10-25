@@ -2,6 +2,7 @@
 let socket;
 let sessionID;
 let joint;
+let trustedOrigin;
 
 const send = (cmd, msg) => {
 	if (socket && socket.readyState === WebSocket.OPEN) {
@@ -95,17 +96,8 @@ const onMsg = e => {
 	} else {
 		try {
 			data = JSON.parse(data);
-		} catch (error) {
-			const dataInfo =
-				typeof data === 'string'
-					? `string of length ${data.length}`
-					: typeof data;
-			console.error(
-				'[Worker] Invalid data received from server. Data type:',
-				dataInfo,
-				'Error:',
-				error,
-			);
+		} catch {
+			console.error('[Worker] Invalid data received from server');
 			return;
 		}
 
@@ -160,7 +152,7 @@ const onMsg = e => {
 				});
 				break;
 			default:
-				console.warn('[Worker] Unknown command:', data[0]);
+				console.warn('[Worker] Ignoring unknown command');
 				break;
 		}
 	}
@@ -183,10 +175,36 @@ const removeDuplicates = blocks => {
 
 // Main Handler
 self.onmessage = msg => {
+	// First message received will establish trust
+	if (!trustedOrigin) {
+		trustedOrigin = msg.origin;
+	}
+
+	// In same-origin contexts, origin can be "" or "null"
+	if (
+		msg.origin !== trustedOrigin &&
+		msg.origin !== '' &&
+		msg.origin !== 'null'
+	) {
+		console.warn(
+			`[Worker] Discarding message from untrusted origin: ${msg.origin}`,
+		);
+		return;
+	}
+
 	const data = msg.data;
 	switch (data.cmd) {
 		case 'connect':
 			try {
+				if (!data.url || typeof data.url !== 'string') {
+					throw new Error('Invalid or missing WebSocket URL.');
+				}
+				const wsUrl = new URL(data.url);
+				// Verify WebSocket URL matches trusted hostname
+				const trustedHostname = self.location.hostname;
+				if (wsUrl.hostname !== trustedHostname) {
+					throw new Error(`Blocked webSocket connection to untrusted host`);
+				}
 				socket = new WebSocket(data.url);
 
 				// Attach event listeners to the WebSocket
@@ -257,6 +275,8 @@ self.onmessage = msg => {
 			if (socket) {
 				socket.close();
 			}
+			break;
+		case 'init':
 			break;
 		default:
 			break;

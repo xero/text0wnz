@@ -1,4 +1,4 @@
-// usage flags
+// Usage flags
 const printHelp = () => {
 	console.log(`teXt0wnz backend server
 Usage: {bun,node} server.js [port] [options]
@@ -18,7 +18,19 @@ Examples:
 	process.exit(0);
 };
 
-// strips possibly sensitive headers
+const callout = msg => {
+	console.log(
+		`╓─────  ${sanitize(msg)}\n╙───────────────────────────────── ─ ─`,
+	);
+};
+
+const createTimestampedFilename = (sessionName, extension) => {
+	// Windows safe file names
+	const timestamp = new Date().toISOString().replace(/[:]/g, '-');
+	return `${sessionName}-${timestamp}.${extension}`;
+};
+
+// Strips possibly sensitive headers
 const cleanHeaders = headers => {
 	const SENSITIVE_HEADERS = [
 		'authorization',
@@ -38,10 +50,49 @@ const cleanHeaders = headers => {
 	return redacted;
 };
 
-const createTimestampedFilename = (sessionName, extension) => {
-	// windows safe name
-	const timestamp = new Date().toISOString().replace(/[:]/g, '-');
-	return `${sessionName}-${timestamp}.${extension}`;
+// Strips Unicode control characters, newlines, limits length, and adds quotes
+const sanitize = input => {
+	if (input === null || input === undefined) {
+		return '';
+	}
+	const str = String(input)
+		.trim()
+		.replace(/\p{C}/gu, '')
+		.replace(/[\n\r]/g, '')
+		.substring(0, 100);
+	return `'${str}'`;
 };
 
-export { printHelp, cleanHeaders, createTimestampedFilename };
+const anonymizeIp = ip => {
+	if (!ip) {
+		return 'unknown';
+	}
+	// Handle IPv4-mapped IPv6 addresses (e.g. reverse proxy)
+	if (ip.includes('::ffff:')) {
+		ip = ip.split(':').pop();
+	}
+	// Mask the final octet
+	if (ip.includes('.')) {
+		const parts = ip.split('.');
+		parts[3] = 'X';
+		return parts.join('.');
+	}
+	if (ip.includes(':')) {
+		const parts = ip.split(':');
+		const anonymizedParts = parts.slice(0, 4);
+		while (anonymizedParts.length < 8) {
+			anonymizedParts.push('X');
+		}
+		return anonymizedParts.join(':');
+	}
+	return 'unknown';
+};
+
+export {
+	printHelp,
+	callout,
+	createTimestampedFilename,
+	cleanHeaders,
+	sanitize,
+	anonymizeIp,
+};
