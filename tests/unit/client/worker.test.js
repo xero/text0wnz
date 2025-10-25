@@ -106,6 +106,21 @@ describe('WebSocket Worker', () => {
 					case 'draw':
 						workerCode.send('draw', workerCode.removeDuplicates(data.blocks));
 						break;
+					case 'canvasSettings':
+						workerCode.send('canvasSettings', data.settings);
+						break;
+					case 'resize':
+						workerCode.send('resize', { columns: data.columns, rows: data.rows });
+						break;
+					case 'fontChange':
+						workerCode.send('fontChange', { fontName: data.fontName });
+						break;
+					case 'iceColorsChange':
+						workerCode.send('iceColorsChange', { iceColors: data.iceColors });
+						break;
+					case 'letterSpacingChange':
+						workerCode.send('letterSpacingChange', { letterSpacing: data.letterSpacing });
+						break;
 					case 'disconnect':
 						if (workerCode.socket) {
 							workerCode.socket.close();
@@ -374,6 +389,87 @@ describe('WebSocket Worker', () => {
 			// Input: [65601, 131138, 65603] -> Output: [131138, 65603]
 			expect(mockWebSocket.send).toHaveBeenCalledWith(
 				JSON.stringify(['draw', [131138, 65603]]),
+			);
+		});
+
+		it('should send canvas settings', () => {
+			const canvasSettingsData = {
+				cmd: 'canvasSettings',
+				settings: {
+					columns: 80,
+					rows: 25,
+					iceColors: true,
+					letterSpacing: false,
+					fontName: 'CP437 8x16',
+				},
+			};
+
+			workerCode.handleMessage(canvasSettingsData);
+
+			expect(mockWebSocket.send).toHaveBeenCalledWith(
+				JSON.stringify([
+					'canvasSettings',
+					{
+						columns: 80,
+						rows: 25,
+						iceColors: true,
+						letterSpacing: false,
+						fontName: 'CP437 8x16',
+					},
+				]),
+			);
+		});
+
+		it('should send resize message', () => {
+			const resizeData = {
+				cmd: 'resize',
+				columns: 120,
+				rows: 40,
+			};
+
+			workerCode.handleMessage(resizeData);
+
+			expect(mockWebSocket.send).toHaveBeenCalledWith(
+				JSON.stringify(['resize', { columns: 120, rows: 40 }]),
+			);
+		});
+
+		it('should send font change', () => {
+			const fontChangeData = {
+				cmd: 'fontChange',
+				fontName: 'Topaz-437 8x16',
+			};
+
+			workerCode.handleMessage(fontChangeData);
+
+			expect(mockWebSocket.send).toHaveBeenCalledWith(
+				JSON.stringify(['fontChange', { fontName: 'Topaz-437 8x16' }]),
+			);
+		});
+
+		it('should send ice colors change', () => {
+			const iceColorsData = {
+				cmd: 'iceColorsChange',
+				iceColors: true,
+			};
+
+			workerCode.handleMessage(iceColorsData);
+
+			expect(mockWebSocket.send).toHaveBeenCalledWith(
+				JSON.stringify(['iceColorsChange', { iceColors: true }]),
+			);
+		});
+
+		it('should send letter spacing change', () => {
+			const letterSpacingData = {
+				cmd: 'letterSpacingChange',
+				letterSpacing: true,
+			};
+
+			workerCode.handleMessage(letterSpacingData);
+
+			expect(mockWebSocket.send).toHaveBeenCalledWith(
+				JSON.stringify(['letterSpacingChange', { letterSpacing: true }]),
 			);
 		});
 
