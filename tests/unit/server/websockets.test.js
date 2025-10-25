@@ -85,10 +85,10 @@ describe('WebSockets Module', () => {
 			onWebSocketConnection(mockWs, mockReq);
 
 			expect(consoleLogSpy).toHaveBeenCalledWith(
-				'╓───── New WebSocket Connection',
+				"╓─────  'New WebSocket Connection'\n╙───────────────────────────────── ─ ─",
 			);
 			expect(consoleLogSpy).toHaveBeenCalledWith(
-				expect.stringContaining(`- Session ID: ${mockReq.sessionID}`),
+				expect.stringContaining('- Session ID: test-sesXXXXXX'),
 			);
 		});
 
@@ -207,7 +207,7 @@ describe('WebSockets Module', () => {
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
 				'Error parsing message:',
 				expect.any(Error),
-				malformedMessage,
+				"[User message: 'invalid json']",
 			);
 			expect(text0wnz.message).not.toHaveBeenCalled();
 		});
