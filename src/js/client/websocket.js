@@ -1,8 +1,17 @@
+// /mnt/x0/text.0w.nz/src/js/client/websocket.js
+//     5:5   error  'trustedOrigin' is defined but never used  no-unused-vars
+//   183:7   error  'initialized' is not defined               no-undef
+//   189:3   error  'allowedHostname' is not defined           no-undef
+//   190:3   error  'initialized' is not defined               no-undef
+//   196:7   error  'initialized' is not defined               no-undef
+//   210:28  error  'allowedHostname' is not defined           no-undef
+
 /* global self:readonly */
 let socket;
 let sessionID;
 let joint;
-let trustedOrigin;
+let initialized;
+let allowedHostname;
 
 const send = (cmd, msg) => {
 	if (socket && socket.readyState === WebSocket.OPEN) {
@@ -152,7 +161,7 @@ const onMsg = e => {
 				});
 				break;
 			default:
-				console.warn('[Worker] Ignoring unknown command');
+				console.warn('[Worker] Ignoring unknown command:', data[0].slice(0, 6));
 				break;
 		}
 	}
@@ -174,25 +183,30 @@ const removeDuplicates = blocks => {
 };
 
 // Main Handler
-self.onmessage = msg => {
-	// First message received will establish trust
-	if (!trustedOrigin) {
-		trustedOrigin = msg.origin;
-	}
 
-	// In same-origin contexts, origin can be "" or "null"
-	if (
-		msg.origin !== trustedOrigin &&
-		msg.origin !== '' &&
-		msg.origin !== 'null'
-	) {
-		console.warn(
-			`[Worker] Discarding message from untrusted origin: ${msg.origin}`,
-		);
+// Main Handler
+self.onmessage = msg => {
+	const data = msg.data;
+
+	// First message MUST be init to establish security context
+	if (!initialized) {
+		if (data.cmd !== 'init') {
+			console.error('[Worker] First message must be init command');
+			return;
+		}
+		// Store the allowed hostname from initialization
+		allowedHostname = self.location.hostname;
+		initialized = true;
+		self.postMessage({ cmd: 'initialized' });
 		return;
 	}
 
-	const data = msg.data;
+	// All subsequent messages require initialization
+	if (!initialized) {
+		console.error('[Worker] Worker not initialized');
+		return;
+	}
+
 	switch (data.cmd) {
 		case 'connect':
 			try {
@@ -200,10 +214,19 @@ self.onmessage = msg => {
 					throw new Error('Invalid or missing WebSocket URL.');
 				}
 				const wsUrl = new URL(data.url);
-				// Verify WebSocket URL matches trusted hostname
-				if (wsUrl.hostname !== self.location.hostname) {
-					throw new Error(`Blocked webSocket connection to untrusted host`);
+
+				// Verify WebSocket URL matches allowed hostname
+				if (wsUrl.hostname !== allowedHostname) {
+					throw new Error(
+						`Blocked WebSocket connection to untrusted host: ${wsUrl.hostname}`,
+					);
 				}
+
+				// Only allow valid WebSocket protocols
+				if (wsUrl.protocol !== 'wss:' && wsUrl.protocol !== 'ws:') {
+					throw new Error('Invalid WebSocket protocol');
+				}
+
 				socket = new WebSocket(data.url);
 				socket.addEventListener('open', onSockOpen);
 				socket.addEventListener('message', onMsg);
@@ -274,8 +297,12 @@ self.onmessage = msg => {
 			}
 			break;
 		case 'init':
+			// Already initialized, ignore subsequent init attempts
 			break;
 		default:
+			console.warn(
+				`[Worker] Ignoring unknown command: ${data.cmd.slice(0, 5)}...`,
+			);
 			break;
 	}
 };

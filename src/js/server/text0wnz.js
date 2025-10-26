@@ -27,7 +27,7 @@ const initialize = config => {
 };
 
 const log = msg => {
-	const logMsg = sanitize(msg);
+	const logMsg = sanitize(msg, 100, false);
 	debug ? callout(logMsg) : console.log(`* ${logMsg}`);
 };
 
@@ -81,7 +81,7 @@ const loadSession = () => {
 				fontName: 'CP437 8x16', // Default font
 			};
 			if (debug) {
-				console.log(`* Created default canvas: `, sanitize(c + 'x' + r));
+				console.log(`* Created default canvas: `, c + 'x' + r);
 			}
 			// Save the new session file
 			save(binFile, imageData, () => {
@@ -95,14 +95,12 @@ const loadSession = () => {
 
 const sendToAll = (clients, msg) => {
 	const message = JSON.stringify(msg);
+	let suffix = 'client';
+	if (clients.size > 1) {
+		suffix += 's';
+	}
 	if (debug) {
-		console.log(
-			'[Broadcasting]',
-			sanitize(msg[0]),
-			'to',
-			clients.size,
-			'clients',
-		);
+		console.log('[Broadcasting]', sanitize(msg[0]), 'to', clients.size, suffix);
 	}
 
 	clients.forEach(client => {
@@ -209,7 +207,7 @@ const message = (msg, sessionID, clients) => {
 			if (msg[1] && msg[1].columns && msg[1].rows) {
 				console.log(
 					'[Server] Set canvas size:',
-					`${sanitize(msg[1].columns)}x${sanitize(msg[1].rows)}`,
+					`${sanitize(msg[1].columns, 100, false)}x${sanitize(msg[1].rows, 100, false)}`,
 				);
 				imageData.columns = msg[1].columns;
 				imageData.rows = msg[1].rows;
@@ -249,7 +247,7 @@ const message = (msg, sessionID, clients) => {
 
 const closeSession = (sessionID, clients) => {
 	if (userList[sessionID] !== undefined) {
-		log(`${sanitize(userList[sessionID])} has quit.`);
+		log(`${sanitize(userList[sessionID], 100, false)} has quit.`);
 		delete userList[sessionID];
 	}
 	sendToAll(clients, ['part', sessionID]);

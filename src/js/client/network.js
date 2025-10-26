@@ -22,7 +22,6 @@ const createWorkerHandler = inputHandle => {
 		);
 		return;
 	}
-
 	let handle = localStorage.getItem('handle');
 	if (handle === null) {
 		handle = 'Anonymous';
@@ -35,9 +34,9 @@ const createWorkerHandler = inputHandle => {
 	let pendingImageData = null;
 	let pendingCanvasSettings = null; // Store settings during silent check
 	let silentCheckTimer = null;
-	let applyReceivedSettings = false; // Flag to prevent broadcasting when applying settings from server
-	let initializing = false; // Flag to prevent broadcasting during initial collaboration setup
-	State.worker.postMessage({ cmd: 'handle', handle: handle });
+	let applyReceivedSettings = false;
+	let initializing = false;
+
 	$('websocket-cancel').addEventListener('click', () => State.modal.close());
 
 	const onConnected = () => {
@@ -194,6 +193,11 @@ const createWorkerHandler = inputHandle => {
 	const onMessage = async msg => {
 		const data = msg.data;
 		switch (data.cmd) {
+			case 'initialized':
+				console.info('[Network] Worker initialized successfully');
+				// Now that worker is initialized, proceed with connection check
+				initiateConnectionCheck();
+				break;
 			case 'connected':
 				if (silentCheck) {
 					// Silent check succeeded - send join to get full session data
@@ -413,9 +417,48 @@ const createWorkerHandler = inputHandle => {
 
 	const isConnected = () => connected;
 
+	const initiateConnectionCheck = () => {
+		// Use ws:// for HTTP server, wss:// for HTTPS server
+		const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+
+		// Check if we're running through a proxy (like nginx) by checking the port
+		// If we're on standard HTTP/HTTPS ports, use /server path, otherwise connect directly
+		const isProxied =
+			window.location.port === '' ||
+			window.location.port === '80' ||
+			window.location.port === '443';
+		let wsUrl;
+
+		if (isProxied) {
+			// Running through proxy (nginx) - use /server path
+			wsUrl = protocol + window.location.host + '/server';
+			console.info(
+				'[Network] Detected proxy setup, checking server at:',
+				wsUrl,
+			);
+		} else {
+			// Direct connection - use port 1337
+			wsUrl =
+				protocol +
+				window.location.hostname +
+				':1337' +
+				window.location.pathname;
+			console.info(
+				'[Network] Direct connection mode, checking server at:',
+				wsUrl,
+			);
+		}
+
+		// Start with a silent connection check
+		silentCheck = true;
+		State.worker.postMessage({ cmd: 'connect', url: wsUrl, silentCheck: true });
+	};
+
 	if (State.worker) {
 		try {
 			State.worker.addEventListener('message', onMessage);
+			// Initialize the worker first - this MUST be the first message sent
+			State.worker.postMessage({ cmd: 'init' });
 		} catch (error) {
 			console.error(
 				'[Network] Failed to add message event listener to worker:',
@@ -427,35 +470,6 @@ const createWorkerHandler = inputHandle => {
 	// Set up collaboration choice dialog handlers
 	btnJoin.addEventListener('click', joinCollaboration);
 	btnLocal.addEventListener('click', stayLocal);
-
-	// Use ws:// for HTTP server, wss:// for HTTPS server
-	const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-
-	// Check if we're running through a proxy (like nginx) by checking the port
-	// If we're on standard HTTP/HTTPS ports, use /server path, otherwise connect directly
-	const isProxied =
-		window.location.port === '' ||
-		window.location.port === '80' ||
-		window.location.port === '443';
-	let wsUrl;
-
-	if (isProxied) {
-		// Running through proxy (nginx) - use /server path
-		wsUrl = protocol + window.location.host + '/server';
-		console.info('[Network] Detected proxy setup, checking server at:', wsUrl);
-	} else {
-		// Direct connection - use port 1337
-		wsUrl =
-			protocol + window.location.hostname + ':1337' + window.location.pathname;
-		console.info(
-			'[Network] Direct connection mode, checking server at:',
-			wsUrl,
-		);
-	}
-
-	// Start with a silent connection check
-	silentCheck = true;
-	State.worker.postMessage({ cmd: 'connect', url: wsUrl, silentCheck: true });
 
 	return {
 		draw: draw,

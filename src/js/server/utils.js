@@ -20,7 +20,7 @@ Examples:
 
 const callout = msg => {
 	console.log(
-		`╓─────  ${sanitize(msg)}\n╙───────────────────────────────── ─ ─`,
+		`╓─────  ${sanitize(msg, 100, false)}\n╙───────────────────────────────── ─ ─`,
 	);
 };
 
@@ -73,13 +73,13 @@ const anonymizeIp = ip => {
 		normalizedIp = normalizedIp.split(':').pop();
 	}
 	// Mask the final octet for IPv4
-	if (ip.includes('.')) {
+	if (normalizedIp.includes('.')) {
 		const parts = ip.split('.');
 		parts[3] = 'X';
 		return parts.join('.');
 	}
 	// Handle IPv6 (including compressed notation)
-	if (ip.includes(':')) {
+	if (normalizedIp.includes(':')) {
 		const expandIPv6 = address => {
 			const [head, tail] = address.split('::');
 			const headParts = head ? head.split(':').filter(Boolean) : [];
@@ -90,7 +90,7 @@ const anonymizeIp = ip => {
 		};
 		const parts = expandIPv6(ip);
 		if (parts.length !== 8) {
-			return 'unknown';
+			return 'invalid ip';
 		}
 		// Mask the last 4 segments
 		for (let i = 4; i < 8; i++) {
