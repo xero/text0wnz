@@ -75,18 +75,25 @@ const anonymizeIp = ip => {
 	// Mask the final octet for IPv4
 	if (normalizedIp.includes('.')) {
 		const parts = normalizedIp.split('.');
+		if (parts.length !== 4) {
+			return 'invalid ip';
+		}
 		parts[3] = 'X';
 		return parts.join('.');
 	}
 	// Handle IPv6 (including compressed notation)
 	if (normalizedIp.includes(':')) {
 		const expandIPv6 = address => {
-			const [head, tail] = address.split('::');
-			const headParts = head ? head.split(':').filter(Boolean) : [];
-			const tailParts = tail ? tail.split(':').filter(Boolean) : [];
-			const missing = 8 - (headParts.length + tailParts.length);
-			const zeros = Array(missing > 0 ? missing : 0).fill('0');
-			return [...headParts, ...zeros, ...tailParts];
+			if (address.includes('::')) {
+				const [head, tail] = address.split('::', 2);
+				const headParts = head ? head.split(':') : [];
+				const tailParts = tail ? tail.split(':') : [];
+				const missing = 8 - (headParts.length + tailParts.length);
+				const zeros = Array(missing > 0 ? missing : 0).fill('0');
+				return [...headParts, ...zeros, ...tailParts];
+			} else {
+				return address.split(':');
+			}
 		};
 		const parts = expandIPv6(normalizedIp);
 		if (parts.length !== 8) {

@@ -207,7 +207,7 @@ const message = (msg, sessionID, clients) => {
 			if (msg[1] && msg[1].columns && msg[1].rows) {
 				console.log(
 					'[Server] Set canvas size:',
-					`${sanitize(msg[1].columns, 100, false)}x${sanitize(msg[1].rows, 100, false)}`,
+					`${Number(msg[1].columns)}x${Number(msg[1].rows)}`,
 				);
 				imageData.columns = msg[1].columns;
 				imageData.rows = msg[1].rows;

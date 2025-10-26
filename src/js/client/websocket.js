@@ -4,6 +4,9 @@ let sessionID;
 let joint;
 let initialized;
 let allowedHostname;
+let trustedProtocol;
+let trustedPort;
+let wsUrl;
 
 const send = (cmd, msg) => {
 	if (socket && socket.readyState === WebSocket.OPEN) {
@@ -188,8 +191,11 @@ self.onmessage = msg => {
 			console.error('[Worker] First message must be init command');
 			return;
 		}
-		// Store the allowed hostname from initialization
 		allowedHostname = self.location.hostname;
+		trustedProtocol = self.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		trustedPort =
+			self.location.port ||
+			(self.location.protocol === 'https:' ? '443' : '80');
 		initialized = true;
 		self.postMessage({ cmd: 'initialized' });
 		return;
@@ -204,24 +210,26 @@ self.onmessage = msg => {
 	switch (data.cmd) {
 		case 'connect':
 			try {
-				if (!data.url || typeof data.url !== 'string') {
-					throw new Error('Invalid or missing WebSocket URL.');
+				if (!data.path || typeof data.path !== 'string') {
+					throw new Error('Invalid or missing WebSocket path.');
 				}
-				const wsUrl = new URL(data.url);
-
-				// Verify WebSocket URL matches allowed hostname
-				if (wsUrl.hostname !== allowedHostname) {
-					throw new Error(
-						`Blocked WebSocket connection to untrusted host: ${wsUrl.hostname}`,
+				const sanitizedPath = data.path.replace(/[^a-zA-Z0-9\-_/]/g, '');
+				try {
+					wsUrl = new URL(
+						`${trustedProtocol}//${allowedHostname}:${trustedPort}/${sanitizedPath}`,
 					);
+				} catch {
+					if (data.silentCheck) {
+						self.postMessage({ cmd: 'silentCheckFailed' });
+					} else {
+						self.postMessage({
+							cmd: 'error',
+							error: `Malformed WebSocket URL: ${data.url.replace(/[\r\n]/g, '')}`,
+						});
+					}
+					return;
 				}
-
-				// Only allow valid WebSocket protocols
-				if (wsUrl.protocol !== 'wss:' && wsUrl.protocol !== 'ws:') {
-					throw new Error('Invalid WebSocket protocol');
-				}
-
-				socket = new WebSocket(data.url);
+				socket = new WebSocket(wsUrl);
 				socket.addEventListener('open', onSockOpen);
 				socket.addEventListener('message', onMsg);
 				socket.addEventListener('close', e => {
@@ -295,7 +303,7 @@ self.onmessage = msg => {
 			break;
 		default:
 			console.warn(
-				`[Worker] Ignoring unknown command: "${String(data[0])
+				`[Worker] Ignoring unknown command: "${String(data.cmd)
 					.replace(/[\r\n]/g, '')
 					.slice(0, 6)}..."`,
 			);
