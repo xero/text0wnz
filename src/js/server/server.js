@@ -55,9 +55,7 @@ const startServer = config => {
 		if (config.debug) {
 			console.log(`* Request to /server endpoint:
   - Method: ${req.method}
-  - Headers: ${JSON.stringify(cleanHeaders(req.headers))}
-  - Connection header: ${req.headers.connection}
-  - Upgrade header: ${req.headers.upgrade}`);
+  - Headers: ${JSON.stringify(cleanHeaders(req.headers))}`);
 		}
 		next();
 	});

@@ -181,7 +181,9 @@ const message = (msg, sessionID, clients) => {
 				false,
 			);
 			const newHandle = sanitize(msg[1], 100, false);
-			console.log(`> ${oldHandle} is now ${newHandle}`);
+			console.log(
+				`> ${oldHandle.replace(/\n|\r/g, '')} is now ${newHandle.replace(/\n|\r/g, '')}`,
+			);
 			userList[sessionID] = newHandle;
 			msg[1] = newHandle;
 			msg.push(sessionID);
