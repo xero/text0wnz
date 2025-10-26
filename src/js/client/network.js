@@ -411,29 +411,10 @@ const createWorkerHandler = inputHandle => {
 	const isConnected = () => connected;
 
 	const initiateConnectionCheck = () => {
-		// Check if we're running through a proxy (like nginx) by checking the port
-		// If we're on standard HTTP/HTTPS ports, use /server path, otherwise connect directly
-		const isProxied =
-			window.location.port === '' ||
-			window.location.port === '80' ||
-			window.location.port === '443';
-		let wsPath;
-
-		if (isProxied) {
-			// Running through reverse proxy: use /server path
-			wsPath = 'server';
-			console.info('[Network] Detected proxy setup, using path:', wsPath);
-		} else {
-			// For direct mode, we'll need to handle port in the worker
-			wsPath = window.location.pathname.substring(1); // Remove leading slash
-			console.info('[Network] Direct connection mode, using path:', wsPath);
-		}
-
 		// Start with a silent connection check
 		silentCheck = true;
 		State.worker.postMessage({
 			cmd: 'connect',
-			path: wsPath,
 			silentCheck: true,
 		});
 	};

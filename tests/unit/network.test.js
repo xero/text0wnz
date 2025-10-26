@@ -231,9 +231,7 @@ describe('Network Module', () => {
 
 			// Simulate the first worker message for init
 			messageListener({ data: { cmd: 'initialized' } });
-			expect(mockWorker.postMessage).toHaveBeenCalledWith({
-				cmd: 'init',
-			});
+			expect(mockWorker.postMessage).toHaveBeenCalledWith({ cmd: 'init' });
 
 			// Now it should send the connect command
 			messageListener({ data: { cmd: 'initialized' } });

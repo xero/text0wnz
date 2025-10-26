@@ -210,13 +210,9 @@ self.onmessage = msg => {
 	switch (data.cmd) {
 		case 'connect':
 			try {
-				if (!data.path || typeof data.path !== 'string') {
-					throw new Error('Invalid or missing WebSocket path.');
-				}
-				const sanitizedPath = data.path.replace(/[^a-zA-Z0-9\-_/]/g, '');
 				try {
 					wsUrl = new URL(
-						`${trustedProtocol}//${allowedHostname}:${trustedPort}/${sanitizedPath}`,
+						`${trustedProtocol}//${allowedHostname}:${trustedPort}/server`,
 					);
 				} catch {
 					if (data.silentCheck) {
@@ -224,7 +220,7 @@ self.onmessage = msg => {
 					} else {
 						self.postMessage({
 							cmd: 'error',
-							error: `Malformed WebSocket URL: ${data.url.replace(/[\r\n]/g, '')}`,
+							error: `Malformed WebSocket URL: ${wsUrl.replace(/[\r\n]/g, '')}`,
 						});
 					}
 					return;

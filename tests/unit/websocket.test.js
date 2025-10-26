@@ -389,7 +389,8 @@ describe('WebSocket Worker', () => {
 			workerCode.handleMessage(drawData);
 
 			// The removeDuplicates function keeps the last occurrence
-			// Input: [65601, 131138, 65603] -> Output: [131138, 65603]
+			// Input: [(1 << 16) | 0x41, (2 << 16) | 0x42, (1 << 16) | 0x43] // [65601, 131138, 65603]
+			// Output: [(2 << 16) | 0x42, (1 << 16) | 0x43] // [131138, 65603]
 			expect(mockWebSocket.send).toHaveBeenCalledWith(
 				JSON.stringify(['draw', [131138, 65603]]),
 			);
@@ -691,7 +692,8 @@ describe('WebSocket Worker', () => {
 			const result = workerCode.removeDuplicates(blocks);
 
 			// Should keep: position 3, position 2, position 1 (last occurrence)
-			// Input: [65601, 196675, 131138, 65604] -> Output: [196675, 131138, 65604]
+			// Input: Input: [(1 << 16) | 0x41, (3 << 16) | 0x43, (2 << 16) | 0x42, (1 << 16) | 0x44]
+			// Output: [(3 << 16) | 0x43, (2 << 16) | 0x42, (1 << 16) | 0x44]
 			expect(result).toEqual([
 				(3 << 16) | 0x43, // Position 3
 				(2 << 16) | 0x42, // Position 2
