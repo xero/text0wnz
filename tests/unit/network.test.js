@@ -237,7 +237,6 @@ describe('Network Module', () => {
 			messageListener({ data: { cmd: 'initialized' } });
 			expect(mockWorker.postMessage).toHaveBeenCalledWith({
 				cmd: 'connect',
-				path: 'server',
 				silentCheck: true,
 			});
 
@@ -260,7 +259,6 @@ describe('Network Module', () => {
 
 			expect(mockWorker.postMessage).toHaveBeenCalledWith({
 				cmd: 'connect',
-				path: 'path',
 				silentCheck: true,
 			});
 		});
@@ -281,7 +279,6 @@ describe('Network Module', () => {
 
 			expect(mockWorker.postMessage).toHaveBeenCalledWith({
 				cmd: 'connect',
-				path: 'server',
 				silentCheck: true,
 			});
 		});
