@@ -85,10 +85,10 @@ describe('WebSockets Module', () => {
 			onWebSocketConnection(mockWs, mockReq);
 
 			expect(consoleLogSpy).toHaveBeenCalledWith(
-				'╓───── New WebSocket Connection',
+				"╓─────  New WebSocket Connection\n╙───────────────────────────────── ─ ─",
 			);
 			expect(consoleLogSpy).toHaveBeenCalledWith(
-				expect.stringContaining(`- Session ID: ${mockReq.sessionID}`),
+				expect.stringContaining('- Session ID: test-sesXXXXXX'),
 			);
 		});
 
@@ -207,7 +207,7 @@ describe('WebSockets Module', () => {
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
 				'Error parsing message:',
 				expect.any(Error),
-				malformedMessage,
+				"[User message: 'invalid json']",
 			);
 			expect(text0wnz.message).not.toHaveBeenCalled();
 		});
@@ -254,19 +254,6 @@ describe('WebSockets Module', () => {
 				testError,
 			);
 			expect(mockClients.has(mockWs)).toBe(false);
-		});
-
-		it('should log additional debug info when debug is enabled', () => {
-			// Reinitialize with debug enabled
-			webSocketInit({ debug: true }, mockClients);
-
-			onWebSocketConnection(mockWs, mockReq);
-
-			expect(consoleLogSpy).toHaveBeenCalledWith(
-				expect.stringContaining(
-					`- Remote address: ${mockReq.connection.remoteAddress}`,
-				),
-			);
 		});
 
 		it('should handle missing image data gracefully', () => {

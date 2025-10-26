@@ -2,6 +2,11 @@
 let socket;
 let sessionID;
 let joint;
+let initialized;
+let allowedHostname;
+let trustedProtocol;
+let trustedPort;
+let wsUrl;
 
 const send = (cmd, msg) => {
 	if (socket && socket.readyState === WebSocket.OPEN) {
@@ -95,17 +100,8 @@ const onMsg = e => {
 	} else {
 		try {
 			data = JSON.parse(data);
-		} catch (error) {
-			const dataInfo =
-				typeof data === 'string'
-					? `string of length ${data.length}`
-					: typeof data;
-			console.error(
-				'[Worker] Invalid data received from server. Data type:',
-				dataInfo,
-				'Error:',
-				error,
-			);
+		} catch {
+			console.error('[Worker] Invalid data received from server');
 			return;
 		}
 
@@ -160,7 +156,11 @@ const onMsg = e => {
 				});
 				break;
 			default:
-				console.warn('[Worker] Unknown command:', data[0]);
+				console.warn(
+					`[Worker] Ignoring unknown command: "${String(data[0])
+						.replace(/[\r\n]/g, '')
+						.slice(0, 6)}..."`,
+				);
 				break;
 		}
 	}
@@ -184,12 +184,47 @@ const removeDuplicates = blocks => {
 // Main Handler
 self.onmessage = msg => {
 	const data = msg.data;
+
+	// First message MUST be init to establish security context
+	if (!initialized) {
+		if (data.cmd !== 'init') {
+			console.error('[Worker] First message must be init command');
+			return;
+		}
+		allowedHostname = self.location.hostname;
+		trustedProtocol = self.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		trustedPort =
+			self.location.port ||
+			(self.location.protocol === 'https:' ? '443' : '80');
+		initialized = true;
+		self.postMessage({ cmd: 'initialized' });
+		return;
+	}
+
+	// All subsequent messages require initialization
+	if (!initialized) {
+		console.error('[Worker] Worker not initialized');
+		return;
+	}
+
 	switch (data.cmd) {
 		case 'connect':
 			try {
-				socket = new WebSocket(data.url);
-
-				// Attach event listeners to the WebSocket
+				const wsUrlString = `${trustedProtocol}//${allowedHostname}:${trustedPort}/server`;
+				try {
+					wsUrl = new URL(wsUrlString);
+				} catch {
+					if (data.silentCheck) {
+						self.postMessage({ cmd: 'silentCheckFailed' });
+					} else {
+						self.postMessage({
+							cmd: 'error',
+							error: `Malformed WebSocket URL: ${wsUrlString.replace(/[\r\n]/g, '')}`,
+						});
+					}
+					return;
+				}
+				socket = new WebSocket(wsUrl);
 				socket.addEventListener('open', onSockOpen);
 				socket.addEventListener('message', onMsg);
 				socket.addEventListener('close', e => {
@@ -258,7 +293,15 @@ self.onmessage = msg => {
 				socket.close();
 			}
 			break;
+		case 'init':
+			// Already initialized, ignore subsequent init attempts
+			break;
 		default:
+			console.warn(
+				`[Worker] Ignoring unknown command: "${String(data.cmd)
+					.replace(/[\r\n]/g, '')
+					.slice(0, 6)}..."`,
+			);
 			break;
 	}
 };

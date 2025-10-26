@@ -1,4 +1,4 @@
-// usage flags
+// Usage flags
 const printHelp = () => {
 	console.log(`teXt0wnz backend server
 Usage: {bun,node} server.js [port] [options]
@@ -18,7 +18,19 @@ Examples:
 	process.exit(0);
 };
 
-// strips possibly sensitive headers
+const callout = msg => {
+	console.log(
+		`╓─────  ${sanitize(msg, 100, false)}\n╙───────────────────────────────── ─ ─`,
+	);
+};
+
+const createTimestampedFilename = (sessionName, extension) => {
+	// Windows safe file names
+	const timestamp = new Date().toISOString().replace(/[:]/g, '-');
+	return `${sessionName}-${timestamp}.${extension}`;
+};
+
+// Strips possibly sensitive headers
 const cleanHeaders = headers => {
 	const SENSITIVE_HEADERS = [
 		'authorization',
@@ -38,10 +50,72 @@ const cleanHeaders = headers => {
 	return redacted;
 };
 
-const createTimestampedFilename = (sessionName, extension) => {
-	// windows safe name
-	const timestamp = new Date().toISOString().replace(/[:]/g, '-');
-	return `${sessionName}-${timestamp}.${extension}`;
+// Strips Unicode control characters and newlines,
+// limits length, and optionally adds quotes
+const sanitize = (input, limit = 100, quote = true) => {
+	if (input === null || input === undefined) {
+		return '';
+	}
+	const str = String(input)
+		.trim()
+		.replace(/\p{C}/gu, '')
+		.replace(/[\n\r]/g, '')
+		.substring(0, limit);
+	return quote ? `'${str}'` : str;
 };
 
-export { printHelp, cleanHeaders, createTimestampedFilename };
+const anonymizeIp = ip => {
+	if (!ip) {
+		return 'unknown';
+	}
+	let normalizedIp = ip;
+	if (normalizedIp.includes('::ffff:')) {
+		const ipv4Mapped = normalizedIp.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/);
+		if (ipv4Mapped) {
+			normalizedIp = ipv4Mapped[1];
+		}
+	}
+	// Mask the final octet for IPv4
+	if (normalizedIp.includes('.')) {
+		const parts = normalizedIp.split('.');
+		if (parts.length !== 4) {
+			return 'invalid ip';
+		}
+		parts[3] = 'X';
+		return parts.join('.');
+	}
+	// Handle IPv6 (including compressed notation)
+	if (normalizedIp.includes(':')) {
+		const expandIPv6 = address => {
+			if (address.includes('::')) {
+				const [head, tail] = address.split('::', 2);
+				const headParts = head ? head.split(':') : [];
+				const tailParts = tail ? tail.split(':') : [];
+				const missing = 8 - (headParts.length + tailParts.length);
+				const zeros = Array(missing > 0 ? missing : 0).fill('0');
+				return [...headParts, ...zeros, ...tailParts];
+			} else {
+				return address.split(':');
+			}
+		};
+		const parts = expandIPv6(normalizedIp);
+		if (parts.length !== 8) {
+			return 'invalid ip';
+		}
+		// Mask the last 4 segments
+		for (let i = 4; i < 8; i++) {
+			parts[i] = 'X';
+		}
+		return parts.join(':');
+	}
+	return 'unknown';
+};
+
+export {
+	printHelp,
+	callout,
+	createTimestampedFilename,
+	cleanHeaders,
+	sanitize,
+	anonymizeIp,
+};
