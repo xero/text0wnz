@@ -229,13 +229,17 @@ describe('Network Module', () => {
 				call => call[0] === 'message',
 			)[1];
 
-			// Simulate the worker responding to init
+			// Simulate the first worker message for init
 			messageListener({ data: { cmd: 'initialized' } });
+			expect(mockWorker.postMessage).toHaveBeenCalledWith({
+				cmd: 'init',
+			});
 
 			// Now it should send the connect command
+			messageListener({ data: { cmd: 'initialized' } });
 			expect(mockWorker.postMessage).toHaveBeenCalledWith({
 				cmd: 'connect',
-				url: 'ws://localhost:3000/server',
+				path: 'server',
 				silentCheck: true,
 			});
 
@@ -258,7 +262,7 @@ describe('Network Module', () => {
 
 			expect(mockWorker.postMessage).toHaveBeenCalledWith({
 				cmd: 'connect',
-				url: 'ws://example.com:1337/path',
+				path: 'path',
 				silentCheck: true,
 			});
 		});
@@ -279,7 +283,7 @@ describe('Network Module', () => {
 
 			expect(mockWorker.postMessage).toHaveBeenCalledWith({
 				cmd: 'connect',
-				url: 'wss://localhost:3000/server',
+				path: 'server',
 				silentCheck: true,
 			});
 		});
