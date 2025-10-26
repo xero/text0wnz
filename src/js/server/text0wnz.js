@@ -223,20 +223,24 @@ const message = (msg, sessionID, clients) => {
 			break;
 		case 'fontChange':
 			if (msg[1] && Object.hasOwn(msg[1], 'fontName')) {
-				console.log('[Server] set font:', sanitize(msg[1].fontName));
+				console.log('[Server] updated font');
 				imageData.fontName = msg[1].fontName;
 			}
 			break;
 		case 'iceColorsChange':
 			if (msg[1] && Object.hasOwn(msg[1], 'iceColors')) {
-				console.log('[Server] ice colors:', sanitize(msg[1].iceColors));
-				imageData.iceColors = msg[1].iceColors;
+				console.log('[Server] updated ice colors');
+				imageData.iceColors =
+					typeof msg[1].iceColors === 'boolean' ? msg[1].iceColors : false;
 			}
 			break;
 		case 'letterSpacingChange':
 			if (msg[1] && Object.hasOwn(msg[1], 'letterSpacing')) {
-				console.log('[Server] letter spacing:', sanitize(msg[1].letterSpacing));
-				imageData.letterSpacing = msg[1].letterSpacing;
+				console.log('[Server] updated letter spacing');
+				imageData.letterSpacing =
+					typeof msg[1].letterSpacing === 'boolean'
+						? msg[1].letterSpacing
+						: false;
 			}
 			break;
 		default:

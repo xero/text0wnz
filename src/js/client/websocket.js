@@ -210,17 +210,16 @@ self.onmessage = msg => {
 	switch (data.cmd) {
 		case 'connect':
 			try {
+				const wsUrlString = `${trustedProtocol}//${allowedHostname}:${trustedPort}/server`;
 				try {
-					wsUrl = new URL(
-						`${trustedProtocol}//${allowedHostname}:${trustedPort}/server`,
-					);
+					wsUrl = new URL(wsUrlString);
 				} catch {
 					if (data.silentCheck) {
 						self.postMessage({ cmd: 'silentCheckFailed' });
 					} else {
 						self.postMessage({
 							cmd: 'error',
-							error: `Malformed WebSocket URL: ${wsUrl.replace(/[\r\n]/g, '')}`,
+							error: `Malformed WebSocket URL: ${wsUrlString.replace(/[\r\n]/g, '')}`,
 						});
 					}
 					return;
