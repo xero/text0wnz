@@ -169,7 +169,7 @@ const message = (msg, sessionID, clients) => {
 
 	switch (msg[0]) {
 		case 'join': {
-			const handle = sanitize(msg[1],100,false);
+			const handle = sanitize(msg[1], 100, false);
 			log(`${handle} has joined`);
 			userList[sessionID] = handle;
 			msg[1] = handle;
@@ -177,8 +177,12 @@ const message = (msg, sessionID, clients) => {
 			break;
 		}
 		case 'nick': {
-			const oldHandle = sanitize((userList[sessionID] || 'Anonymous'),100,false);
-			const newHandle = sanitize(msg[1],100,false);
+			const oldHandle = sanitize(
+				userList[sessionID] || 'Anonymous',
+				100,
+				false,
+			);
+			const newHandle = sanitize(msg[1], 100, false);
 			console.log(`> ${oldHandle} is now ${newHandle}`);
 			userList[sessionID] = newHandle;
 			msg[1] = newHandle;
@@ -186,8 +190,8 @@ const message = (msg, sessionID, clients) => {
 			break;
 		}
 		case 'chat': {
-			const handle = sanitize((userList[sessionID] || 'Anonymous'),100,false);
-			const chatText = sanitize(msg[1],140,false);
+			const handle = sanitize(userList[sessionID] || 'Anonymous', 100, false);
+			const chatText = sanitize(msg[1], 140, false);
 			msg.splice(1, 0, handle);
 			msg[2] = chatText;
 			chat.push([handle, chatText]);

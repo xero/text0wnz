@@ -80,7 +80,7 @@ const anonymizeIp = ip => {
 	}
 	// Handle IPv6 (including compressed notation)
 	if (ip.includes(':')) {
-		const expandIPv6 = (address) => {
+		const expandIPv6 = address => {
 			const [head, tail] = address.split('::');
 			const headParts = head ? head.split(':').filter(Boolean) : [];
 			const tailParts = tail ? tail.split(':').filter(Boolean) : [];
@@ -88,7 +88,7 @@ const anonymizeIp = ip => {
 			const zeros = Array(missing > 0 ? missing : 0).fill('0');
 			return [...headParts, ...zeros, ...tailParts];
 		};
-		let parts = expandIPv6(ip);
+		const parts = expandIPv6(ip);
 		if (parts.length !== 8) {
 			return 'unknown';
 		}

@@ -110,7 +110,10 @@ describe('WebSocket Worker', () => {
 						workerCode.send('canvasSettings', data.settings);
 						break;
 					case 'resize':
-						workerCode.send('resize', { columns: data.columns, rows: data.rows });
+						workerCode.send('resize', {
+							columns: data.columns,
+							rows: data.rows,
+						});
 						break;
 					case 'fontChange':
 						workerCode.send('fontChange', { fontName: data.fontName });
