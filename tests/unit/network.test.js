@@ -69,7 +69,11 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	})),
 	showOverlay: vi.fn(),
 	hideOverlay: vi.fn(),
+	websocketUI: vi.fn(),
 }));
+
+// Mock palette module
+vi.mock('../../src/js/client/palette.js', () => ({ createDefaultPalette: vi.fn(() => ({})) }));
 
 // Mock DOM
 global.document = {
@@ -99,6 +103,7 @@ global.document = {
 		scrollTop: 0,
 	})),
 	querySelector: vi.fn(() => null),
+	dispatchEvent: vi.fn(),
 };
 
 global.window = {
@@ -119,6 +124,7 @@ global.localStorage = {
 global.Worker = vi.fn(() => ({
 	addEventListener: vi.fn(),
 	postMessage: vi.fn(),
+	removeEventListener: vi.fn(),
 }));
 
 global.alert = vi.fn();
@@ -149,6 +155,7 @@ describe('Network Module', () => {
 		mockWorker = {
 			addEventListener: vi.fn(),
 			postMessage: vi.fn(),
+			removeEventListener: vi.fn(),
 		};
 
 		global.Worker.mockReturnValue(mockWorker);
@@ -204,10 +211,8 @@ describe('Network Module', () => {
 		it('should create worker and set up message handling', () => {
 			createWorkerHandler(mockInputHandle);
 
-			expect(mockWorker.postMessage).toHaveBeenCalledWith({
-				cmd: 'handle',
-				handle: 'Anonymous',
-			});
+			// Should send init command first
+			expect(mockWorker.postMessage).toHaveBeenCalledWith({ cmd: 'init' });
 			expect(mockWorker.addEventListener).toHaveBeenCalledWith(
 				'message',
 				expect.any(Function),
@@ -218,6 +223,16 @@ describe('Network Module', () => {
 			// Test proxied setup (standard ports)
 			global.window.location.port = '';
 			createWorkerHandler(mockInputHandle);
+
+			// Get the message event listener that was registered
+			const messageListener = mockWorker.addEventListener.mock.calls.find(
+				call => call[0] === 'message',
+			)[1];
+
+			// Simulate the worker responding to init
+			messageListener({ data: { cmd: 'initialized' } });
+
+			// Now it should send the connect command
 			expect(mockWorker.postMessage).toHaveBeenCalledWith({
 				cmd: 'connect',
 				url: 'ws://localhost:3000/server',
@@ -232,6 +247,15 @@ describe('Network Module', () => {
 			global.window.location.pathname = '/path';
 
 			createWorkerHandler(mockInputHandle);
+
+			// Get the new message listener
+			const messageListener2 = mockWorker.addEventListener.mock.calls.find(
+				call => call[0] === 'message',
+			)[1];
+
+			// Simulate the worker responding to init
+			messageListener2({ data: { cmd: 'initialized' } });
+
 			expect(mockWorker.postMessage).toHaveBeenCalledWith({
 				cmd: 'connect',
 				url: 'ws://example.com:1337/path',
@@ -244,6 +268,15 @@ describe('Network Module', () => {
 			global.window.location.port = '';
 
 			createWorkerHandler(mockInputHandle);
+
+			// Get the message event listener
+			const messageListener = mockWorker.addEventListener.mock.calls.find(
+				call => call[0] === 'message',
+			)[1];
+
+			// Simulate the worker responding to init
+			messageListener({ data: { cmd: 'initialized' } });
+
 			expect(mockWorker.postMessage).toHaveBeenCalledWith({
 				cmd: 'connect',
 				url: 'wss://localhost:3000/server',
