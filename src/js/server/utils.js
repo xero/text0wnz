@@ -70,7 +70,10 @@ const anonymizeIp = ip => {
 	}
 	let normalizedIp = ip;
 	if (normalizedIp.includes('::ffff:')) {
-		normalizedIp = normalizedIp.split(':').pop();
+		const ipv4Mapped = normalizedIp.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/);
+		if (ipv4Mapped) {
+			normalizedIp = ipv4Mapped[1];
+		}
 	}
 	// Mask the final octet for IPv4
 	if (normalizedIp.includes('.')) {

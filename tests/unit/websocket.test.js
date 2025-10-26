@@ -692,7 +692,7 @@ describe('WebSocket Worker', () => {
 			const result = workerCode.removeDuplicates(blocks);
 
 			// Should keep: position 3, position 2, position 1 (last occurrence)
-			// Input: Input: [(1 << 16) | 0x41, (3 << 16) | 0x43, (2 << 16) | 0x42, (1 << 16) | 0x44]
+			// Input: [(1 << 16) | 0x41, (3 << 16) | 0x43, (2 << 16) | 0x42, (1 << 16) | 0x44]
 			// Output: [(3 << 16) | 0x43, (2 << 16) | 0x42, (1 << 16) | 0x44]
 			expect(result).toEqual([
 				(3 << 16) | 0x43, // Position 3
