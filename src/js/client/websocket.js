@@ -201,13 +201,10 @@ self.onmessage = msg => {
 				}
 				const wsUrl = new URL(data.url);
 				// Verify WebSocket URL matches trusted hostname
-				const trustedHostname = self.location.hostname;
-				if (wsUrl.hostname !== trustedHostname) {
+				if (wsUrl.hostname !== self.location.hostname) {
 					throw new Error(`Blocked webSocket connection to untrusted host`);
 				}
 				socket = new WebSocket(data.url);
-
-				// Attach event listeners to the WebSocket
 				socket.addEventListener('open', onSockOpen);
 				socket.addEventListener('message', onMsg);
 				socket.addEventListener('close', e => {

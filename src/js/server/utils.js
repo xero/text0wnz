@@ -50,8 +50,9 @@ const cleanHeaders = headers => {
 	return redacted;
 };
 
-// Strips Unicode control characters, newlines, limits length, and adds quotes
-const sanitize = input => {
+// Strips Unicode control characters and newlines,
+// limits length, and optionally adds quotes
+const sanitize = (input, limit = 100, quote = true) => {
 	if (input === null || input === undefined) {
 		return '';
 	}
@@ -59,33 +60,44 @@ const sanitize = input => {
 		.trim()
 		.replace(/\p{C}/gu, '')
 		.replace(/[\n\r]/g, '')
-		.substring(0, 100);
-	return `'${str}'`;
+		.substring(0, limit);
+	return quote ? `'${str}'` : str;
 };
 
 const anonymizeIp = ip => {
 	if (!ip) {
 		return 'unknown';
 	}
-	// Handle IPv4-mapped IPv6 addresses (e.g. reverse proxy)
-	if (ip.includes('::ffff:')) {
-		ip = ip.split(':').pop();
+	let normalizedIp = ip;
+	if (normalizedIp.includes('::ffff:')) {
+		normalizedIp = normalizedIp.split(':').pop();
 	}
-	// Mask the final octet
+	// Mask the final octet for IPv4
 	if (ip.includes('.')) {
 		const parts = ip.split('.');
 		parts[3] = 'X';
 		return parts.join('.');
 	}
+	// Handle IPv6 (including compressed notation)
 	if (ip.includes(':')) {
-		const parts = ip.split(':');
-		const anonymizedParts = parts.slice(0, 4);
-		while (anonymizedParts.length < 8) {
-			anonymizedParts.push('X');
+		const expandIPv6 = (address) => {
+			const [head, tail] = address.split('::');
+			const headParts = head ? head.split(':').filter(Boolean) : [];
+			const tailParts = tail ? tail.split(':').filter(Boolean) : [];
+			const missing = 8 - (headParts.length + tailParts.length);
+			const zeros = Array(missing > 0 ? missing : 0).fill('0');
+			return [...headParts, ...zeros, ...tailParts];
+		};
+		let parts = expandIPv6(ip);
+		if (parts.length !== 8) {
+			return 'unknown';
 		}
-		return anonymizedParts.join(':');
+		// Mask the last 4 segments
+		for (let i = 4; i < 8; i++) {
+			parts[i] = 'X';
+		}
+		return parts.join(':');
 	}
-	return 'unknown';
 };
 
 export {
