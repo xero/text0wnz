@@ -13,8 +13,6 @@ const createWorkerHandler = inputHandle => {
 
 	try {
 		State.worker = new Worker(State.workerPath);
-		// Initialize the worker with the current origin for security
-		State.worker.postMessage({ cmd: 'init' });
 	} catch (error) {
 		console.error(
 			`[Network] Failed to load worker from ${State.workerPath}:`,
