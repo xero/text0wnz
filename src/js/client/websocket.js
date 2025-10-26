@@ -1,11 +1,3 @@
-// /mnt/x0/text.0w.nz/src/js/client/websocket.js
-//     5:5   error  'trustedOrigin' is defined but never used  no-unused-vars
-//   183:7   error  'initialized' is not defined               no-undef
-//   189:3   error  'allowedHostname' is not defined           no-undef
-//   190:3   error  'initialized' is not defined               no-undef
-//   196:7   error  'initialized' is not defined               no-undef
-//   210:28  error  'allowedHostname' is not defined           no-undef
-
 /* global self:readonly */
 let socket;
 let sessionID;
@@ -161,7 +153,11 @@ const onMsg = e => {
 				});
 				break;
 			default:
-				console.warn('[Worker] Ignoring unknown command:', data[0].slice(0, 6));
+				console.warn(
+					`[Worker] Ignoring unknown command: "${String(data[0])
+						.replace(/[\r\n]/g, '')
+						.slice(0, 6)}..."`,
+				);
 				break;
 		}
 	}
@@ -181,8 +177,6 @@ const removeDuplicates = blocks => {
 	});
 	return blocks.reverse();
 };
-
-// Main Handler
 
 // Main Handler
 self.onmessage = msg => {
@@ -301,7 +295,9 @@ self.onmessage = msg => {
 			break;
 		default:
 			console.warn(
-				`[Worker] Ignoring unknown command: ${data.cmd.slice(0, 5)}...`,
+				`[Worker] Ignoring unknown command: "${String(data[0])
+					.replace(/[\r\n]/g, '')
+					.slice(0, 6)}..."`,
 			);
 			break;
 	}

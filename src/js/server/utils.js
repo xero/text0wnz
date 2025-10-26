@@ -74,7 +74,7 @@ const anonymizeIp = ip => {
 	}
 	// Mask the final octet for IPv4
 	if (normalizedIp.includes('.')) {
-		const parts = ip.split('.');
+		const parts = normalizedIp.split('.');
 		parts[3] = 'X';
 		return parts.join('.');
 	}
@@ -88,7 +88,7 @@ const anonymizeIp = ip => {
 			const zeros = Array(missing > 0 ? missing : 0).fill('0');
 			return [...headParts, ...zeros, ...tailParts];
 		};
-		const parts = expandIPv6(ip);
+		const parts = expandIPv6(normalizedIp);
 		if (parts.length !== 8) {
 			return 'invalid ip';
 		}
@@ -98,6 +98,7 @@ const anonymizeIp = ip => {
 		}
 		return parts.join(':');
 	}
+	return 'unknown';
 };
 
 export {
