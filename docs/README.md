@@ -2,16 +2,15 @@
 
 This directory contains comprehensive guides for using, developing, testing, and deploying the **teXt0wnz** editor.
 
----
-
 ## Quick Links
 
-### For Users
+### For Users / Artists
 
 - Start here: [Editor Client](editor-client.md)
 - Learn the [Editor Interface](interface.md) visually with pictures
 - Learn keyboard shortcuts: [Editor Client - Key Bindings](editor-client.md#key-bindings--mouse-controls)
 - [PWA Install](docs/install-pwa.md): Installation guide for multiple platforms
+- [Fonts](fonts.md) - Complete font reference and previews
 
 ### For Developers
 
@@ -26,13 +25,19 @@ This directory contains comprehensive guides for using, developing, testing, and
 - Containerization: [Docker Containerization](docker.md)
 - Monitoring: [Other Tools - Monitoring Tools](other-tools.md#monitoring-tools)
 
----
-
 ## Core Documentation
 
 ### Application Guides
 
 - **[Interface](interface.md)** - Visual guide to the user interface and options
+
+- **[Architecture](architecture.md)** - System architecture and design
+  - High-level overview and application modes
+  - Client and server architecture
+  - Data flow and module structure
+  - Build system and code splitting
+  - Storage and persistence strategies
+  - Design patterns and performance optimizations
 
 - **[Editor Client](editor-client.md)** - Frontend text art editor application
   - Drawing tools and features
@@ -51,24 +56,7 @@ This directory contains comprehensive guides for using, developing, testing, and
   - Process management (systemd, forever)
   - SSL configuration
 
-- **[Architecture](architecture.md)** - System architecture and design
-  - High-level overview and application modes
-  - Client and server architecture
-  - Data flow and module structure
-  - Build system and code splitting
-  - Storage and persistence strategies
-  - Design patterns and performance optimizations
-
 ### Development Guides
-
-- **[Building and Developing](building-and-developing.md)** - Development workflow and build process
-  - Requirements and quick start
-  - Build tools (Vite, PostCSS, Tailwind CSS)
-  - Bun/NPM scripts reference
-  - Environment variables
-  - Development workflow
-  - Linting and formatting (ESLint, Prettier)
-  - Project structure
 
 - **[Project Structure](project-structure.md)** - Comprehensive file and module organization
   - Directory structure and file organization
@@ -78,6 +66,15 @@ This directory contains comprehensive guides for using, developing, testing, and
   - Build output
   - Naming conventions
   - Module import patterns
+
+- **[Building and Developing](building-and-developing.md)** - Development workflow and build process
+  - Requirements and quick start
+  - Build tools (Vite, PostCSS, Tailwind CSS)
+  - Bun/NPM scripts reference
+  - Environment variables
+  - Development workflow
+  - Linting and formatting (ESLint, Prettier)
+  - Project structure
 
 - **[Environment Variables](environment-variables.md)** - Configuration and environment setup
   - Build-time variables (Vite)
@@ -129,54 +126,21 @@ This directory contains comprehensive guides for using, developing, testing, and
 
 - **[SAUCE Format](sauce-format.md)** - SAUCE metadata format specification
 - **[XBin Format](xb-format.md)** - XBin file format specification
-- **[Fonts](fonts.md)** - Complete font reference and previews
 
-## Additional Resources
+### Policies
 
+- **[Security Policy](security.md)** - Security policy and vulnerability reporting
 - **[Privacy Policy](privacy.md)** - Privacy policy and data handling
+- **[Contributing Guide](contributing.md)** - Resources for working on the project
+- **[Code of Conduct](code_of_conduct.md)** - {Una,A}cceptable behaviour for the project
+
+### Supplemental
+
 - **[Logos](logos.md)** - ASCII art logos for the project
 - **[Pre-commit Hook](pre-commit)** - Git pre-commit hook script
-- **[Examples](examples/)** - Sample artwork to view and edit
-  - ANSI artwork by [xero](https://16colo.rs/artist/xero)
-  - XBin artwork by [hellbeard](https://16colo.rs/artist/hellbeard)
-
-## Docs Directory Structure
-
-```
-docs/
-├── README.md                      # This file
-├── interface.md                   # Visual UI guide
-├── editor-client.md               # Frontend application guide
-├── collaboration-server.md        # Backend server guide
-├── architecture.md                # System architecture
-├── project-structure.md           # File and module organization
-├── environment-variables.md       # Configuration and environment setup
-├── install-pwa.md                 # PWA installation guide
-├── building-and-developing.md     # Development workflow
-├── testing.md                     # Testing guide
-├── cicd.md                        # CI/CD pipeline guide
-├── docker.md                      # Docker containerization
-├── webserver-configuration.md     # Webserver setup
-├── other-tools.md                 # Additional tools
-├── sauce-format.md                # SAUCE specification
-├── xb-format.md                   # XBin specification
-├── fonts.md                       # Font reference
-├── privacy.md                     # Privacy policy
-├── logos.md                       # ASCII logos
-├── pre-commit                     # Git hook
-├── preview.png                    # Application preview
-└── examples/                      # Sample artwork
-    ├── ansi/
-    │   ├── x0-defcon25.ans
-    │   ├── x0-grandpa-dan.ans
-    │   └── x0-outlaw-research.ans
-    └── xbin/
-        ├── xz-divinestylers.xb
-        ├── xz-neuromancer.xb
-        └── xz-xero.xb
-```
-
----
+- **[Examples](https://github.com/xero/text0wnz/tree/main/docs/examples)** - Sample artwork to view and edit
+  - ANSI artwork by [xero](https://16colo.rs/artist/xero) (alias: x0^67^aMi5H^iMP!)
+  - XBin artwork by [hellbeard](https://16colo.rs/artist/hellbeard) (alias: xz^dS^iMPuRe!)
 
 ## Contributing
 
@@ -188,6 +152,8 @@ When contributing documentation:
 4. Test all commands and configurations
 5. Keep documentation up to date with code changes
 6. Cross-reference related documents
+
+See: [Contributing](contributing) for more details
 
 ## Getting Help
 
