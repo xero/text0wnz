@@ -84,7 +84,7 @@ src/js/client/
 ├── keyboard.js            # Keyboard mode and shortcuts
 ├── lazyFont.js            # Lazy font loading
 ├── magicNumbers.js        # Constants and magic values
-├── network.js             # Network layer with silent checks and worker coordination
+├── network.js             # Network layer with non-intrusive connection testing
 ├── palette.js             # Color palette management
 ├── state.js               # Global application state
 ├── storage.js             # IndexedDB persistence
@@ -189,8 +189,8 @@ src/js/client/
 **network.js** - Network Layer
 
 - WebSocket client management
-- Worker lifecycle coordination
-- Silent connection checks (non-intrusive)
+- Worker initialization and state management
+- Non-intrusive connection testing
 - Connection state management
 - Message protocol handling
 - Canvas synchronization
@@ -253,7 +253,7 @@ src/js/client/
 - Security-hardened WebSocket connection
 - Mandatory initialization sequence
 - Trusted URL construction
-- Input validation and sanitization
+- JSON parsing protection and command validation
 - Message handling with error protection
 - Background communication
 - Keeps UI responsive
