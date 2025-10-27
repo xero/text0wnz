@@ -23,13 +23,17 @@ describe('WebSocket Worker', () => {
 			readyState: 1, // WebSocket.OPEN
 		};
 
-		global.WebSocket.mockImplementation(() => mockWebSocket);
+		global.WebSocket.mockImplementation(function () {
+			return mockWebSocket;
+		});
 
 		// Mock FileReader
-		global.FileReader.mockImplementation(() => ({
-			addEventListener: vi.fn(),
-			readAsArrayBuffer: vi.fn(),
-		}));
+		global.FileReader.mockImplementation(function () {
+			return {
+				addEventListener: vi.fn(),
+				readAsArrayBuffer: vi.fn(),
+			};
+		});
 
 		// Import and execute the worker code
 		// Since worker.js uses self.onmessage, we need to simulate loading it
@@ -309,7 +313,7 @@ describe('WebSocket Worker', () => {
 		});
 
 		it('should handle WebSocket creation exception', () => {
-			WebSocket.mockImplementation(() => {
+			WebSocket.mockImplementation(function () {
 				throw new Error('WebSocket not supported');
 			});
 
@@ -589,7 +593,9 @@ describe('WebSocket Worker', () => {
 				addEventListener: vi.fn(),
 				readAsArrayBuffer: vi.fn(),
 			};
-			global.FileReader.mockImplementation(() => mockFileReader);
+			global.FileReader.mockImplementation(function () {
+				return mockFileReader;
+			});
 
 			const binaryData = new ArrayBuffer(100);
 			const messageEvent = { data: binaryData };

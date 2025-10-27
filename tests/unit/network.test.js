@@ -121,19 +121,23 @@ global.localStorage = {
 	setItem: vi.fn(),
 };
 
-global.Worker = vi.fn(() => ({
-	addEventListener: vi.fn(),
-	postMessage: vi.fn(),
-	removeEventListener: vi.fn(),
-}));
+global.Worker = vi.fn(function () {
+	return {
+		addEventListener: vi.fn(),
+		postMessage: vi.fn(),
+		removeEventListener: vi.fn(),
+	};
+});
 
 global.alert = vi.fn();
 global.console = { log: vi.fn(), info: vi.fn(), error: vi.fn(), warn: vi.fn() };
 
-global.Notification = vi.fn(() => ({
-	addEventListener: vi.fn(),
-	close: vi.fn(),
-}));
+global.Notification = vi.fn(function () {
+	return {
+		addEventListener: vi.fn(),
+		close: vi.fn(),
+	};
+});
 global.Notification.permission = 'granted';
 global.Notification.requestPermission = vi.fn();
 

@@ -92,11 +92,17 @@ describe('File Module', () => {
 		global.URL = mockURL;
 		global.window = { URL: mockURL };
 		global.FileReader = mockFileReader;
-		global.Blob = vi.fn();
+		global.Blob = vi.fn(function (parts, options) {
+			this.parts = parts;
+			this.options = options;
+			return this;
+		});
 		global.btoa = vi.fn(str => Buffer.from(str, 'binary').toString('base64'));
 		global.atob = vi.fn(str => Buffer.from(str, 'base64').toString('binary'));
 		global.navigator = { userAgent: 'Chrome/90.0' };
-		global.MouseEvent = vi.fn(() => ({ bubbles: true, cancelable: true }));
+		global.MouseEvent = vi.fn(function () {
+			return { bubbles: true, cancelable: true };
+		});
 
 		// Import the module fresh for each test
 		const fileModule = await import('../../src/js/client/file.js');

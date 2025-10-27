@@ -57,13 +57,15 @@ describe('Font Module - Basic Tests', () => {
 		};
 
 		// Reset global Image mock
-		global.Image = vi.fn(() => ({
-			addEventListener: vi.fn(),
-			removeEventListener: vi.fn(),
-			src: '',
-			width: 128,
-			height: 256,
-		}));
+		global.Image = vi.fn(function () {
+			return {
+				addEventListener: vi.fn(),
+				removeEventListener: vi.fn(),
+				src: '',
+				width: 128,
+				height: 256,
+			};
+		});
 	});
 
 	afterEach(() => {
@@ -110,7 +112,9 @@ describe('Font Module - Basic Tests', () => {
 				height: 256,
 			};
 
-			global.Image = vi.fn(() => mockImage);
+			global.Image = vi.fn(function () {
+				return mockImage;
+			});
 		});
 
 		it('should setup image loading correctly', async () => {
