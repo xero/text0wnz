@@ -13,6 +13,7 @@ These variables are used during the build process and are read from the `.env` f
 **Purpose:** Sets the domain for robots.txt and sitemap.xml generation.
 
 **Usage:**
+
 ```bash
 VITE_DOMAIN='https://your-domain.com'
 ```
@@ -20,6 +21,7 @@ VITE_DOMAIN='https://your-domain.com'
 **Note:** This only affects SEO files. The application itself uses relative URLs and works on any domain.
 
 **Build files affected:**
+
 - `dist/robots.txt` - Sets the sitemap location
 - `dist/sitemap.xml` - Uses domain for URL generation
 
@@ -30,11 +32,13 @@ VITE_DOMAIN='https://your-domain.com'
 **Purpose:** Sets the directory name for UI assets in the build output.
 
 **Usage:**
+
 ```bash
 VITE_UI_DIR='assets/'
 ```
 
 **Build output structure:**
+
 ```
 dist/
 ├── index.html
@@ -54,6 +58,7 @@ dist/
 **Purpose:** Sets the filename for the WebSocket worker.
 
 **Usage:**
+
 ```bash
 VITE_WORKER_FILE='worker.js'
 ```
@@ -67,6 +72,7 @@ VITE_WORKER_FILE='worker.js'
 **Purpose:** Sets the directory name for bitmap font assets.
 
 **Usage:**
+
 ```bash
 VITE_FONT_DIR='bitmapfonts/'
 ```
@@ -84,6 +90,7 @@ These variables are used when running the collaboration server.
 **Purpose:** Sets the port for the WebSocket collaboration server.
 
 **Usage:**
+
 ```bash
 # Command line
 bun server 8060
@@ -102,10 +109,12 @@ docker run -e PORT=8060 text0wnz:latest
 **Purpose:** Sets the Node.js environment mode.
 
 **Values:**
+
 - `production` - Production mode with optimizations
 - `development` - Development mode with verbose logging
 
 **Usage:**
+
 ```bash
 NODE_ENV=development bun server
 
@@ -114,6 +123,7 @@ docker run -e NODE_ENV=development text0wnz:latest
 ```
 
 **Effects:**
+
 - Logging verbosity
 - Error messages
 - Caddy configuration (in Docker)
@@ -126,12 +136,14 @@ docker run -e NODE_ENV=development text0wnz:latest
 **Purpose:** Sets the domain name for the server (Docker only).
 
 **Usage:**
+
 ```bash
 # Docker
 docker run -e DOMAIN=text.example.com text0wnz:latest
 ```
 
 **Effects (Docker):**
+
 - Caddy server configuration
 - SSL certificate generation
 - WebSocket endpoint configuration
@@ -143,6 +155,7 @@ docker run -e DOMAIN=text.example.com text0wnz:latest
 **Purpose:** Secret key for express-session middleware.
 
 **Usage:**
+
 ```bash
 # Docker
 KEY=$(openssl rand -base64 32)
@@ -150,9 +163,11 @@ docker run -e SESSION_KEY=$KEY text0wnz:latest
 ```
 
 **Security:**
+
 - Should be a long random string in production
 - Used for session cookie signing
 - Auto-generated via urandom in Docker if not provided
+
 ```bash
 SESSION_KEY=$(tr -dc 'a-z0-9' </dev/urandom | head -c 20)
 ```
@@ -164,6 +179,7 @@ SESSION_KEY=$(tr -dc 'a-z0-9' </dev/urandom | head -c 20)
 **Purpose:** Sets the Caddy data directory.
 
 **Usage:**
+
 ```bash
 # Docker
 docker run -e XDG_DATA_HOME=/custom/path text0wnz:latest
@@ -176,6 +192,7 @@ docker run -e XDG_DATA_HOME=/custom/path text0wnz:latest
 **Purpose:** Sets the Caddy configuration directory.
 
 **Usage:**
+
 ```bash
 # Docker
 docker run -e XDG_CONFIG_HOME=/custom/path text0wnz:latest
@@ -190,6 +207,7 @@ These are GitHub secrets and environment variables used in workflows.
 **Purpose:** Authentication for GitHub API operations.
 
 **Used in:**
+
 - All workflows for repository access
 - Docker image pushes to GHCR
 - Artifact uploads/downloads
@@ -202,6 +220,7 @@ These are GitHub secrets and environment variables used in workflows.
 **Purpose:** Docker Hub login username.
 
 **Setup:**
+
 ```
 Repository Settings → Secrets and variables → Actions → New repository secret
 Name: DOCKERHUB_USERNAME
@@ -215,6 +234,7 @@ Value: your-dockerhub-username
 **Purpose:** Docker Hub access token (password).
 
 **Setup:**
+
 ```
 1. Create access token at https://hub.docker.com/settings/security
 2. Add to GitHub:
@@ -230,6 +250,7 @@ Value: your-dockerhub-username
 **Purpose:** Personal access token for wiki repository access.
 
 **Setup:**
+
 ```
 1. Create personal access token at https://github.com/settings/tokens
    Required permissions: repo (full control)
@@ -246,6 +267,7 @@ Value: your-dockerhub-username
 **Purpose:** Personal access token for GitHub Packages.
 
 **Setup:**
+
 ```
 1. Create personal access token at https://github.com/settings/tokens
    Required permissions: write:packages, read:packages
@@ -260,6 +282,7 @@ Value: your-dockerhub-username
 The `.env` file in the project root is used for local development configuration.
 
 **Example `.env`:**
+
 ```bash
 # Build configuration
 VITE_DOMAIN='https://text.0w.nz'
@@ -279,6 +302,7 @@ NODE_ENV=production
 ### Local Development
 
 **Option 1: .env file (recommended)**
+
 ```bash
 # Create .env file
 cat > .env << EOF
@@ -292,6 +316,7 @@ bun server
 ```
 
 **Option 2: Command line**
+
 ```bash
 # Inline
 VITE_DOMAIN='https://localhost' bun bake
@@ -307,6 +332,7 @@ bun server
 ### Docker
 
 **Option 1: -e flags**
+
 ```bash
 docker run \
   -e DOMAIN=your.domain.com \
@@ -316,6 +342,7 @@ docker run \
 ```
 
 **Option 2: --env-file**
+
 ```bash
 # Create docker.env file
 cat > docker.env << EOF
@@ -329,6 +356,7 @@ docker run --env-file docker.env text0wnz:latest
 ```
 
 **Option 3: docker-compose.yml**
+
 ```yaml
 version: '3.8'
 services:
@@ -339,8 +367,8 @@ services:
       - NODE_ENV=production
       - SESSION_KEY=your-secret-key
     ports:
-      - "80:80"
-      - "443:443"
+      - '80:80'
+      - '443:443'
 ```
 
 ### CI/CD (GitHub Actions)
@@ -365,11 +393,13 @@ jobs:
 ### Variables Not Working
 
 **Build-time variables not applied:**
+
 - Ensure `.env` file exists in project root
 - Variable names _**must**_ start with `VITE_`
 - Rebuild application after changing variables
 
 **Runtime variables not working:**
+
 - Check environment variable is exported
 - Verify variable name (case-sensitive)
 - Check Docker logs for environment values

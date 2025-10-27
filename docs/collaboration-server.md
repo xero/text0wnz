@@ -67,6 +67,7 @@ bun i
 ```
 
 Required packages:
+
 - `express` (v5.1.0+) - Web framework
 - `express-session` (v1.18.2+) - Session middleware
 - `express-ws` (v5.0.2+) - WebSocket support
@@ -74,6 +75,7 @@ Required packages:
 ### Starting the Server
 
 Basic start:
+
 ```bash
 bun server
 # or
@@ -84,34 +86,38 @@ The server starts on port 1337 by default.
 
 ## Command-Line Options
 
-| Option                | Description                                                | Default             |
-|-----------------------|------------------------------------------------------------|---------------------|
-| `[port]`              | Port to run the server on                                  | `1337`              |
-| `--ssl`               | Enable SSL (requires certificates in `ssl-dir`)            | Disabled            |
-| `--ssl-dir <path>`    | SSL certificate directory                                  | `/etc/ssl/private`  |
-| `--save-interval <n>` | Auto-save interval in minutes                              | `30` (minutes)      |
-| `--session-name <str>`| Session file prefix (for state and chat backups)           | `joint`             |
-| `--debug`             | Enable verbose logging                                     | `false`             |
-| `--help`              | Show help message and usage examples                       | -                   |
+| Option                 | Description                                      | Default            |
+| ---------------------- | ------------------------------------------------ | ------------------ |
+| `[port]`               | Port to run the server on                        | `1337`             |
+| `--ssl`                | Enable SSL (requires certificates in `ssl-dir`)  | Disabled           |
+| `--ssl-dir <path>`     | SSL certificate directory                        | `/etc/ssl/private` |
+| `--save-interval <n>`  | Auto-save interval in minutes                    | `30` (minutes)     |
+| `--session-name <str>` | Session file prefix (for state and chat backups) | `joint`            |
+| `--debug`              | Enable verbose logging                           | `false`            |
+| `--help`               | Show help message and usage examples             | -                  |
 
 ### Examples
 
 **Basic usage with custom port:**
+
 ```bash
 bun server 8080
 ```
 
 **With SSL and custom session name:**
+
 ```bash
 bun server 443 --ssl --ssl-dir /etc/letsencrypt --session-name myjam
 ```
 
 **With custom save interval and debug mode:**
+
 ```bash
 bun server 1337 --save-interval 10 --debug
 ```
 
 **Complete configuration:**
+
 ```bash
 bun server 8080 --ssl --ssl-dir /etc/letsencrypt --save-interval 15 --session-name collab --debug
 ```
@@ -120,15 +126,16 @@ bun server 8080 --ssl --ssl-dir /etc/letsencrypt --save-interval 15 --session-na
 
 You can set environment variables before starting the server:
 
-| Variable      | Description                                 | Example                     |
-|---------------|---------------------------------------------|------------------------------|
-| `NODE_ENV`    | Node environment setting                    | `production`                 |
-| `SESSION_KEY` | Session secret key for express              | `supersecretkey`             |
+| Variable      | Description                    | Example          |
+| ------------- | ------------------------------ | ---------------- |
+| `NODE_ENV`    | Node environment setting       | `production`     |
+| `SESSION_KEY` | Session secret key for express | `supersecretkey` |
 
 > [!IMPORTANT]
 > By default, the session secret is set to `"sauce"`. For production use, set a strong value via `SESSION_KEY` or modify in `src/js/server/server.js`.
 
 **Example with environment variables:**
+
 ```bash
 NODE_ENV=production SESSION_KEY=your-secret-key bun server 1337
 ```
@@ -137,31 +144,31 @@ NODE_ENV=production SESSION_KEY=your-secret-key bun server 1337
 
 ### Client-to-Server Messages
 
-| Message Type | Format | Description |
-|--------------|--------|-------------|
-| `join` | `["join", username]` | User joins collaboration session |
-| `nick` | `["nick", newUsername]` | User changes display name |
-| `chat` | `["chat", message]` | Chat message |
-| `draw` | `["draw", blocks]` | Drawing command with array of canvas blocks |
-| `resize` | `["resize", {columns, rows}]` | Canvas size change |
-| `fontChange` | `["fontChange", {fontName}]` | Font selection change |
-| `iceColorsChange` | `["iceColorsChange", {iceColors}]` | Ice colors toggle |
-| `letterSpacingChange` | `["letterSpacingChange", {letterSpacing}]` | Letter spacing toggle |
+| Message Type          | Format                                     | Description                                 |
+| --------------------- | ------------------------------------------ | ------------------------------------------- |
+| `join`                | `["join", username]`                       | User joins collaboration session            |
+| `nick`                | `["nick", newUsername]`                    | User changes display name                   |
+| `chat`                | `["chat", message]`                        | Chat message                                |
+| `draw`                | `["draw", blocks]`                         | Drawing command with array of canvas blocks |
+| `resize`              | `["resize", {columns, rows}]`              | Canvas size change                          |
+| `fontChange`          | `["fontChange", {fontName}]`               | Font selection change                       |
+| `iceColorsChange`     | `["iceColorsChange", {iceColors}]`         | Ice colors toggle                           |
+| `letterSpacingChange` | `["letterSpacingChange", {letterSpacing}]` | Letter spacing toggle                       |
 
 ### Server-to-Client Messages
 
-| Message Type | Format | Description |
-|--------------|--------|-------------|
-| `start` | `["start", sessionData, sessionID, userList]` | Initial session data |
-| `join` | `["join", username, sessionID]` | User joined notification |
-| `part` | `["part", sessionID]` | User left notification |
-| `nick` | `["nick", username, sessionID]` | User name change |
-| `chat` | `["chat", username, message]` | Chat message broadcast |
-| `draw` | `["draw", blocks]` | Drawing command broadcast |
-| `resize` | `["resize", {columns, rows}]` | Canvas resize broadcast |
-| `fontChange` | `["fontChange", {fontName}]` | Font change broadcast |
-| `iceColorsChange` | `["iceColorsChange", {iceColors}]` | Ice colors broadcast |
-| `letterSpacingChange` | `["letterSpacingChange", {letterSpacing}]` | Letter spacing broadcast |
+| Message Type          | Format                                        | Description               |
+| --------------------- | --------------------------------------------- | ------------------------- |
+| `start`               | `["start", sessionData, sessionID, userList]` | Initial session data      |
+| `join`                | `["join", username, sessionID]`               | User joined notification  |
+| `part`                | `["part", sessionID]`                         | User left notification    |
+| `nick`                | `["nick", username, sessionID]`               | User name change          |
+| `chat`                | `["chat", username, message]`                 | Chat message broadcast    |
+| `draw`                | `["draw", blocks]`                            | Drawing command broadcast |
+| `resize`              | `["resize", {columns, rows}]`                 | Canvas resize broadcast   |
+| `fontChange`          | `["fontChange", {fontName}]`                  | Font change broadcast     |
+| `iceColorsChange`     | `["iceColorsChange", {iceColors}]`            | Ice colors broadcast      |
+| `letterSpacingChange` | `["letterSpacingChange", {letterSpacing}]`    | Letter spacing broadcast  |
 
 ## Session Management
 
@@ -189,6 +196,7 @@ Session files are stored in the server working directory:
 - `{sessionName} {timestamp}.bin` - Timestamped backups
 
 **Example:**
+
 - `joint.bin` - Current canvas state
 - `joint.json` - Current chat history
 - `joint 2024-01-15T10-30-00.bin` - Backup from specific time
@@ -196,15 +204,18 @@ Session files are stored in the server working directory:
 ### State Persistence
 
 **Auto-save:**
+
 - Saves at configured intervals (default: 30 minutes)
 - Creates timestamped backup on each save
 - Persists both canvas and chat data
 
 **Manual save:**
+
 - Triggered by configuration changes
 - Runs on server shutdown (graceful)
 
 **State restoration:**
+
 - Loads existing session on startup
 - New users receive current state
 - Seamless mid-session joins
@@ -236,17 +247,20 @@ WantedBy=multi-user.target
 ```
 
 **Enable and start:**
+
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable --now text0wnz.service
 ```
 
 **Check status:**
+
 ```bash
 sudo systemctl status text0wnz.service
 ```
 
 **View logs:**
+
 ```bash
 sudo journalctl -u text0wnz.service -f
 ```
@@ -273,10 +287,12 @@ forever restart src/js/server/main.js
 ```
 
 **Pros:**
+
 - Simple and lightweight
 - Easy to set up
 
 **Cons:**
+
 - Less robust than systemd
 - No system-level integration
 
@@ -335,6 +351,7 @@ New users joining mid-session receive the current collaboration state, not the d
 ### Common Issues
 
 **Port already in use:**
+
 ```bash
 # Check what's using the port
 sudo lsof -i :1337
@@ -344,6 +361,7 @@ bun server 8080
 ```
 
 **Permission denied (port < 1024):**
+
 ```bash
 # Use sudo for privileged ports
 sudo bun server 443 --ssl
@@ -353,6 +371,7 @@ bun server 8443 --ssl
 ```
 
 **SSL certificate errors:**
+
 ```bash
 # Verify certificate files exist
 ls -la /etc/ssl/private/letsencrypt-domain.*
@@ -366,6 +385,7 @@ openssl x509 -in /etc/ssl/private/letsencrypt-domain.pem -noout -dates
 ```
 
 **Session not saving:**
+
 ```bash
 # Check write permissions in working directory
 ls -la session/
@@ -379,6 +399,7 @@ bun server 1337 --debug
 ```
 
 **WebSocket connection fails:**
+
 - Check firewall rules (ufw, iptables)
 - Verify nginx proxy configuration
 - Test direct connection (bypass proxy)
@@ -387,11 +408,13 @@ bun server 1337 --debug
 ### Debug Mode
 
 Enable verbose logging:
+
 ```bash
 bun server 1337 --debug
 ```
 
 Debug mode logs:
+
 - Connection attempts
 - Message broadcasts
 - Save operations
@@ -401,22 +424,26 @@ Debug mode logs:
 ## Performance Considerations
 
 **Memory Usage:**
+
 - Minimal baseline (Node.js + Express)
 - Scales with number of connected users
 - Canvas state kept in memory
 - Chat history accumulates over time
 
 **Network Bandwidth:**
+
 - Drawing commands broadcast to all users
 - Efficient binary protocol
 - Message deduplication by worker
 
 **Disk I/O:**
+
 - Auto-save at intervals (not continuous)
 - Timestamped backups on each save
 - Consider SSD for better performance
 
 **Optimization Tips:**
+
 - Lower save interval for busy sessions
 - Limit chat history size
 - Use compression in nginx proxy
@@ -437,16 +464,19 @@ Debug mode logs:
 For production deployments with high traffic:
 
 **Load Balancing:**
+
 - Not currently supported (sticky sessions required)
 - Use nginx for SSL termination only
 - Consider horizontal scaling in future versions
 
 **Database Integration:**
+
 - Currently file-based storage
 - Future: Redis/MongoDB for session storage
 - Would enable multi-server deployments
 
 **Monitoring:**
+
 - Use PM2 for process monitoring
 - Set up health check endpoints
 - Monitor with tools like Grafana/Prometheus

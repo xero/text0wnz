@@ -11,18 +11,21 @@ teXt0wnz uses a comprehensive three-part testing strategy: unit tests with Vites
 ### Triple-Headed Testing
 
 **Vitest (Unit Tests)**
+
 - Test individual modules and functions in isolation
 - Fast execution
 - High coverage of business logic
 - Mock external dependencies
 
 **Testing Library (DOM/Component Tests)**
+
 - Test DOM manipulation and user interactions
 - Focus on behavior over implementation
 - User-centric testing approach
 - Integration between UI components
 
 **Playwright (E2E Tests)**
+
 - Test complete user workflows in real browsers
 - Cross-browser compatibility testing
 - Visual regression detection
@@ -67,25 +70,26 @@ tests/
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  test: {
-    environment: 'jsdom',
-    setupFiles: ['./tests/setupTests.js'],
-    globals: true,
-    // Vitest v4: Use maxWorkers and isolate instead of threads/maxThreads
-    maxWorkers: 1,
-    isolate: true,
-    coverage: {
-      enabled: true,
-      reporter: ['text', 'html'],
-      reportsDirectory: 'tests/results/coverage',
-    },
-  },
+	test: {
+		environment: 'jsdom',
+		setupFiles: ['./tests/setupTests.js'],
+		globals: true,
+		// Vitest v4: Use maxWorkers and isolate instead of threads/maxThreads
+		maxWorkers: 1,
+		isolate: true,
+		coverage: {
+			enabled: true,
+			reporter: ['text', 'html'],
+			reportsDirectory: 'tests/results/coverage',
+		},
+	},
 });
 ```
 
 ### Running Unit Tests
 
 **Run all tests:**
+
 ```bash
 bun test:unit
 # or
@@ -93,6 +97,7 @@ npm run test:unit
 ```
 
 **Run tests with coverage:**
+
 ```bash
 npx vitest run --coverage
 # or
@@ -100,6 +105,7 @@ bunx vitest run --coverage
 ```
 
 **Run tests in watch mode:**
+
 ```bash
 npx vitest
 # or
@@ -107,18 +113,21 @@ bunx vitest
 ```
 
 **Run specific test file:**
+
 ```bash
 npx vitest tests/unit/canvas.test.js
 npx vitest tests/unit/server/config.test.js
 ```
 
 **Run tests matching a pattern:**
+
 ```bash
 npx vitest canvas
 npx vitest server
 ```
 
 **Run tests with UI:**
+
 ```bash
 npx vitest --ui
 ```
@@ -126,16 +135,19 @@ npx vitest --ui
 ### Test Coverage
 
 **Current status:**
+
 - Overall: ~45% statement coverage
 - Client modules: 45% average
 - Server modules: 51% average
 
 **Coverage goals:**
+
 - Critical modules: 80%+ coverage
 - General modules: 60%+ coverage
 - Utility functions: 90%+ coverage
 
 **View coverage report:**
+
 ```bash
 # After running tests with --coverage
 open tests/results/coverage/index.html      # macOS
@@ -143,9 +155,10 @@ xdg-open tests/results/coverage/index.html  # Linux
 start tests/results/coverage/index.html     # Windows
 ```
 
-**V8 Coverage Improvements in Vitest v4:**
+#### V8 Coverage Improvements in Vitest v4
 
 Vitest v4 uses AST-based coverage analysis for more accurate results. Key improvements:
+
 - More precise coverage mapping with fewer false positives
 - Lines without runtime code are automatically excluded
 - `coverage.ignoreClassMethods` now supported by V8 provider
@@ -153,7 +166,8 @@ Vitest v4 uses AST-based coverage analysis for more accurate results. Key improv
   - Single line: `/* v8 ignore next */`
   - Code block: `/* v8 ignore start */` and `/* v8 ignore stop */`
 
-**Coverage ignore examples:**
+#### Coverage ignore examples
+
 ```javascript
 // Ignore a single line
 /* v8 ignore next */
@@ -162,7 +176,7 @@ if (DEBUG) console.log('debug info');
 // Ignore a block
 /* v8 ignore start */
 function debugHelper() {
-  // development-only code
+	// development-only code
 }
 /* v8 ignore stop */
 ```
@@ -172,6 +186,7 @@ function debugHelper() {
 #### Client Modules
 
 **canvas.test.js** - Canvas rendering and manipulation
+
 - Canvas initialization and setup
 - Drawing operations
 - Undo/redo functionality
@@ -181,6 +196,7 @@ function debugHelper() {
 - XBin font/palette handling
 
 **file.test.js** - File I/O operations
+
 - ANSI file format handling
 - Binary (.bin) file support
 - XBin format support
@@ -190,6 +206,7 @@ function debugHelper() {
 - Font name conversions
 
 **font.test.js** - Font loading and rendering
+
 - Font loading from images
 - XB font data parsing
 - Glyph rendering
@@ -199,6 +216,7 @@ function debugHelper() {
 - Font dimension validation
 
 **freehand_tools.test.js** - Drawing tools
+
 - Halfblock/block drawing
 - Character brush
 - Shading brush
@@ -209,6 +227,7 @@ function debugHelper() {
 - Tool state management
 
 **keyboard.test.js** - Keyboard input and shortcuts
+
 - Keyboard mode toggle
 - Text input handling
 - Arrow key navigation
@@ -217,12 +236,14 @@ function debugHelper() {
 - Special key handling
 
 **main.test.js** - Application initialization
+
 - Module initialization
 - Event listener setup
 - State management
 - Integration tests
 
 **network.test.js** - Network and collaboration
+
 - WebSocket connection
 - Message handling
 - Chat functionality
@@ -230,6 +251,7 @@ function debugHelper() {
 - Drawing synchronization
 
 **palette.test.js** - Color palette management
+
 - Default palette creation
 - Color selection
 - RGB conversion
@@ -237,6 +259,7 @@ function debugHelper() {
 - Palette updates
 
 **state.test.js** - Global state management
+
 - State initialization
 - State updates
 - Font management
@@ -244,29 +267,34 @@ function debugHelper() {
 - Canvas state
 
 **toolbar.test.js** - Toolbar interactions
+
 - Tool selection
 - Tool switching
 - Toolbar state management
 - UI updates
 
 **ui.test.js** - User interface components
+
 - UI element creation
 - Event handling
 - DOM manipulation
 - Component interactions
 
 **utils.test.js** - Utility functions
+
 - Helper functions
 - Data manipulation
 - Format conversions
 
 **worker.test.js** - Web Worker
+
 - Worker message handling
 - Data processing algorithms
 - Block deduplication logic
 - Message processing
 
 **xbin-persistence.test.js** - XBin format persistence
+
 - Embedded font handling
 - Palette persistence
 - File roundtrip testing
@@ -274,11 +302,13 @@ function debugHelper() {
 #### Server Modules
 
 **server/config.test.js** - Server configuration
+
 - Configuration parsing
 - Default values
 - Validation
 
 **server/fileio.test.js** - Server file operations
+
 - SAUCE record creation and parsing
 - Binary data conversions
 - File format validation
@@ -286,29 +316,34 @@ function debugHelper() {
 - Data type conversions
 
 **server/main.test.js** - Server main module
+
 - Module structure validation
 - Configuration integration
 - Component exports
 - Dependency integration
 
 **server/server.test.js** - Express server
+
 - Server initialization
 - Route handling
 - Middleware setup
 - SSL configuration
 
 **server/text0wnz.test.js** - Collaboration engine
+
 - Session management
 - User tracking
 - Canvas state synchronization
 - Message broadcasting
 
 **server/utils.test.js** - Server utilities
+
 - Helper functions
 - Data validation
 - Format conversions
 
 **server/websockets.test.js** - WebSocket handlers
+
 - Connection handling
 - Message routing
 - Session cleanup
@@ -318,85 +353,103 @@ function debugHelper() {
 
 > [!IMPORTANT]
 > **Vitest v4 requires regular functions (not arrow functions) for constructor mocks**
-> 
+>
 > When mocking constructors, you must use the `function` keyword or `class` syntax. Arrow functions will cause a "not a constructor" error.
-> 
-> Since the project's ESLint configuration prefers arrow functions, **you must add this comment at the top of all test files**:
+>
+> Since the project's ESLint configuration prefers arrow functions, you may see lint warnings when using regular functions for constructor mocks.
+>
+> **Best practice:** Only disable ESLint's `prefer-arrow-callback` or `func-names` rules locally, around the specific constructor mock, rather than for the entire file. For example:
+>
 > ```javascript
-> /* eslint-disable prefer-arrow-callback */
+> // eslint-disable-next-line prefer-arrow-callback
+> const MyMock = function () {
+> 	/* ... */
+> };
+> ```
+>
+> Or, if you need to disable `func-names` for anonymous constructors:
+>
+> ```javascript
+> // eslint-disable-next-line func-names
+> const MyMock = function () {
+> 	/* ... */
+> };
 > ```
 
 **Test structure:**
+
 ```javascript
 /* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { functionToTest } from '../../src/js/client/module.js';
 
 describe('Module Name', () => {
-  beforeEach(() => {
-    // Setup before each test
-    vi.clearAllMocks();
-  });
+	beforeEach(() => {
+		// Setup before each test
+		vi.clearAllMocks();
+	});
 
-  afterEach(() => {
-    // Cleanup after each test
-    vi.restoreAllMocks();
-  });
+	afterEach(() => {
+		// Cleanup after each test
+		vi.restoreAllMocks();
+	});
 
-  describe('Function Group', () => {
-    it('should do something specific', () => {
-      // Arrange
-      const input = 'test data';
+	describe('Function Group', () => {
+		it('should do something specific', () => {
+			// Arrange
+			const input = 'test data';
 
-      // Act
-      const result = functionToTest(input);
+			// Act
+			const result = functionToTest(input);
 
-      // Assert
-      expect(result).toBe('expected output');
-    });
+			// Assert
+			expect(result).toBe('expected output');
+		});
 
-    it('should handle edge cases', () => {
-      expect(() => functionToTest(null)).toThrow();
-    });
-  });
+		it('should handle edge cases', () => {
+			expect(() => functionToTest(null)).toThrow();
+		});
+	});
 });
 ```
 
 **Mocking:**
+
 ```javascript
-/* eslint-disable prefer-arrow-callback */
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { functionToTest } from '../../src/js/client/module.js';
+// Example of a constructor mock using a regular function:
+// eslint-disable-next-line prefer-arrow-callback
+const MyConstructorMock = function () {
+	// mock implementation
+};
 
-// Mock a module
-vi.mock('../../src/js/client/state.js', () => ({
-  default: {
-    font: { /* mock implementation */ },
-    palette: { /* mock implementation */ }
-  }
-}));
-
-// Mock a regular function (arrow functions OK here)
+// Mock a regular function (arrow functions are OK for regular function mocks, but NOT for constructor mocks)
 const mockFunction = vi.fn(() => 'mocked value');
 
 // Mock a constructor - MUST use function keyword or class
 global.FileReader = vi.fn(function () {
-  return mockReaderInstance;
+	return mockReaderInstance;
 });
 
 // OR use a class for constructor mocks
-global.FileReader = vi.fn(class MockFileReader {
-  constructor() {
-    this.result = null;
-  }
-  readAsArrayBuffer() {
-    // mock implementation
-  }
-});
+global.FileReader = vi.fn(
+	class MockFileReader {
+		constructor() {
+			this.result = null;
+		}
+		readAsArrayBuffer() {
+			// mock implementation
+		}
+	},
+);
 
 // Spy on a method
 const spy = vi.spyOn(object, 'method');
 ```
 
 **Best practices:**
+
 1. Test isolation - each test should be independent
 2. Clear names - describe expected behavior
 3. Arrange-Act-Assert - structure tests clearly
@@ -413,6 +466,7 @@ const spy = vi.spyOn(object, 'method');
 Testing Library is integrated with Vitest for DOM manipulation testing.
 
 **Configuration:** `tests/setupTests.js`
+
 ```javascript
 import '@testing-library/jest-dom';
 ```
@@ -420,40 +474,43 @@ import '@testing-library/jest-dom';
 ### DOM Testing Patterns
 
 **Testing DOM manipulation:**
+
 ```javascript
 /* eslint-disable prefer-arrow-callback */
 import { screen } from '@testing-library/dom';
 
 it('should update element', () => {
-  const element = document.createElement('div');
-  updateElement(element, 'new text');
-  expect(element).toHaveTextContent('new text');
+	const element = document.createElement('div');
+	updateElement(element, 'new text');
+	expect(element).toHaveTextContent('new text');
 });
 ```
 
 **Testing events:**
+
 ```javascript
 /* eslint-disable prefer-arrow-callback */
 import { fireEvent } from '@testing-library/dom';
 
 it('should handle events', () => {
-  const handler = vi.fn();
-  const button = document.createElement('button');
-  button.addEventListener('click', handler);
+	const handler = vi.fn();
+	const button = document.createElement('button');
+	button.addEventListener('click', handler);
 
-  fireEvent.click(button);
+	fireEvent.click(button);
 
-  expect(handler).toHaveBeenCalled();
+	expect(handler).toHaveBeenCalled();
 });
 ```
 
 **Testing async code:**
+
 ```javascript
 /* eslint-disable prefer-arrow-callback */
 
 it('should load data asynchronously', async () => {
-  const result = await loadData();
-  expect(result).toBeDefined();
+	const result = await loadData();
+	expect(result).toBeDefined();
 });
 ```
 
@@ -465,25 +522,25 @@ it('should load data asynchronously', async () => {
 
 ```javascript
 export default defineConfig({
-  testDir: './tests/e2e',
-  timeout: 30000,
-  retries: 1,
-  outputDir: 'tests/results/e2e',
-  use: {
-    baseURL: 'http://localhost:8060',
-    viewport: { width: 1280, height: 720 },
-    screenshot: 'only-on-failure',
-  },
-  webServer: {
-    command: 'bun www',
-    port: 8060,
-    reuseExistingServer: !process.env.CI,
-  },
-  projects: [
-    { name: 'Chrome', use: { channel: 'chrome' } },
-    { name: 'Firefox', use: { browserName: 'firefox' } },
-    { name: 'WebKit', use: { browserName: 'webkit' } },
-  ],
+	testDir: './tests/e2e',
+	timeout: 30000,
+	retries: 1,
+	outputDir: 'tests/results/e2e',
+	use: {
+		baseURL: 'http://localhost:8060',
+		viewport: { width: 1280, height: 720 },
+		screenshot: 'only-on-failure',
+	},
+	webServer: {
+		command: 'bun www',
+		port: 8060,
+		reuseExistingServer: !process.env.CI,
+	},
+	projects: [
+		{ name: 'Chrome', use: { channel: 'chrome' } },
+		{ name: 'Firefox', use: { browserName: 'firefox' } },
+		{ name: 'WebKit', use: { browserName: 'webkit' } },
+	],
 });
 ```
 
@@ -492,11 +549,13 @@ export default defineConfig({
 **Prerequisites:**
 
 1. Build the application:
+
 ```bash
 bun bake
 ```
 
 2. Install browsers (first time only):
+
 ```bash
 bun test:install
 # or
@@ -504,6 +563,7 @@ npx playwright install
 ```
 
 **Run all E2E tests:**
+
 ```bash
 bun test:e2e
 # or
@@ -511,6 +571,7 @@ npx playwright test
 ```
 
 **Run tests for specific browser:**
+
 ```bash
 npx playwright test --project=Chrome
 npx playwright test --project=Firefox
@@ -518,21 +579,25 @@ npx playwright test --project=WebKit
 ```
 
 **Run specific test file:**
+
 ```bash
 npx playwright test tests/e2e/canvas.spec.js
 ```
 
 **Run tests in UI mode (interactive):**
+
 ```bash
 npx playwright test --ui
 ```
 
 **Run tests in headed mode (see browser):**
+
 ```bash
 npx playwright test --headed
 ```
 
 **Debug tests:**
+
 ```bash
 npx playwright test --debug
 ```
@@ -540,11 +605,13 @@ npx playwright test --debug
 ### Test Results
 
 Results are saved to:
+
 - **HTML Report:** `tests/results/playwright-report/`
 - **JSON Results:** `tests/results/e2e/results.json`
 - **Videos/Screenshots:** `tests/results/e2e/`
 
 **View HTML report:**
+
 ```bash
 npx playwright show-report tests/results/playwright-report
 ```
@@ -552,6 +619,7 @@ npx playwright show-report tests/results/playwright-report
 ### E2E Test Files
 
 **canvas.spec.js** - Basic canvas functionality
+
 - Application loading
 - Canvas visibility and initialization
 - Canvas resizing
@@ -560,6 +628,7 @@ npx playwright show-report tests/results/playwright-report
 - Position information updates
 
 **tools.spec.js** - Drawing tools functionality
+
 - Freehand drawing tool
 - Character tool
 - Brush tool
@@ -572,6 +641,7 @@ npx playwright show-report tests/results/playwright-report
 - Copy/paste operations
 
 **palette.spec.js** - Color palette and character selection
+
 - Color palette visibility
 - Foreground/background color selection
 - ICE colors toggle
@@ -580,6 +650,7 @@ npx playwright show-report tests/results/playwright-report
 - Character palette selection
 
 **file-operations.spec.js** - File I/O and canvas operations
+
 - New document creation
 - File open dialog
 - Save options (ANSI, Binary, XBin, PNG)
@@ -590,6 +661,7 @@ npx playwright show-report tests/results/playwright-report
 - Canvas clearing
 
 **keyboard.spec.js** - Keyboard shortcuts and keyboard mode
+
 - Undo/redo shortcuts
 - Tool selection shortcuts
 - Keyboard mode entry/exit
@@ -600,6 +672,7 @@ npx playwright show-report tests/results/playwright-report
 - Home, End, PageUp, PageDown navigation
 
 **ui.spec.js** - User interface elements
+
 - Main UI element visibility
 - Responsive layout
 - Position information display
@@ -613,27 +686,29 @@ npx playwright show-report tests/results/playwright-report
 ### Writing E2E Tests
 
 **Test structure:**
+
 ```javascript
 import { test, expect } from '@playwright/test';
 
 test.describe('Feature Name', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('#canvas-container', { timeout: 10000 });
-    await page.waitForTimeout(1000);
-  });
+	test.beforeEach(async ({ page }) => {
+		await page.goto('/');
+		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForTimeout(1000);
+	});
 
-  test('should do something', async ({ page }) => {
-    const element = page.locator('#my-element');
-    await element.click();
-    await page.waitForTimeout(300);
+	test('should do something', async ({ page }) => {
+		const element = page.locator('#my-element');
+		await element.click();
+		await page.waitForTimeout(300);
 
-    await expect(element).toBeVisible();
-  });
+		await expect(element).toBeVisible();
+	});
 });
 ```
 
 **Best practices:**
+
 1. Wait for elements - ensure elements are ready
 2. Use timeouts - add delays after interactions
 3. Flexible selectors - use multiple selector strategies
@@ -645,11 +720,13 @@ test.describe('Feature Name', () => {
 ## Continuous Integration
 
 Tests run automatically on:
+
 - Every pull request
 - Every commit to main branch
 - Scheduled daily runs
 
 **GitHub Actions workflow:**
+
 - Installs dependencies
 - Builds application
 - Runs unit tests
@@ -678,11 +755,13 @@ Tests run automatically on:
 ### Unit Tests
 
 **Tests timing out:**
+
 - Increase timeout in vitest.config.js
 - Check for unhandled promises
 - Look for infinite loops
 
 **Mocks not working:**
+
 - Ensure mocks are defined before imports
 - Check mock file paths
 - Verify mock implementation
@@ -690,17 +769,20 @@ Tests run automatically on:
 - Add `/* eslint-disable prefer-arrow-callback */` at the top of test files
 
 **"is not a constructor" errors:**
+
 - This occurs when using arrow functions with `vi.fn()` for constructor mocks
 - Change `vi.fn(() => ...)` to `vi.fn(function () { ... })` for constructors
 - Or use `vi.fn(class MockClass { ... })` syntax
 - See the Mocking section for examples
 
 **Memory leaks:**
+
 - Clean up event listeners in afterEach
 - Clear large objects after use
 - Use --no-coverage for faster iterations
 
 **Flaky tests:**
+
 - Avoid timing-dependent tests
 - Mock Date.now() for time-based tests
 - Ensure proper cleanup between tests
@@ -708,25 +790,30 @@ Tests run automatically on:
 ### E2E Tests
 
 **Tests fail with connection refused:**
+
 - Ensure application is built: `bun bake`
 - Check web server starts automatically
 - Verify port 8060 is available
 
 **Browsers not installed:**
+
 - Run: `bun test:install`
 - Or: `npx playwright install --with-deps`
 
 **Tests timeout:**
+
 - Increase timeout in playwright.config.js
 - Add longer waits in specific tests
 - Check if application loads slowly
 
 **Tests are flaky:**
+
 - Add explicit waits (waitForTimeout, waitForSelector)
 - Use waitForLoadState('networkidle')
 - Increase retry count in config
 
 **Screenshots/videos not captured:**
+
 - Check outputDir in playwright.config.js
 - Verify write permissions in tests/results/
 - Ensure tests actually fail (screenshots only on failure by default)

@@ -16,6 +16,7 @@ A webserver like nginx serves the static files and proxies WebSocket connections
 ### Basic Setup
 
 **1. Install nginx:**
+
 ```bash
 # Ubuntu/Debian
 sudo apt update
@@ -71,6 +72,7 @@ server {
 ```
 
 **3. Enable the site:**
+
 ```bash
 sudo ln -s /etc/nginx/sites-available/text0wnz /etc/nginx/sites-enabled/
 sudo nginx -t  # Test configuration
@@ -80,17 +82,20 @@ sudo systemctl reload nginx
 ### Key Configuration Points
 
 **Document Root:**
+
 - Must point to the built `dist/` directory
 - Contains `index.html`, `ui/`, and other assets
 - Not the `src/` directory
 
 **WebSocket Proxy:**
+
 - `proxy_pass` must match your collaboration server port
 - Trailing slash is **required** (`http://localhost:1337/`)
 - WebSocket upgrade headers are essential
 - Long timeout (86400 = 24 hours) for persistent connections
 
 **Try Files:**
+
 - `try_files $uri $uri/ /index.html` enables client-side routing
 - Falls back to index.html for SPA behavior
 
@@ -127,6 +132,7 @@ add_header X-Content-Type-Options "nosniff" always;
 ### Let's Encrypt (Certbot)
 
 **1. Install Certbot:**
+
 ```bash
 # Ubuntu/Debian
 sudo apt install certbot python3-certbot-nginx
@@ -136,6 +142,7 @@ sudo yum install certbot python3-certbot-nginx
 ```
 
 **2. Obtain certificate:**
+
 ```bash
 sudo certbot --nginx -d text.0w.nz
 ```
@@ -143,11 +150,13 @@ sudo certbot --nginx -d text.0w.nz
 **3. Auto-renewal:**
 
 Certbot automatically sets up renewal. Verify with:
+
 ```bash
 sudo certbot renew --dry-run
 ```
 
 **4. Copy certificates to expected location:**
+
 ```bash
 sudo cp /etc/letsencrypt/live/text.0w.nz/fullchain.pem /etc/ssl/private/letsencrypt-domain.pem
 sudo cp /etc/letsencrypt/live/text.0w.nz/privkey.pem /etc/ssl/private/letsencrypt-domain.key
@@ -158,6 +167,7 @@ sudo chmod 600 /etc/ssl/private/letsencrypt-domain.key
 **5. Set up renewal hook:**
 
 Create `/etc/letsencrypt/renewal-hooks/deploy/copy-certs.sh`:
+
 ```bash
 #!/bin/bash
 cp /etc/letsencrypt/live/text.0w.nz/fullchain.pem /etc/ssl/private/letsencrypt-domain.pem
@@ -168,6 +178,7 @@ systemctl reload nginx
 ```
 
 Make executable:
+
 ```bash
 sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/copy-certs.sh
 ```
@@ -189,7 +200,7 @@ limit_req_zone $binary_remote_addr zone=text0wnz:10m rate=10r/s;
 server {
     listen 80;
     server_name text.0w.nz;
-    
+
     # Redirect HTTP to HTTPS
     return 301 https://$server_name$request_uri;
 }
@@ -217,15 +228,15 @@ server {
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript 
-               application/x-javascript application/xml+rss 
+    gzip_types text/plain text/css text/xml text/javascript
+               application/x-javascript application/xml+rss
                application/javascript application/json image/svg+xml;
 
     # Brotli compression (if enabled)
     # brotli on;
     # brotli_comp_level 6;
-    # brotli_types text/plain text/css text/xml text/javascript 
-    #              application/x-javascript application/xml+rss 
+    # brotli_types text/plain text/css text/xml text/javascript
+    #              application/x-javascript application/xml+rss
     #              application/javascript application/json image/svg+xml;
 
     # Let's Encrypt challenge
@@ -261,11 +272,11 @@ server {
         # Proxy settings
         proxy_pass http://localhost:1337/;
         proxy_http_version 1.1;
-        
+
         # WebSocket headers
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
-        
+
         # Forwarding headers
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -273,12 +284,12 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Port $server_port;
-        
+
         # Timeouts
         proxy_connect_timeout 7d;
         proxy_send_timeout 7d;
         proxy_read_timeout 7d;
-        
+
         # Buffering
         proxy_buffering off;
         proxy_redirect off;
@@ -296,6 +307,7 @@ server {
 ### Performance Optimizations
 
 **Worker processes:**
+
 ```nginx
 # In nginx.conf
 worker_processes auto;
@@ -303,6 +315,7 @@ worker_connections 1024;
 ```
 
 **Caching:**
+
 ```nginx
 # In http block
 open_file_cache max=1000 inactive=20s;
@@ -312,6 +325,7 @@ open_file_cache_errors on;
 ```
 
 **Buffer sizes:**
+
 ```nginx
 client_body_buffer_size 10K;
 client_header_buffer_size 1k;
@@ -351,7 +365,7 @@ Alternative setup using Apache:
         Options -Indexes +FollowSymLinks
         AllowOverride All
         Require all granted
-        
+
         # Enable SPA routing
         RewriteEngine On
         RewriteBase /
@@ -364,13 +378,13 @@ Alternative setup using Apache:
     # WebSocket proxy for collaboration
     ProxyPreserveHost On
     ProxyRequests Off
-    
+
     RewriteEngine On
     RewriteCond %{HTTP:Upgrade} =websocket [NC]
     RewriteRule /server/(.*) ws://localhost:1337/$1 [P,L]
     RewriteCond %{HTTP:Upgrade} !=websocket [NC]
     RewriteRule /server/(.*) http://localhost:1337/$1 [P,L]
-    
+
     ProxyPass /server http://localhost:1337/
     ProxyPassReverse /server http://localhost:1337/
 
@@ -400,6 +414,7 @@ Alternative setup using Apache:
 ```
 
 **Enable site:**
+
 ```bash
 sudo a2ensite text0wnz
 sudo systemctl reload apache2
@@ -414,31 +429,31 @@ Modern alternative with automatic HTTPS:
 ```caddy
 text.0w.nz {
     # Automatic HTTPS via Let's Encrypt
-    
+
     # Document root
     root * /var/www/text0wnz/dist
-    
+
     # Enable file server
     file_server
-    
+
     # SPA routing
     try_files {path} /index.html
-    
+
     # WebSocket proxy for collaboration
     handle /server* {
         reverse_proxy localhost:1337
     }
-    
+
     # Compression
     encode gzip zstd
-    
+
     # Security headers
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
         X-Frame-Options "SAMEORIGIN"
         X-Content-Type-Options "nosniff"
     }
-    
+
     # Cache static assets
     @static {
         path *.js *.css *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2
@@ -448,6 +463,7 @@ text.0w.nz {
 ```
 
 **Start Caddy:**
+
 ```bash
 sudo caddy start
 ```
@@ -459,11 +475,13 @@ sudo caddy start
 **Problem: WebSocket fails to upgrade**
 
 Check nginx error log:
+
 ```bash
 sudo tail -f /var/log/nginx/error.log
 ```
 
 Common fixes:
+
 1. Ensure trailing slash in `proxy_pass`: `http://localhost:1337/`
 2. Verify WebSocket headers are set
 3. Check long timeout values
@@ -472,6 +490,7 @@ Common fixes:
 **Problem: Connection drops after short time**
 
 Increase timeouts:
+
 ```nginx
 proxy_read_timeout 86400;
 proxy_send_timeout 86400;
@@ -480,6 +499,7 @@ proxy_send_timeout 86400;
 **Problem: 502 Bad Gateway**
 
 Collaboration server not running:
+
 ```bash
 # Check if server is running
 ps aux | grep node
@@ -494,6 +514,7 @@ bun server 1337
 
 1. Verify certificate files exist and are readable
 2. Check certificate validity:
+
 ```bash
 openssl x509 -in /etc/ssl/private/letsencrypt-domain.pem -noout -dates
 ```
@@ -504,6 +525,7 @@ openssl x509 -in /etc/ssl/private/letsencrypt-domain.pem -noout -dates
 **Problem: Mixed content warnings**
 
 Ensure all assets load over HTTPS:
+
 1. Check service worker registration
 2. Verify all URLs are relative or use HTTPS
 3. Add CSP header to enforce HTTPS
@@ -514,11 +536,13 @@ Ensure all assets load over HTTPS:
 
 1. Verify document root points to `dist/` directory
 2. Check file permissions:
+
 ```bash
 ls -la /var/www/text0wnz/dist
 ```
 
 3. Ensure nginx user can read files:
+
 ```bash
 sudo chown -R www-data:www-data /var/www/text0wnz/dist
 sudo chmod -R 755 /var/www/text0wnz/dist
@@ -527,6 +551,7 @@ sudo chmod -R 755 /var/www/text0wnz/dist
 **Problem: CSS/JS not loading**
 
 1. Check MIME types in nginx:
+
 ```nginx
 include /etc/nginx/mime.types;
 default_type application/octet-stream;
@@ -570,6 +595,7 @@ sudo awk '{print $1}' /var/log/nginx/access.log | sort | uniq -c | sort -rn | he
 ### Nginx Status Module
 
 Enable in nginx.conf:
+
 ```nginx
 location /nginx_status {
     stub_status on;
@@ -580,6 +606,7 @@ location /nginx_status {
 ```
 
 Check status:
+
 ```bash
 curl http://localhost/nginx_status
 ```

@@ -7,17 +7,20 @@ This directory contains comprehensive guides for using, developing, testing, and
 ## Quick Links
 
 ### For Users
+
 - Start here: [Editor Client](editor-client.md)
 - Learn the [Editor Interface](interface.md) visually with pictures
 - Learn keyboard shortcuts: [Editor Client - Key Bindings](editor-client.md#key-bindings--mouse-controls)
 - [PWA Install](docs/install-pwa.md): Installation guide for multiple platforms
 
 ### For Developers
+
 - Start here: [Building and Developing](building-and-developing.md)
 - Testing: [Testing Guide](testing.md)
 - Code quality: [Building and Developing - Linting and Formatting](building-and-developing.md#linting-and-formatting)
 
 ### For System Administrators
+
 - Start here: [Webserver Configuration](webserver-configuration.md)
 - Collaboration server: [Collaboration Server](collaboration-server.md)
 - Containerization: [Docker Containerization](docker.md)
@@ -136,7 +139,6 @@ This directory contains comprehensive guides for using, developing, testing, and
 - **[Examples](examples/)** - Sample artwork to view and edit
   - ANSI artwork by [xero](https://16colo.rs/artist/xero)
   - XBin artwork by [hellbeard](https://16colo.rs/artist/hellbeard)
-
 
 ## Docs Directory Structure
 

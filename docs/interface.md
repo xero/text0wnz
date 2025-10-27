@@ -34,7 +34,7 @@ This section of the UI display the current canvas size, font, and cursor positio
 
 ![resolution](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/resolution.png)
 
-Text art is resolution is calculated by columns and rows. 80 x 25 is the default size of dial-up BBS screens, and is still a very common  size for text art to this day. But feel free to make it as large as you like, even use the 80th column _\*gasps!\*_
+Text art is resolution is calculated by columns and rows. 80 x 25 is the default size of dial-up BBS screens, and is still a very common size for text art to this day. But feel free to make it as large as you like, even use the 80th column _\*gasps!\*_
 
 # Color Management
 
@@ -153,6 +153,7 @@ Horizontally mirrors any drawing tool on the opposite site of the canvas.
 Change the font options for your artwork.
 
 ### Font Select
+
 Choose from classic ANSI fonts and modern XBIN fonts. See [fonts.md](fonts) for a complete list.
 
 ![font-select](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/font-select.png)

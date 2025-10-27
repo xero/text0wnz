@@ -96,12 +96,14 @@ src/js/client/
 #### Client Module Descriptions
 
 **main.js** - Application Bootstrap
+
 - Initializes all modules
 - Sets up event listeners
 - Handles application startup
 - Manages mode selection (local vs collaborative)
 
 **canvas.js** - Canvas System
+
 - Offscreen canvas rendering
 - Dirty region tracking
 - Character and color rendering
@@ -111,12 +113,14 @@ src/js/client/
 - Exports: `createCanvas()`
 
 **compression.js** - Data Compression
+
 - Run-length encoding (RLE)
 - Canvas data compression for storage
 - Decompression for restoration
 - Exports: `compress()`, `decompress()`
 
 **file.js** - File Operations
+
 - ANSI format (.ans, .utf8.ans) support
 - Binary format (.bin) support
 - XBIN format (.xb) support
@@ -128,6 +132,7 @@ src/js/client/
 - Exports: `loadFile()`, `saveFile()`, etc.
 
 **font.js** - Font System
+
 - Load fonts from PNG images
 - XB font data parsing
 - Glyph rendering
@@ -136,12 +141,14 @@ src/js/client/
 - Exports: `loadFont()`, `renderGlyph()`
 
 **fontCache.js** - Font Caching
+
 - LRU cache for fonts
 - Memory management
 - Preloading support
 - Exports: `FontCache` class
 
 **freehand_tools.js** - Drawing Tools
+
 - Halfblock/Block tool
 - Character brush
 - Shading brush (░▒▓)
@@ -155,6 +162,7 @@ src/js/client/
 - Exports: Tool objects with `enable()`/`disable()` methods
 
 **keyboard.js** - Keyboard System
+
 - Keyboard mode toggle
 - Text input handling
 - Arrow key navigation
@@ -164,12 +172,14 @@ src/js/client/
 - Exports: `KeyboardMode` object
 
 **lazyFont.js** - Lazy Loading
+
 - On-demand font loading
 - Loading state management
 - Error handling
 - Exports: `loadFontLazy()`
 
 **magicNumbers.js** - Constants
+
 - Canvas dimensions
 - File format signatures
 - Color codes
@@ -177,6 +187,7 @@ src/js/client/
 - Exports: Constant values
 
 **network.js** - Network Layer
+
 - WebSocket client management
 - Connection state
 - Message protocol handling
@@ -186,6 +197,7 @@ src/js/client/
 - Exports: `Network` object
 
 **palette.js** - Color Management
+
 - 16-color ANSI palette
 - ICE colors support (extended backgrounds)
 - RGB to ANSI conversion
@@ -195,6 +207,7 @@ src/js/client/
 - Exports: `Palette` object
 
 **state.js** - State Management
+
 - Global application state
 - Canvas configuration
 - Current tool selection
@@ -205,6 +218,7 @@ src/js/client/
 - Exports: `State` object
 
 **storage.js** - Persistence Layer
+
 - IndexedDB operations
 - Canvas data storage
 - Editor settings storage
@@ -213,6 +227,7 @@ src/js/client/
 - Exports: `Storage` object
 
 **toolbar.js** - Toolbar System
+
 - Tool registration
 - Tool switching
 - UI state management
@@ -220,6 +235,7 @@ src/js/client/
 - Exports: `Toolbar` object
 
 **ui.js** - User Interface
+
 - Modal dialogs
 - Menu systems
 - Dropdown menus
@@ -230,6 +246,7 @@ src/js/client/
 - Exports: UI component functions
 
 **websocket.js** - WebSocket Worker
+
 - Runs in Web Worker thread
 - WebSocket connection
 - Message handling
@@ -253,6 +270,7 @@ src/js/server/
 #### Server Module Descriptions
 
 **main.js** - Entry Point
+
 - CLI argument processing
 - Server startup
 - Help message display
@@ -260,6 +278,7 @@ src/js/server/
 - Exports: None (executable)
 
 **config.js** - Configuration
+
 - Parse CLI arguments
 - Validate options
 - Provide defaults
@@ -267,6 +286,7 @@ src/js/server/
 - Exports: `parseConfig()`
 
 **fileio.js** - File Operations
+
 - Binary file reading/writing
 - SAUCE record creation
 - SAUCE record parsing
@@ -276,6 +296,7 @@ src/js/server/
 - Exports: File I/O functions
 
 **server.js** - Express Server
+
 - Server initialization
 - SSL/TLS setup
 - Session middleware
@@ -285,6 +306,7 @@ src/js/server/
 - Exports: `createServer()`
 
 **text0wnz.js** - Collaboration Engine
+
 - Canvas state management (imageData)
 - User session tracking
 - Message broadcasting
@@ -294,6 +316,7 @@ src/js/server/
 - Exports: `CollaborationEngine` class
 
 **utils.js** - Utilities
+
 - Logging functions
 - Data validation
 - Format conversions
@@ -301,6 +324,7 @@ src/js/server/
 - Exports: Utility functions
 
 **websockets.js** - WebSocket Layer
+
 - Connection handlers
 - Disconnection cleanup
 - Message routing
@@ -409,6 +433,7 @@ tests/
 ### Build and Development
 
 **vite.config.js** - Vite Build Configuration
+
 - Entry points
 - Output directory and structure
 - Asset handling
@@ -417,33 +442,38 @@ tests/
 - Development server settings
 
 **postcss.config.js** - PostCSS Configuration
+
 - Tailwind CSS processing
 - CSS minification (cssnano)
 - Advanced optimization
 
 **tailwind.config.js** - Tailwind CSS Configuration
+
 - Content scanning paths
 - Dark mode configuration
 - Theme customization
 - Plugin configuration
 
 **eslint.config.js** - ESLint Configuration
+
 - Linting rules
 - HTML linting
 - Stylistic rules
 - File patterns
 
 **.prettierrc** - Prettier Configuration
+
 ```json
 {
-  "useTabs": true,
-  "singleQuote": true,
-  "trailingComma": "es5",
-  "printWidth": 100
+	"useTabs": true,
+	"singleQuote": true,
+	"trailingComma": "es5",
+	"printWidth": 100
 }
 ```
 
 **.prettierignore** - Prettier Ignore Patterns
+
 - `node_modules/`
 - `dist/`
 - `tests/results/`
@@ -453,6 +483,7 @@ tests/
 ### Testing
 
 **vitest.config.js** - Vitest Configuration
+
 - Test environment (jsdom)
 - Setup files
 - Coverage settings
@@ -460,6 +491,7 @@ tests/
 - Isolation settings
 
 **playwright.config.js** - Playwright Configuration
+
 - Test directory
 - Timeout settings
 - Retry configuration
@@ -471,6 +503,7 @@ tests/
 ### Docker
 
 **Dockerfile** - Production Container
+
 - Multi-stage build
 - Bun + Caddy + Alpine base
 - Security hardening
@@ -479,6 +512,7 @@ tests/
 - Environment variables
 
 **.github/ci.Dockerfile** - CI Container
+
 - Based on Playwright image
 - Pre-installed browsers
 - Bun runtime
@@ -487,6 +521,7 @@ tests/
 ### Git
 
 **.gitignore** - Git Ignore Patterns
+
 - `node_modules/`
 - `dist/`
 - `tests/results/`
@@ -495,12 +530,14 @@ tests/
 - Build artifacts
 
 **.gitattributes** - Git Attributes
+
 - Line ending normalization
 - Binary file handling
 
 ### Package Management
 
 **package.json** - Package Configuration
+
 - Project metadata
 - Dependencies
 - Scripts
@@ -508,6 +545,7 @@ tests/
 - Repository information
 
 **bun.lock / package-lock.json** - Lockfiles
+
 - Dependency versions
 - Integrity hashes
 - Resolution information
@@ -568,27 +606,31 @@ dist/                          # Generated by `bun bake`
 ## File Naming Conventions
 
 ### Source Files
+
 - JavaScript: `lowercase.js` (e.g., `canvas.js`, `freehand_tools.js`)
 - Tests: `module.test.js` or `module.spec.js`
 - CSS: `lowercase.css`
 - HTML: `lowercase.html`
 
 ### Documentation
+
 - Markdown: `lowercase-with-hyphens.md`
 - All lowercase with hyphens for spaces (URL safe)
 
 ### Assets
+
 - Images: `lowercase-descriptive-name.png/jpg/svg`
 - Fonts: `fontname size.png` (e.g., `CP437 8x16.png`)
 
 ## Module Import Conventions
 
 ### ES Modules
+
 All JavaScript uses ES6 module syntax:
 
 ```javascript
 // Named exports
-export function myFunction() { }
+export function myFunction() {}
 export const myConstant = 42;
 
 // Default export
@@ -600,16 +642,16 @@ import MyClass from './module.js';
 ```
 
 ### Module Pattern (Legacy)
+
 Some modules use revealing module pattern:
 
 ```javascript
 const Module = (() => {
+	function publicFunction() {}
 
-    function publicFunction() { }
-
-    return {
-        "publicFunction": publicFunction
-    };
+	return {
+		publicFunction: publicFunction,
+	};
 })();
 
 export default Module;

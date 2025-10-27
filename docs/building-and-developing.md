@@ -15,16 +15,19 @@ This guide covers the build process, development workflow, tooling, and scripts 
 This project uses [Bun](https://bun.com) as the preferred package manager and runtime for better performance.
 
 **NPM global install:**
+
 ```bash
 npm i -g bun
 ```
 
 **NPM local install:**
+
 ```bash
 npm i bun
 ```
 
 **Manual install:**
+
 ```bash
 curl -fsSL https://bun.sh/install | bash
 # or
@@ -56,6 +59,7 @@ bun server
 **Configuration:** `vite.config.js`
 
 **Key features:**
+
 - ES module bundling with code splitting
 - Automatic code splitting into logical chunks (core, canvas, tools, fileops, network, palette)
 - Asset optimization with cache-busting hashes
@@ -63,6 +67,7 @@ bun server
 - Production minification with Terser
 
 **Build output structure:**
+
 ```
 dist/
 ├── index.html              # Main entry point
@@ -95,6 +100,7 @@ dist/
 #### vite-plugin-static-copy
 
 Copies static assets to the build directory:
+
 - Web Worker (`worker.js`)
 - Font files (`.png` format)
 - Manifest icons
@@ -103,11 +109,13 @@ Copies static assets to the build directory:
 #### vite-plugin-pwa (PWA Support)
 
 Generates Progressive Web App files:
+
 - `service.js` - Service worker for offline support
 - `site.webmanifest` - PWA manifest
 - Workbox runtime for caching strategies
 
 **Features:**
+
 - Offline support
 - Install to home screen
 - Auto-update on new versions
@@ -116,10 +124,12 @@ Generates Progressive Web App files:
 #### vite-plugin-sitemap
 
 Generates SEO files:
+
 - `sitemap.xml` - Site structure for search engines
 - `robots.txt` - Search engine crawler directives
 
 **Configuration:**
+
 - Hostname from `VITE_DOMAIN` environment variable
 - Monthly change frequency
 - Extensive bot blocking list (AI crawlers, scrapers, etc.)
@@ -131,10 +141,12 @@ Generates SEO files:
 **Configuration:** `postcss.config.js`
 
 **Plugins:**
+
 - `@tailwindcss/postcss` - Tailwind CSS processing
 - `cssnano` - CSS minification and optimization
 
 **Optimization:**
+
 - Advanced preset for maximum compression
 - Dead code elimination
 - Merging of rules
@@ -146,11 +158,13 @@ Generates SEO files:
 **Configuration:** `tailwind.config.js`
 
 **Features:**
+
 - Dark mode support (class-based)
 - Custom content scanning
 - Minimal output (only used classes)
 
 **Content sources:**
+
 - `./src/www/index.html`
 - `./src/css/editor.css`
 
@@ -159,11 +173,13 @@ Generates SEO files:
 ### Build Scripts
 
 **`bun bake`** - Build for production
+
 ```bash
 bun bake
 # or
 npm run bake
 ```
+
 - Runs Vite build in production mode
 - Minifies JavaScript and CSS
 - Generates PWA files and service worker
@@ -173,21 +189,25 @@ npm run bake
 ### Development Scripts
 
 **`bun www`** - Serve built application
+
 ```bash
 bun www
 # or
 npm run www
 ```
+
 - Serves `dist/` directory on port 8060
 - Useful for testing production builds
 - No hot reload (static server)
 
 **`bun server`** - Start collaboration server
+
 ```bash
 bun server [port] [options]
 # or
 npm run server [port] [options]
 ```
+
 - Starts Node.js collaboration server
 - Default port: 1337
 - See [collaboration-server.md](collaboration-server.md) for options
@@ -195,81 +215,97 @@ npm run server [port] [options]
 ### Code Quality Scripts
 
 **`bun fix`** - Auto-fix all code issues
+
 ```bash
 bun fix
 # or
 npm run fix
 ```
+
 - Runs Prettier for formatting
 - Runs ESLint with auto-fix
 - Applies to HTML, CSS, and JavaScript
 
 **`bun lint:check`** - Check for linting issues
+
 ```bash
 bun lint:check
 # or
 npm run lint:check
 ```
+
 - Checks code with ESLint
 - Reports issues without fixing
 - Exits with error if issues found
 
 **`bun lint:fix`** - Auto-fix linting issues
+
 ```bash
 bun lint:fix
 # or
 npm run lint:fix
 ```
+
 - Runs ESLint with auto-fix
 - Fixes code style and syntax issues
 
 **`bun format:check`** - Check code formatting
+
 ```bash
 bun format:check
 # or
 npm run format:check
 ```
+
 - Checks formatting with Prettier
 - Reports unformatted files
 - Doesn't modify files
 
 **`bun format:fix`** - Auto-fix formatting
+
 ```bash
 bun format:fix
 # or
 npm run format:fix
 ```
+
 - Formats code with Prettier
 - Applies consistent style
 
 ### Testing Scripts
 
 **`bun test:unit`** - Run unit tests
+
 ```bash
 bun test:unit
 # or
 npm run test:unit
 ```
+
 - Runs Vitest unit tests
 - Generates coverage report
 - See [testing.md](testing.md) for details
 
 **`bun test:e2e`** - Run end-to-end tests
+
 ```bash
 bun test:e2e
 # or
 npm run test:e2e
 ```
+
 - Runs Playwright E2E tests
 - Tests in Chrome, Firefox, WebKit
 - See [testing.md](testing.md) for details
 
 **`bun test:install`** - Install test dependencies
+
 ```bash
 bun test:install
 # or
 npm run test:install
 ```
+
 - Installs Playwright browsers
 - Required before first E2E test run
 
@@ -287,20 +323,24 @@ VITE_WORKER_FILE='websocket.js'
 ### Variable Reference
 
 **`VITE_DOMAIN`**
+
 - Used for sitemap.xml and robots.txt generation
 - All app URLs are relative (domain only for SEO)
 - Default: `https://text.0w.nz`
 
 **`VITE_UI_DIR`**
+
 - Directory for UI assets in build output
 - Trailing slash required
 - Default: `ui/`
 
 **`VITE_FONT_DIR`**
+
 - Directory for font files (not currently used)
 - Default: `fonts/`
 
 **`VITE_WORKER_FILE`**
+
 - Web Worker filename
 - Default: `websocket.js`
 
@@ -371,15 +411,18 @@ bun test:unit
 **Configuration:** `eslint.config.js`
 
 **Purpose:**
+
 - Enforce code quality standards
 - Catch potential bugs
 - Maintain consistent style
 
 **Plugins:**
+
 - `@html-eslint/eslint-plugin` - HTML linting
 - `@stylistic/eslint-plugin` - Code style rules
 
 **Usage:**
+
 ```bash
 # Check for issues
 bun lint:check
@@ -393,6 +436,7 @@ bun lint:fix
 **Configuration:** `.prettierrc`
 
 **Purpose:**
+
 - Consistent code formatting
 - Automatic style application
 - Reduces formatting debates
@@ -400,6 +444,7 @@ bun lint:fix
 **Ignore patterns:** `.prettierignore`
 
 **Usage:**
+
 ```bash
 # Check formatting
 bun format:check
@@ -490,11 +535,13 @@ docs/
 ### 1. Asset Processing
 
 **Code Splitting:**
+
 - Automatic chunking into logical modules (core, canvas, tools, fileops, network, palette)
 - Lazy loading of non-critical code
 - Shared dependencies extracted to reduce duplication
 
 **Fonts:**
+
 - Copied from `src/fonts/` to `dist/ui/fonts/`
 - PNG format (bitmap fonts for text art)
 - No transformation applied
@@ -502,17 +549,20 @@ docs/
 - Font caching system for instant switching between common fonts
 
 **Images:**
+
 - Icons and manifest images
 - Optimized during build
 - Multiple sizes for different devices
 - Hashed filenames for cache busting
 
 **CSS:**
+
 - Processed with Tailwind CSS
 - Minified with cssnano advanced preset
 - Output: `dist/ui/stylez-[hash].css` (hashed for cache busting)
 
 **JavaScript:**
+
 - Bundled with Vite/Rollup into code-split chunks
 - Minified with Terser for production
 - Each chunk has a unique hash for cache invalidation
@@ -521,12 +571,14 @@ docs/
 ### 2. PWA Generation
 
 **Service Worker:**
+
 - Generated by vite-plugin-pwa
 - Precaches critical assets
 - Implements offline support
 - Cache-first strategy for static assets
 
 **Manifest:**
+
 - `site.webmanifest` with app metadata
 - Icons, screenshots, theme colors
 - Install prompts and app info
@@ -534,11 +586,13 @@ docs/
 ### 3. SEO Files
 
 **Sitemap:**
+
 - Auto-generated from routes
 - Hostname from environment variable
 - Monthly update frequency
 
 **Robots.txt:**
+
 - Search engine directives
 - Blocks AI crawlers and scrapers
 - Allows legitimate search engines
@@ -555,6 +609,7 @@ NODE_ENV=development bun bake
 ```
 
 This enables:
+
 - Source maps for debugging
 - Readable output (not minified)
 - Development warnings
@@ -570,11 +625,13 @@ This enables:
 ### Server Debugging
 
 Enable debug mode:
+
 ```bash
 bun server 1337 --debug
 ```
 
 This logs:
+
 - Connection attempts
 - Message routing
 - State changes
@@ -591,23 +648,27 @@ This logs:
 ### Runtime Performance
 
 **Code Splitting:**
+
 - Automatic chunking into logical modules (core, canvas, tools, fileops, network, palette)
 - Lazy loading of non-critical code reduces initial bundle size
 - Shared dependencies extracted to minimize duplication
 
 **Font Optimization:**
+
 - Lazy glyph generation: Only creates character glyphs when first needed
 - Font caching system: Preloads common fonts (CP437, Topaz) for instant switching
 - In-memory glyph cache prevents regeneration
 - Significantly reduces memory footprint compared to pre-generating all 65,536 possible glyph combinations
 
 **Storage Optimization:**
+
 - IndexedDB for large binary canvas data (efficient storage of Uint16Array)
 - localStorage for small configuration settings
 - RLE compression for canvas data reduces storage size
 - Auto-save on canvas changes without blocking the UI
 
 **Asset Optimization:**
+
 - PNG fonts (small bitmap files)
 - CSS minification with cssnano advanced preset
 - JavaScript minification with Terser
@@ -615,6 +676,7 @@ This logs:
 - Hashed filenames enable aggressive browser caching
 
 **Cache Strategy:**
+
 - Service worker caching with cache-first strategy
 - Workbox runtime for efficient offline support
 - Font cache for instant font switching
@@ -625,18 +687,21 @@ This logs:
 ### Build Fails
 
 **Node version mismatch:**
+
 ```bash
 node --version  # Should be 22.19.0+
 nvm use 22      # Or install correct version
 ```
 
 **Missing dependencies:**
+
 ```bash
 rm -rf node_modules
 bun install
 ```
 
 **Permission errors:**
+
 ```bash
 # Fix permissions
 chmod -R 755 src/
@@ -646,6 +711,7 @@ chmod -R 755 dist/
 ### Bun Issues
 
 **Bun not found:**
+
 ```bash
 # Reinstall Bun
 curl -fsSL https://bun.sh/install | bash
@@ -653,6 +719,7 @@ source ~/.bashrc  # Reload shell config
 ```
 
 **Version conflicts:**
+
 ```bash
 bun upgrade  # Update to latest version
 ```
@@ -660,16 +727,19 @@ bun upgrade  # Update to latest version
 ### Build Output Issues
 
 **Assets not copied:**
+
 - Check `vite.config.js` static copy targets
 - Verify source file paths
 - Rebuild with `bun bake`
 
 **CSS not updating:**
+
 - Clear browser cache
 - Check Tailwind content paths
 - Rebuild CSS with `bun bake`
 
 **Service worker cache:**
+
 - Clear service worker in browser DevTools
 - Unregister old service worker
 - Hard reload (Ctrl+Shift+R)

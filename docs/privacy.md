@@ -9,6 +9,7 @@ The makers of the [teXt0wnz](https://github.com/xero/teXt0wnz) application value
 ### Local Storage
 
 This application uses your device’s local storage to save the following information:
+
 - **CANVAS_DATA**: The raw drawing data for your current artwork.
 - **FONT_NAME**, **PALETTE_COLORS**, **ICE_COLORS**, **LETTER_SPACING**, **XBIN_FONT_DATA**: Editor font and configuration settings to ensure a consistent experience.
 
@@ -29,6 +30,7 @@ When you opt into collaboration mode, the following data is temporarily processe
 - **FONT_NAME**, **PALETTE_COLORS**, **ICE_COLORS**, **LETTER_SPACING**, **XBIN_FONT_DATA**: Editor font and configuration settings shared for consistent rendering.
 
 **Data Handling Details:**
+
 - By default, no IP addresses or other persistent identifiers are logged.
 - You have full control over what information is shared; chat handle and notification settings are opt-in and default to anonymous and off.
 
@@ -50,6 +52,5 @@ This privacy policy may be updated in the future. Any changes will be reflected 
 For questions or concerns about this privacy policy, please contact the current repo maintainer.
 
 | Updated  | Maintainer                     | Change discription   |
-|----------|--------------------------------|----------------------|
+| -------- | ------------------------------ | -------------------- |
 | 10.08.25 | [xero](http://github.com/xero) | Initial policy draft |
-

@@ -51,11 +51,13 @@ The CI/CD system consists of 10 workflow files that handle:
 **Purpose:** Orchestrates the complete CI/CD pipeline for code changes.
 
 **Triggers:**
+
 - Push to `main` branch (excluding docs and markdown files)
 - Pull requests to any branch
 - Manual workflow dispatch
 
 **Jobs:**
+
 1. **lint** - Code quality checks
 2. **build** - Build verification
 3. **unit** - Unit test execution
@@ -64,6 +66,7 @@ The CI/CD system consists of 10 workflow files that handle:
 6. **deploy** - Deploy to GitHub Pages (main branch only)
 
 **Path Ignores:**
+
 - `docs/**`
 - `**/*.md`
 - `LICENSE.txt`
@@ -73,6 +76,7 @@ The CI/CD system consists of 10 workflow files that handle:
 - `.prettierignore`
 
 **Permissions:**
+
 ```yaml
 contents: write
 pages: write
@@ -81,6 +85,7 @@ packages: read
 ```
 
 **Workflow:**
+
 ```mermaid
 graph TD
     A[Push/PR] --> B[Lint]
@@ -109,17 +114,20 @@ graph TD
 **Called by:** test-suite.yml
 
 **Steps:**
+
 1. Checkout code
 2. Setup Bun
 3. Install dependencies
 4. Run `bun lint:check`
 
 **Coverage:**
+
 - HTML files (`src/**/*.html`)
 - JavaScript files (`src/js/**/*.js`)
 - Test files (`tests/**/*.js`)
 
 **Linting Rules:**
+
 - ESLint configuration from `eslint.config.js`
 - HTML linting with `@html-eslint/eslint-plugin`
 - Stylistic rules with `@stylistic/eslint-plugin`
@@ -131,6 +139,7 @@ graph TD
 **Called by:** test-suite.yml
 
 **Steps:**
+
 1. Checkout code
 2. Setup Bun
 3. Install dependencies
@@ -140,12 +149,14 @@ graph TD
 7. Upload build artifacts (main branch only)
 
 **Verified Artifacts:**
+
 - Directory structure (`dist/ui`, `dist/ui/js`, `dist/ui/img`, `dist/ui/fonts`)
 - Static files (icons, manifest, HTML, robots.txt, sitemap.xml)
 - Hashed files (JavaScript bundles, CSS, SVG icons, screenshots)
 - Service worker and Workbox runtime
 
 **Artifact Upload:**
+
 - Name: `editor-build`
 - Retention: 3 days
 - Only on successful builds from the `main` branch
@@ -157,6 +168,7 @@ graph TD
 **Called by:** test-suite.yml
 
 **Steps:**
+
 1. Checkout code with full history
 2. Setup Bun
 3. Install dependencies
@@ -165,12 +177,14 @@ graph TD
 6. Upload coverage artifacts
 
 **Test Configuration:**
+
 - Test runner: Vitest
 - Environment: jsdom
 - Coverage provider: v8
 - Output: `tests/results/coverage/`
 
 **Coverage Report:**
+
 - HTML report with dark theme support
 - Statement, branch, function, and line coverage
 - Uploaded as artifact: `unit-test-results`
@@ -178,6 +192,7 @@ graph TD
 
 **Dark Theme Injection:**
 Adds CSS for dark mode support in coverage reports:
+
 ```css
 @media (prefers-color-scheme:dark) { ... }
 ```
@@ -190,24 +205,29 @@ Adds CSS for dark mode support in coverage reports:
 
 **Sharding Strategy:**
 Tests are split into 4 parallel shards for faster execution:
+
 - Shard 1/4
 - Shard 2/4
 - Shard 3/4
 - Shard 4/4
 
 **Container:**
+
 ```yaml
 image: ghcr.io/xero/text0wnz/ci:latest
 options: --user root
 ```
+
 [ci docker image](https://github.com/xero/text0wnz/pkgs/container/text0wnz%2Fci)
 
 **Test Browsers:**
+
 - Chrome
 - Firefox
 - Safari
 
 **Steps:**
+
 1. Checkout code
 2. Install dependencies with Bun
 3. Set localhost domain in `.env`
@@ -216,10 +236,12 @@ options: --user root
 6. Upload blob report
 
 **Environment:**
+
 - `HOME: /root`
 - `PLAYWRIGHT_TEST_BASE_URL: http://localhost:8060`
 
 **Artifacts:**
+
 - Name: `blob-report-{shard}` (e.g., `blob-report-1-4`)
 - Path: `blob-report`
 - Retention: 1 day
@@ -232,6 +254,7 @@ options: --user root
 **Called by:** test-suite.yml
 
 **Steps:**
+
 1. Checkout code
 2. Install Bun and Playwright
 3. Download all blob reports
@@ -239,10 +262,12 @@ options: --user root
 5. Upload merged report
 
 **Input:**
+
 - Downloads artifacts matching pattern: `blob-report-*`
 - Merges multiple blob reports into one
 
 **Output:**
+
 - Artifact name: `merged-playwright-report`
 - Path: `playwright-report`
 - Retention: 14 days (configurable)
@@ -254,6 +279,7 @@ options: --user root
 **Called by:** test-suite.yml (only on main branch)
 
 **Permissions:**
+
 ```yaml
 contents: read
 pages: write
@@ -261,12 +287,14 @@ id-token: write
 ```
 
 **Concurrency:**
+
 - Group: `pages`
 - Cancel in-progress: false
 
 **Jobs:**
 
 #### build-artifacts
+
 1. Download `editor-build` artifact
 2. Download `unit-test-results` artifact
 3. Download `merged-playwright-report` artifact
@@ -282,11 +310,13 @@ id-token: write
 5. Upload pages artifact
 
 #### deploy
+
 1. Deploy to GitHub Pages using pages artifact
 2. Set environment: `github-pages`
 3. Output deployment URL
 
 **Deployed Structure:**
+
 ```
 https://xero.github.io/text0wnz/
 ├── index.html              (Application)
@@ -304,18 +334,22 @@ https://xero.github.io/text0wnz/
 **Purpose:** Builds and publishes multi-architecture Docker images for the Editor.
 
 **Triggers:**
+
 - Manual workflow dispatch
 - Push to main when `Dockerfile` changes
 
 **Platforms:**
+
 - `linux/amd64`
 - `linux/arm64`
 
 **Registries:**
+
 1. GitHub Container Registry: `ghcr.io/xero/text0wnz`
 2. Docker Hub: `xerostyle/text0wnz`
 
 **Steps:**
+
 1. Checkout code
 2. Setup QEMU for multi-arch builds
 3. Setup Docker Buildx
@@ -325,10 +359,12 @@ https://xero.github.io/text0wnz/
 7. Build and push images
 
 **Tags:**
+
 - `latest` (always)
 - `sha-{short-sha}` (commit-based)
 
 **Cache:**
+
 - Type: GitHub Actions cache
 - Mode: max (cache everything possible)
 
@@ -337,21 +373,25 @@ https://xero.github.io/text0wnz/
 **Purpose:** Builds the CI container image used for E2E testing.
 
 **Triggers:**
+
 - Manual workflow dispatch
 - Push to main when `.github/ci.Dockerfile` changes
 
 **Base Image:**
+
 ```dockerfile
 FROM mcr.microsoft.com/playwright:latest
 ```
 
 **Includes:**
+
 - Bun runtime
 - Playwright with all browsers (Chrome, Firefox, WebKit)
 - ESLint and Prettier
 - All necessary dependencies
 
 **Registry:**
+
 - `ghcr.io/xero/text0wnz/ci:latest`
 
 **Purpose:**
@@ -364,10 +404,12 @@ Provides a pre-configured environment for E2E tests with all browsers and depend
 **Purpose:** Synchronizes documentation from `/docs` to GitHub Wiki.
 
 **Triggers:**
+
 - Push to main branch with changes in `docs/**`
 - Manual workflow dispatch
 
 **Steps:**
+
 1. Checkout repository
 2. Checkout wiki repository
 3. Configure git with commit author
@@ -379,6 +421,7 @@ Provides a pre-configured environment for E2E tests with all browsers and depend
 9. Commit and push if changes exist
 
 **Link Transformation:**
+
 ```perl
 # Before: [link](document.md)
 # After:  [link](document)
@@ -416,6 +459,7 @@ See: [other-tools/pin-github-action](other-tools.md#pin-github-action)
 Each workflow uses least-privilege permissions:
 
 **test-suite.yml:**
+
 ```yaml
 permissions:
   contents: write
@@ -425,6 +469,7 @@ permissions:
 ```
 
 **docker-build.yml:**
+
 ```yaml
 permissions:
   contents: read
@@ -432,6 +477,7 @@ permissions:
 ```
 
 **deploy.yml:**
+
 ```yaml
 permissions:
   contents: read
@@ -443,19 +489,20 @@ permissions:
 
 Required repository secrets:
 
-| Secret | Purpose | Used In |
-|--------|---------|---------|
-| `GITHUB_TOKEN` | Built-in token for GitHub API access | Most workflows |
-| `DOCKERHUB_USERNAME` | Docker Hub login | docker-build.yml |
-| `DOCKERHUB_TOKEN` | Docker Hub password | docker-build.yml |
-| `CICD_TOKEN` | Wiki repository access | wiki.yml |
-| `PKG_TOKEN` | GitHub Packages access | ci-docker-build.yml |
+| Secret               | Purpose                              | Used In             |
+| -------------------- | ------------------------------------ | ------------------- |
+| `GITHUB_TOKEN`       | Built-in token for GitHub API access | Most workflows      |
+| `DOCKERHUB_USERNAME` | Docker Hub login                     | docker-build.yml    |
+| `DOCKERHUB_TOKEN`    | Docker Hub password                  | docker-build.yml    |
+| `CICD_TOKEN`         | Wiki repository access               | wiki.yml            |
+| `PKG_TOKEN`          | GitHub Packages access               | ci-docker-build.yml |
 
 ## Artifacts and Reports
 
 ### Build Artifacts
 
 **editor-build**
+
 - Content: Complete built application from `dist/`
 - Size: ~10-20 MB
 - Used by: deploy.yml
@@ -463,17 +510,20 @@ Required repository secrets:
 ### Test Artifacts
 
 **unit-test-results**
+
 - Content: HTML coverage report from Vitest
 - Path: `tests/results/coverage/`
 - Includes: Dark theme CSS injection
 - Used by: deploy.yml
 
 **blob-report-{shard}**
+
 - Content: Playwright E2E test results for one shard
 - Path: `blob-report/`
 - Used by: merge-reports.yml
 
 **merged-playwright-report**
+
 - Content: Combined E2E test HTML report
 - Path: `playwright-report/`
 - Used by: deploy.yml
@@ -481,6 +531,7 @@ Required repository secrets:
 ### Download Artifacts
 
 **Via GitHub CLI:**
+
 ```bash
 # List artifacts for a run
 gh run view RUN_ID --json artifacts
@@ -511,6 +562,7 @@ strategy:
 ### Caching
 
 **Docker Build Cache:**
+
 ```yaml
 cache-from: type=gha
 cache-to: type=gha,mode=max
@@ -540,12 +592,14 @@ The repository README includes these CI/CD badges:
 ### Viewing Workflow Runs
 
 **GitHub UI:**
+
 1. Navigate to Actions tab
 2. Select workflow from sidebar
 3. Click on specific run
 4. View job details and logs
 
 **GitHub CLI:**
+
 ```bash
 # List recent runs
 gh run list --workflow=test-suite.yml
@@ -563,6 +617,7 @@ gh run view RUN_ID --log
 ### Debugging Failed Workflows
 
 **Check Logs:**
+
 1. Open failed workflow run
 2. Click on failed job
 3. Expand failed step
@@ -571,21 +626,25 @@ gh run view RUN_ID --log
 **Common Issues:**
 
 **Build Failures:**
+
 - Check `bun bake` output
 - Verify `vite.config.js` configuration
 - Check for missing dependencies
 
 **Test Failures:**
+
 - Review test logs
 - Check screenshots (E2E) in artifacts
 - Verify browser compatibility
 
 **Deployment Failures:**
+
 - Check Pages settings in repository
 - Verify permissions
 - Review artifact upload/download steps
 
 **Docker Build Failures:**
+
 - Check Dockerfile syntax
 - Verify base images are available
 - Check registry authentication
@@ -593,10 +652,12 @@ gh run view RUN_ID --log
 ### Re-running Workflows
 
 **Via GitHub UI:**
+
 1. Open failed workflow run
 2. Click "Re-run all jobs" or "Re-run failed jobs"
 
 **Via GitHub CLI:**
+
 ```bash
 # Re-run entire workflow
 gh run rerun RUN_ID
@@ -610,21 +671,25 @@ gh run rerun RUN_ID --failed
 ### Running Tests Locally
 
 **Lint:**
+
 ```bash
 bun lint:check
 ```
 
 **Build:**
+
 ```bash
 bun bake
 ```
 
 **Unit Tests:**
+
 ```bash
 bun test:unit
 ```
 
 **E2E Tests:**
+
 ```bash
 bun test:e2e
 ```
@@ -632,16 +697,19 @@ bun test:e2e
 ### Docker Build Testing
 
 **Standard build:**
+
 ```bash
 docker buildx build -t text0wnz:local .
 ```
 
 **Multi-arch build:**
+
 ```bash
 docker buildx build --platform linux/amd64,linux/arm64 -t text0wnz:local .
 ```
 
 **Run locally:**
+
 ```bash
 docker run -p 80:80 -e NODE_ENV=development text0wnz:local
 ```
@@ -649,11 +717,13 @@ docker run -p 80:80 -e NODE_ENV=development text0wnz:local
 ### CI Container Testing
 
 **Build CI image:**
+
 ```bash
 docker build -f .github/ci.Dockerfile -t text0wnz-ci:local .
 ```
 
 **Run E2E tests in container:**
+
 ```bash
 docker run -v $(pwd):/app -w /app text0wnz-ci:local bun test:e2e
 ```
@@ -673,6 +743,7 @@ docker run -v $(pwd):/app -w /app text0wnz-ci:local bun test:e2e
 1. Test changes in a feature branch
 2. Use `workflow_dispatch` for manual testing
 3. Check workflow syntax with:
+
    ```bash
    # Install actionlint
    brew install actionlint  # macOS
@@ -681,6 +752,7 @@ docker run -v $(pwd):/app -w /app text0wnz-ci:local bun test:e2e
    # Validate workflow
    actionlint .github/workflows/*.yml
    ```
+
 4. Review security implications
 5. Update documentation
 
