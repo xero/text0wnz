@@ -7,6 +7,7 @@
 Our containerization approach focuses on several key areas:
 
 ### Multi-Stage Build Architecture
+
 We utilize a sophisticated multi-stage build process that:
 
 - Sources the latest secure Caddy binary from the official caddy:2-alpine image
@@ -14,6 +15,7 @@ We utilize a sophisticated multi-stage build process that:
 - Combines these in a minimal Alpine Linux base for a clean, secure final image
 
 ### Security Hardening
+
 The container implements multiple security measures:
 
 - Non-root execution using a dedicated textart user with minimal permissions
@@ -22,6 +24,7 @@ The container implements multiple security measures:
 - No unnecessary packages or development tools in the final image
 
 ### Performance Optimization
+
 Several techniques are employed to maximize performance:
 
 - HTTP/2 and TLS support via Caddy for optimized connections
@@ -30,6 +33,7 @@ Several techniques are employed to maximize performance:
 - Appropriate cache headers for static assets
 
 ### Service Orchestration
+
 Container services are carefully managed with:
 
 - Proper dependency ordering with readiness checks between components
@@ -42,10 +46,13 @@ Container services are carefully managed with:
 Prebuilt images are avalable in **linux/amd64** & **linux/arm64** flavors from multiple repositories:
 
 **[DockerHub](https://hub.docker.com/r/xerostyle/text0wnz):**
+
 ```sh
 docker pull xerostyle/text0wnz:latest
 ```
+
 **[GitHub Container Registry](https://github.com/xero/text0wnz/pkgs/container/text0wnz):**
+
 ```sh
 docker pull ghcr.io/xero/text0wnz:latest
 ```
@@ -92,16 +99,16 @@ docker run \
     -p 80:80 -p 443:443 \
     text0wnz:latest
 ```
+
 This setup enables:
 
 - Automatic HTTPS via Caddy's built-in certificate management
 - Production-optimized performance settings
 - Stricter security headers and content policies
 
-
 ### Required Capabilities
-The container requires `NET_BIND_SERVICE` capability to bind to privileged ports (80/443). For enhanced security, we avoid running as root while still providing standard web server ports.
 
+The container requires `NET_BIND_SERVICE` capability to bind to privileged ports (80/443). For enhanced security, we avoid running as root while still providing standard web server ports.
 
 ## Container Lifecycle
 
@@ -115,12 +122,12 @@ The container implements a robust startup sequence:
 
 ## Environment Variables
 
-| Variable      | Description                                 | Default                      |
-|---------------|---------------------------------------------|------------------------------|
-| `DOMAIN`      | Domain name for the application             | `localhost`                  |
-| `PORT`        | _Internal_ port for the WebSocket server    | `1337`                       |
-| `NODE_ENV`    | Node environment setting                    | `production`                 |
-| `SESSION_KEY` | Session secret key for express              | `supersecretkey`             |
+| Variable      | Description                              | Default          |
+| ------------- | ---------------------------------------- | ---------------- |
+| `DOMAIN`      | Domain name for the application          | `localhost`      |
+| `PORT`        | _Internal_ port for the WebSocket server | `1337`           |
+| `NODE_ENV`    | Node environment setting                 | `production`     |
+| `SESSION_KEY` | Session secret key for express           | `supersecretkey` |
 
 ## Advanced Usage
 

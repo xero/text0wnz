@@ -54,6 +54,7 @@ teXt0wnz is a Progressive Web Application (PWA) for creating and editing text-mo
 The default mode when no server is detected or when user chooses local mode.
 
 **Features:**
+
 - Full drawing and editing capabilities
 - Local storage persistence (IndexedDB)
 - Automatic save/restore
@@ -61,6 +62,7 @@ The default mode when no server is detected or when user chooses local mode.
 - Offline [PWA support](docs/install-pwa.md)
 
 **Data Flow:**
+
 ```
 User Action → State Update → Canvas Render → IndexedDB Persist
 ```
@@ -70,6 +72,7 @@ User Action → State Update → Canvas Render → IndexedDB Persist
 Activated when connecting to a collaboration server.
 
 **Features:**
+
 - All client-only features plus:
 - Real-time multi-user editing
 - Synchronized canvas state
@@ -78,6 +81,7 @@ Activated when connecting to a collaboration server.
 - Session management
 
 **Data Flow:**
+
 ```
 User Action → State Update → Canvas Render → WebSocket Send → Server Broadcast → Other Clients
 ```
@@ -111,6 +115,7 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 ### Core Modules
 
 **State Management** (`state.js`)
+
 - Global application state
 - Canvas dimensions and configuration
 - Current tool and color selection
@@ -118,6 +123,7 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 - Undo/redo history
 
 **Canvas Rendering** (`canvas.js`)
+
 - Offscreen canvas for performance
 - Dirty region tracking (only redraw changed areas)
 - Character and color rendering
@@ -125,6 +131,7 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 - Grid overlay
 
 **Font System** (`font.js`, `lazyFont.js`, `fontCache.js`)
+
 - PNG-based bitmap fonts
 - Lazy loading on demand
 - Font caching for performance
@@ -132,6 +139,7 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 - Letter spacing (9px mode)
 
 **Drawing Tools** (`freehand_tools.js`)
+
 - Halfblock/Block drawing
 - Character brush
 - Shading brush (░▒▓)
@@ -142,12 +150,14 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 - Sample tool (color picker)
 
 **Keyboard Mode** (`keyboard.js`)
+
 - Text input handling
 - Arrow key navigation
 - Special character insertion (F-keys)
 - Canvas editing shortcuts
 
 **User Interface** (`ui.js`)
+
 - Modal dialogs
 - Toolbar management
 - Menu systems
@@ -156,6 +166,7 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 - Status bar updates
 
 **File Operations** (`file.js`)
+
 - ANSI format (.ans, .utf8.ans)
 - Binary format (.bin)
 - XBIN format (.xb)
@@ -165,6 +176,7 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 - SAUCE metadata support
 
 **Color Management** (`palette.js`)
+
 - 16-color ANSI palette
 - ICE colors (extended backgrounds)
 - RGB to ANSI conversion
@@ -172,6 +184,7 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 - Custom palettes (XBIN)
 
 **Storage** (`storage.js`, `compression.js`)
+
 - IndexedDB for canvas persistence
 - Optimized binary compression
 - Automatic save/restore
@@ -179,22 +192,28 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 - Run-length encoding for efficiency
 
 **Network** (`network.js`, `websocket.js`)
-- WebSocket client (in Web Worker)
-- Connection management
-- Message protocol handling
+
+- WebSocket client (in Web Worker with security hardening)
+- Mandatory worker initialization sequence
+- Trusted URL construction from page location
+- Silent connection checks (non-intrusive)
+- Connection state management
+- Message protocol handling with input validation
 - Canvas synchronization
 - Chat functionality
 
 ### Event System
 
 Custom events for canvas interaction:
+
 ```javascript
-document.addEventListener("onTextCanvasDown", handler);
-document.addEventListener("onTextCanvasDrag", handler);
-document.addEventListener("onTextCanvasUp", handler);
+document.addEventListener('onTextCanvasDown', handler);
+document.addEventListener('onTextCanvasDrag', handler);
+document.addEventListener('onTextCanvasUp', handler);
 ```
 
 This abstraction allows tools to work consistently across:
+
 - Mouse events
 - Touch events
 - Keyboard events (for cursor position)
@@ -202,31 +221,32 @@ This abstraction allows tools to work consistently across:
 ### Tool Pattern
 
 Each drawing tool follows this pattern:
+
 ```javascript
 const createToolController = () => {
+	function enable() {
+		// Register event listeners
+		document.addEventListener('onTextCanvasDown', canvasDown);
+		document.addEventListener('onTextCanvasDrag', canvasDrag);
+		document.addEventListener('onTextCanvasUp', canvasUp);
+	}
 
-    function enable() {
-        // Register event listeners
-        document.addEventListener("onTextCanvasDown", canvasDown);
-        document.addEventListener("onTextCanvasDrag", canvasDrag);
-        document.addEventListener("onTextCanvasUp", canvasUp);
-    }
+	function disable() {
+		// Unregister event listeners
+		document.removeEventListener('onTextCanvasDown', canvasDown);
+		document.removeEventListener('onTextCanvasDrag', canvasDrag);
+		document.removeEventListener('onTextCanvasUp', canvasUp);
+	}
 
-    function disable() {
-        // Unregister event listeners
-        document.removeEventListener("onTextCanvasDown", canvasDown);
-        document.removeEventListener("onTextCanvasDrag", canvasDrag);
-        document.removeEventListener("onTextCanvasUp", canvasUp);
-    }
-
-    return {
-        "enable": enable,
-        "disable": disable
-    };
-}
+	return {
+		enable: enable,
+		disable: disable,
+	};
+};
 ```
 
 Benefits:
+
 - Clean enable/disable without conflicts
 - Consistent interface for all tools
 - Easy tool switching
@@ -265,12 +285,14 @@ Benefits:
 ### Server Modules
 
 **Configuration** (`config.js`)
+
 - Parse CLI arguments
 - Validate options
 - Provide defaults
 - Export configuration object
 
 **Server Setup** (`server.js`)
+
 - Express server initialization
 - SSL/TLS configuration
 - Session middleware setup
@@ -278,6 +300,7 @@ Benefits:
 - Error handling
 
 **Collaboration Engine** (`text0wnz.js`)
+
 - Canvas state management (imageData object)
 - User session tracking
 - Message broadcasting
@@ -285,6 +308,7 @@ Benefits:
 - Canvas settings synchronization
 
 **WebSocket Handling** (`websockets.js`)
+
 - Connection/disconnection handlers
 - Message routing
 - User cleanup
@@ -292,6 +316,7 @@ Benefits:
 - Logging
 
 **File I/O** (`fileio.js`)
+
 - Binary file operations
 - SAUCE record creation/parsing
 - Canvas dimension extraction
@@ -299,6 +324,7 @@ Benefits:
 - Timestamped backups
 
 **Utilities** (`utils.js`)
+
 - Logging helpers
 - Data validation
 - Type conversions
@@ -307,38 +333,45 @@ Benefits:
 ### Message Protocol
 
 **Client to Server:**
+
 ```javascript
-["join", username]              // Join session
-["nick", newUsername]           // Change username
-["chat", message]               // Send chat message
-["draw", blocks]                // Drawing command
-["resize", {columns, rows}]     // Canvas resize
-["fontChange", {fontName}]      // Font change
-["iceColorsChange", {iceColors}] // ICE colors toggle
-["letterSpacingChange", {letterSpacing}] // Letter spacing toggle
+const clientProto =
+	(['join', username], // Join session
+	['nick', newUsername], // Change username
+	['chat', message], // Send chat message
+	['draw', blocks], // Drawing command
+	['resize', { columns, rows }], // Canvas resize
+	['fontChange', { fontName }], // Font change
+	['iceColorsChange', { iceColors }], // ICE colors toggle
+	['letterSpacingChange', { letterSpacing }]); // Letter spacing toggle
 ```
 
 **Server to Client:**
+
+`start` is the first command run after websocket initialization. It returns the connecting client's session id and the entire shared server state, which the editor caches. If the client chooses to join, the editor is reconfigured with the shared server data and chat features are enabled.
+
 ```javascript
-["start", sessionData, sessionID, userList] // Initial state
-["join", username, sessionID]    // User joined
-["part", sessionID]              // User left
-["nick", username, sessionID]    // Username changed
-["chat", username, message]      // Chat message
-["draw", blocks]                 // Drawing broadcast
-["resize", {columns, rows}]      // Canvas resize broadcast
-// ... (canvas settings broadcasts)
+const serverProto =
+	(['start', sessionData, sessionID, userList], // Canvas data, client id, users
+	['join', username, sessionID], // User joined
+	['part', sessionID], // User left
+	['nick', username, sessionID], // Username changed
+	['chat', username, message], // Chat message
+	['draw', blocks], // Drawing broadcast
+	['resize', { columns, rows }]); // Canvas resize
 ```
 
 ### State Synchronization
 
 When a user joins:
+
 1. Server sends current canvas state via "start" message
 2. Client applies canvas settings (size, font, colors, spacing)
 3. Client renders canvas from imageData
 4. User is added to session list
 
 When a drawing occurs:
+
 1. Client sends "draw" message with affected blocks
 2. Server updates internal imageData
 3. Server broadcasts to all other clients
@@ -521,6 +554,7 @@ main.js
 ### Vite Configuration
 
 **Code Splitting:**
+
 ```javascript
 manualChunks: {
     core: ['state', 'storage', 'compression', 'ui'],
@@ -533,12 +567,14 @@ manualChunks: {
 ```
 
 **Benefits:**
+
 - Faster initial load (progressive loading)
 - Better caching (chunks change independently)
 - Smaller bundle sizes
 - Parallel downloads
 
 **Build Output:**
+
 ```
 dist/
 ├── index.html
@@ -560,18 +596,21 @@ dist/
 ### Asset Optimization
 
 **CSS:**
+
 - Tailwind JIT compilation
 - PostCSS processing
 - cssnano minification
 - Unused style purging
 
 **JavaScript:**
+
 - Terser minification
 - Tree shaking
 - Code splitting
 - Source maps (dev only)
 
 **Images:**
+
 - PNG optimization (fonts)
 - SVG sprite generation
 
@@ -594,16 +633,18 @@ dist/
    - Examples: `selectedFont`, `iceColors`, `letterSpacing`, `gridVisible`
 
 **Compression:**
+
 - Run-length encoding (RLE)
 - Stores only changed regions
 - Typical compression: 90%+ for most artwork
 
 **Auto-Save Strategy:**
+
 ```javascript
 // Debounced save after changes
 const saveToIndexedDB = debounce(() => {
-    const compressed = compress(canvasData);
-    db.put('canvasData', compressed, 'currentCanvas');
+	const compressed = compress(canvasData);
+	db.put('canvasData', compressed, 'currentCanvas');
 }, 500);
 ```
 
@@ -627,6 +668,7 @@ const saveToIndexedDB = debounce(() => {
    - Manual recovery if needed
 
 **File Format (Binary):**
+
 ```
 Canvas Data:
 - Width: 2 bytes (uint16)
@@ -644,70 +686,79 @@ Attributes Byte:
 ### Module Pattern
 
 All modules use the revealing module pattern:
+
 ```javascript
 const Module = (() => {
+	// Private variables
+	let privateVar = 0;
 
-    // Private variables
-    let privateVar = 0;
+	// Private functions
+	function privateFunc() {
+		// ...
+	}
 
-    // Private functions
-    function privateFunc() {
-        // ...
-    }
+	// Public API
+	function publicFunc() {
+		// ...
+	}
 
-    // Public API
-    function publicFunc() {
-        // ...
-    }
-
-    return {
-        "publicFunc": publicFunc
-    };
+	return {
+		publicFunc: publicFunc,
+	};
 })();
 ```
 
 ### Observer Pattern
 
 Event-driven architecture for loose coupling:
+
 ```javascript
 // Publish
-document.dispatchEvent(new CustomEvent("onTextCanvasChange", {
-    detail: { x, y, char, fg, bg }
-}));
+document.dispatchEvent(
+	new CustomEvent('onTextCanvasChange', {
+		detail: { x, y, char, fg, bg },
+	}),
+);
 
 // Subscribe
-document.addEventListener("onTextCanvasChange", handler);
+document.addEventListener('onTextCanvasChange', handler);
 ```
 
 ### Command Pattern
 
 Undo/redo system:
+
 ```javascript
 const command = {
-    execute: () => { /* apply change */ },
-    undo: () => { /* revert change */ }
+	execute: () => {
+		/* apply change */
+	},
+	undo: () => {
+		/* revert change */
+	},
 };
 
 State.textArtCanvas.startUndo(); // Push to undo stack
 // ... make changes ...
-State.textArtCanvas.endUndo();   // Finalize undo entry
+State.textArtCanvas.endUndo(); // Finalize undo entry
 ```
 
 ### Strategy Pattern
 
 Tool system allows runtime tool switching:
+
 ```javascript
 const tools = {
-    keyboard: keyboardTool,
-    freehand: freehandTool,
-    brush: brushTool,
-    // ...
+	keyboard: keyboardTool,
+	freehand: freehandTool,
+	brush: brushTool,
+	// ...
 };
 
 function selectTool(toolName) {
-    currentTool.disable();
-    currentTool = tools[toolName];
-    currentTool.enable();
+	currentTool.disable();
+	currentTool = tools[toolName];
+	currentTool.enable();
 }
 ```
 
@@ -717,6 +768,7 @@ function selectTool(toolName) {
 
 **Dirty Region Tracking:**
 Only redraw changed areas instead of entire canvas:
+
 ```javascript
 // Mark region as dirty
 canvas.markDirty(startX, startY, endX, endY);
@@ -727,6 +779,7 @@ canvas.renderDirty();
 
 **Offscreen Canvas:**
 Render to offscreen canvas first, then blit to visible canvas:
+
 ```javascript
 offscreenCtx.drawImage(fontImage, ...);
 visibleCtx.drawImage(offscreenCanvas, 0, 0);
@@ -738,18 +791,21 @@ visibleCtx.drawImage(offscreenCanvas, 0, 0);
 
 **Lazy Loading:**
 Fonts loaded on-demand, not all at once:
+
 ```javascript
 // Load font when first used
 function loadFont(fontName) {
-    if (!fontCache.has(fontName)) {
-        return fetch(`/ui/fonts/${fontName}.png`)
-            .then(img => fontCache.set(fontName, img));
-    }
+	if (!fontCache.has(fontName)) {
+		return fetch(`/ui/fonts/${fontName}.png`).then(img =>
+			fontCache.set(fontName, img),
+		);
+	}
 }
 ```
 
 **Font Cache:**
 Keep recently used fonts in memory:
+
 ```javascript
 const fontCache = new Map(); // LRU cache with size limit
 ```
@@ -758,30 +814,61 @@ const fontCache = new Map(); // LRU cache with size limit
 
 **Message Batching:**
 Multiple canvas changes sent together:
+
 ```javascript
 const changes = [];
 // ... collect changes ...
-worker.postMessage({ cmd: "draw", blocks: changes });
+worker.postMessage({ cmd: 'draw', blocks: changes });
 ```
 
 **Web Worker:**
 WebSocket communication in worker thread keeps UI responsive:
+
 ```javascript
 // Main thread
 const worker = new Worker('websocket.js');
-worker.postMessage({ cmd: "connect", url: serverUrl });
+// First message MUST be init to establish security context
+worker.postMessage({ cmd: 'init' });
 
 // Worker thread
-self.onmessage = (e) => {
-    const { cmd, data } = e.data;
-    // Handle WebSocket communication
+self.onmessage = e => {
+	const { cmd, data } = e.data;
+	// Handle WebSocket communication
 };
+```
+
+**Security Features:**
+
+- **Mandatory Initialization**: Worker requires `init` command as first message to establish security context
+- **Trusted URL Construction**: WebSocket URLs are constructed only from the worker's own `location` object (protocol, hostname, port)
+- **URL Validation**: Malformed WebSocket URLs are detected and rejected using URL constructor validation
+- **Input Sanitization**: All error messages and unknown commands sanitize output to prevent injection
+- **JSON Parsing Protection**: Invalid JSON from server is caught and safely logged without crashing
+- **Silent Connection Check**: Server availability is tested silently before prompting user, avoiding intrusive errors
+
+**Connection Flow:**
+
+```javascript
+// 1. Initialize worker with security context
+worker.postMessage({ cmd: 'init' });
+
+// 2. Worker establishes trusted parameters from its own location
+// allowedHostname = self.location.hostname
+// trustedProtocol = self.location.protocol === 'https:' ? 'wss:' : 'ws:'
+// trustedPort = self.location.port || (https ? '443' : '80')
+
+// 3. Silent connection check (optional)
+worker.postMessage({ cmd: 'connect', silentCheck: true });
+
+// 4. User chooses collaboration or local mode
+// 5. Full connection established if user opts in
 ```
 
 ### Storage Optimization
 
 **Compression:**
 Run-length encoding reduces storage size:
+
 ```javascript
 // Before: [1,1,1,1,1,2,2,2,3,3]
 // After:  [[1,5],[2,3],[3,2]]
@@ -790,6 +877,7 @@ Run-length encoding reduces storage size:
 
 **Debouncing:**
 Avoid excessive saves:
+
 ```javascript
 const debouncedSave = debounce(saveToIndexedDB, 500);
 ```

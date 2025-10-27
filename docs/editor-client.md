@@ -30,77 +30,77 @@ The teXt0wnz client is a browser-based text art editor supporting ANSI, ASCII, X
 
 ### Main Tool Shortcuts
 
-| Key      | Action/Tool                |
-|----------|----------------------------|
-| K        | Keyboard Mode              |
-| F        | Freestyle (half-block)     |
-| B        | Character Brush            |
-| N        | Fill                       |
-| A        | Attribute Brush            |
-| G        | Grid Toggle                |
-| I        | iCE Colors Toggle          |
-| M        | Mirror Mode (drawing)      |
+| Key | Action/Tool            |
+| --- | ---------------------- |
+| K   | Keyboard Mode          |
+| F   | Freestyle (half-block) |
+| B   | Character Brush        |
+| N   | Fill                   |
+| A   | Attribute Brush        |
+| G   | Grid Toggle            |
+| I   | iCE Colors Toggle      |
+| M   | Mirror Mode (drawing)  |
 
 ### Color & Character
 
-| Key/Combo   | Action                     |
-|-------------|----------------------------|
-| D           | Reset colors to default    |
-| Q           | Swap foreground/background |
-| 0–7         | Select basic color         |
-| F1–F12      | Insert special block chars |
+| Key/Combo | Action                     |
+| --------- | -------------------------- |
+| D         | Reset colors to default    |
+| Q         | Swap foreground/background |
+| 0–7       | Select basic color         |
+| F1–F12    | Insert special block chars |
 
 ### File & Canvas
 
-| Key Combo           | Action                      |
-|---------------------|-----------------------------|
-| Ctrl+Z / Ctrl+Y     | Undo / Redo                 |
-| Ctrl+X/C/V/Shift+V  | Cut/Copy/Paste/System Paste |
-| Ctrl+Delete         | Delete selection            |
+| Key Combo          | Action                      |
+| ------------------ | --------------------------- |
+| Ctrl+Z / Ctrl+Y    | Undo / Redo                 |
+| Ctrl+X/C/V/Shift+V | Cut/Copy/Paste/System Paste |
+| Ctrl+Delete        | Delete selection            |
 
 ### Navigation (Keyboard Mode)
 
-| Key              | Action                  |
-|------------------|-------------------------|
-| Arrow Keys       | Move cursor             |
-| Home/End         | Line start/end          |
-| Page Up/Down     | Page jump               |
-| Tab/Backspace    | Insert tab/delete left  |
-| Enter            | New line                |
+| Key           | Action                 |
+| ------------- | ---------------------- |
+| Arrow Keys    | Move cursor            |
+| Home/End      | Line start/end         |
+| Page Up/Down  | Page jump              |
+| Tab/Backspace | Insert tab/delete left |
+| Enter         | New line               |
 
 ### Advanced Editing (Alt + Key)
 
-| Combo             | Action            |
-|-------------------|-------------------|
-| Alt+Up/Down       | Insert/Delete row |
-| Alt+Right/Left    | Insert/Delete col |
-| Alt+E/Shift+E     | Erase row/col     |
-| Alt+Home/End      | Erase to start/end|
-| Alt+PgUp/PgDn     | Erase to top/bottom|
+| Combo          | Action              |
+| -------------- | ------------------- |
+| Alt+Up/Down    | Insert/Delete row   |
+| Alt+Right/Left | Insert/Delete col   |
+| Alt+E/Shift+E  | Erase row/col       |
+| Alt+Home/End   | Erase to start/end  |
+| Alt+PgUp/PgDn  | Erase to top/bottom |
 
 ### Selection Operations
 
-| Key      | Action         |
-|----------|---------------|
-| [ / ]    | Flip selection |
-| M        | Move mode      |
+| Key   | Action         |
+| ----- | -------------- |
+| [ / ] | Flip selection |
+| M     | Move mode      |
 
 ### Special Function Keys
 
-| Key | Character | Description |
-|-----|-----------|-------------|
-| F1  | `░` | Light shade block |
-| F2  | `▒` | Medium shade block |
-| F3  | `▓` | Dark shade block |
-| F4  | `█` | Full block |
-| F5  | `▀` | Upper half block |
-| F6  | `▄` | Lower half block |
-| F7  | `▌` | Left half block |
-| F8  | `▐` | Right half block |
-| F9  | `■` | Small solid square |
-| F10 | `○` | Circle |
-| F11 | `•` | Bullet |
-| F12 | `NULL` | Blank/transparent |
+| Key | Character | Description        |
+| --- | --------- | ------------------ |
+| F1  | `░`       | Light shade block  |
+| F2  | `▒`       | Medium shade block |
+| F3  | `▓`       | Dark shade block   |
+| F4  | `█`       | Full block         |
+| F5  | `▀`       | Upper half block   |
+| F6  | `▄`       | Lower half block   |
+| F7  | `▌`       | Left half block    |
+| F8  | `▐`       | Right half block   |
+| F9  | `■`       | Small solid square |
+| F10 | `○`       | Circle             |
+| F11 | `•`       | Bullet             |
+| F12 | `NULL`    | Blank/transparent  |
 
 ### Mouse Controls
 
@@ -146,9 +146,10 @@ Toggle grid with G key. Useful for alignment and precision work.
 
 ### Font Selection
 
-Access via View menu. Choose from classic ANSI fonts and modern XBIN fonts. 
+Access via View menu. Choose from classic ANSI fonts and modern XBIN fonts.
 
 **Font Loading:**
+
 - Lazy glyph generation: Character glyphs are only created when first needed
 - Font caching: Common fonts (CP437, Topaz) are preloaded for instant switching
 - In-memory cache prevents regenerating glyphs for better performance
@@ -175,11 +176,13 @@ Edit artwork metadata via File menu. Includes title, author, group, comments, an
 ### Import/Export
 
 **Import:**
+
 - Load existing files via File → Open
 - Drag and drop files onto canvas
 - Automatic format detection
 
 **Export:**
+
 - ANSI (.ans)
 - Binary (.bin)
 - XBIN (.xb) with embedded fonts
@@ -188,9 +191,10 @@ Edit artwork metadata via File menu. Includes title, author, group, comments, an
 
 ### Auto Save/Restore
 
-Artwork is automatically saved to browser IndexedDB as you draw. When reopening the app, your work is automatically restored. 
+Artwork is automatically saved to browser IndexedDB as you draw. When reopening the app, your work is automatically restored.
 
 **How it works:**
+
 - Canvas data stored in IndexedDB as binary Uint16Array for efficiency
 - RLE compression reduces storage size for repetitive patterns
 - Small configuration settings stored in localStorage
@@ -198,6 +202,7 @@ Artwork is automatically saved to browser IndexedDB as you draw. When reopening 
 - Works even when offline
 
 **Storage Details:**
+
 - IndexedDB for large binary canvas data (efficient for Uint16Array)
 - localStorage for small settings and preferences
 - Compression applied to canvas data to minimize storage footprint
@@ -254,8 +259,8 @@ src/js/client/
 ├── lazyFont.js       # Lazy glyph generation
 ├── fontCache.js      # Font caching system
 ├── magicNumbers.js   # Constants and configuration
-├── websocket.js      # Web Worker for background processing
-└── network.js        # Collaboration/network functionality
+├── websocket.js      # WebSocket worker with security hardening
+└── network.js        # Collaboration/network with silent checks
 ```
 
 ### Key Modules
@@ -286,9 +291,9 @@ src/js/client/
 
 **magicNumbers.js** - Application constants, default values, and configuration.
 
-**websocket.js** - Web Worker for handling collaboration WebSocket communication in the background.
+**websocket.js** - Web Worker for handling collaboration WebSocket communication in the background. Implements security measures including mandatory initialization, trusted URL construction, and input sanitization.
 
-**network.js** - Manages network connections and real-time collaboration features.
+**network.js** - Manages network connections and real-time collaboration features. Coordinates worker lifecycle, silent connection checks, and collaboration mode selection.
 
 ## Standalone vs Collaborative Mode
 

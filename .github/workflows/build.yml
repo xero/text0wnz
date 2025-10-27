@@ -20,7 +20,9 @@ jobs:
         run: |
           sed -i 's!text.0w.nz!xero.github.io/text0wnz!' .env
       - name: build application
-        run: bun bake
+        run: |
+          bun bake
+          cp LICENSE dist/
       - name: check build artifacts
         run: |
           # dirs

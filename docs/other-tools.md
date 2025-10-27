@@ -12,11 +12,13 @@ This document covers additional tools and utilities that are useful for developi
 Automatically pins GitHub Actions dependencies to specific SHAs for security and reproducibility.
 
 **Purpose:**
+
 - Ensures workflow reproducibility
 - Prevents supply chain attacks
 - Required for this repository (all workflows must use pinned hashes)
 
 **Installation:**
+
 ```bash
 bun i -g pin-github-action
 # or
@@ -24,6 +26,7 @@ npm install -g pin-github-action
 ```
 
 **Usage:**
+
 ```bash
 # Pin actions in a workflow file
 pin-github-action /path/to/.github/workflows/your-workflow.yml
@@ -35,6 +38,7 @@ done
 ```
 
 **Example transformation:**
+
 ```yaml
 # Before
 - uses: actions/checkout@v4
@@ -44,6 +48,7 @@ done
 ```
 
 **Benefits:**
+
 - Specific commit SHAs can't be changed maliciously
 - Easier to track what version is actually being used
 - Better security posture for CI/CD
@@ -55,16 +60,19 @@ done
 Upgrades package.json dependencies to the latest versions, ignoring existing version constraints.
 
 **Purpose:**
+
 - Keep dependencies up to date
 - Find available updates quickly
 - Batch update all dependencies
 
 **Installation:**
+
 ```bash
 bun i npm-check-updates
 ```
 
 **Usage:**
+
 ```bash
 # Check for updates (dry run)
 ncu
@@ -86,6 +94,7 @@ ncu -i
 ```
 
 **Best practices:**
+
 1. Always test after updating dependencies
 2. Update incrementally (not all at once)
 3. Check for breaking changes in changelogs
@@ -103,6 +112,7 @@ Custom pre-commit hook for ensuring code quality before commits.
 **Location:** `docs/pre-commit`
 
 **Installation:**
+
 ```bash
 # Copy to .git/hooks/
 cp docs/pre-commit .git/hooks/pre-commit
@@ -110,6 +120,7 @@ chmod +x .git/hooks/pre-commit
 ```
 
 **What it does:**
+
 - Runs linting checks
 - Runs formatting checks
 - Prevents commits with issues
@@ -163,6 +174,7 @@ fi
 For managing large binary files (artwork examples, test fixtures).
 
 **Installation:**
+
 ```bash
 # Ubuntu/Debian
 sudo apt install git-lfs
@@ -175,6 +187,7 @@ git lfs install
 ```
 
 **Usage:**
+
 ```bash
 # Track specific file types
 git lfs track "*.xb"
@@ -198,35 +211,45 @@ git lfs pull
 Additional ESLint plugins for enhanced code quality:
 
 **eslint-plugin-security**
+
 ```bash
 bun add -D eslint-plugin-security
 ```
+
 Identifies potential security issues in code.
 
 **eslint-plugin-sonarjs**
+
 ```bash
 bun add -D eslint-plugin-sonarjs
 ```
+
 Detects bugs and code smells.
 
 **eslint-plugin-unicorn**
+
 ```bash
 bun add -D eslint-plugin-unicorn
 ```
+
 Powerful ESLint rules for better code quality.
 
 ### Prettier Plugins
 
 **prettier-plugin-organize-imports**
+
 ```bash
 bun add -D prettier-plugin-organize-imports
 ```
+
 Automatically organizes import statements.
 
 **prettier-plugin-packagejson**
+
 ```bash
 bun add -D prettier-plugin-packagejson
 ```
+
 Formats package.json files consistently.
 
 ## Performance Tools
@@ -236,11 +259,13 @@ Formats package.json files consistently.
 Automated performance, accessibility, and SEO testing.
 
 **Installation:**
+
 ```bash
 bun i -g @lhci/cli
 ```
 
 **Usage:**
+
 ```bash
 # Run Lighthouse
 lhci autorun
@@ -250,20 +275,21 @@ lhci autorun --config=lighthouserc.json
 ```
 
 **Example config (`lighthouserc.json`):**
+
 ```json
 {
-  "ci": {
-    "collect": {
-      "url": ["http://localhost:8060"],
-      "numberOfRuns": 3
-    },
-    "assert": {
-      "assertions": {
-        "categories:performance": ["error", {"minScore": 0.9}],
-        "categories:accessibility": ["error", {"minScore": 0.9}]
-      }
-    }
-  }
+	"ci": {
+		"collect": {
+			"url": ["http://localhost:8060"],
+			"numberOfRuns": 3
+		},
+		"assert": {
+			"assertions": {
+				"categories:performance": ["error", { "minScore": 0.9 }],
+				"categories:accessibility": ["error", { "minScore": 0.9 }]
+			}
+		}
+	}
 }
 ```
 
@@ -272,22 +298,24 @@ lhci autorun --config=lighthouserc.json
 Analyze bundle size and dependencies.
 
 **rollup-plugin-visualizer** (included with Vite):
+
 ```javascript
 // Add to vite.config.js
 import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig({
-  plugins: [
-    visualizer({
-      open: true,
-      gzipSize: true,
-      brotliSize: true,
-    }),
-  ],
+	plugins: [
+		visualizer({
+			open: true,
+			gzipSize: true,
+			brotliSize: true,
+		}),
+	],
 });
 ```
 
 Then run:
+
 ```bash
 bun bake
 # Opens visualization in browser
@@ -300,11 +328,13 @@ bun bake
 Advanced process manager for Node.js applications.
 
 **Installation:**
+
 ```bash
 bun i -g pm2
 ```
 
 **Usage:**
+
 ```bash
 # Start server
 pm2 start src/js/server/main.js --name text0wnz -- 1337
@@ -335,25 +365,29 @@ pm2 startup
 ```
 
 **Ecosystem file (`ecosystem.config.js`):**
+
 ```javascript
 module.exports = {
-  apps: [{
-    name: 'text0wnz',
-    script: './src/js/server/main.js',
-    args: '1337',
-    instances: 1,
-    autorestart: true,
-    watch: false,
-    max_memory_restart: '1G',
-    env: {
-      NODE_ENV: 'production',
-      SESSION_KEY: 'your-secret-key',
-    },
-  }],
+	apps: [
+		{
+			name: 'text0wnz',
+			script: './src/js/server/main.js',
+			args: '1337',
+			instances: 1,
+			autorestart: true,
+			watch: false,
+			max_memory_restart: '1G',
+			env: {
+				NODE_ENV: 'production',
+				SESSION_KEY: 'your-secret-key',
+			},
+		},
+	],
 };
 ```
 
 Run with:
+
 ```bash
 pm2 start ecosystem.config.js
 ```
@@ -365,11 +399,13 @@ pm2 start ecosystem.config.js
 Self-hosted monitoring tool.
 
 **Installation:**
+
 ```bash
 docker run -d --restart=always -p 3001:3001 -v uptime-kuma:/app/data --name uptime-kuma louislam/uptime-kuma:1
 ```
 
 **Setup monitors for:**
+
 - Application URL (https://text.0w.nz)
 - Collaboration server port
 - SSL certificate expiration
@@ -379,11 +415,13 @@ docker run -d --restart=always -p 3001:3001 -v uptime-kuma:/app/data --name upti
 Real-time performance monitoring.
 
 **Installation:**
+
 ```bash
 bash <(curl -Ss https://my-netdata.io/kickstart.sh)
 ```
 
 **Monitors:**
+
 - CPU usage
 - Memory usage
 - Disk I/O
@@ -398,6 +436,7 @@ bash <(curl -Ss https://my-netdata.io/kickstart.sh)
 Check for vulnerabilities in dependencies.
 
 **Usage:**
+
 ```bash
 # Run audit
 bun audit
@@ -417,12 +456,14 @@ bun audit --json
 Advanced security scanning for dependencies.
 
 **Installation:**
+
 ```bash
 bun i -g snyk
 snyk auth
 ```
 
 **Usage:**
+
 ```bash
 # Test for vulnerabilities
 snyk test
@@ -439,16 +480,17 @@ snyk fix
 GitHub's automated dependency updates.
 
 **Configuration (`.github/dependabot.yml`):**
+
 ```yaml
 version: 2
 updates:
-  - package-ecosystem: "bun"
-    directory: "/"
+  - package-ecosystem: 'bun'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     open-pull-requests-limit: 10
     reviewers:
-      - "xero"
+      - 'xero'
 ```
 
 ## CI/CD Tools
@@ -458,6 +500,7 @@ updates:
 Already configured in `.github/workflows/`.
 
 **Useful actions:**
+
 - `actions/checkout` - Checkout code
 - `actions/setup-node` - Setup Node.js
 - `actions/cache` - Cache dependencies
@@ -469,6 +512,7 @@ Already configured in `.github/workflows/`.
 Run GitHub Actions locally.
 
 **Installation:**
+
 ```bash
 # macOS
 brew install act
@@ -478,6 +522,7 @@ curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
 ```
 
 **Usage:**
+
 ```bash
 # List workflows
 act -l
@@ -497,6 +542,7 @@ act -n
 ### Markdown Linters
 
 **markdownlint-cli:**
+
 ```bash
 bun i -g markdownlint-cli
 
@@ -512,11 +558,13 @@ markdownlint --fix '**/*.md'
 Generate API documentation from code comments.
 
 **Installation:**
+
 ```bash
 bun i -g jsdoc
 ```
 
 **Usage:**
+
 ```bash
 # Generate docs
 jsdoc src/js/client/*.js -d docs/api
@@ -532,10 +580,12 @@ jsdoc -c jsdoc.json
 Browser extension for accessibility testing.
 
 **Installation:**
+
 - Chrome: Install from Chrome Web Store
 - Firefox: Install from Firefox Add-ons
 
 **Usage:**
+
 1. Open DevTools
 2. Go to axe DevTools tab
 3. Click "Scan ALL of my page"
@@ -546,11 +596,13 @@ Browser extension for accessibility testing.
 Automated accessibility testing.
 
 **Installation:**
+
 ```bash
 bun i -g pa11y
 ```
 
 **Usage:**
+
 ```bash
 # Test URL
 pa11y http://localhost:8060
@@ -569,6 +621,7 @@ pa11y --threshold 10 http://localhost:8060
 Backup session files and artwork.
 
 **Usage:**
+
 ```bash
 # Backup session directory
 rsync -avz /path/to/text0wnz/session/ user@backup-server:/backups/text0wnz/
@@ -584,6 +637,7 @@ rsync -avz /var/www/text0wnz/session/ /backups/text0wnz-$DATE/
 Automated tasks.
 
 **Example crontab:**
+
 ```bash
 # Edit crontab
 crontab -e
@@ -605,6 +659,7 @@ crontab -e
 Built-in browser debugging.
 
 **Key features:**
+
 - Elements inspector
 - Console
 - Network monitoring
@@ -617,6 +672,7 @@ Built-in browser debugging.
 Debug Node.js server.
 
 **Usage:**
+
 ```bash
 # Start with inspector
 node --inspect src/js/server/main.js
@@ -626,6 +682,7 @@ node --inspect-brk src/js/server/main.js
 ```
 
 Then open Chrome DevTools:
+
 ```
 chrome://inspect
 ```
@@ -635,6 +692,7 @@ chrome://inspect
 Test HTTP/WebSocket endpoints.
 
 **Usage:**
+
 ```bash
 # Test static file
 curl http://localhost:8060/

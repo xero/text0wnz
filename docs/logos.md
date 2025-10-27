@@ -3,6 +3,7 @@
 created by [x0^67^aMi5H^iMP!](https://0w.nz), and are free to use in any aspect related to the project.
 
 ## clean logo
+
 ```
     ______     .______   _____ ______  ____
    _\    /__   |   __/___\    \)    /_/   /_
@@ -20,6 +21,7 @@ created by [x0^67^aMi5H^iMP!](https://0w.nz), and are free to use in any aspect 
 ```
 
 ## stylized logo
+
 ```
     ______     .______   _____ ______  ____
    _\    /__   |   __/___\    \)    /_/   /_
@@ -37,8 +39,8 @@ created by [x0^67^aMi5H^iMP!](https://0w.nz), and are free to use in any aspect 
 ```
 
 ## mini 2 liner
+
 ```
   _/ _ \)_/ /\    _ __
   /‾(/_(\/‾ \/\))/ ) /_
 ```
-
