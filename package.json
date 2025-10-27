@@ -45,11 +45,18 @@
 		"lintpatterns": "src/**/*.html src/js/**/*.js tests/**/*.js"
 	},
 	"scripts": {
+		"bake": "./banner; vite build --mode production",
+		"server": "./banner; bun src/js/server/main.js",
+		"www": "./banner; serve dist -l 8060",
 		"fix": "./banner; prettier --write $npm_package_config_formatpatterns && eslint --fix $npm_package_config_lintpatterns",
 		"lint:check": "./banner; eslint $npm_package_config_lintpatterns",
 		"lint:fix": "./banner; eslint --fix $npm_package_config_lintpatterns",
 		"format:fix": "./banner; prettier --write $npm_package_config_formatpatterns",
-		"format:check": "./banner; prettier --check $npm_package_config_formatpatterns"
+		"format:check": "./banner; prettier --check $npm_package_config_formatpatterns",
+		"test:unit": "./banner; vitest run",
+		"test:dom": "./banner; vitest run tests/dom/",
+		"test:e2e": "./banner; playwright test",
+		"test:install": "./banner; playwright install-deps && playwright install && playwright install chrome firefox webkit"
 	},
 	"dependencies": {
 		"@html-eslint/eslint-plugin": "^0.47.0",
