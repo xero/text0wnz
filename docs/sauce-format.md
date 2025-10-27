@@ -358,7 +358,7 @@ Prior to revision 00.5, this field was a filler, so this field will be empty for
    Similar to trying to display a 4:3 TV signal on a widescreen display, some people will prefer the compressed but ‘native pixel’ sharpness, and others will prefer the native dimension and accept the loss in sharpness.
    The pixel aspect ratio is obtained by dividing the display aspect ratio width by the horizontal resolution and dividing the display aspect ratio height by the vertical resolution and then reducing both sides of the ratio.
 6. The stretching percentage that needs to be applied to the composed bitmap so that its relative size matches the original device it was intended for. The actual calculation for this stretch percentage would normally involve knowing the current display aspect ratio as well as the resolution. However since most modern screens have a 1:1 aspect ratio, this can simplified to:
-   ((pixel aspect ratio height / pixel aspect ratio width) - 1) _ 100
+   ((pixel aspect ratio height / pixel aspect ratio width) - 1) * 100
    Or alternatively:
    (((display aspect height / y-resolution) / (display aspect width / x-resolution)) -1) _ 100
 7. 9 pixel fonts. to be completed

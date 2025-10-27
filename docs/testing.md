@@ -85,7 +85,7 @@ export default defineConfig({
 
 > [!NOTE]
 > Vitest v4 deprecated `threads`/`maxThreads` in favor of `maxWorkers`/`isolate`
-> Set maxWorkers: 1 and isolate: true for single-threaded execution.'
+> Set maxWorkers: 1 and isolate: true for single-threaded execution.
 
 ### Running Unit Tests
 
@@ -386,7 +386,6 @@ const debug = msg => {
 **Test structure:**
 
 ```javascript
-/* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { functionToTest } from '../../src/js/client/module.js';
 
