@@ -335,22 +335,30 @@ Benefits:
 **Client to Server:**
 
 ```javascript
-['join', username][('nick', newUsername)][('chat', message)][('draw', blocks)][ // Join session // Change username // Send chat message // Drawing command
-	('resize', { columns, rows })
-][('fontChange', { fontName })][('iceColorsChange', { iceColors })][ // Canvas resize // Font change // ICE colors toggle
-	('letterSpacingChange', { letterSpacing })
-]; // Letter spacing toggle
+const clientProto =
+	(['join', username], // Join session
+	['nick', newUsername], // Change username
+	['chat', message], // Send chat message
+	['draw', blocks], // Drawing command
+	['resize', { columns, rows }], // Canvas resize
+	['fontChange', { fontName }], // Font change
+	['iceColorsChange', { iceColors }], // ICE colors toggle
+	['letterSpacingChange', { letterSpacing }]); // Letter spacing toggle
 ```
 
 **Server to Client:**
 
+`start` is the first command run after websocket initialization. It returns the connecting client's session id and the entire shared server state, which the editor caches. If the client chooses to join, the editor is reconfigured with the shared server data and chat features are enabled.
+
 ```javascript
-['start', sessionData, sessionID, userList][('join', username, sessionID)][ // Initial state // User joined
-	('part', sessionID)
-][('nick', username, sessionID)][('chat', username, message)][('draw', blocks)][ // User left // Username changed // Chat message // Drawing broadcast
-	('resize', { columns, rows })
-]; // Canvas resize broadcast
-// ... (canvas settings broadcasts)
+const serverProto =
+	(['start', sessionData, sessionID, userList], // Canvas data, client id, users
+	['join', username, sessionID], // User joined
+	['part', sessionID], // User left
+	['nick', username, sessionID], // Username changed
+	['chat', username, message], // Chat message
+	['draw', blocks], // Drawing broadcast
+	['resize', { columns, rows }]); // Canvas resize
 ```
 
 ### State Synchronization

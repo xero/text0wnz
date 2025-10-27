@@ -85,6 +85,7 @@ export default defineConfig({
 
 > [!NOTE]
 > Vitest v4 deprecated `threads`/`maxThreads` in favor of `maxWorkers`/`isolate`
+> Set maxWorkers: 1 and isolate: true for single-threaded execution.'
 
 ### Running Unit Tests
 
