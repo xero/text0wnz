@@ -71,9 +71,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./tests/setupTests.js'],
     globals: true,
-    threads: false,
+    // Vitest v4: Use maxWorkers and isolate instead of threads/maxThreads
+    maxWorkers: 1,
     isolate: true,
-    maxThreads: 1,
     coverage: {
       enabled: true,
       reporter: ['text', 'html'],
@@ -141,6 +141,28 @@ npx vitest --ui
 open tests/results/coverage/index.html      # macOS
 xdg-open tests/results/coverage/index.html  # Linux
 start tests/results/coverage/index.html     # Windows
+```
+
+**V8 Coverage Improvements in Vitest v4:**
+
+Vitest v4 uses AST-based coverage analysis for more accurate results. Key improvements:
+- More precise coverage mapping with fewer false positives
+- Lines without runtime code are automatically excluded
+- `coverage.ignoreClassMethods` now supported by V8 provider
+- Ignore comments updated - use `/* v8 ignore next */` or `/* v8 ignore start */` / `/* v8 ignore stop */`
+
+**Coverage ignore examples:**
+```javascript
+// Ignore a single line
+/* v8 ignore next */
+if (DEBUG) console.log('debug info');
+
+// Ignore a block
+/* v8 ignore start */
+function debugHelper() {
+  // development-only code
+}
+/* v8 ignore stop */
 ```
 
 ### Test Files
@@ -292,8 +314,19 @@ start tests/results/coverage/index.html     # Windows
 
 ### Writing Unit Tests
 
+> [!IMPORTANT]
+> **Vitest v4 requires regular functions (not arrow functions) for constructor mocks**
+> 
+> When mocking constructors, you must use the `function` keyword or `class` syntax. Arrow functions will cause a "not a constructor" error.
+> 
+> Since the project's ESLint configuration prefers arrow functions, **you must add this comment at the top of all test files**:
+> ```javascript
+> /* eslint-disable prefer-arrow-callback */
+> ```
+
 **Test structure:**
 ```javascript
+/* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { functionToTest } from '../../src/js/client/module.js';
 
@@ -329,6 +362,8 @@ describe('Module Name', () => {
 
 **Mocking:**
 ```javascript
+/* eslint-disable prefer-arrow-callback */
+
 // Mock a module
 vi.mock('../../src/js/client/state.js', () => ({
   default: {
@@ -337,8 +372,23 @@ vi.mock('../../src/js/client/state.js', () => ({
   }
 }));
 
-// Mock a function
+// Mock a regular function (arrow functions OK here)
 const mockFunction = vi.fn(() => 'mocked value');
+
+// Mock a constructor - MUST use function keyword or class
+global.FileReader = vi.fn(function () {
+  return mockReaderInstance;
+});
+
+// OR use a class for constructor mocks
+global.FileReader = vi.fn(class MockFileReader {
+  constructor() {
+    this.result = null;
+  }
+  readAsArrayBuffer() {
+    // mock implementation
+  }
+});
 
 // Spy on a method
 const spy = vi.spyOn(object, 'method');
@@ -369,6 +419,7 @@ import '@testing-library/jest-dom';
 
 **Testing DOM manipulation:**
 ```javascript
+/* eslint-disable prefer-arrow-callback */
 import { screen } from '@testing-library/dom';
 
 it('should update element', () => {
@@ -380,6 +431,7 @@ it('should update element', () => {
 
 **Testing events:**
 ```javascript
+/* eslint-disable prefer-arrow-callback */
 import { fireEvent } from '@testing-library/dom';
 
 it('should handle events', () => {
@@ -395,6 +447,8 @@ it('should handle events', () => {
 
 **Testing async code:**
 ```javascript
+/* eslint-disable prefer-arrow-callback */
+
 it('should load data asynchronously', async () => {
   const result = await loadData();
   expect(result).toBeDefined();
@@ -630,6 +684,14 @@ Tests run automatically on:
 - Ensure mocks are defined before imports
 - Check mock file paths
 - Verify mock implementation
+- **Constructor mocks must use `function` keyword or `class`, not arrow functions**
+- Add `/* eslint-disable prefer-arrow-callback */` at the top of test files
+
+**"is not a constructor" errors:**
+- This occurs when using arrow functions with `vi.fn()` for constructor mocks
+- Change `vi.fn(() => ...)` to `vi.fn(function () { ... })` for constructors
+- Or use `vi.fn(class MockClass { ... })` syntax
+- See the Mocking section for examples
 
 **Memory leaks:**
 - Clean up event listeners in afterEach
@@ -679,6 +741,7 @@ Tests run automatically on:
 
 - [Vitest Mocking Guide](https://vitest.dev/guide/mocking.html)
 - [Vitest Coverage Guide](https://vitest.dev/guide/coverage.html)
+- [Vitest v4 Migration Guide](https://vitest.dev/guide/migration.html#vitest-4)
 - [Playwright Best Practices](https://playwright.dev/docs/best-practices)
 - [Playwright Debugging](https://playwright.dev/docs/debug)
 - [Testing Library Queries](https://testing-library.com/docs/queries/about)
