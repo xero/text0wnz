@@ -6,7 +6,7 @@ LABEL org.opencontainers.image.title="text0wnz"
 LABEL org.opencontainers.image.authors="xero <x@xero.style>"
 LABEL org.opencontainers.image.description="Text-mode art editor for ANSI, ASCII, XBIN, NFO, & TXT files"
 LABEL org.opencontainers.image.source="https://github.com/xero/text0wnz"
-LABEL org.opencontainers.image.created="2025-10-17"
+LABEL org.opencontainers.image.created="2025-10-27"
 
 # Override me!
 ENV DOMAIN="localhost"
@@ -31,8 +31,10 @@ COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /app
 COPY . .
 RUN bun i && bun bake
+# Take out the bun and let it cool
+RUN rm -rf ./node_modules && bun i --production
 
-# Cleanup
+# Clean up the kitchen
 RUN rm -rf \
     .env \
     .git \
@@ -53,14 +55,11 @@ RUN rm -rf \
     tests \
     /var/cache/apk/*
 
-# Server only deps
-RUN bun i --production
-
 # Create unprivileged user
 RUN addgroup -S textart && \
 		adduser -S -G textart -h /app textart
 
-# Create directory structure for our user
+# Create directory structure
 RUN mkdir -p /etc/caddy /var/log /var/lib/caddy /home/textart/.local/share && \
     chown -R textart:textart /app /var/log /var/lib/caddy /etc/caddy /home/textart && \
     chmod -R 755 /app
