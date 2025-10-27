@@ -43,9 +43,9 @@ jobs:
           find wiki -mindepth 1 -maxdepth 1 -not -name '.git' -not -name 'img' -exec rm -rf {} \;
           # copy docs to wiki
           cp -r repo/docs/* wiki/
-          cp .github/CONTRIBUTING.md wiki/contributing.md
-          cp .github/CODE_OF_CONDUCT.md wiki/code_of_conduct.md
-          cp .github/SECURITY.md wiki/security.md
+          cp repo/.github/CONTRIBUTING.md wiki/contributing.md
+          cp repo/.github/CODE_OF_CONDUCT.md wiki/code_of_conduct.md
+          cp repo/.github/SECURITY.md wiki/security.md
           cd wiki
           # rename index file
           mv README.md Home.md
