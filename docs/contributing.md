@@ -11,7 +11,7 @@
 
 > ### **Do not open up a issue if the bug is a security vulnerability**
 >
-> Instead to refer to our [security policy](security.md) and submit a private [advisory](https://github.com/xero/text0wnz/security/advisories/new).
+> Instead to refer to our [security policy](https://github.com/xero/text0wnz/wiki/security.md) and submit a private [advisory](https://github.com/xero/text0wnz/security/advisories/new).
 
 ## Did you fix a bug?
 
@@ -21,7 +21,7 @@
 
 ## Did you write a new feature?
 
-- Rad! Please [lint, format](building-and-developing.md#code-quality-scripts), and [test](testing.md) your code before submitting a [pull request](https://github.com/xero/text0wnz/pulls).
+- Rad! Please [lint, format](https://github.com/xero/text0wnz/wiki/building-and-developing.md#code-quality-scripts), and [test](https://github.com/xero/text0wnz/wiki/testing.md) your code before submitting a [pull request](https://github.com/xero/text0wnz/pulls).
 
 # Do you have question about the code or using the app?
 

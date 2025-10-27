@@ -45,7 +45,7 @@ We **do not** use cookies, tracking technologies, or similar mechanisms.
 - CANVAS_DATA: The raw drawing data for your current artwork.
 - FONT_NAME, PALETTE_COLORS, ICE_COLORS, LETTER_SPACING, XBIN_FONT_DATA: Editor font and configuration settings to ensure a consistent experience.
 
-For more information, see our [Privacy Policy](privacy.md)
+For more information, see our [Privacy Policy](https://github.com/xero/text0wnz/wiki/privacy)
 
 ## WebSocket Security (Collaboration Mode)
 
@@ -77,16 +77,16 @@ When using the optional collaboration server, the application implements multipl
 
 ### Server-Side Security
 
-For server-side security best practices, see the [Collaboration Server Security section](collaboration-server.md#security-best-practices).
+For server-side security best practices, see the [Collaboration Server Security section](https://github.com/xero/text0wnz/wiki/collaboration-server#security-best-practices).
 
 ### Threat Model
 
 **Mitigated Threats:**
 
-- **URL Injection**: Prevented by trusted URL construction from location object
-- **JSON Injection**: Prevented by try-catch parsing and input sanitization
-- **Error Message Injection**: Prevented by output sanitization
-- **Uninitialized Worker Exploitation**: Prevented by mandatory initialization sequence
+- **Uninitialized Worker Exploitation**: Prevented by mandatory initialization sequence [CWE-918][CWE-940]
+- **URL Injection**: Prevented by trusted URL construction from location object [CWE-918][CWE-940]
+- **JSON Injection**: Prevented by try-catch parsing and input sanitization [CWE-20][CWE-117]
+- **Error Message Injection**: Prevented by output sanitization [CWE-20][CWE-117]
 
 **User Responsibility:**
 
