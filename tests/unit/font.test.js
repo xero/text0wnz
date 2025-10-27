@@ -1,3 +1,4 @@
+/* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
 	loadFontFromXBData,
@@ -57,13 +58,15 @@ describe('Font Module - Basic Tests', () => {
 		};
 
 		// Reset global Image mock
-		global.Image = vi.fn(() => ({
-			addEventListener: vi.fn(),
-			removeEventListener: vi.fn(),
-			src: '',
-			width: 128,
-			height: 256,
-		}));
+		global.Image = vi.fn(function () {
+			return {
+				addEventListener: vi.fn(),
+				removeEventListener: vi.fn(),
+				src: '',
+				width: 128,
+				height: 256,
+			};
+		});
 	});
 
 	afterEach(() => {
@@ -110,7 +113,9 @@ describe('Font Module - Basic Tests', () => {
 				height: 256,
 			};
 
-			global.Image = vi.fn(() => mockImage);
+			global.Image = vi.fn(function () {
+				return mockImage;
+			});
 		});
 
 		it('should setup image loading correctly', async () => {
@@ -276,7 +281,9 @@ describe('Font Module - Basic Tests', () => {
 				width: 128,
 				height: 256,
 			};
-			global.Image = vi.fn(() => mockImage);
+			global.Image = vi.fn(function () {
+				return mockImage;
+			});
 
 			// Test with letter spacing enabled
 			loadFontFromImage('TestFont', true, mockPalette);
