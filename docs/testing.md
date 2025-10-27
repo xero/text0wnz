@@ -35,29 +35,27 @@ teXt0wnz uses a comprehensive three-part testing strategy: unit tests with Vites
 
 ```
 tests/
-├── unit/               # Vitest unit tests
-│   ├── canvas.test.js
+├── unit/                   # Vitest unit tests
+│   ├── canvas.test.js      # client tests in the root
 │   ├── file.test.js
-│   ├── keyboard.test.js
-│   ├── palette.test.js
-│   └── server/
+│   ├── ...
+│   └── server/             # Server tests nested
 │       ├── config.test.js
 │       ├── fileio.test.js
-│       └── text0wnz.test.js
-├── dom/                # Testing Library tests
-│   └── (DOM component tests)
-├── e2e/                # Playwright E2E tests
+│       └── ...
+├── dom/                    # Testing Library tests
+│   ├── canvas.test.js
+│   ├── fontPreview.test.js
+│   └── ...
+├── e2e/                    # Playwright E2E tests
 │   ├── canvas.spec.js
 │   ├── tools.spec.js
-│   ├── palette.spec.js
-│   ├── file-operations.spec.js
-│   ├── keyboard.spec.js
-│   └── ui.spec.js
-├── results/            # Test results (gitignored)
-│   ├── coverage/       # Coverage reports
-│   ├── e2e/            # E2E artifacts
+│   └── ...
+├── results/                # Test results (gitignored)
+│   ├── coverage/           # Coverage reports
+│   ├── e2e/                # E2E artifacts
 │   └── playwright-report/  # Playwright HTML report
-└── setupTests.js       # Test environment setup
+└── setupTests.js           # Test environment setup
 ```
 
 ## Vitest (Unit Testing)
@@ -74,7 +72,6 @@ export default defineConfig({
 		environment: 'jsdom',
 		setupFiles: ['./tests/setupTests.js'],
 		globals: true,
-		// Vitest v4: Use maxWorkers and isolate instead of threads/maxThreads
 		maxWorkers: 1,
 		isolate: true,
 		coverage: {
@@ -85,6 +82,9 @@ export default defineConfig({
 	},
 });
 ```
+
+> [!NOTE]
+> Vitest v4 deprecated `threads`/`maxThreads` in favor of `maxWorkers`/`isolate`
 
 ### Running Unit Tests
 
@@ -157,7 +157,7 @@ start tests/results/coverage/index.html     # Windows
 
 #### V8 Coverage Improvements in Vitest v4
 
-Vitest v4 uses AST-based coverage analysis for more accurate results. Key improvements:
+Vitest v4 uses AST-based coverage analysis for more accurate results.
 
 - More precise coverage mapping with fewer false positives
 - Lines without runtime code are automatically excluded
@@ -168,15 +168,17 @@ Vitest v4 uses AST-based coverage analysis for more accurate results. Key improv
 
 #### Coverage ignore examples
 
+**Ignore a single line:**
 ```javascript
-// Ignore a single line
 /* v8 ignore next */
 if (DEBUG) console.log('debug info');
+```
 
-// Ignore a block
+**Ignore a block:**
+```javascript
 /* v8 ignore start */
-function debugHelper() {
-	// development-only code
+const debug = msg => {
+	console.log('debug info:', msg)
 }
 /* v8 ignore stop */
 ```
@@ -355,6 +357,8 @@ function debugHelper() {
 > **Vitest v4 requires regular functions (not arrow functions) for constructor mocks**
 >
 > When mocking constructors, you must use the `function` keyword or `class` syntax. Arrow functions will cause a "not a constructor" error.
+>
+> For more details, see the [Vitest v4 migration guide](https://vitest.dev/guide/migration/v4.html).
 >
 > Since the project's ESLint configuration prefers arrow functions, you may see lint warnings when using regular functions for constructor mocks.
 >
