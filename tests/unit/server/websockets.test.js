@@ -257,6 +257,7 @@ describe('WebSockets Module', () => {
 		});
 
 		it('should handle missing image data gracefully', () => {
+			text0wnz.getStart.mockReturnValue('["start",{}]');
 			text0wnz.getImageData.mockReturnValue({ data: null });
 
 			expect(() => {

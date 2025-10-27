@@ -1,3 +1,4 @@
+/* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock State module
@@ -535,7 +536,9 @@ describe('Main Application Module', () => {
 				width: 128,
 				height: 256,
 			};
-			global.Image.mockImplementation(() => mockImg);
+			global.Image.mockImplementation(function () {
+				return mockImg;
+			});
 
 			// Test font preview logic by triggering onload
 			mockImg.onload && mockImg.onload();
@@ -551,7 +554,9 @@ describe('Main Application Module', () => {
 				onerror: null,
 				src: '',
 			};
-			global.Image.mockImplementation(() => mockImg);
+			global.Image.mockImplementation(function () {
+				return mockImg;
+			});
 
 			// Test font preview error handling
 			expect(() => {

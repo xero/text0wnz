@@ -1,3 +1,4 @@
+/* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
 	createWorkerHandler,
@@ -8,6 +9,9 @@ import {
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		worker: null,
+		workerPath: '/js/worker.js',
+		modal: { close: vi.fn() },
+		title: '',
 		textArtCanvas: {
 			setImageData: vi.fn(),
 			resize: vi.fn(),
@@ -121,19 +125,23 @@ global.localStorage = {
 	setItem: vi.fn(),
 };
 
-global.Worker = vi.fn(() => ({
-	addEventListener: vi.fn(),
-	postMessage: vi.fn(),
-	removeEventListener: vi.fn(),
-}));
+global.Worker = vi.fn(function () {
+	return {
+		addEventListener: vi.fn(),
+		postMessage: vi.fn(),
+		removeEventListener: vi.fn(),
+	};
+});
 
 global.alert = vi.fn();
 global.console = { log: vi.fn(), info: vi.fn(), error: vi.fn(), warn: vi.fn() };
 
-global.Notification = vi.fn(() => ({
-	addEventListener: vi.fn(),
-	close: vi.fn(),
-}));
+global.Notification = vi.fn(function () {
+	return {
+		addEventListener: vi.fn(),
+		close: vi.fn(),
+	};
+});
 global.Notification.permission = 'granted';
 global.Notification.requestPermission = vi.fn();
 
@@ -158,7 +166,9 @@ describe('Network Module', () => {
 			removeEventListener: vi.fn(),
 		};
 
-		global.Worker.mockReturnValue(mockWorker);
+		global.Worker.mockImplementation(function () {
+			return mockWorker;
+		});
 		global.localStorage.getItem.mockReturnValue(null);
 	});
 
