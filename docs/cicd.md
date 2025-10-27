@@ -69,7 +69,7 @@ The CI/CD system consists of 10 workflow files that handle:
 
 - `docs/**`
 - `**/*.md`
-- `LICENSE.txt`
+- `LICENSE`
 - `OSSMETADATA`
 - `.gitattributes`
 - `.gitignore`

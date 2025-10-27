@@ -12,7 +12,7 @@
 | https://xero.github.io/text0wnz | Github Pages version of the site. No collab server |
 
 
-[![MIT Licensed](https://img.shields.io/github/license/xero/text0wnz?logo=wikiversity&logoColor=979da4&labelColor=262a2e&color=gold)](https://github.com/xero/text0wnz/blob/main/LICENSE.txt)
+[![MIT Licensed](https://img.shields.io/github/license/xero/text0wnz?logo=wikiversity&logoColor=979da4&labelColor=262a2e&color=gold)](https://github.com/xero/text0wnz/blob/main/LICENSE)
 [![Version](https://img.shields.io/github/package-json/version/xero/teXt0wnz?labelColor=%2333383e&logo=npm&&logoColor=%23979da4&color=6e2aa5)](https://github.com/xero/teXt0wnz/releases/latest)
 [![GitHub repo size](https://img.shields.io/github/repo-size/xero/teXt0wnz?labelColor=%23262a2e&logo=googlecontaineroptimizedos&logoColor=%23979da4&color=6e2aa5)](https://github.com/xero/teXt0wnz/)
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/w/xero/teXt0wnz?labelColor=%23262a2e&logo=stagetimer&logoColor=%23979da4&color=6e2aa5)](https://github.com/xero/text0wnz/graphs/commit-activity)
@@ -488,4 +488,4 @@ mad love & respect to ▒ [Andy Herbert^67](http://github.com/andyherbert) - [Mo
 
 ---
 
-All files and scripts in this repo are released [MIT](https://github.com/xero/teXt0wnz/blob/main/LICENSE.txt) / [kopimi](https://kopimi.com)! In the spirit of _freedom of information_, I encourage you to fork, modify, change, share, or do whatever you like with this project! `^c^v`
+All files and scripts in this repo are released [MIT](https://github.com/xero/teXt0wnz/blob/main/LICENSE) / [kopimi](https://kopimi.com)! In the spirit of _freedom of information_, I encourage you to fork, modify, change, share, or do whatever you like with this project! `^c^v`
