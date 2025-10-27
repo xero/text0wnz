@@ -1,3 +1,4 @@
+/* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
 	loadFontFromXBData,
@@ -280,7 +281,7 @@ describe('Font Module - Basic Tests', () => {
 				width: 128,
 				height: 256,
 			};
-			global.Image = vi.fn(function() {
+			global.Image = vi.fn(function () {
 				return mockImage;
 			});
 

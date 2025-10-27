@@ -1,3 +1,4 @@
+/* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock WebSocket and self since we're testing a Web Worker

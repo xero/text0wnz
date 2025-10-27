@@ -1,3 +1,4 @@
+/* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const canvasDataURL =
@@ -67,7 +68,7 @@ const mockDocument = {
 	dispatchEvent: vi.fn(),
 };
 
-const mockURL = vi.fn(function(url, base) {
+const mockURL = vi.fn(function (url, _base) {
 	this.href = url;
 	this.protocol = '';
 	this.hostname = '';
@@ -204,7 +205,7 @@ describe('File Module', () => {
 				};
 
 				const mockFileReaderInstance = new FileReader();
-				global.FileReader = vi.fn(function() {
+				global.FileReader = vi.fn(function () {
 					return mockFileReaderInstance;
 				});
 
@@ -427,7 +428,7 @@ describe('File Module', () => {
 		describe('Date Handling', () => {
 			it('should format dates correctly in SAUCE records', () => {
 				const mockDate = new Date('2023-03-15');
-				vi.spyOn(global, 'Date').mockImplementation(function() {
+				vi.spyOn(global, 'Date').mockImplementation(function () {
 					return mockDate;
 				});
 
@@ -618,7 +619,7 @@ describe('File Module', () => {
 			};
 
 			// Mock FileReader constructor to return our instance
-			global.FileReader = vi.fn(function() { return mockReaderInstance; });
+			global.FileReader = vi.fn(function () { return mockReaderInstance; });
 
 			Load.file(mockFile, callback);
 
@@ -642,7 +643,7 @@ describe('File Module', () => {
 				readAsArrayBuffer: vi.fn(),
 			};
 
-			global.FileReader = vi.fn(function() { return mockReaderInstance; });
+			global.FileReader = vi.fn(function () { return mockReaderInstance; });
 
 			Load.file(mockFile, callback);
 
@@ -666,7 +667,7 @@ describe('File Module', () => {
 				readAsArrayBuffer: vi.fn(),
 			};
 
-			global.FileReader = vi.fn(function() { return mockReaderInstance; });
+			global.FileReader = vi.fn(function () { return mockReaderInstance; });
 
 			Load.file(mockFile, callback);
 
@@ -690,7 +691,7 @@ describe('File Module', () => {
 				readAsArrayBuffer: vi.fn(),
 			};
 
-			global.FileReader = vi.fn(function() { return mockReaderInstance; });
+			global.FileReader = vi.fn(function () { return mockReaderInstance; });
 
 			Load.file(mockFile, callback);
 
@@ -724,7 +725,7 @@ describe('File Module', () => {
 					readAsArrayBuffer: vi.fn(),
 				};
 
-				global.FileReader = vi.fn(function() { return mockReaderInstance; });
+				global.FileReader = vi.fn(function () { return mockReaderInstance; });
 
 				expect(() => Load.file(mockFile, callback)).not.toThrow();
 				expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(
@@ -755,7 +756,7 @@ describe('File Module', () => {
 				readAsArrayBuffer: vi.fn(),
 			};
 
-			global.FileReader = vi.fn(function() { return mockReaderInstance; });
+			global.FileReader = vi.fn(function () { return mockReaderInstance; });
 
 			Load.file(mockFile, callback);
 
@@ -799,7 +800,7 @@ describe('File Module', () => {
 				readAsArrayBuffer: vi.fn(),
 			};
 
-			global.FileReader = vi.fn(function() { return mockReaderInstance; });
+			global.FileReader = vi.fn(function () { return mockReaderInstance; });
 
 			Load.file(mockFile, callback);
 
@@ -1018,7 +1019,7 @@ describe('File Module', () => {
 				readAsArrayBuffer: vi.fn(),
 			};
 
-			global.FileReader = vi.fn(function() { return mockReaderInstance; });
+			global.FileReader = vi.fn(function () { return mockReaderInstance; });
 
 			Load.file(mockFile, callback);
 
@@ -1042,7 +1043,7 @@ describe('File Module', () => {
 				readAsArrayBuffer: vi.fn(),
 			};
 
-			global.FileReader = vi.fn(function() { return mockReaderInstance; });
+			global.FileReader = vi.fn(function () { return mockReaderInstance; });
 
 			Load.file(mockFile, callback);
 
@@ -1066,7 +1067,7 @@ describe('File Module', () => {
 				readAsArrayBuffer: vi.fn(),
 			};
 
-			global.FileReader = vi.fn(function() { return mockReaderInstance; });
+			global.FileReader = vi.fn(function () { return mockReaderInstance; });
 
 			Load.file(mockFile, callback);
 
@@ -1097,7 +1098,7 @@ describe('File Module', () => {
 					readAsArrayBuffer: vi.fn(),
 				};
 
-				global.FileReader = vi.fn(function() { return mockReaderInstance; });
+				global.FileReader = vi.fn(function () { return mockReaderInstance; });
 
 				expect(() => Load.file(file, callback)).not.toThrow();
 				expect(mockReaderInstance.readAsArrayBuffer).toHaveBeenCalledWith(file);

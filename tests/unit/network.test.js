@@ -1,3 +1,4 @@
+/* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
 	createWorkerHandler,
@@ -9,9 +10,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		worker: null,
 		workerPath: '/js/worker.js',
-		modal: {
-			close: vi.fn(),
-		},
+		modal: { close: vi.fn() },
 		title: '',
 		textArtCanvas: {
 			setImageData: vi.fn(),
