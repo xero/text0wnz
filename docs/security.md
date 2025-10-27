@@ -58,6 +58,7 @@ When using the optional collaboration server, the application implements multipl
 **Mandatory Initialization**: The worker requires an `init` command as its first message to establish a security context. Any other command received first is rejected.
 
 **Trusted URL Construction**: WebSocket URLs are constructed exclusively from the worker's own `location` object:
+
 - Protocol automatically matches page protocol (`wss:` for HTTPS, `ws:` for HTTP)
 - Hostname matches the page's hostname
 - Port uses the page's port or secure defaults (443/80)
@@ -65,6 +66,7 @@ When using the optional collaboration server, the application implements multipl
 **URL Validation**: All WebSocket URLs are validated using the URL constructor. Malformed URLs are detected and rejected before connection attempts.
 
 **Input Sanitization**: All error messages and unknown commands have sanitized output:
+
 - Newlines and control characters are stripped
 - String length is limited (max 6 chars for unknown commands)
 - Prevents injection attacks via error messages
@@ -80,12 +82,14 @@ For server-side security best practices, see the [Collaboration Server Security 
 ### Threat Model
 
 **Mitigated Threats:**
+
 - **URL Injection**: Prevented by trusted URL construction from location object
 - **JSON Injection**: Prevented by try-catch parsing and input sanitization
 - **Error Message Injection**: Prevented by output sanitization
 - **Uninitialized Worker Exploitation**: Prevented by mandatory initialization sequence
 
 **User Responsibility:**
+
 - Users should only connect to trusted collaboration servers
 - HTTPS/WSS is strongly recommended for production use
 - Server certificate validation is handled by the browser

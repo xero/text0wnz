@@ -44,15 +44,17 @@ RUN rm -rf \
     *.config.js \
     bun.lock \
     Dockerfile \
-    openrcDockerfile \
     docs \
     node_modules \
-    LICENSE.txt \
+    LICENSE \
     OSSMETADATA \
     package*.json \
     README.md \
     tests \
     /var/cache/apk/*
+
+# Server only deps
+RUN bun i --production
 
 # Create unprivileged user
 RUN addgroup -S textart && \
