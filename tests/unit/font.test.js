@@ -280,7 +280,9 @@ describe('Font Module - Basic Tests', () => {
 				width: 128,
 				height: 256,
 			};
-			global.Image = vi.fn(() => mockImage);
+			global.Image = vi.fn(function() {
+				return mockImage;
+			});
 
 			// Test with letter spacing enabled
 			loadFontFromImage('TestFont', true, mockPalette);

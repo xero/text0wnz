@@ -8,6 +8,11 @@ import {
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		worker: null,
+		workerPath: '/js/worker.js',
+		modal: {
+			close: vi.fn(),
+		},
+		title: '',
 		textArtCanvas: {
 			setImageData: vi.fn(),
 			resize: vi.fn(),
@@ -162,7 +167,9 @@ describe('Network Module', () => {
 			removeEventListener: vi.fn(),
 		};
 
-		global.Worker.mockReturnValue(mockWorker);
+		global.Worker.mockImplementation(function () {
+			return mockWorker;
+		});
 		global.localStorage.getItem.mockReturnValue(null);
 	});
 
