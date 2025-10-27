@@ -193,9 +193,12 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 
 **Network** (`network.js`, `websocket.js`)
 
-- WebSocket client (in Web Worker)
-- Connection management
-- Message protocol handling
+- WebSocket client (in Web Worker with security hardening)
+- Mandatory worker initialization sequence
+- Trusted URL construction from page location
+- Silent connection checks (non-intrusive)
+- Connection state management
+- Message protocol handling with input validation
 - Canvas synchronization
 - Chat functionality
 
@@ -816,13 +819,41 @@ WebSocket communication in worker thread keeps UI responsive:
 ```javascript
 // Main thread
 const worker = new Worker('websocket.js');
-worker.postMessage({ cmd: 'connect', url: serverUrl });
+// First message MUST be init to establish security context
+worker.postMessage({ cmd: 'init' });
 
 // Worker thread
 self.onmessage = e => {
 	const { cmd, data } = e.data;
 	// Handle WebSocket communication
 };
+```
+
+**Security Features:**
+
+- **Mandatory Initialization**: Worker requires `init` command as first message to establish security context
+- **Trusted URL Construction**: WebSocket URLs are constructed only from the worker's own `location` object (protocol, hostname, port)
+- **URL Validation**: Malformed WebSocket URLs are detected and rejected using URL constructor validation
+- **Input Sanitization**: All error messages and unknown commands sanitize output to prevent injection
+- **JSON Parsing Protection**: Invalid JSON from server is caught and safely logged without crashing
+- **Silent Connection Check**: Server availability is tested silently before prompting user, avoiding intrusive errors
+
+**Connection Flow:**
+
+```javascript
+// 1. Initialize worker with security context
+worker.postMessage({ cmd: 'init' });
+
+// 2. Worker establishes trusted parameters from its own location
+// allowedHostname = self.location.hostname
+// trustedProtocol = self.location.protocol === 'https:' ? 'wss:' : 'ws:'
+// trustedPort = self.location.port || (https ? '443' : '80')
+
+// 3. Silent connection check (optional)
+worker.postMessage({ cmd: 'connect', silentCheck: true });
+
+// 4. User chooses collaboration or local mode
+// 5. Full connection established if user opts in
 ```
 
 ### Storage Optimization

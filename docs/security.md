@@ -46,3 +46,46 @@ We **do not** use cookies, tracking technologies, or similar mechanisms.
 - FONT_NAME, PALETTE_COLORS, ICE_COLORS, LETTER_SPACING, XBIN_FONT_DATA: Editor font and configuration settings to ensure a consistent experience.
 
 For more information, see our [Privacy Policy](privacy.md)
+
+## WebSocket Security (Collaboration Mode)
+
+When using the optional collaboration server, the application implements multiple security measures:
+
+### Client-Side Security
+
+**Worker Isolation**: WebSocket communication runs in a dedicated Web Worker, isolating network operations from the main UI thread.
+
+**Mandatory Initialization**: The worker requires an `init` command as its first message to establish a security context. Any other command received first is rejected.
+
+**Trusted URL Construction**: WebSocket URLs are constructed exclusively from the worker's own `location` object:
+- Protocol automatically matches page protocol (`wss:` for HTTPS, `ws:` for HTTP)
+- Hostname matches the page's hostname
+- Port uses the page's port or secure defaults (443/80)
+
+**URL Validation**: All WebSocket URLs are validated using the URL constructor. Malformed URLs are detected and rejected before connection attempts.
+
+**Input Sanitization**: All error messages and unknown commands have sanitized output:
+- Newlines and control characters are stripped
+- String length is limited (max 6 chars for unknown commands)
+- Prevents injection attacks via error messages
+
+**JSON Protection**: Server messages are parsed with try-catch blocks. Invalid JSON is safely logged without crashing the application.
+
+**Silent Connection Check**: The application performs a non-intrusive server availability check before prompting users, preventing error dialogs when collaboration is unavailable.
+
+### Server-Side Security
+
+For server-side security best practices, see the [Collaboration Server Security section](collaboration-server.md#security-best-practices).
+
+### Threat Model
+
+**Mitigated Threats:**
+- **URL Injection**: Prevented by trusted URL construction from location object
+- **JSON Injection**: Prevented by try-catch parsing and input sanitization
+- **Error Message Injection**: Prevented by output sanitization
+- **Uninitialized Worker Exploitation**: Prevented by mandatory initialization sequence
+
+**User Responsibility:**
+- Users should only connect to trusted collaboration servers
+- HTTPS/WSS is strongly recommended for production use
+- Server certificate validation is handled by the browser

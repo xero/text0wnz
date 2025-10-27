@@ -259,8 +259,8 @@ src/js/client/
 ├── lazyFont.js       # Lazy glyph generation
 ├── fontCache.js      # Font caching system
 ├── magicNumbers.js   # Constants and configuration
-├── websocket.js      # Web Worker for background processing
-└── network.js        # Collaboration/network functionality
+├── websocket.js      # WebSocket worker with security hardening
+└── network.js        # Collaboration/network with silent checks
 ```
 
 ### Key Modules
@@ -291,9 +291,9 @@ src/js/client/
 
 **magicNumbers.js** - Application constants, default values, and configuration.
 
-**websocket.js** - Web Worker for handling collaboration WebSocket communication in the background.
+**websocket.js** - Web Worker for handling collaboration WebSocket communication in the background. Implements security measures including mandatory initialization, trusted URL construction, and input sanitization.
 
-**network.js** - Manages network connections and real-time collaboration features.
+**network.js** - Manages network connections and real-time collaboration features. Coordinates worker lifecycle, silent connection checks, and collaboration mode selection.
 
 ## Standalone vs Collaborative Mode
 

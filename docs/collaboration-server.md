@@ -142,6 +142,54 @@ NODE_ENV=production SESSION_KEY=your-secret-key bun server 1337
 
 ## WebSocket Protocol
 
+### Security Model
+
+The WebSocket connection implements multiple security layers:
+
+**Client-Side Security:**
+
+1. **Worker Initialization**: The WebSocket worker must receive an `init` command before accepting any other messages. This establishes the security context.
+
+2. **Trusted URL Construction**: WebSocket URLs are constructed exclusively from the worker's own `location` object:
+   - Protocol: `wss:` for HTTPS origins, `ws:` for HTTP origins
+   - Hostname: Matches the page's hostname
+   - Port: Uses the page's port or defaults (443 for HTTPS, 80 for HTTP)
+
+3. **URL Validation**: All WebSocket URLs are validated using the URL constructor. Malformed URLs are rejected with sanitized error messages.
+
+4. **Input Sanitization**: All error messages and unknown commands have their output sanitized (newlines stripped, length limited) to prevent injection attacks.
+
+5. **JSON Protection**: Server messages are parsed with try-catch blocks. Invalid JSON is safely logged without crashing the worker.
+
+6. **Silent Connection Check**: The application performs a non-intrusive server availability check before prompting the user, preventing error dialogs when no server is present.
+
+**Connection Sequence:**
+
+```javascript
+// 1. Worker creation and initialization
+const worker = new Worker('websocket.js');
+worker.postMessage({ cmd: 'init' }); // Required first message
+
+// 2. Worker establishes trusted parameters from location
+// - allowedHostname = self.location.hostname
+// - trustedProtocol = 'wss:' or 'ws:' based on page protocol
+// - trustedPort = self.location.port or default
+
+// 3. Silent server check (non-blocking)
+worker.postMessage({ cmd: 'connect', silentCheck: true });
+
+// 4. User chooses collaboration mode if server available
+// 5. Full connection for collaboration
+worker.postMessage({ cmd: 'connect', silentCheck: false });
+```
+
+**Error Handling:**
+
+- Malformed URLs: Sanitized error message, connection rejected
+- Invalid JSON: Logged to console, message ignored
+- Unknown commands: Logged with sanitized command name (max 6 chars)
+- Connection failures: Clean failure handling with user notification
+
 ### Client-to-Server Messages
 
 | Message Type          | Format                                     | Description                                 |

@@ -483,8 +483,8 @@ src/
     │   ├── lazyFont.js      # Lazy glyph generation
     │   ├── fontCache.js     # Font caching system
     │   ├── magicNumbers.js
-    │   ├── websocket.js     # Web Worker for collaboration
-    │   └── network.js
+    │   ├── websocket.js     # Security-hardened WebSocket worker
+    │   └── network.js       # Network layer with silent checks
     └── server/         # Server-side modules
         ├── main.js
         ├── config.js

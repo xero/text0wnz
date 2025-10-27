@@ -84,13 +84,13 @@ src/js/client/
 ├── keyboard.js            # Keyboard mode and shortcuts
 ├── lazyFont.js            # Lazy font loading
 ├── magicNumbers.js        # Constants and magic values
-├── network.js             # Network communication and WebSocket client
+├── network.js             # Network layer with non-intrusive connection testing
 ├── palette.js             # Color palette management
 ├── state.js               # Global application state
 ├── storage.js             # IndexedDB persistence
 ├── toolbar.js             # Toolbar management
 ├── ui.js                  # User interface components
-└── websocket.js           # WebSocket worker (runs in Web Worker)
+└── websocket.js           # Security-hardened WebSocket worker
 ```
 
 #### Client Module Descriptions
@@ -189,11 +189,13 @@ src/js/client/
 **network.js** - Network Layer
 
 - WebSocket client management
-- Connection state
+- Worker initialization and state management
+- Non-intrusive connection testing
+- Connection state management
 - Message protocol handling
 - Canvas synchronization
 - Chat functionality
-- Server communication
+- Collaboration mode selection
 - Exports: `Network` object
 
 **palette.js** - Color Management
@@ -248,8 +250,11 @@ src/js/client/
 **websocket.js** - WebSocket Worker
 
 - Runs in Web Worker thread
-- WebSocket connection
-- Message handling
+- Security-hardened WebSocket connection
+- Mandatory initialization sequence
+- Trusted URL construction
+- JSON parsing protection and command validation
+- Message handling with error protection
 - Background communication
 - Keeps UI responsive
 - Exports: Worker message protocol
