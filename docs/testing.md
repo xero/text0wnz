@@ -149,7 +149,9 @@ Vitest v4 uses AST-based coverage analysis for more accurate results. Key improv
 - More precise coverage mapping with fewer false positives
 - Lines without runtime code are automatically excluded
 - `coverage.ignoreClassMethods` now supported by V8 provider
-- Ignore comments updated - use `/* v8 ignore next */` or `/* v8 ignore start */` / `/* v8 ignore stop */`
+- New ignore comment syntax:
+  - Single line: `/* v8 ignore next */`
+  - Code block: `/* v8 ignore start */` and `/* v8 ignore stop */`
 
 **Coverage ignore examples:**
 ```javascript
