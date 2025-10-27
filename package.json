@@ -41,7 +41,7 @@
 		"node": ">=22.19.0 <23"
 	},
 	"config": {
-		"formatpatterns": "src/**/*.html src/**/*.css src/js/**/*.js tests/**/*.js docs/*.md",
+		"formatpatterns": "src/**/*.html src/**/*.css src/js/**/*.js tests/**/*.js docs/**/*.md",
 		"lintpatterns": "src/**/*.html src/js/**/*.js tests/**/*.js"
 	},
 	"scripts": {

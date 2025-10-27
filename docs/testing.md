@@ -169,17 +169,19 @@ Vitest v4 uses AST-based coverage analysis for more accurate results.
 #### Coverage ignore examples
 
 **Ignore a single line:**
+
 ```javascript
 /* v8 ignore next */
 if (DEBUG) console.log('debug info');
 ```
 
 **Ignore a block:**
+
 ```javascript
 /* v8 ignore start */
 const debug = msg => {
-	console.log('debug info:', msg)
-}
+	console.log('debug info:', msg);
+};
 /* v8 ignore stop */
 ```
 
@@ -358,7 +360,7 @@ const debug = msg => {
 >
 > When mocking constructors, you must use the `function` keyword or `class` syntax. Arrow functions will cause a "not a constructor" error.
 >
-> For more details, see the [Vitest v4 migration guide](https://vitest.dev/guide/migration/v4.html).
+> For more details, see the [Vitest v4 migration guide](https://vitest.dev/guide/migration.html#vitest-4).
 >
 > Since the project's ESLint configuration prefers arrow functions, you may see lint warnings when using regular functions for constructor mocks.
 >
@@ -422,7 +424,9 @@ describe('Module Name', () => {
 ```javascript
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { functionToTest } from '../../src/js/client/module.js';
+
 // Example of a constructor mock using a regular function:
+
 // eslint-disable-next-line prefer-arrow-callback
 const MyConstructorMock = function () {
 	// mock implementation
@@ -480,7 +484,6 @@ import '@testing-library/jest-dom';
 **Testing DOM manipulation:**
 
 ```javascript
-/* eslint-disable prefer-arrow-callback */
 import { screen } from '@testing-library/dom';
 
 it('should update element', () => {
@@ -493,7 +496,6 @@ it('should update element', () => {
 **Testing events:**
 
 ```javascript
-/* eslint-disable prefer-arrow-callback */
 import { fireEvent } from '@testing-library/dom';
 
 it('should handle events', () => {
@@ -510,8 +512,6 @@ it('should handle events', () => {
 **Testing async code:**
 
 ```javascript
-/* eslint-disable prefer-arrow-callback */
-
 it('should load data asynchronously', async () => {
 	const result = await loadData();
 	expect(result).toBeDefined();
