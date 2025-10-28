@@ -714,7 +714,7 @@ class StateManager {
 		const closeModal = () => {
 			if (
 				!stateManager.state.modal.current() ||
-					stateManager.state.modal.current() === 'loading'
+				stateManager.state.modal.current() === 'loading'
 			) {
 				stateManager.state.modal.close();
 			}

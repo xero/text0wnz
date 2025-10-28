@@ -258,7 +258,6 @@ const initializeAppComponents = async () => {
 	onClick($('update'), _ => {
 		State.modal.open('update');
 	});
-	// Update service worker application
 	onClick(reload, _ => {
 		State.clearLocalStorage();
 		if ('caches' in window) {
