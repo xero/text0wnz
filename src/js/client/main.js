@@ -130,7 +130,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		// Initialize global state and variables
 		State.startInitialization();
 		$$$$();
-		bodyContainer.classList.add('loading');
 
 		// Tier 1: Core UI and Canvas (most critical)
 		State.modal = createModalController($('modal'));
@@ -256,8 +255,11 @@ const initializeAppComponents = async () => {
 			'https://github.com/xero/teXt0wnz/blob/main/docs/privacy.md';
 	});
 
+	onClick($('update'), _ => {
+		State.modal.open('update');
+	});
 	// Update service worker application
-	const updateClient = _ => {
+	onClick(reload, _ => {
 		State.clearLocalStorage();
 		if ('caches' in window) {
 			window.caches.keys().then(keys => {
@@ -268,11 +270,7 @@ const initializeAppComponents = async () => {
 		} else {
 			window.location.reload();
 		}
-	};
-	onClick($('update'), _ => {
-		State.modal.open('update');
 	});
-	onClick(reload, updateClient);
 	onReturn(reload, reload);
 
 	const palettePreview = createPalettePreview($('palette-preview'));

@@ -711,6 +711,15 @@ class StateManager {
 		stateManager.state.modal.open('loading');
 		this.loadingFromStorage = true;
 
+		const closeModal = () => {
+			if (
+				!stateManager.state.modal.current() ||
+					stateManager.state.modal.current() === 'loading'
+			) {
+				stateManager.state.modal.close();
+			}
+		};
+
 		try {
 			// Handle legacy format first (if present)
 			if (savedState) {
@@ -885,14 +894,14 @@ class StateManager {
 							if (settings?.fontName && this.state.textArtCanvas) {
 								this.state.textArtCanvas.setFont(settings.fontName, () => {
 									this.loadingFromStorage = false;
-									stateManager.state.modal.close();
+									closeModal();
 									document.dispatchEvent(
 										new CustomEvent('onStateRestorationComplete'),
 									);
 								});
 							} else {
 								this.loadingFromStorage = false;
-								stateManager.state.modal.close();
+								closeModal();
 							}
 						}, 0);
 					}, 0);
@@ -900,8 +909,8 @@ class StateManager {
 			}
 		} catch (error) {
 			console.error('[State] Error restoring state from localStorage:', error);
-			stateManager.state.modal.close();
 			this.loadingFromStorage = false;
+			closeModal();
 		}
 	}
 }

@@ -11,7 +11,7 @@ The Standard Architecture for Universal Comment Extensions or SAUCE as it is mor
 
 ## Why SAUCE?
 
-In the early 1990s there was a growing popularity in ANSI artwork. The ANSI art groups regularly released the works of their members over a certain period. Some of the bigger groups also included specialised viewers in each ‘artpack’. One of the problems with these artpacks was a lack of standardized way to provide meta data to the art, such as the title of the artwork, the author, the group, ... Some of the specialised viewers provided such information for a specific artpack either by encoding it as part of the executable, or by having some sort of database or list. However every viewer did it their own way. This meant you either had to use the viewer included with the artpack, or had to make do without the extra info. SAUCE was created to address that need. So if you wanted to, you could use your prefered viewer to view the art in a certain artpack, or even store the art files you liked in a separate folder while retaining the meta data.
+In the early 1990s there was a growing popularity in ANSI artwork. The ANSI art groups regularly released the works of their members over a certain period. Some of the bigger groups also included specialised viewers in each `artpack`. One of the problems with these artpacks was a lack of standardized way to provide meta data to the art, such as the title of the artwork, the author, the group, ... Some of the specialised viewers provided such information for a specific artpack either by encoding it as part of the executable, or by having some sort of database or list. However every viewer did it their own way. This meant you either had to use the viewer included with the artpack, or had to make do without the extra info. SAUCE was created to address that need. So if you wanted to, you could use your prefered viewer to view the art in a certain artpack, or even store the art files you liked in a separate folder while retaining the meta data.
 
 The goal was simple, but the way to get there certainly was not. Logistically, we wanted as many art groups as possible to support it. Technically, we wanted a system that was easy to implement and – if at all possible – manage to provide this meta data while still being compatible with all the existing software such as ANSI viewers, and Bulletin Board Software.
 
@@ -19,7 +19,7 @@ The goal was simple, but the way to get there certainly was not. Logistically, w
 
 SAUCE was created in 1994 and it continues to be in use today as a de facto standard within the ANSI art community. However, being created so many years ago, some of the common assumptions made back then are now cause for confusion. This document is a revised edition of the SAUCE specifications; slightly more formal and in a fresh HTML format. This specification is still compatible with the original, some of the legacy confusions are explicitly addressed, and a few new features have been added.
 
-The ‘born from DOS’ nature explains some of the limits of SAUCE. The Title, Author and Group fields are so short because part of the original design idea was that the DOS filename, title and author needed to fit on a single line in text mode while still leaving some space so you could create a decent UI to select the files in the ANSI viewers. Limitations were also designed around what video cards could do in text mode.
+The `born from DOS` nature explains some of the limits of SAUCE. The Title, Author and Group fields are so short because part of the original design idea was that the DOS filename, title and author needed to fit on a single line in text mode while still leaving some space so you could create a decent UI to select the files in the ANSI viewers. Limitations were also designed around what video cards could do in text mode.
 The specialised viewers in the various ANSI artpacks also explain why it was possible to add SAUCE to some files even though the file format really does not like it when you just add a load of extra bytes at the end. The SAUCE-aware viewer could account for the SAUCE and still render the file properly, even if the applications used to edit those files regarded the file as corrupt. In such an event, it was easy enough to remove the SAUCE.
 
 SAUCE is not a perfect solution, but at the time – and with a bit of friendly pressure from the right folks – it managed to fulfill what it was designed to do.
@@ -78,7 +78,7 @@ Code:
 
 #### Warning!
 
-SAUCE was initially created for supporting only the ANSi and RIP formats. Since those formats are ‘technically’ processed one character at a time, SAUCE almost never interferes with how a program treats the files, reading and processing should stop at the EOF character. Files that are treated in a similar way such as ASCII, PCBoard, Avatar and ANSiMations equally tend to work unaffected even in programs that are not SAUCE aware.
+SAUCE was initially created for supporting only the ANSi and RIP formats. Since those formats are `technically` processed one character at a time, SAUCE almost never interferes with how a program treats the files, reading and processing should stop at the EOF character. Files that are treated in a similar way such as ASCII, PCBoard, Avatar and ANSiMations equally tend to work unaffected even in programs that are not SAUCE aware.
 
 This is **not** true for all the other types of files SAUCE has DataType / FileType values for however. Adding SAUCE to some of the other types of files may have serious consequences on programs using those files. For this reason I would currently advise against adding SAUCE to such files, unless there is a pressing reason to do so anyway.
 
@@ -126,7 +126,7 @@ A SAUCE comment block is an optional, variable sized structure that holds up to 
    - I have seen SAUCE where Character fields were terminated with a binary 0 with the remainder containing garbage. When making a SAUCE reader, it is a good idea to properly handle this case. When writing SAUCE, stick with space padding.
    - Character fields should contain only plain text, do not insert formatting codes such as ansi escape codes, pcboard color codes, html tags, ...
    - Do not assume that a viewer will display this in a particular font or even if the font is fixed width or not.
-   - Prior to revision 5, the SAUCE specifications specified ‘ASCII characters’ which implies code page 437. There are ANSI files out there however where the artist assumed an ANSI according to his native code page and also has SAUCE assumed as such.
+   - Prior to revision 5, the SAUCE specifications specified `ASCII characters` which implies code page 437. There are ANSI files out there however where the artist assumed an ANSI according to his native code page and also has SAUCE assumed as such.
 4. An unsigned binary value of 1 byte (0 to 255), 2 bytes (0 to 65535) or 4 bytes (0 to 4294967295) stored in intel [little-endian](http://en.wikipedia.org/wiki/Little_endian#Little-endian) format.
    - Note that the FileSize field prior to revision 5 was listed as signed. This was an artefact of Turbo Pascal – a dominant programming language in the early 1990s – supporting a signed integer of 4 bytes but not having an unsigned integer of 4 bytes. Since a file size can never be negative, it is safe to assume unsigned.
    - SAUCE prior to revision 5 only allowed SAUCE on files up to 2Gb in size, which back then was hardly a problem since hard disks were typically smaller.
@@ -288,7 +288,7 @@ These bits are interpreted as:
 
   Changing the font width and wanting to remain at 80 characters per row means that you need to adjust for a change in horizontal resolution (from 720 pixels to 640 or vice versa). When you are trying to match the original aspect ratio (see the AR bits), you will need to adjust the vertical stretching accordingly.
   Only the VGA (and the Hercules) video cards actually supported fonts 9 pixels wide. SAUCE does not prevent you from specifying you want a 9 pixel wide font for a font that technically was never used that way. Note that duplicating the 8th column on non-IBM fonts (and even some code pages for IBM fonts) may not give the desired effect.
-  Some people like the 9 pixel fonts, some do not because it causes a visible break in the 3 ‘shadow blocks’ (B0h, B1h and B2h)
+  Some people like the 9 pixel fonts, some do not because it causes a visible break in the 3 `shadow blocks` (B0h, B1h and B2h)
 
 - AR: Aspect Ratio. Introduced in Version 00.5
   Most modern display devices have square pixels, but that has not always been the case. Displaying an ANSI file that was created for one of the older devices on a device with square pixels will vertically compress the image slightly. This can be compensated for by either taking a font that is slightly taller than was used on the legacy device, or by stretching the rendered image.
@@ -340,7 +340,7 @@ Prior to revision 00.5, this field was a filler, so this field will be empty for
    - If you do not support EGA fonts, fallback to the matching VGA variant and vice versa. (string-replace "EGA" with "VGA" or vice versa).
    - Code page 872 and 855 are mostly interchangeable (only different for the euro sign).
    - Code page 858 and 850 are mostly interchangeable (only different for the euro sign).
-   - Code page 865 and 437 are mostly interchangeable (9Bh ‘ø’ replacing ‘¢’ and 9Dh ‘Ø’ replacing ‘¥’).
+   - Code page 865 and 437 are mostly interchangeable (9Bh `ø` replacing `¢` and 9Dh `Ø` replacing `¥`).
    - If you do not support the specific code page, fallback to default variant. (remove " ###" from the end of the string)
    - Fallback to whatever font your program uses as default.
 
@@ -355,58 +355,58 @@ Prior to revision 00.5, this field was a filler, so this field will be empty for
 5. Modern display devices (LCD, LED and plasma) tend to have square pixels or at least as near square as is technically feasible, because square pixels make it easy to draw squares and circles. For various technical reasons square pixels have not always been the norm however.
    The downside of this is that if one tries to display an image or font on a display with a different aspect ratio than it was intended for, the image will appear to be stretched or compressed. All the old display modes tended to have a pixels that were taler than they were wide, so they will appear compressed vertically on a display with a 1:1 pixel aspect ratio.
    You can compensate for this compression by stretching the image, but this will introduce pixelation when you just duplicate pixel lines or blurring when you apply anti-aliassing or interpolation.
-   Similar to trying to display a 4:3 TV signal on a widescreen display, some people will prefer the compressed but ‘native pixel’ sharpness, and others will prefer the native dimension and accept the loss in sharpness.
+   Similar to trying to display a 4:3 TV signal on a widescreen display, some people will prefer the compressed but `native pixel` sharpness, and others will prefer the native dimension and accept the loss in sharpness.
    The pixel aspect ratio is obtained by dividing the display aspect ratio width by the horizontal resolution and dividing the display aspect ratio height by the vertical resolution and then reducing both sides of the ratio.
 6. The stretching percentage that needs to be applied to the composed bitmap so that its relative size matches the original device it was intended for. The actual calculation for this stretch percentage would normally involve knowing the current display aspect ratio as well as the resolution. However since most modern screens have a 1:1 aspect ratio, this can simplified to:
-   ((pixel aspect ratio height / pixel aspect ratio width) - 1) * 100
+   `((pixel aspect ratio height / pixel aspect ratio width) - 1) * 100`
    Or alternatively:
-   (((display aspect height / y-resolution) / (display aspect width / x-resolution)) -1) _ 100
+   `(((display aspect height / y-resolution) / (display aspect width / x-resolution)) -1) * 100`
 7. 9 pixel fonts. to be completed
 8. The “###” is a placeholder, these 3 characters should be replaced by one of the code pages IBM/Microsoft defined for use in DOS. The possible values for code page *###* are:
-   - 437: The character set of the original IBM PC. Also known as ‘MS-DOS Latin US’.
-   - 720: Arabic. Also known as ‘Windows-1256’.
-   - 737: Greek. Also known as ‘MS-DOS Greek’.
-   - 775: Baltic Rim (Estonian, Lithuanian and Latvian). Also known as ‘MS-DOS Baltic Rim’.
-   - 819: Latin-1 Supplemental. Also known as ‘Windows-28591’ and ‘ISO/IEC 8859-1’.
-     It is commonly mistaken for ‘Windows-1252’ which it resembles except for the 80h-9fh range (C1 control codes).
-   - 850: Western Europe. Also known as ‘MS-DOS Latin 1’.
+   - 437: The character set of the original IBM PC. Also known as `MS-DOS Latin US`.
+   - 720: Arabic. Also known as `Windows-1256`.
+   - 737: Greek. Also known as `MS-DOS Greek`.
+   - 775: Baltic Rim (Estonian, Lithuanian and Latvian). Also known as `MS-DOS Baltic Rim`.
+   - 819: Latin-1 Supplemental. Also known as `Windows-28591` and `ISO/IEC 8859-1`.
+     It is commonly mistaken for `Windows-1252` which it resembles except for the 80h-9fh range (C1 control codes).
+   - 850: Western Europe. Also known as `MS-DOS Latin 1`.
      Designed to include all the language glyphs, part of the line graphics characters were sacrificed, which made some DOS programs appear strange. Because of this most systems in these countries stuck with CP437 instead.
-   - 852: Central Europe (Bosnian, Croatian, Czech, Hungarian, Polish, Romanian, Serbian and Slovak). Also known as ‘MS-DOS Latin 2’.
+   - 852: Central Europe (Bosnian, Croatian, Czech, Hungarian, Polish, Romanian, Serbian and Slovak). Also known as `MS-DOS Latin 2`.
      Designed to include all the language glyphs, part of the line graphics characters were sacrificed, which made some DOS programs appear strange. Because of this, several countries adopted their own unofficial encoding system instead.
-   - 855: Cyrillic (Serbian, Macedonian Bulgarian, Russian). Also known as ‘MS-DOS Cyrillic’.
+   - 855: Cyrillic (Serbian, Macedonian Bulgarian, Russian). Also known as `MS-DOS Cyrillic`.
      Used in Serbia, Macedonia and Bulgaria, but eventually replaced by CP866. Never caught on in Russia.
-   - 857: Turkish. Also known as ‘MS-DOS Turkish’.
+   - 857: Turkish. Also known as `MS-DOS Turkish`.
      Based on CP850 and designed to include all characters from ISO 8859-9 (with a different encoding).
    - 858: Western Europe.
-     Identical to CP850 but has the euro sign at D5h instead. Also known as ‘Modified code page 850’.
-   - 860: Portuguese. Also known as ‘MS-DOS Portuguese’.
+     Identical to CP850 but has the euro sign at D5h instead. Also known as `Modified code page 850`.
+   - 860: Portuguese. Also known as `MS-DOS Portuguese`.
      Even though this code page preserves all the line graphics characters, Brazil has mainly adopted CP850 which does not.
-   - 861: Icelandic. Also known as ‘MS-DOS Icelandic’.
-   - 862: Hebrew. Also known as ‘MS-DOS Hebrew’.
+   - 861: Icelandic. Also known as `MS-DOS Icelandic`.
+   - 862: Hebrew. Also known as `MS-DOS Hebrew`.
      Obsolete on modern operating systems, replaced by Unicode which preserves the logical bidirectional order (which DOS could not).
-   - 863: French Canada. Also known as ‘MS-DOS French Canada’.
+   - 863: French Canada. Also known as `MS-DOS French Canada`.
    - 864: Arabic.
      Sacrifices all of the line graphics characters (encoding the single line box characters differently) in order to get more Arabic symbols. CP720 does preserve the line graphics characters.
    - 865: Nordic.
    - 866: Cyrillic.
-   - 869: Greek 2. Also known as ‘MS-DOS Greek 2’.
+   - 869: Greek 2. Also known as `MS-DOS Greek 2`.
      Designed to include all the glyphs from ISO 8859-7 (with a different encoding), part of the line graphics characters were sacrificed, which made some DOS programs appear strange. This made CP869 unpopular and most Greek systems used CP737 instead.
    - 872: Cyrillic.
      Identical to CP855 but has the euro sign at CFh instead.
-   - KAM: ‘Kamenický’ encoding. Also known as ‘KEYBCS2’.
+   - KAM: `Kamenický` encoding. Also known as `KEYBCS2`.
      Used for Czech, this code page was custom designed as an alternative for CP852 to preserved the line graphics characters while providing the characters needed for the Czech language. Supported in some DOS clones under the unofficial code page number 867 or 895.
-   - MAZ: ‘Mazovia’ encoding.
+   - MAZ: `Mazovia` encoding.
      Used for Polish, this code page was custom designed as an alternative for CP852 to preserved the line graphics characters while providing the characters needed for the Polish language. Supported in some DOS clones under the unofficial code page number 667 or 790.
    - MIK: Cyrillic.
      Most widespread codepage in Bulgaria. Supported in some DOS clones under the unofficial code page number 866.
 
    So for example "IBM VGA 855" would select the VGA 9×16 font for code page 855 for 80×25 text mode.
    Unsupported code pages:
-   - 667: Unofficial code page number for ‘Mazovia’ encoding, use "MAZ" instead.
-   - 790: Unofficial code page number for ‘Mazovia’ encoding on FreeDOS, use "MAZ" instead.
-   - 866: Unofficial code page number for ‘MIK’ encoding, use "MIK" instead.
-   - 867: Unofficial code page number for ‘Kamenický’ encoding, use "KAM" instead.
-   - 895: Unofficial code page number for ‘Kamenický’ encoding, use "KAM" instead.
+   - 667: Unofficial code page number for `Mazovia` encoding, use "MAZ" instead.
+   - 790: Unofficial code page number for `Mazovia` encoding on FreeDOS, use "MAZ" instead.
+   - 866: Unofficial code page number for `MIK` encoding, use "MIK" instead.
+   - 867: Unofficial code page number for `Kamenický` encoding, use "KAM" instead.
+   - 895: Unofficial code page number for `Kamenický` encoding, use "KAM" instead.
    - 991: Unofficial code page number, depending on the Operating System or device its meaning could differ. Probably refers to "MAZ".
 
 9. The Amiga 500 typically works at a 640×200 resolution or 640×400 in interlaced mode on NTSC monitor (USA and Japan), and at 640×256 (640×512 interlaced) on PAL monitors (most of Europe). In interlaced mode, rather than condensing the font to achieve double the amount of lines of text, the font instead was stretched to double its size.
@@ -424,3 +424,4 @@ Prior to revision 00.5, this field was a filler, so this field will be empty for
 | 00.3             | July 29, 1996     | Character/Avatar extended to use TInfo1 and TInfo2. <br>Added support for Audio/IT                                                                                                                                                                                                         |
 | 00.4             | May 31, 1997      | Technical cleanup                                                                                                                                                                                                                                                                          |
 | 00.5             | November 12, 2013 | Complete rewrite of the spec – this document. <br><br>- Filler is now used as a type dependant string.<br>- Flags for ANSI files and similar has been changed to include letter-spacing selection, as well as aspect ratio selection.<br>- ANSI files and similar can now specifiy a font. |
+| 00.6             | October 27, 2025  | Converted to markdown, fixed math multiplication typos                                                                                                                                                                                                                                     |
