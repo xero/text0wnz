@@ -27,7 +27,7 @@ text0wnz/
 ├── Dockerfile              # Production Docker image
 ├── docs/                   # Documentation files
 ├── eslint.config.js        # ESLint configuration
-├── LICENSE                 # MIT license
+├── LICENSE.txt             # MIT license
 ├── node_modules/           # Dependencies (gitignored)
 ├── OSSMETADATA             # Open source metadata
 ├── package.json            # Package configuration

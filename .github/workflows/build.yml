@@ -22,7 +22,7 @@ jobs:
       - name: build application
         run: |
           bun bake
-          cp LICENSE dist/
+          cp LICENSE.txt dist/
       - name: check build artifacts
         run: |
           # dirs

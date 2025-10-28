@@ -48,7 +48,7 @@ RUN rm -rf \
     Dockerfile \
     docs \
     node_modules \
-    LICENSE \
+    LICENSE.txt \
     OSSMETADATA \
     package*.json \
     README.md \
