@@ -40,6 +40,7 @@ const createModalController = modal => {
 		$('loading-modal'),
 		$('warning-modal'),
 	];
+	let current = false;
 	let closingTimeout = null;
 	let focus = () => {};
 	let blur = () => {};
@@ -49,9 +50,12 @@ const createModalController = modal => {
 		blur = onBlur;
 	};
 
+	const currentScreen = () => current;
+
 	const clear = () => modals.forEach(s => classList(s, 'hide'));
 
 	const open = name => {
+		current = name;
 		const section = name + '-modal';
 		if ($(section)) {
 			// cancel current close event
@@ -87,6 +91,7 @@ const createModalController = modal => {
 				blur();
 				classList(modal, 'closing', false);
 				modal.close();
+				current = false;
 				closingTimeout = null;
 			}, 700);
 		}
@@ -102,6 +107,7 @@ const createModalController = modal => {
 
 	return {
 		isOpen: () => modal.open,
+		current: currentScreen,
 		open: open,
 		close: close,
 		error: error,
