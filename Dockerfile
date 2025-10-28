@@ -19,7 +19,7 @@ ENV XDG_CONFIG_HOME="/etc/caddy"
 RUN apk add --no-cache \
     libstdc++=14.2.0-r6 \
     libgcc=14.2.0-r6 \
-    ca-certificates \
+    ca-certificates=20250911-r0 \
 		gettext=0.24.1-r0 \
 		netcat-openbsd=1.229.1-r0
 
@@ -33,6 +33,7 @@ COPY . .
 RUN bun i && bun bake
 # Take out the bun and let it cool
 RUN rm -rf ./node_modules && bun i --production
+RUN printf "\n%s\n%s\n" "https://github.com/xero/text0wnz" "https://teXt.0w.nz" >> LICENSE.txt
 
 # Clean up the kitchen
 RUN rm -rf \
@@ -48,7 +49,6 @@ RUN rm -rf \
     Dockerfile \
     docs \
     node_modules \
-    LICENSE.txt \
     OSSMETADATA \
     package*.json \
     README.md \
