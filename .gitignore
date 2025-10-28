@@ -96,10 +96,6 @@ $RECYCLE.BIN/
 .zig-cache/
 tmp/
 zig-out/
-src/ui/i/proj/
-src/ui/i/thumb/
-src/ui/i/me.jpg
-src/ui/i/signature.png
 Icon[]
 Network Trash Folder
 Session.vim
