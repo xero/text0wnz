@@ -1,9 +1,17 @@
-import { beforeAll } from 'vitest';
+import { beforeAll, afterEach } from 'vitest';
+
+// Cache contexts to reduce memory allocation
+const contextCache = new WeakMap();
 
 beforeAll(() => {
 	HTMLCanvasElement.prototype.getContext = function (type) {
 		if (type === '2d') {
-			return {
+			// Reuse cached context if available
+			if (contextCache.has(this)) {
+				return contextCache.get(this);
+			}
+
+			const context = {
 				canvas: this,
 				fillRect: () => {},
 				clearRect: () => {},
@@ -73,6 +81,10 @@ beforeAll(() => {
 				globalAlpha: 1,
 				globalCompositeOperation: 'source-over',
 			};
+
+			// Cache the context
+			contextCache.set(this, context);
+			return context;
 		}
 		if (type === 'webgl' || type === 'webgl2') {
 			return {};
@@ -87,4 +99,10 @@ beforeAll(() => {
 	HTMLCanvasElement.prototype.toBlob = function (callback) {
 		callback(new Blob());
 	};
+});
+
+// Clean up canvas context cache after each test to prevent memory leaks
+afterEach(() => {
+	// Note: WeakMap will automatically clean up when canvas elements are garbage collected,
+	// but we clear document.body.innerHTML in tests which helps with cleanup
 });
