@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
 	createFKeyShortcut,
 	createFKeysShortcut,
@@ -83,6 +83,13 @@ describe('Keyboard Utilities', () => {
 		vi.spyOn(console, 'error').mockImplementation(() => {});
 		// Reset all mocks
 		vi.clearAllMocks();
+	});
+
+	afterEach(() => {
+		// Clean up DOM
+		document.body.innerHTML = '';
+		// Restore all mocks and spies
+		vi.restoreAllMocks();
 	});
 
 	describe('Module Exports', () => {

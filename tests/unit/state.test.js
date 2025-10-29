@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import State from '../../src/js/client/state.js';
 
 describe('State Management System', () => {
@@ -9,6 +9,15 @@ describe('State Management System', () => {
 		// Clear all listeners to avoid interference between tests
 		State._manager.listeners.clear();
 		State._manager.waitQueue.clear();
+	});
+
+	afterEach(() => {
+		// Clean up state and listeners
+		State.reset();
+		State._manager.listeners.clear();
+		State._manager.waitQueue.clear();
+		// Restore all mocks
+		vi.restoreAllMocks();
 	});
 
 	describe('Basic State Operations', () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock modules that UI depends on
 vi.mock('../../src/js/client/state.js', () => ({ default: {} }));
@@ -27,6 +27,11 @@ describe('UI Utilities', () => {
 					{ selector, idx: 1 },
 				]),
 			};
+		});
+
+		afterEach(() => {
+			// Restore mocks
+			vi.restoreAllMocks();
 		});
 
 		it('should create a canvas with specified dimensions', async () => {

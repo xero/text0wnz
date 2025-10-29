@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Toolbar from '../../src/js/client/toolbar.js';
 
 // Mock State module
@@ -19,6 +19,13 @@ describe('Toolbar', () => {
 		// Reset toolbar state by creating new tools
 		// We can't directly reset the toolbar's internal state, so we work with it as-is
 		vi.clearAllMocks();
+	});
+
+	afterEach(() => {
+		// Clean up DOM
+		document.body.innerHTML = '';
+		// Restore all mocks
+		vi.restoreAllMocks();
 	});
 
 	describe('Toolbar.add', () => {

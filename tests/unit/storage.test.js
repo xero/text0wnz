@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Storage } from '../../src/js/client/storage.js';
 
 // Mock IndexedDB for testing
@@ -81,6 +81,13 @@ describe('Storage Utilities', () => {
 		localStorage.clear();
 		// Mock IndexedDB
 		mockIndexedDB();
+	});
+
+	afterEach(() => {
+		// Clean up storage
+		localStorage.clear();
+		// Restore all mocks
+		vi.restoreAllMocks();
 	});
 
 	describe('Settings Storage (localStorage)', () => {

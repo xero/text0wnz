@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
 	getUnicode,
 	getUTF8,
@@ -89,6 +89,13 @@ describe('Palette Utilities', () => {
 		beforeEach(() => {
 			// Mock document.dispatchEvent for palette tests
 			global.document = { dispatchEvent: vi.fn() };
+		});
+
+		afterEach(() => {
+			// Clean up palette object
+			mockPalette = null;
+			// Restore mocks
+			vi.restoreAllMocks();
 		});
 
 		it('should create a palette with correct RGBA values from 6-bit RGB', () => {
