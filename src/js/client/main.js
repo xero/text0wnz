@@ -36,6 +36,7 @@ import {
 import {
 	createCursor,
 	createSelectionCursor,
+	createSelectionTool,
 	createKeyboardController,
 	createPasteTool,
 } from './keyboard.js';
@@ -150,6 +151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				State.positionInfo = createPositionInfo($('position-info'));
 				State.selectionCursor = createSelectionCursor(canvasContainer);
 				State.cursor = createCursor(canvasContainer);
+				State.selectionTool = createSelectionTool();
 
 				// Tier 3: Secondary tools - defer with requestIdleCallback
 				const initSecondaryTools = () => {
@@ -165,6 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 							'modal',
 							'cursor',
 							'selectionCursor',
+							'selectionTool',
 							'positionInfo',
 							'toolPreview',
 							'pasteTool',
@@ -369,6 +372,22 @@ const initializeAppComponents = async () => {
 			$('keyboard-toolbar').classList.add('hide');
 		},
 	).enable();
+	Toolbar.add(
+		$('selection'),
+		() => {
+			paintShortcuts.disable();
+			State.menus.close();
+			State.selectionTool.enable();
+			$('keyboard-toolbar').classList.add('hide');
+			$('selection-toolbar').classList.remove('hide');
+		},
+		() => {
+			paintShortcuts.enable();
+			State.selectionTool.disable();
+			$('selection-toolbar').classList.add('hide');
+		},
+	);
+
 	onClick($('undo'), State.textArtCanvas.undo);
 	onClick($('redo'), State.textArtCanvas.redo);
 	onClick($('resolution'), () => {
@@ -600,22 +619,6 @@ const initializeAppComponents = async () => {
 		$('clipboard'),
 	);
 	Toolbar.add($('clipboard'), clipboard.enable, clipboard.disable);
-
-	Toolbar.addLazy($('selection'), async () => {
-		const { createSelectionTool } = await import('./freehand_tools.js');
-		State.selectionTool = createSelectionTool();
-		return {
-			onFocus: () => {
-				paintShortcuts.disable();
-				State.selectionTool.enable();
-			},
-			onBlur: () => {
-				paintShortcuts.enable();
-				State.selectionTool.disable();
-			},
-			enable: State.selectionTool.enable,
-		};
-	});
 
 	Toolbar.addLazy($('sample'), async () => {
 		// Sample tool depends on shading brushes, so we need to ensure they're loaded

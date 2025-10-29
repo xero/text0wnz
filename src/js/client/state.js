@@ -22,6 +22,7 @@ const EditorState = {
 	font: null,
 	cursor: null,
 	selectionCursor: null,
+	selectionTool: null,
 
 	// UI components
 	modal: null,
@@ -30,7 +31,6 @@ const EditorState = {
 	pasteTool: null,
 	chat: null,
 	sampleTool: null,
-	selectionTool: null,
 	menus: null,
 
 	// Network/collaboration
@@ -52,6 +52,7 @@ const EditorState = {
 		modal: false,
 		cursor: false,
 		selectionCursor: false,
+		selectionTool: false,
 		positionInfo: false,
 		toolPreview: false,
 		pasteTool: false,
@@ -261,6 +262,7 @@ class StateManager {
 			'modal',
 			'cursor',
 			'selectionCursor',
+			'selectionTool',
 			'positionInfo',
 			'toolPreview',
 			'pasteTool',
@@ -298,6 +300,7 @@ class StateManager {
 			modal: null,
 			cursor: null,
 			selectionCursor: null,
+			selectionTool: null,
 			positionInfo: null,
 			toolPreview: null,
 			pasteTool: null,
@@ -316,6 +319,7 @@ class StateManager {
 				modal: false,
 				cursor: false,
 				selectionCursor: false,
+				selectionTool: false,
 				positionInfo: false,
 				toolPreview: false,
 				pasteTool: false,
@@ -961,6 +965,12 @@ const State = {
 	},
 	set selectionCursor(value) {
 		stateManager.set('selectionCursor', value);
+	},
+	get selectionTool() {
+		return stateManager.state.selectionTool;
+	},
+	set selectionTool(value) {
+		stateManager.set('selectionTool', value);
 	},
 	get font() {
 		return stateManager.state.font;
