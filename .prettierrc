@@ -11,11 +11,11 @@
 	"arrowParens": "avoid",
 	"endOfLine": "lf",
 	"overrides": [
-    {
-      "files": "*.html",
-      "options": {
-        "printWidth": 400
-      }
-    }
-  ]
+		{
+			"files": "*.html",
+			"options": {
+				"printWidth": 400
+			}
+		}
+	]
 }
