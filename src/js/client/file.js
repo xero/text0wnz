@@ -1351,7 +1351,11 @@ const saveModule = () => {
 		return sauce;
 	};
 
-	const encodeANSi = async (useUTF8, blinkers = true) => {
+	const encodeANSi = async (
+		useUTF8,
+		blinkers = true,
+		stripEscapeCodes = false,
+	) => {
 		const ansiColor = binColor => {
 			switch (binColor) {
 				case 1:
@@ -1370,7 +1374,7 @@ const saveModule = () => {
 		const imageData = State.textArtCanvas.getImageData();
 		const columns = State.textArtCanvas.getColumns();
 		const rows = State.textArtCanvas.getRows();
-		let output = [27, 91, 48, 109]; // Start with a full reset (ESC[0m)
+		let output = stripEscapeCodes ? [] : [27, 91, 48, 109]; // Start with a full reset (ESC[0m) if not stripping codes
 		let bold = false;
 		let blink = false;
 		let currentForeground = magicNumbers.DEFAULT_FOREGROUND;
@@ -1424,50 +1428,53 @@ const saveModule = () => {
 					blink = false;
 				}
 
-				// Reset attributes if necessary
-				if ((lineBold && !bold) || (lineBlink && !blink)) {
-					attribs.push([48]); // Reset attributes (ESC[0m)
-					lineForeground = magicNumbers.DEFAULT_FOREGROUND;
-					lineBackground = magicNumbers.DEFAULT_BACKGROUND;
-					lineBold = false;
-					lineBlink = false;
-				}
-
-				// Enable bold or blink if needed
-				if (bold && !lineBold) {
-					attribs.push([49]); // Bold on (ESC[1m)
-					lineBold = true;
-				}
-				if (blink && !lineBlink) {
-					if (!useUTF8 || blinkers) {
-						attribs.push([53]); // Blink on (ESC[5m)
+				// Skip escape codes if stripEscapeCodes is true
+				if (!stripEscapeCodes) {
+					// Reset attributes if necessary
+					if ((lineBold && !bold) || (lineBlink && !blink)) {
+						attribs.push([48]); // Reset attributes (ESC[0m)
+						lineForeground = magicNumbers.DEFAULT_FOREGROUND;
+						lineBackground = magicNumbers.DEFAULT_BACKGROUND;
+						lineBold = false;
+						lineBlink = false;
 					}
-					lineBlink = true;
-				}
 
-				// Change foreground or background colors if necessary
-				if (foreground !== lineForeground) {
-					attribs.push([51, 48 + ansiColor(foreground)]); // Set foreground color (ESC[3Xm)
-					lineForeground = foreground;
-				}
-				if (background !== lineBackground) {
-					attribs.push([52, 48 + ansiColor(background)]); // Set background color (ESC[4Xm)
-					lineBackground = background;
-				}
+					// Enable bold or blink if needed
+					if (bold && !lineBold) {
+						attribs.push([49]); // Bold on (ESC[1m)
+						lineBold = true;
+					}
+					if (blink && !lineBlink) {
+						if (!useUTF8 || blinkers) {
+							attribs.push([53]); // Blink on (ESC[5m)
+						}
+						lineBlink = true;
+					}
 
-				// Apply attributes if there are changes
-				if (attribs.length) {
-					lineOutput.push(27, 91); // ESC[
-					for (
-						let attribIndex = 0;
-						attribIndex < attribs.length;
-						attribIndex++
-					) {
-						lineOutput = lineOutput.concat(attribs[attribIndex]);
-						if (attribIndex !== attribs.length - 1) {
-							lineOutput.push(59); // ;
-						} else {
-							lineOutput.push(109); // m
+					// Change foreground or background colors if necessary
+					if (foreground !== lineForeground) {
+						attribs.push([51, 48 + ansiColor(foreground)]); // Set foreground color (ESC[3Xm)
+						lineForeground = foreground;
+					}
+					if (background !== lineBackground) {
+						attribs.push([52, 48 + ansiColor(background)]); // Set background color (ESC[4Xm)
+						lineBackground = background;
+					}
+
+					// Apply attributes if there are changes
+					if (attribs.length) {
+						lineOutput.push(27, 91); // ESC[
+						for (
+							let attribIndex = 0;
+							attribIndex < attribs.length;
+							attribIndex++
+						) {
+							lineOutput = lineOutput.concat(attribs[attribIndex]);
+							if (attribIndex !== attribs.length - 1) {
+								lineOutput.push(59); // ;
+							} else {
+								lineOutput.push(109); // m
+							}
 						}
 					}
 				}
@@ -1483,14 +1490,19 @@ const saveModule = () => {
 			}
 
 			if (useUTF8) {
-				// Fill unused columns with spaces and reset attributes
-				for (let col = lineOutput.length / 2; col < columns; col++) {
-					lineOutput.push(32); // Space character
-					lineOutput.push(27, 91, 49, 109); // Reset background color (ESC[49m)
+				if (stripEscapeCodes) {
+					// Just add newline for plain text
+					lineOutput.push(10); // Newline (LF)
+				} else {
+					// Fill unused columns with spaces and reset attributes
+					for (let col = lineOutput.length / 2; col < columns; col++) {
+						lineOutput.push(32); // Space character
+						lineOutput.push(27, 91, 49, 109); // Reset background color (ESC[49m)
+					}
+					// Add newline and reset attributes per row
+					lineOutput.push(27, 91, 48, 109); // Full reset (ESC[0m)
+					lineOutput.push(10); // Newline (LF)
 				}
-				// Add newline and reset attributes per row
-				lineOutput.push(27, 91, 48, 109); // Full reset (ESC[0m)
-				lineOutput.push(10); // Newline (LF)
 			}
 
 			// Concatenate the line output to the overall output
@@ -1503,11 +1515,20 @@ const saveModule = () => {
 			currentBlink = lineBlink;
 		}
 
-		// Final full reset
-		output.push(27, 91, 48, 109); // ESC[0m
+		// Final full reset (only if not stripping escape codes)
+		if (!stripEscapeCodes) {
+			output.push(27, 91, 48, 109); // ESC[0m
+		}
 
 		const sauce = useUTF8 ? '' : createSauce(1, 1, output.length, true);
-		const fname = State.title + (useUTF8 ? '.utf8.ans' : '.ans');
+		let fname;
+		if (stripEscapeCodes) {
+			fname = State.title + '.txt';
+		} else if (useUTF8) {
+			fname = State.title + '.utf8.ans';
+		} else {
+			fname = State.title + '.ans';
+		}
 		await saveFile(new Uint8Array(output), sauce, fname);
 	};
 	const ans = async () => {
@@ -1520,6 +1541,10 @@ const saveModule = () => {
 
 	const utf8noBlink = async () => {
 		await encodeANSi(true, false);
+	};
+
+	const plainText = async () => {
+		await encodeANSi(true, false, true);
 	};
 
 	const convert16BitArrayTo8BitArray = Uint16s => {
@@ -1642,6 +1667,7 @@ const saveModule = () => {
 		ans: ans,
 		utf8: utf8,
 		utf8noBlink: utf8noBlink,
+		plainText: plainText,
 		bin: bin,
 		xb: xb,
 		png: png,

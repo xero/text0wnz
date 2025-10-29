@@ -286,6 +286,7 @@ describe('File Module', () => {
 				expect(typeof Save.ans).toBe('function');
 				expect(typeof Save.utf8).toBe('function');
 				expect(typeof Save.utf8noBlink).toBe('function');
+				expect(typeof Save.plainText).toBe('function');
 				expect(typeof Save.bin).toBe('function');
 				expect(typeof Save.xb).toBe('function');
 				expect(typeof Save.png).toBe('function');
@@ -314,6 +315,14 @@ describe('File Module', () => {
 				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
 
 				Save.utf8noBlink();
+
+				expect(createElementSpy).toHaveBeenCalledWith('a');
+			});
+
+			it('should save plain text files without escape codes', () => {
+				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
+
+				Save.plainText();
 
 				expect(createElementSpy).toHaveBeenCalledWith('a');
 			});

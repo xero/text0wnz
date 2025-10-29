@@ -230,6 +230,7 @@ const initializeAppComponents = async () => {
 	});
 	onClick($('save-ansi'), Save.ans);
 	onClick($('save-utf8'), Save.utf8);
+	onClick($('save-plaintext'), Save.plainText);
 	onClick($('save-bin'), Save.bin);
 	onClick($('save-xbin'), Save.xb);
 	onClick($('save-png'), Save.png);
