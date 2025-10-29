@@ -6,9 +6,19 @@ export default {
 		tailwindcss,
 		cssnano({
 			preset: ['advanced', {
+				convertValues: {
+					length: false,
+					time: true,
+				},
 				discardComments: {
 					removeAll: true,
 				},
+				normalizeCharset: {
+					add: false,
+				},
+				zindex: {
+					startIndex: 1,
+				}
 			}],
 		}),
 	],
