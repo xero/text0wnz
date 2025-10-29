@@ -1,6 +1,6 @@
 # teXt.0w.nz
 
-**teXt0wnz** is a web-based text-mode art editor for ANSI, ASCII, XBIN, NFO and more. Create, edit, and share text-based artwork in your browser—with full support for auto-save/restore with local storage, real-time collaborative editing, modern build tools, and automated testing.
+**Your browser is the canvas**—draw, edit, and collaborate on ANSI, ASCII, NFO, and XBIN art in a retro text art editor rebooted for the modern web. Offline-first with auto-save/restore and local storage, plus optional real-time sessions. Crafted for keyboard-centric artists and creators using mouse or touch—_on any device_. Built with modern tools and automated testing for a seamless experience.
 
 ![preview](https://raw.githubusercontent.com/xero/teXt0wnz/refs/heads/main/docs/preview.png)
 
