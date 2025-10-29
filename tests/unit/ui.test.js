@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import State from '../../src/js/client/state.js';
 import {
 	$,
@@ -62,6 +62,13 @@ describe('UI Utilities', () => {
 		document.body.innerHTML = '';
 		// Reset all mocks
 		vi.clearAllMocks();
+	});
+
+	afterEach(() => {
+		// Clean up any remaining DOM elements
+		document.body.innerHTML = '';
+		// Restore all mocks to prevent memory leaks
+		vi.restoreAllMocks();
 	});
 
 	describe('DOM Utilities', () => {

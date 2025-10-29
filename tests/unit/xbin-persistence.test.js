@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
@@ -44,6 +44,16 @@ describe('XBIN Font Data Persistence', () => {
 				this.data = {};
 			},
 		};
+	});
+
+	afterEach(() => {
+		// Clean up mocks and data
+		mockCanvas = null;
+		xbinFileBytes = null;
+		if (global.localStorage) {
+			global.localStorage.clear();
+		}
+		vi.restoreAllMocks();
 	});
 
 	it('should verify XBIN file has embedded font', () => {

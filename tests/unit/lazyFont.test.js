@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createLazyFont } from '../../src/js/client/lazyFont.js';
 
 // Mock the UI module
@@ -47,6 +47,14 @@ describe('Lazy Font Module', () => {
 			height: height,
 			data: data,
 		};
+	});
+
+	afterEach(() => {
+		// Clean up large objects
+		mockPalette = null;
+		fontData = null;
+		// Restore all mocks
+		vi.restoreAllMocks();
 	});
 
 	describe('createLazyFont', () => {
