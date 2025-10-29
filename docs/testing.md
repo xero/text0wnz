@@ -35,27 +35,37 @@ teXt0wnz uses a comprehensive three-part testing strategy: unit tests with Vites
 
 ```
 tests/
-├── unit/                   # Vitest unit tests
-│   ├── canvas.test.js      # client tests in the root
-│   ├── file.test.js
+├── unit/                          # Vitest unit tests
+│   ├── canvas.test.js             # client tests in the root
+│   ├── file-load.test.js          # File I/O - Load and Save
+│   ├── file-formats.test.js       # File I/O - Formats and Parsing
+│   ├── file-advanced.test.js      # File I/O - Advanced Operations
+│   ├── freehand-panels.test.js    # Drawing tools - Panels and Cursors
+│   ├── freehand-shapes.test.js    # Drawing tools - Shapes and Fill
+│   ├── freehand-advanced.test.js  # Drawing tools - Advanced Tools
+│   ├── ui-basic.test.js           # UI - Basic Utilities
+│   ├── ui-controls.test.js        # UI - Controls and Controllers
+│   ├── ui-components.test.js      # UI - Components
+│   ├── ui-modals.test.js          # UI - Advanced Utilities
 │   ├── ...
-│   └── server/             # Server tests nested
+│   └── server/                    # Server tests nested
 │       ├── config.test.js
 │       ├── fileio.test.js
 │       └── ...
-├── dom/                    # Testing Library tests
+├── dom/                           # Testing Library tests
 │   ├── canvas.test.js
 │   ├── fontPreview.test.js
 │   └── ...
-├── e2e/                    # Playwright E2E tests
+├── e2e/                           # Playwright E2E tests
 │   ├── canvas.spec.js
 │   ├── tools.spec.js
 │   └── ...
-├── results/                # Test results (gitignored)
-│   ├── coverage/           # Coverage reports
-│   ├── e2e/                # E2E artifacts
-│   └── playwright-report/  # Playwright HTML report
-└── setupTests.js           # Test environment setup
+├── results/                       # Test results (gitignored)
+│   ├── coverage/                  # Coverage reports
+│   ├── e2e/                       # E2E artifacts
+│   └── playwright-report/         # Playwright HTML report
+├── canvasShim.js                  # Canvas API shim for tests
+└── setupTests.js                  # Test environment setup
 ```
 
 ## Vitest (Unit Testing)
@@ -200,13 +210,29 @@ const debug = msg => {
 - Mirror mode functionality
 - XBin font/palette handling
 
-**file.test.js** - File I/O operations
+**file-load.test.js** - File I/O: Load and Save operations
 
-- ANSI file format handling
-- Binary (.bin) file support
-- XBin format support
-- SAUCE metadata parsing
-- File export operations
+- Load module functionality
+- Save module operations
+- Data type conversions
+- Basic file format handling
+- ANSI and binary file support
+
+**file-formats.test.js** - File I/O: Formats and parsing
+
+- Binary data handling
+- Error handling
+- File class internal logic
+- SAUCE record processing
+- ANSI parsing engine
+- UTF-8 processing
+
+**file-advanced.test.js** - File I/O: Advanced operations
+
+- Advanced save operations
+- Data conversion functions
+- File format edge cases
+- Internal data processing
 - PNG image generation
 - Font name conversions
 
@@ -220,16 +246,34 @@ const debug = msg => {
 - Error handling
 - Font dimension validation
 
-**freehand_tools.test.js** - Drawing tools
+**freehand-panels.test.js** - Drawing tools: Panels and cursors
 
-- Halfblock/block drawing
-- Character brush
-- Shading brush
-- Line tool
-- Square tool
-- Circle tool
-- Fill tool
-- Tool state management
+- Panel cursor creation
+- Floating panel palette
+- Floating panel management
+- Brush controller
+- Half-block controller
+- Shading controller and panel
+- Character brush panel
+
+**freehand-shapes.test.js** - Drawing tools: Shapes and fill
+
+- Fill controller
+- Shapes controller
+- Line controller
+- Square controller (outline and fill modes)
+- Circle controller
+- Shape drawing algorithms
+
+**freehand-advanced.test.js** - Drawing tools: Advanced tools
+
+- Attribute brush controller
+- Selection tool
+- Sample tool (color picker)
+- Line drawing algorithms
+- Panel state management
+- Event handling edge cases
+- Memory management patterns
 
 **keyboard.test.js** - Keyboard input and shortcuts
 
@@ -278,12 +322,39 @@ const debug = msg => {
 - Toolbar state management
 - UI updates
 
-**ui.test.js** - User interface components
+**ui-basic.test.js** - User interface: Basic utilities
 
-- UI element creation
-- Event handling
-- DOM manipulation
-- Component interactions
+- DOM utilities ($, $$, createCanvas)
+- Setting toggles
+- Event listener functions (onClick, onReturn, onFileChange)
+- Position info display
+- Modal functions
+- Undo/redo functionality
+
+**ui-controls.test.js** - User interface: Controls and controllers
+
+- Toggle button creation
+- Generic controller pattern
+- Byte enforcement for text fields
+- WebSocket UI updates
+- Fullscreen toggle
+- Modal controller management
+
+**ui-components.test.js** - User interface: Components
+
+- Viewport tap interactions
+- Paint shortcuts system
+- Resolution controller
+- Drag and drop controller
+- Menu controller
+
+**ui-modals.test.js** - User interface: Advanced utilities
+
+- Additional DOM utilities ($$$)
+- Grid creation and management
+- Tool preview rendering
+- Font selection interface
+- WebSocket connectivity UI
 
 **utils.test.js** - Utility functions
 
@@ -303,6 +374,22 @@ const debug = msg => {
 - Embedded font handling
 - Palette persistence
 - File roundtrip testing
+
+> [!NOTE]
+> **Test File Organization Best Practices**
+>
+> Test files should be **small and focused** on testing specific features rather than entire sections of the editor. Each test file should:
+>
+> - Focus on a single module or feature area (e.g., `file-load.test.js` for loading, `file-formats.test.js` for parsing)
+> - Keep file size under ~500 lines for maintainability
+> - Group related functionality logically (e.g., UI controls vs. UI components)
+> - Make it easy to locate and run tests for specific features
+> - Enable faster test execution when working on specific areas
+>
+> Large monolithic test files (1000+ lines) should be split into focused, feature-specific files as demonstrated by:
+> - `ui-*.test.js` - Split by UI feature groups (basic, controls, components, modals)
+> - `file-*.test.js` - Split by operation type (load, formats, advanced)
+> - `freehand-*.test.js` - Split by tool categories (panels, shapes, advanced)
 
 #### Server Modules
 

@@ -376,61 +376,73 @@ docs/
 
 ```
 tests/
-├── setupTests.js              # Test environment setup
-├── unit/                      # Vitest unit tests
-│   ├── README.md              # Unit test documentation
-│   ├── canvas.test.js         # Canvas module tests
-│   ├── client/                # Client-specific tests
-│   │   └── worker.test.js     # WebSocket worker tests
-│   ├── compression.test.js    # Compression tests
-│   ├── file.test.js           # File I/O tests
-│   ├── font.test.js           # Font system tests
-│   ├── fontCache.test.js      # Font cache tests
-│   ├── freehand_tools.test.js # Drawing tools tests
-│   ├── keyboard.test.js       # Keyboard tests
-│   ├── lazyFont.test.js       # Lazy loading tests
-│   ├── magicNumbers.test.js   # Constants tests
-│   ├── main.test.js           # Main module tests
-│   ├── network.test.js        # Network tests
-│   ├── palette.test.js        # Palette tests
-│   ├── server/                # Server-specific tests
-│   │   ├── config.test.js     # Config tests
-│   │   ├── fileio.test.js     # Server file I/O tests
-│   │   ├── main.test.js       # Server main tests
-│   │   ├── server.test.js     # Express server tests
-│   │   ├── text0wnz.test.js   # Collaboration tests
-│   │   ├── utils.test.js      # Server utils tests
+├── canvasShim.js            # Canvas API shim for tests
+├── setupTests.js            # Test environment setup
+├── unit/                    # Vitest unit tests
+│   ├── README.md            # Unit test documentation
+│   ├── canvas.test.js       # Canvas module tests
+│   ├── client/              # Client-specific tests
+│   │   └── worker.test.js   # WebSocket worker tests
+│   ├── compression.test.js  # Compression tests
+│   ├── file-load.test.js    # File I/O - Load and Save tests
+│   ├── file-formats.test.js # File I/O - Formats and Parsing tests
+│   ├── file-advanced.test.js # File I/O - Advanced operations tests
+│   ├── font.test.js         # Font system tests
+│   ├── fontCache.test.js    # Font cache tests
+│   ├── freehand-panels.test.js # Drawing tools - Panels and Cursors
+│   ├── freehand-shapes.test.js # Drawing tools - Shapes and Fill
+│   ├── freehand-advanced.test.js # Drawing tools - Advanced tools
+│   ├── keyboard.test.js     # Keyboard tests
+│   ├── lazyFont.test.js     # Lazy loading tests
+│   ├── magicNumbers.test.js # Constants tests
+│   ├── main.test.js         # Main module tests
+│   ├── network.test.js      # Network tests
+│   ├── palette.test.js      # Palette tests
+│   ├── server/              # Server-specific tests
+│   │   ├── config.test.js   # Config tests
+│   │   ├── fileio.test.js   # Server file I/O tests
+│   │   ├── main.test.js     # Server main tests
+│   │   ├── server.test.js   # Express server tests
+│   │   ├── text0wnz.test.js # Collaboration tests
+│   │   ├── utils.test.js    # Server utils tests
 │   │   └── websockets.test.js # WebSocket tests
-│   ├── state.test.js          # State management tests
-│   ├── storage.test.js        # Storage tests
-│   ├── toolbar.test.js        # Toolbar tests
-│   ├── ui.test.js             # UI tests
-│   ├── utils.test.js          # Client utils tests
-│   ├── websocket.test.js      # WebSocket client tests
-│   ├── worker.test.js         # Worker tests
+│   ├── state.test.js        # State management tests
+│   ├── storage.test.js      # Storage tests
+│   ├── toolbar.test.js      # Toolbar tests
+│   ├── ui-basic.test.js     # UI - Basic utilities tests
+│   ├── ui-controls.test.js  # UI - Controls and controllers tests
+│   ├── ui-components.test.js # UI - Components tests
+│   ├── ui-modals.test.js    # UI - Advanced utilities tests
+│   ├── utils.test.js        # Client utils tests
+│   ├── websocket.test.js    # WebSocket client tests
+│   ├── worker.test.js       # Worker tests
 │   └── xbin-persistence.test.js # XBIN tests
-├── dom/                       # Testing Library DOM tests
-│   ├── README.md              # DOM test documentation
-│   ├── keyboard.test.js       # Keyboard DOM tests
-│   ├── modal.test.js          # Modal tests
-│   ├── palette.test.js        # Palette DOM tests
-│   ├── toggleButton.test.js   # Toggle button tests
-│   └── toolbar.test.js        # Toolbar DOM tests
-├── e2e/                       # Playwright E2E tests
-│   ├── README.md              # E2E test documentation
-│   ├── canvas.spec.js         # Canvas E2E tests
-│   ├── clipboard.spec.js      # Clipboard tests
-│   ├── collaboration.spec.js  # Collaboration tests
+├── dom/                     # Testing Library DOM tests
+│   ├── README.md            # DOM test documentation
+│   ├── canvas.test.js       # Canvas DOM tests
+│   ├── fontPreview.test.js  # Font preview tests
+│   ├── fullscreen.test.js   # Fullscreen tests
+│   ├── keyboard.test.js     # Keyboard DOM tests
+│   ├── menu.test.js         # Menu tests
+│   ├── modal.test.js        # Modal tests
+│   ├── palette.test.js      # Palette DOM tests
+│   ├── toggleButton.test.js # Toggle button tests
+│   └── toolbar.test.js      # Toolbar DOM tests
+├── e2e/                     # Playwright E2E tests
+│   ├── README.md            # E2E test documentation
+│   ├── canvas.spec.js       # Canvas E2E tests
+│   ├── clipboard.spec.js    # Clipboard tests
+│   ├── collaboration.spec.js # Collaboration tests
 │   ├── file-operations.spec.js # File operations tests
-│   ├── keyboard.spec.js       # Keyboard E2E tests
-│   ├── palette.spec.js        # Palette E2E tests
-│   ├── tools.spec.js          # Tools E2E tests
-│   ├── ui.spec.js             # UI E2E tests
-│   └── undo-redo.spec.js      # Undo/redo tests
-└── results/                   # Test results (gitignored)
-    ├── coverage/              # Unit test coverage
-    ├── e2e/                   # E2E artifacts
-    └── playwright-report/     # Playwright HTML report
+│   ├── keyboard.spec.js     # Keyboard E2E tests
+│   ├── palette.spec.js      # Palette E2E tests
+│   ├── tools.spec.js        # Tools E2E tests
+│   ├── ui.spec.js           # UI E2E tests
+│   └── undo-redo.spec.js    # Undo/redo tests
+└── results/                 # Test results (gitignored)
+    ├── coverage/            # Unit test coverage
+    ├── e2e/                 # E2E artifacts
+    └── playwright-report/   # Playwright HTML report
 ```
 
 ## Configuration Files
