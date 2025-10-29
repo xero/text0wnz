@@ -219,11 +219,13 @@ const createCursor = canvasContainer => {
 				}
 			} else if (e.metaKey && !e.shiftKey) {
 				switch (e.code) {
-					case 'ArrowLeft': // Cmd/Meta + Left arrow
+					// Cmd/Meta + Left arrow
+					case 'ArrowLeft':
 						e.preventDefault();
 						startOfCurrentRow();
 						break;
-					case 'ArrowRight': // Cmd/Meta + Right arrow
+					// Cmd/Meta + Right arrow
+					case 'ArrowRight':
 						e.preventDefault();
 						endOfCurrentRow();
 						break;
@@ -233,10 +235,10 @@ const createCursor = canvasContainer => {
 			} else if (e.shiftKey && !e.metaKey) {
 				// Shift + arrow keys trigger selection - switch to selection tool
 				switch (e.code) {
-					case 'ArrowLeft': // Shift + Left arrow
-					case 'ArrowUp': // Shift + Up arrow
-					case 'ArrowRight': // Shift + Right arrow
-					case 'ArrowDown': // Shift + Down arrow
+					case 'ArrowLeft':
+					case 'ArrowUp':
+					case 'ArrowRight':
+					case 'ArrowDown':
 						e.preventDefault();
 						// Start selection from current cursor position
 						State.cursor.startSelection();
@@ -268,6 +270,7 @@ const createCursor = canvasContainer => {
 		return visible;
 	};
 
+	// init
 	canvas.classList.add('cursor');
 	hide();
 	canvasContainer.insertBefore(canvas, canvasContainer.firstChild);
@@ -301,7 +304,6 @@ const createSelectionCursor = element => {
 	const cursor = createCanvas(0, 0);
 	let sx, sy, dx, dy, x, y, width, height;
 	let visible = false;
-
 	// Marching ants animation state
 	let dashOffset = 0;
 	let animationId = null;
@@ -452,9 +454,7 @@ const createKeyboardController = () => {
 		const currentRows = State.textArtCanvas.getRows();
 		const currentColumns = State.textArtCanvas.getColumns();
 		const cursorY = State.cursor.getY();
-
 		State.textArtCanvas.startUndo();
-
 		const newImageData = new Uint16Array(currentColumns * (currentRows + 1));
 		const oldImageData = State.textArtCanvas.getImageData();
 
@@ -464,11 +464,9 @@ const createKeyboardController = () => {
 					oldImageData[y * currentColumns + x];
 			}
 		}
-
 		for (let x = 0; x < currentColumns; x++) {
 			newImageData[cursorY * currentColumns + x] = magicNumbers.BLANK_CELL;
 		}
-
 		for (let y = cursorY; y < currentRows; y++) {
 			for (let x = 0; x < currentColumns; x++) {
 				newImageData[(y + 1) * currentColumns + x] =
@@ -488,13 +486,10 @@ const createKeyboardController = () => {
 		const currentRows = State.textArtCanvas.getRows();
 		const currentColumns = State.textArtCanvas.getColumns();
 		const cursorY = State.cursor.getY();
-
 		if (currentRows <= 1) {
 			return;
 		} // Don't delete if only one row
-
 		State.textArtCanvas.startUndo();
-
 		const newImageData = new Uint16Array(currentColumns * (currentRows - 1));
 		const oldImageData = State.textArtCanvas.getImageData();
 
@@ -504,7 +499,6 @@ const createKeyboardController = () => {
 					oldImageData[y * currentColumns + x];
 			}
 		}
-
 		// Skip the row at cursor position (delete it)
 		// Copy rows after cursor position
 		for (let y = cursorY + 1; y < currentRows; y++) {
@@ -513,14 +507,12 @@ const createKeyboardController = () => {
 					oldImageData[y * currentColumns + x];
 			}
 		}
-
 		State.textArtCanvas.setImageData(
 			currentColumns,
 			currentRows - 1,
 			newImageData,
 			State.textArtCanvas.getIceColors(),
 		);
-
 		if (State.cursor.getY() >= currentRows - 1) {
 			State.cursor.move(State.cursor.getX(), currentRows - 2);
 		}
@@ -530,9 +522,7 @@ const createKeyboardController = () => {
 		const currentRows = State.textArtCanvas.getRows();
 		const currentColumns = State.textArtCanvas.getColumns();
 		const cursorX = State.cursor.getX();
-
 		State.textArtCanvas.startUndo();
-
 		const newImageData = new Uint16Array((currentColumns + 1) * currentRows);
 		const oldImageData = State.textArtCanvas.getImageData();
 
@@ -541,7 +531,6 @@ const createKeyboardController = () => {
 				newImageData[y * (currentColumns + 1) + x] =
 					oldImageData[y * currentColumns + x];
 			}
-
 			newImageData[y * (currentColumns + 1) + cursorX] =
 				magicNumbers.BLANK_CELL;
 
@@ -550,7 +539,6 @@ const createKeyboardController = () => {
 					oldImageData[y * currentColumns + x];
 			}
 		}
-
 		State.textArtCanvas.setImageData(
 			currentColumns + 1,
 			currentRows,
@@ -563,13 +551,10 @@ const createKeyboardController = () => {
 		const currentRows = State.textArtCanvas.getRows();
 		const currentColumns = State.textArtCanvas.getColumns();
 		const cursorX = State.cursor.getX();
-
 		if (currentColumns <= 1) {
 			return;
 		} // Don't delete if only one column
-
 		State.textArtCanvas.startUndo();
-
 		const newImageData = new Uint16Array((currentColumns - 1) * currentRows);
 		const oldImageData = State.textArtCanvas.getImageData();
 
@@ -578,7 +563,6 @@ const createKeyboardController = () => {
 				newImageData[y * (currentColumns - 1) + x] =
 					oldImageData[y * currentColumns + x];
 			}
-
 			// Skip the column at cursor position (delete it)
 			for (let x = cursorX + 1; x < currentColumns; x++) {
 				newImageData[y * (currentColumns - 1) + x - 1] =
@@ -601,9 +585,7 @@ const createKeyboardController = () => {
 	const eraseRow = () => {
 		const currentColumns = State.textArtCanvas.getColumns();
 		const cursorY = State.cursor.getY();
-
 		State.textArtCanvas.startUndo();
-
 		for (let x = 0; x < currentColumns; x++) {
 			State.textArtCanvas.draw(callback => {
 				callback(
@@ -640,9 +622,7 @@ const createKeyboardController = () => {
 		const currentColumns = State.textArtCanvas.getColumns();
 		const cursorX = State.cursor.getX();
 		const cursorY = State.cursor.getY();
-
 		State.textArtCanvas.startUndo();
-
 		for (let x = cursorX; x < currentColumns; x++) {
 			State.textArtCanvas.draw(callback => {
 				callback(
@@ -678,9 +658,7 @@ const createKeyboardController = () => {
 	const eraseToStartOfColumn = () => {
 		const cursorX = State.cursor.getX();
 		const cursorY = State.cursor.getY();
-
 		State.textArtCanvas.startUndo();
-
 		for (let y = 0; y <= cursorY; y++) {
 			State.textArtCanvas.draw(callback => {
 				callback(
@@ -717,8 +695,8 @@ const createKeyboardController = () => {
 	const keyDown = e => {
 		if (!ignored) {
 			if (!e.altKey && !e.ctrlKey && !e.metaKey) {
+				// Tab key - insert tab character
 				if (e.code === 'Tab') {
-					// Tab key
 					e.preventDefault();
 					draw(9); // Tab character code
 				} else if (e.code === 'Backspace') {
@@ -728,25 +706,29 @@ const createKeyboardController = () => {
 					}
 				}
 			} else if (e.altKey && !e.ctrlKey && !e.metaKey) {
-				// Alt key combinations for edit actions
 				switch (e.code) {
-					case 'ArrowUp': // Alt+Up Arrow - Insert Row
+					// Alt+Up Arrow - Insert Row
+					case 'ArrowUp':
 						e.preventDefault();
 						insertRow();
 						break;
-					case 'ArrowDown': // Alt+Down Arrow - Delete Row
+					// Alt+Down Arrow - Delete Row
+					case 'ArrowDown':
 						e.preventDefault();
 						deleteRow();
 						break;
-					case 'ArrowRight': // Alt+Right Arrow - Insert Column
+					// Alt+Right Arrow - Insert Column
+					case 'ArrowRight':
 						e.preventDefault();
 						insertColumn();
 						break;
-					case 'ArrowLeft': // Alt+Left Arrow - Delete Column
+					// Alt+Left Arrow - Delete Column
+					case 'ArrowLeft':
 						e.preventDefault();
 						deleteColumn();
 						break;
-					case 'KeyE': // Alt+E - Erase Row (or Alt+Shift+E for Erase Column)
+					// Alt+E - Erase Row (or Alt+Shift+E for Erase Column)
+					case 'KeyE':
 						e.preventDefault();
 						if (e.shiftKey) {
 							eraseColumn();
@@ -754,19 +736,23 @@ const createKeyboardController = () => {
 							eraseRow();
 						}
 						break;
-					case 'Home': // Alt+Home - Erase to Start of Row
+					// Alt+Home - Erase to Start of Row
+					case 'Home':
 						e.preventDefault();
 						eraseToStartOfRow();
 						break;
-					case 'End': // Alt+End - Erase to End of Row
+					// Alt+End - Erase to End of Row
+					case 'End':
 						e.preventDefault();
 						eraseToEndOfRow();
 						break;
-					case 'PageUp': // Alt+Page Up - Erase to Start of Column
+					// Alt+Page Up - Erase to Start of Column
+					case 'PageUp':
 						e.preventDefault();
 						eraseToStartOfColumn();
 						break;
-					case 'PageDown': // Alt+Page Down - Erase to End of Column
+					// Alt+Page Down - Erase to End of Column
+					case 'PageDown':
 						e.preventDefault();
 						eraseToEndOfColumn();
 						break;
@@ -926,11 +912,11 @@ const createKeyboardController = () => {
 					e.preventDefault();
 					draw(convertUnicode(e.key.charCodeAt(0)));
 				} else if (e.key === 'Enter') {
-					// Enter key
+					// Enter key - cursor to new line
 					e.preventDefault();
 					State.cursor.newLine();
 				} else if (e.key === 'Backspace') {
-					// Backspace key
+					// Backspace key - delete text
 					e.preventDefault();
 					if (State.cursor.getX() > 0) {
 						deleteText();
@@ -1095,7 +1081,6 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 			console.log('[Keyboard] Clipboard API not available');
 			return;
 		}
-
 		navigator.clipboard
 			.readText()
 			.then(text => {
@@ -1105,10 +1090,8 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 				) {
 					const columns = State.textArtCanvas.getColumns();
 					const rows = State.textArtCanvas.getRows();
-
 					// Check for oversized content
 					const lines = text.split(/\r\n|\r|\n/);
-
 					// Check single line width
 					if (
 						lines.length === 1 &&
@@ -1119,7 +1102,6 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 						);
 						return;
 					}
-
 					// Check multi-line height
 					if (lines.length > rows * magicNumbers.MAX_COPY_LINES) {
 						alert(
@@ -1127,9 +1109,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 						);
 						return;
 					}
-
 					State.textArtCanvas.startUndo();
-
 					let currentX = x;
 					let currentY = y;
 					const startX = x; // Remember starting column for line breaks
@@ -1139,7 +1119,6 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 					State.textArtCanvas.draw(draw => {
 						for (let i = 0; i < text.length; i++) {
 							const char = text.charAt(i);
-
 							// Handle newline characters
 							if (char === '\n' || char === '\r') {
 								currentY++;
@@ -1154,26 +1133,21 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 								}
 								continue;
 							}
-
 							// Check bounds - stop if we're beyond canvas vertically
 							if (currentY >= rows) {
 								break;
 							}
-
 							// Handle edge truncation - skip characters that exceed the right edge
 							if (currentX >= columns) {
 								// Skip this character and continue until we hit a newline
 								continue;
 							}
-
 							// Handle non-printable characters
 							let charCode = char.charCodeAt(0);
-
 							// Convert tabs and other whitespace/non-printable characters to space
 							if (char === '\t' || charCode < 32 || charCode === 127) {
 								charCode = magicNumbers.CHAR_SPACE;
 							}
-
 							// Draw the character
 							draw(charCode, foreground, background, currentX, currentY);
 
@@ -1224,8 +1198,6 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 			deleteSelection();
 		}
 	};
-
-	// add listener
 	document.addEventListener('keydown', keyDown);
 
 	return {
@@ -1302,9 +1274,7 @@ const createSelectionTool = () => {
 		if (!selection) {
 			return;
 		}
-
 		State.textArtCanvas.startUndo();
-
 		// Get all blocks in the selection
 		for (let y = 0; y < selection.height; y++) {
 			const blocks = [];
@@ -1313,14 +1283,12 @@ const createSelectionTool = () => {
 					State.textArtCanvas.getBlock(selection.x + x, selection.y + y),
 				);
 			}
-
 			// Flip the row horizontally
 			State.textArtCanvas.draw(callback => {
 				for (let x = 0; x < selection.width; x++) {
 					const sourceBlock = blocks[x];
 					const targetX = selection.x + (selection.width - 1 - x);
 					let charCode = sourceBlock.charCode;
-
 					// Transform left/right half blocks
 					switch (charCode) {
 						case 221: // LEFT_HALF_BLOCK
@@ -1349,9 +1317,7 @@ const createSelectionTool = () => {
 		if (!selection) {
 			return;
 		}
-
 		State.textArtCanvas.startUndo();
-
 		// Get all blocks in the selection
 		for (let x = 0; x < selection.width; x++) {
 			const blocks = [];
@@ -1360,14 +1326,12 @@ const createSelectionTool = () => {
 					State.textArtCanvas.getBlock(selection.x + x, selection.y + y),
 				);
 			}
-
 			// Flip the column vertically
 			State.textArtCanvas.draw(callback => {
 				for (let y = 0; y < selection.height; y++) {
 					const sourceBlock = blocks[y];
 					const targetY = selection.y + (selection.height - 1 - y);
 					let charCode = sourceBlock.charCode;
-
 					// Transform upper/lower half blocks
 					switch (charCode) {
 						case 223: // UPPER_HALF_BLOCK
@@ -1401,7 +1365,6 @@ const createSelectionTool = () => {
 			for (let py = 0; py < maxHeight; py++) {
 				for (let px = 0; px < maxWidth; px++) {
 					const sourceAttrib = area.data[py * area.width + px];
-
 					// Only apply the source character if it's not a truly blank character
 					// Truly blank = char code 0, foreground 0, background 0 (attrib === 0)
 					if (sourceAttrib !== 0) {
@@ -1434,7 +1397,6 @@ const createSelectionTool = () => {
 		if (!selection) {
 			return;
 		}
-
 		const newX = Math.max(
 			0,
 			Math.min(
@@ -1449,14 +1411,11 @@ const createSelectionTool = () => {
 				State.textArtCanvas.getRows() - selection.height,
 			),
 		);
-
 		// Don't process if we haven't actually moved
 		if (newX === selection.x && newY === selection.y) {
 			return;
 		}
-
 		State.textArtCanvas.startUndo();
-
 		// Get the current selection data if we don't have it
 		if (!selectionData) {
 			selectionData = State.textArtCanvas.getArea(
@@ -1466,12 +1425,10 @@ const createSelectionTool = () => {
 				selection.height,
 			);
 		}
-
 		// Restore what was underneath the current position (if any)
 		if (underlyingData) {
 			State.textArtCanvas.setArea(underlyingData, selection.x, selection.y);
 		}
-
 		// Store what's underneath the new position
 		underlyingData = State.textArtCanvas.getArea(
 			newX,
@@ -1479,10 +1436,8 @@ const createSelectionTool = () => {
 			selection.width,
 			selection.height,
 		);
-
 		// Apply the selection at the new position, but only non-blank characters
 		setAreaSelective(selectionData, underlyingData, newX, newY);
-
 		// Update the selection cursor to the new position
 		State.selectionCursor.setStart(newX, newY);
 		State.selectionCursor.setEnd(
@@ -1510,7 +1465,6 @@ const createSelectionTool = () => {
 			// Enable move mode
 			moveButton.classList.add('enabled');
 			State.selectionCursor.getElement().classList.add('move-mode');
-
 			// Store selection data and original position when entering move mode
 			const selection = State.selectionCursor.getSelection();
 			if (selection) {
@@ -1548,7 +1502,6 @@ const createSelectionTool = () => {
 					0,
 				);
 			}
-
 			moveButton.classList.remove('enabled');
 			State.selectionCursor.getElement().classList.remove('move-mode');
 			selectionData = null;
@@ -1571,6 +1524,72 @@ const createSelectionTool = () => {
 		}
 		// If selection already exists, keep using the current anchor (selectionStartX/Y)
 		// and end (selectionEndX/Y) coordinates. Don't reinitialize from bounds.
+	};
+
+	const moveSelectionLeft = () => {
+		const selection = State.selectionCursor.getSelection();
+		if (!selection) {
+			return;
+		}
+		const newX = Math.max(0, selection.x - 1);
+		const newY = selection.y;
+		selectionStartX = newX;
+		selectionStartY = newY;
+		selectionEndX = newX + selection.width - 1;
+		selectionEndY = newY + selection.height - 1;
+		State.selectionCursor.setStart(selectionStartX, selectionStartY);
+		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+	};
+
+	const moveSelectionRight = () => {
+		const selection = State.selectionCursor.getSelection();
+		if (!selection) {
+			return;
+		}
+		const newX = Math.min(
+			State.textArtCanvas.getColumns() - selection.width,
+			selection.x + 1,
+		);
+		const newY = selection.y;
+		selectionStartX = newX;
+		selectionStartY = newY;
+		selectionEndX = newX + selection.width - 1;
+		selectionEndY = newY + selection.height - 1;
+		State.selectionCursor.setStart(selectionStartX, selectionStartY);
+		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+	};
+
+	const moveSelectionUp = () => {
+		const selection = State.selectionCursor.getSelection();
+		if (!selection) {
+			return;
+		}
+		const newX = selection.x;
+		const newY = Math.max(0, selection.y - 1);
+		selectionStartX = newX;
+		selectionStartY = newY;
+		selectionEndX = newX + selection.width - 1;
+		selectionEndY = newY + selection.height - 1;
+		State.selectionCursor.setStart(selectionStartX, selectionStartY);
+		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+	};
+
+	const moveSelectionDown = () => {
+		const selection = State.selectionCursor.getSelection();
+		if (!selection) {
+			return;
+		}
+		const newX = selection.x;
+		const newY = Math.min(
+			State.textArtCanvas.getRows() - selection.height,
+			selection.y + 1,
+		);
+		selectionStartX = newX;
+		selectionStartY = newY;
+		selectionEndX = newX + selection.width - 1;
+		selectionEndY = newY + selection.height - 1;
+		State.selectionCursor.setStart(selectionStartX, selectionStartY);
+		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
 	};
 
 	const shiftLeft = () => {
@@ -1636,61 +1655,56 @@ const createSelectionTool = () => {
 				e.preventDefault();
 				toggleMoveMode();
 			} else if (moveMode && State.selectionCursor.getSelection()) {
-				// Arrow key movement in move mode
+				// Arrow key shift selection contents in move mode
 				if (e.code === 'ArrowLeft') {
-					// Left arrow
 					e.preventDefault();
 					moveSelection(-1, 0);
 				} else if (e.code === 'ArrowUp') {
-					// Up arrow
 					e.preventDefault();
 					moveSelection(0, -1);
 				} else if (e.code === 'ArrowRight') {
-					// Right arrow
 					e.preventDefault();
 					moveSelection(1, 0);
 				} else if (e.code === 'ArrowDown') {
-					// Down arrow
 					e.preventDefault();
 					moveSelection(0, 1);
 				}
 			} else {
-				// Switch to keyboard when not in move mode
 				switch (e.code) {
-					case 'Enter': // Enter key - new line
+					// Enter key - cursor to new line
+					case 'Enter':
 						e.preventDefault();
 						Toolbar.switchTool('keyboard');
 						State.cursor.newLine();
 						break;
-					case 'End': // End key
+					// End key - cursor to end of line
+					case 'End':
 						e.preventDefault();
 						Toolbar.switchTool('keyboard');
 						State.cursor.endOfCurrentRow();
 						break;
-					case 'Home': // Home key
+					// Home key - cursor to start of line
+					case 'Home':
 						e.preventDefault();
 						Toolbar.switchTool('keyboard');
 						State.cursor.startOfCurrentRow();
 						break;
-					case 'ArrowLeft': // Left arrow
+					// arrow keys move selection area
+					case 'ArrowLeft':
 						e.preventDefault();
-						Toolbar.switchTool('keyboard');
-						State.cursor.left();
+						moveSelectionLeft();
 						break;
-					case 'ArrowUp': // Up arrow
+					case 'ArrowUp':
 						e.preventDefault();
-						Toolbar.switchTool('keyboard');
-						State.cursor.up();
+						moveSelectionUp();
 						break;
-					case 'ArrowRight': // Right arrow
+					case 'ArrowRight':
 						e.preventDefault();
-						Toolbar.switchTool('keyboard');
-						State.cursor.right();
+						moveSelectionRight();
 						break;
-					case 'ArrowDown': // Down arrow
+					case 'ArrowDown':
 						e.preventDefault();
-						Toolbar.switchTool('keyboard');
-						State.cursor.down();
+						moveSelectionDown();
 						break;
 					default:
 						break;
@@ -1698,11 +1712,13 @@ const createSelectionTool = () => {
 			}
 		} else if (e.metaKey && !e.shiftKey) {
 			switch (e.code) {
-				case 'ArrowLeft': // Meta+Left - expand selection to start of current row
+				// Meta+Left - expand selection to start of current row
+				case 'ArrowLeft':
 					e.preventDefault();
 					shiftToStartOfRow();
 					break;
-				case 'ArrowRight': // Meta+Right - expand selection to end of current row
+				// Meta+Right - expand selection to end of current row
+				case 'ArrowRight':
 					e.preventDefault();
 					shiftToEndOfRow();
 					break;
@@ -1710,21 +1726,21 @@ const createSelectionTool = () => {
 					break;
 			}
 		} else if (e.shiftKey && !e.metaKey) {
-			// Handle Shift key combinations for selection expansion
+			// Arrows + Shift key combinations expand selection
 			switch (e.code) {
-				case 'ArrowLeft': // Shift+Left
+				case 'ArrowLeft':
 					e.preventDefault();
 					shiftLeft();
 					break;
-				case 'ArrowUp': // Shift+Up
+				case 'ArrowUp':
 					e.preventDefault();
 					shiftUp();
 					break;
-				case 'ArrowRight': // Shift+Right
+				case 'ArrowRight':
 					e.preventDefault();
 					shiftRight();
 					break;
-				case 'ArrowDown': // Shift+Down
+				case 'ArrowDown':
 					e.preventDefault();
 					shiftDown();
 					break;
@@ -1741,8 +1757,6 @@ const createSelectionTool = () => {
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		document.addEventListener('keydown', keyDown);
-
-		// Add click handlers for the buttons
 		flipHButton.addEventListener('click', flipHorizontal);
 		flipVButton.addEventListener('click', flipVertical);
 		moveButton.addEventListener('click', toggleMoveMode);
@@ -1765,8 +1779,6 @@ const createSelectionTool = () => {
 		if (pendingInitialAction) {
 			const action = pendingInitialAction;
 			pendingInitialAction = null; // Clear it immediately
-
-			// Execute the appropriate shift method based on the key code
 			switch (action) {
 				case 'ArrowLeft':
 					shiftLeft();
@@ -1811,7 +1823,6 @@ const createSelectionTool = () => {
 					0,
 				);
 			}
-
 			moveMode = false;
 			moveButton.classList.remove('enabled');
 			State.selectionCursor.getElement().classList.remove('move-mode');
@@ -1819,8 +1830,6 @@ const createSelectionTool = () => {
 			originalPosition = null;
 			underlyingData = null;
 		}
-
-		// Remove click handlers
 		flipHButton.removeEventListener('click', flipHorizontal);
 		flipVButton.removeEventListener('click', flipVertical);
 		moveButton.removeEventListener('click', toggleMoveMode);
