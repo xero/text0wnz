@@ -1622,7 +1622,6 @@ const createSelectionTool = () => {
 	};
 
 	const keyDown = e => {
-		// Note: Escape key handled in Toolbar.js
 		if (!e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
 			if (e.key === '[') {
 				// '[' key - flip horizontal

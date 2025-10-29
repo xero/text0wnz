@@ -378,7 +378,6 @@ const initializeAppComponents = async () => {
 			paintShortcuts.disable();
 			State.menus.close();
 			State.selectionTool.enable();
-			$('keyboard-toolbar').classList.add('hide');
 			$('selection-toolbar').classList.remove('hide');
 		},
 		() => {

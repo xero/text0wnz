@@ -338,6 +338,7 @@ describe('State Management System', () => {
 			State.modal = { test: 'modal' };
 			State.cursor = { test: 'cursor' };
 			State.selectionCursor = { test: 'selectionCursor' };
+			State.selectionTool = { test: 'selectionTool' };
 			State.positionInfo = { test: 'positionInfo' };
 			State.toolPreview = { test: 'toolPreview' };
 			State.pasteTool = { test: 'pasteTool' };
@@ -394,7 +395,7 @@ describe('State Management System', () => {
 
 			const status = State.getInitializationStatus();
 			expect(status.readyCount).toBe(3);
-			expect(status.totalCount).toBe(9);
+			expect(status.totalCount).toBe(10);
 		});
 
 		it('should return deep copy of dependencies ready in status', () => {
