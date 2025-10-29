@@ -1,5 +1,33 @@
-*.js text eol=lf
+# Exclude files from exporting
+.gitattributes export-ignore
+.gitignore     export-ignore
+.gitkeep       export-ignore
+
+# Include markdown files in repo stats
 *.md linguist-vendored=false
 *.md linguist-generated=false
-*.md linguist-documentation=false
+*.md linguist-documentation=true
 *.md linguist-detectable=true
+
+# Auto detect text files and perform LF normalization
+*          text=auto
+# The above will handle all files NOT found below
+
+# Graphics
+*.ico      binary diff=nodiff
+*.png      binary diff=nodiff
+*.woff2    binary diff=nodiff
+*.svg      text eol=lf
+# Scripts
+*.css      text eol=lf
+*.js       text eol=lf
+*.sh       text eol=lf
+# Serialisation
+*.html     text eol=lf
+*.json     text eol=lf
+*.xml      text eol=lf
+*.yml      text eol=lf
+# Documents
+*.md       text diff=markdown
+*.txt      text eol=lf
+*.patch    -text
