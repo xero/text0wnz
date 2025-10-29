@@ -251,6 +251,7 @@ export default [
 					"alt",
 					"name",
 					'aria-label',
+					'property',
 					"content",
 					"size",
 					"sizes",

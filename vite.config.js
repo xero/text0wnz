@@ -2,10 +2,13 @@ import { defineConfig, loadEnv } from 'vite';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 import { VitePWA } from 'vite-plugin-pwa';
 import Sitemap from 'vite-plugin-sitemap';
+import htmlMinifierTerser from "vite-plugin-html-minifier-terser";
+import { existsSync, statSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 export default ({ mode }) => {
-	const versionBump = () => Date.now().toString();
+	const cacheBuster = () => Date.now().toString();
+
 	// load settings from the .env file or use defaults
 	process.env = { ...process.env, ...loadEnv(mode, process.cwd()) };
 	const domain = process.env.VITE_DOMAIN || 'https://text.0w.nz';
@@ -82,15 +85,82 @@ export default ({ mode }) => {
 			},
 		},
 		plugins: [
+			{
+				name: 'log-postcss',
+				apply: 'build',
+				originalCssSize: 0,
+				buildStart() {
+					const srcCssPath = path.resolve('./src/css', 'style.css');
+					if (existsSync(srcCssPath)) {
+						const srcStats = statSync(srcCssPath);
+						this.originalCssSize = srcStats.size;
+					}
+				},
+				closeBundle() {
+					const distCssDir = path.resolve('./dist/ui');
+					if (existsSync(distCssDir)) {
+						const files = readdirSync(distCssDir);
+						const cssFile = files.find(f => f.startsWith('stylez-') && f.endsWith('.css'));
+
+						if (cssFile) {
+							const minified = statSync(path.join(distCssDir, cssFile)).size;
+							const savings = ((1 - minified / this.originalCssSize) * 100).toFixed(1);
+							console.log(`\n\x1b[36m[PostCSS] \x1b[0mBuilding stylesheet\n\x1b[32m✓ \x1b[34mtailwindcss\n\x1b[32m✓ \x1b[34mcssnano \x1b[35m(preset: advanced)\x1b[0m`);
+							console.log(`../dist/ui/\x1b[32m${cssFile}\x1b[0m: \x1b[33m${(this.originalCssSize / 1024).toFixed(2)}kb\x1b[0m → \x1b[32m${(minified / 1024).toFixed(2)}kb\x1b[0m (\x1b[36m${savings}% reduction\x1b[0m)\n`);
+						}
+					}
+				}
+			},
+			htmlMinifierTerser({
+				minify: true,
+				html5: true,
+				quoteCharacter: '"',
+				keepClosingSlash: false,
+				removeAttributeQuotes: true,
+				removeComments: false,
+				removeEmptyElements: false,
+				removeScriptTypeAttributes: false,
+				removeStyleLinkTypeAttributes: false,
+			}),
+			{
+				name: 'log-html-minifier',
+				apply: 'build',
+				originalSize: 0,
+				buildStart() {
+					const srcPath = path.resolve('./src', 'index.html');
+					const srcStats = statSync(srcPath);
+					this.originalSize = srcStats.size;
+				},
+				closeBundle() {
+					const minifiedPath = path.resolve('./dist', 'index.html');
+					if (existsSync(minifiedPath)) {
+						const minified = statSync(minifiedPath).size;
+						const savings = ((1 - minified / this.originalSize) * 100).toFixed(1);
+						console.log(`\x1b[36m[htmlMinifierTerser] \x1b[0mCompressing index`);
+						console.log(`../dist/\x1b[32mindex.html\x1b[0m: \x1b[33m${(this.originalSize / 1024).toFixed(2)}kb\x1b[0m → \x1b[32m${(minified / 1024).toFixed(2)}kb\x1b[0m (\x1b[36m${savings}% reduction\x1b[0m)\n`);
+					}
+				}
+			},
 			viteStaticCopy({
 				// move static assets into place
+				silent: true,
 				targets: [
-					{ src: `js/client/${worker}`, dest: uiDir+'js/' },
-					{ src: 'fonts', dest: uiDir },
-					{ src: 'img/manifest/favicon.ico', dest: '.' },
+					{ src: 'LICENSE.txt', dest: '.' },
 					{ src: 'humans.txt', dest: '.' },
+					{ src: 'img/manifest/favicon.ico', dest: '.' },
+					{ src: 'fonts', dest: uiDir },
+					{ src: `js/client/${worker}`, dest: uiDir + 'js/' },
 				],
 			}),
+			{
+				name: 'log-static-copy',
+				apply: 'build',
+				originalSize: 0,
+				closeBundle() {
+					console.log(`\x1b[36m[vite-static-copy] \x1b[0mMoving 5 files recursively`);
+					console.log(`../dist/\x1b[32mLICENSE.txt\n\x1b[0m../dist/\x1b[32mhumans.txt\n\x1b[0m../dist/\x1b[32mfavicon.ico\n\x1b[0m../dist/${uiDir}\x1b[32mfonts\x1b[0m/\x1b[33m*\x1b[0m\n../dist/${uiDir}js/\x1b[32m${worker}\x1b[0m\n`);
+				}
+			},
 			Sitemap({
 				// generate an xml sitemap and robots.txt file
 				hostname: domain,
@@ -179,7 +249,7 @@ export default ({ mode }) => {
 				name: 'log-sitemap-robots',
 				apply: 'build',
 				closeBundle() {
-					console.log(`\x1b[36m[vite-plugin-sitemap] \x1b[0mbuilding for domain: \x1b[34m${domain}\x1b[0m\n../dist/robots.txt\n../dist/sitemap.xml`);
+					console.log(`\x1b[36m[vite-plugin-sitemap] \x1b[0mGenerating for domain: \x1b[34m${domain}\x1b[0m\n../dist/robots.txt\n../dist/sitemap.xml`);
 				}
 			},
 			VitePWA({
@@ -197,7 +267,7 @@ export default ({ mode }) => {
 					scope: '/',
 					start_url: '/',
 					display: 'standalone',
-					description: 'The online collaborative text art editor. Supporting CP437 ANSI/ASCII, Scene NFO, XBIN/BIN, & UTF8 TXT file types',
+					description: 'Draw, edit & collaborate in a retro text art editor for ANSI, ASCII, NFO & XBIN with keyboard, mouse, or touch. Offline-first or join real-time sessions',
 					dir: 'ltr',
 					lang: 'en',
 					orientation: 'any',
@@ -210,27 +280,27 @@ export default ({ mode }) => {
 						sizes: '512x512',
 						type: 'image/png',
 						purpose: 'any',
-					},{
+					}, {
 						src: `/${uiDir}img/web-app-manifest-512x512.png`,
 						sizes: '512x512',
 						type: 'image/png',
 						purpose: 'maskable',
-					},{
+					}, {
 						src: `/${uiDir}img/web-app-manifest-192x192.png`,
 						sizes: '192x192',
 						type: 'image/png',
 						purpose: 'maskable',
-					},{
+					}, {
 						src: `/${uiDir}img/apple-touch-icon.png`,
 						sizes: '180x180',
 						type: 'image/png',
 						purpose: 'maskable',
-					},{
+					}, {
 						src: `/${uiDir}img/favicon-96x96.png`,
 						sizes: '96x96',
 						type: 'image/png',
 						purpose: 'any',
-					},{
+					}, {
 						src: `/${uiDir}img/android-launchericon-48-48.png`,
 						sizes: '48x48',
 						type: 'image/png',
@@ -242,42 +312,42 @@ export default ({ mode }) => {
 						sizes: '3024x1964',
 						type: 'image/png',
 						platform: 'any',
-					},{
+					}, {
 						src: `/${uiDir}img/screenshot-mobile.png`,
 						sizes: '1140x1520',
 						type: 'image/png',
 						platform: 'any',
-					},{
+					}, {
 						src: `/${uiDir}img/screenshot-font-tall.png`,
 						sizes: '910x1370',
 						type: 'image/png',
 						platform: 'any',
 						form_factor: 'narrow',
-					},{
+					}, {
 						src: `/${uiDir}img/screenshot-sauce-tall.png`,
 						sizes: '910x1370',
 						type: 'image/png',
 						platform: 'any',
 						form_factor: 'narrow',
-					},{
+					}, {
 						src: `/${uiDir}img/screenshot-light-wide.png`,
 						sizes: '1540x1158',
 						type: 'image/png',
 						platform: 'any',
 						form_factor: 'wide',
-					},{
+					}, {
 						src: `/${uiDir}img/screenshot-dark-wide.png`,
 						sizes: '1540x1158',
 						type: 'image/png',
 						platform: 'any',
 						form_factor: 'wide',
 					}],
-					version: versionBump(),
+					version: cacheBuster(),
 				},
 				workbox: {
 					// version bump
 					additionalManifestEntries: [
-						{ url: '/', revision: versionBump() },
+						{ url: '/', revision: cacheBuster() },
 					],
 					// cache all the things \o/
 					globPatterns: ['index.html', '**/*.{js,css,html,ico,png,svg,woff2}'],
@@ -287,6 +357,7 @@ export default ({ mode }) => {
 					navigateFallback: '/',
 					// ok, not all the things...
 					navigateFallbackDenylist: [
+						/^\/LICENSE.txt/,
 						/^\/humans.txt/,
 						/^\/robots.txt/,
 						/^\/sitemap.xml/,
@@ -297,15 +368,15 @@ export default ({ mode }) => {
 						urlPattern: new RegExp(`^\\/${uiDirSafe}\\/img\\/.*\\.(png|svg|ico)$`),
 						handler: 'CacheFirst',
 						options: { cacheName: 'asset-cache' },
-					},{
+					}, {
 						urlPattern: new RegExp(`^\\/${uiDirSafe}\\/js\\/.*\\.js$`),
 						handler: 'CacheFirst',
 						options: { cacheName: 'app-cache' },
-					},{
+					}, {
 						urlPattern: new RegExp(`^\\/${uiDirSafe}\\/.*\\.(css|svg|woff2)$`),
 						handler: 'CacheFirst',
 						options: { cacheName: 'style-cache' },
-					},{
+					}, {
 						urlPattern: /^\/(index\.html)?$/,
 						handler: 'CacheFirst',
 						options: { cacheName: 'html-cache' },
