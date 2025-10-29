@@ -265,7 +265,7 @@ export default [
 	},
 	{
 		// Skip linting entirely for dist files
-		files: ['dist/**/*.js'],
+		files: ['dist/**/*.*'],
 		rules: {
 			'no-console': 'off',
 			'no-unused-vars': 'off',
