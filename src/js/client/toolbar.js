@@ -2,131 +2,117 @@ import State from './state.js';
 
 const Toolbar = (() => {
 	let currentButton;
-	let currentOnBlur;
 	let previousButton;
 	const tools = {};
-	const lazyTools = {};
+
+	const blur = () => {
+		Object.values(tools).forEach(tool => {
+			if (tool.isLoaded) {
+				tool.button.classList.remove('toolbar-displayed');
+				if (typeof tool.onBlur === 'function') {
+					tool.onBlur();
+				}
+			}
+		});
+	};
+
+	const _activateTool = (tool, onFocus) => {
+		if (currentButton !== tool.button) {
+			if (
+				currentButton !== undefined &&
+				currentButton.id !== 'shapes' &&
+				currentButton.id !== 'brushes'
+			) {
+				previousButton = currentButton;
+			}
+			blur(); // Deactivate the current tool
+			tool.button.classList.add('toolbar-displayed');
+			currentButton = tool.button;
+		}
+		if (typeof onFocus === 'function') {
+			onFocus();
+		}
+	};
 
 	const add = (button, onFocus, onBlur) => {
-		const enable = () => {
+		const tool = {
+			button: button,
+			onFocus: onFocus,
+			onBlur: onBlur,
+			isLoaded: true,
+		};
+
+		tool.enable = () => {
 			closeMenu();
-			if (currentButton !== button) {
-				// Store previous tool before switching
-				if (currentButton !== undefined) {
-					previousButton = currentButton;
-					currentButton.classList.remove('toolbar-displayed');
-				}
-				if (currentOnBlur !== undefined) {
-					currentOnBlur();
-				}
-				button.classList.add('toolbar-displayed');
-				currentButton = button;
-				currentOnBlur = onBlur;
-				if (onFocus !== undefined) {
-					onFocus();
-				}
-			} else {
-				onFocus();
-			}
+			_activateTool(tool, tool.onFocus);
 		};
 
 		button.addEventListener('click', e => {
 			e.preventDefault();
-			enable();
+			tool.enable();
 		});
 
-		// Store tool reference for programmatic access
-		tools[button.id] = {
-			button: button,
-			enable: enable,
-			onFocus: onFocus,
-			onBlur: onBlur,
-		};
-
-		return { enable: enable };
+		tools[button.id] = tool;
+		return { enable: tool.enable };
 	};
 
 	const addLazy = (button, toolLoader) => {
-		let toolLoaded = false;
-		let loadedTool = null;
+		const tool = {
+			button: button,
+			toolLoader: toolLoader,
+			isLoaded: false,
+		};
 
 		const enable = async () => {
 			closeMenu();
 
-			// Load the tool on first use
-			if (!toolLoaded) {
+			// If the tool is not loaded, load it first.
+			if (!tool.isLoaded) {
 				try {
-					loadedTool = await toolLoader();
-					toolLoaded = true;
-
-					// Update the tools registry with the loaded tool
-					tools[button.id] = {
-						button: button,
-						enable: loadedTool.enable,
-						onFocus: loadedTool.onFocus,
-						onBlur: loadedTool.onBlur,
+					const loadedTool = await tool.toolLoader();
+					// Once loaded, update the tool's definition with its actual implementation.
+					tool.onFocus = loadedTool.onFocus;
+					tool.onBlur = loadedTool.onBlur;
+					tool.isLoaded = true;
+					tool.enable = () => {
+						closeMenu();
+						_activateTool(tool, tool.onFocus);
 					};
 				} catch (error) {
 					console.error(`Failed to load tool for ${button.id}:`, error);
 					return;
 				}
 			}
-
-			// Now enable the loaded tool
-			if (loadedTool && loadedTool.enable) {
-				if (currentButton !== button) {
-					// Store previous tool before switching
-					if (currentButton !== undefined) {
-						previousButton = currentButton;
-						currentButton.classList.remove('toolbar-displayed');
-					}
-					if (currentOnBlur !== undefined) {
-						currentOnBlur();
-					}
-					button.classList.add('toolbar-displayed');
-					currentButton = button;
-					currentOnBlur = loadedTool.onBlur;
-					if (loadedTool.onFocus !== undefined) {
-						loadedTool.onFocus();
-					}
-				} else if (loadedTool.onFocus) {
-					loadedTool.onFocus();
-				}
-			}
+			_activateTool(tool, tool.onFocus);
 		};
+
+		tool.enable = enable;
 
 		button.addEventListener('click', e => {
 			e.preventDefault();
-			enable();
+			tool.enable();
 		});
 
-		// Store lazy tool reference
-		lazyTools[button.id] = {
-			button: button,
-			enable: enable,
-			loader: toolLoader,
-		};
-
-		return { enable: enable };
+		tools[button.id] = tool;
+		return { enable: tool.enable };
 	};
 
 	const switchTool = toolId => {
-		// Check both regular and lazy tools
 		if (tools[toolId]) {
 			tools[toolId].enable();
-		} else if (lazyTools[toolId]) {
-			lazyTools[toolId].enable();
 		}
 		closeMenu();
 	};
 
 	const returnToPreviousTool = () => {
 		if (previousButton) {
-			const toolId = previousButton.id;
-			if (tools[toolId]) {
-				tools[toolId].enable();
-			} else if (lazyTools[toolId]) {
-				lazyTools[toolId].enable();
+			if (State.selectionTool.isMoveMode()) {
+				State.selectionTool.toggleMoveMode();
+			} else {
+				const toolId = previousButton.id;
+				if (tools[toolId]) {
+					tools[toolId].enable();
+				}
 			}
 		}
 		closeMenu();
@@ -142,6 +128,14 @@ const Toolbar = (() => {
 			State.menus.close();
 		}
 	};
+
+	// Escape key - return to previous tool
+	document.addEventListener('keydown', e => {
+		if (e.code === 'Escape') {
+			e.preventDefault();
+			returnToPreviousTool();
+		}
+	});
 
 	return {
 		add: add,

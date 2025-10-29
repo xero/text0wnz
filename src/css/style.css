@@ -977,9 +977,12 @@
 		}
 	}
 	#update-modal {
-		@apply text-center justify-self-center;
+		@apply justify-self-center;
 		h4 {
-			@apply text-cyber mb-4;
+			@apply text-center text-xl text-cyber mb-4;
+		}
+		p {
+			text-align: left;
 		}
 	}
 	#loading-modal,
