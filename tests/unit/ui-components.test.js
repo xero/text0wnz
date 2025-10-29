@@ -1,21 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import State from '../../src/js/client/state.js';
 import {
-	$,
-	$$,
-	createCanvas,
-	createSettingToggle,
-	onClick,
-	onReturn,
-	onFileChange,
-	createPositionInfo,
-	createModalController,
-	undoAndRedo,
-	createGenericController,
-	createToggleButton,
-	enforceMaxBytes,
-	websocketUI,
-	toggleFullscreen,
 	viewportTap,
 	createPaintShortcuts,
 	createResolutionController,
@@ -48,7 +33,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 	},
 }));
 
-describe('UI Utilities', () => {
+describe('UI Components', () => {
 	// Helper to create events that work in both Node and browser environments
 	const createEvent = (type, props = {}) => {
 		const event = document.createEvent('Event');
@@ -343,5 +328,4 @@ describe('UI Utilities', () => {
 			vi.useRealTimers();
 		});
 	});
-
 });

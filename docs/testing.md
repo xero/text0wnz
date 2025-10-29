@@ -387,6 +387,7 @@ const debug = msg => {
 > - Enable faster test execution when working on specific areas
 >
 > Large monolithic test files (1000+ lines) should be split into focused, feature-specific files as demonstrated by:
+>
 > - `ui-*.test.js` - Split by UI feature groups (basic, controls, components, modals)
 > - `file-*.test.js` - Split by operation type (load, formats, advanced)
 > - `freehand-*.test.js` - Split by tool categories (panels, shapes, advanced)

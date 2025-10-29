@@ -1,26 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import State from '../../src/js/client/state.js';
 import {
-	$,
-	$$,
-	createCanvas,
-	createSettingToggle,
-	onClick,
-	onReturn,
-	onFileChange,
-	createPositionInfo,
-	createModalController,
-	undoAndRedo,
-	createGenericController,
 	createToggleButton,
+	createGenericController,
 	enforceMaxBytes,
 	websocketUI,
 	toggleFullscreen,
-	viewportTap,
-	createPaintShortcuts,
-	createResolutionController,
-	createDragDropController,
-	createMenuController,
+	createModalController,
 } from '../../src/js/client/ui.js';
 
 // Mock the State module
@@ -48,15 +33,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 	},
 }));
 
-describe('UI Utilities', () => {
-	// Helper to create events that work in both Node and browser environments
-	const createEvent = (type, props = {}) => {
-		const event = document.createEvent('Event');
-		event.initEvent(type, true, true);
-		Object.assign(event, props);
-		return event;
-	};
-
+describe('UI Controls and Controllers', () => {
 	beforeEach(() => {
 		// Clear DOM
 		document.body.innerHTML = '';
@@ -476,5 +453,4 @@ describe('UI Utilities', () => {
 			expect(onFocus).toHaveBeenCalled();
 		});
 	});
-
 });

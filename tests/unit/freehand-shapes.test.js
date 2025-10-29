@@ -1,20 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-	createPanelCursor,
-	createFloatingPanelPalette,
-	createFloatingPanel,
-	createBrushController,
-	createHalfBlockController,
-	createShadingController,
-	createShadingPanel,
-	createCharacterBrushPanel,
 	createFillController,
 	createLineController,
 	createShapesController,
 	createSquareController,
 	createCircleController,
 	createAttributeBrushController,
-	createSampleTool,
 } from '../../src/js/client/freehand_tools.js';
 import { createSelectionTool } from '../../src/js/client/keyboard.js';
 
@@ -517,5 +508,4 @@ describe('Freehand Tools - Shapes and Fill', () => {
 			}).not.toThrow();
 		});
 	});
-
 });

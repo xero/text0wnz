@@ -38,15 +38,9 @@ vi.mock('../../src/js/client/state.js', () => ({
 	},
 }));
 
-describe('UI Basic Utilities', () => {
-	// Helper to create events that work in both Node and browser environments
-	const createEvent = (type, props = {}) => {
-		const event = document.createEvent('Event');
-		event.initEvent(type, true, true);
-		Object.assign(event, props);
-		return event;
-	};
+void State; // Used in mocked tests
 
+describe('UI Basic Utilities', () => {
 	beforeEach(() => {
 		// Clear DOM
 		document.body.innerHTML = '';
@@ -394,5 +388,4 @@ describe('UI Basic Utilities', () => {
 			expect(State.textArtCanvas.redo).not.toHaveBeenCalled();
 		});
 	});
-
 });

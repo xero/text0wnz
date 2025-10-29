@@ -506,5 +506,4 @@ describe('File Module - Formats and Parsing', () => {
 			});
 		});
 	});
-
 });

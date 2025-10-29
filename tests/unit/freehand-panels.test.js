@@ -8,15 +8,7 @@ import {
 	createShadingController,
 	createShadingPanel,
 	createCharacterBrushPanel,
-	createFillController,
-	createLineController,
-	createShapesController,
-	createSquareController,
-	createCircleController,
-	createAttributeBrushController,
-	createSampleTool,
 } from '../../src/js/client/freehand_tools.js';
-import { createSelectionTool } from '../../src/js/client/keyboard.js';
 
 // Mock dependencies
 vi.mock('../../src/js/client/state.js', () => ({
@@ -557,5 +549,4 @@ describe('Freehand Tools - Panels and Cursors', () => {
 			}).not.toThrow();
 		});
 	});
-
 });

@@ -1,10 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import State from '../../src/js/client/state.js';
-import {
-	$,
-	createCanvas,
-	websocketUI,
-} from '../../src/js/client/ui.js';
+import { websocketUI } from '../../src/js/client/ui.js';
 
 // Mock the State module
 vi.mock('../../src/js/client/state.js', () => ({
@@ -31,15 +26,9 @@ vi.mock('../../src/js/client/state.js', () => ({
 	},
 }));
 
-describe('UI Advanced Utilities', () => {
-	// Helper to create events that work in both Node and browser environments
-	const createEvent = (type, props = {}) => {
-		const event = document.createEvent('Event');
-		event.initEvent(type, true, true);
-		Object.assign(event, props);
-		return event;
-	};
+void websocketUI; // Used in tests
 
+describe('UI Advanced Utilities', () => {
 	beforeEach(() => {
 		// Clear DOM
 		document.body.innerHTML = '';

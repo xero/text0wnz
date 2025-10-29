@@ -1,22 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-	createPanelCursor,
-	createFloatingPanelPalette,
-	createFloatingPanel,
 	createBrushController,
 	createHalfBlockController,
-	createShadingController,
 	createShadingPanel,
+	createFloatingPanelPalette,
 	createCharacterBrushPanel,
 	createFillController,
 	createLineController,
-	createShapesController,
 	createSquareController,
 	createCircleController,
-	createAttributeBrushController,
 	createSampleTool,
 } from '../../src/js/client/freehand_tools.js';
-import { createSelectionTool } from '../../src/js/client/keyboard.js';
 
 // Mock dependencies
 vi.mock('../../src/js/client/state.js', () => ({
