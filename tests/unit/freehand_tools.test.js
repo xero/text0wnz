@@ -14,9 +14,9 @@ import {
 	createSquareController,
 	createCircleController,
 	createAttributeBrushController,
-	createSelectionTool,
 	createSampleTool,
 } from '../../src/js/client/freehand_tools.js';
+import { createSelectionTool } from '../../src/js/client/keyboard.js';
 
 // Mock dependencies
 vi.mock('../../src/js/client/state.js', () => ({
@@ -89,6 +89,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 			setStart: vi.fn(),
 			setEnd: vi.fn(),
 			hide: vi.fn(),
+			show: vi.fn(),
 			isVisible: vi.fn(() => false),
 			getElement: vi.fn(() => ({
 				classList: {

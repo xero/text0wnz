@@ -9,7 +9,9 @@ const Toolbar = (() => {
 		Object.values(tools).forEach(tool => {
 			if (tool.isLoaded) {
 				tool.button.classList.remove('toolbar-displayed');
-				tool.onBlur();
+				if (typeof tool.onBlur === 'function') {
+					tool.onBlur();
+				}
 			}
 		});
 	};
@@ -27,7 +29,9 @@ const Toolbar = (() => {
 			tool.button.classList.add('toolbar-displayed');
 			currentButton = tool.button;
 		}
-		onFocus();
+		if (typeof onFocus === 'function') {
+			onFocus();
+		}
 	};
 
 	const add = (button, onFocus, onBlur) => {

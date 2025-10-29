@@ -1,6 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import Toolbar from '../../src/js/client/toolbar.js';
 
+// Mock State module
+vi.mock('../../src/js/client/state.js', () => ({
+	default: {
+		menus: { close: vi.fn() },
+		selectionTool: {
+			isMoveMode: vi.fn(() => false),
+			toggleMoveMode: vi.fn(),
+		},
+	},
+}));
+
 describe('Toolbar', () => {
 	beforeEach(() => {
 		// Clear DOM
