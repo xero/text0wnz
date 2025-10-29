@@ -13,12 +13,13 @@ const ignore = [
 export default defineConfig({
 	test: {
 		environment: 'jsdom',
-		setupFiles: ['./tests/setupTests.js'],
+		setupFiles: [
+			'./tests/canvasShim.js',
+			'./tests/setupTests.js',
+		],
 		globals: true,
-		// Optimize for memory usage
-		threads: false, // Run tests sequentially to reduce memory pressure
 		isolate: true, // Ensure clean state between tests
-		maxThreads: 1, // Single thread to avoid memory multiplication
+		maxWorkers: 1, // Single thread to avoid memory multiplication
 		exclude: ignore,
 		coverage: {
 			enabled: true,
