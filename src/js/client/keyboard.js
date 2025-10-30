@@ -1423,13 +1423,8 @@ const createSelectionTool = () => {
 				selection.height,
 			);
 		}
-		// Restore what was underneath the current position, but only if we've moved away from the original position
-		// (don't restore the initial empty underlyingData which would erase the original selection)
-		const atOriginalPosition =
-			originalPosition &&
-			selection.x === originalPosition.x &&
-			selection.y === originalPosition.y;
-		if (underlyingData && !atOriginalPosition) {
+		// Restore what was underneath the current position (if any)
+		if (underlyingData) {
 			State.textArtCanvas.setArea(underlyingData, selection.x, selection.y);
 		}
 		// Store what's underneath the new position
