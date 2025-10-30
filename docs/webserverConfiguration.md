@@ -619,6 +619,6 @@ curl http://localhost/nginx_status
 
 ## See Also
 
-- [Collaboration Server](collaboration-server.md) - Server setup and configuration
-- [Building and Developing](building-and-developing.md) - Build process
+- [Collaboration Server](collaborationServer.md) - Server setup and configuration
+- [Building and Developing](buildingAndDeveloping.md) - Build process
 - [Testing](testing.md) - Testing setup

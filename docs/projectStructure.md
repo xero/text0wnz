@@ -346,11 +346,11 @@ src/js/server/
 docs/
 ├── README.md                      # Documentation index
 ├── architecture.md                # System architecture
-├── building-and-developing.md     # Development guide
+├── buildingAndDeveloping.md     # Development guide
 ├── cicd.md                        # CI/CD pipeline
-├── collaboration-server.md        # Server documentation
+├── collaborationServer.md        # Server documentation
 ├── docker.md                      # Docker guide
-├── editor-client.md               # Client documentation
+├── editorClient.md               # Client documentation
 ├── examples/                      # Sample artwork
 │   ├── ansi/                      # ANSI examples
 │   │   ├── x0-defcon25.ans
@@ -361,17 +361,17 @@ docs/
 │       ├── xz-neuromancer.xb
 │       └── xz-xero.xb
 ├── fonts.md                       # Font reference
-├── install-pwa.md                 # PWA installation
+├── installPwa.md                 # PWA installation
 ├── interface.md                   # UI guide
 ├── logos.md                       # Project logos
-├── other-tools.md                 # Additional tools
+├── otherTools.md                 # Additional tools
 ├── pre-commit                     # Git pre-commit hook
 ├── preview.png                    # Application preview
 ├── privacy.md                     # Privacy policy
-├── sauce-format.md                # SAUCE specification
+├── sauceFormat.md                # SAUCE specification
 ├── testing.md                     # Testing guide
-├── webserver-configuration.md     # Webserver setup
-└── xb-format.md                   # XBIN specification
+├── webserverConfiguration.md     # Webserver setup
+└── xbFormat.md                   # XBIN specification
 ```
 
 ## Tests
@@ -679,6 +679,6 @@ export default Module;
 ## Related Documentation
 
 - [Architecture](architecture.md) - System architecture and design
-- [Building and Developing](building-and-developing.md) - Development workflow
+- [Building and Developing](buildingAndDeveloping.md) - Development workflow
 - [Testing](testing.md) - Test structure and guidelines
 - [CI/CD Pipeline](cicd.md) - Continuous integration and deployment

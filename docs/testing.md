@@ -935,6 +935,6 @@ Tests run automatically on:
 
 ## See Also
 
-- [Building and Developing](building-and-developing.md) - Build process and tools
-- [Editor Client](editor-client.md) - Frontend application details
-- [Collaboration Server](collaboration-server.md) - Backend server details
+- [Building and Developing](buildingAndDeveloping.md) - Build process and tools
+- [Editor Client](editorClient.md) - Frontend application details
+- [Collaboration Server](collaborationServer.md) - Backend server details

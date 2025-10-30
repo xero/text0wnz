@@ -22,7 +22,7 @@ File operations allowing you to create, open, and save artwork in multiple file 
 - **Plain Text** (.txt) - Export as text only
 - **PNG** - Export as image
 
-See [other-tools.md](other-tools.md) for information on working with different file formats and [xb-format.md](xb-format.md) for details on the XBin format.
+See [otherTools.md](otherTools.md) for information on working with different file formats and [xbFormat.md](xbFormat.md) for details on the XBin format.
 
 ![file-menu](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/file-menu.png)
 
@@ -39,7 +39,7 @@ Edit operations to quickly add/remove rows/columns, erase sections, and more.
 - **Color Operations** - Default color, swap colors
 - **Fullscreen Mode** - Toggle fullscreen for distraction-free editing
 
-See [editor-client.md](editor-client.md) for more details on editor features and keyboard shortcuts.
+See [editorClient.md](editorClient.md) for more details on editor features and keyboard shortcuts.
 
 ![edit-menu](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/edit-menu.png)
 
@@ -73,7 +73,7 @@ Text art resolution is calculated by columns and rows. 80 × 25 is the default s
 - **80 × 50** - Extended terminal mode
 - **132 × 60** - Wide format for detailed work
 
-See [building-and-developing.md](building-and-developing.md) for technical details on canvas rendering.
+See [buildingAndDeveloping.md](buildingAndDeveloping.md) for technical details on canvas rendering.
 
 # Color Management
 
@@ -101,7 +101,7 @@ The color system uses the classic 16-color ANSI palette with optional iCE colors
 - iCE colors (extended 16 background colors)
 - Custom palettes in XBIN format
 
-See [xb-format.md](xb-format.md) for information on custom palettes and [architecture.md](architecture.md) for technical color handling details.
+See [xbFormat.md](xbFormat.md) for information on custom palettes and [architecture.md](architecture.md) for technical color handling details.
 
 # Tools
 
@@ -123,7 +123,7 @@ Some tools such as "Brushes" have many options or sub-tools. Clicking the tool i
 - Grid - Toggle alignment grid
 - Light/Dark Mode - Interface theme
 
-See [editor-client.md](editor-client.md) for detailed tool descriptions and [project-structure.md](project-structure.md) for technical implementation details.
+See [editorClient.md](editorClient.md) for detailed tool descriptions and [projectStructure.md](projectStructure.md) for technical implementation details.
 
 ## ![keyboard](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/keyboard.png) Keyboard Mode
 
@@ -144,7 +144,7 @@ Full text input with navigation controls. Type characters directly onto the canv
 > [!TIP]
 > Click the F-key legend preview to insert that character to the current cell.
 
-See [editor-client.md](editor-client.md) for keyboard shortcuts and navigation details.
+See [editorClient.md](editorClient.md) for keyboard shortcuts and navigation details.
 
 ## ![brush](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/brush.png) Brushes
 
@@ -196,7 +196,7 @@ Paint/recolor the foreground and background colors of the selected cell.
 - Preserve existing artwork structure
 - Quick color corrections
 
-See [fonts.md](fonts.md) for available characters in different fonts and [project-structure.md](project-structure.md) for technical brush implementation.
+See [fonts.md](fonts.md) for available characters in different fonts and [projectStructure.md](projectStructure.md) for technical brush implementation.
 
 ## ![fill](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/fill.png) Fill Tool
 
@@ -208,7 +208,7 @@ Flood fill for colors and text patterns with smart attribute handling to preserv
 - Smart attribute detection
 - Color-only fill option to preserve characters
 
-See [project-structure.md](project-structure.md) for fill algorithm implementation details.
+See [projectStructure.md](projectStructure.md) for fill algorithm implementation details.
 
 ## ![shapes](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/shapes.png) Shapes
 
@@ -293,7 +293,7 @@ Move mode is orange:
 - **Ctrl+V** - Paste from app clipboard
 - **Ctrl+Shift+V** - Paste from system clipboard
 
-See [editor-client.md](editor-client.md) for more keyboard shortcuts and clipboard operations.
+See [editorClient.md](editorClient.md) for more keyboard shortcuts and clipboard operations.
 
 ## ![sample](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/sample.png) Sample Tool
 
@@ -323,7 +323,7 @@ Horizontally mirrors any drawing tool on the opposite side of the canvas.
 
 ![mirror-mode](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/mirror-mode.png)
 
-Ideal for creating logos, symmetric patterns, and balanced compositions. See [editor-client.md](editor-client.md) for more drawing techniques.
+Ideal for creating logos, symmetric patterns, and balanced compositions. See [editorClient.md](editorClient.md) for more drawing techniques.
 
 ## ![font](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/font.png) Fonts
 
@@ -384,7 +384,7 @@ A special "extra pixel" wide mode for letter spacing.
 
 ![microknight](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/microknight.png)
 
-See [fonts.md](fonts.md) for the complete font catalog and [xb-format.md](xb-format.md) for embedding custom fonts in XBin files.
+See [fonts.md](fonts.md) for the complete font catalog and [xbFormat.md](xbFormat.md) for embedding custom fonts in XBin files.
 
 ## ![history](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/history.png) History
 
@@ -464,4 +464,4 @@ The chat window is available when connected to a collaboration server. It provid
 - Enable/disable notifications with the checkbox in the header
 - Drag the header to reposition the window (position does not persist between sessions)
 
-See [collaboration-server.md](collaboration-server.md) for details on setting up and using the collaboration server.
+See [collaborationServer.md](collaborationServer.md) for details on setting up and using the collaboration server.

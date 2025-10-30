@@ -452,7 +452,7 @@ actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
 actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
 ```
 
-See: [other-tools/pin-github-action](other-tools.md#pin-github-action)
+See: [other-tools/pin-github-action](otherTools.md#pin-github-action)
 
 ### Permissions
 
@@ -786,9 +786,9 @@ docker run -v $(pwd):/app -w /app text0wnz-ci:local bun test:e2e
 ## Related Documentation
 
 - [Testing Guide](testing.md) - Test infrastructure details
-- [Building and Developing](building-and-developing.md) - Build process
+- [Building and Developing](buildingAndDeveloping.md) - Build process
 - [Docker](docker.md) - Container deployment
-- [Webserver Configuration](webserver-configuration.md) - Production deployment
+- [Webserver Configuration](webserverConfiguration.md) - Production deployment
 
 ## Resources
 

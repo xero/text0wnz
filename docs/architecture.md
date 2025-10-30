@@ -59,7 +59,7 @@ The default mode when no server is detected or when user chooses local mode.
 - Local storage persistence (IndexedDB)
 - Automatic save/restore
 - File import/export
-- Offline [PWA support](docs/install-pwa.md)
+- Offline [PWA support](docs/installPwa.md)
 
 **Data Flow:**
 
@@ -891,8 +891,8 @@ const debouncedSave = debounce(saveToIndexedDB, 500);
 
 ## Related Documentation
 
-- [Editor Client](editor-client.md) - Frontend features and usage
-- [Collaboration Server](collaboration-server.md) - Server setup and protocol
-- [Building and Developing](building-and-developing.md) - Build process
+- [Editor Client](editorClient.md) - Frontend features and usage
+- [Collaboration Server](collaborationServer.md) - Server setup and protocol
+- [Building and Developing](buildingAndDeveloping.md) - Build process
 - [Testing](testing.md) - Test architecture
 - [CI/CD Pipeline](cicd.md) - Deployment architecture

@@ -6,24 +6,24 @@ This directory contains comprehensive guides for using, developing, testing, and
 
 ### For Users / Artists
 
-- Start here: [Editor Client](editor-client.md)
+- Start here: [Editor Client](editorClient.md)
 - Learn the [Editor Interface](interface.md) visually with pictures
-- Learn keyboard shortcuts: [Editor Client - Key Bindings](editor-client.md#key-bindings--mouse-controls)
-- [PWA Install](docs/install-pwa.md): Installation guide for multiple platforms
+- Learn keyboard shortcuts: [Editor Client - Key Bindings](editorClient.md#key-bindings--mouse-controls)
+- [PWA Install](docs/installPwa.md): Installation guide for multiple platforms
 - [Fonts](fonts.md) - Complete font reference and previews
 
 ### For Developers
 
-- Start here: [Building and Developing](building-and-developing.md)
+- Start here: [Building and Developing](buildingAndDeveloping.md)
 - Testing: [Testing Guide](testing.md)
-- Code quality: [Building and Developing - Linting and Formatting](building-and-developing.md#linting-and-formatting)
+- Code quality: [Building and Developing - Linting and Formatting](buildingAndDeveloping.md#linting-and-formatting)
 
 ### For System Administrators
 
-- Start here: [Webserver Configuration](webserver-configuration.md)
-- Collaboration server: [Collaboration Server](collaboration-server.md)
+- Start here: [Webserver Configuration](webserverConfiguration.md)
+- Collaboration server: [Collaboration Server](collaborationServer.md)
 - Containerization: [Docker Containerization](docker.md)
-- Monitoring: [Other Tools - Monitoring Tools](other-tools.md#monitoring-tools)
+- Monitoring: [Other Tools - Monitoring Tools](otherTools.md#monitoring-tools)
 
 ## Core Documentation
 
@@ -39,7 +39,7 @@ This directory contains comprehensive guides for using, developing, testing, and
   - Storage and persistence strategies
   - Design patterns and performance optimizations
 
-- **[Editor Client](editor-client.md)** - Frontend text art editor application
+- **[Editor Client](editorClient.md)** - Frontend text art editor application
   - Drawing tools and features
   - Keyboard shortcuts and mouse controls
   - Color management and palettes
@@ -47,7 +47,7 @@ This directory contains comprehensive guides for using, developing, testing, and
   - Canvas operations
   - Client-side architecture
 
-- **[Collaboration Server](collaboration-server.md)** - Backend real-time collaboration server
+- **[Collaboration Server](collaborationServer.md)** - Backend real-time collaboration server
   - Server architecture and features
   - Installation and setup
   - Command-line options
@@ -58,7 +58,7 @@ This directory contains comprehensive guides for using, developing, testing, and
 
 ### Development Guides
 
-- **[Project Structure](project-structure.md)** - Comprehensive file and module organization
+- **[Project Structure](projectStructure.md)** - Comprehensive file and module organization
   - Directory structure and file organization
   - Client and server module descriptions
   - Configuration files
@@ -67,7 +67,7 @@ This directory contains comprehensive guides for using, developing, testing, and
   - Naming conventions
   - Module import patterns
 
-- **[Building and Developing](building-and-developing.md)** - Development workflow and build process
+- **[Building and Developing](buildingAndDeveloping.md)** - Development workflow and build process
   - Requirements and quick start
   - Build tools (Vite, PostCSS, Tailwind CSS)
   - Bun/NPM scripts reference
@@ -76,7 +76,7 @@ This directory contains comprehensive guides for using, developing, testing, and
   - Linting and formatting (ESLint, Prettier)
   - Project structure
 
-- **[Environment Variables](environment-variables.md)** - Configuration and environment setup
+- **[Environment Variables](environmentVariables.md)** - Configuration and environment setup
   - Build-time variables (Vite)
   - Runtime variables (Server)
   - CI/CD secrets (GitHub Actions)
@@ -103,7 +103,7 @@ This directory contains comprehensive guides for using, developing, testing, and
 
 ### Deployment Guides
 
-- **[Webserver Configuration](webserver-configuration.md)** - Webserver setup and configuration
+- **[Webserver Configuration](webserverConfiguration.md)** - Webserver setup and configuration
   - Nginx configuration (recommended)
   - Apache configuration
   - Caddy configuration
@@ -112,7 +112,7 @@ This directory contains comprehensive guides for using, developing, testing, and
   - Troubleshooting
   - Monitoring
 
-- **[Other Tools](other-tools.md)** - Additional development and deployment tools
+- **[Other Tools](otherTools.md)** - Additional development and deployment tools
   - Development tools (pin-github-action, npm-check-updates)
   - Git tools and hooks
   - Code quality tools
@@ -124,15 +124,15 @@ This directory contains comprehensive guides for using, developing, testing, and
 
 ## Technical Specifications
 
-- **[SAUCE Format](sauce-format.md)** - SAUCE metadata format specification
-- **[XBin Format](xb-format.md)** - XBin file format specification
+- **[SAUCE Format](sauceFormat.md)** - SAUCE metadata format specification
+- **[XBin Format](xbFormat.md)** - XBin file format specification
 
 ### Policies
 
 - **[Security Policy](security.md)** - Security policy and vulnerability reporting
 - **[Privacy Policy](privacy.md)** - Privacy policy and data handling
 - **[Contributing Guide](contributing.md)** - Resources for working on the project
-- **[Code of Conduct](code_of_conduct.md)** - {Una,A}cceptable behaviour for the project
+- **[Code of Conduct](codeOfConduct.md)** - {Una,A}cceptable behaviour for the project
 
 ### Supplemental
 

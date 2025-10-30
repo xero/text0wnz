@@ -319,4 +319,4 @@ When connected to the collaboration server:
 - Session persistence
 - User presence indicators
 
-See [collaboration-server.md](collaboration-server.md) for server setup and details, or [interface.md](interface.md) for chat window usage.
+See [collaborationServer.md](collaborationServer.md) for server setup and details, or [interface.md](interface.md) for chat window usage.

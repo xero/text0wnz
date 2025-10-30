@@ -50,7 +50,7 @@
 
 - **Web-based text art drawing, also works offline as a PWA**
   - No install required!
-  - But easily [installed as a Progressive Web Application](docs/install-pwa.md) to your device
+  - But easily [installed as a Progressive Web Application](docs/installPwa.md) to your device
 - **Comprehensive keyboard shortcuts and mouse controls**
   - Draw using the keyboard, mouse, or touch screen
 - **Classic and modern fonts**
@@ -94,16 +94,16 @@
 **Application Guides**
 
 - [Interface](docs/interface.md) - Visual guide to the user interface and options
-- [Editor Client](docs/editor-client.md) - Frontend text art editor application
-  - [Hotkeys](docs/editor-client.md#key-bindings--mouse-controls) - Editor shortcuts reference
-- [Collaboration Server](docs/collaboration-server.md) - Backend real-time collaboration server
+- [Editor Client](docs/editorClient.md) - Frontend text art editor application
+  - [Hotkeys](docs/editorClient.md#key-bindings--mouse-controls) - Editor shortcuts reference
+- [Collaboration Server](docs/collaborationServer.md) - Backend real-time collaboration server
 - [Architecture](docs/architecture.md) - System architecture and design overview
-- [PWA Install](docs/install-pwa.md) - Guide to installing the app on multiple platforms
+- [PWA Install](docs/installPwa.md) - Guide to installing the app on multiple platforms
 - [Privacy Policy](docs/privacy.md) - Privacy and data handling policy
 
 **Development Guides**
 
-- [Project Structure](docs/project-structure.md) - File and module organization guide
+- [Project Structure](docs/projectStructure.md) - File and module organization guide
 - [Building and Developing](docs/building-and-developing.md) - Development workflow and build process
 - [Testing](docs/testing.md) - Triple headed testing guide (unit, dom, & e2e)
 - [CI/CD Pipeline](docs/cicd.md) - Continuous integration and deployment
@@ -142,7 +142,7 @@
 ## Key Bindings & Mouse/Touch Controls
 
 > [!NOTE]
-> See: [docs/editor-client](docs/editor-client.md) for more info.
+> See: [docs/editor-client](docs/editorClient.md) for more info.
 
 ### Main Shortcuts
 

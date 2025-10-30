@@ -210,7 +210,7 @@ npm run server [port] [options]
 
 - Starts Node.js collaboration server
 - Default port: 1337
-- See [collaboration-server.md](collaboration-server.md) for options
+- See [collaborationServer.md](collaborationServer.md) for options
 
 ### Code Quality Scripts
 
@@ -515,15 +515,15 @@ tests/
 ```
 docs/
 ├── README.md           # Documentation index
-├── editor-client.md    # Frontend app documentation
-├── collaboration-server.md  # Backend server documentation
-├── building-and-developing.md  # This file
+├── editorClient.md    # Frontend app documentation
+├── collaborationServer.md  # Backend server documentation
+├── buildingAndDeveloping.md  # This file
 ├── testing.md          # Testing documentation
-├── webserver-configuration.md  # Webserver setup
-├── other-tools.md      # Useful tools
+├── webserverConfiguration.md  # Webserver setup
+├── otherTools.md      # Useful tools
 ├── fonts.md            # Font reference
-├── sauce-format.md     # SAUCE spec
-├── xb-format.md        # XBin spec
+├── sauceFormat.md     # SAUCE spec
+├── xbFormat.md        # XBin spec
 ├── privacy.md          # Privacy policy
 └── examples/           # Sample artwork
     ├── ansi/
@@ -747,6 +747,6 @@ bun upgrade  # Update to latest version
 ## See Also
 
 - [Testing](testing.md) - Testing framework details
-- [Collaboration Server](collaboration-server.md) - Server configuration
-- [Editor Client](editor-client.md) - Frontend application
-- [Other Tools](other-tools.md) - Additional development tools
+- [Collaboration Server](collaborationServer.md) - Server configuration
+- [Editor Client](editorClient.md) - Frontend application
+- [Other Tools](otherTools.md) - Additional development tools

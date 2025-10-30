@@ -426,7 +426,7 @@ jobs:
 
 ## Related Documentation
 
-- [Building and Developing](building-and-developing.md) - Build process and configuration
+- [Building and Developing](buildingAndDeveloping.md) - Build process and configuration
 - [Docker](docker.md) - Container deployment and environment setup
 - [CI/CD Pipeline](cicd.md) - Workflow configuration and secrets
-- [Collaboration Server](collaboration-server.md) - Server configuration options
+- [Collaboration Server](collaborationServer.md) - Server configuration options

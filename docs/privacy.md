@@ -13,7 +13,7 @@ This application uses your device’s local storage to save the following inform
 - **CANVAS_DATA**: The raw drawing data for your current artwork.
 - **FONT_NAME**, **PALETTE_COLORS**, **ICE_COLORS**, **LETTER_SPACING**, **XBIN_FONT_DATA**: Editor font and configuration settings to ensure a consistent experience.
 
-No personal data is collected or stored unless you voluntarily include it in your artwork’s "[sauce](sauce-format.md)" metadata. All data remains on your device and is never unknowingly transferred; only files you explicitly choose to save or export leave your device.
+No personal data is collected or stored unless you voluntarily include it in your artwork’s "[sauce](sauceFormat.md)" metadata. All data remains on your device and is never unknowingly transferred; only files you explicitly choose to save or export leave your device.
 
 ### Cookies and Tracking
 

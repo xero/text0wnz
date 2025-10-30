@@ -711,7 +711,7 @@ curl -i -N \
 
 ## See Also
 
-- [Building and Developing](building-and-developing.md) - Development workflow
+- [Building and Developing](buildingAndDeveloping.md) - Development workflow
 - [Testing](testing.md) - Testing tools and setup
-- [Collaboration Server](collaboration-server.md) - Server configuration
-- [Webserver Configuration](webserver-configuration.md) - Webserver setup
+- [Collaboration Server](collaborationServer.md) - Server configuration
+- [Webserver Configuration](webserverConfiguration.md) - Webserver setup
