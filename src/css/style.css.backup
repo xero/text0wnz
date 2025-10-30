@@ -174,7 +174,7 @@
 		}
 	}
 
-	#bodyContainer {
+	#body-container {
 		@apply w-full h-full overflow-y-hidden;
 	}
 
@@ -190,7 +190,7 @@
 	}
 	header,
 	aside,
-	#positionInfo {
+	#position-info {
 		@apply bg-menu;
 	}
 
@@ -216,7 +216,7 @@
 		}
 		button,
 		#resolution,
-		#currentFontDisplay {
+		#current-font-display {
 			@apply h-[var(--header-size)];
 			&:hover {
 				@apply bg-hl;
@@ -224,7 +224,7 @@
 		}
 	}
 
-	#chatButton {
+	#chat-button {
 		@apply float-right text-fg;
 		font-size: 10px;
 		line-height: 19px;
@@ -238,20 +238,20 @@
 			@apply bg-purp!;
 		}
 		&.active {
-			#chatIconText {
+			#chat-icon-text {
 				@apply hidden;
 			}
-			#chatIconCloseText {
+			#chat-icon-close-text {
 				@apply block;
 			}
 		}
 	}
 
-	#chatIconCloseText {
+	#chat-icon-close-text {
 		@apply hidden;
 	}
 
-	#chatWindow {
+	#chat-window {
 		@apply flex fixed top-[var(--header-size)] right-0 z-50 scale-y-100 opacity-100
       w-[45vw] min-w-[30vw] max-w-full min-h-[300px] max-h-screen /*height intentionally omitted*/
       dialog-style;
@@ -287,20 +287,20 @@
 						@apply text-fg;
 					}
 				}
-				#closeChat {
+				#close-chat {
 					@apply text-fg flex flex-grow-0 cursor-pointer m-auto px-1.5;
 
 					&:hover svg {
 						@apply fill-cyan;
 					}
 				}
-				#notificationSetting {
+				#notification-setting {
 					@apply text-fg flex flex-grow-0 h-[20px];
 
 					label {
 						@apply mr-2.5 text-base;
 					}
-					#notificationCheckbox {
+					#notification-checkbox {
 						@apply mr-3;
 
 						&:before {
@@ -321,17 +321,17 @@
 			section {
 				@apply flex flex-1 min-h-[284px] flex-row overflow-y-scroll;
 
-				#userList,
-				#messageWindow {
+				#user-list,
+				#message-window {
 					@apply flex flex-col max-h-[40vh] h-full m-0 pt-2 break-all;
 				}
-				#userList {
+				#user-list {
 					@apply w-1/4 bg-menu text-fg pl-3 overflow-auto;
-					.userName {
+					.user-name {
 						max-height: 25px;
 					}
 				}
-				#messageWindow {
+				#message-window {
 					@apply w-3/4 bg-editor overflow-y-scroll;
 					div {
 						@apply inline-table px-2 text-chat;
@@ -352,7 +352,7 @@
 				* {
 					@apply m-0 h-[25px];
 				}
-				#handleInput {
+				#handle-input {
 					@apply flex w-1/4 text-cyber;
 				}
 				.prompt {
@@ -363,7 +363,7 @@
 						@apply text-fg;
 					}
 				}
-				#messageInput {
+				#message-input {
 					@apply flex grow text-fg;
 				}
 				button {
@@ -383,7 +383,7 @@
 		}
 	}
 
-	#palettePicker {
+	#palette-picker {
 		margin-top: 8px;
 	}
 
@@ -409,20 +409,20 @@
 		}
 	}
 
-	#viewportToolbar,
-	#clipboardToolbar,
-	#fontToolbar,
-	#brushToolbar,
-	#shapesToolbar,
-	#selectionToolbar {
+	#viewport-toolbar,
+	#clipboard-toolbar,
+	#font-toolbar,
+	#brush-toolbar,
+	#shapes-toolbar,
+	#selection-toolbar {
 		@apply hidden w-auto flex-row justify-start;
 	}
-	.toolButton {
+	.tool-button {
 		@apply text-white flex text-sm h-[var(--header-size)];
 		line-height: 20px;
 		padding-right: 5px;
 
-		&:not(.toolbarDisplayed):hover {
+		&:not(.toolbar-displayed):hover {
 			@apply bg-hl;
 		}
 		&.enabled {
@@ -435,7 +435,7 @@
 			@apply my-auto;
 		}
 	}
-	#viewportToolbar {
+	#viewport-toolbar {
 		input[type='range'] {
 			@apply appearance-none bg-transparent;
 		}
@@ -475,7 +475,7 @@
 			@apply bg-file cursor-ew-resize w-full;
 			height: 8.4px;
 		}
-		.toolButton {
+		.tool-button {
 			svg {
 				margin-inline: 5px;
 			}
@@ -484,9 +484,9 @@
 			}
 		}
 	}
-	#clipboardToolbar,
-	#fontToolbar {
-		.toolButton {
+	#clipboard-toolbar,
+	#font-toolbar {
+		.tool-button {
 			@apply mr-1;
 		}
 	}
@@ -495,12 +495,12 @@
 		margin-left: 4px !important;
 	}
 
-	#shapesToolbar {
+	#shapes-toolbar {
 		min-width: 370px;
 	}
 
-	#selectionToolbar {
-		.toolButton {
+	#selection-toolbar {
+		.tool-button {
 			@apply flex flex-col m-0 h-[var(--header-size)] px-[5px];
 
 			kbd,
@@ -516,7 +516,7 @@
 		}
 	}
 
-	#keyboardToolbar {
+	#keyboard-toolbar {
 		@apply flex text-fg text-xs;
 
 		span {
@@ -533,7 +533,7 @@
 		}
 	}
 
-	#currentFontDisplay {
+	#current-font-display {
 		user-select: none;
 		margin-right: 1px;
 	}
@@ -553,16 +553,16 @@
 	}
 
 	#resolution kbd,
-	#currentFontDisplay kbd {
+	#current-font-display kbd {
 		@apply bg-lbl mr-[5px] px-[8px] py-[1px];
 	}
 
-	#positionInfo {
+	#position-info {
 		@apply flex flex-row text-right text-fg text-xs min-w-[50px];
 		line-height: 20px;
 	}
 
-	#canvasContainer {
+	#canvas-container {
 		@apply relative cursor-crosshair bg-black;
 		margin: 16px auto;
 		width: 640px;
@@ -573,7 +573,7 @@
 		}
 	}
 
-	.canvasOverlay {
+	.canvas-overlay {
 		@apply absolute hidden left-0 top-0;
 
 		&.enabled {
@@ -614,18 +614,18 @@
 		}
 	}
 
-	.toolbarDisplayed {
+	.toolbar-displayed {
 		@apply bg-indigo;
 	}
 
 	aside > div {
-		&.enabledParent,
+		&.enabled-parent,
 		&.enabled {
 			@apply bg-indigo;
 		}
 	}
 
-	.menuTitle {
+	.menu-title {
 		font-size: 14px;
 		line-height: 20px;
 		@apply w-auto h-[var(--header-size)] text-fg bg-menu inline-block relative align-top overflow-hidden;
@@ -635,16 +635,16 @@
 		}
 	}
 
-	.menuOpen {
+	.menu-open {
 		overflow: visible;
 	}
 
-	.menuList {
+	.menu-list {
 		@apply z-40 block cursor-default absolute w-[300px] bg-file border-4 border-solid border-menu;
 		box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
 	}
 
-	.menuItem {
+	.menu-item {
 		padding: 2px 4px;
 		margin: 4px 2px;
 		font-size: 14px;
@@ -653,15 +653,15 @@
 			font-size: 13px;
 		}
 	}
-	.dark .menuItem kbd {
+	.dark .menu-item kbd {
 		@apply text-tools;
 	}
 
-	.menuList .separator {
+	.menu-list .separator {
 		@apply m-0.5 bg-menu h-[4px];
 	}
 
-	.menuItem {
+	.menu-item {
 		&:hover {
 			@apply bg-indigo text-white;
 		}
@@ -786,15 +786,15 @@
 			}
 		}
 	}
-	#aboutModal,
-	#resizeModal,
-	#sauceModal,
-	#websocketModal,
-	#loadingModal,
-	#choiceModal,
-	#updateModal,
-	#warningModal,
-	#fontsModal {
+	#about-modal,
+	#resize-modal,
+	#sauce-modal,
+	#websocket-modal,
+	#loading-modal,
+	#choice-modal,
+	#update-modal,
+	#warning-modal,
+	#fonts-modal {
 		@apply flex flex-col w-fit h-fit min-h-0;
 		h1,
 		h2,
@@ -827,7 +827,7 @@
 			@apply px-3 py-1 h-fit mr-2 my-2 bg-midnight text-fg;
 		}
 	}
-	#resizeModal {
+	#resize-modal {
 		header,
 		section,
 		nav,
@@ -872,7 +872,7 @@
 			}
 		}
 	}
-	#fontsModal {
+	#fonts-modal {
 		@apply p-5;
 		#fontMeta {
 			@apply text-xl text-subtitle pl-4 pt-1.5;
@@ -897,45 +897,45 @@
 			@apply mt-auto pt-5 bg-menu;
 		}
 	}
-	#fontSelect {
+	#font-select {
 		@apply bg-editor p-0 m-0 overflow-y-scroll;
 		max-height: 21em;
 		min-width: 8em;
 	}
-	#fontSelect::-webkit-scrollbar {
+	#font-select::-webkit-scrollbar {
 		@apply w-5 h-5;
 	}
-	#fontSelect::-webkit-scrollbar-thumb {
+	#font-select::-webkit-scrollbar-thumb {
 		@apply bg-menu rounded-none;
 	}
-	#fontSelect::-webkit-scrollbar-track {
+	#font-select::-webkit-scrollbar-track {
 		@apply bg-editor;
 	}
-	#fontSelect::-webkit-scrollbar-thumb:hover {
+	#font-select::-webkit-scrollbar-thumb:hover {
 		@apply bg-file;
 	}
-	#fontSelect::-webkit-scrollbar-button {
+	#font-select::-webkit-scrollbar-button {
 		@apply bg-editor w-5 h-5;
 	}
-	#fontSelect::-webkit-scrollbar-corner {
+	#font-select::-webkit-scrollbar-corner {
 		@apply bg-editor w-5 h-5;
 	}
-	#fontSelect [role='option'] {
+	#font-select [role='option'] {
 		@apply bg-editor text-fg m-0 cursor-pointer;
 		padding: 0.5em 1.55em;
 		cursor: pointer;
 	}
-	#fontSelect [role='option'][aria-selected='true'] {
+	#font-select [role='option'][aria-selected='true'] {
 		@apply bg-cyber text-midnight;
 	}
-	.groupLabel {
+	.group-label {
 		@apply text-cyan bg-midnight m-0 cursor-default;
 		padding: 0.5em 0.75em;
 	}
-	#fontPreviewInfo {
+	#font-preview-info {
 		@apply pl-4 text-chat;
 	}
-	#sauceModal {
+	#sauce-modal {
 		@apply justify-between;
 		article {
 			@apply flex-row px-12;
@@ -956,11 +956,11 @@
 		nav {
 			@apply p-3;
 		}
-		#sauceBytes {
+		#sauce-bytes {
 			@apply bg-transparent text-chat border-0 pt-0 m-0 text-lg;
 		}
 	}
-	#choiceModal {
+	#choice-modal {
 		nav {
 			@apply p-2;
 			button {
@@ -968,9 +968,9 @@
 			}
 		}
 	}
-	#warningModal,
-	#updateModal,
-	#aboutModal {
+	#warning-modal,
+	#update-modal,
+	#about-modal {
 		header {
 			@apply h-fit flex-col bg-editor;
 			h1 {
@@ -987,7 +987,7 @@
 			@apply p-2 justify-evenly;
 		}
 	}
-	#updateModal {
+	#update-modal {
 		@apply justify-self-center;
 		h4 {
 			@apply text-center text-xl text-cyber mb-4;
@@ -996,8 +996,8 @@
 			text-align: left;
 		}
 	}
-	#loadingModal,
-	#websocketModal {
+	#loading-modal,
+	#websocket-modal {
 		nav {
 			@apply bg-transparent;
 			button {
@@ -1018,18 +1018,18 @@
 			}
 		}
 	}
-	#loadingModal {
+	#loading-modal {
 		@apply cursor-progress;
 		nav {
 			@apply bg-editor;
 		}
 	}
 
-	#customColor {
+	#custom-color {
 		@apply fixed top-[60px] left-[40px] h-0 w-0;
 	}
 
-	.floatingPanel {
+	.floating-panel {
 		@apply fixed hidden cursor-move bg-panel pr-1 pl-1 pb-1 pt-4 transition-none!;
 		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
 
@@ -1060,14 +1060,14 @@
 		}
 	}
 
-	.toggleButton-container {
+	.toggle-button-container {
 		@apply w-[120px] text-center flex flex-row;
 		margin: 0px auto;
 		color: rgb(200, 200, 200);
 		font-size: 14px;
 	}
 
-	.toggleButton {
+	.toggle-button {
 		@apply bg-menu inline-flex justify-center p-[2px] w-[66px];
 
 		&.enabled {
@@ -1089,7 +1089,7 @@
 
 	canvas {
 		&.cursor,
-		&.selectionCursor {
+		&.selection-cursor {
 			@apply absolute z-20;
 		}
 		&.cursor {
@@ -1106,7 +1106,7 @@
 		}
 	}
 
-	.includedForWebsocket {
+	.included-for-websocket {
 		@apply hidden;
 	}
 
@@ -1114,15 +1114,15 @@
 	button,
 	.button,
 	.hover,
-	.toggleButton,
-	.toolButton,
-	.menuItem:hover,
-	.menuTitle:hover,
+	.toggle-button,
+	.tool-button,
+	.menu-item:hover,
+	.menu-title:hover,
 	.fkey,
 	#resolution,
-	#selectionToolbar .toolButton,
-	#currentFontDisplay,
-	#chatButton {
+	#selection-toolbar .tool-button,
+	#current-font-display,
+	#chat-button {
 		@apply cursor-pointer;
 	}
 }
@@ -1137,14 +1137,14 @@
 	}
 
 	/*  darkmode toggle */
-	.sunAndMoon {
-		> :is(.moon, .sun, .sunBeams) {
+	.sun-and-moon {
+		> :is(.moon, .sun, .sun-beams) {
 			@apply origin-center;
 		}
 		> :is(.moon, .sun) {
 			@apply fill-icon;
 		}
-		> .sunBeams {
+		> .sun-beams {
 			@apply stroke-icon;
 			stroke-width: 0.125rem;
 		}
@@ -1154,7 +1154,7 @@
 					@apply fill-icon-hover;
 				}
 			}
-			> .sunBeams {
+			> .sun-beams {
 				.darkmode:is(:hover, :focus-visible) & {
 					@apply stroke-icon-hover;
 				}
@@ -1164,7 +1164,7 @@
 			& > .sun {
 				transform: scale(1.75);
 			}
-			& > .sunBeams {
+			& > .sun-beams {
 				@apply opacity-0;
 			}
 			& > .moon > circle {
@@ -1179,7 +1179,7 @@
 			> .sun {
 				transition: transform 0.5s var(--ease-elastic-1);
 			}
-			> .sunBeams {
+			> .sun-beams {
 				transition:
 					transform 0.5s var(--ease-elastic-2),
 					opacity 0.5s var(--ease);
@@ -1196,7 +1196,7 @@
 					transition-timing-function: var(--ease);
 					transition-duration: 0.25s;
 				}
-				> .sunBeams {
+				> .sun-beams {
 					transform: rotateZ(-25deg);
 					transition-duration: 0.15s;
 				}
