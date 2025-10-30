@@ -236,7 +236,7 @@ const createPaintShortcuts = keyPair => {
 	const isConnected = e =>
 		!State.network ||
 		!State.network.isConnected() ||
-		!keyPair[e.key].classList.contains('excluded-for-websocket');
+		!keyPair[e.key].classList.contains('excludedForWebsocket');
 
 	const keyDown = e => {
 		if (!ignored) {
@@ -312,13 +312,13 @@ const createToggleButton = (
 	stateTwoClick,
 ) => {
 	const container = document.createElement('DIV');
-	container.classList.add('toggle-button-container');
+	container.classList.add('toggleButtonContainer');
 	const stateOne = document.createElement('DIV');
-	stateOne.classList.add('toggle-button');
+	stateOne.classList.add('toggleButton');
 	stateOne.classList.add('left');
 	stateOne.textContent = stateOneName;
 	const stateTwo = document.createElement('DIV');
-	stateTwo.classList.add('toggle-button');
+	stateTwo.classList.add('toggleButton');
 	stateTwo.classList.add('right');
 	stateTwo.textContent = stateTwoName;
 	container.appendChild(stateOne);
@@ -543,11 +543,11 @@ const enforceMaxBytes = () => {
 const createGenericController = (panel, nav) => {
 	const enable = () => {
 		panel.style.display = 'flex';
-		nav.classList.add('enabled-parent');
+		nav.classList.add('enabledParent');
 	};
 	const disable = () => {
 		panel.style.display = 'none';
-		nav.classList.remove('enabled-parent');
+		nav.classList.remove('enabledParent');
 	};
 	return {
 		enable: enable,
@@ -603,13 +603,13 @@ const createDragDropController = (handler, el) => {
 const createMenuController = (menus, view) => {
 	const close = menu => {
 		setTimeout(_ => {
-			menu.classList.remove('menu-open');
+			menu.classList.remove('menuOpen');
 			view.focus();
 		}, 60);
 	};
 	const closeAll = () => {
 		menus.forEach(m => {
-			m.classList.remove('menu-open');
+			m.classList.remove('menuOpen');
 		});
 		view.focus();
 	};
@@ -617,10 +617,10 @@ const createMenuController = (menus, view) => {
 		menu.addEventListener('click', e => {
 			e.stopPropagation();
 			e.preventDefault();
-			if (menu.classList.contains('menu-open')) {
+			if (menu.classList.contains('menuOpen')) {
 				close(menu);
 			} else {
-				menu.classList.add('menu-open');
+				menu.classList.add('menuOpen');
 				menu.focus();
 			}
 		});

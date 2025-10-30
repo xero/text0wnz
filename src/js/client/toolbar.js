@@ -8,7 +8,7 @@ const Toolbar = (() => {
 	const blur = () => {
 		Object.values(tools).forEach(tool => {
 			if (tool.isLoaded) {
-				tool.button.classList.remove('toolbar-displayed');
+				tool.button.classList.remove('toolbarDisplayed');
 				if (typeof tool.onBlur === 'function') {
 					tool.onBlur();
 				}
@@ -26,7 +26,7 @@ const Toolbar = (() => {
 				previousButton = currentButton;
 			}
 			blur(); // Deactivate the current tool
-			tool.button.classList.add('toolbar-displayed');
+			tool.button.classList.add('toolbarDisplayed');
 			currentButton = tool.button;
 		}
 		if (typeof onFocus === 'function') {

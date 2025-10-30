@@ -36,7 +36,7 @@ const createPanelCursor = el => {
 const createFloatingPanel = (x, y) => {
 	const panel = document.createElement('DIV');
 	const hide = document.createElement('DIV');
-	panel.classList.add('floating-panel');
+	panel.classList.add('floatingPanel');
 	hide.classList.add('hidePanel');
 	hide.innerText = 'X';
 	panel.appendChild(hide);

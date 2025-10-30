@@ -649,7 +649,7 @@ const createChatController = (
 				div: document.createElement('DIV'),
 			};
 			const msg = `${handle} has joined`;
-			userList[sessionID].div.classList.add('user-name');
+			userList[sessionID].div.classList.add('userName');
 			userList[sessionID].div.textContent = handle;
 			winUsers.appendChild(userList[sessionID].div);
 			addConversation(handle, msg, showNotification, true);

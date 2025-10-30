@@ -401,7 +401,7 @@ const createSelectionCursor = element => {
 		return null;
 	};
 
-	cursor.classList.add('selection-cursor');
+	cursor.classList.add('selectionCursor');
 	cursor.style.display = 'none';
 	element.appendChild(cursor);
 
