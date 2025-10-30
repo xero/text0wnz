@@ -8,7 +8,7 @@ import {
 	createShadingController,
 	createShadingPanel,
 	createCharacterBrushPanel,
-} from '../../src/js/client/freehand_tools.js';
+} from '../../src/js/client/freehandTools.js';
 
 // Mock dependencies
 vi.mock('../../src/js/client/state.js', () => ({

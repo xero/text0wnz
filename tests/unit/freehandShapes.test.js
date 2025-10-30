@@ -6,7 +6,7 @@ import {
 	createSquareController,
 	createCircleController,
 	createAttributeBrushController,
-} from '../../src/js/client/freehand_tools.js';
+} from '../../src/js/client/freehandTools.js';
 import { createSelectionTool } from '../../src/js/client/keyboard.js';
 
 // Mock dependencies
