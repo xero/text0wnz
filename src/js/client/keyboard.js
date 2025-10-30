@@ -1356,40 +1356,38 @@ const createSelectionTool = () => {
 	};
 
 	const setAreaSelective = (area, targetArea, x, y) => {
-		// Apply selection data to target position, but only overwrite non-blank characters
-		// Blank characters (char code 0, foreground 0, background 0) are treated as transparent
-		const maxWidth = Math.min(area.width, State.textArtCanvas.getColumns() - x);
-		const maxHeight = Math.min(area.height, State.textArtCanvas.getRows() - y);
+		const columns = State.textArtCanvas.getColumns();
+		const rows = State.textArtCanvas.getRows();
+		const maxWidth = Math.min(area.width, columns - x);
+		const maxHeight = Math.min(area.height, rows - y);
 
 		State.textArtCanvas.draw(draw => {
 			for (let py = 0; py < maxHeight; py++) {
 				for (let px = 0; px < maxWidth; px++) {
-					const sourceAttrib = area.data[py * area.width + px];
-					// Only apply the source character if it's not a truly blank character
-					// Truly blank = char code 0, foreground 0, background 0 (attrib === 0)
+					const srcIndex = py * area.width + px;
+					const sourceAttrib = area.data[srcIndex] || 0;
+
 					if (sourceAttrib !== 0) {
-						draw(
-							sourceAttrib >> 8,
-							sourceAttrib & 15,
-							(sourceAttrib >> 4) & 15,
-							x + px,
-							y + py,
-						);
-					} else if (targetArea) {
-						// Keep the original target character for blank spaces
-						const targetAttrib = targetArea.data[py * targetArea.width + px];
-						draw(
-							targetAttrib >> 8,
-							targetAttrib & 15,
-							(targetAttrib >> 4) & 15,
-							x + px,
-							y + py,
-						);
+						const charCode = sourceAttrib >> 8;
+						const fg = sourceAttrib & 15;
+						const bg = (sourceAttrib >> 4) & 15;
+						draw(charCode, fg, bg, x + px, y + py);
+					} else if (
+						targetArea &&
+						px < targetArea.width &&
+						py < targetArea.height
+					) {
+						const tgtIndex = py * targetArea.width + px;
+						const targetAttrib = targetArea.data[tgtIndex] || 0;
+						const charCode = targetAttrib >> 8;
+						const fg = targetAttrib & 15;
+						const bg = (targetAttrib >> 4) & 15;
+						draw(charCode, fg, bg, x + px, y + py);
 					}
-					// If no targetArea and source is blank, do nothing
+					// else: leave existing canvas pixel alone
 				}
 			}
-		});
+		}, false); // batch the whole operation for consistent commit/undo
 	};
 
 	const moveSelection = (deltaX, deltaY) => {
@@ -1499,7 +1497,7 @@ const createSelectionTool = () => {
 					originalPosition.y,
 					originalPosition.width,
 					originalPosition.height,
-					0,
+					State.palette.getBackgroundColor(),
 				);
 			}
 			moveButton.classList.remove('enabled');
@@ -1820,7 +1818,7 @@ const createSelectionTool = () => {
 					originalPosition.y,
 					originalPosition.width,
 					originalPosition.height,
-					0,
+					State.palette.getBackgroundColor(),
 				);
 			}
 			moveMode = false;
