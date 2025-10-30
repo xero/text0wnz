@@ -5,6 +5,7 @@ node_modules/
 dist/
 tests/results/
 test-results/
+blob-report/
 sessions/*.bin
 sessions/*.json
 !package.json
