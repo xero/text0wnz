@@ -483,11 +483,11 @@ const createChatController = (
 	let initialY = 0;
 
 	const dragStart = e => {
-		// Only drag when clicking on header, not on child elements like inputs
+		// Only drag when clicking on header or h2, not on child elements like inputs
 		if (
 			e.target === chatHeader ||
 			e.target.tagName === 'H2' ||
-			e.target.closest('h2')
+			e.target.parentElement?.tagName === 'H2'
 		) {
 			initialX = e.clientX - currentX;
 			initialY = e.clientY - currentY;

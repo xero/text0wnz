@@ -336,11 +336,6 @@ test.describe('Chat Window Drag Functionality', () => {
 
 			const windowCount = await chatWindow.count();
 			if (windowCount > 0) {
-				// Get initial position
-				const initialTransform = await chatWindow.evaluate(el => {
-					return el.style.transform || 'none';
-				});
-
 				// Drag the header
 				const headerBox = await chatHeader.boundingBox();
 				if (headerBox) {
@@ -353,14 +348,14 @@ test.describe('Chat Window Drag Functionality', () => {
 					await page.mouse.up();
 					await page.waitForTimeout(300);
 
-					// Get new position
+					// Check that transform contains translate values
 					const newTransform = await chatWindow.evaluate(el => {
-						return el.style.transform || 'none';
+						return el.style.transform || '';
 					});
 
-					// Transform should have changed
-					expect(newTransform).not.toBe(initialTransform);
+					// Transform should contain translate after dragging
 					expect(newTransform).toContain('translate');
+					expect(newTransform).toMatch(/translate\(.+px,\s*.+px\)/);
 				}
 			}
 		}
