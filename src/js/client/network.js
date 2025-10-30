@@ -474,6 +474,48 @@ const createChatController = (
 	}
 	checkNotifications.checked = notifications;
 
+	// Drag functionality for chat window
+	const chatHeader = winChat.querySelector('header');
+	let isDragging = false;
+	let currentX = 0;
+	let currentY = 0;
+	let initialX = 0;
+	let initialY = 0;
+
+	const dragStart = e => {
+		// Only drag when clicking on header, not on child elements like inputs
+		if (
+			e.target === chatHeader ||
+			e.target.tagName === 'H2' ||
+			e.target.closest('h2')
+		) {
+			initialX = e.clientX - currentX;
+			initialY = e.clientY - currentY;
+			isDragging = true;
+			chatHeader.style.cursor = 'grabbing';
+		}
+	};
+
+	const dragEnd = () => {
+		isDragging = false;
+		chatHeader.style.cursor = 'grab';
+	};
+
+	const drag = e => {
+		if (isDragging) {
+			e.preventDefault();
+			currentX = e.clientX - initialX;
+			currentY = e.clientY - initialY;
+
+			// Apply transform to move the chat window
+			winChat.style.transform = `translate(${currentX}px, ${currentY}px)`;
+		}
+	};
+
+	chatHeader.addEventListener('mousedown', dragStart);
+	document.addEventListener('mouseup', dragEnd);
+	document.addEventListener('mousemove', drag);
+
 	const scrollToBottom = () => {
 		const rect = winMsg.getBoundingClientRect();
 		winMsg.scrollTop = winMsg.scrollHeight - rect.height;

@@ -276,8 +276,12 @@
 			header {
 				@apply w-full flex-row pl-2 pr-0 place-content-between min-h-0 bg-header;
 				flex-wrap: balance;
+				cursor: grab;
+				user-select: none;
 				h2 {
 					@apply text-cyan text-2xl;
+					cursor: grab;
+					user-select: none;
 				}
 				button {
 					@apply p-0 pb-0.5;
