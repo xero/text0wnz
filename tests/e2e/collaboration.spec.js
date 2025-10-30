@@ -295,3 +295,90 @@ test.describe('Network Features', () => {
 		}
 	});
 });
+
+test.describe('Chat Window Drag Functionality', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto('/');
+		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForTimeout(1000);
+	});
+
+	test('should have draggable cursor on chat header', async ({ page }) => {
+		const chatButton = page.locator('#chat-button');
+
+		if (await chatButton.isVisible()) {
+			await chatButton.click();
+			await page.waitForTimeout(500);
+
+			const chatHeader = page.locator('#chat-window header');
+			const headerCount = await chatHeader.count();
+
+			if (headerCount > 0) {
+				// Check cursor style
+				const cursor = await chatHeader.evaluate(el => {
+					return window.getComputedStyle(el).cursor;
+				});
+
+				expect(cursor).toBe('grab');
+			}
+		}
+	});
+
+	test('should allow dragging chat window by header', async ({ page }) => {
+		const chatButton = page.locator('#chat-button');
+
+		if (await chatButton.isVisible()) {
+			await chatButton.click();
+			await page.waitForTimeout(500);
+
+			const chatWindow = page.locator('#chat-window');
+			const chatHeader = page.locator('#chat-window header h2');
+
+			const windowCount = await chatWindow.count();
+			if (windowCount > 0) {
+				// Drag the header
+				const headerBox = await chatHeader.boundingBox();
+				if (headerBox) {
+					await page.mouse.move(
+						headerBox.x + headerBox.width / 2,
+						headerBox.y + headerBox.height / 2,
+					);
+					await page.mouse.down();
+					await page.mouse.move(headerBox.x + 100, headerBox.y + 50);
+					await page.mouse.up();
+					await page.waitForTimeout(300);
+
+					// Check that transform contains translate values
+					const newTransform = await chatWindow.evaluate(el => {
+						return el.style.transform || '';
+					});
+
+					// Transform should contain translate after dragging
+					expect(newTransform).toContain('translate');
+					expect(newTransform).toMatch(/translate\(.+px,\s*.+px\)/);
+				}
+			}
+		}
+	});
+
+	test('should not select text when dragging', async ({ page }) => {
+		const chatButton = page.locator('#chat-button');
+
+		if (await chatButton.isVisible()) {
+			await chatButton.click();
+			await page.waitForTimeout(500);
+
+			const chatHeader = page.locator('#chat-window header');
+			const headerCount = await chatHeader.count();
+
+			if (headerCount > 0) {
+				// Check user-select style
+				const userSelect = await chatHeader.evaluate(el => {
+					return window.getComputedStyle(el).userSelect;
+				});
+
+				expect(userSelect).toBe('none');
+			}
+		}
+	});
+});

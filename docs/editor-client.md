@@ -313,8 +313,10 @@ When connected to the collaboration server:
 
 - Real-time multi-user editing
 - Shared canvas state
-- Chat functionality
+- Chat functionality with repositionable window
+- Server activity logs (join/leave/nickname changes)
+- Desktop notifications for chat and events
 - Session persistence
 - User presence indicators
 
-See [collaboration-server.md](collaboration-server.md) for server setup and details.
+See [collaboration-server.md](collaboration-server.md) for server setup and details, or [interface.md](interface.md) for chat window usage.

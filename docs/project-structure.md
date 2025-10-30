@@ -194,7 +194,9 @@ src/js/client/
 - Connection state management
 - Message protocol handling
 - Canvas synchronization
-- Chat functionality
+- Chat functionality with repositionable window
+- Server log message display (join/leave/nick)
+- Desktop notifications
 - Collaboration mode selection
 - Exports: `Network` object
 

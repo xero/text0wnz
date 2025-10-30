@@ -361,6 +361,13 @@ const serverProto =
 	['resize', { columns, rows }]); // Canvas resize
 ```
 
+**Chat Message Display:**
+
+The client displays chat messages differently based on context:
+
+- User messages: Displayed with username handle and message text
+- Server log messages: Join/leave/nick change events styled as system logs
+
 ### State Synchronization
 
 When a user joins:

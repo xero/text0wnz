@@ -274,10 +274,12 @@
 				@apply flex-shrink-0 w-full;
 			}
 			header {
-				@apply w-full flex-row pl-2 pr-0 place-content-between min-h-0 bg-header;
+				@apply w-full flex-row pl-2 pr-0 place-content-between min-h-0 bg-header select-none flex;
 				flex-wrap: balance;
+				cursor: grab;
 				h2 {
-					@apply text-cyan text-2xl;
+					@apply text-cyan text-2xl mt-1 flex flex-grow select-none;
+					cursor: grab;
 				}
 				button {
 					@apply p-0 pb-0.5;
@@ -285,13 +287,19 @@
 						@apply text-fg;
 					}
 				}
-				#notification-setting {
-					@apply float-end text-fg;
-					width: 140px;
-					height: 20px;
-					font-size: 10px;
-					line-height: 20px;
+				#close-chat {
+					@apply text-fg flex flex-grow-0 cursor-pointer m-auto px-1.5;
 
+					&:hover svg {
+						@apply fill-cyan;
+					}
+				}
+				#notification-setting {
+					@apply text-fg flex flex-grow-0 h-[20px];
+
+					label {
+						@apply mr-2.5 text-base;
+					}
 					#notification-checkbox {
 						@apply mr-3;
 
@@ -333,6 +341,9 @@
 								content: ':';
 							}
 						}
+					}
+					.log {
+						@apply text-header;
 					}
 				}
 			}
@@ -1117,6 +1128,10 @@
 }
 /* <--//--------------------------------------------------------[componentz] */
 @layer components {
+	.drag {
+		@apply transition-none!;
+	}
+
 	.hide {
 		@apply hidden! pointer-events-none!;
 	}
