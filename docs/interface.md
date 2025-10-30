@@ -210,3 +210,27 @@ Toggles between light and dark mode interface colors.
 ![dark-mode](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/dark-mode.png)
 
 ![light-mode](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/light-mode.png)
+
+# Collaboration Features
+
+## Chat Window
+
+The chat window is available when connected to a collaboration server. It provides real-time communication with other users and displays server activity logs.
+
+### Features
+
+- **Repositionable** - Click and drag the chat header to move the window anywhere on screen
+- **User Messages** - Send and receive chat messages with other collaborators
+- **Server Logs** - Join/leave/nickname change events displayed as styled log messages
+- **Notifications** - Optional desktop notifications for new messages and events
+- **User List** - See all currently connected users
+- **Close Button** - Click the X button in the header to close the chat window
+
+### Usage
+
+- Type your message in the input field and press Enter or click "send"
+- Change your username by editing the handle field
+- Enable/disable notifications with the checkbox in the header
+- Drag the header to reposition the window (position does not persist between sessions)
+
+See [collaboration-server.md](collaboration-server.md) for details on setting up and using the collaboration server.

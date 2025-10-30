@@ -6,7 +6,9 @@ The teXt0wnz collaboration server enables real-time multi-user editing of text a
 
 - **Real-time collaboration** - Multiple users can edit the same canvas simultaneously
 - **Canvas persistence** - Canvas state auto-saved to disk at configurable intervals
-- **Chat functionality** - Built-in chat for collaborators
+- **Chat functionality** - Built-in chat with user messages and server activity logs
+- **Repositionable chat window** - Drag the chat header to move the window around the screen
+- **Desktop notifications** - Optional notifications for chat messages and user events
 - **Session management** - Named sessions with automatic state restoration
 - **SSL support** - Optional HTTPS/WSS encryption
 - **Minimal overhead** - Efficient message broadcasting and state management
@@ -216,7 +218,57 @@ worker.postMessage({ cmd: 'connect', silentCheck: false });
 | `resize`              | `["resize", {columns, rows}]`                 | Canvas resize broadcast   |
 | `fontChange`          | `["fontChange", {fontName}]`                  | Font change broadcast     |
 | `iceColorsChange`     | `["iceColorsChange", {iceColors}]`            | Ice colors broadcast      |
-| `letterSpacingChange` | `["letterSpacingChange", {letterSpacing}]`    | Letter spacing broadcast  |
+| `letterSpacingChange` | `["letterSpacingChange`, {letterSpacing}]`    | Letter spacing broadcast  |
+
+## Chat Features
+
+The collaboration server includes a fully-featured chat system for real-time communication between users.
+
+### Chat Window Interface
+
+**Repositionable Window:**
+
+- Drag the chat header to move the window anywhere on screen
+- Position does not persist between sessions (resets on reload)
+- Click the close button (X) in the header to hide the chat window
+
+**Message Display:**
+
+- User messages: Displayed with username and message text
+- Server logs: Join/leave/nickname change events styled differently
+- Auto-scroll to newest messages
+- Message history preserved during session
+
+**User Controls:**
+
+- Handle input: Change your display name (max 14 characters)
+- Message input: Send chat messages (max 140 characters)
+- Notifications toggle: Enable/disable desktop notifications
+- User list: View all currently connected users
+
+### Chat Message Types
+
+**User Messages:**
+
+```
+username: message text
+```
+
+**Server Log Messages:**
+
+- `username has joined` - User connects to session
+- `oldname is now newname` - User changes display name
+- `username has quit` - User disconnects from session
+
+### Notifications
+
+Optional desktop notifications for:
+
+- New chat messages
+- User join/leave events
+- Nickname changes
+
+Users must grant browser notification permissions and enable the setting in the chat header.
 
 ## Session Management
 

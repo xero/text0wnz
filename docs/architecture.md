@@ -361,6 +361,15 @@ const serverProto =
 	['resize', { columns, rows }]); // Canvas resize
 ```
 
+**Chat Message Display:**
+
+The client displays chat messages differently based on context:
+
+- User messages: Displayed with username handle and message text
+- Server log messages: Join/leave/nick change events styled as system logs
+
+Join, part, and nick messages are automatically converted to styled log messages in the chat window (e.g., "username has joined", "username has quit", "oldname is now newname").
+
 ### State Synchronization
 
 When a user joins:
