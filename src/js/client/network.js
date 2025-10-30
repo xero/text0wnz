@@ -476,6 +476,7 @@ const createChatController = (
 
 	// Drag functionality for chat window
 	const chatHeader = winChat.querySelector('header');
+	const close = $('close-chat');
 	let isDragging = false;
 	let currentX = 0;
 	let currentY = 0;
@@ -493,12 +494,14 @@ const createChatController = (
 			initialY = e.clientY - currentY;
 			isDragging = true;
 			chatHeader.style.cursor = 'grabbing';
+			winChat.classList.add('drag');
 		}
 	};
 
 	const dragEnd = () => {
 		isDragging = false;
 		chatHeader.style.cursor = 'grab';
+		winChat.classList.remove('drag');
 	};
 
 	const drag = e => {
@@ -524,7 +527,7 @@ const createChatController = (
 	const newNotification = text => {
 		const notification = new Notification('text.0w.nz', {
 			body: text,
-			icon: `${State.uiDir}favicon.svg`,
+			icon: `${State.uiDir}img/favicon.svg`,
 		});
 		// Auto-close notification after 7 seconds
 		const notificationTimer = setTimeout(() => {
@@ -537,18 +540,28 @@ const createChatController = (
 		});
 	};
 
-	const addConversation = (handle, text, showNotification) => {
+	const addConversation = (handle, text, showNotification, log = false) => {
 		const div = document.createElement('DIV');
-		const spanHandle = document.createElement('SPAN');
-		const spanSeparator = document.createElement('SPAN');
-		const spanText = document.createElement('SPAN');
-		spanHandle.textContent = handle;
-		spanHandle.classList.add('handle');
-		spanSeparator.textContent = ' ';
-		spanText.textContent = text;
-		div.appendChild(spanHandle);
-		div.appendChild(spanSeparator);
-		div.appendChild(spanText);
+		if (log) {
+			const spanLog = document.createElement('SPAN');
+			spanLog.textContent = `${text}`;
+			spanLog.classList.add('log');
+			div.appendChild(spanLog);
+			if (showNotification) {
+				newNotification(text);
+			}
+		} else {
+			const spanHandle = document.createElement('SPAN');
+			const spanSeparator = document.createElement('SPAN');
+			const spanText = document.createElement('SPAN');
+			spanHandle.textContent = handle;
+			spanHandle.classList.add('handle');
+			spanSeparator.textContent = ' ';
+			spanText.textContent = text;
+			div.appendChild(spanHandle);
+			div.appendChild(spanSeparator);
+			div.appendChild(spanText);
+		}
 		winMsg.appendChild(div);
 		scrollToBottom();
 		if (
@@ -607,7 +620,7 @@ const createChatController = (
 	txtHandle.addEventListener('keypress', keypressHandle);
 	txtMsg.addEventListener('keypress', keypressMessage);
 
-	const toggle = () => {
+	const toggle = _ => {
 		if (enabled) {
 			winChat.classList.add('hide');
 			enabled = false;
@@ -623,6 +636,7 @@ const createChatController = (
 			btnChat.classList.add('active');
 		}
 	};
+	close.addEventListener('click', toggle);
 
 	const isEnabled = () => {
 		return enabled;
@@ -630,38 +644,34 @@ const createChatController = (
 
 	const join = (handle, sessionID, showNotification) => {
 		if (userList[sessionID] === undefined) {
-			if (notifications && showNotification) {
-				newNotification(handle + ' has joined');
-			}
 			userList[sessionID] = {
 				handle: handle,
 				div: document.createElement('DIV'),
 			};
+			const msg = `${handle} has joined`;
 			userList[sessionID].div.classList.add('user-name');
 			userList[sessionID].div.textContent = handle;
 			winUsers.appendChild(userList[sessionID].div);
+			addConversation(handle, msg, showNotification, true);
 		}
 	};
 
 	const nick = (handle, sessionID, showNotification) => {
 		if (userList[sessionID] !== undefined) {
-			if (showNotification && notifications) {
-				newNotification(
-					userList[sessionID].handle + ' has changed their name to ' + handle,
-				);
-			}
+			const msg = `${userList[sessionID].handle} is now ${handle}`;
 			userList[sessionID].handle = handle;
 			userList[sessionID].div.textContent = handle;
+			addConversation(handle, msg, showNotification, true);
 		}
 	};
 
 	const part = sessionID => {
 		if (userList[sessionID] !== undefined) {
-			if (notifications) {
-				newNotification(userList[sessionID].handle + ' has left');
-			}
+			const handle = userList[sessionID].handle;
+			const msg = `${handle} has quit`;
 			winUsers.removeChild(userList[sessionID].div);
 			delete userList[sessionID];
+			addConversation(handle, msg, notifications, true);
 		}
 	};
 
