@@ -505,8 +505,8 @@ const createPalettePicker = canvas => {
 			.createImageData(canvas.width / 2, canvas.height / 8);
 	}
 	// Custom colors
-	if ($('custom-color')) {
-		cc = $('custom-color');
+	if ($('customColor')) {
+		cc = $('customColor');
 		cc.addEventListener('change', colorChange);
 		cc.addEventListener('blur', colorChange);
 	}

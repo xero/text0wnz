@@ -55,7 +55,7 @@ describe('Toolbar', () => {
 			expect(onFocus).toHaveBeenCalled();
 		});
 
-		it('should add toolbar-displayed class when tool is enabled', () => {
+		it('should add toolbarDisplayed class when tool is enabled', () => {
 			const button = document.createElement('div');
 			button.id = 'test-tool-3';
 			const onFocus = vi.fn();
@@ -64,7 +64,7 @@ describe('Toolbar', () => {
 			const tool = Toolbar.add(button, onFocus, onBlur);
 			tool.enable();
 
-			expect(button.classList.contains('toolbar-displayed')).toBe(true);
+			expect(button.classList.contains('toolbarDisplayed')).toBe(true);
 		});
 
 		it('should call onFocus when tool is enabled', () => {
@@ -95,12 +95,12 @@ describe('Toolbar', () => {
 
 			// Enable first tool
 			tool1.enable();
-			expect(button1.classList.contains('toolbar-displayed')).toBe(true);
+			expect(button1.classList.contains('toolbarDisplayed')).toBe(true);
 
 			// Enable second tool - should disable first
 			tool2.enable();
-			expect(button1.classList.contains('toolbar-displayed')).toBe(false);
-			expect(button2.classList.contains('toolbar-displayed')).toBe(true);
+			expect(button1.classList.contains('toolbarDisplayed')).toBe(false);
+			expect(button2.classList.contains('toolbarDisplayed')).toBe(true);
 			expect(onBlur1).toHaveBeenCalled();
 			expect(onFocus2).toHaveBeenCalled();
 		});
@@ -132,7 +132,7 @@ describe('Toolbar', () => {
 			Toolbar.switchTool('switch-test-tool');
 
 			expect(onFocus).toHaveBeenCalled();
-			expect(button.classList.contains('toolbar-displayed')).toBe(true);
+			expect(button.classList.contains('toolbarDisplayed')).toBe(true);
 		});
 
 		it('should do nothing when switching to non-existent tool', () => {
@@ -204,8 +204,8 @@ describe('Toolbar', () => {
 			Toolbar.returnToPreviousTool();
 
 			expect(onFocus1).toHaveBeenCalled();
-			expect(button1.classList.contains('toolbar-displayed')).toBe(true);
-			expect(button2.classList.contains('toolbar-displayed')).toBe(false);
+			expect(button1.classList.contains('toolbarDisplayed')).toBe(true);
+			expect(button2.classList.contains('toolbarDisplayed')).toBe(false);
 		});
 
 		it('should do nothing when no previous tool exists', () => {
@@ -392,8 +392,8 @@ describe('Toolbar', () => {
 
 			expect(onBlurRegular).toHaveBeenCalled();
 			expect(onFocusLazy).toHaveBeenCalled();
-			expect(regularButton.classList.contains('toolbar-displayed')).toBe(false);
-			expect(lazyButton.classList.contains('toolbar-displayed')).toBe(true);
+			expect(regularButton.classList.contains('toolbarDisplayed')).toBe(false);
+			expect(lazyButton.classList.contains('toolbarDisplayed')).toBe(true);
 		});
 
 		it('should support switchTool with lazy tools', async () => {

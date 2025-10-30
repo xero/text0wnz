@@ -1212,10 +1212,10 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 };
 
 const createSelectionTool = () => {
-	const panel = $('selection-toolbar');
-	const flipHButton = $('flip-horizontal');
-	const flipVButton = $('flip-vertical');
-	const moveButton = $('move-blocks');
+	const panel = $('selectionToolbar');
+	const flipHButton = $('flipHorizontal');
+	const flipVButton = $('flipVertical');
+	const moveButton = $('moveBlocks');
 	let moveMode = false;
 	let selectionData = null;
 	let isDragging = false;

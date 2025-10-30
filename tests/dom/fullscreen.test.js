@@ -22,7 +22,7 @@ describe('Fullscreen DOM Tests', () => {
 		// Create fullscreen button
 		fullscreenButton = document.createElement('article');
 		fullscreenButton.id = 'fullscreen';
-		fullscreenButton.className = 'menu-item';
+		fullscreenButton.className = 'menuItem';
 		fullscreenButton.textContent = 'Toggle Fullscreen Mode';
 		document.body.appendChild(fullscreenButton);
 
@@ -43,8 +43,8 @@ describe('Fullscreen DOM Tests', () => {
 			expect(fullscreenButton).toHaveTextContent('Toggle Fullscreen Mode');
 		});
 
-		it('should have menu-item class', () => {
-			expect(fullscreenButton).toHaveClass('menu-item');
+		it('should have menuItem class', () => {
+			expect(fullscreenButton).toHaveClass('menuItem');
 		});
 
 		it('should be clickable', async () => {
@@ -240,29 +240,29 @@ describe('Fullscreen DOM Tests', () => {
 		it('should be part of a menu structure', () => {
 			// Create a parent menu
 			const menu = document.createElement('div');
-			menu.className = 'menu-list';
+			menu.className = 'menuList';
 			menu.appendChild(fullscreenButton);
 
 			expect(fullscreenButton.parentElement).toBe(menu);
 			expect(menu.querySelector('#fullscreen')).toBe(fullscreenButton);
 		});
 
-		it('should maintain menu-item styling', () => {
-			expect(fullscreenButton.className).toContain('menu-item');
+		it('should maintain menuItem styling', () => {
+			expect(fullscreenButton.className).toContain('menuItem');
 		});
 
 		it('should be accessible within menu navigation', () => {
 			const menu = document.createElement('div');
-			menu.className = 'menu-list';
+			menu.className = 'menuList';
 
 			const item1 = document.createElement('article');
-			item1.className = 'menu-item';
+			item1.className = 'menuItem';
 			item1.textContent = 'Item 1';
 
 			menu.appendChild(item1);
 			menu.appendChild(fullscreenButton);
 
-			const menuItems = menu.querySelectorAll('.menu-item');
+			const menuItems = menu.querySelectorAll('.menuItem');
 			expect(menuItems.length).toBe(2);
 			expect(menuItems[1]).toBe(fullscreenButton);
 		});

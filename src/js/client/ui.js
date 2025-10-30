@@ -30,15 +30,15 @@ const toggleFullscreen = () => {
 // Modal
 const createModalController = modal => {
 	const modals = [
-		$('about-modal'),
-		$('resize-modal'),
-		$('fonts-modal'),
-		$('sauce-modal'),
-		$('websocket-modal'),
-		$('choice-modal'),
-		$('update-modal'),
-		$('loading-modal'),
-		$('warning-modal'),
+		$('aboutModal'),
+		$('resizeModal'),
+		$('fontsModal'),
+		$('sauceModal'),
+		$('websocketModal'),
+		$('choiceModal'),
+		$('updateModal'),
+		$('loadingModal'),
+		$('warningModal'),
 	];
 	let current = false;
 	let closingTimeout = null;
@@ -527,7 +527,7 @@ const getUtf8Bytes = str => {
 
 const enforceMaxBytes = () => {
 	const SAUCE_MAX_BYTES = 16320;
-	const sauceComments = $('sauce-comments');
+	const sauceComments = $('sauceComments');
 	let val = sauceComments.value;
 	let bytes = getUtf8Bytes(val);
 	while (bytes > SAUCE_MAX_BYTES) {
@@ -537,7 +537,7 @@ const enforceMaxBytes = () => {
 	if (val !== sauceComments.value) {
 		sauceComments.value = val;
 	}
-	$('sauce-bytes').value = `${bytes}/${SAUCE_MAX_BYTES} bytes`;
+	$('sauceBytes').value = `${bytes}/${SAUCE_MAX_BYTES} bytes`;
 };
 
 const createGenericController = (panel, nav) => {
@@ -767,8 +767,8 @@ const createFontSelect = (el, lbl, img, btn) => {
 
 const websocketUI = show => {
 	[
-		['excluded-for-websocket', !show],
-		['included-for-websocket', show],
+		['excludedForWebsocket', !show],
+		['includedForWebsocket', show],
 	].forEach(([sel, prop]) =>
 		[...D.getElementsByClassName(sel)].forEach(
 			el => (el.style.display = prop ? 'block' : 'none'),

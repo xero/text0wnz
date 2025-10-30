@@ -3,13 +3,13 @@ import { $, $$, websocketUI } from './ui.js';
 import { createDefaultPalette } from './palette.js';
 
 const createWorkerHandler = inputHandle => {
-	const btnJoin = $('join-collaboration');
-	const btnLocal = $('stay-local');
+	const btnJoin = $('joinCollaboration');
+	const btnLocal = $('stayLocal');
 	const lblFont = $$('#current-font-display kbd');
-	const selFont = $('font-select');
+	const selFont = $('fontSelect');
 	const btn9pt = $('nav9pt');
 	const btnIce = $('navICE');
-	const btnNet = $('network-button');
+	const btnNet = $('networkButton');
 
 	try {
 		State.worker = new Worker(State.workerPath);
@@ -35,7 +35,7 @@ const createWorkerHandler = inputHandle => {
 	let applyReceivedSettings = false;
 	let initializing = false;
 
-	$('websocket-cancel').addEventListener('click', () => State.modal.close());
+	$('websocketCancel').addEventListener('click', () => State.modal.close());
 
 	const onConnected = () => {
 		websocketUI(true);
@@ -476,7 +476,7 @@ const createChatController = (
 
 	// Drag functionality for chat window
 	const chatHeader = winChat.querySelector('header');
-	const close = $('close-chat');
+	const close = $('closeChat');
 	let isDragging = false;
 	let currentX = 0;
 	let currentY = 0;

@@ -415,7 +415,7 @@ describe('UI Utilities', () => {
 			expect(toggle).toHaveProperty('setStateTwo');
 
 			const element = toggle.getElement();
-			expect(element.classList.contains('toggle-button-container')).toBe(true);
+			expect(element.classList.contains('toggleButtonContainer')).toBe(true);
 		});
 
 		it('should trigger state one click when state one is clicked', () => {
@@ -486,7 +486,7 @@ describe('UI Utilities', () => {
 			expect(controller).toHaveProperty('disable');
 		});
 
-		it('should show panel and add enabled-parent class on enable', () => {
+		it('should show panel and add enabledParent class on enable', () => {
 			const panel = document.createElement('div');
 			const nav = document.createElement('div');
 
@@ -494,19 +494,19 @@ describe('UI Utilities', () => {
 			controller.enable();
 
 			expect(panel.style.display).toBe('flex');
-			expect(nav.classList.contains('enabled-parent')).toBe(true);
+			expect(nav.classList.contains('enabledParent')).toBe(true);
 		});
 
-		it('should hide panel and remove enabled-parent class on disable', () => {
+		it('should hide panel and remove enabledParent class on disable', () => {
 			const panel = document.createElement('div');
 			const nav = document.createElement('div');
-			nav.classList.add('enabled-parent');
+			nav.classList.add('enabledParent');
 
 			const controller = createGenericController(panel, nav);
 			controller.disable();
 
 			expect(panel.style.display).toBe('none');
-			expect(nav.classList.contains('enabled-parent')).toBe(false);
+			expect(nav.classList.contains('enabledParent')).toBe(false);
 		});
 	});
 
@@ -549,9 +549,9 @@ describe('UI Utilities', () => {
 	describe('websocketUI', () => {
 		it('should show websocket elements when show is true', () => {
 			const excludedEl = document.createElement('div');
-			excludedEl.classList.add('excluded-for-websocket');
+			excludedEl.classList.add('excludedForWebsocket');
 			const includedEl = document.createElement('div');
-			includedEl.classList.add('included-for-websocket');
+			includedEl.classList.add('includedForWebsocket');
 
 			document.body.appendChild(excludedEl);
 			document.body.appendChild(includedEl);
@@ -564,9 +564,9 @@ describe('UI Utilities', () => {
 
 		it('should hide websocket elements when show is false', () => {
 			const excludedEl = document.createElement('div');
-			excludedEl.classList.add('excluded-for-websocket');
+			excludedEl.classList.add('excludedForWebsocket');
 			const includedEl = document.createElement('div');
-			includedEl.classList.add('included-for-websocket');
+			includedEl.classList.add('includedForWebsocket');
 
 			document.body.appendChild(excludedEl);
 			document.body.appendChild(includedEl);
@@ -1051,7 +1051,7 @@ describe('UI Utilities', () => {
 			clickEvent.preventDefault = vi.fn();
 			menu.dispatchEvent(clickEvent);
 
-			expect(menu.classList.contains('menu-open')).toBe(true);
+			expect(menu.classList.contains('menuOpen')).toBe(true);
 
 			vi.useRealTimers();
 		});
@@ -1061,8 +1061,8 @@ describe('UI Utilities', () => {
 
 			const menu1 = document.createElement('div');
 			const menu2 = document.createElement('div');
-			menu1.classList.add('menu-open');
-			menu2.classList.add('menu-open');
+			menu1.classList.add('menuOpen');
+			menu2.classList.add('menuOpen');
 			const view = document.createElement('div');
 			view.focus = vi.fn();
 
@@ -1070,8 +1070,8 @@ describe('UI Utilities', () => {
 
 			controller.close();
 
-			expect(menu1.classList.contains('menu-open')).toBe(false);
-			expect(menu2.classList.contains('menu-open')).toBe(false);
+			expect(menu1.classList.contains('menuOpen')).toBe(false);
+			expect(menu2.classList.contains('menuOpen')).toBe(false);
 
 			vi.useRealTimers();
 		});
@@ -1271,9 +1271,9 @@ describe('UI Utilities', () => {
 
 			// Create elements with the specific classes
 			const excludedDiv = document.createElement('div');
-			excludedDiv.className = 'excluded-for-websocket';
+			excludedDiv.className = 'excludedForWebsocket';
 			const includedDiv = document.createElement('div');
-			includedDiv.className = 'included-for-websocket';
+			includedDiv.className = 'includedForWebsocket';
 
 			document.body.appendChild(excludedDiv);
 			document.body.appendChild(includedDiv);
@@ -1293,13 +1293,13 @@ describe('UI Utilities', () => {
 			const { websocketUI } = await import('../../src/js/client/ui.js');
 
 			const excluded1 = document.createElement('div');
-			excluded1.className = 'excluded-for-websocket';
+			excluded1.className = 'excludedForWebsocket';
 			const excluded2 = document.createElement('div');
-			excluded2.className = 'excluded-for-websocket';
+			excluded2.className = 'excludedForWebsocket';
 			const included1 = document.createElement('div');
-			included1.className = 'included-for-websocket';
+			included1.className = 'includedForWebsocket';
 			const included2 = document.createElement('div');
-			included2.className = 'included-for-websocket';
+			included2.className = 'includedForWebsocket';
 
 			document.body.appendChild(excluded1);
 			document.body.appendChild(excluded2);
