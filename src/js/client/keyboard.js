@@ -1478,8 +1478,14 @@ const createSelectionTool = () => {
 					width: selection.width,
 					height: selection.height,
 				};
-				// What's underneath initially is empty space (what should be left when the selection moves away)
-				underlyingData = createEmptyArea(selection.width, selection.height);
+				// Capture what's underneath the selection (for moves that don't fully cover it)
+				// This will be used to restore areas during the move
+				underlyingData = State.textArtCanvas.getArea(
+					selection.x,
+					selection.y,
+					selection.width,
+					selection.height,
+				);
 			}
 		} else {
 			// Disable move mode - finalize the move by clearing original position if different
