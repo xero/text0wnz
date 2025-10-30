@@ -77,7 +77,7 @@ const $$$$ = () => {
 	sauceTitle = $('sauceTitle');
 	swapColors = $('swapColors');
 	rowsInput = $('rowsInput');
-	fontDisplay = $$('#current-font-display kbd');
+	fontDisplay = $$('#currentFontDisplay kbd');
 	changeFont = $('changeFont');
 	applyFont = $('fontsApply');
 	previewInfo = $('fontPreviewInfo');
@@ -720,11 +720,7 @@ const initializeAppComponents = async () => {
 			}
 		},
 	);
-	createSettingToggle(
-		$('chatButton'),
-		State.chat.isEnabled,
-		State.chat.toggle,
-	);
+	createSettingToggle($('chatButton'), State.chat.isEnabled, State.chat.toggle);
 	State.network = createWorkerHandler($('handleInput'));
 
 	const darkToggle = () => {

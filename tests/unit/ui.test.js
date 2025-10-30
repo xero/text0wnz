@@ -67,19 +67,19 @@ describe('UI Utilities', () => {
 	describe('DOM Utilities', () => {
 		it('should provide $ function for getting elements by ID', () => {
 			const div = document.createElement('div');
-			div.id = 'test-element';
+			div.id = 'testElement';
 			document.body.appendChild(div);
 
-			const result = $('test-element');
+			const result = $('testElement');
 			expect(result).toBe(div);
 		});
 
 		it('should provide $$ function for query selector', () => {
 			const div = document.createElement('div');
-			div.className = 'test-class';
+			div.className = 'testClass';
 			document.body.appendChild(div);
 
-			const result = $$('.test-class');
+			const result = $$('.testClass');
 			expect(result).toBe(div);
 		});
 
@@ -278,15 +278,15 @@ describe('UI Utilities', () => {
 
 			// Create required modal sections
 			document.body.innerHTML = `
-				<div id="resize-modal" class="hide"></div>
-				<div id="fonts-modal" class="hide"></div>
-				<div id="sauce-modal" class="hide"></div>
-				<div id="websocket-modal" class="hide"></div>
-				<div id="choice-modal" class="hide"></div>
-				<div id="about-modal" class="hide"></div>
-				<div id="update-modal" class="hide"></div>
-				<div id="loading-modal" class="hide"></div>
-				<div id="warning-modal" class="hide"></div>
+				<div id="resizeModal" class="hide"></div>
+				<div id="fontsModal" class="hide"></div>
+				<div id="sauceModal" class="hide"></div>
+				<div id="websocketModal" class="hide"></div>
+				<div id="choiceModal" class="hide"></div>
+				<div id="aboutModal" class="hide"></div>
+				<div id="updateModal" class="hide"></div>
+				<div id="loadingModal" class="hide"></div>
+				<div id="warningModal" class="hide"></div>
 				<div id="modalError"></div>
 			`;
 
@@ -306,15 +306,15 @@ describe('UI Utilities', () => {
 			};
 
 			document.body.innerHTML = `
-				<div id="resize-modal" class="hide"></div>
-				<div id="fonts-modal" class="hide"></div>
-				<div id="sauce-modal" class="hide"></div>
-				<div id="websocket-modal" class="hide"></div>
-				<div id="choice-modal" class="hide"></div>
-				<div id="about-modal" class="hide"></div>
-				<div id="update-modal" class="hide"></div>
-				<div id="loading-modal" class="hide"></div>
-				<div id="warning-modal" class="hide"></div>
+				<div id="resizeModal" class="hide"></div>
+				<div id="fontsModal" class="hide"></div>
+				<div id="sauceModal" class="hide"></div>
+				<div id="websocketModal" class="hide"></div>
+				<div id="choiceModal" class="hide"></div>
+				<div id="aboutModal" class="hide"></div>
+				<div id="updateModal" class="hide"></div>
+				<div id="loadingModal" class="hide"></div>
+				<div id="warningModal" class="hide"></div>
 				<div id="modalError"></div>
 			`;
 
@@ -323,7 +323,7 @@ describe('UI Utilities', () => {
 
 			expect(mockModal.showModal).toHaveBeenCalled();
 			expect(
-				document.getElementById('resize-modal').classList.contains('hide'),
+				document.getElementById('resizeModal').classList.contains('hide'),
 			).toBe(false);
 		});
 	});
@@ -513,11 +513,11 @@ describe('UI Utilities', () => {
 	describe('enforceMaxBytes', () => {
 		it('should truncate comments when they exceed max bytes', () => {
 			const sauceComments = document.createElement('textarea');
-			sauceComments.id = 'sauce-comments';
+			sauceComments.id = 'sauceComments';
 			sauceComments.value = 'x'.repeat(20000); // Way over the limit
 
 			const sauceBytes = document.createElement('input');
-			sauceBytes.id = 'sauce-bytes';
+			sauceBytes.id = 'sauceBytes';
 
 			document.body.appendChild(sauceComments);
 			document.body.appendChild(sauceBytes);
@@ -531,11 +531,11 @@ describe('UI Utilities', () => {
 		it('should not modify comments when under max bytes', () => {
 			const originalValue = 'Short comment';
 			const sauceComments = document.createElement('textarea');
-			sauceComments.id = 'sauce-comments';
+			sauceComments.id = 'sauceComments';
 			sauceComments.value = originalValue;
 
 			const sauceBytes = document.createElement('input');
-			sauceBytes.id = 'sauce-bytes';
+			sauceBytes.id = 'sauceBytes';
 
 			document.body.appendChild(sauceComments);
 			document.body.appendChild(sauceBytes);
@@ -621,7 +621,7 @@ describe('UI Utilities', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -645,7 +645,7 @@ describe('UI Utilities', () => {
 			modal.close = vi.fn();
 
 			const aboutModal = document.createElement('div');
-			aboutModal.id = 'about-modal';
+			aboutModal.id = 'aboutModal';
 			aboutModal.classList.add('hide');
 			document.body.appendChild(aboutModal);
 
@@ -661,7 +661,7 @@ describe('UI Utilities', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -697,7 +697,7 @@ describe('UI Utilities', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -710,7 +710,7 @@ describe('UI Utilities', () => {
 
 			// Open a modal first
 			const aboutModal = document.createElement('div');
-			aboutModal.id = 'about-modal';
+			aboutModal.id = 'aboutModal';
 			aboutModal.classList.add('hide');
 			document.body.appendChild(aboutModal);
 
@@ -741,7 +741,7 @@ describe('UI Utilities', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -751,7 +751,7 @@ describe('UI Utilities', () => {
 			document.body.appendChild(modalError);
 
 			const errorModal = document.createElement('div');
-			errorModal.id = 'error-modal';
+			errorModal.id = 'errorModal';
 			errorModal.classList.add('hide');
 			document.body.appendChild(errorModal);
 
@@ -778,7 +778,7 @@ describe('UI Utilities', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -795,7 +795,7 @@ describe('UI Utilities', () => {
 
 			// Open modal should trigger focus
 			const aboutModal = document.createElement('div');
-			aboutModal.id = 'about-modal';
+			aboutModal.id = 'aboutModal';
 			aboutModal.classList.add('hide');
 			document.body.appendChild(aboutModal);
 
@@ -1083,13 +1083,13 @@ describe('UI Utilities', () => {
 			const { $$$ } = await import('../../src/js/client/ui.js');
 
 			const div1 = document.createElement('div');
-			div1.className = 'test-class-multi';
+			div1.className = 'testClassMulti';
 			const div2 = document.createElement('div');
-			div2.className = 'test-class-multi';
+			div2.className = 'testClassMulti';
 			document.body.appendChild(div1);
 			document.body.appendChild(div2);
 
-			const results = $$$('.test-class-multi');
+			const results = $$$('.testClassMulti');
 			expect(results.length).toBe(2);
 		});
 	});

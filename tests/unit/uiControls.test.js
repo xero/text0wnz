@@ -163,11 +163,11 @@ describe('UI Controls and Controllers', () => {
 	describe('enforceMaxBytes', () => {
 		it('should truncate comments when they exceed max bytes', () => {
 			const sauceComments = document.createElement('textarea');
-			sauceComments.id = 'sauce-comments';
+			sauceComments.id = 'sauceComments';
 			sauceComments.value = 'x'.repeat(20000); // Way over the limit
 
 			const sauceBytes = document.createElement('input');
-			sauceBytes.id = 'sauce-bytes';
+			sauceBytes.id = 'sauceBytes';
 
 			document.body.appendChild(sauceComments);
 			document.body.appendChild(sauceBytes);
@@ -181,11 +181,11 @@ describe('UI Controls and Controllers', () => {
 		it('should not modify comments when under max bytes', () => {
 			const originalValue = 'Short comment';
 			const sauceComments = document.createElement('textarea');
-			sauceComments.id = 'sauce-comments';
+			sauceComments.id = 'sauceComments';
 			sauceComments.value = originalValue;
 
 			const sauceBytes = document.createElement('input');
-			sauceBytes.id = 'sauce-bytes';
+			sauceBytes.id = 'sauceBytes';
 
 			document.body.appendChild(sauceComments);
 			document.body.appendChild(sauceBytes);
@@ -271,7 +271,7 @@ describe('UI Controls and Controllers', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -295,7 +295,7 @@ describe('UI Controls and Controllers', () => {
 			modal.close = vi.fn();
 
 			const aboutModal = document.createElement('div');
-			aboutModal.id = 'about-modal';
+			aboutModal.id = 'aboutModal';
 			aboutModal.classList.add('hide');
 			document.body.appendChild(aboutModal);
 
@@ -311,7 +311,7 @@ describe('UI Controls and Controllers', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -347,7 +347,7 @@ describe('UI Controls and Controllers', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -360,7 +360,7 @@ describe('UI Controls and Controllers', () => {
 
 			// Open a modal first
 			const aboutModal = document.createElement('div');
-			aboutModal.id = 'about-modal';
+			aboutModal.id = 'aboutModal';
 			aboutModal.classList.add('hide');
 			document.body.appendChild(aboutModal);
 
@@ -391,7 +391,7 @@ describe('UI Controls and Controllers', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -401,7 +401,7 @@ describe('UI Controls and Controllers', () => {
 			document.body.appendChild(modalError);
 
 			const errorModal = document.createElement('div');
-			errorModal.id = 'error-modal';
+			errorModal.id = 'errorModal';
 			errorModal.classList.add('hide');
 			document.body.appendChild(errorModal);
 
@@ -428,7 +428,7 @@ describe('UI Controls and Controllers', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -445,7 +445,7 @@ describe('UI Controls and Controllers', () => {
 
 			// Open modal should trigger focus
 			const aboutModal = document.createElement('div');
-			aboutModal.id = 'about-modal';
+			aboutModal.id = 'aboutModal';
 			aboutModal.classList.add('hide');
 			document.body.appendChild(aboutModal);
 

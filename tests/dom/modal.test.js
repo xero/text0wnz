@@ -22,7 +22,7 @@ describe('Modal DOM Tests', () => {
 
 		// Create modal dialog element
 		modal = document.createElement('dialog');
-		modal.id = 'main-modal';
+		modal.id = 'mainModal';
 		modal.className = 'modal';
 
 		// Mock dialog methods for jsdom
@@ -38,16 +38,16 @@ describe('Modal DOM Tests', () => {
 
 		// Create ALL modal sections that the controller expects
 		const sections = [
-			'about-modal',
-			'resize-modal',
-			'fonts-modal',
-			'sauce-modal',
-			'websocket-modal',
-			'choice-modal',
-			'update-modal',
-			'loading-modal',
-			'warning-modal',
-			'error-modal', // For error tests
+			'aboutModal',
+			'resizeModal',
+			'fontsModal',
+			'sauceModal',
+			'websocketModal',
+			'choiceModal',
+			'updateModal',
+			'loadingModal',
+			'warningModal',
+			'errorModal', // For error tests
 		];
 
 		sections.forEach(id => {
@@ -60,7 +60,7 @@ describe('Modal DOM Tests', () => {
 		// Add modalError div for error tests
 		const errorDiv = document.createElement('div');
 		errorDiv.id = 'modalError';
-		document.getElementById('error-modal').appendChild(errorDiv);
+		document.getElementById('errorModal').appendChild(errorDiv);
 
 		// Create modal controller
 		modalController = createModalController(modal);
@@ -80,9 +80,9 @@ describe('Modal DOM Tests', () => {
 		});
 
 		it('should render all expected modal sections', () => {
-			const aboutSection = modal.querySelector('#about-modal');
-			const resizeSection = modal.querySelector('#resize-modal');
-			const fontsSection = modal.querySelector('#fonts-modal');
+			const aboutSection = modal.querySelector('#aboutModal');
+			const resizeSection = modal.querySelector('#resizeModal');
+			const fontsSection = modal.querySelector('#fontsModal');
 
 			expect(aboutSection).toBeInTheDocument();
 			expect(resizeSection).toBeInTheDocument();
@@ -92,7 +92,7 @@ describe('Modal DOM Tests', () => {
 
 	describe('Modal Opening', () => {
 		it('should open modal when open() is called', () => {
-			const aboutSection = modal.querySelector('#about-modal');
+			const aboutSection = modal.querySelector('#aboutModal');
 
 			modalController.open('about');
 
@@ -101,8 +101,8 @@ describe('Modal DOM Tests', () => {
 		});
 
 		it('should show correct section when opening different modals', () => {
-			const aboutSection = modal.querySelector('#about-modal');
-			const resizeSection = modal.querySelector('#resize-modal');
+			const aboutSection = modal.querySelector('#aboutModal');
+			const resizeSection = modal.querySelector('#resizeModal');
 
 			modalController.open('about');
 			expect(aboutSection).not.toHaveClass('hide');
@@ -197,7 +197,7 @@ describe('Modal DOM Tests', () => {
 		it('should render modal header', () => {
 			const header = document.createElement('header');
 			header.textContent = 'Modal Title';
-			modal.querySelector('#about-modal').appendChild(header);
+			modal.querySelector('#aboutModal').appendChild(header);
 
 			modalController.open('about');
 
@@ -206,9 +206,9 @@ describe('Modal DOM Tests', () => {
 
 		it('should render modal body content', () => {
 			const content = document.createElement('div');
-			content.className = 'modal-content';
+			content.className = 'modalContent';
 			content.innerHTML = '<p>This is modal content</p>';
-			modal.querySelector('#about-modal').appendChild(content);
+			modal.querySelector('#aboutModal').appendChild(content);
 
 			modalController.open('about');
 
@@ -221,7 +221,7 @@ describe('Modal DOM Tests', () => {
 			okButton.textContent = 'OK';
 			okButton.setAttribute('aria-label', 'OK');
 			footer.appendChild(okButton);
-			modal.querySelector('#about-modal').appendChild(footer);
+			modal.querySelector('#aboutModal').appendChild(footer);
 
 			modalController.open('about');
 
@@ -256,7 +256,7 @@ describe('Modal DOM Tests', () => {
 		});
 
 		it('should have accessible section headings', () => {
-			const aboutSection = modal.querySelector('#about-modal');
+			const aboutSection = modal.querySelector('#aboutModal');
 			const heading = document.createElement('h2');
 			heading.textContent = 'About';
 			aboutSection.appendChild(heading);
@@ -310,10 +310,10 @@ describe('Modal DOM Tests', () => {
 		});
 
 		it('should focus first focusable element when modal opens', async () => {
-			const aboutSection = modal.querySelector('#about-modal');
+			const aboutSection = modal.querySelector('#aboutModal');
 			const input = document.createElement('input');
 			input.type = 'text';
-			input.id = 'modal-input';
+			input.id = 'modalInput';
 			aboutSection.appendChild(input);
 
 			modalController.open('about');
@@ -326,8 +326,8 @@ describe('Modal DOM Tests', () => {
 
 	describe('Modal State Management', () => {
 		it('should clear all sections before opening new one', () => {
-			const aboutSection = modal.querySelector('#about-modal');
-			const resizeSection = modal.querySelector('#resize-modal');
+			const aboutSection = modal.querySelector('#aboutModal');
+			const resizeSection = modal.querySelector('#resizeModal');
 
 			modalController.open('about');
 			expect(aboutSection).not.toHaveClass('hide');
@@ -367,7 +367,7 @@ describe('Modal DOM Tests', () => {
 		});
 
 		it('should open error modal section', () => {
-			const errorSection = document.getElementById('error-modal');
+			const errorSection = document.getElementById('errorModal');
 			errorSection.classList.remove('hide');
 
 			expect(errorSection).not.toHaveClass('hide');
@@ -378,7 +378,7 @@ describe('Modal DOM Tests', () => {
 		it('should handle opening non-existent modal gracefully', () => {
 			// This should not throw an error
 			expect(() => {
-				modalController.open('non-existent-modal');
+				modalController.open('nonExistentModal');
 			}).not.toThrow();
 		});
 
@@ -396,7 +396,7 @@ describe('Modal DOM Tests', () => {
 			modalController.open('resize');
 
 			expect(modal.open).toBe(true);
-			const resizeSection = modal.querySelector('#resize-modal');
+			const resizeSection = modal.querySelector('#resizeModal');
 			expect(resizeSection).not.toHaveClass('hide');
 		});
 
@@ -405,7 +405,7 @@ describe('Modal DOM Tests', () => {
 
 			sections.forEach(name => {
 				modalController.open(name);
-				const section = modal.querySelector(`#${name}-modal`);
+				const section = modal.querySelector(`#${name}Modal`);
 				expect(section).not.toHaveClass('hide');
 			});
 		});

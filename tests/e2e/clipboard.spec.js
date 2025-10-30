@@ -3,18 +3,18 @@ import { test } from '@playwright/test';
 test.describe('Advanced Clipboard Operations', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
 	test('should copy and paste with color formatting', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Select a foreground color
-		const colorPalette = page.locator('#fg-palette, .color-palette');
+		const colorPalette = page.locator('#fgPalette, .colorPalette');
 		if (await colorPalette.isVisible()) {
 			const colorSwatch = colorPalette
-				.locator('.color-swatch, [data-color]')
+				.locator('.colorSwatch, [data-color]')
 				.first();
 			if (await colorSwatch.isVisible()) {
 				await colorSwatch.click();
@@ -71,17 +71,17 @@ test.describe('Advanced Clipboard Operations', () => {
 	});
 
 	test('should handle copy with background color', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Switch to background color mode (B key)
 		await page.keyboard.press('b');
 		await page.waitForTimeout(200);
 
 		// Select a background color
-		const colorPalette = page.locator('#bg-palette, .color-palette');
+		const colorPalette = page.locator('#bgPalette, .colorPalette');
 		if (await colorPalette.isVisible()) {
 			const colorSwatch = colorPalette
-				.locator('.color-swatch, [data-color]')
+				.locator('.colorSwatch, [data-color]')
 				.nth(2);
 			if (await colorSwatch.isVisible()) {
 				await colorSwatch.click();
@@ -96,7 +96,7 @@ test.describe('Advanced Clipboard Operations', () => {
 		// Draw with both foreground and background colors
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#character-brush').click();
+		await page.locator('#characterBrush').click();
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
@@ -135,7 +135,7 @@ test.describe('Advanced Clipboard Operations', () => {
 	});
 
 	test('should copy and paste text with attributes', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Enter keyboard mode and type text
 		await page.keyboard.press('k');
@@ -174,7 +174,7 @@ test.describe('Advanced Clipboard Operations', () => {
 	});
 
 	test('should handle multiple copy operations', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Draw first pattern
 		await page.locator('#brushes').click();
@@ -205,7 +205,7 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.waitForTimeout(300);
 
 			// Draw second pattern
-			await page.locator('#character-brush').click();
+			await page.locator('#characterBrush').click();
 			await page.waitForTimeout(300);
 
 			if (bbox) {
@@ -236,7 +236,7 @@ test.describe('Advanced Clipboard Operations', () => {
 	});
 
 	test('should handle cut operation', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Draw something
 		await page.locator('#brushes').click();
@@ -283,7 +283,7 @@ test.describe('Advanced Clipboard Operations', () => {
 	});
 
 	test('should paste selection at cursor position', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Draw pattern
 		await page.locator('#brushes').click();
@@ -341,7 +341,7 @@ test.describe('Advanced Clipboard Operations', () => {
 	});
 
 	test('should handle empty clipboard paste gracefully', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Try to paste without copying anything
 		await page.keyboard.press('Control+v');
@@ -366,7 +366,7 @@ test.describe('Advanced Clipboard Operations', () => {
 	});
 
 	test('should copy large selection', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Draw a larger pattern
 		await page.locator('#brushes').click();
@@ -418,11 +418,11 @@ test.describe('Advanced Clipboard Operations', () => {
 	});
 
 	test('should maintain selection formatting during clipboard operations', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Set ICE colors if available
 		const iceColorsToggle = page.locator(
-			'button:has-text("ICE Colors"), input[type="checkbox"][name*="ice"], #ice-colors-toggle',
+			'button:has-text("ICE Colors"), input[type="checkbox"][name*="ice"], #iceColorsToggle',
 		);
 		if (await iceColorsToggle.isVisible()) {
 			await iceColorsToggle.click();
@@ -433,10 +433,10 @@ test.describe('Advanced Clipboard Operations', () => {
 		await page.keyboard.press('f');
 		await page.waitForTimeout(200);
 
-		const colorPalette = page.locator('.color-palette, #fg-palette');
+		const colorPalette = page.locator('.colorPalette, #fgPalette');
 		if (await colorPalette.isVisible()) {
 			const brightColor = colorPalette
-				.locator('.color-swatch, [data-color]')
+				.locator('.colorSwatch, [data-color]')
 				.nth(10);
 			if (await brightColor.isVisible()) {
 				await brightColor.click();
@@ -447,7 +447,7 @@ test.describe('Advanced Clipboard Operations', () => {
 		// Draw with bright color
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#character-brush').click();
+		await page.locator('#characterBrush').click();
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();

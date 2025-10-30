@@ -3,21 +3,21 @@ import { test, expect } from '@playwright/test';
 test.describe('UI Elements', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
 	test('should display main UI elements', async ({ page }) => {
 		// Check for toolbar
-		const toolbar = page.locator('#body-container aside, .toolbar, nav');
+		const toolbar = page.locator('#bodyContainer aside, .toolbar, nav');
 		await expect(toolbar.first()).toBeVisible();
 
 		// Check for canvas
-		const canvas = page.locator('#canvas-container');
+		const canvas = page.locator('#canvasContainer');
 		await expect(canvas).toBeVisible();
 
 		// Check for palettes
-		const palette = page.locator('#palette-preview, #palette-picker');
+		const palette = page.locator('#palettePreview, #palettePicker');
 		await expect(palette.first()).toBeVisible();
 	});
 
@@ -28,11 +28,11 @@ test.describe('UI Elements', () => {
 		expect(viewportSize?.height).toBe(720);
 
 		// Canvas should be visible
-		await expect(page.locator('#canvas-container')).toBeVisible();
+		await expect(page.locator('#canvasContainer')).toBeVisible();
 	});
 
 	test('should display position information', async ({ page }) => {
-		const positionInfo = page.locator('#position-info, .position-info');
+		const positionInfo = page.locator('#positionInfo, .positionInfo');
 		const count = await positionInfo.count();
 
 		if (count > 0) {
@@ -45,8 +45,8 @@ test.describe('UI Elements', () => {
 		// Check for common tools
 		const tools = [
 			'#halfblock',
-			'#character-brush',
-			'#shading-brush',
+			'#characterBrush',
+			'#shadingBrush',
 			'#line',
 			'#square',
 			'#circle',
@@ -66,7 +66,7 @@ test.describe('UI Elements', () => {
 	});
 
 	test('should have file operations menu', async ({ page }) => {
-		const fileMenu = page.locator('#file-menu, .file-menu, #file');
+		const fileMenu = page.locator('#fileMenu, .fileMenu, #file');
 		const fileButtons = page.locator('#new, #open, #save');
 
 		const menuCount = await fileMenu.count();
@@ -78,7 +78,7 @@ test.describe('UI Elements', () => {
 
 	test('should display canvas settings controls', async ({ page }) => {
 		// Check for ICE colors toggle
-		const iceToggle = page.locator('#navICE, [data-testid="ice-colors"]');
+		const iceToggle = page.locator('#navICE, [data-testid="iceColors"]');
 		const iceCount = await iceToggle.count();
 
 		// Check for letter spacing toggle
@@ -91,7 +91,7 @@ test.describe('UI Elements', () => {
 
 	test('should have font selection interface', async ({ page }) => {
 		const fontButton = page.locator('#fonts, button:has-text("Font")');
-		const fontSelect = page.locator('#font-select, select[name="font"]');
+		const fontSelect = page.locator('#fontSelect, select[name="font"]');
 
 		const buttonCount = await fontButton.count();
 		const selectCount = await fontSelect.count();
@@ -104,7 +104,7 @@ test.describe('UI Elements', () => {
 test.describe('Toolbar Interactions', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
@@ -128,10 +128,10 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#halfblock').click();
 		await page.waitForTimeout(200);
 
-		await page.locator('#character-brush').click();
+		await page.locator('#characterBrush').click();
 		await page.waitForTimeout(200);
 
-		await page.locator('#shading-brush').click();
+		await page.locator('#shadingBrush').click();
 		await page.waitForTimeout(200);
 
 		await page.locator('#shapes').click();
@@ -149,13 +149,13 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#selection').click();
 		await page.waitForTimeout(300);
 
-		await page.locator('#flip-horizontal').click();
+		await page.locator('#flipHorizontal').click();
 		await page.waitForTimeout(200);
 
-		await page.locator('#flip-vertical').click();
+		await page.locator('#flipVertical').click();
 		await page.waitForTimeout(200);
 
-		await page.locator('#move-blocks').click();
+		await page.locator('#moveBlocks').click();
 		await page.waitForTimeout(200);
 
 		await page.locator('#cut').click();
@@ -170,7 +170,7 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#paste').click();
 		await page.waitForTimeout(200);
 
-		await page.locator('#system-paste').click();
+		await page.locator('#systemPaste').click();
 		await page.waitForTimeout(200);
 
 		await page.locator('#clipboard').click();
@@ -197,14 +197,14 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#nav9pt').click();
 		await page.waitForTimeout(200);
 
-		await page.locator('#change-font').click();
+		await page.locator('#changeFont').click();
 		await page.waitForTimeout(200);
-		await page.locator('#fonts-cancel').click();
+		await page.locator('#fontsCancel').click();
 		await page.waitForTimeout(800);
 
 		//
 		// No errors should occur
-		const errors = await page.locator('.error, .error-message').count();
+		const errors = await page.locator('.error, .errorMessage').count();
 		expect(errors).toBe(0);
 	});
 
@@ -234,7 +234,7 @@ test.describe('Toolbar Interactions', () => {
 		await page.waitForTimeout(200);
 
 		// Make a selection
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -262,13 +262,13 @@ test.describe('Toolbar Interactions', () => {
 test.describe('Canvas Display', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
 	test('should render canvas layers', async ({ page }) => {
 		// Check for canvas elements
-		const canvases = page.locator('#canvas-container canvas');
+		const canvases = page.locator('#canvasContainer canvas');
 		const count = await canvases.count();
 
 		// Should have at least one canvas layer
@@ -277,7 +277,7 @@ test.describe('Canvas Display', () => {
 
 	test('should display cursor or pointer', async ({ page }) => {
 		// Move mouse over canvas
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -297,7 +297,7 @@ test.describe('Canvas Display', () => {
 
 	test('should update canvas on window resize', async ({ page }) => {
 		// Get initial canvas
-		const canvas = page.locator('#canvas-container');
+		const canvas = page.locator('#canvasContainer');
 		await expect(canvas).toBeVisible();
 
 		// Resize browser
@@ -319,10 +319,8 @@ test.describe('Canvas Display', () => {
 			await resizeButton.click();
 			await page.waitForTimeout(300);
 
-			const columnsInput = page.locator(
-				'#columns-input, input[name="columns"]',
-			);
-			const rowsInput = page.locator('#rows-input, input[name="rows"]');
+			const columnsInput = page.locator('#columnsInput, input[name="columns"]');
+			const rowsInput = page.locator('#rowsInput, input[name="rows"]');
 
 			if ((await columnsInput.count()) > 0) {
 				await columnsInput.first().fill('200');
@@ -334,7 +332,7 @@ test.describe('Canvas Display', () => {
 					await page.waitForTimeout(500);
 
 					// Check if scrollable
-					const canvasContainer = page.locator('#canvas-container');
+					const canvasContainer = page.locator('#canvasContainer');
 					const box = await canvasContainer.boundingBox();
 					expect(box).toBeTruthy();
 				}
@@ -346,7 +344,7 @@ test.describe('Canvas Display', () => {
 test.describe('Modal Dialogs', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
@@ -356,9 +354,9 @@ test.describe('Modal Dialogs', () => {
 		await page.waitForTimeout(500);
 
 		// Check if warning modal appears
-		const warningModal = page.locator('#warning-modal');
+		const warningModal = page.locator('#warningModal');
 		if (await warningModal.isVisible()) {
-			const warningYes = page.locator('#warning-yes');
+			const warningYes = page.locator('#warningYes');
 			await expect(warningYes).toBeVisible();
 		}
 	});
@@ -369,7 +367,7 @@ test.describe('Modal Dialogs', () => {
 		await page.waitForTimeout(500);
 
 		// Click No on warning dialog
-		const warningNo = page.locator('#warning-no');
+		const warningNo = page.locator('#warningNo');
 		if (await warningNo.isVisible()) {
 			await warningNo.click();
 			await page.waitForTimeout(500);
@@ -380,7 +378,7 @@ test.describe('Modal Dialogs', () => {
 test.describe('Help and Information', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
@@ -407,7 +405,7 @@ test.describe('Help and Information', () => {
 			await page.waitForTimeout(500);
 
 			// Look for shortcuts panel
-			const shortcutsPanel = page.locator('.shortcuts-panel, #shortcuts-panel');
+			const shortcutsPanel = page.locator('.shortcutsPanel, #shortcutsPanel');
 			if ((await shortcutsPanel.count()) > 0) {
 				await expect(shortcutsPanel.first()).toBeVisible();
 			}

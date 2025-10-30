@@ -56,7 +56,7 @@ const createModalController = modal => {
 
 	const open = name => {
 		current = name;
-		const section = name + '-modal';
+		const section = name + 'Modal';
 		if ($(section)) {
 			// cancel current close event
 			if (closingTimeout) {

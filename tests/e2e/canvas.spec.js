@@ -4,22 +4,22 @@ test.describe('Basic Canvas Functionality', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
 		// Wait for the canvas to be loaded
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 	});
 
 	test('should load the application successfully', async ({ page }) => {
 		// Check if main elements are present
-		await expect(page.locator('#canvas-container')).toBeVisible();
+		await expect(page.locator('#canvasContainer')).toBeVisible();
 
 		// Wait for canvas to be ready
 		await page.waitForTimeout(500);
 
 		// Check sidebar exists
-		const sidebar = page.locator('#body-container aside');
+		const sidebar = page.locator('#bodyContainer aside');
 		await expect(sidebar).toBeVisible();
 
 		// Check palette elements exist
-		const palettePicker = page.locator('#palette-picker');
+		const palettePicker = page.locator('#palettePicker');
 		await expect(palettePicker).toBeVisible();
 	});
 
@@ -28,21 +28,21 @@ test.describe('Basic Canvas Functionality', () => {
 		await page.waitForTimeout(1000);
 
 		// Check if canvas exists
-		const canvasContainer = page.locator('#canvas-container');
+		const canvasContainer = page.locator('#canvasContainer');
 		await expect(canvasContainer).toBeVisible();
 	});
 
 	test('should display position info', async ({ page }) => {
-		const positionInfo = page.locator('#position-info');
+		const positionInfo = page.locator('#positionInfo');
 		await expect(positionInfo).toBeVisible();
 	});
 
 	test('should have color palette visible', async ({ page }) => {
-		const palette = page.locator('#palette-picker');
+		const palette = page.locator('#palettePicker');
 		await expect(palette).toBeVisible();
 
 		// Palette picker canvas should exist
-		const paletteCanvas = page.locator('#palette-picker');
+		const paletteCanvas = page.locator('#palettePicker');
 		await expect(paletteCanvas).toBeVisible();
 	});
 
@@ -60,14 +60,14 @@ test.describe('Basic Canvas Functionality', () => {
 		await resizeButton.click();
 
 		// Wait for resize modal
-		await page.waitForSelector('#resize-modal', { timeout: 5000 });
+		await page.waitForSelector('#resizeModal', { timeout: 5000 });
 
 		// Change canvas size
-		await page.fill('#columns-input', '100');
-		await page.fill('#rows-input', '30');
+		await page.fill('#columnsInput', '100');
+		await page.fill('#rowsInput', '30');
 
 		// Confirm resize
-		const confirmButton = page.locator('#resize-apply');
+		const confirmButton = page.locator('#resizeApply');
 		await confirmButton.click();
 
 		// Wait for resize to complete
@@ -81,7 +81,7 @@ test.describe('Basic Canvas Functionality', () => {
 
 		// Handle warning dialog
 		await page.waitForTimeout(500);
-		const warningYes = page.locator('#warning-yes');
+		const warningYes = page.locator('#warningYes');
 		if (await warningYes.isVisible()) {
 			await warningYes.click();
 		}
@@ -92,7 +92,7 @@ test.describe('Basic Canvas Functionality', () => {
 test.describe('Canvas Interaction', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
@@ -106,7 +106,7 @@ test.describe('Canvas Interaction', () => {
 		await halfblockTool.click();
 
 		// Get canvas position
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -137,7 +137,7 @@ test.describe('Canvas Interaction', () => {
 	});
 
 	test('should update position info on mouse move', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -146,7 +146,7 @@ test.describe('Canvas Interaction', () => {
 			await page.waitForTimeout(300);
 
 			// Check if position info is updated
-			const positionInfo = page.locator('#position-info');
+			const positionInfo = page.locator('#positionInfo');
 			const text = await positionInfo.textContent();
 			expect(text).toBeTruthy();
 		}
