@@ -1423,8 +1423,13 @@ const createSelectionTool = () => {
 				selection.height,
 			);
 		}
-		// Restore what was underneath the current position (if any)
-		if (underlyingData) {
+		// Restore what was underneath the current position, but only if we've moved away from the original position
+		// (don't restore the initial empty underlyingData which would erase the original selection)
+		const atOriginalPosition =
+			originalPosition &&
+			selection.x === originalPosition.x &&
+			selection.y === originalPosition.y;
+		if (underlyingData && !atOriginalPosition) {
 			State.textArtCanvas.setArea(underlyingData, selection.x, selection.y);
 		}
 		// Store what's underneath the new position
@@ -1490,15 +1495,47 @@ const createSelectionTool = () => {
 				(currentSelection.x !== originalPosition.x ||
 				  currentSelection.y !== originalPosition.y)
 			) {
-				// Only clear original position if we actually moved
+				// Check if the original and current positions overlap
+				const xOverlap =
+					originalPosition.x < currentSelection.x + currentSelection.width &&
+					originalPosition.x + originalPosition.width > currentSelection.x;
+				const yOverlap =
+					originalPosition.y < currentSelection.y + currentSelection.height &&
+					originalPosition.y + originalPosition.height > currentSelection.y;
+				const hasOverlap = xOverlap && yOverlap;
+
 				State.textArtCanvas.startUndo();
-				State.textArtCanvas.deleteArea(
-					originalPosition.x,
-					originalPosition.y,
-					originalPosition.width,
-					originalPosition.height,
-					State.palette.getBackgroundColor(),
-				);
+				if (hasOverlap) {
+					// If there's overlap, we need to selectively clear only the non-overlapping parts
+					// For now, use setAreaSelective with empty data to preserve the moved selection
+					const emptyData = createEmptyArea(
+						originalPosition.width,
+						originalPosition.height,
+					);
+					// Get what's currently at the original position (which includes part of the moved selection)
+					const currentAtOriginal = State.textArtCanvas.getArea(
+						originalPosition.x,
+						originalPosition.y,
+						originalPosition.width,
+						originalPosition.height,
+					);
+					// Apply empty data, but preserve anything from the current selection
+					setAreaSelective(
+						emptyData,
+						currentAtOriginal,
+						originalPosition.x,
+						originalPosition.y,
+					);
+				} else {
+					// No overlap - safe to delete the entire original area
+					State.textArtCanvas.deleteArea(
+						originalPosition.x,
+						originalPosition.y,
+						originalPosition.width,
+						originalPosition.height,
+						State.palette.getBackgroundColor(),
+					);
+				}
 			}
 			moveButton.classList.remove('enabled');
 			State.selectionCursor.getElement().classList.remove('move-mode');
@@ -1812,14 +1849,47 @@ const createSelectionTool = () => {
 				(currentSelection.x !== originalPosition.x ||
 				  currentSelection.y !== originalPosition.y)
 			) {
+				// Check if the original and current positions overlap
+				const xOverlap =
+					originalPosition.x < currentSelection.x + currentSelection.width &&
+					originalPosition.x + originalPosition.width > currentSelection.x;
+				const yOverlap =
+					originalPosition.y < currentSelection.y + currentSelection.height &&
+					originalPosition.y + originalPosition.height > currentSelection.y;
+				const hasOverlap = xOverlap && yOverlap;
+
 				State.textArtCanvas.startUndo();
-				State.textArtCanvas.deleteArea(
-					originalPosition.x,
-					originalPosition.y,
-					originalPosition.width,
-					originalPosition.height,
-					State.palette.getBackgroundColor(),
-				);
+				if (hasOverlap) {
+					// If there's overlap, we need to selectively clear only the non-overlapping parts
+					// For now, use setAreaSelective with empty data to preserve the moved selection
+					const emptyData = createEmptyArea(
+						originalPosition.width,
+						originalPosition.height,
+					);
+					// Get what's currently at the original position (which includes part of the moved selection)
+					const currentAtOriginal = State.textArtCanvas.getArea(
+						originalPosition.x,
+						originalPosition.y,
+						originalPosition.width,
+						originalPosition.height,
+					);
+					// Apply empty data, but preserve anything from the current selection
+					setAreaSelective(
+						emptyData,
+						currentAtOriginal,
+						originalPosition.x,
+						originalPosition.y,
+					);
+				} else {
+					// No overlap - safe to delete the entire original area
+					State.textArtCanvas.deleteArea(
+						originalPosition.x,
+						originalPosition.y,
+						originalPosition.width,
+						originalPosition.height,
+						State.palette.getBackgroundColor(),
+					);
+				}
 			}
 			moveMode = false;
 			moveButton.classList.remove('enabled');
