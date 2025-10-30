@@ -380,6 +380,12 @@ describe('Network Module', () => {
 		let mockElements;
 
 		beforeEach(() => {
+			// Mock header element for drag functionality
+			const mockHeader = {
+				addEventListener: vi.fn(),
+				style: { cursor: '' },
+			};
+
 			mockElements = {
 				divChatButton: {
 					classList: {
@@ -394,6 +400,8 @@ describe('Network Module', () => {
 						remove: vi.fn(),
 						contains: vi.fn(() => false),
 					},
+					querySelector: vi.fn(() => mockHeader),
+					style: { transform: '' },
 				},
 				divMessageWindow: {
 					appendChild: vi.fn(),
