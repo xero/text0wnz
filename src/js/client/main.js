@@ -500,7 +500,7 @@ const initializeAppComponents = async () => {
 	// Lazy load tools - they'll be loaded when first clicked
 	// Brushes are most common after keyboard, so we'll lazy load them
 	Toolbar.addLazy($('brushes'), async () => {
-		const { createBrushController } = await import('./freehand_tools.js');
+		const { createBrushController } = await import('./freehandTools.js');
 		const brushes = createBrushController();
 		return {
 			onFocus: brushes.enable,
@@ -510,7 +510,7 @@ const initializeAppComponents = async () => {
 	});
 
 	Toolbar.addLazy($('halfblock'), async () => {
-		const { createHalfBlockController } = await import('./freehand_tools.js');
+		const { createHalfBlockController } = await import('./freehandTools.js');
 		const halfblock = createHalfBlockController();
 		return {
 			onFocus: halfblock.enable,
@@ -525,7 +525,7 @@ const initializeAppComponents = async () => {
 
 	Toolbar.addLazy($('shading-brush'), async () => {
 		const { createShadingController, createShadingPanel } = await import(
-			'./freehand_tools.js'
+			'./freehandTools.js'
 		);
 		shadeBrush = createShadingController(createShadingPanel(), false);
 		return {
@@ -539,7 +539,7 @@ const initializeAppComponents = async () => {
 
 	Toolbar.addLazy($('character-brush'), async () => {
 		const { createShadingController, createCharacterBrushPanel } = await import(
-			'./freehand_tools.js'
+			'./freehandTools.js'
 		);
 		characterBrush = createShadingController(createCharacterBrushPanel(), true);
 		return {
@@ -552,7 +552,7 @@ const initializeAppComponents = async () => {
 	});
 
 	Toolbar.addLazy($('fill'), async () => {
-		const { createFillController } = await import('./freehand_tools.js');
+		const { createFillController } = await import('./freehandTools.js');
 		const fill = createFillController();
 		return {
 			onFocus: fill.enable,
@@ -563,7 +563,7 @@ const initializeAppComponents = async () => {
 
 	Toolbar.addLazy($('attrib'), async () => {
 		const { createAttributeBrushController } = await import(
-			'./freehand_tools.js'
+			'./freehandTools.js'
 		);
 		const attributeBrush = createAttributeBrushController();
 		return {
@@ -574,7 +574,7 @@ const initializeAppComponents = async () => {
 	});
 
 	Toolbar.addLazy($('shapes'), async () => {
-		const { createShapesController } = await import('./freehand_tools.js');
+		const { createShapesController } = await import('./freehandTools.js');
 		const shapes = createShapesController();
 		return {
 			onFocus: shapes.enable,
@@ -584,7 +584,7 @@ const initializeAppComponents = async () => {
 	});
 
 	Toolbar.addLazy($('line'), async () => {
-		const { createLineController } = await import('./freehand_tools.js');
+		const { createLineController } = await import('./freehandTools.js');
 		const line = createLineController();
 		return {
 			onFocus: line.enable,
@@ -594,7 +594,7 @@ const initializeAppComponents = async () => {
 	});
 
 	Toolbar.addLazy($('square'), async () => {
-		const { createSquareController } = await import('./freehand_tools.js');
+		const { createSquareController } = await import('./freehandTools.js');
 		const square = createSquareController();
 		return {
 			onFocus: square.enable,
@@ -604,7 +604,7 @@ const initializeAppComponents = async () => {
 	});
 
 	Toolbar.addLazy($('circle'), async () => {
-		const { createCircleController } = await import('./freehand_tools.js');
+		const { createCircleController } = await import('./freehandTools.js');
 		const circle = createCircleController();
 		return {
 			onFocus: circle.enable,
@@ -622,18 +622,18 @@ const initializeAppComponents = async () => {
 
 	Toolbar.addLazy($('sample'), async () => {
 		// Sample tool depends on shading brushes, so we need to ensure they're loaded
-		const { createSampleTool } = await import('./freehand_tools.js');
+		const { createSampleTool } = await import('./freehandTools.js');
 
 		// If brushes aren't loaded yet, we need to load them first
 		if (!shadeBrush) {
 			const { createShadingController, createShadingPanel } = await import(
-				'./freehand_tools.js'
+				'./freehandTools.js'
 			);
 			shadeBrush = createShadingController(createShadingPanel(), false);
 		}
 		if (!characterBrush) {
 			const { createShadingController, createCharacterBrushPanel } =
-				await import('./freehand_tools.js');
+				await import('./freehandTools.js');
 			characterBrush = createShadingController(
 				createCharacterBrushPanel(),
 				true,

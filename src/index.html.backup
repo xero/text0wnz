@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<title>teXt0wnz</title>
+		<meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5.0"/>
+		<link rel="icon" type="image/png" sizes="96x96" href="./ui/img/favicon-96x96.png"/>
+		<link rel="icon" type="image/svg+xml" href="./ui/imgfavicon.svg"/>
+		<link rel="shortcut icon" href="./ui/img/favicon.ico"/>
+		<link rel="apple-touch-icon" sizes="180x180" href="./ui/img/apple-touch-icon.png"/>
+		<meta name="apple-mobile-web-app-title" content="text.0w.nz"/>
+		<meta name="theme-color" content="#4f4f4f"/>
+		<meta name="author" content="https://github.com/xero/text0wnz/graphs/contributors"/>
+		<meta name="description" content="Draw, edit & collaborate in a retro text art editor for ANSI, ASCII, NFO & XBIN with keyboard, mouse, or touch. Offline-first or join real-time sessions"/>
+		<meta name="keywords" content="ansi, ascii, xbin, txt, nfo, art, textart, textmode, ansi-editor, ascii-editor, web, blocktronics, highrez, scene, sceneart"/>
+		<meta property="og:title" content="teXt0wnz"/>
+		<meta property="og:description" content="Draw, edit & collaborate in a retro text art editor for ANSI, ASCII, NFO & XBIN with keyboard, mouse, or touch. Offline-first or join real-time sessions"/>
+		<meta property="og:image" content="https://raw.githubusercontent.com/xero/teXt0wnz/refs/heads/main/docs/preview.png"/>
+		<script type="module" src="js/client/main.js"></script>
+	</head>
+	<body>
+		<div id="body-container" class="loading">
+			<header class="dynamic">
+				<nav>
+					<div id="file-nav">
+						<div id="file-menu" class="menu-title" tabindex="0">
+							<button id="file" aria-label="File Menu">
+								<svg alt="File" aria-label="File">
+									<use href="img/icons.svg#save"></use>
+								</svg>
+							</button>
+							<div class="menu-list">
+								<article id="new" class="menu-item excluded-for-websocket">New</article>
+								<article id="open" class="menu-item excluded-for-websocket">Open</article>
+								<article class="separator excluded-for-websocket"></article>
+								<article id="save-ansi" class="menu-item">Save as ANSi</article>
+								<article id="save-bin" class="menu-item">Save as Binary Text</article>
+								<article id="save-xbin" class="menu-item">Save as XBin</article>
+								<article class="separator"></article>
+								<article id="save-png" class="menu-item">Export as PNG</article>
+								<article id="save-utf8" class="menu-item">Export as UTF-8 Text</article>
+								<article id="save-plaintext" class="menu-item">Export as Plain Text</article>
+								<article class="separator"></article>
+								<article id="update" class="menu-item">Update Editor</article>
+								<article id="about" class="menu-item">About teXt0wnz</article>
+							</div>
+						</div>
+						<div id="edit-menu" class="menu-title" tabindex="0">
+							<button id="edit" aria-label="Edit Menu">
+								<svg alt="Edit" aria-label="Edit">
+									<use href="img/icons.svg#settings"></use>
+								</svg>
+							</button>
+							<div class="menu-list">
+								<article id="nav-cut" class="menu-item disabled">Cut <kbd>Ctrl-X</kbd></article>
+								<article id="nav-copy" class="menu-item disabled">Copy <kbd>Ctrl-C</kbd></article>
+								<article id="nav-paste" class="menu-item disabled">Paste <kbd>Ctrl-V</kbd></article>
+								<article id="nav-system-paste" class="menu-item">System Paste <kbd>Ctrl-Shift-V</kbd></article>
+								<article id="nav-delete" class="menu-item disabled">Delete <kbd>Ctrl-Delete</kbd></article>
+								<article class="separator"></article>
+								<article id="nav-undo" class="menu-item">Undo <kbd>Ctrl-Z</kbd></article>
+								<article id="nav-redo" class="menu-item">Redo <kbd>Ctrl-Y</kbd></article>
+								<article class="separator"></article>
+								<article id="insert-row" class="menu-item">Insert Row <kbd>Alt+Up</kbd></article>
+								<article id="delete-row" class="menu-item">Delete Row <kbd>Alt+Down</kbd></article>
+								<article id="insert-column" class="menu-item">Insert Column <kbd>Alt+Right</kbd></article>
+								<article id="delete-column" class="menu-item">Delete Column <kbd>Alt+Left</kbd></article>
+								<article id="erase-row" class="menu-item">Erase Row <kbd>Alt+E</kbd></article>
+								<article id="erase-row-start" class="menu-item">Erase to Start of Row <kbd>Alt+Home</kbd></article>
+								<article id="erase-row-end" class="menu-item">Erase to End of Row <kbd>Alt+End</kbd></article>
+								<article id="erase-column" class="menu-item">Erase Column <kbd>Alt+Shift+E</kbd></article>
+								<article id="erase-column-start" class="menu-item">Erase to Start of Column <kbd>Alt+Page Up</kbd></article>
+								<article id="erase-column-end" class="menu-item">Erase to End of Column <kbd>Alt+Page Down</kbd></article>
+								<article class="separator"></article>
+								<article id="default-color" class="menu-item">Default Color <kbd>Ctrl-D</kbd></article>
+								<article id="swap-colors" class="menu-item">Swap Colors <kbd>Ctrl-Q</kbd></article>
+								<article id="fullscreen" class="menu-item">Toggle Fullscreen Mode</article>
+							</div>
+						</div>
+					</div>
+					<button id="navSauce" aria-label="Sauce Menu">
+						<svg>
+							<use href="img/icons.svg#sauce"></use>
+						</svg>
+					</button>
+				</nav>
+				<nav>
+					<div id="keyboard-toolbar">
+						<span>F1<canvas id="fkey0" class="fkey" height="0" width="0"></canvas></span>
+						<span>F2<canvas id="fkey1" class="fkey" height="0" width="0"></canvas></span>
+						<span>F3<canvas id="fkey2" class="fkey" height="0" width="0"></canvas></span>
+						<span>F4<canvas id="fkey3" class="fkey" height="0" width="0"></canvas></span>
+						<span>F5<canvas id="fkey4" class="fkey" height="0" width="0"></canvas></span>
+						<span>F6<canvas id="fkey5" class="fkey" height="0" width="0"></canvas></span>
+						<span>F7<canvas id="fkey6" class="fkey" height="0" width="0"></canvas></span>
+						<span>F8<canvas id="fkey7" class="fkey" height="0" width="0"></canvas></span>
+						<span>F9<canvas id="fkey8" class="fkey" height="0" width="0"></canvas></span>
+						<span>F10<canvas id="fkey9" class="fkey" height="0" width="0"></canvas></span>
+						<span>F11<canvas id="fkey10" class="fkey" height="0" width="0"></canvas></span>
+						<span>F12<canvas id="fkey11" class="fkey" height="0" width="0"></canvas></span>
+					</div>
+					<div id="brush-toolbar">
+						<div id="halfblock" class="tool-button">
+							<svg alt="Block" aria-label="Block (f)">
+								<use href="img/icons.svg#blockBrush"></use>
+							</svg>
+							<kbd>Block</kbd>
+						</div>
+						<div id="shading-brush" class="tool-button">
+							<svg alt="Shading" aria-label="Shading (f)">
+								<use href="img/icons.svg#shadeBrush"></use>
+							</svg>
+							<kbd>Shading</kbd>
+						</div>
+						<div id="character-brush" class="tool-button">
+							<svg alt="Character Brush" aria-label="Character Brush (b)">
+								<use href="img/icons.svg#character"></use>
+							</svg>
+							<kbd>Character</kbd>
+						</div>
+						<div id="attrib" class="tool-button">
+							<svg alt="Colorize" aria-label="Colorize">
+								<use href="img/icons.svg#roller"></use>
+							</svg>
+							<kbd>Colorize</kbd>
+						</div>
+					</div>
+					<div id="selection-toolbar">
+						<div id="flip-horizontal" class="tool-button">
+							<kbd>Mirror</kbd>
+							<svg class="sm" alt="Flip Horizontal" aria-label="Flip Horizontal ([)">
+								<use href="img/icons.svg#fliph"></use>
+							</svg>
+						</div>
+						<div id="flip-vertical" class="tool-button">
+							<kbd>Flip</kbd>
+							<svg class="sm" alt="Flip Vertical" aria-label="Flip Vertical (])">
+								<use href="img/icons.svg#flipv"></use>
+							</svg>
+						</div>
+						<div id="move-blocks" class="tool-button">
+							<kbd>Move</kbd>
+							<svg>
+								<use href="img/icons.svg#move"></use>
+							</svg>
+						</div>
+						<div id="cut" class="tool-button">
+							<kbd>Cut</kbd>
+							<svg transform="matrix(-1,0,0,1,0,0)">
+								<use href="img/icons.svg#cut"></use>
+							</svg>
+						</div>
+						<div id="delete" class="tool-button">
+							<kbd>Delete</kbd>
+							<svg>
+								<use href="img/icons.svg#delete"></use>
+							</svg>
+						</div>
+						<div id="copy" class="tool-button">
+							<kbd>Copy</kbd>
+							<svg>
+								<use href="img/icons.svg#copy"></use>
+							</svg>
+						</div>
+						<div id="paste" class="tool-button">
+							<kbd>Paste</kbd>
+							<svg>
+								<use href="img/icons.svg#paste"></use>
+							</svg>
+						</div>
+						<div id="system-paste" class="tool-button">
+							<kbd>System</kbd>
+							<svg transform="rotate(90)">
+								<use href="img/icons.svg#paste"></use>
+							</svg>
+						</div>
+					</div>
+					<div id="shapes-toolbar">
+						<div id="line" class="tool-button">
+							<svg alt="Line" aria-label="Line">
+								<use href="img/icons.svg#line"></use>
+							</svg>
+							<kbd>Line</kbd>
+						</div>
+						<div id="square" class="tool-button">
+							<svg alt="Square" aria-label="Square">
+								<use href="img/icons.svg#square"></use>
+							</svg>
+							<kbd>Square</kbd>
+						</div>
+						<div id="circle" class="tool-button">
+							<svg alt="Circle" aria-label="Circle">
+								<use href="img/icons.svg#circle"></use>
+							</svg>
+							<kbd>Circle</kbd>
+						</div>
+						<div id="circle-toolbar" class="hide"></div>
+						<div id="square-toolbar" class="hide"></div>
+					</div>
+					<div id="clipboard-toolbar">
+						<div id="undo" class="tool-button">
+							<svg alt="Undo" aria-label="Undo">
+								<use href="img/icons.svg#undo"></use>
+							</svg>
+							<kbd>Undo</kbd>
+						</div>
+						<div id="redo" class="tool-button">
+							<svg alt="Redo" aria-label="Redo">
+								<use href="img/icons.svg#redo"></use>
+							</svg>
+							<kbd>Redo</kbd>
+						</div>
+					</div>
+					<div id="font-toolbar">
+						<div id="change-font" class="tool-button">
+							<svg alt="Change Font" aria-label="Change Font">
+								<use href="img/icons.svg#font"></use>
+							</svg>
+							<kbd>Change Font</kbd>
+						</div>
+						<div id="navICE" class="tool-button">
+							<svg alt="Use iCE Colors" aria-label="Toggle iCE Colors">
+								<use href="img/icons.svg#ice"></use>
+							</svg>
+							<kbd>ICE Colors</kbd>
+						</div>
+						<div id="nav9pt" class="tool-button">
+							<svg alt="Use 9px Font" aria-label="Toggle 9px Font">
+								<use href="img/icons.svg#spacing"></use>
+							</svg>
+							<kbd>9pt Font</kbd>
+						</div>
+					</div>
+				</nav>
+				<nav>
+					<button id="network-button" class="hide" aria-label="Join Collab">
+						<svg alt="Join Collab" aria-label="Join Collab">
+							<use href="img/icons.svg#group"></use>
+						</svg>
+					</button>
+					<button id="chat-button" class="included-for-websocket" aria-label="Chat">
+						<svg alt="Toggle Chat" aria-label="Toggle Chat">
+							<use href="img/icons.svg#group"></use>
+						</svg>
+					</button>
+					<div id="chat-window" class="hide">
+						<div id="chatRoom">
+							<header>
+								<h2>chatz</h2>
+								<div id="notification-setting">
+									<input id="notification-checkbox" type="checkbox" aria-label="Display Notifications"/>
+									<label for="notification-checkbox">Notifications</label>
+								</div>
+								<div id="close-chat">
+									<svg alt="Close Chat" aria-label="Close Chat">
+										<use href="img/icons.svg#chatLeave"></use>
+									</svg>
+								</div>
+							</header>
+							<section>
+								<div id="user-list"></div>
+								<div id="message-window"></div>
+							</section>
+							<nav>
+								<input id="handle-input" type="text" aria-label="Handle/Username" autocomplete="off" maxlength="14" spellcheck="false"/>
+								<div class="prompt">
+									<input id="message-input" type="text" aria-label="Chat Message" autocomplete="off" maxlength="140" spellcheck="false"/>
+								</div>
+								<button id="message-send" aria-label="Send Chat">send</button>
+							</nav>
+						</div>
+					</div>
+					<div id="resolution">
+						<svg id="navRes" alt="Change Resolution" aria-label="Change Resolution">
+							<use href="img/icons.svg#resolution"></use>
+						</svg>
+						<kbd id="resolution-label">80x25</kbd>
+					</div>
+					<div id="current-font-display">
+						<kbd></kbd>
+					</div>
+					<div id="position-info"></div>
+				</nav>
+			</header>
+			<aside>
+				<canvas id="palette-preview" height="40" width="40"></canvas>
+				<canvas id="palette-picker" height="160" width="40"></canvas>
+				<div id="keyboard">
+					<svg alt="Keyboard" aria-label="Keyboard (k)">
+						<use href="img/icons.svg#keeb"></use>
+					</svg>
+				</div>
+				<div id="brushes">
+					<svg alt="Brushes" aria-label="Brushes">
+						<use href="img/icons.svg#brush"></use>
+					</svg>
+				</div>
+				<div id="fill">
+					<svg alt="Fill" aria-label="Fill (n)">
+						<use href="img/icons.svg#fill"></use>
+					</svg>
+				</div>
+				<div id="shapes">
+					<svg alt="Shapes" aria-label="Shapes">
+						<use href="img/icons.svg#shapes"></use>
+					</svg>
+				</div>
+				<div class="separator"></div>
+				<div id="selection">
+					<svg alt="Selection" aria-label="Selection">
+						<use href="img/icons.svg#select"></use>
+					</svg>
+				</div>
+				<div id="sample">
+					<svg alt="Sample" aria-label="Sample (alt)">
+						<use href="img/icons.svg#dropper"></use>
+					</svg>
+				</div>
+				<div id="mirror">
+					<svg alt="Mirror Mode" aria-label="Mirror Mode (Ctrl+M)">
+						<use href="img/icons.svg#mirror"></use>
+					</svg>
+				</div>
+				<div class="separator"></div>
+				<div id="clipboard">
+					<svg alt="Undo" aria-label="Undo">
+						<use href="img/icons.svg#history"></use>
+					</svg>
+				</div>
+				<div id="fonts">
+					<svg alt="Change Font" aria-label="Change Font">
+						<use href="img/icons.svg#font"></use>
+					</svg>
+				</div>
+				<div id="navGrid" class="tool-button">
+					<svg alt="Show Grid (Ctrl-G)" aria-label="Show Grid (Ctrl-G)">
+						<use href="img/icons.svg#grid"></use>
+					</svg>
+				</div>
+				<div id="navDarkmode" class="tool-button">
+					<svg class="sun-and-moon" aria-hidden="true" viewBox="1 0 24 24">
+						<mask id="moon-mask" class="moon">
+							<rect fill="white" height="100%" width="100%" x="0" y="0"/>
+							<circle cx="0" cy="10" fill="black" r="6"/>
+						</mask>
+						<circle class="sun" cx="12" cy="12" fill="currentColor" mask="url(#moon-mask)" r="6"/>
+						<g class="sun-beams" stroke="currentColor">
+							<line x1="12" x2="12" y1="1" y2="3"/>
+							<line x1="12" x2="12" y1="21" y2="23"/>
+							<line x1="4.22" x2="5.64" y1="4.22" y2="5.64"/>
+							<line x1="18.36" x2="19.78" y1="18.36" y2="19.78"/>
+							<line x1="1" x2="3" y1="12" y2="12"/>
+							<line x1="21" x2="23" y1="12" y2="12"/>
+							<line x1="4.22" x2="5.64" y1="19.78" y2="18.36"/>
+							<line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/>
+						</g>
+					</svg>
+				</div>
+			</aside>
+			<div id="viewport">
+				<div id="canvas-container">
+					<div id="tool-preview" class="canvas-overlay"></div>
+					<div id="grid" class="canvas-overlay"></div>
+				</div>
+			</div>
+		</div>
+		<label for="open-file">
+			<input id="open-file" class="hide" type="file" aria-label="Open File" accept=".ans,.ansi,.xb,.xbin,.bin,.txt,.nfo,.utf8ans"/>
+		</label>
+		<label for="custom-color">
+			<input id="custom-color" class="hide" type="color" aria-label="Select Color"/>
+		</label>
+		<div id="dragdrop">
+			<kbd>Drop your file<br/>anywhere to load</kbd>
+		</div>
+		<dialog id="modal">
+			<section id="resize-modal">
+				<header>
+					<h2>Resolution</h2>
+				</header>
+				<section>
+					<article>
+						<label for="columns-input">
+							Columns:
+							<input id="columns-input" type="number" min="1"/>
+						</label>
+						<label for="rows-input">
+							Rows:
+							<input id="rows-input" type="number" min="1"/>
+						</label>
+					</article>
+				</section>
+				<nav>
+					<button id="resize-apply" aria-label="Resize Canvas">
+						<svg>
+							<use href="img/icons.svg#check"></use>
+						</svg>
+						Save
+					</button>
+					<button id="resize-cancel" class="close" aria-label="Cancel">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Cancel
+					</button>
+				</nav>
+			</section>
+			<section id="fonts-modal">
+				<h2>Font: <strong id="font-preview-info"></strong></h2>
+				<article>
+					<aside>
+						<img id="font-preview-image" alt="Font Preview"/>
+					</aside>
+					<aside>
+						<ul id="font-select" aria-label="Select Font" role="listbox" tabindex="0">
+							<li class="group-label" role="presentation">XBin</li>
+							<li id="font-xbin" aria-selected="false" data-value="XBIN" role="option">XBIN (embedded)</li>
+							<li class="group-label" role="presentation">Modern</li>
+							<li id="font-topaz-437-8x16" aria-selected="false" data-value="Topaz-437 8x16" role="option">Topaz 437 (8x16)</li>
+							<li id="font-bloody-8x16" aria-selected="false" data-value="BLOODY 8x16" role="option">BLOODY (8x16)</li>
+							<li id="font-blobzplus-8x16" aria-selected="false" data-value="Blobz+ 8x16" role="option">Blobz+ (8x16)</li>
+							<li id="font-calce-8x32" aria-selected="false" data-value="Calce 8x32" role="option">calce (8x32)</li>
+							<li id="font-dss8-8x16" aria-selected="false" data-value="DSS8 8x16" role="option">DSS8 (8x16)</li>
+							<li id="font-dss8-8x8" aria-selected="false" data-value="DSS8 8x8" role="option">DSS8 (8x8)</li>
+							<li id="font-fmtowns-8x16" aria-selected="false" data-value="FM-TOWNS 8x16" role="option">FM-TOWNS (8x16)</li>
+							<li id="font-fmtowns-8x8" aria-selected="false" data-value="FM-TOWNS 8x8" role="option">FM-TOWNS (8x8)</li>
+							<li id="font-frogblock-8x8" aria-selected="false" data-value="FrogBlock 8x8" role="option">FrogBlock (8x8)</li>
+							<li id="font-glitch-8x20" aria-selected="false" data-value="Glitch 8x20" role="option">Glitch (8x20)</li>
+							<li id="font-gjsci-x-8x16" aria-selected="false" data-value="GJSCI-X 8x16" role="option">GJSCI-X (8x16)</li>
+							<li id="font-hack-8x16" aria-selected="false" data-value="Hack 8x16" role="option">Hack (8x16)</li>
+							<li id="font-hack-8x8" aria-selected="false" data-value="Hack 8x8" role="option">Hack (8x8)</li>
+							<li id="font-human-fossil-8x16" aria-selected="false" data-value="Human Fossil 8x16" role="option">Human Fossil (8x16)</li>
+							<li id="font-line-8x16" aria-selected="false" data-value="Line 8x16" role="option">Line (8x16)</li>
+							<li id="font-line-8x8" aria-selected="false" data-value="Line 8x8" role="option">Line (8x8)</li>
+							<li id="font-megaball-8x16" aria-selected="false" data-value="Megaball 8x16" role="option">Megaball (8x16)</li>
+							<li id="font-nimbus-8x20" aria-selected="false" data-value="NIMBUS 8x20" role="option">NIMBUS (8x20)</li>
+							<li id="font-dos-j700c-v-8x19" aria-selected="false" data-value="DOS-J700C-V 8x19" role="option">DOS-J700C-V (8x19)</li>
+							<li id="font-perihelion-8x16" aria-selected="false" data-value="Perihelion 8x16" role="option">Perihelion (8x16)</li>
+							<li id="font-song-logo-8x16" aria-selected="false" data-value="Song_Logo 8x16" role="option">Song_Logo (8x16)</li>
+							<li id="font-song-logo-8x8" aria-selected="false" data-value="Song_Logo 8x8" role="option">Song_Logo (8x8)</li>
+							<li id="font-structures-8x16" aria-selected="false" data-value="Structures 8x16" role="option">Structures (8x16)</li>
+							<li id="font-tes-gigr-8x16" aria-selected="false" data-value="TES-GIGR 8x16" role="option">TES-GIGR (8x16)</li>
+							<li id="font-tes-sym5-8x16" aria-selected="false" data-value="TES-SYM5 8x16" role="option">TES-SYM5 (8x16)</li>
+							<li id="font-tes-sym6-8x16" aria-selected="false" data-value="TES-SYM6 8x16" role="option">TES-SYM6 (8x16)</li>
+							<li id="font-teletext-8x18" aria-selected="false" data-value="Teletext 8x18" role="option">Teletext (8x18)</li>
+							<li id="font-teletext-8x9" aria-selected="false" data-value="Teletext 8x9" role="option">Teletext (8x9)</li>
+							<li id="font-zoids-8x16" aria-selected="false" data-value="Zoids 8x16" role="option">Zoids (8x16)</li>
+							<li id="font-zoids-8x8" aria-selected="false" data-value="Zoids 8x8" role="option">Zoids (8x8)</li>
+							<li class="group-label" role="presentation">Commodore 64</li>
+							<li id="font-c64-petscii-shifted-8x8" aria-selected="false" data-value="C64 PETSCII shifted 8x8" role="option">C64 PETSCII shifted (8x8)</li>
+							<li id="font-c64-petscii-unshifted-8x8" aria-selected="false" data-value="C64 PETSCII unshifted 8x8" role="option">C64 PETSCII unshifted (8x8)</li>
+							<li id="font-c64-diskmaster-8x16" aria-selected="false" data-value="C64-DiskMaster 8x16" role="option">C64-DiskMaster (8x16)</li>
+							<li class="group-label" role="presentation">Amiga</li>
+							<li id="font-microknight-8x16" aria-selected="false" data-value="MicroKnight 8x16" role="option">MicroKnight (8x16)</li>
+							<li id="font-microknightplus-8x16" aria-selected="false" data-value="MicroKnight+ 8x16" role="option">MicroKnight+ (8x16)</li>
+							<li id="font-mosoul-8x16" aria-selected="false" data-value="mO'sOul 8x16" role="option">mO'sOul (8x16)</li>
+							<li id="font-pot-noodle-8x16" aria-selected="false" data-value="P0t-NOoDLE 8x16" role="option">P0t-NOoDLE (8x16)</li>
+							<li id="font-pot-noodle-8x20" aria-selected="false" data-value="p0t-noodle 8x20" role="option">p0t-noodle (8x20)</li>
+							<li id="font-topaz-1200-8x16" aria-selected="false" data-value="Topaz 1200 8x16" role="option">Topaz 1200 (8x16)</li>
+							<li id="font-topaz-500-8x16" aria-selected="false" data-value="Topaz 500 8x16" role="option">Topaz 500 (8x16)</li>
+							<li id="font-topazplus-1200-8x16" aria-selected="false" data-value="Topaz+ 1200 8x16" role="option">Topaz+ 1200 (8x16)</li>
+							<li id="font-topazplus-500-8x16" aria-selected="false" data-value="Topaz+ 500 8x16" role="option">Topaz+ 500 (8x16)</li>
+							<li class="group-label" role="presentation">Arabic</li>
+							<li id="font-cp864-8x8" aria-selected="false" data-value="CP864 8x8" role="option">IBM PC Code page 864 (8x8)</li>
+							<li id="font-cp864-8x14" aria-selected="false" data-value="CP864 8x14" role="option">IBM PC Code page 864 (8x14)</li>
+							<li id="font-cp864-8x16" aria-selected="false" data-value="CP864 8x16" role="option">IBM PC Code page 864 (8x16)</li>
+							<li class="group-label" role="presentation">Baltic Rim</li>
+							<li id="font-cp775-8x8" aria-selected="false" data-value="CP775 8x8" role="option">IBM PC Code page 775 (8x8)</li>
+							<li id="font-cp775-8x14" aria-selected="false" data-value="CP775 8x14" role="option">IBM PC Code page 775 (8x14)</li>
+							<li id="font-cp775-8x16" aria-selected="false" data-value="CP775 8x16" role="option">IBM PC Code page 775 (8x16)</li>
+							<li class="group-label" role="presentation">Cyrillic</li>
+							<li id="font-cp855-8x8" aria-selected="false" data-value="CP855 8x8" role="option">IBM PC Code page 855 (8x8)</li>
+							<li id="font-cp855-8x14" aria-selected="false" data-value="CP855 8x14" role="option">IBM PC Code page 855 (8x14)</li>
+							<li id="font-cp855-8x16" aria-selected="false" data-value="CP855 8x16" role="option">IBM PC Code page 855 (8x16)</li>
+							<li id="font-cp866-8x8" aria-selected="false" data-value="CP866 8x8" role="option">IBM PC Code page 866 (8x8)</li>
+							<li id="font-cp866-8x14" aria-selected="false" data-value="CP866 8x14" role="option">IBM PC Code page 866 (8x14)</li>
+							<li id="font-cp866-8x16" aria-selected="false" data-value="CP866 8x16" role="option">IBM PC Code page 866 (8x16)</li>
+							<li class="group-label" role="presentation">French Canadian</li>
+							<li id="font-cp863-8x8" aria-selected="false" data-value="CP863 8x8" role="option">IBM PC Code page 863 (8x8)</li>
+							<li id="font-cp863-8x14" aria-selected="false" data-value="CP863 8x14" role="option">IBM PC Code page 863 (8x14)</li>
+							<li id="font-cp863-8x16" aria-selected="false" data-value="CP863 8x16" role="option">IBM PC Code page 863 (8x16)</li>
+							<li id="font-cp863-8x19" aria-selected="false" data-value="CP863 8x19" role="option">IBM PC Code page 863 (8x19)</li>
+							<li class="group-label" role="presentation">Greek</li>
+							<li id="font-cp737-8x8" aria-selected="false" data-value="CP737 8x8" role="option">IBM PC Code page 737 (8x8)</li>
+							<li id="font-cp737-8x14" aria-selected="false" data-value="CP737 8x14" role="option">IBM PC Code page 737 (8x14)</li>
+							<li id="font-cp737-8x16" aria-selected="false" data-value="CP737 8x16" role="option">IBM PC Code page 737 (8x16)</li>
+							<li id="font-cp851-8x8" aria-selected="false" data-value="CP851 8x8" role="option">IBM PC Code page 851 (8x8)</li>
+							<li id="font-cp851-8x14" aria-selected="false" data-value="CP851 8x14" role="option">IBM PC Code page 851 (8x14)</li>
+							<li id="font-cp851-8x16" aria-selected="false" data-value="CP851 8x16" role="option">IBM PC Code page 851 (8x16)</li>
+							<li id="font-cp851-8x19" aria-selected="false" data-value="CP851 8x19" role="option">IBM PC Code page 851 (8x19)</li>
+							<li id="font-cp869-8x8" aria-selected="false" data-value="CP869 8x8" role="option">IBM PC Code page 869 (8x8)</li>
+							<li id="font-cp869-8x14" aria-selected="false" data-value="CP869 8x14" role="option">IBM PC Code page 869 (8x14)</li>
+							<li id="font-cp869-8x16" aria-selected="false" data-value="CP869 8x16" role="option">IBM PC Code page 869 (8x16)</li>
+							<li class="group-label" role="presentation">Hebrew</li>
+							<li id="font-cp862-8x8" aria-selected="false" data-value="CP862 8x8" role="option">IBM PC Code page 862 (8x8)</li>
+							<li id="font-cp862-8x14" aria-selected="false" data-value="CP862 8x14" role="option">IBM PC Code page 862 (8x14)</li>
+							<li id="font-cp862-8x16" aria-selected="false" data-value="CP862 8x16" role="option">IBM PC Code page 862 (8x16)</li>
+							<li class="group-label" role="presentation">IBM PC</li>
+							<li id="font-cp437-8x8" aria-selected="false" data-value="CP437 8x8" role="option">IBM PC Code page 437 (8x8)</li>
+							<li id="font-cp437-8x14" aria-selected="false" data-value="CP437 8x14" role="option">IBM PC Code page 437 (8x14)</li>
+							<li id="font-cp437-8x16" aria-selected="true" data-value="CP437 8x16" role="option">IBM PC Code page 437 (8x16)</li>
+							<li id="font-cp437-8x19" aria-selected="false" data-value="CP437 8x19" role="option">IBM PC Code page 437 (8x19)</li>
+							<li class="group-label" role="presentation">Icelandic</li>
+							<li id="font-cp861-8x8" aria-selected="false" data-value="CP861 8x8" role="option">IBM PC Code page 861 (8x8)</li>
+							<li id="font-cp861-8x14" aria-selected="false" data-value="CP861 8x14" role="option">IBM PC Code page 861 (8x14)</li>
+							<li id="font-cp861-8x16" aria-selected="false" data-value="CP861 8x16" role="option">IBM PC Code page 861 (8x16)</li>
+							<li id="font-cp861-8x19" aria-selected="false" data-value="CP861 8x19" role="option">IBM PC Code page 861 (8x19)</li>
+							<li class="group-label" role="presentation">Latin-1 Western European</li>
+							<li id="font-cp850-8x8" aria-selected="false" data-value="CP850 8x8" role="option">IBM PC Code page 850 (8x8)</li>
+							<li id="font-cp850-8x14" aria-selected="false" data-value="CP850 8x14" role="option">IBM PC Code page 850 (8x14)</li>
+							<li id="font-cp850-8x16" aria-selected="false" data-value="CP850 8x16" role="option">IBM PC Code page 850 (8x16)</li>
+							<li id="font-cp850-8x19" aria-selected="false" data-value="CP850 8x19" role="option">IBM PC Code page 850 (8x19)</li>
+							<li class="group-label" role="presentation">Latin-2 Central European</li>
+							<li id="font-cp852-8x8" aria-selected="false" data-value="CP852 8x8" role="option">IBM PC Code page 852 (8x8)</li>
+							<li id="font-cp852-8x14" aria-selected="false" data-value="CP852 8x14" role="option">IBM PC Code page 852 (8x14)</li>
+							<li id="font-cp852-8x16" aria-selected="false" data-value="CP852 8x16" role="option">IBM PC Code page 852 (8x16)</li>
+							<li id="font-cp852-8x19" aria-selected="false" data-value="CP852 8x19" role="option">IBM PC Code page 852 (8x19)</li>
+							<li class="group-label" role="presentation">Latin-3 Multilingual</li>
+							<li id="font-cp853-8x8" aria-selected="false" data-value="CP853 8x8" role="option">IBM PC Code page 853 (8x8)</li>
+							<li id="font-cp853-8x14" aria-selected="false" data-value="CP853 8x14" role="option">IBM PC Code page 853 (8x14)</li>
+							<li id="font-cp853-8x16" aria-selected="false" data-value="CP853 8x16" role="option">IBM PC Code page 853 (8x16)</li>
+							<li id="font-cp853-8x19" aria-selected="false" data-value="CP853 8x19" role="option">IBM PC Code page 853 (8x19)</li>
+							<li class="group-label" role="presentation">Nordic</li>
+							<li id="font-cp865-8x8" aria-selected="false" data-value="CP865 8x8" role="option">IBM PC Code page 865 (8x8)</li>
+							<li id="font-cp865-8x14" aria-selected="false" data-value="CP865 8x14" role="option">IBM PC Code page 865 (8x14)</li>
+							<li id="font-cp865-8x16" aria-selected="false" data-value="CP865 8x16" role="option">IBM PC Code page 865 (8x16)</li>
+							<li id="font-cp865-8x19" aria-selected="false" data-value="CP865 8x19" role="option">IBM PC Code page 865 (8x19)</li>
+							<li class="group-label" role="presentation">Portuguese</li>
+							<li id="font-cp860-8x8" aria-selected="false" data-value="CP860 8x8" role="option">IBM PC Code page 860 (8x8)</li>
+							<li id="font-cp860-8x14" aria-selected="false" data-value="CP860 8x14" role="option">IBM PC Code page 860 (8x14)</li>
+							<li id="font-cp860-8x16" aria-selected="false" data-value="CP860 8x16" role="option">IBM PC Code page 860 (8x16)</li>
+							<li id="font-cp860-8x19" aria-selected="false" data-value="CP860 8x19" role="option">IBM PC Code page 860 (8x19)</li>
+							<li class="group-label" role="presentation">Turkish</li>
+							<li id="font-cp857-8x8" aria-selected="false" data-value="CP857 8x8" role="option">IBM PC Code page 857 (8x8)</li>
+							<li id="font-cp857-8x14" aria-selected="false" data-value="CP857 8x14" role="option">IBM PC Code page 857 (8x14)</li>
+							<li id="font-cp857-8x16" aria-selected="false" data-value="CP857 8x16" role="option">IBM PC Code page 857 (8x16)</li>
+						</ul>
+					</aside>
+				</article>
+				<nav>
+					<button id="fonts-apply" aria-label="Change Font">
+						<svg>
+							<use href="img/icons.svg#check"></use>
+						</svg>
+						Select
+					</button>
+					<button id="fonts-cancel" class="close" aria-label="Cancel">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Cancel
+					</button>
+				</nav>
+			</section>
+			<section id="sauce-modal">
+				<header>
+					<h2>Sauce Inf0</h2>
+				</header>
+				<section>
+					<article>
+						<label for="sauce-title">Title:</label>
+						<div>
+							<input id="sauce-title" type="text" autocomplete="off" maxlength="35" spellcheck="false"/>
+						</div>
+					</article>
+					<article>
+						<label for="sauce-author">Author:</label>
+						<div>
+							<input id="sauce-author" type="text" autocomplete="off" maxlength="20" spellcheck="false"/>
+						</div>
+					</article>
+					<article>
+						<label for="sauce-group">Group:</label>
+						<div>
+							<input id="sauce-group" type="text" autocomplete="off" maxlength="20" spellcheck="false"/>
+						</div>
+					</article>
+					<article>
+						<label for="sauce-comments">Comments:</label>
+						<div>
+							<textarea id="sauce-comments" cols="19" autocomplete="off" rows="5"></textarea>
+						</div>
+					</article>
+					<article class="lil">
+						<label for="sauce-bytes"></label>
+						<div class="lil">
+							<input id="sauce-bytes" type="text" aria-label="Comments Size" value="0/16320 bytes" readonly tabindex="-1"/>
+						</div>
+					</article>
+				</section>
+				<nav>
+					<button id="sauce-done" aria-label="Save Sauce">
+						<svg>
+							<use href="img/icons.svg#check"></use>
+						</svg>
+						Save
+					</button>
+					<button id="sauce-cancel" class="close" aria-label="Cancel">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Cancel
+					</button>
+				</nav>
+			</section>
+			<section id="choice-modal">
+				<section>
+					<img class="logo" title="logo" alt="logo" loading="lazy" src="img/logo.png"/>
+					<p>The collaboration server is available! Would you like to join the session in progress, or continue offline?</p>
+				</section>
+				<nav>
+					<button id="join-collaboration" aria-label="Join Collaboration">
+						<svg>
+							<use href="img/icons.svg#collab"></use>
+						</svg>
+						Join
+					</button>
+					<button id="stay-local" aria-label="Stay Local">
+						<svg>
+							<use href="img/icons.svg#chatLeave"></use>
+						</svg>
+						Stay Local
+					</button>
+				</nav>
+			</section>
+			<section id="websocket-modal">
+				<p>Please wait... Retrieving data from server.</p>
+				<nav>
+					<button id="websocket-cancel" class="close" aria-label="Cancel">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Cancel
+					</button>
+				</nav>
+			</section>
+			<section id="update-modal">
+				<header>
+					<h2>Update Available!</h2>
+				</header>
+				<p>A new version of the editor is available.<br/>This will clear your local storage.<br/>Press update to reload and apply it now,<br/>but if you are currently drawing press cancel</p>
+				<h4>AND SAVE BEFORE UPDATING!</h4>
+				<nav>
+					<button id="update-reload" aria-label="Reload and Update">
+						<svg>
+							<use href="img/icons.svg#check"></use>
+						</svg>
+						Update
+					</button>
+					<button id="update-cancel" class="close" aria-label="Cancel Reload">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Cancel
+					</button>
+				</nav>
+			</section>
+			<section id="warning-modal">
+				<header>
+					<h2>Warning!</h2>
+				</header>
+				<p>All data will be lost.<br/>Are you sure you want to continue?</p>
+				<nav>
+					<button id="warning-yes" aria-label="Reload and Update">
+						<svg>
+							<use href="img/icons.svg#check"></use>
+						</svg>
+						Yes
+					</button>
+					<button id="warning-no" class="close" aria-label="Cancel">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						No
+					</button>
+				</nav>
+			</section>
+			<section id="about-modal">
+				<header>
+					<p>
+						Licensed MIT 2018-2025 <a href="https://x-e.ro" target="_blank">xeR0</a>, <a href="https://github.com/andyherbert" target="_blank">andyh</a>, and our <a href="https://github.com/xero/text0wnz/graphs/contributors" target="_blank">contributors</a>. The code is open-source and freely available on <a href="https://github.com/xero/text0wnz" target="_blank">Github</a> /
+						<a href="https://git.sr.ht/~xero/text0wnz">SourceHut</a>
+					</p>
+				</header>
+				<img class="logo" title="logo" alt="logo" src="img/logo.png"/>
+				<p class="privacy"><a href="https://github.com/xero/teXt0wnz/blob/main/docs/privacy.md">Privacy Notice:</a> This application uses your device’s local storage to save artwork and editor state. We do not use cookies, analytics, or any tracking technologies.</p>
+				<nav>
+					<button id="about-privacy" aria-label="View the Privacy Policy">
+						<svg>
+							<use href="img/icons.svg#privacy"></use>
+						</svg>
+						Privacy
+					</button>
+					<button id="about-dl" aria-label="Download newest release">
+						<svg>
+							<use href="img/icons.svg#download"></use>
+						</svg>
+						Download
+					</button>
+					<button id="about-ok" class="close" aria-label="Close About Menu">
+						<svg>
+							<use href="img/icons.svg#check"></use>
+						</svg>
+						Close
+					</button>
+				</nav>
+			</section>
+			<section id="loading-modal">
+				<header>
+					<h2>Loading...</h2>
+				</header>
+				<p>Reinitializing editor state from local storage.</p>
+				<nav>
+					<button id="loading-cancel" class="close" aria-label="Cancel">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Cancel
+					</button>
+				</nav>
+			</section>
+		</dialog>
+	</body>
+</html>
+<!--
+	.   ______     .______   _____ ______  ____
+	.  _\    /__   |   __/___\    \)    /_/   /_
+	. (_    ___/---:  _)     :\_      _/__   __/---.
+	.   |   )      |  \      |    __     |   )     |
+	.   |___       |__       |    \|     :___      |
+	.      \______/  \______/l_____\     |  \______|
+	.   .------.  x0!        ______ \____!________
+	.  /   _    \----./\.----\     \)    |    _   \_
+	.  |   )     \   /  \    /      \    l___/     /
+	.  |         :           |           _/      _/__
+	.  |__       |           :   \       \       )  /
+	.    \______/l____/\_____j___/\______!\________/ -->
