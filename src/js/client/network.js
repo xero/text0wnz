@@ -5,7 +5,7 @@ import { createDefaultPalette } from './palette.js';
 const createWorkerHandler = inputHandle => {
 	const btnJoin = $('joinCollaboration');
 	const btnLocal = $('stayLocal');
-	const lblFont = $$('#current-font-display kbd');
+	const lblFont = $$('#currentFontDisplay kbd');
 	const selFont = $('fontSelect');
 	const btn9pt = $('nav9pt');
 	const btnIce = $('navICE');

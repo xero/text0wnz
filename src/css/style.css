@@ -1060,7 +1060,7 @@
 		}
 	}
 
-	.toggleButton-container {
+	.toggleButtonContainer {
 		@apply w-[120px] text-center flex flex-row;
 		margin: 0px auto;
 		color: rgb(200, 200, 200);

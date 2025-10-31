@@ -326,7 +326,7 @@ const createSelectionCursor = element => {
 	const drawBorder = () => {
 		const ctx = cursor.getContext('2d');
 		ctx.clearRect(0, 0, cursor.width, cursor.height);
-		const antsColor = cursor.classList.contains('move-mode')
+		const antsColor = cursor.classList.contains('moveMode')
 			? '#ff7518'
 			: '#fff';
 		ctx.save();
@@ -1078,7 +1078,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 
 	const systemPaste = () => {
 		if (!navigator.clipboard || !navigator.clipboard.readText) {
-			console.log('[Keyboard] Clipboard API not available');
+			console.warn('[Keyboard] Clipboard API not available');
 			return;
 		}
 		navigator.clipboard
@@ -1157,7 +1157,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 				}
 			})
 			.catch(err => {
-				console.log('[Keyboard] Failed to read clipboard:', err);
+				console.error('[Keyboard] Failed to read clipboard:', err);
 			});
 	};
 
@@ -1462,7 +1462,7 @@ const createSelectionTool = () => {
 		if (moveMode) {
 			// Enable move mode
 			moveButton.classList.add('enabled');
-			State.selectionCursor.getElement().classList.add('move-mode');
+			State.selectionCursor.getElement().classList.add('moveMode');
 			// Store selection data and original position when entering move mode
 			const selection = State.selectionCursor.getSelection();
 			if (selection) {
@@ -1533,7 +1533,7 @@ const createSelectionTool = () => {
 				}
 			}
 			moveButton.classList.remove('enabled');
-			State.selectionCursor.getElement().classList.remove('move-mode');
+			State.selectionCursor.getElement().classList.remove('moveMode');
 			selectionData = null;
 			originalPosition = null;
 			underlyingData = null;
@@ -1888,7 +1888,7 @@ const createSelectionTool = () => {
 			}
 			moveMode = false;
 			moveButton.classList.remove('enabled');
-			State.selectionCursor.getElement().classList.remove('move-mode');
+			State.selectionCursor.getElement().classList.remove('moveMode');
 			selectionData = null;
 			originalPosition = null;
 			underlyingData = null;
