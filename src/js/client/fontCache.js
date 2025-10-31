@@ -38,7 +38,6 @@ export const FontCache = {
 						if (!(await cache.match(fontUrl))) {
 							try {
 								await cache.add(fontUrl);
-								console.log(`[FontCache] Preloaded ${fontName}`);
 							} catch (err) {
 								console.warn(`[FontCache] Failed to preload ${fontName}:`, err);
 							}
@@ -59,7 +58,6 @@ export const FontCache = {
 						.then(response => response.blob())
 						.then(blob => {
 							this.memoryCache.set(fontName, blob);
-							console.log(`[FontCache] Preloaded ${fontName} to memory`);
 						})
 						.catch(error => {
 							console.warn(`[FontCache] Failed to preload ${fontName}:`, error);

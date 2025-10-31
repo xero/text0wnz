@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('File Operations', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
@@ -11,7 +11,7 @@ test.describe('File Operations', () => {
 		// Check for new, open, save buttons
 		const newButton = page.locator('#new, button:has-text("New")');
 		const openButton = page.locator(
-			'#open, #open-file, button:has-text("Open")',
+			'#open, #openFile, button:has-text("Open")',
 		);
 		const saveButton = page.locator('#save, button:has-text("Save")');
 
@@ -31,7 +31,7 @@ test.describe('File Operations', () => {
 		await newButton.click();
 		await page.waitForTimeout(500);
 
-		const warningYes = page.locator('#warning-yes');
+		const warningYes = page.locator('#warningYes');
 		if (await warningYes.isVisible()) {
 			await warningYes.click();
 		}
@@ -39,7 +39,7 @@ test.describe('File Operations', () => {
 	});
 
 	test('should open file dialog', async ({ page }) => {
-		const openButton = page.locator('#open-file, #open');
+		const openButton = page.locator('#openFile, #open');
 
 		if ((await openButton.count()) > 0) {
 			// Note: We can't actually test file upload without a file in E2E
@@ -51,16 +51,16 @@ test.describe('File Operations', () => {
 	test('should have save options', async ({ page }) => {
 		// Look for save/export buttons
 		const saveAsAnsi = page.locator(
-			'#save-ansi, #save-as-ansi, button:has-text("ANSi")',
+			'#saveAnsi, #saveAsAnsi, button:has-text("ANSi")',
 		);
 		const saveAsBin = page.locator(
-			'#save-bin, #save-as-bin, button:has-text("Binary")',
+			'#saveBin, #saveAsBin, button:has-text("Binary")',
 		);
 		const saveAsXbin = page.locator(
-			'#save-xbin, #save-as-xbin, button:has-text("XBin")',
+			'#saveXbin, #saveAsXbin, button:has-text("XBin")',
 		);
 		const saveAsPng = page.locator(
-			'#save-png, #save-as-png, button:has-text("PNG")',
+			'#savePng, #saveAsPng, button:has-text("PNG")',
 		);
 
 		// At least one save format should be available
@@ -75,9 +75,9 @@ test.describe('File Operations', () => {
 
 	test('should have SAUCE metadata fields', async ({ page }) => {
 		// Check for SAUCE-related inputs
-		const sauceTitle = page.locator('#sauce-title, #title');
-		const sauceAuthor = page.locator('#sauce-author, #author');
-		const sauceGroup = page.locator('#sauce-group, #group');
+		const sauceTitle = page.locator('#sauceTitle, #title');
+		const sauceAuthor = page.locator('#sauceAuthor, #author');
+		const sauceGroup = page.locator('#sauceGroup, #group');
 
 		const titleCount = await sauceTitle.count();
 		const authorCount = await sauceAuthor.count();
@@ -88,9 +88,9 @@ test.describe('File Operations', () => {
 	});
 
 	test('should fill SAUCE metadata', async ({ page }) => {
-		const sauceTitle = page.locator('#sauce-title');
-		const sauceAuthor = page.locator('#sauce-author');
-		const sauceGroup = page.locator('#sauce-group');
+		const sauceTitle = page.locator('#sauceTitle');
+		const sauceAuthor = page.locator('#sauceAuthor');
+		const sauceGroup = page.locator('#sauceGroup');
 
 		if (await sauceTitle.isVisible()) {
 			await sauceTitle.fill('Test Artwork');
@@ -109,7 +109,7 @@ test.describe('File Operations', () => {
 test.describe('Canvas Operations', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
@@ -122,11 +122,9 @@ test.describe('Canvas Operations', () => {
 
 			// Look for resize inputs
 			const columnsInput = page.locator(
-				'#columns-input, #width, input[name="columns"]',
+				'#columnsInput, #width, input[name="columns"]',
 			);
-			const rowsInput = page.locator(
-				'#rows-input, #height, input[name="rows"]',
-			);
+			const rowsInput = page.locator('#rowsInput, #height, input[name="rows"]');
 
 			if ((await columnsInput.count()) > 0 && (await rowsInput.count()) > 0) {
 				await columnsInput.first().fill('100');
@@ -174,9 +172,9 @@ test.describe('Canvas Operations', () => {
 
 	test('should have font selection', async ({ page }) => {
 		const fontSelector = page.locator(
-			'#fonts, #font-select, select[name="font"]',
+			'#fonts, #fontSelect, select[name="font"]',
 		);
-		const fontButton = page.locator('#font-toolbar, button:has-text("Font")');
+		const fontButton = page.locator('#fontToolbar, button:has-text("Font")');
 
 		const selectorCount = await fontSelector.count();
 		const buttonCount = await fontButton.count();
@@ -193,7 +191,7 @@ test.describe('Canvas Operations', () => {
 			await page.waitForTimeout(500);
 
 			// Look for font options
-			const fontOptions = page.locator('.font-option, [data-font]');
+			const fontOptions = page.locator('.fontOption, [data-font]');
 			const count = await fontOptions.count();
 
 			if (count > 0) {
@@ -206,7 +204,7 @@ test.describe('Canvas Operations', () => {
 
 	test('should clear canvas', async ({ page }) => {
 		// Draw something first
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -224,7 +222,7 @@ test.describe('Canvas Operations', () => {
 		// Clear with new document - handle warning modal
 		await page.locator('#new').click();
 		await page.waitForTimeout(500);
-		const warningYes = page.locator('#warning-yes');
+		const warningYes = page.locator('#warningYes');
 		if (await warningYes.isVisible()) {
 			await warningYes.click();
 		}
@@ -235,13 +233,13 @@ test.describe('Canvas Operations', () => {
 test.describe('Export Operations', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
 	test('should have export options available', async ({ page }) => {
 		// Draw something to export
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -258,7 +256,7 @@ test.describe('Export Operations', () => {
 
 		// Check for save buttons
 		const saveOptions = page.locator(
-			'#save-ansi, #save-bin, #save-xbin, #save-png, [id^="save-"]',
+			'#saveAnsi, #saveBin, #saveXbin, #savePng, [id^="save"]',
 		);
 		const count = await saveOptions.count();
 

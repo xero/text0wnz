@@ -237,9 +237,9 @@ describe('UI Advanced Utilities', () => {
 
 			// Create elements with the specific classes
 			const excludedDiv = document.createElement('div');
-			excludedDiv.className = 'excluded-for-websocket';
+			excludedDiv.className = 'excludedForWebsocket';
 			const includedDiv = document.createElement('div');
-			includedDiv.className = 'included-for-websocket';
+			includedDiv.className = 'includedForWebsocket';
 
 			document.body.appendChild(excludedDiv);
 			document.body.appendChild(includedDiv);
@@ -259,13 +259,13 @@ describe('UI Advanced Utilities', () => {
 			const { websocketUI } = await import('../../src/js/client/ui.js');
 
 			const excluded1 = document.createElement('div');
-			excluded1.className = 'excluded-for-websocket';
+			excluded1.className = 'excludedForWebsocket';
 			const excluded2 = document.createElement('div');
-			excluded2.className = 'excluded-for-websocket';
+			excluded2.className = 'excludedForWebsocket';
 			const included1 = document.createElement('div');
-			included1.className = 'included-for-websocket';
+			included1.className = 'includedForWebsocket';
 			const included2 = document.createElement('div');
-			included2.className = 'included-for-websocket';
+			included2.className = 'includedForWebsocket';
 
 			document.body.appendChild(excluded1);
 			document.body.appendChild(excluded2);

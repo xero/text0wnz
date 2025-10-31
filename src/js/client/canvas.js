@@ -463,7 +463,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					callback();
 				}
 			} else if (fontName === 'XBIN' && !xbFontData) {
-				console.log(
+				console.warn(
 					`[Canvas] XBIN selected but no embedded font data available, falling back to: ${magicNumbers.DEFAULT_FONT}`,
 				);
 

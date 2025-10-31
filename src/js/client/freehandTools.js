@@ -36,11 +36,11 @@ const createPanelCursor = el => {
 const createFloatingPanel = (x, y) => {
 	const panel = document.createElement('DIV');
 	const hide = document.createElement('DIV');
-	panel.classList.add('floating-panel');
+	panel.classList.add('floatingPanel');
 	hide.classList.add('hidePanel');
 	hide.innerText = 'X';
 	panel.appendChild(hide);
-	$('body-container').appendChild(panel);
+	$('bodyContainer').appendChild(panel);
 	hide.addEventListener('click', _ => panel.classList.remove('enabled'));
 
 	let dragStartPointer = null; // [x, y]
@@ -242,7 +242,7 @@ const createFloatingPanelPalette = (width, height) => {
 };
 
 const createBrushController = () => {
-	const panel = $('brush-toolbar');
+	const panel = $('brushToolbar');
 	const enable = () => {
 		panel.style.display = 'flex';
 		$('halfblock').click();
@@ -258,7 +258,7 @@ const createBrushController = () => {
 
 const createHalfBlockController = () => {
 	let prev = {};
-	const bar = $('brush-toolbar');
+	const bar = $('brushToolbar');
 	const nav = $('brushes');
 
 	const line = (x0, y0, x1, y1, callback) => {
@@ -347,7 +347,7 @@ const createHalfBlockController = () => {
 };
 
 const createShadingController = (panel, charMode) => {
-	const bar = $('brush-toolbar');
+	const bar = $('brushToolbar');
 	const nav = $('brushes');
 	let prev = {};
 	let drawMode;
@@ -1053,7 +1053,7 @@ const createFillController = () => {
 };
 
 const createShapesController = () => {
-	const panel = $('shapes-toolbar');
+	const panel = $('shapesToolbar');
 	const enable = () => {
 		panel.style.display = 'flex';
 		$('line').click();
@@ -1068,7 +1068,7 @@ const createShapesController = () => {
 };
 
 const createLineController = () => {
-	const panel = $('shapes-toolbar');
+	const panel = $('shapesToolbar');
 	const nav = $('shapes');
 	let startXY;
 	let endXY;
@@ -1177,8 +1177,8 @@ const createLineController = () => {
 };
 
 const createSquareController = () => {
-	const panel = $('square-toolbar');
-	const bar = $('shapes-toolbar');
+	const panel = $('squareToolbar');
+	const bar = $('shapesToolbar');
 	const nav = $('shapes');
 	let startXY;
 	let endXY;
@@ -1317,8 +1317,8 @@ const createSquareController = () => {
 };
 
 const createCircleController = () => {
-	const bar = $('shapes-toolbar');
-	const panel = $('circle-toolbar');
+	const bar = $('shapesToolbar');
+	const panel = $('circleToolbar');
 	const nav = $('shapes');
 	let startXY;
 	let endXY;
@@ -1605,7 +1605,7 @@ const createSampleTool = (
 const createAttributeBrushController = () => {
 	let isActive = false;
 	let lastCoord = null;
-	const bar = $('brush-toolbar');
+	const bar = $('brushToolbar');
 
 	const paintAttribute = (x, y, altKey) => {
 		const block = State.textArtCanvas.getBlock(x, y);

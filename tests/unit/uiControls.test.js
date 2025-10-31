@@ -65,7 +65,7 @@ describe('UI Controls and Controllers', () => {
 			expect(toggle).toHaveProperty('setStateTwo');
 
 			const element = toggle.getElement();
-			expect(element.classList.contains('toggle-button-container')).toBe(true);
+			expect(element.classList.contains('toggleButtonContainer')).toBe(true);
 		});
 
 		it('should trigger state one click when state one is clicked', () => {
@@ -136,7 +136,7 @@ describe('UI Controls and Controllers', () => {
 			expect(controller).toHaveProperty('disable');
 		});
 
-		it('should show panel and add enabled-parent class on enable', () => {
+		it('should show panel and add enabledParent class on enable', () => {
 			const panel = document.createElement('div');
 			const nav = document.createElement('div');
 
@@ -144,30 +144,30 @@ describe('UI Controls and Controllers', () => {
 			controller.enable();
 
 			expect(panel.style.display).toBe('flex');
-			expect(nav.classList.contains('enabled-parent')).toBe(true);
+			expect(nav.classList.contains('enabledParent')).toBe(true);
 		});
 
-		it('should hide panel and remove enabled-parent class on disable', () => {
+		it('should hide panel and remove enabledParent class on disable', () => {
 			const panel = document.createElement('div');
 			const nav = document.createElement('div');
-			nav.classList.add('enabled-parent');
+			nav.classList.add('enabledParent');
 
 			const controller = createGenericController(panel, nav);
 			controller.disable();
 
 			expect(panel.style.display).toBe('none');
-			expect(nav.classList.contains('enabled-parent')).toBe(false);
+			expect(nav.classList.contains('enabledParent')).toBe(false);
 		});
 	});
 
 	describe('enforceMaxBytes', () => {
 		it('should truncate comments when they exceed max bytes', () => {
 			const sauceComments = document.createElement('textarea');
-			sauceComments.id = 'sauce-comments';
+			sauceComments.id = 'sauceComments';
 			sauceComments.value = 'x'.repeat(20000); // Way over the limit
 
 			const sauceBytes = document.createElement('input');
-			sauceBytes.id = 'sauce-bytes';
+			sauceBytes.id = 'sauceBytes';
 
 			document.body.appendChild(sauceComments);
 			document.body.appendChild(sauceBytes);
@@ -181,11 +181,11 @@ describe('UI Controls and Controllers', () => {
 		it('should not modify comments when under max bytes', () => {
 			const originalValue = 'Short comment';
 			const sauceComments = document.createElement('textarea');
-			sauceComments.id = 'sauce-comments';
+			sauceComments.id = 'sauceComments';
 			sauceComments.value = originalValue;
 
 			const sauceBytes = document.createElement('input');
-			sauceBytes.id = 'sauce-bytes';
+			sauceBytes.id = 'sauceBytes';
 
 			document.body.appendChild(sauceComments);
 			document.body.appendChild(sauceBytes);
@@ -199,9 +199,9 @@ describe('UI Controls and Controllers', () => {
 	describe('websocketUI', () => {
 		it('should show websocket elements when show is true', () => {
 			const excludedEl = document.createElement('div');
-			excludedEl.classList.add('excluded-for-websocket');
+			excludedEl.classList.add('excludedForWebsocket');
 			const includedEl = document.createElement('div');
-			includedEl.classList.add('included-for-websocket');
+			includedEl.classList.add('includedForWebsocket');
 
 			document.body.appendChild(excludedEl);
 			document.body.appendChild(includedEl);
@@ -214,9 +214,9 @@ describe('UI Controls and Controllers', () => {
 
 		it('should hide websocket elements when show is false', () => {
 			const excludedEl = document.createElement('div');
-			excludedEl.classList.add('excluded-for-websocket');
+			excludedEl.classList.add('excludedForWebsocket');
 			const includedEl = document.createElement('div');
-			includedEl.classList.add('included-for-websocket');
+			includedEl.classList.add('includedForWebsocket');
 
 			document.body.appendChild(excludedEl);
 			document.body.appendChild(includedEl);
@@ -271,7 +271,7 @@ describe('UI Controls and Controllers', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -295,7 +295,7 @@ describe('UI Controls and Controllers', () => {
 			modal.close = vi.fn();
 
 			const aboutModal = document.createElement('div');
-			aboutModal.id = 'about-modal';
+			aboutModal.id = 'aboutModal';
 			aboutModal.classList.add('hide');
 			document.body.appendChild(aboutModal);
 
@@ -311,7 +311,7 @@ describe('UI Controls and Controllers', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -347,7 +347,7 @@ describe('UI Controls and Controllers', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -360,7 +360,7 @@ describe('UI Controls and Controllers', () => {
 
 			// Open a modal first
 			const aboutModal = document.createElement('div');
-			aboutModal.id = 'about-modal';
+			aboutModal.id = 'aboutModal';
 			aboutModal.classList.add('hide');
 			document.body.appendChild(aboutModal);
 
@@ -391,7 +391,7 @@ describe('UI Controls and Controllers', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -401,7 +401,7 @@ describe('UI Controls and Controllers', () => {
 			document.body.appendChild(modalError);
 
 			const errorModal = document.createElement('div');
-			errorModal.id = 'error-modal';
+			errorModal.id = 'errorModal';
 			errorModal.classList.add('hide');
 			document.body.appendChild(errorModal);
 
@@ -428,7 +428,7 @@ describe('UI Controls and Controllers', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -445,7 +445,7 @@ describe('UI Controls and Controllers', () => {
 
 			// Open modal should trigger focus
 			const aboutModal = document.createElement('div');
-			aboutModal.id = 'about-modal';
+			aboutModal.id = 'aboutModal';
 			aboutModal.classList.add('hide');
 			document.body.appendChild(aboutModal);
 

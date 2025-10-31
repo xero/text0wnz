@@ -67,19 +67,19 @@ describe('UI Utilities', () => {
 	describe('DOM Utilities', () => {
 		it('should provide $ function for getting elements by ID', () => {
 			const div = document.createElement('div');
-			div.id = 'test-element';
+			div.id = 'testElement';
 			document.body.appendChild(div);
 
-			const result = $('test-element');
+			const result = $('testElement');
 			expect(result).toBe(div);
 		});
 
 		it('should provide $$ function for query selector', () => {
 			const div = document.createElement('div');
-			div.className = 'test-class';
+			div.className = 'testClass';
 			document.body.appendChild(div);
 
-			const result = $$('.test-class');
+			const result = $$('.testClass');
 			expect(result).toBe(div);
 		});
 
@@ -278,15 +278,15 @@ describe('UI Utilities', () => {
 
 			// Create required modal sections
 			document.body.innerHTML = `
-				<div id="resize-modal" class="hide"></div>
-				<div id="fonts-modal" class="hide"></div>
-				<div id="sauce-modal" class="hide"></div>
-				<div id="websocket-modal" class="hide"></div>
-				<div id="choice-modal" class="hide"></div>
-				<div id="about-modal" class="hide"></div>
-				<div id="update-modal" class="hide"></div>
-				<div id="loading-modal" class="hide"></div>
-				<div id="warning-modal" class="hide"></div>
+				<div id="resizeModal" class="hide"></div>
+				<div id="fontsModal" class="hide"></div>
+				<div id="sauceModal" class="hide"></div>
+				<div id="websocketModal" class="hide"></div>
+				<div id="choiceModal" class="hide"></div>
+				<div id="aboutModal" class="hide"></div>
+				<div id="updateModal" class="hide"></div>
+				<div id="loadingModal" class="hide"></div>
+				<div id="warningModal" class="hide"></div>
 				<div id="modalError"></div>
 			`;
 
@@ -306,15 +306,15 @@ describe('UI Utilities', () => {
 			};
 
 			document.body.innerHTML = `
-				<div id="resize-modal" class="hide"></div>
-				<div id="fonts-modal" class="hide"></div>
-				<div id="sauce-modal" class="hide"></div>
-				<div id="websocket-modal" class="hide"></div>
-				<div id="choice-modal" class="hide"></div>
-				<div id="about-modal" class="hide"></div>
-				<div id="update-modal" class="hide"></div>
-				<div id="loading-modal" class="hide"></div>
-				<div id="warning-modal" class="hide"></div>
+				<div id="resizeModal" class="hide"></div>
+				<div id="fontsModal" class="hide"></div>
+				<div id="sauceModal" class="hide"></div>
+				<div id="websocketModal" class="hide"></div>
+				<div id="choiceModal" class="hide"></div>
+				<div id="aboutModal" class="hide"></div>
+				<div id="updateModal" class="hide"></div>
+				<div id="loadingModal" class="hide"></div>
+				<div id="warningModal" class="hide"></div>
 				<div id="modalError"></div>
 			`;
 
@@ -323,7 +323,7 @@ describe('UI Utilities', () => {
 
 			expect(mockModal.showModal).toHaveBeenCalled();
 			expect(
-				document.getElementById('resize-modal').classList.contains('hide'),
+				document.getElementById('resizeModal').classList.contains('hide'),
 			).toBe(false);
 		});
 	});
@@ -415,7 +415,7 @@ describe('UI Utilities', () => {
 			expect(toggle).toHaveProperty('setStateTwo');
 
 			const element = toggle.getElement();
-			expect(element.classList.contains('toggle-button-container')).toBe(true);
+			expect(element.classList.contains('toggleButtonContainer')).toBe(true);
 		});
 
 		it('should trigger state one click when state one is clicked', () => {
@@ -486,7 +486,7 @@ describe('UI Utilities', () => {
 			expect(controller).toHaveProperty('disable');
 		});
 
-		it('should show panel and add enabled-parent class on enable', () => {
+		it('should show panel and add enabledParent class on enable', () => {
 			const panel = document.createElement('div');
 			const nav = document.createElement('div');
 
@@ -494,30 +494,30 @@ describe('UI Utilities', () => {
 			controller.enable();
 
 			expect(panel.style.display).toBe('flex');
-			expect(nav.classList.contains('enabled-parent')).toBe(true);
+			expect(nav.classList.contains('enabledParent')).toBe(true);
 		});
 
-		it('should hide panel and remove enabled-parent class on disable', () => {
+		it('should hide panel and remove enabledParent class on disable', () => {
 			const panel = document.createElement('div');
 			const nav = document.createElement('div');
-			nav.classList.add('enabled-parent');
+			nav.classList.add('enabledParent');
 
 			const controller = createGenericController(panel, nav);
 			controller.disable();
 
 			expect(panel.style.display).toBe('none');
-			expect(nav.classList.contains('enabled-parent')).toBe(false);
+			expect(nav.classList.contains('enabledParent')).toBe(false);
 		});
 	});
 
 	describe('enforceMaxBytes', () => {
 		it('should truncate comments when they exceed max bytes', () => {
 			const sauceComments = document.createElement('textarea');
-			sauceComments.id = 'sauce-comments';
+			sauceComments.id = 'sauceComments';
 			sauceComments.value = 'x'.repeat(20000); // Way over the limit
 
 			const sauceBytes = document.createElement('input');
-			sauceBytes.id = 'sauce-bytes';
+			sauceBytes.id = 'sauceBytes';
 
 			document.body.appendChild(sauceComments);
 			document.body.appendChild(sauceBytes);
@@ -531,11 +531,11 @@ describe('UI Utilities', () => {
 		it('should not modify comments when under max bytes', () => {
 			const originalValue = 'Short comment';
 			const sauceComments = document.createElement('textarea');
-			sauceComments.id = 'sauce-comments';
+			sauceComments.id = 'sauceComments';
 			sauceComments.value = originalValue;
 
 			const sauceBytes = document.createElement('input');
-			sauceBytes.id = 'sauce-bytes';
+			sauceBytes.id = 'sauceBytes';
 
 			document.body.appendChild(sauceComments);
 			document.body.appendChild(sauceBytes);
@@ -549,9 +549,9 @@ describe('UI Utilities', () => {
 	describe('websocketUI', () => {
 		it('should show websocket elements when show is true', () => {
 			const excludedEl = document.createElement('div');
-			excludedEl.classList.add('excluded-for-websocket');
+			excludedEl.classList.add('excludedForWebsocket');
 			const includedEl = document.createElement('div');
-			includedEl.classList.add('included-for-websocket');
+			includedEl.classList.add('includedForWebsocket');
 
 			document.body.appendChild(excludedEl);
 			document.body.appendChild(includedEl);
@@ -564,9 +564,9 @@ describe('UI Utilities', () => {
 
 		it('should hide websocket elements when show is false', () => {
 			const excludedEl = document.createElement('div');
-			excludedEl.classList.add('excluded-for-websocket');
+			excludedEl.classList.add('excludedForWebsocket');
 			const includedEl = document.createElement('div');
-			includedEl.classList.add('included-for-websocket');
+			includedEl.classList.add('includedForWebsocket');
 
 			document.body.appendChild(excludedEl);
 			document.body.appendChild(includedEl);
@@ -621,7 +621,7 @@ describe('UI Utilities', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -645,7 +645,7 @@ describe('UI Utilities', () => {
 			modal.close = vi.fn();
 
 			const aboutModal = document.createElement('div');
-			aboutModal.id = 'about-modal';
+			aboutModal.id = 'aboutModal';
 			aboutModal.classList.add('hide');
 			document.body.appendChild(aboutModal);
 
@@ -661,7 +661,7 @@ describe('UI Utilities', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -697,7 +697,7 @@ describe('UI Utilities', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -710,7 +710,7 @@ describe('UI Utilities', () => {
 
 			// Open a modal first
 			const aboutModal = document.createElement('div');
-			aboutModal.id = 'about-modal';
+			aboutModal.id = 'aboutModal';
 			aboutModal.classList.add('hide');
 			document.body.appendChild(aboutModal);
 
@@ -741,7 +741,7 @@ describe('UI Utilities', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -751,7 +751,7 @@ describe('UI Utilities', () => {
 			document.body.appendChild(modalError);
 
 			const errorModal = document.createElement('div');
-			errorModal.id = 'error-modal';
+			errorModal.id = 'errorModal';
 			errorModal.classList.add('hide');
 			document.body.appendChild(errorModal);
 
@@ -778,7 +778,7 @@ describe('UI Utilities', () => {
 				'warning',
 			].forEach(name => {
 				const section = document.createElement('div');
-				section.id = `${name}-modal`;
+				section.id = `${name}Modal`;
 				section.classList.add('hide');
 				document.body.appendChild(section);
 			});
@@ -795,7 +795,7 @@ describe('UI Utilities', () => {
 
 			// Open modal should trigger focus
 			const aboutModal = document.createElement('div');
-			aboutModal.id = 'about-modal';
+			aboutModal.id = 'aboutModal';
 			aboutModal.classList.add('hide');
 			document.body.appendChild(aboutModal);
 
@@ -1051,7 +1051,7 @@ describe('UI Utilities', () => {
 			clickEvent.preventDefault = vi.fn();
 			menu.dispatchEvent(clickEvent);
 
-			expect(menu.classList.contains('menu-open')).toBe(true);
+			expect(menu.classList.contains('menuOpen')).toBe(true);
 
 			vi.useRealTimers();
 		});
@@ -1061,8 +1061,8 @@ describe('UI Utilities', () => {
 
 			const menu1 = document.createElement('div');
 			const menu2 = document.createElement('div');
-			menu1.classList.add('menu-open');
-			menu2.classList.add('menu-open');
+			menu1.classList.add('menuOpen');
+			menu2.classList.add('menuOpen');
 			const view = document.createElement('div');
 			view.focus = vi.fn();
 
@@ -1070,8 +1070,8 @@ describe('UI Utilities', () => {
 
 			controller.close();
 
-			expect(menu1.classList.contains('menu-open')).toBe(false);
-			expect(menu2.classList.contains('menu-open')).toBe(false);
+			expect(menu1.classList.contains('menuOpen')).toBe(false);
+			expect(menu2.classList.contains('menuOpen')).toBe(false);
 
 			vi.useRealTimers();
 		});
@@ -1083,13 +1083,13 @@ describe('UI Utilities', () => {
 			const { $$$ } = await import('../../src/js/client/ui.js');
 
 			const div1 = document.createElement('div');
-			div1.className = 'test-class-multi';
+			div1.className = 'testClassMulti';
 			const div2 = document.createElement('div');
-			div2.className = 'test-class-multi';
+			div2.className = 'testClassMulti';
 			document.body.appendChild(div1);
 			document.body.appendChild(div2);
 
-			const results = $$$('.test-class-multi');
+			const results = $$$('.testClassMulti');
 			expect(results.length).toBe(2);
 		});
 	});
@@ -1271,9 +1271,9 @@ describe('UI Utilities', () => {
 
 			// Create elements with the specific classes
 			const excludedDiv = document.createElement('div');
-			excludedDiv.className = 'excluded-for-websocket';
+			excludedDiv.className = 'excludedForWebsocket';
 			const includedDiv = document.createElement('div');
-			includedDiv.className = 'included-for-websocket';
+			includedDiv.className = 'includedForWebsocket';
 
 			document.body.appendChild(excludedDiv);
 			document.body.appendChild(includedDiv);
@@ -1293,13 +1293,13 @@ describe('UI Utilities', () => {
 			const { websocketUI } = await import('../../src/js/client/ui.js');
 
 			const excluded1 = document.createElement('div');
-			excluded1.className = 'excluded-for-websocket';
+			excluded1.className = 'excludedForWebsocket';
 			const excluded2 = document.createElement('div');
-			excluded2.className = 'excluded-for-websocket';
+			excluded2.className = 'excludedForWebsocket';
 			const included1 = document.createElement('div');
-			included1.className = 'included-for-websocket';
+			included1.className = 'includedForWebsocket';
 			const included2 = document.createElement('div');
-			included2.className = 'included-for-websocket';
+			included2.className = 'includedForWebsocket';
 
 			document.body.appendChild(excluded1);
 			document.body.appendChild(excluded2);

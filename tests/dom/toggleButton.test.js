@@ -33,7 +33,7 @@ describe('Toggle Button DOM Tests', () => {
 
 			document.body.appendChild(toggleButton.getElement());
 
-			const container = document.querySelector('.toggle-button-container');
+			const container = document.querySelector('.toggleButtonContainer');
 			expect(container).toBeInTheDocument();
 		});
 
@@ -57,9 +57,9 @@ describe('Toggle Button DOM Tests', () => {
 			const leftButton = screen.getByText('Left');
 			const rightButton = screen.getByText('Right');
 
-			expect(leftButton).toHaveClass('toggle-button');
+			expect(leftButton).toHaveClass('toggleButton');
 			expect(leftButton).toHaveClass('left');
-			expect(rightButton).toHaveClass('toggle-button');
+			expect(rightButton).toHaveClass('toggleButton');
 			expect(rightButton).toHaveClass('right');
 		});
 	});
@@ -340,7 +340,7 @@ describe('Toggle Button DOM Tests', () => {
 			const toggleButton = createToggleButton('', '', vi.fn(), vi.fn());
 			document.body.appendChild(toggleButton.getElement());
 
-			const container = document.querySelector('.toggle-button-container');
+			const container = document.querySelector('.toggleButtonContainer');
 			expect(container).toBeInTheDocument();
 		});
 
@@ -412,7 +412,7 @@ describe('Toggle Button DOM Tests', () => {
 			const element = toggleButton.getElement();
 
 			expect(element).toBeInstanceOf(HTMLElement);
-			expect(element).toHaveClass('toggle-button-container');
+			expect(element).toHaveClass('toggleButtonContainer');
 		});
 	});
 

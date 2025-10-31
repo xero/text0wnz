@@ -14,8 +14,8 @@ export default defineConfig({
 	test: {
 		environment: 'jsdom',
 		setupFiles: [
-			'./tests/canvas-shim.js',
-			'./tests/setup-tests.js',
+			'./tests/canvasShim.js',
+			'./tests/setupTests.js',
 		],
 		globals: true,
 		isolate: true, // Ensure clean state between tests

@@ -474,7 +474,7 @@ src/
     │   ├── ui.js
     │   ├── palette.js
     │   ├── file.js
-    │   ├── freehand_tools.js
+    │   ├── freehandTools.js
     │   ├── toolbar.js
     │   ├── state.js
     │   ├── storage.js       # IndexedDB storage system

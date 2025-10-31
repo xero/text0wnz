@@ -250,7 +250,7 @@ src/js/client/
 ├── ui.js             # UI components and interactions
 ├── palette.js        # Color palette management
 ├── file.js           # File I/O operations (load/save)
-├── freehand_tools.js # Drawing tools implementation
+├── freehandTools.js  # Drawing tools implementation
 ├── toolbar.js        # Toolbar state management
 ├── state.js          # Global application state
 ├── storage.js        # IndexedDB storage system
@@ -274,6 +274,8 @@ src/js/client/
 **ui.js** - Manages UI components, dialogs, menus, and user interactions.
 
 **palette.js** - Manages color palettes, RGB conversions, and color selection.
+
+**freehandTools.js** - Provides a variety of different drawing tools.
 
 **file.js** - Handles file loading, saving, format detection, SAUCE metadata, and PNG export.
 

@@ -58,19 +58,19 @@ describe('UI Basic Utilities', () => {
 	describe('DOM Utilities', () => {
 		it('should provide $ function for getting elements by ID', () => {
 			const div = document.createElement('div');
-			div.id = 'test-element';
+			div.id = 'testElement';
 			document.body.appendChild(div);
 
-			const result = $('test-element');
+			const result = $('testElement');
 			expect(result).toBe(div);
 		});
 
 		it('should provide $$ function for query selector', () => {
 			const div = document.createElement('div');
-			div.className = 'test-class';
+			div.className = 'testClass';
 			document.body.appendChild(div);
 
-			const result = $$('.test-class');
+			const result = $$('.testClass');
 			expect(result).toBe(div);
 		});
 
@@ -269,15 +269,15 @@ describe('UI Basic Utilities', () => {
 
 			// Create required modal sections
 			document.body.innerHTML = `
-				<div id="resize-modal" class="hide"></div>
-				<div id="fonts-modal" class="hide"></div>
-				<div id="sauce-modal" class="hide"></div>
-				<div id="websocket-modal" class="hide"></div>
-				<div id="choice-modal" class="hide"></div>
-				<div id="about-modal" class="hide"></div>
-				<div id="update-modal" class="hide"></div>
-				<div id="loading-modal" class="hide"></div>
-				<div id="warning-modal" class="hide"></div>
+				<div id="resizeModal" class="hide"></div>
+				<div id="fontsModal" class="hide"></div>
+				<div id="sauceModal" class="hide"></div>
+				<div id="websocketModal" class="hide"></div>
+				<div id="choiceModal" class="hide"></div>
+				<div id="aboutModal" class="hide"></div>
+				<div id="updateModal" class="hide"></div>
+				<div id="loadingModal" class="hide"></div>
+				<div id="warningModal" class="hide"></div>
 				<div id="modalError"></div>
 			`;
 
@@ -297,15 +297,15 @@ describe('UI Basic Utilities', () => {
 			};
 
 			document.body.innerHTML = `
-				<div id="resize-modal" class="hide"></div>
-				<div id="fonts-modal" class="hide"></div>
-				<div id="sauce-modal" class="hide"></div>
-				<div id="websocket-modal" class="hide"></div>
-				<div id="choice-modal" class="hide"></div>
-				<div id="about-modal" class="hide"></div>
-				<div id="update-modal" class="hide"></div>
-				<div id="loading-modal" class="hide"></div>
-				<div id="warning-modal" class="hide"></div>
+				<div id="resizeModal" class="hide"></div>
+				<div id="fontsModal" class="hide"></div>
+				<div id="sauceModal" class="hide"></div>
+				<div id="websocketModal" class="hide"></div>
+				<div id="choiceModal" class="hide"></div>
+				<div id="aboutModal" class="hide"></div>
+				<div id="updateModal" class="hide"></div>
+				<div id="loadingModal" class="hide"></div>
+				<div id="warningModal" class="hide"></div>
 				<div id="modalError"></div>
 			`;
 
@@ -314,7 +314,7 @@ describe('UI Basic Utilities', () => {
 
 			expect(mockModal.showModal).toHaveBeenCalled();
 			expect(
-				document.getElementById('resize-modal').classList.contains('hide'),
+				document.getElementById('resizeModal').classList.contains('hide'),
 			).toBe(false);
 		});
 	});

@@ -3,25 +3,25 @@ import { test, expect } from '@playwright/test';
 test.describe('Color Palette', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
 	test('should display color palette', async ({ page }) => {
-		const palette = page.locator('#palette-picker');
+		const palette = page.locator('#palettePicker');
 		await expect(palette).toBeVisible();
 	});
 
 	test('should have foreground and background color indicators', async ({ page }) => {
 		// Check for palette preview canvas (shows current colors)
-		const palettePreview = page.locator('#palette-preview');
+		const palettePreview = page.locator('#palettePreview');
 		await expect(palettePreview).toBeVisible();
 	});
 
 	test('should change foreground color on left click', async ({ page }) => {
 		// Find a color swatch
 		const colorSwatches = page.locator(
-			'.palette-color, .color-swatch, [data-color]',
+			'.paletteColor, .colorSwatch, [data-color]',
 		);
 		const count = await colorSwatches.count();
 
@@ -39,7 +39,7 @@ test.describe('Color Palette', () => {
 	test('should change background color on right click', async ({ page }) => {
 		// Find a color swatch
 		const colorSwatches = page.locator(
-			'.palette-color, .color-swatch, [data-color]',
+			'.paletteColor, .colorSwatch, [data-color]',
 		);
 		const count = await colorSwatches.count();
 
@@ -88,7 +88,7 @@ test.describe('Color Palette', () => {
 
 	test('should allow color selection from multiple positions', async ({ page }) => {
 		const colorSwatches = page.locator(
-			'.palette-color, .color-swatch, [data-color]',
+			'.paletteColor, .colorSwatch, [data-color]',
 		);
 		const count = await colorSwatches.count();
 
@@ -113,13 +113,13 @@ test.describe('Color Palette', () => {
 test.describe('Sample Tool (Color Picker)', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
 	test('should activate sample tool with Alt key', async ({ page }) => {
 		// Draw something first
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -146,7 +146,7 @@ test.describe('Sample Tool (Color Picker)', () => {
 test.describe('Character Palette', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
@@ -155,7 +155,7 @@ test.describe('Character Palette', () => {
 		await page.waitForTimeout(300);
 
 		// Try to open character palette
-		const charButton = page.locator('#character-brush');
+		const charButton = page.locator('#characterBrush');
 		const count = await charButton.count();
 
 		if (count > 0) {
@@ -164,7 +164,7 @@ test.describe('Character Palette', () => {
 
 			// Look for character grid or selector
 			const charGrid = page.locator(
-				'.character-grid, .char-selector, #character-brush-selector',
+				'.characterGrid, .charSelector, #characterBrushSelector',
 			);
 			const gridCount = await charGrid.count();
 
@@ -180,12 +180,12 @@ test.describe('Character Palette', () => {
 		await page.waitForTimeout(300);
 
 		// Activate character tool
-		const characterTool = page.locator('#character-brush');
+		const characterTool = page.locator('#characterBrush');
 		await characterTool.click();
 		await page.waitForTimeout(300);
 
 		// Try to draw a character
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {

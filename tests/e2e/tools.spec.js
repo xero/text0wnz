@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Drawing Tools', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
@@ -25,7 +25,7 @@ test.describe('Drawing Tools', () => {
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
 
-		const characterBrushTool = page.locator('#character-brush');
+		const characterBrushTool = page.locator('#characterBrush');
 		await characterBrushTool.click();
 		await page.waitForTimeout(300);
 
@@ -39,7 +39,7 @@ test.describe('Drawing Tools', () => {
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
 
-		const shadingBrushTool = page.locator('#shading-brush');
+		const shadingBrushTool = page.locator('#shadingBrush');
 		await shadingBrushTool.click();
 		await page.waitForTimeout(300);
 	});
@@ -54,7 +54,7 @@ test.describe('Drawing Tools', () => {
 		await page.waitForTimeout(300);
 
 		// Draw a line
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -76,7 +76,7 @@ test.describe('Drawing Tools', () => {
 		await page.waitForTimeout(300);
 
 		// Draw a square
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -98,7 +98,7 @@ test.describe('Drawing Tools', () => {
 		await page.waitForTimeout(300);
 
 		// Draw a circle
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -116,7 +116,7 @@ test.describe('Drawing Tools', () => {
 		await page.waitForTimeout(300);
 
 		// Create a selection
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -137,7 +137,7 @@ test.describe('Drawing Tools', () => {
 	});
 
 	test('should draw with multiple tools in sequence', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -175,13 +175,13 @@ test.describe('Drawing Tools', () => {
 test.describe('Tool Features', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
 	test('should support undo operation', async ({ page }) => {
 		// Draw something
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -205,7 +205,7 @@ test.describe('Tool Features', () => {
 
 	test('should support redo operation', async ({ page }) => {
 		// Draw something
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -234,7 +234,7 @@ test.describe('Tool Features', () => {
 	});
 
 	test('should support copy and paste with selection tool', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {

@@ -97,10 +97,10 @@ describe('Toolbar DOM Tests', () => {
 			await user.click(screen.getByRole('button', { name: /test tool/i }));
 
 			expect(onFocus).toHaveBeenCalled();
-			expect(button).toHaveClass('toolbar-displayed');
+			expect(button).toHaveClass('toolbarDisplayed');
 		});
 
-		it('should add toolbar-displayed class when tool is activated', async () => {
+		it('should add toolbarDisplayed class when tool is activated', async () => {
 			const button = document.createElement('button');
 			button.id = 'active-tool';
 			button.setAttribute('aria-label', 'Active Tool');
@@ -110,7 +110,7 @@ describe('Toolbar DOM Tests', () => {
 
 			await user.click(button);
 
-			expect(button).toHaveClass('toolbar-displayed');
+			expect(button).toHaveClass('toolbarDisplayed');
 		});
 
 		it('should switch between tools when clicking different buttons', async () => {
@@ -135,13 +135,13 @@ describe('Toolbar DOM Tests', () => {
 
 			// Activate first tool
 			await user.click(screen.getByRole('button', { name: /tool 1/i }));
-			expect(button1).toHaveClass('toolbar-displayed');
+			expect(button1).toHaveClass('toolbarDisplayed');
 			expect(onFocus1).toHaveBeenCalled();
 
 			// Activate second tool
 			await user.click(screen.getByRole('button', { name: /tool 2/i }));
-			expect(button2).toHaveClass('toolbar-displayed');
-			expect(button1).not.toHaveClass('toolbar-displayed');
+			expect(button2).toHaveClass('toolbarDisplayed');
+			expect(button1).not.toHaveClass('toolbarDisplayed');
 			expect(onBlur1).toHaveBeenCalled();
 			expect(onFocus2).toHaveBeenCalled();
 		});
@@ -175,7 +175,7 @@ describe('Toolbar DOM Tests', () => {
 			Toolbar.switchTool('switch-target');
 
 			expect(onFocus).toHaveBeenCalled();
-			expect(button).toHaveClass('toolbar-displayed');
+			expect(button).toHaveClass('toolbarDisplayed');
 		});
 
 		it('should return to previous tool using returnToPreviousTool', async () => {
@@ -197,20 +197,20 @@ describe('Toolbar DOM Tests', () => {
 
 			// Activate first tool
 			await user.click(button1);
-			expect(button1).toHaveClass('toolbar-displayed');
+			expect(button1).toHaveClass('toolbarDisplayed');
 
 			vi.clearAllMocks();
 
 			// Activate second tool
 			await user.click(button2);
-			expect(button2).toHaveClass('toolbar-displayed');
+			expect(button2).toHaveClass('toolbarDisplayed');
 
 			vi.clearAllMocks();
 
 			// Return to previous tool
 			Toolbar.returnToPreviousTool();
 			expect(onFocus1).toHaveBeenCalled();
-			expect(button1).toHaveClass('toolbar-displayed');
+			expect(button1).toHaveClass('toolbarDisplayed');
 		});
 
 		it('should get current tool ID', async () => {
@@ -266,11 +266,11 @@ describe('Toolbar DOM Tests', () => {
 
 			Toolbar.add(button, vi.fn(), vi.fn());
 
-			expect(button).not.toHaveClass('toolbar-displayed');
+			expect(button).not.toHaveClass('toolbarDisplayed');
 
 			await user.click(button);
 
-			expect(button).toHaveClass('toolbar-displayed');
+			expect(button).toHaveClass('toolbarDisplayed');
 		});
 	});
 
@@ -286,7 +286,7 @@ describe('Toolbar DOM Tests', () => {
 			}).not.toThrow();
 
 			await user.click(button);
-			expect(button).toHaveClass('toolbar-displayed');
+			expect(button).toHaveClass('toolbarDisplayed');
 		});
 
 		it('should handle rapid clicks', async () => {
@@ -327,7 +327,7 @@ describe('Toolbar DOM Tests', () => {
 	});
 
 	describe('Visual State Management', () => {
-		it('should remove toolbar-displayed class from previous tool', async () => {
+		it('should remove toolbarDisplayed class from previous tool', async () => {
 			const button1 = document.createElement('button');
 			button1.id = 'visual-state-1';
 			button1.setAttribute('aria-label', 'Visual State 1');
@@ -343,13 +343,13 @@ describe('Toolbar DOM Tests', () => {
 
 			// Activate first tool
 			await user.click(button1);
-			expect(button1).toHaveClass('toolbar-displayed');
-			expect(button2).not.toHaveClass('toolbar-displayed');
+			expect(button1).toHaveClass('toolbarDisplayed');
+			expect(button2).not.toHaveClass('toolbarDisplayed');
 
 			// Activate second tool
 			await user.click(button2);
-			expect(button1).not.toHaveClass('toolbar-displayed');
-			expect(button2).toHaveClass('toolbar-displayed');
+			expect(button1).not.toHaveClass('toolbarDisplayed');
+			expect(button2).toHaveClass('toolbarDisplayed');
 		});
 
 		it('should maintain only one active tool at a time', async () => {
@@ -369,7 +369,7 @@ describe('Toolbar DOM Tests', () => {
 
 				// Count how many buttons have the active class
 				const activeButtons = buttons.filter(b =>
-					b.classList.contains('toolbar-displayed'));
+					b.classList.contains('toolbarDisplayed'));
 				expect(activeButtons).toHaveLength(1);
 				expect(activeButtons[0]).toBe(button);
 			}

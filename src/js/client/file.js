@@ -1087,10 +1087,10 @@ const loadModule = () => {
 	const checkUTF8 = file => file.endsWith('.utf8.ans') || file.endsWith('.txt');
 
 	const updateSauceModal = imageData => {
-		$('sauce-title').value = imageData.title || '';
-		$('sauce-group').value = imageData.group || '';
-		$('sauce-author').value = imageData.author || '';
-		$('sauce-comments').value = imageData.comments || '';
+		$('sauceTitle').value = imageData.title || '';
+		$('sauceGroup').value = imageData.group || '';
+		$('sauceAuthor').value = imageData.author || '';
+		$('sauceComments').value = imageData.comments || '';
 		enforceMaxBytes();
 	};
 
@@ -1234,7 +1234,7 @@ const saveModule = () => {
 			}
 		};
 
-		const commentsText = $('sauce-comments').value.trim();
+		const commentsText = $('sauceComments').value.trim();
 		const commentLines = commentsText ? commentsText.split('\n') : [];
 
 		let processedComments = '';
@@ -1270,9 +1270,9 @@ const saveModule = () => {
 		addText('SAUCE00', 7, 0);
 
 		// Title, Author, Group (padded)
-		const titleBytes = new TextEncoder().encode($('sauce-title').value);
-		const authorBytes = new TextEncoder().encode($('sauce-author').value);
-		const groupBytes = new TextEncoder().encode($('sauce-group').value);
+		const titleBytes = new TextEncoder().encode($('sauceTitle').value);
+		const authorBytes = new TextEncoder().encode($('sauceAuthor').value);
+		const groupBytes = new TextEncoder().encode($('sauceGroup').value);
 
 		sauce.fill(0x20, 7, 42); // Clear title field
 		sauce.set(titleBytes.slice(0, 35), 7);

@@ -3,12 +3,12 @@ import { test } from '@playwright/test';
 test.describe('Advanced Undo/Redo Operations', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
 	test('should undo and redo multiple drawing operations', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Activate halfblock tool
 		await page.locator('#brushes').click();
@@ -53,7 +53,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 	});
 
 	test('should handle undo after tool switching', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Use halfblock tool
 		await page.locator('#brushes').click();
@@ -69,7 +69,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 		}
 
 		// Switch to character brush
-		await page.locator('#character-brush').click();
+		await page.locator('#characterBrush').click();
 		await page.waitForTimeout(300);
 
 		if (bbox) {
@@ -89,7 +89,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 	});
 
 	test('should handle undo/redo with line tool', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Activate line tool
 		await page.locator('#shapes').click();
@@ -118,7 +118,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 	});
 
 	test('should handle undo/redo with filled shapes', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Activate square tool
 		await page.locator('#shapes').click();
@@ -147,7 +147,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 	});
 
 	test('should handle undo after fill operation', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// First draw something to fill
 		await page.locator('#brushes').click();
@@ -185,7 +185,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 	});
 
 	test('should maintain undo stack after canvas resize', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Draw something
 		await page.locator('#brushes').click();
@@ -220,7 +220,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 	});
 
 	test('should handle rapid undo/redo operations', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Activate halfblock tool
 		await page.locator('#brushes').click();
@@ -253,7 +253,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 	});
 
 	test('should clear redo stack when new operation is performed', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Activate halfblock tool
 		await page.locator('#brushes').click();
@@ -288,7 +288,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 	});
 
 	test('should handle undo/redo with selection tool', async ({ page }) => {
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// First draw something to select
 		await page.locator('#brushes').click();
@@ -372,7 +372,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 			'button:has-text("Redo"), button[aria-label*="Redo"], button[title*="Redo"]',
 		);
 
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 
 		// Draw something
 		await page.locator('#brushes').click();

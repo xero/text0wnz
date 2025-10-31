@@ -68,28 +68,28 @@ let reload;
 
 const $$$$ = () => {
 	htmlDoc = $$('html');
-	bodyContainer = $('body-container');
-	canvasContainer = $('canvas-container');
-	columnsInput = $('columns-input');
-	openFile = $('open-file');
-	resizeApply = $('resize-apply');
-	sauceDone = $('sauce-done');
-	sauceTitle = $('sauce-title');
-	swapColors = $('swap-colors');
-	rowsInput = $('rows-input');
-	fontDisplay = $$('#current-font-display kbd');
-	changeFont = $('change-font');
-	applyFont = $('fonts-apply');
-	previewInfo = $('font-preview-info');
-	previewImage = $('font-preview-image');
-	sauceGroup = $('sauce-group');
-	sauceAuthor = $('sauce-author');
-	sauceComments = $('sauce-comments');
+	bodyContainer = $('bodyContainer');
+	canvasContainer = $('canvasContainer');
+	columnsInput = $('columnsInput');
+	openFile = $('openFile');
+	resizeApply = $('resizeApply');
+	sauceDone = $('sauceDone');
+	sauceTitle = $('sauceTitle');
+	swapColors = $('swapColors');
+	rowsInput = $('rowsInput');
+	fontDisplay = $$('#currentFontDisplay kbd');
+	changeFont = $('changeFont');
+	applyFont = $('fontsApply');
+	previewInfo = $('fontPreviewInfo');
+	previewImage = $('fontPreviewImage');
+	sauceGroup = $('sauceGroup');
+	sauceAuthor = $('sauceAuthor');
+	sauceComments = $('sauceComments');
 	navSauce = $('navSauce');
 	navDarkmode = $('navDarkmode');
 	metaTheme = $$('meta[name="theme-color"]');
 	saveTimeout = null;
-	reload = $('update-reload');
+	reload = $('updateReload');
 };
 
 // Debounce to avoid saving too frequently during drawing
@@ -148,14 +148,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 			// Tier 2: use setTimeout to allow UI to respond
 			setTimeout(() => {
-				State.positionInfo = createPositionInfo($('position-info'));
+				State.positionInfo = createPositionInfo($('positionInfo'));
 				State.selectionCursor = createSelectionCursor(canvasContainer);
 				State.cursor = createCursor(canvasContainer);
 				State.selectionTool = createSelectionTool();
 
 				// Tier 3: Secondary tools - defer with requestIdleCallback
 				const initSecondaryTools = () => {
-					State.toolPreview = createToolPreview($('tool-preview'));
+					State.toolPreview = createToolPreview($('toolPreview'));
 					State.title = 'Untitled';
 
 					// Once everything is ready...
@@ -196,18 +196,18 @@ const initializeAppComponents = async () => {
 	State.restoreStateFromLocalStorage();
 	document.addEventListener('keydown', undoAndRedo);
 	createResolutionController(
-		$('resolution-label'),
-		$('columns-input'),
-		$('rows-input'),
+		$('resolutionLabel'),
+		$('columnsInput'),
+		$('rowsInput'),
 	);
 	State.menus = createMenuController(
-		[$('file-menu'), $('edit-menu')],
+		[$('fileMenu'), $('editMenu')],
 		canvasContainer,
 	);
 	onClick($('new'), () => {
 		State.modal.open('warning');
 	});
-	onClick($('warning-yes'), async () => {
+	onClick($('warningYes'), async () => {
 		bodyContainer.classList.add('loading');
 		// Clear localStorage when creating a new file
 		State.clearLocalStorage();
@@ -228,33 +228,33 @@ const initializeAppComponents = async () => {
 	onClick($('open'), () => {
 		openFile.click();
 	});
-	onClick($('save-ansi'), Save.ans);
-	onClick($('save-utf8'), Save.utf8);
-	onClick($('save-plaintext'), Save.plainText);
-	onClick($('save-bin'), Save.bin);
-	onClick($('save-xbin'), Save.xb);
-	onClick($('save-png'), Save.png);
+	onClick($('saveAnsi'), Save.ans);
+	onClick($('saveUtf8'), Save.utf8);
+	onClick($('savePlaintext'), Save.plainText);
+	onClick($('saveBin'), Save.bin);
+	onClick($('saveXbin'), Save.xb);
+	onClick($('savePng'), Save.png);
 	onClick($('cut'), State.pasteTool.cut);
 	onClick($('copy'), State.pasteTool.copy);
 	onClick($('paste'), State.pasteTool.paste);
-	onClick($('system-paste'), State.pasteTool.systemPaste);
+	onClick($('systemPaste'), State.pasteTool.systemPaste);
 	onClick($('delete'), State.pasteTool.deleteSelection);
-	onClick($('nav-cut'), State.pasteTool.cut);
-	onClick($('nav-copy'), State.pasteTool.copy);
-	onClick($('nav-paste'), State.pasteTool.paste);
-	onClick($('nav-system-paste'), State.pasteTool.systemPaste);
-	onClick($('nav-delete'), State.pasteTool.deleteSelection);
-	onClick($('nav-undo'), State.textArtCanvas.undo);
-	onClick($('nav-redo'), State.textArtCanvas.redo);
+	onClick($('navCut'), State.pasteTool.cut);
+	onClick($('navCopy'), State.pasteTool.copy);
+	onClick($('navPaste'), State.pasteTool.paste);
+	onClick($('navSystemPaste'), State.pasteTool.systemPaste);
+	onClick($('navDelete'), State.pasteTool.deleteSelection);
+	onClick($('navUndo'), State.textArtCanvas.undo);
+	onClick($('navRedo'), State.textArtCanvas.redo);
 
 	// Credz
 	onClick($('about'), _ => {
 		State.modal.open('about');
 	});
-	onClick($('about-dl'), _ => {
+	onClick($('aboutDl'), _ => {
 		window.location.href = 'https://github.com/xero/text0wnz/releases/latest';
 	});
-	onClick($('about-privacy'), _ => {
+	onClick($('aboutPrivacy'), _ => {
 		window.location.href =
 			'https://github.com/xero/teXt0wnz/blob/main/docs/privacy.md';
 	});
@@ -276,8 +276,8 @@ const initializeAppComponents = async () => {
 	});
 	onReturn(reload, reload);
 
-	const palettePreview = createPalettePreview($('palette-preview'));
-	const palettePicker = createPalettePicker($('palette-picker'));
+	const palettePreview = createPalettePreview($('palettePreview'));
+	const palettePicker = createPalettePicker($('palettePicker'));
 
 	const openHandler = file => {
 		bodyContainer.classList.add('loading');
@@ -346,11 +346,11 @@ const initializeAppComponents = async () => {
 	onReturn(sauceAuthor, sauceDone);
 	onReturn(sauceComments, sauceDone);
 	const paintShortcuts = createPaintShortcuts({
-		d: $('default-color'),
+		d: $('defaultColor'),
 		q: swapColors,
 		k: $('keyboard'),
 		f: $('brushes'),
-		b: $('character-brush'),
+		b: $('characterBrush'),
 		n: $('fill'),
 		a: $('attrib'),
 		g: $('navGrid'),
@@ -364,13 +364,13 @@ const initializeAppComponents = async () => {
 			paintShortcuts.disable();
 			State.menus.close();
 			keyboard.enable();
-			$('keyboard-toolbar').classList.remove('hide');
+			$('keyboardToolbar').classList.remove('hide');
 		},
 		() => {
 			paintShortcuts.enable();
 			keyboard.disable();
 			State.menus.close();
-			$('keyboard-toolbar').classList.add('hide');
+			$('keyboardToolbar').classList.add('hide');
 		},
 	).enable();
 	Toolbar.add(
@@ -379,12 +379,12 @@ const initializeAppComponents = async () => {
 			paintShortcuts.disable();
 			State.menus.close();
 			State.selectionTool.enable();
-			$('selection-toolbar').classList.remove('hide');
+			$('selectionToolbar').classList.remove('hide');
 		},
 		() => {
 			paintShortcuts.enable();
 			State.selectionTool.disable();
-			$('selection-toolbar').classList.add('hide');
+			$('selectionToolbar').classList.add('hide');
 		},
 	);
 
@@ -411,19 +411,19 @@ const initializeAppComponents = async () => {
 	onReturn(rowsInput, resizeApply);
 
 	// Edit action menu items
-	onClick($('insert-row'), keyboard.insertRow);
-	onClick($('delete-row'), keyboard.deleteRow);
-	onClick($('insert-column'), keyboard.insertColumn);
-	onClick($('delete-column'), keyboard.deleteColumn);
-	onClick($('erase-row'), keyboard.eraseRow);
-	onClick($('erase-row-start'), keyboard.eraseToStartOfRow);
-	onClick($('erase-row-end'), keyboard.eraseToEndOfRow);
-	onClick($('erase-column'), keyboard.eraseColumn);
-	onClick($('erase-column-start'), keyboard.eraseToStartOfColumn);
-	onClick($('erase-column-end'), keyboard.eraseToEndOfColumn);
+	onClick($('insertRow'), keyboard.insertRow);
+	onClick($('deleteRow'), keyboard.deleteRow);
+	onClick($('insertColumn'), keyboard.insertColumn);
+	onClick($('deleteColumn'), keyboard.deleteColumn);
+	onClick($('eraseRow'), keyboard.eraseRow);
+	onClick($('eraseRowStart'), keyboard.eraseToStartOfRow);
+	onClick($('eraseRowEnd'), keyboard.eraseToEndOfRow);
+	onClick($('eraseColumn'), keyboard.eraseColumn);
+	onClick($('eraseColumnStart'), keyboard.eraseToStartOfColumn);
+	onClick($('eraseColumnEnd'), keyboard.eraseToEndOfColumn);
 	onClick($('fullscreen'), toggleFullscreen);
 
-	onClick($('default-color'), () => {
+	onClick($('defaultColor'), () => {
 		State.palette.setForegroundColor(7);
 		State.palette.setBackgroundColor(0);
 	});
@@ -432,7 +432,7 @@ const initializeAppComponents = async () => {
 		State.palette.setForegroundColor(State.palette.getBackgroundColor());
 		State.palette.setBackgroundColor(tempForeground);
 	});
-	onClick($('palette-preview'), () => {
+	onClick($('palettePreview'), () => {
 		const tempForeground = State.palette.getForegroundColor();
 		State.palette.setForegroundColor(State.palette.getBackgroundColor());
 		State.palette.setBackgroundColor(tempForeground);
@@ -459,7 +459,7 @@ const initializeAppComponents = async () => {
 	);
 
 	fontSelect = createFontSelect(
-		$('font-select'),
+		$('fontSelect'),
 		previewInfo,
 		previewImage,
 		applyFont,
@@ -500,7 +500,7 @@ const initializeAppComponents = async () => {
 	// Lazy load tools - they'll be loaded when first clicked
 	// Brushes are most common after keyboard, so we'll lazy load them
 	Toolbar.addLazy($('brushes'), async () => {
-		const { createBrushController } = await import('./freehand_tools.js');
+		const { createBrushController } = await import('./freehandTools.js');
 		const brushes = createBrushController();
 		return {
 			onFocus: brushes.enable,
@@ -510,7 +510,7 @@ const initializeAppComponents = async () => {
 	});
 
 	Toolbar.addLazy($('halfblock'), async () => {
-		const { createHalfBlockController } = await import('./freehand_tools.js');
+		const { createHalfBlockController } = await import('./freehandTools.js');
 		const halfblock = createHalfBlockController();
 		return {
 			onFocus: halfblock.enable,
@@ -523,9 +523,9 @@ const initializeAppComponents = async () => {
 	let shadeBrush = null;
 	let characterBrush = null;
 
-	Toolbar.addLazy($('shading-brush'), async () => {
+	Toolbar.addLazy($('shadingBrush'), async () => {
 		const { createShadingController, createShadingPanel } = await import(
-			'./freehand_tools.js'
+			'./freehandTools.js'
 		);
 		shadeBrush = createShadingController(createShadingPanel(), false);
 		return {
@@ -537,9 +537,9 @@ const initializeAppComponents = async () => {
 		};
 	});
 
-	Toolbar.addLazy($('character-brush'), async () => {
+	Toolbar.addLazy($('characterBrush'), async () => {
 		const { createShadingController, createCharacterBrushPanel } = await import(
-			'./freehand_tools.js'
+			'./freehandTools.js'
 		);
 		characterBrush = createShadingController(createCharacterBrushPanel(), true);
 		return {
@@ -552,7 +552,7 @@ const initializeAppComponents = async () => {
 	});
 
 	Toolbar.addLazy($('fill'), async () => {
-		const { createFillController } = await import('./freehand_tools.js');
+		const { createFillController } = await import('./freehandTools.js');
 		const fill = createFillController();
 		return {
 			onFocus: fill.enable,
@@ -563,7 +563,7 @@ const initializeAppComponents = async () => {
 
 	Toolbar.addLazy($('attrib'), async () => {
 		const { createAttributeBrushController } = await import(
-			'./freehand_tools.js'
+			'./freehandTools.js'
 		);
 		const attributeBrush = createAttributeBrushController();
 		return {
@@ -574,7 +574,7 @@ const initializeAppComponents = async () => {
 	});
 
 	Toolbar.addLazy($('shapes'), async () => {
-		const { createShapesController } = await import('./freehand_tools.js');
+		const { createShapesController } = await import('./freehandTools.js');
 		const shapes = createShapesController();
 		return {
 			onFocus: shapes.enable,
@@ -584,7 +584,7 @@ const initializeAppComponents = async () => {
 	});
 
 	Toolbar.addLazy($('line'), async () => {
-		const { createLineController } = await import('./freehand_tools.js');
+		const { createLineController } = await import('./freehandTools.js');
 		const line = createLineController();
 		return {
 			onFocus: line.enable,
@@ -594,7 +594,7 @@ const initializeAppComponents = async () => {
 	});
 
 	Toolbar.addLazy($('square'), async () => {
-		const { createSquareController } = await import('./freehand_tools.js');
+		const { createSquareController } = await import('./freehandTools.js');
 		const square = createSquareController();
 		return {
 			onFocus: square.enable,
@@ -604,7 +604,7 @@ const initializeAppComponents = async () => {
 	});
 
 	Toolbar.addLazy($('circle'), async () => {
-		const { createCircleController } = await import('./freehand_tools.js');
+		const { createCircleController } = await import('./freehandTools.js');
 		const circle = createCircleController();
 		return {
 			onFocus: circle.enable,
@@ -612,28 +612,28 @@ const initializeAppComponents = async () => {
 			enable: circle.enable,
 		};
 	});
-	const fonts = createGenericController($('font-toolbar'), $('fonts'));
+	const fonts = createGenericController($('fontToolbar'), $('fonts'));
 	Toolbar.add($('fonts'), fonts.enable, fonts.disable);
 	const clipboard = createGenericController(
-		$('clipboard-toolbar'),
+		$('clipboardToolbar'),
 		$('clipboard'),
 	);
 	Toolbar.add($('clipboard'), clipboard.enable, clipboard.disable);
 
 	Toolbar.addLazy($('sample'), async () => {
 		// Sample tool depends on shading brushes, so we need to ensure they're loaded
-		const { createSampleTool } = await import('./freehand_tools.js');
+		const { createSampleTool } = await import('./freehandTools.js');
 
 		// If brushes aren't loaded yet, we need to load them first
 		if (!shadeBrush) {
 			const { createShadingController, createShadingPanel } = await import(
-				'./freehand_tools.js'
+				'./freehandTools.js'
 			);
 			shadeBrush = createShadingController(createShadingPanel(), false);
 		}
 		if (!characterBrush) {
 			const { createShadingController, createCharacterBrushPanel } =
-				await import('./freehand_tools.js');
+				await import('./freehandTools.js');
 			characterBrush = createShadingController(
 				createCharacterBrushPanel(),
 				true,
@@ -642,9 +642,9 @@ const initializeAppComponents = async () => {
 
 		State.sampleTool = createSampleTool(
 			shadeBrush,
-			$('shading-brush'),
+			$('shadingBrush'),
 			characterBrush,
-			$('character-brush'),
+			$('characterBrush'),
 		);
 		return {
 			onFocus: State.sampleTool.enable,
@@ -689,14 +689,14 @@ const initializeAppComponents = async () => {
 
 	// Initialize chat before creating network handler
 	State.chat = createChatController(
-		$('chat-button'),
-		$('chat-window'),
-		$('message-window'),
-		$('user-list'),
-		$('handle-input'),
-		$('message-input'),
-		$('message-send'),
-		$('notification-checkbox'),
+		$('chatButton'),
+		$('chatWindow'),
+		$('messageWindow'),
+		$('userList'),
+		$('handleInput'),
+		$('messageInput'),
+		$('messageSend'),
+		$('notificationCheckbox'),
 		() => {
 			keyboard.ignore();
 			paintShortcuts.ignore();
@@ -720,12 +720,8 @@ const initializeAppComponents = async () => {
 			}
 		},
 	);
-	createSettingToggle(
-		$('chat-button'),
-		State.chat.isEnabled,
-		State.chat.toggle,
-	);
-	State.network = createWorkerHandler($('handle-input'));
+	createSettingToggle($('chatButton'), State.chat.isEnabled, State.chat.toggle);
+	State.network = createWorkerHandler($('handleInput'));
 
 	const darkToggle = () => {
 		htmlDoc.classList.toggle('dark');

@@ -73,7 +73,7 @@ export default ({ mode }) => {
 							'src/js/client/fontCache.js',
 						],
 						tools: [
-							'src/js/client/freehand_tools.js',
+							'src/js/client/freehandTools.js',
 							'src/js/client/keyboard.js',
 							'src/js/client/toolbar.js',
 						],

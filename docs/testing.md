@@ -37,16 +37,9 @@ teXt0wnz uses a comprehensive three-part testing strategy: unit tests with Vites
 tests/
 ├── unit/                          # Vitest unit tests
 │   ├── canvas.test.js             # client tests in the root
-│   ├── file-load.test.js          # File I/O - Load and Save
-│   ├── file-formats.test.js       # File I/O - Formats and Parsing
-│   ├── file-advanced.test.js      # File I/O - Advanced Operations
-│   ├── freehand-panels.test.js    # Drawing tools - Panels and Cursors
-│   ├── freehand-shapes.test.js    # Drawing tools - Shapes and Fill
-│   ├── freehand-advanced.test.js  # Drawing tools - Advanced Tools
-│   ├── ui-basic.test.js           # UI - Basic Utilities
-│   ├── ui-controls.test.js        # UI - Controls and Controllers
-│   ├── ui-components.test.js      # UI - Components
-│   ├── ui-modals.test.js          # UI - Advanced Utilities
+│   ├── fileLoad.test.js          # File I/O - Load and Save
+│   ├── freehandAdvanced.test.js  # Drawing tools - Advanced Tools
+│   ├── uiBasic.test.js           # UI - Basic Utilities
 │   ├── ...
 │   └── server/                    # Server tests nested
 │       ├── config.test.js
@@ -77,17 +70,29 @@ tests/
 ```javascript
 import { defineConfig } from 'vitest/config';
 
+const ignore = [
+	'*.config.js',
+	'banner',
+	'dist',
+	'docs',
+	'session',
+	'node_modules',
+	'tests/e2e/**',
+];
+
 export default defineConfig({
 	test: {
 		environment: 'jsdom',
-		setupFiles: ['./tests/setupTests.js'],
+		setupFiles: ['./tests/canvasShim.js', './tests/setupTests.js'],
 		globals: true,
-		maxWorkers: 1,
-		isolate: true,
+		isolate: true, // Ensure clean state between tests
+		maxWorkers: 1, // Single thread to avoid memory multiplication
+		exclude: ignore,
 		coverage: {
 			enabled: true,
 			reporter: ['text', 'html'],
 			reportsDirectory: 'tests/results/coverage',
+			exclude: ignore,
 		},
 	},
 });
@@ -210,7 +215,7 @@ const debug = msg => {
 - Mirror mode functionality
 - XBin font/palette handling
 
-**file-load.test.js** - File I/O: Load and Save operations
+**fileLoad.test.js** - File I/O: Load and Save operations
 
 - Load module functionality
 - Save module operations
@@ -218,7 +223,7 @@ const debug = msg => {
 - Basic file format handling
 - ANSI and binary file support
 
-**file-formats.test.js** - File I/O: Formats and parsing
+**fileFormats.test.js** - File I/O: Formats and parsing
 
 - Binary data handling
 - Error handling
@@ -227,7 +232,7 @@ const debug = msg => {
 - ANSI parsing engine
 - UTF-8 processing
 
-**file-advanced.test.js** - File I/O: Advanced operations
+**fileAdvanced.test.js** - File I/O: Advanced operations
 
 - Advanced save operations
 - Data conversion functions
@@ -246,7 +251,7 @@ const debug = msg => {
 - Error handling
 - Font dimension validation
 
-**freehand-panels.test.js** - Drawing tools: Panels and cursors
+**freehandPanels.test.js** - Drawing tools: Panels and cursors
 
 - Panel cursor creation
 - Floating panel palette
@@ -256,7 +261,7 @@ const debug = msg => {
 - Shading controller and panel
 - Character brush panel
 
-**freehand-shapes.test.js** - Drawing tools: Shapes and fill
+**freehandShapes.test.js** - Drawing tools: Shapes and fill
 
 - Fill controller
 - Shapes controller
@@ -265,7 +270,7 @@ const debug = msg => {
 - Circle controller
 - Shape drawing algorithms
 
-**freehand-advanced.test.js** - Drawing tools: Advanced tools
+**freehandAdvanced.test.js** - Drawing tools: Advanced tools
 
 - Attribute brush controller
 - Selection tool
@@ -322,7 +327,7 @@ const debug = msg => {
 - Toolbar state management
 - UI updates
 
-**ui-basic.test.js** - User interface: Basic utilities
+**uiBasic.test.js** - User interface: Basic utilities
 
 - DOM utilities ($, $$, createCanvas)
 - Setting toggles
@@ -331,7 +336,7 @@ const debug = msg => {
 - Modal functions
 - Undo/redo functionality
 
-**ui-controls.test.js** - User interface: Controls and controllers
+**uiControls.test.js** - User interface: Controls and controllers
 
 - Toggle button creation
 - Generic controller pattern
@@ -340,7 +345,7 @@ const debug = msg => {
 - Fullscreen toggle
 - Modal controller management
 
-**ui-components.test.js** - User interface: Components
+**uiComponents.test.js** - User interface: Components
 
 - Viewport tap interactions
 - Paint shortcuts system
@@ -348,7 +353,7 @@ const debug = msg => {
 - Drag and drop controller
 - Menu controller
 
-**ui-modals.test.js** - User interface: Advanced utilities
+**uiModals.test.js** - User interface: Advanced utilities
 
 - Additional DOM utilities ($$$)
 - Grid creation and management
@@ -369,7 +374,7 @@ const debug = msg => {
 - Block deduplication logic
 - Message processing
 
-**xbin-persistence.test.js** - XBin format persistence
+**xbinPersistence.test.js** - XBin format persistence
 
 - Embedded font handling
 - Palette persistence
@@ -741,7 +746,7 @@ npx playwright show-report tests/results/playwright-report
 - Sample tool (color picker)
 - Character palette selection
 
-**file-operations.spec.js** - File I/O and canvas operations
+**fileOperations.spec.js** - File I/O and canvas operations
 
 - New document creation
 - File open dialog

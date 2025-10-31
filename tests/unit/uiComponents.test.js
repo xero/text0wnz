@@ -303,7 +303,7 @@ describe('UI Components', () => {
 			clickEvent.preventDefault = vi.fn();
 			menu.dispatchEvent(clickEvent);
 
-			expect(menu.classList.contains('menu-open')).toBe(true);
+			expect(menu.classList.contains('menuOpen')).toBe(true);
 
 			vi.useRealTimers();
 		});
@@ -313,8 +313,8 @@ describe('UI Components', () => {
 
 			const menu1 = document.createElement('div');
 			const menu2 = document.createElement('div');
-			menu1.classList.add('menu-open');
-			menu2.classList.add('menu-open');
+			menu1.classList.add('menuOpen');
+			menu2.classList.add('menuOpen');
 			const view = document.createElement('div');
 			view.focus = vi.fn();
 
@@ -322,8 +322,8 @@ describe('UI Components', () => {
 
 			controller.close();
 
-			expect(menu1.classList.contains('menu-open')).toBe(false);
-			expect(menu2.classList.contains('menu-open')).toBe(false);
+			expect(menu1.classList.contains('menuOpen')).toBe(false);
+			expect(menu2.classList.contains('menuOpen')).toBe(false);
 
 			vi.useRealTimers();
 		});

@@ -138,7 +138,7 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 - Support for 100+ classic fonts
 - Letter spacing (9px mode)
 
-**Drawing Tools** (`freehand_tools.js`)
+**Drawing Tools** (`freehandTools.js`)
 
 - Halfblock/Block drawing
 - Character brush
@@ -395,7 +395,7 @@ When a drawing occurs:
        │
        ▼
 ┌─────────────┐
-│ Tool Handler│ (freehand_tools.js)
+│ Tool Handler│ (freehandTools.js)
 └──────┬──────┘
        │
        ▼
@@ -498,7 +498,7 @@ src/js/client/
 ├── toolbar.js           # Toolbar management
 ├── palette.js           # Color palette
 ├── keyboard.js          # Keyboard mode and shortcuts
-├── freehand_tools.js    # Drawing tools
+├── freehandTools.js     # Drawing tools
 ├── file.js              # File I/O operations
 ├── network.js           # Network communication
 ├── websocket.js         # WebSocket worker
@@ -539,7 +539,7 @@ main.js
   ├── keyboard.js
   │   ├── state.js
   │   └── canvas.js
-  ├── freehand_tools.js
+  ├── freehandTools.js
   │   ├── state.js
   │   ├── canvas.js
   │   └── toolbar.js
@@ -549,7 +549,7 @@ main.js
   ├── network.js
   │   ├── state.js
   │   ├── canvas.js
-  │   └── websocket.js (worker)
+  │   └── websocket.js (web worker)
   ├── storage.js
   │   ├── state.js
   │   └── compression.js
@@ -564,9 +564,9 @@ main.js
 
 ```javascript
 manualChunks: {
-    core: ['state', 'storage', 'compression', 'ui'],
-    canvas: ['canvas', 'font', 'lazyFont', 'fontCache'],
-    tools: ['freehand_tools', 'keyboard', 'toolbar'],
+    core:    ['state', 'storage', 'compression', 'ui'],
+    canvas:  ['canvas', 'font', 'lazyFont', 'fontCache'],
+    tools:   ['freehandTools', 'keyboard', 'toolbar'],
     fileops: ['file'],
     network: ['network'],
     palette: ['palette']

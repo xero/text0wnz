@@ -30,15 +30,15 @@ const toggleFullscreen = () => {
 // Modal
 const createModalController = modal => {
 	const modals = [
-		$('about-modal'),
-		$('resize-modal'),
-		$('fonts-modal'),
-		$('sauce-modal'),
-		$('websocket-modal'),
-		$('choice-modal'),
-		$('update-modal'),
-		$('loading-modal'),
-		$('warning-modal'),
+		$('aboutModal'),
+		$('resizeModal'),
+		$('fontsModal'),
+		$('sauceModal'),
+		$('websocketModal'),
+		$('choiceModal'),
+		$('updateModal'),
+		$('loadingModal'),
+		$('warningModal'),
 	];
 	let current = false;
 	let closingTimeout = null;
@@ -56,7 +56,7 @@ const createModalController = modal => {
 
 	const open = name => {
 		current = name;
-		const section = name + '-modal';
+		const section = name + 'Modal';
 		if ($(section)) {
 			// cancel current close event
 			if (closingTimeout) {
@@ -236,7 +236,7 @@ const createPaintShortcuts = keyPair => {
 	const isConnected = e =>
 		!State.network ||
 		!State.network.isConnected() ||
-		!keyPair[e.key].classList.contains('excluded-for-websocket');
+		!keyPair[e.key].classList.contains('excludedForWebsocket');
 
 	const keyDown = e => {
 		if (!ignored) {
@@ -312,13 +312,13 @@ const createToggleButton = (
 	stateTwoClick,
 ) => {
 	const container = document.createElement('DIV');
-	container.classList.add('toggle-button-container');
+	container.classList.add('toggleButtonContainer');
 	const stateOne = document.createElement('DIV');
-	stateOne.classList.add('toggle-button');
+	stateOne.classList.add('toggleButton');
 	stateOne.classList.add('left');
 	stateOne.textContent = stateOneName;
 	const stateTwo = document.createElement('DIV');
-	stateTwo.classList.add('toggle-button');
+	stateTwo.classList.add('toggleButton');
 	stateTwo.classList.add('right');
 	stateTwo.textContent = stateTwoName;
 	container.appendChild(stateOne);
@@ -527,7 +527,7 @@ const getUtf8Bytes = str => {
 
 const enforceMaxBytes = () => {
 	const SAUCE_MAX_BYTES = 16320;
-	const sauceComments = $('sauce-comments');
+	const sauceComments = $('sauceComments');
 	let val = sauceComments.value;
 	let bytes = getUtf8Bytes(val);
 	while (bytes > SAUCE_MAX_BYTES) {
@@ -537,17 +537,17 @@ const enforceMaxBytes = () => {
 	if (val !== sauceComments.value) {
 		sauceComments.value = val;
 	}
-	$('sauce-bytes').value = `${bytes}/${SAUCE_MAX_BYTES} bytes`;
+	$('sauceBytes').value = `${bytes}/${SAUCE_MAX_BYTES} bytes`;
 };
 
 const createGenericController = (panel, nav) => {
 	const enable = () => {
 		panel.style.display = 'flex';
-		nav.classList.add('enabled-parent');
+		nav.classList.add('enabledParent');
 	};
 	const disable = () => {
 		panel.style.display = 'none';
-		nav.classList.remove('enabled-parent');
+		nav.classList.remove('enabledParent');
 	};
 	return {
 		enable: enable,
@@ -603,13 +603,13 @@ const createDragDropController = (handler, el) => {
 const createMenuController = (menus, view) => {
 	const close = menu => {
 		setTimeout(_ => {
-			menu.classList.remove('menu-open');
+			menu.classList.remove('menuOpen');
 			view.focus();
 		}, 60);
 	};
 	const closeAll = () => {
 		menus.forEach(m => {
-			m.classList.remove('menu-open');
+			m.classList.remove('menuOpen');
 		});
 		view.focus();
 	};
@@ -617,10 +617,10 @@ const createMenuController = (menus, view) => {
 		menu.addEventListener('click', e => {
 			e.stopPropagation();
 			e.preventDefault();
-			if (menu.classList.contains('menu-open')) {
+			if (menu.classList.contains('menuOpen')) {
 				close(menu);
 			} else {
-				menu.classList.add('menu-open');
+				menu.classList.add('menuOpen');
 				menu.focus();
 			}
 		});
@@ -767,8 +767,8 @@ const createFontSelect = (el, lbl, img, btn) => {
 
 const websocketUI = show => {
 	[
-		['excluded-for-websocket', !show],
-		['included-for-websocket', show],
+		['excludedForWebsocket', !show],
+		['includedForWebsocket', show],
 	].forEach(([sel, prop]) =>
 		[...D.getElementsByClassName(sel)].forEach(
 			el => (el.style.display = prop ? 'block' : 'none'),

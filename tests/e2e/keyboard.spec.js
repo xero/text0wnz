@@ -3,13 +3,13 @@ import { test, expect } from '@playwright/test';
 test.describe('Keyboard Shortcuts', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
 	test('should support undo with Ctrl+Z', async ({ page }) => {
 		// Draw something
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -31,7 +31,7 @@ test.describe('Keyboard Shortcuts', () => {
 
 	test('should support redo with Ctrl+Y', async ({ page }) => {
 		// Draw something
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -170,7 +170,7 @@ test.describe('Keyboard Shortcuts', () => {
 		await page.locator('#selection').click();
 		await page.waitForTimeout(200);
 
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -191,7 +191,7 @@ test.describe('Keyboard Shortcuts', () => {
 		await page.locator('#selection').click();
 		await page.waitForTimeout(200);
 
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -215,7 +215,7 @@ test.describe('Keyboard Shortcuts', () => {
 		await page.locator('#selection').click();
 		await page.waitForTimeout(200);
 
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -236,7 +236,7 @@ test.describe('Keyboard Shortcuts', () => {
 		await page.locator('#selection').click();
 		await page.waitForTimeout(200);
 
-		const canvas = page.locator('#canvas-container canvas').first();
+		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
 		if (box) {
@@ -269,7 +269,7 @@ test.describe('Keyboard Shortcuts', () => {
 test.describe('Keyboard Mode', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 

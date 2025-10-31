@@ -31,7 +31,7 @@ describe('Menu DOM Tests', () => {
 		// Create file menu
 		fileMenu = document.createElement('div');
 		fileMenu.id = 'file-menu';
-		fileMenu.className = 'menu-title';
+		fileMenu.className = 'menuTitle';
 		fileMenu.tabIndex = 0;
 
 		const fileButton = document.createElement('button');
@@ -40,17 +40,17 @@ describe('Menu DOM Tests', () => {
 		fileMenu.appendChild(fileButton);
 
 		const fileMenuList = document.createElement('div');
-		fileMenuList.className = 'menu-list';
+		fileMenuList.className = 'menuList';
 
 		const newItem = document.createElement('article');
 		newItem.id = 'new';
-		newItem.className = 'menu-item';
+		newItem.className = 'menuItem';
 		newItem.textContent = 'New';
 		fileMenuList.appendChild(newItem);
 
 		const openItem = document.createElement('article');
 		openItem.id = 'open';
-		openItem.className = 'menu-item';
+		openItem.className = 'menuItem';
 		openItem.textContent = 'Open';
 		fileMenuList.appendChild(openItem);
 
@@ -60,7 +60,7 @@ describe('Menu DOM Tests', () => {
 		// Create edit menu
 		editMenu = document.createElement('div');
 		editMenu.id = 'edit-menu';
-		editMenu.className = 'menu-title';
+		editMenu.className = 'menuTitle';
 		editMenu.tabIndex = 0;
 
 		const editButton = document.createElement('button');
@@ -69,17 +69,17 @@ describe('Menu DOM Tests', () => {
 		editMenu.appendChild(editButton);
 
 		const editMenuList = document.createElement('div');
-		editMenuList.className = 'menu-list';
+		editMenuList.className = 'menuList';
 
 		const undoItem = document.createElement('article');
 		undoItem.id = 'nav-undo';
-		undoItem.className = 'menu-item';
+		undoItem.className = 'menuItem';
 		undoItem.textContent = 'Undo';
 		editMenuList.appendChild(undoItem);
 
 		const redoItem = document.createElement('article');
 		redoItem.id = 'nav-redo';
-		redoItem.className = 'menu-item';
+		redoItem.className = 'menuItem';
 		redoItem.textContent = 'Redo';
 		editMenuList.appendChild(redoItem);
 
@@ -92,60 +92,60 @@ describe('Menu DOM Tests', () => {
 
 	describe('Menu Opening and Closing', () => {
 		it('should open file menu on click', async () => {
-			expect(fileMenu.classList.contains('menu-open')).toBe(false);
+			expect(fileMenu.classList.contains('menuOpen')).toBe(false);
 
 			await user.click(fileMenu);
 
-			expect(fileMenu.classList.contains('menu-open')).toBe(true);
+			expect(fileMenu.classList.contains('menuOpen')).toBe(true);
 		});
 
 		it('should close file menu on second click', async () => {
 			await user.click(fileMenu);
-			expect(fileMenu.classList.contains('menu-open')).toBe(true);
+			expect(fileMenu.classList.contains('menuOpen')).toBe(true);
 
 			// Wait for menu to fully open
 			await waitFor(() => {
-				expect(fileMenu.classList.contains('menu-open')).toBe(true);
+				expect(fileMenu.classList.contains('menuOpen')).toBe(true);
 			});
 
 			// Click again to close
 			await user.click(fileMenu);
 
 			await waitFor(() => {
-				expect(fileMenu.classList.contains('menu-open')).toBe(false);
+				expect(fileMenu.classList.contains('menuOpen')).toBe(false);
 			});
 		});
 
 		it('should open edit menu on click', async () => {
-			expect(editMenu.classList.contains('menu-open')).toBe(false);
+			expect(editMenu.classList.contains('menuOpen')).toBe(false);
 
 			await user.click(editMenu);
 
-			expect(editMenu.classList.contains('menu-open')).toBe(true);
+			expect(editMenu.classList.contains('menuOpen')).toBe(true);
 		});
 
 		it('should close menu on blur', async () => {
 			await user.click(fileMenu);
-			expect(fileMenu.classList.contains('menu-open')).toBe(true);
+			expect(fileMenu.classList.contains('menuOpen')).toBe(true);
 
 			// Trigger blur event
 			fireEvent.blur(fileMenu);
 
 			await waitFor(() => {
-				expect(fileMenu.classList.contains('menu-open')).toBe(false);
+				expect(fileMenu.classList.contains('menuOpen')).toBe(false);
 			});
 		});
 
 		it('should focus view when menu closes', async () => {
 			await user.click(fileMenu);
-			expect(fileMenu.classList.contains('menu-open')).toBe(true);
+			expect(fileMenu.classList.contains('menuOpen')).toBe(true);
 
 			fireEvent.blur(fileMenu);
 
 			await waitFor(() => {
 				// After blur, the view should become the active element
 				// This is handled by the menu controller
-				expect(fileMenu.classList.contains('menu-open')).toBe(false);
+				expect(fileMenu.classList.contains('menuOpen')).toBe(false);
 			});
 		});
 
@@ -153,13 +153,13 @@ describe('Menu DOM Tests', () => {
 			await user.click(fileMenu);
 			await user.click(editMenu);
 
-			expect(fileMenu.classList.contains('menu-open')).toBe(true);
-			expect(editMenu.classList.contains('menu-open')).toBe(true);
+			expect(fileMenu.classList.contains('menuOpen')).toBe(true);
+			expect(editMenu.classList.contains('menuOpen')).toBe(true);
 
 			menuController.close();
 
-			expect(fileMenu.classList.contains('menu-open')).toBe(false);
-			expect(editMenu.classList.contains('menu-open')).toBe(false);
+			expect(fileMenu.classList.contains('menuOpen')).toBe(false);
+			expect(editMenu.classList.contains('menuOpen')).toBe(false);
 		});
 	});
 
@@ -188,8 +188,8 @@ describe('Menu DOM Tests', () => {
 			const newItem = document.querySelector('#new');
 			const undoItem = document.querySelector('#nav-undo');
 
-			expect(newItem).toHaveClass('menu-item');
-			expect(undoItem).toHaveClass('menu-item');
+			expect(newItem).toHaveClass('menuItem');
+			expect(undoItem).toHaveClass('menuItem');
 		});
 	});
 
@@ -210,8 +210,8 @@ describe('Menu DOM Tests', () => {
 		it('should focus menu when opened', async () => {
 			await user.click(fileMenu);
 
-			// Menu should have the menu-open class when focused
-			expect(fileMenu.classList.contains('menu-open')).toBe(true);
+			// Menu should have the menuOpen class when focused
+			expect(fileMenu.classList.contains('menuOpen')).toBe(true);
 		});
 	});
 

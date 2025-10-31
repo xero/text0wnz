@@ -3,12 +3,12 @@ import { test, expect } from '@playwright/test';
 test.describe('Collaboration and Chat Features', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
 	test('should have chat button available', async ({ page }) => {
-		const chatButton = page.locator('#chat-button');
+		const chatButton = page.locator('#chatButton');
 		const count = await chatButton.count();
 
 		// Chat button may not be visible if websocket is not enabled
@@ -17,14 +17,14 @@ test.describe('Collaboration and Chat Features', () => {
 	});
 
 	test('should open chat window', async ({ page }) => {
-		const chatButton = page.locator('#chat-button');
+		const chatButton = page.locator('#chatButton');
 
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
 			// Check if chat window appears
-			const chatWindow = page.locator('#chat-window, #chatRoom');
+			const chatWindow = page.locator('#chatWindow, #chatRoom');
 			const windowCount = await chatWindow.count();
 
 			if (windowCount > 0) {
@@ -42,7 +42,7 @@ test.describe('Collaboration and Chat Features', () => {
 	});
 
 	test('should close chat window', async ({ page }) => {
-		const chatButton = page.locator('#chat-button');
+		const chatButton = page.locator('#chatButton');
 
 		if (await chatButton.isVisible()) {
 			// Open chat
@@ -51,7 +51,7 @@ test.describe('Collaboration and Chat Features', () => {
 
 			// Look for close button
 			const closeButton = page.locator(
-				'#chat-close, .chat-close, button:has-text("Close")',
+				'#chatClose, .chatClose, button:has-text("Close")',
 			);
 			const closeCount = await closeButton.count();
 
@@ -67,7 +67,7 @@ test.describe('Collaboration and Chat Features', () => {
 	});
 
 	test('should have chat input field', async ({ page }) => {
-		const chatButton = page.locator('#chat-button');
+		const chatButton = page.locator('#chatButton');
 
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
@@ -75,7 +75,7 @@ test.describe('Collaboration and Chat Features', () => {
 
 			// Look for message input
 			const messageInput = page.locator(
-				'#message-input, input[name="message"], textarea[name="message"]',
+				'#messageInput, input[name="message"], textarea[name="message"]',
 			);
 			const inputCount = await messageInput.count();
 
@@ -86,7 +86,7 @@ test.describe('Collaboration and Chat Features', () => {
 	});
 
 	test('should have user handle input', async ({ page }) => {
-		const chatButton = page.locator('#chat-button');
+		const chatButton = page.locator('#chatButton');
 
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
@@ -94,7 +94,7 @@ test.describe('Collaboration and Chat Features', () => {
 
 			// Look for handle/username input
 			const handleInput = page.locator(
-				'#handle-input, input[name="handle"], input[name="username"]',
+				'#handleInput, input[name="handle"], input[name="username"]',
 			);
 			const handleCount = await handleInput.count();
 
@@ -105,13 +105,13 @@ test.describe('Collaboration and Chat Features', () => {
 	});
 
 	test('should allow setting user handle', async ({ page }) => {
-		const chatButton = page.locator('#chat-button');
+		const chatButton = page.locator('#chatButton');
 
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
-			const handleInput = page.locator('#handle-input');
+			const handleInput = page.locator('#handleInput');
 			if (await handleInput.isVisible()) {
 				await handleInput.fill('TestUser');
 				await page.waitForTimeout(300);
@@ -123,7 +123,7 @@ test.describe('Collaboration and Chat Features', () => {
 	});
 
 	test('should display message window', async ({ page }) => {
-		const chatButton = page.locator('#chat-button');
+		const chatButton = page.locator('#chatButton');
 
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
@@ -131,7 +131,7 @@ test.describe('Collaboration and Chat Features', () => {
 
 			// Look for message display area
 			const messageWindow = page.locator(
-				'#message-window, .message-window, .chat-messages',
+				'#messageWindow, .messageWindow, .chatMessages',
 			);
 			const windowCount = await messageWindow.count();
 
@@ -142,7 +142,7 @@ test.describe('Collaboration and Chat Features', () => {
 	});
 
 	test('should have notification toggle', async ({ page }) => {
-		const chatButton = page.locator('#chat-button');
+		const chatButton = page.locator('#chatButton');
 
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
@@ -150,7 +150,7 @@ test.describe('Collaboration and Chat Features', () => {
 
 			// Look for notification checkbox
 			const notificationToggle = page.locator(
-				'#notification-checkbox, input[name="notifications"]',
+				'#notificationCheckbox, input[name="notifications"]',
 			);
 			const toggleCount = await notificationToggle.count();
 
@@ -161,14 +161,14 @@ test.describe('Collaboration and Chat Features', () => {
 	});
 
 	test('should display user list', async ({ page }) => {
-		const chatButton = page.locator('#chat-button');
+		const chatButton = page.locator('#chatButton');
 
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
 			// Look for user list
-			const userList = page.locator('#user-list, .user-list');
+			const userList = page.locator('#userList, .userList');
 			const listCount = await userList.count();
 
 			if (listCount > 0) {
@@ -178,13 +178,13 @@ test.describe('Collaboration and Chat Features', () => {
 	});
 
 	test('should type message in chat input', async ({ page }) => {
-		const chatButton = page.locator('#chat-button');
+		const chatButton = page.locator('#chatButton');
 
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
-			const messageInput = page.locator('#message-input');
+			const messageInput = page.locator('#messageInput');
 			if (await messageInput.isVisible()) {
 				await messageInput.fill('Hello, this is a test message!');
 				await page.waitForTimeout(300);
@@ -196,13 +196,13 @@ test.describe('Collaboration and Chat Features', () => {
 	});
 
 	test('should clear message input after sending', async ({ page }) => {
-		const chatButton = page.locator('#chat-button');
+		const chatButton = page.locator('#chatButton');
 
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
-			const messageInput = page.locator('#message-input');
+			const messageInput = page.locator('#messageInput');
 			if (await messageInput.isVisible()) {
 				// Type a message
 				await messageInput.fill('Test message');
@@ -222,7 +222,7 @@ test.describe('Collaboration and Chat Features', () => {
 test.describe('Collaboration Mode Detection', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
@@ -231,7 +231,7 @@ test.describe('Collaboration Mode Detection', () => {
 		// This test verifies the app works without a collaboration server
 
 		// Canvas should still be functional
-		const canvas = page.locator('#canvas-container');
+		const canvas = page.locator('#canvasContainer');
 		await expect(canvas).toBeVisible();
 
 		// Drawing tools should work - click brushes to show toolbar
@@ -269,7 +269,7 @@ test.describe('Collaboration Mode Detection', () => {
 test.describe('Network Features', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
@@ -278,14 +278,14 @@ test.describe('Network Features', () => {
 		await page.waitForTimeout(2000);
 
 		// App should function regardless of connection status
-		const canvas = page.locator('#canvas-container');
+		const canvas = page.locator('#canvasContainer');
 		await expect(canvas).toBeVisible();
 	});
 
 	test('should show connection status if available', async ({ page }) => {
 		// Look for connection indicator
 		const connectionStatus = page.locator(
-			'.connection-status, #connection-status, .online-indicator',
+			'.connectionStatus, #connectionStatus, .onlineIndicator',
 		);
 		const statusCount = await connectionStatus.count();
 
@@ -299,18 +299,18 @@ test.describe('Network Features', () => {
 test.describe('Chat Window Drag Functionality', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
+		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
 	test('should have draggable cursor on chat header', async ({ page }) => {
-		const chatButton = page.locator('#chat-button');
+		const chatButton = page.locator('#chatButton');
 
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
-			const chatHeader = page.locator('#chat-window header');
+			const chatHeader = page.locator('#chatWindow header');
 			const headerCount = await chatHeader.count();
 
 			if (headerCount > 0) {
@@ -325,14 +325,14 @@ test.describe('Chat Window Drag Functionality', () => {
 	});
 
 	test('should allow dragging chat window by header', async ({ page }) => {
-		const chatButton = page.locator('#chat-button');
+		const chatButton = page.locator('#chatButton');
 
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
-			const chatWindow = page.locator('#chat-window');
-			const chatHeader = page.locator('#chat-window header h2');
+			const chatWindow = page.locator('#chatWindow');
+			const chatHeader = page.locator('#chatWindow header h2');
 
 			const windowCount = await chatWindow.count();
 			if (windowCount > 0) {
@@ -362,13 +362,13 @@ test.describe('Chat Window Drag Functionality', () => {
 	});
 
 	test('should not select text when dragging', async ({ page }) => {
-		const chatButton = page.locator('#chat-button');
+		const chatButton = page.locator('#chatButton');
 
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
-			const chatHeader = page.locator('#chat-window header');
+			const chatHeader = page.locator('#chatWindow header');
 			const headerCount = await chatHeader.count();
 
 			if (headerCount > 0) {
