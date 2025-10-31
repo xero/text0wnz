@@ -77,7 +77,7 @@ test.describe('File Operations', () => {
 		// Check for SAUCE-related inputs
 		const sauceTitle = page.locator('#sauceTitle, #title');
 		const sauceAuthor = page.locator('#sauceAuthor, #author');
-		const sauceGroup = page.locator('#sauceRoup, #group');
+		const sauceGroup = page.locator('#sauceGroup, #group');
 
 		const titleCount = await sauceTitle.count();
 		const authorCount = await sauceAuthor.count();
