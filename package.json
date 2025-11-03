@@ -74,11 +74,11 @@
 		"@testing-library/dom": "^10.4.1",
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/user-event": "^14.6.1",
-		"@vitest/coverage-v8": "4.0.5",
+		"@vitest/coverage-v8": "^4.0.6",
 		"cssnano": "^7.1.2",
 		"cssnano-preset-advanced": "^7.0.10",
-		"eslint": "^9.38.0",
-		"jsdom": "^27.0.1",
+		"eslint": "^9.39.0",
+		"jsdom": "^27.1.0",
 		"playwright": "^1.56.1",
 		"postcss": "^8.5.6",
 		"prettier": "^3.6.2",
@@ -89,7 +89,7 @@
 		"vite-plugin-pwa": "^1.1.0",
 		"vite-plugin-sitemap": "^0.8.2",
 		"vite-plugin-static-copy": "^3.1.4",
-		"vitest": "^4.0.5"
+		"vitest": "^4.0.6"
 	},
 	"overrides": {
 		"magic-string": "^0.30.17"
