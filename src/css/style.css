@@ -539,6 +539,16 @@
 		}
 	}
 
+	#fkeySetPrev,
+	#fkeySetNext {
+		@apply h-full;
+
+		svg {
+			width: 25px;
+			height: 25px;
+		}
+	}
+
 	#aSize {
 		@apply flex-col;
 		label {

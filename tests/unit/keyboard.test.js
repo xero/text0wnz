@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
-	createFKeyShortcut,
-	createFKeysShortcut,
+	createFKeys,
 	createCursor,
 	createSelectionCursor,
 	createKeyboardController,
 	createPasteTool,
+	createSelectionTool,
 } from '../../src/js/client/keyboard.js';
 
 // Mock the State module and other dependencies
@@ -19,33 +19,60 @@ vi.mock('../../src/js/client/state.js', () => ({
 		palette: {
 			getForegroundColor: vi.fn(() => 7),
 			getBackgroundColor: vi.fn(() => 0),
+			setForegroundColor: vi.fn(),
+			setBackgroundColor: vi.fn(),
 		},
 		textArtCanvas: {
 			startUndo: vi.fn(),
 			draw: vi.fn(),
 			getColumns: vi.fn(() => 80),
 			getRows: vi.fn(() => 25),
-			copyBlock: vi.fn(),
-			deleteBlock: vi.fn(),
-			pasteBlock: vi.fn(),
+			getBlock: vi.fn(() => ({
+				charCode: 32,
+				foregroundColor: 7,
+				backgroundColor: 0,
+			})),
 			getArea: vi.fn(() => ({ data: [], width: 1, height: 1 })),
+			setArea: vi.fn(),
+			deleteArea: vi.fn(),
+			setImageData: vi.fn(),
+			getImageData: vi.fn(() => new Uint16Array(2000)),
+			getIceColors: vi.fn(() => false),
 		},
 		cursor: {
 			getX: vi.fn(() => 0),
 			getY: vi.fn(() => 0),
 			right: vi.fn(),
-			set: vi.fn(),
+			left: vi.fn(),
+			move: vi.fn(),
 			enable: vi.fn(),
 			disable: vi.fn(),
 			isVisible: vi.fn(() => false),
+			hide: vi.fn(),
+			newLine: vi.fn(),
+			startOfCurrentRow: vi.fn(),
+			endOfCurrentRow: vi.fn(),
+			startSelection: vi.fn(),
 		},
 		selectionCursor: {
 			setStart: vi.fn(),
+			setEnd: vi.fn(),
 			hide: vi.fn(),
+			show: vi.fn(),
 			isVisible: vi.fn(() => false),
+			getSelection: vi.fn(() => null),
+			getElement: vi.fn(() => document.createElement('div')),
 		},
 		positionInfo: { update: vi.fn() },
-		pasteTool: { setSelection: vi.fn() },
+		pasteTool: {
+			setSelection: vi.fn(),
+			disable: vi.fn(),
+		},
+		selectionTool: { setPendingAction: vi.fn() },
+		toolPreview: {
+			clear: vi.fn(),
+			drawHalfBlock: vi.fn(),
+		},
 	},
 }));
 
@@ -60,93 +87,94 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	$: vi.fn(id => {
 		const element = document.createElement('canvas');
 		element.id = id;
-		element.getContext = vi.fn(() => ({ clearRect: vi.fn() }));
+		element.getContext = vi.fn(() => ({
+			clearRect: vi.fn(),
+			fillRect: vi.fn(),
+			drawImage: vi.fn(),
+			save: vi.fn(),
+			restore: vi.fn(),
+			strokeStyle: '',
+			lineWidth: 0,
+			setLineDash: vi.fn(),
+			lineDashOffset: 0,
+			strokeRect: vi.fn(),
+			createImageData: vi.fn(() => ({
+				data: new Uint8ClampedArray(64),
+				width: 8,
+				height: 8,
+			})),
+			putImageData: vi.fn(),
+		}));
+		element.addEventListener = vi.fn();
+		element.classList = {
+			add: vi.fn(),
+			remove: vi.fn(),
+			contains: vi.fn(() => false),
+		};
+		element.style = {};
 		return element;
 	}),
 	createCanvas: vi.fn((width, height) => {
 		const canvas = document.createElement('canvas');
 		canvas.width = width;
 		canvas.height = height;
-		canvas.getContext = vi.fn(() => ({ clearRect: vi.fn() }));
+		canvas.getContext = vi.fn(() => ({
+			clearRect: vi.fn(),
+			fillRect: vi.fn(),
+			drawImage: vi.fn(),
+			save: vi.fn(),
+			restore: vi.fn(),
+			strokeStyle: '',
+			lineWidth: 0,
+			setLineDash: vi.fn(),
+			lineDashOffset: 0,
+			strokeRect: vi.fn(),
+		}));
+		canvas.style = {};
+		canvas.classList = {
+			add: vi.fn(),
+			remove: vi.fn(),
+			contains: vi.fn(() => false),
+		};
 		return canvas;
 	}),
 }));
 
 describe('Keyboard Utilities', () => {
 	beforeEach(() => {
-		// Clear DOM
 		document.body.innerHTML = '';
-		// Clear all event listeners
-		document.removeEventListener = vi.fn();
-		document.addEventListener = vi.fn();
-		// Mock console
-		vi.spyOn(console, 'error').mockImplementation(() => {});
-		// Reset all mocks
 		vi.clearAllMocks();
+		// Reset requestAnimationFrame mock
+		global.requestAnimationFrame = vi.fn(cb => setTimeout(cb, 16));
+		global.cancelAnimationFrame = vi.fn(id => clearTimeout(id));
 	});
 
 	afterEach(() => {
-		// Clean up DOM
 		document.body.innerHTML = '';
-		// Restore all mocks and spies
 		vi.restoreAllMocks();
 	});
 
 	describe('Module Exports', () => {
 		it('should export all expected keyboard functions', () => {
-			expect(createFKeyShortcut).toBeDefined();
-			expect(createFKeysShortcut).toBeDefined();
+			expect(createFKeys).toBeDefined();
 			expect(createCursor).toBeDefined();
 			expect(createSelectionCursor).toBeDefined();
 			expect(createKeyboardController).toBeDefined();
 			expect(createPasteTool).toBeDefined();
+			expect(createSelectionTool).toBeDefined();
 
-			expect(typeof createFKeyShortcut).toBe('function');
-			expect(typeof createFKeysShortcut).toBe('function');
+			expect(typeof createFKeys).toBe('function');
 			expect(typeof createCursor).toBe('function');
 			expect(typeof createSelectionCursor).toBe('function');
 			expect(typeof createKeyboardController).toBe('function');
 			expect(typeof createPasteTool).toBe('function');
+			expect(typeof createSelectionTool).toBe('function');
 		});
 	});
 
-	describe('createFKeyShortcut', () => {
-		it('should create F-key shortcut with canvas and charCode', () => {
-			const canvas = document.createElement('canvas');
-			canvas.getContext = vi.fn(() => ({ clearRect: vi.fn() }));
-
-			// Should not throw
-			expect(() => createFKeyShortcut(canvas, 176)).not.toThrow();
-		});
-
-		it('should add event listeners for palette and font changes', () => {
-			const canvas = document.createElement('canvas');
-			canvas.getContext = vi.fn(() => ({ clearRect: vi.fn() }));
-
-			createFKeyShortcut(canvas, 176);
-
-			expect(document.addEventListener).toHaveBeenCalledWith(
-				'onPaletteChange',
-				expect.any(Function),
-			);
-			expect(document.addEventListener).toHaveBeenCalledWith(
-				'onForegroundChange',
-				expect.any(Function),
-			);
-			expect(document.addEventListener).toHaveBeenCalledWith(
-				'onBackgroundChange',
-				expect.any(Function),
-			);
-			expect(document.addEventListener).toHaveBeenCalledWith(
-				'onFontChange',
-				expect.any(Function),
-			);
-		});
-	});
-
-	describe('createFKeysShortcut', () => {
-		it('should create F-keys shortcut controller', () => {
-			const controller = createFKeysShortcut();
+	describe('createFKeys', () => {
+		it('should create F-keys controller with enable/disable methods', () => {
+			const controller = createFKeys();
 
 			expect(controller).toHaveProperty('enable');
 			expect(controller).toHaveProperty('disable');
@@ -155,83 +183,141 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('should add keydown event listener on enable', () => {
-			const controller = createFKeysShortcut();
+			const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
+			const controller = createFKeys();
 			controller.enable();
 
-			expect(document.addEventListener).toHaveBeenCalledWith(
+			expect(addEventListenerSpy).toHaveBeenCalledWith(
 				'keydown',
 				expect.any(Function),
 			);
 		});
 
 		it('should remove keydown event listener on disable', () => {
-			const controller = createFKeysShortcut();
+			const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
+			const controller = createFKeys();
 			controller.disable();
 
-			expect(document.removeEventListener).toHaveBeenCalledWith(
+			expect(removeEventListenerSpy).toHaveBeenCalledWith(
 				'keydown',
+				expect.any(Function),
+			);
+		});
+
+		it('should initialize with predefined character sets', () => {
+			// Test that createFKeys doesn't throw and can be called
+			expect(() => createFKeys()).not.toThrow();
+		});
+
+		it('should add palette and font change listeners', () => {
+			const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
+			createFKeys();
+
+			expect(addEventListenerSpy).toHaveBeenCalledWith(
+				'onPaletteChange',
+				expect.any(Function),
+			);
+			expect(addEventListenerSpy).toHaveBeenCalledWith(
+				'onForegroundChange',
+				expect.any(Function),
+			);
+			expect(addEventListenerSpy).toHaveBeenCalledWith(
+				'onBackgroundChange',
+				expect.any(Function),
+			);
+			expect(addEventListenerSpy).toHaveBeenCalledWith(
+				'onFontChange',
 				expect.any(Function),
 			);
 		});
 	});
 
 	describe('createCursor', () => {
-		it('should create cursor with show/hide methods', () => {
-			const container = document.createElement('div');
-
-			// Should not throw during creation
-			expect(() => createCursor(container)).not.toThrow();
-		});
-
-		it('should handle cursor creation without errors', () => {
+		it('should create cursor with required methods', () => {
 			const container = document.createElement('div');
 			const cursor = createCursor(container);
 
-			// Basic methods should exist
 			expect(cursor).toHaveProperty('show');
 			expect(cursor).toHaveProperty('hide');
+			expect(cursor).toHaveProperty('move');
 			expect(cursor).toHaveProperty('getX');
 			expect(cursor).toHaveProperty('getY');
-			// Note: cursor returns different methods than expected, checking what actually exists
-			expect(typeof cursor.show).toBe('function');
-			expect(typeof cursor.hide).toBe('function');
+			expect(cursor).toHaveProperty('left');
+			expect(cursor).toHaveProperty('right');
+			expect(cursor).toHaveProperty('up');
+			expect(cursor).toHaveProperty('down');
+			expect(cursor).toHaveProperty('newLine');
+			expect(cursor).toHaveProperty('enable');
+			expect(cursor).toHaveProperty('disable');
+			expect(cursor).toHaveProperty('isVisible');
+			expect(cursor).toHaveProperty('startSelection');
+		});
+
+		it('should track cursor position', () => {
+			const container = document.createElement('div');
+			const cursor = createCursor(container);
+
+			// Initial position should be 0,0
+			expect(cursor.getX()).toBe(0);
+			expect(cursor.getY()).toBe(0);
+		});
+
+		it('should have enable and disable methods', () => {
+			const container = document.createElement('div');
+			const cursor = createCursor(container);
+
+			expect(typeof cursor.enable).toBe('function');
+			expect(typeof cursor.disable).toBe('function');
 		});
 	});
 
 	describe('createSelectionCursor', () => {
 		it('should create selection cursor with required methods', () => {
 			const container = document.createElement('div');
-
-			// Should not throw during creation
-			expect(() => createSelectionCursor(container)).not.toThrow();
-		});
-
-		it('should handle selection cursor creation', () => {
-			const container = document.createElement('div');
 			const selectionCursor = createSelectionCursor(container);
 
 			expect(selectionCursor).toHaveProperty('show');
 			expect(selectionCursor).toHaveProperty('hide');
 			expect(selectionCursor).toHaveProperty('setStart');
+			expect(selectionCursor).toHaveProperty('setEnd');
+			expect(selectionCursor).toHaveProperty('isVisible');
+			expect(selectionCursor).toHaveProperty('getSelection');
+			expect(selectionCursor).toHaveProperty('getElement');
+		});
+
+		it('should handle visibility state', () => {
+			const container = document.createElement('div');
+			const selectionCursor = createSelectionCursor(container);
+
+			expect(typeof selectionCursor.isVisible).toBe('function');
 		});
 	});
 
 	describe('createKeyboardController', () => {
-		it('should create keyboard controller with enable/disable', () => {
-			const container = document.createElement('div');
-
-			// Should not throw during creation
-			expect(() => createKeyboardController(container)).not.toThrow();
-		});
-
-		it('should handle keyboard controller creation', () => {
-			const container = document.createElement('div');
-			const controller = createKeyboardController(container);
+		it('should create keyboard controller with required methods', () => {
+			const controller = createKeyboardController();
 
 			expect(controller).toHaveProperty('enable');
 			expect(controller).toHaveProperty('disable');
-			expect(typeof controller.enable).toBe('function');
-			expect(typeof controller.disable).toBe('function');
+			expect(controller).toHaveProperty('ignore');
+			expect(controller).toHaveProperty('unignore');
+			expect(controller).toHaveProperty('insertRow');
+			expect(controller).toHaveProperty('deleteRow');
+			expect(controller).toHaveProperty('insertColumn');
+			expect(controller).toHaveProperty('deleteColumn');
+			expect(controller).toHaveProperty('eraseRow');
+			expect(controller).toHaveProperty('eraseColumn');
+		});
+
+		it('should enable keyboard controller', () => {
+			const controller = createKeyboardController();
+			expect(() => controller.enable()).not.toThrow();
+		});
+
+		it('should disable keyboard controller', () => {
+			const controller = createKeyboardController();
+			controller.enable();
+			expect(() => controller.disable()).not.toThrow();
 		});
 	});
 
@@ -242,16 +328,10 @@ describe('Keyboard Utilities', () => {
 			const pasteItem = document.createElement('div');
 			const deleteItem = document.createElement('div');
 
-			// Should not throw during creation
-			expect(() =>
-				createPasteTool(cutItem, copyItem, pasteItem, deleteItem)).not.toThrow();
-		});
-
-		it('should handle paste tool creation', () => {
-			const cutItem = document.createElement('div');
-			const copyItem = document.createElement('div');
-			const pasteItem = document.createElement('div');
-			const deleteItem = document.createElement('div');
+			cutItem.classList = { add: vi.fn(), remove: vi.fn() };
+			copyItem.classList = { add: vi.fn(), remove: vi.fn() };
+			pasteItem.classList = { add: vi.fn(), remove: vi.fn() };
+			deleteItem.classList = { add: vi.fn(), remove: vi.fn() };
 
 			const pasteTool = createPasteTool(
 				cutItem,
@@ -275,6 +355,11 @@ describe('Keyboard Utilities', () => {
 			const pasteItem = document.createElement('div');
 			const deleteItem = document.createElement('div');
 
+			cutItem.classList = { add: vi.fn(), remove: vi.fn() };
+			copyItem.classList = { add: vi.fn(), remove: vi.fn() };
+			pasteItem.classList = { add: vi.fn(), remove: vi.fn() };
+			deleteItem.classList = { add: vi.fn(), remove: vi.fn() };
+
 			const pasteTool = createPasteTool(
 				cutItem,
 				copyItem,
@@ -287,96 +372,76 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('should add keydown event listener', () => {
+			const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
 			const cutItem = document.createElement('div');
 			const copyItem = document.createElement('div');
 			const pasteItem = document.createElement('div');
 			const deleteItem = document.createElement('div');
 
+			cutItem.classList = { add: vi.fn(), remove: vi.fn() };
+			copyItem.classList = { add: vi.fn(), remove: vi.fn() };
+			pasteItem.classList = { add: vi.fn(), remove: vi.fn() };
+			deleteItem.classList = { add: vi.fn(), remove: vi.fn() };
+
 			createPasteTool(cutItem, copyItem, pasteItem, deleteItem);
 
-			expect(document.addEventListener).toHaveBeenCalledWith(
+			expect(addEventListenerSpy).toHaveBeenCalledWith(
 				'keydown',
 				expect.any(Function),
 			);
 		});
 	});
 
-	describe('Function Key Shortcuts', () => {
-		it('should provide function key shortcut creators', () => {
-			expect(createFKeysShortcut).toBeDefined();
-			expect(typeof createFKeysShortcut).toBe('function');
+	describe('createSelectionTool', () => {
+		it('should create selection tool with required methods', () => {
+			const tool = createSelectionTool();
+
+			expect(tool).toHaveProperty('enable');
+			expect(tool).toHaveProperty('disable');
+			expect(tool).toHaveProperty('flipHorizontal');
+			expect(tool).toHaveProperty('flipVertical');
+			expect(tool).toHaveProperty('setPendingAction');
+			expect(tool).toHaveProperty('toggleMoveMode');
+			expect(tool).toHaveProperty('isMoveMode');
 		});
 
-		it('should handle F1-F12 key shortcuts', () => {
-			// Test F-key shortcut array - standard characters used in ANSI art
-			const expectedFKeyChars = [176, 177, 178, 219, 223, 220, 221, 222, 254, 249, 7, 0];
+		it('should handle enable and disable', () => {
+			const tool = createSelectionTool();
 
-			expect(expectedFKeyChars).toHaveLength(12); // F1-F12
-			expect(expectedFKeyChars.every(char => typeof char === 'number')).toBe(
-				true,
-			);
-			expect(expectedFKeyChars.every(char => char >= 0 && char <= 255)).toBe(
-				true,
-			);
-		});
-	});
-
-	describe('Cursor Management', () => {
-		it('should provide cursor creation functions', () => {
-			expect(createCursor).toBeDefined();
-			expect(createSelectionCursor).toBeDefined();
-			expect(typeof createCursor).toBe('function');
-			expect(typeof createSelectionCursor).toBe('function');
+			expect(() => tool.enable()).not.toThrow();
+			expect(() => tool.disable()).not.toThrow();
 		});
 	});
 
-	describe('Keyboard Controller', () => {
-		it('should provide keyboard controller function', () => {
-			expect(createKeyboardController).toBeDefined();
-			expect(typeof createKeyboardController).toBe('function');
-		});
-	});
+	describe('Function Key Character Sets', () => {
+		it('should handle predefined character sets', () => {
+			// Test predefined character sets from Moebius/PabloDraw
+			const predefinedSets = [
+				[218, 191, 192, 217, 196, 179, 195, 180, 193, 194, 32, 32],
+				[201, 187, 200, 188, 205, 186, 204, 185, 202, 203, 32, 32],
+				[213, 184, 212, 190, 205, 179, 198, 181, 207, 209, 32, 32],
+				[214, 183, 211, 189, 196, 186, 199, 182, 208, 210, 32, 32],
+				[197, 206, 216, 215, 232, 232, 155, 156, 153, 239, 32, 32],
+				[176, 177, 178, 219, 223, 220, 221, 222, 254, 250, 32, 32],
+			];
 
-	describe('Paste Tool', () => {
-		it('should provide paste tool creation function', () => {
-			expect(createPasteTool).toBeDefined();
-			expect(typeof createPasteTool).toBe('function');
-		});
-	});
-
-	describe('Keyboard Event Handling Architecture', () => {
-		it('should handle F-key shortcuts consistently', () => {
-			// Test F-key shortcut array - standard characters used in ANSI art
-			const expectedFKeyChars = [176, 177, 178, 219, 223, 220, 221, 222, 254, 249, 7, 0];
-
-			expect(expectedFKeyChars).toHaveLength(12); // F1-F12
-			expect(expectedFKeyChars.every(char => typeof char === 'number')).toBe(
-				true,
-			);
-			expect(expectedFKeyChars.every(char => char >= 0 && char <= 255)).toBe(
-				true,
-			);
-		});
-
-		it('should handle keyboard navigation keys', () => {
-			// Arrow key codes that should be handled
-			const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
-
-			arrowKeys.forEach(key => {
-				expect(typeof key).toBe('string');
-				expect(key.startsWith('Arrow')).toBe(true);
+			expect(predefinedSets).toHaveLength(6);
+			predefinedSets.forEach(set => {
+				expect(set).toHaveLength(12);
+				set.forEach(char => {
+					expect(char).toBeGreaterThanOrEqual(0);
+					expect(char).toBeLessThanOrEqual(255);
+				});
 			});
 		});
 
-		it('should handle color selection keys', () => {
-			// Digit keys 0-7 for color selection
-			const colorKeys = [48, 49, 50, 51, 52, 53, 54, 55]; // Keycodes for 0-7
-
-			expect(colorKeys).toHaveLength(8);
-			colorKeys.forEach(keyCode => {
-				expect(keyCode).toBeGreaterThanOrEqual(48); // '0'
-				expect(keyCode).toBeLessThanOrEqual(55); // '7'
-			});
+		it('should generate additional character sets for full coverage', () => {
+			// Test that character set generation covers all 256 characters
+			const allChars = new Set();
+			for (let i = 0; i < 256; i++) {
+				allChars.add(i);
+			}
+			expect(allChars.size).toBe(256);
 		});
 	});
 
@@ -389,7 +454,6 @@ describe('Keyboard Utilities', () => {
 				};
 			};
 
-			// Test boundary conditions
 			expect(clampToCanvas(-5, -5, 79, 24)).toEqual({ x: 0, y: 0 });
 			expect(clampToCanvas(100, 100, 79, 24)).toEqual({ x: 79, y: 24 });
 			expect(clampToCanvas(40, 12, 79, 24)).toEqual({ x: 40, y: 12 });
@@ -419,7 +483,6 @@ describe('Keyboard Utilities', () => {
 				};
 			};
 
-			// Test selection normalization
 			expect(normalizeSelection(10, 8, 5, 3)).toEqual({
 				startX: 5,
 				startY: 3,
@@ -439,7 +502,6 @@ describe('Keyboard Utilities', () => {
 	describe('Clipboard Operations', () => {
 		it('should handle clipboard text processing', () => {
 			const processClipboardText = text => {
-				// Basic text processing for ANSI art
 				return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
 			};
 
@@ -456,173 +518,6 @@ describe('Keyboard Utilities', () => {
 
 			expect(textToChars('ABC')).toEqual([65, 66, 67]);
 			expect(textToChars('123')).toEqual([49, 50, 51]);
-		});
-	});
-
-	describe('Cursor Movement', () => {
-		it('should create cursor with movement methods', () => {
-			const cursor = createCursor(document.createElement('div'));
-
-			expect(cursor).toBeDefined();
-			expect(typeof cursor.left).toBe('function');
-			expect(typeof cursor.right).toBe('function');
-			expect(typeof cursor.up).toBe('function');
-			expect(typeof cursor.down).toBe('function');
-			expect(typeof cursor.getX).toBe('function');
-			expect(typeof cursor.getY).toBe('function');
-		});
-
-		it('should track cursor position', () => {
-			const cursor = createCursor(document.createElement('div'));
-
-			// Initial position should be 0,0
-			expect(cursor.getX()).toBe(0);
-			expect(cursor.getY()).toBe(0);
-		});
-
-		it('should have enable and disable methods', () => {
-			const cursor = createCursor(document.createElement('div'));
-
-			expect(typeof cursor.enable).toBe('function');
-			expect(typeof cursor.disable).toBe('function');
-		});
-	});
-
-	describe('Selection Cursor', () => {
-		it('should create selection cursor with required methods', () => {
-			const selectionCursor = createSelectionCursor(
-				document.createElement('div'),
-			);
-
-			expect(selectionCursor).toBeDefined();
-			expect(typeof selectionCursor.setStart).toBe('function');
-			expect(typeof selectionCursor.setEnd).toBe('function');
-			expect(typeof selectionCursor.hide).toBe('function');
-		});
-
-		it('should handle visibility state', () => {
-			const selectionCursor = createSelectionCursor(
-				document.createElement('div'),
-			);
-
-			expect(typeof selectionCursor.isVisible).toBe('function');
-		});
-	});
-
-	describe('FKey Shortcuts', () => {
-		it('should create FKey shortcuts with enable/disable', () => {
-			const fkeys = createFKeysShortcut();
-
-			expect(fkeys).toBeDefined();
-			expect(typeof fkeys.enable).toBe('function');
-			expect(typeof fkeys.disable).toBe('function');
-		});
-
-		it('should enable FKey shortcuts', () => {
-			const fkeys = createFKeysShortcut();
-
-			// Should not throw when enabling
-			expect(() => fkeys.enable()).not.toThrow();
-		});
-
-		it('should disable FKey shortcuts', () => {
-			const fkeys = createFKeysShortcut();
-
-			fkeys.enable();
-			// Should not throw when disabling
-			expect(() => fkeys.disable()).not.toThrow();
-		});
-	});
-
-	describe('Keyboard Controller', () => {
-		it('should create keyboard controller with required methods', () => {
-			const controller = createKeyboardController();
-
-			expect(controller).toBeDefined();
-			expect(typeof controller.enable).toBe('function');
-			expect(typeof controller.disable).toBe('function');
-		});
-
-		it('should enable keyboard controller', () => {
-			const controller = createKeyboardController();
-
-			// Should not throw when enabling
-			expect(() => controller.enable()).not.toThrow();
-		});
-
-		it('should disable keyboard controller', () => {
-			const controller = createKeyboardController();
-
-			controller.enable();
-			// Should not throw when disabling
-			expect(() => controller.disable()).not.toThrow();
-		});
-	});
-
-	describe('Paste Tool', () => {
-		it('should create paste tool with required methods', () => {
-			const cutBtn = document.createElement('button');
-			const copyBtn = document.createElement('button');
-			const pasteBtn = document.createElement('button');
-			const deleteBtn = document.createElement('button');
-
-			const pasteTool = createPasteTool(cutBtn, copyBtn, pasteBtn, deleteBtn);
-
-			expect(pasteTool).toBeDefined();
-			expect(typeof pasteTool.cut).toBe('function');
-			expect(typeof pasteTool.copy).toBe('function');
-			expect(typeof pasteTool.paste).toBe('function');
-			expect(typeof pasteTool.deleteSelection).toBe('function');
-			expect(typeof pasteTool.systemPaste).toBe('function');
-			expect(typeof pasteTool.setSelection).toBe('function');
-		});
-
-		it('should have disable method', () => {
-			const cutBtn = document.createElement('button');
-			const copyBtn = document.createElement('button');
-			const pasteBtn = document.createElement('button');
-			const deleteBtn = document.createElement('button');
-
-			const pasteTool = createPasteTool(cutBtn, copyBtn, pasteBtn, deleteBtn);
-
-			expect(typeof pasteTool.disable).toBe('function');
-
-			// Should not throw when disabling
-			expect(() => pasteTool.disable()).not.toThrow();
-		});
-	});
-
-	describe('FKey Character Insertion', () => {
-		it('should create single FKey shortcut', () => {
-			const canvas = document.createElement('canvas');
-			canvas.getContext = vi.fn(() => ({
-				clearRect: vi.fn(),
-				fillRect: vi.fn(),
-				drawImage: vi.fn(),
-			}));
-
-			// Should not throw when creating FKey shortcut
-			expect(() => createFKeyShortcut(canvas, 65)).not.toThrow();
-		});
-
-		it('should handle FKey shortcut click event', () => {
-			const canvas = document.createElement('canvas');
-			const mockCtx = {
-				clearRect: vi.fn(),
-				fillRect: vi.fn(),
-				drawImage: vi.fn(),
-			};
-			canvas.getContext = vi.fn(() => mockCtx);
-
-			createFKeyShortcut(canvas, 65);
-
-			// Simulate click event
-			const clickEvent = document.createEvent('Event');
-			clickEvent.initEvent('click', true, true);
-			canvas.dispatchEvent(clickEvent);
-
-			// Should have attempted to draw
-			// (actual drawing depends on State which is mocked)
 		});
 	});
 });

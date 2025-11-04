@@ -152,14 +152,107 @@ test.describe('Keyboard Shortcuts', () => {
 		expect(errors).toBe(0);
 	});
 
-	test('should support F1-F12 function keys', async ({ page }) => {
-		// F keys often correspond to tool selection or shortcuts
-		const fKeys = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6'];
+	test('should support F1-F12 function keys in keyboard mode', async ({ page }) => {
+		// Enter keyboard mode to activate F-keys
+		await page.keyboard.press('k');
+		await page.waitForTimeout(300);
+
+		// F-keys insert characters when in keyboard mode
+		const fKeys = [
+			'F1',
+			'F2',
+			'F3',
+			'F4',
+			'F5',
+			'F6',
+			'F7',
+			'F8',
+			'F9',
+			'F10',
+			'F11',
+			'F12',
+		];
 
 		for (const fKey of fKeys) {
 			await page.keyboard.press(fKey);
 			await page.waitForTimeout(150);
 		}
+
+		// Exit keyboard mode
+		await page.keyboard.press('Escape');
+		await page.waitForTimeout(200);
+
+		const errors = await page.locator('.error').count();
+		expect(errors).toBe(0);
+	});
+
+	test('should cycle fkey character sets with Ctrl+[ and Ctrl+]', async ({ page }) => {
+		// Enter keyboard mode
+		await page.keyboard.press('k');
+		await page.waitForTimeout(300);
+
+		// Cycle to next character set
+		await page.keyboard.press('Control+BracketRight');
+		await page.waitForTimeout(200);
+
+		// Insert a character from the new set
+		await page.keyboard.press('F1');
+		await page.waitForTimeout(200);
+
+		// Cycle to previous character set
+		await page.keyboard.press('Control+BracketLeft');
+		await page.waitForTimeout(200);
+
+		// Insert a character from the original set
+		await page.keyboard.press('F1');
+		await page.waitForTimeout(200);
+
+		// Exit keyboard mode
+		await page.keyboard.press('Escape');
+		await page.waitForTimeout(200);
+
+		const errors = await page.locator('.error').count();
+		expect(errors).toBe(0);
+	});
+
+	test('should click fkey navigation buttons', async ({ page }) => {
+		// Check if fkey navigation buttons exist
+		const prevButton = page.locator('#fkeySetPrev');
+		const nextButton = page.locator('#fkeySetNext');
+
+		// Click next button
+		if (await nextButton.isVisible()) {
+			await nextButton.click();
+			await page.waitForTimeout(200);
+		}
+
+		// Click previous button
+		if (await prevButton.isVisible()) {
+			await prevButton.click();
+			await page.waitForTimeout(200);
+		}
+
+		const errors = await page.locator('.error').count();
+		expect(errors).toBe(0);
+	});
+
+	test('should click fkey canvases to insert characters', async ({ page }) => {
+		// Enter keyboard mode
+		await page.keyboard.press('k');
+		await page.waitForTimeout(300);
+
+		// Click fkey canvases (if they exist and are visible)
+		for (let i = 0; i < 12; i++) {
+			const fkeyCanvas = page.locator(`#fkey${i}`);
+			if (await fkeyCanvas.isVisible()) {
+				await fkeyCanvas.click();
+				await page.waitForTimeout(100);
+			}
+		}
+
+		// Exit keyboard mode
+		await page.keyboard.press('Escape');
+		await page.waitForTimeout(200);
 
 		const errors = await page.locator('.error').count();
 		expect(errors).toBe(0);

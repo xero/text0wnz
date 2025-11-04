@@ -133,6 +133,7 @@ Full text input with navigation controls. Type characters directly onto the canv
 
 - Direct character input
 - F-key block character insertion
+- Ctrl+[ / ] to swap character sets
 - Arrow key navigation
 - Home/End row navigation
 - Page Up/Down column navigation

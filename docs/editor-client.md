@@ -48,7 +48,7 @@ The teXt0wnz client is a browser-based text art editor supporting ANSI, ASCII, X
 | D         | Reset colors to default    |
 | Q         | Swap foreground/background |
 | 0–7       | Select basic color         |
-| F1–F12    | Insert special block chars |
+| F1–F12    | Insert specific characters |
 
 ### File & Canvas
 
@@ -85,7 +85,11 @@ The teXt0wnz client is a browser-based text art editor supporting ANSI, ASCII, X
 | [ / ] | Flip selection |
 | M     | Move mode      |
 
-### Special Function Keys
+### Special Function Keys (F1-F12)
+
+The F-keys provide quick access to commonly used characters from the CP437 font. Each key inserts its assigned character at the cursor position. The current character set is displayed in the keyboard toolbar, and you can click any preview to insert that character.
+
+**Default character set (blocks and shades):**
 
 | Key | Character | Description        |
 | --- | --------- | ------------------ |
@@ -101,6 +105,17 @@ The teXt0wnz client is a browser-based text art editor supporting ANSI, ASCII, X
 | F10 | `○`       | Circle             |
 | F11 | `•`       | Bullet             |
 | F12 | `NULL`    | Blank/transparent  |
+
+**Cycling character sets:**
+
+Use the arrow buttons flanking the F-key previews in the toolbar, or these keyboard shortcuts:
+
+| Combo  | Action                 |
+| ------ | ---------------------- |
+| Ctrl+[ | Previous character set |
+| Ctrl+] | Next character set     |
+
+The editor includes predefined character sets (box drawing, symbols, accented letters, etc.) plus auto-generated sets that cover all characters in the font.
 
 ### Mouse Controls
 

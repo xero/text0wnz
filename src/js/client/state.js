@@ -8,6 +8,7 @@
 
 import { Compression } from './compression.js';
 import { Storage } from './storage.js';
+import magicNumbers from './magicNumbers.js';
 
 // Object to hold application state
 const EditorState = {
@@ -722,8 +723,12 @@ class StateManager {
 					settings.paletteColors.forEach((color, index) => {
 						this.state.palette.setRGBAColor(index, color);
 					});
-					this.state.palette.setForegroundColor(7);
-					this.state.palette.setBackgroundColor(0);
+					this.state.palette.setForegroundColor(
+						magicNumbers.DEFAULT_FOREGROUND,
+					);
+					this.state.palette.setBackgroundColor(
+						magicNumbers.DEFAULT_BACKGROUND,
+					);
 				}
 
 				// Load XBIN font data if available

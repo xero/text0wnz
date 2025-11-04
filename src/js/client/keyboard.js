@@ -3,66 +3,127 @@ import Toolbar from './toolbar.js';
 import { $, createCanvas } from './ui.js';
 import magicNumbers from './magicNumbers.js';
 
-const createFKeyShortcut = (canvas, charCode) => {
-	const update = () => {
-		// Set actual canvas dimensions for proper rendering
-		canvas.width = State.font.getWidth();
-		canvas.height = State.font.getHeight();
-		// Set CSS dimensions for proper display
-		canvas.style.width = State.font.getWidth() + 'px';
-		canvas.style.height = State.font.getHeight() + 'px';
-		State.font.draw(
-			charCode,
-			State.palette.getForegroundColor(),
-			State.palette.getBackgroundColor(),
-			canvas.getContext('2d'),
-			0,
-			0,
-		);
-	};
-	const insert = () => {
-		State.textArtCanvas.startUndo();
-		State.textArtCanvas.draw(callback => {
-			callback(
-				charCode,
-				State.palette.getForegroundColor(),
-				State.palette.getBackgroundColor(),
-				State.cursor.getX(),
-				State.cursor.getY(),
-			);
-		}, false);
-		State.cursor.right();
-	};
-	document.addEventListener('onPaletteChange', update);
-	document.addEventListener('onForegroundChange', update);
-	document.addEventListener('onBackgroundChange', update);
-	document.addEventListener('onFontChange', update);
-	canvas.addEventListener('click', insert);
-
-	update();
-};
-
-const createFKeysShortcut = () => {
-	const shortcuts = [
-		magicNumbers.LIGHT_BLOCK, // (░)
-		magicNumbers.MEDIUM_BLOCK, // (▒)
-		magicNumbers.DARK_BLOCK, // (▓)
-		magicNumbers.FULL_BLOCK, // (█)
-		magicNumbers.LOWER_HALFBLOCK, // (▄)
-		magicNumbers.UPPER_HALFBLOCK, // (▀)
-		magicNumbers.LEFT_HALFBLOCK, // (▌)
-		magicNumbers.RIGHT_HALFBLOCK, // (▐)
-		magicNumbers.MIDDLE_BLOCK, // (■)
-		magicNumbers.MIDDLE_DOT, // (·)
-		magicNumbers.CHAR_BELL, // (BEL)
-		magicNumbers.CHAR_NULL, // (NUL)
+const createFKeys = () => {
+	// Stolen "savagely" from Moebius, who stole it "mercilessly" from PabloDraw, thanks Curtis! lol
+	const predefinedSets = [
+		[218, 191, 192, 217, 196, 179, 195, 180, 193, 194, 32, 32],
+		[201, 187, 200, 188, 205, 186, 204, 185, 202, 203, 32, 32],
+		[213, 184, 212, 190, 205, 179, 198, 181, 207, 209, 32, 32],
+		[214, 183, 211, 189, 196, 186, 199, 182, 208, 210, 32, 32],
+		[197, 206, 216, 215, 232, 232, 155, 156, 153, 239, 32, 32],
+		[176, 177, 178, 219, 223, 220, 221, 222, 254, 250, 32, 32],
+		[1, 2, 3, 4, 5, 6, 240, 14, 15, 32, 32, 32],
+		[24, 25, 30, 31, 16, 17, 18, 29, 20, 21, 32, 32],
+		[174, 175, 242, 243, 169, 170, 253, 246, 171, 172, 32, 32],
+		[227, 241, 244, 245, 234, 157, 228, 248, 251, 252, 32, 32],
+		[224, 225, 226, 229, 230, 231, 235, 236, 237, 238, 32, 32],
+		[128, 135, 165, 164, 152, 159, 247, 249, 173, 168, 32, 32],
+		[131, 132, 133, 160, 166, 134, 142, 143, 145, 146, 32, 32],
+		[136, 137, 138, 130, 144, 140, 139, 141, 161, 158, 32, 32],
+		[147, 148, 149, 162, 167, 150, 129, 151, 163, 154, 32, 32],
+		[47, 92, 40, 41, 123, 125, 91, 93, 96, 39, 32, 32],
 	];
+
+	// Generate additional sets to cover all 256 characters
+	const generateCharSets = () => {
+		const charSets = [...predefinedSets];
+		const usedChars = new Set();
+		predefinedSets.forEach(set => {
+			set.forEach(char => usedChars.add(char));
+		});
+		// Generate sets for remaining characters
+		let currentSet = [];
+		for (let i = 0; i < 256; i++) {
+			if (!usedChars.has(i)) {
+				currentSet.push(i);
+				if (currentSet.length === 12) {
+					charSets.push([...currentSet]);
+					currentSet = [];
+				}
+			}
+		}
+		// Add any remaining characters as a final set
+		if (currentSet.length > 0) {
+			while (currentSet.length < 12) {
+				currentSet.push(32); // Pad with spaces
+			}
+			charSets.push(currentSet);
+		}
+		return charSets;
+	};
+
+	const fkeySets = generateCharSets();
+	let currentSetIndex = 5; // Default to set 5 (blocks, half-blocks, etc.)
+
+	// Update all fkey canvases with current set
+	const updateFKeyDisplays = () => {
+		const currentSet = fkeySets[currentSetIndex];
+		for (let i = 0; i < 12; i++) {
+			const canvas = $('fkey' + i);
+			if (canvas) {
+				canvas.width = State.font.getWidth();
+				canvas.height = State.font.getHeight();
+				canvas.style.width = State.font.getWidth() + 'px';
+				canvas.style.height = State.font.getHeight() + 'px';
+				State.font.draw(
+					currentSet[i],
+					State.palette.getForegroundColor(),
+					State.palette.getBackgroundColor(),
+					canvas.getContext('2d'),
+					0,
+					0,
+				);
+			}
+		}
+	};
+
+	// Initialize fkey canvases
 	for (let i = 0; i < 12; i++) {
-		createFKeyShortcut($('fkey' + i), shortcuts[i]);
+		const canvas = $('fkey' + i);
+		if (canvas) {
+			const insert = () => {
+				State.textArtCanvas.startUndo();
+				State.textArtCanvas.draw(callback => {
+					callback(
+						fkeySets[currentSetIndex][i],
+						State.palette.getForegroundColor(),
+						State.palette.getBackgroundColor(),
+						State.cursor.getX(),
+						State.cursor.getY(),
+					);
+				}, false);
+				State.cursor.right();
+			};
+			canvas.addEventListener('click', insert);
+		}
+	}
+
+	// Set up navigation
+	const prevButton = $('fkeySetPrev');
+	const nextButton = $('fkeySetNext');
+
+	const previousCharacterSet = () => {
+		currentSetIndex =
+			currentSetIndex <= 0 ? fkeySets.length - 1 : currentSetIndex - 1;
+		updateFKeyDisplays();
+	};
+
+	const nextCharacterSet = () => {
+		currentSetIndex =
+			currentSetIndex >= fkeySets.length - 1 ? 0 : currentSetIndex + 1;
+		updateFKeyDisplays();
+	};
+
+	if (prevButton) {
+		prevButton.addEventListener('click', previousCharacterSet);
+	}
+
+	if (nextButton) {
+		nextButton.addEventListener('click', nextCharacterSet);
 	}
 
 	const keyDown = e => {
-		// Handle F1-F12 function keys (F1=112, F2=113, ..., F12=123)
+		// Handle F1-F12 function keys
 		const fKeyMatch = e.code.match(/^F(\d+)$/);
 		if (
 			!e.altKey &&
@@ -76,7 +137,7 @@ const createFKeysShortcut = () => {
 			State.textArtCanvas.startUndo();
 			State.textArtCanvas.draw(callback => {
 				callback(
-					shortcuts[fKeyMatch[1] - 1],
+					fkeySets[currentSetIndex][fKeyMatch[1] - 1],
 					State.palette.getForegroundColor(),
 					State.palette.getBackgroundColor(),
 					State.cursor.getX(),
@@ -85,15 +146,37 @@ const createFKeysShortcut = () => {
 			}, false);
 			State.cursor.right();
 		}
+		// 'Ctrl+[' - previous character set
+		else if (e.ctrlKey && !e.altKey && !e.metaKey && e.code === 'BracketLeft') {
+			e.preventDefault();
+			previousCharacterSet();
+		}
+		// 'Ctrl+]' - next character set
+		else if (
+			e.ctrlKey &&
+			!e.altKey &&
+			!e.metaKey &&
+			e.code === 'BracketRight'
+		) {
+			e.preventDefault();
+			nextCharacterSet();
+		}
 	};
 
 	const enable = () => {
 		document.addEventListener('keydown', keyDown);
+		updateFKeyDisplays();
 	};
 
 	const disable = () => {
 		document.removeEventListener('keydown', keyDown);
 	};
+
+	// Update displays when palette/font changes
+	document.addEventListener('onPaletteChange', updateFKeyDisplays);
+	document.addEventListener('onForegroundChange', updateFKeyDisplays);
+	document.addEventListener('onBackgroundChange', updateFKeyDisplays);
+	document.addEventListener('onFontChange', updateFKeyDisplays);
 
 	return {
 		enable: enable,
@@ -417,7 +500,7 @@ const createSelectionCursor = element => {
 };
 
 const createKeyboardController = () => {
-	const fkeys = createFKeysShortcut();
+	const fkeys = createFKeys();
 	let enabled = false;
 	let ignored = false;
 
@@ -1918,8 +2001,7 @@ const createSelectionTool = () => {
 	};
 };
 export {
-	createFKeyShortcut,
-	createFKeysShortcut,
+	createFKeys,
 	createCursor,
 	createSelectionCursor,
 	createKeyboardController,
