@@ -617,41 +617,6 @@ describe('State Management System', () => {
 			}
 		});
 
-		it('should handle backward compatibility with legacy array format', () => {
-			const legacyData = {
-				canvasData: {
-					imageData: [1, 2, 3, 4, 5],
-					columns: 5,
-					rows: 1,
-				},
-				iceColors: false,
-				fontName: 'CP437 8x16',
-			};
-
-			let capturedData = null;
-			const mockCanvas = {
-				setImageData: (cols, rows, data, ice) => {
-					capturedData = { cols, rows, data, ice };
-				},
-				setFont: vi.fn((fontName, callback) => callback && callback()),
-			};
-
-			State.textArtCanvas = mockCanvas;
-			State.modal = { open: vi.fn(), close: vi.fn() };
-
-			// Mock loadFromLocalStorage to return legacy format
-			State._manager.loadFromLocalStorage = () => legacyData;
-
-			State.restoreStateFromLocalStorage();
-
-			// Check that data was restored correctly
-			expect(capturedData).not.toBeNull();
-			expect(capturedData.cols).toBe(5);
-			expect(capturedData.rows).toBe(1);
-			expect(capturedData.data).toBeInstanceOf(Uint16Array);
-			expect(Array.from(capturedData.data)).toEqual([1, 2, 3, 4, 5]);
-		});
-
 		it('should produce smaller serialized data with base64 vs array', () => {
 			const imageData = new Uint16Array(80 * 25);
 			for (let i = 0; i < imageData.length; i++) {

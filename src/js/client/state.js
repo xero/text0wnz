@@ -106,7 +106,6 @@ class StateManager {
 		this.getInitializationStatus = this.getInitializationStatus.bind(this);
 		this.safely = this.safely.bind(this);
 		this.saveToLocalStorage = this.saveToLocalStorage.bind(this);
-		this.loadFromLocalStorage = this.loadFromLocalStorage.bind(this);
 		this.restoreStateFromLocalStorage =
 			this.restoreStateFromLocalStorage.bind(this);
 		this.clearLocalStorage = this.clearLocalStorage.bind(this);
@@ -457,7 +456,7 @@ class StateManager {
 					this.state.font.getLetterSpacing();
 			}
 
-			// Save palette colors and selection
+			// Save palette colors
 			if (this.state.palette) {
 				if (typeof this.state.palette.getPalette === 'function') {
 					const paletteColors = this.state.palette.getPalette();
@@ -658,21 +657,6 @@ class StateManager {
 	}
 
 	/**
-	 * Load state from localStorage (returns the raw data, doesn't apply it)
-	 */
-	loadFromLocalStorage() {
-		try {
-			const raw = localStorage.getItem('editorState');
-			if (raw) {
-				return JSON.parse(raw);
-			}
-		} catch (error) {
-			console.error('[State] Failed to load state from localStorage:', error);
-		}
-		return null;
-	}
-
-	/**
 	 * Convert base64 string to Uint16Array (optimized deserialization)
 	 */
 	_base64ToUint16Array(base64String) {
@@ -706,9 +690,8 @@ class StateManager {
 	async restoreStateFromLocalStorage() {
 		// Try loading from new storage system first
 		const settings = Storage.loadSettings();
-		const savedState = this.loadFromLocalStorage(); // Legacy format
 
-		if (!settings && !savedState) {
+		if (!settings) {
 			return;
 		}
 
@@ -725,133 +708,6 @@ class StateManager {
 		};
 
 		try {
-			// Handle legacy format first (if present)
-			if (savedState) {
-				// Restore ice colors first (before canvas data)
-				if (
-					savedState[STATE_SYNC_KEYS.ICE_COLORS] !== undefined &&
-					this.state.textArtCanvas
-				) {
-					// Ice colors will be set when we restore canvas data
-				}
-
-				// Restore canvas data
-				if (
-					savedState[STATE_SYNC_KEYS.CANVAS_DATA] &&
-					this.state.textArtCanvas
-				) {
-					const canvasData = savedState[STATE_SYNC_KEYS.CANVAS_DATA];
-					const iceColors = savedState[STATE_SYNC_KEYS.ICE_COLORS] || false;
-
-					let uint16Data;
-
-					if (canvasData.compressed) {
-						// Handle compressed data
-						const compressed = Compression.base64ToCompressed(
-							canvasData.imageData,
-						);
-						uint16Data = Compression.decompressToUint16Array(
-							compressed,
-							canvasData.originalLength,
-						);
-					} else if (typeof canvasData.imageData === 'string') {
-						// Regular base64 data
-						uint16Data = this._base64ToUint16Array(canvasData.imageData);
-					} else if (Array.isArray(canvasData.imageData)) {
-						// Legacy array format
-						uint16Data = new Uint16Array(canvasData.imageData);
-					}
-
-					// Use setImageData to restore canvas
-					if (
-						uint16Data &&
-						typeof this.state.textArtCanvas.setImageData === 'function'
-					) {
-						this.state.textArtCanvas.setImageData(
-							canvasData.columns,
-							canvasData.rows,
-							uint16Data,
-							iceColors,
-						);
-					}
-				}
-
-				// Restore letter spacing
-				if (
-					savedState[STATE_SYNC_KEYS.LETTER_SPACING] !== undefined &&
-					this.state.font
-				) {
-					if (typeof this.state.font.setLetterSpacing === 'function') {
-						this.state.font.setLetterSpacing(
-							savedState[STATE_SYNC_KEYS.LETTER_SPACING],
-						);
-					}
-				}
-
-				// Restore palette colors
-				if (savedState[STATE_SYNC_KEYS.PALETTE_COLORS] && this.state.palette) {
-					const paletteColors = savedState[STATE_SYNC_KEYS.PALETTE_COLORS];
-					if (typeof this.state.palette.setRGBAColor === 'function') {
-						paletteColors.forEach((color, index) => {
-							// color is [r, g, b, a] in 6-bit format (0-63)
-							// setRGBAColor expects 6-bit and will expand to 8-bit
-							this.state.palette.setRGBAColor(index, color);
-						});
-					}
-				}
-
-				// Restore XBIN font data if present (must be done before restoring font)
-				if (
-					savedState[STATE_SYNC_KEYS.XBIN_FONT_DATA] &&
-					this.state.textArtCanvas
-				) {
-					if (typeof this.state.textArtCanvas.setXBFontData === 'function') {
-						const xbFontData = savedState[STATE_SYNC_KEYS.XBIN_FONT_DATA];
-
-						let fontBytes;
-						// Support both new base64 format and legacy array format
-						if (typeof xbFontData.bytes === 'string') {
-							// New optimized base64 format
-							fontBytes = this._base64ToUint8Array(xbFontData.bytes);
-						} else if (Array.isArray(xbFontData.bytes)) {
-							// Legacy array format (for backward compatibility)
-							fontBytes = new Uint8Array(xbFontData.bytes);
-						} else {
-							console.error(
-								'[State] Invalid XBIN font data format in localStorage',
-							);
-							return;
-						}
-
-						this.state.textArtCanvas.setXBFontData(
-							fontBytes,
-							xbFontData.width,
-							xbFontData.height,
-						);
-					}
-				}
-
-				// Restore font (must be done last and async)
-				if (savedState[STATE_SYNC_KEYS.FONT_NAME] && this.state.textArtCanvas) {
-					if (typeof this.state.textArtCanvas.setFont === 'function') {
-						// Font loading is async, so we need to handle it carefully
-						this.state.textArtCanvas.setFont(
-							savedState[STATE_SYNC_KEYS.FONT_NAME],
-							() => {
-								// After font loads, emit that state was restored
-								this.emit('app:state-restored', { state: savedState });
-							},
-						);
-					}
-				} else {
-					// No font to restore, emit event immediately
-					this.emit('app:state-restored', { state: savedState });
-				}
-
-				return; // Legacy format handled, don't continue to new format
-			}
-
-			// Handle new storage format
 			if (settings) {
 				// Apply simple settings immediately
 				if (settings.iceColors !== undefined && this.state.textArtCanvas) {
@@ -866,6 +722,8 @@ class StateManager {
 					settings.paletteColors.forEach((color, index) => {
 						this.state.palette.setRGBAColor(index, color);
 					});
+					this.state.palette.setForegroundColor(7);
+					this.state.palette.setBackgroundColor(0);
 				}
 
 				// Load XBIN font data if available
@@ -1044,7 +902,6 @@ const State = {
 
 	// LocalStorage sync methods
 	saveToLocalStorage: stateManager.saveToLocalStorage,
-	loadFromLocalStorage: stateManager.loadFromLocalStorage,
 	restoreStateFromLocalStorage: stateManager.restoreStateFromLocalStorage,
 	clearLocalStorage: stateManager.clearLocalStorage,
 

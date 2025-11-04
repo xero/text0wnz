@@ -170,6 +170,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 			},
 			addEventListener: vi.fn(),
 			removeEventListener: vi.fn(),
+			remove: vi.fn(),
 			getContext: vi.fn(() => ({
 				createImageData: vi.fn(() => ({
 					data: new Uint8ClampedArray(4),

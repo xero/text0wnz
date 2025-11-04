@@ -566,6 +566,9 @@ const initializeAppComponents = async () => {
 			'./freehandTools.js'
 		);
 		const attributeBrush = createAttributeBrushController();
+		$('attribSize').addEventListener('change', e => {
+			attributeBrush.setBrushSize(parseInt(e.target.value, 10));
+		});
 		return {
 			onFocus: attributeBrush.enable,
 			onBlur: attributeBrush.disable,

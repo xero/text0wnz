@@ -1606,6 +1606,62 @@ const createAttributeBrushController = () => {
 	let isActive = false;
 	let lastCoord = null;
 	const bar = $('brushToolbar');
+	const menu = $('aSize');
+	let brushSize = 1;
+	let previewCursor = null;
+	let lastPreviewX = -1;
+	let lastPreviewY = -1;
+
+	const createPreviewCursor = () => {
+		const cursor = createCanvas(0, 0);
+		cursor.classList.add('cursor');
+		cursor.style.pointerEvents = 'none';
+		cursor.style.zIndex = '1000';
+		$('canvasContainer').appendChild(cursor);
+		return cursor;
+	};
+
+	const updatePreviewCursor = (x, y) => {
+		if (!previewCursor) {
+			return;
+		}
+
+		const fontWidth = State.font.getWidth();
+		const fontHeight = State.font.getHeight();
+		const size = Math.sqrt(brushSize);
+
+		// Center the brush area around the cursor position
+		const offsetCells = Math.floor(size / 2);
+		const startX = x - offsetCells;
+		const startY = y - offsetCells;
+
+		previewCursor.width = size * fontWidth + 1;
+		previewCursor.height = size * fontHeight + 1;
+		previewCursor.style.left = startX * fontWidth - 1 + 'px';
+		previewCursor.style.top = startY * fontHeight - 1 + 'px';
+
+		// Draw border
+		const ctx = previewCursor.getContext('2d');
+		ctx.clearRect(0, 0, previewCursor.width, previewCursor.height);
+		ctx.strokeStyle = '#fff';
+		ctx.lineWidth = 1;
+		ctx.strokeRect(0.5, 0.5, previewCursor.width - 1, previewCursor.height - 1);
+
+		lastPreviewX = x;
+		lastPreviewY = y;
+	};
+
+	const showPreview = () => {
+		if (previewCursor) {
+			previewCursor.style.display = 'block';
+		}
+	};
+
+	const hidePreview = () => {
+		if (previewCursor) {
+			previewCursor.style.display = 'none';
+		}
+	};
 
 	const paintAttribute = (x, y, altKey) => {
 		const block = State.textArtCanvas.getBlock(x, y);
@@ -1635,6 +1691,32 @@ const createAttributeBrushController = () => {
 		}
 	};
 
+	const paintArea = (centerX, centerY, altKey) => {
+		const size = Math.sqrt(brushSize);
+		const offsetCells = Math.floor(size / 2);
+		const startX = centerX - offsetCells;
+		const startY = centerY - offsetCells;
+		const columns = State.textArtCanvas.getColumns();
+		const rows = State.textArtCanvas.getRows();
+
+		for (let dy = 0; dy < size; dy++) {
+			for (let dx = 0; dx < size; dx++) {
+				const targetX = startX + dx;
+				const targetY = startY + dy;
+
+				// Check bounds
+				if (
+					targetX >= 0 &&
+					targetX < columns &&
+					targetY >= 0 &&
+					targetY < rows
+				) {
+					paintAttribute(targetX, targetY, altKey);
+				}
+			}
+		}
+	};
+
 	const paintLine = (fromX, fromY, toX, toY, altKey) => {
 		// Use Bresenham's line algorithm to paint attributes along a line
 		const dx = Math.abs(toX - fromX);
@@ -1646,7 +1728,7 @@ const createAttributeBrushController = () => {
 		let y = fromY;
 
 		while (true) {
-			paintAttribute(x, y, altKey);
+			paintArea(x, y, altKey);
 
 			if (x === toX && y === toY) {
 				break;
@@ -1664,9 +1746,18 @@ const createAttributeBrushController = () => {
 		}
 	};
 
+	const canvasMove = e => {
+		// Update preview position when mouse moves (not dragging)
+		if (lastPreviewX !== e.detail.x || lastPreviewY !== e.detail.y) {
+			updatePreviewCursor(e.detail.x, e.detail.y);
+		}
+	};
+
 	const canvasDown = e => {
 		State.textArtCanvas.startUndo();
 		isActive = true;
+		showPreview();
+		updatePreviewCursor(e.detail.x, e.detail.y);
 
 		if (e.detail.shiftKey && lastCoord) {
 			// Shift+click draws a line from last point
@@ -1678,14 +1769,19 @@ const createAttributeBrushController = () => {
 				e.detail.altKey,
 			);
 		} else {
-			// Normal click paints single point
-			paintAttribute(e.detail.x, e.detail.y, e.detail.altKey);
+			// Normal click paints area
+			paintArea(e.detail.x, e.detail.y, e.detail.altKey);
 		}
 
 		lastCoord = { x: e.detail.x, y: e.detail.y };
 	};
 
 	const canvasDrag = e => {
+		// Update preview during drag
+		if (lastPreviewX !== e.detail.x || lastPreviewY !== e.detail.y) {
+			updatePreviewCursor(e.detail.x, e.detail.y);
+		}
+
 		if (isActive && lastCoord) {
 			paintLine(
 				lastCoord.x,
@@ -1702,25 +1798,55 @@ const createAttributeBrushController = () => {
 		isActive = false;
 	};
 
+	const setBrushSize = size => {
+		// Validate that size is a perfect square
+		const sqrtSize = Math.sqrt(size);
+		if (sqrtSize === Math.floor(sqrtSize)) {
+			brushSize = size;
+			if (lastPreviewX >= 0 && lastPreviewY >= 0) {
+				updatePreviewCursor(lastPreviewX, lastPreviewY);
+			}
+		}
+	};
+
+	const getBrushSize = () => brushSize;
+
 	const enable = () => {
+		if (!previewCursor) {
+			previewCursor = createPreviewCursor();
+		}
+		document.addEventListener('onTextCanvasMove', canvasMove);
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		bar.style.display = 'flex';
+		menu.style.display = 'flex';
+		showPreview();
 	};
 
 	const disable = () => {
+		document.removeEventListener('onTextCanvasMove', canvasMove);
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
 		bar.style.display = 'none';
+		menu.style.display = 'none';
 		isActive = false;
 		lastCoord = null;
+		lastPreviewX = -1;
+		lastPreviewY = -1;
+		hidePreview();
+		if (previewCursor) {
+			previewCursor.remove();
+			previewCursor = null;
+		}
 	};
 
 	return {
 		enable: enable,
 		disable: disable,
+		setBrushSize: setBrushSize,
+		getBrushSize: getBrushSize,
 	};
 };
 

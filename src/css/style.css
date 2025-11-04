@@ -247,6 +247,7 @@
 		}
 	}
 
+	#aSize,
 	#chatIconCloseText {
 		@apply hidden;
 	}
@@ -435,6 +436,11 @@
 			@apply my-auto;
 		}
 	}
+
+	#brushToolbar {
+		min-width: 378px;
+	}
+
 	#viewportToolbar {
 		input[type='range'] {
 			@apply appearance-none bg-transparent;
@@ -530,6 +536,16 @@
 					outline: 1px solid var(--cyber);
 				}
 			}
+		}
+	}
+
+	#aSize {
+		@apply flex-col;
+		label {
+			@apply text-xs text-fg text-left pl-[4px] pt-[2px];
+		}
+		select {
+			@apply text-xs text-fg p-0 bg-purp pb-[2px] pt-[3px] border-2 border-midnight border-solid;
 		}
 	}
 

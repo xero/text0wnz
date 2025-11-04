@@ -1044,8 +1044,20 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	canvasContainer.addEventListener('mousemove', e => {
 		e.preventDefault();
-		if (mouseButton) {
-			getXYCoords(e.clientX, e.clientY, (x, y, halfBlockY) => {
+		getXYCoords(e.clientX, e.clientY, (x, y, halfBlockY) => {
+			// Always dispatch move event for preview cursors
+			document.dispatchEvent(
+				new CustomEvent('onTextCanvasMove', {
+					detail: {
+						x: x,
+						y: y,
+						halfBlockY: halfBlockY,
+					},
+				}),
+			);
+
+			// Dispatch drag event only when mouse button is down
+			if (mouseButton) {
 				document.dispatchEvent(
 					new CustomEvent('onTextCanvasDrag', {
 						detail: {
@@ -1057,8 +1069,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 						},
 					}),
 				);
-			});
-		}
+			}
+		});
 	});
 
 	canvasContainer.addEventListener('touchend', e => {
