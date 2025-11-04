@@ -12,22 +12,23 @@
 | https://xero.github.io/text0wnz | Github Pages version of the site. No collab server |
 
 
-[![MIT Licensed](https://img.shields.io/github/license/xero/text0wnz?logo=wikiversity&logoColor=979da4&labelColor=262a2e&color=gold)](https://github.com/xero/text0wnz/blob/main/LICENSE)
-[![Version](https://img.shields.io/github/package-json/version/xero/teXt0wnz?labelColor=%2333383e&logo=npm&&logoColor=%23979da4&color=6e2aa5)](https://github.com/xero/teXt0wnz/releases/latest)
-[![GitHub repo size](https://img.shields.io/github/repo-size/xero/teXt0wnz?labelColor=%23262a2e&logo=googlecontaineroptimizedos&logoColor=%23979da4&color=6e2aa5)](https://github.com/xero/teXt0wnz/)
-[![GitHub commit activity](https://img.shields.io/github/commit-activity/w/xero/teXt0wnz?labelColor=%23262a2e&logo=stagetimer&logoColor=%23979da4&color=6e2aa5)](https://github.com/xero/text0wnz/graphs/commit-activity)
-[![GitHub last commit](https://img.shields.io/github/last-commit/xero/teXt0wnz.svg?labelColor=%23262a2e&logo=git&logoColor=%23979da4&color=6e2aa5)](https://github.com/xero/text0wnz/commits/main/)
-[![OSS Lifecycle](https://img.shields.io/osslifecycle?file_url=https%3A%2F%2Fraw.githubusercontent.com%2Fxero%2FteXt0wnz%2Frefs%2Fheads%2Fmain%2FOSSMETADATA&-square&labelColor=%23262a2e&logo=checkmarx&logoColor=%23979da4)](https://github.com/xero/teXt0wnz/blob/main/OSSMETADATA)
-[![Latest Test Suite Results](https://github.com/xero/teXt0wnz/actions/workflows/test-suite.yml/badge.svg?branch=main)](https://github.com/xero/teXt0wnz/actions/workflows/test-suite.yml?query=branch%3Amain)
-[![Latest Deployment](https://img.shields.io/github/deployments/xero/text0wnz/github-pages?logo=githubactions&logoColor=%23979da4&label=Pages%20Deployment&labelColor=%23262a2e)](https://github.com/xero/text0wnz/deployments)
-[![Latest Wiki Deployment](https://img.shields.io/badge/success-success?logo=gitbook&logoColor=%23979da4&labelColor=%23262a2e&label=Wiki%20Deployment)](https://github.com/xero/text0wnz/wiki)
-[![Schema](https://img.shields.io/badge/Valid-Valid?logo=semanticweb&logoColor=%23979da4&labelColor=%23262a2e&label=Schema)](https://validator.schema.org/#url=https%3A%2F%2Fraw.githubusercontent.com%2Fxero%2FteXt0wnz%2Frefs%2Fheads%2Fmain%2Fsrc%2Findex.html)
-[![Lighthouse Preformance](https://img.shields.io/badge/99%25-lighthouse?logo=lighthouse&logoColor=%23979da4&label=Lighthouse&labelColor=%23262a2e)](https://pagespeed.web.dev/analysis/https-text-0w-nz/eo49m2s0eo?hl=en-US&form_factor=desktop)
-[![Powered by Bun](https://img.shields.io/badge/Bun-Bun?labelColor=%23262a2e&logo=bun&logoColor=%23f9f1e1&label=Powered%20by&color=%23e47ab4&link=https%3A%2F%2Fbun.js)](https://bun.com)
-[![Eslint](https://img.shields.io/badge/Eslint-Eslint?logo=eslint&logoColor=%23979da4&label=Linting&labelColor=%23262a2e&color=%2300aaaa)](https://github.com/xero/teXt0wnz/blob/main/eslint.config.js)
-[![Prettier](https://img.shields.io/badge/Prettier-Prettier?logo=prettier&logoColor=%23979da4&label=Formatting&labelColor=%23262a2e&color=%2300aaaa)](https://github.com/xero/teXt0wnz/blob/main/.prettierrc)
-[![16colors](https://img.shields.io/badge/16colors-16colors?logo=renovate&logoColor=%23979da4&logoSize=auto&label=Text%20Mode%20Art&labelColor=%23262a2e&color=%2300aaaa&link=https%3A%2F%2F16colo.rs)](https://16colo.rs)
 
+[![MIT Licensed](https://img.shields.io/github/license/xero/text0wnz?logo=wikiversity&logoColor=979da4&labelColor=262a2e&color=gold)](https://github.com/xero/text0wnz/blob/main/LICENSE)
+[![Version](https://img.shields.io/github/package-json/version/xero/teXt0wnz?labelColor=33383e&logo=npm&&logoColor=979da4&color=6e2aa5)](https://github.com/xero/teXt0wnz/releases/latest)
+[![GitHub repo size](https://img.shields.io/github/repo-size/xero/teXt0wnz?labelColor=262a2e&logo=googlecontaineroptimizedos&logoColor=979da4&color=6e2aa5)](https://github.com/xero/teXt0wnz/)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/w/xero/teXt0wnz?labelColor=262a2e&logo=stagetimer&logoColor=979da4&color=6e2aa5)](https://github.com/xero/text0wnz/graphs/commit-activity)
+[![GitHub last commit](https://img.shields.io/github/last-commit/xero/teXt0wnz.svg?labelColor=262a2e&logo=git&logoColor=979da4&color=6e2aa5)](https://github.com/xero/text0wnz/commits/main/)
+[![OSS Lifecycle](https://img.shields.io/osslifecycle?file_url=https%3A%2F%2Fraw.githubusercontent.com%2Fxero%2FteXt0wnz%2Frefs%2Fheads%2Fmain%2FOSSMETADATA&-square&labelColor=262a2e&logo=checkmarx&logoColor=979da4)](https://github.com/xero/teXt0wnz/blob/main/OSSMETADATA)
+[![Latest Test Suite Results](https://github.com/xero/teXt0wnz/actions/workflows/test-suite.yml/badge.svg?branch=main)](https://github.com/xero/teXt0wnz/actions/workflows/test-suite.yml?query=branch%3Amain)
+[![Latest Deployment](https://img.shields.io/github/deployments/xero/text0wnz/github-pages?logo=githubactions&logoColor=979da4&label=Pages%20Deployment&labelColor=262a2e)](https://github.com/xero/text0wnz/deployments)
+[![Latest Wiki Deployment](https://img.shields.io/badge/success-success?logo=gitbook&logoColor=979da4&labelColor=262a2e&label=Wiki%20Deployment)](https://github.com/xero/text0wnz/wiki)
+[![Schema](https://img.shields.io/badge/Valid-Valid?logo=semanticweb&logoColor=979da4&labelColor=262a2e&label=Schema)](https://validator.schema.org/#url=https%3A%2F%2Fraw.githubusercontent.com%2Fxero%2FteXt0wnz%2Frefs%2Fheads%2Fmain%2Fsrc%2Findex.html)
+[![Lighthouse Preformance](https://img.shields.io/badge/99%25-lighthouse?logo=lighthouse&logoColor=979da4&label=Lighthouse&labelColor=262a2e)](https://pagespeed.web.dev/analysis/https-text-0w-nz/eo49m2s0eo?hl=en-US&form_factor=desktop)
+[![Powered by Bun](https://img.shields.io/badge/Bun-Bun?labelColor=262a2e&logo=bun&logoColor=f9f1e1&label=Powered%20by&color=e47ab4&link=https%3A%2F%2Fbun.js)](https://bun.com)
+[![Eslint](https://img.shields.io/badge/Eslint-Eslint?logo=eslint&logoColor=979da4&label=Linting&labelColor=262a2e&color=00aaaa)](https://github.com/xero/teXt0wnz/blob/main/eslint.config.js)
+[![Prettier](https://img.shields.io/badge/Prettier-Prettier?logo=prettier&logoColor=979da4&label=Formatting&labelColor=262a2e&color=00aaaa)](https://github.com/xero/teXt0wnz/blob/main/.prettierrc)
+[![16colors](https://img.shields.io/badge/16Colors-16Colors?logo=renovate&logoColor=979da4&logoSize=auto&label=ANSI%20Art&labelColor=262a2e&color=gold)](https://16colo.rs)
+[![AsciiArena](https://img.shields.io/badge/AsciiArena-AsciiArena?logo=academia&logoColor=979da4&label=Text%20Art&labelColor=262a2e&color=gold)](https://asciiarena.se)
 
 # Table o' Contents
 
@@ -60,7 +61,7 @@
 - **Advanced color management**
   - 16-color ANSI, iCE colors, real-time preview, color conflict resolution
 - **Import/export:**
-  - ANSI, BIN, XBIN, UTF-8 TXT, NFO, PNG
+  - ANSI, BIN, XBIN, NFO, UTF-8 TXT, PNG
 - **Canvas operations:**
   - Undo/redo, resizing, grid overlay, font selection, and full SAUCE metadata support
 - **Auto Save/Restore**
@@ -159,13 +160,14 @@
 
 ### Color & Character
 
-| Key/Combo        | Action                                     |
-| ---------------- | ------------------------------------------ |
-| d                | Reset colors to default                    |
-| Q                | Swap foreground/background                 |
-| f1–f12           | Insert ASNI block chars                    |
-| 0–7              | Select foreground color (again for bright) |
-| alt/option + 0–7 | Select background color (again for bright) |
+| Key/Combo         | Action                                            |
+| ----------------- | ------------------------------------------------- |
+| d                 | Reset colors to default                           |
+| Q                 | Swap foreground/background                        |
+| 0–7               | Select foreground color (again for bright)        |
+| alt/option + 0–7  | Select background color (again for bright)        |
+| F1–F12 (function) | Insert specific characters (see keyboard toolbar) |
+| ctrl + [ / ]      | Cycle Function Key ANSI character sets            |
 
 ### File & Canvas
 
