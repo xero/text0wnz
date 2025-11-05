@@ -13,10 +13,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			canvases,
 			redrawing = false,
 			ctxs,
-			offBlinkCanvases,
-			onBlinkCanvases,
-			offBlinkCtxs,
-			onBlinkCtxs,
 			blinkOn = false,
 			mouseButton = false,
 			currentUndo = [],
@@ -30,7 +26,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			xbFontData = null;
 
 	// Virtualization: viewport tracking and chunk management
-	const CHUNK_SIZE = 25; // Keep existing 25-row chunks
+	const CHUNK_SIZE = 25;
 	const viewportState = {
 		scrollTop: 0,
 		scrollLeft: 0,
@@ -44,34 +40,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const updateBeforeBlinkFlip = (x, y) => {
 		const dataIndex = y * columns + x;
-		const contextIndex = Math.floor(y / 25);
-		const contextY = y % 25;
-		const charCode = imageData[dataIndex] >> 8;
-		let background = (imageData[dataIndex] >> 4) & 15;
-		const foreground = imageData[dataIndex] & 15;
-		const shifted = background >= 8;
-		if (shifted) {
-			background -= 8;
-		}
-		if (blinkOn && shifted) {
-			State.font.draw(
-				charCode,
-				background,
-				background,
-				ctxs[contextIndex],
-				x,
-				contextY,
-			);
-		} else {
-			State.font.draw(
-				charCode,
-				foreground,
-				background,
-				ctxs[contextIndex],
-				x,
-				contextY,
-			);
-		}
+		redrawGlyph(dataIndex, x, y);
 	};
 
 	const enqueueDirtyRegion = (x, y, w, h) => {
@@ -140,7 +109,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 		// Coalesce regions for better performance
 		const coalescedRegions = coalesceRegions(dirtyRegions);
-		dirtyRegions = []; // Clear the queue
+		dirtyRegions = [];
 
 		// Draw all coalesced regions
 		for (let i = 0; i < coalescedRegions.length; i++) {
@@ -281,13 +250,50 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const blink = () => {
 		// Only blink active (visible) chunks
 		blinkOn = !blinkOn;
+
 		activeChunks.forEach(chunkIndex => {
 			const chunk = canvasChunks.get(chunkIndex);
-			if (!chunk) {
+			if (!chunk || chunk.blinkCells.size === 0) {
 				return;
 			}
-			const sourceCanvas = blinkOn ? chunk.onBlinkCanvas : chunk.offBlinkCanvas;
-			chunk.ctx.drawImage(sourceCanvas, 0, 0);
+
+			chunk.blinkCells.forEach(index => {
+				const x = index % columns;
+				const y = Math.floor(index / columns);
+
+				if (y >= chunk.startRow && y < chunk.endRow) {
+					const localY = y - chunk.startRow;
+					const charCode = imageData[index] >> 8;
+					let background = (imageData[index] >> 4) & 15;
+					const foreground = imageData[index] & 15;
+
+					if (background >= 8) {
+						background -= 8;
+
+						if (blinkOn) {
+							State.font.draw(
+								charCode,
+								background,
+								background,
+								chunk.ctx,
+								x,
+								localY,
+							);
+						} else {
+							State.font.draw(
+								charCode,
+								foreground,
+								background,
+								chunk.ctx,
+								x,
+								localY,
+							);
+						}
+					} else {
+						chunk.blinkCells.delete(index);
+					}
+				}
+			});
 		});
 	};
 
@@ -305,7 +311,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const releaseMutex = await acquireBlinkTimerMutex();
 		try {
 			if (blinkTimerRunning) {
-				return; // Prevent multiple timers from running
+				return;
 			}
 			blinkTimerRunning = true;
 			blinkStop = false;
@@ -445,26 +451,20 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		canvas.style.left = '0px';
 		canvas.style.backgroundColor = '#000';
 
-		// Create blink canvases
-		const onBlinkCanvas = createCanvas(canvasWidth, canvasHeight);
-		const offBlinkCanvas = createCanvas(canvasWidth, canvasHeight);
-
 		const chunk = {
 			canvas: canvas,
 			ctx: canvas.getContext('2d'),
-			onBlinkCanvas: onBlinkCanvas,
-			onBlinkCtx: onBlinkCanvas.getContext('2d'),
-			offBlinkCanvas: offBlinkCanvas,
-			offBlinkCtx: offBlinkCanvas.getContext('2d'),
 			rendered: false,
 			chunkIndex: chunkIndex,
 			startRow: chunkStartRow,
 			endRow: chunkEndRow,
+			blinkCells: new Set(),
 		};
 
 		canvasChunks.set(chunkIndex, chunk);
 		return chunk;
 	};
+
 	/**
 	 * Render a specific chunk
 	 */
@@ -473,7 +473,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return;
 		}
 
-		const { startRow, endRow, ctx, onBlinkCtx, offBlinkCtx } = chunk;
+		const { startRow, endRow, ctx } = chunk;
 
 		// Clear the chunk canvases
 		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
@@ -483,8 +483,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const canvasWidth = fontWidth * columns;
 
 		ctx.clearRect(0, 0, canvasWidth, chunkHeight);
-		onBlinkCtx.clearRect(0, 0, canvasWidth, chunkHeight);
-		offBlinkCtx.clearRect(0, 0, canvasWidth, chunkHeight);
+		chunk.blinkCells.clear();
 
 		// Render all cells in this chunk
 		for (let y = startRow; y < endRow; y++) {
@@ -505,45 +504,39 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const charCode = imageData[index] >> 8;
 		let background = (imageData[index] >> 4) & 15;
 		const foreground = imageData[index] & 15;
+		const isBlinkBackground = background >= 8;
 
 		if (iceColors) {
 			State.font.draw(charCode, foreground, background, chunk.ctx, x, localY);
+			chunk.blinkCells.delete(index);
 		} else {
-			if (background >= 8) {
+			if (isBlinkBackground) {
+				chunk.blinkCells.add(index);
+
 				background -= 8;
-				State.font.draw(
-					charCode,
-					foreground,
-					background,
-					chunk.offBlinkCtx,
-					x,
-					localY,
-				);
-				State.font.draw(
-					charCode,
-					background,
-					background,
-					chunk.onBlinkCtx,
-					x,
-					localY,
-				);
+
+				if (blinkOn) {
+					State.font.draw(
+						charCode,
+						background,
+						background,
+						chunk.ctx,
+						x,
+						localY,
+					);
+				} else {
+					State.font.draw(
+						charCode,
+						foreground,
+						background,
+						chunk.ctx,
+						x,
+						localY,
+					);
+				}
 			} else {
-				State.font.draw(
-					charCode,
-					foreground,
-					background,
-					chunk.offBlinkCtx,
-					x,
-					localY,
-				);
-				State.font.draw(
-					charCode,
-					foreground,
-					background,
-					chunk.onBlinkCtx,
-					x,
-					localY,
-				);
+				State.font.draw(charCode, foreground, background, chunk.ctx, x, localY);
+				chunk.blinkCells.delete(index);
 			}
 		}
 	};
@@ -554,10 +547,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const updateLegacyArrays = () => {
 		canvases = [];
 		ctxs = [];
-		offBlinkCanvases = [];
-		onBlinkCanvases = [];
-		offBlinkCtxs = [];
-		onBlinkCtxs = [];
 
 		const totalChunks = Math.ceil(rows / CHUNK_SIZE);
 		for (let i = 0; i < totalChunks; i++) {
@@ -565,10 +554,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			if (chunk) {
 				canvases.push(chunk.canvas);
 				ctxs.push(chunk.ctx);
-				offBlinkCanvases.push(chunk.offBlinkCanvas);
-				onBlinkCanvases.push(chunk.onBlinkCanvas);
-				offBlinkCtxs.push(chunk.offBlinkCtx);
-				onBlinkCtxs.push(chunk.onBlinkCtx);
 			}
 		}
 	};
@@ -629,7 +614,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		pendingScrollUpdate = true;
 
 		if (scrollScheduled) {
-			return; // Already have a frame scheduled
+			return;
 		}
 
 		scrollScheduled = true;
@@ -703,10 +688,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		// Reset legacy arrays for backward compatibility
 		canvases = [];
 		ctxs = [];
-		offBlinkCanvases = [];
-		onBlinkCanvases = [];
-		offBlinkCtxs = [];
-		onBlinkCtxs = [];
 
 		// Set container dimensions
 		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
@@ -928,6 +909,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const completeCanvas = createCanvas(fontWidth * columns, fontHeight * rows);
 		const ctx = completeCanvas.getContext('2d');
 
+		const wasBlinkOn = blinkOn;
+		blinkOn = false;
+
 		// Ensure all chunks exist and are rendered for export
 		const totalChunks = Math.ceil(rows / CHUNK_SIZE);
 
@@ -940,10 +924,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				renderChunk(chunk);
 				chunk.rendered = true;
 			}
-			const sourceCanvas = iceColors ? chunk.canvas : chunk.offBlinkCanvas;
 			const yPosition = chunkIndex * CHUNK_SIZE * fontHeight;
-			ctx.drawImage(sourceCanvas, 0, yPosition);
+			ctx.drawImage(chunk.canvas, 0, yPosition);
 		}
+
+		blinkOn = wasBlinkOn;
 
 		return completeCanvas;
 	};

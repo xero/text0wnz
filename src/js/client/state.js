@@ -689,15 +689,26 @@ class StateManager {
 	 * Supports compression, new storage format and legacy formats for backward compatibility
 	 */
 	async restoreStateFromLocalStorage() {
-		// Try loading from new storage system first
 		const settings = Storage.loadSettings();
-
 		if (!settings) {
 			return;
 		}
 
 		stateManager.state.modal.open('loading');
 		this.loadingFromStorage = true;
+
+		if (this.state.textArtCanvas) {
+			// Temporarily set iceColors to true to prevent blink timer from starting
+			const originalStopBlinkTimer = this.state.textArtCanvas.stopBlinkTimer;
+			const restorationComplete = false;
+			// Override stopBlinkTimer to prevent it from restarting
+			this.state.textArtCanvas.stopBlinkTimer = () => {
+				if (!restorationComplete) {
+					// During restoration, just stop it without allowing restart
+					originalStopBlinkTimer();
+				}
+			};
+		}
 
 		const closeModal = () => {
 			if (
@@ -710,9 +721,10 @@ class StateManager {
 
 		try {
 			if (settings) {
-				// Apply simple settings immediately
-				if (settings.iceColors !== undefined && this.state.textArtCanvas) {
-					this.state.textArtCanvas.setIceColors(settings.iceColors);
+				// Temporarily enable ice colors to prevent blink timer
+				const originalIceColors = settings.iceColors;
+				if (this.state.textArtCanvas) {
+					this.state.textArtCanvas.setIceColors(true);
 				}
 
 				if (settings.letterSpacing !== undefined && this.state.font) {
@@ -752,7 +764,7 @@ class StateManager {
 								canvasData.columns,
 								canvasData.rows,
 								canvasData.imageData,
-								settings?.iceColors || false,
+								true, // Temporarily use ice colors
 							);
 						}
 
@@ -760,6 +772,10 @@ class StateManager {
 						setTimeout(() => {
 							if (settings?.fontName && this.state.textArtCanvas) {
 								this.state.textArtCanvas.setFont(settings.fontName, () => {
+									// NOW restore the actual ice colors setting
+									if (this.state.textArtCanvas) {
+										this.state.textArtCanvas.setIceColors(originalIceColors);
+									}
 									this.loadingFromStorage = false;
 									closeModal();
 									document.dispatchEvent(
@@ -767,6 +783,9 @@ class StateManager {
 									);
 								});
 							} else {
+								if (this.state.textArtCanvas) {
+									this.state.textArtCanvas.setIceColors(originalIceColors);
+								}
 								this.loadingFromStorage = false;
 								closeModal();
 							}
