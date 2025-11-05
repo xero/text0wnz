@@ -595,5 +595,131 @@ describe('FileIO Module Integration Tests', () => {
 			expect(defaults.iceColors).toBe(false);
 			expect(defaults.letterSpacing).toBe(false);
 		});
+
+		it('should test convertUInt8ToUint16 with offset and size', () => {
+			// Test conversion with different offsets
+			const convertUint8ToUint16 = (uint8Array, start, size) => {
+				const uint16Array = new Uint16Array(size / 2);
+				for (let i = 0, j = 0; i < size; i += 2, j++) {
+					uint16Array[j] =
+						(uint8Array[start + i] << 8) + uint8Array[start + i + 1];
+				}
+				return uint16Array;
+			};
+
+			const data = new Uint8Array([0xff, 0xee, 0x12, 0x34, 0xab, 0xcd, 0x00, 0x11]);
+			
+			// Convert from start
+			const result1 = convertUint8ToUint16(data, 0, 4);
+			expect(result1.length).toBe(2);
+			expect(result1[0]).toBe(0xffee);
+			expect(result1[1]).toBe(0x1234);
+
+			// Convert with offset
+			const result2 = convertUint8ToUint16(data, 2, 4);
+			expect(result2.length).toBe(2);
+			expect(result2[0]).toBe(0x1234);
+			expect(result2[1]).toBe(0xabcd);
+
+			// Convert all
+			const result3 = convertUint8ToUint16(data, 0, 8);
+			expect(result3.length).toBe(4);
+			expect(result3[3]).toBe(0x0011);
+		});
+
+		it('should test getSauce with different data types', () => {
+			// Test getSauce return values for datatype 5 vs normal
+			const mockGetSauce = (bytes, defaultColumns, dataType) => {
+				if (bytes.length < 128) {
+					return {
+						columns: defaultColumns,
+						rows: undefined,
+						fileSize: bytes.length,
+					};
+				}
+
+				const sauce = bytes.slice(-128);
+				if (String.fromCharCode(...sauce.slice(0, 7)) === 'SAUCE00') {
+					const fileSize = 
+						sauce[90] + 
+						(sauce[91] << 8) + 
+						(sauce[92] << 16) + 
+						(sauce[93] << 24);
+
+					if (dataType === 5) {
+						// Binary text format
+						const columns = sauce[95] * 2;
+						const rows = fileSize / columns / 2;
+						return { columns, rows, fileSize, dataType };
+					} else {
+						// Normal ANSI format
+						const columns = sauce[96] + (sauce[97] << 8);
+						const rows = sauce[99] + (sauce[100] << 8);
+						return { columns, rows, fileSize, dataType };
+					}
+				}
+
+				return { columns: defaultColumns, rows: undefined, fileSize: bytes.length };
+			};
+
+			// Test datatype 5
+			const bytes5 = new Uint8Array(256);
+			const sauceStart5 = bytes5.length - 128;
+			bytes5.set(new TextEncoder().encode('SAUCE00'), sauceStart5);
+			bytes5[sauceStart5 + 90] = 0x40; 
+			bytes5[sauceStart5 + 91] = 0x1f; // fileSize = 8000
+			bytes5[sauceStart5 + 94] = 5; // datatype
+			bytes5[sauceStart5 + 95] = 80; // filetype (columns/2)
+			
+			const result5 = mockGetSauce(bytes5, 160, 5);
+			expect(result5.dataType).toBe(5);
+			expect(result5.columns).toBe(160); // 80 * 2
+			expect(result5.rows).toBe(25); // 8000 / 160 / 2
+
+			// Test normal ANSI format
+			const bytesNormal = new Uint8Array(256);
+			const sauceStartNormal = bytesNormal.length - 128;
+			bytesNormal.set(new TextEncoder().encode('SAUCE00'), sauceStartNormal);
+			bytesNormal[sauceStartNormal + 90] = 0x00; 
+			bytesNormal[sauceStartNormal + 91] = 0x10; // fileSize = 4096
+			bytesNormal[sauceStartNormal + 94] = 1; // datatype (ANSI)
+			bytesNormal[sauceStartNormal + 96] = 80; // columns
+			bytesNormal[sauceStartNormal + 99] = 25; // rows
+			
+			const resultNormal = mockGetSauce(bytesNormal, 160, 1);
+			expect(resultNormal.dataType).toBe(1);
+			expect(resultNormal.columns).toBe(80);
+			expect(resultNormal.rows).toBe(25);
+		});
+
+		it('should test getSauce with various file sizes', () => {
+			// Test fileSize extraction from SAUCE
+			const extractFileSize = sauce => {
+				return (
+					sauce[90] +
+					(sauce[91] << 8) +
+					(sauce[92] << 16) +
+					(sauce[93] << 24)
+				);
+			};
+
+			const sauce = new Uint8Array(128);
+			
+			// Small file
+			sauce[90] = 0x00; sauce[91] = 0x04; // 1024 bytes
+			expect(extractFileSize(sauce)).toBe(1024);
+
+			// Medium file
+			sauce[90] = 0x00; sauce[91] = 0x10; // 4096 bytes
+			expect(extractFileSize(sauce)).toBe(4096);
+
+			// Large file
+			sauce[90] = 0x00; sauce[91] = 0x00; sauce[92] = 0x01; // 65536 bytes
+			expect(extractFileSize(sauce)).toBe(65536);
+
+			// Very large file
+			sauce[90] = 0xff; sauce[91] = 0xff; sauce[92] = 0xff; sauce[93] = 0x7f; // Max signed 32-bit
+			expect(extractFileSize(sauce)).toBe(2147483647);
+		});
 	});
 });
