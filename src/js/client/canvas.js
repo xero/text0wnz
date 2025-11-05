@@ -31,7 +31,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	// Virtualization: viewport tracking and chunk management
 	const CHUNK_SIZE = 25; // Keep existing 25-row chunks
-	const ENABLE_VIRTUALIZATION = true; // Feature flag for quick rollback
 	const viewportState = {
 		scrollTop: 0,
 		scrollLeft: 0,
@@ -153,73 +152,17 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const redrawGlyph = (index, x, y) => {
-		if (ENABLE_VIRTUALIZATION) {
-			// Virtualization-aware redraw: only update if chunk is active
-			const chunkIndex = Math.floor(y / CHUNK_SIZE);
-			const chunk = canvasChunks.get(chunkIndex);
-			if (!chunk || !activeChunks.has(chunkIndex)) {
-				// Chunk not visible, skip rendering but mark as dirty if it exists
-				if (chunk) {
-					chunk.rendered = false;
-				}
-				return;
+		// Virtualization-aware redraw: only update if chunk is active
+		const chunkIndex = Math.floor(y / CHUNK_SIZE);
+		const chunk = canvasChunks.get(chunkIndex);
+		if (!chunk || !activeChunks.has(chunkIndex)) {
+			// Chunk not visible, skip rendering but mark as dirty if it exists
+			if (chunk) {
+				chunk.rendered = false;
 			}
-			redrawGlyphInChunk(index, x, y, chunk);
-		} else {
-			// Legacy rendering
-			const contextIndex = Math.floor(y / 25);
-			const contextY = y % 25;
-			const charCode = imageData[index] >> 8;
-			let background = (imageData[index] >> 4) & 15;
-			const foreground = imageData[index] & 15;
-			if (iceColors) {
-				State.font.draw(
-					charCode,
-					foreground,
-					background,
-					ctxs[contextIndex],
-					x,
-					contextY,
-				);
-			} else {
-				if (background >= 8) {
-					background -= 8;
-					State.font.draw(
-						charCode,
-						foreground,
-						background,
-						offBlinkCtxs[contextIndex],
-						x,
-						contextY,
-					);
-					State.font.draw(
-						charCode,
-						background,
-						background,
-						onBlinkCtxs[contextIndex],
-						x,
-						contextY,
-					);
-				} else {
-					State.font.draw(
-						charCode,
-						foreground,
-						background,
-						offBlinkCtxs[contextIndex],
-						x,
-						contextY,
-					);
-					State.font.draw(
-						charCode,
-						foreground,
-						background,
-						onBlinkCtxs[contextIndex],
-						x,
-						contextY,
-					);
-				}
-			}
+			return;
 		}
+		redrawGlyphInChunk(index, x, y, chunk);
 	};
 
 	const redrawEntireImage = () => {
@@ -336,29 +279,14 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	let blinkStop = false;
 
 	const blink = () => {
-		if (ENABLE_VIRTUALIZATION) {
-			// Only blink active (visible) chunks
-			blinkOn = !blinkOn;
-			activeChunks.forEach(chunkIndex => {
-				const chunk = canvasChunks.get(chunkIndex);
-				if (!chunk) {return;}
-				const sourceCanvas = blinkOn ? chunk.onBlinkCanvas : chunk.offBlinkCanvas;
-				chunk.ctx.drawImage(sourceCanvas, 0, 0);
-			});
-		} else {
-			// Legacy blink
-			if (!blinkOn) {
-				blinkOn = true;
-				for (let i = 0; i < ctxs.length; i++) {
-					ctxs[i].drawImage(onBlinkCanvases[i], 0, 0);
-				}
-			} else {
-				blinkOn = false;
-				for (let i = 0; i < ctxs.length; i++) {
-					ctxs[i].drawImage(offBlinkCanvases[i], 0, 0);
-				}
-			}
-		}
+		// Only blink active (visible) chunks
+		blinkOn = !blinkOn;
+		activeChunks.forEach(chunkIndex => {
+			const chunk = canvasChunks.get(chunkIndex);
+			if (!chunk) {return;}
+			const sourceCanvas = blinkOn ? chunk.onBlinkCanvas : chunk.offBlinkCanvas;
+			chunk.ctx.drawImage(sourceCanvas, 0, 0);
+		});
 	};
 
 	let blinkTimerMutex = Promise.resolve();
@@ -418,7 +346,19 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 		// Get viewport element and dimensions
 		const viewportElement = document.getElementById('viewport');
-		const viewportHeight = viewportElement ? viewportElement.clientHeight : window.innerHeight;
+		if (!viewportElement) {
+			// Fallback: render all chunks if viewport not available
+			console.warn('[Canvas] #viewport not found, rendering all chunks');
+			return {
+				startChunk: 0,
+				endChunk: totalChunks - 1,
+				totalChunks,
+				visibleStartRow: 0,
+				visibleEndRow: rows,
+			};
+		}
+
+		const viewportHeight = viewportElement.clientHeight || window.innerHeight;
 
 		// Buffer is 1 chunk (25 rows) above and below for smooth scrolling
 		const bufferRows = CHUNK_SIZE;
@@ -453,8 +393,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	 * Update viewport state based on current container scroll/size
 	 */
 	const updateViewportState = () => {
-		if (!ENABLE_VIRTUALIZATION) {return;}
-
 		const viewportElement = document.getElementById('viewport');
 		if (!viewportElement) {
 			console.warn('[Canvas] #viewport element not found');
@@ -636,7 +574,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	 * Render only visible chunks based on viewport
 	 */
 	const renderVisibleChunks = () => {
-		if (!ENABLE_VIRTUALIZATION) {return;}
+		if (!canvasContainer) {
+			console.error('[Canvas] canvasContainer is null, cannot render chunks');
+			return;
+		}
 
 		const { startChunk, endChunk } = calculateVisibleChunks();
 		const newActiveChunks = new Set();
@@ -680,7 +621,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	 */
 	let scrollScheduled = false;
 	const handleScroll = () => {
-		if (!ENABLE_VIRTUALIZATION) {return;}
 		if (scrollScheduled) {return;}
 		scrollScheduled = true;
 		requestAnimationFrame(() => {
@@ -695,7 +635,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	 */
 	let resizeScheduled = false;
 	const handleResize = () => {
-		if (!ENABLE_VIRTUALIZATION) {return;}
 		if (resizeScheduled) {return;}
 		resizeScheduled = true;
 		requestAnimationFrame(() => {
@@ -709,8 +648,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	 * Initialize viewport event listeners
 	 */
 	const initViewportListeners = () => {
-		if (!ENABLE_VIRTUALIZATION) {return;}
-
 		const viewportElement = document.getElementById('viewport');
 		if (!viewportElement) {
 			console.warn('[Canvas] #viewport element not found, scroll virtualization disabled');
@@ -728,74 +665,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	// ===== END VIRTUALIZATION FUNCTIONS =====
 
-	const createCanvasesLegacy = () => {
-		// Legacy implementation for when virtualization is disabled
-		redrawing = true;
-		if (canvases !== undefined) {
-			canvases.forEach(canvas => {
-				canvasContainer.removeChild(canvas);
-			});
-		}
-		canvases = [];
-		offBlinkCanvases = [];
-		offBlinkCtxs = [];
-		onBlinkCanvases = [];
-		onBlinkCtxs = [];
-		ctxs = [];
-		let fontWidth = State.font.getWidth();
-		let fontHeight = State.font.getHeight();
-
-		if (!fontWidth || fontWidth <= 0) {
-			console.warn(
-				`[Canvas] Invalid font width detected, falling back to ${magicNumbers.DEFAULT_FONT_WIDTH}px`,
-			);
-			fontWidth = magicNumbers.DEFAULT_FONT_WIDTH;
-		}
-		if (!fontHeight || fontHeight <= 0) {
-			console.warn(
-				`[Canvas] Invalid font height detected, falling back to ${magicNumbers.DEFAULT_FONT_HEIGHT}px`,
-			);
-			fontHeight = magicNumbers.DEFAULT_FONT_HEIGHT;
-		}
-
-		const canvasWidth = fontWidth * columns;
-		let canvasHeight = fontHeight * 25;
-		for (let i = 0; i < Math.floor(rows / 25); i++) {
-			const canvas = createCanvas(canvasWidth, canvasHeight);
-			canvases.push(canvas);
-			ctxs.push(canvas.getContext('2d'));
-			const onBlinkCanvas = createCanvas(canvasWidth, canvasHeight);
-			onBlinkCanvases.push(onBlinkCanvas);
-			onBlinkCtxs.push(onBlinkCanvas.getContext('2d'));
-			const offBlinkCanvas = createCanvas(canvasWidth, canvasHeight);
-			offBlinkCanvases.push(offBlinkCanvas);
-			offBlinkCtxs.push(offBlinkCanvas.getContext('2d'));
-		}
-		canvasHeight = fontHeight * (rows % 25);
-		if (rows % 25 !== 0) {
-			const canvas = createCanvas(canvasWidth, canvasHeight);
-			canvases.push(canvas);
-			ctxs.push(canvas.getContext('2d'));
-			const onBlinkCanvas = createCanvas(canvasWidth, canvasHeight);
-			onBlinkCanvases.push(onBlinkCanvas);
-			onBlinkCtxs.push(onBlinkCanvas.getContext('2d'));
-			const offBlinkCanvas = createCanvas(canvasWidth, canvasHeight);
-			offBlinkCanvases.push(offBlinkCanvas);
-			offBlinkCtxs.push(offBlinkCanvas.getContext('2d'));
-		}
-		canvasContainer.style.width = canvasWidth + 'px';
-		for (let i = 0; i < canvases.length; i++) {
-			canvasContainer.appendChild(canvases[i]);
-		}
-		redrawing = false;
-		stopBlinkTimer();
-		redrawEntireImage();
-		// Timer will be started by updateTimer() call after createCanvases()
-	};
-
 	const createCanvases = () => {
-		if (!ENABLE_VIRTUALIZATION) {
-			createCanvasesLegacy();
+		// Safety check
+		if (!canvasContainer) {
+			console.error('[Canvas] canvasContainer is null, cannot create canvases');
 			return;
 		}
 
@@ -1012,30 +885,21 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const completeCanvas = createCanvas(fontWidth * columns, fontHeight * rows);
 		const ctx = completeCanvas.getContext('2d');
 
-		if (ENABLE_VIRTUALIZATION) {
-			// Ensure all chunks exist and are rendered for export
-			const totalChunks = Math.ceil(rows / CHUNK_SIZE);
+		// Ensure all chunks exist and are rendered for export
+		const totalChunks = Math.ceil(rows / CHUNK_SIZE);
 
-			for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-				let chunk = canvasChunks.get(chunkIndex);
-				if (!chunk) {
-					chunk = getOrCreateCanvasChunk(chunkIndex);
-				}
-				if (!chunk.rendered) {
-					renderChunk(chunk);
-					chunk.rendered = true;
-				}
-				const sourceCanvas = iceColors ? chunk.canvas : chunk.offBlinkCanvas;
-				const yPosition = chunkIndex * CHUNK_SIZE * fontHeight;
-				ctx.drawImage(sourceCanvas, 0, yPosition);
+		for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+			let chunk = canvasChunks.get(chunkIndex);
+			if (!chunk) {
+				chunk = getOrCreateCanvasChunk(chunkIndex);
 			}
-		} else {
-			// Legacy export
-			let y = 0;
-			(iceColors ? canvases : offBlinkCanvases).forEach(canvas => {
-				ctx.drawImage(canvas, 0, y);
-				y += canvas.height;
-			});
+			if (!chunk.rendered) {
+				renderChunk(chunk);
+				chunk.rendered = true;
+			}
+			const sourceCanvas = iceColors ? chunk.canvas : chunk.offBlinkCanvas;
+			const yPosition = chunkIndex * CHUNK_SIZE * fontHeight;
+			ctx.drawImage(sourceCanvas, 0, yPosition);
 		}
 
 		return completeCanvas;
@@ -1805,29 +1669,21 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				// Update imageData immediately (always)
 				imageData[block[0]] = block[1];
 
-				if (ENABLE_VIRTUALIZATION) {
-					const y = block[3];
-					const chunkIndex = Math.floor(y / CHUNK_SIZE);
-					const chunk = canvasChunks.get(chunkIndex);
+				const y = block[3];
+				const chunkIndex = Math.floor(y / CHUNK_SIZE);
+				const chunk = canvasChunks.get(chunkIndex);
 
-					if (chunk && activeChunks.has(chunkIndex)) {
-						// Chunk is visible - update immediately
-						if (!iceColors) {
-							updateBeforeBlinkFlip(block[2], block[3]);
-						}
-						enqueueDirtyCell(block[2], block[3]);
-					} else if (chunk) {
-						// Chunk exists but not visible - mark as dirty
-						chunk.rendered = false;
-					}
-					// If chunk doesn't exist, it will be rendered fresh when created
-				} else {
-					// Legacy mode
+				if (chunk && activeChunks.has(chunkIndex)) {
+					// Chunk is visible - update immediately
 					if (!iceColors) {
 						updateBeforeBlinkFlip(block[2], block[3]);
 					}
 					enqueueDirtyCell(block[2], block[3]);
+				} else if (chunk) {
+					// Chunk exists but not visible - mark as dirty
+					chunk.rendered = false;
 				}
+				// If chunk doesn't exist, it will be rendered fresh when created
 			}
 		});
 		processDirtyRegions();
