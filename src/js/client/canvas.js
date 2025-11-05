@@ -880,8 +880,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const getImage = () => {
-		const fontWidth = State.font.getWidth();
-		const fontHeight = State.font.getHeight();
+		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
+		const fontHeight = State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
 		const completeCanvas = createCanvas(fontWidth * columns, fontHeight * rows);
 		const ctx = completeCanvas.getContext('2d');
 
