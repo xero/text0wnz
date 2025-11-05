@@ -100,7 +100,9 @@ describe('Keyboard Extended Coverage', () => {
 		it('should copy selection to clipboard', () => {
 			// Test copy operation logic
 			const copySelection = (selection, canvas) => {
-				if (!selection) {return null;}
+				if (!selection) {
+					return null;
+				}
 
 				const { startX, startY, endX, endY } = selection;
 				const width = Math.abs(endX - startX) + 1;
@@ -184,7 +186,9 @@ describe('Keyboard Extended Coverage', () => {
 		it('should paste clipboard data to canvas', () => {
 			// Test paste operation logic
 			const pasteData = (clipboard, canvas, x, y) => {
-				if (!clipboard || !clipboard.data) {return false;}
+				if (!clipboard || !clipboard.data) {
+					return false;
+				}
 
 				let pasted = 0;
 				for (let dy = 0; dy < clipboard.data.length; dy++) {

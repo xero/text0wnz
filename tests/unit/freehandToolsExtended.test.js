@@ -97,6 +97,7 @@ describe('Freehand Tools - Extended Coverage', () => {
 			expect(state.isDrawing()).toBe(true);
 
 			const movement = state.move(15, 25);
+			expect(movement).toBeDefined();
 			expect(movement.from).toEqual({ x: 10, y: 20 });
 			expect(movement.to).toEqual({ x: 15, y: 25 });
 
@@ -286,7 +287,9 @@ describe('Freehand Tools - Extended Coverage', () => {
 				while (true) {
 					points.push({ x, y });
 
-					if (x === x1 && y === y1) {break;}
+					if (x === x1 && y === y1) {
+						break;
+					}
 
 					const e2 = 2 * err;
 					if (e2 > -dy) {

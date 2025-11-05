@@ -502,15 +502,19 @@ describe('Text0wnz Module Integration Tests', () => {
 			// Test log function with debug = true (uses callout)
 			const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 			
+			// Import actual sanitize for consistency
+			const sanitize = (input, limit = 100, quote = false) => {
+				if (!input) return '';
+				const str = String(input).trim().replace(/\p{C}/gu, '').replace(/[\n\r]/g, '').substring(0, limit);
+				return quote ? `'${str}'` : str;
+			};
+			
+			const callout = msg => {
+				const logMsg = sanitize(msg, 100, false);
+				console.log(`╓───── ${logMsg}\n╙───────────────────────────────── ─ ─`);
+			};
+			
 			const log = (msg, debug) => {
-				const sanitize = (input, limit = 100, quote = false) => {
-					if (!input) return '';
-					return String(input).trim().substring(0, limit);
-				};
-				const callout = msg => {
-					const logMsg = sanitize(msg, 100, false);
-					console.log(`╓───── ${logMsg}\n╙───────────────────────────────── ─ ─`);
-				};
 				const logMsg = sanitize(msg, 100, false);
 				debug ? callout(logMsg) : console.log(`* ${logMsg}`);
 			};
