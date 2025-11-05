@@ -23,10 +23,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			currentFontName = magicNumbers.DEFAULT_FONT,
 			dirtyRegions = [],
 			processingDirtyRegions = false,
-			xbFontData = null;
+			xbFontData = null,
+			dirtyRegionScheduled = false;
 
 	// Virtualization: viewport tracking and chunk management
-	const CHUNK_SIZE = 25;
+	const chunkSize = 25;
 	const viewportState = {
 		scrollTop: 0,
 		scrollLeft: 0,
@@ -105,24 +106,28 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return;
 		}
 
-		processingDirtyRegions = true;
-
-		// Coalesce regions for better performance
-		const coalescedRegions = coalesceRegions(dirtyRegions);
-		dirtyRegions = [];
-
-		// Draw all coalesced regions
-		for (let i = 0; i < coalescedRegions.length; i++) {
-			const region = coalescedRegions[i];
-			drawRegion(region.x, region.y, region.w, region.h);
+		// Throttle with RAF for smooth rendering
+		if (!dirtyRegionScheduled) {
+			dirtyRegionScheduled = true;
+			requestAnimationFrame(() => {
+				processingDirtyRegions = true;
+				// Coalesce regions for better performance
+				const coalescedRegions = coalesceRegions(dirtyRegions);
+				dirtyRegions = [];
+				// Draw all coalesced regions
+				for (let i = 0; i < coalescedRegions.length; i++) {
+					const region = coalescedRegions[i];
+					drawRegion(region.x, region.y, region.w, region.h);
+				}
+				processingDirtyRegions = false;
+				dirtyRegionScheduled = false;
+			});
 		}
-
-		processingDirtyRegions = false;
 	};
 
 	const redrawGlyph = (index, x, y) => {
 		// Virtualization-aware redraw: only update if chunk is active
-		const chunkIndex = Math.floor(y / CHUNK_SIZE);
+		const chunkIndex = Math.floor(y / chunkSize);
 		const chunk = canvasChunks.get(chunkIndex);
 		if (!chunk || !activeChunks.has(chunkIndex)) {
 			// Chunk not visible, skip rendering but mark as dirty if it exists
@@ -134,24 +139,76 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		redrawGlyphInChunk(index, x, y, chunk);
 	};
 
-	const redrawEntireImage = () => {
+	// Replace redrawEntireImage() (around line 168):
+
+	const redrawEntireImage = (onProgress, onComplete) => {
 		// For small canvases, direct render is fine
 		if (rows * columns < 5000) {
 			drawRegion(0, 0, columns, rows);
+			if (onComplete) {
+				requestAnimationFrame(onComplete);
+			}
 			return;
 		}
-		// For larger canvases, use progressive rendering
-		const batchSize = 5; // Rows per frame
-		progressiveRedraw(0, batchSize);
+
+		// Dynamic batch sizing based on canvas size
+		const totalCells = rows * columns;
+		let batchSize;
+
+		if (totalCells < 10000) {
+			batchSize = 10; // Small: 10 rows per frame
+		} else if (totalCells < 50000) {
+			batchSize = 5; // Medium: 5 rows per frame
+		} else {
+			batchSize = 3; // Large: 3 rows per frame
+		}
+
+		progressiveRedraw(0, batchSize, rows, onProgress, onComplete);
 	};
 
-	const progressiveRedraw = (startRow, batchSize) => {
-		const endRow = Math.min(startRow + batchSize, rows);
+	const progressiveRedraw = (
+		startRow,
+		batchSize,
+		totalRows,
+		onProgress,
+		onComplete,
+	) => {
+		const frameStart = performance.now();
+		const endRow = Math.min(startRow + batchSize, totalRows || rows);
+
 		drawRegion(0, startRow, columns, endRow - startRow);
 
-		if (endRow < rows) {
-			requestAnimationFrame(() => progressiveRedraw(endRow, batchSize));
+		// Call progress callback if provided
+		if (onProgress) {
+			const progress = (endRow / (totalRows || rows)) * 100;
+			onProgress(progress);
+		}
+
+		if (endRow < (totalRows || rows)) {
+			requestAnimationFrame(() => {
+				// Dynamic batch sizing based on performance
+				const frameTime = performance.now() - frameStart;
+				let nextBatchSize = batchSize;
+
+				// Adjust batch size to maintain 60fps
+				if (frameTime < 10) {
+					nextBatchSize = Math.min(batchSize * 2, 25); // Increase if fast
+				} else if (frameTime > 16) {
+					nextBatchSize = Math.max(Math.floor(batchSize / 2), 1); // Decrease if slow
+				}
+
+				progressiveRedraw(
+					endRow,
+					nextBatchSize,
+					totalRows,
+					onProgress,
+					onComplete,
+				);
+			});
 		} else {
+			if (onComplete) {
+				onComplete();
+			}
 			document.dispatchEvent(new CustomEvent('onCanvasRenderComplete'));
 		}
 	};
@@ -349,7 +406,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const calculateVisibleChunks = () => {
 		const fontHeight =
 			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
-		const totalChunks = Math.ceil(rows / CHUNK_SIZE);
+		const totalChunks = Math.ceil(rows / chunkSize);
 
 		// Get viewport element and dimensions
 		const viewportElement = document.getElementById('viewport');
@@ -368,7 +425,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const viewportHeight = viewportElement.clientHeight || window.innerHeight;
 
 		// Buffer is 1 chunk (25 rows) above and below for smooth scrolling
-		const bufferRows = CHUNK_SIZE * 2;
+		const bufferRows = chunkSize * 2;
 
 		const viewportTop = viewportState.scrollTop;
 		const viewportBottom = viewportTop + viewportHeight;
@@ -381,10 +438,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		);
 
 		// Convert pixel positions to chunk indices
-		const startChunk = Math.floor(bufferedTop / (CHUNK_SIZE * fontHeight));
+		const startChunk = Math.floor(bufferedTop / (chunkSize * fontHeight));
 		const endChunk = Math.min(
 			totalChunks - 1,
-			Math.floor(bufferedBottom / (CHUNK_SIZE * fontHeight)),
+			Math.floor(bufferedBottom / (chunkSize * fontHeight)),
 		);
 
 		return {
@@ -437,8 +494,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
 
 		// Calculate chunk dimensions
-		const chunkStartRow = chunkIndex * CHUNK_SIZE;
-		const chunkEndRow = Math.min((chunkIndex + 1) * CHUNK_SIZE, rows);
+		const chunkStartRow = chunkIndex * chunkSize;
+		const chunkEndRow = Math.min((chunkIndex + 1) * chunkSize, rows);
 		const chunkHeight = chunkEndRow - chunkStartRow;
 
 		const canvasWidth = fontWidth * columns;
@@ -466,34 +523,42 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	/**
-	 * Render a specific chunk
+	 * Render a specific chunk with RAF batching for initial render
 	 */
-	const renderChunk = chunk => {
+	const renderChunk = (chunk, async = false) => {
 		if (!chunk) {
 			return;
 		}
 
-		const { startRow, endRow, ctx } = chunk;
+		const doRender = () => {
+			const { startRow, endRow, ctx } = chunk;
 
-		// Clear the chunk canvases
-		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
-		const fontHeight =
-			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
-		const chunkHeight = (endRow - startRow) * fontHeight;
-		const canvasWidth = fontWidth * columns;
+			const fontWidth =
+				State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
+			const fontHeight =
+				State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+			const chunkHeight = (endRow - startRow) * fontHeight;
+			const canvasWidth = fontWidth * columns;
 
-		ctx.clearRect(0, 0, canvasWidth, chunkHeight);
-		chunk.blinkCells.clear();
+			ctx.clearRect(0, 0, canvasWidth, chunkHeight);
+			chunk.blinkCells.clear();
 
-		// Render all cells in this chunk
-		for (let y = startRow; y < endRow; y++) {
-			for (let x = 0; x < columns; x++) {
-				const index = y * columns + x;
-				redrawGlyphInChunk(index, x, y, chunk);
+			// Render all cells in this chunk
+			for (let y = startRow; y < endRow; y++) {
+				for (let x = 0; x < columns; x++) {
+					const index = y * columns + x;
+					redrawGlyphInChunk(index, x, y, chunk);
+				}
 			}
-		}
 
-		chunk.rendered = true;
+			chunk.rendered = true;
+		};
+
+		if (async) {
+			requestAnimationFrame(doRender);
+		} else {
+			doRender();
+		}
 	};
 
 	/**
@@ -548,7 +613,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		canvases = [];
 		ctxs = [];
 
-		const totalChunks = Math.ceil(rows / CHUNK_SIZE);
+		const totalChunks = Math.ceil(rows / chunkSize);
 		for (let i = 0; i < totalChunks; i++) {
 			const chunk = canvasChunks.get(i);
 			if (chunk) {
@@ -709,10 +774,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			? viewportElement.clientHeight
 			: window.innerHeight;
 		const visibleChunkCount = Math.ceil(
-			viewportHeight / (fontHeight * CHUNK_SIZE),
+			viewportHeight / (fontHeight * chunkSize),
 		);
 		const preRenderEndChunk = Math.min(
-			Math.ceil(rows / CHUNK_SIZE) - 1,
+			Math.ceil(rows / chunkSize) - 1,
 			endChunk + visibleChunkCount * 4,
 		);
 
@@ -913,7 +978,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		blinkOn = false;
 
 		// Ensure all chunks exist and are rendered for export
-		const totalChunks = Math.ceil(rows / CHUNK_SIZE);
+		const totalChunks = Math.ceil(rows / chunkSize);
 
 		for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
 			let chunk = canvasChunks.get(chunkIndex);
@@ -924,7 +989,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				renderChunk(chunk);
 				chunk.rendered = true;
 			}
-			const yPosition = chunkIndex * CHUNK_SIZE * fontHeight;
+			const yPosition = chunkIndex * chunkSize * fontHeight;
 			ctx.drawImage(chunk.canvas, 0, yPosition);
 		}
 
@@ -942,6 +1007,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		newRowValue,
 		newImageData,
 		newIceColors,
+		onProgress,
+		onComplete,
 	) => {
 		clearUndos();
 		columns = newColumnValue;
@@ -952,8 +1019,14 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			iceColors = newIceColors;
 		}
 		updateTimer();
-		redrawEntireImage();
-		document.dispatchEvent(new CustomEvent('onOpenedFile'));
+
+		// Use progressive rendering with progress callback
+		redrawEntireImage(onProgress, () => {
+			document.dispatchEvent(new CustomEvent('onOpenedFile'));
+			if (onComplete) {
+				onComplete();
+			}
+		});
 	};
 
 	const getColumns = () => {
@@ -1439,49 +1512,107 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		if (undoBuffer.length > 0) {
 			const currentRedo = [];
 			const undoChunk = undoBuffer.pop();
-			for (let i = undoChunk.length - 1; i >= 0; i--) {
-				const undo = undoChunk.pop();
-				if (undo[0] < imageData.length) {
-					currentRedo.push([undo[0], imageData[undo[0]], undo[2], undo[3]]);
-					imageData[undo[0]] = undo[1];
-					drawHistory.push((undo[0] << 16) + undo[1]);
-					if (!iceColors) {
-						updateBeforeBlinkFlip(undo[2], undo[3]);
+
+			// Batch undo operations for better performance
+			let undoBatchSize = 100;
+			let processed = 0;
+
+			const processUndoBatch = () => {
+				const batchStart = performance.now();
+				const batchEnd = Math.min(processed + undoBatchSize, undoChunk.length);
+				const itemsToProcess = batchEnd - processed;
+
+				// Process items from the END of undoChunk backwards
+				for (let i = 0; i < itemsToProcess; i++) {
+					const undo = undoChunk.pop(); // This safely removes from the end
+
+					if (undo && undo[0] < imageData.length) {
+						currentRedo.push([undo[0], imageData[undo[0]], undo[2], undo[3]]);
+						imageData[undo[0]] = undo[1];
+						drawHistory.push((undo[0] << 16) + undo[1]);
+						if (!iceColors) {
+							updateBeforeBlinkFlip(undo[2], undo[3]);
+						}
+						redrawGlyph(undo[0], undo[2], undo[3]);
+						enqueueDirtyCell(undo[2], undo[3]);
 					}
-					// Use both immediate redraw AND dirty region system for undo
-					redrawGlyph(undo[0], undo[2], undo[3]);
-					enqueueDirtyCell(undo[2], undo[3]);
 				}
-			}
-			redoBuffer.push(currentRedo);
-			processDirtyRegions();
-			sendDrawHistory();
-			State.saveToLocalStorage();
+
+				processed = batchEnd;
+				const batchTime = performance.now() - batchStart;
+
+				// Adaptive batching
+				if (batchTime < 5) {
+					undoBatchSize = Math.min(undoBatchSize * 1.2, 500);
+				} else if (batchTime > 15) {
+					undoBatchSize = Math.max(Math.floor(undoBatchSize * 0.8), 10);
+				}
+
+				if (processed < undoChunk.length) {
+					requestAnimationFrame(processUndoBatch);
+				} else {
+					redoBuffer.push(currentRedo);
+					processDirtyRegions();
+					sendDrawHistory();
+					State.saveToLocalStorage();
+				}
+			};
+
+			processUndoBatch();
 		}
 	};
 
 	const redo = () => {
 		if (redoBuffer.length > 0) {
 			const redoChunk = redoBuffer.pop();
-			for (let i = redoChunk.length - 1; i >= 0; i--) {
-				const redo = redoChunk.pop();
-				if (redo[0] < imageData.length) {
-					currentUndo.push([redo[0], imageData[redo[0]], redo[2], redo[3]]);
-					imageData[redo[0]] = redo[1];
-					drawHistory.push((redo[0] << 16) + redo[1]);
-					if (!iceColors) {
-						updateBeforeBlinkFlip(redo[2], redo[3]);
+
+			// Batch redo operations for better performance
+			let redoBatchSize = 100;
+			let processed = 0;
+
+			const processRedoBatch = () => {
+				const batchStart = performance.now();
+				const batchEnd = Math.min(processed + redoBatchSize, redoChunk.length);
+				const itemsToProcess = batchEnd - processed;
+
+				// Process items from the END of redoChunk backwards
+				for (let i = 0; i < itemsToProcess; i++) {
+					const redo = redoChunk.pop(); // This safely removes from the end
+
+					if (redo && redo[0] < imageData.length) {
+						currentUndo.push([redo[0], imageData[redo[0]], redo[2], redo[3]]);
+						imageData[redo[0]] = redo[1];
+						drawHistory.push((redo[0] << 16) + redo[1]);
+						if (!iceColors) {
+							updateBeforeBlinkFlip(redo[2], redo[3]);
+						}
+						redrawGlyph(redo[0], redo[2], redo[3]);
+						enqueueDirtyCell(redo[2], redo[3]);
 					}
-					// Use both immediate redraw AND dirty region system for redo
-					redrawGlyph(redo[0], redo[2], redo[3]);
-					enqueueDirtyCell(redo[2], redo[3]);
 				}
-			}
-			undoBuffer.push(currentUndo);
-			currentUndo = [];
-			processDirtyRegions();
-			sendDrawHistory();
-			State.saveToLocalStorage();
+
+				processed = batchEnd;
+				const batchTime = performance.now() - batchStart;
+
+				// Adaptive batching
+				if (batchTime < 5) {
+					redoBatchSize = Math.min(redoBatchSize * 1.2, 500);
+				} else if (batchTime > 15) {
+					redoBatchSize = Math.max(Math.floor(redoBatchSize * 0.8), 10);
+				}
+
+				if (processed < redoChunk.length) {
+					requestAnimationFrame(processRedoBatch);
+				} else {
+					undoBuffer.push(currentUndo);
+					currentUndo = [];
+					processDirtyRegions();
+					sendDrawHistory();
+					State.saveToLocalStorage();
+				}
+			};
+
+			processRedoBatch();
 		}
 	};
 
@@ -1698,7 +1829,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				imageData[block[0]] = block[1];
 
 				const y = block[3];
-				const chunkIndex = Math.floor(y / CHUNK_SIZE);
+				const chunkIndex = Math.floor(y / chunkSize);
 				const chunk = canvasChunks.get(chunkIndex);
 
 				if (chunk && activeChunks.has(chunkIndex)) {
