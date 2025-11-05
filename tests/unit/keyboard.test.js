@@ -61,6 +61,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 			show: vi.fn(),
 			isVisible: vi.fn(() => false),
 			getSelection: vi.fn(() => null),
+			getPos: vi.fn(() => null),
 			getElement: vi.fn(() => document.createElement('div')),
 		},
 		positionInfo: { update: vi.fn() },
