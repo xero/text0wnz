@@ -674,12 +674,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 		redrawing = true;
 
-		// Clear existing canvases
-		if (canvasContainer.firstChild) {
-			while (canvasContainer.firstChild) {
-				canvasContainer.removeChild(canvasContainer.firstChild);
+		// Remove existing canvas chunks (but preserve overlay elements like toolPreview and grid)
+		canvasChunks.forEach(chunk => {
+			if (chunk.canvas && chunk.canvas.parentNode) {
+				canvasContainer.removeChild(chunk.canvas);
 			}
-		}
+		});
 
 		canvasChunks.clear();
 		activeChunks.clear();
