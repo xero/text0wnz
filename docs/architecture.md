@@ -812,17 +812,21 @@ const viewportState = {
 	scrollLeft: 0,
 	containerHeight: 0,
 	visibleStartRow: 0,
-	visibleEndRow: 0
+	visibleEndRow: 0,
 };
 
 function calculateVisibleChunks() {
 	const viewportTop = viewportState.scrollTop;
 	const viewportBottom = viewportTop + viewportState.containerHeight;
 	const bufferZone = chunkSize * fontHeight; // 1 chunk buffer
-	
-	const startChunk = Math.floor((viewportTop - bufferZone) / (chunkSize * fontHeight));
-	const endChunk = Math.floor((viewportBottom + bufferZone) / (chunkSize * fontHeight));
-	
+
+	const startChunk = Math.floor(
+		(viewportTop - bufferZone) / (chunkSize * fontHeight),
+	);
+	const endChunk = Math.floor(
+		(viewportBottom + bufferZone) / (chunkSize * fontHeight),
+	);
+
 	return { startChunk, endChunk };
 }
 ```
@@ -833,7 +837,7 @@ Chunks are attached/detached from DOM as user scrolls:
 ```javascript
 function renderVisibleChunks() {
 	const { startChunk, endChunk } = calculateVisibleChunks();
-	
+
 	// Remove chunks outside viewport
 	activeChunks.forEach(chunkIndex => {
 		if (chunkIndex < startChunk || chunkIndex > endChunk) {
@@ -843,7 +847,7 @@ function renderVisibleChunks() {
 			}
 		}
 	});
-	
+
 	// Add visible chunks to DOM
 	for (let i = startChunk; i <= endChunk; i++) {
 		const chunk = getOrCreateCanvasChunk(i);
@@ -859,6 +863,7 @@ function renderVisibleChunks() {
 ```
 
 **Performance Impact:**
+
 - 80×200 canvas: ~60% faster initial load (80ms vs 200ms)
 - Memory: ~66% reduction (only visible chunks in memory)
 - Scalability: Handles canvases up to 2000+ rows efficiently
@@ -879,7 +884,7 @@ function processDirtyRegions() {
 	// Coalesce adjacent regions to minimize draw calls
 	const coalesced = coalesceRegions(dirtyRegions);
 	dirtyRegions = [];
-	
+
 	coalesced.forEach(region => {
 		drawRegion(region.x, region.y, region.w, region.h);
 	});
@@ -893,13 +898,13 @@ Dirty tracking respects chunk visibility:
 function redrawGlyph(index, x, y) {
 	const chunkIndex = Math.floor(y / chunkSize);
 	const chunk = canvasChunks.get(chunkIndex);
-	
+
 	if (!chunk || !activeChunks.has(chunkIndex)) {
 		// Mark chunk as dirty for later rendering
 		if (chunk) chunk.rendered = false;
 		return;
 	}
-	
+
 	// Render immediately for visible chunks
 	redrawGlyphInChunk(index, x, y, chunk);
 }
@@ -907,24 +912,25 @@ function redrawGlyph(index, x, y) {
 
 #### RequestAnimationFrame Throttling
 
-**RAF Throttling** (RequestAnimationFrame Throttling) synchronizes expensive operations with the browser's rendering cycle (typically 60fps = 16.67ms per frame).[¹](https://stackoverflow.com/questions/79641790/how-to-throttle-requestanimationframe-efficiently)[²](https://programmerall.com/article/2717382771/)
+**RAF Throttling** (RequestAnimationFrame Throttling) synchronizes expensive operations with the browser's rendering cycle (typically 60fps = 16.67ms per frame). [cite](https://stackoverflow.com/questions/79641790/how-to-throttle-requestanimationframe-efficiently)
 
 **Scroll Event Throttling:**
+
 ```javascript
 let scrollScheduled = false;
 let pendingScrollUpdate = false;
 
 function handleScroll() {
 	pendingScrollUpdate = true;
-	
+
 	if (scrollScheduled) return;
-	
+
 	scrollScheduled = true;
 	requestAnimationFrame(() => {
 		updateViewportState();
 		renderVisibleChunks();
 		scrollScheduled = false;
-		
+
 		// Handle accumulated scroll events
 		if (pendingScrollUpdate) {
 			pendingScrollUpdate = false;
@@ -937,23 +943,24 @@ viewportElement.addEventListener('scroll', handleScroll, { passive: true });
 ```
 
 **Dirty Region Rendering:**
+
 ```javascript
 let dirtyRegionScheduled = false;
 
 function processDirtyRegions() {
 	if (dirtyRegions.length === 0 || processingDirtyRegions) return;
-	
+
 	if (!dirtyRegionScheduled) {
 		dirtyRegionScheduled = true;
 		requestAnimationFrame(() => {
 			processingDirtyRegions = true;
 			const coalescedRegions = coalesceRegions(dirtyRegions);
 			dirtyRegions = [];
-			
+
 			coalescedRegions.forEach(region => {
 				drawRegion(region.x, region.y, region.w, region.h);
 			});
-			
+
 			processingDirtyRegions = false;
 			dirtyRegionScheduled = false;
 		});
@@ -962,6 +969,7 @@ function processDirtyRegions() {
 ```
 
 **Benefits:**
+
 - Prevents redundant rendering within same frame
 - Syncs updates with browser repaint cycle
 - Eliminates jank and tearing
@@ -974,41 +982,41 @@ For large canvases, render in batches across multiple frames:
 ```javascript
 function redrawEntireImage(onProgress, onComplete) {
 	const totalCells = rows * columns;
-	
+
 	// Dynamic batch sizing
 	let batchSize;
 	if (totalCells < 10000) {
 		batchSize = 10; // Small: 10 rows per frame
 	} else if (totalCells < 50000) {
-		batchSize = 5;  // Medium: 5 rows per frame
+		batchSize = 5; // Medium: 5 rows per frame
 	} else {
-		batchSize = 3;  // Large: 3 rows per frame
+		batchSize = 3; // Large: 3 rows per frame
 	}
-	
+
 	function renderBatch(startRow) {
 		const endRow = Math.min(startRow + batchSize, rows);
 		drawRegion(0, startRow, columns, endRow - startRow);
-		
+
 		if (onProgress) onProgress(endRow / rows);
-		
+
 		if (endRow < rows) {
 			requestAnimationFrame(() => renderBatch(endRow));
 		} else if (onComplete) {
 			requestAnimationFrame(onComplete);
 		}
 	}
-	
+
 	renderBatch(0);
 }
 ```
 
 #### Optimized Blink Effect
 
-The blink effect uses selective cell tracking instead of full canvas duplication:
+The blink effect uses selective cell tracking
 
 ```javascript
 const chunk = {
-	canvas: createCanvas(...),  // Single visible canvas
+	canvas: createCanvas(...),
 	ctx: canvas.getContext('2d'),
 	blinkCells: new Set(),      // Track cells with blink attribute
 	startRow: ...,
@@ -1017,21 +1025,19 @@ const chunk = {
 
 // During render, identify cells with blink attribute (background >= 8)
 function redrawGlyphInChunk(index, x, y, chunk) {
-	const charCode = imageData[index] >> 8;
-	let background = (imageData[index] >> 4) & 15;
-	const foreground = imageData[index] & 15;
-	const isBlinkBackground = background >= 8;
-	
+    // ...
 	if (!iceColors && isBlinkBackground) {
 		chunk.blinkCells.add(index);  // Track for blink timer
 		background -= 8;
-		
 		// Draw based on current blink state
-		if (blinkOn) {
-			State.font.draw(charCode, background, background, chunk.ctx, x, localY);
-		} else {
-			State.font.draw(charCode, foreground, background, chunk.ctx, x, localY);
-		}
+        State.font.draw(
+            charCode,
+            blinkOn ? background : foreground,
+            background,
+            chunk.ctx,
+            x,
+            localY
+        );
 	} else {
 		chunk.blinkCells.delete(index);
 		State.font.draw(charCode, foreground, background, chunk.ctx, x, localY);
@@ -1044,34 +1050,31 @@ function blink() {
 	activeChunks.forEach(chunkIndex => {
 		const chunk = canvasChunks.get(chunkIndex);
 		if (!chunk || chunk.blinkCells.size === 0) return;
-		
+
 		// Only redraw cells that need blinking
 		chunk.blinkCells.forEach(index => {
-			const x = index % columns;
-			const y = Math.floor(index / columns);
-			const localY = y - chunk.startRow;
-			
-			const charCode = imageData[index] >> 8;
-			let background = ((imageData[index] >> 4) & 15) - 8;
-			const foreground = imageData[index] & 15;
-			
-			if (blinkOn) {
-				State.font.draw(charCode, background, background, chunk.ctx, x, localY);
-			} else {
-				State.font.draw(charCode, foreground, background, chunk.ctx, x, localY);
-			}
+            // ...
+            State.font.draw(
+                charCode,
+                blinkOn ? background : foreground,
+                background,
+                chunk.ctx,
+                x,
+                localY
+            );
 		});
 	});
 }
 ```
 
 **Benefits:**
+
 - No offscreen canvases needed (reduced memory by 66%)
 - Only redraws cells that actually blink
 - Mutex-based timer prevents race conditions
 - Automatically skips chunks with no blinking cells
 
-**Result:** Smooth 60 FPS on canvases of any size (tested up to 2000+ rows)
+**Result:** Smooth 60 FPS on canvases of any size (tested with 2000+ row canvases)
 
 ### Font Loading
 

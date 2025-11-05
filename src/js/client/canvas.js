@@ -24,20 +24,19 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			dirtyRegions = [],
 			processingDirtyRegions = false,
 			xbFontData = null,
-			dirtyRegionScheduled = false;
+			dirtyRegionScheduled = false,
+			activeChunks = new Set();
 
-	// Virtualization: viewport tracking and chunk management
-	const chunkSize = 25;
-	const viewportState = {
-		scrollTop: 0,
-		scrollLeft: 0,
-		containerHeight: 0,
-		containerWidth: 0,
-		visibleStartRow: 0,
-		visibleEndRow: 0,
-	};
-	const canvasChunks = new Map(); // Key: chunkIndex, Value: { canvas, ctx, onBlink, offBlink, rendered: bool }
-	let activeChunks = new Set(); // Currently visible chunk indices
+	const chunkSize = 25,
+				viewportState = {
+					scrollTop: 0,
+					scrollLeft: 0,
+					containerHeight: 0,
+					containerWidth: 0,
+					visibleStartRow: 0,
+					visibleEndRow: 0,
+				},
+				canvasChunks = new Map(); // Key: chunkIndex, Value: { canvas, ctx, onBlink, offBlink, rendered: bool }
 
 	const updateBeforeBlinkFlip = (x, y) => {
 		const dataIndex = y * columns + x;
@@ -111,10 +110,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			dirtyRegionScheduled = true;
 			requestAnimationFrame(() => {
 				processingDirtyRegions = true;
-				// Coalesce regions for better performance
 				const coalescedRegions = coalesceRegions(dirtyRegions);
 				dirtyRegions = [];
-				// Draw all coalesced regions
 				for (let i = 0; i < coalescedRegions.length; i++) {
 					const region = coalescedRegions[i];
 					drawRegion(region.x, region.y, region.w, region.h);
@@ -126,7 +123,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const redrawGlyph = (index, x, y) => {
-		// Virtualization-aware redraw: only update if chunk is active
+		// Only update if chunk is active
 		const chunkIndex = Math.floor(y / chunkSize);
 		const chunk = canvasChunks.get(chunkIndex);
 		if (!chunk || !activeChunks.has(chunkIndex)) {
@@ -138,8 +135,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 		redrawGlyphInChunk(index, x, y, chunk);
 	};
-
-	// Replace redrawEntireImage() (around line 168):
 
 	const redrawEntireImage = (onProgress, onComplete) => {
 		// For small canvases, direct render is fine
@@ -162,7 +157,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		} else {
 			batchSize = 3; // Large: 3 rows per frame
 		}
-
 		progressiveRedraw(0, batchSize, rows, onProgress, onComplete);
 	};
 
@@ -190,13 +184,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				const frameTime = performance.now() - frameStart;
 				let nextBatchSize = batchSize;
 
-				// Adjust batch size to maintain 60fps
+				// Adjust batch size to maintain snappy fps
 				if (frameTime < 10) {
 					nextBatchSize = Math.min(batchSize * 2, 25); // Increase if fast
 				} else if (frameTime > 16) {
 					nextBatchSize = Math.max(Math.floor(batchSize / 2), 1); // Decrease if slow
 				}
-
 				progressiveRedraw(
 					endRow,
 					nextBatchSize,
@@ -213,7 +206,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	// dirty region coalescing algorithm
+	// Dirty region coalescing algorithm
 	const coalesceRegions = regions => {
 		if (regions.length <= 1) {
 			return regions;
@@ -238,7 +231,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				Math.floor((region.y + region.h - 1) / gridCellSize),
 				gridHeight - 1,
 			);
-
 			for (let y = startGridY; y <= endGridY; y++) {
 				for (let x = startGridX; x <= endGridX; x++) {
 					grid[y][x] = true;
@@ -321,31 +313,18 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				if (y >= chunk.startRow && y < chunk.endRow) {
 					const localY = y - chunk.startRow;
 					const charCode = imageData[index] >> 8;
-					let background = (imageData[index] >> 4) & 15;
 					const foreground = imageData[index] & 15;
-
+					let background = (imageData[index] >> 4) & 15;
 					if (background >= 8) {
 						background -= 8;
-
-						if (blinkOn) {
-							State.font.draw(
-								charCode,
-								background,
-								background,
-								chunk.ctx,
-								x,
-								localY,
-							);
-						} else {
-							State.font.draw(
-								charCode,
-								foreground,
-								background,
-								chunk.ctx,
-								x,
-								localY,
-							);
-						}
+						State.font.draw(
+							charCode,
+							blinkOn ? background : foreground,
+							background,
+							chunk.ctx,
+							x,
+							localY,
+						);
 					} else {
 						chunk.blinkCells.delete(index);
 					}
@@ -407,8 +386,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const fontHeight =
 			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
 		const totalChunks = Math.ceil(rows / chunkSize);
-
-		// Get viewport element and dimensions
 		const viewportElement = document.getElementById('viewport');
 		if (!viewportElement) {
 			// Fallback: render all chunks if viewport not available
@@ -426,7 +403,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 		// Buffer is 1 chunk (25 rows) above and below for smooth scrolling
 		const bufferRows = chunkSize * 2;
-
 		const viewportTop = viewportState.scrollTop;
 		const viewportBottom = viewportTop + viewportHeight;
 
@@ -436,7 +412,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			rows * fontHeight,
 			viewportBottom + bufferRows * fontHeight,
 		);
-
 		// Convert pixel positions to chunk indices
 		const startChunk = Math.floor(bufferedTop / (chunkSize * fontHeight));
 		const endChunk = Math.min(
@@ -531,12 +506,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 
 		const doRender = () => {
-			const { startRow, endRow, ctx } = chunk;
-
 			const fontWidth =
 				State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
 			const fontHeight =
 				State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+			const { startRow, endRow, ctx } = chunk;
 			const chunkHeight = (endRow - startRow) * fontHeight;
 			const canvasWidth = fontWidth * columns;
 
@@ -550,7 +524,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					redrawGlyphInChunk(index, x, y, chunk);
 				}
 			}
-
 			chunk.rendered = true;
 		};
 
@@ -562,7 +535,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	/**
-	 * Redraw a single glyph in a specific chunk (virtualization-aware)
+	 * Redraw a single glyph in a specific chunk
 	 */
 	const redrawGlyphInChunk = (index, x, y, chunk) => {
 		const localY = y - chunk.startRow;
@@ -577,28 +550,15 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		} else {
 			if (isBlinkBackground) {
 				chunk.blinkCells.add(index);
-
 				background -= 8;
-
-				if (blinkOn) {
-					State.font.draw(
-						charCode,
-						background,
-						background,
-						chunk.ctx,
-						x,
-						localY,
-					);
-				} else {
-					State.font.draw(
-						charCode,
-						foreground,
-						background,
-						chunk.ctx,
-						x,
-						localY,
-					);
-				}
+				State.font.draw(
+					charCode,
+					blinkOn ? background : foreground,
+					background,
+					chunk.ctx,
+					x,
+					localY,
+				);
 			} else {
 				State.font.draw(charCode, foreground, background, chunk.ctx, x, localY);
 				chunk.blinkCells.delete(index);
@@ -649,22 +609,18 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		for (let chunkIndex = startChunk; chunkIndex <= endChunk; chunkIndex++) {
 			newActiveChunks.add(chunkIndex);
 			let chunk = canvasChunks.get(chunkIndex);
-
 			if (!chunk) {
 				chunk = getOrCreateCanvasChunk(chunkIndex);
 			}
-
 			// Attach to DOM if not already attached
 			if (!chunk.canvas.parentNode) {
 				canvasContainer.appendChild(chunk.canvas);
 			}
-
 			// Render if not yet rendered
 			if (!chunk.rendered) {
 				renderChunk(chunk);
 			}
 		}
-
 		activeChunks = newActiveChunks;
 		updateLegacyArrays();
 	};
@@ -765,7 +721,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		canvasContainer.style.height = totalHeight + 'px';
 		canvasContainer.style.position = 'relative';
 
-		// Update viewport state
 		updateViewportState();
 
 		const { startChunk, endChunk } = calculateVisibleChunks();
@@ -992,7 +947,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			const yPosition = chunkIndex * chunkSize * fontHeight;
 			ctx.drawImage(chunk.canvas, 0, yPosition);
 		}
-
 		blinkOn = wasBlinkOn;
 
 		return completeCanvas;
