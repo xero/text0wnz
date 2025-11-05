@@ -29,6 +29,20 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			processingDirtyRegions = false,
 			xbFontData = null;
 
+	// Virtualization: viewport tracking and chunk management
+	const CHUNK_SIZE = 25; // Keep existing 25-row chunks
+	const ENABLE_VIRTUALIZATION = true; // Feature flag for quick rollback
+	const viewportState = {
+		scrollTop: 0,
+		scrollLeft: 0,
+		containerHeight: 0,
+		containerWidth: 0,
+		visibleStartRow: 0,
+		visibleEndRow: 0,
+	};
+	const canvasChunks = new Map(); // Key: chunkIndex, Value: { canvas, ctx, onBlink, offBlink, rendered: bool }
+	let activeChunks = new Set(); // Currently visible chunk indices
+
 	const updateBeforeBlinkFlip = (x, y) => {
 		const dataIndex = y * columns + x;
 		const contextIndex = Math.floor(y / 25);
@@ -139,56 +153,71 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const redrawGlyph = (index, x, y) => {
-		const contextIndex = Math.floor(y / 25);
-		const contextY = y % 25;
-		const charCode = imageData[index] >> 8;
-		let background = (imageData[index] >> 4) & 15;
-		const foreground = imageData[index] & 15;
-		if (iceColors) {
-			State.font.draw(
-				charCode,
-				foreground,
-				background,
-				ctxs[contextIndex],
-				x,
-				contextY,
-			);
+		if (ENABLE_VIRTUALIZATION) {
+			// Virtualization-aware redraw: only update if chunk is active
+			const chunkIndex = Math.floor(y / CHUNK_SIZE);
+			const chunk = canvasChunks.get(chunkIndex);
+			if (!chunk || !activeChunks.has(chunkIndex)) {
+				// Chunk not visible, skip rendering but mark as dirty if it exists
+				if (chunk) {
+					chunk.rendered = false;
+				}
+				return;
+			}
+			redrawGlyphInChunk(index, x, y, chunk);
 		} else {
-			if (background >= 8) {
-				background -= 8;
+			// Legacy rendering
+			const contextIndex = Math.floor(y / 25);
+			const contextY = y % 25;
+			const charCode = imageData[index] >> 8;
+			let background = (imageData[index] >> 4) & 15;
+			const foreground = imageData[index] & 15;
+			if (iceColors) {
 				State.font.draw(
 					charCode,
 					foreground,
 					background,
-					offBlinkCtxs[contextIndex],
-					x,
-					contextY,
-				);
-				State.font.draw(
-					charCode,
-					background,
-					background,
-					onBlinkCtxs[contextIndex],
+					ctxs[contextIndex],
 					x,
 					contextY,
 				);
 			} else {
-				State.font.draw(
-					charCode,
-					foreground,
-					background,
-					offBlinkCtxs[contextIndex],
-					x,
-					contextY,
-				);
-				State.font.draw(
-					charCode,
-					foreground,
-					background,
-					onBlinkCtxs[contextIndex],
-					x,
-					contextY,
-				);
+				if (background >= 8) {
+					background -= 8;
+					State.font.draw(
+						charCode,
+						foreground,
+						background,
+						offBlinkCtxs[contextIndex],
+						x,
+						contextY,
+					);
+					State.font.draw(
+						charCode,
+						background,
+						background,
+						onBlinkCtxs[contextIndex],
+						x,
+						contextY,
+					);
+				} else {
+					State.font.draw(
+						charCode,
+						foreground,
+						background,
+						offBlinkCtxs[contextIndex],
+						x,
+						contextY,
+					);
+					State.font.draw(
+						charCode,
+						foreground,
+						background,
+						onBlinkCtxs[contextIndex],
+						x,
+						contextY,
+					);
+				}
 			}
 		}
 	};
@@ -307,15 +336,27 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	let blinkStop = false;
 
 	const blink = () => {
-		if (!blinkOn) {
-			blinkOn = true;
-			for (let i = 0; i < ctxs.length; i++) {
-				ctxs[i].drawImage(onBlinkCanvases[i], 0, 0);
-			}
+		if (ENABLE_VIRTUALIZATION) {
+			// Only blink active (visible) chunks
+			blinkOn = !blinkOn;
+			activeChunks.forEach(chunkIndex => {
+				const chunk = canvasChunks.get(chunkIndex);
+				if (!chunk) {return;}
+				const sourceCanvas = blinkOn ? chunk.onBlinkCanvas : chunk.offBlinkCanvas;
+				chunk.ctx.drawImage(sourceCanvas, 0, 0);
+			});
 		} else {
-			blinkOn = false;
-			for (let i = 0; i < ctxs.length; i++) {
-				ctxs[i].drawImage(offBlinkCanvases[i], 0, 0);
+			// Legacy blink
+			if (!blinkOn) {
+				blinkOn = true;
+				for (let i = 0; i < ctxs.length; i++) {
+					ctxs[i].drawImage(onBlinkCanvases[i], 0, 0);
+				}
+			} else {
+				blinkOn = false;
+				for (let i = 0; i < ctxs.length; i++) {
+					ctxs[i].drawImage(offBlinkCanvases[i], 0, 0);
+				}
 			}
 		}
 	};
@@ -366,7 +407,329 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}, 10);
 	};
 
-	const createCanvases = () => {
+	// ===== VIRTUALIZATION FUNCTIONS =====
+
+	/**
+	 * Calculate which chunks are visible in the current viewport
+	 */
+	const calculateVisibleChunks = () => {
+		const fontHeight = State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+		const totalChunks = Math.ceil(rows / CHUNK_SIZE);
+
+		// Get viewport element and dimensions
+		const viewportElement = document.getElementById('viewport');
+		const viewportHeight = viewportElement ? viewportElement.clientHeight : window.innerHeight;
+
+		// Buffer is 1 chunk (25 rows) above and below for smooth scrolling
+		const bufferRows = CHUNK_SIZE;
+
+		const viewportTop = viewportState.scrollTop;
+		const viewportBottom = viewportTop + viewportHeight;
+
+		// Add buffer zone (1 chunk = 25 rows worth of pixels)
+		const bufferedTop = Math.max(0, viewportTop - (bufferRows * fontHeight));
+		const bufferedBottom = Math.min(
+			rows * fontHeight,
+			viewportBottom + (bufferRows * fontHeight),
+		);
+
+		// Convert pixel positions to chunk indices
+		const startChunk = Math.floor(bufferedTop / (CHUNK_SIZE * fontHeight));
+		const endChunk = Math.min(
+			totalChunks - 1,
+			Math.floor(bufferedBottom / (CHUNK_SIZE * fontHeight)),
+		);
+
+		return {
+			startChunk,
+			endChunk,
+			totalChunks,
+			visibleStartRow: Math.floor(viewportTop / fontHeight),
+			visibleEndRow: Math.ceil(viewportBottom / fontHeight),
+		};
+	};
+
+	/**
+	 * Update viewport state based on current container scroll/size
+	 */
+	const updateViewportState = () => {
+		if (!ENABLE_VIRTUALIZATION) {return;}
+
+		const viewportElement = document.getElementById('viewport');
+		if (!viewportElement) {
+			console.warn('[Canvas] #viewport element not found');
+			return;
+		}
+
+		viewportState.scrollTop = viewportElement.scrollTop;
+		viewportState.scrollLeft = viewportElement.scrollLeft;
+		viewportState.containerHeight = viewportElement.clientHeight;
+		viewportState.containerWidth = viewportElement.clientWidth;
+
+		const fontHeight = State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+		viewportState.visibleStartRow = Math.floor(viewportState.scrollTop / fontHeight);
+		viewportState.visibleEndRow = Math.min(
+			rows,
+			Math.ceil((viewportState.scrollTop + viewportState.containerHeight) / fontHeight),
+		);
+	};
+
+	/**
+	 * Create or retrieve a canvas chunk for a specific index
+	 */
+	const getOrCreateCanvasChunk = chunkIndex => {
+		if (canvasChunks.has(chunkIndex)) {
+			return canvasChunks.get(chunkIndex);
+		}
+
+		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
+		const fontHeight = State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+
+		// Calculate chunk dimensions
+		const chunkStartRow = chunkIndex * CHUNK_SIZE;
+		const chunkEndRow = Math.min((chunkIndex + 1) * CHUNK_SIZE, rows);
+		const chunkHeight = chunkEndRow - chunkStartRow;
+
+		const canvasWidth = fontWidth * columns;
+		const canvasHeight = fontHeight * chunkHeight;
+
+		// Create main canvas
+		const canvas = createCanvas(canvasWidth, canvasHeight);
+		canvas.style.position = 'absolute';
+		canvas.style.top = (chunkStartRow * fontHeight) + 'px';
+		canvas.style.left = '0px';
+
+		// Create blink canvases
+		const onBlinkCanvas = createCanvas(canvasWidth, canvasHeight);
+		const offBlinkCanvas = createCanvas(canvasWidth, canvasHeight);
+
+		const chunk = {
+			canvas: canvas,
+			ctx: canvas.getContext('2d'),
+			onBlinkCanvas: onBlinkCanvas,
+			onBlinkCtx: onBlinkCanvas.getContext('2d'),
+			offBlinkCanvas: offBlinkCanvas,
+			offBlinkCtx: offBlinkCanvas.getContext('2d'),
+			rendered: false,
+			chunkIndex: chunkIndex,
+			startRow: chunkStartRow,
+			endRow: chunkEndRow,
+		};
+
+		canvasChunks.set(chunkIndex, chunk);
+		return chunk;
+	};
+
+	/**
+	 * Render a specific chunk
+	 */
+	const renderChunk = chunk => {
+		if (!chunk) {return;}
+
+		const { startRow, endRow, ctx, onBlinkCtx, offBlinkCtx } = chunk;
+
+		// Clear the chunk canvases
+		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
+		const fontHeight = State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+		const chunkHeight = (endRow - startRow) * fontHeight;
+		const canvasWidth = fontWidth * columns;
+
+		ctx.clearRect(0, 0, canvasWidth, chunkHeight);
+		onBlinkCtx.clearRect(0, 0, canvasWidth, chunkHeight);
+		offBlinkCtx.clearRect(0, 0, canvasWidth, chunkHeight);
+
+		// Render all cells in this chunk
+		for (let y = startRow; y < endRow; y++) {
+			for (let x = 0; x < columns; x++) {
+				const index = y * columns + x;
+				redrawGlyphInChunk(index, x, y, chunk);
+			}
+		}
+
+		chunk.rendered = true;
+	};
+
+	/**
+	 * Redraw a single glyph in a specific chunk (virtualization-aware)
+	 */
+	const redrawGlyphInChunk = (index, x, y, chunk) => {
+		const localY = y - chunk.startRow;
+		const charCode = imageData[index] >> 8;
+		let background = (imageData[index] >> 4) & 15;
+		const foreground = imageData[index] & 15;
+
+		if (iceColors) {
+			State.font.draw(
+				charCode,
+				foreground,
+				background,
+				chunk.ctx,
+				x,
+				localY,
+			);
+		} else {
+			if (background >= 8) {
+				background -= 8;
+				State.font.draw(
+					charCode,
+					foreground,
+					background,
+					chunk.offBlinkCtx,
+					x,
+					localY,
+				);
+				State.font.draw(
+					charCode,
+					background,
+					background,
+					chunk.onBlinkCtx,
+					x,
+					localY,
+				);
+			} else {
+				State.font.draw(
+					charCode,
+					foreground,
+					background,
+					chunk.offBlinkCtx,
+					x,
+					localY,
+				);
+				State.font.draw(
+					charCode,
+					foreground,
+					background,
+					chunk.onBlinkCtx,
+					x,
+					localY,
+				);
+			}
+		}
+	};
+
+	/**
+	 * Update legacy arrays for backward compatibility
+	 */
+	const updateLegacyArrays = () => {
+		canvases = [];
+		ctxs = [];
+		offBlinkCanvases = [];
+		onBlinkCanvases = [];
+		offBlinkCtxs = [];
+		onBlinkCtxs = [];
+
+		const totalChunks = Math.ceil(rows / CHUNK_SIZE);
+		for (let i = 0; i < totalChunks; i++) {
+			const chunk = canvasChunks.get(i);
+			if (chunk) {
+				canvases.push(chunk.canvas);
+				ctxs.push(chunk.ctx);
+				offBlinkCanvases.push(chunk.offBlinkCanvas);
+				onBlinkCanvases.push(chunk.onBlinkCanvas);
+				offBlinkCtxs.push(chunk.offBlinkCtx);
+				onBlinkCtxs.push(chunk.onBlinkCtx);
+			}
+		}
+	};
+
+	/**
+	 * Render only visible chunks based on viewport
+	 */
+	const renderVisibleChunks = () => {
+		if (!ENABLE_VIRTUALIZATION) {return;}
+
+		const { startChunk, endChunk } = calculateVisibleChunks();
+		const newActiveChunks = new Set();
+
+		// Remove chunks that are no longer visible
+		activeChunks.forEach(chunkIndex => {
+			if (chunkIndex < startChunk || chunkIndex > endChunk) {
+				const chunk = canvasChunks.get(chunkIndex);
+				if (chunk && chunk.canvas.parentNode) {
+					canvasContainer.removeChild(chunk.canvas);
+				}
+			}
+		});
+
+		// Add/render visible chunks
+		for (let chunkIndex = startChunk; chunkIndex <= endChunk; chunkIndex++) {
+			newActiveChunks.add(chunkIndex);
+			let chunk = canvasChunks.get(chunkIndex);
+
+			if (!chunk) {
+				chunk = getOrCreateCanvasChunk(chunkIndex);
+			}
+
+			// Attach to DOM if not already attached
+			if (!chunk.canvas.parentNode) {
+				canvasContainer.appendChild(chunk.canvas);
+			}
+
+			// Render if not yet rendered
+			if (!chunk.rendered) {
+				renderChunk(chunk);
+			}
+		}
+
+		activeChunks = newActiveChunks;
+		updateLegacyArrays();
+	};
+
+	/**
+	 * Scroll event handler with throttling
+	 */
+	let scrollScheduled = false;
+	const handleScroll = () => {
+		if (!ENABLE_VIRTUALIZATION) {return;}
+		if (scrollScheduled) {return;}
+		scrollScheduled = true;
+		requestAnimationFrame(() => {
+			updateViewportState();
+			renderVisibleChunks();
+			scrollScheduled = false;
+		});
+	};
+
+	/**
+	 * Resize event handler with throttling
+	 */
+	let resizeScheduled = false;
+	const handleResize = () => {
+		if (!ENABLE_VIRTUALIZATION) {return;}
+		if (resizeScheduled) {return;}
+		resizeScheduled = true;
+		requestAnimationFrame(() => {
+			updateViewportState();
+			renderVisibleChunks();
+			resizeScheduled = false;
+		});
+	};
+
+	/**
+	 * Initialize viewport event listeners
+	 */
+	const initViewportListeners = () => {
+		if (!ENABLE_VIRTUALIZATION) {return;}
+
+		const viewportElement = document.getElementById('viewport');
+		if (!viewportElement) {
+			console.warn('[Canvas] #viewport element not found, scroll virtualization disabled');
+			return;
+		}
+
+		// Remove existing listeners to avoid duplicates
+		viewportElement.removeEventListener('scroll', handleScroll);
+		window.removeEventListener('resize', handleResize);
+
+		// Add new listeners
+		viewportElement.addEventListener('scroll', handleScroll, { passive: true });
+		window.addEventListener('resize', handleResize, { passive: true });
+	};
+
+	// ===== END VIRTUALIZATION FUNCTIONS =====
+
+	const createCanvasesLegacy = () => {
+		// Legacy implementation for when virtualization is disabled
 		redrawing = true;
 		if (canvases !== undefined) {
 			canvases.forEach(canvas => {
@@ -428,6 +791,56 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		stopBlinkTimer();
 		redrawEntireImage();
 		// Timer will be started by updateTimer() call after createCanvases()
+	};
+
+	const createCanvases = () => {
+		if (!ENABLE_VIRTUALIZATION) {
+			createCanvasesLegacy();
+			return;
+		}
+
+		redrawing = true;
+
+		// Clear existing canvases
+		if (canvasContainer.firstChild) {
+			while (canvasContainer.firstChild) {
+				canvasContainer.removeChild(canvasContainer.firstChild);
+			}
+		}
+
+		canvasChunks.clear();
+		activeChunks.clear();
+
+		// Reset legacy arrays for backward compatibility
+		canvases = [];
+		ctxs = [];
+		offBlinkCanvases = [];
+		onBlinkCanvases = [];
+		offBlinkCtxs = [];
+		onBlinkCtxs = [];
+
+		// Set container dimensions
+		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
+		const fontHeight = State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+		const totalHeight = fontHeight * rows;
+		const totalWidth = fontWidth * columns;
+
+		canvasContainer.style.width = totalWidth + 'px';
+		canvasContainer.style.height = totalHeight + 'px';
+		canvasContainer.style.position = 'relative';
+
+		// Update viewport state
+		updateViewportState();
+
+		// Create and render only visible chunks
+		renderVisibleChunks();
+
+		// Initialize viewport listeners
+		initViewportListeners();
+
+		redrawing = false;
+		stopBlinkTimer();
+		updateTimer();
 	};
 
 	const updateTimer = () => {
@@ -594,16 +1007,37 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const getImage = () => {
-		const completeCanvas = createCanvas(
-			State.font.getWidth() * columns,
-			State.font.getHeight() * rows,
-		);
-		let y = 0;
+		const fontWidth = State.font.getWidth();
+		const fontHeight = State.font.getHeight();
+		const completeCanvas = createCanvas(fontWidth * columns, fontHeight * rows);
 		const ctx = completeCanvas.getContext('2d');
-		(iceColors ? canvases : offBlinkCanvases).forEach(canvas => {
-			ctx.drawImage(canvas, 0, y);
-			y += canvas.height;
-		});
+
+		if (ENABLE_VIRTUALIZATION) {
+			// Ensure all chunks exist and are rendered for export
+			const totalChunks = Math.ceil(rows / CHUNK_SIZE);
+
+			for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+				let chunk = canvasChunks.get(chunkIndex);
+				if (!chunk) {
+					chunk = getOrCreateCanvasChunk(chunkIndex);
+				}
+				if (!chunk.rendered) {
+					renderChunk(chunk);
+					chunk.rendered = true;
+				}
+				const sourceCanvas = iceColors ? chunk.canvas : chunk.offBlinkCanvas;
+				const yPosition = chunkIndex * CHUNK_SIZE * fontHeight;
+				ctx.drawImage(sourceCanvas, 0, yPosition);
+			}
+		} else {
+			// Legacy export
+			let y = 0;
+			(iceColors ? canvases : offBlinkCanvases).forEach(canvas => {
+				ctx.drawImage(canvas, 0, y);
+				y += canvas.height;
+			});
+		}
+
 		return completeCanvas;
 	};
 
@@ -1368,11 +1802,32 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const quickDraw = blocks => {
 		blocks.forEach(block => {
 			if (imageData[block[0]] !== block[1]) {
+				// Update imageData immediately (always)
 				imageData[block[0]] = block[1];
-				if (!iceColors) {
-					updateBeforeBlinkFlip(block[2], block[3]);
+
+				if (ENABLE_VIRTUALIZATION) {
+					const y = block[3];
+					const chunkIndex = Math.floor(y / CHUNK_SIZE);
+					const chunk = canvasChunks.get(chunkIndex);
+
+					if (chunk && activeChunks.has(chunkIndex)) {
+						// Chunk is visible - update immediately
+						if (!iceColors) {
+							updateBeforeBlinkFlip(block[2], block[3]);
+						}
+						enqueueDirtyCell(block[2], block[3]);
+					} else if (chunk) {
+						// Chunk exists but not visible - mark as dirty
+						chunk.rendered = false;
+					}
+					// If chunk doesn't exist, it will be rendered fresh when created
+				} else {
+					// Legacy mode
+					if (!iceColors) {
+						updateBeforeBlinkFlip(block[2], block[3]);
+					}
+					enqueueDirtyCell(block[2], block[3]);
 				}
-				enqueueDirtyCell(block[2], block[3]);
 			}
 		});
 		processDirtyRegions();
