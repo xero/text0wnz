@@ -1469,16 +1469,18 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 			// Batch undo operations for better performance
 			let undoBatchSize = 100;
-			let processed = 0;
+			let processedIndex = undoChunk.length; // ← Start from END and work backwards
 
 			const processUndoBatch = () => {
 				const batchStart = performance.now();
-				const batchEnd = Math.min(processed + undoBatchSize, undoChunk.length);
-				const itemsToProcess = batchEnd - processed;
 
-				// Process items from the END of undoChunk backwards
-				for (let i = 0; i < itemsToProcess; i++) {
-					const undo = undoChunk.pop(); // This safely removes from the end
+				// Calculate how many items to process this batch (working backwards)
+				const itemsToProcess = Math.min(undoBatchSize, processedIndex);
+				const batchStartIndex = processedIndex - itemsToProcess;
+
+				// Process items in reverse order using slice
+				for (let i = processedIndex - 1; i >= batchStartIndex; i--) {
+					const undo = undoChunk[i];
 
 					if (undo && undo[0] < imageData.length) {
 						currentRedo.push([undo[0], imageData[undo[0]], undo[2], undo[3]]);
@@ -1492,7 +1494,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					}
 				}
 
-				processed = batchEnd;
+				processedIndex -= itemsToProcess;
 				const batchTime = performance.now() - batchStart;
 
 				// Adaptive batching
@@ -1502,7 +1504,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					undoBatchSize = Math.max(Math.floor(undoBatchSize * 0.8), 10);
 				}
 
-				if (processed < undoChunk.length) {
+				if (processedIndex > 0) {
 					requestAnimationFrame(processUndoBatch);
 				} else {
 					redoBuffer.push(currentRedo);
@@ -1522,16 +1524,18 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 			// Batch redo operations for better performance
 			let redoBatchSize = 100;
-			let processed = 0;
+			let processedIndex = redoChunk.length; // ← Start from END and work backwards
 
 			const processRedoBatch = () => {
 				const batchStart = performance.now();
-				const batchEnd = Math.min(processed + redoBatchSize, redoChunk.length);
-				const itemsToProcess = batchEnd - processed;
 
-				// Process items from the END of redoChunk backwards
-				for (let i = 0; i < itemsToProcess; i++) {
-					const redo = redoChunk.pop(); // This safely removes from the end
+				// Calculate how many items to process this batch (working backwards)
+				const itemsToProcess = Math.min(redoBatchSize, processedIndex);
+				const batchStartIndex = processedIndex - itemsToProcess;
+
+				// Process items in reverse order using array access
+				for (let i = processedIndex - 1; i >= batchStartIndex; i--) {
+					const redo = redoChunk[i];
 
 					if (redo && redo[0] < imageData.length) {
 						currentUndo.push([redo[0], imageData[redo[0]], redo[2], redo[3]]);
@@ -1545,7 +1549,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					}
 				}
 
-				processed = batchEnd;
+				processedIndex -= itemsToProcess;
 				const batchTime = performance.now() - batchStart;
 
 				// Adaptive batching
@@ -1555,7 +1559,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					redoBatchSize = Math.max(Math.floor(redoBatchSize * 0.8), 10);
 				}
 
-				if (processed < redoChunk.length) {
+				if (processedIndex > 0) {
 					requestAnimationFrame(processRedoBatch);
 				} else {
 					undoBuffer.push(currentUndo);
