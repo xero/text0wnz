@@ -773,9 +773,9 @@ function selectTool(toolName) {
 
 ### Canvas Rendering
 
-The canvas rendering system employs a three-phase optimization strategy for handling canvases of any size efficiently.
+The canvas rendering system employs multiple optimization strategies for handling canvases of any size efficiently.
 
-#### Phase 1: Virtualized Viewport Rendering
+#### Virtualized Viewport Rendering
 
 **Lazy Chunk Creation:**
 Canvas is divided into 25-row chunks. Only visible chunks (plus a buffer) are created and rendered:
@@ -863,7 +863,7 @@ function renderVisibleChunks() {
 - Memory: ~66% reduction (only visible chunks in memory)
 - Scalability: Handles canvases up to 2000+ rows efficiently
 
-#### Phase 2: Dirty Region Tracking
+#### Dirty Region Tracking
 
 Only redraw cells that have changed, not the entire canvas:
 
@@ -905,7 +905,7 @@ function redrawGlyph(index, x, y) {
 }
 ```
 
-#### Phase 3: RequestAnimationFrame Throttling
+#### RequestAnimationFrame Throttling
 
 **RAF Throttling** (RequestAnimationFrame Throttling) synchronizes expensive operations with the browser's rendering cycle (typically 60fps = 16.67ms per frame).[¹](https://stackoverflow.com/questions/79641790/how-to-throttle-requestanimationframe-efficiently)[²](https://programmerall.com/article/2717382771/)
 
