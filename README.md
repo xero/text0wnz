@@ -11,9 +11,9 @@
 | https://text.0w.nz              | The main domain. Collab server may be available    |
 | https://xero.github.io/text0wnz | Github Pages version of the site. No collab server |
 
+&nbsp;
 
-
-[![MIT Licensed](https://img.shields.io/github/license/xero/text0wnz?logo=wikiversity&logoColor=979da4&labelColor=262a2e&color=gold)](https://github.com/xero/text0wnz/blob/main/LICENSE)
+[![MIT Licensed](https://img.shields.io/github/license/xero/text0wnz?logo=wikiversity&logoColor=979da4&labelColor=262a2e&color=b1a268)](https://github.com/xero/text0wnz/blob/main/LICENSE)
 [![Version](https://img.shields.io/github/package-json/version/xero/teXt0wnz?labelColor=33383e&logo=npm&&logoColor=979da4&color=6e2aa5)](https://github.com/xero/teXt0wnz/releases/latest)
 [![GitHub repo size](https://img.shields.io/github/repo-size/xero/teXt0wnz?labelColor=262a2e&logo=googlecontaineroptimizedos&logoColor=979da4&color=6e2aa5)](https://github.com/xero/teXt0wnz/)
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/w/xero/teXt0wnz?labelColor=262a2e&logo=stagetimer&logoColor=979da4&color=6e2aa5)](https://github.com/xero/text0wnz/graphs/commit-activity)
@@ -27,8 +27,8 @@
 [![Powered by Bun](https://img.shields.io/badge/Bun-Bun?labelColor=262a2e&logo=bun&logoColor=f9f1e1&label=Powered%20by&color=e47ab4&link=https%3A%2F%2Fbun.js)](https://bun.com)
 [![Eslint](https://img.shields.io/badge/Eslint-Eslint?logo=eslint&logoColor=979da4&label=Linting&labelColor=262a2e&color=00aaaa)](https://github.com/xero/teXt0wnz/blob/main/eslint.config.js)
 [![Prettier](https://img.shields.io/badge/Prettier-Prettier?logo=prettier&logoColor=979da4&label=Formatting&labelColor=262a2e&color=00aaaa)](https://github.com/xero/teXt0wnz/blob/main/.prettierrc)
-[![16colors](https://img.shields.io/badge/16Colors-16Colors?logo=renovate&logoColor=979da4&logoSize=auto&label=ANSI%20Art&labelColor=262a2e&color=gold)](https://16colo.rs)
-[![AsciiArena](https://img.shields.io/badge/AsciiArena-AsciiArena?logo=academia&logoColor=979da4&label=Text%20Art&labelColor=262a2e&color=gold)](https://asciiarena.se)
+[![16colors](https://img.shields.io/badge/16Colors-16Colors?logo=renovate&logoColor=979da4&logoSize=auto&label=ANSI%20Art&labelColor=262a2e&color=ed7a2c)](https://16colo.rs)
+[![AsciiArena](https://img.shields.io/badge/AsciiArena-AsciiArena?logo=academia&logoColor=979da4&label=Ascii%20Art&labelColor=262a2e&color=ed7a2c)](https://asciiarena.se)
 
 # Table o' Contents
 

@@ -11,7 +11,7 @@ const createFKeys = () => {
 		[213, 184, 212, 190, 205, 179, 198, 181, 207, 209, 32, 32],
 		[214, 183, 211, 189, 196, 186, 199, 182, 208, 210, 32, 32],
 		[197, 206, 216, 215, 232, 232, 155, 156, 153, 239, 32, 32],
-		[176, 177, 178, 219, 223, 220, 221, 222, 254, 250, 32, 32],
+		[176, 177, 178, 219, 223, 220, 221, 222, 254, 250, 7, 32],
 		[1, 2, 3, 4, 5, 6, 240, 14, 15, 32, 32, 32],
 		[24, 25, 30, 31, 16, 17, 18, 29, 20, 21, 32, 32],
 		[174, 175, 242, 243, 169, 170, 253, 246, 171, 172, 32, 32],
@@ -463,6 +463,7 @@ const createSelectionCursor = element => {
 		width = 1;
 		height = 1;
 		updateCursor();
+		State.pasteTool.setSelection(x, y, width, height);
 	};
 
 	const setEnd = (endX, endY) => {
@@ -1633,6 +1634,7 @@ const createSelectionTool = () => {
 			selectionEndX = selectionStartX;
 			selectionEndY = selectionStartY;
 			State.selectionCursor.setStart(selectionStartX, selectionStartY);
+			State.selectionCursor.setEnd(selectionEndX, selectionEndY);
 			State.cursor.hide();
 		}
 		// If selection already exists, keep using the current anchor (selectionStartX/Y)
