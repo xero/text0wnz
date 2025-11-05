@@ -283,7 +283,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		blinkOn = !blinkOn;
 		activeChunks.forEach(chunkIndex => {
 			const chunk = canvasChunks.get(chunkIndex);
-			if (!chunk) {return;}
+			if (!chunk) {
+				return;
+			}
 			const sourceCanvas = blinkOn ? chunk.onBlinkCanvas : chunk.offBlinkCanvas;
 			chunk.ctx.drawImage(sourceCanvas, 0, 0);
 		});
@@ -335,13 +337,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}, 10);
 	};
 
-	// ===== VIRTUALIZATION FUNCTIONS =====
-
 	/**
 	 * Calculate which chunks are visible in the current viewport
 	 */
 	const calculateVisibleChunks = () => {
-		const fontHeight = State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+		const fontHeight =
+			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
 		const totalChunks = Math.ceil(rows / CHUNK_SIZE);
 
 		// Get viewport element and dimensions
@@ -361,16 +362,16 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const viewportHeight = viewportElement.clientHeight || window.innerHeight;
 
 		// Buffer is 1 chunk (25 rows) above and below for smooth scrolling
-		const bufferRows = CHUNK_SIZE;
+		const bufferRows = CHUNK_SIZE * 2;
 
 		const viewportTop = viewportState.scrollTop;
 		const viewportBottom = viewportTop + viewportHeight;
 
 		// Add buffer zone (1 chunk = 25 rows worth of pixels)
-		const bufferedTop = Math.max(0, viewportTop - (bufferRows * fontHeight));
+		const bufferedTop = Math.max(0, viewportTop - bufferRows * fontHeight);
 		const bufferedBottom = Math.min(
 			rows * fontHeight,
-			viewportBottom + (bufferRows * fontHeight),
+			viewportBottom + bufferRows * fontHeight,
 		);
 
 		// Convert pixel positions to chunk indices
@@ -404,11 +405,16 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		viewportState.containerHeight = viewportElement.clientHeight;
 		viewportState.containerWidth = viewportElement.clientWidth;
 
-		const fontHeight = State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
-		viewportState.visibleStartRow = Math.floor(viewportState.scrollTop / fontHeight);
+		const fontHeight =
+			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+		viewportState.visibleStartRow = Math.floor(
+			viewportState.scrollTop / fontHeight,
+		);
 		viewportState.visibleEndRow = Math.min(
 			rows,
-			Math.ceil((viewportState.scrollTop + viewportState.containerHeight) / fontHeight),
+			Math.ceil(
+				(viewportState.scrollTop + viewportState.containerHeight) / fontHeight,
+			),
 		);
 	};
 
@@ -421,7 +427,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 
 		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
-		const fontHeight = State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+		const fontHeight =
+			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
 
 		// Calculate chunk dimensions
 		const chunkStartRow = chunkIndex * CHUNK_SIZE;
@@ -431,11 +438,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const canvasWidth = fontWidth * columns;
 		const canvasHeight = fontHeight * chunkHeight;
 
-		// Create main canvas
+		// Create main canvas with a background color to avoid flash
 		const canvas = createCanvas(canvasWidth, canvasHeight);
 		canvas.style.position = 'absolute';
-		canvas.style.top = (chunkStartRow * fontHeight) + 'px';
+		canvas.style.top = chunkStartRow * fontHeight + 'px';
 		canvas.style.left = '0px';
+		canvas.style.backgroundColor = '#000';
 
 		// Create blink canvases
 		const onBlinkCanvas = createCanvas(canvasWidth, canvasHeight);
@@ -457,18 +465,20 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		canvasChunks.set(chunkIndex, chunk);
 		return chunk;
 	};
-
 	/**
 	 * Render a specific chunk
 	 */
 	const renderChunk = chunk => {
-		if (!chunk) {return;}
+		if (!chunk) {
+			return;
+		}
 
 		const { startRow, endRow, ctx, onBlinkCtx, offBlinkCtx } = chunk;
 
 		// Clear the chunk canvases
 		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
-		const fontHeight = State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+		const fontHeight =
+			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
 		const chunkHeight = (endRow - startRow) * fontHeight;
 		const canvasWidth = fontWidth * columns;
 
@@ -497,14 +507,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const foreground = imageData[index] & 15;
 
 		if (iceColors) {
-			State.font.draw(
-				charCode,
-				foreground,
-				background,
-				chunk.ctx,
-				x,
-				localY,
-			);
+			State.font.draw(charCode, foreground, background, chunk.ctx, x, localY);
 		} else {
 			if (background >= 8) {
 				background -= 8;
@@ -617,16 +620,30 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	/**
-	 * Scroll event handler with throttling
+	 * Scroll event handler with trailing throttle
 	 */
 	let scrollScheduled = false;
+	let pendingScrollUpdate = false;
+
 	const handleScroll = () => {
-		if (scrollScheduled) {return;}
+		pendingScrollUpdate = true;
+
+		if (scrollScheduled) {
+			return; // Already have a frame scheduled
+		}
+
 		scrollScheduled = true;
 		requestAnimationFrame(() => {
 			updateViewportState();
 			renderVisibleChunks();
+
 			scrollScheduled = false;
+
+			// If more scroll events came in, schedule another update
+			if (pendingScrollUpdate) {
+				pendingScrollUpdate = false;
+				handleScroll();
+			}
 		});
 	};
 
@@ -635,7 +652,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	 */
 	let resizeScheduled = false;
 	const handleResize = () => {
-		if (resizeScheduled) {return;}
+		if (resizeScheduled) {
+			return;
+		}
 		resizeScheduled = true;
 		requestAnimationFrame(() => {
 			updateViewportState();
@@ -650,20 +669,18 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const initViewportListeners = () => {
 		const viewportElement = document.getElementById('viewport');
 		if (!viewportElement) {
-			console.warn('[Canvas] #viewport element not found, scroll virtualization disabled');
+			console.warn(
+				'[Canvas] #viewport element not found, scroll virtualization disabled',
+			);
 			return;
 		}
-
 		// Remove existing listeners to avoid duplicates
 		viewportElement.removeEventListener('scroll', handleScroll);
 		window.removeEventListener('resize', handleResize);
-
 		// Add new listeners
 		viewportElement.addEventListener('scroll', handleScroll, { passive: true });
 		window.addEventListener('resize', handleResize, { passive: true });
 	};
-
-	// ===== END VIRTUALIZATION FUNCTIONS =====
 
 	const createCanvases = () => {
 		// Safety check
@@ -671,10 +688,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			console.error('[Canvas] canvasContainer is null, cannot create canvases');
 			return;
 		}
-
 		redrawing = true;
 
-		// Remove existing canvas chunks (but preserve overlay elements like toolPreview and grid)
+		// Remove existing canvas chunks
 		canvasChunks.forEach(chunk => {
 			if (chunk.canvas && chunk.canvas.parentNode) {
 				canvasContainer.removeChild(chunk.canvas);
@@ -694,7 +710,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 		// Set container dimensions
 		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
-		const fontHeight = State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+		const fontHeight =
+			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
 		const totalHeight = fontHeight * rows;
 		const totalWidth = fontWidth * columns;
 
@@ -705,12 +722,37 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		// Update viewport state
 		updateViewportState();
 
-		// Create and render only visible chunks
-		renderVisibleChunks();
+		const { startChunk, endChunk } = calculateVisibleChunks();
+		const viewportElement = document.getElementById('viewport');
+		const viewportHeight = viewportElement
+			? viewportElement.clientHeight
+			: window.innerHeight;
+		const visibleChunkCount = Math.ceil(
+			viewportHeight / (fontHeight * CHUNK_SIZE),
+		);
+		const preRenderEndChunk = Math.min(
+			Math.ceil(rows / CHUNK_SIZE) - 1,
+			endChunk + visibleChunkCount * 4,
+		);
 
-		// Initialize viewport listeners
+		// Create and render visible chunks + pre-rendered buffer below
+		for (
+			let chunkIndex = startChunk;
+			chunkIndex <= preRenderEndChunk;
+			chunkIndex++
+		) {
+			const chunk = getOrCreateCanvasChunk(chunkIndex);
+			// Only attach visible chunks to DOM
+			if (chunkIndex <= endChunk) {
+				canvasContainer.appendChild(chunk.canvas);
+				activeChunks.add(chunkIndex);
+			}
+			if (!chunk.rendered) {
+				renderChunk(chunk);
+			}
+		}
+		updateLegacyArrays();
 		initViewportListeners();
-
 		redrawing = false;
 		stopBlinkTimer();
 		updateTimer();
@@ -881,7 +923,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const getImage = () => {
 		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
-		const fontHeight = State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+		const fontHeight =
+			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
 		const completeCanvas = createCanvas(fontWidth * columns, fontHeight * rows);
 		const ctx = completeCanvas.getContext('2d');
 
