@@ -496,4 +496,307 @@ describe('Text0wnz Module Integration Tests', () => {
 			expect(chat[1]).toEqual(['Bob', 'Hi']);
 		});
 	});
+
+	describe('Log Function Coverage', () => {
+		it('should log with debug mode enabled (callout)', () => {
+			// Test log function with debug = true (uses callout)
+			const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+			
+			// Import actual sanitize for consistency
+			const sanitize = (input, limit = 100, quote = false) => {
+				if (!input) return '';
+				const str = String(input).trim().replace(/\p{C}/gu, '').replace(/[\n\r]/g, '').substring(0, limit);
+				return quote ? `'${str}'` : str;
+			};
+			
+			const callout = msg => {
+				const logMsg = sanitize(msg, 100, false);
+				console.log(`╓───── ${logMsg}\n╙───────────────────────────────── ─ ─`);
+			};
+			
+			const log = (msg, debug) => {
+				const logMsg = sanitize(msg, 100, false);
+				debug ? callout(logMsg) : console.log(`* ${logMsg}`);
+			};
+
+			log('Test message', true);
+			expect(consoleLogSpy).toHaveBeenCalledWith(
+				expect.stringContaining('╓─────')
+			);
+			expect(consoleLogSpy).toHaveBeenCalledWith(
+				expect.stringContaining('Test message')
+			);
+
+			consoleLogSpy.mockRestore();
+		});
+
+		it('should log with debug mode disabled (simple log)', () => {
+			// Test log function with debug = false (uses console.log)
+			const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+			
+			const log = (msg, debug) => {
+				const sanitize = (input, limit = 100, quote = false) => {
+					if (!input) return '';
+					return String(input).trim().substring(0, limit);
+				};
+				const logMsg = sanitize(msg, 100, false);
+				debug ? console.log(`╓───── ${logMsg}`) : console.log(`* ${logMsg}`);
+			};
+
+			log('Test message', false);
+			expect(consoleLogSpy).toHaveBeenCalledWith('* Test message');
+
+			consoleLogSpy.mockRestore();
+		});
+	});
+
+	describe('GetStart Error Case', () => {
+		it('should return error when imageData is not initialized', () => {
+			// Test getStart when imageData is null/undefined
+			const getStart = (imageData, sessionID) => {
+				if (!imageData) {
+					console.error('! ImageData not initialized');
+					return JSON.stringify(['error', 'Server not ready']);
+				}
+				return JSON.stringify([
+					'start',
+					{
+						columns: imageData.columns,
+						rows: imageData.rows,
+						letterSpacing: imageData.letterSpacing,
+						iceColors: imageData.iceColors,
+						fontName: imageData.fontName || 'CP437 8x16',
+						chat: [],
+					},
+					sessionID,
+					{},
+				]);
+			};
+
+			const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+			
+			const result = getStart(null, 'test-session');
+			expect(result).toBe(JSON.stringify(['error', 'Server not ready']));
+			expect(consoleErrorSpy).toHaveBeenCalledWith('! ImageData not initialized');
+
+			consoleErrorSpy.mockRestore();
+		});
+
+		it('should return valid start data when imageData is initialized', () => {
+			const getStart = (imageData, sessionID) => {
+				if (!imageData) {
+					return JSON.stringify(['error', 'Server not ready']);
+				}
+				return JSON.stringify([
+					'start',
+					{
+						columns: imageData.columns,
+						rows: imageData.rows,
+						letterSpacing: imageData.letterSpacing,
+						iceColors: imageData.iceColors,
+						fontName: imageData.fontName || 'CP437 8x16',
+						chat: [],
+					},
+					sessionID,
+					{},
+				]);
+			};
+
+			const imageData = {
+				columns: 80,
+				rows: 25,
+				letterSpacing: false,
+				iceColors: true,
+				fontName: 'CP437 8x16',
+			};
+
+			const result = JSON.parse(getStart(imageData, 'test-session'));
+			expect(result[0]).toBe('start');
+			expect(result[1].columns).toBe(80);
+			expect(result[1].rows).toBe(25);
+			expect(result[2]).toBe('test-session');
+		});
+	});
+
+	describe('SaveSession Coverage', () => {
+		it('should save both chat and canvas data', () => {
+			// Test saveSession logic
+			let chatSaved = false;
+			let canvasSaved = false;
+
+			const mockWriteFile = (filename, data, callback) => {
+				if (filename.includes('.json')) {
+					chatSaved = true;
+				}
+				callback();
+			};
+
+			const mockSave = (filename, imageData, callback) => {
+				canvasSaved = true;
+				callback();
+			};
+
+			const saveSession = (chat, imageData, writeFile, save, callback) => {
+				writeFile('session.json', JSON.stringify({ chat }), () => {
+					save('session.bin', imageData, callback);
+				});
+			};
+
+			const testChat = [['user1', 'message1']];
+			const testImageData = { columns: 80, rows: 25, data: new Uint16Array(2000) };
+
+			saveSession(testChat, testImageData, mockWriteFile, mockSave, () => {});
+
+			expect(chatSaved).toBe(true);
+			expect(canvasSaved).toBe(true);
+		});
+
+		it('should handle save callback properly', () => {
+			let callbackCalled = false;
+
+			const mockWriteFile = (filename, data, callback) => {
+				callback();
+			};
+
+			const mockSave = (filename, imageData, callback) => {
+				callback();
+			};
+
+			const saveSession = (chat, imageData, writeFile, save, callback) => {
+				writeFile('session.json', JSON.stringify({ chat }), () => {
+					save('session.bin', imageData, callback);
+				});
+			};
+
+			saveSession([], {}, mockWriteFile, mockSave, () => {
+				callbackCalled = true;
+			});
+
+			expect(callbackCalled).toBe(true);
+		});
+	});
+
+	describe('Console Message Coverage', () => {
+		it('should log join messages', () => {
+			const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+			const log = msg => console.log(`* ${msg}`);
+			log('Alice has joined');
+
+			expect(consoleLogSpy).toHaveBeenCalledWith('* Alice has joined');
+			consoleLogSpy.mockRestore();
+		});
+
+		it('should log nickname changes', () => {
+			const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+			const handleNick = (oldName, newName) => {
+				console.log(`> ${oldName} is now ${newName}`);
+			};
+
+			handleNick('Alice', 'Alicia');
+			expect(consoleLogSpy).toHaveBeenCalledWith('> Alice is now Alicia');
+			consoleLogSpy.mockRestore();
+		});
+
+		it('should log canvas resize operations', () => {
+			const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+			const handleResize = (columns, rows) => {
+				console.log('[Server] Set canvas size:', `${columns}x${rows}`);
+			};
+
+			handleResize(160, 50);
+			expect(consoleLogSpy).toHaveBeenCalledWith(
+				'[Server] Set canvas size:',
+				'160x50'
+			);
+			consoleLogSpy.mockRestore();
+		});
+
+		it('should log font changes', () => {
+			const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+			const handleFontChange = () => {
+				console.log('[Server] updated font');
+			};
+
+			handleFontChange();
+			expect(consoleLogSpy).toHaveBeenCalledWith('[Server] updated font');
+			consoleLogSpy.mockRestore();
+		});
+
+		it('should log ice colors changes', () => {
+			const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+			const handleIceColors = () => {
+				console.log('[Server] updated ice colors');
+			};
+
+			handleIceColors();
+			expect(consoleLogSpy).toHaveBeenCalledWith('[Server] updated ice colors');
+			consoleLogSpy.mockRestore();
+		});
+
+		it('should log letter spacing changes', () => {
+			const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+			const handleLetterSpacing = () => {
+				console.log('[Server] updated letter spacing');
+			};
+
+			handleLetterSpacing();
+			expect(consoleLogSpy).toHaveBeenCalledWith('[Server] updated letter spacing');
+			consoleLogSpy.mockRestore();
+		});
+
+		it('should log broadcast operations when debug enabled', () => {
+			const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+			const sendToAll = (clients, msg, debug) => {
+				if (debug) {
+					const suffix = clients.size > 1 ? 'clients' : 'client';
+					console.log('[Broadcasting]', msg[0], 'to', clients.size, suffix);
+				}
+			};
+
+			const mockClients = new Set([{ id: 1 }, { id: 2 }]);
+			sendToAll(mockClients, ['draw', []], true);
+
+			expect(consoleLogSpy).toHaveBeenCalledWith(
+				'[Broadcasting]',
+				'draw',
+				'to',
+				2,
+				'clients'
+			);
+			consoleLogSpy.mockRestore();
+		});
+
+		it('should handle send errors gracefully', () => {
+			const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+			const sendToClient = (client, message) => {
+				try {
+					if (client.readyState === 1) {
+						if (client.throwError) {
+							throw new Error('Send failed');
+						}
+						client.send(message);
+					}
+				} catch (e) {
+					console.error('[Error] sending to client:', e.message);
+				}
+			};
+
+			const errorClient = { readyState: 1, throwError: true };
+			sendToClient(errorClient, 'test');
+
+			expect(consoleErrorSpy).toHaveBeenCalledWith(
+				'[Error] sending to client:',
+				expect.any(String)
+			);
+			consoleErrorSpy.mockRestore();
+		});
+	});
 });

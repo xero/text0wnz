@@ -8,6 +8,8 @@ const ignore = [
 	'session',
 	'node_modules',
 	'tests/e2e/**',
+	'src/img/**',
+	'src/css/**',
 ];
 
 export default defineConfig({

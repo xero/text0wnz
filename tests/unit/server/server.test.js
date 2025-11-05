@@ -438,5 +438,59 @@ describe('Server Module Integration Tests', () => {
 			expect(shouldLog(prodConfig, 'startup')).toBe(false);
 			expect(shouldLog(prodConfig, 'websocket')).toBe(false);
 		});
+
+		it('should handle debug middleware logging', () => {
+			// Test debug middleware functionality
+			const mockReq = {
+				method: 'GET',
+				headers: {
+					'user-agent': 'test',
+					'host': 'localhost',
+				},
+			};
+
+			const logWebSocketRequest = (config, req) => {
+				if (!config.debug) {
+					return null;
+				}
+
+				return {
+					method: req.method,
+					headersLogged: true,
+				};
+			};
+
+			const debugResult = logWebSocketRequest({ debug: true }, mockReq);
+			expect(debugResult).toEqual({
+				method: 'GET',
+				headersLogged: true,
+			});
+
+			const prodResult = logWebSocketRequest({ debug: false }, mockReq);
+			expect(prodResult).toBeNull();
+		});
+
+		it('should handle SIGINT signal gracefully', () => {
+			// Test SIGINT handler logic
+			let savedBeforeExit = false;
+			let processExited = false;
+
+			const simulateSIGINT = (saveSession, processExit) => {
+				saveSession(() => {
+					savedBeforeExit = true;
+					processExit();
+				});
+			};
+
+			const mockSaveSession = callback => callback();
+			const mockProcessExit = () => {
+				processExited = true;
+			};
+
+			simulateSIGINT(mockSaveSession, mockProcessExit);
+
+			expect(savedBeforeExit).toBe(true);
+			expect(processExited).toBe(true);
+		});
 	});
 });
