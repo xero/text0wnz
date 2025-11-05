@@ -323,11 +323,9 @@ const createCursor = canvasContainer => {
 					case 'ArrowRight':
 					case 'ArrowDown':
 						e.preventDefault();
-						// Start selection from current cursor position
-						State.cursor.startSelection();
 						// Set pending action so selection tool can apply it immediately
 						State.selectionTool.setPendingAction(e.code);
-						// Switch to selection tool which will handle the shift+arrow event
+						State.cursor.startSelection();
 						Toolbar.switchTool('selection');
 						break;
 					default:
@@ -392,6 +390,7 @@ const createSelectionCursor = element => {
 	let animationId = null;
 	const dashPattern = [4, 4]; // dash, gap length
 	const dashSpeed = 0.1; // px per frame
+	x = y = 0;
 
 	const processCoords = () => {
 		x = Math.min(sx, dx);
@@ -485,6 +484,10 @@ const createSelectionCursor = element => {
 		return null;
 	};
 
+	const getPos = () => {
+		return { x, y };
+	};
+
 	cursor.classList.add('selectionCursor');
 	cursor.style.display = 'none';
 	element.appendChild(cursor);
@@ -495,6 +498,7 @@ const createSelectionCursor = element => {
 		setStart,
 		setEnd,
 		isVisible,
+		getPos,
 		getSelection,
 		getElement: () => cursor,
 	};
@@ -1047,6 +1051,11 @@ const createKeyboardController = () => {
 		State.cursor.enable();
 		fkeys.enable();
 		State.positionInfo.update(State.cursor.getX(), State.cursor.getY());
+		// Check if there's an active selection and inherit its position
+		const selection = State.selectionCursor.getPos();
+		if (selection) {
+			State.cursor.move(selection.x, selection.y);
+		}
 		enabled = true;
 	};
 
@@ -1982,9 +1991,6 @@ const createSelectionTool = () => {
 		flipVButton.removeEventListener('click', flipVertical);
 		moveButton.removeEventListener('click', toggleMoveMode);
 		State.pasteTool.disable();
-
-		// Clear any pending actions
-		pendingInitialAction = null;
 	};
 
 	// Method to set pending initial action when switching from keyboard mode
