@@ -1002,38 +1002,74 @@ function redrawEntireImage(onProgress, onComplete) {
 }
 ```
 
-#### Offscreen Canvas for Blink Effect
+#### Optimized Blink Effect
 
-Each chunk maintains separate canvases for non-blinking and blinking states:
+The blink effect uses selective cell tracking instead of full canvas duplication:
 
 ```javascript
 const chunk = {
-	canvas: createCanvas(...),        // Visible canvas
-	offBlinkCanvas: createCanvas(...), // Non-blink state
-	onBlinkCanvas: createCanvas(...)   // Blink state (bg-colored chars)
+	canvas: createCanvas(...),  // Single visible canvas
+	ctx: canvas.getContext('2d'),
+	blinkCells: new Set(),      // Track cells with blink attribute
+	startRow: ...,
+	endRow: ...
 };
 
-// Render to offscreen, then blit to visible
-function renderChunk(chunk) {
-	// Draw all cells to offBlinkCanvas and onBlinkCanvas
-	// ...
+// During render, identify cells with blink attribute (background >= 8)
+function redrawGlyphInChunk(index, x, y, chunk) {
+	const charCode = imageData[index] >> 8;
+	let background = (imageData[index] >> 4) & 15;
+	const foreground = imageData[index] & 15;
+	const isBlinkBackground = background >= 8;
 	
-	// Copy appropriate state to visible canvas
-	const source = iceColors ? chunk.offBlinkCanvas : 
-	               (blinkOn ? chunk.onBlinkCanvas : chunk.offBlinkCanvas);
-	chunk.ctx.drawImage(source, 0, 0);
+	if (!iceColors && isBlinkBackground) {
+		chunk.blinkCells.add(index);  // Track for blink timer
+		background -= 8;
+		
+		// Draw based on current blink state
+		if (blinkOn) {
+			State.font.draw(charCode, background, background, chunk.ctx, x, localY);
+		} else {
+			State.font.draw(charCode, foreground, background, chunk.ctx, x, localY);
+		}
+	} else {
+		chunk.blinkCells.delete(index);
+		State.font.draw(charCode, foreground, background, chunk.ctx, x, localY);
+	}
 }
 
-// Blink timer only swaps visible canvas sources
+// Blink timer only redraws tracked cells
 function blink() {
 	blinkOn = !blinkOn;
 	activeChunks.forEach(chunkIndex => {
 		const chunk = canvasChunks.get(chunkIndex);
-		const source = blinkOn ? chunk.onBlinkCanvas : chunk.offBlinkCanvas;
-		chunk.ctx.drawImage(source, 0, 0);
+		if (!chunk || chunk.blinkCells.size === 0) return;
+		
+		// Only redraw cells that need blinking
+		chunk.blinkCells.forEach(index => {
+			const x = index % columns;
+			const y = Math.floor(index / columns);
+			const localY = y - chunk.startRow;
+			
+			const charCode = imageData[index] >> 8;
+			let background = ((imageData[index] >> 4) & 15) - 8;
+			const foreground = imageData[index] & 15;
+			
+			if (blinkOn) {
+				State.font.draw(charCode, background, background, chunk.ctx, x, localY);
+			} else {
+				State.font.draw(charCode, foreground, background, chunk.ctx, x, localY);
+			}
+		});
 	});
 }
 ```
+
+**Benefits:**
+- No offscreen canvases needed (reduced memory by 66%)
+- Only redraws cells that actually blink
+- Mutex-based timer prevents race conditions
+- Automatically skips chunks with no blinking cells
 
 **Result:** Smooth 60 FPS on canvases of any size (tested up to 2000+ rows)
 
