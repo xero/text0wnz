@@ -1451,6 +1451,15 @@ const createSelectionTool = () => {
 	const canvasUp = _ => {
 		if (moveMode && isDragging) {
 			isDragging = false;
+		} else {
+			// Sync selection expansion state after mouse selection
+			const selection = State.selectionCursor.getSelection();
+			if (selection) {
+				selectionStartX = selection.x;
+				selectionStartY = selection.y;
+				selectionEndX = selection.x + selection.width - 1;
+				selectionEndY = selection.y + selection.height - 1;
+			}
 		}
 	};
 
@@ -1599,15 +1608,13 @@ const createSelectionTool = () => {
 			return;
 		}
 		State.textArtCanvas.startUndo();
-		// Get the current selection data if we don't have it
-		if (!selectionData) {
-			selectionData = State.textArtCanvas.getArea(
-				selection.x,
-				selection.y,
-				selection.width,
-				selection.height,
-			);
-		}
+		// Always refetch current selection data
+		selectionData = State.textArtCanvas.getArea(
+			selection.x,
+			selection.y,
+			selection.width,
+			selection.height,
+		);
 		// Restore what was underneath the current position (if any)
 		if (underlyingData) {
 			State.textArtCanvas.setArea(underlyingData, selection.x, selection.y);
@@ -1755,6 +1762,7 @@ const createSelectionTool = () => {
 		selectionEndY = newY + selection.height - 1;
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const moveSelectionRight = () => {
@@ -1773,6 +1781,7 @@ const createSelectionTool = () => {
 		selectionEndY = newY + selection.height - 1;
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const moveSelectionUp = () => {
@@ -1788,6 +1797,7 @@ const createSelectionTool = () => {
 		selectionEndY = newY + selection.height - 1;
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const moveSelectionDown = () => {
@@ -1806,6 +1816,7 @@ const createSelectionTool = () => {
 		selectionEndY = newY + selection.height - 1;
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const shiftLeft = () => {
@@ -1813,6 +1824,7 @@ const createSelectionTool = () => {
 		selectionEndX = Math.max(selectionEndX - 1, 0);
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const shiftRight = () => {
@@ -1823,6 +1835,7 @@ const createSelectionTool = () => {
 		);
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const shiftUp = () => {
@@ -1830,6 +1843,7 @@ const createSelectionTool = () => {
 		selectionEndY = Math.max(selectionEndY - 1, 0);
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const shiftDown = () => {
@@ -1840,20 +1854,31 @@ const createSelectionTool = () => {
 		);
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const shiftToStartOfRow = () => {
 		startSelectionExpansion();
 		selectionEndX = 0;
+		// Ensure coordinates are ordered (start <= end)
+		if (selectionStartX > selectionEndX) {
+			[selectionStartX, selectionEndX] = [selectionEndX, selectionStartX];
+		}
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const shiftToEndOfRow = () => {
 		startSelectionExpansion();
 		selectionEndX = State.textArtCanvas.getColumns() - 1;
+		// Ensure coordinates are ordered (start <= end)
+		if (selectionStartX > selectionEndX) {
+			[selectionStartX, selectionEndX] = [selectionEndX, selectionStartX];
+		}
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const scrollViewportToSelection = () => {
@@ -1908,8 +1933,10 @@ const createSelectionTool = () => {
 			return;
 		}
 
-		const fontHeight = State.font.getHeight();
-		const rowsPerScreen = calculateRowsPerScreen(viewport, fontHeight);
+		const rowsPerScreen = calculateRowsPerScreen(
+			viewport,
+			State.font.getHeight(),
+		);
 		const maxY = State.textArtCanvas.getRows() - 1;
 		const delta = direction === 'up' ? -rowsPerScreen : rowsPerScreen;
 
@@ -1917,8 +1944,24 @@ const createSelectionTool = () => {
 			moveSelection(0, delta);
 		} else {
 			startSelectionExpansion();
-			selectionStartY = Math.max(0, Math.min(maxY, selectionStartY + delta));
-			selectionEndY = Math.max(0, Math.min(maxY, selectionEndY + delta));
+			const selection = State.selectionCursor.getSelection();
+			const selectionHeight = selection ? selection.height : 1;
+
+			// Calculate new position
+			let newStartY = selectionStartY + delta;
+			let newEndY = selectionEndY + delta;
+
+			// Clamp to canvas bounds while preserving selection height
+			if (newEndY > maxY) {
+				newEndY = maxY;
+				newStartY = Math.max(0, maxY - selectionHeight + 1);
+			} else if (newStartY < 0) {
+				newStartY = 0;
+				newEndY = Math.min(maxY, selectionHeight - 1);
+			}
+
+			selectionStartY = newStartY;
+			selectionEndY = newEndY;
 			State.selectionCursor.setStart(selectionStartX, selectionStartY);
 			State.selectionCursor.setEnd(selectionEndX, selectionEndY);
 		}
@@ -1935,7 +1978,7 @@ const createSelectionTool = () => {
 		} else if (e.code === 'End') {
 			e.preventDefault();
 			shiftToEndOfRow();
-			// Home key -expand selection to start of current row
+			// Home key - expand selection to start of current row
 		} else if (e.code === 'Home') {
 			e.preventDefault();
 			shiftToStartOfRow();
@@ -2149,6 +2192,7 @@ const createSelectionTool = () => {
 	return {
 		enable: enable,
 		disable: disable,
+		scrollViewportToSelection: scrollViewportToSelection,
 		flipHorizontal: flipHorizontal,
 		flipVertical: flipVertical,
 		setPendingAction: setPendingAction,
