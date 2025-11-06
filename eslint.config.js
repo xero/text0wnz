@@ -48,6 +48,7 @@ export default [
 				localStorage: 'readonly',
 				mkdirSync: 'readonly',
 				navigator: 'readonly',
+				performance: 'readonly',
 				process: 'readonly',
 				requestAnimationFrame: 'readonly',
 				setInterval: 'readonly',
