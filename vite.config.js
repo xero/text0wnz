@@ -276,67 +276,67 @@ export default ({ mode }) => {
 					display_override: ['window-controls-overlay'], // removes window chrome
 					// fav/app icons
 					icons: [{
-						src: `/${uiDir}img/web-app-manifest-512x512.png`,
+						src: `${uiDir}img/web-app-manifest-512x512.png`,
 						sizes: '512x512',
 						type: 'image/png',
 						purpose: 'any',
 					}, {
-						src: `/${uiDir}img/web-app-manifest-512x512.png`,
+						src: `${uiDir}img/web-app-manifest-512x512.png`,
 						sizes: '512x512',
 						type: 'image/png',
 						purpose: 'maskable',
 					}, {
-						src: `/${uiDir}img/web-app-manifest-192x192.png`,
+						src: `${uiDir}img/web-app-manifest-192x192.png`,
 						sizes: '192x192',
 						type: 'image/png',
 						purpose: 'maskable',
 					}, {
-						src: `/${uiDir}img/apple-touch-icon.png`,
+						src: `${uiDir}img/apple-touch-icon.png`,
 						sizes: '180x180',
 						type: 'image/png',
 						purpose: 'maskable',
 					}, {
-						src: `/${uiDir}img/favicon-96x96.png`,
+						src: `${uiDir}img/favicon-96x96.png`,
 						sizes: '96x96',
 						type: 'image/png',
 						purpose: 'any',
 					}, {
-						src: `/${uiDir}img/android-launchericon-48-48.png`,
+						src: `${uiDir}img/android-launchericon-48-48.png`,
 						sizes: '48x48',
 						type: 'image/png',
 						purpose: 'any',
 					}],
 					// PWA install previews
 					screenshots: [{
-						src: `/${uiDir}img/screenshot-desktop.png`,
+						src: `${uiDir}img/screenshot-desktop.png`,
 						sizes: '3024x1964',
 						type: 'image/png',
 						platform: 'any',
 					}, {
-						src: `/${uiDir}img/screenshot-mobile.png`,
+						src: `${uiDir}img/screenshot-mobile.png`,
 						sizes: '1140x1520',
 						type: 'image/png',
 						platform: 'any',
 					}, {
-						src: `/${uiDir}img/screenshot-font-tall.png`,
+						src: `${uiDir}img/screenshot-font-tall.png`,
 						sizes: '910x1370',
 						type: 'image/png',
 						platform: 'any',
 						form_factor: 'narrow',
 					}, {
-						src: `/${uiDir}img/screenshot-sauce-tall.png`,
+						src: `${uiDir}img/screenshot-sauce-tall.png`,
 						sizes: '910x1370',
 						type: 'image/png',
 						platform: 'any',
 						form_factor: 'narrow',
 					}, {
-						src: `/${uiDir}img/screenshot-light-wide.png`,
+						src: `${uiDir}img/screenshot-light-wide.png`,
 						sizes: '1540x1158',
 						type: 'image/png',
 						platform: 'any',
 						form_factor: 'wide',
 					}, {
-						src: `/${uiDir}img/screenshot-dark-wide.png`,
+						src: `${uiDir}img/screenshot-dark-wide.png`,
 						sizes: '1540x1158',
 						type: 'image/png',
 						platform: 'any',
