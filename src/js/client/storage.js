@@ -6,7 +6,7 @@
 // IndexedDB setup
 const dbPromise = () => {
 	return new Promise((resolve, reject) => {
-		const request = indexedDB.open('text0wnz', 2);
+		const request = indexedDB.open('text0wnz', 3);
 
 		request.onupgradeneeded = e => {
 			const db = e.target.result;
@@ -18,6 +18,10 @@ const dbPromise = () => {
 
 			if (!db.objectStoreNames.contains('fontData')) {
 				db.createObjectStore('fontData');
+			}
+
+			if (!db.objectStoreNames.contains('undoHistory')) {
+				db.createObjectStore('undoHistory');
 			}
 		};
 
@@ -114,6 +118,48 @@ export const Storage = {
 	},
 
 	/**
+	 * Save undo history to IndexedDB
+	 */
+	async saveUndoHistory(undoHistory) {
+		try {
+			const db = await dbPromise();
+			const tx = db.transaction('undoHistory', 'readwrite');
+			const store = tx.objectStore('undoHistory');
+
+			await new Promise((resolve, reject) => {
+				const request = store.put(undoHistory, 'currentUndoHistory');
+				request.onsuccess = () => resolve();
+				request.onerror = () => reject(request.error);
+			});
+
+			return true;
+		} catch (error) {
+			console.error('[Storage] Error saving undo history:', error);
+			return false;
+		}
+	},
+
+	/**
+	 * Load undo history from IndexedDB
+	 */
+	async loadUndoHistory() {
+		try {
+			const db = await dbPromise();
+			const tx = db.transaction('undoHistory', 'readonly');
+			const store = tx.objectStore('undoHistory');
+
+			return await new Promise((resolve, reject) => {
+				const request = store.get('currentUndoHistory');
+				request.onsuccess = () => resolve(request.result);
+				request.onerror = () => reject(request.error);
+			});
+		} catch (error) {
+			console.error('[Storage] Error loading undo history:', error);
+			return null;
+		}
+	},
+
+	/**
 	 * Save lightweight settings to localStorage
 	 */
 	saveSettings(settings) {
@@ -157,6 +203,10 @@ export const Storage = {
 			const tx2 = db.transaction('fontData', 'readwrite');
 			const store2 = tx2.objectStore('fontData');
 			store2.clear();
+
+			const tx3 = db.transaction('undoHistory', 'readwrite');
+			const store3 = tx3.objectStore('undoHistory');
+			store3.clear();
 
 			return true;
 		} catch (error) {
