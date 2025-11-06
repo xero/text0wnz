@@ -185,6 +185,10 @@ const createFKeys = () => {
 	};
 };
 
+const calculateRowsPerScreen = (viewport, fontHeight) => {
+	return Math.floor(viewport.clientHeight / fontHeight);
+};
+
 const createCursor = canvasContainer => {
 	const canvas = createCanvas(State.font.getWidth(), State.font.getHeight());
 	const viewport = $('viewport');
@@ -313,17 +317,19 @@ const createCursor = canvasContainer => {
 	};
 
 	const pageUp = () => {
-		const fontHeight = State.font.getHeight();
-		const viewportHeight = viewport.clientHeight;
-		const rowsPerScreen = Math.floor(viewportHeight / fontHeight);
+		const rowsPerScreen = calculateRowsPerScreen(
+			viewport,
+			State.font.getHeight(),
+		);
 		const newY = Math.max(0, y - rowsPerScreen);
 		move(x, newY);
 	};
 
 	const pageDown = () => {
-		const fontHeight = State.font.getHeight();
-		const viewportHeight = viewport.clientHeight;
-		const rowsPerScreen = Math.floor(viewportHeight / fontHeight);
+		const rowsPerScreen = calculateRowsPerScreen(
+			viewport,
+			State.font.getHeight(),
+		);
 		const maxY = State.textArtCanvas.getRows() - 1;
 		const newY = Math.min(maxY, y + rowsPerScreen);
 		move(x, newY);
@@ -1897,43 +1903,22 @@ const createSelectionTool = () => {
 		}
 	};
 
-	const pageUp = () => {
+	const pageScroll = (direction = 'down') => {
 		if (!viewport) {
 			return;
 		}
 
 		const fontHeight = State.font.getHeight();
-		const viewportHeight = viewport.clientHeight;
-		const rowsPerScreen = Math.floor(viewportHeight / fontHeight);
-
-		if (moveMode && State.selectionCursor.getSelection()) {
-			moveSelection(0, -rowsPerScreen);
-		} else {
-			startSelectionExpansion();
-			selectionStartY = Math.max(0, selectionStartY - rowsPerScreen);
-			selectionEndY = Math.max(0, selectionEndY - rowsPerScreen);
-			State.selectionCursor.setStart(selectionStartX, selectionStartY);
-			State.selectionCursor.setEnd(selectionEndX, selectionEndY);
-		}
-		scrollViewportToSelection();
-	};
-
-	const pageDown = () => {
-		if (!viewport) {
-			return;
-		}
-
-		const fontHeight = State.font.getHeight();
-		const viewportHeight = viewport.clientHeight;
-		const rowsPerScreen = Math.floor(viewportHeight / fontHeight);
+		const rowsPerScreen = calculateRowsPerScreen(viewport, fontHeight);
 		const maxY = State.textArtCanvas.getRows() - 1;
+		const delta = direction === 'up' ? -rowsPerScreen : rowsPerScreen;
 
 		if (moveMode && State.selectionCursor.getSelection()) {
-			moveSelection(0, rowsPerScreen);
+			moveSelection(0, delta);
 		} else {
 			startSelectionExpansion();
-			selectionStartY = Math.min(maxY, selectionStartY + rowsPerScreen);
-			selectionEndY = Math.min(maxY, selectionEndY + rowsPerScreen);
+			selectionStartY = Math.max(0, Math.min(maxY, selectionStartY + delta));
+			selectionEndY = Math.max(0, Math.min(maxY, selectionEndY + delta));
 			State.selectionCursor.setStart(selectionStartX, selectionStartY);
 			State.selectionCursor.setEnd(selectionEndX, selectionEndY);
 		}
@@ -1970,10 +1955,10 @@ const createSelectionTool = () => {
 				toggleMoveMode();
 			} else if (e.code === 'PageUp') {
 				e.preventDefault();
-				pageUp();
+				pageScroll('up');
 			} else if (e.code === 'PageDown') {
 				e.preventDefault();
-				pageDown();
+				pageScroll('down');
 			} else if (moveMode && State.selectionCursor.getSelection()) {
 				// Arrow key shift selection contents in move mode
 				if (e.code === 'ArrowLeft') {
