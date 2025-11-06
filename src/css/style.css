@@ -623,7 +623,7 @@
 	}
 
 	.canvasOverlay {
-		@apply absolute hidden left-0 top-0;
+		@apply absolute hidden left-0 top-0 z-10;
 
 		&.enabled {
 			@apply block;
