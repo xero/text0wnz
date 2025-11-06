@@ -44,6 +44,7 @@ import {
 let htmlDoc;
 let bodyContainer;
 let canvasContainer;
+let viewport;
 let columnsInput;
 let fontSelect;
 let openFile;
@@ -70,6 +71,7 @@ const $$$$ = () => {
 	htmlDoc = $$('html');
 	bodyContainer = $('bodyContainer');
 	canvasContainer = $('canvasContainer');
+	viewport = $('viewport');
 	columnsInput = $('columnsInput');
 	openFile = $('openFile');
 	resizeApply = $('resizeApply');
@@ -306,6 +308,7 @@ const initializeAppComponents = async () => {
 					);
 					palettePicker.updatePalette(); // ANSi
 					openFile.value = '';
+					viewport.scrollLeft = viewport.scrollTop = 0;
 				};
 
 				const isNFOFile = file.name.toLowerCase().endsWith('.nfo');
@@ -688,7 +691,8 @@ const initializeAppComponents = async () => {
 
 	updateFontDisplay();
 
-	viewportTap($('viewport'));
+	// Touch handlers
+	viewportTap(viewport);
 
 	// Initialize chat before creating network handler
 	State.chat = createChatController(

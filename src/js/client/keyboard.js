@@ -221,6 +221,53 @@ const createCursor = canvasContainer => {
 		canvas.style.top = y * State.font.getHeight() - 1 + 'px';
 		State.positionInfo.update(x, y);
 		State.pasteTool.setSelection(x, y, 1, 1);
+
+		// Auto-scroll viewport to keep cursor visible
+		scrollViewportToCursor();
+	};
+
+	const scrollViewportToCursor = () => {
+		const viewport = document.getElementById('viewport');
+		if (!viewport) {
+			return;
+		}
+
+		const fontHeight = State.font.getHeight();
+		const fontWidth = State.font.getWidth();
+		const bufferRows = 5; // Number of rows as buffer
+
+		const cursorPixelY = y * fontHeight;
+		const cursorPixelX = x * fontWidth;
+		const bufferPixels = bufferRows * fontHeight;
+
+		const viewportHeight = viewport.clientHeight;
+		const viewportWidth = viewport.clientWidth;
+		const scrollTop = viewport.scrollTop;
+		const scrollLeft = viewport.scrollLeft;
+
+		// Check vertical scrolling
+		const cursorTop = cursorPixelY - bufferPixels;
+		const cursorBottom = cursorPixelY + fontHeight + bufferPixels;
+
+		if (cursorTop < scrollTop) {
+			// Cursor is above viewport, scroll up
+			viewport.scrollTop = Math.max(0, cursorTop);
+		} else if (cursorBottom > scrollTop + viewportHeight) {
+			// Cursor is below viewport, scroll down
+			viewport.scrollTop = Math.max(0, cursorBottom - viewportHeight);
+		}
+
+		// Check horizontal scrolling
+		const cursorLeft = cursorPixelX - bufferRows * fontWidth;
+		const cursorRight = cursorPixelX + fontWidth + bufferRows * fontWidth;
+
+		if (cursorLeft < scrollLeft) {
+			// Cursor is left of viewport, scroll left
+			viewport.scrollLeft = Math.max(0, cursorLeft);
+		} else if (cursorRight > scrollLeft + viewportWidth) {
+			// Cursor is right of viewport, scroll right
+			viewport.scrollLeft = Math.max(0, cursorRight - viewportWidth);
+		}
 	};
 
 	const updateDimensions = () => {
