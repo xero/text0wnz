@@ -218,8 +218,22 @@
 		#resolution,
 		#currentFontDisplay {
 			@apply h-[var(--header-size)];
+		}
+		button:hover {
+			@apply bg-hl;
+		}
+		#resolution kbd {
+			@apply mr-0.5;
+		}
+		#currentFontDisplay kbd {
+			@apply mx-1;
+		}
+		#resolution,
+		#currentFontDisplay {
 			&:hover {
-				@apply bg-hl;
+				kbd {
+					@apply bg-purp;
+				}
 			}
 		}
 	}
@@ -541,11 +555,21 @@
 
 	#fkeySetPrev,
 	#fkeySetNext {
-		@apply h-full;
+		height: calc(var(--header-size) - 8px);
+		&:hover {
+			background: transparent;
+			svg {
+				fill: var(--color-cyan);
+			}
+		}
+		&:active svg {
+			fill: var(--color-cyber);
+		}
 
 		svg {
 			width: 25px;
 			height: 25px;
+			margin-top: 5px;
 		}
 	}
 
@@ -561,7 +585,6 @@
 
 	#currentFontDisplay {
 		user-select: none;
-		margin-right: 1px;
 	}
 
 	#resolution {
@@ -580,11 +603,11 @@
 
 	#resolution kbd,
 	#currentFontDisplay kbd {
-		@apply bg-lbl mr-[5px] px-[8px] py-[1px];
+		@apply bg-lbl px-[8px] py-[1px];
 	}
 
 	#positionInfo {
-		@apply flex flex-row text-right text-fg text-xs min-w-[50px];
+		@apply flex flex-row text-right text-fg text-xs ml-1 min-w-[50px];
 		line-height: 20px;
 	}
 
