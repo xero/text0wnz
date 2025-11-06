@@ -172,6 +172,47 @@ describe('Canvas Module', () => {
 			expect(() => canvas.redo()).not.toThrow();
 		});
 
+		it('should provide getUndoHistory method', () => {
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(canvas.getUndoHistory).toBeDefined();
+			expect(typeof canvas.getUndoHistory).toBe('function');
+
+			const history = canvas.getUndoHistory();
+			expect(history).toBeDefined();
+			expect(history.currentUndo).toBeDefined();
+			expect(history.undoBuffer).toBeDefined();
+			expect(history.redoBuffer).toBeDefined();
+			expect(Array.isArray(history.currentUndo)).toBe(true);
+			expect(Array.isArray(history.undoBuffer)).toBe(true);
+			expect(Array.isArray(history.redoBuffer)).toBe(true);
+		});
+
+		it('should provide setUndoHistory method', () => {
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			expect(canvas.setUndoHistory).toBeDefined();
+			expect(typeof canvas.setUndoHistory).toBe('function');
+
+			const mockHistory = {
+				currentUndo: [[0, 1234, 0, 0]],
+				undoBuffer: [
+					[
+						[1, 5678, 1, 0],
+						[2, 9012, 2, 0],
+					],
+				],
+				redoBuffer: [],
+			};
+
+			expect(() => canvas.setUndoHistory(mockHistory)).not.toThrow();
+
+			const history = canvas.getUndoHistory();
+			expect(history.currentUndo).toEqual(mockHistory.currentUndo);
+			expect(history.undoBuffer).toEqual(mockHistory.undoBuffer);
+			expect(history.redoBuffer).toEqual(mockHistory.redoBuffer);
+		});
+
 		it('should handle mirror mode operations', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 

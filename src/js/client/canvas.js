@@ -1911,6 +1911,22 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const getXBFontData = () => xbFontData;
 
+	const getUndoHistory = () => {
+		return {
+			currentUndo: currentUndo,
+			undoBuffer: undoBuffer,
+			redoBuffer: redoBuffer,
+		};
+	};
+
+	const setUndoHistory = history => {
+		if (history) {
+			currentUndo = history.currentUndo || [];
+			undoBuffer = history.undoBuffer || [];
+			redoBuffer = history.redoBuffer || [];
+		}
+	};
+
 	const loadXBFileSequential = (imageData, finalCallback) => {
 		clearXBData(() => {
 			if (imageData.paletteData) {
@@ -1985,6 +2001,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		startUndo: startUndo,
 		undo: undo,
 		redo: redo,
+		getUndoHistory: getUndoHistory,
+		setUndoHistory: setUndoHistory,
 		deleteArea: deleteArea,
 		getArea: getArea,
 		setArea: setArea,

@@ -629,6 +629,15 @@ class StateManager {
 				}
 			}
 
+			// Save undo history to IndexedDB
+			if (
+				this.state.textArtCanvas &&
+				typeof this.state.textArtCanvas.getUndoHistory === 'function'
+			) {
+				const undoHistory = this.state.textArtCanvas.getUndoHistory();
+				await Storage.saveUndoHistory(undoHistory);
+			}
+
 			// 2. Save lightweight settings to localStorage
 			const settings = {
 				fontName: this.state.textArtCanvas?.getCurrentFontName(),
@@ -766,6 +775,16 @@ class StateManager {
 								canvasData.imageData,
 								true, // Temporarily use ice colors
 							);
+						}
+
+						// Load undo history
+						const undoHistory = await Storage.loadUndoHistory();
+						if (
+							undoHistory &&
+							this.state.textArtCanvas &&
+							typeof this.state.textArtCanvas.setUndoHistory === 'function'
+						) {
+							this.state.textArtCanvas.setUndoHistory(undoHistory);
 						}
 
 						// Finally, set font

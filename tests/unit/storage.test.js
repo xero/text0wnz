@@ -160,6 +160,11 @@ describe('Storage Utilities', () => {
 			expect(typeof Storage.loadFontData).toBe('function');
 		});
 
+		it('should have undo history methods', () => {
+			expect(typeof Storage.saveUndoHistory).toBe('function');
+			expect(typeof Storage.loadUndoHistory).toBe('function');
+		});
+
 		it('should have clearAll method', () => {
 			expect(typeof Storage.clearAll).toBe('function');
 		});
@@ -200,6 +205,27 @@ describe('Storage Utilities', () => {
 
 		it('should handle loadFontData without crashing', async () => {
 			const result = await Storage.loadFontData('XBIN');
+			expect(result === null || typeof result === 'object').toBe(true);
+		});
+
+		it('should handle saveUndoHistory without crashing', async () => {
+			const undoHistory = {
+				currentUndo: [[0, 1234, 0, 0]],
+				undoBuffer: [
+					[
+						[1, 5678, 1, 0],
+						[2, 9012, 2, 0],
+					],
+				],
+				redoBuffer: [],
+			};
+
+			const result = await Storage.saveUndoHistory(undoHistory);
+			expect(typeof result).toBe('boolean');
+		});
+
+		it('should handle loadUndoHistory without crashing', async () => {
+			const result = await Storage.loadUndoHistory();
 			expect(result === null || typeof result === 'object').toBe(true);
 		});
 	});
