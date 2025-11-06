@@ -623,11 +623,14 @@
 	}
 
 	.canvasOverlay {
-		@apply absolute hidden left-0 top-0;
+		@apply absolute hidden left-0 top-0 z-10;
 
 		&.enabled {
 			@apply block;
 		}
+	}
+	#grid {
+		@apply border-r border-b border-[#343434];
 	}
 
 	canvas {
