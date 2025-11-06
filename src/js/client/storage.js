@@ -6,6 +6,10 @@
 // IndexedDB setup
 const dbPromise = () => {
 	return new Promise((resolve, reject) => {
+		// Database version history:
+		// v1: Initial version (not tracked)
+		// v2: Added canvasData and fontData stores
+		// v3: Added undoHistory store for undo/redo persistence
 		const request = indexedDB.open('text0wnz', 3);
 
 		request.onupgradeneeded = e => {
