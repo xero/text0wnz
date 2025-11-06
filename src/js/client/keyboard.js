@@ -186,12 +186,18 @@ const createFKeys = () => {
 };
 
 const calculateRowsPerScreen = (viewport, fontHeight) => {
+	if (!viewport) {
+		return 0;
+	}
 	return Math.floor(viewport.clientHeight / fontHeight);
 };
 
 const createCursor = canvasContainer => {
 	const canvas = createCanvas(State.font.getWidth(), State.font.getHeight());
 	const viewport = $('viewport');
+	if (!viewport) {
+		console.error('viewport element missing, focus scroll disabled');
+	}
 	let x = 0;
 	let y = 0;
 	let visible = false;
@@ -1971,15 +1977,16 @@ const createSelectionTool = () => {
 	const keyDown = e => {
 		// These keys work with or without modifiers
 		if (e.code === 'Enter') {
+			// Enter - exit selection and use default cursor behavior
 			e.preventDefault();
 			Toolbar.switchTool('keyboard');
 			State.cursor.newLine();
-			// End key - expand selection to end of current row
 		} else if (e.code === 'End') {
+			// End key - expand selection to end of current row
 			e.preventDefault();
 			shiftToEndOfRow();
-			// Home key - expand selection to start of current row
 		} else if (e.code === 'Home') {
+			// Home key - expand selection to start of current row
 			e.preventDefault();
 			shiftToStartOfRow();
 		}
