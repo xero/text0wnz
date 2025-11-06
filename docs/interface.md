@@ -127,18 +127,26 @@ See [editor-client.md](editor-client.md) for detailed tool descriptions and [pro
 
 ## ![keyboard](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/keyboard.png) Keyboard Mode
 
-Full text input with navigation controls. Type characters directly onto the canvas. Use the F-keys to insert block shading characters (`░▒▓`) like traditional ANSI editors. Navigate the canvas with the arrow keys, home/end, and page up/down.
+Full text input with navigation controls. Type characters directly onto the canvas. Use the F-keys to insert block shading characters (`░▒▓`) like traditional ANSI editors.
 
 **Features:**
 
 - Direct character input
 - F-key block character insertion
 - Ctrl+[ / ] to swap character sets
-- Arrow key navigation
-- Home/End row navigation
-- Page Up/Down column navigation
 - Traditional ANSI editor workflow
 - Shift+Arrow keys switches to the Selection Tool
+
+**Navigation:**
+
+- **Arrow Keys** - Move cursor in any direction
+- **Home** - Move to start of current row
+- **End** - Move to end of current row
+- **Page Up** - Move cursor up by one screen height
+- **Page Down** - Move cursor down by one screen height
+- **Cmd/Meta + Left Arrow** - Move to start of current row
+- **Cmd/Meta + Right Arrow** - Move to end of current row
+- **Enter** - Move to next line (start of new row)
 
 ![f-key legend](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/fkeys.png)
 
@@ -250,32 +258,44 @@ See [architecture.md](architecture.md) for shape rendering algorithms.
 
 ![selection-menu](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/selection-menu.png)
 
-Visually highlight rectangular sections of the canvas and apply transformations to it.
+Visually highlight rectangular sections of the canvas and apply transformations to it. The selection position is displayed in the status bar in real-time as you manipulate it.
 
-**Keyboard:**
+**Keyboard Navigation:**
 
-- Arrow keys: Movement
-  - Default: Move the selection
-  - Move Mode: Move the selection _and it's contents_
-- Shift + Arrow keys: Grow/Shrink selection
-- Meta + left/right: Expand selection to canvas bounds
+- **Arrow Keys** - Move selection by one cell
+  - Default: Move the selection box
+  - Move Mode: Move the selection _and its contents_
+- **Shift + Arrow Keys** - Expand/shrink selection
+- **Home** - Expand selection to start of current row
+- **End** - Expand selection to end of current row
+- **Page Up** - Move selection up by one screen height
+- **Page Down** - Move selection down by one screen height
+- **Cmd/Meta + Left Arrow** - Expand selection to start of current row
+- **Cmd/Meta + Right Arrow** - Expand selection to end of current row
 
 **Mouse/Touch:**
 
-- In an unselected area: New selection
-- Within a selection:
-  - Default: Move the selection
-  - Move Mode: Move the selection _and it's contents_
+- **Click in unselected area** - Create new selection
+- **Click and drag** - Create or expand selection to different cell
+- **Within a selection (default mode)** - Move the selection box
+- **Within a selection (move mode)** - Move the selection _and its contents_
+
+> [!NOTE]
+> Single clicks move the cursor without creating a selection. Drag to create a selection to prevent accidental single-cell selections.
+
+**Viewport Auto-Scroll:**
+
+When navigating selections with keyboard or mouse, the viewport automatically scrolls to keep the selection visible with a buffer zone, similar to cursor navigation.
 
 **Operations:**
 
-- Flip Horizontally
-- Flip Vertically
-- Move
-- Cut
-- Copy
-- Paste (from app clipboard)
-- System Paste (from operating system clipboard)
+- Flip Horizontally (`[` key)
+- Flip Vertically (`]` key)
+- Move Mode (`M` key) - Toggle orange move mode
+- Cut (`Ctrl+X`)
+- Copy (`Ctrl+C`)
+- Paste from app clipboard (`Ctrl+V`)
+- System Paste from OS clipboard (`Ctrl+Shift+V`)
 
 **Selection Modes:**
 
@@ -283,7 +303,7 @@ The default selection mode is white:
 
 ![selection](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/selection.png)
 
-Move mode is orange:
+Move mode is orange (toggle with `M` key):
 
 ![move](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/move.png)
 
@@ -293,6 +313,9 @@ Move mode is orange:
 - **Ctrl+C** - Copy selection
 - **Ctrl+V** - Paste from app clipboard
 - **Ctrl+Shift+V** - Paste from system clipboard
+- **[** - Flip horizontally
+- **]** - Flip vertically
+- **M** - Toggle move mode
 
 See [editor-client.md](editor-client.md) for more keyboard shortcuts and clipboard operations.
 

@@ -60,13 +60,17 @@ The teXt0wnz client is a browser-based text art editor supporting ANSI, ASCII, X
 
 ### Navigation (Keyboard Mode)
 
-| Key           | Action                 |
-| ------------- | ---------------------- |
-| Arrow Keys    | Move cursor            |
-| Home/End      | Line start/end         |
-| Page Up/Down  | Page jump              |
-| Tab/Backspace | Insert tab/delete left |
-| Enter         | New line               |
+| Key              | Action                       |
+| ---------------- | ---------------------------- |
+| Arrow Keys       | Move cursor in any direction |
+| Home             | Move to start of current row |
+| End              | Move to end of current row   |
+| Page Up          | Move cursor up by screen     |
+| Page Down        | Move cursor down by screen   |
+| Cmd/Meta + Left  | Move to start of row         |
+| Cmd/Meta + Right | Move to end of row           |
+| Tab/Backspace    | Insert tab/delete left       |
+| Enter            | Move to next line            |
 
 ### Advanced Editing (Alt + Key)
 
@@ -84,6 +88,28 @@ The teXt0wnz client is a browser-based text art editor supporting ANSI, ASCII, X
 | ----- | -------------- |
 | [ / ] | Flip selection |
 | M     | Move mode      |
+
+### Selection Navigation
+
+| Key              | Action                               |
+| ---------------- | ------------------------------------ |
+| Arrow Keys       | Move selection by one cell           |
+| Shift + Arrow    | Expand/shrink selection              |
+| Home             | Expand selection to row start        |
+| End              | Expand selection to row end          |
+| Page Up          | Move selection up by screen height   |
+| Page Down        | Move selection down by screen height |
+| Cmd/Meta + Left  | Expand selection to row start        |
+| Cmd/Meta + Right | Expand selection to row end          |
+| [                | Flip selection horizontally          |
+| ]                | Flip selection vertically            |
+| M                | Toggle move mode                     |
+
+**In Move Mode:**
+
+- **Arrow Keys** - Move selected content by one cell
+- **Page Up** - Move selected content up by screen height
+- **Page Down** - Move selected content down by screen height
 
 ### Special Function Keys (F1-F12)
 
@@ -119,11 +145,17 @@ The editor includes predefined character sets (box drawing, symbols, accented le
 
 ### Mouse Controls
 
-- **Left Click:** Draw
-- **Drag:** Draw/Shape
+- **Left Click:** Draw (in tools), position cursor (on canvas in keyboard mode)
+- **Click and Drag:** Draw/Shape, or create selection
 - **Shift+Click:** Straight line (freehand)
 - **Alt+Click:** Sample color/alt draw
 - **Right Click:** Context menu
+
+**Selection Tool Mouse Behavior:**
+
+- **Single Click:** Move cursor to clicked position (does not create selection)
+- **Click and Drag:** Create or expand selection by dragging to different cell
+- **In Move Mode:** Drag within selection to move selected content
 
 ## Color Management
 
@@ -243,6 +275,23 @@ The editor works as a Progressive Web App:
 8. Use F-keys for quick access to block characters
 9. Alt+Click to sample colors from artwork
 10. Undo/Redo freely (up to 1000 operations stored)
+
+## Screen-Aware Navigation
+
+Page Up and Page Down automatically calculate movement based on the current viewport height and font size, allowing you to navigate large canvases one screen at a time without losing your bearings.
+
+**In Keyboard Mode:**
+
+- Canvas cursor moves by one full screen height
+- Viewport automatically scrolls to keep cursor visible
+
+**In Selection Tool:**
+
+- Selection moves by one full screen height in default mode
+- In move mode, selected content moves by one full screen height
+- Viewport automatically scrolls to keep selection visible
+
+This makes navigation much faster and more intuitive on large text art pieces.
 
 ## Browser Support
 
