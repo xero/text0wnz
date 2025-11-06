@@ -542,13 +542,12 @@
 		span {
 			@apply flex flex-col mx-1 my-auto;
 			margin-top: -5px;
+			&:hover canvas {
+				outline: 1px solid var(--cyber);
+			}
 			canvas {
 				scale: 1.5;
 				margin: 3px auto auto auto;
-
-				&:hover {
-					outline: 1px solid var(--cyber);
-				}
 			}
 		}
 	}
@@ -607,8 +606,9 @@
 	}
 
 	#positionInfo {
-		@apply flex flex-row text-right text-fg text-xs ml-1 min-w-[50px];
-		line-height: 20px;
+		@apply flex flex-row text-fg text-xs mr-1 min-w-[50px];
+		padding: 5px 2px 2px 3px;
+		word-spacing: -6px;
 	}
 
 	#canvasContainer {
@@ -1174,6 +1174,7 @@
 	#resolution,
 	#selectionToolbar .toolButton,
 	#currentFontDisplay,
+	#keyboardToolbar span,
 	#chatButton {
 		@apply cursor-pointer;
 	}

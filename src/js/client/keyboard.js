@@ -80,7 +80,8 @@ const createFKeys = () => {
 	// Initialize fkey canvases
 	for (let i = 0; i < 12; i++) {
 		const canvas = $('fkey' + i);
-		if (canvas) {
+		const wrap = $('fkey' + i + 'w');
+		if (canvas && wrap) {
 			const insert = () => {
 				State.textArtCanvas.startUndo();
 				State.textArtCanvas.draw(callback => {
@@ -94,7 +95,7 @@ const createFKeys = () => {
 				}, false);
 				State.cursor.right();
 			};
-			canvas.addEventListener('click', insert);
+			wrap.addEventListener('click', insert);
 		}
 	}
 
@@ -184,8 +185,19 @@ const createFKeys = () => {
 	};
 };
 
+const calculateRowsPerScreen = (viewport, fontHeight) => {
+	if (!viewport) {
+		return 0;
+	}
+	return Math.floor(viewport.clientHeight / fontHeight);
+};
+
 const createCursor = canvasContainer => {
 	const canvas = createCanvas(State.font.getWidth(), State.font.getHeight());
+	const viewport = $('viewport');
+	if (!viewport) {
+		console.error('viewport element missing, focus scroll disabled');
+	}
 	let x = 0;
 	let y = 0;
 	let visible = false;
@@ -227,11 +239,9 @@ const createCursor = canvasContainer => {
 	};
 
 	const scrollViewportToCursor = () => {
-		const viewport = document.getElementById('viewport');
 		if (!viewport) {
 			return;
 		}
-
 		const fontHeight = State.font.getHeight();
 		const fontWidth = State.font.getWidth();
 		const bufferRows = 5; // Number of rows as buffer
@@ -312,6 +322,25 @@ const createCursor = canvasContainer => {
 		move(State.textArtCanvas.getColumns() - 1, y);
 	};
 
+	const pageUp = () => {
+		const rowsPerScreen = calculateRowsPerScreen(
+			viewport,
+			State.font.getHeight(),
+		);
+		const newY = Math.max(0, y - rowsPerScreen);
+		move(x, newY);
+	};
+
+	const pageDown = () => {
+		const rowsPerScreen = calculateRowsPerScreen(
+			viewport,
+			State.font.getHeight(),
+		);
+		const maxY = State.textArtCanvas.getRows() - 1;
+		const newY = Math.min(maxY, y + rowsPerScreen);
+		move(x, newY);
+	};
+
 	const keyDown = e => {
 		if (!e.ctrlKey && !e.altKey) {
 			if (!e.shiftKey && !e.metaKey) {
@@ -327,6 +356,14 @@ const createCursor = canvasContainer => {
 					case 'Home':
 						e.preventDefault();
 						startOfCurrentRow();
+						break;
+					case 'PageUp':
+						e.preventDefault();
+						pageUp();
+						break;
+					case 'PageDown':
+						e.preventDefault();
+						pageDown();
 						break;
 					case 'ArrowLeft':
 						e.preventDefault();
@@ -520,6 +557,7 @@ const createSelectionCursor = element => {
 		updateCursor();
 		State.pasteTool.setSelection(x, y, width, height);
 		visible = true;
+		State.positionInfo.update(x, y);
 	};
 
 	const isVisible = () => visible;
@@ -1079,15 +1117,23 @@ const createKeyboardController = () => {
 		}
 	};
 
+	let selectionStartX = 0;
+	let selectionStartY = 0;
 	const textCanvasDown = e => {
 		State.cursor.move(e.detail.x, e.detail.y);
-		State.selectionCursor.setStart(e.detail.x, e.detail.y);
+		// Store start position but don't create selection yet
+		selectionStartX = e.detail.x;
+		selectionStartY = e.detail.y;
 	};
 
 	const textCanvasDrag = e => {
-		State.cursor.hide();
-		Toolbar.switchTool('selection');
-		State.selectionCursor.setEnd(e.detail.x, e.detail.y);
+		// Only switch to selection if we've dragged to a different cell
+		if (e.detail.x !== selectionStartX || e.detail.y !== selectionStartY) {
+			State.cursor.hide();
+			Toolbar.switchTool('selection');
+			State.selectionCursor.setStart(selectionStartX, selectionStartY);
+			State.selectionCursor.setEnd(e.detail.x, e.detail.y);
+		}
 	};
 
 	const enable = () => {
@@ -1111,6 +1157,10 @@ const createKeyboardController = () => {
 		document.removeEventListener('keypress', keyPress);
 		document.removeEventListener('onTextCanvasDown', textCanvasDown);
 		document.removeEventListener('onTextCanvasDrag', textCanvasDrag);
+		const selection = State.selectionCursor.getPos();
+		if (selection) {
+			State.cursor.move(selection.x, selection.y);
+		}
 		State.selectionCursor.hide();
 		State.cursor.disable();
 		fkeys.disable();
@@ -1352,6 +1402,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 };
 
 const createSelectionTool = () => {
+	const viewport = $('viewport');
 	const panel = $('selectionToolbar');
 	const flipHButton = $('flipHorizontal');
 	const flipVButton = $('flipVertical');
@@ -1406,6 +1457,15 @@ const createSelectionTool = () => {
 	const canvasUp = _ => {
 		if (moveMode && isDragging) {
 			isDragging = false;
+		} else {
+			// Sync selection expansion state after mouse selection
+			const selection = State.selectionCursor.getSelection();
+			if (selection) {
+				selectionStartX = selection.x;
+				selectionStartY = selection.y;
+				selectionEndX = selection.x + selection.width - 1;
+				selectionEndY = selection.y + selection.height - 1;
+			}
 		}
 	};
 
@@ -1554,15 +1614,13 @@ const createSelectionTool = () => {
 			return;
 		}
 		State.textArtCanvas.startUndo();
-		// Get the current selection data if we don't have it
-		if (!selectionData) {
-			selectionData = State.textArtCanvas.getArea(
-				selection.x,
-				selection.y,
-				selection.width,
-				selection.height,
-			);
-		}
+		// Always refetch current selection data
+		selectionData = State.textArtCanvas.getArea(
+			selection.x,
+			selection.y,
+			selection.width,
+			selection.height,
+		);
 		// Restore what was underneath the current position (if any)
 		if (underlyingData) {
 			State.textArtCanvas.setArea(underlyingData, selection.x, selection.y);
@@ -1710,6 +1768,7 @@ const createSelectionTool = () => {
 		selectionEndY = newY + selection.height - 1;
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const moveSelectionRight = () => {
@@ -1728,6 +1787,7 @@ const createSelectionTool = () => {
 		selectionEndY = newY + selection.height - 1;
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const moveSelectionUp = () => {
@@ -1743,6 +1803,7 @@ const createSelectionTool = () => {
 		selectionEndY = newY + selection.height - 1;
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const moveSelectionDown = () => {
@@ -1761,6 +1822,7 @@ const createSelectionTool = () => {
 		selectionEndY = newY + selection.height - 1;
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const shiftLeft = () => {
@@ -1768,6 +1830,7 @@ const createSelectionTool = () => {
 		selectionEndX = Math.max(selectionEndX - 1, 0);
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const shiftRight = () => {
@@ -1778,6 +1841,7 @@ const createSelectionTool = () => {
 		);
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const shiftUp = () => {
@@ -1785,6 +1849,7 @@ const createSelectionTool = () => {
 		selectionEndY = Math.max(selectionEndY - 1, 0);
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const shiftDown = () => {
@@ -1795,23 +1860,136 @@ const createSelectionTool = () => {
 		);
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const shiftToStartOfRow = () => {
 		startSelectionExpansion();
 		selectionEndX = 0;
+		// Ensure coordinates are ordered (start <= end)
+		if (selectionStartX > selectionEndX) {
+			[selectionStartX, selectionEndX] = [selectionEndX, selectionStartX];
+		}
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
 	};
 
 	const shiftToEndOfRow = () => {
 		startSelectionExpansion();
 		selectionEndX = State.textArtCanvas.getColumns() - 1;
+		// Ensure coordinates are ordered (start <= end)
+		if (selectionStartX > selectionEndX) {
+			[selectionStartX, selectionEndX] = [selectionEndX, selectionStartX];
+		}
 		State.selectionCursor.setStart(selectionStartX, selectionStartY);
 		State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		scrollViewportToSelection();
+	};
+
+	const scrollViewportToSelection = () => {
+		if (!viewport) {
+			return;
+		}
+
+		const selection = State.selectionCursor.getSelection();
+		if (!selection) {
+			return;
+		}
+
+		const fontHeight = State.font.getHeight();
+		const fontWidth = State.font.getWidth();
+		const bufferRows = 5; // Same buffer as cursor
+
+		// Use the end position of the selection for focus
+		const selectionPixelY = selection.y * fontHeight;
+		const selectionPixelX = selection.x * fontWidth;
+		const bufferPixels = bufferRows * fontHeight;
+
+		const viewportHeight = viewport.clientHeight;
+		const viewportWidth = viewport.clientWidth;
+		const scrollTop = viewport.scrollTop;
+		const scrollLeft = viewport.scrollLeft;
+
+		// Check vertical scrolling
+		const selectionTop = selectionPixelY - bufferPixels;
+		const selectionBottom =
+			selectionPixelY + selection.height * fontHeight + bufferPixels;
+
+		if (selectionTop < scrollTop) {
+			viewport.scrollTop = Math.max(0, selectionTop);
+		} else if (selectionBottom > scrollTop + viewportHeight) {
+			viewport.scrollTop = Math.max(0, selectionBottom - viewportHeight);
+		}
+
+		// Check horizontal scrolling
+		const selectionLeft = selectionPixelX - bufferRows * fontWidth;
+		const selectionRight =
+			selectionPixelX + selection.width * fontWidth + bufferRows * fontWidth;
+
+		if (selectionLeft < scrollLeft) {
+			viewport.scrollLeft = Math.max(0, selectionLeft);
+		} else if (selectionRight > scrollLeft + viewportWidth) {
+			viewport.scrollLeft = Math.max(0, selectionRight - viewportWidth);
+		}
+	};
+
+	const pageScroll = (direction = 'down') => {
+		if (!viewport) {
+			return;
+		}
+
+		const rowsPerScreen = calculateRowsPerScreen(
+			viewport,
+			State.font.getHeight(),
+		);
+		const maxY = State.textArtCanvas.getRows() - 1;
+		const delta = direction === 'up' ? -rowsPerScreen : rowsPerScreen;
+
+		if (moveMode && State.selectionCursor.getSelection()) {
+			moveSelection(0, delta);
+		} else {
+			startSelectionExpansion();
+			const selection = State.selectionCursor.getSelection();
+			const selectionHeight = selection ? selection.height : 1;
+
+			// Calculate new position
+			let newStartY = selectionStartY + delta;
+			let newEndY = selectionEndY + delta;
+
+			// Clamp to canvas bounds while preserving selection height
+			if (newEndY > maxY) {
+				newEndY = maxY;
+				newStartY = Math.max(0, maxY - selectionHeight + 1);
+			} else if (newStartY < 0) {
+				newStartY = 0;
+				newEndY = Math.min(maxY, selectionHeight - 1);
+			}
+
+			selectionStartY = newStartY;
+			selectionEndY = newEndY;
+			State.selectionCursor.setStart(selectionStartX, selectionStartY);
+			State.selectionCursor.setEnd(selectionEndX, selectionEndY);
+		}
+		scrollViewportToSelection();
 	};
 
 	const keyDown = e => {
+		// These keys work with or without modifiers
+		if (e.code === 'Enter') {
+			// Enter - exit selection and use default cursor behavior
+			e.preventDefault();
+			Toolbar.switchTool('keyboard');
+			State.cursor.newLine();
+		} else if (e.code === 'End') {
+			// End key - expand selection to end of current row
+			e.preventDefault();
+			shiftToEndOfRow();
+		} else if (e.code === 'Home') {
+			// Home key - expand selection to start of current row
+			e.preventDefault();
+			shiftToStartOfRow();
+		}
 		if (!e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
 			if (e.key === '[') {
 				// '[' key - flip horizontal
@@ -1825,6 +2003,12 @@ const createSelectionTool = () => {
 				// 'M' key - toggle move mode
 				e.preventDefault();
 				toggleMoveMode();
+			} else if (e.code === 'PageUp') {
+				e.preventDefault();
+				pageScroll('up');
+			} else if (e.code === 'PageDown') {
+				e.preventDefault();
+				pageScroll('down');
 			} else if (moveMode && State.selectionCursor.getSelection()) {
 				// Arrow key shift selection contents in move mode
 				if (e.code === 'ArrowLeft') {
@@ -1842,24 +2026,6 @@ const createSelectionTool = () => {
 				}
 			} else {
 				switch (e.code) {
-					// Enter key - cursor to new line
-					case 'Enter':
-						e.preventDefault();
-						Toolbar.switchTool('keyboard');
-						State.cursor.newLine();
-						break;
-					// End key - cursor to end of line
-					case 'End':
-						e.preventDefault();
-						Toolbar.switchTool('keyboard');
-						State.cursor.endOfCurrentRow();
-						break;
-					// Home key - cursor to start of line
-					case 'Home':
-						e.preventDefault();
-						Toolbar.switchTool('keyboard');
-						State.cursor.startOfCurrentRow();
-						break;
 					// arrow keys move selection area
 					case 'ArrowLeft':
 						e.preventDefault();
@@ -1880,21 +2046,6 @@ const createSelectionTool = () => {
 					default:
 						break;
 				}
-			}
-		} else if (e.metaKey && !e.shiftKey) {
-			switch (e.code) {
-				// Meta+Left - expand selection to start of current row
-				case 'ArrowLeft':
-					e.preventDefault();
-					shiftToStartOfRow();
-					break;
-				// Meta+Right - expand selection to end of current row
-				case 'ArrowRight':
-					e.preventDefault();
-					shiftToEndOfRow();
-					break;
-				default:
-					break;
 			}
 		} else if (e.shiftKey && !e.metaKey) {
 			// Arrows + Shift key combinations expand selection
@@ -2048,6 +2199,7 @@ const createSelectionTool = () => {
 	return {
 		enable: enable,
 		disable: disable,
+		scrollViewportToSelection: scrollViewportToSelection,
 		flipHorizontal: flipHorizontal,
 		flipVertical: flipVertical,
 		setPendingAction: setPendingAction,
