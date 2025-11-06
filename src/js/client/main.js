@@ -108,7 +108,7 @@ const save = () => {
 document.addEventListener('DOMContentLoaded', async () => {
 	// Initialize service worker
 	if ('serviceWorker' in navigator) {
-		navigator.serviceWorker.register('/service.js').then(reg => {
+		navigator.serviceWorker.register('service.js').then(reg => {
 			if (reg.waiting) {
 				// New SW is waiting to activate
 				reg.waiting.postMessage({ type: 'SKIP_WAITING' });
