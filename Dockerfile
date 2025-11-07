@@ -1,11 +1,12 @@
 FROM caddy:2-alpine AS caddy
 FROM oven/bun:alpine AS bun
+FROM alpine:3.22.2
 
 LABEL org.opencontainers.image.title="text0wnz"
 LABEL org.opencontainers.image.authors="xero <x@xero.style>"
 LABEL org.opencontainers.image.description="Text-mode art editor for ANSI, ASCII, XBIN, NFO, & TXT files"
 LABEL org.opencontainers.image.source="https://github.com/xero/text0wnz"
-LABEL org.opencontainers.image.created="2025-10-27"
+LABEL org.opencontainers.image.created="2025-11-06"
 
 # Override me!
 ENV DOMAIN="localhost"
@@ -16,14 +17,15 @@ ENV XDG_CONFIG_HOME="/etc/caddy"
 
 # Install dependencies
 RUN apk add --no-cache \
-    libstdc++ \
-    libgcc \
-    ca-certificates \
-		gettext \
-		netcat-openbsd
+    libstdc++=14.2.0-r6 \
+    libgcc=14.2.0-r6 \
+    ca-certificates=20250911-r0 \
+		gettext=0.24.1-r0 \
+		netcat-openbsd=1.229.1-r0
 
 # Grab a caddy & toss in a bun
 COPY --from=caddy /usr/bin/caddy /usr/bin/caddy
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 
 # Put the sources in the oven & bake
 WORKDIR /app
