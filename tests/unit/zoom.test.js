@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createLazyFont } from '../../src/js/client/lazyFont.js';
-import { createZoomControl } from '../../src/js/client/zoomControl.js';
 
 describe('Zoom Functionality', () => {
 	describe('lazyFont with scaleFactor', () => {
