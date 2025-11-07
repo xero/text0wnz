@@ -20,7 +20,7 @@ export const createZoomControl = () => {
 	slider.id = 'zoom-slider';
 	slider.min = '0.5';
 	slider.max = '4';
-	slider.step = '0.5'; // 0.5x increments: 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4
+	slider.step = '0.5';
 	slider.value = '1';
 	slider.setAttribute('aria-valuemin', '0.5');
 	slider.setAttribute('aria-valuemax', '4');
@@ -65,24 +65,22 @@ export const createZoomControl = () => {
 
 	// Keyboard shortcuts
 	const handleKeyboardZoom = e => {
-		// Ctrl/Cmd + Plus: Zoom in
 		if ((e.ctrlKey || e.metaKey) && e.key === '=') {
+			// Ctrl/Cmd + Plus: Zoom in
 			e.preventDefault();
 			const currentValue = parseFloat(slider.value);
 			const newValue = Math.min(4, currentValue + 0.5);
 			slider.value = newValue.toString();
 			updateZoom(newValue.toString());
-		}
-		// Ctrl/Cmd + Minus: Zoom out
-		else if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+		} else if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+			// Ctrl/Cmd + Minus: Zoom out
 			e.preventDefault();
 			const currentValue = parseFloat(slider.value);
 			const newValue = Math.max(0.5, currentValue - 0.5);
 			slider.value = newValue.toString();
 			updateZoom(newValue.toString());
-		}
-		// Ctrl/Cmd + 0: Reset to 1x
-		else if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+		} else if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+			// Ctrl/Cmd + 0: Reset to 1x
 			e.preventDefault();
 			slider.value = '1';
 			updateZoom('1');
@@ -90,8 +88,6 @@ export const createZoomControl = () => {
 	};
 
 	document.addEventListener('keydown', handleKeyboardZoom);
-
-	// Assembly
 	container.appendChild(label);
 	container.appendChild(slider);
 	container.appendChild(display);

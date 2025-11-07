@@ -540,15 +540,68 @@
 		@apply flex text-fg text-xs;
 
 		span {
-			@apply flex flex-col mx-1 my-auto;
-			margin-top: -5px;
+			@apply flex flex-col my-auto mx-1;
 			&:hover canvas {
 				outline: 1px solid var(--cyber);
 			}
 			canvas {
-				scale: 1.5;
-				margin: 3px auto auto auto;
+				scale: 1 !important;
+				margin: auto;
 			}
+		}
+	}
+	#zoomControl {
+		#zoom-slider {
+			max-width: 70px;
+
+			&:focus,
+			&:focus-within {
+				@apply bg-transparent!;
+			}
+		}
+		input[type='range'] {
+			@apply appearance-none bg-transparent;
+		}
+		input[type='range']::-webkit-slider-thumb {
+			@apply appearance-none bg-transparent;
+		}
+		input[type='range']:focus {
+			outline: none;
+		}
+		input[type='range']::-webkit-slider-thumb {
+			@apply appearance-none bg-tools cursor-ew-resize rounded-bl-xs;
+			height: 26px;
+			width: 16px;
+			margin-top: -9px;
+
+			&:hover {
+				@apply bg-cyan;
+			}
+		}
+		input[type='range']::-moz-range-thumb {
+			@apply bg-tools cursor-ew-resize rounded-bl-xs;
+			height: 25px;
+			width: 16px;
+
+			&:hover {
+				@apply bg-cyan;
+			}
+		}
+		input[type='range']::-webkit-slider-runnable-track {
+			@apply bg-midnight cursor-ew-resize w-full;
+			height: 8.4px;
+		}
+		input[type='range']:active:-webkit-slider-runnable-track {
+			@apply bg-tools;
+		}
+		input[type='range']::-moz-range-track {
+			@apply bg-midnight cursor-ew-resize w-full;
+			height: 8.4px;
+		}
+
+		label,
+		span {
+			@apply text-fg p-1;
 		}
 	}
 
@@ -1084,6 +1137,7 @@
 	.floatingPanel {
 		@apply fixed hidden cursor-move bg-panel pr-1 pl-1 pb-1 pt-4 transition-none!;
 		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
+		z-index: 999;
 
 		&.enabled {
 			display: block;

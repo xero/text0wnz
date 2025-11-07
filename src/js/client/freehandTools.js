@@ -521,7 +521,7 @@ const createShadingController = (panel, charMode) => {
 };
 
 const createShadingPanel = () => {
-	let panelWidth = State.font.getWidth() * magicNumbers.PANEL_WIDTH_MULTIPLIER;
+	let panelWidth = State.fontWidth * magicNumbers.PANEL_WIDTH_MULTIPLIER;
 	const panel = createFloatingPanel(50, 50);
 	const canvasContainer = document.createElement('div');
 	const cursor = createPanelCursor(canvasContainer);
@@ -555,7 +555,7 @@ const createShadingPanel = () => {
 
 	const generateCanvases = () => {
 		currentFont = State.textArtCanvas.getCurrentFontName();
-		const fontHeight = State.font.getHeight();
+		const fontHeight = State.fontHeight;
 		for (let foreground = 0; foreground < 16; foreground++) {
 			const canvas = createCanvas(panelWidth, fontHeight * 15);
 			const ctx = canvas.getContext('2d');
@@ -710,7 +710,7 @@ const createShadingPanel = () => {
 			currentFont === 'XBIN' ||
 			currentFont !== State.textArtCanvas.getCurrentFontName()
 		) {
-			panelWidth = State.font.getWidth() * magicNumbers.PANEL_WIDTH_MULTIPLIER;
+			panelWidth = State.fontWidth * magicNumbers.PANEL_WIDTH_MULTIPLIER;
 			generateCanvases();
 			updateCursor();
 			canvasContainer.removeChild(canvasContainer.firstChild);
@@ -770,11 +770,11 @@ const createShadingPanel = () => {
 };
 
 const createCharacterBrushPanel = () => {
-	let panelWidth = State.font.getWidth() * 16;
+	let panelWidth = State.fontWidth * 16;
 	const panel = createFloatingPanel(50, 50);
 	const canvasContainer = document.createElement('div');
 	const cursor = createPanelCursor(canvasContainer);
-	const canvas = createCanvas(panelWidth, State.font.getHeight() * 16);
+	const canvas = createCanvas(panelWidth, State.fontHeight * 16);
 	const ctx = canvas.getContext('2d');
 	let x = 0;
 	let y = 0;
@@ -850,9 +850,9 @@ const createCharacterBrushPanel = () => {
 	};
 
 	const resizeCanvas = () => {
-		panelWidth = State.font.getWidth() * 16;
+		panelWidth = State.fontWidth * 16;
 		canvas.width = panelWidth;
-		canvas.height = State.font.getHeight() * 16;
+		canvas.height = State.fontHeight * 16;
 		redrawCanvas();
 		updateCursor();
 	};
@@ -1626,8 +1626,8 @@ const createAttributeBrushController = () => {
 			return;
 		}
 
-		const fontWidth = State.font.getWidth();
-		const fontHeight = State.font.getHeight();
+		const fontWidth = State.fontWidth;
+		const fontHeight = State.fontHeight;
 		const size = Math.sqrt(brushSize);
 
 		// Center the brush area around the cursor position

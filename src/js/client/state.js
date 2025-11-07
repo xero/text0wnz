@@ -16,6 +16,8 @@ const EditorState = {
 	uiDir: null,
 	fontDir: null,
 	workerPath: null,
+	fontWidth: null,
+	fontHeight: null,
 
 	// Core components
 	textArtCanvas: null,
@@ -298,6 +300,8 @@ class StateManager {
 			textArtCanvas: null,
 			palette: null,
 			font: null,
+			fontWidth: null,
+			fontHeight: null,
 			modal: null,
 			cursor: null,
 			selectionCursor: null,
@@ -898,6 +902,18 @@ const State = {
 	},
 	set font(value) {
 		stateManager.set('font', value);
+	},
+	get fontWidth() {
+		return stateManager.state.fontWidth;
+	},
+	set fontWidth(value) {
+		stateManager.set('fontWidth', value);
+	},
+	get fontHeight() {
+		return stateManager.state.fontHeight;
+	},
+	set fontHeight(value) {
+		stateManager.set('fontHeight', value);
 	},
 	get modal() {
 		return stateManager.state.modal;
