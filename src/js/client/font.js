@@ -120,7 +120,12 @@ const loadFontFromXBData = (
 		};
 
 		const createLazyFontInstance = () => {
-			lazyFont = createLazyFont(fontData, palette, letterSpacing);
+			lazyFont = createLazyFont(
+				fontData,
+				palette,
+				letterSpacing,
+				currentScaleFactor,
+			);
 		};
 
 		fontData = parseXBFontData(fontBytes, fontWidth, fontHeight);
@@ -238,7 +243,12 @@ const loadFontFromImage = (
 		};
 
 		const createLazyFontInstance = () => {
-			lazyFont = createLazyFont(fontData, palette, letterSpacing);
+			lazyFont = createLazyFont(
+				fontData,
+				palette,
+				letterSpacing,
+				currentScaleFactor,
+			);
 		};
 
 		loadImageAndGetImageData(`${State.fontDir}${fontName}.png`)
