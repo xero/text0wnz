@@ -30,7 +30,8 @@ COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 # Put the sources in the oven & bake
 WORKDIR /app
 COPY . .
-RUN bun i && bun bake
+RUN bun install
+RUN bun bake
 # Take out the bun and let it cool
 RUN rm -rf ./node_modules && bun i --production
 RUN printf "\n%s\n%s\n" "https://github.com/xero/text0wnz" "https://teXt.0w.nz" >> LICENSE.txt
