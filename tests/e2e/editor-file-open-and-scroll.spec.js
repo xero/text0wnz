@@ -11,6 +11,9 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// enable screenshots for all tests in this file
+test.use({ screenshot: 'on' });
+
 test.describe('File Open and Scrolling', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
