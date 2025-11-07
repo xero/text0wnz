@@ -27,6 +27,7 @@ import {
 	enforceMaxBytes,
 	createFontSelect,
 } from './ui.js';
+import { createZoomControl } from './zoomControl.js';
 import {
 	createDefaultPalette,
 	createPalettePreview,
@@ -154,6 +155,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 				State.selectionCursor = createSelectionCursor(canvasContainer);
 				State.cursor = createCursor(canvasContainer);
 				State.selectionTool = createSelectionTool();
+
+				// Initialize zoom control
+				const zoomControlContainer = $('zoomControl');
+				if (zoomControlContainer) {
+					const zoomControl = createZoomControl();
+					zoomControlContainer.appendChild(zoomControl);
+				}
 
 				// Tier 3: Secondary tools - defer with requestIdleCallback
 				const initSecondaryTools = () => {
