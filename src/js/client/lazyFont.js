@@ -58,32 +58,47 @@ export const createLazyFont = (
 		const key = `${charCode}-${foreground}-${background}-${scaleFactor}`;
 
 		if (!glyphCache.has(key)) {
-			// Generate at original size first
-			const imageData = ctx.createImageData(fontData.width, fontData.height);
-
-			for (
-				let i = 0, j = charCode * fontData.width * fontData.height;
-				i < fontData.width * fontData.height;
-				i += 1, j += 1
-			) {
-				const color = palette.getRGBAColor(
-					bits[j] === 1 ? foreground : background,
-				);
-				imageData.data.set(color, i * 4);
-			}
-
-			// If scale factor is 1, use original (no scaling needed)
 			if (scaleFactor === 1) {
+				// No scaling - create directly at original size
+				const imageData = ctx.createImageData(fontData.width, fontData.height);
+
+				for (
+					let i = 0, j = charCode * fontData.width * fontData.height;
+					i < fontData.width * fontData.height;
+					i += 1, j += 1
+				) {
+					const color = palette.getRGBAColor(
+						bits[j] === 1 ? foreground : background,
+					);
+					imageData.data.set(color, i * 4);
+				}
+
 				glyphCache.set(key, imageData);
 			} else {
-				// Scale the glyph using nearest-neighbor
+				// Scaling needed - generate at original size, then scale
 				const tempCanvas = createCanvas(fontData.width, fontData.height);
 				const tempCtx = tempCanvas.getContext('2d');
+				const imageData = tempCtx.createImageData(
+					fontData.width,
+					fontData.height,
+				);
+
+				for (
+					let i = 0, j = charCode * fontData.width * fontData.height;
+					i < fontData.width * fontData.height;
+					i += 1, j += 1
+				) {
+					const color = palette.getRGBAColor(
+						bits[j] === 1 ? foreground : background,
+					);
+					imageData.data.set(color, i * 4);
+				}
+
 				tempCtx.putImageData(imageData, 0, 0);
 
+				// Scale using nearest-neighbor
 				const scaledCanvas = createCanvas(scaledWidth, scaledHeight);
 				const scaledCtx = scaledCanvas.getContext('2d');
-				// Disable smoothing for pixel-perfect scaling
 				scaledCtx.imageSmoothingEnabled = false;
 				scaledCtx.drawImage(
 					tempCanvas,
