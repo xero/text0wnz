@@ -76,10 +76,12 @@ const loadFontFromXBData = (
 	fontHeight,
 	letterSpacing,
 	palette,
+	scaleFactor = 1,
 ) => {
 	return new Promise((resolve, reject) => {
 		let fontData = {};
 		let lazyFont = null;
+		let currentScaleFactor = scaleFactor;
 
 		const parseXBFontData = (fontBytes, fontWidth, fontHeight) => {
 			if (!fontBytes || fontBytes.length === 0) {
@@ -138,8 +140,8 @@ const loadFontFromXBData = (
 
 		resolve({
 			getData: () => fontData,
-			getWidth: () => fontData.width,
-			getHeight: () => fontData.height,
+			getWidth: () => (lazyFont ? lazyFont.getWidth() : fontData.width),
+			getHeight: () => (lazyFont ? lazyFont.getHeight() : fontData.height),
 			setLetterSpacing: newLetterSpacing => {
 				if (newLetterSpacing !== letterSpacing) {
 					letterSpacing = newLetterSpacing;
@@ -150,6 +152,16 @@ const loadFontFromXBData = (
 				}
 			},
 			getLetterSpacing: () => letterSpacing,
+			setScaleFactor: newScaleFactor => {
+				if (newScaleFactor !== currentScaleFactor && newScaleFactor > 0) {
+					currentScaleFactor = newScaleFactor;
+					createLazyFontInstance();
+					document.dispatchEvent(
+						new CustomEvent('onScaleFactorChange', { detail: currentScaleFactor }),
+					);
+				}
+			},
+			getScaleFactor: () => currentScaleFactor,
 			draw: (charCode, foreground, background, ctx, x, y) => {
 				if (!lazyFont) {
 					console.warn('[Font] XB Lazy font not initialized');
@@ -169,10 +181,16 @@ const loadFontFromXBData = (
 	});
 };
 
-const loadFontFromImage = (fontName, letterSpacing, palette) => {
+const loadFontFromImage = (
+	fontName,
+	letterSpacing,
+	palette,
+	scaleFactor = 1,
+) => {
 	return new Promise((resolve, reject) => {
 		let fontData = {};
 		let lazyFont = null;
+		let currentScaleFactor = scaleFactor;
 
 		const parseFontData = imageData => {
 			const fontWidth = imageData.width / 16;
@@ -235,9 +253,9 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 
 					resolve({
 						getData: () => fontData,
-						getWidth: () =>
-							letterSpacing ? fontData.width + 1 : fontData.width,
-						getHeight: () => fontData.height,
+						getWidth: () => (lazyFont ? lazyFont.getWidth() : fontData.width),
+						getHeight: () =>
+							lazyFont ? lazyFont.getHeight() : fontData.height,
 						setLetterSpacing: newLetterSpacing => {
 							if (newLetterSpacing !== letterSpacing) {
 								letterSpacing = newLetterSpacing;
@@ -248,6 +266,16 @@ const loadFontFromImage = (fontName, letterSpacing, palette) => {
 							}
 						},
 						getLetterSpacing: () => letterSpacing,
+						setScaleFactor: newScaleFactor => {
+							if (newScaleFactor !== currentScaleFactor && newScaleFactor > 0) {
+								currentScaleFactor = newScaleFactor;
+								createLazyFontInstance();
+								document.dispatchEvent(
+									new CustomEvent('onScaleFactorChange', { detail: currentScaleFactor }),
+								);
+							}
+						},
+						getScaleFactor: () => currentScaleFactor,
 						draw: (charCode, foreground, background, ctx, x, y) => {
 							if (!lazyFont) {
 								console.warn('[Font] Lazy font not initialized');
