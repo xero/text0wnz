@@ -780,6 +780,57 @@ npx playwright show-report tests/results/playwright-report
 - Tool highlighting
 - Modal dialogs
 
+**editor-file-open-and-scroll.spec.js** - File loading and viewport scrolling
+
+- Opening ANSI files via file input (docs/examples/ansi/x0-defcon25.ans)
+- PageDown/PageUp keyboard scrolling behavior
+- Mouse wheel scrolling of canvas viewport
+- Viewport scroll position tracking and validation
+
+**editor-keybinds.spec.js** - Comprehensive keybind coverage
+
+- Tool activation shortcuts (K, F, B, N, A, M, G, I)
+- Navigation in keyboard mode (Arrow keys, Home, End, PageUp, PageDown)
+- Undo/redo operations (Ctrl+Z, Ctrl+Y)
+- Clipboard operations (Ctrl+C, Ctrl+V, Ctrl+X)
+- Function key character insertion (F1-F4)
+- Selection transformations (flip horizontal/vertical with [ and ])
+- Selection move mode (M key)
+
+### E2E Test Helpers
+
+The E2E test suite includes reusable helper modules in `tests/e2e/helpers/`:
+
+**editorHelpers.js** - Common editor utilities
+
+- `waitForEditorReady(page, timeout)` - Wait for canvas container and initialization
+- `focusCanvas(page)` - Click viewport to establish keyboard focus
+- `getCanvasText(page)` - Retrieve canvas text content (via window API if available)
+- `getViewportScrollPosition(page)` - Get current viewport scroll coordinates
+- `getPositionInfo(page)` - Read position info text from UI
+- `getActiveTool(page)` - Determine which tool is currently active
+
+**openFile.js** - File loading utilities
+
+- `openFile(page, filePath)` - Open file using file input element and setInputFiles
+- `openFileViaDragDrop(page, filePath)` - Placeholder for drag-and-drop file opening
+- `openFileViaURL(page, fileURL)` - Open file via window.Load API (if exposed)
+
+**Example usage:**
+
+```javascript
+import { openFile } from './helpers/openFile.js';
+import { getViewportScrollPosition } from './helpers/editorHelpers.js';
+
+test('loads file and scrolls', async ({ page }) => {
+	await openFile(page, 'docs/examples/ansi/x0-defcon25.ans');
+	const before = await getViewportScrollPosition(page);
+	await page.keyboard.press('PageDown');
+	const after = await getViewportScrollPosition(page);
+	expect(after.scrollTop).toBeGreaterThan(before.scrollTop);
+});
+```
+
 ### Writing E2E Tests
 
 **Test structure:**
