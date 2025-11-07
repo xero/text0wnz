@@ -72,6 +72,7 @@ const STATE_SYNC_KEYS = {
 	ICE_COLORS: 'iceColors',
 	LETTER_SPACING: 'letterSpacing',
 	XBIN_FONT_DATA: 'xbinFontData',
+	SCALE_FACTOR: 'scaleFactor',
 };
 
 /**
@@ -457,6 +458,17 @@ class StateManager {
 					this.state.font.getLetterSpacing();
 			}
 
+			// Save scale factor
+			if (
+				this.state.font &&
+				typeof this.state.font.getScaleFactor === 'function'
+			) {
+				serialized[STATE_SYNC_KEYS.SCALE_FACTOR] =
+					this.state.font.getScaleFactor();
+			} else {
+				serialized[STATE_SYNC_KEYS.SCALE_FACTOR] = 1; // Default
+			}
+
 			// Save palette colors
 			if (this.state.palette) {
 				if (typeof this.state.palette.getPalette === 'function') {
@@ -643,6 +655,7 @@ class StateManager {
 				fontName: this.state.textArtCanvas?.getCurrentFontName(),
 				iceColors: this.state.textArtCanvas?.getIceColors(),
 				letterSpacing: this.state.font?.getLetterSpacing(),
+				scaleFactor: this.state.font?.getScaleFactor() ?? 1,
 				paletteColors: this.state.palette
 					?.getPalette()
 					.map(color => [
@@ -740,6 +753,9 @@ class StateManager {
 					this.state.font.setLetterSpacing(settings.letterSpacing);
 				}
 
+				// Store scale factor to pass to setFont later
+				const savedScaleFactor = settings.scaleFactor ?? 1;
+
 				if (settings.paletteColors && this.state.palette) {
 					settings.paletteColors.forEach((color, index) => {
 						this.state.palette.setRGBAColor(index, color);
@@ -790,17 +806,21 @@ class StateManager {
 						// Finally, set font
 						setTimeout(() => {
 							if (settings?.fontName && this.state.textArtCanvas) {
-								this.state.textArtCanvas.setFont(settings.fontName, () => {
-									// NOW restore the actual ice colors setting
-									if (this.state.textArtCanvas) {
-										this.state.textArtCanvas.setIceColors(originalIceColors);
-									}
-									this.loadingFromStorage = false;
-									closeModal();
-									document.dispatchEvent(
-										new CustomEvent('onStateRestorationComplete'),
-									);
-								});
+								this.state.textArtCanvas.setFont(
+									settings.fontName,
+									() => {
+										// NOW restore the actual ice colors setting
+										if (this.state.textArtCanvas) {
+											this.state.textArtCanvas.setIceColors(originalIceColors);
+										}
+										this.loadingFromStorage = false;
+										closeModal();
+										document.dispatchEvent(
+											new CustomEvent('onStateRestorationComplete'),
+										);
+									},
+									savedScaleFactor,
+								);
 							} else {
 								if (this.state.textArtCanvas) {
 									this.state.textArtCanvas.setIceColors(originalIceColors);
