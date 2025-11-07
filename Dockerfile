@@ -31,9 +31,11 @@ COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /app
 COPY . .
 RUN rm bun.lock package-lock.json
-RUN bun i && bun bake
+RUN bun i
+RUN bun bake
 # Take out the bun and let it cool
-RUN rm -rf ./node_modules && bun i --production
+RUN rm -rf ./node_modules
+RUN bun i --production
 RUN printf "\n%s\n%s\n" "https://github.com/xero/text0wnz" "https://teXt.0w.nz" >> LICENSE.txt
 
 # Clean up the kitchen
@@ -46,7 +48,6 @@ RUN rm -rf \
     .prettierignore \
     .prettierrc \
     *.config.js \
-    bun.lock \
     Dockerfile \
     docs \
     node_modules \
