@@ -1,5 +1,4 @@
 FROM caddy:2-alpine AS caddy
-FROM oven/bun:alpine AS bun
 FROM alpine:3.22.2
 
 LABEL org.opencontainers.image.title="text0wnz"
@@ -25,7 +24,7 @@ RUN apk add --no-cache \
 
 # Grab a caddy & toss in a bun
 COPY --from=caddy /usr/bin/caddy /usr/bin/caddy
-COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
+RUN curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr bash
 
 # Put the sources in the oven & bake
 WORKDIR /app
