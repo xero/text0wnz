@@ -16,11 +16,11 @@ ENV XDG_CONFIG_HOME="/etc/caddy"
 
 # Install dependencies
 RUN apk add --no-cache \
-    libstdc++=14.2.0-r6 \
-    libgcc=14.2.0-r6 \
-    ca-certificates=20250911-r0 \
-		gettext=0.24.1-r0 \
-		netcat-openbsd=1.229.1-r0
+    libstdc++ \
+    libgcc \
+    ca-certificates \
+		gettext \
+		netcat-openbsd
 
 # Grab a caddy & toss in a bun
 COPY --from=caddy /usr/bin/caddy /usr/bin/caddy
