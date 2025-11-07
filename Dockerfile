@@ -33,7 +33,7 @@ COPY . .
 RUN bun install
 RUN bun bake
 # Take out the bun and let it cool
-RUN rm -rf ./node_modules && bun i --production
+RUN rm -rf ./node_modules
 RUN printf "\n%s\n%s\n" "https://github.com/xero/text0wnz" "https://teXt.0w.nz" >> LICENSE.txt
 
 # Clean up the kitchen
