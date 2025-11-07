@@ -17,8 +17,8 @@ export async function openFile(page: Page, filePath: string): Promise<void> {
 	await fileInput.setInputFiles(absolutePath);
 
 	// Wait for file to be processed
-	// TODO: Adjust this wait based on actual file loading indicators
-	// May need to wait for a specific DOM change or event
+	// TODO: Replace timeout with specific DOM change or loading complete indicator
+	// Consider waiting for canvas update, position info change, or loading modal to disappear
 	await page.waitForTimeout(2000);
 }
 
@@ -35,12 +35,14 @@ export async function openFileViaDragDrop(page: Page, filePath: string): Promise
 /**
  * Alternative method: Open file via URL if editor supports it
  * This attempts to use a window API if available
+ * TODO: The @ts-ignore comments indicate missing type definitions for window.Load
+ * Consider adding proper TypeScript declarations for the editor's window API
  */
 export async function openFileViaURL(page: Page, fileURL: string): Promise<void> {
 	const loaded = await page.evaluate((url) => {
-		// @ts-ignore - checking if API exists
+		// @ts-ignore - window.Load may exist but lacks type definitions
 		if (window.Load && window.Load.loadFileFromUrl) {
-			// @ts-ignore
+			// @ts-ignore - loadFileFromUrl may exist on Load module
 			window.Load.loadFileFromUrl(url);
 			return true;
 		}
@@ -52,5 +54,6 @@ export async function openFileViaURL(page: Page, fileURL: string): Promise<void>
 	}
 
 	// Wait for file to be loaded
+	// TODO: Replace timeout with specific loading complete indicator
 	await page.waitForTimeout(2000);
 }

@@ -21,6 +21,7 @@ test.describe('File Open and Scrolling', () => {
 		await openFile(page, exampleFilePath);
 
 		// Wait for the file to be loaded and rendered
+		// TODO: Replace with specific indicator when file loading is complete
 		await page.waitForTimeout(1500);
 
 		// Check that the canvas container is still visible (basic sanity check)
@@ -28,8 +29,7 @@ test.describe('File Open and Scrolling', () => {
 		await expect(canvasContainer).toBeVisible();
 
 		// Verify file loaded by checking for known content
-		// The first line of x0-defcon25.ans contains "this one goes out to all the"
-		// We can check if the page content includes this text or check DOM
+		// The example file x0-defcon25.ans contains ANSI escape codes and artwork
 		// TODO: Adjust this assertion based on how the editor exposes loaded content
 		// For now, we'll check that at least one canvas element exists
 		const canvases = page.locator('#canvasContainer canvas');

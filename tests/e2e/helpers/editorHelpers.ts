@@ -3,36 +3,41 @@ import { Page } from '@playwright/test';
 /**
  * Wait for the editor to be ready by checking for the canvas container
  * and allowing time for initialization
+ * TODO: Replace timeout with specific readiness indicator from editor state
  */
 export async function waitForEditorReady(page: Page, timeout = 10000): Promise<void> {
 	await page.waitForSelector('#canvasContainer', { timeout });
-	// Give the editor time to fully initialize
+	// Allow time for editor initialization (fonts, state, etc.)
+	// TODO: Wait for specific initialization complete event or DOM state
 	await page.waitForTimeout(1000);
 }
 
 /**
  * Focus the canvas element for keyboard input
  * Clicks on the viewport container instead of canvas to avoid overlay interference
+ * TODO: Replace timeout with focus state validation
  */
 export async function focusCanvas(page: Page): Promise<void> {
 	// Click on viewport instead of canvas to avoid toolPreview overlay interference
 	const viewport = page.locator('#viewport');
 	await viewport.click({ position: { x: 100, y: 100 } });
+	// Allow time for focus to be established
+	// TODO: Wait for specific focus state or activeElement change
 	await page.waitForTimeout(200);
 }
 
 /**
  * Get canvas text content by reading from the DOM
- * TODO: This is a placeholder - adjust based on actual DOM structure
- * or window API if available. May need to read from State.textArtCanvas
- * via page.evaluate() if that's exposed.
+ * TODO: This uses @ts-ignore due to missing type definitions for window.State
+ * Consider adding proper TypeScript declarations for the editor's window API
+ * or use a more specific type assertion with an interface definition
  */
 export async function getCanvasText(page: Page): Promise<string> {
 	// Attempt to get text from canvas via window API if exposed
 	const textFromAPI = await page.evaluate(() => {
-		// @ts-ignore - checking if API exists
+		// @ts-ignore - window.State may exist but lacks type definitions
 		if (window.State && window.State.textArtCanvas) {
-			// @ts-ignore
+			// @ts-ignore - textArtCanvas.toString() may exist
 			return window.State.textArtCanvas.toString();
 		}
 		return null;
