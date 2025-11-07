@@ -1,11 +1,10 @@
-import { Page } from '@playwright/test';
 import path from 'path';
 
 /**
  * Open a file using the editor's file input element
  * Uses Playwright's file chooser API to simulate file selection
  */
-export async function openFile(page: Page, filePath: string): Promise<void> {
+export async function openFile(page, filePath) {
 	// Get absolute path to the file
 	const absolutePath = path.resolve(filePath);
 
@@ -26,7 +25,7 @@ export async function openFile(page: Page, filePath: string): Promise<void> {
  * Alternative method: Open file via drag and drop
  * TODO: This is a placeholder - implement if needed
  */
-export async function openFileViaDragDrop(page: Page, filePath: string): Promise<void> {
+export async function openFileViaDragDrop(page, filePath) {
 	// This would simulate drag and drop onto the canvas
 	// Implementation depends on the drag-drop controller behavior
 	throw new Error('Not implemented - use openFile() instead');
@@ -35,14 +34,10 @@ export async function openFileViaDragDrop(page: Page, filePath: string): Promise
 /**
  * Alternative method: Open file via URL if editor supports it
  * This attempts to use a window API if available
- * TODO: The @ts-ignore comments indicate missing type definitions for window.Load
- * Consider adding proper TypeScript declarations for the editor's window API
  */
-export async function openFileViaURL(page: Page, fileURL: string): Promise<void> {
+export async function openFileViaURL(page, fileURL) {
 	const loaded = await page.evaluate((url) => {
-		// @ts-ignore - window.Load may exist but lacks type definitions
 		if (window.Load && window.Load.loadFileFromUrl) {
-			// @ts-ignore - loadFileFromUrl may exist on Load module
 			window.Load.loadFileFromUrl(url);
 			return true;
 		}

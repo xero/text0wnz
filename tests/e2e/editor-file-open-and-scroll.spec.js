@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { waitForEditorReady, focusCanvas, getViewportScrollPosition } from './helpers/editorHelpers';
-import { openFile } from './helpers/openFile';
+import {
+	waitForEditorReady,
+	focusCanvas,
+	getViewportScrollPosition,
+} from './helpers/editorHelpers.js';
+import { openFile } from './helpers/openFile.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -15,7 +19,10 @@ test.describe('File Open and Scrolling', () => {
 
 	test('opens example ANSI file via file open', async ({ page }) => {
 		// Path to the example ANSI file in the repository
-		const exampleFilePath = path.join(__dirname, '../../docs/examples/ansi/x0-defcon25.ans');
+		const exampleFilePath = path.join(
+			__dirname,
+			'../../docs/examples/ansi/x0-defcon25.ans',
+		);
 
 		// Open the file using the file input
 		await openFile(page, exampleFilePath);
@@ -43,7 +50,10 @@ test.describe('File Open and Scrolling', () => {
 
 	test('page down and page up keyboard scrolling', async ({ page }) => {
 		// First, load a large file to enable scrolling
-		const exampleFilePath = path.join(__dirname, '../../docs/examples/ansi/x0-defcon25.ans');
+		const exampleFilePath = path.join(
+			__dirname,
+			'../../docs/examples/ansi/x0-defcon25.ans',
+		);
 		await openFile(page, exampleFilePath);
 		await page.waitForTimeout(1500);
 
@@ -77,7 +87,10 @@ test.describe('File Open and Scrolling', () => {
 
 	test('mouse wheel scrolls canvas', async ({ page }) => {
 		// Load a large file to enable scrolling
-		const exampleFilePath = path.join(__dirname, '../../docs/examples/ansi/x0-defcon25.ans');
+		const exampleFilePath = path.join(
+			__dirname,
+			'../../docs/examples/ansi/x0-defcon25.ans',
+		);
 		await openFile(page, exampleFilePath);
 		await page.waitForTimeout(1500);
 

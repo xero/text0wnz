@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForEditorReady, focusCanvas, getActiveTool } from './helpers/editorHelpers';
+import { waitForEditorReady } from './helpers/editorHelpers.js';
 
 test.describe('Editor Keybinds', () => {
 	test.beforeEach(async ({ page }) => {
