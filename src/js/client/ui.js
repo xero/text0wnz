@@ -429,6 +429,7 @@ const createGrid = el => {
 	document.addEventListener('onTextCanvasSizeChange', resize);
 	document.addEventListener('onLetterSpacingChange', resize);
 	document.addEventListener('onFontChange', resize);
+	document.addEventListener('onScaleFactorChange', resize);
 	document.addEventListener('onOpenedFile', resize);
 
 	const isShown = () => {
