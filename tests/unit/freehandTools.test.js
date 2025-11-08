@@ -500,8 +500,8 @@ describe('Freehand Tools', () => {
 	});
 
 	describe('createShadingPanel', () => {
-		it('should create a shading panel with proper interface', () => {
-			const panel = createShadingPanel();
+		it('should create a shading panel with proper interface', async () => {
+			const panel = await createShadingPanel();
 
 			expect(panel).toHaveProperty('enable');
 			expect(panel).toHaveProperty('disable');
@@ -511,8 +511,8 @@ describe('Freehand Tools', () => {
 			expect(panel).toHaveProperty('unignore');
 		});
 
-		it('should return valid mode data', () => {
-			const panel = createShadingPanel();
+		it('should return valid mode data', async () => {
+			const panel = await createShadingPanel();
 			const mode = panel.getMode();
 
 			expect(mode).toHaveProperty('halfBlockMode');
@@ -525,8 +525,8 @@ describe('Freehand Tools', () => {
 			expect(typeof mode.charCode).toBe('number');
 		});
 
-		it('should handle character selection', () => {
-			const panel = createShadingPanel();
+		it('should handle character selection', async () => {
+			const panel = await createShadingPanel();
 
 			expect(() => {
 				panel.select(177); // Light shade character
@@ -535,8 +535,8 @@ describe('Freehand Tools', () => {
 	});
 
 	describe('createCharacterBrushPanel', () => {
-		it('should create a character brush panel', () => {
-			const panel = createCharacterBrushPanel();
+		it('should create a character brush panel', async () => {
+			const panel = await createCharacterBrushPanel();
 
 			expect(panel).toHaveProperty('enable');
 			expect(panel).toHaveProperty('disable');
@@ -547,8 +547,8 @@ describe('Freehand Tools', () => {
 			expect(panel).toHaveProperty('redrawGlyphs');
 		});
 
-		it('should return valid mode for character selection', () => {
-			const panel = createCharacterBrushPanel();
+		it('should return valid mode for character selection', async () => {
+			const panel = await createCharacterBrushPanel();
 			const mode = panel.getMode();
 
 			expect(mode).toHaveProperty('halfBlockMode');
@@ -558,8 +558,8 @@ describe('Freehand Tools', () => {
 			expect(mode.halfBlockMode).toBe(false);
 		});
 
-		it('should handle character code selection correctly', () => {
-			const panel = createCharacterBrushPanel();
+		it('should handle character code selection correctly', async () => {
+			const panel = await createCharacterBrushPanel();
 
 			expect(() => {
 				panel.select(65); // Character 'A'
@@ -917,8 +917,8 @@ describe('Freehand Tools', () => {
 				backgroundColor: 0,
 			});
 
-			// Test the sampling
-			tool.sample(5, 10);
+			// Test the sampling (now async)
+			await tool.sample(5, 10);
 
 			// Should call appropriate brush selection
 			expect(mockCharacterBrush.select).toHaveBeenCalledWith(65);
@@ -947,8 +947,8 @@ describe('Freehand Tools', () => {
 				backgroundColor: 0,
 			});
 
-			// Test the sampling
-			tool.sample(5, 10);
+			// Test the sampling (now async)
+			await tool.sample(5, 10);
 
 			// Should call shade brush selection
 			expect(mockShadeBrush.select).toHaveBeenCalledWith(177);
@@ -1034,9 +1034,9 @@ describe('Freehand Tools', () => {
 	});
 
 	describe('Panel State Management', () => {
-		it('should handle panel enable/disable states correctly', () => {
-			const shadingPanel = createShadingPanel();
-			const characterPanel = createCharacterBrushPanel();
+		it('should handle panel enable/disable states correctly', async () => {
+			const shadingPanel = await createShadingPanel();
+			const characterPanel = await createCharacterBrushPanel();
 
 			// Test enable/disable
 			expect(() => {
@@ -1047,9 +1047,9 @@ describe('Freehand Tools', () => {
 			}).not.toThrow();
 		});
 
-		it('should handle panel ignore/unignore states', () => {
-			const shadingPanel = createShadingPanel();
-			const characterPanel = createCharacterBrushPanel();
+		it('should handle panel ignore/unignore states', async () => {
+			const shadingPanel = await createShadingPanel();
+			const characterPanel = await createCharacterBrushPanel();
 
 			// Test ignore/unignore
 			expect(() => {
@@ -1060,9 +1060,9 @@ describe('Freehand Tools', () => {
 			}).not.toThrow();
 		});
 
-		it('should return consistent mode data', () => {
-			const shadingPanel = createShadingPanel();
-			const characterPanel = createCharacterBrushPanel();
+		it('should return consistent mode data', async () => {
+			const shadingPanel = await createShadingPanel();
+			const characterPanel = await createCharacterBrushPanel();
 
 			const shadingMode = shadingPanel.getMode();
 			const characterMode = characterPanel.getMode();
@@ -1131,9 +1131,9 @@ describe('Freehand Tools', () => {
 			expect(afterDisableCount).toBeGreaterThan(0);
 		});
 
-		it('should handle multiple panel instances', () => {
-			const panel1 = createShadingPanel();
-			const panel2 = createCharacterBrushPanel();
+		it('should handle multiple panel instances', async () => {
+			const panel1 = await createShadingPanel();
+			const panel2 = await createCharacterBrushPanel();
 			const panel3 = createFloatingPanelPalette(128, 64);
 
 			expect(() => {

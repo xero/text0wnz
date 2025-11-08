@@ -160,7 +160,7 @@ describe('Zoom Functionality', () => {
 			);
 			container = createZoomControl();
 
-			const display = container.querySelector('.zoom-display');
+			const display = container.querySelector('.zoomDisplay');
 			expect(display.textContent).toBe('1.0x');
 		});
 
@@ -171,7 +171,7 @@ describe('Zoom Functionality', () => {
 			container = createZoomControl();
 
 			const slider = container.querySelector('input[type="range"]');
-			const display = container.querySelector('.zoom-display');
+			const display = container.querySelector('.zoomDisplay');
 
 			slider.value = '2';
 			slider.dispatchEvent(new Event('input'));
