@@ -847,8 +847,8 @@ describe('Freehand Tools', () => {
 			mockCharacterElement = { click: vi.fn() };
 		});
 
-		it('should create a sample tool with proper interface', () => {
-			const tool = createSampleTool(
+		it('should create a sample tool with proper interface', async () => {
+			const tool = await createSampleTool(
 				mockShadeBrush,
 				mockShadeElement,
 				mockCharacterBrush,
@@ -860,8 +860,8 @@ describe('Freehand Tools', () => {
 			expect(tool).toHaveProperty('sample');
 		});
 
-		it('should handle sampling functionality', () => {
-			const tool = createSampleTool(
+		it('should handle sampling functionality', async () => {
+			const tool = await createSampleTool(
 				mockShadeBrush,
 				mockShadeElement,
 				mockCharacterBrush,
@@ -874,7 +874,7 @@ describe('Freehand Tools', () => {
 		});
 
 		it('should handle blocky half-block sampling', async () => {
-			const tool = createSampleTool(
+			const tool = await createSampleTool(
 				mockShadeBrush,
 				mockShadeElement,
 				mockCharacterBrush,
@@ -896,7 +896,7 @@ describe('Freehand Tools', () => {
 		});
 
 		it('should handle non-blocky character sampling', async () => {
-			const tool = createSampleTool(
+			const tool = await createSampleTool(
 				mockShadeBrush,
 				mockShadeElement,
 				mockCharacterBrush,
@@ -926,7 +926,7 @@ describe('Freehand Tools', () => {
 		});
 
 		it('should handle shading character sampling', async () => {
-			const tool = createSampleTool(
+			const tool = await createSampleTool(
 				mockShadeBrush,
 				mockShadeElement,
 				mockCharacterBrush,
@@ -955,8 +955,8 @@ describe('Freehand Tools', () => {
 			expect(mockShadeElement.click).toHaveBeenCalled();
 		});
 
-		it('should manage canvas down events', () => {
-			const tool = createSampleTool(
+		it('should manage canvas down events', async () => {
+			const tool = await createSampleTool(
 				mockShadeBrush,
 				mockShadeElement,
 				mockCharacterBrush,
