@@ -203,12 +203,7 @@ test.describe('Toolbar Interactions', () => {
 		await page.waitForTimeout(300);
 
 		await page.locator('#navDarkmode').click();
-		// Wait for all animations to complete
-		await page.evaluate(() => {
-			return Promise.all(
-				document.getAnimations().map(animation => animation.finished),
-			);
-		});
+		await page.waitForTimeout(500);
 
 		// No errors should occur
 		const errors = await page.locator('.error, .errorMessage').count();

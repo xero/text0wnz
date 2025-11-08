@@ -19,5 +19,3 @@ jobs:
         run: bun i
       - name: install dev tools
         run: bun i -g eslint prettier playwright
-      - name: install browsers
-        run: bun test:install

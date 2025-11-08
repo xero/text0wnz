@@ -1625,7 +1625,7 @@ const createCircleController = () => {
 	};
 };
 
-const createSampleTool = (
+const createSampleTool = async (
 	shadeBrush,
 	shadeElement,
 	characterBrush,

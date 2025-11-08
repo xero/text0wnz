@@ -664,7 +664,7 @@ const initializeAppComponents = async () => {
 			);
 		}
 
-		State.sampleTool = createSampleTool(
+		State.sampleTool = await createSampleTool(
 			shadeBrush,
 			$('shadingBrush'),
 			characterBrush,
