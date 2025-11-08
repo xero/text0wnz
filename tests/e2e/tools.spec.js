@@ -149,11 +149,14 @@ test.describe('Drawing Tools', () => {
 			await page.waitForTimeout(300);
 			await page.locator('#halfblock').click();
 			await page.waitForTimeout(300);
-			
+
 			// Use conservative coordinates that stay within canvas bounds
 			await page.mouse.move(box.x + 20, box.y + 20);
 			await page.mouse.down();
-			await page.mouse.move(box.x + Math.min(40, box.width - 10), box.y + Math.min(40, box.height - 10));
+			await page.mouse.move(
+				box.x + Math.min(40, box.width - 10),
+				box.y + Math.min(40, box.height - 10),
+			);
 			await page.mouse.up();
 			await page.waitForTimeout(300);
 
@@ -162,7 +165,7 @@ test.describe('Drawing Tools', () => {
 			await page.waitForTimeout(300);
 			await page.locator('#line').click();
 			await page.waitForTimeout(300);
-			
+
 			await page.mouse.move(box.x + 60, box.y + 60);
 			await page.mouse.down();
 			await page.mouse.move(box.x + Math.min(100, box.width - 10), box.y + 60);
@@ -172,7 +175,7 @@ test.describe('Drawing Tools', () => {
 			// Square is also in shapes toolbar
 			await page.locator('#square').click();
 			await page.waitForTimeout(300);
-			
+
 			await page.mouse.move(box.x + Math.min(120, box.width - 50), box.y + 20);
 			await page.mouse.down();
 			await page.mouse.move(box.x + Math.min(160, box.width - 10), box.y + 60);
