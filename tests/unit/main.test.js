@@ -123,6 +123,7 @@ const mockCreateFunctions = {
 		update: vi.fn(),
 		sync: vi.fn(),
 	})),
+	createZoomControl: vi.fn(() => createMockElement()),
 };
 
 // Set up global document BEFORE any imports

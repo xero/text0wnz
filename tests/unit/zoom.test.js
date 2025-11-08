@@ -131,7 +131,7 @@ describe('Zoom Functionality', () => {
 			const display = container.querySelector('.zoomDisplay');
 
 			expect(label).toBeDefined();
-			expect(label.textContent).toBe('Zoom:');
+			expect(label.textContent).toBe('Zoom');
 			expect(slider).toBeDefined();
 			expect(display).toBeDefined();
 		});
