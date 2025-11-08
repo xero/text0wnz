@@ -188,7 +188,11 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#navDarkmode').click();
 		await page.waitForTimeout(500); // Increased for Firefox stability
 
-		// Wait for navGrid to be ready after dark mode toggle
+		// Reopen viewport toolbar to access navGrid (toolbar may close after dark mode toggle)
+		await page.locator('#navView').click();
+		await page.waitForTimeout(300);
+
+		// Wait for navGrid to be ready
 		await page.locator('#navGrid').waitFor({ state: 'visible', timeout: 5000 });
 		await page.locator('#navGrid').click();
 		await page.waitForTimeout(300);
