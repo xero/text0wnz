@@ -538,7 +538,7 @@ const initializeAppComponents = async () => {
 		const { createShadingController, createShadingPanel } = await import(
 			'./freehandTools.js'
 		);
-		shadeBrush = createShadingController(createShadingPanel(), false);
+		shadeBrush = createShadingController(await createShadingPanel(), false);
 		return {
 			onFocus: shadeBrush.enable,
 			onBlur: shadeBrush.disable,
@@ -552,7 +552,10 @@ const initializeAppComponents = async () => {
 		const { createShadingController, createCharacterBrushPanel } = await import(
 			'./freehandTools.js'
 		);
-		characterBrush = createShadingController(createCharacterBrushPanel(), true);
+		characterBrush = createShadingController(
+			await createCharacterBrushPanel(),
+			true,
+		);
 		return {
 			onFocus: characterBrush.enable,
 			onBlur: characterBrush.disable,
@@ -643,13 +646,13 @@ const initializeAppComponents = async () => {
 			const { createShadingController, createShadingPanel } = await import(
 				'./freehandTools.js'
 			);
-			shadeBrush = createShadingController(createShadingPanel(), false);
+			shadeBrush = createShadingController(await createShadingPanel(), false);
 		}
 		if (!characterBrush) {
 			const { createShadingController, createCharacterBrushPanel } =
 				await import('./freehandTools.js');
 			characterBrush = createShadingController(
-				createCharacterBrushPanel(),
+				await createCharacterBrushPanel(),
 				true,
 			);
 		}

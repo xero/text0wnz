@@ -520,22 +520,34 @@ const createShadingController = (panel, charMode) => {
 	};
 };
 
-const createShadingPanel = () => {
-	let panelWidth = State.fontWidth * magicNumbers.PANEL_WIDTH_MULTIPLIER;
-	const panel = createFloatingPanel(50, 50);
+const createShadingPanel = async () => {
+	let panelFont = null;
+	let ignored = false;
+	const panel = createFloatingPanel(150, 150);
 	const canvasContainer = document.createElement('div');
+	canvasContainer.style.display = 'flex';
+	canvasContainer.style.flexWrap = 'wrap';
+
 	const cursor = createPanelCursor(canvasContainer);
 	const canvases = new Array(16);
 	const nav = $('brushes');
 	let halfBlockMode = false;
 	let x = 0;
 	let y = 0;
-	let ignored = false;
 	let currentFont;
 
+	const get1xFont = async () => {
+		if (!State.font || !State.font.getData) {return null;}
+		const { createLazyFont } = await import('./lazyFont.js');
+		const fontData = State.font.getData();
+		const palette = State.palette;
+		const letterSpacing = State.font.getLetterSpacing?.() ?? false;
+		return createLazyFont(fontData, palette, letterSpacing, 1);
+	};
+
 	const updateCursor = () => {
-		const width = canvases[0].width / 5;
-		const height = canvases[0].height / 15;
+		const width = (panelFont.getWidth() * 16) / 5;
+		const height = (panelFont.getHeight() * 16) / 15;
 		cursor.resize(width, height);
 		cursor.setPos(x * width, y * height);
 	};
@@ -553,29 +565,35 @@ const createShadingPanel = () => {
 		};
 	};
 
-	const generateCanvases = () => {
-		currentFont = State.textArtCanvas.getCurrentFontName();
-		const fontHeight = State.fontHeight;
+	const generateCanvases = async () => {
+		canvasContainer.innerHTML = '';
+
+		panelFont = await get1xFont();
+		if (!panelFont) {return;}
+
 		for (let foreground = 0; foreground < 16; foreground++) {
-			const canvas = createCanvas(panelWidth, fontHeight * 15);
+			const canvas = createCanvas(
+				panelFont.getWidth() * 15,
+				panelFont.getHeight() * 15,
+			);
 			const ctx = canvas.getContext('2d');
 			let y = 0;
 			for (let background = 0; background < 8; background++) {
 				if (foreground !== background) {
 					for (let i = 0; i < 4; i++) {
-						State.font.draw(219, foreground, background, ctx, i, y);
+						panelFont.draw(219, foreground, background, ctx, i, y);
 					}
 					for (let i = 4; i < 8; i++) {
-						State.font.draw(178, foreground, background, ctx, i, y);
+						panelFont.draw(178, foreground, background, ctx, i, y);
 					}
 					for (let i = 8; i < 12; i++) {
-						State.font.draw(177, foreground, background, ctx, i, y);
+						panelFont.draw(177, foreground, background, ctx, i, y);
 					}
 					for (let i = 12; i < 16; i++) {
-						State.font.draw(176, foreground, background, ctx, i, y);
+						panelFont.draw(176, foreground, background, ctx, i, y);
 					}
 					for (let i = 16; i < 20; i++) {
-						State.font.draw(0, foreground, background, ctx, i, y);
+						panelFont.draw(0, foreground, background, ctx, i, y);
 					}
 					y += 1;
 				}
@@ -583,19 +601,19 @@ const createShadingPanel = () => {
 			for (let background = 8; background < 16; background++) {
 				if (foreground !== background) {
 					for (let i = 0; i < 4; i++) {
-						State.font.draw(219, foreground, background, ctx, i, y);
+						panelFont.draw(219, foreground, background, ctx, i, y);
 					}
 					for (let i = 4; i < 8; i++) {
-						State.font.draw(178, foreground, background, ctx, i, y);
+						panelFont.draw(178, foreground, background, ctx, i, y);
 					}
 					for (let i = 8; i < 12; i++) {
-						State.font.draw(177, foreground, background, ctx, i, y);
+						panelFont.draw(177, foreground, background, ctx, i, y);
 					}
 					for (let i = 12; i < 16; i++) {
-						State.font.draw(176, foreground, background, ctx, i, y);
+						panelFont.draw(176, foreground, background, ctx, i, y);
 					}
 					for (let i = 16; i < 20; i++) {
-						State.font.draw(0, foreground, background, ctx, i, y);
+						panelFont.draw(0, foreground, background, ctx, i, y);
 					}
 					y += 1;
 				}
@@ -603,6 +621,7 @@ const createShadingPanel = () => {
 			canvas.addEventListener('mousedown', mouseDownGenerator(foreground));
 			canvases[foreground] = canvas;
 		}
+		canvasContainer.appendChild(canvases[State.palette.getForegroundColor()]);
 	};
 
 	const keyDown = e => {
@@ -645,6 +664,7 @@ const createShadingPanel = () => {
 		document.addEventListener('keydown', keyDown);
 		panel.enable();
 		nav.classList.add('enabled');
+		generateCanvases();
 	};
 
 	const disable = () => {
@@ -703,27 +723,28 @@ const createShadingPanel = () => {
 		);
 		cursor.hide();
 		halfBlockMode = true;
+		generateCanvases();
 	};
 
-	const fontChange = () => {
+	const fontChange = async () => {
 		if (
 			currentFont === 'XBIN' ||
 			currentFont !== State.textArtCanvas.getCurrentFontName()
 		) {
-			panelWidth = State.fontWidth * magicNumbers.PANEL_WIDTH_MULTIPLIER;
-			generateCanvases();
+			await generateCanvases();
 			updateCursor();
 			canvasContainer.removeChild(canvasContainer.firstChild);
 			canvasContainer.insertBefore(
 				canvases[State.palette.getForegroundColor()],
 				canvasContainer.firstChild,
 			);
+			await generateCanvases();
 		}
 	};
 
-	const onPaletteChange = () => {
-		const w8 = setTimeout(() => {
-			generateCanvases();
+	const onPaletteChange = async () => {
+		const w8 = setTimeout(async () => {
+			await generateCanvases();
 			updateCursor();
 			canvasContainer.removeChild(canvasContainer.firstChild);
 			canvasContainer.insertBefore(
@@ -750,14 +771,14 @@ const createShadingPanel = () => {
 	document.addEventListener('onLetterSpacingChange', fontChange);
 	document.addEventListener('onFontChange', fontChange);
 
-	generateCanvases();
+	await generateCanvases();
 	updateCursor();
 	canvasContainer.insertBefore(
 		canvases[State.palette.getForegroundColor()],
 		canvasContainer.firstChild,
 	);
 	panel.append(canvasContainer);
-	cursor.hide();
+	cursor.show();
 
 	return {
 		enable: enable,
@@ -769,17 +790,28 @@ const createShadingPanel = () => {
 	};
 };
 
-const createCharacterBrushPanel = () => {
-	let panelWidth = State.fontWidth * 16;
-	const panel = createFloatingPanel(50, 50);
+const createCharacterBrushPanel = async () => {
+	let ignored = false;
+	const panel = createFloatingPanel(100, 100);
 	const canvasContainer = document.createElement('div');
 	const cursor = createPanelCursor(canvasContainer);
-	const canvas = createCanvas(panelWidth, State.fontHeight * 16);
-	const ctx = canvas.getContext('2d');
+	const canvas = createCanvas(
+		State.fontWidth * magicNumbers.PANEL_WIDTH_MULTIPLIER,
+		State.fontHeight * magicNumbers.PANEL_WIDTH_MULTIPLIER,
+	);
 	let x = 0;
 	let y = 0;
-	let ignored = false;
 	const nav = $('brushes');
+
+	// Create a 1x scale font for rendering the panel (unaffected by zoom)
+	const get1xFont = async () => {
+		if (!State.font || !State.font.getData) {return null;}
+		const { createLazyFont } = await import('./lazyFont.js');
+		const fontData = State.font.getData();
+		const palette = State.palette;
+		const letterSpacing = State.font.getLetterSpacing?.() ?? false;
+		return createLazyFont(fontData, palette, letterSpacing, 1);
+	};
 
 	const updateCursor = () => {
 		const width = canvas.width / 16;
@@ -788,14 +820,40 @@ const createCharacterBrushPanel = () => {
 		cursor.setPos(x * width, y * height);
 	};
 
-	const redrawCanvas = () => {
+	const redrawCanvas = async () => {
+		const panelFont = await get1xFont();
+		if (!panelFont) {return;}
+
+		const fontWidth = panelFont.getWidth();
+		const fontHeight = panelFont.getHeight();
 		const foreground = State.palette.getForegroundColor();
 		const background = State.palette.getBackgroundColor();
-		for (let y = 0, charCode = 0; y < 16; y++) {
-			for (let x = 0; x < 16; x++, charCode++) {
-				State.font.draw(charCode, foreground, background, ctx, x, y);
+
+		canvasContainer.innerHTML = '';
+
+		const canvas = createCanvas(
+			panelFont.getWidth() * 16,
+			panelFont.getHeight() * 16,
+		);
+
+		const ctx = canvas.getContext('2d');
+
+		for (let y = 0; y < 16; y++) {
+			for (let x = 0; x < 16; x++) {
+				const charCode = y * 16 + x;
+				panelFont.draw(charCode, foreground, background, ctx, x, y);
 			}
 		}
+
+		canvas.addEventListener('click', e => {
+			const rect = canvas.getBoundingClientRect();
+			const x = Math.floor((e.clientX - rect.left) / fontWidth);
+			const y = Math.floor((e.clientY - rect.top) / fontHeight);
+			const charCode = y * 16 + x;
+			if (charCode < 256) {select(charCode);}
+		});
+
+		canvasContainer.appendChild(canvas);
 	};
 
 	const keyDown = e => {
@@ -831,6 +889,7 @@ const createCharacterBrushPanel = () => {
 		document.addEventListener('keydown', keyDown);
 		panel.enable();
 		nav.classList.add('enabled');
+		redrawCanvas();
 	};
 
 	const disable = () => {
@@ -850,8 +909,7 @@ const createCharacterBrushPanel = () => {
 	};
 
 	const resizeCanvas = () => {
-		panelWidth = State.fontWidth * 16;
-		canvas.width = panelWidth;
+		canvas.width = State.fontWidth * 16;
 		canvas.height = State.fontHeight * 16;
 		redrawCanvas();
 		updateCursor();
@@ -870,6 +928,7 @@ const createCharacterBrushPanel = () => {
 		x = charCode % 16;
 		y = Math.floor(charCode / 16);
 		updateCursor();
+		redrawCanvas();
 	};
 
 	const ignore = () => {
@@ -895,11 +954,11 @@ const createCharacterBrushPanel = () => {
 	document.addEventListener('onXBFontLoaded', redrawGlyphs);
 	canvas.addEventListener('mouseup', mouseUp);
 
-	updateCursor();
-	cursor.show();
 	canvasContainer.appendChild(canvas);
 	panel.append(canvasContainer);
-	redrawCanvas();
+	await redrawCanvas();
+	updateCursor();
+	cursor.show();
 
 	return {
 		enable: enable,
