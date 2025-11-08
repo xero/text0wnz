@@ -12,12 +12,12 @@ export const createZoomControl = () => {
 	// Label
 	const label = document.createElement('label');
 	label.textContent = 'Zoom:';
-	label.htmlFor = 'zoom-slider';
+	label.htmlFor = 'zoomSlider';
 
 	// Slider
 	const slider = document.createElement('input');
 	slider.type = 'range';
-	slider.id = 'zoom-slider';
+	slider.id = 'zoomSlider';
 	slider.min = '0.5';
 	slider.max = '4';
 	slider.step = '0.5';
@@ -29,7 +29,7 @@ export const createZoomControl = () => {
 
 	// Display
 	const display = document.createElement('span');
-	display.className = 'zoom-display';
+	display.className = 'zoomDisplay';
 	display.textContent = '1.0x';
 	display.setAttribute('aria-live', 'polite');
 
@@ -89,8 +89,8 @@ export const createZoomControl = () => {
 
 	document.addEventListener('keydown', handleKeyboardZoom);
 	container.appendChild(label);
-	container.appendChild(slider);
 	container.appendChild(display);
+	container.appendChild(slider);
 
 	return container;
 };

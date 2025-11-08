@@ -15,6 +15,8 @@ import {
 // Mock dependencies
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
+		fontWidth: 8,
+		fontHeight: 16,
 		palette: {
 			getRGBAColor: vi.fn(() => [255, 0, 0, 255]),
 			getForegroundColor: vi.fn(() => 7),
@@ -64,6 +66,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 		font: {
 			getWidth: vi.fn(() => 8),
 			getHeight: vi.fn(() => 16),
+			getData: vi.fn(() => ({})),
 			draw: vi.fn(),
 			getLetterSpacing: vi.fn(() => false),
 			setLetterSpacing: vi.fn(),
@@ -173,6 +176,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 			},
 			addEventListener: vi.fn(),
 			removeEventListener: vi.fn(),
+			remove: vi.fn(),
 			getContext: vi.fn(() => ({
 				createImageData: vi.fn(() => ({
 					data: new Uint8ClampedArray(4),
@@ -181,8 +185,13 @@ vi.mock('../../src/js/client/ui.js', () => ({
 				})),
 				putImageData: vi.fn(),
 				drawImage: vi.fn(),
+				clearRect: vi.fn(),
+				strokeStyle: '',
+				lineWidth: 1,
+				strokeRect: vi.fn(),
 			})),
 			toDataURL: vi.fn(() => 'data:image/png;base64,mock'),
+			contains: vi.fn(() => false),
 		};
 		return mockCanvas;
 	}),

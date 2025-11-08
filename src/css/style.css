@@ -551,8 +551,9 @@
 		}
 	}
 	#zoomControl {
-		#zoom-slider {
+		#zoomSlider {
 			max-width: 70px;
+			margin-inline: 4px;
 
 			&:focus,
 			&:focus-within {
@@ -599,9 +600,11 @@
 			height: 8.4px;
 		}
 
-		label,
+		label {
+			@apply text-sm text-fg p-1;
+		}
 		span {
-			@apply text-fg p-1;
+			@apply text-xs text-chat;
 		}
 	}
 
