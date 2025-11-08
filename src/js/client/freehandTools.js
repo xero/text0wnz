@@ -1696,8 +1696,8 @@ const createAttributeBrushController = () => {
 			return;
 		}
 
-		const fontWidth = State.fontWidth;
-		const fontHeight = State.fontHeight;
+		const fontWidth = State.font.getWidth();
+		const fontHeight = State.font.getHeight();
 		const size = Math.sqrt(brushSize);
 
 		// Center the brush area around the cursor position
