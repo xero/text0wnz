@@ -452,6 +452,7 @@ const createCursor = canvasContainer => {
 	document.addEventListener('onTextCanvasSizeChange', updateDimensions);
 	document.addEventListener('onFontChange', updateDimensions);
 	document.addEventListener('onOpenedFile', updateDimensions);
+	document.addEventListener('onScaleFactorChange', updateDimensions);
 	move(x, y);
 
 	return {

@@ -19,6 +19,7 @@ import {
 	undoAndRedo,
 	viewportTap,
 	createPaintShortcuts,
+	createViewportController,
 	createGenericController,
 	createResolutionController,
 	createGrid,
@@ -26,8 +27,8 @@ import {
 	createMenuController,
 	enforceMaxBytes,
 	createFontSelect,
+	createZoomControl,
 } from './ui.js';
-import { createZoomControl } from './zoomControl.js';
 import {
 	createDefaultPalette,
 	createPalettePreview,
@@ -64,6 +65,7 @@ let sauceAuthor;
 let sauceComments;
 let navSauce;
 let navDarkmode;
+let lblDarkmode;
 let metaTheme;
 let saveTimeout;
 let reload;
@@ -90,6 +92,7 @@ const $$$$ = () => {
 	sauceComments = $('sauceComments');
 	navSauce = $('navSauce');
 	navDarkmode = $('navDarkmode');
+	lblDarkmode = $('mode');
 	metaTheme = $$('meta[name="theme-color"]');
 	saveTimeout = null;
 	reload = $('updateReload');
@@ -635,6 +638,10 @@ const initializeAppComponents = async () => {
 		$('clipboardToolbar'),
 		$('clipboard'),
 	);
+
+	const view = createViewportController($('viewportToolbar'));
+	Toolbar.add($('navView'), view.enable, view.disable);
+
 	Toolbar.add($('clipboard'), clipboard.enable, clipboard.disable);
 
 	Toolbar.addLazy($('sample'), async () => {
@@ -746,6 +753,7 @@ const initializeAppComponents = async () => {
 		const isDark = htmlDoc.classList.contains('dark');
 		navDarkmode.setAttribute('aria-pressed', isDark);
 		metaTheme.setAttribute('content', isDark ? '#333333' : '#4f4f4f');
+		lblDarkmode.innerText = isDark ? 'Night' : 'Light';
 	};
 	onClick(navDarkmode, darkToggle);
 	window.matchMedia('(prefers-color-scheme: dark)').matches && darkToggle();

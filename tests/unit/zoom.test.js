@@ -115,9 +115,7 @@ describe('Zoom Functionality', () => {
 		});
 
 		it('should create zoom control container', async () => {
-			const { createZoomControl } = await import(
-				'../../src/js/client/zoomControl.js'
-			);
+			const { createZoomControl } = await import('../../src/js/client/ui.js');
 			container = createZoomControl();
 
 			expect(container).toBeDefined();
@@ -125,9 +123,7 @@ describe('Zoom Functionality', () => {
 		});
 
 		it('should have label, slider, and display elements', async () => {
-			const { createZoomControl } = await import(
-				'../../src/js/client/zoomControl.js'
-			);
+			const { createZoomControl } = await import('../../src/js/client/ui.js');
 			container = createZoomControl();
 
 			const label = container.querySelector('label');
@@ -141,9 +137,7 @@ describe('Zoom Functionality', () => {
 		});
 
 		it('should configure slider with correct attributes', async () => {
-			const { createZoomControl } = await import(
-				'../../src/js/client/zoomControl.js'
-			);
+			const { createZoomControl } = await import('../../src/js/client/ui.js');
 			container = createZoomControl();
 
 			const slider = container.querySelector('input[type="range"]');
@@ -155,9 +149,7 @@ describe('Zoom Functionality', () => {
 		});
 
 		it('should initialize display from current font scale', async () => {
-			const { createZoomControl } = await import(
-				'../../src/js/client/zoomControl.js'
-			);
+			const { createZoomControl } = await import('../../src/js/client/ui.js');
 			container = createZoomControl();
 
 			const display = container.querySelector('.zoomDisplay');
@@ -165,9 +157,7 @@ describe('Zoom Functionality', () => {
 		});
 
 		it('should update display when slider input changes', async () => {
-			const { createZoomControl } = await import(
-				'../../src/js/client/zoomControl.js'
-			);
+			const { createZoomControl } = await import('../../src/js/client/ui.js');
 			container = createZoomControl();
 
 			const slider = container.querySelector('input[type="range"]');
