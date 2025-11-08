@@ -44,12 +44,24 @@ export const createZoomControl = () => {
 		}
 	};
 
+	// Function to update slider UI from current state
+	const updateSliderFromState = () => {
+		if (State.font && State.font.getScaleFactor) {
+			const currentScale = State.font.getScaleFactor();
+			slider.value = currentScale.toString();
+			display.textContent = `${currentScale.toFixed(1)}x`;
+			slider.setAttribute('aria-valuenow', currentScale.toString());
+		}
+	};
+
 	// Initialize from current font scale
-	State.waitFor('font', () => {
-		const currentScale = State.font.getScaleFactor?.() ?? 1;
-		slider.value = currentScale.toString();
-		display.textContent = `${currentScale.toFixed(1)}x`;
-	});
+	State.waitFor('font', updateSliderFromState);
+
+	// Update slider UI when state is restored
+	document.addEventListener(
+		'onStateRestorationComplete',
+		updateSliderFromState,
+	);
 
 	// Event listeners
 	slider.addEventListener('input', e => {
@@ -61,6 +73,10 @@ export const createZoomControl = () => {
 	slider.addEventListener('change', e => {
 		// Apply zoom on release
 		updateZoom(e.target.value);
+		// Save immediately to state (don't wait for debounced save)
+		if (State.saveToLocalStorage) {
+			State.saveToLocalStorage();
+		}
 	});
 
 	// Keyboard shortcuts
@@ -72,6 +88,10 @@ export const createZoomControl = () => {
 			const newValue = Math.min(4, currentValue + 0.5);
 			slider.value = newValue.toString();
 			updateZoom(newValue.toString());
+			// Save immediately to state
+			if (State.saveToLocalStorage) {
+				State.saveToLocalStorage();
+			}
 		} else if ((e.ctrlKey || e.metaKey) && e.key === '-') {
 			// Ctrl/Cmd + Minus: Zoom out
 			e.preventDefault();
@@ -79,11 +99,19 @@ export const createZoomControl = () => {
 			const newValue = Math.max(0.5, currentValue - 0.5);
 			slider.value = newValue.toString();
 			updateZoom(newValue.toString());
+			// Save immediately to state
+			if (State.saveToLocalStorage) {
+				State.saveToLocalStorage();
+			}
 		} else if ((e.ctrlKey || e.metaKey) && e.key === '0') {
 			// Ctrl/Cmd + 0: Reset to 1x
 			e.preventDefault();
 			slider.value = '1';
 			updateZoom('1');
+			// Save immediately to state
+			if (State.saveToLocalStorage) {
+				State.saveToLocalStorage();
+			}
 		}
 	};
 
