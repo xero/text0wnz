@@ -611,8 +611,15 @@ class StateManager {
 	 */
 	async saveToLocalStorage() {
 		try {
-			// Skip saving if state is default or connected to network
-			if (this.isDefaultState() || stateManager.state.network.isConnected()) {
+			// Check if zoom has changed from default
+			const scaleFactor = this.state.font?.getScaleFactor() ?? 1;
+			const hasNonDefaultZoom = scaleFactor !== 1;
+
+			// Skip saving if state is default (unless zoom changed) or connected to network
+			if (
+				!hasNonDefaultZoom &&
+				(this.isDefaultState() || stateManager.state.network.isConnected())
+			) {
 				return;
 			}
 
