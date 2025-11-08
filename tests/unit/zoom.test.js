@@ -121,7 +121,7 @@ describe('Zoom Functionality', () => {
 			container = createZoomControl();
 
 			expect(container).toBeDefined();
-			expect(container.className).toBe('zoom-control');
+			expect(container.className).toBe('zoomControl');
 		});
 
 		it('should have label, slider, and display elements', async () => {
@@ -132,7 +132,7 @@ describe('Zoom Functionality', () => {
 
 			const label = container.querySelector('label');
 			const slider = container.querySelector('input[type="range"]');
-			const display = container.querySelector('.zoom-display');
+			const display = container.querySelector('.zoomDisplay');
 
 			expect(label).toBeDefined();
 			expect(label.textContent).toBe('Zoom:');

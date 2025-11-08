@@ -6,7 +6,7 @@ import State from './state.js';
 
 export const createZoomControl = () => {
 	const container = document.createElement('div');
-	container.className = 'zoom-control';
+	container.className = 'zoomControl';
 	container.setAttribute('aria-label', 'Canvas Zoom Control');
 
 	// Label
