@@ -1,5 +1,6 @@
 import State from './state.js';
 import { $, createCanvas, createToggleButton } from './ui.js';
+import Toolbar from './toolbar.js';
 import magicNumbers from './magicNumbers.js';
 
 const createPanelCursor = el => {
@@ -936,9 +937,9 @@ const createCharacterBrushPanel = async () => {
 	};
 
 	const select = async charCode => {
+		await redrawCanvas();
 		x = charCode % 16;
 		y = Math.floor(charCode / 16);
-		await redrawCanvas();
 		updateCursor();
 	};
 
@@ -1173,23 +1174,25 @@ const createLineController = () => {
 	};
 
 	const canvasUp = () => {
-		State.toolPreview.clear();
-		const foreground = State.palette.getForegroundColor();
-		State.textArtCanvas.startUndo();
-		State.textArtCanvas.drawHalfBlock(draw => {
-			const endPoint = endXY || startXY;
-			line(
-				startXY.x,
-				startXY.halfBlockY,
-				endPoint.x,
-				endPoint.halfBlockY,
-				(lineX, lineY) => {
-					draw(foreground, lineX, lineY);
-				},
-			);
-		});
-		startXY = undefined;
-		endXY = undefined;
+		if (startXY) {
+			State.toolPreview.clear();
+			const foreground = State.palette.getForegroundColor();
+			State.textArtCanvas.startUndo();
+			State.textArtCanvas.drawHalfBlock(draw => {
+				const endPoint = endXY || startXY;
+				line(
+					startXY.x,
+					startXY.halfBlockY,
+					endPoint.x,
+					endPoint.halfBlockY,
+					(lineX, lineY) => {
+						draw(foreground, lineX, lineY);
+					},
+				);
+			});
+			startXY = undefined;
+			endXY = undefined;
+		}
 	};
 
 	const hasEndPointChanged = (e, endPoint = undefined) => {
@@ -1639,6 +1642,7 @@ const createSampleTool = async (
 			} else {
 				State.palette.setForegroundColor(block.lowerBlockColor);
 			}
+			Toolbar.returnToPreviousTool();
 		} else {
 			block = State.textArtCanvas.getBlock(block.x, Math.floor(block.y / 2));
 			State.palette.setForegroundColor(block.foregroundColor);
