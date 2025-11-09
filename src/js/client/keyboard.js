@@ -67,8 +67,8 @@ const createFKeys = () => {
 
 				// Keep CSS display size fixed at 1.5x of BASE font size
 				// This maintains the original UI appearance regardless of zoom
-				const baseWidth = 8; // Base font width
-				const baseHeight = 16; // Base font height
+				const baseWidth = State.fontWidth;
+				const baseHeight = State.fontHeight;
 				const fixedScale = 1.5;
 
 				canvas.style.width = baseWidth * fixedScale + 'px';

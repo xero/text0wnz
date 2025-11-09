@@ -825,7 +825,9 @@ const createCharacterBrushPanel = async () => {
 		const foreground = State.palette.getForegroundColor();
 		const background = State.palette.getBackgroundColor();
 
-		canvasContainer.removeChild(canvas);
+		if (canvasContainer.contains(canvas)) {
+			canvasContainer.removeChild(canvas);
+		}
 
 		canvas = createCanvas(
 			panelFont.getWidth() * 16,
