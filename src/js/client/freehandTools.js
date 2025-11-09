@@ -533,7 +533,6 @@ const createShadingPanel = async () => {
 	let halfBlockMode = false;
 	let x = 0;
 	let y = 0;
-	let currentFont;
 
 	const get1xFont = async () => {
 		if (!State.font || !State.font.getData) {
@@ -732,33 +731,18 @@ const createShadingPanel = async () => {
 		halfBlockMode = true;
 	};
 
-	const fontChange = async () => {
-		if (
-			currentFont === 'XBIN' ||
-			currentFont !== State.textArtCanvas.getCurrentFontName()
-		) {
-			await generateCanvases();
-			updateCursor();
-			canvasContainer.removeChild(canvasContainer.firstChild);
+	const onChange = async () => {
+		await generateCanvases().then(() => {
+			if (canvasContainer.childElementCount > 1) {
+				canvasContainer.removeChild(canvasContainer.firstChild);
+			}
 			canvasContainer.insertBefore(
 				canvases[State.palette.getForegroundColor()],
 				canvasContainer.firstChild,
 			);
-			await generateCanvases();
-		}
-	};
-
-	const onPaletteChange = async () => {
-		const w8 = setTimeout(async () => {
-			await generateCanvases();
 			updateCursor();
-			canvasContainer.removeChild(canvasContainer.firstChild);
-			canvasContainer.insertBefore(
-				canvases[State.palette.getForegroundColor()],
-				canvasContainer.firstChild,
-			);
-			clearTimeout(w8);
-		}, 500);
+			cursor.show();
+		});
 	};
 
 	const select = async charCode => {
@@ -772,10 +756,12 @@ const createShadingPanel = async () => {
 		cursor.show();
 	};
 
-	document.addEventListener('onPaletteChange', onPaletteChange);
 	document.addEventListener('onForegroundChange', foregroundChange);
-	document.addEventListener('onLetterSpacingChange', fontChange);
-	document.addEventListener('onFontChange', fontChange);
+	document.addEventListener('onPaletteChange', onChange);
+	document.addEventListener('onLetterSpacingChange', onChange);
+	document.addEventListener('onFontChange', onChange);
+	document.addEventListener('onXBFontLoaded', onChange);
+	document.addEventListener('onOpenedFile', onChange);
 
 	await generateCanvases();
 	updateCursor();
@@ -937,10 +923,12 @@ const createCharacterBrushPanel = async () => {
 	};
 
 	const select = async charCode => {
-		await redrawCanvas();
-		x = charCode % 16;
-		y = Math.floor(charCode / 16);
-		updateCursor();
+		await redrawCanvas().then(() => {
+			x = charCode % 16;
+			y = Math.floor(charCode / 16);
+			updateCursor();
+			cursor.show();
+		});
 	};
 
 	const ignore = () => {
@@ -964,6 +952,7 @@ const createCharacterBrushPanel = async () => {
 	document.addEventListener('onFontChange', redrawGlyphs);
 	document.addEventListener('onPaletteChange', redrawCanvas);
 	document.addEventListener('onXBFontLoaded', redrawGlyphs);
+	document.addEventListener('onOpenedFile', redrawGlyphs);
 	canvas.addEventListener('mouseup', mouseUp);
 
 	canvasContainer.appendChild(canvas);
@@ -1648,11 +1637,11 @@ const createSampleTool = async (
 			State.palette.setForegroundColor(block.foregroundColor);
 			State.palette.setBackgroundColor(block.backgroundColor);
 			if (block.charCode >= 176 && block.charCode <= 178) {
-				await shadeBrush.select(block.charCode);
 				shadeElement.click();
+				await shadeBrush.select(block.charCode);
 			} else {
-				await characterBrush.select(block.charCode);
 				characterElement.click();
+				await characterBrush.select(block.charCode);
 			}
 		}
 	};

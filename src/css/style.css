@@ -712,8 +712,9 @@
 	}
 
 	.menuList {
-		@apply z-40 block cursor-default absolute w-[300px] bg-file border-4 border-solid border-menu;
+		@apply block cursor-default absolute w-[300px] bg-file border-4 border-solid border-menu;
 		box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
+		z-index: 998;
 	}
 
 	.menuItem {
@@ -1104,7 +1105,7 @@
 	.floatingPanel {
 		@apply fixed hidden cursor-move bg-panel pr-1 pl-1 pb-1 pt-4 transition-none!;
 		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
-		z-index: 998;
+		z-index: 997;
 
 		&.enabled {
 			display: block;
@@ -1164,7 +1165,7 @@
 		&.cursor,
 		&.selectionCursor {
 			@apply absolute;
-			z-index: 999;
+			z-index: 997;
 		}
 		&.cursor {
 			border: 1px solid #555;

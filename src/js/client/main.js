@@ -537,11 +537,26 @@ const initializeAppComponents = async () => {
 	let shadeBrush = null;
 	let characterBrush = null;
 
+	const ensureBrushesLoaded = async () => {
+		if (!shadeBrush) {
+			const { createShadingController, createShadingPanel } = await import(
+				'./freehandTools.js'
+			);
+			shadeBrush = createShadingController(await createShadingPanel(), false);
+		}
+		if (!characterBrush) {
+			const { createShadingController, createCharacterBrushPanel } =
+				await import('./freehandTools.js');
+			characterBrush = createShadingController(
+				await createCharacterBrushPanel(),
+				true,
+			);
+		}
+		return { shadeBrush, characterBrush };
+	};
+
 	Toolbar.addLazy($('shadingBrush'), async () => {
-		const { createShadingController, createShadingPanel } = await import(
-			'./freehandTools.js'
-		);
-		shadeBrush = createShadingController(await createShadingPanel(), false);
+		await ensureBrushesLoaded();
 		return {
 			onFocus: shadeBrush.enable,
 			onBlur: shadeBrush.disable,
@@ -552,13 +567,7 @@ const initializeAppComponents = async () => {
 	});
 
 	Toolbar.addLazy($('characterBrush'), async () => {
-		const { createShadingController, createCharacterBrushPanel } = await import(
-			'./freehandTools.js'
-		);
-		characterBrush = createShadingController(
-			await createCharacterBrushPanel(),
-			true,
-		);
+		await ensureBrushesLoaded();
 		return {
 			onFocus: characterBrush.enable,
 			onBlur: characterBrush.disable,
@@ -632,6 +641,7 @@ const initializeAppComponents = async () => {
 			enable: circle.enable,
 		};
 	});
+
 	const fonts = createGenericController($('fontToolbar'), $('fonts'));
 	Toolbar.add($('fonts'), fonts.enable, fonts.disable);
 	const clipboard = createGenericController(
@@ -645,24 +655,8 @@ const initializeAppComponents = async () => {
 	Toolbar.add($('clipboard'), clipboard.enable, clipboard.disable);
 
 	Toolbar.addLazy($('sample'), async () => {
-		// Sample tool depends on shading brushes, so we need to ensure they're loaded
 		const { createSampleTool } = await import('./freehandTools.js');
-
-		// If brushes aren't loaded yet, we need to load them first
-		if (!shadeBrush) {
-			const { createShadingController, createShadingPanel } = await import(
-				'./freehandTools.js'
-			);
-			shadeBrush = createShadingController(await createShadingPanel(), false);
-		}
-		if (!characterBrush) {
-			const { createShadingController, createCharacterBrushPanel } =
-				await import('./freehandTools.js');
-			characterBrush = createShadingController(
-				await createCharacterBrushPanel(),
-				true,
-			);
-		}
+		await ensureBrushesLoaded();
 
 		State.sampleTool = await createSampleTool(
 			shadeBrush,
@@ -676,6 +670,7 @@ const initializeAppComponents = async () => {
 			enable: State.sampleTool.enable,
 		};
 	});
+
 	createSettingToggle(
 		$('mirror'),
 		State.textArtCanvas.getMirrorMode,
