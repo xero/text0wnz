@@ -14,12 +14,12 @@ File operations allowing you to create, open, and save artwork in multiple file 
 
 **Supported Formats:**
 
-- **ANSI** (.ans) - Classic ANSI text art format
-- **NFO** (.nfo) - Warez scene release format
-- **Binary Text** (.bin) - Raw binary format (scene legacy)
-- **XBin** (.xb) - Extended Binary format with embedded fonts and palettes
-- **UTF-8** (.utf8.ans) - Export as text with shell color escape codes
-- **Plain Text** (.txt) - Export as text only
+- **ANSI** (`.ans`) - Classic ANSI text art format
+- **NFO** (`.nfo`) - Warez scene release format
+- **Binary Text** (`.bin`) - Raw binary (legacy scene format)
+- **XBin** (`.xb`) - Extended Binary format with embedded fonts and palettes
+- **UTF-8** (`.utf8.ans`) - Export as text with shell color escape codes
+- **Plain Text** (`.txt`) - Export as text only
 - **PNG** - Export as image
 
 See [other-tools.md](other-tools.md) for information on working with different file formats and [xb-format.md](xb-format.md) for details on the XBin format.
@@ -85,8 +85,8 @@ The color system uses the classic 16-color ANSI palette with optional iCE colors
 
 - Foreground and background color selection
 - Click to swap foreground/background colors
-- Keyboard shortcut: **Q** to quickly swap colors
-- Keyboard shortcut: **Ctrl+D** for default colors
+- Keyboard shortcut: `q` to quickly swap colors
+- Keyboard shortcut: `ctrl+d` for default colors
 
 # Color Palette
 
@@ -107,10 +107,13 @@ See [xb-format.md](xb-format.md) for information on custom palettes and [archite
 
 ![tools](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/tools.png)
 
-Some tools such as "Brushes" have many options or sub-tools. Clicking the tool icon from the left menu will update (or clear) the current tool options section of the top bar.
-
 > [!NOTE]
 > The currently selected tool will be highlighted (keyboard mode in this case)
+
+Some tools such as "Brushes" have many options or sub-tools. Clicking the tool icon from the left menu will update (or clear) the current tool options section of the top bar.
+
+> [!TIP]
+> Press `escape` to switch back to the previous tool
 
 **Available Tools:**
 
@@ -137,25 +140,29 @@ Full text input with navigation controls. Type characters directly onto the canv
 
 - Direct character input
 - F-key block character insertion
-- Ctrl+[ / ] to swap character sets
+- `ctrl+[`, `ctrl+]` to swap character sets
 - Traditional ANSI editor workflow
-- Shift+Arrow keys switches to the Selection Tool
-
-**Navigation:**
-
-- **Arrow Keys** - Move cursor in any direction
-- **Home** - Move to start of current row
-- **End** - Move to end of current row
-- **Page Up** - Move cursor up by one screen height
-- **Page Down** - Move cursor down by one screen height
-- **Cmd/Meta + Left Arrow** - Move to start of current row
-- **Cmd/Meta + Right Arrow** - Move to end of current row
-- **Enter** - Move to next line (start of new row)
+- `shift+arrow keys` switch to the Selection Tool
 
 ![f-key legend](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/fkeys.png)
 
 > [!TIP]
 > Click the F-key legend preview to insert that character to the current cell.
+
+**Navigation:**
+
+- `arrow keys` - Move cursor in any direction
+- `home` - Move to start of current row
+- `end` - Move to end of current row
+- `page up` - Move cursor up by one screen height
+- `page down` - Move cursor down by one screen height
+- `cmd/meta + left arrow` - Move to start of current row
+- `cmd/meta + right arrow` - Move to end of current row
+- `enter` - Move to next line (start of new row)
+
+**Viewport Auto-Scroll:**
+
+When navigating selections with keyboard or mouse, the viewport automatically scrolls to keep the selection visible with a buffer zone, similar to cursor navigation.
 
 See [editor-client.md](editor-client.md) for keyboard shortcuts and navigation details.
 
@@ -177,7 +184,7 @@ Draw with blocks for pixel-like drawing. Hold Shift for straight lines. Think of
 
 ### Shading Brush
 
-Draw with shading blocks (`░▒▓`). 'Reduce mode' when holding Shift. Ideal for gradients and texture effects. Includes a block color gradient picker. Click the 'X' to close it, or drag it around using the top area.
+Draw with shading blocks (`░▒▓`). 'Reduce mode' when holding Shift. Ideal for gradients and texture effects. Includes a block color gradient picker. Click the **X** to close it, or drag it around using the top area.
 
 ![shading-panel](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/shading-panel.png)
 
@@ -275,16 +282,14 @@ Visually highlight rectangular sections of the canvas and apply transformations 
 
 **Keyboard Navigation:**
 
-- **Arrow Keys** - Move selection by one cell
-  - Default: Move the selection box
-  - Move Mode: Move the selection _and its contents_
-- **Shift + Arrow Keys** - Expand/shrink selection
-- **Home** - Expand selection to start of current row
-- **End** - Expand selection to end of current row
-- **Page Up** - Move selection up by one screen height
-- **Page Down** - Move selection down by one screen height
-- **Cmd/Meta + Left Arrow** - Expand selection to start of current row
-- **Cmd/Meta + Right Arrow** - Expand selection to end of current row
+- `arrow keys` - Move selection by one cell
+  - **Default**: Move the selection box
+  - **Move Mode**: Move the selection _and its contents_
+- `shift + arrow keys` - Expand/shrink selection
+- `home` - Expand selection to start of current row
+- `end` - Expand selection to end of current row
+- `page up` - Move selection up by one screen height
+- `page down` - Move selection down by one screen height
 
 **Mouse/Touch:**
 
@@ -296,19 +301,15 @@ Visually highlight rectangular sections of the canvas and apply transformations 
 > [!NOTE]
 > Single clicks move the cursor without creating a selection. Drag to create a selection to prevent accidental single-cell selections.
 
-**Viewport Auto-Scroll:**
-
-When navigating selections with keyboard or mouse, the viewport automatically scrolls to keep the selection visible with a buffer zone, similar to cursor navigation.
-
 **Operations:**
 
 - Flip Horizontally (`[` key)
 - Flip Vertically (`]` key)
-- Move Mode (`M` key) - Toggle orange move mode
-- Cut (`Ctrl+X`)
-- Copy (`Ctrl+C`)
-- Paste from app clipboard (`Ctrl+V`)
-- System Paste from OS clipboard (`Ctrl+Shift+V`)
+- Move Mode (`m` key) - Toggle orange move mode
+- Cut (`ctrl+x`)
+- Copy (`ctrl+c`)
+- Paste from app clipboard (`ctrl+v`)
+- System Paste from OS clipboard (`ctrl+shift+v`)
 
 **Selection Modes:**
 
@@ -316,19 +317,19 @@ The default selection mode is white:
 
 ![selection](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/selection.png)
 
-Move mode is orange (toggle with `M` key):
+Move mode is orange (toggle with `m` key):
 
 ![move](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/move.png)
 
 **Keyboard Shortcuts:**
 
-- **Ctrl+X** - Cut selection
-- **Ctrl+C** - Copy selection
-- **Ctrl+V** - Paste from app clipboard
-- **Ctrl+Shift+V** - Paste from system clipboard
-- **[** - Flip horizontally
-- **]** - Flip vertically
-- **M** - Toggle move mode
+- `ctrl+x` - Cut selection
+- `ctrl+c` - Copy selection
+- `ctrl+v` - Paste from app clipboard
+- `ctrl+shift+v` - Paste from system clipboard
+- `[` - Flip horizontally
+- `]` - Flip vertically
+- `m` - Toggle move mode
 
 See [editor-client.md](editor-client.md) for more keyboard shortcuts and clipboard operations.
 
@@ -341,7 +342,7 @@ Sync the editor foreground/background color and brush tool with the selected cel
 - Pick colors from existing artwork
 - Copy character and color attributes
 - Quick tool for color matching
-- Keyboard shortcut: **Alt** key (while using other tools)
+- Keyboard shortcut: `Alt` key (while using other tools)
 
 Great for matching colors and characters when working on complex artwork.
 
@@ -354,7 +355,7 @@ Horizontally mirrors any drawing tool on the opposite side of the canvas.
 - Automatic horizontal mirroring
 - Works with all drawing tools
 - Perfect for creating symmetrical designs
-- Keyboard shortcut: **Ctrl+M**
+- Keyboard shortcut: `ctrl+m`
 
 **Example**:
 
@@ -371,10 +372,10 @@ Full undo/redo support for all drawing operations.
 **Features:**
 
 - Up to 1000 undo operations
-- **Ctrl+Z** to undo
-- **Ctrl+Y** to redo
-- History maintained during session
+- `ctrl+z` to undo
+- `ctrl+y` to redo
 - Works with all tools and operations
+- History saved to local storage with artwork changes for session persistence.
 
 **Supported Operations:**
 
@@ -383,6 +384,11 @@ Full undo/redo support for all drawing operations.
 - Selection operations
 - Canvas resizing
 - Font changes
+
+> [!TIP]
+> Undo/Redo works with the `control`, `command`, or `meta` modifier keys.
+>
+> _e.g._ `ctrl+z`, `cmd+z`, or `meta+z` are all equivalent
 
 See [architecture.md](architecture.md) for state management implementation details.
 
@@ -404,7 +410,7 @@ Choose from classic ANSI fonts and modern XBIN fonts. See [fonts.md](fonts.md) f
 - **Modern** - Contemporary XBIN fonts (Topaz437, SES-SYM variants, etc.)
 - **Commodore 64** - PETSCII fonts (Shifted, UnShifted, and DiskMaster)
 - **Amiga** - MicroKnight, mO'sOul, P0t-N0oDLE, & Topaz variants
-- **Internation CP** - Arabic, Cyrillic, Greek, Hebrew, and more
+- **International** - Arabic, Cyrillic, Greek, Hebrew, and more
 
 ### iCE Colors
 
@@ -461,14 +467,17 @@ Visually scale the drawing canvas from 0.5-4x size, while keeping the interface 
 
 ![zoom-x2](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/zoom-x2.png)
 
-- Use the slider or **Ctrl +** and **Ctrl -** to adjust the zoom
+- Use the slider or `ctrl +` and `ctrl -` to adjust the zoom
 - Provides half size steps for greater control
 - Select whole number scaling for pixel perfect rendering
 - Preference saved in local storage
 
+> [!NOTE]
+> Scaling events take a moment to complete. The entire font and canvas need to be recalculated and redrawn.
+
 ### ![theme select](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/modeselect.png) Light/Dark Mode
 
-Toggles between light and dark mode interface colors.
+Toggles between **light** and **night** mode interface colors.
 
 ![dark-mode](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/dark-mode.png)
 
@@ -476,7 +485,7 @@ Toggles between light and dark mode interface colors.
 
 **Features:**
 
-- Dark mode for low-light environments
+- Night mode for low-light environments
 - Light mode for bright environments
 - Preference saved in local storage
 - Instant switching without reload
@@ -492,7 +501,7 @@ Toggles the visual grid. Useful for alignment and precision work.
 **Features:**
 
 - Visual cell boundaries
-- Keyboard shortcut: **Ctrl+G**
+- Keyboard shortcut: `ctrl+g`
 - Helps with alignment and spacing
 - Non-destructive overlay (doesn't affect artwork)
 
