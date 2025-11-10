@@ -2,8 +2,6 @@
 
 This document provides step-by-step instructions for installing a Progressive Web App (PWA), like **teXt0wnz** across major platforms and browsers. PWAs offer app-like experiences directly from your browser, with offline support and native-like features.
 
----
-
 ## 1. Desktop Chrome
 
 ![desktop install](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/pwa-chrome.png)
@@ -23,6 +21,8 @@ This document provides step-by-step instructions for installing a Progressive We
 ---
 
 ## 2. Desktop Safari (macOS)
+
+![safari install](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/pwa-ios.png)
 
 **Steps:**
 
