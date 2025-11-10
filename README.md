@@ -55,16 +55,19 @@
 - **Classic and modern fonts**
   - Over 100 fonts from IBM PCs, Amiga, C64, and many more vintage/custom
 - **Full suite of drawing tools:**
-  - Keyboard, freehand brushes, fills, shapes, selection, and color picker
+  - Keyboard, freehand brushes, fills, shapes, selection, and mirror mode
 - **Advanced color management**
   - 16-color ANSI, iCE colors, real-time preview, color conflict resolution
+  - Custom XBIN color palette support and selection
 - **Import/export:**
   - ANSI, BIN, XBIN, NFO, UTF-8 TXT, PNG
 - **Canvas operations:**
-  - Undo/redo, resizing, grid overlay, font selection, and full SAUCE metadata support
+  - Undo/redo, resizing, font selection, and full SAUCE metadata support
+- **Editor options:**
+  - Canvas zoom, light/dark mode, and grid overlay
 - **Auto Save/Restore**
   - Editor Setting saved to local storage for a consistent drawing sessions
-  - Artwork saved to IndexedDB as you draw, auto-reloaded when the app is opened
+  - Artwork and undo history saved to IndexedDB as you draw, auto-reloads when the app is opened
   - Optimized binary data storage packing for efficient canvas persistence
 - **Collaborative server mode**
   - For real-time multi-user editing
