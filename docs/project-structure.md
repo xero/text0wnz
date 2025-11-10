@@ -450,7 +450,6 @@ docs/
 ├── logos.md                       # Project logos
 ├── other-tools.md                 # Additional tools
 ├── pre-commit                     # Git pre-commit hook
-├── preview.png                    # Application preview
 ├── privacy.md                     # Privacy policy
 ├── sauce-format.md                # SAUCE specification
 ├── testing.md                     # Testing guide

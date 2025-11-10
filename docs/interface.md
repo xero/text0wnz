@@ -165,9 +165,9 @@ See [editor-client.md](editor-client.md) for keyboard shortcuts and navigation d
 
 Multiple brush types for different drawing techniques. Each brush has unique properties and use cases.
 
-### Freehand/Half Block
+### Block / Freehand
 
-Draw with half-blocks for pixel-like drawing. Hold Shift for straight lines. Think of this tool as your pen.
+Draw with blocks for pixel-like drawing. Hold Shift for straight lines. Think of this tool as your pen.
 
 **Features:**
 

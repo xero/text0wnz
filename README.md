@@ -2,7 +2,7 @@
 
 **Your browser is the canvas**. Draw, edit, and collaborate on ANSI, ASCII, NFO, and XBIN art in a retro text art editor rebooted for the modern web. Offline-first with auto-save/restore and local storage, plus optional real-time sessions. Crafted for keyboard-centric artists and creators using mouse or touch, _on any device_. Built with modern tools and automated testing for a seamless experience.
 
-![preview](https://raw.githubusercontent.com/xero/teXt0wnz/refs/heads/main/docs/preview.png)
+![preview](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/preview.png)
 
 ## Draw in your browser now!
 
@@ -224,6 +224,9 @@
 8. F-keys for quick block chars
 9. Alt+Click to sample colors
 10. Undo/Redo freely (up to 1000 ops)
+
+> [!NOTE]
+> See the curated collection of [ANSi Tutorials](https://github.com/xero/ansi-art-tutorials/blob/main/README.md) for tips on drawing styles.
 
 ## Build & Development
 
