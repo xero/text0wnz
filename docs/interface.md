@@ -109,6 +109,9 @@ See [xb-format.md](xb-format.md) for information on custom palettes and [archite
 
 Some tools such as "Brushes" have many options or sub-tools. Clicking the tool icon from the left menu will update (or clear) the current tool options section of the top bar.
 
+> [!NOTE]
+> The currently selected tool will be highlighted (keyboard mode in this case)
+
 **Available Tools:**
 
 - Keyboard Mode - Full text input
@@ -122,6 +125,7 @@ Some tools such as "Brushes" have many options or sub-tools. Clicking the tool i
 - Font Selection - Choose from many classic fonts
 - Grid - Toggle alignment grid
 - Light/Dark Mode - Interface theme
+- Zoom - Scale the drawing canvas
 
 See [editor-client.md](editor-client.md) for detailed tool descriptions and [project-structure.md](project-structure.md) for technical implementation details.
 
@@ -197,13 +201,20 @@ Draw with any character from the font. Includes a character picker for selecting
 
 ### Colorize/Attribute Brush
 
-Paint/recolor the foreground and background colors of the selected cell.
+Paint/recolor the foreground and background colors of the selected cell. Use the size dropdown to adjust the brush size to paint larger/smaller areas.
+
+**Brush size x1** _(default)_
+![color-x1](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/color-x1.png)
+
+**Brush size x3**
+![color-x3](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/color-x3.png)
 
 **Features:**
 
 - Change colors without affecting characters
 - Preserve existing artwork structure
 - Quick color corrections
+- Repaint large areas faster
 
 See [fonts.md](fonts.md) for available characters in different fonts and [project-structure.md](project-structure.md) for technical brush implementation.
 
@@ -349,6 +360,30 @@ Horizontally mirrors any drawing tool on the opposite side of the canvas.
 
 Ideal for creating logos, symmetric patterns, and balanced compositions. See [editor-client.md](editor-client.md) for more drawing techniques.
 
+## ![history](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/history.png) History
+
+![history-menu](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/history-menu.png)
+
+Full undo/redo support for all drawing operations.
+
+**Features:**
+
+- Up to 1000 undo operations
+- **Ctrl+Z** to undo
+- **Ctrl+Y** to redo
+- History maintained during session
+- Works with all tools and operations
+
+**Supported Operations:**
+
+- Drawing and erasing
+- Color changes
+- Selection operations
+- Canvas resizing
+- Font changes
+
+See [architecture.md](architecture.md) for state management implementation details.
+
 ## ![font](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/font.png) Fonts
 
 ![font-menu](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/font-menu.png)
@@ -410,46 +445,26 @@ A special "extra pixel" wide mode for letter spacing.
 
 See [fonts.md](fonts.md) for the complete font catalog and [xb-format.md](xb-format.md) for embedding custom fonts in XBin files.
 
-## ![history](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/history.png) History
+## ![viewport](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/viewport.png) Viewport Options
 
-![history-menu](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/history-menu.png)
+![viewport toolbar](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/viewport-toolbar.png)
 
-Full undo/redo support for all drawing operations.
+Customize your editing experience with these interface options.
 
-**Features:**
+### Zoom
 
-- Up to 1000 undo operations
-- **Ctrl+Z** to undo
-- **Ctrl+Y** to redo
-- History maintained during session
-- Works with all tools and operations
+Visually scale the drawing canvas from 0.5-4x size, while keeping the interface elements unchanged.
 
-**Supported Operations:**
+![zoom-x1](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/zoom-x1.png)
 
-- Drawing and erasing
-- Color changes
-- Selection operations
-- Canvas resizing
-- Font changes
+![zoom-x2](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/zoom-x2.png)
 
-See [architecture.md](architecture.md) for state management implementation details.
+- Use the slider or **Ctrl +** and **Ctrl -** to adjust the zoom
+- Provides half size steps for greater control
+- Select whole number scaling for pixel perfect rendering
+- Preference saved in local storage
 
-## ![grid](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/gridtool.png) Grid Overlay
-
-Toggles the visual grid. Useful for alignment and precision work.
-
-![grid example](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/grid.png)
-
-**Features:**
-
-- Visual cell boundaries
-- Keyboard shortcut: **Ctrl+G**
-- Helps with alignment and spacing
-- Non-destructive overlay (doesn't affect artwork)
-
-Perfect for creating precise layouts, aligning elements, and maintaining consistent spacing in your artwork.
-
-## ![modeselect](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/modeselect.png) Light/Dark Mode
+### ![theme select](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/modeselect.png) Light/Dark Mode
 
 Toggles between light and dark mode interface colors.
 
@@ -464,7 +479,25 @@ Toggles between light and dark mode interface colors.
 - Preference saved in local storage
 - Instant switching without reload
 
-Choose the theme that works best for your environment and personal preference. See [privacy.md](privacy.md) for information on local storage usage.
+Choose the theme that works best for your environment and personal preference.
+
+### ![grid](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/gridtool.png) Grid Overlay
+
+Toggles the visual grid. Useful for alignment and precision work.
+
+![grid example](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/grid.png)
+
+**Features:**
+
+- Visual cell boundaries
+- Keyboard shortcut: **Ctrl+G**
+- Helps with alignment and spacing
+- Non-destructive overlay (doesn't affect artwork)
+
+Perfect for creating precise layouts, aligning elements, and maintaining consistent spacing in your artwork.
+
+> [!NOTE]
+> See [privacy.md](privacy.md) for information on local storage usage.
 
 # Collaboration Features
 
@@ -472,13 +505,15 @@ Choose the theme that works best for your environment and personal preference. S
 
 The chat window is available when connected to a collaboration server. It provides real-time communication with other users and displays server activity logs.
 
+![chat window](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/chat.png)
+
 ### Features
 
 - **Repositionable** - Click and drag the chat header to move the window anywhere on screen
 - **User Messages** - Send and receive chat messages with other collaborators
 - **Server Logs** - Join/leave/nickname change events displayed as styled log messages
 - **Notifications** - Optional desktop notifications for new messages and events
-- **User List** - See all currently connected users
+- **User List** - See all currently connected users (left hand column)
 - **Close Button** - Click the X button in the header to close the chat window
 
 ### Usage
