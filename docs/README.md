@@ -9,7 +9,7 @@ This directory contains comprehensive guides for using, developing, testing, and
 - Start here: [Editor Client](editor-client.md)
 - Learn the [Editor Interface](interface.md) visually with pictures
 - Learn keyboard shortcuts: [Editor Client - Key Bindings](editor-client.md#key-bindings--mouse-controls)
-- [PWA Install](docs/install-pwa.md): Installation guide for multiple platforms
+- [PWA Install](install-pwa.md): Installation guide for multiple platforms
 - [Fonts](fonts.md) - Complete font reference and previews
 
 ### For Developers
