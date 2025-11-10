@@ -65,7 +65,7 @@
 		"vite-plugin-html-minifier-terser": "^3.8.0"
 	},
 	"devDependencies": {
-		"@html-eslint/eslint-plugin": "^0.47.1",
+		"@html-eslint/eslint-plugin": "^0.48.0",
 		"@html-eslint/parser": "^0.47.1",
 		"@playwright/test": "^1.56.1",
 		"@stylistic/eslint-plugin": "^5.5.0",
