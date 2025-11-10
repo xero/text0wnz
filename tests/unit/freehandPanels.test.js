@@ -211,6 +211,7 @@ const mockDocument = {
 		appendChild: vi.fn(),
 		removeChild: vi.fn(),
 		insertBefore: vi.fn(),
+		contains: vi.fn(() => false),
 		getBoundingClientRect: vi.fn(() => ({
 			left: 0,
 			top: 0,
