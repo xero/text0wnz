@@ -1630,7 +1630,7 @@ const saveModule = () => {
 		output.set(imageData, dataOffset);
 
 		// Create SAUCE data
-		const sauce = createSauce(6, 0, imageData.length, false);
+		const sauce = createSauce(6, 0, totalSize, false);
 		const fname = State.title;
 		await saveFile(output, sauce, fname + '.xb');
 	};
