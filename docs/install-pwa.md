@@ -6,6 +6,8 @@ This document provides step-by-step instructions for installing a Progressive We
 
 ## 1. Desktop Chrome
 
+![desktop install](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/pwa-chrome.png)
+
 **Steps:**
 
 1. Navigate to the website you want to install as a PWA in Google Chrome.
@@ -44,7 +46,7 @@ This document provides step-by-step instructions for installing a Progressive We
 **Steps:**
 
 1. Firefox does not natively support PWA installation as a standalone app on desktop.
-2. You can use third-party extensions or rely on OS features (like Windows "Install as App" via Edge or Chrome).
+2. You can use a third-party extension like [PWAs-For-FireFox](https://addons.mozilla.org/en-US/firefox/addon/pwas-for-firefox/)
 3. Alternatively, use Chrome or Edge for PWA installation on desktop.
 
 **Reference:**
@@ -54,6 +56,8 @@ This document provides step-by-step instructions for installing a Progressive We
 ---
 
 ## 4. iPadOS (Safari)
+
+![ipad install](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/pwa-ios.png)
 
 **Steps:**
 
@@ -70,6 +74,8 @@ This document provides step-by-step instructions for installing a Progressive We
 ---
 
 ## 5. Android (Chrome)
+
+![android install](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/pwa-android.png)
 
 **Steps:**
 
