@@ -250,7 +250,9 @@ describe('Font Module - Basic Tests', () => {
 				removeEventListener: vi.fn(),
 				src: '',
 			};
-			global.Image = vi.fn(() => mockImage);
+			global.Image = vi.fn(function () {
+				return mockImage;
+			});
 
 			await expect(
 				loadFontFromImage('NonExistentFont', false, mockPalette),
@@ -261,7 +263,7 @@ describe('Font Module - Basic Tests', () => {
 	describe('XB Font Data Parsing - Additional Coverage', () => {
 		it('should validate XB font data size requirements', () => {
 			// Test the size validation logic
-			const validateXBFontSize = (bytes, width, height) => {
+			const validateXBFontSize = (bytes, _width, height) => {
 				const expectedSize = height * 256;
 				return bytes.length >= expectedSize;
 			};
