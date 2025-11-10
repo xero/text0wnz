@@ -84,7 +84,7 @@
 		"serve": "^14.2.5",
 		"tailwindcss": "^4.1.17",
 		"terser": "^5.44.1",
-		"vite": "^7.2.1",
+		"vite": "^7.2.2",
 		"vite-plugin-pwa": "^1.1.0",
 		"vite-plugin-sitemap": "^0.8.2",
 		"vite-plugin-static-copy": "^3.1.4",
