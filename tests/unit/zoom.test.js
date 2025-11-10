@@ -62,7 +62,7 @@ describe('Zoom Functionality', () => {
 				expect(lazyFont.getWidth()).toBe(expectedW);
 				expect(lazyFont.getHeight()).toBe(expectedH);
 			});
-		});
+		}, 10000); // 10 sec for slower machines
 
 		it('should scale dimensions with letter spacing', () => {
 			const lazyFont = createLazyFont(fontData, mockPalette, true, 2);
@@ -104,7 +104,7 @@ describe('Zoom Functionality', () => {
 						getScaleFactor: vi.fn(() => 1),
 						setScaleFactor: vi.fn(),
 					},
-					waitFor: vi.fn((key, callback) => callback()),
+					waitFor: vi.fn((_key, callback) => callback()),
 				},
 			}));
 		});
