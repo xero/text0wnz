@@ -272,6 +272,10 @@ const initializeAppComponents = async () => {
 			'https://github.com/xero/teXt0wnz/blob/main/docs/privacy.md';
 	});
 
+	onClick($('help'), _ => {
+		window.open('https://github.com/xero/text0wnz/wiki/manual', '_blank');
+	});
+
 	onClick($('update'), _ => {
 		State.modal.open('update');
 	});

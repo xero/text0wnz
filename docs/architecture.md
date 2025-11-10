@@ -1173,7 +1173,7 @@ const debouncedSave = debounce(saveToIndexedDB, 500);
 
 ## Related Documentation
 
-- [Editor Client](editor-client.md) - Frontend features and usage
+- [Editor Client Manual](manual.md) - Frontend application guide
 - [Collaboration Server](collaboration-server.md) - Server setup and protocol
 - [Building and Developing](building-and-developing.md) - Build process
 - [Testing](testing.md) - Test architecture

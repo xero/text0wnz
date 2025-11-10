@@ -992,5 +992,5 @@ Tests run automatically on:
 ## See Also
 
 - [Building and Developing](building-and-developing.md) - Build process and tools
-- [Editor Client](editor-client.md) - Frontend application details
+- [Editor Client Manual](manual.md) - Frontend application guide
 - [Collaboration Server](collaboration-server.md) - Backend server details

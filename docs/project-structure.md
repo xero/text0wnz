@@ -434,7 +434,6 @@ docs/
 ├── cicd.md                        # CI/CD pipeline
 ├── collaboration-server.md        # Server documentation
 ├── docker.md                      # Docker guide
-├── editor-client.md               # Client documentation
 ├── examples/                      # Sample artwork
 │   ├── ansi/                      # ANSI examples
 │   │   ├── x0-defcon25.ans
@@ -446,8 +445,8 @@ docs/
 │       └── xz-xero.xb
 ├── fonts.md                       # Font reference
 ├── install-pwa.md                 # PWA installation
-├── interface.md                   # UI guide
 ├── logos.md                       # Project logos
+├── manual.md                      # Frontend documentation
 ├── other-tools.md                 # Additional tools
 ├── pre-commit                     # Git pre-commit hook
 ├── privacy.md                     # Privacy policy

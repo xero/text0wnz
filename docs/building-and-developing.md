@@ -509,18 +509,11 @@ tests/
 
 ```
 docs/
-├── README.md           # Documentation index
-├── editor-client.md    # Frontend app documentation
-├── collaboration-server.md  # Backend server documentation
+├── manual.md                   # Frontend app documentation
 ├── building-and-developing.md  # This file
-├── testing.md          # Testing documentation
-├── webserver-configuration.md  # Webserver setup
-├── other-tools.md      # Useful tools
-├── fonts.md            # Font reference
-├── sauce-format.md     # SAUCE spec
-├── xb-format.md        # XBin spec
-├── privacy.md          # Privacy policy
-└── examples/           # Sample artwork
+├── privacy.md                  # Privacy policy
+├── ...                         # Other files
+└── examples/                   # Sample artwork
     ├── ansi/
     └── xbin/
 ```
@@ -743,5 +736,5 @@ bun upgrade  # Update to latest version
 
 - [Testing](testing.md) - Testing framework details
 - [Collaboration Server](collaboration-server.md) - Server configuration
-- [Editor Client](editor-client.md) - Frontend application
+- [Editor Client Manual](manual.md) - Frontend application guide
 - [Other Tools](other-tools.md) - Additional development tools

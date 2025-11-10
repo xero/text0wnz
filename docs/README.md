@@ -6,9 +6,7 @@ This directory contains comprehensive guides for using, developing, testing, and
 
 ### For Users / Artists
 
-- Start here: [Editor Client](editor-client.md)
-- Learn the [Editor Interface](interface.md) visually with pictures
-- Learn keyboard shortcuts: [Editor Client - Key Bindings](editor-client.md#key-bindings--mouse-controls)
+- Start here: "[The Manual](manual.md)"
 - [PWA Install](install-pwa.md): Installation guide for multiple platforms
 - [Fonts](fonts.md) - Complete font reference and previews
 
@@ -29,7 +27,13 @@ This directory contains comprehensive guides for using, developing, testing, and
 
 ### Application Guides
 
-- **[Interface](interface.md)** - Visual guide to the user interface and options
+- **[The Manual](manual.md)** - Visual guide to the Frontend text art editor
+  - Drawing tools and features
+  - Keyboard shortcuts and mouse controls
+  - Color management and palettes
+  - File operations and formats
+  - Canvas operations
+  - Client-side architecture
 
 - **[Architecture](architecture.md)** - System architecture and design
   - High-level overview and application modes
@@ -38,14 +42,6 @@ This directory contains comprehensive guides for using, developing, testing, and
   - Build system and code splitting
   - Storage and persistence strategies
   - Design patterns and performance optimizations
-
-- **[Editor Client](editor-client.md)** - Frontend text art editor application
-  - Drawing tools and features
-  - Keyboard shortcuts and mouse controls
-  - Color management and palettes
-  - File operations and formats
-  - Canvas operations
-  - Client-side architecture
 
 - **[Collaboration Server](collaboration-server.md)** - Backend real-time collaboration server
   - Server architecture and features

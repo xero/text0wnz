@@ -95,9 +95,8 @@
 
 **Application Guides**
 
-- [Interface](docs/interface.md) - Visual guide to the user interface and options
-- [Editor Client](docs/editor-client.md) - Frontend text art editor application
-  - [Hotkeys](docs/editor-client.md#key-bindings--mouse-controls) - Editor shortcuts reference
+- [Editor Client Manual](manual.md) - Visual guide to the Frontend application
+   - [Key bindings](manual.md#key-bindings-summary) - Hot keys reference guide
 - [Collaboration Server](docs/collaboration-server.md) - Backend real-time collaboration server
 - [Architecture](docs/architecture.md) - System architecture and design overview
 - [PWA Install](docs/install-pwa.md) - Guide to installing the app on multiple platforms
@@ -144,7 +143,7 @@
 ## Key Bindings & Mouse/Touch Controls
 
 > [!NOTE]
-> See: [docs/editor-client](docs/editor-client.md) for more info.
+> See: [docs/manual.md](docs/manual.md) for more info.
 
 ### Main Shortcuts
 
