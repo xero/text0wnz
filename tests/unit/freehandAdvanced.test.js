@@ -15,6 +15,8 @@ import {
 // Mock dependencies
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
+		fontWidth: 8,
+		fontHeight: 16,
 		palette: {
 			getRGBAColor: vi.fn(() => [255, 0, 0, 255]),
 			getForegroundColor: vi.fn(() => 7),
@@ -64,6 +66,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 		font: {
 			getWidth: vi.fn(() => 8),
 			getHeight: vi.fn(() => 16),
+			getData: vi.fn(() => ({})),
 			draw: vi.fn(),
 			getLetterSpacing: vi.fn(() => false),
 			setLetterSpacing: vi.fn(),
@@ -173,6 +176,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 			},
 			addEventListener: vi.fn(),
 			removeEventListener: vi.fn(),
+			remove: vi.fn(),
 			getContext: vi.fn(() => ({
 				createImageData: vi.fn(() => ({
 					data: new Uint8ClampedArray(4),
@@ -181,8 +185,13 @@ vi.mock('../../src/js/client/ui.js', () => ({
 				})),
 				putImageData: vi.fn(),
 				drawImage: vi.fn(),
+				clearRect: vi.fn(),
+				strokeStyle: '',
+				lineWidth: 1,
+				strokeRect: vi.fn(),
 			})),
 			toDataURL: vi.fn(() => 'data:image/png;base64,mock'),
+			contains: vi.fn(() => false),
 		};
 		return mockCanvas;
 	}),
@@ -210,6 +219,7 @@ const mockDocument = {
 		appendChild: vi.fn(),
 		removeChild: vi.fn(),
 		insertBefore: vi.fn(),
+		contains: vi.fn(() => false),
 		getBoundingClientRect: vi.fn(() => ({
 			left: 0,
 			top: 0,
@@ -258,8 +268,8 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 			mockCharacterElement = { click: vi.fn() };
 		});
 
-		it('should create a sample tool with proper interface', () => {
-			const tool = createSampleTool(
+		it('should create a sample tool with proper interface', async () => {
+			const tool = await createSampleTool(
 				mockShadeBrush,
 				mockShadeElement,
 				mockCharacterBrush,
@@ -271,8 +281,8 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 			expect(tool).toHaveProperty('sample');
 		});
 
-		it('should handle sampling functionality', () => {
-			const tool = createSampleTool(
+		it('should handle sampling functionality', async () => {
+			const tool = await createSampleTool(
 				mockShadeBrush,
 				mockShadeElement,
 				mockCharacterBrush,
@@ -285,7 +295,7 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 		});
 
 		it('should handle blocky half-block sampling', async () => {
-			const tool = createSampleTool(
+			const tool = await createSampleTool(
 				mockShadeBrush,
 				mockShadeElement,
 				mockCharacterBrush,
@@ -307,7 +317,7 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 		});
 
 		it('should handle non-blocky character sampling', async () => {
-			const tool = createSampleTool(
+			const tool = await createSampleTool(
 				mockShadeBrush,
 				mockShadeElement,
 				mockCharacterBrush,
@@ -328,8 +338,8 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 				backgroundColor: 0,
 			});
 
-			// Test the sampling
-			tool.sample(5, 10);
+			// Test the sampling (now async)
+			await tool.sample(5, 10);
 
 			// Should call appropriate brush selection
 			expect(mockCharacterBrush.select).toHaveBeenCalledWith(65);
@@ -337,7 +347,7 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 		});
 
 		it('should handle shading character sampling', async () => {
-			const tool = createSampleTool(
+			const tool = await createSampleTool(
 				mockShadeBrush,
 				mockShadeElement,
 				mockCharacterBrush,
@@ -358,16 +368,16 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 				backgroundColor: 0,
 			});
 
-			// Test the sampling
-			tool.sample(5, 10);
+			// Test the sampling (now async)
+			await tool.sample(5, 10);
 
 			// Should call shade brush selection
 			expect(mockShadeBrush.select).toHaveBeenCalledWith(177);
 			expect(mockShadeElement.click).toHaveBeenCalled();
 		});
 
-		it('should manage canvas down events', () => {
-			const tool = createSampleTool(
+		it('should manage canvas down events', async () => {
+			const tool = await createSampleTool(
 				mockShadeBrush,
 				mockShadeElement,
 				mockCharacterBrush,
@@ -445,9 +455,9 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 	});
 
 	describe('Panel State Management', () => {
-		it('should handle panel enable/disable states correctly', () => {
-			const shadingPanel = createShadingPanel();
-			const characterPanel = createCharacterBrushPanel();
+		it('should handle panel enable/disable states correctly', async () => {
+			const shadingPanel = await createShadingPanel();
+			const characterPanel = await createCharacterBrushPanel();
 
 			// Test enable/disable
 			expect(() => {
@@ -458,9 +468,9 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 			}).not.toThrow();
 		});
 
-		it('should handle panel ignore/unignore states', () => {
-			const shadingPanel = createShadingPanel();
-			const characterPanel = createCharacterBrushPanel();
+		it('should handle panel ignore/unignore states', async () => {
+			const shadingPanel = await createShadingPanel();
+			const characterPanel = await createCharacterBrushPanel();
 
 			// Test ignore/unignore
 			expect(() => {
@@ -471,9 +481,9 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 			}).not.toThrow();
 		});
 
-		it('should return consistent mode data', () => {
-			const shadingPanel = createShadingPanel();
-			const characterPanel = createCharacterBrushPanel();
+		it('should return consistent mode data', async () => {
+			const shadingPanel = await createShadingPanel();
+			const characterPanel = await createCharacterBrushPanel();
 
 			const shadingMode = shadingPanel.getMode();
 			const characterMode = characterPanel.getMode();
@@ -542,9 +552,9 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 			expect(afterDisableCount).toBeGreaterThan(0);
 		});
 
-		it('should handle multiple panel instances', () => {
-			const panel1 = createShadingPanel();
-			const panel2 = createCharacterBrushPanel();
+		it('should handle multiple panel instances', async () => {
+			const panel1 = await createShadingPanel();
+			const panel2 = await createCharacterBrushPanel();
 			const panel3 = createFloatingPanelPalette(128, 64);
 
 			expect(() => {

@@ -61,10 +61,19 @@ const createFKeys = () => {
 		for (let i = 0; i < 12; i++) {
 			const canvas = $('fkey' + i);
 			if (canvas) {
+				// Set canvas internal dimensions
 				canvas.width = State.font.getWidth();
 				canvas.height = State.font.getHeight();
-				canvas.style.width = State.font.getWidth() + 'px';
-				canvas.style.height = State.font.getHeight() + 'px';
+
+				// Keep CSS display size fixed at 1.5x of BASE font size
+				// This maintains the original UI appearance regardless of zoom
+				const baseWidth = State.fontWidth;
+				const baseHeight = State.fontHeight;
+				const fixedScale = 1.5;
+
+				canvas.style.width = baseWidth * fixedScale + 'px';
+				canvas.style.height = baseHeight * fixedScale + 'px';
+
 				State.font.draw(
 					currentSet[i],
 					State.palette.getForegroundColor(),
@@ -443,6 +452,7 @@ const createCursor = canvasContainer => {
 	document.addEventListener('onTextCanvasSizeChange', updateDimensions);
 	document.addEventListener('onFontChange', updateDimensions);
 	document.addEventListener('onOpenedFile', updateDimensions);
+	document.addEventListener('onScaleFactorChange', updateDimensions);
 	move(x, y);
 
 	return {

@@ -61,6 +61,7 @@ const createMockElement = (overrides = {}) => ({
 	appendChild: vi.fn(),
 	focus: vi.fn(),
 	insertBefore: vi.fn(),
+	setAttribute: vi.fn(),
 	value: 'mock',
 	innerText: 'mock',
 	textContent: 'mock',
@@ -122,6 +123,7 @@ const mockCreateFunctions = {
 		update: vi.fn(),
 		sync: vi.fn(),
 	})),
+	createZoomControl: vi.fn(() => createMockElement()),
 };
 
 // Set up global document BEFORE any imports

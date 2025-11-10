@@ -19,6 +19,7 @@ import {
 	undoAndRedo,
 	viewportTap,
 	createPaintShortcuts,
+	createViewportController,
 	createGenericController,
 	createResolutionController,
 	createGrid,
@@ -26,6 +27,7 @@ import {
 	createMenuController,
 	enforceMaxBytes,
 	createFontSelect,
+	createZoomControl,
 } from './ui.js';
 import {
 	createDefaultPalette,
@@ -63,6 +65,7 @@ let sauceAuthor;
 let sauceComments;
 let navSauce;
 let navDarkmode;
+let lblDarkmode;
 let metaTheme;
 let saveTimeout;
 let reload;
@@ -89,6 +92,7 @@ const $$$$ = () => {
 	sauceComments = $('sauceComments');
 	navSauce = $('navSauce');
 	navDarkmode = $('navDarkmode');
+	lblDarkmode = $('mode');
 	metaTheme = $$('meta[name="theme-color"]');
 	saveTimeout = null;
 	reload = $('updateReload');
@@ -154,6 +158,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 				State.selectionCursor = createSelectionCursor(canvasContainer);
 				State.cursor = createCursor(canvasContainer);
 				State.selectionTool = createSelectionTool();
+
+				// Initialize zoom control
+				const zoomControlContainer = $('zoomControl');
+				if (zoomControlContainer) {
+					const zoomControl = createZoomControl();
+					zoomControlContainer.appendChild(zoomControl);
+				}
 
 				// Tier 3: Secondary tools - defer with requestIdleCallback
 				const initSecondaryTools = () => {
@@ -526,11 +537,26 @@ const initializeAppComponents = async () => {
 	let shadeBrush = null;
 	let characterBrush = null;
 
+	const ensureBrushesLoaded = async () => {
+		if (!shadeBrush) {
+			const { createShadingController, createShadingPanel } = await import(
+				'./freehandTools.js'
+			);
+			shadeBrush = createShadingController(await createShadingPanel(), false);
+		}
+		if (!characterBrush) {
+			const { createShadingController, createCharacterBrushPanel } =
+				await import('./freehandTools.js');
+			characterBrush = createShadingController(
+				await createCharacterBrushPanel(),
+				true,
+			);
+		}
+		return { shadeBrush, characterBrush };
+	};
+
 	Toolbar.addLazy($('shadingBrush'), async () => {
-		const { createShadingController, createShadingPanel } = await import(
-			'./freehandTools.js'
-		);
-		shadeBrush = createShadingController(createShadingPanel(), false);
+		await ensureBrushesLoaded();
 		return {
 			onFocus: shadeBrush.enable,
 			onBlur: shadeBrush.disable,
@@ -541,10 +567,7 @@ const initializeAppComponents = async () => {
 	});
 
 	Toolbar.addLazy($('characterBrush'), async () => {
-		const { createShadingController, createCharacterBrushPanel } = await import(
-			'./freehandTools.js'
-		);
-		characterBrush = createShadingController(createCharacterBrushPanel(), true);
+		await ensureBrushesLoaded();
 		return {
 			onFocus: characterBrush.enable,
 			onBlur: characterBrush.disable,
@@ -618,35 +641,24 @@ const initializeAppComponents = async () => {
 			enable: circle.enable,
 		};
 	});
+
 	const fonts = createGenericController($('fontToolbar'), $('fonts'));
 	Toolbar.add($('fonts'), fonts.enable, fonts.disable);
 	const clipboard = createGenericController(
 		$('clipboardToolbar'),
 		$('clipboard'),
 	);
+
+	const view = createViewportController($('viewportToolbar'));
+	Toolbar.add($('navView'), view.enable, view.disable);
+
 	Toolbar.add($('clipboard'), clipboard.enable, clipboard.disable);
 
 	Toolbar.addLazy($('sample'), async () => {
-		// Sample tool depends on shading brushes, so we need to ensure they're loaded
 		const { createSampleTool } = await import('./freehandTools.js');
+		await ensureBrushesLoaded();
 
-		// If brushes aren't loaded yet, we need to load them first
-		if (!shadeBrush) {
-			const { createShadingController, createShadingPanel } = await import(
-				'./freehandTools.js'
-			);
-			shadeBrush = createShadingController(createShadingPanel(), false);
-		}
-		if (!characterBrush) {
-			const { createShadingController, createCharacterBrushPanel } =
-				await import('./freehandTools.js');
-			characterBrush = createShadingController(
-				createCharacterBrushPanel(),
-				true,
-			);
-		}
-
-		State.sampleTool = createSampleTool(
+		State.sampleTool = await createSampleTool(
 			shadeBrush,
 			$('shadingBrush'),
 			characterBrush,
@@ -658,6 +670,7 @@ const initializeAppComponents = async () => {
 			enable: State.sampleTool.enable,
 		};
 	});
+
 	createSettingToggle(
 		$('mirror'),
 		State.textArtCanvas.getMirrorMode,
@@ -735,6 +748,7 @@ const initializeAppComponents = async () => {
 		const isDark = htmlDoc.classList.contains('dark');
 		navDarkmode.setAttribute('aria-pressed', isDark);
 		metaTheme.setAttribute('content', isDark ? '#333333' : '#4f4f4f');
+		lblDarkmode.innerText = isDark ? 'Night' : 'Light';
 	};
 	onClick(navDarkmode, darkToggle);
 	window.matchMedia('(prefers-color-scheme: dark)').matches && darkToggle();

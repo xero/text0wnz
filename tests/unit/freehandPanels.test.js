@@ -13,6 +13,8 @@ import {
 // Mock dependencies
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
+		fontWidth: 8,
+		fontHeight: 16,
 		palette: {
 			getRGBAColor: vi.fn(() => [255, 0, 0, 255]),
 			getForegroundColor: vi.fn(() => 7),
@@ -62,6 +64,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 		font: {
 			getWidth: vi.fn(() => 8),
 			getHeight: vi.fn(() => 16),
+			getData: vi.fn(() => ({})),
 			draw: vi.fn(),
 			getLetterSpacing: vi.fn(() => false),
 			setLetterSpacing: vi.fn(),
@@ -208,6 +211,7 @@ const mockDocument = {
 		appendChild: vi.fn(),
 		removeChild: vi.fn(),
 		insertBefore: vi.fn(),
+		contains: vi.fn(() => false),
 		getBoundingClientRect: vi.fn(() => ({
 			left: 0,
 			top: 0,
@@ -483,8 +487,8 @@ describe('Freehand Tools - Panels and Cursors', () => {
 	});
 
 	describe('createShadingPanel', () => {
-		it('should create a shading panel with proper interface', () => {
-			const panel = createShadingPanel();
+		it('should create a shading panel with proper interface', async () => {
+			const panel = await createShadingPanel();
 
 			expect(panel).toHaveProperty('enable');
 			expect(panel).toHaveProperty('disable');
@@ -494,8 +498,8 @@ describe('Freehand Tools - Panels and Cursors', () => {
 			expect(panel).toHaveProperty('unignore');
 		});
 
-		it('should return valid mode data', () => {
-			const panel = createShadingPanel();
+		it('should return valid mode data', async () => {
+			const panel = await createShadingPanel();
 			const mode = panel.getMode();
 
 			expect(mode).toHaveProperty('halfBlockMode');
@@ -508,8 +512,8 @@ describe('Freehand Tools - Panels and Cursors', () => {
 			expect(typeof mode.charCode).toBe('number');
 		});
 
-		it('should handle character selection', () => {
-			const panel = createShadingPanel();
+		it('should handle character selection', async () => {
+			const panel = await createShadingPanel();
 
 			expect(() => {
 				panel.select(177); // Light shade character
@@ -518,8 +522,8 @@ describe('Freehand Tools - Panels and Cursors', () => {
 	});
 
 	describe('createCharacterBrushPanel', () => {
-		it('should create a character brush panel', () => {
-			const panel = createCharacterBrushPanel();
+		it('should create a character brush panel', async () => {
+			const panel = await createCharacterBrushPanel();
 
 			expect(panel).toHaveProperty('enable');
 			expect(panel).toHaveProperty('disable');
@@ -530,8 +534,8 @@ describe('Freehand Tools - Panels and Cursors', () => {
 			expect(panel).toHaveProperty('redrawGlyphs');
 		});
 
-		it('should return valid mode for character selection', () => {
-			const panel = createCharacterBrushPanel();
+		it('should return valid mode for character selection', async () => {
+			const panel = await createCharacterBrushPanel();
 			const mode = panel.getMode();
 
 			expect(mode).toHaveProperty('halfBlockMode');
@@ -541,8 +545,8 @@ describe('Freehand Tools - Panels and Cursors', () => {
 			expect(mode.halfBlockMode).toBe(false);
 		});
 
-		it('should handle character code selection correctly', () => {
-			const panel = createCharacterBrushPanel();
+		it('should handle character code selection correctly', async () => {
+			const panel = await createCharacterBrushPanel();
 
 			expect(() => {
 				panel.select(65); // Character 'A'

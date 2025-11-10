@@ -68,6 +68,7 @@
 	--color-midnight: var(--midnight);
 	--color-file: var(--light-file);
 	--color-iron: var(--iron);
+	--color-thumb: var(--chat);
 }
 .dark {
 	--color-lbl: var(--midnight);
@@ -81,6 +82,7 @@
 	--color-tools: var(--dark-tools);
 	--color-hl: var(--dark-hl);
 	--color-file: var(--dark-file);
+	--color-thumb: var(--dark-tools);
 	dialog::backdrop {
 		background: radial-gradient(
 			circle,
@@ -267,7 +269,7 @@
 	}
 
 	#chatWindow {
-		@apply flex fixed top-[var(--header-size)] right-0 z-50 scale-y-100 opacity-100
+		@apply flex fixed top-[var(--header-size)] right-0 z-50 scale-y-100 opacity-100 z-30
       w-[45vw] min-w-[30vw] max-w-full min-h-[300px] max-h-screen /*height intentionally omitted*/
       dialog-style;
 		transform-origin: top;
@@ -432,6 +434,14 @@
 	#selectionToolbar {
 		@apply hidden w-auto flex-row justify-start;
 	}
+	#viewportToolbar {
+		.toolButton kbd {
+			@apply mx-1;
+		}
+	}
+	#navDarkmode > kbd {
+		width: max-content;
+	}
 	.toolButton {
 		@apply text-white flex text-sm h-[var(--header-size)];
 		line-height: 20px;
@@ -455,55 +465,6 @@
 		min-width: 378px;
 	}
 
-	#viewportToolbar {
-		input[type='range'] {
-			@apply appearance-none bg-transparent;
-		}
-		input[type='range']::-webkit-slider-thumb {
-			@apply appearance-none bg-transparent;
-		}
-		input[type='range']:focus {
-			outline: none;
-		}
-		input[type='range']::-webkit-slider-thumb {
-			@apply appearance-none bg-tools cursor-ew-resize rounded-bl-xs;
-			height: 26px;
-			width: 16px;
-			margin-top: -9px;
-
-			&:hover {
-				@apply bg-cyan;
-			}
-		}
-		input[type='range']::-moz-range-thumb {
-			@apply bg-tools cursor-ew-resize rounded-bl-xs;
-			height: 26px;
-			width: 16px;
-
-			&:hover {
-				@apply bg-cyan;
-			}
-		}
-		input[type='range']::-webkit-slider-runnable-track {
-			@apply bg-file cursor-ew-resize w-full;
-			height: 8.4px;
-		}
-		input[type='range']:focus::-webkit-slider-runnable-track {
-			@apply bg-file;
-		}
-		input[type='range']::-moz-range-track {
-			@apply bg-file cursor-ew-resize w-full;
-			height: 8.4px;
-		}
-		.toolButton {
-			svg {
-				margin-inline: 5px;
-			}
-			kbd {
-				margin-right: 8px;
-			}
-		}
-	}
 	#clipboardToolbar,
 	#fontToolbar {
 		.toolButton {
@@ -540,15 +501,74 @@
 		@apply flex text-fg text-xs;
 
 		span {
-			@apply flex flex-col mx-1 my-auto;
-			margin-top: -5px;
+			@apply flex flex-col my-auto mx-1;
 			&:hover canvas {
 				outline: 1px solid var(--cyber);
 			}
 			canvas {
-				scale: 1.5;
-				margin: 3px auto auto auto;
+				scale: 1 !important;
+				margin: auto;
 			}
+		}
+	}
+	#navDarkmode,
+	#zoomControl {
+		&:hover,
+		&:focus,
+		&:focus-within {
+			@apply bg-transparent!;
+		}
+	}
+	#zoomControl {
+		#zoomSlider {
+			max-width: 70px;
+			margin-inline: 4px;
+		}
+		input[type='range'] {
+			@apply appearance-none bg-transparent;
+		}
+		input[type='range']::-webkit-slider-thumb {
+			@apply appearance-none bg-transparent;
+		}
+		input[type='range']:focus {
+			outline: none;
+		}
+		input[type='range']::-webkit-slider-thumb {
+			@apply appearance-none bg-thumb cursor-ew-resize rounded-bl-xs;
+			height: 26px;
+			width: 16px;
+			margin-top: -9px;
+
+			&:hover {
+				@apply bg-cyan;
+			}
+		}
+		input[type='range']::-moz-range-thumb {
+			@apply bg-thumb cursor-ew-resize rounded-bl-xs;
+			height: 25px;
+			width: 16px;
+
+			&:hover {
+				@apply bg-cyan;
+			}
+		}
+		input[type='range']::-webkit-slider-runnable-track {
+			@apply bg-midnight cursor-ew-resize w-full;
+			height: 8.4px;
+		}
+		input[type='range']:active:-webkit-slider-runnable-track {
+			@apply bg-tools;
+		}
+		input[type='range']::-moz-range-track {
+			@apply bg-midnight cursor-ew-resize w-full;
+			height: 8.4px;
+		}
+
+		label {
+			@apply text-sm text-fg p-1;
+		}
+		span {
+			@apply text-sm text-chat mx-0.5;
 		}
 	}
 
@@ -692,7 +712,7 @@
 	}
 
 	.menuList {
-		@apply z-40 block cursor-default absolute w-[300px] bg-file border-4 border-solid border-menu;
+		@apply block cursor-default absolute w-[300px] bg-file border-4 border-solid border-menu z-40;
 		box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
 	}
 
@@ -1082,7 +1102,7 @@
 	}
 
 	.floatingPanel {
-		@apply fixed hidden cursor-move bg-panel pr-1 pl-1 pb-1 pt-4 transition-none!;
+		@apply fixed hidden cursor-move bg-panel pr-1 pl-1 pb-1 pt-4 z-30 transition-none!;
 		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
 
 		&.enabled {
@@ -1151,8 +1171,7 @@
 	}
 
 	#dragdrop {
-		@apply fixed inset-0 hidden justify-center pointer-events-none top-0 left-0 bottom-0 right-0 w-full h-full bg-menu/90;
-		z-index: 999;
+		@apply fixed inset-0 hidden justify-center pointer-events-none top-0 left-0 bottom-0 right-0 w-full h-full bg-menu/90 z-50;
 		kbd {
 			@apply text-cyan text-center m-auto text-[4rem];
 		}

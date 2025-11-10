@@ -767,8 +767,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	const setFont = async (fontName, callback) => {
+	const setFont = async (fontName, callback, scaleFactor) => {
 		try {
+			// Get scale factor from State if not provided
+			const effectiveScaleFactor =
+				scaleFactor ?? State.font?.getScaleFactor?.() ?? 1;
+
 			if (fontName === 'XBIN' && xbFontData) {
 				const font = await loadFontFromXBData(
 					xbFontData.bytes,
@@ -776,6 +780,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					xbFontData.height,
 					xbFontData.letterSpacing,
 					State.palette,
+					effectiveScaleFactor,
 				);
 				State.font = font;
 				currentFontName = fontName;
@@ -802,6 +807,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					fallbackFont,
 					false,
 					State.palette,
+					effectiveScaleFactor,
 				);
 				State.font = font;
 				currentFontName = fallbackFont;
@@ -819,7 +825,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				}
 			} else {
 				const spacing = State.font ? State.font.getLetterSpacing() : false;
-				const font = await loadFontFromImage(fontName, spacing, State.palette);
+				const font = await loadFontFromImage(
+					fontName,
+					spacing,
+					State.palette,
+					effectiveScaleFactor,
+				);
 				State.font = font;
 				currentFontName = fontName;
 
@@ -838,6 +849,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		} catch (error) {
 			console.error('[Canvas] Failed to load font:', error);
 
+			// Get scale factor from State for fallback
+			const effectiveScaleFactor =
+				scaleFactor ?? State.font?.getScaleFactor?.() ?? 1;
+
 			// Fallback to CP437 in case of failure
 			const fallbackFont = magicNumbers.DEFAULT_FONT;
 			try {
@@ -845,6 +860,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					fallbackFont,
 					false,
 					State.palette,
+					effectiveScaleFactor,
 				);
 				State.font = font;
 				currentFontName = fallbackFont;
@@ -1305,6 +1321,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	document.addEventListener('onLetterSpacingChange', onCriticalChange);
 	document.addEventListener('onPaletteChange', onCriticalChange);
+	document.addEventListener('onScaleFactorChange', onCriticalChange);
 
 	const getXYCoords = (clientX, clientY, callback) => {
 		const rect = canvasContainer.getBoundingClientRect();

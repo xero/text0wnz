@@ -140,34 +140,47 @@ test.describe('Drawing Tools', () => {
 		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
+		// Ensure box is defined before proceeding
+		expect(box).not.toBeNull();
+
 		if (box) {
 			// Click brushes to show brush toolbar, then select halfblock
 			await page.locator('#brushes').click();
-			await page.waitForTimeout(200);
+			await page.waitForTimeout(300);
 			await page.locator('#halfblock').click();
+			await page.waitForTimeout(300);
+
+			// Use conservative coordinates that stay within canvas bounds
 			await page.mouse.move(box.x + 20, box.y + 20);
 			await page.mouse.down();
-			await page.mouse.move(box.x + 40, box.y + 40);
+			await page.mouse.move(
+				box.x + Math.min(40, box.width - 10),
+				box.y + Math.min(40, box.height - 10),
+			);
 			await page.mouse.up();
-			await page.waitForTimeout(200);
+			await page.waitForTimeout(300);
 
 			// Click shapes to show shapes toolbar, then select line
 			await page.locator('#shapes').click();
-			await page.waitForTimeout(200);
+			await page.waitForTimeout(300);
 			await page.locator('#line').click();
+			await page.waitForTimeout(300);
+
 			await page.mouse.move(box.x + 60, box.y + 60);
 			await page.mouse.down();
-			await page.mouse.move(box.x + 100, box.y + 60);
+			await page.mouse.move(box.x + Math.min(100, box.width - 10), box.y + 60);
 			await page.mouse.up();
-			await page.waitForTimeout(200);
+			await page.waitForTimeout(300);
 
 			// Square is also in shapes toolbar
 			await page.locator('#square').click();
-			await page.mouse.move(box.x + 120, box.y + 20);
+			await page.waitForTimeout(300);
+
+			await page.mouse.move(box.x + Math.min(120, box.width - 50), box.y + 20);
 			await page.mouse.down();
-			await page.mouse.move(box.x + 160, box.y + 60);
+			await page.mouse.move(box.x + Math.min(160, box.width - 10), box.y + 60);
 			await page.mouse.up();
-			await page.waitForTimeout(200);
+			await page.waitForTimeout(300);
 		}
 	});
 });

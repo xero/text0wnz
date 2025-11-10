@@ -57,6 +57,7 @@ export default [
 				// vitest / jsdom
 				Buffer: 'readonly',
 				beforeEach: 'readonly',
+				Event: 'readonly',
 				global: 'readonly',
 				HTMLElement: 'readonly',
 				KeyboardEvent: 'readonly',

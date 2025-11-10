@@ -182,12 +182,6 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#redo').click();
 		await page.waitForTimeout(200);
 
-		await page.locator('#navDarkmode').click();
-		await page.waitForTimeout(200);
-
-		await page.locator('#navGrid').click();
-		await page.waitForTimeout(200);
-
 		await page.locator('#fonts').click();
 		await page.waitForTimeout(300);
 
@@ -202,7 +196,15 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#fontsCancel').click();
 		await page.waitForTimeout(800);
 
-		//
+		await page.locator('#navView').click();
+		await page.waitForTimeout(300);
+
+		await page.locator('#navGrid').evaluate(el => el.click());
+		await page.waitForTimeout(300);
+
+		await page.locator('#navDarkmode').click();
+		await page.waitForTimeout(500);
+
 		// No errors should occur
 		const errors = await page.locator('.error, .errorMessage').count();
 		expect(errors).toBe(0);
