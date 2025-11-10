@@ -204,9 +204,11 @@ Draw with any character from the font. Includes a character picker for selecting
 Paint/recolor the foreground and background colors of the selected cell. Use the size dropdown to adjust the brush size to paint larger/smaller areas.
 
 **Brush size x1** _(default)_
+
 ![color-x1](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/color-x1.png)
 
 **Brush size x3**
+
 ![color-x3](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/color-x3.png)
 
 **Features:**

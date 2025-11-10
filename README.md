@@ -1,6 +1,6 @@
 # teXt.0w.nz
 
-**Your browser is the canvas**—draw, edit, and collaborate on ANSI, ASCII, NFO, and XBIN art in a retro text art editor rebooted for the modern web. Offline-first with auto-save/restore and local storage, plus optional real-time sessions. Crafted for keyboard-centric artists and creators using mouse or touch—_on any device_. Built with modern tools and automated testing for a seamless experience.
+**Your browser is the canvas**. Draw, edit, and collaborate on ANSI, ASCII, NFO, and XBIN art in a retro text art editor rebooted for the modern web. Offline-first with auto-save/restore and local storage, plus optional real-time sessions. Crafted for keyboard-centric artists and creators using mouse or touch, _on any device_. Built with modern tools and automated testing for a seamless experience.
 
 ![preview](https://raw.githubusercontent.com/xero/teXt0wnz/refs/heads/main/docs/preview.png)
 
@@ -177,6 +177,7 @@
 | ctrl+v          | Paste                       |
 | ctrl+shift+v    | Paste from system clipboard |
 | ctrl+delete     | Delete selection            |
+| ctrl +/-        | Adjust canvas zoom level    |
 
 ### Canvas Editing
 
