@@ -228,18 +228,25 @@
 
 **Requirements:**
 
+- bun (recommended over npm)
 - node.js (v22.19+)
-- bun (recommended) or npm
 
 **Quick Start:**
 
-install [bun](https://bun.com)
+Install [bun](https://bun.com):
 
 ```sh
+# From an existing npm installation:
 npm i -g bun
+
+# For UNIX systems like Linux, MacOS, and Open/FreeBSD:
+curl -fsSL https://bun.sh/install | bash
+
+# For Windows:
+powershell -c "irm bun.sh/install.ps1 | iex"
 ```
 
-install, build, and serve the app:
+Install dependencies, build, and serve the app:
 
 ```sh
 bun i      # or npm install

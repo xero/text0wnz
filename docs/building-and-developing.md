@@ -14,24 +14,19 @@ This guide covers the build process, development workflow, tooling, and scripts 
 
 This project uses [Bun](https://bun.com) as the preferred package manager and runtime for better performance.
 
-**NPM global install:**
+**Platform install examples**
 
-```bash
+```sh
+# From an existing npm installation:
 npm i -g bun
-```
 
-**NPM local install:**
-
-```bash
-npm i bun
-```
-
-**Manual install:**
-
-```bash
+# For UNIX systems like Linux, MacOS, and Open/FreeBSD:
 curl -fsSL https://bun.sh/install | bash
 # or
 wget -qO- https://bun.sh/install | bash
+
+# For Windows:
+powershell -c "irm bun.sh/install.ps1 | iex"
 ```
 
 ## Quick Start
