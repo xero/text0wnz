@@ -90,13 +90,14 @@
 - `*.png`: Image (export support only)
 
 ## Project Documentation
+
 - The [docs](docs/) folder of this repo contains the raw markdown documentation files as well as example artwork to view and play around with.
 - The [wiki](https://github.com/xero/text0wnz/wiki) renders these files into easier to read webpages. The wiki also hosts the documentation images to keep the repo size more manageable.
 
 **Application Guides**
 
-- [Editor Client Manual](manual.md) - Visual guide to the Frontend application
-   - [Key bindings](manual.md#key-bindings-summary) - Hot keys reference guide
+- **[Editor Manual](docs/manual.md) - Visual guide to the Frontend application**
+  - [Key bindings](docs/manual.md#key-bindings-summary) - Hot keys reference guide
 - [Collaboration Server](docs/collaboration-server.md) - Backend real-time collaboration server
 - [Architecture](docs/architecture.md) - System architecture and design overview
 - [PWA Install](docs/install-pwa.md) - Guide to installing the app on multiple platforms
@@ -143,77 +144,108 @@
 
 ## Key Bindings & Mouse/Touch Controls
 
-> [!NOTE]
-> See: [docs/manual.md](docs/manual.md#key-bindings-summary) for more info.
+**Main Tool Shortcuts:**
 
-### Main Shortcuts
-
-| Key | Action/Tool            |
+| Key | Tool/Action            |
 | --- | ---------------------- |
-| k   | Keyboard Mode          |
-| f   | Freestyle (half-block) |
-| b   | Character Brush        |
-| n   | Fill                   |
-| a   | Attribute Brush        |
-| g   | Grid Toggle            |
-| i   | iCE Colors Toggle      |
-| m   | Mirror Mode            |
+| `k` | Keyboard Mode          |
+| `f` | Freestyle (half-block) |
+| `b` | Character Brush        |
+| `n` | Fill Tool              |
+| `a` | Attribute Brush        |
+| `g` | Grid Toggle            |
+| `i` | iCE Colors Toggle      |
+| `m` | Mirror Mode            |
 
-### Color & Character
+**Color & Character:**
 
-| Key/Combo         | Action                                            |
-| ----------------- | ------------------------------------------------- |
-| d                 | Reset colors to default                           |
-| Q                 | Swap foreground/background                        |
-| 0–7               | Select foreground color (again for bright)        |
-| alt/option + 0–7  | Select background color (again for bright)        |
-| F1–F12 (function) | Insert specific characters (see keyboard toolbar) |
-| ctrl + [ / ]      | Cycle Function Key ANSI character sets            |
+| Key/Combo  | Action                             |
+| ---------- | ---------------------------------- |
+| `d`        | Reset colors to default            |
+| `q`        | Swap foreground/background         |
+| `0`–`7`    | Select basic color                 |
+| `F1`–`F12` | Insert block/character (see below) |
 
-### File & Canvas
+**File & Canvas:**
 
-| Key Combo       | Action                      |
-| --------------- | --------------------------- |
-| ctrl+z / ctrl+y | Undo / Redo                 |
-| ctrl+x          | Cut                         |
-| ctrl+c          | Copy                        |
-| ctrl+v          | Paste                       |
-| ctrl+shift+v    | Paste from system clipboard |
-| ctrl+delete     | Delete selection            |
-| ctrl +/-        | Adjust canvas zoom level    |
+| Combo                                     | Action                     |
+| ----------------------------------------- | -------------------------- |
+| `ctrl z` / `ctrl y`                       | Undo / Redo                |
+| `ctrl x`/`ctrl c`/`ctrl v`/`ctrl shift v` | Cut/Copy/Paste/SystemPaste |
+| `ctrl delete`                             | Delete selection           |
 
-### Canvas Editing
+**Navigation (Keyboard Mode):**
 
-| Combo          | Action              |
-| -------------- | ------------------- |
-| alt+up/down    | Insert/Delete row   |
-| alt+right/left | Insert/Delete col   |
-| alt+e/shift+e  | Erase row/col       |
-| alt+home/end   | Erase to start/end  |
-| alt+pgUp/pgDn  | Erase to top/bottom |
+| Key                      | Action                  |
+| ------------------------ | ----------------------- |
+| `arrow keys`             | Move cursor             |
+| `home`                   | Start of current row    |
+| `end`                    | End of current row      |
+| `page up` / `page down`  | Move by viewport screen |
+| `cmd left` / `cmd right` | Start/end of row        |
 
-### Navigation (Keyboard Mode)
+**Advanced Editing (alt + key):**
 
-| Key           | Action                 |
-| ------------- | ---------------------- |
-| arrow keys    | Move cursor            |
-| home/end      | Line start/end         |
-| page up/down  | Page jump              |
-| tab/backspace | Insert tab/delete left |
-| enter         | New line               |
+| Combo                           | Action               |
+| ------------------------------- | -------------------- |
+| `alt up` / `alt down`           | Insert/Delete row    |
+| `alt right` / `alt left`        | Insert/Delete column |
+| `alt e` / `alt shift e`         | Erase row/col        |
+| `alt home` / `alt end`          | Erase to start/end   |
+| `alt page up` / `alt page down` | Erase to top/bottom  |
 
-### Selection Tool
+**Selection Operations:**
 
-| Key | Action         |
-| --- | -------------- |
-| [,] | Flip selection |
-| M   | Move mode      |
+| Key       | Action         |
+| --------- | -------------- |
+| `[` / `]` | Flip selection |
+| `m`       | Move mode      |
 
-### Mouse / Touch
+**Selection Navigation:**
+
+| Key                      | Action                            |
+| ------------------------ | --------------------------------- |
+| `arrow keys`             | Move selection area by one cell   |
+| `shift arrow keys`       | Expand/shrink selection           |
+| `home` / `end`           | Expand selection to row start/end |
+| `page up` / `page down`  | Move selection by screen height   |
+| `cmd left` / `cmd right` | Expand selection to row start/end |
+
+**In Move Mode:**
+
+- `arrow keys`, `page up`, `page down` move selected content
+
+**Function Keys (`F1`–`F12`):** Quick character insert from CP437 font (blocks, symbols, shapes, and more).
+
+**The Classic CP437 ANSI block shortcuts**
+
+| Key   | Character | Description        |
+| ----- | --------- | ------------------ |
+| `f1`  | `░`       | Light shade block  |
+| `f2`  | `▒`       | Medium shade block |
+| `f3`  | `▓`       | Dark shade block   |
+| `f4`  | `█`       | Full block         |
+| `f5`  | `▀`       | Upper half block   |
+| `f6`  | `▄`       | Lower half block   |
+| `f7`  | `▌`       | Left half block    |
+| `f8`  | `▐`       | Right half block   |
+| `f9`  | `■`       | Small solid square [\*](https://16colo.rs/artist/alla%20xul) |
+| `f10` | `○`       | Circle             |
+| `f11` | `•`       | Bullet             |
+| `f12` | `NULL`    | Blank/transparent  |
+
+**Cycling character sets:**
+
+- Use toolbar or shortcuts (`ctrl [`, `ctrl ]`) to cycle predefined sets (blocks, box-drawing, symbols, accents, etc).
+
+### Mouse / Touch Controls
 
 - **Click/Touch:** Draw
 - **Drag:** Draw/Shape
-- **Alt+Click:** Sample color/alt draw
+- **Alt Click:** Sample color/alternative draw
+
+> [!TIP]
+> See: [docs/manual.md](docs/manual.md) for more info.
 
 ## Tips & Workflow
 
@@ -371,10 +403,13 @@ node src/js/server/main.js
 Prebuilt images are avalable in **linux/amd64** & **linux/arm64** flavors from multiple repositories:
 
 **[DockerHub](https://hub.docker.com/r/xerostyle/text0wnz):**
+
 ```sh
 docker pull xerostyle/text0wnz:latest
 ```
+
 **[GitHub Container Registry](https://github.com/xero/text0wnz/pkgs/container/text0wnz):**
+
 ```sh
 docker pull ghcr.io/xero/text0wnz:latest
 ```
@@ -419,6 +454,7 @@ docker run \
     -p 80:80 -p 443:443 \
     text0wnz:latest
 ```
+
 This setup enables:
 
 - Automatic HTTPS via Caddy's built-in certificate management
