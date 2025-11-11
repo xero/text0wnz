@@ -1,24 +1,26 @@
 # teXt0wnz Documentation
 
+![preview](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/preview.png)
+
 This directory contains comprehensive guides for using, developing, testing, and deploying the **teXt0wnz** editor.
 
 ## Quick Links
 
 ### For Users / Artists
 
-- Start here: "[The Manual](manual.md)"
+- Start here: **[The Editor Manual](manual.md)**
 - [PWA Install](install-pwa.md): Installation guide for multiple platforms
 - [Fonts](fonts.md) - Complete font reference and previews
 
 ### For Developers
 
-- Start here: [Building and Developing](building-and-developing.md)
+- Start here: **[Building and Developing](building-and-developing.md)**
 - Testing: [Testing Guide](testing.md)
 - Code quality: [Building and Developing - Linting and Formatting](building-and-developing.md#linting-and-formatting)
 
 ### For System Administrators
 
-- Start here: [Webserver Configuration](webserver-configuration.md)
+- Start here: **[Webserver Configuration](webserver-configuration.md)**
 - Collaboration server: [Collaboration Server](collaboration-server.md)
 - Containerization: [Docker Containerization](docker.md)
 - Monitoring: [Other Tools - Monitoring Tools](other-tools.md#monitoring-tools)
@@ -27,7 +29,7 @@ This directory contains comprehensive guides for using, developing, testing, and
 
 ### Application Guides
 
-- **[The Manual](manual.md)** - Visual guide to the Frontend text art editor
+- **[Client Editor Manual](manual.md)** - Visual guide to the Frontend text art editor
   - Drawing tools and features
   - Keyboard shortcuts and mouse controls
   - Color management and palettes

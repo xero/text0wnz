@@ -1,6 +1,6 @@
 # teXt.0w.nz
 
-**Your browser is the canvas**. Draw, edit, and collaborate on ANSI, ASCII, NFO, and XBIN art in a retro text art editor rebooted for the modern web. Offline-first with auto-save/restore and local storage, plus optional real-time sessions. Crafted for keyboard-centric artists and creators using mouse or touch, _on any device_. Built with modern tools and automated testing for a seamless experience.
+**Your browser is the canvas**. Draw, edit, and collaborate on ANSI, ASCII, NFO, and XBIN art in a retro text art editor rebooted for the modern web. Offline-first with auto-save/restore and local storage, plus optional real-time sessions. Crafted for keyboard-centric artists and creators using mouse or touch, _on any device_. Built with modern tools and automated testing for a seamless experience for text artists and developers.
 
 ![preview](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/preview.png)
 
@@ -101,6 +101,7 @@
 - [Architecture](docs/architecture.md) - System architecture and design overview
 - [PWA Install](docs/install-pwa.md) - Guide to installing the app on multiple platforms
 - [Privacy Policy](docs/privacy.md) - Privacy and data handling policy
+- [Security Policy](docs/security.md) - Vulnerability reporting & threat modeling
 
 **Development Guides**
 
@@ -143,7 +144,7 @@
 ## Key Bindings & Mouse/Touch Controls
 
 > [!NOTE]
-> See: [docs/manual.md](docs/manual.md) for more info.
+> See: [docs/manual.md](docs/manual.md#key-bindings-summary) for more info.
 
 ### Main Shortcuts
 
@@ -456,7 +457,7 @@ All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/mai
 - Port in use: Change server port or stop other process
 - SSL fails: Check cert/key files and permissions
 - Client can't connect: Check server, proxy, firewall settings
-- WebSocket drops: Validate nginx headers, trailing slash in proxy_pass
+- WebSocket drops: Validate webserver headers, note trailing slash in proxy_pass
 - Session not saving: Check write permissions, save interval
 - Permissions: Confirm systemd user access
 - Wrong port: Sync client/server configs

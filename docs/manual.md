@@ -1,57 +1,48 @@
-# teXt0wnz Manual
+# teXt0wnz Editor Manual
 
 ## Table of Contents
 
 - [Visual Reference](#visual-reference)
 - [Top Bar](#top-bar)
-  - [Editor Menus](#editor-menus)
+  - [Editor Menus](#-editor-menus)
     - [File Menu](#file-menu)
     - [Edit Menu](#edit-menu)
     - [Sauce Editor](#sauce-editor)
-  - [Status Display](#status-display)
+  - [Status Display](#-status-display)
   - [Canvas Resolution / Size](#canvas-resolution--size)
 - [Color Management](#color-management)
   - [Current Colors](#current-colors)
   - [Color Palette](#color-palette)
 - [Toolbar & Drawing Tools](#toolbar--drawing-tools)
-  - [Keyboard Mode](#keyboard-mode)
+  - [Keyboard Mode](#-keyboard-mode)
     - [Screen-Aware Navigation](#screen-aware-navigation)
-  - [Brushes](#brushes)
+  - [Brushes](#-brushes)
     - [Block / Freehand Brush](#block--freehand-brush)
     - [Shading Brush](#shading-brush)
     - [Character Brush](#character-brush)
     - [Colorize/Attribute Brush](#colorizeattribute-brush)
-  - [Fill Tool](#fill-tool)
-  - [Shapes](#shapes)
+  - [Fill Tool](#-fill-tool)
+  - [Shapes](#-shapes)
     - [Line Tool](#line-tool)
     - [Square/Circle Tool](#squarecircle-tool)
-  - [Selection Tool](#selection-tool)
-  - [Sample Tool](#sample-tool)
-  - [Mirror Mode](#mirror-mode)
-  - [History](#history)
-  - [Fonts](#fonts)
+  - [Selection Tool](#-selection-tool)
+  - [Sample Tool](#-sample-tool)
+  - [Mirror Mode](#-mirror-mode)
+  - [History](#-history)
+  - [Fonts](#-fonts)
     - [Font Select](#font-select)
     - [iCE Colors](#ice-colors)
     - [9pt Font](#9pt-font)
       - [Font Examples](#font-examples)
-  - [Viewport Options](#viewport-options)
+  - [Viewport Options](#-viewport-options)
     - [Zoom](#zoom)
-    - [Light/Dark Mode](#lightdark-mode)
-    - [Grid Overlay](#grid-overlay)
+    - [Light/Dark Mode](#-lightdark-mode)
+    - [Grid Overlay](#-grid-overlay)
 - [Collaboration Features](#collaboration-features)
   - [Chat Window](#chat-window)
     - [Features](#features)
     - [Usage](#usage)
 - [Key Bindings Summary](#key-bindings-summary)
-  - [Main Tool Shortcuts](#main-tool-shortcuts)
-  - [Color & Character](#color--character)
-  - [File & Canvas](#file--canvas)
-  - [Navigation (Keyboard Mode)](#navigation-keyboard-mode)
-  - [Advanced Editing (`alt` + key)](#advanced-editing-alt--key)
-  - [Selection Operations](#selection-operations)
-  - [Selection Navigation](#selection-navigation)
-  - [Function Keys (`F1`–`F12`)](#function-keys-f1f12)
-  - [Mouse Controls](#mouse-controls)
 - [Tips & Workflow](#tips--workflow)
   - [How to draw?](#how-to-draw)
 
@@ -167,7 +158,7 @@ The color system uses the classic 16-color ANSI palette with optional iCE colors
 - iCE colors (extended 16 background colors)
 - Custom palettes in XBIN format
 
-> See [xb-format.md](xb-format.md) for information on custom palettes and [architecture.md](architecture.md) for technical color handling details.
+> See [xb-format.md](xb-format.md) for information on custom palettes
 
 # Toolbar & Drawing Tools
 
@@ -603,8 +594,6 @@ The chat window is available when connected to a collaboration server. It provid
 
 > See [collaboration-server.md](collaboration-server.md) for details on setting up and using the collaboration server.
 
----
-
 # Key Bindings Summary
 
 **Main Tool Shortcuts:**
@@ -706,8 +695,6 @@ The chat window is available when connected to a collaboration server. It provid
 - **shift click:** Straight line with freehand
 - **alt click:** Sample colors (any tool)
 - **right click:** Context menu
-
----
 
 # Tips & Workflow
 
