@@ -23,28 +23,34 @@ teXt0wnz is a Progressive Web Application (PWA) for creating and editing text-mo
 2. **Collaborative mode** - Real-time multi-user editing via WebSocket server
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Browser Client                         │
-│  ┌─────────────┐  ┌──────────────┐  ┌───────────────┐       │
-│  │  UI Layer   │  │ Canvas Layer │  │ Storage Layer │       │
-│  │  (Controls) │  │  (Rendering) │  │  (IndexedDB)  │       │
-│  └─────────────┘  └──────────────┘  └───────────────┘       │
-│         │                │                   │              │
-│         └────────────────┴───────────────────┘              │
-│                          │                                  │
-│                   State Management                          │
-│                          │                                  │
-└──────────────────────────┼──────────────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│                      Browser Client                    │
+│  ┌─────────────┐  ┌──────────────┐  ┌───────────────┐  │
+│  │  UI Layer   │  │ Canvas Layer │  │ Storage Layer │  │
+│  │  (Controls) │  │  (Rendering) │  │  (IndexedDB)  │  │
+│  └─────────────┘  └──────────────┘  └───────────────┘  │
+│         │                │                   │         │
+│         └────────────────┴───────────────────┘         │
+│                          │                             │
+│                   State Management                     │
+│                          │                             │
+└──────────────────────────┼─────────────────────────────┘
+                           │
+                  ┌────────┼────────┐
+                  │        │        │
+         Service Worker    │   File System APIs
+         (Offline/Share)   │   (File Handlers)
+                           │
                            │
                   Optional WebSocket
                            │
-┌──────────────────────────┼──────────────────────────────────┐
-│                   Collaboration Server                      │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐        │
-│  │  WebSocket  │  │ Session Mgmt │  │ File Storage │        │
-│  │  Handlers   │  │   (Canvas)   │  │    (Disk)    │        │
-│  └─────────────┘  └──────────────┘  └──────────────┘        │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────┼────────────────────────────┐
+│                   Collaboration Server                │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │  WebSocket  │  │ Session Mgmt │  │ File Storage │  │
+│  │  Handlers   │  │   (Canvas)   │  │    (Disk)    │  │
+│  └─────────────┘  └──────────────┘  └──────────────┘  │
+└───────────────────────────────────────────────────────┘
 ```
 
 ## Application Modes
@@ -106,10 +112,10 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 │  Rendering Engine, Font Management, Dirty Tracking   │
 └─────────────────┬────────────────────────────────────┘
                   │
-┌─────────────────┴────────────────────────────────────┐
-│                      Data Layer                      │
-│  Storage (IndexedDB), File I/O, Network (WebSocket)  │
-└──────────────────────────────────────────────────────┘
+┌─────────────────┴────────────────────────────────────────────────────┐
+│                           Data Layer                                 │
+│  Storage (IndexedDB), File I/O, Network (WebSocket), PWA (Caching)   │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Core Modules
@@ -170,10 +176,35 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 - ANSI format (.ans, .utf8.ans)
 - Binary format (.bin)
 - XBIN format (.xb)
-- NFO format (.nfo)
+- Scene release formats (.nfo, .diz)
 - Plain text (.txt)
+- Full SAUCE metadata support
 - PNG export
-- SAUCE metadata support
+
+**File Opening Methods:**
+
+- Traditional file picker (all platforms)
+- Drag-and-drop (all platforms)
+- OS "Open with" (Desktop Chrome/Edge via File Handlers API)
+- Share sheet (Android via Share Target API)
+- iOS workaround (`accept="*/*"` for broader file access)
+
+**Service Worker** (`service.js`)
+
+- Offline support and caching
+- Share Target API (Android file sharing)
+- Runtime caching strategies
+- Workbox-based precaching
+- Stale file cleanup
+
+**PWA Capabilities** (`site.webmanifest`)
+
+- File Handlers API (Desktop "Open with" support)
+- Share Target API (Mobile share sheet integration)
+- Multi-platform file opening:
+  - Desktop: OS "Open with" → File Handlers API
+  - Android: Share sheet → Share Target API
+  - iOS: Manual file picker with `accept="*/*"` hack
 
 **Color Management** (`palette.js`)
 
@@ -490,24 +521,26 @@ When a drawing occurs:
 ### Client Modules
 
 ```
-src/js/client/
-├── main.js              # Application entry point
-├── state.js             # Global state management
-├── canvas.js            # Canvas rendering engine
-├── ui.js                # User interface components
-├── toolbar.js           # Toolbar management
-├── palette.js           # Color palette
-├── keyboard.js          # Keyboard mode and shortcuts
-├── freehandTools.js     # Drawing tools
-├── file.js              # File I/O operations
-├── network.js           # Network communication
-├── websocket.js         # WebSocket worker
-├── font.js              # Font loading and rendering
-├── lazyFont.js          # Lazy font loading
-├── fontCache.js         # Font caching
-├── storage.js           # IndexedDB persistence
-├── compression.js       # Data compression
-└── magicNumbers.js      # Constants and magic values
+src/
+├── js/client/
+│   ├── main.js            # Application entry point
+│   ├── state.js           # Global state management
+│   ├── canvas.js          # Canvas rendering engine
+│   ├── ui.js              # User interface components
+│   ├── toolbar.js         # Toolbar management
+│   ├── palette.js         # Color palette
+│   ├── keyboard.js        # Keyboard mode and shortcuts
+│   ├── freehandTools.js   # Drawing tools
+│   ├── file.js            # File I/O operations
+│   ├── network.js         # Network communication
+│   ├── websocket.js       # WebSocket worker
+│   ├── font.js            # Font loading and rendering
+│   ├── lazyFont.js        # Lazy font loading
+│   ├── fontCache.js       # Font caching
+│   ├── storage.js         # IndexedDB persistence
+│   ├── compression.js     # Data compression
+│   └── magicNumbers.js    # Constants and magic values
+└── service.js             # PWA service worker
 ```
 
 ### Server Modules
@@ -654,6 +687,35 @@ const saveToIndexedDB = debounce(() => {
 	db.put('canvasData', compressed, 'currentCanvas');
 }, 500);
 ```
+
+### Service Worker Cache (Cache API)
+
+**Purpose:** Temporary storage for shared files and offline support
+
+**Cache: `text0wnz-shared-files`**
+
+**Usage:**
+
+- Stores files shared via Share Target API (Android)
+- Temporary cache cleared after file is opened
+- Stale file cleanup on service worker activation
+
+**Cache Strategy:**
+
+```javascript
+// Service worker handles POST to /open
+self.addEventListener('fetch', event => {
+	if (url.pathname === '/open' && event.request.method === 'POST') {
+		// Cache shared file temporarily
+		event.respondWith(handleShareTarget(event.request));
+	}
+});
+```
+
+**Cache Cleanup:**
+
+- Files deleted immediately after opening in main app
+- Stale files cleaned on service worker activation
 
 ### Server Storage (File System)
 

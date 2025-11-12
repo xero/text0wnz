@@ -1111,9 +1111,9 @@ const loadModule = () => {
 							callback(columns, rows, data, iceColors, letterSpacing, fontName);
 						},
 					);
-					// Trigger character brush refresh for XB files
+					// Trigger font character refresh
 					document.dispatchEvent(new CustomEvent('onXBFontLoaded'));
-					// Then ensure everything is properly rendered after font loading completes
+					// Ensure everything is properly rendered after font loading
 					State.textArtCanvas.redrawEntireImage();
 					break;
 				case 'bin':
@@ -1129,21 +1129,21 @@ const loadModule = () => {
 						);
 					});
 					break;
+				case 'ans':
+				case 'diz':
+				case 'nfo':
+				case 'txt':
 				default:
-					// Clear any previous XB data to avoid palette persistence
 					State.textArtCanvas.clearXBData(() => {
 						imageData = loadAnsi(data, checkUTF8(file.name.toLowerCase()));
 						updateSauceModal(imageData);
-
 						callback(
 							imageData.width,
 							imageData.height,
 							convertData(imageData.data),
 							imageData.noblink,
 							imageData.letterSpacing,
-							file.name.toLowerCase().endsWith('nfo')
-								? magicNumbers.NFO_FONT
-								: imageData.fontName,
+							imageData.fontName,
 						);
 					});
 					break;
@@ -1185,7 +1185,8 @@ const saveModule = () => {
 						{
 							description: 'Text Art',
 							accept: {
-								'application/octet-stream': ['.ans', '.bin', '.xb'],
+								'application/octet-stream': ['.ans', '.bin', '.xb', '.diz'],
+								'text/plain': ['.txt'],
 								'image/png': ['.png'],
 							},
 						},
@@ -1656,12 +1657,12 @@ const saveModule = () => {
 
 	return {
 		ans: ans,
+		bin: bin,
+		plainText: plainText,
+		png: png,
 		utf8: utf8,
 		utf8noBlink: utf8noBlink,
-		plainText: plainText,
-		bin: bin,
 		xb: xb,
-		png: png,
 	};
 };
 const Save = saveModule();

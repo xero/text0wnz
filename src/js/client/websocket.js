@@ -1,4 +1,3 @@
-/* global self:readonly */
 let socket;
 let sessionID;
 let joint;

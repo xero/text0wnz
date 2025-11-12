@@ -50,6 +50,11 @@
 - **Web-based text art drawing, also works offline as a PWA**
   - No install required!
   - But easily [installed as a Progressive Web Application](docs/install-pwa.md) to your device
+- **Multi-platform file opening**
+  - Desktop: OS "Open with" integration (Chrome/Edge)
+  - Android: Share sheet integration
+  - iPad+iOS: Enhanced file picker
+  - Drag-and-drop support for everyone!
 - **Comprehensive keyboard shortcuts and mouse controls**
   - Draw using the keyboard, mouse, or touch screen
 - **Classic and modern fonts**
@@ -86,6 +91,7 @@
 - `*.bin`: DOS-era BIN
 - `*.xbin`: Modern XBIN
 - `*.nfo`: Scene/release NFO
+- `*.diz`: FILE_ID.DIZ release files
 - `*.txt`: ASCII or other plain text
 - `*.png`: Image (export support only)
 
@@ -326,7 +332,7 @@ bun www    # or npm run www
 dist/
 ├── index.html              # Main entry point
 ├── site.webmanifest        # PWA manifest
-├── service.js              # Service worker
+├── service.js              # Service worker (injectManifest strategy)
 ├── workbox-[hash].js       # Workbox runtime for caching
 ├── robots.txt              # Search engine directives
 ├── sitemap.xml             # Site map

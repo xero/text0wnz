@@ -14,7 +14,6 @@ export default ({ mode }) => {
 	const domain = process.env.VITE_DOMAIN || 'https://text.0w.nz';
 	const worker = process.env.VITE_WORKER_FILE || 'websocket.js';
 	const uiDir = ((process.env.VITE_UI_DIR || 'ui').replace(/^\/|\/?$/g, '')) + '/';
-	const uiDirSafe = uiDir.slice(0, -1).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 	return defineConfig({
 		root: './src',
@@ -253,12 +252,13 @@ export default ({ mode }) => {
 				}
 			},
 			VitePWA({
+				strategies: 'injectManifest',
+				srcDir: '.',
 				filename: 'service.js',
 				manifestFilename: 'site.webmanifest',
 				registerType: 'autoUpdate',
 				injectRegister: false,
 				includeAssets: ['**/*'],
-				precache: ['**/*'],
 				manifest: {
 					// PWA configuration and metadata
 					name: 'teXt0wnz',
@@ -274,6 +274,54 @@ export default ({ mode }) => {
 					background_color: '#000',
 					theme_color: '#000',
 					display_override: ['window-controls-overlay'], // removes window chrome
+					// Web Share Target API
+					share_target: {
+						action: '/open',
+						method: 'POST',
+						enctype: 'multipart/form-data',
+						params: {
+							title: 'title',
+							text: 'text',
+							files: [{
+								name: 'file',
+								accept: [
+									'.ans',
+									'.ansi',
+									'.xb',
+									'.xbin',
+									'.bin',
+									'.txt',
+									'.nfo',
+									'.diz',
+									'.utf8ans',
+									'text/plain',
+									'text/*',
+									'application/octet-stream'
+								]
+							}
+							]
+						}
+					},
+					file_handlers: [
+						{
+							action: '/',
+							name: 'Text Art Files',
+							accept: {
+								'text/plain': ['.txt'],
+								'application/octet-stream': [
+									'.ans',
+									'.ansi',
+									'.bin',
+									'.xb',
+									'.xbin',
+									'.nfo',
+									'.diz',
+									'.utf8ans'
+								],
+								'text/*': []
+							}
+						}
+					],
 					// fav/app icons
 					icons: [{
 						src: `${uiDir}img/web-app-manifest-512x512.png`,
@@ -349,13 +397,7 @@ export default ({ mode }) => {
 					additionalManifestEntries: [
 						{ url: '/', revision: cacheBuster() },
 					],
-					// cache all the things \o/
 					globPatterns: ['index.html', '**/*.{js,css,html,ico,png,svg,woff2}'],
-					cleanupOutdatedCaches: true,
-					clientsClaim: true,
-					skipWaiting: true,
-					navigateFallback: '/',
-					// ok, not all the things...
 					navigateFallbackDenylist: [
 						/^\/LICENSE.txt/,
 						/^\/humans.txt/,
@@ -364,23 +406,6 @@ export default ({ mode }) => {
 						/^\/tests/,
 					],
 					maximumFileSizeToCacheInBytes: 3000000,// 3mb max
-					runtimeCaching: [{
-						urlPattern: new RegExp(`^\\/${uiDirSafe}\\/img\\/.*\\.(png|svg|ico)$`),
-						handler: 'CacheFirst',
-						options: { cacheName: 'asset-cache' },
-					}, {
-						urlPattern: new RegExp(`^\\/${uiDirSafe}\\/js\\/.*\\.js$`),
-						handler: 'CacheFirst',
-						options: { cacheName: 'app-cache' },
-					}, {
-						urlPattern: new RegExp(`^\\/${uiDirSafe}\\/.*\\.(css|svg|woff2)$`),
-						handler: 'CacheFirst',
-						options: { cacheName: 'style-cache' },
-					}, {
-						urlPattern: /^\/(index\.html)?$/,
-						handler: 'CacheFirst',
-						options: { cacheName: 'html-cache' },
-					}],
 				},
 			}),
 		],

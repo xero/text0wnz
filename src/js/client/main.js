@@ -43,6 +43,9 @@ import {
 	createPasteTool,
 } from './keyboard.js';
 
+const CACHE_ID = 'text0wnz-shared-files';
+const CACHE_DATA = '/shared-file-data';
+
 let htmlDoc;
 let bodyContainer;
 let canvasContainer;
@@ -69,6 +72,8 @@ let lblDarkmode;
 let metaTheme;
 let saveTimeout;
 let reload;
+let palettePicker;
+let pendingFile = null;
 
 const $$$$ = () => {
 	htmlDoc = $$('html');
@@ -98,6 +103,101 @@ const $$$$ = () => {
 	reload = $('updateReload');
 };
 
+const openHandler = file => {
+	bodyContainer.classList.add('loading');
+	State.textArtCanvas.clearXBData();
+	State.textArtCanvas.clear();
+	Load.file(
+		file,
+		async (columns, rows, imageData, iceColors, letterSpacing, fontName) => {
+			const indexOfPeriod = file.name.lastIndexOf('.');
+			let fileTitle;
+			if (indexOfPeriod !== -1) {
+				fileTitle = file.name.substring(0, indexOfPeriod);
+			} else {
+				fileTitle = file.name;
+			}
+			State.title = fileTitle;
+			bodyContainer.classList.remove('loading');
+
+			const applyData = () => {
+				State.textArtCanvas.setImageData(
+					columns,
+					rows,
+					imageData,
+					iceColors,
+					letterSpacing,
+				);
+				palettePicker.updatePalette(); // ANSi
+				openFile.value = '';
+				viewport.scrollLeft = viewport.scrollTop = 0;
+			};
+
+			const isSceneFile =
+				file.name.toLowerCase().endsWith('.nfo') ||
+				file.name.toLowerCase().endsWith('.diz');
+			if (isSceneFile) {
+				await State.textArtCanvas.setFont(magicNumbers.NFO_FONT, applyData);
+				return; // Exit early since callback will be called from setFont
+			}
+			const isXBFile = file.name.toLowerCase().endsWith('.xb');
+			if (fontName && !isXBFile) {
+				// Only handle non-XB files here, as XB files handle font loading internally
+				const appFontName = Load.sauceToAppFont(fontName.trim());
+				if (appFontName) {
+					await State.textArtCanvas.setFont(appFontName, applyData);
+					return; // Exit early since callback will be called from setFont
+				}
+			}
+			applyData(); // Apply data without font change
+			palettePicker.updatePalette(); // XB
+		},
+	);
+};
+
+const handleLaunchFiles = () => {
+	if ('launchQueue' in window) {
+		window.launchQueue.setConsumer(async launchParams => {
+			if (!launchParams.files || launchParams.files.length === 0) {
+				return;
+			}
+			const fileHandle = launchParams.files[0];
+			try {
+				const file = await fileHandle.getFile();
+				console.log(`[Launch] File queued: ${file.name} (${file.size} bytes)`);
+				// Store the file to open after initialization
+				pendingFile = file;
+			} catch (error) {
+				console.error('[App] Error reading launched file:', error);
+			}
+		});
+	}
+};
+handleLaunchFiles();
+
+const handleFileShare = async () => {
+	try {
+		const cache = await caches.open(CACHE_ID);
+		const response = await cache.match(CACHE_DATA);
+
+		if (response) {
+			const filename = response.headers.get('X-Filename') || 'untitled.txt';
+			const fileSize = response.headers.get('X-File-Size') || '0';
+			const blob = await response.blob();
+			const file = new File([blob], filename, {
+				type:
+					response.headers.get('Content-Type') || 'application/octet-stream',
+			});
+			return { file, filename, fileSize };
+		}
+
+		return null;
+	} catch (error) {
+		console.error('[Error] Failed checking for shared file:', error);
+		return null;
+	}
+};
+
 // Debounce to avoid saving too frequently during drawing
 const save = () => {
 	if (saveTimeout) {
@@ -108,6 +208,8 @@ const save = () => {
 		saveTimeout = null;
 	}, 300);
 };
+
+const isIOS = () => (/iPad|iPhone|iPod/).test(navigator.userAgent);
 
 document.addEventListener('DOMContentLoaded', async () => {
 	// Initialize service worker
@@ -206,7 +308,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 const initializeAppComponents = async () => {
-	State.restoreStateFromLocalStorage();
+	// If we're not loading a new file, restore from localStorage
+	if (!pendingFile) {
+		State.restoreStateFromLocalStorage();
+	}
 	document.addEventListener('keydown', undoAndRedo);
 	createResolutionController(
 		$('resolutionLabel'),
@@ -294,59 +399,15 @@ const initializeAppComponents = async () => {
 	onReturn(reload, reload);
 
 	const palettePreview = createPalettePreview($('palettePreview'));
-	const palettePicker = createPalettePicker($('palettePicker'));
+	palettePicker = createPalettePicker($('palettePicker'));
 
-	const openHandler = file => {
-		bodyContainer.classList.add('loading');
-		State.textArtCanvas.clearXBData();
-		State.textArtCanvas.clear();
-		Load.file(
-			file,
-			async (columns, rows, imageData, iceColors, letterSpacing, fontName) => {
-				const indexOfPeriod = file.name.lastIndexOf('.');
-				let fileTitle;
-				if (indexOfPeriod !== -1) {
-					fileTitle = file.name.substring(0, indexOfPeriod);
-				} else {
-					fileTitle = file.name;
-				}
-				State.title = fileTitle;
-				bodyContainer.classList.remove('loading');
-
-				const applyData = () => {
-					State.textArtCanvas.setImageData(
-						columns,
-						rows,
-						imageData,
-						iceColors,
-						letterSpacing,
-					);
-					palettePicker.updatePalette(); // ANSi
-					openFile.value = '';
-					viewport.scrollLeft = viewport.scrollTop = 0;
-				};
-
-				const isNFOFile = file.name.toLowerCase().endsWith('.nfo');
-				if (isNFOFile) {
-					await State.textArtCanvas.setFont(magicNumbers.NFO_FONT, applyData);
-					return; // Exit early since callback will be called from setFont
-				}
-				const isXBFile = file.name.toLowerCase().endsWith('.xb');
-				if (fontName && !isXBFile) {
-					// Only handle non-XB files here, as XB files handle font loading internally
-					const appFontName = Load.sauceToAppFont(fontName.trim());
-					if (appFontName) {
-						await State.textArtCanvas.setFont(appFontName, applyData);
-						return; // Exit early since callback will be called from setFont
-					}
-				}
-				applyData(); // Apply data without font change
-				palettePicker.updatePalette(); // XB
-			},
-		);
-	};
 	onFileChange(openFile, openHandler);
 	createDragDropController(openHandler, $('dragdrop'));
+
+	if (isIOS()) {
+		// Make file picker accept all files on iOS
+		openFile.setAttribute('accept', '*/*');
+	}
 
 	onClick(navSauce, () => {
 		State.menus.close();
@@ -765,6 +826,27 @@ const initializeAppComponents = async () => {
 	document.addEventListener('onLetterSpacingChange', save);
 	document.addEventListener('onIceColorsChange', save);
 	document.addEventListener('onOpenedFile', save);
+
+	// Handle pending launched file
+	if (pendingFile) {
+		console.log(`[Launch] Opening launched file: ${pendingFile.name}`);
+		openHandler(pendingFile);
+		pendingFile = null;
+		return; // Exit early, don't check for shared files
+	}
+
+	// Check for shared files
+	const sharedFileData = await handleFileShare();
+	if (sharedFileData) {
+		console.log(`[Share] Opening shared file: ${sharedFileData.filename}`);
+		openHandler(sharedFileData.file);
+		// Clean up the cached file
+		caches
+			.open(CACHE_ID)
+			.then(cache => cache.delete(CACHE_DATA))
+			.catch(error =>
+				console.error('[Error] Failed to cleanup shared file cache:', error));
+	}
 };
 
 // Inject style sheets and manifest images into the build pipeline

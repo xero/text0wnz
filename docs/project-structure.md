@@ -135,20 +135,9 @@ src/
 ├── css/
 │   └── style.css          # Main Tailwind CSS styles
 ├── fonts/                 # Bitmap font assets (PNG format)
-│   ├── README.md          # Font documentation
-│   └── *.png              # Individual font files (100+ fonts)
-├── humans.txt             # Humans.txt file (credits)
 ├── img/                   # Static images and assets
-│   ├── manifest/          # PWA manifest icons
-│   │   ├── android-launchericon-48-48.png
-│   │   ├── apple-touch-icon.png
-│   │   ├── favicon-96x96.png
-│   │   ├── favicon.ico
-│   │   └── favicon.svg
-│   ├── logo.png           # Application logo
-│   ├── screenshot-*.png   # PWA install screenshots
-│   └── web-app-manifest-*.png  # PWA icons
 ├── index.html             # Main HTML entry point
+├── service.js             # PWA service worker (custom, not auto-generated)
 └── js/
     ├── client/            # Client-side JavaScript modules
     └── server/            # Server-side JavaScript modules
@@ -175,9 +164,22 @@ src/js/client/
 ├── toolbar.js             # Toolbar management
 ├── ui.js                  # User interface components
 └── websocket.js           # Security-hardened WebSocket worker
+src/service.js             # Service worker (separate from client bundle)
 ```
 
 #### Client Module Descriptions
+
+**service.js** - Service Worker (PWA)
+
+Located at `src/service.js` (root level, separate from client modules)
+
+- Workbox-based precaching with custom manifest injection
+- Runtime caching strategies (assets, scripts, styles, HTML)
+- Share Target API handler for Android file sharing
+- File Handlers API support for Desktop "Open with"
+- Stale shared file cleanup on activation
+- Cache API for temporary file storage
+- Exports: Service worker runtime (no exports, runs independently)
 
 **main.js** - Application Bootstrap
 
