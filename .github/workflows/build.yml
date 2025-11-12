@@ -60,7 +60,6 @@ jobs:
           [ -n "$(compgen -G "dist/ui/js/websocket.js")" ] || exit 1
           [ -n "$(compgen -G "dist/ui/icons*.svg")" ] || exit 1
           [ -n "$(compgen -G "dist/ui/stylez*.css")" ] || exit 1
-          [ -n "$(compgen -G "dist/workbox*.js")" ] || exit 1
           echo "Build successful"
       - name: upload build results as artifact
         if: success() && github.ref == 'refs/heads/main'

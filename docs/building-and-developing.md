@@ -68,7 +68,6 @@ dist/
 ├── index.html              # Main entry point
 ├── site.webmanifest        # PWA manifest
 ├── service.js              # Service worker
-├── workbox-[hash].js       # Workbox runtime for caching
 ├── robots.txt              # Search engine directives
 ├── sitemap.xml             # Site map
 ├── humans.txt              # Humans.txt file
