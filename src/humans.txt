@@ -45,42 +45,42 @@ Contributors:
 - LocalStorage settings persistence
 - IndexDB artwork and history caching
 - Progressive Web App
-	- Service worker
-	- File system handlers
-	- Share target API
+  - Service worker
+  - File system handlers
+  - Share target API
 - WebSocket Workers
   - Power the real-time collab server
 
 /* Build Software */
 
 - Bun: Dependency and build management
-	- https://bun.com
+  - https://bun.com
 - Vite: Build Framework (vite-plugin-pwa)
-	- https://vite.dev
-	- https://vite-pwa-org.netlify.app
+  - https://vite.dev
+  - https://vite-pwa-org.netlify.app
 - Terser: JS parser, mangler & compressor
-	- https://github.com/terser/terser
+  - https://github.com/terser/terser
 - Vitest: Unit Testing Framework (coverage-v8)
-	- https://vitest.dev
+  - https://vitest.dev
 - JSDOM & testing-library/jest-dom: Testing Tools
-	- https://github.com/jsdom/jsdom
-	- https://github.com/testing-library/jest-dom
+  - https://github.com/jsdom/jsdom
+  - https://github.com/testing-library/jest-dom
 - Playwright: End2End Testing Framework
-	- https://playwright.dev
+  - https://playwright.dev
 - PostCSS: CSS build tool-chain
-	- https://postcss.org
+  - https://postcss.org
 - TailwindCSS: Modern CSS framework
-	- https://tailwindcss.com
+  - https://tailwindcss.com
 - CssNano: CSS minifier
-	- https://cssnano.github.io/cssnano
+  - https://cssnano.github.io/cssnano
 - Prettier: Code Formatting
-	- https://prettier.io
+  - https://prettier.io
 - ESlint: Code Linting (plugin-html-eslint, plugin-stylistic)
-	- https://eslint.org
-	- https://html-eslint.org
-	- https://eslint.style
+  - https://eslint.org
+  - https://html-eslint.org
+  - https://eslint.style
 - NeoVim: the editor of choice
-	- https://neovim.io
+  - https://neovim.io
 
 /* EOF */
 
