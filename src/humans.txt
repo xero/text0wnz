@@ -1,48 +1,85 @@
 /* humanstxt.org */
+  ______     .______   _____ ______  ____
+ _\    /__   |   __/___\    \)    /_/   /_
+(_    ___/---:  _)     :\_      _/__   __/---.
+  |   )      |  \      |    __     |   )     |
+  |___  ..:  |__  ..:  |    \|     :___  ..: |
+  x0!\______/  \______/|_____\  .: |  \______|
+  .------.            .______ \____!________
+ /   _    \----./\.----\     \)    |    _   \_
+ |   )     \   /  \    /      \  . l___/     /
+ |         |         . |        .: _/      _/__
+ |__  ..:: |       .:: |   \   .:: \ ::.   )  /
+   \______/l____/\_____j___/\______!\________/
+
+/* teXt0wnz: your browser is the canvas */
+
+Site: https://teXt.0w.nz
+Wiki: https://github.com/xero/text0wnz/wiki
+Download: https://github.com/xero/text0wnz/releases
+Mirror: https://xero.github.io/text0wnz
+License: MIT
+Language: English
+
+/* Design and Code: the humans responsible */
+
+Current Author & Maintainer:
+	- xero (https://x-e.ro)
+
+Original Author (AnsiEdit):
+	- andyh (https://github.com/andyherbert)
+
+Contributors:
+	- https://github.com/xero/text0wnz/graphs/contributors
+
+/* Site */
+
+Standards:
+	- HTML 5
+	- CSS 4
+	- ES6 JavaScript
+
+Technologies:
+	- LocalStorage & IndexDB Caching
+	- Progressive Web App
+		- Service Worker
+		- File System Handlers
+		- Share Target API
+	- WebSocket Workers (Collab Server)
+
+Build Software:
+	- Bun: Dependency and build management
+		- https://bun.com
+	- Vite: Build Framework (vite-plugin-pwa)
+		- https://vite.dev
+		- https://vite-pwa-org.netlify.app
+	- Terser: JS parser, mangler & compressor
+		- https://github.com/terser/terser
+	- Vitest: Unit Testing Framework (coverage-v8)
+		- https://vitest.dev
+	- JSDOM & testing-library/jest-dom: Testing Tools
+		- https://github.com/jsdom/jsdom
+		- https://github.com/testing-library/jest-dom
+	- Playwright: End2End Testing Framework
+		- https://playwright.dev
+	- PostCSS: CSS build tool-chain
+		- https://postcss.org
+	- TailwindCSS: Modern CSS framework
+		- https://tailwindcss.com
+	- CssNano: CSS minifier
+		- https://cssnano.github.io/cssnano
+	- Prettier: Code Formatting
+		- https://prettier.io
+	- ESlint: Code Linting (plugin-html-eslint, plugin-stylistic)
+		- https://eslint.org
+		- https://html-eslint.org
+		- https://eslint.style
+	- NeoVim: the editor of choice
+		- https://neovim.io
+
+/* EOF */
 
 	_/ _ \)_/ /\    _ __
 	/‾(/_(\/‾ \/\))/ ) /_
 
-/* teXt0wnz: The Online Collaborative Text Art Editor */
-
-	Site: https://text.0w.nz
-	Download: https://github.com/xero/text0wnz/releases
-	License: MIT
-
-/* Design and Code */
-
-	Author: xero (x0^67^aMi5H^iMP!)
-	Author: andy (blocktronics)
-
-/* Site */
-
-	Standards:
-		- HTML 5
-		- CSS 4
-		- ES6 Javascript
-		- WebSockets
-
-	Software:
-		- Bun: Dependency and build management
-			- https://bun.sh
-		- Vite: Build Framework (vite-plugin-pwa)
-			- https://vite.dev
-		- Vitest: Unit Testing Framework (coverage-v8)
-			- https://vitest.dev
-		- jsdom & testing-library/jest-dom: Testing Tools
-			- https://github.com/jsdom/jsdom
-			- https://github.com/testing-library/jest-dom
-		- prettier: Code Formatting
-			- https://prettier.io
-		- eslint: Code Linting (plugin-html-eslint, plugin-stylistic)
-			- https://eslint.org
-			- https://html-eslint.org
-			- https://eslint.style
-		- PostCSS: CSS build tool-chain
-			- https://postcss.org
-		- TailwindCSS: Modern CSS framework
-			- https://tailwindcss.com
-		- CssNano: CSS minifier
-			- https://cssnano.github.io/cssnano
-		- NeoVim: My editor of choice
-			- https://neovim.io
+   https://teXt.0w.nz
