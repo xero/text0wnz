@@ -21,7 +21,7 @@
 [![Latest Deployment](https://img.shields.io/github/deployments/xero/text0wnz/github-pages?logo=githubactions&logoColor=979da4&label=Pages%20Deployment&labelColor=262a2e)](https://github.com/xero/text0wnz/deployments)
 [![Latest Wiki Deployment](https://img.shields.io/badge/success-success?logo=gitbook&logoColor=979da4&labelColor=262a2e&label=Wiki%20Deployment)](https://github.com/xero/text0wnz/wiki)
 [![Schema](https://img.shields.io/badge/Valid-Valid?logo=semanticweb&logoColor=979da4&labelColor=262a2e&label=Schema)](https://validator.schema.org/#url=https%3A%2F%2Fraw.githubusercontent.com%2Fxero%2FteXt0wnz%2Frefs%2Fheads%2Fmain%2Fsrc%2Findex.html)
-[![Lighthouse Preformance](https://img.shields.io/badge/99%25-lighthouse?logo=lighthouse&logoColor=979da4&label=Lighthouse&labelColor=262a2e)](https://pagespeed.web.dev/analysis/https-text-0w-nz/eo49m2s0eo?hl=en-US&form_factor=desktop)
+[![Lighthouse Preformance](https://img.shields.io/badge/100%25-lighthouse?logo=lighthouse&logoColor=979da4&label=Lighthouse&labelColor=262a2e)](https://pagespeed.web.dev/analysis/https-text-0w-nz/eo49m2s0eo?hl=en-US&form_factor=desktop)
 [![Powered by Bun](https://img.shields.io/badge/Bun-Bun?labelColor=262a2e&logo=bun&logoColor=f9f1e1&label=Powered%20by&color=e47ab4&link=https%3A%2F%2Fbun.js)](https://bun.com)
 [![Eslint](https://img.shields.io/badge/Eslint-Eslint?logo=eslint&logoColor=979da4&label=Linting&labelColor=262a2e&color=00aaaa)](https://github.com/xero/teXt0wnz/blob/main/eslint.config.js)
 [![Prettier](https://img.shields.io/badge/Prettier-Prettier?logo=prettier&logoColor=979da4&label=Formatting&labelColor=262a2e&color=00aaaa)](https://github.com/xero/teXt0wnz/blob/main/.prettierrc)
@@ -31,7 +31,7 @@
 # Table o' Contents
 
 - [Features](#features)
-- [Supported File Types](#file-types)
+- [Supported File Types](#supported-file-types)
 - [Project Documentation](#project-documentation)
 - [Drawing & Editing Tools](#drawing--editing-tools)
 - [Key-bindings & Mouse/Touch Controls](#key-bindings--mousetouch-controls)
@@ -42,7 +42,6 @@
 - [Testing Suite](#testing-suite)
 - [Troubleshooting](#troubleshooting)
 - [Browser Support](#browser-support)
-- [Standards & Style](#standards--style)
 - [Project History](#project-history)
 - [License & Greetz](#license--greetz)
 
@@ -51,11 +50,6 @@
 - **Web-based text art drawing, also works offline as a PWA**
   - No install required!
   - But easily [installed as a Progressive Web Application](docs/install-pwa.md) to your device
-- **Multi-platform file opening**
-  - Desktop: OS "Open with" integration (Chrome/Edge)
-  - Android: Share sheet integration
-  - iPad+iOS: Enhanced file picker
-  - Drag-and-drop support for everyone!
 - **Comprehensive keyboard shortcuts and mouse controls**
   - Draw using the keyboard, mouse, or touch screen
 - **Classic and modern fonts**
@@ -65,8 +59,14 @@
 - **Advanced color management**
   - 16-color ANSI, iCE colors, real-time preview, color conflict resolution
   - Custom XBIN color palette support and selection
-- **Import/export:**
-  - ANSI, BIN, XBIN, NFO, DIZ, UTF-8 TXT, PNG
+- **Supported file types:**
+  - Import: ANSI, BIN, XBIN, NFO, DIZ, UTF-8 TXT
+  - Export: all of the above and PNG
+- **Multi-platform file opening**
+  - Desktop: OS "Open with" integration (Chrome/Edge)
+  - Android: Share sheet integration
+  - iPad+iOS: Enhanced file picker
+  - Drag-and-drop support for everyone!
 - **Canvas operations:**
   - Undo/redo, canvas resizing, font selection, and full SAUCE metadata support
 - **Editor options:**
@@ -85,21 +85,23 @@
 - **Robust linting and formatting:**
   - Eslint and Prettier
 
-## File Types
+## Supported File Types
 
-- `*.ans`: ANSI art
+- `*.ans`: ANSI art **‡**
 - `*.utf8.ans`: UTF-8 ANSI for terminals
-- `*.bin`: DOS-era binary format
-- `*.xb`: Modern XBIN
-- `*.nfo`: Scene/release format
-- `*.diz`: FILE_ID.DIZ release files
+- `*.bin`: DOS-era binary format **‡**
+- `*.xb`: Modern [XBIN](docs/xb-format.md) files **‡**
+- `*.nfo`: Scene release format **‡**
+- `*.diz`: FILE_ID.DIZ archive metadata files **‡**
 - `*.txt`: ASCII or other plain text
 - `*.png`: Image (export support only)
 
+**‡** with full [sauce](docs/sauce-format.md) support
+
 ## Project Documentation
 
-- **The [docs](docs/)** folder of this repo contains the raw markdown documentation files as well as example artwork to view and play around with.
-- **The [wiki](https://github.com/xero/text0wnz/wiki)** renders these files into easier to read webpages. The wiki also hosts the documentation images to keep the repo size more manageable.
+- The **[docs](docs/)** folder of this repo contains the raw markdown documentation files as well as example artwork to view and play around with.
+- The **[wiki](https://github.com/xero/text0wnz/wiki)** renders these files into easier to read webpages. The wiki also hosts the documentation images to keep the repo size more manageable.
 
 **Application Guides**
 
@@ -301,7 +303,7 @@ bun www    # or npm run www
 ```
 
 > [!NOTE]
-> See: [docs/building-and-developing](docs/building-and-developing.md) for more info.
+> See: [docs/building-and-developing](docs/building-and-developing.md) for more info
 
 **Scripts:**
 
@@ -316,6 +318,8 @@ bun www    # or npm run www
 | test:unit        | Run unit tests (Vitest)              |
 | test:e2e         | Run end to end tests (Playwright)    |
 | test:install     | Install playwright browsers          |
+
+> See: [package.json](package.json) for commands definitions
 
 **Build Process:**
 
@@ -358,6 +362,14 @@ dist/
 
 > [!IMPORTANT]
 > `DOMAIN` is only used for robots.txt and sitemap.xml generation, all app urls are relative
+
+
+**Code Standards & Style**
+
+- **HTML 5**: Semantic tagging
+- **CSS 4**: Modern nesting
+- **ES6 JavaScript**: Vanilla & framework free
+- Sources use all `lowercase` or `camelCase` names
 
 ## Collaborative Server
 
@@ -528,13 +540,6 @@ All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/mai
 - Firefox 93+
 - Safari 15+
 - Edge 95+
-
-## Standards & Style
-
-- **HTML 5**: Semantic tagging
-- **CSS 4**: Modern nesting
-- **ES6 JavaScript**: Vanilla & framework free
-- Sources use all `lowercase` or `camelCase` names
 
 ## Project History
 
