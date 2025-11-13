@@ -1,0 +1,42 @@
+{
+  "_meta": {
+    "date": "2025-11-13",
+    "verified_by": "caniuse.com data analysis",
+    "notes": "All target browsers fully supported. requestIdleCallback has setTimeout fallback implemented.",
+    "sources": "https://github.com/Fyrd/caniuse"
+  },
+  "chrome": {
+    "95.0": true,
+    "94.0": false,
+    "canary": true
+  },
+  "firefox": {
+    "93.0": true,
+    "92.0": false,
+    "nightly": true
+  },
+  "safari": {
+    "15.0": true,
+    "14.0": false
+  },
+  "edge": {
+    "95.0": true,
+    "94.0": false
+  },
+  "opera": {
+    "81.0": true,
+    "80.0": false
+  },
+  "iphone": {
+    "15.0": true,
+    "14.0": false
+  },
+  "ipad": {
+    "15.0": true,
+    "14.0": false
+  },
+  "android-chrome": {
+    "95.0": true,
+    "94.0": false
+  }
+}

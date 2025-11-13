@@ -534,12 +534,12 @@ All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/mai
 
 ## Browser Support
 
-> _Works on desktop and mobile!_
-
-- Chrome/Chromium 95+
-- Firefox 93+
-- Safari 15+
-- Edge 95+
+| Browser         | Chrome | Firefox | Safari | Edge  | Opera | iOS | iPadOS | Android |
+|-----------------|--------|---------|--------|-------|-------|--------|------|--------|
+| **Updated:** [2025-11-13](https://github.com/Fyrd/caniuse)  | <img src="https://raw.githubusercontent.com/alrra/browser-logos/refs/heads/main/src/chrome/chrome.svg"width="50" height="50"> | <img src="https://raw.githubusercontent.com/alrra/browser-logos/refs/heads/main/src/firefox/firefox.svg"width="50" height="50"> | <img src="https://raw.githubusercontent.com/alrra/browser-logos/refs/heads/main/src/archive/safari_8-13/safari_8-13.png"width="50" height="50"> | <img src="https://raw.githubusercontent.com/alrra/browser-logos/refs/heads/main/src/edge/edge.svg"width="50" height="50"> | <img src="https://raw.githubusercontent.com/alrra/browser-logos/refs/heads/main/src/opera/opera.svg"width="50" height="50"> | <img src="https://raw.githubusercontent.com/alrra/browser-logos/refs/heads/main/src/safari-ios/safari-ios.svg"width="50" height="50"> | <img src="https://raw.githubusercontent.com/alrra/browser-logos/refs/heads/main/src/safari-ios/safari-ios.svg"width="50" height="50"> | <img src="https://raw.githubusercontent.com/alrra/browser-logos/refs/heads/main/src/archive/chrome-android_18-36/chrome-android_18-36.png"width="50" height="50"> |
+| **Supported**   | 95.0+  | 93.0+   | 15.0+  | 95.0+ | 81.0+ | 15.0+  | 15.0+ | 95.0+ |
+| **Unsupported** | <94.0  | <92.0   | <14.0  | <94.0 | <80.0 | <14.0  | <14.0 | <94.0 |
+| **Latest Dev**  | Canary | Nightly | -      | -     | -     | -      | -     | -     |
 
 ## Project History
 
