@@ -42,6 +42,7 @@
 - [Testing Suite](#testing-suite)
 - [Troubleshooting](#troubleshooting)
 - [Browser Support](#browser-support)
+- [Standards & Style](#standards--style)
 - [Project History](#project-history)
 - [License & Greetz](#license--greetz)
 
@@ -527,6 +528,13 @@ All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/mai
 - Firefox 93+
 - Safari 15+
 - Edge 95+
+
+## Standards & Style
+
+- **HTML 5**: Semantic tagging
+- **CSS 4**: Modern nesting
+- **ES6 JavaScript**: Vanilla & framework free
+- Sources use all `lowercase` or `camelCase` names
 
 ## Project History
 

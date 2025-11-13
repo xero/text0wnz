@@ -1,18 +1,20 @@
 /* humanstxt.org */
-  ______     .______   _____ ______  ____
- _\    /__   |   __/___\    \)    /_/   /_
-(_    ___/---:  _)     :\_      _/__   __/---.
-  |   )      |  \      |    __     |   )     |
-  |___  ..:  |__  ..:  |    \|     :___  ..: |
-  x0!\______/  \______/|_____\  .: |  \______|
-  .------.            .______ \____!________
- /   _    \----./\.----\     \)    |    _   \_
- |   )     \   /  \    /      \  . l___/     /
- |         |         . |        .: _/      _/__
- |__  ..:: |       .:: |   \   .:: \ ::.   )  /
-   \______/l____/\_____j___/\______!\________/
 
-/* teXt0wnz: your browser is the canvas */
+         "your browser is the canvas"
+   ______     .______   _____ ______  ____
+  _\    /__   |   __/___\    \)    /_/   /_
+ (_    ___/---:  _)     :\_      _/__   __/---.
+   |   )      |  \      |    __     |   )     |
+   |___  ..:  |__  ..:  |    \|     :___  ..: |
+   x0!\______/  \______/|_____\  .: |  \______|
+   .------.            .______ \____!________
+  /   _    \----./\.----\     \)    |    _   \_
+  |   )     \   /  \    /      \  . l___/     /
+  |         |         . |        .: _/      _/__
+  |__  ..:: |       .:: |   \   .:: \ ::.   )  /
+    \______/l____/\_____j___/\______!\________/
+
+/* teXt0wnz: the rebooted retro text art editor */
 
 Site: https://teXt.0w.nz
 Wiki: https://github.com/xero/text0wnz/wiki
@@ -24,62 +26,65 @@ Language: English
 /* Design and Code: the humans responsible */
 
 Current Author & Maintainer:
-	- xero (https://x-e.ro)
+  - xero (https://x-e.ro)
 
-Original Author (AnsiEdit):
-	- andyh (https://github.com/andyherbert)
+Original Author [AnsiEdit]:
+  - andyh (https://github.com/andyherbert)
 
 Contributors:
-	- https://github.com/xero/text0wnz/graphs/contributors
+  - https://github.com/xero/text0wnz/graphs/contributors
 
-/* Site */
+/* Site Standards */
 
-Standards:
-	- HTML 5
-	- CSS 4
-	- ES6 JavaScript
+- HTML 5: Semantic tagging
+- CSS 4: Modern nesting
+- ES6 JavaScript: Vanilla & framework free
 
-Technologies:
-	- LocalStorage & IndexDB Caching
-	- Progressive Web App
-		- Service Worker
-		- File System Handlers
-		- Share Target API
-	- WebSocket Workers (Collab Server)
+/* Technologies */
 
-Build Software:
-	- Bun: Dependency and build management
-		- https://bun.com
-	- Vite: Build Framework (vite-plugin-pwa)
-		- https://vite.dev
-		- https://vite-pwa-org.netlify.app
-	- Terser: JS parser, mangler & compressor
-		- https://github.com/terser/terser
-	- Vitest: Unit Testing Framework (coverage-v8)
-		- https://vitest.dev
-	- JSDOM & testing-library/jest-dom: Testing Tools
-		- https://github.com/jsdom/jsdom
-		- https://github.com/testing-library/jest-dom
-	- Playwright: End2End Testing Framework
-		- https://playwright.dev
-	- PostCSS: CSS build tool-chain
-		- https://postcss.org
-	- TailwindCSS: Modern CSS framework
-		- https://tailwindcss.com
-	- CssNano: CSS minifier
-		- https://cssnano.github.io/cssnano
-	- Prettier: Code Formatting
-		- https://prettier.io
-	- ESlint: Code Linting (plugin-html-eslint, plugin-stylistic)
-		- https://eslint.org
-		- https://html-eslint.org
-		- https://eslint.style
-	- NeoVim: the editor of choice
-		- https://neovim.io
+- LocalStorage settings persistence
+- IndexDB artwork and history caching
+- Progressive Web App
+	- Service worker
+	- File system handlers
+	- Share target API
+- WebSocket Workers
+  - Power the real-time collab server
+
+/* Build Software */
+
+- Bun: Dependency and build management
+	- https://bun.com
+- Vite: Build Framework (vite-plugin-pwa)
+	- https://vite.dev
+	- https://vite-pwa-org.netlify.app
+- Terser: JS parser, mangler & compressor
+	- https://github.com/terser/terser
+- Vitest: Unit Testing Framework (coverage-v8)
+	- https://vitest.dev
+- JSDOM & testing-library/jest-dom: Testing Tools
+	- https://github.com/jsdom/jsdom
+	- https://github.com/testing-library/jest-dom
+- Playwright: End2End Testing Framework
+	- https://playwright.dev
+- PostCSS: CSS build tool-chain
+	- https://postcss.org
+- TailwindCSS: Modern CSS framework
+	- https://tailwindcss.com
+- CssNano: CSS minifier
+	- https://cssnano.github.io/cssnano
+- Prettier: Code Formatting
+	- https://prettier.io
+- ESlint: Code Linting (plugin-html-eslint, plugin-stylistic)
+	- https://eslint.org
+	- https://html-eslint.org
+	- https://eslint.style
+- NeoVim: the editor of choice
+	- https://neovim.io
 
 /* EOF */
 
-	_/ _ \)_/ /\    _ __
-	/‾(/_(\/‾ \/\))/ ) /_
+  _/ _ \)_/ /\    _ __
+  /‾(/_(\/‾ \/\))/ ) /_
 
    https://teXt.0w.nz
