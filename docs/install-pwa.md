@@ -19,20 +19,20 @@
 
 ## What is a PWA?
 
-Progressive Web Apps (PWAs) are web applications that can be installed on your device and work like native apps...
+Progressive Web Apps (PWAs) are web applications that can be installed on your device and work like native applications.
 
 ## Features
 
 ### Offline Support
 
-Once installed, teXt0wnz works completely offline...
+Once installed, teXt0wnz works completely offline.
 
 ### File Handling
 
 **Desktop (Chrome/Edge):**
 
 - OS-level "Open With" integration
-- Right-click `.ans`, `.xb`, `.bin` files → "Open with teXt0wnz"
+- Right-click `.ans`, `.xb`, `.bin`, etc files → "Open with teXt0wnz"
 
 **Android:**
 
@@ -103,7 +103,7 @@ This document provides step-by-step instructions for installing a Progressive We
 
 **Steps:**
 
-1. Firefox does not natively support PWA installation as a standalone app on desktop.
+1. Firefox _does not_ natively support PWA installation as a standalone app on desktop.
 2. You can use a third-party extension like [PWAs-For-FireFox](https://addons.mozilla.org/en-US/firefox/addon/pwas-for-firefox/)
 3. Alternatively, use Chrome or Edge for PWA installation on desktop.
 
@@ -206,7 +206,7 @@ This document provides step-by-step instructions for installing a Progressive We
 
 - For Microsoft Edge (desktop/mobile), installation steps are nearly identical to Chrome.
 - Some browsers and platforms may not fully support all PWA features or installation flows.
-- PWAs must meet browser criteria for installability (manifest, service worker, HTTPS, etc.).
+  > See: https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest
 
 ---
 

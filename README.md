@@ -65,9 +65,9 @@
   - 16-color ANSI, iCE colors, real-time preview, color conflict resolution
   - Custom XBIN color palette support and selection
 - **Import/export:**
-  - ANSI, BIN, XBIN, NFO, UTF-8 TXT, PNG
+  - ANSI, BIN, XBIN, NFO, DIZ, UTF-8 TXT, PNG
 - **Canvas operations:**
-  - Undo/redo, resizing, font selection, and full SAUCE metadata support
+  - Undo/redo, canvas resizing, font selection, and full SAUCE metadata support
 - **Editor options:**
   - Canvas zoom, light/dark mode, and grid overlay
 - **Auto Save/Restore**
@@ -88,17 +88,17 @@
 
 - `*.ans`: ANSI art
 - `*.utf8.ans`: UTF-8 ANSI for terminals
-- `*.bin`: DOS-era BIN
-- `*.xbin`: Modern XBIN
-- `*.nfo`: Scene/release NFO
+- `*.bin`: DOS-era binary format
+- `*.xb`: Modern XBIN
+- `*.nfo`: Scene/release format
 - `*.diz`: FILE_ID.DIZ release files
 - `*.txt`: ASCII or other plain text
 - `*.png`: Image (export support only)
 
 ## Project Documentation
 
-- The [docs](docs/) folder of this repo contains the raw markdown documentation files as well as example artwork to view and play around with.
-- The [wiki](https://github.com/xero/text0wnz/wiki) renders these files into easier to read webpages. The wiki also hosts the documentation images to keep the repo size more manageable.
+- **The [docs](docs/)** folder of this repo contains the raw markdown documentation files as well as example artwork to view and play around with.
+- **The [wiki](https://github.com/xero/text0wnz/wiki)** renders these files into easier to read webpages. The wiki also hosts the documentation images to keep the repo size more manageable.
 
 **Application Guides**
 
@@ -106,7 +106,7 @@
   - [Key bindings](docs/manual.md#key-bindings-summary) - Hot keys reference guide
 - [Collaboration Server](docs/collaboration-server.md) - Backend real-time collaboration server
 - [Architecture](docs/architecture.md) - System architecture and design overview
-- [PWA Install](docs/install-pwa.md) - Guide to installing the app on multiple platforms
+- [PWA Install](docs/install-pwa.md) - Guide to app installing and OS integration for multiple platforms
 - [Privacy Policy](docs/privacy.md) - Privacy and data handling policy
 - [Security Policy](docs/security.md) - Vulnerability reporting & threat modeling
 
