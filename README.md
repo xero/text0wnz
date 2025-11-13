@@ -32,6 +32,7 @@
 
 - [Features](#features)
 - [Supported File Types](#supported-file-types)
+- [Browser Support](#browser-support)
 - [Project Documentation](#project-documentation)
 - [Drawing & Editing Tools](#drawing--editing-tools)
 - [Key-bindings & Mouse/Touch Controls](#key-bindings--mousetouch-controls)
@@ -41,7 +42,6 @@
 - [Docker Containerization](#docker-containerization)
 - [Testing Suite](#testing-suite)
 - [Troubleshooting](#troubleshooting)
-- [Browser Support](#browser-support)
 - [Project History](#project-history)
 - [License & Greetz](#license--greetz)
 
@@ -87,16 +87,25 @@
 
 ## Supported File Types
 
-- `*.ans`: ANSI art **‡**
+- `*.ans`: ANSI art **_‡_**
 - `*.utf8.ans`: UTF-8 ANSI for terminals
-- `*.bin`: DOS-era binary format **‡**
-- `*.xb`: Modern [XBIN](docs/xb-format.md) files **‡**
-- `*.nfo`: Scene release format **‡**
-- `*.diz`: FILE_ID.DIZ archive metadata files **‡**
+- `*.bin`: DOS-era binary format **_‡_**
+- `*.xb`: Modern [XBIN](docs/xb-format.md) files **_‡_**
+- `*.nfo`: Scene release format **_‡_**
+- `*.diz`: FILE_ID.DIZ archive metadata files **_‡_**
 - `*.txt`: ASCII or other plain text
 - `*.png`: Image (export support only)
 
-**‡** with full [sauce](docs/sauce-format.md) support
+**_‡_** With full [Sauce](docs/sauce-format.md) metadata
+
+## Browser Support
+
+| Browser           | Chrome | Firefox | Safari | Edge   | Opera  | iOS     | iPadOS | Android |
+|-------------------|--------|---------|--------|--------|--------|---------|--------|---------|
+| **Updated:** <br> [2025-11-13](https://github.com/Fyrd/caniuse) | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/chrome.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/firefox.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/safari.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/edge.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/opera.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/ios.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/ipados.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/android.svg" width="50" height="50"> |
+| **Supported**     | 95.0+  | 93.0+   | 15.0+  | 95.0+  | 81.0+  | 15.0+   | 15.0+  | 95.0+   |
+| _**Unsupported**_ | < 94.0 | < 92.0  | < 14.0 | < 94.0 | < 80.0 | < 14.0  | < 14.0 | < 94.0  |
+| **Latest Dev**    | Canary | Nightly | -      | -      | -      | -       | -      | -       |
 
 ## Project Documentation
 
@@ -319,7 +328,8 @@ bun www    # or npm run www
 | test:e2e         | Run end to end tests (Playwright)    |
 | test:install     | Install playwright browsers          |
 
-> See: [package.json](package.json) for commands definitions
+> [!TIP]
+> See: [package.json](package.json) for full commands definitions
 
 **Build Process:**
 
@@ -338,7 +348,6 @@ dist/
 ├── index.html              # Main entry point
 ├── site.webmanifest        # PWA manifest
 ├── service.js              # Service worker (injectManifest strategy)
-├── workbox-[hash].js       # Workbox runtime for caching
 ├── robots.txt              # Search engine directives
 ├── sitemap.xml             # Site map
 ├── humans.txt              # Humans.txt file
@@ -508,17 +517,21 @@ All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/mai
 
 **Common Issues:**
 
+**Client**
 - Build fails: Check Node.js version, reinstall deps
+- e2e tests fail: Check you have the playwright browsers installed (`bun test:install`)
+- Client can't connect to server: Check server, proxy, firewall settings
+- WebSocket drops: Validate webserver headers, note trailing slash in proxy_pass
+
+**Still stuck?**
+[Review the wiki](https://github.com/xero/text0wnz/wiki) then [open an issue](https://github.com/xero/teXt0wnz/issues) with error logs and platform details.
+
+**Server:**
 - Port in use: Change server port or stop other process
 - SSL fails: Check cert/key files and permissions
-- Client can't connect: Check server, proxy, firewall settings
-- WebSocket drops: Validate webserver headers, note trailing slash in proxy_pass
 - Session not saving: Check write permissions, save interval
 - Permissions: Confirm systemd user access
 - Wrong port: Sync client/server configs
-
-**Still stuck?**
-[Open an issue](https://github.com/xero/teXt0wnz/issues) with error logs and platform details.
 
 **Tips:**
 
@@ -531,15 +544,6 @@ All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/mai
 
 > [!NOTE]
 > See: [docs/trouble_shooting](docs/webserver-configuration.md#troubleshooting) for more help.
-
-## Browser Support
-
-> _Works on desktop and mobile!_
-
-- Chrome/Chromium 95+
-- Firefox 93+
-- Safari 15+
-- Edge 95+
 
 ## Project History
 

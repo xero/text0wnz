@@ -139,6 +139,7 @@ This directory contains comprehensive guides for using, developing, testing, and
 - **[Examples](https://github.com/xero/text0wnz/tree/main/docs/examples)** - Sample artwork to view and edit
   - ANSI artwork by [xero](https://16colo.rs/artist/xero) (alias: x0^67^aMi5H^iMP!)
   - XBin artwork by [hellbeard](https://16colo.rs/artist/hellbeard) (alias: xz^dS^iMPuRe!)
+- **[Browser Compatibility Analysis](https://github.com/xero/text0wnz/wiki/browser-compatibility-analysis-guide)** - Guide for GitHub Copilot Agents to analyze the codebase and generate browser support statistics from raw caniuse.com data sets.
 
 ## Contributing
 
