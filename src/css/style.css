@@ -1179,7 +1179,8 @@
 		}
 	}
 
-	.iosWin header.dynamic {
+	/* ios 26 quirk */
+	.ios header.dynamic {
 		padding-left: 75px;
 	}
 
