@@ -18,12 +18,43 @@ const createCanvas = (width, height) => {
 };
 
 const toggleFullscreen = () => {
-	if (document.fullscreenEnabled) {
-		if (document.fullscreenElement) {
-			document.exitFullscreen();
+	// Check if any fullscreen API is available
+	const isFullscreenEnabled =
+		document.fullscreenEnabled || document.webkitFullscreenEnabled;
+
+	if (!isFullscreenEnabled) {
+		console.warn('[UI] Fullscreen not supported');
+		$('fullscreen').classList.add('disabled');
+		return;
+	}
+
+	try {
+		const fullscreenElement =
+			document.fullscreenElement ||
+			document.webkitFullscreenElement ||
+			document.webkitCurrentFullScreenElement; // Safari specific
+
+		if (fullscreenElement) {
+			if (document.exitFullscreen) {
+				document.exitFullscreen();
+			} else if (document.webkitExitFullscreen) {
+				document.webkitExitFullscreen();
+			} else if (document.webkitCancelFullScreen) {
+				document.webkitCancelFullScreen(); // Older Safari
+			}
 		} else {
-			document.documentElement.requestFullscreen();
+			const element = document.documentElement;
+
+			if (element.requestFullscreen) {
+				element.requestFullscreen();
+			} else if (element.webkitRequestFullscreen) {
+				element.webkitRequestFullscreen();
+			} else if (element.webkitRequestFullScreen) {
+				element.webkitRequestFullScreen(); // Older Safari (capital S)
+			}
 		}
+	} catch {
+		console.error('[UI] Failed toggling fullscreen mode');
 	}
 };
 

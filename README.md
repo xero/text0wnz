@@ -341,6 +341,9 @@ bun www    # or npm run www
   - `VITE_UI_DIR='ui/'`
   - `VITE_WORKER_FILE='websocket.js'`
 
+> [!IMPORTANT]
+> `VITE_DOMAIN` is _only_ used for robots.txt and sitemap.xml generation, **all app urls are relative**
+
 **Build Output Structure:**
 
 ```
@@ -368,10 +371,6 @@ dist/
         ├── palette-[hash].js     # Color palette
         └── websocket.js          # Web Worker (not hashed)
 ```
-
-> [!IMPORTANT]
-> `DOMAIN` is only used for robots.txt and sitemap.xml generation, all app urls are relative
-
 
 **Code Standards & Style**
 

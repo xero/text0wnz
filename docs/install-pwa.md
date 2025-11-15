@@ -7,15 +7,17 @@
   - [Offline Support](#offline-support)
   - [File Handling](#file-handling)
 - [Installation by Platform](#installation-by-platform)
-  - [Desktop Chrome/Edge](#desktop-chromeedge)
+  - [Desktop Chrome/Edge](#desktop-chrome)
   - [Desktop Safari (macOS)](#desktop-safari-macos)
   - [Desktop Firefox](#desktop-firefox)
-  - [iPadOS (Safari)](#ipados-safari)
+  - [iPadOS (Safari)](#ipados--ios-safari)
   - [Android (Chrome)](#android-chrome)
 - [Using File Handling Features](#using-file-handling-features)
   - [Desktop: "Open With" Integration](#desktop-open-with-integration)
   - [Android: Share Sheet](#android-share-sheet)
   - [iOS: Manual File Opening](#ios-manual-file-opening)
+- [Additional Information](#additional-information)
+- [Citations](#citations)
 
 ## What is a PWA?
 
@@ -50,11 +52,9 @@ Once installed, teXt0wnz works completely offline.
 
 ## Installation by Platform
 
-# Progressive Web App (PWA) Install Instructions by Platform
-
 This document provides step-by-step instructions for installing a Progressive Web App (PWA), like **teXt0wnz** across major platforms and browsers. PWAs offer app-like experiences directly from your browser, with offline support and native-like features.
 
-## 1. Desktop Chrome
+## Desktop Chrome
 
 ![desktop install](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/pwa-chrome.png)
 
@@ -78,9 +78,9 @@ This document provides step-by-step instructions for installing a Progressive We
 
 ---
 
-## 2. Desktop Safari (macOS)
+## Desktop Safari (macOS)
 
-![safari install](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/pwa-ios.png)
+![safari install](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/pwa-safari.png)
 
 **Steps:**
 
@@ -99,7 +99,7 @@ This document provides step-by-step instructions for installing a Progressive We
 
 ---
 
-## 3. Desktop Firefox
+## Desktop Firefox
 
 **Steps:**
 
@@ -113,16 +113,16 @@ This document provides step-by-step instructions for installing a Progressive We
 
 ---
 
-## 4. iPadOS (Safari)
+## iPadOS / iOS (Safari)
 
 ![ipad install](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/pwa-ios.png)
 
 **Steps:**
 
-1. Open the website in Safari on your iPad.
+1. Open the website in Safari on your iPad or iPhone.
 2. Tap the "Share" button (square with an arrow pointing up).
-3. Tap “Add to Home Screen.”
-4. Enter a name for the app and tap "Add."
+3. Tap the "More" button (Three dots).
+4. Tap “Add to Home Screen.”
 5. The web app will appear on your home screen and can be launched like any other app.
 
 **What you get after installing:**
@@ -137,7 +137,7 @@ This document provides step-by-step instructions for installing a Progressive We
 
 ---
 
-## 5. Android (Chrome)
+## Android (Chrome)
 
 ![android install](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/pwa-android.png)
 
@@ -206,9 +206,9 @@ This document provides step-by-step instructions for installing a Progressive We
 
 - For Microsoft Edge (desktop/mobile), installation steps are nearly identical to Chrome.
 - Some browsers and platforms may not fully support all PWA features or installation flows.
-  > See: https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest
 
----
+> [!NOTE]
+> See: https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest
 
 ## Citations
 

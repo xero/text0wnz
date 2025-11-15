@@ -32,11 +32,20 @@ async function handleShareTarget(request) {
 						'X-Filename': file.name || 'untitled.txt',
 						'X-File-Size': file.size.toString(),
 						'X-Shared-At': Date.now().toString(),
+						'X-Source': 'share-target',
 					},
 				}),
 			);
+			const clients = await self.clients.matchAll({ type: 'window' });
+			clients.forEach(client => {
+				client.postMessage({
+					type: 'SHARED_FILE_READY',
+					filename: file.name,
+					size: file.size,
+				});
+			});
 		}
-		return Response.redirect('/', 303);
+		return Response.redirect('/?source=share', 303);
 	} catch (error) {
 		console.error('[ServiceWorker] Error handling share target:', error);
 		return Response.redirect('/', 303);

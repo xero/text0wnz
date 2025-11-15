@@ -200,14 +200,16 @@
 		@apply w-full flex justify-between h-[var(--header-size)];
 
 		&.dynamic {
+			-webkit-app-region: drag;
 			app-region: drag;
-			padding-left: env(titlebar-area-x, 0px);
-			padding-right: calc(env(titlebar-area-x, 0px) * 1.6);
+			padding-left: calc(env(titlebar-area-x, 0px) + 2px);
+			padding-right: calc(env(titlebar-area-x, 0px) + 25px);
 		}
 		* {
 			@apply my-auto;
 		}
 		nav {
+			-webkit-app-region: no-drag;
 			app-region: no-drag;
 			div {
 				@apply flex;
@@ -1175,6 +1177,10 @@
 		kbd {
 			@apply text-cyan text-center m-auto text-[4rem];
 		}
+	}
+
+	.iosWin header.dynamic {
+		padding-left: 75px;
 	}
 
 	.includedForWebsocket {

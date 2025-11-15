@@ -322,6 +322,9 @@ export default ({ mode }) => {
 							}
 						}
 					],
+					launch_handler: {
+						client_mode: 'focus-existing',
+					},
 					// fav/app icons
 					icons: [{
 						src: `${uiDir}img/web-app-manifest-512x512.png`,

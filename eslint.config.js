@@ -34,6 +34,7 @@ export default [
 				Uint16Array: 'readonly',
 				Uint32Array: 'readonly',
 				Uint8Array: 'readonly',
+				URLSearchParams: 'readonly',
 				WebSocket: 'readonly',
 				Worker: 'readonly',
 				alert: 'readonly',

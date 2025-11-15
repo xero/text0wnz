@@ -74,6 +74,7 @@ let saveTimeout;
 let reload;
 let palettePicker;
 let pendingFile = null;
+let navFullscreen;
 
 const $$$$ = () => {
 	htmlDoc = $$('html');
@@ -101,6 +102,7 @@ const $$$$ = () => {
 	metaTheme = $$('meta[name="theme-color"]');
 	saveTimeout = null;
 	reload = $('updateReload');
+	navFullscreen = $('fullscreen');
 };
 
 const openHandler = file => {
@@ -164,9 +166,16 @@ const handleLaunchFiles = () => {
 			const fileHandle = launchParams.files[0];
 			try {
 				const file = await fileHandle.getFile();
-				console.log(`[Launch] File queued: ${file.name} (${file.size} bytes)`);
-				// Store the file to open after initialization
-				pendingFile = file;
+				// If app is already initialized, open immediately
+				if (
+					State.textArtCanvas &&
+					!bodyContainer?.classList.contains('loading')
+				) {
+					openHandler(file);
+				} else {
+					// Otherwise store for later
+					pendingFile = file;
+				}
 			} catch (error) {
 				console.error('[App] Error reading launched file:', error);
 			}
@@ -209,7 +218,23 @@ const save = () => {
 	}, 300);
 };
 
-const isIOS = () => (/iPad|iPhone|iPod/).test(navigator.userAgent);
+const isIOS = (/iPad|iPhone|iPod/).test(navigator.userAgent);
+
+const handleIOS = () => {
+	const isWindowed =
+		window.navigator.standalone ||
+		window.matchMedia('(display-mode: standalone)').matches ||
+		window.matchMedia('(display-mode: window-controls-overlay)').matches;
+	const isMaximized =
+		window.innerWidth >= window.screen.availWidth &&
+		window.innerHeight >= window.screen.availHeight * 0.95;
+	const isWebkitFullscreen = !!(
+		document.webkitFullscreenElement || document.webkitCurrentFullScreenElement
+	);
+	const needsPadding = isWebkitFullscreen || (isWindowed && !isMaximized);
+	htmlDoc.classList.toggle('ios', needsPadding);
+	navFullscreen.classList.toggle('disabled', isWindowed);
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
 	// Initialize service worker
@@ -229,6 +254,39 @@ document.addEventListener('DOMContentLoaded', async () => {
 					}
 				};
 			};
+		});
+
+		// Listen for shared file messages from service worker
+		navigator.serviceWorker.addEventListener('message', async event => {
+			if (event.data.type === 'SHARED_FILE_READY') {
+				console.log('[Share] File shared:', event.data.filename);
+				// Wait for app to be ready
+				const waitForApp = () => {
+					return new Promise(resolve => {
+						if (State.textArtCanvas && openHandler) {
+							resolve();
+						} else {
+							setTimeout(() => waitForApp().then(resolve), 100);
+						}
+					});
+				};
+				await waitForApp();
+				const sharedFileData = await handleFileShare();
+				if (sharedFileData) {
+					pendingFile = sharedFileData.file;
+					openHandler(pendingFile);
+					pendingFile = null;
+					// Clean up the cached file
+					caches
+						.open(CACHE_ID)
+						.then(cache => cache.delete(CACHE_DATA))
+						.catch(error =>
+							console.error(
+								'[Error] Failed to cleanup shared file cache:',
+								error,
+							));
+				}
+			}
 		});
 	}
 
@@ -312,6 +370,16 @@ const initializeAppComponents = async () => {
 	if (!pendingFile) {
 		State.restoreStateFromLocalStorage();
 	}
+	// iOS quirks
+	if (isIOS) {
+		// Make file picker accept all files on iOS
+		openFile.setAttribute('accept', '*/*');
+		// track state to offset traffic lights
+		handleIOS();
+		document.addEventListener('webkitfullscreenchange', handleIOS);
+		window.addEventListener('resize', handleIOS);
+	}
+
 	document.addEventListener('keydown', undoAndRedo);
 	createResolutionController(
 		$('resolutionLabel'),
@@ -404,11 +472,6 @@ const initializeAppComponents = async () => {
 	onFileChange(openFile, openHandler);
 	createDragDropController(openHandler, $('dragdrop'));
 
-	if (isIOS()) {
-		// Make file picker accept all files on iOS
-		openFile.setAttribute('accept', '*/*');
-	}
-
 	onClick(navSauce, () => {
 		State.menus.close();
 		State.modal.open('sauce');
@@ -500,7 +563,7 @@ const initializeAppComponents = async () => {
 	onClick($('eraseColumn'), keyboard.eraseColumn);
 	onClick($('eraseColumnStart'), keyboard.eraseToStartOfColumn);
 	onClick($('eraseColumnEnd'), keyboard.eraseToEndOfColumn);
-	onClick($('fullscreen'), toggleFullscreen);
+	onClick(navFullscreen, toggleFullscreen);
 
 	onClick($('defaultColor'), () => {
 		State.palette.setForegroundColor(7);
@@ -827,25 +890,28 @@ const initializeAppComponents = async () => {
 	document.addEventListener('onIceColorsChange', save);
 	document.addEventListener('onOpenedFile', save);
 
-	// Handle pending launched file
+	// Handle pending launchQueue file
 	if (pendingFile) {
-		console.log(`[Launch] Opening launched file: ${pendingFile.name}`);
 		openHandler(pendingFile);
 		pendingFile = null;
 		return; // Exit early, don't check for shared files
 	}
 
-	// Check for shared files
-	const sharedFileData = await handleFileShare();
-	if (sharedFileData) {
-		console.log(`[Share] Opening shared file: ${sharedFileData.filename}`);
-		openHandler(sharedFileData.file);
-		// Clean up the cached file
-		caches
-			.open(CACHE_ID)
-			.then(cache => cache.delete(CACHE_DATA))
-			.catch(error =>
-				console.error('[Error] Failed to cleanup shared file cache:', error));
+	// Handle share target files
+	const urlParams = new URLSearchParams(window.location.search);
+	const source = urlParams.get('source');
+	if (source === 'share') {
+		const sharedFileData = await handleFileShare();
+		if (sharedFileData) {
+			console.log(`[Share] Opening shared file: ${sharedFileData.filename}`);
+			openHandler(sharedFileData.file);
+			// Clean up the cached file
+			caches
+				.open(CACHE_ID)
+				.then(cache => cache.delete(CACHE_DATA))
+				.catch(error =>
+					console.error('[Error] Failed to cleanup shared file cache:', error));
+		}
 	}
 };
 
