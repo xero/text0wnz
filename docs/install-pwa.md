@@ -8,9 +8,9 @@
   - [File Handling](#file-handling)
 - [Installation by Platform](#installation-by-platform)
   - [Desktop Chrome/Edge](#desktop-chrome)
-  - [Desktop Safari (macOS)](#desktop-safari-macos)
+  - [Desktop Safari (MacOS)](#desktop-safari-macos)
   - [Desktop Firefox](#desktop-firefox)
-  - [iPadOS (Safari)](#ipados--ios-safari)
+  - [iPadOS/iOS (Safari)](#ipados--ios-safari)
   - [Android (Chrome)](#android-chrome)
 - [Using File Handling Features](#using-file-handling-features)
   - [Desktop: "Open With" Integration](#desktop-open-with-integration)
@@ -76,9 +76,7 @@ This document provides step-by-step instructions for installing a Progressive We
 
 - [Google Chrome Help: Install a Progressive Web App](https://support.google.com/chrome/answer/9658361?hl=en)
 
----
-
-## Desktop Safari (macOS)
+## Desktop Safari (MacOS)
 
 ![safari install](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/pwa-safari.png)
 
@@ -97,8 +95,6 @@ This document provides step-by-step instructions for installing a Progressive We
 - [Apple: Add a website icon to your Home Screen](https://support.apple.com/en-gb/guide/safari-iphone/iph3d60f5ef/ios)
 - [Apple Developer: Web Apps on macOS](https://developer.apple.com/news/?id=7n3z7a2q)
 
----
-
 ## Desktop Firefox
 
 **Steps:**
@@ -110,8 +106,6 @@ This document provides step-by-step instructions for installing a Progressive We
 **Reference:**
 
 - [Mozilla Bugzilla: PWA Desktop App Support](https://bugzilla.mozilla.org/show_bug.cgi?id=1603312)
-
----
 
 ## iPadOS / iOS (Safari)
 
@@ -131,11 +125,10 @@ This document provides step-by-step instructions for installing a Progressive We
 - Enhanced file picker (accepts all files)
 - _No share target or Finder integration (iOS limitation)_
 
-**Reference:**
+**References:**
 
 - [Apple: Add a website icon to your Home Screen](https://discussions.apple.com/thread/255899735)
-
----
+- [Webkit: Features in Safari 26](https://webkit.org/blog/17333/webkit-features-in-safari-26-0/)
 
 ## Android (Chrome)
 
@@ -158,8 +151,6 @@ This document provides step-by-step instructions for installing a Progressive We
 
 - [Google Chrome Help: Install a Progressive Web App](https://support.google.com/chrome/answer/9658361?hl=en)
 - [Web.dev: PWA install prompts](https://web.dev/install-criteria/)
-
----
 
 ## Using File Handling Features
 
