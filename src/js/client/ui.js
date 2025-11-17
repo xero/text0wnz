@@ -65,14 +65,15 @@ const createModalController = modal => {
 		$('resizeModal'),
 		$('fontsModal'),
 		$('sauceModal'),
-		$('websocketModal'),
 		$('choiceModal'),
 		$('updateModal'),
 		$('loadingModal'),
 		$('warningModal'),
+		$('tutorialsModal'),
 	];
 	let current = false;
 	let closingTimeout = null;
+	let backdropHandler = null;
 	let focus = () => {};
 	let blur = () => {};
 
@@ -99,6 +100,13 @@ const createModalController = modal => {
 			focus();
 			classList($(section), 'hide', false);
 			modal.showModal();
+			if (name !== 'update') {
+				backdropHandler = onClick(modal, e => {
+					if (e.target === modal) {
+						close();
+					}
+				});
+			}
 		} else {
 			error(`Unknown modal: <kbd>#{section}</kbd>`);
 			console.error(`Unknown modal: <kbd>#{section}</kbd>`);
@@ -116,6 +124,10 @@ const createModalController = modal => {
 	};
 
 	const close = () => {
+		if (typeof backdropHandler === 'function') {
+			backdropHandler();
+			backdropHandler = null;
+		}
 		if (!queued()) {
 			classList(modal, 'closing');
 			closingTimeout = setTimeout(() => {
@@ -126,6 +138,13 @@ const createModalController = modal => {
 				closingTimeout = null;
 			}, 700);
 		}
+	};
+
+	const loading = (message = 'Reinitializing editor state...') => {
+		if (current !== 'loading') {
+			$('loadingMsg').innerHTML = message;
+		}
+		open('loading');
 	};
 
 	const error = message => {
@@ -143,6 +162,7 @@ const createModalController = modal => {
 		close: close,
 		error: error,
 		focusEvents: focusEvents,
+		loading: loading,
 	};
 };
 
@@ -195,10 +215,14 @@ const onReturn = (el, target) => {
 };
 
 const onClick = (el, func) => {
-	el.addEventListener('click', e => {
-		e.preventDefault();
-		func(el);
-	});
+	const handler = e => {
+		if (el.tagName === 'A' || el.tagName === 'BUTTON') {
+			e.preventDefault();
+		}
+		func(e, el);
+	};
+	el.addEventListener('click', handler);
+	return () => el.removeEventListener('click', handler);
 };
 
 const onFileChange = (el, func) => {

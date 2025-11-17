@@ -169,39 +169,17 @@ else
 fi
 ```
 
-### Git LFS (Large File Storage)
+### Optimizing Tutorial Images
 
-For managing large binary files (artwork examples, test fixtures).
-
-**Installation:**
+When adding new tutorial preview images, optimize them with a tool like [imagemagick](https://imagemagick.org/script/download.php) limiting their palettes to only 16 colors and stripping any metadata.
 
 ```bash
-# Ubuntu/Debian
-sudo apt install git-lfs
-
-# macOS
-brew install git-lfs
-
-# Initialize in repo
-git lfs install
-```
-
-**Usage:**
-
-```bash
-# Track specific file types
-git lfs track "*.xb"
-git lfs track "*.bin"
-git lfs track "*.png"
-
-# List tracked patterns
-git lfs track
-
-# List tracked files
-git lfs ls-files
-
-# Pull LFS files
-git lfs pull
+#!/bin/sh
+for file in *; do
+	if [ -f "$file" ] && [ "./$file" != "$0" ]; then
+		convert "$file" -colors 16 -strip "$file"
+	fi
+done
 ```
 
 ## Code Quality Tools

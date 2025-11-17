@@ -149,6 +149,7 @@ export default ({ mode }) => {
 					{ src: 'img/manifest/favicon.ico', dest: '.' },
 					{ src: 'fonts', dest: uiDir },
 					{ src: `js/client/${worker}`, dest: uiDir + 'js/' },
+					{ src: 'ansi', dest: '.'},
 				],
 			}),
 			{

@@ -35,8 +35,6 @@ const createWorkerHandler = inputHandle => {
 	let applyReceivedSettings = false;
 	let initializing = false;
 
-	$('websocketCancel').addEventListener('click', () => State.modal.close());
-
 	const onConnected = () => {
 		websocketUI(true);
 		State.title = 'collab mode';
@@ -343,7 +341,7 @@ const createWorkerHandler = inputHandle => {
 
 	const joinCollaboration = async () => {
 		connected = true;
-		State.modal.open('websocket');
+		State.modal.loading('Updating editor with data from the collab session...');
 		State.palette = createDefaultPalette();
 		document.dispatchEvent(
 			new CustomEvent('onPaletteChange', {

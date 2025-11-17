@@ -863,11 +863,11 @@
 	#aboutModal,
 	#resizeModal,
 	#sauceModal,
-	#websocketModal,
 	#loadingModal,
 	#choiceModal,
 	#updateModal,
 	#warningModal,
+	#tutorialsModal,
 	#fontsModal {
 		@apply flex flex-col w-fit h-fit min-h-0;
 		h1,
@@ -1070,8 +1070,7 @@
 			text-align: left;
 		}
 	}
-	#loadingModal,
-	#websocketModal {
+	#loadingModal {
 		nav {
 			@apply bg-transparent;
 			button {
@@ -1096,6 +1095,58 @@
 		@apply cursor-progress;
 		nav {
 			@apply bg-editor;
+		}
+	}
+	#tutorialsModal {
+		max-width: 756px;
+		min-width: 65%;
+		header {
+			@apply h-fit flex-col bg-editor p-4;
+
+			h2 {
+				padding-left: 0;
+			}
+			h3 {
+				@apply text-justify text-fg text-subtitle;
+				em {
+					@apply text-fg;
+				}
+			}
+		}
+		article {
+			@apply flex-col;
+
+			img {
+				@apply cursor-pointer flex flex-grow pxl8;
+			}
+			strong {
+				@apply text-justify text-fg;
+			}
+			ul {
+				@apply my-4;
+
+				li {
+					@apply text-subtitle ml-2;
+					i {
+						@apply italic;
+					}
+					button:hover {
+						@apply bg-purp;
+					}
+				}
+			}
+			h2 {
+				padding-top: 6px;
+			}
+			h3 {
+				@apply flex text-fg text-xl my-3;
+
+				&::before {
+					@apply inline-flex text-lg text-chat;
+					content: '▓▒░';
+					margin: -5px 5px 0 0;
+				}
+			}
 		}
 	}
 

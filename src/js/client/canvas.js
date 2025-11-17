@@ -922,6 +922,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const onCriticalChange = async _ => {
+		State.modal.loading('Updating editor with new settings...');
 		const waitForRedrawing = () =>
 			new Promise(resolve => {
 				const intervalId = setInterval(() => {
@@ -934,8 +935,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		stopBlinkTimer();
 		await waitForRedrawing();
 		createCanvases();
-		redrawEntireImage();
-		updateTimer();
+		redrawEntireImage(null, () => {
+			updateTimer();
+			if (!State.loadingFromStorage) {
+				State.modal.close();
+			}
+		});
 	};
 
 	const getImage = () => {

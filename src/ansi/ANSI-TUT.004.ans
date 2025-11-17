@@ -1,0 +1,146 @@
+[0m
+[1;45m This tutorial was done by Halaster of Fire, taken from P1's AnsiHelp File.    [40m
+[A[79C[1;37;45m [0m
+
+[1;34mhow to draw the halaster way (part1 of ?) - by halaster[fire president/acid '95][0m°°ДДД--ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД°ДДДДДДДДДДДДД-ДДДДДДДДДДДДДДД°±°Д
+[6CЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ  [1mshape -[0m
+[6CЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ
+[6CЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ  ok .. here, we have a very simple shape.  that's
+[6CЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ  neat, if you want a very simple ansi.
+[6CЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ  the first rule of halaster shading is to never
+[6CЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ  leave any shape in it's basic form.  so we're gonna
+[6CЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ  distort this little bugger .. .like a so.
+
+[16CЬЬЬЬЬІ
+[6CЬЬЬЫЫЫЫЫЫЫЫЫЫЫЫЫ [1mfucked up shape -[0m
+[6CЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ
+[5CЮЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЭ so it may not look grand now, just bear with me.
+[5CЮЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЭ at least it was a little harder to draw than
+[5CЮЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЭ the regular square.
+[5CЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ
+[5CЫЫЫЫЫЫЫЫЫЫЫЫЫЯЯЯ
+[5CІЯЯЯЯЯ
+[16C[36mЬЬЬЬЬІ[37m
+[6C[36mЬЬЬЫЫЫЫЫЫЫЫЫЫЫЫЫ [1;37mcolor -[0m
+[6C[36mЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ[37m
+[5C[36mЮЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЭ [37mthere are two main types of colors in ansi.  one type
+[5C[36mЮЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЭ [37mshades real well, the other doesn't.  simple, eh?
+[5C[36mЮЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЭ[37m
+[5C[36mЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ  [37mi'll show you how to shade both.
+[5C[36mЫЫЫЫЫЫЫЫЫЫЫЫЫЯЯЯ[37m
+[5C[36mІЯЯЯЯЯ[37m
+
+[16C[36mЬЬЬЬЬІ [1;37mcolor that shades good -[0m
+[6C[36mЬЬЬЫЫЫЫЫЫЫ[30;46mbright[37;40m
+[6C[36mЫЫЫЫЫЫЫЫЫЫЫ[30;46m   [36;40mЫЫ [37mok, here i've chosen cyan .. one of the easiest to shade
+[5C[36mЮЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЭ [37mcolors .. now, the first thing to do is to decide
+[5C[36mЮЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЭ [37mwhere the light source will be.
+[5C[36mЮЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЭ[37m
+[5C[36mЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ  [37mfor this example, i've chosen dark to be lower-left.
+[5C[30;46m dark[36;40mЫЫЫЫЫЫЫЫЯЯЯ  [37mand bright to be upper-right.
+[5C[36mІЯЯЯЯЯ[37m
+
+[16C[1;36mЬЬЬЬЬІ[0m
+[6C[36mЬЬЬЫ[1;46m Я ЯЯЯІЫЫЫЫЫ[0m
+[6C[36mЫЫЫЫ[1;46m  [0;36mЫЫЫЫ[1;46m° ЫЫЫЫ[0m [1mcolor swirls -[0m
+[5C[36mЮЫЫЫЫЫЫЫЫЫЫ[1;46m  ЮЫЯ[0;36mЭ[37m
+[5C[36mЮ[1;30;46m°[0;36mЫЫЫЫЫЫЫЫЫЫ[1;46mюЯ[0;36mЫ[1;46m°[0;36mЭ [37mi never ever ever do straight line bright spots and only
+[5C[36mЮ[1;30;46m±  Ью[0;36mЫЫЫЫЫЫЫЫЫ[1;46m°[0;36mЭ [37muse °±І shading as detail work.  here i've mapped out the[5C[1;30;46mЫІЫЫЭ    [0;36mЫЫЫЫЫЫЫ  [37mbright spots.
+[5C[1;30mЫЫЫЫЫЫЫ[46mЭЬЬЬ°[0;36mЫЯЯЯ[37m
+[5C[1;30mІЯЯЯЯЯ[0m
+
+[16C[36mЬЬЬЬЬІ [37m<-yes
+[6C[36mЬЬЬЫ[1;46m Я  ЯЯІЫЫЫІ [0m
+[6C[36mЫЫЫЫ[1;46m  [0;36mЫЫЫЫ[1;46m° ЫЫЫ[0;36mЫ [1;37mcartoon borders -[0m
+[5C[36mЮЫЫЫЫЫЫЫЫЫЫ[1;46m  ЮЫЯ[0;36mЭ[37m
+[5C[36mЮ[1;30;46m°[0;36mЫЫЫЫЫЫЫЫЫЫ[1;46mюЯ[0;36mЫ[1;46m°[0;36mЭ [37manother neat trick is to use cartoon borders on the
+[5C[36mЮ[1;30;46m±  Ью[0;36mЫЫЫЫЫЫЫЫЫ[1;46m°[0;36mЭ [37medges oh a shape  .. i only do it with brights, however.
+[5C[1;30;46mЫІЫЫЭ    [0;36mЫЫЫЫЫЫЫ  [37mthis square really doesn't show the potential of borders
+no-> [1;30mЫЫЫЫЫЫЫ[46mЭЬЬЬ°[0;36mЫЯЯЯ  [37mthat well .. i suggest you look at some other pics. :)
+[5C[1;30mІЯЯЯЯЯ[0m
+
+[16C[36mЬЬЬЬЬІ[37m
+[6C[36mЬЬЬЫ[1;46m Я  ЯЯІЫ[40mЫЫЫ[46m [0m [1mextremes -[0m
+[6C[36mЫЫЫЫ[1;46m  [0;36mЫЫЫЫ[1;46m° [40mЫ[37mЫ[36;46mЫ[0;36mЫ[37m
+[5C[36mЮЫЫЫЫЫЫЫЫЫЫ[1;46m  ЮЫЯ[0;36mЭ [37mthe next step in halshade is to go to extremes .. this
+[5C[36mЮ[1;30;46m°[0;36mЫЫЫЫЫЫЫЫЫЫ[1;46mюЯ[0;36mЫ[1;46m°[0;36mЭ [37mmeans little bright spots and little spots of complete
+[5C[36mЮ[1;30;46m±  Ью[0;36mЫЫЫЫЫЫЫЫЫ[1;46m°[0;36mЭ [37mblack should be in the center of the shade regions.
+[5C[1;30;46mЫІЫЫЭ    [0;36mЫЫЫЫЫЫЫ[37m
+[5C[1;30mЫ°ЯЫЯЫЫ[46mЭЬЬЬ°[0;36mЫЯЯЯ  [37mcolor 7, 15, and color 0 work best for this.
+[5C[1;30mІЯЯЯЯЯ[0m
+[16C[36mЬЬЬЬЬІ[37m
+[6C[36mЬЬЬЫ[1;46m Я  ЯЯІЫ[40mЫЫЫ[46m [0m [1mthe 'plus' -[0m
+[6C[36mЫ[1;46m°°   [0;36mЫЫЫЫ[1;46m° [40mЫ[37mЫ[36;46mЫ[0;36mЫ[37m
+[5C[36mЮЫ[1;46m  [0;36mЫЫЫЫЫЫЫ[1;46m  ЮЫЯ[0;36mЭ [37ma great shading technique that i picked up from lord
+[5C[36mЮ[1;30;46m°[0;36mЫЫЫЫЫЫЫЫЫЫ[1;46mюЯ[0;36mЫ[1;46m°[0;36mЭ [37mjazz, sushi-x and maestro is the plus.  while some people[5C[36mЮ[1;30;46m±  Ью[0;36mЫ[1;30;46mЬІЬ[0;36mЫЫЫЫЫ[1;46m°[0;36mЭ [37mhate it, i think it's a great way to add 'grit' to a pic.[5C[1;30;46mЫІЫЫЭ   Я[0;36mЫЫЫЫЫЫЫ[37m
+[5C[1;30mЫ°ЯЫЯЫЫ[46mЭЬЬЬ°[0;36mЫЯЯЯ  [37mthe chromatic °° is a nice touch, too.
+[5C[1;30mІЯЯЯЯЯ[0m
+[16C[36mЬЬЬЬЬІ[37m
+[6C[36mЬЬЬЫ[1;46m Я  ЯЯІЫ[40mЫЫЫ[46m [0m [1mrandom shade -[0m
+[6C[36mЫ[1;46m°°     [0;36mЫЫ[1;46m° [40mЫ[37mЫ[36;46mЫ[0;36mЫ[37m
+[5C[36mЮЫ[1;46m  [0;36mЫЫЫЫЫЫЫ[1;46m  ЮЫЯ[0;36mЭ [37mi like to throw random colors into my work ..
+[5C[36mЮ[1;30;46m°[0;36mЫЫЫЫЫЫЫЫЫЫ[1;46mюЯ[0;36mЫ[1;46m°[0;36mЭ [37mbut i always choose colors that are in other parts
+[5C[36mЮ[1;30;46m±  Ью[0;36mЫ[1;30;46mЬІЬ[0;36mЫЫЫЫЫ[1;46m°[0;36mЭ [37mof the picture .. for example, imagine that there's
+[5C[1;30;46mЫІЫЫЭ   Я[0;36mЫЫЫ[34;46m ° [36;40mЫ  [37ma blue square nearby for this example.
+[5C[1;30mЫ°ЯЫЯЫЫ[46mЭЬЬЬ°[0;36mЫЯЯЯ[37m
+[5C[1;30mІЯЯЯЯЯ[0m
+[16C[36mЬЬЬЬЬІ[37m
+[6C[36mЬЬЬІ[1;46m Я[40m°[46m ЯЯІЫ[40mЫЫЫ± [37mthe pnakotic -[0m
+[6C[36mЫ[1;46m°°     [0;36mЫЫ[1;46m° [40mЫ[37mЫ[36;46mЫ[40m°[0m
+[5C[36mЮЫ[1;46m  [0;36mЫЫЫЫЫЫЫ[1;46m  ЮЫЯ[0;36mЭ [37mhere's something i learned from pnakotic.
+[5C[36mЮ[1;30;46m°[0;36mЫЫЫЫЫЫЫЫЫЫ[1;46mюЯ[0;36mЫ[1;46m°[0;36mЭ[37m
+[5C[36mЮ[1;30;46m±  Ью[0;36mЫ[1;30;46mЬІЬ[0;36mЫЫЫЫЫ[1;46m°[0;36mЭ [1;30mЫ [0m= °   [36mЫ [37m= [1;36m°   [0;35mЫ [37m= [1;35m°   [0;31mЫ [37m= [1;31m°   [0mЫ = [1m°   [0;32mЫ [37m= [1;32m°[0m
+[5C[1;30;46mЫІЫЫЭ   Я[0;36mЫЫЫ[34;46m ° [36;40mЫ[37m
+[5C°[1;30m°ЯЫЯЫЫ[46mЭЬЬЬ°[0;36mІЯЯЯ  [37mthrow in the high intensity f1 and 2's to add more grit.
+[5C[1;30mІЯЯЯЯЯ[0m[12Calso use f3's of the primary color.
+
+[7Chere[5C[36mЬЬЬЬЬІ[37m
+[6C[36mЬЬЬЮ[1;46m Я[40m°[46m ЯЯІЫ[40mЫЫЫ± [37mthe Я and Ю reversal -[0m
+[6C[36mЫ[1;46m°°     [0;36mЫЫ[1;46m° [40mЫ[37mЫ[36;46mЫ[40m°[0m
+here [36mЬЫ[1;46m  [0;36mЫЫЫЫЫЫЫ[1;46m  ЮЫЯ[0;36mЭ [37manother neat trick is swapping Э's for Я's and vice-
+[5C[36mЮ[1;30;46m°[0;36mЫЫЫЫЫЫЫЫЫЫ[1;46mюЯ[0;36mЫ[1;46m°[0;36mЭ[37m versa .. check it out.
+[5C[36mЮ[1;30;46m±  Ью[0;36mЫ[1;30;46mЬІЬ[0;36mЫЫЫЫЫ[1;46m°[0;36mЯ [37m
+[5C[1;30;46mЫІЫЫЭ   Я[0;36mЫЫЫ[34;46m ° [36;40mЫ[37m here 
+[5C°[1;30m°ЯЫЯЫЫ[46mЭЬЬЬ°[0;36mІЯЯЯ  [37m
+[5C[1;30mІЯЯЯЯЯ[0mhere
+
+[7C    [5C[36mЬЬЬЬЬІ[37m
+[6C[36mЬЬЬЮ[1;46m Я[40m°[46m ЯЯІЫ[40mІЫЫ± [37mlast touches -[0m
+[6C[36mЫ[1;46m°°       ° [40mЫ[37mЫ[36;46mЫ[40m°[0m
+     [36mЬЫ[1;46m [0;30;46m [36;40mЫ[30;46m  [36;40mЫ[1;46m hal ЮЫЯ[0;36mЭ [37mhere's where you do pic-specific things.  like your 
+[5C[36mЮ[1;30;46m°[0;36mЫ[30;46mЯ  [36;40mЫЫЫЫЫЫ[1;46mюЯ[0;36mЫ[1;46m°[0;36mЭ[37m initials and stuff.  or extra random shading.
+[5C[36mЮ[1;30;46m±  Ью[0;36mЫ[1;30;46mЬІЬ[0;36mЫЫЫЫЫ[1;46m°[0;36mЯ [37m
+[5C[1;30;46mЫІЫЫЭ   Я[0;36mЫЫ[1;46m [0;34;46m ° [36;40mЫ[37m      
+[5C°[1;30m°ЯЫЯЫІ[46mЭЬЬЬ°[0;36mІЯЯЯ  [37m
+[5C[1;30mІЯЯЯЯЯ[0m    
+
+[15C[1m      [0m[5C[1mwhich do you prefer? :)[0m
+
+[12C    [5C[36mЬЬЬЬЬІ[37m
+[11C[36mЬЬЬЮ[1;46m Я[40m°[46m ЯЯІЫ[40mІЫЫ±[0m[21C[36mЫЫЫЫЫ[1;46m°[0;36mЫ[1;46m°°±ІІЫЫЫ[0m
+[11C[36mЫ[1;46m°°       ° [40mЫ[37mЫ[36;46mЫ[40m°[0m[21C[1;30;46m°[0;36mЫЫЫЫЫЫЫЫ[1;46m°°±ІІІ[0m
+[10C[36mЬЫ[1;46m [0;30;46m [36;40mЫ[30;46m  [36;40mЫ[1;46m hal ЮЫЯ[0;36mЭ[37m[3C<- halshade!(c)[3C[1;30;46m±[0;36mЫ[1;30;46m°[0;36mЫЫЫЫЫЫЫЫ[1;46m°±±І[0;36m [37m
+[10C[36mЮ[1;30;46m°[0;36mЫ[30;46mЯ  [36;40mЫЫЫЫЫЫ[1;46mюЯ[0;36mЫ[1;46m°[0;36mЭ[37m[21C[1;30;46mІ°°[0;36mЫЫЫЫЫЫЫЫ[1;46m °°±[0;36m [37m
+[10C[36mЮ[1;30;46m±  Ью[0;36mЫ[1;30;46mЬІЬ[0;36mЫЫЫЫЫ[1;46m°[0;36mЯ[37m[3Cleading brand ->[36m  [1;30;46mЫ±±°[0;36mЫЫЫЫЫЫЫЫЫЫ[1;46m°[0;36m [37m
+[10C[1;30;46mЫІЫЫЭ   Я[0;36mЫЫ[1;46m [0;34;46m ° [36;40mЫ[37m[22C[1;30;46mЫІІ±°°[0;36mЫЫЫЫЫЫЫЫЫ [37m
+[10C°[1;30m°ЯЫЯЫІ[46mЭЬЬЬ°[0;36mІЯЯЯ [37m[21C[1;30;46mЫЫІІ±±°°[0;36mЫ[1;30;46m°[0;36mЫЫЫЫЫ [37m
+[10C[1;30mІЯЯЯЯЯ[0m    
+
+[23C[1mhard color -[0m
+[7C    [5C[31mЬЬЬЬЬІ[37m
+[6C[31mЬЬЬЮЫ[1;41mЯ[40m°[0;31mЫ[1;41mЯЯІЫ[40mІ[47mЫ[41mЫ[40m±[36m [0mthe only thing you'll have to do with hard colors   
+[6C[31mЫ[1;41m°°[0;31mЫЫЫЫЫЫЫ[1;41m°[0;31mЫ[1;41mЫ[47mІ[41mЫ[40m°[0m is eliminate the extremes and, sometimes, cut out all
+     [31mЬЫЫЫЫЫЫЫЫ[1;41mhal[0;31mЫ[1;41mЮЫЯ[0;31mЭ[36m [37mcolor 8 .. check this red square.
+[5C[31mЮІЫЬЫЫЫЫЫЫЫЫ[1;41mюЯ[0;31mЫ[1;41m°[0;31mЭ[37m     
+[5C[31mЮ±ЫЫЯ[30;41mю[31;40mЫЯ°ЯЫЫЫЫЫ[1;41m°[0;31mЯ[36m [37mhard colors = red, green and blue.
+[5C[36m [31m°[36m  [31mЮЫЫЫЬЫЫЫЫ[44mІ[40mЫЫ[37m  
+[5C[36m  [1;30m°°[0;36m   [31mЮЯЯЯ[1;30;41m°[0;31mІЯЯЯ[36m  [37mif you really need the full shape, you can use light
+[5C[36m   [1;30m  [0;36m [37m    [8Ccolor 8 shading.
+[22C 
+
+[3Cthanks for your time and have fun drawring! if this has been useful at all,
+[3Cdrop me a line at the regency to let me know.
+[46C  [3C[34m [37m - halaster[fire]
+
+---[eof]
+[0mSAUCE00Halshade!(c)                       Halaster            Fire                19960503S%  P –                             
