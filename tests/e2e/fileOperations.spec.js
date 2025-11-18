@@ -24,6 +24,11 @@ test.describe('File Operations', () => {
 	});
 
 	test('should create new document', async ({ page }) => {
+		// Open file menu first
+		const fileMenuButton = page.locator('#fileMenu button');
+		await fileMenuButton.click();
+		await page.waitForTimeout(200);
+
 		// Click new button
 		const newButton = page.locator('#new');
 
@@ -39,16 +44,27 @@ test.describe('File Operations', () => {
 	});
 
 	test('should open file dialog', async ({ page }) => {
-		const openButton = page.locator('#openFile, #open');
+		// Open file menu first
+		const fileMenuButton = page.locator('#fileMenu button');
+		await fileMenuButton.click();
+		await page.waitForTimeout(200);
+
+		// Check for the visible menu item, not the hidden file input
+		const openButton = page.locator('#open');
 
 		if ((await openButton.count()) > 0) {
 			// Note: We can't actually test file upload without a file in E2E
-			// but we can verify the button exists and is clickable
+			// but we can verify the menu item exists and is visible
 			await expect(openButton.first()).toBeVisible();
 		}
 	});
 
 	test('should have save options', async ({ page }) => {
+		// Open file menu first
+		const fileMenuButton = page.locator('#fileMenu button');
+		await fileMenuButton.click();
+		await page.waitForTimeout(200);
+
 		// Look for save/export buttons
 		const saveAsAnsi = page.locator(
 			'#saveAnsi, #saveAsAnsi, button:has-text("ANSi")',
@@ -220,6 +236,10 @@ test.describe('Canvas Operations', () => {
 		}
 
 		// Clear with new document - handle warning modal
+		const fileMenuButton = page.locator('#fileMenu button');
+		await fileMenuButton.click();
+		await page.waitForTimeout(200);
+
 		await page.locator('#new').click();
 		await page.waitForTimeout(500);
 		const warningYes = page.locator('#warningYes');
