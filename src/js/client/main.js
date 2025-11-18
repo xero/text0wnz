@@ -424,8 +424,18 @@ const initializeAppComponents = async () => {
 		$('rowsInput'),
 	);
 	State.menus = createMenuController(
-		[$('fileMenu'), $('editMenu')],
+		[
+			{
+				button: $('fileMenu'),
+				menu: $('fileList'),
+			},
+			{
+				button: $('editMenu'),
+				menu: $('editList'),
+			},
+		],
 		canvasContainer,
+		viewport,
 	);
 	onClick($('new'), () => {
 		State.modal.open('warning');
@@ -493,8 +503,8 @@ const initializeAppComponents = async () => {
 			...$$$('#tutorialsModal button'),
 		];
 		const removers = items.map(el =>
-			onClick(el, e => {
-				const tut = e.dataset.ansi || null;
+			onClick(el, (_, target) => {
+				const tut = target.dataset && target.dataset.ansi;
 				if (tut) {
 					fetchTutorial(tut);
 				}

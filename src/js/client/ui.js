@@ -6,9 +6,11 @@ const D = document,
 			$ = D.getElementById.bind(D),
 			$$ = D.querySelector.bind(D),
 			$$$ = D.querySelectorAll.bind(D),
-			has = (i, c) => i.classList.contains(c),
-			classList = (el, className, add = true) =>
+			has = (i, c) => !!i && i.classList.contains(c),
+			classList = (el, className, add = true) => {
+				if (!el || !el.classList) {return;}
 				add ? el.classList.add(className) : el.classList.remove(className);
+			};
 
 const createCanvas = (width, height) => {
 	const canvas = document.createElement('canvas');
@@ -670,34 +672,44 @@ const createDragDropController = (handler, el) => {
 	});
 };
 
-const createMenuController = (menus, view) => {
-	const close = menu => {
-		setTimeout(_ => {
-			menu.classList.remove('menuOpen');
-			view.focus();
-		}, 60);
-	};
+const createMenuController = (elements, canvas, view) => {
+	const menus = [];
+	let current = null;
+
 	const closeAll = () => {
-		menus.forEach(m => {
-			m.classList.remove('menuOpen');
+		menus.forEach(menu => {
+			classList(menu, 'hide', true);
 		});
-		view.focus();
+		canvas.focus();
 	};
-	menus.forEach(menu => {
-		menu.addEventListener('click', e => {
-			e.stopPropagation();
-			e.preventDefault();
-			if (menu.classList.contains('menuOpen')) {
-				close(menu);
-			} else {
-				menu.classList.add('menuOpen');
-				menu.focus();
-			}
+	const close = _ => {
+		current = null;
+		closeAll();
+	};
+
+	const toggle = menu => {
+		current = has(menu, 'hide') ? menu : null;
+		closeAll();
+		if (current) {
+			classList(current, 'hide', false);
+			menu.focus();
+		} else {
+			canvas.focus();
+		}
+	};
+	elements.forEach(el => {
+		const button = el.button;
+		const menu = el.menu;
+		menus.push(menu);
+		onClick(button, _ => {
+			toggle(menu);
 		});
-		menu.addEventListener('blur', _ => {
-			close(menu);
+		menu.querySelectorAll('.menuItem').forEach(item => {
+			onClick(item, close);
 		});
+		menu.addEventListener('blur', close);
 	});
+	onClick(view, close);
 	return { close: closeAll };
 };
 

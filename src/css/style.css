@@ -700,28 +700,25 @@
 	}
 
 	.menuTitle {
-		font-size: 14px;
-		line-height: 20px;
-		@apply w-auto h-[var(--header-size)] text-fg bg-menu inline-block relative align-top overflow-hidden;
+		@apply w-auto h-[var(--header-size)] text-fg bg-menu;
 
 		button {
 			@apply h-[40px] w-[40px] pr-1 border-none bg-transparent;
 		}
 	}
 
-	.menuOpen {
-		overflow: visible;
-	}
-
 	.menuList {
-		@apply block cursor-default absolute w-[300px] bg-file border-4 border-solid border-menu z-40;
+		@apply inline cursor-default absolute w-[300px] h-fit bg-file border-4 border-solid border-menu z-40;
+		top: var(--header-size);
 		box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
+	}
+	#editList {
+		left: 40px;
 	}
 
 	.menuItem {
-		padding: 2px 4px;
-		margin: 4px 2px;
-		font-size: 14px;
+		@apply cursor-pointer text-sm text-fg px-1.5 py-1;
+
 		kbd {
 			@apply text-fg bg-editor ml-2.5 p-1;
 			font-size: 13px;

@@ -29,23 +29,6 @@
 									<use href="img/icons.svg#save"></use>
 								</svg>
 							</button>
-							<div class="menuList">
-								<article id="new" class="menuItem excludedForWebsocket">New</article>
-								<article id="open" class="menuItem excludedForWebsocket">Open</article>
-								<article class="separator excludedForWebsocket"></article>
-								<article id="saveAnsi" class="menuItem">Save as ANSi</article>
-								<article id="saveBin" class="menuItem">Save as Binary Text</article>
-								<article id="saveXbin" class="menuItem">Save as XBin</article>
-								<article class="separator"></article>
-								<article id="savePng" class="menuItem">Export as PNG</article>
-								<article id="saveUtf8" class="menuItem">Export as UTF-8 Text</article>
-								<article id="savePlaintext" class="menuItem">Export as Plain Text</article>
-								<article class="separator"></article>
-								<article id="help" class="menuItem">Help!</article>
-								<article id="tutorials" class="menuItem">Tutorials</article>
-								<article id="update" class="menuItem">Update Editor</article>
-								<article id="about" class="menuItem">About teXt0wnz</article>
-							</div>
 						</div>
 						<div id="editMenu" class="menuTitle" tabindex="0">
 							<button id="edit" aria-label="Edit Menu">
@@ -53,31 +36,6 @@
 									<use href="img/icons.svg#settings"></use>
 								</svg>
 							</button>
-							<div class="menuList">
-								<article id="navCut" class="menuItem disabled">Cut <kbd>Ctrl-X</kbd></article>
-								<article id="navCopy" class="menuItem disabled">Copy <kbd>Ctrl-C</kbd></article>
-								<article id="navPaste" class="menuItem disabled">Paste <kbd>Ctrl-V</kbd></article>
-								<article id="navSystemPaste" class="menuItem">System Paste <kbd>Ctrl-Shift-V</kbd></article>
-								<article id="navDelete" class="menuItem disabled">Delete <kbd>Ctrl-Delete</kbd></article>
-								<article class="separator"></article>
-								<article id="navUndo" class="menuItem">Undo <kbd>Ctrl-Z</kbd></article>
-								<article id="navRedo" class="menuItem">Redo <kbd>Ctrl-Y</kbd></article>
-								<article class="separator"></article>
-								<article id="insertRow" class="menuItem">Insert Row <kbd>Alt+Up</kbd></article>
-								<article id="deleteRow" class="menuItem">Delete Row <kbd>Alt+Down</kbd></article>
-								<article id="insertColumn" class="menuItem">Insert Column <kbd>Alt+Right</kbd></article>
-								<article id="deleteColumn" class="menuItem">Delete Column <kbd>Alt+Left</kbd></article>
-								<article id="eraseRow" class="menuItem">Erase Row <kbd>Alt+E</kbd></article>
-								<article id="eraseRowStart" class="menuItem">Erase to Start of Row <kbd>Alt+Home</kbd></article>
-								<article id="eraseRowEnd" class="menuItem">Erase to End of Row <kbd>Alt+End</kbd></article>
-								<article id="eraseColumn" class="menuItem">Erase Column <kbd>Alt+Shift+E</kbd></article>
-								<article id="eraseColumnStart" class="menuItem">Erase to Start of Column <kbd>Alt+Page Up</kbd></article>
-								<article id="eraseColumnEnd" class="menuItem">Erase to End of Column <kbd>Alt+Page Down</kbd></article>
-								<article class="separator"></article>
-								<article id="defaultColor" class="menuItem">Default Color <kbd>Ctrl-D</kbd></article>
-								<article id="swapColors" class="menuItem">Swap Colors <kbd>Ctrl-Q</kbd></article>
-								<article id="fullscreen" class="menuItem">Toggle Fullscreen Mode</article>
-							</div>
 						</div>
 					</div>
 					<button id="navSauce" aria-label="Sauce Menu">
@@ -419,6 +377,49 @@
 		</label>
 		<div id="dragdrop">
 			<kbd>Drop your file<br/>anywhere to load</kbd>
+		</div>
+
+		<div id="fileList" class="menuList hide">
+			<article id="new" class="menuItem excludedForWebsocket">New</article>
+			<article id="open" class="menuItem excludedForWebsocket">Open</article>
+			<article class="separator excludedForWebsocket"></article>
+			<article id="saveAnsi" class="menuItem">Save as ANSi</article>
+			<article id="saveBin" class="menuItem">Save as Binary Text</article>
+			<article id="saveXbin" class="menuItem">Save as XBin</article>
+			<article class="separator"></article>
+			<article id="savePng" class="menuItem">Export as PNG</article>
+			<article id="saveUtf8" class="menuItem">Export as UTF-8 Text</article>
+			<article id="savePlaintext" class="menuItem">Export as Plain Text</article>
+			<article class="separator"></article>
+			<article id="help" class="menuItem">Help!</article>
+			<article id="tutorials" class="menuItem">Tutorials</article>
+			<article id="update" class="menuItem">Update Editor</article>
+			<article id="about" class="menuItem">About teXt0wnz</article>
+		</div>
+		<div id="editList" class="menuList hide">
+			<article id="navCut" class="menuItem disabled">Cut <kbd>Ctrl-X</kbd></article>
+			<article id="navCopy" class="menuItem disabled">Copy <kbd>Ctrl-C</kbd></article>
+			<article id="navPaste" class="menuItem disabled">Paste <kbd>Ctrl-V</kbd></article>
+			<article id="navSystemPaste" class="menuItem">System Paste <kbd>Ctrl-Shift-V</kbd></article>
+			<article id="navDelete" class="menuItem disabled">Delete <kbd>Ctrl-Delete</kbd></article>
+			<article class="separator"></article>
+			<article id="navUndo" class="menuItem">Undo <kbd>Ctrl-Z</kbd></article>
+			<article id="navRedo" class="menuItem">Redo <kbd>Ctrl-Y</kbd></article>
+			<article class="separator"></article>
+			<article id="insertRow" class="menuItem">Insert Row <kbd>Alt+Up</kbd></article>
+			<article id="deleteRow" class="menuItem">Delete Row <kbd>Alt+Down</kbd></article>
+			<article id="insertColumn" class="menuItem">Insert Column <kbd>Alt+Right</kbd></article>
+			<article id="deleteColumn" class="menuItem">Delete Column <kbd>Alt+Left</kbd></article>
+			<article id="eraseRow" class="menuItem">Erase Row <kbd>Alt+E</kbd></article>
+			<article id="eraseRowStart" class="menuItem">Erase to Start of Row <kbd>Alt+Home</kbd></article>
+			<article id="eraseRowEnd" class="menuItem">Erase to End of Row <kbd>Alt+End</kbd></article>
+			<article id="eraseColumn" class="menuItem">Erase Column <kbd>Alt+Shift+E</kbd></article>
+			<article id="eraseColumnStart" class="menuItem">Erase to Start of Column <kbd>Alt+Page Up</kbd></article>
+			<article id="eraseColumnEnd" class="menuItem">Erase to End of Column <kbd>Alt+Page Down</kbd></article>
+			<article class="separator"></article>
+			<article id="defaultColor" class="menuItem">Default Color <kbd>Ctrl-D</kbd></article>
+			<article id="swapColors" class="menuItem">Swap Colors <kbd>Ctrl-Q</kbd></article>
+			<article id="fullscreen" class="menuItem">Toggle Fullscreen Mode</article>
 		</div>
 		<dialog id="modal">
 			<section id="resizeModal">
@@ -777,7 +778,7 @@
 						</li>
 					</ul>
 					<h3>Basic Colors</h3>
-					<img alt="Basic Colors" data-ansi="ANSI-TUT.002" src="img/tutorials/ANSI-TUT.002.png"/>
+					<img alt="Basic Colors" data-ansi="ANSI-TUT.002.ans" src="img/tutorials/ANSI-TUT.002.png"/>
 					<ul>
 						<li><strong>title:</strong> <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.00" target="_blank">Basic Colors</a></li>
 						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/newbie01" target="_blank">newbie01</a></li>
@@ -807,7 +808,7 @@
 						</li>
 					</ul>
 					<h3>Curving and Shading</h3>
-					<img alt="Curving and Shading" data-ansi="ANSI-TUT.006" src="img/tutorials/ANSI-TUT.006.png"/>
+					<img alt="Curving and Shading" data-ansi="ANSI-TUT.006.ans" src="img/tutorials/ANSI-TUT.006.png"/>
 					<ul>
 						<li><strong>title:</strong> <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.006" target="_blank">Curving and Shading</a></li>
 						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/newbie01" target="_blank">newbie01</a></li>
@@ -822,7 +823,7 @@
 						</li>
 					</ul>
 					<h3>Shading Techniques</h3>
-					<img alt="Shading technique" data-ansi="ANSI-TUT.005" src="img/tutorials/ANSI-TUT.005.png"/>
+					<img alt="Shading technique" data-ansi="ANSI-TUT.005.ans" src="img/tutorials/ANSI-TUT.005.png"/>
 					<ul>
 						<li><strong>title:</strong> <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.005" target="_blank">Shading technique</a></li>
 						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/newbie01" target="_blank">newbie01</a></li>
@@ -837,7 +838,7 @@
 						</li>
 					</ul>
 					<h3>The "Halshade" Shading Technique</h3>
-					<img alt="the Halshade shading technique" data-ansi="ANSI-TUT.004" src="img/tutorials/ANSI-TUT.004.png"/>
+					<img alt="the Halshade shading technique" data-ansi="ANSI-TUT.004.ans" src="img/tutorials/ANSI-TUT.004.png"/>
 					<ul>
 						<li><strong>title:</strong> <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.004" target="_blank">the Halshade shading technique</a></li>
 						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/newbie01" target="_blank">newbie01</a></li>
@@ -852,7 +853,7 @@
 						</li>
 					</ul>
 					<h3>Picture Shading</h3>
-					<img alt="Picture Shading" data-ansi="ANSI-TUT.013" src="img/tutorials/ANSI-TUT.013.png"/>
+					<img alt="Picture Shading" data-ansi="ANSI-TUT.013.ans" src="img/tutorials/ANSI-TUT.013.png"/>
 					<ul>
 						<li><strong>title:</strong> <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.013" target="_blank">Picture Shading</a></li>
 						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/newbie01" target="_blank">newbie01</a></li>
@@ -867,7 +868,7 @@
 						</li>
 					</ul>
 					<h3>Lord Jazz's Font Drawing part 1</h3>
-					<img alt="Font Drawing part 1" data-ansi="ANSI-TUT.007" src="img/tutorials/ANSI-TUT.007.png"/>
+					<img alt="Font Drawing part 1" data-ansi="ANSI-TUT.007.ans" src="img/tutorials/ANSI-TUT.007.png"/>
 					<ul>
 						<li><strong>title:</strong> <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.007" target="_blank">Font Drawing part 1</a></li>
 						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/vagina01/" target="_blank">newbie01</a></li>
@@ -882,7 +883,7 @@
 						</li>
 					</ul>
 					<h3>Lord Jazz's Font Drawing part 2</h3>
-					<img alt="Font Drawing part 2" data-ansi="ANSI-TUT.008" src="img/tutorials/ANSI-TUT.008.png"/>
+					<img alt="Font Drawing part 2" data-ansi="ANSI-TUT.008.ans" src="img/tutorials/ANSI-TUT.008.png"/>
 					<ul>
 						<li><strong>title:</strong> <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.008" target="_blank">Font Drawing part 2</a></li>
 						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/vagina02/" target="_blank">newbie01</a></li>
@@ -912,7 +913,7 @@
 						</li>
 					</ul>
 					<h3>14 Steps to Scene Domination: Part 1</h3>
-					<img alt="14 steps to scene domination part 1" data-ansi="PART_1.ANS" src="img/tutorials/PART_1.ANS.png"/>
+					<img alt="14 steps to scene domination part 1" data-ansi="PART_1.ANS" src="img/tutorials/PART-1.ANS.png"/>
 					<ul>
 						<li><strong>title:</strong> <a href="https://16colo.rs/pack/14/%28PART_1%29.ANS" target="_blank">14 steps to scene domination</a></li>
 						<li><strong>Released:</strong> 1997 in <a href="https://16colo.rs/pack/14" target="_blank">14</a></li>
@@ -927,7 +928,7 @@
 						</li>
 					</ul>
 					<h3>14 Steps to Scene Domination: Part 2</h3>
-					<img alt="14 steps to scene domination part 2" data-ansi="PART_2.ANS" src="img/tutorials/PART_2.ANS.png"/>
+					<img alt="14 steps to scene domination part 2" data-ansi="PART_2.ANS" src="img/tutorials/PART-2.ANS.png"/>
 					<ul>
 						<li><strong>title:</strong> <a href="https://16colo.rs/pack/14/%28PART_2%29.ANS" target="_blank">14 steps to scene domination part 2</a></li>
 						<li><strong>Released:</strong> 1997 in <a href="https://16colo.rs/pack/14" target="_blank">14</a></li>
@@ -942,7 +943,7 @@
 						</li>
 					</ul>
 					<h3>Advanced Picture Tutorial</h3>
-					<img alt="Advanced Picture Tutorial" data-ansi="ANSI-TUT.014" src="img/tutorials/ANSI-TUT.014.png"/>
+					<img alt="Advanced Picture Tutorial" data-ansi="ANSI-TUT.014.ans" src="img/tutorials/ANSI-TUT.014.png"/>
 					<ul>
 						<li><strong>title:</strong> <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.014" target="_blank">Advanced Picture Tutorial</a></li>
 						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/newbie01" target="_blank">newbie01</a></li>
