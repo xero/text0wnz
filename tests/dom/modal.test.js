@@ -42,11 +42,11 @@ describe('Modal DOM Tests', () => {
 			'resizeModal',
 			'fontsModal',
 			'sauceModal',
-			'websocketModal',
 			'choiceModal',
 			'updateModal',
 			'loadingModal',
 			'warningModal',
+			'tutorialsModal',
 			'errorModal', // For error tests
 		];
 
