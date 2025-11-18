@@ -220,19 +220,6 @@ describe('Menu DOM Tests', () => {
 	});
 
 	describe('Menu Event Handling', () => {
-		it('should stop propagation on menu click', async () => {
-			const clickHandler = vi.fn();
-			document.body.addEventListener('click', clickHandler);
-
-			const clickEvent = new MouseEvent('click', { bubbles: true });
-			const stopPropagation = vi.spyOn(clickEvent, 'stopPropagation');
-
-			fileButton.dispatchEvent(clickEvent);
-
-			// The button click will not stop propagation, it's handled by onClick
-			// which prevents default on buttons
-		});
-
 		it('should prevent default on menu click', async () => {
 			const clickEvent = new MouseEvent('click', { bubbles: true });
 			const preventDefault = vi.spyOn(clickEvent, 'preventDefault');

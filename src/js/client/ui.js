@@ -8,7 +8,9 @@ const D = document,
 			$$$ = D.querySelectorAll.bind(D),
 			has = (i, c) => !!i && i.classList.contains(c),
 			classList = (el, className, add = true) => {
-				if (!el || !el.classList) {return;}
+				if (!el || !el.classList) {
+					return;
+				}
 				add ? el.classList.add(className) : el.classList.remove(className);
 			};
 
