@@ -78,6 +78,7 @@ const createModalController = modal => {
 	let current = false;
 	let closingTimeout = null;
 	let backdropHandler = null;
+	let cleanupHandler = null;
 	let focus = () => {};
 	let blur = () => {};
 
@@ -132,6 +133,10 @@ const createModalController = modal => {
 			backdropHandler();
 			backdropHandler = null;
 		}
+		if (typeof cleanupHandler === 'function') {
+			cleanupHandler();
+			cleanupHandler = null;
+		}
 		if (!queued()) {
 			classList(modal, 'closing');
 			closingTimeout = setTimeout(() => {
@@ -156,6 +161,10 @@ const createModalController = modal => {
 		open('error');
 	};
 
+	const onClose = handler => {
+		cleanupHandler = handler;
+	};
+
 	// attach to all close buttons
 	$$$('.close').forEach(b => onClick(b, _ => close()));
 
@@ -167,6 +176,7 @@ const createModalController = modal => {
 		error: error,
 		focusEvents: focusEvents,
 		loading: loading,
+		onClose: onClose,
 	};
 };
 

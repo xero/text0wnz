@@ -509,8 +509,14 @@ const initializeAppComponents = async () => {
 					fetchTutorial(tut);
 				}
 			}));
-		onClick($('tutorialsCancel'), _ => {
+
+		// Set up cleanup handler that runs when modal closes by any means
+		State.modal.onClose(() => {
 			removers.forEach(remove => remove());
+		});
+
+		onClick($('tutorialsCancel'), _ => {
+			State.modal.close();
 		});
 	});
 
