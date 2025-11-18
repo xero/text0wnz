@@ -75,6 +75,11 @@ test.describe('Basic Canvas Functionality', () => {
 	});
 
 	test('should clear canvas on new document', async ({ page }) => {
+		// Open file menu first
+		const fileMenuButton = page.locator('#fileMenu button');
+		await fileMenuButton.click();
+		await page.waitForTimeout(200);
+
 		// Click new button
 		const newButton = page.locator('#new');
 		await newButton.click();
