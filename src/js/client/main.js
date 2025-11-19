@@ -509,8 +509,13 @@ const initializeAppComponents = async () => {
 					fetchTutorial(tut);
 				}
 			}));
-		onClick($('tutorialsCancel'), _ => {
+
+		State.modal.onClose(() => {
 			removers.forEach(remove => remove());
+		});
+
+		onClick($('tutorialsCancel'), _ => {
+			State.modal.close();
 		});
 	});
 
