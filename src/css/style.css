@@ -700,28 +700,25 @@
 	}
 
 	.menuTitle {
-		font-size: 14px;
-		line-height: 20px;
-		@apply w-auto h-[var(--header-size)] text-fg bg-menu inline-block relative align-top overflow-hidden;
+		@apply w-auto h-[var(--header-size)] text-fg bg-menu;
 
 		button {
 			@apply h-[40px] w-[40px] pr-1 border-none bg-transparent;
 		}
 	}
 
-	.menuOpen {
-		overflow: visible;
-	}
-
 	.menuList {
-		@apply block cursor-default absolute w-[300px] bg-file border-4 border-solid border-menu z-40;
+		@apply inline cursor-default absolute w-[300px] h-fit bg-file border-4 border-solid border-menu z-40;
+		top: var(--header-size);
 		box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
+	}
+	#editList {
+		left: 40px;
 	}
 
 	.menuItem {
-		padding: 2px 4px;
-		margin: 4px 2px;
-		font-size: 14px;
+		@apply cursor-pointer text-sm text-fg px-1.5 py-1;
+
 		kbd {
 			@apply text-fg bg-editor ml-2.5 p-1;
 			font-size: 13px;
@@ -863,11 +860,11 @@
 	#aboutModal,
 	#resizeModal,
 	#sauceModal,
-	#websocketModal,
 	#loadingModal,
 	#choiceModal,
 	#updateModal,
 	#warningModal,
+	#tutorialsModal,
 	#fontsModal {
 		@apply flex flex-col w-fit h-fit min-h-0;
 		h1,
@@ -1070,8 +1067,7 @@
 			text-align: left;
 		}
 	}
-	#loadingModal,
-	#websocketModal {
+	#loadingModal {
 		nav {
 			@apply bg-transparent;
 			button {
@@ -1096,6 +1092,58 @@
 		@apply cursor-progress;
 		nav {
 			@apply bg-editor;
+		}
+	}
+	#tutorialsModal {
+		max-width: 756px;
+		min-width: 65%;
+		header {
+			@apply h-fit flex-col bg-editor p-4;
+
+			h2 {
+				padding-left: 0;
+			}
+			h3 {
+				@apply text-justify text-fg text-subtitle;
+				em {
+					@apply text-fg;
+				}
+			}
+		}
+		article {
+			@apply flex-col;
+
+			img {
+				@apply cursor-pointer flex flex-grow pxl8;
+			}
+			strong {
+				@apply text-justify text-fg;
+			}
+			ul {
+				@apply my-4;
+
+				li {
+					@apply text-subtitle ml-2;
+					i {
+						@apply italic;
+					}
+					button:hover {
+						@apply bg-purp;
+					}
+				}
+			}
+			h2 {
+				padding-top: 6px;
+			}
+			h3 {
+				@apply flex text-fg text-xl my-3;
+
+				&::before {
+					@apply inline-flex text-lg text-chat;
+					content: '▓▒░';
+					margin: -5px 5px 0 0;
+				}
+			}
 		}
 	}
 

@@ -16,6 +16,11 @@ vi.mock('../../src/js/client/state.js', () => ({
 			getForegroundColor: vi.fn(() => 7),
 			getBackgroundColor: vi.fn(() => 0),
 		},
+		modal: {
+			loading: vi.fn(),
+			close: vi.fn(),
+		},
+		loadingFromStorage: false,
 	},
 }));
 

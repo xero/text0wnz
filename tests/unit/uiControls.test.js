@@ -340,11 +340,11 @@ describe('UI Controls and Controllers', () => {
 				'resize',
 				'fonts',
 				'sauce',
-				'websocket',
 				'choice',
 				'update',
 				'loading',
 				'warning',
+				'tutorials',
 			].forEach(name => {
 				const section = document.createElement('div');
 				section.id = `${name}Modal`;
@@ -357,12 +357,6 @@ describe('UI Controls and Controllers', () => {
 			document.body.appendChild(modalError);
 
 			const controller = createModalController(modal);
-
-			// Open a modal first
-			const aboutModal = document.createElement('div');
-			aboutModal.id = 'aboutModal';
-			aboutModal.classList.add('hide');
-			document.body.appendChild(aboutModal);
 
 			controller.open('about');
 			controller.close();

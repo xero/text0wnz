@@ -203,7 +203,7 @@ describe('UI Basic Utilities', () => {
 				const clickEvent = new window.Event('click');
 				div.dispatchEvent(clickEvent);
 
-				expect(mockFunc).toHaveBeenCalledWith(div);
+				expect(mockFunc).toHaveBeenCalledWith(clickEvent, div);
 			});
 		});
 
@@ -294,6 +294,8 @@ describe('UI Basic Utilities', () => {
 				open: false,
 				showModal: vi.fn(),
 				close: vi.fn(),
+				addEventListener: vi.fn(),
+				removeEventListener: vi.fn(),
 			};
 
 			document.body.innerHTML = `

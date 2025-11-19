@@ -29,22 +29,6 @@
 									<use href="img/icons.svg#save"></use>
 								</svg>
 							</button>
-							<div class="menuList">
-								<article id="new" class="menuItem excludedForWebsocket">New</article>
-								<article id="open" class="menuItem excludedForWebsocket">Open</article>
-								<article class="separator excludedForWebsocket"></article>
-								<article id="saveAnsi" class="menuItem">Save as ANSi</article>
-								<article id="saveBin" class="menuItem">Save as Binary Text</article>
-								<article id="saveXbin" class="menuItem">Save as XBin</article>
-								<article class="separator"></article>
-								<article id="savePng" class="menuItem">Export as PNG</article>
-								<article id="saveUtf8" class="menuItem">Export as UTF-8 Text</article>
-								<article id="savePlaintext" class="menuItem">Export as Plain Text</article>
-								<article class="separator"></article>
-								<article id="help" class="menuItem">Help!</article>
-								<article id="update" class="menuItem">Update Editor</article>
-								<article id="about" class="menuItem">About teXt0wnz</article>
-							</div>
 						</div>
 						<div id="editMenu" class="menuTitle" tabindex="0">
 							<button id="edit" aria-label="Edit Menu">
@@ -52,31 +36,6 @@
 									<use href="img/icons.svg#settings"></use>
 								</svg>
 							</button>
-							<div class="menuList">
-								<article id="navCut" class="menuItem disabled">Cut <kbd>Ctrl-X</kbd></article>
-								<article id="navCopy" class="menuItem disabled">Copy <kbd>Ctrl-C</kbd></article>
-								<article id="navPaste" class="menuItem disabled">Paste <kbd>Ctrl-V</kbd></article>
-								<article id="navSystemPaste" class="menuItem">System Paste <kbd>Ctrl-Shift-V</kbd></article>
-								<article id="navDelete" class="menuItem disabled">Delete <kbd>Ctrl-Delete</kbd></article>
-								<article class="separator"></article>
-								<article id="navUndo" class="menuItem">Undo <kbd>Ctrl-Z</kbd></article>
-								<article id="navRedo" class="menuItem">Redo <kbd>Ctrl-Y</kbd></article>
-								<article class="separator"></article>
-								<article id="insertRow" class="menuItem">Insert Row <kbd>Alt+Up</kbd></article>
-								<article id="deleteRow" class="menuItem">Delete Row <kbd>Alt+Down</kbd></article>
-								<article id="insertColumn" class="menuItem">Insert Column <kbd>Alt+Right</kbd></article>
-								<article id="deleteColumn" class="menuItem">Delete Column <kbd>Alt+Left</kbd></article>
-								<article id="eraseRow" class="menuItem">Erase Row <kbd>Alt+E</kbd></article>
-								<article id="eraseRowStart" class="menuItem">Erase to Start of Row <kbd>Alt+Home</kbd></article>
-								<article id="eraseRowEnd" class="menuItem">Erase to End of Row <kbd>Alt+End</kbd></article>
-								<article id="eraseColumn" class="menuItem">Erase Column <kbd>Alt+Shift+E</kbd></article>
-								<article id="eraseColumnStart" class="menuItem">Erase to Start of Column <kbd>Alt+Page Up</kbd></article>
-								<article id="eraseColumnEnd" class="menuItem">Erase to End of Column <kbd>Alt+Page Down</kbd></article>
-								<article class="separator"></article>
-								<article id="defaultColor" class="menuItem">Default Color <kbd>Ctrl-D</kbd></article>
-								<article id="swapColors" class="menuItem">Swap Colors <kbd>Ctrl-Q</kbd></article>
-								<article id="fullscreen" class="menuItem">Toggle Fullscreen Mode</article>
-							</div>
 						</div>
 					</div>
 					<button id="navSauce" aria-label="Sauce Menu">
@@ -419,6 +378,49 @@
 		<div id="dragdrop">
 			<kbd>Drop your file<br/>anywhere to load</kbd>
 		</div>
+
+		<div id="fileList" class="menuList hide">
+			<article id="new" class="menuItem excludedForWebsocket">New</article>
+			<article id="open" class="menuItem excludedForWebsocket">Open</article>
+			<article class="separator excludedForWebsocket"></article>
+			<article id="saveAnsi" class="menuItem">Save as ANSi</article>
+			<article id="saveBin" class="menuItem">Save as Binary Text</article>
+			<article id="saveXbin" class="menuItem">Save as XBin</article>
+			<article class="separator"></article>
+			<article id="savePng" class="menuItem">Export as PNG</article>
+			<article id="saveUtf8" class="menuItem">Export as UTF-8 Text</article>
+			<article id="savePlaintext" class="menuItem">Export as Plain Text</article>
+			<article class="separator"></article>
+			<article id="help" class="menuItem">Help!</article>
+			<article id="tutorials" class="menuItem">Tutorials</article>
+			<article id="update" class="menuItem">Update Editor</article>
+			<article id="about" class="menuItem">About teXt0wnz</article>
+		</div>
+		<div id="editList" class="menuList hide">
+			<article id="navCut" class="menuItem disabled">Cut <kbd>Ctrl-X</kbd></article>
+			<article id="navCopy" class="menuItem disabled">Copy <kbd>Ctrl-C</kbd></article>
+			<article id="navPaste" class="menuItem disabled">Paste <kbd>Ctrl-V</kbd></article>
+			<article id="navSystemPaste" class="menuItem">System Paste <kbd>Ctrl-Shift-V</kbd></article>
+			<article id="navDelete" class="menuItem disabled">Delete <kbd>Ctrl-Delete</kbd></article>
+			<article class="separator"></article>
+			<article id="navUndo" class="menuItem">Undo <kbd>Ctrl-Z</kbd></article>
+			<article id="navRedo" class="menuItem">Redo <kbd>Ctrl-Y</kbd></article>
+			<article class="separator"></article>
+			<article id="insertRow" class="menuItem">Insert Row <kbd>Alt+Up</kbd></article>
+			<article id="deleteRow" class="menuItem">Delete Row <kbd>Alt+Down</kbd></article>
+			<article id="insertColumn" class="menuItem">Insert Column <kbd>Alt+Right</kbd></article>
+			<article id="deleteColumn" class="menuItem">Delete Column <kbd>Alt+Left</kbd></article>
+			<article id="eraseRow" class="menuItem">Erase Row <kbd>Alt+E</kbd></article>
+			<article id="eraseRowStart" class="menuItem">Erase to Start of Row <kbd>Alt+Home</kbd></article>
+			<article id="eraseRowEnd" class="menuItem">Erase to End of Row <kbd>Alt+End</kbd></article>
+			<article id="eraseColumn" class="menuItem">Erase Column <kbd>Alt+Shift+E</kbd></article>
+			<article id="eraseColumnStart" class="menuItem">Erase to Start of Column <kbd>Alt+Page Up</kbd></article>
+			<article id="eraseColumnEnd" class="menuItem">Erase to End of Column <kbd>Alt+Page Down</kbd></article>
+			<article class="separator"></article>
+			<article id="defaultColor" class="menuItem">Default Color <kbd>Ctrl-D</kbd></article>
+			<article id="swapColors" class="menuItem">Swap Colors <kbd>Ctrl-Q</kbd></article>
+			<article id="fullscreen" class="menuItem">Toggle Fullscreen Mode</article>
+		</div>
 		<dialog id="modal">
 			<section id="resizeModal">
 				<header>
@@ -669,17 +671,6 @@
 					</button>
 				</nav>
 			</section>
-			<section id="websocketModal">
-				<p>Please wait... Retrieving data from server.</p>
-				<nav>
-					<button id="websocketCancel" class="close" aria-label="Cancel">
-						<svg>
-							<use href="img/icons.svg#cancel"></use>
-						</svg>
-						Cancel
-					</button>
-				</nav>
-			</section>
 			<section id="updateModal">
 				<header>
 					<h2>Update Available!</h2>
@@ -755,13 +746,382 @@
 				<header>
 					<h2>Loading...</h2>
 				</header>
-				<p>Reinitializing editor state from local storage.</p>
+				<p id="loadingMsg">Reinitializing editor state...</p>
 				<nav>
 					<button id="loadingCancel" class="close" aria-label="Cancel">
 						<svg>
 							<use href="img/icons.svg#cancel"></use>
 						</svg>
 						Cancel
+					</button>
+				</nav>
+			</section>
+			<section id="tutorialsModal">
+				<header>
+					<h2>Tutorials</h2>
+					<h3>When learning any skill you should always <em>"Study The Masters."</em> These are hand-collected works spanning decades of the scene. Each entry showcases unique techniques, styles, and the vision of a talented artist.</h3>
+				</header>
+				<article>
+					<h3>Ansi Academy</h3>
+					<img alt="Ansi Academy" data-ansi="LDA-ANSIACADEMY.ANS" src="img/tutorials/LDA-ANSIACADEMY.ANS.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/mist0221/LDA-ANSIACADEMY.ANS" target="_blank">Ansi Academy</a></li>
+						<li><strong>Released:</strong> 2021 in <a href="https://16colo.rs/pack/mist0221" target="_blank">mist0221</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/lda" target="_blank">LDA</a> of <a href="https://16colo.rs/group/mistigris" target="_blank">mistigris</a></li>
+						<li>
+							<button data-ansi="LDA-ANSIACADEMY.ANS">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>Basic Colors</h3>
+					<img alt="Basic Colors" data-ansi="ANSI-TUT.002.ans" src="img/tutorials/ANSI-TUT.002.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.00" target="_blank">Basic Colors</a></li>
+						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/newbie01" target="_blank">newbie01</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/prisoner%20number%20one2" target="_blank">Prisoner #1</a> of <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.014" target="_blank">Fire</a></li>
+						<li>
+							<button data-ansi="ANSI-TUT.002.ans">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>Color Science</h3>
+					<img alt="color science tutorial" data-ansi="AVE-TUTP.ANS" src="img/tutorials/AVE-TUTP.ANS.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/bmbook16/AVE-TUTP.ANS" target="_blank">color science tutorial</a></li>
+						<li><strong>Released:</strong> 1998 in <a href="https://16colo.rs/pack/bmbook16" target="_blank">bmbook16</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/avenger2" target="_blank">avenger</a> of <a href="https://16colo.rs/group/maiden%20brazil" target="_blank">maiden brazil</a></li>
+						<li>
+							<button data-ansi="AVE-TUTP.ANS">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>Curving and Shading</h3>
+					<img alt="Curving and Shading" data-ansi="ANSI-TUT.006.ans" src="img/tutorials/ANSI-TUT.006.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.006" target="_blank">Curving and Shading</a></li>
+						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/newbie01" target="_blank">newbie01</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/nootropic2" target="_blank">Nootropic</a> of <a href="https://16colo.rs/group/dark" target="_blank">Dark</a></li>
+						<li>
+							<button data-ansi="ANSI-TUT.006.ans">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>Shading Techniques</h3>
+					<img alt="Shading technique" data-ansi="ANSI-TUT.005.ans" src="img/tutorials/ANSI-TUT.005.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.005" target="_blank">Shading technique</a></li>
+						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/newbie01" target="_blank">newbie01</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/prisoner%20number%20one2" target="_blank">Prisoner #1</a> of <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.014" target="_blank">Fire</a></li>
+						<li>
+							<button data-ansi="ANSI-TUT.005.ans">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>The "Halshade" Shading Technique</h3>
+					<img alt="the Halshade shading technique" data-ansi="ANSI-TUT.004.ans" src="img/tutorials/ANSI-TUT.004.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.004" target="_blank">the Halshade shading technique</a></li>
+						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/newbie01" target="_blank">newbie01</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/halaster" target="_blank">halaster</a> of <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.014" target="_blank">fire</a></li>
+						<li>
+							<button data-ansi="ANSI-TUT.004.ans">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>Picture Shading</h3>
+					<img alt="Picture Shading" data-ansi="ANSI-TUT.013.ans" src="img/tutorials/ANSI-TUT.013.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.013" target="_blank">Picture Shading</a></li>
+						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/newbie01" target="_blank">newbie01</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/sodium2" target="_blank">Sodium</a> of <a href="https://16colo.rs/group/odium" target="_blank">Odium</a></li>
+						<li>
+							<button data-ansi="ANSI-TUT.013.ans">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>Lord Jazz's Font Drawing part 1</h3>
+					<img alt="Font Drawing part 1" data-ansi="ANSI-TUT.007.ans" src="img/tutorials/ANSI-TUT.007.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.007" target="_blank">Font Drawing part 1</a></li>
+						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/vagina01/" target="_blank">newbie01</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/lord%20jazz2" target="_blank">lord jazz</a> of 765</li>
+						<li>
+							<button data-ansi="ANSI-TUT.007.ans">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>Lord Jazz's Font Drawing part 2</h3>
+					<img alt="Font Drawing part 2" data-ansi="ANSI-TUT.008.ans" src="img/tutorials/ANSI-TUT.008.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.008" target="_blank">Font Drawing part 2</a></li>
+						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/vagina02/" target="_blank">newbie01</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/lord%20jazz2" target="_blank">lord jazz</a> of 765</li>
+						<li>
+							<button data-ansi="ANSI-TUT.008.ans">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>How to Draw like zeroVision</h3>
+					<img alt="how to draw like zeroVision" data-ansi="zv-tutorial.ans" src="img/tutorials/zv-tutorial.ans.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/blocktronics_resvolution/zv-tutorial.ans" target="_blank">how to draw like zeroVision</a></li>
+						<li><strong>Released:</strong> 2008 in <a href="https://16colo.rs/pack/blocktronics_resvolution" target="_blank">blocktronics_res[v]olution</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/zerovision" target="_blank">zeroVision</a> of <a href="https://16colo.rs/group/blocktronics" target="_blank">blocktronics</a></li>
+						<li>
+							<button data-ansi="zv-tutorial.ans">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>14 Steps to Scene Domination: Part 1</h3>
+					<img alt="14 steps to scene domination part 1" data-ansi="PART_1.ANS" src="img/tutorials/PART-1.ANS.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/14/%28PART_1%29.ANS" target="_blank">14 steps to scene domination</a></li>
+						<li><strong>Released:</strong> 1997 in <a href="https://16colo.rs/pack/14" target="_blank">14</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/hennifer2" target="_blank">hennifer</a> of <a href="https://16colo.rs/group/lazarus" target="_blank">lazarus</a></li>
+						<li>
+							<button data-ansi="PART_1.ANS">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>14 Steps to Scene Domination: Part 2</h3>
+					<img alt="14 steps to scene domination part 2" data-ansi="PART_2.ANS" src="img/tutorials/PART-2.ANS.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/14/%28PART_2%29.ANS" target="_blank">14 steps to scene domination part 2</a></li>
+						<li><strong>Released:</strong> 1997 in <a href="https://16colo.rs/pack/14" target="_blank">14</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/hennifer2" target="_blank">hennifer</a> of <a href="https://16colo.rs/group/lazarus" target="_blank">lazarus</a></li>
+						<li>
+							<button data-ansi="PART_2.ANS">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>Advanced Picture Tutorial</h3>
+					<img alt="Advanced Picture Tutorial" data-ansi="ANSI-TUT.014.ans" src="img/tutorials/ANSI-TUT.014.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.014" target="_blank">Advanced Picture Tutorial</a></li>
+						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/newbie01" target="_blank">newbie01</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/lord%20soth2" target="_blank">Lord Soth</a> of <a href="https://16colo.rs/group/ice" target="_blank">iCE</a></li>
+						<li>
+							<button data-ansi="ANSI-TUT.014.ans">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>enz0's Flying Eagle Tutorial</h3>
+					<img alt="flying eagle tutorial" data-ansi="zO-flyingEagleTutorial.ANS" src="img/tutorials/zO-flyingEagleTutorial.ANS.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/blocktronics_acid_trip/zO-flyingEagleTutorial.ANS" target="_blank">flying eagle tutorial</a></li>
+						<li><strong>Released:</strong> 2013 in <a href="https://16colo.rs/pack/blocktronics_acid_trip" target="_blank">blocktronics_acid_trip</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/enzo" target="_blank">enz0</a> of <a href="https://16colo.rs/group/blocktronics" target="_blank">blocktronics</a></li>
+						<li>
+							<button data-ansi="zO-flyingEagleTutorial.ANS">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>Female character drawing</h3>
+					<img alt="Female character drawing" data-ansi="zO-TheDefinitiveChickDrawingTutorial.ans" src="img/tutorials/zO-TheDefinitiveChickDrawingTutorial.ans.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/blocktronics_blockalypse/zO-TheDefinitiveChickDrawingTutorial.ans" target="_blank">Female character drawing</a></li>
+						<li><strong>Released:</strong> 2014 in <a href="https://16colo.rs/pack/blocktronics_blockalypse" target="_blank">blocktronics_blockalypse</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/enzo" target="_blank">enz0</a> of <a href="https://16colo.rs/group/blocktronics" target="_blank">blocktronics</a></li>
+						<li>
+							<button data-ansi="zO-TheDefinitiveChickDrawingTutorial.ans">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>zeroVision's Font Tutorial</h3>
+					<img alt="zeroVision's font tutorial" data-ansi="zv-fonthow2.ans" src="img/tutorials/zv-fonthow2.ans.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/blocktronics_codename_chris_wirth/zv-fonthow2.ans" target="_blank">zeroVision's font tutorial</a></li>
+						<li><strong>Released:</strong> 2009 in <a href="https://16colo.rs/pack/blocktronics_codename_chris_wirth" target="_blank">blocktronics_codename_chris_wirth</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/zerovision" target="_blank">zeroVision</a> of <a href="https://16colo.rs/group/blocktronics" target="_blank">blocktronics</a></li>
+						<li>
+							<button data-ansi="zv-fonthow2.ans">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>Ansi Tutorial</h3>
+					<img alt="Ansi Tutorial" data-ansi="ANSINUL.ANS" src="img/tutorials/ANSINUL.ANS.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/nph-06/ANSINUL.ANS" target="_blank">Ansi Tutorial</a></li>
+						<li><strong>Released:</strong> 1998 in <a href="https://16colo.rs/pack/nph-06" target="_blank">nph-06</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/bisounours2" target="_blank">Bisounours</a> of <a href="https://16colo.rs/group/tiny%20toons" target="_blank">Tiny Toons</a></li>
+						<li>
+							<button data-ansi="ANSINUL.ANS">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>Hulk Face Tutorial</h3>
+					<img alt="Hulk Face Tutorial" data-ansi="MISC-005.ANS" src="img/tutorials/MISC-005.ANS.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/fever1yr/MISC-005.ANS" target="_blank">Hulk Face Tutorial</a></li>
+						<li><strong>Released:</strong> 1997 in <a href="https://16colo.rs/pack/fever1yr" target="_blank">fever1yr</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/fever" target="_blank">fever/tcf</a> of <a href="https://16colo.rs/group/blocktronics" target="_blank">blocktronics</a></li>
+						<li>
+							<button data-ansi="MISC-005.ANS">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>rorshack's wERiD fONt Tutorial</h3>
+					<img alt="rorshack's werid font tutorial" data-ansi="RS-TURT1.ANS" src="img/tutorials/RS-TURT1.ANS.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/mdn-9709/RS-TURT1.ANS" target="_blank">rorshack's werid font tutorial</a></li>
+						<li><strong>Released:</strong> 1997 in <a href="https://16colo.rs/pack/mdn-9709" target="_blank">mdn-9709</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/pack/mdn-9709/RS-TURT1.ANS" target="_blank">rorshack</a> of <a href="https://16colo.rs/group/maiden%20brazil" target="_blank">maiden brazil</a></li>
+						<li>
+							<button data-ansi="RS-TURT1.ANS">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>Draw Fonts the Gunthar Way</h3>
+					<img alt="draw font the gunthar way" data-ansi="GUN-TUT2.ANS" src="img/tutorials/GUN-TUT2.ANS.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/fire0397/GUN-TUT2.ANS" target="_blank">draw fonts the gunthar way</a></li>
+						<li><strong>Released:</strong> 1997 in <a href="https://16colo.rs/pack/fire0397" target="_blank">fire0397</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/gunthar" target="_blank">gunthar</a> of <a href="https://16colo.rs/group/fire" target="_blank">fire</a></li>
+						<li>
+							<button data-ansi="GUN-TUT2.ANS">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>Flame's Font Tutorial</h3>
+					<img alt="flame's font tutorial" data-ansi="FL-TUT1.ANS" src="img/tutorials/FL-TUT1.ANS.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/hmd-0596/FL-TUT%231.ANS" target="_blank">flame's font tutorial</a></li>
+						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/hmd-0596" target="_blank">hmd-0596</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/flame" target="_blank">flame</a> of <a href="https://16colo.rs/group/humid" target="_blank">humid</a></li>
+						<li>
+							<button data-ansi="FL-TUT1.ANS">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>How to Draw Like Halaster</h3>
+					<img alt="how to draw like halaster" data-ansi="HAL-H2P2.ANS" src="img/tutorials/HAL-H2P2.ANS.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/fire0896/HAL-H2P2.ANS" target="_blank">how to draw like halaster</a></li>
+						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/fire0896" target="_blank">fire0896</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/halaster" target="_blank">halaster</a> of <a href="https://16colo.rs/pack/newbie01/ANSI-TUT.014" target="_blank">fire</a></li>
+						<li>
+							<button data-ansi="HAL-H2P2.ANS">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h3>phiber optic</h3>
+					<img alt="phiber optic" data-ansi="SHA-TUT1.ANS" src="img/tutorials/SHA-TUT1.ANS.png"/>
+					<ul>
+						<li><strong>title:</strong> <a href="https://16colo.rs/pack/srg2vos/SHA-TUT1.ANS" target="_blank">phiber optic</a></li>
+						<li><strong>Released:</strong> 1996 in <a href="https://16colo.rs/pack/srg2vos" target="_blank">srg2vos</a></li>
+						<li><strong>Artist:</strong> <a href="https://16colo.rs/artist/shaitan" target="_blank">shaitan</a> of fbk.sargahd / asgaard</li>
+						<li>
+							<button data-ansi="SHA-TUT1.ANS">
+								<svg>
+									<use href="img/icons.svg#edit"></use>
+								</svg>
+								Open
+							</button>
+						</li>
+					</ul>
+					<h2>pLS m0aR iNSPo!</h2>
+					<strong>Looking for more inspiration? These sites are treasure troves of text-mode art history, preserving the entire legacy of the text-mode art scene:</strong>
+					<ul>
+						<li><a href="https://16colo.rs" target="_blank">16colo.rs</a>: An interactive gallery showcasing <i>every</i> art pack released since 1990.</li>
+						<li><a href="https://asciiarena.se" target="_blank">aSCII aRENA</a>: A web-based BBS for exploring and sharing ASCII art and <a href="https://www.asciiarena.se/collys.php?sort_by=cdate&sort_order=D" target="_blank">amiga "collys."</a></li>
+						<li><a href="https://artpacks.org" target="_blank">Artpacks.org</a>: A simple depot of zipped scene releases organized by year.</li>
+						<li><a href="http://artscene.textfiles.com/ansi/scene/" target="_blank">ArtScene Textfiles</a>: Historical archives and classic tools for ANSI art.</li>
+					</ul>
+				</article>
+				<nav>
+					<button id="tutorialsCancel" class="close" aria-label="Cancel">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Close
 					</button>
 				</nav>
 			</section>

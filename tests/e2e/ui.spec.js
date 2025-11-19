@@ -351,6 +351,11 @@ test.describe('Modal Dialogs', () => {
 	});
 
 	test('should show confirmation dialog for new document', async ({ page }) => {
+		// Open file menu first
+		const fileMenuButton = page.locator('#fileMenu button');
+		await fileMenuButton.click();
+		await page.waitForTimeout(200);
+
 		const newButton = page.locator('#new');
 		await newButton.click();
 		await page.waitForTimeout(500);
@@ -364,6 +369,11 @@ test.describe('Modal Dialogs', () => {
 	});
 
 	test('should handle dialog cancellation', async ({ page }) => {
+		// Open file menu first
+		const fileMenuButton = page.locator('#fileMenu button');
+		await fileMenuButton.click();
+		await page.waitForTimeout(200);
+
 		const newButton = page.locator('#new');
 		await newButton.click();
 		await page.waitForTimeout(500);
@@ -385,6 +395,11 @@ test.describe('Help and Information', () => {
 	});
 
 	test('should have help or info button', async ({ page }) => {
+		// Help is inside the file menu
+		const fileMenuButton = page.locator('#fileMenu button');
+		await fileMenuButton.click();
+		await page.waitForTimeout(200);
+
 		const helpButton = page.locator(
 			'#help, #info, button:has-text("Help"), button:has-text("?")',
 		);

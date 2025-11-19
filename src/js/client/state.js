@@ -727,7 +727,7 @@ class StateManager {
 			return;
 		}
 
-		stateManager.state.modal.open('loading');
+		stateManager.state.modal.loading('Reloading editor from local storage...');
 		this.loadingFromStorage = true;
 
 		if (this.state.textArtCanvas) {
@@ -974,6 +974,9 @@ const State = {
 	},
 	get workerPath() {
 		return stateManager.workerPath;
+	},
+	get loadingFromStorage() {
+		return stateManager.loadingFromStorage;
 	},
 
 	// Utility methods

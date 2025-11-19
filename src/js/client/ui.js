@@ -6,9 +6,13 @@ const D = document,
 			$ = D.getElementById.bind(D),
 			$$ = D.querySelector.bind(D),
 			$$$ = D.querySelectorAll.bind(D),
-			has = (i, c) => i.classList.contains(c),
-			classList = (el, className, add = true) =>
+			has = (i, c) => !!i && i.classList.contains(c),
+			classList = (el, className, add = true) => {
+				if (!el || !el.classList) {
+					return;
+				}
 				add ? el.classList.add(className) : el.classList.remove(className);
+			};
 
 const createCanvas = (width, height) => {
 	const canvas = document.createElement('canvas');
@@ -65,14 +69,16 @@ const createModalController = modal => {
 		$('resizeModal'),
 		$('fontsModal'),
 		$('sauceModal'),
-		$('websocketModal'),
 		$('choiceModal'),
 		$('updateModal'),
 		$('loadingModal'),
 		$('warningModal'),
+		$('tutorialsModal'),
 	];
 	let current = false;
 	let closingTimeout = null;
+	let backdropHandler = null;
+	let cleanupHandler = null;
 	let focus = () => {};
 	let blur = () => {};
 
@@ -99,6 +105,13 @@ const createModalController = modal => {
 			focus();
 			classList($(section), 'hide', false);
 			modal.showModal();
+			if (name !== 'update') {
+				backdropHandler = onClick(modal, e => {
+					if (e.target === modal) {
+						close();
+					}
+				});
+			}
 		} else {
 			error(`Unknown modal: <kbd>#{section}</kbd>`);
 			console.error(`Unknown modal: <kbd>#{section}</kbd>`);
@@ -116,6 +129,14 @@ const createModalController = modal => {
 	};
 
 	const close = () => {
+		if (typeof backdropHandler === 'function') {
+			backdropHandler();
+			backdropHandler = null;
+		}
+		if (typeof cleanupHandler === 'function') {
+			cleanupHandler();
+			cleanupHandler = null;
+		}
 		if (!queued()) {
 			classList(modal, 'closing');
 			closingTimeout = setTimeout(() => {
@@ -128,9 +149,20 @@ const createModalController = modal => {
 		}
 	};
 
+	const loading = (message = 'Reinitializing editor state...') => {
+		if (current !== 'loading') {
+			$('loadingMsg').innerHTML = message;
+		}
+		open('loading');
+	};
+
 	const error = message => {
 		$('modalError').innerHTML = message;
 		open('error');
+	};
+
+	const onClose = handler => {
+		cleanupHandler = handler;
 	};
 
 	// attach to all close buttons
@@ -143,6 +175,8 @@ const createModalController = modal => {
 		close: close,
 		error: error,
 		focusEvents: focusEvents,
+		loading: loading,
+		onClose: onClose,
 	};
 };
 
@@ -195,10 +229,14 @@ const onReturn = (el, target) => {
 };
 
 const onClick = (el, func) => {
-	el.addEventListener('click', e => {
-		e.preventDefault();
-		func(el);
-	});
+	const handler = e => {
+		if (el.tagName === 'A' || el.tagName === 'BUTTON') {
+			e.preventDefault();
+		}
+		func(e, el);
+	};
+	el.addEventListener('click', handler);
+	return () => el.removeEventListener('click', handler);
 };
 
 const onFileChange = (el, func) => {
@@ -646,34 +684,44 @@ const createDragDropController = (handler, el) => {
 	});
 };
 
-const createMenuController = (menus, view) => {
-	const close = menu => {
-		setTimeout(_ => {
-			menu.classList.remove('menuOpen');
-			view.focus();
-		}, 60);
-	};
+const createMenuController = (elements, canvas, view) => {
+	const menus = [];
+	let current = null;
+
 	const closeAll = () => {
-		menus.forEach(m => {
-			m.classList.remove('menuOpen');
+		menus.forEach(menu => {
+			classList(menu, 'hide', true);
 		});
-		view.focus();
+		canvas.focus();
 	};
-	menus.forEach(menu => {
-		menu.addEventListener('click', e => {
-			e.stopPropagation();
-			e.preventDefault();
-			if (menu.classList.contains('menuOpen')) {
-				close(menu);
-			} else {
-				menu.classList.add('menuOpen');
-				menu.focus();
-			}
+	const close = _ => {
+		current = null;
+		closeAll();
+	};
+
+	const toggle = menu => {
+		current = has(menu, 'hide') ? menu : null;
+		closeAll();
+		if (current) {
+			classList(current, 'hide', false);
+			menu.focus();
+		} else {
+			canvas.focus();
+		}
+	};
+	elements.forEach(el => {
+		const button = el.button;
+		const menu = el.menu;
+		menus.push(menu);
+		onClick(button, _ => {
+			toggle(menu);
 		});
-		menu.addEventListener('blur', _ => {
-			close(menu);
+		menu.querySelectorAll('.menuItem').forEach(item => {
+			onClick(item, close);
 		});
+		menu.addEventListener('blur', close);
 	});
+	onClick(view, close);
 	return { close: closeAll };
 };
 

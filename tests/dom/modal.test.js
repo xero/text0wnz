@@ -42,11 +42,11 @@ describe('Modal DOM Tests', () => {
 			'resizeModal',
 			'fontsModal',
 			'sauceModal',
-			'websocketModal',
 			'choiceModal',
 			'updateModal',
 			'loadingModal',
 			'warningModal',
+			'tutorialsModal',
 			'errorModal', // For error tests
 		];
 
@@ -437,6 +437,132 @@ describe('Modal DOM Tests', () => {
 			modalController.open('about');
 
 			expect(modal).not.toHaveClass('closing');
+		});
+	});
+
+	describe('Cleanup Handler', () => {
+		it('should call cleanup handler when modal is closed', async () => {
+			const cleanupFn = vi.fn();
+
+			modalController.open('about');
+			modalController.onClose(cleanupFn);
+
+			expect(cleanupFn).not.toHaveBeenCalled();
+
+			modalController.close();
+
+			await waitFor(
+				() => {
+					expect(cleanupFn).toHaveBeenCalledTimes(1);
+				},
+				{ timeout: 1000 },
+			);
+		});
+
+		it('should call cleanup handler when modal is closed via backdrop click', async () => {
+			const cleanupFn = vi.fn();
+
+			modalController.open('about');
+			modalController.onClose(cleanupFn);
+
+			// Simulate backdrop click
+			await user.click(modal);
+
+			await waitFor(
+				() => {
+					expect(cleanupFn).toHaveBeenCalledTimes(1);
+				},
+				{ timeout: 1000 },
+			);
+		});
+
+		it('should support multiple cleanup handlers for different modals', async () => {
+			const cleanup1 = vi.fn();
+			const cleanup2 = vi.fn();
+
+			// Open first modal with cleanup
+			modalController.open('about');
+			modalController.onClose(cleanup1);
+			modalController.close();
+
+			await waitFor(
+				() => {
+					expect(cleanup1).toHaveBeenCalledTimes(1);
+				},
+				{ timeout: 1000 },
+			);
+
+			// Open second modal with different cleanup
+			modalController.open('resize');
+			modalController.onClose(cleanup2);
+			modalController.close();
+
+			await waitFor(
+				() => {
+					expect(cleanup2).toHaveBeenCalledTimes(1);
+				},
+				{ timeout: 1000 },
+			);
+
+			// First cleanup should not be called again
+			expect(cleanup1).toHaveBeenCalledTimes(1);
+		});
+
+		it('should only call cleanup handler once per close', async () => {
+			const cleanupFn = vi.fn();
+
+			modalController.open('about');
+			modalController.onClose(cleanupFn);
+
+			// Close and wait
+			modalController.close();
+
+			await waitFor(
+				() => {
+					expect(cleanupFn).toHaveBeenCalledTimes(1);
+				},
+				{ timeout: 1000 },
+			);
+
+			// Try closing again (should not call cleanup again)
+			modalController.close();
+
+			// Wait a bit more to ensure no additional calls
+			await new Promise(resolve => setTimeout(resolve, 100));
+
+			expect(cleanupFn).toHaveBeenCalledTimes(1);
+		});
+
+		it('should allow setting new cleanup handler after modal reopens', async () => {
+			const cleanup1 = vi.fn();
+			const cleanup2 = vi.fn();
+
+			// Open, set cleanup, close
+			modalController.open('about');
+			modalController.onClose(cleanup1);
+			modalController.close();
+
+			await waitFor(
+				() => {
+					expect(cleanup1).toHaveBeenCalledTimes(1);
+				},
+				{ timeout: 1000 },
+			);
+
+			// Reopen same modal with new cleanup
+			modalController.open('about');
+			modalController.onClose(cleanup2);
+			modalController.close();
+
+			await waitFor(
+				() => {
+					expect(cleanup2).toHaveBeenCalledTimes(1);
+				},
+				{ timeout: 1000 },
+			);
+
+			// First cleanup should still be 1
+			expect(cleanup1).toHaveBeenCalledTimes(1);
 		});
 	});
 });

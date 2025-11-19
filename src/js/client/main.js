@@ -8,6 +8,7 @@ import { FontCache } from './fontCache.js';
 import {
 	$,
 	$$,
+	$$$,
 	createDragDropController,
 	toggleFullscreen,
 	createModalController,
@@ -218,6 +219,42 @@ const save = () => {
 	}, 300);
 };
 
+const fetchTutorial = async url => {
+	try {
+		const res = await fetch('./ansi/' + url);
+		// const res = await fetch('https://raw.githubusercontent.com/xero/ansi-tutorials/refs/heads/main/ansi/'+url);
+		if (!res.ok) {
+			throw new Error(`HTTP ${res.status} ${res.statusText}`);
+		}
+		const blob = await res.blob();
+		const cd = res.headers.get('Content-Disposition') || '';
+		let filename = '';
+		const fnMatch =
+			cd.match(/filename\*=UTF-8''([^;\r\n]+)/i) ||
+			cd.match(/filename="?([^";\r\n]+)"?/i);
+		if (fnMatch) {
+			filename = decodeURIComponent(fnMatch[1]);
+		} else {
+			const urlPath = new URL(url, location.href).pathname;
+			filename = urlPath.split('/').pop() || 'remote-file';
+		}
+		const file = new File([blob], filename, { type: 'application/octet-stream' });
+
+		if (
+			typeof openHandler === 'function' &&
+			State?.textArtCanvas &&
+			!bodyContainer?.classList.contains('loading')
+		) {
+			State.modal.loading('Reloading editor from file...');
+			openHandler(file);
+		} else {
+			pendingFile = file;
+		}
+	} catch (err) {
+		console.error('Failed to fetch/open remote file:', err);
+	}
+};
+
 const isIOS = (/iPad|iPhone|iPod/).test(navigator.userAgent);
 
 const handleIOS = () => {
@@ -387,8 +424,18 @@ const initializeAppComponents = async () => {
 		$('rowsInput'),
 	);
 	State.menus = createMenuController(
-		[$('fileMenu'), $('editMenu')],
+		[
+			{
+				button: $('fileMenu'),
+				menu: $('fileList'),
+			},
+			{
+				button: $('editMenu'),
+				menu: $('editList'),
+			},
+		],
 		canvasContainer,
+		viewport,
 	);
 	onClick($('new'), () => {
 		State.modal.open('warning');
@@ -447,6 +494,29 @@ const initializeAppComponents = async () => {
 
 	onClick($('help'), _ => {
 		window.open('https://github.com/xero/text0wnz/wiki/manual', '_blank');
+	});
+
+	onClick($('tutorials'), _ => {
+		State.modal.open('tutorials');
+		const items = [
+			...$$$('#tutorialsModal img'),
+			...$$$('#tutorialsModal button'),
+		];
+		const removers = items.map(el =>
+			onClick(el, (_, target) => {
+				const tut = target.dataset && target.dataset.ansi;
+				if (tut) {
+					fetchTutorial(tut);
+				}
+			}));
+
+		State.modal.onClose(() => {
+			removers.forEach(remove => remove());
+		});
+
+		onClick($('tutorialsCancel'), _ => {
+			State.modal.close();
+		});
 	});
 
 	onClick($('update'), _ => {
