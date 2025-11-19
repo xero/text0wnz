@@ -1488,111 +1488,49 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		if (undoBuffer.length > 0) {
 			const currentRedo = [];
 			const undoChunk = undoBuffer.pop();
-
-			// Batch undo operations for better performance
-			let undoBatchSize = 100;
-			let processedIndex = undoChunk.length; // ← Start from END and work backwards
-
-			const processUndoBatch = () => {
-				const batchStart = performance.now();
-
-				// Calculate how many items to process this batch (working backwards)
-				const itemsToProcess = Math.min(undoBatchSize, processedIndex);
-				const batchStartIndex = processedIndex - itemsToProcess;
-
-				// Process items in reverse order using slice
-				for (let i = processedIndex - 1; i >= batchStartIndex; i--) {
-					const undo = undoChunk[i];
-
-					if (undo && undo[0] < imageData.length) {
-						currentRedo.push([undo[0], imageData[undo[0]], undo[2], undo[3]]);
-						imageData[undo[0]] = undo[1];
-						drawHistory.push((undo[0] << 16) + undo[1]);
-						if (!iceColors) {
-							updateBeforeBlinkFlip(undo[2], undo[3]);
-						}
-						redrawGlyph(undo[0], undo[2], undo[3]);
-						enqueueDirtyCell(undo[2], undo[3]);
+			for (let i = undoChunk.length - 1; i >= 0; i--) {
+				const undo = undoChunk.pop();
+				if (undo[0] < imageData.length) {
+					currentRedo.push([undo[0], imageData[undo[0]], undo[2], undo[3]]);
+					imageData[undo[0]] = undo[1];
+					drawHistory.push((undo[0] << 16) + undo[1]);
+					if (!iceColors) {
+						updateBeforeBlinkFlip(undo[2], undo[3]);
 					}
+					// Use both immediate redraw AND dirty region system for undo
+					redrawGlyph(undo[0], undo[2], undo[3]);
+					enqueueDirtyCell(undo[2], undo[3]);
 				}
-
-				processedIndex -= itemsToProcess;
-				const batchTime = performance.now() - batchStart;
-
-				// Adaptive batching
-				if (batchTime < 5) {
-					undoBatchSize = Math.min(undoBatchSize * 1.2, 500);
-				} else if (batchTime > 15) {
-					undoBatchSize = Math.max(Math.floor(undoBatchSize * 0.8), 10);
-				}
-
-				if (processedIndex > 0) {
-					requestAnimationFrame(processUndoBatch);
-				} else {
-					redoBuffer.push(currentRedo);
-					processDirtyRegions();
-					sendDrawHistory();
-					State.saveToLocalStorage();
-				}
-			};
-
-			processUndoBatch();
+			}
+			redoBuffer.push(currentRedo);
+			processDirtyRegions();
+			sendDrawHistory();
+			State.saveToLocalStorage();
 		}
 	};
 
 	const redo = () => {
 		if (redoBuffer.length > 0) {
 			const redoChunk = redoBuffer.pop();
-
-			// Batch redo operations for better performance
-			let redoBatchSize = 100;
-			let processedIndex = redoChunk.length; // ← Start from END and work backwards
-
-			const processRedoBatch = () => {
-				const batchStart = performance.now();
-
-				// Calculate how many items to process this batch (working backwards)
-				const itemsToProcess = Math.min(redoBatchSize, processedIndex);
-				const batchStartIndex = processedIndex - itemsToProcess;
-
-				// Process items in reverse order using array access
-				for (let i = processedIndex - 1; i >= batchStartIndex; i--) {
-					const redo = redoChunk[i];
-
-					if (redo && redo[0] < imageData.length) {
-						currentUndo.push([redo[0], imageData[redo[0]], redo[2], redo[3]]);
-						imageData[redo[0]] = redo[1];
-						drawHistory.push((redo[0] << 16) + redo[1]);
-						if (!iceColors) {
-							updateBeforeBlinkFlip(redo[2], redo[3]);
-						}
-						redrawGlyph(redo[0], redo[2], redo[3]);
-						enqueueDirtyCell(redo[2], redo[3]);
+			for (let i = redoChunk.length - 1; i >= 0; i--) {
+				const redo = redoChunk.pop();
+				if (redo[0] < imageData.length) {
+					currentUndo.push([redo[0], imageData[redo[0]], redo[2], redo[3]]);
+					imageData[redo[0]] = redo[1];
+					drawHistory.push((redo[0] << 16) + redo[1]);
+					if (!iceColors) {
+						updateBeforeBlinkFlip(redo[2], redo[3]);
 					}
+					// Use both immediate redraw AND dirty region system for redo
+					redrawGlyph(redo[0], redo[2], redo[3]);
+					enqueueDirtyCell(redo[2], redo[3]);
 				}
-
-				processedIndex -= itemsToProcess;
-				const batchTime = performance.now() - batchStart;
-
-				// Adaptive batching
-				if (batchTime < 5) {
-					redoBatchSize = Math.min(redoBatchSize * 1.2, 500);
-				} else if (batchTime > 15) {
-					redoBatchSize = Math.max(Math.floor(redoBatchSize * 0.8), 10);
-				}
-
-				if (processedIndex > 0) {
-					requestAnimationFrame(processRedoBatch);
-				} else {
-					undoBuffer.push(currentUndo);
-					currentUndo = [];
-					processDirtyRegions();
-					sendDrawHistory();
-					State.saveToLocalStorage();
-				}
-			};
-
-			processRedoBatch();
+			}
+			undoBuffer.push(currentUndo);
+			currentUndo = [];
+			processDirtyRegions();
+			sendDrawHistory();
+			State.saveToLocalStorage();
 		}
 	};
 
