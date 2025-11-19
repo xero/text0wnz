@@ -1624,13 +1624,15 @@ const createSelectionTool = () => {
 			return;
 		}
 		State.textArtCanvas.startUndo();
-		// Always refetch current selection data
-		selectionData = State.textArtCanvas.getArea(
-			selection.x,
-			selection.y,
-			selection.width,
-			selection.height,
-		);
+		// Only update the current selection data if we don't have it
+		if (!selectionData) {
+			selectionData = State.textArtCanvas.getArea(
+				selection.x,
+				selection.y,
+				selection.width,
+				selection.height,
+			);
+		}
 		// Restore what was underneath the current position (if any)
 		if (underlyingData) {
 			State.textArtCanvas.setArea(underlyingData, selection.x, selection.y);
