@@ -1,6 +1,12 @@
 name: build and publish editor docker image
 on:
   workflow_dispatch:
+  workflow_call:
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
   push:
     paths:
       - 'Dockerfile'
@@ -12,6 +18,8 @@ jobs:
     permissions:
       contents: write
       packages: write
+    outputs:
+      build_tag: ${{ steps.get_sha.outputs.build_tag }}
     steps:
       - name: checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
@@ -19,13 +27,18 @@ jobs:
         uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
         with:
           bun-version: 'latest'
-      - name: sync metadata
-        id: sync-metadata
+      - name: version bump
+        id: version-bump
         run: |
+          git fetch origin main
+          git checkout main
+          git pull origin main --ff-only
           BUILDTIME=$(date -u +%Y-%m-%d)
           VERSION=$(bun -p "require('./package.json').version")
-          perl -pi -e "s/(LABEL\s+org\.opencontainers\.image\.created=\")[^\"]*(\")/\$1$BUILDTIME\$2/" Dockerfile
-          perl -pi -e "s/(LABEL\s+org\.opencontainers\.image\.version=\")[^\"]*(\")/\$1$VERSION\$2/" Dockerfile
+          BLINE=$(awk '/org.opencontainers.image.created/ { print NR; exit }' Dockerfile)
+          VLINE=$(awk '/org.opencontainers.image.version/ { print NR; exit }' Dockerfile)
+          sed -i "${BLINE}c\LABEL org.opencontainers.image.created=\"${BUILDTIME}\"" Dockerfile
+          sed -i "${VLINE}c\LABEL org.opencontainers.image.version=\"${VERSION}\"" Dockerfile
           echo "buildtime=$BUILDTIME" >> "$GITHUB_OUTPUT"
           echo "buildversion=$VERSION" >> "$GITHUB_OUTPUT"
           git add Dockerfile
@@ -41,7 +54,7 @@ jobs:
             if [ -z "${{ github.event.head_commit.message }}" ]; then
               COMMIT_MSG="${{ github.event.head_commit.message }}"
             else
-              COMMIT_MSG="$(git log -1 --pretty=%s || true)"
+            COMMIT_MSG="$(git log -1 --pretty=%s || true)"
             fi
             if [ -z "$COMMIT_MSG" ]; then
               COMMIT_MSG="chore(container) docker build"
@@ -78,6 +91,11 @@ jobs:
           tags: |
             type=raw,value=latest
             type=sha,format=short,prefix=sha-
+      - name: get docker short sha
+        id: get_sha
+        run: |
+          SHA=$(echo "${{ steps.meta.outputs.tags }}" | grep '^sha-' | head -n1)
+          echo "build_tag=$SHA" >> $GITHUB_OUTPUT
       - name: build and push
         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
@@ -96,5 +114,5 @@ jobs:
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.title=text0wnz
             org.opencontainers.image.url=https://text.0w.nz
-            org.opencontainers.image.created="${{ steps.sync-metadata.outputs.buildtime }}"
-            org.opencontainers.image.version="${{ steps.sync-metadata.outputs.buildversion }}"
+            org.opencontainers.image.created="${{ steps.version-bump.outputs.buildtime }}"
+            org.opencontainers.image.version="${{ steps.version-bump.outputs.buildversion }}"
