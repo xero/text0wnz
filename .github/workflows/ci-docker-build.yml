@@ -15,6 +15,10 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+      - name: setup bun
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
+        with:
+          bun-version: 'latest'
       - name: sync metadata
         id: sync-metadata
         run: |
@@ -23,6 +27,30 @@ jobs:
           sed -E -i "s@(^[[:space:]]*LABEL[[:space:]]+org\.opencontainers\.image\.created=\")([^\"]*)(\".*)@\1$BUILDTIME\3@g".github/ci.Dockerfile
           sed -E -i "s@(^[[:space:]]*LABEL[[:space:]]+org\.opencontainers\.image\.version=\")([^\"]*)(\".*)@\1$VERSION\3@g" .github/ci.Dockerfile
           echo "buildtime=$BUILDTIME" >> "$GITHUB_OUTPUT"
+          git add .github/ci.Dockerfile
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            COMMIT_NAME="${{ github.event.head_commit.author.name }}"
+            COMMIT_EMAIL="${{ github.event.head_commit.author.email }}"
+            if [ -z "$COMMIT_NAME" ]; then
+              COMMIT_NAME="${{ github.actor }}"
+              COMMIT_EMAIL="${{ github.actor }}@users.noreply.github.com"
+            fi
+            if [ -z "${{ github.event.head_commit.message }}" ]; then
+              COMMIT_MSG="${{ github.event.head_commit.message }}"
+            else
+              COMMIT_MSG="$(git log -1 --pretty=%s || true)"
+            fi
+            if [ -z "$COMMIT_MSG" ]; then
+              COMMIT_MSG="chore(ci.container) docker build"
+            fi
+            git config --global user.name "$COMMIT_NAME"
+            git config --global user.email "$COMMIT_EMAIL"
+            git add docs/Home.md docs/_Sidebar.md
+              git commit --author="$COMMIT_NAME <$COMMIT_EMAIL>" -m "$COMMIT_MSG"
+            git push
+          fi
       - name: set up docker buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
       - name: github container registry login

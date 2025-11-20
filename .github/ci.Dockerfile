@@ -14,7 +14,7 @@ LABEL org.opencontainers.image.created="2025-10-28"
 COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 ENV PATH="/root/.bun/bin:${PATH}"
 
-# Install required packages
+# Install dependencies
 RUN apt-get update && apt-get install -y curl unzip
 
 # Dev tools
