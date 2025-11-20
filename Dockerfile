@@ -2,12 +2,12 @@ FROM caddy:2-alpine AS caddy
 FROM oven/bun:alpine AS bun
 FROM alpine:3.22.2
 
+LABEL org.opencontainers.image.title="text0wnz"
 LABEL org.opencontainers.image.description="Retro Text Art Editor for ANSI/ASCII/NFO/XBIN Files Rebooted for the Modern Web"
 LABEL org.opencontainers.image.authors="https://github.com/xero/text0wnz/graphs/contributors"
 LABEL org.opencontainers.image.documentation="https://github.com/xero/text0wnz/wiki"
 LABEL org.opencontainers.image.source="https://github.com/xero/text0wnz"
 LABEL org.opencontainers.image.url="https://text.0w.nz"
-LABEL org.opencontainers.image.title="text0wnz"
 LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.created="2025-11-06"
 LABEL org.opencontainers.image.version="2.1.2"

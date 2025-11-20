@@ -23,9 +23,7 @@ jobs:
         id: sync-metadata
         run: |
           BUILDTIME=$(date -u +%Y-%m-%d)
-          VERSION=$(bun -p "require('./package.json').version")
-          sed -E -i "s@(^[[:space:]]*LABEL[[:space:]]+org\.opencontainers\.image\.created=\")([^\"]*)(\".*)@\1$BUILDTIME\3@g".github/ci.Dockerfile
-          sed -E -i "s@(^[[:space:]]*LABEL[[:space:]]+org\.opencontainers\.image\.version=\")([^\"]*)(\".*)@\1$VERSION\3@g" .github/ci.Dockerfile
+          perl -pi -e "s/(LABEL\s+org\.opencontainers\.image\.created=\")[^\"]*(\")/\$1$BUILDTIME\$2/" Dockerfile
           echo "buildtime=$BUILDTIME" >> "$GITHUB_OUTPUT"
           git add .github/ci.Dockerfile
           if git diff --staged --quiet; then
