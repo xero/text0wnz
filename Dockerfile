@@ -2,11 +2,15 @@ FROM caddy:2-alpine AS caddy
 FROM oven/bun:alpine AS bun
 FROM alpine:3.22.2
 
-LABEL org.opencontainers.image.title="text0wnz"
-LABEL org.opencontainers.image.authors="xero <x@xero.style>"
-LABEL org.opencontainers.image.description="Text-mode art editor for ANSI, ASCII, XBIN, NFO, & TXT files"
+LABEL org.opencontainers.image.description="Retro Text Art Editor for ANSI/ASCII/NFO/XBIN Files Rebooted for the Modern Web"
+LABEL org.opencontainers.image.authors="https://github.com/xero/text0wnz/graphs/contributors"
+LABEL org.opencontainers.image.documentation="https://github.com/xero/text0wnz/wiki"
 LABEL org.opencontainers.image.source="https://github.com/xero/text0wnz"
-LABEL org.opencontainers.image.created="2025-10-27"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.title="text0wnz"
+LABEL org.opencontainers.image.url="https://text.0w.nz"
+LABEL org.opencontainers.image.created="2025-11-20"
+LABEL org.opencontainers.image.version="2.1.2"
 
 # Override me!
 ENV DOMAIN="localhost"
@@ -30,7 +34,6 @@ COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 # Put the sources in the oven & bake
 WORKDIR /app
 COPY . .
-RUN rm bun.lock package-lock.json
 RUN bun i && bun bake
 # Take out the bun and let it cool
 RUN rm -rf ./node_modules && bun i --production
@@ -46,6 +49,7 @@ RUN rm -rf \
     .prettierignore \
     .prettierrc \
     *.config.js \
+		bun.lock \
     Dockerfile \
     docs \
     node_modules \

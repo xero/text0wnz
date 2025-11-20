@@ -15,6 +15,15 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+      - name: sync metadata
+        id: sync-metadata
+        run: |
+          BUILDTIME=$(date -u +%Y-%m-%d)
+          VERSION=$(bun -p "require('./package.json').version")
+          sed -E -i "s@(^[[:space:]]*LABEL[[:space:]]+org\.opencontainers\.image\.created=\")([^\"]*)(\".*)@\1$BUILDTIME\3@g" Dockerfile
+          sed -E -i "s@(^[[:space:]]*LABEL[[:space:]]+org\.opencontainers\.image\.version=\")([^\"]*)(\".*)@\1$VERSION\3@g" Dockerfile
+          echo "buildtime=$BUILDTIME" >> "$GITHUB_OUTPUT"
+          echo "buildversion=$VERSION" >> "$GITHUB_OUTPUT"
       - name: set up QEMU
         uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3
       - name: set up docker buildx
@@ -53,8 +62,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           annotations: |
-            org.opencontainers.image.description=Text-mode art editor for ANSI, ASCII, XBIN, NFO, & TXT files. Modern web-based PWA w/ offline mode, local storage sync, & optional collaborative server
-            org.opencontainers.image.title=text0wnz
             org.opencontainers.image.authors=https://github.com/xero/text0wnz/graphs/contributors
+            org.opencontainers.image.description=Retro Text Art Editor for ANSI/ASCII/NFO/XBIN Files Rebooted for the Modern Web
+            org.opencontainers.image.documentation=https://github.com/xero/text0wnz/wiki
             org.opencontainers.image.source=https://github.com/xero/text0wnz
             org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.title=text0wnz
+            org.opencontainers.image.url=https://text.0w.nz
+            org.opencontainers.image.created="${{ steps.sync-metadata.outputs.buildtime }}"
+            org.opencontainers.image.version="${{ steps.sync-metadata.outputs.buildversion }}"

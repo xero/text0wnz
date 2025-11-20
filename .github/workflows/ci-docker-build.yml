@@ -15,6 +15,14 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+      - name: sync metadata
+        id: sync-metadata
+        run: |
+          BUILDTIME=$(date -u +%Y-%m-%d)
+          VERSION=$(bun -p "require('./package.json').version")
+          sed -E -i "s@(^[[:space:]]*LABEL[[:space:]]+org\.opencontainers\.image\.created=\")([^\"]*)(\".*)@\1$BUILDTIME\3@g".github/ci.Dockerfile
+          sed -E -i "s@(^[[:space:]]*LABEL[[:space:]]+org\.opencontainers\.image\.version=\")([^\"]*)(\".*)@\1$VERSION\3@g" .github/ci.Dockerfile
+          echo "buildtime=$BUILDTIME" >> "$GITHUB_OUTPUT"
       - name: set up docker buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
       - name: github container registry login
@@ -33,7 +41,10 @@ jobs:
           tags: ghcr.io/${{ github.repository }}/ci:latest
           annotations: |
             org.opencontainers.image.description=CI worker base image for vitetest & playwright, unit & e2e testing
-            org.opencontainers.image.title=text0wnz
             org.opencontainers.image.authors=https://github.com/xero/text0wnz/graphs/contributors
+            org.opencontainers.image.documentation=https://github.com/xero/text0wnz/wiki
             org.opencontainers.image.source=https://github.com/xero/text0wnz
             org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.title=text0wnz
+            org.opencontainers.image.url=https://text.0w.nz
+            org.opencontainers.image.created="${{ steps.sync-metadata.outputs.buildtime }}"

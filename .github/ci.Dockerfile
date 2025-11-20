@@ -1,10 +1,13 @@
 FROM oven/bun:debian AS bun
 FROM mcr.microsoft.com/playwright:latest
 
-LABEL org.opencontainers.image.title="text0wnz/ci"
-LABEL org.opencontainers.image.authors="xero <x@xero.style>"
-LABEL org.opencontainers.image.description="cicd toolchain for the text0wnz editor"
+LABEL org.opencontainers.image.description="cicd unit testing toolchain for the text0wnz editor"
+LABEL org.opencontainers.image.authors="https://github.com/xero/text0wnz/graphs/contributors"
+LABEL org.opencontainers.image.documentation="https://github.com/xero/text0wnz/wiki"
+LABEL org.opencontainers.image.url="https://github.com/xero/text0wnz/actions"
 LABEL org.opencontainers.image.source="https://github.com/xero/text0wnz"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.title="text0wnz"
 LABEL org.opencontainers.image.created="2025-10-28"
 
 # Pull the bun outta the oven
