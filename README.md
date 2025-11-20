@@ -7,7 +7,7 @@
 ## Draw in your browser now!
 
 | Domain                          | Status                                             |
-| :------------------------------ | :------------------------------------------------- |
+|:--------------------------------|:---------------------------------------------------|
 | https://text.0w.nz              | The main domain. Collab server may be available    |
 | https://xero.github.io/text0wnz | Github Pages version of the site. No collab server |
 
@@ -28,22 +28,27 @@
 [![16colors](https://img.shields.io/badge/16Colors-16Colors?logo=renovate&logoColor=979da4&logoSize=auto&label=ANSI%20Art&labelColor=262a2e&color=ed7a2c)](https://16colo.rs)
 [![AsciiArena](https://img.shields.io/badge/AsciiArena-AsciiArena?logo=academia&logoColor=979da4&label=Ascii%20Art&labelColor=262a2e&color=ed7a2c)](https://asciiarena.se)
 
-# Table o' Contents
 
-- [Features](#features)
-- [Supported File Types](#supported-file-types)
-- [Browser Support](#browser-support)
-- [Project Documentation](#project-documentation)
-- [Drawing & Editing Tools](#drawing--editing-tools)
-- [Key-bindings & Mouse/Touch Controls](#key-bindings--mousetouch-controls)
-- [Tips & Workflow](#tips--workflow)
-- [Build & Development](#build--development)
-- [Collaborative Server](#collaborative-server)
-- [Docker Containerization](#docker-containerization)
-- [Testing Suite](#testing-suite)
-- [Troubleshooting](#troubleshooting)
-- [Project History](#project-history)
-- [License & Greetz](#license--greetz)
+> ### ,-'2_,-'2_,-'2_,-'2_,-'2_,-'2_,-'2_,-'2_,-'2_,-'2_,-'2_,-'2_
+>
+> # Table o' Contents
+>
+> - [Features](#features)
+> - [File Types](#supported-file-types)
+> - [Browser Support](#browser-support)
+> - [Documentation](#documentation)
+> - [Drawing & Editing Tools](#drawing--editing-tools)
+> - [Key-bindings & Mouse/Touch Controls](#key-bindings--mousetouch-controls)
+> - [Tips & Workflow](#tips--workflow)
+> - [Build & Development](#build--development)
+> - [Collaborative Server](#collaborative-server)
+> - [Docker Containerization](#docker-containerization)
+> - [Testing Suite](#testing-suite)
+> - [Troubleshooting](#troubleshooting)
+> - [Project History](#project-history)
+> - [License & Greetz](#license--greetz)
+>
+> ### "7_/"7_/"7_/"7_/"7_/"7_/"7_/"7_/"7_/"7_/"7_/"7_/"7_/"7_/"
 
 ## Features
 
@@ -87,85 +92,89 @@
 
 ## Supported File Types
 
-- `*.ans`: ANSI art **_‡_**
-- `*.utf8.ans`: UTF-8 ANSI for terminals
-- `*.bin`: DOS-era binary format **_‡_**
-- `*.xb`: Modern [XBIN](docs/xb-format.md) files **_‡_**
-- `*.nfo`: Scene release format **_‡_**
-- `*.diz`: FILE_ID.DIZ archive metadata files **_‡_**
-- `*.txt`: ASCII or other plain text
-- `*.png`: Image (export support only)
-
-**_‡_** With full [Sauce](docs/sauce-format.md) metadata
+| Extension       | Description                            | Import | Export | [Sauce](docs/sauce-format.md) |
+|:----------------|:---------------------------------------|:-----|:-----|:-----|
+| **`.ans`**      | ANSI art                               | ░▒▒░ | ░▒▒░ | ░▒▒░ |
+| **`.utf8.ans`** | UTF-8 ANSI for terminals               | ░▒▒░ | ░▒▒░ |      |
+| **`.bin`**      | DOS-era binary format                  | ░▒▒░ | ░▒▒░ | ░▒▒░ |
+| **`.xb`**       | Modern [XBIN](docs/xb-format.md) files | ░▒▒░ | ░▒▒░ | ░▒▒░ |
+| **`.nfo`**      | Scene release format                   | ░▒▒░ | ░▒▒░ | ░▒▒░ |
+| **`.diz`**      | FILE_ID.DIZ archive metadata files     | ░▒▒░ | ░▒▒░ | ░▒▒░ |
+| **`.txt`**      | ASCII or other plain text              | ░▒▒░ | ░▒▒░ |      |
+| **`.png`**      | Artwork rendered as an image           |      | ░▒▒░ |      |
 
 ## Browser Support
 
 | Browser           | Chrome | Firefox | Safari  | Edge   | Opera  | iOS     | iPadOS | Android |
-|-------------------|--------|---------|---------|--------|--------|---------|--------|---------|
-| **Updated:** <br> [2025-11-13](https://github.com/Fyrd/caniuse) | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/chrome.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/firefox.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/safari.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/edge.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/opera.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/ios.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/ipados.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/android.svg" width="50" height="50"> |
+|:------------------|:-------|:--------|:--------|:-------|:-------|:--------|:-------|:--------|
+| Updated: <br> [2025-11-20](https://github.com/Fyrd/caniuse) | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/chrome.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/firefox.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/safari.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/edge.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/opera.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/ios.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/ipados.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/android.svg" width="50" height="50"> |
 | **Supported**     | 95.0+  | 93.0+   | 15.0+   | 95.0+  | 81.0+  | 15.0+   | 15.0+  | 95.0+   |
 | **Latest Dev**    | Canary | Nightly | Preview | Dev    | -      | -       | -      | -       |
-| _**Unsupported**_ | < 94.X | < 92.X  | < 14.X  | < 94.X | < .X.X | < 14.X  | < 14.X | < 94.X  |
+| _**Unsupported**_ | < 94.x | < 92.x  | < 14.x  | < 94.x | < 80.x | < 14.x  | < 14.x | < 94.x  |
 
-## Project Documentation
+## Documentation
 
-- The **[docs](docs/)** folder of this repo contains the raw markdown documentation files as well as example artwork to view and play around with.
-- The **[wiki](https://github.com/xero/text0wnz/wiki)** renders these files into easier to read webpages.
+> The **[docs](docs/)** folder contains raw markdown documentation files
+>
+> The **[wiki](https://github.com/xero/text0wnz/wiki)** renders these files into easier to read webpages
 
 **Application Guides**
 
-- **[Editor Manual](docs/manual.md) - Visual guide to the Frontend application**
-  - [Key bindings](docs/manual.md#key-bindings-summary) - Hot keys reference guide
-- [Collaboration Server](docs/collaboration-server.md) - Backend real-time collaboration server
-- [Architecture](docs/architecture.md) - System architecture and design overview
-- [PWA Install](docs/install-pwa.md) - Guide to app installing and OS integration for multiple platforms
-- [Privacy Policy](docs/privacy.md) - Privacy and data handling policy
-- [Security Policy](docs/security.md) - Vulnerability reporting & threat modeling
+- **[Editor Manual](docs/manual.md) - Visual guide to the Frontend application** [**↵**](https://github.com/xero/text0wnz/wiki/manual)
+  - [Key bindings](docs/manual.md#key-bindings-summary) - Hot keys reference guide [**↵**](https://github.com/xero/text0wnz/wiki/manual#key-bindings-summary)
+- [Collaboration Server](docs/collaboration-server.md) - Backend real-time collaboration server [**↵**](https://github.com/xero/text0wnz/wiki/collaboration-server)
+- [Architecture](docs/architecture.md) - System architecture and design overview [**↵**](https://github.com/xero/text0wnz/wiki/architecture)
+- [PWA Install](docs/install-pwa.md) - Guide to app installing and OS integration for multiple platforms [**↵**](https://github.com/xero/text0wnz/wiki/install-pwa)
+- [Privacy Policy](docs/privacy.md) - Privacy and data handling policy [**↵**](https://github.com/xero/text0wnz/wiki/privacy)
+- [Security Policy](docs/security.md) - Vulnerability reporting & threat modeling [**↵**](https://github.com/xero/text0wnz/wiki/security)
 
 **Development Guides**
 
-- [Project Structure](docs/project-structure.md) - File and module organization guide
-- [Building and Developing](docs/building-and-developing.md) - Development workflow and build process
-- [Testing](docs/testing.md) - Triple headed testing guide (unit, dom, & e2e)
-- [CI/CD Pipeline](docs/cicd.md) - Continuous integration and deployment
-- [Webserver Configuration](docs/webserver-configuration.md) - Webserver setup and configuration
-- [Docker](docs/docker.md) - Container deployment guide
-- [Other Tools](docs/other-tools.md) - Additional development and deployment tools
+- [Project Structure](docs/project-structure.md) - File and module organization guide [**↵**](https://github.com/xero/text0wnz/wiki/project-structure)
+- [Building and Developing](docs/building-and-developing.md) - Development workflow and build process [**↵**](https://github.com/xero/text0wnz/wiki/building-and-developing)
+- [Testing](docs/testing.md) - Triple headed testing guide (unit, dom, & e2e) [**↵**](https://github.com/xero/text0wnz/wiki/testing)
+- [CI/CD Pipeline](docs/cicd.md) - Continuous integration and deployment [**↵**](https://github.com/xero/text0wnz/wiki/cicd)
+- [Webserver Configuration](docs/webserver-configuration.md) - Webserver setup and configuration [**↵**](https://github.com/xero/text0wnz/wiki/webserver-configuration)
+- [Docker](docs/docker.md) - Container deployment guide [**↵**](https://github.com/xero/text0wnz/wiki/docker)
+- [Other Tools](docs/other-tools.md) - Additional development and deployment tools [**↵**](https://github.com/xero/text0wnz/wiki/other-tools)
 
 **Technical Specifications**
 
-- [SAUCE Format](docs/sauce-format.md) - SAUCE metadata format specification
-- [XBin Format](docs/xb-format.md) - XBin file format specification
+- [SAUCE Format](docs/sauce-format.md) - SAUCE metadata format specification [**↵**](https://github.com/xero/text0wnz/wiki/sauce-format)
+- [XBin Format](docs/xb-format.md) - XBin file format specification [**↵**](https://github.com/xero/text0wnz/wiki/xb-format)
 
 **Supplemental**
 
-- [Fonts](docs/fonts.md) - Complete font reference and previews
-- [Logos](docs/logos.md) - ASCII art logos for the project
+- [Fonts](docs/fonts.md) - Complete font reference and previews [**↵**](https://github.com/xero/text0wnz/wiki/fonts)
+- [Logos](docs/logos.md) - ASCII art logos for the project [**↵**](https://github.com/xero/text0wnz/wiki/logos)
 - [Examples](docs/examples/) - Sample artwork to view and edit
   - ANSI artwork by [xeR0](https://16colo.rs/artist/xero)
   - XBin artwork by [Hellbeard](https://16colo.rs/artist/hellbeard)
 
+> [!NOTE]
+> **` ↵ `** links to the wiki version of a document
+
 ## Drawing & Editing Tools
 
-| Tool Name          | Description                                                                    |
-| ------------------ | ------------------------------------------------------------------------------ |
-| Keyboard Mode      | Type characters onto the canvas, using full keyboard navigation                |
-| Half Block Brush   | Draw half-blocks with the mouse or touchscreen, pressure-sensitive             |
-| Shading Brush      | Draw shading blocks with the mouse or touchscreen, 'reduce mode' with shift    |
-| Character Brush    | Draw any ASCII/extended character in the font using a mouse, includes a picker |
-| Fill Tool          | Flood fill for color/text, smart attribute handling                            |
-| Colorizer          | Paint colors only, hold alt for background colors                              |
-| Line Tool          | Draw straight lines, with color conflict resolution                            |
-| Square/Circle Tool | Draw rectangles/circles/ellipses, outline or filled, with a real-time preview  |
-| Selection Tool     | Select, move, copy, flip, manipulate rectangular areas                         |
-| Sample Tool        | Color picker for quick selection from artwork                                  |
+| Tool Name              | Description                                                                    |
+|:-----------------------|:-------------------------------------------------------------------------------|
+| **Keyboard Mode**      | Type characters onto the canvas, using full keyboard navigation                |
+| **Half Block Brush**   | Draw half-blocks with the mouse or touchscreen, pressure-sensitive             |
+| **Shading Brush**      | Draw shading blocks with the mouse or touchscreen, 'reduce mode' with shift    |
+| **Character Brush**    | Draw any ASCII/extended character in the font using a mouse, includes a picker |
+| **Fill Tool**          | Flood fill for color/text, smart attribute handling                            |
+| **Colorizer**          | Paint colors only, hold alt for background colors                              |
+| **Line Tool**          | Draw straight lines, with color conflict resolution                            |
+| **Square/Circle Tool** | Draw rectangles/circles/ellipses, outline or filled, with a real-time preview  |
+| **Selection Tool**     | Select, move, copy, flip, manipulate rectangular areas                         |
+| **Sample Tool**        | Color picker for quick selection from artwork                                  |
 
 ## Key Bindings & Mouse/Touch Controls
 
 **Main Tool Shortcuts:**
 
 | Key | Tool/Action            |
-| --- | ---------------------- |
+|:--- |:-----------------------|
 | `k` | Keyboard Mode          |
 | `f` | Freestyle (half-block) |
 | `b` | Character Brush        |
@@ -178,7 +187,7 @@
 **Color & Character:**
 
 | Key/Combo  | Action                             |
-| ---------- | ---------------------------------- |
+|:---------- |:-----------------------------------|
 | `d`        | Reset colors to default            |
 | `q`        | Swap foreground/background         |
 | `0`–`7`    | Select basic color                 |
@@ -187,7 +196,7 @@
 **File & Canvas:**
 
 | Combo                                     | Action                     |
-| ----------------------------------------- | -------------------------- |
+|:----------------------------------------- |:---------------------------|
 | `ctrl z` / `ctrl y`                       | Undo / Redo                |
 | `ctrl x`/`ctrl c`/`ctrl v`/`ctrl shift v` | Cut/Copy/Paste/SystemPaste |
 | `ctrl delete`                             | Delete selection           |
@@ -195,7 +204,7 @@
 **Navigation (Keyboard Mode):**
 
 | Key                      | Action                  |
-| ------------------------ | ----------------------- |
+|:------------------------ |:------------------------|
 | `arrow keys`             | Move cursor             |
 | `home`                   | Start of current row    |
 | `end`                    | End of current row      |
@@ -205,7 +214,7 @@
 **Advanced Editing (alt + key):**
 
 | Combo                           | Action               |
-| ------------------------------- | -------------------- |
+|:------------------------------- |:---------------------|
 | `alt up` / `alt down`           | Insert/Delete row    |
 | `alt right` / `alt left`        | Insert/Delete column |
 | `alt e` / `alt shift e`         | Erase row/col        |
@@ -215,14 +224,14 @@
 **Selection Operations:**
 
 | Key       | Action         |
-| --------- | -------------- |
+|:--------- |:---------------|
 | `[` / `]` | Flip selection |
 | `m`       | Move mode      |
 
 **Selection Navigation:**
 
 | Key                      | Action                            |
-| ------------------------ | --------------------------------- |
+|:------------------------ |:----------------------------------|
 | `arrow keys`             | Move selection area by one cell   |
 | `shift arrow keys`       | Expand/shrink selection           |
 | `home` / `end`           | Expand selection to row start/end |
@@ -238,7 +247,7 @@
 **The Classic CP437 ANSI block shortcuts**
 
 | Key   | Character | Description        |
-| ----- | --------- | ------------------ |
+|:----- |:--------- |:-------------------|
 | `f1`  | `░`       | Light shade block  |
 | `f2`  | `▒`       | Medium shade block |
 | `f3`  | `▓`       | Dark shade block   |
@@ -316,17 +325,17 @@ bun www    # or npm run www
 
 **Scripts:**
 
-| Script           | Purpose                              |
-| ---------------- | ------------------------------------ |
-| bake             | Build for production (Vite)          |
-| server           | Start collaboration server           |
-| www              | Serve the `/dist` folder for testing |
-| fix              | Auto-fix lint and format             |
-| lint:check/fix   | Lint checking/fixing                 |
-| format:check/fix | Formatting check/fix                 |
-| test:unit        | Run unit tests (Vitest)              |
-| test:e2e         | Run end to end tests (Playwright)    |
-| test:install     | Install playwright browsers          |
+| Script             | Purpose                              |
+|:-------------------|:-------------------------------------|
+| `bake`             | Build for production (Vite)          |
+| `server`           | Start collaboration server           |
+| `www`              | Serve the `/dist` folder for testing |
+| `fix`              | Auto-fix lint and format             |
+| `lint:check/fix`   | Lint checking/fixing                 |
+| `format:check/fix` | Formatting check/fix`                |
+| `test:unit`        | Run unit tests (Vitest)              |
+| `test:e2e`         | Run end to end tests (Playwright)    |
+| `test:install`     | Install playwright browsers          |
 
 > [!TIP]
 > See: [package.json](package.json) for full commands definitions
@@ -404,7 +413,7 @@ node src/js/server/main.js
 **Command-Line Options**
 
 | Option                 | Description                                      | Default            |
-| ---------------------- | ------------------------------------------------ | ------------------ |
+|:---------------------- |:------------------------------------------------ |:-------------------|
 | `[port]`               | Port to run the server on                        | `1337`             |
 | `--ssl`                | Enable SSL (requires certificates in `ssl-dir`)  | Disabled           |
 | `--ssl-dir <path>`     | SSL certificate directory                        | `/etc/ssl/private` |
@@ -556,7 +565,7 @@ Fast forward a decade: xeR0 found himself sad he was still unable to use the new
 
 <img src="https://gist.githubusercontent.com/xero/cbcd5c38b695004c848b73e5c1c0c779/raw/6b32899b0af238b17383d7a878a69a076139e72d/kopimi-sm.png" align="left" height="222">
 
-mad love & respect to ▒ [Andy Herbert^67](http://github.com/andyherbert) - [Moebius](https://github.com/blocktronics/moebius) ░ [grmmxi^imp!](https://glyphdrawing.club/) - [MoebiusXBIN](https://github.com/hlotvonen/moebiusXBIN/) ░ [Curtis Wensley](https://github.com/cwensley) - [PabloDraw](https://github.com/cwensley/pablodraw) ░ [Skull Leader^ACiD](https://defacto2.net/p/skull-leader) - [ACiDDRAW](https://www.acid.org/apps/apps.html) ▒ & the scene!
+Mad love & respect to ▒ [Andy Herbert^67](http://github.com/andyherbert) - [Moebius](https://github.com/blocktronics/moebius) ░ [grmmxi^imp!](https://glyphdrawing.club/) - [MoebiusXBIN](https://github.com/hlotvonen/moebiusXBIN/) ░ [Curtis Wensley](https://github.com/cwensley) - [PabloDraw](https://github.com/cwensley/pablodraw) ░ [Skull Leader^ACiD](https://defacto2.net/p/skull-leader) - [ACiDDRAW](https://www.acid.org/apps/apps.html) ▒ & the art scene!
 
 ---
 
