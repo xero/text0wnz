@@ -156,4 +156,4 @@ See: [Contributing](contributing) for more details
 
 ## Getting Help
 
-- **Issues:** [GitHub Issues](https://github.com/xero/teXt0wnz/issues)
+If after reading the docs you still need help, search our [GitHub Issues](https://github.com/xero/teXt0wnz/issues) or create a new one describing your problem or desired behaviour.

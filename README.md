@@ -100,17 +100,17 @@
 
 ## Browser Support
 
-| Browser           | Chrome | Firefox | Safari | Edge   | Opera  | iOS     | iPadOS | Android |
-|-------------------|--------|---------|--------|--------|--------|---------|--------|---------|
+| Browser           | Chrome | Firefox | Safari  | Edge   | Opera  | iOS     | iPadOS | Android |
+|-------------------|--------|---------|---------|--------|--------|---------|--------|---------|
 | **Updated:** <br> [2025-11-13](https://github.com/Fyrd/caniuse) | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/chrome.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/firefox.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/safari.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/edge.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/opera.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/ios.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/ipados.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/android.svg" width="50" height="50"> |
-| **Supported**     | 95.0+  | 93.0+   | 15.0+  | 95.0+  | 81.0+  | 15.0+   | 15.0+  | 95.0+   |
-| _**Unsupported**_ | < 94.0 | < 92.0  | < 14.0 | < 94.0 | < 80.0 | < 14.0  | < 14.0 | < 94.0  |
-| **Latest Dev**    | Canary | Nightly | -      | -      | -      | -       | -      | -       |
+| **Supported**     | 95.0+  | 93.0+   | 15.0+   | 95.0+  | 81.0+  | 15.0+   | 15.0+  | 95.0+   |
+| **Latest Dev**    | Canary | Nightly | Preview | Dev    | -      | -       | -      | -       |
+| _**Unsupported**_ | < 94.X | < 92.X  | < 14.X  | < 94.X | < .X.X | < 14.X  | < 14.X | < 94.X  |
 
 ## Project Documentation
 
 - The **[docs](docs/)** folder of this repo contains the raw markdown documentation files as well as example artwork to view and play around with.
-- The **[wiki](https://github.com/xero/text0wnz/wiki)** renders these files into easier to read webpages. The wiki also hosts the documentation images to keep the repo size more manageable.
+- The **[wiki](https://github.com/xero/text0wnz/wiki)** renders these files into easier to read webpages.
 
 **Application Guides**
 
