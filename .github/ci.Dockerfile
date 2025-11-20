@@ -17,7 +17,7 @@ ENV PATH="/root/.bun/bin:${PATH}"
 # Install dependencies
 RUN apt-get update && apt-get install -y curl unzip
 
-# Dev tools
+# Testing tools
 RUN bun i -g playwright eslint prettier
 
 # Playwright browsers

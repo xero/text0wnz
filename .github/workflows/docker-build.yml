@@ -48,8 +48,7 @@ jobs:
             fi
             git config --global user.name "$COMMIT_NAME"
             git config --global user.email "$COMMIT_EMAIL"
-            git add docs/Home.md docs/_Sidebar.md
-              git commit --author="$COMMIT_NAME <$COMMIT_EMAIL>" -m "$COMMIT_MSG"
+            git commit --author="$COMMIT_NAME <$COMMIT_EMAIL>" -m "$COMMIT_MSG"
             git push
           fi
       - name: set up QEMU
