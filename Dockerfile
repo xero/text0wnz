@@ -34,6 +34,7 @@ COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 # Put the sources in the oven & bake
 WORKDIR /app
 COPY . .
+RUN rm bun.lock package-lock.json
 RUN bun i && bun bake
 # Take out the bun and let it cool
 RUN rm -rf ./node_modules && bun i --production
@@ -49,7 +50,6 @@ RUN rm -rf \
     .prettierignore \
     .prettierrc \
     *.config.js \
-		bun.lock \
     Dockerfile \
     docs \
     node_modules \
