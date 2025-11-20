@@ -19,11 +19,15 @@ jobs:
         uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
         with:
           bun-version: 'latest'
-      - name: sync metadata
-        id: sync-metadata
+      - name: version bump
+        id: version-bump
         run: |
+          git fetch origin main
+          git checkout main
+          git pull origin main --ff-only
           BUILDTIME=$(date -u +%Y-%m-%d)
-          perl -pi -e "s/(LABEL\s+org\.opencontainers\.image\.created=\")[^\"]*(\")/\$1$BUILDTIME\$2/" .github/ci.Dockerfile
+          LINE=$(awk '/org.opencontainers.image.created/ { print NR; exit }' .github/ci.Dockerfile)
+          sed -i "${LINE}c\LABEL org.opencontainers.image.created=\"${BUILDTIME}\"" .github/ci.Dockerfile
           echo "buildtime=$BUILDTIME" >> "$GITHUB_OUTPUT"
           git add .github/ci.Dockerfile
           if git diff --staged --quiet; then
@@ -72,4 +76,4 @@ jobs:
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.title=text0wnz
             org.opencontainers.image.url=https://text.0w.nz
-            org.opencontainers.image.created="${{ steps.sync-metadata.outputs.buildtime }}"
+            org.opencontainers.image.created="${{ steps.version-bump.outputs.buildtime }}"

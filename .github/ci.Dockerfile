@@ -8,7 +8,7 @@ LABEL org.opencontainers.image.documentation="https://github.com/xero/text0wnz/w
 LABEL org.opencontainers.image.url="https://github.com/xero/text0wnz/actions"
 LABEL org.opencontainers.image.source="https://github.com/xero/text0wnz"
 LABEL org.opencontainers.image.licenses="MIT"
--11-20"
+LABEL org.opencontainers.image.created="2025-11-06"
 
 # Pull the bun outta the oven
 COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
