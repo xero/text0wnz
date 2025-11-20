@@ -27,5 +27,6 @@ RUN playwright install-deps && \
 
 # Set working directory
 WORKDIR /app
+
 # No CMD required for CI containers as all
 # commands run are controlled by workflows
