@@ -804,5 +804,5 @@ bun upgrade  # Update to latest version
 
 - [Testing](testing.md) - Testing framework details
 - [Collaboration Server](collaboration-server.md) - Server configuration
-- [Editor Client Manual](manual.md) - Frontend application guide
+- [Client Editor Manual](manual.md) - Visual guide to the Frontend text art editor
 - [Other Tools](other-tools.md) - Additional development tools

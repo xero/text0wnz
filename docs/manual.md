@@ -1,52 +1,56 @@
 # teXt0wnz Editor Manual
 
-## Table of Contents
-
-- [Visual Reference](#visual-reference)
-- [Top Bar](#top-bar)
-  - [Editor Menus](#-editor-menus)
-    - [File Menu](#file-menu)
-    - [Edit Menu](#edit-menu)
-    - [Sauce Editor](#sauce-editor)
-  - [Status Display](#-status-display)
-  - [Canvas Resolution / Size](#canvas-resolution--size)
-- [Color Management](#color-management)
-  - [Current Colors](#current-colors)
-  - [Color Palette](#color-palette)
-- [Toolbar & Drawing Tools](#toolbar--drawing-tools)
-  - [Keyboard Mode](#-keyboard-mode)
-    - [Screen-Aware Navigation](#screen-aware-navigation)
-  - [Brushes](#-brushes)
-    - [Block / Freehand Brush](#block--freehand-brush)
-    - [Shading Brush](#shading-brush)
-    - [Character Brush](#character-brush)
-    - [Colorize/Attribute Brush](#colorizeattribute-brush)
-  - [Fill Tool](#-fill-tool)
-  - [Shapes](#-shapes)
-    - [Line Tool](#line-tool)
-    - [Square/Circle Tool](#squarecircle-tool)
-  - [Selection Tool](#-selection-tool)
-  - [Sample Tool](#-sample-tool)
-  - [Mirror Mode](#-mirror-mode)
-  - [History](#-history)
-  - [Fonts](#-fonts)
-    - [Font Select](#font-select)
-    - [iCE Colors](#ice-colors)
-    - [9pt Font](#9pt-font)
-      - [Font Examples](#font-examples)
-  - [Viewport Options](#-viewport-options)
-    - [Zoom](#zoom)
-    - [Light/Dark Mode](#-lightdark-mode)
-    - [Grid Overlay](#-grid-overlay)
-- [Collaboration Features](#collaboration-features)
-  - [Chat Window](#chat-window)
-    - [Features](#features)
-    - [Usage](#usage)
-- [Key Bindings Summary](#key-bindings-summary)
-- [Tips & Workflow](#tips--workflow)
-  - [How to draw?](#how-to-draw)
-
----
+> ### ,-'2*,-'2*,-'2*,-'2*,-'2*,-'2*,-'2*,-'2*,-'2*,-'2*,-'2*,-'2*
+>
+> # Table o' Contents
+>
+> - [Visual Reference](#visual-reference)
+> - [Top Bar](#top-bar)
+>   - [Editor Menus](#-editor-menus)
+>     - [File Menu](#file-menu)
+>     - [Edit Menu](#edit-menu)
+>     - [Sauce Editor](#sauce-editor)
+>   - [Status Display](#-status-display)
+>   - [Canvas Resolution / Size](#canvas-resolution--size)
+> - [Color Management](#color-management)
+>   - [Current Colors](#current-colors)
+>   - [Color Palette](#color-palette)
+> - [Toolbar & Drawing Tools](#toolbar--drawing-tools)
+>   - [Keyboard Mode](#-keyboard-mode)
+>     - [Screen-Aware Navigation](#screen-aware-navigation)
+>   - [Brushes](#-brushes)
+>     - [Block / Freehand Brush](#block--freehand-brush)
+>     - [Shading Brush](#shading-brush)
+>     - [Character Brush](#character-brush)
+>     - [Colorize/Attribute Brush](#colorizeattribute-brush)
+>   - [Fill Tool](#-fill-tool)
+>   - [Shapes](#-shapes)
+>     - [Line Tool](#line-tool)
+>     - [Square/Circle Tool](#squarecircle-tool)
+>   - [Selection Tool](#-selection-tool)
+>   - [Sample Tool](#-sample-tool)
+>   - [Mirror Mode](#-mirror-mode)
+>   - [History](#-history)
+>   - [Fonts](#-fonts)
+>     - [Font Select](#font-select)
+>     - [iCE Colors](#ice-colors)
+>     - [9pt Font](#9pt-font)
+>       - [Font Examples](#font-examples)
+>   - [Viewport Options](#-viewport-options)
+>     - [Zoom](#zoom)
+>     - [Light/Dark Mode](#-lightdark-mode)
+>     - [Grid Overlay](#-grid-overlay)
+> - [Workflows](#workflows)
+> - [Tutorials](#tutorials)
+>   - [Viewing and Opening Tutorials](#viewing-and-opening-tutorials)
+> - [Collaboration Features](#collaboration-features)
+>   - [Chat Window](#chat-window)
+>     - [Features](#features)
+>     - [Usage](#usage)
+> - [Key Bindings Summary](#key-bindings-summary)
+>   - [Mouse Controls](#mouse-controls)
+>
+> ### "7*/"7*/"7*/"7*/"7*/"7*/"7*/"7*/"7*/"7*/"7*/"7*/"7*/"7*/"
 
 # Visual Reference
 
@@ -70,6 +74,7 @@ File operations allowing you to create, open, and save artwork in multiple file 
 - **Plain Text** (`.txt`) - Export as text only
 - **PNG** - Export as image
 
+> [!NOTE]
 > See [xb-format.md](xb-format.md) for technical details on the XBin format.
 
 ![file-menu](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/file-menu.png)
@@ -130,6 +135,7 @@ Text art resolution is calculated by columns and rows. 80 × 25 is the default s
 - **80 × 50** - Extended terminal mode
 - **132 × 60** - Wide format for detailed work
 
+> [!NOTE]
 > See [building-and-developing.md](building-and-developing.md) for technical details on canvas rendering.
 
 # Color Management
@@ -158,13 +164,14 @@ The color system uses the classic 16-color ANSI palette with optional iCE colors
 - iCE colors (extended 16 background colors)
 - Custom palettes in XBIN format
 
+> [!NOTE]
 > See [xb-format.md](xb-format.md) for information on custom palettes
 
 # Toolbar & Drawing Tools
 
 ![tools](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/tools.png)
 
-> [!NOTE]
+> [!TIP]
 > The currently selected tool will be highlighted (keyboard mode in this case)
 
 Some tools such as "Brushes" have many options or sub-tools. Clicking the tool icon from the left menu will update (or clear) the current tool options section of the top bar.
@@ -295,6 +302,7 @@ Paint/recolor the foreground and background colors of the selected cell. Use the
 - Quick color corrections
 - Repaint large areas faster
 
+> [!NOTE]
 > See [fonts.md](fonts.md) for available characters in different fonts and [project-structure.md](project-structure.md) for technical brush implementation.
 
 ## ![fill](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/fill.png) Fill Tool
@@ -441,6 +449,7 @@ Full undo/redo support for all drawing operations.
 | `ctrl z`, `cmd z`, `meta z` | Undo   |
 | `ctrl y`, `cmd y`, `meta y` | Redo   |
 
+> [!NOTE]
 > See [architecture.md](architecture.md) for state management implementation details.
 
 ## ![font](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/font.png) Fonts
@@ -502,7 +511,8 @@ A special "extra pixel" wide mode for letter spacing.
 
 ![microknight](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/microknight.png)
 
-See [fonts.md](fonts.md) for the complete font catalog and [xb-format.md](xb-format.md) for embedding custom fonts in XBin files.
+> [!NOTE]
+> See [fonts.md](fonts.md) for the complete font catalog and [xb-format.md](xb-format.md) for embedding custom fonts in XBin files.
 
 ## ![viewport](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/viewport.png) Viewport Options
 
@@ -530,7 +540,7 @@ Visually scale the drawing canvas from 0.5-4x size, while keeping the interface 
 | `ctrl +`  | Zoom canvas in  |
 | `ctrl -`  | Zoom canvas out |
 
-> [!NOTE]
+> [!WARNING]
 > Scaling events take a moment to complete. The entire font and canvas need to be recalculated and redrawn.
 
 ### ![theme select](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/modeselect.png) Light/Dark Mode
@@ -568,6 +578,40 @@ Toggles the visual grid. Useful for creating precise layouts, aligning elements,
 > [!NOTE]
 > See [privacy.md](privacy.md) for information on local storage usage.
 
+# Workflows
+
+> [!TIP]
+>
+> 1. Start with Keyboard Mode for layout and text
+> 2. Use Grid (G key) for alignment
+> 3. Switch to Freestyle for shading and pixel art
+> 4. Use Character Brush for textures and patterns
+> 5. Fill Tool for large color blocks
+> 6. Selection Tool for moving and copying sections
+> 7. Save often (Ctrl+S)
+> 8. Use F-keys for quick access to block characters
+> 9. Alt+Click to sample colors from artwork
+> 10. Undo/Redo freely (up to 1000 operations stored)
+
+# Tutorials
+
+The editor contains a built in library of 20+ hand-collected ANSI drawing tutorials spanning decades of the scene. Each entry showcases unique techniques, styles, and the vision of a talented artist.
+
+The tutorials themselves are just normal ANSI art files. Viewing a tutorial simply opens the file in the editor. Allowing you to test the techniques and play around with the samples in their native context.
+
+## Viewing and Opening Tutorials
+
+![Tutorials Menu](https://github.com/user-attachments/assets/f2f496e6-1ec9-4467-8e07-3e6c4364b842)
+
+- Click file menu floppy disk icon
+- Click the **"Tutorials"** item
+- Click on a preview to load the tutorial into the editor!
+
+![Tutorials Modal](https://github.com/user-attachments/assets/57576b04-2d84-4224-b58b-ad76a89fd380)
+
+> [!NOTE]
+> See [tutorials.md](tutorials.md) for a complete listing.
+
 # Collaboration Features
 
 ## Chat Window
@@ -592,6 +636,7 @@ The chat window is available when connected to a collaboration server. It provid
 - Enable/disable notifications with the checkbox in the header
 - Drag the header to reposition the window (position does not persist between sessions)
 
+> [!NOTE]
 > See [collaboration-server.md](collaboration-server.md) for details on setting up and using the collaboration server.
 
 # Key Bindings Summary
@@ -696,21 +741,10 @@ The chat window is available when connected to a collaboration server. It provid
 - **alt click:** Sample colors (any tool)
 - **right click:** Context menu
 
-# Tips & Workflow
+## Related Documentation
 
-1. Start with Keyboard Mode for layout and text
-2. Use Grid (G key) for alignment
-3. Switch to Freestyle for shading and pixel art
-4. Use Character Brush for textures and patterns
-5. Fill Tool for large color blocks
-6. Selection Tool for moving and copying sections
-7. Save often (Ctrl+S)
-8. Use F-keys for quick access to block characters
-9. Alt+Click to sample colors from artwork
-10. Undo/Redo freely (up to 1000 operations stored)
+- [architecture.md](architecture.md) - System architecture and design
 
-## How to draw?
+## Related Documentation
 
-Checkout our curated list of [ANSi Tutorials](https://github.com/xero/ansi-art-tutorials/blob/main/README.md)
-
-These are hand-collected works spanning decades of the scene. Each entry showcases unique techniques, styles, and the vision of a talented artist. Open them in your editor and try them out!
+- [architecture.md](architecture.md) - System architecture and design

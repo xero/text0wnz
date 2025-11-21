@@ -9,8 +9,9 @@ This directory contains comprehensive guides for using, developing, testing, and
 ### For Users / Artists
 
 - Start here: **[The Editor Manual](manual.md)**
-- [PWA Install](install-pwa.md): Installation guide for multiple platforms
+- [Tutorials](tutorials.md) - Discover the in-editor classic drawing tutorials
 - [Fonts](fonts.md) - Complete font reference and previews
+- [PWA Install](install-pwa.md): Installation guide for multiple platforms
 
 ### For Developers
 
@@ -53,6 +54,11 @@ This directory contains comprehensive guides for using, developing, testing, and
   - Session management
   - Process management (systemd, forever)
   - SSL configuration
+
+- **[Tutorials](tutorials.md)** - Classic ANSI drawing tutorials
+  - library of 20+ hand-collected ANSI tutorials spanning decades of the scene.
+  - Each showcases unique techniques, styles, and the vision of a talented artist.
+  - Tutorials are ANSI files, so they open in the editor to test the techniques in context.
 
 ### Development Guides
 

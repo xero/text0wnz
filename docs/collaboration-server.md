@@ -585,5 +585,5 @@ For production deployments with high traffic:
 ## See Also
 
 - [Webserver Configuration](webserver-configuration.md) - Nginx and reverse proxy setup
-- [Editor Client Manual](manual.md) - Frontend application guide
+- [Client Editor Manual](manual.md) - Visual guide to the Frontend text art editor
 - [Building and Developing](building-and-developing.md) - Development workflow
