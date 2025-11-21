@@ -9,8 +9,8 @@ LABEL org.opencontainers.image.documentation="https://github.com/xero/text0wnz/w
 LABEL org.opencontainers.image.source="https://github.com/xero/text0wnz"
 LABEL org.opencontainers.image.url="https://text.0w.nz"
 LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.created="2025-11-20"
-LABEL org.opencontainers.image.version="2.1.2"
+LABEL org.opencontainers.image.created="2025-11-21"
+LABEL org.opencontainers.image.version="2.2.0"
 
 # Override me!
 ENV DOMAIN="localhost"
