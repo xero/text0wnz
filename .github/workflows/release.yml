@@ -109,9 +109,12 @@ jobs:
         with:
           tag_name: v${{ needs.release.outputs.new_version }}
           body: |
-            changeset: ${{ steps.changelog.outputs.url }}
-
             ## Docker Images
-            - **Dockerhub** `docker pull ghcr.io/xero/text0wnz:${{ needs.containerize.outputs.build_tag}}`
-            - **Github Container Registry** `docker pull xerostyle/text0wnz:${{ needs.containerize.outputs.build_tag }}`
+            ```bash
+            # Dockerhub
+            docker pull ${{ needs.containerize.outputs.dockerhub }}
+
+            #Github Container Registry
+            docker pull ${{ needs.containerize.outputs.ghcr }}
+            ```
           append_body: true

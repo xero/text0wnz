@@ -19,7 +19,8 @@ jobs:
       contents: write
       packages: write
     outputs:
-      build_tag: ${{ steps.get_sha.outputs.build_tag }}
+      ghcr:  ${{ steps.get_sha.outputs.ghcr }}
+      dockerhub:  ${{ steps.get_sha.outputs.dockerhub }}
     steps:
       - name: checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -94,8 +95,12 @@ jobs:
       - name: get docker short sha
         id: get_sha
         run: |
-          SHA=$(echo "${{ steps.meta.outputs.tags }}" | grep '^sha-' | head -n1)
-          echo "build_tag=$SHA" >> $GITHUB_OUTPUT
+          GHCR=$(echo "${{ steps.meta.outputs.tags }}" | grep '^ghcr\.io.*/text0wnz:sha-' | head -n1)
+          GHCR="${GHCR:-ghcr.io/xero/text0wnz:latest}"
+          DHUB=$(echo "${{ steps.meta.outputs.tags }}" | grep '^xerostyle/text0wnz:sha-' | head -n1)
+          DHUB="${DHUB:-xerostyle/text0wnz:latest}"
+          echo "ghcr=$GHCR" >> $GITHUB_OUTPUT
+          echo "dockerhub=$DHUB" >> $GITHUB_OUTPUT
       - name: build and push
         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
