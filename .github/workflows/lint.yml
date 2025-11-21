@@ -17,4 +17,4 @@ jobs:
       - name: install dependencies
         run: bun i
       - name: run linter tests
-        run: bun lint:check
+        run: CI=actions bun lint:check

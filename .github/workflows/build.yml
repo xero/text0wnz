@@ -21,7 +21,7 @@ jobs:
           sed -i 's!text.0w.nz!xero.github.io/text0wnz!' .env
       - name: build application
         run: |
-          bun bake
+          CI=actions bun bake
           printf "\n%s\n%s\n" "https://github.com/xero/text0wnz" "https://teXt.0w.nz" >> LICENSE.txt
           cp LICENSE.txt dist/
       - name: check build artifacts

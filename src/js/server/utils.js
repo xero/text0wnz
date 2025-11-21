@@ -1,7 +1,7 @@
 // Usage flags
 const printHelp = () => {
 	console.log(`teXt0wnz backend server
-Usage: {bun,node} server.js [port] [options]
+Usage: {bun,node} server [port] [options]
 
 Options:
   --ssl                 Enable SSL (requires certificates in ssl-dir)
@@ -12,8 +12,8 @@ Options:
   --help                Show this help message
 
 Examples:
-  bun server.js 8080 --ssl --session-name myart --debug
-  node server.js --save-interval 60 --session-name collaborative
+  bun server 8080 --ssl --session-name myart --debug
+  node server --save-interval 60 --session-name collaborative
 `);
 	process.exit(0);
 };

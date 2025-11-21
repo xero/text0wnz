@@ -29,7 +29,7 @@ describe('Utils Module', () => {
 				expect.stringContaining('teXt0wnz backend server'),
 			);
 			expect(consoleLogSpy).toHaveBeenCalledWith(
-				expect.stringContaining('Usage: {bun,node} server.js [port] [options]'),
+				expect.stringContaining('Usage: {bun,node} server [port] [options]'),
 			);
 			expect(consoleLogSpy).toHaveBeenCalledWith(
 				expect.stringContaining('--ssl'),

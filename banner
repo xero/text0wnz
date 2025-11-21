@@ -1,7 +1,10 @@
 #!/usr/bin/env sh
 # MMXXV xer0 <https://0w.nz>
 
-if [ -n "$GITHUB_ACTIONS" ] || [ -n "$CI" ] || [ -n "$GITHUB_WORKFLOW" ] || [ -n "$GITHUB_RUN_ID" ] || [ -n "$GITHUB_REPOSITORY" ] || [ -n "$KUBERNETES_SERVICE_HOST" ] || [ -n "$DOCKER_CONTAINER" ]; then
+colors="$(tput colors 2>/dev/null)"
+status=$?
+if [ $status -ne 0 ] || [ -z "$colors" ] || [ "$colors" -lt 16 ]; then colors=0; fi
+if [ "$colors" -eq 0 ] || [ -n "$CI" ] || [ -n "$KUBERNETES_SERVICE_HOST" ] || [ -n "$SVC_NAME_SERVICE_HOST" ] || [ -n "$DOCKER_CONTEXT" ]; then
 cat << EOF
   ______     .______   _____ ______  ____
  _\    /__   |   __/___\    \)    /_/   /_

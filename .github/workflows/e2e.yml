@@ -24,7 +24,7 @@ jobs:
         run: |
           sed -i 's!text.0w.nz!localhost!' .env
       - name: build application
-        run: bun bake
+        run: CI=actions bun bake
       - name: set artifact name
         id: set-artifact-name
         shell: bash
@@ -33,7 +33,7 @@ jobs:
           ARTIFACT_NAME="blob-report-${SHARD//\//-}"
           echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
       - name: run e2e tests
-        run: bun test:e2e --shard=${{ inputs.shard }}
+        run: CI=actions bun test:e2e --shard=${{ inputs.shard }}
         env:
           HOME: /root
           PLAYWRIGHT_TEST_BASE_URL: http://localhost:8060
