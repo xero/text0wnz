@@ -136,6 +136,11 @@ const openHandler = file => {
 				viewport.scrollLeft = viewport.scrollTop = 0;
 			};
 
+			const closeModal = () => {
+				if (State.modal.isOpen() && State.modal.current === 'loading') {
+					State.modal.close();
+				}
+			};
 			const isSceneFile =
 				file.name.toLowerCase().endsWith('.nfo') ||
 				file.name.toLowerCase().endsWith('.diz');
@@ -149,11 +154,13 @@ const openHandler = file => {
 				const appFontName = Load.sauceToAppFont(fontName.trim());
 				if (appFontName) {
 					await State.textArtCanvas.setFont(appFontName, applyData);
+					closeModal();
 					return; // Exit early since callback will be called from setFont
 				}
 			}
 			applyData(); // Apply data without font change
 			palettePicker.updatePalette(); // XB
+			closeModal();
 		},
 	);
 };
@@ -222,7 +229,6 @@ const save = () => {
 const fetchTutorial = async url => {
 	try {
 		const res = await fetch('./ansi/' + url);
-		// const res = await fetch('https://raw.githubusercontent.com/xero/ansi-tutorials/refs/heads/main/ansi/'+url);
 		if (!res.ok) {
 			throw new Error(`HTTP ${res.status} ${res.statusText}`);
 		}
@@ -498,10 +504,7 @@ const initializeAppComponents = async () => {
 
 	onClick($('tutorials'), _ => {
 		State.modal.open('tutorials');
-		const items = [
-			...$$$('#tutorialsModal img'),
-			...$$$('#tutorialsModal button'),
-		];
+		const items = [...$$$('#tutorialsModal main')];
 		const removers = items.map(el =>
 			onClick(el, (_, target) => {
 				const tut = target.dataset && target.dataset.ansi;

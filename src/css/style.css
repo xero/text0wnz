@@ -1113,9 +1113,23 @@
 		article {
 			@apply flex-col;
 
-			img {
-				@apply cursor-pointer flex flex-grow pxl8;
+			main {
+				@apply flex flex-col relative;
+				&:hover {
+					button {
+						@apply flex relative w-full bg-purp;
+						margin-top: -50px;
+						padding-bottom: 10px;
+					}
+				}
+				button {
+					@apply hidden;
+				}
+				img {
+					@apply cursor-pointer flex flex-grow pxl8;
+				}
 			}
+
 			strong {
 				@apply text-justify text-fg;
 			}
