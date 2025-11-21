@@ -1,15 +1,17 @@
-# teXt.0w.nz
+# teXt0wnz
 
-**Your browser is the canvas**. Draw, edit, and collaborate on ANSI, ASCII, NFO, and XBIN art in a retro text art editor rebooted for the modern web. Offline-first with auto-save/restore and local storage, plus optional real-time sessions. Crafted for keyboard-centric artists and creators using mouse or touch, _on any device_. Built with modern tools and automated testing for a seamless experience for text artists and developers.
+> ### _Your browser is the canvas_
+
+A retro text art editor rebooted for the modern web. Draw, edit, and collaborate on ANSI, ASCII, NFO, and XBIN files. Offline-first with auto-save/restore via local storage, plus an optional self-hosted server component enabling real-time, multi-user sessions. Crafted for keyboard-centric artists and creators using mouse or touch, _on any device_. Built with modern tools and automated testing for a seamless experience for text artists and developers.
 
 ![preview](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/preview.png)
 
-## Draw in your browser now!
+### Draw in your browser now!
 
-| Domain                          | Status                                             |
-|:--------------------------------|:---------------------------------------------------|
-| https://text.0w.nz              | The main domain. Collab server may be available    |
-| https://xero.github.io/text0wnz | Github Pages version of the site. No collab server |
+| Domain                              | Status                                             |
+|:------------------------------------|:---------------------------------------------------|
+| **https://text.0w.nz**              | The main domain. Collab server may be available    |
+| **https://xero.github.io/text0wnz** | Github Pages version of the site. No collab server |
 
 [![MIT Licensed](https://img.shields.io/github/license/xero/text0wnz?logo=wikiversity&logoColor=979da4&labelColor=262a2e&color=b1a268)](https://github.com/xero/text0wnz/blob/main/LICENSE)
 [![Version](https://img.shields.io/github/package-json/version/xero/teXt0wnz?labelColor=33383e&logo=npm&&logoColor=979da4&color=6e2aa5)](https://github.com/xero/teXt0wnz/releases/latest)
@@ -21,7 +23,7 @@
 [![Latest Deployment](https://img.shields.io/github/deployments/xero/text0wnz/github-pages?logo=githubactions&logoColor=979da4&label=Pages%20Deployment&labelColor=262a2e)](https://github.com/xero/text0wnz/deployments)
 [![Latest Wiki Deployment](https://img.shields.io/badge/success-success?logo=gitbook&logoColor=979da4&labelColor=262a2e&label=Wiki%20Deployment)](https://github.com/xero/text0wnz/wiki)
 [![Schema](https://img.shields.io/badge/Valid-Valid?logo=semanticweb&logoColor=979da4&labelColor=262a2e&label=Schema)](https://validator.schema.org/#url=https%3A%2F%2Fraw.githubusercontent.com%2Fxero%2FteXt0wnz%2Frefs%2Fheads%2Fmain%2Fsrc%2Findex.html)
-[![Lighthouse Preformance](https://img.shields.io/badge/100%25-lighthouse?logo=lighthouse&logoColor=979da4&label=Lighthouse&labelColor=262a2e)](https://pagespeed.web.dev/analysis/https-text-0w-nz/eo49m2s0eo?hl=en-US&form_factor=desktop)
+[![Lighthouse Performance](https://img.shields.io/badge/100%25-lighthouse?logo=lighthouse&logoColor=979da4&label=Lighthouse&labelColor=262a2e)](https://pagespeed.web.dev/analysis/https-text-0w-nz/eo49m2s0eo?hl=en-US&form_factor=desktop)
 [![Powered by Bun](https://img.shields.io/badge/Bun-Bun?labelColor=262a2e&logo=bun&logoColor=f9f1e1&label=Powered%20by&color=e47ab4&link=https%3A%2F%2Fbun.js)](https://bun.com)
 [![Eslint](https://img.shields.io/badge/Eslint-Eslint?logo=eslint&logoColor=979da4&label=Linting&labelColor=262a2e&color=00aaaa)](https://github.com/xero/teXt0wnz/blob/main/eslint.config.js)
 [![Prettier](https://img.shields.io/badge/Prettier-Prettier?logo=prettier&logoColor=979da4&label=Formatting&labelColor=262a2e&color=00aaaa)](https://github.com/xero/teXt0wnz/blob/main/.prettierrc)
@@ -95,11 +97,11 @@
 | Extension       | Description                            | Import | Export | [Sauce](docs/sauce-format.md) |
 |:----------------|:---------------------------------------|:-----|:-----|:-----|
 | **`.ans`**      | ANSI art                               | ░▒▒░ | ░▒▒░ | ░▒▒░ |
-| **`.utf8.ans`** | UTF-8 ANSI for terminals               | ░▒▒░ | ░▒▒░ |      |
+| **`.utf8.ans`** | UTF-8 ANSI for modern terminals        | ░▒▒░ | ░▒▒░ |      |
 | **`.bin`**      | DOS-era binary format                  | ░▒▒░ | ░▒▒░ | ░▒▒░ |
-| **`.xb`**       | Modern [XBIN](docs/xb-format.md) files | ░▒▒░ | ░▒▒░ | ░▒▒░ |
+| **`.xb`**       | [XBIN](docs/xb-format.md) format       | ░▒▒░ | ░▒▒░ | ░▒▒░ |
 | **`.nfo`**      | Scene release format                   | ░▒▒░ | ░▒▒░ | ░▒▒░ |
-| **`.diz`**      | FILE_ID.DIZ archive metadata files     | ░▒▒░ | ░▒▒░ | ░▒▒░ |
+| **`.diz`**      | FILE_ID.DIZ archive metadata files     | ░▒▒░ |      | ░▒▒░ |
 | **`.txt`**      | ASCII or other plain text              | ░▒▒░ | ░▒▒░ |      |
 | **`.png`**      | Artwork rendered as an image           |      | ░▒▒░ |      |
 
@@ -107,7 +109,7 @@
 
 | Browser           | Chrome | Firefox | Safari  | Edge   | Opera  | iOS     | iPadOS | Android |
 |:------------------|:-------|:--------|:--------|:-------|:-------|:--------|:-------|:--------|
-| Updated: <br> [2025-11-20](https://github.com/Fyrd/caniuse) | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/chrome.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/firefox.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/safari.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/edge.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/opera.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/ios.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/ipados.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/android.svg" width="50" height="50"> |
+| Last Updated <br> [2025-11-20](https://github.com/Fyrd/caniuse) | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/chrome.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/firefox.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/safari.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/edge.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/opera.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/ios.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/ipados.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/android.svg" width="50" height="50"> |
 | **Supported**     | 95.0+  | 93.0+   | 15.0+   | 95.0+  | 81.0+  | 15.0+   | 15.0+  | 95.0+   |
 | **Latest Dev**    | Canary | Nightly | Preview | Dev    | -      | -       | -      | -       |
 | _**Unsupported**_ | < 94.x | < 92.x  | < 14.x  | < 94.x | < 80.x | < 14.x  | < 14.x | < 94.x  |
@@ -134,7 +136,7 @@
 - [Building and Developing](docs/building-and-developing.md) - Development workflow and build process [**↵**](https://github.com/xero/text0wnz/wiki/building-and-developing)
 - [Testing](docs/testing.md) - Triple headed testing guide (unit, dom, & e2e) [**↵**](https://github.com/xero/text0wnz/wiki/testing)
 - [CI/CD Pipeline](docs/cicd.md) - Continuous integration and deployment [**↵**](https://github.com/xero/text0wnz/wiki/cicd)
-- [Webserver Configuration](docs/webserver-configuration.md) - Webserver setup and configuration [**↵**](https://github.com/xero/text0wnz/wiki/webserver-configuration)
+- [WebServer Configuration](docs/webserver-configuration.md) - WebServer setup and configuration [**↵**](https://github.com/xero/text0wnz/wiki/webserver-configuration)
 - [Docker](docs/docker.md) - Container deployment guide [**↵**](https://github.com/xero/text0wnz/wiki/docker)
 - [Other Tools](docs/other-tools.md) - Additional development and deployment tools [**↵**](https://github.com/xero/text0wnz/wiki/other-tools)
 
@@ -174,7 +176,7 @@
 **Main Tool Shortcuts:**
 
 | Key | Tool/Action            |
-|:--- |:-----------------------|
+|:----|:-----------------------|
 | `k` | Keyboard Mode          |
 | `f` | Freestyle (half-block) |
 | `b` | Character Brush        |
@@ -186,8 +188,8 @@
 
 **Color & Character:**
 
-| Key/Combo  | Action                             |
-|:---------- |:-----------------------------------|
+| Key        | Action                             |
+|:-----------|:-----------------------------------|
 | `d`        | Reset colors to default            |
 | `q`        | Swap foreground/background         |
 | `0`–`7`    | Select basic color                 |
@@ -204,7 +206,7 @@
 **Navigation (Keyboard Mode):**
 
 | Key                      | Action                  |
-|:------------------------ |:------------------------|
+|:-------------------------|:------------------------|
 | `arrow keys`             | Move cursor             |
 | `home`                   | Start of current row    |
 | `end`                    | End of current row      |
@@ -214,7 +216,7 @@
 **Advanced Editing (alt + key):**
 
 | Combo                           | Action               |
-|:------------------------------- |:---------------------|
+|:--------------------------------|:---------------------|
 | `alt up` / `alt down`           | Insert/Delete row    |
 | `alt right` / `alt left`        | Insert/Delete column |
 | `alt e` / `alt shift e`         | Erase row/col        |
@@ -224,52 +226,52 @@
 **Selection Operations:**
 
 | Key       | Action         |
-|:--------- |:---------------|
+|:----------|:---------------|
 | `[` / `]` | Flip selection |
 | `m`       | Move mode      |
 
 **Selection Navigation:**
 
 | Key                      | Action                            |
-|:------------------------ |:----------------------------------|
+|:-------------------------|:----------------------------------|
 | `arrow keys`             | Move selection area by one cell   |
 | `shift arrow keys`       | Expand/shrink selection           |
 | `home` / `end`           | Expand selection to row start/end |
 | `page up` / `page down`  | Move selection by screen height   |
 | `cmd left` / `cmd right` | Expand selection to row start/end |
 
-**In Move Mode:**
-
-- `arrow keys`, `page up`, `page down` move selected content
+> [!IMPORTANT]
+>
+> In **Move Mode**: `arrow keys`, `page up`, `page down` move the _selected content_ in the same ways the default actions move the _selection area_.
 
 **Function Keys (`F1`–`F12`):** Quick character insert from CP437 font (blocks, symbols, shapes, and more).
 
 **The Classic CP437 ANSI block shortcuts**
 
 | Key   | Character | Description        |
-|:----- |:--------- |:-------------------|
-| `f1`  | `░`       | Light shade block  |
-| `f2`  | `▒`       | Medium shade block |
-| `f3`  | `▓`       | Dark shade block   |
-| `f4`  | `█`       | Full block         |
-| `f5`  | `▀`       | Upper half block   |
-| `f6`  | `▄`       | Lower half block   |
-| `f7`  | `▌`       | Left half block    |
-| `f8`  | `▐`       | Right half block   |
-| `f9`  | `■`       | Small solid square [\*](https://16colo.rs/artist/alla%20xul) |
-| `f10` | `○`       | Circle             |
-| `f11` | `•`       | Bullet             |
-| `f12` | `NULL`    | Blank/transparent  |
+|:------|:----------|:-------------------|
+| `F1`  | `░`       | Light shade block  |
+| `F2`  | `▒`       | Medium shade block |
+| `F3`  | `▓`       | Dark shade block   |
+| `F4`  | `█`       | Full block         |
+| `F5`  | `▀`       | Upper half block   |
+| `F6`  | `▄`       | Lower half block   |
+| `F7`  | `▌`       | Left half block    |
+| `F8`  | `▐`       | Right half block   |
+| `F9`  | `■`       | Small solid square  [**_‡_**](https://16colo.rs/artist/alla%20xul) |
+| `F10` | `○`       | Circle             |
+| `F11` | `•`       | Bullet             |
+| `F12` | `NULL`    | Blank/transparent  |
 
 **Cycling character sets:**
 
-- Use toolbar or shortcuts (`ctrl [`, `ctrl ]`) to cycle predefined sets (blocks, box-drawing, symbols, accents, etc).
+Use the toolbar buttons or shortcuts `ctrl [`, `ctrl ]` to cycle predefined sets (blocks, box-drawing, symbols, accents, etc).
 
 ### Mouse / Touch Controls
 
 - **Click/Touch:** Draw
-- **Drag:** Draw/Shape
-- **Alt Click:** Sample color/alternative draw
+- **Drag:** Draw/Select/Shape
+- **Alt Click:** Sample Color/Alternative Draw
 
 > [!TIP]
 > See: [docs/manual.md](docs/manual.md) for more info.
@@ -332,7 +334,7 @@ bun www    # or npm run www
 | `www`              | Serve the `/dist` folder for testing |
 | `fix`              | Auto-fix lint and format             |
 | `lint:check/fix`   | Lint checking/fixing                 |
-| `format:check/fix` | Formatting check/fix`                |
+| `format:check/fix` | Formatting check/fix                 |
 | `test:unit`        | Run unit tests (Vitest)              |
 | `test:e2e`         | Run end to end tests (Playwright)    |
 | `test:install`     | Install playwright browsers          |
@@ -351,34 +353,35 @@ bun www    # or npm run www
   - `VITE_WORKER_FILE='websocket.js'`
 
 > [!IMPORTANT]
-> `VITE_DOMAIN` is _only_ used for robots.txt and sitemap.xml generation, **all app urls are relative**
+> **`VITE_DOMAIN`** is _only_ used for robots.txt and sitemap.xml generation, **all app urls are relative**
 
 **Build Output Structure:**
 
 ```
 dist/
-├── index.html              # Main entry point
-├── site.webmanifest        # PWA manifest
-├── service.js              # Service worker (injectManifest strategy)
-├── robots.txt              # Search engine directives
-├── sitemap.xml             # Site map
-├── humans.txt              # Humans.txt file
-├── favicon.ico             # Favicon
-└── ui/                     # UI assets directory
-    ├── stylez-[hash].css   # Minified CSS (hashed)
-    ├── icons-[hash].svg    # Icon sprite (hashed)
-    ├── topazplus_1200.woff2  # Font file
-    ├── fonts/              # Bitmap fonts (PNG format)
-    ├── img/                # Images and icons
-    └── js/                 # JavaScript bundles (all hashed)
-        ├── editor-[hash].js      # Main entry
-        ├── core-[hash].js        # Core modules (state, storage, compression)
-        ├── canvas-[hash].js      # Canvas rendering with lazy font loading
-        ├── tools-[hash].js       # Drawing tools
-        ├── fileops-[hash].js     # File operations
-        ├── network-[hash].js     # Collaboration
-        ├── palette-[hash].js     # Color palette
-        └── websocket.js          # Web Worker (not hashed)
+├── index.html                 # Main entry point
+├── site.webmanifest           # PWA manifest
+├── service.js                 # Service worker (injectManifest strategy)
+├── robots.txt                 # Search engine directives
+├── sitemap.xml                # SEO Site map
+├── humans.txt                 # Credits
+├── favicon.ico                # Application icon
+├── ansi/                      # ANSI art tutorials (ANS files, PNG previews)
+└── ui/                        # UI assets
+    ├── stylez-[hash].css      # Minified CSS
+    ├── icons-[hash].svg       # Icon sprite
+    ├── topazplus_1200.woff2   # Interface font (Amiga style)
+    ├── fonts/                 # Bitmap fonts (PNG format)
+    ├── img/                   # PWA Images and app icons
+    └── js/                    # JavaScript bundles
+        ├── editor-[hash].js   # Main application entry point
+        ├── core-[hash].js     # Core modules (state, storage, compression)
+        ├── canvas-[hash].js   # Canvas rendering with lazy font loading
+        ├── tools-[hash].js    # Drawing tools
+        ├── fileops-[hash].js  # File operations
+        ├── network-[hash].js  # Collaboration
+        ├── palette-[hash].js  # Color palette
+        └── websocket.js       # Web Worker (not hashed)
 ```
 
 **Code Standards & Style**
@@ -408,14 +411,14 @@ node src/js/server/main.js
 ```
 
 > [!TIP]
-> The server starts on port `1337` by default. _so elite_
+> The server starts on port **`1337`** by default. _so elite_
 
 **Command-Line Options**
 
 | Option                 | Description                                      | Default            |
-|:---------------------- |:------------------------------------------------ |:-------------------|
+|:-----------------------|:-------------------------------------------------|:-------------------|
 | `[port]`               | Port to run the server on                        | `1337`             |
-| `--ssl`                | Enable SSL (requires certificates in `ssl-dir`)  | Disabled           |
+| `--ssl`                | Enable SSL (requires certificates in `ssl-dir`)  | _Disabled_         |
 | `--ssl-dir <path>`     | SSL certificate directory                        | `/etc/ssl/private` |
 | `--save-interval <n>`  | Auto-save interval in minutes                    | `30` (minutes)     |
 | `--session-name <str>` | Session file prefix (for state and chat backups) | `joint`            |
@@ -436,7 +439,7 @@ node src/js/server/main.js
 
 ### Registry Support
 
-Prebuilt images are avalable in **linux/amd64** & **linux/arm64** flavors from multiple repositories:
+Prebuilt images are available in **linux/amd64** & **linux/arm64** flavors from multiple repositories:
 
 **[DockerHub](https://hub.docker.com/r/xerostyle/text0wnz):**
 
@@ -475,7 +478,7 @@ docker run \
     text0wnz:latest
 ```
 
-The application will be available at http://localhost with WebSocket collaboration features enabled.
+The editor client will be available at http://localhost with WebSocket collaboration features enabled.
 
 ### Running in Production Mode
 
@@ -509,17 +512,19 @@ This setup enables:
 - **Playwright:** E2E/browser
 
 > [!TIP]
-> view the latest: [unit coverage report](https://xero.github.io/text0wnz/tests/) & [e2e testing report](https://xero.github.io/text0wnz/tests/e2e/)
+> View the latest [unit coverage report](https://xero.github.io/text0wnz/tests/) & [e2e testing report](https://xero.github.io/text0wnz/tests/e2e/)
 
 ```sh
 bun test:unit  # Run unit tests
 bun test:e2e   # Run end2end tests
 ```
 
-All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/main/.github/workflows). See the [CI/CD Pipeline documentation](docs/cicd.md) for details on the automated testing, building, and deployment process.
+All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/main/.github/workflows).
 
 > [!NOTE]
-> See: [docs/testing](docs/testing.md) for more info.
+> See: [docs/testing](docs/testing.md) for more info on unit test frameworks and tools.
+>
+> See: [CI/CD Pipeline documentation](docs/cicd.md) for details on the automated testing, building, and deployment process.
 
 ## Troubleshooting
 
@@ -529,7 +534,7 @@ All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/mai
 - Build fails: Check Node.js version, reinstall deps
 - e2e tests fail: Check you have the playwright browsers installed (`bun test:install`)
 - Client can't connect to server: Check server, proxy, firewall settings
-- WebSocket drops: Validate webserver headers, note trailing slash in proxy_pass
+- WebSocket drops: Validate webServer headers, note trailing slash in proxy_pass
 
 **Still stuck?**
 [Review the wiki](https://github.com/xero/text0wnz/wiki) then [open an issue](https://github.com/xero/teXt0wnz/issues) with error logs and platform details.
@@ -541,16 +546,14 @@ All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/mai
 - Permissions: Confirm systemd user access
 - Wrong port: Sync client/server configs
 
-**Tips:**
-
-- Always use a process manager (systemd, forever)
-- Lower save interval for busy sessions
-- Use SSL in production (Let's Encrypt via Certbot, ACME-nginx, etc)
-- WebSocket debugging: browser dev tools
-- Restore session: rename backups as needed
-- Review logs for details
-
-> [!NOTE]
+> [!TIP]
+> - Use a process manager (systemd, forever) for the server
+> - Lower save interval for busy sessions
+> - Use SSL in production (Let's Encrypt via Certbot, ACME-nginx, etc)
+> - WebSocket debugging: browser dev tools
+> - Restore session: rename backups in the **`sessions`** folder
+> - Run using the **`--debug`** flag and review logs for details
+>
 > See: [docs/trouble_shooting](docs/webserver-configuration.md#troubleshooting) for more help.
 
 ## Project History
