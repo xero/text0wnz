@@ -233,7 +233,9 @@ npm run server [port] [options]
 
 - Starts Node.js collaboration server
 - Default port: 1337
-- See [collaboration-server.md](collaboration-server.md) for options
+
+> [!NOTE]
+> See [collaboration-server.md](collaboration-server.md) for options
 
 ### Code Quality Scripts
 
@@ -307,7 +309,9 @@ npm run test:unit
 
 - Runs Vitest unit tests
 - Generates coverage report
-- See [testing.md](testing.md) for details
+
+> [!NOTE]
+> See [testing.md](testing.md) for details
 
 **`bun test:e2e`** - Run end-to-end tests
 
@@ -319,7 +323,9 @@ npm run test:e2e
 
 - Runs Playwright E2E tests
 - Tests in Chrome, Firefox, WebKit
-- See [testing.md](testing.md) for details
+
+> [!NOTE]
+> See [testing.md](testing.md) for details
 
 **`bun test:install`** - Install test dependencies
 

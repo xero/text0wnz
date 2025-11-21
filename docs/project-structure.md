@@ -675,7 +675,8 @@ tests/
     └── wiki.yml               # Wiki documentation sync
 ```
 
-See [CI/CD Pipeline](cicd.md) for detailed workflow documentation.
+> [!INFO]
+> See [CI/CD Pipeline](cicd.md) for detailed workflow documentation.
 
 ## Build Output
 

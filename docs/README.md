@@ -151,14 +151,17 @@ This directory contains comprehensive guides for using, developing, testing, and
 
 When contributing documentation:
 
-1. Follow the existing structure and style
-2. Use proper Markdown formatting
-3. Include code examples where appropriate
-4. Test all commands and configurations
-5. Keep documentation up to date with code changes
-6. Cross-reference related documents
+> [!TIP]
+>
+> 1. Follow the existing structure and style
+> 2. Use proper Markdown formatting
+> 3. Include code examples where appropriate
+> 4. Test all commands and configurations
+> 5. Keep documentation up to date with code changes
+> 6. Cross-reference related documents
 
-See: [Contributing](contributing) for more details
+> [!NOTE]
+> See: [Contributing](contributing) for more details
 
 ## Getting Help
 
