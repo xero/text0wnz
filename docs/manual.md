@@ -1,7 +1,5 @@
-# teXt0wnz Editor Manual
+# teXt0wnz Client Editor Manual
 
-> ### ,-'2*,-'2*,-'2*,-'2*,-'2*,-'2*,-'2*,-'2*,-'2*,-'2*,-'2*,-'2*
->
 > # Table o' Contents
 >
 > - [Visual Reference](#visual-reference)
@@ -49,8 +47,6 @@
 >     - [Usage](#usage)
 > - [Key Bindings Summary](#key-bindings-summary)
 >   - [Mouse Controls](#mouse-controls)
->
-> ### "7*/"7*/"7*/"7*/"7*/"7*/"7*/"7*/"7*/"7*/"7*/"7*/"7*/"7*/"
 
 # Visual Reference
 
@@ -740,10 +736,6 @@ The chat window is available when connected to a collaboration server. It provid
 - **shift click:** Straight line with freehand
 - **alt click:** Sample colors (any tool)
 - **right click:** Context menu
-
-## Related Documentation
-
-- [architecture.md](architecture.md) - System architecture and design
 
 ## Related Documentation
 
