@@ -72,7 +72,7 @@
 		"@testing-library/dom": "^10.4.1",
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/user-event": "^14.6.1",
-		"@vitest/coverage-v8": "^4.0.13",
+		"@vitest/coverage-v8": "^4.0.14",
 		"cssnano": "^7.1.2",
 		"cssnano-preset-advanced": "^7.0.10",
 		"eslint": "^9.39.1",
