@@ -1,6 +1,6 @@
 FROM caddy:2-alpine AS caddy
 FROM oven/bun:alpine AS bun
-FROM alpine:3.22.2
+FROM alpine:3.22.3
 
 LABEL org.opencontainers.image.title="text0wnz"
 LABEL org.opencontainers.image.description="Retro Text Art Editor for ANSI/ASCII/NFO/XBIN Files Rebooted for the Modern Web"
