@@ -1,5 +1,5 @@
 FROM oven/bun:debian AS bun
-FROM mcr.microsoft.com/playwright:latest
+FROM mcr.microsoft.com/playwright:v1.59.1-jammy
 
 LABEL org.opencontainers.image.title="text0wnz/ci"
 LABEL org.opencontainers.image.description="cicd unit testing toolchain for the text0wnz editor"
@@ -8,7 +8,7 @@ LABEL org.opencontainers.image.documentation="https://github.com/xero/text0wnz/w
 LABEL org.opencontainers.image.url="https://github.com/xero/text0wnz/actions"
 LABEL org.opencontainers.image.source="https://github.com/xero/text0wnz"
 LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.created="2025-11-20"
+LABEL org.opencontainers.image.created="2026-05-03"
 
 # Pull the bun outta the oven
 COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun

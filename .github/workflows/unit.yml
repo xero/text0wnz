@@ -9,11 +9,11 @@ jobs:
     name: unit tests
     steps:
       - name: checkout code
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
       - name: setup bun
-        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: "latest"
       - name: install dependencies
@@ -24,7 +24,7 @@ jobs:
         run: |
           echo "@media (prefers-color-scheme:dark){.cover-empty,body{background:#000}body{color:#efefef}table{color:#000}table,td,th{border:1px solid #222!important}td.empty{color:#eee}.cbranch-no,.cstat-no,.fstat-no{background:#afe9dc}.cline-yes,.high{background:#f2bfff}.cline-no,.low{background:#bbf2e8}.fraction,.quiet,table .chart,table .high,table .low,td.text,th.file,th.pct{-webkit-filter:invert(100%)}.footer{display:none!important}body>div.wrapper>div:first-child>p{background:#ddd;width:fit-content;padding:10px}}" >> tests/results/coverage/base.css
       - name: upload unit test artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: unit-test-results
           path: tests/results/coverage/
