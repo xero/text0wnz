@@ -1,6 +1,6 @@
 FROM caddy:2-alpine AS caddy
 FROM oven/bun:alpine AS bun
-FROM alpine:3.22.3
+FROM alpine:3.23.4
 
 LABEL org.opencontainers.image.title="text0wnz"
 LABEL org.opencontainers.image.description="Retro Text Art Editor for ANSI/ASCII/NFO/XBIN Files Rebooted for the Modern Web"
@@ -21,11 +21,11 @@ ENV XDG_CONFIG_HOME="/etc/caddy"
 
 # Install dependencies
 RUN apk add --no-cache \
-    libstdc++=14.2.0-r6 \
-    libgcc=14.2.0-r6 \
-    ca-certificates=20250911-r0 \
-		gettext=0.24.1-r0 \
-		netcat-openbsd=1.229.1-r0
+    libstdc++=15.2.0-r2 \
+    libgcc=15.2.0-r2 \
+    ca-certificates=20260413-r0 \
+		gettext=0.24.1-r1 \
+		netcat-openbsd=1.234.1-r0
 
 # Grab a caddy & toss in a bun
 COPY --from=caddy /usr/bin/caddy /usr/bin/caddy
