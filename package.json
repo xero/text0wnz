@@ -87,7 +87,7 @@
 		"vite-plugin-html-minifier-terser": "^3.8.0",
 		"vite-plugin-pwa": "^1.2.0",
 		"vite-plugin-sitemap": "^0.8.2",
-		"vite-plugin-static-copy": "^3.4.0",
+		"vite-plugin-static-copy": "^4.1.0",
 		"vitest": "^4.1.5"
 	},
 	"overrides": {
