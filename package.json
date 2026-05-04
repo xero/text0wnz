@@ -83,7 +83,7 @@
 		"serve": "^14.2.6",
 		"tailwindcss": "^4.2.4",
 		"terser": "^5.46.2",
-		"vite": "^7.3.2",
+		"vite": "^8.0.10",
 		"vite-plugin-html-minifier-terser": "^3.8.0",
 		"vite-plugin-pwa": "^1.2.0",
 		"vite-plugin-sitemap": "^0.8.2",
