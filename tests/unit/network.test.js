@@ -80,7 +80,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 vi.mock('../../src/js/client/palette.js', () => ({ createDefaultPalette: vi.fn(() => ({})) }));
 
 // Mock DOM
-global.document = {
+vi.stubGlobal('document', {
 	getElementsByClassName: vi.fn(() => []),
 	addEventListener: vi.fn(),
 	createElement: vi.fn(() => ({
@@ -108,7 +108,7 @@ global.document = {
 	})),
 	querySelector: vi.fn(() => null),
 	dispatchEvent: vi.fn(),
-};
+});
 
 global.window = {
 	location: {
@@ -120,10 +120,10 @@ global.window = {
 	},
 };
 
-global.localStorage = {
+vi.stubGlobal('localStorage', {
 	getItem: vi.fn(() => null),
 	setItem: vi.fn(),
-};
+});
 
 global.Worker = vi.fn(function () {
 	return {

@@ -72,7 +72,8 @@ This document defines how autonomous workflow agents must work on the text0wnz r
 3) Unit tests (Vitest)
 - Follow tests/ directory organization described in docs/testing.md.
 - Use jsdom environment and existing setup files (tests/canvasShim.js, tests/setupTests.js).
-- When mocking constructors, use `function` or `class` syntax (Vitest v4 requirement).
+- When mocking constructors, use `function` or `class` syntax (Vitest v4+ requirement).
+- Mock `document`, `navigator`, and `localStorage` with `vi.stubGlobal()`, never by assignment (Vitest v5 throws on getter-only globals).
 - Keep unit tests focused and small. Add fixtures from docs/examples/ where relevant.
 - Run `bun test:unit` locally; ensure coverage goals for the touched modules are reasonable.
 

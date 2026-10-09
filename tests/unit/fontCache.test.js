@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+// jsdom's Blob has no stream(), which node's Response needs for a body
+import { Blob as NodeBlob } from 'node:buffer';
 import { FontCache } from '../../src/js/client/fontCache.js';
 
 // Mock State module
@@ -158,7 +160,7 @@ describe('FontCache Module', () => {
 			const tempCaches = globalThis.caches;
 			delete globalThis.caches;
 
-			const mockBlob = new Blob(['font data']);
+			const mockBlob = new NodeBlob(['font data']);
 			FontCache.memoryCache.set('TestFont', mockBlob);
 
 			const result = await FontCache.getFont('TestFont');
@@ -172,7 +174,7 @@ describe('FontCache Module', () => {
 			const tempCaches = globalThis.caches;
 			delete globalThis.caches;
 
-			const mockBlob = new Blob(['font data']);
+			const mockBlob = new NodeBlob(['font data']);
 			const mockResponse = new globalThis.Response(mockBlob);
 			mockResponse.clone = vi
 				.fn()

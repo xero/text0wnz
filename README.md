@@ -297,7 +297,7 @@ Use the toolbar buttons or shortcuts `ctrl [`, `ctrl ]` to cycle predefined sets
 **Requirements:**
 
 - bun (recommended over npm)
-- node.js (v22.19+)
+- node.js (v22.22.2+)
 
 **Quick Start:**
 

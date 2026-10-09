@@ -10,7 +10,7 @@ describe('UI Utilities', () => {
 	describe('createCanvas', () => {
 		beforeEach(() => {
 			// Mock document.createElement for canvas
-			global.document = {
+			vi.stubGlobal('document', {
 				createElement: vi.fn(tagName => {
 					if (tagName === 'canvas') {
 						return {
@@ -26,7 +26,7 @@ describe('UI Utilities', () => {
 					{ selector, idx: 0 },
 					{ selector, idx: 1 },
 				]),
-			};
+			});
 		});
 
 		afterEach(() => {
@@ -90,10 +90,10 @@ describe('UI Utilities', () => {
 	describe('DOM selector utilities', () => {
 		beforeEach(() => {
 			// Mock document for DOM selectors with proper bind support
-			global.document = {
+			vi.stubGlobal('document', {
 				getElementById: vi.fn(id => ({ id })),
 				querySelector: vi.fn(selector => ({ selector })),
-			};
+			});
 			// Ensure the functions have bind method
 			global.document.getElementById.bind = vi
 				.fn()

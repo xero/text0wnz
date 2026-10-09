@@ -596,15 +596,21 @@ main.js
 **Code Splitting:**
 
 ```javascript
-manualChunks: {
-    core:    ['state', 'storage', 'compression', 'ui'],
-    canvas:  ['canvas', 'font', 'lazyFont', 'fontCache'],
-    tools:   ['freehandTools', 'keyboard', 'toolbar'],
-    fileops: ['file'],
-    network: ['network'],
-    palette: ['palette']
+codeSplitting: {
+    includeDependenciesRecursively: false,
+    groups: [
+        { name: 'core',    test: /(magicNumbers|state|storage|compression|ui)\.js$/ },
+        { name: 'canvas',  test: /(canvas|font|lazyFont|fontCache)\.js$/ },
+        { name: 'tools',   test: /(freehandTools|keyboard|toolbar)\.js$/ },
+        { name: 'fileops', test: /file\.js$/ },
+        { name: 'network', test: /network\.js$/ },
+        { name: 'palette', test: /palette\.js$/ },
+    ],
 }
 ```
+
+> [!NOTE]
+> Vite 8 bundles with Rolldown, which matches `test` against absolute module ids. The `core` and `canvas` modules import each other, so `includeDependenciesRecursively: false` keeps each chunk to only its listed modules. The `core` group also takes Vite's dynamic import helper, so no chunk imports the entry back.
 
 **Benefits:**
 
@@ -626,6 +632,7 @@ dist/
 │   ├── fileops-[hash].js     # File operations (~40 KB)
 │   ├── network-[hash].js     # Collaboration (~30 KB)
 │   ├── palette-[hash].js     # Palette (~15 KB)
+│   ├── rolldown-runtime-[hash].js # Bundler runtime (<1 KB)
 │   └── websocket.js          # Worker (no hash)
 └── ui/
     ├── stylez-[hash].css     # Styles (~30 KB compressed)

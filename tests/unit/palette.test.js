@@ -88,7 +88,7 @@ describe('Palette Utilities', () => {
 
 		beforeEach(() => {
 			// Mock document.dispatchEvent for palette tests
-			global.document = { dispatchEvent: vi.fn() };
+			vi.stubGlobal('document', { dispatchEvent: vi.fn() });
 		});
 
 		afterEach(() => {
@@ -229,7 +229,7 @@ describe('Palette Utilities', () => {
 				height: 50,
 			};
 
-			global.document = { addEventListener: vi.fn() };
+			vi.stubGlobal('document', { addEventListener: vi.fn() });
 		});
 
 		it('should create a palette preview with update function', () => {
@@ -288,7 +288,7 @@ describe('Palette Utilities', () => {
 				getBoundingClientRect: vi.fn(() => ({ left: 0, top: 0 })),
 			};
 
-			global.document = { addEventListener: vi.fn() };
+			vi.stubGlobal('document', { addEventListener: vi.fn() });
 		});
 
 		it('should create a palette picker with update function', () => {

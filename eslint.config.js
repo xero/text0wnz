@@ -244,7 +244,7 @@ export default [
 			"html/no-obsolete-tags": "error",
 			"html/indent": ["error", "tab"],
 			"html/lowercase": "error",
-			"html/no-extra-spacing-attrs": "error",
+			"html/no-extra-spacing-tags": "error",
 			"html/quotes": ["error", "double"],
 			"html/no-trailing-spaces": "error",
 			"html/require-closing-tags": ["error", {

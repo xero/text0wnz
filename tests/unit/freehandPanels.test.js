@@ -231,7 +231,7 @@ const mockDocument = {
 };
 
 // Setup global mocks
-global.document = mockDocument;
+vi.stubGlobal('document', mockDocument);
 global.Image = vi.fn(() => ({
 	addEventListener: vi.fn(),
 	onload: null,
