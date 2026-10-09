@@ -1,4 +1,5 @@
 import path from 'path';
+import { randomBytes } from 'crypto';
 import { existsSync, readFileSync } from 'fs';
 import { createServer as createHttpServer } from 'http';
 import { createServer as createHttpsServer } from 'https';
@@ -8,6 +9,10 @@ import expressWs from 'express-ws';
 import { cleanHeaders } from './utils.js';
 import { webSocketInit, onWebSocketConnection } from './websockets.js';
 import text0wnz from './text0wnz.js';
+
+// Sign session cookies with SESSION_KEY, or a random secret for this process
+const getSessionSecret = () =>
+	process.env.SESSION_KEY || randomBytes(32).toString('hex');
 
 const startServer = config => {
 	let server;
@@ -44,7 +49,16 @@ const startServer = config => {
 	const allClients = new Set();
 
 	// Important: Set up session middleware before WebSocket handling
-	app.use(session({ resave: false, saveUninitialized: true, secret: 'sauce' }));
+	if (!process.env.SESSION_KEY) {
+		console.log('* SESSION_KEY not set, using a random session secret');
+	}
+	app.use(
+		session({
+			resave: false,
+			saveUninitialized: true,
+			secret: getSessionSecret(),
+		}),
+	);
 	app.use(express.static('public'));
 
 	// Initialize express-ws with the server AFTER session middleware
@@ -81,4 +95,4 @@ const startServer = config => {
 		text0wnz.saveSession(() => process.exit());
 	});
 };
-export { startServer };
+export { startServer, getSessionSecret };

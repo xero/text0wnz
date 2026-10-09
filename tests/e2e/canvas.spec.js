@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { waitForEditorReady } from './helpers/editorHelpers.js';
 
 test.describe('Basic Canvas Functionality', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		// Wait for the canvas to be loaded
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
+		// Wait for the canvas to be loaded and the menus/modals to be wired up
+		await waitForEditorReady(page);
 	});
 
 	test('should load the application successfully', async ({ page }) => {

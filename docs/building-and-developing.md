@@ -248,9 +248,8 @@ bun fix
 npm run fix
 ```
 
-- Runs Prettier for formatting
-- Runs ESLint with auto-fix
-- Applies to HTML, CSS, and JavaScript
+- Runs Prettier on CSS and Markdown
+- Runs ESLint with auto-fix on HTML and JavaScript
 
 **`bun lint:check`** - Check for linting issues
 
@@ -283,7 +282,7 @@ bun format:check
 npm run format:check
 ```
 
-- Checks formatting with Prettier
+- Checks CSS and Markdown formatting with Prettier
 - Reports unformatted files
 - Doesn't modify files
 
@@ -295,7 +294,7 @@ bun format:fix
 npm run format:fix
 ```
 
-- Formats code with Prettier
+- Formats CSS and Markdown with Prettier
 - Applies consistent style
 
 ### Testing Scripts
@@ -464,6 +463,9 @@ bun lint:fix
 ### Prettier (Code Formatting)
 
 **Configuration:** `.prettierrc`
+
+> [!NOTE]
+> Prettier only formats CSS and Markdown. ESLint stylistic rules own JavaScript and HTML formatting, and `.prettierignore` excludes those files so editor integrations don't fight ESLint.
 
 **Purpose:**
 

@@ -154,7 +154,7 @@ describe('Utils Module', () => {
 	describe('sanitize', () => {
 		it('should sanitize normal strings with quotes', () => {
 			const result = sanitize('Hello World', 100, true);
-			expect(result).toBe("'Hello World'");
+			expect(result).toBe('\'Hello World\'');
 		});
 
 		it('should sanitize strings without quotes when quote is false', () => {
@@ -206,7 +206,7 @@ describe('Utils Module', () => {
 
 		it('should use default quote=true when not specified', () => {
 			const result = sanitize('test');
-			expect(result).toBe("'test'");
+			expect(result).toBe('\'test\'');
 		});
 	});
 

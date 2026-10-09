@@ -150,7 +150,7 @@ docker run -e DOMAIN=text.example.com text0wnz:latest
 
 ### SESSION_KEY
 
-**Default:** `supersecretkey` (auto-generated in Docker if not provided)
+**Default:** a random secret generated at server startup (the Docker image generates one at boot if not provided)
 
 **Purpose:** Secret key for express-session middleware.
 

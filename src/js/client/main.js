@@ -390,6 +390,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 						],
 						async _deps => {
 							await initializeAppComponents();
+							// Signal that every control is wired up (used by e2e tests)
+							bodyContainer.dataset.ready = 'true';
 						},
 					);
 				};

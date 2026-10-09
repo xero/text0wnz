@@ -23,7 +23,7 @@ ENV XDG_CONFIG_HOME="/etc/caddy"
 RUN apk add --no-cache \
     libstdc++=15.2.0-r2 \
     libgcc=15.2.0-r2 \
-    ca-certificates=20260413-r0 \
+    ca-certificates=20260909-r0 \
 		gettext=0.24.1-r1 \
 		netcat-openbsd=1.234.1-r0
 
@@ -52,7 +52,6 @@ RUN rm -rf \
     *.config.js \
     Dockerfile \
     docs \
-    node_modules \
     OSSMETADATA \
     package*.json \
     README.md \
@@ -83,6 +82,7 @@ RUN echo '#!/bin/sh' > /bootup && \
     echo '        exit 1' >> /bootup && \
     echo '    fi' >> /bootup && \
     echo 'fi' >> /bootup && \
+    echo 'export SESSION_KEY' >> /bootup && \
     echo 'echo "[$(date)] Starting text0wnz at: $DOMAIN on port $PORT (Environment: $NODE_ENV)"' >> /bootup && \
     echo '' >> /bootup && \
     echo '# Create log directory' >> /bootup && \

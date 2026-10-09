@@ -34,7 +34,7 @@ This document defines how autonomous workflow agents must work on the text0wnz r
 - bun server
   - Starts the backend collaboration server. Use this when changes affect server-side behavior or collaborative features.
 - bun fix
-  - Runs Prettier and then ESLint auto-fix. MUST be run before building or committing. Resolve any ESLint warnings/errors that remain after running it (do not ignore lint failures unless you explicitly explain why and update project config via PR).
+  - Runs Prettier (CSS, Markdown) and then ESLint auto-fix (JavaScript, HTML). MUST be run before building or committing. Resolve any ESLint warnings/errors that remain after running it (do not ignore lint failures unless you explicitly explain why and update project config via PR).
 
 ## Behavioral patterns and code conventions (must follow)
 
@@ -130,7 +130,7 @@ This document defines how autonomous workflow agents must work on the text0wnz r
 - Build production: `bun bake`
 - Serve built app (static): `bun www`
 - Start collaboration server: `bun server`
-- Lint & format: `bun fix` (runs Prettier then ESLint both with auto-fix enforcing the project style. you _MUST_ run both so use the alias command)
+- Lint & format: `bun fix` (runs Prettier on CSS and Markdown, then ESLint on JavaScript and HTML, both with auto-fix enforcing the project style. you _MUST_ run both so use the alias command)
 - Unit tests: `bun test:unit`
 - E2E tests: `bun test:e2e`
 - Install Playwright browsers: `bun test:install`

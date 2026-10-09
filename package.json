@@ -41,18 +41,18 @@
 		"node": ">=22.22.2 <23"
 	},
 	"config": {
-		"formatpatterns": "src/**/*.html src/**/*.css src/{*.js,js/**/*.js} tests/**/*.js docs/**/*.md",
+		"formatpatterns": "src/**/*.css docs/**/*.md",
 		"lintpatterns": "src/**/*.html src/{*,js/**/*}.js tests/**/*.js"
 	},
 	"scripts": {
 		"bake": "./banner; vite build --mode production",
 		"server": "./banner; bun src/js/server/main.js",
 		"www": "./banner; serve dist -l 8060",
-		"fix": "./banner; prettier --write $npm_package_config_formatpatterns && eslint --fix $npm_package_config_lintpatterns",
-		"lint:check": "./banner; eslint $npm_package_config_lintpatterns",
-		"lint:fix": "./banner; eslint --fix $npm_package_config_lintpatterns",
-		"format:fix": "./banner; prettier --write $npm_package_config_formatpatterns",
-		"format:check": "./banner; prettier --check $npm_package_config_formatpatterns",
+		"fix": "./banner; set -f; prettier --write $npm_package_config_formatpatterns && eslint --fix $npm_package_config_lintpatterns",
+		"lint:check": "./banner; set -f; eslint $npm_package_config_lintpatterns",
+		"lint:fix": "./banner; set -f; eslint --fix $npm_package_config_lintpatterns",
+		"format:fix": "./banner; set -f; prettier --write $npm_package_config_formatpatterns",
+		"format:check": "./banner; set -f; prettier --check $npm_package_config_formatpatterns",
 		"test:unit": "./banner; vitest run",
 		"test:dom": "./banner; vitest run tests/dom/",
 		"test:e2e": "./banner; playwright test",

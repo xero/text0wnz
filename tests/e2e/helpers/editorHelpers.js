@@ -1,12 +1,12 @@
 /**
- * Wait for the editor to be ready by checking for the canvas container
- * and allowing time for initialization
- * TODO: Replace timeout with specific readiness indicator from editor state
+ * Wait for the editor to be ready: the canvas container exists and main.js
+ * has wired up every control (it sets data-ready on #bodyContainer)
  */
 export async function waitForEditorReady(page, timeout = 10000) {
 	await page.waitForSelector('#canvasContainer', { timeout });
-	// Allow time for editor initialization (fonts, state, etc.)
-	// TODO: Wait for specific initialization complete event or DOM state
+	// Controls clicked before this point are silently ignored
+	await page.waitForSelector('#bodyContainer[data-ready]', { state: 'attached', timeout });
+	// Allow time for remaining async work (fonts, rendering, etc.)
 	await page.waitForTimeout(1000);
 }
 

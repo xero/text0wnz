@@ -18,3 +18,5 @@ jobs:
         run: bun i
       - name: run linter tests
         run: CI=actions bun lint:check
+      - name: run format tests
+        run: CI=actions bun format:check
