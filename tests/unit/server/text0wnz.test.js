@@ -212,9 +212,7 @@ describe('Text0wnz Module Integration Tests', () => {
 		it('should provide default font name when missing', () => {
 			// Test fallback to default font
 			const generateStartMessage = imageData => {
-				return {
-					fontName: imageData.fontName || 'CP437 8x16',
-				};
+				return { fontName: imageData.fontName || 'CP437 8x16' };
 			};
 
 			const withoutFont = generateStartMessage({ columns: 80, rows: 25 });
@@ -338,7 +336,6 @@ describe('Text0wnz Module Integration Tests', () => {
 			const userList = { session1: 'Alice', session2: 'Bob' };
 
 			const handleDisconnect = sessionID => {
-				const username = userList[sessionID];
 				delete userList[sessionID];
 				return ['part', sessionID];
 			};
@@ -501,19 +498,21 @@ describe('Text0wnz Module Integration Tests', () => {
 		it('should log with debug mode enabled (callout)', () => {
 			// Test log function with debug = true (uses callout)
 			const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-			
+
 			// Import actual sanitize for consistency
 			const sanitize = (input, limit = 100, quote = false) => {
-				if (!input) return '';
-				const str = String(input).trim().replace(/\p{C}/gu, '').replace(/[\n\r]/g, '').substring(0, limit);
+				if (!input) {return '';}
+				const str = String(input).trim().replace(/\p{C}/gu, '')
+					.replace(/[\n\r]/g, '')
+					.substring(0, limit);
 				return quote ? `'${str}'` : str;
 			};
-			
+
 			const callout = msg => {
 				const logMsg = sanitize(msg, 100, false);
 				console.log(`╓───── ${logMsg}\n╙───────────────────────────────── ─ ─`);
 			};
-			
+
 			const log = (msg, debug) => {
 				const logMsg = sanitize(msg, 100, false);
 				debug ? callout(logMsg) : console.log(`* ${logMsg}`);
@@ -521,10 +520,10 @@ describe('Text0wnz Module Integration Tests', () => {
 
 			log('Test message', true);
 			expect(consoleLogSpy).toHaveBeenCalledWith(
-				expect.stringContaining('╓─────')
+				expect.stringContaining('╓─────'),
 			);
 			expect(consoleLogSpy).toHaveBeenCalledWith(
-				expect.stringContaining('Test message')
+				expect.stringContaining('Test message'),
 			);
 
 			consoleLogSpy.mockRestore();
@@ -533,10 +532,10 @@ describe('Text0wnz Module Integration Tests', () => {
 		it('should log with debug mode disabled (simple log)', () => {
 			// Test log function with debug = false (uses console.log)
 			const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-			
+
 			const log = (msg, debug) => {
-				const sanitize = (input, limit = 100, quote = false) => {
-					if (!input) return '';
+				const sanitize = (input, limit = 100, _quote = false) => {
+					if (!input) {return '';}
 					return String(input).trim().substring(0, limit);
 				};
 				const logMsg = sanitize(msg, 100, false);
@@ -574,7 +573,7 @@ describe('Text0wnz Module Integration Tests', () => {
 			};
 
 			const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-			
+
 			const result = getStart(null, 'test-session');
 			expect(result).toBe(JSON.stringify(['error', 'Server not ready']));
 			expect(consoleErrorSpy).toHaveBeenCalledWith('! ImageData not initialized');
@@ -709,7 +708,7 @@ describe('Text0wnz Module Integration Tests', () => {
 			handleResize(160, 50);
 			expect(consoleLogSpy).toHaveBeenCalledWith(
 				'[Server] Set canvas size:',
-				'160x50'
+				'160x50',
 			);
 			consoleLogSpy.mockRestore();
 		});
@@ -768,7 +767,7 @@ describe('Text0wnz Module Integration Tests', () => {
 				'draw',
 				'to',
 				2,
-				'clients'
+				'clients',
 			);
 			consoleLogSpy.mockRestore();
 		});
@@ -794,7 +793,7 @@ describe('Text0wnz Module Integration Tests', () => {
 
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
 				'[Error] sending to client:',
-				expect.any(String)
+				expect.any(String),
 			);
 			consoleErrorSpy.mockRestore();
 		});

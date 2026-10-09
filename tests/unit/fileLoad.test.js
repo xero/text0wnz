@@ -95,7 +95,7 @@ describe('File Module - Load and Save Operations', () => {
 		vi.clearAllMocks();
 
 		// Setup global mocks
-		global.document = mockDocument;
+		vi.stubGlobal('document', mockDocument);
 		global.URL = mockURL;
 		global.window = { URL: mockURL };
 		global.FileReader = mockFileReader;
@@ -106,7 +106,7 @@ describe('File Module - Load and Save Operations', () => {
 		});
 		global.btoa = vi.fn(str => Buffer.from(str, 'binary').toString('base64'));
 		global.atob = vi.fn(str => Buffer.from(str, 'base64').toString('binary'));
-		global.navigator = { userAgent: 'Chrome/90.0' };
+		vi.stubGlobal('navigator', { userAgent: 'Chrome/90.0' });
 		global.MouseEvent = vi.fn(function () {
 			return { bubbles: true, cancelable: true };
 		});

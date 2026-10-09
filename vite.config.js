@@ -15,6 +15,10 @@ export default ({ mode }) => {
 	const worker = process.env.VITE_WORKER_FILE || 'websocket.js';
 	const uiDir = ((process.env.VITE_UI_DIR || 'ui').replace(/^\/|\/?$/g, '')) + '/';
 
+	// source sizes for the build logs (rolldown gives each plugin hook a fresh `this`)
+	let originalCssSize = 0;
+	let originalHtmlSize = 0;
+
 	return defineConfig({
 		root: './src',
 		base: './', // output relative urls
@@ -31,7 +35,7 @@ export default ({ mode }) => {
 				}
 			},
 			sourcemap: process.env.NODE_ENV !== 'production',
-			rollupOptions: {
+			rolldownOptions: {
 				input: {
 					index: path.resolve('./src', 'index.html'),
 				},
@@ -40,7 +44,7 @@ export default ({ mode }) => {
 					entryFileNames: `${uiDir}js/editor-[hash].js`,
 					chunkFileNames: `${uiDir}js/[name]-[hash].js`,
 					assetFileNames: assetInfo => {
-						const assetName = assetInfo.name || assetInfo.names?.[0];
+						const assetName = assetInfo.names?.[0];
 						if (!assetName) return '';
 						const info = assetName.split('.');
 						const ext = info[info.length - 1];
@@ -57,29 +61,19 @@ export default ({ mode }) => {
 						return `${uiDir}[name].${ext}`;
 					},
 					// progressively load features
-					manualChunks: {
-						core: [
-							'src/js/client/magicNumbers.js',
-							'src/js/client/state.js',
-							'src/js/client/storage.js',
-							'src/js/client/compression.js',
-							'src/js/client/ui.js',
+					codeSplitting: {
+						// core & canvas import each other, keep each chunk to only its listed modules
+						includeDependenciesRecursively: false,
+						groups: [
+							// also holds vite's dynamic import helper, otherwise it lands in the entry chunk & tools imports the editor back
+							{ name: 'core', test: /[\\/]src[\\/]js[\\/]client[\\/](magicNumbers|state|storage|compression|ui)\.js$|vite[\\/]preload-helper/ },
+							{ name: 'canvas', test: /[\\/]src[\\/]js[\\/]client[\\/](canvas|font|lazyFont|fontCache)\.js$/ },
+							{ name: 'tools', test: /[\\/]src[\\/]js[\\/]client[\\/](freehandTools|keyboard|toolbar)\.js$/ },
+							{ name: 'fileops', test: /[\\/]src[\\/]js[\\/]client[\\/]file\.js$/ },
+							{ name: 'network', test: /[\\/]src[\\/]js[\\/]client[\\/]network\.js$/ },
+							{ name: 'palette', test: /[\\/]src[\\/]js[\\/]client[\\/]palette\.js$/ },
 						],
-						canvas: [
-							'src/js/client/canvas.js',
-							'src/js/client/font.js',
-							'src/js/client/lazyFont.js',
-							'src/js/client/fontCache.js',
-						],
-						tools: [
-							'src/js/client/freehandTools.js',
-							'src/js/client/keyboard.js',
-							'src/js/client/toolbar.js',
-						],
-						fileops: ['src/js/client/file.js'],
-						network: ['src/js/client/network.js'],
-						palette: ['src/js/client/palette.js'],
-					}
+					},
 				},
 			},
 		},
@@ -87,12 +81,11 @@ export default ({ mode }) => {
 			{
 				name: 'log-postcss',
 				apply: 'build',
-				originalCssSize: 0,
 				buildStart() {
 					const srcCssPath = path.resolve('./src/css', 'style.css');
 					if (existsSync(srcCssPath)) {
 						const srcStats = statSync(srcCssPath);
-						this.originalCssSize = srcStats.size;
+						originalCssSize = srcStats.size;
 					}
 				},
 				closeBundle() {
@@ -103,9 +96,9 @@ export default ({ mode }) => {
 
 						if (cssFile) {
 							const minified = statSync(path.join(distCssDir, cssFile)).size;
-							const savings = ((1 - minified / this.originalCssSize) * 100).toFixed(1);
+							const savings = ((1 - minified / originalCssSize) * 100).toFixed(1);
 							console.log(`\n\x1b[36m[PostCSS] \x1b[0mBuilding stylesheet\n\x1b[32m✓ \x1b[34mtailwindcss\n\x1b[32m✓ \x1b[34mcssnano \x1b[35m(preset: advanced)\x1b[0m`);
-							console.log(`../dist/ui/\x1b[32m${cssFile}\x1b[0m: \x1b[33m${(this.originalCssSize / 1024).toFixed(2)}kb\x1b[0m → \x1b[32m${(minified / 1024).toFixed(2)}kb\x1b[0m (\x1b[36m${savings}% reduction\x1b[0m)\n`);
+							console.log(`../dist/ui/\x1b[32m${cssFile}\x1b[0m: \x1b[33m${(originalCssSize / 1024).toFixed(2)}kb\x1b[0m → \x1b[32m${(minified / 1024).toFixed(2)}kb\x1b[0m (\x1b[36m${savings}% reduction\x1b[0m)\n`);
 						}
 					}
 				}
@@ -124,19 +117,18 @@ export default ({ mode }) => {
 			{
 				name: 'log-html-minifier',
 				apply: 'build',
-				originalSize: 0,
 				buildStart() {
 					const srcPath = path.resolve('./src', 'index.html');
 					const srcStats = statSync(srcPath);
-					this.originalSize = srcStats.size;
+					originalHtmlSize = srcStats.size;
 				},
 				closeBundle() {
 					const minifiedPath = path.resolve('./dist', 'index.html');
 					if (existsSync(minifiedPath)) {
 						const minified = statSync(minifiedPath).size;
-						const savings = ((1 - minified / this.originalSize) * 100).toFixed(1);
+						const savings = ((1 - minified / originalHtmlSize) * 100).toFixed(1);
 						console.log(`\x1b[36m[htmlMinifierTerser] \x1b[0mCompressing index`);
-						console.log(`../dist/\x1b[32mindex.html\x1b[0m: \x1b[33m${(this.originalSize / 1024).toFixed(2)}kb\x1b[0m → \x1b[32m${(minified / 1024).toFixed(2)}kb\x1b[0m (\x1b[36m${savings}% reduction\x1b[0m)\n`);
+						console.log(`../dist/\x1b[32mindex.html\x1b[0m: \x1b[33m${(originalHtmlSize / 1024).toFixed(2)}kb\x1b[0m → \x1b[32m${(minified / 1024).toFixed(2)}kb\x1b[0m (\x1b[36m${savings}% reduction\x1b[0m)\n`);
 					}
 				}
 			},
@@ -146,9 +138,10 @@ export default ({ mode }) => {
 				targets: [
 					{ src: 'LICENSE.txt', dest: '.' },
 					{ src: 'humans.txt', dest: '.' },
-					{ src: 'img/manifest/favicon.ico', dest: '.' },
+					// v4 keeps the src path in dest by default, flatten single files
+					{ src: 'img/manifest/favicon.ico', dest: '.', rename: { stripBase: true } },
 					{ src: 'fonts', dest: uiDir },
-					{ src: `js/client/${worker}`, dest: uiDir + 'js/' },
+					{ src: `js/client/${worker}`, dest: uiDir + 'js/', rename: { stripBase: true } },
 					{ src: 'ansi', dest: '.'},
 				],
 			}),

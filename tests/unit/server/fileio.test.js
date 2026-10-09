@@ -475,7 +475,7 @@ describe('FileIO Module Integration Tests', () => {
 		it('should handle invalid SAUCE version', () => {
 			// Test detection of invalid SAUCE version
 			const isValidSauce = bytes => {
-				if (bytes.length < 128) return false;
+				if (bytes.length < 128) {return false;}
 				const sauce = bytes.slice(-128);
 				const id = String.fromCharCode(...sauce.slice(0, 5));
 				const version = String.fromCharCode(...sauce.slice(5, 7));
@@ -551,9 +551,9 @@ describe('FileIO Module Integration Tests', () => {
 			// Test bitwise flag operations
 			const testFlags = (iceColors, letterSpacing) => {
 				let flags = 0;
-				if (iceColors) flags |= 0x01;
-				if (!letterSpacing) flags |= 0x02;
-				else flags |= 0x04;
+				if (iceColors) {flags |= 0x01;}
+				if (!letterSpacing) {flags |= 0x02;}
+				else {flags |= 0x04;}
 
 				return {
 					flags,
@@ -608,7 +608,7 @@ describe('FileIO Module Integration Tests', () => {
 			};
 
 			const data = new Uint8Array([0xff, 0xee, 0x12, 0x34, 0xab, 0xcd, 0x00, 0x11]);
-			
+
 			// Convert from start
 			const result1 = convertUint8ToUint16(data, 0, 4);
 			expect(result1.length).toBe(2);
@@ -640,10 +640,10 @@ describe('FileIO Module Integration Tests', () => {
 
 				const sauce = bytes.slice(-128);
 				if (String.fromCharCode(...sauce.slice(0, 7)) === 'SAUCE00') {
-					const fileSize = 
-						sauce[90] + 
-						(sauce[91] << 8) + 
-						(sauce[92] << 16) + 
+					const fileSize =
+						sauce[90] +
+						(sauce[91] << 8) +
+						(sauce[92] << 16) +
 						(sauce[93] << 24);
 
 					if (dataType === 5) {
@@ -666,11 +666,11 @@ describe('FileIO Module Integration Tests', () => {
 			const bytes5 = new Uint8Array(256);
 			const sauceStart5 = bytes5.length - 128;
 			bytes5.set(new TextEncoder().encode('SAUCE00'), sauceStart5);
-			bytes5[sauceStart5 + 90] = 0x40; 
+			bytes5[sauceStart5 + 90] = 0x40;
 			bytes5[sauceStart5 + 91] = 0x1f; // fileSize = 8000
 			bytes5[sauceStart5 + 94] = 5; // datatype
 			bytes5[sauceStart5 + 95] = 80; // filetype (columns/2)
-			
+
 			const result5 = mockGetSauce(bytes5, 160, 5);
 			expect(result5.dataType).toBe(5);
 			expect(result5.columns).toBe(160); // 80 * 2
@@ -680,12 +680,12 @@ describe('FileIO Module Integration Tests', () => {
 			const bytesNormal = new Uint8Array(256);
 			const sauceStartNormal = bytesNormal.length - 128;
 			bytesNormal.set(new TextEncoder().encode('SAUCE00'), sauceStartNormal);
-			bytesNormal[sauceStartNormal + 90] = 0x00; 
+			bytesNormal[sauceStartNormal + 90] = 0x00;
 			bytesNormal[sauceStartNormal + 91] = 0x10; // fileSize = 4096
 			bytesNormal[sauceStartNormal + 94] = 1; // datatype (ANSI)
 			bytesNormal[sauceStartNormal + 96] = 80; // columns
 			bytesNormal[sauceStartNormal + 99] = 25; // rows
-			
+
 			const resultNormal = mockGetSauce(bytesNormal, 160, 1);
 			expect(resultNormal.dataType).toBe(1);
 			expect(resultNormal.columns).toBe(80);
@@ -704,7 +704,7 @@ describe('FileIO Module Integration Tests', () => {
 			};
 
 			const sauce = new Uint8Array(128);
-			
+
 			// Small file
 			sauce[90] = 0x00; sauce[91] = 0x04; // 1024 bytes
 			expect(extractFileSize(sauce)).toBe(1024);

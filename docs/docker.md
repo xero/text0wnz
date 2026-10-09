@@ -122,12 +122,12 @@ The container implements a robust startup sequence:
 
 ## Environment Variables
 
-| Variable      | Description                              | Default          |
-| ------------- | ---------------------------------------- | ---------------- |
-| `DOMAIN`      | Domain name for the application          | `localhost`      |
-| `PORT`        | _Internal_ port for the WebSocket server | `1337`           |
-| `NODE_ENV`    | Node environment setting                 | `production`     |
-| `SESSION_KEY` | Session secret key for express           | `supersecretkey` |
+| Variable      | Description                              | Default                   |
+| ------------- | ---------------------------------------- | ------------------------- |
+| `DOMAIN`      | Domain name for the application          | `localhost`               |
+| `PORT`        | _Internal_ port for the WebSocket server | `1337`                    |
+| `NODE_ENV`    | Node environment setting                 | `production`              |
+| `SESSION_KEY` | Session secret key for express           | random, generated at boot |
 
 ## Advanced Usage
 

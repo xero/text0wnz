@@ -95,7 +95,7 @@ describe('File Module - Formats and Parsing', () => {
 		vi.clearAllMocks();
 
 		// Setup global mocks
-		global.document = mockDocument;
+		vi.stubGlobal('document', mockDocument);
 		global.URL = mockURL;
 		global.window = { URL: mockURL };
 		global.FileReader = mockFileReader;
@@ -106,7 +106,7 @@ describe('File Module - Formats and Parsing', () => {
 		});
 		global.btoa = vi.fn(str => Buffer.from(str, 'binary').toString('base64'));
 		global.atob = vi.fn(str => Buffer.from(str, 'base64').toString('binary'));
-		global.navigator = { userAgent: 'Chrome/90.0' };
+		vi.stubGlobal('navigator', { userAgent: 'Chrome/90.0' });
 		global.MouseEvent = vi.fn(function () {
 			return { bubbles: true, cancelable: true };
 		});
@@ -237,17 +237,17 @@ describe('File Module - Formats and Parsing', () => {
 		it('should handle missing DOM elements gracefully', async () => {
 			// Mock a scenario where `document.createElement` is not available
 			const originalDocument = global.document;
-			global.document = {
+			vi.stubGlobal('document', {
 				createElement: vi.fn(() => {
 					throw new Error('createElement failed');
 				}),
-			};
+			});
 
 			// Expect the Save.ans() function to throw an error
 			await expect(Save.ans()).rejects.toThrow('createElement failed');
 
 			// Restore the original document object
-			global.document = originalDocument;
+			vi.stubGlobal('document', originalDocument);
 		});
 
 		it('should handle invalid file names', () => {

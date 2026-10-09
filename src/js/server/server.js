@@ -1,4 +1,5 @@
 import path from 'path';
+import { randomBytes } from 'crypto';
 import { existsSync, readFileSync } from 'fs';
 import { createServer as createHttpServer } from 'http';
 import { createServer as createHttpsServer } from 'https';
@@ -8,6 +9,17 @@ import expressWs from 'express-ws';
 import { cleanHeaders } from './utils.js';
 import { webSocketInit, onWebSocketConnection } from './websockets.js';
 import text0wnz from './text0wnz.js';
+
+// Sign session cookies with SESSION_KEY, or a random secret for this process
+const getSessionSecret = () =>
+	process.env.SESSION_KEY || randomBytes(32).toString('hex');
+
+// Websockets arrive as 'upgrade' events, answer any plain http request with
+// a 426 right away instead of leaving the connection hanging
+const upgradeRequired = (_req, res) => {
+	res.writeHead(426, { Connection: 'Upgrade', Upgrade: 'websocket' });
+	res.end('Upgrade Required');
+};
 
 const startServer = config => {
 	let server;
@@ -39,13 +51,25 @@ const startServer = config => {
 		server = createHttpServer();
 		console.log('* Using HTTP server (SSL disabled)');
 	}
+	server.on('request', upgradeRequired);
 
 	const app = express();
 	const allClients = new Set();
 
 	// Important: Set up session middleware before WebSocket handling
-	app.use(session({ resave: false, saveUninitialized: true, secret: 'sauce' }));
-	app.use(express.static('public'));
+	// It only supplies req.sessionID per websocket. The cookie is never sent,
+	// plain http gets a 426 before express & ws writes the 101 upgrade response,
+	// so it needs no secure flag (TLS terminates at the reverse proxy)
+	if (!process.env.SESSION_KEY) {
+		console.log('* SESSION_KEY not set, using a random session secret');
+	}
+	app.use(
+		session({
+			resave: false,
+			saveUninitialized: true,
+			secret: getSessionSecret(),
+		}),
+	);
 
 	// Initialize express-ws with the server AFTER session middleware
 	expressWs(app, server);
@@ -81,4 +105,4 @@ const startServer = config => {
 		text0wnz.saveSession(() => process.exit());
 	});
 };
-export { startServer };
+export { startServer, getSessionSecret, upgradeRequired };

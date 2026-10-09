@@ -127,7 +127,7 @@ const mockCreateFunctions = {
 };
 
 // Set up global document BEFORE any imports
-global.document = {
+vi.stubGlobal('document', {
 	getElementById: vi.fn(id => {
 		const mockElement = createMockElement();
 		// Special cases for specific elements
@@ -145,7 +145,7 @@ global.document = {
 	dispatchEvent: vi.fn(),
 	title: 'test',
 	createElement: vi.fn(() => createMockElement()),
-};
+});
 
 global.confirm = vi.fn(() => true);
 global.alert = vi.fn();

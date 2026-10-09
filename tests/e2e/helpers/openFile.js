@@ -19,13 +19,26 @@ export async function openFile(page, filePath) {
 	// TODO: Replace timeout with specific DOM change or loading complete indicator
 	// Consider waiting for canvas update, position info change, or loading modal to disappear
 	await page.waitForTimeout(2000);
+
+	// The "updating editor" loading modal can outlast the timeout on slower
+	// machines, and it covers the viewport. Only wait on the loading modal, other
+	// modals depend on server, storage, or session state
+	await page.waitForFunction(
+		() => {
+			const modal = document.getElementById('modal');
+			const loading = document.getElementById('loadingModal');
+			return !modal?.open || loading?.classList.contains('hide');
+		},
+		null,
+		{ timeout: 15000 },
+	);
 }
 
 /**
  * Alternative method: Open file via drag and drop
  * TODO: This is a placeholder - implement if needed
  */
-export async function openFileViaDragDrop(page, filePath) {
+export async function openFileViaDragDrop(_page, _filePath) {
 	// This would simulate drag and drop onto the canvas
 	// Implementation depends on the drag-drop controller behavior
 	throw new Error('Not implemented - use openFile() instead');
@@ -36,7 +49,7 @@ export async function openFileViaDragDrop(page, filePath) {
  * This attempts to use a window API if available
  */
 export async function openFileViaURL(page, fileURL) {
-	const loaded = await page.evaluate((url) => {
+	const loaded = await page.evaluate(url => {
 		if (window.Load && window.Load.loadFileFromUrl) {
 			window.Load.loadFileFromUrl(url);
 			return true;

@@ -109,12 +109,10 @@ describe('Server Module Integration Tests', () => {
 
 			// Simulate server setup order
 			mockApp.use('session-middleware');
-			mockApp.use('public');
 			mockApp.use('/server', 'debug-middleware');
 
 			expect(middlewareOrder).toEqual([
 				'session-middleware',
-				'public',
 				'/server',
 			]);
 		});
@@ -329,7 +327,7 @@ describe('Server Module Integration Tests', () => {
 			const paths = constructPaths(
 				'/etc/letsencrypt',
 				'letsencrypt-domain.pem',
-				'letsencrypt-domain.key'
+				'letsencrypt-domain.key',
 			);
 
 			expect(paths.cert).toBe('/etc/letsencrypt/letsencrypt-domain.pem');
@@ -373,24 +371,38 @@ describe('Server Module Integration Tests', () => {
 			expect(routes[1].path).toBe('/server');
 		});
 
-		it('should handle session middleware configuration', () => {
-			// Test session config structure
-			const sessionConfig = {
-				resave: false,
-				saveUninitialized: true,
-				secret: 'sauce',
-			};
+		it('should use SESSION_KEY as the session secret when set', async () => {
+			const { getSessionSecret } = await import('../../../src/js/server/server.js');
+			vi.stubEnv('SESSION_KEY', 'test-session-key');
 
-			expect(sessionConfig.resave).toBe(false);
-			expect(sessionConfig.saveUninitialized).toBe(true);
-			expect(sessionConfig.secret).toBe('sauce');
+			expect(getSessionSecret()).toBe('test-session-key');
+
+			vi.unstubAllEnvs();
 		});
 
-		it('should handle static file serving configuration', () => {
-			// Test static file serving path
-			const staticPath = 'public';
-			
-			expect(staticPath).toBe('public');
+		it('should generate a random session secret when SESSION_KEY is unset', async () => {
+			const { getSessionSecret } = await import('../../../src/js/server/server.js');
+			vi.stubEnv('SESSION_KEY', '');
+
+			const secret = getSessionSecret();
+			expect(secret).toMatch(/^[0-9a-f]{64}$/);
+			expect(secret).not.toBe('sauce');
+			expect(getSessionSecret()).not.toBe(secret);
+
+			vi.unstubAllEnvs();
+		});
+
+		it('should answer plain http requests with 426 Upgrade Required', async () => {
+			const { upgradeRequired } = await import('../../../src/js/server/server.js');
+			const res = { writeHead: vi.fn(), end: vi.fn() };
+
+			upgradeRequired({}, res);
+
+			expect(res.writeHead).toHaveBeenCalledWith(426, {
+				Connection: 'Upgrade',
+				Upgrade: 'websocket',
+			});
+			expect(res.end).toHaveBeenCalledWith('Upgrade Required');
 		});
 
 		it('should handle WebSocket initialization', () => {

@@ -109,8 +109,17 @@ test.describe('File Open and Scrolling', () => {
 		const initialScroll = await getViewportScrollPosition(page);
 
 		// Scroll down with mouse wheel
-		// Move mouse to center of viewport first
-		await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+		// Aim at the viewport background left of the drawing canvas, not the
+		// canvas itself or the menus
+		const canvasBox = await page.locator('#canvasContainer').boundingBox();
+		const wheelX = (box.x + canvasBox.x) / 2;
+		const wheelY = box.y + box.height / 2;
+		const target = await page.evaluate(
+			([x, y]) => document.elementFromPoint(x, y)?.id,
+			[wheelX, wheelY],
+		);
+		expect(target).toBe('viewport');
+		await page.mouse.move(wheelX, wheelY);
 		// Scroll down (positive deltaY)
 		await page.mouse.wheel(0, 300);
 		await page.waitForTimeout(500);

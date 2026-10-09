@@ -50,19 +50,15 @@ beforeAll(() => {
 				clip: () => {},
 				isPointInPath: () => true,
 				isPointInStroke: () => true,
-				measureText: (text) => ({
+				measureText: text => ({
 					width: text.length * 7,
 					actualBoundingBoxAscent: 10,
 					actualBoundingBoxDescent: 3,
 					fontBoundingBoxAscent: 12,
 					fontBoundingBoxDescent: 4,
 				}),
-				createLinearGradient: () => ({
-					addColorStop: () => {},
-				}),
-				createRadialGradient: () => ({
-					addColorStop: () => {},
-				}),
+				createLinearGradient: () => ({ addColorStop: () => {} }),
+				createRadialGradient: () => ({ addColorStop: () => {} }),
 				createPattern: () => ({}),
 				// Properties
 				fillStyle: '',

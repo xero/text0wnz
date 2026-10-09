@@ -32,7 +32,7 @@ describe('XBIN Font Data Persistence', () => {
 		};
 
 		// Setup localStorage mock
-		global.localStorage = {
+		vi.stubGlobal('localStorage', {
 			data: {},
 			getItem(key) {
 				return this.data[key] || null;
@@ -43,7 +43,7 @@ describe('XBIN Font Data Persistence', () => {
 			clear() {
 				this.data = {};
 			},
-		};
+		});
 	});
 
 	afterEach(() => {

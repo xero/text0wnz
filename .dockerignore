@@ -1,0 +1,9 @@
+# keep local deps, build output, test results, session data & env overrides out of the image
+.git
+node_modules
+dist
+tests/results
+sessions/*.bin
+sessions/*.json
+.claude
+.env*.local

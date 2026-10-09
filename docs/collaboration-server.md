@@ -133,7 +133,7 @@ You can set environment variables before starting the server:
 | `SESSION_KEY` | Session secret key for express | `supersecretkey` |
 
 > [!IMPORTANT]
-> By default, the session secret is set to `"sauce"`. For production use, set a strong value via `SESSION_KEY` or modify in `src/js/server/server.js`.
+> Without `SESSION_KEY`, the server generates a random session secret each time it starts, so session cookies stop validating after a restart. For production use, set a strong, stable value via `SESSION_KEY`.
 
 **Example with environment variables:**
 

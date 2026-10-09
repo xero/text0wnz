@@ -4,6 +4,10 @@ import html from "@html-eslint/eslint-plugin";
 import parser from '@html-eslint/parser';
 
 export default [
+	{
+		// generated test reports (playwright trace viewer, coverage html)
+		ignores: ['tests/results/**'],
+	},
 	js.configs.recommended,
 	{
 		plugins: {
@@ -24,6 +28,7 @@ export default [
 				CustomEvent: 'readonly',
 				File: 'readonly',
 				FileReader: 'readonly',
+				HTMLCanvasElement: 'readonly',
 				Image: 'readonly',
 				MouseEvent: 'readonly',
 				Notification: 'readonly',
@@ -244,7 +249,7 @@ export default [
 			"html/no-obsolete-tags": "error",
 			"html/indent": ["error", "tab"],
 			"html/lowercase": "error",
-			"html/no-extra-spacing-attrs": "error",
+			"html/no-extra-spacing-tags": "error",
 			"html/quotes": ["error", "double"],
 			"html/no-trailing-spaces": "error",
 			"html/require-closing-tags": ["error", {

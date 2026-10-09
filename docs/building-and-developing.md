@@ -6,7 +6,7 @@ This guide covers the build process, development workflow, tooling, and scripts 
 
 ### System Requirements
 
-- **Node.js** v22.19.0 or higher (but less than v23)
+- **Node.js** v22.22.2 or higher (but less than v23)
 - **Bun** (recommended) or npm
 - Modern web browser (Chrome 95+, Firefox 93+, Safari 15+, Edge 95+)
 
@@ -86,6 +86,7 @@ dist/
         ├── fileops-[hash].js     # File I/O operations
         ├── network-[hash].js     # Collaboration/WebSocket
         ├── palette-[hash].js     # Color palette management
+        ├── rolldown-runtime-[hash].js # Bundler runtime shared by chunks
         └── websocket.js          # Web Worker (no hash for service worker caching)
 ```
 
@@ -247,9 +248,8 @@ bun fix
 npm run fix
 ```
 
-- Runs Prettier for formatting
-- Runs ESLint with auto-fix
-- Applies to HTML, CSS, and JavaScript
+- Runs Prettier on CSS and Markdown
+- Runs ESLint with auto-fix on HTML and JavaScript
 
 **`bun lint:check`** - Check for linting issues
 
@@ -282,7 +282,7 @@ bun format:check
 npm run format:check
 ```
 
-- Checks formatting with Prettier
+- Checks CSS and Markdown formatting with Prettier
 - Reports unformatted files
 - Doesn't modify files
 
@@ -294,7 +294,7 @@ bun format:fix
 npm run format:fix
 ```
 
-- Formats code with Prettier
+- Formats CSS and Markdown with Prettier
 - Applies consistent style
 
 ### Testing Scripts
@@ -463,6 +463,9 @@ bun lint:fix
 ### Prettier (Code Formatting)
 
 **Configuration:** `.prettierrc`
+
+> [!NOTE]
+> Prettier only formats CSS and Markdown. ESLint stylistic rules own JavaScript and HTML formatting, and `.prettierignore` excludes those files so editor integrations don't fight ESLint.
 
 **Purpose:**
 
@@ -751,7 +754,7 @@ This logs:
 **Node version mismatch:**
 
 ```bash
-node --version  # Should be 22.19.0+
+node --version  # Should be 22.22.2+
 nvm use 22      # Or install correct version
 ```
 

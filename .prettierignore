@@ -2,3 +2,6 @@ dist/
 node_modules/
 sessions/
 banner
+# eslint owns js & html formatting
+*.js
+*.html

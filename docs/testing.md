@@ -78,6 +78,8 @@ const ignore = [
 	'session',
 	'node_modules',
 	'tests/e2e/**',
+	'src/img/**',
+	'src/css/**',
 ];
 
 export default defineConfig({
@@ -450,11 +452,11 @@ const debug = msg => {
 ### Writing Unit Tests
 
 > [!IMPORTANT]
-> **Vitest v4 requires regular functions (not arrow functions) for constructor mocks**
+> **Vitest v4+ requires regular functions (not arrow functions) for constructor mocks**
 >
 > When mocking constructors, you must use the `function` keyword or `class` syntax. Arrow functions will cause a "not a constructor" error.
 >
-> For more details, see the [Vitest v4 migration guide](https://vitest.dev/guide/migration.html#vitest-4).
+> For more details, see the [Vitest v4 migration guide](https://v4.vitest.dev/guide/migration#vitest-4).
 >
 > Since the project's ESLint configuration prefers arrow functions, you may see lint warnings when using regular functions for constructor mocks.
 >
@@ -475,6 +477,20 @@ const debug = msg => {
 > 	/* ... */
 > };
 > ```
+
+> [!IMPORTANT]
+> **Vitest v5 requires `vi.stubGlobal()` to mock `document`, `navigator`, or `localStorage`**
+>
+> In v5, assigning a global also updates the underlying jsdom window, and these properties are getter-only there. Plain assignment like `global.document = mockDocument` throws `Cannot set property document of [object Window] which has only a getter`.
+>
+> ```javascript
+> vi.stubGlobal('document', mockDocument);
+> vi.stubGlobal('navigator', { userAgent: 'Chrome/90.0' });
+> ```
+>
+> You can still assign writable globals like `URL`, `Blob`, `FileReader`, and `btoa` directly.
+>
+> For more details, see the [Vitest v5 migration guide](https://vitest.dev/guide/migration).
 
 **Test structure:**
 
@@ -978,7 +994,8 @@ Tests run automatically on:
 
 - [Vitest Mocking Guide](https://vitest.dev/guide/mocking.html)
 - [Vitest Coverage Guide](https://vitest.dev/guide/coverage.html)
-- [Vitest v4 Migration Guide](https://vitest.dev/guide/migration.html#vitest-4)
+- [Vitest v5 Migration Guide](https://vitest.dev/guide/migration)
+- [Vitest v4 Migration Guide](https://v4.vitest.dev/guide/migration#vitest-4)
 - [Playwright Best Practices](https://playwright.dev/docs/best-practices)
 - [Playwright Debugging](https://playwright.dev/docs/debug)
 - [Testing Library Queries](https://testing-library.com/docs/queries/about)
