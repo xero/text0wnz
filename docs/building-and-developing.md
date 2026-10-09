@@ -14,6 +14,8 @@ This guide covers the build process, development workflow, tooling, and scripts 
 
 This project uses [Bun](https://bun.com) as the preferred package manager and runtime for better performance.
 
+`bun.lock` is the canonical lockfile; it is what CI and the Docker image install from. Do not commit a `package-lock.json`. If `npm install` generates one locally, delete it instead of checking it in.
+
 **Platform install examples**
 
 ```sh

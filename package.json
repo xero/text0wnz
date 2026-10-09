@@ -76,6 +76,7 @@
 		"cssnano": "^7.1.8",
 		"cssnano-preset-advanced": "^7.0.16",
 		"eslint": "^9.39.4",
+		"fast-png": "^8.0.0",
 		"jsdom": "^30.1.2",
 		"playwright": "^1.59.1",
 		"postcss": "^8.5.13",

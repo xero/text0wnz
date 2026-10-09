@@ -6,6 +6,8 @@ import {
 	createResolutionController,
 	createDragDropController,
 	createMenuController,
+	createGrid,
+	createToolPreview,
 } from '../../src/js/client/ui.js';
 
 // Mock the State module
@@ -208,8 +210,51 @@ describe('UI Components', () => {
 		});
 	});
 
-	// Note: createGrid and createToolPreview are complex rendering functions
-	// that require full canvas context and State initialization. They are tested via E2E tests.
+	// Note: createGrid and createToolPreview rendering output is covered by
+	// E2E tests; the unit tests below only assert their lazy allocation.
+
+	describe('createGrid', () => {
+		it('should defer grid canvas creation until toggled on', () => {
+			const el = document.createElement('div');
+			document.body.appendChild(el);
+
+			const grid = createGrid(el);
+
+			expect(el.querySelectorAll('canvas').length).toBe(0);
+			expect(grid.isShown()).toBe(false);
+
+			grid.show(true);
+			expect(grid.isShown()).toBe(true);
+			expect(el.querySelectorAll('canvas').length).toBeGreaterThan(0);
+
+			grid.show(false);
+			expect(grid.isShown()).toBe(false);
+			expect(el.querySelectorAll('canvas').length).toBe(0);
+		});
+	});
+
+	describe('createToolPreview', () => {
+		it('should create preview canvases lazily per 25-row chunk', () => {
+			State.textArtCanvas.getRows.mockReturnValue(100);
+			const el = document.createElement('div');
+			document.body.appendChild(el);
+
+			const preview = createToolPreview(el);
+
+			expect(el.querySelectorAll('canvas').length).toBe(0);
+
+			// Half-block y 150 is text row 75, chunk 3
+			preview.drawHalfBlock(7, 0, 150);
+			expect(el.querySelectorAll('canvas').length).toBe(1);
+
+			// Half-block y 0 is text row 0, chunk 0
+			preview.drawHalfBlock(7, 0, 0);
+			expect(el.querySelectorAll('canvas').length).toBe(2);
+
+			expect(State.font.drawWithAlpha).toHaveBeenCalledTimes(2);
+			expect(() => preview.clear()).not.toThrow();
+		});
+	});
 
 	describe('createResolutionController', () => {
 		it('should update resolution display on canvas size change', () => {

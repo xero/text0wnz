@@ -1,0 +1,170 @@
+#!/bin/sh
+set -e
+CI=x0 sh /app/banner
+# Validate required environment variables
+if [ -z "$SESSION_KEY" ]; then
+    echo "[$(date)] SESSION_KEY not provided, generating one..."
+    if [ -e /dev/urandom ]; then
+        SESSION_KEY=$(tr -dc "a-z0-9" < /dev/urandom | head -c 20)
+        echo "[$(date)] Generated SESSION_KEY"
+    else
+        echo "[$(date)] ERROR: Cannot generate secure SESSION_KEY, /dev/urandom not available"
+        exit 1
+    fi
+fi
+export SESSION_KEY
+echo "[$(date)] Starting text0wnz at: $DOMAIN on port $PORT (Environment: $NODE_ENV)"
+
+# Create log directory
+mkdir -p /var/log
+
+# Start the application server in background
+echo "[$(date)] Starting text0wnz backend server"
+bun /app/src/js/server/main.js "$PORT" > /var/log/text0wnz.log 2>&1 &
+BACKEND_PID=$!
+
+# Wait briefly to ensure backend starts
+sleep 2
+if ! kill -0 $BACKEND_PID 2> /dev/null; then
+	echo "[$(date)] ERROR: Backend server failed to start!"
+	cat /var/log/text0wnz.log
+	exit 1
+fi
+echo "[$(date)] Backend server started with PID: $BACKEND_PID"
+
+# Wait for WebSocket server to be fully ready
+printf "%s %s" "[$(date)]" "Waiting for WebSocket server to accept connections..."
+RETRY=0
+MAX_RETRIES=30
+while ! nc -z 127.0.0.1 $PORT && [ $RETRY -lt $MAX_RETRIES ]; do
+  sleep 1
+  RETRY=$((RETRY+1))
+  printf "%s" "."
+done
+if [ $RETRY -eq $MAX_RETRIES ]; then
+  echo "[$(date)] ERROR: WebSocket server failed to start in time"
+  exit 1
+fi
+echo "[$(date)] WebSocket server is ready to accept connections"
+
+# Generate appropriate Caddyfile based on environment
+if [ "$NODE_ENV" = "production" ]; then
+	echo "[$(date)] Configuring Caddy in production mode"
+	cat > /etc/caddy/Caddyfile << EOF
+{
+	admin off
+	log {
+		level ERROR
+	}
+}
+
+$DOMAIN {
+	root * /app/dist
+	file_server
+	
+	# WebSocket Handler
+	handle /server* {
+		reverse_proxy 127.0.0.1:$PORT {
+			header_up Host {host}
+			header_up X-Real-IP {remote}
+			header_up Connection {http.request.header.Connection}
+			header_up Upgrade {http.request.header.Upgrade}
+		}
+	}
+	
+	# Regular files
+	handle {
+		try_files {path} /index.html
+	}
+	
+	# Performance optimizations
+	encode gzip zstd
+	
+	# Security headers
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		Content-Security-Policy "default-src 'self'; connect-src 'self' ws: wss:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:;"
+	}
+	
+	# Cache static assets
+	@static {
+		path *.js *.css *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff2
+	}
+	header @static Cache-Control "public, max-age=31536000, immutable"
+}
+EOF
+else
+	echo "[$(date)] Configuring Caddy in development mode"
+	cat > /etc/caddy/Caddyfile << EOF
+{
+	admin off
+	auto_https off
+	http_port 80
+	log {
+		level ERROR
+	}
+}
+
+http://$DOMAIN {
+	root * /app/dist
+	file_server
+	
+	# WebSocket Handler
+	handle /server* {
+		reverse_proxy 127.0.0.1:$PORT {
+			header_up Host {host}
+			header_up X-Real-IP {remote}
+			header_up Connection {http.request.header.Connection}
+			header_up Upgrade {http.request.header.Upgrade}
+		}
+	}
+	
+	# Regular files
+	handle {
+		try_files {path} /index.html
+	}
+	
+	# Performance optimizations
+	encode gzip zstd
+	
+	# Security headers
+	header {
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		Content-Security-Policy "default-src 'self'; connect-src 'self' ws: wss:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:;"
+	}
+	
+	# Cache static assets
+	@static {
+		path *.js *.css *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff2
+	}
+	header @static Cache-Control "public, max-age=31536000, immutable"
+}
+EOF
+fi
+
+# Create health and metrics endpoint
+mkdir -p /app/dist/healthz
+echo '{"status":"ok","version":"1.0.0"}' > /app/dist/healthz/index.json
+
+# Start Caddy
+echo "[$(date)] Starting Caddy web server"
+caddy fmt --overwrite /etc/caddy/Caddyfile
+caddy run --config /etc/caddy/Caddyfile &
+CADDY_PID=$!
+
+# Wait briefly to ensure Caddy starts
+sleep 2
+if ! kill -0 $CADDY_PID 2> /dev/null; then
+	echo "[$(date)] ERROR: Caddy failed to start!"
+	exit 1
+fi
+
+# Keep container running
+echo "[$(date)] Server is running at: $DOMAIN"
+trap 'echo "[$(date)] Shutting down..."; kill $BACKEND_PID; kill $CADDY_PID; exit 0' TERM INT QUIT
+wait $CADDY_PID

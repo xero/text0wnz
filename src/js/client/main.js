@@ -224,6 +224,23 @@ const save = () => {
 		State.saveToLocalStorage();
 		saveTimeout = null;
 	}, 300);
+	saveUndoOnIdle();
+};
+
+// Undo history is heavy; persist it only once editing goes idle
+let undoSaveTimeout = null;
+const saveUndoOnIdle = () => {
+	if (undoSaveTimeout) {
+		clearTimeout(undoSaveTimeout);
+	}
+	undoSaveTimeout = setTimeout(() => {
+		undoSaveTimeout = null;
+		if ('requestIdleCallback' in window) {
+			requestIdleCallback(() => State.saveUndoHistory());
+		} else {
+			State.saveUndoHistory();
+		}
+	}, 3000);
 };
 
 const fetchTutorial = async url => {
@@ -618,6 +635,23 @@ const initializeAppComponents = async () => {
 		const columnsValue = parseInt(columnsInput.value, 10);
 		const rowsValue = parseInt(rowsInput.value, 10);
 		if (!isNaN(columnsValue) && !isNaN(rowsValue)) {
+			if (
+				columnsValue > magicNumbers.MAX_COLUMNS ||
+				rowsValue > magicNumbers.MAX_ROWS
+			) {
+				alert(
+					`Canvas too large. Maximum size is ${magicNumbers.MAX_COLUMNS} columns by ${magicNumbers.MAX_ROWS} rows.`,
+				);
+				return;
+			}
+			if (
+				columnsValue * rowsValue > magicNumbers.RESIZE_WARN_CELLS &&
+				!confirm(
+					`A ${columnsValue}x${rowsValue} canvas is very large and may be slow or run out of memory. Resize anyway?`,
+				)
+			) {
+				return;
+			}
 			State.textArtCanvas.resize(columnsValue, rowsValue);
 			// Broadcast resize to other users if in collaboration mode
 			State.network?.sendResize?.(columnsValue, rowsValue);
@@ -964,6 +998,16 @@ const initializeAppComponents = async () => {
 	document.addEventListener('onLetterSpacingChange', save);
 	document.addEventListener('onIceColorsChange', save);
 	document.addEventListener('onOpenedFile', save);
+
+	// Flush undo history when the page is hidden or unloading
+	document.addEventListener('visibilitychange', () => {
+		if (document.hidden) {
+			State.saveUndoHistory();
+		}
+	});
+	window.addEventListener('pagehide', () => {
+		State.saveUndoHistory();
+	});
 
 	// Handle pending launchQueue file
 	if (pendingFile) {

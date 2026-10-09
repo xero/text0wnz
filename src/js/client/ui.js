@@ -77,10 +77,22 @@ const createModalController = modal => {
 	];
 	let current = false;
 	let closingTimeout = null;
+	let transitionHandler = null;
 	let backdropHandler = null;
 	let cleanupHandler = null;
 	let focus = () => {};
 	let blur = () => {};
+
+	const cancelPendingClose = () => {
+		if (closingTimeout) {
+			clearTimeout(closingTimeout);
+			closingTimeout = null;
+		}
+		if (transitionHandler) {
+			modal.removeEventListener('transitionend', transitionHandler);
+			transitionHandler = null;
+		}
+	};
 
 	const focusEvents = (onFocus, onBlur) => {
 		focus = onFocus;
@@ -96,9 +108,8 @@ const createModalController = modal => {
 		const section = name + 'Modal';
 		if ($(section)) {
 			// cancel current close event
-			if (closingTimeout) {
-				clearTimeout(closingTimeout);
-				closingTimeout = null;
+			if (closingTimeout || transitionHandler) {
+				cancelPendingClose();
 				classList(modal, 'closing', false);
 			}
 			clear();
@@ -139,13 +150,22 @@ const createModalController = modal => {
 		}
 		if (!queued()) {
 			classList(modal, 'closing');
-			closingTimeout = setTimeout(() => {
+			const finishClose = () => {
+				cancelPendingClose();
 				blur();
 				classList(modal, 'closing', false);
 				modal.close();
 				current = false;
-				closingTimeout = null;
-			}, 700);
+			};
+			// Close as soon as the dialog transition ends; the timeout is a
+			// fallback for environments without transitions
+			transitionHandler = e => {
+				if (e.target === modal) {
+					finishClose();
+				}
+			};
+			modal.addEventListener('transitionend', transitionHandler);
+			closingTimeout = setTimeout(finishClose, 700);
 		}
 	};
 
@@ -486,14 +506,22 @@ const createGrid = el => {
 		}
 	};
 
-	const resize = () => {
+	const destroyGrid = () => {
 		canvases.forEach(canvas => {
 			el.removeChild(canvas);
 		});
-		createGrid();
+		canvases = [];
 	};
 
-	createGrid();
+	const resize = () => {
+		// Only rebuild while the grid is shown; it is created lazily on toggle
+		if (canvases.length > 0) {
+			destroyGrid();
+		}
+		if (enabled) {
+			createGrid();
+		}
+	};
 
 	document.addEventListener('onTextCanvasSizeChange', resize);
 	document.addEventListener('onLetterSpacingChange', resize);
@@ -509,7 +537,11 @@ const createGrid = el => {
 		if (enabled && !turnOn) {
 			el.classList.remove('enabled');
 			enabled = false;
+			destroyGrid();
 		} else if (!enabled && turnOn) {
+			if (canvases.length === 0) {
+				createGrid();
+			}
 			el.classList.add('enabled');
 			enabled = true;
 		}
@@ -524,47 +556,53 @@ const createGrid = el => {
 const createToolPreview = el => {
 	let canvases = [];
 	let ctxs = [];
+	let fontWidth = 0;
+	let fontHeight = 0;
+	let columns = 0;
+	let rows = 0;
 
-	const createCanvases = () => {
-		const fontWidth = State.font.getWidth();
-		const fontHeight = State.font.getHeight();
-		const columns = State.textArtCanvas.getColumns();
-		const rows = State.textArtCanvas.getRows();
-		const canvasWidth = fontWidth * columns;
-		const canvasHeight = fontHeight * 25;
-		canvases = new Array();
-		ctxs = new Array();
-		for (let i = 0; i < Math.floor(rows / 25); i++) {
-			const canvas = createCanvas(canvasWidth, canvasHeight);
-			canvases.push(canvas);
-			ctxs.push(canvas.getContext('2d'));
+	const updateDimensions = () => {
+		fontWidth = State.font.getWidth();
+		fontHeight = State.font.getHeight();
+		columns = State.textArtCanvas.getColumns();
+		rows = State.textArtCanvas.getRows();
+	};
+
+	// Preview canvases are created lazily, one 25-row chunk at a time,
+	// so a tall document never allocates a full overlay stack up front
+	const getOrCreateCtx = ctxIndex => {
+		if (ctxs[ctxIndex]) {
+			return ctxs[ctxIndex];
 		}
-		if (rows % 25 !== 0) {
-			const canvas = createCanvas(canvasWidth, fontHeight * (rows % 25));
-			canvases.push(canvas);
-			ctxs.push(canvas.getContext('2d'));
-		}
-		canvases.forEach(canvas => {
-			el.appendChild(canvas);
-		});
+		const chunkRows = Math.min(25, rows - ctxIndex * 25);
+		const canvas = createCanvas(fontWidth * columns, fontHeight * chunkRows);
+		canvas.style.position = 'absolute';
+		canvas.style.left = '0px';
+		canvas.style.top = ctxIndex * 25 * fontHeight + 'px';
+		el.appendChild(canvas);
+		canvases[ctxIndex] = canvas;
+		ctxs[ctxIndex] = canvas.getContext('2d');
+		return ctxs[ctxIndex];
 	};
 
 	const resize = () => {
 		canvases.forEach(canvas => {
 			el.removeChild(canvas);
 		});
-		createCanvases();
+		canvases = [];
+		ctxs = [];
+		updateDimensions();
 	};
 
 	const drawHalfBlock = (foreground, x, y) => {
 		const halfBlockY = y % 2;
 		const textY = Math.floor(y / 2);
 		const ctxIndex = Math.floor(textY / 25);
-		if (ctxIndex >= 0 && ctxIndex < ctxs.length) {
+		if (ctxIndex >= 0 && ctxIndex < Math.ceil(rows / 25)) {
 			State.font.drawWithAlpha(
 				halfBlockY === 0 ? 223 : 220,
 				foreground,
-				ctxs[ctxIndex],
+				getOrCreateCtx(ctxIndex),
 				x,
 				textY % 25,
 			);
@@ -573,11 +611,13 @@ const createToolPreview = el => {
 
 	const clear = () => {
 		for (let i = 0; i < ctxs.length; i++) {
-			ctxs[i].clearRect(0, 0, canvases[i].width, canvases[i].height);
+			if (ctxs[i]) {
+				ctxs[i].clearRect(0, 0, canvases[i].width, canvases[i].height);
+			}
 		}
 	};
 
-	createCanvases();
+	updateDimensions();
 	el.classList.add('enabled');
 
 	document.addEventListener('onTextCanvasSizeChange', resize);

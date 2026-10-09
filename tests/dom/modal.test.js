@@ -146,6 +146,18 @@ describe('Modal DOM Tests', () => {
 			expect(modal).toHaveClass('closing');
 		});
 
+		it('should close as soon as the closing transition ends', () => {
+			modalController.open('about');
+
+			modalController.close();
+			expect(modal).toHaveClass('closing');
+
+			modal.dispatchEvent(new Event('transitionend'));
+
+			expect(modal.open).toBe(false);
+			expect(modal).not.toHaveClass('closing');
+		});
+
 		it('should remove closing class after animation completes', async () => {
 			modalController.open('about');
 

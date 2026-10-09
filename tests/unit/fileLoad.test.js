@@ -18,6 +18,7 @@ const mockState = {
 		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)), // Mock 6-bit palette data
 	},
 	font: {
+		getWidth: vi.fn(() => 8),
 		getHeight: vi.fn(() => 16),
 		getLetterSpacing: vi.fn(() => false),
 		getData: vi.fn(() => null), // No font data by default
@@ -377,6 +378,27 @@ describe('File Module - Load and Save Operations', () => {
 
 				expect(createElementSpy).toHaveBeenCalledWith('a');
 				expect(mockState.textArtCanvas.getImage).toHaveBeenCalled();
+			});
+
+			it('should encode tall documents from strips without a full canvas', async () => {
+				// 80x3000 cells at 8x16 is 30.7MP, over the iOS canvas area cap
+				mockState.textArtCanvas.getRows.mockReturnValue(3000);
+				mockState.textArtCanvas.getImageRGBA = vi.fn(() => ({
+					width: 4,
+					height: 4,
+					data: new Uint8ClampedArray(64).fill(255),
+				}));
+
+				await Save.png();
+
+				expect(mockState.textArtCanvas.getImageRGBA).toHaveBeenCalled();
+				expect(mockState.textArtCanvas.getImage).not.toHaveBeenCalled();
+
+				// Saved bytes carry the PNG signature
+				const bytes = global.Blob.mock.calls[0][0][0];
+				expect(Array.from(bytes.subarray(0, 4))).toEqual([137, 80, 78, 71]);
+
+				mockState.textArtCanvas.getRows.mockReturnValue(25);
 			});
 		});
 
