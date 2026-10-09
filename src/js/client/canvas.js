@@ -38,11 +38,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				},
 				canvasChunks = new Map(); // Key: chunkIndex, Value: { canvas, ctx, onBlink, offBlink, rendered: bool }
 
-	const updateBeforeBlinkFlip = (x, y) => {
-		const dataIndex = y * columns + x;
-		redrawGlyph(dataIndex, x, y);
-	};
-
 	const enqueueDirtyRegion = (x, y, w, h) => {
 		// Validate and clamp region to canvas bounds
 		if (x < 0) {
@@ -605,6 +600,27 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			}
 		});
 
+		// Evict chunks far outside the viewport to bound canvas memory;
+		// evicted chunks are recreated unrendered and redrawn on return
+		const fontHeight =
+			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+		const viewportChunks = Math.max(
+			1,
+			Math.ceil(viewportState.containerHeight / (fontHeight * chunkSize)),
+		);
+		const evictionMargin = viewportChunks * 4;
+		canvasChunks.forEach((chunk, chunkIndex) => {
+			if (
+				chunkIndex < startChunk - evictionMargin ||
+				chunkIndex > endChunk + evictionMargin
+			) {
+				if (chunk.canvas.parentNode) {
+					canvasContainer.removeChild(chunk.canvas);
+				}
+				canvasChunks.delete(chunkIndex);
+			}
+		});
+
 		// Add/render visible chunks
 		for (let chunkIndex = startChunk; chunkIndex <= endChunk; chunkIndex++) {
 			newActiveChunks.add(chunkIndex);
@@ -973,6 +989,41 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		return completeCanvas;
 	};
 
+	const getImageRGBA = () => {
+		// Chunk-strip export that never composites one tall canvas, so tall
+		// documents stay under the iOS Safari canvas area cap
+		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
+		const fontHeight =
+			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+		const width = fontWidth * columns;
+		const height = fontHeight * rows;
+		const data = new Uint8ClampedArray(width * height * 4);
+
+		const wasBlinkOn = blinkOn;
+		blinkOn = false;
+
+		const totalChunks = Math.ceil(rows / chunkSize);
+		for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+			let chunk = canvasChunks.get(chunkIndex);
+			if (!chunk) {
+				chunk = getOrCreateCanvasChunk(chunkIndex);
+			}
+			if (!chunk.rendered) {
+				renderChunk(chunk);
+			}
+			const chunkData = chunk.ctx.getImageData(
+				0,
+				0,
+				chunk.canvas.width,
+				chunk.canvas.height,
+			).data;
+			data.set(chunkData, chunkIndex * chunkSize * fontHeight * width * 4);
+		}
+		blinkOn = wasBlinkOn;
+
+		return { width: width, height: height, data: data };
+	};
+
 	const getImageData = () => {
 		return imageData;
 	};
@@ -1012,10 +1063,26 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		return rows;
 	};
 
+	let undoBufferCells = 0;
+
 	const clearUndos = () => {
 		currentUndo = [];
 		undoBuffer = [];
 		redoBuffer = [];
+		undoBufferCells = 0;
+	};
+
+	const pushUndoChunk = chunk => {
+		undoBuffer.push(chunk);
+		undoBufferCells += chunk.length;
+		// Drop the oldest chunks once the stack exceeds the cell cap,
+		// always keeping at least the most recent chunk
+		while (
+			undoBufferCells > magicNumbers.MAX_UNDO_CELLS &&
+			undoBuffer.length > 1
+		) {
+			undoBufferCells -= undoBuffer.shift().length;
+		}
 	};
 
 	const clear = () => {
@@ -1028,24 +1095,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const getMirrorX = x => {
-		if (columns % 2 === 0) {
-			// Even columns: split 50/50
-			if (x < columns / 2) {
-				return columns - 1 - x;
-			} else {
-				return columns - 1 - x;
-			}
-		} else {
-			// Odd columns
-			const center = Math.floor(columns / 2);
-			if (x === center) {
-				return -1; // Don't mirror center column
-			} else if (x < center) {
-				return columns - 1 - x;
-			} else {
-				return columns - 1 - x;
-			}
+		// Odd columns: don't mirror the center column
+		if (columns % 2 !== 0 && x === Math.floor(columns / 2)) {
+			return -1;
 		}
+		return columns - 1 - x;
 	};
 
 	// Transform characters for horizontal mirroring
@@ -1134,10 +1188,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			drawHistory.push((index << 16) + imageData[index]);
 		}
 		enqueueDirtyCell(x, y);
-
-		if (!iceColors) {
-			updateBeforeBlinkFlip(x, y);
-		}
 	};
 
 	const getBlock = (x, y) => {
@@ -1356,14 +1406,16 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 							State.sampleTool.sample(x, halfBlockY);
 						}
 					} else {
+						// Touch events carry no mouse buttons; the Pointer Events
+						// rewrite replaces these handlers
 						document.dispatchEvent(
 							new CustomEvent('onTextCanvasDown', {
 								detail: {
 									x: x,
 									y: y,
 									halfBlockY: halfBlockY,
-									leftMouseButton: e.button === 0 && e.ctrlKey !== true,
-									rightMouseButton: e.button === 2 || e.ctrlKey,
+									leftMouseButton: false,
+									rightMouseButton: e.ctrlKey === true,
 								},
 							}),
 						);
@@ -1409,8 +1461,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 						x: x,
 						y: y,
 						halfBlockY: halfBlockY,
-						leftMouseButton: e.button === 0 && e.ctrlKey !== true,
-						rightMouseButton: e.button === 2 || e.ctrlKey,
+						leftMouseButton: false,
+						rightMouseButton: e.ctrlKey === true,
 					},
 				}),
 			);
@@ -1462,11 +1514,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	});
 
-	canvasContainer.addEventListener('touchenter', e => {
-		e.preventDefault();
-		document.dispatchEvent(new CustomEvent('onTextCanvasUp', {}));
-	});
-
 	canvasContainer.addEventListener('mouseenter', e => {
 		e.preventDefault();
 		if (mouseButton && (e.which === 0 || e.buttons === 0)) {
@@ -1482,23 +1529,19 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const undo = () => {
 		if (currentUndo.length > 0) {
-			undoBuffer.push(currentUndo);
+			pushUndoChunk(currentUndo);
 			currentUndo = [];
 		}
 		if (undoBuffer.length > 0) {
 			const currentRedo = [];
 			const undoChunk = undoBuffer.pop();
+			undoBufferCells -= undoChunk.length;
 			for (let i = undoChunk.length - 1; i >= 0; i--) {
 				const undo = undoChunk.pop();
 				if (undo[0] < imageData.length) {
 					currentRedo.push([undo[0], imageData[undo[0]], undo[2], undo[3]]);
 					imageData[undo[0]] = undo[1];
 					drawHistory.push((undo[0] << 16) + undo[1]);
-					if (!iceColors) {
-						updateBeforeBlinkFlip(undo[2], undo[3]);
-					}
-					// Use both immediate redraw AND dirty region system for undo
-					redrawGlyph(undo[0], undo[2], undo[3]);
 					enqueueDirtyCell(undo[2], undo[3]);
 				}
 			}
@@ -1518,15 +1561,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					currentUndo.push([redo[0], imageData[redo[0]], redo[2], redo[3]]);
 					imageData[redo[0]] = redo[1];
 					drawHistory.push((redo[0] << 16) + redo[1]);
-					if (!iceColors) {
-						updateBeforeBlinkFlip(redo[2], redo[3]);
-					}
-					// Use both immediate redraw AND dirty region system for redo
-					redrawGlyph(redo[0], redo[2], redo[3]);
 					enqueueDirtyCell(redo[2], redo[3]);
 				}
 			}
-			undoBuffer.push(currentUndo);
+			pushUndoChunk(currentUndo);
 			currentUndo = [];
 			processDirtyRegions();
 			sendDrawHistory();
@@ -1536,7 +1574,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const startUndo = () => {
 		if (currentUndo.length > 0) {
-			undoBuffer.push(currentUndo);
+			pushUndoChunk(currentUndo);
 			currentUndo = [];
 		}
 		redoBuffer = [];
@@ -1751,10 +1789,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				const chunk = canvasChunks.get(chunkIndex);
 
 				if (chunk && activeChunks.has(chunkIndex)) {
-					// Chunk is visible - update immediately
-					if (!iceColors) {
-						updateBeforeBlinkFlip(block[2], block[3]);
-					}
+					// Chunk is visible - update via the dirty region pass
 					enqueueDirtyCell(block[2], block[3]);
 				} else if (chunk) {
 					// Chunk exists but not visible - mark as dirty
@@ -1884,6 +1919,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			currentUndo = history.currentUndo || [];
 			undoBuffer = history.undoBuffer || [];
 			redoBuffer = history.redoBuffer || [];
+			undoBufferCells = undoBuffer.reduce(
+				(cells, chunk) => cells + chunk.length,
+				0,
+			);
 		}
 	};
 
@@ -1949,6 +1988,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		getIceColors: getIceColors,
 		setIceColors: setIceColors,
 		getImage: getImage,
+		getImageRGBA: getImageRGBA,
 		getImageData: getImageData,
 		setImageData: setImageData,
 		getColumns: getColumns,

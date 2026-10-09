@@ -18,6 +18,7 @@ const mockState = {
 		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)), // Mock 6-bit palette data
 	},
 	font: {
+		getWidth: vi.fn(() => 8),
 		getHeight: vi.fn(() => 16),
 		getLetterSpacing: vi.fn(() => false),
 		getData: vi.fn(() => null), // No font data by default

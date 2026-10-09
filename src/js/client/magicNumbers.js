@@ -43,10 +43,18 @@ const CHAR_GREATER_THAN = 62; // >
 const CHAR_LESS_THAN = 60; // <
 const CHAR_CAPITAL_P = 80; // P
 const CHAR_DIGIT_9 = 57; // 9
-// Browser clipboard limiter
-const MAX_COPY_LINES = 3;
+// Browser clipboard limiter (multiplier of canvas columns/rows)
+const PASTE_LIMIT_MULTIPLIER = 3;
 // Multiplier to calculate panel width
 const PANEL_WIDTH_MULTIPLIER = 20;
+// Canvas resize limits
+const MAX_COLUMNS = 1000;
+const MAX_ROWS = 10000;
+const RESIZE_WARN_CELLS = 300000;
+// In-memory undo stack cap, in cell entries
+const MAX_UNDO_CELLS = 1048576;
+// iOS Safari refuses canvases above ~16.7 megapixels
+const MAX_CANVAS_AREA = 16777216;
 
 export default {
 	DEFAULT_FONT,
@@ -89,6 +97,11 @@ export default {
 	CHAR_LESS_THAN,
 	CHAR_CAPITAL_P,
 	CHAR_DIGIT_9,
-	MAX_COPY_LINES,
+	PASTE_LIMIT_MULTIPLIER,
 	PANEL_WIDTH_MULTIPLIER,
+	MAX_COLUMNS,
+	MAX_ROWS,
+	RESIZE_WARN_CELLS,
+	MAX_UNDO_CELLS,
+	MAX_CANVAS_AREA,
 };

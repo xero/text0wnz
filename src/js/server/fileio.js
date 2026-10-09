@@ -1,5 +1,65 @@
 import { readFile, writeFile } from 'fs';
 
+// Application font names mapped to SAUCE font names; keep in sync with
+// appToSauceFont in src/js/client/file.js until a shared codec exists
+const appToSauceFont = {
+	'CP437 8x16': 'IBM VGA',
+	'CP437 8x8': 'IBM VGA50',
+	'CP437 8x19': 'IBM VGA25G',
+	'CP437 8x14': 'IBM EGA',
+	'CP850 8x16': 'IBM VGA 850',
+	'CP850 8x8': 'IBM VGA50 850',
+	'CP850 8x19': 'IBM VGA25G 850',
+	'CP850 8x14': 'IBM EGA 850',
+	'CP852 8x16': 'IBM VGA 852',
+	'CP852 8x8': 'IBM VGA50 852',
+	'CP852 8x19': 'IBM VGA25G 852',
+	'CP852 8x14': 'IBM EGA 852',
+	'Topaz 500 8x16': 'Amiga Topaz 1',
+	'Topaz+ 500 8x16': 'Amiga Topaz 1+',
+	'Topaz 1200 8x16': 'Amiga Topaz 2',
+	'Topaz+ 1200 8x16': 'Amiga Topaz 2+',
+	'MicroKnight 8x16': 'Amiga MicroKnight',
+	'MicroKnight+ 8x16': 'Amiga MicroKnight+',
+	'P0t-NOoDLE 8x16': 'Amiga P0T-NOoDLE',
+	'mO\'sOul 8x16': 'Amiga mOsOul',
+	'C64 PETSCII unshifted 8x8': 'C64 PETSCII unshifted',
+	'C64 PETSCII shifted 8x8': 'C64 PETSCII shifted',
+	'Topaz-437 8x16': 'Topaz-437',
+	'Human Fossil 8x16': 'NewSchool_hf',
+	'Structures 8x16': 'Structures',
+	'TES-SYM5 8x16': 'TES-SYM5',
+	'TES-SYM6 8x16': 'TES-SYM6',
+	'Calce 8x32': 'Calce',
+	'FrogBlock 8x8': 'FrogBlock',
+	'Blobz+ 8x16': 'Blobz+',
+	'BLOODY 8x16': 'BLOODY',
+	'C64-DiskMaster 8x16': 'C64-DiskMaster',
+	'DSS8 8x16': 'DSS8_2x',
+	'DSS8 8x8': 'DSS8',
+	'FM-TOWNS 8x16': 'FM-TOWNS_2x',
+	'FM-TOWNS 8x8': 'FM-TOWNS',
+	'Glitch 8x20': 'Glitch',
+	'GJSCI-X 8x16': 'GJSCI-X',
+	'Hack 8x16': 'Hack_2x',
+	'Hack 8x8': 'Hack',
+	'Line 8x16': 'Line_2x',
+	'Line 8x8': 'Line',
+	'Megaball 8x16': 'Megaball',
+	'NIMBUS 8x20': 'NIMBUS',
+	'p0t-noodle 8x20': 'p0t-noodle_2x',
+	'DOS-J700C-V 8x19': 'DOS-J700C-V',
+	'Perihelion 8x16': 'Perihelion',
+	'Song_Logo 8x16': 'Song_Logo_2x',
+	'Song_Logo 8x8': 'Song_Logo',
+	'Teletext 8x18': 'Teletext_2x',
+	'Teletext 8x9': 'Teletext',
+	'TES-GIGR 8x16': 'TES-GIGR',
+	'Zoids 8x16': 'Zoids_2x',
+	'Zoids 8x8': 'Zoids',
+	'XBIN': 'XBIN',
+};
+
 const createSauce = (
 	columns,
 	rows,
@@ -9,6 +69,7 @@ const createSauce = (
 	doFlagsAndTInfoS,
 	iceColors,
 	letterSpacing,
+	fontName,
 ) => {
 	const addText = (text, maxlength, index) => {
 		let i;
@@ -49,9 +110,10 @@ const createSauce = (
 		} else {
 			flags += 1 << 2;
 		}
+		flags += 1 << 4; // Set aspect ratio flag, matching the client encoder
 		sauce[106] = flags;
-		const fontName = 'IBM VGA';
-		addText(fontName, fontName.length, 107);
+		const sauceFontName = appToSauceFont[fontName] || 'IBM VGA';
+		addText(sauceFontName, Math.min(sauceFontName.length, 22), 107);
 	}
 	return sauce;
 };
@@ -166,6 +228,7 @@ const save = (filename, imageData, callback) => {
 		true,
 		imageData.iceColors,
 		imageData.letterSpacing,
+		imageData.fontName,
 	);
 	const output = new Uint8Array(data.length + sauce.length);
 	output.set(data, 0);

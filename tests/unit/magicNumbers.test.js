@@ -162,9 +162,19 @@ describe('Magic Numbers Constants', () => {
 	});
 
 	describe('Application Constants', () => {
-		it('should export max copy lines limit', () => {
-			expect(magicNumbers.MAX_COPY_LINES).toBe(3);
-			expect(typeof magicNumbers.MAX_COPY_LINES).toBe('number');
+		it('should export paste limit multiplier', () => {
+			expect(magicNumbers.PASTE_LIMIT_MULTIPLIER).toBe(3);
+			expect(typeof magicNumbers.PASTE_LIMIT_MULTIPLIER).toBe('number');
+		});
+
+		it('should export canvas resize limits', () => {
+			expect(magicNumbers.MAX_COLUMNS).toBe(1000);
+			expect(magicNumbers.MAX_ROWS).toBe(10000);
+			expect(magicNumbers.RESIZE_WARN_CELLS).toBe(300000);
+		});
+
+		it('should export undo stack cap', () => {
+			expect(magicNumbers.MAX_UNDO_CELLS).toBeGreaterThan(0);
 		});
 
 		it('should export panel width multiplier', () => {
@@ -173,7 +183,7 @@ describe('Magic Numbers Constants', () => {
 		});
 
 		it('should have positive application constants', () => {
-			expect(magicNumbers.MAX_COPY_LINES).toBeGreaterThan(0);
+			expect(magicNumbers.PASTE_LIMIT_MULTIPLIER).toBeGreaterThan(0);
 			expect(magicNumbers.PANEL_WIDTH_MULTIPLIER).toBeGreaterThan(0);
 		});
 	});

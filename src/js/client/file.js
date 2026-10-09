@@ -1,3 +1,4 @@
+import { encode as encodePng } from 'fast-png';
 import State from './state.js';
 import magicNumbers from './magicNumbers.js';
 import { $, enforceMaxBytes } from './ui.js';
@@ -359,7 +360,11 @@ const loadModule = () => {
 				const decoded = decodeUtf8(bytes, file.getPos() - 1);
 				code = decoded.charCode;
 				bytesConsumed = decoded.bytesConsumed;
-				code = getUnicodeReverseMap.get(code) || code;
+				code = getUnicodeReverseMap.get(code) ?? code;
+				if (code > 255) {
+					// Substitute '?' for codepoints outside CP437
+					code = 63;
+				}
 			} else {
 				bytesConsumed = 1;
 			}
@@ -1375,7 +1380,7 @@ const saveModule = () => {
 		const imageData = State.textArtCanvas.getImageData();
 		const columns = State.textArtCanvas.getColumns();
 		const rows = State.textArtCanvas.getRows();
-		let output = stripEscapeCodes ? [] : [27, 91, 48, 109]; // Start with a full reset (ESC[0m) if not stripping codes
+		const output = stripEscapeCodes ? [] : [27, 91, 48, 109]; // Start with a full reset (ESC[0m) if not stripping codes
 		let bold = false;
 		let blink = false;
 		let currentForeground = magicNumbers.DEFAULT_FOREGROUND;
@@ -1486,20 +1491,18 @@ const saveModule = () => {
 			}
 
 			if (useUTF8) {
-				if (stripEscapeCodes) {
-					lineOutput.push(10); // Newline (LF)
-				} else {
-					for (let col = lineOutput.length / 2; col < columns; col++) {
-						lineOutput.push(32); // Space character
-						lineOutput.push(27, 91, 49, 109); // Reset background color (ESC[49m)
-					}
+				// Every column emits exactly one cell, so lines are already
+				// full width and need no padding
+				if (!stripEscapeCodes) {
 					lineOutput.push(27, 91, 48, 109); // Full reset (ESC[0m)
-					lineOutput.push(10); // Newline (LF)
 				}
+				lineOutput.push(10); // Newline (LF)
 			}
 
-			// Concatenate the line output to the overall output
-			output = output.concat(lineOutput);
+			// Append the line output to the overall output
+			for (let i = 0; i < lineOutput.length; i++) {
+				output.push(lineOutput[i]);
+			}
 
 			// Update current attributes
 			currentForeground = lineForeground;
@@ -1560,10 +1563,90 @@ const saveModule = () => {
 		}
 	};
 
-	const xb = async () => {
-		const imageData = convert16BitArrayTo8BitArray(
-			State.textArtCanvas.getImageData(),
-		);
+	const compressXBin = (imageData, columns, rows) => {
+		// XBin RLE: counter byte = (runType << 6) | (runLength - 1), max run 64
+		// Run types: 0 = none, 1 = repeated char, 2 = repeated attribute, 3 = both
+		// Runs never cross row boundaries per the XBin spec
+		const output = [];
+		for (let row = 0; row < rows; row++) {
+			const rowStart = row * columns;
+			const rowEnd = rowStart + columns;
+			let i = rowStart;
+			while (i < rowEnd) {
+				const cell = imageData[i];
+				const char = cell >> 8;
+				const attr = cell & 255;
+				let runBoth = 1;
+				while (
+					i + runBoth < rowEnd &&
+					runBoth < 64 &&
+					imageData[i + runBoth] === cell
+				) {
+					runBoth++;
+				}
+				let runChar = 1;
+				while (
+					i + runChar < rowEnd &&
+					runChar < 64 &&
+					imageData[i + runChar] >> 8 === char
+				) {
+					runChar++;
+				}
+				let runAttr = 1;
+				while (
+					i + runAttr < rowEnd &&
+					runAttr < 64 &&
+					(imageData[i + runAttr] & 255) === attr
+				) {
+					runAttr++;
+				}
+				if (runBoth > 1 && runBoth >= runChar && runBoth >= runAttr) {
+					output.push(0xc0 | (runBoth - 1), char, attr);
+					i += runBoth;
+				} else if (runChar > 1 && runChar >= runAttr) {
+					output.push(0x40 | (runChar - 1), char);
+					for (let k = 0; k < runChar; k++) {
+						output.push(imageData[i + k] & 255);
+					}
+					i += runChar;
+				} else if (runAttr > 1) {
+					output.push(0x80 | (runAttr - 1), attr);
+					for (let k = 0; k < runAttr; k++) {
+						output.push(imageData[i + k] >> 8);
+					}
+					i += runAttr;
+				} else {
+					// Collect literal cells until the next run of two or more
+					let literal = 1;
+					while (i + literal + 1 < rowEnd && literal < 64) {
+						const next = imageData[i + literal];
+						const after = imageData[i + literal + 1];
+						if (
+							next === after ||
+							next >> 8 === after >> 8 ||
+							(next & 255) === (after & 255)
+						) {
+							break;
+						}
+						literal++;
+					}
+					if (i + literal === rowEnd - 1 && literal < 64) {
+						literal++;
+					}
+					output.push(literal - 1);
+					for (let k = 0; k < literal; k++) {
+						output.push(imageData[i + k] >> 8, imageData[i + k] & 255);
+					}
+					i += literal;
+				}
+			}
+		}
+		return new Uint8Array(output);
+	};
+
+	const xb = async (compress = true) => {
+		const rawImageData = State.textArtCanvas.getImageData();
+		const imageData = convert16BitArrayTo8BitArray(rawImageData);
 		const columns = State.textArtCanvas.getColumns();
 		const rows = State.textArtCanvas.getRows();
 		const iceColors = State.textArtCanvas.getIceColors();
@@ -1586,13 +1669,23 @@ const saveModule = () => {
 			additionalDataSize += xbFontData.data.length;
 		}
 
+		// RLE-compress the image data, keeping raw output when it is smaller
+		let imageBytes = imageData;
+		if (compress) {
+			const compressed = compressXBin(rawImageData, columns, rows);
+			if (compressed.length < imageData.length) {
+				imageBytes = compressed;
+				flags |= 1 << 2; // Set compression flag (bit 2)
+			}
+		}
+
 		// Set ice colors flag if enabled
 		if (iceColors) {
 			flags |= 1 << 3;
 		}
 
 		// Create output array with space for header, additional data, and image data
-		const totalSize = 11 + additionalDataSize + imageData.length;
+		const totalSize = 11 + additionalDataSize + imageBytes.length;
 		const output = new Uint8Array(totalSize);
 
 		// Set XBIN header
@@ -1628,7 +1721,7 @@ const saveModule = () => {
 		}
 
 		// Add image data
-		output.set(imageData, dataOffset);
+		output.set(imageBytes, dataOffset);
 
 		// Create SAUCE data
 		const sauce = createSauce(6, 0, totalSize, false);
@@ -1648,11 +1741,31 @@ const saveModule = () => {
 
 	const png = async () => {
 		const fname = State.title;
-		await saveFile(
-			dataUrlToBytes(State.textArtCanvas.getImage().toDataURL()),
-			undefined,
-			fname + '.png',
-		);
+		const fontWidth = State.font.getWidth();
+		const fontHeight = State.font.getHeight();
+		const width = State.textArtCanvas.getColumns() * fontWidth;
+		const height = State.textArtCanvas.getRows() * fontHeight;
+		if (width * height > magicNumbers.MAX_CANVAS_AREA) {
+			// Tall documents exceed the iOS Safari canvas area cap, so encode
+			// from chunk strips without compositing one full-size canvas
+			const image = State.textArtCanvas.getImageRGBA();
+			await saveFile(
+				encodePng({
+					width: image.width,
+					height: image.height,
+					data: image.data,
+					channels: 4,
+				}),
+				undefined,
+				fname + '.png',
+			);
+		} else {
+			await saveFile(
+				dataUrlToBytes(State.textArtCanvas.getImage().toDataURL()),
+				undefined,
+				fname + '.png',
+			);
+		}
 	};
 
 	return {

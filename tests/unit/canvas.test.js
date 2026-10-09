@@ -559,6 +559,18 @@ describe('Canvas Module', () => {
 	});
 
 	describe('Image Data Operations', () => {
+		it('should export RGBA pixels from chunk strips', async () => {
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			await vi.waitFor(() => expect(mockCallback).toHaveBeenCalled());
+
+			const image = canvas.getImageRGBA();
+
+			expect(image.width).toBe(80 * 8);
+			expect(image.height).toBe(25 * 16);
+			expect(image.data).toBeInstanceOf(Uint8ClampedArray);
+			expect(image.data.length).toBe(image.width * image.height * 4);
+		});
+
 		it('should get image data', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
 
@@ -656,6 +668,33 @@ describe('Canvas Module', () => {
 
 			// Draw callback should be called
 			expect(drawCallback).toHaveBeenCalled();
+		});
+
+		it('should paint an edited cell exactly once per edit', async () => {
+			const State = (await import('../../src/js/client/state.js')).default;
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+
+			// Wait for the initial font load and canvas creation to finish
+			await vi.waitFor(() => expect(mockCallback).toHaveBeenCalled());
+
+			const fontDraw = State.font.draw;
+			fontDraw.mockClear();
+
+			canvas.startUndo();
+			canvas.draw(cb => cb(65, 7, 0, 10, 5), false);
+
+			// Painting happens in the RAF dirty pass, not synchronously
+			expect(fontDraw).not.toHaveBeenCalled();
+
+			// Wait for the RAF dirty pass to flush
+			await new Promise(resolve => setTimeout(resolve, 100));
+
+			// Other canvas instances redraw blank cells during the wait, so
+			// count only draws of this test's character at this cell
+			const cellDraws = fontDraw.mock.calls.filter(
+				call => call[0] === 65 && call[4] === 10 && call[5] === 5,
+			);
+			expect(cellDraws.length).toBe(1);
 		});
 
 		it('should support mirror mode drawing', () => {

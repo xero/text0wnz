@@ -178,14 +178,76 @@ describe('Lazy Font Module', () => {
 			expect(lazyFontInstance.getAlphaCacheSize()).toBe(80);
 		});
 
-		it('should handle letter spacing', () => {
+		it('should bound the glyph cache size', () => {
+			lazyFontInstance = createLazyFont(fontData, mockPalette, false);
+
+			// Request far more combinations than the cache cap
+			for (let charCode = 0; charCode < 256; charCode++) {
+				for (let fg = 0; fg < 16; fg++) {
+					lazyFontInstance.getGlyph(charCode, fg, 0);
+					lazyFontInstance.getGlyph(charCode, fg, 1);
+				}
+			}
+
+			expect(lazyFontInstance.getCacheSize()).toBeLessThanOrEqual(4096);
+		});
+	});
+
+	describe('9px Letter Spacing Glyphs', () => {
+		const pixelAt = (glyph, x, y) =>
+			Array.from(glyph.data.slice((y * glyph.width + x) * 4, (y * glyph.width + x) * 4 + 4));
+
+		it('should emit nine-pixel-wide glyphs when letter spacing is on', () => {
 			lazyFontInstance = createLazyFont(fontData, mockPalette, true);
 
-			// Should have letter spacing data cached
-			const spacingData = lazyFontInstance.getLetterSpacingData(7);
+			const glyph = lazyFontInstance.getGlyph(65, 7, 1);
 
-			expect(spacingData).toBeDefined();
-			expect(spacingData.data).toBeInstanceOf(Uint8ClampedArray);
+			expect(glyph.width).toBe(9);
+			expect(glyph.height).toBe(16);
+		});
+
+		it('should keep eight-pixel glyphs when letter spacing is off', () => {
+			lazyFontInstance = createLazyFont(fontData, mockPalette, false);
+
+			const glyph = lazyFontInstance.getGlyph(0xc0, 7, 1);
+
+			expect(glyph.width).toBe(8);
+		});
+
+		it('should fill column nine with the background color', () => {
+			lazyFontInstance = createLazyFont(fontData, mockPalette, true);
+
+			const background = 1;
+			const backgroundColor = mockPalette.getRGBAColor(background);
+			const glyph = lazyFontInstance.getGlyph(65, 7, background);
+
+			for (let y = 0; y < 16; y++) {
+				expect(pixelAt(glyph, 8, y)).toEqual(backgroundColor);
+			}
+		});
+
+		it('should duplicate column eight into column nine for chars 0xC0-0xDF', () => {
+			lazyFontInstance = createLazyFont(fontData, mockPalette, true);
+
+			[0xc0, 0xcd, 0xdf].forEach(charCode => {
+				const glyph = lazyFontInstance.getGlyph(charCode, 7, 1);
+				for (let y = 0; y < 16; y++) {
+					expect(pixelAt(glyph, 8, y)).toEqual(pixelAt(glyph, 7, y));
+				}
+			});
+		});
+
+		it('should draw nine-pixel glyphs at the nine-pixel pitch', () => {
+			lazyFontInstance = createLazyFont(fontData, mockPalette, true);
+
+			const mockCtx = { putImageData: vi.fn() };
+			lazyFontInstance.draw(0xc0, 7, 1, mockCtx, 3, 2);
+
+			expect(mockCtx.putImageData).toHaveBeenCalledWith(
+				expect.objectContaining({ width: 9 }),
+				3 * 9,
+				2 * 16,
+			);
 		});
 	});
 

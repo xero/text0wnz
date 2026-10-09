@@ -110,6 +110,7 @@ class StateManager {
 		this.getInitializationStatus = this.getInitializationStatus.bind(this);
 		this.safely = this.safely.bind(this);
 		this.saveToLocalStorage = this.saveToLocalStorage.bind(this);
+		this.saveUndoHistory = this.saveUndoHistory.bind(this);
 		this.restoreStateFromLocalStorage =
 			this.restoreStateFromLocalStorage.bind(this);
 		this.clearLocalStorage = this.clearLocalStorage.bind(this);
@@ -652,15 +653,6 @@ class StateManager {
 				}
 			}
 
-			// Save undo history to IndexedDB
-			if (
-				this.state.textArtCanvas &&
-				typeof this.state.textArtCanvas.getUndoHistory === 'function'
-			) {
-				const undoHistory = this.state.textArtCanvas.getUndoHistory();
-				await Storage.saveUndoHistory(undoHistory);
-			}
-
 			// 2. Save lightweight settings to localStorage
 			const settings = {
 				fontName: this.state.textArtCanvas?.getCurrentFontName(),
@@ -680,6 +672,25 @@ class StateManager {
 			Storage.saveSettings(settings);
 		} catch (error) {
 			console.error('[State] Failed to save state:', error);
+		}
+	}
+
+	/**
+	 * Persist undo history to IndexedDB
+	 * Heavy write; call on idle, visibilitychange, or pagehide only
+	 */
+	async saveUndoHistory() {
+		try {
+			if (
+				!this.state.textArtCanvas ||
+				typeof this.state.textArtCanvas.getUndoHistory !== 'function' ||
+				this.state.network?.isConnected?.()
+			) {
+				return;
+			}
+			await Storage.saveUndoHistory(this.state.textArtCanvas.getUndoHistory());
+		} catch (error) {
+			console.error('[State] Failed to save undo history:', error);
 		}
 	}
 
@@ -991,6 +1002,7 @@ const State = {
 
 	// LocalStorage sync methods
 	saveToLocalStorage: stateManager.saveToLocalStorage,
+	saveUndoHistory: stateManager.saveUndoHistory,
 	restoreStateFromLocalStorage: stateManager.restoreStateFromLocalStorage,
 	clearLocalStorage: stateManager.clearLocalStorage,
 

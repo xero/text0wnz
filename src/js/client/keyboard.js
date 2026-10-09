@@ -1295,17 +1295,17 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 					// Check single line width
 					if (
 						lines.length === 1 &&
-						lines[0].length > columns * magicNumbers.MAX_COPY_LINES
+						lines[0].length > columns * magicNumbers.PASTE_LIMIT_MULTIPLIER
 					) {
 						alert(
-							`Paste buffer too large. Single line content exceeds ${columns * magicNumbers.MAX_COPY_LINES} characters. Please copy smaller blocks.`,
+							`Paste buffer too large. Single line content exceeds ${columns * magicNumbers.PASTE_LIMIT_MULTIPLIER} characters. Please copy smaller blocks.`,
 						);
 						return;
 					}
 					// Check multi-line height
-					if (lines.length > rows * magicNumbers.MAX_COPY_LINES) {
+					if (lines.length > rows * magicNumbers.PASTE_LIMIT_MULTIPLIER) {
 						alert(
-							`Paste buffer too large. Content exceeds ${rows * magicNumbers.MAX_COPY_LINES} lines. Please copy smaller blocks.`,
+							`Paste buffer too large. Content exceeds ${rows * magicNumbers.PASTE_LIMIT_MULTIPLIER} lines. Please copy smaller blocks.`,
 						);
 						return;
 					}

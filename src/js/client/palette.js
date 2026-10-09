@@ -185,8 +185,8 @@ const getUTF8 = charCode => unicodeToArray(getUnicode(charCode));
 
 const getUnicodeReverseMap = (() => {
 	const map = new Map();
-	for (const key of Object.keys(getUnicode)) {
-		map.set(getUnicode(key), key);
+	for (let charCode = 0; charCode <= 255; charCode++) {
+		map.set(getUnicode(charCode), charCode);
 	}
 	return map;
 })();

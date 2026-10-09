@@ -115,7 +115,6 @@ text0wnz/
 ├── node_modules/           # Dependencies (gitignored)
 ├── OSSMETADATA             # Open source metadata
 ├── package.json            # Package configuration
-├── package-lock.json       # npm lockfile
 ├── playwright.config.js    # Playwright E2E test configuration
 ├── postcss.config.js       # PostCSS configuration
 ├── README.md               # Main project documentation
@@ -647,7 +646,7 @@ tests/
 - Engine requirements
 - Repository information
 
-**bun.lock / package-lock.json** - Lockfiles
+**bun.lock** - Lockfile
 
 - Dependency versions
 - Integrity hashes
