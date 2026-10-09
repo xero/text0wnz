@@ -14,6 +14,13 @@ import text0wnz from './text0wnz.js';
 const getSessionSecret = () =>
 	process.env.SESSION_KEY || randomBytes(32).toString('hex');
 
+// Websockets arrive as 'upgrade' events, answer any plain http request with
+// a 426 right away instead of leaving the connection hanging
+const upgradeRequired = (_req, res) => {
+	res.writeHead(426, { Connection: 'Upgrade', Upgrade: 'websocket' });
+	res.end('Upgrade Required');
+};
+
 const startServer = config => {
 	let server;
 
@@ -44,11 +51,15 @@ const startServer = config => {
 		server = createHttpServer();
 		console.log('* Using HTTP server (SSL disabled)');
 	}
+	server.on('request', upgradeRequired);
 
 	const app = express();
 	const allClients = new Set();
 
 	// Important: Set up session middleware before WebSocket handling
+	// It only supplies req.sessionID per websocket. The cookie is never sent,
+	// plain http gets a 426 before express & ws writes the 101 upgrade response,
+	// so it needs no secure flag (TLS terminates at the reverse proxy)
 	if (!process.env.SESSION_KEY) {
 		console.log('* SESSION_KEY not set, using a random session secret');
 	}
@@ -59,7 +70,6 @@ const startServer = config => {
 			secret: getSessionSecret(),
 		}),
 	);
-	app.use(express.static('public'));
 
 	// Initialize express-ws with the server AFTER session middleware
 	expressWs(app, server);
@@ -95,4 +105,4 @@ const startServer = config => {
 		text0wnz.saveSession(() => process.exit());
 	});
 };
-export { startServer, getSessionSecret };
+export { startServer, getSessionSecret, upgradeRequired };

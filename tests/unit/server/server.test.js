@@ -109,12 +109,10 @@ describe('Server Module Integration Tests', () => {
 
 			// Simulate server setup order
 			mockApp.use('session-middleware');
-			mockApp.use('public');
 			mockApp.use('/server', 'debug-middleware');
 
 			expect(middlewareOrder).toEqual([
 				'session-middleware',
-				'public',
 				'/server',
 			]);
 		});
@@ -394,11 +392,17 @@ describe('Server Module Integration Tests', () => {
 			vi.unstubAllEnvs();
 		});
 
-		it('should handle static file serving configuration', () => {
-			// Test static file serving path
-			const staticPath = 'public';
+		it('should answer plain http requests with 426 Upgrade Required', async () => {
+			const { upgradeRequired } = await import('../../../src/js/server/server.js');
+			const res = { writeHead: vi.fn(), end: vi.fn() };
 
-			expect(staticPath).toBe('public');
+			upgradeRequired({}, res);
+
+			expect(res.writeHead).toHaveBeenCalledWith(426, {
+				Connection: 'Upgrade',
+				Upgrade: 'websocket',
+			});
+			expect(res.end).toHaveBeenCalledWith('Upgrade Required');
 		});
 
 		it('should handle WebSocket initialization', () => {
