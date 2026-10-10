@@ -351,11 +351,9 @@ describe('corpus tier (b): weird SAUCE records', () => {
 		expect(d1.fontName).toBe('');
 	});
 
-	// KNOWN v2 DEFECT (PLAN.md P0 finding): a SAUCE record with TInfo1 = 0
-	// (common in wild files) is trusted verbatim, yielding a 0-column doc
-	// instead of falling back to content-derived width. Flip to a plain it()
-	// when the loader falls back (P2 codec package).
-	it.fails('SAUCE with zero tinfo falls back to content-derived dimensions', async () => {
+	// Was a v2 defect (P0 finding): TInfo1 = 0 was trusted verbatim and
+	// yielded a 0-column doc; the loader now keeps content-derived dims
+	it('SAUCE with zero tinfo falls back to content-derived dimensions', async () => {
 		const body = makeAnsi({ columns: 80, rows: 5, seed: 2 });
 		const bytes = concatBytes([
 			body,
@@ -475,11 +473,9 @@ describe('corpus tier (b): XBin', () => {
 		expect(d2.fontData.bytes).toEqual(font);
 	});
 
-	// KNOWN v2 DEFECT (PLAN.md P0 finding): Save.xb never sets the 512-glyph
-	// flag (header bit 4), so a 512-glyph font is written but readers parse
-	// only 256 glyphs of it and the image data misaligns. Flip to a plain
-	// it() when the saver handles 512-glyph fonts (P2 codec package).
-	it.fails('512-glyph XBin font round-trips through save', async () => {
+	// Was a v2 defect (P0 finding): Save.xb never set the 512-glyph flag
+	// (header bit 4), so readers parsed 256 glyphs and misaligned the image
+	it('512-glyph XBin font round-trips through save', async () => {
 		const columns = 40;
 		const rows = 20;
 		const cells = makeCells(columns, rows, 33);
