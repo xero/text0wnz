@@ -347,28 +347,73 @@ const installProfiler = () => {
 	].join(';');
 	panel.appendChild(output);
 
+	// The app globally disables text selection and touch callout (style.css
+	// base layer, !important); the results must opt back in or no copy path
+	// exists on a device
+	for (const prop of ['user-select', '-webkit-user-select']) {
+		output.style.setProperty(prop, 'text', 'important');
+	}
+	output.style.setProperty('-webkit-touch-callout', 'default', 'important');
+
+	const selectAll = () => {
+		// iOS refuses select() on readonly textareas; lift it for the call
+		output.readOnly = false;
+		output.focus();
+		output.select();
+		output.setSelectionRange(0, output.value.length);
+		output.readOnly = true;
+	};
+
 	const copyButton = document.createElement('button');
 	copyButton.textContent = 'copy json';
 	copyButton.style.cssText =
 		'background:#000;color:#0f0;border:1px solid #0f0;cursor:pointer;margin-top:4px;display:none';
-	copyButton.addEventListener('click', () => {
-		output.select();
+	copyButton.addEventListener('click', async () => {
+		let copied = false;
+		// The clipboard API exists only in secure contexts (https/localhost);
+		// LAN http:// device runs land in the execCommand fallback
 		if (navigator.clipboard) {
-			navigator.clipboard.writeText(output.value);
-		} else {
-			document.execCommand('copy');
+			try {
+				await navigator.clipboard.writeText(output.value);
+				copied = true;
+			} catch {
+				copied = false;
+			}
 		}
-		copyButton.textContent = 'copied!';
+		if (!copied) {
+			selectAll();
+			try {
+				copied = document.execCommand('copy');
+			} catch {
+				copied = false;
+			}
+		}
+		copyButton.textContent = copied ? 'copied!' : 'copy blocked: selected instead';
 		setTimeout(() => {
 			copyButton.textContent = 'copy json';
-		}, 1500);
+		}, 2500);
 	});
 	panel.appendChild(copyButton);
+
+	const downloadButton = document.createElement('button');
+	downloadButton.textContent = 'download json';
+	downloadButton.style.cssText =
+		'background:#000;color:#0f0;border:1px solid #0f0;cursor:pointer;margin-top:4px;margin-left:6px;display:none';
+	downloadButton.addEventListener('click', () => {
+		const blob = new Blob([output.value], { type: 'application/json' });
+		const link = document.createElement('a');
+		link.href = URL.createObjectURL(blob);
+		link.download = `t0wnz-profile-${Date.now()}.json`;
+		link.click();
+		setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+	});
+	panel.appendChild(downloadButton);
 
 	const showResults = results => {
 		output.value = JSON.stringify(results, null, '\t');
 		output.style.display = 'block';
 		copyButton.style.display = 'inline-block';
+		downloadButton.style.display = 'inline-block';
 	};
 
 	let running = false;
