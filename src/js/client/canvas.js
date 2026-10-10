@@ -3,6 +3,7 @@ import State from './state.js';
 import { createCanvas } from './ui.js';
 import { loadFontFromImage, loadFontFromXBData } from './font.js';
 import { createPalette, createDefaultPalette } from './palette.js';
+import { createGLRenderer } from './glRenderer.js';
 import magicNumbers from './magicNumbers.js';
 
 const createTextArtCanvas = (canvasContainer, callback) => {
@@ -37,6 +38,32 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					visibleEndRow: 0,
 				},
 				canvasChunks = new Map(); // Key: chunkIndex, Value: { canvas, ctx, onBlink, offBlink, rendered: bool }
+
+	// GL is the default renderer (PLAN.md P1/O11, owner-approved 2026-10-10).
+	// All paint paths delegate to it when active; the doc model is shared.
+	// ?renderer=2d forces the legacy chunk renderer below, which also remains
+	// the automatic fallback wherever webgl2 is unavailable; its deletion is
+	// owner-triggered after the next tagged release.
+	let glRenderer = null;
+	if (
+		typeof window !== 'undefined' &&
+		new URLSearchParams(window.location.search).get('renderer') !== '2d'
+	) {
+		try {
+			glRenderer = createGLRenderer(canvasContainer, {
+				getColumns: () => columns,
+				getRows: () => rows,
+				getImageData: () => imageData,
+				getIceColors: () => iceColors,
+			});
+		} catch (error) {
+			console.warn('[Canvas] GL renderer init failed', error);
+			glRenderer = null;
+		}
+		if (!glRenderer) {
+			console.warn('[Canvas] webgl2 unavailable; using the chunk renderer');
+		}
+	}
 
 	const enqueueDirtyRegion = (x, y, w, h) => {
 		// Validate and clamp region to canvas bounds
@@ -86,6 +113,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			h = rows - y;
 		}
 
+		if (glRenderer) {
+			glRenderer.drawRegion(x, y, w, h);
+			return;
+		}
+
 		// Redraw all cells in the region
 		for (let regionY = y; regionY < y + h; regionY++) {
 			for (let regionX = x; regionX < x + w; regionX++) {
@@ -118,6 +150,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const redrawGlyph = (index, x, y) => {
+		if (glRenderer) {
+			glRenderer.drawCell(x, y);
+			return;
+		}
 		// Only update if chunk is active
 		const chunkIndex = Math.floor(y / chunkSize);
 		const chunk = canvasChunks.get(chunkIndex);
@@ -132,6 +168,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const redrawEntireImage = (onProgress, onComplete) => {
+		if (glRenderer) {
+			// Coverage repaints are sub-frame; progressive pacing collapses
+			// to one paint with the same completion contract
+			glRenderer.redraw(onProgress, onComplete);
+			return;
+		}
 		// For small canvases, direct render is fine
 		if (rows * columns < 5000) {
 			drawRegion(0, 0, columns, rows);
@@ -710,6 +752,14 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			console.error('[Canvas] canvasContainer is null, cannot create canvases');
 			return;
 		}
+		if (glRenderer) {
+			// Geometry/font/palette changed: atlas + layout rebuild, sub-frame
+			redrawing = true;
+			glRenderer.rebuild();
+			redrawing = false;
+			updateTimer();
+			return;
+		}
 		redrawing = true;
 
 		// Remove existing canvas chunks
@@ -776,6 +826,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const updateTimer = () => {
+		if (glRenderer) {
+			glRenderer.updateBlink();
+			return;
+		}
 		stopBlinkTimer();
 		if (!iceColors) {
 			blinkOn = false;
@@ -941,6 +995,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		State.modal.loading('Updating editor with new settings...');
 		const waitForRedrawing = () =>
 			new Promise(resolve => {
+				// Fast path: don't pay a 50ms poll tick when already idle
+				if (!redrawing) {
+					resolve();
+					return;
+				}
 				const intervalId = setInterval(() => {
 					if (!redrawing) {
 						clearInterval(intervalId);
@@ -960,6 +1019,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const getImage = () => {
+		if (glRenderer) {
+			return glRenderer.getImage();
+		}
 		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
 		const fontHeight =
 			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
@@ -990,6 +1052,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const getImageRGBA = () => {
+		if (glRenderer) {
+			return glRenderer.getImageRGBA();
+		}
 		// Chunk-strip export that never composites one tall canvas, so tall
 		// documents stay under the iOS Safari canvas area cap
 		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
@@ -1784,6 +1849,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				// Update imageData immediately (always)
 				imageData[block[0]] = block[1];
 
+				if (glRenderer) {
+					// No chunk bookkeeping; the dirty pass repaints coverage
+					enqueueDirtyCell(block[2], block[3]);
+					return;
+				}
+
 				const y = block[3];
 				const chunkIndex = Math.floor(y / chunkSize);
 				const chunk = canvasChunks.get(chunkIndex);
@@ -1984,6 +2055,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	return {
 		resize: resize,
 		redrawEntireImage: redrawEntireImage,
+		getRendererId: () =>
+			glRenderer ? 'webgl2-slack-buffer' : 'canvas2d-chunks',
 		setFont: setFont,
 		getIceColors: getIceColors,
 		setIceColors: setIceColors,

@@ -1,0 +1,436 @@
+{
+	"host": {
+		"hostname": "Mac",
+		"platform": "darwin 27.0.0",
+		"arch": "arm64",
+		"cpu": "Apple M4",
+		"cores": 10,
+		"totalMemGB": 32
+	},
+	"capturedAt": "2026-10-10T07:24:29.681Z",
+	"pattern": "slack-buffer webgl2 instanced",
+	"machine": {
+		"userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+		"devicePixelRatio": 1,
+		"viewport": "1280x720",
+		"hardwareConcurrency": 10
+	},
+	"defaults": {
+		"slackScreens": 1.5,
+		"toleranceScreens": 0.5
+	},
+	"docs": {
+		"80x3000": {
+			"capturedAt": "2026-10-10T07:24:14.353Z",
+			"pattern": "slack-buffer webgl2 instanced",
+			"doc": {
+				"name": "80x3000",
+				"columns": 80,
+				"rows": 3000
+			},
+			"font": {
+				"name": "CP437 8x16",
+				"cellCss": "8x16",
+				"letterSpacing": false
+			},
+			"params": {
+				"slackScreens": 1.5,
+				"toleranceScreens": 0.5,
+				"canvasRows": 113,
+				"canvasMB": 4.4
+			},
+			"machine": {
+				"userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+				"devicePixelRatio": 1,
+				"viewport": "1280x720",
+				"hardwareConcurrency": 10
+			},
+			"runs": {
+				"slow": {
+					"pxPerFrame": 4,
+					"frames": 300,
+					"avgFps": 60,
+					"p95FrameMs": 16.8,
+					"jankFrames": 0,
+					"reAnchors": 3,
+					"repackMs": {
+						"mean": 0.03,
+						"max": 0.1,
+						"p95": 0.1
+					},
+					"drawMs": {
+						"mean": 0,
+						"max": 0,
+						"p95": 0
+					},
+					"anchorMs": {
+						"mean": 0.07,
+						"max": 0.2,
+						"p95": 0.2
+					},
+					"blankFrames": 0
+				},
+				"fling": {
+					"pxPerFrame": 40,
+					"frames": 300,
+					"avgFps": 60,
+					"p95FrameMs": 16.8,
+					"jankFrames": 0,
+					"reAnchors": 57,
+					"repackMs": {
+						"mean": 0.03,
+						"max": 0.1,
+						"p95": 0.1
+					},
+					"drawMs": {
+						"mean": 0.02,
+						"max": 0.1,
+						"p95": 0.1
+					},
+					"anchorMs": {
+						"mean": 0.07,
+						"max": 0.2,
+						"p95": 0.2
+					},
+					"blankFrames": 0
+				},
+				"extreme": {
+					"pxPerFrame": 120,
+					"frames": 300,
+					"avgFps": 60,
+					"p95FrameMs": 16.8,
+					"jankFrames": 0,
+					"reAnchors": 147,
+					"repackMs": {
+						"mean": 0.03,
+						"max": 0.2,
+						"p95": 0.1
+					},
+					"drawMs": {
+						"mean": 0.02,
+						"max": 0.1,
+						"p95": 0.1
+					},
+					"anchorMs": {
+						"mean": 0.07,
+						"max": 0.3,
+						"p95": 0.2
+					},
+					"blankFrames": 0
+				}
+			}
+		},
+		"240x3000": {
+			"capturedAt": "2026-10-10T07:24:29.504Z",
+			"pattern": "slack-buffer webgl2 instanced",
+			"doc": {
+				"name": "240x3000",
+				"columns": 240,
+				"rows": 3000
+			},
+			"font": {
+				"name": "CP437 8x16",
+				"cellCss": "8x16",
+				"letterSpacing": false
+			},
+			"params": {
+				"slackScreens": 1.5,
+				"toleranceScreens": 0.5,
+				"canvasRows": 113,
+				"canvasMB": 13.2
+			},
+			"machine": {
+				"userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+				"devicePixelRatio": 1,
+				"viewport": "1280x720",
+				"hardwareConcurrency": 10
+			},
+			"runs": {
+				"slow": {
+					"pxPerFrame": 4,
+					"frames": 300,
+					"avgFps": 60,
+					"p95FrameMs": 16.8,
+					"jankFrames": 0,
+					"reAnchors": 3,
+					"repackMs": {
+						"mean": 0.03,
+						"max": 0.1,
+						"p95": 0.1
+					},
+					"drawMs": {
+						"mean": 0,
+						"max": 0,
+						"p95": 0
+					},
+					"anchorMs": {
+						"mean": 0.1,
+						"max": 0.1,
+						"p95": 0.1
+					},
+					"blankFrames": 0
+				},
+				"fling": {
+					"pxPerFrame": 40,
+					"frames": 300,
+					"avgFps": 60,
+					"p95FrameMs": 16.8,
+					"jankFrames": 0,
+					"reAnchors": 57,
+					"repackMs": {
+						"mean": 0.03,
+						"max": 0.1,
+						"p95": 0.1
+					},
+					"drawMs": {
+						"mean": 0.02,
+						"max": 0.1,
+						"p95": 0.1
+					},
+					"anchorMs": {
+						"mean": 0.07,
+						"max": 0.2,
+						"p95": 0.2
+					},
+					"blankFrames": 0
+				},
+				"extreme": {
+					"pxPerFrame": 120,
+					"frames": 300,
+					"avgFps": 60,
+					"p95FrameMs": 16.7,
+					"jankFrames": 0,
+					"reAnchors": 147,
+					"repackMs": {
+						"mean": 0.03,
+						"max": 0.1,
+						"p95": 0.1
+					},
+					"drawMs": {
+						"mean": 0.02,
+						"max": 0.1,
+						"p95": 0.1
+					},
+					"anchorMs": {
+						"mean": 0.07,
+						"max": 0.2,
+						"p95": 0.2
+					},
+					"blankFrames": 0
+				}
+			}
+		}
+	},
+	"sweep": [
+		{
+			"slackScreens": 0.5,
+			"toleranceScreens": 0.25,
+			"canvasRows": 68,
+			"canvasMB": 2.7,
+			"extreme": {
+				"pxPerFrame": 120,
+				"frames": 300,
+				"avgFps": 60,
+				"p95FrameMs": 16.8,
+				"jankFrames": 0,
+				"reAnchors": 299,
+				"repackMs": {
+					"mean": 0.02,
+					"max": 0.1,
+					"p95": 0.1
+				},
+				"drawMs": {
+					"mean": 0.01,
+					"max": 0.1,
+					"p95": 0.1
+				},
+				"anchorMs": {
+					"mean": 0.05,
+					"max": 0.2,
+					"p95": 0.1
+				},
+				"blankFrames": 0
+			},
+			"fling": {
+				"avgFps": 60,
+				"reAnchors": 296,
+				"blankFrames": 0
+			}
+		},
+		{
+			"slackScreens": 1,
+			"toleranceScreens": 0.25,
+			"canvasRows": 90,
+			"canvasMB": 3.5,
+			"extreme": {
+				"pxPerFrame": 120,
+				"frames": 300,
+				"avgFps": 60,
+				"p95FrameMs": 16.7,
+				"jankFrames": 0,
+				"reAnchors": 148,
+				"repackMs": {
+					"mean": 0.02,
+					"max": 0.1,
+					"p95": 0.1
+				},
+				"drawMs": {
+					"mean": 0.02,
+					"max": 0.1,
+					"p95": 0.1
+				},
+				"anchorMs": {
+					"mean": 0.06,
+					"max": 0.2,
+					"p95": 0.1
+				},
+				"blankFrames": 0
+			},
+			"fling": {
+				"avgFps": 60,
+				"reAnchors": 58,
+				"blankFrames": 0
+			}
+		},
+		{
+			"slackScreens": 1,
+			"toleranceScreens": 0.5,
+			"canvasRows": 90,
+			"canvasMB": 3.5,
+			"extreme": {
+				"pxPerFrame": 120,
+				"frames": 300,
+				"avgFps": 60,
+				"p95FrameMs": 16.7,
+				"jankFrames": 0,
+				"reAnchors": 297,
+				"repackMs": {
+					"mean": 0.02,
+					"max": 0.2,
+					"p95": 0.1
+				},
+				"drawMs": {
+					"mean": 0.01,
+					"max": 0.1,
+					"p95": 0.1
+				},
+				"anchorMs": {
+					"mean": 0.05,
+					"max": 0.3,
+					"p95": 0.2
+				},
+				"blankFrames": 0
+			},
+			"fling": {
+				"avgFps": 60,
+				"reAnchors": 291,
+				"blankFrames": 0
+			}
+		},
+		{
+			"slackScreens": 1.5,
+			"toleranceScreens": 0.5,
+			"canvasRows": 113,
+			"canvasMB": 4.4,
+			"extreme": {
+				"pxPerFrame": 120,
+				"frames": 300,
+				"avgFps": 60,
+				"p95FrameMs": 16.8,
+				"jankFrames": 0,
+				"reAnchors": 147,
+				"repackMs": {
+					"mean": 0.03,
+					"max": 0.2,
+					"p95": 0.1
+				},
+				"drawMs": {
+					"mean": 0.02,
+					"max": 0.1,
+					"p95": 0.1
+				},
+				"anchorMs": {
+					"mean": 0.07,
+					"max": 0.2,
+					"p95": 0.2
+				},
+				"blankFrames": 0
+			},
+			"fling": {
+				"avgFps": 60,
+				"reAnchors": 57,
+				"blankFrames": 0
+			}
+		},
+		{
+			"slackScreens": 2,
+			"toleranceScreens": 0.5,
+			"canvasRows": 135,
+			"canvasMB": 5.3,
+			"extreme": {
+				"pxPerFrame": 120,
+				"frames": 300,
+				"avgFps": 60,
+				"p95FrameMs": 16.7,
+				"jankFrames": 0,
+				"reAnchors": 73,
+				"repackMs": {
+					"mean": 0.03,
+					"max": 0.1,
+					"p95": 0.1
+				},
+				"drawMs": {
+					"mean": 0.03,
+					"max": 0.2,
+					"p95": 0.1
+				},
+				"anchorMs": {
+					"mean": 0.08,
+					"max": 0.3,
+					"p95": 0.2
+				},
+				"blankFrames": 0
+			},
+			"fling": {
+				"avgFps": 60,
+				"reAnchors": 28,
+				"blankFrames": 0
+			}
+		},
+		{
+			"slackScreens": 3,
+			"toleranceScreens": 1,
+			"canvasRows": 180,
+			"canvasMB": 7,
+			"extreme": {
+				"pxPerFrame": 120,
+				"frames": 300,
+				"avgFps": 60,
+				"p95FrameMs": 16.7,
+				"jankFrames": 0,
+				"reAnchors": 72,
+				"repackMs": {
+					"mean": 0.02,
+					"max": 0.2,
+					"p95": 0.1
+				},
+				"drawMs": {
+					"mean": 0.03,
+					"max": 0.1,
+					"p95": 0.1
+				},
+				"anchorMs": {
+					"mean": 0.06,
+					"max": 0.2,
+					"p95": 0.2
+				},
+				"blankFrames": 0
+			},
+			"fling": {
+				"avgFps": 60,
+				"reAnchors": 27,
+				"blankFrames": 0
+			}
+		}
+	]
+}

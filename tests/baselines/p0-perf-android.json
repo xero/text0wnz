@@ -1,0 +1,47 @@
+{
+	"capturedAt": "2026-10-10T15:21:12.000Z",
+	"renderer": "canvas2d-chunks",
+	"machine": {
+		"userAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36",
+		"hardwareConcurrency": 8,
+		"deviceMemory": null,
+		"devicePixelRatio": 2.625,
+		"screen": "412x915",
+		"viewport": "371x722"
+	},
+	"docSize": {
+		"columns": 80,
+		"rows": 3000
+	},
+	"scrollFps": 28,
+	"keystrokeMs": 16.75,
+	"zoomMs": 31739.2,
+	"fullRepaintMs": 11631.7,
+	"canvasMemMB": 3.9,
+	"detail": {
+		"scroll": {
+			"slow": {
+				"frames": 452,
+				"avgFps": 90.4,
+				"p95FrameMs": 11.1,
+				"jankFrames": 0
+			},
+			"fling": {
+				"frames": 147,
+				"avgFps": 28,
+				"p95FrameMs": 365,
+				"jankFrames": 9
+			}
+		},
+		"keystroke": {
+			"medianMs": 16.75,
+			"p95Ms": 18,
+			"medianCallMs": 0.2
+		},
+		"memory": {
+			"canvasCount": 20,
+			"canvasMemMB": 3.9,
+			"jsHeapMB": 9.5
+		}
+	}
+}

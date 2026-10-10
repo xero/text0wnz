@@ -1,0 +1,47 @@
+{
+	"capturedAt": "2026-10-10T15:19:21.552Z",
+	"renderer": "webgl2-slack-buffer",
+	"machine": {
+		"userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+		"hardwareConcurrency": 10,
+		"deviceMemory": 32,
+		"devicePixelRatio": 2,
+		"screen": "1512x982",
+		"viewport": "1472x822"
+	},
+	"docSize": {
+		"columns": 80,
+		"rows": 3000
+	},
+	"scrollFps": 120,
+	"keystrokeMs": 8.3,
+	"zoomMs": 16.4,
+	"fullRepaintMs": 1.6,
+	"canvasMemMB": 5.1,
+	"detail": {
+		"scroll": {
+			"slow": {
+				"frames": 599,
+				"avgFps": 120,
+				"p95FrameMs": 9.1,
+				"jankFrames": 0
+			},
+			"fling": {
+				"frames": 600,
+				"avgFps": 120,
+				"p95FrameMs": 8.9,
+				"jankFrames": 0
+			}
+		},
+		"keystroke": {
+			"medianMs": 8.3,
+			"p95Ms": 9.1,
+			"medianCallMs": 0.05
+		},
+		"memory": {
+			"canvasCount": 17,
+			"canvasMemMB": 5.1,
+			"jsHeapMB": 24.5
+		}
+	}
+}

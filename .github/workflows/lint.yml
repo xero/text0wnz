@@ -20,3 +20,5 @@ jobs:
         run: CI=actions bun lint:check
       - name: run format tests
         run: CI=actions bun format:check
+      - name: run typescript checks
+        run: CI=actions bun types:check

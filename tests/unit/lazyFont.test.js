@@ -1,6 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createLazyFont } from '../../src/js/client/lazyFont.js';
 
+// Common-glyph pre-generation is deferred to idle time and drained in
+// per-glyph slices, 16 per tick in the setTimeout fallback; interleave
+// enough ticks with the same mechanism so assertions see the fully
+// populated cache (1,360 glyph slices / 16 = 85 fallback ticks)
+const flushIdle = async () => {
+	const idle = globalThis.requestIdleCallback || (fn => setTimeout(fn, 0));
+	for (let i = 0; i < 100; i++) {
+		await new Promise(resolve => idle(() => resolve()));
+	}
+};
+
 // Mock the UI module
 vi.mock('../../src/js/client/ui.js', () => ({
 	createCanvas: vi.fn(() => ({
@@ -97,15 +108,49 @@ describe('Lazy Font Module', () => {
 			expect(lazyFontInstance.getData()).toEqual(fontData);
 		});
 
-		it('should pre-generate common glyphs', () => {
+		it('should pre-generate common glyphs', async () => {
 			lazyFontInstance = createLazyFont(fontData, mockPalette, false);
+			await flushIdle();
 
-			// Common glyphs should be cached immediately
+			// Common glyphs are cached once the thread idles
 			const cacheSize = lazyFontInstance.getCacheSize();
 			expect(cacheSize).toBeGreaterThan(0);
 
 			// Space (32) and block characters (176, 177, 178, 219) * 16 * 16 = 1280 glyphs
 			expect(cacheSize).toBe(5 * 16 * 16);
+		});
+
+		it('should stop pre-generation when disposed before the first idle tick', async () => {
+			lazyFontInstance = createLazyFont(fontData, mockPalette, false);
+			lazyFontInstance.dispose();
+			await flushIdle();
+
+			// The queued drain saw the disposed flag and generated nothing
+			expect(lazyFontInstance.getCacheSize()).toBe(0);
+			expect(lazyFontInstance.getAlphaCacheSize()).toBe(0);
+		});
+
+		it('should stop a partially drained pre-generation on dispose', async () => {
+			lazyFontInstance = createLazyFont(fontData, mockPalette, false);
+
+			// Let a couple of fallback ticks run (16 glyphs each), then cancel
+			const idle = globalThis.requestIdleCallback || (fn => setTimeout(fn, 0));
+			for (let i = 0; i < 2; i++) {
+				await new Promise(resolve => idle(() => resolve()));
+			}
+			lazyFontInstance.dispose();
+			const sizeAtDispose =
+				lazyFontInstance.getCacheSize() + lazyFontInstance.getAlphaCacheSize();
+			await flushIdle();
+
+			// No further slices ran after dispose; on-demand generation still works
+			expect(
+				lazyFontInstance.getCacheSize() + lazyFontInstance.getAlphaCacheSize(),
+			).toBe(sizeAtDispose);
+			lazyFontInstance.getGlyph(65, 7, 0);
+			expect(
+				lazyFontInstance.getCacheSize() + lazyFontInstance.getAlphaCacheSize(),
+			).toBe(sizeAtDispose + 1);
 		});
 
 		it('should generate glyphs on demand', () => {
@@ -165,8 +210,9 @@ describe('Lazy Font Module', () => {
 			expect(alphaGlyph).toBeDefined();
 		});
 
-		it('should cache alpha glyphs separately', () => {
+		it('should cache alpha glyphs separately', async () => {
 			lazyFontInstance = createLazyFont(fontData, mockPalette, false);
+			await flushIdle();
 
 			// Upper half-block character (220)
 			const alphaGlyph1 = lazyFontInstance.getAlphaGlyph(220, 5);
@@ -306,8 +352,9 @@ describe('Lazy Font Module', () => {
 	});
 
 	describe('Memory Efficiency', () => {
-		it('should not pre-generate all glyphs', () => {
+		it('should not pre-generate all glyphs', async () => {
 			lazyFontInstance = createLazyFont(fontData, mockPalette, false);
+			await flushIdle();
 
 			// Total possible glyphs: 256 chars × 16 fg × 16 bg = 65,536
 			// But we only pre-generate common ones: 5 chars × 16 × 16 = 1,280

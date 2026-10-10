@@ -122,6 +122,11 @@ const loadFontFromXBData = (
 		};
 
 		const createLazyFontInstance = () => {
+			// Cancel the outgoing instance's idle pregeneration drain, or rapid
+			// zoom/font changes stack stale drains filling orphaned caches
+			if (lazyFont) {
+				lazyFont.dispose();
+			}
 			lazyFont = createLazyFont(
 				fontData,
 				palette,
@@ -247,6 +252,11 @@ const loadFontFromImage = (
 		};
 
 		const createLazyFontInstance = () => {
+			// Cancel the outgoing instance's idle pregeneration drain, or rapid
+			// zoom/font changes stack stale drains filling orphaned caches
+			if (lazyFont) {
+				lazyFont.dispose();
+			}
 			lazyFont = createLazyFont(
 				fontData,
 				palette,

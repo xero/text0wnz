@@ -1,15 +1,17 @@
+// @ts-check
 /**
  * Optimized storage system using IndexedDB for binary data and
  * localStorage for small configuration
  */
 
 // IndexedDB setup
+/** @returns {Promise<IDBDatabase>} */
 const dbPromise = () => {
 	return new Promise((resolve, reject) => {
 		const request = indexedDB.open('text0wnz', 3);
 
-		request.onupgradeneeded = e => {
-			const db = e.target.result;
+		request.onupgradeneeded = _e => {
+			const db = request.result;
 
 			// Create object stores if they don't exist
 			if (!db.objectStoreNames.contains('canvasData')) {
@@ -25,8 +27,8 @@ const dbPromise = () => {
 			}
 		};
 
-		request.onsuccess = e => resolve(e.target.result);
-		request.onerror = e => reject(e.target.error);
+		request.onsuccess = _e => resolve(request.result);
+		request.onerror = _e => reject(request.error);
 	});
 };
 
@@ -34,6 +36,7 @@ const dbPromise = () => {
 export const Storage = {
 	/**
 	 * Save canvas state to IndexedDB
+	 * @param {unknown} data canvas snapshot (Uint16Array plus metadata)
 	 */
 	async saveCanvasData(data) {
 		try {
@@ -42,11 +45,11 @@ export const Storage = {
 			const store = tx.objectStore('canvasData');
 
 			// Store canvas data directly as Uint16Array - more efficient than conversion
-			await new Promise((resolve, reject) => {
+			await /** @type {Promise<void>} */(new Promise((resolve, reject) => {
 				const request = store.put(data, 'currentCanvas');
 				request.onsuccess = () => resolve();
 				request.onerror = () => reject(request.error);
-			});
+			}));
 
 			return true;
 		} catch (error) {
@@ -77,6 +80,8 @@ export const Storage = {
 
 	/**
 	 * Save font data to IndexedDB
+	 * @param {string} fontName
+	 * @param {unknown} fontData
 	 */
 	async saveFontData(fontName, fontData) {
 		try {
@@ -84,11 +89,11 @@ export const Storage = {
 			const tx = db.transaction('fontData', 'readwrite');
 			const store = tx.objectStore('fontData');
 
-			await new Promise((resolve, reject) => {
+			await /** @type {Promise<void>} */(new Promise((resolve, reject) => {
 				const request = store.put(fontData, fontName);
 				request.onsuccess = () => resolve();
 				request.onerror = () => reject(request.error);
-			});
+			}));
 
 			return true;
 		} catch (error) {
@@ -99,6 +104,7 @@ export const Storage = {
 
 	/**
 	 * Load font data from IndexedDB
+	 * @param {string} fontName
 	 */
 	async loadFontData(fontName) {
 		try {
@@ -119,6 +125,7 @@ export const Storage = {
 
 	/**
 	 * Save undo history to IndexedDB
+	 * @param {unknown} undoHistory
 	 */
 	async saveUndoHistory(undoHistory) {
 		try {
@@ -126,11 +133,11 @@ export const Storage = {
 			const tx = db.transaction('undoHistory', 'readwrite');
 			const store = tx.objectStore('undoHistory');
 
-			await new Promise((resolve, reject) => {
+			await /** @type {Promise<void>} */(new Promise((resolve, reject) => {
 				const request = store.put(undoHistory, 'currentUndoHistory');
 				request.onsuccess = () => resolve();
 				request.onerror = () => reject(request.error);
-			});
+			}));
 
 			return true;
 		} catch (error) {
@@ -161,6 +168,7 @@ export const Storage = {
 
 	/**
 	 * Save lightweight settings to localStorage
+	 * @param {object} settings
 	 */
 	saveSettings(settings) {
 		try {

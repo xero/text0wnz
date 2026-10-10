@@ -1,3 +1,4 @@
+// @ts-check
 /* ≈ Magic Numbers ≈ shared application constants */
 
 // Fonts

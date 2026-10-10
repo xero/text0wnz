@@ -11,7 +11,8 @@ const firefoxEnv = process.platform === 'darwin'
 	: undefined;
 
 export default defineConfig({
-	testDir: './tests/e2e',
+	testDir: './tests',
+	testMatch: ['e2e/**/*.spec.js', 'golden/**/*.spec.js', 'gl/**/*.spec.js'],
 	timeout: 30000,
 	retries: 1,
 	outputDir: 'tests/results/e2e',
@@ -44,12 +45,23 @@ export default defineConfig({
 	projects: [
 		{
 			name: 'Chrome',
+			testMatch: 'e2e/**/*.spec.js',
 			use: {
 				channel: 'chrome',
+				// GL is the default renderer (O11); headless needs software
+				// WebGL2 or the whole e2e rail silently tests the fallback
+				launchOptions: {
+					args: [
+						'--use-gl=angle',
+						'--use-angle=swiftshader-webgl',
+						'--enable-unsafe-swiftshader',
+					],
+				},
 			},
 		},
 		{
 			name: 'Firefox',
+			testMatch: 'e2e/**/*.spec.js',
 			use: {
 				browserName: 'firefox',
 				// Firefox-specific settings for CI environment
@@ -63,12 +75,71 @@ export default defineConfig({
 		},
 		{
 			name: 'WebKit',
+			testMatch: 'e2e/**/*.spec.js',
 			use: {
 				browserName: 'webkit',
 				// WebKit-specific settings to handle pointer event issues
 				actionTimeout: 10000,
 			},
 			timeout: 45000,
+		},
+		{
+			// Pixel goldens: generated ONLY in the CI container (linux,
+			// SwiftShader, dpr 1). Elsewhere the flows run but screenshot
+			// assertions are skipped, since font/AA rendering differs per OS
+			name: 'golden',
+			testMatch: 'golden/**/*.spec.js',
+			ignoreSnapshots: !process.env.CI,
+			use: {
+				browserName: 'chromium',
+				deviceScaleFactor: 1,
+				launchOptions: {
+					args: [
+						'--use-gl=angle',
+						'--use-angle=swiftshader-webgl',
+						'--enable-unsafe-swiftshader',
+					],
+				},
+			},
+		},
+		{
+			// P1 pixel-parity gate: the same golden suite rendered through
+			// the GL renderer (?renderer=gl) and asserted against the SAME
+			// goldens the 2D chunk renderer generated (integer zoom, dpr 1)
+			name: 'golden-gl',
+			testMatch: 'golden/**/*.spec.js',
+			ignoreSnapshots: !process.env.CI,
+			snapshotPathTemplate:
+				'{snapshotDir}/{testFileDir}/{testFileName}-snapshots/{arg}-golden{-snapshotSuffix}{ext}',
+			use: {
+				browserName: 'chromium',
+				deviceScaleFactor: 1,
+				launchOptions: {
+					args: [
+						'--use-gl=angle',
+						'--use-angle=swiftshader-webgl',
+						'--enable-unsafe-swiftshader',
+					],
+				},
+			},
+		},
+		{
+			// GL rail for the P1 renderer (PLAN.md §4 P0): same SwiftShader
+			// flags the goldens use; asserts WebGL2 works in CI before any
+			// renderer code depends on it
+			name: 'chromium-gl',
+			testMatch: 'gl/**/*.spec.js',
+			use: {
+				browserName: 'chromium',
+				deviceScaleFactor: 1,
+				launchOptions: {
+					args: [
+						'--use-gl=angle',
+						'--use-angle=swiftshader-webgl',
+						'--enable-unsafe-swiftshader',
+					],
+				},
+			},
 		},
 	],
 });

@@ -887,11 +887,21 @@ const loadModule = () => {
 				commentsCount = sauce[104]; // Comments field at byte 104
 
 				if (dataType === 5) {
-					columns = sauce[95] * 2;
-					rows = fileSize / columns / 2;
+					if (sauce[95] > 0) {
+						columns = sauce[95] * 2;
+						rows = fileSize / columns / 2;
+					}
 				} else {
-					columns = readLE16(sauce, 96);
-					rows = readLE16(sauce, 98);
+					// TInfo of 0 means "unspecified" in wild files: keep the
+					// content-derived fallback instead of a 0-column document
+					const tinfo1 = readLE16(sauce, 96);
+					const tinfo2 = readLE16(sauce, 98);
+					if (tinfo1 > 0) {
+						columns = tinfo1;
+					}
+					if (tinfo2 > 0) {
+						rows = tinfo2;
+					}
 				}
 				flags = sauce[105];
 				const letterSpacingBits = (flags >> 1) & 0x03; // Extract bits 1-2
@@ -959,9 +969,14 @@ const loadModule = () => {
 
 	const loadBin = bytes => {
 		const sauce = getSauce(bytes, 160);
-		if (sauce.rows === undefined) {
-			sauce.rows = sauce.fileSize / 160 / 2;
-		}
+		// A binary payload has no newlines, so getSauce's content-derived row
+		// count is meaningless for BIN (and rows is always numeric, so the old
+		// `=== undefined` fallback never fired). Always derive rows from the
+		// payload size and the selected width: SAUCE FileType when set, the
+		// 160-column default when FileType is 0 ("unspecified", like a zero
+		// TInfo) or when there is no record at all.
+		const payloadSize = sauce.fileSize > 0 ? sauce.fileSize : bytes.length;
+		sauce.rows = Math.floor(payloadSize / sauce.columns / 2);
 		const data = convertUInt8ToUint16(bytes, 0, sauce.columns * sauce.rows * 2);
 		return {
 			columns: sauce.columns,
@@ -1651,9 +1666,24 @@ const saveModule = () => {
 		const rows = State.textArtCanvas.getRows();
 		const iceColors = State.textArtCanvas.getIceColors();
 
-		// Get current palette and font data for embedding
+		// Get current palette and font data for embedding. Prefer the
+		// original embedded XB font bytes (full 512-glyph fonts survive);
+		// the live font object only holds the 256 renderable glyphs
 		const xbPaletteData = State.textArtCanvas.getXBPaletteData();
-		const xbFontData = State.font.getData();
+		const embeddedFont =
+			State.textArtCanvas.getCurrentFontName() === 'XBIN'
+				? State.textArtCanvas.getXBFontData?.()
+				: null;
+		const liveFontData = State.font.getData();
+		const fontBytes =
+			(embeddedFont && embeddedFont.bytes) ||
+			(liveFontData && liveFontData.data) ||
+			null;
+		// Header wants the UNSCALED glyph height; getHeight() is zoom-scaled
+		const fontHeight =
+			(embeddedFont && embeddedFont.height) ||
+			(liveFontData && liveFontData.height) ||
+			State.font.getHeight();
 
 		// Initialize flags and calculate additional data size
 		let flags = 0;
@@ -1664,9 +1694,13 @@ const saveModule = () => {
 		additionalDataSize += 48; // Palette data size (16 colors * 3 bytes each)
 
 		// Embed font data if available
-		if (xbFontData && xbFontData.data) {
+		if (fontBytes) {
 			flags |= 1 << 1; // Set font flag (bit 1)
-			additionalDataSize += xbFontData.data.length;
+			additionalDataSize += fontBytes.length;
+			// XBin fonts are 8px wide, so bytes = height * glyph count
+			if (fontBytes.length === fontHeight * 512) {
+				flags |= 1 << 4; // Set 512-glyph font flag (bit 4)
+			}
 		}
 
 		// RLE-compress the image data, keeping raw output when it is smaller
@@ -1700,7 +1734,7 @@ const saveModule = () => {
 				columns >> 8,
 				rows & 255,
 				rows >> 8,
-				State.font.getHeight(),
+				fontHeight,
 				flags,
 			]),
 			0,
@@ -1715,9 +1749,9 @@ const saveModule = () => {
 		}
 
 		// Add font data if available
-		if (xbFontData && xbFontData.data) {
-			output.set(xbFontData.data, dataOffset);
-			dataOffset += xbFontData.data.length;
+		if (fontBytes) {
+			output.set(fontBytes, dataOffset);
+			dataOffset += fontBytes.length;
 		}
 
 		// Add image data
