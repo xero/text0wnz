@@ -5,11 +5,13 @@ name: golden update
 # commit. Never generate goldens on a workstation.
 on:
   workflow_dispatch:
-  # also run when this file itself changes: workflow_dispatch only registers
-  # on the default branch, so this is how seeding runs ride feature branches
+  # also run when the suite (or this file) changes: workflow_dispatch only
+  # registers on the default branch, so this is how seeding runs ride feature
+  # branches; a spec/fixture change invalidates the goldens anyway
   push:
     paths:
       - '.github/workflows/golden-update.yml'
+      - 'tests/golden/**'
 permissions:
   contents: read
   packages: read

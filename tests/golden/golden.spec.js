@@ -105,6 +105,14 @@ test.describe('golden renderer screenshots', () => {
 			await page.goto('/?test');
 			await waitForEditorReady(page);
 			await page.waitForFunction(() => !!window.__t0wnz, null, { timeout: 10000 });
+			// Cursor/selection overlays toggle with focus state, which is racy
+			// across runs; only the art may decide golden pixels
+			await page.addStyleTag({
+				content:
+					'#canvasContainer canvas.cursor,' +
+					'#canvasContainer canvas.selectionCursor' +
+					'{display:none !important}',
+			});
 			await openFixture(page, combo.fixture);
 			await applyView(page, combo);
 			await expect(page.locator('#canvasContainer')).toHaveScreenshot(
