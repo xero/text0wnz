@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createLazyFont } from '../../src/js/client/lazyFont.js';
 
 // Common-glyph pre-generation is deferred to idle time and drained in
-// slices, one per tick in the setTimeout fallback; interleave enough ticks
-// with the same mechanism so assertions see the fully populated cache
-// (85 slices: 5 chars x 16 backgrounds + 5 alpha chars)
+// per-glyph slices, 16 per tick in the setTimeout fallback; interleave
+// enough ticks with the same mechanism so assertions see the fully
+// populated cache (1,360 glyph slices / 16 = 85 fallback ticks)
 const flushIdle = async () => {
 	const idle = globalThis.requestIdleCallback || (fn => setTimeout(fn, 0));
 	for (let i = 0; i < 100; i++) {

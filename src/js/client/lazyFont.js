@@ -217,8 +217,10 @@ export const createLazyFont = (
 	 * Common characters: space (32) and block characters (176, 177, 178, 219).
 	 * One monolithic pass measured ~2.4s of main thread on an iPad, stalling
 	 * the first idle moment after every font or zoom change (and polluting
-	 * anything measured across it); a 16-glyph slice per tick keeps each
-	 * block trivial, and on-demand generation covers anything drawn sooner.
+	 * anything measured across it). Slices are a single glyph (~2ms worst
+	 * case measured) packed into the granted IdleDeadline budget; a 16-glyph
+	 * slice overshot the budget enough to jank slow scrolling on the iPad.
+	 * On-demand generation covers anything drawn before the drain finishes.
 	 */
 	const idle = globalThis.requestIdleCallback || (fn => setTimeout(fn, 0));
 	const preGenerateCommonGlyphs = () => {
@@ -239,30 +241,28 @@ export const createLazyFont = (
 		const slices = [];
 		for (const charCode of commonChars) {
 			for (let bg = 0; bg < 16; bg++) {
-				slices.push(() => {
-					for (let fg = 0; fg < 16; fg++) {
-						getGlyph(charCode, fg, bg);
-					}
-				});
+				for (let fg = 0; fg < 16; fg++) {
+					slices.push(() => getGlyph(charCode, fg, bg));
+				}
 			}
 		}
 		for (const charCode of alphaChars) {
-			slices.push(() => {
-				for (let fg = 0; fg < 16; fg++) {
-					getAlphaGlyph(charCode, fg);
-				}
-			});
+			for (let fg = 0; fg < 16; fg++) {
+				slices.push(() => getAlphaGlyph(charCode, fg));
+			}
 		}
 		const drain = deadline => {
-			// With a real IdleDeadline, fill the granted budget; in the
-			// setTimeout fallback, one slice per tick
+			// With a real IdleDeadline, pack glyphs into the granted budget;
+			// in the setTimeout fallback, a fixed small batch per tick
+			let fallbackBudget = 16;
 			do {
 				slices.shift()();
+				fallbackBudget--;
 			} while (
 				slices.length > 0 &&
-				deadline &&
-				deadline.timeRemaining &&
-				deadline.timeRemaining() > 2
+				(deadline && deadline.timeRemaining
+					? deadline.timeRemaining() > 2
+					: fallbackBudget > 0)
 			);
 			if (slices.length > 0) {
 				idle(drain);
