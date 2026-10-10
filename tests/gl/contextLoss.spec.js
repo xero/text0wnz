@@ -33,12 +33,24 @@ test('gl renderer survives context loss and restore', async ({ page }) => {
 			return { error: 'WEBGL_lose_context unavailable' };
 		}
 
+		// Await the transition events instead of fixed sleeps; loss and
+		// restore are asynchronous and can outrun any timer on a loaded
+		// SwiftShader runner. The renderer registered its own handlers at
+		// init, so they run before these later-added listeners fire.
+		const lostEvent = new Promise(resolve =>
+			canvas.addEventListener('webglcontextlost', resolve, { once: true }));
 		ext.loseContext();
-		await new Promise(resolve => setTimeout(resolve, 100));
+		await lostEvent;
 		const lostDuring = gl.isContextLost();
+		// restoreContext() is INVALID_OPERATION until the webglcontextlost
+		// dispatch fully completes with its default prevented; an awaited
+		// listener resumes as a microtask still inside that dispatch, so
+		// hop one macrotask before restoring
+		await new Promise(resolve => setTimeout(resolve, 0));
+		const restoredEvent = new Promise(resolve =>
+			canvas.addEventListener('webglcontextrestored', resolve, { once: true }));
 		ext.restoreContext();
-		// the restore handler rebuilds all GL state and repaints
-		await new Promise(resolve => setTimeout(resolve, 300));
+		await restoredEvent;
 
 		// Repaint synchronously, then sample the backbuffer before the
 		// compositor can discard it (preserveDrawingBuffer is false)

@@ -388,6 +388,31 @@ describe('corpus tier (b): BIN', () => {
 		expectSameCells(d2, d1, 'bin');
 	});
 
+	it('BIN with SAUCE FileType 0 derives rows from file size at the default width', async () => {
+		// FileType 0 means "unspecified" (same convention as zero TInfo):
+		// keep the 160-column default and compute rows from the payload
+		// size, never from counting newlines in binary data
+		const image = makeBin({ columns: 160, rows: 40, seed: 23 });
+		const ft0 = makeBin({
+			columns: 160,
+			rows: 40,
+			seed: 23,
+			sauce: { filetype: 0, title: 'filetype zero' },
+		});
+		const d1 = await decode('ft0.bin', ft0);
+		expect(d1.columns).toBe(160);
+		expect(d1.rows).toBe(40);
+		const reference = await decode('ref.bin', image);
+		expectSameCells(d1, reference, 'filetype-0 bin');
+	});
+
+	it('headerless BIN derives rows from byte length at the default width', async () => {
+		const bytes = makeBin({ columns: 160, rows: 30, seed: 24 });
+		const d1 = await decode('plain.bin', bytes);
+		expect(d1.columns).toBe(160);
+		expect(d1.rows).toBe(30);
+	});
+
 	it('wide BIN (320 columns) round-trips', async () => {
 		const bytes = makeBin({
 			columns: 320,

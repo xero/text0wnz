@@ -199,6 +199,12 @@ const installProfiler = () => {
 	};
 
 	const repaintScenario = async () => {
+		// End-to-end latency by design: BOTH renderers resolve the redraw
+		// callback on the next animation frame, so a sample carries up to one
+		// refresh interval of frame-phase alignment on top of the draw work.
+		// That is what a user experiences, it is symmetric across renderers,
+		// and it cannot move any conclusion at the magnitudes the committed
+		// baselines compare (tens of ms vs tens of seconds).
 		const t0 = performance.now();
 		await new Promise(resolve => {
 			State.textArtCanvas.redrawEntireImage(null, () => resolve());

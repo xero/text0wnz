@@ -969,9 +969,14 @@ const loadModule = () => {
 
 	const loadBin = bytes => {
 		const sauce = getSauce(bytes, 160);
-		if (sauce.rows === undefined) {
-			sauce.rows = sauce.fileSize / 160 / 2;
-		}
+		// A binary payload has no newlines, so getSauce's content-derived row
+		// count is meaningless for BIN (and rows is always numeric, so the old
+		// `=== undefined` fallback never fired). Always derive rows from the
+		// payload size and the selected width: SAUCE FileType when set, the
+		// 160-column default when FileType is 0 ("unspecified", like a zero
+		// TInfo) or when there is no record at all.
+		const payloadSize = sauce.fileSize > 0 ? sauce.fileSize : bytes.length;
+		sauce.rows = Math.floor(payloadSize / sauce.columns / 2);
 		const data = convertUInt8ToUint16(bytes, 0, sauce.columns * sauce.rows * 2);
 		return {
 			columns: sauce.columns,
