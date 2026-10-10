@@ -100,7 +100,10 @@ export const v3ToU16 = (doc: DocV3, frameIndex = 0): U16Doc => {
 			throw new ConvertError(`glyph ${glyphId} is not CP437-identity`, i);
 		}
 		if (attrs & ~ATTR_BLINK) {
-			throw new ConvertError(`attrs 0x${attrs.toString(16)} unsupported in u16`, i);
+			throw new ConvertError(
+				`attrs 0x${attrs.toString(16)} unsupported in u16`,
+				i,
+			);
 		}
 		const blink = (attrs & ATTR_BLINK) !== 0;
 		if (!isPaletteColor(frame.fg[i]) || !isPaletteColor(frame.bg[i])) {
@@ -122,10 +125,7 @@ export const v3ToU16 = (doc: DocV3, frameIndex = 0): U16Doc => {
 				);
 			}
 		} else if (bgIndex > (iceColors ? 15 : 7)) {
-			throw new ConvertError(
-				`bg palette index ${bgIndex} needs ice colors`,
-				i,
-			);
+			throw new ConvertError(`bg palette index ${bgIndex} needs ice colors`, i);
 		}
 		const bgNibble = blink ? bgIndex | 8 : bgIndex;
 		imageData[i] = (glyphId << 8) | (bgNibble << 4) | fgIndex;

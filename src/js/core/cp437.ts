@@ -180,7 +180,15 @@ for (const [byte, codepoint] of nonIdentity) {
 
 /** Unicode codepoint for a CP437 byte (identity where unmapped). */
 export const cp437ToUnicode = (byte: number): number =>
-	toUnicode.get(byte & 0xff) ?? (byte & 0xff);
+	toUnicode.get(byte & 0xff) ?? byte & 0xff;
+
+/**
+ * Strict reverse lookup: only explicitly mapped codepoints, no identity
+ * fallback. The lenient UTF-8 reader needs this exact v2 semantic
+ * (unmapped codepoints <= 255 pass through as raw bytes there).
+ */
+export const unicodeToCp437Strict = (codepoint: number): number | undefined =>
+	fromUnicode.get(codepoint);
 
 /** CP437 byte for a unicode codepoint, or undefined when outside CP437. */
 export const unicodeToCp437 = (codepoint: number): number | undefined => {

@@ -41,7 +41,12 @@ export interface PatchArena {
 	 * Record one cell write. First `before` wins and last `after` wins
 	 * when the same plane index is touched again within the stroke.
 	 */
-	record: (plane: PlaneName, index: number, before: number, after: number) => void;
+	record: (
+		plane: PlaneName,
+		index: number,
+		before: number,
+		after: number,
+	) => void;
 	/** Commit the open stroke; empty strokes vanish. Drops the redo tail. */
 	endStroke: () => boolean;
 	undo: (doc: DocV3) => StrokeMeta | null;
@@ -68,10 +73,13 @@ export const createPatchArena = (
 	let bytes = 0;
 
 	let openMeta: StrokeMeta | null = null;
-	let openPatches: Map<PlaneName, Map<number, [number, number]>> | null =
-		null;
+	let openPatches: Map<PlaneName, Map<number, [number, number]>> | null = null;
 
-	const planeOf = (doc: DocV3, frame: number, plane: PlaneName): Uint32Array => {
+	const planeOf = (
+		doc: DocV3,
+		frame: number,
+		plane: PlaneName,
+	): Uint32Array => {
 		const f = doc.frames[frame];
 		if (!f) {
 			throw new RangeError(`[core/patchArena] frame ${frame} out of range`);

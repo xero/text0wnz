@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-	createDocV3,
-	glyphWord,
-	paletteColor,
-} from '../../src/js/core/doc.js';
+import { createDocV3, glyphWord, paletteColor } from '../../src/js/core/doc.js';
 import { createPatchArena } from '../../src/js/core/patchArena.js';
 import type { DocV3 } from '../../src/js/core/doc.js';
 import type { PatchArena } from '../../src/js/core/patchArena.js';

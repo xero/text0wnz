@@ -37,9 +37,7 @@ export const rgbColor = (r: number, g: number, b: number): number =>
 export const isPaletteColor = (word: number): boolean =>
 	(word & PALETTE_TAG) !== 0;
 export const paletteIndexOf = (word: number): number => word & 0x00ffffff;
-export const rgbOf = (
-	word: number,
-): { r: number; g: number; b: number } => ({
+export const rgbOf = (word: number): { r: number; g: number; b: number } => ({
 	r: (word >>> 16) & 0xff,
 	g: (word >>> 8) & 0xff,
 	b: word & 0xff,
@@ -198,12 +196,24 @@ export interface DocV3 {
 		y: number,
 		width: number,
 		height: number,
-	) => { width: number; height: number; glyph: Uint32Array; fg: Uint32Array; bg: Uint32Array };
+	) => {
+		width: number;
+		height: number;
+		glyph: Uint32Array;
+		fg: Uint32Array;
+		bg: Uint32Array;
+	};
 	setArea: (
 		frame: number,
 		x: number,
 		y: number,
-		area: { width: number; height: number; glyph: Uint32Array; fg: Uint32Array; bg: Uint32Array },
+		area: {
+			width: number;
+			height: number;
+			glyph: Uint32Array;
+			fg: Uint32Array;
+			bg: Uint32Array;
+		},
 	) => void;
 	/** Budget check without mutating (O13 UI guard hook). */
 	canAddFrame: () => boolean;
@@ -244,8 +254,7 @@ export const createDocV3 = (options: DocV3Options): DocV3 => {
 	let iceColors = options.iceColors ?? false;
 	let letterSpacing = options.letterSpacing ?? false;
 	let globalDelayMs = options.globalDelayMs ?? 100;
-	const frameCellBudget =
-		options.frameCellBudget ?? DEFAULT_FRAME_CELL_BUDGET;
+	const frameCellBudget = options.frameCellBudget ?? DEFAULT_FRAME_CELL_BUDGET;
 	const palette = options.palette ?? createDefaultPaletteRGB();
 	const glyphTable = options.glyphTable ?? createCP437GlyphTable();
 	const frames: Frame[] = [createBlankPlanes(columns * rows)];
@@ -318,14 +327,10 @@ export const createDocV3 = (options: DocV3Options): DocV3 => {
 				f.bg.set(area.bg.subarray(src, src + area.width), dst);
 			}
 		},
-		canAddFrame: () =>
-			(frames.length + 1) * columns * rows <= frameCellBudget,
+		canAddFrame: () => (frames.length + 1) * columns * rows <= frameCellBudget,
 		addFrame: addOptions => {
 			const { copyFrom, force } = addOptions ?? {};
-			if (
-				!force &&
-				(frames.length + 1) * columns * rows > frameCellBudget
-			) {
+			if (!force && (frames.length + 1) * columns * rows > frameCellBudget) {
 				throw new Error(
 					`[core/doc] frame budget exceeded: ${frames.length + 1} frames x ${columns * rows} cells > ${frameCellBudget} (O13)`,
 				);
