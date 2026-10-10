@@ -157,7 +157,11 @@ const installScrollSpike = () => {
 	};
 
 	// --- spike state ---------------------------------------------------
-	let doc = snapshotEditorDoc();
+	// Default to a synthetic stress doc: snapshotting the editor at install
+	// time races the doc restore (catches the default 80x25), and a doc that
+	// fits the viewport cannot exercise scrolling at all. 'editor doc' in
+	// the HUD select re-snapshots at selection time instead.
+	let doc = buildSyntheticDoc('80x3000');
 	// tunables under measurement (screens = multiples of viewport height)
 	const params = {
 		slackScreens: 1.5, // total overdraw beyond the viewport
@@ -404,7 +408,9 @@ const installScrollSpike = () => {
 			return;
 		}
 		const top = scroller.scrollTop;
-		const bottom = top + viewportH();
+		// Clamp to the doc's extent: page background below a doc shorter
+		// than the viewport is not blank slack
+		const bottom = Math.min(top + viewportH(), doc.rows * cellHCss);
 		if (
 			top < anchorRow * cellHCss - 0.5 ||
 			bottom > (anchorRow + coverageRows) * cellHCss + 0.5
@@ -463,6 +469,12 @@ const installScrollSpike = () => {
 	};
 
 	const runScripted = async () => {
+		// A doc that fits the viewport has nothing to scroll; refuse to emit
+		// a results json where every run would be zero frames
+		if (scroller.scrollHeight - scroller.clientHeight <= 0) {
+			setStatus('nothing to scroll: doc fits the viewport, pick a bigger preset');
+			return null;
+		}
 		const runs = {};
 		setStatus('slow scroll…');
 		runs.slow = await scrollRun(4, 5000);
@@ -557,7 +569,7 @@ const installScrollSpike = () => {
 	makeSelect(
 		'doc',
 		['editor doc', ...Object.keys(PRESETS)],
-		'editor doc',
+		'80x3000',
 		value => {
 			doc = value === 'editor doc' ? snapshotEditorDoc() : buildSyntheticDoc(value);
 			scroller.scrollTop = 0;
