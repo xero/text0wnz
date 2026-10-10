@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Simple compression utilities for localStorage
  * Using a lightweight implementation that doesn't require external dependencies
@@ -6,6 +7,8 @@
 export const Compression = {
 	/**
 	 * Simple RLE compression for Uint16Array data
+	 * @param {Uint16Array|null|undefined} array
+	 * @returns {Uint32Array|null} RLE pairs, or null when compression doesn't help
 	 */
 	compressUint16Array(array) {
 		if (!array || !array.length) {
@@ -39,6 +42,9 @@ export const Compression = {
 
 	/**
 	 * Decompress RLE data back to Uint16Array
+	 * @param {Uint32Array|null|undefined} compressed
+	 * @param {number} outputLength
+	 * @returns {Uint16Array|null}
 	 */
 	decompressToUint16Array(compressed, outputLength) {
 		if (!compressed || !compressed.length) {
@@ -62,6 +68,8 @@ export const Compression = {
 
 	/**
 	 * Convert compressed data to base64 for storage
+	 * @param {Uint32Array} compressed
+	 * @returns {string}
 	 */
 	compressedToBase64(compressed) {
 		const bytes = new Uint8Array(compressed.buffer);
@@ -74,6 +82,8 @@ export const Compression = {
 
 	/**
 	 * Convert base64 back to compressed data
+	 * @param {string} base64
+	 * @returns {Uint32Array}
 	 */
 	base64ToCompressed(base64) {
 		const binaryString = atob(base64);

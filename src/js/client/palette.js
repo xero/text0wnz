@@ -1,7 +1,9 @@
+// @ts-check
 /* Color related methods */
 import State from './state.js';
 import { $ } from './ui.js';
 
+/** @type {Map<number, number>} */
 const charCodeToUnicode = new Map([
 	[1, 0x263a],
 	[2, 0x263b],
@@ -166,8 +168,10 @@ const charCodeToUnicode = new Map([
 	[255, 0x00a0],
 ]);
 
+/** @param {number} charCode @returns {number} */
 const getUnicode = charCode => charCodeToUnicode.get(charCode) || charCode;
 
+/** @param {number} unicode @returns {number[]} UTF-8 byte sequence */
 const unicodeToArray = unicode => {
 	if (unicode < 0x80) {
 		return [unicode];
@@ -181,9 +185,11 @@ const unicodeToArray = unicode => {
 	];
 };
 
+/** @param {number} charCode @returns {number[]} UTF-8 byte sequence */
 const getUTF8 = charCode => unicodeToArray(getUnicode(charCode));
 
 const getUnicodeReverseMap = (() => {
+	/** @type {Map<number, number>} */
 	const map = new Map();
 	for (let charCode = 0; charCode <= 255; charCode++) {
 		map.set(getUnicode(charCode), charCode);
@@ -191,6 +197,7 @@ const getUnicodeReverseMap = (() => {
 	return map;
 })();
 
+/** @param {{r: number, g: number, b: number, a: number}} rgba @returns {number[]} */
 const rgbaToXbin = ({ r, g, b, a }) => [
 	// Ensure the values don't exceed 63
 	Math.min(r >> 2, 63),
@@ -199,6 +206,7 @@ const rgbaToXbin = ({ r, g, b, a }) => [
 	a, // Alpha remains unchanged
 ];
 
+/** @param {number[]} xbin 6-bit [r, g, b, a] @returns {number[]} */
 const xbinToRgba = ([r, g, b, a]) => [
 	// Scale 6-bit to 8-bit
 	Math.round((r / 63) * 255),
@@ -207,6 +215,7 @@ const xbinToRgba = ([r, g, b, a]) => [
 	a, // Alpha remains unchanged
 ];
 
+/** @param {string} hex @returns {{r: number, g: number, b: number, a: number}} */
 const hexToRbga = hex => {
 	const m = (/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i).exec(hex);
 	if (!m) {
@@ -221,12 +230,15 @@ const hexToRbga = hex => {
 	};
 };
 
+/** @param {string} rgbColor comma-separated "r,g,b[,a]" @returns {string} */
 const rgbaToHex = rgbColor => {
 	const [r, g, b] = rgbColor.split(',').map(num => parseInt(num.trim(), 10));
+	/** @param {number} value */
 	const toHex = value => value.toString(16).padStart(2, '0');
 	return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 };
 
+/** @param {number[][]} RGB6Bit sixteen 6-bit [r, g, b] entries */
 const createPalette = RGB6Bit => {
 	const RGBAColors = RGB6Bit.map(RGB6Bit => {
 		return new Uint8Array([
@@ -239,6 +251,7 @@ const createPalette = RGB6Bit => {
 	let foreground = 7;
 	let background = 0;
 
+	/** @param {number} index @param {number[]} newColor 6-bit [r, g, b, a] */
 	const setRGBAColor = (index, newColor) => {
 		const expandedColor = xbinToRgba(newColor); // Expand 6-bit to 8-bit
 		RGBAColors[index] = new Uint8Array(expandedColor);
@@ -249,10 +262,11 @@ const createPalette = RGB6Bit => {
 				cancelable: false,
 			}),
 		);
-		State.font.redraw();
+		State.font?.redraw();
 		setForegroundColor(index);
 	};
 
+	/** @param {number} newForeground */
 	const setForegroundColor = newForeground => {
 		foreground = newForeground;
 		document.dispatchEvent(
@@ -264,6 +278,7 @@ const createPalette = RGB6Bit => {
 		);
 	};
 
+	/** @param {number} newBackground */
 	const setBackgroundColor = newBackground => {
 		background = newBackground;
 		document.dispatchEvent(
@@ -275,8 +290,11 @@ const createPalette = RGB6Bit => {
 		);
 	};
 
+	/** @param {string} hex */
 	const hexToXbin = hex => rgbaToXbin(hexToRbga(hex));
+	/** @param {number} index */
 	const getRGBColor = index => rgbaToHex(RGBAColors[index].toString());
+	/** @param {number} index */
 	const getRGBAColor = index => RGBAColors[index];
 	const getForegroundColor = () => foreground;
 	const getBackgroundColor = () => background;
@@ -322,21 +340,26 @@ const createDefaultPalette = () => {
 	]);
 };
 
+/** @param {HTMLCanvasElement} canvas */
 const createPalettePreview = canvas => {
 	const updatePreview = () => {
 		const ctx = canvas.getContext('2d');
+		const palette = State.palette;
+		if (!ctx || !palette) {
+			return;
+		}
 		const w = canvas.width;
 		const h = canvas.height;
 		const squareSize = Math.floor(Math.min(w, h) * 0.6);
 		const offset = Math.floor(squareSize * 0.66) + 1;
 		ctx.clearRect(0, 0, w, h);
-		ctx.fillStyle = `rgba(${State.palette.getRGBAColor(State.palette.getBackgroundColor()).join(',')})`;
+		ctx.fillStyle = `rgba(${palette.getRGBAColor(palette.getBackgroundColor()).join(',')})`;
 		ctx.fillRect(offset, 0, squareSize, squareSize);
-		ctx.fillStyle = `rgba(${State.palette.getRGBAColor(State.palette.getForegroundColor()).join(',')})`;
+		ctx.fillStyle = `rgba(${palette.getRGBAColor(palette.getForegroundColor()).join(',')})`;
 		ctx.fillRect(0, offset, squareSize, squareSize);
 	};
 
-	canvas.getContext('2d').createImageData(canvas.width, canvas.height);
+	canvas.getContext('2d')?.createImageData(canvas.width, canvas.height);
 	updatePreview();
 	document.addEventListener('onForegroundChange', updatePreview);
 	document.addEventListener('onBackgroundChange', updatePreview);
@@ -349,16 +372,24 @@ const createPalettePreview = canvas => {
 	};
 };
 
+/** @param {HTMLCanvasElement} canvas */
 const createPalettePicker = canvas => {
+	/** @type {ImageData[]} */
 	const imageData = [];
 	const doubleTapThreshold = 300; // Time in ms to detect double-tap/click
 	let lastTouchTime = 0;
 	let lastMouseTime = 0;
+	/** @type {HTMLInputElement|null} */
 	let cc = null;
-	let colorEdited;
+	let colorEdited = 0;
 
+	/** @param {number} index */
 	const updateColor = index => {
-		const color = State.palette.getRGBAColor(index);
+		const palette = State.palette;
+		if (!palette) {
+			return;
+		}
+		const color = palette.getRGBAColor(index);
 		for (let y = 0, i = 0; y < imageData[index].height; y++) {
 			for (let x = 0; x < imageData[index].width; x++, i += 4) {
 				imageData[index].data.set(color, i);
@@ -366,20 +397,25 @@ const createPalettePicker = canvas => {
 		}
 		canvas
 			.getContext('2d')
-			.putImageData(
+			?.putImageData(
 				imageData[index],
 				index > 7 ? canvas.width / 2 : 0,
 				(index % 8) * imageData[index].height,
 			);
 	};
 
-	const updatePalette = _ => {
+	const updatePalette = () => {
 		for (let i = 0; i < 16; i++) {
 			updateColor(i);
 		}
 	};
 
+	/** @param {KeyboardEvent} e */
 	const keydown = e => {
+		const palette = State.palette;
+		if (!palette) {
+			return;
+		}
 		// Handle digit keys (0-7) with ctrl or alt modifiers
 		if (
 			e.code.startsWith('Digit') &&
@@ -389,18 +425,18 @@ const createPalettePicker = canvas => {
 
 			if (e.ctrlKey) {
 				e.preventDefault();
-				if (State.palette.getForegroundColor() === num) {
-					State.palette.setForegroundColor(num + 8);
+				if (palette.getForegroundColor() === num) {
+					palette.setForegroundColor(num + 8);
 				} else {
-					State.palette.setForegroundColor(num);
+					palette.setForegroundColor(num);
 				}
 			} else if (e.altKey) {
 				// Using e.code ensures we detect the physical key regardless of the character produced
 				e.preventDefault();
-				if (State.palette.getBackgroundColor() === num) {
-					State.palette.setBackgroundColor(num + 8);
+				if (palette.getBackgroundColor() === num) {
+					palette.setBackgroundColor(num + 8);
 				} else {
-					State.palette.setBackgroundColor(num);
+					palette.setBackgroundColor(num);
 				}
 			}
 			// ctrl + arrows
@@ -409,24 +445,24 @@ const createPalettePicker = canvas => {
 			let color;
 			switch (e.code) {
 				case 'ArrowLeft': // Ctrl+Left - Previous background color
-					color = State.palette.getBackgroundColor();
+					color = palette.getBackgroundColor();
 					color = color === 0 ? 15 : color - 1;
-					State.palette.setBackgroundColor(color);
+					palette.setBackgroundColor(color);
 					break;
 				case 'ArrowUp': // Ctrl+Up - Previous foreground color
-					color = State.palette.getForegroundColor();
+					color = palette.getForegroundColor();
 					color = color === 0 ? 15 : color - 1;
-					State.palette.setForegroundColor(color);
+					palette.setForegroundColor(color);
 					break;
 				case 'ArrowRight': // Ctrl+Right - Next background color
-					color = State.palette.getBackgroundColor();
+					color = palette.getBackgroundColor();
 					color = color === 15 ? 0 : color + 1;
-					State.palette.setBackgroundColor(color);
+					palette.setBackgroundColor(color);
 					break;
 				case 'ArrowDown': // Ctrl+Down - Next foreground color
-					color = State.palette.getForegroundColor();
+					color = palette.getForegroundColor();
 					color = color === 15 ? 0 : color + 1;
-					State.palette.setForegroundColor(color);
+					palette.setForegroundColor(color);
 					break;
 				default:
 					break;
@@ -434,22 +470,37 @@ const createPalettePicker = canvas => {
 		}
 	};
 
+	/**
+	 * @param {number} x
+	 * @param {number} y
+	 * @param {boolean} isDoubleClick
+	 * @param {boolean} _isTouch
+	 */
 	const handleInteraction = (x, y, isDoubleClick, _isTouch) => {
+		const palette = State.palette;
+		if (!palette) {
+			return;
+		}
 		const colorIndex = y + (x === 0 ? 0 : 8);
 		if (isDoubleClick) {
 			if (cc !== null) {
 				cc.classList.remove('hide');
-				cc.value = State.palette.getRGBColor(colorIndex);
+				cc.value = palette.getRGBColor(colorIndex);
 				cc.click();
 				colorEdited = colorIndex;
 			} else {
-				State.palette.setForegroundColor(colorIndex);
+				palette.setForegroundColor(colorIndex);
 			}
 		} else {
-			State.palette.setForegroundColor(colorIndex);
+			palette.setForegroundColor(colorIndex);
 		}
 	};
 
+	/**
+	 * Shared tap/click handler; touch events carry coords on touches[0]
+	 * @param {*} e TouchEvent or MouseEvent
+	 * @param {boolean} isTouch
+	 */
 	const processEvent = (e, isTouch) => {
 		const rect = canvas.getBoundingClientRect();
 		const coords = isTouch
@@ -475,38 +526,50 @@ const createPalettePicker = canvas => {
 		}
 	};
 
+	/** @param {TouchEvent} e */
 	const touchEnd = e => {
 		if (e.touches.length === 0) {
 			processEvent(e, true);
 		}
 	};
 
+	/** @param {MouseEvent} e */
 	const mouseEnd = e => {
 		processEvent(e, false);
 	};
 
+	/** @param {number[]} a @param {number[]} b */
 	const arraysEqual = (a, b) =>
 		a.length === b.length && a.every((value, index) => value === b[index]);
 
+	/** @param {Event} e */
 	const colorChange = e => {
-		const oldColor = State.palette.hexToXbin(
-			State.palette.getRGBColor(colorEdited),
-		);
-		const newColor = State.palette.hexToXbin(e.target.value);
+		const palette = State.palette;
+		if (!palette) {
+			return;
+		}
+		const oldColor = palette.hexToXbin(palette.getRGBColor(colorEdited));
+		const input = /** @type {HTMLInputElement} */ (e.target);
+		const newColor = palette.hexToXbin(input.value);
 		if (!arraysEqual(oldColor, newColor)) {
-			State.palette.setRGBAColor(colorEdited, newColor);
+			palette.setRGBAColor(colorEdited, newColor);
 		}
 	};
 
 	// Create canvases
-	for (let i = 0; i < 16; i++) {
-		imageData[i] = canvas
-			.getContext('2d')
-			.createImageData(canvas.width / 2, canvas.height / 8);
+	const pickerCtx = canvas.getContext('2d');
+	if (pickerCtx) {
+		for (let i = 0; i < 16; i++) {
+			imageData[i] = pickerCtx.createImageData(
+				canvas.width / 2,
+				canvas.height / 8,
+			);
+		}
 	}
 	// Custom colors
-	if ($('customColor')) {
-		cc = $('customColor');
+	const customColor = /** @type {HTMLInputElement|null} */ ($('customColor'));
+	if (customColor) {
+		cc = customColor;
 		cc.addEventListener('change', colorChange);
 		cc.addEventListener('blur', colorChange);
 	}

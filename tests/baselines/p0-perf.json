@@ -1,0 +1,55 @@
+{
+	"host": {
+		"hostname": "Mac",
+		"platform": "darwin 27.0.0",
+		"arch": "arm64",
+		"cpu": "Apple M4",
+		"cores": 10,
+		"totalMemGB": 32
+	},
+	"capturedAt": "2026-10-09T23:30:08.318Z",
+	"renderer": "canvas2d-chunks",
+	"machine": {
+		"userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+		"hardwareConcurrency": 10,
+		"deviceMemory": 32,
+		"devicePixelRatio": 1,
+		"screen": "1280x720",
+		"viewport": "1240x680"
+	},
+	"docSize": {
+		"columns": 80,
+		"rows": 3000
+	},
+	"scrollFps": 60,
+	"keystrokeMs": 16.7,
+	"zoomMs": 51682,
+	"fullRepaintMs": 49947.9,
+	"canvasMemMB": 3.9,
+	"detail": {
+		"scroll": {
+			"slow": {
+				"frames": 300,
+				"avgFps": 60,
+				"p95FrameMs": 16.7,
+				"jankFrames": 0
+			},
+			"fling": {
+				"frames": 300,
+				"avgFps": 60,
+				"p95FrameMs": 16.7,
+				"jankFrames": 0
+			}
+		},
+		"keystroke": {
+			"medianMs": 16.7,
+			"p95Ms": 32.1,
+			"medianCallMs": 0
+		},
+		"memory": {
+			"canvasCount": 20,
+			"canvasMemMB": 3.9,
+			"jsHeapMB": 4.9
+		}
+	}
+}

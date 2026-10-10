@@ -409,6 +409,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 							await initializeAppComponents();
 							// Signal that every control is wired up (used by e2e tests)
 							bodyContainer.dataset.ready = 'true';
+							// Opt-in instrumentation, never part of the normal boot path
+							const toolParams = new URLSearchParams(window.location.search);
+							if (toolParams.has('test')) {
+								import('./testBridge.js').then(m => m.installTestBridge());
+							}
+							if (toolParams.has('profile')) {
+								import('./profiler.js').then(m => m.installProfiler());
+							}
 						},
 					);
 				};

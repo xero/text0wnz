@@ -7,7 +7,11 @@ const ignore = [
 	'docs',
 	'session',
 	'node_modules',
+	// playwright suites, not vitest
 	'tests/e2e/**',
+	'tests/golden/**',
+	'tests/gl/**',
+	'tests/perf/**',
 	'src/img/**',
 	'src/css/**',
 ];

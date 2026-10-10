@@ -885,6 +885,7 @@ const State = {
 	set pasteTool(value) {
 		stateManager.set('pasteTool', value);
 	},
+	/** @returns {ReturnType<typeof import('./palette.js').createPalette>|null} */
 	get palette() {
 		return stateManager.state.palette;
 	},
@@ -915,6 +916,7 @@ const State = {
 	set selectionTool(value) {
 		stateManager.set('selectionTool', value);
 	},
+	/** @returns {*} font instance (loadFontFromImage/loadFontFromXBData resolve untyped) */
 	get font() {
 		return stateManager.state.font;
 	},

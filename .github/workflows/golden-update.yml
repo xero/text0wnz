@@ -1,0 +1,37 @@
+name: golden update
+# Regenerates the golden screenshot suite inside the CI container (the only
+# environment goldens are valid for) and uploads them as an artifact. Review
+# the images, drop them into tests/golden/golden.spec.js-snapshots/, and
+# commit. Never generate goldens on a workstation.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: read
+jobs:
+  golden-update:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/xero/text0wnz/ci:latest
+      options: --user root
+    steps:
+      - name: checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: install project dependencies
+        run: bun i
+      - name: set localhost domain
+        run: |
+          sed -i 's!text.0w.nz!localhost!' .env
+      - name: build application
+        run: CI=actions bun bake
+      - name: regenerate goldens
+        run: CI=actions bun test:e2e --project=golden --update-snapshots
+        env:
+          HOME: /root
+          PLAYWRIGHT_TEST_BASE_URL: http://localhost:8060
+      - name: upload goldens
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: golden-snapshots
+          path: tests/golden/golden.spec.js-snapshots
+          retention-days: 7
