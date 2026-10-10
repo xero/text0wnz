@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import stylistic from '@stylistic/eslint-plugin';
 import html from "@html-eslint/eslint-plugin";
 import parser from '@html-eslint/parser';
+import tseslint from 'typescript-eslint';
 
 export default [
 	{
@@ -9,6 +10,13 @@ export default [
 		ignores: ['tests/results/**'],
 	},
 	js.configs.recommended,
+	// TypeScript (the v3 core, P2+): tseslint parser + recommended rules,
+	// scoped to .ts so the .js parsing path is untouched. Type-level
+	// correctness is gated separately by `bun types:check`.
+	...tseslint.configs.recommended.map(cfg => ({
+		...cfg,
+		files: ['src/js/**/*.ts', 'tests/**/*.ts'],
+	})),
 	{
 		plugins: {
 			'@stylistic': stylistic,
@@ -17,6 +25,11 @@ export default [
 			'src/*.js',
 			'src/js/**/*.js',
 			'tests/**/*.js',
+			// style rules apply to TS too; the tseslint block above already
+			// set the parser for these files, and languageOptions merge
+			// per-property so this block's globals don't unset it
+			'src/js/**/*.ts',
+			'tests/**/*.ts',
 		],
 		languageOptions: {
 			ecmaVersion: 2022,
