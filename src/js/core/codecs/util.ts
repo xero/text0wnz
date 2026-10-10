@@ -126,3 +126,93 @@ export const utf8Encode = (codepoint: number): number[] => {
 		0x80 | (codepoint & 0x3f),
 	];
 };
+
+// ------------------------------------------------------------------ base64
+// Zero-dep base64 over Uint8Array: atob/btoa are DOM-ish and Buffer is
+// node-only; the envelope codec needs both directions everywhere.
+
+const B64_ALPHABET =
+	'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+export const bytesToBase64 = (bytes: Uint8Array): string => {
+	let out = '';
+	for (let i = 0; i < bytes.length; i += 3) {
+		const a = bytes[i];
+		const b = i + 1 < bytes.length ? bytes[i + 1] : 0;
+		const c = i + 2 < bytes.length ? bytes[i + 2] : 0;
+		out += B64_ALPHABET[a >> 2];
+		out += B64_ALPHABET[((a & 3) << 4) | (b >> 4)];
+		out +=
+			i + 1 < bytes.length ? B64_ALPHABET[((b & 15) << 2) | (c >> 6)] : '=';
+		out += i + 2 < bytes.length ? B64_ALPHABET[c & 63] : '=';
+	}
+	return out;
+};
+
+const B64_REVERSE = new Map<string, number>(
+	Array.from(B64_ALPHABET, (ch, i) => [ch, i] as const),
+);
+
+export const base64ToBytes = (text: string): Uint8Array => {
+	const clean = text.replace(/=+$/, '');
+	const out = new Uint8Array(Math.floor((clean.length * 3) / 4));
+	let at = 0;
+	let buffer = 0;
+	let bits = 0;
+	for (const ch of clean) {
+		const value = B64_REVERSE.get(ch);
+		if (value === undefined) {
+			throw new CodecError(`invalid base64 character ${JSON.stringify(ch)}`);
+		}
+		buffer = (buffer << 6) | value;
+		bits += 6;
+		if (bits >= 8) {
+			bits -= 8;
+			out[at++] = (buffer >> bits) & 0xff;
+		}
+	}
+	return out;
+};
+
+// gzip/gunzip through the runtime-native CompressionStream. Built on
+// bare ReadableStream (no Blob/Response: jsdom's Blob lacks .stream()
+// and the fewer globals the codec touches, the more hosts it runs in).
+
+const pumpThrough = async (
+	bytes: Uint8Array,
+	transform: {
+		readable: ReadableStream<Uint8Array>;
+		writable: WritableStream<BufferSource>;
+	},
+): Promise<Uint8Array> => {
+	const writer = transform.writable.getWriter();
+	// Copy guarantees ArrayBuffer backing for the BufferSource write
+	// (callers may hand views over any buffer type)
+	const chunk = new Uint8Array(bytes);
+	// Errors surface through the read side; the write promise is observed
+	// in finally so a transform failure never leaves a dangling rejection
+	const writing = writer
+		.write(chunk)
+		.then(() => writer.close())
+		.catch(() => undefined);
+	const reader = transform.readable.getReader();
+	const chunks: Uint8Array[] = [];
+	try {
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done) {
+				break;
+			}
+			chunks.push(value);
+		}
+	} finally {
+		await writing;
+	}
+	return concatBytes(chunks);
+};
+
+export const gzip = (bytes: Uint8Array): Promise<Uint8Array> =>
+	pumpThrough(bytes, new CompressionStream('gzip'));
+
+export const gunzip = (bytes: Uint8Array): Promise<Uint8Array> =>
+	pumpThrough(bytes, new DecompressionStream('gzip'));
