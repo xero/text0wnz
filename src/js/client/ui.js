@@ -623,6 +623,10 @@ const createToolPreview = el => {
 	document.addEventListener('onTextCanvasSizeChange', resize);
 	document.addEventListener('onLetterSpacingChange', resize);
 	document.addEventListener('onFontChange', resize);
+	// Zoom dispatches onScaleFactorChange only (not onFontChange); without
+	// this, the chunk canvases keep stale metrics and a preview crossing a
+	// 25-row boundary draws its lower part into a mispositioned canvas
+	document.addEventListener('onScaleFactorChange', resize);
 	document.addEventListener('onOpenedFile', resize);
 
 	return {
