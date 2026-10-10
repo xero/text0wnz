@@ -417,6 +417,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 							if (toolParams.has('profile')) {
 								import('./profiler.js').then(m => m.installProfiler());
 							}
+							if (toolParams.has('spike')) {
+								import('./scrollSpike.js').then(m => m.installScrollSpike());
+							}
 						},
 					);
 				};
