@@ -48,6 +48,15 @@ export default defineConfig({
 			testMatch: 'e2e/**/*.spec.js',
 			use: {
 				channel: 'chrome',
+				// GL is the default renderer (O11); headless needs software
+				// WebGL2 or the whole e2e rail silently tests the fallback
+				launchOptions: {
+					args: [
+						'--use-gl=angle',
+						'--use-angle=swiftshader-webgl',
+						'--enable-unsafe-swiftshader',
+					],
+				},
 			},
 		},
 		{

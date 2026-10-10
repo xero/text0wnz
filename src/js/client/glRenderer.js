@@ -110,7 +110,9 @@ const createGLRenderer = (canvasContainer, host) => {
 		depth: false,
 		stencil: false,
 	});
-	if (!gl) {
+	// Guard against partial contexts too (test shims, broken drivers): the
+	// caller falls back to the chunk renderer on null
+	if (!gl || typeof gl.drawArraysInstanced !== 'function') {
 		return null;
 	}
 

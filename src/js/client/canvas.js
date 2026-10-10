@@ -43,16 +43,25 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	// renderer below stays the default until the owner flips it (O11). All
 	// paint paths delegate when it is active; the doc model is shared.
 	let glRenderer = null;
+	// GL is the default renderer (O11, owner-approved 2026-10-10).
+	// ?renderer=2d forces the legacy chunk renderer, which also remains the
+	// automatic fallback wherever webgl2 is unavailable; its deletion is
+	// owner-triggered after the next tagged release.
 	if (
 		typeof window !== 'undefined' &&
-		new URLSearchParams(window.location.search).get('renderer') === 'gl'
+		new URLSearchParams(window.location.search).get('renderer') !== '2d'
 	) {
-		glRenderer = createGLRenderer(canvasContainer, {
-			getColumns: () => columns,
-			getRows: () => rows,
-			getImageData: () => imageData,
-			getIceColors: () => iceColors,
-		});
+		try {
+			glRenderer = createGLRenderer(canvasContainer, {
+				getColumns: () => columns,
+				getRows: () => rows,
+				getImageData: () => imageData,
+				getIceColors: () => iceColors,
+			});
+		} catch (error) {
+			console.warn('[Canvas] GL renderer init failed', error);
+			glRenderer = null;
+		}
 		if (!glRenderer) {
 			console.warn('[Canvas] webgl2 unavailable; using the chunk renderer');
 		}
@@ -2048,6 +2057,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	return {
 		resize: resize,
 		redrawEntireImage: redrawEntireImage,
+		getRendererId: () =>
+			glRenderer ? 'webgl2-slack-buffer' : 'canvas2d-chunks',
 		setFont: setFont,
 		getIceColors: getIceColors,
 		setIceColors: setIceColors,

@@ -84,10 +84,11 @@ const realartName = ({ zoom, nine, scroll }) =>
 	`realart-vga-z${zoom}-${nine ? '9px' : '8px'}-${scroll}.png`;
 
 const prepPage = async (page, testInfo) => {
-	// The golden-gl project runs the SAME shots through the GL renderer
-	// and asserts against the SAME goldens: the P1 pixel-parity gate
+	// Both renderers assert the SAME goldens (the P1 pixel-parity gate).
+	// GL is the default since O11; the golden project pins the legacy chunk
+	// renderer explicitly so it keeps its pixel gate until deletion
 	const gl = testInfo.project.name === 'golden-gl';
-	await page.goto(gl ? '/?test&renderer=gl' : '/?test');
+	await page.goto(gl ? '/?test&renderer=gl' : '/?test&renderer=2d');
 	await waitForEditorReady(page);
 	await page.waitForFunction(() => !!window.__t0wnz, null, { timeout: 10000 });
 	// Cursor/selection overlays toggle with focus state, which is racy

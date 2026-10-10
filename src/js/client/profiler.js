@@ -249,10 +249,11 @@ const installProfiler = () => {
 
 		const results = {
 			capturedAt: new Date().toISOString(),
-			renderer:
-				new URLSearchParams(window.location.search).get('renderer') === 'gl'
-					? 'webgl2-slack-buffer'
-					: 'canvas2d-chunks',
+			// Report the renderer actually in use, not the URL's request:
+			// GL is the default and falls back to the chunk renderer
+			renderer: State.textArtCanvas.getRendererId
+				? State.textArtCanvas.getRendererId()
+				: 'unknown',
 			machine: machineDescriptor(),
 			docSize: preset,
 			// Headline metrics (PLAN.md P0 baseline shape)
