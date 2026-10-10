@@ -1,7 +1,8 @@
 /**
- * WebGL2 text renderer (PLAN.md §3.1, §4 P1), the editor's second renderer
- * implementation behind ?renderer=gl (chunk renderer stays the default until
- * the owner flips it, O11).
+ * WebGL2 text renderer (PLAN.md §3.1, §4 P1), the editor's DEFAULT renderer
+ * since O11 (owner-approved 2026-10-10). ?renderer=2d forces the legacy
+ * chunk renderer, which also remains the automatic fallback wherever webgl2
+ * is unavailable, until its owner-triggered deletion.
  *
  * Architecture: the slack-buffer pattern validated by the P1 scroll spike.
  * One canvas positioned absolutely inside #canvasContainer, sized to the
@@ -204,7 +205,12 @@ const createGLRenderer = (canvasContainer, host) => {
 	initGL();
 
 	// unpack the 1bpp font into cached per-glyph bit rows (shared by the
-	// atlas upload and the CPU export rasterizer)
+	// atlas upload and the CPU export rasterizer). Deliberately capped at
+	// 256 glyphs: the u16 doc model (charCode<<8 | attr) holds 8 bits of
+	// charCode, so no cell anywhere in the editor can address an upper-page
+	// glyph; the chunk renderer and both exporters have the same reach.
+	// 512-glyph XB fonts survive save round-trips at the codec level, and
+	// upper-page ADDRESSING arrives with the P2 doc model + glyph table.
 	const unpackFontBits = fontData => {
 		const bits = new Uint8Array(fontData.width * fontData.height * 256);
 		for (let k = 0; k < bits.length; k++) {

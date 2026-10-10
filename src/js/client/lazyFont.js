@@ -223,6 +223,12 @@ export const createLazyFont = (
 	 * On-demand generation covers anything drawn before the drain finishes.
 	 */
 	const idle = globalThis.requestIdleCallback || (fn => setTimeout(fn, 0));
+	// Set by dispose(): font.js replaces the lazy font on every zoom, spacing,
+	// font, and palette change, and a replaced instance's drain must stop, or
+	// stale drains stack and fill orphaned caches. The setTimeout fallback
+	// (Safari has no requestIdleCallback) has no budget gate, so stacked
+	// drains there are real main-thread work, not just wasted idle time.
+	let disposed = false;
 	const preGenerateCommonGlyphs = () => {
 		const commonChars = [
 			32, // Space
@@ -252,6 +258,9 @@ export const createLazyFont = (
 			}
 		}
 		const drain = deadline => {
+			if (disposed) {
+				return;
+			}
 			// With a real IdleDeadline, pack glyphs into the granted budget;
 			// in the setTimeout fallback, a fixed small batch per tick
 			let fallbackBudget = 16;
@@ -277,6 +286,11 @@ export const createLazyFont = (
 
 	return {
 		getData: () => fontData,
+		// Stop the idle pregeneration drain; the caches stay valid for any
+		// caller still holding the instance
+		dispose: () => {
+			disposed = true;
+		},
 		// Return scaled dimensions
 		getWidth: () =>
 			letterSpacing ? scaledWidth + Math.floor(1 * scaleFactor) : scaledWidth,

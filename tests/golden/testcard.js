@@ -103,9 +103,16 @@ export const testcardIceBin = () => {
 };
 
 /**
- * 512-glyph XBin test card with a custom palette and a procedural font
- * (each glyph renders its own index as a bit pattern, so font paging
- * regressions are visible). Ice flag set, bright backgrounds used.
+ * 512-glyph XBin test card with a custom palette and a procedural font.
+ * What it gates TODAY: loading a 512-glyph XB through the real codec
+ * (flag bit 4, 512*fontHeight font bytes, custom palette) and rendering
+ * the lower page. It cannot exercise upper-page RENDERING, because the
+ * u16 doc model holds 8 bits of charCode, so no cell can address glyphs
+ * 256-511 anywhere in the editor until the P2 doc model + glyph table.
+ * The upper-page bitmaps are the bitwise inverse of their lower-page
+ * counterparts, so the moment upper-page addressing exists, any paging
+ * bug flips pixels and the goldens catch it. Ice flag set, bright
+ * backgrounds used.
  */
 export const testcard512Xb = () => {
 	const fontHeight = 16;
@@ -113,12 +120,15 @@ export const testcard512Xb = () => {
 	const font = new Uint8Array(glyphCount * fontHeight);
 	for (let glyph = 0; glyph < glyphCount; glyph++) {
 		for (let y = 0; y < fontHeight; y++) {
-			// Recognizable, glyph-dependent stripes with a solid border
+			// Recognizable, glyph-dependent stripes with a solid border;
+			// inverted stripes on the upper page keep every glyph's bitmap
+			// distinct from its page-one counterpart
+			const stripes = (glyph ^ (y * 37)) & 0xff;
 			if (y === 0 || y === fontHeight - 1) {
 				font[glyph * fontHeight + y] = 0xff;
 			} else {
 				font[glyph * fontHeight + y] =
-					(glyph ^ (y * 37)) & 0xff;
+					glyph & 0x100 ? ~stripes & 0xff : stripes;
 			}
 		}
 	}
@@ -126,7 +136,9 @@ export const testcard512Xb = () => {
 	const rows = 8;
 	const cells = new Uint16Array(COLUMNS * rows);
 	for (let i = 0; i < cells.length; i++) {
-		// Walk all 512 glyphs; vary colors incl. bright backgrounds
+		// Walk the glyph space with varied colors incl. bright backgrounds;
+		// the & 0xff below is the doc model's own ceiling (see the doc
+		// comment above), so rendered cells repeat the lower page
 		const glyph = i % glyphCount;
 		const fg = 1 + (i % 15);
 		const bg = (i >> 2) % 16;

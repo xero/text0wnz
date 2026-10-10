@@ -39,14 +39,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				},
 				canvasChunks = new Map(); // Key: chunkIndex, Value: { canvas, ctx, onBlink, offBlink, rendered: bool }
 
-	// Experimental GL renderer (PLAN.md P1) behind ?renderer=gl; the chunk
-	// renderer below stays the default until the owner flips it (O11). All
-	// paint paths delegate when it is active; the doc model is shared.
-	let glRenderer = null;
-	// GL is the default renderer (O11, owner-approved 2026-10-10).
-	// ?renderer=2d forces the legacy chunk renderer, which also remains the
-	// automatic fallback wherever webgl2 is unavailable; its deletion is
+	// GL is the default renderer (PLAN.md P1/O11, owner-approved 2026-10-10).
+	// All paint paths delegate to it when active; the doc model is shared.
+	// ?renderer=2d forces the legacy chunk renderer below, which also remains
+	// the automatic fallback wherever webgl2 is unavailable; its deletion is
 	// owner-triggered after the next tagged release.
+	let glRenderer = null;
 	if (
 		typeof window !== 'undefined' &&
 		new URLSearchParams(window.location.search).get('renderer') !== '2d'

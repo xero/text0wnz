@@ -120,6 +120,39 @@ describe('Lazy Font Module', () => {
 			expect(cacheSize).toBe(5 * 16 * 16);
 		});
 
+		it('should stop pre-generation when disposed before the first idle tick', async () => {
+			lazyFontInstance = createLazyFont(fontData, mockPalette, false);
+			lazyFontInstance.dispose();
+			await flushIdle();
+
+			// The queued drain saw the disposed flag and generated nothing
+			expect(lazyFontInstance.getCacheSize()).toBe(0);
+			expect(lazyFontInstance.getAlphaCacheSize()).toBe(0);
+		});
+
+		it('should stop a partially drained pre-generation on dispose', async () => {
+			lazyFontInstance = createLazyFont(fontData, mockPalette, false);
+
+			// Let a couple of fallback ticks run (16 glyphs each), then cancel
+			const idle = globalThis.requestIdleCallback || (fn => setTimeout(fn, 0));
+			for (let i = 0; i < 2; i++) {
+				await new Promise(resolve => idle(() => resolve()));
+			}
+			lazyFontInstance.dispose();
+			const sizeAtDispose =
+				lazyFontInstance.getCacheSize() + lazyFontInstance.getAlphaCacheSize();
+			await flushIdle();
+
+			// No further slices ran after dispose; on-demand generation still works
+			expect(
+				lazyFontInstance.getCacheSize() + lazyFontInstance.getAlphaCacheSize(),
+			).toBe(sizeAtDispose);
+			lazyFontInstance.getGlyph(65, 7, 0);
+			expect(
+				lazyFontInstance.getCacheSize() + lazyFontInstance.getAlphaCacheSize(),
+			).toBe(sizeAtDispose + 1);
+		});
+
 		it('should generate glyphs on demand', () => {
 			lazyFontInstance = createLazyFont(fontData, mockPalette, false);
 
