@@ -94,6 +94,27 @@ export default defineConfig({
 			},
 		},
 		{
+			// P1 pixel-parity gate: the same golden suite rendered through
+			// the GL renderer (?renderer=gl) and asserted against the SAME
+			// goldens the 2D chunk renderer generated (integer zoom, dpr 1)
+			name: 'golden-gl',
+			testMatch: 'golden/**/*.spec.js',
+			ignoreSnapshots: !process.env.CI,
+			snapshotPathTemplate:
+				'{snapshotDir}/{testFileDir}/{testFileName}-snapshots/{arg}-golden{-snapshotSuffix}{ext}',
+			use: {
+				browserName: 'chromium',
+				deviceScaleFactor: 1,
+				launchOptions: {
+					args: [
+						'--use-gl=angle',
+						'--use-angle=swiftshader-webgl',
+						'--enable-unsafe-swiftshader',
+					],
+				},
+			},
+		},
+		{
 			// GL rail for the P1 renderer (PLAN.md §4 P0): same SwiftShader
 			// flags the goldens use; asserts WebGL2 works in CI before any
 			// renderer code depends on it

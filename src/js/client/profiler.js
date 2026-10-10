@@ -249,7 +249,10 @@ const installProfiler = () => {
 
 		const results = {
 			capturedAt: new Date().toISOString(),
-			renderer: 'canvas2d-chunks',
+			renderer:
+				new URLSearchParams(window.location.search).get('renderer') === 'gl'
+					? 'webgl2-slack-buffer'
+					: 'canvas2d-chunks',
 			machine: machineDescriptor(),
 			docSize: preset,
 			// Headline metrics (PLAN.md P0 baseline shape)

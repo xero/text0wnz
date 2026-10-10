@@ -249,8 +249,11 @@ export const createLazyFont = (
 		}
 	};
 
-	// Pre-generate common glyphs on initialization
-	preGenerateCommonGlyphs();
+	// Pre-generate common glyphs when the thread next idles: on-demand
+	// generation covers anything drawn before then, and keeping this off the
+	// critical path makes font/zoom changes hundreds of ms cheaper
+	const idle = globalThis.requestIdleCallback || (fn => setTimeout(fn, 0));
+	idle(() => preGenerateCommonGlyphs());
 
 	return {
 		getData: () => fontData,

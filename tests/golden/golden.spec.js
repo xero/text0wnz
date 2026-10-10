@@ -102,7 +102,10 @@ test.describe('golden renderer screenshots', () => {
 				!goldenExists(shotName(combo)),
 				'golden not seeded; run the golden-update workflow and commit its artifact',
 			);
-			await page.goto('/?test');
+			// The golden-gl project runs the SAME shots through the GL renderer
+			// and asserts against the SAME goldens: the P1 pixel-parity gate
+			const gl = testInfo.project.name === 'golden-gl';
+			await page.goto(gl ? '/?test&renderer=gl' : '/?test');
 			await waitForEditorReady(page);
 			await page.waitForFunction(() => !!window.__t0wnz, null, { timeout: 10000 });
 			// Cursor/selection overlays toggle with focus state, which is racy

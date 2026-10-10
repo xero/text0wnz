@@ -20,7 +20,13 @@ import { chromium } from 'playwright';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const distDir = path.join(repoRoot, 'dist');
-const outFile = path.join(repoRoot, 'tests/baselines/p0-perf.json');
+// PERF_QUERY/PERF_OUT make the same harness capture other renderers, e.g.
+//   PERF_QUERY='?profile&renderer=gl' PERF_OUT=tests/baselines/p1-gl-perf.json
+const outFile = path.join(
+	repoRoot,
+	process.env.PERF_OUT || 'tests/baselines/p0-perf.json',
+);
+const QUERY = process.env.PERF_QUERY || '?profile';
 const PORT = process.env.PERF_PORT || 8071;
 const PRESET = process.env.PERF_PRESET || '80x3000';
 
@@ -70,7 +76,7 @@ const main = async () => {
 		const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 		page.on('pageerror', error => console.error('[pageerror]', error.message));
 
-		await page.goto(`http://localhost:${PORT}/?profile`, { waitUntil: 'load' });
+		await page.goto(`http://localhost:${PORT}/${QUERY}`, { waitUntil: 'load' });
 		await page.waitForSelector('#bodyContainer[data-ready]', {
 			state: 'attached',
 			timeout: 30000,

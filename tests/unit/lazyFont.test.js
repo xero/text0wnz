@@ -1,6 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createLazyFont } from '../../src/js/client/lazyFont.js';
 
+// Common-glyph pre-generation is deferred to idle time; queue behind it
+// with the same mechanism so assertions see the populated cache
+const flushIdle = () =>
+	new Promise(resolve => {
+		(globalThis.requestIdleCallback || (fn => setTimeout(fn, 0)))(() =>
+			resolve());
+	});
+
 // Mock the UI module
 vi.mock('../../src/js/client/ui.js', () => ({
 	createCanvas: vi.fn(() => ({
@@ -97,10 +105,11 @@ describe('Lazy Font Module', () => {
 			expect(lazyFontInstance.getData()).toEqual(fontData);
 		});
 
-		it('should pre-generate common glyphs', () => {
+		it('should pre-generate common glyphs', async () => {
 			lazyFontInstance = createLazyFont(fontData, mockPalette, false);
+			await flushIdle();
 
-			// Common glyphs should be cached immediately
+			// Common glyphs are cached once the thread idles
 			const cacheSize = lazyFontInstance.getCacheSize();
 			expect(cacheSize).toBeGreaterThan(0);
 
@@ -165,8 +174,9 @@ describe('Lazy Font Module', () => {
 			expect(alphaGlyph).toBeDefined();
 		});
 
-		it('should cache alpha glyphs separately', () => {
+		it('should cache alpha glyphs separately', async () => {
 			lazyFontInstance = createLazyFont(fontData, mockPalette, false);
+			await flushIdle();
 
 			// Upper half-block character (220)
 			const alphaGlyph1 = lazyFontInstance.getAlphaGlyph(220, 5);
@@ -306,8 +316,9 @@ describe('Lazy Font Module', () => {
 	});
 
 	describe('Memory Efficiency', () => {
-		it('should not pre-generate all glyphs', () => {
+		it('should not pre-generate all glyphs', async () => {
 			lazyFontInstance = createLazyFont(fontData, mockPalette, false);
+			await flushIdle();
 
 			// Total possible glyphs: 256 chars × 16 fg × 16 bg = 65,536
 			// But we only pre-generate common ones: 5 chars × 16 × 16 = 1,280
