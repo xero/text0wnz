@@ -213,9 +213,14 @@ export const createLazyFont = (
 	};
 
 	/**
-	 * Pre-generate commonly used glyphs for instant access
-	 * Common characters: space (32) and block characters (176, 177, 178, 219)
+	 * Pre-generate commonly used glyphs for instant access, in idle slices.
+	 * Common characters: space (32) and block characters (176, 177, 178, 219).
+	 * One monolithic pass measured ~2.4s of main thread on an iPad, stalling
+	 * the first idle moment after every font or zoom change (and polluting
+	 * anything measured across it); a 16-glyph slice per tick keeps each
+	 * block trivial, and on-demand generation covers anything drawn sooner.
 	 */
+	const idle = globalThis.requestIdleCallback || (fn => setTimeout(fn, 0));
 	const preGenerateCommonGlyphs = () => {
 		const commonChars = [
 			32, // Space
@@ -224,16 +229,6 @@ export const createLazyFont = (
 			178, // Dark block ▓
 			219, // Full block █
 		];
-
-		for (let fg = 0; fg < 16; fg++) {
-			for (let bg = 0; bg < 16; bg++) {
-				commonChars.forEach(charCode => {
-					getGlyph(charCode, fg, bg);
-				});
-			}
-		}
-
-		// Also pre-generate alpha glyphs for special drawing characters
 		const alphaChars = [
 			magicNumbers.LOWER_HALFBLOCK,
 			magicNumbers.UPPER_HALFBLOCK,
@@ -241,19 +236,44 @@ export const createLazyFont = (
 			magicNumbers.CHAR_PIPE,
 			magicNumbers.CHAR_CAPITAL_X,
 		];
-
-		for (let fg = 0; fg < 16; fg++) {
-			alphaChars.forEach(charCode => {
-				getAlphaGlyph(charCode, fg);
+		const slices = [];
+		for (const charCode of commonChars) {
+			for (let bg = 0; bg < 16; bg++) {
+				slices.push(() => {
+					for (let fg = 0; fg < 16; fg++) {
+						getGlyph(charCode, fg, bg);
+					}
+				});
+			}
+		}
+		for (const charCode of alphaChars) {
+			slices.push(() => {
+				for (let fg = 0; fg < 16; fg++) {
+					getAlphaGlyph(charCode, fg);
+				}
 			});
 		}
+		const drain = deadline => {
+			// With a real IdleDeadline, fill the granted budget; in the
+			// setTimeout fallback, one slice per tick
+			do {
+				slices.shift()();
+			} while (
+				slices.length > 0 &&
+				deadline &&
+				deadline.timeRemaining &&
+				deadline.timeRemaining() > 2
+			);
+			if (slices.length > 0) {
+				idle(drain);
+			}
+		};
+		idle(drain);
 	};
 
-	// Pre-generate common glyphs when the thread next idles: on-demand
-	// generation covers anything drawn before then, and keeping this off the
-	// critical path makes font/zoom changes hundreds of ms cheaper
-	const idle = globalThis.requestIdleCallback || (fn => setTimeout(fn, 0));
-	idle(() => preGenerateCommonGlyphs());
+	// Pre-generate common glyphs when the thread next idles: keeping this off
+	// the critical path makes font/zoom changes hundreds of ms cheaper
+	preGenerateCommonGlyphs();
 
 	return {
 		getData: () => fontData,

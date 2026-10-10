@@ -1,13 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createLazyFont } from '../../src/js/client/lazyFont.js';
 
-// Common-glyph pre-generation is deferred to idle time; queue behind it
-// with the same mechanism so assertions see the populated cache
-const flushIdle = () =>
-	new Promise(resolve => {
-		(globalThis.requestIdleCallback || (fn => setTimeout(fn, 0)))(() =>
-			resolve());
-	});
+// Common-glyph pre-generation is deferred to idle time and drained in
+// slices, one per tick in the setTimeout fallback; interleave enough ticks
+// with the same mechanism so assertions see the fully populated cache
+// (85 slices: 5 chars x 16 backgrounds + 5 alpha chars)
+const flushIdle = async () => {
+	const idle = globalThis.requestIdleCallback || (fn => setTimeout(fn, 0));
+	for (let i = 0; i < 100; i++) {
+		await new Promise(resolve => idle(() => resolve()));
+	}
+};
 
 // Mock the UI module
 vi.mock('../../src/js/client/ui.js', () => ({
