@@ -42,6 +42,13 @@ export interface PatchArenaStats {
 	canRedo: boolean;
 }
 
+/** Per-write observer for undo/redo (dirty-cell + collab replication). */
+export type PlaneWrite = (
+	plane: PlaneName,
+	index: number,
+	word: number,
+) => void;
+
 export interface PatchArena {
 	beginStroke: (meta: StrokeMeta) => void;
 	/**
@@ -56,8 +63,13 @@ export interface PatchArena {
 	) => void;
 	/** Commit the open stroke; empty strokes vanish. Drops the redo tail. */
 	endStroke: () => boolean;
-	undo: (doc: DocV3) => StrokeMeta | null;
-	redo: (doc: DocV3) => StrokeMeta | null;
+	undo: (doc: DocV3, onWrite?: PlaneWrite) => StrokeMeta | null;
+	redo: (doc: DocV3, onWrite?: PlaneWrite) => StrokeMeta | null;
+	/**
+	 * Drop the redo tail without committing anything: v2's startUndo
+	 * clears redo unconditionally, even when no edits follow.
+	 */
+	dropRedo: () => void;
 	stats: () => PatchArenaStats;
 	clear: () => void;
 }
@@ -176,7 +188,7 @@ export const createPatchArena = (
 			options.onCommit?.({ meta, patches });
 			return true;
 		},
-		undo: doc => {
+		undo: (doc, onWrite) => {
 			if (openMeta) {
 				throw new Error('[core/patchArena] stroke still open');
 			}
@@ -192,12 +204,13 @@ export const createPatchArena = (
 				const target = planeOf(doc, stroke.meta.frame, plane);
 				for (let i = 0; i < flat.length; i += 3) {
 					target[flat[i]] = flat[i + 1];
+					onWrite?.(plane, flat[i], flat[i + 1]);
 				}
 			}
 			cursor--;
 			return { ...stroke.meta };
 		},
-		redo: doc => {
+		redo: (doc, onWrite) => {
 			if (openMeta) {
 				throw new Error('[core/patchArena] stroke still open');
 			}
@@ -213,10 +226,16 @@ export const createPatchArena = (
 				const target = planeOf(doc, stroke.meta.frame, plane);
 				for (let i = 0; i < flat.length; i += 3) {
 					target[flat[i]] = flat[i + 2];
+					onWrite?.(plane, flat[i], flat[i + 2]);
 				}
 			}
 			cursor++;
 			return { ...stroke.meta };
+		},
+		dropRedo: () => {
+			strokes.splice(cursor + 1).forEach(dropped => {
+				bytes -= dropped.bytes;
+			});
 		},
 		stats: () => ({
 			strokes: strokes.length,
