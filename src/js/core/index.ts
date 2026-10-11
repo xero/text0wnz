@@ -21,3 +21,4 @@ export * from './codecs/ans.js';
 export * from './codecs/tundra.js';
 export * from './codecs/dur.js';
 export * from './codecs/envelope.js';
+export * from './protocol/moebius.js';
