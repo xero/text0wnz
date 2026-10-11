@@ -422,6 +422,8 @@
 			<article class="separator"></article>
 			<article id="defaultColor" class="menuItem">Default Color <kbd>Ctrl-D</kbd></article>
 			<article id="swapColors" class="menuItem">Swap Colors <kbd>Ctrl-Q</kbd></article>
+			<article class="separator"></article>
+			<article id="charsetPicker" class="menuItem">Character Sets</article>
 			<article id="fullscreen" class="menuItem">Toggle Fullscreen Mode</article>
 		</div>
 		<dialog id="modal">
@@ -758,6 +760,22 @@
 						Cancel
 					</button>
 				</nav>
+			</section>
+			<section id="charsetModal">
+				<h2>Character Sets: <strong id="charsetBlockLabel"></strong></h2>
+				<article>
+					<aside>
+						<input id="charsetSearch" type="text" aria-label="Search Unicode Blocks" autocomplete="off" placeholder="search unicode blocks"/>
+						<ul id="charsetBlocks" aria-label="Unicode Blocks" role="listbox" tabindex="0"></ul>
+					</aside>
+					<aside>
+						<div id="charsetGrid" aria-label="Characters"></div>
+						<footer>
+							<label id="charsetImportLabel" for="charsetImport">Import charset (.ini / .json)</label>
+							<input id="charsetImport" class="hide" type="file" aria-label="Import Charset" accept=".ini,.json,text/plain,application/json"/>
+						</footer>
+					</aside>
+				</article>
 			</section>
 			<section id="tutorialsModal">
 				<header>

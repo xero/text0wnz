@@ -6,6 +6,7 @@ import { createTextArtCanvas } from './canvas.js';
 import { createWorkerHandler, createChatController } from './network.js';
 import { trustedMessage } from './messageGuard.js';
 import { createZoomController } from './zoom.js';
+import { createCharsetPicker } from './charsetPicker.js';
 import { FontCache } from './fontCache.js';
 import {
 	$,
@@ -542,6 +543,10 @@ const initializeAppComponents = async () => {
 	onClick($('navDelete'), State.pasteTool.deleteSelection);
 	onClick($('navUndo'), State.textArtCanvas.undo);
 	onClick($('navRedo'), State.textArtCanvas.redo);
+
+	// P5 charset picker (durdraw lineage)
+	const charsetPicker = createCharsetPicker();
+	onClick($('charsetPicker'), charsetPicker.show);
 
 	// Credz
 	onClick($('about'), _ => {

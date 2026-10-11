@@ -163,6 +163,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					if (glRenderer) {
 						glRenderer.redraw();
 					}
+					// the F-key bar and charset picker re-render from this
+					document.dispatchEvent(new CustomEvent('onHexBlocksLoaded'));
 				},
 			});
 		}
@@ -1679,6 +1681,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		getRendererId: () =>
 			glRenderer ? 'webgl2-slack-buffer' : 'canvas2d-chunks',
 		resolveUnicode: resolveUnicode,
+		// preview-only (never interns); tri-state like glyphBits
+		unicodeGlyphBits: (codepoint, fontW, fontH) =>
+			ensureHexPages().previewBits(codepoint, fontW, fontH),
 		setFont: setFont,
 		getIceColors: getIceColors,
 		setIceColors: setIceColors,

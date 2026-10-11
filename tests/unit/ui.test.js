@@ -282,6 +282,7 @@ describe('UI Utilities', () => {
 				<div id="fontsModal" class="hide"></div>
 				<div id="sauceModal" class="hide"></div>
 				<div id="websocketModal" class="hide"></div>
+				<div id="charsetModal" class="hide"></div>
 				<div id="choiceModal" class="hide"></div>
 				<div id="aboutModal" class="hide"></div>
 				<div id="updateModal" class="hide"></div>
@@ -311,6 +312,7 @@ describe('UI Utilities', () => {
 				<div id="resizeModal" class="hide"></div>
 				<div id="fontsModal" class="hide"></div>
 				<div id="sauceModal" class="hide"></div>
+				<div id="charsetModal" class="hide"></div>
 				<div id="choiceModal" class="hide"></div>
 				<div id="aboutModal" class="hide"></div>
 				<div id="updateModal" class="hide"></div>
@@ -692,6 +694,7 @@ describe('UI Utilities', () => {
 				'resize',
 				'fonts',
 				'sauce',
+				'charset',
 				'choice',
 				'update',
 				'loading',

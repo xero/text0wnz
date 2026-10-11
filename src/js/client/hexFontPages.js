@@ -193,6 +193,25 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 	};
 
 	/**
+	 * Preview bits across ALL hex fonts (unscii first), without any
+	 * glyph-table interning: the charset picker and F-key bar render
+	 * from this. Same tri-state contract as glyphBits.
+	 */
+	const previewBits = (codepoint, fontW, fontH) => {
+		let waiting = false;
+		for (const slot of SLOT_KEYS.keys()) {
+			const bits = glyphBits(slot, codepoint, fontW, fontH);
+			if (bits instanceof Uint8Array) {
+				return bits;
+			}
+			if (bits === undefined) {
+				waiting = true;
+			}
+		}
+		return waiting ? undefined : null;
+	};
+
+	/**
 	 * Fire the fetches for every block a doc's glyph table touches
 	 * (dedupe is free: loadBlock and the caches already collapse
 	 * repeats). Used on doc load so scrolling and exports meet loaded
@@ -215,6 +234,7 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 
 	return {
 		glyphBits,
+		previewBits,
 		pickSlot,
 		preload,
 		loadManifest,

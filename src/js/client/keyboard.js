@@ -7,6 +7,7 @@ import {
 	PASTE_SUBSTITUTE,
 	tokenizePasteText,
 } from '../core/paste.js';
+import { pageFromString, pagesForRange } from '../core/charsets.js';
 
 const createFKeys = () => {
 	// Stolen "savagely" from Moebius, who stole it "mercilessly" from PabloDraw, thanks Curtis! lol
@@ -57,12 +58,102 @@ const createFKeys = () => {
 		return charSets;
 	};
 
-	const fkeySets = generateCharSets();
+	// P5 charset tables (durdraw model): pages are {label, chars} where
+	// chars are tokens - 0-255 draws the classic font, negative is
+	// ~codepoint and renders/draws through the hex fonts + glyph table
+	const classicPages = generateCharSets().map((chars, index) => ({
+		label: `CP437 ${index + 1}`,
+		chars,
+	}));
+	const unicodePages = [
+		pageFromString('Rounded & diagonals', '╭╮╰╯╱╲╳◤◥◢◣'),
+		...pagesForRange('Sextants', 0x1fb00, 0x1fb3b),
+		...pagesForRange('Wedges', 0x1fb3c, 0x1fb6f),
+		...pagesForRange('Eighth blocks', 0x1fb70, 0x1fb8b),
+	];
+	const loadCustomPages = () => {
+		try {
+			const raw = localStorage.getItem('customCharsets');
+			const parsed = raw ? JSON.parse(raw) : [];
+			return Array.isArray(parsed)
+				? parsed.filter(page => page && Array.isArray(page.chars))
+				: [];
+		} catch {
+			return [];
+		}
+	};
+	let customPages = loadCustomPages();
+	const buildSets = () => [...classicPages, ...unicodePages, ...customPages];
+	let fkeySets = buildSets();
 	let currentSetIndex = 5; // Default to set 5 (blocks, half-blocks, etc.)
+
+	// warm the glyph table + hex blocks for the active page so inserts
+	// and previews are ready by the time they're used
+	const preresolveCurrentSet = () => {
+		const codepoints = fkeySets[currentSetIndex].chars
+			.filter(token => token < 0)
+			.map(token => ~token);
+		if (codepoints.length > 0 && State.textArtCanvas) {
+			State.textArtCanvas.resolveUnicode(codepoints);
+		}
+	};
+
+	/** paint one ~codepoint token onto an fkey canvas */
+	const drawUnicodeToken = (ctx, width, height, codepoint) => {
+		const bits = State.textArtCanvas
+			? State.textArtCanvas.unicodeGlyphBits(codepoint, width, height)
+			: null;
+		const fg = State.palette.getRGBAColor(State.palette.getForegroundColor());
+		const bg = State.palette.getRGBAColor(State.palette.getBackgroundColor());
+		const image = ctx.createImageData(width, height);
+		for (let i = 0; i < width * height; i++) {
+			const on = bits instanceof Uint8Array && bits[i] === 1;
+			const color = on ? fg : bg;
+			image.data[i * 4] = color[0];
+			image.data[i * 4 + 1] = color[1];
+			image.data[i * 4 + 2] = color[2];
+			image.data[i * 4 + 3] = 255;
+		}
+		ctx.putImageData(image, 0, 0);
+		if (bits === null) {
+			// definitively unrenderable: hollow box like the renderer
+			ctx.strokeStyle = `rgba(${fg[0]},${fg[1]},${fg[2]},1)`;
+			ctx.strokeRect(1.5, 1.5, width - 3, height - 3);
+		}
+	};
+
+	/** insert any token at the cursor (resolves unicode first) */
+	const insertToken = token => {
+		const commit = charCode => {
+			State.textArtCanvas.startUndo();
+			State.textArtCanvas.draw(callback => {
+				callback(
+					charCode,
+					State.palette.getForegroundColor(),
+					State.palette.getBackgroundColor(),
+					State.cursor.getX(),
+					State.cursor.getY(),
+				);
+			}, false);
+			State.cursor.right();
+		};
+		if (token >= 0) {
+			commit(token);
+			return;
+		}
+		State.textArtCanvas
+			.resolveUnicode([~token])
+			.then(resolved => commit(resolved.get(~token) ?? 63));
+	};
 
 	// Update all fkey canvases with current set
 	const updateFKeyDisplays = () => {
-		const currentSet = fkeySets[currentSetIndex];
+		const currentPage = fkeySets[currentSetIndex];
+		const currentSet = currentPage.chars;
+		const toolbar = $('keyboardToolbar');
+		if (toolbar) {
+			toolbar.title = currentPage.label;
+		}
 		for (let i = 0; i < 12; i++) {
 			const canvas = $('fkey' + i);
 			if (canvas) {
@@ -79,14 +170,23 @@ const createFKeys = () => {
 				canvas.style.width = baseWidth * fixedScale + 'px';
 				canvas.style.height = baseHeight * fixedScale + 'px';
 
-				State.font.draw(
-					currentSet[i],
-					State.palette.getForegroundColor(),
-					State.palette.getBackgroundColor(),
-					canvas.getContext('2d'),
-					0,
-					0,
-				);
+				if (currentSet[i] >= 0) {
+					State.font.draw(
+						currentSet[i],
+						State.palette.getForegroundColor(),
+						State.palette.getBackgroundColor(),
+						canvas.getContext('2d'),
+						0,
+						0,
+					);
+				} else {
+					drawUnicodeToken(
+						canvas.getContext('2d'),
+						canvas.width,
+						canvas.height,
+						~currentSet[i],
+					);
+				}
 			}
 		}
 	};
@@ -96,20 +196,9 @@ const createFKeys = () => {
 		const canvas = $('fkey' + i);
 		const wrap = $('fkey' + i + 'w');
 		if (canvas && wrap) {
-			const insert = () => {
-				State.textArtCanvas.startUndo();
-				State.textArtCanvas.draw(callback => {
-					callback(
-						fkeySets[currentSetIndex][i],
-						State.palette.getForegroundColor(),
-						State.palette.getBackgroundColor(),
-						State.cursor.getX(),
-						State.cursor.getY(),
-					);
-				}, false);
-				State.cursor.right();
-			};
-			wrap.addEventListener('click', insert);
+			wrap.addEventListener('click', () => {
+				insertToken(fkeySets[currentSetIndex].chars[i]);
+			});
 		}
 	}
 
@@ -120,12 +209,14 @@ const createFKeys = () => {
 	const previousCharacterSet = () => {
 		currentSetIndex =
 			currentSetIndex <= 0 ? fkeySets.length - 1 : currentSetIndex - 1;
+		preresolveCurrentSet();
 		updateFKeyDisplays();
 	};
 
 	const nextCharacterSet = () => {
 		currentSetIndex =
 			currentSetIndex >= fkeySets.length - 1 ? 0 : currentSetIndex + 1;
+		preresolveCurrentSet();
 		updateFKeyDisplays();
 	};
 
@@ -149,17 +240,7 @@ const createFKeys = () => {
 			fKeyMatch[1] <= 12
 		) {
 			e.preventDefault();
-			State.textArtCanvas.startUndo();
-			State.textArtCanvas.draw(callback => {
-				callback(
-					fkeySets[currentSetIndex][fKeyMatch[1] - 1],
-					State.palette.getForegroundColor(),
-					State.palette.getBackgroundColor(),
-					State.cursor.getX(),
-					State.cursor.getY(),
-				);
-			}, false);
-			State.cursor.right();
+			insertToken(fkeySets[currentSetIndex].chars[fKeyMatch[1] - 1]);
 		}
 		// 'Ctrl+[' - previous character set
 		else if (e.ctrlKey && !e.altKey && !e.metaKey && e.code === 'BracketLeft') {
@@ -192,10 +273,32 @@ const createFKeys = () => {
 	document.addEventListener('onForegroundChange', updateFKeyDisplays);
 	document.addEventListener('onBackgroundChange', updateFKeyDisplays);
 	document.addEventListener('onFontChange', updateFKeyDisplays);
+	// hex blocks land async; re-render any pending unicode slots
+	document.addEventListener('onHexBlocksLoaded', updateFKeyDisplays);
+	// the charset picker persisted new custom pages
+	document.addEventListener('onCustomCharsetsChange', () => {
+		customPages = loadCustomPages();
+		fkeySets = buildSets();
+		if (currentSetIndex >= fkeySets.length) {
+			currentSetIndex = 0;
+		}
+		updateFKeyDisplays();
+	});
+
+	/** jump straight to a page by index (the charset picker's hook) */
+	const showSet = index => {
+		if (index >= 0 && index < fkeySets.length) {
+			currentSetIndex = index;
+			preresolveCurrentSet();
+			updateFKeyDisplays();
+		}
+	};
 
 	return {
 		enable: enable,
 		disable: disable,
+		showSet: showSet,
+		getSets: () => fkeySets,
 	};
 };
 
