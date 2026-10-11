@@ -126,6 +126,9 @@ const connect = options => {
 		);
 	});
 	ws.addEventListener('message', event => {
+		if (socket !== ws) {
+			return; // stale socket: a newer connection owns the state
+		}
 		let frame;
 		try {
 			frame = decodeFrame(event.data);
@@ -146,13 +149,20 @@ const connect = options => {
 		toPage({ cmd: 'frame', type: frame.type, data: frame.data });
 	});
 	ws.addEventListener('close', () => {
+		// a stale socket's close must not clobber a newer connection
+		// (review finding: retry/server-switch wedged the client)
+		if (socket !== ws) {
+			return;
+		}
 		const wasConnected = connected;
 		connected = false;
 		socket = null;
 		toPage({ cmd: 'closed', wasConnected });
 	});
 	ws.addEventListener('error', () => {
-		toPage({ cmd: 'error', error: 'websocket error' });
+		if (socket === ws) {
+			toPage({ cmd: 'error', error: 'websocket error' });
+		}
 	});
 };
 

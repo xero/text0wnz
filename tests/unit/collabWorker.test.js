@@ -162,3 +162,21 @@ describe('collab worker', () => {
 		expect(pageMessages()).toEqual([]);
 	});
 });
+
+describe('stale socket (review pass)', () => {
+	it('an old socket closing never clobbers a newer connection', () => {
+		toWorker({ cmd: 'connect', nick: 'first' });
+		const oldWs = sockets.at(-1);
+		toWorker({ cmd: 'connect', nick: 'second' });
+		const newWs = sockets.at(-1);
+		newWs.emit('open');
+		newWs.emit('message', { data: JSON.stringify({ type: 0, data: { id: 5, doc: {} } }) });
+		fakeSelf.postMessage.mockClear();
+		// the OLD socket's async close event arrives late
+		oldWs.emit('close', {});
+		expect(pageMessages()).toEqual([]); // no spurious 'closed'
+		// the new session still works end to end
+		newWs.emit('message', { data: JSON.stringify({ type: 10, data: { text: 'alive' } }) });
+		expect(pageMessages().at(-1).cmd).toBe('frame');
+	});
+});

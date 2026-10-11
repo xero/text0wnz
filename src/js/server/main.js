@@ -15,6 +15,24 @@ import { createMoebiusServer } from './moebiusServer.js';
 import { bridgeConfigFromEnv } from './bridge.js';
 import { saveRoom, backupRoom, loadRoomDoc } from './persistence.js';
 
+const sessionsDirEarly = path.resolve('./sessions');
+
+/** lazy per-room restore: EVERY room loads its persisted doc on
+ * creation, not just the default (a named room used to boot blank and
+ * its next autosave overwrote the saved art - review finding) */
+const restoreRoomState = room => {
+	loadRoomDoc(sessionsDirEarly, room.name)
+		.then(saved => {
+			// a draw that beat the async load wins; never clobber it
+			if (saved && !room.isDirty()) {
+				room.loadState(saved);
+				callout(`restored session '${room.name}'`);
+			}
+		})
+		.catch(error =>
+			console.error(`[Server] restore failed for ${room.name}:`, error));
+};
+
 const config = parseArgs();
 const sessionsDir = path.resolve('./sessions');
 const lastBackupHashes = new Map();
@@ -40,17 +58,16 @@ const server = createMoebiusServer({
 	bridge: bridgeConfigFromEnv(),
 	tls,
 	log: config.debug ? console.log : () => {},
+	onRoomCreate: restoreRoomState,
+	// an emptied dirty room persists before the server GCs it
+	onRoomEmpty: async room => {
+		const bytes = await saveRoom(room, sessionsDir);
+		await backupRoom(sessionsDir, room.name, bytes, lastBackupHashes);
+	},
 });
 
-// restore the default room's persisted doc (migration path included)
-const restoreRoom = async name => {
-	const saved = await loadRoomDoc(sessionsDir, name);
-	if (saved) {
-		server.getRoom(name)?.loadState(saved);
-		callout(`restored session '${name}'`);
-	}
-};
-await restoreRoom(config.sessionName);
+// eagerly create (and thereby restore) the default room
+server.getRoom(config.sessionName);
 
 const saveAll = async () => {
 	for (const room of server.rooms.values()) {

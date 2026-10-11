@@ -111,6 +111,9 @@ export const createRoom = (options = {}) => {
 	const opLog = [];
 	let nextId = 0;
 	let dirty = false;
+	// monotonic mutation counter: saves clear dirty ONLY if nothing
+	// mutated while the write was in flight (review finding)
+	let dirtySeq = 0;
 
 	/** @param {number} type @param {object} data */
 	const pushOp = (type, data) => {
@@ -119,6 +122,7 @@ export const createRoom = (options = {}) => {
 			opLog.splice(0, opLog.length - opLogLimit);
 		}
 		dirty = true;
+		dirtySeq++;
 	};
 
 	/**
@@ -273,14 +277,27 @@ export const createRoom = (options = {}) => {
 				) {
 					return;
 				}
+				/** @param {unknown} v @param {number} fallback @param {number} max */
+				const clamp = (v, fallback, max) =>
+					typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= max
+						? v
+						: fallback;
 				const cell = {
-					code: Number.isInteger(block.code) ? block.code : 32,
-					fg: Number.isInteger(block.fg) ? block.fg : 7,
-					bg: Number.isInteger(block.bg) ? block.bg : 0,
+					code: clamp(block.code, 32, 0x10ffff),
+					fg: clamp(block.fg, 7, 255),
+					bg: clamp(block.bg, 0, 255),
 				};
 				doc.data[y * doc.columns + x] = cell;
 				pushOp(type, { x, y, block: cell, id: user.id });
-				broadcast(client, type, data, { spectators: true });
+				// broadcast the SANITIZED cell with the server-known id: the
+				// stored doc and what peers render can never diverge, and ids
+				// cannot be spoofed (review finding)
+				broadcast(
+					client,
+					type,
+					{ x, y, block: cell, id: user.id },
+					{ spectators: true },
+				);
 				return;
 			}
 			case MoebiusAction.CHAT: {
@@ -379,6 +396,12 @@ export const createRoom = (options = {}) => {
 				) {
 					return;
 				}
+				// NO throttle, deliberately: a dropped resize diverges the
+				// sender's apply-locally state and the vanilla dialect has no
+				// content resync (the convergence fuzz proved both a silent
+				// drop AND a dims-echo diverge). An authed editor spamming
+				// 10M-cell resizes can churn memory exactly as on upstream
+				// servers; the real fix is the P5 seq/resync extension.
 				resizeDoc(columns, rows);
 				pushOp(type, { columns, rows, id: user.id });
 				// relay the sender's data verbatim: it carries the id vanilla
@@ -387,6 +410,14 @@ export const createRoom = (options = {}) => {
 				log(`canvas resized ${columns}x${rows}`);
 				return;
 			}
+			case MoebiusAction.CONNECTED:
+			case MoebiusAction.REFUSED:
+			case MoebiusAction.JOIN:
+			case MoebiusAction.LEAVE:
+				// handshake/membership frames are server-emitted only; a
+				// mid-session CONNECTED hitting the blind relay would leak
+				// the pass field to peers and crash vanilla clients
+				return;
 			case MoebiusAction.SET_BG:
 				return; // upstream swallows it
 			default: {
@@ -458,8 +489,13 @@ export const createRoom = (options = {}) => {
 		}),
 		chatHistory: () => [...chatHistory],
 		opLog: () => [...opLog],
-		markClean: () => {
-			dirty = false;
+		/** capture before a save begins; pass back to markClean */
+		dirtyToken: () => dirtySeq,
+		/** @param {number} [token] clears dirty only if nothing mutated since */
+		markClean: token => {
+			if (token === undefined || token === dirtySeq) {
+				dirty = false;
+			}
 		},
 		isDirty: () => dirty,
 	};

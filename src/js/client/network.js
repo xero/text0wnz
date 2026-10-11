@@ -112,10 +112,18 @@ const createWorkerHandler = inputHandle => {
 
 	const onRemoteDraw = data => {
 		const columns = State.textArtCanvas.getColumns();
+		const rows = State.textArtCanvas.getRows();
 		const { x, y, block } = data;
 		if (
 			!Number.isInteger(x) ||
 			!Number.isInteger(y) ||
+			x < 0 ||
+			y < 0 ||
+			// bounds against OUR current dims: a draw serialized before a
+			// resize must not land at a wrong index (landmine 7; draws
+			// near concurrent resizes drop everywhere, by design)
+			x >= columns ||
+			y >= rows ||
 			typeof block !== 'object' ||
 			block === null
 		) {

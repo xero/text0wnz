@@ -10,7 +10,8 @@ const parseRoomPasswords = raw => {
 			const out = {};
 			for (const [room, pass] of Object.entries(parsed)) {
 				if (typeof pass === 'string') {
-					out[room] = pass;
+					// room names from paths normalize to lowercase; keys must too
+					out[room.toLowerCase()] = pass;
 				}
 			}
 			return out;

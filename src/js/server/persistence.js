@@ -35,6 +35,9 @@ export const roomFile = (dir, roomName) =>
  */
 export const saveRoom = async (room, dir) => {
 	await mkdir(dir, { recursive: true });
+	// token BEFORE the writes: mutations landing mid-write must keep
+	// the room dirty for the next save (review finding)
+	const token = room.dirtyToken();
 	const join = room.toJoinDoc();
 	const { doc } = joinDocToDoc(join);
 	const bytes = await encodeEnvelope(doc, {
@@ -45,9 +48,20 @@ export const saveRoom = async (room, dir) => {
 		},
 	});
 	await writeFile(roomFile(dir, room.name), bytes);
-	room.markClean();
+	// the envelope is the interchange file (quantized); the sidecar
+	// keeps full session fidelity (palette, font bytes, comments, chat)
+	// so a restart does not degrade the live room (review finding)
+	await writeFile(
+		stateFile(dir, room.name),
+		JSON.stringify({ join, chat: room.chatHistory() }),
+	);
+	room.markClean(token);
 	return bytes;
 };
+
+/** @param {string} dir @param {string} roomName */
+export const stateFile = (dir, roomName) =>
+	path.join(dir, `${roomName}.state.json`);
 
 /**
  * Hourly sha1-deduped backup: copies the saved envelope aside when the
@@ -79,6 +93,20 @@ export const backupRoom = async (dir, roomName, bytes, lastHashes) => {
  * @returns {Promise<import('../core/index').MoebiusJoinDoc | null>}
  */
 export const loadRoomDoc = async (dir, roomName) => {
+	// the sidecar carries full fidelity; prefer it
+	const sidecar = stateFile(dir, roomName);
+	if (existsSync(sidecar)) {
+		try {
+			const saved = JSON.parse(await readFile(sidecar, 'utf8'));
+			if (saved && typeof saved === 'object' && saved.join) {
+				const join = withData(saved.join);
+				join.chat = Array.isArray(saved.chat) ? saved.chat : [];
+				return join;
+			}
+		} catch {
+			// corrupt sidecar: fall through to the envelope
+		}
+	}
 	const native = roomFile(dir, roomName);
 	if (existsSync(native)) {
 		const decoded = await decodeEnvelope(await readFile(native));

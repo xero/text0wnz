@@ -185,7 +185,15 @@ export const compressBlocks = (
 	return out;
 };
 
-const expandRuns = (runs: RleRun[], label: string): number[] => {
+// absolute decode ceiling when the caller gives no expected length:
+// the client-side doc cap (1000 x 10000 cells)
+const MAX_RLE_CELLS = 10_000_000;
+
+const expandRuns = (
+	runs: RleRun[],
+	label: string,
+	maxLength: number,
+): number[] => {
 	const out: number[] = [];
 	for (const run of runs) {
 		if (
@@ -196,6 +204,11 @@ const expandRuns = (runs: RleRun[], label: string): number[] => {
 			run[1] < 0
 		) {
 			throw new ProtocolError(`bad ${label} run ${JSON.stringify(run)}`);
+		}
+		// the bound applies BEFORE expansion: a hostile run like
+		// [32, 1e9] must never allocate first (review finding)
+		if (out.length + run[1] + 1 > maxLength) {
+			throw new ProtocolError(`${label} stream exceeds ${maxLength} cells`);
 		}
 		for (let i = 0; i <= run[1]; i++) {
 			out.push(run[0]);
@@ -209,9 +222,10 @@ export const uncompressBlocks = (
 	compressed: MoebiusCompressedData,
 	expectedLength?: number,
 ): MoebiusBlock[] => {
-	const codes = expandRuns(compressed.code ?? [], 'code');
-	const fgs = expandRuns(compressed.fg ?? [], 'fg');
-	const bgs = expandRuns(compressed.bg ?? [], 'bg');
+	const limit = expectedLength ?? MAX_RLE_CELLS;
+	const codes = expandRuns(compressed.code ?? [], 'code', limit);
+	const fgs = expandRuns(compressed.fg ?? [], 'fg', limit);
+	const bgs = expandRuns(compressed.bg ?? [], 'bg', limit);
 	if (codes.length !== fgs.length || codes.length !== bgs.length) {
 		throw new ProtocolError(
 			`stream lengths disagree: ${codes.length}/${fgs.length}/${bgs.length}`,

@@ -378,3 +378,63 @@ describe('convergence fuzz', () => {
 		}
 	});
 });
+
+describe('review-pass regressions', () => {
+	it('a mid-session CONNECTED is never relayed (no pass leak)', () => {
+		const room = createRoom();
+		const a = joinEditor(room, 'a');
+		const b = joinEditor(room, 'b');
+		room.message(a, {
+			type: A.CONNECTED,
+			data: { nick: 'evil', pass: 'sniffme', id: 0 },
+		});
+		expect(b.ofType(A.CONNECTED)).toHaveLength(1); // only its own
+		expect(JSON.stringify(b.frames)).not.toContain('sniffme');
+	});
+
+	it('DRAW broadcasts the sanitized cell with the server-known id', () => {
+		const room = createRoom({ columns: 4, rows: 2 });
+		const a = joinEditor(room, 'a');
+		const b = joinEditor(room, 'b');
+		room.message(a, {
+			type: A.DRAW,
+			data: { x: 1, y: 0, block: { code: -5, fg: 999, bg: 3 }, id: 42 },
+		});
+		const frame = b.ofType(A.DRAW)[0];
+		expect(frame.data.block).toEqual({ code: 32, fg: 7, bg: 3 });
+		expect(frame.data.id).toBe(0); // the server's id, never the claim
+	});
+
+	it('back-to-back resizes all apply (no throttle: a dropped resize diverges apply-locally senders, and the dialect has no resync)', () => {
+		const room = createRoom({ columns: 10, rows: 10 });
+		const a = joinEditor(room, 'a');
+		room.message(a, {
+			type: A.SET_CANVAS_SIZE,
+			data: { columns: 20, rows: 20, id: 0 },
+		});
+		room.message(a, {
+			type: A.SET_CANVAS_SIZE,
+			data: { columns: 30, rows: 30, id: 0 },
+		});
+		expect(room.stats().columns).toBe(30);
+	});
+
+	it('markClean with a stale token keeps mutations dirty', () => {
+		const room = createRoom({ columns: 4, rows: 2 });
+		const a = joinEditor(room, 'a');
+		room.message(a, {
+			type: A.DRAW,
+			data: { x: 0, y: 0, block: { code: 65, fg: 7, bg: 0 }, id: 0 },
+		});
+		const token = room.dirtyToken();
+		// a mutation lands while the save is "in flight"
+		room.message(a, {
+			type: A.DRAW,
+			data: { x: 1, y: 0, block: { code: 66, fg: 7, bg: 0 }, id: 0 },
+		});
+		room.markClean(token);
+		expect(room.isDirty()).toBe(true);
+		room.markClean(room.dirtyToken());
+		expect(room.isDirty()).toBe(false);
+	});
+});

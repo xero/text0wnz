@@ -319,3 +319,21 @@ describe('v3 doc to join doc', () => {
 		expect(blocks[0].fg).toBe(12); // nearest default-palette bright red
 	});
 });
+
+describe('hostile RLE (review pass)', () => {
+	it('rejects oversized runs BEFORE allocating', () => {
+		const started = performance.now();
+		expect(() =>
+			uncompressBlocks(
+				{
+					code: [[32, 1_000_000_000]],
+					fg: [[7, 1_000_000_000]],
+					bg: [[0, 1_000_000_000]],
+				},
+				80 * 25,
+			),
+		).toThrow(ProtocolError);
+		// fast-fail, not an 8GB allocation attempt
+		expect(performance.now() - started).toBeLessThan(200);
+	});
+});

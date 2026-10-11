@@ -35,7 +35,6 @@ export const BRIDGE_DEFAULTS = Object.freeze({
 	target: 'ws://127.0.0.1:8000',
 	port: 8000,
 	maxConnections: 16,
-	idleTimeoutSeconds: 120,
 });
 
 /**
@@ -68,17 +67,17 @@ export const isPrivateAddress = ip => {
 		}
 		return false;
 	}
-	// v6
-	if (addr === '::' || addr === '::1') {
-		return true;
+	// v6: only global unicast 2000::/3 counts as public. Everything
+	// else is denied, which closes the encodings the dotted check
+	// misses: hex v4-mapped (::ffff:7f00:1), v4-compatible (::7f00:1),
+	// NAT64 (64:ff9b::/96), ULA, link-local, loopback (review finding).
+	if (isIP(addr) === 6) {
+		const first = addr.split(':', 1)[0] || '0';
+		const firstGroup = parseInt(first, 16) || 0;
+		return !(firstGroup >= 0x2000 && firstGroup <= 0x3fff);
 	}
-	if (addr.startsWith('fe8') || addr.startsWith('fe9') || addr.startsWith('fea') || addr.startsWith('feb')) {
-		return true; // fe80::/10
-	}
-	if (addr.startsWith('fc') || addr.startsWith('fd')) {
-		return true; // fc00::/7
-	}
-	return false;
+	// not a recognizable address at all: never dial it
+	return true;
 };
 
 /**
@@ -173,9 +172,13 @@ export const bridgeConfigFromEnv = (env = process.env) => ({
  * Runtime piping state for one bridged browser socket. The upstream
  * dial happens on open; browser frames queue until it connects.
  */
+export const BRIDGE_QUEUE_LIMIT_BYTES = 256 * 1024;
+export const BRIDGE_CONNECT_TIMEOUT_MS = 10000;
+
 export const createBridgePipe = (browserWs, targetUrl, log = () => {}) => {
 	/** @type {(string | Uint8Array)[]} */
 	const queue = [];
+	let queuedBytes = 0;
 	let upstream = null;
 	let closed = false;
 
@@ -184,6 +187,8 @@ export const createBridgePipe = (browserWs, targetUrl, log = () => {}) => {
 			return;
 		}
 		closed = true;
+		queue.length = 0;
+		queuedBytes = 0;
 		try {
 			browserWs.close();
 		} catch {
@@ -204,11 +209,20 @@ export const createBridgePipe = (browserWs, targetUrl, log = () => {}) => {
 		return { fromBrowser: () => {}, close: closeBoth };
 	}
 	upstream.binaryType = 'arraybuffer';
+	// a blackholed dial must not hold the pipe (and its queue) forever
+	const connectTimer = setTimeout(() => {
+		if (upstream.readyState === 0) {
+			log('bridge dial timed out');
+			closeBoth();
+		}
+	}, BRIDGE_CONNECT_TIMEOUT_MS);
 	upstream.addEventListener('open', () => {
+		clearTimeout(connectTimer);
 		for (const frame of queue) {
 			upstream.send(frame);
 		}
 		queue.length = 0;
+		queuedBytes = 0;
 	});
 	upstream.addEventListener('message', event => {
 		try {
@@ -231,6 +245,13 @@ export const createBridgePipe = (browserWs, targetUrl, log = () => {}) => {
 			if (upstream.readyState === 1) {
 				upstream.send(frame);
 			} else if (upstream.readyState === 0) {
+				// bounded pre-connect buffer (review finding)
+				queuedBytes += typeof frame === 'string' ? frame.length : frame.byteLength;
+				if (queuedBytes > BRIDGE_QUEUE_LIMIT_BYTES) {
+					log('bridge queue overflow');
+					closeBoth();
+					return;
+				}
 				queue.push(frame);
 			} else {
 				closeBoth();

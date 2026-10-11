@@ -191,3 +191,20 @@ describe('bridgeConfigFromEnv', () => {
 		expect(BRIDGE_DEFAULTS.mode).toBe('off');
 	});
 });
+
+describe('v6 encoding bypasses (review pass)', () => {
+	it('denies hex v4-mapped, v4-compatible, and NAT64 encodings', () => {
+		for (const ip of [
+			'::ffff:7f00:1', // hex v4-mapped loopback
+			'::7f00:1', // v4-compatible loopback
+			'::127.0.0.1',
+			'64:ff9b::7f00:1', // NAT64
+			'64:ff9b::192.168.0.1',
+		]) {
+			expect(isPrivateAddress(ip), ip).toBe(true);
+		}
+		// global unicast stays public
+		expect(isPrivateAddress('2606:2800:220:1::1')).toBe(false);
+		expect(isPrivateAddress('2001:db8::1')).toBe(false);
+	});
+});

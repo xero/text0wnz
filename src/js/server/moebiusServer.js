@@ -44,6 +44,8 @@ export const roomNameFromPath = (pathname, defaultRoom) => {
  * @param {string} [config.pass]
  * @param {Record<string, string>} [config.roomPasswords]
  * @param {{mode: string, target: string, port: number, allow: string[], maxConnections: number}} [config.bridge]
+ * @param {(room: ReturnType<typeof createRoom>) => void} [config.onRoomCreate]
+ * @param {(room: ReturnType<typeof createRoom>) => void | Promise<void>} [config.onRoomEmpty]
  * @param {boolean} [config.debug]
  * @param {{cert: string, key: string} | undefined} [config.tls]
  * @param {(line: string) => void} [config.log]
@@ -53,6 +55,8 @@ export const createMoebiusServer = config => {
 	const defaultRoom = config.sessionName ?? 'joint';
 	/** @type {Map<string, ReturnType<typeof createRoom>>} */
 	const rooms = new Map();
+	/** sockets per room INCLUDING ones that never sent CONNECTED */
+	const socketCounts = new Map();
 
 	const getRoom = name => {
 		let room = rooms.get(name);
@@ -66,6 +70,10 @@ export const createMoebiusServer = config => {
 				log,
 			});
 			rooms.set(name, room);
+			// lazy restore hook: the host loads any persisted doc for this
+			// room (named rooms used to boot blank, and the next autosave
+			// overwrote the saved art with the blank doc - review finding)
+			config.onRoomCreate?.(room);
 		}
 		return room;
 	};
@@ -89,6 +97,16 @@ export const createMoebiusServer = config => {
 	const sockets = new Set();
 	const bridgeConfig = config.bridge ?? { mode: 'off' };
 	let bridgeCount = 0;
+	let bridgePending = 0;
+
+	/** resolveBridgeTarget, but a throw releases the pending slot */
+	const resolveBridgeTargetSafe = async (cfg, requested) => {
+		try {
+			return await resolveBridgeTarget(cfg, requested);
+		} catch (error) {
+			return { ok: false, reason: String(error) };
+		}
+	};
 
 	const websocket = {
 		maxPayloadLength: SERVER_LIMITS.maxPayloadBytes,
@@ -102,11 +120,19 @@ export const createMoebiusServer = config => {
 				ws.data.pipe = createBridgePipe(ws, ws.data.targetUrl, log);
 				return;
 			}
-			const room = getRoom(ws.data.roomName);
-			if (!room || room.stats().memberCount >= SERVER_LIMITS.maxClientsPerRoom) {
+			// cap on SOCKETS, not registered members: idle pre-CONNECTED
+			// sockets count too (review finding)
+			const open = socketCounts.get(ws.data.roomName) ?? 0;
+			const room =
+				open < SERVER_LIMITS.maxClientsPerRoom
+					? getRoom(ws.data.roomName)
+					: null;
+			if (!room) {
 				ws.close(1013, 'room full');
 				return;
 			}
+			socketCounts.set(ws.data.roomName, open + 1);
+			ws.data.counted = true;
 			ws.data.room = room;
 			sockets.add(ws);
 		},
@@ -140,6 +166,11 @@ export const createMoebiusServer = config => {
 					return;
 				}
 				ws.data.connected = room.connect(client, frame.data);
+				if (!ws.data.connected) {
+					// a refused socket closes: no wire-speed password
+					// brute force on a held connection (review finding)
+					ws.close(1008, 'refused');
+				}
 				return;
 			}
 			room.message(client, frame);
@@ -152,8 +183,33 @@ export const createMoebiusServer = config => {
 				ws.data.pipe?.close();
 				return;
 			}
+			if (ws.data.counted) {
+				const open = (socketCounts.get(ws.data.roomName) ?? 1) - 1;
+				if (open > 0) {
+					socketCounts.set(ws.data.roomName, open);
+				} else {
+					socketCounts.delete(ws.data.roomName);
+				}
+			}
 			if (ws.data.room && ws.data.connected) {
 				ws.data.room.disconnect(clientFor(ws));
+			}
+			// empty rooms are garbage-collected (64 throwaway names must
+			// not wedge maxRooms forever); the host persists dirty ones
+			// through onRoomEmpty first
+			const room = ws.data.room;
+			if (room && !socketCounts.has(room.name) && rooms.get(room.name) === room) {
+				const finish = () => {
+					if (!socketCounts.has(room.name) && rooms.get(room.name) === room) {
+						rooms.delete(room.name);
+					}
+				};
+				if (room.isDirty() && config.onRoomEmpty) {
+					Promise.resolve(config.onRoomEmpty(room)).then(finish, finish);
+				} else if (!room.isDirty()) {
+					finish();
+				}
+				// dirty room without a persistence hook: keep it resident
 			}
 		},
 		/** @param {import('bun').ServerWebSocket<any>} ws */
@@ -166,14 +222,21 @@ export const createMoebiusServer = config => {
 	const fetchHandler = async (req, server) => {
 		const url = new URL(req.url);
 		if (url.pathname === '/bridge') {
-			if (bridgeCount >= (bridgeConfig.maxConnections ?? 16)) {
+			// reserve BEFORE the async DNS await: parallel requests in
+			// flight must not all pass the cap check (review finding)
+			if (
+				bridgeCount + bridgePending >=
+				(bridgeConfig.maxConnections ?? 16)
+			) {
 				return new Response('bridge busy', { status: 503 });
 			}
-			const vet = await resolveBridgeTarget(bridgeConfig, {
+			bridgePending++;
+			const vet = await resolveBridgeTargetSafe(bridgeConfig, {
 				host: url.searchParams.get('host'),
 				port: url.searchParams.get('port'),
 				room: url.searchParams.get('room'),
 			});
+			bridgePending = Math.max(0, bridgePending - 1);
 			if (!vet.ok) {
 				log(`bridge refused: ${vet.reason}`);
 				return new Response(vet.reason, { status: 403 });
