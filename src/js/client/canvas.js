@@ -1091,11 +1091,17 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	let criticalRunning = false;
 	let criticalDirty = false;
 	const onCriticalChange = async _ => {
+		criticalDirty = true;
 		if (criticalRunning) {
-			criticalDirty = true;
 			return;
 		}
 		criticalRunning = true;
+		// collapse every same-task trigger (e.g. letter spacing + zoom
+		// set back to back) into ONE relayout at the final metrics; the
+		// first serialized version made the second change queue behind a
+		// fully awaited redraw, which the golden suite caught as a
+		// stale-scrollHeight pixel diff
+		await Promise.resolve();
 		const waitForRedrawing = () =>
 			new Promise(resolve => {
 				// Fast path: don't pay a 50ms poll tick when already idle
