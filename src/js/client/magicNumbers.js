@@ -56,6 +56,15 @@ const RESIZE_WARN_CELLS = 300000;
 const MAX_UNDO_CELLS = 1048576;
 // Trailing debounce for autosave journal keyframe rewrites
 const JOURNAL_KEYFRAME_DEBOUNCE_MS = 500;
+// Touch gesture tuning (PLAN §3.5 / D11): the owner device pass tunes
+// these here. Hold = single-finger stroke disambiguation delay; slop =
+// max travel for a tap; window = both-fingers-lift deadline for
+// undo/redo taps; palm grace = how long after a pen lifts touch stays
+// rejected.
+const GESTURE_TAP_WINDOW_MS = 250;
+const GESTURE_SLOP_PX = 10;
+const GESTURE_STROKE_HOLD_MS = 70;
+const PEN_PALM_GRACE_MS = 500;
 // iOS Safari refuses canvases above ~16.7 megapixels
 const MAX_CANVAS_AREA = 16777216;
 
@@ -107,5 +116,9 @@ export default {
 	RESIZE_WARN_CELLS,
 	MAX_UNDO_CELLS,
 	JOURNAL_KEYFRAME_DEBOUNCE_MS,
+	GESTURE_TAP_WINDOW_MS,
+	GESTURE_SLOP_PX,
+	GESTURE_STROKE_HOLD_MS,
+	PEN_PALM_GRACE_MS,
 	MAX_CANVAS_AREA,
 };

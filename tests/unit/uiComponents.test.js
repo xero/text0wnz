@@ -59,7 +59,7 @@ describe('UI Components', () => {
 	});
 
 	describe('viewportTap', () => {
-		it('closes menus on touchstart and never undoes (recognizer owns taps)', () => {
+		it('quick 2-finger tap outside the canvas undoes (v2 margin gesture)', () => {
 			const view = document.createElement('div');
 			document.body.appendChild(view);
 
@@ -75,7 +75,46 @@ describe('UI Components', () => {
 			const touchEndEvent = createEvent('touchend');
 			touchEndEvent.changedTouches = [{ identifier: 1 }, { identifier: 2 }];
 			view.dispatchEvent(touchEndEvent);
+			expect(State.textArtCanvas.undo).toHaveBeenCalledTimes(1);
+		});
+
+		it('slow 2-finger lift outside the canvas does not undo', () => {
+			vi.useFakeTimers();
+			const view = document.createElement('div');
+			document.body.appendChild(view);
+
+			viewportTap(view);
+			State.textArtCanvas.undo.mockClear();
+
+			const touchStartEvent = createEvent('touchstart');
+			touchStartEvent.touches = [{ identifier: 1 }, { identifier: 2 }];
+			view.dispatchEvent(touchStartEvent);
+			vi.advanceTimersByTime(400);
+			const touchEndEvent = createEvent('touchend');
+			touchEndEvent.changedTouches = [{ identifier: 1 }, { identifier: 2 }];
+			view.dispatchEvent(touchEndEvent);
 			expect(State.textArtCanvas.undo).not.toHaveBeenCalled();
+			vi.useRealTimers();
+		});
+
+		it('taps ON the canvas never undo here (the recognizer owns them)', () => {
+			const view = document.createElement('div');
+			const canvas = document.createElement('div');
+			canvas.id = 'canvasContainer';
+			view.appendChild(canvas);
+			document.body.appendChild(view);
+
+			viewportTap(view);
+			State.textArtCanvas.undo.mockClear();
+
+			const touchStartEvent = createEvent('touchstart');
+			touchStartEvent.touches = [{ identifier: 1 }, { identifier: 2 }];
+			canvas.dispatchEvent(touchStartEvent);
+			const touchEndEvent = createEvent('touchend');
+			touchEndEvent.changedTouches = [{ identifier: 1 }, { identifier: 2 }];
+			canvas.dispatchEvent(touchEndEvent);
+			expect(State.textArtCanvas.undo).not.toHaveBeenCalled();
+			canvas.remove();
 		});
 	});
 

@@ -30,6 +30,8 @@
  * handoff) is one file.
  */
 
+import magicNumbers from './magicNumbers.js';
+
 /**
  * @typedef {object} GesturePoint
  * @property {number} clientX
@@ -49,9 +51,9 @@
  */
 
 export const GESTURE_DEFAULTS = {
-	tapWindowMs: 250,
-	slopPx: 10,
-	strokeHoldMs: 70,
+	tapWindowMs: magicNumbers.GESTURE_TAP_WINDOW_MS,
+	slopPx: magicNumbers.GESTURE_SLOP_PX,
+	strokeHoldMs: magicNumbers.GESTURE_STROKE_HOLD_MS,
 };
 
 /**
@@ -105,19 +107,12 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 		}
 	};
 
-	const centroid = () => {
-		let cx = 0;
-		let cy = 0;
-		for (const p of pointers.values()) {
-			cx += p.lastX;
-			cy += p.lastY;
-		}
-		const n = pointers.size || 1;
-		return { clientX: cx / n, clientY: cy / n };
-	};
+	// pinch math always runs on the first two pointers so a grazing
+	// third finger (or palm edge) cannot freeze an active pinch
+	const pair = () => [...pointers.values()].slice(0, 2);
 
 	const pairDistance = () => {
-		const pts = [...pointers.values()];
+		const pts = pair();
 		if (pts.length < 2) {
 			return 0;
 		}
@@ -125,6 +120,18 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 			pts[0].lastX - pts[1].lastX,
 			pts[0].lastY - pts[1].lastY,
 		);
+	};
+
+	const pairCentroid = () => {
+		const pts = pair();
+		let cx = 0;
+		let cy = 0;
+		for (const p of pts) {
+			cx += p.lastX;
+			cy += p.lastY;
+		}
+		const n = pts.length || 1;
+		return { clientX: cx / n, clientY: cy / n };
 	};
 
 	const updateTravel = () => {
@@ -136,7 +143,8 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 		}
 	};
 
-	const reset = () => {
+	// internal cleanup: the lift paths emit their own end events first
+	const clearAll = () => {
 		clearHold();
 		pointers.clear();
 		state = 'idle';
@@ -144,6 +152,19 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 		maxCount = 0;
 		pinching = false;
 		tapEligible = true;
+	};
+
+	// external reset (dispose paths): an in-flight stroke or pinch must
+	// end observably, or consumers (the zoom controller's interactive
+	// flag, tools awaiting Up) wedge
+	const reset = () => {
+		if (state === 'stroke') {
+			callbacks.onStrokeEnd?.();
+		}
+		if (pinching) {
+			callbacks.onPinchEnd?.();
+		}
+		clearAll();
 	};
 
 	/** @param {GesturePoint} pt */
@@ -156,9 +177,9 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 	const enterGesture = () => {
 		clearHold();
 		state = 'gesture';
-		if (pointers.size === 2) {
+		if (pointers.size >= 2) {
 			pinchStartDist = pairDistance();
-			const c = centroid();
+			const c = pairCentroid();
 			lastCentroidX = c.clientX;
 			lastCentroidY = c.clientY;
 		}
@@ -226,17 +247,17 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 			}
 		} else if (state === 'stroke') {
 			callbacks.onStrokeMove?.({ clientX, clientY });
-		} else if (state === 'gesture' && pointers.size === 2) {
+		} else if (state === 'gesture' && pointers.size >= 2) {
 			if (!pinching && maxTravel > slopPx) {
 				pinching = true;
 				pinchStartDist = pairDistance() || 1;
-				const c = centroid();
+				const c = pairCentroid();
 				lastCentroidX = c.clientX;
 				lastCentroidY = c.clientY;
 				callbacks.onPinchStart?.(c);
 			}
 			if (pinching) {
-				const c = centroid();
+				const c = pairCentroid();
 				const dist = pairDistance();
 				callbacks.onPinchMove?.({
 					centroid: c,
@@ -269,12 +290,12 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 				beginStroke({ clientX: p.startX, clientY: p.startY });
 				callbacks.onStrokeEnd?.();
 			}
-			reset();
+			clearAll();
 			return;
 		}
 		if (state === 'stroke') {
 			callbacks.onStrokeEnd?.();
-			reset();
+			clearAll();
 			return;
 		}
 		if (state === 'gesture') {
@@ -284,7 +305,7 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 				callbacks.onPinchEnd?.();
 				state = pointers.size === 0 ? 'idle' : 'dead';
 				if (pointers.size === 0) {
-					reset();
+					clearAll();
 				}
 				return;
 			}
@@ -299,12 +320,12 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 						callbacks.onRedo?.();
 					}
 				}
-				reset();
+				clearAll();
 			}
 			return;
 		}
 		if (state === 'dead' && pointers.size === 0) {
-			reset();
+			clearAll();
 		}
 	};
 

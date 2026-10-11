@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => {
 			getWidth: () => Math.floor(8 * scale),
 			getHeight: () => Math.floor(16 * scale),
 		},
-		textArtCanvas: { getRendererId: vi.fn(() => 'gl') },
+		textArtCanvas: { getRendererId: vi.fn(() => 'webgl2-slack-buffer') },
 		saveToLocalStorage: vi.fn(),
 	};
 	return {
@@ -57,7 +57,7 @@ beforeEach(() => {
 	mocks.setScale(1);
 	mocks.state.font.setScaleFactor.mockClear();
 	mocks.state.saveToLocalStorage.mockClear();
-	mocks.state.textArtCanvas.getRendererId.mockReturnValue('gl');
+	mocks.state.textArtCanvas.getRendererId.mockReturnValue('webgl2-slack-buffer');
 	viewport = document.createElement('div');
 	viewport.id = 'viewport';
 	container = document.createElement('div');
@@ -120,7 +120,7 @@ describe('zoom controller', () => {
 	});
 
 	it('pinch on the chunk renderer commits once at the end', () => {
-		mocks.state.textArtCanvas.getRendererId.mockReturnValue('2d');
+		mocks.state.textArtCanvas.getRendererId.mockReturnValue('canvas2d-chunks');
 		createZoomController(viewport);
 		pinch('onTextCanvasPinchStart', {});
 		pinch('onTextCanvasPinchMove', {
@@ -155,6 +155,51 @@ describe('zoom controller', () => {
 		expect(mocks.state.font.setScaleFactor).toHaveBeenCalled();
 		const applied = mocks.state.font.setScaleFactor.mock.calls.at(-1)[0];
 		expect(applied).toBeGreaterThan(1);
+	});
+
+	it('wheel bursts accumulate instead of committing only the last notch', () => {
+		vi.useFakeTimers();
+		mocks.state.textArtCanvas.getRendererId.mockReturnValue('canvas2d-chunks');
+		createZoomController(viewport);
+		const tick = () =>
+			viewport.dispatchEvent(
+				new WheelEvent('wheel', {
+					deltaY: -100,
+					ctrlKey: true,
+					clientX: 100,
+					clientY: 100,
+					cancelable: true,
+				}),
+			);
+		for (let i = 0; i < 5; i++) {
+			tick();
+			vi.advanceTimersByTime(20);
+		}
+		vi.advanceTimersByTime(300);
+		const applied = mocks.state.font.setScaleFactor.mock.calls.at(-1)[0];
+		// five compounding notches: exp(0.2 * 5) ~ 2.72, not exp(0.2) ~ 1.22
+		expect(applied).toBeGreaterThan(2);
+		// the idle flush dropped the interactive flag and saved once
+		expect(isInteractiveZoom()).toBe(false);
+		expect(mocks.state.saveToLocalStorage).toHaveBeenCalledTimes(1);
+		vi.useRealTimers();
+	});
+
+	it('pinch end applies the final rAF target before saving', () => {
+		createZoomController(viewport);
+		pinch('onTextCanvasPinchStart', {});
+		pinch('onTextCanvasPinchMove', {
+			centroid: { clientX: 100, clientY: 100 },
+			centroidDelta: { clientX: 0, clientY: 0 },
+			scale: 2.5,
+		});
+		// rAF has NOT run yet; the end must flush it while interactive
+		pinch('onTextCanvasPinchEnd');
+		expect(mocks.state.font.setScaleFactor).toHaveBeenCalledWith(2.5);
+		expect(isInteractiveZoom()).toBe(false);
+		// nothing left in the rAF queue to double-apply
+		flushRaf();
+		expect(mocks.state.font.setScaleFactor).toHaveBeenCalledTimes(1);
 	});
 
 	it('focal anchoring corrects scroll after the canvas relayouts', () => {

@@ -277,11 +277,38 @@ const createPositionInfo = el => {
 };
 
 const viewportTap = view => {
-	// menu close only: the 2-finger-tap undo that used to live here is
-	// owned by the gesture recognizer now (it double-fired with the
-	// canvas handler when both saw the same tap)
-	view.addEventListener('touchstart', () => {
+	// Menu close, plus v2's margin gesture: a quick 2-finger tap on the
+	// viewport OUTSIDE the canvas still undoes. On the canvas itself the
+	// gesture recognizer owns taps, and filtering by target is what
+	// fixes v2's double-undo (both layers used to see the same tap).
+	const maxTapDuration = 300;
+	let touchStartTime = 0;
+	let eligible = false;
+
+	view.addEventListener('touchstart', event => {
 		State.menus.close();
+		const onCanvas =
+			typeof event.target?.closest === 'function' &&
+			event.target.closest('#canvasContainer') !== null;
+		eligible = event.touches.length === 2 && !onCanvas;
+		if (eligible) {
+			touchStartTime = Date.now();
+		}
+	});
+
+	view.addEventListener('touchend', event => {
+		if (
+			eligible &&
+			event.changedTouches.length === 2 &&
+			Date.now() - touchStartTime < maxTapDuration
+		) {
+			State.textArtCanvas.undo();
+		}
+		eligible = false;
+	});
+
+	view.addEventListener('touchcancel', () => {
+		eligible = false;
 	});
 };
 

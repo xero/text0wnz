@@ -24,8 +24,9 @@
  */
 
 import { createGestureRecognizer } from './gestures.js';
+import magicNumbers from './magicNumbers.js';
 
-export const PEN_PALM_GRACE_MS = 500;
+export const PEN_PALM_GRACE_MS = magicNumbers.PEN_PALM_GRACE_MS;
 
 /**
  * @typedef {{x: number, y: number, halfBlockY: number}} MappedCell
@@ -33,7 +34,7 @@ export const PEN_PALM_GRACE_MS = 500;
 
 /**
  * @typedef {object} PointerHandlers
- * @property {(clientX: number, clientY: number, clamp: boolean) => MappedCell} map
+ * @property {(clientX: number, clientY: number, clamp: boolean) => MappedCell | null} map
  * @property {(x: number, halfBlockY: number) => void} [sample]
  * @property {() => void} undo
  * @property {() => void} redo
@@ -75,11 +76,22 @@ export const createPointerInput = (container, handlers, options = {}) => {
 	// ---- mouse + pen stroke state -----------------------------------
 	/** @type {number | null} */
 	let strokePointer = null;
-	let penDown = 0;
+	// pen pointers tracked by id, never a counter: every end path
+	// (up, cancel, lost capture) deletes, so a missed decrement cannot
+	// leave palm rejection stuck on forever
+	/** @type {Set<number>} */
+	const penIds = new Set();
 	let penGraceUntil = 0;
 
 	const penActive = () =>
-		penDown > 0 || performance.now() < penGraceUntil;
+		penIds.size > 0 || performance.now() < penGraceUntil;
+
+	/** @param {number} id */
+	const penLifted = id => {
+		if (penIds.delete(id) && penIds.size === 0) {
+			penGraceUntil = performance.now() + PEN_PALM_GRACE_MS;
+		}
+	};
 
 	// ---- touch state -------------------------------------------------
 	/** @type {Set<number>} */
@@ -90,6 +102,9 @@ export const createPointerInput = (container, handlers, options = {}) => {
 		{
 			onStrokeStart: pt => {
 				const cell = handlers.map(pt.clientX, pt.clientY, false);
+				if (!cell) {
+					return;
+				}
 				if (touchMods.altKey && handlers.sample) {
 					handlers.sample(cell.x, cell.halfBlockY);
 					return;
@@ -108,6 +123,9 @@ export const createPointerInput = (container, handlers, options = {}) => {
 			},
 			onStrokeMove: pt => {
 				const cell = handlers.map(pt.clientX, pt.clientY, true);
+				if (!cell) {
+					return;
+				}
 				dispatch('onTextCanvasDrag', {
 					x: cell.x,
 					y: cell.y,
@@ -160,16 +178,19 @@ export const createPointerInput = (container, handlers, options = {}) => {
 			return;
 		}
 		if (e.pointerType === 'pen') {
-			penDown++;
+			penIds.add(e.pointerId);
 			// the pen wins over a palm that landed first
 			cancelAllTouch();
 		}
 		if (strokePointer !== null) {
 			return; // one drawing pointer at a time
 		}
+		const cell = handlers.map(e.clientX, e.clientY, false);
+		if (!cell) {
+			return; // degenerate font metrics mid-swap: skip the event
+		}
 		strokePointer = e.pointerId;
 		capture(e.pointerId);
-		const cell = handlers.map(e.clientX, e.clientY, false);
 		if (e.altKey && handlers.sample) {
 			handlers.sample(cell.x, cell.halfBlockY);
 			return;
@@ -194,18 +215,24 @@ export const createPointerInput = (container, handlers, options = {}) => {
 			return;
 		}
 		e.preventDefault();
-		const hover = handlers.map(e.clientX, e.clientY, false);
+		const stroking = strokePointer === e.pointerId;
+		// hover previews clamp during a captured stroke (moves arrive from
+		// outside the canvas); free hover keeps v2's raw coords
+		const hover = handlers.map(e.clientX, e.clientY, stroking);
+		if (!hover) {
+			return;
+		}
 		dispatch('onTextCanvasMove', {
 			x: hover.x,
 			y: hover.y,
 			halfBlockY: hover.halfBlockY,
 		});
-		if (strokePointer === e.pointerId && (e.buttons & 3) !== 0) {
-			const cell = handlers.map(e.clientX, e.clientY, true);
+		if (stroking && (e.buttons & 3) !== 0) {
+			// hover was mapped with clamp while stroking; reuse it
 			dispatch('onTextCanvasDrag', {
-				x: cell.x,
-				y: cell.y,
-				halfBlockY: cell.halfBlockY,
+				x: hover.x,
+				y: hover.y,
+				halfBlockY: hover.halfBlockY,
 				leftMouseButton: (e.buttons & 1) !== 0 && e.ctrlKey !== true,
 				rightMouseButton: (e.buttons & 2) !== 0 || e.ctrlKey,
 				shiftKey: e.shiftKey === true,
@@ -230,12 +257,7 @@ export const createPointerInput = (container, handlers, options = {}) => {
 			}
 			return;
 		}
-		if (e.pointerType === 'pen') {
-			penDown = Math.max(0, penDown - 1);
-			if (penDown === 0) {
-				penGraceUntil = performance.now() + PEN_PALM_GRACE_MS;
-			}
-		}
+		penLifted(e.pointerId);
 		e.preventDefault();
 		if (strokePointer === e.pointerId) {
 			strokePointer = null;
@@ -257,7 +279,10 @@ export const createPointerInput = (container, handlers, options = {}) => {
 		if (e.pointerType === 'touch' && touchIds.has(e.pointerId)) {
 			touchIds.delete(e.pointerId);
 			recognizer.cancel(e.pointerId);
-		} else if (strokePointer === e.pointerId) {
+			return;
+		}
+		penLifted(e.pointerId);
+		if (strokePointer === e.pointerId) {
 			strokePointer = null;
 			dispatch('onTextCanvasUp', {});
 		}
@@ -285,7 +310,7 @@ export const createPointerInput = (container, handlers, options = {}) => {
 		},
 		stats: () => ({
 			strokePointer,
-			penDown,
+			penDown: penIds.size,
 			touchCount: touchIds.size,
 			gesture: recognizer.stats(),
 		}),

@@ -77,8 +77,13 @@ export const createZoomController = viewport => {
 
 	const canvasContainer = () => document.getElementById('canvasContainer');
 
-	const glRenderer = () =>
-		/** @type {any} */ (State).textArtCanvas?.getRendererId?.() === 'gl';
+	// canvas.js reports 'webgl2-slack-buffer' or 'canvas2d-chunks'; match
+	// on the family, not an exact string (an exact 'gl' compare shipped
+	// dead once already)
+	const glRenderer = () => {
+		const id = /** @type {any} */ (State).textArtCanvas?.getRendererId?.();
+		return typeof id === 'string' && id.startsWith('webgl');
+	};
 
 	const getZoom = () => State.font?.getScaleFactor?.() ?? 1;
 
@@ -163,6 +168,20 @@ export const createZoomController = viewport => {
 		});
 	};
 
+	// a gesture ends with its LAST scheduled zoom applied while still
+	// interactive, or the pending rAF fires after interactive drops and
+	// flashes the settings modal with a stale zoom already saved
+	const flushScheduled = () => {
+		if (rafHandle !== null) {
+			cancelAnimationFrame(rafHandle);
+			rafHandle = null;
+		}
+		if (rafTarget) {
+			applyZoom(rafTarget.scale, rafTarget.focal);
+			rafTarget = null;
+		}
+	};
+
 	/**
 	 * @param {number} scale
 	 * @param {{clientX: number, clientY: number}} [focal]
@@ -225,17 +244,22 @@ export const createZoomController = viewport => {
 	document.addEventListener(
 		'onTextCanvasPinchEnd',
 		() => {
-			interactive = false;
+			// commit while still interactive so the final relayout skips
+			// the settings modal, THEN drop the flag and save the result
+			flushScheduled();
 			if (!glRenderer() && pendingPinchScale > 0) {
 				applyZoom(pendingPinchScale, lastCentroid);
 				pendingPinchScale = 0;
 			}
+			interactive = false;
 			save();
 		},
 		{ signal },
 	);
 
 	// ---- ctrl/cmd + wheel (trackpad pinch arrives this way) ------------
+	let wheelTarget = 0; // 0 = no burst in flight
+
 	viewport.addEventListener(
 		'wheel',
 		e => {
@@ -244,27 +268,39 @@ export const createZoomController = viewport => {
 			}
 			e.preventDefault();
 			interactive = true;
+			const focal = { clientX: e.clientX, clientY: e.clientY };
+			// accumulate across the burst: each tick multiplies the PENDING
+			// target, never the lagging applied zoom (a 10-notch burst must
+			// compound, not commit only its last notch)
+			const base = wheelTarget > 0 ? wheelTarget : getZoom();
+			wheelTarget = clampZoom(
+				base * Math.exp(-e.deltaY * WHEEL_ZOOM_SENSITIVITY),
+			);
 			clearTimeout(wheelIdleTimer);
 			wheelIdleTimer = /** @type {number} */ (
 				/** @type {unknown} */ (
 					setTimeout(() => {
+						// final value lands while still interactive (no modal),
+						// then the flag drops and the result saves
+						flushScheduled();
+						if (wheelTarget > 0) {
+							clearTimeout(chunkCommitTimer);
+							applyZoom(wheelTarget, focal);
+							wheelTarget = 0;
+						}
 						interactive = false;
 						save();
 					}, WHEEL_IDLE_MS)
 				)
 			);
-			const focal = { clientX: e.clientX, clientY: e.clientY };
-			const target = clampZoom(
-				getZoom() * Math.exp(-e.deltaY * WHEEL_ZOOM_SENSITIVITY),
-			);
 			if (glRenderer()) {
-				scheduleApply(target, focal);
+				scheduleApply(wheelTarget, focal);
 			} else {
 				clearTimeout(chunkCommitTimer);
 				chunkCommitTimer = /** @type {number} */ (
 					/** @type {unknown} */ (
 						setTimeout(() => {
-							applyZoom(target, focal);
+							applyZoom(wheelTarget, focal);
 						}, CHUNK_WHEEL_COMMIT_MS)
 					)
 				);
@@ -284,6 +320,12 @@ export const createZoomController = viewport => {
 			aborter.abort();
 			clearTimeout(wheelIdleTimer);
 			clearTimeout(chunkCommitTimer);
+			if (rafHandle !== null) {
+				cancelAnimationFrame(rafHandle);
+				rafHandle = null;
+			}
+			rafTarget = null;
+			interactive = false;
 			if (singleton === controller) {
 				singleton = null;
 			}

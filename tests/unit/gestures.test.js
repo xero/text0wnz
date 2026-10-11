@@ -206,6 +206,35 @@ describe('gesture recognizer', () => {
 		expect(cb.onStrokeStart).toHaveBeenCalledTimes(1);
 	});
 
+	it('a grazing third finger does not freeze an active pinch', () => {
+		const { rec, cb } = harness();
+		rec.down(1, 100, 100);
+		rec.down(2, 200, 100);
+		rec.move(1, 80, 100); // breakout
+		expect(cb.onPinchStart).toHaveBeenCalledTimes(1);
+		rec.down(3, 150, 220); // palm edge joins
+		cb.onPinchMove.mockClear();
+		rec.move(2, 260, 100); // pair keeps pinching
+		expect(cb.onPinchMove).toHaveBeenCalled();
+		const update = cb.onPinchMove.mock.calls.at(-1)[0];
+		expect(update.scale).toBeGreaterThan(1);
+	});
+
+	it('external reset mid-stroke and mid-pinch emits the end events', () => {
+		const a = harness();
+		a.rec.down(1, 50, 50);
+		a.rec.move(1, 80, 50); // stroke via slop
+		a.rec.reset();
+		expect(a.cb.onStrokeEnd).toHaveBeenCalledTimes(1);
+
+		const b = harness();
+		b.rec.down(1, 100, 100);
+		b.rec.down(2, 200, 100);
+		b.rec.move(1, 60, 100); // pinch
+		b.rec.reset();
+		expect(b.cb.onPinchEnd).toHaveBeenCalledTimes(1);
+	});
+
 	it('stats exposes the machine for debugging', () => {
 		const { rec } = harness();
 		expect(rec.stats()).toEqual({

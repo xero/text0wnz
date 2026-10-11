@@ -1084,13 +1084,18 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
+	// Serialized with trailing coalescing: interactive zoom can fire
+	// scale changes faster than a relayout completes, and overlapping
+	// runs double-create canvases and consume the zoom controller's
+	// focal anchor with the wrong metrics
+	let criticalRunning = false;
+	let criticalDirty = false;
 	const onCriticalChange = async _ => {
-		// continuous zoom (pinch, wheel) relayouts every frame on GL;
-		// flashing the settings modal per frame would be unusable
-		const interactive = isInteractiveZoom();
-		if (!interactive) {
-			State.modal.loading('Updating editor with new settings...');
+		if (criticalRunning) {
+			criticalDirty = true;
+			return;
 		}
+		criticalRunning = true;
 		const waitForRedrawing = () =>
 			new Promise(resolve => {
 				// Fast path: don't pay a 50ms poll tick when already idle
@@ -1105,18 +1110,31 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					}
 				}, 50);
 			});
-		stopBlinkTimer();
-		await waitForRedrawing();
-		createCanvases();
-		// the zoom controller corrects scroll for focal anchoring once
-		// the container has its new size
-		document.dispatchEvent(new CustomEvent('onCanvasLayoutChange', {}));
-		redrawEntireImage(null, () => {
-			updateTimer();
-			if (!interactive && !State.loadingFromStorage) {
-				State.modal.close();
+		do {
+			criticalDirty = false;
+			// continuous zoom (pinch, wheel) relayouts every frame on GL;
+			// flashing the settings modal per frame would be unusable
+			const interactive = isInteractiveZoom();
+			if (!interactive) {
+				State.modal.loading('Updating editor with new settings...');
 			}
-		});
+			stopBlinkTimer();
+			await waitForRedrawing();
+			createCanvases();
+			// the zoom controller corrects scroll for focal anchoring once
+			// the container has its new size
+			document.dispatchEvent(new CustomEvent('onCanvasLayoutChange', {}));
+			await new Promise(resolve => {
+				redrawEntireImage(null, () => {
+					updateTimer();
+					if (!interactive && !State.loadingFromStorage) {
+						State.modal.close();
+					}
+					resolve();
+				});
+			});
+		} while (criticalDirty);
+		criticalRunning = false;
 	};
 
 	const getImage = () => {
@@ -1303,11 +1321,18 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	// cell size the font reports; drags are clamped because pointer
 	// capture keeps delivering moves after the pointer leaves the canvas.
 	const mapPointToCell = (clientX, clientY, clamp) => {
+		const cellWidth = State.font.getWidth();
+		const cellHeight = State.font.getHeight();
+		if (!(cellWidth > 0) || !(cellHeight > 0)) {
+			// font swap in flight: v2 degraded silently, so skip the event
+			// rather than throw inside a pointer handler
+			return null;
+		}
 		const rect = canvasContainer.getBoundingClientRect();
 		const dpr = window.devicePixelRatio || 1;
 		const cell = cellFromPoint(clientX, clientY, {
-			cellWidth: State.font.getWidth(),
-			cellHeight: State.font.getHeight(),
+			cellWidth,
+			cellHeight,
 			originX: snapOrigin(rect.left, dpr),
 			originY: snapOrigin(rect.top, dpr),
 		});

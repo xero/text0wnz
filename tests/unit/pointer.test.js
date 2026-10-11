@@ -187,9 +187,10 @@ describe('mouse and pen', () => {
 		);
 		const drag = events.find(e => e.name === 'onTextCanvasDrag');
 		expect(drag.detail).toMatchObject({ x: 0, y: 24, halfBlockY: 49 });
-		// the hover Move stays unclamped, exactly like v2's raw coords
+		// the hover Move clamps too while a stroke is captured, so tool
+		// previews can't render at out-of-range cells
 		const move = events.find(e => e.name === 'onTextCanvasMove');
-		expect(move.detail.x).toBe(-7);
+		expect(move.detail.x).toBe(0);
 	});
 
 	it('pointercancel ends the stroke with Up', () => {
@@ -351,6 +352,51 @@ describe('touch', () => {
 		container.dispatchEvent(touch('pointerup', 10, 40, 40));
 		container.dispatchEvent(touch('pointerup', 11, 80, 40));
 		expect(undo).not.toHaveBeenCalled();
+	});
+});
+
+describe('end-path robustness', () => {
+	const touch = (type, id, x, y) =>
+		pev(type, {
+			pointerId: id,
+			pointerType: 'touch',
+			clientX: x,
+			clientY: y,
+		});
+
+	it('a pen ending via lostpointercapture releases palm rejection', () => {
+		const { container, input } = makeHarness();
+		container.dispatchEvent(
+			pev('pointerdown', {
+				pointerId: 7,
+				pointerType: 'pen',
+				button: 0,
+				buttons: 1,
+				pressure: 0.5,
+				clientX: 0,
+				clientY: 0,
+			}),
+		);
+		expect(input.stats().penDown).toBe(1);
+		// capture lost WITHOUT a pointerup/cancel: the leak that used to
+		// reject all touch input forever
+		container.dispatchEvent(
+			pev('lostpointercapture', { pointerId: 7, pointerType: 'pen' }),
+		);
+		expect(input.stats().penDown).toBe(0);
+		vi.advanceTimersByTime(PEN_PALM_GRACE_MS + 50);
+		container.dispatchEvent(touch('pointerdown', 10, 40, 40));
+		expect(input.stats().touchCount).toBe(1);
+	});
+
+	it('dispose mid-pinch emits PinchEnd so consumers unwind', () => {
+		const { container, events, input } = makeHarness();
+		container.dispatchEvent(touch('pointerdown', 10, 100, 100));
+		container.dispatchEvent(touch('pointerdown', 11, 200, 100));
+		container.dispatchEvent(touch('pointermove', 10, 60, 100));
+		expect(events.some(e => e.name === 'onTextCanvasPinchStart')).toBe(true);
+		input.dispose();
+		expect(events.at(-1).name).toBe('onTextCanvasPinchEnd');
 	});
 });
 
