@@ -178,3 +178,109 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 		ws.close();
 	});
 });
+
+describe.skipIf(!canRun)('bridge over real sockets', () => {
+	let target = null;
+	let front = null;
+	let targetPort = 0;
+	let frontPort = 0;
+	let bridgeScratch = null;
+
+	beforeAll(async () => {
+		bridgeScratch = mkdtempSync(path.join(tmpdir(), 't0wnz-bridge-'));
+		targetPort = 22000 + Math.floor(Math.random() * 10000);
+		frontPort = 33000 + Math.floor(Math.random() * 10000);
+		target = spawn(
+			'bun',
+			[path.join(repoRoot, 'src/js/server/main.js'), String(targetPort)],
+			{ cwd: bridgeScratch, stdio: ['ignore', 'pipe', 'pipe']},
+		);
+		front = spawn(
+			'bun',
+			[path.join(repoRoot, 'src/js/server/main.js'), String(frontPort)],
+			{
+				cwd: bridgeScratch,
+				stdio: ['ignore', 'pipe', 'pipe'],
+				env: {
+					...process.env,
+					BRIDGE: 'local',
+					BRIDGE_TARGET: `ws://127.0.0.1:${targetPort}/bridged`,
+				},
+			},
+		);
+		const deadline = Date.now() + 15000;
+		for (const checkPort of [targetPort, frontPort]) {
+			for (;;) {
+				try {
+					const res = await fetch(`http://127.0.0.1:${checkPort}/`);
+					if (res.status === 426) {
+						break;
+					}
+				} catch {
+					// not up yet
+				}
+				if (Date.now() > deadline) {
+					throw new Error('bridge servers did not come up');
+				}
+				await new Promise(r => setTimeout(r, 150));
+			}
+		}
+	}, 25000);
+
+	afterAll(() => {
+		target?.kill('SIGKILL');
+		front?.kill('SIGKILL');
+		if (bridgeScratch) {
+			rmSync(bridgeScratch, { recursive: true, force: true });
+		}
+	});
+
+	it('local mode pipes frames verbatim to the fixed target', async () => {
+		const ws = new WebSocket(`ws://127.0.0.1:${frontPort}/bridge`);
+		await new Promise((resolve, reject) => {
+			ws.addEventListener('open', resolve, { once: true });
+			ws.addEventListener('error', reject, { once: true });
+		});
+		const reply = nextFrame(ws);
+		send(ws, 0, { nick: 'piped' });
+		const frame = await reply;
+		// the TARGET server answered through the pipe with the join doc
+		expect(frame.type).toBe(0);
+		expect(frame.data.doc.columns).toBe(80);
+		ws.close();
+	});
+
+	it('requests cannot steer the local-mode destination', async () => {
+		const open = async url => {
+			const ws = new WebSocket(url);
+			await new Promise((resolve, reject) => {
+				ws.addEventListener('open', resolve, { once: true });
+				ws.addEventListener('error', reject, { once: true });
+			});
+			return ws;
+		};
+		// first user joins through the plain bridge path and STAYS
+		const anchor = await open(`ws://127.0.0.1:${frontPort}/bridge`);
+		const anchorReply = nextFrame(anchor);
+		send(anchor, 0, { nick: 'anchor' });
+		expect((await anchorReply).type).toBe(0);
+		// second user asks for a different host/port/room; local mode
+		// must land them in the SAME fixed room regardless
+		const steer = await open(
+			`ws://127.0.0.1:${frontPort}/bridge?host=127.0.0.1&port=${targetPort}&room=elsewhere`,
+		);
+		const steerReply = nextFrame(steer);
+		send(steer, 0, { nick: 'steer' });
+		const frame = await steerReply;
+		expect(frame.type).toBe(0);
+		expect(Array.isArray(frame.data.users)).toBe(true);
+		expect(frame.data.users.some(u => u.nick === 'anchor')).toBe(true);
+		anchor.close();
+		steer.close();
+	});
+
+	it('off mode (the default server) refuses /bridge with 403', async () => {
+		const res = await fetch(`http://127.0.0.1:${port}/bridge?host=a.example`);
+		expect(res.status).toBe(403);
+	});
+});

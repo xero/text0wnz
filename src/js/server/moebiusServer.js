@@ -14,6 +14,7 @@
 
 import { decodeFrame, ProtocolError } from '../core/index';
 import { createRoom } from './room.js';
+import { resolveBridgeTarget, createBridgePipe } from './bridge.js';
 
 export const SERVER_LIMITS = Object.freeze({
 	maxPayloadBytes: 1024 * 1024,
@@ -42,6 +43,7 @@ export const roomNameFromPath = (pathname, defaultRoom) => {
  * @param {string} [config.sessionName]
  * @param {string} [config.pass]
  * @param {Record<string, string>} [config.roomPasswords]
+ * @param {{mode: string, target: string, port: number, allow: string[], maxConnections: number}} [config.bridge]
  * @param {boolean} [config.debug]
  * @param {{cert: string, key: string} | undefined} [config.tls]
  * @param {(line: string) => void} [config.log]
@@ -85,6 +87,8 @@ export const createMoebiusServer = config => {
 
 	/** @type {Set<import('bun').ServerWebSocket<any>>} */
 	const sockets = new Set();
+	const bridgeConfig = config.bridge ?? { mode: 'off' };
+	let bridgeCount = 0;
 
 	const websocket = {
 		maxPayloadLength: SERVER_LIMITS.maxPayloadBytes,
@@ -92,6 +96,12 @@ export const createMoebiusServer = config => {
 		/** @param {import('bun').ServerWebSocket<any>} ws */
 		open: ws => {
 			ws.data.alive = true;
+			if (ws.data.kind === 'bridge') {
+				bridgeCount++;
+				log(`bridge open -> ${ws.data.targetUrl}`);
+				ws.data.pipe = createBridgePipe(ws, ws.data.targetUrl, log);
+				return;
+			}
 			const room = getRoom(ws.data.roomName);
 			if (!room || room.stats().memberCount >= SERVER_LIMITS.maxClientsPerRoom) {
 				ws.close(1013, 'room full');
@@ -102,6 +112,13 @@ export const createMoebiusServer = config => {
 		},
 		/** @param {import('bun').ServerWebSocket<any>} ws @param {string | Buffer} raw */
 		message: (ws, raw) => {
+			if (ws.data.kind === 'bridge') {
+				// pure byte pipe: frames relay verbatim, text or binary
+				ws.data.pipe?.fromBrowser(
+					typeof raw === 'string' ? raw : new Uint8Array(raw),
+				);
+				return;
+			}
 			const room = ws.data.room;
 			if (!room) {
 				return;
@@ -130,6 +147,11 @@ export const createMoebiusServer = config => {
 		/** @param {import('bun').ServerWebSocket<any>} ws */
 		close: ws => {
 			sockets.delete(ws);
+			if (ws.data.kind === 'bridge') {
+				bridgeCount = Math.max(0, bridgeCount - 1);
+				ws.data.pipe?.close();
+				return;
+			}
 			if (ws.data.room && ws.data.connected) {
 				ws.data.room.disconnect(clientFor(ws));
 			}
@@ -141,8 +163,28 @@ export const createMoebiusServer = config => {
 	};
 
 	/** @param {Request} req @param {import('bun').Server} server */
-	const fetchHandler = (req, server) => {
+	const fetchHandler = async (req, server) => {
 		const url = new URL(req.url);
+		if (url.pathname === '/bridge') {
+			if (bridgeCount >= (bridgeConfig.maxConnections ?? 16)) {
+				return new Response('bridge busy', { status: 503 });
+			}
+			const vet = await resolveBridgeTarget(bridgeConfig, {
+				host: url.searchParams.get('host'),
+				port: url.searchParams.get('port'),
+				room: url.searchParams.get('room'),
+			});
+			if (!vet.ok) {
+				log(`bridge refused: ${vet.reason}`);
+				return new Response(vet.reason, { status: 403 });
+			}
+			if (
+				server.upgrade(req, { data: { kind: 'bridge', targetUrl: vet.url, alive: true } })
+			) {
+				return undefined;
+			}
+			return new Response('upgrade required', { status: 426 });
+		}
 		const roomName = roomNameFromPath(url.pathname, defaultRoom);
 		if (roomName === null) {
 			return new Response('no such room', { status: 404 });

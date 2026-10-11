@@ -12,6 +12,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { parseArgs } from './config.js';
 import { callout } from './utils.js';
 import { createMoebiusServer } from './moebiusServer.js';
+import { bridgeConfigFromEnv } from './bridge.js';
 import { saveRoom, backupRoom, loadRoomDoc } from './persistence.js';
 
 const config = parseArgs();
@@ -36,6 +37,7 @@ const server = createMoebiusServer({
 	pass: config.pass,
 	roomPasswords: config.roomPasswords,
 	debug: config.debug,
+	bridge: bridgeConfigFromEnv(),
 	tls,
 	log: config.debug ? console.log : () => {},
 });
