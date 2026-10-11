@@ -7,13 +7,19 @@ Options:
   --ssl                 Enable SSL (requires certificates in ssl-dir)
   --ssl-dir <path>      SSL certificate directory (default: /etc/ssl/private)
   --save-interval <min> Auto-save interval in minutes (default: 30)
-  --session-name <name> Session file prefix (default: joint)
+  --session-name <name> Default room + session file prefix (default: joint)
+  --plain-port <port>   Extra plaintext ws listener for desktop clients
+  --pass <password>     Room password (gates spectators too)
   --debug               Enable verbose console messages
   --help                Show this help message
 
+Environment:
+  ROOM_PASS             Same as --pass
+  ROOM_PASSWORDS        Per-room passwords as JSON: {"room":"pw"}
+
 Examples:
   bun server 8080 --ssl --session-name myart --debug
-  node server --save-interval 60 --session-name collaborative
+  bun server 1337 --plain-port 8000 --pass hunter2
 `);
 	process.exit(0);
 };

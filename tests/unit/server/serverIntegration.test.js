@@ -1,0 +1,286 @@
+// @vitest-environment node
+/**
+ * Real-socket integration: spawns the bun server on an ephemeral port
+ * in a scratch cwd and talks actual websockets through the global
+ * WebSocket client (node >= 22). Pins the Bun.serve layer: upgrade
+ * routing, 426 for plain HTTP, path rooms isolation, password refusal,
+ * caps reply, and the no-self-echo draw fanout end to end.
+ * Never points at a shared server (PLAN §3.6.2 #4): everything local.
+ */
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { spawn, execSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
+const repoRoot = path.resolve(import.meta.dirname, '../../..');
+const PASS = 'hunter2';
+
+const hasBun = (() => {
+	try {
+		execSync('bun --version', { stdio: 'ignore' });
+		return true;
+	} catch {
+		return false;
+	}
+})();
+
+const canRun = hasBun && typeof WebSocket === 'function';
+
+let child = null;
+let scratch = null;
+let port = 0;
+
+const send = (ws, type, data) => ws.send(JSON.stringify({ type, data }));
+
+const nextFrame = (ws, wantType, timeoutMs = 5000) =>
+	new Promise((resolve, reject) => {
+		const timer = setTimeout(
+			() => reject(new Error(`timed out waiting for type ${wantType}`)),
+			timeoutMs,
+		);
+		const onMessage = event => {
+			const frame = JSON.parse(event.data);
+			if (wantType === undefined || frame.type === wantType) {
+				clearTimeout(timer);
+				ws.removeEventListener('message', onMessage);
+				resolve(frame);
+			}
+		};
+		ws.addEventListener('message', onMessage);
+		ws.addEventListener('error', () => {
+			clearTimeout(timer);
+			reject(new Error('socket error'));
+		});
+	});
+
+const connectClient = async (room, data) => {
+	const ws = new WebSocket(`ws://127.0.0.1:${port}/${room}`);
+	await new Promise((resolve, reject) => {
+		ws.addEventListener('open', resolve, { once: true });
+		ws.addEventListener('error', reject, { once: true });
+	});
+	const replyPromise = nextFrame(ws);
+	send(ws, 0, data);
+	const reply = await replyPromise;
+	return { ws, reply };
+};
+
+beforeAll(async () => {
+	if (!canRun) {
+		return;
+	}
+	scratch = mkdtempSync(path.join(tmpdir(), 't0wnz-srv-'));
+	port = 20000 + Math.floor(Math.random() * 20000);
+	child = spawn(
+		'bun',
+		[path.join(repoRoot, 'src/js/server/main.js'), String(port), '--pass', PASS],
+		{ cwd: scratch, stdio: ['ignore', 'pipe', 'pipe']},
+	);
+	// readiness: poll the http endpoint for the 426
+	const deadline = Date.now() + 15000;
+	for (;;) {
+		try {
+			const res = await fetch(`http://127.0.0.1:${port}/`);
+			if (res.status === 426) {
+				break;
+			}
+		} catch {
+			// not up yet
+		}
+		if (Date.now() > deadline) {
+			throw new Error('server did not come up');
+		}
+		await new Promise(r => setTimeout(r, 150));
+	}
+}, 20000);
+
+afterAll(() => {
+	child?.kill('SIGKILL');
+	if (scratch) {
+		rmSync(scratch, { recursive: true, force: true });
+	}
+});
+
+describe.skipIf(!canRun)('bun server over real sockets', () => {
+	it('answers plain http with 426 upgrade required', async () => {
+		const res = await fetch(`http://127.0.0.1:${port}/`);
+		expect(res.status).toBe(426);
+	});
+
+	it('refuses a bad password and unknown room paths', async () => {
+		const { ws, reply } = await connectClient('server', {
+			nick: 'x',
+			pass: 'wrong',
+		});
+		expect(reply.type).toBe(1); // REFUSED
+		ws.close();
+		const res = await fetch(`http://127.0.0.1:${port}/bad%20name!!`);
+		expect(res.status).toBe(404);
+	});
+
+	it('joins, decodes the doc, and fans out draws without self-echo', async () => {
+		const a = await connectClient('server', { nick: 'a', pass: PASS });
+		expect(a.reply.type).toBe(0);
+		expect(a.reply.data.doc.columns).toBe(80);
+		expect(a.reply.data.doc.compressed_data).toBeDefined();
+
+		const b = await connectClient('server', { nick: 'b', pass: PASS });
+		const drawAtB = nextFrame(b.ws, 9);
+		let selfEcho = false;
+		a.ws.addEventListener('message', e => {
+			if (JSON.parse(e.data).type === 9) {
+				selfEcho = true;
+			}
+		});
+		send(a.ws, 9, {
+			x: 2,
+			y: 1,
+			block: { code: 219, fg: 12, bg: 4 },
+			id: a.reply.data.id,
+		});
+		const frame = await drawAtB;
+		expect(frame.data.block).toEqual({ code: 219, fg: 12, bg: 4 });
+		await new Promise(r => setTimeout(r, 150));
+		expect(selfEcho).toBe(false);
+		a.ws.close();
+		b.ws.close();
+	});
+
+	it('path rooms are isolated', async () => {
+		const main = await connectClient('server', { nick: 'm', pass: PASS });
+		const lounge = await connectClient('lounge', { nick: 'l', pass: PASS });
+		let leaked = false;
+		main.ws.addEventListener('message', e => {
+			if (JSON.parse(e.data).type === 9) {
+				leaked = true;
+			}
+		});
+		send(lounge.ws, 9, {
+			x: 0,
+			y: 0,
+			block: { code: 65, fg: 7, bg: 0 },
+			id: lounge.reply.data.id,
+		});
+		await new Promise(r => setTimeout(r, 200));
+		expect(leaked).toBe(false);
+		main.ws.close();
+		lounge.ws.close();
+	});
+
+	it('caps-aware clients get a caps reply field', async () => {
+		const { ws, reply } = await connectClient('server', {
+			nick: 'c',
+			pass: PASS,
+			caps: ['anything'],
+		});
+		expect(Array.isArray(reply.data.caps)).toBe(true);
+		ws.close();
+	});
+});
+
+describe.skipIf(!canRun)('bridge over real sockets', () => {
+	let target = null;
+	let front = null;
+	let targetPort = 0;
+	let frontPort = 0;
+	let bridgeScratch = null;
+
+	beforeAll(async () => {
+		bridgeScratch = mkdtempSync(path.join(tmpdir(), 't0wnz-bridge-'));
+		targetPort = 22000 + Math.floor(Math.random() * 10000);
+		frontPort = 33000 + Math.floor(Math.random() * 10000);
+		target = spawn(
+			'bun',
+			[path.join(repoRoot, 'src/js/server/main.js'), String(targetPort)],
+			{ cwd: bridgeScratch, stdio: ['ignore', 'pipe', 'pipe']},
+		);
+		front = spawn(
+			'bun',
+			[path.join(repoRoot, 'src/js/server/main.js'), String(frontPort)],
+			{
+				cwd: bridgeScratch,
+				stdio: ['ignore', 'pipe', 'pipe'],
+				env: {
+					...process.env,
+					BRIDGE: 'local',
+					BRIDGE_TARGET: `ws://127.0.0.1:${targetPort}/bridged`,
+				},
+			},
+		);
+		const deadline = Date.now() + 15000;
+		for (const checkPort of [targetPort, frontPort]) {
+			for (;;) {
+				try {
+					const res = await fetch(`http://127.0.0.1:${checkPort}/`);
+					if (res.status === 426) {
+						break;
+					}
+				} catch {
+					// not up yet
+				}
+				if (Date.now() > deadline) {
+					throw new Error('bridge servers did not come up');
+				}
+				await new Promise(r => setTimeout(r, 150));
+			}
+		}
+	}, 25000);
+
+	afterAll(() => {
+		target?.kill('SIGKILL');
+		front?.kill('SIGKILL');
+		if (bridgeScratch) {
+			rmSync(bridgeScratch, { recursive: true, force: true });
+		}
+	});
+
+	it('local mode pipes frames verbatim to the fixed target', async () => {
+		const ws = new WebSocket(`ws://127.0.0.1:${frontPort}/bridge`);
+		await new Promise((resolve, reject) => {
+			ws.addEventListener('open', resolve, { once: true });
+			ws.addEventListener('error', reject, { once: true });
+		});
+		const reply = nextFrame(ws);
+		send(ws, 0, { nick: 'piped' });
+		const frame = await reply;
+		// the TARGET server answered through the pipe with the join doc
+		expect(frame.type).toBe(0);
+		expect(frame.data.doc.columns).toBe(80);
+		ws.close();
+	});
+
+	it('requests cannot steer the local-mode destination', async () => {
+		const open = async url => {
+			const ws = new WebSocket(url);
+			await new Promise((resolve, reject) => {
+				ws.addEventListener('open', resolve, { once: true });
+				ws.addEventListener('error', reject, { once: true });
+			});
+			return ws;
+		};
+		// first user joins through the plain bridge path and STAYS
+		const anchor = await open(`ws://127.0.0.1:${frontPort}/bridge`);
+		const anchorReply = nextFrame(anchor);
+		send(anchor, 0, { nick: 'anchor' });
+		expect((await anchorReply).type).toBe(0);
+		// second user asks for a different host/port/room; local mode
+		// must land them in the SAME fixed room regardless
+		const steer = await open(
+			`ws://127.0.0.1:${frontPort}/bridge?host=127.0.0.1&port=${targetPort}&room=elsewhere`,
+		);
+		const steerReply = nextFrame(steer);
+		send(steer, 0, { nick: 'steer' });
+		const frame = await steerReply;
+		expect(frame.type).toBe(0);
+		expect(Array.isArray(frame.data.users)).toBe(true);
+		expect(frame.data.users.some(u => u.nick === 'anchor')).toBe(true);
+		anchor.close();
+		steer.close();
+	});
+
+	it('off mode (the default server) refuses /bridge with 403', async () => {
+		const res = await fetch(`http://127.0.0.1:${port}/bridge?host=a.example`);
+		expect(res.status).toBe(403);
+	});
+});

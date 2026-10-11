@@ -4,6 +4,10 @@ import { beforeAll, afterEach } from 'vitest';
 const contextCache = new WeakMap();
 
 beforeAll(() => {
+	// node-environment test files have no DOM to shim
+	if (typeof HTMLCanvasElement === 'undefined') {
+		return;
+	}
 	HTMLCanvasElement.prototype.getContext = function (type) {
 		if (type === '2d') {
 			// Reuse cached context if available

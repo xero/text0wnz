@@ -242,6 +242,10 @@ const createCursor = canvasContainer => {
 		canvas.style.top = y * State.font.getHeight() - 1 + 'px';
 		State.positionInfo.update(x, y);
 		State.pasteTool.setSelection(x, y, 1, 1);
+		// peers render our cursor natively (P4); network throttles sends
+		document.dispatchEvent(
+			new CustomEvent('onTextCursorMove', { detail: { x, y } }),
+		);
 
 		// Auto-scroll viewport to keep cursor visible
 		scrollViewportToCursor();

@@ -1,5 +1,6 @@
 /* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import State from '../../src/js/client/state.js';
 import {
 	createWorkerHandler,
 	createChatController,
@@ -9,8 +10,7 @@ import {
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		worker: null,
-		workerPath: '/js/worker.js',
-		modal: { close: vi.fn() },
+		modal: { close: vi.fn(), open: vi.fn(), loading: vi.fn() },
 		title: '',
 		textArtCanvas: {
 			setImageData: vi.fn(),
@@ -229,68 +229,27 @@ describe('Network Module', () => {
 			);
 		});
 
-		it('should determine WebSocket URL based on location', () => {
-			// Test proxied setup (standard ports)
-			global.window.location.port = '';
+		it('probes after init without joining (consent-first)', () => {
 			createWorkerHandler(mockInputHandle);
-
-			// Get the message event listener that was registered
 			const messageListener = mockWorker.addEventListener.mock.calls.find(
 				call => call[0] === 'message',
 			)[1];
-
-			// Simulate the first worker message for init
 			messageListener({ data: { cmd: 'initialized' } });
-			expect(mockWorker.postMessage).toHaveBeenCalledWith({ cmd: 'init' });
-
-			// Now it should send the connect command
-			messageListener({ data: { cmd: 'initialized' } });
-			expect(mockWorker.postMessage).toHaveBeenCalledWith({
-				cmd: 'connect',
-				silentCheck: true,
-			});
-
-			vi.clearAllMocks();
-
-			// Test direct connection (custom port)
-			global.window.location.port = '8080';
-			global.window.location.hostname = 'example.com';
-			global.window.location.pathname = '/path';
-
-			createWorkerHandler(mockInputHandle);
-
-			// Get the new message listener
-			const messageListener2 = mockWorker.addEventListener.mock.calls.find(
-				call => call[0] === 'message',
-			)[1];
-
-			// Simulate the worker responding to init
-			messageListener2({ data: { cmd: 'initialized' } });
-
-			expect(mockWorker.postMessage).toHaveBeenCalledWith({
-				cmd: 'connect',
-				silentCheck: true,
-			});
+			expect(mockWorker.postMessage).toHaveBeenCalledWith({ cmd: 'probe' });
+			// a found server only opens the choice modal; no connect yet
+			messageListener({ data: { cmd: 'probeResult', found: true } });
+			expect(State.modal.open).toHaveBeenCalledWith('choice');
+			const cmds = mockWorker.postMessage.mock.calls.map(c => c[0].cmd);
+			expect(cmds).not.toContain('connect');
 		});
 
-		it('should use wss:// for HTTPS', () => {
-			global.window.location.protocol = 'https:';
-			global.window.location.port = '';
-
+		it('ignores a probe that finds nothing', () => {
 			createWorkerHandler(mockInputHandle);
-
-			// Get the message event listener
 			const messageListener = mockWorker.addEventListener.mock.calls.find(
 				call => call[0] === 'message',
 			)[1];
-
-			// Simulate the worker responding to init
-			messageListener({ data: { cmd: 'initialized' } });
-
-			expect(mockWorker.postMessage).toHaveBeenCalledWith({
-				cmd: 'connect',
-				silentCheck: true,
-			});
+			messageListener({ data: { cmd: 'probeResult', found: false } });
+			expect(State.modal.open).not.toHaveBeenCalled();
 		});
 
 		it('should handle connection state management', () => {
@@ -320,16 +279,14 @@ describe('Network Module', () => {
 
 		it('should handle setHandle functionality', () => {
 			const handler = createWorkerHandler(mockInputHandle);
-
-			handler.setHandle('NewUser');
+			mockWorker.postMessage.mockClear();
+			handler.setHandle('NewHandle');
 			expect(global.localStorage.setItem).toHaveBeenCalledWith(
 				'handle',
-				'NewUser',
+				'NewHandle',
 			);
-			expect(mockWorker.postMessage).toHaveBeenCalledWith({
-				cmd: 'nick',
-				handle: 'NewUser',
-			});
+			// moebius has no NICK frame; the rename rides the next CHAT
+			expect(mockWorker.postMessage).not.toHaveBeenCalled();
 		});
 
 		it('should not update handle if same', () => {
@@ -346,14 +303,13 @@ describe('Network Module', () => {
 			});
 		});
 
-		it('should handle sendChat functionality', () => {
+		it('sendChat is inert while disconnected (server excludes sender)', () => {
 			const handler = createWorkerHandler(mockInputHandle);
-
+			mockWorker.postMessage.mockClear();
 			handler.sendChat('Hello world');
-			expect(mockWorker.postMessage).toHaveBeenCalledWith({
-				cmd: 'chat',
-				text: 'Hello world',
-			});
+			// not connected: nothing hits the wire and nothing renders
+			const cmds = mockWorker.postMessage.mock.calls.map(c => c[0].cmd);
+			expect(cmds).not.toContain('send');
 		});
 
 		it('should handle canvas settings when not in collaboration mode', () => {

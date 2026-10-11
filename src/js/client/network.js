@@ -2,6 +2,64 @@ import State from './state.js';
 import { $, $$, websocketUI } from './ui.js';
 import { createDefaultPalette } from './palette.js';
 import { trustedMessage } from './messageGuard.js';
+import { MoebiusAction, joinDocToDoc } from '../core/index';
+
+/**
+ * Remote collaborator cursors (native CURSOR/SELECTION rendering,
+ * PLAN §3.6.3): one positioned box per peer id, placed through the
+ * same scaled font metrics everything else uses.
+ */
+const createRemoteCursors = () => {
+	/** @type {Map<number, HTMLElement>} */
+	const cursors = new Map();
+	const container = () => document.getElementById('canvasContainer');
+
+	const show = (id, x, y) => {
+		const host = container();
+		if (!host || !State.font) {
+			return;
+		}
+		let el = cursors.get(id);
+		if (!el) {
+			el = document.createElement('div');
+			el.className = 'remoteCursor';
+			el.style.position = 'absolute';
+			el.style.pointerEvents = 'none';
+			el.style.border = '1px solid #ff7518';
+			el.style.zIndex = '900';
+			host.appendChild(el);
+			cursors.set(id, el);
+		}
+		const w = State.font.getWidth();
+		const h = State.font.getHeight();
+		el.style.left = `${x * w}px`;
+		el.style.top = `${y * h}px`;
+		el.style.width = `${w}px`;
+		el.style.height = `${h}px`;
+		el.style.display = 'block';
+	};
+
+	const hide = id => {
+		const el = cursors.get(id);
+		if (el) {
+			el.style.display = 'none';
+		}
+	};
+
+	const remove = id => {
+		cursors.get(id)?.remove();
+		cursors.delete(id);
+	};
+
+	const clear = () => {
+		for (const el of cursors.values()) {
+			el.remove();
+		}
+		cursors.clear();
+	};
+
+	return { show, hide, remove, clear };
+};
 
 const createWorkerHandler = inputHandle => {
 	const btnJoin = $('joinCollaboration');
@@ -13,12 +71,9 @@ const createWorkerHandler = inputHandle => {
 	const btnNet = $('networkButton');
 
 	try {
-		State.worker = new Worker(State.workerPath);
+		State.worker = new Worker(new URL('./collabWorker.js', import.meta.url), { type: 'module' });
 	} catch (error) {
-		console.error(
-			`[Network] Failed to load worker from ${State.workerPath}:`,
-			error,
-		);
+		console.error('[Network] Failed to load collab worker:', error);
 		return;
 	}
 	let handle = localStorage.getItem('handle');
@@ -28,123 +83,68 @@ const createWorkerHandler = inputHandle => {
 	}
 	inputHandle.value = handle;
 	let connected = false;
-	let silentCheck = false;
 	let collaborationMode = false;
-	let pendingImageData = null;
-	let pendingCanvasSettings = null; // Store settings during silent check
-	let silentCheckTimer = null;
+	// explicit server url (?server=ws://...): remote dial on explicit
+	// user intent; same-origin default otherwise (PLAN 3.6.3)
+	const explicitServer =
+		new URLSearchParams(window.location.search).get('server') ?? undefined;
 	let applyReceivedSettings = false;
-	let initializing = false;
+	const remoteCursors = createRemoteCursors();
+	/** id -> nick, for rename detection (renames ride CHAT upstream) */
+	const peerNicks = new Map();
 
-	const onConnected = () => {
-		websocketUI(true);
-		State.title = 'collab mode';
-		State.worker.postMessage({ cmd: 'join', handle: handle });
-		connected = true;
-	};
-
-	const onDisconnected = () => {
-		if (connected) {
+	const onDisconnected = wasConnected => {
+		const hadSession = connected && collaborationMode;
+		connected = false;
+		collaborationMode = false;
+		remoteCursors.clear();
+		peerNicks.clear();
+		websocketUI(false);
+		if (hadSession && wasConnected) {
+			// the v2 defect: a dropped server was never noticed and local
+			// autosave stayed paused forever; now the journal resumes and
+			// the user hears about it
 			alert(
 				'You were disconnected from the server, try refreshing the page to try again.',
 			);
-		} else if (!silentCheck) {
-			State.modal.close();
-		}
-		websocketUI(false);
-		// If this was a silent check and it failed, just stay in local mode
-		connected = false;
-	};
-
-	const onImageData = (columns, rows, data, iceColors, letterSpacing) => {
-		if (silentCheck) {
-			// Clear the timeout since we received image data
-			if (silentCheckTimer) {
-				clearTimeout(silentCheckTimer);
-				silentCheckTimer = null;
-			}
-			// Store image data for later use if user chooses collaboration
-			pendingImageData = { columns, rows, data, iceColors, letterSpacing };
-			// Now show the collaboration choice dialog
-			showCollaborationChoice();
-		} else if (collaborationMode) {
-			// Apply image data immediately only in collaboration mode
-			State.textArtCanvas.setImageData(
-				columns,
-				rows,
-				data,
-				iceColors,
-				letterSpacing,
-			);
-			State.modal.close();
 		}
 	};
 
-	const onChat = (handle, text, showNotification) => {
-		State.chat.addConversation(handle, text, showNotification);
-	};
-
-	const onJoin = (handle, sessionID, showNotification) => {
-		State.chat.join(handle, sessionID, showNotification);
-	};
-
-	const onPart = sessionID => {
-		State.chat.part(sessionID);
-	};
-
-	const onNick = (handle, sessionID, showNotification) => {
-		State.chat.nick(handle, sessionID, showNotification);
-	};
-
-	const onDraw = blocks => {
-		State.textArtCanvas.quickDraw(blocks);
-	};
-
-	const onCanvasSettings = async settings => {
-		if (silentCheck) {
-			// Store settings during silent check instead of applying them
-			pendingCanvasSettings = settings;
+	const onRemoteDraw = data => {
+		const columns = State.textArtCanvas.getColumns();
+		const rows = State.textArtCanvas.getRows();
+		const { x, y, block } = data;
+		if (
+			!Number.isInteger(x) ||
+			!Number.isInteger(y) ||
+			x < 0 ||
+			y < 0 ||
+			// bounds against OUR current dims: a draw serialized before a
+			// resize must not land at a wrong index (landmine 7; draws
+			// near concurrent resizes drop everywhere, by design)
+			x >= columns ||
+			y >= rows ||
+			typeof block !== 'object' ||
+			block === null
+		) {
 			return;
 		}
+		const word =
+			((block.code & 0xff) << 8) | ((block.bg & 15) << 4) | (block.fg & 15);
+		State.textArtCanvas.quickDraw([[y * columns + x, word, x, y]]);
+	};
 
-		// Only apply settings if we're in collaboration mode
-		if (!collaborationMode) {
-			return;
-		}
-
-		// Set flag to prevent re-broadcasting
-		applyReceivedSettings = true;
-
-		if (settings.columns !== undefined && settings.rows !== undefined) {
-			State.textArtCanvas.resize(settings.columns, settings.rows);
-		}
-		if (settings.fontName !== undefined) {
-			await State.textArtCanvas.setFont(settings.fontName, () => {});
-		}
-		if (settings.iceColors !== undefined) {
-			State.textArtCanvas.setIceColors(settings.iceColors);
-			// Update the ice colors toggle UI
-			if (settings.iceColors) {
-				btnIce.classList.add('enabled');
-			} else {
-				btnIce.classList.remove('enabled');
+	const onRemoteChat = data => {
+		const id = data.id;
+		const nick = typeof data.nick === 'string' ? data.nick : 'guest';
+		if (Number.isInteger(id)) {
+			const known = peerNicks.get(id);
+			if (known !== undefined && known !== nick) {
+				State.chat.nick(nick, id, false);
 			}
+			peerNicks.set(id, nick);
 		}
-		if (settings.letterSpacing !== undefined) {
-			State.font.setLetterSpacing(settings.letterSpacing);
-			// Update the letter spacing toggle UI
-			if (settings.letterSpacing) {
-				btn9pt.classList.add('enabled');
-			} else {
-				btn9pt.classList.remove('enabled');
-			}
-		}
-		applyReceivedSettings = false;
-
-		// If this was during initialization, we're now ready to send changes
-		if (initializing) {
-			initializing = false;
-		}
+		State.chat.addConversation(nick, String(data.text ?? ''), true);
 	};
 
 	const onResize = (columns, rows) => {
@@ -187,6 +187,51 @@ const createWorkerHandler = inputHandle => {
 		applyReceivedSettings = false;
 	};
 
+	/** @param {number} type @param {any} data */
+	const onFrame = async (type, data) => {
+		switch (type) {
+			case MoebiusAction.DRAW:
+				onRemoteDraw(data);
+				break;
+			case MoebiusAction.CHAT:
+				onRemoteChat(data);
+				break;
+			case MoebiusAction.JOIN: {
+				const nick = typeof data.nick === 'string' ? data.nick : 'guest';
+				peerNicks.set(data.id, nick);
+				State.chat.join(nick, data.id, true);
+				break;
+			}
+			case MoebiusAction.LEAVE:
+				remoteCursors.remove(data.id);
+				peerNicks.delete(data.id);
+				State.chat.part(data.id);
+				break;
+			case MoebiusAction.CURSOR:
+			case MoebiusAction.SELECTION:
+				remoteCursors.show(data.id, data.x, data.y);
+				break;
+			case MoebiusAction.HIDE_CURSOR:
+				remoteCursors.hide(data.id);
+				break;
+			case MoebiusAction.ICE_COLORS:
+				onIceColorsChange(data.value === true);
+				break;
+			case MoebiusAction.USE_9PX_FONT:
+				onLetterSpacingChange(data.value === true);
+				break;
+			case MoebiusAction.CHANGE_FONT:
+				await onFontChange(data.font_name);
+				break;
+			case MoebiusAction.SET_CANVAS_SIZE:
+				onResize(data.columns, data.rows);
+				break;
+			default:
+				// STATUS, SAUCE, operations 17-20/22: nothing to render yet
+				break;
+		}
+	};
+
 	const onMessage = async msg => {
 		if (!trustedMessage(msg)) {
 			return;
@@ -194,207 +239,148 @@ const createWorkerHandler = inputHandle => {
 		const data = msg.data;
 		switch (data.cmd) {
 			case 'initialized':
-				console.info('[Network] Worker initialized successfully');
-				initiateConnectionCheck();
+				// scoped probe: same-origin default server only; no join and
+				// no remote state until the user consents
+				State.worker.postMessage({ cmd: 'probe', url: explicitServer });
 				break;
-			case 'connected':
-				if (silentCheck) {
-					// Silent check succeeded - send join to get full session data
-					State.worker.postMessage({ cmd: 'join', handle: handle });
-					silentCheckTimer = setTimeout(() => {
-						if (silentCheck) {
-							showCollaborationChoice();
-						}
-					}, 1000);
-				} else {
-					// Direct connection - proceed with collaboration
-					onConnected();
+			case 'probeResult':
+				if (data.found) {
+					showCollaborationChoice();
 				}
 				break;
-			case 'disconnected':
-				onDisconnected();
+			case 'connected':
+				await adoptSession(data);
+				break;
+			case 'refused':
+				alert('The collab server refused the connection.');
+				stayLocal();
+				break;
+			case 'frame':
+				if (collaborationMode) {
+					await onFrame(data.type, data.data);
+				}
+				break;
+			case 'closed':
+				onDisconnected(data.wasConnected);
 				break;
 			case 'error':
-				// Let browser handle
-				break;
-			case 'imageData':
-				onImageData(
-					data.columns,
-					data.rows,
-					new Uint16Array(data.data),
-					data.iceColors,
-					data.letterSpacing,
-				);
-				break;
-			case 'chat':
-				onChat(data.handle, data.text, data.showNotification);
-				break;
-			case 'join':
-				onJoin(data.handle, data.sessionID, data.showNotification);
-				break;
-			case 'part':
-				onPart(data.sessionID);
-				break;
-			case 'nick':
-				onNick(data.handle, data.sessionID, data.showNotification);
-				break;
-			case 'draw':
-				onDraw(data.blocks);
-				break;
-			case 'canvasSettings':
-				onCanvasSettings(data.settings);
-				break;
-			case 'resize':
-				onResize(data.columns, data.rows);
-				break;
-			case 'fontChange':
-				await onFontChange(data.fontName);
-				break;
-			case 'iceColorsChange':
-				onIceColorsChange(data.iceColors);
-				break;
-			case 'letterSpacingChange':
-				onLetterSpacingChange(data.letterSpacing);
+				console.warn('[Network] worker error:', data.error);
 				break;
 		}
 	};
 
-	const draw = blocks => {
-		if (collaborationMode && connected) {
-			State.worker.postMessage({ cmd: 'draw', blocks: blocks });
+	/** @param {number} type @param {object} data */
+	const sendFrame = (type, data) => {
+		if (collaborationMode && connected && !applyReceivedSettings) {
+			State.worker.postMessage({ cmd: 'send', type, data });
 		}
 	};
 
-	const sendCanvasSettings = settings => {
-		if (
-			collaborationMode &&
-			connected &&
-			!applyReceivedSettings &&
-			!initializing
-		) {
-			State.worker.postMessage({ cmd: 'canvasSettings', settings: settings });
+	/**
+	 * cells arrive from canvas.js as {x, y, block:{code, fg, bg}}; each
+	 * becomes a per-cell DRAW (apply-locally-on-send: the server
+	 * excludes the sender, so no echo comes back)
+	 */
+	const draw = cells => {
+		if (collaborationMode && connected && Array.isArray(cells)) {
+			State.worker.postMessage({ cmd: 'draw', cells });
 		}
 	};
 
-	const sendResize = (columns, rows) => {
-		if (
-			collaborationMode &&
-			connected &&
-			!applyReceivedSettings &&
-			!initializing
-		) {
-			State.worker.postMessage({ cmd: 'resize', columns: columns, rows: rows });
-		}
-	};
+	// no Moebius equivalent; kept as a no-op so old call sites are inert
+	const sendCanvasSettings = _settings => {};
 
-	const sendFontChange = fontName => {
-		if (
-			collaborationMode &&
-			connected &&
-			!applyReceivedSettings &&
-			!initializing
-		) {
-			State.worker.postMessage({ cmd: 'fontChange', fontName: fontName });
-		}
-	};
+	const sendResize = (columns, rows) =>
+		sendFrame(MoebiusAction.SET_CANVAS_SIZE, { columns, rows });
 
-	const sendIceColorsChange = iceColors => {
-		if (
-			collaborationMode &&
-			connected &&
-			!applyReceivedSettings &&
-			!initializing
-		) {
-			State.worker.postMessage({
-				cmd: 'iceColorsChange',
-				iceColors: iceColors,
-			});
-		}
-	};
+	const sendFontChange = fontName =>
+		sendFrame(MoebiusAction.CHANGE_FONT, { font_name: fontName });
 
-	const sendLetterSpacingChange = letterSpacing => {
-		if (
-			collaborationMode &&
-			connected &&
-			!applyReceivedSettings &&
-			!initializing
-		) {
-			State.worker.postMessage({
-				cmd: 'letterSpacingChange',
-				letterSpacing: letterSpacing,
-			});
-		}
-	};
+	const sendIceColorsChange = iceColors =>
+		sendFrame(MoebiusAction.ICE_COLORS, { value: iceColors });
 
-	const reinit = () => {
-		State.worker.removeEventListener('message', onMessage);
-		btnJoin.removeEventListener('click', joinCollaboration);
-		btnLocal.removeEventListener('click', stayLocal);
-		State.network = createWorkerHandler(inputHandle);
-	};
+	const sendLetterSpacingChange = letterSpacing =>
+		sendFrame(MoebiusAction.USE_9PX_FONT, { value: letterSpacing });
 
 	const showCollaborationChoice = () => {
 		State.modal.open('choice');
-		// Reset silent check flag since we're now in interactive mode
-		silentCheck = false;
-		if (silentCheckTimer) {
-			clearTimeout(silentCheckTimer);
-			silentCheckTimer = null;
+	};
+
+	/**
+	 * CONNECTED arrived: adopt the session doc and populate chat. This
+	 * runs only after the user consented (joinCollaboration connects).
+	 */
+	const adoptSession = async data => {
+		connected = true;
+		collaborationMode = true;
+		applyReceivedSettings = true;
+		try {
+			State.modal.loading(
+				'Updating editor with data from the collab session...',
+			);
+			State.palette = createDefaultPalette();
+			document.dispatchEvent(
+				new CustomEvent('onPaletteChange', {
+					detail: State.palette,
+					bubbles: true,
+					cancelable: false,
+				}),
+			);
+			const result = joinDocToDoc(data.data.doc);
+			State.textArtCanvas.setDocData(result.doc);
+			if (result.fontName) {
+				await onFontChange(result.fontName);
+			}
+			State.font.setLetterSpacing(result.use9px);
+			if (Array.isArray(data.data.users)) {
+				for (const user of data.data.users) {
+					const nick = typeof user.nick === 'string' ? user.nick : 'guest';
+					peerNicks.set(user.id, nick);
+					State.chat.join(nick, user.id, false);
+				}
+			}
+			if (Array.isArray(data.data.chat_history)) {
+				for (const entry of data.data.chat_history) {
+					State.chat.addConversation(
+						String(entry.nick ?? 'guest'),
+						String(entry.text ?? ''),
+						false,
+					);
+				}
+			}
+			btnNet.classList.add('hide');
+			websocketUI(true);
+			State.title = 'collab mode';
+		} catch (error) {
+			console.error('[Network] failed to adopt session doc:', error);
+			stayLocal();
+		} finally {
+			applyReceivedSettings = false;
+			State.modal.close();
 		}
 	};
 
-	const joinCollaboration = async () => {
-		connected = true;
-		State.modal.loading('Updating editor with data from the collab session...');
-		State.palette = createDefaultPalette();
-		document.dispatchEvent(
-			new CustomEvent('onPaletteChange', {
-				detail: State.palette,
-				bubbles: true,
-				cancelable: false,
-			}),
-		);
-		collaborationMode = true;
-		initializing = true; // Set flag to prevent broadcasting during initial setup
-
-		// Apply pending image data if available
-		if (pendingImageData) {
-			State.textArtCanvas.setImageData(
-				pendingImageData.columns,
-				pendingImageData.rows,
-				pendingImageData.data,
-				pendingImageData.iceColors,
-				pendingImageData.letterSpacing,
-			);
-			pendingImageData = null;
-		}
-
-		// Apply pending canvas settings if available
-		if (pendingCanvasSettings) {
-			await onCanvasSettings(pendingCanvasSettings);
-			pendingCanvasSettings = null;
-		}
-
-		// Apply UI changes for collaboration mode
-		btnNet.classList.add('hide');
-		websocketUI(true);
-		State.title = 'collab mode';
-
-		// Hide the overlay since we're ready
-		State.modal.close();
+	const joinCollaboration = () => {
+		State.modal.loading('Joining the collab session...');
+		State.worker.postMessage({
+			cmd: 'connect',
+			nick: handle,
+			group: '',
+			pass: '',
+			caps: [],
+			url: explicitServer,
+		});
 	};
 
 	const stayLocal = () => {
 		State.modal.close();
 		collaborationMode = false;
-		pendingImageData = null; // Clear any pending server data
-		pendingCanvasSettings = null; // Clear any pending server settings
+		connected = false;
 		websocketUI(false);
-		// Disconnect the websocket since user wants local mode
 		State.worker.postMessage({ cmd: 'disconnect' });
 		btnNet.classList.remove('hide');
 		btnNet.addEventListener('click', _ => {
-			reinit();
+			showCollaborationChoice();
 		});
 	};
 
@@ -402,24 +388,47 @@ const createWorkerHandler = inputHandle => {
 		if (handle !== newHandle) {
 			handle = newHandle;
 			localStorage.setItem('handle', handle);
-			State.worker.postMessage({ cmd: 'nick', handle: handle });
+			// moebius has no NICK frame: renames ride the next CHAT
 		}
 	};
 
 	const sendChat = text => {
-		State.worker.postMessage({ cmd: 'chat', text: text });
+		if (connected) {
+			sendFrame(MoebiusAction.CHAT, { nick: handle, group: '', text });
+			// the server excludes the sender: render our own line locally
+			State.chat.addConversation(handle, text, false);
+		}
 	};
 
 	const isConnected = () => connected;
 
-	const initiateConnectionCheck = () => {
-		// Start with a silent connection check
-		silentCheck = true;
-		State.worker.postMessage({
-			cmd: 'connect',
-			silentCheck: true,
-		});
-	};
+	// own-cursor sends, throttled ~100ms trailing (PLAN 3.6.3): peers
+	// render it via the native CURSOR frames
+	let cursorTimer = 0;
+	let cursorPending = null;
+	document.addEventListener('onTextCursorMove', e => {
+		if (!collaborationMode || !connected) {
+			return;
+		}
+		cursorPending = /** @type {CustomEvent} */ (e).detail;
+		if (cursorTimer) {
+			return;
+		}
+		cursorTimer = /** @type {number} */ (
+			/** @type {unknown} */ (
+				setTimeout(() => {
+					cursorTimer = 0;
+					if (cursorPending && connected) {
+						sendFrame(MoebiusAction.CURSOR, {
+							x: cursorPending.x,
+							y: cursorPending.y,
+						});
+						cursorPending = null;
+					}
+				}, 100)
+			)
+		);
+	});
 
 	if (State.worker) {
 		try {

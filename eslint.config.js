@@ -6,7 +6,8 @@ import parser from '@html-eslint/parser';
 export default [
 	{
 		// generated test reports (playwright trace viewer, coverage html)
-		ignores: ['tests/results/**'],
+		// interop fixtures are VERBATIM upstream code (their style, not ours)
+		ignores: ['tests/results/**', 'tests/interop/fixtures/**'],
 	},
 	js.configs.recommended,
 	{
