@@ -24,19 +24,20 @@ jobs:
           path: wiki
           token: ${{ secrets.CICD_TOKEN }}
       - name: configure git
+        # head_commit fields are attacker-controlled (commit author/message):
+        # they reach the shell only as env vars, never script interpolation
+        env:
+          COMMIT_NAME: ${{ github.event.head_commit.author.name }}
+          COMMIT_EMAIL: ${{ github.event.head_commit.author.email }}
+          FALLBACK_NAME: ${{ github.actor }}
         run: |
-          # get the last commit author name and email
-          cd repo
-          COMMIT_NAME="${{ github.event.head_commit.author.name }}"
-          COMMIT_EMAIL="${{ github.event.head_commit.author.email }}"
           # default to actor name if head_commit info is not available (e.g. onDispatch)
           if [ -z "$COMMIT_NAME" ]; then
-            COMMIT_NAME="${{ github.actor }}"
-            COMMIT_EMAIL="${{ github.actor }}@users.noreply.github.com"
+            COMMIT_NAME="$FALLBACK_NAME"
+            COMMIT_EMAIL="$FALLBACK_NAME@users.noreply.github.com"
           fi
           git config --global user.name "$COMMIT_NAME"
           git config --global user.email "$COMMIT_EMAIL"
-          cd ..
       - name: sync docs to wiki
         run: |
           # clear wiki
