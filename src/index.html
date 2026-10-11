@@ -309,6 +309,20 @@
 			<aside>
 				<canvas id="palettePreview" height="40" width="40"></canvas>
 				<canvas id="palettePicker" height="160" width="40"></canvas>
+				<div id="paletteMore" title="More colors (256 + RGB)">++</div>
+				<div id="colorPanel" class="hide">
+					<h3>xterm 256 <small>click: fg, right-click: bg</small></h3>
+					<div id="colorGrid"></div>
+					<h3>RGB</h3>
+					<div id="colorRGB">
+						<input id="colorHexInput" type="color" aria-label="Pick RGB Color" value="#ff00ff"/>
+						<button id="colorRGBfg">fg</button>
+						<button id="colorRGBbg">bg</button>
+					</div>
+					<h3>Recent</h3>
+					<div id="colorRecent"></div>
+					<p id="colorLockNote" class="hide">Joined server only speaks 16 colors: extended picks are disabled until you disconnect.</p>
+				</div>
 				<div id="keyboard">
 					<svg alt="Keyboard" aria-label="Keyboard (k)">
 						<use href="img/icons.svg#keeb"></use>

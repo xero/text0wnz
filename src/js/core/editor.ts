@@ -29,7 +29,7 @@ import {
 	paletteColor,
 	paletteIndexOf,
 } from './doc.js';
-import { U16Doc, v3ToU16, v3ToU16Lossy } from './convert.js';
+import { U16Doc, quantizeColorWord, v3ToU16, v3ToU16Lossy } from './convert.js';
 import { unicodeToCp437Strict } from './cp437.js';
 import {
 	EditCell,
@@ -164,21 +164,37 @@ export const createEditorCore = (
 
 	// ------------------------------------------------------- cell access
 
-	/** Classic16 view of a cell; non-classic parts degrade like v2 nibbles. */
+	/**
+	 * Cell view for the tools. Colors are classic 0-15 indexes when the
+	 * plane word is one; anything else (P5 extended colors: tag-bit
+	 * indexes above 15, raw RGB words) passes through as the WORD so a
+	 * read-then-rewrite round trip cannot corrupt it. Values 0-15 and
+	 * words are distinguishable everywhere that matters: index words
+	 * carry bit 31, and the color picker never emits RGB words <= 15.
+	 */
 	const readCell = (index: number): EditCell => {
 		const frame = doc.frames[0];
 		const glyph = frame.glyph[index];
-		const fgWord = frame.fg[index];
-		const bgWord = frame.bg[index];
 		const blink = (attrsOf(glyph) & ATTR_BLINK) !== 0;
-		const fg = isPaletteColor(fgWord) ? paletteIndexOf(fgWord) & 15 : 0;
-		const bgIndex = isPaletteColor(bgWord) ? paletteIndexOf(bgWord) & 15 : 0;
+		const classic = (word: number): number | null =>
+			isPaletteColor(word) && paletteIndexOf(word) <= 15
+				? paletteIndexOf(word)
+				: null;
+		const fgIndex = classic(frame.fg[index]);
+		const bgIndex = classic(frame.bg[index]);
 		return {
 			charCode: glyphIdOf(glyph),
-			fg,
-			bg: blink ? bgIndex | 8 : bgIndex,
+			fg: fgIndex ?? frame.fg[index] >>> 0,
+			bg:
+				bgIndex !== null
+					? blink
+						? bgIndex | 8
+						: bgIndex
+					: frame.bg[index] >>> 0,
 		};
 	};
+
+	const isClassic = (value: number): boolean => value >= 0 && value <= 15;
 
 	const packWord = (cell: EditCell): number => {
 		let charCode = cell.charCode;
@@ -188,16 +204,27 @@ export const createEditorCore = (
 			const def = doc.glyphTable.get(charCode);
 			charCode = (def && unicodeToCp437Strict(def.codepoint)) ?? 63;
 		}
-		return (charCode << 8) | ((cell.bg & 15) << 4) | (cell.fg & 15);
+		// extended colors quantize the same way v3ToU16Lossy does, so the
+		// mirror, the wire, and the lossy projection can never disagree
+		const fgIndex = isClassic(cell.fg)
+			? cell.fg & 15
+			: quantizeColorWord(cell.fg >>> 0, doc, 16);
+		const bgNibble = isClassic(cell.bg)
+			? cell.bg & 15
+			: quantizeColorWord(cell.bg >>> 0, doc, doc.getIceColors() ? 16 : 8);
+		return (charCode << 8) | (bgNibble << 4) | fgIndex;
 	};
 
-	/** Fold a classic16 cell into plane words per the doc's ice flag. */
+	/** Fold a cell into plane words per the doc's ice flag. */
 	const planeWords = (cell: EditCell): Cell => {
-		const blink = !doc.getIceColors() && cell.bg > 7;
+		const classicBg = isClassic(cell.bg);
+		const blink = !doc.getIceColors() && classicBg && cell.bg > 7;
 		return {
 			glyph: glyphWord(cell.charCode, blink ? ATTR_BLINK : 0),
-			fg: paletteColor(cell.fg & 15),
-			bg: paletteColor(blink ? cell.bg & 7 : cell.bg & 15),
+			fg: isClassic(cell.fg) ? paletteColor(cell.fg & 15) : cell.fg >>> 0,
+			bg: classicBg
+				? paletteColor(blink ? cell.bg & 7 : cell.bg & 15)
+				: cell.bg >>> 0,
 		};
 	};
 

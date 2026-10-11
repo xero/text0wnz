@@ -2,6 +2,7 @@
 /* Color related methods */
 import State from './state.js';
 import { $ } from './ui.js';
+import { xterm256RGB } from '../core/codecs/dur.js';
 
 /** @type {Map<number, number>} */
 const charCodeToUnicode = new Map([
@@ -294,8 +295,36 @@ const createPalette = RGB6Bit => {
 	const hexToXbin = hex => rgbaToXbin(hexToRbga(hex));
 	/** @param {number} index */
 	const getRGBColor = index => rgbaToHex(RGBAColors[index].toString());
-	/** @param {number} index */
-	const getRGBAColor = index => RGBAColors[index];
+	/**
+	 * RGBA for any color value: classic 0-15 index, tag-bit palette word
+	 * (indexes above 15 resolve through the xterm table), or a raw
+	 * 0x00RRGGBB word (P5 extended colors).
+	 * @param {number} value
+	 */
+	const getRGBAColor = value => {
+		if (value >= 0 && value <= 15) {
+			return RGBAColors[value];
+		}
+		if ((value & 0x80000000) !== 0) {
+			const index = value & 0xff;
+			if (index <= 15) {
+				return RGBAColors[index];
+			}
+			const word = xterm256RGB(index);
+			return new Uint8Array([
+				(word >> 16) & 0xff,
+				(word >> 8) & 0xff,
+				word & 0xff,
+				255,
+			]);
+		}
+		return new Uint8Array([
+			(value >> 16) & 0xff,
+			(value >> 8) & 0xff,
+			value & 0xff,
+			255,
+		]);
+	};
 	const getForegroundColor = () => foreground;
 	const getBackgroundColor = () => background;
 	const getPalette = () => RGBAColors;

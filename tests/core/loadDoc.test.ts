@@ -201,3 +201,50 @@ describe('unicode glyph ids through the editor (P5)', () => {
 		expect(doc.frames[0].glyph[1] & 0xffff).toBe(hanId);
 	});
 });
+
+describe('extended colors through the editor (P5)', () => {
+	it('writes words to the planes and quantizes the u16 side', () => {
+		const doc = createDocV3({ columns: 4, rows: 1 });
+		const writes: number[] = [];
+		const editor = createEditorCore(doc, {
+			onWrite: ({ word }) => writes.push(word),
+		});
+		const red256 = paletteColor(196); // xterm 196 = pure red
+		const navy = rgbColor(0, 0, 128);
+		editor.drawBlocks(draw => {
+			draw(65, red256, navy, 0, 0);
+		});
+		expect(doc.frames[0].fg[0]).toBe(red256);
+		expect(doc.frames[0].bg[0]).toBe(navy);
+		// mirror quantizes: xterm red (255,0,0) sits nearer dim red (4)
+		// than bright red (255,85,85); navy lands on blue (1)
+		expect(writes[0] & 15).toBe(4);
+		expect((writes[0] >> 4) & 15).toBe(1);
+		// read-then-rewrite round trip preserves the exact words
+		const block = editor.getBlock(0, 0);
+		expect(block.foregroundColor).toBe(red256);
+		expect(block.backgroundColor).toBe(navy);
+		editor.drawBlocks(draw => {
+			draw(block.charCode, block.foregroundColor, block.backgroundColor, 1, 0);
+		});
+		expect(doc.frames[0].fg[1]).toBe(red256);
+		expect(doc.frames[0].bg[1]).toBe(navy);
+		// classic cells stay classic through the same path
+		editor.drawBlocks(draw => {
+			draw(66, 14, 4, 2, 0);
+		});
+		expect(doc.frames[0].fg[2]).toBe(paletteColor(14));
+		expect(writes[2] & 15).toBe(14);
+	});
+
+	it('keeps extended backgrounds out of the blink fold', () => {
+		const doc = createDocV3({ columns: 2, rows: 1 });
+		const editor = createEditorCore(doc);
+		editor.drawBlocks(draw => {
+			draw(65, 7, rgbColor(200, 0, 0), 0, 0);
+		});
+		// no ATTR_BLINK on the glyph word; the bg word is the raw RGB
+		expect(doc.frames[0].glyph[0] & 0x10000).toBe(0);
+		expect(doc.frames[0].bg[0]).toBe(rgbColor(200, 0, 0));
+	});
+});

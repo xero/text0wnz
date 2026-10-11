@@ -184,6 +184,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				getIceColors: iceColorsNow,
 				getGlyphDef: glyphId => doc.glyphTable.get(glyphId),
 				getHexPages: ensureHexPages,
+				getPalette: () => doc.palette,
 			});
 		} catch (error) {
 			console.warn('[Canvas] GL renderer init failed', error);

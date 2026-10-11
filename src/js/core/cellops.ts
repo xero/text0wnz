@@ -180,7 +180,9 @@ export const overlayHalfBlock = (
  */
 export const optimizeCell = (cell: EditCell): EditCell | null => {
 	const { charCode, fg, bg } = cell;
-	if (bg < 8) {
+	// the bright-bg rewrite is classic16 ice semantics only; extended
+	// color words (P5) pass through untouched
+	if (bg < 8 || bg > 15) {
 		return null;
 	}
 	switch (charCode) {

@@ -1063,6 +1063,70 @@
 	#charsetImportLabel:hover {
 		@apply bg-purp;
 	}
+	#paletteMore {
+		@apply text-fg bg-menu text-center cursor-pointer select-none;
+		width: 40px;
+		line-height: 20px;
+	}
+	#paletteMore:hover {
+		@apply bg-purp;
+	}
+	#colorPanel {
+		@apply fixed z-40 dialog-style p-2;
+		left: 48px;
+		top: var(--header-size);
+		width: 346px;
+		h3 {
+			@apply text-cyan text-sm pt-1;
+			small {
+				@apply text-fg text-xs pl-2;
+			}
+		}
+		p {
+			@apply text-fg text-xs pt-2;
+		}
+	}
+	#colorPanel.locked {
+		#colorGrid,
+		#colorRGB,
+		#colorRecent {
+			@apply opacity-40 pointer-events-none;
+		}
+	}
+	#colorGrid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1px;
+	}
+	#colorGrid .colorSwatch {
+		width: 13px;
+		height: 13px;
+	}
+	#colorRecent {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 2px;
+		min-height: 18px;
+	}
+	#colorRecent .colorSwatch {
+		width: 18px;
+		height: 18px;
+	}
+	.colorSwatch {
+		@apply cursor-pointer;
+	}
+	.colorSwatch:hover {
+		outline: 1px solid theme('colors.cyber');
+	}
+	#colorRGB {
+		@apply flex flex-row gap-2 items-center;
+		button {
+			@apply bg-menu text-fg px-3 cursor-pointer;
+		}
+		button:hover {
+			@apply bg-purp;
+		}
+	}
 	#sauceModal {
 		@apply justify-between;
 		article {

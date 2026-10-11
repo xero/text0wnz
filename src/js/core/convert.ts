@@ -25,6 +25,7 @@ import {
 	rgbOf,
 } from './doc.js';
 import { cp437ToUnicode, unicodeToCp437Strict } from './cp437.js';
+import { xterm256RGB } from './codecs/dur.js';
 
 export class ConvertError extends Error {
 	readonly cellIndex: number;
@@ -150,6 +151,49 @@ export const v3ToU16 = (doc: DocV3, frameIndex = 0): U16Doc => {
  * non-CP437 glyphs degrade to '?' exactly like v2's lenient UTF-8
  * reader. Never use this where v3ToU16's strictness is the point.
  */
+/**
+ * Quantize any color word to a classic palette index below `limit`:
+ * in-range indexes pass through, everything else (raw RGB, indexes
+ * beyond the limit) lands on the nearest default-palette entry. The
+ * single source of truth for every lossy 16-color projection (the u16
+ * mirror, the vanilla collab wire, exports).
+ */
+export const quantizeColorWord = (
+	word: number,
+	doc: DocV3,
+	limit = 16,
+): number => {
+	if (isPaletteColor(word)) {
+		const index = paletteIndexOf(word);
+		if (index < limit) {
+			return index;
+		}
+	}
+	// indexes beyond the doc palette resolve through the canonical xterm
+	// table, exactly like the GL renderer's palette texture
+	const index = isPaletteColor(word) ? paletteIndexOf(word) : -1;
+	const rgbWord =
+		index >= 0
+			? (doc.palette[index] ?? xterm256RGB(index & 0xff))
+			: word & 0x00ffffff;
+	const defaults = createDefaultPaletteRGB();
+	const { r, g, b } = rgbOf(rgbWord);
+	let best = 0;
+	let bestDistance = Infinity;
+	for (let i = 0; i < limit; i++) {
+		const entry = rgbOf(defaults[i]);
+		const distance =
+			(entry.r - r) * (entry.r - r) +
+			(entry.g - g) * (entry.g - g) +
+			(entry.b - b) * (entry.b - b);
+		if (distance < bestDistance) {
+			bestDistance = distance;
+			best = i;
+		}
+	}
+	return best;
+};
+
 export const v3ToU16Lossy = (doc: DocV3, frameIndex = 0): U16Doc => {
 	const frame = doc.frames[frameIndex];
 	if (!frame) {
@@ -160,40 +204,8 @@ export const v3ToU16Lossy = (doc: DocV3, frameIndex = 0): U16Doc => {
 	const iceColors = doc.getIceColors();
 	const imageData = new Uint16Array(columns * rows);
 
-	const resolveRGB = (word: number): number => {
-		if (!isPaletteColor(word)) {
-			return word & 0x00ffffff;
-		}
-		const index = paletteIndexOf(word);
-		return index < doc.palette.length ? doc.palette[index] : 0;
-	};
-	const defaults = createDefaultPaletteRGB();
-	const nearest = (rgbWord: number, limit: number): number => {
-		const { r, g, b } = rgbOf(rgbWord);
-		let best = 0;
-		let bestDistance = Infinity;
-		for (let i = 0; i < limit; i++) {
-			const entry = rgbOf(defaults[i]);
-			const distance =
-				(entry.r - r) * (entry.r - r) +
-				(entry.g - g) * (entry.g - g) +
-				(entry.b - b) * (entry.b - b);
-			if (distance < bestDistance) {
-				bestDistance = distance;
-				best = i;
-			}
-		}
-		return best;
-	};
-	const toIndex = (word: number, limit: number): number => {
-		if (isPaletteColor(word)) {
-			const index = paletteIndexOf(word);
-			if (index < limit) {
-				return index;
-			}
-		}
-		return nearest(resolveRGB(word), limit);
-	};
+	const toIndex = (word: number, limit: number): number =>
+		quantizeColorWord(word, doc, limit);
 
 	for (let i = 0; i < imageData.length; i++) {
 		const glyphId = glyphIdOf(frame.glyph[i]);

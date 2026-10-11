@@ -7,6 +7,7 @@ import { createWorkerHandler, createChatController } from './network.js';
 import { trustedMessage } from './messageGuard.js';
 import { createZoomController } from './zoom.js';
 import { createCharsetPicker } from './charsetPicker.js';
+import { createColorPanel } from './colorPanel.js';
 import { FontCache } from './fontCache.js';
 import {
 	$,
@@ -547,6 +548,9 @@ const initializeAppComponents = async () => {
 	// P5 charset picker (durdraw lineage)
 	const charsetPicker = createCharsetPicker();
 	onClick($('charsetPicker'), charsetPicker.show);
+
+	// P5 extended colors: the strip's 256/RGB expansion panel
+	createColorPanel();
 
 	// Credz
 	onClick($('about'), _ => {

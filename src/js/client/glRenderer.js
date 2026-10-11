@@ -35,6 +35,7 @@
  */
 import State from './state.js';
 import { createCanvas } from './ui.js';
+import { xterm256RGB } from '../core/codecs/dur.js';
 
 // Winning spike parameters (tests/baselines/p1-scroll-spike.json): zero
 // blank frames at every tested velocity; tolerance well under half the
@@ -50,7 +51,8 @@ uniform vec2 u_cellPx;
 uniform vec2 u_canvasPx;
 uniform float u_cols;
 uniform float u_blink;
-uniform vec4 u_palette[16];
+// 256x1 texture: 0-15 the live UI palette, 16-255 the doc/xterm table
+uniform sampler2D u_palette;
 flat out float v_char;
 flat out vec4 v_fg;
 flat out vec4 v_bg;
@@ -58,7 +60,7 @@ out vec2 v_pix;
 // tag-bit resolve (PLAN §3.2): bit 31 = palette index, else 0x00RRGGBB
 vec4 cellColor(uint word) {
 	if ((word & 0x80000000u) != 0u) {
-		return u_palette[int(word & 15u)];
+		return texelFetch(u_palette, ivec2(int(word & 0xffu), 0), 0);
 	}
 	return vec4(
 		float((word >> 16) & 0xffu) / 255.0,
@@ -233,6 +235,7 @@ const createGLRenderer = (canvasContainer, host) => {
 
 		gl.uniform1i(uniforms.u_atlas, 0);
 		gl.uniform1i(uniforms.u_upages, 1);
+		gl.uniform1i(uniforms.u_palette, 2);
 		gl.clearColor(0, 0, 0, 1);
 	};
 	initGL();
@@ -429,19 +432,52 @@ const createGLRenderer = (canvasContainer, host) => {
 		return ((word & 0xffff0000) | (256 + slotForGlyphId(glyphId))) >>> 0;
 	};
 
+	let paletteTexture = null;
 	const uploadPalette = () => {
 		if (!State.palette) {
 			return;
 		}
-		const flat = new Float32Array(64);
+		// 256-entry palette as a 256x1 texture (a uniform array this size
+		// can bust minimum GLES3 uniform budgets on weak devices): 0-15
+		// live from the UI palette, 16+ from the doc palette when it has
+		// them (xterm-256 docs), else the canonical xterm table
+		const pixels = new Uint8Array(256 * 4);
 		for (let i = 0; i < 16; i++) {
 			const rgba = State.palette.getRGBAColor(i);
-			flat[i * 4] = rgba[0] / 255;
-			flat[i * 4 + 1] = rgba[1] / 255;
-			flat[i * 4 + 2] = rgba[2] / 255;
-			flat[i * 4 + 3] = 1;
+			pixels.set([rgba[0], rgba[1], rgba[2], 255], i * 4);
 		}
-		gl.uniform4fv(uniforms.u_palette, flat);
+		const docPalette = host.getPalette ? host.getPalette() : null;
+		for (let i = 16; i < 256; i++) {
+			const word =
+				docPalette && i < docPalette.length
+					? docPalette[i]
+					: xterm256RGB(i);
+			pixels.set(
+				[(word >> 16) & 0xff, (word >> 8) & 0xff, word & 0xff, 255],
+				i * 4,
+			);
+		}
+		if (!paletteTexture) {
+			paletteTexture = gl.createTexture();
+		}
+		gl.activeTexture(gl.TEXTURE2);
+		gl.bindTexture(gl.TEXTURE_2D, paletteTexture);
+		gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+		gl.texImage2D(
+			gl.TEXTURE_2D,
+			0,
+			gl.RGBA,
+			256,
+			1,
+			0,
+			gl.RGBA,
+			gl.UNSIGNED_BYTE,
+			pixels,
+		);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 	};
 
 	const refreshMetrics = () => {
@@ -632,11 +668,17 @@ const createGLRenderer = (canvasContainer, host) => {
 		for (let i = 0; i < 16; i++) {
 			colors.push(State.palette.getRGBAColor(i));
 		}
+		const docPalette = host.getPalette ? host.getPalette() : null;
+		for (let i = 16; i < 256; i++) {
+			const word =
+				docPalette && i < docPalette.length ? docPalette[i] : xterm256RGB(i);
+			colors.push([(word >> 16) & 0xff, (word >> 8) & 0xff, word & 0xff, 255]);
+		}
 		// same tag-bit resolve as the shader; blink cells export in their
 		// visible phase (the planes already hold the dim background)
 		const resolve = word =>
 			((word & 0x80000000) !== 0
-				? colors[word & 15]
+				? colors[word & 0xff]
 				: [(word >> 16) & 0xff, (word >> 8) & 0xff, word & 0xff, 255]);
 		// unicode glyph bits for exports, independent of what the paint
 		// path has cached (off-coverage cells were never slot-assigned)
@@ -706,6 +748,9 @@ const createGLRenderer = (canvasContainer, host) => {
 	canvas.addEventListener('webglcontextrestored', () => {
 		contextLost = false;
 		console.warn('[GLRenderer] context restored; rebuilding');
+		// GL object handles died with the old context
+		paletteTexture = null;
+		unicodeTexture = null;
 		initGL();
 		rebuild();
 	});

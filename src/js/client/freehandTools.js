@@ -1762,10 +1762,13 @@ const createAttributeBrushController = () => {
 		let newForeground, newBackground;
 
 		if (altKey) {
-			// Alt+click modifies background color only
+			// Alt+click modifies background color only (the -8 fold is
+			// classic16 semantics; extended color words pass through)
 			newForeground = block.foregroundColor;
 			newBackground =
-				currentForeground > 7 ? currentForeground - 8 : currentForeground;
+				currentForeground > 7 && currentForeground <= 15
+					? currentForeground - 8
+					: currentForeground;
 		} else {
 			// Normal click modifies both foreground and background colors
 			newForeground = currentForeground;
