@@ -19,7 +19,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test, expect } from '@playwright/test';
 import { waitForEditorReady } from '../e2e/helpers/editorHelpers.js';
-import { testcardBin, testcardIceBin, testcard512Xb } from './testcard.js';
+import {
+	testcardBin,
+	testcardIceBin,
+	testcard512Xb,
+	testcardUtf8,
+} from './testcard.js';
 
 const snapshotDir = path.join(
 	path.dirname(fileURLToPath(import.meta.url)),
@@ -27,7 +32,9 @@ const snapshotDir = path.join(
 );
 // Goldens are linux-container artifacts (see header comment)
 const goldenExists = name =>
-	existsSync(path.join(snapshotDir, `${name.replace('.png', '')}-golden-linux.png`));
+	existsSync(
+		path.join(snapshotDir, `${name.replace('.png', '')}-golden-linux.png`),
+	);
 
 // Real artwork, read from docs/examples rather than copied: one source of
 // truth, and the goldens derived from it are renders of the author's art,
@@ -44,6 +51,7 @@ const FIXTURES = {
 	ice: { name: 'testcard-ice.bin', bytes: testcardIceBin },
 	xb512: { name: 'testcard-512.xb', bytes: testcard512Xb },
 	realart: { name: 'x0-defcon25.ans', bytes: () => realArtBytes },
+	utf8: { name: 'testcard-unicode.utf8.ans', bytes: testcardUtf8 },
 };
 
 // fixture, font (null = keep the fixture's font), zoom, 9px letter spacing
@@ -143,11 +151,14 @@ const applyView = async (page, { font, zoom, nine, ice }) => {
 
 const seedSkip = (testInfo, name) =>
 	// Until the golden-update workflow has seeded snapshots, CI runs
-	// the flow but skips the pixel assertion instead of failing
+	// the flow but skips the pixel assertion instead of failing. The
+	// golden-gl project's snapshotPathTemplate pins the same -golden
+	// suffix as the 2D project, so one name covers both (the GL-only
+	// unicode goldens are seeded by the workflow's golden-gl step)
 	test.skip(
 		!!process.env.CI &&
-		testInfo.config.updateSnapshots === 'missing' &&
-		!goldenExists(name),
+			testInfo.config.updateSnapshots === 'missing' &&
+			!goldenExists(name),
 		'golden not seeded; run the golden-update workflow and commit its artifact',
 	);
 
@@ -211,6 +222,46 @@ test.describe('golden real artwork screenshots', () => {
 			});
 			await expect(page).toHaveScreenshot(realartName(combo), {
 				clip,
+				maxDiffPixels: 0,
+				animations: 'disabled',
+			});
+		});
+	}
+});
+
+test.describe('golden unicode screenshots (P5)', () => {
+	// GL-only: the chunk fallback renders the lossy '?' mirror by design
+	// (unit-pinned), so only the GL path owns the mixed-charset pixels
+	for (const zoom of [1, 2]) {
+		const name = `unicode-mixed-z${zoom}.png`;
+		test(name, async ({ page }, testInfo) => {
+			test.skip(
+				testInfo.project.name !== 'golden-gl',
+				'unicode cells render on the GL path only',
+			);
+			seedSkip(testInfo, name);
+			await prepPage(page, testInfo);
+			await openFixture(page, 'utf8');
+			await applyView(page, { font: 'CP437 8x16', zoom, nine: false });
+			// hex blocks stream in after the doc opens; wait until the
+			// loader has been quiet for a bit, then settle with a repaint
+			await page.evaluate(
+				() =>
+					new Promise(resolve => {
+						let timer = setTimeout(resolve, 1000);
+						document.addEventListener('onHexBlocksLoaded', () => {
+							clearTimeout(timer);
+							timer = setTimeout(resolve, 1000);
+						});
+					}),
+			);
+			await page.evaluate(async () => {
+				const { State } = window.__t0wnz;
+				await new Promise(resolve =>
+					State.textArtCanvas.redrawEntireImage(null, resolve));
+			});
+			await page.waitForTimeout(100);
+			await expect(page.locator('#canvasContainer')).toHaveScreenshot(name, {
 				maxDiffPixels: 0,
 				animations: 'disabled',
 			});

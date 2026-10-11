@@ -3,6 +3,7 @@ import { $, $$, websocketUI } from './ui.js';
 import { createDefaultPalette } from './palette.js';
 import { trustedMessage } from './messageGuard.js';
 import { MoebiusAction, joinDocToDoc } from '../core/index';
+import { Load } from './file.js';
 
 /**
  * Remote collaborator cursors (native CURSOR/SELECTION rendering,
@@ -221,7 +222,11 @@ const createWorkerHandler = inputHandle => {
 				onLetterSpacingChange(data.value === true);
 				break;
 			case MoebiusAction.CHANGE_FONT:
-				await onFontChange(data.font_name);
+				// landmine 6: Moebius speaks SAUCE font names ('IBM VGA');
+				// map to app names, fall through raw for unknowns
+				await onFontChange(
+					Load.sauceToAppFont(data.font_name) ?? data.font_name,
+				);
 				break;
 			case MoebiusAction.SET_CANVAS_SIZE:
 				onResize(data.columns, data.rows);
@@ -294,7 +299,8 @@ const createWorkerHandler = inputHandle => {
 		sendFrame(MoebiusAction.SET_CANVAS_SIZE, { columns, rows });
 
 	const sendFontChange = fontName =>
-		sendFrame(MoebiusAction.CHANGE_FONT, { font_name: fontName });
+		// landmine 6 outbound: peers (Moebius included) expect SAUCE names
+		sendFrame(MoebiusAction.CHANGE_FONT, { font_name: Load.appToSauceFont(fontName) ?? fontName });
 
 	const sendIceColorsChange = iceColors =>
 		sendFrame(MoebiusAction.ICE_COLORS, { value: iceColors });
