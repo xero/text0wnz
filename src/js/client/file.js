@@ -4,11 +4,13 @@ import magicNumbers from './magicNumbers.js';
 import { $, enforceMaxBytes } from './ui.js';
 import { getUTF8, getUnicodeReverseMap } from './palette.js';
 import {
+	decodeAns,
 	decodeDur,
 	decodeEnvelope,
 	decodeTundra,
 	encodeEnvelope,
 	encodeTundra,
+	encodeUtf8,
 	v3ToU16Lossy,
 } from '../core/index';
 
@@ -1240,7 +1242,26 @@ const loadModule = () => {
 				case 'txt':
 				default:
 					State.textArtCanvas.clearXBData(() => {
-						imageData = loadAnsi(data, checkUTF8(file.name.toLowerCase()));
+						if (checkUTF8(file.name.toLowerCase())) {
+							// P5: UTF-8 opens go through the core reader, which
+							// builds v3 planes natively (glyph table, extended
+							// colors, the LF-after-wrap fix); the doc rides the
+							// plane-native callback slot like tnd/dur/0wnz
+							const result = decodeAns(data, { utf8: true });
+							updateSauceModal(result.meta);
+							const u16 = v3ToU16Lossy(result.doc);
+							callback(
+								u16.columns,
+								u16.rows,
+								u16.imageData,
+								u16.iceColors,
+								u16.letterSpacing,
+								result.meta.fontName?.trim() || undefined,
+								result.doc,
+							);
+							return;
+						}
+						imageData = loadAnsi(data, false);
 						updateSauceModal(imageData);
 						callback(
 							imageData.width,
@@ -1637,16 +1658,25 @@ const saveModule = () => {
 		await encodeANSi(false);
 	};
 
+	// P5 (D9): UTF-8 and plain-text exports go through the core v3
+	// writer: one cell per column, LF endings (O1), unicode glyphs ride
+	// the doc glyph table, ice-vs-blink per the artist's choice (D8)
 	const utf8 = async () => {
-		await encodeANSi(true);
+		const bytes = encodeUtf8(State.textArtCanvas.getDoc(), { meta: sauceMeta() });
+		await saveFile(bytes, undefined, State.title + '.utf8.ans');
 	};
 
-	const utf8noBlink = async () => {
-		await encodeANSi(true, false);
+	const utf8Blink = async () => {
+		const bytes = encodeUtf8(State.textArtCanvas.getDoc(), {
+			blinkMode: 'blink',
+			meta: sauceMeta(),
+		});
+		await saveFile(bytes, undefined, State.title + '.utf8.ans');
 	};
 
 	const plainText = async () => {
-		await encodeANSi(true, false, true);
+		const bytes = encodeUtf8(State.textArtCanvas.getDoc(), { plain: true });
+		await saveFile(bytes, undefined, State.title + '.txt');
 	};
 
 	const convert16BitArrayTo8BitArray = Uint16s => {
@@ -1930,7 +1960,7 @@ const saveModule = () => {
 		png: png,
 		tnd: tnd,
 		utf8: utf8,
-		utf8noBlink: utf8noBlink,
+		utf8Blink: utf8Blink,
 		xb: xb,
 	};
 };

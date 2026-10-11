@@ -10,13 +10,15 @@ describe('core cp437 mapping', () => {
 	});
 
 	it('round-trips every byte through unicode except the NBSP collision', () => {
-		// Bytes 0 (NUL) and 255 both map to NBSP 0x00a0 in the client
-		// table (both are blank cells); the reverse map keeps the lower
-		// byte. Doc round-trips are unaffected: u16<->v3 goes through
-		// glyphId identity, never through unicode.
+		// Bytes 0 (NUL) and 255 both map to NBSP 0x00a0 (both are blank
+		// cells); the reverse map gives 255, matching v2's last-wins
+		// getUnicodeReverseMap. An NBSP must NEVER reverse to NUL: that
+		// made cells that looked blank but held char 0 (the owner's
+		// hidden-glyph bug). Doc round-trips are unaffected: u16<->v3
+		// goes through glyphId identity, never through unicode.
 		for (let byte = 0; byte < 256; byte++) {
 			expect(unicodeToCp437(cp437ToUnicode(byte))).toBe(
-				byte === 255 ? 0 : byte,
+				byte === 0 ? 255 : byte,
 			);
 		}
 		expect(cp437ToUnicode(0)).toBe(0x00a0);

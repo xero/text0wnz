@@ -6,8 +6,19 @@ import {
 	decodeXBin,
 	encodeXBin,
 } from '../../src/js/core/codecs/xbin.js';
-import { decodeAns, encodeAns } from '../../src/js/core/codecs/ans.js';
+import {
+	decodeAns,
+	encodeAns,
+	encodeUtf8,
+} from '../../src/js/core/codecs/ans.js';
 import { v3ToU16 } from '../../src/js/core/convert.js';
+import {
+	FONT_SLOT_UNSCII,
+	createDocV3,
+	glyphWord,
+	paletteColor,
+	rgbColor,
+} from '../../src/js/core/doc.js';
 import {
 	makeAnsi,
 	makeBin,
@@ -220,22 +231,94 @@ describe('ans codec', () => {
 		expect(e2).toEqual(e1);
 	});
 
-	// KNOWN v2 DEFECT carried over on purpose (bug-compatible port): the
-	// writer emits full-width lines plus LF, the reader wraps at width AND
-	// honors the LF, doubling rows with blanks. The corpus pins the same
-	// failure for v2; D9's v3 UTF-8 writer replaces this path in P5.
-	it.fails(
-		'lenient UTF-8 fixture decodes and survives the v2-style writer',
-		() => {
-			const bytes = makeUtf8Ansi({ columns: 40, rows: 10, seed: 7 });
-			const d1 = decodeAns(bytes, { utf8: true });
-			// No SAUCE record: the width defaults to 80, exactly like v2
-			expect(d1.doc.getColumns()).toBe(80);
-			const e1 = encodeAns(d1.doc, { utf8: true });
-			const d2 = decodeAns(e1, { utf8: true });
-			expect(v3ToU16(d2.doc).imageData).toEqual(v3ToU16(d1.doc).imageData);
-		},
-	);
+	// Historical v2 defect, FIXED by the P5 reader+writer pair (D9): the
+	// v2 writer emitted full-width lines plus LF and its reader honored
+	// both the wrap AND the LF, doubling rows with blanks. The v3 reader
+	// swallows one LF after an auto-wrap (terminal deferred-wrap
+	// semantics), so old files reimport clean and the v3 writer's
+	// full-width-plus-LF output is lossless.
+	it('lenient UTF-8 fixture decodes and round-trips the v3 writer', () => {
+		const bytes = makeUtf8Ansi({ columns: 40, rows: 10, seed: 7 });
+		const d1 = decodeAns(bytes, { utf8: true });
+		// No SAUCE record: the width defaults to 80, exactly like v2
+		expect(d1.doc.getColumns()).toBe(80);
+		const e1 = encodeUtf8(d1.doc, { date: FIXED_DATE });
+		const d2 = decodeAns(e1, { utf8: true });
+		// the writer's SAUCE pins the real width now
+		expect(d2.doc.getColumns()).toBe(80);
+		expect(d2.doc.getRows()).toBe(d1.doc.getRows());
+		// NUL and 255 both write NBSP and read back as 255 (v2's exact
+		// collapse; both render blank), so compare modulo that fold
+		const canon = (u16: Uint16Array) =>
+			Array.from(
+				u16,
+				word => (word >> 8 === 0 ? 255 << 8 : word & 0xff00) | (word & 0xff),
+			);
+		expect(canon(v3ToU16(d2.doc).imageData)).toEqual(
+			canon(v3ToU16(d1.doc).imageData),
+		);
+		// fixed point: a second generation is byte-identical
+		expect(encodeUtf8(d2.doc, { date: FIXED_DATE })).toEqual(e1);
+	});
+
+	it('v2-style full-width-plus-LF files no longer double their rows', () => {
+		// simulate the OLD writer: an 80-col doc written as full-width
+		// UTF-8 rows each followed by ESC[0m + LF (no SAUCE). Glyphs must
+		// land on the original grid with no doubled blank rows. (Colors
+		// CAN'T fully survive: the v2 encoder reset the stream per row
+		// but not its diff trackers, a lossy bug baked into old files.)
+		const d1 = decodeAns(makeAnsi({ columns: 80, rows: 25, seed: 55 }));
+		const legacy = encodeAns(d1.doc, { utf8: true });
+		const d2 = decodeAns(legacy, { utf8: true });
+		expect(d2.doc.getRows()).toBe(d1.doc.getRows());
+		const chars = (u16: Uint16Array) => Array.from(u16, word => word >> 8);
+		expect(chars(v3ToU16(d2.doc).imageData)).toEqual(
+			chars(v3ToU16(d1.doc).imageData),
+		);
+	});
+
+	it('UTF-8 blink mode (D8) round-trips blink cells exactly', () => {
+		const d1 = decodeAns(makeAnsi({ columns: 20, rows: 4, seed: 3 }));
+		const e1 = encodeUtf8(d1.doc, { blinkMode: 'blink', date: FIXED_DATE });
+		const d2 = decodeAns(e1, { utf8: true });
+		expect(v3ToU16(d2.doc).imageData).toEqual(v3ToU16(d1.doc).imageData);
+		expect(d2.doc.getIceColors()).toBe(d1.doc.getIceColors());
+	});
+
+	it('UTF-8 writer carries unicode glyphs and extended colors', () => {
+		const doc = createDocV3({ columns: 3, rows: 1 });
+		const han = doc.glyphTable.idFor(FONT_SLOT_UNSCII, 0x4e2d);
+		doc.setCell(0, 0, 0, {
+			glyph: glyphWord(han, 0),
+			fg: rgbColor(250, 90, 10),
+			bg: paletteColor(0),
+		});
+		doc.setCell(0, 1, 0, {
+			glyph: glyphWord(176, 0),
+			fg: paletteColor(12),
+			bg: rgbColor(1, 2, 3),
+		});
+		const e1 = encodeUtf8(doc, { date: FIXED_DATE });
+		const text = new TextDecoder().decode(e1);
+		expect(text).toContain('中');
+		expect(text).toContain('38;2;250;90;10m');
+		expect(text).toContain('48;2;1;2;3m');
+		const d2 = decodeAns(e1, { utf8: true });
+		const back = d2.doc.frames[0];
+		const def = d2.doc.glyphTable.get(back.glyph[0] & 0xffff);
+		expect(def?.codepoint).toBe(0x4e2d);
+		expect(back.fg[0]).toBe(rgbColor(250, 90, 10));
+		expect(back.fg[1]).toBe(paletteColor(12));
+		expect(back.bg[1]).toBe(rgbColor(1, 2, 3));
+		expect(encodeUtf8(d2.doc, { date: FIXED_DATE })).toEqual(e1);
+	});
+
+	it('UTF-8 reader freezes xterm-256 indexes to their RGB', () => {
+		const bytes = new TextEncoder().encode('\u001b[38;5;196m\u001b[48;5;232mX');
+		const { doc } = decodeAns(bytes, { utf8: true });
+		expect(doc.frames[0].fg[0]).toBe(rgbColor(255, 0, 0));
+		expect(doc.frames[0].bg[0]).toBe(rgbColor(8, 8, 8));
+	});
 
 	it('plain-text export strips escape codes', () => {
 		const d1 = decodeAns(makeAnsi({ columns: 20, rows: 3, seed: 5 }));

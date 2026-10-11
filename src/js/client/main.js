@@ -523,6 +523,7 @@ const initializeAppComponents = async () => {
 	});
 	onClick($('saveAnsi'), Save.ans);
 	onClick($('saveUtf8'), Save.utf8);
+	onClick($('saveUtf8Blink'), Save.utf8Blink);
 	onClick($('savePlaintext'), Save.plainText);
 	onClick($('saveBin'), Save.bin);
 	onClick($('saveXbin'), Save.xb);

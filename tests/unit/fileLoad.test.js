@@ -1,5 +1,8 @@
 /* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createDocV3 } from '../../src/js/core/doc.js';
+
+const makeMockDoc = () => createDocV3({ columns: 80, rows: 25 });
 
 const canvasDataURL =
 	'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
@@ -7,6 +10,7 @@ const canvasDataURL =
 const mockState = {
 	textArtCanvas: {
 		getColumns: vi.fn(() => 80),
+		getDoc: vi.fn(() => makeMockDoc()),
 		getRows: vi.fn(() => 25),
 		getImageData: vi.fn(() => new Uint16Array(80 * 25).fill(0x2007)), // Space char with white on black
 		getIceColors: vi.fn(() => false),
@@ -286,7 +290,7 @@ describe('File Module - Load and Save Operations', () => {
 			it('should have all save format functions', () => {
 				expect(typeof Save.ans).toBe('function');
 				expect(typeof Save.utf8).toBe('function');
-				expect(typeof Save.utf8noBlink).toBe('function');
+				expect(typeof Save.utf8Blink).toBe('function');
 				expect(typeof Save.plainText).toBe('function');
 				expect(typeof Save.bin).toBe('function');
 				expect(typeof Save.xb).toBe('function');
@@ -315,7 +319,7 @@ describe('File Module - Load and Save Operations', () => {
 			it('should save UTF-8 ANSI files without blink', () => {
 				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
 
-				Save.utf8noBlink();
+				Save.utf8Blink();
 
 				expect(createElementSpy).toHaveBeenCalledWith('a');
 			});

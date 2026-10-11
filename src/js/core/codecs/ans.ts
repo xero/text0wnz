@@ -7,15 +7,43 @@
  * - binColor swaps the ANSI<->BIN color order (1<->4, 3<->6, +bright).
  * - Cursor-forward at the right edge wraps first (v2 'C' behavior).
  * - EL ('K') clears with attribute 0 from the cursor to EOL.
- * - The lenient UTF-8 read maps unknown codepoints <= 255 to the raw
- *   byte and everything else to '?' (63), exactly like v2.
- * The v3 UTF-8 WRITER (D9 hard break) lands in P5; this encoder is the
- * byte-compatible v2 one for the interim.
+ *
+ * The UTF-8 read builds v3 planes natively (P5): codepoints hit the
+ * strict CP437 reverse map first and intern into the doc glyph table
+ * otherwise, extended SGR (90-97/100-107, 38/48;5;n, 38/48;2;r;g;b)
+ * lands as tag-bit color words, and one LF immediately after an
+ * auto-wrap is swallowed (real terminals defer the wrap, so the
+ * full-width-rows-plus-LF files the v2 writer produced now reimport
+ * without the historical doubled blank rows). Everything the v2
+ * reader accepted still decodes (old-file leniency, D9).
+ *
+ * encodeUtf8 is the v3 UTF-8 writer (D9 hard break): one cell per
+ * column, LF endings (O1), SGR per color tier, ice-vs-blink per the
+ * artist's D8 toggle (ice default), SAUCE appended with the artist's
+ * meta verbatim (O1: nothing auto-added). encodeAns keeps the
+ * byte-compatible v2 CP437/plain-text paths.
  */
 
-import { DocV3 } from '../doc.js';
+import {
+	ATTR_BLINK,
+	DocV3,
+	FONT_SLOT_UNSCII,
+	createCP437GlyphTable,
+	createDocV3,
+	glyphIdOf,
+	glyphWord,
+	isPaletteColor,
+	paletteColor,
+	paletteIndexOf,
+	rgbColor,
+} from '../doc.js';
 import { u16ToV3, v3ToU16 } from '../convert.js';
-import { cp437ToUnicode, unicodeToCp437Strict } from '../cp437.js';
+import {
+	cp437ToUnicode,
+	unicodeToCp437,
+	unicodeToCp437Strict,
+} from '../cp437.js';
+import { xterm256RGB } from './dur.js';
 import { buildSauce, parseSauce } from './sauce.js';
 import { CodecError, concatBytes, utf8Encode } from './util.js';
 import { DecodeResult, DocMeta } from './bin.js';
@@ -140,6 +168,56 @@ const createScreen = (width: number) => {
 	};
 };
 
+/**
+ * Growable v3-plane screen for the UTF-8 reader. Mirrors createScreen's
+ * geometry quirks exactly (NaN cursor writes no-op, maxY tracks height)
+ * but stores full glyph words and tag-bit color words.
+ */
+const createV3Screen = (width: number) => {
+	const BLANK = paletteColor(0);
+	const alloc = (cells: number) => ({
+		glyph: new Uint32Array(cells),
+		fg: new Uint32Array(cells).fill(BLANK),
+		bg: new Uint32Array(cells).fill(BLANK),
+	});
+	let planes = alloc(width * 100);
+	let maxY = 0;
+	const extend = (y: number) => {
+		const next = alloc(width * (y + 100) + planes.glyph.length);
+		next.glyph.set(planes.glyph, 0);
+		next.fg.set(planes.fg, 0);
+		next.bg.set(planes.bg, 0);
+		planes = next;
+	};
+	return {
+		reset: () => {
+			planes = alloc(width * 100);
+			maxY = 0;
+		},
+		set: (x: number, y: number, glyph: number, fg: number, bg: number) => {
+			const pos = y * width + x;
+			if (pos >= planes.glyph.length) {
+				extend(y);
+			}
+			planes.glyph[pos] = glyph;
+			planes.fg[pos] = fg;
+			planes.bg[pos] = bg;
+			if (y > maxY) {
+				maxY = y;
+			}
+		},
+		height: () => maxY + 1,
+		planes: () => {
+			const cells = width * (maxY + 1);
+			return {
+				glyph: planes.glyph.slice(0, cells),
+				fg: planes.fg.slice(0, cells),
+				bg: planes.bg.slice(0, cells),
+			};
+		},
+	};
+};
+
 export interface DecodeAnsOptions {
 	utf8?: boolean;
 }
@@ -163,8 +241,13 @@ export const decodeAns = (
 		}
 	}
 	const size = sauce ? sauce.payloadSize : bytes.length;
+	const iceColors = sauce?.iceColors ?? false;
 
 	const screen = createScreen(columns);
+	// UTF-8 mode renders into v3 planes instead (tag-bit colors, doc
+	// glyph table); the shared cursor state machine drives both sinks
+	const v3screen = createV3Screen(columns);
+	const glyphTable = createCP437GlyphTable();
 	let x = 1;
 	let y = 1;
 	// v2 leaves these undefined until ESC[s; a stray ESC[u then poisons
@@ -182,6 +265,16 @@ export const decodeAns = (
 	let bold = false;
 	let blink = false;
 	let inverse = false;
+	// UTF-8 extensions (never parsed in CP437 mode, which stays v2-exact):
+	// 90-97/100-107 bright flags and 38/48 extended color words
+	let fgBright = false;
+	let bgBright = false;
+	let fgExt: number | null = null;
+	let bgExt: number | null = null;
+	// one LF immediately after an auto-wrap is swallowed (UTF-8 only):
+	// real terminals defer the wrap, so full-width rows + LF (the v2
+	// writer's output and encodeUtf8's) mean ONE row, not two
+	let wrappedPending = false;
 
 	const resetAttributes = () => {
 		foreground = DEFAULT_FOREGROUND;
@@ -189,6 +282,10 @@ export const decodeAns = (
 		bold = false;
 		blink = false;
 		inverse = false;
+		fgBright = false;
+		bgBright = false;
+		fgExt = null;
+		bgExt = null;
 	};
 	const newLine = () => {
 		x = 1;
@@ -211,16 +308,130 @@ export const decodeAns = (
 				return isNaN(parsed) ? 1 : parsed;
 			});
 
+	/**
+	 * UTF-8 cell write. The 16c index math mirrors v2 exactly (inverse
+	 * swaps BASE colors, bold/blink brighten post-swap, non-ice blink
+	 * folds to the attr bit with a dim background); extended words ride
+	 * over it, and unmapped codepoints intern into the glyph table.
+	 */
+	const putUtf8Cell = (px: number, py: number, codepoint: number) => {
+		// explicit mapping or identity-if-unclaimed (space is 32, not an
+		// interned U+0020); only codepoints truly outside CP437 intern
+		const mapped = unicodeToCp437(codepoint);
+		const glyphId =
+			mapped !== undefined
+				? mapped
+				: glyphTable.idFor(FONT_SLOT_UNSCII, codepoint);
+		const baseFg = inverse ? background : foreground;
+		const baseBg = inverse ? foreground : background;
+		const effFg = Math.min(
+			15,
+			baseFg + (bold || (fgBright && !inverse) ? 8 : 0),
+		);
+		const effBg = Math.min(
+			15,
+			baseBg + ((blink && iceColors) || (bgBright && !inverse) ? 8 : 0),
+		);
+		const attr = blink && !iceColors ? ATTR_BLINK : 0;
+		const fgWord = (inverse ? bgExt : fgExt) ?? paletteColor(binColor(effFg));
+		const bgWord = (inverse ? fgExt : bgExt) ?? paletteColor(binColor(effBg));
+		v3screen.set(px, py, glyphWord(glyphId, attr), fgWord, bgWord);
+	};
+
+	/** UTF-8 SGR superset: v2's codes plus 90-107, 38/48, 39/49. */
+	const applySgrUtf8 = (values: number[]) => {
+		for (let i = 0; i < values.length; i++) {
+			const value = values[i];
+			if (value >= 30 && value <= 37) {
+				foreground = value - 30;
+				fgBright = false;
+				fgExt = null;
+			} else if (value >= 40 && value <= 47) {
+				background = value - 40;
+				bgBright = false;
+				bgExt = null;
+			} else if (value >= 90 && value <= 97) {
+				foreground = value - 90;
+				fgBright = true;
+				fgExt = null;
+			} else if (value >= 100 && value <= 107) {
+				background = value - 100;
+				bgBright = true;
+				bgExt = null;
+			} else if (value === 38 || value === 48) {
+				let word: number | null = null;
+				if (values[i + 1] === 5 && i + 2 < values.length) {
+					const n = values[i + 2] & 0xff;
+					// 0-15 are the standard colors in ANSI order; 16-255
+					// freeze to the xterm RGB (renders correctly everywhere
+					// today; a 256-entry doc palette may supersede this)
+					word = n < 16 ? paletteColor(binColor(n)) : xterm256RGB(n);
+					i += 2;
+				} else if (values[i + 1] === 2 && i + 4 < values.length) {
+					word = rgbColor(
+						values[i + 2] & 0xff,
+						values[i + 3] & 0xff,
+						values[i + 4] & 0xff,
+					);
+					i += 4;
+				} else {
+					return; // malformed extended color: stop like a terminal
+				}
+				if (value === 38) {
+					fgExt = word;
+				} else {
+					bgExt = word;
+				}
+			} else {
+				switch (value) {
+					case 0:
+						resetAttributes();
+						break;
+					case 1:
+						bold = true;
+						break;
+					case 5:
+						blink = true;
+						break;
+					case 7:
+						inverse = true;
+						break;
+					case 22:
+						bold = false;
+						break;
+					case 25:
+						blink = false;
+						break;
+					case 27:
+						inverse = false;
+						break;
+					case 39:
+						foreground = DEFAULT_FOREGROUND;
+						fgBright = false;
+						fgExt = null;
+						break;
+					case 49:
+						background = DEFAULT_BACKGROUND;
+						bgBright = false;
+						bgExt = null;
+						break;
+				}
+			}
+		}
+	};
+
 	let pos = 0;
 	while (pos < size) {
 		let code = bytes[pos];
 		let bytesConsumed = 1;
 		pos += 1;
+		let codepoint = code;
 		if (isUTF8) {
 			const decoded = decodeUtf8At(bytes, pos - 1);
 			bytesConsumed = decoded.bytesConsumed;
-			// Lenient v2 mapping: strict reverse map, else the raw value
-			// when it fits a byte, else '?'
+			codepoint = decoded.charCode;
+			// dispatch value for the state machine (controls are ASCII);
+			// the cell write below uses the real codepoint instead
 			code = unicodeToCp437Strict(decoded.charCode) ?? decoded.charCode;
 			if (code > 255) {
 				code = 63;
@@ -233,6 +444,11 @@ export const decodeAns = (
 				escaped = false;
 				const values = getValues();
 				if (escapeCode.charAt(0) === '[') {
+					// every CSI except SGR moves or edits, ending a deferred
+					// wrap; SGR between a wrap and its LF must not
+					if (escapeCode.charAt(escapeCode.length - 1) !== 'm') {
+						wrappedPending = false;
+					}
 					switch (escapeCode.charAt(escapeCode.length - 1)) {
 						case 'A':
 							y = Math.max(1, y - values[0]);
@@ -261,14 +477,24 @@ export const decodeAns = (
 								x = 1;
 								y = 1;
 								screen.reset();
+								v3screen.reset();
 							}
 							break;
 						case 'K':
 							for (let j = x - 1; j < columns; j += 1) {
-								screen.set(j, y - 1 + topOfScreen, 0, 0, 0);
+								if (isUTF8) {
+									const blankWord = paletteColor(0);
+									v3screen.set(j, y - 1 + topOfScreen, 0, blankWord, blankWord);
+								} else {
+									screen.set(j, y - 1 + topOfScreen, 0, 0, 0);
+								}
 							}
 							break;
 						case 'm':
+							if (isUTF8) {
+								applySgrUtf8(values);
+								break;
+							}
 							for (const value of values) {
 								if (value >= 30 && value <= 37) {
 									foreground = value - 30;
@@ -316,12 +542,20 @@ export const decodeAns = (
 		} else {
 			switch (code) {
 				case 10:
-					newLine();
+					if (wrappedPending) {
+						wrappedPending = false;
+					} else {
+						newLine();
+					}
 					break;
 				case 13:
 					if (bytes[pos] === 0x0a) {
 						pos += 1;
-						newLine();
+						if (wrappedPending) {
+							wrappedPending = false;
+						} else {
+							newLine();
+						}
 					}
 					break;
 				case 26:
@@ -330,7 +564,10 @@ export const decodeAns = (
 					if (code === 27 && bytes[pos] === 0x5b) {
 						escaped = true;
 					} else {
-						if (!inverse) {
+						wrappedPending = false;
+						if (isUTF8) {
+							putUtf8Cell(x - 1, y - 1 + topOfScreen, codepoint);
+						} else if (!inverse) {
 							screen.set(
 								x - 1,
 								y - 1 + topOfScreen,
@@ -350,6 +587,7 @@ export const decodeAns = (
 						x += 1;
 						if (x === columns + 1) {
 							newLine();
+							wrappedPending = isUTF8;
 						}
 					}
 			}
@@ -359,13 +597,28 @@ export const decodeAns = (
 		}
 	}
 
-	const doc = u16ToV3({
-		imageData: screen.data(),
-		columns,
-		rows: screen.height(),
-		iceColors: sauce?.iceColors ?? false,
-		letterSpacing: sauce?.letterSpacing ?? false,
-	});
+	let doc: DocV3;
+	if (isUTF8) {
+		const planes = v3screen.planes();
+		doc = createDocV3({
+			columns,
+			rows: v3screen.height(),
+			glyphTable,
+			iceColors,
+			letterSpacing: sauce?.letterSpacing ?? false,
+		});
+		doc.frames[0].glyph.set(planes.glyph);
+		doc.frames[0].fg.set(planes.fg);
+		doc.frames[0].bg.set(planes.bg);
+	} else {
+		doc = u16ToV3({
+			imageData: screen.data(),
+			columns,
+			rows: screen.height(),
+			iceColors,
+			letterSpacing: sauce?.letterSpacing ?? false,
+		});
+	}
 	return {
 		doc,
 		meta: sauce
@@ -526,6 +779,190 @@ export const encodeAns = (
 		columns,
 		rows,
 		iceColors,
+		letterSpacing: doc.getLetterSpacing(),
+		title: meta.title,
+		author: meta.author,
+		group: meta.group,
+		comments: meta.comments,
+		fontName: meta.fontName,
+		date: options.date,
+	});
+	return concatBytes([payload, Uint8Array.of(0x1a), sauce]);
+};
+
+export interface EncodeUtf8Options {
+	/**
+	 * D8, the artist's choice for blink-attr cells: 'ice' (default)
+	 * presents them as bright backgrounds with the SAUCE iCE flag set;
+	 * 'blink' writes SGR 5 with the normal background. Ice semantics are
+	 * 16-color-only (O7): a blink attr over an extended background drops
+	 * under 'ice' and writes SGR 5 under 'blink'.
+	 */
+	blinkMode?: 'ice' | 'blink';
+	/** no SGR, no SAUCE: the .txt export (glyph-table codepoints ride) */
+	plain?: boolean;
+	meta?: DocMeta;
+	date?: Date;
+}
+
+const UTF8_SGR_RESET = [27, 91, 48, 109]; // ESC[0m
+
+/**
+ * The v3 UTF-8 writer (D9 hard break): one cell per column, full-width
+ * rows with LF endings (O1) - correct in real terminals, which defer
+ * the wrap, and lossless through this file's reader, which swallows
+ * the post-wrap LF. SGR per color tier: 30-37/90-97 (+40-47/100-107)
+ * for palette 0-15, 38/48;5;n for higher palette indexes, 38/48;2 for
+ * frozen RGB. Unicode glyphs write their glyph-table codepoints. SAUCE
+ * carries the artist's meta verbatim; nothing is auto-added (O1).
+ */
+export const encodeUtf8 = (
+	doc: DocV3,
+	options: EncodeUtf8Options = {},
+): Uint8Array => {
+	const blinkMode = options.blinkMode ?? 'ice';
+	const plain = options.plain ?? false;
+	const columns = doc.getColumns();
+	const rows = doc.getRows();
+	const iceDoc = doc.getIceColors();
+	const frame = doc.frames[0];
+	const output: number[] = [];
+
+	const pushDigits = (value: number) => {
+		for (const ch of String(value)) {
+			output.push(ch.charCodeAt(0));
+		}
+	};
+	/** emit ESC[...m from numeric params */
+	const pushSgr = (params: number[][]) => {
+		output.push(27, 91);
+		params.forEach((param, index) => {
+			param.forEach((value, j) => {
+				pushDigits(value);
+				if (j < param.length - 1) {
+					output.push(59);
+				}
+			});
+			output.push(index === params.length - 1 ? 109 : 59);
+		});
+	};
+	const fgParam = (word: number): number[] => {
+		if (isPaletteColor(word)) {
+			const index = paletteIndexOf(word);
+			if (index <= 7) {
+				return [30 + ansiColor(index)];
+			}
+			if (index <= 15) {
+				return [90 + ansiColor(index - 8)];
+			}
+			return [38, 5, index & 0xff];
+		}
+		return [38, 2, (word >> 16) & 0xff, (word >> 8) & 0xff, word & 0xff];
+	};
+	const bgParam = (word: number): number[] => {
+		const param = fgParam(word);
+		param[0] += 10;
+		return param;
+	};
+	/** present a 16c palette word as its bright (ice) counterpart */
+	const brighten = (word: number): number => {
+		const index = paletteIndexOf(word);
+		return index <= 7 ? paletteColor(index + 8) : word;
+	};
+
+	// SGR tracked state; reset to defaults at every row's trailing ESC[0m
+	const DEFAULT_FG = paletteColor(DEFAULT_FOREGROUND);
+	const DEFAULT_BG = paletteColor(DEFAULT_BACKGROUND);
+	let curFg = DEFAULT_FG;
+	let curBg = DEFAULT_BG;
+	let curBlink = false;
+	let anyBlink = false;
+
+	if (!plain) {
+		output.push(...UTF8_SGR_RESET);
+	}
+	for (let row = 0; row < rows; row++) {
+		for (let col = 0; col < columns; col++) {
+			const index = row * columns + col;
+			const word = frame.glyph[index];
+			let glyphId = glyphIdOf(word);
+			const blinkAttr = (word & (ATTR_BLINK << 16)) !== 0;
+			const fg = frame.fg[index];
+			let bg = frame.bg[index];
+			let wantBlink = false;
+			if (blinkAttr) {
+				anyBlink = true;
+				const bg16 = isPaletteColor(bg) && paletteIndexOf(bg) <= 15;
+				if (blinkMode === 'blink') {
+					wantBlink = true;
+				} else if (bg16) {
+					bg = brighten(bg); // ice presentation
+				}
+				// ice over an extended background: blink drops (O7)
+			}
+			if (!plain) {
+				const params: number[][] = [];
+				if (wantBlink !== curBlink) {
+					params.push([wantBlink ? 5 : 25]);
+					curBlink = wantBlink;
+				}
+				if (fg !== curFg) {
+					params.push(fgParam(fg));
+					curFg = fg;
+				}
+				if (bg !== curBg) {
+					params.push(bgParam(bg));
+					curBg = bg;
+				}
+				if (params.length) {
+					pushSgr(params);
+				}
+			}
+			if (glyphId < 256) {
+				// control lookalikes, exactly like the CP437 writer
+				switch (glyphId) {
+					case 10:
+						glyphId = 9;
+						break;
+					case 13:
+						glyphId = 14;
+						break;
+					case 26:
+						glyphId = 16;
+						break;
+					case 27:
+						glyphId = 17;
+						break;
+				}
+				output.push(...utf8Encode(cp437ToUnicode(glyphId)));
+			} else {
+				const codepoint = doc.glyphTable.get(glyphId)?.codepoint ?? 63;
+				output.push(...utf8Encode(codepoint));
+			}
+		}
+		if (plain) {
+			output.push(10);
+		} else {
+			output.push(...UTF8_SGR_RESET, 10);
+			curFg = DEFAULT_FG;
+			curBg = DEFAULT_BG;
+			curBlink = false;
+		}
+	}
+
+	const payload = new Uint8Array(output);
+	if (plain) {
+		// .txt exports carry the v2-parity lone EOF byte and no SAUCE
+		return concatBytes([payload, Uint8Array.of(0x1a)]);
+	}
+	const meta = options.meta ?? {};
+	const sauce = buildSauce({
+		dataType: 1,
+		fileType: 1,
+		fileSize: payload.length,
+		columns,
+		rows,
+		iceColors: iceDoc || (blinkMode === 'ice' && anyBlink),
 		letterSpacing: doc.getLetterSpacing(),
 		title: meta.title,
 		author: meta.author,

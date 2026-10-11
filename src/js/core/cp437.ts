@@ -171,11 +171,14 @@ const nonIdentity: ReadonlyArray<readonly [number, number]> = [
 ];
 
 const toUnicode = new Map<number, number>(nonIdentity);
+// LAST entry wins, exactly like v2's getUnicodeReverseMap (it set
+// 0..255 in order). The one duplicate codepoint is NBSP (U+00A0),
+// claimed by both NUL and 255: the reverse MUST give 255, because an
+// NBSP decoding to char 0 creates cells that look blank but hold NUL,
+// the owner's long-standing hidden-glyph bug.
 const fromUnicode = new Map<number, number>();
 for (const [byte, codepoint] of nonIdentity) {
-	if (!fromUnicode.has(codepoint)) {
-		fromUnicode.set(codepoint, byte);
-	}
+	fromUnicode.set(codepoint, byte);
 }
 
 /** Unicode codepoint for a CP437 byte (identity where unmapped). */

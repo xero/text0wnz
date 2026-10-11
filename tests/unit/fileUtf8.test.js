@@ -1,11 +1,15 @@
 /* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createDocV3 } from '../../src/js/core/doc.js';
+
+const makeMockDoc = () => createDocV3({ columns: 80, rows: 25 });
 
 // Mock State module
 const mockState = {
 	title: 'test-artwork',
 	textArtCanvas: {
 		getColumns: vi.fn(() => 80),
+		getDoc: vi.fn(() => makeMockDoc()),
 		getRows: vi.fn(() => 25),
 		getImageData: vi.fn(() => new Uint16Array(80 * 25).fill(0x2007)), // Space char with white on black
 		getIceColors: vi.fn(() => false),
