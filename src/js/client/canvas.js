@@ -1652,11 +1652,33 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		callback();
 	});
 
+	/**
+	 * Resolve codepoints outside CP437 to doc glyph ids for paste/import
+	 * (P5): picks a hex font slot per the v1 width policy and interns
+	 * into the glyph table. null marks a codepoint that must substitute
+	 * (no coverage, or wide/emoji/combining under single-width v1).
+	 *
+	 * @param {Iterable<number>} codepoints
+	 * @returns {Promise<Map<number, number|null>>}
+	 */
+	const resolveUnicode = async codepoints => {
+		const resolved = new Map();
+		for (const codepoint of new Set(codepoints)) {
+			const slot = await ensureHexPages().pickSlot(codepoint);
+			resolved.set(
+				codepoint,
+				slot === null ? null : doc.glyphTable.idFor(slot, codepoint),
+			);
+		}
+		return resolved;
+	};
+
 	return {
 		resize: resize,
 		redrawEntireImage: redrawEntireImage,
 		getRendererId: () =>
 			glRenderer ? 'webgl2-slack-buffer' : 'canvas2d-chunks',
+		resolveUnicode: resolveUnicode,
 		setFont: setFont,
 		getIceColors: getIceColors,
 		setIceColors: setIceColors,

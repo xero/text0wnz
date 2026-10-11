@@ -30,6 +30,7 @@ import {
 	paletteIndexOf,
 } from './doc.js';
 import { U16Doc, v3ToU16, v3ToU16Lossy } from './convert.js';
+import { unicodeToCp437Strict } from './cp437.js';
 import {
 	EditCell,
 	classifyHalfBlock,
@@ -179,8 +180,16 @@ export const createEditorCore = (
 		};
 	};
 
-	const packWord = (cell: EditCell): number =>
-		((cell.charCode & 0xff) << 8) | ((cell.bg & 15) << 4) | (cell.fg & 15);
+	const packWord = (cell: EditCell): number => {
+		let charCode = cell.charCode;
+		if (charCode > 0xff) {
+			// unicode glyph ids quantize for the u16 mirror and the vanilla
+			// collab wire exactly like v3ToU16Lossy: strict reverse else '?'
+			const def = doc.glyphTable.get(charCode);
+			charCode = (def && unicodeToCp437Strict(def.codepoint)) ?? 63;
+		}
+		return (charCode << 8) | ((cell.bg & 15) << 4) | (cell.fg & 15);
+	};
 
 	/** Fold a classic16 cell into plane words per the doc's ice flag. */
 	const planeWords = (cell: EditCell): Cell => {

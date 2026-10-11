@@ -2,6 +2,11 @@ import State from './state.js';
 import Toolbar from './toolbar.js';
 import { $, createCanvas } from './ui.js';
 import magicNumbers from './magicNumbers.js';
+import {
+	PASTE_NEWLINE,
+	PASTE_SUBSTITUTE,
+	tokenizePasteText,
+} from '../core/paste.js';
 
 const createFKeys = () => {
 	// Stolen "savagely" from Moebius, who stole it "mercilessly" from PabloDraw, thanks Curtis! lol
@@ -1299,7 +1304,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 		}
 		navigator.clipboard
 			.readText()
-			.then(text => {
+			.then(async text => {
 				if (
 					text &&
 					(State.selectionCursor.isVisible() || State.cursor.isVisible())
@@ -1325,6 +1330,17 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 						);
 						return;
 					}
+					// Tokenize grapheme clusters FIRST (P5 paste pipeline,
+					// core/paste.ts): unicode blanks become spaces, zero-width
+					// chars vanish, box/shade chars hit their real CP437
+					// codes, and codepoints outside CP437 resolve through the
+					// doc glyph table below.
+					const { tokens, unmapped } = tokenizePasteText(text);
+					const resolved =
+						unmapped.size > 0
+							? await State.textArtCanvas.resolveUnicode(unmapped)
+							: new Map();
+
 					State.textArtCanvas.startUndo();
 					let currentX = x;
 					let currentY = y;
@@ -1333,20 +1349,10 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 					const background = State.palette.getBackgroundColor();
 
 					State.textArtCanvas.draw(draw => {
-						for (let i = 0; i < text.length; i++) {
-							const char = text.charAt(i);
-							// Handle newline characters
-							if (char === '\n' || char === '\r') {
+						for (const token of tokens) {
+							if (token === PASTE_NEWLINE) {
 								currentY++;
 								currentX = startX;
-								// Skip \r\n combination
-								if (
-									char === '\r' &&
-									i + 1 < text.length &&
-									text.charAt(i + 1) === '\n'
-								) {
-									i++;
-								}
 								continue;
 							}
 							// Check bounds - stop if we're beyond canvas vertically
@@ -1358,15 +1364,11 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 								// Skip this character and continue until we hit a newline
 								continue;
 							}
-							// Handle non-printable characters
-							let charCode = char.charCodeAt(0);
-							// Convert tabs and other whitespace/non-printable characters to space
-							if (char === '\t' || charCode < 32 || charCode === 127) {
-								charCode = magicNumbers.CHAR_SPACE;
-							}
-							// Draw the character
+							const charCode =
+								token >= 0
+									? token
+									: (resolved.get(~token) ?? PASTE_SUBSTITUTE);
 							draw(charCode, foreground, background, currentX, currentY);
-
 							currentX++;
 						}
 					}, false);

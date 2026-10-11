@@ -168,3 +168,36 @@ describe('editor.loadDoc', () => {
 		expect(editor.undo()).toBe(false); // history gone
 	});
 });
+
+describe('unicode glyph ids through the editor (P5)', () => {
+	it('writes the full id to the planes but substitutes on the u16 side', () => {
+		const doc = createDocV3({ columns: 4, rows: 1 });
+		// unicode entries intern above the CP437 identity seed
+		const boxId = doc.glyphTable.idFor(1, 0x2510); // ┐ via hex slot: maps back
+		const hanId = doc.glyphTable.idFor(2, 0x4e2d); // 中: outside CP437
+		const writes: number[] = [];
+		const editor = createEditorCore(doc, {
+			onWrite: ({ word }) => writes.push(word),
+		});
+		editor.drawBlocks(draw => {
+			draw(boxId, 7, 0, 0, 0);
+			draw(hanId, 7, 0, 1, 0);
+		});
+		// planes keep the real ids (the GL renderer draws these)
+		expect(doc.frames[0].glyph[0] & 0xffff).toBe(boxId);
+		expect(doc.frames[0].glyph[1] & 0xffff).toBe(hanId);
+		// the mirror/wire words quantize like v3ToU16Lossy: strict reverse
+		// for ┐ (CP437 191), '?' for anything CP437 cannot express
+		expect(writes[0] >> 8).toBe(191);
+		expect(writes[1] >> 8).toBe(63);
+		expect(v3ToU16Lossy(doc).imageData[0] >> 8).toBe(191);
+		expect(v3ToU16Lossy(doc).imageData[1] >> 8).toBe(63);
+		// readCell round-trip: tools reading then re-writing a unicode
+		// cell must not corrupt it (the attribute-brush path)
+		const block = editor.getBlock(1, 0);
+		editor.drawBlocks(draw => {
+			draw(block.charCode, 4, 2, 1, 0);
+		});
+		expect(doc.frames[0].glyph[1] & 0xffff).toBe(hanId);
+	});
+});
