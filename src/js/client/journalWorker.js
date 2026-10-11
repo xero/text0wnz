@@ -16,6 +16,8 @@
  * mid-append leaves a torn tail the journal format already tolerates.
  */
 
+import { trustedMessage } from './messageGuard.js';
+
 const META_FILE = 'journal.meta';
 const GENERATIONS = ['journal.a', 'journal.b'];
 
@@ -132,6 +134,9 @@ const ops = {
 let ready = null;
 
 self.onmessage = async event => {
+	if (!trustedMessage(event) || typeof event.data.op !== 'string') {
+		return;
+	}
 	const { id, op, bytes } = event.data;
 	try {
 		if (!ready) {

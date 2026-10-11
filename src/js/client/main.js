@@ -4,6 +4,7 @@ import Toolbar from './toolbar.js';
 import { Load, Save } from './file.js';
 import { createTextArtCanvas } from './canvas.js';
 import { createWorkerHandler, createChatController } from './network.js';
+import { trustedMessage } from './messageGuard.js';
 import { FontCache } from './fontCache.js';
 import {
 	$,
@@ -332,6 +333,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 		// Listen for shared file messages from service worker
 		navigator.serviceWorker.addEventListener('message', async event => {
+			if (!trustedMessage(event)) {
+				return;
+			}
 			if (event.data.type === 'SHARED_FILE_READY') {
 				console.log('[Share] File shared:', event.data.filename);
 				// Wait for app to be ready

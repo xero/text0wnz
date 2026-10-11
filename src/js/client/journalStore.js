@@ -15,6 +15,7 @@
  */
 
 import { shouldCompact } from '../core/index';
+import { trustedMessage } from './messageGuard.js';
 
 /**
  * @typedef {object} JournalBackend
@@ -38,6 +39,9 @@ const createOpfsBackend = () => {
 	/** @type {Map<number, {resolve: (v: Uint8Array | null) => void, reject: (e: Error) => void}>} */
 	const pending = new Map();
 	worker.onmessage = event => {
+		if (!trustedMessage(event)) {
+			return;
+		}
 		const { id, ok, bytes, error } = event.data;
 		const entry = pending.get(id);
 		if (!entry) {
