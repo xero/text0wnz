@@ -13,4 +13,6 @@ export * from './codecs/sauce.js';
 export * from './codecs/bin.js';
 export * from './codecs/xbin.js';
 export * from './codecs/ans.js';
+export * from './codecs/tundra.js';
+export * from './codecs/dur.js';
 export * from './codecs/envelope.js';

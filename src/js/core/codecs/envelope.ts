@@ -1,10 +1,12 @@
 /**
  * The native container (O5, owner-chosen 2026-10-10): a versioned JSON
- * envelope gzipped through the runtime-native CompressionStream. It
- * holds everything the classic formats cannot: unicode glyph tables,
- * raw-RGB colors, frames with delays, doc mode, and metadata. UTF-8
- * ANSI remains the interchange format; a binary container may supersede
- * this later without breaking readers (the format field is the seam).
+ * envelope gzipped through the runtime-native CompressionStream, saved
+ * as `.0wnz` (owner-chosen extension; the codec itself is
+ * extension-agnostic). It holds everything the classic formats cannot:
+ * unicode glyph tables, raw-RGB colors, frames with delays, doc mode,
+ * and metadata. UTF-8 ANSI remains the interchange format; a binary
+ * container may supersede this later without breaking readers (the
+ * format field is the seam).
  *
  * Planes serialize as little-endian u32 base64 regardless of host
  * endianness, so saves are byte-stable across platforms.

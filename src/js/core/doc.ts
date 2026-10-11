@@ -169,9 +169,9 @@ export interface Cell {
 }
 
 /**
- * O13 placeholder: frames × cells budget guarded at addFrame. Final
- * value is the owner's call; 16M cell-frames = ~192MB of planes
- * (12B/cell/frame), far above any typical ansimation (80×25×50 = 100k).
+ * O13 (owner-chosen 2026-10-10): frames × cells budget guarded at
+ * addFrame. 16M cell-frames = ~192MB of planes (12B/cell/frame), far
+ * above any typical ansimation (80×25×50 = 100k).
  */
 export const DEFAULT_FRAME_CELL_BUDGET = 16_000_000;
 
