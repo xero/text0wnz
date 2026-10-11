@@ -145,7 +145,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			glRenderer = createGLRenderer(canvasContainer, {
 				getColumns: () => columns,
 				getRows: () => rows,
-				getImageData: () => imageData,
+				// GL renders the v3 planes directly (tag-bit colors, attr
+				// blink); the u16 mirror stays for the chunk fallback + collab
+				getPlanes: () => doc.frames[0],
 				getIceColors: iceColorsNow,
 			});
 		} catch (error) {
