@@ -84,6 +84,10 @@ const createWorkerHandler = inputHandle => {
 	inputHandle.value = handle;
 	let connected = false;
 	let collaborationMode = false;
+	// explicit server url (?server=ws://...): remote dial on explicit
+	// user intent; same-origin default otherwise (PLAN 3.6.3)
+	const explicitServer =
+		new URLSearchParams(window.location.search).get('server') ?? undefined;
 	let applyReceivedSettings = false;
 	const remoteCursors = createRemoteCursors();
 	/** id -> nick, for rename detection (renames ride CHAT upstream) */
@@ -229,7 +233,7 @@ const createWorkerHandler = inputHandle => {
 			case 'initialized':
 				// scoped probe: same-origin default server only; no join and
 				// no remote state until the user consents
-				State.worker.postMessage({ cmd: 'probe' });
+				State.worker.postMessage({ cmd: 'probe', url: explicitServer });
 				break;
 			case 'probeResult':
 				if (data.found) {
@@ -356,6 +360,7 @@ const createWorkerHandler = inputHandle => {
 			group: '',
 			pass: '',
 			caps: [],
+			url: explicitServer,
 		});
 	};
 

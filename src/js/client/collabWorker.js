@@ -35,7 +35,18 @@ let socket = null;
 let myId = -1;
 let connected = false;
 
-const serverUrl = () => {
+/**
+ * Same-origin default server, or an explicit ws/wss url (remote dial
+ * and the e2e round trip pass one; the bridge transport picker will).
+ * @param {unknown} explicit
+ */
+const serverUrl = explicit => {
+	if (
+		typeof explicit === 'string' &&
+		(explicit.startsWith('ws://') || explicit.startsWith('wss://'))
+	) {
+		return explicit;
+	}
 	const protocol = self.location.protocol === 'https:' ? 'wss:' : 'ws:';
 	const port =
 		self.location.port ||
@@ -63,10 +74,10 @@ const closeSocket = () => {
  * One-shot nickless probe: any reply (CONNECTED or REFUSED) proves a
  * server exists; the socket closes either way and the page decides.
  */
-const probe = () => {
+const probe = (explicitUrl = undefined) => {
 	let ws;
 	try {
-		ws = new WebSocket(serverUrl());
+		ws = new WebSocket(serverUrl(explicitUrl));
 	} catch {
 		toPage({ cmd: 'probeResult', found: false });
 		return;
@@ -93,12 +104,12 @@ const probe = () => {
 	setTimeout(() => settle(false), 4000);
 };
 
-/** @param {{nick?: string, group?: string, pass?: string, caps?: string[]}} options */
+/** @param {{nick?: string, group?: string, pass?: string, caps?: string[], url?: string}} options */
 const connect = options => {
 	closeSocket();
 	let ws;
 	try {
-		ws = new WebSocket(serverUrl());
+		ws = new WebSocket(serverUrl(options.url));
 	} catch (error) {
 		toPage({ cmd: 'error', error: String(error) });
 		return;
@@ -167,7 +178,7 @@ self.onmessage = event => {
 			toPage({ cmd: 'initialized' });
 			break;
 		case 'probe':
-			probe();
+			probe(msg.url);
 			break;
 		case 'connect':
 			connect(msg);
