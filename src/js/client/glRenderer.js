@@ -378,12 +378,17 @@ const createGLRenderer = (canvasContainer, host) => {
 		}
 	};
 
+	// set when a repaint pass hits SLOT_CAP; cells already written into
+	// the in-flight attribute slice reference their old slots, so the
+	// reset must happen BETWEEN passes, never mid-pass (and at most once
+	// per anchor/layout so a pathological doc cannot churn forever)
+	let slotOverflow = false;
+	let slotOverflowHandled = false;
+
 	const assignSlot = bits => {
 		if (slotBits.length >= SLOT_CAP) {
-			// full: drop everything but the substitute; the repaint under way
-			// re-adds only glyphs actually in coverage
-			slotByGlyphId = new Map();
-			slotBits = slotBits.slice(0, 1);
+			slotOverflow = true;
+			return 0; // substitute for the rest of this pass
 		}
 		const slot = slotBits.length;
 		slotBits.push(bits);
@@ -417,8 +422,14 @@ const createGLRenderer = (canvasContainer, host) => {
 		if (bits === undefined) {
 			return 0;
 		}
-		const slot = bits ? assignSlot(bits) : 0;
-		slotByGlyphId.set(glyphId, slot);
+		if (!bits) {
+			slotByGlyphId.set(glyphId, 0); // definitive miss: substitute
+			return 0;
+		}
+		const slot = assignSlot(bits);
+		if (slot > 0) {
+			slotByGlyphId.set(glyphId, slot);
+		}
 		return slot;
 	};
 
@@ -553,10 +564,19 @@ const createGLRenderer = (canvasContainer, host) => {
 		gl.uniform1f(uniforms.u_blink, blinkOn ? 1 : 0);
 		gl.clear(gl.COLOR_BUFFER_BIT);
 		gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
+		if (slotOverflow && !slotOverflowHandled) {
+			// one clean refill for this coverage: reset between passes and
+			// repaint once; glyphs beyond the cap render the substitute
+			slotOverflowHandled = true;
+			slotOverflow = false;
+			resetUnicodePages();
+			requestAnimationFrame(repaint);
+		}
 	};
 
 	const anchorTo = row => {
 		const rows = host.getRows();
+		slotOverflowHandled = false; // new coverage may refill the atlas
 		anchorRow = Math.max(0, Math.min(row, rows - canvasRows));
 		repaint();
 		canvas.style.top = `${anchorRow * cellH}px`;
@@ -604,6 +624,7 @@ const createGLRenderer = (canvasContainer, host) => {
 		buildAtlas();
 		// slot bitmaps are scaled to the font metrics, so any rebuild
 		// invalidates them; repaint refills from the hex page cache
+		slotOverflowHandled = false;
 		resetUnicodePages();
 		uploadPalette();
 		layout();

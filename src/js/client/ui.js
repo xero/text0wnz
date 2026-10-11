@@ -731,6 +731,12 @@ const createDragDropController = (handler, el) => {
 		e.preventDefault();
 		dragCounter = 0;
 		el.style.display = 'none';
+		// collab lockout: opening a file mid-session replaces the local
+		// doc with content peers never see (the Open menu item is hidden
+		// while connected for the same reason)
+		if (State.network?.isConnected?.() === true) {
+			return;
+		}
 		const files = e.dataTransfer?.files;
 		if (files && files.length > 0) {
 			handler(files[0]);

@@ -43,7 +43,6 @@ import {
 	unicodeToCp437,
 	unicodeToCp437Strict,
 } from '../cp437.js';
-import { xterm256RGB } from './dur.js';
 import { buildSauce, parseSauce } from './sauce.js';
 import { CodecError, concatBytes, utf8Encode } from './util.js';
 import { DecodeResult, DocMeta } from './bin.js';
@@ -95,6 +94,7 @@ const ansiColor = (bin: number): number => {
 const decodeUtf8At = (
 	bytes: Uint8Array,
 	startIndex: number,
+	end = bytes.length,
 ): { charCode: number; bytesConsumed: number } => {
 	const fail = (message: string): never => {
 		throw new CodecError(`${message} at position ${startIndex}`);
@@ -104,7 +104,7 @@ const decodeUtf8At = (
 		return { charCode: first, bytesConsumed: 1 };
 	}
 	const continuation = (offset: number): number => {
-		if (startIndex + offset >= bytes.length) {
+		if (startIndex + offset >= end) {
 			fail('unexpected end of data in UTF-8 sequence');
 		}
 		const byte = bytes[startIndex + offset];
@@ -316,12 +316,23 @@ export const decodeAns = (
 	 */
 	const putUtf8Cell = (px: number, py: number, codepoint: number) => {
 		// explicit mapping or identity-if-unclaimed (space is 32, not an
-		// interned U+0020); only codepoints truly outside CP437 intern
-		const mapped = unicodeToCp437(codepoint);
-		const glyphId =
-			mapped !== undefined
-				? mapped
-				: glyphTable.idFor(FONT_SLOT_UNSCII, codepoint);
+		// interned U+0020); only codepoints truly outside CP437 intern.
+		// Overlong encodings can smuggle lone surrogates and values past
+		// U+10FFFF: those substitute, and a (hostile) file that fills the
+		// 65,536-entry glyph table degrades to '?' instead of aborting
+		const invalid =
+			codepoint > 0x10ffff || (codepoint >= 0xd800 && codepoint <= 0xdfff);
+		const mapped = invalid ? 63 : unicodeToCp437(codepoint);
+		let glyphId: number;
+		if (mapped !== undefined) {
+			glyphId = mapped;
+		} else {
+			try {
+				glyphId = glyphTable.idFor(FONT_SLOT_UNSCII, codepoint);
+			} catch {
+				glyphId = 63;
+			}
+		}
 		const baseFg = inverse ? background : foreground;
 		const baseBg = inverse ? foreground : background;
 		const effFg = Math.min(
@@ -362,10 +373,12 @@ export const decodeAns = (
 				let word: number | null = null;
 				if (values[i + 1] === 5 && i + 2 < values.length) {
 					const n = values[i + 2] & 0xff;
-					// 0-15 are the standard colors in ANSI order; 16-255
-					// freeze to the xterm RGB (renders correctly everywhere
-					// today; a 256-entry doc palette may supersede this)
-					word = n < 16 ? paletteColor(binColor(n)) : xterm256RGB(n);
+					// 0-15 are the standard colors in ANSI order; 16-255 stay
+					// palette-index words, symmetric with the writer, so
+					// paletteColor(n) round-trips through utf8 losslessly
+					// (renderers resolve indexes beyond the doc palette via
+					// the canonical xterm table)
+					word = paletteColor(n < 16 ? binColor(n) : n);
 					i += 2;
 				} else if (values[i + 1] === 2 && i + 4 < values.length) {
 					word = rgbColor(
@@ -427,7 +440,7 @@ export const decodeAns = (
 		pos += 1;
 		let codepoint = code;
 		if (isUTF8) {
-			const decoded = decodeUtf8At(bytes, pos - 1);
+			const decoded = decodeUtf8At(bytes, pos - 1, size);
 			bytesConsumed = decoded.bytesConsumed;
 			codepoint = decoded.charCode;
 			// dispatch value for the state machine (controls are ASCII);
@@ -876,7 +889,12 @@ export const encodeUtf8 = (
 	let curFg = DEFAULT_FG;
 	let curBg = DEFAULT_BG;
 	let curBlink = false;
-	let anyBlink = false;
+	// drives the SAUCE iCE flag: only blink attrs actually PRESENTED as
+	// bright backgrounds count (a dropped blink over an extended bg does
+	// not make the file ice). Degenerate case accepted: blink attrs
+	// inside an ice doc under mode 'blink' write SGR 5 + the ice flag
+	// and fold to bright on reimport.
+	let anyBrightened = false;
 
 	if (!plain) {
 		output.push(...UTF8_SGR_RESET);
@@ -891,12 +909,12 @@ export const encodeUtf8 = (
 			let bg = frame.bg[index];
 			let wantBlink = false;
 			if (blinkAttr) {
-				anyBlink = true;
 				const bg16 = isPaletteColor(bg) && paletteIndexOf(bg) <= 15;
 				if (blinkMode === 'blink') {
 					wantBlink = true;
 				} else if (bg16) {
 					bg = brighten(bg); // ice presentation
+					anyBrightened = true;
 				}
 				// ice over an extended background: blink drops (O7)
 			}
@@ -936,7 +954,13 @@ export const encodeUtf8 = (
 				}
 				output.push(...utf8Encode(cp437ToUnicode(glyphId)));
 			} else {
-				const codepoint = doc.glyphTable.get(glyphId)?.codepoint ?? 63;
+				let codepoint = doc.glyphTable.get(glyphId)?.codepoint ?? 63;
+				if (
+					codepoint > 0x10ffff ||
+					(codepoint >= 0xd800 && codepoint <= 0xdfff)
+				) {
+					codepoint = 63; // never write invalid UTF-8
+				}
 				output.push(...utf8Encode(codepoint));
 			}
 		}
@@ -962,7 +986,7 @@ export const encodeUtf8 = (
 		fileSize: payload.length,
 		columns,
 		rows,
-		iceColors: iceDoc || (blinkMode === 'ice' && anyBlink),
+		iceColors: iceDoc || anyBrightened,
 		letterSpacing: doc.getLetterSpacing(),
 		title: meta.title,
 		author: meta.author,

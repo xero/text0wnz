@@ -106,3 +106,24 @@ describe('lintDocForFormat', () => {
 		).toContain('blink');
 	});
 });
+
+describe('ice-blink (review finding 11)', () => {
+	it('flags blink attrs inside an ice doc for 16c formats', () => {
+		const doc = createDocV3({ columns: 2, rows: 1, iceColors: true });
+		doc.setCell(0, 0, 0, {
+			glyph: glyphWord(65, ATTR_BLINK),
+			fg: paletteColor(7),
+			bg: paletteColor(0),
+		});
+		const kinds = lintDocForFormat(doc, 'ans').issues.map(issue => issue.kind);
+		expect(kinds).toEqual(['ice-blink']);
+		// non-ice docs fold blink legitimately: no flag
+		const plain = createDocV3({ columns: 2, rows: 1 });
+		plain.setCell(0, 0, 0, {
+			glyph: glyphWord(65, ATTR_BLINK),
+			fg: paletteColor(7),
+			bg: paletteColor(0),
+		});
+		expect(lintDocForFormat(plain, 'ans').ok).toBe(true);
+	});
+});

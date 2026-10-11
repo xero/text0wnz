@@ -351,10 +351,17 @@ export const createEditorCore = (
 		ice: boolean,
 	) => {
 		const attrs = attrsOf(frame.glyph[i]);
+		// the blink<->bright fold is CLASSIC16 semantics only: extended
+		// backgrounds (raw RGB, palette indexes above 15) pass through the
+		// ice toggle untouched, keeping their blink attr as-is (O7: the
+		// attr bit exists everywhere; ice folding is 16-color-only)
+		const classicBg =
+			isPaletteColor(frame.bg[i]) && paletteIndexOf(frame.bg[i]) <= 15;
+		if (!classicBg) {
+			return;
+		}
 		if (ice && attrs & ATTR_BLINK) {
-			const bgIndex = isPaletteColor(frame.bg[i])
-				? paletteIndexOf(frame.bg[i]) & 7
-				: 0;
+			const bgIndex = paletteIndexOf(frame.bg[i]) & 7;
 			frame.glyph[i] = glyphWord(
 				glyphIdOf(frame.glyph[i]),
 				attrs & ~ATTR_BLINK,
@@ -363,8 +370,7 @@ export const createEditorCore = (
 		} else if (
 			!ice &&
 			!(attrs & ATTR_BLINK) &&
-			isPaletteColor(frame.bg[i]) &&
-			(paletteIndexOf(frame.bg[i]) & 15) > 7
+			paletteIndexOf(frame.bg[i]) > 7
 		) {
 			const bgIndex = paletteIndexOf(frame.bg[i]) & 15;
 			frame.glyph[i] = glyphWord(glyphIdOf(frame.glyph[i]), attrs | ATTR_BLINK);

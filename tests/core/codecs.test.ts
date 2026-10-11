@@ -313,11 +313,28 @@ describe('ans codec', () => {
 		expect(encodeUtf8(d2.doc, { date: FIXED_DATE })).toEqual(e1);
 	});
 
-	it('UTF-8 reader freezes xterm-256 indexes to their RGB', () => {
+	it('UTF-8 reader keeps xterm-256 indexes as palette words', () => {
 		const bytes = new TextEncoder().encode('\u001b[38;5;196m\u001b[48;5;232mX');
 		const { doc } = decodeAns(bytes, { utf8: true });
-		expect(doc.frames[0].fg[0]).toBe(rgbColor(255, 0, 0));
-		expect(doc.frames[0].bg[0]).toBe(rgbColor(8, 8, 8));
+		expect(doc.frames[0].fg[0]).toBe(paletteColor(196));
+		expect(doc.frames[0].bg[0]).toBe(paletteColor(232));
+		// ...and they round-trip losslessly through the writer
+		const again = decodeAns(encodeUtf8(doc), { utf8: true });
+		expect(again.doc.frames[0].fg[0]).toBe(paletteColor(196));
+		expect(again.doc.frames[0].bg[0]).toBe(paletteColor(232));
+	});
+
+	it('UTF-8 reader substitutes smuggled surrogates and stays in the payload', () => {
+		// 0xED 0xA0 0x80 encodes lone surrogate U+D800
+		const surrogate = decodeAns(new Uint8Array([0xed, 0xa0, 0x80]), {
+			utf8: true,
+		});
+		expect(surrogate.doc.frames[0].glyph[0] & 0xffff).toBe(63);
+		// a multibyte lead as the LAST payload byte must not consume
+		// bytes beyond the payload end
+		expect(() =>
+			decodeAns(new Uint8Array([0x41, 0xe2]), { utf8: true }),
+		).toThrow();
 	});
 
 	it('plain-text export strips escape codes', () => {

@@ -15,6 +15,7 @@ import { UNICODE_BLOCKS } from '../core/blocksData.js';
 import { CharsetError, parseCharset } from '../core/charsets.js';
 
 const GRID_LIMIT = 512;
+const MAX_IMPORT_PAGES = 256;
 
 const createCharsetPicker = () => {
 	const search = $('charsetSearch');
@@ -150,7 +151,7 @@ const createCharsetPicker = () => {
 
 	const importCharset = async file => {
 		try {
-			const pages = parseCharset(await file.text());
+			const pages = parseCharset(await file.text()).slice(0, MAX_IMPORT_PAGES);
 			let existing = [];
 			try {
 				existing = JSON.parse(localStorage.getItem('customCharsets')) ?? [];
@@ -170,7 +171,9 @@ const createCharsetPicker = () => {
 			if (error instanceof CharsetError) {
 				alert(`Could not read charset: ${error.message}`);
 			} else {
-				throw error;
+				// storage quota and friends: surface it, never lose it
+				alert(`Could not import charset: ${error.message ?? error}`);
+				console.error('[charsetPicker] import failed:', error);
 			}
 		}
 	};

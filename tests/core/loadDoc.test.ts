@@ -248,3 +248,28 @@ describe('extended colors through the editor (P5)', () => {
 		expect(doc.frames[0].bg[0]).toBe(rgbColor(200, 0, 0));
 	});
 });
+
+describe('ice toggle with extended colors (review finding 1)', () => {
+	it('never touches extended backgrounds in either direction', () => {
+		const doc = createDocV3({ columns: 4, rows: 1 });
+		const editor = createEditorCore(doc);
+		const xterm28 = paletteColor(28);
+		const rgb = rgbColor(10, 200, 10);
+		editor.drawBlocks(draw => {
+			draw(65, 7, xterm28, 0, 0);
+			draw(66, 7, rgb, 1, 0);
+			draw(67, 7, 4, 2, 0); // classic dim bg: still folds normally
+		});
+		editor.setIceColors(true);
+		expect(doc.frames[0].bg[0]).toBe(xterm28);
+		expect(doc.frames[0].bg[1]).toBe(rgb);
+		editor.setIceColors(false);
+		// extended bgs survive the round trip exactly, no spurious blink
+		expect(doc.frames[0].bg[0]).toBe(xterm28);
+		expect(doc.frames[0].bg[1]).toBe(rgb);
+		expect(doc.frames[0].glyph[0] & 0x10000).toBe(0);
+		expect(doc.frames[0].glyph[1] & 0x10000).toBe(0);
+		// classic cells keep v2 fold semantics
+		expect(doc.frames[0].bg[2]).toBe(paletteColor(4));
+	});
+});

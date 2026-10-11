@@ -87,14 +87,17 @@ const createFKeys = () => {
 	let fkeySets = buildSets();
 	let currentSetIndex = 5; // Default to set 5 (blocks, half-blocks, etc.)
 
-	// warm the glyph table + hex blocks for the active page so inserts
-	// and previews are ready by the time they're used
+	// warm the hex blocks for the active page so previews and inserts
+	// are ready; browsing must NOT intern into the doc glyph table
+	// (interning happens on insert), so this uses the preview path
 	const preresolveCurrentSet = () => {
-		const codepoints = fkeySets[currentSetIndex].chars
-			.filter(token => token < 0)
-			.map(token => ~token);
-		if (codepoints.length > 0 && State.textArtCanvas) {
-			State.textArtCanvas.resolveUnicode(codepoints);
+		if (!State.textArtCanvas) {
+			return;
+		}
+		for (const token of fkeySets[currentSetIndex].chars) {
+			if (token < 0) {
+				State.textArtCanvas.unicodeGlyphBits(~token, 8, 16);
+			}
 		}
 	};
 
@@ -1450,9 +1453,13 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 							: new Map();
 
 					State.textArtCanvas.startUndo();
-					let currentX = x;
+					// re-read bounds: the resolve above awaits network block
+					// fetches, and the doc may have been resized meanwhile
+					const drawColumns = State.textArtCanvas.getColumns();
+					const drawRows = State.textArtCanvas.getRows();
+					let currentX = Math.min(x, drawColumns - 1);
 					let currentY = y;
-					const startX = x; // Remember starting column for line breaks
+					const startX = Math.min(x, drawColumns - 1);
 					const foreground = State.palette.getForegroundColor();
 					const background = State.palette.getBackgroundColor();
 
@@ -1464,11 +1471,11 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 								continue;
 							}
 							// Check bounds - stop if we're beyond canvas vertically
-							if (currentY >= rows) {
+							if (currentY >= drawRows) {
 								break;
 							}
 							// Handle edge truncation - skip characters that exceed the right edge
-							if (currentX >= columns) {
+							if (currentX >= drawColumns) {
 								// Skip this character and continue until we hit a newline
 								continue;
 							}

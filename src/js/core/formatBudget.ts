@@ -28,7 +28,9 @@ export interface BudgetIssue {
 		/** tundra blanks chars 1-6 (PabloDraw lineage) */
 		| 'tnd-control-glyph'
 		/** tundra has no blink; these cells refuse to encode */
-		| 'tnd-blink';
+		| 'tnd-blink'
+		/** blink attrs inside an ice doc fold away in 16c exports */
+		| 'ice-blink';
 	count: number;
 	/** first offending cell, for a future jump-to-cell affordance */
 	firstIndex: number;
@@ -74,8 +76,14 @@ export const lintDocForFormat = (
 		} else if (format === 'tnd' && glyphId >= 1 && glyphId <= 6) {
 			hit('tnd-control-glyph', i);
 		}
-		if (format === 'tnd' && (frame.glyph[i] & (ATTR_BLINK << 16)) !== 0) {
+		const blinkAttr = (frame.glyph[i] & (ATTR_BLINK << 16)) !== 0;
+		if (format === 'tnd' && blinkAttr) {
 			hit('tnd-blink', i);
+		}
+		// a blink attr in an ICE doc cannot survive the u16 projection
+		// (the fold only exists for non-ice docs): ans/bin/xbin drop it
+		if (blinkAttr && doc.getIceColors() && format !== 'tnd') {
+			hit('ice-blink', i);
 		}
 		if (checkColors) {
 			if (!isPaletteColor(frame.fg[i]) || paletteIndexOf(frame.fg[i]) > 15) {
@@ -103,5 +111,7 @@ export const describeIssue = (issue: BudgetIssue): string => {
 			return `${issue.count} control-character cell${issue.count === 1 ? '' : 's'} (☺☻♥♦♣♠) become blank`;
 		case 'tnd-blink':
 			return `${issue.count} blinking cell${issue.count === 1 ? '' : 's'}: TundraDraw has no blink`;
+		case 'ice-blink':
+			return `${issue.count} blinking cell${issue.count === 1 ? '' : 's'} fold away (ice is on)`;
 	}
 };

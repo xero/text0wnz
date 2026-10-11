@@ -1671,17 +1671,24 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		// would silently diverge from every peer - substitute until a
 		// protocol extension negotiates unicode (SERVER_CAPS, ids 23+)
 		const locked = State.network?.isConnected?.() === true;
-		for (const codepoint of new Set(codepoints)) {
-			if (locked) {
+		const unique = [...new Set(codepoints)];
+		if (locked) {
+			for (const codepoint of unique) {
 				resolved.set(codepoint, null);
-				continue;
 			}
-			const slot = await ensureHexPages().pickSlot(codepoint);
+			return resolved;
+		}
+		// slots resolve in parallel (block fetches dedupe inside the
+		// pages manager); interning stays synchronous afterwards
+		const slots = await Promise.all(
+			unique.map(codepoint => ensureHexPages().pickSlot(codepoint)),
+		);
+		unique.forEach((codepoint, i) => {
 			resolved.set(
 				codepoint,
-				slot === null ? null : doc.glyphTable.idFor(slot, codepoint),
+				slots[i] === null ? null : doc.glyphTable.idFor(slots[i], codepoint),
 			);
-		}
+		});
 		return resolved;
 	};
 

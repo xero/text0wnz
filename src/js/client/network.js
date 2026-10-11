@@ -335,7 +335,7 @@ const createWorkerHandler = inputHandle => {
 			const result = joinDocToDoc(data.data.doc);
 			State.textArtCanvas.setDocData(result.doc);
 			if (result.fontName) {
-				await onFontChange(result.fontName);
+				await onFontChange(Load.sauceToAppFont(result.fontName) ?? result.fontName);
 			}
 			State.font.setLetterSpacing(result.use9px);
 			if (Array.isArray(data.data.users)) {
