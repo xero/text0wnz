@@ -2,6 +2,15 @@ name: build and publish editor docker image
 on:
   workflow_dispatch:
   workflow_call:
+    # job outputs are invisible to callers unless exported here; the
+    # release workflow reads these for its release-notes docker pulls
+    outputs:
+      ghcr:
+        description: GHCR image ref with short-sha tag
+        value: ${{ jobs.build-and-push.outputs.ghcr }}
+      dockerhub:
+        description: Docker Hub image ref with short-sha tag
+        value: ${{ jobs.build-and-push.outputs.dockerhub }}
     secrets:
       DOCKERHUB_USERNAME:
         required: true
@@ -30,6 +39,13 @@ jobs:
           bun-version: 'latest'
       - name: version bump
         id: version-bump
+        # head_commit fields are attacker-controlled (commit author/message):
+        # they reach the shell only as env vars, never script interpolation
+        env:
+          COMMIT_NAME: ${{ github.event.head_commit.author.name }}
+          COMMIT_EMAIL: ${{ github.event.head_commit.author.email }}
+          HEAD_COMMIT_MSG: ${{ github.event.head_commit.message }}
+          FALLBACK_NAME: ${{ github.actor }}
         run: |
           git fetch origin main
           git checkout main
@@ -46,16 +62,13 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            COMMIT_NAME="${{ github.event.head_commit.author.name }}"
-            COMMIT_EMAIL="${{ github.event.head_commit.author.email }}"
             if [ -z "$COMMIT_NAME" ]; then
-              COMMIT_NAME="${{ github.actor }}"
-              COMMIT_EMAIL="${{ github.actor }}@users.noreply.github.com"
+              COMMIT_NAME="$FALLBACK_NAME"
+              COMMIT_EMAIL="$FALLBACK_NAME@users.noreply.github.com"
             fi
-            if [ -z "${{ github.event.head_commit.message }}" ]; then
-              COMMIT_MSG="${{ github.event.head_commit.message }}"
-            else
-            COMMIT_MSG="$(git log -1 --pretty=%s || true)"
+            COMMIT_MSG="$HEAD_COMMIT_MSG"
+            if [ -z "$COMMIT_MSG" ]; then
+              COMMIT_MSG="$(git log -1 --pretty=%s || true)"
             fi
             if [ -z "$COMMIT_MSG" ]; then
               COMMIT_MSG="chore(container) docker build"
@@ -94,13 +107,15 @@ jobs:
             type=sha,format=short,prefix=sha-
       - name: get docker short sha
         id: get_sha
+        env:
+          META_TAGS: ${{ steps.meta.outputs.tags }}
         run: |
-          GHCR=$(echo "${{ steps.meta.outputs.tags }}" | grep '^ghcr\.io.*/text0wnz:sha-' | head -n1)
+          GHCR=$(echo "$META_TAGS" | grep '^ghcr\.io.*/text0wnz:sha-' | head -n1)
           GHCR="${GHCR:-ghcr.io/xero/text0wnz:latest}"
-          DHUB=$(echo "${{ steps.meta.outputs.tags }}" | grep '^xerostyle/text0wnz:sha-' | head -n1)
+          DHUB=$(echo "$META_TAGS" | grep '^xerostyle/text0wnz:sha-' | head -n1)
           DHUB="${DHUB:-xerostyle/text0wnz:latest}"
-          echo "ghcr=$GHCR" >> $GITHUB_OUTPUT
-          echo "dockerhub=$DHUB" >> $GITHUB_OUTPUT
+          echo "ghcr=$GHCR" >> "$GITHUB_OUTPUT"
+          echo "dockerhub=$DHUB" >> "$GITHUB_OUTPUT"
       - name: build and push
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
