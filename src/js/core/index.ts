@@ -8,6 +8,8 @@ export * from './doc.js';
 export * from './convert.js';
 export * from './cp437.js';
 export * from './patchArena.js';
+export * from './journal.js';
+export * from './migrate.js';
 export * from './codecs/util.js';
 export * from './codecs/sauce.js';
 export * from './codecs/bin.js';

@@ -21,10 +21,17 @@ export interface StrokeMeta {
 	userId?: string | number;
 }
 
-interface Stroke {
+/**
+ * A frozen, committed stroke. The arena never mutates it after commit;
+ * treat it as read-only (the journal serializes it without copying).
+ */
+export interface CommittedStroke {
 	meta: StrokeMeta;
 	/** Flat triples: [index, before, after] x n, per touched plane. */
 	patches: Partial<Record<PlaneName, Uint32Array>>;
+}
+
+interface Stroke extends CommittedStroke {
 	bytes: number;
 }
 
@@ -63,8 +70,17 @@ export interface PatchArena {
  */
 export const DEFAULT_UNDO_BYTE_CAP = 32 * 1024 * 1024;
 
+export interface PatchArenaOptions {
+	byteCap?: number;
+	/**
+	 * Fires once per committed (non-empty) stroke, after the ring
+	 * bookkeeping: the OPFS journal's append hook (PLAN §3.2).
+	 */
+	onCommit?: (stroke: CommittedStroke) => void;
+}
+
 export const createPatchArena = (
-	options: { byteCap?: number } = {},
+	options: PatchArenaOptions = {},
 ): PatchArena => {
 	const byteCap = options.byteCap ?? DEFAULT_UNDO_BYTE_CAP;
 	const strokes: Stroke[] = [];
@@ -157,6 +173,7 @@ export const createPatchArena = (
 			cursor = strokes.length - 1;
 			bytes += strokeBytes;
 			evictToCap();
+			options.onCommit?.({ meta, patches });
 			return true;
 		},
 		undo: doc => {
