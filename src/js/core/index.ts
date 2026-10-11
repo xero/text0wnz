@@ -12,6 +12,7 @@ export * from './cellops.js';
 export * from './editor.js';
 export * from './journal.js';
 export * from './migrate.js';
+export * from './mapping.js';
 export * from './codecs/util.js';
 export * from './codecs/sauce.js';
 export * from './codecs/bin.js';

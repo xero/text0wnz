@@ -439,7 +439,34 @@ const createShadingController = (panel, charMode) => {
 		return code;
 	};
 
+	// A pen picks its shade from pressure directly (PLAN §3.5 "pen draws
+	// with pressure"); finger and mouse keep the classic darken/lighten
+	// cycle. Quartiles map onto the CP437 shade ramp.
+	const shadeFromPressure = pressure => {
+		if (pressure < 0.25) {
+			return 176;
+		}
+		if (pressure < 0.5) {
+			return 177;
+		}
+		if (pressure < 0.75) {
+			return 178;
+		}
+		return 219;
+	};
+
 	const draw = coords => {
+		const penPressure =
+			!charMode &&
+			coords.pointerType === 'pen' &&
+			typeof coords.pressure === 'number' &&
+			coords.pressure > 0
+				? coords.pressure
+				: null;
+		const shadeAt = (x, y) =>
+			penPressure !== null
+				? shadeFromPressure(penPressure)
+				: calculateShadingCharacter(x, y);
 		if (
 			prev.x !== coords.x ||
 			prev.y !== coords.y ||
@@ -449,7 +476,7 @@ const createShadingController = (panel, charMode) => {
 				State.textArtCanvas.draw(callback => {
 					line(prev.x, prev.y, coords.x, coords.y, (x, y) => {
 						callback(
-							charMode ? drawMode.charCode : calculateShadingCharacter(x, y),
+							charMode ? drawMode.charCode : shadeAt(x, y),
 							drawMode.foreground,
 							drawMode.background,
 							x,
@@ -460,9 +487,7 @@ const createShadingController = (panel, charMode) => {
 			} else {
 				State.textArtCanvas.draw(callback => {
 					callback(
-						charMode
-							? drawMode.charCode
-							: calculateShadingCharacter(coords.x, coords.y),
+						charMode ? drawMode.charCode : shadeAt(coords.x, coords.y),
 						drawMode.foreground,
 						drawMode.background,
 						coords.x,
@@ -852,6 +877,9 @@ const createCharacterBrushPanel = async () => {
 				select(charCode);
 			}
 		});
+		// mouseUp must ride each rebuilt canvas; the one-time registration
+		// died on the first redraw (font/color changes replace the canvas)
+		canvas.addEventListener('mouseup', mouseUp);
 
 		canvasContainer.appendChild(canvas);
 	};
@@ -955,7 +983,6 @@ const createCharacterBrushPanel = async () => {
 	document.addEventListener('onPaletteChange', redrawCanvas);
 	document.addEventListener('onXBFontLoaded', redrawGlyphs);
 	document.addEventListener('onOpenedFile', redrawGlyphs);
-	canvas.addEventListener('mouseup', mouseUp);
 
 	canvasContainer.appendChild(canvas);
 	panel.append(canvasContainer);

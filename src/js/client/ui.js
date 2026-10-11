@@ -1,5 +1,6 @@
 import State from './state.js';
 import { loadFontFromXBData } from './font.js';
+import { getZoomController } from './zoom.js';
 
 // Utilities for DOM manipulation
 const D = document,
@@ -276,31 +277,38 @@ const createPositionInfo = el => {
 };
 
 const viewportTap = view => {
+	// Menu close, plus v2's margin gesture: a quick 2-finger tap on the
+	// viewport OUTSIDE the canvas still undoes. On the canvas itself the
+	// gesture recognizer owns taps, and filtering by target is what
+	// fixes v2's double-undo (both layers used to see the same tap).
 	const maxTapDuration = 300;
 	let touchStartTime = 0;
-	let activeTouches = 0;
+	let eligible = false;
 
 	view.addEventListener('touchstart', event => {
-		activeTouches = event.touches.length;
-		if (activeTouches === 2) {
+		State.menus.close();
+		const onCanvas =
+			typeof event.target?.closest === 'function' &&
+			event.target.closest('#canvasContainer') !== null;
+		eligible = event.touches.length === 2 && !onCanvas;
+		if (eligible) {
 			touchStartTime = Date.now();
 		}
-		State.menus.close();
 	});
 
 	view.addEventListener('touchend', event => {
-		if (activeTouches === 2 && event.changedTouches.length === 2) {
-			const endTime = Date.now();
-			const tapDuration = endTime - touchStartTime;
-			if (tapDuration < maxTapDuration) {
-				State.textArtCanvas.undo();
-			}
+		if (
+			eligible &&
+			event.changedTouches.length === 2 &&
+			Date.now() - touchStartTime < maxTapDuration
+		) {
+			State.textArtCanvas.undo();
 		}
-		activeTouches = 0;
+		eligible = false;
 	});
 
-	view.addEventListener('touchcancel', _ => {
-		activeTouches = 0;
+	view.addEventListener('touchcancel', () => {
+		eligible = false;
 	});
 };
 
@@ -934,7 +942,10 @@ const createZoomControl = () => {
 		display.textContent = `${scale.toFixed(1)}x`;
 		slider.setAttribute('aria-valuenow', value);
 
-		if (State.font && State.font.setScaleFactor) {
+		const zoom = getZoomController();
+		if (zoom) {
+			zoom.setZoom(scale);
+		} else if (State.font && State.font.setScaleFactor) {
 			State.font.setScaleFactor(scale);
 		}
 	};
@@ -957,6 +968,9 @@ const createZoomControl = () => {
 		updateSliderFromState,
 	);
 
+	// pinch and wheel zoom change the scale outside the slider; mirror it
+	document.addEventListener('onScaleFactorChange', updateSliderFromState);
+
 	// Event listeners
 	slider.addEventListener('input', e => {
 		// Update display during drag (preview)
@@ -973,11 +987,18 @@ const createZoomControl = () => {
 		}
 	});
 
-	// Keyboard shortcuts
+	// Keyboard shortcuts (combos unchanged: ctrl/cmd + = / - / 0). The
+	// controller path anchors at the viewport center and saves; the
+	// fallback reproduces v2 exactly for contexts without a controller.
 	const handleKeyboardZoom = e => {
 		if ((e.ctrlKey || e.metaKey) && e.key === '=') {
 			// Ctrl/Cmd + Plus: Zoom in
 			e.preventDefault();
+			const zoom = getZoomController();
+			if (zoom) {
+				zoom.zoomIn();
+				return;
+			}
 			const currentValue = parseFloat(slider.value);
 			const newValue = Math.min(4, currentValue + 0.5);
 			slider.value = newValue.toString();
@@ -988,6 +1009,11 @@ const createZoomControl = () => {
 		} else if ((e.ctrlKey || e.metaKey) && e.key === '-') {
 			// Ctrl/Cmd + Minus: Zoom out
 			e.preventDefault();
+			const zoom = getZoomController();
+			if (zoom) {
+				zoom.zoomOut();
+				return;
+			}
 			const currentValue = parseFloat(slider.value);
 			const newValue = Math.max(0.5, currentValue - 0.5);
 			slider.value = newValue.toString();
@@ -998,6 +1024,11 @@ const createZoomControl = () => {
 		} else if ((e.ctrlKey || e.metaKey) && e.key === '0') {
 			// Ctrl/Cmd + 0: Reset to 1x
 			e.preventDefault();
+			const zoom = getZoomController();
+			if (zoom) {
+				zoom.zoomReset();
+				return;
+			}
 			slider.value = '1';
 			updateZoom('1');
 			if (State.saveToLocalStorage) {

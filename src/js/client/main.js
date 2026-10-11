@@ -5,6 +5,7 @@ import { Load, Save } from './file.js';
 import { createTextArtCanvas } from './canvas.js';
 import { createWorkerHandler, createChatController } from './network.js';
 import { trustedMessage } from './messageGuard.js';
+import { createZoomController } from './zoom.js';
 import { FontCache } from './fontCache.js';
 import {
 	$,
@@ -397,7 +398,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 				State.cursor = createCursor(canvasContainer);
 				State.selectionTool = createSelectionTool();
 
-				// Initialize zoom control
+				// Initialize zoom: the controller first (pinch/wheel/focal
+				// anchoring), then the slider UI that routes through it
+				const viewportElement = $('viewport');
+				if (viewportElement) {
+					createZoomController(viewportElement);
+				}
 				const zoomControlContainer = $('zoomControl');
 				if (zoomControlContainer) {
 					const zoomControl = createZoomControl();

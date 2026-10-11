@@ -587,6 +587,18 @@ const createSelectionCursor = element => {
 	cursor.style.display = 'none';
 	element.appendChild(cursor);
 
+	// an open selection must track metric changes or it drifts off its
+	// cells (zoom left it behind in v2)
+	const refreshMetrics = () => {
+		if (visible) {
+			processCoords();
+			updateCursor();
+		}
+	};
+	document.addEventListener('onScaleFactorChange', refreshMetrics);
+	document.addEventListener('onLetterSpacingChange', refreshMetrics);
+	document.addEventListener('onFontChange', refreshMetrics);
+
 	return {
 		show,
 		hide,

@@ -59,66 +59,62 @@ describe('UI Components', () => {
 	});
 
 	describe('viewportTap', () => {
-		it('should handle two-finger tap for undo', () => {
-			vi.useFakeTimers();
+		it('quick 2-finger tap outside the canvas undoes (v2 margin gesture)', () => {
 			const view = document.createElement('div');
 			document.body.appendChild(view);
 
 			viewportTap(view);
+			State.textArtCanvas.undo.mockClear();
+			State.menus.close.mockClear();
 
-			// Simulate two-finger touch start
 			const touchStartEvent = createEvent('touchstart');
 			touchStartEvent.touches = [{ identifier: 1 }, { identifier: 2 }];
 			view.dispatchEvent(touchStartEvent);
+			expect(State.menus.close).toHaveBeenCalled();
 
-			vi.advanceTimersByTime(100);
-
-			// Simulate two-finger touch end
 			const touchEndEvent = createEvent('touchend');
 			touchEndEvent.changedTouches = [{ identifier: 1 }, { identifier: 2 }];
 			view.dispatchEvent(touchEndEvent);
-
-			expect(State.textArtCanvas.undo).toHaveBeenCalled();
-
-			vi.useRealTimers();
+			expect(State.textArtCanvas.undo).toHaveBeenCalledTimes(1);
 		});
 
-		it('should not undo if tap duration is too long', () => {
+		it('slow 2-finger lift outside the canvas does not undo', () => {
 			vi.useFakeTimers();
 			const view = document.createElement('div');
 			document.body.appendChild(view);
 
 			viewportTap(view);
-
 			State.textArtCanvas.undo.mockClear();
 
-			// Simulate two-finger touch start
 			const touchStartEvent = createEvent('touchstart');
 			touchStartEvent.touches = [{ identifier: 1 }, { identifier: 2 }];
 			view.dispatchEvent(touchStartEvent);
-
-			// Wait too long
 			vi.advanceTimersByTime(400);
-
-			// Simulate two-finger touch end
 			const touchEndEvent = createEvent('touchend');
 			touchEndEvent.changedTouches = [{ identifier: 1 }, { identifier: 2 }];
 			view.dispatchEvent(touchEndEvent);
-
 			expect(State.textArtCanvas.undo).not.toHaveBeenCalled();
-
 			vi.useRealTimers();
 		});
 
-		it('should handle touch cancel', () => {
+		it('taps ON the canvas never undo here (the recognizer owns them)', () => {
 			const view = document.createElement('div');
+			const canvas = document.createElement('div');
+			canvas.id = 'canvasContainer';
+			view.appendChild(canvas);
 			document.body.appendChild(view);
 
 			viewportTap(view);
+			State.textArtCanvas.undo.mockClear();
 
-			// Simulate touch cancel
-			const touchCancelEvent = createEvent('touchcancel');
-			expect(() => view.dispatchEvent(touchCancelEvent)).not.toThrow();
+			const touchStartEvent = createEvent('touchstart');
+			touchStartEvent.touches = [{ identifier: 1 }, { identifier: 2 }];
+			canvas.dispatchEvent(touchStartEvent);
+			const touchEndEvent = createEvent('touchend');
+			touchEndEvent.changedTouches = [{ identifier: 1 }, { identifier: 2 }];
+			canvas.dispatchEvent(touchEndEvent);
+			expect(State.textArtCanvas.undo).not.toHaveBeenCalled();
+			canvas.remove();
 		});
 	});
 
