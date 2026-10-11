@@ -18,6 +18,7 @@ import {
 } from '../core/index';
 import { createJournalStore } from './journalStore.js';
 import { createPointerInput } from './pointer.js';
+import { isInteractiveZoom } from './zoom.js';
 import magicNumbers from './magicNumbers.js';
 
 const createTextArtCanvas = (canvasContainer, callback) => {
@@ -1084,7 +1085,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const onCriticalChange = async _ => {
-		State.modal.loading('Updating editor with new settings...');
+		// continuous zoom (pinch, wheel) relayouts every frame on GL;
+		// flashing the settings modal per frame would be unusable
+		const interactive = isInteractiveZoom();
+		if (!interactive) {
+			State.modal.loading('Updating editor with new settings...');
+		}
 		const waitForRedrawing = () =>
 			new Promise(resolve => {
 				// Fast path: don't pay a 50ms poll tick when already idle
@@ -1102,9 +1108,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		stopBlinkTimer();
 		await waitForRedrawing();
 		createCanvases();
+		// the zoom controller corrects scroll for focal anchoring once
+		// the container has its new size
+		document.dispatchEvent(new CustomEvent('onCanvasLayoutChange', {}));
 		redrawEntireImage(null, () => {
 			updateTimer();
-			if (!State.loadingFromStorage) {
+			if (!interactive && !State.loadingFromStorage) {
 				State.modal.close();
 			}
 		});
