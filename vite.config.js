@@ -12,7 +12,6 @@ export default ({ mode }) => {
 	// load settings from the .env file or use defaults
 	process.env = { ...process.env, ...loadEnv(mode, process.cwd()) };
 	const domain = process.env.VITE_DOMAIN || 'https://text.0w.nz';
-	const worker = process.env.VITE_WORKER_FILE || 'websocket.js';
 	const uiDir = ((process.env.VITE_UI_DIR || 'ui').replace(/^\/|\/?$/g, '')) + '/';
 
 	// source sizes for the build logs (rolldown gives each plugin hook a fresh `this`)
@@ -141,7 +140,6 @@ export default ({ mode }) => {
 					// v4 keeps the src path in dest by default, flatten single files
 					{ src: 'img/manifest/favicon.ico', dest: '.', rename: { stripBase: true } },
 					{ src: 'fonts', dest: uiDir },
-					{ src: `js/client/${worker}`, dest: uiDir + 'js/', rename: { stripBase: true } },
 					{ src: 'ansi', dest: '.'},
 				],
 			}),
@@ -151,7 +149,7 @@ export default ({ mode }) => {
 				originalSize: 0,
 				closeBundle() {
 					console.log(`\x1b[36m[vite-static-copy] \x1b[0mMoving 5 files recursively`);
-					console.log(`../dist/\x1b[32mLICENSE.txt\n\x1b[0m../dist/\x1b[32mhumans.txt\n\x1b[0m../dist/\x1b[32mfavicon.ico\n\x1b[0m../dist/${uiDir}\x1b[32mfonts\x1b[0m/\x1b[33m*\x1b[0m\n../dist/${uiDir}js/\x1b[32m${worker}\x1b[0m\n`);
+					console.log(`../dist/\x1b[32mLICENSE.txt\n\x1b[0m../dist/\x1b[32mhumans.txt\n\x1b[0m../dist/\x1b[32mfavicon.ico\n\x1b[0m../dist/${uiDir}\x1b[32mfonts\x1b[0m/\x1b[33m*\x1b[0m\n`);
 				}
 			},
 			Sitemap({

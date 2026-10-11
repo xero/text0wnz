@@ -10,7 +10,6 @@ import {
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		worker: null,
-		workerPath: '/js/worker.js',
 		modal: { close: vi.fn(), open: vi.fn(), loading: vi.fn() },
 		title: '',
 		textArtCanvas: {

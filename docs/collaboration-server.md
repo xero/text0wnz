@@ -1,5 +1,12 @@
 # Collaboration Server (Backend App)
 
+> [!WARNING]
+> This document describes the ORIGINAL teXt0wnz protocol and the
+> Express-based server, both retired by the Moebius-native rewrite.
+> It stays for historical reference. See
+> [collab-protocol-migration](./collab-protocol-migration.md) for the
+> current protocol, server flags, and migration steps.
+
 The teXt0wnz collaboration server enables real-time multi-user editing of text art. Built with Node.js and Express, it provides WebSocket-based communication for synchronized drawing and chat.
 
 ## Features

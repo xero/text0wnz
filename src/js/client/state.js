@@ -15,7 +15,6 @@ const EditorState = {
 	urlPrefix: null,
 	uiDir: null,
 	fontDir: null,
-	workerPath: null,
 	fontWidth: null,
 	fontHeight: null,
 
@@ -92,8 +91,6 @@ class StateManager {
 		this.urlPrefix = import.meta.env.BASE_URL || '';
 		this.uiDir = this.urlPrefix + import.meta.env.VITE_UI_DIR || 'ui/';
 		this.fontDir = this.uiDir + import.meta.env.VITE_FONT_DIR || 'fonts/';
-		this.workerPath =
-			this.uiDir + 'js/' + import.meta.env.VITE_WORKER_FILE || 'worker.js';
 
 		// Bind methods to ensure `this` is preserved when passed as callbacks
 		this.set = this.set.bind(this);
@@ -992,9 +989,6 @@ const State = {
 	},
 	get fontDir() {
 		return stateManager.fontDir;
-	},
-	get workerPath() {
-		return stateManager.workerPath;
 	},
 	get loadingFromStorage() {
 		return stateManager.loadingFromStorage;
