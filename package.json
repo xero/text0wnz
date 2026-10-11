@@ -61,11 +61,6 @@
 		"test:e2e": "./banner; playwright test",
 		"test:install": "./banner; playwright install-deps && playwright install && playwright install chrome firefox webkit"
 	},
-	"dependencies": {
-		"express": "^5.2.1",
-		"express-session": "^1.19.0",
-		"express-ws": "^5.0.2"
-	},
 	"devDependencies": {
 		"@html-eslint/eslint-plugin": "^0.66.1",
 		"@html-eslint/parser": "^0.66.1",

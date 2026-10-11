@@ -31,6 +31,9 @@ describe('Config Module - parseArgs', () => {
 			sessionName: 'joint',
 			debug: false,
 			port: 1337,
+			plainPort: 0,
+			pass: '',
+			roomPasswords: {},
 		});
 	});
 
@@ -117,6 +120,9 @@ describe('Config Module - parseArgs', () => {
 			sessionName: 'test',
 			debug: true,
 			port: 8080,
+			plainPort: 0,
+			pass: '',
+			roomPasswords: {},
 		});
 	});
 
