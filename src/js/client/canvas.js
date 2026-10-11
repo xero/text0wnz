@@ -5,15 +5,19 @@ import { loadFontFromImage, loadFontFromXBData } from './font.js';
 import { createPalette, createDefaultPalette } from './palette.js';
 import { createGLRenderer } from './glRenderer.js';
 import {
+	cellFromPoint,
+	clampCell,
 	createDocV3,
 	createEditorCore,
 	createJournal,
 	createPatchArena,
 	encodeStrokeRecord,
 	replayJournal,
+	snapOrigin,
 	v3ToU16,
 } from '../core/index';
 import { createJournalStore } from './journalStore.js';
+import { createPointerInput } from './pointer.js';
 import magicNumbers from './magicNumbers.js';
 
 const createTextArtCanvas = (canvasContainer, callback) => {
@@ -24,7 +28,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			redrawing = false,
 			ctxs,
 			blinkOn = false,
-			mouseButton = false,
 			drawHistory = [],
 			currentFontName = magicNumbers.DEFAULT_FONT,
 			dirtyRegions = [],
@@ -1286,148 +1289,31 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	document.addEventListener('onPaletteChange', onCriticalChange);
 	document.addEventListener('onScaleFactorChange', onCriticalChange);
 
-	const getXYCoords = (clientX, clientY, callback) => {
+	// The ONE mapping (core/mapping.ts): hit-testing shares its formula
+	// with drawing and the fuzz gates. Zoom is baked into the scaled
+	// cell size the font reports; drags are clamped because pointer
+	// capture keeps delivering moves after the pointer leaves the canvas.
+	const mapPointToCell = (clientX, clientY, clamp) => {
 		const rect = canvasContainer.getBoundingClientRect();
-		const x = Math.floor((clientX - rect.left) / State.font.getWidth());
-		const y = Math.floor((clientY - rect.top) / State.font.getHeight());
-		const halfBlockY = Math.floor(
-			((clientY - rect.top) / State.font.getHeight()) * 2,
-		);
-		callback(x, y, halfBlockY);
+		const dpr = window.devicePixelRatio || 1;
+		const cell = cellFromPoint(clientX, clientY, {
+			cellWidth: State.font.getWidth(),
+			cellHeight: State.font.getHeight(),
+			originX: snapOrigin(rect.left, dpr),
+			originY: snapOrigin(rect.top, dpr),
+		});
+		return clamp ? clampCell(cell, columns, rows) : cell;
 	};
 
-	canvasContainer.addEventListener('touchstart', e => {
-		if (e.touches.length === 2 && e.changedTouches.length === 2) {
-			e.preventDefault();
-			undo();
-		} else if (e.touches.length > 2 && e.changedTouches.length > 2) {
-			e.preventDefault();
-			redo();
-		} else {
-			mouseButton = true;
-			getXYCoords(
-				e.touches[0].pageX,
-				e.touches[0].pageY,
-				(x, y, halfBlockY) => {
-					if (e.altKey) {
-						if (State.sampleTool && State.sampleTool.sample) {
-							State.sampleTool.sample(x, halfBlockY);
-						}
-					} else {
-						// Touch events carry no mouse buttons; the Pointer Events
-						// rewrite replaces these handlers
-						document.dispatchEvent(
-							new CustomEvent('onTextCanvasDown', {
-								detail: {
-									x: x,
-									y: y,
-									halfBlockY: halfBlockY,
-									leftMouseButton: false,
-									rightMouseButton: e.ctrlKey === true,
-								},
-							}),
-						);
-					}
-				},
-			);
-		}
-	});
-
-	canvasContainer.addEventListener('mousedown', e => {
-		mouseButton = true;
-		getXYCoords(e.clientX, e.clientY, (x, y, halfBlockY) => {
-			if (e.altKey) {
-				if (State.sampleTool && State.sampleTool.sample) {
-					State.sampleTool.sample(x, halfBlockY);
-				}
-			} else {
-				document.dispatchEvent(
-					new CustomEvent('onTextCanvasDown', {
-						detail: {
-							x: x,
-							y: y,
-							halfBlockY: halfBlockY,
-							leftMouseButton: e.button === 0 && e.ctrlKey !== true,
-							rightMouseButton: e.button === 2 || e.ctrlKey,
-						},
-					}),
-				);
+	createPointerInput(canvasContainer, {
+		map: mapPointToCell,
+		sample: (x, halfBlockY) => {
+			if (State.sampleTool && State.sampleTool.sample) {
+				State.sampleTool.sample(x, halfBlockY);
 			}
-		});
-	});
-
-	canvasContainer.addEventListener('contextmenu', e => {
-		e.preventDefault();
-	});
-
-	canvasContainer.addEventListener('touchmove', e => {
-		e.preventDefault();
-		getXYCoords(e.touches[0].pageX, e.touches[0].pageY, (x, y, halfBlockY) => {
-			document.dispatchEvent(
-				new CustomEvent('onTextCanvasDrag', {
-					detail: {
-						x: x,
-						y: y,
-						halfBlockY: halfBlockY,
-						leftMouseButton: false,
-						rightMouseButton: e.ctrlKey === true,
-					},
-				}),
-			);
-		});
-	});
-
-	canvasContainer.addEventListener('mousemove', e => {
-		e.preventDefault();
-		getXYCoords(e.clientX, e.clientY, (x, y, halfBlockY) => {
-			// Always dispatch move event for preview cursors
-			document.dispatchEvent(
-				new CustomEvent('onTextCanvasMove', {
-					detail: {
-						x: x,
-						y: y,
-						halfBlockY: halfBlockY,
-					},
-				}),
-			);
-
-			// Dispatch drag event only when mouse button is down
-			if (mouseButton) {
-				document.dispatchEvent(
-					new CustomEvent('onTextCanvasDrag', {
-						detail: {
-							x: x,
-							y: y,
-							halfBlockY: halfBlockY,
-							leftMouseButton: e.button === 0 && e.ctrlKey !== true,
-							rightMouseButton: e.button === 2 || e.ctrlKey,
-						},
-					}),
-				);
-			}
-		});
-	});
-
-	canvasContainer.addEventListener('touchend', e => {
-		e.preventDefault();
-		mouseButton = false;
-		document.dispatchEvent(new CustomEvent('onTextCanvasUp', {}));
-	});
-
-	canvasContainer.addEventListener('mouseup', e => {
-		e.preventDefault();
-		if (mouseButton) {
-			mouseButton = false;
-			document.dispatchEvent(new CustomEvent('onTextCanvasUp', {}));
-		}
-	});
-
-	canvasContainer.addEventListener('mouseenter', e => {
-		e.preventDefault();
-		if (mouseButton && (e.which === 0 || e.buttons === 0)) {
-			mouseButton = false;
-			document.dispatchEvent(new CustomEvent('onTextCanvasUp', {}));
-		}
+		},
+		undo: () => undo(),
+		redo: () => redo(),
 	});
 
 	const sendDrawHistory = () => {

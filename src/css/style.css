@@ -638,6 +638,8 @@
 		margin: 16px auto;
 		width: 640px;
 		box-shadow: 0px 4px 32px rgba(0, 0, 0, 0.7);
+		/* the pointer normalizer interprets every touch gesture itself */
+		touch-action: none;
 
 		canvas {
 			@apply block;

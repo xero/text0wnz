@@ -276,31 +276,11 @@ const createPositionInfo = el => {
 };
 
 const viewportTap = view => {
-	const maxTapDuration = 300;
-	let touchStartTime = 0;
-	let activeTouches = 0;
-
-	view.addEventListener('touchstart', event => {
-		activeTouches = event.touches.length;
-		if (activeTouches === 2) {
-			touchStartTime = Date.now();
-		}
+	// menu close only: the 2-finger-tap undo that used to live here is
+	// owned by the gesture recognizer now (it double-fired with the
+	// canvas handler when both saw the same tap)
+	view.addEventListener('touchstart', () => {
 		State.menus.close();
-	});
-
-	view.addEventListener('touchend', event => {
-		if (activeTouches === 2 && event.changedTouches.length === 2) {
-			const endTime = Date.now();
-			const tapDuration = endTime - touchStartTime;
-			if (tapDuration < maxTapDuration) {
-				State.textArtCanvas.undo();
-			}
-		}
-		activeTouches = 0;
-	});
-
-	view.addEventListener('touchcancel', _ => {
-		activeTouches = 0;
 	});
 };
 

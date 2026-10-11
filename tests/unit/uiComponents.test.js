@@ -59,66 +59,23 @@ describe('UI Components', () => {
 	});
 
 	describe('viewportTap', () => {
-		it('should handle two-finger tap for undo', () => {
-			vi.useFakeTimers();
+		it('closes menus on touchstart and never undoes (recognizer owns taps)', () => {
 			const view = document.createElement('div');
 			document.body.appendChild(view);
 
 			viewportTap(view);
-
-			// Simulate two-finger touch start
-			const touchStartEvent = createEvent('touchstart');
-			touchStartEvent.touches = [{ identifier: 1 }, { identifier: 2 }];
-			view.dispatchEvent(touchStartEvent);
-
-			vi.advanceTimersByTime(100);
-
-			// Simulate two-finger touch end
-			const touchEndEvent = createEvent('touchend');
-			touchEndEvent.changedTouches = [{ identifier: 1 }, { identifier: 2 }];
-			view.dispatchEvent(touchEndEvent);
-
-			expect(State.textArtCanvas.undo).toHaveBeenCalled();
-
-			vi.useRealTimers();
-		});
-
-		it('should not undo if tap duration is too long', () => {
-			vi.useFakeTimers();
-			const view = document.createElement('div');
-			document.body.appendChild(view);
-
-			viewportTap(view);
-
 			State.textArtCanvas.undo.mockClear();
+			State.menus.close.mockClear();
 
-			// Simulate two-finger touch start
 			const touchStartEvent = createEvent('touchstart');
 			touchStartEvent.touches = [{ identifier: 1 }, { identifier: 2 }];
 			view.dispatchEvent(touchStartEvent);
+			expect(State.menus.close).toHaveBeenCalled();
 
-			// Wait too long
-			vi.advanceTimersByTime(400);
-
-			// Simulate two-finger touch end
 			const touchEndEvent = createEvent('touchend');
 			touchEndEvent.changedTouches = [{ identifier: 1 }, { identifier: 2 }];
 			view.dispatchEvent(touchEndEvent);
-
 			expect(State.textArtCanvas.undo).not.toHaveBeenCalled();
-
-			vi.useRealTimers();
-		});
-
-		it('should handle touch cancel', () => {
-			const view = document.createElement('div');
-			document.body.appendChild(view);
-
-			viewportTap(view);
-
-			// Simulate touch cancel
-			const touchCancelEvent = createEvent('touchcancel');
-			expect(() => view.dispatchEvent(touchCancelEvent)).not.toThrow();
 		});
 	});
 
