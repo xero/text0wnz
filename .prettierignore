@@ -5,3 +5,4 @@ banner
 # eslint owns js & html formatting
 *.js
 *.html
+tests/interop/fixtures/
