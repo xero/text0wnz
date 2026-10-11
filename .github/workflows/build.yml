@@ -57,7 +57,9 @@ jobs:
           [ -n "$(compgen -G "dist/ui/js/network*.js")" ] || exit 1
           [ -n "$(compgen -G "dist/ui/js/palette*.js")" ] || exit 1
           [ -n "$(compgen -G "dist/ui/js/tools*.js")" ] || exit 1
-          [ -n "$(compgen -G "dist/ui/js/websocket.js")" ] || exit 1
+          # bundled module workers land at the dist root
+          [ -n "$(compgen -G "dist/collabWorker*.js")" ] || exit 1
+          [ -n "$(compgen -G "dist/journalWorker*.js")" ] || exit 1
           [ -n "$(compgen -G "dist/ui/icons*.svg")" ] || exit 1
           [ -n "$(compgen -G "dist/ui/stylez*.css")" ] || exit 1
           echo "Build successful"
