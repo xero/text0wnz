@@ -1665,7 +1665,16 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	 */
 	const resolveUnicode = async codepoints => {
 		const resolved = new Map();
+		// collab lockout (visible in the charset UI): the vanilla Moebius
+		// dialect cannot carry unicode cells, and an apply-locally sender
+		// would silently diverge from every peer - substitute until a
+		// protocol extension negotiates unicode (SERVER_CAPS, ids 23+)
+		const locked = State.network?.isConnected?.() === true;
 		for (const codepoint of new Set(codepoints)) {
+			if (locked) {
+				resolved.set(codepoint, null);
+				continue;
+			}
 			const slot = await ensureHexPages().pickSlot(codepoint);
 			resolved.set(
 				codepoint,

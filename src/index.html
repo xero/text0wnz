@@ -761,8 +761,24 @@
 					</button>
 				</nav>
 			</section>
+			<section id="exportModal">
+				<h2>Export as <strong id="exportFormatLabel"></strong></h2>
+				<article>
+					<p id="exportIssuesIntro">This format can't hold everything in this piece:</p>
+					<ul id="exportIssues"></ul>
+					<label id="exportCompressLabel">
+						<input id="exportCompress" type="checkbox" checked/>
+						RLE compression
+					</label>
+				</article>
+				<nav>
+					<button id="exportCancel">Cancel</button>
+					<button id="exportConfirm">Save</button>
+				</nav>
+			</section>
 			<section id="charsetModal">
 				<h2>Character Sets: <strong id="charsetBlockLabel"></strong></h2>
+				<p id="charsetLockNote" class="hide">Joined server only speaks CP437: unicode characters insert as '?' until you disconnect.</p>
 				<article>
 					<aside>
 						<input id="charsetSearch" type="text" aria-label="Search Unicode Blocks" autocomplete="off" placeholder="search unicode blocks"/>

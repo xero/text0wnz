@@ -171,6 +171,7 @@ const createFKeys = () => {
 				canvas.style.height = baseHeight * fixedScale + 'px';
 
 				if (currentSet[i] >= 0) {
+					canvas.style.opacity = '';
 					State.font.draw(
 						currentSet[i],
 						State.palette.getForegroundColor(),
@@ -180,6 +181,10 @@ const createFKeys = () => {
 						0,
 					);
 				} else {
+					// collab lockout: vanilla servers can't carry unicode,
+					// so these dim while connected (inserts become '?')
+					canvas.style.opacity =
+						State.network?.isConnected?.() === true ? '0.4' : '';
 					drawUnicodeToken(
 						canvas.getContext('2d'),
 						canvas.width,

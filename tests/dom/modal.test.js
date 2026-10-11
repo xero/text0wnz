@@ -43,6 +43,7 @@ describe('Modal DOM Tests', () => {
 			'fontsModal',
 			'sauceModal',
 			'charsetModal',
+			'exportModal',
 			'choiceModal',
 			'updateModal',
 			'loadingModal',

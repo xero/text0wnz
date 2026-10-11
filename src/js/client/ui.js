@@ -71,6 +71,7 @@ const createModalController = modal => {
 		$('fontsModal'),
 		$('sauceModal'),
 		$('charsetModal'),
+		$('exportModal'),
 		$('choiceModal'),
 		$('updateModal'),
 		$('loadingModal'),

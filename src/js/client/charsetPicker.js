@@ -195,6 +195,15 @@ const createCharsetPicker = () => {
 
 	const show = () => {
 		open = true;
+		// compat lockout stays visible (PLAN P5 gate): vanilla collab
+		// servers cannot carry unicode cells
+		const lockNote = $('charsetLockNote');
+		if (lockNote) {
+			lockNote.classList.toggle(
+				'hide',
+				State.network?.isConnected?.() !== true,
+			);
+		}
 		renderBlockList();
 		if (!currentBlock) {
 			// start somewhere scene-useful

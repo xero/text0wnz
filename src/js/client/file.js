@@ -11,6 +11,8 @@ import {
 	encodeEnvelope,
 	encodeTundra,
 	encodeUtf8,
+	describeIssue,
+	lintDocForFormat,
 	v3ToU16Lossy,
 } from '../core/index';
 
@@ -1654,8 +1656,60 @@ const saveModule = () => {
 		}
 		await saveFile(new Uint8Array(output), sauce, fname);
 	};
+	// P5 format-budget linter (PLAN §3.2) + the O2 compression toggle:
+	// lossy saves confirm through the export modal when the doc holds
+	// anything the target format cannot; XBin always shows it, because
+	// the RLE checkbox lives there. Falls through silently when the
+	// modal infrastructure is absent (unit tests, headless embeds).
+	const confirmExport = (format, label, { compressToggle = false } = {}) =>
+		new Promise(resolve => {
+			const modal = State.modal;
+			const doc = State.textArtCanvas.getDoc?.();
+			const report = doc
+				? lintDocForFormat(doc, format)
+				: { ok: true, issues: []};
+			if ((report.ok && !compressToggle) || !modal?.open) {
+				resolve({ proceed: true, compress: true });
+				return;
+			}
+			$('exportFormatLabel').textContent = label;
+			const list = $('exportIssues');
+			list.replaceChildren();
+			for (const issue of report.issues) {
+				const item = document.createElement('li');
+				item.textContent = describeIssue(issue);
+				list.appendChild(item);
+			}
+			$('exportIssuesIntro').classList.toggle('hide', report.ok);
+			$('exportCompressLabel').classList.toggle('hide', !compressToggle);
+			let settled = false;
+			const finish = proceed => {
+				if (!settled) {
+					settled = true;
+					resolve({ proceed, compress: !!$('exportCompress').checked });
+				}
+			};
+			const confirmOnce = () => {
+				finish(true);
+				modal.close();
+			};
+			const cancelOnce = () => {
+				modal.close();
+			};
+			$('exportConfirm').addEventListener('click', confirmOnce);
+			$('exportCancel').addEventListener('click', cancelOnce);
+			modal.open('export');
+			modal.onClose(() => {
+				$('exportConfirm').removeEventListener('click', confirmOnce);
+				$('exportCancel').removeEventListener('click', cancelOnce);
+				finish(false);
+			});
+		});
+
 	const ans = async () => {
-		await encodeANSi(false);
+		if ((await confirmExport('ans', 'ANSi')).proceed) {
+			await encodeANSi(false);
+		}
 	};
 
 	// P5 (D9): UTF-8 and plain-text exports go through the core v3
@@ -1675,6 +1729,9 @@ const saveModule = () => {
 	};
 
 	const plainText = async () => {
+		if (!(await confirmExport('txt', 'Plain Text')).proceed) {
+			return;
+		}
 		const bytes = encodeUtf8(State.textArtCanvas.getDoc(), { plain: true });
 		await saveFile(bytes, undefined, State.title + '.txt');
 	};
@@ -1689,6 +1746,9 @@ const saveModule = () => {
 	};
 
 	const bin = async () => {
+		if (!(await confirmExport('bin', 'Binary Text')).proceed) {
+			return;
+		}
 		const columns = State.textArtCanvas.getColumns();
 		if (columns % 2 === 0) {
 			const imageData = convert16BitArrayTo8BitArray(
@@ -1781,7 +1841,20 @@ const saveModule = () => {
 		return new Uint8Array(output);
 	};
 
-	const xb = async (compress = true) => {
+	const xb = async compress => {
+		// programmatic escape hatch kept from pre-O2 days: an explicit
+		// argument skips the export modal entirely
+		if (compress !== undefined) {
+			await writeXb(compress);
+			return;
+		}
+		const choice = await confirmExport('xbin', 'XBin', { compressToggle: true });
+		if (choice.proceed) {
+			await writeXb(choice.compress);
+		}
+	};
+
+	const writeXb = async (compress = true) => {
 		const rawImageData = State.textArtCanvas.getImageData();
 		const imageData = convert16BitArrayTo8BitArray(rawImageData);
 		const columns = State.textArtCanvas.getColumns();
@@ -1903,6 +1976,11 @@ const saveModule = () => {
 	});
 
 	const tnd = async () => {
+		// the linter fronts the throw cases (unicode glyphs, blink) plus
+		// the silent chars-1-6 blanking, so the artist decides first
+		if (!(await confirmExport('tnd', 'TundraDraw')).proceed) {
+			return;
+		}
 		// encodeTundra appends its own SAUCE; it throws on content tundra
 		// cannot hold (unicode glyphs, blink attrs)
 		try {
