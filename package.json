@@ -42,10 +42,11 @@
 	},
 	"config": {
 		"formatpatterns": "src/**/*.css docs/**/*.md src/js/**/*.ts tests/**/*.ts",
-		"lintpatterns": "src/**/*.html src/{*,js/**/*}.js tests/**/*.js"
+		"lintpatterns": "src/**/*.html src/{*,js/**/*}.js tests/**/*.js tools/**/*.js"
 	},
 	"scripts": {
-		"bake": "./banner; vite build --mode production",
+		"bake": "./banner; bun tools/bakeHexFonts.js && vite build --mode production",
+		"fonts:bake": "./banner; bun tools/bakeHexFonts.js",
 		"server": "./banner; bun src/js/server/main.js",
 		"www": "./banner; serve dist -l 8060",
 		"fix": "./banner; set -f; prettier --write $npm_package_config_formatpatterns && eslint --fix $npm_package_config_lintpatterns",

@@ -31,3 +31,5 @@
 *.md       text diff=markdown
 *.txt      text eol=lf
 *.patch    -text
+# vendored font sources are sha256-pinned; never munge line endings
+assets/hexfonts/** -text
