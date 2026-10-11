@@ -58,7 +58,23 @@ const createOpfsBackend = () => {
 	const call = (op, bytes) =>
 		new Promise((resolve, reject) => {
 			const id = nextId++;
-			pending.set(id, { resolve, reject });
+			// A dead worker must degrade (legacy restore, warn-and-continue
+			// writes), never wedge callers awaiting a reply forever
+			const deadline = setTimeout(() => {
+				if (pending.delete(id)) {
+					reject(new Error(`journal worker timed out on ${op}`));
+				}
+			}, 10000);
+			pending.set(id, {
+				resolve: value => {
+					clearTimeout(deadline);
+					resolve(value);
+				},
+				reject: error => {
+					clearTimeout(deadline);
+					reject(error);
+				},
+			});
 			if (bytes) {
 				// Copy so the caller keeps its view; the buffer transfers
 				const copy = new Uint8Array(bytes);
