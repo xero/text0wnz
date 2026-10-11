@@ -157,8 +157,8 @@ const seedSkip = (testInfo, name) =>
 	// unicode goldens are seeded by the workflow's golden-gl step)
 	test.skip(
 		!!process.env.CI &&
-			testInfo.config.updateSnapshots === 'missing' &&
-			!goldenExists(name),
+		testInfo.config.updateSnapshots === 'missing' &&
+		!goldenExists(name),
 		'golden not seeded; run the golden-update workflow and commit its artifact',
 	);
 
