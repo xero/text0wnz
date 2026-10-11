@@ -4,7 +4,16 @@ import { createCanvas } from './ui.js';
 import { loadFontFromImage, loadFontFromXBData } from './font.js';
 import { createPalette, createDefaultPalette } from './palette.js';
 import { createGLRenderer } from './glRenderer.js';
-import { createDocV3, createEditorCore } from '../core/index';
+import {
+	createDocV3,
+	createEditorCore,
+	createJournal,
+	createPatchArena,
+	encodeStrokeRecord,
+	replayJournal,
+	v3ToU16,
+} from '../core/index';
+import { createJournalStore } from './journalStore.js';
 import magicNumbers from './magicNumbers.js';
 
 const createTextArtCanvas = (canvasContainer, callback) => {
@@ -30,7 +39,64 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	// buffer shape they always did. The renderers move onto the planes
 	// in the follow-up step; collab stays u16 until P4 by design.
 	const doc = createDocV3({ columns, rows });
+
+	// OPFS autosave journal (PLAN §3.2): committed strokes append live;
+	// doc-level changes and undo/redo write a debounced fresh keyframe.
+	// Collab sessions never journal - the server owns that doc (v2 rule).
+	const journal = createJournalStore();
+	let keyframeTimer = null;
+	// The first keyframe of a session supersedes whatever the journal
+	// held before (a previous session, a torn tail): strokes may only
+	// replay on top of a keyframe written by THIS session.
+	let sessionKeyframeWritten = false;
+	const scheduleJournalKeyframe = () => {
+		if (keyframeTimer !== null) {
+			clearTimeout(keyframeTimer);
+		}
+		keyframeTimer = setTimeout(async () => {
+			keyframeTimer = null;
+			if (State.network?.isConnected?.()) {
+				return;
+			}
+			try {
+				await journal.rewrite(
+					await createJournal(
+						doc,
+						xbFontData
+							? { fontBytes: xbFontData.bytes, fontHeight: xbFontData.height }
+							: {},
+					),
+				);
+				sessionKeyframeWritten = true;
+			} catch (error) {
+				console.warn('[Canvas] journal keyframe failed:', error);
+			}
+		}, magicNumbers.JOURNAL_KEYFRAME_DEBOUNCE_MS);
+	};
+	const arena = createPatchArena({
+		onCommit: stroke => {
+			if (State.network?.isConnected?.()) {
+				return;
+			}
+			if (!sessionKeyframeWritten) {
+				// a rewrite is already pending or due; it captures this
+				// stroke's effect, so appending too stays consistent
+				scheduleJournalKeyframe();
+			}
+			journal
+				.appendStroke(encodeStrokeRecord(stroke))
+				.then(compactionDue => {
+					if (compactionDue) {
+						scheduleJournalKeyframe();
+					}
+				})
+				.catch(error =>
+					console.warn('[Canvas] journal append failed:', error));
+		},
+	});
+
 	const editor = createEditorCore(doc, {
+		arena,
 		onWrite: ({ index, x, y, word, history }) => {
 			imageData[index] = word;
 			if (history) {
@@ -988,6 +1054,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			columns = newColumnValue;
 			rows = newRowValue;
 			imageData = editor.toU16().imageData;
+			scheduleJournalKeyframe();
 			createCanvases();
 			updateTimer();
 			redrawEntireImage();
@@ -1005,6 +1072,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		if (doc.getIceColors() !== newIceColors) {
 			// Refolds the planes (u16 mirror words are invariant under it)
 			editor.setIceColors(newIceColors);
+			scheduleJournalKeyframe();
 			updateTimer();
 			redrawEntireImage();
 		}
@@ -1125,6 +1193,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		rows = newRowValue;
 		// Adopt the caller's array as the mirror, exactly like v2 did
 		imageData = newImageData;
+		scheduleJournalKeyframe();
 		createCanvases();
 		updateTimer();
 
@@ -1153,6 +1222,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		State.title = '';
 		editor.clear(); // blank planes, history gone, ice back to default
 		imageData = new Uint16Array(columns * rows);
+		scheduleJournalKeyframe();
 		updateTimer(); // Restart blink timer if needed
 		redrawEntireImage();
 	};
@@ -1345,6 +1415,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		if (editor.undo()) {
 			processDirtyRegions();
 			sendDrawHistory();
+			scheduleJournalKeyframe();
 			State.saveToLocalStorage();
 		}
 	};
@@ -1353,6 +1424,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		if (editor.redo()) {
 			processDirtyRegions();
 			sendDrawHistory();
+			scheduleJournalKeyframe();
 			State.saveToLocalStorage();
 		}
 	};
@@ -1422,6 +1494,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			width: fontWidth,
 			height: fontHeight,
 		};
+		scheduleJournalKeyframe();
 		return true;
 	};
 
@@ -1463,6 +1536,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const clearXBData = callback => {
 		xbFontData = null;
+		scheduleJournalKeyframe();
 		State.palette = createDefaultPalette();
 		document.dispatchEvent(
 			new CustomEvent('onPaletteChange', {
@@ -1505,6 +1579,36 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	 * restore their content, and their undo stacks are deliberately
 	 * dropped (see core/migrate.ts).
 	 */
+	/**
+	 * Restore source for state.js: replay the autosave journal into v2
+	 * shapes. Returns null when the journal is empty, unreadable, or
+	 * holds a doc the u16 model cannot express yet (then the legacy
+	 * IndexedDB snapshot is the fallback, and its restore re-seeds the
+	 * journal through setImageData's keyframe trigger).
+	 */
+	const loadJournalSnapshot = async () => {
+		try {
+			const bytes = await journal.open();
+			if (!bytes || bytes.length === 0) {
+				return null;
+			}
+			const replay = await replayJournal(bytes);
+			const u16 = v3ToU16(replay.doc);
+			return {
+				columns: u16.columns,
+				rows: u16.rows,
+				imageData: u16.imageData,
+				iceColors: u16.iceColors,
+				letterSpacing: u16.letterSpacing,
+				fontBytes: replay.fontBytes,
+				fontHeight: replay.fontHeight,
+			};
+		} catch (error) {
+			console.warn('[Canvas] journal restore failed:', error);
+			return null;
+		}
+	};
+
 	const getUndoHistory = () => null;
 
 	const setUndoHistory = _history => {};
@@ -1592,6 +1696,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		getArea: getArea,
 		setArea: setArea,
 		quickDraw: quickDraw,
+		loadJournalSnapshot: loadJournalSnapshot,
+		journalKeyframe: scheduleJournalKeyframe,
 		setMirrorMode: setMirrorMode,
 		getMirrorMode: getMirrorMode,
 		getMirrorX: getMirrorX,
