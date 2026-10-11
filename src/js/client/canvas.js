@@ -104,7 +104,17 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		onWrite: ({ index, x, y, word, history }) => {
 			imageData[index] = word;
 			if (history) {
-				drawHistory.push((index << 16) + word);
+				// Moebius-native wire cells (P4): unpacked coordinates, so
+				// the signed (index<<16) row-409 cap is gone for good
+				drawHistory.push({
+					x,
+					y,
+					block: {
+						code: word >> 8,
+						fg: word & 15,
+						bg: (word >> 4) & 15,
+					},
+				});
 				enqueueDirtyCell(x, y);
 				return;
 			}
