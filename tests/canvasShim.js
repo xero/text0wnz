@@ -15,6 +15,10 @@ beforeAll(() => {
 				canvas: this,
 				fillRect: () => {},
 				clearRect: () => {},
+				strokeRect: () => {},
+				setLineDash: () => {},
+				getLineDash: () => [],
+				lineDashOffset: 0,
 				getImageData: (_x, _y, w, h) => ({
 					data: new Uint8ClampedArray(w * h * 4),
 					width: w,
