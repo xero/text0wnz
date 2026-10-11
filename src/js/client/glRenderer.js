@@ -19,9 +19,16 @@
  * bright-bg convention into it), flipped by a uniform + repaint on the
  * same 500ms cadence as the 2D path. Exports rasterize on the CPU from
  * the same planes (byte-equal to the 2D glyph blits at integer zoom).
- * Glyph ids address the classic 256-glyph atlas through their low byte
- * until the P3 hex-atlas pipeline; the 16-entry palette uniform likewise
- * masks indexes to 0-15 until 256-color docs arrive.
+ *
+ * Glyph ids are 16-bit (PLAN §3.2): 0-255 address the classic atlas,
+ * higher ids are doc glyph-table entries rendered from the hex font
+ * pages (P5). The repaint interleave remaps those ids to slots in a
+ * second, grow-on-demand atlas texture; a glyph whose block has not
+ * arrived yet (hexFontPages fetches lazily and repaints on landing),
+ * is absent, or is wide under the v1 single-width policy renders the
+ * reserved substitute slot (a hollow box, deliberately distinct from
+ * any real glyph). The 16-entry palette uniform still masks indexes
+ * to 0-15 until 256-color docs arrive.
  *
  * Context loss (mandatory per plan): loss is intercepted, GL state is
  * rebuilt on restore; repeated loss leaves the last frame visible and logs.
@@ -67,8 +74,8 @@ void main() {
 	vec2 ndc = px / u_canvasPx * 2.0 - 1.0;
 	gl_Position = vec4(ndc.x, -ndc.y, 0.0, 1.0);
 	v_pix = a_corner * u_cellPx;
-	// low byte addresses the classic atlas until the P3 hex-atlas pages
-	v_char = float(a_cell.x & 0xffu);
+	// 0-255 = classic atlas; 256+n = unicode page slot n (CPU-remapped)
+	v_char = float(a_cell.x & 0xffffu);
 	vec4 fg = cellColor(a_cell.y);
 	vec4 bg = cellColor(a_cell.z);
 	// attr bit 0 = blink: the glyph hides during the off phase
@@ -80,6 +87,7 @@ void main() {
 const FRAGMENT_SRC = `#version 300 es
 precision highp float;
 uniform sampler2D u_atlas;
+uniform sampler2D u_upages;
 uniform vec2 u_fontPx;
 uniform float u_pxScale;
 uniform float u_spacing;
@@ -93,6 +101,7 @@ void main() {
 	float fy = floor(v_pix.y / u_pxScale);
 	if (u_spacing > 0.5 && fx >= u_fontPx.x) {
 		// VGA ninth column: background, except 0xC0-0xDF duplicate column 8
+		// (a classic-font rule: unicode slots always render background)
 		if (v_char >= 192.0 && v_char <= 223.0) {
 			fx = u_fontPx.x - 1.0;
 		} else {
@@ -100,8 +109,17 @@ void main() {
 			return;
 		}
 	}
-	float gx = mod(v_char, 16.0) * u_fontPx.x + min(fx, u_fontPx.x - 1.0);
-	float gy = floor(v_char / 16.0) * u_fontPx.y + min(fy, u_fontPx.y - 1.0);
+	float glyph = v_char;
+	if (glyph >= 256.0) {
+		float slot = glyph - 256.0;
+		float ux = mod(slot, 16.0) * u_fontPx.x + min(fx, u_fontPx.x - 1.0);
+		float uy = floor(slot / 16.0) * u_fontPx.y + min(fy, u_fontPx.y - 1.0);
+		float ubit = texelFetch(u_upages, ivec2(int(ux), int(uy)), 0).r;
+		fragColor = ubit > 0.5 ? v_fg : v_bg;
+		return;
+	}
+	float gx = mod(glyph, 16.0) * u_fontPx.x + min(fx, u_fontPx.x - 1.0);
+	float gy = floor(glyph / 16.0) * u_fontPx.y + min(fy, u_fontPx.y - 1.0);
 	float bit = texelFetch(u_atlas, ivec2(int(gx), int(gy)), 0).r;
 	fragColor = bit > 0.5 ? v_fg : v_bg;
 }`;
@@ -109,7 +127,9 @@ void main() {
 /**
  * @param {HTMLElement} canvasContainer - the sized, scrolled content element
  * @param {Object} host - doc accessors from the text art canvas closure:
- *   { getColumns, getRows, getPlanes, getIceColors }
+ *   { getColumns, getRows, getPlanes, getIceColors, getGlyphDef,
+ *     getHexPages } - the last two feed the unicode glyph pages and are
+ *   optional (absent means ids >= 256 render the substitute box)
  * @returns {Object|null} renderer, or null when WebGL2 is unavailable
  */
 const createGLRenderer = (canvasContainer, host) => {
@@ -180,6 +200,7 @@ const createGLRenderer = (canvasContainer, host) => {
 			'u_blink',
 			'u_palette',
 			'u_atlas',
+			'u_upages',
 			'u_fontPx',
 			'u_pxScale',
 			'u_spacing',
@@ -211,6 +232,7 @@ const createGLRenderer = (canvasContainer, host) => {
 		gl.vertexAttribDivisor(cellLoc, 1);
 
 		gl.uniform1i(uniforms.u_atlas, 0);
+		gl.uniform1i(uniforms.u_upages, 1);
 		gl.clearColor(0, 0, 0, 1);
 	};
 	initGL();
@@ -263,6 +285,148 @@ const createGLRenderer = (canvasContainer, host) => {
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	};
+
+	// ------------------------------------------------ unicode glyph pages
+	// Slot grid matches the classic atlas (16 glyphs per row at font
+	// resolution); slot 0 is the substitute box, rows double on demand up
+	// to SLOT_CAP, then the map resets and repaints refill what's visible.
+	const SLOT_CAP = 4096;
+	let unicodeTexture = null;
+	let unicodeSlotRows = 16;
+	/** glyphId -> slot (0 = substitute, cached only for definite misses) */
+	let slotByGlyphId = new Map();
+	/** CPU copies at font resolution, re-uploaded on grow/restore */
+	let slotBits = [];
+
+	const substituteBits = () => {
+		const bits = new Uint8Array(fontW * fontH);
+		for (let y = 1; y < fontH - 1; y++) {
+			for (let x = 1; x < fontW - 1; x++) {
+				if (y === 1 || y === fontH - 2 || x === 1 || x === fontW - 2) {
+					bits[y * fontW + x] = 1;
+				}
+			}
+		}
+		return bits;
+	};
+
+	const uploadSlot = (slot, bits) => {
+		const pixels = new Uint8Array(fontW * fontH);
+		for (let i = 0; i < pixels.length; i++) {
+			pixels[i] = bits[i] ? 255 : 0;
+		}
+		gl.activeTexture(gl.TEXTURE1);
+		gl.bindTexture(gl.TEXTURE_2D, unicodeTexture);
+		gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+		gl.texSubImage2D(
+			gl.TEXTURE_2D,
+			0,
+			(slot % 16) * fontW,
+			Math.floor(slot / 16) * fontH,
+			fontW,
+			fontH,
+			gl.RED,
+			gl.UNSIGNED_BYTE,
+			pixels,
+		);
+	};
+
+	// (re)allocate the page texture and re-upload every cached slot
+	const buildUnicodePages = () => {
+		if (unicodeTexture) {
+			gl.deleteTexture(unicodeTexture);
+		}
+		unicodeTexture = gl.createTexture();
+		gl.activeTexture(gl.TEXTURE1);
+		gl.bindTexture(gl.TEXTURE_2D, unicodeTexture);
+		gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+		gl.texImage2D(
+			gl.TEXTURE_2D,
+			0,
+			gl.R8,
+			fontW * 16,
+			fontH * unicodeSlotRows,
+			0,
+			gl.RED,
+			gl.UNSIGNED_BYTE,
+			null,
+		);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		if (slotBits.length === 0) {
+			slotBits.push(substituteBits());
+		}
+		slotBits.forEach((bits, slot) => uploadSlot(slot, bits));
+	};
+
+	// metric change invalidates every scaled bitmap; the texture itself
+	// is created lazily on the first unicode glyph, so classic docs
+	// never allocate any of this
+	const resetUnicodePages = () => {
+		slotByGlyphId = new Map();
+		slotBits = [];
+		unicodeSlotRows = 16;
+		if (unicodeTexture) {
+			gl.deleteTexture(unicodeTexture);
+			unicodeTexture = null;
+		}
+	};
+
+	const assignSlot = bits => {
+		if (slotBits.length >= SLOT_CAP) {
+			// full: drop everything but the substitute; the repaint under way
+			// re-adds only glyphs actually in coverage
+			slotByGlyphId = new Map();
+			slotBits = slotBits.slice(0, 1);
+		}
+		const slot = slotBits.length;
+		slotBits.push(bits);
+		if (slot >= unicodeSlotRows * 16) {
+			unicodeSlotRows = Math.min(unicodeSlotRows * 2, SLOT_CAP / 16);
+			buildUnicodePages();
+		} else {
+			uploadSlot(slot, bits);
+		}
+		return slot;
+	};
+
+	/**
+	 * Map a 16-bit glyph id to its unicode page slot, rasterizing on
+	 * first sight. Pending block fetches return the substitute WITHOUT
+	 * caching, so the repaint fired by onBlocksLoaded resolves them.
+	 */
+	const slotForGlyphId = glyphId => {
+		if (!unicodeTexture) {
+			buildUnicodePages();
+		}
+		const known = slotByGlyphId.get(glyphId);
+		if (known !== undefined) {
+			return known;
+		}
+		const def = host.getGlyphDef ? host.getGlyphDef(glyphId) : undefined;
+		const pages = def && host.getHexPages ? host.getHexPages() : null;
+		const bits = pages
+			? pages.glyphBits(def.fontSlot, def.codepoint, fontW, fontH)
+			: null;
+		if (bits === undefined) {
+			return 0;
+		}
+		const slot = bits ? assignSlot(bits) : 0;
+		slotByGlyphId.set(glyphId, slot);
+		return slot;
+	};
+
+	// repaint-path remap: ids 0-255 pass through, higher ids become
+	// 256 + slot with the attr byte preserved
+	const mapGlyphWord = word => {
+		const glyphId = word & 0xffff;
+		if (glyphId < 256) {
+			return word;
+		}
+		return ((word & 0xffff0000) | (256 + slotForGlyphId(glyphId))) >>> 0;
 	};
 
 	const uploadPalette = () => {
@@ -340,7 +504,8 @@ const createGLRenderer = (canvasContainer, host) => {
 		hasBlink = false;
 		for (let i = 0, j = 0; i < count; i++, j += 3) {
 			const glyphWord = glyph[first + i];
-			slice[j] = glyphWord;
+			slice[j] =
+				(glyphWord & 0xffff) < 256 ? glyphWord : mapGlyphWord(glyphWord);
 			slice[j + 1] = fg[first + i];
 			slice[j + 2] = bg[first + i];
 			if ((glyphWord & 0x10000) !== 0) {
@@ -401,6 +566,9 @@ const createGLRenderer = (canvasContainer, host) => {
 		}
 		refreshMetrics();
 		buildAtlas();
+		// slot bitmaps are scaled to the font metrics, so any rebuild
+		// invalidates them; repaint refills from the hex page cache
+		resetUnicodePages();
 		uploadPalette();
 		layout();
 		centerOnViewport();
@@ -470,12 +638,29 @@ const createGLRenderer = (canvasContainer, host) => {
 			((word & 0x80000000) !== 0
 				? colors[word & 15]
 				: [(word >> 16) & 0xff, (word >> 8) & 0xff, word & 0xff, 255]);
+		// unicode glyph bits for exports, independent of what the paint
+		// path has cached (off-coverage cells were never slot-assigned)
+		const unicodeExportBits = glyphId => {
+			const slot = slotByGlyphId.get(glyphId);
+			if (slot !== undefined && slot > 0) {
+				return slotBits[slot];
+			}
+			const def = host.getGlyphDef ? host.getGlyphDef(glyphId) : undefined;
+			const pages = def && host.getHexPages ? host.getHexPages() : null;
+			const bits = pages
+				? pages.glyphBits(def.fontSlot, def.codepoint, fontW, fontH)
+				: null;
+			return bits || substituteBits();
+		};
 		for (let index = 0; index < columns * rows; index++) {
-			const charCode = glyph[index] & 0xff;
+			const glyphId = glyph[index] & 0xffff;
+			const classic = glyphId < 256;
+			const bits = classic ? fontBits : unicodeExportBits(glyphId);
+			const glyphBase = classic ? glyphId * fontW * fontH : 0;
 			const fg = resolve(fgPlane[index]);
 			const bg = resolve(bgPlane[index]);
-			const ninthDuplicates = spacing && charCode >= 0xc0 && charCode <= 0xdf;
-			const glyphBase = charCode * fontW * fontH;
+			const ninthDuplicates =
+				classic && spacing && glyphId >= 0xc0 && glyphId <= 0xdf;
 			const originX = (index % columns) * cellW;
 			const originY = Math.floor(index / columns) * cellH;
 			for (let py = 0; py < cellH; py++) {
@@ -485,11 +670,11 @@ const createGLRenderer = (canvasContainer, host) => {
 					const fx = Math.floor(px / scale);
 					let color = bg;
 					if (fx >= fontW) {
-						// ninth column
-						if (ninthDuplicates && fontBits[glyphBase + fy * fontW + fontW - 1]) {
+						// ninth column (classic-font rule only)
+						if (ninthDuplicates && bits[glyphBase + fy * fontW + fontW - 1]) {
 							color = fg;
 						}
-					} else if (fontBits[glyphBase + fy * fontW + fx]) {
+					} else if (bits[glyphBase + fy * fontW + fx]) {
 						color = fg;
 					}
 					data[offset] = color[0];
