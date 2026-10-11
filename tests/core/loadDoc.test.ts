@@ -99,7 +99,7 @@ describe('editor.loadDoc', () => {
 		expect(mirror.imageData[0] & 15).toBe(12); // nearest: bright red
 	});
 
-	it('adopts a dur movie: frames, delays, frozen xterm colors, glyph remap', async () => {
+	it('adopts a dur movie: frames, delays, live xterm colors, glyph remap', async () => {
 		const movie = {
 			DurMovie: {
 				formatVersion: 8,
@@ -144,10 +144,15 @@ describe('editor.loadDoc', () => {
 		expect(doc.frames).toHaveLength(2);
 		expect(doc.frames[0].delayMs).toBe(500);
 		expect(doc.getGlobalDelayMs()).toBe(250);
-		// low palette indexes stay live, xterm indexes freeze to RGB
+		// P5: every palette index stays LIVE (renderers resolve 16-255
+		// through the adopted doc palette / xterm table); the old
+		// freeze-to-RGB projection is gone
 		expect(doc.getCell(0, 0, 0).fg).toBe(paletteColor(12));
-		expect(doc.getCell(0, 1, 0).fg).toBe(rgbColor(255, 0, 0)); // xterm 196
+		expect(doc.getCell(0, 1, 0).fg).toBe(paletteColor(196));
 		expect(doc.getCell(0, 1, 0).bg).toBe(paletteColor(3));
+		// ...and the source's 256-entry palette is adopted wholesale
+		expect(doc.palette.length).toBe(256);
+		expect(doc.palette[196]).toBe(rgbColor(255, 0, 0));
 		// the snowman re-registers in THIS doc's glyph table
 		const snowman = doc.getCell(0, 1, 0).glyph & 0xffff;
 		expect(doc.glyphTable.get(snowman)).toEqual({
@@ -271,5 +276,24 @@ describe('ice toggle with extended colors (review finding 1)', () => {
 		expect(doc.frames[0].glyph[1] & 0x10000).toBe(0);
 		// classic cells keep v2 fold semantics
 		expect(doc.frames[0].bg[2]).toBe(paletteColor(4));
+	});
+});
+
+describe('loadDoc with short-palette sources (golden regression)', () => {
+	it('keeps high palette-index words live instead of freezing to black', () => {
+		// exactly what the UTF-8 reader produces: paletteColor(n >= 16)
+		// words on a doc whose own palette has only 16 entries; the old
+		// freeze projected these through source.palette[i] ?? 0 = BLACK
+		const source = createDocV3({ columns: 2, rows: 1 });
+		source.setCell(0, 0, 0, {
+			glyph: glyphWord(88, 0),
+			fg: paletteColor(196),
+			bg: paletteColor(232),
+		});
+		const doc = createDocV3({ columns: 80, rows: 25 });
+		const editor = createEditorCore(doc);
+		editor.loadDoc(source);
+		expect(doc.frames[0].fg[0]).toBe(paletteColor(196));
+		expect(doc.frames[0].bg[0]).toBe(paletteColor(232));
 	});
 });

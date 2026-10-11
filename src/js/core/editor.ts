@@ -506,18 +506,12 @@ export const createEditorCore = (
 			while (doc.frames.length < source.frames.length) {
 				doc.addFrame({ force: true });
 			}
-			const freeze = (word: number): number => {
-				if (!isPaletteColor(word)) {
-					return word;
-				}
-				const index = paletteIndexOf(word);
-				if (index < 16) {
-					return word; // live palette semantics, like every classic load
-				}
-				return index < source.palette.length
-					? source.palette[index] & 0x00ffffff
-					: 0;
-			};
+			// adopt the source palette wholesale: index words stay LIVE
+			// (P5: the renderers resolve indexes past the palette length
+			// through the canonical xterm table, so the old freeze-to-RGB
+			// projection is gone - it also turned short-palette docs'
+			// high indexes into black)
+			doc.palette = new Uint32Array(source.palette);
 			source.frames.forEach((src, f) => {
 				const target = doc.frames[f];
 				target.delayMs = src.delayMs;
@@ -527,8 +521,8 @@ export const createEditorCore = (
 						? doc.glyphTable.idFor(def.fontSlot, def.codepoint)
 						: 0;
 					target.glyph[i] = glyphWord(id, attrsOf(src.glyph[i]));
-					target.fg[i] = freeze(src.fg[i]);
-					target.bg[i] = freeze(src.bg[i]);
+					target.fg[i] = src.fg[i];
+					target.bg[i] = src.bg[i];
 				}
 			});
 		},
