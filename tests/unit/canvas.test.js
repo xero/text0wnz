@@ -177,45 +177,23 @@ describe('Canvas Module', () => {
 			expect(() => canvas.redo()).not.toThrow();
 		});
 
-		it('should provide getUndoHistory method', () => {
+		it('no longer persists undo history (moved to the OPFS journal)', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			expect(canvas.getUndoHistory).toBeDefined();
+			// P2 engine swap: the v2 IndexedDB chunk shape is gone; the
+			// journal owns stroke persistence. getUndoHistory reports
+			// nothing to save and setUndoHistory tolerates old autosaves.
 			expect(typeof canvas.getUndoHistory).toBe('function');
-
-			const history = canvas.getUndoHistory();
-			expect(history).toBeDefined();
-			expect(history.currentUndo).toBeDefined();
-			expect(history.undoBuffer).toBeDefined();
-			expect(history.redoBuffer).toBeDefined();
-			expect(Array.isArray(history.currentUndo)).toBe(true);
-			expect(Array.isArray(history.undoBuffer)).toBe(true);
-			expect(Array.isArray(history.redoBuffer)).toBe(true);
-		});
-
-		it('should provide setUndoHistory method', () => {
-			canvas = createTextArtCanvas(mockContainer, mockCallback);
-
-			expect(canvas.setUndoHistory).toBeDefined();
 			expect(typeof canvas.setUndoHistory).toBe('function');
+			expect(canvas.getUndoHistory()).toBeNull();
 
-			const mockHistory = {
+			const v2Shape = {
 				currentUndo: [[0, 1234, 0, 0]],
-				undoBuffer: [
-					[
-						[1, 5678, 1, 0],
-						[2, 9012, 2, 0],
-					],
-				],
+				undoBuffer: [[[1, 5678, 1, 0]]],
 				redoBuffer: [],
 			};
-
-			expect(() => canvas.setUndoHistory(mockHistory)).not.toThrow();
-
-			const history = canvas.getUndoHistory();
-			expect(history.currentUndo).toEqual(mockHistory.currentUndo);
-			expect(history.undoBuffer).toEqual(mockHistory.undoBuffer);
-			expect(history.redoBuffer).toEqual(mockHistory.redoBuffer);
+			expect(() => canvas.setUndoHistory(v2Shape)).not.toThrow();
+			expect(canvas.getUndoHistory()).toBeNull();
 		});
 
 		it('should handle mirror mode operations', () => {

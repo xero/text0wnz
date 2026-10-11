@@ -4,29 +4,55 @@ import { createCanvas } from './ui.js';
 import { loadFontFromImage, loadFontFromXBData } from './font.js';
 import { createPalette, createDefaultPalette } from './palette.js';
 import { createGLRenderer } from './glRenderer.js';
+import { createDocV3, createEditorCore } from '../core/index';
 import magicNumbers from './magicNumbers.js';
 
 const createTextArtCanvas = (canvasContainer, callback) => {
 	let columns = 80,
 			rows = 25,
-			iceColors = false,
 			imageData = new Uint16Array(columns * rows),
 			canvases,
 			redrawing = false,
 			ctxs,
 			blinkOn = false,
 			mouseButton = false,
-			currentUndo = [],
-			undoBuffer = [],
-			redoBuffer = [],
 			drawHistory = [],
-			mirrorMode = false,
 			currentFontName = magicNumbers.DEFAULT_FONT,
 			dirtyRegions = [],
 			processingDirtyRegions = false,
 			xbFontData = null,
 			dirtyRegionScheduled = false,
 			activeChunks = new Set();
+
+	// P2 engine swap (PLAN §4): the three-plane v3 doc + editor core own
+	// the document and undo; `imageData` stays alive as a u16 MIRROR fed
+	// by onWrite so the renderers and the collab protocol read the exact
+	// buffer shape they always did. The renderers move onto the planes
+	// in the follow-up step; collab stays u16 until P4 by design.
+	const doc = createDocV3({ columns, rows });
+	const editor = createEditorCore(doc, {
+		onWrite: ({ index, x, y, word, history }) => {
+			imageData[index] = word;
+			if (history) {
+				drawHistory.push((index << 16) + word);
+				enqueueDirtyCell(x, y);
+				return;
+			}
+			// network quickDraw path keeps v2's chunk bookkeeping
+			if (glRenderer) {
+				enqueueDirtyCell(x, y);
+				return;
+			}
+			const chunkIndex = Math.floor(y / chunkSize);
+			const chunk = canvasChunks.get(chunkIndex);
+			if (chunk && activeChunks.has(chunkIndex)) {
+				enqueueDirtyCell(x, y);
+			} else if (chunk) {
+				chunk.rendered = false;
+			}
+		},
+	});
+	const iceColorsNow = () => doc.getIceColors();
 
 	const chunkSize = 25,
 				viewportState = {
@@ -54,7 +80,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				getColumns: () => columns,
 				getRows: () => rows,
 				getImageData: () => imageData,
-				getIceColors: () => iceColors,
+				getIceColors: iceColorsNow,
 			});
 		} catch (error) {
 			console.warn('[Canvas] GL renderer init failed', error);
@@ -389,7 +415,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			blinkTimerRunning = true;
 			blinkStop = false;
 
-			if (!iceColors) {
+			if (!iceColorsNow()) {
 				blinkOn = false;
 				try {
 					while (!blinkStop) {
@@ -581,7 +607,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const foreground = imageData[index] & 15;
 		const isBlinkBackground = background >= 8;
 
-		if (iceColors) {
+		if (iceColorsNow()) {
 			State.font.draw(charCode, foreground, background, chunk.ctx, x, localY);
 			chunk.blinkCells.delete(index);
 		} else {
@@ -831,7 +857,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return;
 		}
 		stopBlinkTimer();
-		if (!iceColors) {
+		if (!iceColorsNow()) {
 			blinkOn = false;
 			updateBlinkTimer().catch(console.error);
 		}
@@ -958,18 +984,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			newColumnValue > 0 &&
 			newRowValue > 0
 		) {
-			clearUndos();
-			const maxColumn = columns > newColumnValue ? newColumnValue : columns;
-			const maxRow = rows > newRowValue ? newRowValue : rows;
-			const newImageData = new Uint16Array(newColumnValue * newRowValue);
-			for (let y = 0; y < maxRow; y++) {
-				for (let x = 0; x < maxColumn; x++) {
-					newImageData[y * newColumnValue + x] = imageData[y * columns + x];
-				}
-			}
-			imageData = newImageData;
+			editor.resize(newColumnValue, newRowValue);
 			columns = newColumnValue;
 			rows = newRowValue;
+			imageData = editor.toU16().imageData;
 			createCanvases();
 			updateTimer();
 			redrawEntireImage();
@@ -980,12 +998,13 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const getIceColors = () => {
-		return iceColors;
+		return doc.getIceColors();
 	};
 
 	const setIceColors = newIceColors => {
-		if (iceColors !== newIceColors) {
-			iceColors = newIceColors;
+		if (doc.getIceColors() !== newIceColors) {
+			// Refolds the planes (u16 mirror words are invariant under it)
+			editor.setIceColors(newIceColors);
 			updateTimer();
 			redrawEntireImage();
 		}
@@ -1101,14 +1120,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		onProgress,
 		onComplete,
 	) => {
-		clearUndos();
+		editor.loadU16(newImageData, newColumnValue, newRowValue, newIceColors);
 		columns = newColumnValue;
 		rows = newRowValue;
+		// Adopt the caller's array as the mirror, exactly like v2 did
 		imageData = newImageData;
 		createCanvases();
-		if (iceColors !== newIceColors) {
-			iceColors = newIceColors;
-		}
 		updateTimer();
 
 		// Use progressive rendering with progress callback
@@ -1128,114 +1145,33 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		return rows;
 	};
 
-	let undoBufferCells = 0;
-
-	const clearUndos = () => {
-		currentUndo = [];
-		undoBuffer = [];
-		redoBuffer = [];
-		undoBufferCells = 0;
-	};
-
-	const pushUndoChunk = chunk => {
-		undoBuffer.push(chunk);
-		undoBufferCells += chunk.length;
-		// Drop the oldest chunks once the stack exceeds the cell cap,
-		// always keeping at least the most recent chunk
-		while (
-			undoBufferCells > magicNumbers.MAX_UNDO_CELLS &&
-			undoBuffer.length > 1
-		) {
-			undoBufferCells -= undoBuffer.shift().length;
-		}
-	};
+	// --- P2 engine swap: document mutations live in the v3 editor core ---
+	// (cell algebra: src/js/core/cellops.ts; stroke/undo: core/editor.ts;
+	// identity vs the frozen v2 reference pinned by engineParity.test.js)
 
 	const clear = () => {
 		State.title = '';
-		clearUndos();
+		editor.clear(); // blank planes, history gone, ice back to default
 		imageData = new Uint16Array(columns * rows);
-		iceColors = false; // Reset ICE colors to disabled (default)
 		updateTimer(); // Restart blink timer if needed
 		redrawEntireImage();
 	};
 
-	const getMirrorX = x => {
-		// Odd columns: don't mirror the center column
-		if (columns % 2 !== 0 && x === Math.floor(columns / 2)) {
-			return -1;
-		}
-		return columns - 1 - x;
-	};
-
-	// Transform characters for horizontal mirroring
-	const getMirrorCharCode = charCode => {
-		switch (charCode) {
-			// Mirror half blocks
-			case magicNumbers.LEFT_HALFBLOCK:
-				return magicNumbers.RIGHT_HALFBLOCK;
-			case magicNumbers.RIGHT_HALFBLOCK:
-				return magicNumbers.LEFT_HALFBLOCK;
-			// Upper and lower half blocks stay the same for horizontal mirroring
-			case magicNumbers.UPPER_HALFBLOCK:
-			case magicNumbers.LOWER_HALFBLOCK:
-				return charCode;
-
-			// Brackets and braces
-			case magicNumbers.CHAR_LEFT_PARENTHESIS:
-				return magicNumbers.CHAR_RIGHT_PARENTHESIS;
-			case magicNumbers.CHAR_RIGHT_PARENTHESIS:
-				return magicNumbers.CHAR_LEFT_PARENTHESIS;
-			case magicNumbers.CHAR_LEFT_SQUARE_BRACKET:
-				return magicNumbers.CHAR_RIGHT_SQUARE_BRACKET;
-			case magicNumbers.CHAR_RIGHT_SQUARE_BRACKET:
-				return magicNumbers.CHAR_LEFT_SQUARE_BRACKET;
-			case magicNumbers.CHAR_LEFT_CURLY_BRACE:
-				return magicNumbers.CHAR_RIGHT_CURLY_BRACE;
-			case magicNumbers.CHAR_RIGHT_CURLY_BRACE:
-				return magicNumbers.CHAR_LEFT_CURLY_BRACE;
-
-			// Slashes and backslashes
-			case magicNumbers.CHAR_FORWARD_SLASH:
-				return magicNumbers.CHAR_BACKSLASH;
-			case magicNumbers.CHAR_BACKSLASH:
-				return magicNumbers.CHAR_FORWARD_SLASH;
-
-			// Quotation marks
-			case magicNumbers.CHAR_GRAVE_ACCENT:
-				return magicNumbers.CHAR_APOSTROPHE;
-			case magicNumbers.CHAR_APOSTROPHE:
-				return magicNumbers.CHAR_GRAVE_ACCENT;
-
-			// Arrows
-			case magicNumbers.CHAR_LESS_THAN:
-				return magicNumbers.CHAR_GREATER_THAN;
-			case magicNumbers.CHAR_GREATER_THAN:
-				return magicNumbers.CHAR_LESS_THAN;
-
-			// Additional characters
-			case magicNumbers.CHAR_DIGIT_9:
-				return magicNumbers.CHAR_CAPITAL_P;
-			case magicNumbers.CHAR_CAPITAL_P:
-				return magicNumbers.CHAR_DIGIT_9;
-			default:
-				return charCode;
-		}
-	};
+	const getMirrorX = x => editor.getMirrorX(x);
 
 	const setMirrorMode = enabled => {
-		mirrorMode = enabled;
+		editor.setMirrorMode(enabled);
 	};
 
 	const getMirrorMode = () => {
-		return mirrorMode;
+		return editor.getMirrorMode();
 	};
 
-	const draw = (index, charCode, foreground, background, x, y) => {
-		currentUndo.push([index, imageData[index], x, y]);
-		imageData[index] = (charCode << 8) + (background << 4) + foreground;
-		drawHistory.push((index << 16) + imageData[index]);
-	};
-
+	/**
+	 * Legacy single-cell write shim (exported surface only; every real
+	 * caller moved into the editor core). Writes without joining an undo
+	 * group, mirroring none.
+	 */
 	const patchBufferAndEnqueueDirty = (
 		index,
 		charCode,
@@ -1243,201 +1179,14 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		background,
 		x,
 		y,
-		addToUndo = true,
+		_addToUndo = true,
 	) => {
-		if (addToUndo) {
-			currentUndo.push([index, imageData[index], x, y]);
-		}
-		imageData[index] = (charCode << 8) + (background << 4) + foreground;
-		if (addToUndo) {
-			drawHistory.push((index << 16) + imageData[index]);
-		}
-		enqueueDirtyCell(x, y);
+		editor.quickDrawU16([[index, ((charCode & 0xff) << 8) | ((background & 15) << 4) | (foreground & 15), x, y]]);
 	};
 
-	const getBlock = (x, y) => {
-		const index = y * columns + x;
-		const charCode = imageData[index] >> 8;
-		const foregroundColor = imageData[index] & 15;
-		const backgroundColor = (imageData[index] >> 4) & 15;
-		return {
-			x: x,
-			y: y,
-			charCode: charCode,
-			foregroundColor: foregroundColor,
-			backgroundColor: backgroundColor,
-		};
-	};
+	const getBlock = (x, y) => editor.getBlock(x, y);
 
-	const getHalfBlock = (x, y) => {
-		const textY = Math.floor(y / 2);
-		const index = textY * columns + x;
-		const foreground = imageData[index] & 15;
-		const background = (imageData[index] >> 4) & 15;
-		let upperBlockColor = 0;
-		let lowerBlockColor = 0;
-		let isBlocky = false;
-		let isVerticalBlocky = false;
-		let leftBlockColor;
-		let rightBlockColor;
-		switch (imageData[index] >> 8) {
-			case 0:
-			case 32:
-			case 255:
-				upperBlockColor = background;
-				lowerBlockColor = background;
-				isBlocky = true;
-				break;
-			case 220:
-				upperBlockColor = background;
-				lowerBlockColor = foreground;
-				isBlocky = true;
-				break;
-			case 221:
-				isVerticalBlocky = true;
-				leftBlockColor = foreground;
-				rightBlockColor = background;
-				break;
-			case 222:
-				isVerticalBlocky = true;
-				leftBlockColor = background;
-				rightBlockColor = foreground;
-				break;
-			case 223:
-				upperBlockColor = foreground;
-				lowerBlockColor = background;
-				isBlocky = true;
-				break;
-			case 219:
-				upperBlockColor = foreground;
-				lowerBlockColor = foreground;
-				isBlocky = true;
-				break;
-			default:
-				if (foreground === background) {
-					isBlocky = true;
-					upperBlockColor = foreground;
-					lowerBlockColor = foreground;
-				} else {
-					isBlocky = false;
-				}
-		}
-		return {
-			x: x,
-			y: y,
-			textY: textY,
-			isBlocky: isBlocky,
-			upperBlockColor: upperBlockColor,
-			lowerBlockColor: lowerBlockColor,
-			halfBlockY: y % 2,
-			isVerticalBlocky: isVerticalBlocky,
-			leftBlockColor: leftBlockColor,
-			rightBlockColor: rightBlockColor,
-		};
-	};
-
-	const drawHalfBlock = (index, foreground, x, y, textY) => {
-		const halfBlockY = y % 2;
-		const charCode = imageData[index] >> 8;
-		const currentForeground = imageData[index] & 15;
-		const currentBackground = (imageData[index] >> 4) & 15;
-
-		let newCharCode, newForeground, newBackground;
-		let shouldUpdate = false;
-
-		if (charCode === magicNumbers.FULL_BLOCK) {
-			if (currentForeground !== foreground) {
-				if (halfBlockY === 0) {
-					newCharCode = magicNumbers.LOWER_HALFBLOCK;
-					newForeground = foreground;
-					newBackground = currentForeground;
-					shouldUpdate = true;
-				} else {
-					newCharCode = magicNumbers.UPPER_HALFBLOCK;
-					newForeground = foreground;
-					newBackground = currentForeground;
-					shouldUpdate = true;
-				}
-			}
-		} else if (
-			charCode !== magicNumbers.UPPER_HALFBLOCK &&
-			charCode !== magicNumbers.LOWER_HALFBLOCK
-		) {
-			if (halfBlockY === 0) {
-				newCharCode = magicNumbers.LOWER_HALFBLOCK;
-				newForeground = foreground;
-				newBackground = currentBackground;
-				shouldUpdate = true;
-			} else {
-				newCharCode = magicNumbers.UPPER_HALFBLOCK;
-				newForeground = foreground;
-				newBackground = currentBackground;
-				shouldUpdate = true;
-			}
-		} else {
-			if (halfBlockY === 0) {
-				if (charCode === magicNumbers.LOWER_HALFBLOCK) {
-					if (currentBackground === foreground) {
-						newCharCode = magicNumbers.FULL_BLOCK;
-						newForeground = foreground;
-						newBackground = 0;
-						shouldUpdate = true;
-					} else {
-						newCharCode = magicNumbers.LOWER_HALFBLOCK;
-						newForeground = foreground;
-						newBackground = currentBackground;
-						shouldUpdate = true;
-					}
-				} else if (currentForeground === foreground) {
-					newCharCode = magicNumbers.FULL_BLOCK;
-					newForeground = foreground;
-					newBackground = 0;
-					shouldUpdate = true;
-				} else {
-					newCharCode = magicNumbers.LOWER_HALFBLOCK;
-					newForeground = foreground;
-					newBackground = currentForeground;
-					shouldUpdate = true;
-				}
-			} else {
-				if (charCode === magicNumbers.UPPER_HALFBLOCK) {
-					if (currentBackground === foreground) {
-						newCharCode = magicNumbers.FULL_BLOCK;
-						newForeground = foreground;
-						newBackground = 0;
-						shouldUpdate = true;
-					} else {
-						newCharCode = magicNumbers.UPPER_HALFBLOCK;
-						newForeground = foreground;
-						newBackground = currentBackground;
-						shouldUpdate = true;
-					}
-				} else if (currentForeground === foreground) {
-					newCharCode = magicNumbers.FULL_BLOCK;
-					newForeground = foreground;
-					newBackground = 0;
-					shouldUpdate = true;
-				} else {
-					newCharCode = magicNumbers.UPPER_HALFBLOCK;
-					newForeground = foreground;
-					newBackground = currentForeground;
-					shouldUpdate = true;
-				}
-			}
-		}
-
-		if (shouldUpdate) {
-			patchBufferAndEnqueueDirty(
-				index,
-				newCharCode,
-				newForeground,
-				newBackground,
-				x,
-				textY,
-				false,
-			);
-		}
-	};
+	const getHalfBlock = (x, y) => editor.getHalfBlockAt(x, y);
 
 	document.addEventListener('onLetterSpacingChange', onCriticalChange);
 	document.addEventListener('onPaletteChange', onCriticalChange);
@@ -1593,24 +1342,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const undo = () => {
-		if (currentUndo.length > 0) {
-			pushUndoChunk(currentUndo);
-			currentUndo = [];
-		}
-		if (undoBuffer.length > 0) {
-			const currentRedo = [];
-			const undoChunk = undoBuffer.pop();
-			undoBufferCells -= undoChunk.length;
-			for (let i = undoChunk.length - 1; i >= 0; i--) {
-				const undo = undoChunk.pop();
-				if (undo[0] < imageData.length) {
-					currentRedo.push([undo[0], imageData[undo[0]], undo[2], undo[3]]);
-					imageData[undo[0]] = undo[1];
-					drawHistory.push((undo[0] << 16) + undo[1]);
-					enqueueDirtyCell(undo[2], undo[3]);
-				}
-			}
-			redoBuffer.push(currentRedo);
+		if (editor.undo()) {
 			processDirtyRegions();
 			sendDrawHistory();
 			State.saveToLocalStorage();
@@ -1618,19 +1350,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const redo = () => {
-		if (redoBuffer.length > 0) {
-			const redoChunk = redoBuffer.pop();
-			for (let i = redoChunk.length - 1; i >= 0; i--) {
-				const redo = redoChunk.pop();
-				if (redo[0] < imageData.length) {
-					currentUndo.push([redo[0], imageData[redo[0]], redo[2], redo[3]]);
-					imageData[redo[0]] = redo[1];
-					drawHistory.push((redo[0] << 16) + redo[1]);
-					enqueueDirtyCell(redo[2], redo[3]);
-				}
-			}
-			pushUndoChunk(currentUndo);
-			currentUndo = [];
+		if (editor.redo()) {
 			processDirtyRegions();
 			sendDrawHistory();
 			State.saveToLocalStorage();
@@ -1638,239 +1358,41 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const startUndo = () => {
-		if (currentUndo.length > 0) {
-			pushUndoChunk(currentUndo);
-			currentUndo = [];
-		}
-		redoBuffer = [];
-	};
-
-	const optimizeBlocks = blocks => {
-		blocks.forEach(block => {
-			const index = block[0];
-			const attribute = imageData[index];
-			const background = (attribute >> 4) & 15;
-			let foreground;
-			if (background >= 8) {
-				switch (attribute >> 8) {
-					case magicNumbers.CHAR_NULL:
-					case magicNumbers.CHAR_SPACE:
-					case magicNumbers.CHAR_NBSP:
-						draw(
-							index,
-							magicNumbers.FULL_BLOCK,
-							background,
-							0,
-							block[1],
-							block[2],
-						);
-						break;
-					case magicNumbers.FULL_BLOCK:
-						draw(
-							index,
-							magicNumbers.FULL_BLOCK,
-							attribute & 15,
-							0,
-							block[1],
-							block[2],
-						);
-						break;
-					case magicNumbers.LEFT_HALFBLOCK:
-						foreground = attribute & 15;
-						if (foreground < 8) {
-							draw(
-								index,
-								magicNumbers.RIGHT_HALFBLOCK,
-								background,
-								foreground,
-								block[1],
-								block[2],
-							);
-						}
-						break;
-					case magicNumbers.RIGHT_HALFBLOCK:
-						foreground = attribute & 15;
-						if (foreground < 8) {
-							draw(
-								index,
-								magicNumbers.LEFT_HALFBLOCK,
-								background,
-								foreground,
-								block[1],
-								block[2],
-							);
-						}
-						break;
-					case magicNumbers.LOWER_HALFBLOCK:
-						foreground = attribute & 15;
-						if (foreground < 8) {
-							draw(
-								index,
-								magicNumbers.UPPER_HALFBLOCK,
-								background,
-								foreground,
-								block[1],
-								block[2],
-							);
-						}
-						break;
-					case magicNumbers.UPPER_HALFBLOCK:
-						foreground = attribute & 15;
-						if (foreground < 8) {
-							draw(
-								index,
-								magicNumbers.LOWER_HALFBLOCK,
-								background,
-								foreground,
-								block[1],
-								block[2],
-							);
-						}
-						break;
-					default:
-						break;
-				}
-			}
-		});
+		editor.startUndo();
 	};
 
 	const drawEntryPoint = (callback, optimise) => {
-		const blocks = [];
-		callback((charCode, foreground, background, x, y) => {
-			const index = y * columns + x;
-			blocks.push([index, x, y]);
-			patchBufferAndEnqueueDirty(
-				index,
-				charCode,
-				foreground,
-				background,
-				x,
-				y,
-				true,
-			);
-
-			if (mirrorMode) {
-				const mirrorX = getMirrorX(x);
-				if (mirrorX >= 0 && mirrorX < columns) {
-					const mirrorIndex = y * columns + mirrorX;
-					const mirrorCharCode = getMirrorCharCode(charCode);
-					blocks.push([mirrorIndex, mirrorX, y]);
-					patchBufferAndEnqueueDirty(
-						mirrorIndex,
-						mirrorCharCode,
-						foreground,
-						background,
-						mirrorX,
-						y,
-						true,
-					);
-				}
-			}
-		});
-		if (optimise) {
-			optimizeBlocks(blocks);
-		}
-
+		editor.drawBlocks(callback, optimise);
 		processDirtyRegions();
 		sendDrawHistory();
 	};
 
-	const drawWithUndo = (index, foreground, x, y, textY) => {
-		currentUndo.push([index, imageData[index], x, textY]);
-		drawHalfBlock(index, foreground, x, y, textY);
-		drawHistory.push((index << 16) + imageData[index]);
-	};
-
 	const drawHalfBlockEntryPoint = callback => {
-		const blocks = [];
-		callback((foreground, x, y) => {
-			const textY = Math.floor(y / 2);
-			const index = textY * columns + x;
-			blocks.push([index, x, textY]);
-			drawWithUndo(index, foreground, x, y, textY);
-			if (mirrorMode) {
-				const mirrorX = getMirrorX(x);
-				if (mirrorX >= 0 && mirrorX < columns) {
-					const mirrorIndex = textY * columns + mirrorX;
-					blocks.push([mirrorIndex, mirrorX, textY]);
-					drawWithUndo(mirrorIndex, foreground, mirrorX, y, textY);
-				}
-			}
-		});
-		optimizeBlocks(blocks);
+		editor.drawHalfBlocks(callback);
 		processDirtyRegions();
 		sendDrawHistory();
 	};
 
 	const deleteArea = (x, y, width, height, background) => {
-		const maxWidth = x + width;
-		const maxHeight = y + height;
-		drawEntryPoint(draw => {
-			for (let dy = y; dy < maxHeight; dy++) {
-				for (let dx = x; dx < maxWidth; dx++) {
-					draw(0, 0, background, dx, dy);
-				}
-			}
-		});
+		editor.deleteArea(x, y, width, height, background);
+		processDirtyRegions();
+		sendDrawHistory();
 	};
 
-	const getArea = (x, y, width, height) => {
-		const data = new Uint16Array(width * height);
-		for (let dy = 0, j = 0; dy < height; dy++) {
-			for (let dx = 0; dx < width; dx++, j++) {
-				const i = (y + dy) * columns + (x + dx);
-				data[j] = imageData[i];
-			}
-		}
-		return {
-			data: data,
-			width: width,
-			height: height,
-		};
-	};
+	const getArea = (x, y, width, height) => editor.getAreaU16(x, y, width, height);
 
 	const setArea = (area, x, y) => {
-		const maxWidth = Math.min(area.width, columns - x);
-		const maxHeight = Math.min(area.height, rows - y);
-		drawEntryPoint(draw => {
-			for (let py = 0; py < maxHeight; py++) {
-				for (let px = 0; px < maxWidth; px++) {
-					const attrib = area.data[py * area.width + px];
-					draw(attrib >> 8, attrib & 15, (attrib >> 4) & 15, x + px, y + py);
-				}
-			}
-		});
+		editor.setAreaU16(area, x, y);
+		processDirtyRegions();
+		sendDrawHistory();
 	};
 
-	// Use unified buffer patching without adding to undo (network changes)
+	// Network changes: repaint without entering undo or the draw history
 	const quickDraw = blocks => {
-		blocks.forEach(block => {
-			if (imageData[block[0]] !== block[1]) {
-				// Update imageData immediately (always)
-				imageData[block[0]] = block[1];
-
-				if (glRenderer) {
-					// No chunk bookkeeping; the dirty pass repaints coverage
-					enqueueDirtyCell(block[2], block[3]);
-					return;
-				}
-
-				const y = block[3];
-				const chunkIndex = Math.floor(y / chunkSize);
-				const chunk = canvasChunks.get(chunkIndex);
-
-				if (chunk && activeChunks.has(chunkIndex)) {
-					// Chunk is visible - update via the dirty region pass
-					enqueueDirtyCell(block[2], block[3]);
-				} else if (chunk) {
-					// Chunk exists but not visible - mark as dirty
-					chunk.rendered = false;
-				}
-				// If chunk doesn't exist, it will be rendered fresh when created
-			}
-		});
+		editor.quickDrawU16(blocks);
 		processDirtyRegions();
 	};
+
 
 	const getDefaultFontName = () => magicNumbers.DEFAULT_FONT;
 
@@ -1977,25 +1499,15 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const getXBFontData = () => xbFontData;
 
-	const getUndoHistory = () => {
-		return {
-			currentUndo: currentUndo,
-			undoBuffer: undoBuffer,
-			redoBuffer: redoBuffer,
-		};
-	};
+	/**
+	 * Undo persistence moved to the OPFS journal with the engine swap;
+	 * the v2 IndexedDB chunk shape is no longer produced. Old autosaves
+	 * restore their content, and their undo stacks are deliberately
+	 * dropped (see core/migrate.ts).
+	 */
+	const getUndoHistory = () => null;
 
-	const setUndoHistory = history => {
-		if (history) {
-			currentUndo = history.currentUndo || [];
-			undoBuffer = history.undoBuffer || [];
-			redoBuffer = history.redoBuffer || [];
-			undoBufferCells = undoBuffer.reduce(
-				(cells, chunk) => cells + chunk.length,
-				0,
-			);
-		}
-	};
+	const setUndoHistory = _history => {};
 
 	const loadXBFileSequential = (imageData, finalCallback) => {
 		clearXBData(() => {

@@ -688,7 +688,10 @@ class StateManager {
 			) {
 				return;
 			}
-			await Storage.saveUndoHistory(this.state.textArtCanvas.getUndoHistory());
+			const undoHistory = this.state.textArtCanvas.getUndoHistory();
+			if (undoHistory) {
+				await Storage.saveUndoHistory(undoHistory);
+			}
 		} catch (error) {
 			console.error('[State] Failed to save undo history:', error);
 		}
