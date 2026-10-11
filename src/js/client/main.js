@@ -112,7 +112,15 @@ const openHandler = file => {
 	State.textArtCanvas.clear();
 	Load.file(
 		file,
-		async (columns, rows, imageData, iceColors, letterSpacing, fontName) => {
+		async (
+			columns,
+			rows,
+			imageData,
+			iceColors,
+			letterSpacing,
+			fontName,
+			docNative,
+		) => {
 			const indexOfPeriod = file.name.lastIndexOf('.');
 			let fileTitle;
 			if (indexOfPeriod !== -1) {
@@ -124,13 +132,19 @@ const openHandler = file => {
 			bodyContainer.classList.remove('loading');
 
 			const applyData = () => {
-				State.textArtCanvas.setImageData(
-					columns,
-					rows,
-					imageData,
-					iceColors,
-					letterSpacing,
-				);
+				if (docNative) {
+					// tnd/dur/0wnz: plane-native load keeps truecolor and
+					// frames; legacy consumers read the lossy u16 mirror
+					State.textArtCanvas.setDocData(docNative);
+				} else {
+					State.textArtCanvas.setImageData(
+						columns,
+						rows,
+						imageData,
+						iceColors,
+						letterSpacing,
+					);
+				}
 				palettePicker.updatePalette(); // ANSi
 				openFile.value = '';
 				viewport.scrollLeft = viewport.scrollTop = 0;
@@ -502,6 +516,8 @@ const initializeAppComponents = async () => {
 	onClick($('savePlaintext'), Save.plainText);
 	onClick($('saveBin'), Save.bin);
 	onClick($('saveXbin'), Save.xb);
+	onClick($('saveTundra'), Save.tnd);
+	onClick($('saveOwnz'), Save.ownz);
 	onClick($('savePng'), Save.png);
 	onClick($('cut'), State.pasteTool.cut);
 	onClick($('copy'), State.pasteTool.copy);

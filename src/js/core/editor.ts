@@ -29,7 +29,7 @@ import {
 	paletteColor,
 	paletteIndexOf,
 } from './doc.js';
-import { U16Doc, v3ToU16 } from './convert.js';
+import { U16Doc, v3ToU16, v3ToU16Lossy } from './convert.js';
 import {
 	EditCell,
 	classifyHalfBlock,
@@ -130,6 +130,8 @@ export interface EditorCore {
 	/** Rewrites the planes to the new blink interpretation. */
 	setIceColors: (ice: boolean) => void;
 	toU16: () => U16Doc;
+	/** Quantized projection for the fallback renderer/collab mirror. */
+	toU16Lossy: () => U16Doc;
 	/** v2 setImageData: replace content wholesale, clearing history. */
 	loadU16: (
 		imageData: Uint16Array,
@@ -137,6 +139,14 @@ export interface EditorCore {
 		rows: number,
 		iceColors: boolean,
 	) => void;
+	/**
+	 * Adopt a decoded DocV3's content (tnd/dur/envelope loads): glyphs
+	 * remap through this doc's table, palette indexes past 15 freeze to
+	 * their RGB (no 256-entry rendering until P3), frames carry over,
+	 * history clears. The doc object identity is preserved for the
+	 * renderer bridges.
+	 */
+	loadDoc: (source: DocV3) => void;
 	/** v2 resize semantics: overlap copy, history cleared. */
 	resize: (columns: number, rows: number) => void;
 	clear: () => void;
@@ -440,6 +450,46 @@ export const createEditorCore = (
 			}
 		},
 		toU16: () => v3ToU16(doc),
+		toU16Lossy: () => v3ToU16Lossy(doc),
+		loadDoc: source => {
+			flushStroke();
+			arena.clear();
+			doc.resize(source.getColumns(), source.getRows());
+			doc.setIceColors(source.getIceColors());
+			doc.setLetterSpacing(source.getLetterSpacing());
+			doc.setGlobalDelayMs(source.getGlobalDelayMs());
+			while (doc.frames.length > source.frames.length) {
+				doc.removeFrame(doc.frames.length - 1);
+			}
+			while (doc.frames.length < source.frames.length) {
+				doc.addFrame({ force: true });
+			}
+			const freeze = (word: number): number => {
+				if (!isPaletteColor(word)) {
+					return word;
+				}
+				const index = paletteIndexOf(word);
+				if (index < 16) {
+					return word; // live palette semantics, like every classic load
+				}
+				return index < source.palette.length
+					? source.palette[index] & 0x00ffffff
+					: 0;
+			};
+			source.frames.forEach((src, f) => {
+				const target = doc.frames[f];
+				target.delayMs = src.delayMs;
+				for (let i = 0; i < src.glyph.length; i++) {
+					const def = source.glyphTable.get(glyphIdOf(src.glyph[i]));
+					const id = def
+						? doc.glyphTable.idFor(def.fontSlot, def.codepoint)
+						: 0;
+					target.glyph[i] = glyphWord(id, attrsOf(src.glyph[i]));
+					target.fg[i] = freeze(src.fg[i]);
+					target.bg[i] = freeze(src.bg[i]);
+				}
+			});
+		},
 		loadU16: (imageData, newColumns, newRows, iceColors) => {
 			flushStroke();
 			arena.clear();

@@ -15,14 +15,16 @@ import {
 	ATTR_BLINK,
 	DocV3,
 	attrsOf,
+	createDefaultPaletteRGB,
 	createDocV3,
 	glyphIdOf,
 	glyphWord,
 	isPaletteColor,
 	paletteColor,
 	paletteIndexOf,
+	rgbOf,
 } from './doc.js';
-import { cp437ToUnicode } from './cp437.js';
+import { cp437ToUnicode, unicodeToCp437Strict } from './cp437.js';
 
 export class ConvertError extends Error {
 	readonly cellIndex: number;
@@ -129,6 +131,92 @@ export const v3ToU16 = (doc: DocV3, frameIndex = 0): U16Doc => {
 		}
 		const bgNibble = blink ? bgIndex | 8 : bgIndex;
 		imageData[i] = (glyphId << 8) | (bgNibble << 4) | fgIndex;
+	}
+	return {
+		imageData,
+		columns,
+		rows,
+		iceColors,
+		letterSpacing: doc.getLetterSpacing(),
+	};
+};
+
+/**
+ * Lossy projection for docs the u16 model cannot express: the chunk
+ * fallback renderer, the collab protocol (u16 until P4), and the tools'
+ * classic16 view all read this after a tnd/dur/envelope import. Raw-RGB
+ * and high palette colors quantize to the nearest default-palette entry
+ * (foregrounds over 16, backgrounds over the blink-legal range), and
+ * non-CP437 glyphs degrade to '?' exactly like v2's lenient UTF-8
+ * reader. Never use this where v3ToU16's strictness is the point.
+ */
+export const v3ToU16Lossy = (doc: DocV3, frameIndex = 0): U16Doc => {
+	const frame = doc.frames[frameIndex];
+	if (!frame) {
+		throw new ConvertError(`frame ${frameIndex} out of range`, -1);
+	}
+	const columns = doc.getColumns();
+	const rows = doc.getRows();
+	const iceColors = doc.getIceColors();
+	const imageData = new Uint16Array(columns * rows);
+
+	const resolveRGB = (word: number): number => {
+		if (!isPaletteColor(word)) {
+			return word & 0x00ffffff;
+		}
+		const index = paletteIndexOf(word);
+		return index < doc.palette.length ? doc.palette[index] : 0;
+	};
+	const defaults = createDefaultPaletteRGB();
+	const nearest = (rgbWord: number, limit: number): number => {
+		const { r, g, b } = rgbOf(rgbWord);
+		let best = 0;
+		let bestDistance = Infinity;
+		for (let i = 0; i < limit; i++) {
+			const entry = rgbOf(defaults[i]);
+			const distance =
+				(entry.r - r) * (entry.r - r) +
+				(entry.g - g) * (entry.g - g) +
+				(entry.b - b) * (entry.b - b);
+			if (distance < bestDistance) {
+				bestDistance = distance;
+				best = i;
+			}
+		}
+		return best;
+	};
+	const toIndex = (word: number, limit: number): number => {
+		if (isPaletteColor(word)) {
+			const index = paletteIndexOf(word);
+			if (index < limit) {
+				return index;
+			}
+		}
+		return nearest(resolveRGB(word), limit);
+	};
+
+	for (let i = 0; i < imageData.length; i++) {
+		const glyphId = glyphIdOf(frame.glyph[i]);
+		const blink = (attrsOf(frame.glyph[i]) & ATTR_BLINK) !== 0 && !iceColors;
+		const def = doc.glyphTable.get(glyphId);
+		let charCode: number;
+		if (
+			glyphId <= 0xff &&
+			def &&
+			def.fontSlot === 0 &&
+			def.codepoint === cp437ToUnicode(glyphId)
+		) {
+			charCode = glyphId;
+		} else {
+			charCode = (def && unicodeToCp437Strict(def.codepoint)) ?? 63; // '?'
+		}
+		const fgIndex = toIndex(frame.fg[i], 16);
+		// without ice a bright background nibble MEANS blink, so non-blink
+		// cells may only quantize into the dim half
+		const bgLimit = iceColors ? 16 : 8;
+		const bgIndex = toIndex(frame.bg[i], bgLimit) & (blink ? 7 : 15);
+		const bgNibble = blink ? bgIndex | 8 : bgIndex;
+		imageData[i] = (charCode << 8) | (bgNibble << 4) | (fgIndex & 15);
 	}
 	return {
 		imageData,

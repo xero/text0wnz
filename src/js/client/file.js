@@ -3,6 +3,14 @@ import State from './state.js';
 import magicNumbers from './magicNumbers.js';
 import { $, enforceMaxBytes } from './ui.js';
 import { getUTF8, getUnicodeReverseMap } from './palette.js';
+import {
+	decodeDur,
+	decodeEnvelope,
+	decodeTundra,
+	encodeEnvelope,
+	encodeTundra,
+	v3ToU16Lossy,
+} from '../core/index';
 
 // Load module implementation
 const loadModule = () => {
@@ -1149,6 +1157,83 @@ const loadModule = () => {
 						);
 					});
 					break;
+				case 'tnd':
+					// TundraDraw: 24-bit colors ride the v3 planes; the lossy
+					// u16 projection feeds legacy consumers (PLAN P2)
+					State.textArtCanvas.clearXBData(() => {
+						const result = decodeTundra(data);
+						updateSauceModal({
+							title: result.meta.title,
+							group: result.meta.group,
+							author: result.meta.author,
+							comments: result.meta.comments,
+						});
+						const u16 = v3ToU16Lossy(result.doc);
+						callback(
+							u16.columns,
+							u16.rows,
+							u16.imageData,
+							u16.iceColors,
+							u16.letterSpacing,
+							undefined,
+							result.doc,
+						);
+					});
+					break;
+				case 'dur':
+					// durdraw v7/v8 movie: frames import with the doc and stay
+					// latent until the frames UI (P6); frame 0 displays
+					State.textArtCanvas.clearXBData(async () => {
+						const result = await decodeDur(data);
+						updateSauceModal({
+							title: result.meta.title,
+							author: result.meta.author,
+						});
+						const u16 = v3ToU16Lossy(result.doc);
+						callback(
+							u16.columns,
+							u16.rows,
+							u16.imageData,
+							u16.iceColors,
+							u16.letterSpacing,
+							undefined,
+							result.doc,
+						);
+					});
+					break;
+				case '0wnz':
+					// native t0wnz-doc envelope (O5)
+					State.textArtCanvas.clearXBData(async () => {
+						const result = await decodeEnvelope(data);
+						if (result.fontBytes) {
+							const fontValid = State.textArtCanvas.setXBFontData(
+								result.fontBytes,
+								8,
+								result.fontHeight || 16,
+							);
+							if (fontValid) {
+								await new Promise(resolve =>
+									State.textArtCanvas.setFont('XBIN', resolve));
+							}
+						}
+						updateSauceModal({
+							title: result.meta.title,
+							group: result.meta.group,
+							author: result.meta.author,
+							comments: result.meta.comments,
+						});
+						const u16 = v3ToU16Lossy(result.doc);
+						callback(
+							u16.columns,
+							u16.rows,
+							u16.imageData,
+							u16.iceColors,
+							u16.letterSpacing,
+							undefined,
+							result.doc,
+						);
+					});
+					break;
 				case 'ans':
 				case 'diz':
 				case 'nfo':
@@ -1205,7 +1290,14 @@ const saveModule = () => {
 						{
 							description: 'Text Art',
 							accept: {
-								'application/octet-stream': ['.ans', '.bin', '.xb', '.diz'],
+								'application/octet-stream': [
+									'.ans',
+									'.bin',
+									'.xb',
+									'.diz',
+									'.tnd',
+									'.0wnz',
+								],
 								'text/plain': ['.txt'],
 								'image/png': ['.png'],
 							},
@@ -1773,6 +1865,34 @@ const saveModule = () => {
 		return bytes;
 	};
 
+	const sauceMeta = () => ({
+		title: $('sauceTitle').value,
+		group: $('sauceGroup').value,
+		author: $('sauceAuthor').value,
+		comments: $('sauceComments').value.trim() || undefined,
+	});
+
+	const tnd = async () => {
+		// encodeTundra appends its own SAUCE; it throws on content tundra
+		// cannot hold (unicode glyphs, blink attrs)
+		try {
+			const bytes = encodeTundra(State.textArtCanvas.getDoc(), { meta: sauceMeta() });
+			await saveFile(bytes, undefined, State.title + '.tnd');
+		} catch (error) {
+			console.error('[Save] tundra:', error);
+		}
+	};
+
+	const ownz = async () => {
+		const xbData = State.textArtCanvas.getXBFontData();
+		const bytes = await encodeEnvelope(State.textArtCanvas.getDoc(), {
+			meta: sauceMeta(),
+			fontBytes: xbData ? xbData.bytes : null,
+			fontHeight: xbData ? xbData.height : undefined,
+		});
+		await saveFile(bytes, undefined, State.title + '.0wnz');
+	};
+
 	const png = async () => {
 		const fname = State.title;
 		const fontWidth = State.font.getWidth();
@@ -1805,8 +1925,10 @@ const saveModule = () => {
 	return {
 		ans: ans,
 		bin: bin,
+		ownz: ownz,
 		plainText: plainText,
 		png: png,
+		tnd: tnd,
 		utf8: utf8,
 		utf8noBlink: utf8noBlink,
 		xb: xb,

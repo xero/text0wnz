@@ -1208,6 +1208,28 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		});
 	};
 
+	/**
+	 * Plane-native load for tnd/dur/envelope docs (content the u16 path
+	 * cannot carry). The mirror becomes the lossy projection - the chunk
+	 * fallback, collab packets, and the tools' classic16 reads quantize -
+	 * while the GL renderer shows the planes faithfully.
+	 */
+	const setDocData = (sourceDoc, onComplete) => {
+		editor.loadDoc(sourceDoc);
+		columns = doc.getColumns();
+		rows = doc.getRows();
+		imageData = editor.toU16Lossy().imageData;
+		scheduleJournalKeyframe();
+		createCanvases();
+		updateTimer();
+		redrawEntireImage(null, () => {
+			document.dispatchEvent(new CustomEvent('onOpenedFile'));
+			if (onComplete) {
+				onComplete();
+			}
+		});
+	};
+
 	const getColumns = () => {
 		return columns;
 	};
@@ -1682,6 +1704,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		getImageRGBA: getImageRGBA,
 		getImageData: getImageData,
 		setImageData: setImageData,
+		setDocData: setDocData,
+		getDoc: () => doc,
 		getColumns: getColumns,
 		getRows: getRows,
 		clear: clear,
