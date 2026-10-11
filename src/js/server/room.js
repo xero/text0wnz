@@ -442,8 +442,9 @@ export const createRoom = (options = {}) => {
 				doc.ice_colors = saved.ice_colors === true;
 				doc.use_9px_font = saved.use_9px_font === true;
 			}
-			if (Array.isArray(/** @type {any} */ (saved).chat)) {
-				chatHistory.push(...(saved).chat);
+			const savedChat = /** @type {any} */ (saved).chat;
+			if (Array.isArray(savedChat)) {
+				chatHistory.push(...savedChat);
 			}
 		},
 		stats: () => ({
