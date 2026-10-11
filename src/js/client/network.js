@@ -394,6 +394,34 @@ const createWorkerHandler = inputHandle => {
 
 	const isConnected = () => connected;
 
+	// own-cursor sends, throttled ~100ms trailing (PLAN 3.6.3): peers
+	// render it via the native CURSOR frames
+	let cursorTimer = 0;
+	let cursorPending = null;
+	document.addEventListener('onTextCursorMove', e => {
+		if (!collaborationMode || !connected) {
+			return;
+		}
+		cursorPending = /** @type {CustomEvent} */ (e).detail;
+		if (cursorTimer) {
+			return;
+		}
+		cursorTimer = /** @type {number} */ (
+			/** @type {unknown} */ (
+				setTimeout(() => {
+					cursorTimer = 0;
+					if (cursorPending && connected) {
+						sendFrame(MoebiusAction.CURSOR, {
+							x: cursorPending.x,
+							y: cursorPending.y,
+						});
+						cursorPending = null;
+					}
+				}, 100)
+			)
+		);
+	});
+
 	if (State.worker) {
 		try {
 			State.worker.addEventListener('message', onMessage);

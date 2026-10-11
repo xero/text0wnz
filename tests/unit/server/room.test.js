@@ -282,3 +282,99 @@ describe('relay tier and misc', () => {
 		expect(room.stats().opLogLength).toBe(0);
 	});
 });
+
+describe('convergence fuzz', () => {
+	it('every peer converges on the server doc under a seeded op storm', () => {
+		const mulberry32 = seed => () => {
+			seed |= 0;
+			seed = (seed + 0x6d2b79f5) | 0;
+			let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+			t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+			return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+		};
+		const rand = mulberry32(0xc0117ab);
+		const room = createRoom({ columns: 20, rows: 10 });
+
+		// each client keeps a local replica: own ops apply locally at
+		// send (apply-locally-on-send), received DRAW/RESIZE apply too
+		const makeReplica = () => ({
+			columns: 20,
+			rows: 10,
+			cells: new Map(),
+		});
+		const applyDraw = (replica, data) => {
+			if (data.x < replica.columns && data.y < replica.rows) {
+				replica.cells.set(`${data.x},${data.y}`, data.block.code);
+			}
+		};
+		const applyResize = (replica, data) => {
+			replica.columns = data.columns;
+			replica.rows = data.rows;
+			for (const key of [...replica.cells.keys()]) {
+				const [cx, cy] = key.split(',').map(Number);
+				if (cx >= data.columns || cy >= data.rows) {
+					replica.cells.delete(key);
+				}
+			}
+		};
+
+		const replicas = [];
+		const clients = [];
+		for (let i = 0; i < 3; i++) {
+			const replica = makeReplica();
+			replicas.push(replica);
+			const client = {
+				send: (type, data) => {
+					if (type === A.DRAW) {
+						applyDraw(replica, data);
+					}
+					if (type === A.SET_CANVAS_SIZE) {
+						applyResize(replica, data);
+					}
+				},
+			};
+			clients.push(client);
+			room.connect(client, { nick: `fuzz${i}` });
+		}
+
+		for (let op = 0; op < 600; op++) {
+			const who = Math.floor(rand() * 3);
+			const replica = replicas[who];
+			if (rand() < 0.95) {
+				const data = {
+					x: Math.floor(rand() * replica.columns),
+					y: Math.floor(rand() * replica.rows),
+					block: { code: 33 + Math.floor(rand() * 90), fg: 7, bg: 0 },
+					id: who,
+				};
+				applyDraw(replica, data); // apply-locally-on-send
+				room.message(clients[who], { type: A.DRAW, data });
+			} else {
+				const data = {
+					columns: 10 + Math.floor(rand() * 30),
+					rows: 5 + Math.floor(rand() * 15),
+					id: who,
+				};
+				applyResize(replica, data);
+				room.message(clients[who], { type: A.SET_CANVAS_SIZE, data });
+			}
+		}
+
+		const serverDoc = room.toJoinDoc();
+		const serverBlocks = uncompressBlocks(
+			serverDoc.compressed_data,
+			serverDoc.columns * serverDoc.rows,
+		);
+		for (const replica of replicas) {
+			expect(replica.columns).toBe(serverDoc.columns);
+			expect(replica.rows).toBe(serverDoc.rows);
+			for (let y = 0; y < serverDoc.rows; y++) {
+				for (let x = 0; x < serverDoc.columns; x++) {
+					const server = serverBlocks[y * serverDoc.columns + x].code;
+					const local = replica.cells.get(`${x},${y}`) ?? 32;
+					expect(local, `cell ${x},${y}`).toBe(server);
+				}
+			}
+		}
+	});
+});
