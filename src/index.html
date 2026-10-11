@@ -309,6 +309,20 @@
 			<aside>
 				<canvas id="palettePreview" height="40" width="40"></canvas>
 				<canvas id="palettePicker" height="160" width="40"></canvas>
+				<div id="paletteMore" title="More colors (256 + RGB)">++</div>
+				<div id="colorPanel" class="hide">
+					<h3>xterm 256 <small>click: fg, right-click: bg</small></h3>
+					<div id="colorGrid"></div>
+					<h3>RGB</h3>
+					<div id="colorRGB">
+						<input id="colorHexInput" type="color" aria-label="Pick RGB Color" value="#ff00ff"/>
+						<button id="colorRGBfg">fg</button>
+						<button id="colorRGBbg">bg</button>
+					</div>
+					<h3>Recent</h3>
+					<div id="colorRecent"></div>
+					<p id="colorLockNote" class="hide">Joined server only speaks 16 colors: extended picks are disabled until you disconnect.</p>
+				</div>
 				<div id="keyboard">
 					<svg alt="Keyboard" aria-label="Keyboard (k)">
 						<use href="img/icons.svg#keeb"></use>
@@ -391,6 +405,7 @@
 			<article class="separator"></article>
 			<article id="savePng" class="menuItem">Export as PNG</article>
 			<article id="saveUtf8" class="menuItem">Export as UTF-8 Text</article>
+			<article id="saveUtf8Blink" class="menuItem">Export as UTF-8 (blink)</article>
 			<article id="savePlaintext" class="menuItem">Export as Plain Text</article>
 			<article class="separator"></article>
 			<article id="help" class="menuItem">Help!</article>
@@ -421,6 +436,8 @@
 			<article class="separator"></article>
 			<article id="defaultColor" class="menuItem">Default Color <kbd>Ctrl-D</kbd></article>
 			<article id="swapColors" class="menuItem">Swap Colors <kbd>Ctrl-Q</kbd></article>
+			<article class="separator"></article>
+			<article id="charsetPicker" class="menuItem">Character Sets</article>
 			<article id="fullscreen" class="menuItem">Toggle Fullscreen Mode</article>
 		</div>
 		<dialog id="modal">
@@ -723,6 +740,7 @@
 				</header>
 				<img class="logo" title="logo" alt="logo" src="img/logo.png"/>
 				<p class="privacy"><a href="https://github.com/xero/teXt0wnz/blob/main/docs/privacy.md">Privacy Notice:</a> This application uses your device’s local storage to save artwork and editor state. We do not use cookies, analytics, or any tracking technologies.</p>
+				<p class="privacy">Unicode glyphs rendered from <a href="http://viznut.fi/unscii/" target="_blank">unscii-16</a> 2.1 (Public Domain) by viznut, and <a href="https://unifoundry.com/unifont/" target="_blank">GNU Unifont</a> 18.0.01 (<a href="https://openfontlicense.org" target="_blank">SIL OFL 1.1</a>) by Roman Czyborra, Paul Hardy, and contributors. Thank you!</p>
 				<nav>
 					<button id="aboutPrivacy" aria-label="View the Privacy Policy">
 						<svg>
@@ -757,6 +775,38 @@
 						Cancel
 					</button>
 				</nav>
+			</section>
+			<section id="exportModal">
+				<h2>Export as <strong id="exportFormatLabel"></strong></h2>
+				<article>
+					<p id="exportIssuesIntro">This format can't hold everything in this piece:</p>
+					<ul id="exportIssues"></ul>
+					<label id="exportCompressLabel">
+						<input id="exportCompress" type="checkbox" checked/>
+						RLE compression
+					</label>
+				</article>
+				<nav>
+					<button id="exportCancel">Cancel</button>
+					<button id="exportConfirm">Save</button>
+				</nav>
+			</section>
+			<section id="charsetModal">
+				<h2>Character Sets: <strong id="charsetBlockLabel"></strong></h2>
+				<p id="charsetLockNote" class="hide">Joined server only speaks CP437: unicode characters insert as '?' until you disconnect.</p>
+				<article>
+					<aside>
+						<input id="charsetSearch" type="text" aria-label="Search Unicode Blocks" autocomplete="off" placeholder="search unicode blocks"/>
+						<ul id="charsetBlocks" aria-label="Unicode Blocks" role="listbox" tabindex="0"></ul>
+					</aside>
+					<aside>
+						<div id="charsetGrid" aria-label="Characters"></div>
+						<footer>
+							<label id="charsetImportLabel" for="charsetImport">Import charset (.ini / .json)</label>
+							<input id="charsetImport" class="hide" type="file" aria-label="Import Charset" accept=".ini,.json,text/plain,application/json"/>
+						</footer>
+					</aside>
+				</article>
 			</section>
 			<section id="tutorialsModal">
 				<header>

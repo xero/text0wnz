@@ -157,3 +157,30 @@ export const testcard512Xb = () => {
 		sauce: { title: 'golden testcard 512' },
 	});
 };
+
+/**
+ * UTF-8 ANSI testcard (P5): mixed-charset content for the GL unicode
+ * golden - classic CP437 glyphs, hex-font unicode (sextants, wedges,
+ * rounded corners, braille), extended SGR colors (256 + truecolor),
+ * and deliberately-unrenderable cells (a wide CJK char and an emoji)
+ * that must show the substitute box. Deterministic by construction.
+ */
+export const testcardUtf8 = () => {
+	const esc = text => `\u001b[${text}`;
+	const lines = [
+		// classic glyphs through the reverse map, 16c colors
+		`${esc('0;37;40m')}░▒▓█ ┌─┬─┐ ╔═╦═╗ ${esc('1;33m')}★? ${esc('0;36m')}AaZz09`,
+		// sextants + eighth blocks (unscii/unifont hex glyphs)
+		`${esc('0;32m')}🬀🬁🬂🬃🬄🬅🬆🬇 ${esc('35m')}🭨🭩🭪🭫🭬🭭🭮🭯 ▂▄▆`,
+		// rounded corners, diagonals, braille
+		`${esc('0;31m')}╭─╮ ╱╲ ╳ ${esc('34m')}⠁⠃⠇⠏⠟⠿ ${esc('37m')}end`,
+		// 256-color tier
+		`${esc('0;38;5;196m')}XTERM196 ${esc('48;5;27m')}ON27${esc('0m')} ${esc('38;5;244m')}gray244`,
+		// truecolor tier
+		`${esc('0;38;2;255;128;0m')}RGB-ORANGE ${esc('48;2;0;64;128m')}ON-NAVY${esc('0m')}`,
+		// v1 single-width policy: wide CJK + emoji render the substitute
+		`${esc('0;37m')}wide:中 emoji:😀 done`,
+	];
+	const text = `${lines.join(`${esc('0m')}\n`)}${esc('0m')}\n`;
+	return new TextEncoder().encode(text);
+};

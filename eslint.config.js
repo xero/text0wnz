@@ -18,6 +18,7 @@ export default [
 			'src/*.js',
 			'src/js/**/*.js',
 			'tests/**/*.js',
+			'tools/**/*.js',
 		],
 		languageOptions: {
 			ecmaVersion: 2022,

@@ -1008,6 +1008,125 @@
 	#fontPreviewInfo {
 		@apply pl-4 text-chat;
 	}
+	#charsetModal {
+		@apply flex flex-col w-fit h-fit min-h-0;
+		h2 {
+			@apply flex flex-row w-full h-auto p-1 text-cyan text-2xl;
+		}
+		article {
+			@apply flex flex-row w-full h-auto p-1 gap-2;
+		}
+		input[type='text'] {
+			@apply px-3 py-1 h-fit mb-2 bg-midnight text-fg w-full;
+		}
+		footer {
+			@apply flex flex-row w-full h-auto p-1;
+		}
+	}
+	#charsetBlockLabel {
+		@apply pl-4 text-chat;
+	}
+	#charsetBlocks {
+		@apply bg-editor p-0 m-0 overflow-y-scroll;
+		max-height: 19em;
+		min-width: 14em;
+	}
+	#charsetBlocks [role='option'] {
+		@apply bg-editor text-fg m-0 cursor-pointer;
+		padding: 0.25em 0.75em;
+	}
+	#charsetBlocks [role='option'][aria-selected='true'] {
+		@apply bg-cyber text-midnight;
+	}
+	#charsetGrid {
+		@apply bg-editor overflow-y-scroll content-start;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 2px;
+		width: 28em;
+		max-height: 19em;
+		padding: 0.5em;
+	}
+	.charsetGlyph {
+		@apply cursor-pointer;
+		image-rendering: pixelated;
+	}
+	.charsetGlyph:hover {
+		outline: 1px solid theme('colors.cyber');
+	}
+	.charsetMore {
+		@apply bg-menu text-fg px-2 cursor-pointer;
+	}
+	#charsetImportLabel {
+		@apply text-fg bg-menu px-3 py-1 cursor-pointer;
+	}
+	#charsetImportLabel:hover {
+		@apply bg-purp;
+	}
+	#paletteMore {
+		@apply text-fg bg-menu text-center cursor-pointer select-none;
+		width: 40px;
+		line-height: 20px;
+	}
+	#paletteMore:hover {
+		@apply bg-purp;
+	}
+	#colorPanel {
+		@apply fixed z-40 dialog-style p-2;
+		left: 48px;
+		top: var(--header-size);
+		width: 346px;
+		h3 {
+			@apply text-cyan text-sm pt-1;
+			small {
+				@apply text-fg text-xs pl-2;
+			}
+		}
+		p {
+			@apply text-fg text-xs pt-2;
+		}
+	}
+	#colorPanel.locked {
+		#colorGrid,
+		#colorRGB,
+		#colorRecent {
+			@apply opacity-40 pointer-events-none;
+		}
+	}
+	#colorGrid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1px;
+	}
+	#colorGrid .colorSwatch {
+		width: 13px;
+		height: 13px;
+	}
+	#colorRecent {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 2px;
+		min-height: 18px;
+	}
+	#colorRecent .colorSwatch {
+		width: 18px;
+		height: 18px;
+	}
+	.colorSwatch {
+		@apply cursor-pointer;
+	}
+	.colorSwatch:hover {
+		outline: 1px solid theme('colors.cyber');
+	}
+	#colorRGB {
+		@apply flex flex-row gap-2 items-center;
+		button {
+			@apply bg-menu text-fg px-3 cursor-pointer;
+		}
+		button:hover {
+			@apply bg-purp;
+		}
+	}
 	#sauceModal {
 		@apply justify-between;
 		article {

@@ -26,6 +26,7 @@ import {
 	decodeBin as coreDecodeBin,
 	decodeXBin as coreDecodeXBin,
 	encodeAns as coreEncodeAns,
+	encodeUtf8 as coreEncodeUtf8,
 	encodeBin as coreEncodeBin,
 	encodeXBin as coreEncodeXBin,
 	v3ToU16,
@@ -550,18 +551,20 @@ describe('corpus tier (b): UTF-8 ANSI', () => {
 		expect(codes.has(176)).toBe(true);
 	});
 
-	// KNOWN v2 DEFECT (PLAN.md P0 finding): the UTF-8 exporter emits LF after
-	// every FULL-WIDTH row; on reimport the loader wraps at the column limit
-	// AND honors the LF, doubling the row count with blank rows. The v3
-	// UTF-8 writer (PLAN.md D9) replaces this path outright; flip to a plain
-	// it() when export -> import converges.
-	it.fails('UTF-8 export of a CP437 doc re-imports losslessly', async () => {
+	// Historical v2 defect (PLAN.md P0 finding), FIXED by D9's v3 writer +
+	// reader pair in P5: full-width rows + LF now reimport losslessly
+	// because the reader swallows the one LF after an auto-wrap, and the
+	// writer's SAUCE pins the real width.
+	it('UTF-8 export of a CP437 doc re-imports losslessly', async () => {
 		const bytes = makeAnsi({ columns: 80, rows: 25, seed: 55 });
 		const d1 = await decode('cp437.ans', bytes);
-		wireDoc(d1);
-		const e1 = await encode('utf8');
-		const d2 = await decode('rt.utf8.ans', e1);
-		expectSameCells(d2, d1, 'cp437->utf8');
+		const core1 = coreDecodeAns(bytes);
+		// core and v2 agree on the source doc
+		expect(v3ToU16(core1.doc).imageData).toEqual(d1.data);
+		const e1 = coreEncodeUtf8(core1.doc);
+		const d2 = coreDecodeAns(e1, { utf8: true });
+		expect(d2.doc.getRows()).toBe(core1.doc.getRows());
+		expect(v3ToU16(d2.doc).imageData).toEqual(v3ToU16(core1.doc).imageData);
 	});
 });
 

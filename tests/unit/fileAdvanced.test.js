@@ -1,5 +1,8 @@
 /* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createDocV3 } from '../../src/js/core/doc.js';
+
+const makeMockDoc = () => createDocV3({ columns: 80, rows: 25 });
 
 const canvasDataURL =
 	'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
@@ -7,6 +10,7 @@ const canvasDataURL =
 const mockState = {
 	textArtCanvas: {
 		getColumns: vi.fn(() => 80),
+		getDoc: vi.fn(() => makeMockDoc()),
 		getRows: vi.fn(() => 25),
 		getImageData: vi.fn(() => new Uint16Array(80 * 25).fill(0x2007)), // Space char with white on black
 		getIceColors: vi.fn(() => false),
@@ -123,7 +127,7 @@ describe('File Module - Advanced Operations', () => {
 	});
 
 	describe('Advanced Save Operations', () => {
-		it('should test comprehensive ANSI generation with all attribute types', () => {
+		it('should test comprehensive ANSI generation with all attribute types', async () => {
 			// Set up complex image data with various attributes
 			const complexImageData = new Uint16Array(80 * 25);
 
@@ -143,14 +147,14 @@ describe('File Module - Advanced Operations', () => {
 			mockState.textArtCanvas.getRows.mockReturnValue(25);
 
 			// Test ANSI generation
-			Save.ans();
+			await Save.ans();
 
 			expect(global.Blob).toHaveBeenCalled();
 			const blobCall = global.Blob.mock.calls[0];
 			expect(blobCall[1]).toEqual({ type: 'application/octet-stream' });
 		});
 
-		it('should test UTF-8 ANSI generation without mocking issues', () => {
+		it('should test UTF-8 ANSI generation without mocking issues', async () => {
 			// Set up image data with regular characters
 			const regularImageData = new Uint16Array(80 * 5);
 			for (let i = 0; i < 10; i++) {
@@ -161,12 +165,12 @@ describe('File Module - Advanced Operations', () => {
 			mockState.textArtCanvas.getColumns.mockReturnValue(80);
 			mockState.textArtCanvas.getRows.mockReturnValue(5);
 
-			Save.utf8();
+			await Save.utf8();
 
 			expect(global.Blob).toHaveBeenCalled();
 		});
 
-		it('should test XBIN generation with ICE colors and font data', () => {
+		it('should test XBIN generation with ICE colors and font data', async () => {
 			mockState.textArtCanvas.getIceColors.mockReturnValue(true);
 			mockState.textArtCanvas.getColumns.mockReturnValue(80);
 			mockState.textArtCanvas.getRows.mockReturnValue(25);
@@ -178,12 +182,12 @@ describe('File Module - Advanced Operations', () => {
 			}
 			mockState.textArtCanvas.getImageData.mockReturnValue(iceImageData);
 
-			Save.xb();
+			await Save.xb();
 
 			expect(global.Blob).toHaveBeenCalled();
 		});
 
-		it('should test BIN file generation with proper width validation', () => {
+		it('should test BIN file generation with proper width validation', async () => {
 			// Test with even width (should succeed)
 			mockState.textArtCanvas.getColumns.mockReturnValue(80);
 			mockState.textArtCanvas.getRows.mockReturnValue(25);
@@ -194,7 +198,7 @@ describe('File Module - Advanced Operations', () => {
 			}
 			mockState.textArtCanvas.getImageData.mockReturnValue(binImageData);
 
-			Save.bin();
+			await Save.bin();
 
 			expect(global.Blob).toHaveBeenCalled();
 
@@ -203,7 +207,7 @@ describe('File Module - Advanced Operations', () => {
 
 			// Test with odd width (should not create file)
 			mockState.textArtCanvas.getColumns.mockReturnValue(81);
-			Save.bin();
+			await Save.bin();
 
 			expect(global.Blob).not.toHaveBeenCalled();
 		});

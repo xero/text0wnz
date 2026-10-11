@@ -93,6 +93,13 @@ export interface GlyphDef {
 	codepoint: number;
 }
 
+// Font slots are doc-relative: 0 is the doc's classic font, the hex
+// bundles have fixed slots so saved glyph tables mean the same thing
+// in every session (runtime mapping: src/js/client/hexFontPages.js).
+export const FONT_SLOT_CLASSIC = 0;
+export const FONT_SLOT_UNSCII = 1;
+export const FONT_SLOT_UNIFONT = 2;
+
 export interface GlyphTable {
 	get: (glyphId: number) => GlyphDef | undefined;
 	/** Existing id for (fontSlot, codepoint), or append a new entry. */

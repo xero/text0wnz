@@ -99,7 +99,7 @@ describe('editor.loadDoc', () => {
 		expect(mirror.imageData[0] & 15).toBe(12); // nearest: bright red
 	});
 
-	it('adopts a dur movie: frames, delays, frozen xterm colors, glyph remap', async () => {
+	it('adopts a dur movie: frames, delays, live xterm colors, glyph remap', async () => {
 		const movie = {
 			DurMovie: {
 				formatVersion: 8,
@@ -144,10 +144,15 @@ describe('editor.loadDoc', () => {
 		expect(doc.frames).toHaveLength(2);
 		expect(doc.frames[0].delayMs).toBe(500);
 		expect(doc.getGlobalDelayMs()).toBe(250);
-		// low palette indexes stay live, xterm indexes freeze to RGB
+		// P5: every palette index stays LIVE (renderers resolve 16-255
+		// through the adopted doc palette / xterm table); the old
+		// freeze-to-RGB projection is gone
 		expect(doc.getCell(0, 0, 0).fg).toBe(paletteColor(12));
-		expect(doc.getCell(0, 1, 0).fg).toBe(rgbColor(255, 0, 0)); // xterm 196
+		expect(doc.getCell(0, 1, 0).fg).toBe(paletteColor(196));
 		expect(doc.getCell(0, 1, 0).bg).toBe(paletteColor(3));
+		// ...and the source's 256-entry palette is adopted wholesale
+		expect(doc.palette.length).toBe(256);
+		expect(doc.palette[196]).toBe(rgbColor(255, 0, 0));
 		// the snowman re-registers in THIS doc's glyph table
 		const snowman = doc.getCell(0, 1, 0).glyph & 0xffff;
 		expect(doc.glyphTable.get(snowman)).toEqual({
@@ -166,5 +171,129 @@ describe('editor.loadDoc', () => {
 		editor.loadDoc(source);
 		expect(v3ToU16(doc)).toEqual(v3ToU16(source));
 		expect(editor.undo()).toBe(false); // history gone
+	});
+});
+
+describe('unicode glyph ids through the editor (P5)', () => {
+	it('writes the full id to the planes but substitutes on the u16 side', () => {
+		const doc = createDocV3({ columns: 4, rows: 1 });
+		// unicode entries intern above the CP437 identity seed
+		const boxId = doc.glyphTable.idFor(1, 0x2510); // ┐ via hex slot: maps back
+		const hanId = doc.glyphTable.idFor(2, 0x4e2d); // 中: outside CP437
+		const writes: number[] = [];
+		const editor = createEditorCore(doc, {
+			onWrite: ({ word }) => writes.push(word),
+		});
+		editor.drawBlocks(draw => {
+			draw(boxId, 7, 0, 0, 0);
+			draw(hanId, 7, 0, 1, 0);
+		});
+		// planes keep the real ids (the GL renderer draws these)
+		expect(doc.frames[0].glyph[0] & 0xffff).toBe(boxId);
+		expect(doc.frames[0].glyph[1] & 0xffff).toBe(hanId);
+		// the mirror/wire words quantize like v3ToU16Lossy: strict reverse
+		// for ┐ (CP437 191), '?' for anything CP437 cannot express
+		expect(writes[0] >> 8).toBe(191);
+		expect(writes[1] >> 8).toBe(63);
+		expect(v3ToU16Lossy(doc).imageData[0] >> 8).toBe(191);
+		expect(v3ToU16Lossy(doc).imageData[1] >> 8).toBe(63);
+		// readCell round-trip: tools reading then re-writing a unicode
+		// cell must not corrupt it (the attribute-brush path)
+		const block = editor.getBlock(1, 0);
+		editor.drawBlocks(draw => {
+			draw(block.charCode, 4, 2, 1, 0);
+		});
+		expect(doc.frames[0].glyph[1] & 0xffff).toBe(hanId);
+	});
+});
+
+describe('extended colors through the editor (P5)', () => {
+	it('writes words to the planes and quantizes the u16 side', () => {
+		const doc = createDocV3({ columns: 4, rows: 1 });
+		const writes: number[] = [];
+		const editor = createEditorCore(doc, {
+			onWrite: ({ word }) => writes.push(word),
+		});
+		const red256 = paletteColor(196); // xterm 196 = pure red
+		const navy = rgbColor(0, 0, 128);
+		editor.drawBlocks(draw => {
+			draw(65, red256, navy, 0, 0);
+		});
+		expect(doc.frames[0].fg[0]).toBe(red256);
+		expect(doc.frames[0].bg[0]).toBe(navy);
+		// mirror quantizes: xterm red (255,0,0) sits nearer dim red (4)
+		// than bright red (255,85,85); navy lands on blue (1)
+		expect(writes[0] & 15).toBe(4);
+		expect((writes[0] >> 4) & 15).toBe(1);
+		// read-then-rewrite round trip preserves the exact words
+		const block = editor.getBlock(0, 0);
+		expect(block.foregroundColor).toBe(red256);
+		expect(block.backgroundColor).toBe(navy);
+		editor.drawBlocks(draw => {
+			draw(block.charCode, block.foregroundColor, block.backgroundColor, 1, 0);
+		});
+		expect(doc.frames[0].fg[1]).toBe(red256);
+		expect(doc.frames[0].bg[1]).toBe(navy);
+		// classic cells stay classic through the same path
+		editor.drawBlocks(draw => {
+			draw(66, 14, 4, 2, 0);
+		});
+		expect(doc.frames[0].fg[2]).toBe(paletteColor(14));
+		expect(writes[2] & 15).toBe(14);
+	});
+
+	it('keeps extended backgrounds out of the blink fold', () => {
+		const doc = createDocV3({ columns: 2, rows: 1 });
+		const editor = createEditorCore(doc);
+		editor.drawBlocks(draw => {
+			draw(65, 7, rgbColor(200, 0, 0), 0, 0);
+		});
+		// no ATTR_BLINK on the glyph word; the bg word is the raw RGB
+		expect(doc.frames[0].glyph[0] & 0x10000).toBe(0);
+		expect(doc.frames[0].bg[0]).toBe(rgbColor(200, 0, 0));
+	});
+});
+
+describe('ice toggle with extended colors (review finding 1)', () => {
+	it('never touches extended backgrounds in either direction', () => {
+		const doc = createDocV3({ columns: 4, rows: 1 });
+		const editor = createEditorCore(doc);
+		const xterm28 = paletteColor(28);
+		const rgb = rgbColor(10, 200, 10);
+		editor.drawBlocks(draw => {
+			draw(65, 7, xterm28, 0, 0);
+			draw(66, 7, rgb, 1, 0);
+			draw(67, 7, 4, 2, 0); // classic dim bg: still folds normally
+		});
+		editor.setIceColors(true);
+		expect(doc.frames[0].bg[0]).toBe(xterm28);
+		expect(doc.frames[0].bg[1]).toBe(rgb);
+		editor.setIceColors(false);
+		// extended bgs survive the round trip exactly, no spurious blink
+		expect(doc.frames[0].bg[0]).toBe(xterm28);
+		expect(doc.frames[0].bg[1]).toBe(rgb);
+		expect(doc.frames[0].glyph[0] & 0x10000).toBe(0);
+		expect(doc.frames[0].glyph[1] & 0x10000).toBe(0);
+		// classic cells keep v2 fold semantics
+		expect(doc.frames[0].bg[2]).toBe(paletteColor(4));
+	});
+});
+
+describe('loadDoc with short-palette sources (golden regression)', () => {
+	it('keeps high palette-index words live instead of freezing to black', () => {
+		// exactly what the UTF-8 reader produces: paletteColor(n >= 16)
+		// words on a doc whose own palette has only 16 entries; the old
+		// freeze projected these through source.palette[i] ?? 0 = BLACK
+		const source = createDocV3({ columns: 2, rows: 1 });
+		source.setCell(0, 0, 0, {
+			glyph: glyphWord(88, 0),
+			fg: paletteColor(196),
+			bg: paletteColor(232),
+		});
+		const doc = createDocV3({ columns: 80, rows: 25 });
+		const editor = createEditorCore(doc);
+		editor.loadDoc(source);
+		expect(doc.frames[0].fg[0]).toBe(paletteColor(196));
+		expect(doc.frames[0].bg[0]).toBe(paletteColor(232));
 	});
 });

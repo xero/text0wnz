@@ -21,6 +21,7 @@ import {
 	createGlyphTable,
 } from '../doc.js';
 import { cp437ToUnicode } from '../cp437.js';
+import { WIDTH_TABLE_VERSION } from '../width.js';
 import { DocMeta } from './bin.js';
 import {
 	CodecError,
@@ -52,6 +53,8 @@ interface EnvelopeJson {
 	palette: number[];
 	/** 'cp437' marks the identity table; otherwise [fontSlot, codepoint][]. */
 	glyphTable: 'cp437' | Array<[number, number]>;
+	/** East Asian Width table version the doc was authored under (P5). */
+	widthTable?: string;
 	frames: EnvelopeFrame[];
 	meta?: DocMeta;
 	/** Embedded XB font, when the doc carries one. */
@@ -120,6 +123,9 @@ export const encodeEnvelope = async (
 		glyphTable: isCP437Identity(doc)
 			? 'cp437'
 			: doc.glyphTable.entries().map(def => [def.fontSlot, def.codepoint]),
+		// pinned so width semantics stay reproducible across browser and
+		// app updates (PLAN §3.4); readers tolerate its absence
+		widthTable: WIDTH_TABLE_VERSION,
 		frames: doc.frames.map(frame => ({
 			...(frame.delayMs !== undefined ? { delayMs: frame.delayMs } : {}),
 			glyph: planeToBase64(frame.glyph),

@@ -746,10 +746,16 @@ const createShadingPanel = async () => {
 		};
 	};
 
+	// the preview panel is classic16 by design: an extended color word
+	// (P5) previews as white, while the actual paint path reads the real
+	// value from State.palette
+	const panelCanvas = value =>
+		canvases[value] ?? canvases[magicNumbers.DEFAULT_FOREGROUND ?? 7];
+
 	const foregroundChange = e => {
 		canvasContainer.removeChild(canvasContainer.firstChild);
 		canvasContainer.insertBefore(
-			canvases[e.detail],
+			panelCanvas(e.detail),
 			canvasContainer.firstChild,
 		);
 		cursor.show();
@@ -762,7 +768,7 @@ const createShadingPanel = async () => {
 				canvasContainer.removeChild(canvasContainer.firstChild);
 			}
 			canvasContainer.insertBefore(
-				canvases[State.palette.getForegroundColor()],
+				panelCanvas(State.palette.getForegroundColor()),
 				canvasContainer.firstChild,
 			);
 			updateCursor();
@@ -773,8 +779,11 @@ const createShadingPanel = async () => {
 	const select = async charCode => {
 		halfBlockMode = false;
 		x = 3 - (charCode - 176);
-		y = State.palette.getBackgroundColor();
-		if (y > State.palette.getForegroundColor()) {
+		const bg = State.palette.getBackgroundColor();
+		const fg = State.palette.getForegroundColor();
+		// extended words (P5) have no panel row; anchor the cursor at 0
+		y = bg >= 0 && bg <= 15 ? bg : 0;
+		if (fg >= 0 && fg <= 15 && y > fg) {
 			y -= 1;
 		}
 		updateCursor();
@@ -791,7 +800,7 @@ const createShadingPanel = async () => {
 	await generateCanvases();
 	updateCursor();
 	canvasContainer.insertBefore(
-		canvases[State.palette.getForegroundColor()],
+		panelCanvas(State.palette.getForegroundColor()),
 		canvasContainer.firstChild,
 	);
 	panel.append(canvasContainer);
@@ -1762,10 +1771,13 @@ const createAttributeBrushController = () => {
 		let newForeground, newBackground;
 
 		if (altKey) {
-			// Alt+click modifies background color only
+			// Alt+click modifies background color only (the -8 fold is
+			// classic16 semantics; extended color words pass through)
 			newForeground = block.foregroundColor;
 			newBackground =
-				currentForeground > 7 ? currentForeground - 8 : currentForeground;
+				currentForeground > 7 && currentForeground <= 15
+					? currentForeground - 8
+					: currentForeground;
 		} else {
 			// Normal click modifies both foreground and background colors
 			newForeground = currentForeground;

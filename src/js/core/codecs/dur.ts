@@ -56,7 +56,7 @@ interface DurMovieJson {
 }
 
 /** xterm-256 entries 16-255: 6x6x6 color cube, then the gray ramp. */
-const xterm256RGB = (index: number): number => {
+export const xterm256RGB = (index: number): number => {
 	if (index >= 232) {
 		const v = 8 + 10 * (index - 232);
 		return rgbColor(v, v, v);

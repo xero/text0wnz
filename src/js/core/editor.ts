@@ -29,7 +29,8 @@ import {
 	paletteColor,
 	paletteIndexOf,
 } from './doc.js';
-import { U16Doc, v3ToU16, v3ToU16Lossy } from './convert.js';
+import { U16Doc, quantizeColorWord, v3ToU16, v3ToU16Lossy } from './convert.js';
+import { unicodeToCp437Strict } from './cp437.js';
 import {
 	EditCell,
 	classifyHalfBlock,
@@ -163,32 +164,67 @@ export const createEditorCore = (
 
 	// ------------------------------------------------------- cell access
 
-	/** Classic16 view of a cell; non-classic parts degrade like v2 nibbles. */
+	/**
+	 * Cell view for the tools. Colors are classic 0-15 indexes when the
+	 * plane word is one; anything else (P5 extended colors: tag-bit
+	 * indexes above 15, raw RGB words) passes through as the WORD so a
+	 * read-then-rewrite round trip cannot corrupt it. Values 0-15 and
+	 * words are distinguishable everywhere that matters: index words
+	 * carry bit 31, and the color picker never emits RGB words <= 15.
+	 */
 	const readCell = (index: number): EditCell => {
 		const frame = doc.frames[0];
 		const glyph = frame.glyph[index];
-		const fgWord = frame.fg[index];
-		const bgWord = frame.bg[index];
 		const blink = (attrsOf(glyph) & ATTR_BLINK) !== 0;
-		const fg = isPaletteColor(fgWord) ? paletteIndexOf(fgWord) & 15 : 0;
-		const bgIndex = isPaletteColor(bgWord) ? paletteIndexOf(bgWord) & 15 : 0;
+		const classic = (word: number): number | null =>
+			isPaletteColor(word) && paletteIndexOf(word) <= 15
+				? paletteIndexOf(word)
+				: null;
+		const fgIndex = classic(frame.fg[index]);
+		const bgIndex = classic(frame.bg[index]);
 		return {
 			charCode: glyphIdOf(glyph),
-			fg,
-			bg: blink ? bgIndex | 8 : bgIndex,
+			fg: fgIndex ?? frame.fg[index] >>> 0,
+			bg:
+				bgIndex !== null
+					? blink
+						? bgIndex | 8
+						: bgIndex
+					: frame.bg[index] >>> 0,
 		};
 	};
 
-	const packWord = (cell: EditCell): number =>
-		((cell.charCode & 0xff) << 8) | ((cell.bg & 15) << 4) | (cell.fg & 15);
+	const isClassic = (value: number): boolean => value >= 0 && value <= 15;
 
-	/** Fold a classic16 cell into plane words per the doc's ice flag. */
+	const packWord = (cell: EditCell): number => {
+		let charCode = cell.charCode;
+		if (charCode > 0xff) {
+			// unicode glyph ids quantize for the u16 mirror and the vanilla
+			// collab wire exactly like v3ToU16Lossy: strict reverse else '?'
+			const def = doc.glyphTable.get(charCode);
+			charCode = (def && unicodeToCp437Strict(def.codepoint)) ?? 63;
+		}
+		// extended colors quantize the same way v3ToU16Lossy does, so the
+		// mirror, the wire, and the lossy projection can never disagree
+		const fgIndex = isClassic(cell.fg)
+			? cell.fg & 15
+			: quantizeColorWord(cell.fg >>> 0, doc, 16);
+		const bgNibble = isClassic(cell.bg)
+			? cell.bg & 15
+			: quantizeColorWord(cell.bg >>> 0, doc, doc.getIceColors() ? 16 : 8);
+		return (charCode << 8) | (bgNibble << 4) | fgIndex;
+	};
+
+	/** Fold a cell into plane words per the doc's ice flag. */
 	const planeWords = (cell: EditCell): Cell => {
-		const blink = !doc.getIceColors() && cell.bg > 7;
+		const classicBg = isClassic(cell.bg);
+		const blink = !doc.getIceColors() && classicBg && cell.bg > 7;
 		return {
 			glyph: glyphWord(cell.charCode, blink ? ATTR_BLINK : 0),
-			fg: paletteColor(cell.fg & 15),
-			bg: paletteColor(blink ? cell.bg & 7 : cell.bg & 15),
+			fg: isClassic(cell.fg) ? paletteColor(cell.fg & 15) : cell.fg >>> 0,
+			bg: classicBg
+				? paletteColor(blink ? cell.bg & 7 : cell.bg & 15)
+				: cell.bg >>> 0,
 		};
 	};
 
@@ -315,10 +351,17 @@ export const createEditorCore = (
 		ice: boolean,
 	) => {
 		const attrs = attrsOf(frame.glyph[i]);
+		// the blink<->bright fold is CLASSIC16 semantics only: extended
+		// backgrounds (raw RGB, palette indexes above 15) pass through the
+		// ice toggle untouched, keeping their blink attr as-is (O7: the
+		// attr bit exists everywhere; ice folding is 16-color-only)
+		const classicBg =
+			isPaletteColor(frame.bg[i]) && paletteIndexOf(frame.bg[i]) <= 15;
+		if (!classicBg) {
+			return;
+		}
 		if (ice && attrs & ATTR_BLINK) {
-			const bgIndex = isPaletteColor(frame.bg[i])
-				? paletteIndexOf(frame.bg[i]) & 7
-				: 0;
+			const bgIndex = paletteIndexOf(frame.bg[i]) & 7;
 			frame.glyph[i] = glyphWord(
 				glyphIdOf(frame.glyph[i]),
 				attrs & ~ATTR_BLINK,
@@ -327,8 +370,7 @@ export const createEditorCore = (
 		} else if (
 			!ice &&
 			!(attrs & ATTR_BLINK) &&
-			isPaletteColor(frame.bg[i]) &&
-			(paletteIndexOf(frame.bg[i]) & 15) > 7
+			paletteIndexOf(frame.bg[i]) > 7
 		) {
 			const bgIndex = paletteIndexOf(frame.bg[i]) & 15;
 			frame.glyph[i] = glyphWord(glyphIdOf(frame.glyph[i]), attrs | ATTR_BLINK);
@@ -464,18 +506,12 @@ export const createEditorCore = (
 			while (doc.frames.length < source.frames.length) {
 				doc.addFrame({ force: true });
 			}
-			const freeze = (word: number): number => {
-				if (!isPaletteColor(word)) {
-					return word;
-				}
-				const index = paletteIndexOf(word);
-				if (index < 16) {
-					return word; // live palette semantics, like every classic load
-				}
-				return index < source.palette.length
-					? source.palette[index] & 0x00ffffff
-					: 0;
-			};
+			// adopt the source palette wholesale: index words stay LIVE
+			// (P5: the renderers resolve indexes past the palette length
+			// through the canonical xterm table, so the old freeze-to-RGB
+			// projection is gone - it also turned short-palette docs'
+			// high indexes into black)
+			doc.palette = new Uint32Array(source.palette);
 			source.frames.forEach((src, f) => {
 				const target = doc.frames[f];
 				target.delayMs = src.delayMs;
@@ -485,8 +521,8 @@ export const createEditorCore = (
 						? doc.glyphTable.idFor(def.fontSlot, def.codepoint)
 						: 0;
 					target.glyph[i] = glyphWord(id, attrsOf(src.glyph[i]));
-					target.fg[i] = freeze(src.fg[i]);
-					target.bg[i] = freeze(src.bg[i]);
+					target.fg[i] = src.fg[i];
+					target.bg[i] = src.bg[i];
 				}
 			});
 		},

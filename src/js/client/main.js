@@ -6,6 +6,8 @@ import { createTextArtCanvas } from './canvas.js';
 import { createWorkerHandler, createChatController } from './network.js';
 import { trustedMessage } from './messageGuard.js';
 import { createZoomController } from './zoom.js';
+import { createCharsetPicker } from './charsetPicker.js';
+import { createColorPanel } from './colorPanel.js';
 import { FontCache } from './fontCache.js';
 import {
 	$,
@@ -523,6 +525,7 @@ const initializeAppComponents = async () => {
 	});
 	onClick($('saveAnsi'), Save.ans);
 	onClick($('saveUtf8'), Save.utf8);
+	onClick($('saveUtf8Blink'), Save.utf8Blink);
 	onClick($('savePlaintext'), Save.plainText);
 	onClick($('saveBin'), Save.bin);
 	onClick($('saveXbin'), Save.xb);
@@ -541,6 +544,13 @@ const initializeAppComponents = async () => {
 	onClick($('navDelete'), State.pasteTool.deleteSelection);
 	onClick($('navUndo'), State.textArtCanvas.undo);
 	onClick($('navRedo'), State.textArtCanvas.redo);
+
+	// P5 charset picker (durdraw lineage)
+	const charsetPicker = createCharsetPicker();
+	onClick($('charsetPicker'), charsetPicker.show);
+
+	// P5 extended colors: the strip's 256/RGB expansion panel
+	createColorPanel();
 
 	// Credz
 	onClick($('about'), _ => {

@@ -1,5 +1,8 @@
 /* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createDocV3 } from '../../src/js/core/doc.js';
+
+const makeMockDoc = () => createDocV3({ columns: 80, rows: 25 });
 
 const canvasDataURL =
 	'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
@@ -7,6 +10,7 @@ const canvasDataURL =
 const mockState = {
 	textArtCanvas: {
 		getColumns: vi.fn(() => 80),
+		getDoc: vi.fn(() => makeMockDoc()),
 		getRows: vi.fn(() => 25),
 		getImageData: vi.fn(() => new Uint16Array(80 * 25).fill(0x2007)), // Space char with white on black
 		getIceColors: vi.fn(() => false),
@@ -286,7 +290,7 @@ describe('File Module - Load and Save Operations', () => {
 			it('should have all save format functions', () => {
 				expect(typeof Save.ans).toBe('function');
 				expect(typeof Save.utf8).toBe('function');
-				expect(typeof Save.utf8noBlink).toBe('function');
+				expect(typeof Save.utf8Blink).toBe('function');
 				expect(typeof Save.plainText).toBe('function');
 				expect(typeof Save.bin).toBe('function');
 				expect(typeof Save.xb).toBe('function');
@@ -295,86 +299,86 @@ describe('File Module - Load and Save Operations', () => {
 		});
 
 		describe('ANSI Save Format', () => {
-			it('should save ANSI files with proper headers', () => {
+			it('should save ANSI files with proper headers', async () => {
 				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
 
-				Save.ans();
+				await Save.ans();
 
 				expect(createElementSpy).toHaveBeenCalledWith('a');
 				expect(global.Blob).toHaveBeenCalled();
 			});
 
-			it('should save UTF-8 ANSI files', () => {
+			it('should save UTF-8 ANSI files', async () => {
 				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
 
-				Save.utf8();
+				await Save.utf8();
 
 				expect(createElementSpy).toHaveBeenCalledWith('a');
 			});
 
-			it('should save UTF-8 ANSI files without blink', () => {
+			it('should save UTF-8 ANSI files without blink', async () => {
 				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
 
-				Save.utf8noBlink();
+				await Save.utf8Blink();
 
 				expect(createElementSpy).toHaveBeenCalledWith('a');
 			});
 
-			it('should save plain text files without escape codes', () => {
+			it('should save plain text files without escape codes', async () => {
 				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
 
-				Save.plainText();
+				await Save.plainText();
 
 				expect(createElementSpy).toHaveBeenCalledWith('a');
 			});
 		});
 
 		describe('Binary Save Format', () => {
-			it('should save BIN files when width is even', () => {
+			it('should save BIN files when width is even', async () => {
 				mockState.textArtCanvas.getColumns.mockReturnValue(80); // Even width
 				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
 
-				Save.bin();
+				await Save.bin();
 
 				expect(createElementSpy).toHaveBeenCalledWith('a');
 				expect(global.Blob).toHaveBeenCalled();
 			});
 
-			it('should not save BIN files when width is odd', () => {
+			it('should not save BIN files when width is odd', async () => {
 				mockState.textArtCanvas.getColumns.mockReturnValue(81); // Odd width
 				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
 
-				Save.bin();
+				await Save.bin();
 
 				expect(createElementSpy).not.toHaveBeenCalled();
 			});
 		});
 
 		describe('XBIN Save Format', () => {
-			it('should save XB files with proper headers', () => {
+			it('should save XB files with proper headers', async () => {
 				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
 
-				Save.xb();
+				await Save.xb();
 
 				expect(createElementSpy).toHaveBeenCalledWith('a');
 				expect(global.Blob).toHaveBeenCalled();
 			});
 
-			it('should save XB files with ICE colors when enabled', () => {
+			it('should save XB files with ICE colors when enabled', async () => {
 				mockState.textArtCanvas.getIceColors.mockReturnValue(true);
 				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
 
-				Save.xb();
+				await Save.xb();
 
 				expect(createElementSpy).toHaveBeenCalledWith('a');
 			});
 		});
 
 		describe('PNG Save Format', () => {
-			it('should save PNG files from canvas data URL', () => {
+			it('should save PNG files from canvas data URL', async () => {
 				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
 
-				Save.png();
+				await Save.png();
 
 				expect(createElementSpy).toHaveBeenCalledWith('a');
 				expect(mockState.textArtCanvas.getImage).toHaveBeenCalled();
@@ -403,21 +407,21 @@ describe('File Module - Load and Save Operations', () => {
 		});
 
 		describe('Browser Compatibility', () => {
-			it('should handle Safari browser differently', () => {
+			it('should handle Safari browser differently', async () => {
 				global.navigator.userAgent = 'Safari/605.1.15';
 				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
 
-				Save.ans();
+				await Save.ans();
 
 				expect(createElementSpy).toHaveBeenCalledWith('a');
 				expect(global.btoa).toHaveBeenCalled();
 			});
 
-			it('should handle Chrome browser with Blob URLs', () => {
+			it('should handle Chrome browser with Blob URLs', async () => {
 				global.navigator.userAgent = 'Chrome/90.0';
 				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
 
-				Save.ans();
+				await Save.ans();
 
 				expect(createElementSpy).toHaveBeenCalledWith('a');
 				expect(global.Blob).toHaveBeenCalled();
@@ -426,46 +430,46 @@ describe('File Module - Load and Save Operations', () => {
 		});
 
 		describe('SAUCE Record Creation', () => {
-			it('should create SAUCE records with proper metadata', () => {
+			it('should create SAUCE records with proper metadata', async () => {
 				mockUIElements['sauce-title'].value = 'Test Title';
 				mockUIElements['sauce-author'].value = 'Test Author';
 				mockUIElements['sauce-group'].value = 'Test Group';
 				mockUIElements['sauce-comments'].value = 'Line 1\nLine 2\nLine 3';
 
-				Save.ans();
+				await Save.ans();
 
 				expect(global.Blob).toHaveBeenCalled();
 			});
 
-			it('should handle empty SAUCE fields', () => {
+			it('should handle empty SAUCE fields', async () => {
 				mockUIElements['sauce-title'].value = '';
 				mockUIElements['sauce-author'].value = '';
 				mockUIElements['sauce-group'].value = '';
 				mockUIElements['sauce-comments'].value = '';
 
-				Save.ans();
+				await Save.ans();
 
 				expect(global.Blob).toHaveBeenCalled();
 			});
 
-			it('should handle long comment blocks', () => {
+			it('should handle long comment blocks', async () => {
 				const longComments = Array(300).fill('Comment line').join('\n');
 				mockUIElements['sauce-comments'].value = longComments;
 
-				Save.ans();
+				await Save.ans();
 
 				expect(global.Blob).toHaveBeenCalled();
 			});
 		});
 
 		describe('Date Handling', () => {
-			it('should format dates correctly in SAUCE records', () => {
+			it('should format dates correctly in SAUCE records', async () => {
 				const mockDate = new Date('2023-03-15');
 				vi.spyOn(global, 'Date').mockImplementation(function () {
 					return mockDate;
 				});
 
-				Save.ans();
+				await Save.ans();
 
 				expect(global.Blob).toHaveBeenCalled();
 				global.Date.mockRestore();
@@ -473,28 +477,28 @@ describe('File Module - Load and Save Operations', () => {
 		});
 
 		describe('Font and Color Flags', () => {
-			it('should set ICE colors flag when enabled', () => {
+			it('should set ICE colors flag when enabled', async () => {
 				mockState.textArtCanvas.getIceColors.mockReturnValue(true);
 
-				Save.ans();
+				await Save.ans();
 
 				expect(global.Blob).toHaveBeenCalled();
 			});
 
-			it('should set letter spacing flags correctly', () => {
+			it('should set letter spacing flags correctly', async () => {
 				mockState.font.getLetterSpacing.mockReturnValue(true);
 
-				Save.ans();
+				await Save.ans();
 
 				expect(global.Blob).toHaveBeenCalled();
 			});
 
-			it('should handle different font names in SAUCE', () => {
+			it('should handle different font names in SAUCE', async () => {
 				mockState.textArtCanvas.getCurrentFontName.mockReturnValue(
 					'CP850 8x16',
 				);
 
-				Save.ans();
+				await Save.ans();
 
 				// Test that the function call completes without error
 				expect(global.Blob).toHaveBeenCalled();

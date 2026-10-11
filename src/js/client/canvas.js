@@ -4,6 +4,7 @@ import { createCanvas } from './ui.js';
 import { loadFontFromImage, loadFontFromXBData } from './font.js';
 import { createPalette, createDefaultPalette } from './palette.js';
 import { createGLRenderer } from './glRenderer.js';
+import { createHexFontPages } from './hexFontPages.js';
 import {
 	cellFromPoint,
 	clampCell,
@@ -151,6 +152,24 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	// the automatic fallback wherever webgl2 is unavailable; its deletion is
 	// owner-triggered after the next tagged release.
 	let glRenderer = null;
+	// unicode glyph pages (P5): created on the first glyph id >= 256, so
+	// classic docs never fetch the manifest or any block
+	let hexPages = null;
+	const ensureHexPages = () => {
+		if (!hexPages) {
+			hexPages = createHexFontPages({
+				baseUrl: `${State.fontDir}u`,
+				onBlocksLoaded: () => {
+					if (glRenderer) {
+						glRenderer.redraw();
+					}
+					// the F-key bar and charset picker re-render from this
+					document.dispatchEvent(new CustomEvent('onHexBlocksLoaded'));
+				},
+			});
+		}
+		return hexPages;
+	};
 	if (
 		typeof window !== 'undefined' &&
 		new URLSearchParams(window.location.search).get('renderer') !== '2d'
@@ -163,6 +182,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				// blink); the u16 mirror stays for the chunk fallback + collab
 				getPlanes: () => doc.frames[0],
 				getIceColors: iceColorsNow,
+				getGlyphDef: glyphId => doc.glyphTable.get(glyphId),
+				getHexPages: ensureHexPages,
+				getPalette: () => doc.palette,
 			});
 		} catch (error) {
 			console.warn('[Canvas] GL renderer init failed', error);
@@ -1265,6 +1287,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		columns = doc.getColumns();
 		rows = doc.getRows();
 		imageData = editor.toU16Lossy().imageData;
+		// start every hex block this doc needs now, so scrolling and PNG
+		// exports meet loaded glyphs instead of substitute boxes
+		if (doc.glyphTable.size() > 256) {
+			ensureHexPages().preload(doc.glyphTable.entries());
+		}
 		scheduleJournalKeyframe();
 		createCanvases();
 		updateTimer();
@@ -1628,11 +1655,52 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		callback();
 	});
 
+	/**
+	 * Resolve codepoints outside CP437 to doc glyph ids for paste/import
+	 * (P5): picks a hex font slot per the v1 width policy and interns
+	 * into the glyph table. null marks a codepoint that must substitute
+	 * (no coverage, or wide/emoji/combining under single-width v1).
+	 *
+	 * @param {Iterable<number>} codepoints
+	 * @returns {Promise<Map<number, number|null>>}
+	 */
+	const resolveUnicode = async codepoints => {
+		const resolved = new Map();
+		// collab lockout (visible in the charset UI): the vanilla Moebius
+		// dialect cannot carry unicode cells, and an apply-locally sender
+		// would silently diverge from every peer - substitute until a
+		// protocol extension negotiates unicode (SERVER_CAPS, ids 23+)
+		const locked = State.network?.isConnected?.() === true;
+		const unique = [...new Set(codepoints)];
+		if (locked) {
+			for (const codepoint of unique) {
+				resolved.set(codepoint, null);
+			}
+			return resolved;
+		}
+		// slots resolve in parallel (block fetches dedupe inside the
+		// pages manager); interning stays synchronous afterwards
+		const slots = await Promise.all(
+			unique.map(codepoint => ensureHexPages().pickSlot(codepoint)),
+		);
+		unique.forEach((codepoint, i) => {
+			resolved.set(
+				codepoint,
+				slots[i] === null ? null : doc.glyphTable.idFor(slots[i], codepoint),
+			);
+		});
+		return resolved;
+	};
+
 	return {
 		resize: resize,
 		redrawEntireImage: redrawEntireImage,
 		getRendererId: () =>
 			glRenderer ? 'webgl2-slack-buffer' : 'canvas2d-chunks',
+		resolveUnicode: resolveUnicode,
+		// preview-only (never interns); tri-state like glyphBits
+		unicodeGlyphBits: (codepoint, fontW, fontH) =>
+			ensureHexPages().previewBits(codepoint, fontW, fontH),
 		setFont: setFont,
 		getIceColors: getIceColors,
 		setIceColors: setIceColors,
