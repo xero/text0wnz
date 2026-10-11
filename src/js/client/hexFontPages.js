@@ -129,22 +129,12 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 		return out;
 	};
 
-	const glyphBits = (fontSlot, codepoint, fontW, fontH) => {
-		const fontKey = SLOT_KEYS.get(fontSlot);
-		if (!fontKey) {
-			return null;
-		}
-		if (!manifest) {
-			if (manifestFailed) {
-				return null;
-			}
-			loadManifest();
-			return undefined;
-		}
+	/** single-font lookup; glyphBits layers the cross-font fallback */
+	const glyphBitsIn = (fontKey, codepoint, fontW, fontH) => {
 		if (!fontHasBlock(fontKey, codepoint)) {
 			return null;
 		}
-		const cacheKey = `${fontSlot}:${codepoint}:${fontW}x${fontH}`;
+		const cacheKey = `${fontKey}:${codepoint}:${fontW}x${fontH}`;
 		const cached = scaledCache.get(cacheKey);
 		if (cached !== undefined) {
 			return cached;
@@ -166,6 +156,44 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 		const bits = scaleBits(reader.glyph(codepoint), fontW, fontH);
 		scaledCache.set(cacheKey, bits);
 		return bits;
+	};
+
+	/**
+	 * The glyph def's fontSlot is a PREFERENCE: when that font
+	 * definitively lacks the glyph, the other bundled fonts cover for
+	 * it (a doc interned under unscii still renders its octants from
+	 * Unifont). Only a definitive miss everywhere returns null.
+	 */
+	const glyphBits = (fontSlot, codepoint, fontW, fontH) => {
+		const primary = SLOT_KEYS.get(fontSlot);
+		if (!primary) {
+			return null;
+		}
+		if (!manifest) {
+			if (manifestFailed) {
+				return null;
+			}
+			loadManifest();
+			return undefined;
+		}
+		const order = [
+			primary,
+			...[...SLOT_KEYS.values()].filter(key => key !== primary),
+		];
+		for (const fontKey of order) {
+			const bits = glyphBitsIn(fontKey, codepoint, fontW, fontH);
+			if (bits instanceof Uint8Array) {
+				return bits;
+			}
+			if (bits === undefined) {
+				// wait for this font before probing the next: the common
+				// case resolves here, and eager fallback fetches would
+				// double every block request; onBlocksLoaded repaints
+				// drive the next hop when this font turns up empty
+				return undefined;
+			}
+		}
+		return null;
 	};
 
 	/**

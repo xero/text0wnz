@@ -87,9 +87,15 @@ describe('glyphBits', () => {
 		// first row of the test glyph is solid
 		expect([...bits.slice(0, 8)]).toEqual([1, 1, 1, 1, 1, 1, 1, 1]);
 		expect(ready).toHaveBeenCalled();
-		// absent codepoint in a present block
+		// absent in unscii's block: the unifont fallback kicks in and is
+		// pending first, then definitively absent there too
+		expect(pages.glyphBits(FONT_SLOT_UNSCII, 0x2593, 8, 16)).toBeUndefined();
+		await flush();
 		expect(pages.glyphBits(FONT_SLOT_UNSCII, 0x2593, 8, 16)).toBeNull();
-		// block the font does not list: no fetch, definitive null
+		// block unscii does not list: falls back to unifont, where 4e2d
+		// exists but is WIDE, so the v1 policy substitutes
+		expect(pages.glyphBits(FONT_SLOT_UNSCII, 0x4e2d, 8, 16)).toBeUndefined();
+		await flush();
 		expect(pages.glyphBits(FONT_SLOT_UNSCII, 0x4e2d, 8, 16)).toBeNull();
 		// unknown slot (classic font never routes here)
 		expect(pages.glyphBits(FONT_SLOT_CLASSIC, 0x41, 8, 16)).toBeNull();
@@ -129,7 +135,7 @@ describe('glyphBits', () => {
 		).toBeInstanceOf(Uint8Array);
 	});
 
-	it('never retry-storms a failed block and dedupes in-flight fetches', async () => {
+	it('never retry-storms a failed block, and the other font covers', async () => {
 		const { fetchFn, requests } = makeFetch({
 			fonts: UNSCII_FONTS,
 			blocks: BLOCKS,
@@ -139,13 +145,20 @@ describe('glyphBits', () => {
 		pages.glyphBits(FONT_SLOT_UNSCII, 0x2592, 8, 16);
 		await flush();
 		pages.glyphBits(FONT_SLOT_UNSCII, 0x2592, 8, 16);
-		pages.glyphBits(FONT_SLOT_UNSCII, 0x2593, 8, 16);
 		await flush();
-		// failed: definitive null, and no further requests on re-ask
-		expect(pages.glyphBits(FONT_SLOT_UNSCII, 0x2592, 8, 16)).toBeNull();
-		const count = requests.length;
+		// the unscii fetch failed for the session; this ask starts the
+		// unifont fallback fetch, whose copy then renders
 		pages.glyphBits(FONT_SLOT_UNSCII, 0x2592, 8, 16);
 		await flush();
+		expect(
+			pages.glyphBits(FONT_SLOT_UNSCII, 0x2592, 8, 16),
+		).toBeInstanceOf(Uint8Array);
+		// and the failed block is never re-fetched
+		const count = requests.length;
+		pages.glyphBits(FONT_SLOT_UNSCII, 0x2592, 8, 16);
+		pages.glyphBits(FONT_SLOT_UNSCII, 0x2593, 8, 16);
+		await flush();
+		expect(requests.filter(u => u.includes('unscii16/25')).length).toBe(1);
 		expect(requests.length).toBe(count);
 	});
 
