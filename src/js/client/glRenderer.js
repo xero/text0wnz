@@ -12,10 +12,16 @@
  * coverage window, so full repaints, zoom, font, palette, and ice changes
  * all cost well under a frame (vs seconds on the chunk renderer).
  *
- * Renders the existing u16 doc model (charCode<<8 | bg<<4 | fg) with the
- * live font and palette. Blink runs as a uniform flip + repaint on the same
- * 500ms cadence as the 2D path. Exports rasterize on the CPU from doc data
- * and the 1bpp font (byte-equal to the 2D glyph blits at integer zoom).
+ * Renders the v3 doc planes (PLAN §3.2): per-instance data is the raw
+ * glyph/fg/bg words, and color resolve follows the tag bit in-shader -
+ * bit 31 set means a live palette index, clear means frozen 0x00RRGGBB.
+ * Blink is attr bit 0 of the glyph word (the editor folds the classic
+ * bright-bg convention into it), flipped by a uniform + repaint on the
+ * same 500ms cadence as the 2D path. Exports rasterize on the CPU from
+ * the same planes (byte-equal to the 2D glyph blits at integer zoom).
+ * Glyph ids address the classic 256-glyph atlas through their low byte
+ * until the P3 hex-atlas pipeline; the 16-entry palette uniform likewise
+ * masks indexes to 0-15 until 256-color docs arrive.
  *
  * Context loss (mandatory per plan): loss is intercepted, GL state is
  * rebuilt on restore; repeated loss leaves the last frame visible and logs.
@@ -31,17 +37,28 @@ const TOLERANCE_SCREENS = 0.5;
 
 const VERTEX_SRC = `#version 300 es
 in vec2 a_corner;
-in float a_cell;
+// per-instance plane words: x = glyph (id:16|attrs:8), y = fg, z = bg
+in uvec3 a_cell;
 uniform vec2 u_cellPx;
 uniform vec2 u_canvasPx;
 uniform float u_cols;
-uniform float u_ice;
 uniform float u_blink;
 uniform vec4 u_palette[16];
 flat out float v_char;
 flat out vec4 v_fg;
 flat out vec4 v_bg;
 out vec2 v_pix;
+// tag-bit resolve (PLAN §3.2): bit 31 = palette index, else 0x00RRGGBB
+vec4 cellColor(uint word) {
+	if ((word & 0x80000000u) != 0u) {
+		return u_palette[int(word & 15u)];
+	}
+	return vec4(
+		float((word >> 16) & 0xffu) / 255.0,
+		float((word >> 8) & 0xffu) / 255.0,
+		float(word & 0xffu) / 255.0,
+		1.0);
+}
 void main() {
 	float id = float(gl_InstanceID);
 	float col = mod(id, u_cols);
@@ -50,20 +67,14 @@ void main() {
 	vec2 ndc = px / u_canvasPx * 2.0 - 1.0;
 	gl_Position = vec4(ndc.x, -ndc.y, 0.0, 1.0);
 	v_pix = a_corner * u_cellPx;
-	float ch = floor(a_cell / 256.0);
-	float color = a_cell - ch * 256.0;
-	float bg = floor(color / 16.0);
-	float fg = color - bg * 16.0;
-	float blinkCell = 0.0;
-	// without ice, bright backgrounds mean blink: bg drops to the dim half
-	// and the glyph hides during the off phase (matches the 2D chunk path)
-	if (u_ice < 0.5 && bg > 7.0) {
-		bg -= 8.0;
-		blinkCell = 1.0;
-	}
-	v_char = ch;
-	v_fg = (u_blink > 0.5 && blinkCell > 0.5) ? u_palette[int(bg)] : u_palette[int(fg)];
-	v_bg = u_palette[int(bg)];
+	// low byte addresses the classic atlas until the P3 hex-atlas pages
+	v_char = float(a_cell.x & 0xffu);
+	vec4 fg = cellColor(a_cell.y);
+	vec4 bg = cellColor(a_cell.z);
+	// attr bit 0 = blink: the glyph hides during the off phase
+	bool blinkCell = (a_cell.x & 0x10000u) != 0u;
+	v_fg = (u_blink > 0.5 && blinkCell) ? bg : fg;
+	v_bg = bg;
 }`;
 
 const FRAGMENT_SRC = `#version 300 es
@@ -98,7 +109,7 @@ void main() {
 /**
  * @param {HTMLElement} canvasContainer - the sized, scrolled content element
  * @param {Object} host - doc accessors from the text art canvas closure:
- *   { getColumns, getRows, getImageData, getIceColors }
+ *   { getColumns, getRows, getPlanes, getIceColors }
  * @returns {Object|null} renderer, or null when WebGL2 is unavailable
  */
 const createGLRenderer = (canvasContainer, host) => {
@@ -166,7 +177,6 @@ const createGLRenderer = (canvasContainer, host) => {
 			'u_cellPx',
 			'u_canvasPx',
 			'u_cols',
-			'u_ice',
 			'u_blink',
 			'u_palette',
 			'u_atlas',
@@ -191,12 +201,13 @@ const createGLRenderer = (canvasContainer, host) => {
 		gl.enableVertexAttribArray(cornerLoc);
 		gl.vertexAttribPointer(cornerLoc, 2, gl.FLOAT, false, 0, 0);
 
-		// per-instance: the raw u16 cell, read as an exact float
+		// per-instance: the three raw plane words, interleaved (12B/cell,
+		// the §3.1 coverage repack - ~100-300KB per repaint window)
 		cellBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, cellBuffer);
 		const cellLoc = gl.getAttribLocation(program, 'a_cell');
 		gl.enableVertexAttribArray(cellLoc);
-		gl.vertexAttribPointer(cellLoc, 1, gl.UNSIGNED_SHORT, false, 0, 0);
+		gl.vertexAttribIPointer(cellLoc, 3, gl.UNSIGNED_INT, 0, 0);
 		gl.vertexAttribDivisor(cellLoc, 1);
 
 		gl.uniform1i(uniforms.u_atlas, 0);
@@ -319,25 +330,25 @@ const createGLRenderer = (canvasContainer, host) => {
 		}
 		const columns = host.getColumns();
 		const rows = host.getRows();
-		const iceColors = host.getIceColors();
-		const imageData = host.getImageData();
+		const { glyph, fg, bg } = host.getPlanes();
 		coverageRows = Math.min(canvasRows, rows - anchorRow);
 		const first = anchorRow * columns;
 		const count = coverageRows * columns;
-		const slice = imageData.subarray(first, first + count);
-		// blink cells in coverage decide whether the blink tick repaints
+		// interleave the coverage window from the planes; blink attrs in
+		// coverage decide whether the blink tick repaints
+		const slice = new Uint32Array(count * 3);
 		hasBlink = false;
-		if (!iceColors) {
-			for (let i = 0; i < count; i++) {
-				if ((slice[i] & 0x80) !== 0) {
-					hasBlink = true;
-					break;
-				}
+		for (let i = 0, j = 0; i < count; i++, j += 3) {
+			const glyphWord = glyph[first + i];
+			slice[j] = glyphWord;
+			slice[j + 1] = fg[first + i];
+			slice[j + 2] = bg[first + i];
+			if ((glyphWord & 0x10000) !== 0) {
+				hasBlink = true;
 			}
 		}
 		gl.bindBuffer(gl.ARRAY_BUFFER, cellBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, slice, gl.DYNAMIC_DRAW);
-		gl.uniform1f(uniforms.u_ice, iceColors ? 1 : 0);
 		gl.uniform1f(uniforms.u_blink, blinkOn ? 1 : 0);
 		gl.clear(gl.COLOR_BUFFER_BIT);
 		gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
@@ -445,8 +456,7 @@ const createGLRenderer = (canvasContainer, host) => {
 	const getImageRGBA = () => {
 		const columns = host.getColumns();
 		const rows = host.getRows();
-		const iceColors = host.getIceColors();
-		const imageData = host.getImageData();
+		const { glyph, fg: fgPlane, bg: bgPlane } = host.getPlanes();
 		const width = cellW * columns;
 		const height = cellH * rows;
 		const data = new Uint8ClampedArray(width * height * 4);
@@ -454,16 +464,16 @@ const createGLRenderer = (canvasContainer, host) => {
 		for (let i = 0; i < 16; i++) {
 			colors.push(State.palette.getRGBAColor(i));
 		}
+		// same tag-bit resolve as the shader; blink cells export in their
+		// visible phase (the planes already hold the dim background)
+		const resolve = word =>
+			((word & 0x80000000) !== 0
+				? colors[word & 15]
+				: [(word >> 16) & 0xff, (word >> 8) & 0xff, word & 0xff, 255]);
 		for (let index = 0; index < columns * rows; index++) {
-			const cell = imageData[index];
-			const charCode = cell >> 8;
-			let background = (cell >> 4) & 15;
-			const foreground = cell & 15;
-			if (!iceColors && background >= 8) {
-				background -= 8;
-			}
-			const fg = colors[foreground];
-			const bg = colors[background];
+			const charCode = glyph[index] & 0xff;
+			const fg = resolve(fgPlane[index]);
+			const bg = resolve(bgPlane[index]);
 			const ninthDuplicates = spacing && charCode >= 0xc0 && charCode <= 0xdf;
 			const glyphBase = charCode * fontW * fontH;
 			const originX = (index % columns) * cellW;

@@ -54,6 +54,8 @@ const MAX_ROWS = 10000;
 const RESIZE_WARN_CELLS = 300000;
 // In-memory undo stack cap, in cell entries
 const MAX_UNDO_CELLS = 1048576;
+// Trailing debounce for autosave journal keyframe rewrites
+const JOURNAL_KEYFRAME_DEBOUNCE_MS = 500;
 // iOS Safari refuses canvases above ~16.7 megapixels
 const MAX_CANVAS_AREA = 16777216;
 
@@ -104,5 +106,6 @@ export default {
 	MAX_ROWS,
 	RESIZE_WARN_CELLS,
 	MAX_UNDO_CELLS,
+	JOURNAL_KEYFRAME_DEBOUNCE_MS,
 	MAX_CANVAS_AREA,
 };

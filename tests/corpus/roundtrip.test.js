@@ -22,6 +22,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
+	decodeAns as coreDecodeAns,
+	decodeBin as coreDecodeBin,
+	decodeXBin as coreDecodeXBin,
+	encodeAns as coreEncodeAns,
+	encodeBin as coreEncodeBin,
+	encodeXBin as coreEncodeXBin,
+	v3ToU16,
+} from '../../src/js/core/index';
+import {
 	makeAnsi,
 	makeBin,
 	makeCells,
@@ -553,5 +562,225 @@ describe('corpus tier (b): UTF-8 ANSI', () => {
 		const e1 = await encode('utf8');
 		const d2 = await decode('rt.utf8.ans', e1);
 		expectSameCells(d2, d1, 'cp437->utf8');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Core codec parity (0wnzlib, P2 gate): the same bytes through the v2 loader
+// and the core codecs must produce identical docs, and core-encoded bytes
+// must decode identically through BOTH decoders. ANSI/CP437 is the critical
+// surface, so every committed artwork file runs through it.
+// ---------------------------------------------------------------------------
+
+const coreDecode = (name, bytes) => {
+	const n = name.toLowerCase();
+	if (n.endsWith('.xb')) {
+		return coreDecodeXBin(bytes);
+	}
+	if (n.endsWith('.bin')) {
+		return coreDecodeBin(bytes);
+	}
+	return coreDecodeAns(bytes, { utf8: n.endsWith('.utf8.ans') || n.endsWith('.txt') });
+};
+
+/** Decode through both engines; assert doc identity; return both. */
+const expectCoreParity = async (name, bytes) => {
+	const v2 = await decode(name, bytes);
+	const result = coreDecode(name, bytes);
+	const u16 = v3ToU16(result.doc);
+	expect(u16.columns, `${name}: core columns`).toBe(v2.columns);
+	expect(u16.rows, `${name}: core rows`).toBe(v2.rows);
+	expect(u16.imageData, `${name}: core cells`).toEqual(v2.data);
+	expect(!!u16.iceColors, `${name}: core iceColors`).toBe(!!v2.iceColors);
+	expect(
+		!!u16.letterSpacing,
+		`${name}: core letterSpacing`,
+	).toBe(!!v2.letterSpacing);
+	return { v2, result };
+};
+
+describe('core codec parity: ANSI', () => {
+	it.each(tierAFiles)(
+		'%s: core decoder matches v2 and core-encoded bytes satisfy both',
+		async name => {
+			const bytes = new Uint8Array(readFileSync(path.join(ansiDir, name)));
+			const { result } = await expectCoreParity(name, bytes);
+
+			// Core encode, then BOTH decoders must agree on the result and
+			// reproduce the original cells
+			const encoded = coreEncodeAns(result.doc, { meta: result.meta });
+			const { result: reResult } = await expectCoreParity(
+				'core-roundtrip.ans',
+				encoded,
+			);
+			expect(
+				v3ToU16(reResult.doc).imageData,
+				`${name}: cells after core encode`,
+			).toEqual(v3ToU16(result.doc).imageData);
+
+			// Core encoder is a fixed point
+			const encodedAgain = coreEncodeAns(reResult.doc, { meta: reResult.meta });
+			expect(encodedAgain, `${name}: core encoder fixed point`).toEqual(
+				encoded,
+			);
+		},
+	);
+
+	it('synthetic ANSI fixtures decode identically through both engines', async () => {
+		const fixtures = [
+			['full-width.ans', makeAnsi({ columns: 80, rows: 50, seed: 42 })],
+			[
+				'crlf.ans',
+				makeAnsi({ columns: 80, rows: 30, seed: 7, lineBreaks: true }),
+			],
+			[
+				'ice.ans',
+				makeAnsi({
+					columns: 80,
+					rows: 25,
+					ice: true,
+					seed: 99,
+					sauce: {
+						title: 'ice test',
+						flags: 0b00010011,
+						tinfo1: 80,
+						tinfo2: 25,
+					},
+				}),
+			],
+			[
+				'wide.ans',
+				makeAnsi({
+					columns: 132,
+					rows: 40,
+					seed: 5,
+					sauce: { tinfo1: 132, tinfo2: 40 },
+				}),
+			],
+			['tall.ans', makeAnsi({ columns: 80, rows: 2000, seed: 13 })],
+			[
+				'nosig.ans',
+				concatBytes([
+					makeAnsi({ columns: 80, rows: 2, seed: 1 }),
+					textToBytes('x'.repeat(200)),
+				]),
+			],
+		];
+		const zeroBody = makeAnsi({ columns: 80, rows: 5, seed: 2 });
+		fixtures.push([
+			'zerotinfo.ans',
+			concatBytes([
+				zeroBody,
+				new Uint8Array([0x1a]),
+				makeSauce({ fileSize: zeroBody.length, tinfo1: 0, tinfo2: 0 }),
+			]),
+		]);
+		for (const [name, bytes] of fixtures) {
+			await expectCoreParity(name, bytes);
+		}
+	});
+
+	it('lenient UTF-8 decode matches v2', async () => {
+		const bytes = makeUtf8Ansi({ columns: 40, rows: 10, seed: 7 });
+		await expectCoreParity('fixture.utf8.ans', bytes);
+	});
+});
+
+describe('core codec parity: BIN', () => {
+	it('BIN fixtures decode identically and core encode satisfies both', async () => {
+		const fixtures = [
+			[
+				'sauced.bin',
+				makeBin({ columns: 160, rows: 50, seed: 21, sauce: { title: 'b' } }),
+			],
+			[
+				'ft0.bin',
+				makeBin({ columns: 160, rows: 40, seed: 23, sauce: { filetype: 0 } }),
+			],
+			['plain.bin', makeBin({ columns: 160, rows: 30, seed: 24 })],
+			['wide.bin', makeBin({ columns: 320, rows: 100, seed: 22, sauce: {} })],
+		];
+		for (const [name, bytes] of fixtures) {
+			const { result } = await expectCoreParity(name, bytes);
+			const encoded = coreEncodeBin(result.doc, { meta: result.meta });
+			const { result: reResult } = await expectCoreParity(
+				'core-roundtrip.bin',
+				encoded,
+			);
+			expect(
+				v3ToU16(reResult.doc).imageData,
+				`${name}: cells after core encode`,
+			).toEqual(v3ToU16(result.doc).imageData);
+		}
+	});
+});
+
+describe('core codec parity: XBin', () => {
+	it('XBin fixtures decode identically including font and palette', async () => {
+		const rle = makeXBinRleRuns(16);
+		const fixtures = [
+			[
+				'raw.xb',
+				makeXBin({
+					columns: 32,
+					rows: 8,
+					rawCells: makeCells(32, 8, 13),
+					sauce: {},
+				}),
+			],
+			[
+				'rle.xb',
+				makeXBin({
+					columns: 16,
+					rows: rle.cells.length / 16,
+					compressed: rle.rle,
+					sauce: {},
+				}),
+			],
+			[
+				'full.xb',
+				makeXBin({
+					columns: 32,
+					rows: 8,
+					rawCells: makeCells(32, 8, 17),
+					font: makeXBinFont(512, 16, 9),
+					font512: true,
+					fontHeight: 16,
+					palette: makeXBinPalette(5),
+					iceColors: true,
+					sauce: { title: 'xb 512' },
+				}),
+			],
+		];
+		for (const [name, bytes] of fixtures) {
+			const { v2, result } = await expectCoreParity(name, bytes);
+			if (v2.paletteData) {
+				expect(result.palette6, `${name}: palette bytes`).toEqual(
+					v2.paletteData,
+				);
+			}
+			if (v2.fontData && v2.fontData.bytes) {
+				expect(result.fontBytes, `${name}: font bytes`).toEqual(
+					v2.fontData.bytes,
+				);
+				expect(result.fontHeight, `${name}: font height`).toBe(
+					v2.fontData.height,
+				);
+			}
+			const encoded = coreEncodeXBin(result.doc, {
+				palette6: result.palette6,
+				fontBytes: result.fontBytes,
+				fontHeight: result.fontHeight,
+				meta: result.meta,
+			});
+			const { result: reResult } = await expectCoreParity(
+				'core-roundtrip.xb',
+				encoded,
+			);
+			expect(
+				v3ToU16(reResult.doc).imageData,
+				`${name}: cells after core encode`,
+			).toEqual(v3ToU16(result.doc).imageData);
+		}
 	});
 });

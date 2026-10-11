@@ -182,6 +182,18 @@ const removeDuplicates = blocks => {
 
 // Main Handler
 self.onmessage = msg => {
+	// Inline copy of messageGuard.js's trustedMessage: this file is a
+	// classic worker copied verbatim to dist, so it cannot import the
+	// shared helper. Dedicated-worker messages from the owning page
+	// carry an empty origin; drop anything claiming a foreign origin
+	// or carrying a non-object payload. Keep in sync with the helper.
+	if (
+		(msg.origin && msg.origin !== self.location.origin) ||
+		typeof msg.data !== 'object' ||
+		msg.data === null
+	) {
+		return;
+	}
 	const data = msg.data;
 
 	// First message MUST be init to establish security context

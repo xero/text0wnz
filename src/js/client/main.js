@@ -4,6 +4,7 @@ import Toolbar from './toolbar.js';
 import { Load, Save } from './file.js';
 import { createTextArtCanvas } from './canvas.js';
 import { createWorkerHandler, createChatController } from './network.js';
+import { trustedMessage } from './messageGuard.js';
 import { FontCache } from './fontCache.js';
 import {
 	$,
@@ -112,7 +113,15 @@ const openHandler = file => {
 	State.textArtCanvas.clear();
 	Load.file(
 		file,
-		async (columns, rows, imageData, iceColors, letterSpacing, fontName) => {
+		async (
+			columns,
+			rows,
+			imageData,
+			iceColors,
+			letterSpacing,
+			fontName,
+			docNative,
+		) => {
 			const indexOfPeriod = file.name.lastIndexOf('.');
 			let fileTitle;
 			if (indexOfPeriod !== -1) {
@@ -124,13 +133,19 @@ const openHandler = file => {
 			bodyContainer.classList.remove('loading');
 
 			const applyData = () => {
-				State.textArtCanvas.setImageData(
-					columns,
-					rows,
-					imageData,
-					iceColors,
-					letterSpacing,
-				);
+				if (docNative) {
+					// tnd/dur/0wnz: plane-native load keeps truecolor and
+					// frames; legacy consumers read the lossy u16 mirror
+					State.textArtCanvas.setDocData(docNative);
+				} else {
+					State.textArtCanvas.setImageData(
+						columns,
+						rows,
+						imageData,
+						iceColors,
+						letterSpacing,
+					);
+				}
 				palettePicker.updatePalette(); // ANSi
 				openFile.value = '';
 				viewport.scrollLeft = viewport.scrollTop = 0;
@@ -318,6 +333,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 		// Listen for shared file messages from service worker
 		navigator.serviceWorker.addEventListener('message', async event => {
+			if (!trustedMessage(event)) {
+				return;
+			}
 			if (event.data.type === 'SHARED_FILE_READY') {
 				console.log('[Share] File shared:', event.data.filename);
 				// Wait for app to be ready
@@ -502,6 +520,8 @@ const initializeAppComponents = async () => {
 	onClick($('savePlaintext'), Save.plainText);
 	onClick($('saveBin'), Save.bin);
 	onClick($('saveXbin'), Save.xb);
+	onClick($('saveTundra'), Save.tnd);
+	onClick($('saveOwnz'), Save.ownz);
 	onClick($('savePng'), Save.png);
 	onClick($('cut'), State.pasteTool.cut);
 	onClick($('copy'), State.pasteTool.copy);

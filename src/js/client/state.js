@@ -688,7 +688,10 @@ class StateManager {
 			) {
 				return;
 			}
-			await Storage.saveUndoHistory(this.state.textArtCanvas.getUndoHistory());
+			const undoHistory = this.state.textArtCanvas.getUndoHistory();
+			if (undoHistory) {
+				await Storage.saveUndoHistory(undoHistory);
+			}
 		} catch (error) {
 			console.error('[State] Failed to save undo history:', error);
 		}
@@ -802,9 +805,14 @@ class StateManager {
 						);
 					}
 
-					// Load canvas data
+					// Load canvas data: the OPFS autosave journal is the source
+					// of truth; the legacy IndexedDB snapshot is the fallback,
+					// and restoring it re-seeds the journal via setImageData's
+					// keyframe trigger (the IndexedDB -> OPFS migration).
 					setTimeout(async () => {
-						const canvasData = await Storage.loadCanvasData();
+						const canvasData =
+							(await this.state.textArtCanvas?.loadJournalSnapshot?.()) ??
+							(await Storage.loadCanvasData());
 
 						if (canvasData && this.state.textArtCanvas) {
 							this.state.textArtCanvas.setImageData(

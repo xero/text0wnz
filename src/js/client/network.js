@@ -1,6 +1,7 @@
 import State from './state.js';
 import { $, $$, websocketUI } from './ui.js';
 import { createDefaultPalette } from './palette.js';
+import { trustedMessage } from './messageGuard.js';
 
 const createWorkerHandler = inputHandle => {
 	const btnJoin = $('joinCollaboration');
@@ -187,6 +188,9 @@ const createWorkerHandler = inputHandle => {
 	};
 
 	const onMessage = async msg => {
+		if (!trustedMessage(msg)) {
+			return;
+		}
 		const data = msg.data;
 		switch (data.cmd) {
 			case 'initialized':
