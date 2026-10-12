@@ -597,6 +597,38 @@ const initializeAppComponents = async () => {
 		createSettingToggle($('navFrames'), framesPanel.isOpen, framesPanel.setOpen);
 	}
 
+	// a partial cell may only ever render at the BOTTOM edge: once any
+	// scroll settles, nudge the viewport onto a row boundary in content
+	// space (the canvas sits below a container margin). Aligned settles
+	// rewrite nothing, so the snap cannot re-trigger itself.
+	const vpScroller = $('viewport');
+	if (vpScroller) {
+		let snapTimer = 0;
+		vpScroller.addEventListener(
+			'scroll',
+			() => {
+				clearTimeout(snapTimer);
+				snapTimer = setTimeout(() => {
+					const fh = State.font?.getHeight();
+					const container = $('canvasContainer');
+					if (!fh || !container) {
+						return;
+					}
+					const offY =
+						container.getBoundingClientRect().top -
+						vpScroller.getBoundingClientRect().top +
+						vpScroller.scrollTop;
+					const snapped =
+						offY + Math.round((vpScroller.scrollTop - offY) / fh) * fh;
+					if (Math.abs(snapped - vpScroller.scrollTop) >= 1) {
+						vpScroller.scrollTop = Math.max(0, snapped);
+					}
+				}, 150);
+			},
+			{ passive: true },
+		);
+	}
+
 	// minimap + CRT pass (both GL-only)
 	const minimap = createMinimap();
 	if (minimap) {

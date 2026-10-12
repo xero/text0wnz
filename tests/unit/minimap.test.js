@@ -106,6 +106,16 @@ describe('minimap', () => {
 				width: 128,
 				height: 100,
 			});
+			// jsdom rects are zero-sized, which would put every pointer in
+			// the auto-scroll edge zone; give the panel a real slice
+			panel.getBoundingClientRect = () => ({
+				top: 0,
+				bottom: 400,
+				left: 0,
+				right: 140,
+				width: 140,
+				height: 400,
+			});
 		});
 
 		it('commits a tap on release, never on pointerdown', () => {
@@ -128,6 +138,27 @@ describe('minimap', () => {
 			point('pointermove', 80, 'touch');
 			point('pointerup', 80, 'touch');
 			expect(vp.scrollTop).toBe(0);
+		});
+
+		it('a touch drag on the focus box scrubs even when the map overflows', () => {
+			Object.defineProperty(panel, 'scrollHeight', {
+				value: 200,
+				configurable: true,
+			});
+			Object.defineProperty(panel, 'clientHeight', {
+				value: 100,
+				configurable: true,
+			});
+			const frame = document.getElementById('minimapViewport');
+			const onFrame = (type, y) => {
+				const e = new MouseEvent(type, { clientY: y, bubbles: true });
+				Object.defineProperty(e, 'pointerType', { value: 'touch' });
+				frame.dispatchEvent(e);
+			};
+			onFrame('pointerdown', 10);
+			onFrame('pointermove', 50);
+			expect(vp.scrollTop).toBe(16);
+			onFrame('pointerup', 50);
 		});
 
 		it('a touch drag scrubs when the map fits the panel', () => {

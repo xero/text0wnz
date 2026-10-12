@@ -1185,9 +1185,13 @@
 		image-rendering: pixelated;
 	}
 	#minimapViewport {
-		@apply absolute pointer-events-none;
+		@apply absolute;
 		left: 4px;
 		right: 4px;
+		/* the frame doubles as a scrollbar thumb: gestures starting on it
+		   must stay ours (scrub), while the rest of the panel pans */
+		touch-action: none;
+		cursor: grab;
 		/* dark halo inside and out: the ring must read over any art color */
 		border: 2px solid theme('colors.cyber');
 		outline: 1px solid #000;

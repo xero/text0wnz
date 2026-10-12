@@ -55,11 +55,14 @@ const createMinimap = () => {
 		const scaleY = art.clientHeight / docPx;
 		const height = Math.max(4, Math.min(vp.clientHeight, docPx) * scaleY);
 		// the viewport scrolls past the doc (container chrome below the
-		// canvas); clamp the frame inside the art or its overhang makes
-		// the panel report overflow and steal touch drags for a dead pan
-		const top = Math.min(
-			art.offsetTop + vp.scrollTop * scaleY,
-			art.offsetTop + art.clientHeight - height,
+		// canvas); clamp the frame inside the art on BOTH ends, or its
+		// overhang makes the panel report overflow and steal touch drags
+		const top = Math.max(
+			art.offsetTop,
+			Math.min(
+				art.offsetTop + vp.scrollTop * scaleY,
+				art.offsetTop + art.clientHeight - height,
+			),
 		);
 		frameRect.style.top = `${top}px`;
 		frameRect.style.height = `${height}px`;
@@ -116,8 +119,21 @@ const createMinimap = () => {
 			return;
 		}
 		const fraction = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
-		const docPx = State.textArtCanvas.getRows() * State.font.getHeight();
-		vp.scrollTop = fraction * docPx - vp.clientHeight / 2;
+		const fh = State.font.getHeight();
+		const docPx = State.textArtCanvas.getRows() * fh;
+		const target = fraction * docPx - vp.clientHeight / 2;
+		// snap to row boundaries in content space (the canvas sits below
+		// a container margin) so a scrub never clips the top row mid-cell
+		const cc = document.getElementById('canvasContainer');
+		const offY = cc
+			? cc.getBoundingClientRect().top -
+			vp.getBoundingClientRect().top +
+			vp.scrollTop
+			: 0;
+		vp.scrollTop = offY + Math.round((target - offY) / fh) * fh;
+		// the viewport scroll event arrives async; track the frame NOW so
+		// drag-follow math never works from a stale position
+		positionRect();
 	};
 
 	// taps commit on RELEASE, gated by the shared gesture slop: a jump on
@@ -129,12 +145,75 @@ const createMinimap = () => {
 	let scrubbing = false;
 	const travel = e =>
 		Math.hypot(e.clientX - pending.x, e.clientY - pending.y);
+
+	// drag-autoscroll: the box rides the finger 1:1 anywhere in the
+	// panel's visible slice; holding at (or past) an edge scrolls the
+	// map at a FIXED rate, and backing away from the edge stops it.
+	// Movement never scrolls the panel, so the rate stays predictable
+	let lastClientY = 0;
+	let autoScroll = 0;
+	const EDGE_RATE = 6;
+	// the box centers on the finger, so it touches the slice edge when
+	// the finger is half a box height away: hand off to the pin exactly
+	// there and the box is already flush, no jump either direction
+	const edgeDirection = clientY => {
+		const view = panel.getBoundingClientRect();
+		const reach = frameRect.offsetHeight / 2;
+		if (clientY < view.top + reach) {
+			return -1;
+		}
+		if (clientY > view.bottom - reach) {
+			return 1;
+		}
+		return 0;
+	};
+	// pin the box flush to the visible slice's edge and aim the viewport
+	// there directly: no finger mapping (the art slides under a held
+	// finger) and no row quantization (its alternating rounding is the
+	// jitter; the global settle snap re-aligns rows on release)
+	const pinBoxToEdge = direction => {
+		const vp = viewport();
+		const docPx = State.textArtCanvas.getRows() * State.font.getHeight();
+		if (!vp || docPx <= 0 || art.clientHeight <= 0) {
+			return;
+		}
+		const scaleY = art.clientHeight / docPx;
+		const frameTop =
+			direction === 1
+				? panel.scrollTop + panel.clientHeight - frameRect.offsetHeight
+				: panel.scrollTop;
+		vp.scrollTop = (frameTop - art.offsetTop) / scaleY;
+		positionRect();
+	};
+	const autoScrollTick = () => {
+		const direction = edgeDirection(lastClientY);
+		if (direction !== 0) {
+			panel.scrollTop += direction * EDGE_RATE;
+			pinBoxToEdge(direction);
+		}
+		autoScroll = requestAnimationFrame(autoScrollTick);
+	};
+	const stopAutoScroll = () => {
+		cancelAnimationFrame(autoScroll);
+		autoScroll = 0;
+	};
 	panel.addEventListener('pointerdown', e => {
-		pending = { x: e.clientX, y: e.clientY };
+		pending = {
+			x: e.clientX,
+			y: e.clientY,
+			// a drag born on the focus box scrubs like a scrollbar thumb,
+			// even when the rest of the panel pans natively
+			onFrame: e.target === frameRect || frameRect.contains(e.target),
+		};
 		scrubbing = false;
 	});
 	panel.addEventListener('pointermove', e => {
-		if (!pending || (e.pointerType === 'touch' && overflowsMeaningfully())) {
+		if (
+			!pending ||
+			(e.pointerType === 'touch' &&
+			  overflowsMeaningfully() &&
+			  !pending.onFrame)
+		) {
 			return;
 		}
 		if (!scrubbing && travel(e) > magicNumbers.GESTURE_SLOP_PX) {
@@ -142,7 +221,15 @@ const createMinimap = () => {
 			panel.setPointerCapture?.(e.pointerId);
 		}
 		if (scrubbing) {
-			scrollTo(e.clientY);
+			lastClientY = e.clientY;
+			// inside an edge zone the tick owns the box (finger tremor
+			// would otherwise fight the pin); elsewhere it rides the finger
+			if (edgeDirection(e.clientY) === 0) {
+				scrollTo(e.clientY);
+			}
+			if (!autoScroll) {
+				autoScroll = requestAnimationFrame(autoScrollTick);
+			}
 		}
 	});
 	panel.addEventListener('pointerup', e => {
@@ -151,10 +238,12 @@ const createMinimap = () => {
 		}
 		pending = null;
 		scrubbing = false;
+		stopAutoScroll();
 	});
 	panel.addEventListener('pointercancel', () => {
 		pending = null;
 		scrubbing = false;
+		stopAutoScroll();
 	});
 
 	const remember = value => {

@@ -312,6 +312,43 @@ const calculateRowsPerScreen = (viewport, fontHeight) => {
 	return Math.floor(viewport.clientHeight / fontHeight);
 };
 
+// user scrolls re-home whatever carries keyboard focus (the cursor, or
+// the selection rect in selection mode); both land at buffer depth so
+// the next keypress cannot trigger a follow-scroll snap
+const SCROLL_BUFFER_ROWS = 5;
+
+/** first and last fully visible cells plus the re-home cell, computed
+ * in scroll-content space (the canvas sits below a container margin) */
+const visibleCellFrame = () => {
+	const vp = $('viewport');
+	const container = document.getElementById('canvasContainer');
+	if (!vp || !container || !State.font) {
+		return null;
+	}
+	const fw = State.font.getWidth();
+	const fh = State.font.getHeight();
+	const vr = vp.getBoundingClientRect();
+	const cr = container.getBoundingClientRect();
+	const offX = cr.left - vr.left + vp.scrollLeft;
+	const offY = cr.top - vr.top + vp.scrollTop;
+	const first = {
+		x: Math.ceil((vp.scrollLeft - offX) / fw),
+		y: Math.ceil((vp.scrollTop - offY) / fh),
+	};
+	return {
+		first,
+		last: {
+			x: Math.floor((vp.scrollLeft - offX + vp.clientWidth) / fw) - 1,
+			y: Math.floor((vp.scrollTop - offY + vp.clientHeight) / fh) - 1,
+		},
+		// at the doc edge the scroll clamps, so no buffer is needed there
+		home: {
+			x: first.x > 0 ? first.x + SCROLL_BUFFER_ROWS : 0,
+			y: first.y > 0 ? first.y + SCROLL_BUFFER_ROWS : 0,
+		},
+	};
+};
+
 const createCursor = canvasContainer => {
 	const canvas = createCanvas(State.font.getWidth(), State.font.getHeight());
 	const viewport = $('viewport');
@@ -366,7 +403,7 @@ const createCursor = canvasContainer => {
 	// stamped whenever the follow-scroll mutates the viewport, so the
 	// scroll listener can tell navigation scrolls from user scrolls
 	let followedAt = 0;
-	const bufferRows = 5;
+	const bufferRows = SCROLL_BUFFER_ROWS;
 
 	// the canvas does not start at the scroll content's top (the
 	// container carries a margin); cell math must work in content space
@@ -435,30 +472,13 @@ const createCursor = canvasContainer => {
 			if (performance.now() - followedAt < 250) {
 				return;
 			}
-			const fw = State.font.getWidth();
-			const fh = State.font.getHeight();
-			const off = contentOffset();
-			const first = {
-				x: Math.ceil((viewport.scrollLeft - off.x) / fw),
-				y: Math.ceil((viewport.scrollTop - off.y) / fh),
-			};
-			const last = {
-				x:
-					Math.floor((viewport.scrollLeft - off.x + viewport.clientWidth) / fw) -
-					1,
-				y:
-					Math.floor((viewport.scrollTop - off.y + viewport.clientHeight) / fh) -
-					1,
-			};
+			const frame = visibleCellFrame();
+			if (!frame) {
+				return;
+			}
+			const { first, last, home } = frame;
 			if (x < first.x || x > last.x || y < first.y || y > last.y) {
-				// land at buffer depth so the next arrow press moves the
-				// cursor without the follow-scroll snapping the view; at the
-				// doc edge the scroll clamps, so no buffer is needed there
-				move(
-					first.x > 0 ? first.x + bufferRows : 0,
-					first.y > 0 ? first.y + bufferRows : 0,
-					false,
-				);
+				move(home.x, home.y, false);
 			}
 		}, 120);
 	};
@@ -1701,6 +1721,40 @@ const createSelectionTool = () => {
 		}
 	};
 
+	// same re-home rule as the keyboard cursor: a user scroll that
+	// settles with the selection fully off screen collapses it to the
+	// buffer-depth home cell, so the next keypress acts where you look
+	// instead of snapping the view back. Never during move mode or a
+	// drag: the rect then anchors real content
+	let settleTimer = 0;
+	const onViewportScroll = () => {
+		clearTimeout(settleTimer);
+		settleTimer = setTimeout(() => {
+			if (moveMode || isDragging) {
+				return;
+			}
+			const selection = State.selectionCursor.getSelection();
+			const frame = visibleCellFrame();
+			if (!selection || !frame) {
+				return;
+			}
+			const offscreen =
+				selection.x + selection.width - 1 < frame.first.x ||
+				selection.x > frame.last.x ||
+				selection.y + selection.height - 1 < frame.first.y ||
+				selection.y > frame.last.y;
+			if (!offscreen) {
+				return;
+			}
+			State.selectionCursor.setStart(frame.home.x, frame.home.y);
+			State.selectionCursor.setEnd(frame.home.x, frame.home.y);
+			selectionStartX = frame.home.x;
+			selectionStartY = frame.home.y;
+			selectionEndX = frame.home.x;
+			selectionEndY = frame.home.y;
+		}, 120);
+	};
+
 	const flipHorizontal = () => {
 		const selection = State.selectionCursor.getSelection();
 		if (!selection) {
@@ -2295,6 +2349,7 @@ const createSelectionTool = () => {
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		document.addEventListener('keydown', keyDown);
+		viewport?.addEventListener('scroll', onViewportScroll, { passive: true });
 		flipHButton.addEventListener('click', flipHorizontal);
 		flipVButton.addEventListener('click', flipVertical);
 		moveButton.addEventListener('click', toggleMoveMode);
@@ -2341,6 +2396,8 @@ const createSelectionTool = () => {
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
 		document.removeEventListener('keydown', keyDown);
+		viewport?.removeEventListener('scroll', onViewportScroll);
+		clearTimeout(settleTimer);
 
 		// Reset move mode if it was active and finalize any pending move
 		if (moveMode) {
