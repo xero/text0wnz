@@ -95,11 +95,20 @@ const createColorPanel = () => {
 			return;
 		}
 		grid.replaceChildren();
+		// the classic 256colors table: the 6x6x6 cube wraps on ramp
+		// boundaries (16-231, three 6-value blue ramps per row) and the
+		// greys wrap at 12, so every row reads as a smooth gradient
+		const cube = document.createElement('div');
+		cube.className = 'cube';
+		const greys = document.createElement('div');
+		greys.className = 'greys';
 		for (let index = 16; index < 256; index++) {
 			const word = xterm256RGB(index);
 			const hex = (word & 0xffffff).toString(16).padStart(6, '0');
-			grid.appendChild(makeSwatch(paletteColor(index), `${index} #${hex}`));
+			const section = index < 232 ? cube : greys;
+			section.appendChild(makeSwatch(paletteColor(index), `${index} #${hex}`));
 		}
+		grid.append(cube, greys);
 	};
 
 	const renderRecent = () => {

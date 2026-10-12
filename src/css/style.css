@@ -1112,11 +1112,21 @@
 	}
 	#colorGrid {
 		display: flex;
-		flex-wrap: wrap;
+		flex-direction: column;
+		gap: 2px;
+	}
+	/* rows span the panel like the 256colors table spans the terminal */
+	#colorGrid .cube {
+		display: grid;
+		grid-template-columns: repeat(18, 1fr);
+		gap: 1px;
+	}
+	#colorGrid .greys {
+		display: grid;
+		grid-template-columns: repeat(12, 1fr);
 		gap: 1px;
 	}
 	#colorGrid .colorSwatch {
-		width: 13px;
 		height: 13px;
 	}
 	#colorRecent {
