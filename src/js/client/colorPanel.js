@@ -13,7 +13,7 @@
  * the panel is inert and says why.
  */
 import State from './state.js';
-import { $ } from './ui.js';
+import { $, makePanelFloat } from './ui.js';
 import { xterm256RGB } from '../core/codecs/dur.js';
 import { paletteColor, rgbColor } from '../core/doc.js';
 
@@ -95,11 +95,29 @@ const createColorPanel = () => {
 			return;
 		}
 		grid.replaceChildren();
-		for (let index = 16; index < 256; index++) {
+		const swatch = (section, index) => {
 			const word = xterm256RGB(index);
 			const hex = (word & 0xffffff).toString(16).padStart(6, '0');
-			grid.appendChild(makeSwatch(paletteColor(index), `${index} #${hex}`));
+			section.appendChild(makeSwatch(paletteColor(index), `${index} #${hex}`));
+		};
+		// the 6x6x6 cube as six 6x6 faces, three side by side per band:
+		// each face is one red level with green down and blue across, so
+		// every block is a continuous gradient with no row banding
+		const cube = document.createElement('div');
+		cube.className = 'cube';
+		for (let r = 0; r < 12; r++) {
+			for (let c = 0; c < 18; c++) {
+				const red = Math.floor(r / 6) * 3 + Math.floor(c / 6);
+				swatch(cube, 16 + red * 36 + (r % 6) * 6 + (c % 6));
+			}
 		}
+		// the grey ramp runs continuously over two rows of 12
+		const greys = document.createElement('div');
+		greys.className = 'greys';
+		for (let index = 232; index < 256; index++) {
+			swatch(greys, index);
+		}
+		grid.append(cube, greys);
 	};
 
 	const renderRecent = () => {
@@ -130,10 +148,12 @@ const createColorPanel = () => {
 		bgButton.addEventListener('click', () => apply(rgbFromInput(), true));
 	}
 	if (toggleButton && panel) {
+		const floater = makePanelFloat(panel, () => panel.classList.add('hide'));
 		toggleButton.addEventListener('click', () => {
 			const opening = panel.classList.contains('hide');
 			panel.classList.toggle('hide');
 			if (opening) {
+				floater.focus();
 				if (lockNote) {
 					lockNote.classList.toggle('hide', !locked());
 				}

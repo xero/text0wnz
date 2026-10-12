@@ -710,6 +710,124 @@ const createViewportController = el => {
 	};
 };
 
+// one shared stack so overlapping tool windows focus on press: any
+// pointer down inside a registered window lifts it above its siblings.
+// The whole range stays below the z-50 modals and menus
+const panelStack = [];
+const PANEL_BASE_Z = 40;
+const restackPanels = () => {
+	panelStack.forEach((p, i) => {
+		p.style.zIndex = String(PANEL_BASE_Z + i);
+	});
+};
+const registerFloatingPanel = panel => {
+	const focus = () => {
+		const i = panelStack.indexOf(panel);
+		if (i === panelStack.length - 1) {
+			return;
+		}
+		panelStack.splice(i, 1);
+		panelStack.push(panel);
+		restackPanels();
+	};
+	panelStack.push(panel);
+	restackPanels();
+	panel.addEventListener('mousedown', focus, true);
+	panel.addEventListener('touchstart', focus, { capture: true, passive: true });
+	return focus;
+};
+
+// drag + close chrome for the fixed tool windows (colors, frames),
+// matching the brush windows' behavior. A press on a control is a
+// control gesture, so only free panel area starts a drag
+const makePanelFloat = (panel, onClose) => {
+	const focus = registerFloatingPanel(panel);
+	const close = document.createElement('div');
+	close.classList.add('hidePanel');
+	close.innerText = 'X';
+	panel.appendChild(close);
+	close.addEventListener('click', onClose);
+
+	const interactive = target =>
+		target.closest('button, input, select, canvas, .colorSwatch, .hidePanel') !==
+		null;
+
+	let startPointer = null;
+	let startPanel = null;
+
+	const setPos = (newX, newY) => {
+		// dropping the far-edge anchors keeps a bottom- or right-pinned
+		// panel from stretching once top and left are set
+		panel.style.bottom = 'auto';
+		panel.style.right = 'auto';
+		panel.style.left = newX + 'px';
+		panel.style.top = newY + 'px';
+	};
+
+	const begin = (px, py) => {
+		startPointer = [px, py];
+		const rect = panel.getBoundingClientRect();
+		startPanel = [rect.left, rect.top];
+	};
+
+	const dragTo = (px, py) => {
+		setPos(
+			startPanel[0] + (px - startPointer[0]),
+			startPanel[1] + (py - startPointer[1]),
+		);
+	};
+
+	const mouseMove = e => {
+		if (startPointer) {
+			e.preventDefault();
+			dragTo(e.clientX, e.clientY);
+		}
+	};
+
+	const mouseUp = () => {
+		startPointer = null;
+		document.removeEventListener('mousemove', mouseMove);
+		document.removeEventListener('mouseup', mouseUp);
+	};
+
+	panel.addEventListener('mousedown', e => {
+		if (interactive(e.target)) {
+			return;
+		}
+		begin(e.clientX, e.clientY);
+		document.addEventListener('mousemove', mouseMove);
+		document.addEventListener('mouseup', mouseUp);
+	});
+
+	const touchMove = e => {
+		if (startPointer) {
+			e.preventDefault();
+			dragTo(e.touches[0].pageX, e.touches[0].pageY);
+		}
+	};
+
+	const touchEnd = () => {
+		startPointer = null;
+		document.removeEventListener('touchmove', touchMove);
+		document.removeEventListener('touchend', touchEnd);
+	};
+
+	panel.addEventListener(
+		'touchstart',
+		e => {
+			if (interactive(e.target)) {
+				return;
+			}
+			begin(e.touches[0].pageX, e.touches[0].pageY);
+			document.addEventListener('touchmove', touchMove, { passive: false });
+			document.addEventListener('touchend', touchEnd);
+		},
+		{ passive: true },
+	);
+
+	return { focus };
+};
+
 const createResolutionController = (lbl, txtC, txtR) => {
 	[
 		'onTextCanvasSizeChange',
@@ -1124,8 +1242,13 @@ const createZoomControl = () => {
 	};
 
 	document.addEventListener('keydown', handleKeyboardZoom);
-	container.appendChild(label);
-	container.appendChild(display);
+	// icon, label and value ride the top row (main.js moves the sprite
+	// icon in); the slider gets the full row below
+	const top = document.createElement('div');
+	top.className = 'zoomTop';
+	top.appendChild(label);
+	top.appendChild(display);
+	container.appendChild(top);
 	container.appendChild(slider);
 	return container;
 };
@@ -1162,6 +1285,8 @@ export {
 	createToolPreview,
 	enforceMaxBytes,
 	createResolutionController,
+	makePanelFloat,
+	registerFloatingPanel,
 	createDragDropController,
 	createMenuController,
 	createFontSelect,

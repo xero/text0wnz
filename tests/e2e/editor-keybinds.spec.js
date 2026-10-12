@@ -37,6 +37,10 @@ test.describe('Editor Keybinds', () => {
 		});
 
 		test('activates fill tool with N key', async ({ page }) => {
+			// paint shortcuts are letters, so they only fire outside
+			// keyboard typing mode; fill lives in the brush submenu
+			await page.locator('#brushes').click();
+			await page.waitForTimeout(300);
 			await page.keyboard.press('n');
 			await page.waitForTimeout(300);
 
@@ -45,6 +49,7 @@ test.describe('Editor Keybinds', () => {
 
 			const fillTool = page.locator('#fill');
 			await expect(fillTool).toBeVisible();
+			await expect(fillTool).toHaveClass(/toolbarDisplayed/);
 		});
 
 		test('activates attribute brush with A key', async ({ page }) => {

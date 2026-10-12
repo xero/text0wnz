@@ -40,17 +40,21 @@ const createReferenceImage = () => {
 		}
 	};
 
+	const load = file => {
+		clear();
+		objectUrl = URL.createObjectURL(file);
+		overlay.src = objectUrl;
+		overlay.classList.add('enabled');
+		applyStyle();
+	};
+
 	$('refLoad')?.addEventListener('click', () => fileInput?.click());
 	fileInput?.addEventListener('change', event => {
 		const file = event.target.files?.[0];
 		if (!file) {
 			return;
 		}
-		clear();
-		objectUrl = URL.createObjectURL(file);
-		overlay.src = objectUrl;
-		overlay.classList.add('enabled');
-		applyStyle();
+		load(file);
 		event.target.value = '';
 	});
 	opacity?.addEventListener('input', applyStyle);
@@ -67,6 +71,7 @@ const createReferenceImage = () => {
 
 	return {
 		clear,
+		load,
 		isVisible: () => overlay.classList.contains('enabled'),
 		applyStyle,
 		isOpen,

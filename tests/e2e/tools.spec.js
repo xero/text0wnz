@@ -123,11 +123,13 @@ test.describe('Drawing Tools', () => {
 	});
 
 	test('should activate fill tool', async ({ page }) => {
+		// fill lives in the brush submenu now
+		await page.locator('#brushes').click();
+		await page.waitForTimeout(300);
 		const fillTool = page.locator('#fill');
-		if (await fillTool.isVisible()) {
-			await fillTool.click();
-			await page.waitForTimeout(300);
-		}
+		await fillTool.click();
+		await page.waitForTimeout(300);
+		await expect(fillTool).toHaveClass(/toolbarDisplayed/);
 	});
 
 	test('should draw with multiple tools in sequence', async ({ page }) => {

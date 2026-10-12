@@ -160,6 +160,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 		return mockElement;
 	}),
 	$$: vi.fn(() => ({ textContent: 'mock' })),
+	registerFloatingPanel: vi.fn(() => vi.fn()),
 	createCanvas: vi.fn((width, height) => {
 		const mockCanvas = {
 			width: width || 100,

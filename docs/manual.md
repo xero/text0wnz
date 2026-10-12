@@ -45,7 +45,6 @@
 >     - [Light/Dark Mode](#-lightdark-mode)
 >     - [Grid Overlay](#-grid-overlay)
 >     - [Minimap](#minimap)
->     - [CRT Effect](#crt-effect)
 >     - [Reference Image](#reference-image)
 > - [Animation](#animation)
 >   - [Frame Timeline](#frame-timeline)
@@ -267,6 +266,7 @@ The `++` button under the palette strip opens the extended color panel, one clic
 - **xterm 256 grid** - Click a swatch for the foreground, right-click for the background
 - **RGB** - Pick any truecolor value with the hex color input, then apply it with the `fg` or `bg` buttons
 - **Recent** - Your last ten extended picks, remembered between sessions
+- The panel floats: drag any free spot to move it, close it with the **X** or the `++` button
 
 Formats that cannot hold extended colors list what will be quantized or dropped at export time.
 
@@ -288,15 +288,14 @@ Some tools such as "Brushes" have many options or sub-tools. Clicking the tool i
 **Available Tools:**
 
 - Keyboard Mode - Full text input
-- Brushes - Freehand, shading, character, and attribute brushes
-- Fill - Flood fill color regions
+- Brushes - Freehand, shading, character, and attribute brushes, plus flood fill
 - Shapes - Lines, rectangles, circles, and ellipses
 - Selection - Select, move, copy, and transform areas
 - Sample - Pick colors and characters from canvas
 - Mirror Mode - Symmetrical drawing
 - History - Undo/redo operations
 - Font Selection - Choose from many classic fonts
-- Viewport Options - Zoom, theme, grid, animation frames, minimap, CRT effect, and reference image
+- Viewport Options - Zoom, theme, grid, animation frames, minimap, and reference image
 
 ## ![keyboard](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/keyboard.png) Keyboard Mode
 
@@ -420,7 +419,7 @@ Paint/recolor the foreground and background colors of the selected cell. Use the
 
 ## ![fill](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/fill.png) Fill Tool
 
-Flood fill connected color regions with the current foreground color.
+Flood fill connected color regions with the current foreground color. Fill lives in the brush submenu alongside the block, shading, character, and color brushes.
 
 **Features:**
 
@@ -480,6 +479,8 @@ The default selection mode is white:
 Move mode is orange (toggle with `m` key):
 
 ![move](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/move.png)
+
+Blank cells in the selection move transparently, like paste transparent: artwork under the empty parts of the rect shows through and survives the move. A cell counts as blank when it is empty (char 0, space, or nbsp) on a black background, the same rule the paste modes use.
 
 **Keyboard Shortcuts:**
 
@@ -640,10 +641,10 @@ A special "extra pixel" wide mode for letter spacing.
 
 ![viewport toolbar](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/viewport-toolbar.png)
 
-Customize your editing experience with these interface options. This toolbar also holds the toggles for the animation frames panel, the minimap, the CRT effect, and the reference image.
+Customize your editing experience with these interface options. This toolbar also holds the toggles for the animation frames panel, the minimap, and the reference image.
 
 > [!NOTE]
-> The editor renders with WebGL and falls back to a 2D renderer where WebGL2 is unavailable (append `?renderer=2d` to the URL to force it). The minimap, CRT effect, and onion skin need the WebGL renderer.
+> The editor renders with WebGL and falls back to a 2D renderer where WebGL2 is unavailable (append `?renderer=2d` to the URL to force it). The minimap and onion skin need the WebGL renderer.
 
 ### Zoom
 
@@ -658,6 +659,7 @@ Visually scale the drawing canvas from 0.5-4x size, while keeping the interface 
 - Select whole number scaling for pixel perfect rendering
 - `ctrl` + mouse wheel (or a trackpad pinch) zooms at the pointer
 - A two-finger pinch zooms at the pinch center on touch screens
+- Pinching anywhere else, menus and panels included, zooms the editor too; the browser's own page zoom and double-tap zoom stay out of the way
 - Preference saved in local storage
 
 **Keyboard Shortcuts:**
@@ -716,13 +718,6 @@ A live overview of the whole canvas, one pixel per cell, docked beside the viewp
 - Refreshes twice a second while open
 - Toggle it with the **Minimap** button in the viewport toolbar; the choice is remembered
 
-### CRT Effect
-
-The **CRT** button in the viewport toolbar toggles a retro monitor look rendered as a WebGL post-processing pass: scanlines per glyph pixel row, a soft aperture-grille mask, slight phosphor bleed, and a vignette.
-
-- Purely visual; exports and collaboration are unaffected
-- Needs the WebGL renderer; the button stays unlit on the 2D fallback
-
 ### Reference Image
 
 The **Ref Image** button in the viewport toolbar opens a small panel for tracing over a picture.
@@ -734,10 +729,12 @@ The **Ref Image** button in the viewport toolbar opens a small panel for tracing
 - **width** slider sizes the image from 10 to 200 percent of the canvas width
 - Every tool draws straight through the overlay, and it follows zoom and canvas resizes
 - **clear** removes the image
+- Opening an image through **File > Open** or by dropping it on the editor loads it here too, never into the canvas
+- The panel floats: drag any free spot to move it, close it with the **X** or the **Ref Image** button
 
 # Animation
 
-teXt0wnz edits multi-frame animations. Press the **Frames** button in the viewport toolbar to open the frames panel.
+teXt0wnz edits multi-frame animations. Press the **Frames** button in the viewport toolbar to open the frames panel. The panel floats: drag any free spot to move it, close it with the **X** or the **Frames** button.
 
 ## Frame Timeline
 

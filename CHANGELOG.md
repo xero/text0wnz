@@ -48,8 +48,7 @@ byte-exact golden tests before anything else moved.
 
 ### Changed
 
-- **Renderer.** WebGL replaces the 2D canvas chunks, with an optional
-  CRT effect.
+- **Renderer.** WebGL replaces the 2D canvas chunks.
 - **Undo.** A byte-budgeted patch arena (64 MB) replaces cell-count
   caps, so huge joints stop eating your history.
 - **Collab server.** Speaks native Moebius protocol, so one server
@@ -59,6 +58,13 @@ byte-exact golden tests before anything else moved.
 
 ### Fixed
 
+- **Move mode is transparent over blanks.** Moving a selection no
+  longer stamps its empty cells over artwork: blanks (char 0, space,
+  or nbsp on black, the same rule the paste modes use) let the art
+  underneath show through and survive.
+- **Opening an image traces it.** Picking or dropping a png, jpg, or
+  other image routes it to the reference overlay instead of dumping
+  its raw bytes into the canvas as text.
 - **Selections survive tool switches.** Leaving the selection tool and
   coming back restores the last selection instead of collapsing it to
   a single cell at the cursor. A pre-v3 defect.

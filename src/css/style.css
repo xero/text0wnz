@@ -120,6 +120,9 @@
 		user-select: none !important;
 		-ms-user-select: none !important;
 		-webkit-user-select: none !important;
+		/* panning stays native, but double-tap and pinch zoom belong to
+		   the app everywhere (the gesture guard supplies editor zoom) */
+		touch-action: pan-x pan-y;
 		font-weight: normal;
 		font-style: normal;
 		outline: none;
@@ -137,7 +140,10 @@
 		canvas,
 		#viewport,
 		#canvasContainer,
-		#minimapViewport {
+		#minimapViewport,
+		#colorPanel,
+		#framesPanel,
+		#refPanel {
 			@apply transition-none!;
 		}
 	}
@@ -443,18 +449,12 @@
 	#selectionToolbar {
 		@apply hidden w-auto flex-row justify-start;
 	}
-	#viewportToolbar {
-		.toolButton kbd {
-			@apply mx-1;
-		}
-	}
 	#navDarkmode > kbd {
 		width: max-content;
 	}
+	/* every submenu stacks the icon over its label */
 	.toolButton {
-		@apply text-white flex text-sm h-[var(--header-size)];
-		line-height: 20px;
-		padding-right: 5px;
+		@apply text-white flex flex-col text-sm h-[var(--header-size)] px-[5px] mx-0.5;
 
 		&:not(.toolbarDisplayed):hover {
 			@apply bg-hl;
@@ -462,48 +462,20 @@
 		&.enabled {
 			@apply bg-indigo;
 		}
+		svg,
+		kbd {
+			@apply flex my-0 mx-auto;
+		}
 		svg {
-			margin-inline-end: 5px;
+			width: 24px;
 		}
 		kbd {
-			@apply my-auto;
-		}
-	}
-
-	#brushToolbar {
-		min-width: 378px;
-	}
-
-	#clipboardToolbar,
-	#fontToolbar {
-		.toolButton {
-			@apply mr-1;
+			@apply text-xs w-full text-center;
 		}
 	}
 
 	#cut {
 		margin-left: 4px !important;
-	}
-
-	#shapesToolbar {
-		min-width: 370px;
-	}
-
-	#selectionToolbar {
-		.toolButton {
-			@apply flex flex-col m-0 h-[var(--header-size)] px-[5px];
-
-			kbd,
-			svg {
-				@apply flex my-0 mx-auto;
-			}
-			kbd {
-				@apply text-xs w-full text-center;
-			}
-			svg {
-				width: 24px;
-			}
-		}
 	}
 
 	#keyboardToolbar {
@@ -529,9 +501,28 @@
 		}
 	}
 	#zoomControl {
+		/* icon, label and value share the top row; the slider rides alone
+		   below it */
+		.zoomControl {
+			@apply flex flex-col items-center;
+		}
+		.zoomTop {
+			@apply flex flex-row items-center;
+
+			svg {
+				@apply mx-0;
+			}
+			/* wider break after the icon, tighter label-to-value pair */
+			label {
+				@apply cursor-pointer pl-2 pr-1;
+			}
+		}
+		/* the slider spans exactly the row above it: zero width keeps
+		   the input's intrinsic size from widening the column, and the
+		   min-width stretches it back to the row */
 		#zoomSlider {
-			max-width: 70px;
-			margin-inline: 4px;
+			width: 0;
+			min-width: 100%;
 		}
 		input[type='range'] {
 			@apply appearance-none bg-transparent;
@@ -544,9 +535,9 @@
 		}
 		input[type='range']::-webkit-slider-thumb {
 			@apply appearance-none bg-thumb cursor-ew-resize rounded-bl-xs;
-			height: 26px;
+			height: 16px;
 			width: 16px;
-			margin-top: -9px;
+			margin-top: -4px;
 
 			&:hover {
 				@apply bg-cyan;
@@ -554,7 +545,7 @@
 		}
 		input[type='range']::-moz-range-thumb {
 			@apply bg-thumb cursor-ew-resize rounded-bl-xs;
-			height: 25px;
+			height: 16px;
 			width: 16px;
 
 			&:hover {
@@ -1079,11 +1070,17 @@
 		@apply bg-purp;
 	}
 	#colorPanel {
-		/* aside > div makes this a centered flex row; restack it */
-		@apply fixed z-40 dialog-style p-2 flex-col items-stretch text-left;
+		/* aside > div makes this a centered flex row; restack it.
+		   floating-window chrome: solid dark border, thicker on top
+		   to mark the drag strip, like the brush windows */
+		@apply fixed z-40 bg-menu p-2 flex-col items-stretch text-left;
+		border: 4px solid var(--color-panel);
+		border-top-width: 16px;
+		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
+		cursor: move;
 		left: 48px;
 		top: var(--header-size);
-		width: 346px;
+		width: 354px;
 		h3 {
 			@apply text-cyan text-sm pt-1 pb-1;
 			small {
@@ -1103,11 +1100,21 @@
 	}
 	#colorGrid {
 		display: flex;
-		flex-wrap: wrap;
+		flex-direction: column;
+		gap: 2px;
+	}
+	/* rows span the panel like the 256colors table spans the terminal */
+	#colorGrid .cube {
+		display: grid;
+		grid-template-columns: repeat(18, 1fr);
+		gap: 1px;
+	}
+	#colorGrid .greys {
+		display: grid;
+		grid-template-columns: repeat(12, 1fr);
 		gap: 1px;
 	}
 	#colorGrid .colorSwatch {
-		width: 13px;
 		height: 13px;
 	}
 	#colorRecent {
@@ -1127,7 +1134,12 @@
 		outline: 1px solid theme('colors.cyber');
 	}
 	#framesPanel {
-		@apply fixed z-40 dialog-style p-2 flex flex-row gap-2 items-center;
+		/* floating-window chrome, thicker top border = drag strip */
+		@apply fixed z-40 bg-menu p-2 flex flex-row gap-2 items-center;
+		border: 4px solid var(--color-panel);
+		border-top-width: 16px;
+		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
+		cursor: move;
 		left: 48px;
 		bottom: 8px;
 		max-width: calc(100vw - 64px);
@@ -1243,7 +1255,12 @@
 		@apply text-cyan text-sm pt-2;
 	}
 	#refPanel {
-		@apply fixed z-40 dialog-style p-2 flex flex-row gap-3 items-center;
+		/* floating-window chrome, thicker top border = drag strip */
+		@apply fixed z-40 bg-menu p-2 flex flex-row gap-3 items-center;
+		border: 4px solid var(--color-panel);
+		border-top-width: 16px;
+		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
+		cursor: move;
 		right: 8px;
 		bottom: 8px;
 		button {
@@ -1481,6 +1498,26 @@
 		canvas {
 			cursor: crosshair;
 			vertical-align: bottom;
+		}
+	}
+
+	/* close chrome for the floated color and frames windows; the brush
+	   windows keep their own higher-specificity copy above. The X rides
+	   up into the border drag strip (absolute offsets anchor to the
+	   padding box, which sits below the thick top border) */
+	.hidePanel {
+		display: block;
+		position: absolute;
+		top: -16px;
+		right: -4px;
+		color: #efefef;
+		padding: 2px 5px;
+		font-size: 10px;
+		line-height: 12px;
+		cursor: pointer;
+
+		&:hover {
+			background: #000;
 		}
 	}
 
