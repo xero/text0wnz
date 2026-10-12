@@ -1261,10 +1261,14 @@
 		}
 	}
 	#sixteenList {
-		@apply overflow-y-auto;
+		@apply overflow-y-auto overflow-x-hidden;
 		max-height: 62vh;
+		/* reaching an edge must not bounce or scroll the page behind */
+		overscroll-behavior: contain;
 		button {
-			@apply bg-menu text-fg px-2 py-1 cursor-pointer;
+			/* m-0 kills the dialog-wide mr-6: on the last grid column it
+			   becomes 24px of horizontal scroll */
+			@apply bg-menu text-fg m-0 px-2 py-1 cursor-pointer;
 		}
 		button:hover:not(:disabled) {
 			@apply bg-purp;
