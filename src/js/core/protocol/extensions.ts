@@ -39,6 +39,7 @@
 import {
 	attrsOf,
 	createDefaultPaletteRGB,
+	createDocV3,
 	glyphIdOf,
 	glyphWord,
 	isPaletteColor,
@@ -302,6 +303,72 @@ export const docToExtCells = (doc: DocV3, frameIndex = 0): ExtCell[] => {
 		};
 	}
 	return out;
+};
+
+export interface ExtSyncResult {
+	doc: DocV3;
+	fontName: string | null;
+	use9px: boolean;
+	title: string;
+	author: string;
+	group: string;
+	comments: string;
+}
+
+// same ceiling as the join-doc RLE decode (1000 x 10000 client cap)
+const MAX_SYNC_CELLS = 10_000_000;
+
+/**
+ * EXT_SYNC payload -> a fresh v3 doc the client adopts wholesale.
+ * The ext analogue of joinDocToDoc; throws ProtocolError on anything
+ * malformed so the caller can drop the frame.
+ */
+export const extSyncToDoc = (
+	payload: Record<string, unknown>,
+): ExtSyncResult => {
+	const { columns, rows } = payload;
+	if (
+		!Number.isInteger(columns) ||
+		!Number.isInteger(rows) ||
+		(columns as number) <= 0 ||
+		(rows as number) <= 0 ||
+		(columns as number) * (rows as number) > MAX_SYNC_CELLS
+	) {
+		throw new ProtocolError(
+			`bad sync doc size ${String(columns)}x${String(rows)}`,
+		);
+	}
+	const cells = expandExtCells(
+		payload.cells,
+		(columns as number) * (rows as number),
+	);
+	const doc = createDocV3({
+		columns: columns as number,
+		rows: rows as number,
+		mode: 'free',
+	});
+	doc.setIceColors(payload.ice_colors === true);
+	doc.setLetterSpacing(payload.use_9px_font === true);
+	const palette = sanitizeExtPalette(payload.palette);
+	if (palette) {
+		const words = new Uint32Array(Math.max(doc.palette.length, palette.length));
+		words.set(doc.palette.subarray(0, Math.min(doc.palette.length, words.length)));
+		for (let i = 0; i < palette.length; i++) {
+			words[i] = palette[i];
+		}
+		doc.palette = words;
+	}
+	applyExtCells(doc, cells);
+	return {
+		doc,
+		fontName:
+			typeof payload.font_name === 'string' ? payload.font_name : null,
+		use9px: payload.use_9px_font === true,
+		title: typeof payload.title === 'string' ? payload.title : '',
+		author: typeof payload.author === 'string' ? payload.author : '',
+		group: typeof payload.group === 'string' ? payload.group : '',
+		comments: typeof payload.comments === 'string' ? payload.comments : '',
+	};
 };
 
 /** validate an EXT_PALETTE payload: <=256 RGB words, else null */

@@ -122,6 +122,15 @@ export interface EditorCore {
 	) => void;
 	/** Network writes: [index, u16word, x, y][], never undoable. */
 	quickDrawU16: (blocks: ReadonlyArray<ReadonlyArray<number>>) => void;
+	/** remote ext cells: raw plane words, no undo/history (collab) */
+	quickDrawExt: (
+		cells: ReadonlyArray<{
+			index: number;
+			glyph: number;
+			fg: number;
+			bg: number;
+		}>,
+	) => void;
 	startUndo: () => void;
 	undo: () => boolean;
 	redo: () => boolean;
@@ -447,6 +456,18 @@ export const createEditorCore = (
 				if (packWord(readCell(index)) !== word) {
 					writeCell(index, cell, false);
 				}
+			}
+		},
+		quickDrawExt: cells => {
+			// remote full-fidelity cells (collab extension suite): raw plane
+			// words, no undo, no history — like quickDrawU16, the mirror
+			// stays consistent through the same packWord projection
+			const frame = doc.frames[0];
+			for (const { index, glyph, fg, bg } of cells) {
+				frame.glyph[index] = glyph >>> 0;
+				frame.fg[index] = fg >>> 0;
+				frame.bg[index] = bg >>> 0;
+				emit(index, packWord(readCell(index)), false);
 			}
 		},
 		startUndo: () => {

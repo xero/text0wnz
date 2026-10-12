@@ -8,6 +8,7 @@ import { createHexFontPages } from './hexFontPages.js';
 import {
 	cellFromPoint,
 	clampCell,
+	cp437ToUnicode,
 	createDocV3,
 	createEditorCore,
 	createJournal,
@@ -15,6 +16,7 @@ import {
 	encodeStrokeRecord,
 	replayJournal,
 	snapOrigin,
+	unicodeToCp437Strict,
 	v3ToU16,
 } from '../core/index';
 import { createJournalStore } from './journalStore.js';
@@ -106,7 +108,13 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			imageData[index] = word;
 			if (history) {
 				// Moebius-native wire cells (P4): unpacked coordinates, so
-				// the signed (index<<16) row-409 cap is gone for good
+				// the signed (index<<16) row-409 cap is gone for good. The
+				// ext payload carries full fidelity straight off the planes;
+				// network.js sends it in ext sessions and strips it for
+				// vanilla ones (P6 extension suite).
+				const frame = doc.frames[0];
+				const glyphValue = frame.glyph[index];
+				const glyphId = glyphValue & 0xffff;
 				drawHistory.push({
 					x,
 					y,
@@ -114,6 +122,14 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 						code: word >> 8,
 						fg: word & 15,
 						bg: (word >> 4) & 15,
+					},
+					ext: {
+						u:
+							doc.glyphTable.get(glyphId)?.codepoint ??
+							cp437ToUnicode(glyphId & 0xff),
+						a: (glyphValue >>> 16) & 0xff,
+						fg: frame.fg[index] >>> 0,
+						bg: frame.bg[index] >>> 0,
 					},
 				});
 				enqueueDirtyCell(x, y);
@@ -1452,6 +1468,43 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		processDirtyRegions();
 	};
 
+	/**
+	 * Remote full-fidelity cells (collab extension suite): resolve
+	 * codepoints exactly like paste does (cp437 identity first, hex font
+	 * slots for the rest), then write the planes without undo/history.
+	 * @param {{x: number, y: number, u: number, a: number, fg: number, bg: number}[]} cells
+	 */
+	const drawRemoteExtCells = async cells => {
+		const unresolved = new Set();
+		for (const cell of cells) {
+			if (unicodeToCp437Strict(cell.u) === undefined) {
+				unresolved.add(cell.u);
+			}
+		}
+		const resolved =
+			unresolved.size > 0 ? await resolveUnicode(unresolved) : new Map();
+		// bounds re-check AFTER the await: a resize during the hex block
+		// fetch must not misplace writes (the P5 paste lesson)
+		const writes = [];
+		for (const cell of cells) {
+			if (cell.x >= columns || cell.y >= rows) {
+				continue;
+			}
+			const byte = unicodeToCp437Strict(cell.u);
+			const glyphId = byte !== undefined ? byte : (resolved.get(cell.u) ?? 63);
+			writes.push({
+				index: cell.y * columns + cell.x,
+				glyph: ((cell.a & 0xff) << 16) | (glyphId & 0xffff),
+				fg: cell.fg,
+				bg: cell.bg,
+			});
+		}
+		if (writes.length > 0) {
+			editor.quickDrawExt(writes);
+			processDirtyRegions();
+		}
+	};
+
 
 	const getDefaultFontName = () => magicNumbers.DEFAULT_FONT;
 
@@ -1668,9 +1721,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const resolved = new Map();
 		// collab lockout (visible in the charset UI): the vanilla Moebius
 		// dialect cannot carry unicode cells, and an apply-locally sender
-		// would silently diverge from every peer - substitute until a
-		// protocol extension negotiates unicode (SERVER_CAPS, ids 23+)
-		const locked = State.network?.isConnected?.() === true;
+		// would silently diverge from every peer. The t0wnz extension
+		// suite (ids 23+) lifts it: when the server negotiated the suite,
+		// unicode cells travel natively and nothing substitutes.
+		const locked =
+			State.network?.isConnected?.() === true &&
+			State.network?.extCollab?.() !== true;
 		const unique = [...new Set(codepoints)];
 		if (locked) {
 			for (const codepoint of unique) {
@@ -1726,6 +1782,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		getArea: getArea,
 		setArea: setArea,
 		quickDraw: quickDraw,
+		drawRemoteExtCells: drawRemoteExtCells,
 		loadJournalSnapshot: loadJournalSnapshot,
 		journalKeyframe: scheduleJournalKeyframe,
 		setMirrorMode: setMirrorMode,

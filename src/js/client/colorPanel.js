@@ -31,7 +31,11 @@ const createColorPanel = () => {
 	const bgButton = $('colorRGBbg');
 	const lockNote = $('colorLockNote');
 
-	const locked = () => State.network?.isConnected?.() === true;
+	// extended colors lock only in VANILLA sessions; the t0wnz extension
+	// suite carries full color words natively
+	const locked = () =>
+		State.network?.isConnected?.() === true &&
+		State.network?.extCollab?.() !== true;
 
 	const loadRecent = () => {
 		try {

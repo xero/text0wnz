@@ -1,8 +1,18 @@
 import State from './state.js';
 import { $, $$, websocketUI } from './ui.js';
-import { createDefaultPalette } from './palette.js';
+import { createDefaultPalette, createPalette } from './palette.js';
 import { trustedMessage } from './messageGuard.js';
-import { MoebiusAction, joinDocToDoc } from '../core/index';
+import {
+	EXT_BATCH_LIMIT,
+	EXT_SUITE_CAP,
+	MoebiusAction,
+	T0wnzAction,
+	compress8to6,
+	extSyncToDoc,
+	joinDocToDoc,
+	sanitizeExtCell,
+	sanitizeExtPalette,
+} from '../core/index';
 import { Load } from './file.js';
 
 /**
@@ -93,11 +103,22 @@ const createWorkerHandler = inputHandle => {
 	const remoteCursors = createRemoteCursors();
 	/** id -> nick, for rename detection (renames ride CHAT upstream) */
 	const peerNicks = new Map();
+	// extension suite state (t0wnz-ext-1): negotiated caps, the seq
+	// stream position, and how many of our own mutations await an ack
+	/** @type {string[]} */
+	let serverCaps = [];
+	let lastSeq = -1;
+	let pendingOps = 0;
+	let syncCooldown = 0;
+	const extActive = () => serverCaps.includes(EXT_SUITE_CAP);
 
 	const onDisconnected = wasConnected => {
 		const hadSession = connected && collaborationMode;
 		connected = false;
 		collaborationMode = false;
+		serverCaps = [];
+		lastSeq = -1;
+		pendingOps = 0;
 		remoteCursors.clear();
 		peerNicks.clear();
 		websocketUI(false);
@@ -188,11 +209,166 @@ const createWorkerHandler = inputHandle => {
 		applyReceivedSettings = false;
 	};
 
+	/**
+	 * Ask the server for a wholesale resync (seq gap, or a resize racing
+	 * our in-flight ops). Cooldown-coalesced so a burst of gaps costs one
+	 * round trip.
+	 */
+	const requestSync = () => {
+		if (!extActive() || !connected || syncCooldown) {
+			return;
+		}
+		syncCooldown = setTimeout(() => {
+			syncCooldown = 0;
+		}, 1000);
+		State.worker.postMessage({
+			cmd: 'send',
+			type: T0wnzAction.EXT_SYNC,
+			data: {},
+		});
+	};
+
+	/**
+	 * Track the mutation seq stream (broadcasts carry it for remote ops,
+	 * EXT_ACK for our own). Returns false for a stale frame the caller
+	 * must skip; a gap schedules recovery but still applies the frame
+	 * (the sync replaces everything anyway).
+	 */
+	const noteSeq = data => {
+		const seq = data?.seq;
+		if (!Number.isInteger(seq) || !extActive()) {
+			return true;
+		}
+		if (lastSeq >= 0 && seq <= lastSeq) {
+			return false;
+		}
+		if (lastSeq >= 0 && seq > lastSeq + 1) {
+			requestSync();
+		}
+		lastSeq = seq;
+		return true;
+	};
+
+	/** bridge the classic 16 of a remote palette into the strip + GL */
+	const adoptClassic16 = palette => {
+		const triples = [];
+		for (let i = 0; i < 16; i++) {
+			const word = palette[i] ?? 0;
+			triples.push([
+				compress8to6((word >> 16) & 0xff),
+				compress8to6((word >> 8) & 0xff),
+				compress8to6(word & 0xff),
+			]);
+		}
+		State.palette = createPalette(triples);
+		document.dispatchEvent(
+			new CustomEvent('onPaletteChange', {
+				detail: State.palette,
+				bubbles: true,
+				cancelable: false,
+			}),
+		);
+		State.font?.redraw();
+	};
+
+	const onRemoteExtPalette = data => {
+		const palette = sanitizeExtPalette(data.palette);
+		if (!palette) {
+			return;
+		}
+		applyReceivedSettings = true;
+		try {
+			const doc = State.textArtCanvas.getDoc();
+			const words = new Uint32Array(Math.max(doc.palette.length, palette.length));
+			words.set(doc.palette.subarray(0, Math.min(doc.palette.length, words.length)));
+			for (let i = 0; i < palette.length; i++) {
+				words[i] = palette[i];
+			}
+			doc.palette = words;
+			adoptClassic16(palette);
+			State.textArtCanvas.redrawEntireImage();
+		} finally {
+			applyReceivedSettings = false;
+		}
+	};
+
+	const onRemoteExtDraw = async cells => {
+		const valid = [];
+		for (const raw of cells) {
+			const cell = sanitizeExtCell(raw);
+			if (
+				cell &&
+				Number.isInteger(raw.x) &&
+				Number.isInteger(raw.y) &&
+				raw.x >= 0 &&
+				raw.y >= 0
+			) {
+				valid.push({ x: raw.x, y: raw.y, ...cell });
+			}
+		}
+		if (valid.length > 0) {
+			await State.textArtCanvas.drawRemoteExtCells(valid);
+		}
+	};
+
+	/** adopt the full-fidelity doc (join follow-up or requested resync) */
+	const applyExtSync = async payload => {
+		applyReceivedSettings = true;
+		try {
+			const result = extSyncToDoc(payload);
+			State.textArtCanvas.setDocData(result.doc);
+			if (result.fontName) {
+				await onFontChange(
+					Load.sauceToAppFont(result.fontName) ?? result.fontName,
+				);
+			}
+			State.font.setLetterSpacing(result.use9px);
+			btn9pt.classList.toggle('enabled', result.use9px);
+			btnIce.classList.toggle('enabled', result.doc.getIceColors());
+			if (Array.isArray(payload.palette)) {
+				const palette = sanitizeExtPalette(payload.palette);
+				if (palette) {
+					adoptClassic16(palette);
+				}
+			}
+			if (Number.isInteger(payload.seq)) {
+				lastSeq = payload.seq;
+			}
+			pendingOps = 0;
+		} catch (error) {
+			console.warn('[Network] dropped malformed EXT_SYNC:', error);
+		} finally {
+			applyReceivedSettings = false;
+		}
+	};
+
 	/** @param {number} type @param {any} data */
 	const onFrame = async (type, data) => {
+		// every mutation broadcast carries seq in ext sessions; stale
+		// frames drop, gaps schedule a resync but the frame still applies
+		if (!noteSeq(data)) {
+			return;
+		}
 		switch (type) {
 			case MoebiusAction.DRAW:
 				onRemoteDraw(data);
+				break;
+			case T0wnzAction.EXT_DRAW:
+				await onRemoteExtDraw([data]);
+				break;
+			case T0wnzAction.EXT_DRAW_BATCH:
+				if (Array.isArray(data.cells)) {
+					await onRemoteExtDraw(data.cells);
+				}
+				break;
+			case T0wnzAction.EXT_PALETTE:
+				onRemoteExtPalette(data);
+				break;
+			case T0wnzAction.EXT_SYNC:
+				await applyExtSync(data);
+				break;
+			case T0wnzAction.EXT_ACK:
+				pendingOps = Math.max(0, pendingOps - 1);
 				break;
 			case MoebiusAction.CHAT:
 				onRemoteChat(data);
@@ -230,6 +406,12 @@ const createWorkerHandler = inputHandle => {
 				break;
 			case MoebiusAction.SET_CANVAS_SIZE:
 				onResize(data.columns, data.rows);
+				// a remote resize racing our in-flight ops is the one
+				// divergence the vanilla dialect can't detect; with the
+				// suite negotiated, recover wholesale (P4 fuzz lesson)
+				if (extActive() && pendingOps > 0) {
+					requestSync();
+				}
 				break;
 			default:
 				// STATUS, SAUCE, operations 17-20/22: nothing to render yet
@@ -274,39 +456,71 @@ const createWorkerHandler = inputHandle => {
 		}
 	};
 
-	/** @param {number} type @param {object} data */
+	/** @param {number} type @param {object} data @returns {boolean} sent */
 	const sendFrame = (type, data) => {
 		if (collaborationMode && connected && !applyReceivedSettings) {
 			State.worker.postMessage({ cmd: 'send', type, data });
+			return true;
+		}
+		return false;
+	};
+
+	/** a doc mutation of ours: the ext ack bookkeeping rides the send */
+	const sendMutation = (type, data) => {
+		if (sendFrame(type, data) && extActive()) {
+			pendingOps++;
 		}
 	};
 
 	/**
-	 * cells arrive from canvas.js as {x, y, block:{code, fg, bg}}; each
-	 * becomes a per-cell DRAW (apply-locally-on-send: the server
-	 * excludes the sender, so no echo comes back)
+	 * cells arrive from canvas.js as {x, y, block:{code, fg, bg}, ext}
+	 * (apply-locally-on-send: the server excludes the sender, so no echo
+	 * comes back). Ext sessions send one full-fidelity batch per flush;
+	 * vanilla sessions get per-cell DRAWs with the ext payload stripped
+	 * (upstream servers relay unknown fields verbatim).
 	 */
 	const draw = cells => {
-		if (collaborationMode && connected && Array.isArray(cells)) {
-			State.worker.postMessage({ cmd: 'draw', cells });
+		if (!collaborationMode || !connected || !Array.isArray(cells)) {
+			return;
 		}
+		if (extActive()) {
+			const extCells = [];
+			for (const cell of cells) {
+				if (cell && cell.ext) {
+					extCells.push({ x: cell.x, y: cell.y, ...cell.ext });
+				}
+			}
+			for (let i = 0; i < extCells.length; i += EXT_BATCH_LIMIT) {
+				pendingOps++;
+				State.worker.postMessage({
+					cmd: 'send',
+					type: T0wnzAction.EXT_DRAW_BATCH,
+					data: { cells: extCells.slice(i, i + EXT_BATCH_LIMIT) },
+				});
+			}
+			return;
+		}
+		State.worker.postMessage({
+			cmd: 'draw',
+			cells: cells.map(({ x, y, block }) => ({ x, y, block })),
+		});
 	};
 
 	// no Moebius equivalent; kept as a no-op so old call sites are inert
 	const sendCanvasSettings = _settings => {};
 
 	const sendResize = (columns, rows) =>
-		sendFrame(MoebiusAction.SET_CANVAS_SIZE, { columns, rows });
+		sendMutation(MoebiusAction.SET_CANVAS_SIZE, { columns, rows });
 
 	const sendFontChange = fontName =>
 		// landmine 6 outbound: peers (Moebius included) expect SAUCE names
-		sendFrame(MoebiusAction.CHANGE_FONT, { font_name: Load.appToSauceFont(fontName) ?? fontName });
+		sendMutation(MoebiusAction.CHANGE_FONT, { font_name: Load.appToSauceFont(fontName) ?? fontName });
 
 	const sendIceColorsChange = iceColors =>
-		sendFrame(MoebiusAction.ICE_COLORS, { value: iceColors });
+		sendMutation(MoebiusAction.ICE_COLORS, { value: iceColors });
 
 	const sendLetterSpacingChange = letterSpacing =>
-		sendFrame(MoebiusAction.USE_9PX_FONT, { value: letterSpacing });
+		sendMutation(MoebiusAction.USE_9PX_FONT, { value: letterSpacing });
 
 	const showCollaborationChoice = () => {
 		State.modal.open('choice');
@@ -320,6 +534,11 @@ const createWorkerHandler = inputHandle => {
 		connected = true;
 		collaborationMode = true;
 		applyReceivedSettings = true;
+		serverCaps = Array.isArray(data.data.caps)
+			? data.data.caps.filter(cap => typeof cap === 'string')
+			: [];
+		lastSeq = -1;
+		pendingOps = 0;
 		try {
 			State.modal.loading(
 				'Updating editor with data from the collab session...',
@@ -373,7 +592,7 @@ const createWorkerHandler = inputHandle => {
 			nick: handle,
 			group: '',
 			pass: '',
-			caps: [],
+			caps: [EXT_SUITE_CAP],
 			url: explicitServer,
 		});
 	};
@@ -458,6 +677,10 @@ const createWorkerHandler = inputHandle => {
 		setHandle: setHandle,
 		sendChat: sendChat,
 		isConnected: isConnected,
+		// true iff the session negotiated the t0wnz extension suite:
+		// unicode cells and extended colors travel natively, so the P5
+		// lockouts lift (vanilla sessions keep them)
+		extCollab: () => connected && extActive(),
 		joinCollaboration: joinCollaboration,
 		stayLocal: stayLocal,
 		sendCanvasSettings: sendCanvasSettings,

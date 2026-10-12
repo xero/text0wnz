@@ -188,4 +188,69 @@ test.describe('collab round trip against a live server', () => {
 		await a.context.close();
 		await late.context.close();
 	});
+
+	test('unicode and truecolor cells converge natively (extension suite)', async ({
+		browser,
+		browserName,
+	}) => {
+		test.skip(browserName !== 'chromium', 'one engine runs the full stack');
+		test.skip(!hasBun, 'bun is required to spawn the server');
+		test.slow();
+
+		const a = await joinPage(browser, 'uni-a');
+		const b = await joinPage(browser, 'uni-b');
+
+		// both sides negotiated the suite
+		expect(
+			await a.page.evaluate(() =>
+				window.__t0wnz.State.network.extCollab()),
+		).toBe(true);
+
+		// A draws a heavy black heart suit in truecolor orange through the
+		// editor core (the same path the tools use)
+		await a.page.evaluate(async () => {
+			const { State } = window.__t0wnz;
+			const resolved = await State.textArtCanvas.resolveUnicode([0x2764]);
+			const id = resolved.get(0x2764);
+			State.textArtCanvas.draw(cb => cb(id, 0xff8800, 0, 4, 2), false);
+		});
+
+		// B converges on the REAL cell: same codepoint, exact RGB word
+		const cellOnB = () =>
+			b.page.evaluate(() => {
+				const doc = window.__t0wnz.State.textArtCanvas.getDoc();
+				const index = 2 * doc.getColumns() + 4;
+				const glyphId = doc.frames[0].glyph[index] & 0xffff;
+				return {
+					codepoint: doc.glyphTable.get(glyphId)?.codepoint ?? null,
+					fg: doc.frames[0].fg[index] >>> 0,
+				};
+			});
+		await expect
+			.poll(async () => (await cellOnB()).codepoint, { timeout: 10000 })
+			.toBe(0x2764);
+		expect((await cellOnB()).fg).toBe(0xff8800);
+
+		// a late vanilla-fidelity check: the late joiner adopts via
+		// EXT_SYNC and sees the identical cell
+		const late = await joinPage(browser, 'uni-late');
+		const cellOnLate = () =>
+			late.page.evaluate(() => {
+				const doc = window.__t0wnz.State.textArtCanvas.getDoc();
+				const index = 2 * doc.getColumns() + 4;
+				const glyphId = doc.frames[0].glyph[index] & 0xffff;
+				return {
+					codepoint: doc.glyphTable.get(glyphId)?.codepoint ?? null,
+					fg: doc.frames[0].fg[index] >>> 0,
+				};
+			});
+		await expect
+			.poll(async () => (await cellOnLate()).codepoint, { timeout: 10000 })
+			.toBe(0x2764);
+		expect((await cellOnLate()).fg).toBe(0xff8800);
+
+		await a.context.close();
+		await b.context.close();
+		await late.context.close();
+	});
 });

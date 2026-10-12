@@ -199,12 +199,14 @@ const createCharsetPicker = () => {
 	const show = () => {
 		open = true;
 		// compat lockout stays visible (PLAN P5 gate): vanilla collab
-		// servers cannot carry unicode cells
+		// servers cannot carry unicode cells; a session that negotiated
+		// the t0wnz extension suite carries them natively
 		const lockNote = $('charsetLockNote');
 		if (lockNote) {
 			lockNote.classList.toggle(
 				'hide',
-				State.network?.isConnected?.() !== true,
+				State.network?.isConnected?.() !== true ||
+				State.network?.extCollab?.() === true,
 			);
 		}
 		renderBlockList();

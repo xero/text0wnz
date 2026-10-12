@@ -184,10 +184,14 @@ const createFKeys = () => {
 						0,
 					);
 				} else {
-					// collab lockout: vanilla servers can't carry unicode,
-					// so these dim while connected (inserts become '?')
+					// collab lockout: vanilla servers can't carry unicode, so
+					// these dim while connected (inserts become '?'); the ext
+					// suite (t0wnz-ext-1) lifts it
 					canvas.style.opacity =
-						State.network?.isConnected?.() === true ? '0.4' : '';
+						State.network?.isConnected?.() === true &&
+						State.network?.extCollab?.() !== true
+							? '0.4'
+							: '';
 					drawUnicodeToken(
 						canvas.getContext('2d'),
 						canvas.width,
