@@ -36,12 +36,17 @@ const createFramesPanel = () => {
 	let playTimer = 0;
 	let baudActive = false;
 	let baudRaf = 0;
+	// every stop/play bumps the token; a step chain that outlives its
+	// token aborts, so NO stale timer can ever keep animating (owner
+	// report: stop sometimes did not stop — this makes that impossible)
+	let playToken = 0;
 
 	const canvas = () => State.textArtCanvas;
 	const locked = () => State.network?.isConnected?.() === true;
 
 	/** stops BOTH playback modes (frame stepping and the baud reveal) */
 	const stop = () => {
+		playToken++;
 		if (playTimer) {
 			clearTimeout(playTimer);
 			playTimer = 0;
@@ -61,6 +66,7 @@ const createFramesPanel = () => {
 
 	const playBaud = () => {
 		stop();
+		const token = playToken;
 		const c = canvas();
 		const offsets = c.getBaudOffsets();
 		// 8N1: one byte costs 10 bits on the wire
@@ -69,7 +75,7 @@ const createFramesPanel = () => {
 		baudActive = true;
 		btnBaud.classList.add('active');
 		const tick = () => {
-			if (!baudActive) {
+			if (token !== playToken || !baudActive) {
 				return;
 			}
 			const bytes = ((performance.now() - t0) / 1000) * bytesPerSecond;
@@ -94,25 +100,25 @@ const createFramesPanel = () => {
 		tick();
 	};
 
-	const step = () => {
-		const c = canvas();
-		if (!playing || c.getFrameCount() < 2) {
-			stop();
-			return;
-		}
-		const next = (c.getCurrentFrame() + 1) % c.getFrameCount();
-		c.setCurrentFrame(next);
-		const delay = c.getFrameDelay(next) ?? c.getGlobalDelayMs();
-		playTimer = setTimeout(step, Math.max(16, delay));
-	};
-
 	const play = () => {
 		if (locked() || canvas().getFrameCount() < 2) {
 			return;
 		}
+		stop(); // any prior chain dies before a new one starts
 		playing = true;
 		btnPlay.textContent = 'stop';
 		btnPlay.classList.add('active');
+		const token = playToken;
+		const step = () => {
+			const c = canvas();
+			if (token !== playToken || !playing || c.getFrameCount() < 2) {
+				return;
+			}
+			const next = (c.getCurrentFrame() + 1) % c.getFrameCount();
+			c.setCurrentFrame(next);
+			const delay = c.getFrameDelay(next) ?? c.getGlobalDelayMs();
+			playTimer = setTimeout(step, Math.max(16, delay));
+		};
 		step();
 	};
 
@@ -195,7 +201,9 @@ const createFramesPanel = () => {
 		}
 	});
 	btnPlay.addEventListener('click', () => {
-		if (playing) {
+		// the play/stop button stops EVERY animation mode (a running
+		// baud reveal included) before it would ever start playback
+		if (playing || baudActive) {
 			stop();
 		} else {
 			play();
