@@ -1014,6 +1014,10 @@ const createCharacterBrushPanel = async () => {
 };
 
 const createFillController = () => {
+	// fill lives in the brush submenu, so like its siblings it keeps
+	// the bar open and the brushes nav lit while active
+	const bar = $('brushToolbar');
+	const nav = $('brushes');
 	const fillPoint = e => {
 		let block = State.textArtCanvas.getHalfBlock(
 			e.detail.x,
@@ -1140,10 +1144,14 @@ const createFillController = () => {
 
 	const enable = () => {
 		document.addEventListener('onTextCanvasDown', fillPoint);
+		bar.style.display = 'flex';
+		nav.classList.add('enabled');
 	};
 
 	const disable = () => {
 		document.removeEventListener('onTextCanvasDown', fillPoint);
+		bar.style.display = 'none';
+		nav.classList.remove('enabled');
 	};
 
 	return {

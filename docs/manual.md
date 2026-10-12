@@ -288,8 +288,7 @@ Some tools such as "Brushes" have many options or sub-tools. Clicking the tool i
 **Available Tools:**
 
 - Keyboard Mode - Full text input
-- Brushes - Freehand, shading, character, and attribute brushes
-- Fill - Flood fill color regions
+- Brushes - Freehand, shading, character, and attribute brushes, plus flood fill
 - Shapes - Lines, rectangles, circles, and ellipses
 - Selection - Select, move, copy, and transform areas
 - Sample - Pick colors and characters from canvas
@@ -420,7 +419,7 @@ Paint/recolor the foreground and background colors of the selected cell. Use the
 
 ## ![fill](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/fill.png) Fill Tool
 
-Flood fill connected color regions with the current foreground color.
+Flood fill connected color regions with the current foreground color. Fill lives in the brush submenu alongside the block, shading, character, and color brushes.
 
 **Features:**
 

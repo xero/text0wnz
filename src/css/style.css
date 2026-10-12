@@ -446,18 +446,12 @@
 	#selectionToolbar {
 		@apply hidden w-auto flex-row justify-start;
 	}
-	#viewportToolbar {
-		.toolButton kbd {
-			@apply mx-1;
-		}
-	}
 	#navDarkmode > kbd {
 		width: max-content;
 	}
+	/* every submenu stacks the icon over its label */
 	.toolButton {
-		@apply text-white flex text-sm h-[var(--header-size)];
-		line-height: 20px;
-		padding-right: 5px;
+		@apply text-white flex flex-col text-sm h-[var(--header-size)] px-[5px];
 
 		&:not(.toolbarDisplayed):hover {
 			@apply bg-hl;
@@ -465,16 +459,16 @@
 		&.enabled {
 			@apply bg-indigo;
 		}
+		svg,
+		kbd {
+			@apply flex my-0 mx-auto;
+		}
 		svg {
-			margin-inline-end: 5px;
+			width: 24px;
 		}
 		kbd {
-			@apply my-auto;
+			@apply text-xs w-full text-center;
 		}
-	}
-
-	#brushToolbar {
-		min-width: 378px;
 	}
 
 	#clipboardToolbar,
@@ -486,27 +480,6 @@
 
 	#cut {
 		margin-left: 4px !important;
-	}
-
-	#shapesToolbar {
-		min-width: 370px;
-	}
-
-	#selectionToolbar {
-		.toolButton {
-			@apply flex flex-col m-0 h-[var(--header-size)] px-[5px];
-
-			kbd,
-			svg {
-				@apply flex my-0 mx-auto;
-			}
-			kbd {
-				@apply text-xs w-full text-center;
-			}
-			svg {
-				width: 24px;
-			}
-		}
 	}
 
 	#keyboardToolbar {
