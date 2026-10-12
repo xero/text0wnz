@@ -1180,6 +1180,36 @@
 		right: 4px;
 		border: 1px solid theme('colors.cyber');
 	}
+	#sixteenList {
+		@apply flex flex-wrap gap-2 overflow-y-auto content-start;
+		max-height: 55vh;
+		button {
+			@apply bg-menu text-fg px-2 py-1 cursor-pointer;
+		}
+		button:hover:not(:disabled) {
+			@apply bg-purp;
+		}
+		button:disabled {
+			@apply opacity-40 cursor-default;
+		}
+		.sixteenPager {
+			@apply w-full flex gap-2 items-center text-fg;
+		}
+		.sixteenPiece {
+			@apply flex flex-col items-center gap-1 p-1;
+			width: 172px;
+			img {
+				max-width: 160px;
+				height: auto;
+			}
+			span {
+				@apply text-xs break-all;
+			}
+		}
+	}
+	#sixteenStatus {
+		@apply text-cyan text-sm;
+	}
 	#colorRGB {
 		@apply flex flex-row gap-2 items-center;
 		button {

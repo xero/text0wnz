@@ -21,6 +21,7 @@ export * from './codecs/ans.js';
 export * from './codecs/tundra.js';
 export * from './codecs/dur.js';
 export * from './codecs/envelope.js';
+export * from './codecs/zip.js';
 export * from './protocol/moebius.js';
 export * from './protocol/extensions.js';
 export * from './protocol/timelapse.js';

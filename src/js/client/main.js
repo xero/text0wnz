@@ -10,6 +10,7 @@ import { createCharsetPicker } from './charsetPicker.js';
 import { createColorPanel } from './colorPanel.js';
 import { createFramesPanel } from './frames.js';
 import { createMinimap } from './minimap.js';
+import { createSixteenColors } from './sixteenColors.js';
 import { FontCache } from './fontCache.js';
 import {
 	$,
@@ -525,6 +526,9 @@ const initializeAppComponents = async () => {
 	onClick($('open'), () => {
 		openFile.click();
 	});
+	// P6: the 16colo.rs in-app browser opens straight into the editor
+	const sixteen = createSixteenColors({ openFile: openHandler });
+	onClick($('browse16c'), () => sixteen?.show());
 	onClick($('saveAnsi'), Save.ans);
 	onClick($('saveUtf8'), Save.utf8);
 	onClick($('saveUtf8Blink'), Save.utf8Blink);

@@ -216,3 +216,9 @@ export const gzip = (bytes: Uint8Array): Promise<Uint8Array> =>
 
 export const gunzip = (bytes: Uint8Array): Promise<Uint8Array> =>
 	pumpThrough(bytes, new DecompressionStream('gzip'));
+
+export const deflateRaw = (bytes: Uint8Array): Promise<Uint8Array> =>
+	pumpThrough(bytes, new CompressionStream('deflate-raw'));
+
+export const inflateRaw = (bytes: Uint8Array): Promise<Uint8Array> =>
+	pumpThrough(bytes, new DecompressionStream('deflate-raw'));
