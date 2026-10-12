@@ -670,13 +670,15 @@ const createWorkerHandler = inputHandle => {
 		}
 	};
 
-	const joinCollaboration = (pass = '') => {
+	const joinCollaboration = pass => {
 		State.modal.loading('Joining the collab session...');
 		State.worker.postMessage({
 			cmd: 'connect',
 			nick: handle,
 			group: '',
-			pass,
+			// callers include DOM click handlers: only a real string is a
+			// password (a PointerEvent here once broke the worker clone)
+			pass: typeof pass === 'string' ? pass : '',
 			caps: [EXT_SUITE_CAP],
 			url: explicitServer,
 		});
@@ -753,8 +755,9 @@ const createWorkerHandler = inputHandle => {
 		}
 	}
 
-	// Set up collaboration choice dialog handlers
-	btnJoin.addEventListener('click', joinCollaboration);
+	// Set up collaboration choice dialog handlers (wrapped: the click
+	// event must never become the password argument)
+	btnJoin.addEventListener('click', () => joinCollaboration());
 	btnLocal.addEventListener('click', stayLocal);
 
 	return {
