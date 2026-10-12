@@ -82,6 +82,8 @@ let lblDarkmode;
 let metaTheme;
 let saveTimeout;
 let reload;
+let swRegistration = null;
+let updateAccepted = false;
 let palettePicker;
 let pendingFile = null;
 let navFullscreen;
@@ -323,8 +325,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 	// Initialize service worker
 	if ('serviceWorker' in navigator) {
 		navigator.serviceWorker.register('service.js').then(reg => {
-			if (reg.waiting) {
-				// New SW is waiting to activate
+			swRegistration = reg;
+			if (reg.waiting && navigator.serviceWorker.controller) {
+				// a new worker is already waiting: ask instead of activating
+				// under a live session (activation evicts the old assets this
+				// page may still lazy-load)
+				State.modal.open('update');
+			} else if (reg.waiting) {
 				reg.waiting.postMessage({ type: 'SKIP_WAITING' });
 			}
 			reg.onupdatefound = () => {
@@ -339,9 +346,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 			};
 		});
 
+		// reload exactly once after the user accepts an update and the new
+		// worker takes control; recovery claims by wedged-page repair also
+		// fire controllerchange, so gate on the explicit acceptance
+		navigator.serviceWorker.addEventListener('controllerchange', () => {
+			if (updateAccepted) {
+				updateAccepted = false;
+				window.location.reload();
+			}
+		});
+
 		// Listen for shared file messages from service worker
 		navigator.serviceWorker.addEventListener('message', async event => {
 			if (!trustedMessage(event)) {
+				return;
+			}
+			if (event.data.type === 'RECOVERY_PING') {
+				// prove this page is alive so the recovering worker leaves
+				// its session alone instead of force-reloading it
+				event.source?.postMessage({ type: 'RECOVERY_PONG' });
 				return;
 			}
 			if (event.data.type === 'SHARED_FILE_READY') {
@@ -644,6 +667,15 @@ const initializeAppComponents = async () => {
 		State.modal.open('update');
 	});
 	onClick(reload, _ => {
+		if (swRegistration?.waiting) {
+			// normal update path: activate the waiting worker and reload on
+			// controllerchange; settings and caches survive
+			updateAccepted = true;
+			swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+			return;
+		}
+		// no update pending (modal opened from the menu): keep the old
+		// scorched-earth refresh as a manual recovery tool
 		State.clearLocalStorage();
 		if ('caches' in window) {
 			window.caches.keys().then(keys => {
