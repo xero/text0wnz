@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
 	loadFontFromXBData,
 	loadFontFromImage,
+	clearGlyphZero,
 } from '../../src/js/client/font.js';
 
 const imgDataCap = 256;
@@ -71,6 +72,21 @@ describe('Font Module - Basic Tests', () => {
 		if (global.gc) {
 			global.gc();
 		}
+	});
+
+	describe('clearGlyphZero', () => {
+		it('blanks only glyph 0, so an inked atlas slot cannot leak', () => {
+			// Topaz-437 ships glyph 0 inked; deletes write char 0 and must
+			// render empty like every other font
+			const bytesPerGlyph = (8 * 16) / 8;
+			const data = new Uint8Array(bytesPerGlyph * 256).fill(0xff);
+			const cleared = clearGlyphZero({ width: 8, height: 16, data });
+			expect(
+				[...cleared.data.slice(0, bytesPerGlyph)].every(b => b === 0),
+			).toBe(true);
+			expect(cleared.data[bytesPerGlyph]).toBe(0xff);
+			expect(cleared.data[cleared.data.length - 1]).toBe(0xff);
+		});
 	});
 
 	describe('loadFontFromXBData', () => {

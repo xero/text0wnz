@@ -162,6 +162,12 @@
 
 	body {
 		@apply w-full h-full m-0 bg-black fixed overflow-hidden overscroll-none left-0 top-0 right-0 bottom-0;
+		/* a fixed box with top-0 bottom-0 sizes to the LAYOUT viewport,
+		   which iOS keeps at toolbar-collapsed height while Safari's
+		   chrome shows: 35px of layout hid under the toolbar. dvh tracks
+		   the real window; height wins over bottom in the over-
+		   constrained box, and h-full stays the fallback */
+		height: 100dvh;
 
 		> div {
 			@apply w-full h-full m-0;

@@ -256,6 +256,36 @@ export const createZoomController = viewport => {
 		{ signal },
 	);
 
+	// ---- ctrl/cmd +=/-/0 ------------------------------------------------
+	document.addEventListener(
+		'keydown',
+		e => {
+			if ((!e.ctrlKey && !e.metaKey) || e.altKey || e.shiftKey) {
+				return;
+			}
+			const target = /** @type {HTMLElement | null} */ (
+				e.target instanceof HTMLElement ? e.target : null
+			);
+			// text fields keep their own ctrl combos
+			if (
+				target &&
+				(target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')
+			) {
+				return;
+			}
+			// ctrl+0 stays off this list: it selects color 0, the classic
+			// ACiD Draw / Pablo / Moebius binding the editor shares
+			if (e.code === 'Equal' || e.code === 'NumpadAdd') {
+				e.preventDefault();
+				zoomIn();
+			} else if (e.code === 'Minus' || e.code === 'NumpadSubtract') {
+				e.preventDefault();
+				zoomOut();
+			}
+		},
+		{ signal },
+	);
+
 	// ---- ctrl/cmd + wheel (trackpad pinch arrives this way) ------------
 	let wheelTarget = 0; // 0 = no burst in flight
 

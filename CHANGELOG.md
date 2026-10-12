@@ -71,6 +71,18 @@ byte-exact golden tests before anything else moved.
 - **Selections survive tool switches.** Leaving the selection tool and
   coming back restores the last selection instead of collapsing it to
   a single cell at the cursor. A pre-v3 defect.
+- **Deletes render blank in every font.** Char 0 is the editor's empty
+  cell, but the Topaz-437 atlas inks glyph 0, so deleted cells stamped
+  visible marks. PNG font atlases now blank glyph 0 on load; fonts
+  embedded in XBin files keep theirs, since a custom glyph 0 is the
+  author's call.
+- **The zoom shortcuts exist now.** `ctrl +` and `ctrl -` were
+  documented and did nothing; they now step the zoom in every mode.
+  `ctrl 0` stays what it has always been in the scene: color 0.
+- **iOS layout fits the window.** The fixed root sized to the layout
+  viewport, which runs taller than the window while Safari's toolbar
+  shows, hiding the bottom rows of the editor and baring offsets at
+  the top. The root now tracks the dynamic viewport height.
 - **Modals no longer self-close.** A doubled close (a backdrop
   double-tap, or stacked backdrop handlers from switching modals)
   orphaned a transition handler that shut every later modal the moment

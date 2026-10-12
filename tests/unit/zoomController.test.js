@@ -98,6 +98,43 @@ describe('zoom controller', () => {
 		expect(mocks.state.font.setScaleFactor).toHaveBeenLastCalledWith(1);
 	});
 
+	it('ctrl/cmd plus, minus, and zero step the zoom from any mode', () => {
+		createZoomController(viewport);
+		const key = (code, init = {}) =>
+			document.dispatchEvent(
+				new KeyboardEvent('keydown', {
+					code,
+					ctrlKey: true,
+					cancelable: true,
+					...init,
+				}),
+			);
+		key('Equal');
+		expect(mocks.state.font.setScaleFactor).toHaveBeenLastCalledWith(1.5);
+		mocks.setScale(1.5);
+		key('Minus');
+		expect(mocks.state.font.setScaleFactor).toHaveBeenLastCalledWith(1);
+		// ctrl+0 belongs to color 0, the classic scene binding: untouched
+		mocks.setScale(3);
+		mocks.state.font.setScaleFactor.mockClear();
+		key('Digit0');
+		expect(mocks.state.font.setScaleFactor).not.toHaveBeenCalled();
+		// text fields keep their own ctrl combos
+		mocks.setScale(2);
+		mocks.state.font.setScaleFactor.mockClear();
+		const input = document.createElement('input');
+		document.body.appendChild(input);
+		input.dispatchEvent(
+			new KeyboardEvent('keydown', {
+				code: 'Equal',
+				ctrlKey: true,
+				bubbles: true,
+				cancelable: true,
+			}),
+		);
+		expect(mocks.state.font.setScaleFactor).not.toHaveBeenCalled();
+	});
+
 	it('pinch pans the viewport and zooms continuously on GL', () => {
 		createZoomController(viewport);
 		viewport.scrollLeft = 200;
