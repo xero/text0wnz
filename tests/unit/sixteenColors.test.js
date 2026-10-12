@@ -172,6 +172,11 @@ describe('sixteen colors browser', () => {
 										{ file: 'cover.png', tn: '/pack/bmbook16/tn/cover.png' },
 									],
 								},
+								// a gif-only release: no section at all
+								mist1198: {
+									group: 'mistigris',
+									files: [{ file: 'AVE-ANIM.GIF', tn: '/pack/mist1198/tn/AVE-ANIM.GIF.png' }],
+								},
 							},
 						},
 					}),
@@ -208,8 +213,10 @@ describe('sixteen colors browser', () => {
 		await flush();
 		const list = document.getElementById('sixteenList');
 		expect(list.dataset.view).toBe('artistworks');
-		const head = document.querySelector('.sixteenWorksHead');
-		expect(head.textContent).toBe('1998 / bmbook16 (maiden brazil)');
+		// one section: the gif-only mistigris release leaves no header
+		const heads = document.querySelectorAll('.sixteenWorksHead');
+		expect(heads).toHaveLength(1);
+		expect(heads[0].textContent).toBe('1998 / bmbook16 (maiden brazil)');
 		// the png never renders, only openable works do
 		const pieces = [...document.querySelectorAll('.sixteenWorksBody .sixteenPiece')];
 		expect(pieces.map(p => p.textContent)).toEqual(['AVE-TUTP.ANS']);

@@ -386,10 +386,19 @@ const createSixteenColors = ({ openFile }) => {
 			say(`16colo.rs did not answer (${error.message})`, true);
 			return;
 		}
-		say(null);
 		const years = Object.keys(data.results ?? {}).sort((a, b) => b - a);
+		let shown = 0;
 		for (const year of years) {
 			for (const [packName, entry] of Object.entries(data.results[year])) {
+				const pieces = (entry.files ?? [])
+					.filter(f => isOpenable(f.file))
+					.map(f => ({ name: f.file, tn: f.tn ?? null, w: 0, h: 0 }));
+				// a release of nothing but filtered formats (gif subs and
+				// the like) must not leave a bare header behind
+				if (!pieces.length) {
+					continue;
+				}
+				shown++;
 				const section = document.createElement('section');
 				section.className = 'sixteenWorks';
 				const head = button(
@@ -400,14 +409,12 @@ const createSixteenColors = ({ openFile }) => {
 				section.appendChild(head);
 				const body = document.createElement('div');
 				body.className = 'sixteenWorksBody';
-				const pieces = (entry.files ?? [])
-					.filter(f => isOpenable(f.file))
-					.map(f => ({ name: f.file, tn: f.tn ?? null, w: 0, h: 0 }));
 				layoutPieces(body, pieces, file => openVia(packName, file));
 				section.appendChild(body);
 				list.appendChild(section);
 			}
 		}
+		say(shown ? null : 'none of this artist\'s releases open in the editor');
 	};
 
 	const showCrews = async (filter, page) => {
