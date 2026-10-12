@@ -72,6 +72,8 @@ const createModalController = modal => {
 		$('sauceModal'),
 		$('charsetModal'),
 		$('exportModal'),
+		$('sixteenModal'),
+		$('pluginModal'),
 		$('choiceModal'),
 		$('updateModal'),
 		$('loadingModal'),
@@ -902,6 +904,79 @@ const createFontSelect = (el, lbl, img, btn) => {
 	listbox.addEventListener('blur', () =>
 		getOptions().forEach(opt => opt.classList.remove('focused')));
 
+	// P6 steal (font browser favorites): starred fonts pin to a
+	// Favorites group at the top of the listbox, kept in localStorage
+	const FAVORITES_KEY = 'fontFavorites';
+	const favorites = () => {
+		try {
+			const parsed = JSON.parse(localStorage.getItem(FAVORITES_KEY)) ?? [];
+			return Array.isArray(parsed)
+				? parsed.filter(value => typeof value === 'string')
+				: [];
+		} catch {
+			return [];
+		}
+	};
+	const saveFavorites = values => {
+		try {
+			localStorage.setItem(FAVORITES_KEY, JSON.stringify(values));
+		} catch {
+			// storage blocked: favorites just don't persist
+		}
+	};
+	const originalOptionFor = value =>
+		getOptions().find(
+			opt =>
+				!opt.classList.contains('favoriteOption') &&
+				opt.dataset.value === value,
+		);
+	const rebuildFavorites = () => {
+		const selected = getValue();
+		listbox
+			.querySelectorAll('.favoriteOption, .favoritesLabel')
+			.forEach(node => node.remove());
+		const values = favorites().filter(value => originalOptionFor(value));
+		if (values.length > 0) {
+			const label = document.createElement('li');
+			label.className = 'groupLabel favoritesLabel';
+			label.setAttribute('role', 'presentation');
+			label.textContent = 'Favorites';
+			const nodes = [label];
+			values.forEach((value, i) => {
+				const clone = originalOptionFor(value).cloneNode(true);
+				clone.classList.add('favoriteOption');
+				clone.classList.remove('focused');
+				clone.id = `fontFav-${i}`;
+				clone.setAttribute('aria-selected', 'false');
+				clone.addEventListener('click', () => {
+					updateSelection(getOptions().indexOf(clone));
+				});
+				nodes.push(clone);
+			});
+			listbox.prepend(...nodes);
+		}
+		if (selected !== null) {
+			setValue(selected);
+		}
+	};
+	const toggleFavorite = () => {
+		const value = getValue();
+		if (value === null) {
+			return false;
+		}
+		const values = favorites();
+		const at = values.indexOf(value);
+		if (at >= 0) {
+			values.splice(at, 1);
+		} else {
+			values.push(value);
+		}
+		saveFavorites(values);
+		rebuildFavorites();
+		return values.includes(value);
+	};
+	const isFavorite = () => favorites().includes(getValue());
+
 	// Init
 	let focusedIdx = getOptions().findIndex(
 		opt => opt.getAttribute('aria-selected') === 'true',
@@ -911,11 +986,14 @@ const createFontSelect = (el, lbl, img, btn) => {
 	}
 	updateSelection(focusedIdx);
 	updateFontPreview(getValue());
+	rebuildFavorites();
 
 	return {
 		focus: setFocus,
 		getValue: getValue,
 		setValue: setValue,
+		toggleFavorite: toggleFavorite,
+		isFavorite: isFavorite,
 	};
 };
 

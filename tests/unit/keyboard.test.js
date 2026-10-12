@@ -7,6 +7,7 @@ import {
 	createPasteTool,
 	createSelectionTool,
 } from '../../src/js/client/keyboard.js';
+import State from '../../src/js/client/state.js';
 
 // Mock the State module and other dependencies
 vi.mock('../../src/js/client/state.js', () => ({
@@ -519,6 +520,73 @@ describe('Keyboard Utilities', () => {
 
 			expect(textToChars('ABC')).toEqual([65, 66, 67]);
 			expect(textToChars('123')).toEqual([49, 50, 51]);
+		});
+	});
+
+	describe('paste modes (P6 steal)', () => {
+		const makeTool = () => {
+			const item = () => document.createElement('div');
+			return createPasteTool(item(), item(), item(), item());
+		};
+		let drawn;
+
+		beforeEach(() => {
+			vi.clearAllMocks();
+			drawn = [];
+			State.selectionCursor.isVisible = vi.fn(() => true);
+			State.cursor.isVisible = vi.fn(() => false);
+			// clipboard: [blank space, red full block]
+			State.textArtCanvas.getArea = vi.fn(() => ({
+				data: Uint16Array.from([32 << 8, (219 << 8) | 4]),
+				width: 2,
+				height: 1,
+			}));
+			State.textArtCanvas.draw = vi.fn(callback => {
+				callback((code, fg, bg, x, y) => drawn.push({ code, fg, bg, x, y }));
+			});
+		});
+
+		it('pasteTransparent skips clipboard blanks', () => {
+			const tool = makeTool();
+			tool.setSelection(0, 0, 2, 1);
+			tool.copy();
+			tool.pasteTransparent();
+			expect(State.textArtCanvas.startUndo).toHaveBeenCalledTimes(1);
+			expect(drawn).toEqual([{ code: 219, fg: 4, bg: 0, x: 1, y: 0 }]);
+		});
+
+		it('pasteUnder writes only into blank target cells', () => {
+			State.textArtCanvas.getBlock = vi.fn(x =>
+				(x === 0
+					? { charCode: 32, foregroundColor: 7, backgroundColor: 0 }
+					: { charCode: 219, foregroundColor: 7, backgroundColor: 0 }));
+			const tool = makeTool();
+			tool.setSelection(0, 0, 2, 1);
+			tool.copy();
+			tool.pasteUnder();
+			expect(drawn).toEqual([{ code: 32, fg: 0, bg: 0, x: 0, y: 0 }]);
+		});
+
+		it('extended-color targets count as occupied for pasteUnder', () => {
+			State.textArtCanvas.getBlock = vi.fn(() => ({
+				charCode: 32,
+				foregroundColor: 7,
+				backgroundColor: 0x800000c8, // palette word: colored, not blank
+			}));
+			const tool = makeTool();
+			tool.setSelection(0, 0, 2, 1);
+			tool.copy();
+			tool.pasteUnder();
+			expect(drawn).toEqual([]);
+		});
+
+		it('both modes clip at the canvas edge', () => {
+			State.textArtCanvas.getColumns = vi.fn(() => 1);
+			const tool = makeTool();
+			tool.setSelection(0, 0, 2, 1);
+			tool.copy();
+			tool.pasteTransparent();
+			expect(drawn).toEqual([]); // cell 1 clipped, cell 0 blank
 		});
 	});
 });

@@ -8,14 +8,18 @@ import { createHexFontPages } from './hexFontPages.js';
 import {
 	cellFromPoint,
 	clampCell,
+	cp437ToUnicode,
 	createDocV3,
 	createEditorCore,
 	createJournal,
 	createPatchArena,
 	encodeStrokeRecord,
 	replayJournal,
+	paletteColor,
 	snapOrigin,
+	unicodeToCp437Strict,
 	v3ToU16,
+	v3ToU16Lossy,
 } from '../core/index';
 import { createJournalStore } from './journalStore.js';
 import { createPointerInput } from './pointer.js';
@@ -102,11 +106,21 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const editor = createEditorCore(doc, {
 		arena,
+		onFrameChange: frameIndex => handleFrameChange(frameIndex),
 		onWrite: ({ index, x, y, word, history }) => {
 			imageData[index] = word;
+			if (onionSkin && onionPlanes) {
+				updateOnionIndex(index);
+			}
 			if (history) {
 				// Moebius-native wire cells (P4): unpacked coordinates, so
-				// the signed (index<<16) row-409 cap is gone for good
+				// the signed (index<<16) row-409 cap is gone for good. The
+				// ext payload carries full fidelity straight off the planes;
+				// network.js sends it in ext sessions and strips it for
+				// vanilla ones (P6 extension suite).
+				const frame = doc.frames[editor.getCurrentFrame()];
+				const glyphValue = frame.glyph[index];
+				const glyphId = glyphValue & 0xffff;
 				drawHistory.push({
 					x,
 					y,
@@ -114,6 +128,14 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 						code: word >> 8,
 						fg: word & 15,
 						bg: (word >> 4) & 15,
+					},
+					ext: {
+						u:
+							doc.glyphTable.get(glyphId)?.codepoint ??
+							cp437ToUnicode(glyphId & 0xff),
+						a: (glyphValue >>> 16) & 0xff,
+						fg: frame.fg[index] >>> 0,
+						bg: frame.bg[index] >>> 0,
 					},
 				});
 				enqueueDirtyCell(x, y);
@@ -134,6 +156,143 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		},
 	});
 	const iceColorsNow = () => doc.getIceColors();
+
+	// ---- P6 frames: onion-skin compose + current-frame mirror ----------
+	// Onion skin is a DATA-level ghost, GL-only (the chunk fallback's u16
+	// mirror always reflects the real frame): blank cells of the current
+	// frame show the previous frame dimmed to 35%, blink stripped.
+	let onionSkin = false;
+	/** @type {{glyph: Uint32Array, fg: Uint32Array, bg: Uint32Array} | null} */
+	let onionPlanes = null;
+	const BLANK_BG = paletteColor(0);
+
+	const dimWord = word => {
+		const [r, g, b] = State.palette.getRGBAColor(word);
+		return (
+			((Math.floor(r * 0.35) & 0xff) << 16) |
+			((Math.floor(g * 0.35) & 0xff) << 8) |
+			(Math.floor(b * 0.35) & 0xff)
+		);
+	};
+
+	const composeOnionIndex = (prev, cur, i) => {
+		const glyphId = cur.glyph[i] & 0xffff;
+		const blank =
+			(glyphId === 0 || glyphId === 32) && cur.bg[i] === BLANK_BG;
+		if (!blank || !prev) {
+			onionPlanes.glyph[i] = cur.glyph[i];
+			onionPlanes.fg[i] = cur.fg[i];
+			onionPlanes.bg[i] = cur.bg[i];
+		} else {
+			onionPlanes.glyph[i] = prev.glyph[i] & 0xffff; // blink stripped
+			onionPlanes.fg[i] = dimWord(prev.fg[i]);
+			onionPlanes.bg[i] = dimWord(prev.bg[i]);
+		}
+	};
+
+	const updateOnionIndex = index => {
+		const frameIndex = editor.getCurrentFrame();
+		composeOnionIndex(
+			frameIndex > 0 ? doc.frames[frameIndex - 1] : null,
+			doc.frames[frameIndex],
+			index,
+		);
+	};
+
+	const rebuildOnionPlanes = () => {
+		const frameIndex = editor.getCurrentFrame();
+		const cur = doc.frames[frameIndex];
+		const prev = frameIndex > 0 ? doc.frames[frameIndex - 1] : null;
+		if (!onionPlanes || onionPlanes.glyph.length !== cur.glyph.length) {
+			onionPlanes = {
+				glyph: new Uint32Array(cur.glyph.length),
+				fg: new Uint32Array(cur.glyph.length),
+				bg: new Uint32Array(cur.glyph.length),
+			};
+		}
+		for (let i = 0; i < cur.glyph.length; i++) {
+			composeOnionIndex(prev, cur, i);
+		}
+	};
+
+	// Baud preview (P6): reveal the current frame in encoded-byte order
+	// at a chosen line rate — another data-level compose, GL-only.
+	/** @type {{glyph: Uint32Array, fg: Uint32Array, bg: Uint32Array} | null} */
+	let baudPlanes = null;
+	let baudReveal = -1;
+
+	/**
+	 * Cumulative estimated ANSI byte cost per cell of the current frame
+	 * (glyph byte + ~11 bytes per SGR change + CRLF per row): honest
+	 * enough pacing without replaying the real encoder.
+	 */
+	const getBaudOffsets = () => {
+		const mirror = v3ToU16Lossy(doc, editor.getCurrentFrame()).imageData;
+		const offsets = new Float64Array(mirror.length);
+		let total = 0;
+		let prevFg = 7;
+		let prevBg = 0;
+		for (let i = 0; i < mirror.length; i++) {
+			const word = mirror[i];
+			const fg = word & 15;
+			const bg = (word >> 4) & 15;
+			if (fg !== prevFg || bg !== prevBg) {
+				total += 11;
+				prevFg = fg;
+				prevBg = bg;
+			}
+			total += 1;
+			if ((i + 1) % columns === 0) {
+				total += 2;
+			}
+			offsets[i] = total;
+		}
+		return offsets;
+	};
+
+	/** @param {number | null} count cells revealed; null ends the preview */
+	const setBaudReveal = count => {
+		if (count === null || count < 0) {
+			baudReveal = -1;
+			baudPlanes = null;
+			redrawEntireImage();
+			return;
+		}
+		const frame = doc.frames[editor.getCurrentFrame()];
+		const size = frame.glyph.length;
+		if (!baudPlanes || baudPlanes.glyph.length !== size) {
+			baudPlanes = {
+				glyph: new Uint32Array(size),
+				fg: new Uint32Array(size),
+				bg: new Uint32Array(size),
+			};
+		}
+		const limit = Math.min(count, size);
+		baudPlanes.glyph.set(frame.glyph.subarray(0, limit));
+		baudPlanes.fg.set(frame.fg.subarray(0, limit));
+		baudPlanes.bg.set(frame.bg.subarray(0, limit));
+		baudPlanes.glyph.fill(0, limit);
+		baudPlanes.fg.fill(BLANK_BG, limit);
+		baudPlanes.bg.fill(BLANK_BG, limit);
+		baudReveal = limit;
+		redrawEntireImage();
+	};
+
+	/** re-mirror + repaint + tell the UI; fired by editor navigation */
+	const handleFrameChange = frameIndex => {
+		imageData = v3ToU16Lossy(doc, frameIndex).imageData;
+		if (onionSkin) {
+			rebuildOnionPlanes();
+		}
+		redrawEntireImage();
+		document.dispatchEvent(
+			new CustomEvent('onFrameChange', {
+				detail: { frame: frameIndex, count: doc.frames.length },
+				bubbles: true,
+				cancelable: false,
+			}),
+		);
+	};
 
 	const chunkSize = 25,
 				viewportState = {
@@ -179,8 +338,20 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				getColumns: () => columns,
 				getRows: () => rows,
 				// GL renders the v3 planes directly (tag-bit colors, attr
-				// blink); the u16 mirror stays for the chunk fallback + collab
-				getPlanes: () => doc.frames[0],
+				// blink); the u16 mirror stays for the chunk fallback +
+				// collab. Frames: the current frame renders; onion mode
+				// substitutes the composed ghost planes (GL-only)
+				getPlanes: () => {
+					if (baudReveal >= 0 && baudPlanes) {
+						return baudPlanes;
+					}
+					return onionSkin && onionPlanes
+						? onionPlanes
+						: doc.frames[editor.getCurrentFrame()];
+				},
+				// exports read the REAL document, never the onion/baud
+				// composites (review finding: PNGs shipped the ghost)
+				getDocPlanes: () => doc.frames[editor.getCurrentFrame()],
 				getIceColors: iceColorsNow,
 				getGlyphDef: glyphId => doc.glyphTable.get(glyphId),
 				getHexPages: ensureHexPages,
@@ -1091,7 +1262,13 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			editor.resize(newColumnValue, newRowValue);
 			columns = newColumnValue;
 			rows = newRowValue;
-			imageData = editor.toU16().imageData;
+			// LOSSY projection, current frame: the strict one throws on
+			// unicode glyphs and RGB words (latent P5 bug: resizing after
+			// a unicode paste crashed), and the mirror is lossy by contract
+			imageData = v3ToU16Lossy(doc, editor.getCurrentFrame()).imageData;
+			if (onionSkin) {
+				rebuildOnionPlanes();
+			}
 			scheduleJournalKeyframe();
 			createCanvases();
 			updateTimer();
@@ -1295,8 +1472,19 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		scheduleJournalKeyframe();
 		createCanvases();
 		updateTimer();
+		if (onionSkin) {
+			rebuildOnionPlanes();
+		}
 		redrawEntireImage(null, () => {
 			document.dispatchEvent(new CustomEvent('onOpenedFile'));
+			// the frame count may have changed (.dur / envelope imports)
+			document.dispatchEvent(
+				new CustomEvent('onFrameChange', {
+					detail: { frame: 0, count: doc.frames.length },
+					bubbles: true,
+					cancelable: false,
+				}),
+			);
 			if (onComplete) {
 				onComplete();
 			}
@@ -1446,10 +1634,104 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		sendDrawHistory();
 	};
 
+	// ---- P6 frames API (timeline UI drives these) ----------------------
+	// Collab sessions are single-frame by policy: no frame op exists in
+	// the protocol, so navigation and structure changes refuse while
+	// connected (the timeline UI says why).
+	const framesLocked = () => State.network?.isConnected?.() === true;
+
+	const setCurrentFrame = index => {
+		if (framesLocked()) {
+			return false;
+		}
+		return editor.setCurrentFrame(index);
+	};
+
+	const addFrame = options => {
+		if (framesLocked()) {
+			return -1;
+		}
+		const index = editor.addFrame(options);
+		scheduleJournalKeyframe();
+		State.saveToLocalStorage();
+		document.dispatchEvent(
+			new CustomEvent('onFrameChange', {
+				detail: { frame: editor.getCurrentFrame(), count: doc.frames.length },
+				bubbles: true,
+				cancelable: false,
+			}),
+		);
+		return index;
+	};
+
+	const removeFrame = index => {
+		if (framesLocked() || doc.frames.length === 1) {
+			return false;
+		}
+		editor.removeFrame(index); // fires onFrameChange -> remirror+repaint
+		scheduleJournalKeyframe();
+		State.saveToLocalStorage();
+		return true;
+	};
+
+	const setFrameDelay = (index, delayMs) => {
+		const frame = doc.frames[index];
+		if (!frame) {
+			return;
+		}
+		frame.delayMs = delayMs;
+		scheduleJournalKeyframe();
+	};
+
+	const setOnionSkin = enabled => {
+		onionSkin = enabled === true;
+		if (onionSkin) {
+			rebuildOnionPlanes();
+		}
+		redrawEntireImage();
+	};
+
 	// Network changes: repaint without entering undo or the draw history
 	const quickDraw = blocks => {
 		editor.quickDrawU16(blocks);
 		processDirtyRegions();
+	};
+
+	/**
+	 * Remote full-fidelity cells (collab extension suite): resolve
+	 * codepoints exactly like paste does (cp437 identity first, hex font
+	 * slots for the rest), then write the planes without undo/history.
+	 * @param {{x: number, y: number, u: number, a: number, fg: number, bg: number}[]} cells
+	 */
+	const drawRemoteExtCells = async cells => {
+		const unresolved = new Set();
+		for (const cell of cells) {
+			if (unicodeToCp437Strict(cell.u) === undefined) {
+				unresolved.add(cell.u);
+			}
+		}
+		const resolved =
+			unresolved.size > 0 ? await resolveUnicode(unresolved) : new Map();
+		// bounds re-check AFTER the await: a resize during the hex block
+		// fetch must not misplace writes (the P5 paste lesson)
+		const writes = [];
+		for (const cell of cells) {
+			if (cell.x >= columns || cell.y >= rows) {
+				continue;
+			}
+			const byte = unicodeToCp437Strict(cell.u);
+			const glyphId = byte !== undefined ? byte : (resolved.get(cell.u) ?? 63);
+			writes.push({
+				index: cell.y * columns + cell.x,
+				glyph: ((cell.a & 0xff) << 16) | (glyphId & 0xffff),
+				fg: cell.fg,
+				bg: cell.bg,
+			});
+		}
+		if (writes.length > 0) {
+			editor.quickDrawExt(writes);
+			processDirtyRegions();
+		}
 	};
 
 
@@ -1668,9 +1950,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const resolved = new Map();
 		// collab lockout (visible in the charset UI): the vanilla Moebius
 		// dialect cannot carry unicode cells, and an apply-locally sender
-		// would silently diverge from every peer - substitute until a
-		// protocol extension negotiates unicode (SERVER_CAPS, ids 23+)
-		const locked = State.network?.isConnected?.() === true;
+		// would silently diverge from every peer. The t0wnz extension
+		// suite (ids 23+) lifts it: when the server negotiated the suite,
+		// unicode cells travel natively and nothing substitutes.
+		const locked =
+			State.network?.isConnected?.() === true &&
+			State.network?.extCollab?.() !== true;
 		const unique = [...new Set(codepoints)];
 		if (locked) {
 			for (const codepoint of unique) {
@@ -1726,6 +2011,28 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		getArea: getArea,
 		setArea: setArea,
 		quickDraw: quickDraw,
+		drawRemoteExtCells: drawRemoteExtCells,
+		getFrameCount: () => doc.frames.length,
+		getCurrentFrame: () => editor.getCurrentFrame(),
+		setCurrentFrame: setCurrentFrame,
+		addFrame: addFrame,
+		removeFrame: removeFrame,
+		canAddFrame: () => doc.canAddFrame(),
+		getFrameDelay: index => doc.frames[index]?.delayMs,
+		setFrameDelay: setFrameDelay,
+		getGlobalDelayMs: () => doc.getGlobalDelayMs(),
+		setGlobalDelayMs: ms => {
+			doc.setGlobalDelayMs(ms);
+			scheduleJournalKeyframe();
+		},
+		setOnionSkin: setOnionSkin,
+		getOnionSkin: () => onionSkin,
+		getBaudOffsets: getBaudOffsets,
+		setBaudReveal: setBaudReveal,
+		// CRT post pass rides the GL renderer only; the chunk fallback
+		// ignores the toggle (getCrtEffect stays false there)
+		setCrtEffect: enabled => glRenderer?.setCrt?.(enabled),
+		getCrtEffect: () => glRenderer?.getCrt?.() === true,
 		loadJournalSnapshot: loadJournalSnapshot,
 		journalKeyframe: scheduleJournalKeyframe,
 		setMirrorMode: setMirrorMode,

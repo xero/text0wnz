@@ -12,8 +12,13 @@ import { createRoom, SERVER_CAPS, ROOM_DEFAULTS } from '../../../src/js/server/r
 import {
 	MoebiusAction as A,
 	MoebiusStatus,
+	T0wnzAction,
+	EXT_SUITE_CAP,
+	expandExtCells,
+	timelapseToDoc,
 	uncompressBlocks,
 } from '../../../src/js/core/index';
+import { paletteColor } from '../../../src/js/core/doc.js';
 
 const fakeClient = () => {
 	const frames = [];
@@ -218,6 +223,40 @@ describe('settings and canvas', () => {
 		});
 		expect(room.stats().columns).toBe(ROOM_DEFAULTS.columns);
 	});
+
+	it('honors per-room resize walls in either direction (O3 env knob)', () => {
+		// a cautious host LOWERS the wall below the compiled-in default
+		const room = createRoom({ maxColumns: 200, maxRows: 500 });
+		const editor = joinEditor(room);
+		room.message(editor, {
+			type: A.SET_CANVAS_SIZE,
+			data: { columns: 201, rows: 100, id: 0 },
+		});
+		expect(room.stats().columns).toBe(ROOM_DEFAULTS.columns);
+		room.message(editor, {
+			type: A.SET_CANVAS_SIZE,
+			data: { columns: 100, rows: 501, id: 0 },
+		});
+		expect(room.stats().rows).toBe(ROOM_DEFAULTS.rows);
+		room.message(editor, {
+			type: A.SET_CANVAS_SIZE,
+			data: { columns: 200, rows: 500, id: 0 },
+		});
+		expect(room.stats().columns).toBe(200);
+		expect(room.stats().rows).toBe(500);
+
+		// a jam host RAISES it past the default (kept tiny-rowed so the
+		// test doesn't allocate a jam-sized doc; the wall math is what's
+		// under test)
+		const jam = createRoom({ maxColumns: 1200, maxRows: 30 });
+		const artist = joinEditor(jam);
+		jam.message(artist, {
+			type: A.SET_CANVAS_SIZE,
+			data: { columns: 1100, rows: 30, id: 0 },
+		});
+		expect(jam.stats().columns).toBe(1100);
+		expect(jam.stats().rows).toBe(30);
+	});
 });
 
 describe('relay tier and misc', () => {
@@ -246,15 +285,19 @@ describe('relay tier and misc', () => {
 		expect(b.ofType(A.SET_BG)).toHaveLength(0);
 	});
 
-	it('extension frames only flow from caps-aware clients', () => {
+	it('unknown extension ids flow only BETWEEN caps-aware clients', () => {
 		const room = createRoom();
 		const vanilla = joinEditor(room, 'v');
 		const capsy = fakeClient();
+		const capsy2 = fakeClient();
 		room.connect(capsy, { nick: 'c', caps: []});
+		room.connect(capsy2, { nick: 'c2', caps: []});
 		room.message(vanilla, { type: 42, data: { id: 0 } });
 		expect(capsy.ofType(42)).toHaveLength(0); // vanilla sender dropped
 		room.message(capsy, { type: 42, data: { id: 1 } });
-		expect(vanilla.ofType(42)).toHaveLength(1); // caps sender relays
+		// caps sender relays to caps peers; vanilla never sees unknown shapes
+		expect(capsy2.ofType(42)).toHaveLength(1);
+		expect(vanilla.ofType(42)).toHaveLength(0);
 	});
 
 	it('STATUS echoes to self and others', () => {
@@ -280,6 +323,377 @@ describe('relay tier and misc', () => {
 		const stranger = fakeClient();
 		room.message(stranger, { type: A.DRAW, data: {} });
 		expect(room.stats().opLogLength).toBe(0);
+	});
+});
+
+describe('extension suite v1 (t0wnz-ext-1)', () => {
+	const joinCaps = (room, nick) =>
+		joinEditor(room, nick, { caps: [EXT_SUITE_CAP]});
+	const extCell = {
+		u: 0x4e2d, // CJK: no cp437 home
+		a: 0,
+		fg: 0xff8800,
+		bg: paletteColor(0),
+	};
+
+	it('caps joiners get the advertised suite and a full-fidelity sync', () => {
+		const room = createRoom({ columns: 3, rows: 1 });
+		const caps = joinCaps(room, 'caps');
+		expect(caps.ofType(A.CONNECTED)[0].data.caps).toEqual([EXT_SUITE_CAP]);
+		const sync = caps.ofType(T0wnzAction.EXT_SYNC)[0];
+		expect(sync.data.columns).toBe(3);
+		expect(sync.data.seq).toBe(0);
+		const cells = expandExtCells(sync.data.cells, 3);
+		expect(cells[0]).toEqual({
+			u: 32,
+			a: 0,
+			fg: paletteColor(7),
+			bg: paletteColor(0),
+		});
+	});
+
+	it('EXT_DRAW reaches caps peers natively and vanilla peers down-converted', () => {
+		const room = createRoom({ columns: 4, rows: 2 });
+		const sender = joinCaps(room, 'sender');
+		const capsPeer = joinCaps(room, 'peer');
+		const vanilla = joinEditor(room, 'van');
+		room.message(sender, {
+			type: T0wnzAction.EXT_DRAW,
+			data: { x: 1, y: 0, ...extCell, id: 0 },
+		});
+		const native = capsPeer.ofType(T0wnzAction.EXT_DRAW)[0];
+		expect(native.data).toEqual({ x: 1, y: 0, ...extCell, id: 0, seq: 1 });
+		const down = vanilla.ofType(A.DRAW)[0];
+		expect(down.data.block.code).toBe(63); // '?' substitute
+		expect(down.data.block.fg).toBeLessThan(16);
+		// the sender's ack carries the same seq
+		expect(sender.ofType(T0wnzAction.EXT_ACK)[0].data.seq).toBe(1);
+		// late joiners: vanilla sees the projection, caps sees the truth
+		const lateVan = joinEditor(room, 'late');
+		const doc = lateVan.ofType(A.CONNECTED)[0].data.doc;
+		expect(uncompressBlocks(doc.compressed_data, 8)[1].code).toBe(63);
+		const lateCaps = joinCaps(room, 'latecaps');
+		const sync = lateCaps.ofType(T0wnzAction.EXT_SYNC)[0];
+		expect(expandExtCells(sync.data.cells, 8)[1]).toEqual(extCell);
+	});
+
+	it('vanilla mutations carry seq to caps peers and stay verbatim for vanilla', () => {
+		const room = createRoom({ columns: 4, rows: 2 });
+		const caps = joinCaps(room, 'caps');
+		const vanA = joinEditor(room, 'a');
+		const vanB = joinEditor(room, 'b');
+		room.message(vanA, {
+			type: A.DRAW,
+			data: { x: 0, y: 0, block: { code: 65, fg: 7, bg: 0 }, id: 1 },
+		});
+		expect(caps.ofType(A.DRAW)[0].data.seq).toBe(1);
+		expect(vanB.ofType(A.DRAW)[0].data.seq).toBeUndefined();
+		// vanilla senders get no ack
+		expect(vanA.ofType(T0wnzAction.EXT_ACK)).toHaveLength(0);
+	});
+
+	it('a caps client sees a contiguous seq stream across own and remote ops', () => {
+		const room = createRoom({ columns: 4, rows: 2 });
+		const caps = joinCaps(room, 'caps');
+		const van = joinEditor(room, 'van');
+		const block = { code: 65, fg: 7, bg: 0 };
+		room.message(caps, {
+			type: T0wnzAction.EXT_DRAW,
+			data: { x: 0, y: 0, ...extCell, id: 0 },
+		});
+		room.message(van, { type: A.DRAW, data: { x: 1, y: 0, block, id: 1 } });
+		room.message(caps, {
+			type: A.SET_CANVAS_SIZE,
+			data: { columns: 3, rows: 2, id: 0 },
+		});
+		const seqs = caps.frames
+			.map(f => f.data.seq)
+			.filter(s => typeof s === 'number');
+		// the join-time EXT_SYNC anchors the stream; acks (own ops) and
+		// broadcasts (remote ops) continue it without a gap
+		expect(seqs).toEqual([0, 1, 2, 3]);
+	});
+
+	it('EXT_DRAW_BATCH is one op natively and per-cell DRAWs for vanilla', () => {
+		const room = createRoom({ columns: 4, rows: 1 });
+		const sender = joinCaps(room, 'sender');
+		const capsPeer = joinCaps(room, 'peer');
+		const vanilla = joinEditor(room, 'van');
+		room.message(sender, {
+			type: T0wnzAction.EXT_DRAW_BATCH,
+			data: {
+				cells: [
+					{ x: 0, y: 0, ...extCell },
+					{ x: 9, y: 9, ...extCell }, // out of bounds: skipped
+					{ x: 2, y: 0, ...extCell },
+				],
+				id: 0,
+			},
+		});
+		const native = capsPeer.ofType(T0wnzAction.EXT_DRAW_BATCH);
+		expect(native).toHaveLength(1);
+		expect(native[0].data.cells).toHaveLength(2);
+		expect(native[0].data.seq).toBe(1);
+		expect(vanilla.ofType(A.DRAW)).toHaveLength(2);
+		expect(sender.ofType(T0wnzAction.EXT_ACK)).toHaveLength(1);
+		expect(room.stats().opLogLength).toBe(1);
+	});
+
+	it('EXT_PALETTE updates caps peers, the vanilla join palette, and reprojections', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const sender = joinCaps(room, 'sender');
+		const capsPeer = joinCaps(room, 'peer');
+		const vanilla = joinEditor(room, 'van');
+		// an RGB cell that quantizes against the CURRENT palette
+		room.message(sender, {
+			type: T0wnzAction.EXT_DRAW,
+			data: { x: 0, y: 0, u: 65, a: 0, fg: 0x123456, bg: paletteColor(0), id: 0 },
+		});
+		const palette = new Array(16).fill(0x000000);
+		palette[1] = 0x123456;
+		room.message(sender, {
+			type: T0wnzAction.EXT_PALETTE,
+			data: { palette, id: 0 },
+		});
+		expect(capsPeer.ofType(T0wnzAction.EXT_PALETTE)[0].data.palette).toEqual(
+			palette,
+		);
+		// vanilla peers get nothing in-session (upstream precedent)...
+		expect(vanilla.ofType(T0wnzAction.EXT_PALETTE)).toHaveLength(0);
+		// ...but late vanilla joiners see the classic 16 in 6-bit form
+		const late = joinEditor(room, 'late');
+		const joinPalette = late.ofType(A.CONNECTED)[0].data.doc.palette;
+		expect(joinPalette[1]).toEqual([0x12 >> 2, 0x34 >> 2, 0x56 >> 2]);
+	});
+
+	it('ice toggles reproject stored blink folds for vanilla viewers', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const caps = joinCaps(room, 'caps');
+		room.message(caps, {
+			type: T0wnzAction.EXT_DRAW,
+			data: {
+				x: 0,
+				y: 0,
+				u: 65,
+				a: 1, // blink
+				fg: paletteColor(7),
+				bg: paletteColor(1),
+				id: 0,
+			},
+		});
+		const before = joinEditor(room, 'before');
+		const doc1 = before.ofType(A.CONNECTED)[0].data.doc;
+		expect(uncompressBlocks(doc1.compressed_data, 2)[0].bg).toBe(9);
+		room.message(caps, { type: A.ICE_COLORS, data: { value: true, id: 0 } });
+		const after = joinEditor(room, 'after');
+		const doc2 = after.ofType(A.CONNECTED)[0].data.doc;
+		expect(uncompressBlocks(doc2.compressed_data, 2)[0].bg).toBe(1);
+	});
+
+	it('EXT_SYNC replies on request; caps spectators receive but cannot draw', () => {
+		const room = createRoom({ columns: 2, rows: 1, syncCooldownMs: 0 });
+		const caps = joinCaps(room, 'caps');
+		const spectator = fakeClient();
+		room.connect(spectator, { caps: [EXT_SUITE_CAP]});
+		expect(spectator.ofType(T0wnzAction.EXT_SYNC)).toHaveLength(1);
+		room.message(caps, {
+			type: T0wnzAction.EXT_DRAW,
+			data: { x: 0, y: 0, ...extCell, id: 0 },
+		});
+		expect(spectator.ofType(T0wnzAction.EXT_DRAW)).toHaveLength(1);
+		room.message(spectator, {
+			type: T0wnzAction.EXT_DRAW,
+			data: { x: 1, y: 0, ...extCell, id: 1 },
+		});
+		expect(room.stats().opLogLength).toBe(1); // spectator draw dropped
+		room.message(caps, { type: T0wnzAction.EXT_SYNC, data: { id: 0 } });
+		const syncs = caps.ofType(T0wnzAction.EXT_SYNC);
+		expect(syncs).toHaveLength(2); // join + requested
+		expect(syncs[1].data.seq).toBe(1);
+	});
+
+	it('ext frames from caps-less clients are dropped', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const caps = joinCaps(room, 'caps');
+		const vanilla = joinEditor(room, 'van');
+		room.message(vanilla, {
+			type: T0wnzAction.EXT_DRAW,
+			data: { x: 0, y: 0, ...extCell, id: 1 },
+		});
+		expect(caps.ofType(T0wnzAction.EXT_DRAW)).toHaveLength(0);
+		expect(room.stats().opLogLength).toBe(0);
+	});
+
+	it('EXT_TIMELAPSE replays to the live doc even after op-log eviction', () => {
+		// tiny log: draws 3-6 evict 1-2 into the baseline
+		const room = createRoom({
+			columns: 4,
+			rows: 1,
+			opLogLimit: 2,
+			syncCooldownMs: 0,
+		});
+		const caps = joinCaps(room, 'caps');
+		for (let i = 0; i < 6; i++) {
+			room.message(caps, {
+				type: T0wnzAction.EXT_DRAW,
+				data: {
+					x: i % 4,
+					y: 0,
+					u: 65 + i,
+					a: 0,
+					fg: paletteColor(7),
+					bg: paletteColor(0),
+					id: 0,
+				},
+			});
+		}
+		room.message(caps, { type: T0wnzAction.EXT_TIMELAPSE, data: { id: 0 } });
+		const reply = caps.ofType(T0wnzAction.EXT_TIMELAPSE)[0];
+		expect(reply.data.ops).toHaveLength(2);
+		const { doc } = timelapseToDoc(reply.data);
+		// the last frame equals the live doc: G(70) at x2, H? no — ops were
+		// A..F across x0-x3 twice; final cells are C D E F with E,F from
+		// the log and C,D absorbed into the baseline
+		const last = doc.frames.length - 1;
+		const codeAt = x =>
+			doc.glyphTable.get(doc.getCell(last, x, 0).glyph & 0xffff)?.codepoint;
+		expect([codeAt(0), codeAt(1), codeAt(2), codeAt(3)]).toEqual([69, 70, 67, 68]);
+	});
+
+	it('extState/loadState round-trips full fidelity across a restart', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const caps = joinCaps(room, 'caps');
+		room.message(caps, {
+			type: T0wnzAction.EXT_DRAW,
+			data: { x: 1, y: 0, ...extCell, id: 0 },
+		});
+		const palette = new Array(16).fill(0x101010);
+		room.message(caps, {
+			type: T0wnzAction.EXT_PALETTE,
+			data: { palette, id: 0 },
+		});
+		const saved = room.toJoinDoc();
+		saved.data = uncompressBlocks(saved.compressed_data, 2);
+		delete saved.compressed_data;
+		saved.ext = room.extState();
+
+		const restarted = createRoom({ columns: 2, rows: 1 });
+		restarted.loadState(saved);
+		const rejoin = joinCaps(restarted, 'rejoin');
+		const sync = rejoin.ofType(T0wnzAction.EXT_SYNC)[0];
+		expect(expandExtCells(sync.data.cells, 2)[1]).toEqual(extCell);
+		expect(sync.data.palette).toEqual(palette);
+	});
+});
+
+
+describe('review hardening (P6 adversarial pass)', () => {
+	const joinCaps = (room, nick) =>
+		joinEditor(room, nick, { caps: [EXT_SUITE_CAP]});
+
+	it('folds surrogate DRAW codes so the ext projection stays saveable', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const editor = joinEditor(room, 'evil');
+		room.message(editor, {
+			type: A.DRAW,
+			data: { x: 0, y: 0, block: { code: 0xd800, fg: 7, bg: 0 }, id: 0 },
+		});
+		// the poisoned cell used to make EVERY save throw (data loss)
+		const ext = room.extState();
+		expect(() => expandExtCells(ext.cells, 2)).not.toThrow();
+		expect(expandExtCells(ext.cells, 2)[0].u).toBe(63);
+	});
+
+	it('acks refused mutations so caps clients can book off and resync', () => {
+		const room = createRoom({ columns: 4, rows: 2, maxColumns: 100, maxRows: 100 });
+		const caps = joinCaps(room, 'caps');
+		room.message(caps, {
+			type: A.SET_CANVAS_SIZE,
+			data: { columns: 500, rows: 2, id: 0 },
+		});
+		const ack = caps.ofType(T0wnzAction.EXT_ACK)[0];
+		expect(ack.data.refused).toBe(true);
+		expect(ack.data.seq).toBe(0); // nothing was accepted
+		room.message(caps, {
+			type: T0wnzAction.EXT_DRAW,
+			data: { x: 99, y: 0, u: 65, a: 0, fg: 0, bg: 0, id: 0 },
+		});
+		expect(
+			caps.ofType(T0wnzAction.EXT_ACK).filter(f => f.data.refused),
+		).toHaveLength(2);
+	});
+
+	it('clamps SAUCE fields and broadcasts a whitelisted shape', () => {
+		const room = createRoom();
+		const sender = joinEditor(room, 'a');
+		const peer = joinCaps(room, 'b');
+		room.message(sender, {
+			type: A.SAUCE,
+			data: {
+				title: 'x'.repeat(5000),
+				author: 'me',
+				seq: 999999, // smuggle attempt
+				junk: 'y'.repeat(5000),
+				id: 42, // forged
+			},
+		});
+		const frame = peer.ofType(A.SAUCE)[0];
+		expect(frame.data.title.length).toBe(35);
+		expect(frame.data.junk).toBeUndefined();
+		expect(frame.data.id).toBe(0); // the server-known id
+		// the smuggled seq is REPLACED by the server's stamp, not relayed
+		expect(frame.data.seq).toBe(1);
+	});
+
+	it('CHAT never relays smuggled fields to peers', () => {
+		const room = createRoom();
+		const sender = joinEditor(room, 'a');
+		const peer = joinEditor(room, 'b');
+		room.message(sender, {
+			type: A.CHAT,
+			data: { nick: 'a', text: 'hi', seq: 2147483647, evil: true },
+		});
+		const frame = peer.ofType(A.CHAT)[0];
+		expect(frame.data.seq).toBeUndefined();
+		expect(frame.data.evil).toBeUndefined();
+	});
+
+	it('short EXT_PALETTE still bridges a FULL 16-entry vanilla palette', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const caps = joinCaps(room, 'caps');
+		room.message(caps, {
+			type: T0wnzAction.EXT_PALETTE,
+			data: { palette: [0xff0000], id: 0 },
+		});
+		const late = joinEditor(room, 'late');
+		const joinPalette = late.ofType(A.CONNECTED)[0].data.doc.palette;
+		expect(joinPalette).toHaveLength(16);
+		expect(joinPalette[0]).toEqual([0xff >> 2, 0, 0]);
+	});
+
+	it('rate-limits EXT_SYNC requests per user', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const caps = joinCaps(room, 'caps');
+		// the join sync consumed the first slot
+		room.message(caps, { type: T0wnzAction.EXT_SYNC, data: { id: 0 } });
+		room.message(caps, { type: T0wnzAction.EXT_SYNC, data: { id: 0 } });
+		expect(caps.ofType(T0wnzAction.EXT_SYNC)).toHaveLength(1);
+	});
+
+	it('rebuilds mutation relays with the server-known id', () => {
+		const room = createRoom({ columns: 4, rows: 2 });
+		const sender = joinEditor(room, 'a');
+		const peer = joinEditor(room, 'b');
+		room.message(sender, {
+			type: A.ICE_COLORS,
+			data: { value: true, id: 42 },
+		});
+		room.message(sender, {
+			type: A.SET_CANVAS_SIZE,
+			data: { columns: 3, rows: 2, id: 42 },
+		});
+		expect(peer.ofType(A.ICE_COLORS)[0].data.id).toBe(0);
+		expect(peer.ofType(A.SET_CANVAS_SIZE)[0].data.id).toBe(0);
 	});
 });
 

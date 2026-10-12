@@ -1,0 +1,46 @@
+# syntax=docker/dockerfile:1
+# P6 packaging target (PLAN 3.7 #3): multi-stage oven/bun build, then a
+# distroless non-root runtime holding ONE compiled server binary plus
+# the built PWA. The binary serves the app itself (STATIC_DIR), collab
+# websockets, the bridge, and /healthz; with no shell in the image it
+# doubles as its own HEALTHCHECK probe. buildx compiles per-platform:
+#
+#   docker buildx build -f Dockerfile.distroless \
+#     --platform linux/amd64,linux/arm64 -t text0wnz:v3 .
+#
+# The classic caddy+bun Dockerfile remains the default image until the
+# owner flips it; this one is the single-binary deployment.
+
+FROM oven/bun:1.3.14 AS build
+WORKDIR /app
+COPY . .
+RUN rm -f package-lock.json && bun install
+RUN bun run bake
+# compiles for the stage's own platform; buildx runs one per --platform
+RUN bun build --compile --minify src/js/server/main.js --outfile /t0wnz
+RUN mkdir -p /app/sessions
+
+FROM gcr.io/distroless/base-debian12:nonroot
+
+LABEL org.opencontainers.image.title="text0wnz"
+LABEL org.opencontainers.image.description="Retro Text Art Editor for ANSI/ASCII/NFO/XBIN Files Rebooted for the Modern Web"
+LABEL org.opencontainers.image.authors="https://github.com/xero/text0wnz/graphs/contributors"
+LABEL org.opencontainers.image.documentation="https://github.com/xero/text0wnz/wiki"
+LABEL org.opencontainers.image.source="https://github.com/xero/text0wnz"
+LABEL org.opencontainers.image.url="https://text.0w.nz"
+LABEL org.opencontainers.image.licenses="MIT"
+
+WORKDIR /app
+COPY --from=build /t0wnz /app/t0wnz
+COPY --from=build /app/dist /app/dist
+COPY --from=build --chown=nonroot:nonroot /app/sessions /app/sessions
+
+ENV PORT=1337
+ENV STATIC_DIR=/app/dist
+EXPOSE 1337
+VOLUME /app/sessions
+USER nonroot
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
+	CMD ["/app/t0wnz", "healthcheck"]
+ENTRYPOINT ["/app/t0wnz"]
+CMD ["1337"]

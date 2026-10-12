@@ -9,8 +9,10 @@ import {
 import {
 	decodeAns,
 	encodeAns,
+	encodeAnsimation,
 	encodeUtf8,
 } from '../../src/js/core/codecs/ans.js';
+import { parseSauce as readSauce } from '../../src/js/core/codecs/sauce.js';
 import { v3ToU16 } from '../../src/js/core/convert.js';
 import {
 	FONT_SLOT_UNSCII,
@@ -341,5 +343,36 @@ describe('ans codec', () => {
 		const d1 = decodeAns(makeAnsi({ columns: 20, rows: 3, seed: 5 }));
 		const text = encodeAns(d1.doc, { utf8: true, stripEscapeCodes: true });
 		expect(Array.from(text)).not.toContain(27);
+	});
+});
+
+describe('ansimation export (P6)', () => {
+	it('homes between frames, plays back to the last frame, marks SAUCE ANSiMation', () => {
+		const doc = createDocV3({ columns: 4, rows: 2 });
+		doc.frames[0].glyph[0] = glyphWord(65, 0); // 'A'
+		doc.frames[0].fg[0] = paletteColor(7);
+		doc.addFrame({ copyFrom: 0 });
+		doc.frames[1].glyph[0] = glyphWord(66, 0); // 'B' overwrites
+		const bytes = encodeAnsimation(doc, {
+			meta: { title: 'anim' },
+			date: FIXED_DATE,
+		});
+		const text = new TextDecoder('latin1').decode(bytes);
+		expect(text.startsWith('\u001b[2J')).toBe(true);
+		expect(text.split('\u001b[H').length - 1).toBe(2);
+		// a terminal (and our reader) ends on the LAST frame
+		const played = decodeAns(bytes);
+		expect(played.doc.getCell(0, 0, 0).glyph & 0xffff).toBe(66);
+		const sauce = readSauce(bytes);
+		expect(sauce?.dataType).toBe(1);
+		expect(sauce?.fileType).toBe(2);
+		expect(sauce?.title).toBe('anim');
+	});
+
+	it('lossy per frame: extended colors do not throw', () => {
+		const doc = createDocV3({ columns: 2, rows: 1, mode: 'xterm256' });
+		doc.frames[0].fg[0] = 0xff8800; // raw RGB word
+		doc.frames[0].bg[1] = paletteColor(200);
+		expect(() => encodeAnsimation(doc)).not.toThrow();
 	});
 });

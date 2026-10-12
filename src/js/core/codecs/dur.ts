@@ -25,12 +25,17 @@ import {
 	DocV3,
 	createDefaultPaletteRGB,
 	createDocV3,
+	glyphIdOf,
 	glyphWord,
+	isPaletteColor,
 	paletteColor,
+	paletteIndexOf,
 	rgbColor,
+	rgbOf,
 } from '../doc.js';
+import { cp437ToUnicode } from '../cp437.js';
 import { DocMeta } from './bin.js';
-import { CodecError, gunzip } from './util.js';
+import { CodecError, gunzip, gzip } from './util.js';
 
 export const DUR_MIN_VERSION = 7;
 export const DUR_MAX_VERSION = 8;
@@ -203,4 +208,89 @@ export const decodeDur = async (
 		colorFormat,
 		encoding,
 	};
+};
+
+// ------------------------------------------------------------- encoder
+
+/**
+ * v3 doc -> durdraw v8 movie (P6 export; 256-color mode always, the
+ * richer of the two supported formats). Index color words 0-255 pass
+ * through by index (durdraw reads them as xterm-256); raw RGB words
+ * land on the nearest xterm entry. Glyphs travel as codepoints in the
+ * utf-8 encoding; blink attrs drop (durdraw has no blink). Gzipped
+ * JSON, like durdraw writes.
+ */
+export const encodeDur = async (
+	doc: DocV3,
+	meta: DocMeta = {},
+): Promise<Uint8Array> => {
+	const columns = doc.getColumns();
+	const rows = doc.getRows();
+	const xterm = createXterm256Palette();
+	const nearestXterm = (word: number): number => {
+		const { r, g, b } = rgbOf(word & 0xffffff);
+		let best = 0;
+		let bestDistance = Infinity;
+		for (let i = 0; i < 256; i++) {
+			const entry = rgbOf(xterm[i]);
+			const distance =
+				(entry.r - r) * (entry.r - r) +
+				(entry.g - g) * (entry.g - g) +
+				(entry.b - b) * (entry.b - b);
+			if (distance < bestDistance) {
+				bestDistance = distance;
+				best = i;
+			}
+		}
+		return best;
+	};
+	const toIndex = (word: number): number =>
+		isPaletteColor(word) ? paletteIndexOf(word) & 0xff : nearestXterm(word);
+	const codepointOf = (glyph: number): number => {
+		const glyphId = glyphIdOf(glyph);
+		return (
+			doc.glyphTable.get(glyphId)?.codepoint ??
+			(glyphId <= 0xff ? cp437ToUnicode(glyphId) : 63)
+		);
+	};
+
+	const frames = doc.frames.map(frame => {
+		const contents: string[] = [];
+		const colorMap: number[][][] = [];
+		for (let y = 0; y < rows; y++) {
+			let line = '';
+			const rowColors: number[][] = [];
+			for (let x = 0; x < columns; x++) {
+				const i = y * columns + x;
+				line += String.fromCodePoint(codepointOf(frame.glyph[i]));
+				rowColors.push([toIndex(frame.fg[i]), toIndex(frame.bg[i])]);
+			}
+			contents.push(line);
+			colorMap.push(rowColors);
+		}
+		return {
+			...(frame.delayMs !== undefined && frame.delayMs > 0
+				? { delay: frame.delayMs / 1000 }
+				: {}),
+			contents,
+			colorMap,
+		};
+	});
+
+	const movie = {
+		formatVersion: 8,
+		colorFormat: '256',
+		preferredFont: 'fixed',
+		encoding: 'utf-8',
+		name: meta.title ?? '',
+		artist: meta.author ?? '',
+		framerate: Math.max(
+			1,
+			Math.min(60, Math.round(1000 / doc.getGlobalDelayMs())),
+		),
+		columns,
+		lines: rows,
+		frames,
+	};
+	return gzip(new TextEncoder().encode(JSON.stringify({ DurMovie: movie })));
 };

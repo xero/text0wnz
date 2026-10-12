@@ -3,7 +3,9 @@ import { glyphWord, paletteColor, rgbColor } from '../../src/js/core/doc.js';
 import {
 	createXterm256Palette,
 	decodeDur,
+	encodeDur,
 } from '../../src/js/core/codecs/dur.js';
+import { createDocV3 } from '../../src/js/core/doc.js';
 import { gzip } from '../../src/js/core/codecs/util.js';
 import { v3ToU16 } from '../../src/js/core/convert.js';
 
@@ -248,5 +250,42 @@ describe('dur codec (durdraw v7/v8 import)', () => {
 		await expect(
 			decodeDur(await pack({ DurMovie: { ...base.DurMovie, frames: [] } })),
 		).rejects.toThrow(/no frames/);
+	});
+});
+
+describe('encodeDur round trip (P6 export)', () => {
+	it('keeps frames, delays, unicode glyphs, and 256 indexes', async () => {
+		const doc = createDocV3({ columns: 3, rows: 2, mode: 'xterm256' });
+		const frame0 = doc.frames[0];
+		frame0.glyph[0] = glyphWord(doc.glyphTable.idFor(0, 0x2764), 0);
+		frame0.fg[0] = paletteColor(208);
+		frame0.bg[0] = paletteColor(17);
+		doc.addFrame({ copyFrom: 0 });
+		doc.frames[1].glyph[1] = glyphWord(65, 0);
+		doc.frames[1].delayMs = 250;
+		doc.setGlobalDelayMs(50);
+
+		const bytes = await encodeDur(doc, { title: 'loop', author: 'xero' });
+		const decoded = await decodeDur(bytes);
+		expect(decoded.formatVersion).toBe(8);
+		expect(decoded.colorFormat).toBe('256');
+		expect(decoded.meta.title).toBe('loop');
+		expect(decoded.doc.frames).toHaveLength(2);
+		const cell = decoded.doc.getCell(0, 0, 0);
+		expect(decoded.doc.glyphTable.get(cell.glyph & 0xffff)?.codepoint).toBe(
+			0x2764,
+		);
+		expect(cell.fg).toBe(paletteColor(208));
+		expect(cell.bg).toBe(paletteColor(17));
+		expect(decoded.doc.frames[1].delayMs).toBe(250);
+		expect(decoded.doc.getGlobalDelayMs()).toBe(50);
+	});
+
+	it('quantizes raw RGB words to the nearest xterm entry', async () => {
+		const doc = createDocV3({ columns: 1, rows: 1 });
+		doc.frames[0].fg[0] = 0xff0000; // raw RGB word, no tag bit
+		const decoded = await decodeDur(await encodeDur(doc));
+		// xterm 196 is pure red (255,0,0)
+		expect(decoded.doc.getCell(0, 0, 0).fg).toBe(paletteColor(196));
 	});
 });

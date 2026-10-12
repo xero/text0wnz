@@ -28,6 +28,14 @@
  * - resize is row-aware (v2's linear copy scrambled late joiners).
  * - malformed frames are dropped with a log line, never a crash.
  * - every mutation lands in a bounded op log (timelapse substrate).
+ *
+ * Extension suite v1 (PLAN §3.6.3, ids 23-27, cap "t0wnz-ext-1"):
+ * caps-aware clients get full-fidelity cells (unicode + v3 color
+ * words), a seq on every mutation plus EXT_ACK for their own, and
+ * EXT_SYNC wholesale recovery. Every ext mutation is down-converted to
+ * the nearest vanilla frame for caps-less members, so mixed rooms stay
+ * coherent; ext payloads are stored on blocks only where the vanilla
+ * projection loses information.
  */
 
 import {
@@ -35,6 +43,18 @@ import {
 	MoebiusStatus,
 	MOEBIUS_EXTENSION_BASE,
 	compressBlocks,
+	EXT_BATCH_LIMIT,
+	EXT_SUITE_CAP,
+	T0wnzAction,
+	blockToExtCell,
+	compressExtCells,
+	expandExtCells,
+	extCellEquals,
+	extCellToBlock,
+	paletteTo6Bit,
+	paletteWordsFromJoin,
+	sanitizeExtDraw,
+	sanitizeExtPalette,
 } from '../core/index';
 import { sanitize } from './utils.js';
 
@@ -51,7 +71,7 @@ export const ROOM_DEFAULTS = Object.freeze({
 
 /** capability names our server advertises to caps-aware clients */
 /** @type {readonly string[]} */
-export const SERVER_CAPS = Object.freeze([]);
+export const SERVER_CAPS = Object.freeze([EXT_SUITE_CAP]);
 
 const blankBlock = () => ({ code: 32, fg: 7, bg: 0 });
 
@@ -68,7 +88,10 @@ const blankBlock = () => ({ code: 32, fg: 7, bg: 0 });
  * @param {{enabled?: boolean, canChat?: boolean, canDraw?: boolean}} [options.spectators]
  * @param {number} [options.columns]
  * @param {number} [options.rows]
+ * @param {number} [options.maxColumns] resize wall (O3 env knob; either direction)
+ * @param {number} [options.maxRows] resize wall (O3 env knob; either direction)
  * @param {number} [options.opLogLimit]
+ * @param {number} [options.syncCooldownMs] per-user EXT_SYNC/TIMELAPSE rate limit
  * @param {(line: string) => void} [options.log]
  */
 export const createRoom = (options = {}) => {
@@ -79,7 +102,10 @@ export const createRoom = (options = {}) => {
 		canChat: options.spectators?.canChat ?? true,
 		canDraw: options.spectators?.canDraw ?? false,
 	};
+	const maxColumns = options.maxColumns ?? ROOM_DEFAULTS.maxColumns;
+	const maxRows = options.maxRows ?? ROOM_DEFAULTS.maxRows;
 	const opLogLimit = options.opLogLimit ?? ROOM_DEFAULTS.opLogLimit;
+	const syncCooldownMs = options.syncCooldownMs ?? 1000;
 	const log = options.log ?? (() => {});
 
 	// the live document, wire-shaped (block cells); persistence converts
@@ -87,7 +113,7 @@ export const createRoom = (options = {}) => {
 	const doc = {
 		columns: options.columns ?? ROOM_DEFAULTS.columns,
 		rows: options.rows ?? ROOM_DEFAULTS.rows,
-		/** @type {{code: number, fg: number, bg: number}[]} */
+		/** @type {{code: number, fg: number, bg: number, ext?: import('../core/index').ExtCell}[]} */
 		data: [],
 		title: '',
 		author: '',
@@ -100,29 +126,107 @@ export const createRoom = (options = {}) => {
 		font_name: 'CP437 8x16',
 		ice_colors: false,
 		use_9px_font: false,
+		/** @type {number[] | undefined} full ext palette, 0x00RRGGBB words */
+		ext_palette: undefined,
 	};
 	doc.data = Array.from({ length: doc.columns * doc.rows }, blankBlock);
 
-	/** @type {Map<RoomClient, {id: number, nick: string | undefined, group: string, status: number, role: 'viewer' | 'editor', caps: string[] | null}>} */
+	/** @type {Map<RoomClient, {id: number, nick: string | undefined, group: string, status: number, role: 'viewer' | 'editor', caps: string[] | null, lastSyncAt: number}>} */
 	const members = new Map();
 	/** @type {{id: number, nick: string, group: string, text: string, time: number}[]} */
 	const chatHistory = [];
-	/** @type {{t: number, type: number, data: object}[]} */
+	/** @type {{t: number, type: number, data: object, seq: number}[]} */
 	const opLog = [];
 	let nextId = 0;
 	let dirty = false;
 	// monotonic mutation counter: saves clear dirty ONLY if nothing
 	// mutated while the write was in flight (review finding)
 	let dirtySeq = 0;
+	// the extension suite's op counter: every accepted doc mutation gets
+	// the next seq; caps clients receive it on broadcasts and acks, and
+	// a gap on their side means a missed op (=> they request EXT_SYNC)
+	let seq = 0;
 
-	/** @param {number} type @param {object} data */
+	// timelapse baseline: the doc state BEFORE the oldest logged op.
+	// Evicted ops are absorbed so baseline + log always replays to the
+	// live doc, however long the session runs.
+	/** @type {{columns: number, rows: number, cells: import('../core/index').ExtCell[]}} */
+	const baseline = { columns: 0, rows: 0, cells: []};
+	const resetBaseline = () => {
+		baseline.columns = doc.columns;
+		baseline.rows = doc.rows;
+		baseline.cells = doc.data.map(blockToExtCell);
+	};
+
+	/** @param {{type: number, data: any}} op */
+	const absorbIntoBaseline = op => {
+		const { type, data } = op;
+		/** @param {any} x @param {any} y @param {import('../core/index').ExtCell | null} cell */
+		const putCell = (x, y, cell) => {
+			if (
+				cell &&
+				Number.isInteger(x) &&
+				Number.isInteger(y) &&
+				x >= 0 &&
+				y >= 0 &&
+				x < baseline.columns &&
+				y < baseline.rows
+			) {
+				baseline.cells[y * baseline.columns + x] = cell;
+			}
+		};
+		if (type === MoebiusAction.DRAW && data?.block) {
+			putCell(data.x, data.y, blockToExtCell(data.block));
+		} else if (type === T0wnzAction.EXT_DRAW) {
+			putCell(data.x, data.y, {
+				u: data.u,
+				a: data.a,
+				fg: data.fg,
+				bg: data.bg,
+			});
+		} else if (type === T0wnzAction.EXT_DRAW_BATCH && Array.isArray(data?.cells)) {
+			for (const cell of data.cells) {
+				putCell(cell.x, cell.y, {
+					u: cell.u,
+					a: cell.a,
+					fg: cell.fg,
+					bg: cell.bg,
+				});
+			}
+		} else if (type === MoebiusAction.SET_CANVAS_SIZE) {
+			const { columns, rows } = data;
+			if (!Number.isInteger(columns) || !Number.isInteger(rows)) {
+				return;
+			}
+			const next = Array.from({ length: columns * rows }, () =>
+				blockToExtCell(blankBlock()));
+			const copyCols = Math.min(columns, baseline.columns);
+			const copyRows = Math.min(rows, baseline.rows);
+			for (let y = 0; y < copyRows; y++) {
+				for (let x = 0; x < copyCols; x++) {
+					next[y * columns + x] =
+						baseline.cells[y * baseline.columns + x];
+				}
+			}
+			baseline.columns = columns;
+			baseline.rows = rows;
+			baseline.cells = next;
+		}
+	};
+
+	resetBaseline();
+
+	/** @param {number} type @param {object} data @returns {number} seq */
 	const pushOp = (type, data) => {
-		opLog.push({ t: Date.now(), type, data });
-		if (opLog.length > opLogLimit) {
-			opLog.splice(0, opLog.length - opLogLimit);
+		seq++;
+		opLog.push({ t: Date.now(), type, data, seq });
+		while (opLog.length > opLogLimit) {
+			absorbIntoBaseline(opLog[0]);
+			opLog.shift();
 		}
 		dirty = true;
 		dirtySeq++;
+		return seq;
 	};
 
 	/**
@@ -144,6 +248,107 @@ export const createRoom = (options = {}) => {
 			} catch {
 				// a dead socket must never break the fanout; close() will
 				// reap it
+			}
+		}
+	};
+
+	/** @param {{caps: string[] | null}} user */
+	const hasExt = user => user.caps?.includes(EXT_SUITE_CAP) === true;
+
+	/** resolve words for down-converting quantization */
+	const paletteWords = () =>
+		doc.ext_palette
+			? Uint32Array.from(doc.ext_palette)
+			: paletteWordsFromJoin(doc.palette);
+
+	/**
+	 * Mutation fanout: caps members get the native frame with seq,
+	 * vanilla members get the down-converted frame(s) (null = nothing
+	 * expressible), and a caps sender gets EXT_ACK so its seq stream
+	 * stays contiguous under exclude-sender echo semantics.
+	 * @param {RoomClient} sender
+	 * @param {{caps: string[] | null}} senderUser
+	 * @param {number} opSeq
+	 * @param {{type: number, data: object}} native
+	 * @param {{type: number, data: object} | {type: number, data: object}[] | null} vanilla
+	 * @param {{spectators?: boolean}} [tier]
+	 */
+	const fanoutMutation = (sender, senderUser, opSeq, native, vanilla, tier = {}) => {
+		for (const [client, user] of members) {
+			if (client === sender) {
+				continue;
+			}
+			if (user.role === 'viewer' && !tier.spectators) {
+				continue;
+			}
+			try {
+				if (hasExt(user)) {
+					client.send(native.type, { ...native.data, seq: opSeq });
+				} else if (Array.isArray(vanilla)) {
+					for (const frame of vanilla) {
+						client.send(frame.type, frame.data);
+					}
+				} else if (vanilla) {
+					client.send(vanilla.type, vanilla.data);
+				}
+			} catch {
+				// dead sockets never break the fanout
+			}
+		}
+		if (hasExt(senderUser)) {
+			try {
+				sender.send(T0wnzAction.EXT_ACK, { seq: opSeq });
+			} catch {
+				// ditto
+			}
+		}
+	};
+
+	/**
+	 * A silently dropped mutation from a caps client would leak its
+	 * pendingOps counter forever AND leave its apply-locally state
+	 * diverged with no seq gap to notice (review finding). Refusals ack
+	 * with the current seq and a refused flag: the client books the op
+	 * off and resyncs.
+	 * @param {RoomClient} client @param {{caps: string[] | null}} user
+	 */
+	const refuseAck = (client, user) => {
+		if (hasExt(user)) {
+			try {
+				client.send(T0wnzAction.EXT_ACK, { seq, refused: true });
+			} catch {
+				// dead socket; close() reaps it
+			}
+		}
+	};
+
+	/** the full-fidelity doc snapshot a caps client adopts wholesale */
+	const syncPayload = () => ({
+		seq,
+		columns: doc.columns,
+		rows: doc.rows,
+		cells: compressExtCells(doc.data.map(blockToExtCell)),
+		palette: doc.ext_palette ?? null,
+		ice_colors: doc.ice_colors,
+		use_9px_font: doc.use_9px_font,
+		font_name: doc.font_name,
+		title: doc.title,
+		author: doc.author,
+		group: doc.group,
+		comments: doc.comments,
+	});
+
+	/**
+	 * ice toggles and palette swaps change how ext cells project to
+	 * vanilla blocks; recompute the stored vanilla views so late vanilla
+	 * joiners and the interchange save never see a stale fold
+	 */
+	const reprojectExtBlocks = () => {
+		const words = paletteWords();
+		for (let i = 0; i < doc.data.length; i++) {
+			const ext = doc.data[i].ext;
+			if (ext) {
+				doc.data[i] = { ...extCellToBlock(ext, doc.ice_colors, words), ext };
 			}
 		}
 	};
@@ -222,6 +427,7 @@ export const createRoom = (options = {}) => {
 				isSpectator ? 'viewer' : 'editor'
 			),
 			caps,
+			lastSyncAt: 0,
 		};
 		// upstream reply shapes, verbatim; caps ride along only for
 		// caps-aware clients (vanilla must see exactly vanilla)
@@ -239,6 +445,13 @@ export const createRoom = (options = {}) => {
 		}
 		members.set(client, user);
 		client.send(MoebiusAction.CONNECTED, reply);
+		if (hasExt(user)) {
+			// the vanilla doc in the reply is the quantized view; caps
+			// clients adopt the full-fidelity snapshot that follows it
+			// (and it counts against the sync rate limit)
+			user.lastSyncAt = Date.now();
+			client.send(T0wnzAction.EXT_SYNC, syncPayload());
+		}
 		broadcast(client, MoebiusAction.JOIN, {
 			id,
 			nick,
@@ -275,6 +488,7 @@ export const createRoom = (options = {}) => {
 					typeof block !== 'object' ||
 					block === null
 				) {
+					refuseAck(client, user);
 					return;
 				}
 				/** @param {unknown} v @param {number} fallback @param {number} max */
@@ -282,20 +496,30 @@ export const createRoom = (options = {}) => {
 					typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= max
 						? v
 						: fallback;
+				let code = clamp(block.code, 32, 0x10ffff);
+				if (code >= 0xd800 && code <= 0xdfff) {
+					// surrogate halves are not characters; one smuggled into
+					// the doc poisoned the ext projection and every save of
+					// the room threw (review finding: total data loss)
+					code = 63;
+				}
 				const cell = {
-					code: clamp(block.code, 32, 0x10ffff),
+					code,
 					fg: clamp(block.fg, 7, 255),
 					bg: clamp(block.bg, 0, 255),
 				};
 				doc.data[y * doc.columns + x] = cell;
-				pushOp(type, { x, y, block: cell, id: user.id });
-				// broadcast the SANITIZED cell with the server-known id: the
+				const payload = { x, y, block: cell, id: user.id };
+				const opSeq = pushOp(type, payload);
+				// fan out the SANITIZED cell with the server-known id: the
 				// stored doc and what peers render can never diverge, and ids
 				// cannot be spoofed (review finding)
-				broadcast(
+				fanoutMutation(
 					client,
-					type,
-					{ x, y, block: cell, id: user.id },
+					user,
+					opSeq,
+					{ type, data: payload },
+					{ type, data: payload },
 					{ spectators: true },
 				);
 				return;
@@ -327,8 +551,15 @@ export const createRoom = (options = {}) => {
 					chatHistory.shift();
 				}
 				dirty = true;
-				// O14: spectators chat and HEAR chat on our server
-				broadcast(client, type, { ...data, nick, text, id: user.id }, { spectators: true });
+				// O14: spectators chat and HEAR chat on our server. Explicit
+				// shape: relayed junk fields once let a client smuggle a fake
+				// `seq` into caps peers' streams (review finding)
+				broadcast(
+					client,
+					type,
+					{ nick, group: user.group, text, id: user.id },
+					{ spectators: true },
+				);
 				log(`${nick}: ${text}`);
 				return;
 			}
@@ -343,13 +574,30 @@ export const createRoom = (options = {}) => {
 				if (user.role === 'viewer') {
 					return;
 				}
-				doc.title = typeof data.title === 'string' ? data.title : doc.title;
-				doc.author = typeof data.author === 'string' ? data.author : doc.author;
-				doc.group = typeof data.group === 'string' ? data.group : doc.group;
-				doc.comments =
-					typeof data.comments === 'string' ? data.comments : doc.comments;
-				pushOp(type, data);
-				broadcast(client, type, data, { spectators: true });
+				// clamped at intake (review finding: unbounded strings bloated
+				// the op log, the sidecar JSON, and every broadcast)
+				/** @param {unknown} value @param {string} fallback @param {number} limit */
+				const field = (value, fallback, limit) =>
+					typeof value === 'string' ? value.slice(0, limit) : fallback;
+				doc.title = field(data.title, doc.title, 35);
+				doc.author = field(data.author, doc.author, 20);
+				doc.group = field(data.group, doc.group, 20);
+				doc.comments = field(data.comments, doc.comments, 64 * 64);
+				const payload = {
+					title: doc.title,
+					author: doc.author,
+					group: doc.group,
+					comments: doc.comments,
+					id: user.id,
+				};
+				fanoutMutation(
+					client,
+					user,
+					pushOp(type, payload),
+					{ type, data: payload },
+					{ type, data: payload },
+					{ spectators: true },
+				);
 				return;
 			}
 			case MoebiusAction.ICE_COLORS: {
@@ -357,8 +605,17 @@ export const createRoom = (options = {}) => {
 					return;
 				}
 				doc.ice_colors = data.value === true;
-				pushOp(type, data);
-				broadcast(client, type, data, { spectators: true });
+				// the blink fold in stored vanilla views depends on ice
+				reprojectExtBlocks();
+				const payload = { value: doc.ice_colors, id: user.id };
+				fanoutMutation(
+					client,
+					user,
+					pushOp(type, payload),
+					{ type, data: payload },
+					{ type, data: payload },
+					{ spectators: true },
+				);
 				return;
 			}
 			case MoebiusAction.USE_9PX_FONT: {
@@ -366,8 +623,15 @@ export const createRoom = (options = {}) => {
 					return;
 				}
 				doc.use_9px_font = data.value === true;
-				pushOp(type, data);
-				broadcast(client, type, data, { spectators: true });
+				const payload = { value: doc.use_9px_font, id: user.id };
+				fanoutMutation(
+					client,
+					user,
+					pushOp(type, payload),
+					{ type, data: payload },
+					{ type, data: payload },
+					{ spectators: true },
+				);
 				return;
 			}
 			case MoebiusAction.CHANGE_FONT: {
@@ -375,10 +639,17 @@ export const createRoom = (options = {}) => {
 					return;
 				}
 				if (typeof data.font_name === 'string') {
-					doc.font_name = data.font_name;
+					doc.font_name = data.font_name.slice(0, 100);
 				}
-				pushOp(type, data);
-				broadcast(client, type, data, { spectators: true });
+				const payload = { font_name: doc.font_name, id: user.id };
+				fanoutMutation(
+					client,
+					user,
+					pushOp(type, payload),
+					{ type, data: payload },
+					{ type, data: payload },
+					{ spectators: true },
+				);
 				return;
 			}
 			case MoebiusAction.SET_CANVAS_SIZE: {
@@ -391,25 +662,207 @@ export const createRoom = (options = {}) => {
 					!Number.isInteger(rows) ||
 					columns <= 0 ||
 					rows <= 0 ||
-					columns > ROOM_DEFAULTS.maxColumns ||
-					rows > ROOM_DEFAULTS.maxRows
+					columns > maxColumns ||
+					rows > maxRows
 				) {
+					refuseAck(client, user);
 					return;
 				}
 				// NO throttle, deliberately: a dropped resize diverges the
 				// sender's apply-locally state and the vanilla dialect has no
 				// content resync (the convergence fuzz proved both a silent
-				// drop AND a dims-echo diverge). An authed editor spamming
-				// 10M-cell resizes can churn memory exactly as on upstream
-				// servers; the real fix is the P5 seq/resync extension.
+				// drop AND a dims-echo diverge). Vanilla peers still live with
+				// that, exactly as upstream; caps clients now detect any
+				// divergence through the seq stream and recover via EXT_SYNC.
 				resizeDoc(columns, rows);
-				pushOp(type, { columns, rows, id: user.id });
-				// relay the sender's data verbatim: it carries the id vanilla
-				// clients crash without (landmine 2)
-				broadcast(client, type, data, { spectators: true });
+				const payload = { columns, rows, id: user.id };
+				const opSeq = pushOp(type, payload);
+				// rebuilt shape with the SERVER-known id: vanilla clients
+				// crash without an id (landmine 2), and relayed client ids
+				// were forgeable (review finding)
+				fanoutMutation(
+					client,
+					user,
+					opSeq,
+					{ type, data: payload },
+					{ type, data: payload },
+					{ spectators: true },
+				);
 				log(`canvas resized ${columns}x${rows}`);
 				return;
 			}
+			case T0wnzAction.EXT_DRAW: {
+				if (!hasExt(user)) {
+					return;
+				}
+				if (user.role === 'viewer' && !spectators.canDraw) {
+					return;
+				}
+				const draw = sanitizeExtDraw(data, doc.columns, doc.rows);
+				if (!draw) {
+					refuseAck(client, user);
+					return;
+				}
+				const { x, y } = draw;
+				const ext = { u: draw.u, a: draw.a, fg: draw.fg, bg: draw.bg };
+				const block = extCellToBlock(ext, doc.ice_colors, paletteWords());
+				// store the ext payload only when the vanilla block loses
+				// information (a caps client drawing a plain classic cell
+				// costs nothing extra)
+				doc.data[y * doc.columns + x] = extCellEquals(
+					blockToExtCell(block),
+					ext,
+				)
+					? block
+					: { ...block, ext };
+				const payload = { x, y, ...ext, id: user.id };
+				fanoutMutation(
+					client,
+					user,
+					pushOp(type, payload),
+					{ type, data: payload },
+					{
+						type: MoebiusAction.DRAW,
+						data: { x, y, block, id: user.id },
+					},
+					{ spectators: true },
+				);
+				return;
+			}
+			case T0wnzAction.EXT_DRAW_BATCH: {
+				if (!hasExt(user)) {
+					return;
+				}
+				if (user.role === 'viewer' && !spectators.canDraw) {
+					return;
+				}
+				if (
+					!Array.isArray(data.cells) ||
+					data.cells.length === 0 ||
+					data.cells.length > EXT_BATCH_LIMIT
+				) {
+					refuseAck(client, user);
+					return;
+				}
+				const words = paletteWords();
+				const applied = [];
+				const vanillaFrames = [];
+				for (const raw of data.cells) {
+					const draw = sanitizeExtDraw(raw ?? {}, doc.columns, doc.rows);
+					if (!draw) {
+						continue;
+					}
+					const ext = { u: draw.u, a: draw.a, fg: draw.fg, bg: draw.bg };
+					const block = extCellToBlock(ext, doc.ice_colors, words);
+					doc.data[draw.y * doc.columns + draw.x] = extCellEquals(
+						blockToExtCell(block),
+						ext,
+					)
+						? block
+						: { ...block, ext };
+					applied.push(draw);
+					vanillaFrames.push({
+						type: MoebiusAction.DRAW,
+						data: { x: draw.x, y: draw.y, block, id: user.id },
+					});
+				}
+				if (applied.length === 0) {
+					refuseAck(client, user);
+					return;
+				}
+				// one op, one seq; vanilla peers get it as per-cell DRAWs
+				const payload = { cells: applied, id: user.id };
+				fanoutMutation(
+					client,
+					user,
+					pushOp(type, payload),
+					{ type, data: payload },
+					vanillaFrames,
+					{ spectators: true },
+				);
+				return;
+			}
+			case T0wnzAction.EXT_SYNC: {
+				if (!hasExt(user)) {
+					return;
+				}
+				// a tiny request frame makes the server walk the whole doc:
+				// per-user cooldown (the honest client already has one)
+				const now = Date.now();
+				if (now - user.lastSyncAt < syncCooldownMs) {
+					return;
+				}
+				user.lastSyncAt = now;
+				try {
+					client.send(T0wnzAction.EXT_SYNC, syncPayload());
+				} catch {
+					// dead socket; close() reaps it
+				}
+				return;
+			}
+			case T0wnzAction.EXT_PALETTE: {
+				if (!hasExt(user) || user.role === 'viewer') {
+					return;
+				}
+				const palette = sanitizeExtPalette(data.palette);
+				if (!palette) {
+					refuseAck(client, user);
+					return;
+				}
+				doc.ext_palette = palette;
+				// bridge the classic 16 into the vanilla join palette so late
+				// vanilla joiners see them; in-session vanilla peers keep a
+				// stale palette (upstream's own CHANGE_PALETTE precedent).
+				// Padded to EXACTLY 16: a short join palette is an
+				// out-of-contract shape vanilla clients index into blindly
+				// (review finding)
+				const bridge = paletteWordsFromJoin(doc.palette);
+				for (let i = 0; i < Math.min(16, palette.length); i++) {
+					bridge[i] = palette[i];
+				}
+				doc.palette = paletteTo6Bit(
+					[...bridge.slice(0, 16)].map(w => [
+						(w >> 16) & 0xff,
+						(w >> 8) & 0xff,
+						w & 0xff,
+					]),
+				);
+				reprojectExtBlocks();
+				const payload = { palette, id: user.id };
+				fanoutMutation(
+					client,
+					user,
+					pushOp(type, payload),
+					{ type, data: payload },
+					null,
+					{ spectators: true },
+				);
+				return;
+			}
+			case T0wnzAction.EXT_TIMELAPSE: {
+				if (!hasExt(user)) {
+					return;
+				}
+				const now = Date.now();
+				if (now - user.lastSyncAt < syncCooldownMs) {
+					return;
+				}
+				user.lastSyncAt = now;
+				try {
+					client.send(T0wnzAction.EXT_TIMELAPSE, {
+						columns: baseline.columns,
+						rows: baseline.rows,
+						cells: compressExtCells(baseline.cells),
+						palette: doc.ext_palette ?? null,
+						ops: opLog,
+					});
+				} catch {
+					// dead socket; close() reaps it
+				}
+				return;
+			}
+			case T0wnzAction.EXT_ACK:
+				return; // server-emitted only
 			case MoebiusAction.CONNECTED:
 			case MoebiusAction.REFUSED:
 			case MoebiusAction.JOIN:
@@ -421,8 +874,28 @@ export const createRoom = (options = {}) => {
 			case MoebiusAction.SET_BG:
 				return; // upstream swallows it
 			default: {
-				if (type >= MOEBIUS_EXTENSION_BASE && user.caps === null) {
-					return; // extensions only flow between caps-aware peers
+				if (type >= MOEBIUS_EXTENSION_BASE) {
+					// unknown FUTURE extension ids relay only between
+					// caps-bearing registered peers; vanilla members never see
+					// shapes they cannot parse
+					if (user.caps === null || user.role === 'viewer') {
+						return;
+					}
+					for (const [peer, peerUser] of members) {
+						if (
+							peer === client ||
+							peerUser.role === 'viewer' ||
+							peerUser.caps === null
+						) {
+							continue;
+						}
+						try {
+							peer.send(type, data);
+						} catch {
+							// dead sockets never break the fanout
+						}
+					}
+					return;
 				}
 				// upstream's blind relay: registered users only, never
 				// persisted (CURSOR/SELECTION/OPERATION/17-20/22). Late
@@ -475,9 +948,42 @@ export const createRoom = (options = {}) => {
 			}
 			const savedChat = /** @type {any} */ (saved).chat;
 			if (Array.isArray(savedChat)) {
-				chatHistory.push(...savedChat);
+				chatHistory.push(
+					...savedChat.slice(-ROOM_DEFAULTS.chatHistoryLimit),
+				);
 			}
+			// full-fidelity rider (sidecar or envelope restore): reattach
+			// ext payloads where the vanilla block lost information
+			const savedExt = /** @type {any} */ (saved).ext;
+			if (savedExt && Array.isArray(savedExt.palette)) {
+				const palette = sanitizeExtPalette(savedExt.palette);
+				if (palette) {
+					doc.ext_palette = palette;
+				}
+			}
+			if (savedExt && Array.isArray(savedExt.cells)) {
+				try {
+					const cells = expandExtCells(
+						savedExt.cells,
+						doc.columns * doc.rows,
+					);
+					for (let i = 0; i < cells.length; i++) {
+						if (!extCellEquals(blockToExtCell(doc.data[i]), cells[i])) {
+							doc.data[i] = { ...doc.data[i], ext: cells[i] };
+						}
+					}
+				} catch {
+					// corrupt ext rider: the vanilla view stands
+				}
+			}
+			// the restored doc is the new timelapse starting point
+			resetBaseline();
 		},
+		/** full-fidelity state for persistence (RLE runs + ext palette) */
+		extState: () => ({
+			cells: compressExtCells(doc.data.map(blockToExtCell)),
+			palette: doc.ext_palette ?? null,
+		}),
 		stats: () => ({
 			name,
 			users: usersList(),
@@ -485,6 +991,7 @@ export const createRoom = (options = {}) => {
 			columns: doc.columns,
 			rows: doc.rows,
 			opLogLength: opLog.length,
+			seq,
 			dirty,
 		}),
 		chatHistory: () => [...chatHistory],

@@ -1,9 +1,20 @@
 import State from './state.js';
 import { $, $$, websocketUI } from './ui.js';
-import { createDefaultPalette } from './palette.js';
+import { createDefaultPalette, createPalette } from './palette.js';
 import { trustedMessage } from './messageGuard.js';
-import { MoebiusAction, joinDocToDoc } from '../core/index';
+import {
+	EXT_BATCH_LIMIT,
+	EXT_SUITE_CAP,
+	MoebiusAction,
+	T0wnzAction,
+	compress8to6,
+	extSyncToDoc,
+	joinDocToDoc,
+	sanitizeExtCell,
+	sanitizeExtPalette,
+} from '../core/index';
 import { Load } from './file.js';
+import magicNumbers from './magicNumbers.js';
 
 /**
  * Remote collaborator cursors (native CURSOR/SELECTION rendering,
@@ -89,15 +100,34 @@ const createWorkerHandler = inputHandle => {
 	// user intent; same-origin default otherwise (PLAN 3.6.3)
 	const explicitServer =
 		new URLSearchParams(window.location.search).get('server') ?? undefined;
-	let applyReceivedSettings = false;
+	// depth, not a boolean: nested remote-apply helpers (font change
+	// inside a sync inside adoption) each balance their own ++/--
+	let applyDepth = 0;
 	const remoteCursors = createRemoteCursors();
 	/** id -> nick, for rename detection (renames ride CHAT upstream) */
 	const peerNicks = new Map();
+	// extension suite state (t0wnz-ext-1): negotiated caps, the seq
+	// stream position, and how many of our own mutations await an ack
+	/** @type {string[]} */
+	let serverCaps = [];
+	let lastSeq = -1;
+	let pendingOps = 0;
+	let syncCooldown = 0;
+	let syncQueued = false;
+	let syncRetryTimer = 0;
+	let passwordTried = false;
+	const extActive = () => serverCaps.includes(EXT_SUITE_CAP);
 
 	const onDisconnected = wasConnected => {
 		const hadSession = connected && collaborationMode;
 		connected = false;
 		collaborationMode = false;
+		serverCaps = [];
+		lastSeq = -1;
+		pendingOps = 0;
+		syncQueued = false;
+		clearTimeout(syncRetryTimer);
+		syncRetryTimer = 0;
 		remoteCursors.clear();
 		peerNicks.clear();
 		websocketUI(false);
@@ -149,23 +179,35 @@ const createWorkerHandler = inputHandle => {
 	};
 
 	const onResize = (columns, rows) => {
-		applyReceivedSettings = true; // Flag to prevent re-broadcasting
+		// a hostile/buggy server must not drive an unbounded allocation
+		// (the user can dial any ?server= url) — clamp at the border
+		if (
+			!Number.isInteger(columns) ||
+			!Number.isInteger(rows) ||
+			columns < 1 ||
+			rows < 1 ||
+			columns > magicNumbers.MAX_COLUMNS ||
+			rows > magicNumbers.MAX_ROWS
+		) {
+			return;
+		}
+		applyDepth++; // prevents re-broadcasting received settings
 		State.textArtCanvas.resize(columns, rows);
-		applyReceivedSettings = false;
+		applyDepth = Math.max(0, applyDepth - 1);
 	};
 
 	const onFontChange = async fontName => {
-		applyReceivedSettings = true; // Flag to prevent re-broadcasting
+		applyDepth++; // prevents re-broadcasting received settings
 		await State.textArtCanvas.setFont(fontName, () => {
 			// Update the font display UI
 			lblFont.textContent = fontName;
 			selFont.value = fontName;
 		});
-		applyReceivedSettings = false;
+		applyDepth = Math.max(0, applyDepth - 1);
 	};
 
 	const onIceColorsChange = iceColors => {
-		applyReceivedSettings = true; // Flag to prevent re-broadcasting
+		applyDepth++; // prevents re-broadcasting received settings
 		State.textArtCanvas.setIceColors(iceColors);
 		// Update the ice colors toggle UI
 		if (iceColors) {
@@ -173,11 +215,11 @@ const createWorkerHandler = inputHandle => {
 		} else {
 			btnIce.classList.remove('enabled');
 		}
-		applyReceivedSettings = false;
+		applyDepth = Math.max(0, applyDepth - 1);
 	};
 
 	const onLetterSpacingChange = letterSpacing => {
-		applyReceivedSettings = true; // Flag to prevent re-broadcasting
+		applyDepth++; // prevents re-broadcasting received settings
 		State.font.setLetterSpacing(letterSpacing);
 		// Update the letter spacing toggle UI
 		if (letterSpacing) {
@@ -185,14 +227,262 @@ const createWorkerHandler = inputHandle => {
 		} else {
 			btn9pt.classList.remove('enabled');
 		}
-		applyReceivedSettings = false;
+		applyDepth = Math.max(0, applyDepth - 1);
+	};
+
+	/** @type {((payload: object) => void) | null} */
+	let timelapseWaiter = null;
+
+	/**
+	 * Fetch the room's baseline + op log (EXT_TIMELAPSE); resolves null
+	 * on vanilla sessions or a 10s server silence. The caller (file.js)
+	 * replays it into an exportable animation.
+	 * @returns {Promise<object | null>}
+	 */
+	const requestTimelapse = () =>
+		new Promise(resolve => {
+			if (!connected || !extActive()) {
+				resolve(null);
+				return;
+			}
+			const timer = setTimeout(() => {
+				timelapseWaiter = null;
+				resolve(null);
+			}, 10000);
+			timelapseWaiter = payload => {
+				clearTimeout(timer);
+				resolve(payload);
+			};
+			State.worker.postMessage({
+				cmd: 'send',
+				type: T0wnzAction.EXT_TIMELAPSE,
+				data: {},
+			});
+		});
+
+	/**
+	 * Ask the server for a wholesale resync (seq gap, or a resize racing
+	 * our in-flight ops). Cooldown-coalesced so a burst of gaps costs one
+	 * round trip.
+	 */
+	const requestSync = () => {
+		if (!extActive() || !connected) {
+			return;
+		}
+		if (syncCooldown) {
+			// remember the suppressed request; a dropped one used to lose
+			// the recovery entirely (review finding)
+			syncQueued = true;
+			return;
+		}
+		syncCooldown = setTimeout(() => {
+			syncCooldown = 0;
+			if (syncQueued) {
+				syncQueued = false;
+				requestSync();
+			}
+		}, 1000);
+		// retry insurance: the server rate-limits sync replies, so a
+		// request landing inside ITS window vanishes silently — keep
+		// re-asking (gently) until a sync actually applies
+		clearTimeout(syncRetryTimer);
+		syncRetryTimer = setTimeout(() => {
+			syncQueued = false;
+			requestSync();
+		}, 2500);
+		State.worker.postMessage({
+			cmd: 'send',
+			type: T0wnzAction.EXT_SYNC,
+			data: {},
+		});
+	};
+
+	/**
+	 * Track the mutation seq stream. ONLY the server-stamped mutation
+	 * types consult this (a client once smuggled a fake seq through a
+	 * blind-relayed CURSOR and wedged every caps peer — review finding).
+	 * Returns false for a stale frame the caller must skip; a gap
+	 * schedules recovery but still applies the frame.
+	 */
+	const SEQ_TYPES = new Set([
+		MoebiusAction.DRAW,
+		MoebiusAction.SAUCE,
+		MoebiusAction.ICE_COLORS,
+		MoebiusAction.USE_9PX_FONT,
+		MoebiusAction.CHANGE_FONT,
+		MoebiusAction.SET_CANVAS_SIZE,
+		T0wnzAction.EXT_DRAW,
+		T0wnzAction.EXT_DRAW_BATCH,
+		T0wnzAction.EXT_PALETTE,
+	]);
+	const noteSeq = data => {
+		const seq = data?.seq;
+		if (!Number.isInteger(seq) || !extActive()) {
+			return true;
+		}
+		if (lastSeq >= 0 && seq <= lastSeq) {
+			return false;
+		}
+		if (lastSeq >= 0 && seq > lastSeq + 1) {
+			requestSync();
+		}
+		lastSeq = seq;
+		return true;
+	};
+
+	/** acks advance the stream but are never dropped as stale */
+	const noteSeqAdvance = data => {
+		const seq = data?.seq;
+		if (!Number.isInteger(seq) || !extActive()) {
+			return;
+		}
+		if (lastSeq >= 0 && seq > lastSeq + 1) {
+			requestSync();
+		}
+		if (seq > lastSeq) {
+			lastSeq = seq;
+		}
+	};
+
+	/** bridge the classic 16 of a remote palette into the strip + GL */
+	const adoptClassic16 = palette => {
+		const triples = [];
+		for (let i = 0; i < 16; i++) {
+			const word = palette[i] ?? 0;
+			triples.push([
+				compress8to6((word >> 16) & 0xff),
+				compress8to6((word >> 8) & 0xff),
+				compress8to6(word & 0xff),
+			]);
+		}
+		State.palette = createPalette(triples);
+		document.dispatchEvent(
+			new CustomEvent('onPaletteChange', {
+				detail: State.palette,
+				bubbles: true,
+				cancelable: false,
+			}),
+		);
+		State.font?.redraw();
+	};
+
+	const onRemoteExtPalette = data => {
+		const palette = sanitizeExtPalette(data.palette);
+		if (!palette) {
+			return;
+		}
+		applyDepth++;
+		try {
+			const doc = State.textArtCanvas.getDoc();
+			const words = new Uint32Array(Math.max(doc.palette.length, palette.length));
+			words.set(doc.palette.subarray(0, Math.min(doc.palette.length, words.length)));
+			for (let i = 0; i < palette.length; i++) {
+				words[i] = palette[i];
+			}
+			doc.palette = words;
+			adoptClassic16(palette);
+			State.textArtCanvas.redrawEntireImage();
+		} finally {
+			applyDepth = Math.max(0, applyDepth - 1);
+		}
+	};
+
+	const onRemoteExtDraw = async cells => {
+		const valid = [];
+		for (const raw of cells) {
+			const cell = sanitizeExtCell(raw);
+			if (
+				cell &&
+				Number.isInteger(raw.x) &&
+				Number.isInteger(raw.y) &&
+				raw.x >= 0 &&
+				raw.y >= 0
+			) {
+				valid.push({ x: raw.x, y: raw.y, ...cell });
+			}
+		}
+		if (valid.length > 0) {
+			await State.textArtCanvas.drawRemoteExtCells(valid);
+		}
+	};
+
+	/** adopt the full-fidelity doc (join follow-up or requested resync) */
+	const applyExtSync = async payload => {
+		applyDepth++;
+		try {
+			const result = extSyncToDoc(payload);
+			State.textArtCanvas.setDocData(result.doc);
+			if (result.fontName) {
+				await onFontChange(
+					Load.sauceToAppFont(result.fontName) ?? result.fontName,
+				);
+			}
+			State.font.setLetterSpacing(result.use9px);
+			btn9pt.classList.toggle('enabled', result.use9px);
+			btnIce.classList.toggle('enabled', result.doc.getIceColors());
+			if (Array.isArray(payload.palette)) {
+				const palette = sanitizeExtPalette(payload.palette);
+				if (palette) {
+					adoptClassic16(palette);
+				}
+			}
+			if (Number.isInteger(payload.seq)) {
+				lastSeq = payload.seq;
+			}
+			pendingOps = 0;
+			syncQueued = false;
+			clearTimeout(syncRetryTimer);
+			syncRetryTimer = 0;
+		} catch (error) {
+			console.warn('[Network] dropped malformed EXT_SYNC:', error);
+		} finally {
+			applyDepth = Math.max(0, applyDepth - 1);
+		}
 	};
 
 	/** @param {number} type @param {any} data */
 	const onFrame = async (type, data) => {
+		// acks and sync replies are the RECOVERY channel: they must never
+		// fall to the staleness drop (review finding: the sync reply's
+		// seq always looked stale, so recovery never applied)
+		if (type === T0wnzAction.EXT_ACK) {
+			noteSeqAdvance(data);
+			pendingOps = Math.max(0, pendingOps - 1);
+			if (data?.refused === true) {
+				// the server dropped an op this client already applied
+				// locally; nothing else reconciles that
+				requestSync();
+			}
+			return;
+		}
+		if (type === T0wnzAction.EXT_SYNC) {
+			await applyExtSync(data);
+			return;
+		}
+		// only server-stamped mutation types consult the seq stream
+		if (SEQ_TYPES.has(type) && !noteSeq(data)) {
+			return;
+		}
 		switch (type) {
 			case MoebiusAction.DRAW:
 				onRemoteDraw(data);
+				break;
+			case T0wnzAction.EXT_DRAW:
+				await onRemoteExtDraw([data]);
+				break;
+			case T0wnzAction.EXT_DRAW_BATCH:
+				if (Array.isArray(data.cells)) {
+					await onRemoteExtDraw(data.cells);
+				}
+				break;
+			case T0wnzAction.EXT_PALETTE:
+				onRemoteExtPalette(data);
+				break;
+			case T0wnzAction.EXT_TIMELAPSE:
+				if (timelapseWaiter) {
+					timelapseWaiter(data);
+					timelapseWaiter = null;
+				}
 				break;
 			case MoebiusAction.CHAT:
 				onRemoteChat(data);
@@ -224,15 +514,49 @@ const createWorkerHandler = inputHandle => {
 			case MoebiusAction.CHANGE_FONT:
 				// landmine 6: Moebius speaks SAUCE font names ('IBM VGA');
 				// map to app names, fall through raw for unknowns
-				await onFontChange(
-					Load.sauceToAppFont(data.font_name) ?? data.font_name,
-				);
+				if (typeof data.font_name === 'string') {
+					await onFontChange(
+						Load.sauceToAppFont(data.font_name) ?? data.font_name,
+					);
+				}
 				break;
 			case MoebiusAction.SET_CANVAS_SIZE:
 				onResize(data.columns, data.rows);
+				// a remote resize racing our in-flight ops is the one
+				// divergence the vanilla dialect can't detect; with the
+				// suite negotiated, recover wholesale (P4 fuzz lesson)
+				if (extActive() && pendingOps > 0) {
+					requestSync();
+				}
 				break;
+			case MoebiusAction.SAUCE: {
+				// P4 leftover: remote SAUCE edits land in the modal + title
+				applyDepth++;
+				try {
+					if (typeof data.title === 'string') {
+						State.title = data.title;
+						const field = document.getElementById('sauceTitle');
+						if (field) {
+							field.value = data.title;
+						}
+					}
+					for (const [key, id] of [
+						['author', 'sauceAuthor'],
+						['group', 'sauceGroup'],
+						['comments', 'sauceComments'],
+					]) {
+						const field = document.getElementById(id);
+						if (field && typeof data[key] === 'string') {
+							field.value = data[key];
+						}
+					}
+				} finally {
+					applyDepth = Math.max(0, applyDepth - 1);
+				}
+				break;
+			}
 			default:
-				// STATUS, SAUCE, operations 17-20/22: nothing to render yet
+				// STATUS, operations 17-20/22: nothing to render yet
 				break;
 		}
 	};
@@ -256,10 +580,24 @@ const createWorkerHandler = inputHandle => {
 			case 'connected':
 				await adoptSession(data);
 				break;
-			case 'refused':
-				alert('The collab server refused the connection.');
+			case 'refused': {
+				// P4 leftover: gated rooms get a real password path instead
+				// of a dead-end alert; one retry, then stay local
+				if (!passwordTried) {
+					passwordTried = true;
+					const pass = window.prompt(
+						'This room is password protected. Enter the password:',
+					);
+					if (pass) {
+						joinCollaboration(pass);
+						break;
+					}
+				} else {
+					alert('The collab server refused the connection.');
+				}
 				stayLocal();
 				break;
+			}
 			case 'frame':
 				if (collaborationMode) {
 					await onFrame(data.type, data.data);
@@ -274,39 +612,79 @@ const createWorkerHandler = inputHandle => {
 		}
 	};
 
-	/** @param {number} type @param {object} data */
+	/** @param {number} type @param {object} data @returns {boolean} sent */
 	const sendFrame = (type, data) => {
-		if (collaborationMode && connected && !applyReceivedSettings) {
+		if (collaborationMode && connected && applyDepth === 0) {
 			State.worker.postMessage({ cmd: 'send', type, data });
+			return true;
+		}
+		return false;
+	};
+
+	/** a doc mutation of ours: the ext ack bookkeeping rides the send */
+	const sendMutation = (type, data) => {
+		if (sendFrame(type, data) && extActive()) {
+			pendingOps++;
 		}
 	};
 
 	/**
-	 * cells arrive from canvas.js as {x, y, block:{code, fg, bg}}; each
-	 * becomes a per-cell DRAW (apply-locally-on-send: the server
-	 * excludes the sender, so no echo comes back)
+	 * cells arrive from canvas.js as {x, y, block:{code, fg, bg}, ext}
+	 * (apply-locally-on-send: the server excludes the sender, so no echo
+	 * comes back). Ext sessions send one full-fidelity batch per flush;
+	 * vanilla sessions get per-cell DRAWs with the ext payload stripped
+	 * (upstream servers relay unknown fields verbatim).
 	 */
 	const draw = cells => {
-		if (collaborationMode && connected && Array.isArray(cells)) {
-			State.worker.postMessage({ cmd: 'draw', cells });
+		if (!collaborationMode || !connected || !Array.isArray(cells)) {
+			return;
 		}
+		if (extActive()) {
+			const extCells = [];
+			for (const cell of cells) {
+				if (cell && cell.ext) {
+					extCells.push({ x: cell.x, y: cell.y, ...cell.ext });
+				}
+			}
+			for (let i = 0; i < extCells.length; i += EXT_BATCH_LIMIT) {
+				pendingOps++;
+				State.worker.postMessage({
+					cmd: 'send',
+					type: T0wnzAction.EXT_DRAW_BATCH,
+					data: { cells: extCells.slice(i, i + EXT_BATCH_LIMIT) },
+				});
+			}
+			return;
+		}
+		State.worker.postMessage({
+			cmd: 'draw',
+			cells: cells.map(({ x, y, block }) => ({ x, y, block })),
+		});
 	};
 
 	// no Moebius equivalent; kept as a no-op so old call sites are inert
 	const sendCanvasSettings = _settings => {};
 
 	const sendResize = (columns, rows) =>
-		sendFrame(MoebiusAction.SET_CANVAS_SIZE, { columns, rows });
+		sendMutation(MoebiusAction.SET_CANVAS_SIZE, { columns, rows });
 
 	const sendFontChange = fontName =>
 		// landmine 6 outbound: peers (Moebius included) expect SAUCE names
-		sendFrame(MoebiusAction.CHANGE_FONT, { font_name: Load.appToSauceFont(fontName) ?? fontName });
+		sendMutation(MoebiusAction.CHANGE_FONT, { font_name: Load.appToSauceFont(fontName) ?? fontName });
 
 	const sendIceColorsChange = iceColors =>
-		sendFrame(MoebiusAction.ICE_COLORS, { value: iceColors });
+		sendMutation(MoebiusAction.ICE_COLORS, { value: iceColors });
+
+	const sendSauce = meta =>
+		sendMutation(MoebiusAction.SAUCE, {
+			title: meta.title ?? '',
+			author: meta.author ?? '',
+			group: meta.group ?? '',
+			comments: meta.comments ?? '',
+		});
 
 	const sendLetterSpacingChange = letterSpacing =>
-		sendFrame(MoebiusAction.USE_9PX_FONT, { value: letterSpacing });
+		sendMutation(MoebiusAction.USE_9PX_FONT, { value: letterSpacing });
 
 	const showCollaborationChoice = () => {
 		State.modal.open('choice');
@@ -319,7 +697,12 @@ const createWorkerHandler = inputHandle => {
 	const adoptSession = async data => {
 		connected = true;
 		collaborationMode = true;
-		applyReceivedSettings = true;
+		applyDepth++;
+		serverCaps = Array.isArray(data.data.caps)
+			? data.data.caps.filter(cap => typeof cap === 'string')
+			: [];
+		lastSeq = -1;
+		pendingOps = 0;
 		try {
 			State.modal.loading(
 				'Updating editor with data from the collab session...',
@@ -361,19 +744,21 @@ const createWorkerHandler = inputHandle => {
 			console.error('[Network] failed to adopt session doc:', error);
 			stayLocal();
 		} finally {
-			applyReceivedSettings = false;
+			applyDepth = Math.max(0, applyDepth - 1);
 			State.modal.close();
 		}
 	};
 
-	const joinCollaboration = () => {
+	const joinCollaboration = pass => {
 		State.modal.loading('Joining the collab session...');
 		State.worker.postMessage({
 			cmd: 'connect',
 			nick: handle,
 			group: '',
-			pass: '',
-			caps: [],
+			// callers include DOM click handlers: only a real string is a
+			// password (a PointerEvent here once broke the worker clone)
+			pass: typeof pass === 'string' ? pass : '',
+			caps: [EXT_SUITE_CAP],
 			url: explicitServer,
 		});
 	};
@@ -385,10 +770,11 @@ const createWorkerHandler = inputHandle => {
 		websocketUI(false);
 		State.worker.postMessage({ cmd: 'disconnect' });
 		btnNet.classList.remove('hide');
-		btnNet.addEventListener('click', _ => {
-			showCollaborationChoice();
-		});
 	};
+	// once, not per stayLocal call (listeners used to stack)
+	btnNet.addEventListener('click', _ => {
+		showCollaborationChoice();
+	});
 
 	const setHandle = newHandle => {
 		if (handle !== newHandle) {
@@ -449,8 +835,9 @@ const createWorkerHandler = inputHandle => {
 		}
 	}
 
-	// Set up collaboration choice dialog handlers
-	btnJoin.addEventListener('click', joinCollaboration);
+	// Set up collaboration choice dialog handlers (wrapped: the click
+	// event must never become the password argument)
+	btnJoin.addEventListener('click', () => joinCollaboration());
 	btnLocal.addEventListener('click', stayLocal);
 
 	return {
@@ -458,6 +845,11 @@ const createWorkerHandler = inputHandle => {
 		setHandle: setHandle,
 		sendChat: sendChat,
 		isConnected: isConnected,
+		// true iff the session negotiated the t0wnz extension suite:
+		// unicode cells and extended colors travel natively, so the P5
+		// lockouts lift (vanilla sessions keep them)
+		extCollab: () => connected && extActive(),
+		requestTimelapse: requestTimelapse,
 		joinCollaboration: joinCollaboration,
 		stayLocal: stayLocal,
 		sendCanvasSettings: sendCanvasSettings,
@@ -465,6 +857,7 @@ const createWorkerHandler = inputHandle => {
 		sendFontChange: sendFontChange,
 		sendIceColorsChange: sendIceColorsChange,
 		sendLetterSpacingChange: sendLetterSpacingChange,
+		sendSauce: sendSauce,
 	};
 };
 

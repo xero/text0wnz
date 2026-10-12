@@ -52,8 +52,8 @@ const PANEL_WIDTH_MULTIPLIER = 20;
 const MAX_COLUMNS = 1000;
 const MAX_ROWS = 10000;
 const RESIZE_WARN_CELLS = 300000;
-// In-memory undo stack cap, in cell entries
-const MAX_UNDO_CELLS = 1048576;
+// (v2's MAX_UNDO_CELLS is gone: undo depth is byte-capped by the patch
+// arena ring in core/patchArena.ts, DEFAULT_UNDO_BYTE_CAP)
 // Trailing debounce for autosave journal keyframe rewrites
 const JOURNAL_KEYFRAME_DEBOUNCE_MS = 500;
 // Touch gesture tuning (PLAN §3.5 / D11): the owner device pass tunes
@@ -114,7 +114,6 @@ export default {
 	MAX_COLUMNS,
 	MAX_ROWS,
 	RESIZE_WARN_CELLS,
-	MAX_UNDO_CELLS,
 	JOURNAL_KEYFRAME_DEBOUNCE_MS,
 	GESTURE_TAP_WINDOW_MS,
 	GESTURE_SLOP_PX,

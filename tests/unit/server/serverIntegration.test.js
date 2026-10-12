@@ -9,9 +9,10 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn, execSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { MoebiusAction as A } from '../../../src/js/core/index';
 
 const repoRoot = path.resolve(import.meta.dirname, '../../..');
 const PASS = 'hunter2';
@@ -107,6 +108,69 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 		const res = await fetch(`http://127.0.0.1:${port}/`);
 		expect(res.status).toBe(426);
 	});
+
+	it('serves /healthz liveness (P6 Docker target)', async () => {
+		const res = await fetch(`http://127.0.0.1:${port}/healthz`);
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.ok).toBe(true);
+		expect(typeof body.uptime).toBe('number');
+	});
+
+	it('static mode serves the PWA, guards traversal, keeps ws rooms', async () => {
+		const staticDir = mkdtempSync(path.join(tmpdir(), 't0wnz-static-'));
+		writeFileSync(path.join(staticDir, 'index.html'), '<html>t0wnz</html>');
+		const staticPort = 20000 + Math.floor(Math.random() * 20000);
+		const staticChild = spawn(
+			'bun',
+			[path.join(repoRoot, 'src/js/server/main.js'), String(staticPort)],
+			{
+				cwd: scratch,
+				stdio: ['ignore', 'pipe', 'pipe'],
+				env: { ...process.env, STATIC_DIR: staticDir },
+			},
+		);
+		try {
+			const deadline = Date.now() + 15000;
+			for (;;) {
+				try {
+					const res = await fetch(`http://127.0.0.1:${staticPort}/healthz`);
+					if (res.ok) {
+						break;
+					}
+				} catch {
+					// not up yet
+				}
+				if (Date.now() > deadline) {
+					throw new Error('static server did not come up');
+				}
+				await new Promise(r => setTimeout(r, 150));
+			}
+			const page = await fetch(`http://127.0.0.1:${staticPort}/`);
+			expect(page.status).toBe(200);
+			expect(await page.text()).toContain('t0wnz');
+			const missing = await fetch(`http://127.0.0.1:${staticPort}/nope.js`);
+			expect(missing.status).toBe(404);
+			const sneaky = await fetch(
+				`http://127.0.0.1:${staticPort}/%2e%2e/%2e%2e/etc/passwd`,
+			);
+			expect([400, 403, 404]).toContain(sneaky.status);
+			// websocket rooms still answer on the same listener
+			const ws = new WebSocket(`ws://127.0.0.1:${staticPort}/server`);
+			await new Promise((resolve, reject) => {
+				ws.addEventListener('open', resolve, { once: true });
+				ws.addEventListener('error', reject, { once: true });
+			});
+			const replyPromise = nextFrame(ws);
+			send(ws, 0, { nick: 'static-test' });
+			const reply = await replyPromise;
+			expect(reply.type).toBe(A.CONNECTED);
+			ws.close();
+		} finally {
+			staticChild.kill('SIGKILL');
+			rmSync(staticDir, { recursive: true, force: true });
+		}
+	}, 20000);
 
 	it('refuses a bad password and unknown room paths', async () => {
 		const { ws, reply } = await connectClient('server', {

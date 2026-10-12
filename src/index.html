@@ -254,6 +254,30 @@
 							</svg>
 							<kbd>Grid</kbd>
 						</div>
+						<div id="navFrames" class="toolButton">
+							<svg alt="Animation Frames" aria-label="Animation Frames">
+								<use href="img/icons.svg#history"></use>
+							</svg>
+							<kbd>Frames</kbd>
+						</div>
+						<div id="navMinimap" class="toolButton">
+							<svg alt="Minimap" aria-label="Minimap">
+								<use href="img/icons.svg#canvas"></use>
+							</svg>
+							<kbd>Minimap</kbd>
+						</div>
+						<div id="navCrt" class="toolButton">
+							<svg alt="CRT Effect" aria-label="CRT Effect">
+								<use href="img/icons.svg#circle"></use>
+							</svg>
+							<kbd>CRT</kbd>
+						</div>
+						<div id="navRef" class="toolButton">
+							<svg alt="Reference Image" aria-label="Reference Image">
+								<use href="img/icons.svg#dropper"></use>
+							</svg>
+							<kbd>Ref Image</kbd>
+						</div>
 					</div>
 				</nav>
 				<nav>
@@ -323,6 +347,35 @@
 					<div id="colorRecent"></div>
 					<p id="colorLockNote" class="hide">Joined server only speaks 16 colors: extended picks are disabled until you disconnect.</p>
 				</div>
+				<div id="framesPanel" class="hide">
+					<button id="framePrev" title="Previous frame">&#9664;</button>
+					<kbd id="frameLabel">1/1</kbd>
+					<button id="frameNext" title="Next frame">&#9654;</button>
+					<div id="frameStrip"></div>
+					<button id="frameAdd" title="Add blank frame">+</button>
+					<button id="frameDup" title="Duplicate frame">=</button>
+					<button id="frameDel" title="Delete frame">&#215;</button>
+					<label>
+						ms
+						<input id="frameDelay" type="number" title="Per-frame delay (blank = global)" max="60000" min="16" step="10"/>
+					</label>
+					<label>
+						fps
+						<input id="frameFps" type="number" title="Global playback rate" max="60" min="1"/>
+					</label>
+					<button id="framePlay" title="Play / stop">play</button>
+					<button id="frameOnion" title="Onion skin (previous frame ghosted)">onion</button>
+					<select id="frameBaud" title="Line rate for the baud preview">
+						<option>2400</option>
+						<option>9600</option>
+						<option selected>14400</option>
+						<option>28800</option>
+						<option>57600</option>
+						<option>115200</option>
+					</select>
+					<button id="frameBaudPlay" title="Preview the current frame at the chosen baud rate">baud</button>
+					<p id="framesLockNote" class="hide">Animation editing is local-only: collab sessions stay on one frame.</p>
+				</div>
 				<div id="keyboard">
 					<svg alt="Keyboard" aria-label="Keyboard (k)">
 						<use href="img/icons.svg#keeb"></use>
@@ -376,8 +429,26 @@
 					</svg>
 				</div>
 			</aside>
+			<div id="minimapPanel" class="hide">
+				<canvas id="minimapArt" height="25" width="80"></canvas>
+				<div id="minimapViewport"></div>
+			</div>
+			<div id="refPanel" class="hide">
+				<button id="refLoad">load image</button>
+				<input id="refFileInput" class="hide" type="file" accept="image/*"/>
+				<label>
+					opacity
+					<input id="refOpacity" type="range" value="40" max="95" min="5"/>
+				</label>
+				<label>
+					width
+					<input id="refScale" type="range" value="100" max="200" min="10"/>
+				</label>
+				<button id="refClear">clear</button>
+			</div>
 			<div id="viewport">
 				<div id="canvasContainer">
+					<img id="refOverlay" class="canvasOverlay hide" alt=""/>
 					<div id="toolPreview" class="canvasOverlay"></div>
 					<div id="grid" class="canvasOverlay"></div>
 				</div>
@@ -396,18 +467,23 @@
 		<div id="fileList" class="menuList hide">
 			<article id="new" class="menuItem excludedForWebsocket">New</article>
 			<article id="open" class="menuItem excludedForWebsocket">Open</article>
+			<article id="browse16c" class="menuItem excludedForWebsocket">Browse 16colo.rs</article>
 			<article class="separator excludedForWebsocket"></article>
 			<article id="saveAnsi" class="menuItem">Save as ANSi</article>
 			<article id="saveBin" class="menuItem">Save as Binary Text</article>
 			<article id="saveXbin" class="menuItem">Save as XBin</article>
 			<article id="saveTundra" class="menuItem">Save as TundraDraw</article>
+			<article id="saveDur" class="menuItem">Save as durdraw Movie</article>
 			<article id="saveOwnz" class="menuItem">Save as teXt0wnz Doc</article>
 			<article class="separator"></article>
 			<article id="savePng" class="menuItem">Export as PNG</article>
 			<article id="saveUtf8" class="menuItem">Export as UTF-8 Text</article>
 			<article id="saveUtf8Blink" class="menuItem">Export as UTF-8 (blink)</article>
 			<article id="savePlaintext" class="menuItem">Export as Plain Text</article>
+			<article id="saveAnsimation" class="menuItem">Export as ANSimation</article>
+			<article id="saveTimelapse" class="menuItem">Export Session Timelapse</article>
 			<article class="separator"></article>
+			<article id="pluginsMenu" class="menuItem">Plugins</article>
 			<article id="help" class="menuItem">Help!</article>
 			<article id="tutorials" class="menuItem">Tutorials</article>
 			<article id="update" class="menuItem">Update Editor</article>
@@ -417,6 +493,8 @@
 			<article id="navCut" class="menuItem disabled">Cut <kbd>Ctrl-X</kbd></article>
 			<article id="navCopy" class="menuItem disabled">Copy <kbd>Ctrl-C</kbd></article>
 			<article id="navPaste" class="menuItem disabled">Paste <kbd>Ctrl-V</kbd></article>
+			<article id="navPasteTransparent" class="menuItem">Paste Transparent</article>
+			<article id="navPasteUnder" class="menuItem">Paste Under</article>
 			<article id="navSystemPaste" class="menuItem">System Paste <kbd>Ctrl-Shift-V</kbd></article>
 			<article id="navDelete" class="menuItem disabled">Delete <kbd>Ctrl-Delete</kbd></article>
 			<article class="separator"></article>
@@ -473,7 +551,10 @@
 				</nav>
 			</section>
 			<section id="fontsModal">
-				<h2>Font: <strong id="fontPreviewInfo"></strong></h2>
+				<h2>
+					Font: <strong id="fontPreviewInfo"></strong>
+					<button id="fontFavToggle" title="Toggle favorite">&#9734;</button>
+				</h2>
 				<article>
 					<aside>
 						<img id="fontPreviewImage" alt="Font Preview"/>
@@ -789,6 +870,37 @@
 				<nav>
 					<button id="exportCancel">Cancel</button>
 					<button id="exportConfirm">Save</button>
+				</nav>
+			</section>
+			<section id="pluginModal">
+				<h2>Plugins</h2>
+				<article>
+					<p>
+						A plugin is one ES module exporting <code>{name, run(api)}</code>.
+						It runs with full access to this page: only load code you trust.
+					</p>
+					<nav id="pluginLoaders">
+						<button id="pluginLoadFile">Load .js file</button>
+						<input id="pluginFileInput" class="hide" type="file" accept=".js,.mjs"/>
+						<input id="pluginUrlInput" type="url" placeholder="https://.../plugin.js"/>
+						<button id="pluginLoadUrl">Load URL</button>
+					</nav>
+					<p id="pluginStatus" class="hide"></p>
+					<div id="pluginList"></div>
+				</article>
+				<nav>
+					<button id="pluginClose">Close</button>
+				</nav>
+			</section>
+			<section id="sixteenModal">
+				<h2>16colo.rs: <strong id="sixteenCrumb">years</strong></h2>
+				<article>
+					<p id="sixteenStatus" class="hide"></p>
+					<div id="sixteenList"></div>
+				</article>
+				<nav>
+					<button id="sixteenBack" disabled>Back</button>
+					<button id="sixteenClose">Close</button>
 				</nav>
 			</section>
 			<section id="charsetModal">

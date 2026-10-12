@@ -1118,6 +1118,156 @@
 	.colorSwatch:hover {
 		outline: 1px solid theme('colors.cyber');
 	}
+	#framesPanel {
+		@apply fixed z-40 dialog-style p-2 flex flex-row gap-2 items-center;
+		left: 48px;
+		bottom: 8px;
+		max-width: calc(100vw - 64px);
+		button {
+			@apply bg-menu text-fg px-2 cursor-pointer;
+		}
+		button:hover:not(:disabled) {
+			@apply bg-purp;
+		}
+		button:disabled {
+			@apply opacity-40 cursor-default;
+		}
+		button.active {
+			@apply bg-purp;
+		}
+		kbd {
+			@apply text-cyan text-sm px-1;
+		}
+		label {
+			@apply text-fg text-xs flex items-center gap-1;
+			input {
+				@apply bg-menu text-fg;
+				width: 54px;
+			}
+		}
+		p {
+			@apply text-fg text-xs;
+		}
+	}
+	#frameStrip {
+		@apply flex flex-row gap-1 overflow-x-auto;
+		max-width: 320px;
+		.frameCell {
+			@apply text-xs px-1;
+		}
+		.frameCell.current {
+			@apply bg-purp;
+		}
+	}
+	#minimapPanel {
+		@apply fixed z-30 dialog-style p-1;
+		right: 8px;
+		top: var(--header-size);
+		max-height: calc(100vh - var(--header-size) - 16px);
+		overflow-y: auto;
+		cursor: pointer;
+		position: fixed;
+	}
+	#minimapArt {
+		display: block;
+		width: 128px;
+		height: auto;
+		image-rendering: pixelated;
+	}
+	#minimapViewport {
+		@apply absolute pointer-events-none;
+		left: 4px;
+		right: 4px;
+		border: 1px solid theme('colors.cyber');
+	}
+	#sixteenList {
+		@apply flex flex-wrap gap-2 overflow-y-auto content-start;
+		max-height: 55vh;
+		button {
+			@apply bg-menu text-fg px-2 py-1 cursor-pointer;
+		}
+		button:hover:not(:disabled) {
+			@apply bg-purp;
+		}
+		button:disabled {
+			@apply opacity-40 cursor-default;
+		}
+		.sixteenPager {
+			@apply w-full flex gap-2 items-center text-fg;
+		}
+		.sixteenPiece {
+			@apply flex flex-col items-center gap-1 p-1;
+			width: 172px;
+			img {
+				max-width: 160px;
+				height: auto;
+			}
+			span {
+				@apply text-xs break-all;
+			}
+		}
+	}
+	#sixteenStatus {
+		@apply text-cyan text-sm;
+	}
+	#pluginLoaders {
+		@apply flex flex-row gap-2 items-center;
+		input[type='url'] {
+			@apply bg-menu text-fg grow px-2;
+		}
+		button {
+			@apply bg-menu text-fg px-2 cursor-pointer;
+		}
+		button:hover {
+			@apply bg-purp;
+		}
+	}
+	#pluginStatus {
+		@apply text-cyan text-sm pt-2;
+	}
+	#refPanel {
+		@apply fixed z-40 dialog-style p-2 flex flex-row gap-3 items-center;
+		right: 8px;
+		bottom: 8px;
+		button {
+			@apply bg-menu text-fg px-2 cursor-pointer;
+		}
+		button:hover {
+			@apply bg-purp;
+		}
+		label {
+			@apply text-fg text-xs flex items-center gap-1;
+		}
+	}
+	#refOverlay {
+		@apply absolute pointer-events-none;
+		left: 0;
+		top: 0;
+		height: auto;
+		z-index: 5;
+	}
+	#fontFavToggle {
+		@apply bg-menu text-cyan px-2 cursor-pointer text-base;
+	}
+	#fontFavToggle:hover {
+		@apply bg-purp;
+	}
+	.favoriteOption {
+		@apply text-cyan;
+	}
+	#pluginList {
+		@apply flex flex-col gap-1 pt-2 overflow-y-auto;
+		max-height: 40vh;
+		.pluginRow {
+			@apply flex flex-row gap-2 items-center text-fg text-sm;
+			button {
+				@apply bg-menu text-fg px-2 cursor-pointer;
+			}
+			button:hover {
+				@apply bg-purp;
+			}
+		}
+	}
 	#colorRGB {
 		@apply flex flex-row gap-2 items-center;
 		button {

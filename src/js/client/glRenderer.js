@@ -126,6 +126,46 @@ void main() {
 	fragColor = bit > 0.5 ? v_fg : v_bg;
 }`;
 
+// CRT post pass (PLAN §3.1, P6): scene renders into an FBO, then one
+// fullscreen quad applies scanlines (one per glyph pixel row), a soft
+// aperture-grille mask, cheap horizontal phosphor bleed, and a
+// vignette. GL-only, like the minimap and onion skin.
+const CRT_VERTEX_SRC = `#version 300 es
+const vec2 corners[4] = vec2[4](
+	vec2(-1.0, -1.0), vec2(1.0, -1.0), vec2(-1.0, 1.0), vec2(1.0, 1.0));
+out vec2 v_uv;
+void main() {
+	vec2 corner = corners[gl_VertexID];
+	v_uv = corner * 0.5 + 0.5;
+	gl_Position = vec4(corner, 0.0, 1.0);
+}`;
+
+const CRT_FRAGMENT_SRC = `#version 300 es
+precision highp float;
+uniform sampler2D u_scene;
+uniform vec2 u_resolution;
+uniform float u_pxScale;
+in vec2 v_uv;
+out vec4 fragColor;
+void main() {
+	vec3 color = texture(u_scene, v_uv).rgb;
+	float pitch = max(u_pxScale, 1.0);
+	float phase = fract(gl_FragCoord.y / pitch);
+	float scan = 0.82 + 0.18 * cos(6.28318 * phase);
+	float m = mod(gl_FragCoord.x, 3.0);
+	vec3 mask = m < 1.0 ? vec3(1.0, 0.92, 0.92)
+		: m < 2.0 ? vec3(0.92, 1.0, 0.92)
+		: vec3(0.92, 0.92, 1.0);
+	vec2 texel = 1.0 / u_resolution;
+	vec3 glow =
+		texture(u_scene, v_uv + vec2(texel.x, 0.0)).rgb +
+		texture(u_scene, v_uv - vec2(texel.x, 0.0)).rgb;
+	color = color * 0.85 + glow * 0.12;
+	vec2 d = v_uv - 0.5;
+	float vig = 1.0 - dot(d, d) * 0.45;
+	fragColor = vec4(color * scan * mask * vig * 1.12, 1.0);
+}`;
+
 /**
  * @param {HTMLElement} canvasContainer - the sized, scrolled content element
  * @param {Object} host - doc accessors from the text art canvas closure:
@@ -173,6 +213,18 @@ const createGLRenderer = (canvasContainer, host) => {
 	let cellBuffer = null;
 	let contextLost = false;
 
+	// CRT post pass state (scene FBO + composite program)
+	let sceneProgram = null;
+	let sceneVao = null;
+	let crtEnabled = false;
+	let crtProgram = null;
+	let crtVao = null;
+	let crtUniforms = {};
+	let crtFbo = null;
+	let crtTexture = null;
+	let crtW = 0;
+	let crtH = 0;
+
 	const compile = (type, src) => {
 		const shader = gl.createShader(type);
 		gl.shaderSource(shader, src);
@@ -193,6 +245,7 @@ const createGLRenderer = (canvasContainer, host) => {
 			throw new Error(`[GLRenderer] program: ${gl.getProgramInfoLog(program)}`);
 		}
 		gl.useProgram(program);
+		sceneProgram = program;
 
 		uniforms = {};
 		[
@@ -212,6 +265,7 @@ const createGLRenderer = (canvasContainer, host) => {
 
 		const vao = gl.createVertexArray();
 		gl.bindVertexArray(vao);
+		sceneVao = vao;
 
 		const cornerBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, cornerBuffer);
@@ -237,8 +291,72 @@ const createGLRenderer = (canvasContainer, host) => {
 		gl.uniform1i(uniforms.u_upages, 1);
 		gl.uniform1i(uniforms.u_palette, 2);
 		gl.clearColor(0, 0, 0, 1);
+
+		// CRT composite program (fullscreen quad from gl_VertexID; the
+		// empty VAO satisfies WebGL2's bound-VAO requirement)
+		crtProgram = gl.createProgram();
+		gl.attachShader(crtProgram, compile(gl.VERTEX_SHADER, CRT_VERTEX_SRC));
+		gl.attachShader(crtProgram, compile(gl.FRAGMENT_SHADER, CRT_FRAGMENT_SRC));
+		gl.linkProgram(crtProgram);
+		if (!gl.getProgramParameter(crtProgram, gl.LINK_STATUS)) {
+			throw new Error(
+				`[GLRenderer] crt program: ${gl.getProgramInfoLog(crtProgram)}`,
+			);
+		}
+		crtVao = gl.createVertexArray();
+		crtUniforms = {};
+		for (const name of ['u_scene', 'u_resolution', 'u_pxScale']) {
+			crtUniforms[name] = gl.getUniformLocation(crtProgram, name);
+		}
+		crtFbo = null;
+		crtTexture = null;
+		crtW = 0;
+		crtH = 0;
 	};
 	initGL();
+
+	/** (re)size the CRT scene target to the current canvas */
+	const ensureCrtTarget = () => {
+		if (!crtEnabled || (crtW === canvas.width && crtH === canvas.height)) {
+			return;
+		}
+		if (crtTexture) {
+			gl.deleteTexture(crtTexture);
+		}
+		if (crtFbo) {
+			gl.deleteFramebuffer(crtFbo);
+		}
+		crtTexture = gl.createTexture();
+		gl.activeTexture(gl.TEXTURE3);
+		gl.bindTexture(gl.TEXTURE_2D, crtTexture);
+		gl.texImage2D(
+			gl.TEXTURE_2D,
+			0,
+			gl.RGBA8,
+			canvas.width,
+			canvas.height,
+			0,
+			gl.RGBA,
+			gl.UNSIGNED_BYTE,
+			null,
+		);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		crtFbo = gl.createFramebuffer();
+		gl.bindFramebuffer(gl.FRAMEBUFFER, crtFbo);
+		gl.framebufferTexture2D(
+			gl.FRAMEBUFFER,
+			gl.COLOR_ATTACHMENT0,
+			gl.TEXTURE_2D,
+			crtTexture,
+			0,
+		);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+		crtW = canvas.width;
+		crtH = canvas.height;
+	};
 
 	// unpack the 1bpp font into cached per-glyph bit rows (shared by the
 	// atlas upload and the CPU export rasterizer). Deliberately capped at
@@ -562,8 +680,30 @@ const createGLRenderer = (canvasContainer, host) => {
 		gl.bindBuffer(gl.ARRAY_BUFFER, cellBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, slice, gl.DYNAMIC_DRAW);
 		gl.uniform1f(uniforms.u_blink, blinkOn ? 1 : 0);
+		if (crtEnabled) {
+			ensureCrtTarget();
+		}
+		const useCrt = crtEnabled && crtFbo !== null;
+		if (useCrt) {
+			gl.bindFramebuffer(gl.FRAMEBUFFER, crtFbo);
+		}
 		gl.clear(gl.COLOR_BUFFER_BIT);
 		gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
+		if (useCrt) {
+			// composite the scene through the CRT quad, then restore the
+			// scene program + VAO (everything else binds per-repaint)
+			gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+			gl.useProgram(crtProgram);
+			gl.bindVertexArray(crtVao);
+			gl.activeTexture(gl.TEXTURE3);
+			gl.bindTexture(gl.TEXTURE_2D, crtTexture);
+			gl.uniform1i(crtUniforms.u_scene, 3);
+			gl.uniform2f(crtUniforms.u_resolution, canvas.width, canvas.height);
+			gl.uniform1f(crtUniforms.u_pxScale, scale);
+			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+			gl.useProgram(sceneProgram);
+			gl.bindVertexArray(sceneVao);
+		}
 		if (slotOverflow && !slotOverflowHandled) {
 			// one clean refill for this coverage: reset between passes and
 			// repaint once; glyphs beyond the cap render the substitute
@@ -678,10 +818,13 @@ const createGLRenderer = (canvasContainer, host) => {
 	 * (nearest-neighbor at any scale, ninth-column rule, blink drawn in its
 	 * visible phase), reading only doc data + 1bpp font + palette.
 	 */
+	const exportPlanes = () =>
+		(host.getDocPlanes ?? host.getPlanes)();
+
 	const getImageRGBA = () => {
 		const columns = host.getColumns();
 		const rows = host.getRows();
-		const { glyph, fg: fgPlane, bg: bgPlane } = host.getPlanes();
+		const { glyph, fg: fgPlane, bg: bgPlane } = exportPlanes();
 		const width = cellW * columns;
 		const height = cellH * rows;
 		const data = new Uint8ClampedArray(width * height * 4);
@@ -791,6 +934,19 @@ const createGLRenderer = (canvasContainer, host) => {
 		updateBlink,
 		getImage,
 		getImageRGBA,
+		setCrt: enabled => {
+			crtEnabled = enabled === true;
+			if (!crtEnabled && crtFbo) {
+				gl.deleteFramebuffer(crtFbo);
+				gl.deleteTexture(crtTexture);
+				crtFbo = null;
+				crtTexture = null;
+				crtW = 0;
+				crtH = 0;
+			}
+			repaint();
+		},
+		getCrt: () => crtEnabled,
 		canvas,
 	};
 };

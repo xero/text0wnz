@@ -15,8 +15,11 @@ import {
 import { createRoom } from '../../../src/js/server/room.js';
 import {
 	MoebiusAction as A,
+	T0wnzAction,
+	EXT_SUITE_CAP,
 	createDocV3,
 	encodeBin,
+	expandExtCells,
 	glyphWord,
 	paletteColor,
 } from '../../../src/js/core/index';
@@ -95,5 +98,31 @@ describe('room persistence', () => {
 		const backups = readdirSync(path.join(dir, 'backups'));
 		expect(backups).toHaveLength(2);
 		expect(roomFile(dir, 'art').endsWith('art.0wnz')).toBe(true);
+	});
+
+	it('keeps unicode cells and extended colors across a restart, via sidecar AND envelope', async () => {
+		const room = createRoom({ name: 'uni', columns: 2, rows: 1 });
+		const caps = { send: () => {} };
+		room.connect(caps, { nick: 'x', caps: [EXT_SUITE_CAP]});
+		const cell = { u: 0x4e2d, a: 1, fg: 0xff8800, bg: paletteColor(0) };
+		room.message(caps, {
+			type: T0wnzAction.EXT_DRAW,
+			data: { x: 1, y: 0, ...cell, id: 0 },
+		});
+		await saveRoom(room, dir);
+
+		// sidecar path (the normal restart)
+		const viaSidecar = await loadRoomDoc(dir, 'uni');
+		const restarted = createRoom({ name: 'uni', columns: 2, rows: 1 });
+		restarted.loadState(viaSidecar);
+		expect(expandExtCells(restarted.extState().cells, 2)[1]).toEqual(cell);
+
+		// envelope path (sidecar lost): fidelity survives because the
+		// .0wnz now stores the real art, not the vanilla projection
+		rmSync(path.join(dir, 'uni.state.json'));
+		const viaEnvelope = await loadRoomDoc(dir, 'uni');
+		const again = createRoom({ name: 'uni', columns: 2, rows: 1 });
+		again.loadState(viaEnvelope);
+		expect(expandExtCells(again.extState().cells, 2)[1]).toEqual(cell);
 	});
 });

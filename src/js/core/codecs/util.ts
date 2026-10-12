@@ -184,6 +184,7 @@ const pumpThrough = async (
 		readable: ReadableStream<Uint8Array>;
 		writable: WritableStream<BufferSource>;
 	},
+	maxBytes = Infinity,
 ): Promise<Uint8Array> => {
 	const writer = transform.writable.getWriter();
 	// Copy guarantees ArrayBuffer backing for the BufferSource write
@@ -198,10 +199,18 @@ const pumpThrough = async (
 	const reader = transform.readable.getReader();
 	const chunks: Uint8Array[] = [];
 	try {
+		let total = 0;
 		for (;;) {
 			const { done, value } = await reader.read();
 			if (done) {
 				break;
+			}
+			total += value.length;
+			if (total > maxBytes) {
+				// a decompression bomb must die DURING the read, not after
+				// it has been buffered (review finding)
+				await reader.cancel();
+				throw new CodecError(`decompressed stream exceeds ${maxBytes} bytes`);
 			}
 			chunks.push(value);
 		}
@@ -216,3 +225,12 @@ export const gzip = (bytes: Uint8Array): Promise<Uint8Array> =>
 
 export const gunzip = (bytes: Uint8Array): Promise<Uint8Array> =>
 	pumpThrough(bytes, new DecompressionStream('gzip'));
+
+export const deflateRaw = (bytes: Uint8Array): Promise<Uint8Array> =>
+	pumpThrough(bytes, new CompressionStream('deflate-raw'));
+
+export const inflateRaw = (
+	bytes: Uint8Array,
+	maxBytes = Infinity,
+): Promise<Uint8Array> =>
+	pumpThrough(bytes, new DecompressionStream('deflate-raw'), maxBytes);

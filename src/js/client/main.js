@@ -8,6 +8,11 @@ import { trustedMessage } from './messageGuard.js';
 import { createZoomController } from './zoom.js';
 import { createCharsetPicker } from './charsetPicker.js';
 import { createColorPanel } from './colorPanel.js';
+import { createFramesPanel } from './frames.js';
+import { createMinimap } from './minimap.js';
+import { createSixteenColors } from './sixteenColors.js';
+import { createPluginManager } from './plugins.js';
+import { createReferenceImage } from './referenceImage.js';
 import { FontCache } from './fontCache.js';
 import {
 	$,
@@ -523,6 +528,16 @@ const initializeAppComponents = async () => {
 	onClick($('open'), () => {
 		openFile.click();
 	});
+	// P6: the 16colo.rs in-app browser opens straight into the editor
+	const sixteen = createSixteenColors({ openFile: openHandler });
+	onClick($('browse16c'), () => sixteen?.show());
+
+	// P6: ES-module plugin surface (durdraw lineage)
+	const pluginManager = createPluginManager();
+	onClick($('pluginsMenu'), () => pluginManager?.show());
+
+	// P6 steal: reference-image overlay for tracing
+	createReferenceImage();
 	onClick($('saveAnsi'), Save.ans);
 	onClick($('saveUtf8'), Save.utf8);
 	onClick($('saveUtf8Blink'), Save.utf8Blink);
@@ -530,6 +545,9 @@ const initializeAppComponents = async () => {
 	onClick($('saveBin'), Save.bin);
 	onClick($('saveXbin'), Save.xb);
 	onClick($('saveTundra'), Save.tnd);
+	onClick($('saveDur'), Save.dur);
+	onClick($('saveAnsimation'), Save.ansimation);
+	onClick($('saveTimelapse'), Save.timelapse);
 	onClick($('saveOwnz'), Save.ownz);
 	onClick($('savePng'), Save.png);
 	onClick($('cut'), State.pasteTool.cut);
@@ -540,6 +558,8 @@ const initializeAppComponents = async () => {
 	onClick($('navCut'), State.pasteTool.cut);
 	onClick($('navCopy'), State.pasteTool.copy);
 	onClick($('navPaste'), State.pasteTool.paste);
+	onClick($('navPasteTransparent'), State.pasteTool.pasteTransparent);
+	onClick($('navPasteUnder'), State.pasteTool.pasteUnder);
 	onClick($('navSystemPaste'), State.pasteTool.systemPaste);
 	onClick($('navDelete'), State.pasteTool.deleteSelection);
 	onClick($('navUndo'), State.textArtCanvas.undo);
@@ -551,6 +571,21 @@ const initializeAppComponents = async () => {
 
 	// P5 extended colors: the strip's 256/RGB expansion panel
 	createColorPanel();
+
+	// P6 animation: frames timeline + playback + onion skin
+	createFramesPanel();
+
+	// P6 polish: minimap + CRT pass (both GL-only)
+	createMinimap();
+	onClick($('navCrt'), () => {
+		const next = !State.textArtCanvas.getCrtEffect();
+		State.textArtCanvas.setCrtEffect(next);
+		// reflects actual support: stays unlit on the chunk fallback
+		$('navCrt').classList.toggle(
+			'active',
+			State.textArtCanvas.getCrtEffect(),
+		);
+	});
 
 	// Credz
 	onClick($('about'), _ => {
@@ -618,6 +653,13 @@ const initializeAppComponents = async () => {
 
 	onClick(sauceDone, () => {
 		State.title = sauceTitle.value;
+		// collab peers hear SAUCE edits (type 12 persists server-side)
+		State.network?.sendSauce?.({
+			title: sauceTitle.value,
+			author: sauceAuthor.value,
+			group: sauceGroup.value,
+			comments: sauceComments.value,
+		});
 		State.modal.close();
 	});
 
@@ -694,7 +736,7 @@ const initializeAppComponents = async () => {
 			if (
 				columnsValue * rowsValue > magicNumbers.RESIZE_WARN_CELLS &&
 				!confirm(
-					`A ${columnsValue}x${rowsValue} canvas is very large and may be slow or run out of memory. Resize anyway?`,
+					`A ${columnsValue}x${rowsValue} canvas is very large: it uses more memory, autosaves get big, and joining collab sessions gets slow. Resize anyway?`,
 				)
 			) {
 				return;
@@ -779,10 +821,25 @@ const initializeAppComponents = async () => {
 		State.menus.close();
 		changeFont.click();
 	});
+	const syncFavStar = () => {
+		$('fontFavToggle').innerHTML = fontSelect.isFavorite()
+			? '&#9733;'
+			: '&#9734;';
+	};
 	onClick(changeFont, async () => {
 		State.menus.close();
 		State.modal.open('fonts');
 		fontSelect.focus();
+		syncFavStar();
+	});
+	onClick($('fontFavToggle'), () => {
+		fontSelect.toggleFavorite();
+		syncFavStar();
+	});
+	$('fontSelect').addEventListener('click', syncFavStar);
+	$('fontSelect').addEventListener('keydown', () => {
+		// selection moves on arrows; reflect it after the handler runs
+		setTimeout(syncFavStar, 0);
 	});
 	onClick(applyFont, async () => {
 		const selectedFont = fontSelect.getValue();

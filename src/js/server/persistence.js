@@ -14,10 +14,14 @@ import { mkdir, readFile, writeFile, copyFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import {
+	applyExtCells,
+	compressExtCells,
 	decodeBin,
 	decodeEnvelope,
+	docToExtCells,
 	docToJoinDoc,
 	encodeEnvelope,
+	expandExtCells,
 	joinDocToDoc,
 	uncompressBlocks,
 } from '../core/index';
@@ -39,7 +43,14 @@ export const saveRoom = async (room, dir) => {
 	// the room dirty for the next save (review finding)
 	const token = room.dirtyToken();
 	const join = room.toJoinDoc();
+	const ext = room.extState();
 	const { doc } = joinDocToDoc(join);
+	// the envelope keeps the FULL-fidelity art (unicode cells, extended
+	// colors), not the vanilla projection the wire blocks carry
+	applyExtCells(doc, expandExtCells(ext.cells, join.columns * join.rows));
+	if (ext.palette) {
+		doc.palette = Uint32Array.from(ext.palette);
+	}
 	const bytes = await encodeEnvelope(doc, {
 		meta: {
 			title: join.title,
@@ -48,12 +59,12 @@ export const saveRoom = async (room, dir) => {
 		},
 	});
 	await writeFile(roomFile(dir, room.name), bytes);
-	// the envelope is the interchange file (quantized); the sidecar
-	// keeps full session fidelity (palette, font bytes, comments, chat)
-	// so a restart does not degrade the live room (review finding)
+	// the sidecar keeps full session fidelity (palette, font bytes,
+	// comments, chat, ext cells) so a restart never degrades the live
+	// room (review finding)
 	await writeFile(
 		stateFile(dir, room.name),
-		JSON.stringify({ join, chat: room.chatHistory() }),
+		JSON.stringify({ join, chat: room.chatHistory(), ext }),
 	);
 	room.markClean(token);
 	return bytes;
@@ -101,6 +112,7 @@ export const loadRoomDoc = async (dir, roomName) => {
 			if (saved && typeof saved === 'object' && saved.join) {
 				const join = withData(saved.join);
 				join.chat = Array.isArray(saved.chat) ? saved.chat : [];
+				join.ext = saved.ext;
 				return join;
 			}
 		} catch {
@@ -110,7 +122,15 @@ export const loadRoomDoc = async (dir, roomName) => {
 	const native = roomFile(dir, roomName);
 	if (existsSync(native)) {
 		const decoded = await decodeEnvelope(await readFile(native));
-		return withData(docToJoinDoc(decoded.doc ?? decoded, decoded.meta ?? {}));
+		const doc = decoded.doc ?? decoded;
+		const join = withData(docToJoinDoc(doc, decoded.meta ?? {}));
+		// the envelope holds full fidelity; ride the ext view alongside
+		// the vanilla projection so room.loadState restores both
+		join.ext = {
+			cells: compressExtCells(docToExtCells(doc)),
+			palette: [...doc.palette].map(word => word & 0xffffff),
+		};
+		return join;
 	}
 	const legacy = path.join(dir, `${roomName}.bin`);
 	if (existsSync(legacy)) {

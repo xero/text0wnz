@@ -8,6 +8,9 @@ import {
 	decodeDur,
 	decodeEnvelope,
 	decodeTundra,
+	encodeAnsimation,
+	encodeDur,
+	timelapseToDoc,
 	encodeEnvelope,
 	encodeTundra,
 	encodeUtf8,
@@ -1991,6 +1994,49 @@ const saveModule = () => {
 		}
 	};
 
+	// P6 animation exports: classic ansimation (clear + home-per-frame,
+	// baud is the clock) and the durdraw v8 movie (256-color, utf-8)
+	const ansimation = async () => {
+		if (!(await confirmExport('ans', 'ANSimation')).proceed) {
+			return;
+		}
+		const bytes = encodeAnsimation(State.textArtCanvas.getDoc(), { meta: sauceMeta() });
+		await saveFile(bytes, undefined, State.title + '.ans');
+	};
+
+	const dur = async () => {
+		const bytes = await encodeDur(State.textArtCanvas.getDoc(), sauceMeta());
+		await saveFile(bytes, undefined, State.title + '.dur');
+	};
+
+	// P6 timelapse: baseline + op log from the server, replayed into a
+	// capped multi-frame movie — the shareable session artifact
+	const timelapse = async () => {
+		if (State.network?.extCollab?.() !== true) {
+			alert(
+				'Session timelapse needs a live collab session on a teXt0wnz server.',
+			);
+			return;
+		}
+		const payload = await State.network.requestTimelapse();
+		if (!payload) {
+			alert('The server did not answer the timelapse request.');
+			return;
+		}
+		try {
+			const { doc } = timelapseToDoc(payload);
+			const bytes = await encodeDur(doc, sauceMeta());
+			await saveFile(
+				bytes,
+				undefined,
+				(State.title || 'session') + '.timelapse.dur',
+			);
+		} catch (error) {
+			console.error('[Save] timelapse:', error);
+			alert('Timelapse replay failed.');
+		}
+	};
+
 	const ownz = async () => {
 		const xbData = State.textArtCanvas.getXBFontData();
 		const bytes = await encodeEnvelope(State.textArtCanvas.getDoc(), {
@@ -2032,10 +2078,13 @@ const saveModule = () => {
 
 	return {
 		ans: ans,
+		ansimation: ansimation,
 		bin: bin,
+		dur: dur,
 		ownz: ownz,
 		plainText: plainText,
 		png: png,
+		timelapse: timelapse,
 		tnd: tnd,
 		utf8: utf8,
 		utf8Blink: utf8Blink,

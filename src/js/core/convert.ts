@@ -156,11 +156,12 @@ export const v3ToU16 = (doc: DocV3, frameIndex = 0): U16Doc => {
  * in-range indexes pass through, everything else (raw RGB, indexes
  * beyond the limit) lands on the nearest default-palette entry. The
  * single source of truth for every lossy 16-color projection (the u16
- * mirror, the vanilla collab wire, exports).
+ * mirror, the vanilla collab wire, exports). Takes anything carrying a
+ * doc-shaped palette so the server's room (no DocV3) can use it too.
  */
 export const quantizeColorWord = (
 	word: number,
-	doc: DocV3,
+	doc: { palette: Uint32Array },
 	limit = 16,
 ): number => {
 	if (isPaletteColor(word)) {

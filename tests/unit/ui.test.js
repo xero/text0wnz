@@ -284,6 +284,8 @@ describe('UI Utilities', () => {
 				<div id="websocketModal" class="hide"></div>
 				<div id="charsetModal" class="hide"></div>
 				<div id="exportModal" class="hide"></div>
+				<div id="sixteenModal" class="hide"></div>
+				<div id="pluginModal" class="hide"></div>
 				<div id="choiceModal" class="hide"></div>
 				<div id="aboutModal" class="hide"></div>
 				<div id="updateModal" class="hide"></div>
@@ -315,6 +317,8 @@ describe('UI Utilities', () => {
 				<div id="sauceModal" class="hide"></div>
 				<div id="charsetModal" class="hide"></div>
 				<div id="exportModal" class="hide"></div>
+				<div id="sixteenModal" class="hide"></div>
+				<div id="pluginModal" class="hide"></div>
 				<div id="choiceModal" class="hide"></div>
 				<div id="aboutModal" class="hide"></div>
 				<div id="updateModal" class="hide"></div>
@@ -698,6 +702,8 @@ describe('UI Utilities', () => {
 				'sauce',
 				'charset',
 				'export',
+				'sixteen',
+				'plugin',
 				'choice',
 				'update',
 				'loading',
