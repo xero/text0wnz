@@ -606,7 +606,7 @@ const createToolPreview = el => {
 		updateDimensions();
 	};
 
-	const drawHalfBlock = (foreground, x, y) => {
+	const drawOneHalfBlock = (foreground, x, y) => {
 		const halfBlockY = y % 2;
 		const textY = Math.floor(y / 2);
 		const ctxIndex = Math.floor(textY / 25);
@@ -618,6 +618,19 @@ const createToolPreview = el => {
 				x,
 				textY % 25,
 			);
+		}
+	};
+
+	const drawHalfBlock = (foreground, x, y) => {
+		drawOneHalfBlock(foreground, x, y);
+		// mirror mode draws the reflected half on COMMIT (editor core);
+		// the ghost has to say so beforehand, for every shape tool at
+		// once (pre-existing gap: v2's preview never mirrored either)
+		if (State.textArtCanvas.getMirrorMode?.()) {
+			const mirrorX = State.textArtCanvas.getMirrorX(x);
+			if (mirrorX !== x && mirrorX >= 0 && mirrorX < columns) {
+				drawOneHalfBlock(foreground, mirrorX, y);
+			}
 		}
 	};
 
