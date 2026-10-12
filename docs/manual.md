@@ -344,6 +344,12 @@ Full text input with navigation controls. Type characters directly onto the canv
 - In move mode, selected content moves by one full screen height
 - Viewport automatically scrolls to keep selection visible
 
+**After scrolling by hand:**
+
+- Scroll anywhere (minimap, touch, wheel, or scrollbar) and the cursor follows: once it is fully off screen, it re-homes near the top left of the visible canvas, so the next keypress acts where you look instead of snapping the view back
+- A selection does the same, collapsing to a single cell; one still partly visible, mid-drag, or in move mode never moves
+- Scrolling settles on whole rows; a partial row only ever appears at the bottom edge
+
 This makes navigation much faster and more intuitive on large text art pieces.
 
 ## ![brush](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/brush.png) Brushes
@@ -702,9 +708,11 @@ A live overview of the whole canvas, one pixel per cell, docked beside the viewp
 
 **Features:**
 
-- Renders the full document with foreground and background colors blended by glyph coverage; 256-color and RGB art previews true
-- A frame marks the visible viewport and tracks your scrolling
-- Click or drag anywhere on the minimap to jump the viewport there
+- Renders the full document at the art's true proportions, with foreground and background colors blended by glyph coverage; 256-color and RGB art previews true
+- A focus box marks the visible viewport, tracks your scrolling, and stays in view as the map pages along with you
+- Tap anywhere on the map to jump the viewport there; jumps land on whole rows
+- Drag the focus box like a scrollbar thumb to scrub the canvas; hold it at the map's top or bottom edge and the map auto-scrolls until you release or back away
+- On maps taller than the panel, dragging outside the focus box pans the map itself
 - Refreshes twice a second while open
 - Toggle it with the **Minimap** button in the viewport toolbar; the choice is remembered
 
