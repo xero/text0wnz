@@ -130,6 +130,9 @@ test.describe('Advanced Undo/Redo Operations', () => {
 			await page.waitForTimeout(200);
 		}
 
+		// fill lives in the brush submenu now
+		await page.locator('#brushes').click();
+		await page.waitForTimeout(300);
 		const fillTool = page.locator('#fill');
 		if (await fillTool.isVisible()) {
 			await fillTool.click();

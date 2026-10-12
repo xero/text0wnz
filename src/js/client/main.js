@@ -452,7 +452,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				const zoomControlContainer = $('zoomControl');
 				if (zoomControlContainer) {
 					const zoomControl = createZoomControl();
-					const icon = zoomControlContainer.querySelector('svg');
+					const icon = zoomControlContainer.querySelector?.('svg');
 					if (icon) {
 						zoomControl.querySelector('.zoomTop')?.prepend(icon);
 					}
