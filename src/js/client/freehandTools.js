@@ -1,5 +1,10 @@
 import State from './state.js';
-import { $, createCanvas, createToggleButton } from './ui.js';
+import {
+	$,
+	createCanvas,
+	createToggleButton,
+	registerFloatingPanel,
+} from './ui.js';
 import Toolbar from './toolbar.js';
 import magicNumbers from './magicNumbers.js';
 
@@ -43,6 +48,7 @@ const createFloatingPanel = (x, y) => {
 	panel.appendChild(hide);
 	$('bodyContainer').appendChild(panel);
 	hide.addEventListener('click', _ => panel.classList.remove('enabled'));
+	const focus = registerFloatingPanel(panel);
 
 	let dragStartPointer = null; // [x, y]
 	let dragStartPanel = null; // [x, y]
@@ -106,6 +112,7 @@ const createFloatingPanel = (x, y) => {
 
 	const enable = () => {
 		panel.classList.add('enabled');
+		focus();
 		document.addEventListener('touchmove', touchMove, { passive: false });
 		document.addEventListener('mousemove', mouseMove);
 		document.addEventListener('mouseup', mouseUp);

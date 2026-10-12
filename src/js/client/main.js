@@ -66,6 +66,7 @@ let fontSelect;
 let openFile;
 let referenceImage;
 let refToggle;
+let refFloat;
 let resizeApply;
 let sauceDone;
 let sauceTitle;
@@ -137,6 +138,7 @@ const openHandler = file => {
 		referenceImage.load(file);
 		referenceImage.setOpen(true);
 		refToggle?.update();
+		refFloat?.focus();
 		openFile.value = '';
 		return;
 	}
@@ -571,10 +573,19 @@ const initializeAppComponents = async () => {
 	// reference-image overlay for tracing
 	referenceImage = createReferenceImage();
 	if (referenceImage) {
+		refFloat = makePanelFloat($('refPanel'), () => {
+			referenceImage.setOpen(false);
+			refToggle.update();
+		});
 		refToggle = createSettingToggle(
 			$('navRef'),
 			referenceImage.isOpen,
-			referenceImage.setOpen,
+			open => {
+				referenceImage.setOpen(open);
+				if (open) {
+					refFloat.focus();
+				}
+			},
 		);
 	}
 	onClick($('saveAnsi'), Save.ans);
@@ -616,15 +627,20 @@ const initializeAppComponents = async () => {
 	// toolbar view switches, like the grid button
 	const framesPanel = createFramesPanel();
 	if (framesPanel) {
-		const framesToggle = createSettingToggle(
-			$('navFrames'),
-			framesPanel.isOpen,
-			framesPanel.setOpen,
-		);
-		makePanelFloat($('framesPanel'), () => {
+		const framesFloat = makePanelFloat($('framesPanel'), () => {
 			framesPanel.setOpen(false);
 			framesToggle.update();
 		});
+		const framesToggle = createSettingToggle(
+			$('navFrames'),
+			framesPanel.isOpen,
+			open => {
+				framesPanel.setOpen(open);
+				if (open) {
+					framesFloat.focus();
+				}
+			},
+		);
 	}
 
 	// a partial cell may only ever render at the BOTTOM edge: once any

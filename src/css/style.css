@@ -137,7 +137,10 @@
 		canvas,
 		#viewport,
 		#canvasContainer,
-		#minimapViewport {
+		#minimapViewport,
+		#colorPanel,
+		#framesPanel,
+		#refPanel {
 			@apply transition-none!;
 		}
 	}
@@ -1079,12 +1082,17 @@
 		@apply bg-purp;
 	}
 	#colorPanel {
-		/* aside > div makes this a centered flex row; restack it */
-		@apply fixed z-40 dialog-style p-2 flex-col items-stretch text-left;
+		/* aside > div makes this a centered flex row; restack it.
+		   floating-window chrome: solid dark border, thicker on top
+		   to mark the drag strip, like the brush windows */
+		@apply fixed z-40 bg-menu p-2 flex-col items-stretch text-left;
+		border: 4px solid var(--color-panel);
+		border-top-width: 16px;
+		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
 		cursor: move;
 		left: 48px;
 		top: var(--header-size);
-		width: 346px;
+		width: 354px;
 		h3 {
 			@apply text-cyan text-sm pt-1 pb-1;
 			small {
@@ -1128,13 +1136,15 @@
 		outline: 1px solid theme('colors.cyber');
 	}
 	#framesPanel {
-		@apply fixed z-40 dialog-style p-2 flex flex-row gap-2 items-center;
+		/* floating-window chrome, thicker top border = drag strip */
+		@apply fixed z-40 bg-menu p-2 flex flex-row gap-2 items-center;
+		border: 4px solid var(--color-panel);
+		border-top-width: 16px;
+		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
 		cursor: move;
 		left: 48px;
 		bottom: 8px;
 		max-width: calc(100vw - 64px);
-		/* the close X needs a corner the row's buttons do not reach */
-		padding-right: 1.25rem;
 		button {
 			@apply bg-menu text-fg px-2 cursor-pointer;
 		}
@@ -1247,7 +1257,12 @@
 		@apply text-cyan text-sm pt-2;
 	}
 	#refPanel {
-		@apply fixed z-40 dialog-style p-2 flex flex-row gap-3 items-center;
+		/* floating-window chrome, thicker top border = drag strip */
+		@apply fixed z-40 bg-menu p-2 flex flex-row gap-3 items-center;
+		border: 4px solid var(--color-panel);
+		border-top-width: 16px;
+		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
+		cursor: move;
 		right: 8px;
 		bottom: 8px;
 		button {
@@ -1489,15 +1504,18 @@
 	}
 
 	/* close chrome for the floated color and frames windows; the brush
-	   windows keep their own higher-specificity copy above */
+	   windows keep their own higher-specificity copy above. The X rides
+	   up into the border drag strip (absolute offsets anchor to the
+	   padding box, which sits below the thick top border) */
 	.hidePanel {
 		display: block;
 		position: absolute;
-		top: 0;
-		right: 0;
+		top: -16px;
+		right: -4px;
 		color: #efefef;
 		padding: 2px 5px;
 		font-size: 10px;
+		line-height: 12px;
 		cursor: pointer;
 
 		&:hover {

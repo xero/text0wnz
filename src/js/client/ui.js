@@ -710,10 +710,38 @@ const createViewportController = el => {
 	};
 };
 
+// one shared stack so overlapping tool windows focus on press: any
+// pointer down inside a registered window lifts it above its siblings.
+// The whole range stays below the z-50 modals and menus
+const panelStack = [];
+const PANEL_BASE_Z = 40;
+const restackPanels = () => {
+	panelStack.forEach((p, i) => {
+		p.style.zIndex = String(PANEL_BASE_Z + i);
+	});
+};
+const registerFloatingPanel = panel => {
+	const focus = () => {
+		const i = panelStack.indexOf(panel);
+		if (i === panelStack.length - 1) {
+			return;
+		}
+		panelStack.splice(i, 1);
+		panelStack.push(panel);
+		restackPanels();
+	};
+	panelStack.push(panel);
+	restackPanels();
+	panel.addEventListener('mousedown', focus, true);
+	panel.addEventListener('touchstart', focus, { capture: true, passive: true });
+	return focus;
+};
+
 // drag + close chrome for the fixed tool windows (colors, frames),
 // matching the brush windows' behavior. A press on a control is a
 // control gesture, so only free panel area starts a drag
 const makePanelFloat = (panel, onClose) => {
+	const focus = registerFloatingPanel(panel);
 	const close = document.createElement('div');
 	close.classList.add('hidePanel');
 	close.innerText = 'X';
@@ -728,9 +756,10 @@ const makePanelFloat = (panel, onClose) => {
 	let startPanel = null;
 
 	const setPos = (newX, newY) => {
-		// dropping the bottom anchor keeps a bottom-pinned panel from
-		// stretching once top is set
+		// dropping the far-edge anchors keeps a bottom- or right-pinned
+		// panel from stretching once top and left are set
 		panel.style.bottom = 'auto';
+		panel.style.right = 'auto';
 		panel.style.left = newX + 'px';
 		panel.style.top = newY + 'px';
 	};
@@ -795,6 +824,8 @@ const makePanelFloat = (panel, onClose) => {
 		},
 		{ passive: true },
 	);
+
+	return { focus };
 };
 
 const createResolutionController = (lbl, txtC, txtR) => {
@@ -1250,6 +1281,7 @@ export {
 	enforceMaxBytes,
 	createResolutionController,
 	makePanelFloat,
+	registerFloatingPanel,
 	createDragDropController,
 	createMenuController,
 	createFontSelect,

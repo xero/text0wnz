@@ -130,10 +130,12 @@ const createColorPanel = () => {
 		bgButton.addEventListener('click', () => apply(rgbFromInput(), true));
 	}
 	if (toggleButton && panel) {
+		const floater = makePanelFloat(panel, () => panel.classList.add('hide'));
 		toggleButton.addEventListener('click', () => {
 			const opening = panel.classList.contains('hide');
 			panel.classList.toggle('hide');
 			if (opening) {
+				floater.focus();
 				if (lockNote) {
 					lockNote.classList.toggle('hide', !locked());
 				}
@@ -144,7 +146,6 @@ const createColorPanel = () => {
 				renderRecent();
 			}
 		});
-		makePanelFloat(panel, () => panel.classList.add('hide'));
 	}
 
 	return { hide: () => panel?.classList.add('hide') };
