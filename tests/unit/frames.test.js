@@ -93,7 +93,7 @@ beforeEach(() => {
 	State.textArtCanvas = canvas;
 	State.network.isConnected.mockReturnValue(false);
 	panel = createFramesPanel();
-	document.getElementById('navFrames').click(); // open -> refresh
+	panel.setOpen(true); // open -> refresh (main.js wires the button)
 });
 
 afterEach(() => {

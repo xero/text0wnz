@@ -57,11 +57,9 @@ const createReferenceImage = () => {
 	scale?.addEventListener('input', applyStyle);
 	$('refClear')?.addEventListener('click', clear);
 
-	nav.addEventListener('click', () => {
-		const show = panel.classList.contains('hide');
-		panel.classList.toggle('hide', !show);
-		nav.classList.toggle('active', show);
-	});
+	// the toolbar button wires through createSettingToggle in main.js
+	const isOpen = () => !panel.classList.contains('hide');
+	const setOpen = open => panel.classList.toggle('hide', !open);
 
 	// the canvas width moves under zoom and resizes; the trace follows
 	document.addEventListener('onCanvasLayoutChange', applyStyle);
@@ -71,6 +69,8 @@ const createReferenceImage = () => {
 		clear,
 		isVisible: () => overlay.classList.contains('enabled'),
 		applyStyle,
+		isOpen,
+		setOpen,
 	};
 };
 

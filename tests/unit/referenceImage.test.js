@@ -67,12 +67,12 @@ describe('reference image overlay', () => {
 		expect(ref.isVisible()).toBe(false);
 	});
 
-	it('panel toggles from the toolbar button', () => {
-		const nav = document.getElementById('navRef');
+	it('panel open state rides the settings-toggle surface', () => {
 		const panel = document.getElementById('refPanel');
-		nav.click();
+		expect(ref.isOpen()).toBe(false);
+		ref.setOpen(true);
 		expect(panel.classList.contains('hide')).toBe(false);
-		nav.click();
+		ref.setOpen(false);
 		expect(panel.classList.contains('hide')).toBe(true);
 	});
 });
