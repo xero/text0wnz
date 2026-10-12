@@ -150,6 +150,15 @@ const createSixteenColors = ({ openFile }) => {
 		return el;
 	};
 
+	/** a list button whose release or pack count rides a dim kbd tag */
+	const countButton = (label, count, onClick) => {
+		const el = button(label, onClick);
+		const kbd = document.createElement('kbd');
+		kbd.textContent = String(count);
+		el.appendChild(kbd);
+		return el;
+	};
+
 	// both ends always render so the row never shifts; bounds disable
 	const pager = (page, pages, goPage) => {
 		const el = document.createElement('div');
@@ -272,7 +281,7 @@ const createSixteenColors = ({ openFile }) => {
 		say(null);
 		for (const year of Object.keys(cache.years).reverse()) {
 			list.appendChild(
-				button(`${year} (${cache.years[year].packs})`, () =>
+				countButton(year, cache.years[year].packs, () =>
 					visit(() => showPacks(Number(year), 1))),
 			);
 		}
@@ -356,7 +365,7 @@ const createSixteenColors = ({ openFile }) => {
 				continue;
 			}
 			list.appendChild(
-				button(`${name} (${row.artist.releases ?? 0})`, () =>
+				countButton(name, row.artist.releases ?? 0, () =>
 					visit(() => showArtistWorks(name))),
 			);
 		}
@@ -429,7 +438,7 @@ const createSixteenColors = ({ openFile }) => {
 				continue;
 			}
 			list.appendChild(
-				button(`${tag} (${info?.releases ?? 0})`, () =>
+				countButton(tag, info?.releases ?? 0, () =>
 					visit(() => showCrewPacks(tag))),
 			);
 		}

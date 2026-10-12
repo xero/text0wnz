@@ -198,10 +198,12 @@ describe('sixteen colors browser', () => {
 			throw new Error(`unexpected fetch ${url}`);
 		});
 		await browser.showArtists('aven', 1);
+		// the release count rides a kbd tag beside the name
 		const artist = [...document.querySelectorAll('#sixteenList button')].find(
-			b => b.textContent === 'avenger (373)',
+			b => b.firstChild?.textContent === 'avenger',
 		);
 		expect(artist).toBeTruthy();
+		expect(artist.querySelector('kbd').textContent).toBe('373');
 		artist.click();
 		await flush();
 		const list = document.getElementById('sixteenList');
@@ -242,8 +244,9 @@ describe('sixteen colors browser', () => {
 		});
 		await browser.showCrews('', 1);
 		const crew = [...document.querySelectorAll('#sixteenList button')].find(
-			b => b.textContent === 'mistigris (160)',
+			b => b.firstChild?.textContent === 'mistigris',
 		);
+		expect(crew.querySelector('kbd').textContent).toBe('160');
 		crew.click();
 		await flush();
 		const list = document.getElementById('sixteenList');

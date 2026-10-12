@@ -1273,6 +1273,10 @@
 		button:hover:not(:disabled) {
 			@apply bg-purp;
 		}
+		/* counts are metadata: small and dim beside the name */
+		button kbd {
+			@apply text-xs pl-2 text-subtitle;
+		}
 		.sixteenPager {
 			@apply flex gap-2 items-center justify-between pb-1;
 			grid-column: 1 / -1;
