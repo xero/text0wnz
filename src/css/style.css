@@ -513,9 +513,12 @@
 				@apply cursor-pointer;
 			}
 		}
+		/* the slider spans exactly the row above it: zero width keeps
+		   the input's intrinsic size from widening the column, and the
+		   min-width stretches it back to the row */
 		#zoomSlider {
-			max-width: 70px;
-			margin-inline: 4px;
+			width: 0;
+			min-width: 100%;
 		}
 		input[type='range'] {
 			@apply appearance-none bg-transparent;
