@@ -320,6 +320,25 @@ describe('Keyboard Utilities', () => {
 			expect(() => controller.disable()).not.toThrow();
 		});
 
+		it('switching away without a live selection leaves the cursor alone', () => {
+			vi.clearAllMocks();
+			State.selectionCursor.isVisible = vi.fn(() => false);
+			const controller = createKeyboardController();
+			controller.enable();
+			controller.disable();
+			expect(State.cursor.move).not.toHaveBeenCalled();
+		});
+
+		it('parks the cursor at a live selection without scrolling', () => {
+			vi.clearAllMocks();
+			State.selectionCursor.isVisible = vi.fn(() => true);
+			State.selectionCursor.getPos = vi.fn(() => ({ x: 7, y: 9 }));
+			const controller = createKeyboardController();
+			controller.enable();
+			controller.disable();
+			expect(State.cursor.move).toHaveBeenCalledWith(7, 9, false);
+		});
+
 		it('draws CP437 21 exactly once per § keypress', () => {
 			vi.clearAllMocks();
 			const drawn = [];

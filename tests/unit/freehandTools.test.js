@@ -100,6 +100,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 			})),
 		},
 		cursor: {
+			move: vi.fn(),
 			left: vi.fn(),
 			right: vi.fn(),
 			up: vi.fn(),
