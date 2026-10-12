@@ -127,7 +127,7 @@ test.describe('touch gestures and zoom shortcuts', () => {
 		expect(scale).toBeLessThanOrEqual(4);
 	});
 
-	test('ctrl +/-/0 zoom shortcuts still work', async ({ page }) => {
+	test('ctrl +/- zooms; ctrl+0 picks a color, not zoom', async ({ page }) => {
 		expect(await getScale(page)).toBe(1);
 		await page.keyboard.press('Control+=');
 		await page.waitForTimeout(400);
@@ -135,10 +135,15 @@ test.describe('touch gestures and zoom shortcuts', () => {
 		await page.keyboard.press('Control+-');
 		await page.waitForTimeout(400);
 		expect(await getScale(page)).toBe(1);
+		// ctrl+digit owns color selection everywhere; zoom must not move
 		await page.keyboard.press('Control+=');
 		await page.waitForTimeout(400);
 		await page.keyboard.press('Control+0');
 		await page.waitForTimeout(400);
-		expect(await getScale(page)).toBe(1);
+		expect(await getScale(page)).toBe(1.5);
+		expect(
+			await page.evaluate(() =>
+				window.__t0wnz.State.palette.getForegroundColor()),
+		).toBe(0);
 	});
 });
