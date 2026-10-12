@@ -197,7 +197,19 @@ const createMinimap = () => {
 		cancelAnimationFrame(autoScroll);
 		autoScroll = 0;
 	};
+
+	// canvas scrolls keep the box at the top of the visible map slice,
+	// so the map pages along with you; never while a finger is on the
+	// panel (or just left it), where the box answers to the gesture
+	let panelTouchedAt = 0;
+	const followFocus = () => {
+		if (pending || performance.now() - panelTouchedAt < 300) {
+			return;
+		}
+		panel.scrollTop = frameRect.offsetTop;
+	};
 	panel.addEventListener('pointerdown', e => {
+		panelTouchedAt = performance.now();
 		pending = {
 			x: e.clientX,
 			y: e.clientY,
@@ -239,11 +251,13 @@ const createMinimap = () => {
 		pending = null;
 		scrubbing = false;
 		stopAutoScroll();
+		panelTouchedAt = performance.now();
 	});
 	panel.addEventListener('pointercancel', () => {
 		pending = null;
 		scrubbing = false;
 		stopAutoScroll();
+		panelTouchedAt = performance.now();
 	});
 
 	const remember = value => {
@@ -276,6 +290,7 @@ const createMinimap = () => {
 		() => {
 			if (visible) {
 				positionRect();
+				followFocus();
 			}
 		},
 		{ passive: true },
