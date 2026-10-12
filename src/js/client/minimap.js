@@ -8,6 +8,7 @@
  */
 import State from './state.js';
 import { $ } from './ui.js';
+import magicNumbers from './magicNumbers.js';
 
 /** approximate ink coverage per classic glyph id; 0.35 otherwise */
 const INK = new Map([
@@ -35,6 +36,11 @@ const createMinimap = () => {
 	let visible = false;
 	let timer = 0;
 
+	// native panel panning only exists when the map meaningfully
+	// overflows the panel; a few stray pixels must not steal touch drags
+	const overflowsMeaningfully = () =>
+		panel.scrollHeight > panel.clientHeight + 8;
+
 	const viewport = () => document.getElementById('viewport');
 
 	const positionRect = () => {
@@ -47,8 +53,16 @@ const createMinimap = () => {
 			return;
 		}
 		const scaleY = art.clientHeight / docPx;
-		frameRect.style.top = `${art.offsetTop + vp.scrollTop * scaleY}px`;
-		frameRect.style.height = `${Math.max(4, Math.min(vp.clientHeight, docPx) * scaleY)}px`;
+		const height = Math.max(4, Math.min(vp.clientHeight, docPx) * scaleY);
+		// the viewport scrolls past the doc (container chrome below the
+		// canvas); clamp the frame inside the art or its overhang makes
+		// the panel report overflow and steal touch drags for a dead pan
+		const top = Math.min(
+			art.offsetTop + vp.scrollTop * scaleY,
+			art.offsetTop + art.clientHeight - height,
+		);
+		frameRect.style.top = `${top}px`;
+		frameRect.style.height = `${height}px`;
 	};
 
 	const render = () => {
@@ -64,6 +78,15 @@ const createMinimap = () => {
 			art.width = columns;
 			art.height = rows;
 		}
+		// one canvas pixel per CELL, but cells are not square: scale the
+		// displayed height by the font ratio or the art reads squashed
+		if (State.font && columns > 0) {
+			const cellAspect = State.font.getHeight() / State.font.getWidth();
+			art.style.height = `${(art.clientWidth * rows * cellAspect) / columns}px`;
+		}
+		// a fitting map leaves Safari nothing to pan; take the touch
+		// gesture for scrubbing before the browser claims and cancels it
+		panel.style.touchAction = overflowsMeaningfully() ? '' : 'none';
 		const ctx = art.getContext('2d');
 		if (!ctx) {
 			return;
@@ -97,19 +120,41 @@ const createMinimap = () => {
 		vp.scrollTop = fraction * docPx - vp.clientHeight / 2;
 	};
 
-	let dragging = false;
+	// taps commit on RELEASE, gated by the shared gesture slop: a jump on
+	// pointerdown fights the panel's own touch scrolling (iOS claims the
+	// pan and cancels the pointer after the viewport already moved).
+	// Touch drags belong to native panel scrolling; mouse and pen drags
+	// scrub the viewport once they travel past slop.
+	let pending = null;
+	let scrubbing = false;
+	const travel = e =>
+		Math.hypot(e.clientX - pending.x, e.clientY - pending.y);
 	panel.addEventListener('pointerdown', e => {
-		dragging = true;
-		panel.setPointerCapture?.(e.pointerId);
-		scrollTo(e.clientY);
+		pending = { x: e.clientX, y: e.clientY };
+		scrubbing = false;
 	});
 	panel.addEventListener('pointermove', e => {
-		if (dragging) {
+		if (!pending || (e.pointerType === 'touch' && overflowsMeaningfully())) {
+			return;
+		}
+		if (!scrubbing && travel(e) > magicNumbers.GESTURE_SLOP_PX) {
+			scrubbing = true;
+			panel.setPointerCapture?.(e.pointerId);
+		}
+		if (scrubbing) {
 			scrollTo(e.clientY);
 		}
 	});
-	panel.addEventListener('pointerup', () => {
-		dragging = false;
+	panel.addEventListener('pointerup', e => {
+		if (pending && !scrubbing && travel(e) <= magicNumbers.GESTURE_SLOP_PX) {
+			scrollTo(e.clientY);
+		}
+		pending = null;
+		scrubbing = false;
+	});
+	panel.addEventListener('pointercancel', () => {
+		pending = null;
+		scrubbing = false;
 	});
 
 	const remember = value => {

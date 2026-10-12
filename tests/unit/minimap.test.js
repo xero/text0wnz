@@ -9,7 +9,7 @@ import State from '../../src/js/client/state.js';
 
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
-		font: { getHeight: () => 16 },
+		font: { getHeight: () => 16, getWidth: () => 8 },
 		palette: { getRGBAColor: vi.fn(() => [255, 0, 0, 255]) },
 		textArtCanvas: null,
 	},
@@ -80,5 +80,79 @@ describe('minimap', () => {
 		const art = document.getElementById('minimapArt');
 		expect(art.width).toBe(4);
 		expect(art.height).toBe(2);
+	});
+
+	describe('tap vs drag', () => {
+		// art rect 100px tall, doc 2 rows x 16px = 32 doc px: a pointer at
+		// y=50 is fraction 0.5, so scrollTop lands at 16
+		let panel;
+		let vp;
+		const point = (type, y, pointerType = 'mouse') => {
+			const e = new MouseEvent(type, { clientY: y, bubbles: true });
+			Object.defineProperty(e, 'pointerType', { value: pointerType });
+			panel.dispatchEvent(e);
+		};
+
+		beforeEach(() => {
+			createMinimap();
+			panel = document.getElementById('minimapPanel');
+			vp = document.getElementById('viewport');
+			vp.scrollTop = 0;
+			document.getElementById('minimapArt').getBoundingClientRect = () => ({
+				top: 0,
+				bottom: 100,
+				left: 0,
+				right: 128,
+				width: 128,
+				height: 100,
+			});
+		});
+
+		it('commits a tap on release, never on pointerdown', () => {
+			point('pointerdown', 50);
+			expect(vp.scrollTop).toBe(0);
+			point('pointerup', 50);
+			expect(vp.scrollTop).toBe(16);
+		});
+
+		it('a touch drag pans natively when the map overflows the panel', () => {
+			Object.defineProperty(panel, 'scrollHeight', {
+				value: 200,
+				configurable: true,
+			});
+			Object.defineProperty(panel, 'clientHeight', {
+				value: 100,
+				configurable: true,
+			});
+			point('pointerdown', 50, 'touch');
+			point('pointermove', 80, 'touch');
+			point('pointerup', 80, 'touch');
+			expect(vp.scrollTop).toBe(0);
+		});
+
+		it('a touch drag scrubs when the map fits the panel', () => {
+			point('pointerdown', 10, 'touch');
+			point('pointermove', 50, 'touch');
+			expect(vp.scrollTop).toBe(16);
+			point('pointerup', 50, 'touch');
+			expect(vp.scrollTop).toBe(16);
+		});
+
+		it('a mouse drag scrubs past slop without a release jump', () => {
+			point('pointerdown', 10);
+			point('pointermove', 50);
+			expect(vp.scrollTop).toBe(16);
+			point('pointermove', 100);
+			expect(vp.scrollTop).toBe(32);
+			point('pointerup', 100);
+			expect(vp.scrollTop).toBe(32);
+		});
+
+		it('pointercancel clears the pending tap', () => {
+			point('pointerdown', 50);
+			point('pointercancel', 50);
+			point('pointerup', 50);
+			expect(vp.scrollTop).toBe(0);
+		});
 	});
 });

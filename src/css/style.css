@@ -133,7 +133,11 @@
 		* {
 			@apply transition-all ease-in-out;
 		}
-		canvas {
+		/* anything that tracks input or scroll must not ease behind it */
+		canvas,
+		#viewport,
+		#canvasContainer,
+		#minimapViewport {
 			@apply transition-none!;
 		}
 	}
@@ -144,11 +148,14 @@
 	}
 
 	html {
-		@apply w-full h-full m-0;
+		/* iOS sizes h-full to the layout viewport, which is taller than the
+		   window while the Safari toolbar shows; lock the root or that slack
+		   pans and bares the bg above the header */
+		@apply w-full h-full m-0 overflow-hidden overscroll-none;
 	}
 
 	body {
-		@apply w-full h-full m-0 bg-black fixed overflow-hidden left-0 top-0 right-0 bottom-0;
+		@apply w-full h-full m-0 bg-black fixed overflow-hidden overscroll-none left-0 top-0 right-0 bottom-0;
 
 		> div {
 			@apply w-full h-full m-0;
@@ -1164,7 +1171,9 @@
 		@apply fixed z-30 dialog-style p-1;
 		right: 8px;
 		top: var(--header-size);
-		max-height: calc(100vh - var(--header-size) - 16px);
+		/* 100% of the ICB, not 100vh: iOS vh units outgrow the window and
+		   push the bottom border off screen on long files */
+		max-height: calc(100% - var(--header-size));
 		overflow-y: auto;
 		cursor: pointer;
 		position: fixed;
@@ -1179,7 +1188,10 @@
 		@apply absolute pointer-events-none;
 		left: 4px;
 		right: 4px;
-		border: 1px solid theme('colors.cyber');
+		/* dark halo inside and out: the ring must read over any art color */
+		border: 2px solid theme('colors.cyber');
+		outline: 1px solid #000;
+		box-shadow: inset 0 0 0 1px #000;
 	}
 	#sixteenList {
 		@apply flex flex-wrap gap-2 overflow-y-auto content-start;
