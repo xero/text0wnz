@@ -537,7 +537,14 @@ const initializeAppComponents = async () => {
 	onClick($('pluginsMenu'), () => pluginManager?.show());
 
 	// P6 steal: reference-image overlay for tracing
-	createReferenceImage();
+	const referenceImage = createReferenceImage();
+	if (referenceImage) {
+		createSettingToggle(
+			$('navRef'),
+			referenceImage.isOpen,
+			referenceImage.setOpen,
+		);
+	}
 	onClick($('saveAnsi'), Save.ans);
 	onClick($('saveUtf8'), Save.utf8);
 	onClick($('saveUtf8Blink'), Save.utf8Blink);
@@ -572,20 +579,30 @@ const initializeAppComponents = async () => {
 	// P5 extended colors: the strip's 256/RGB expansion panel
 	createColorPanel();
 
-	// P6 animation: frames timeline + playback + onion skin
-	createFramesPanel();
+	// P6 animation: frames timeline + playback + onion skin. All four
+	// new toolbar buttons ride createSettingToggle so the 'enabled'
+	// highlight persists across toolbar view switches, exactly like the
+	// grid button (owner-reported inconsistency).
+	const framesPanel = createFramesPanel();
+	if (framesPanel) {
+		createSettingToggle($('navFrames'), framesPanel.isOpen, framesPanel.setOpen);
+	}
 
 	// P6 polish: minimap + CRT pass (both GL-only)
-	createMinimap();
-	onClick($('navCrt'), () => {
-		const next = !State.textArtCanvas.getCrtEffect();
-		State.textArtCanvas.setCrtEffect(next);
-		// reflects actual support: stays unlit on the chunk fallback
-		$('navCrt').classList.toggle(
-			'active',
-			State.textArtCanvas.getCrtEffect(),
-		);
-	});
+	const minimap = createMinimap();
+	if (minimap) {
+		createSettingToggle($('navMinimap'), minimap.isVisible, visible =>
+			(visible ? minimap.show() : minimap.hide()));
+	}
+	const crtToggle = createSettingToggle(
+		$('navCrt'),
+		() => State.textArtCanvas.getCrtEffect(),
+		enabled => {
+			State.textArtCanvas.setCrtEffect(enabled);
+			// reflects actual support: stays unlit on the chunk fallback
+			crtToggle.update();
+		},
+	);
 
 	// Credz
 	onClick($('about'), _ => {

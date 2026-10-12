@@ -238,22 +238,24 @@ const createFramesPanel = () => {
 		refresh();
 	});
 
-	navButton.addEventListener('click', () => {
-		const show = panel.classList.contains('hide');
-		panel.classList.toggle('hide', !show);
-		navButton.classList.toggle('active', show);
-		if (show) {
+	// the toolbar button wires through createSettingToggle in main.js
+	// (the house pattern: the 'enabled' highlight persists across
+	// toolbar view switches, like the grid button)
+	const isOpen = () => !panel.classList.contains('hide');
+	const setOpen = open => {
+		panel.classList.toggle('hide', !open);
+		if (open) {
 			refresh();
 		} else {
 			stop();
 		}
-	});
+	};
 
 	document.addEventListener('onFrameChange', refresh);
 	// editing stops playback (drawing into a flipbook is chaos)
 	document.addEventListener('onTextCanvasDown', stop);
 
-	return { refresh, stop, isPlaying: () => playing };
+	return { refresh, stop, isPlaying: () => playing, isOpen, setOpen };
 };
 
 export { createFramesPanel };

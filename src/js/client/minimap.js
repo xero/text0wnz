@@ -123,7 +123,6 @@ const createMinimap = () => {
 	const show = () => {
 		visible = true;
 		panel.classList.remove('hide');
-		nav.classList.add('active');
 		render();
 		timer = setInterval(render, 500);
 		remember('true');
@@ -132,13 +131,12 @@ const createMinimap = () => {
 	const hide = () => {
 		visible = false;
 		panel.classList.add('hide');
-		nav.classList.remove('active');
 		clearInterval(timer);
 		timer = 0;
 		remember('false');
 	};
 
-	nav.addEventListener('click', () => (visible ? hide() : show()));
+	// the toolbar button wires through createSettingToggle in main.js
 	document.getElementById('viewport')?.addEventListener(
 		'scroll',
 		() => {
