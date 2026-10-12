@@ -1,13 +1,13 @@
 /**
- * ES-module plugin surface (PLAN §4 P6, durdraw lineage): a plugin is
+ * ES-module plugin surface (durdraw lineage): a plugin is
  * one ES module whose default export is { name, description?, run }.
  * run(api) receives a small stable surface over the current frame and
  * may be async. Writes buffer and apply as ONE undoable stroke when
  * run resolves; reads always see the document as it was when the
  * plugin started (documented contract, keeps the batch atomic).
  *
- * Loading is explicit user action only — a local .js file (imported
- * through a blob: URL) or a typed URL — and the modal says plainly
+ * Loading is explicit user action only (a local .js file imported
+ * through a blob: URL, or a typed URL), and the modal says plainly
  * that a plugin runs with full page access, like durdraw's warning.
  * Nothing loads automatically, nothing persists except the list of
  * URLs the user chose to keep.

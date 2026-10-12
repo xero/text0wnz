@@ -1,10 +1,9 @@
 /**
- * Server entry (P4): Moebius-native superset server on Bun.serve
- * (O10). Loads persisted room docs (native .0wnz, or legacy v2 .bin as
- * the migration), autosaves dirty rooms on the configured interval
- * with hourly sha1-deduped backups, and saves on SIGINT AND SIGTERM
- * (docker stop sends SIGTERM; the v2 server only listened for SIGINT
- * and lost up to a save interval of work).
+ * Server entry: Moebius-native superset server on Bun.serve (O10).
+ * Loads persisted room docs (native .0wnz, or legacy v2 .bin as the
+ * migration), autosaves dirty rooms on the configured interval with
+ * hourly sha1-deduped backups, and saves on SIGINT AND SIGTERM
+ * (docker stop sends SIGTERM).
  */
 
 import path from 'node:path';
@@ -30,8 +29,8 @@ import { saveRoom, backupRoom, loadRoomDoc } from './persistence.js';
 const sessionsDirEarly = path.resolve('./sessions');
 
 /** lazy per-room restore: EVERY room loads its persisted doc on
- * creation, not just the default (a named room used to boot blank and
- * its next autosave overwrote the saved art - review finding) */
+ * creation, not just the default; otherwise a named room boots blank
+ * and its next autosave overwrites the saved art */
 const restoreRoomState = room => {
 	loadRoomDoc(sessionsDirEarly, room.name)
 		.then(saved => {

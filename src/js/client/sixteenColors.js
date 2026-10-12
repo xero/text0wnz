@@ -1,14 +1,14 @@
 /**
- * 16colo.rs in-app browser (PLAN §4 P6, browse+open): years -> packs ->
+ * 16colo.rs in-app browser: years -> packs ->
  * pieces with thumbnails, opening straight into the editor. Metadata
  * and thumbnails come from api.16colo.rs and the gallery (the API is
  * CORS-open; thumbs ride plain <img> tags). FILE BYTES come from the
  * owner's GitHub archive mirror (xero/sixteencolors-archive): the
  * gallery host serves no CORS headers for raw files, while
- * raw.githubusercontent.com does — the pack zip fetches once, caches,
+ * raw.githubusercontent.com does; the pack zip fetches once, caches,
  * and single pieces inflate client-side through the core zip reader.
  * Politeness: every request is user-driven and cached; NOTHING here
- * runs in CI (PLAN §3.6.2 #4 / §4 P0 corpus policy).
+ * runs in CI.
  */
 import State from './state.js';
 import { $ } from './ui.js';

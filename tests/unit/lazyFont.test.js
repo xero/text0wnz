@@ -12,7 +12,6 @@ const flushIdle = async () => {
 	}
 };
 
-// Mock the UI module
 vi.mock('../../src/js/client/ui.js', () => ({
 	createCanvas: vi.fn(() => ({
 		getContext: vi.fn(() => ({
@@ -40,7 +39,6 @@ describe('Lazy Font Module', () => {
 	let lazyFontInstance;
 
 	beforeEach(() => {
-		// Mock palette object
 		mockPalette = { getRGBAColor: vi.fn(color => [color * 16, color * 8, color * 4, 255]) };
 
 		// Create minimal font data (8x16 font)
@@ -49,7 +47,6 @@ describe('Lazy Font Module', () => {
 		const dataSize = (width * height * 256) / 8;
 		const data = new Uint8Array(dataSize);
 
-		// Set some test patterns
 		for (let i = 0; i < dataSize; i++) {
 			data[i] = i % 256;
 		}
@@ -70,7 +67,6 @@ describe('Lazy Font Module', () => {
 		}
 		lazyFontInstance = null;
 
-		// Clean up large objects
 		if (fontData && fontData.data) {
 			fontData.data = null;
 		}
@@ -79,7 +75,6 @@ describe('Lazy Font Module', () => {
 
 		// Clear all mocks to release closures
 		vi.clearAllMocks();
-		// Restore all mocks
 		vi.restoreAllMocks();
 	});
 
@@ -164,7 +159,6 @@ describe('Lazy Font Module', () => {
 			expect(glyph).toBeDefined();
 			expect(glyph.data).toBeInstanceOf(Uint8ClampedArray);
 
-			// Cache should have grown
 			expect(lazyFontInstance.getCacheSize()).toBe(initialCacheSize + 1);
 		});
 
@@ -173,14 +167,11 @@ describe('Lazy Font Module', () => {
 
 			const initialCacheSize = lazyFontInstance.getCacheSize();
 
-			// Request the same glyph twice
 			const glyph1 = lazyFontInstance.getGlyph(100, 5, 3);
 			const glyph2 = lazyFontInstance.getGlyph(100, 5, 3);
 
-			// Should return the same cached instance
 			expect(glyph1).toBe(glyph2);
 
-			// Cache should have grown by 1 (not 2)
 			expect(lazyFontInstance.getCacheSize()).toBe(initialCacheSize + 1);
 		});
 
@@ -189,12 +180,10 @@ describe('Lazy Font Module', () => {
 
 			const initialCacheSize = lazyFontInstance.getCacheSize();
 
-			// Request same character with different colors
 			const glyph1 = lazyFontInstance.getGlyph(50, 7, 0);
 			const glyph2 = lazyFontInstance.getGlyph(50, 15, 1);
 			const glyph3 = lazyFontInstance.getGlyph(50, 7, 0); // Duplicate
 
-			// Should cache separately for different color combinations
 			expect(glyph1).not.toBe(glyph2);
 			expect(glyph1).toBe(glyph3); // But reuse for same combination
 
@@ -367,7 +356,6 @@ describe('Lazy Font Module', () => {
 
 			const initialSize = lazyFontInstance.getCacheSize();
 
-			// Request 10 different glyphs
 			for (let i = 0; i < 10; i++) {
 				lazyFontInstance.getGlyph(100 + i, 7, 0);
 			}

@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { createMenuController } from '../../src/js/client/ui.js';
 
-// Mock State module
 vi.mock('../../src/js/client/state.js', () => ({ default: {} }));
 
 describe('Menu DOM Tests', () => {
@@ -18,32 +17,25 @@ describe('Menu DOM Tests', () => {
 	let menuController;
 
 	beforeEach(() => {
-		// Clear DOM
 		document.body.innerHTML = '';
-		// Create a new userEvent instance for each test
 		user = userEvent.setup();
-		// Clear all mocks
 		vi.clearAllMocks();
 
-		// Create canvas element
 		canvas = document.createElement('canvas');
 		canvas.id = 'canvas';
 		canvas.tabIndex = 0;
 		document.body.appendChild(canvas);
 
-		// Create view element
 		view = document.createElement('div');
 		view.id = 'view';
 		view.tabIndex = 0;
 		document.body.appendChild(view);
 
-		// Create file menu button
 		fileButton = document.createElement('button');
 		fileButton.id = 'fileMenu';
 		fileButton.setAttribute('aria-label', 'File Menu');
 		document.body.appendChild(fileButton);
 
-		// Create file menu list
 		fileMenuList = document.createElement('div');
 		fileMenuList.id = 'fileList';
 		fileMenuList.className = 'menuList hide';
@@ -62,13 +54,11 @@ describe('Menu DOM Tests', () => {
 
 		document.body.appendChild(fileMenuList);
 
-		// Create edit menu button
 		editButton = document.createElement('button');
 		editButton.id = 'editMenu';
 		editButton.setAttribute('aria-label', 'Edit Menu');
 		document.body.appendChild(editButton);
 
-		// Create edit menu list
 		editMenuList = document.createElement('div');
 		editMenuList.id = 'editList';
 		editMenuList.className = 'menuList hide';
@@ -87,7 +77,6 @@ describe('Menu DOM Tests', () => {
 
 		document.body.appendChild(editMenuList);
 
-		// Create menu controller
 		menuController = createMenuController(
 			[
 				{ button: fileButton, menu: fileMenuList },
@@ -111,12 +100,10 @@ describe('Menu DOM Tests', () => {
 			await user.click(fileButton);
 			expect(fileMenuList.classList.contains('hide')).toBe(false);
 
-			// Wait for menu to fully open
 			await waitFor(() => {
 				expect(fileMenuList.classList.contains('hide')).toBe(false);
 			});
 
-			// Click again to close
 			await user.click(fileButton);
 
 			await waitFor(() => {
@@ -136,7 +123,6 @@ describe('Menu DOM Tests', () => {
 			await user.click(fileButton);
 			expect(fileMenuList.classList.contains('hide')).toBe(false);
 
-			// Trigger blur event
 			fireEvent.blur(fileMenuList);
 
 			await waitFor(() => {
@@ -151,8 +137,7 @@ describe('Menu DOM Tests', () => {
 			fireEvent.blur(fileMenuList);
 
 			await waitFor(() => {
-				// After blur, the view should become the active element
-				// This is handled by the menu controller
+				// moving focus to the view is the controller's job; assert the close
 				expect(fileMenuList.classList.contains('hide')).toBe(true);
 			});
 		});
@@ -214,7 +199,6 @@ describe('Menu DOM Tests', () => {
 		it('should focus menu when opened', async () => {
 			await user.click(fileButton);
 
-			// Menu should not have hide class when focused
 			expect(fileMenuList.classList.contains('hide')).toBe(false);
 		});
 	});

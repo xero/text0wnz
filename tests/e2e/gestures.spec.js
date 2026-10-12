@@ -1,5 +1,5 @@
 /**
- * Touch gestures end to end (D11): 2-finger tap undo, 3-finger tap
+ * Touch gestures end to end: 2-finger tap undo, 3-finger tap
  * redo, pinch zoom, and the zoom shortcut pins. Multi-touch needs CDP
  * Input.dispatchTouchEvent, so the gesture tests run on the Chrome
  * project only; the recognizer's logic is engine-neutral and unit

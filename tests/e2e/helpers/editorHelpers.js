@@ -12,14 +12,12 @@ export async function waitForEditorReady(page, timeout = 10000) {
 
 /**
  * Focus the canvas element for keyboard input
- * Clicks on the viewport container instead of canvas to avoid overlay interference
  * TODO: Replace timeout with focus state validation
  */
 export async function focusCanvas(page) {
 	// Click on viewport instead of canvas to avoid toolPreview overlay interference
 	const viewport = page.locator('#viewport');
 	await viewport.click({ position: { x: 100, y: 100 } });
-	// Allow time for focus to be established
 	// TODO: Wait for specific focus state or activeElement change
 	await page.waitForTimeout(200);
 }
@@ -29,7 +27,6 @@ export async function focusCanvas(page) {
  * TODO: Adjust based on actual DOM structure or window API if available
  */
 export async function getCanvasText(page) {
-	// Attempt to get text from canvas via window API if exposed
 	const textFromAPI = await page.evaluate(() => {
 		if (window.State && window.State.textArtCanvas) {
 			return window.State.textArtCanvas.toString();
@@ -41,9 +38,7 @@ export async function getCanvasText(page) {
 		return textFromAPI;
 	}
 
-	// Fallback: try to get text from DOM or return empty
-	// This is a placeholder - actual implementation depends on how
-	// the editor exposes canvas data
+	// placeholder until the editor exposes canvas data
 	return '';
 }
 
@@ -77,7 +72,6 @@ export async function getPositionInfo(page) {
  */
 export async function getActiveTool(page) {
 	return await page.evaluate(() => {
-		// Check for active tool in sidebar
 		const activeTool = document.querySelector('aside > div.active, aside > div[class*="active"]');
 		if (activeTool && activeTool.id) {
 			return activeTool.id;

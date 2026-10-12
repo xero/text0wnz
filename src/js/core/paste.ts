@@ -1,17 +1,15 @@
 /**
- * System-clipboard paste tokenizer (PLAN §3.4 paste/import pipeline).
- * Clipboard text is unicode, never raw CP437 bytes, so every grapheme
- * cluster routes through the CP437 reverse map or gets flagged for the
- * doc glyph table; nothing writes raw UTF-16 code units as glyph ids.
+ * System-clipboard paste tokenizer. Clipboard text is unicode, never
+ * raw CP437 bytes, so every grapheme cluster routes through the CP437
+ * reverse map or gets flagged for the doc glyph table; nothing writes
+ * raw UTF-16 code units as glyph ids.
  *
- * The blank rules kill a long-standing hidden-glyph bug: NBSP reverse
- * maps to CP437 0 (the NUL/NBSP duality in cp437.ts), so pasting
- * terminal output used to create cells that LOOKED blank but held
- * char 0, resurfacing later as mystery glyphs under recolor brushes,
- * font changes, and exports. Here every unicode blank becomes a plain
+ * Blank rules: NBSP reverse maps to CP437 0 (the NUL/NBSP duality in
+ * cp437.ts), which would turn pasted terminal output into cells that
+ * LOOK blank but hold char 0. So every unicode blank becomes a plain
  * space (32), zero-width characters make no cell at all, and controls
- * flatten to space, so what looks blank in the clipboard IS a space
- * in the doc.
+ * flatten to space: what looks blank in the clipboard IS a space in
+ * the doc.
  *
  * Token stream semantics (pinned by tests):
  *   PASTE_NEWLINE (-1)  line break (CRLF, LF, and CR are one each)

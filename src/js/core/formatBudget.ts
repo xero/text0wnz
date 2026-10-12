@@ -1,6 +1,6 @@
 /**
- * Format-budget linter (PLAN §3.2): before a doc leaves through a
- * lossy format, say exactly what that format cannot hold. The export
+ * Format-budget linter: before a doc leaves through a lossy format,
+ * say exactly what that format cannot hold. The export
  * UI shows the counts and lets the artist decide; nothing here blocks
  * anything. utf8 and the native .0wnz envelope hold everything, so
  * they never report issues; plain .txt drops color by definition, so

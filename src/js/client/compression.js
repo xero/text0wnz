@@ -1,7 +1,6 @@
 // @ts-check
 /**
- * Simple compression utilities for localStorage
- * Using a lightweight implementation that doesn't require external dependencies
+ * RLE compression for localStorage payloads; no external dependencies.
  */
 
 export const Compression = {
@@ -29,12 +28,11 @@ export const Compression = {
 			}
 		}
 
-		// Don't forget the last run
+		// emit the final run
 		result.push(count, currentValue);
 
-		// If compression isn't effective, return null
 		if (result.length >= array.length) {
-			return null; // Indicate no compression benefit
+			return null;
 		}
 
 		return new Uint32Array(result);

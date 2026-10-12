@@ -2,8 +2,8 @@
  * XBin codec (docs/xb-format.md is normative): header, optional 48-byte
  * 6-bit palette, optional font (256 or 512 glyphs x fontHeight bytes,
  * 8px wide), raw or RLE cell data. Ports the v2 loader/saver semantics
- * byte-for-byte, including the save fixes P1 landed (512-glyph flag bit
- * 4, unscaled font height, RLE only when it is actually smaller).
+ * byte-for-byte; saves set the 512-glyph flag (bit 4), write the
+ * unscaled font height, and RLE only when it is actually smaller.
  */
 
 import { DocV3, expand6to8, rgbColor } from '../doc.js';

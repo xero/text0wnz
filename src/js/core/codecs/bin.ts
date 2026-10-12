@@ -2,7 +2,7 @@
  * BIN (raw binary text) codec. Headerless char/attr pairs at a known
  * width: SAUCE BinaryText FileType (width/2) when set, the 160-column
  * default otherwise. Rows always derive from payload size and width;
- * binary data has no newlines to count (the v2 fix this ports).
+ * binary data has no newlines to count.
  */
 
 import { DocV3 } from '../doc.js';

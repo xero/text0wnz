@@ -1,12 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 
-// These tests cover the logic patterns of functions mentioned in the coverage report
-// that are not directly testable due to deep dependencies
+// Logic-pattern tests: these freehand helpers are too dependency-heavy
+// to import directly.
 
 describe('Freehand Tools - Extended Coverage', () => {
 	describe('CalculateShadingCharacter Logic', () => {
 		it('should calculate shading character for different modes', () => {
-			// Test the logic of selecting shading characters based on mode
 			const calculateShading = mode => {
 				const shadingChars = {
 					light: [176, 177, 178],
@@ -25,7 +24,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 		});
 
 		it('should select character based on pressure/intensity', () => {
-			// Test character selection based on intensity level
 			const selectCharByIntensity = (intensity, chars) => {
 				const index = Math.floor((intensity / 100) * (chars.length - 1));
 				return chars[Math.min(index, chars.length - 1)];
@@ -41,7 +39,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 
 	describe('MouseDownGenerator Logic', () => {
 		it('should generate mouse down handler for draw tools', () => {
-			// Test the pattern used for generating mouse down handlers
 			const createMouseDownHandler = (drawFn, startUndo) => {
 				return (x, y) => {
 					startUndo();
@@ -64,7 +61,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 		});
 
 		it('should handle multiple drawing states', () => {
-			// Test state management for drawing operations
 			const createDrawState = () => {
 				let isDrawing = false;
 				let lastPos = null;
@@ -108,7 +104,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 
 	describe('ForegroundChange and OnPaletteChange Logic', () => {
 		it('should update foreground color on change', () => {
-			// Test foreground color change handler logic
 			const handleForegroundChange = (panel, newColor) => {
 				if (panel && panel.setForegroundColor) {
 					panel.setForegroundColor(newColor);
@@ -128,7 +123,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 		});
 
 		it('should update background color on palette change', () => {
-			// Test background color change handler logic
 			const handleBackgroundChange = (panel, newColor) => {
 				if (panel && panel.setBackgroundColor) {
 					panel.setBackgroundColor(newColor);
@@ -145,7 +139,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 		});
 
 		it('should handle palette updates for both colors', () => {
-			// Test palette update with both foreground and background
 			const handlePaletteChange = (panel, fg, bg) => {
 				const updates = [];
 				if (panel) {
@@ -175,7 +168,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 
 	describe('ResizeCanvas and RedrawGlyphs Logic', () => {
 		it('should handle canvas resize operations', () => {
-			// Test canvas resize logic pattern
 			const handleResize = (oldWidth, oldHeight, newWidth, newHeight) => {
 				const needsResize = oldWidth !== newWidth || oldHeight !== newHeight;
 
@@ -202,7 +194,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 		});
 
 		it('should calculate glyph positions for redraw', () => {
-			// Test glyph position calculation for redrawing
 			const calculateGlyphPositions = (
 				canvasWidth,
 				canvasHeight,
@@ -236,7 +227,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 		});
 
 		it('should handle partial glyph redraw regions', () => {
-			// Test logic for redrawing specific regions
 			const getRedrawRegion = (
 				dirtyX,
 				dirtyY,
@@ -320,7 +310,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 		});
 
 		it('should handle rectangle fill drawing', () => {
-			// Test rectangle fill logic
 			const drawFilledRect = (x, y, width, height) => {
 				const points = [];
 				for (let dy = 0; dy < height; dy++) {
@@ -378,7 +367,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 
 	describe('Event Handler Coverage', () => {
 		it('should handle processCoords for tools', () => {
-			// Test coordinate processing logic
 			const processCoords = (
 				clientX,
 				clientY,
@@ -415,7 +403,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 		});
 
 		it('should check if endpoint has changed', () => {
-			// Test endpoint change detection
 			const hasEndPointChanged = (oldX, oldY, newX, newY, threshold = 0) => {
 				const dx = Math.abs(newX - oldX);
 				const dy = Math.abs(newY - oldY);
@@ -446,7 +433,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 		});
 
 		it('should handle paintArea flood fill logic', () => {
-			// Test flood fill boundary detection
 			const shouldFill = (
 				targetChar,
 				targetColors,
@@ -462,7 +448,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 		});
 
 		it('should handle setBrushSize logic', () => {
-			// Test brush size setting and validation
 			const setBrushSize = (size, min = 1, max = 10) => {
 				const validSize = Math.max(min, Math.min(max, size));
 				return {
@@ -490,7 +475,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 
 	describe('Shape Drawing Helpers', () => {
 		it('should handle ellipse outline calculation', () => {
-			// Test ellipse outline algorithm
 			const ellipseOutline = (cx, cy, rx, ry) => {
 				const points = [];
 				const rxSq = rx * rx;
@@ -508,12 +492,10 @@ describe('Freehand Tools - Extended Coverage', () => {
 
 			const ellipse = ellipseOutline(10, 10, 5, 3);
 			expect(ellipse.length).toBeGreaterThan(0);
-			// Center points should exist
 			expect(ellipse.some(p => p.x === 10)).toBe(true);
 		});
 
 		it('should handle ellipse filled calculation', () => {
-			// Test filled ellipse algorithm
 			const ellipseFilled = (cx, cy, rx, ry) => {
 				const points = [];
 
@@ -531,12 +513,10 @@ describe('Freehand Tools - Extended Coverage', () => {
 
 			const filled = ellipseFilled(10, 10, 3, 2);
 			expect(filled.length).toBeGreaterThan(0);
-			// Center should be included
 			expect(filled).toContainEqual({ x: 10, y: 10 });
 		});
 
 		it('should handle updatePreviewCursor logic', () => {
-			// Test preview cursor update
 			const updatePreviewCursor = (x, y, visible) => {
 				return {
 					position: { x, y },

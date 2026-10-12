@@ -6,7 +6,6 @@ const makeMockDoc = () => createDocV3({ columns: 80, rows: 25 });
 
 const canvasDataURL =
 	'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
-// Mock State module
 const mockState = {
 	textArtCanvas: {
 		getColumns: vi.fn(() => 80),
@@ -62,7 +61,6 @@ vi.mock('../../src/js/client/palette.js', () => ({
 	getUnicode: vi.fn(),
 }));
 
-// Mock global browser APIs
 const mockDocument = {
 	createElement: vi.fn(() => ({
 		href: '',
@@ -96,10 +94,8 @@ describe('File Module - Formats and Parsing', () => {
 	let Load, Save;
 
 	beforeEach(async () => {
-		// Reset all mocks
 		vi.clearAllMocks();
 
-		// Setup global mocks
 		vi.stubGlobal('document', mockDocument);
 		global.URL = mockURL;
 		global.window = { URL: mockURL };
@@ -116,7 +112,6 @@ describe('File Module - Formats and Parsing', () => {
 			return { bubbles: true, cancelable: true };
 		});
 
-		// Import the module fresh for each test
 		const fileModule = await import('../../src/js/client/file.js');
 		Load = fileModule.Load;
 		Save = fileModule.Save;
@@ -206,9 +201,7 @@ describe('File Module - Formats and Parsing', () => {
 
 		it('should handle data URL to bytes conversion', () => {
 			const testDataUrl = 'data:image/png;base64,SGVsbG8=';
-			// expectedBytes would be new Uint8Array([72, 101, 108, 108, 111]) for "Hello"
 
-			// Test the conversion logic
 			const base64Index = testDataUrl.indexOf(';base64,') + 8;
 			const base64Part = testDataUrl.slice(base64Index);
 			expect(base64Part).toBe('SGVsbG8=');
@@ -235,12 +228,10 @@ describe('File Module - Formats and Parsing', () => {
 			const mockFile = { name: 'test.ans', size: 100 };
 			const callback = vi.fn();
 
-			// This tests that the function doesn't throw
 			expect(() => Load.file(mockFile, callback)).not.toThrow();
 		});
 
 		it('should handle missing DOM elements gracefully', async () => {
-			// Mock a scenario where `document.createElement` is not available
 			const originalDocument = global.document;
 			vi.stubGlobal('document', {
 				createElement: vi.fn(() => {
@@ -248,10 +239,8 @@ describe('File Module - Formats and Parsing', () => {
 				}),
 			});
 
-			// Expect the Save.ans() function to throw an error
 			await expect(Save.ans()).rejects.toThrow('createElement failed');
 
-			// Restore the original document object
 			vi.stubGlobal('document', originalDocument);
 		});
 
@@ -268,21 +257,18 @@ describe('File Module - Formats and Parsing', () => {
 			const mockFile = { name: 'test.ans', size: 100 };
 			const callback = vi.fn();
 
-			// Create a mock FileReader instance that will be returned by the constructor
 			const mockReaderInstance = {
 				result: null,
 				addEventListener: vi.fn(),
 				readAsArrayBuffer: vi.fn(),
 			};
 
-			// Mock FileReader constructor to return our instance
 			global.FileReader = vi.fn(function () {
 				return mockReaderInstance;
 			});
 
 			Load.file(mockFile, callback);
 
-			// Verify FileReader setup
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -308,7 +294,6 @@ describe('File Module - Formats and Parsing', () => {
 
 			Load.file(mockFile, callback);
 
-			// Verify FileReader setup and clearXBData is called for BIN files
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -334,7 +319,6 @@ describe('File Module - Formats and Parsing', () => {
 
 			Load.file(mockFile, callback);
 
-			// Verify FileReader setup - XB files use loadXBFileSequential
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -360,7 +344,6 @@ describe('File Module - Formats and Parsing', () => {
 
 			Load.file(mockFile, callback);
 
-			// Verify FileReader setup for UTF-8 files
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -373,7 +356,6 @@ describe('File Module - Formats and Parsing', () => {
 
 	describe('SAUCE Record Processing', () => {
 		it('should test SAUCE record file extension detection', () => {
-			// Test that different file extensions are handled correctly
 			const testFiles = [
 				{ name: 'test.ans', size: 100 },
 				{ name: 'test.asc', size: 100 },
@@ -402,7 +384,6 @@ describe('File Module - Formats and Parsing', () => {
 		});
 
 		it('should handle SAUCE data processing logic', () => {
-			// Test the getSauce utility function logic
 			const testWidth = 80;
 
 			// This tests the internal getSauce logic
@@ -413,7 +394,6 @@ describe('File Module - Formats and Parsing', () => {
 
 	describe('ANSI Parsing Engine', () => {
 		it('should test ANSI file processing setup', () => {
-			// Test ANSI file processing initialization
 			const mockFile = { name: 'test.ans', size: 150 };
 			const callback = vi.fn();
 
@@ -429,7 +409,6 @@ describe('File Module - Formats and Parsing', () => {
 
 			Load.file(mockFile, callback);
 
-			// Verify setup
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -437,7 +416,6 @@ describe('File Module - Formats and Parsing', () => {
 		});
 
 		it('should test control character mapping logic', () => {
-			// Test control character handling logic
 			const controlCodes = [10, 13, 26, 27];
 			const mappedCodes = controlCodes.map(code => {
 				switch (code) {
@@ -475,7 +453,6 @@ describe('File Module - Formats and Parsing', () => {
 
 			Load.file(mockFile, callback);
 
-			// Verify UTF-8 file setup
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -483,7 +460,6 @@ describe('File Module - Formats and Parsing', () => {
 		});
 
 		it('should test UTF-8 decoding logic', () => {
-			// Test UTF-8 byte sequence logic
 			const utf8Sequences = [
 				{ bytes: [0x41], expected: 0x41 }, // ASCII 'A'
 				{ bytes: [0xc3, 0xa9], expected: 0xe9 }, // é
@@ -491,7 +467,6 @@ describe('File Module - Formats and Parsing', () => {
 			];
 
 			utf8Sequences.forEach(seq => {
-				// Test the UTF-8 decoding logic
 				let charCode = seq.bytes[0];
 				if ((charCode & 0x80) === 0) {
 					// 1-byte sequence

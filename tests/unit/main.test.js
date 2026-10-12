@@ -1,7 +1,6 @@
 /* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-// Mock State module
 const mockState = {
 	startInitialization: vi.fn(),
 	waitFor: vi.fn((deps, callback) => callback()),
@@ -51,7 +50,6 @@ const mockState = {
 	},
 };
 
-// Mock UI elements
 const createMockElement = (overrides = {}) => ({
 	style: { display: 'block' },
 	classList: { add: vi.fn(), remove: vi.fn() },
@@ -72,7 +70,6 @@ const createMockElement = (overrides = {}) => ({
 	...overrides,
 });
 
-// Mock functions that return objects with methods
 const mockCreateFunctions = {
 	createPasteTool: vi.fn(() => mockState.pasteTool),
 	createPositionInfo: vi.fn(() => ({ update: vi.fn() })),
@@ -130,7 +127,6 @@ const mockCreateFunctions = {
 vi.stubGlobal('document', {
 	getElementById: vi.fn(id => {
 		const mockElement = createMockElement();
-		// Special cases for specific elements
 		if (id === 'open-file') {
 			return { ...mockElement, files: [{ name: 'test.ans' }]}; // Use plain object instead of File constructor
 		}
@@ -155,7 +151,6 @@ global.Image = vi.fn(() => ({
 	src: '',
 }));
 
-// Mock all the imported modules
 vi.mock('../../src/js/client/state.js', () => ({ default: mockState }));
 vi.mock('../../src/js/client/ui.js', () => ({
 	$: global.document.getElementById,
@@ -257,7 +252,6 @@ vi.mock('../../src/js/client/fontCache.js', () => ({
 describe('Main Application Module', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		// Reset any global state
 		mockState.startInitialization.mockClear();
 		global.document.addEventListener.mockClear();
 	});
@@ -274,7 +268,6 @@ describe('Main Application Module', () => {
 		});
 
 		it('should handle CSS import without errors', async () => {
-			// The CSS import should not throw
 			expect(async () => {
 				await import('../../src/js/client/main.js');
 			}).not.toThrow();
@@ -285,14 +278,12 @@ describe('Main Application Module', () => {
 		it('should initialize State when DOMContentLoaded fires', async () => {
 			await import('../../src/js/client/main.js');
 
-			// Find the DOMContentLoaded listener
 			const domReadyCall = global.document.addEventListener.mock.calls.find(
 				call => call[0] === 'DOMContentLoaded',
 			);
 
 			expect(domReadyCall).toBeDefined();
 
-			// Execute the DOMContentLoaded handler
 			const domReadyHandler = domReadyCall[1];
 			await domReadyHandler();
 
@@ -313,7 +304,6 @@ describe('Main Application Module', () => {
 			if (domReadyCall) {
 				const domReadyHandler = domReadyCall[1];
 
-				// Should not throw even if initialization fails
 				expect(async () => {
 					await domReadyHandler();
 				}).not.toThrow();
@@ -358,7 +348,6 @@ describe('Main Application Module', () => {
 
 			await import('../../src/js/client/main.js');
 
-			// Find the onClick call for the 'new' button
 			const newButtonCall = onClick.mock.calls.find(
 				call => call[0] && call[0].id === 'new',
 			); // This is a mock, so we check the mock element
@@ -397,7 +386,6 @@ describe('Main Application Module', () => {
 
 			await import('../../src/js/client/main.js');
 
-			// onSelectChange should be called during setup - just verify it's available
 			expect(onSelectChange).toBeDefined();
 			expect(typeof onSelectChange).toBe('function');
 		});
@@ -407,7 +395,6 @@ describe('Main Application Module', () => {
 
 			await import('../../src/js/client/main.js');
 
-			// Test resize apply button
 			const resizeApplyCall = onClick.mock.calls.find(
 				call => call[0] && typeof call[1] === 'function',
 			);
@@ -415,7 +402,6 @@ describe('Main Application Module', () => {
 			if (resizeApplyCall) {
 				const resizeHandler = resizeApplyCall[1];
 
-				// Mock input values
 				global.document.getElementById.mockImplementation(id => {
 					if (id === 'columns-input') {
 						return { value: '100' };
@@ -444,7 +430,6 @@ describe('Main Application Module', () => {
 			if (resizeApplyCall) {
 				const resizeHandler = resizeApplyCall[1];
 
-				// Mock invalid input values
 				global.document.getElementById.mockImplementation(id => {
 					if (id === 'columns-input') {
 						return { value: 'invalid' };
@@ -459,7 +444,6 @@ describe('Main Application Module', () => {
 					resizeHandler();
 				}).not.toThrow();
 
-				// Should not call resize with invalid values
 				expect(mockState.textArtCanvas.resize).not.toHaveBeenCalledWith(
 					NaN,
 					NaN,
@@ -470,7 +454,6 @@ describe('Main Application Module', () => {
 
 	describe('Network Integration', () => {
 		it('should broadcast changes in collaboration mode', async () => {
-			// Set up network state
 			mockState.network = {
 				sendResize: vi.fn(),
 				sendIceColorsChange: vi.fn(),
@@ -482,7 +465,6 @@ describe('Main Application Module', () => {
 
 			await import('../../src/js/client/main.js');
 
-			// Test resize broadcast
 			const resizeCall = onClick.mock.calls.find(
 				call => call[0] && typeof call[1] === 'function',
 			);
@@ -507,14 +489,12 @@ describe('Main Application Module', () => {
 		});
 
 		it('should handle network unavailability gracefully', async () => {
-			// Remove network state
 			mockState.network = null;
 
 			const { onClick } = await import('../../src/js/client/ui.js');
 
 			await import('../../src/js/client/main.js');
 
-			// Operations should still work without network
 			expect(() => {
 				const calls = onClick.mock.calls;
 				calls.forEach(call => {
@@ -530,7 +510,6 @@ describe('Main Application Module', () => {
 		it('should handle font preview for regular PNG fonts', async () => {
 			await import('../../src/js/client/main.js');
 
-			// Mock Image constructor to test font preview
 			const mockImg = {
 				onload: null,
 				onerror: null,
@@ -542,7 +521,6 @@ describe('Main Application Module', () => {
 				return mockImg;
 			});
 
-			// Test font preview logic by triggering onload
 			mockImg.onload && mockImg.onload();
 
 			expect(mockImg.src).toBeDefined();
@@ -560,7 +538,6 @@ describe('Main Application Module', () => {
 				return mockImg;
 			});
 
-			// Test font preview error handling
 			expect(() => {
 				mockImg.onerror && mockImg.onerror();
 			}).not.toThrow();
@@ -569,24 +546,20 @@ describe('Main Application Module', () => {
 		it('should handle XBIN font preview differently', async () => {
 			await import('../../src/js/client/main.js');
 
-			// Test that XBIN font handling is available
 			expect(mockState.textArtCanvas.getCurrentFontName).toBeDefined();
 		});
 	});
 
 	describe('Dependencies and Imports', () => {
 		it('should successfully import all required modules', async () => {
-			// Test that all import statements resolve without errors
 			expect(async () => {
 				const module = await import('../../src/js/client/main.js');
-				// Module should exist
 				expect(module).toBeDefined();
 			}).not.toThrow();
 		});
 
 		it('should have proper module structure', async () => {
-			// Since main.js is primarily about side effects (setting up event listeners, etc.)
-			// we mainly verify it can be imported without issues
+			// main.js is mostly side effects; importing it is the test
 			const module = await import('../../src/js/client/main.js');
 			expect(module).toBeDefined();
 		});
@@ -604,7 +577,6 @@ describe('Main Application Module', () => {
 				const domReadyHandler = domReadyCall[1];
 				await domReadyHandler();
 
-				// Verify initialization order
 				expect(mockState.startInitialization).toHaveBeenCalled();
 				expect(mockCreateFunctions.createTextArtCanvas).toHaveBeenCalled();
 				expect(mockState.waitFor).toHaveBeenCalled();
@@ -614,7 +586,6 @@ describe('Main Application Module', () => {
 		it('should create drawing tools', async () => {
 			await import('../../src/js/client/main.js');
 
-			// Test that palette functions are available
 			expect(mockCreateFunctions.createDefaultPalette).toBeDefined();
 		});
 
@@ -625,7 +596,6 @@ describe('Main Application Module', () => {
 
 			await import('../../src/js/client/main.js');
 
-			// Event handlers should be available
 			expect(onClick).toBeDefined();
 			expect(onSelectChange).toBeDefined();
 			expect(onFileChange).toBeDefined();
@@ -642,7 +612,6 @@ describe('Main Application Module', () => {
 				const domReadyHandler = domReadyCall[1];
 				await domReadyHandler();
 
-				// Canvas configuration should be handled
 				expect(mockState.textArtCanvas).toBeDefined();
 			}
 		});
@@ -650,7 +619,6 @@ describe('Main Application Module', () => {
 		it('should handle font configuration', async () => {
 			await import('../../src/js/client/main.js');
 
-			// Font handling should be available
 			expect(mockState.font.setLetterSpacing).toBeDefined();
 			expect(mockState.font.getLetterSpacing).toBeDefined();
 		});
@@ -658,7 +626,6 @@ describe('Main Application Module', () => {
 		it('should handle ICE colors configuration', async () => {
 			await import('../../src/js/client/main.js');
 
-			// ICE colors handling should be available
 			expect(mockState.textArtCanvas.setIceColors).toBeDefined();
 			expect(mockState.textArtCanvas.getIceColors).toBeDefined();
 		});
@@ -670,14 +637,12 @@ describe('Main Application Module', () => {
 
 			await import('../../src/js/client/main.js');
 
-			// File loading should be configured
 			expect(Load.file).toBeDefined();
 		});
 
 		it('should handle SAUCE information', async () => {
 			await import('../../src/js/client/main.js');
 
-			// SAUCE handling functions should be available
 			expect(global.document.getElementById).toBeDefined();
 		});
 
@@ -686,14 +651,12 @@ describe('Main Application Module', () => {
 
 			await import('../../src/js/client/main.js');
 
-			// Font operations should be available
 			expect(Load.sauceToAppFont).toBeDefined();
 		});
 	});
 
 	describe('Error Recovery', () => {
 		it('should handle component creation failures gracefully', async () => {
-			// Mock a component creation failure
 			mockCreateFunctions.createTextArtCanvas.mockImplementation(() => {
 				throw new Error('Canvas creation failed');
 			});
@@ -748,7 +711,6 @@ describe('Main Application Module', () => {
 				const domReadyHandler = domReadyCall[1];
 				await domReadyHandler();
 
-				// State integration should work
 				expect(mockState.waitFor).toHaveBeenCalledWith(
 					expect.arrayContaining([
 						'palette',
@@ -776,7 +738,6 @@ describe('Main Application Module', () => {
 				const domReadyHandler = domReadyCall[1];
 				await domReadyHandler();
 
-				// State properties should be assigned
 				expect(mockState.title).toBeDefined();
 			}
 		});
@@ -784,11 +745,8 @@ describe('Main Application Module', () => {
 
 	describe('Save Functionality', () => {
 		it('should initialize save timeout variable', async () => {
-			// The main module initializes a saveTimeout variable
-			// We can test that the module loads without errors
 			await import('../../src/js/client/main.js');
 
-			// If we got here, the module loaded successfully
 			expect(true).toBe(true);
 		});
 	});
@@ -805,7 +763,6 @@ describe('Main Application Module', () => {
 				const domReadyHandler = domReadyCall[1];
 				await domReadyHandler();
 
-				// Core UI should be initialized
 				expect(mockCreateFunctions.createModalController).toHaveBeenCalled();
 				expect(mockCreateFunctions.createDefaultPalette).toHaveBeenCalled();
 				expect(mockCreateFunctions.createPasteTool).toHaveBeenCalled();
@@ -824,7 +781,6 @@ describe('Main Application Module', () => {
 				const domReadyHandler = domReadyCall[1];
 				await domReadyHandler();
 
-				// Secondary tools should be initialized
 				expect(mockCreateFunctions.createPositionInfo).toHaveBeenCalled();
 				expect(mockCreateFunctions.createSelectionCursor).toHaveBeenCalled();
 				expect(mockCreateFunctions.createCursor).toHaveBeenCalled();
@@ -850,7 +806,6 @@ describe('Main Application Module', () => {
 				const domReadyHandler = domReadyCall[1];
 				await domReadyHandler();
 
-				// Canvas callback should trigger loading class removal
 				expect(mockBodyContainer.classList.remove).toHaveBeenCalledWith(
 					'loading',
 				);
@@ -874,7 +829,6 @@ describe('Main Application Module', () => {
 				const domReadyHandler = domReadyCall[1];
 				await domReadyHandler();
 
-				// Font preloading should be called
 				expect(mockFontCache.preloadCommonFonts).toHaveBeenCalled();
 			}
 		});
@@ -897,7 +851,6 @@ describe('Main Application Module', () => {
 				const domReadyHandler = domReadyCall[1];
 				await domReadyHandler();
 
-				// Should use requestIdleCallback
 				expect(global.requestIdleCallback).toHaveBeenCalled();
 			}
 
@@ -918,7 +871,6 @@ describe('Main Application Module', () => {
 				const domReadyHandler = domReadyCall[1];
 				await domReadyHandler();
 
-				// Should fallback to setTimeout
 				expect(setTimeout).toHaveBeenCalled();
 			}
 

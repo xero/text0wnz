@@ -7,7 +7,6 @@ describe('Config Module - parseArgs', () => {
 	let processExitSpy;
 
 	beforeEach(() => {
-		// Store original argv
 		originalArgv = process.argv;
 		// Mock console.log and process.exit to avoid side effects
 		consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -15,7 +14,6 @@ describe('Config Module - parseArgs', () => {
 	});
 
 	afterEach(() => {
-		// Restore original argv
 		process.argv = originalArgv;
 		vi.restoreAllMocks();
 	});

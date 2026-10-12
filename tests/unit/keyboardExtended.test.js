@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 
-// These tests cover the logic patterns of keyboard functions mentioned in the coverage report
+// Logic-pattern tests: these keyboard helpers are too dependency-heavy
+// to import directly.
 
 describe('Keyboard Extended Coverage', () => {
 	describe('UpdateDimensions Logic', () => {
 		it('should calculate dimensions from columns and rows', () => {
-			// Test dimension calculation pattern
 			const updateDimensions = (cols, rows, charWidth, charHeight) => {
 				return {
 					width: cols * charWidth,
@@ -46,7 +46,6 @@ describe('Keyboard Extended Coverage', () => {
 
 	describe('Enable/Disable Logic', () => {
 		it('should handle enable/disable state transitions', () => {
-			// Test enable/disable pattern
 			const createEnableableComponent = () => {
 				let enabled = false;
 				const listeners = [];
@@ -98,7 +97,6 @@ describe('Keyboard Extended Coverage', () => {
 
 	describe('Copy/Cut/Paste Operations', () => {
 		it('should copy selection to clipboard', () => {
-			// Test copy operation logic
 			const copySelection = (selection, canvas) => {
 				if (!selection) {
 					return null;
@@ -141,7 +139,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should cut selection from canvas', () => {
-			// Test cut operation logic
 			const cutSelection = (selection, canvas, fillChar = 32) => {
 				const copied = [];
 
@@ -184,7 +181,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should paste clipboard data to canvas', () => {
-			// Test paste operation logic
 			const pasteData = (clipboard, canvas, x, y) => {
 				if (!clipboard || !clipboard.data) {
 					return false;
@@ -229,7 +225,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should handle system paste with text conversion', () => {
-			// Test system paste text processing
 			const processSystemPaste = text => {
 				const lines = text.split('\n');
 				const data = lines.map(line => {
@@ -254,7 +249,6 @@ describe('Keyboard Extended Coverage', () => {
 
 	describe('Row/Column Operations', () => {
 		it('should insert row at position', () => {
-			// Test row insertion logic
 			const insertRow = (canvas, rowIndex, fillChar = 32) => {
 				const width = canvas[0]?.length || 0;
 				const newRow = new Array(width).fill(fillChar);
@@ -275,7 +269,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should delete row at position', () => {
-			// Test row deletion logic
 			const deleteRow = (canvas, rowIndex) => {
 				if (rowIndex >= 0 && rowIndex < canvas.length) {
 					canvas.splice(rowIndex, 1);
@@ -297,7 +290,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should insert column at position', () => {
-			// Test column insertion logic
 			const insertColumn = (canvas, colIndex, fillChar = 32) => {
 				canvas.forEach(row => {
 					row.splice(colIndex, 0, fillChar);
@@ -318,7 +310,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should delete column at position', () => {
-			// Test column deletion logic
 			const deleteColumn = (canvas, colIndex) => {
 				canvas.forEach(row => {
 					if (colIndex >= 0 && colIndex < row.length) {
@@ -343,7 +334,6 @@ describe('Keyboard Extended Coverage', () => {
 
 	describe('Erase Operations', () => {
 		it('should erase row with fill character', () => {
-			// Test row erase logic
 			const eraseRow = (canvas, rowIndex, fillChar = 32) => {
 				if (canvas[rowIndex]) {
 					canvas[rowIndex] = canvas[rowIndex].map(() => fillChar);
@@ -363,7 +353,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should erase to start of row', () => {
-			// Test erase to start logic
 			const eraseToStartOfRow = (canvas, rowIndex, colIndex, fillChar = 32) => {
 				if (canvas[rowIndex]) {
 					for (let i = 0; i <= colIndex; i++) {
@@ -381,7 +370,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should erase to end of row', () => {
-			// Test erase to end logic
 			const eraseToEndOfRow = (canvas, rowIndex, colIndex, fillChar = 32) => {
 				if (canvas[rowIndex]) {
 					for (let i = colIndex; i < canvas[rowIndex].length; i++) {
@@ -399,7 +387,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should erase column', () => {
-			// Test column erase logic
 			const eraseColumn = (canvas, colIndex, fillChar = 32) => {
 				canvas.forEach(row => {
 					if (row[colIndex] !== undefined) {
@@ -424,7 +411,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should erase to start of column', () => {
-			// Test erase to start of column logic
 			const eraseToStartOfColumn = (
 				canvas,
 				colIndex,
@@ -453,7 +439,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should erase to end of column', () => {
-			// Test erase to end of column logic
 			const eraseToEndOfColumn = (
 				canvas,
 				colIndex,
@@ -484,7 +469,6 @@ describe('Keyboard Extended Coverage', () => {
 
 	describe('Selection and Movement', () => {
 		it('should handle setAreaSelective logic', () => {
-			// Test selective area setting
 			const setAreaSelective = (
 				targetData,
 				sourceData,
@@ -512,7 +496,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should create empty area with dimensions', () => {
-			// Test empty area creation
 			const createEmptyArea = (width, height, fillChar = 32) => {
 				const data = [];
 				for (let y = 0; y < height; y++) {
@@ -535,7 +518,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should toggle move mode', () => {
-			// Test move mode toggle
 			const toggleMoveMode = currentMode => {
 				return {
 					moveMode: !currentMode,
@@ -553,7 +535,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should handle selection movement in all directions', () => {
-			// Test selection movement logic
 			const moveSelection = (x, y, direction, amount = 1) => {
 				const moves = {
 					left: { dx: -amount, dy: 0 },
@@ -579,7 +560,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should shift content in canvas', () => {
-			// Test content shifting logic
 			const shiftContent = (data, direction) => {
 				const shifted = [...data];
 
@@ -604,7 +584,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should shift to start/end of row', () => {
-			// Test shift to boundaries
 			const shiftToStart = (data, pos, fillChar = 32) => {
 				const removed = data.splice(0, pos);
 				data.push(...new Array(removed.length).fill(fillChar));
@@ -620,7 +599,6 @@ describe('Keyboard Extended Coverage', () => {
 
 	describe('Unicode and Character Conversion', () => {
 		it('should convert unicode to CP437', () => {
-			// Test unicode conversion logic
 			const convertUnicode = char => {
 				const unicodeMap = {
 					'☺': 1,
@@ -640,7 +618,6 @@ describe('Keyboard Extended Coverage', () => {
 		});
 
 		it('should handle special character mapping', () => {
-			// Test special character handling
 			const mapSpecialChar = char => {
 				if (char.charCodeAt(0) < 32) {
 					return 32; // control chars become spaces
@@ -659,7 +636,6 @@ describe('Keyboard Extended Coverage', () => {
 
 	describe('Ignore/Unignore Input', () => {
 		it('should handle ignore state for input', () => {
-			// Test input ignore state management
 			const createInputController = () => {
 				let ignored = false;
 
@@ -694,7 +670,6 @@ describe('Keyboard Extended Coverage', () => {
 
 	describe('Pending Actions', () => {
 		it('should handle pending action queue', () => {
-			// Test pending action management
 			const createActionQueue = () => {
 				const queue = [];
 

@@ -107,7 +107,6 @@ describe('Canvas Module', () => {
 	});
 
 	afterEach(() => {
-		// Cleanup after each test
 		canvas = null;
 		mockContainer = null;
 		mockCallback = null;
@@ -124,13 +123,11 @@ describe('Canvas Module', () => {
 			expect(canvas).toBeDefined();
 			expect(canvas.getColumns).toBeDefined();
 			expect(canvas.getRows).toBeDefined();
-			// Remove the specific callback test since it's async and complex
 		});
 
 		it('should provide all required canvas methods', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			// Test that all required methods exist
 			expect(canvas.setImageData).toBeDefined();
 			expect(canvas.getColumns).toBeDefined();
 			expect(canvas.getRows).toBeDefined();
@@ -164,7 +161,6 @@ describe('Canvas Module', () => {
 		it('should handle clear operation', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			// Test that clear method exists and can be called
 			expect(canvas.clear).toBeDefined();
 			expect(typeof canvas.clear).toBe('function');
 		});
@@ -180,9 +176,8 @@ describe('Canvas Module', () => {
 		it('no longer persists undo history (moved to the OPFS journal)', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			// P2 engine swap: the v2 IndexedDB chunk shape is gone; the
-			// journal owns stroke persistence. getUndoHistory reports
-			// nothing to save and setUndoHistory tolerates old autosaves.
+			// the OPFS journal owns stroke persistence: getUndoHistory reports
+			// nothing to save and setUndoHistory tolerates old v2 autosaves
 			expect(typeof canvas.getUndoHistory).toBe('function');
 			expect(typeof canvas.setUndoHistory).toBe('function');
 			expect(canvas.getUndoHistory()).toBeNull();
@@ -217,7 +212,6 @@ describe('Canvas Module', () => {
 		it('should handle area operations', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			// Test that area methods exist and can be accessed
 			expect(canvas.getArea).toBeDefined();
 			expect(canvas.setArea).toBeDefined();
 			expect(canvas.deleteArea).toBeDefined();
@@ -335,7 +329,6 @@ describe('Canvas Module', () => {
 
 	describe('Canvas Utility Functions', () => {
 		it('should mirror horizontal line drawing characters correctly', () => {
-			// Test horizontal mirroring for box drawing characters
 			const getMirrorCharCode = charCode => {
 				switch (charCode) {
 					case 221: // LEFT_HALF_BLOCK
@@ -353,7 +346,6 @@ describe('Canvas Module', () => {
 		});
 
 		it('should calculate array indices from coordinates correctly', () => {
-			// Test coordinate to array index conversion
 			const columns = 80;
 			const getArrayIndex = (x, y) => y * columns + x;
 
@@ -379,7 +371,6 @@ describe('Canvas Module', () => {
 		});
 
 		it('should encode character data correctly', () => {
-			// Test 16-bit character/attribute encoding
 			const encodeCharBlock = (charCode, foreground, background) => {
 				return (charCode << 8) | (background << 4) | foreground;
 			};
@@ -393,7 +384,6 @@ describe('Canvas Module', () => {
 		});
 
 		it('should decode character data correctly', () => {
-			// Test decoding 16-bit character/attribute data
 			const decodeCharBlock = data => {
 				return {
 					charCode: data >> 8,
@@ -421,7 +411,6 @@ describe('Canvas Module', () => {
 		});
 
 		it('should convert blink colors correctly', () => {
-			// Test blink color normalization
 			const normalizeBlinkColor = background => {
 				return background >= 8 ? background - 8 : background;
 			};
@@ -432,7 +421,6 @@ describe('Canvas Module', () => {
 		});
 
 		it('should calculate region bounds correctly', () => {
-			// Test region clipping to canvas bounds
 			const clipRegion = (x, y, width, height, canvasWidth, canvasHeight) => {
 				const clippedX = Math.max(0, Math.min(x, canvasWidth - 1));
 				const clippedY = Math.max(0, Math.min(y, canvasHeight - 1));
@@ -477,7 +465,6 @@ describe('Canvas Module', () => {
 		it('should handle dirty region enqueueing', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			// Enqueue dirty regions should not throw
 			expect(() => {
 				canvas.enqueueDirtyCell(10, 5);
 			}).not.toThrow();
@@ -486,7 +473,6 @@ describe('Canvas Module', () => {
 		it('should clamp dirty regions to canvas bounds', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			// Test that regions outside canvas bounds are handled gracefully
 			expect(() => {
 				canvas.enqueueDirtyCell(-5, -5);
 				canvas.enqueueDirtyCell(100, 100);
@@ -496,7 +482,6 @@ describe('Canvas Module', () => {
 		it('should handle dirty region processing', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			// Multiple dirty regions should be processed
 			expect(() => {
 				canvas.enqueueDirtyCell(0, 0);
 				canvas.enqueueDirtyCell(10, 10);
@@ -511,7 +496,6 @@ describe('Canvas Module', () => {
 
 			expect(typeof canvas.getArea).toBe('function');
 
-			// Get area should return an object
 			const result = canvas.getArea(0, 0, 5, 5);
 			expect(result).toBeDefined();
 			expect(result).toHaveProperty('data');
@@ -522,7 +506,6 @@ describe('Canvas Module', () => {
 
 			expect(typeof canvas.setArea).toBe('function');
 
-			// Set area with data should not throw
 			const areaData = { data: new Uint16Array(25), width: 5, height: 5 };
 			expect(() => {
 				canvas.setArea(0, 0, areaData);
@@ -577,7 +560,6 @@ describe('Canvas Module', () => {
 
 			expect(typeof canvas.clearXBData).toBe('function');
 
-			// Clear XB data should not throw
 			expect(() => {
 				canvas.clearXBData();
 			}).not.toThrow();
@@ -589,7 +571,6 @@ describe('Canvas Module', () => {
 			const callback = vi.fn();
 			canvas.clearXBData(callback);
 
-			// Callback should be called
 			expect(callback).toHaveBeenCalled();
 		});
 
@@ -598,7 +579,6 @@ describe('Canvas Module', () => {
 
 			expect(typeof canvas.getXBFontData).toBe('function');
 
-			// Initially should be null
 			const xbData = canvas.getXBFontData();
 			expect(xbData).toBeNull();
 		});
@@ -644,7 +624,6 @@ describe('Canvas Module', () => {
 			const drawCallback = vi.fn();
 			canvas.draw(drawCallback, false);
 
-			// Draw callback should be called
 			expect(drawCallback).toHaveBeenCalled();
 		});
 
@@ -683,7 +662,6 @@ describe('Canvas Module', () => {
 			const drawCallback = vi.fn();
 			canvas.draw(drawCallback, false);
 
-			// With mirror mode, callback should be called multiple times
 			expect(drawCallback).toHaveBeenCalled();
 		});
 

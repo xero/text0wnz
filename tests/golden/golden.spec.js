@@ -1,6 +1,6 @@
 /**
- * Golden screenshot suite (PLAN.md P0, O8) — the first pixel-regression
- * harness for the renderer. Matrix: fixture (CP437 bin / ice bin / 512-glyph
+ * Golden screenshot suite: the pixel-regression harness for the
+ * renderer. Matrix: fixture (CP437 bin / ice bin / 512-glyph
  * XBin with custom palette) x font (CP437, Topaz 1200) x zoom (1, 2) x
  * letter spacing (8px, 9px), minus nonsense combos. Plus real artwork
  * (docs/examples, the author's own pieces): dense shading/color coverage and

@@ -30,7 +30,6 @@ const parseCapEnv = raw => {
 
 const parseArgs = () => {
 	const args = process.argv.slice(2);
-	// Defaults
 	const config = {
 		ssl: false,
 		sslDir: '/etc/ssl/private',
@@ -38,7 +37,7 @@ const parseArgs = () => {
 		sessionName: 'joint',
 		debug: false,
 		port: 1337,
-		// P4: optional second listener speaking plaintext ws for desktop
+		// optional second listener speaking plaintext ws for desktop
 		// clients (Moebius, icy_draw); 0 = disabled
 		plainPort: 0,
 		// room password applied to every room without a specific entry;
@@ -51,8 +50,8 @@ const parseArgs = () => {
 		// 0 = use room.js ROOM_DEFAULTS (1000x10000)
 		maxColumns: parseCapEnv(process.env.ROOM_MAX_COLUMNS),
 		maxRows: parseCapEnv(process.env.ROOM_MAX_ROWS),
-		// P6 packaging: serve the built PWA from this dir (single binary
-		// and the distroless image); '' = ws-only, a proxy serves static
+		// serve the built PWA from this dir (single binary and the
+		// distroless image); '' = ws-only, a proxy serves static
 		staticDir: process.env.STATIC_DIR ?? '',
 	};
 
@@ -70,7 +69,7 @@ const parseArgs = () => {
 			case '--ssl-dir':
 				if (nextArg && !nextArg.startsWith('--')) {
 					config.sslDir = nextArg;
-					i++; // Skip next argument as we consumed it
+					i++;
 				}
 				break;
 			case '--save-interval':
@@ -79,13 +78,13 @@ const parseArgs = () => {
 					if (!isNaN(minutes) && minutes > 0) {
 						config.saveInterval = minutes * 60 * 1000;
 					}
-					i++; // Skip next argument as we consumed it
+					i++;
 				}
 				break;
 			case '--session-name':
 				if (nextArg && !nextArg.startsWith('--')) {
 					config.sessionName = nextArg;
-					i++; // Skip next argument as we consumed it
+					i++;
 				}
 				break;
 			case '--plain-port':
@@ -94,26 +93,26 @@ const parseArgs = () => {
 					if (!isNaN(plainPort) && plainPort > 0 && plainPort <= 65535) {
 						config.plainPort = plainPort;
 					}
-					i++; // Skip next argument as we consumed it
+					i++;
 				}
 				break;
 			case '--pass':
 				if (nextArg && !nextArg.startsWith('--')) {
 					config.pass = nextArg;
-					i++; // Skip next argument as we consumed it
+					i++;
 				}
 				break;
 			case '--static':
 				if (nextArg && !nextArg.startsWith('--')) {
 					config.staticDir = nextArg;
-					i++; // Skip next argument as we consumed it
+					i++;
 				}
 				break;
 			case '--help':
 				printHelp();
 				break;
 			default:
-				// Check if it's a port number
+				// a bare numeric arg is the port
 				{
 					const port = parseInt(arg);
 					if (!isNaN(port) && port > 0 && port <= 65535) {

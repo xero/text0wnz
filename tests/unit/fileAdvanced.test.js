@@ -6,7 +6,6 @@ const makeMockDoc = () => createDocV3({ columns: 80, rows: 25 });
 
 const canvasDataURL =
 	'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
-// Mock State module
 const mockState = {
 	textArtCanvas: {
 		getColumns: vi.fn(() => 80),
@@ -62,7 +61,6 @@ vi.mock('../../src/js/client/palette.js', () => ({
 	getUnicode: vi.fn(),
 }));
 
-// Mock global browser APIs
 const mockDocument = {
 	createElement: vi.fn(() => ({
 		href: '',
@@ -96,10 +94,8 @@ describe('File Module - Advanced Operations', () => {
 	let Load, Save;
 
 	beforeEach(async () => {
-		// Reset all mocks
 		vi.clearAllMocks();
 
-		// Setup global mocks
 		vi.stubGlobal('document', mockDocument);
 		global.URL = mockURL;
 		global.window = { URL: mockURL };
@@ -116,7 +112,6 @@ describe('File Module - Advanced Operations', () => {
 			return { bubbles: true, cancelable: true };
 		});
 
-		// Import the module fresh for each test
 		const fileModule = await import('../../src/js/client/file.js');
 		Load = fileModule.Load;
 		Save = fileModule.Save;
@@ -128,10 +123,8 @@ describe('File Module - Advanced Operations', () => {
 
 	describe('Advanced Save Operations', () => {
 		it('should test comprehensive ANSI generation with all attribute types', async () => {
-			// Set up complex image data with various attributes
 			const complexImageData = new Uint16Array(80 * 25);
 
-			// Fill with various character and attribute combinations
 			for (let y = 0; y < 25; y++) {
 				for (let x = 0; x < 80; x++) {
 					const index = y * 80 + x;
@@ -146,7 +139,6 @@ describe('File Module - Advanced Operations', () => {
 			mockState.textArtCanvas.getColumns.mockReturnValue(80);
 			mockState.textArtCanvas.getRows.mockReturnValue(25);
 
-			// Test ANSI generation
 			await Save.ans();
 
 			expect(global.Blob).toHaveBeenCalled();
@@ -155,7 +147,6 @@ describe('File Module - Advanced Operations', () => {
 		});
 
 		it('should test UTF-8 ANSI generation without mocking issues', async () => {
-			// Set up image data with regular characters
 			const regularImageData = new Uint16Array(80 * 5);
 			for (let i = 0; i < 10; i++) {
 				regularImageData[i] = ((65 + i) << 8) | 0x07; // A-J with white on black
@@ -202,7 +193,6 @@ describe('File Module - Advanced Operations', () => {
 
 			expect(global.Blob).toHaveBeenCalled();
 
-			// Reset mock
 			global.Blob.mockClear();
 
 			// Test with odd width (should not create file)
@@ -215,10 +205,8 @@ describe('File Module - Advanced Operations', () => {
 
 	describe('Data Conversion Functions', () => {
 		it('should test binary data conversion utilities', () => {
-			// Test character code conversions for control characters
 			const testCodes = [10, 13, 26, 27, 65, 255];
 			testCodes.forEach(code => {
-				// Test that the mapping logic works
 				let mappedCode = code;
 				switch (code) {
 					case 10:
@@ -239,11 +227,9 @@ describe('File Module - Advanced Operations', () => {
 		});
 
 		it('should test color attribute processing', () => {
-			// Test ANSI to BIN color conversion
 			const ansiColors = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 			ansiColors.forEach(color => {
 				let binColor = color;
-				// Apply BIN color mapping
 				switch (color) {
 					case 4:
 						binColor = 1;
@@ -310,7 +296,6 @@ describe('File Module - Advanced Operations', () => {
 
 			Load.file(mockFile, callback);
 
-			// Verify FileReader setup
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -336,7 +321,6 @@ describe('File Module - Advanced Operations', () => {
 
 			Load.file(mockFile, callback);
 
-			// Verify setup for large files
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -362,7 +346,6 @@ describe('File Module - Advanced Operations', () => {
 
 			Load.file(mockFile, callback);
 
-			// Verify file loading setup
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -401,11 +384,9 @@ describe('File Module - Advanced Operations', () => {
 
 	describe('Internal Data Processing', () => {
 		it('should test image data conversion logic', () => {
-			// Test the convertData function logic
 			const testData = new Uint8Array([65, 7, 0, 66, 15, 8]); // Two characters with attributes
 			const expectedLength = testData.length / 3;
 
-			// Test conversion logic
 			const output = new Uint16Array(expectedLength);
 			for (let i = 0, j = 0; i < expectedLength; i += 1, j += 3) {
 				output[i] =
@@ -418,7 +399,6 @@ describe('File Module - Advanced Operations', () => {
 		});
 
 		it('should test string processing utilities', () => {
-			// Test bytesToString functionality
 			const testBytes = new Uint8Array([72, 101, 108, 108, 111, 0, 87, 111, 114, 108, 100]);
 			let result = '';
 
@@ -434,7 +414,6 @@ describe('File Module - Advanced Operations', () => {
 		});
 
 		it('should test SAUCE metadata extraction', () => {
-			// Test SAUCE field extraction logic
 			const testSauceData = {
 				title: 'Test Title',
 				author: 'Test Author',
@@ -447,7 +426,6 @@ describe('File Module - Advanced Operations', () => {
 				tInfo2: 25,
 			};
 
-			// Verify SAUCE data structure
 			expect(testSauceData.title).toBe('Test Title');
 			expect(testSauceData.author).toBe('Test Author');
 			expect(testSauceData.tInfo1).toBe(80); // Width
@@ -455,7 +433,6 @@ describe('File Module - Advanced Operations', () => {
 		});
 
 		it('should test attribute processing logic', () => {
-			// Test bold and blink attribute handling
 			const testAttributes = [
 				{ fg: 7, bg: 0, expectedBold: false, expectedBlink: false },
 				{ fg: 15, bg: 0, expectedBold: true, expectedBlink: false },
@@ -473,7 +450,6 @@ describe('File Module - Advanced Operations', () => {
 		});
 
 		it('should test ANSI color code generation', () => {
-			// Test ANSI color mapping
 			const colors = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
 			colors.forEach(color => {
@@ -491,7 +467,6 @@ describe('File Module - Advanced Operations', () => {
 		});
 
 		it('should test file size calculations', () => {
-			// Test various file size calculations
 			const testCases = [
 				{ width: 80, height: 25, expectedBinSize: 80 * 25 * 2 },
 				{ width: 132, height: 50, expectedBinSize: 132 * 50 * 2 },

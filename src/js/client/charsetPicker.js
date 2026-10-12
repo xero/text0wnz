@@ -1,5 +1,5 @@
 /**
- * Charset picker modal (P5, durdraw lineage): search every Unicode
+ * Charset picker modal: search every Unicode
  * block by name, preview the glyphs the bundled hex fonts cover,
  * click to insert at the cursor, and import charset tables (durdraw
  * .ini or teXt0wnz .json) that then ride the F-key bar via the
@@ -198,9 +198,9 @@ const createCharsetPicker = () => {
 
 	const show = () => {
 		open = true;
-		// compat lockout stays visible (PLAN P5 gate): vanilla collab
-		// servers cannot carry unicode cells; a session that negotiated
-		// the t0wnz extension suite carries them natively
+		// compat lockout stays visible: vanilla collab servers cannot
+		// carry unicode cells; a session that negotiated the t0wnz
+		// extension suite carries them natively
 		const lockNote = $('charsetLockNote');
 		if (lockNote) {
 			lockNote.classList.toggle(

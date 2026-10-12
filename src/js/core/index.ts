@@ -1,7 +1,7 @@
 /**
- * 0wnzlib (O4): the shared pure-TS doc model + codec surface
- * (PLAN.md §3.3). Lives under src/js/core until publish-prep extracts
- * it to packages/0wnzlib; this file is the future package entry point.
+ * 0wnzlib: the shared pure-TS doc model + codec surface. Lives under
+ * src/js/core until publish-prep extracts it to packages/0wnzlib; this
+ * file is the future package entry point.
  */
 
 export * from './doc.js';

@@ -1,9 +1,9 @@
 /**
- * Minimal ZIP reader (P6, the 16colo.rs in-app browser): enough to
- * open one piece out of a scene pack zip fetched from the archive
- * mirror. Central-directory driven, store (0) and deflate (8) methods
- * only, inflated through the runtime-native
- * DecompressionStream('deflate-raw') like the other codecs — no
+ * Minimal ZIP reader for the 16colo.rs in-app browser: enough to open
+ * one piece out of a scene pack zip fetched from the archive mirror.
+ * Central-directory driven, store (0) and deflate (8) methods only,
+ * inflated through the runtime-native
+ * DecompressionStream('deflate-raw') like the other codecs; no
  * dependency, no zip64, no encryption (scene packs are small flat
  * archives; anything else throws a CodecError).
  */
@@ -17,8 +17,8 @@ const LOCAL_SIG = 0x04034b50;
 /**
  * Per-entry extraction cap: scene pieces are kilobytes; anything close
  * to this is a decompression bomb, and the size check must run BEFORE
- * inflation (review finding: a 4MB stream expanding to 4GB OOMed the
- * tab before the after-the-fact length compare).
+ * inflation (an after-the-fact length compare lets a 4MB stream expand
+ * to 4GB first).
  */
 export const MAX_ZIP_ENTRY_BYTES = 32 * 1024 * 1024;
 

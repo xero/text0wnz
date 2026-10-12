@@ -1,5 +1,5 @@
 /**
- * Moebius wire protocol codec (PLAN §3.6.1): the de facto collab
+ * Moebius wire protocol codec: the de facto collab
  * dialect, frozen since ≤2021. Frames are JSON `{type, data}`; the
  * enum below is transcribed from moebiusXBIN `app/document/doc.js:7`
  * (the superset of upstream's server enum, which stops at SET_BG and
@@ -16,7 +16,7 @@
  *   above 63 means the whole palette is already 8-bit.
  * - `font_bytes` arrives as Node Buffer JSON ({type:'Buffer',
  *   data:[...]}) from the moebiusXBIN fork; receivers choke on it
- *   unless revived defensively (landmine §3.6.2 #3).
+ *   unless revived defensively (landmine #3).
  * - every client->server frame carries `data.id`; SET_CANVAS_SIZE
  *   broadcasts without it crash vanilla Moebius clients (landmine #2).
  * - icy_draw's Block.code is a u32 unicode codepoint; vanilla Moebius
@@ -206,7 +206,7 @@ const expandRuns = (
 			throw new ProtocolError(`bad ${label} run ${JSON.stringify(run)}`);
 		}
 		// the bound applies BEFORE expansion: a hostile run like
-		// [32, 1e9] must never allocate first (review finding)
+		// [32, 1e9] must never allocate first
 		if (out.length + run[1] + 1 > maxLength) {
 			throw new ProtocolError(`${label} stream exceeds ${maxLength} cells`);
 		}

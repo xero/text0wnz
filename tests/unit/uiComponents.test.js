@@ -10,7 +10,6 @@ import {
 	createToolPreview,
 } from '../../src/js/client/ui.js';
 
-// Mock the State module
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		textArtCanvas: {
@@ -45,16 +44,12 @@ describe('UI Components', () => {
 	};
 
 	beforeEach(() => {
-		// Clear DOM
 		document.body.innerHTML = '';
-		// Reset all mocks
 		vi.clearAllMocks();
 	});
 
 	afterEach(() => {
-		// Clean up any remaining DOM elements
 		document.body.innerHTML = '';
-		// Restore all mocks to prevent memory leaks
 		vi.restoreAllMocks();
 	});
 
@@ -174,7 +169,6 @@ describe('UI Components', () => {
 			// Clear the mock to ensure we track only this call
 			State.palette.setForegroundColor.mockClear();
 
-			// Simulate pressing '3' key
 			const keyEvent = new KeyboardEvent('keydown', {
 				key: '3',
 				code: 'Digit3',
@@ -186,7 +180,6 @@ describe('UI Components', () => {
 
 			document.dispatchEvent(keyEvent);
 
-			// Color should be set
 			expect(State.palette.setForegroundColor).toHaveBeenCalled();
 		});
 
@@ -198,7 +191,6 @@ describe('UI Components', () => {
 
 			controller.ignore();
 
-			// Try to trigger shortcut
 			const keyEvent = new KeyboardEvent('keydown', {
 				key: 'd',
 				code: 'KeyD',
@@ -223,7 +215,6 @@ describe('UI Components', () => {
 			controller.ignore();
 			controller.unignore();
 
-			// Now shortcut should work
 			const keyEvent = new KeyboardEvent('keydown', {
 				key: 'd',
 				code: 'KeyD',
@@ -294,7 +285,6 @@ describe('UI Components', () => {
 
 			createResolutionController(lbl, txtC, txtR);
 
-			// Trigger canvas size change event
 			const event = createEvent('onTextCanvasSizeChange');
 			document.dispatchEvent(event);
 
@@ -310,14 +300,12 @@ describe('UI Components', () => {
 
 			createDragDropController(handler, el);
 
-			// Simulate drag enter
 			const dragEnterEvent = createEvent('dragenter');
 			dragEnterEvent.preventDefault = vi.fn();
 			document.dispatchEvent(dragEnterEvent);
 
 			expect(el.style.display).toBe('flex');
 
-			// Simulate drop
 			const dropEvent = createEvent('drop');
 			dropEvent.preventDefault = vi.fn();
 			dropEvent.dataTransfer = { files: [{ name: 'test.ans' }]};
@@ -334,12 +322,10 @@ describe('UI Components', () => {
 
 			createDragDropController(handler, el);
 
-			// Simulate drag enter
 			const dragEnterEvent = createEvent('dragenter');
 			dragEnterEvent.preventDefault = vi.fn();
 			document.dispatchEvent(dragEnterEvent);
 
-			// Simulate drag leave
 			const dragLeaveEvent = createEvent('dragleave');
 			dragLeaveEvent.preventDefault = vi.fn();
 			document.dispatchEvent(dragLeaveEvent);
@@ -387,7 +373,6 @@ describe('UI Components', () => {
 
 			createMenuController([{ button, menu }], canvas, view);
 
-			// Click to open
 			const clickEvent = createEvent('click');
 			button.dispatchEvent(clickEvent);
 

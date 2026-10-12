@@ -1,8 +1,8 @@
 /**
- * Plugin surface (P6, durdraw lineage): the run(api) contract — reads
+ * Plugin surface (durdraw lineage): the run(api) contract (reads
  * snapshot the document at plugin start, writes buffer into ONE
- * undoable batch, bounds clamp — plus module-shape validation and the
- * manager's run/report flow.
+ * undoable batch, bounds clamp), plus module-shape validation and
+ * the manager's run/report flow.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {

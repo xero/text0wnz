@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import Toolbar from '../../src/js/client/toolbar.js';
 
-// Mock State module
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		menus: { close: vi.fn() },
@@ -19,11 +18,8 @@ describe('Toolbar DOM Tests', () => {
 	let user;
 
 	beforeEach(() => {
-		// Clear DOM
 		document.body.innerHTML = '';
-		// Create a new userEvent instance for each test
 		user = userEvent.setup();
-		// Clear all mocks
 		vi.clearAllMocks();
 	});
 
@@ -133,12 +129,10 @@ describe('Toolbar DOM Tests', () => {
 			Toolbar.add(button1, onFocus1, onBlur1);
 			Toolbar.add(button2, onFocus2, vi.fn());
 
-			// Activate first tool
 			await user.click(screen.getByRole('button', { name: /tool 1/i }));
 			expect(button1).toHaveClass('toolbarDisplayed');
 			expect(onFocus1).toHaveBeenCalled();
 
-			// Activate second tool
 			await user.click(screen.getByRole('button', { name: /tool 2/i }));
 			expect(button2).toHaveClass('toolbarDisplayed');
 			expect(button1).not.toHaveClass('toolbarDisplayed');
@@ -157,7 +151,7 @@ describe('Toolbar DOM Tests', () => {
 
 			await user.dblClick(button);
 
-			// Should call onFocus twice (once for each click)
+			// one activation per click
 			expect(onFocus).toHaveBeenCalledTimes(2);
 		});
 	});
@@ -195,19 +189,16 @@ describe('Toolbar DOM Tests', () => {
 			Toolbar.add(button1, onFocus1, vi.fn());
 			Toolbar.add(button2, onFocus2, vi.fn());
 
-			// Activate first tool
 			await user.click(button1);
 			expect(button1).toHaveClass('toolbarDisplayed');
 
 			vi.clearAllMocks();
 
-			// Activate second tool
 			await user.click(button2);
 			expect(button2).toHaveClass('toolbarDisplayed');
 
 			vi.clearAllMocks();
 
-			// Return to previous tool
 			Toolbar.returnToPreviousTool();
 			expect(onFocus1).toHaveBeenCalled();
 			expect(button1).toHaveClass('toolbarDisplayed');
@@ -298,23 +289,19 @@ describe('Toolbar DOM Tests', () => {
 			const onFocus = vi.fn();
 			Toolbar.add(button, onFocus, vi.fn());
 
-			// Click multiple times rapidly
 			await user.click(button);
 			await user.click(button);
 			await user.click(button);
 
-			// Should handle all clicks without error
 			expect(onFocus).toHaveBeenCalledTimes(3);
 		});
 
 		it('should handle buttons appended after page load', async () => {
-			// Simulate dynamic button creation
 			const button = document.createElement('button');
 			button.id = 'dynamic-tool';
 			button.setAttribute('aria-label', 'Dynamic Tool');
 			button.textContent = 'Dynamic';
 
-			// Add to DOM after test start
 			document.body.appendChild(button);
 
 			const onFocus = vi.fn();
@@ -341,12 +328,10 @@ describe('Toolbar DOM Tests', () => {
 			Toolbar.add(button1, vi.fn(), vi.fn());
 			Toolbar.add(button2, vi.fn(), vi.fn());
 
-			// Activate first tool
 			await user.click(button1);
 			expect(button1).toHaveClass('toolbarDisplayed');
 			expect(button2).not.toHaveClass('toolbarDisplayed');
 
-			// Activate second tool
 			await user.click(button2);
 			expect(button1).not.toHaveClass('toolbarDisplayed');
 			expect(button2).toHaveClass('toolbarDisplayed');
@@ -363,11 +348,9 @@ describe('Toolbar DOM Tests', () => {
 				buttons.push(button);
 			}
 
-			// Click each button
 			for (const button of buttons) {
 				await user.click(button);
 
-				// Count how many buttons have the active class
 				const activeButtons = buttons.filter(b =>
 					b.classList.contains('toolbarDisplayed'));
 				expect(activeButtons).toHaveLength(1);

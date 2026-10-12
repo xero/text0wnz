@@ -117,8 +117,8 @@ describe('room persistence', () => {
 		restarted.loadState(viaSidecar);
 		expect(expandExtCells(restarted.extState().cells, 2)[1]).toEqual(cell);
 
-		// envelope path (sidecar lost): fidelity survives because the
-		// .0wnz now stores the real art, not the vanilla projection
+		// envelope path (sidecar lost): fidelity survives because the .0wnz
+		// stores the real art, not the vanilla projection
 		rmSync(path.join(dir, 'uni.state.json'));
 		const viaEnvelope = await loadRoomDoc(dir, 'uni');
 		const again = createRoom({ name: 'uni', columns: 2, rows: 1 });

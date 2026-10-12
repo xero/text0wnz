@@ -1,9 +1,7 @@
 /**
- * chromium-gl rail (PLAN.md P0 CI task): proves the CI container exposes a
- * working WebGL2 context under SwiftShader BEFORE the P1 GL renderer lands,
- * so renderer work never debugs CI plumbing and renderer regressions at the
- * same time. Once P1 ships, this project forces ?renderer=gl and asserts
- * the GLRenderer is the active implementation.
+ * chromium-gl rail: proves the CI container exposes a working WebGL2
+ * context under SwiftShader, so GL renderer regressions never have to be
+ * untangled from CI plumbing.
  */
 import { test, expect } from '@playwright/test';
 
@@ -27,7 +25,7 @@ test.describe('chromium-gl environment', () => {
 		});
 		expect(info).not.toBeNull();
 		expect(info.version).toContain('WebGL 2.0');
-		// Glyph atlas pages (PLAN.md §3.1) need at least 4096px textures
+		// Glyph atlas pages need at least 4096px textures
 		expect(info.maxTextureSize).toBeGreaterThanOrEqual(4096);
 		// In the CI container the launch flags force software GL; goldens
 		// rendered there must never silently flip to a hardware driver

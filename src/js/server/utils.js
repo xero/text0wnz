@@ -1,4 +1,3 @@
-// Usage flags
 const printHelp = () => {
 	console.log(`teXt0wnz backend server
 Usage: {bun,node} server [port] [options]

@@ -1,17 +1,15 @@
 /**
- * Pure cell-level editing algebra ported from v2's canvas.js closures
- * (PLAN.md §3.2: half-block algebra ≈1207-1375, mirror tables
- * ≈1097-1158, shading cycle from freehandTools.js, bright-background
- * normalization from optimizeBlocks). Everything here is integer math
- * over `{charCode, fg, bg}` cells in classic16 terms (palette indices
- * 0-15, bg 0-15 with 8-15 = ice-bright or blink per the doc flag); the
- * editor layer owns the plane-word encoding.
+ * Pure cell-level editing algebra (half blocks, mirror, shading,
+ * bright-background normalization), kept parity-equivalent with v2.
+ * Everything here is integer math over `{charCode, fg, bg}` cells in
+ * classic16 terms (palette indices 0-15, bg 8-15 = ice-bright or blink
+ * per the doc flag); the editor layer owns the plane-word encoding.
  *
  * NAMING WARNING: v2's magicNumbers.js swaps the half-block names
  * (UPPER_HALFBLOCK = 220 which is CP437 ▄, LOWER_HALFBLOCK = 223 which
- * is ▀); its logic is self-consistent by value. This port names the
- * glyphs by their true CP437 meaning and was transcribed by VALUE, not
- * by v2 name. The parity suite pins equivalence.
+ * is ▀). This port names glyphs by their true CP437 meaning,
+ * transcribed by VALUE, not by v2 name. The parity suite pins
+ * equivalence.
  */
 
 export const FULL_BLOCK = 219; // █
@@ -181,7 +179,7 @@ export const overlayHalfBlock = (
 export const optimizeCell = (cell: EditCell): EditCell | null => {
 	const { charCode, fg, bg } = cell;
 	// the bright-bg rewrite is classic16 ice semantics only; extended
-	// color words (P5) pass through untouched
+	// color words pass through untouched
 	if (bg < 8 || bg > 15) {
 		return null;
 	}

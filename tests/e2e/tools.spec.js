@@ -15,7 +15,6 @@ test.describe('Drawing Tools', () => {
 		const halfblockTool = page.locator('#halfblock');
 		await halfblockTool.click();
 
-		// Check if tool is selected (may have active class)
 		const classList = await halfblockTool.getAttribute('class');
 		expect(classList).toBeTruthy();
 	});
@@ -29,7 +28,6 @@ test.describe('Drawing Tools', () => {
 		await characterBrushTool.click();
 		await page.waitForTimeout(300);
 
-		// Verify tool is active
 		const classList = await characterBrushTool.getAttribute('class');
 		expect(classList).toBeTruthy();
 	});
@@ -53,7 +51,6 @@ test.describe('Drawing Tools', () => {
 		await lineTool.click();
 		await page.waitForTimeout(300);
 
-		// Draw a line
 		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
@@ -75,7 +72,6 @@ test.describe('Drawing Tools', () => {
 		await squareTool.click();
 		await page.waitForTimeout(300);
 
-		// Draw a square
 		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
@@ -97,7 +93,6 @@ test.describe('Drawing Tools', () => {
 		await circleTool.click();
 		await page.waitForTimeout(300);
 
-		// Draw a circle
 		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
@@ -115,7 +110,6 @@ test.describe('Drawing Tools', () => {
 		await selectionTool.click();
 		await page.waitForTimeout(300);
 
-		// Create a selection
 		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
@@ -140,7 +134,6 @@ test.describe('Drawing Tools', () => {
 		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
-		// Ensure box is defined before proceeding
 		expect(box).not.toBeNull();
 
 		if (box) {
@@ -193,7 +186,6 @@ test.describe('Tool Features', () => {
 	});
 
 	test('should support undo operation', async ({ page }) => {
-		// Draw something
 		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
@@ -208,7 +200,6 @@ test.describe('Tool Features', () => {
 			await page.mouse.up();
 			await page.waitForTimeout(500);
 
-			// Undo with keyboard shortcut
 			await page.keyboard.down('Control');
 			await page.keyboard.press('z');
 			await page.keyboard.up('Control');
@@ -217,7 +208,6 @@ test.describe('Tool Features', () => {
 	});
 
 	test('should support redo operation', async ({ page }) => {
-		// Draw something
 		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
@@ -232,13 +222,11 @@ test.describe('Tool Features', () => {
 			await page.mouse.up();
 			await page.waitForTimeout(300);
 
-			// Undo
 			await page.keyboard.down('Control');
 			await page.keyboard.press('z');
 			await page.keyboard.up('Control');
 			await page.waitForTimeout(300);
 
-			// Redo
 			await page.keyboard.down('Control');
 			await page.keyboard.press('y');
 			await page.keyboard.up('Control');
@@ -251,7 +239,7 @@ test.describe('Tool Features', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			// Draw something - click brushes to show brush toolbar
+			// Click brushes to show the brush toolbar
 			await page.locator('#brushes').click();
 			await page.waitForTimeout(200);
 			await page.locator('#halfblock').click();
@@ -261,7 +249,6 @@ test.describe('Tool Features', () => {
 			await page.mouse.up();
 			await page.waitForTimeout(300);
 
-			// Select the area
 			await page.locator('#selection').click();
 			await page.mouse.move(box.x + 40, box.y + 40);
 			await page.mouse.down();
@@ -269,13 +256,11 @@ test.describe('Tool Features', () => {
 			await page.mouse.up();
 			await page.waitForTimeout(300);
 
-			// Copy
 			const copyButton = page.locator('#copy');
 			if (await copyButton.isVisible()) {
 				await copyButton.click();
 				await page.waitForTimeout(300);
 
-				// Paste
 				const pasteButton = page.locator('#paste');
 				if (await pasteButton.isVisible()) {
 					await pasteButton.click();

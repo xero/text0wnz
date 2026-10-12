@@ -1,15 +1,13 @@
 /**
- * Service worker unit coverage. The SKIP_WAITING listener: main.js
- * posts it when the user accepts the update modal; the worker must call
- * skipWaiting() in response (this path was dead until the postMessage
- * audit found service.js had no message listener at all). The recovery
- * path: a worker generation precached index.html with revision:null and
- * wedged returning browsers on stale HTML, so install must detect that
- * generation (legacy runtime caches or a revisionless precached
- * index.html), flag it, and skip waiting; activate must then purge the
- * legacy caches and reload only the wedged (non-answering) clients.
- * Workbox and the worker global are stubbed; jsdom has no service
- * worker scope.
+ * Service worker unit coverage. The worker must answer a same-origin
+ * SKIP_WAITING message with skipWaiting() (main.js posts it when the
+ * user accepts the update modal). Recovery: a generation that
+ * precached index.html with revision:null wedges returning browsers
+ * on stale HTML, so install must detect that generation (legacy
+ * runtime caches or a revisionless precached index.html), flag it,
+ * and skip waiting; activate must then purge the legacy caches and
+ * reload only the wedged (non-answering) clients. Workbox and the
+ * worker global are stubbed; jsdom has no service worker scope.
  */
 import {
 	describe,

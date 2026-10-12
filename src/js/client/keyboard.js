@@ -37,7 +37,6 @@ const createFKeys = () => {
 		predefinedSets.forEach(set => {
 			set.forEach(char => usedChars.add(char));
 		});
-		// Generate sets for remaining characters
 		let currentSet = [];
 		for (let i = 0; i < 256; i++) {
 			if (!usedChars.has(i)) {
@@ -48,7 +47,6 @@ const createFKeys = () => {
 				}
 			}
 		}
-		// Add any remaining characters as a final set
 		if (currentSet.length > 0) {
 			while (currentSet.length < 12) {
 				currentSet.push(32); // Pad with spaces
@@ -58,8 +56,8 @@ const createFKeys = () => {
 		return charSets;
 	};
 
-	// P5 charset tables (durdraw model): pages are {label, chars} where
-	// chars are tokens - 0-255 draws the classic font, negative is
+	// charset tables (durdraw model): pages are {label, chars} where
+	// chars are tokens; 0-255 draws the classic font, negative is
 	// ~codepoint and renders/draws through the hex fonts + glyph table
 	const classicPages = generateCharSets().map((chars, index) => ({
 		label: `CP437 ${index + 1}`,
@@ -149,7 +147,6 @@ const createFKeys = () => {
 			.then(resolved => commit(resolved.get(~token) ?? 63));
 	};
 
-	// Update all fkey canvases with current set
 	const updateFKeyDisplays = () => {
 		const currentPage = fkeySets[currentSetIndex];
 		const currentSet = currentPage.chars;
@@ -160,12 +157,10 @@ const createFKeys = () => {
 		for (let i = 0; i < 12; i++) {
 			const canvas = $('fkey' + i);
 			if (canvas) {
-				// Set canvas internal dimensions
 				canvas.width = State.font.getWidth();
 				canvas.height = State.font.getHeight();
 
-				// Keep CSS display size fixed at 1.5x of BASE font size
-				// This maintains the original UI appearance regardless of zoom
+				// CSS size stays 1.5x the BASE font so zoom never resizes it
 				const baseWidth = State.fontWidth;
 				const baseHeight = State.fontHeight;
 				const fixedScale = 1.5;
@@ -203,7 +198,6 @@ const createFKeys = () => {
 		}
 	};
 
-	// Initialize fkey canvases
 	for (let i = 0; i < 12; i++) {
 		const canvas = $('fkey' + i);
 		const wrap = $('fkey' + i + 'w');
@@ -214,7 +208,6 @@ const createFKeys = () => {
 		}
 	}
 
-	// Set up navigation
 	const prevButton = $('fkeySetPrev');
 	const nextButton = $('fkeySetNext');
 
@@ -241,7 +234,6 @@ const createFKeys = () => {
 	}
 
 	const keyDown = e => {
-		// Handle F1-F12 function keys
 		const fKeyMatch = e.code.match(/^F(\d+)$/);
 		if (
 			!e.altKey &&
@@ -280,7 +272,6 @@ const createFKeys = () => {
 		document.removeEventListener('keydown', keyDown);
 	};
 
-	// Update displays when palette/font changes
 	document.addEventListener('onPaletteChange', updateFKeyDisplays);
 	document.addEventListener('onForegroundChange', updateFKeyDisplays);
 	document.addEventListener('onBackgroundChange', updateFKeyDisplays);
@@ -362,12 +353,11 @@ const createCursor = canvasContainer => {
 		canvas.style.top = y * State.font.getHeight() - 1 + 'px';
 		State.positionInfo.update(x, y);
 		State.pasteTool.setSelection(x, y, 1, 1);
-		// peers render our cursor natively (P4); network throttles sends
+		// peers render our cursor natively; network throttles sends
 		document.dispatchEvent(
 			new CustomEvent('onTextCursorMove', { detail: { x, y } }),
 		);
 
-		// Auto-scroll viewport to keep cursor visible
 		scrollViewportToCursor();
 	};
 
@@ -377,7 +367,7 @@ const createCursor = canvasContainer => {
 		}
 		const fontHeight = State.font.getHeight();
 		const fontWidth = State.font.getWidth();
-		const bufferRows = 5; // Number of rows as buffer
+		const bufferRows = 5;
 
 		const cursorPixelY = y * fontHeight;
 		const cursorPixelX = x * fontWidth;
@@ -388,27 +378,21 @@ const createCursor = canvasContainer => {
 		const scrollTop = viewport.scrollTop;
 		const scrollLeft = viewport.scrollLeft;
 
-		// Check vertical scrolling
 		const cursorTop = cursorPixelY - bufferPixels;
 		const cursorBottom = cursorPixelY + fontHeight + bufferPixels;
 
 		if (cursorTop < scrollTop) {
-			// Cursor is above viewport, scroll up
 			viewport.scrollTop = Math.max(0, cursorTop);
 		} else if (cursorBottom > scrollTop + viewportHeight) {
-			// Cursor is below viewport, scroll down
 			viewport.scrollTop = Math.max(0, cursorBottom - viewportHeight);
 		}
 
-		// Check horizontal scrolling
 		const cursorLeft = cursorPixelX - bufferRows * fontWidth;
 		const cursorRight = cursorPixelX + fontWidth + bufferRows * fontWidth;
 
 		if (cursorLeft < scrollLeft) {
-			// Cursor is left of viewport, scroll left
 			viewport.scrollLeft = Math.max(0, cursorLeft);
 		} else if (cursorRight > scrollLeft + viewportWidth) {
-			// Cursor is right of viewport, scroll right
 			viewport.scrollLeft = Math.max(0, cursorRight - viewportWidth);
 		}
 	};
@@ -478,7 +462,7 @@ const createCursor = canvasContainer => {
 		if (!e.ctrlKey && !e.altKey) {
 			if (!e.shiftKey && !e.metaKey) {
 				switch (e.code) {
-					case 'Enter': // Enter key
+					case 'Enter':
 						e.preventDefault();
 						newLine();
 						break;
@@ -712,7 +696,7 @@ const createSelectionCursor = element => {
 	element.appendChild(cursor);
 
 	// an open selection must track metric changes or it drifts off its
-	// cells (zoom left it behind in v2)
+	// cells
 	const refreshMetrics = () => {
 		if (visible) {
 			processCoords();
@@ -807,7 +791,7 @@ const createKeyboardController = () => {
 		const cursorY = State.cursor.getY();
 		if (currentRows <= 1) {
 			return;
-		} // Don't delete if only one row
+		}
 		State.textArtCanvas.startUndo();
 		const newImageData = new Uint16Array(currentColumns * (currentRows - 1));
 		const oldImageData = State.textArtCanvas.getImageData();
@@ -818,8 +802,6 @@ const createKeyboardController = () => {
 					oldImageData[y * currentColumns + x];
 			}
 		}
-		// Skip the row at cursor position (delete it)
-		// Copy rows after cursor position
 		for (let y = cursorY + 1; y < currentRows; y++) {
 			for (let x = 0; x < currentColumns; x++) {
 				newImageData[(y - 1) * currentColumns + x] =
@@ -872,7 +854,7 @@ const createKeyboardController = () => {
 		const cursorX = State.cursor.getX();
 		if (currentColumns <= 1) {
 			return;
-		} // Don't delete if only one column
+		}
 		State.textArtCanvas.startUndo();
 		const newImageData = new Uint16Array((currentColumns - 1) * currentRows);
 		const oldImageData = State.textArtCanvas.getImageData();
@@ -882,7 +864,6 @@ const createKeyboardController = () => {
 				newImageData[y * (currentColumns - 1) + x] =
 					oldImageData[y * currentColumns + x];
 			}
-			// Skip the column at cursor position (delete it)
 			for (let x = cursorX + 1; x < currentColumns; x++) {
 				newImageData[y * (currentColumns - 1) + x - 1] =
 					oldImageData[y * currentColumns + x];
@@ -1014,7 +995,6 @@ const createKeyboardController = () => {
 	const keyDown = e => {
 		if (!ignored) {
 			if (!e.altKey && !e.ctrlKey && !e.metaKey) {
-				// Tab key - insert tab character
 				if (e.code === 'Tab') {
 					e.preventDefault();
 					draw(9); // Tab character code
@@ -1213,9 +1193,8 @@ const createKeyboardController = () => {
 	]);
 
 	/**
-	 * Converts a Unicode code point to the corresponding code in the custom code page.
-	 * If the code point exists in the unicodeMapping Map, returns the mapped value.
-	 * Otherwise, returns the original code point.
+	 * Map a Unicode code point to its CP437 code, or pass it through
+	 * unchanged.
 	 *
 	 * @param {number} keyCode - The Unicode code point to convert.
 	 * @returns {number} The mapped code page value or the original code point.
@@ -1225,17 +1204,13 @@ const createKeyboardController = () => {
 	const keyPress = e => {
 		if (!ignored) {
 			if (!e.altKey && !e.ctrlKey && !e.metaKey) {
-				// Check for printable characters
 				if (e.key.length === 1) {
-					// Single character keys (printable characters)
 					e.preventDefault();
 					draw(convertUnicode(e.key.charCodeAt(0)));
 				} else if (e.key === 'Enter') {
-					// Enter key - cursor to new line
 					e.preventDefault();
 					State.cursor.newLine();
 				} else if (e.key === 'Backspace') {
-					// Backspace key - delete text
 					e.preventDefault();
 					if (State.cursor.getX() > 0) {
 						deleteText();
@@ -1248,7 +1223,6 @@ const createKeyboardController = () => {
 					draw(21);
 				}
 			} else if (e.ctrlKey) {
-				// Handle Ctrl key combinations
 				if (e.key === 'u' || e.key === 'U') {
 					// Ctrl+U - Pick up colors from current position
 					e.preventDefault();
@@ -1418,7 +1392,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 		background === 0;
 
 	/**
-	 * PabloDraw-style paste modes (P6 steal):
+	 * PabloDraw-style paste modes:
 	 * - 'transparent': blank cells in the CLIPBOARD don't overwrite
 	 * - 'under': cells land only where the TARGET is blank
 	 * One undoable batch either way.
@@ -1479,9 +1453,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 				) {
 					const columns = State.textArtCanvas.getColumns();
 					const rows = State.textArtCanvas.getRows();
-					// Check for oversized content
 					const lines = text.split(/\r\n|\r|\n/);
-					// Check single line width
 					if (
 						lines.length === 1 &&
 						lines[0].length > columns * magicNumbers.PASTE_LIMIT_MULTIPLIER
@@ -1491,18 +1463,16 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 						);
 						return;
 					}
-					// Check multi-line height
 					if (lines.length > rows * magicNumbers.PASTE_LIMIT_MULTIPLIER) {
 						alert(
 							`Paste buffer too large. Content exceeds ${rows * magicNumbers.PASTE_LIMIT_MULTIPLIER} lines. Please copy smaller blocks.`,
 						);
 						return;
 					}
-					// Tokenize grapheme clusters FIRST (P5 paste pipeline,
-					// core/paste.ts): unicode blanks become spaces, zero-width
-					// chars vanish, box/shade chars hit their real CP437
-					// codes, and codepoints outside CP437 resolve through the
-					// doc glyph table below.
+					// Tokenize grapheme clusters FIRST (core/paste.ts): unicode
+					// blanks become spaces, zero-width chars vanish, box/shade
+					// chars hit their real CP437 codes, and codepoints outside
+					// CP437 resolve through the doc glyph table below.
 					const { tokens, unmapped } = tokenizePasteText(text);
 					const resolved =
 						unmapped.size > 0
@@ -1527,13 +1497,11 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 								currentX = startX;
 								continue;
 							}
-							// Check bounds - stop if we're beyond canvas vertically
 							if (currentY >= drawRows) {
 								break;
 							}
-							// Handle edge truncation - skip characters that exceed the right edge
+							// past the right edge: drop chars until the next newline
 							if (currentX >= drawColumns) {
-								// Skip this character and continue until we hit a newline
 								continue;
 							}
 							const charCode =
@@ -1677,7 +1645,6 @@ const createSelectionTool = () => {
 			return;
 		}
 		State.textArtCanvas.startUndo();
-		// Get all blocks in the selection
 		for (let y = 0; y < selection.height; y++) {
 			const blocks = [];
 			for (let x = 0; x < selection.width; x++) {
@@ -1685,7 +1652,6 @@ const createSelectionTool = () => {
 					State.textArtCanvas.getBlock(selection.x + x, selection.y + y),
 				);
 			}
-			// Flip the row horizontally
 			State.textArtCanvas.draw(callback => {
 				for (let x = 0; x < selection.width; x++) {
 					const sourceBlock = blocks[x];
@@ -1720,7 +1686,6 @@ const createSelectionTool = () => {
 			return;
 		}
 		State.textArtCanvas.startUndo();
-		// Get all blocks in the selection
 		for (let x = 0; x < selection.width; x++) {
 			const blocks = [];
 			for (let y = 0; y < selection.height; y++) {
@@ -1728,7 +1693,6 @@ const createSelectionTool = () => {
 					State.textArtCanvas.getBlock(selection.x + x, selection.y + y),
 				);
 			}
-			// Flip the column vertically
 			State.textArtCanvas.draw(callback => {
 				for (let y = 0; y < selection.height; y++) {
 					const sourceBlock = blocks[y];
@@ -1811,12 +1775,10 @@ const createSelectionTool = () => {
 				State.textArtCanvas.getRows() - selection.height,
 			),
 		);
-		// Don't process if we haven't actually moved
 		if (newX === selection.x && newY === selection.y) {
 			return;
 		}
 		State.textArtCanvas.startUndo();
-		// Only update the current selection data if we don't have it
 		if (!selectionData) {
 			selectionData = State.textArtCanvas.getArea(
 				selection.x,
@@ -1838,7 +1800,6 @@ const createSelectionTool = () => {
 		);
 		// Apply the selection at the new position, but only non-blank characters
 		setAreaSelective(selectionData, underlyingData, newX, newY);
-		// Update the selection cursor to the new position
 		State.selectionCursor.setStart(newX, newY);
 		State.selectionCursor.setEnd(
 			newX + selection.width - 1,
@@ -1847,7 +1808,6 @@ const createSelectionTool = () => {
 	};
 
 	const createEmptyArea = (width, height) => {
-		// Create an area filled with empty/blank characters (char code 0, colors 0)
 		const data = new Uint16Array(width * height);
 		for (let i = 0; i < data.length; i++) {
 			data[i] = 0; // char code 0, foreground 0, background 0
@@ -1862,10 +1822,8 @@ const createSelectionTool = () => {
 	const toggleMoveMode = () => {
 		moveMode = !moveMode;
 		if (moveMode) {
-			// Enable move mode
 			moveButton.classList.add('enabled');
 			State.selectionCursor.getElement().classList.add('moveMode');
-			// Store selection data and original position when entering move mode
 			const selection = State.selectionCursor.getSelection();
 			if (selection) {
 				selectionData = State.textArtCanvas.getArea(
@@ -1880,12 +1838,11 @@ const createSelectionTool = () => {
 					width: selection.width,
 					height: selection.height,
 				};
-				// For a move operation, the old position should be cleared (empty)
-				// We'll restore empty space as we move away
+				// a move empties the old position as the selection drags away
 				underlyingData = createEmptyArea(selection.width, selection.height);
 			}
 		} else {
-			// Disable move mode - finalize the move by clearing original position if different
+			// finalize: clear the original position if the selection moved
 			const currentSelection = State.selectionCursor.getSelection();
 			if (
 				originalPosition &&
@@ -1893,7 +1850,6 @@ const createSelectionTool = () => {
 				(currentSelection.x !== originalPosition.x ||
 				  currentSelection.y !== originalPosition.y)
 			) {
-				// Check if the original and current positions overlap
 				const xOverlap =
 					originalPosition.x < currentSelection.x + currentSelection.width &&
 					originalPosition.x + originalPosition.width > currentSelection.x;
@@ -1909,7 +1865,7 @@ const createSelectionTool = () => {
 						originalPosition.width,
 						originalPosition.height,
 					);
-					// Get what's currently at the original position (which includes part of the moved selection)
+					// the original position now holds part of the moved selection
 					const currentAtOriginal = State.textArtCanvas.getArea(
 						originalPosition.x,
 						originalPosition.y,
@@ -1924,7 +1880,6 @@ const createSelectionTool = () => {
 						originalPosition.y,
 					);
 				} else {
-					// No overlap
 					State.textArtCanvas.deleteArea(
 						originalPosition.x,
 						originalPosition.y,
@@ -1946,7 +1901,6 @@ const createSelectionTool = () => {
 	// Selection expansion methods - delegated from cursor
 	const startSelectionExpansion = () => {
 		if (!State.selectionCursor.isVisible()) {
-			// Start selection from current cursor position
 			selectionStartX = State.cursor.getX();
 			selectionStartY = State.cursor.getY();
 			selectionEndX = selectionStartX;
@@ -2105,7 +2059,6 @@ const createSelectionTool = () => {
 		const fontWidth = State.font.getWidth();
 		const bufferRows = 5; // Same buffer as cursor
 
-		// Use the end position of the selection for focus
 		const selectionPixelY = selection.y * fontHeight;
 		const selectionPixelX = selection.x * fontWidth;
 		const bufferPixels = bufferRows * fontHeight;
@@ -2115,7 +2068,6 @@ const createSelectionTool = () => {
 		const scrollTop = viewport.scrollTop;
 		const scrollLeft = viewport.scrollLeft;
 
-		// Check vertical scrolling
 		const selectionTop = selectionPixelY - bufferPixels;
 		const selectionBottom =
 			selectionPixelY + selection.height * fontHeight + bufferPixels;
@@ -2126,7 +2078,6 @@ const createSelectionTool = () => {
 			viewport.scrollTop = Math.max(0, selectionBottom - viewportHeight);
 		}
 
-		// Check horizontal scrolling
 		const selectionLeft = selectionPixelX - bufferRows * fontWidth;
 		const selectionRight =
 			selectionPixelX + selection.width * fontWidth + bufferRows * fontWidth;
@@ -2157,7 +2108,6 @@ const createSelectionTool = () => {
 			const selection = State.selectionCursor.getSelection();
 			const selectionHeight = selection ? selection.height : 1;
 
-			// Calculate new position
 			let newStartY = selectionStartY + delta;
 			let newEndY = selectionEndY + delta;
 
@@ -2304,7 +2254,7 @@ const createSelectionTool = () => {
 		// Execute pending initial action if one was set from keyboard mode
 		if (pendingInitialAction) {
 			const action = pendingInitialAction;
-			pendingInitialAction = null; // Clear it immediately
+			pendingInitialAction = null;
 			switch (action) {
 				case 'ArrowLeft':
 					shiftLeft();
@@ -2332,7 +2282,6 @@ const createSelectionTool = () => {
 
 		// Reset move mode if it was active and finalize any pending move
 		if (moveMode) {
-			// Finalize the move by clearing original position if different
 			const currentSelection = State.selectionCursor.getSelection();
 			if (
 				originalPosition &&
@@ -2340,7 +2289,6 @@ const createSelectionTool = () => {
 				(currentSelection.x !== originalPosition.x ||
 				  currentSelection.y !== originalPosition.y)
 			) {
-				// Check if the original and current positions overlap
 				const xOverlap =
 					originalPosition.x < currentSelection.x + currentSelection.width &&
 					originalPosition.x + originalPosition.width > currentSelection.x;
@@ -2351,13 +2299,13 @@ const createSelectionTool = () => {
 
 				State.textArtCanvas.startUndo();
 				if (hasOverlap) {
-					// If there's overlap, we need to selectively clear only the non-overlapping parts
-					// For now, use setAreaSelective with empty data to preserve the moved selection
+					// overlap: clear only the non-overlapping parts, preserving
+					// the moved selection
 					const emptyData = createEmptyArea(
 						originalPosition.width,
 						originalPosition.height,
 					);
-					// Get what's currently at the original position (which includes part of the moved selection)
+					// the original position now holds part of the moved selection
 					const currentAtOriginal = State.textArtCanvas.getArea(
 						originalPosition.x,
 						originalPosition.y,
@@ -2395,7 +2343,6 @@ const createSelectionTool = () => {
 		State.pasteTool.disable();
 	};
 
-	// Method to set pending initial action when switching from keyboard mode
 	const setPendingAction = keyCode => {
 		pendingInitialAction = keyCode;
 	};

@@ -1,5 +1,5 @@
 /**
- * Minimap panel (P6): toggle lifecycle and the no-markup guard. The
+ * Minimap panel: toggle lifecycle and the no-markup guard. The
  * pixel render itself is exercised in the browser (jsdom has no 2D
  * context); render() must no-op gracefully there.
  */

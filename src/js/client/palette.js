@@ -254,7 +254,7 @@ const createPalette = RGB6Bit => {
 
 	/** @param {number} index @param {number[]} newColor 6-bit [r, g, b, a] */
 	const setRGBAColor = (index, newColor) => {
-		const expandedColor = xbinToRgba(newColor); // Expand 6-bit to 8-bit
+		const expandedColor = xbinToRgba(newColor);
 		RGBAColors[index] = new Uint8Array(expandedColor);
 		document.dispatchEvent(
 			new CustomEvent('onPaletteChange', {
@@ -450,7 +450,7 @@ const createPalettePicker = canvas => {
 			e.code.startsWith('Digit') &&
 			['0', '1', '2', '3', '4', '5', '6', '7'].includes(e.code.slice(-1))
 		) {
-			const num = parseInt(e.code.slice(-1), 10); // Extract the digit from 'Digit0', etc.
+			const num = parseInt(e.code.slice(-1), 10);
 
 			if (e.ctrlKey) {
 				e.preventDefault();
@@ -460,7 +460,7 @@ const createPalettePicker = canvas => {
 					palette.setForegroundColor(num);
 				}
 			} else if (e.altKey) {
-				// Using e.code ensures we detect the physical key regardless of the character produced
+				// e.code reads the physical key, whatever character it produced
 				e.preventDefault();
 				if (palette.getBackgroundColor() === num) {
 					palette.setBackgroundColor(num + 8);
@@ -585,7 +585,6 @@ const createPalettePicker = canvas => {
 		}
 	};
 
-	// Create canvases
 	const pickerCtx = canvas.getContext('2d');
 	if (pickerCtx) {
 		for (let i = 0; i < 16; i++) {
@@ -595,14 +594,12 @@ const createPalettePicker = canvas => {
 			);
 		}
 	}
-	// Custom colors
 	const customColor = /** @type {HTMLInputElement|null} */ ($('customColor'));
 	if (customColor) {
 		cc = customColor;
 		cc.addEventListener('change', colorChange);
 		cc.addEventListener('blur', colorChange);
 	}
-	// Add event listeners
 	canvas.addEventListener('touchend', touchEnd);
 	canvas.addEventListener('touchcancel', touchEnd);
 	canvas.addEventListener('mouseup', mouseEnd);

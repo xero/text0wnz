@@ -10,7 +10,6 @@ import path from 'node:path';
 export default ({ mode }) => {
 	const cacheBuster = () => Date.now().toString();
 
-	// load settings from the .env file or use defaults
 	process.env = { ...process.env, ...loadEnv(mode, process.cwd()) };
 	const domain = process.env.VITE_DOMAIN || 'https://text.0w.nz';
 	const uiDir = ((process.env.VITE_UI_DIR || 'ui').replace(/^\/|\/?$/g, '')) + '/';
@@ -48,7 +47,6 @@ export default ({ mode }) => {
 						if (!assetName) return '';
 						const info = assetName.split('.');
 						const ext = info[info.length - 1];
-						// explicit file placement
 						if (assetName === 'index.css') {
 							return `${uiDir}stylez-[hash].css`;
 						}
@@ -133,7 +131,6 @@ export default ({ mode }) => {
 				}
 			},
 			viteStaticCopy({
-				// move static assets into place
 				silent: true,
 				targets: [
 					{ src: 'LICENSE.txt', dest: '.' },
@@ -154,7 +151,6 @@ export default ({ mode }) => {
 				}
 			},
 			Sitemap({
-				// generate an xml sitemap and robots.txt file
 				hostname: domain,
 				changefreq: 'monthly',
 				// block all these gross bots and scrapers
@@ -237,7 +233,6 @@ export default ({ mode }) => {
 				],
 			}),
 			{
-				// build output logging
 				name: 'log-sitemap-robots',
 				apply: 'build',
 				closeBundle() {
@@ -253,7 +248,6 @@ export default ({ mode }) => {
 				injectRegister: false,
 				includeAssets: ['**/*'],
 				manifest: {
-					// PWA configuration and metadata
 					name: 'teXt0wnz',
 					short_name: 'teXt0wnz',
 					id: '/',
@@ -318,7 +312,6 @@ export default ({ mode }) => {
 					launch_handler: {
 						client_mode: 'focus-existing',
 					},
-					// fav/app icons
 					icons: [{
 						src: `${uiDir}img/web-app-manifest-512x512.png`,
 						sizes: '512x512',
@@ -388,10 +381,8 @@ export default ({ mode }) => {
 					}],
 					version: cacheBuster(),
 				},
-				// these options only apply under the `injectManifest` key in
-				// injectManifest mode; a previous `workbox` block here was
-				// silently ignored, which shipped index.html with
-				// revision:null and wedged stale HTML into returning browsers
+				// injectManifest mode reads these from `injectManifest`; a
+				// `workbox` block is silently ignored
 				injectManifest: {
 					globPatterns: [
 						'**/*.{js,css,html,woff2}',

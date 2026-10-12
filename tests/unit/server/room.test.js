@@ -5,7 +5,8 @@
  * pins: D12 (password gates spectators), O14 (spectators cannot draw,
  * CAN chat and hear chat), landmine 2 (SET_CANVAS_SIZE relays the
  * sender's id), the do-not-diverge rule (default relay never
- * persisted), and the row-aware resize that fixes v2's scramble.
+ * persisted), and the row-aware resize (v2 moves cells by linear
+ * offset, scrambling rows).
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createRoom, SERVER_CAPS, ROOM_DEFAULTS } from '../../../src/js/server/room.js';
@@ -551,9 +552,9 @@ describe('extension suite v1 (t0wnz-ext-1)', () => {
 		const reply = caps.ofType(T0wnzAction.EXT_TIMELAPSE)[0];
 		expect(reply.data.ops).toHaveLength(2);
 		const { doc } = timelapseToDoc(reply.data);
-		// the last frame equals the live doc: G(70) at x2, H? no — ops were
-		// A..F across x0-x3 twice; final cells are C D E F with E,F from
-		// the log and C,D absorbed into the baseline
+		// the last frame equals the live doc: ops A..F land across x0-x3
+		// (wrapping), so the final cells are E F C D with E,F from the log
+		// and C,D absorbed into the baseline
 		const last = doc.frames.length - 1;
 		const codeAt = x =>
 			doc.glyphTable.get(doc.getCell(last, x, 0).glyph & 0xffff)?.codepoint;
@@ -598,7 +599,7 @@ describe('review hardening (P6 adversarial pass)', () => {
 			type: A.DRAW,
 			data: { x: 0, y: 0, block: { code: 0xd800, fg: 7, bg: 0 }, id: 0 },
 		});
-		// the poisoned cell used to make EVERY save throw (data loss)
+		// a poisoned cell must never make saves throw (data loss)
 		const ext = room.extState();
 		expect(() => expandExtCells(ext.cells, 2)).not.toThrow();
 		expect(expandExtCells(ext.cells, 2)[0].u).toBe(63);

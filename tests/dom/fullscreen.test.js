@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { toggleFullscreen } from '../../src/js/client/ui.js';
 
-// Mock State module
 vi.mock('../../src/js/client/state.js', () => ({ default: {} }));
 
 describe('Fullscreen DOM Tests', () => {
@@ -12,21 +11,16 @@ describe('Fullscreen DOM Tests', () => {
 	let fullscreenButton;
 
 	beforeEach(() => {
-		// Clear DOM
 		document.body.innerHTML = '';
-		// Create a new userEvent instance for each test
 		user = userEvent.setup();
-		// Clear all mocks
 		vi.clearAllMocks();
 
-		// Create fullscreen button
 		fullscreenButton = document.createElement('article');
 		fullscreenButton.id = 'fullscreen';
 		fullscreenButton.className = 'menuItem';
 		fullscreenButton.textContent = 'Toggle Fullscreen Mode';
 		document.body.appendChild(fullscreenButton);
 
-		// Mock fullscreen API
 		document.fullscreenEnabled = true;
 		document.fullscreenElement = null;
 		document.documentElement.requestFullscreen = vi.fn(() => Promise.resolve());
@@ -75,12 +69,10 @@ describe('Fullscreen DOM Tests', () => {
 		});
 
 		it('should toggle between fullscreen states', () => {
-			// Start not in fullscreen
 			document.fullscreenElement = null;
 			toggleFullscreen();
 			expect(document.documentElement.requestFullscreen).toHaveBeenCalled();
 
-			// Now in fullscreen, toggle again
 			document.fullscreenElement = document.documentElement;
 			toggleFullscreen();
 			expect(document.exitFullscreen).toHaveBeenCalled();
@@ -117,19 +109,16 @@ describe('Fullscreen DOM Tests', () => {
 		});
 
 		it('should support multiple fullscreen toggles', () => {
-			// First toggle - enter fullscreen
 			document.fullscreenElement = null;
 			toggleFullscreen();
 			expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(
 				1,
 			);
 
-			// Second toggle - exit fullscreen
 			document.fullscreenElement = document.documentElement;
 			toggleFullscreen();
 			expect(document.exitFullscreen).toHaveBeenCalledTimes(1);
 
-			// Third toggle - enter fullscreen again
 			document.fullscreenElement = null;
 			toggleFullscreen();
 			expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(
@@ -207,19 +196,16 @@ describe('Fullscreen DOM Tests', () => {
 
 	describe('Fullscreen User Interaction', () => {
 		it('should respond to keyboard shortcut simulation', async () => {
-			// Simulate F11 or similar fullscreen shortcut
 			fullscreenButton.addEventListener('click', () => {
 				toggleFullscreen();
 			});
 
-			// Trigger with keyboard event
 			await user.click(fullscreenButton);
 
 			expect(document.documentElement.requestFullscreen).toHaveBeenCalled();
 		});
 
 		it('should handle rapid toggle attempts', () => {
-			// Rapid toggles
 			document.fullscreenElement = null;
 			toggleFullscreen();
 
@@ -238,7 +224,6 @@ describe('Fullscreen DOM Tests', () => {
 
 	describe('Fullscreen Menu Integration', () => {
 		it('should be part of a menu structure', () => {
-			// Create a parent menu
 			const menu = document.createElement('div');
 			menu.className = 'menuList';
 			menu.appendChild(fullscreenButton);

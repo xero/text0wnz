@@ -171,19 +171,19 @@ const openHandler = file => {
 				file.name.toLowerCase().endsWith('.diz');
 			if (isSceneFile) {
 				await State.textArtCanvas.setFont(magicNumbers.NFO_FONT, applyData);
-				return; // Exit early since callback will be called from setFont
+				return; // setFont runs applyData
 			}
 			const isXBFile = file.name.toLowerCase().endsWith('.xb');
 			if (fontName && !isXBFile) {
-				// Only handle non-XB files here, as XB files handle font loading internally
+				// XB files handle font loading internally
 				const appFontName = Load.sauceToAppFont(fontName.trim());
 				if (appFontName) {
 					await State.textArtCanvas.setFont(appFontName, applyData);
 					closeModal();
-					return; // Exit early since callback will be called from setFont
+					return; // setFont runs applyData
 				}
 			}
-			applyData(); // Apply data without font change
+			applyData();
 			palettePicker.updatePalette(); // XB
 			closeModal();
 		},
@@ -199,14 +199,12 @@ const handleLaunchFiles = () => {
 			const fileHandle = launchParams.files[0];
 			try {
 				const file = await fileHandle.getFile();
-				// If app is already initialized, open immediately
 				if (
 					State.textArtCanvas &&
 					!bodyContainer?.classList.contains('loading')
 				) {
 					openHandler(file);
 				} else {
-					// Otherwise store for later
 					pendingFile = file;
 				}
 			} catch (error) {
@@ -322,7 +320,6 @@ const handleIOS = () => {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-	// Initialize service worker
 	if ('serviceWorker' in navigator) {
 		navigator.serviceWorker.register('service.js').then(reg => {
 			swRegistration = reg;
@@ -356,7 +353,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			}
 		});
 
-		// Listen for shared file messages from service worker
 		navigator.serviceWorker.addEventListener('message', async event => {
 			if (!trustedMessage(event)) {
 				return;
@@ -369,7 +365,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			}
 			if (event.data.type === 'SHARED_FILE_READY') {
 				console.log('[Share] File shared:', event.data.filename);
-				// Wait for app to be ready
 				const waitForApp = () => {
 					return new Promise(resolve => {
 						if (State.textArtCanvas && openHandler) {
@@ -385,7 +380,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 					pendingFile = sharedFileData.file;
 					openHandler(pendingFile);
 					pendingFile = null;
-					// Clean up the cached file
 					caches
 						.open(CACHE_ID)
 						.then(cache => cache.delete(CACHE_DATA))
@@ -400,10 +394,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 	}
 
 	try {
-		// Start preloading fonts in the background first
 		FontCache.preloadCommonFonts();
 
-		// Initialize global state and variables
 		State.startInitialization();
 		$$$$();
 
@@ -416,9 +408,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 			$('paste'),
 			$('delete'),
 		);
-		// Create canvas but defer heavy initialization
 		State.textArtCanvas = createTextArtCanvas(canvasContainer, () => {
-			// Remove loading state immediately after canvas is minimally ready
+			// drop the loading state as soon as the canvas is minimally ready
 			bodyContainer.classList.remove('loading');
 
 			// Tier 2: use setTimeout to allow UI to respond
@@ -428,8 +419,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 				State.cursor = createCursor(canvasContainer);
 				State.selectionTool = createSelectionTool();
 
-				// Initialize zoom: the controller first (pinch/wheel/focal
-				// anchoring), then the slider UI that routes through it
+				// zoom controller first (pinch/wheel/focal anchoring), then
+				// the slider UI that routes through it
 				const viewportElement = $('viewport');
 				if (viewportElement) {
 					createZoomController(viewportElement);
@@ -445,7 +436,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 					State.toolPreview = createToolPreview($('toolPreview'));
 					State.title = 'Untitled';
 
-					// Once everything is ready...
 					State.waitFor(
 						[
 							'palette',
@@ -478,7 +468,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 					);
 				};
 
-				// Use requestIdleCallback if available, otherwise defer with timeout
 				if ('requestIdleCallback' in window) {
 					requestIdleCallback(initSecondaryTools);
 				} else {
@@ -493,13 +482,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 const initializeAppComponents = async () => {
-	// If we're not loading a new file, restore from localStorage
+	// a pending launch file wins over the autosave restore
 	if (!pendingFile) {
 		State.restoreStateFromLocalStorage();
 	}
 	// iOS quirks
 	if (isIOS) {
-		// Make file picker accept all files on iOS
 		openFile.setAttribute('accept', '*/*');
 		// track state to offset traffic lights
 		handleIOS();
@@ -532,7 +520,6 @@ const initializeAppComponents = async () => {
 	});
 	onClick($('warningYes'), async () => {
 		bodyContainer.classList.add('loading');
-		// Clear localStorage when creating a new file
 		State.clearLocalStorage();
 		State.textArtCanvas.clearXBData(async _ => {
 			State.palette = createDefaultPalette();
@@ -551,15 +538,15 @@ const initializeAppComponents = async () => {
 	onClick($('open'), () => {
 		openFile.click();
 	});
-	// P6: the 16colo.rs in-app browser opens straight into the editor
+	// the 16colo.rs in-app browser opens straight into the editor
 	const sixteen = createSixteenColors({ openFile: openHandler });
 	onClick($('browse16c'), () => sixteen?.show());
 
-	// P6: ES-module plugin surface (durdraw lineage)
+	// ES-module plugin surface (durdraw lineage)
 	const pluginManager = createPluginManager();
 	onClick($('pluginsMenu'), () => pluginManager?.show());
 
-	// P6 steal: reference-image overlay for tracing
+	// reference-image overlay for tracing
 	const referenceImage = createReferenceImage();
 	if (referenceImage) {
 		createSettingToggle(
@@ -595,23 +582,22 @@ const initializeAppComponents = async () => {
 	onClick($('navUndo'), State.textArtCanvas.undo);
 	onClick($('navRedo'), State.textArtCanvas.redo);
 
-	// P5 charset picker (durdraw lineage)
+	// charset picker (durdraw lineage)
 	const charsetPicker = createCharsetPicker();
 	onClick($('charsetPicker'), charsetPicker.show);
 
-	// P5 extended colors: the strip's 256/RGB expansion panel
+	// extended colors: the strip's 256/RGB expansion panel
 	createColorPanel();
 
-	// P6 animation: frames timeline + playback + onion skin. All four
-	// new toolbar buttons ride createSettingToggle so the 'enabled'
-	// highlight persists across toolbar view switches, exactly like the
-	// grid button (owner-reported inconsistency).
+	// frames timeline + playback + onion skin; the toolbar buttons ride
+	// createSettingToggle so the 'enabled' highlight persists across
+	// toolbar view switches, like the grid button
 	const framesPanel = createFramesPanel();
 	if (framesPanel) {
 		createSettingToggle($('navFrames'), framesPanel.isOpen, framesPanel.setOpen);
 	}
 
-	// P6 polish: minimap + CRT pass (both GL-only)
+	// minimap + CRT pass (both GL-only)
 	const minimap = createMinimap();
 	if (minimap) {
 		createSettingToggle($('navMinimap'), minimap.isVisible, visible =>
@@ -674,8 +660,8 @@ const initializeAppComponents = async () => {
 			swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
 			return;
 		}
-		// no update pending (modal opened from the menu): keep the old
-		// scorched-earth refresh as a manual recovery tool
+		// no update pending (modal opened from the menu): scorched-earth
+		// refresh as a manual recovery tool
 		State.clearLocalStorage();
 		if ('caches' in window) {
 			window.caches.keys().then(keys => {
@@ -791,7 +777,6 @@ const initializeAppComponents = async () => {
 				return;
 			}
 			State.textArtCanvas.resize(columnsValue, rowsValue);
-			// Broadcast resize to other users if in collaboration mode
 			State.network?.sendResize?.(columnsValue, rowsValue);
 			State.modal.close();
 		}
@@ -832,7 +817,6 @@ const initializeAppComponents = async () => {
 		State.textArtCanvas.getIceColors,
 		newIceColors => {
 			State.textArtCanvas.setIceColors(newIceColors);
-			// Broadcast ice colors change to other users if in collaboration mode
 			State.network?.sendIceColorsChange?.(newIceColors);
 		},
 	);
@@ -842,7 +826,6 @@ const initializeAppComponents = async () => {
 		State.font.getLetterSpacing,
 		newLetterSpacing => {
 			State.font.setLetterSpacing(newLetterSpacing);
-			// Broadcast letter spacing change to other users if in collaboration mode
 			State.network?.sendLetterSpacingChange?.(newLetterSpacing);
 		},
 	);
@@ -901,8 +884,7 @@ const initializeAppComponents = async () => {
 	const grid = createGrid($('grid'));
 	createSettingToggle($('navGrid'), grid.isShown, grid.show);
 
-	// Lazy load tools - they'll be loaded when first clicked
-	// Brushes are most common after keyboard, so we'll lazy load them
+	// everything past the default keyboard mode lazy-loads on first click
 	Toolbar.addLazy($('brushes'), async () => {
 		const { createBrushController } = await import('./freehandTools.js');
 		const brushes = createBrushController();
@@ -1071,7 +1053,6 @@ const initializeAppComponents = async () => {
 		() => {
 			keyboard.ignore();
 			paintShortcuts.ignore();
-			// Only ignore if the brushes are loaded
 			if (shadeBrush && shadeBrush.ignore) {
 				shadeBrush.ignore();
 			}
@@ -1082,7 +1063,6 @@ const initializeAppComponents = async () => {
 		() => {
 			keyboard.unignore();
 			paintShortcuts.unignore();
-			// Only unignore if the brushes are loaded
 			if (shadeBrush && shadeBrush.unignore) {
 				shadeBrush.unignore();
 			}
@@ -1094,7 +1074,6 @@ const initializeAppComponents = async () => {
 
 	updateFontDisplay();
 
-	// Touch handlers
 	viewportTap(viewport);
 
 	// Initialize chat before creating network handler
@@ -1110,7 +1089,6 @@ const initializeAppComponents = async () => {
 		() => {
 			keyboard.ignore();
 			paintShortcuts.ignore();
-			// Only ignore if the brushes are loaded
 			if (shadeBrush && shadeBrush.ignore) {
 				shadeBrush.ignore();
 			}
@@ -1121,7 +1099,6 @@ const initializeAppComponents = async () => {
 		() => {
 			keyboard.unignore();
 			paintShortcuts.unignore();
-			// Only unignore if the brushes are loaded
 			if (shadeBrush && shadeBrush.unignore) {
 				shadeBrush.unignore();
 			}
@@ -1143,7 +1120,6 @@ const initializeAppComponents = async () => {
 	onClick(navDarkmode, darkToggle);
 	window.matchMedia('(prefers-color-scheme: dark)').matches && darkToggle();
 
-	// Set up event listeners to save editor state
 	document.addEventListener('onTextCanvasUp', save);
 	document.addEventListener('keypress', save);
 	document.addEventListener('onFontChange', save);
@@ -1152,7 +1128,7 @@ const initializeAppComponents = async () => {
 	document.addEventListener('onIceColorsChange', save);
 	document.addEventListener('onOpenedFile', save);
 
-	// Flush undo history when the page is hidden or unloading
+	// the idle undo save may not have fired before the page goes away
 	document.addEventListener('visibilitychange', () => {
 		if (document.hidden) {
 			State.saveUndoHistory();
@@ -1162,14 +1138,12 @@ const initializeAppComponents = async () => {
 		State.saveUndoHistory();
 	});
 
-	// Handle pending launchQueue file
 	if (pendingFile) {
 		openHandler(pendingFile);
 		pendingFile = null;
-		return; // Exit early, don't check for shared files
+		return; // a launch file preempts share-target handling
 	}
 
-	// Handle share target files
 	const urlParams = new URLSearchParams(window.location.search);
 	const source = urlParams.get('source');
 	if (source === 'share') {
@@ -1177,7 +1151,6 @@ const initializeAppComponents = async () => {
 		if (sharedFileData) {
 			console.log(`[Share] Opening shared file: ${sharedFileData.filename}`);
 			openHandler(sharedFileData.file);
-			// Clean up the cached file
 			caches
 				.open(CACHE_ID)
 				.then(cache => cache.delete(CACHE_DATA))
@@ -1187,8 +1160,7 @@ const initializeAppComponents = async () => {
 	}
 };
 
-// Inject style sheets and manifest images into the build pipeline
-// for processing and proper inclusion in the resulting build
+// imported so the build bundles the stylesheet and manifest images
 import '../../css/style.css';
 import '../../img/logo.png';
 import '../../img/manifest/android-launchericon-48-48.png';

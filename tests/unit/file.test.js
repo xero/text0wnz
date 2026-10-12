@@ -6,7 +6,6 @@ const makeMockDoc = () => createDocV3({ columns: 80, rows: 25 });
 
 const canvasDataURL =
 	'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
-// Mock State module
 const mockState = {
 	textArtCanvas: {
 		getColumns: vi.fn(() => 80),
@@ -62,7 +61,6 @@ vi.mock('../../src/js/client/palette.js', () => ({
 	getUnicode: vi.fn(),
 }));
 
-// Mock global browser APIs
 const mockDocument = {
 	createElement: vi.fn(() => ({
 		href: '',
@@ -96,10 +94,8 @@ describe('File Module', () => {
 	let Load, Save;
 
 	beforeEach(async () => {
-		// Reset all mocks
 		vi.clearAllMocks();
 
-		// Setup global mocks
 		vi.stubGlobal('document', mockDocument);
 		global.URL = mockURL;
 		global.window = { URL: mockURL };
@@ -116,7 +112,6 @@ describe('File Module', () => {
 			return { bubbles: true, cancelable: true };
 		});
 
-		// Import the module fresh for each test
 		const fileModule = await import('../../src/js/client/file.js');
 		Load = fileModule.Load;
 		Save = fileModule.Save;
@@ -234,7 +229,7 @@ describe('File Module', () => {
 
 				const callback = vi.fn();
 
-				// The file loading sets up a FileReader - clearXBData won't be called until the reader triggers
+				// clearXBData only runs after the FileReader fires
 				expect(() => Load.file(mockFile, callback)).not.toThrow();
 			});
 
@@ -246,7 +241,7 @@ describe('File Module', () => {
 
 				const callback = vi.fn();
 
-				// The file loading sets up a FileReader - loadXBFileSequential won't be called until the reader triggers
+				// loadXBFileSequential only runs after the FileReader fires
 				expect(() => Load.file(mockFile, callback)).not.toThrow();
 			});
 
@@ -258,7 +253,7 @@ describe('File Module', () => {
 
 				const callback = vi.fn();
 
-				// The file loading sets up a FileReader - clearXBData won't be called until the reader triggers
+				// clearXBData only runs after the FileReader fires
 				expect(() => Load.file(mockFile, callback)).not.toThrow();
 			});
 
@@ -270,7 +265,7 @@ describe('File Module', () => {
 
 				const callback = vi.fn();
 
-				// The file loading sets up a FileReader - clearXBData won't be called until the reader triggers
+				// clearXBData only runs after the FileReader fires
 				expect(() => Load.file(mockFile, callback)).not.toThrow();
 			});
 		});
@@ -278,7 +273,6 @@ describe('File Module', () => {
 
 	describe('Save Module', () => {
 		beforeEach(() => {
-			// Reset UI element values
 			mockUIElements['artwork-title'].value = 'test-artwork';
 			mockUIElements['sauce-title'].value = 'Test Title';
 			mockUIElements['sauce-author'].value = 'Test Author';
@@ -479,7 +473,6 @@ describe('File Module', () => {
 
 				await Save.ans();
 
-				// Test that the function call completes without error
 				expect(global.Blob).toHaveBeenCalled();
 			});
 		});
@@ -565,9 +558,7 @@ describe('File Module', () => {
 
 		it('should handle data URL to bytes conversion', () => {
 			const testDataUrl = 'data:image/png;base64,SGVsbG8=';
-			// expectedBytes would be new Uint8Array([72, 101, 108, 108, 111]) for "Hello"
 
-			// Test the conversion logic
 			const base64Index = testDataUrl.indexOf(';base64,') + 8;
 			const base64Part = testDataUrl.slice(base64Index);
 			expect(base64Part).toBe('SGVsbG8=');
@@ -594,12 +585,10 @@ describe('File Module', () => {
 			const mockFile = { name: 'test.ans', size: 100 };
 			const callback = vi.fn();
 
-			// This tests that the function doesn't throw
 			expect(() => Load.file(mockFile, callback)).not.toThrow();
 		});
 
 		it('should handle missing DOM elements gracefully', async () => {
-			// Mock a scenario where `document.createElement` is not available
 			const originalDocument = global.document;
 			vi.stubGlobal('document', {
 				createElement: vi.fn(() => {
@@ -607,10 +596,8 @@ describe('File Module', () => {
 				}),
 			});
 
-			// Expect the Save.ans() function to throw an error
 			await expect(Save.ans()).rejects.toThrow('createElement failed');
 
-			// Restore the original document object
 			vi.stubGlobal('document', originalDocument);
 		});
 
@@ -627,21 +614,18 @@ describe('File Module', () => {
 			const mockFile = { name: 'test.ans', size: 100 };
 			const callback = vi.fn();
 
-			// Create a mock FileReader instance that will be returned by the constructor
 			const mockReaderInstance = {
 				result: null,
 				addEventListener: vi.fn(),
 				readAsArrayBuffer: vi.fn(),
 			};
 
-			// Mock FileReader constructor to return our instance
 			global.FileReader = vi.fn(function () {
 				return mockReaderInstance;
 			});
 
 			Load.file(mockFile, callback);
 
-			// Verify FileReader setup
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -667,7 +651,6 @@ describe('File Module', () => {
 
 			Load.file(mockFile, callback);
 
-			// Verify FileReader setup and clearXBData is called for BIN files
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -693,7 +676,6 @@ describe('File Module', () => {
 
 			Load.file(mockFile, callback);
 
-			// Verify FileReader setup - XB files use loadXBFileSequential
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -719,7 +701,6 @@ describe('File Module', () => {
 
 			Load.file(mockFile, callback);
 
-			// Verify FileReader setup for UTF-8 files
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -732,7 +713,6 @@ describe('File Module', () => {
 
 	describe('SAUCE Record Processing', () => {
 		it('should test SAUCE record file extension detection', () => {
-			// Test that different file extensions are handled correctly
 			const testFiles = [
 				{ name: 'test.ans', size: 100 },
 				{ name: 'test.asc', size: 100 },
@@ -761,7 +741,6 @@ describe('File Module', () => {
 		});
 
 		it('should handle SAUCE data processing logic', () => {
-			// Test the getSauce utility function logic
 			const testWidth = 80;
 
 			// This tests the internal getSauce logic
@@ -772,7 +751,6 @@ describe('File Module', () => {
 
 	describe('ANSI Parsing Engine', () => {
 		it('should test ANSI file processing setup', () => {
-			// Test ANSI file processing initialization
 			const mockFile = { name: 'test.ans', size: 150 };
 			const callback = vi.fn();
 
@@ -788,7 +766,6 @@ describe('File Module', () => {
 
 			Load.file(mockFile, callback);
 
-			// Verify setup
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -796,7 +773,6 @@ describe('File Module', () => {
 		});
 
 		it('should test control character mapping logic', () => {
-			// Test control character handling logic
 			const controlCodes = [10, 13, 26, 27];
 			const mappedCodes = controlCodes.map(code => {
 				switch (code) {
@@ -834,7 +810,6 @@ describe('File Module', () => {
 
 			Load.file(mockFile, callback);
 
-			// Verify UTF-8 file setup
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -842,7 +817,6 @@ describe('File Module', () => {
 		});
 
 		it('should test UTF-8 decoding logic', () => {
-			// Test UTF-8 byte sequence logic
 			const utf8Sequences = [
 				{ bytes: [0x41], expected: 0x41 }, // ASCII 'A'
 				{ bytes: [0xc3, 0xa9], expected: 0xe9 }, // é
@@ -850,7 +824,6 @@ describe('File Module', () => {
 			];
 
 			utf8Sequences.forEach(seq => {
-				// Test the UTF-8 decoding logic
 				let charCode = seq.bytes[0];
 				if ((charCode & 0x80) === 0) {
 					// 1-byte sequence
@@ -873,10 +846,8 @@ describe('File Module', () => {
 
 	describe('Advanced Save Operations', () => {
 		it('should test comprehensive ANSI generation with all attribute types', async () => {
-			// Set up complex image data with various attributes
 			const complexImageData = new Uint16Array(80 * 25);
 
-			// Fill with various character and attribute combinations
 			for (let y = 0; y < 25; y++) {
 				for (let x = 0; x < 80; x++) {
 					const index = y * 80 + x;
@@ -891,7 +862,6 @@ describe('File Module', () => {
 			mockState.textArtCanvas.getColumns.mockReturnValue(80);
 			mockState.textArtCanvas.getRows.mockReturnValue(25);
 
-			// Test ANSI generation
 			await Save.ans();
 
 			expect(global.Blob).toHaveBeenCalled();
@@ -900,7 +870,6 @@ describe('File Module', () => {
 		});
 
 		it('should test UTF-8 ANSI generation without mocking issues', async () => {
-			// Set up image data with regular characters
 			const regularImageData = new Uint16Array(80 * 5);
 			for (let i = 0; i < 10; i++) {
 				regularImageData[i] = ((65 + i) << 8) | 0x07; // A-J with white on black
@@ -947,7 +916,6 @@ describe('File Module', () => {
 
 			expect(global.Blob).toHaveBeenCalled();
 
-			// Reset mock
 			global.Blob.mockClear();
 
 			// Test with odd width (should not create file)
@@ -960,10 +928,8 @@ describe('File Module', () => {
 
 	describe('Data Conversion Functions', () => {
 		it('should test binary data conversion utilities', () => {
-			// Test character code conversions for control characters
 			const testCodes = [10, 13, 26, 27, 65, 255];
 			testCodes.forEach(code => {
-				// Test that the mapping logic works
 				let mappedCode = code;
 				switch (code) {
 					case 10:
@@ -984,11 +950,9 @@ describe('File Module', () => {
 		});
 
 		it('should test color attribute processing', () => {
-			// Test ANSI to BIN color conversion
 			const ansiColors = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 			ansiColors.forEach(color => {
 				let binColor = color;
-				// Apply BIN color mapping
 				switch (color) {
 					case 4:
 						binColor = 1;
@@ -1055,7 +1019,6 @@ describe('File Module', () => {
 
 			Load.file(mockFile, callback);
 
-			// Verify FileReader setup
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -1081,7 +1044,6 @@ describe('File Module', () => {
 
 			Load.file(mockFile, callback);
 
-			// Verify setup for large files
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -1107,7 +1069,6 @@ describe('File Module', () => {
 
 			Load.file(mockFile, callback);
 
-			// Verify file loading setup
 			expect(mockReaderInstance.addEventListener).toHaveBeenCalledWith(
 				'load',
 				expect.any(Function),
@@ -1146,11 +1107,9 @@ describe('File Module', () => {
 
 	describe('Internal Data Processing', () => {
 		it('should test image data conversion logic', () => {
-			// Test the convertData function logic
 			const testData = new Uint8Array([65, 7, 0, 66, 15, 8]); // Two characters with attributes
 			const expectedLength = testData.length / 3;
 
-			// Test conversion logic
 			const output = new Uint16Array(expectedLength);
 			for (let i = 0, j = 0; i < expectedLength; i += 1, j += 3) {
 				output[i] =
@@ -1163,7 +1122,6 @@ describe('File Module', () => {
 		});
 
 		it('should test string processing utilities', () => {
-			// Test bytesToString functionality
 			const testBytes = new Uint8Array([72, 101, 108, 108, 111, 0, 87, 111, 114, 108, 100]);
 			let result = '';
 
@@ -1179,7 +1137,6 @@ describe('File Module', () => {
 		});
 
 		it('should test SAUCE metadata extraction', () => {
-			// Test SAUCE field extraction logic
 			const testSauceData = {
 				title: 'Test Title',
 				author: 'Test Author',
@@ -1192,7 +1149,6 @@ describe('File Module', () => {
 				tInfo2: 25,
 			};
 
-			// Verify SAUCE data structure
 			expect(testSauceData.title).toBe('Test Title');
 			expect(testSauceData.author).toBe('Test Author');
 			expect(testSauceData.tInfo1).toBe(80); // Width
@@ -1200,7 +1156,6 @@ describe('File Module', () => {
 		});
 
 		it('should test attribute processing logic', () => {
-			// Test bold and blink attribute handling
 			const testAttributes = [
 				{ fg: 7, bg: 0, expectedBold: false, expectedBlink: false },
 				{ fg: 15, bg: 0, expectedBold: true, expectedBlink: false },
@@ -1218,7 +1173,6 @@ describe('File Module', () => {
 		});
 
 		it('should test ANSI color code generation', () => {
-			// Test ANSI color mapping
 			const colors = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
 			colors.forEach(color => {
@@ -1236,7 +1190,6 @@ describe('File Module', () => {
 		});
 
 		it('should test file size calculations', () => {
-			// Test various file size calculations
 			const testCases = [
 				{ width: 80, height: 25, expectedBinSize: 80 * 25 * 2 },
 				{ width: 132, height: 50, expectedBinSize: 132 * 50 * 2 },

@@ -1,8 +1,8 @@
 /**
- * Editor current-frame semantics (P6 frames UI): writes route to the
- * selected frame, strokes remember their frame, undo/redo navigate
- * back to the frame they touch, and frame removal drops the undo
- * history (stroke frame indexes go stale when frames shift).
+ * Editor current-frame semantics: writes route to the selected frame,
+ * strokes remember their frame, undo/redo navigate back to the frame
+ * they touch, and frame removal drops the undo history (stroke frame
+ * indexes go stale when frames shift).
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createDocV3, type DocV3 } from '../../src/js/core/doc.js';

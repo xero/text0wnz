@@ -1,5 +1,5 @@
 /**
- * In-app profiling harness (PLAN.md P0). Loaded ONLY when the page is opened
+ * In-app profiling harness. Loaded ONLY when the page is opened
  * with ?profile (see main.js). Runs scripted scroll / keystroke / zoom /
  * repaint scenarios against the live renderer and reports fps, latencies,
  * and canvas memory, so the same numbers can be captured on desktop CI
@@ -262,7 +262,7 @@ const installProfiler = () => {
 				: 'unknown',
 			machine: machineDescriptor(),
 			docSize: preset,
-			// Headline metrics (PLAN.md P0 baseline shape)
+			// Headline metrics (the committed baseline shape)
 			scrollFps: scroll.fling.avgFps,
 			keystrokeMs: keystroke.medianMs,
 			zoomMs: zoom.zoomMs,

@@ -1,5 +1,5 @@
 /**
- * Reference-image overlay (P6 steal): a translucent image floated over
+ * Reference-image overlay: a translucent image floated over
  * the art for tracing. Local file only (object URL, never uploaded),
  * opacity and width sliders, pointer-events none so every tool draws
  * straight through it. Width is a percentage of the canvas and
@@ -30,8 +30,8 @@ const createReferenceImage = () => {
 
 	const clear = () => {
 		// .canvasOverlay visibility rides the 'enabled' class (the
-		// toolPreview convention): the class hides overlays regardless of
-		// 'hide', which is why the first cut never showed anything
+		// toolPreview convention): the class hides overlays regardless
+		// of 'hide'
 		overlay.classList.remove('enabled');
 		overlay.removeAttribute('src');
 		if (objectUrl) {

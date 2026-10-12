@@ -1,5 +1,5 @@
 /**
- * Deterministic synthetic fixture generators — corpus tier (b).
+ * Deterministic synthetic fixture generators (corpus tier b).
  * Pure functions, no DOM, no randomness beyond a seeded LCG: every call with
  * the same arguments yields identical bytes, so tests need no committed blobs.
  * Formats follow docs/sauce-format.md and docs/xb-format.md.
@@ -195,7 +195,7 @@ export const makeBin = ({ columns = 160, rows = 25, seed = 3, sauce = null } = {
 	return bytes;
 };
 
-/** Deterministic 6-bit (0–63) XBin palette, 16 × RGB. */
+/** Deterministic 6-bit (0-63) XBin palette, 16 × RGB. */
 export const makeXBinPalette = (seed = 5) => {
 	const rand = lcg(seed);
 	const palette = new Uint8Array(48);

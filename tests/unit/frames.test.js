@@ -1,6 +1,6 @@
 /**
- * Frames timeline panel (P6): strip rendering, navigation, structure
- * ops, playback stepping with per-frame delays, onion toggle, and the
+ * Frames timeline panel: strip rendering, navigation, structure ops,
+ * playback stepping with per-frame delays, onion toggle, and the
  * collab lockout.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -185,8 +185,8 @@ describe('playback', () => {
 		canvas.addFrame();
 		document.getElementById('frameBaudPlay').click();
 		expect(canvas.setBaudReveal).toHaveBeenCalled();
-		// the play/stop button must stop the baud reveal, not start
-		// frame playback on top of it (owner report)
+		// the play/stop button must stop the baud reveal, not start frame
+		// playback on top of it
 		document.getElementById('framePlay').click();
 		expect(canvas.setBaudReveal).toHaveBeenLastCalledWith(null);
 		expect(panel.isPlaying()).toBe(false);

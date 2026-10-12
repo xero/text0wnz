@@ -18,7 +18,6 @@ import {
 } from '../../src/js/client/freehandTools.js';
 import { createSelectionTool } from '../../src/js/client/keyboard.js';
 
-// Mock dependencies
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		fontWidth: 8,
@@ -33,7 +32,6 @@ vi.mock('../../src/js/client/state.js', () => ({
 		textArtCanvas: {
 			startUndo: vi.fn(),
 			drawHalfBlock: vi.fn(callback => {
-				// Mock the callback pattern
 				const mockCallback = vi.fn();
 				callback(mockCallback);
 			}),
@@ -138,7 +136,6 @@ vi.mock('../../src/js/client/toolbar.js', () => ({
 
 vi.mock('../../src/js/client/ui.js', () => ({
 	$: vi.fn(_ => {
-		// Create mock DOM elements
 		const mockElement = {
 			style: { display: 'block' },
 			classList: {
@@ -212,7 +209,6 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	})),
 }));
 
-// Mock global document and DOM methods
 const mockDocument = {
 	createElement: vi.fn(tag => ({
 		style: {},
@@ -244,7 +240,6 @@ const mockDocument = {
 	dispatchEvent: vi.fn(),
 };
 
-// Setup global mocks
 vi.stubGlobal('document', mockDocument);
 global.Image = vi.fn(() => ({
 	addEventListener: vi.fn(),
@@ -272,11 +267,9 @@ describe('Freehand Tools', () => {
 			expect(cursor).toHaveProperty('resize');
 			expect(cursor).toHaveProperty('setPos');
 
-			// Test show functionality
 			cursor.show();
 			expect(typeof cursor.show).toBe('function');
 
-			// Test hide functionality
 			cursor.hide();
 			expect(typeof cursor.hide).toBe('function');
 		});
@@ -399,7 +392,6 @@ describe('Freehand Tools', () => {
 				controller.disable();
 			}).not.toThrow();
 
-			// Verify event listeners were added/removed
 			expect(mockDocument.addEventListener).toHaveBeenCalled();
 			expect(mockDocument.removeEventListener).toHaveBeenCalled();
 		});
@@ -882,7 +874,6 @@ describe('Freehand Tools', () => {
 				mockCharacterElement,
 			);
 
-			// Mock blocky half block with specific colors
 			const State = (await import('../../src/js/client/state.js')).default;
 			State.textArtCanvas.getHalfBlock.mockReturnValue({
 				isBlocky: true,
@@ -918,10 +909,8 @@ describe('Freehand Tools', () => {
 				backgroundColor: 0,
 			});
 
-			// Test the sampling (now async)
 			await tool.sample(5, 10);
 
-			// Should call appropriate brush selection
 			expect(mockCharacterBrush.select).toHaveBeenCalledWith(65);
 			expect(mockCharacterElement.click).toHaveBeenCalled();
 		});
@@ -934,7 +923,6 @@ describe('Freehand Tools', () => {
 				mockCharacterElement,
 			);
 
-			// Mock shading character
 			const State = (await import('../../src/js/client/state.js')).default;
 			State.textArtCanvas.getHalfBlock.mockReturnValue({
 				isBlocky: false,
@@ -948,10 +936,8 @@ describe('Freehand Tools', () => {
 				backgroundColor: 0,
 			});
 
-			// Test the sampling (now async)
 			await tool.sample(5, 10);
 
-			// Should call shade brush selection
 			expect(mockShadeBrush.select).toHaveBeenCalledWith(177);
 			expect(mockShadeElement.click).toHaveBeenCalled();
 		});
@@ -982,7 +968,6 @@ describe('Freehand Tools', () => {
 		it('should test line drawing in HalfBlockController', () => {
 			const controller = createHalfBlockController();
 
-			// Test that controller can be created and used
 			expect(controller).toHaveProperty('enable');
 			expect(controller).toHaveProperty('disable');
 
@@ -1008,11 +993,9 @@ describe('Freehand Tools', () => {
 		it('should test square coordinate processing', () => {
 			const controller = createSquareController();
 
-			// Test that square controller can handle coordinates
 			expect(controller).toHaveProperty('enable');
 			expect(controller).toHaveProperty('disable');
 
-			// Enable/disable should work without throwing
 			expect(() => {
 				controller.enable();
 				controller.disable();
@@ -1022,11 +1005,9 @@ describe('Freehand Tools', () => {
 		it('should test circle coordinate processing', () => {
 			const controller = createCircleController();
 
-			// Test that circle controller can handle coordinates
 			expect(controller).toHaveProperty('enable');
 			expect(controller).toHaveProperty('disable');
 
-			// Enable/disable should work without throwing
 			expect(() => {
 				controller.enable();
 				controller.disable();
@@ -1039,7 +1020,6 @@ describe('Freehand Tools', () => {
 			const shadingPanel = await createShadingPanel();
 			const characterPanel = await createCharacterBrushPanel();
 
-			// Test enable/disable
 			expect(() => {
 				shadingPanel.enable();
 				characterPanel.enable();
@@ -1052,7 +1032,6 @@ describe('Freehand Tools', () => {
 			const shadingPanel = await createShadingPanel();
 			const characterPanel = await createCharacterBrushPanel();
 
-			// Test ignore/unignore
 			expect(() => {
 				shadingPanel.ignore();
 				characterPanel.ignore();
@@ -1068,7 +1047,6 @@ describe('Freehand Tools', () => {
 			const shadingMode = shadingPanel.getMode();
 			const characterMode = characterPanel.getMode();
 
-			// Both should return valid mode objects
 			expect(shadingMode).toHaveProperty('charCode');
 			expect(shadingMode).toHaveProperty('foreground');
 			expect(shadingMode).toHaveProperty('background');
@@ -1079,7 +1057,6 @@ describe('Freehand Tools', () => {
 			expect(characterMode).toHaveProperty('background');
 			expect(characterMode).toHaveProperty('halfBlockMode');
 
-			// Character panel should not be in half-block mode
 			expect(characterMode.halfBlockMode).toBe(false);
 		});
 	});
@@ -1125,10 +1102,8 @@ describe('Freehand Tools', () => {
 			const afterDisableCount =
 				mockDocument.removeEventListener.mock.calls.length;
 
-			// Should have called addEventListener when enabled
 			expect(afterEnableCount).toBeGreaterThan(initialCallCount);
 
-			// Should have called removeEventListener when disabled
 			expect(afterDisableCount).toBeGreaterThan(0);
 		});
 
@@ -1276,7 +1251,6 @@ describe('Freehand Tools', () => {
 
 		it('should handle palette generation and updates', () => {
 			expect(() => {
-				// Test that the floating panel palette works with basic operations
 				panelPalette.getElement();
 				panelPalette.updateColor(0);
 				// Note: redrawSwatches method may not be exposed in the public API
@@ -1285,7 +1259,6 @@ describe('Freehand Tools', () => {
 
 		it('should handle color position calculations for different positions', () => {
 			expect(() => {
-				// Test various color indices to exercise color calculation logic
 				for (let i = 0; i < 16; i++) {
 					panelPalette.updateColor(i);
 				}

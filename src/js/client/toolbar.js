@@ -25,7 +25,7 @@ const Toolbar = (() => {
 			) {
 				previousButton = currentButton;
 			}
-			blur(); // Deactivate the current tool
+			blur();
 			tool.button.classList.add('toolbarDisplayed');
 			currentButton = tool.button;
 		}
@@ -66,11 +66,9 @@ const Toolbar = (() => {
 		const enable = async () => {
 			closeMenu();
 
-			// If the tool is not loaded, load it first.
 			if (!tool.isLoaded) {
 				try {
 					const loadedTool = await tool.toolLoader();
-					// Once loaded, update the tool's definition with its actual implementation.
 					tool.onFocus = loadedTool.onFocus;
 					tool.onBlur = loadedTool.onBlur;
 					tool.isLoaded = true;

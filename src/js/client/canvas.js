@@ -1,4 +1,3 @@
-// Global reference using state management
 import State from './state.js';
 import { createCanvas } from './ui.js';
 import { loadFontFromImage, loadFontFromXBData } from './font.js';
@@ -42,16 +41,14 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			dirtyRegionScheduled = false,
 			activeChunks = new Set();
 
-	// P2 engine swap (PLAN §4): the three-plane v3 doc + editor core own
-	// the document and undo; `imageData` stays alive as a u16 MIRROR fed
-	// by onWrite so the renderers and the collab protocol read the exact
-	// buffer shape they always did. The renderers move onto the planes
-	// in the follow-up step; collab stays u16 until P4 by design.
+	// The three-plane v3 doc + editor core own the document and undo;
+	// `imageData` is a u16 MIRROR fed by onWrite for the chunk fallback
+	// renderer and the vanilla collab protocol.
 	const doc = createDocV3({ columns, rows });
 
 	// OPFS autosave journal (PLAN §3.2): committed strokes append live;
 	// doc-level changes and undo/redo write a debounced fresh keyframe.
-	// Collab sessions never journal - the server owns that doc (v2 rule).
+	// Collab sessions never journal; the server owns that doc.
 	const journal = createJournalStore();
 	let keyframeTimer = null;
 	// The first keyframe of a session supersedes whatever the journal
@@ -113,11 +110,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				updateOnionIndex(index);
 			}
 			if (history) {
-				// Moebius-native wire cells (P4): unpacked coordinates, so
-				// the signed (index<<16) row-409 cap is gone for good. The
-				// ext payload carries full fidelity straight off the planes;
-				// network.js sends it in ext sessions and strips it for
-				// vanilla ones (P6 extension suite).
+				// Wire cells carry unpacked coordinates (no signed index<<16
+				// row cap). The ext payload is full fidelity straight off the
+				// planes; network.js sends it in ext sessions and strips it
+				// for vanilla ones.
 				const frame = doc.frames[editor.getCurrentFrame()];
 				const glyphValue = frame.glyph[index];
 				const glyphId = glyphValue & 0xffff;
@@ -141,7 +137,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				enqueueDirtyCell(x, y);
 				return;
 			}
-			// network quickDraw path keeps v2's chunk bookkeeping
+			// network quickDraw path keeps the chunk renderer's bookkeeping
 			if (glRenderer) {
 				enqueueDirtyCell(x, y);
 				return;
@@ -215,8 +211,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	// Baud preview (P6): reveal the current frame in encoded-byte order
-	// at a chosen line rate — another data-level compose, GL-only.
+	// Baud preview: reveal the current frame in encoded-byte order at a
+	// chosen line rate; another data-level compose, GL-only.
 	/** @type {{glyph: Uint32Array, fg: Uint32Array, bg: Uint32Array} | null} */
 	let baudPlanes = null;
 	let baudReveal = -1;
@@ -303,15 +299,14 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					visibleStartRow: 0,
 					visibleEndRow: 0,
 				},
-				canvasChunks = new Map(); // Key: chunkIndex, Value: { canvas, ctx, onBlink, offBlink, rendered: bool }
+				canvasChunks = new Map();
 
-	// GL is the default renderer (PLAN.md P1/O11, owner-approved 2026-10-10).
-	// All paint paths delegate to it when active; the doc model is shared.
-	// ?renderer=2d forces the legacy chunk renderer below, which also remains
-	// the automatic fallback wherever webgl2 is unavailable; its deletion is
-	// owner-triggered after the next tagged release.
+	// GL is the default renderer. All paint paths delegate to it when
+	// active; the doc model is shared. ?renderer=2d forces the legacy
+	// chunk renderer below, which is also the automatic fallback
+	// wherever webgl2 is unavailable.
 	let glRenderer = null;
-	// unicode glyph pages (P5): created on the first glyph id >= 256, so
+	// unicode glyph pages: created on the first glyph id >= 256, so
 	// classic docs never fetch the manifest or any block
 	let hexPages = null;
 	const ensureHexPages = () => {
@@ -350,7 +345,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 						: doc.frames[editor.getCurrentFrame()];
 				},
 				// exports read the REAL document, never the onion/baud
-				// composites (review finding: PNGs shipped the ghost)
+				// composites
 				getDocPlanes: () => doc.frames[editor.getCurrentFrame()],
 				getIceColors: iceColorsNow,
 				getGlyphDef: glyphId => doc.glyphTable.get(glyphId),
@@ -367,7 +362,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	}
 
 	const enqueueDirtyRegion = (x, y, w, h) => {
-		// Validate and clamp region to canvas bounds
 		if (x < 0) {
 			w += x;
 			x = 0;
@@ -376,7 +370,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			h += y;
 			y = 0;
 		}
-		// Invalid or empty region
 		if (x >= columns || y >= rows || w <= 0 || h <= 0) {
 			return;
 		}
@@ -394,7 +387,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const drawRegion = (x, y, w, h) => {
-		// Validate and clamp region to canvas bounds
 		if (x < 0) {
 			w += x;
 			x = 0;
@@ -403,7 +395,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			h += y;
 			y = 0;
 		}
-		// Invalid or empty region, no-op
 		if (x >= columns || y >= rows || w <= 0 || h <= 0) {
 			return;
 		}
@@ -419,7 +410,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return;
 		}
 
-		// Redraw all cells in the region
 		for (let regionY = y; regionY < y + h; regionY++) {
 			for (let regionX = x; regionX < x + w; regionX++) {
 				const index = regionY * columns + regionX;
@@ -455,7 +445,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			glRenderer.drawCell(x, y);
 			return;
 		}
-		// Only update if chunk is active
 		const chunkIndex = Math.floor(y / chunkSize);
 		const chunk = canvasChunks.get(chunkIndex);
 		if (!chunk || !activeChunks.has(chunkIndex)) {
@@ -484,7 +473,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return;
 		}
 
-		// Dynamic batch sizing based on canvas size
 		const totalCells = rows * columns;
 		let batchSize;
 
@@ -510,7 +498,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 		drawRegion(0, startRow, columns, endRow - startRow);
 
-		// Call progress callback if provided
 		if (onProgress) {
 			const progress = (endRow / (totalRows || rows)) * 100;
 			onProgress(progress);
@@ -518,15 +505,14 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 		if (endRow < (totalRows || rows)) {
 			requestAnimationFrame(() => {
-				// Dynamic batch sizing based on performance
 				const frameTime = performance.now() - frameStart;
 				let nextBatchSize = batchSize;
 
 				// Adjust batch size to maintain snappy fps
 				if (frameTime < 10) {
-					nextBatchSize = Math.min(batchSize * 2, 25); // Increase if fast
+					nextBatchSize = Math.min(batchSize * 2, 25);
 				} else if (frameTime > 16) {
-					nextBatchSize = Math.max(Math.floor(batchSize / 2), 1); // Decrease if slow
+					nextBatchSize = Math.max(Math.floor(batchSize / 2), 1);
 				}
 				progressiveRedraw(
 					endRow,
@@ -544,7 +530,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	// Dirty region coalescing algorithm
 	const coalesceRegions = regions => {
 		if (regions.length <= 1) {
 			return regions;
@@ -557,7 +542,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			.fill()
 			.map(() => Array(gridWidth).fill(false));
 
-		// Mark all cells that contain dirty regions
 		regions.forEach(region => {
 			const startGridX = Math.floor(region.x / gridCellSize);
 			const startGridY = Math.floor(region.y / gridCellSize);
@@ -576,7 +560,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			}
 		});
 
-		// Create optimized regions from the grid
 		const result = [];
 		for (let y = 0; y < gridHeight; y++) {
 			let start = -1;
@@ -717,16 +700,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}, 10);
 	};
 
-	/**
-	 * Calculate which chunks are visible in the current viewport
-	 */
 	const calculateVisibleChunks = () => {
 		const fontHeight =
 			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
 		const totalChunks = Math.ceil(rows / chunkSize);
 		const viewportElement = document.getElementById('viewport');
 		if (!viewportElement) {
-			// Fallback: render all chunks if viewport not available
 			console.warn('[Canvas] #viewport not found, rendering all chunks');
 			return {
 				startChunk: 0,
@@ -739,18 +718,16 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 		const viewportHeight = viewportElement.clientHeight || window.innerHeight;
 
-		// Buffer is 1 chunk (25 rows) above and below for smooth scrolling
+		// buffer rows above and below the viewport for smooth scrolling
 		const bufferRows = chunkSize * 2;
 		const viewportTop = viewportState.scrollTop;
 		const viewportBottom = viewportTop + viewportHeight;
 
-		// Add buffer zone (1 chunk = 25 rows worth of pixels)
 		const bufferedTop = Math.max(0, viewportTop - bufferRows * fontHeight);
 		const bufferedBottom = Math.min(
 			rows * fontHeight,
 			viewportBottom + bufferRows * fontHeight,
 		);
-		// Convert pixel positions to chunk indices
 		const startChunk = Math.floor(bufferedTop / (chunkSize * fontHeight));
 		const endChunk = Math.min(
 			totalChunks - 1,
@@ -766,9 +743,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		};
 	};
 
-	/**
-	 * Update viewport state based on current container scroll/size
-	 */
 	const updateViewportState = () => {
 		const viewportElement = document.getElementById('viewport');
 		if (!viewportElement) {
@@ -794,9 +768,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		);
 	};
 
-	/**
-	 * Create or retrieve a canvas chunk for a specific index
-	 */
 	const getOrCreateCanvasChunk = chunkIndex => {
 		if (canvasChunks.has(chunkIndex)) {
 			return canvasChunks.get(chunkIndex);
@@ -806,7 +777,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const fontHeight =
 			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
 
-		// Calculate chunk dimensions
 		const chunkStartRow = chunkIndex * chunkSize;
 		const chunkEndRow = Math.min((chunkIndex + 1) * chunkSize, rows);
 		const chunkHeight = chunkEndRow - chunkStartRow;
@@ -835,9 +805,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		return chunk;
 	};
 
-	/**
-	 * Render a specific chunk with RAF batching for initial render
-	 */
+	/** async batches the initial render via RAF */
 	const renderChunk = (chunk, async = false) => {
 		if (!chunk) {
 			return;
@@ -855,7 +823,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			ctx.clearRect(0, 0, canvasWidth, chunkHeight);
 			chunk.blinkCells.clear();
 
-			// Render all cells in this chunk
 			for (let y = startRow; y < endRow; y++) {
 				for (let x = 0; x < columns; x++) {
 					const index = y * columns + x;
@@ -872,9 +839,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	/**
-	 * Redraw a single glyph in a specific chunk
-	 */
 	const redrawGlyphInChunk = (index, x, y, chunk) => {
 		const localY = y - chunk.startRow;
 		const charCode = imageData[index] >> 8;
@@ -904,9 +868,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	/**
-	 * Update legacy arrays for backward compatibility
-	 */
 	const updateLegacyArrays = () => {
 		canvases = [];
 		ctxs = [];
@@ -921,9 +882,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	/**
-	 * Render only visible chunks based on viewport
-	 */
 	const renderVisibleChunks = () => {
 		if (!canvasContainer) {
 			console.error('[Canvas] canvasContainer is null, cannot render chunks');
@@ -933,7 +891,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const { startChunk, endChunk } = calculateVisibleChunks();
 		const newActiveChunks = new Set();
 
-		// Remove chunks that are no longer visible
 		activeChunks.forEach(chunkIndex => {
 			if (chunkIndex < startChunk || chunkIndex > endChunk) {
 				const chunk = canvasChunks.get(chunkIndex);
@@ -964,18 +921,15 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			}
 		});
 
-		// Add/render visible chunks
 		for (let chunkIndex = startChunk; chunkIndex <= endChunk; chunkIndex++) {
 			newActiveChunks.add(chunkIndex);
 			let chunk = canvasChunks.get(chunkIndex);
 			if (!chunk) {
 				chunk = getOrCreateCanvasChunk(chunkIndex);
 			}
-			// Attach to DOM if not already attached
 			if (!chunk.canvas.parentNode) {
 				canvasContainer.appendChild(chunk.canvas);
 			}
-			// Render if not yet rendered
 			if (!chunk.rendered) {
 				renderChunk(chunk);
 			}
@@ -984,9 +938,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		updateLegacyArrays();
 	};
 
-	/**
-	 * Scroll event handler with trailing throttle
-	 */
+	// trailing throttle: a scroll during the RAF pass schedules one more
 	let scrollScheduled = false;
 	let pendingScrollUpdate = false;
 
@@ -1012,9 +964,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		});
 	};
 
-	/**
-	 * Resize event handler with throttling
-	 */
 	let resizeScheduled = false;
 	const handleResize = () => {
 		if (resizeScheduled) {
@@ -1028,9 +977,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		});
 	};
 
-	/**
-	 * Initialize viewport event listeners
-	 */
 	const initViewportListeners = () => {
 		const viewportElement = document.getElementById('viewport');
 		if (!viewportElement) {
@@ -1042,13 +988,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		// Remove existing listeners to avoid duplicates
 		viewportElement.removeEventListener('scroll', handleScroll);
 		window.removeEventListener('resize', handleResize);
-		// Add new listeners
 		viewportElement.addEventListener('scroll', handleScroll, { passive: true });
 		window.addEventListener('resize', handleResize, { passive: true });
 	};
 
 	const createCanvases = () => {
-		// Safety check
 		if (!canvasContainer) {
 			console.error('[Canvas] canvasContainer is null, cannot create canvases');
 			return;
@@ -1063,7 +1007,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 		redrawing = true;
 
-		// Remove existing canvas chunks
 		canvasChunks.forEach(chunk => {
 			if (chunk.canvas && chunk.canvas.parentNode) {
 				canvasContainer.removeChild(chunk.canvas);
@@ -1073,11 +1016,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		canvasChunks.clear();
 		activeChunks.clear();
 
-		// Reset legacy arrays for backward compatibility
 		canvases = [];
 		ctxs = [];
 
-		// Set container dimensions
 		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
 		const fontHeight =
 			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
@@ -1140,7 +1081,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const setFont = async (fontName, callback, scaleFactor) => {
 		try {
-			// Get scale factor from State if not provided
 			const effectiveScaleFactor =
 				scaleFactor ?? State.font?.getScaleFactor?.() ?? 1;
 
@@ -1156,7 +1096,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				State.font = font;
 				currentFontName = fontName;
 
-				// Trigger updates after font is loaded
 				createCanvases();
 				updateTimer();
 				redrawEntireImage();
@@ -1172,7 +1111,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					`[Canvas] XBIN selected but no embedded font data available, falling back to: ${magicNumbers.DEFAULT_FONT}`,
 				);
 
-				// Fallback to CP437 font
 				const fallbackFont = magicNumbers.DEFAULT_FONT;
 				const font = await loadFontFromImage(
 					fallbackFont,
@@ -1183,7 +1121,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				State.font = font;
 				currentFontName = fallbackFont;
 
-				// Trigger updates after fallback font is loaded
 				createCanvases();
 				updateTimer();
 				redrawEntireImage();
@@ -1205,7 +1142,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				State.font = font;
 				currentFontName = fontName;
 
-				// Trigger updates after font is loaded
 				createCanvases();
 				updateTimer();
 				redrawEntireImage();
@@ -1220,11 +1156,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		} catch (error) {
 			console.error('[Canvas] Failed to load font:', error);
 
-			// Get scale factor from State for fallback
 			const effectiveScaleFactor =
 				scaleFactor ?? State.font?.getScaleFactor?.() ?? 1;
 
-			// Fallback to CP437 in case of failure
 			const fallbackFont = magicNumbers.DEFAULT_FONT;
 			try {
 				const font = await loadFontFromImage(
@@ -1236,7 +1170,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				State.font = font;
 				currentFontName = fallbackFont;
 
-				// Trigger updates after fallback font is loaded
 				createCanvases();
 				updateTimer();
 				redrawEntireImage();
@@ -1263,8 +1196,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			columns = newColumnValue;
 			rows = newRowValue;
 			// LOSSY projection, current frame: the strict one throws on
-			// unicode glyphs and RGB words (latent P5 bug: resizing after
-			// a unicode paste crashed), and the mirror is lossy by contract
+			// unicode glyphs and RGB words, and the mirror is lossy by
+			// contract
 			imageData = v3ToU16Lossy(doc, editor.getCurrentFrame()).imageData;
 			if (onionSkin) {
 				rebuildOnionPlanes();
@@ -1306,10 +1239,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 		criticalRunning = true;
 		// collapse every same-task trigger (e.g. letter spacing + zoom
-		// set back to back) into ONE relayout at the final metrics; the
-		// first serialized version made the second change queue behind a
-		// fully awaited redraw, which the golden suite caught as a
-		// stale-scrollHeight pixel diff
+		// set back to back) into ONE relayout at the final metrics
 		await Promise.resolve();
 		const waitForRedrawing = () =>
 			new Promise(resolve => {
@@ -1438,13 +1368,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		editor.loadU16(newImageData, newColumnValue, newRowValue, newIceColors);
 		columns = newColumnValue;
 		rows = newRowValue;
-		// Adopt the caller's array as the mirror, exactly like v2 did
+		// Adopt the caller's array as the mirror
 		imageData = newImageData;
 		scheduleJournalKeyframe();
 		createCanvases();
 		updateTimer();
 
-		// Use progressive rendering with progress callback
 		redrawEntireImage(onProgress, () => {
 			document.dispatchEvent(new CustomEvent('onOpenedFile'));
 			if (onComplete) {
@@ -1499,7 +1428,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		return rows;
 	};
 
-	// --- P2 engine swap: document mutations live in the v3 editor core ---
+	// --- document mutations live in the v3 editor core -------------------
 	// (cell algebra: src/js/core/cellops.ts; stroke/undo: core/editor.ts;
 	// identity vs the frozen v2 reference pinned by engineParity.test.js)
 
@@ -1523,9 +1452,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	/**
-	 * Legacy single-cell write shim (exported surface only; every real
-	 * caller moved into the editor core). Writes without joining an undo
-	 * group, mirroring none.
+	 * Single-cell write shim kept only for the exported surface. Writes
+	 * without joining an undo group, mirroring none.
 	 */
 	const patchBufferAndEnqueueDirty = (
 		index,
@@ -1555,8 +1483,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const cellWidth = State.font.getWidth();
 		const cellHeight = State.font.getHeight();
 		if (!(cellWidth > 0) || !(cellHeight > 0)) {
-			// font swap in flight: v2 degraded silently, so skip the event
-			// rather than throw inside a pointer handler
+			// font swap in flight: skip the event rather than throw inside
+			// a pointer handler
 			return null;
 		}
 		const rect = canvasContainer.getBoundingClientRect();
@@ -1713,7 +1641,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const resolved =
 			unresolved.size > 0 ? await resolveUnicode(unresolved) : new Map();
 		// bounds re-check AFTER the await: a resize during the hex block
-		// fetch must not misplace writes (the P5 paste lesson)
+		// fetch must not misplace writes
 		const writes = [];
 		for (const cell of cells) {
 			if (cell.x >= columns || cell.y >= rows) {
@@ -1843,10 +1771,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const getXBFontData = () => xbFontData;
 
 	/**
-	 * Undo persistence moved to the OPFS journal with the engine swap;
-	 * the v2 IndexedDB chunk shape is no longer produced. Old autosaves
-	 * restore their content, and their undo stacks are deliberately
-	 * dropped (see core/migrate.ts).
+	 * Undo persists in the OPFS journal only. Legacy IndexedDB autosaves
+	 * restore their content; their undo stacks are deliberately dropped
+	 * (see core/migrate.ts).
 	 */
 	/**
 	 * Restore source for state.js: replay the autosave journal into v2
@@ -1938,10 +1865,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	});
 
 	/**
-	 * Resolve codepoints outside CP437 to doc glyph ids for paste/import
-	 * (P5): picks a hex font slot per the v1 width policy and interns
-	 * into the glyph table. null marks a codepoint that must substitute
-	 * (no coverage, or wide/emoji/combining under single-width v1).
+	 * Resolve codepoints outside CP437 to doc glyph ids for paste/import:
+	 * picks a hex font slot per the v1 width policy and interns into the
+	 * glyph table. null marks a codepoint that must substitute (no
+	 * coverage, or wide/emoji/combining under single-width v1).
 	 *
 	 * @param {Iterable<number>} codepoints
 	 * @returns {Promise<Map<number, number|null>>}

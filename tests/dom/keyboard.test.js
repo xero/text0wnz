@@ -7,11 +7,8 @@ describe('Keyboard Shortcuts DOM Tests', () => {
 	let user;
 
 	beforeEach(() => {
-		// Clear DOM
 		document.body.innerHTML = '';
-		// Create a new userEvent instance for each test
 		user = userEvent.setup();
-		// Clear all mocks
 		vi.clearAllMocks();
 	});
 
@@ -25,7 +22,6 @@ describe('Keyboard Shortcuts DOM Tests', () => {
 			button.setAttribute('aria-label', 'Action');
 			document.body.appendChild(button);
 
-			// Add keyboard event listener
 			document.addEventListener('keydown', e => {
 				if (e.ctrlKey && e.key === 'k') {
 					e.preventDefault();
@@ -529,7 +525,6 @@ describe('Keyboard Shortcuts DOM Tests', () => {
 			document.body.appendChild(input);
 
 			document.addEventListener('keydown', e => {
-				// Don't trigger shortcuts when typing in input
 				if (
 					e.target.tagName !== 'INPUT' &&
 					e.target.tagName !== 'TEXTAREA' &&
@@ -545,7 +540,6 @@ describe('Keyboard Shortcuts DOM Tests', () => {
 
 			expect(shortcutHandler).not.toHaveBeenCalled();
 
-			// But should work when input is not focused
 			document.body.focus();
 			fireEvent.keyDown(document, { key: 'k', ctrlKey: true });
 

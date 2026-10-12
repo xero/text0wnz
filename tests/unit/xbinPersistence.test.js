@@ -3,23 +3,19 @@ import fs from 'fs';
 import path from 'path';
 
 /**
- * XBIN Font Data Persistence Tests
- *
- * Verifies that XBIN font data is correctly saved to and restored from localStorage
+ * XBIN font data round-trips through localStorage.
  */
 describe('XBIN Font Data Persistence', () => {
 	let mockCanvas;
 	let xbinFileBytes;
 
 	beforeEach(() => {
-		// Read actual XBIN file for testing
 		const xbinPath = path.join(
 			process.cwd(),
 			'docs/examples/xbin/xz-neuromancer.xb',
 		);
 		xbinFileBytes = new Uint8Array(fs.readFileSync(xbinPath));
 
-		// Create mock canvas with XBIN methods
 		mockCanvas = {
 			getXBFontData: vi.fn(),
 			setXBFontData: vi.fn(),
@@ -31,7 +27,6 @@ describe('XBIN Font Data Persistence', () => {
 			setFont: vi.fn((fontName, callback) => callback && callback()),
 		};
 
-		// Setup localStorage mock
 		vi.stubGlobal('localStorage', {
 			data: {},
 			getItem(key) {
@@ -47,7 +42,6 @@ describe('XBIN Font Data Persistence', () => {
 	});
 
 	afterEach(() => {
-		// Clean up mocks and data
 		mockCanvas = null;
 		xbinFileBytes = null;
 		if (global.localStorage) {
@@ -97,14 +91,12 @@ describe('XBIN Font Data Persistence', () => {
 	});
 
 	it('should serialize XBIN font data to localStorage format', () => {
-		// Create test font data
 		const testFontData = {
 			bytes: new Uint8Array(16 * 256),
 			width: 8,
 			height: 16,
 		};
 
-		// Fill with test pattern
 		for (let i = 0; i < testFontData.bytes.length; i++) {
 			testFontData.bytes[i] = i % 256;
 		}
@@ -116,7 +108,6 @@ describe('XBIN Font Data Persistence', () => {
 			height: testFontData.height,
 		};
 
-		// Verify serialization
 		expect(serialized.bytes).toBeInstanceOf(Array);
 		expect(serialized.bytes.length).toBe(4096);
 		expect(serialized.width).toBe(8);
@@ -124,7 +115,6 @@ describe('XBIN Font Data Persistence', () => {
 	});
 
 	it('should deserialize XBIN font data from localStorage format', () => {
-		// Create serialized data
 		const serialized = {
 			bytes: Array.from({ length: 4096 }, (_, i) => i % 256),
 			width: 8,
@@ -138,7 +128,6 @@ describe('XBIN Font Data Persistence', () => {
 			height: serialized.height,
 		};
 
-		// Verify deserialization
 		expect(deserialized.bytes).toBeInstanceOf(Uint8Array);
 		expect(deserialized.bytes.length).toBe(4096);
 		expect(deserialized.width).toBe(8);
@@ -146,21 +135,17 @@ describe('XBIN Font Data Persistence', () => {
 	});
 
 	it('should preserve byte values through serialization round-trip', () => {
-		// Create test data
 		const original = new Uint8Array(256);
 		for (let i = 0; i < 256; i++) {
 			original[i] = i;
 		}
 
-		// Serialize
 		const serialized = Array.from(original);
 		const jsonString = JSON.stringify(serialized);
 
-		// Deserialize
 		const parsed = JSON.parse(jsonString);
 		const restored = new Uint8Array(parsed);
 
-		// Verify all bytes match
 		for (let i = 0; i < 256; i++) {
 			expect(restored[i]).toBe(original[i]);
 		}
@@ -173,7 +158,6 @@ describe('XBIN Font Data Persistence', () => {
 			height: 16,
 		};
 
-		// Mock the getXBFontData to return test data
 		mockCanvas.getXBFontData.mockReturnValue(testFontData);
 
 		const result = mockCanvas.getXBFontData();
@@ -184,7 +168,6 @@ describe('XBIN Font Data Persistence', () => {
 	});
 
 	it('should handle getXBFontData() when font data is null', () => {
-		// Mock the getXBFontData to return null
 		mockCanvas.getXBFontData.mockReturnValue(null);
 
 		const result = mockCanvas.getXBFontData();
@@ -192,7 +175,6 @@ describe('XBIN Font Data Persistence', () => {
 	});
 
 	it('should include XBIN font data in state serialization when available', () => {
-		// Simulate state with XBIN font
 		const testFontData = {
 			bytes: new Uint8Array(4096),
 			width: 8,
@@ -212,7 +194,6 @@ describe('XBIN Font Data Persistence', () => {
 			};
 		}
 
-		// Verify serialization
 		expect(serialized.xbinFontData).toBeDefined();
 		expect(serialized.xbinFontData.bytes).toBeInstanceOf(Array);
 		expect(serialized.xbinFontData.width).toBe(8);
@@ -233,12 +214,10 @@ describe('XBIN Font Data Persistence', () => {
 			};
 		}
 
-		// Verify no XBIN data
 		expect(serialized.xbinFontData).toBeUndefined();
 	});
 
 	it('should restore XBIN font data before setting font', () => {
-		// Setup saved state
 		const savedState = {
 			fontName: 'XBIN',
 			xbinFontData: {
@@ -262,11 +241,9 @@ describe('XBIN Font Data Persistence', () => {
 			mockCanvas.setFont(savedState.fontName);
 		}
 
-		// Verify setXBFontData was called before setFont
 		expect(mockCanvas.setXBFontData).toHaveBeenCalled();
 		expect(mockCanvas.setFont).toHaveBeenCalledWith('XBIN');
 
-		// Verify font data was converted back to Uint8Array
 		const callArgs = mockCanvas.setXBFontData.mock.calls[0];
 		expect(callArgs[0]).toBeInstanceOf(Uint8Array);
 		expect(callArgs[0].length).toBe(4096);

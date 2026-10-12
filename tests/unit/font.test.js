@@ -7,7 +7,6 @@ import {
 
 const imgDataCap = 256;
 
-// Mock the FontCache module
 vi.mock('../../src/js/client/fontCache.js', () => ({
 	FontCache: {
 		getFont: vi.fn(() => Promise.resolve(null)), // Returns null by default (direct loading)
@@ -17,7 +16,6 @@ vi.mock('../../src/js/client/fontCache.js', () => ({
 	},
 }));
 
-// Mock the UI module
 vi.mock('../../src/js/client/ui.js', () => ({
 	createCanvas: vi.fn(() => ({
 		getContext: vi.fn(() => ({
@@ -50,14 +48,12 @@ describe('Font Module - Basic Tests', () => {
 			global.gc();
 		}
 
-		// Mock palette object
 		mockPalette = {
 			getRGBAColor: vi.fn(color => [color * 16, color * 8, color * 4, 255]),
 			getForegroundColor: vi.fn(() => 7),
 			getBackgroundColor: vi.fn(() => 0),
 		};
 
-		// Reset global Image mock
 		global.Image = vi.fn(function () {
 			return {
 				addEventListener: vi.fn(),
@@ -70,7 +66,6 @@ describe('Font Module - Basic Tests', () => {
 	});
 
 	afterEach(() => {
-		// Cleanup after each test
 		mockPalette = null;
 		vi.clearAllMocks();
 		if (global.gc) {
@@ -141,7 +136,6 @@ describe('Font Module - Basic Tests', () => {
 			// Wait for FontCache.getFont promise to resolve
 			await new Promise(resolve => setTimeout(resolve, 0));
 
-			// Simulate image load error
 			const errorHandler = mockImage.addEventListener.mock.calls.find(
 				call => call[0] === 'error',
 			)[1];
@@ -262,7 +256,6 @@ describe('Font Module - Basic Tests', () => {
 
 	describe('XB Font Data Parsing - Additional Coverage', () => {
 		it('should validate XB font data size requirements', () => {
-			// Test the size validation logic
 			const validateXBFontSize = (bytes, _width, height) => {
 				const expectedSize = height * 256;
 				return bytes.length >= expectedSize;
@@ -287,7 +280,6 @@ describe('Font Module - Basic Tests', () => {
 				return mockImage;
 			});
 
-			// Test with letter spacing enabled
 			loadFontFromImage('TestFont', true, mockPalette);
 
 			// Wait for FontCache.getFont promise to resolve
@@ -295,7 +287,6 @@ describe('Font Module - Basic Tests', () => {
 
 			expect(mockImage.src).toBe('/ui/fonts/TestFont.png');
 
-			// Test with letter spacing disabled
 			loadFontFromImage('AnotherFont', false, mockPalette);
 
 			// Wait for FontCache.getFont promise to resolve
@@ -305,7 +296,6 @@ describe('Font Module - Basic Tests', () => {
 		});
 
 		it('should provide correct font dimensions based on letter spacing', async () => {
-			// Test dimension calculation with letter spacing
 			const testDimensions = (width, letterSpacing) => {
 				return {
 					effectiveWidth: letterSpacing ? width + 1 : width,
@@ -319,7 +309,6 @@ describe('Font Module - Basic Tests', () => {
 		});
 
 		it('should handle font data retrieval', () => {
-			// Test font data structure
 			const mockFontData = {
 				width: 8,
 				height: 16,
@@ -332,7 +321,6 @@ describe('Font Module - Basic Tests', () => {
 		});
 
 		it('should handle letter spacing changes', () => {
-			// Test letter spacing toggle logic
 			let letterSpacing = false;
 
 			const toggleLetterSpacing = newValue => {
@@ -353,7 +341,6 @@ describe('Font Module - Basic Tests', () => {
 
 	describe('Font Drawing Operations', () => {
 		it('should validate character code ranges for drawing', () => {
-			// Test character code validation logic
 			const isValidCharCode = code => {
 				return code >= 0 && code <= 255;
 			};
@@ -366,7 +353,6 @@ describe('Font Module - Basic Tests', () => {
 		});
 
 		it('should validate color values for drawing', () => {
-			// Test color value validation logic
 			const isValidColor = color => {
 				return color >= 0 && color <= 15;
 			};
@@ -379,7 +365,6 @@ describe('Font Module - Basic Tests', () => {
 		});
 
 		it('should handle coordinate positioning for character drawing', () => {
-			// Test coordinate calculation logic
 			const calculatePosition = (x, y, charWidth, charHeight) => {
 				return {
 					pixelX: x * charWidth,
@@ -401,7 +386,6 @@ describe('Font Module - Basic Tests', () => {
 
 	describe('Font State Management', () => {
 		it('should handle font initialization state', () => {
-			// Test font initialization tracking
 			let fontInitialized = false;
 			let lazyFontCreated = false;
 
@@ -420,7 +404,6 @@ describe('Font Module - Basic Tests', () => {
 		});
 
 		it('should handle font redraw operations', () => {
-			// Test font redraw triggering
 			let redrawCount = 0;
 
 			const triggerRedraw = () => {

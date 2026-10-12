@@ -1,6 +1,6 @@
 /**
- * GNU Unifont .hex parsing and per-block packing (PLAN §3.4): the
- * all-planes Unifont hex is ~8MB of text, far too big to ship or slice
+ * GNU Unifont .hex parsing and per-block packing: the all-planes
+ * Unifont hex is ~8MB of text, far too big to ship or slice
  * at runtime, so tools/bakeHexFonts.js preprocesses every bundled .hex
  * at BUILD TIME into one small packed binary per 256-codepoint block
  * plus a manifest. The runtime fetches blocks lazily and reads them

@@ -8,7 +8,6 @@ import {
 	createPalettePicker,
 } from '../../src/js/client/palette.js';
 
-// Mock the State module since these are unit tests
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		palette: {
@@ -49,7 +48,6 @@ describe('Palette Utilities', () => {
 		});
 
 		it('should handle extended ASCII range correctly', () => {
-			// Test some additional extended ASCII mappings
 			expect(getUnicode(176)).toBe(0x2591); // Light shade
 			expect(getUnicode(177)).toBe(0x2592); // Medium shade
 			expect(getUnicode(178)).toBe(0x2593); // Dark shade
@@ -87,14 +85,11 @@ describe('Palette Utilities', () => {
 		let mockPalette;
 
 		beforeEach(() => {
-			// Mock document.dispatchEvent for palette tests
 			vi.stubGlobal('document', { dispatchEvent: vi.fn() });
 		});
 
 		afterEach(() => {
-			// Clean up palette object
 			mockPalette = null;
-			// Restore mocks
 			vi.restoreAllMocks();
 		});
 
@@ -108,7 +103,6 @@ describe('Palette Utilities', () => {
 
 			mockPalette = createPalette(rgb6Bit);
 
-			// Test black color
 			const black = mockPalette.getRGBAColor(0);
 			expect(black[0]).toBe(0); // R
 			expect(black[1]).toBe(0); // G
@@ -174,7 +168,6 @@ describe('Palette Utilities', () => {
 		it('should create a standard 16-color palette', () => {
 			const palette = createDefaultPalette();
 
-			// Test that we can get colors for all 16 standard colors
 			for (let i = 0; i < 16; i++) {
 				const color = palette.getRGBAColor(i);
 				expect(color).toBeInstanceOf(Uint8Array);
@@ -186,19 +179,16 @@ describe('Palette Utilities', () => {
 		it('should have correct standard colors', () => {
 			const palette = createDefaultPalette();
 
-			// Test black (color 0)
 			const black = palette.getRGBAColor(0);
 			expect(black[0]).toBe(0);
 			expect(black[1]).toBe(0);
 			expect(black[2]).toBe(0);
 
-			// Test bright white (color 15)
 			const white = palette.getRGBAColor(15);
 			expect(white[0]).toBe(255); // 63 << 2 | 63 >> 4 = 255
 			expect(white[1]).toBe(255);
 			expect(white[2]).toBe(255);
 
-			// Test red (color 4)
 			const red = palette.getRGBAColor(4);
 			expect(red[0]).toBe(170); // 42 << 2 | 42 >> 4 = 168 | 2 = 170
 			expect(red[1]).toBe(0);
@@ -216,7 +206,6 @@ describe('Palette Utilities', () => {
 		let mockCanvas, mockCtx;
 
 		beforeEach(() => {
-			// Mock canvas and context
 			mockCtx = {
 				clearRect: vi.fn(),
 				fillRect: vi.fn(),
@@ -244,7 +233,6 @@ describe('Palette Utilities', () => {
 		it('should calculate square size correctly', () => {
 			createPalettePreview(mockCanvas);
 
-			// Should call clearRect and fillRect
 			expect(mockCtx.clearRect).toHaveBeenCalledWith(0, 0, 100, 50);
 			expect(mockCtx.fillRect).toHaveBeenCalled();
 		});
@@ -301,7 +289,6 @@ describe('Palette Utilities', () => {
 		it('should create image data for all 16 colors', () => {
 			createPalettePicker(mockCanvas);
 
-			// Should create image data for all 16 colors
 			expect(mockCtx.createImageData).toHaveBeenCalledTimes(16);
 			expect(mockCtx.createImageData).toHaveBeenCalledWith(40, 8); // width/2, height/8
 		});
@@ -341,10 +328,8 @@ describe('Palette Utilities', () => {
 		});
 
 		it('should handle touch events for color selection', () => {
-			// This test verifies touch event handler is registered
 			createPalettePicker(mockCanvas);
 
-			// Verify touchend handler is registered
 			const touchHandlerCall = mockCanvas.addEventListener.mock.calls.find(
 				call => call[0] === 'touchend',
 			);
@@ -353,10 +338,8 @@ describe('Palette Utilities', () => {
 		});
 
 		it('should handle mouse events for color selection', () => {
-			// This test verifies mouse event handler is registered
 			createPalettePicker(mockCanvas);
 
-			// Verify mouseup handler is registered
 			const mouseHandlerCall = mockCanvas.addEventListener.mock.calls.find(
 				call => call[0] === 'mouseup',
 			);
@@ -365,10 +348,8 @@ describe('Palette Utilities', () => {
 		});
 
 		it('should handle digit key combinations for color selection', () => {
-			// This test verifies keyboard event handler is registered and handles basic key events
 			createPalettePicker(mockCanvas);
 
-			// Get the keydown handler from document.addEventListener
 			const keyHandlerCall = global.document.addEventListener.mock.calls.find(
 				call => call[0] === 'keydown',
 			);
@@ -377,7 +358,6 @@ describe('Palette Utilities', () => {
 		});
 
 		it('should handle color cycling when same color is selected', () => {
-			// This test verifies that the keydown handler exists and can process events
 			createPalettePicker(mockCanvas);
 
 			const keyHandlerCall = global.document.addEventListener.mock.calls.find(
@@ -388,7 +368,6 @@ describe('Palette Utilities', () => {
 		});
 
 		it('should handle arrow key navigation with wrap-around', () => {
-			// This test verifies that arrow key handling is set up correctly
 			createPalettePicker(mockCanvas);
 
 			const keyHandlerCall = global.document.addEventListener.mock.calls.find(
@@ -406,7 +385,6 @@ describe('Palette Utilities', () => {
 
 			createPalettePicker(mockMenuCanvas);
 
-			// Get the context menu handler
 			const menuHandlerCall = mockMenuCanvas.addEventListener.mock.calls.find(
 				call => call[0] === 'contextmenu',
 			);
@@ -421,16 +399,13 @@ describe('Palette Utilities', () => {
 		});
 
 		it('should handle color cycling when same color is selected with Ctrl+digit', () => {
-			// Test that the test infrastructure works
 			expect(() => {
-				// Create a simple keydown event handler test
 				const keyHandler = e => {
 					const keyCode = e.keyCode || e.which;
 					if (keyCode >= 48 && keyCode <= 55 && e.ctrlKey === true) {
 						e.preventDefault();
 						// This represents the logic that would be in the actual handler
 						const num = keyCode - 48;
-						// Mock the color cycling logic
 						if (num === 3) {
 							// Simulate cycling to high color
 							expect(num + 8).toBe(11);
@@ -452,14 +427,12 @@ describe('Palette Utilities', () => {
 		});
 
 		it('should handle color cycling when same color is selected with Alt+digit', () => {
-			// Test that the Alt+digit logic works correctly
 			expect(() => {
 				const keyHandler = e => {
 					const keyCode = e.keyCode || e.which;
 					if (keyCode >= 48 && keyCode <= 55 && e.altKey === true) {
 						e.preventDefault();
 						const num = keyCode - 48;
-						// Mock the color cycling logic for Alt+5
 						if (num === 5) {
 							// Simulate cycling to high color
 							expect(num + 8).toBe(13);
@@ -481,13 +454,11 @@ describe('Palette Utilities', () => {
 		});
 
 		it('should handle Ctrl+Arrow key navigation for color selection', () => {
-			// Test arrow key navigation logic
 			expect(() => {
 				const keyHandler = e => {
 					if (e.code.startsWith('Arrow') && e.ctrlKey === true) {
 						e.preventDefault();
 
-						// Test the color calculation logic
 						switch (e.code) {
 							case 'ArrowUp': {
 								// Previous foreground color
@@ -521,7 +492,6 @@ describe('Palette Utilities', () => {
 					}
 				};
 
-				// Test each arrow key
 				['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].forEach(code => {
 					keyHandler({
 						code: code,
@@ -533,7 +503,6 @@ describe('Palette Utilities', () => {
 		});
 
 		it('should handle color wrap-around at boundaries', () => {
-			// Test color wrap-around logic
 			expect(() => {
 				// Test minimum boundary wrap-around (0 -> 15)
 				const colorAtMin = 0;
@@ -557,7 +526,6 @@ describe('Palette Utilities', () => {
 		});
 
 		it('should handle mouse events with modifier keys for background color selection', () => {
-			// Test mouse event coordinate calculation and modifier key logic
 			expect(() => {
 				const calculateColor = (
 					clientX,
@@ -570,7 +538,6 @@ describe('Palette Utilities', () => {
 					const y = Math.floor(clientY / (canvasHeight / 8));
 					const colorIndex = y + (x === 0 ? 0 : 8);
 
-					// Test the calculations
 					if (
 						clientX === 50 &&
 						clientY === 40 &&
@@ -596,7 +563,6 @@ describe('Palette Utilities', () => {
 					return colorIndex;
 				};
 
-				// Test different mouse positions and modifier combinations
 				calculateColor(50, 40, 200, 160, { altKey: true });
 				calculateColor(150, 60, 200, 160, { ctrlKey: true });
 			}).not.toThrow();
@@ -616,17 +582,14 @@ describe('Palette Utilities', () => {
 
 			createPalettePicker(mockCanvas);
 
-			// Get the keydown handler
 			const keyHandlerCall = global.document.addEventListener.mock.calls.find(
 				call => call[0] === 'keydown',
 			);
 			const keyHandler = keyHandlerCall[1];
 
-			// Clear any existing calls
 			mockState.palette.setForegroundColor.mockClear();
 			mockState.palette.setBackgroundColor.mockClear();
 
-			// Test key events that should be ignored
 			const nonMatchingEvents = [
 				{ keyCode: 65, ctrlKey: true }, // Ctrl+A
 				{ keyCode: 56, ctrlKey: true }, // Ctrl+8 (out of range)
@@ -644,7 +607,6 @@ describe('Palette Utilities', () => {
 				}
 			});
 
-			// Should not have made any calls
 			expect(mockState.palette.setForegroundColor).not.toHaveBeenCalled();
 			expect(mockState.palette.setBackgroundColor).not.toHaveBeenCalled();
 		});

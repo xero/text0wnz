@@ -1,9 +1,9 @@
 /**
- * Width policy v1 (PLAN §3.4): the cell grid is single-width only.
- * Text arriving by paste or import is split into grapheme clusters and
- * every cluster that cannot occupy exactly one cell — wide/fullwidth
- * East Asian codepoints, multi-codepoint clusters (ZWJ emoji,
- * combining sequences), or lone combining marks — is substituted by
+ * Width policy v1: the cell grid is single-width only. Text arriving
+ * by paste or import is split into grapheme clusters, and every
+ * cluster that cannot occupy exactly one cell (wide/fullwidth East
+ * Asian codepoints, multi-codepoint clusters like ZWJ emoji and
+ * combining sequences, or lone combining marks) is substituted by
  * the caller. The wide-continuation attr bit (doc.ts, bit 1) stays
  * reserved until double-width ships in v1.5.
  *

@@ -25,7 +25,7 @@
  *   spectators (upstream lets nickless connections bypass it).
  * - O14: spectators default to read-only drawing but MAY chat, and
  *   they receive chat (upstream excludes them from the chat tier).
- * - resize is row-aware (v2's linear copy scrambled late joiners).
+ * - resize is row-aware (a linear copy scrambles late joiners).
  * - malformed frames are dropped with a log line, never a crash.
  * - every mutation lands in a bounded op log (timelapse substrate).
  *
@@ -140,7 +140,7 @@ export const createRoom = (options = {}) => {
 	let nextId = 0;
 	let dirty = false;
 	// monotonic mutation counter: saves clear dirty ONLY if nothing
-	// mutated while the write was in flight (review finding)
+	// mutated while the write was in flight
 	let dirtySeq = 0;
 	// the extension suite's op counter: every accepted doc mutation gets
 	// the next seq; caps clients receive it on broadcasts and acks, and
@@ -307,9 +307,8 @@ export const createRoom = (options = {}) => {
 	/**
 	 * A silently dropped mutation from a caps client would leak its
 	 * pendingOps counter forever AND leave its apply-locally state
-	 * diverged with no seq gap to notice (review finding). Refusals ack
-	 * with the current seq and a refused flag: the client books the op
-	 * off and resyncs.
+	 * diverged with no seq gap to notice. Refusals ack with the current
+	 * seq and a refused flag: the client books the op off and resyncs.
 	 * @param {RoomClient} client @param {{caps: string[] | null}} user
 	 */
 	const refuseAck = (client, user) => {
@@ -377,7 +376,7 @@ export const createRoom = (options = {}) => {
 	});
 
 	/**
-	 * row-aware resize; v2's linear copy scrambled late joiners
+	 * row-aware resize; a linear copy scrambles late joiners
 	 * @param {number} columns @param {number} rows
 	 */
 	const resizeDoc = (columns, rows) => {
@@ -498,9 +497,8 @@ export const createRoom = (options = {}) => {
 						: fallback;
 				let code = clamp(block.code, 32, 0x10ffff);
 				if (code >= 0xd800 && code <= 0xdfff) {
-					// surrogate halves are not characters; one smuggled into
-					// the doc poisoned the ext projection and every save of
-					// the room threw (review finding: total data loss)
+					// surrogate halves are not characters; one in the doc
+					// poisons the ext projection and makes every save throw
 					code = 63;
 				}
 				const cell = {
@@ -513,7 +511,7 @@ export const createRoom = (options = {}) => {
 				const opSeq = pushOp(type, payload);
 				// fan out the SANITIZED cell with the server-known id: the
 				// stored doc and what peers render can never diverge, and ids
-				// cannot be spoofed (review finding)
+				// cannot be spoofed
 				fanoutMutation(
 					client,
 					user,
@@ -552,8 +550,8 @@ export const createRoom = (options = {}) => {
 				}
 				dirty = true;
 				// O14: spectators chat and HEAR chat on our server. Explicit
-				// shape: relayed junk fields once let a client smuggle a fake
-				// `seq` into caps peers' streams (review finding)
+				// shape: relaying junk fields would let a client smuggle a
+				// fake `seq` into caps peers' streams
 				broadcast(
 					client,
 					type,
@@ -574,8 +572,8 @@ export const createRoom = (options = {}) => {
 				if (user.role === 'viewer') {
 					return;
 				}
-				// clamped at intake (review finding: unbounded strings bloated
-				// the op log, the sidecar JSON, and every broadcast)
+				// clamped at intake: unbounded strings bloat the op log, the
+				// sidecar JSON, and every broadcast
 				/** @param {unknown} value @param {string} fallback @param {number} limit */
 				const field = (value, fallback, limit) =>
 					typeof value === 'string' ? value.slice(0, limit) : fallback;
@@ -670,16 +668,15 @@ export const createRoom = (options = {}) => {
 				}
 				// NO throttle, deliberately: a dropped resize diverges the
 				// sender's apply-locally state and the vanilla dialect has no
-				// content resync (the convergence fuzz proved both a silent
-				// drop AND a dims-echo diverge). Vanilla peers still live with
-				// that, exactly as upstream; caps clients now detect any
-				// divergence through the seq stream and recover via EXT_SYNC.
+				// content resync. Vanilla peers live with that, exactly as
+				// upstream; caps clients detect divergence through the seq
+				// stream and recover via EXT_SYNC.
 				resizeDoc(columns, rows);
 				const payload = { columns, rows, id: user.id };
 				const opSeq = pushOp(type, payload);
 				// rebuilt shape with the SERVER-known id: vanilla clients
 				// crash without an id (landmine 2), and relayed client ids
-				// were forgeable (review finding)
+				// are forgeable
 				fanoutMutation(
 					client,
 					user,
@@ -815,7 +812,6 @@ export const createRoom = (options = {}) => {
 				// stale palette (upstream's own CHANGE_PALETTE precedent).
 				// Padded to EXACTLY 16: a short join palette is an
 				// out-of-contract shape vanilla clients index into blindly
-				// (review finding)
 				const bridge = paletteWordsFromJoin(doc.palette);
 				for (let i = 0; i < Math.min(16, palette.length); i++) {
 					bridge[i] = palette[i];

@@ -10,7 +10,6 @@ import {
 	createCharacterBrushPanel,
 } from '../../src/js/client/freehandTools.js';
 
-// Mock dependencies
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		fontWidth: 8,
@@ -25,7 +24,6 @@ vi.mock('../../src/js/client/state.js', () => ({
 		textArtCanvas: {
 			startUndo: vi.fn(),
 			drawHalfBlock: vi.fn(callback => {
-				// Mock the callback pattern
 				const mockCallback = vi.fn();
 				callback(mockCallback);
 			}),
@@ -130,7 +128,6 @@ vi.mock('../../src/js/client/toolbar.js', () => ({
 
 vi.mock('../../src/js/client/ui.js', () => ({
 	$: vi.fn(_ => {
-		// Create mock DOM elements
 		const mockElement = {
 			style: { display: 'block' },
 			classList: {
@@ -198,7 +195,6 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	})),
 }));
 
-// Mock global document and DOM methods
 const mockDocument = {
 	createElement: vi.fn(tag => ({
 		style: {},
@@ -230,7 +226,6 @@ const mockDocument = {
 	dispatchEvent: vi.fn(),
 };
 
-// Setup global mocks
 vi.stubGlobal('document', mockDocument);
 global.Image = vi.fn(() => ({
 	addEventListener: vi.fn(),
@@ -258,11 +253,9 @@ describe('Freehand Tools - Panels and Cursors', () => {
 			expect(cursor).toHaveProperty('resize');
 			expect(cursor).toHaveProperty('setPos');
 
-			// Test show functionality
 			cursor.show();
 			expect(typeof cursor.show).toBe('function');
 
-			// Test hide functionality
 			cursor.hide();
 			expect(typeof cursor.hide).toBe('function');
 		});
@@ -385,7 +378,6 @@ describe('Freehand Tools - Panels and Cursors', () => {
 				controller.disable();
 			}).not.toThrow();
 
-			// Verify event listeners were added/removed
 			expect(mockDocument.addEventListener).toHaveBeenCalled();
 			expect(mockDocument.removeEventListener).toHaveBeenCalled();
 		});

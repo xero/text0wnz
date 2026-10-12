@@ -23,7 +23,6 @@ import {
 	createMenuController,
 } from '../../src/js/client/ui.js';
 
-// Mock the State module
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		textArtCanvas: {
@@ -58,9 +57,7 @@ describe('UI Utilities', () => {
 	};
 
 	beforeEach(() => {
-		// Clear DOM
 		document.body.innerHTML = '';
-		// Reset all mocks
 		vi.clearAllMocks();
 	});
 
@@ -276,7 +273,6 @@ describe('UI Utilities', () => {
 				close: vi.fn(),
 			};
 
-			// Create required modal sections
 			document.body.innerHTML = `
 				<div id="resizeModal" class="hide"></div>
 				<div id="fontsModal" class="hide"></div>
@@ -590,7 +586,6 @@ describe('UI Utilities', () => {
 
 	describe('toggleFullscreen', () => {
 		it('should request fullscreen when not in fullscreen', () => {
-			// Mock fullscreen API
 			document.fullscreenEnabled = true;
 			document.fullscreenElement = null;
 			document.documentElement.requestFullscreen = vi.fn();
@@ -601,7 +596,6 @@ describe('UI Utilities', () => {
 		});
 
 		it('should exit fullscreen when in fullscreen', () => {
-			// Mock fullscreen API
 			document.fullscreenEnabled = true;
 			document.fullscreenElement = document.documentElement;
 			document.exitFullscreen = vi.fn();
@@ -618,7 +612,6 @@ describe('UI Utilities', () => {
 			modal.showModal = vi.fn();
 			modal.close = vi.fn();
 
-			// Create modal sections
 			[
 				'about',
 				'resize',
@@ -659,7 +652,6 @@ describe('UI Utilities', () => {
 			aboutModal.classList.add('hide');
 			document.body.appendChild(aboutModal);
 
-			// Create other modals
 			[
 				'resize',
 				'fonts',
@@ -801,7 +793,6 @@ describe('UI Utilities', () => {
 			const controller = createModalController(modal);
 			controller.focusEvents(onFocus, onBlur);
 
-			// Open modal should trigger focus
 			const aboutModal = document.createElement('div');
 			aboutModal.id = 'aboutModal';
 			aboutModal.classList.add('hide');
@@ -895,7 +886,6 @@ describe('UI Utilities', () => {
 			// Clear the mock to ensure we track only this call
 			State.palette.setForegroundColor.mockClear();
 
-			// Simulate pressing '3' key
 			const keyEvent = new KeyboardEvent('keydown', {
 				key: '3',
 				code: 'Digit3',
@@ -907,7 +897,6 @@ describe('UI Utilities', () => {
 
 			document.dispatchEvent(keyEvent);
 
-			// Color should be set
 			expect(State.palette.setForegroundColor).toHaveBeenCalled();
 		});
 
@@ -919,7 +908,6 @@ describe('UI Utilities', () => {
 
 			controller.ignore();
 
-			// Try to trigger shortcut
 			const keyEvent = new KeyboardEvent('keydown', {
 				key: 'd',
 				code: 'KeyD',
@@ -944,7 +932,6 @@ describe('UI Utilities', () => {
 			controller.ignore();
 			controller.unignore();
 
-			// Now shortcut should work
 			const keyEvent = new KeyboardEvent('keydown', {
 				key: 'd',
 				code: 'KeyD',
@@ -960,8 +947,8 @@ describe('UI Utilities', () => {
 		});
 	});
 
-	// Note: createGrid and createToolPreview are complex rendering functions
-	// that require full canvas context and State initialization. They are tested via E2E tests.
+	// createGrid and createToolPreview need a real canvas context and
+	// State init; E2E covers them.
 
 	describe('createResolutionController', () => {
 		it('should update resolution display on canvas size change', () => {
@@ -972,7 +959,6 @@ describe('UI Utilities', () => {
 
 			createResolutionController(lbl, txtC, txtR);
 
-			// Trigger canvas size change event
 			const event = createEvent('onTextCanvasSizeChange');
 			document.dispatchEvent(event);
 
@@ -988,14 +974,12 @@ describe('UI Utilities', () => {
 
 			createDragDropController(handler, el);
 
-			// Simulate drag enter
 			const dragEnterEvent = createEvent('dragenter');
 			dragEnterEvent.preventDefault = vi.fn();
 			document.dispatchEvent(dragEnterEvent);
 
 			expect(el.style.display).toBe('flex');
 
-			// Simulate drop
 			const dropEvent = createEvent('drop');
 			dropEvent.preventDefault = vi.fn();
 			dropEvent.dataTransfer = { files: [{ name: 'test.ans' }]};
@@ -1012,12 +996,10 @@ describe('UI Utilities', () => {
 
 			createDragDropController(handler, el);
 
-			// Simulate drag enter
 			const dragEnterEvent = createEvent('dragenter');
 			dragEnterEvent.preventDefault = vi.fn();
 			document.dispatchEvent(dragEnterEvent);
 
-			// Simulate drag leave
 			const dragLeaveEvent = createEvent('dragleave');
 			dragLeaveEvent.preventDefault = vi.fn();
 			document.dispatchEvent(dragLeaveEvent);
@@ -1065,7 +1047,6 @@ describe('UI Utilities', () => {
 
 			createMenuController([{ button, menu }], canvas, view);
 
-			// Click to open
 			const clickEvent = createEvent('click');
 			button.dispatchEvent(clickEvent);
 
@@ -1127,8 +1108,6 @@ describe('UI Utilities', () => {
 
 			expect(typeof createGrid).toBe('function');
 
-			// Test that calling the function with a div doesn't throw before canvas operations
-			// We can't fully test it without proper State mock and canvas support
 			const container = document.createElement('div');
 			document.body.appendChild(container);
 
@@ -1162,7 +1141,6 @@ describe('UI Utilities', () => {
 		it('should create font select controller with focus/getValue/setValue methods', async () => {
 			const { createFontSelect } = await import('../../src/js/client/ui.js');
 
-			// Create minimal DOM structure for font select
 			const listbox = document.createElement('div');
 			listbox.setAttribute('role', 'listbox');
 			listbox.focus = vi.fn();
@@ -1296,7 +1274,6 @@ describe('UI Utilities', () => {
 		it('should show websocket-specific UI elements', async () => {
 			const { websocketUI } = await import('../../src/js/client/ui.js');
 
-			// Create elements with the specific classes
 			const excludedDiv = document.createElement('div');
 			excludedDiv.className = 'excludedForWebsocket';
 			const includedDiv = document.createElement('div');
@@ -1305,12 +1282,10 @@ describe('UI Utilities', () => {
 			document.body.appendChild(excludedDiv);
 			document.body.appendChild(includedDiv);
 
-			// Test showing websocket UI
 			websocketUI(true);
 			expect(includedDiv.style.display).toBe('block');
 			expect(excludedDiv.style.display).toBe('none');
 
-			// Test hiding websocket UI
 			websocketUI(false);
 			expect(includedDiv.style.display).toBe('none');
 			expect(excludedDiv.style.display).toBe('block');

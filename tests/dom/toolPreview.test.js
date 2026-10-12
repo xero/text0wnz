@@ -48,9 +48,8 @@ describe('Tool Preview DOM Tests', () => {
 		preview.drawHalfBlock(7, 10, 90);
 		expect(el.querySelectorAll('canvas')[0].style.top).toBe('400px');
 
-		// Zoom to 2x: only onScaleFactorChange is dispatched for this
-		// (regression: the preview missed this event and kept stale metrics,
-		// drawing a tall circle preview's lower part into the wrong place)
+		// Zoom dispatches only onScaleFactorChange; a preview that misses it
+		// keeps stale metrics and draws shape previews in the wrong place
 		metrics.width = 16;
 		metrics.height = 32;
 		document.dispatchEvent(new CustomEvent('onScaleFactorChange', { detail: 2 }));

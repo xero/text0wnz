@@ -1,9 +1,8 @@
 // @vitest-environment node
 /**
- * Bridge lockdowns (PLAN §3.6.4, D13): the P4 gate for private-range
- * denial (DNS rebinding included), port pinning, the fixed-target
- * `local` mode, and the explicit allow list. All pure: DNS is
- * injected.
+ * Bridge lockdowns (PLAN §3.6.4, D13): private-range denial (DNS
+ * rebinding included), port pinning, the fixed-target `local` mode,
+ * and the explicit allow list. All pure: DNS is injected.
  */
 import { describe, it, expect } from 'vitest';
 import {

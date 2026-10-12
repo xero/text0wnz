@@ -13,7 +13,6 @@ const dbPromise = () => {
 		request.onupgradeneeded = _e => {
 			const db = request.result;
 
-			// Create object stores if they don't exist
 			if (!db.objectStoreNames.contains('canvasData')) {
 				db.createObjectStore('canvasData');
 			}
@@ -197,11 +196,9 @@ export const Storage = {
 	 * Clear all storage
 	 */
 	async clearAll() {
-		// Clear localStorage
 		localStorage.removeItem('text0wnz-settings');
-		localStorage.removeItem('editorState'); // Clear legacy data
+		localStorage.removeItem('editorState'); // legacy key
 
-		// Clear IndexedDB
 		try {
 			const db = await dbPromise();
 			const tx1 = db.transaction('canvasData', 'readwrite');

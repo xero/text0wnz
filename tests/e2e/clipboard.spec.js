@@ -10,7 +10,6 @@ test.describe('Advanced Clipboard Operations', () => {
 	test('should copy and paste with color formatting', async ({ page }) => {
 		const canvas = page.locator('#canvasContainer canvas').first();
 
-		// Select a foreground color
 		const colorPalette = page.locator('#fgPalette, .colorPalette');
 		if (await colorPalette.isVisible()) {
 			const colorSwatch = colorPalette
@@ -22,7 +21,6 @@ test.describe('Advanced Clipboard Operations', () => {
 			}
 		}
 
-		// Draw something with color
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
 		await page.locator('#halfblock').click();
@@ -30,7 +28,6 @@ test.describe('Advanced Clipboard Operations', () => {
 
 		const bbox = await canvas.boundingBox();
 		if (bbox) {
-			// Draw multiple blocks with current color
 			await canvas.click({ position: { x: 50, y: 50 } });
 			await page.waitForTimeout(100);
 			await canvas.click({ position: { x: 60, y: 50 } });
@@ -39,25 +36,21 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.waitForTimeout(200);
 		}
 
-		// Select the drawn area
 		const selectionTool = page.locator('#select');
 		if (await selectionTool.isVisible()) {
 			await selectionTool.click();
 			await page.waitForTimeout(300);
 
 			if (bbox) {
-				// Make selection
 				await canvas.click({ position: { x: 40, y: 40 } });
 				await page.waitForTimeout(100);
 				await canvas.click({ position: { x: 80, y: 60 } });
 				await page.waitForTimeout(300);
 			}
 
-			// Copy
 			await page.keyboard.press('Control+c');
 			await page.waitForTimeout(300);
 
-			// Move cursor and paste
 			if (bbox) {
 				await canvas.click({ position: { x: 150, y: 100 } });
 				await page.waitForTimeout(100);
@@ -66,18 +59,15 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.keyboard.press('Control+v');
 			await page.waitForTimeout(300);
 		}
-
-		// Canvas operations completed successfully
 	});
 
 	test('should handle copy with background color', async ({ page }) => {
 		const canvas = page.locator('#canvasContainer canvas').first();
 
-		// Switch to background color mode (B key)
+		// b switches color input to background mode
 		await page.keyboard.press('b');
 		await page.waitForTimeout(200);
 
-		// Select a background color
 		const colorPalette = page.locator('#bgPalette, .colorPalette');
 		if (await colorPalette.isVisible()) {
 			const colorSwatch = colorPalette
@@ -93,7 +83,6 @@ test.describe('Advanced Clipboard Operations', () => {
 		await page.keyboard.press('f');
 		await page.waitForTimeout(200);
 
-		// Draw with both foreground and background colors
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
 		await page.locator('#characterBrush').click();
@@ -105,7 +94,6 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.waitForTimeout(200);
 		}
 
-		// Select and copy
 		const selectionTool = page.locator('#select');
 		if (await selectionTool.isVisible()) {
 			await selectionTool.click();
@@ -121,7 +109,6 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.keyboard.press('Control+c');
 			await page.waitForTimeout(300);
 
-			// Paste in new location
 			if (bbox) {
 				await canvas.click({ position: { x: 120, y: 50 } });
 				await page.waitForTimeout(100);
@@ -130,8 +117,6 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.keyboard.press('Control+v');
 			await page.waitForTimeout(300);
 		}
-
-		// Canvas operations completed successfully
 	});
 
 	test('should copy and paste text with attributes', async ({ page }) => {
@@ -147,7 +132,6 @@ test.describe('Advanced Clipboard Operations', () => {
 		await page.keyboard.press('Escape');
 		await page.waitForTimeout(300);
 
-		// Select the text
 		const selectionTool = page.locator('#select');
 		if (await selectionTool.isVisible()) {
 			await selectionTool.click();
@@ -161,22 +145,17 @@ test.describe('Advanced Clipboard Operations', () => {
 				await page.waitForTimeout(300);
 			}
 
-			// Copy
 			await page.keyboard.press('Control+c');
 			await page.waitForTimeout(300);
 
-			// Paste
 			await page.keyboard.press('Control+v');
 			await page.waitForTimeout(300);
 		}
-
-		// Canvas operations completed successfully
 	});
 
 	test('should handle multiple copy operations', async ({ page }) => {
 		const canvas = page.locator('#canvasContainer canvas').first();
 
-		// Draw first pattern
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
 		await page.locator('#halfblock').click();
@@ -188,7 +167,6 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.waitForTimeout(100);
 		}
 
-		// Select and copy first pattern
 		const selectionTool = page.locator('#select');
 		if (await selectionTool.isVisible()) {
 			await selectionTool.click();
@@ -204,7 +182,6 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.keyboard.press('Control+c');
 			await page.waitForTimeout(300);
 
-			// Draw second pattern
 			await page.locator('#characterBrush').click();
 			await page.waitForTimeout(300);
 
@@ -213,7 +190,7 @@ test.describe('Advanced Clipboard Operations', () => {
 				await page.waitForTimeout(200);
 			}
 
-			// Select and copy second pattern (replacing clipboard)
+			// the second copy replaces the clipboard
 			await selectionTool.click();
 			await page.waitForTimeout(300);
 
@@ -227,18 +204,15 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.keyboard.press('Control+c');
 			await page.waitForTimeout(300);
 
-			// Paste (should paste the second pattern)
+			// paste must yield the second pattern
 			await page.keyboard.press('Control+v');
 			await page.waitForTimeout(300);
 		}
-
-		// Canvas operations completed successfully
 	});
 
 	test('should handle cut operation', async ({ page }) => {
 		const canvas = page.locator('#canvasContainer canvas').first();
 
-		// Draw something
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
 		await page.locator('#halfblock').click();
@@ -252,7 +226,6 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.waitForTimeout(200);
 		}
 
-		// Select the drawn blocks
 		const selectionTool = page.locator('#select');
 		if (await selectionTool.isVisible()) {
 			await selectionTool.click();
@@ -265,11 +238,9 @@ test.describe('Advanced Clipboard Operations', () => {
 				await page.waitForTimeout(300);
 			}
 
-			// Cut
 			await page.keyboard.press('Control+x');
 			await page.waitForTimeout(300);
 
-			// Paste in new location
 			if (bbox) {
 				await canvas.click({ position: { x: 150, y: 100 } });
 				await page.waitForTimeout(100);
@@ -278,14 +249,11 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.keyboard.press('Control+v');
 			await page.waitForTimeout(300);
 		}
-
-		// Canvas operations completed successfully
 	});
 
 	test('should paste selection at cursor position', async ({ page }) => {
 		const canvas = page.locator('#canvasContainer canvas').first();
 
-		// Draw pattern
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
 		await page.locator('#halfblock').click();
@@ -293,7 +261,6 @@ test.describe('Advanced Clipboard Operations', () => {
 
 		const bbox = await canvas.boundingBox();
 		if (bbox) {
-			// Draw 3x3 pattern
 			for (let x = 0; x < 3; x++) {
 				for (let y = 0; y < 3; y++) {
 					await canvas.click({ position: { x: 50 + x * 10, y: 50 + y * 10 } });
@@ -303,7 +270,6 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.waitForTimeout(200);
 		}
 
-		// Select the pattern
 		const selectionTool = page.locator('#select');
 		if (await selectionTool.isVisible()) {
 			await selectionTool.click();
@@ -316,11 +282,9 @@ test.describe('Advanced Clipboard Operations', () => {
 				await page.waitForTimeout(300);
 			}
 
-			// Copy
 			await page.keyboard.press('Control+c');
 			await page.waitForTimeout(300);
 
-			// Click at different positions and paste
 			const positions = [
 				{ x: 150, y: 50 },
 				{ x: 100, y: 150 },
@@ -336,21 +300,15 @@ test.describe('Advanced Clipboard Operations', () => {
 				}
 			}
 		}
-
-		// Canvas operations completed successfully
 	});
 
 	test('should handle empty clipboard paste gracefully', async ({ page }) => {
 		const canvas = page.locator('#canvasContainer canvas').first();
 
-		// Try to paste without copying anything
 		await page.keyboard.press('Control+v');
 		await page.waitForTimeout(300);
 
-		// Canvas should still be functional
-		// Canvas operations completed successfully
-
-		// Draw something after failed paste
+		// drawing after the empty paste proves the canvas still works
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
 		await page.locator('#halfblock').click();
@@ -361,14 +319,11 @@ test.describe('Advanced Clipboard Operations', () => {
 			await canvas.click({ position: { x: 50, y: 50 } });
 			await page.waitForTimeout(200);
 		}
-
-		// Canvas operations completed successfully
 	});
 
 	test('should copy large selection', async ({ page }) => {
 		const canvas = page.locator('#canvasContainer canvas').first();
 
-		// Draw a larger pattern
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
 		await page.locator('#halfblock').click();
@@ -376,7 +331,6 @@ test.describe('Advanced Clipboard Operations', () => {
 
 		const bbox = await canvas.boundingBox();
 		if (bbox) {
-			// Draw 5x5 grid
 			for (let x = 0; x < 5; x++) {
 				for (let y = 0; y < 5; y++) {
 					await canvas.click({ position: { x: 50 + x * 12, y: 50 + y * 12 } });
@@ -386,25 +340,21 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.waitForTimeout(200);
 		}
 
-		// Select the large area
 		const selectionTool = page.locator('#select');
 		if (await selectionTool.isVisible()) {
 			await selectionTool.click();
 			await page.waitForTimeout(300);
 
 			if (bbox) {
-				// Select a large area
 				await canvas.click({ position: { x: 40, y: 40 } });
 				await page.waitForTimeout(100);
 				await canvas.click({ position: { x: 120, y: 120 } });
 				await page.waitForTimeout(300);
 			}
 
-			// Copy large selection
 			await page.keyboard.press('Control+c');
 			await page.waitForTimeout(500);
 
-			// Paste large selection
 			if (bbox) {
 				await canvas.click({ position: { x: 150, y: 150 } });
 				await page.waitForTimeout(100);
@@ -413,14 +363,11 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.keyboard.press('Control+v');
 			await page.waitForTimeout(500);
 		}
-
-		// Canvas operations completed successfully
 	});
 
 	test('should maintain selection formatting during clipboard operations', async ({ page }) => {
 		const canvas = page.locator('#canvasContainer canvas').first();
 
-		// Set ICE colors if available
 		const iceColorsToggle = page.locator(
 			'button:has-text("ICE Colors"), input[type="checkbox"][name*="ice"], #iceColorsToggle',
 		);
@@ -429,7 +376,7 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.waitForTimeout(300);
 		}
 
-		// Select bright foreground color
+		// f switches color input back to foreground mode
 		await page.keyboard.press('f');
 		await page.waitForTimeout(200);
 
@@ -444,7 +391,6 @@ test.describe('Advanced Clipboard Operations', () => {
 			}
 		}
 
-		// Draw with bright color
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
 		await page.locator('#characterBrush').click();
@@ -456,7 +402,7 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.waitForTimeout(200);
 		}
 
-		// Copy and paste - formatting should be preserved
+		// formatting must survive the copy/paste
 		const selectionTool = page.locator('#select');
 		if (await selectionTool.isVisible()) {
 			await selectionTool.click();
@@ -474,7 +420,5 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.keyboard.press('Control+v');
 			await page.waitForTimeout(300);
 		}
-
-		// Canvas operations completed successfully
 	});
 });

@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock modules that UI depends on
 vi.mock('../../src/js/client/state.js', () => ({ default: {} }));
 
 vi.mock('../../src/js/client/toolbar.js', () => ({ default: {} }));
@@ -9,7 +8,6 @@ vi.mock('../../src/js/client/toolbar.js', () => ({ default: {} }));
 describe('UI Utilities', () => {
 	describe('createCanvas', () => {
 		beforeEach(() => {
-			// Mock document.createElement for canvas
 			vi.stubGlobal('document', {
 				createElement: vi.fn(tagName => {
 					if (tagName === 'canvas') {
@@ -30,7 +28,6 @@ describe('UI Utilities', () => {
 		});
 
 		afterEach(() => {
-			// Restore mocks
 			vi.restoreAllMocks();
 		});
 
@@ -71,7 +68,6 @@ describe('UI Utilities', () => {
 		it('should count multi-byte UTF-8 characters correctly', () => {
 			const encoder = new TextEncoder();
 
-			// Unicode characters that require multiple bytes
 			expect(encoder.encode('café').length).toBe(5); // é is 2 bytes
 			expect(encoder.encode('🎨').length).toBe(4); // emoji is 4 bytes
 			expect(encoder.encode('测试').length).toBe(6); // Chinese chars are 3 bytes each
@@ -94,7 +90,6 @@ describe('UI Utilities', () => {
 				getElementById: vi.fn(id => ({ id })),
 				querySelector: vi.fn(selector => ({ selector })),
 			});
-			// Ensure the functions have bind method
 			global.document.getElementById.bind = vi
 				.fn()
 				.mockReturnValue(global.document.getElementById);

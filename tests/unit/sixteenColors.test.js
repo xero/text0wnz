@@ -1,7 +1,7 @@
 /**
- * 16colo.rs in-app browser (P6): years -> packs -> pieces navigation
- * against a MOCKED api (no network ever leaves the test), and the open
- * path through a real in-memory pack zip from the mirror.
+ * 16colo.rs in-app browser: years -> packs -> pieces navigation
+ * against a MOCKED api (no network ever leaves the test), and the
+ * open path through a real in-memory pack zip from the mirror.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createSixteenColors } from '../../src/js/client/sixteenColors.js';

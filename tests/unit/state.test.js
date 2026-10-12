@@ -3,7 +3,6 @@ import State from '../../src/js/client/state.js';
 
 describe('State Management System', () => {
 	beforeEach(() => {
-		// Reset state before each test
 		State.reset();
 		State.modal = { close: vi.fn(), open: vi.fn() };
 		// Clear all listeners to avoid interference between tests
@@ -12,11 +11,9 @@ describe('State Management System', () => {
 	});
 
 	afterEach(() => {
-		// Clean up state and listeners
 		State.reset();
 		State._manager.listeners.clear();
 		State._manager.waitQueue.clear();
-		// Restore all mocks
 		vi.restoreAllMocks();
 	});
 
@@ -340,7 +337,6 @@ describe('State Management System', () => {
 
 			State.startInitialization();
 
-			// Set all required dependencies
 			State.palette = { test: 'palette' };
 			State.textArtCanvas = { test: 'canvas' };
 			State.font = { test: 'font' };
@@ -360,7 +356,6 @@ describe('State Management System', () => {
 		it('should not complete initialization if not all dependencies are ready', () => {
 			State.startInitialization();
 
-			// Set only some dependencies
 			State.palette = { test: 'palette' };
 			State.font = { test: 'font' };
 
@@ -422,7 +417,6 @@ describe('State Management System', () => {
 			const resetListener = vi.fn();
 			State.on('app:reset', resetListener);
 
-			// Set some values
 			State._manager.set('title', 'Test Title');
 			State.palette = { test: 'palette' };
 			State.startInitialization();
@@ -437,7 +431,6 @@ describe('State Management System', () => {
 		});
 
 		it('should reset all dependency ready flags', () => {
-			// Set some dependencies
 			State.palette = { test: 'palette' };
 			State.font = { test: 'font' };
 
@@ -467,7 +460,6 @@ describe('State Management System', () => {
 				'title',
 			];
 
-			// Set components
 			components.forEach(component => {
 				State._manager.set(component, { test: component });
 			});
@@ -525,7 +517,6 @@ describe('State Management System', () => {
 
 	describe('LocalStorage Optimization', () => {
 		it('should use base64 encoding for canvas data serialization', () => {
-			// Mock textArtCanvas with realistic data
 			const imageData = new Uint16Array(80 * 25);
 			for (let i = 0; i < imageData.length; i++) {
 				imageData[i] = Math.floor(Math.random() * 65536);
@@ -585,13 +576,10 @@ describe('State Management System', () => {
 				originalData[i] = i % 65536;
 			}
 
-			// Serialize using the optimized method
 			const base64 = State._manager._uint16ArrayToBase64(originalData);
 
-			// Deserialize it back
 			const deserializedData = State._manager._base64ToUint16Array(base64);
 
-			// Check that data matches
 			expect(deserializedData.length).toBe(originalData.length);
 			for (let i = 0; i < originalData.length; i++) {
 				expect(deserializedData[i]).toBe(originalData[i]);
@@ -604,13 +592,10 @@ describe('State Management System', () => {
 				originalBytes[i] = i % 256;
 			}
 
-			// Serialize using the optimized method
 			const base64 = State._manager._uint8ArrayToBase64(originalBytes);
 
-			// Deserialize it back
 			const deserializedBytes = State._manager._base64ToUint8Array(base64);
 
-			// Check that data matches
 			expect(deserializedBytes.length).toBe(originalBytes.length);
 			for (let i = 0; i < originalBytes.length; i++) {
 				expect(deserializedBytes[i]).toBe(originalBytes[i]);
@@ -638,7 +623,6 @@ describe('State Management System', () => {
 		it('should use compression for repetitive canvas data', () => {
 			// Create canvas with lots of repetition (typical for blank areas)
 			const imageData = new Uint16Array(80 * 25);
-			// Blank canvas (all same value)
 			imageData.fill(0);
 
 			const mockCanvas = {
@@ -655,7 +639,6 @@ describe('State Management System', () => {
 
 			const serialized = State._manager.serializeState();
 
-			// Check that compression was used
 			expect(serialized.canvasData.compressed).toBe(true);
 			expect(serialized.canvasData.originalLength).toBe(imageData.length);
 		});
@@ -679,7 +662,6 @@ describe('State Management System', () => {
 
 			const serialized = State._manager.serializeState();
 
-			// Check that compression was not used
 			expect(serialized.canvasData.compressed).toBe(false);
 		});
 	});
@@ -710,7 +692,6 @@ describe('State Management System', () => {
 		});
 
 		it('should handle dependency checks for non-existent properties', () => {
-			// This should not crash
 			State._manager.checkDependencyQueue('nonExistentProperty');
 		});
 

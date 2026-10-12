@@ -4,7 +4,6 @@ import { createDocV3 } from '../../src/js/core/doc.js';
 
 const makeMockDoc = () => createDocV3({ columns: 80, rows: 25 });
 
-// Mock State module
 const mockState = {
 	title: 'test-artwork',
 	textArtCanvas: {
