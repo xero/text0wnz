@@ -1346,11 +1346,9 @@ const createKeyboardController = () => {
 		State.cursor.enable();
 		fkeys.enable();
 		State.positionInfo.update(State.cursor.getX(), State.cursor.getY());
-		// Check if there's an active selection and inherit its position
-		const selection = State.selectionCursor.getPos();
-		if (selection) {
-			State.cursor.move(selection.x, selection.y);
-		}
+		// the selection tool parks the cursor at a real selection when it
+		// disables; inheriting getPos here read stale or default (0,0)
+		// coords on EVERY entry and yanked the view to them
 		enabled = true;
 	};
 
@@ -1359,9 +1357,11 @@ const createKeyboardController = () => {
 		document.removeEventListener('keypress', keyPress);
 		document.removeEventListener('onTextCanvasDown', textCanvasDown);
 		document.removeEventListener('onTextCanvasDrag', textCanvasDrag);
-		const selection = State.selectionCursor.getPos();
-		if (selection) {
-			State.cursor.move(selection.x, selection.y);
+		// park the cursor at a LIVE shift-selection only, and never
+		// scroll: hiding a cursor must not move the view
+		if (State.selectionCursor.isVisible()) {
+			const selection = State.selectionCursor.getPos();
+			State.cursor.move(selection.x, selection.y, false);
 		}
 		State.selectionCursor.hide();
 		State.cursor.disable();
@@ -2390,7 +2390,14 @@ const createSelectionTool = () => {
 	};
 
 	const disable = () => {
+		// a real selection hands its corner to the keyboard cursor (the
+		// Enter-to-keyboard flow); captured before the hide, parked after
+		// it so move() cannot re-show the cursor, and never scrolled
+		const parked = State.selectionCursor.getSelection();
 		State.selectionCursor.hide();
+		if (parked) {
+			State.cursor.move(parked.x, parked.y, false);
+		}
 		panel.style.display = 'none';
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
