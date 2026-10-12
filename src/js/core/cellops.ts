@@ -4,12 +4,6 @@
  * Everything here is integer math over `{charCode, fg, bg}` cells in
  * classic16 terms (palette indices 0-15, bg 8-15 = ice-bright or blink
  * per the doc flag); the editor layer owns the plane-word encoding.
- *
- * NAMING WARNING: v2's magicNumbers.js swaps the half-block names
- * (UPPER_HALFBLOCK = 220 which is CP437 ▄, LOWER_HALFBLOCK = 223 which
- * is ▀). This port names glyphs by their true CP437 meaning,
- * transcribed by VALUE, not by v2 name. The parity suite pins
- * equivalence.
  */
 
 export const FULL_BLOCK = 219; // █

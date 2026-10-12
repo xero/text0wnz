@@ -4,6 +4,7 @@
  */
 import { createCanvas } from './ui.js';
 import magicNumbers from './magicNumbers.js';
+import { LOWER_HALF, UPPER_HALF } from '../core/cellops.js';
 
 /**
  * Creates a lazy font loader that generates glyphs on demand
@@ -159,8 +160,8 @@ export const createLazyFont = (
 
 		if (!alphaGlyphCache.has(key)) {
 			if (
-				charCode === magicNumbers.LOWER_HALFBLOCK ||
-				charCode === magicNumbers.UPPER_HALFBLOCK ||
+				charCode === LOWER_HALF ||
+				charCode === UPPER_HALF ||
 				charCode === magicNumbers.CHAR_SLASH ||
 				charCode === magicNumbers.CHAR_PIPE ||
 				charCode === magicNumbers.CHAR_CAPITAL_X
@@ -229,8 +230,8 @@ export const createLazyFont = (
 			219, // Full block █
 		];
 		const alphaChars = [
-			magicNumbers.LOWER_HALFBLOCK,
-			magicNumbers.UPPER_HALFBLOCK,
+			LOWER_HALF,
+			UPPER_HALF,
 			magicNumbers.CHAR_SLASH,
 			magicNumbers.CHAR_PIPE,
 			magicNumbers.CHAR_CAPITAL_X,

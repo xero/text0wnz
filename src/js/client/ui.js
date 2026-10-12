@@ -1120,19 +1120,6 @@ const createZoomControl = () => {
 			if (State.saveToLocalStorage) {
 				State.saveToLocalStorage();
 			}
-		} else if ((e.ctrlKey || e.metaKey) && e.key === '0') {
-			// Ctrl/Cmd + 0: Reset to 1x
-			e.preventDefault();
-			const zoom = getZoomController();
-			if (zoom) {
-				zoom.zoomReset();
-				return;
-			}
-			slider.value = '1';
-			updateZoom('1');
-			if (State.saveToLocalStorage) {
-				State.saveToLocalStorage();
-			}
 		}
 	};
 

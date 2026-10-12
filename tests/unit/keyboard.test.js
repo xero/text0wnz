@@ -310,12 +310,27 @@ describe('Keyboard Utilities', () => {
 		it('should enable keyboard controller', () => {
 			const controller = createKeyboardController();
 			expect(() => controller.enable()).not.toThrow();
+			// detach the document listener so later tests see only their own
+			controller.disable();
 		});
 
 		it('should disable keyboard controller', () => {
 			const controller = createKeyboardController();
 			controller.enable();
 			expect(() => controller.disable()).not.toThrow();
+		});
+
+		it('draws CP437 21 exactly once per § keypress', () => {
+			vi.clearAllMocks();
+			const drawn = [];
+			State.textArtCanvas.draw = vi.fn(callback =>
+				callback((code, fg, bg, x, y) => drawn.push({ code, x, y })));
+			const controller = createKeyboardController();
+			controller.enable();
+			document.dispatchEvent(new KeyboardEvent('keypress', { key: '§' }));
+			controller.disable();
+			expect(drawn).toEqual([{ code: 21, x: 0, y: 0 }]);
+			expect(State.textArtCanvas.startUndo).toHaveBeenCalledTimes(1);
 		});
 	});
 
