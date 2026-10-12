@@ -173,8 +173,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const composeOnionIndex = (prev, cur, i) => {
 		const glyphId = cur.glyph[i] & 0xffff;
+		// same blank rule as the paste modes and move mode: an empty
+		// glyph (nul, space, or nbsp) on black
 		const blank =
-			(glyphId === 0 || glyphId === 32) && cur.bg[i] === BLANK_BG;
+			(glyphId === 0 || glyphId === 32 || glyphId === 255) &&
+			cur.bg[i] === BLANK_BG;
 		if (!blank || !prev) {
 			onionPlanes.glyph[i] = cur.glyph[i];
 			onionPlanes.fg[i] = cur.fg[i];
