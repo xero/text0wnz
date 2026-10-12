@@ -1072,12 +1072,13 @@
 		@apply bg-purp;
 	}
 	#colorPanel {
-		@apply fixed z-40 dialog-style p-2;
+		/* aside > div makes this a centered flex row; restack it */
+		@apply fixed z-40 dialog-style p-2 flex-col items-stretch text-left;
 		left: 48px;
 		top: var(--header-size);
 		width: 346px;
 		h3 {
-			@apply text-cyan text-sm pt-1;
+			@apply text-cyan text-sm pt-1 pb-1;
 			small {
 				@apply text-fg text-xs pl-2;
 			}
