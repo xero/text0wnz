@@ -50,14 +50,6 @@ describe('Magic Numbers Constants', () => {
 			expect(magicNumbers.LIGHT_BLOCK).toBe(176); // ░
 			expect(magicNumbers.MEDIUM_BLOCK).toBe(177); // ▒
 			expect(magicNumbers.DARK_BLOCK).toBe(178); // ▓
-			expect(magicNumbers.FULL_BLOCK).toBe(219); // █
-		});
-
-		it('should export half-block character codes', () => {
-			expect(magicNumbers.UPPER_HALFBLOCK).toBe(220); // ▀
-			expect(magicNumbers.LOWER_HALFBLOCK).toBe(223); // ▄
-			expect(magicNumbers.LEFT_HALFBLOCK).toBe(221); // ▌
-			expect(magicNumbers.RIGHT_HALFBLOCK).toBe(222); // ▐
 		});
 
 		it('should export special block characters', () => {
@@ -70,11 +62,6 @@ describe('Magic Numbers Constants', () => {
 				magicNumbers.LIGHT_BLOCK,
 				magicNumbers.MEDIUM_BLOCK,
 				magicNumbers.DARK_BLOCK,
-				magicNumbers.FULL_BLOCK,
-				magicNumbers.UPPER_HALFBLOCK,
-				magicNumbers.LOWER_HALFBLOCK,
-				magicNumbers.LEFT_HALFBLOCK,
-				magicNumbers.RIGHT_HALFBLOCK,
 				magicNumbers.MIDDLE_BLOCK,
 				magicNumbers.MIDDLE_DOT,
 			];
@@ -268,20 +255,6 @@ describe('Magic Numbers Constants', () => {
 	});
 
 	describe('Logical Character Groupings', () => {
-		it('should group half-block characters correctly', () => {
-			const halfBlocks = [
-				magicNumbers.UPPER_HALFBLOCK,
-				magicNumbers.LOWER_HALFBLOCK,
-				magicNumbers.LEFT_HALFBLOCK,
-				magicNumbers.RIGHT_HALFBLOCK,
-			];
-
-			// All half-blocks should be in close proximity in CP437
-			const min = Math.min(...halfBlocks);
-			const max = Math.max(...halfBlocks);
-			expect(max - min).toBeLessThan(10); // Should be within 10 chars of each other
-		});
-
 		it('should group shade characters correctly', () => {
 			const shadeBlocks = [
 				magicNumbers.LIGHT_BLOCK,

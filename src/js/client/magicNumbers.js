@@ -16,11 +16,6 @@ const BLANK_CELL = (32 << 8) + 7;
 const LIGHT_BLOCK = 176; // ░
 const MEDIUM_BLOCK = 177; // ▒
 const DARK_BLOCK = 178; // ▓
-const FULL_BLOCK = 219; // █
-const UPPER_HALFBLOCK = 220; // ▀
-const LOWER_HALFBLOCK = 223; // ▄
-const LEFT_HALFBLOCK = 221; // ▌
-const RIGHT_HALFBLOCK = 222; // ▐
 const MIDDLE_BLOCK = 254; // ■
 const MIDDLE_DOT = 249; // ·
 const CHAR_BELL = 7; // (BEL)
@@ -80,11 +75,6 @@ export default {
 	LIGHT_BLOCK,
 	MEDIUM_BLOCK,
 	DARK_BLOCK,
-	FULL_BLOCK,
-	LOWER_HALFBLOCK,
-	UPPER_HALFBLOCK,
-	LEFT_HALFBLOCK,
-	RIGHT_HALFBLOCK,
 	MIDDLE_BLOCK,
 	MIDDLE_DOT,
 	CHAR_BELL,

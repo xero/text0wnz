@@ -656,11 +656,10 @@ Visually scale the drawing canvas from 0.5-4x size, while keeping the interface 
 
 **Keyboard Shortcuts:**
 
-| Key Combo | Action             |
-| --------- | ------------------ |
-| `ctrl +`  | Zoom canvas in     |
-| `ctrl -`  | Zoom canvas out    |
-| `ctrl 0`  | Reset zoom to 1.0x |
+| Key Combo | Action          |
+| --------- | --------------- |
+| `ctrl +`  | Zoom canvas in  |
+| `ctrl -`  | Zoom canvas out |
 
 > [!NOTE]
 > On the WebGL renderer, zoom applies live as you pinch or scroll. The 2D fallback renderer commits the new scale when the gesture ends, which can take a moment on large canvases.
@@ -892,7 +891,7 @@ These work whenever you are not typing in Keyboard Mode. Hold `ctrl` to use them
 | `ctrl z` / `ctrl y`                       | Undo / Redo                |
 | `ctrl x`/`ctrl c`/`ctrl v`/`ctrl shift v` | Cut/Copy/Paste/SystemPaste |
 | `ctrl backspace`                          | Delete selection           |
-| `ctrl +` / `ctrl -` / `ctrl 0`            | Zoom in / out / reset      |
+| `ctrl +` / `ctrl -`                       | Zoom in / out              |
 
 **Navigation (Keyboard Mode):**
 

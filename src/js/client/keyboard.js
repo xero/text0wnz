@@ -1061,6 +1061,7 @@ const createKeyboardController = () => {
 	};
 
 	const unicodeMapping = new Map([
+		[0x00a7, 21], // SECTION SIGN (§)
 		[0x2302, 127], // HOUSE (⌂)
 		[0x00c7, 128], // CAPITAL LETTER C WITH CEDILLA (Ç)
 		[0x00fc, 129], // SMALL LETTER U WITH DIAERESIS (ü)
@@ -1215,12 +1216,6 @@ const createKeyboardController = () => {
 					if (State.cursor.getX() > 0) {
 						deleteText();
 					}
-				}
-
-				// Special case for section sign
-				if (e.key === '§') {
-					e.preventDefault();
-					draw(21);
 				}
 			} else if (e.ctrlKey) {
 				if (e.key === 'u' || e.key === 'U') {
