@@ -95,18 +95,27 @@ const createColorPanel = () => {
 			return;
 		}
 		grid.replaceChildren();
-		// the classic 256colors table: the 6x6x6 cube wraps on ramp
-		// boundaries (16-231, three 6-value blue ramps per row) and the
-		// greys wrap at 12, so every row reads as a smooth gradient
-		const cube = document.createElement('div');
-		cube.className = 'cube';
-		const greys = document.createElement('div');
-		greys.className = 'greys';
-		for (let index = 16; index < 256; index++) {
+		const swatch = (section, index) => {
 			const word = xterm256RGB(index);
 			const hex = (word & 0xffffff).toString(16).padStart(6, '0');
-			const section = index < 232 ? cube : greys;
 			section.appendChild(makeSwatch(paletteColor(index), `${index} #${hex}`));
+		};
+		// the 6x6x6 cube as six 6x6 faces, three side by side per band:
+		// each face is one red level with green down and blue across, so
+		// every block is a continuous gradient with no row banding
+		const cube = document.createElement('div');
+		cube.className = 'cube';
+		for (let r = 0; r < 12; r++) {
+			for (let c = 0; c < 18; c++) {
+				const red = Math.floor(r / 6) * 3 + Math.floor(c / 6);
+				swatch(cube, 16 + red * 36 + (r % 6) * 6 + (c % 6));
+			}
+		}
+		// the grey ramp runs continuously over two rows of 12
+		const greys = document.createElement('div');
+		greys.className = 'greys';
+		for (let index = 232; index < 256; index++) {
+			swatch(greys, index);
 		}
 		grid.append(cube, greys);
 	};
