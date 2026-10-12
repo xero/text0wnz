@@ -1,6 +1,6 @@
 /**
- * Bun.serve websocket layer (O10): path rooms, hardened frame intake,
- * ws-level heartbeat (the protocol has none, landmine §3.6.2 #5), and
+ * Bun.serve websocket layer: path rooms, hardened frame intake,
+ * ws-level heartbeat (the protocol has none), and
  * the dual-listener story: the main listener sits behind Caddy (wss
  * for browsers) and an optional plaintext listener on another port
  * serves desktop clients (Moebius, icy_draw) directly, which solves
@@ -330,7 +330,7 @@ export const createMoebiusServer = config => {
 				})
 			: null;
 
-	// the Moebius dialect has no heartbeat (landmine 5): ws-level pings
+	// the Moebius dialect has no heartbeat: ws-level pings
 	// keep quiet-but-alive clients (pure spectators) clear of the idle
 	// reaper, and a missed pong since the last sweep marks a ghost
 	const heartbeat = setInterval(() => {

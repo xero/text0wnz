@@ -436,7 +436,7 @@ const createShadingController = (panel, charMode) => {
 		return code;
 	};
 
-	// A pen picks its shade from pressure directly (PLAN §3.5 "pen draws
+	// A pen picks its shade from pressure directly ("pen draws
 	// with pressure"); finger and mouse keep the classic darken/lighten
 	// cycle. Quartiles map onto the CP437 shade ramp.
 	const shadeFromPressure = pressure => {

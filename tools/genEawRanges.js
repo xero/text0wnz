@@ -1,6 +1,6 @@
 /**
  * Regenerates src/js/core/eawData.ts from the vendored Unicode East
- * Asian Width table (PLAN §3.4 width policy). Unlike the hex fonts,
+ * Asian Width table (width policy). Unlike the hex fonts,
  * the output is COMMITTED: it is ~130 ranges of TypeScript that tsc,
  * vitest, and the bundler all need statically, and it only changes on
  * a Unicode version bump. Runs under bun:

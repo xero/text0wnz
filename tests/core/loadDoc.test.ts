@@ -174,7 +174,7 @@ describe('editor.loadDoc', () => {
 	});
 });
 
-describe('unicode glyph ids through the editor (P5)', () => {
+describe('unicode glyph ids through the editor', () => {
 	it('writes the full id to the planes but substitutes on the u16 side', () => {
 		const doc = createDocV3({ columns: 4, rows: 1 });
 		// unicode entries intern above the CP437 identity seed
@@ -207,7 +207,7 @@ describe('unicode glyph ids through the editor (P5)', () => {
 	});
 });
 
-describe('extended colors through the editor (P5)', () => {
+describe('extended colors through the editor', () => {
 	it('writes words to the planes and quantizes the u16 side', () => {
 		const doc = createDocV3({ columns: 4, rows: 1 });
 		const writes: number[] = [];
@@ -254,7 +254,7 @@ describe('extended colors through the editor (P5)', () => {
 	});
 });
 
-describe('ice toggle with extended colors (review finding 1)', () => {
+describe('ice toggle with extended colors', () => {
 	it('never touches extended backgrounds in either direction', () => {
 		const doc = createDocV3({ columns: 4, rows: 1 });
 		const editor = createEditorCore(doc);

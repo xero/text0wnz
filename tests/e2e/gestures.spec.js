@@ -127,7 +127,7 @@ test.describe('touch gestures and zoom shortcuts', () => {
 		expect(scale).toBeLessThanOrEqual(4);
 	});
 
-	test('ctrl +/-/0 zoom shortcuts still work (D15)', async ({ page }) => {
+	test('ctrl +/-/0 zoom shortcuts still work', async ({ page }) => {
 		expect(await getScale(page)).toBe(1);
 		await page.keyboard.press('Control+=');
 		await page.waitForTimeout(400);

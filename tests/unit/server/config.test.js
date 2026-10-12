@@ -130,7 +130,7 @@ describe('Config Module - parseArgs', () => {
 		});
 	});
 
-	describe('ROOM_MAX_COLUMNS / ROOM_MAX_ROWS env knobs (O3)', () => {
+	describe('ROOM_MAX_COLUMNS / ROOM_MAX_ROWS env knobs', () => {
 		afterEach(() => {
 			delete process.env.ROOM_MAX_COLUMNS;
 			delete process.env.ROOM_MAX_ROWS;

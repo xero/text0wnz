@@ -1,10 +1,10 @@
 /**
- * Room protocol semantics (PLAN §3.6.3): vanilla Moebius behavior
+ * Room protocol semantics: vanilla Moebius behavior
  * transcribed from upstream plus our policy deltas, driven through
  * fake clients so the whole surface tests without sockets. Policy
- * pins: D12 (password gates spectators), O14 (spectators cannot draw,
- * CAN chat and hear chat), landmine 2 (SET_CANVAS_SIZE relays the
- * sender's id), the do-not-diverge rule (default relay never
+ * pins: the password gates spectators, spectators cannot draw but
+ * CAN chat and hear chat, SET_CANVAS_SIZE relays the sender's id,
+ * the do-not-diverge rule (default relay never
  * persisted), and the row-aware resize (v2 moves cells by linear
  * offset, scrambling rows).
  */
@@ -77,7 +77,7 @@ describe('connect', () => {
 		expect(client.last().data.caps).toEqual([...SERVER_CAPS]);
 	});
 
-	it('D12: the password gates spectators too', () => {
+	it('the password gates spectators too', () => {
 		const room = createRoom({ password: 'hunter2' });
 		const spectator = fakeClient();
 		expect(room.connect(spectator, {})).toBe(false);
@@ -128,7 +128,7 @@ describe('draw', () => {
 		expect(blocks[1 * 4 + 1]).toEqual(block);
 	});
 
-	it('O14: spectators cannot draw by default', () => {
+	it('spectators cannot draw by default', () => {
 		const room = createRoom({ columns: 4, rows: 2 });
 		const editor = joinEditor(room);
 		const spectator = joinSpectator(room);
@@ -141,7 +141,7 @@ describe('draw', () => {
 	});
 });
 
-describe('chat (O14: spectators chat and hear chat)', () => {
+describe('chat (spectators chat and hear chat)', () => {
 	it('spectator chat reaches editors and spectators', () => {
 		const room = createRoom();
 		const editor = joinEditor(room);
@@ -193,7 +193,7 @@ describe('settings and canvas', () => {
 		expect(doc.title).toBe('t');
 	});
 
-	it('SET_CANVAS_SIZE resizes row-aware and relays the id (landmine 2)', () => {
+	it('SET_CANVAS_SIZE resizes row-aware and relays the id', () => {
 		const room = createRoom({ columns: 3, rows: 2 });
 		const editor = joinEditor(room);
 		const peer = joinEditor(room, 'peer');
@@ -225,7 +225,7 @@ describe('settings and canvas', () => {
 		expect(room.stats().columns).toBe(ROOM_DEFAULTS.columns);
 	});
 
-	it('honors per-room resize walls in either direction (O3 env knob)', () => {
+	it('honors per-room resize walls in either direction (env knob)', () => {
 		// a cautious host LOWERS the wall below the compiled-in default
 		const room = createRoom({ maxColumns: 200, maxRows: 500 });
 		const editor = joinEditor(room);
@@ -588,7 +588,7 @@ describe('extension suite v1 (t0wnz-ext-1)', () => {
 });
 
 
-describe('review hardening (P6 adversarial pass)', () => {
+describe('hostile input hardening', () => {
 	const joinCaps = (room, nick) =>
 		joinEditor(room, nick, { caps: [EXT_SUITE_CAP]});
 

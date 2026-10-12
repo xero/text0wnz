@@ -172,7 +172,7 @@ const createFramesPanel = () => {
 		if (!c.canAddFrame()) {
 			if (
 				!confirm(
-					'This passes the animation memory budget (O13). Add the frame anyway?',
+					'This passes the animation memory budget. Add the frame anyway?',
 				)
 			) {
 				return;

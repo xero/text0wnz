@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Collab room (PLAN §3.6.3): Moebius-native semantics with the
+ * Collab room: Moebius-native semantics with the
  * superset policies layered on. Transport-free: callers hand in
  * client objects with a send(type, data) and we never touch sockets,
  * so the whole protocol surface unit-tests without a network.
@@ -14,22 +14,22 @@
  * - SAUCE/ICE_COLORS/USE_9PX_FONT/CHANGE_FONT/SET_CANVAS_SIZE persist
  *   and broadcast including spectators; SET_CANVAS_SIZE relays the
  *   sender's data verbatim, which keeps the id vanilla Moebius clients
- *   crash without (landmine §3.6.2 #2).
+ *   crash without.
  * - CURSOR/SELECTION/OPERATION/17-20/22 ride the default relay to
  *   registered users and are NEVER persisted; late joiners see stale
  *   palette/flips exactly like upstream (do-not-diverge rule).
  * - SET_BG is swallowed (upstream comments it out).
  *
  * Our deltas (owner decisions):
- * - D12: a room password applies to EVERYONE, including nickless
+ * - a room password applies to EVERYONE, including nickless
  *   spectators (upstream lets nickless connections bypass it).
- * - O14: spectators default to read-only drawing but MAY chat, and
+ * - spectators default to read-only drawing but MAY chat, and
  *   they receive chat (upstream excludes them from the chat tier).
  * - resize is row-aware (a linear copy scrambles late joiners).
  * - malformed frames are dropped with a log line, never a crash.
  * - every mutation lands in a bounded op log (timelapse substrate).
  *
- * Extension suite v1 (PLAN §3.6.3, ids 23-27, cap "t0wnz-ext-1"):
+ * Extension suite v1 (ids 23-27, cap "t0wnz-ext-1"):
  * caps-aware clients get full-fidelity cells (unicode + v3 color
  * words), a seq on every mutation plus EXT_ACK for their own, and
  * EXT_SYNC wholesale recovery. Every ext mutation is down-converted to
@@ -88,8 +88,8 @@ const blankBlock = () => ({ code: 32, fg: 7, bg: 0 });
  * @param {{enabled?: boolean, canChat?: boolean, canDraw?: boolean}} [options.spectators]
  * @param {number} [options.columns]
  * @param {number} [options.rows]
- * @param {number} [options.maxColumns] resize wall (O3 env knob; either direction)
- * @param {number} [options.maxRows] resize wall (O3 env knob; either direction)
+ * @param {number} [options.maxColumns] resize wall (env knob; either direction)
+ * @param {number} [options.maxRows] resize wall (env knob; either direction)
  * @param {number} [options.opLogLimit]
  * @param {number} [options.syncCooldownMs] per-user EXT_SYNC/TIMELAPSE rate limit
  * @param {(line: string) => void} [options.log]
@@ -401,7 +401,7 @@ export const createRoom = (options = {}) => {
 	const connect = (client, data) => {
 		const nick = typeof data.nick === 'string' ? sanitize(data.nick, ROOM_DEFAULTS.nickLimit, false) : undefined;
 		const pass = typeof data.pass === 'string' ? data.pass : '';
-		// D12: the password gates EVERYONE, spectators included
+		// the password gates EVERYONE, spectators included
 		if (password !== '' && pass !== password) {
 			client.send(MoebiusAction.REFUSED, {});
 			log(`${nick ?? 'spectator'} refused (bad password)`);
@@ -549,7 +549,7 @@ export const createRoom = (options = {}) => {
 					chatHistory.shift();
 				}
 				dirty = true;
-				// O14: spectators chat and HEAR chat on our server. Explicit
+				// spectators chat and HEAR chat on our server. Explicit
 				// shape: relaying junk fields would let a client smuggle a
 				// fake `seq` into caps peers' streams
 				broadcast(
@@ -675,7 +675,7 @@ export const createRoom = (options = {}) => {
 				const payload = { columns, rows, id: user.id };
 				const opSeq = pushOp(type, payload);
 				// rebuilt shape with the SERVER-known id: vanilla clients
-				// crash without an id (landmine 2), and relayed client ids
+				// crash without an id, and relayed client ids
 				// are forgeable
 				fanoutMutation(
 					client,

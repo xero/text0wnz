@@ -144,7 +144,7 @@ describe('docV3', () => {
 		expect(() => doc.removeFrame(0)).toThrow();
 	});
 
-	it('enforces the O13 frame budget unless forced', () => {
+	it('enforces the frame budget unless forced', () => {
 		const doc = createDocV3({ columns: 10, rows: 10, frameCellBudget: 250 });
 		doc.addFrame(); // 200 cells, fits
 		expect(doc.canAddFrame()).toBe(false);

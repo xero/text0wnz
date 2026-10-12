@@ -1,8 +1,8 @@
 /**
- * Runtime unicode glyph source (PLAN §3.4): lazily fetches the packed
+ * Runtime unicode glyph source: lazily fetches the packed
  * per-256-codepoint blocks that tools/bakeHexFonts.js bakes into
  * ui/fonts/u/, and rasterizes glyphs to the active classic font's cell
- * metrics for the renderer's unicode atlas pages (§3.1 xterm.js
+ * metrics for the renderer's unicode atlas pages (xterm.js
  * model). Blocks and the manifest load on demand only - a classic doc
  * never touches the network for any of this.
  *

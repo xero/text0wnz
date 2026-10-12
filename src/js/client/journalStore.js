@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Autosave journal store (PLAN §3.2): the client side of the OPFS
+ * Autosave journal store: the client side of the OPFS
  * journal. Picks a backend at open time:
  * - OPFS sync-access handles in a worker (journalWorker.js) wherever
  *   `navigator.storage.getDirectory` exists (Safari 15.2+, Chromium,

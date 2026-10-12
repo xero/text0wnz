@@ -1,5 +1,5 @@
 /**
- * Capture desktop-Chromium perf baselines (PLAN.md P0) by driving the in-app
+ * Capture desktop-Chromium perf baselines by driving the in-app
  * profiling harness (src/js/client/profiler.js, ?profile) with Playwright.
  *
  * Usage:
@@ -9,7 +9,7 @@
  * Numbers are machine-dependent snapshots recorded WITH a hardware
  * descriptor; they are evidence for before/after comparisons, not a CI gate.
  * On-device (iPad/Android) runs are owner handoffs: open <app>/?profile on
- * the device and press "run all" (PLAN.md O9).
+ * the device and press "run all".
  */
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -21,7 +21,7 @@ import { chromium } from 'playwright';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const distDir = path.join(repoRoot, 'dist');
 // The default output is p0-perf.json, the legacy chunk-renderer baseline,
-// so the default query pins renderer=2d now that GL is the default (O11).
+// so the default query pins renderer=2d now that GL is the default.
 // PERF_QUERY/PERF_OUT make the same harness capture other renderers, e.g.
 //   PERF_QUERY='?profile&renderer=gl' PERF_OUT=tests/baselines/p1-gl-perf.json
 const outFile = path.join(

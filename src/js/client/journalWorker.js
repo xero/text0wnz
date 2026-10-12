@@ -1,5 +1,5 @@
 /**
- * OPFS journal worker (PLAN §3.2): owns the autosave journal file via
+ * OPFS journal worker: owns the autosave journal file via
  * createSyncAccessHandle, which only exists in workers (Safari 15.2+).
  * (No @ts-check: FileSystemSyncAccessHandle and the worker-scoped
  * postMessage overloads are not in the repo's TS lib set; the JSDoc

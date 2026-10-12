@@ -121,8 +121,8 @@ describe('timelapseToDoc', () => {
 		).toThrow(ProtocolError);
 	});
 
-	it('bounds frames x cells by the animation budget (review pin)', () => {
-		// 4M cells: the O13 budget (16M cell-frames) allows 4 frames
+	it('bounds frames x cells by the animation budget', () => {
+		// 4M cells: the budget (16M cell-frames) allows 4 frames
 		const payload = basePayload(4000, 1000);
 		payload.ops = Array.from({ length: 50 }, (_, i) =>
 			extDrawOp(i % 4, 0, 65 + (i % 26)),

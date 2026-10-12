@@ -11,8 +11,8 @@
  * (ignoreSnapshots in playwright.config.js). To (re)generate goldens, run
  * the golden-update workflow and commit the artifact it uploads.
  *
- * P1 gate: the GL renderer must reproduce these shots at integer zoom with
- * threshold 0 (PLAN.md §4 P1).
+ * Gate: the GL renderer must reproduce these shots at integer zoom with
+ * threshold 0.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -92,8 +92,8 @@ const realartName = ({ zoom, nine, scroll }) =>
 	`realart-vga-z${zoom}-${nine ? '9px' : '8px'}-${scroll}.png`;
 
 const prepPage = async (page, testInfo) => {
-	// Both renderers assert the SAME goldens (the P1 pixel-parity gate).
-	// GL is the default since O11; the golden project pins the legacy chunk
+	// Both renderers assert the SAME goldens (the pixel-parity gate).
+	// GL is the default; the golden project pins the legacy chunk
 	// renderer explicitly so it keeps its pixel gate until deletion
 	const gl = testInfo.project.name === 'golden-gl';
 	await page.goto(gl ? '/?test&renderer=gl' : '/?test&renderer=2d');
@@ -229,7 +229,7 @@ test.describe('golden real artwork screenshots', () => {
 	}
 });
 
-test.describe('golden unicode screenshots (P5)', () => {
+test.describe('golden unicode screenshots', () => {
 	// GL-only: the chunk fallback renders the lossy '?' mirror by design
 	// (unit-pinned), so only the GL path owns the mixed-charset pixels
 	for (const zoom of [1, 2]) {

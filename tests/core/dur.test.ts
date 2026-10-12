@@ -253,7 +253,7 @@ describe('dur codec (durdraw v7/v8 import)', () => {
 	});
 });
 
-describe('encodeDur round trip (P6 export)', () => {
+describe('encodeDur round trip', () => {
 	it('keeps frames, delays, unicode glyphs, and 256 indexes', async () => {
 		const doc = createDocV3({ columns: 3, rows: 2, mode: 'xterm256' });
 		const frame0 = doc.frames[0];

@@ -1,5 +1,5 @@
 /**
- * Pen pressure (PLAN §3.5 "pen draws with pressure"): the shading
+ * Pen pressure: the shading
  * brush picks its shade from pen pressure quartiles; mouse and touch
  * keep the classic darken/lighten cycle. Also pins the attribute
  * brush's shift-line path, which needs the modifiers the normalizer
