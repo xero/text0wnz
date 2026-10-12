@@ -504,13 +504,14 @@
 			@apply flex flex-col items-center;
 		}
 		.zoomTop {
-			@apply flex flex-row items-center gap-1;
+			@apply flex flex-row items-center;
 
 			svg {
 				@apply mx-0;
 			}
+			/* wider break after the icon, tighter label-to-value pair */
 			label {
-				@apply cursor-pointer;
+				@apply cursor-pointer pl-2 pr-1;
 			}
 		}
 		/* the slider spans exactly the row above it: zero width keeps
