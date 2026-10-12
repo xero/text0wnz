@@ -1209,27 +1209,92 @@
 		outline: 1px solid #000;
 		box-shadow: inset 0 0 0 1px #000;
 	}
+	#sixteenModal {
+		/* responsive: the content is scene art of unknowable shapes */
+		width: 80vw;
+		header,
+		nav,
+		article {
+			@apply flex-shrink-0 w-full;
+		}
+		header {
+			@apply w-full flex-row pl-2 my-2.5 place-content-between;
+			h2 {
+				@apply text-cyan text-2xl;
+			}
+		}
+		article {
+			@apply flex min-h-0 flex-col w-full bg-editor p-3;
+		}
+		nav {
+			@apply justify-end border-0 bg-menu w-auto mt-0.5;
+			button {
+				@apply flex bg-midnight justify-center items-center m-2;
+				svg {
+					@apply mr-3.5;
+					width: 37px;
+					height: 37px;
+				}
+			}
+			button:disabled {
+				@apply opacity-40 cursor-default;
+				&:hover {
+					@apply bg-midnight;
+				}
+			}
+		}
+	}
 	#sixteenList {
-		@apply flex flex-wrap gap-2 overflow-y-auto content-start;
-		max-height: 55vh;
+		@apply overflow-y-auto;
+		max-height: 62vh;
 		button {
 			@apply bg-menu text-fg px-2 py-1 cursor-pointer;
 		}
 		button:hover:not(:disabled) {
 			@apply bg-purp;
 		}
-		button:disabled {
-			@apply opacity-40 cursor-default;
-		}
 		.sixteenPager {
-			@apply w-full flex gap-2 items-center text-fg;
+			@apply flex gap-2 items-center text-fg;
+			grid-column: 1 / -1;
+		}
+		/* every year cell fits the longest label, "1994 (593)" */
+		&[data-view='years'] {
+			@apply grid gap-2 content-start;
+			grid-template-columns: repeat(auto-fill, minmax(8.5em, 1fr));
+			button {
+				@apply w-full text-center;
+			}
+		}
+		&[data-view='packs'] {
+			@apply grid gap-2 content-start;
+			grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
+		}
+		.sixteenPack {
+			@apply flex flex-col items-center gap-1 p-1;
+			/* the frame stays a black square when a pack has no diz */
+			.dizFrame {
+				@apply bg-midnight w-full;
+				aspect-ratio: 1;
+				img {
+					@apply w-full h-full;
+					object-fit: contain;
+				}
+			}
+			span {
+				@apply text-xs break-all;
+			}
+		}
+		/* masonry: balanced columns from the API's thumbnail sizes */
+		&[data-view='files'] {
+			@apply flex flex-row gap-2 items-start;
+		}
+		.sixteenCol {
+			@apply flex flex-col gap-2 flex-1 min-w-0;
 		}
 		.sixteenPiece {
-			@apply flex flex-col items-center gap-1 p-1;
-			width: 172px;
+			@apply flex flex-col items-center gap-1 p-1 w-full;
 			img {
-				max-width: 160px;
-				height: auto;
+				@apply w-full h-auto;
 			}
 			span {
 				@apply text-xs break-all;
@@ -1237,7 +1302,10 @@
 		}
 	}
 	#sixteenStatus {
-		@apply text-cyan text-sm;
+		@apply text-cyan text-sm w-full pb-2;
+		&.error {
+			@apply text-red-400;
+		}
 	}
 	#pluginLoaders {
 		@apply flex flex-row gap-2 items-center;

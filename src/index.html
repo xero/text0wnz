@@ -888,14 +888,26 @@
 				</nav>
 			</section>
 			<section id="sixteenModal">
-				<h2>16colo.rs: <strong id="sixteenCrumb">years</strong></h2>
+				<header>
+					<h2>16colo.rs: <strong id="sixteenCrumb">years</strong></h2>
+				</header>
 				<article>
 					<p id="sixteenStatus" class="hide"></p>
 					<div id="sixteenList"></div>
 				</article>
 				<nav>
-					<button id="sixteenBack" disabled>Back</button>
-					<button id="sixteenClose">Close</button>
+					<button id="sixteenBack" aria-label="Back" disabled>
+						<svg>
+							<use href="img/icons.svg#left"></use>
+						</svg>
+						Back
+					</button>
+					<button id="sixteenClose" class="close" aria-label="Close">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Close
+					</button>
 				</nav>
 			</section>
 			<section id="charsetModal">

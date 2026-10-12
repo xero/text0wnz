@@ -117,9 +117,14 @@ File operations allowing you to create, open, and save artwork in multiple file 
 
 **Features:**
 
-- Browse by year, then by pack, with thumbnails for every piece
+- Browse by year, then by pack, with each pack previewed by its
+  `file_id.diz` artwork, the scene's own pack labels
+- Pieces lay out in balanced columns sized from their artwork, like the
+  real gallery
 - Click a piece to open it straight in the editor
-- Pieces in formats the editor opens (`.ans`, `.asc`, `.diz`, `.nfo`, `.txt`, `.bin`, `.xb`, `.tnd`, `.dur`) are clickable; everything else is labeled as unopenable
+- Only formats the editor opens are listed (`.ans`, `.asc`, `.diz`,
+  `.nfo`, `.txt`, `.bin`, `.xb`, `.tnd`, `.dur`, and the bare
+  `file_id`); images, music, and other pack extras are filtered out
 - Pack archives download once and cache for the session
 - Every request is user-driven; nothing loads in the background
 

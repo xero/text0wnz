@@ -35,7 +35,9 @@ byte-exact golden tests before anything else moved.
 - **Plugins.** Load an ES module from a URL or file; it reads the
   document through a small API and writes back as one undoable batch.
 - **16colo.rs browser.** Browse artpacks by year and open pieces
-  straight into the editor.
+  straight into the editor. Packs preview by their `file_id.diz`, years
+  sit in a uniform grid, pieces pack into balanced columns sized from
+  their artwork, and only files the editor opens are listed.
 - **Input.** Pen pressure, touch gestures, focal zoom, and a two-finger
   tap for undo.
 - **Crash recovery.** An OPFS journal autosaves your session and

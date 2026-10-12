@@ -23,8 +23,14 @@ const GALLERY = 'https://16colo.rs';
 const MIRROR =
 	'https://raw.githubusercontent.com/xero/sixteencolors-archive/master';
 
-/** piece extensions the editor can open */
+/** piece extensions the editor can open, plus the bare file_id */
 const OPENABLE = /\.(ans|asc|diz|nfo|txt|bin|xb|tnd|dur)$/i;
+const isOpenable = name => OPENABLE.test(name) || (/^file_id$/i).test(name);
+
+/** column the masonry packs around, thumbnail width plus padding */
+const COL_WIDTH = 196;
+/** caption + padding under each thumbnail, for column balancing */
+const CAPTION_PX = 36;
 
 const createSixteenColors = ({ openFile }) => {
 	const crumb = $('sixteenCrumb');
@@ -44,9 +50,10 @@ const createSixteenColors = ({ openFile }) => {
 	/** @type {{view: string, year?: number, page?: number, pack?: object}} */
 	let where = { view: 'years' };
 
-	const say = text => {
+	const say = (text, isError = false) => {
 		status.textContent = text ?? '';
 		status.classList.toggle('hide', !text);
+		status.classList.toggle('error', Boolean(text) && isError);
 	};
 
 	const fetchJson = async url => {
@@ -57,8 +64,9 @@ const createSixteenColors = ({ openFile }) => {
 		return response.json();
 	};
 
-	const clearList = () => {
+	const clearList = view => {
 		list.textContent = '';
+		list.dataset.view = view;
 	};
 
 	const button = (label, onClick, className = 'sixteenItem') => {
@@ -75,12 +83,12 @@ const createSixteenColors = ({ openFile }) => {
 		where = { view: 'years' };
 		crumb.textContent = 'years';
 		btnBack.disabled = true;
-		clearList();
+		clearList('years');
 		say('loading years...');
 		try {
 			cache.years ??= await fetchJson(`${API}/year`);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`);
+			say(`16colo.rs did not answer (${error.message})`, true);
 			return;
 		}
 		say(null);
@@ -92,11 +100,32 @@ const createSixteenColors = ({ openFile }) => {
 		}
 	};
 
+	// every pack preview rides the gallery's normalized diz name; a pack
+	// without one 404s and the black frame alone holds the cell
+	const packCard = pack => {
+		const item = document.createElement('button');
+		item.className = 'sixteenPack';
+		const frame = document.createElement('div');
+		frame.className = 'dizFrame';
+		const img = document.createElement('img');
+		img.loading = 'lazy';
+		img.src = `${GALLERY}/pack/${encodeURIComponent(pack.name)}/tn/FILE_ID.DIZ.png`;
+		img.alt = pack.name;
+		img.addEventListener('error', () => img.remove());
+		frame.appendChild(img);
+		const caption = document.createElement('span');
+		caption.textContent = pack.name;
+		item.appendChild(frame);
+		item.appendChild(caption);
+		item.addEventListener('click', () => showFiles(pack));
+		return item;
+	};
+
 	const showPacks = async (year, page) => {
 		where = { view: 'packs', year, page };
 		crumb.textContent = String(year);
 		btnBack.disabled = false;
-		clearList();
+		clearList('packs');
 		say(`loading ${year}...`);
 		const key = `${year}:${page}`;
 		let data;
@@ -104,7 +133,7 @@ const createSixteenColors = ({ openFile }) => {
 			data = cache.packs.get(key) ?? (await fetchJson(`${API}/year/${year}?page=${page}`));
 			cache.packs.set(key, data);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`);
+			say(`16colo.rs did not answer (${error.message})`, true);
 			return;
 		}
 		say(null);
@@ -124,15 +153,54 @@ const createSixteenColors = ({ openFile }) => {
 			list.appendChild(pager);
 		}
 		for (const pack of data.results ?? []) {
-			list.appendChild(button(pack.name, () => showFiles(pack)));
+			list.appendChild(packCard(pack));
+		}
+	};
+
+	const pieceCard = (pack, file) => {
+		const item = document.createElement('button');
+		item.className = 'sixteenPiece';
+		if (file.tn) {
+			const img = document.createElement('img');
+			img.loading = 'lazy';
+			img.src = GALLERY + file.tn;
+			img.alt = file.name;
+			item.appendChild(img);
+		}
+		const caption = document.createElement('span');
+		caption.textContent = file.name;
+		item.appendChild(caption);
+		item.addEventListener('click', () => openPiece(pack, file));
+		return item;
+	};
+
+	// greedy shortest-column packing from the API's thumbnail sizes:
+	// no measuring, no reflow, reading order stays roughly rowwise
+	const layoutPieces = (pack, files) => {
+		const count = Math.max(
+			Math.floor((list.clientWidth || 600) / COL_WIDTH),
+			2,
+		);
+		const columns = [];
+		for (let i = 0; i < count; i++) {
+			const el = document.createElement('div');
+			el.className = 'sixteenCol';
+			columns.push({ el, height: 0 });
+			list.appendChild(el);
+		}
+		for (const file of files) {
+			const ratio = file.w && file.h ? file.h / file.w : 1;
+			const shortest = columns.reduce((a, b) => (b.height < a.height ? b : a));
+			shortest.el.appendChild(pieceCard(pack, file));
+			shortest.height += ratio * COL_WIDTH + CAPTION_PX;
 		}
 	};
 
 	const showFiles = async pack => {
-		where = { view: 'files', pack, year: pack.year };
+		where = { view: 'files', pack, year: pack.year, page: where.page ?? 1 };
 		crumb.textContent = `${pack.year} / ${pack.name}`;
 		btnBack.disabled = false;
-		clearList();
+		clearList('files');
 		say(`loading ${pack.name}...`);
 		let files;
 		try {
@@ -141,58 +209,48 @@ const createSixteenColors = ({ openFile }) => {
 				const raw = data.results?.[0]?.files ?? {};
 				cache.files.set(
 					pack.name,
-					Object.entries(raw).map(([name, info]) => ({
-						name,
-						tn: info?.file?.tn?.uri ?? null,
-						artists: info?.artists ?? [],
-					})),
+					Object.entries(raw)
+						.filter(([name]) => isOpenable(name))
+						.map(([name, info]) => ({
+							name,
+							tn: info?.file?.tn?.uri ?? null,
+							w: info?.file?.tn?.width ?? 0,
+							h: info?.file?.tn?.height ?? 0,
+							artists: info?.artists ?? [],
+						})),
 				);
 			}
 			files = cache.files.get(pack.name);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`);
+			say(`16colo.rs did not answer (${error.message})`, true);
 			return;
 		}
-		say(null);
-		for (const file of files) {
-			const item = document.createElement('button');
-			item.className = 'sixteenPiece';
-			if (file.tn) {
-				const img = document.createElement('img');
-				img.loading = 'lazy';
-				img.src = GALLERY + file.tn;
-				img.alt = file.name;
-				item.appendChild(img);
-			}
-			const caption = document.createElement('span');
-			caption.textContent = file.name;
-			item.appendChild(caption);
-			if (OPENABLE.test(file.name)) {
-				item.addEventListener('click', () => openPiece(pack, file));
-			} else {
-				item.disabled = true;
-				item.title = 'not a format the editor opens';
-			}
-			list.appendChild(item);
-		}
+		say(files.length ? null : 'nothing in this pack opens in the editor');
+		layoutPieces(pack, files);
 	};
 
 	// ------------------------------------------------------------ open
 
 	const openPiece = async (pack, file) => {
-		say(`fetching ${pack.archive}...`);
+		if (!pack.archive) {
+			say('16colo.rs lists no zip for this pack, so it cannot be opened here', true);
+			return;
+		}
+		// the mirror strips spaces from archive names on sync
+		const zipName = pack.archive.replace(/\s+/g, '');
+		say(`fetching ${zipName}...`);
 		try {
-			if (!cache.zips.has(pack.archive)) {
+			if (!cache.zips.has(zipName)) {
 				const response = await fetch(
-					`${MIRROR}/${pack.year}/${pack.archive}`,
+					`${MIRROR}/${pack.year}/${encodeURIComponent(zipName)}`,
 				);
 				if (!response.ok) {
 					throw new Error(
-						`the archive mirror has no ${pack.archive} (HTTP ${response.status}); the pack may be newer than the last mirror sync`,
+						`the archive mirror has no ${zipName} (HTTP ${response.status}); the pack may be newer than the last mirror sync`,
 					);
 				}
 				cache.zips.set(
-					pack.archive,
+					zipName,
 					new Uint8Array(await response.arrayBuffer()),
 				);
 				// a browsing session must not hoard every pack it touched
@@ -200,27 +258,39 @@ const createSixteenColors = ({ openFile }) => {
 					cache.zips.delete(cache.zips.keys().next().value);
 				}
 			}
-			const zip = cache.zips.get(pack.archive);
+			const zip = cache.zips.get(zipName);
 			const entry = findZipEntry(readZipEntries(zip), file.name);
 			if (!entry) {
-				throw new Error(`${file.name} is not in ${pack.archive}`);
+				throw new Error(`${file.name} is not in ${zipName}`);
 			}
 			const bytes = await extractZipEntry(zip, entry);
 			say(null);
 			State.modal.close();
 			openFile(new File([bytes], file.name));
 		} catch (error) {
-			say(`could not open: ${error.message}`);
+			say(`could not open: ${error.message}`, true);
 		}
 	};
 
 	const back = () => {
 		if (where.view === 'files') {
-			showPacks(where.year, cache.packs.has(`${where.year}:1`) ? 1 : 1);
+			showPacks(where.year, where.page ?? 1);
 		} else {
 			showYears();
 		}
 	};
+
+	// column count depends on the modal's width: refit an open files
+	// view when the window changes shape
+	let refit = 0;
+	window.addEventListener('resize', () => {
+		clearTimeout(refit);
+		refit = setTimeout(() => {
+			if (where.view === 'files' && where.pack) {
+				showFiles(where.pack);
+			}
+		}, 150);
+	});
 
 	btnBack?.addEventListener('click', back);
 	$('sixteenClose')?.addEventListener('click', () => State.modal.close());
