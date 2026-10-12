@@ -59,6 +59,9 @@ byte-exact golden tests before anything else moved.
 
 ### Fixed
 
+- **Selections survive tool switches.** Leaving the selection tool and
+  coming back restores the last selection instead of collapsing it to
+  a single cell at the cursor. A pre-v3 defect.
 - **Stale PWA cache.** The service worker now revisions `index.html`
   per build and self-heals browsers stuck on an old version. Clearing
   site data by hand is no longer part of updating.

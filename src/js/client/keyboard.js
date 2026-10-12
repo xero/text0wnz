@@ -674,6 +674,7 @@ const createSelectionCursor = element => {
 	const cursor = createCanvas(0, 0);
 	let sx, sy, dx, dy, x, y, width, height;
 	let visible = false;
+	let everSelected = false;
 	// Marching ants animation state
 	let dashOffset = 0;
 	let animationId = null;
@@ -762,6 +763,7 @@ const createSelectionCursor = element => {
 		updateCursor();
 		State.pasteTool.setSelection(x, y, width, height);
 		visible = true;
+		everSelected = true;
 		State.positionInfo.update(x, y);
 	};
 
@@ -769,6 +771,16 @@ const createSelectionCursor = element => {
 
 	const getSelection = () => {
 		if (visible) {
+			return { x, y, width, height };
+		}
+		return null;
+	};
+
+	// the rect's geometry survives a hide, so the selection tool can
+	// bring the last completed selection back after a round trip
+	// through another tool
+	const getLastSelection = () => {
+		if (everSelected) {
 			return { x, y, width, height };
 		}
 		return null;
@@ -802,6 +814,7 @@ const createSelectionCursor = element => {
 		isVisible,
 		getPos,
 		getSelection,
+		getLastSelection,
 		getElement: () => cursor,
 	};
 };
@@ -2353,6 +2366,25 @@ const createSelectionTool = () => {
 		flipHButton.addEventListener('click', flipHorizontal);
 		flipVButton.addEventListener('click', flipVertical);
 		moveButton.addEventListener('click', toggleMoveMode);
+
+		// every tool switch hides the rect, but its geometry survives:
+		// bring the last selection back so leaving the tool does not
+		// cost it, clamped in case the canvas shrank in between
+		if (!State.selectionCursor.isVisible()) {
+			const last = State.selectionCursor.getLastSelection();
+			if (last) {
+				const maxX = State.textArtCanvas.getColumns() - 1;
+				const maxY = State.textArtCanvas.getRows() - 1;
+				State.selectionCursor.setStart(
+					Math.min(last.x, maxX),
+					Math.min(last.y, maxY),
+				);
+				State.selectionCursor.setEnd(
+					Math.min(last.x + last.width - 1, maxX),
+					Math.min(last.y + last.height - 1, maxY),
+				);
+			}
+		}
 
 		// If there's already a selection visible (switched from keyboard mode),
 		// initialize our selection expansion state

@@ -61,6 +61,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 			show: vi.fn(),
 			isVisible: vi.fn(() => false),
 			getSelection: vi.fn(() => null),
+			getLastSelection: vi.fn(() => null),
 			getPos: vi.fn(() => null),
 			getElement: vi.fn(() => document.createElement('div')),
 		},
@@ -288,6 +289,23 @@ describe('Keyboard Utilities', () => {
 			const selectionCursor = createSelectionCursor(container);
 
 			expect(typeof selectionCursor.isVisible).toBe('function');
+		});
+
+		it('remembers the last selection across a hide', () => {
+			const container = document.createElement('div');
+			const selectionCursor = createSelectionCursor(container);
+
+			expect(selectionCursor.getLastSelection()).toBe(null);
+			selectionCursor.setStart(10, 10);
+			selectionCursor.setEnd(14, 12);
+			selectionCursor.hide();
+			expect(selectionCursor.getSelection()).toBe(null);
+			expect(selectionCursor.getLastSelection()).toEqual({
+				x: 10,
+				y: 10,
+				width: 5,
+				height: 3,
+			});
 		});
 	});
 

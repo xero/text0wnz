@@ -68,6 +68,7 @@ vi.mock('../../src/js/client/state.js', () => {
 			w = 1,
 			h = 1;
 	let visible = false;
+	let everSelected = false;
 	const processCoords = () => {
 		scx = Math.max(Math.min(sx, dx), 0);
 		scy = Math.max(Math.min(sy, dy), 0);
@@ -93,11 +94,14 @@ vi.mock('../../src/js/client/state.js', () => {
 			dy = y;
 			processCoords();
 			visible = true;
+			everSelected = true;
 		},
 		isVisible: () => visible,
 		getPos: () => ({ x: scx, y: scy }),
 		getSelection: () =>
 			visible ? { x: scx, y: scy, width: w, height: h } : null,
+		getLastSelection: () =>
+			everSelected ? { x: scx, y: scy, width: w, height: h } : null,
 		getElement: () => ({ classList: { add: () => {}, remove: () => {} } }),
 	};
 
@@ -236,5 +240,51 @@ describe('selection move mode', () => {
 
 		expect(State.textArtCanvas.startUndo.mock.calls.length).toBe(undoCalls);
 		expect(Uint16Array.from(buf)).toEqual(snapshot);
+	});
+
+	it('restores the last selection after a tool switch round trip', () => {
+		const tool = createSelectionTool();
+		tool.enable();
+		State.selectionCursor.setStart(5, 3);
+		State.selectionCursor.setEnd(9, 6);
+		// the switch away: the keyboard controller's disable hides the
+		// rect before this tool's disable runs
+		State.selectionCursor.hide();
+		tool.disable();
+		expect(State.selectionCursor.getSelection()).toBe(null);
+		tool.enable();
+		expect(State.selectionCursor.getSelection()).toEqual({
+			x: 5,
+			y: 3,
+			width: 5,
+			height: 4,
+		});
+		tool.disable();
+	});
+
+	it('restores the rect at the moved position after a move mode abort', () => {
+		const buf = State.textArtCanvas._buffer;
+		buf[5 * COLS + 20] = (66 << 8) | 7;
+		const tool = createSelectionTool();
+		tool.enable();
+		State.selectionCursor.setStart(20, 5);
+		State.selectionCursor.setEnd(20, 5);
+		tool.toggleMoveMode();
+		const kd = keydownHandlers[keydownHandlers.length - 1];
+		kd(key('ArrowDown'));
+		kd(key('ArrowDown'));
+		State.selectionCursor.hide();
+		tool.disable();
+		tool.enable();
+		// the rect comes back at the moved content, move mode stays off
+		expect(State.selectionCursor.getSelection()).toEqual({
+			x: 20,
+			y: 7,
+			width: 1,
+			height: 1,
+		});
+		expect(tool.isMoveMode()).toBe(false);
+		expect(buf[7 * COLS + 20] >> 8).toBe(66);
+		tool.disable();
 	});
 });

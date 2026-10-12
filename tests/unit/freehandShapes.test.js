@@ -80,6 +80,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 			hide: vi.fn(),
 			show: vi.fn(),
 			isVisible: vi.fn(() => false),
+			getLastSelection: vi.fn(() => null),
 			getElement: vi.fn(() => ({
 				classList: {
 					add: vi.fn(),
