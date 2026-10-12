@@ -1225,6 +1225,36 @@
 	#pluginStatus {
 		@apply text-cyan text-sm pt-2;
 	}
+	#refPanel {
+		@apply fixed z-40 dialog-style p-2 flex flex-row gap-3 items-center;
+		right: 8px;
+		bottom: 8px;
+		button {
+			@apply bg-menu text-fg px-2 cursor-pointer;
+		}
+		button:hover {
+			@apply bg-purp;
+		}
+		label {
+			@apply text-fg text-xs flex items-center gap-1;
+		}
+	}
+	#refOverlay {
+		@apply absolute pointer-events-none;
+		left: 0;
+		top: 0;
+		height: auto;
+		z-index: 5;
+	}
+	#fontFavToggle {
+		@apply bg-menu text-cyan px-2 cursor-pointer text-base;
+	}
+	#fontFavToggle:hover {
+		@apply bg-purp;
+	}
+	.favoriteOption {
+		@apply text-cyan;
+	}
 	#pluginList {
 		@apply flex flex-col gap-1 pt-2 overflow-y-auto;
 		max-height: 40vh;

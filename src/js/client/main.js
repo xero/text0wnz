@@ -12,6 +12,7 @@ import { createFramesPanel } from './frames.js';
 import { createMinimap } from './minimap.js';
 import { createSixteenColors } from './sixteenColors.js';
 import { createPluginManager } from './plugins.js';
+import { createReferenceImage } from './referenceImage.js';
 import { FontCache } from './fontCache.js';
 import {
 	$,
@@ -534,6 +535,9 @@ const initializeAppComponents = async () => {
 	// P6: ES-module plugin surface (durdraw lineage)
 	const pluginManager = createPluginManager();
 	onClick($('pluginsMenu'), () => pluginManager?.show());
+
+	// P6 steal: reference-image overlay for tracing
+	createReferenceImage();
 	onClick($('saveAnsi'), Save.ans);
 	onClick($('saveUtf8'), Save.utf8);
 	onClick($('saveUtf8Blink'), Save.utf8Blink);
@@ -554,6 +558,8 @@ const initializeAppComponents = async () => {
 	onClick($('navCut'), State.pasteTool.cut);
 	onClick($('navCopy'), State.pasteTool.copy);
 	onClick($('navPaste'), State.pasteTool.paste);
+	onClick($('navPasteTransparent'), State.pasteTool.pasteTransparent);
+	onClick($('navPasteUnder'), State.pasteTool.pasteUnder);
 	onClick($('navSystemPaste'), State.pasteTool.systemPaste);
 	onClick($('navDelete'), State.pasteTool.deleteSelection);
 	onClick($('navUndo'), State.textArtCanvas.undo);
@@ -808,10 +814,25 @@ const initializeAppComponents = async () => {
 		State.menus.close();
 		changeFont.click();
 	});
+	const syncFavStar = () => {
+		$('fontFavToggle').innerHTML = fontSelect.isFavorite()
+			? '&#9733;'
+			: '&#9734;';
+	};
 	onClick(changeFont, async () => {
 		State.menus.close();
 		State.modal.open('fonts');
 		fontSelect.focus();
+		syncFavStar();
+	});
+	onClick($('fontFavToggle'), () => {
+		fontSelect.toggleFavorite();
+		syncFavStar();
+	});
+	$('fontSelect').addEventListener('click', syncFavStar);
+	$('fontSelect').addEventListener('keydown', () => {
+		// selection moves on arrows; reflect it after the handler runs
+		setTimeout(syncFavStar, 0);
 	});
 	onClick(applyFont, async () => {
 		const selectedFont = fontSelect.getValue();

@@ -1,0 +1,74 @@
+/**
+ * Reference-image overlay (P6 steal): a translucent image floated over
+ * the art for tracing. Local file only (object URL, never uploaded),
+ * opacity and width sliders, pointer-events none so every tool draws
+ * straight through it. Width is a percentage of the canvas and
+ * reapplies on zoom/resize so the trace stays put.
+ */
+import { $ } from './ui.js';
+
+const createReferenceImage = () => {
+	const nav = $('navRef');
+	const panel = $('refPanel');
+	const overlay = $('refOverlay');
+	if (!nav || !panel || !overlay) {
+		return null;
+	}
+	const fileInput = $('refFileInput');
+	const opacity = $('refOpacity');
+	const scale = $('refScale');
+	let objectUrl = null;
+
+	const applyStyle = () => {
+		const container = document.getElementById('canvasContainer');
+		if (!container) {
+			return;
+		}
+		overlay.style.opacity = String(Number(opacity.value) / 100);
+		overlay.style.width = `${(container.clientWidth * Number(scale.value)) / 100}px`;
+	};
+
+	const clear = () => {
+		overlay.classList.add('hide');
+		overlay.removeAttribute('src');
+		if (objectUrl) {
+			URL.revokeObjectURL(objectUrl);
+			objectUrl = null;
+		}
+	};
+
+	$('refLoad')?.addEventListener('click', () => fileInput?.click());
+	fileInput?.addEventListener('change', event => {
+		const file = event.target.files?.[0];
+		if (!file) {
+			return;
+		}
+		clear();
+		objectUrl = URL.createObjectURL(file);
+		overlay.src = objectUrl;
+		overlay.classList.remove('hide');
+		applyStyle();
+		event.target.value = '';
+	});
+	opacity?.addEventListener('input', applyStyle);
+	scale?.addEventListener('input', applyStyle);
+	$('refClear')?.addEventListener('click', clear);
+
+	nav.addEventListener('click', () => {
+		const show = panel.classList.contains('hide');
+		panel.classList.toggle('hide', !show);
+		nav.classList.toggle('active', show);
+	});
+
+	// the canvas width moves under zoom and resizes; the trace follows
+	document.addEventListener('onCanvasLayoutChange', applyStyle);
+	document.addEventListener('onTextCanvasSizeChange', applyStyle);
+
+	return {
+		clear,
+		isVisible: () => !overlay.classList.contains('hide'),
+		applyStyle,
+	};
+};
+
+export { createReferenceImage };

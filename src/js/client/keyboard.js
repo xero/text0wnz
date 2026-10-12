@@ -1412,6 +1412,59 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 		}
 	};
 
+	/** a cell is "blank" for paste purposes: empty glyph on black */
+	const isBlankCell = (charCode, background) =>
+		(charCode === 0 || charCode === 32 || charCode === 255) &&
+		background === 0;
+
+	/**
+	 * PabloDraw-style paste modes (P6 steal):
+	 * - 'transparent': blank cells in the CLIPBOARD don't overwrite
+	 * - 'under': cells land only where the TARGET is blank
+	 * One undoable batch either way.
+	 */
+	const pasteSpecial = mode => {
+		if (
+			buffer === undefined ||
+			!(State.selectionCursor.isVisible() || State.cursor.isVisible())
+		) {
+			return;
+		}
+		State.textArtCanvas.startUndo();
+		const columns = State.textArtCanvas.getColumns();
+		const rows = State.textArtCanvas.getRows();
+		State.textArtCanvas.draw(draw => {
+			for (let py = 0; py < buffer.height; py++) {
+				for (let px = 0; px < buffer.width; px++) {
+					const targetX = x + px;
+					const targetY = y + py;
+					if (targetX >= columns || targetY >= rows) {
+						continue;
+					}
+					const word = buffer.data[py * buffer.width + px];
+					const code = word >> 8;
+					const fg = word & 15;
+					const bg = (word >> 4) & 15;
+					if (mode === 'transparent' && isBlankCell(code, bg)) {
+						continue;
+					}
+					if (mode === 'under') {
+						// raw backgroundColor: an extended color WORD is never
+						// 0, so colored cells always count as occupied
+						const target = State.textArtCanvas.getBlock(targetX, targetY);
+						if (!isBlankCell(target.charCode, target.backgroundColor)) {
+							continue;
+						}
+					}
+					draw(code, fg, bg, targetX, targetY);
+				}
+			}
+		}, false);
+	};
+
+	const pasteTransparent = () => pasteSpecial('transparent');
+	const pasteUnder = () => pasteSpecial('under');
+
 	const systemPaste = () => {
 		if (!navigator.clipboard || !navigator.clipboard.readText) {
 			console.warn('[Keyboard] Clipboard API not available');
@@ -1542,6 +1595,8 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 		cut: cut,
 		copy: copy,
 		paste: paste,
+		pasteTransparent: pasteTransparent,
+		pasteUnder: pasteUnder,
 		systemPaste: systemPaste,
 		deleteSelection: deleteSelection,
 		disable: disable,

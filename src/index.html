@@ -272,6 +272,12 @@
 							</svg>
 							<kbd>CRT</kbd>
 						</div>
+						<div id="navRef" class="toolButton">
+							<svg alt="Reference Image" aria-label="Reference Image">
+								<use href="img/icons.svg#dropper"></use>
+							</svg>
+							<kbd>Ref Image</kbd>
+						</div>
 					</div>
 				</nav>
 				<nav>
@@ -427,8 +433,22 @@
 				<canvas id="minimapArt" height="25" width="80"></canvas>
 				<div id="minimapViewport"></div>
 			</div>
+			<div id="refPanel" class="hide">
+				<button id="refLoad">load image</button>
+				<input id="refFileInput" class="hide" type="file" accept="image/*"/>
+				<label>
+					opacity
+					<input id="refOpacity" type="range" value="40" max="95" min="5"/>
+				</label>
+				<label>
+					width
+					<input id="refScale" type="range" value="100" max="200" min="10"/>
+				</label>
+				<button id="refClear">clear</button>
+			</div>
 			<div id="viewport">
 				<div id="canvasContainer">
+					<img id="refOverlay" class="canvasOverlay hide" alt=""/>
 					<div id="toolPreview" class="canvasOverlay"></div>
 					<div id="grid" class="canvasOverlay"></div>
 				</div>
@@ -473,6 +493,8 @@
 			<article id="navCut" class="menuItem disabled">Cut <kbd>Ctrl-X</kbd></article>
 			<article id="navCopy" class="menuItem disabled">Copy <kbd>Ctrl-C</kbd></article>
 			<article id="navPaste" class="menuItem disabled">Paste <kbd>Ctrl-V</kbd></article>
+			<article id="navPasteTransparent" class="menuItem">Paste Transparent</article>
+			<article id="navPasteUnder" class="menuItem">Paste Under</article>
 			<article id="navSystemPaste" class="menuItem">System Paste <kbd>Ctrl-Shift-V</kbd></article>
 			<article id="navDelete" class="menuItem disabled">Delete <kbd>Ctrl-Delete</kbd></article>
 			<article class="separator"></article>
@@ -529,7 +551,10 @@
 				</nav>
 			</section>
 			<section id="fontsModal">
-				<h2>Font: <strong id="fontPreviewInfo"></strong></h2>
+				<h2>
+					Font: <strong id="fontPreviewInfo"></strong>
+					<button id="fontFavToggle" title="Toggle favorite">&#9734;</button>
+				</h2>
 				<article>
 					<aside>
 						<img id="fontPreviewImage" alt="Font Preview"/>
