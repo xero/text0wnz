@@ -650,21 +650,12 @@ const initializeAppComponents = async () => {
 		);
 	}
 
-	// minimap + CRT pass (both GL-only)
+	// minimap (GL-only)
 	const minimap = createMinimap();
 	if (minimap) {
 		createSettingToggle($('navMinimap'), minimap.isVisible, visible =>
 			(visible ? minimap.show() : minimap.hide()));
 	}
-	const crtToggle = createSettingToggle(
-		$('navCrt'),
-		() => State.textArtCanvas.getCrtEffect(),
-		enabled => {
-			State.textArtCanvas.setCrtEffect(enabled);
-			// reflects actual support: stays unlit on the chunk fallback
-			crtToggle.update();
-		},
-	);
 
 	// Credz
 	onClick($('about'), _ => {

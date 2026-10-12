@@ -1956,10 +1956,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		getOnionSkin: () => onionSkin,
 		getBaudOffsets: getBaudOffsets,
 		setBaudReveal: setBaudReveal,
-		// CRT post pass rides the GL renderer only; the chunk fallback
-		// ignores the toggle (getCrtEffect stays false there)
-		setCrtEffect: enabled => glRenderer?.setCrt?.(enabled),
-		getCrtEffect: () => glRenderer?.getCrt?.() === true,
 		loadJournalSnapshot: loadJournalSnapshot,
 		journalKeyframe: scheduleJournalKeyframe,
 		setMirrorMode: setMirrorMode,

@@ -48,8 +48,7 @@ byte-exact golden tests before anything else moved.
 
 ### Changed
 
-- **Renderer.** WebGL replaces the 2D canvas chunks, with an optional
-  CRT effect.
+- **Renderer.** WebGL replaces the 2D canvas chunks.
 - **Undo.** A byte-budgeted patch arena (64 MB) replaces cell-count
   caps, so huge joints stop eating your history.
 - **Collab server.** Speaks native Moebius protocol, so one server

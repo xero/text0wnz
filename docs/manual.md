@@ -45,7 +45,6 @@
 >     - [Light/Dark Mode](#-lightdark-mode)
 >     - [Grid Overlay](#-grid-overlay)
 >     - [Minimap](#minimap)
->     - [CRT Effect](#crt-effect)
 >     - [Reference Image](#reference-image)
 > - [Animation](#animation)
 >   - [Frame Timeline](#frame-timeline)
@@ -296,7 +295,7 @@ Some tools such as "Brushes" have many options or sub-tools. Clicking the tool i
 - Mirror Mode - Symmetrical drawing
 - History - Undo/redo operations
 - Font Selection - Choose from many classic fonts
-- Viewport Options - Zoom, theme, grid, animation frames, minimap, CRT effect, and reference image
+- Viewport Options - Zoom, theme, grid, animation frames, minimap, and reference image
 
 ## ![keyboard](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/keyboard.png) Keyboard Mode
 
@@ -640,10 +639,10 @@ A special "extra pixel" wide mode for letter spacing.
 
 ![viewport toolbar](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/viewport-toolbar.png)
 
-Customize your editing experience with these interface options. This toolbar also holds the toggles for the animation frames panel, the minimap, the CRT effect, and the reference image.
+Customize your editing experience with these interface options. This toolbar also holds the toggles for the animation frames panel, the minimap, and the reference image.
 
 > [!NOTE]
-> The editor renders with WebGL and falls back to a 2D renderer where WebGL2 is unavailable (append `?renderer=2d` to the URL to force it). The minimap, CRT effect, and onion skin need the WebGL renderer.
+> The editor renders with WebGL and falls back to a 2D renderer where WebGL2 is unavailable (append `?renderer=2d` to the URL to force it). The minimap and onion skin need the WebGL renderer.
 
 ### Zoom
 
@@ -715,13 +714,6 @@ A live overview of the whole canvas, one pixel per cell, docked beside the viewp
 - On maps taller than the panel, dragging outside the focus box pans the map itself
 - Refreshes twice a second while open
 - Toggle it with the **Minimap** button in the viewport toolbar; the choice is remembered
-
-### CRT Effect
-
-The **CRT** button in the viewport toolbar toggles a retro monitor look rendered as a WebGL post-processing pass: scanlines per glyph pixel row, a soft aperture-grille mask, slight phosphor bleed, and a vignette.
-
-- Purely visual; exports and collaboration are unaffected
-- Needs the WebGL renderer; the button stays unlit on the 2D fallback
 
 ### Reference Image
 
