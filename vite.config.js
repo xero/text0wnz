@@ -3,7 +3,8 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 import { VitePWA } from 'vite-plugin-pwa';
 import Sitemap from 'vite-plugin-sitemap';
 import htmlMinifierTerser from "vite-plugin-html-minifier-terser";
-import { existsSync, statSync, readdirSync } from 'node:fs';
+import { existsSync, statSync, readdirSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 export default ({ mode }) => {
@@ -387,20 +388,40 @@ export default ({ mode }) => {
 					}],
 					version: cacheBuster(),
 				},
-				workbox: {
-					// version bump
-					additionalManifestEntries: [
-						{ url: '/', revision: cacheBuster() },
-					],
-					globPatterns: ['index.html', '**/*.{js,css,html,ico,png,svg,woff2}'],
-					navigateFallbackDenylist: [
-						/^\/LICENSE.txt/,
-						/^\/humans.txt/,
-						/^\/robots.txt/,
-						/^\/sitemap.xml/,
-						/^\/tests/,
+				// these options only apply under the `injectManifest` key in
+				// injectManifest mode; a previous `workbox` block here was
+				// silently ignored, which shipped index.html with
+				// revision:null and wedged stale HTML into returning browsers
+				injectManifest: {
+					globPatterns: [
+						'**/*.{js,css,html,woff2}',
+						'ui/*.svg',
+						'favicon.ico',
+						'ui/img/favicon.ico',
 					],
 					maximumFileSizeToCacheInBytes: 3000000,// 3mb max
+					manifestTransforms: [
+						entries => ({
+							manifest: entries.map(entry => {
+								if (entry.url !== 'index.html' || entry.revision) {
+									return entry;
+								}
+								// vite revisions assets by filename hash, but
+								// index.html keeps its name across builds, so it
+								// needs a content revision or workbox never
+								// re-fetches it
+								let revision;
+								try {
+									revision = createHash('md5')
+										.update(readFileSync(path.resolve(process.cwd(), 'dist/index.html')))
+										.digest('hex');
+								} catch {
+									revision = cacheBuster();
+								}
+								return { ...entry, revision };
+							}),
+						}),
+					],
 				},
 			}),
 		],
