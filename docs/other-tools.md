@@ -68,7 +68,7 @@ Upgrades package.json dependencies to the latest versions, ignoring existing ver
 **Installation:**
 
 ```bash
-bun i npm-check-updates
+bun i -g npm-check-updates
 ```
 
 **Usage:**
@@ -128,14 +128,14 @@ chmod +x .git/hooks/pre-commit
 
 ```bash
 #!/bin/sh
-# kopimi mmxxv x0
-printf "%s\n%s\n" "running pre commit hooks" "use --no-verify to skip"
+# cp .git/hooks/pre-commit && chmod +x
+printf "%s\n%s\n\n" "running pre commit hooks" "use --no-verify to skip"
 
 # formatting & linting
 bun fix
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
-	printf "\n%s\n" "linting failed. commit aborted."
+	printf "%s\n" "linting failed. commit aborted."
 	exit 1
 fi
 # update any tracked files that might have been formatted
@@ -149,7 +149,7 @@ if [ $RESULT -ne 0 ]; then
 	exit 1
 fi
 
-printf "\n%s\n" "fetching git upstreams..."
+printf "\n%s\n\n" "fetching git upstreams..."
 git fetch
 
 LOCAL=$(git rev-parse @)
@@ -275,7 +275,11 @@ lhci autorun --config=lighthouserc.json
 
 Analyze bundle size and dependencies.
 
-**rollup-plugin-visualizer** (included with Vite):
+**rollup-plugin-visualizer:**
+
+```bash
+bun add -D rollup-plugin-visualizer
+```
 
 ```javascript
 // Add to vite.config.js
@@ -303,7 +307,10 @@ bun bake
 
 ### PM2 (Process Manager)
 
-Advanced process manager for Node.js applications.
+Advanced process manager for long-running services.
+
+> [!IMPORTANT]
+> The collaboration server runs on Bun, so PM2's default Node interpreter cannot run `src/js/server/main.js`. Manage a compiled `t0wnz` binary instead. Build one for the current platform with `bun tools/compileBinaries.js host` (output: `build/bin/t0wnz-host`).
 
 **Installation:**
 
@@ -315,7 +322,7 @@ bun i -g pm2
 
 ```bash
 # Start server
-pm2 start src/js/server/main.js --name text0wnz -- 1337
+pm2 start build/bin/t0wnz-host --name text0wnz -- 1337
 
 # List processes
 pm2 list
@@ -349,15 +356,14 @@ module.exports = {
 	apps: [
 		{
 			name: 'text0wnz',
-			script: './src/js/server/main.js',
-			args: '1337',
+			script: './build/bin/t0wnz-host',
+			args: '1337 --static dist',
 			instances: 1,
 			autorestart: true,
 			watch: false,
 			max_memory_restart: '1G',
 			env: {
-				NODE_ENV: 'production',
-				SESSION_KEY: 'your-secret-key',
+				ROOM_PASS: 'your-room-password',
 			},
 		},
 	],
@@ -372,6 +378,21 @@ pm2 start ecosystem.config.js
 
 ## Monitoring Tools
 
+### Health Endpoint
+
+The collaboration server answers `GET /healthz` with a small JSON status, ready for any HTTP monitor:
+
+```bash
+curl http://localhost:1337/healthz
+# {"ok":true,"rooms":1,"uptime":120}
+```
+
+The compiled `t0wnz` binary doubles as its own probe (used by the Docker HEALTHCHECK) and exits 0 when the server responds:
+
+```bash
+t0wnz-host healthcheck 1337
+```
+
 ### Uptime Kuma
 
 Self-hosted monitoring tool.
@@ -385,7 +406,7 @@ docker run -d --restart=always -p 3001:3001 -v uptime-kuma:/app/data --name upti
 **Setup monitors for:**
 
 - Application URL (https://text.0w.nz)
-- Collaboration server port
+- Collaboration server health endpoint (`/healthz`)
 - SSL certificate expiration
 
 ### Netdata
@@ -405,7 +426,7 @@ bash <(curl -Ss https://my-netdata.io/kickstart.sh)
 - Disk I/O
 - Network traffic
 - nginx statistics
-- Node.js process metrics
+- Server process metrics
 
 ## Security Tools
 
@@ -419,39 +440,19 @@ Check for vulnerabilities in dependencies.
 # Run audit
 bun audit
 
-# Fix vulnerabilities automatically
-bun audit fix
-
-# Force fix (may break things)
-bun audit fix --force
-
 # Detailed report
 bun audit --json
+
+# Only report moderate severity and above
+bun audit --audit-level=moderate
+
+# Apply compatible fixes (npm only; bun has no fix subcommand)
+npm audit fix
 ```
 
 ### Snyk
 
-Advanced security scanning for dependencies.
-
-**Installation:**
-
-```bash
-bun i -g snyk
-snyk auth
-```
-
-**Usage:**
-
-```bash
-# Test for vulnerabilities
-snyk test
-
-# Monitor project
-snyk monitor
-
-# Fix vulnerabilities
-snyk fix
-```
+The repository uses the Snyk GitHub App, which runs the `security/snyk` status check on every pull request. Configuration lives in the Snyk dashboard, not in the repo.
 
 ### Dependabot
 
@@ -466,24 +467,22 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
-    open-pull-requests-limit: 10
-    reviewers:
-      - 'xero'
 ```
 
 ## CI/CD Tools
 
 ### GitHub Actions
 
-Already configured in `.github/workflows/`.
+Already configured in `.github/workflows/`. See [CI/CD Pipeline](cicd.md) for the full workflow breakdown.
 
-**Useful actions:**
+**Actions in use:**
 
 - `actions/checkout` - Checkout code
-- `actions/setup-node` - Setup Node.js
-- `actions/cache` - Cache dependencies
-- `actions/upload-artifact` - Upload test results
-- `peaceiris/actions-gh-pages` - Deploy to GitHub Pages
+- `oven-sh/setup-bun` - Setup Bun
+- `actions/upload-artifact` and `actions/download-artifact` - Share build output and test results between jobs
+- `actions/upload-pages-artifact` and `actions/deploy-pages` - Deploy to GitHub Pages
+- `docker/build-push-action` (with `docker/login-action`, `docker/metadata-action`, `docker/setup-buildx-action`, and `docker/setup-qemu-action`) - Build and push Docker images
+- `softprops/action-gh-release` - Publish releases
 
 ### Act (Local GitHub Actions)
 
@@ -601,13 +600,13 @@ Backup session files and artwork.
 **Usage:**
 
 ```bash
-# Backup session directory
-rsync -avz /path/to/text0wnz/session/ user@backup-server:/backups/text0wnz/
+# Backup sessions directory
+rsync -avz /path/to/text0wnz/sessions/ user@backup-server:/backups/text0wnz/
 
 # Automated backup script
 #!/bin/bash
 DATE=$(date +%Y-%m-%d)
-rsync -avz /var/www/text0wnz/session/ /backups/text0wnz-$DATE/
+rsync -avz /var/www/text0wnz/sessions/ /backups/text0wnz-$DATE/
 ```
 
 ### Cron Jobs
@@ -645,25 +644,21 @@ Built-in browser debugging.
 - Memory profiling
 - Application (Service Worker, Storage)
 
-### Node.js Inspector
+### Bun Inspector
 
-Debug Node.js server.
+Debug the collaboration server with Bun's built-in inspector.
 
 **Usage:**
 
 ```bash
 # Start with inspector
-node --inspect src/js/server/main.js
+bun --inspect src/js/server/main.js
 
 # With break on start
-node --inspect-brk src/js/server/main.js
+bun --inspect-brk src/js/server/main.js
 ```
 
-Then open Chrome DevTools:
-
-```
-chrome://inspect
-```
+Bun prints an inspector URL; open it in a browser to set breakpoints and step through server code.
 
 ### curl
 
@@ -674,6 +669,9 @@ Test HTTP/WebSocket endpoints.
 ```bash
 # Test static file
 curl http://localhost:8060/
+
+# Check collaboration server health
+curl http://localhost:1337/healthz
 
 # Test with headers
 curl -I https://text.0w.nz/

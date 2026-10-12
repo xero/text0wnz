@@ -6,13 +6,18 @@
 > - [Top Bar](#top-bar)
 >   - [Editor Menus](#-editor-menus)
 >     - [File Menu](#file-menu)
+>     - [16colo.rs Browser](#16colors-browser)
+>     - [Plugins](#plugins)
+>     - [Updating the Editor](#updating-the-editor)
 >     - [Edit Menu](#edit-menu)
+>     - [Character Sets & Unicode](#character-sets--unicode)
 >     - [Sauce Editor](#sauce-editor)
 >   - [Status Display](#-status-display)
 >   - [Canvas Resolution / Size](#canvas-resolution--size)
 > - [Color Management](#color-management)
 >   - [Current Colors](#current-colors)
 >   - [Color Palette](#color-palette)
+>   - [Extended Colors](#extended-colors)
 > - [Toolbar & Drawing Tools](#toolbar--drawing-tools)
 >   - [Keyboard Mode](#-keyboard-mode)
 >     - [Screen-Aware Navigation](#screen-aware-navigation)
@@ -31,6 +36,7 @@
 >   - [History](#-history)
 >   - [Fonts](#-fonts)
 >     - [Font Select](#font-select)
+>     - [Font Favorites](#font-favorites)
 >     - [iCE Colors](#ice-colors)
 >     - [9pt Font](#9pt-font)
 >       - [Font Examples](#font-examples)
@@ -38,6 +44,15 @@
 >     - [Zoom](#zoom)
 >     - [Light/Dark Mode](#-lightdark-mode)
 >     - [Grid Overlay](#-grid-overlay)
+>     - [Minimap](#minimap)
+>     - [CRT Effect](#crt-effect)
+>     - [Reference Image](#reference-image)
+> - [Animation](#animation)
+>   - [Frame Timeline](#frame-timeline)
+>   - [Onion Skin](#onion-skin)
+>   - [Baud Preview](#baud-preview)
+>   - [Exporting Animations](#exporting-animations)
+> - [Touch, Pen, and Gestures](#touch-pen-and-gestures)
 > - [Workflows](#workflows)
 > - [Tutorials](#tutorials)
 >   - [Viewing and Opening Tutorials](#viewing-and-opening-tutorials)
@@ -66,8 +81,12 @@ File operations allowing you to create, open, and save artwork in multiple file 
 - **NFO** (`.nfo`) - Warez scene release format
 - **Binary Text** (`.bin`) - Raw binary (legacy scene format)
 - **XBin** (`.xb`) - Extended Binary format with embedded fonts and palettes
-- **UTF-8** (`.utf8.ans`) - Export as text with shell color escape codes
+- **TundraDraw** (`.tnd`) - 24-bit color text art format
+- **durdraw Movie** (`.dur`) - Animation format (gzipped JSON, 256 colors, UTF-8)
+- **teXt0wnz Doc** (`.0wnz`) - Native format; keeps truecolor, unicode, animation frames, and embedded fonts
+- **UTF-8** (`.utf8.ans`) - Export as text with shell color escape codes, with or without blink
 - **Plain Text** (`.txt`) - Export as text only
+- **ANSimation** (`.ans`) - Export animation frames as a classic ansimation
 - **PNG** - Export as image
 
 > [!NOTE]
@@ -78,15 +97,56 @@ File operations allowing you to create, open, and save artwork in multiple file 
 **Import/Export Operations:**
 
 - Load via **File → Open** or **drag-and-drop**
-- Automatic format detection
+- Format detection by file extension
 - Export options for all supported types and PNG
+- Before an export that cannot hold everything in your piece (unicode glyphs, extended colors, blink), a dialog lists exactly what will be lost so you can decide
+- XBin exports offer an RLE compression toggle
+- **Export Session Timelapse** replays a collaboration session into a durdraw movie (requires a teXt0wnz collaboration server)
 
 **Auto Save/Restore:**
 
-- Artwork auto-saved to IndexedDB in browser
-- Session restoration on new launch
-- Canvas data stored/compressed efficiently for offline use
-- Auto-save triggers on canvas changes without UI blocking
+- Every committed stroke appends to an autosave journal in your browser's private origin storage (OPFS)
+- Larger changes like resizes, file opens, and undo/redo write fresh journal keyframes
+- After a crash, a closed tab, or a reload, the journal replays and your session restores where you left off
+- Browsers without OPFS fall back to an IndexedDB snapshot; private windows that block both lose autosave for that tab only
+- Lightweight settings (theme, zoom, favorites, recent colors) persist in local storage
+- Collaboration sessions never journal; the server owns that document
+
+### 16colo.rs Browser
+
+**File → Browse 16colo.rs** opens an in-app browser for the [16colo.rs](https://16colo.rs) artpack archive.
+
+**Features:**
+
+- Browse by year, then by pack, with thumbnails for every piece
+- Click a piece to open it straight in the editor
+- Pieces in formats the editor opens (`.ans`, `.asc`, `.diz`, `.nfo`, `.txt`, `.bin`, `.xb`, `.tnd`, `.dur`) are clickable; everything else is labeled as unopenable
+- Pack archives download once and cache for the session
+- Every request is user-driven; nothing loads in the background
+
+### Plugins
+
+**File → Plugins** loads and runs ES-module plugins, in the durdraw lineage.
+
+A plugin is one JavaScript module whose default export is `{name, run(api)}`. The `run` function receives a small stable API over the current frame: `columns`, `rows`, the active `foreground` and `background` colors, `get(x, y)` to read a cell, and `put(x, y, code, fg, bg)` to write one.
+
+**Features:**
+
+- Load a local `.js` file or a plugin URL
+- All of a plugin's writes apply as one undo step when it finishes
+- Reads always see the document as it was when the plugin started
+- Loaded URLs are remembered between sessions; nothing ever loads automatically
+
+> [!WARNING]
+> A plugin runs with full access to the page. Only load code you trust.
+
+### Updating the Editor
+
+The editor is an offline-first web app. When a new version is ready, an update prompt appears.
+
+- Press **Update** to apply the new version and reload. Your artwork, settings, font favorites, and recent colors all survive the update.
+- Press **Cancel** to keep working; the update waits.
+- **File → Update Editor** with no update pending acts as a manual recovery reset: it clears saved settings and caches before reloading. Save your work first.
 
 ### Edit Menu
 
@@ -95,17 +155,44 @@ Edit operations to quickly add/remove rows/columns, erase sections, and more.
 **Features:**
 
 - **Clipboard Operations** - Cut, copy, paste (both app and system clipboard)
+- **Paste Modes** - Transparent and under paste for compositing (see below)
 - **Undo/Redo** - Full history support with keyboard shortcuts
 - **Canvas Manipulation** - Insert/delete rows and columns
 - **Erase Tools** - Clear rows, columns, or specific sections
 - **Color Operations** - Default color, swap colors
+- **Character Sets** - Open the unicode character set picker
 - **Fullscreen Mode** - Toggle fullscreen for distraction-free editing
 
 ![edit-menu](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/edit-menu.png)
 
+**Paste Modes:**
+
+Beyond plain paste, the Edit menu offers two PabloDraw-style compositing pastes. A cell counts as blank when it holds no visible glyph (null, space, or non-breaking space) on a black background.
+
+- **Paste Transparent** - Blank cells in the clipboard do not overwrite; your copied shape lands without its empty surroundings
+- **Paste Under** - Clipboard cells land only where the target cell is blank; existing artwork stays on top
+
+Either way the paste applies as one undo step.
+
+### Character Sets & Unicode
+
+**Edit → Character Sets** opens a picker covering every Unicode block.
+
+**Features:**
+
+- Search blocks by name and preview which glyphs the bundled fonts cover
+- Click a glyph to insert it at the cursor
+- Selecting a block also loads it into the F-key bar as the active page
+- Import charset tables (durdraw `.ini` or teXt0wnz `.json`); imported pages ride the F-key bar and persist between sessions
+
+Unicode glyphs render from [unscii-16](http://viznut.fi/unscii/) (purpose-built for textmode art) with [GNU Unifont](https://unifoundry.com/unifont/) covering the rest. A glyph neither font covers renders as a hollow box and inserts as `?`.
+
+> [!NOTE]
+> On a classic collaboration server the wire only speaks CP437, so unicode input locks while connected. The picker says so when it applies.
+
 ### Sauce Editor
 
-_"[Sauce](sauce-format)"_ is a special metadata format created by the ANSI text art scene. It allows for embedding title, author, release group, and comments into files.
+_"[Sauce](sauce-format.md)"_ is a special metadata format created by the ANSI text art scene. It allows for embedding title, author, release group, and comments into files.
 
 ![sauce](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/sauce.png)
 
@@ -131,6 +218,11 @@ Text art resolution is calculated by columns and rows. 80 × 25 is the default s
 - **80 × 50** - Extended terminal mode
 - **132 × 60** - Wide format for detailed work
 
+**Limits:**
+
+- Maximum canvas size is 1000 columns by 10000 rows
+- Resizing past 300,000 total cells asks for confirmation first; very large canvases use more memory, grow autosaves, and slow collaboration joins
+
 > [!NOTE]
 > See [building-and-developing.md](building-and-developing.md) for technical details on canvas rendering.
 
@@ -138,30 +230,48 @@ Text art resolution is calculated by columns and rows. 80 × 25 is the default s
 
 ![color-palette](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/color-palette.png)
 
-The color system uses the classic 16-color ANSI palette with optional iCE colors for extended backgrounds.
+The color system anchors on the classic 16-color ANSI palette, with optional iCE colors for extended backgrounds, and a full extended panel for xterm-256 and RGB truecolor.
 
 ## Current Colors
 
 - Foreground and background color selection
-- Click to swap foreground/background colors
-- Keyboard shortcut: `q` to quickly swap colors
-- Keyboard shortcut: `ctrl+d` for default colors
+- Click the preview swatch to swap foreground/background colors
+- Keyboard shortcut: `q` to quickly swap colors (`ctrl q` in keyboard mode)
+- Keyboard shortcut: `d` for default colors (`ctrl d` in keyboard mode)
 
 ## Color Palette
 
 - 16-color ANSI palette (8 standard + 8 bright colors)
 - Real-time color preview
-- Quick color swap (`q` key)
-- Double click to change color (XBIN files only)
+- Click a swatch to set the foreground color
+- Double click a swatch to edit that palette entry with the system color picker
+- `ctrl` + `0`-`7` sets the foreground, `alt` + `0`-`7` the background; press the same key again for the bright variant
+- `ctrl` + `up`/`down` cycles the foreground color, `ctrl` + `left`/`right` the background
 
 **Color Support:**
 
 - Standard ANSI 16 colors
 - iCE colors (extended 16 background colors)
-- Custom palettes in XBIN format
+- Custom palettes in XBin format
+- xterm-256 and RGB truecolor via the extended panel
 
 > [!NOTE]
 > See [xb-format.md](xb-format.md) for information on custom palettes
+
+## Extended Colors
+
+The `++` button under the palette strip opens the extended color panel, one click past the classic 16.
+
+**Features:**
+
+- **xterm 256 grid** - Click a swatch for the foreground, right-click for the background
+- **RGB** - Pick any truecolor value with the hex color input, then apply it with the `fg` or `bg` buttons
+- **Recent** - Your last ten extended picks, remembered between sessions
+
+Formats that cannot hold extended colors list what will be quantized or dropped at export time.
+
+> [!NOTE]
+> On a classic collaboration server the wire only speaks 16 colors, so the extended panel locks while connected and says why.
 
 # Toolbar & Drawing Tools
 
@@ -179,16 +289,14 @@ Some tools such as "Brushes" have many options or sub-tools. Clicking the tool i
 
 - Keyboard Mode - Full text input
 - Brushes - Freehand, shading, character, and attribute brushes
-- Fill - Flood fill colors and patterns
+- Fill - Flood fill color regions
 - Shapes - Lines, rectangles, circles, and ellipses
 - Selection - Select, move, copy, and transform areas
 - Sample - Pick colors and characters from canvas
 - Mirror Mode - Symmetrical drawing
 - History - Undo/redo operations
 - Font Selection - Choose from many classic fonts
-- Grid - Toggle alignment grid
-- Light/Dark Mode - Interface theme
-- Zoom - Scale the drawing canvas
+- Viewport Options - Zoom, theme, grid, animation frames, minimap, CRT effect, and reference image
 
 ## ![keyboard](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/keyboard.png) Keyboard Mode
 
@@ -197,8 +305,9 @@ Full text input with navigation controls. Type characters directly onto the canv
 **Features:**
 
 - Direct character input
-- F-key block character insertion
-- `ctrl+[`, `ctrl+]` to swap character sets
+- F-key character insertion from the active page
+- `ctrl+[`, `ctrl+]` or the arrow buttons at either end of the bar cycle pages; pages cover all of CP437, unicode blocks (rounded corners and diagonals, sextants, wedges, eighth blocks), and any charsets you import
+- `ctrl+u` picks up the colors of the cell under the cursor
 - Traditional ANSI editor workflow
 - `shift+arrow keys` switch to the Selection Tool
 
@@ -263,6 +372,7 @@ Draw with shading blocks (`░▒▓`). 'Reduce mode' when holding Shift. Ideal 
 
 - Multiple shading levels: light (`░`), medium (`▒`), dark (`▓`), full (`█`)
 - Reduce mode with Shift key
+- A pressure-sensitive pen picks its shade from pressure directly; press lighter or harder to shade
 - Draggable gradient picker panel
 - Press the **'X'** to hide, reopens on tool reselection
 
@@ -294,22 +404,24 @@ Paint/recolor the foreground and background colors of the selected cell. Use the
 **Features:**
 
 - Change colors without affecting characters
+- Alt+click repaints only the background
 - Preserve existing artwork structure
 - Quick color corrections
-- Repaint large areas faster
+- Repaint large areas faster with brush sizes up to 16
 
 > [!NOTE]
 > See [fonts.md](fonts.md) for available characters in different fonts and [project-structure.md](project-structure.md) for technical brush implementation.
 
 ## ![fill](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/fill.png) Fill Tool
 
-Flood fill for colors and text patterns with smart attribute handling to preserve existing artwork while changing colors.
+Flood fill connected color regions with the current foreground color.
 
 **Features:**
 
-- Flood fill connected regions
-- Smart attribute detection
-- Color-only fill option to preserve characters
+- Fills connected half-block regions of the same color
+- Handles left/right and upper/lower half-block boundaries cleanly
+- Seeds the mirrored side too when Mirror Mode is on
+- One undo step per fill
 
 ## ![shapes](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/shapes.png) Shapes
 
@@ -368,7 +480,7 @@ Move mode is orange (toggle with `m` key):
 | Key Combo                  | Action                          |
 | -------------------------- | ------------------------------- |
 | default mode: `arrow keys` | Move selection **area**         |
-| mode mode: `arrow keys`    | Move selection **contents**     |
+| move mode: `arrow keys`    | Move selection **contents**     |
 | `shift arrow keys`         | Expand/shrink selection         |
 | `home`/`end`               | Expand to row start/end         |
 | `page up`/`page down`      | Move by screen height           |
@@ -378,6 +490,7 @@ Move mode is orange (toggle with `m` key):
 | `ctrl shift v`             | Paste from **system** clipboard |
 | `[`/`]`                    | Flip horizontally/vertically    |
 | `m`                        | Toggle move mode (orange)       |
+| `enter`                    | Return to keyboard mode         |
 
 **Mouse/Touch:**
 
@@ -416,7 +529,7 @@ Horizontally mirrors any drawing tool on the opposite side of the canvas. Ideal 
 
 **Keyboard Shortcut:**
 
-`ctrl m`
+`m`, or `ctrl m` in keyboard mode
 
 ## ![history](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/history.png) History
 
@@ -426,9 +539,9 @@ Full undo/redo support for all drawing operations.
 
 **Features:**
 
-- Up to 1000 undo operations
+- Deep undo capped by memory (64 MB of change data), not a fixed step count
 - Works with all tools and operations
-- History saved to local storage with artwork changes for session persistence.
+- Your artwork survives reloads through the autosave journal; the undo stack itself starts fresh each session
 
 **Supported Operations:**
 
@@ -440,10 +553,10 @@ Full undo/redo support for all drawing operations.
 
 **Keyboard Shortcuts:**
 
-| Key Combo                   | Action |
-| --------------------------- | ------ |
-| `ctrl z`, `cmd z`, `meta z` | Undo   |
-| `ctrl y`, `cmd y`, `meta y` | Redo   |
+| Key Combo               | Action |
+| ----------------------- | ------ |
+| `ctrl z`, `cmd z`       | Undo   |
+| `ctrl y`, `cmd shift z` | Redo   |
 
 > [!NOTE]
 > See [architecture.md](architecture.md) for state management implementation details.
@@ -456,17 +569,24 @@ Change the font options for your artwork. teXt0wnz supports a wide variety of cl
 
 ### Font Select
 
-Choose from classic ANSI fonts and modern XBIN fonts. See [fonts.md](fonts.md) for a complete list of available fonts with previews.
+Choose from classic ANSI fonts and modern XBin fonts. See [fonts.md](fonts.md) for a complete list of available fonts with previews.
 
 ![font-select](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/font-select.png)
 
 **Font Categories:**
 
-- **IBM PC** - Classic DOS code pages (CP437, CP850, etc.)
-- **Modern** - Contemporary XBIN fonts (Topaz437, SES-SYM variants, etc.)
+- **XBin** - The font embedded in the loaded XBin or teXt0wnz Doc file
+- **Modern** - Contemporary scene fonts (Topaz 437, TES-SYM variants, Teletext, and more)
 - **Commodore 64** - PETSCII fonts (Shifted, UnShifted, and DiskMaster)
 - **Amiga** - MicroKnight, mO'sOul, P0t-N0oDLE, & Topaz variants
-- **International** - Arabic, Cyrillic, Greek, Hebrew, and more
+- **IBM PC Code Pages** - Grouped by language: Arabic, Baltic Rim, Cyrillic, French Canadian, Greek, Hebrew, IBM PC, Icelandic, Latin-1, Latin-2, Latin-3, Nordic, Portuguese, and Turkish
+
+### Font Favorites
+
+Star the fonts you use most and they pin to a **Favorites** group at the top of the picker.
+
+- Open the font picker and press the star next to the font name to toggle a favorite
+- Favorites persist in local storage and survive editor updates
 
 ### iCE Colors
 
@@ -514,7 +634,10 @@ A special "extra pixel" wide mode for letter spacing.
 
 ![viewport toolbar](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/viewport-toolbar.png)
 
-Customize your editing experience with these interface options.
+Customize your editing experience with these interface options. This toolbar also holds the toggles for the animation frames panel, the minimap, the CRT effect, and the reference image.
+
+> [!NOTE]
+> The editor renders with WebGL and falls back to a 2D renderer where WebGL2 is unavailable (append `?renderer=2d` to the URL to force it). The minimap, CRT effect, and onion skin need the WebGL renderer.
 
 ### Zoom
 
@@ -527,17 +650,20 @@ Visually scale the drawing canvas from 0.5-4x size, while keeping the interface 
 - Use the slider to adjust the zoom
 - Provides half size steps for greater control
 - Select whole number scaling for pixel perfect rendering
+- `ctrl` + mouse wheel (or a trackpad pinch) zooms at the pointer
+- A two-finger pinch zooms at the pinch center on touch screens
 - Preference saved in local storage
 
 **Keyboard Shortcuts:**
 
-| Key Combo | Action          |
-| --------- | --------------- |
-| `ctrl +`  | Zoom canvas in  |
-| `ctrl -`  | Zoom canvas out |
+| Key Combo | Action             |
+| --------- | ------------------ |
+| `ctrl +`  | Zoom canvas in     |
+| `ctrl -`  | Zoom canvas out    |
+| `ctrl 0`  | Reset zoom to 1.0x |
 
-> [!WARNING]
-> Scaling events take a moment to complete. The entire font and canvas need to be recalculated and redrawn.
+> [!NOTE]
+> On the WebGL renderer, zoom applies live as you pinch or scroll. The 2D fallback renderer commits the new scale when the gesture ends, which can take a moment on large canvases.
 
 ### ![theme select](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/modeselect.png) Light/Dark Mode
 
@@ -569,10 +695,92 @@ Toggles the visual grid. Useful for creating precise layouts, aligning elements,
 
 **Keyboard Shortcut:**
 
-`ctrl g`
+`g`, or `ctrl g` in keyboard mode
+
+### Minimap
+
+A live overview of the whole canvas, one pixel per cell, docked beside the viewport. It is on by default.
+
+**Features:**
+
+- Renders the full document with foreground and background colors blended by glyph coverage; 256-color and RGB art previews true
+- A frame marks the visible viewport and tracks your scrolling
+- Click or drag anywhere on the minimap to jump the viewport there
+- Refreshes twice a second while open
+- Toggle it with the **Minimap** button in the viewport toolbar; the choice is remembered
+
+### CRT Effect
+
+The **CRT** button in the viewport toolbar toggles a retro monitor look rendered as a WebGL post-processing pass: scanlines per glyph pixel row, a soft aperture-grille mask, slight phosphor bleed, and a vignette.
+
+- Purely visual; exports and collaboration are unaffected
+- Needs the WebGL renderer; the button stays unlit on the 2D fallback
+
+### Reference Image
+
+The **Ref Image** button in the viewport toolbar opens a small panel for tracing over a picture.
+
+**Features:**
+
+- **load image** floats a translucent image over the canvas; the file stays local and is never uploaded
+- **opacity** slider from 5 to 95 percent
+- **width** slider sizes the image from 10 to 200 percent of the canvas width
+- Every tool draws straight through the overlay, and it follows zoom and canvas resizes
+- **clear** removes the image
+
+# Animation
+
+teXt0wnz edits multi-frame animations. Press the **Frames** button in the viewport toolbar to open the frames panel.
+
+## Frame Timeline
+
+The panel shows a numbered strip of frames with the current one highlighted.
+
+**Controls:**
+
+- **◀ / ▶** step to the previous or next frame; click any number in the strip to jump
+- **+** adds a blank frame after the current one
+- **=** duplicates the current frame
+- **×** deletes the current frame (disabled on the last remaining frame)
+- **ms** sets a per-frame delay in milliseconds (16-60000); leave it blank to use the global rate
+- **fps** sets the global playback rate (1-60 frames per second)
+- **play** cycles the frames at their delays; press again (or click the canvas) to stop
+
+Adding a frame past the animation memory budget asks for confirmation first.
+
+## Onion Skin
+
+The **onion** button ghosts the previous frame under the current one, so you can line up motion between frames. WebGL renderer only.
+
+## Baud Preview
+
+The **baud** button replays the current frame the way it would paint over a modem line, at the selected rate (2400 to 115200 baud, 14400 by default). Classic ansimations use the line rate as their clock, so this is the honest preview of how your animation will feel on a BBS.
+
+## Exporting Animations
+
+- **File → Export as ANSimation** writes a classic ansimation `.ans` (clear screen and home between frames; baud rate is the clock)
+- **File → Save as durdraw Movie** writes a durdraw v8 `.dur` movie: gzipped JSON, 256-color mode, UTF-8 glyphs. RGB colors land on the nearest xterm-256 entry
+- **File → Save as teXt0wnz Doc** keeps frames, truecolor, and unicode losslessly in `.0wnz`
+- Opening a `.dur` or `.0wnz` file brings its frames with it
 
 > [!NOTE]
-> See [privacy.md](privacy.md) for information on local storage usage.
+> Animation editing is local-only. Collaboration sessions stay on one frame, and the panel says so while connected.
+
+# Touch, Pen, and Gestures
+
+The editor treats mouse, pen, and touch as first-class input.
+
+**Touch gestures:**
+
+- **One finger** draws with the active tool; a tap paints one cell
+- **Two-finger tap** undoes (it also works on the viewport margins around the canvas)
+- **Three-finger tap** redoes
+- **Two-finger pinch** zooms at the pinch center; dragging both fingers pans the canvas
+
+**Pen:**
+
+- Pressure drives the Shading Brush: press lighter or harder to pick the shade
+- Palm rejection ignores touch while the pen is down and for a moment after it lifts
 
 # Workflows
 
@@ -580,14 +788,15 @@ Toggles the visual grid. Useful for creating precise layouts, aligning elements,
 >
 > 1. Start with Keyboard Mode for layout and text
 > 2. Use Grid (G key) for alignment
-> 3. Switch to Freestyle for shading and pixel art
+> 3. Switch to the Block brush for shading and pixel art
 > 4. Use Character Brush for textures and patterns
 > 5. Fill Tool for large color blocks
 > 6. Selection Tool for moving and copying sections
-> 7. Save often (Ctrl+S)
+> 7. Autosave has your back, but export your work often
 > 8. Use F-keys for quick access to block characters
 > 9. Alt+Click to sample colors from artwork
-> 10. Undo/Redo freely (up to 1000 operations stored)
+> 10. Undo/Redo freely
+> 11. Open the minimap to keep your bearings on large pieces
 
 # Tutorials
 
@@ -609,6 +818,14 @@ The tutorials themselves are just normal ANSI art files. Viewing a tutorial simp
 > See [tutorials.md](tutorials.md) for a complete listing.
 
 # Collaboration Features
+
+When the editor is served alongside a collaboration server, a prompt at launch asks whether to join the session in progress or continue offline.
+
+- Everyone in a session draws on the same canvas in real time, with live peer cursors, synced fonts, canvas sizes, iCE colors, and SAUCE metadata
+- Between teXt0wnz clients, unicode characters and extended colors travel natively
+- Classic Moebius clients can join the same session; the server down-converts extended cells to their nearest 16-color CP437 equivalents for them, so mixed rooms stay coherent
+- Connected to a classic server, the editor locks what that wire cannot carry: extended colors, unicode input, and animation editing disable while connected, and each panel says so
+- On a teXt0wnz server, **File → Export Session Timelapse** replays the session's history into a durdraw movie
 
 ## Chat Window
 
@@ -639,25 +856,34 @@ The chat window is available when connected to a collaboration server. It provid
 
 **Main Tool Shortcuts:**
 
-| Key | Tool/Action            |
-| --- | ---------------------- |
-| `k` | Keyboard Mode          |
-| `f` | Freestyle (half-block) |
-| `b` | Character Brush        |
-| `n` | Fill Tool              |
-| `a` | Attribute Brush        |
-| `g` | Grid Toggle            |
-| `i` | iCE Colors Toggle      |
-| `m` | Mirror Mode            |
+These work whenever you are not typing in Keyboard Mode. Hold `ctrl` to use them from Keyboard Mode too (for example `ctrl m` for mirror, `ctrl g` for grid).
+
+| Key      | Tool/Action                |
+| -------- | -------------------------- |
+| `k`      | Keyboard Mode              |
+| `f`      | Brushes                    |
+| `b`      | Character Brush            |
+| `n`      | Fill Tool                  |
+| `a`      | Colorize/Attribute Brush   |
+| `g`      | Grid Toggle                |
+| `i`      | iCE Colors Toggle          |
+| `m`      | Mirror Mode                |
+| `d`      | Reset colors to default    |
+| `q`      | Swap foreground/background |
+| `escape` | Back to the previous tool  |
 
 **Color & Character:**
 
-| Key/Combo  | Action                             |
-| ---------- | ---------------------------------- |
-| `d`        | Reset colors to default            |
-| `q`        | Swap foreground/background         |
-| `0`–`7`    | Select basic color                 |
-| `F1`–`F12` | Insert block/character (see below) |
+| Key/Combo                | Action                                            |
+| ------------------------ | ------------------------------------------------- |
+| `0`-`7`                  | Foreground color (press again for bright)         |
+| `ctrl 0`-`7`             | Foreground color, works in keyboard mode          |
+| `alt 0`-`7`              | Background color (press again for bright)         |
+| `ctrl up`/`ctrl down`    | Previous/next foreground color                    |
+| `ctrl left`/`ctrl right` | Previous/next background color                    |
+| `ctrl u`                 | Pick up colors under the cursor (keyboard mode)   |
+| `F1`-`F12`               | Insert character from the active page (see below) |
+| `ctrl [` / `ctrl ]`      | Previous/next character page                      |
 
 **File & Canvas:**
 
@@ -665,7 +891,8 @@ The chat window is available when connected to a collaboration server. It provid
 | ----------------------------------------- | -------------------------- |
 | `ctrl z` / `ctrl y`                       | Undo / Redo                |
 | `ctrl x`/`ctrl c`/`ctrl v`/`ctrl shift v` | Cut/Copy/Paste/SystemPaste |
-| `ctrl delete`                             | Delete selection           |
+| `ctrl backspace`                          | Delete selection           |
+| `ctrl +` / `ctrl -` / `ctrl 0`            | Zoom in / out / reset      |
 
 **Navigation (Keyboard Mode):**
 
@@ -689,26 +916,26 @@ The chat window is available when connected to a collaboration server. It provid
 
 **Selection Operations:**
 
-| Key       | Action         |
-| --------- | -------------- |
-| `[` / `]` | Flip selection |
-| `m`       | Move mode      |
+| Key       | Action                  |
+| --------- | ----------------------- |
+| `[` / `]` | Flip selection          |
+| `m`       | Move mode               |
+| `enter`   | Return to keyboard mode |
 
 **Selection Navigation:**
 
-| Key                      | Action                            |
-| ------------------------ | --------------------------------- |
-| `arrow keys`             | Move selection area by one cell   |
-| `shift arrow keys`       | Expand/shrink selection           |
-| `home` / `end`           | Expand selection to row start/end |
-| `page up` / `page down`  | Move selection by screen height   |
-| `cmd left` / `cmd right` | Expand selection to row start/end |
+| Key                     | Action                            |
+| ----------------------- | --------------------------------- |
+| `arrow keys`            | Move selection area by one cell   |
+| `shift arrow keys`      | Expand/shrink selection           |
+| `home` / `end`          | Expand selection to row start/end |
+| `page up` / `page down` | Move selection by screen height   |
 
 **In Move Mode:**
 
 - `arrow keys`, `page up`, `page down` move selected content
 
-**Function Keys (`F1`–`F12`):** Quick character insert from CP437 font (blocks, symbols, shapes, and more).
+**Function Keys (`F1`-`F12`):** Quick character insert from the active page. The default page holds the classic blocks:
 
 | Key   | Character | Description        |
 | ----- | --------- | ------------------ |
@@ -721,21 +948,21 @@ The chat window is available when connected to a collaboration server. It provid
 | `f7`  | `▌`       | Left half block    |
 | `f8`  | `▐`       | Right half block   |
 | `f9`  | `■`       | Small solid square |
-| `f10` | `○`       | Circle             |
+| `f10` | `·`       | Middle dot         |
 | `f11` | `•`       | Bullet             |
-| `f12` | `NULL`    | Blank/transparent  |
+| `f12` | ` `       | Space              |
 
-**Cycling character sets:**
+**Cycling character pages:**
 
-- Use toolbar or shortcuts (`ctrl [`, `ctrl ]`) to cycle predefined sets (blocks, box-drawing, symbols, accents, etc.).
+- Use the arrow buttons at either end of the F-key bar, or `ctrl [` and `ctrl ]`, to cycle pages: all of CP437 (boxes, blocks, symbols, accents, and more), unicode pages (rounded corners and diagonals, sextants, wedges, eighth blocks), and any charsets you import through the [character set picker](#character-sets--unicode).
 
 ## Mouse Controls
 
 - **left click:** Draw, place cursor
-- **click & Drag:** Draw/Shape or select region
+- **click & drag:** Draw/Shape or select region
 - **shift click:** Straight line with freehand
 - **alt click:** Sample colors (any tool)
-- **right click:** Context menu
+- **right click:** Set the background color (in the color panels); on the canvas the browser context menu is suppressed
 
 ## Related Documentation
 

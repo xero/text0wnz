@@ -70,9 +70,13 @@ dist/
 ├── index.html              # Main entry point
 ├── site.webmanifest        # PWA manifest
 ├── service.js              # Service worker
+├── collabWorker-[hash].js  # Collaboration transport worker (module worker)
+├── journalWorker-[hash].js # OPFS autosave journal worker
+├── ansi/                   # Tutorial artwork
 ├── robots.txt              # Search engine directives
 ├── sitemap.xml             # Site map
 ├── humans.txt              # Humans.txt file
+├── LICENSE.txt             # License
 ├── favicon.ico             # Favicon
 └── ui/
     ├── stylez-[hash].css   # Minified CSS with cache-busting hash
@@ -88,8 +92,10 @@ dist/
         ├── fileops-[hash].js     # File I/O operations
         ├── network-[hash].js     # Collaboration/WebSocket
         ├── palette-[hash].js     # Color palette management
-        ├── rolldown-runtime-[hash].js # Bundler runtime shared by chunks
-        └── websocket.js          # Web Worker (no hash for service worker caching)
+        ├── profiler-[hash].js    # Profiling harness (lazy, ?profile)
+        ├── scrollSpike-[hash].js # Scroll measurement rig (lazy, ?spike)
+        ├── testBridge-[hash].js  # Test bridge (lazy, ?test)
+        └── rolldown-runtime-[hash].js # Bundler runtime shared by chunks
 ```
 
 ### Vite Plugins
@@ -108,10 +114,11 @@ Generates Progressive Web App files:
 
 **Offline & Caching:**
 
-- Custom runtime caching strategies (assets, scripts, styles, HTML)
-- Workbox-based precaching with `__WB_MANIFEST` injection
-- Cache-first strategy for static assets
-- Auto-update on new service worker versions
+- Workbox-based precaching with `__WB_MANIFEST` injection (js, css, html, woff2, UI svgs, favicons)
+- `index.html` precache entry stamped with a content-hash revision so new builds re-fetch it
+- One runtime route: stale-while-revalidate for images (`img-cache`)
+- Activation janitor deletes legacy runtime caches and self-heals installs stuck on an old worker
+- Updates prompt an in-app modal; accepting activates the new worker and reloads once
 
 **File Handling (Multi-Platform):**
 
@@ -138,14 +145,18 @@ Generates Progressive Web App files:
 - Build output: `dist/service.js`
 - Uses `injectManifest` strategy (not `generateSW`)
 
+#### vite-plugin-html-minifier-terser
+
+Minifies `dist/index.html` during production builds.
+
 #### vite-plugin-static-copy
 
 Copies static assets to the build directory:
 
-- Web Worker (`worker.js`)
-- Font files (`.png` format)
-- Manifest icons
-- `humans.txt`
+- `LICENSE.txt` and `humans.txt`
+- `favicon.ico`
+- Bitmap font files (`src/fonts/` → `dist/ui/fonts/`)
+- Tutorial artwork (`src/ansi/` → `dist/ansi/`)
 
 #### vite-plugin-sitemap
 
@@ -191,8 +202,8 @@ Generates SEO files:
 
 **Content sources:**
 
-- `./src/www/index.html`
-- `./src/css/editor.css`
+- `./src/index.html`
+- `./src/css/style.css`
 
 ## NPM Scripts
 
@@ -206,11 +217,18 @@ bun bake
 npm run bake
 ```
 
+- Bakes packed Unicode font pages first (`tools/bakeHexFonts.js`)
 - Runs Vite build in production mode
 - Minifies JavaScript and CSS
 - Generates PWA files and service worker
 - Creates sitemap and robots.txt
 - Outputs to `dist/` directory
+
+**Related build scripts:**
+
+- `bun fonts:bake` - Regenerate the packed Unicode font pages only
+- `bun bake:singlefile` - Single-file build via `vite.singlefile.config.js`
+- `bun binaries` - Compile standalone server binaries to `build/bin/` (`tools/compileBinaries.js`)
 
 ### Development Scripts
 
@@ -234,7 +252,7 @@ bun server [port] [options]
 npm run server [port] [options]
 ```
 
-- Starts Node.js collaboration server
+- Starts the Bun collaboration server
 - Default port: 1337
 
 > [!NOTE]
@@ -250,7 +268,7 @@ bun fix
 npm run fix
 ```
 
-- Runs Prettier on CSS and Markdown
+- Runs Prettier on CSS, Markdown, and TypeScript
 - Runs ESLint with auto-fix on HTML and JavaScript
 
 **`bun lint:check`** - Check for linting issues
@@ -284,7 +302,7 @@ bun format:check
 npm run format:check
 ```
 
-- Checks CSS and Markdown formatting with Prettier
+- Checks CSS, Markdown, and TypeScript formatting with Prettier
 - Reports unformatted files
 - Doesn't modify files
 
@@ -296,8 +314,18 @@ bun format:fix
 npm run format:fix
 ```
 
-- Formats CSS and Markdown with Prettier
+- Formats CSS, Markdown, and TypeScript with Prettier
 - Applies consistent style
+
+**`bun types:check`** - Check TypeScript types
+
+```bash
+bun types:check
+# or
+npm run types:check
+```
+
+- Runs `tsc --noEmit` over the TypeScript sources
 
 ### Testing Scripts
 
@@ -314,6 +342,16 @@ npm run test:unit
 
 > [!NOTE]
 > See [testing.md](testing.md) for details
+
+**`bun test:dom`** - Run DOM/component tests
+
+```bash
+bun test:dom
+# or
+npm run test:dom
+```
+
+- Runs the Testing Library suites in `tests/dom/`
 
 **`bun test:e2e`** - Run end-to-end tests
 
@@ -348,7 +386,6 @@ Configure the build with environment variables in `.env` file:
 VITE_DOMAIN='https://text.0w.nz'
 VITE_UI_DIR='ui/'
 VITE_FONT_DIR='fonts/'
-VITE_WORKER_FILE='websocket.js'
 ```
 
 ### Variable Reference
@@ -367,13 +404,8 @@ VITE_WORKER_FILE='websocket.js'
 
 **`VITE_FONT_DIR`**
 
-- Directory for font files (not currently used)
+- Directory for bitmap font assets, read by the client at runtime
 - Default: `fonts/`
-
-**`VITE_WORKER_FILE`**
-
-- Web Worker filename
-- Default: `websocket.js`
 
 ## Development Workflow
 
@@ -467,7 +499,7 @@ bun lint:fix
 **Configuration:** `.prettierrc`
 
 > [!NOTE]
-> Prettier only formats CSS and Markdown. ESLint stylistic rules own JavaScript and HTML formatting, and `.prettierignore` excludes those files so editor integrations don't fight ESLint.
+> Prettier formats CSS, Markdown, and TypeScript. ESLint stylistic rules own JavaScript and HTML formatting, and `.prettierignore` excludes those files so editor integrations don't fight ESLint.
 
 **Purpose:**
 
@@ -495,15 +527,19 @@ bun format:fix
 src/
 ├── index.html          # Main HTML template
 ├── humans.txt          # Humans.txt file
+├── service.js          # PWA service worker
+├── ansi/               # Tutorial artwork
 ├── css/
 │   └── style.css       # Tailwind CSS styles
 ├── fonts/              # Font assets (PNG format)
 ├── img/                # Static images and icons
 │   └── manifest/       # PWA icons
 └── js/
+    ├── core/           # Shared pure-TS doc model, codecs, and protocol
     ├── client/         # Client-side modules
     │   ├── main.js
-    │   ├── canvas.js
+    │   ├── canvas.js        # 2D chunk renderer (fallback)
+    │   ├── glRenderer.js    # WebGL2 renderer (default)
     │   ├── keyboard.js
     │   ├── ui.js
     │   ├── palette.js
@@ -517,17 +553,21 @@ src/
     │   ├── lazyFont.js      # Lazy glyph generation
     │   ├── fontCache.js     # Font caching system
     │   ├── magicNumbers.js
-    │   ├── websocket.js     # Security-hardened WebSocket worker
-    │   └── network.js       # Network layer with silent checks
+    │   ├── collabWorker.js  # Collaboration transport worker
+    │   ├── network.js       # Network layer with silent probe
+    │   └── ...              # See project-structure.md for the full list
     └── server/         # Server-side modules
         ├── main.js
         ├── config.js
-        ├── server.js
-        ├── text0wnz.js
-        ├── websockets.js
-        ├── fileio.js
+        ├── moebiusServer.js
+        ├── room.js
+        ├── persistence.js
+        ├── bridge.js
         └── utils.js
 ```
+
+> [!NOTE]
+> See [Project Structure](project-structure.md) for the complete, annotated module list.
 
 ### Build Output (`dist/`)
 
@@ -537,10 +577,20 @@ Generated by `bun bake`. Do not edit files in this directory manually.
 
 ```
 tests/
-├── unit/               # Vitest unit tests
-├── e2e/                # Playwright E2E tests
+├── unit/               # Vitest unit tests (server tests nested in server/)
+├── core/               # Vitest tests for the shared TS core
 ├── dom/                # Testing Library tests
+├── e2e/                # Playwright E2E tests
+├── golden/             # Playwright pixel-golden tests
+├── gl/                 # Playwright WebGL renderer tests
+├── perf/               # Performance capture scripts
+├── interop/            # Cross-editor protocol interop tests
+├── corpus/             # Round-trip generators
+├── parity/             # v2 reference engine for parity tests
+├── baselines/          # Performance baselines (JSON)
+├── fixtures/           # Shared fixtures
 ├── results/            # Test results (not committed)
+├── canvasShim.js       # Canvas API shim for tests
 └── setupTests.js       # Test setup configuration
 ```
 
@@ -572,15 +622,15 @@ docs/
 - Copied from `src/fonts/` to `dist/ui/fonts/`
 - PNG format (bitmap fonts for text art)
 - No transformation applied
+- `fonts/u/` holds packed Unicode glyph pages baked by `tools/bakeHexFonts.js`
 - Lazy glyph generation (only creates character images when needed)
 - Font caching system for instant switching between common fonts
 
 **Images:**
 
 - Icons and manifest images
-- Optimized during build
 - Multiple sizes for different devices
-- Hashed filenames for cache busting
+- Stable (unhashed) filenames under `ui/img/`, cached at runtime by the service worker
 
 **CSS:**
 
@@ -590,7 +640,7 @@ docs/
 
 **JavaScript:**
 
-- Bundled with Vite/Rollup into code-split chunks
+- Bundled with Vite/Rolldown into code-split chunks
 - Minified with Terser for production
 - Each chunk has a unique hash for cache invalidation
 - Main entry: `dist/ui/js/editor-[hash].js`
@@ -601,12 +651,11 @@ docs/
 
 - **Custom implementation** using `injectManifest` strategy
 - Source: `src/service.js` (manually written, not auto-generated)
-- Workbox manifest (`__WB_MANIFEST`) injected at build time
-- Custom runtime caching strategies:
-  - Images: `CacheFirst` → `asset-cache`
-  - Scripts: `CacheFirst` → `app-cache`
-  - Styles: `CacheFirst` → `style-cache`
-  - HTML: `CacheFirst` → `html-cache`
+- Workbox manifest (`__WB_MANIFEST`) injected at build time; precaches js, css, html, woff2, UI svgs, and favicons
+- `index.html` precache entry gets a content-hash revision so new builds re-fetch it
+- One runtime route: images served `StaleWhileRevalidate` → `img-cache`
+- Activation janitor deletes the legacy `html-cache`, `app-cache`, `style-cache`, and `asset-cache` caches
+- Recovery path detects installs stuck on an old worker and force-reloads only pages that do not answer a ping
 - Share Target API handler for Android file sharing
 - File Handlers API support for Desktop file opening
 - Stale shared file cleanup on activation
@@ -732,7 +781,7 @@ This logs:
 
 - Custom `injectManifest` strategy for full control
 - Workbox precaching for critical assets
-- Runtime caching with cache-first strategy
+- Single stale-while-revalidate runtime route for images
 - Regex-safe UI directory path construction from env vars
 
 **File Handling:**
@@ -744,7 +793,7 @@ This logs:
 
 **Cache Strategy:**
 
-- Service worker cache-first for static assets
+- Hashed static assets served from the Workbox precache
 - Font cache for instant font switching (client-side)
 - IndexedDB for canvas persistence
 - Aggressive browser caching with hashed filenames
@@ -817,3 +866,4 @@ bun upgrade  # Update to latest version
 - [Collaboration Server](collaboration-server.md) - Server configuration
 - [Client Editor Manual](manual.md) - Visual guide to the Frontend text art editor
 - [Other Tools](other-tools.md) - Additional development tools
+- [Changelog](https://github.com/xero/text0wnz/blob/main/CHANGELOG.md) - Release history

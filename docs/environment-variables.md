@@ -51,20 +51,6 @@ dist/
 
 **Note:** Should end with `/` (or it will be added automatically). Leading slash is removed.
 
-### VITE_WORKER_FILE
-
-**Default:** `websocket.js`
-
-**Purpose:** Sets the filename for the WebSocket worker.
-
-**Usage:**
-
-```bash
-VITE_WORKER_FILE='worker.js'
-```
-
-**Note:** This file is not hashed for cache-busting to allow service worker caching.
-
 ### VITE_FONT_DIR
 
 **Default:** `fonts/`
@@ -77,7 +63,7 @@ VITE_WORKER_FILE='worker.js'
 VITE_FONT_DIR='bitmapfonts/'
 ```
 
-**Note:** Not used in vite.config.js but used in the frontend client application. See `/src/js/client/state.js#L89`
+**Note:** Not used in vite.config.js but read by the frontend client to locate bitmap fonts. See `src/js/client/state.js`
 
 ## Runtime Variables (Server)
 
@@ -92,15 +78,14 @@ These variables are used when running the collaboration server.
 **Usage:**
 
 ```bash
-# Command line
+# Command line (the bare server takes the port as an argument)
 bun server 8060
 
-# Environment variable
-PORT=8060 bun server
-
-# Docker
+# Docker (the startup script passes PORT to the server)
 docker run -e PORT=8060 text0wnz:latest
 ```
+
+**Note:** The server reads `PORT` directly only in its `healthcheck` probe mode; otherwise the port comes from the CLI argument.
 
 ### NODE_ENV
 
@@ -111,12 +96,12 @@ docker run -e PORT=8060 text0wnz:latest
 **Values:**
 
 - `production` - Production mode with optimizations
-- `development` - Development mode with verbose logging
+- `development` - Development mode (plain HTTP in Docker, source maps in builds)
 
 **Usage:**
 
 ```bash
-NODE_ENV=development bun server
+NODE_ENV=development bun bake
 
 # Docker
 docker run -e NODE_ENV=development text0wnz:latest
@@ -124,8 +109,7 @@ docker run -e NODE_ENV=development text0wnz:latest
 
 **Effects:**
 
-- Logging verbosity
-- Error messages
+- Source maps in the Vite build (enabled when not `production`)
 - Caddy configuration (in Docker)
 - SSL settings (in Docker)
 
@@ -150,27 +134,58 @@ docker run -e DOMAIN=text.example.com text0wnz:latest
 
 ### SESSION_KEY
 
-**Default:** a random secret generated at server startup (the Docker image generates one at boot if not provided)
+**Default:** generated at boot (Docker only)
 
-**Purpose:** Secret key for express-session middleware.
+**Purpose:** The Docker startup script generates and exports this value when it is not provided. The collaboration server does not read it; room access control uses `ROOM_PASS` and `ROOM_PASSWORDS` instead.
+
+### ROOM_PASS
+
+**Default:** none
+
+**Purpose:** Room password applied to every room without a specific entry. Same as the `--pass` flag, and it gates spectators too.
 
 **Usage:**
 
 ```bash
-# Docker
-KEY=$(openssl rand -base64 32)
-docker run -e SESSION_KEY=$KEY text0wnz:latest
+ROOM_PASS=hunter2 bun server
 ```
 
-**Security:**
+### ROOM_PASSWORDS
 
-- Should be a long random string in production
-- Used for session cookie signing
-- Auto-generated via urandom in Docker if not provided
+**Default:** none
+
+**Purpose:** Per-room passwords as JSON.
+
+**Usage:**
 
 ```bash
-SESSION_KEY=$(tr -dc 'a-z0-9' </dev/urandom | head -c 20)
+ROOM_PASSWORDS='{"room":"pw"}' bun server
 ```
+
+### ROOM_MAX_COLUMNS / ROOM_MAX_ROWS
+
+**Default:** `1000` columns, `10000` rows
+
+**Purpose:** Canvas resize walls, in either direction. The walls gate resizes only; restored documents keep their size.
+
+### STATIC_DIR
+
+**Default:** none (WebSocket-only; a proxy serves static files)
+
+**Purpose:** Serve the built PWA from this directory. Same as the `--static` flag; used by the single-binary and distroless deployments.
+
+### BRIDGE / BRIDGE_TARGET / BRIDGE_PORT / BRIDGE_ALLOW
+
+**Default:** `BRIDGE=off`, `BRIDGE_TARGET=ws://127.0.0.1:8000`, `BRIDGE_PORT=8000`
+
+**Purpose:** Control the collaboration bridge, a byte pipe from browser connections to plaintext desktop servers (Moebius, icy_draw).
+
+**Modes:**
+
+- `off` - every bridge request is refused (default)
+- `local` - only the preconfigured `BRIDGE_TARGET` is dialed
+- `port` - caller-chosen host pinned to `BRIDGE_PORT`; private addresses are denied
+- `allow` - only targets on the `BRIDGE_ALLOW` list (comma-separated `host:port`)
 
 ### XDG_DATA_HOME
 
@@ -288,14 +303,9 @@ The `.env` file in the project root is used for local development configuration.
 VITE_DOMAIN='https://text.0w.nz'
 VITE_UI_DIR='ui/'
 VITE_FONT_DIR='fonts/'
-VITE_WORKER_FILE='websocket.js'
-
-# Server configuration (optional, can use CLI args instead)
-PORT=1337
-NODE_ENV=production
 ```
 
-**Note:** The `.env` file is gitignored. Manually run: `git add .env ` to track changes as needed.
+**Note:** The `.env` file is not gitignored; keep secrets out of it and commit changes deliberately.
 
 ## Setting Environment Variables
 
@@ -337,7 +347,7 @@ bun server
 docker run \
   -e DOMAIN=your.domain.com \
   -e NODE_ENV=production \
-  -e SESSION_KEY=your-secret-key \
+  -e ROOM_PASS=your-room-password \
   text0wnz:latest
 ```
 
@@ -348,7 +358,7 @@ docker run \
 cat > docker.env << EOF
 DOMAIN=your.domain.com
 NODE_ENV=production
-SESSION_KEY=your-secret-key
+ROOM_PASS=your-room-password
 EOF
 
 # Run with env file
@@ -365,7 +375,7 @@ services:
     environment:
       - DOMAIN=your.cool.tld
       - NODE_ENV=production
-      - SESSION_KEY=your-secret-key
+      - ROOM_PASS=your-room-password
     ports:
       - '80:80'
       - '443:443'
@@ -410,16 +420,12 @@ jobs:
 **Solution:** Set `VITE_DOMAIN` in `.env` before building
 
 **Issue:** WebSocket connection fails in Docker
-**Solution:** Set `DOMAIN` environment variable to match your domain
-**Note:** The default for no domain or port set is `ws://localhost:1337`
-
-**Issue:** Session errors in Docker
-**Solution:** Set `SESSION_KEY` to a secure random value in your docker run command
+**Solution:** Set `DOMAIN` environment variable to match your domain; the client connects back to the page's own origin
 
 ## Security Best Practices
 
-1. **Never commit `.env` file** - It's gitignored for security
-2. **Use strong SESSION_KEY** - Generate with: `openssl rand -base64 32`
+1. **Keep secrets out of `.env`** - It is committed with non-secret build defaults
+2. **Use strong room passwords** - Set via `--pass`, `ROOM_PASS`, or `ROOM_PASSWORDS`
 3. **Rotate secrets regularly** - Update Docker/CI secrets periodically
 4. **Limit token permissions** - Give minimum required permissions
 5. **Use environment-specific configs** - Different keys for dev/staging/prod

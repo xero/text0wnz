@@ -39,8 +39,8 @@ both sides together.
   gone; the server runs on Bun's built-in websockets. `bun install`
   prunes them.
 - New flags: `--pass <password>` protects rooms (and unlike upstream
-  Moebius, it applies to nickless spectators too), `--plain-port
-<port>` adds a plaintext listener for desktop clients, and rooms are
+  Moebius, it applies to nickless spectators too), `--plain-port <port>`
+  adds a plaintext listener for desktop clients, and rooms are
   path-based (`wss://host/roomname`; `/` and `/server` reach the
   default room, so existing Caddy and nginx proxy configs keep
   working).

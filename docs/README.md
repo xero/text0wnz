@@ -4,6 +4,8 @@
 
 This directory contains comprehensive guides for using, developing, testing, and deploying the **teXt0wnz** editor.
 
+What's new: see the [changelog](https://github.com/xero/text0wnz/blob/main/CHANGELOG.md) for the latest features and fixes.
+
 ## Quick Links
 
 ### For Users / Artists
@@ -42,7 +44,7 @@ This directory contains comprehensive guides for using, developing, testing, and
   - High-level overview and application modes
   - Client and server architecture
   - Data flow and module structure
-  - Build system and code splitting
+  - Build system and asset optimization
   - Storage and persistence strategies
   - Design patterns and performance optimizations
 
@@ -54,6 +56,11 @@ This directory contains comprehensive guides for using, developing, testing, and
   - Session management
   - Process management (systemd, forever)
   - SSL configuration
+
+- **[Collab Protocol Migration](collab-protocol-migration.md)** - Moving to the Moebius-native collaboration protocol
+  - What changed and who is affected
+  - Migrating a server
+  - Compatibility notes for mixed sessions
 
 - **[Tutorials](tutorials.md)** - Classic ANSI drawing tutorials
   - library of 20+ hand-collected ANSI tutorials spanning decades of the scene.
@@ -145,7 +152,7 @@ This directory contains comprehensive guides for using, developing, testing, and
 - **[Examples](https://github.com/xero/text0wnz/tree/main/docs/examples)** - Sample artwork to view and edit
   - ANSI artwork by [xero](https://16colo.rs/artist/xero) (alias: x0^67^aMi5H^iMP!)
   - XBin artwork by [hellbeard](https://16colo.rs/artist/hellbeard) (alias: xz^dS^iMPuRe!)
-- **[Browser Compatibility Analysis](https://github.com/xero/text0wnz/wiki/browser-compatibility-analysis-guide)** - Guide for GitHub Copilot Agents to analyze the codebase and generate browser support statistics from raw caniuse.com data sets.
+- **[Browser Compatibility Analysis](browser-compatibility-analysis-guide.md)** - Guide for GitHub Copilot Agents to analyze the codebase and generate browser support statistics from raw caniuse.com data sets.
 
 ## Contributing
 
@@ -161,7 +168,7 @@ When contributing documentation:
 > 6. Cross-reference related documents
 
 > [!NOTE]
-> See: [Contributing](contributing) for more details
+> See: [Contributing](contributing.md) for more details
 
 ## Getting Help
 
