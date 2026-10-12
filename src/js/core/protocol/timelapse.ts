@@ -1,5 +1,5 @@
 /**
- * Timelapse replay (PLAN §3.6.3): the server's EXT_TIMELAPSE payload
+ * Timelapse replay: the server's EXT_TIMELAPSE payload
  * (baseline snapshot + bounded op log) becomes a multi-frame doc the
  * client exports as an animation. The replay walks the mutating ops
  * (draws, batches, resizes) over the baseline grid and snapshots at a
@@ -60,9 +60,9 @@ export const timelapseToDoc = (
 			`bad timelapse dims ${String(columns)}x${String(rows)}`,
 		);
 	}
-	// aggregate memory bound (review finding): frames x cells respects
-	// the O13 animation budget, so a 10M-cell room gets a 2-frame movie
-	// instead of killing the tab
+	// aggregate memory bound: frames x cells respects the O13 frame
+	// budget (doc.ts), so a 10M-cell room gets a 2-frame movie instead
+	// of killing the tab
 	const cells = (columns as number) * (rows as number);
 	const budgetFrames = Math.floor(16_000_000 / cells);
 	const maxFrames = Math.max(

@@ -1,5 +1,5 @@
 /**
- * Timelapse replay (P6): baseline + op log -> capped multi-frame doc.
+ * Timelapse replay: baseline + op log -> capped multi-frame doc.
  * The final frame always equals the end state, resizes replay
  * row-aware at final dims, and hostile ops drop silently.
  */

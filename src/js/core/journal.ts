@@ -1,6 +1,6 @@
 /**
- * Autosave journal format (PLAN.md §3.2): an append-only byte log the
- * OPFS worker writes incrementally via createSyncAccessHandle (with an
+ * Autosave journal format: an append-only byte log the OPFS worker
+ * writes incrementally via createSyncAccessHandle (with an
  * IndexedDB blob fallback for Safari 15.0-15.1). This module is the
  * pure format layer: record framing, stroke serialization, replay, and
  * the compaction policy. File IO lives in the client store; everything

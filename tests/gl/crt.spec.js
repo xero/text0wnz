@@ -1,5 +1,5 @@
 /**
- * CRT post pass smoke (P6): toggling the effect recomposites through
+ * CRT post pass smoke: toggling the effect recomposites through
  * the FBO path without GL errors and visibly changes the presented
  * frame (scanline mask), then restores cleanly. Pixel LOOK is not
  * asserted; the classic goldens pin that the effect stays OFF by

@@ -6,7 +6,6 @@ const makeMockDoc = () => createDocV3({ columns: 80, rows: 25 });
 
 const canvasDataURL =
 	'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
-// Mock State module
 const mockState = {
 	textArtCanvas: {
 		getColumns: vi.fn(() => 80),
@@ -62,7 +61,6 @@ vi.mock('../../src/js/client/palette.js', () => ({
 	getUnicode: vi.fn(),
 }));
 
-// Mock global browser APIs
 const mockDocument = {
 	createElement: vi.fn(() => ({
 		href: '',
@@ -96,10 +94,8 @@ describe('File Module - Load and Save Operations', () => {
 	let Load, Save;
 
 	beforeEach(async () => {
-		// Reset all mocks
 		vi.clearAllMocks();
 
-		// Setup global mocks
 		vi.stubGlobal('document', mockDocument);
 		global.URL = mockURL;
 		global.window = { URL: mockURL };
@@ -116,7 +112,6 @@ describe('File Module - Load and Save Operations', () => {
 			return { bubbles: true, cancelable: true };
 		});
 
-		// Import the module fresh for each test
 		const fileModule = await import('../../src/js/client/file.js');
 		Load = fileModule.Load;
 		Save = fileModule.Save;
@@ -234,7 +229,7 @@ describe('File Module - Load and Save Operations', () => {
 
 				const callback = vi.fn();
 
-				// The file loading sets up a FileReader - clearXBData won't be called until the reader triggers
+				// clearXBData only runs after the FileReader fires
 				expect(() => Load.file(mockFile, callback)).not.toThrow();
 			});
 
@@ -246,7 +241,7 @@ describe('File Module - Load and Save Operations', () => {
 
 				const callback = vi.fn();
 
-				// The file loading sets up a FileReader - loadXBFileSequential won't be called until the reader triggers
+				// loadXBFileSequential only runs after the FileReader fires
 				expect(() => Load.file(mockFile, callback)).not.toThrow();
 			});
 
@@ -258,7 +253,7 @@ describe('File Module - Load and Save Operations', () => {
 
 				const callback = vi.fn();
 
-				// The file loading sets up a FileReader - clearXBData won't be called until the reader triggers
+				// clearXBData only runs after the FileReader fires
 				expect(() => Load.file(mockFile, callback)).not.toThrow();
 			});
 
@@ -270,7 +265,7 @@ describe('File Module - Load and Save Operations', () => {
 
 				const callback = vi.fn();
 
-				// The file loading sets up a FileReader - clearXBData won't be called until the reader triggers
+				// clearXBData only runs after the FileReader fires
 				expect(() => Load.file(mockFile, callback)).not.toThrow();
 			});
 		});
@@ -278,7 +273,6 @@ describe('File Module - Load and Save Operations', () => {
 
 	describe('Save Module', () => {
 		beforeEach(() => {
-			// Reset UI element values
 			mockUIElements['artwork-title'].value = 'test-artwork';
 			mockUIElements['sauce-title'].value = 'Test Title';
 			mockUIElements['sauce-author'].value = 'Test Author';
@@ -500,7 +494,6 @@ describe('File Module - Load and Save Operations', () => {
 
 				await Save.ans();
 
-				// Test that the function call completes without error
 				expect(global.Blob).toHaveBeenCalled();
 			});
 		});

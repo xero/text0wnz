@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Storage } from '../../src/js/client/storage.js';
 
-// Mock IndexedDB for testing
 const mockIndexedDB = () => {
 	const mockStore = {
 		put: vi.fn((value, _key) => {
@@ -73,20 +72,15 @@ const mockIndexedDB = () => {
 	};
 };
 
-// Note: These tests are limited because IndexedDB is not fully available in jsdom
-// Full integration tests would need to run in a real browser environment
+// IndexedDB is not fully available in jsdom; a real browser covers the rest.
 describe('Storage Utilities', () => {
 	beforeEach(() => {
-		// Clear localStorage before each test
 		localStorage.clear();
-		// Mock IndexedDB
 		mockIndexedDB();
 	});
 
 	afterEach(() => {
-		// Clean up storage
 		localStorage.clear();
-		// Restore all mocks
 		vi.restoreAllMocks();
 	});
 
@@ -105,7 +99,6 @@ describe('Storage Utilities', () => {
 			const result = Storage.saveSettings(settings);
 			expect(result).toBe(true);
 
-			// Verify it was saved
 			const raw = localStorage.getItem('text0wnz-settings');
 			expect(raw).not.toBeNull();
 			const parsed = JSON.parse(raw);
@@ -149,7 +142,6 @@ describe('Storage Utilities', () => {
 	});
 
 	describe('IndexedDB Operations', () => {
-		// These tests are limited because IndexedDB is not fully available in jsdom
 		it('should have canvas data methods', () => {
 			expect(typeof Storage.saveCanvasData).toBe('function');
 			expect(typeof Storage.loadCanvasData).toBe('function');
@@ -169,7 +161,6 @@ describe('Storage Utilities', () => {
 			expect(typeof Storage.clearAll).toBe('function');
 		});
 
-		// Basic test to ensure methods don't crash
 		it('should handle saveCanvasData without crashing', async () => {
 			const canvasData = {
 				imageData: new Uint16Array([1, 2, 3]),
@@ -177,16 +168,14 @@ describe('Storage Utilities', () => {
 				rows: 25,
 			};
 
-			// This will likely fail due to IndexedDB not being available in jsdom
-			// but we test that it handles the error gracefully
+			// IndexedDB is unavailable in jsdom; the call must fail gracefully
 			const result = await Storage.saveCanvasData(canvasData);
 			// Result could be true or false depending on environment
 			expect(typeof result).toBe('boolean');
 		});
 
 		it('should handle loadCanvasData without crashing', async () => {
-			// This will likely fail due to IndexedDB not being available in jsdom
-			// but we test that it handles the error gracefully
+			// IndexedDB is unavailable in jsdom; the call must fail gracefully
 			const result = await Storage.loadCanvasData();
 			// Result could be null or an object depending on environment
 			expect(result === null || typeof result === 'object').toBe(true);
@@ -232,13 +221,11 @@ describe('Storage Utilities', () => {
 
 	describe('Clear All Storage', () => {
 		it('should clear localStorage items', async () => {
-			// Set up some localStorage data
 			localStorage.setItem('text0wnz-settings', 'test data');
 			localStorage.setItem('editorState', 'legacy data');
 
 			await Storage.clearAll();
 
-			// Verify localStorage was cleared
 			expect(localStorage.getItem('text0wnz-settings')).toBeNull();
 			expect(localStorage.getItem('editorState')).toBeNull();
 		});

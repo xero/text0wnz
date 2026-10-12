@@ -11,8 +11,7 @@ test.describe('Collaboration and Chat Features', () => {
 		const chatButton = page.locator('#chatButton');
 		const count = await chatButton.count();
 
-		// Chat button may not be visible if websocket is not enabled
-		// Just verify it exists in the DOM
+		// the chat button only shows with websockets enabled; pin DOM presence
 		expect(count).toBeGreaterThanOrEqual(0);
 	});
 
@@ -23,17 +22,14 @@ test.describe('Collaboration and Chat Features', () => {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
-			// Check if chat window appears
 			const chatWindow = page.locator('#chatWindow, #chatRoom');
 			const windowCount = await chatWindow.count();
 
 			if (windowCount > 0) {
-				// Chat window might be visible
 				const isHidden = await chatWindow.first().evaluate(el => {
 					return el.classList.contains('hide') || el.style.display === 'none';
 				});
 
-				// If not hidden, it should be visible
 				if (!isHidden) {
 					await expect(chatWindow.first()).toBeVisible();
 				}
@@ -45,11 +41,9 @@ test.describe('Collaboration and Chat Features', () => {
 		const chatButton = page.locator('#chatButton');
 
 		if (await chatButton.isVisible()) {
-			// Open chat
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
-			// Look for close button
 			const closeButton = page.locator(
 				'#chatClose, .chatClose, button:has-text("Close")',
 			);
@@ -59,7 +53,6 @@ test.describe('Collaboration and Chat Features', () => {
 				await closeButton.first().click();
 				await page.waitForTimeout(500);
 			} else {
-				// Click chat button again to close
 				await chatButton.click();
 				await page.waitForTimeout(500);
 			}
@@ -73,7 +66,6 @@ test.describe('Collaboration and Chat Features', () => {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
-			// Look for message input
 			const messageInput = page.locator(
 				'#messageInput, input[name="message"], textarea[name="message"]',
 			);
@@ -92,7 +84,6 @@ test.describe('Collaboration and Chat Features', () => {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
-			// Look for handle/username input
 			const handleInput = page.locator(
 				'#handleInput, input[name="handle"], input[name="username"]',
 			);
@@ -129,7 +120,6 @@ test.describe('Collaboration and Chat Features', () => {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
-			// Look for message display area
 			const messageWindow = page.locator(
 				'#messageWindow, .messageWindow, .chatMessages',
 			);
@@ -148,7 +138,6 @@ test.describe('Collaboration and Chat Features', () => {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
-			// Look for notification checkbox
 			const notificationToggle = page.locator(
 				'#notificationCheckbox, input[name="notifications"]',
 			);
@@ -167,7 +156,6 @@ test.describe('Collaboration and Chat Features', () => {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
-			// Look for user list
 			const userList = page.locator('#userList, .userList');
 			const listCount = await userList.count();
 
@@ -204,16 +192,13 @@ test.describe('Collaboration and Chat Features', () => {
 
 			const messageInput = page.locator('#messageInput');
 			if (await messageInput.isVisible()) {
-				// Type a message
 				await messageInput.fill('Test message');
 				await page.waitForTimeout(200);
 
-				// Submit with Enter key
 				await messageInput.press('Enter');
 				await page.waitForTimeout(500);
 
-				// Input should be cleared (in collaboration mode)
-				// Note: This only works when connected to a server
+				// the input only clears when connected to a server, so no assertion
 			}
 		}
 	});
@@ -227,14 +212,9 @@ test.describe('Collaboration Mode Detection', () => {
 	});
 
 	test('should detect local mode (no server)', async ({ page }) => {
-		// In local mode, collaboration features might be disabled or hidden
-		// This test verifies the app works without a collaboration server
-
-		// Canvas should still be functional
 		const canvas = page.locator('#canvasContainer');
 		await expect(canvas).toBeVisible();
 
-		// Drawing tools should work - click brushes to show toolbar
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
 
@@ -242,23 +222,18 @@ test.describe('Collaboration Mode Detection', () => {
 		await halfblockTool.click();
 		await page.waitForTimeout(200);
 
-		// Verify app is functional in local mode
 		const errors = await page.locator('.error').count();
 		expect(errors).toBe(0);
 	});
 
 	test('should handle missing server gracefully', async ({ page }) => {
-		// The app should not crash if server is unavailable
 		await page.waitForTimeout(2000);
 
-		// App should either show no error or a graceful "offline mode" message
-		// No JavaScript errors should occur
 		const pageErrors = [];
 		page.on('pageerror', error => pageErrors.push(error));
 
 		await page.waitForTimeout(1000);
 
-		// Critical errors should not occur
 		const criticalErrors = pageErrors.filter(
 			err => err.message.includes('undefined') || err.message.includes('null'),
 		);
@@ -277,20 +252,17 @@ test.describe('Network Features', () => {
 		// Wait for potential connection attempt
 		await page.waitForTimeout(2000);
 
-		// App should function regardless of connection status
 		const canvas = page.locator('#canvasContainer');
 		await expect(canvas).toBeVisible();
 	});
 
 	test('should show connection status if available', async ({ page }) => {
-		// Look for connection indicator
 		const connectionStatus = page.locator(
 			'.connectionStatus, #connectionStatus, .onlineIndicator',
 		);
 		const statusCount = await connectionStatus.count();
 
 		if (statusCount > 0) {
-			// Connection status element exists
 			await expect(connectionStatus.first()).toBeVisible();
 		}
 	});
@@ -314,7 +286,6 @@ test.describe('Chat Window Drag Functionality', () => {
 			const headerCount = await chatHeader.count();
 
 			if (headerCount > 0) {
-				// Check cursor style
 				const cursor = await chatHeader.evaluate(el => {
 					return window.getComputedStyle(el).cursor;
 				});
@@ -336,7 +307,6 @@ test.describe('Chat Window Drag Functionality', () => {
 
 			const windowCount = await chatWindow.count();
 			if (windowCount > 0) {
-				// Drag the header
 				const headerBox = await chatHeader.boundingBox();
 				if (headerBox) {
 					await page.mouse.move(
@@ -348,12 +318,10 @@ test.describe('Chat Window Drag Functionality', () => {
 					await page.mouse.up();
 					await page.waitForTimeout(300);
 
-					// Check that transform contains translate values
 					const newTransform = await chatWindow.evaluate(el => {
 						return el.style.transform || '';
 					});
 
-					// Transform should contain translate after dragging
 					expect(newTransform).toContain('translate');
 					expect(newTransform).toMatch(/translate\(.+px,\s*.+px\)/);
 				}
@@ -372,7 +340,6 @@ test.describe('Chat Window Drag Functionality', () => {
 			const headerCount = await chatHeader.count();
 
 			if (headerCount > 0) {
-				// Check user-select style
 				const userSelect = await chatHeader.evaluate(el => {
 					return window.getComputedStyle(el).userSelect;
 				});

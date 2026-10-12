@@ -1,8 +1,7 @@
 /**
- * Extended color panel (P5, owner-chosen UX: the 16-swatch strip stays
- * the anchor and gains this expansion): the xterm-256 grid, an RGB
- * picker, and recent swatches. Click sets the foreground, right-click
- * the background, exactly one gesture away from the classic strip.
+ * Extended color panel: the xterm-256 grid, an RGB picker, and recent
+ * swatches. The classic 16-swatch strip stays the anchor; click sets
+ * the foreground, right-click the background.
  *
  * Values flow as tag-bit palette words (paletteColor(16..255)) or raw
  * RGB words through State.palette.set*Color and the editor's extended

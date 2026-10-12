@@ -1,5 +1,5 @@
 /**
- * Minimal ZIP reader (P6): store + deflate entries, basename lookup,
+ * Minimal ZIP reader: store + deflate entries, basename lookup,
  * and hardened failure modes. Fixtures are built in-test with the same
  * CompressionStream the extractor inverts.
  */

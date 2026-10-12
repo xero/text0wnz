@@ -1,9 +1,9 @@
 /**
- * P1 scroll spike (PLAN.md §3.1, §4 P1): a THROWAWAY implementation of the
- * slack-buffer scroll pattern, loaded only when the page is opened with
- * ?spike (see main.js). It exists to measure the pattern before the real GL
- * renderer is built on it, on desktop Chromium via Playwright
- * (tests/perf/captureScrollSpike.js) and on real devices by hand (O9).
+ * Scroll spike: a THROWAWAY implementation of the slack-buffer scroll
+ * pattern, loaded only when the page is opened with ?spike (see
+ * main.js). It measures the pattern in isolation from the real GL
+ * renderer, on desktop Chromium via Playwright
+ * (tests/perf/captureScrollSpike.js) and on real devices by hand.
  *
  * The pattern (production precedent: Perfetto VirtualCanvas): keep a NATIVE
  * scroller with a full-document-height spacer, and position one WebGL2
@@ -15,7 +15,7 @@
  *
  * Renders the EXISTING u16 doc model (charCode<<8 | bg<<4 | fg) with the
  * current font and palette. Blink is drawn at a fixed phase (bg dimmed,
- * glyph visible) — animation is out of scope for a scroll measurement.
+ * glyph visible); animation is out of scope for a scroll measurement.
  */
 import State from './state.js';
 

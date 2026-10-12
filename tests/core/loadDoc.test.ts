@@ -144,9 +144,9 @@ describe('editor.loadDoc', () => {
 		expect(doc.frames).toHaveLength(2);
 		expect(doc.frames[0].delayMs).toBe(500);
 		expect(doc.getGlobalDelayMs()).toBe(250);
-		// P5: every palette index stays LIVE (renderers resolve 16-255
-		// through the adopted doc palette / xterm table); the old
-		// freeze-to-RGB projection is gone
+		// every palette index stays LIVE: renderers resolve 16-255 through
+		// the adopted doc palette / xterm table, never a frozen RGB
+		// projection
 		expect(doc.getCell(0, 0, 0).fg).toBe(paletteColor(12));
 		expect(doc.getCell(0, 1, 0).fg).toBe(paletteColor(196));
 		expect(doc.getCell(0, 1, 0).bg).toBe(paletteColor(3));
@@ -282,8 +282,8 @@ describe('ice toggle with extended colors (review finding 1)', () => {
 describe('loadDoc with short-palette sources (golden regression)', () => {
 	it('keeps high palette-index words live instead of freezing to black', () => {
 		// exactly what the UTF-8 reader produces: paletteColor(n >= 16)
-		// words on a doc whose own palette has only 16 entries; the old
-		// freeze projected these through source.palette[i] ?? 0 = BLACK
+		// words on a doc whose own palette has only 16 entries. Freezing
+		// through source.palette[i] ?? 0 would turn them black.
 		const source = createDocV3({ columns: 2, rows: 1 });
 		source.setCell(0, 0, 0, {
 			glyph: glyphWord(88, 0),

@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { createModalController } from '../../src/js/client/ui.js';
 
-// Mock State module
 vi.mock('../../src/js/client/state.js', () => ({ default: {} }));
 
 describe('Modal DOM Tests', () => {
@@ -13,14 +12,10 @@ describe('Modal DOM Tests', () => {
 	let modalController;
 
 	beforeEach(() => {
-		// Clear DOM
 		document.body.innerHTML = '';
-		// Create a new userEvent instance for each test
 		user = userEvent.setup();
-		// Clear all mocks
 		vi.clearAllMocks();
 
-		// Create modal dialog element
 		modal = document.createElement('dialog');
 		modal.id = 'mainModal';
 		modal.className = 'modal';
@@ -61,12 +56,10 @@ describe('Modal DOM Tests', () => {
 			modal.appendChild(section);
 		});
 
-		// Add modalError div for error tests
 		const errorDiv = document.createElement('div');
 		errorDiv.id = 'modalError';
 		document.getElementById('errorModal').appendChild(errorDiv);
 
-		// Create modal controller
 		modalController = createModalController(modal);
 	});
 
@@ -259,7 +252,6 @@ describe('Modal DOM Tests', () => {
 
 			modalController.open('about');
 
-			// Tab to close button
 			closeButton.focus();
 			await user.keyboard('{Enter}');
 
@@ -288,10 +280,10 @@ describe('Modal DOM Tests', () => {
 			modalController.open('about');
 			expect(modal.open).toBe(true);
 
-			// Simulate escape key - note: the real dialog closes automatically,
-			// but we need to manually call close in the test
+			// a real dialog closes itself on Escape; the mocked one needs a
+			// manual close
 			fireEvent.keyDown(modal, { key: 'Escape' });
-			modal.close(); // Manually trigger close for the test
+			modal.close();
 
 			expect(modal.open).toBe(false);
 		});
@@ -334,7 +326,7 @@ describe('Modal DOM Tests', () => {
 
 			modalController.open('about');
 
-			// In a real implementation, focus would be managed
+			// focus management belongs to the implementation; focus manually
 			input.focus();
 			expect(document.activeElement).toBe(input);
 		});
@@ -392,7 +384,6 @@ describe('Modal DOM Tests', () => {
 
 	describe('Edge Cases', () => {
 		it('should handle opening non-existent modal gracefully', () => {
-			// This should not throw an error
 			expect(() => {
 				modalController.open('nonExistentModal');
 			}).not.toThrow();
@@ -496,7 +487,6 @@ describe('Modal DOM Tests', () => {
 			const cleanup1 = vi.fn();
 			const cleanup2 = vi.fn();
 
-			// Open first modal with cleanup
 			modalController.open('about');
 			modalController.onClose(cleanup1);
 			modalController.close();
@@ -508,7 +498,6 @@ describe('Modal DOM Tests', () => {
 				{ timeout: 1000 },
 			);
 
-			// Open second modal with different cleanup
 			modalController.open('resize');
 			modalController.onClose(cleanup2);
 			modalController.close();
@@ -520,7 +509,6 @@ describe('Modal DOM Tests', () => {
 				{ timeout: 1000 },
 			);
 
-			// First cleanup should not be called again
 			expect(cleanup1).toHaveBeenCalledTimes(1);
 		});
 
@@ -530,7 +518,6 @@ describe('Modal DOM Tests', () => {
 			modalController.open('about');
 			modalController.onClose(cleanupFn);
 
-			// Close and wait
 			modalController.close();
 
 			await waitFor(
@@ -540,7 +527,6 @@ describe('Modal DOM Tests', () => {
 				{ timeout: 1000 },
 			);
 
-			// Try closing again (should not call cleanup again)
 			modalController.close();
 
 			// Wait a bit more to ensure no additional calls
@@ -553,7 +539,6 @@ describe('Modal DOM Tests', () => {
 			const cleanup1 = vi.fn();
 			const cleanup2 = vi.fn();
 
-			// Open, set cleanup, close
 			modalController.open('about');
 			modalController.onClose(cleanup1);
 			modalController.close();
@@ -565,7 +550,6 @@ describe('Modal DOM Tests', () => {
 				{ timeout: 1000 },
 			);
 
-			// Reopen same modal with new cleanup
 			modalController.open('about');
 			modalController.onClose(cleanup2);
 			modalController.close();
@@ -577,7 +561,6 @@ describe('Modal DOM Tests', () => {
 				{ timeout: 1000 },
 			);
 
-			// First cleanup should still be 1
 			expect(cleanup1).toHaveBeenCalledTimes(1);
 		});
 	});

@@ -1,9 +1,9 @@
 /**
  * bun --compile binary matrix (PLAN §3.7 #4): cross-compiles the
  * collab/static server for every supported target and prints MEASURED
- * sizes (the docs quote no number on purpose; PLAN says measure at P6
- * and never repeat the old unsourced figure). Output lands in
- * build/bin/ (gitignored). Runs under bun:
+ * sizes (the docs quote no figure on purpose; this script is the
+ * source of truth). Output lands in build/bin/ (gitignored). Runs
+ * under bun:
  *
  *   bun tools/compileBinaries.js            # all targets
  *   bun tools/compileBinaries.js host       # just the host target

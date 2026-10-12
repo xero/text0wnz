@@ -1,9 +1,9 @@
 /**
- * Live collab round trip (P4 gate): two real pages join a spawned bun
- * server (never a shared one, PLAN §3.6.2 #4) through the consent
- * modal, draw in both directions, and verify convergence plus
- * no-self-echo. Chromium project only: one engine exercises the full
- * stack, the transport logic is unit-tested engine-neutrally.
+ * Live collab round trip: two real pages join a spawned bun server
+ * (never a shared or public one) through the consent modal, draw in
+ * both directions, and verify convergence plus no-self-echo. Chromium
+ * project only: one engine exercises the full stack, the transport
+ * logic is unit-tested engine-neutrally.
  */
 import { test, expect } from '@playwright/test';
 import { spawn, execSync } from 'node:child_process';
@@ -307,12 +307,10 @@ test.describe('collab round trip against a live server', () => {
 			);
 			await page.waitForTimeout(400);
 			// resize past the SERVER wall but inside the client wall: the
-			// client applies locally (apply-locally semantics), the server
-			// refuses with an ack, and the sync recovery restores truth
-			// the local-apply read happens INSIDE the evaluate: once the
-			// refusal ack lands, recovery can be FASTER than a second
-			// page.evaluate round trip (it flaked in CI exactly because
-			// recovery worked quickly)
+			// client applies locally, the server refuses with an ack, and
+			// sync recovery restores truth. The local-apply read must happen
+			// INSIDE the evaluate: once the refusal ack lands, recovery can
+			// outrun a second page.evaluate round trip.
 			const localColumns = await page.evaluate(() => {
 				const { State } = window.__t0wnz;
 				State.textArtCanvas.resize(150, 25);

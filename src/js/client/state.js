@@ -1,16 +1,12 @@
 /**
- * Global Application State Machine
- *
- * Centralizes all shared state management
- * Implements pub/sub eventing system to eliminate race conditions and
- * provide consistent state access across all components.
+ * Global application state: centralizes shared state with a pub/sub
+ * eventing system so components see consistent state without races.
  */
 
 import { Compression } from './compression.js';
 import { Storage } from './storage.js';
 import magicNumbers from './magicNumbers.js';
 
-// Object to hold application state
 const EditorState = {
 	urlPrefix: null,
 	uiDir: null,
@@ -61,7 +57,6 @@ const EditorState = {
 	},
 };
 
-// Event listeners storage
 const stateListeners = new Map();
 const dependencyWaitQueue = new Map();
 
@@ -81,7 +76,6 @@ const STATE_SYNC_KEYS = {
  */
 class StateManager {
 	constructor() {
-		// Use direct references to the shared state objects
 		this.state = EditorState;
 		this.listeners = stateListeners;
 		this.waitQueue = dependencyWaitQueue;
@@ -293,7 +287,6 @@ class StateManager {
 	 * Reset the entire state (for testing or new files)
 	 */
 	reset() {
-		// Reset core application state
 		Object.assign(this.state, {
 			textArtCanvas: null,
 			palette: null,
@@ -407,7 +400,6 @@ class StateManager {
 		const serialized = {};
 
 		try {
-			// Save canvas data
 			if (
 				this.state.textArtCanvas &&
 				typeof this.state.textArtCanvas.getImageData === 'function'
@@ -417,11 +409,9 @@ class StateManager {
 				const rows = this.state.textArtCanvas.getRows();
 				const iceColors = this.state.textArtCanvas.getIceColors();
 
-				// Try to compress the image data
 				const compressed = Compression.compressUint16Array(imageData);
 
 				if (compressed) {
-					// Compression was effective
 					serialized[STATE_SYNC_KEYS.CANVAS_DATA] = {
 						imageData: Compression.compressedToBase64(compressed),
 						columns: columns,
@@ -430,7 +420,6 @@ class StateManager {
 						originalLength: imageData.length,
 					};
 				} else {
-					// Compression wasn't effective, use regular encoding
 					serialized[STATE_SYNC_KEYS.CANVAS_DATA] = {
 						imageData: this._uint16ArrayToBase64(imageData),
 						columns: columns,
@@ -442,7 +431,6 @@ class StateManager {
 				serialized[STATE_SYNC_KEYS.ICE_COLORS] = iceColors;
 			}
 
-			// Save font name
 			if (
 				this.state.textArtCanvas &&
 				typeof this.state.textArtCanvas.getCurrentFontName === 'function'
@@ -451,7 +439,6 @@ class StateManager {
 					this.state.textArtCanvas.getCurrentFontName();
 			}
 
-			// Save letter spacing
 			if (
 				this.state.font &&
 				typeof this.state.font.getLetterSpacing === 'function'
@@ -460,7 +447,6 @@ class StateManager {
 					this.state.font.getLetterSpacing();
 			}
 
-			// Save scale factor
 			if (
 				this.state.font &&
 				typeof this.state.font.getScaleFactor === 'function'
@@ -471,15 +457,12 @@ class StateManager {
 				serialized[STATE_SYNC_KEYS.SCALE_FACTOR] = 1; // Default
 			}
 
-			// Save palette colors
 			if (this.state.palette) {
 				if (typeof this.state.palette.getPalette === 'function') {
 					const paletteColors = this.state.palette.getPalette();
-					// Convert 8-bit RGBA to 6-bit RGB for storage (more efficient and correct)
+					// 8-bit RGBA to 6-bit RGB, matching the XBIN format
 					serialized[STATE_SYNC_KEYS.PALETTE_COLORS] = paletteColors.map(
 						color => {
-							// color is Uint8Array [r, g, b, a] in 8-bit (0-255)
-							// Convert to 6-bit (0-63) for consistency with XBIN format
 							return [
 								Math.min(color[0] >> 2, 63),
 								Math.min(color[1] >> 2, 63),
@@ -491,7 +474,6 @@ class StateManager {
 				}
 			}
 
-			// Save XBIN font data if present
 			if (
 				this.state.textArtCanvas &&
 				typeof this.state.textArtCanvas.getXBFontData === 'function'
@@ -518,7 +500,6 @@ class StateManager {
 	 */
 	isDefaultState() {
 		try {
-			// Check if canvas is default size (80x25)
 			if (this.state.textArtCanvas) {
 				const columns = this.state.textArtCanvas.getColumns();
 				const rows = this.state.textArtCanvas.getRows();
@@ -526,44 +507,38 @@ class StateManager {
 					return false;
 				}
 
-				// Check if canvas is blank (all cells are BLANK_CELL = (32 << 8) + 7)
 				const imageData = this.state.textArtCanvas.getImageData();
 				const BLANK_CELL = 0;
 				for (let i = 0; i < imageData.length; i++) {
 					if (imageData[i] !== BLANK_CELL) {
-						return false; // Canvas has content
+						return false;
 					}
 				}
 
-				// Check if font is default (CP437 8x16)
 				const fontName = this.state.textArtCanvas.getCurrentFontName();
 				if (fontName !== 'CP437 8x16') {
 					return false;
 				}
 
-				// Check if ice colors is default (false)
 				const iceColors = this.state.textArtCanvas.getIceColors();
 				if (iceColors !== false) {
 					return false;
 				}
 
-				// Check if there's XBIN font data
 				if (typeof this.state.textArtCanvas.getXBFontData === 'function') {
 					const xbFontData = this.state.textArtCanvas.getXBFontData();
 					if (xbFontData && xbFontData.bytes) {
-						return false; // Has custom XBIN font
+						return false;
 					}
 				}
 			}
 
-			// Check if letter spacing is default
 			if (this.state.font && this.state.font.getLetterSpacing) {
 				if (this.state.font.getLetterSpacing() !== false) {
 					return false;
 				}
 			}
 
-			// Check if palette is default
 			if (this.state.palette && this.state.palette.getPalette) {
 				const currentPalette = this.state.palette.getPalette();
 				const defaultPalette = [
@@ -585,19 +560,18 @@ class StateManager {
 					[255, 255, 255, 255],
 				];
 
-				// Compare each color in the palette
 				for (let i = 0; i < 16; i++) {
 					const current = currentPalette[i];
 					const defaultColor = defaultPalette[i];
 					for (let j = 0; j < 4; j++) {
 						if (current[j] !== defaultColor[j]) {
-							return false; // Palette has been modified
+							return false;
 						}
 					}
 				}
 			}
 
-			return true; // All checks passed, state is default
+			return true;
 		} catch (error) {
 			console.error('[State] Error checking default state:', error);
 			return false; // If there's an error, assume it's not default to be safe
@@ -609,7 +583,6 @@ class StateManager {
 	 */
 	async saveToLocalStorage() {
 		try {
-			// Check if zoom has changed from default
 			const scaleFactor = this.state.font?.getScaleFactor() ?? 1;
 			const hasNonDefaultZoom = scaleFactor !== 1;
 
@@ -639,7 +612,6 @@ class StateManager {
 				});
 			}
 
-			// Save XBIN font data to IndexedDB if present
 			if (
 				this.state.textArtCanvas &&
 				typeof this.state.textArtCanvas.getXBFontData === 'function'
@@ -728,9 +700,9 @@ class StateManager {
 	}
 
 	/**
-	 * Restore state from localStorage after components are initialized
-	 * This dispatches events to ensure UI updates properly
-	 * Supports compression, new storage format and legacy formats for backward compatibility
+	 * Restore state from localStorage after components are initialized,
+	 * dispatching events so the UI updates. Reads compressed,
+	 * uncompressed, and legacy storage formats.
 	 */
 	async restoreStateFromLocalStorage() {
 		const settings = Storage.loadSettings();
@@ -790,7 +762,6 @@ class StateManager {
 					);
 				}
 
-				// Load XBIN font data if available
 				setTimeout(async () => {
 					const xbFontData = await Storage.loadFontData('XBIN');
 
@@ -820,7 +791,6 @@ class StateManager {
 							);
 						}
 
-						// Load undo history
 						const undoHistory = await Storage.loadUndoHistory();
 						if (
 							undoHistory &&
@@ -867,7 +837,6 @@ class StateManager {
 	}
 }
 
-// Create the global state manager instance
 const stateManager = new StateManager();
 
 const State = {
@@ -1015,7 +984,5 @@ const State = {
 	_state: stateManager.state,
 };
 
-// Export the state system
 export { State };
-// Default export
 export default State;

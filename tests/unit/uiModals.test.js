@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { websocketUI } from '../../src/js/client/ui.js';
 
-// Mock the State module
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		textArtCanvas: {
@@ -30,16 +29,12 @@ void websocketUI; // Used in tests
 
 describe('UI Advanced Utilities', () => {
 	beforeEach(() => {
-		// Clear DOM
 		document.body.innerHTML = '';
-		// Reset all mocks
 		vi.clearAllMocks();
 	});
 
 	afterEach(() => {
-		// Clean up any remaining DOM elements
 		document.body.innerHTML = '';
-		// Restore all mocks to prevent memory leaks
 		vi.restoreAllMocks();
 	});
 
@@ -66,8 +61,6 @@ describe('UI Advanced Utilities', () => {
 
 			expect(typeof createGrid).toBe('function');
 
-			// Test that calling the function with a div doesn't throw before canvas operations
-			// We can't fully test it without proper State mock and canvas support
 			const container = document.createElement('div');
 			document.body.appendChild(container);
 
@@ -101,7 +94,6 @@ describe('UI Advanced Utilities', () => {
 		it('should create font select controller with focus/getValue/setValue methods', async () => {
 			const { createFontSelect } = await import('../../src/js/client/ui.js');
 
-			// Create minimal DOM structure for font select
 			const listbox = document.createElement('div');
 			listbox.setAttribute('role', 'listbox');
 			listbox.focus = vi.fn();
@@ -235,7 +227,6 @@ describe('UI Advanced Utilities', () => {
 		it('should show websocket-specific UI elements', async () => {
 			const { websocketUI } = await import('../../src/js/client/ui.js');
 
-			// Create elements with the specific classes
 			const excludedDiv = document.createElement('div');
 			excludedDiv.className = 'excludedForWebsocket';
 			const includedDiv = document.createElement('div');
@@ -244,12 +235,10 @@ describe('UI Advanced Utilities', () => {
 			document.body.appendChild(excludedDiv);
 			document.body.appendChild(includedDiv);
 
-			// Test showing websocket UI
 			websocketUI(true);
 			expect(includedDiv.style.display).toBe('block');
 			expect(excludedDiv.style.display).toBe('none');
 
-			// Test hiding websocket UI
 			websocketUI(false);
 			expect(includedDiv.style.display).toBe('none');
 			expect(excludedDiv.style.display).toBe('block');

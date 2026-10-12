@@ -1,21 +1,17 @@
 // @ts-check
 /**
- * Pointer Events normalizer (PLAN §3.5): the single input pipeline for
- * mouse, pen, and touch on the canvas. Replaces v2's eight
- * mouse/touch listeners while keeping the tool contract identical:
- * tools still receive onTextCanvasDown/Drag/Up/Move custom events on
- * document, with detail extended by {shiftKey, altKey, pressure,
- * pointerType} (v2 built but never delivered the modifiers, which is
- * why the attribute brush's shift-line feature was dead).
+ * Pointer Events normalizer: the single input pipeline for mouse,
+ * pen, and touch on the canvas. Tools receive the
+ * onTextCanvasDown/Drag/Up/Move custom events on document, with
+ * detail extended by {shiftKey, altKey, pressure, pointerType}.
  *
  * Every pointer is captured on down, so moves and lifts route here no
  * matter where the pointer travels; a pinch that starts on the canvas
- * and ends on the toolbar still ends cleanly (the focus bug that sank
- * earlier pinch attempts). pointercancel and lostpointercapture are
- * first-class ends, so nothing wedges when the browser steals a
- * gesture.
+ * and ends on the toolbar still ends cleanly. pointercancel and
+ * lostpointercapture are first-class ends, so nothing wedges when the
+ * browser steals a gesture.
  *
- * Touch routes through the gesture recognizer (strokes vs D11 taps vs
+ * Touch routes through the gesture recognizer (strokes vs taps vs
  * pinch); mouse and pen bypass it. Palm rejection: touch is ignored
  * while a pen is down and for a grace period after it lifts, and a pen
  * landing mid-touch-gesture cancels the touch. Pinch updates leave as
@@ -217,7 +213,7 @@ export const createPointerInput = (container, handlers, options = {}) => {
 		e.preventDefault();
 		const stroking = strokePointer === e.pointerId;
 		// hover previews clamp during a captured stroke (moves arrive from
-		// outside the canvas); free hover keeps v2's raw coords
+		// outside the canvas); free hover keeps raw coords
 		const hover = handlers.map(e.clientX, e.clientY, stroking);
 		if (!hover) {
 			return;

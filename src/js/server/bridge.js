@@ -70,7 +70,7 @@ export const isPrivateAddress = ip => {
 	// v6: only global unicast 2000::/3 counts as public. Everything
 	// else is denied, which closes the encodings the dotted check
 	// misses: hex v4-mapped (::ffff:7f00:1), v4-compatible (::7f00:1),
-	// NAT64 (64:ff9b::/96), ULA, link-local, loopback (review finding).
+	// NAT64 (64:ff9b::/96), ULA, link-local, loopback.
 	if (isIP(addr) === 6) {
 		const first = addr.split(':', 1)[0] || '0';
 		const firstGroup = parseInt(first, 16) || 0;
@@ -245,7 +245,7 @@ export const createBridgePipe = (browserWs, targetUrl, log = () => {}) => {
 			if (upstream.readyState === 1) {
 				upstream.send(frame);
 			} else if (upstream.readyState === 0) {
-				// bounded pre-connect buffer (review finding)
+				// bounded pre-connect buffer
 				queuedBytes += typeof frame === 'string' ? frame.length : frame.byteLength;
 				if (queuedBytes > BRIDGE_QUEUE_LIMIT_BYTES) {
 					log('bridge queue overflow');

@@ -13,7 +13,6 @@ import {
 	undoAndRedo,
 } from '../../src/js/client/ui.js';
 
-// Mock the State module
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		textArtCanvas: {
@@ -42,16 +41,12 @@ void State; // Used in mocked tests
 
 describe('UI Basic Utilities', () => {
 	beforeEach(() => {
-		// Clear DOM
 		document.body.innerHTML = '';
-		// Reset all mocks
 		vi.clearAllMocks();
 	});
 
 	afterEach(() => {
-		// Clean up any remaining DOM elements
 		document.body.innerHTML = '';
-		// Restore all mocks to prevent memory leaks
 		vi.restoreAllMocks();
 	});
 
@@ -267,7 +262,6 @@ describe('UI Basic Utilities', () => {
 				close: vi.fn(),
 			};
 
-			// Create required modal sections
 			document.body.innerHTML = `
 				<div id="resizeModal" class="hide"></div>
 				<div id="fontsModal" class="hide"></div>

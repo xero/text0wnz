@@ -378,8 +378,8 @@ describe('end-path robustness', () => {
 			}),
 		);
 		expect(input.stats().penDown).toBe(1);
-		// capture lost WITHOUT a pointerup/cancel: the leak that used to
-		// reject all touch input forever
+		// capture lost WITHOUT a pointerup/cancel must still clear pen state,
+		// or all later touch input is rejected
 		container.dispatchEvent(
 			pev('lostpointercapture', { pointerId: 7, pointerType: 'pen' }),
 		);

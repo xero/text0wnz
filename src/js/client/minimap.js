@@ -1,5 +1,5 @@
 /**
- * Minimap (PLAN §3.1, P6): the whole doc at one pixel per cell, blended
+ * Minimap: the whole doc at one pixel per cell, blended
  * fg-over-bg by glyph ink coverage, with the live viewport framed and
  * click/drag-to-scroll. Renders from the v3 planes through the
  * word-aware palette, so 256-color and RGB art previews true. Cheap by
@@ -152,7 +152,7 @@ const createMinimap = () => {
 		}
 	});
 
-	// ON by default (owner call, 2026-10-12); the toggle is remembered.
+	// ON by default; the toggle is remembered.
 	// ?test pages (goldens, e2e) opt out of the DEFAULT: the panel is a
 	// fixed overlay that would sit inside pixel-golden captures. An
 	// explicit saved 'true' still shows it there.

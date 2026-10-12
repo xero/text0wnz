@@ -3,16 +3,14 @@
  * Collab transport worker (PLAN §3.6.3): owns the websocket and speaks
  * Moebius-native frames through the shared core codec. A MODULE worker
  * bundled by vite (like journalWorker.js), which is what lets it
- * import the codec; the old classic worker was copied verbatim to dist
- * and died with the old protocol.
+ * import the codec.
  *
  * Client-first handshake: we send CONNECTED {nick, group, pass, caps};
  * the server replies CONNECTED {id, doc, ...} or REFUSED. The silent
- * probe (scoped to the same-origin default server, PLAN §3.6.3) sends
- * a nickless CONNECTED: ANY reply proves a server exists, then the
- * probe socket closes immediately. Nothing joins and no remote state
- * reaches the page until the user consents (v2 applied remote draws
- * while the consent modal was still open).
+ * probe (scoped to the same-origin default server) sends a nickless
+ * CONNECTED: ANY reply proves a server exists, then the probe socket
+ * closes immediately. Nothing joins and no remote state reaches the
+ * page until the user consents.
  *
  * Page RPC (trustedMessage-guarded both ways):
  *   page -> worker: {cmd:'init'} | {cmd:'probe'} |
@@ -23,8 +21,8 @@
  *     {cmd:'frame', type, data} | {cmd:'closed', wasConnected} |
  *     {cmd:'error', error}
  *
- * Every outbound frame is stamped with our id (vanilla Moebius clients
- * crash on SET_CANVAS_SIZE broadcasts without it, landmine §3.6.2 #2).
+ * Every outbound frame is stamped with our id: vanilla Moebius clients
+ * crash on SET_CANVAS_SIZE broadcasts without it.
  */
 
 import { decodeFrame, encodeFrame, MoebiusAction } from '../core/index';
@@ -37,7 +35,7 @@ let connected = false;
 
 /**
  * Same-origin default server, or an explicit ws/wss url (remote dial
- * and the e2e round trip pass one; the bridge transport picker will).
+ * and the e2e round trip pass one).
  * @param {unknown} explicit
  */
 const serverUrl = explicit => {
@@ -133,7 +131,7 @@ const connect = options => {
 		try {
 			frame = decodeFrame(event.data);
 		} catch {
-			return; // malformed frames drop silently (landmine 4 mirror)
+			return; // malformed frames drop silently
 		}
 		if (!connected) {
 			if (frame.type === MoebiusAction.CONNECTED) {
@@ -150,7 +148,6 @@ const connect = options => {
 	});
 	ws.addEventListener('close', () => {
 		// a stale socket's close must not clobber a newer connection
-		// (review finding: retry/server-switch wedged the client)
 		if (socket !== ws) {
 			return;
 		}

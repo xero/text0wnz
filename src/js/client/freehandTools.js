@@ -380,20 +380,17 @@ const createShadingController = (panel, charMode) => {
 	};
 	const keyDown = e => {
 		if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
-			// Shift key pressed
 			reduce = true;
 		}
 	};
 
 	const keyUp = e => {
 		if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
-			// Shift key released
 			reduce = false;
 		}
 	};
 
 	const calculateShadingCharacter = (x, y) => {
-		// Get current cell character
 		const block = State.textArtCanvas.getBlock(x, y);
 		let code = block.charCode;
 		const currentFG = block.foregroundColor;
@@ -660,22 +657,22 @@ const createShadingPanel = async () => {
 		if (!ignored) {
 			if (!halfBlockMode) {
 				switch (e.code) {
-					case 'ArrowLeft': // Left arrow
+					case 'ArrowLeft':
 						e.preventDefault();
 						x = Math.max(x - 1, 0);
 						updateCursor();
 						break;
-					case 'ArrowUp': // Up arrow
+					case 'ArrowUp':
 						e.preventDefault();
 						y = Math.max(y - 1, 0);
 						updateCursor();
 						break;
-					case 'ArrowRight': // Right arrow
+					case 'ArrowRight':
 						e.preventDefault();
 						x = Math.min(x + 1, 4);
 						updateCursor();
 						break;
-					case 'ArrowDown': // Down arrow
+					case 'ArrowDown':
 						e.preventDefault();
 						y = Math.min(y + 1, 14);
 						updateCursor();
@@ -684,7 +681,6 @@ const createShadingPanel = async () => {
 						break;
 				}
 			} else if (e.code.startsWith('Arrow')) {
-				// Any arrow key
 				e.preventDefault();
 				halfBlockMode = false;
 				cursor.show();
@@ -747,7 +743,7 @@ const createShadingPanel = async () => {
 	};
 
 	// the preview panel is classic16 by design: an extended color word
-	// (P5) previews as white, while the actual paint path reads the real
+	// previews as white, while the actual paint path reads the real
 	// value from State.palette
 	const panelCanvas = value =>
 		canvases[value] ?? canvases[magicNumbers.DEFAULT_FOREGROUND ?? 7];
@@ -781,7 +777,7 @@ const createShadingPanel = async () => {
 		x = 3 - (charCode - 176);
 		const bg = State.palette.getBackgroundColor();
 		const fg = State.palette.getForegroundColor();
-		// extended words (P5) have no panel row; anchor the cursor at 0
+		// extended words have no panel row; anchor the cursor at 0
 		y = bg >= 0 && bg <= 15 ? bg : 0;
 		if (fg >= 0 && fg <= 15 && y > fg) {
 			y -= 1;
@@ -886,8 +882,8 @@ const createCharacterBrushPanel = async () => {
 				select(charCode);
 			}
 		});
-		// mouseUp must ride each rebuilt canvas; the one-time registration
-		// died on the first redraw (font/color changes replace the canvas)
+		// font/color changes replace the canvas, so mouseUp must ride
+		// each rebuilt instance
 		canvas.addEventListener('mouseup', mouseUp);
 
 		canvasContainer.appendChild(canvas);
@@ -896,22 +892,22 @@ const createCharacterBrushPanel = async () => {
 	const keyDown = e => {
 		if (!ignored) {
 			switch (e.code) {
-				case 'ArrowLeft': // Left arrow
+				case 'ArrowLeft':
 					e.preventDefault();
 					x = Math.max(x - 1, 0);
 					updateCursor();
 					break;
-				case 'ArrowUp': // Up arrow
+				case 'ArrowUp':
 					e.preventDefault();
 					y = Math.max(y - 1, 0);
 					updateCursor();
 					break;
-				case 'ArrowRight': // Right arrow
+				case 'ArrowRight':
 					e.preventDefault();
 					x = Math.min(x + 1, 15);
 					updateCursor();
 					break;
-				case 'ArrowDown': // Down arrow
+				case 'ArrowDown':
 					e.preventDefault();
 					y = Math.min(y + 1, 15);
 					updateCursor();
@@ -1026,7 +1022,7 @@ const createFillController = () => {
 				let coord = [e.detail.x, e.detail.halfBlockY];
 				const queue = [coord];
 
-				// Handle mirror mode: if enabled and the mirrored position has the same color, add it to queue
+				// mirror mode: seed the mirrored position too when it matches
 				if (State.textArtCanvas.getMirrorMode()) {
 					const mirrorX = State.textArtCanvas.getMirrorX(e.detail.x);
 					if (mirrorX >= 0 && mirrorX < columns) {
@@ -1040,7 +1036,6 @@ const createFillController = () => {
 									? mirrorBlock.upperBlockColor
 									: mirrorBlock.lowerBlockColor;
 							if (mirrorTargetColor === targetColor) {
-								// Add mirror position to the queue so it gets filled too
 								queue.push([mirrorX, e.detail.halfBlockY]);
 							}
 						}
@@ -1300,7 +1295,6 @@ const createSquareController = () => {
 	};
 
 	const processCoords = () => {
-		// If endXY is undefined (no drag), use startXY as endpoint
 		const endPoint = endXY || startXY;
 		let x0, y0, x1, y1;
 		if (startXY.x < endPoint.x) {
@@ -1440,7 +1434,7 @@ const createCircleController = () => {
 	};
 
 	const processCoords = () => {
-		const endPoint = endXY || startXY; // If endXY is undefined (no drag), use startXY as endpoint
+		const endPoint = endXY || startXY;
 		const sx = startXY.x;
 		const sy = startXY.halfBlockY;
 		const width = Math.abs(endPoint.x - startXY.x);
@@ -1741,7 +1735,6 @@ const createAttributeBrushController = () => {
 		previewCursor.style.left = startX * fontWidth - 1 + 'px';
 		previewCursor.style.top = startY * fontHeight - 1 + 'px';
 
-		// Draw border
 		const ctx = previewCursor.getContext('2d');
 		ctx.clearRect(0, 0, previewCursor.width, previewCursor.height);
 		ctx.strokeStyle = '#fff';
@@ -1784,7 +1777,6 @@ const createAttributeBrushController = () => {
 			newBackground = currentBackground;
 		}
 
-		// Only update if something changes
 		if (
 			block.foregroundColor !== newForeground ||
 			block.backgroundColor !== newBackground
@@ -1808,7 +1800,6 @@ const createAttributeBrushController = () => {
 				const targetX = startX + dx;
 				const targetY = startY + dy;
 
-				// Check bounds
 				if (
 					targetX >= 0 &&
 					targetX < columns &&
@@ -1873,7 +1864,6 @@ const createAttributeBrushController = () => {
 				e.detail.altKey,
 			);
 		} else {
-			// Normal click paints area
 			paintArea(e.detail.x, e.detail.y, e.detail.altKey);
 		}
 
@@ -1881,7 +1871,6 @@ const createAttributeBrushController = () => {
 	};
 
 	const canvasDrag = e => {
-		// Update preview during drag
 		if (lastPreviewX !== e.detail.x || lastPreviewY !== e.detail.y) {
 			updatePreviewCursor(e.detail.x, e.detail.y);
 		}

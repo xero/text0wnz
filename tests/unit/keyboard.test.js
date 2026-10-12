@@ -9,7 +9,6 @@ import {
 } from '../../src/js/client/keyboard.js';
 import State from '../../src/js/client/state.js';
 
-// Mock the State module and other dependencies
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		font: {
@@ -146,7 +145,6 @@ describe('Keyboard Utilities', () => {
 	beforeEach(() => {
 		document.body.innerHTML = '';
 		vi.clearAllMocks();
-		// Reset requestAnimationFrame mock
 		global.requestAnimationFrame = vi.fn(cb => setTimeout(cb, 16));
 		global.cancelAnimationFrame = vi.fn(id => clearTimeout(id));
 	});
@@ -207,7 +205,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('should initialize with predefined character sets', () => {
-			// Test that createFKeys doesn't throw and can be called
 			expect(() => createFKeys()).not.toThrow();
 		});
 
@@ -259,7 +256,6 @@ describe('Keyboard Utilities', () => {
 			const container = document.createElement('div');
 			const cursor = createCursor(container);
 
-			// Initial position should be 0,0
 			expect(cursor.getX()).toBe(0);
 			expect(cursor.getY()).toBe(0);
 		});
@@ -438,7 +434,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('should generate additional character sets for full coverage', () => {
-			// Test that character set generation covers all 256 characters
 			const allChars = new Set();
 			for (let i = 0; i < 256; i++) {
 				allChars.add(i);

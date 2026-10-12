@@ -186,12 +186,10 @@ describe('Magic Numbers Constants', () => {
 
 	describe('Constant Relationships', () => {
 		it('should have matching slash constants', () => {
-			// CHAR_SLASH and CHAR_FORWARD_SLASH should be the same
 			expect(magicNumbers.CHAR_SLASH).toBe(magicNumbers.CHAR_FORWARD_SLASH);
 		});
 
 		it('should have paired brackets', () => {
-			// Left brackets should be less than right brackets
 			expect(magicNumbers.CHAR_LEFT_PARENTHESIS).toBeLessThan(
 				magicNumbers.CHAR_RIGHT_PARENTHESIS,
 			);
@@ -204,9 +202,7 @@ describe('Magic Numbers Constants', () => {
 		});
 
 		it('should have consistent default colors', () => {
-			// DEFAULT_FOREGROUND should match COLOR_WHITE
 			expect(magicNumbers.DEFAULT_FOREGROUND).toBe(magicNumbers.COLOR_WHITE);
-			// DEFAULT_BACKGROUND should match COLOR_BLACK
 			expect(magicNumbers.DEFAULT_BACKGROUND).toBe(magicNumbers.COLOR_BLACK);
 		});
 
@@ -234,7 +230,6 @@ describe('Magic Numbers Constants', () => {
 
 		it('should export expected number of constants', () => {
 			const keys = Object.keys(magicNumbers);
-			// Should have around 40+ constants
 			expect(keys.length).toBeGreaterThanOrEqual(40);
 		});
 
@@ -265,7 +260,6 @@ describe('Magic Numbers Constants', () => {
 		});
 
 		it('should correctly encode blank cell', () => {
-			// BLANK_CELL should be space character with default foreground
 			const charCode = magicNumbers.BLANK_CELL >> 8;
 			const attr = magicNumbers.BLANK_CELL & 0xff;
 			expect(charCode).toBe(32); // space

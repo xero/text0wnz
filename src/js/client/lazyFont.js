@@ -1,8 +1,6 @@
 /**
- * Lazy Font Loader - Only generates glyphs on demand
- * This module provides a memory-efficient font loading system that generates
- * character glyphs only when they are first needed, rather than pre-generating
- * all 65,536 possible combinations (16 foregrounds × 16 backgrounds × 256 characters).
+ * Lazy font loader: glyphs generate on first use instead of
+ * pre-building all 65,536 fg/bg/char combinations, to bound memory.
  */
 import { createCanvas } from './ui.js';
 import magicNumbers from './magicNumbers.js';
@@ -38,7 +36,6 @@ export const createLazyFont = (
 		}
 	}
 
-	// Calculate scaled dimensions
 	const scaledWidth = Math.floor(fontData.width * scaleFactor);
 	const scaledHeight = Math.floor(fontData.height * scaleFactor);
 
@@ -100,7 +97,6 @@ export const createLazyFont = (
 	 * @returns {ImageData} Generated glyph image data at scaled size
 	 */
 	const getGlyph = (charCode, foreground, background) => {
-		// Include scaleFactor in cache key
 		const key = `${charCode}-${foreground}-${background}-${scaleFactor}`;
 
 		if (!glyphCache.has(key)) {
@@ -109,7 +105,6 @@ export const createLazyFont = (
 				glyphCache.delete(glyphCache.keys().next().value);
 			}
 			if (scaleFactor === 1) {
-				// No scaling - create directly at original size
 				glyphCache.set(
 					key,
 					buildGlyphImageData(ctx, charCode, foreground, background),
@@ -163,7 +158,6 @@ export const createLazyFont = (
 		const key = `${charCode}-${foreground}-${scaleFactor}`;
 
 		if (!alphaGlyphCache.has(key)) {
-			// Only generate alpha glyphs for specific characters
 			if (
 				charCode === magicNumbers.LOWER_HALFBLOCK ||
 				charCode === magicNumbers.UPPER_HALFBLOCK ||
@@ -186,7 +180,6 @@ export const createLazyFont = (
 				const tempCanvas = createCanvas(fontData.width, fontData.height);
 				tempCanvas.getContext('2d').putImageData(imageData, 0, 0);
 
-				// Scale if needed
 				if (scaleFactor === 1) {
 					alphaGlyphCache.set(key, tempCanvas);
 				} else {
@@ -213,14 +206,12 @@ export const createLazyFont = (
 	};
 
 	/**
-	 * Pre-generate commonly used glyphs for instant access, in idle slices.
-	 * Common characters: space (32) and block characters (176, 177, 178, 219).
-	 * One monolithic pass measured ~2.4s of main thread on an iPad, stalling
-	 * the first idle moment after every font or zoom change (and polluting
-	 * anything measured across it). Slices are a single glyph (~2ms worst
-	 * case measured) packed into the granted IdleDeadline budget; a 16-glyph
-	 * slice overshot the budget enough to jank slow scrolling on the iPad.
-	 * On-demand generation covers anything drawn before the drain finishes.
+	 * Pre-generate common glyphs (space + block chars) in idle slices.
+	 * Slices are ONE glyph each (~2ms worst case): a monolithic pass
+	 * costs ~2.4s of iPad main thread, and even 16-glyph slices
+	 * overshoot the idle budget enough to jank slow scrolling.
+	 * On-demand generation covers anything drawn before the drain
+	 * finishes.
 	 */
 	const idle = globalThis.requestIdleCallback || (fn => setTimeout(fn, 0));
 	// Set by dispose(): font.js replaces the lazy font on every zoom, spacing,
@@ -291,7 +282,6 @@ export const createLazyFont = (
 		dispose: () => {
 			disposed = true;
 		},
-		// Return scaled dimensions
 		getWidth: () =>
 			letterSpacing ? scaledWidth + Math.floor(1 * scaleFactor) : scaledWidth,
 		getHeight: () => scaledHeight,
@@ -344,7 +334,7 @@ export const createLazyFont = (
 				const effectiveWidth = scaledWidth + Math.floor(1 * scaleFactor);
 				drawCtx.drawImage(canvasToUse, x * effectiveWidth, y * scaledHeight);
 
-				// Handle special line drawing characters
+				// 0xC0-0xDF extend into the ninth column (VGA rule)
 				if (effectiveCharCode >= 192 && effectiveCharCode <= 223) {
 					drawCtx.drawImage(
 						canvasToUse,

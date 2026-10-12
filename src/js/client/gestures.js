@@ -1,17 +1,16 @@
 // @ts-check
 /**
- * Touch gesture recognizer (PLAN §3.5, D11). Pure state machine: the
+ * Touch gesture recognizer (PLAN §3.5). Pure state machine: the
  * pointer normalizer feeds it touch pointers only (mouse and pen skip
  * it entirely) and it decides between a draw stroke and the gestures:
  *
  * - one finger: a stroke, after a short disambiguation hold. The hold
  *   ends early when the finger moves past slop (stroke starts at the
  *   ORIGINAL down point so no ink is lost) or lifts (a tap paints one
- *   point, v2 behavior). A second finger landing inside the hold means
- *   it was never a stroke: nothing paints, which fixes v2's "second
- *   finger paints first" bug without undo hacks.
+ *   point). A second finger landing inside the hold means it was
+ *   never a stroke: nothing paints.
  * - two fingers, both lift within tapWindowMs with travel under
- *   slopPx: undo (D11).
+ *   slopPx: undo.
  * - two fingers traveling past slop: pinch-zoom/pan at the centroid
  *   until a finger lifts.
  * - three or more fingers, clean tap: redo.
@@ -23,11 +22,10 @@
  * kills tap eligibility but still ends strokes and pinches cleanly, so
  * a browser-stolen gesture (notification shade, palm) never wedges the
  * machine, and capture-fed events mean fingers may wander anywhere on
- * screen (the pinch the owner lost to focus in past attempts).
+ * screen.
  *
  * Timing and the scheduler are injectable for tests; defaults are the
- * DOM clock. Tunables ride magicNumbers so device tuning (the owner
- * handoff) is one file.
+ * DOM clock. Tunables ride magicNumbers so device tuning is one file.
  */
 
 import magicNumbers from './magicNumbers.js';
@@ -286,7 +284,7 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 		if (state === 'hold') {
 			clearHold();
 			if (!cancelled) {
-				// a quick tap paints one point (v2 behavior)
+				// a quick tap paints one point
 				beginStroke({ clientX: p.startX, clientY: p.startY });
 				callbacks.onStrokeEnd?.();
 			}

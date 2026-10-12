@@ -1,5 +1,5 @@
 /**
- * teXt0wnz collab extension suite v1 (cap "t0wnz-ext-1", PLAN §3.6.3):
+ * teXt0wnz collab extension suite v1 (cap "t0wnz-ext-1"):
  * action ids above the frozen Moebius dialect. Extension frames flow
  * ONLY between caps-aware peers; the server down-converts every
  * mutation for vanilla clients and spectators, so a mixed room stays
@@ -18,7 +18,7 @@
  *   as per-cell DRAW frames.
  * - EXT_SYNC 25       client->server {} requests a sync; the server
  *   replies {seq, columns, rows, cells, palette} where cells is
- *   ExtRun[] ([u, a, fg, bg, count] with count >= 1 — NOT the vanilla
+ *   ExtRun[] ([u, a, fg, bg, count] with count >= 1, NOT the vanilla
  *   repeat+1 quirk) and palette is <=256 0x00RRGGBB words. The client
  *   replaces its doc wholesale.
  * - EXT_PALETTE 26    {palette: number[], id}: full-palette swap,
@@ -33,7 +33,7 @@
  * seq is a per-room monotonic counter over accepted doc mutations.
  * Caps clients receive it on every mutation broadcast (an extra field
  * vanilla never sees); contiguity is the divergence detector that the
- * vanilla dialect lacks (the P4 resize fuzz lesson).
+ * vanilla dialect lacks.
  */
 
 import {
@@ -61,8 +61,8 @@ export const T0wnzAction = Object.freeze({
 	/**
 	 * client->server {} requests; server->client {columns, rows, cells,
 	 * ops, palette}: the baseline snapshot (absorbing ops the bounded
-	 * log evicted) plus the op log — the timelapse substrate (PLAN
-	 * §3.6.3). The client replays it into an animation.
+	 * log evicted) plus the op log, the timelapse substrate. The client
+	 * replays it into an animation.
 	 */
 	EXT_TIMELAPSE: 28,
 });
@@ -208,8 +208,8 @@ export const blockToExtCell = (
 	const raw = block.code <= 0xff ? cp437ToUnicode(block.code) : block.code;
 	return {
 		// a non-character here (icy-style surrogate smuggled past a lax
-		// border) would make every later expandExtCells THROW — which
-		// once meant a room that could never save again (review finding)
+		// border) would make every later expandExtCells THROW and leave
+		// a room that can never save again
 		u: isValidCodepoint(raw) ? raw : 63,
 		a: 0,
 		fg: paletteColor(block.fg & 0xff),
@@ -238,7 +238,7 @@ export const compressExtCells = (cells: ExtCell[]): ExtRun[] => {
 	return runs;
 };
 
-/** hardened expansion; bounds apply BEFORE allocation (P4 lesson) */
+/** hardened expansion; bounds apply BEFORE allocation */
 export const expandExtCells = (
 	runs: unknown,
 	expectedLength: number,

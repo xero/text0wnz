@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { createFontSelect } from '../../src/js/client/ui.js';
 
-// Mock State module
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		fontDir: '/ui/fonts/',
@@ -13,7 +12,6 @@ vi.mock('../../src/js/client/state.js', () => ({
 	},
 }));
 
-// Mock loadFontFromXBData
 vi.mock('../../src/js/client/font.js', () => ({ loadFontFromXBData: vi.fn(() => Promise.resolve(null)) }));
 
 describe('Font Preview DOM Tests', () => {
@@ -25,39 +23,31 @@ describe('Font Preview DOM Tests', () => {
 	let fontController;
 
 	beforeEach(() => {
-		// Clear DOM
 		document.body.innerHTML = '';
-		// Create a new userEvent instance for each test
 		user = userEvent.setup();
-		// Clear all mocks
 		vi.clearAllMocks();
 
-		// Create fonts modal
 		const fontsModal = document.createElement('section');
 		fontsModal.id = 'fonts-modal';
 		document.body.appendChild(fontsModal);
 
-		// Create font preview info
 		fontPreviewInfo = document.createElement('div');
 		fontPreviewInfo.id = 'font-preview-info';
 		fontPreviewInfo.textContent = 'CP437 8x16';
 		fontsModal.appendChild(fontPreviewInfo);
 
-		// Create font preview image
 		fontPreviewImage = document.createElement('img');
 		fontPreviewImage.id = 'font-preview-image';
 		fontPreviewImage.alt = 'Font Preview';
 		fontPreviewImage.src = '/ui/fonts/CP437 8x16.png';
 		fontsModal.appendChild(fontPreviewImage);
 
-		// Create font select listbox
 		fontSelect = document.createElement('ul');
 		fontSelect.id = 'font-select';
 		fontSelect.setAttribute('aria-label', 'Select Font');
 		fontSelect.setAttribute('role', 'listbox');
 		fontSelect.tabIndex = 0;
 
-		// Add font options
 		const fonts = [
 			{ id: 'font-cp437-8x16', value: 'CP437 8x16', selected: true },
 			{ id: 'font-cp437-8x8', value: 'CP437 8x8', selected: false },
@@ -81,13 +71,11 @@ describe('Font Preview DOM Tests', () => {
 
 		fontsModal.appendChild(fontSelect);
 
-		// Create select button
 		fontSelectButton = document.createElement('button');
 		fontSelectButton.id = 'font-select-button';
 		fontSelectButton.textContent = 'Select Font';
 		fontsModal.appendChild(fontSelectButton);
 
-		// Create font controller
 		fontController = createFontSelect(
 			fontSelect,
 			fontPreviewInfo,
@@ -116,18 +104,14 @@ describe('Font Preview DOM Tests', () => {
 		});
 
 		it('should change font preview on font selection', async () => {
-			// Get the second font option
 			const amigaFont = screen.getByText('Amiga Topaz');
 
-			// Click on the font option
 			await user.click(amigaFont);
 
-			// Wait for the font to be selected
 			await waitFor(() => {
 				expect(amigaFont.getAttribute('aria-selected')).toBe('true');
 			});
 
-			// Verify the current value changed
 			expect(fontController.getValue()).toBe('Amiga Topaz');
 		});
 	});
@@ -146,7 +130,6 @@ describe('Font Preview DOM Tests', () => {
 		it('should navigate fonts with arrow keys', async () => {
 			fontSelect.focus();
 
-			// Press arrow down
 			await user.keyboard('{ArrowDown}');
 
 			await waitFor(() => {
@@ -156,13 +139,11 @@ describe('Font Preview DOM Tests', () => {
 		});
 
 		it('should navigate to previous font with arrow up', async () => {
-			// First select the second font
 			const secondFont = fontSelect.children[1];
 			await user.click(secondFont);
 
 			fontSelect.focus();
 
-			// Press arrow up to go back
 			await user.keyboard('{ArrowUp}');
 
 			await waitFor(() => {
@@ -172,13 +153,11 @@ describe('Font Preview DOM Tests', () => {
 		});
 
 		it('should navigate to first font with Home key', async () => {
-			// Select a font in the middle
 			const thirdFont = fontSelect.children[2];
 			await user.click(thirdFont);
 
 			fontSelect.focus();
 
-			// Press Home key
 			await user.keyboard('{Home}');
 
 			await waitFor(() => {
@@ -190,7 +169,6 @@ describe('Font Preview DOM Tests', () => {
 		it('should navigate to last font with End key', async () => {
 			fontSelect.focus();
 
-			// Press End key
 			await user.keyboard('{End}');
 
 			await waitFor(() => {
@@ -202,10 +180,8 @@ describe('Font Preview DOM Tests', () => {
 		it('should select font with Enter key', async () => {
 			fontSelect.focus();
 
-			// Navigate to second font
 			await user.keyboard('{ArrowDown}');
 
-			// Press Enter to select
 			await user.keyboard('{Enter}');
 
 			await waitFor(() => {
@@ -217,10 +193,8 @@ describe('Font Preview DOM Tests', () => {
 		it('should select font with Space key', async () => {
 			fontSelect.focus();
 
-			// Navigate to third font
 			await user.keyboard('{ArrowDown}{ArrowDown}');
 
-			// Press Space to select
 			await user.keyboard(' ');
 
 			await waitFor(() => {
@@ -285,8 +259,7 @@ describe('Font Preview DOM Tests', () => {
 
 			await user.click(ibmFont);
 
-			// The preview info would be updated by the actual implementation
-			// We verify the selection changed
+			// preview info text is the implementation's job; assert selection only
 			expect(fontController.getValue()).toBe('IBM VGA');
 		});
 	});

@@ -233,12 +233,11 @@ describe('ans codec', () => {
 		expect(e2).toEqual(e1);
 	});
 
-	// Historical v2 defect, FIXED by the P5 reader+writer pair (D9): the
-	// v2 writer emitted full-width lines plus LF and its reader honored
-	// both the wrap AND the LF, doubling rows with blanks. The v3 reader
-	// swallows one LF after an auto-wrap (terminal deferred-wrap
-	// semantics), so old files reimport clean and the v3 writer's
-	// full-width-plus-LF output is lossless.
+	// v2 files hold full-width lines plus LF; honoring both the wrap and
+	// the LF doubles rows with blanks. The v3 reader swallows one LF
+	// after an auto-wrap (terminal deferred-wrap semantics), so those
+	// files reimport clean and the v3 writer's full-width-plus-LF output
+	// is lossless.
 	it('lenient UTF-8 fixture decodes and round-trips the v3 writer', () => {
 		const bytes = makeUtf8Ansi({ columns: 40, rows: 10, seed: 7 });
 		const d1 = decodeAns(bytes, { utf8: true });
@@ -246,7 +245,7 @@ describe('ans codec', () => {
 		expect(d1.doc.getColumns()).toBe(80);
 		const e1 = encodeUtf8(d1.doc, { date: FIXED_DATE });
 		const d2 = decodeAns(e1, { utf8: true });
-		// the writer's SAUCE pins the real width now
+		// the writer's SAUCE pins the real width
 		expect(d2.doc.getColumns()).toBe(80);
 		expect(d2.doc.getRows()).toBe(d1.doc.getRows());
 		// NUL and 255 both write NBSP and read back as 255 (v2's exact
@@ -264,11 +263,11 @@ describe('ans codec', () => {
 	});
 
 	it('v2-style full-width-plus-LF files no longer double their rows', () => {
-		// simulate the OLD writer: an 80-col doc written as full-width
-		// UTF-8 rows each followed by ESC[0m + LF (no SAUCE). Glyphs must
-		// land on the original grid with no doubled blank rows. (Colors
-		// CAN'T fully survive: the v2 encoder reset the stream per row
-		// but not its diff trackers, a lossy bug baked into old files.)
+		// Fixture mimics the v2 writer: full-width UTF-8 rows each followed
+		// by ESC[0m + LF, no SAUCE. Glyphs must land on the original grid
+		// with no doubled blank rows. Colors cannot fully survive: the v2
+		// encoder reset the stream per row but not its diff trackers,
+		// lossiness baked into old files.
 		const d1 = decodeAns(makeAnsi({ columns: 80, rows: 25, seed: 55 }));
 		const legacy = encodeAns(d1.doc, { utf8: true });
 		const d2 = decodeAns(legacy, { utf8: true });

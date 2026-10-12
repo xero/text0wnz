@@ -17,9 +17,9 @@ import { Load } from './file.js';
 import magicNumbers from './magicNumbers.js';
 
 /**
- * Remote collaborator cursors (native CURSOR/SELECTION rendering,
- * PLAN §3.6.3): one positioned box per peer id, placed through the
- * same scaled font metrics everything else uses.
+ * Remote collaborator cursors (native CURSOR/SELECTION frames): one
+ * positioned box per peer id, placed through the same scaled font
+ * metrics everything else uses.
  */
 const createRemoteCursors = () => {
 	/** @type {Map<number, HTMLElement>} */
@@ -97,7 +97,7 @@ const createWorkerHandler = inputHandle => {
 	let connected = false;
 	let collaborationMode = false;
 	// explicit server url (?server=ws://...): remote dial on explicit
-	// user intent; same-origin default otherwise (PLAN 3.6.3)
+	// user intent; same-origin default otherwise
 	const explicitServer =
 		new URLSearchParams(window.location.search).get('server') ?? undefined;
 	// depth, not a boolean: nested remote-apply helpers (font change
@@ -132,9 +132,7 @@ const createWorkerHandler = inputHandle => {
 		peerNicks.clear();
 		websocketUI(false);
 		if (hadSession && wasConnected) {
-			// the v2 defect: a dropped server was never noticed and local
-			// autosave stayed paused forever; now the journal resumes and
-			// the user hears about it
+			// a silent drop leaves local autosave paused forever; tell the user
 			alert(
 				'You were disconnected from the server, try refreshing the page to try again.',
 			);
@@ -151,8 +149,8 @@ const createWorkerHandler = inputHandle => {
 			x < 0 ||
 			y < 0 ||
 			// bounds against OUR current dims: a draw serialized before a
-			// resize must not land at a wrong index (landmine 7; draws
-			// near concurrent resizes drop everywhere, by design)
+			// resize must not land at a wrong index (draws near concurrent
+			// resizes drop everywhere, by design)
 			x >= columns ||
 			y >= rows ||
 			typeof block !== 'object' ||
@@ -180,7 +178,7 @@ const createWorkerHandler = inputHandle => {
 
 	const onResize = (columns, rows) => {
 		// a hostile/buggy server must not drive an unbounded allocation
-		// (the user can dial any ?server= url) — clamp at the border
+		// (the user can dial any ?server= url); clamp at the border
 		if (
 			!Number.isInteger(columns) ||
 			!Number.isInteger(rows) ||
@@ -199,7 +197,6 @@ const createWorkerHandler = inputHandle => {
 	const onFontChange = async fontName => {
 		applyDepth++; // prevents re-broadcasting received settings
 		await State.textArtCanvas.setFont(fontName, () => {
-			// Update the font display UI
 			lblFont.textContent = fontName;
 			selFont.value = fontName;
 		});
@@ -209,7 +206,6 @@ const createWorkerHandler = inputHandle => {
 	const onIceColorsChange = iceColors => {
 		applyDepth++; // prevents re-broadcasting received settings
 		State.textArtCanvas.setIceColors(iceColors);
-		// Update the ice colors toggle UI
 		if (iceColors) {
 			btnIce.classList.add('enabled');
 		} else {
@@ -221,7 +217,6 @@ const createWorkerHandler = inputHandle => {
 	const onLetterSpacingChange = letterSpacing => {
 		applyDepth++; // prevents re-broadcasting received settings
 		State.font.setLetterSpacing(letterSpacing);
-		// Update the letter spacing toggle UI
 		if (letterSpacing) {
 			btn9pt.classList.add('enabled');
 		} else {
@@ -270,8 +265,7 @@ const createWorkerHandler = inputHandle => {
 			return;
 		}
 		if (syncCooldown) {
-			// remember the suppressed request; a dropped one used to lose
-			// the recovery entirely (review finding)
+			// remember the suppressed request; dropping it loses the recovery
 			syncQueued = true;
 			return;
 		}
@@ -283,7 +277,7 @@ const createWorkerHandler = inputHandle => {
 			}
 		}, 1000);
 		// retry insurance: the server rate-limits sync replies, so a
-		// request landing inside ITS window vanishes silently — keep
+		// request landing inside ITS window vanishes silently; keep
 		// re-asking (gently) until a sync actually applies
 		clearTimeout(syncRetryTimer);
 		syncRetryTimer = setTimeout(() => {
@@ -298,11 +292,11 @@ const createWorkerHandler = inputHandle => {
 	};
 
 	/**
-	 * Track the mutation seq stream. ONLY the server-stamped mutation
-	 * types consult this (a client once smuggled a fake seq through a
-	 * blind-relayed CURSOR and wedged every caps peer — review finding).
-	 * Returns false for a stale frame the caller must skip; a gap
-	 * schedules recovery but still applies the frame.
+	 * Track the mutation seq stream. ONLY server-stamped mutation types
+	 * consult this: a fake seq smuggled through a blind-relayed frame
+	 * (CURSOR) would wedge every caps peer. Returns false for a stale
+	 * frame the caller must skip; a gap schedules recovery but still
+	 * applies the frame.
 	 */
 	const SEQ_TYPES = new Set([
 		MoebiusAction.DRAW,
@@ -443,8 +437,8 @@ const createWorkerHandler = inputHandle => {
 	/** @param {number} type @param {any} data */
 	const onFrame = async (type, data) => {
 		// acks and sync replies are the RECOVERY channel: they must never
-		// fall to the staleness drop (review finding: the sync reply's
-		// seq always looked stale, so recovery never applied)
+		// fall to the staleness drop (a sync reply's seq always looks
+		// stale, so recovery would never apply)
 		if (type === T0wnzAction.EXT_ACK) {
 			noteSeqAdvance(data);
 			pendingOps = Math.max(0, pendingOps - 1);
@@ -512,8 +506,8 @@ const createWorkerHandler = inputHandle => {
 				onLetterSpacingChange(data.value === true);
 				break;
 			case MoebiusAction.CHANGE_FONT:
-				// landmine 6: Moebius speaks SAUCE font names ('IBM VGA');
-				// map to app names, fall through raw for unknowns
+				// Moebius speaks SAUCE font names ('IBM VGA'); map to app
+				// names, fall through raw for unknowns
 				if (typeof data.font_name === 'string') {
 					await onFontChange(
 						Load.sauceToAppFont(data.font_name) ?? data.font_name,
@@ -524,13 +518,13 @@ const createWorkerHandler = inputHandle => {
 				onResize(data.columns, data.rows);
 				// a remote resize racing our in-flight ops is the one
 				// divergence the vanilla dialect can't detect; with the
-				// suite negotiated, recover wholesale (P4 fuzz lesson)
+				// suite negotiated, recover wholesale
 				if (extActive() && pendingOps > 0) {
 					requestSync();
 				}
 				break;
 			case MoebiusAction.SAUCE: {
-				// P4 leftover: remote SAUCE edits land in the modal + title
+				// remote SAUCE edits land in the modal + title
 				applyDepth++;
 				try {
 					if (typeof data.title === 'string') {
@@ -581,8 +575,7 @@ const createWorkerHandler = inputHandle => {
 				await adoptSession(data);
 				break;
 			case 'refused': {
-				// P4 leftover: gated rooms get a real password path instead
-				// of a dead-end alert; one retry, then stay local
+				// password-gated rooms get one prompt and retry, then stay local
 				if (!passwordTried) {
 					passwordTried = true;
 					const pass = window.prompt(
@@ -662,14 +655,14 @@ const createWorkerHandler = inputHandle => {
 		});
 	};
 
-	// no Moebius equivalent; kept as a no-op so old call sites are inert
+	// no Moebius equivalent; a no-op keeps call sites inert
 	const sendCanvasSettings = _settings => {};
 
 	const sendResize = (columns, rows) =>
 		sendMutation(MoebiusAction.SET_CANVAS_SIZE, { columns, rows });
 
 	const sendFontChange = fontName =>
-		// landmine 6 outbound: peers (Moebius included) expect SAUCE names
+		// peers (Moebius included) expect SAUCE font names
 		sendMutation(MoebiusAction.CHANGE_FONT, { font_name: Load.appToSauceFont(fontName) ?? fontName });
 
 	const sendIceColorsChange = iceColors =>
@@ -756,7 +749,7 @@ const createWorkerHandler = inputHandle => {
 			nick: handle,
 			group: '',
 			// callers include DOM click handlers: only a real string is a
-			// password (a PointerEvent here once broke the worker clone)
+			// password (a PointerEvent breaks the worker clone)
 			pass: typeof pass === 'string' ? pass : '',
 			caps: [EXT_SUITE_CAP],
 			url: explicitServer,
@@ -771,7 +764,7 @@ const createWorkerHandler = inputHandle => {
 		State.worker.postMessage({ cmd: 'disconnect' });
 		btnNet.classList.remove('hide');
 	};
-	// once, not per stayLocal call (listeners used to stack)
+	// bound once, not per stayLocal call, or listeners stack
 	btnNet.addEventListener('click', _ => {
 		showCollaborationChoice();
 	});
@@ -794,8 +787,8 @@ const createWorkerHandler = inputHandle => {
 
 	const isConnected = () => connected;
 
-	// own-cursor sends, throttled ~100ms trailing (PLAN 3.6.3): peers
-	// render it via the native CURSOR frames
+	// own-cursor sends, throttled ~100ms trailing; peers render the
+	// native CURSOR frames
 	let cursorTimer = 0;
 	let cursorPending = null;
 	document.addEventListener('onTextCursorMove', e => {
@@ -825,7 +818,7 @@ const createWorkerHandler = inputHandle => {
 	if (State.worker) {
 		try {
 			State.worker.addEventListener('message', onMessage);
-			// Initialize the worker first - this MUST be the first message sent
+			// 'init' MUST be the worker's first message
 			State.worker.postMessage({ cmd: 'init' });
 		} catch (error) {
 			console.error(
@@ -835,8 +828,7 @@ const createWorkerHandler = inputHandle => {
 		}
 	}
 
-	// Set up collaboration choice dialog handlers (wrapped: the click
-	// event must never become the password argument)
+	// wrapped: the click event must never become the password argument
 	btnJoin.addEventListener('click', () => joinCollaboration());
 	btnLocal.addEventListener('click', stayLocal);
 
@@ -846,8 +838,8 @@ const createWorkerHandler = inputHandle => {
 		sendChat: sendChat,
 		isConnected: isConnected,
 		// true iff the session negotiated the t0wnz extension suite:
-		// unicode cells and extended colors travel natively, so the P5
-		// lockouts lift (vanilla sessions keep them)
+		// unicode cells and extended colors travel natively, so the
+		// vanilla-dialect lockouts lift
 		extCollab: () => connected && extActive(),
 		requestTimelapse: requestTimelapse,
 		joinCollaboration: joinCollaboration,
@@ -884,7 +876,6 @@ const createChatController = (
 	}
 	checkNotifications.checked = notifications;
 
-	// Drag functionality for chat window
 	const chatHeader = winChat.querySelector('header');
 	const close = $('closeChat');
 	let isDragging = false;
@@ -894,7 +885,7 @@ const createChatController = (
 	let initialY = 0;
 
 	const dragStart = e => {
-		// Only drag when clicking on header or h2, not on child elements like inputs
+		// header/h2 only: child inputs must stay clickable
 		if (
 			e.target === chatHeader ||
 			e.target.tagName === 'H2' ||
@@ -920,7 +911,6 @@ const createChatController = (
 			currentX = e.clientX - initialX;
 			currentY = e.clientY - initialY;
 
-			// Apply transform to move the chat window
 			winChat.style.transform = `translate(${currentX}px, ${currentY}px)`;
 		}
 	};
@@ -939,12 +929,10 @@ const createChatController = (
 			body: text,
 			icon: `${State.uiDir}img/favicon.svg`,
 		});
-		// Auto-close notification after 7 seconds
 		const notificationTimer = setTimeout(() => {
 			notification.close();
 		}, 7000);
 
-		// Clean up timer if notification is manually closed
 		notification.addEventListener('close', () => {
 			clearTimeout(notificationTimer);
 		});

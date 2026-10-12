@@ -6,13 +6,11 @@ import { FontCache } from './fontCache.js';
 
 const loadImageAndGetImageData = url => {
 	return new Promise((resolve, reject) => {
-		// Extract font name from URL
 		const fontName = url.substring(
 			url.lastIndexOf('/') + 1,
 			url.lastIndexOf('.'),
 		);
 
-		// Try to get from cache first
 		FontCache.getFont(fontName)
 			.then(response => {
 				if (response) {
@@ -42,7 +40,6 @@ const loadImageAndGetImageData = url => {
 						imgElement.src = blobUrl;
 					});
 				} else {
-					// Fall back to direct loading
 					const imgElement = new Image();
 					imgElement.addEventListener('load', () => {
 						const canvas = createCanvas(imgElement.width, imgElement.height);

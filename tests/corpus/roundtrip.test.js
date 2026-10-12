@@ -1,22 +1,21 @@
 /**
- * Round-trip corpus harness (PLAN.md P0).
+ * Round-trip corpus harness.
  *
  * Tier (a): every committed artwork in src/ansi must decode, re-encode, and
- * decode again to the identical cell grid (idempotence), and the encoder must
- * be a fixed point (encode(decode(encode)) is byte-identical).
+ * decode again to the identical cell grid, and the encoder must be a fixed
+ * point (encode(decode(encode)) is byte-identical).
  *
  * Tier (b): synthetic fixtures from ./generators.js cover edge cases wild
  * files can't guarantee: weird SAUCE records, ice color ANSI, 132-column,
  * XBin RLE with all four run types, 512-glyph XBin fonts, UTF-8 multibyte
  * rows, and large dimensions.
  *
- * Tier (c) — bulk conformance against the sixteencolors archive mirror — is
+ * Tier (c), bulk conformance against the sixteencolors archive mirror, is
  * NOT run here; see tests/fixtures/README.md.
  *
- * These tests pin CURRENT v2 behavior as the regression baseline for the v3
- * codec package (PLAN.md P2). Known v2 defects are marked it.fails with a
- * comment; when a fix lands, the test flips to red and should be promoted to
- * a plain it().
+ * These tests pin v2 behavior as the regression baseline for the v3 codec
+ * package. A known v2 defect is marked it.fails with a comment; when a fix
+ * lands, the test flips to red and gets promoted to a plain it().
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -90,7 +89,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	enforceMaxBytes: vi.fn(),
 }));
 
-// NOTE: palette.js is NOT mocked — the UTF-8 round-trips exercise the real
+// NOTE: palette.js is NOT mocked; the UTF-8 round-trips exercise the real
 // CP437 <-> unicode maps.
 
 let Load;
@@ -361,8 +360,8 @@ describe('corpus tier (b): weird SAUCE records', () => {
 		expect(d1.fontName).toBe('');
 	});
 
-	// Was a v2 defect (P0 finding): TInfo1 = 0 was trusted verbatim and
-	// yielded a 0-column doc; the loader now keeps content-derived dims
+	// Trusting TInfo1 = 0 verbatim yields a 0-column doc; the loader
+	// must keep content-derived dims instead
 	it('SAUCE with zero tinfo falls back to content-derived dimensions', async () => {
 		const body = makeAnsi({ columns: 80, rows: 5, seed: 2 });
 		const bytes = concatBytes([
@@ -508,8 +507,8 @@ describe('corpus tier (b): XBin', () => {
 		expect(d2.fontData.bytes).toEqual(font);
 	});
 
-	// Was a v2 defect (P0 finding): Save.xb never set the 512-glyph flag
-	// (header bit 4), so readers parsed 256 glyphs and misaligned the image
+	// Save.xb must set the 512-glyph flag (header bit 4); without it
+	// readers parse 256 glyphs and misalign the image
 	it('512-glyph XBin font round-trips through save', async () => {
 		const columns = 40;
 		const rows = 20;
@@ -551,10 +550,9 @@ describe('corpus tier (b): UTF-8 ANSI', () => {
 		expect(codes.has(176)).toBe(true);
 	});
 
-	// Historical v2 defect (PLAN.md P0 finding), FIXED by D9's v3 writer +
-	// reader pair in P5: full-width rows + LF now reimport losslessly
-	// because the reader swallows the one LF after an auto-wrap, and the
-	// writer's SAUCE pins the real width.
+	// Full-width rows + LF reimport losslessly: the reader swallows the
+	// one LF after an auto-wrap, and the writer's SAUCE pins the real
+	// width.
 	it('UTF-8 export of a CP437 doc re-imports losslessly', async () => {
 		const bytes = makeAnsi({ columns: 80, rows: 25, seed: 55 });
 		const d1 = await decode('cp437.ans', bytes);
@@ -569,7 +567,7 @@ describe('corpus tier (b): UTF-8 ANSI', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Core codec parity (0wnzlib, P2 gate): the same bytes through the v2 loader
+// Core codec parity (0wnzlib): the same bytes through the v2 loader
 // and the core codecs must produce identical docs, and core-encoded bytes
 // must decode identically through BOTH decoders. ANSI/CP437 is the critical
 // surface, so every committed artwork file runs through it.

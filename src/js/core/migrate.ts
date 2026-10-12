@@ -1,6 +1,6 @@
 /**
- * v2 autosave migration (PLAN.md §4 P2 gate: IndexedDB -> OPFS
- * importer). v2 persists three pieces: the canvas snapshot
+ * v2 autosave migration: IndexedDB -> OPFS importer.
+ * v2 persists three pieces: the canvas snapshot
  * (`canvasData.currentCanvas` = {imageData: Uint16Array, columns,
  * rows}), an optional XB font (`fontData.XBIN` = {bytes, width,
  * height}), and lightweight settings in localStorage

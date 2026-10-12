@@ -1,7 +1,7 @@
 /**
- * TundraDraw .tnd codec, new with v3: 24-bit cell colors need the
- * tag-bit planes (PLAN.md §4 P2). PabloDraw's Tundra.cs is the de facto
- * spec and this port mirrors it, quirks included.
+ * TundraDraw .tnd codec: 24-bit cell colors ride the tag-bit planes.
+ * PabloDraw's Tundra.cs is the de facto spec and this port mirrors it,
+ * quirks included.
  *
  * Layout: one version byte (24), ASCII "TUNDRA24", then a command
  * stream over the payload (SAUCE record excluded):

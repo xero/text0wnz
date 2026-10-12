@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { createPositionInfo } from '../../src/js/client/ui.js';
 
-// Mock State module
 vi.mock('../../src/js/client/state.js', () => ({ default: {} }));
 
 describe('Canvas and Position Info DOM Tests', () => {
@@ -14,14 +13,10 @@ describe('Canvas and Position Info DOM Tests', () => {
 	let positionController;
 
 	beforeEach(() => {
-		// Clear DOM
 		document.body.innerHTML = '';
-		// Create a new userEvent instance for each test
 		user = userEvent.setup();
-		// Clear all mocks
 		vi.clearAllMocks();
 
-		// Create canvas container
 		canvasContainer = document.createElement('div');
 		canvasContainer.id = 'canvas-container';
 		canvasContainer.style.width = '640px';
@@ -29,7 +24,6 @@ describe('Canvas and Position Info DOM Tests', () => {
 		canvasContainer.tabIndex = 0;
 		document.body.appendChild(canvasContainer);
 
-		// Create cursor element
 		cursor = document.createElement('div');
 		cursor.className = 'cursor';
 		cursor.style.position = 'absolute';
@@ -37,13 +31,11 @@ describe('Canvas and Position Info DOM Tests', () => {
 		cursor.style.top = '0px';
 		canvasContainer.appendChild(cursor);
 
-		// Create position info display
 		positionInfo = document.createElement('div');
 		positionInfo.id = 'position-info';
 		positionInfo.textContent = '1, 1';
 		document.body.appendChild(positionInfo);
 
-		// Create position controller
 		positionController = createPositionInfo(positionInfo);
 	});
 
@@ -137,22 +129,18 @@ describe('Canvas and Position Info DOM Tests', () => {
 		});
 
 		it('should calculate position from click coordinates', () => {
-			// Simulate character dimensions (8x16 pixels)
 			const charWidth = 8;
 			const charHeight = 16;
 
-			// Simulate a click at pixel position 80, 160
 			const clickX = 80;
 			const clickY = 160;
 
-			// Calculate character position
 			const charX = Math.floor(clickX / charWidth);
 			const charY = Math.floor(clickY / charHeight);
 
 			expect(charX).toBe(10);
 			expect(charY).toBe(10);
 
-			// Update position info
 			positionController.update(charX, charY);
 			expect(positionInfo.textContent).toBe('11, 11');
 		});
@@ -186,7 +174,6 @@ describe('Canvas and Position Info DOM Tests', () => {
 			const charWidth = 8;
 			const charHeight = 16;
 
-			// Move cursor to character position 10, 5
 			const charX = 10;
 			const charY = 5;
 
@@ -196,7 +183,6 @@ describe('Canvas and Position Info DOM Tests', () => {
 			expect(cursor.style.left).toBe('80px');
 			expect(cursor.style.top).toBe('80px');
 
-			// Update position display
 			positionController.update(charX, charY);
 			expect(positionInfo.textContent).toBe('11, 6');
 		});
@@ -234,7 +220,6 @@ describe('Canvas and Position Info DOM Tests', () => {
 			canvasContainer.focus();
 			await user.click(canvasContainer);
 
-			// Canvas should still be focusable
 			expect(canvasContainer).toHaveAttribute('tabindex', '0');
 		});
 	});

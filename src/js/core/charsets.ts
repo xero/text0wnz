@@ -1,5 +1,5 @@
 /**
- * Charset tables (PLAN §3.4, durdraw model): pages of 12 characters
+ * Charset tables (durdraw model): pages of 12 characters
  * that ride the F-key bar and cycle with ctrl+[/]. A page entry is a
  * TOKEN sharing paste.ts semantics: 0-255 is a CP437 charCode drawn
  * from the active classic font, a negative value is ~codepoint and

@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Zoom controller (PLAN §3.5, P3): every zoom input lands on one
+ * Zoom controller: every zoom input lands on one
  * setZoom with an optional focal point, and the renderer's own zoom
  * (the scaled font metrics everything reads) stays the single source
  * of truth via State.font.setScaleFactor.
@@ -77,9 +77,8 @@ export const createZoomController = viewport => {
 
 	const canvasContainer = () => document.getElementById('canvasContainer');
 
-	// canvas.js reports 'webgl2-slack-buffer' or 'canvas2d-chunks'; match
-	// on the family, not an exact string (an exact 'gl' compare shipped
-	// dead once already)
+	// canvas.js reports 'webgl2-slack-buffer' or 'canvas2d-chunks';
+	// match on the family, never an exact id
 	const glRenderer = () => {
 		const id = /** @type {any} */ (State).textArtCanvas?.getRendererId?.();
 		return typeof id === 'string' && id.startsWith('webgl');
@@ -202,7 +201,7 @@ export const createZoomController = viewport => {
 		};
 	};
 
-	// stepped zoom snaps to the 0.5 grid the slider and v2 shortcuts use
+	// stepped zoom snaps to the 0.5 grid the slider and shortcuts use
 	const zoomIn = () =>
 		setZoom(Math.floor(getZoom() * 2) / 2 + ZOOM_STEP, viewportCenter());
 	const zoomOut = () =>

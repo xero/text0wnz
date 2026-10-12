@@ -1,12 +1,11 @@
 /**
  * Precache manifest pins. index.html keeps its filename across builds,
  * so workbox only re-fetches it when its manifest entry carries a real
- * content revision. A revision:null entry shipped once and permanently
- * wedged returning browsers on old HTML whose hashed assets were gone
- * (the vite config's manifest options sat under the generateSW-only
- * `workbox` key and were silently ignored in injectManifest mode).
- * These assertions read the built worker, so they run after bake like
- * every other e2e gate.
+ * content revision; a revision:null entry wedges returning browsers on
+ * old HTML whose hashed assets are gone. Beware: manifest options under
+ * the generateSW-only `workbox` key are silently ignored in
+ * injectManifest mode. The assertions read the built worker, so they
+ * run after bake like every other e2e gate.
  */
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
@@ -43,8 +42,8 @@ test('legacy janitor and recovery machinery ship in the worker', () => {
 });
 
 test('app shell assets are in the precache', () => {
-	// the ignored glob patterns also dropped the font and icon sprite
-	// from the precache, leaving offline mode without them
+	// the font and icon sprite must stay in the precache or offline mode
+	// loses them
 	expect(sw).toMatch(/"url":"ui\/topazplus_1200\.woff2"/);
 	expect(sw).toMatch(/"url":"ui\/icons-[^"]+\.svg"/);
 });

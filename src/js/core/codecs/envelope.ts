@@ -1,8 +1,8 @@
 /**
- * The native container (O5, owner-chosen 2026-10-10): a versioned JSON
- * envelope gzipped through the runtime-native CompressionStream, saved
- * as `.0wnz` (owner-chosen extension; the codec itself is
- * extension-agnostic). It holds everything the classic formats cannot:
+ * The native container: a versioned JSON envelope gzipped through the
+ * runtime-native CompressionStream, saved as `.0wnz` (the codec itself
+ * is extension-agnostic). It holds everything the classic formats
+ * cannot:
  * unicode glyph tables, raw-RGB colors, frames with delays, doc mode,
  * and metadata. UTF-8 ANSI remains the interchange format; a binary
  * container may supersede this later without breaking readers (the
@@ -53,7 +53,7 @@ interface EnvelopeJson {
 	palette: number[];
 	/** 'cp437' marks the identity table; otherwise [fontSlot, codepoint][]. */
 	glyphTable: 'cp437' | Array<[number, number]>;
-	/** East Asian Width table version the doc was authored under (P5). */
+	/** East Asian Width table version the doc was authored under. */
 	widthTable?: string;
 	frames: EnvelopeFrame[];
 	meta?: DocMeta;
@@ -124,7 +124,7 @@ export const encodeEnvelope = async (
 			? 'cp437'
 			: doc.glyphTable.entries().map(def => [def.fontSlot, def.codepoint]),
 		// pinned so width semantics stay reproducible across browser and
-		// app updates (PLAN §3.4); readers tolerate its absence
+		// app updates; readers tolerate its absence
 		widthTable: WIDTH_TABLE_VERSION,
 		frames: doc.frames.map(frame => ({
 			...(frame.delayMs !== undefined ? { delayMs: frame.delayMs } : {}),

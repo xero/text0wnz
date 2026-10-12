@@ -6,7 +6,6 @@ import {
 	createChatController,
 } from '../../src/js/client/network.js';
 
-// Mock State module
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		worker: null,
@@ -33,7 +32,6 @@ vi.mock('../../src/js/client/state.js', () => ({
 	},
 }));
 
-// Mock UI module
 vi.mock('../../src/js/client/ui.js', () => ({
 	$: vi.fn(_id => ({
 		value: '',
@@ -76,10 +74,8 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	websocketUI: vi.fn(),
 }));
 
-// Mock palette module
 vi.mock('../../src/js/client/palette.js', () => ({ createDefaultPalette: vi.fn(() => ({})) }));
 
-// Mock DOM
 vi.stubGlobal('document', {
 	getElementsByClassName: vi.fn(() => []),
 	addEventListener: vi.fn(),
@@ -221,7 +217,6 @@ describe('Network Module', () => {
 		it('should create worker and set up message handling', () => {
 			createWorkerHandler(mockInputHandle);
 
-			// Should send init command first
 			expect(mockWorker.postMessage).toHaveBeenCalledWith({ cmd: 'init' });
 			expect(mockWorker.addEventListener).toHaveBeenCalledWith(
 				'message',
@@ -255,10 +250,8 @@ describe('Network Module', () => {
 		it('should handle connection state management', () => {
 			const handler = createWorkerHandler(mockInputHandle);
 
-			// Initial state
 			expect(handler.isConnected()).toBe(false);
 
-			// Test that message handlers would be called
 			expect(mockWorker.addEventListener).toHaveBeenCalledWith(
 				'message',
 				expect.any(Function),
@@ -269,7 +262,6 @@ describe('Network Module', () => {
 			const handler = createWorkerHandler(mockInputHandle);
 			const blocks = [0x41, 0x42, 0x43];
 
-			// Initially not connected, should not send
 			handler.draw(blocks);
 			expect(mockWorker.postMessage).not.toHaveBeenCalledWith({
 				cmd: 'draw',
@@ -315,14 +307,12 @@ describe('Network Module', () => {
 		it('should handle canvas settings when not in collaboration mode', () => {
 			const handler = createWorkerHandler(mockInputHandle);
 
-			// Should not send when not in collaboration mode
 			handler.sendCanvasSettings({ columns: 80, rows: 25 });
 			handler.sendResize(80, 25);
 			handler.sendFontChange('CP437 8x8');
 			handler.sendIceColorsChange(true);
 			handler.sendLetterSpacingChange(false);
 
-			// Should not have sent any canvas-related messages
 			expect(mockWorker.postMessage).not.toHaveBeenCalledWith(
 				expect.objectContaining({ cmd: 'canvasSettings' }),
 			);
@@ -336,7 +326,6 @@ describe('Network Module', () => {
 		let mockElements;
 
 		beforeEach(() => {
-			// Mock header element for drag functionality
 			const mockHeader = {
 				addEventListener: vi.fn(),
 				style: { cursor: '' },
@@ -521,10 +510,8 @@ describe('Network Module', () => {
 				onBlur,
 			);
 
-			// Initial state
 			expect(controller.isEnabled()).toBe(false);
 
-			// Toggle on
 			controller.toggle();
 			expect(mockElements.divChatWindow.classList.remove).toHaveBeenCalledWith(
 				'hide',
@@ -539,7 +526,6 @@ describe('Network Module', () => {
 			expect(onFocus).toHaveBeenCalled();
 			expect(controller.isEnabled()).toBe(true);
 
-			// Toggle off
 			controller.toggle();
 			expect(mockElements.divChatWindow.classList.add).toHaveBeenCalledWith(
 				'hide',
@@ -583,10 +569,8 @@ describe('Network Module', () => {
 				vi.fn(),
 			);
 
-			// First join a user
 			controller.join('TestUser', 'session123', false);
 
-			// Then have them part
 			controller.part('session123');
 			expect(mockElements.divUserList.removeChild).toHaveBeenCalled();
 		});
@@ -605,13 +589,10 @@ describe('Network Module', () => {
 				vi.fn(),
 			);
 
-			// First join a user
 			controller.join('OldUser', 'session123', false);
 
-			// Then change their nick
 			controller.nick('NewUser', 'session123', true);
 
-			// Should have updated the user
 			expect(mockElements.divUserList.appendChild).toHaveBeenCalled();
 		});
 
@@ -647,7 +628,6 @@ describe('Network Module', () => {
 				vi.fn(),
 			);
 
-			// Chat is disabled, should add notification class
 			controller.addConversation('TestUser', 'Hello world', true);
 			expect(mockElements.divChatButton.classList.add).toHaveBeenCalledWith(
 				'notification',

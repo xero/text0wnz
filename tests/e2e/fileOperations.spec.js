@@ -8,14 +8,12 @@ test.describe('File Operations', () => {
 	});
 
 	test('should have file menu or file buttons', async ({ page }) => {
-		// Check for new, open, save buttons
 		const newButton = page.locator('#new, button:has-text("New")');
 		const openButton = page.locator(
 			'#open, #openFile, button:has-text("Open")',
 		);
 		const saveButton = page.locator('#save, button:has-text("Save")');
 
-		// At least some file operations should be available
 		const newCount = await newButton.count();
 		const openCount = await openButton.count();
 		const saveCount = await saveButton.count();
@@ -24,15 +22,12 @@ test.describe('File Operations', () => {
 	});
 
 	test('should create new document', async ({ page }) => {
-		// Open file menu first
 		const fileMenuButton = page.locator('#fileMenu button');
 		await fileMenuButton.click();
 		await page.waitForTimeout(200);
 
-		// Click new button
 		const newButton = page.locator('#new');
 
-		// Handle warning modal
 		await newButton.click();
 		await page.waitForTimeout(500);
 
@@ -44,28 +39,24 @@ test.describe('File Operations', () => {
 	});
 
 	test('should open file dialog', async ({ page }) => {
-		// Open file menu first
 		const fileMenuButton = page.locator('#fileMenu button');
 		await fileMenuButton.click();
 		await page.waitForTimeout(200);
 
-		// Check for the visible menu item, not the hidden file input
+		// target the visible menu item, not the hidden file input
 		const openButton = page.locator('#open');
 
 		if ((await openButton.count()) > 0) {
-			// Note: We can't actually test file upload without a file in E2E
-			// but we can verify the menu item exists and is visible
+			// the upload itself is untestable here; pin the menu item
 			await expect(openButton.first()).toBeVisible();
 		}
 	});
 
 	test('should have save options', async ({ page }) => {
-		// Open file menu first
 		const fileMenuButton = page.locator('#fileMenu button');
 		await fileMenuButton.click();
 		await page.waitForTimeout(200);
 
-		// Look for save/export buttons
 		const saveAsAnsi = page.locator(
 			'#saveAnsi, #saveAsAnsi, button:has-text("ANSi")',
 		);
@@ -79,7 +70,6 @@ test.describe('File Operations', () => {
 			'#savePng, #saveAsPng, button:has-text("PNG")',
 		);
 
-		// At least one save format should be available
 		const ansiCount = await saveAsAnsi.count();
 		const binCount = await saveAsBin.count();
 		const xbinCount = await saveAsXbin.count();
@@ -90,7 +80,6 @@ test.describe('File Operations', () => {
 	});
 
 	test('should have SAUCE metadata fields', async ({ page }) => {
-		// Check for SAUCE-related inputs
 		const sauceTitle = page.locator('#sauceTitle, #title');
 		const sauceAuthor = page.locator('#sauceAuthor, #author');
 		const sauceGroup = page.locator('#sauceGroup, #group');
@@ -99,7 +88,6 @@ test.describe('File Operations', () => {
 		const authorCount = await sauceAuthor.count();
 		const groupCount = await sauceGroup.count();
 
-		// At least some SAUCE fields should exist
 		expect(titleCount + authorCount + groupCount).toBeGreaterThan(0);
 	});
 
@@ -136,7 +124,6 @@ test.describe('Canvas Operations', () => {
 			await resizeButton.first().click();
 			await page.waitForTimeout(300);
 
-			// Look for resize inputs
 			const columnsInput = page.locator(
 				'#columnsInput, #width, input[name="columns"]',
 			);
@@ -146,7 +133,6 @@ test.describe('Canvas Operations', () => {
 				await columnsInput.first().fill('100');
 				await rowsInput.first().fill('40');
 
-				// Find and click resize confirm button
 				const confirmButton = page.locator(
 					'button:has-text("Resize"), button:has-text("OK"), button:has-text("Apply")',
 				);
@@ -166,7 +152,6 @@ test.describe('Canvas Operations', () => {
 		const iceToggle = page.locator('#navICE');
 
 		if ((await iceToggle.count()) > 0) {
-			// Click to toggle
 			await iceToggle.click();
 			await page.waitForTimeout(300);
 		}
@@ -180,7 +165,6 @@ test.describe('Canvas Operations', () => {
 		const spacingToggle = page.locator('#nav9pt');
 
 		if ((await spacingToggle.count()) > 0) {
-			// Click to toggle
 			await spacingToggle.click();
 			await page.waitForTimeout(300);
 		}
@@ -195,7 +179,6 @@ test.describe('Canvas Operations', () => {
 		const selectorCount = await fontSelector.count();
 		const buttonCount = await fontButton.count();
 
-		// Font selection should be available in some form
 		expect(selectorCount + buttonCount).toBeGreaterThan(0);
 	});
 
@@ -206,12 +189,10 @@ test.describe('Canvas Operations', () => {
 			await fontsButton.click();
 			await page.waitForTimeout(500);
 
-			// Look for font options
 			const fontOptions = page.locator('.fontOption, [data-font]');
 			const count = await fontOptions.count();
 
 			if (count > 0) {
-				// Select a different font
 				await fontOptions.nth(1).click();
 				await page.waitForTimeout(500);
 			}
@@ -219,7 +200,6 @@ test.describe('Canvas Operations', () => {
 	});
 
 	test('should clear canvas', async ({ page }) => {
-		// Draw something first
 		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
@@ -258,7 +238,6 @@ test.describe('Export Operations', () => {
 	});
 
 	test('should have export options available', async ({ page }) => {
-		// Draw something to export
 		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();
 
@@ -274,7 +253,6 @@ test.describe('Export Operations', () => {
 			await page.waitForTimeout(300);
 		}
 
-		// Check for save buttons
 		const saveOptions = page.locator(
 			'#saveAnsi, #saveBin, #saveXbin, #savePng, [id^="save"]',
 		);

@@ -60,7 +60,6 @@ describe('Utils Module', () => {
 			expect(cleaned['set-cookie']).toBe('[REDACTED]');
 			expect(cleaned['proxy-authorization']).toBe('[REDACTED]');
 			expect(cleaned['x-api-key']).toBe('[REDACTED]');
-			// Non-sensitive headers should remain unchanged
 			expect(cleaned['content-type']).toBe('application/json');
 			expect(cleaned['user-agent']).toBe('Mozilla/5.0');
 		});
@@ -111,7 +110,6 @@ describe('Utils Module', () => {
 		});
 
 		afterEach(() => {
-			// Restore original toISOString
 			Date.prototype.toISOString = originalToISOString;
 		});
 
@@ -124,9 +122,7 @@ describe('Utils Module', () => {
 		it('should replace colons with hyphens for Windows compatibility', () => {
 			const filename = createTimestampedFilename('session', 'json');
 
-			// Should not contain colons
 			expect(filename).not.toContain(':');
-			// Should contain hyphens where colons were
 			expect(filename).toBe('session-2023-12-25T10-30-45.123Z.json');
 		});
 

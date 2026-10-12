@@ -1,8 +1,8 @@
 /**
- * GL renderer context-loss gate (PLAN.md §3.1: context loss is mandatory to
- * handle; §4 P1 gates). Forces a WebGL context loss + restore through the
- * WEBGL_lose_context extension and asserts the renderer comes back rendering
- * actual pixels. Runs in the chromium-gl project (SwiftShader in CI).
+ * GL renderer context-loss gate. Forces a WebGL context loss + restore
+ * through the WEBGL_lose_context extension and asserts the renderer comes
+ * back rendering actual pixels. Runs in the chromium-gl project
+ * (SwiftShader in CI).
  */
 import { test, expect } from '@playwright/test';
 import { waitForEditorReady } from '../e2e/helpers/editorHelpers.js';

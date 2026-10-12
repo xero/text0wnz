@@ -23,7 +23,6 @@ const createCanvas = (width, height) => {
 };
 
 const toggleFullscreen = () => {
-	// Check if any fullscreen API is available
 	const isFullscreenEnabled =
 		document.fullscreenEnabled || document.webkitFullscreenEnabled;
 
@@ -190,7 +189,6 @@ const createModalController = modal => {
 		cleanupHandler = handler;
 	};
 
-	// attach to all close buttons
 	$$$('.close').forEach(b => onClick(b, _ => close()));
 
 	return {
@@ -245,7 +243,6 @@ const createSettingToggle = (el, getter, setter) => {
 const onReturn = (el, target) => {
 	el.addEventListener('keypress', e => {
 		if (!e.altKey && !e.ctrlKey && !e.metaKey && e.code === 'Enter') {
-			// Enter key
 			e.preventDefault();
 			e.stopPropagation();
 			target.click();
@@ -281,10 +278,10 @@ const createPositionInfo = el => {
 };
 
 const viewportTap = view => {
-	// Menu close, plus v2's margin gesture: a quick 2-finger tap on the
+	// Menu close, plus the margin gesture: a quick 2-finger tap on the
 	// viewport OUTSIDE the canvas still undoes. On the canvas itself the
-	// gesture recognizer owns taps, and filtering by target is what
-	// fixes v2's double-undo (both layers used to see the same tap).
+	// gesture recognizer owns taps; filtering by target keeps both
+	// layers from seeing the same tap (a double undo).
 	const maxTapDuration = 300;
 	let touchStartTime = 0;
 	let eligible = false;
@@ -302,9 +299,8 @@ const viewportTap = view => {
 
 	view.addEventListener('touchend', event => {
 		// evaluate on the LAST lift: real fingers rarely leave in the
-		// same event frame, so requiring changedTouches === 2 meant the
-		// gesture almost never fired on hardware (the canvas recognizer
-		// learned the same lesson in P3)
+		// same event frame, so requiring changedTouches === 2 would
+		// almost never fire on hardware
 		const remaining = event.touches?.length ?? 0;
 		if (
 			eligible &&
@@ -631,8 +627,7 @@ const createToolPreview = el => {
 	const drawHalfBlock = (foreground, x, y) => {
 		drawOneHalfBlock(foreground, x, y);
 		// mirror mode draws the reflected half on COMMIT (editor core);
-		// the ghost has to say so beforehand, for every shape tool at
-		// once (pre-existing gap: v2's preview never mirrored either)
+		// the ghost has to say so beforehand, for every shape tool at once
 		if (State.textArtCanvas.getMirrorMode?.()) {
 			const mirrorX = State.textArtCanvas.getMirrorX(x);
 			if (mirrorX !== x && mirrorX >= 0 && mirrorX < columns) {
@@ -924,8 +919,8 @@ const createFontSelect = (el, lbl, img, btn) => {
 	listbox.addEventListener('blur', () =>
 		getOptions().forEach(opt => opt.classList.remove('focused')));
 
-	// P6 steal (font browser favorites): starred fonts pin to a
-	// Favorites group at the top of the listbox, kept in localStorage
+	// font browser favorites: starred fonts pin to a Favorites group
+	// at the top of the listbox, kept in localStorage
 	const FAVORITES_KEY = 'fontFavorites';
 	const favorites = () => {
 		try {
@@ -1065,10 +1060,8 @@ const createZoomControl = () => {
 		}
 	};
 
-	// Initialize from current font scale
 	State.waitFor('font', updateSliderFromState);
 
-	// Update slider UI when state is restored
 	document.addEventListener(
 		'onStateRestorationComplete',
 		updateSliderFromState,
@@ -1093,9 +1086,9 @@ const createZoomControl = () => {
 		}
 	});
 
-	// Keyboard shortcuts (combos unchanged: ctrl/cmd + = / - / 0). The
-	// controller path anchors at the viewport center and saves; the
-	// fallback reproduces v2 exactly for contexts without a controller.
+	// Keyboard zoom (ctrl/cmd + = / - / 0). The controller path anchors
+	// at the viewport center and saves; the slider fallback covers
+	// contexts without a controller.
 	const handleKeyboardZoom = e => {
 		if ((e.ctrlKey || e.metaKey) && e.key === '=') {
 			// Ctrl/Cmd + Plus: Zoom in

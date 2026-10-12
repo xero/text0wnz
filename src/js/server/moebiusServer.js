@@ -77,8 +77,8 @@ export const createMoebiusServer = config => {
 			});
 			rooms.set(name, room);
 			// lazy restore hook: the host loads any persisted doc for this
-			// room (named rooms used to boot blank, and the next autosave
-			// overwrote the saved art with the blank doc - review finding)
+			// room; without it a named room boots blank and its next
+			// autosave overwrites the saved art
 			config.onRoomCreate?.(room);
 		}
 		return room;
@@ -127,7 +127,7 @@ export const createMoebiusServer = config => {
 				return;
 			}
 			// cap on SOCKETS, not registered members: idle pre-CONNECTED
-			// sockets count too (review finding)
+			// sockets count too
 			const open = socketCounts.get(ws.data.roomName) ?? 0;
 			const room =
 				open < SERVER_LIMITS.maxClientsPerRoom
@@ -174,7 +174,7 @@ export const createMoebiusServer = config => {
 				ws.data.connected = room.connect(client, frame.data);
 				if (!ws.data.connected) {
 					// a refused socket closes: no wire-speed password
-					// brute force on a held connection (review finding)
+					// brute force on a held connection
 					ws.close(1008, 'refused');
 				}
 				return;
@@ -224,8 +224,8 @@ export const createMoebiusServer = config => {
 		},
 	};
 
-	// P6 packaging: single-binary / distroless mode serves the built PWA
-	// itself; '' keeps the v2 shape (a proxy owns static, ws-only here)
+	// single-binary / distroless mode serves the built PWA itself;
+	// '' = ws-only, a proxy owns static
 	const staticRoot = config.staticDir ? path.resolve(config.staticDir) : null;
 	/** @param {string} pathname */
 	const serveStatic = async pathname => {
@@ -257,7 +257,7 @@ export const createMoebiusServer = config => {
 	const fetchHandler = async (req, server) => {
 		const url = new URL(req.url);
 		if (url.pathname === '/healthz') {
-			// liveness for the P6 Docker target: cheap, no room state leaks
+			// liveness for the Docker HEALTHCHECK: cheap, no room state leaks
 			return Response.json({
 				ok: true,
 				rooms: rooms.size,
@@ -266,7 +266,7 @@ export const createMoebiusServer = config => {
 		}
 		if (url.pathname === '/bridge') {
 			// reserve BEFORE the async DNS await: parallel requests in
-			// flight must not all pass the cap check (review finding)
+			// flight must not all pass the cap check
 			if (
 				bridgeCount + bridgePending >=
 				(bridgeConfig.maxConnections ?? 16)
@@ -308,7 +308,7 @@ export const createMoebiusServer = config => {
 			return undefined;
 		}
 		// the static app is served by Caddy/nginx; plain HTTP here means
-		// a misconfigured proxy (unchanged v2 behavior)
+		// a misconfigured proxy
 		return new Response('upgrade required', {
 			status: 426,
 			headers: { upgrade: 'websocket', connection: 'upgrade' },

@@ -1,9 +1,8 @@
 /**
- * v3 document model (PLAN.md §3.2): three parallel Uint32Array planes per
- * frame, tag-bit colors, a per-doc glyph table, frames in the core from
- * day one. Pure TS, no DOM: this module is part of the shared codec
- * package surface (D19/O4) and is imported by client, workers, server,
- * and tests alike.
+ * v3 document model: three parallel Uint32Array planes per frame,
+ * tag-bit colors, a per-doc glyph table, frames in the core. Pure TS,
+ * no DOM: this module is part of the shared codec package surface and
+ * is imported by client, workers, server, and tests alike.
  *
  * Word layouts:
  * - glyph word: `glyphId:16 | attrs:8 | reserved:8`
@@ -20,7 +19,7 @@ import { cp437ToUnicode } from './cp437.js';
 // ---------------------------------------------------------------- words
 
 export const ATTR_BLINK = 1 << 0;
-/** Reserved until double-width ships (PLAN §3.2). */
+/** Reserved until double-width ships. */
 export const ATTR_WIDE_CONTINUATION = 1 << 1;
 
 export const glyphWord = (glyphId: number, attrs = 0): number =>
@@ -46,11 +45,10 @@ export const rgbOf = (word: number): { r: number; g: number; b: number } => ({
 // -------------------------------------------------------------- palette
 
 /**
- * Canonical 6-bit -> 8-bit channel expansion: high-bit replication,
- * exactly the Moebius join-doc rule (PLAN §3.6.2 #1) and the client's
- * createPalette. (v2's setRGBAColor path uses round(v/63*255) instead,
- * which diverges for some values, e.g. 15 -> 61 vs 60; the replication
- * form is canonical in v3 and the wart reconciles at wiring time.)
+ * Canonical 6-bit -> 8-bit channel expansion: high-bit replication, the
+ * Moebius join-doc rule and the client's createPalette. NOT v2's
+ * round(v/63*255), which diverges for some values (e.g. 15 -> 61 vs
+ * 60); the replication form is canonical in v3.
  */
 export const expand6to8 = (v: number): number =>
 	(((v & 0x3f) << 2) | ((v & 0x3f) >> 4)) & 0xff;
@@ -146,8 +144,8 @@ export const createGlyphTable = (
 
 /**
  * CP437 identity table: glyphId i = font glyph i for i in 0-255, so
- * classic docs round-trip byte-identically (PLAN §3.2); codepoints
- * carry the unicode mapping for the UTF-8 exporter.
+ * classic docs round-trip byte-identically; codepoints carry the
+ * unicode mapping for the UTF-8 exporter.
  */
 export const createCP437GlyphTable = (fontSlot = 0): GlyphTable => {
 	const seed: GlyphDef[] = [];
@@ -176,9 +174,9 @@ export interface Cell {
 }
 
 /**
- * O13 (owner-chosen 2026-10-10): frames × cells budget guarded at
- * addFrame. 16M cell-frames = ~192MB of planes (12B/cell/frame), far
- * above any typical ansimation (80×25×50 = 100k).
+ * Frames × cells budget guarded at addFrame (O13). 16M cell-frames =
+ * ~192MB of planes (12B/cell/frame), far above any typical ansimation
+ * (80×25×50 = 100k).
  */
 export const DEFAULT_FRAME_CELL_BUDGET = 16_000_000;
 

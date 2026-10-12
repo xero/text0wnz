@@ -1,14 +1,13 @@
 /**
- * P2 GATE: scripted-stroke identity across engines (PLAN.md §4 P2).
- * The same seeded op script runs against THREE engines and the full
- * u16 image is compared word-for-word after EVERY op:
- * - the live v2 textArtCanvas (jsdom, rendering mocked inert),
- * - the frozen v2 reference extraction (tests/parity), which keeps
- *   this gate meaningful after canvas.js itself swaps to v3,
- * - the v3 editor core over the three-plane doc.
- * Covers draws, half-block painting, mirror mode, the bright-bg
- * optimize pass, areas, delete, network quickDraw, undo/redo group
- * boundaries, and ice toggles.
+ * Scripted-stroke identity gate (PLAN.md §4 P2): one seeded op script
+ * runs against the live v2 textArtCanvas (jsdom, rendering mocked
+ * inert), the frozen v2 reference (tests/parity), and the v3 editor
+ * core over the three-plane doc; the full u16 image must match
+ * word-for-word after every op. The frozen reference keeps the gate
+ * meaningful if canvas.js itself swaps engines. Covers draws,
+ * half-block painting, mirror mode, the bright-bg optimize pass,
+ * areas, delete, network quickDraw, undo/redo group boundaries, and
+ * ice toggles.
  */
 import { describe, it, expect, vi } from 'vitest';
 

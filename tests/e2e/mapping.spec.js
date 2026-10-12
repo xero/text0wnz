@@ -1,5 +1,5 @@
 /**
- * Mapping fuzz gate (PLAN §3.1 / P3): clicking the computed center of
+ * Mapping fuzz gate: clicking the computed center of
  * a cell must paint exactly that cell, across zooms (fractional
  * included) and scroll offsets, on every engine this suite runs on
  * (Chrome, Firefox, WebKit projects all match e2e/**). The centers

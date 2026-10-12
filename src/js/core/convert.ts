@@ -1,7 +1,6 @@
 /**
  * Lossless converters between the v2 flat-Uint16Array doc
- * (`charCode<<8 | bg<<4 | fg`) and the v3 three-plane model
- * (PLAN.md §4 P2: "u16<->v3 lossless converters").
+ * (`charCode<<8 | bg<<4 | fg`) and the v3 three-plane model.
  *
  * Blink is the one semantic fold: in v2 a bright background (bg 8-15)
  * MEANS blink when the doc's ice flag is off. v3 stores that
@@ -78,8 +77,8 @@ export const u16ToV3 = (source: U16Doc): DocV3 => {
 /**
  * Strict inverse: throws ConvertError on any cell the u16 model cannot
  * express (non-CP437-identity glyph, raw-RGB or out-of-range palette
- * color, blink in an ice doc). The P2 format-budget linter grows from
- * these checks.
+ * color, blink in an ice doc). The format-budget linter builds on these
+ * checks.
  */
 export const v3ToU16 = (doc: DocV3, frameIndex = 0): U16Doc => {
 	const frame = doc.frames[frameIndex];
@@ -143,15 +142,6 @@ export const v3ToU16 = (doc: DocV3, frameIndex = 0): U16Doc => {
 };
 
 /**
- * Lossy projection for docs the u16 model cannot express: the chunk
- * fallback renderer, the collab protocol (u16 until P4), and the tools'
- * classic16 view all read this after a tnd/dur/envelope import. Raw-RGB
- * and high palette colors quantize to the nearest default-palette entry
- * (foregrounds over 16, backgrounds over the blink-legal range), and
- * non-CP437 glyphs degrade to '?' exactly like v2's lenient UTF-8
- * reader. Never use this where v3ToU16's strictness is the point.
- */
-/**
  * Quantize any color word to a classic palette index below `limit`:
  * in-range indexes pass through, everything else (raw RGB, indexes
  * beyond the limit) lands on the nearest default-palette entry. The
@@ -195,6 +185,15 @@ export const quantizeColorWord = (
 	return best;
 };
 
+/**
+ * Lossy projection for docs the u16 model cannot express: the chunk
+ * fallback renderer, the collab protocol (still u16), and the tools'
+ * classic16 view all read this after a tnd/dur/envelope import. Raw-RGB
+ * and high palette colors quantize to the nearest default-palette entry
+ * (foregrounds over 16, backgrounds over the blink-legal range), and
+ * non-CP437 glyphs degrade to '?' like v2's lenient UTF-8 reader. Never
+ * use this where v3ToU16's strictness is the point.
+ */
 export const v3ToU16Lossy = (doc: DocV3, frameIndex = 0): U16Doc => {
 	const frame = doc.frames[frameIndex];
 	if (!frame) {

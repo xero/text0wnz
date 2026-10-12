@@ -1,8 +1,8 @@
 /**
- * t0wnz extension suite v1 (PLAN §3.6.3): wire validation, the sync
- * RLE, and the down-conversion that keeps vanilla peers coherent in
+ * t0wnz extension suite v1: wire validation, the sync RLE, and the
+ * down-conversion that keeps vanilla peers coherent in
  * mixed rooms. Down-convert semantics are pinned against
- * v3ToU16Lossy's blink/ice fold — the two projections must never
+ * v3ToU16Lossy's blink/ice fold; the two projections must never
  * drift apart.
  */
 import { describe, it, expect } from 'vitest';
@@ -115,7 +115,7 @@ describe('extCellToBlock down-conversion', () => {
 			false,
 			defaults,
 		);
-		// pure red lands on dim red 4 (the P5 lesson: not bright 12)
+		// pure red lands on dim red 4, never bright 12
 		expect(block.fg).toBe(4);
 		expect(block.bg).toBe(0);
 	});
@@ -141,7 +141,7 @@ describe('blockToExtCell', () => {
 	});
 
 	it('folds non-characters to ? instead of poisoning the projection', () => {
-		// a smuggled surrogate here once made every room save throw
+		// a smuggled surrogate here would make every room save throw
 		expect(blockToExtCell({ code: 0xd800, fg: 7, bg: 0 }).u).toBe(63);
 		expect(blockToExtCell({ code: 0x110000, fg: 7, bg: 0 }).u).toBe(63);
 	});

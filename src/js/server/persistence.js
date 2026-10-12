@@ -1,9 +1,9 @@
 /**
  * Room persistence through the shared codecs (PLAN §3.6.3): the live
  * wire-shaped room doc converts through joinDocToDoc and saves as the
- * native .0wnz envelope. Legacy v2 session files (<room>.bin, the
- * BinaryText + SAUCE format the old server wrote) migrate on first
- * load through the core BIN codec. Hourly backups are sha1-deduped:
+ * native .0wnz envelope. Legacy v2 session files (<room>.bin,
+ * BinaryText + SAUCE) migrate on first load through the core BIN
+ * codec. Hourly backups are sha1-deduped:
  * a timestamped copy lands only when the content hash changed.
  * (No @ts-check: node builtin types are not in the repo's TS lib set,
  * same reasoning as journalWorker.js.)
@@ -40,7 +40,7 @@ export const roomFile = (dir, roomName) =>
 export const saveRoom = async (room, dir) => {
 	await mkdir(dir, { recursive: true });
 	// token BEFORE the writes: mutations landing mid-write must keep
-	// the room dirty for the next save (review finding)
+	// the room dirty for the next save
 	const token = room.dirtyToken();
 	const join = room.toJoinDoc();
 	const ext = room.extState();
@@ -61,7 +61,7 @@ export const saveRoom = async (room, dir) => {
 	await writeFile(roomFile(dir, room.name), bytes);
 	// the sidecar keeps full session fidelity (palette, font bytes,
 	// comments, chat, ext cells) so a restart never degrades the live
-	// room (review finding)
+	// room
 	await writeFile(
 		stateFile(dir, room.name),
 		JSON.stringify({ join, chat: room.chatHistory(), ext }),
@@ -134,8 +134,8 @@ export const loadRoomDoc = async (dir, roomName) => {
 	}
 	const legacy = path.join(dir, `${roomName}.bin`);
 	if (existsSync(legacy)) {
-		// the old server wrote BinaryText + SAUCE; the core codec decodes
-		// it to a v3 doc, and docToJoinDoc projects to wire blocks
+		// legacy v2 .bin is BinaryText + SAUCE; the core codec decodes it
+		// to a v3 doc, and docToJoinDoc projects to wire blocks
 		const decoded = decodeBin(await readFile(legacy));
 		return withData(docToJoinDoc(decoded.doc, decoded.meta ?? {}));
 	}

@@ -9,7 +9,6 @@ import {
 } from '../../src/js/client/freehandTools.js';
 import { createSelectionTool } from '../../src/js/client/keyboard.js';
 
-// Mock dependencies
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		palette: {
@@ -22,7 +21,6 @@ vi.mock('../../src/js/client/state.js', () => ({
 		textArtCanvas: {
 			startUndo: vi.fn(),
 			drawHalfBlock: vi.fn(callback => {
-				// Mock the callback pattern
 				const mockCallback = vi.fn();
 				callback(mockCallback);
 			}),
@@ -126,7 +124,6 @@ vi.mock('../../src/js/client/toolbar.js', () => ({
 
 vi.mock('../../src/js/client/ui.js', () => ({
 	$: vi.fn(_ => {
-		// Create mock DOM elements
 		const mockElement = {
 			style: { display: 'block' },
 			classList: {
@@ -195,7 +192,6 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	})),
 }));
 
-// Mock global document and DOM methods
 const mockDocument = {
 	createElement: vi.fn(tag => ({
 		style: {},
@@ -226,7 +222,6 @@ const mockDocument = {
 	dispatchEvent: vi.fn(),
 };
 
-// Setup global mocks
 vi.stubGlobal('document', mockDocument);
 global.Image = vi.fn(() => ({
 	addEventListener: vi.fn(),

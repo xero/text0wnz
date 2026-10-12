@@ -4,7 +4,6 @@ import { Compression } from '../../src/js/client/compression.js';
 describe('Compression Utilities', () => {
 	describe('RLE Compression', () => {
 		it('should compress uniform data effectively', () => {
-			// Create array with repeating values
 			const input = new Uint16Array(100);
 			for (let i = 0; i < 100; i++) {
 				input[i] = 42;
@@ -16,14 +15,12 @@ describe('Compression Utilities', () => {
 		});
 
 		it('should not compress random data (return null)', () => {
-			// Create array with random values
 			const input = new Uint16Array(100);
 			for (let i = 0; i < 100; i++) {
 				input[i] = Math.floor(Math.random() * 65536);
 			}
 
 			const compressed = Compression.compressUint16Array(input);
-			// Random data should not compress well
 			expect(compressed).toBeNull();
 		});
 
@@ -137,7 +134,6 @@ describe('Compression Utilities', () => {
 
 		it('should handle round-trip compression and base64 conversion', () => {
 			const original = new Uint16Array(1000);
-			// Create data with some repetition
 			for (let i = 0; i < 500; i++) {
 				original[i] = 10;
 			}
@@ -145,23 +141,18 @@ describe('Compression Utilities', () => {
 				original[i] = 20;
 			}
 
-			// Compress
 			const compressed = Compression.compressUint16Array(original);
 			expect(compressed).not.toBeNull();
 
-			// Convert to base64
 			const base64 = Compression.compressedToBase64(compressed);
 
-			// Convert back from base64
 			const restoredCompressed = Compression.base64ToCompressed(base64);
 
-			// Decompress
 			const decompressed = Compression.decompressToUint16Array(
 				restoredCompressed,
 				original.length,
 			);
 
-			// Verify data integrity
 			expect(decompressed.length).toBe(original.length);
 			for (let i = 0; i < original.length; i++) {
 				expect(decompressed[i]).toBe(original[i]);

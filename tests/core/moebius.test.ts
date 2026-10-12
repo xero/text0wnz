@@ -1,8 +1,8 @@
 /**
- * Moebius wire codec (PLAN §3.6.1): the enum is pinned value-for-value
- * against moebiusXBIN doc.js:7, the RLE against libtextmode.js
+ * Moebius wire codec: the enum is pinned value-for-value against
+ * moebiusXBIN doc.js:7, the RLE against libtextmode.js
  * compress/uncompress (count = repeat + 1), the palette expansion
- * against palette.js:308, and the landmines (§3.6.2) each get a pin:
+ * against palette.js:308, and the landmines each get a pin:
  * Buffer-JSON font bytes, 6-vs-8-bit palette auto-detect, hardened
  * frame parsing (upstream servers crash on malformed frames; we drop).
  */

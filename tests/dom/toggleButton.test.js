@@ -4,18 +4,14 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { createToggleButton } from '../../src/js/client/ui.js';
 
-// Mock State module
 vi.mock('../../src/js/client/state.js', () => ({ default: {} }));
 
 describe('Toggle Button DOM Tests', () => {
 	let user;
 
 	beforeEach(() => {
-		// Clear DOM
 		document.body.innerHTML = '';
-		// Create a new userEvent instance for each test
 		user = userEvent.setup();
-		// Clear all mocks
 		vi.clearAllMocks();
 	});
 
@@ -205,7 +201,6 @@ describe('Toggle Button DOM Tests', () => {
 			const stateOneButton = screen.getByText('On');
 			stateOneButton.tabIndex = 0;
 
-			// Add keyboard event handler for accessibility
 			stateOneButton.addEventListener('keydown', e => {
 				if (e.key === 'Enter' || e.key === ' ') {
 					e.preventDefault();
@@ -237,7 +232,6 @@ describe('Toggle Button DOM Tests', () => {
 			const stateOneButton = screen.getByText('On');
 			const stateTwoButton = screen.getByText('Off');
 
-			// Add aria-pressed for accessibility
 			stateOneButton.setAttribute('role', 'button');
 			stateOneButton.setAttribute('aria-pressed', 'false');
 			stateTwoButton.setAttribute('role', 'button');
@@ -281,7 +275,6 @@ describe('Toggle Button DOM Tests', () => {
 			await user.click(screen.getByText('Choice Y'));
 			expect(toggle2Click2).toHaveBeenCalled();
 
-			// Other callbacks should not be called
 			expect(toggle1Click2).not.toHaveBeenCalled();
 			expect(toggle2Click1).not.toHaveBeenCalled();
 		});
@@ -325,7 +318,6 @@ describe('Toggle Button DOM Tests', () => {
 			const button1 = screen.getByText('State One');
 			const button2 = screen.getByText('State Two');
 
-			// Rapid clicking
 			await user.click(button1);
 			await user.click(button2);
 			await user.click(button1);

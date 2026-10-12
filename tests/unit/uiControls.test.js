@@ -8,7 +8,6 @@ import {
 	createModalController,
 } from '../../src/js/client/ui.js';
 
-// Mock the State module
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		textArtCanvas: {
@@ -35,16 +34,12 @@ vi.mock('../../src/js/client/state.js', () => ({
 
 describe('UI Controls and Controllers', () => {
 	beforeEach(() => {
-		// Clear DOM
 		document.body.innerHTML = '';
-		// Reset all mocks
 		vi.clearAllMocks();
 	});
 
 	afterEach(() => {
-		// Clean up any remaining DOM elements
 		document.body.innerHTML = '';
-		// Restore all mocks to prevent memory leaks
 		vi.restoreAllMocks();
 	});
 
@@ -230,7 +225,6 @@ describe('UI Controls and Controllers', () => {
 
 	describe('toggleFullscreen', () => {
 		it('should request fullscreen when not in fullscreen', () => {
-			// Mock fullscreen API
 			document.fullscreenEnabled = true;
 			document.fullscreenElement = null;
 			document.documentElement.requestFullscreen = vi.fn();
@@ -241,7 +235,6 @@ describe('UI Controls and Controllers', () => {
 		});
 
 		it('should exit fullscreen when in fullscreen', () => {
-			// Mock fullscreen API
 			document.fullscreenEnabled = true;
 			document.fullscreenElement = document.documentElement;
 			document.exitFullscreen = vi.fn();
@@ -258,7 +251,6 @@ describe('UI Controls and Controllers', () => {
 			modal.showModal = vi.fn();
 			modal.close = vi.fn();
 
-			// Create modal sections
 			[
 				'about',
 				'resize',
@@ -303,7 +295,6 @@ describe('UI Controls and Controllers', () => {
 			aboutModal.classList.add('hide');
 			document.body.appendChild(aboutModal);
 
-			// Create other modals
 			[
 				'resize',
 				'fonts',
@@ -457,7 +448,6 @@ describe('UI Controls and Controllers', () => {
 			const controller = createModalController(modal);
 			controller.focusEvents(onFocus, onBlur);
 
-			// Open modal should trigger focus
 			const aboutModal = document.createElement('div');
 			aboutModal.id = 'aboutModal';
 			aboutModal.classList.add('hide');

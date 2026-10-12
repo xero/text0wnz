@@ -11,7 +11,6 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// enable screenshots for all tests in this file
 test.use({ screenshot: 'on' });
 
 test.describe('File Open and Scrolling', () => {
@@ -21,38 +20,31 @@ test.describe('File Open and Scrolling', () => {
 	});
 
 	test('opens example ANSI file via file open', async ({ page }) => {
-		// Path to the example ANSI file in the repository
 		const exampleFilePath = path.join(
 			__dirname,
 			'../../docs/examples/ansi/x0-defcon25.ans',
 		);
 
-		// Open the file using the file input
 		await openFile(page, exampleFilePath);
 
-		// Wait for the file to be loaded and rendered
-		// TODO: Replace with specific indicator when file loading is complete
+		// TODO: replace with a specific indicator for load completion
 		await page.waitForTimeout(1500);
 
-		// Check that the canvas container is still visible (basic sanity check)
 		const canvasContainer = page.locator('#canvasContainer');
 		await expect(canvasContainer).toBeVisible();
 
-		// Verify file loaded by checking for known content
-		// The example file x0-defcon25.ans contains ANSI escape codes and artwork
-		// TODO: Adjust this assertion based on how the editor exposes loaded content
-		// For now, we'll check that at least one canvas element exists
+		// TODO: assert on loaded content once the editor exposes it; for
+		// now pin that at least one canvas exists
 		const canvases = page.locator('#canvasContainer canvas');
 		const canvasCount = await canvases.count();
 		expect(canvasCount).toBeGreaterThan(0);
 
-		// Additional check: position info should show valid coordinates
 		const positionInfo = page.locator('#positionInfo');
 		await expect(positionInfo).toBeVisible();
 	});
 
 	test('page down and page up keyboard scrolling', async ({ page }) => {
-		// First, load a large file to enable scrolling
+		// load a large file so the canvas can scroll
 		const exampleFilePath = path.join(
 			__dirname,
 			'../../docs/examples/ansi/x0-defcon25.ans',
@@ -60,36 +52,28 @@ test.describe('File Open and Scrolling', () => {
 		await openFile(page, exampleFilePath);
 		await page.waitForTimeout(1500);
 
-		// Focus the canvas/editor for keyboard input
 		await focusCanvas(page);
 
-		// Get initial scroll position
 		const initialScroll = await getViewportScrollPosition(page);
 
-		// Press PageDown
 		await page.keyboard.press('PageDown');
 		await page.waitForTimeout(500);
 
-		// Get new scroll position - should have moved down
 		const afterPageDown = await getViewportScrollPosition(page);
 
-		// Verify scroll position changed (scrolled down)
-		// Note: The exact amount depends on viewport height and font size
+		// the exact scroll amount depends on viewport height and font size
 		expect(afterPageDown.scrollTop).toBeGreaterThan(initialScroll.scrollTop);
 
-		// Press PageUp
 		await page.keyboard.press('PageUp');
 		await page.waitForTimeout(500);
 
-		// Get scroll position after PageUp
 		const afterPageUp = await getViewportScrollPosition(page);
 
-		// Verify scroll position moved back up (should be closer to initial)
 		expect(afterPageUp.scrollTop).toBeLessThan(afterPageDown.scrollTop);
 	});
 
 	test('mouse wheel scrolls canvas', async ({ page }) => {
-		// Load a large file to enable scrolling
+		// load a large file so the canvas can scroll
 		const exampleFilePath = path.join(
 			__dirname,
 			'../../docs/examples/ansi/x0-defcon25.ans',
@@ -97,7 +81,6 @@ test.describe('File Open and Scrolling', () => {
 		await openFile(page, exampleFilePath);
 		await page.waitForTimeout(1500);
 
-		// Get the canvas container or viewport element
 		const viewport = page.locator('#viewport');
 		const box = await viewport.boundingBox();
 
@@ -105,10 +88,8 @@ test.describe('File Open and Scrolling', () => {
 			throw new Error('Viewport not found or not visible');
 		}
 
-		// Get initial scroll position
 		const initialScroll = await getViewportScrollPosition(page);
 
-		// Scroll down with mouse wheel
 		// Aim at the viewport background left of the drawing canvas, not the
 		// canvas itself or the menus
 		const canvasBox = await page.locator('#canvasContainer').boundingBox();
@@ -120,24 +101,18 @@ test.describe('File Open and Scrolling', () => {
 		);
 		expect(target).toBe('viewport');
 		await page.mouse.move(wheelX, wheelY);
-		// Scroll down (positive deltaY)
 		await page.mouse.wheel(0, 300);
 		await page.waitForTimeout(500);
 
-		// Get new scroll position
 		const afterScrollDown = await getViewportScrollPosition(page);
 
-		// Verify scrolled down
 		expect(afterScrollDown.scrollTop).toBeGreaterThan(initialScroll.scrollTop);
 
-		// Scroll back up with mouse wheel
 		await page.mouse.wheel(0, -300);
 		await page.waitForTimeout(500);
 
-		// Get scroll position after scrolling up
 		const afterScrollUp = await getViewportScrollPosition(page);
 
-		// Verify scrolled back up (should be closer to initial position)
 		expect(afterScrollUp.scrollTop).toBeLessThan(afterScrollDown.scrollTop);
 	});
 });

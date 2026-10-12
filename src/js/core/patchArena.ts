@@ -1,13 +1,13 @@
 /**
- * Per-stroke patch arena (PLAN.md §3.2 undo): each stroke is a set of
+ * Per-stroke patch arena: each stroke is a set of
  * `(index, before, after)` triples per touched plane plus metadata
  * `{userId, frame}`. Strokes live in a byte-capped ring; the same
- * op-patch encoding is the substrate for the OPFS journal and the O13
+ * op-patch encoding is the substrate for the OPFS journal and the
  * frame delta path, so triples freeze into flat Uint32Arrays on commit.
  *
- * Collab rule (§3.6.3): undo is local per-user inverse-op stacks and
- * remote ops never enter it, so userId is metadata, not a filter here;
- * each client owns one arena of its own strokes.
+ * Collab rule: undo is local per-user inverse-op stacks and remote ops
+ * never enter it, so userId is metadata, not a filter here; each
+ * client owns one arena of its own strokes.
  */
 
 import { DocV3 } from './doc.js';
@@ -75,13 +75,12 @@ export interface PatchArena {
 }
 
 /**
- * Default ring cap (O3, owner-resolved 2026-10-11 at 64MB). One v3
- * cell write is at most 3 planes x 12B of triple = 36B, so this holds
- * a single undoable op of ~1.9M cells with full plane coverage —
- * roughly 18x the largest real collab piece (80x1295). Strokes evict
- * oldest-first past the cap; an op bigger than the whole ring is
- * itself un-undoable (accepted: a full 10M-cell op would need ~360MB
- * of triples, unreasonable on mobile).
+ * Default ring cap. One v3 cell write is at most 3 planes x 12B of
+ * triple = 36B, so 64MB holds a single undoable op of ~1.9M cells with
+ * full plane coverage, roughly 18x the largest real collab piece
+ * (80x1295). Strokes evict oldest-first past the cap; an op bigger
+ * than the whole ring is itself un-undoable (accepted: a full 10M-cell
+ * op would need ~360MB of triples, unreasonable on mobile).
  */
 export const DEFAULT_UNDO_BYTE_CAP = 64 * 1024 * 1024;
 
@@ -89,7 +88,7 @@ export interface PatchArenaOptions {
 	byteCap?: number;
 	/**
 	 * Fires once per committed (non-empty) stroke, after the ring
-	 * bookkeeping: the OPFS journal's append hook (PLAN §3.2).
+	 * bookkeeping: the OPFS journal's append hook.
 	 */
 	onCommit?: (stroke: CommittedStroke) => void;
 }

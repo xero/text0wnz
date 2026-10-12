@@ -1,8 +1,7 @@
 /**
- * Reference-image overlay (P6 steal): the visibility contract rides
- * the canvasOverlay 'enabled' class (owner-reported: the first cut
- * toggled 'hide' while the class kept the overlay display:none, so
- * nothing ever appeared).
+ * Reference-image overlay: visibility rides the canvasOverlay
+ * 'enabled' class; a 'hide' toggle alone leaves the overlay
+ * display:none and nothing ever appears.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createReferenceImage } from '../../src/js/client/referenceImage.js';

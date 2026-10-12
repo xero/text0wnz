@@ -1,8 +1,7 @@
 /**
- * Frames timeline (PLAN §4 P6): the animation panel — frame strip,
+ * Frames timeline: the animation panel. Frame strip,
  * add/duplicate/delete, per-frame delay, live-fps playback, onion
- * skin. Pure UI over the canvas frames API; the doc model has carried
- * frames since P2 and .dur imports already arrive multi-frame.
+ * skin. Pure UI over the canvas frames API.
  *
  * Collab sessions are single-frame by policy (no frame op exists in
  * the protocol): the controls disable with a visible note while
@@ -37,8 +36,7 @@ const createFramesPanel = () => {
 	let baudActive = false;
 	let baudRaf = 0;
 	// every stop/play bumps the token; a step chain that outlives its
-	// token aborts, so NO stale timer can ever keep animating (owner
-	// report: stop sometimes did not stop — this makes that impossible)
+	// token aborts, so no stale timer can ever keep animating
 	let playToken = 0;
 
 	const canvas = () => State.textArtCanvas;

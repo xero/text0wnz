@@ -84,9 +84,7 @@ describe('Zoom Functionality', () => {
 		it('should cache glyphs with scaleFactor in key', () => {
 			const lazyFont = createLazyFont(fontData, mockPalette, false, 2);
 
-			// First call generates glyph
 			const glyph1 = lazyFont.getGlyph(65, 15, 0);
-			// Second call should use cache
 			const glyph2 = lazyFont.getGlyph(65, 15, 0);
 
 			expect(glyph1).toBe(glyph2); // Same object reference (cached)
@@ -97,7 +95,6 @@ describe('Zoom Functionality', () => {
 		let container;
 
 		beforeEach(() => {
-			// Mock State module
 			vi.doMock('../../src/js/client/state.js', () => ({
 				default: {
 					font: {
@@ -172,9 +169,8 @@ describe('Zoom Functionality', () => {
 
 	describe('Font loading with scaleFactor', () => {
 		it('should pass scaleFactor to font loader functions', async () => {
-			// This is more of an integration test
-			// The actual font loading is tested in font.test.js
-			// Here we just verify the structure exists
+			// font loading itself is covered in font.test.js; this just checks
+			// the structure exists
 			const { loadFontFromImage, loadFontFromXBData } = await import(
 				'../../src/js/client/font.js'
 			);

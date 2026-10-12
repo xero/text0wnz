@@ -1,6 +1,5 @@
 /**
- * Shared byte helpers for the 0wnzlib codecs (PLAN.md §3.3). Pure TS,
- * no DOM.
+ * Shared byte helpers for the 0wnzlib codecs. Pure TS, no DOM.
  */
 
 export class CodecError extends Error {
@@ -208,7 +207,7 @@ const pumpThrough = async (
 			total += value.length;
 			if (total > maxBytes) {
 				// a decompression bomb must die DURING the read, not after
-				// it has been buffered (review finding)
+				// it has been buffered
 				await reader.cancel();
 				throw new CodecError(`decompressed stream exceeds ${maxBytes} bytes`);
 			}

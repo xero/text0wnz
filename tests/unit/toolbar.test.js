@@ -14,17 +14,13 @@ vi.mock('../../src/js/client/state.js', () => ({
 
 describe('Toolbar', () => {
 	beforeEach(() => {
-		// Clear DOM
 		document.body.innerHTML = '';
-		// Reset toolbar state by creating new tools
-		// We can't directly reset the toolbar's internal state, so we work with it as-is
+		// toolbar internal state is not resettable; tests work with it as-is
 		vi.clearAllMocks();
 	});
 
 	afterEach(() => {
-		// Clean up DOM
 		document.body.innerHTML = '';
-		// Restore all mocks
 		vi.restoreAllMocks();
 	});
 
@@ -49,7 +45,6 @@ describe('Toolbar', () => {
 
 			Toolbar.add(button, onFocus, onBlur);
 
-			// Simulate click
 			button.click();
 
 			expect(onFocus).toHaveBeenCalled();
@@ -93,11 +88,9 @@ describe('Toolbar', () => {
 			const tool1 = Toolbar.add(button1, onFocus1, onBlur1);
 			const tool2 = Toolbar.add(button2, onFocus2, onBlur2);
 
-			// Enable first tool
 			tool1.enable();
 			expect(button1.classList.contains('toolbarDisplayed')).toBe(true);
 
-			// Enable second tool - should disable first
 			tool2.enable();
 			expect(button1.classList.contains('toolbarDisplayed')).toBe(false);
 			expect(button2.classList.contains('toolbarDisplayed')).toBe(true);
@@ -113,7 +106,6 @@ describe('Toolbar', () => {
 
 			const tool = Toolbar.add(button, onFocus, onBlur);
 
-			// Enable tool twice
 			tool.enable();
 			tool.enable();
 
@@ -143,21 +135,17 @@ describe('Toolbar', () => {
 
 			Toolbar.add(button, onFocus, onBlur);
 
-			// Try to switch to non-existent tool
 			Toolbar.switchTool('non-existent-tool');
 
-			// Should not affect existing tool
 			expect(onFocus).not.toHaveBeenCalled();
 		});
 	});
 
 	describe('Toolbar.getCurrentTool', () => {
 		it('should return null when no tool is active', () => {
-			// Create a fresh toolbar state by working with new tools
 			const currentTool = Toolbar.getCurrentTool();
 
-			// If there's already a current tool from previous tests, we need to work with that
-			// In a real scenario, this would be null initially
+			// a current tool may leak from earlier tests; fresh runs see null
 			expect(typeof currentTool === 'string' || currentTool === null).toBe(
 				true,
 			);
@@ -192,7 +180,6 @@ describe('Toolbar', () => {
 			const tool1 = Toolbar.add(button1, onFocus1, onBlur1);
 			const tool2 = Toolbar.add(button2, onFocus2, onBlur2);
 
-			// Enable first tool
 			tool1.enable();
 			vi.clearAllMocks(); // Clear the calls from initial enable
 
@@ -200,7 +187,6 @@ describe('Toolbar', () => {
 			tool2.enable();
 			vi.clearAllMocks(); // Clear the calls from switching
 
-			// Return to previous tool
 			Toolbar.returnToPreviousTool();
 
 			expect(onFocus1).toHaveBeenCalled();
@@ -216,8 +202,6 @@ describe('Toolbar', () => {
 
 			Toolbar.add(button, onFocus, onBlur);
 
-			// Try to return to previous tool when none exists
-			// This should not throw an error
 			expect(() => Toolbar.returnToPreviousTool()).not.toThrow();
 		});
 	});
@@ -228,7 +212,6 @@ describe('Toolbar', () => {
 			const onFocusFuncs = [];
 			const onBlurFuncs = [];
 
-			// Register multiple tools
 			for (let i = 0; i < 3; i++) {
 				const button = document.createElement('div');
 				button.id = `multi-tool-${i}`;
@@ -242,7 +225,6 @@ describe('Toolbar', () => {
 				tools.push(tool);
 			}
 
-			// Enable each tool and verify behavior
 			tools.forEach((tool, index) => {
 				tool.enable();
 				expect(onFocusFuncs[index]).toHaveBeenCalled();
@@ -253,7 +235,6 @@ describe('Toolbar', () => {
 			const button = document.createElement('div');
 			button.id = 'undefined-callbacks-tool';
 
-			// Should not throw when callbacks are undefined
 			expect(() => {
 				const tool = Toolbar.add(button, undefined, undefined);
 				tool.enable();
@@ -309,13 +290,10 @@ describe('Toolbar', () => {
 
 			const tool = Toolbar.addLazy(button, toolLoader);
 
-			// Tool loader should not have been called yet
 			expect(toolLoader).not.toHaveBeenCalled();
 
-			// Enable the tool - this should trigger loading
 			await tool.enable();
 
-			// Now tool loader should have been called
 			expect(toolLoader).toHaveBeenCalled();
 			expect(onFocus).toHaveBeenCalled();
 		});
@@ -333,13 +311,10 @@ describe('Toolbar', () => {
 
 			const tool = Toolbar.addLazy(button, toolLoader);
 
-			// Enable twice
 			await tool.enable();
 			await tool.enable();
 
-			// Tool loader should only be called once
 			expect(toolLoader).toHaveBeenCalledOnce();
-			// But onFocus should be called twice
 			expect(onFocus).toHaveBeenCalledTimes(2);
 		});
 
@@ -353,10 +328,8 @@ describe('Toolbar', () => {
 
 			const tool = Toolbar.addLazy(button, toolLoader);
 
-			// Should not throw
 			await expect(tool.enable()).resolves.not.toThrow();
 
-			// Subsequent enable should also not throw
 			await expect(tool.enable()).resolves.not.toThrow();
 		});
 
@@ -381,13 +354,11 @@ describe('Toolbar', () => {
 				onBlur: vi.fn(),
 			}));
 
-			// Enable regular tool first
 			regularTool.enable();
 			expect(onFocusRegular).toHaveBeenCalled();
 
 			vi.clearAllMocks();
 
-			// Switch to lazy tool
 			await lazyTool.enable();
 
 			expect(onBlurRegular).toHaveBeenCalled();
@@ -409,7 +380,6 @@ describe('Toolbar', () => {
 
 			Toolbar.addLazy(button, toolLoader);
 
-			// Switch to the lazy tool using switchTool
 			await Toolbar.switchTool('lazy-switch-tool-test');
 
 			expect(toolLoader).toHaveBeenCalled();
@@ -434,7 +404,6 @@ describe('Toolbar', () => {
 			const tool2 = Toolbar.add(button2, onFocus2, vi.fn());
 			const tool3 = Toolbar.add(button3, onFocus3, vi.fn());
 
-			// Rapid switching
 			tool1.enable();
 			tool2.enable();
 			tool3.enable();
@@ -470,14 +439,12 @@ describe('Toolbar', () => {
 			const tool1 = Toolbar.add(button1, onFocus1, vi.fn());
 			const tool2 = Toolbar.add(button2, onFocus2, vi.fn());
 
-			// Enable first tool
 			tool1.enable();
 
 			// Enable second tool (makes first tool the "previous" tool)
 			tool2.enable();
 			vi.clearAllMocks();
 
-			// Return to previous tool
 			Toolbar.returnToPreviousTool();
 
 			expect(onFocus1).toHaveBeenCalled();
@@ -490,10 +457,8 @@ describe('Toolbar', () => {
 
 			Toolbar.add(button, onFocus, vi.fn());
 
-			// getCurrentTool should trigger closeMenu
 			const current = Toolbar.getCurrentTool();
 
-			// Should not throw
 			expect(typeof current).toBe('string');
 		});
 	});

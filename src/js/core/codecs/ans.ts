@@ -8,20 +8,19 @@
  * - Cursor-forward at the right edge wraps first (v2 'C' behavior).
  * - EL ('K') clears with attribute 0 from the cursor to EOL.
  *
- * The UTF-8 read builds v3 planes natively (P5): codepoints hit the
- * strict CP437 reverse map first and intern into the doc glyph table
+ * The UTF-8 read builds v3 planes natively: codepoints hit the strict
+ * CP437 reverse map first and intern into the doc glyph table
  * otherwise, extended SGR (90-97/100-107, 38/48;5;n, 38/48;2;r;g;b)
  * lands as tag-bit color words, and one LF immediately after an
- * auto-wrap is swallowed (real terminals defer the wrap, so the
- * full-width-rows-plus-LF files the v2 writer produced now reimport
- * without the historical doubled blank rows). Everything the v2
- * reader accepted still decodes (old-file leniency, D9).
+ * auto-wrap is swallowed (real terminals defer the wrap, so full-width
+ * rows plus LF mean one row, not two). Everything the v2 reader
+ * accepted still decodes (old-file leniency).
  *
- * encodeUtf8 is the v3 UTF-8 writer (D9 hard break): one cell per
- * column, LF endings (O1), SGR per color tier, ice-vs-blink per the
- * artist's D8 toggle (ice default), SAUCE appended with the artist's
- * meta verbatim (O1: nothing auto-added). encodeAns keeps the
- * byte-compatible v2 CP437/plain-text paths.
+ * encodeUtf8 is the v3 UTF-8 writer: one cell per column, LF endings,
+ * SGR per color tier, ice-vs-blink per the artist's toggle (ice
+ * default), SAUCE appended with the artist's meta verbatim (nothing
+ * auto-added). encodeAns keeps the byte-compatible v2 CP437/plain-text
+ * paths.
  */
 
 import {
@@ -665,8 +664,8 @@ export interface EncodeAnsOptions {
 
 /**
  * v2 encodeANSi port from a v3 doc. CP437 output gets SAUCE appended
- * after a 0x1a; UTF-8/plain output gets none (v2 behavior; UTF-8 SAUCE
- * content is O1, due at P5 with the v3 writer).
+ * after a 0x1a; UTF-8/plain output gets none (v2 behavior; encodeUtf8
+ * is the UTF-8 writer that carries SAUCE).
  */
 export const encodeAns = (
 	doc: DocV3,
@@ -815,11 +814,11 @@ export const encodeAns = (
 };
 
 /**
- * Classic ansimation (P6): clear once, then every frame homes the
- * cursor and repaints full-width — playback speed is the medium's
- * (baud rate), exactly like the scene's .ans animations. CP437 via the
- * lossy projection per frame; SAUCE marks Character/ANSiMation
- * (dataType 1, fileType 2).
+ * Classic ansimation: clear once, then every frame homes the cursor
+ * and repaints full-width; playback speed is the medium's (baud rate),
+ * exactly like the scene's .ans animations. CP437 via the lossy
+ * projection per frame; SAUCE marks Character/ANSiMation (dataType 1,
+ * fileType 2).
  */
 export const encodeAnsimation = (
 	doc: DocV3,
@@ -852,10 +851,10 @@ export const encodeAnsimation = (
 
 export interface EncodeUtf8Options {
 	/**
-	 * D8, the artist's choice for blink-attr cells: 'ice' (default)
+	 * The artist's choice for blink-attr cells: 'ice' (default)
 	 * presents them as bright backgrounds with the SAUCE iCE flag set;
 	 * 'blink' writes SGR 5 with the normal background. Ice semantics are
-	 * 16-color-only (O7): a blink attr over an extended background drops
+	 * 16-color-only: a blink attr over an extended background drops
 	 * under 'ice' and writes SGR 5 under 'blink'.
 	 */
 	blinkMode?: 'ice' | 'blink';
@@ -868,13 +867,13 @@ export interface EncodeUtf8Options {
 const UTF8_SGR_RESET = [27, 91, 48, 109]; // ESC[0m
 
 /**
- * The v3 UTF-8 writer (D9 hard break): one cell per column, full-width
- * rows with LF endings (O1) - correct in real terminals, which defer
- * the wrap, and lossless through this file's reader, which swallows
- * the post-wrap LF. SGR per color tier: 30-37/90-97 (+40-47/100-107)
- * for palette 0-15, 38/48;5;n for higher palette indexes, 38/48;2 for
- * frozen RGB. Unicode glyphs write their glyph-table codepoints. SAUCE
- * carries the artist's meta verbatim; nothing is auto-added (O1).
+ * The v3 UTF-8 writer: one cell per column, full-width rows with LF
+ * endings (correct in real terminals, which defer the wrap, and
+ * lossless through this file's reader, which swallows the post-wrap
+ * LF). SGR per color tier: 30-37/90-97 (+40-47/100-107) for palette
+ * 0-15, 38/48;5;n for higher palette indexes, 38/48;2 for frozen RGB.
+ * Unicode glyphs write their glyph-table codepoints. SAUCE carries the
+ * artist's meta verbatim; nothing is auto-added.
  */
 export const encodeUtf8 = (
 	doc: DocV3,
@@ -963,7 +962,7 @@ export const encodeUtf8 = (
 					bg = brighten(bg); // ice presentation
 					anyBrightened = true;
 				}
-				// ice over an extended background: blink drops (O7)
+				// ice over an extended background: blink drops
 			}
 			if (!plain) {
 				const params: number[][] = [];

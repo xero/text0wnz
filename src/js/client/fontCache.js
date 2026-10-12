@@ -1,6 +1,5 @@
 /**
- * Font Cache System
- * Preloads and caches fonts for faster switching
+ * Font cache: preloads and caches font PNGs for faster switching.
  */
 import State from './state.js';
 import magicNumbers from './magicNumbers.js';
@@ -9,16 +8,10 @@ export const FontCache = {
 	// In-memory cache for browsers without Cache API
 	memoryCache: new Map(),
 
-	/**
-	 * Check if Cache API is available
-	 */
 	_hasCacheAPI() {
 		return 'caches' in globalThis && globalThis.caches !== undefined;
 	},
 
-	/**
-	 * Preload common fonts
-	 */
 	async preloadCommonFonts() {
 		const commonFonts = [
 			magicNumbers.DEFAULT_FONT, // CP437 8x16 - ANSI/CBIN Default
@@ -29,12 +22,10 @@ export const FontCache = {
 			try {
 				const cache = await globalThis.caches.open('text0wnz-fonts');
 
-				// Preload all common fonts
 				await Promise.all(
 					commonFonts.map(async fontName => {
 						const fontUrl = `${State.fontDir}${fontName}.png`;
 
-						// Check if already cached
 						if (!(await cache.match(fontUrl))) {
 							try {
 								await cache.add(fontUrl);
@@ -48,7 +39,6 @@ export const FontCache = {
 				console.error('[FontCache] Error preloading fonts:', error);
 			}
 		} else {
-			// For browsers without Cache API, use fetch and store in memory
 			commonFonts.forEach(fontName => {
 				const fontUrl = `${State.fontDir}${fontName}.png`;
 
@@ -67,9 +57,6 @@ export const FontCache = {
 		}
 	},
 
-	/**
-	 * Get a font from cache
-	 */
 	async getFont(fontName) {
 		const fontUrl = `${State.fontDir}${fontName}.png`;
 
@@ -85,7 +72,6 @@ export const FontCache = {
 				console.warn('[FontCache] Error fetching from cache:', error);
 			}
 		} else if (this.memoryCache.has(fontName)) {
-			// Return from memory cache
 			return new globalThis.Response(this.memoryCache.get(fontName));
 		}
 
@@ -114,9 +100,6 @@ export const FontCache = {
 		return null;
 	},
 
-	/**
-	 * Clear the font cache
-	 */
 	async clearCache() {
 		if (this._hasCacheAPI()) {
 			try {

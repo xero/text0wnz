@@ -1,6 +1,6 @@
 /**
- * Pointer-to-cell mapping (PLAN §3.1): ONE pure function family shared
- * by hit-testing, drawing overlays, and tests, so every consumer agrees
+ * Pointer-to-cell mapping: ONE pure function family shared by
+ * hit-testing, drawing overlays, and tests, so every consumer agrees
  * about which cell a pixel belongs to at every zoom.
  *
  * The formula is v2's getXYCoords transcribed exactly:

@@ -1,16 +1,15 @@
 /**
- * WebGL2 text renderer (PLAN.md §3.1, §4 P1), the editor's DEFAULT renderer
- * since O11 (owner-approved 2026-10-10). ?renderer=2d forces the legacy
- * chunk renderer, which also remains the automatic fallback wherever webgl2
- * is unavailable, until its owner-triggered deletion.
+ * WebGL2 text renderer (PLAN.md §3.1), the editor's DEFAULT renderer.
+ * ?renderer=2d forces the legacy chunk renderer, which is also the
+ * automatic fallback wherever webgl2 is unavailable.
  *
- * Architecture: the slack-buffer pattern validated by the P1 scroll spike.
- * One canvas positioned absolutely inside #canvasContainer, sized to the
- * viewport plus slack screens of overdraw; the native scroller moves it in
- * compositor-sync, and scrolling only re-anchors + repaints when the
- * viewport nears a drawn edge. Every paint is one instanced draw over the
- * coverage window, so full repaints, zoom, font, palette, and ice changes
- * all cost well under a frame (vs seconds on the chunk renderer).
+ * Architecture: the slack-buffer pattern. One canvas positioned
+ * absolutely inside #canvasContainer, sized to the viewport plus slack
+ * screens of overdraw; the native scroller moves it in compositor-sync,
+ * and scrolling only re-anchors + repaints when the viewport nears a
+ * drawn edge. Every paint is one instanced draw over the coverage
+ * window, so full repaints, zoom, font, palette, and ice changes all
+ * cost well under a frame.
  *
  * Renders the v3 doc planes (PLAN §3.2): per-instance data is the raw
  * glyph/fg/bg words, and color resolve follows the tag bit in-shader -
@@ -22,24 +21,23 @@
  *
  * Glyph ids are 16-bit (PLAN §3.2): 0-255 address the classic atlas,
  * higher ids are doc glyph-table entries rendered from the hex font
- * pages (P5). The repaint interleave remaps those ids to slots in a
+ * pages. The repaint interleave remaps those ids to slots in a
  * second, grow-on-demand atlas texture; a glyph whose block has not
  * arrived yet (hexFontPages fetches lazily and repaints on landing),
  * is absent, or is wide under the v1 single-width policy renders the
  * reserved substitute slot (a hollow box, deliberately distinct from
- * any real glyph). The 16-entry palette uniform still masks indexes
- * to 0-15 until 256-color docs arrive.
+ * any real glyph).
  *
- * Context loss (mandatory per plan): loss is intercepted, GL state is
- * rebuilt on restore; repeated loss leaves the last frame visible and logs.
+ * Context loss is intercepted and GL state rebuilt on restore;
+ * repeated loss leaves the last frame visible and logs.
  */
 import State from './state.js';
 import { createCanvas } from './ui.js';
 import { xterm256RGB } from '../core/codecs/dur.js';
 
-// Winning spike parameters (tests/baselines/p1-scroll-spike.json): zero
-// blank frames at every tested velocity; tolerance well under half the
-// slack so re-anchoring never degenerates to every-frame thrash
+// Baselined in tests/baselines/p1-scroll-spike.json: zero blank frames
+// at every tested velocity; tolerance well under half the slack so
+// re-anchoring never degenerates to every-frame thrash
 const SLACK_SCREENS = 1.5;
 const TOLERANCE_SCREENS = 0.5;
 
@@ -126,7 +124,7 @@ void main() {
 	fragColor = bit > 0.5 ? v_fg : v_bg;
 }`;
 
-// CRT post pass (PLAN §3.1, P6): scene renders into an FBO, then one
+// CRT post pass (PLAN §3.1): scene renders into an FBO, then one
 // fullscreen quad applies scanlines (one per glyph pixel row), a soft
 // aperture-grille mask, cheap horizontal phosphor bleed, and a
 // vignette. GL-only, like the minimap and onion skin.
@@ -360,11 +358,10 @@ const createGLRenderer = (canvasContainer, host) => {
 
 	// unpack the 1bpp font into cached per-glyph bit rows (shared by the
 	// atlas upload and the CPU export rasterizer). Deliberately capped at
-	// 256 glyphs: the u16 doc model (charCode<<8 | attr) holds 8 bits of
-	// charCode, so no cell anywhere in the editor can address an upper-page
-	// glyph; the chunk renderer and both exporters have the same reach.
-	// 512-glyph XB fonts survive save round-trips at the codec level, and
-	// upper-page ADDRESSING arrives with the P2 doc model + glyph table.
+	// 256 glyphs: ids above 255 are doc glyph-table entries served by the
+	// unicode pages, never the classic font, so the upper page of a
+	// 512-glyph XB font is unaddressable here (it still survives save
+	// round-trips at the codec level).
 	const unpackFontBits = fontData => {
 		const bits = new Uint8Array(fontData.width * fontData.height * 256);
 		for (let k = 0; k < bits.length; k++) {
@@ -785,7 +782,7 @@ const createGLRenderer = (canvasContainer, host) => {
 	};
 
 	// cell-level invalidations: anything inside coverage repaints it whole
-	// (one instanced draw, ~0.05ms measured in the spike)
+	// (one instanced draw, ~0.05ms)
 	const drawRegion = (x, y, w, h) => {
 		if (y + h <= anchorRow || y >= anchorRow + coverageRows) {
 			return;
@@ -903,7 +900,7 @@ const createGLRenderer = (canvasContainer, host) => {
 		return completeCanvas;
 	};
 
-	// context loss: mandatory interception + restore (PLAN.md §3.1)
+	// context loss: intercept and rebuild on restore (PLAN.md §3.1)
 	canvas.addEventListener('webglcontextlost', event => {
 		event.preventDefault();
 		contextLost = true;

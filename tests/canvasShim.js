@@ -10,7 +10,6 @@ beforeAll(() => {
 	}
 	HTMLCanvasElement.prototype.getContext = function (type) {
 		if (type === '2d') {
-			// Reuse cached context if available
 			if (contextCache.has(this)) {
 				return contextCache.get(this);
 			}
@@ -86,7 +85,6 @@ beforeAll(() => {
 				globalCompositeOperation: 'source-over',
 			};
 
-			// Cache the context
 			contextCache.set(this, context);
 			return context;
 		}
@@ -105,8 +103,7 @@ beforeAll(() => {
 	};
 });
 
-// Clean up canvas context cache after each test to prevent memory leaks
 afterEach(() => {
-	// Note: WeakMap will automatically clean up when canvas elements are garbage collected,
-	// but we clear document.body.innerHTML in tests which helps with cleanup
+	// No explicit cleanup: the WeakMap drops contexts with their canvases,
+	// and tests clear document.body.innerHTML.
 });

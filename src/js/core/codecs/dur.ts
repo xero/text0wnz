@@ -1,6 +1,5 @@
 /**
- * Durdraw .dur importer (PLAN.md §4 P2: import only, export lands with
- * the frames UI in P4). Normative reference: durformat.md in the
+ * Durdraw .dur codec. Normative reference: durformat.md in the
  * durdraw clone plus durdraw_file.py's loader. A .dur is gzipped JSON
  * holding a "DurMovie": metadata, canvas size, framerate, and frames of
  * full-width text lines ("contents") with a parallel fg/bg pair grid
@@ -9,7 +8,7 @@
  * Versions: 8 is current; 7 differs only in key names (sizeX/sizeY vs
  * columns/lines) and a transposed colorMap (pair for contents[y][x]
  * lives at colorMap[x][y]). Versions below 7 are pickled Python, not
- * JSON, and are rejected. Color formats "16" and "256" only, per plan.
+ * JSON, and are rejected. Color formats "16" and "256" only.
  *
  * Color semantics (durdraw order is the BIN/VGA attribute order, NOT
  * xterm SGR order):
@@ -213,8 +212,8 @@ export const decodeDur = async (
 // ------------------------------------------------------------- encoder
 
 /**
- * v3 doc -> durdraw v8 movie (P6 export; 256-color mode always, the
- * richer of the two supported formats). Index color words 0-255 pass
+ * v3 doc -> durdraw v8 movie (256-color mode always, the richer of
+ * the two supported formats). Index color words 0-255 pass
  * through by index (durdraw reads them as xterm-256); raw RGB words
  * land on the nearest xterm entry. Glyphs travel as codepoints in the
  * utf-8 encoding; blink attrs drop (durdraw has no blink). Gzipped

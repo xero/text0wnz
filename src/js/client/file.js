@@ -19,7 +19,6 @@ import {
 	v3ToU16Lossy,
 } from '../core/index';
 
-// Load module implementation
 const loadModule = () => {
 	class File {
 		constructor(bytes) {
@@ -111,12 +110,12 @@ const loadModule = () => {
 				this.sauce.version = this.getS(2);
 				this.sauce.title = this.getS(35);
 				this.sauce.author = this.getS(20);
-				this.sauce.group = this.getS(20); // String, maximum of 20 characters
-				this.sauce.date = this.getS(8); // String, maximum of 8 characters
-				this.sauce.fileSize = this.get32(); // unsigned 32-bit
+				this.sauce.group = this.getS(20);
+				this.sauce.date = this.getS(8);
+				this.sauce.fileSize = this.get32();
 				this.sauce.dataType = this.get();
-				this.sauce.fileType = this.get(); // unsigned 8-bit
-				this.sauce.tInfo1 = this.get16(); // unsigned 16-bit
+				this.sauce.fileType = this.get();
+				this.sauce.tInfo1 = this.get16();
 				this.sauce.tInfo2 = this.get16();
 				this.sauce.tInfo3 = this.get16();
 				this.sauce.tInfo4 = this.get16();
@@ -324,7 +323,6 @@ const loadModule = () => {
 			);
 		};
 
-		// Parse SAUCE metadata
 		const sauceData = getSauce(bytes, 80);
 		x = 1;
 		y = 1;
@@ -433,25 +431,25 @@ const loadModule = () => {
 										background = values[j] - 40;
 									} else {
 										switch (values[j]) {
-											case 0: // Reset attributes
+											case 0:
 												resetAttributes();
 												break;
-											case 1: // Bold
+											case 1:
 												bold = true;
 												break;
-											case 5: // Blink
+											case 5:
 												blink = true;
 												break;
-											case 7: // Inverse
+											case 7:
 												inverse = true;
 												break;
-											case 22: // Bold off
+											case 22:
 												bold = false;
 												break;
-											case 25: // Blink off
+											case 25:
 												blink = false;
 												break;
-											case 27: // Inverse off
+											case 27:
 												inverse = false;
 												break;
 										}
@@ -511,9 +509,8 @@ const loadModule = () => {
 						}
 				}
 			}
-			// Advance file position for UTF-8 multi-byte sequences
 			if (bytesConsumed > 1) {
-				// Already consumed 1 byte with file.get(), so move forward remaining bytes
+				// file.get() already consumed the first byte
 				file.seek(file.getPos() + (bytesConsumed - 1));
 			}
 		}
@@ -558,7 +555,6 @@ const loadModule = () => {
 			return null;
 		}
 
-		// Map SAUCE font names to application font names
 		switch (sauceFontName) {
 			case 'IBM VGA':
 				return 'CP437 8x16';
@@ -713,7 +709,6 @@ const loadModule = () => {
 			return 'IBM VGA';
 		}
 
-		// Map application font names to SAUCE font names
 		switch (appFontName) {
 			case 'CP437 8x16':
 				return 'IBM VGA';
@@ -899,7 +894,7 @@ const loadModule = () => {
 			) {
 				fileSize = readLE32(sauce, 90);
 				dataType = sauce[94];
-				commentsCount = sauce[104]; // Comments field at byte 104
+				commentsCount = sauce[104];
 
 				if (dataType === 5) {
 					if (sauce[95] > 0) {
@@ -919,9 +914,8 @@ const loadModule = () => {
 					}
 				}
 				flags = sauce[105];
-				const letterSpacingBits = (flags >> 1) & 0x03; // Extract bits 1-2
+				const letterSpacingBits = (flags >> 1) & 0x03;
 
-				// Parse comments if present
 				comments = '';
 				if (commentsCount > 0) {
 					const commentBlockSize = 5 + commentsCount * 64; // "COMNT" + comment lines
@@ -984,12 +978,11 @@ const loadModule = () => {
 
 	const loadBin = bytes => {
 		const sauce = getSauce(bytes, 160);
-		// A binary payload has no newlines, so getSauce's content-derived row
-		// count is meaningless for BIN (and rows is always numeric, so the old
-		// `=== undefined` fallback never fired). Always derive rows from the
-		// payload size and the selected width: SAUCE FileType when set, the
-		// 160-column default when FileType is 0 ("unspecified", like a zero
-		// TInfo) or when there is no record at all.
+		// A binary payload has no newlines, so getSauce's content-derived
+		// row count is meaningless for BIN. Rows always derive from the
+		// payload size and the selected width: SAUCE FileType when set,
+		// else the 160-column default (FileType 0 means "unspecified",
+		// like a zero TInfo).
 		const payloadSize = sauce.fileSize > 0 ? sauce.fileSize : bytes.length;
 		sauce.rows = Math.floor(payloadSize / sauce.columns / 2);
 		const data = convertUInt8ToUint16(bytes, 0, sauce.columns * sauce.rows * 2);
@@ -1070,7 +1063,6 @@ const loadModule = () => {
 			font512Flag = ((flags >> 4) & 0x01) === 1;
 			dataIndex = 11;
 
-			// Extract palette data if present
 			paletteData = null;
 			if (paletteFlag) {
 				paletteData = new Uint8Array(48);
@@ -1080,7 +1072,6 @@ const loadModule = () => {
 				dataIndex += 48;
 			}
 
-			// Extract font data if present
 			fontData = null;
 			const fontCharCount = font512Flag ? 512 : 256;
 			if (fontFlag) {
@@ -1098,7 +1089,7 @@ const loadModule = () => {
 				data = convertUInt8ToUint16(bytes, dataIndex, columns * rows * 2);
 			}
 
-			// Always use XBIN font name for XB files as requested
+			// XB files always report the XBIN font name
 			fontName = 'XBIN';
 		}
 		return {
@@ -1139,16 +1130,14 @@ const loadModule = () => {
 					imageData = loadXBin(data);
 					updateSauceModal(imageData);
 
-					// Implement sequential waterfall loading for XB files to eliminate race conditions
+					// sequential load: font + palette land before the image data
 					State.textArtCanvas.loadXBFileSequential(
 						imageData,
 						(columns, rows, data, iceColors, letterSpacing, fontName) => {
 							callback(columns, rows, data, iceColors, letterSpacing, fontName);
 						},
 					);
-					// Trigger font character refresh
 					document.dispatchEvent(new CustomEvent('onXBFontLoaded'));
-					// Ensure everything is properly rendered after font loading
 					State.textArtCanvas.redrawEntireImage();
 					break;
 				case 'bin':
@@ -1166,7 +1155,7 @@ const loadModule = () => {
 					break;
 				case 'tnd':
 					// TundraDraw: 24-bit colors ride the v3 planes; the lossy
-					// u16 projection feeds legacy consumers (PLAN P2)
+					// u16 projection feeds legacy consumers
 					State.textArtCanvas.clearXBData(() => {
 						const result = decodeTundra(data);
 						updateSauceModal({
@@ -1188,8 +1177,8 @@ const loadModule = () => {
 					});
 					break;
 				case 'dur':
-					// durdraw v7/v8 movie: frames import with the doc and stay
-					// latent until the frames UI (P6); frame 0 displays
+					// durdraw v7/v8 movie: frames import with the doc; frame 0
+					// displays
 					State.textArtCanvas.clearXBData(async () => {
 						const result = await decodeDur(data);
 						updateSauceModal({
@@ -1209,7 +1198,7 @@ const loadModule = () => {
 					});
 					break;
 				case '0wnz':
-					// native t0wnz-doc envelope (O5)
+					// native t0wnz-doc envelope
 					State.textArtCanvas.clearXBData(async () => {
 						const result = await decodeEnvelope(data);
 						if (result.fontBytes) {
@@ -1248,9 +1237,9 @@ const loadModule = () => {
 				default:
 					State.textArtCanvas.clearXBData(() => {
 						if (checkUTF8(file.name.toLowerCase())) {
-							// P5: UTF-8 opens go through the core reader, which
+							// UTF-8 opens go through the core reader, which
 							// builds v3 planes natively (glyph table, extended
-							// colors, the LF-after-wrap fix); the doc rides the
+							// colors, LF after wrap); the doc rides the
 							// plane-native callback slot like tnd/dur/0wnz
 							const result = decodeAns(data, { utf8: true });
 							updateSauceModal(result.meta);
@@ -1290,10 +1279,8 @@ const loadModule = () => {
 	};
 };
 
-// Create Load module instance
 const Load = loadModule();
 
-// Save module implementation
 const saveModule = () => {
 	const saveFile = async (bytes, sauce, filename) => {
 		let outputBytes;
@@ -1309,7 +1296,6 @@ const saveModule = () => {
 
 		try {
 			if ('showSaveFilePicker' in window) {
-				// Use File System Access API
 				const handle = await window.showSaveFilePicker({
 					suggestedName: filename,
 					types: [
@@ -1397,18 +1383,14 @@ const saveModule = () => {
 			commentBlock = new Uint8Array(commentBlockSize);
 
 			commentBlock.set(new Uint8Array([0x43, 0x4f, 0x4d, 0x4e, 0x54]), 0); // "COMNT"
-			// Set processed comment data
 			const commentBytes = new TextEncoder().encode(processedComments);
 			commentBlock.set(commentBytes.slice(0, commentsCount * 64), 5);
 		}
 
-		// Create 128-byte SAUCE record
 		const sauce = new Uint8Array(128);
 
-		// SAUCE signature and version
 		addText('SAUCE00', 7, 0);
 
-		// Title, Author, Group (padded)
 		const titleBytes = new TextEncoder().encode($('sauceTitle').value);
 		const authorBytes = new TextEncoder().encode($('sauceAuthor').value);
 		const groupBytes = new TextEncoder().encode($('sauceGroup').value);
@@ -1435,7 +1417,6 @@ const saveModule = () => {
 		sauce[92] = (filesize >> 16) & 0xff;
 		sauce[93] = filesize >> 24;
 
-		// Data type
 		sauce[94] = datatype;
 
 		const columns = State.textArtCanvas.getColumns();
@@ -1459,7 +1440,6 @@ const saveModule = () => {
 
 		// Flags and font info (only for non-XBIN formats)
 		if (datatype !== 6 && doFlagsAndTInfoS) {
-			// Not XBIN
 			let flags = 0;
 			if (State.textArtCanvas.getIceColors()) {
 				flags += 1;
@@ -1480,7 +1460,6 @@ const saveModule = () => {
 			}
 		}
 
-		// Combine comment block and sauce record if comments exist
 		if (commentBlock) {
 			const combined = new Uint8Array(commentBlock.length + sauce.length);
 			combined.set(commentBlock, 0);
@@ -1553,7 +1532,6 @@ const saveModule = () => {
 						break;
 				}
 
-				// Handle bold and blink attributes
 				if (foreground > 7) {
 					bold = true;
 					foreground -= 8;
@@ -1596,7 +1574,6 @@ const saveModule = () => {
 						lineBackground = background;
 					}
 
-					// Apply attributes if there are changes
 					if (attribs.length) {
 						lineOutput.push(27, 91); // ESC[
 						for (
@@ -1632,12 +1609,10 @@ const saveModule = () => {
 				lineOutput.push(10); // Newline (LF)
 			}
 
-			// Append the line output to the overall output
 			for (let i = 0; i < lineOutput.length; i++) {
 				output.push(lineOutput[i]);
 			}
 
-			// Update current attributes
 			currentForeground = lineForeground;
 			currentBackground = lineBackground;
 			currentBold = lineBold;
@@ -1659,11 +1634,11 @@ const saveModule = () => {
 		}
 		await saveFile(new Uint8Array(output), sauce, fname);
 	};
-	// P5 format-budget linter (PLAN §3.2) + the O2 compression toggle:
-	// lossy saves confirm through the export modal when the doc holds
-	// anything the target format cannot; XBin always shows it, because
-	// the RLE checkbox lives there. Falls through silently when the
-	// modal infrastructure is absent (unit tests, headless embeds).
+	// Format-budget linter + compression toggle: lossy saves confirm
+	// through the export modal when the doc holds anything the target
+	// format cannot; XBin always shows it, because the RLE checkbox
+	// lives there. Falls through silently when the modal infrastructure
+	// is absent (unit tests, headless embeds).
 	const confirmExport = (format, label, { compressToggle = false } = {}) =>
 		new Promise(resolve => {
 			const modal = State.modal;
@@ -1715,9 +1690,9 @@ const saveModule = () => {
 		}
 	};
 
-	// P5 (D9): UTF-8 and plain-text exports go through the core v3
-	// writer: one cell per column, LF endings (O1), unicode glyphs ride
-	// the doc glyph table, ice-vs-blink per the artist's choice (D8)
+	// UTF-8 and plain-text exports go through the core v3 writer: one
+	// cell per column, LF endings, unicode glyphs ride the doc glyph
+	// table, ice-vs-blink per the artist's choice
 	const utf8 = async () => {
 		const bytes = encodeUtf8(State.textArtCanvas.getDoc(), { meta: sauceMeta() });
 		await saveFile(bytes, undefined, State.title + '.utf8.ans');
@@ -1845,8 +1820,8 @@ const saveModule = () => {
 	};
 
 	const xb = async compress => {
-		// programmatic escape hatch kept from pre-O2 days: an explicit
-		// argument skips the export modal entirely
+		// programmatic escape hatch: an explicit argument skips the
+		// export modal entirely
 		if (compress !== undefined) {
 			await writeXb(compress);
 			return;
@@ -1883,7 +1858,6 @@ const saveModule = () => {
 			(liveFontData && liveFontData.height) ||
 			State.font.getHeight();
 
-		// Initialize flags and calculate additional data size
 		let flags = 0;
 		let additionalDataSize = 0;
 
@@ -1891,7 +1865,6 @@ const saveModule = () => {
 		flags |= 1; // Set palette flag (bit 0)
 		additionalDataSize += 48; // Palette data size (16 colors * 3 bytes each)
 
-		// Embed font data if available
 		if (fontBytes) {
 			flags |= 1 << 1; // Set font flag (bit 1)
 			additionalDataSize += fontBytes.length;
@@ -1911,16 +1884,13 @@ const saveModule = () => {
 			}
 		}
 
-		// Set ice colors flag if enabled
 		if (iceColors) {
-			flags |= 1 << 3;
+			flags |= 1 << 3; // ice colors flag (bit 3)
 		}
 
-		// Create output array with space for header, additional data, and image data
 		const totalSize = 11 + additionalDataSize + imageBytes.length;
 		const output = new Uint8Array(totalSize);
 
-		// Set XBIN header
 		output.set(
 			new Uint8Array([
 				88, // 'X'
@@ -1940,22 +1910,18 @@ const saveModule = () => {
 
 		let dataOffset = 11;
 
-		// Add palette data (always included)
 		if (xbPaletteData) {
 			output.set(xbPaletteData, dataOffset);
 			dataOffset += 48;
 		}
 
-		// Add font data if available
 		if (fontBytes) {
 			output.set(fontBytes, dataOffset);
 			dataOffset += fontBytes.length;
 		}
 
-		// Add image data
 		output.set(imageBytes, dataOffset);
 
-		// Create SAUCE data
 		const sauce = createSauce(6, 0, totalSize, false);
 		const fname = State.title;
 		await saveFile(output, sauce, fname + '.xb');
@@ -1994,7 +1960,7 @@ const saveModule = () => {
 		}
 	};
 
-	// P6 animation exports: classic ansimation (clear + home-per-frame,
+	// Animation exports: classic ansimation (clear + home-per-frame,
 	// baud is the clock) and the durdraw v8 movie (256-color, utf-8)
 	const ansimation = async () => {
 		if (!(await confirmExport('ans', 'ANSimation')).proceed) {
@@ -2009,8 +1975,8 @@ const saveModule = () => {
 		await saveFile(bytes, undefined, State.title + '.dur');
 	};
 
-	// P6 timelapse: baseline + op log from the server, replayed into a
-	// capped multi-frame movie — the shareable session artifact
+	// Timelapse: baseline + op log from the server, replayed into a
+	// capped multi-frame movie, the shareable session artifact
 	const timelapse = async () => {
 		if (State.network?.extCollab?.() !== true) {
 			alert(

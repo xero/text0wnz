@@ -52,15 +52,14 @@ const PANEL_WIDTH_MULTIPLIER = 20;
 const MAX_COLUMNS = 1000;
 const MAX_ROWS = 10000;
 const RESIZE_WARN_CELLS = 300000;
-// (v2's MAX_UNDO_CELLS is gone: undo depth is byte-capped by the patch
-// arena ring in core/patchArena.ts, DEFAULT_UNDO_BYTE_CAP)
+// undo depth is byte-capped by the patch arena ring
+// (core/patchArena.ts, DEFAULT_UNDO_BYTE_CAP)
 // Trailing debounce for autosave journal keyframe rewrites
 const JOURNAL_KEYFRAME_DEBOUNCE_MS = 500;
-// Touch gesture tuning (PLAN §3.5 / D11): the owner device pass tunes
-// these here. Hold = single-finger stroke disambiguation delay; slop =
-// max travel for a tap; window = both-fingers-lift deadline for
-// undo/redo taps; palm grace = how long after a pen lifts touch stays
-// rejected.
+// Touch gesture tuning, dialed in on real devices. Hold =
+// single-finger stroke disambiguation delay; slop = max travel for a
+// tap; window = both-fingers-lift deadline for undo/redo taps; palm
+// grace = how long after a pen lifts touch stays rejected.
 const GESTURE_TAP_WINDOW_MS = 250;
 const GESTURE_SLOP_PX = 10;
 const GESTURE_STROKE_HOLD_MS = 70;

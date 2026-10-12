@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock State module
 const mockState = {
 	title: 'test-artwork',
 	textArtCanvas: {
@@ -159,7 +158,6 @@ describe('XBin Save Compression', () => {
 		expect(rows).toBe(25);
 		expect((flags >> 2) & 0x01).toBe(1); // Compression flag set
 
-		// Compressed data must be smaller than raw
 		expect(dataEnd - dataIndex).toBeLessThan(imageData.length * 2);
 
 		const decoded = uncompress(savedBytes, dataIndex, dataEnd, columns, rows);

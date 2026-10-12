@@ -1,5 +1,5 @@
 /**
- * CP437 <-> Unicode mapping (v3 core, PLAN.md §3.2/§3.3).
+ * CP437 <-> Unicode mapping.
  *
  * Sparse map of the non-identity codepoints; everything absent maps to
  * itself (printable ASCII and NUL). Data mirrors the client table in
@@ -171,11 +171,10 @@ const nonIdentity: ReadonlyArray<readonly [number, number]> = [
 ];
 
 const toUnicode = new Map<number, number>(nonIdentity);
-// LAST entry wins, exactly like v2's getUnicodeReverseMap (it set
-// 0..255 in order). The one duplicate codepoint is NBSP (U+00A0),
-// claimed by both NUL and 255: the reverse MUST give 255, because an
-// NBSP decoding to char 0 creates cells that look blank but hold NUL,
-// the owner's long-standing hidden-glyph bug.
+// LAST entry wins, matching v2's getUnicodeReverseMap (it set 0..255
+// in order). The one duplicate codepoint is NBSP (U+00A0), claimed by
+// both NUL and 255: the reverse MUST give 255, or an NBSP decodes to
+// char 0 and the cell looks blank while holding NUL.
 const fromUnicode = new Map<number, number>();
 for (const [byte, codepoint] of nonIdentity) {
 	fromUnicode.set(codepoint, byte);

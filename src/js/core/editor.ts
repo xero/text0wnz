@@ -1,15 +1,14 @@
 /**
- * The v3 editing engine core (PLAN.md §4 P2 "engine swap"): v2
- * canvas.js's document mutations — draw entry points, half-block
- * painting, mirror mode, bright-bg optimize, areas, undo groups —
- * reproduced verbatim over the three-plane doc and the patch arena.
- * Pure TS: rendering, collab packets, and persistence stay in the
- * client, wired through the onWrite observer.
+ * The v3 editing engine core: v2 canvas.js's document mutations (draw
+ * entry points, half-block painting, mirror mode, bright-bg optimize,
+ * areas, undo groups) reproduced verbatim over the three-plane doc and
+ * the patch arena. Pure TS: rendering, collab packets, and persistence
+ * stay in the client, wired through the onWrite observer.
  *
- * Scope: classic16 editing (palette indices 0-15, CP437 glyphs), which
- * is everything the P2 tools emit. Cells holding raw-RGB colors or
- * unicode glyphs (tnd/dur/envelope loads) pass through untouched by the
- * optimize pass and read as non-blocky; painting over them works.
+ * Scope: classic16 editing (palette indices 0-15, CP437 glyphs). Cells
+ * holding raw-RGB colors or unicode glyphs (tnd/dur/envelope loads)
+ * pass through untouched by the optimize pass and read as non-blocky;
+ * painting over them works.
  *
  * Blink folding: v2 stores bg nibbles 8-15 raw and interprets bright-vs-
  * blink at render time via the ice flag. v3 bakes the interpretation
@@ -161,10 +160,9 @@ export interface EditorCore {
 	) => void;
 	/**
 	 * Adopt a decoded DocV3's content (tnd/dur/envelope loads): glyphs
-	 * remap through this doc's table, palette indexes past 15 freeze to
-	 * their RGB (no 256-entry rendering until P3), frames carry over,
-	 * history clears. The doc object identity is preserved for the
-	 * renderer bridges.
+	 * remap through this doc's table, the palette is adopted wholesale
+	 * (index words stay live), frames carry over, history clears. The
+	 * doc object identity is preserved for the renderer bridges.
 	 */
 	loadDoc: (source: DocV3) => void;
 	/** v2 resize semantics: overlap copy, history cleared. */
@@ -185,7 +183,7 @@ export const createEditorCore = (
 
 	/**
 	 * Cell view for the tools. Colors are classic 0-15 indexes when the
-	 * plane word is one; anything else (P5 extended colors: tag-bit
+	 * plane word is one; anything else (extended colors: tag-bit
 	 * indexes above 15, raw RGB words) passes through as the WORD so a
 	 * read-then-rewrite round trip cannot corrupt it. Values 0-15 and
 	 * words are distinguishable everywhere that matters: index words
@@ -250,8 +248,8 @@ export const createEditorCore = (
 	// --------------------------------------------------- stroke plumbing
 
 	let strokeOpen = false;
-	// the frame every read/write/draw targets (P6 frames UI); strokes
-	// record it, and undo/redo navigate back to the frame they touch
+	// the frame every read/write/draw targets; strokes record it, and
+	// undo/redo navigate back to the frame they touch
 	let currentFrame = 0;
 
 	const ensureStroke = () => {
@@ -388,8 +386,8 @@ export const createEditorCore = (
 		const attrs = attrsOf(frame.glyph[i]);
 		// the blink<->bright fold is CLASSIC16 semantics only: extended
 		// backgrounds (raw RGB, palette indexes above 15) pass through the
-		// ice toggle untouched, keeping their blink attr as-is (O7: the
-		// attr bit exists everywhere; ice folding is 16-color-only)
+		// ice toggle untouched, keeping their blink attr as-is (the attr
+		// bit exists everywhere; ice folding is 16-color-only)
 		const classicBg =
 			isPaletteColor(frame.bg[i]) && paletteIndexOf(frame.bg[i]) <= 15;
 		if (!classicBg) {
@@ -486,7 +484,7 @@ export const createEditorCore = (
 		},
 		quickDrawExt: cells => {
 			// remote full-fidelity cells (collab extension suite): raw plane
-			// words, no undo, no history — like quickDrawU16, the mirror
+			// words, no undo, no history; like quickDrawU16, the mirror
 			// stays consistent through the same packWord projection
 			const frame = doc.frames[currentFrame];
 			for (const { index, glyph, fg, bg } of cells) {
@@ -544,9 +542,9 @@ export const createEditorCore = (
 			return doc.addFrame(addOptions);
 		},
 		/**
-		 * remove a frame; later frames shift down so recorded stroke
-		 * frame indexes go stale — the undo history drops (the resize
-		 * precedent), and the view lands on the nearest surviving frame
+		 * remove a frame; later frames shift down, leaving recorded
+		 * stroke frame indexes stale, so the undo history drops (as on
+		 * resize) and the view lands on the nearest surviving frame
 		 */
 		removeFrame: index => {
 			flushStroke();
@@ -585,11 +583,10 @@ export const createEditorCore = (
 			while (doc.frames.length < source.frames.length) {
 				doc.addFrame({ force: true });
 			}
-			// adopt the source palette wholesale: index words stay LIVE
-			// (P5: the renderers resolve indexes past the palette length
-			// through the canonical xterm table, so the old freeze-to-RGB
-			// projection is gone - it also turned short-palette docs'
-			// high indexes into black)
+			// adopt the source palette wholesale: index words stay LIVE; the
+			// renderers resolve indexes past the palette length through the
+			// canonical xterm table (freezing to RGB would turn a short
+			// palette's high indexes black)
 			doc.palette = new Uint32Array(source.palette);
 			source.frames.forEach((src, f) => {
 				const target = doc.frames[f];

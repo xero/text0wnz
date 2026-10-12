@@ -3,10 +3,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Blob as NodeBlob } from 'node:buffer';
 import { FontCache } from '../../src/js/client/fontCache.js';
 
-// Mock State module
 vi.mock('../../src/js/client/state.js', () => ({ default: { fontDir: '/ui/fonts/' } }));
 
-// Mock magicNumbers module
 vi.mock('../../src/js/client/magicNumbers.js', () => ({
 	default: {
 		DEFAULT_FONT: 'CP437 8x16',
@@ -21,10 +19,8 @@ describe('FontCache Module', () => {
 	let mockFetch;
 
 	beforeEach(() => {
-		// Reset the memory cache
 		FontCache.memoryCache.clear();
 
-		// Mock Cache API
 		mockCache = {
 			match: vi.fn(),
 			add: vi.fn(),
@@ -40,7 +36,6 @@ describe('FontCache Module', () => {
 			delete: vi.fn().mockResolvedValue(true),
 		};
 
-		// Mock fetch
 		mockFetch = vi.fn();
 		globalThis.fetch = mockFetch;
 
@@ -92,7 +87,6 @@ describe('FontCache Module', () => {
 		});
 
 		it('should use memory cache when Cache API is not available', async () => {
-			// Temporarily remove caches API
 			const tempCaches = globalThis.caches;
 			delete globalThis.caches;
 
@@ -107,7 +101,6 @@ describe('FontCache Module', () => {
 			expect(mockFetch).toHaveBeenCalledWith('/ui/fonts/CP437 8x16.png');
 			expect(mockFetch).toHaveBeenCalledWith('/ui/fonts/Topaz-437 8x16.png');
 
-			// Restore caches
 			globalThis.caches = tempCaches;
 		});
 

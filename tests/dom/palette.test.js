@@ -4,14 +4,12 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { createPalette } from '../../src/js/client/palette.js';
 
-// Mock State module
 vi.mock('../../src/js/client/state.js', () => ({ default: { palette: null } }));
 
 describe('Palette DOM Tests', () => {
 	let user;
 	let palette;
 
-	// Default RGB6Bit color palette (standard 16 colors)
 	const defaultRGB6Bit = [
 		[0, 0, 0], // Black
 		[0, 0, 42], // Blue
@@ -32,13 +30,9 @@ describe('Palette DOM Tests', () => {
 	];
 
 	beforeEach(() => {
-		// Clear DOM
 		document.body.innerHTML = '';
-		// Create a new userEvent instance for each test
 		user = userEvent.setup();
-		// Clear all mocks
 		vi.clearAllMocks();
-		// Create a fresh palette instance with default colors
 		palette = createPalette(defaultRGB6Bit);
 	});
 
@@ -65,7 +59,6 @@ describe('Palette DOM Tests', () => {
 			container.id = 'color-preview';
 			document.body.appendChild(container);
 
-			// Create color swatches
 			for (let i = 0; i < 16; i++) {
 				const swatch = document.createElement('div');
 				swatch.className = 'color-swatch';
@@ -87,7 +80,6 @@ describe('Palette DOM Tests', () => {
 			const container = document.createElement('div');
 			document.body.appendChild(container);
 
-			// Create a color swatch
 			const swatch = document.createElement('div');
 			swatch.className = 'color-swatch';
 			swatch.dataset.colorIndex = '5';
@@ -95,7 +87,6 @@ describe('Palette DOM Tests', () => {
 			swatch.setAttribute('aria-label', 'Color 5');
 			container.appendChild(swatch);
 
-			// Add click handler
 			swatch.addEventListener('click', e => {
 				if (e.button === 0) {
 					// Left click
@@ -119,13 +110,11 @@ describe('Palette DOM Tests', () => {
 			swatch.setAttribute('aria-label', 'Color 3');
 			container.appendChild(swatch);
 
-			// Add context menu handler
 			swatch.addEventListener('contextmenu', e => {
 				e.preventDefault();
 				palette.setBackgroundColor(parseInt(swatch.dataset.colorIndex));
 			});
 
-			// Simulate right click
 			fireEvent.contextMenu(swatch);
 
 			expect(palette.getBackgroundColor()).toBe(3);
@@ -138,10 +127,8 @@ describe('Palette DOM Tests', () => {
 			swatch.setAttribute('aria-label', 'Invalid Color');
 			document.body.appendChild(swatch);
 
-			// Should not throw when clicking swatch without color index
 			await user.click(swatch);
 
-			// Palette state should remain unchanged
 			expect(palette.getForegroundColor()).toBe(7); // default
 		});
 	});
@@ -175,7 +162,6 @@ describe('Palette DOM Tests', () => {
 			swatch.setAttribute('tabindex', '0');
 			container.appendChild(swatch);
 
-			// Add keyboard handler
 			swatch.addEventListener('keydown', e => {
 				if (e.key === 'Enter' || e.key === ' ') {
 					e.preventDefault();
@@ -252,14 +238,12 @@ describe('Palette DOM Tests', () => {
 			const container = document.createElement('div');
 			document.body.appendChild(container);
 
-			// Create selected color indicator
 			const indicator = document.createElement('div');
 			indicator.id = 'selected-color';
 			indicator.className = 'selected';
 			indicator.dataset.colorIndex = '0';
 			container.appendChild(indicator);
 
-			// Simulate color selection
 			const newColorIndex = 5;
 			indicator.dataset.colorIndex = newColorIndex.toString();
 			indicator.className = 'selected active';
@@ -272,7 +256,6 @@ describe('Palette DOM Tests', () => {
 
 	describe('Edge Cases', () => {
 		it('should handle invalid color indices gracefully', () => {
-			// Try to set out-of-range color
 			expect(() => {
 				palette.setForegroundColor(-1);
 			}).not.toThrow();
@@ -294,7 +277,6 @@ describe('Palette DOM Tests', () => {
 				swatch.setAttribute('aria-label', `Color ${i}`);
 				container.appendChild(swatch);
 
-				// Add click handler
 				swatch.addEventListener('click', () => {
 					palette.setForegroundColor(parseInt(swatch.dataset.colorIndex));
 				});
@@ -302,7 +284,6 @@ describe('Palette DOM Tests', () => {
 
 			const swatches = screen.getAllByRole('button');
 
-			// Click multiple swatches rapidly
 			for (let i = 0; i < 5; i++) {
 				await user.click(swatches[i]);
 				expect(palette.getForegroundColor()).toBe(i);
@@ -316,10 +297,8 @@ describe('Palette DOM Tests', () => {
 			swatch.setAttribute('aria-label', 'Invalid Color');
 			document.body.appendChild(swatch);
 
-			// Should not throw when clicking swatch without color index
 			await user.click(swatch);
 
-			// Palette state should remain unchanged
 			expect(palette.getForegroundColor()).toBe(7); // default
 		});
 	});
@@ -330,14 +309,13 @@ describe('Palette DOM Tests', () => {
 			expect(rgba).toHaveLength(4);
 			expect(rgba[0]).toBeGreaterThanOrEqual(0);
 			expect(rgba[0]).toBeLessThanOrEqual(255);
-			expect(rgba[3]).toBe(255); // Alpha should be 255
+			expect(rgba[3]).toBe(255);
 		});
 
 		it('should return different colors for different indices', () => {
 			const color0 = palette.getRGBAColor(0);
 			const color1 = palette.getRGBAColor(1);
 
-			// Colors should be different
 			const different =
 				color0[0] !== color1[0] ||
 				color0[1] !== color1[1] ||
@@ -349,7 +327,7 @@ describe('Palette DOM Tests', () => {
 			for (let i = 0; i < 16; i++) {
 				const rgba = palette.getRGBAColor(i);
 				expect(rgba).toHaveLength(4);
-				expect(rgba[3]).toBe(255); // All colors should have full opacity
+				expect(rgba[3]).toBe(255);
 			}
 		});
 	});
