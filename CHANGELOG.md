@@ -71,6 +71,11 @@ byte-exact golden tests before anything else moved.
 - **Selections survive tool switches.** Leaving the selection tool and
   coming back restores the last selection instead of collapsing it to
   a single cell at the cursor. A pre-v3 defect.
+- **Modals no longer self-close.** A doubled close (a backdrop
+  double-tap, or stacked backdrop handlers from switching modals)
+  orphaned a transition handler that shut every later modal the moment
+  it finished opening, until a reload. Closes are now one-shot and
+  each open replaces the backdrop handler instead of stacking it.
 - **Stale PWA cache.** The service worker now revisions `index.html`
   per build and self-heals browsers stuck on an old version. Clearing
   site data by hand is no longer part of updating.
