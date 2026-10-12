@@ -68,6 +68,8 @@ const blankBlock = () => ({ code: 32, fg: 7, bg: 0 });
  * @param {{enabled?: boolean, canChat?: boolean, canDraw?: boolean}} [options.spectators]
  * @param {number} [options.columns]
  * @param {number} [options.rows]
+ * @param {number} [options.maxColumns] resize wall (O3 env knob; either direction)
+ * @param {number} [options.maxRows] resize wall (O3 env knob; either direction)
  * @param {number} [options.opLogLimit]
  * @param {(line: string) => void} [options.log]
  */
@@ -79,6 +81,8 @@ export const createRoom = (options = {}) => {
 		canChat: options.spectators?.canChat ?? true,
 		canDraw: options.spectators?.canDraw ?? false,
 	};
+	const maxColumns = options.maxColumns ?? ROOM_DEFAULTS.maxColumns;
+	const maxRows = options.maxRows ?? ROOM_DEFAULTS.maxRows;
 	const opLogLimit = options.opLogLimit ?? ROOM_DEFAULTS.opLogLimit;
 	const log = options.log ?? (() => {});
 
@@ -391,8 +395,8 @@ export const createRoom = (options = {}) => {
 					!Number.isInteger(rows) ||
 					columns <= 0 ||
 					rows <= 0 ||
-					columns > ROOM_DEFAULTS.maxColumns ||
-					rows > ROOM_DEFAULTS.maxRows
+					columns > maxColumns ||
+					rows > maxRows
 				) {
 					return;
 				}

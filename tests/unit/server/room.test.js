@@ -218,6 +218,40 @@ describe('settings and canvas', () => {
 		});
 		expect(room.stats().columns).toBe(ROOM_DEFAULTS.columns);
 	});
+
+	it('honors per-room resize walls in either direction (O3 env knob)', () => {
+		// a cautious host LOWERS the wall below the compiled-in default
+		const room = createRoom({ maxColumns: 200, maxRows: 500 });
+		const editor = joinEditor(room);
+		room.message(editor, {
+			type: A.SET_CANVAS_SIZE,
+			data: { columns: 201, rows: 100, id: 0 },
+		});
+		expect(room.stats().columns).toBe(ROOM_DEFAULTS.columns);
+		room.message(editor, {
+			type: A.SET_CANVAS_SIZE,
+			data: { columns: 100, rows: 501, id: 0 },
+		});
+		expect(room.stats().rows).toBe(ROOM_DEFAULTS.rows);
+		room.message(editor, {
+			type: A.SET_CANVAS_SIZE,
+			data: { columns: 200, rows: 500, id: 0 },
+		});
+		expect(room.stats().columns).toBe(200);
+		expect(room.stats().rows).toBe(500);
+
+		// a jam host RAISES it past the default (kept tiny-rowed so the
+		// test doesn't allocate a jam-sized doc; the wall math is what's
+		// under test)
+		const jam = createRoom({ maxColumns: 1200, maxRows: 30 });
+		const artist = joinEditor(jam);
+		jam.message(artist, {
+			type: A.SET_CANVAS_SIZE,
+			data: { columns: 1100, rows: 30, id: 0 },
+		});
+		expect(jam.stats().columns).toBe(1100);
+		expect(jam.stats().rows).toBe(30);
+	});
 });
 
 describe('relay tier and misc', () => {

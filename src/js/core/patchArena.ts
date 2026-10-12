@@ -75,12 +75,15 @@ export interface PatchArena {
 }
 
 /**
- * Default ring cap. v2 capped at MAX_UNDO_CELLS = 1,048,576 cells; one
- * v3 cell write is at most 3 planes x 12B of triple = 36B, so 32MB
- * holds the same order of edits with full plane coverage (O3-class
- * value: surface to the owner with the phase report).
+ * Default ring cap (O3, owner-resolved 2026-10-11 at 64MB). One v3
+ * cell write is at most 3 planes x 12B of triple = 36B, so this holds
+ * a single undoable op of ~1.9M cells with full plane coverage —
+ * roughly 18x the largest real collab piece (80x1295). Strokes evict
+ * oldest-first past the cap; an op bigger than the whole ring is
+ * itself un-undoable (accepted: a full 10M-cell op would need ~360MB
+ * of triples, unreasonable on mobile).
  */
-export const DEFAULT_UNDO_BYTE_CAP = 32 * 1024 * 1024;
+export const DEFAULT_UNDO_BYTE_CAP = 64 * 1024 * 1024;
 
 export interface PatchArenaOptions {
 	byteCap?: number;

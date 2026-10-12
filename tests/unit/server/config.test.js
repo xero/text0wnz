@@ -34,6 +34,8 @@ describe('Config Module - parseArgs', () => {
 			plainPort: 0,
 			pass: '',
 			roomPasswords: {},
+			maxColumns: 0,
+			maxRows: 0,
 		});
 	});
 
@@ -123,6 +125,35 @@ describe('Config Module - parseArgs', () => {
 			plainPort: 0,
 			pass: '',
 			roomPasswords: {},
+			maxColumns: 0,
+			maxRows: 0,
+		});
+	});
+
+	describe('ROOM_MAX_COLUMNS / ROOM_MAX_ROWS env knobs (O3)', () => {
+		afterEach(() => {
+			delete process.env.ROOM_MAX_COLUMNS;
+			delete process.env.ROOM_MAX_ROWS;
+		});
+
+		it('parses positive integers in either direction', () => {
+			process.argv = ['node', 'server.js'];
+			// raising for a jam host
+			process.env.ROOM_MAX_COLUMNS = '2000';
+			// lowering for a cautious host
+			process.env.ROOM_MAX_ROWS = '500';
+			const config = parseArgs();
+			expect(config.maxColumns).toBe(2000);
+			expect(config.maxRows).toBe(500);
+		});
+
+		it('treats invalid, zero, and negative values as unset', () => {
+			process.argv = ['node', 'server.js'];
+			process.env.ROOM_MAX_COLUMNS = 'wide';
+			process.env.ROOM_MAX_ROWS = '-5';
+			const config = parseArgs();
+			expect(config.maxColumns).toBe(0);
+			expect(config.maxRows).toBe(0);
 		});
 	});
 

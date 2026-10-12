@@ -22,6 +22,12 @@ const parseRoomPasswords = raw => {
 	return {};
 };
 
+/** env cap knob: a positive integer, else 0 = "use the compiled-in default" */
+const parseCapEnv = raw => {
+	const value = parseInt(raw ?? '', 10);
+	return Number.isInteger(value) && value > 0 ? value : 0;
+};
+
 const parseArgs = () => {
 	const args = process.argv.slice(2);
 	// Defaults
@@ -40,6 +46,11 @@ const parseArgs = () => {
 		pass: process.env.ROOM_PASS ?? '',
 		/** per-room passwords from ROOM_PASSWORDS='{"name":"pw"}' */
 		roomPasswords: parseRoomPasswords(process.env.ROOM_PASSWORDS),
+		// O3 env knobs: per-deployment canvas resize wall, in EITHER
+		// direction (jam hosts raise it, cautious hosts lower it);
+		// 0 = use room.js ROOM_DEFAULTS (1000x10000)
+		maxColumns: parseCapEnv(process.env.ROOM_MAX_COLUMNS),
+		maxRows: parseCapEnv(process.env.ROOM_MAX_ROWS),
 	};
 
 	for (let i = 0; i < args.length; i++) {

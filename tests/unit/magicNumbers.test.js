@@ -173,10 +173,6 @@ describe('Magic Numbers Constants', () => {
 			expect(magicNumbers.RESIZE_WARN_CELLS).toBe(300000);
 		});
 
-		it('should export undo stack cap', () => {
-			expect(magicNumbers.MAX_UNDO_CELLS).toBeGreaterThan(0);
-		});
-
 		it('should export panel width multiplier', () => {
 			expect(magicNumbers.PANEL_WIDTH_MULTIPLIER).toBe(20);
 			expect(typeof magicNumbers.PANEL_WIDTH_MULTIPLIER).toBe('number');

@@ -43,6 +43,8 @@ export const roomNameFromPath = (pathname, defaultRoom) => {
  * @param {string} [config.sessionName]
  * @param {string} [config.pass]
  * @param {Record<string, string>} [config.roomPasswords]
+ * @param {number} [config.maxColumns] resize wall override (0/absent = room default)
+ * @param {number} [config.maxRows] resize wall override (0/absent = room default)
  * @param {{mode: string, target: string, port: number, allow: string[], maxConnections: number}} [config.bridge]
  * @param {(room: ReturnType<typeof createRoom>) => void} [config.onRoomCreate]
  * @param {(room: ReturnType<typeof createRoom>) => void | Promise<void>} [config.onRoomEmpty]
@@ -67,6 +69,8 @@ export const createMoebiusServer = config => {
 			room = createRoom({
 				name,
 				password: config.roomPasswords?.[name] ?? config.pass ?? '',
+				maxColumns: config.maxColumns || undefined,
+				maxRows: config.maxRows || undefined,
 				log,
 			});
 			rooms.set(name, room);

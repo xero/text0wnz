@@ -694,7 +694,7 @@ const initializeAppComponents = async () => {
 			if (
 				columnsValue * rowsValue > magicNumbers.RESIZE_WARN_CELLS &&
 				!confirm(
-					`A ${columnsValue}x${rowsValue} canvas is very large and may be slow or run out of memory. Resize anyway?`,
+					`A ${columnsValue}x${rowsValue} canvas is very large: it uses more memory, autosaves get big, and joining collab sessions gets slow. Resize anyway?`,
 				)
 			) {
 				return;

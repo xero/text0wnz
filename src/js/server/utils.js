@@ -16,6 +16,9 @@ Options:
 Environment:
   ROOM_PASS             Same as --pass
   ROOM_PASSWORDS        Per-room passwords as JSON: {"room":"pw"}
+  ROOM_MAX_COLUMNS      Canvas resize width wall (default 1000; raise or lower)
+  ROOM_MAX_ROWS         Canvas resize height wall (default 10000; raise or lower)
+                        Walls gate resizes only; restored docs keep their size
 
 Examples:
   bun server 8080 --ssl --session-name myart --debug
