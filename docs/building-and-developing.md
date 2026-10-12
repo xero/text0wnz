@@ -499,7 +499,7 @@ bun lint:fix
 **Configuration:** `.prettierrc`
 
 > [!NOTE]
-> Prettier formats CSS, Markdown, and TypeScript. ESLint stylistic rules own JavaScript and HTML formatting, and `.prettierignore` excludes those files so editor integrations don't fight ESLint.
+> Prettier formats CSS, Markdown, and TypeScript. ESLint stylistic rules own JavaScript and HTML formatting, and `.prettierignore` excludes those files so editor integrations don't fight ESLint. TypeScript correctness linting runs through oxlint (`.oxlintrc.json`), since typescript-eslint cannot load TypeScript 7's compiler; tsc still owns the types.
 
 **Purpose:**
 

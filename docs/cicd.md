@@ -134,6 +134,8 @@ File patterns live in the `config` block of `package.json`:
 - Lint: `src/**/*.html`, `src/{*,js/**/*}.js`, `tests/**/*.js`, `tools/**/*.js`
 - Format: `src/**/*.css`, `docs/**/*.md`, `src/js/**/*.ts`, `tests/**/*.ts`
 
+`bun lint:check` also runs oxlint over the TypeScript sources (correctness rules only, configured in `.oxlintrc.json`; warnings fail the gate).
+
 **Linting Rules:**
 
 - ESLint configuration from `eslint.config.js`
