@@ -59,6 +59,12 @@ export interface EditorCoreOptions {
 	arena?: PatchArena;
 	/** Observer for every visible cell change (draws, undo, redo). */
 	onWrite?: (write: EditorWrite) => void;
+	/**
+	 * Fires when the edited frame changes: explicit navigation, or an
+	 * undo/redo landing on a stroke recorded in another frame. The
+	 * client re-mirrors and repaints wholesale on this.
+	 */
+	onFrameChange?: (frameIndex: number) => void;
 }
 
 export type DrawBlock = (
@@ -122,6 +128,10 @@ export interface EditorCore {
 	) => void;
 	/** Network writes: [index, u16word, x, y][], never undoable. */
 	quickDrawU16: (blocks: ReadonlyArray<ReadonlyArray<number>>) => void;
+	getCurrentFrame: () => number;
+	setCurrentFrame: (index: number) => boolean;
+	addFrame: (options?: { copyFrom?: number; force?: boolean }) => number;
+	removeFrame: (index: number) => void;
 	/** remote ext cells: raw plane words, no undo/history (collab) */
 	quickDrawExt: (
 		cells: ReadonlyArray<{
@@ -182,7 +192,7 @@ export const createEditorCore = (
 	 * carry bit 31, and the color picker never emits RGB words <= 15.
 	 */
 	const readCell = (index: number): EditCell => {
-		const frame = doc.frames[0];
+		const frame = doc.frames[currentFrame];
 		const glyph = frame.glyph[index];
 		const blink = (attrsOf(glyph) & ATTR_BLINK) !== 0;
 		const classic = (word: number): number | null =>
@@ -240,12 +250,28 @@ export const createEditorCore = (
 	// --------------------------------------------------- stroke plumbing
 
 	let strokeOpen = false;
+	// the frame every read/write/draw targets (P6 frames UI); strokes
+	// record it, and undo/redo navigate back to the frame they touch
+	let currentFrame = 0;
 
 	const ensureStroke = () => {
 		if (!strokeOpen) {
-			arena.beginStroke({ frame: 0 });
+			arena.beginStroke({ frame: currentFrame });
 			strokeOpen = true;
 		}
+	};
+
+	const switchFrame = (index: number): boolean => {
+		if (!Number.isInteger(index) || index < 0 || index >= doc.frames.length) {
+			return false;
+		}
+		if (index === currentFrame) {
+			return true;
+		}
+		flushStroke();
+		currentFrame = index;
+		options.onFrameChange?.(index);
+		return true;
 	};
 
 	const flushStroke = () => {
@@ -266,7 +292,7 @@ export const createEditorCore = (
 	};
 
 	const writeCell = (index: number, cell: EditCell, undoable: boolean) => {
-		const frame = doc.frames[0];
+		const frame = doc.frames[currentFrame];
 		const words = planeWords(cell);
 		if (undoable) {
 			ensureStroke();
@@ -462,7 +488,7 @@ export const createEditorCore = (
 			// remote full-fidelity cells (collab extension suite): raw plane
 			// words, no undo, no history — like quickDrawU16, the mirror
 			// stays consistent through the same packWord projection
-			const frame = doc.frames[0];
+			const frame = doc.frames[currentFrame];
 			for (const { index, glyph, fg, bg } of cells) {
 				frame.glyph[index] = glyph >>> 0;
 				frame.fg[index] = fg >>> 0;
@@ -478,10 +504,15 @@ export const createEditorCore = (
 			flushStroke();
 			const touched = new Set<number>();
 			const meta = arena.undo(doc, (_plane, index) => touched.add(index));
+			// a stroke from another frame pulls the view there first, so
+			// the refold, the mirror, and the repaint all see that frame
+			if (meta && meta.frame !== currentFrame) {
+				switchFrame(meta.frame);
+			}
 			for (const index of touched) {
 				// Strokes recorded before an ice toggle restore words in the
 				// old blink fold; re-express them like v2's flag semantics
-				refoldIndex(doc.frames[0], index, doc.getIceColors());
+				refoldIndex(doc.frames[currentFrame], index, doc.getIceColors());
 				emit(index, packWord(readCell(index)), true);
 			}
 			return meta !== null;
@@ -495,11 +526,37 @@ export const createEditorCore = (
 			flushStroke();
 			const touched = new Set<number>();
 			const meta = arena.redo(doc, (_plane, index) => touched.add(index));
+			if (meta && meta.frame !== currentFrame) {
+				switchFrame(meta.frame);
+			}
 			for (const index of touched) {
-				refoldIndex(doc.frames[0], index, doc.getIceColors());
+				refoldIndex(doc.frames[currentFrame], index, doc.getIceColors());
 				emit(index, packWord(readCell(index)), true);
 			}
 			return meta !== null;
+		},
+		getCurrentFrame: () => currentFrame,
+		/** navigation, never undoable; false = index out of range */
+		setCurrentFrame: index => switchFrame(index),
+		/** append a frame (blank or copied); undo history survives */
+		addFrame: addOptions => {
+			flushStroke();
+			return doc.addFrame(addOptions);
+		},
+		/**
+		 * remove a frame; later frames shift down so recorded stroke
+		 * frame indexes go stale — the undo history drops (the resize
+		 * precedent), and the view lands on the nearest surviving frame
+		 */
+		removeFrame: index => {
+			flushStroke();
+			arena.clear();
+			doc.removeFrame(index);
+			currentFrame = Math.min(
+				index < currentFrame ? currentFrame - 1 : currentFrame,
+				doc.frames.length - 1,
+			);
+			options.onFrameChange?.(currentFrame);
 		},
 		setMirrorMode: enabled => {
 			mirrorMode = enabled;
@@ -517,6 +574,7 @@ export const createEditorCore = (
 		loadDoc: source => {
 			flushStroke();
 			arena.clear();
+			currentFrame = 0; // silent: loadDoc callers rebuild wholesale
 			doc.resize(source.getColumns(), source.getRows());
 			doc.setIceColors(source.getIceColors());
 			doc.setLetterSpacing(source.getLetterSpacing());
@@ -550,6 +608,7 @@ export const createEditorCore = (
 		loadU16: (imageData, newColumns, newRows, iceColors) => {
 			flushStroke();
 			arena.clear();
+			currentFrame = 0; // silent: callers rebuild wholesale
 			doc.resize(newColumns, newRows);
 			doc.setIceColors(iceColors);
 			const frame = doc.frames[0];
@@ -576,6 +635,11 @@ export const createEditorCore = (
 		clear: () => {
 			flushStroke();
 			arena.clear();
+			// New-document semantics: back to a single blank frame
+			currentFrame = 0;
+			while (doc.frames.length > 1) {
+				doc.removeFrame(doc.frames.length - 1);
+			}
 			const frame = doc.frames[0];
 			frame.glyph.fill(0);
 			frame.fg.fill(paletteColor(0));
