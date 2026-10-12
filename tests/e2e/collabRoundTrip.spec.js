@@ -309,15 +309,17 @@ test.describe('collab round trip against a live server', () => {
 			// resize past the SERVER wall but inside the client wall: the
 			// client applies locally (apply-locally semantics), the server
 			// refuses with an ack, and the sync recovery restores truth
-			await page.evaluate(() => {
+			// the local-apply read happens INSIDE the evaluate: once the
+			// refusal ack lands, recovery can be FASTER than a second
+			// page.evaluate round trip (it flaked in CI exactly because
+			// recovery worked quickly)
+			const localColumns = await page.evaluate(() => {
 				const { State } = window.__t0wnz;
 				State.textArtCanvas.resize(150, 25);
 				State.network.sendResize(150, 25);
+				return State.textArtCanvas.getColumns();
 			});
-			expect(
-				await page.evaluate(() =>
-					window.__t0wnz.State.textArtCanvas.getColumns()),
-			).toBe(150);
+			expect(localColumns).toBe(150);
 			await expect
 				.poll(
 					() =>
