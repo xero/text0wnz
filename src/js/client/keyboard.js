@@ -2390,14 +2390,11 @@ const createSelectionTool = () => {
 	};
 
 	const disable = () => {
-		// a real selection hands its corner to the keyboard cursor (the
-		// Enter-to-keyboard flow); captured before the hide, parked after
-		// it so move() cannot re-show the cursor, and never scrolled
-		const parked = State.selectionCursor.getSelection();
+		// a tool switch runs every disable in registration order, and the
+		// keyboard controller registers before this tool: its disable has
+		// already parked the cursor at a live rect and hidden it, so this
+		// one only cleans up
 		State.selectionCursor.hide();
-		if (parked) {
-			State.cursor.move(parked.x, parked.y, false);
-		}
 		panel.style.display = 'none';
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
@@ -2406,56 +2403,11 @@ const createSelectionTool = () => {
 		viewport?.removeEventListener('scroll', onViewportScroll);
 		clearTimeout(settleTimer);
 
-		// Reset move mode if it was active and finalize any pending move
 		if (moveMode) {
-			const currentSelection = State.selectionCursor.getSelection();
-			if (
-				originalPosition &&
-				currentSelection &&
-				(currentSelection.x !== originalPosition.x ||
-				  currentSelection.y !== originalPosition.y)
-			) {
-				const xOverlap =
-					originalPosition.x < currentSelection.x + currentSelection.width &&
-					originalPosition.x + originalPosition.width > currentSelection.x;
-				const yOverlap =
-					originalPosition.y < currentSelection.y + currentSelection.height &&
-					originalPosition.y + originalPosition.height > currentSelection.y;
-				const hasOverlap = xOverlap && yOverlap;
-
-				State.textArtCanvas.startUndo();
-				if (hasOverlap) {
-					// overlap: clear only the non-overlapping parts, preserving
-					// the moved selection
-					const emptyData = createEmptyArea(
-						originalPosition.width,
-						originalPosition.height,
-					);
-					// the original position now holds part of the moved selection
-					const currentAtOriginal = State.textArtCanvas.getArea(
-						originalPosition.x,
-						originalPosition.y,
-						originalPosition.width,
-						originalPosition.height,
-					);
-					// Apply empty data, but preserve anything from the current selection
-					setAreaSelective(
-						emptyData,
-						currentAtOriginal,
-						originalPosition.x,
-						originalPosition.y,
-					);
-				} else {
-					// No overlap - safe to delete the entire original area
-					State.textArtCanvas.deleteArea(
-						originalPosition.x,
-						originalPosition.y,
-						originalPosition.width,
-						originalPosition.height,
-						State.palette.getBackgroundColor(),
-					);
-				}
-			}
+			// no canvas writes on abort: moveSelection restores the
+			// underlying area at the old spot on every step, so the origin
+			// is already clear, and a finalize here would erase never-moved
+			// art whenever an event like a font change hid the rect mid-move
 			moveMode = false;
 			moveButton.classList.remove('enabled');
 			State.selectionCursor.getElement().classList.remove('moveMode');
