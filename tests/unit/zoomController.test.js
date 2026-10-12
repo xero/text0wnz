@@ -98,36 +98,13 @@ describe('zoom controller', () => {
 		expect(mocks.state.font.setScaleFactor).toHaveBeenLastCalledWith(1);
 	});
 
-	it('ctrl/cmd plus, minus, and zero step the zoom from any mode', () => {
+	it('binds no keyboard shortcuts of its own: ui.js owns ctrl +/-', () => {
 		createZoomController(viewport);
-		const key = (code, init = {}) =>
-			document.dispatchEvent(
-				new KeyboardEvent('keydown', {
-					code,
-					ctrlKey: true,
-					cancelable: true,
-					...init,
-				}),
-			);
-		key('Equal');
-		expect(mocks.state.font.setScaleFactor).toHaveBeenLastCalledWith(1.5);
-		mocks.setScale(1.5);
-		key('Minus');
-		expect(mocks.state.font.setScaleFactor).toHaveBeenLastCalledWith(1);
-		mocks.setScale(3);
 		mocks.state.font.setScaleFactor.mockClear();
-		key('Digit0');
-		expect(mocks.state.font.setScaleFactor).not.toHaveBeenCalled();
-		// text fields keep their own ctrl combos
-		mocks.setScale(2);
-		mocks.state.font.setScaleFactor.mockClear();
-		const input = document.createElement('input');
-		document.body.appendChild(input);
-		input.dispatchEvent(
+		document.dispatchEvent(
 			new KeyboardEvent('keydown', {
 				code: 'Equal',
 				ctrlKey: true,
-				bubbles: true,
 				cancelable: true,
 			}),
 		);

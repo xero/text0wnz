@@ -76,9 +76,10 @@ byte-exact golden tests before anything else moved.
   visible marks. PNG font atlases now blank glyph 0 on load; fonts
   embedded in XBin files keep theirs, since a custom glyph 0 is the
   author's call.
-- **The zoom shortcuts exist now.** `ctrl +` and `ctrl -` were
-  documented and did nothing; they now step the zoom in every mode.
-  `ctrl 0` stays what it has always been in the scene: color 0.
+- **F-key previews stop zooming.** The keyboard toolbar's character
+  previews drew through the zoom-scaled font, so zooming the canvas
+  cropped and flickered them. They render through their own 1x font
+  now, like the brush panels always did.
 - **iOS layout fits the window.** The fixed root sized to the layout
   viewport, which runs taller than the window while Safari's toolbar
   shows, hiding the bottom rows of the editor and baring offsets at

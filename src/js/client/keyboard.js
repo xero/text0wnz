@@ -147,18 +147,31 @@ const createFKeys = () => {
 			.then(resolved => commit(resolved.get(~token) ?? 63));
 	};
 
-	const updateFKeyDisplays = () => {
+	const updateFKeyDisplays = async () => {
 		const currentPage = fkeySets[currentSetIndex];
 		const currentSet = currentPage.chars;
 		const toolbar = $('keyboardToolbar');
 		if (toolbar) {
 			toolbar.title = currentPage.label;
 		}
+		// previews are chrome, not canvas: they draw through their own 1x
+		// font (like the brush panels) so zoom can never scale or crop
+		// them, and the backing store stays at base glyph size
+		let previewFont = State.font;
+		if (State.font?.getData) {
+			const { createLazyFont } = await import('./lazyFont.js');
+			previewFont = createLazyFont(
+				State.font.getData(),
+				State.palette,
+				State.font.getLetterSpacing?.() ?? false,
+				1,
+			);
+		}
 		for (let i = 0; i < 12; i++) {
 			const canvas = $('fkey' + i);
 			if (canvas) {
-				canvas.width = State.font.getWidth();
-				canvas.height = State.font.getHeight();
+				canvas.width = State.fontWidth;
+				canvas.height = State.fontHeight;
 
 				// CSS size stays 1.5x the BASE font so zoom never resizes it
 				const baseWidth = State.fontWidth;
@@ -170,7 +183,7 @@ const createFKeys = () => {
 
 				if (currentSet[i] >= 0) {
 					canvas.style.opacity = '';
-					State.font.draw(
+					previewFont.draw(
 						currentSet[i],
 						State.palette.getForegroundColor(),
 						State.palette.getBackgroundColor(),
