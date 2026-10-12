@@ -120,4 +120,17 @@ describe('timelapseToDoc', () => {
 			timelapseToDoc({ columns: -1, rows: 5, cells: [], ops: [] }),
 		).toThrow(ProtocolError);
 	});
+
+	it('bounds frames x cells by the animation budget (review pin)', () => {
+		// 4M cells: the O13 budget (16M cell-frames) allows 4 frames
+		const payload = basePayload(4000, 1000);
+		payload.ops = Array.from({ length: 50 }, (_, i) =>
+			extDrawOp(i % 4, 0, 65 + (i % 26)),
+		);
+		const { doc, frames } = timelapseToDoc(payload, { maxFrames: 120 });
+		expect(frames).toBeLessThanOrEqual(5);
+		expect(frames * doc.getColumns() * doc.getRows()).toBeLessThanOrEqual(
+			16_000_000 * 1.3,
+		);
+	});
 });

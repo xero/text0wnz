@@ -818,10 +818,13 @@ const createGLRenderer = (canvasContainer, host) => {
 	 * (nearest-neighbor at any scale, ninth-column rule, blink drawn in its
 	 * visible phase), reading only doc data + 1bpp font + palette.
 	 */
+	const exportPlanes = () =>
+		(host.getDocPlanes ?? host.getPlanes)();
+
 	const getImageRGBA = () => {
 		const columns = host.getColumns();
 		const rows = host.getRows();
-		const { glyph, fg: fgPlane, bg: bgPlane } = host.getPlanes();
+		const { glyph, fg: fgPlane, bg: bgPlane } = exportPlanes();
 		const width = cellW * columns;
 		const height = cellH * rows;
 		const data = new Uint8ClampedArray(width * height * 4);

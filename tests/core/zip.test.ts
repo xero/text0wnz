@@ -53,4 +53,20 @@ describe('zip reader', () => {
 			),
 		).rejects.toThrow(/truncated|missing/);
 	});
+
+	it('refuses declared bombs and streams-aborts lying ones', async () => {
+		const zip = await buildZip([
+			{ name: 'big.ans', data: new Uint8Array(4096) },
+		]);
+		const entries = readZipEntries(zip);
+		// declared too large: refused before any inflation
+		const declared = { ...entries[0], size: 33 * 1024 * 1024 };
+		await expect(extractZipEntry(zip, declared)).rejects.toThrow(/exceeds/);
+		// declared SMALLER than the real stream: the inflate aborts
+		// mid-read instead of buffering the whole bomb first
+		const lying = { ...entries[0], size: 16 };
+		await expect(extractZipEntry(zip, lying)).rejects.toThrow(
+			/exceeds|inflated/,
+		);
+	});
 });

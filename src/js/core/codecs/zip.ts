@@ -14,6 +14,14 @@ const EOCD_SIG = 0x06054b50;
 const CENTRAL_SIG = 0x02014b50;
 const LOCAL_SIG = 0x04034b50;
 
+/**
+ * Per-entry extraction cap: scene pieces are kilobytes; anything close
+ * to this is a decompression bomb, and the size check must run BEFORE
+ * inflation (review finding: a 4MB stream expanding to 4GB OOMed the
+ * tab before the after-the-fact length compare).
+ */
+export const MAX_ZIP_ENTRY_BYTES = 32 * 1024 * 1024;
+
 export interface ZipEntry {
 	name: string;
 	method: number;
@@ -88,6 +96,14 @@ export const extractZipEntry = async (
 	entry: ZipEntry,
 ): Promise<Uint8Array> => {
 	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+	if (
+		entry.size > MAX_ZIP_ENTRY_BYTES ||
+		entry.compressedSize > MAX_ZIP_ENTRY_BYTES
+	) {
+		throw new CodecError(
+			`zip entry ${entry.name} exceeds ${MAX_ZIP_ENTRY_BYTES} bytes`,
+		);
+	}
 	const at = entry.headerOffset;
 	if (at + 30 > bytes.length || view.getUint32(at, true) !== LOCAL_SIG) {
 		throw new CodecError(`zip local header missing for ${entry.name}`);
@@ -109,7 +125,7 @@ export const extractZipEntry = async (
 			`zip method ${entry.method} unsupported for ${entry.name}`,
 		);
 	}
-	const inflated = await inflateRaw(data);
+	const inflated = await inflateRaw(data, entry.size);
 	if (inflated.length !== entry.size) {
 		throw new CodecError(
 			`zip entry ${entry.name} inflated to ${inflated.length}, expected ${entry.size}`,

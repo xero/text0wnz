@@ -82,7 +82,9 @@ const createPluginApi = canvas => {
 		 */
 		put: (x, y, code, fg, bg) => {
 			if (inBounds(x, y) && Number.isInteger(code)) {
-				writes.push([x, y, code & 0xffff, fg >>> 0, bg >>> 0]);
+				// CP437 codes only: ids past 255 would bypass glyph-table
+				// interning and reverse-map wrong on the collab wire
+				writes.push([x, y, code & 0xff, fg >>> 0, bg >>> 0]);
 			}
 		},
 	};

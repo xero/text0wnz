@@ -349,6 +349,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 						? onionPlanes
 						: doc.frames[editor.getCurrentFrame()];
 				},
+				// exports read the REAL document, never the onion/baud
+				// composites (review finding: PNGs shipped the ghost)
+				getDocPlanes: () => doc.frames[editor.getCurrentFrame()],
 				getIceColors: iceColorsNow,
 				getGlyphDef: glyphId => doc.glyphTable.get(glyphId),
 				getHexPages: ensureHexPages,

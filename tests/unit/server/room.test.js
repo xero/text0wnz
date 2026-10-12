@@ -491,7 +491,7 @@ describe('extension suite v1 (t0wnz-ext-1)', () => {
 	});
 
 	it('EXT_SYNC replies on request; caps spectators receive but cannot draw', () => {
-		const room = createRoom({ columns: 2, rows: 1 });
+		const room = createRoom({ columns: 2, rows: 1, syncCooldownMs: 0 });
 		const caps = joinCaps(room, 'caps');
 		const spectator = fakeClient();
 		room.connect(spectator, { caps: [EXT_SUITE_CAP]});
@@ -526,7 +526,12 @@ describe('extension suite v1 (t0wnz-ext-1)', () => {
 
 	it('EXT_TIMELAPSE replays to the live doc even after op-log eviction', () => {
 		// tiny log: draws 3-6 evict 1-2 into the baseline
-		const room = createRoom({ columns: 4, rows: 1, opLogLimit: 2 });
+		const room = createRoom({
+			columns: 4,
+			rows: 1,
+			opLogLimit: 2,
+			syncCooldownMs: 0,
+		});
 		const caps = joinCaps(room, 'caps');
 		for (let i = 0; i < 6; i++) {
 			room.message(caps, {
@@ -578,6 +583,117 @@ describe('extension suite v1 (t0wnz-ext-1)', () => {
 		const sync = rejoin.ofType(T0wnzAction.EXT_SYNC)[0];
 		expect(expandExtCells(sync.data.cells, 2)[1]).toEqual(extCell);
 		expect(sync.data.palette).toEqual(palette);
+	});
+});
+
+
+describe('review hardening (P6 adversarial pass)', () => {
+	const joinCaps = (room, nick) =>
+		joinEditor(room, nick, { caps: [EXT_SUITE_CAP]});
+
+	it('folds surrogate DRAW codes so the ext projection stays saveable', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const editor = joinEditor(room, 'evil');
+		room.message(editor, {
+			type: A.DRAW,
+			data: { x: 0, y: 0, block: { code: 0xd800, fg: 7, bg: 0 }, id: 0 },
+		});
+		// the poisoned cell used to make EVERY save throw (data loss)
+		const ext = room.extState();
+		expect(() => expandExtCells(ext.cells, 2)).not.toThrow();
+		expect(expandExtCells(ext.cells, 2)[0].u).toBe(63);
+	});
+
+	it('acks refused mutations so caps clients can book off and resync', () => {
+		const room = createRoom({ columns: 4, rows: 2, maxColumns: 100, maxRows: 100 });
+		const caps = joinCaps(room, 'caps');
+		room.message(caps, {
+			type: A.SET_CANVAS_SIZE,
+			data: { columns: 500, rows: 2, id: 0 },
+		});
+		const ack = caps.ofType(T0wnzAction.EXT_ACK)[0];
+		expect(ack.data.refused).toBe(true);
+		expect(ack.data.seq).toBe(0); // nothing was accepted
+		room.message(caps, {
+			type: T0wnzAction.EXT_DRAW,
+			data: { x: 99, y: 0, u: 65, a: 0, fg: 0, bg: 0, id: 0 },
+		});
+		expect(
+			caps.ofType(T0wnzAction.EXT_ACK).filter(f => f.data.refused),
+		).toHaveLength(2);
+	});
+
+	it('clamps SAUCE fields and broadcasts a whitelisted shape', () => {
+		const room = createRoom();
+		const sender = joinEditor(room, 'a');
+		const peer = joinCaps(room, 'b');
+		room.message(sender, {
+			type: A.SAUCE,
+			data: {
+				title: 'x'.repeat(5000),
+				author: 'me',
+				seq: 999999, // smuggle attempt
+				junk: 'y'.repeat(5000),
+				id: 42, // forged
+			},
+		});
+		const frame = peer.ofType(A.SAUCE)[0];
+		expect(frame.data.title.length).toBe(35);
+		expect(frame.data.junk).toBeUndefined();
+		expect(frame.data.id).toBe(0); // the server-known id
+		// the smuggled seq is REPLACED by the server's stamp, not relayed
+		expect(frame.data.seq).toBe(1);
+	});
+
+	it('CHAT never relays smuggled fields to peers', () => {
+		const room = createRoom();
+		const sender = joinEditor(room, 'a');
+		const peer = joinEditor(room, 'b');
+		room.message(sender, {
+			type: A.CHAT,
+			data: { nick: 'a', text: 'hi', seq: 2147483647, evil: true },
+		});
+		const frame = peer.ofType(A.CHAT)[0];
+		expect(frame.data.seq).toBeUndefined();
+		expect(frame.data.evil).toBeUndefined();
+	});
+
+	it('short EXT_PALETTE still bridges a FULL 16-entry vanilla palette', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const caps = joinCaps(room, 'caps');
+		room.message(caps, {
+			type: T0wnzAction.EXT_PALETTE,
+			data: { palette: [0xff0000], id: 0 },
+		});
+		const late = joinEditor(room, 'late');
+		const joinPalette = late.ofType(A.CONNECTED)[0].data.doc.palette;
+		expect(joinPalette).toHaveLength(16);
+		expect(joinPalette[0]).toEqual([0xff >> 2, 0, 0]);
+	});
+
+	it('rate-limits EXT_SYNC requests per user', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const caps = joinCaps(room, 'caps');
+		// the join sync consumed the first slot
+		room.message(caps, { type: T0wnzAction.EXT_SYNC, data: { id: 0 } });
+		room.message(caps, { type: T0wnzAction.EXT_SYNC, data: { id: 0 } });
+		expect(caps.ofType(T0wnzAction.EXT_SYNC)).toHaveLength(1);
+	});
+
+	it('rebuilds mutation relays with the server-known id', () => {
+		const room = createRoom({ columns: 4, rows: 2 });
+		const sender = joinEditor(room, 'a');
+		const peer = joinEditor(room, 'b');
+		room.message(sender, {
+			type: A.ICE_COLORS,
+			data: { value: true, id: 42 },
+		});
+		room.message(sender, {
+			type: A.SET_CANVAS_SIZE,
+			data: { columns: 3, rows: 2, id: 42 },
+		});
+		expect(peer.ofType(A.ICE_COLORS)[0].data.id).toBe(0);
+		expect(peer.ofType(A.SET_CANVAS_SIZE)[0].data.id).toBe(0);
 	});
 });
 

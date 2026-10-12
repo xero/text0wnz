@@ -253,4 +253,82 @@ test.describe('collab round trip against a live server', () => {
 		await b.context.close();
 		await late.context.close();
 	});
+
+	test('a server-refused resize recovers through EXT_SYNC (review pin)', async ({
+		browser,
+		browserName,
+	}) => {
+		test.skip(browserName !== 'chromium', 'one engine runs the full stack');
+		test.skip(!hasBun, 'bun is required to spawn the server');
+		test.slow();
+
+		// a second server whose resize wall sits BELOW the client's
+		const wallPort = 21000 + Math.floor(Math.random() * 20000);
+		const walled = spawn(
+			'bun',
+			[path.join(repoRoot, 'src/js/server/main.js'), String(wallPort)],
+			{
+				cwd: scratch,
+				stdio: ['ignore', 'pipe', 'pipe'],
+				env: { ...process.env, ROOM_MAX_COLUMNS: '100' },
+			},
+		);
+		try {
+			const deadline = Date.now() + 15000;
+			for (;;) {
+				try {
+					const res = await fetch(`http://127.0.0.1:${wallPort}/healthz`);
+					if (res.ok) {
+						break;
+					}
+				} catch {
+					// not up yet
+				}
+				if (Date.now() > deadline) {
+					throw new Error('walled server did not come up');
+				}
+				await new Promise(r => setTimeout(r, 150));
+			}
+			const context = await browser.newContext();
+			const page = await context.newPage();
+			await page.addInitScript(() => {
+				window.localStorage.setItem('handle', 'wall-test');
+			});
+			await page.goto(`/?test&server=ws://127.0.0.1:${wallPort}/wallroom`);
+			await page.waitForSelector('#joinCollaboration', {
+				state: 'visible',
+				timeout: 10000,
+			});
+			await page.locator('#joinCollaboration').click();
+			await page.waitForFunction(
+				() => window.__t0wnz.State.network?.extCollab?.() === true,
+				null,
+				{ timeout: 10000 },
+			);
+			await page.waitForTimeout(400);
+			// resize past the SERVER wall but inside the client wall: the
+			// client applies locally (apply-locally semantics), the server
+			// refuses with an ack, and the sync recovery restores truth
+			await page.evaluate(() => {
+				const { State } = window.__t0wnz;
+				State.textArtCanvas.resize(150, 25);
+				State.network.sendResize(150, 25);
+			});
+			expect(
+				await page.evaluate(() =>
+					window.__t0wnz.State.textArtCanvas.getColumns()),
+			).toBe(150);
+			await expect
+				.poll(
+					() =>
+						page.evaluate(() =>
+							window.__t0wnz.State.textArtCanvas.getColumns()),
+					{ timeout: 15000 },
+				)
+				.toBe(80);
+			await context.close();
+		} finally {
+			walled.kill('SIGKILL');
+		}
+	});
 });

@@ -91,6 +91,7 @@ const blankBlock = () => ({ code: 32, fg: 7, bg: 0 });
  * @param {number} [options.maxColumns] resize wall (O3 env knob; either direction)
  * @param {number} [options.maxRows] resize wall (O3 env knob; either direction)
  * @param {number} [options.opLogLimit]
+ * @param {number} [options.syncCooldownMs] per-user EXT_SYNC/TIMELAPSE rate limit
  * @param {(line: string) => void} [options.log]
  */
 export const createRoom = (options = {}) => {
@@ -104,6 +105,7 @@ export const createRoom = (options = {}) => {
 	const maxColumns = options.maxColumns ?? ROOM_DEFAULTS.maxColumns;
 	const maxRows = options.maxRows ?? ROOM_DEFAULTS.maxRows;
 	const opLogLimit = options.opLogLimit ?? ROOM_DEFAULTS.opLogLimit;
+	const syncCooldownMs = options.syncCooldownMs ?? 1000;
 	const log = options.log ?? (() => {});
 
 	// the live document, wire-shaped (block cells); persistence converts
@@ -129,7 +131,7 @@ export const createRoom = (options = {}) => {
 	};
 	doc.data = Array.from({ length: doc.columns * doc.rows }, blankBlock);
 
-	/** @type {Map<RoomClient, {id: number, nick: string | undefined, group: string, status: number, role: 'viewer' | 'editor', caps: string[] | null}>} */
+	/** @type {Map<RoomClient, {id: number, nick: string | undefined, group: string, status: number, role: 'viewer' | 'editor', caps: string[] | null, lastSyncAt: number}>} */
 	const members = new Map();
 	/** @type {{id: number, nick: string, group: string, text: string, time: number}[]} */
 	const chatHistory = [];
@@ -302,6 +304,24 @@ export const createRoom = (options = {}) => {
 		}
 	};
 
+	/**
+	 * A silently dropped mutation from a caps client would leak its
+	 * pendingOps counter forever AND leave its apply-locally state
+	 * diverged with no seq gap to notice (review finding). Refusals ack
+	 * with the current seq and a refused flag: the client books the op
+	 * off and resyncs.
+	 * @param {RoomClient} client @param {{caps: string[] | null}} user
+	 */
+	const refuseAck = (client, user) => {
+		if (hasExt(user)) {
+			try {
+				client.send(T0wnzAction.EXT_ACK, { seq, refused: true });
+			} catch {
+				// dead socket; close() reaps it
+			}
+		}
+	};
+
 	/** the full-fidelity doc snapshot a caps client adopts wholesale */
 	const syncPayload = () => ({
 		seq,
@@ -407,6 +427,7 @@ export const createRoom = (options = {}) => {
 				isSpectator ? 'viewer' : 'editor'
 			),
 			caps,
+			lastSyncAt: 0,
 		};
 		// upstream reply shapes, verbatim; caps ride along only for
 		// caps-aware clients (vanilla must see exactly vanilla)
@@ -427,6 +448,8 @@ export const createRoom = (options = {}) => {
 		if (hasExt(user)) {
 			// the vanilla doc in the reply is the quantized view; caps
 			// clients adopt the full-fidelity snapshot that follows it
+			// (and it counts against the sync rate limit)
+			user.lastSyncAt = Date.now();
 			client.send(T0wnzAction.EXT_SYNC, syncPayload());
 		}
 		broadcast(client, MoebiusAction.JOIN, {
@@ -465,6 +488,7 @@ export const createRoom = (options = {}) => {
 					typeof block !== 'object' ||
 					block === null
 				) {
+					refuseAck(client, user);
 					return;
 				}
 				/** @param {unknown} v @param {number} fallback @param {number} max */
@@ -472,8 +496,15 @@ export const createRoom = (options = {}) => {
 					typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= max
 						? v
 						: fallback;
+				let code = clamp(block.code, 32, 0x10ffff);
+				if (code >= 0xd800 && code <= 0xdfff) {
+					// surrogate halves are not characters; one smuggled into
+					// the doc poisoned the ext projection and every save of
+					// the room threw (review finding: total data loss)
+					code = 63;
+				}
 				const cell = {
-					code: clamp(block.code, 32, 0x10ffff),
+					code,
 					fg: clamp(block.fg, 7, 255),
 					bg: clamp(block.bg, 0, 255),
 				};
@@ -520,8 +551,15 @@ export const createRoom = (options = {}) => {
 					chatHistory.shift();
 				}
 				dirty = true;
-				// O14: spectators chat and HEAR chat on our server
-				broadcast(client, type, { ...data, nick, text, id: user.id }, { spectators: true });
+				// O14: spectators chat and HEAR chat on our server. Explicit
+				// shape: relayed junk fields once let a client smuggle a fake
+				// `seq` into caps peers' streams (review finding)
+				broadcast(
+					client,
+					type,
+					{ nick, group: user.group, text, id: user.id },
+					{ spectators: true },
+				);
 				log(`${nick}: ${text}`);
 				return;
 			}
@@ -536,17 +574,28 @@ export const createRoom = (options = {}) => {
 				if (user.role === 'viewer') {
 					return;
 				}
-				doc.title = typeof data.title === 'string' ? data.title : doc.title;
-				doc.author = typeof data.author === 'string' ? data.author : doc.author;
-				doc.group = typeof data.group === 'string' ? data.group : doc.group;
-				doc.comments =
-					typeof data.comments === 'string' ? data.comments : doc.comments;
+				// clamped at intake (review finding: unbounded strings bloated
+				// the op log, the sidecar JSON, and every broadcast)
+				/** @param {unknown} value @param {string} fallback @param {number} limit */
+				const field = (value, fallback, limit) =>
+					typeof value === 'string' ? value.slice(0, limit) : fallback;
+				doc.title = field(data.title, doc.title, 35);
+				doc.author = field(data.author, doc.author, 20);
+				doc.group = field(data.group, doc.group, 20);
+				doc.comments = field(data.comments, doc.comments, 64 * 64);
+				const payload = {
+					title: doc.title,
+					author: doc.author,
+					group: doc.group,
+					comments: doc.comments,
+					id: user.id,
+				};
 				fanoutMutation(
 					client,
 					user,
-					pushOp(type, data),
-					{ type, data },
-					{ type, data },
+					pushOp(type, payload),
+					{ type, data: payload },
+					{ type, data: payload },
 					{ spectators: true },
 				);
 				return;
@@ -558,12 +607,13 @@ export const createRoom = (options = {}) => {
 				doc.ice_colors = data.value === true;
 				// the blink fold in stored vanilla views depends on ice
 				reprojectExtBlocks();
+				const payload = { value: doc.ice_colors, id: user.id };
 				fanoutMutation(
 					client,
 					user,
-					pushOp(type, data),
-					{ type, data },
-					{ type, data },
+					pushOp(type, payload),
+					{ type, data: payload },
+					{ type, data: payload },
 					{ spectators: true },
 				);
 				return;
@@ -573,12 +623,13 @@ export const createRoom = (options = {}) => {
 					return;
 				}
 				doc.use_9px_font = data.value === true;
+				const payload = { value: doc.use_9px_font, id: user.id };
 				fanoutMutation(
 					client,
 					user,
-					pushOp(type, data),
-					{ type, data },
-					{ type, data },
+					pushOp(type, payload),
+					{ type, data: payload },
+					{ type, data: payload },
 					{ spectators: true },
 				);
 				return;
@@ -588,14 +639,15 @@ export const createRoom = (options = {}) => {
 					return;
 				}
 				if (typeof data.font_name === 'string') {
-					doc.font_name = data.font_name;
+					doc.font_name = data.font_name.slice(0, 100);
 				}
+				const payload = { font_name: doc.font_name, id: user.id };
 				fanoutMutation(
 					client,
 					user,
-					pushOp(type, data),
-					{ type, data },
-					{ type, data },
+					pushOp(type, payload),
+					{ type, data: payload },
+					{ type, data: payload },
 					{ spectators: true },
 				);
 				return;
@@ -613,6 +665,7 @@ export const createRoom = (options = {}) => {
 					columns > maxColumns ||
 					rows > maxRows
 				) {
+					refuseAck(client, user);
 					return;
 				}
 				// NO throttle, deliberately: a dropped resize diverges the
@@ -622,15 +675,17 @@ export const createRoom = (options = {}) => {
 				// that, exactly as upstream; caps clients now detect any
 				// divergence through the seq stream and recover via EXT_SYNC.
 				resizeDoc(columns, rows);
-				const opSeq = pushOp(type, { columns, rows, id: user.id });
-				// relay the sender's data verbatim: it carries the id vanilla
-				// clients crash without (landmine 2)
+				const payload = { columns, rows, id: user.id };
+				const opSeq = pushOp(type, payload);
+				// rebuilt shape with the SERVER-known id: vanilla clients
+				// crash without an id (landmine 2), and relayed client ids
+				// were forgeable (review finding)
 				fanoutMutation(
 					client,
 					user,
 					opSeq,
-					{ type, data },
-					{ type, data },
+					{ type, data: payload },
+					{ type, data: payload },
 					{ spectators: true },
 				);
 				log(`canvas resized ${columns}x${rows}`);
@@ -645,6 +700,7 @@ export const createRoom = (options = {}) => {
 				}
 				const draw = sanitizeExtDraw(data, doc.columns, doc.rows);
 				if (!draw) {
+					refuseAck(client, user);
 					return;
 				}
 				const { x, y } = draw;
@@ -685,6 +741,7 @@ export const createRoom = (options = {}) => {
 					data.cells.length === 0 ||
 					data.cells.length > EXT_BATCH_LIMIT
 				) {
+					refuseAck(client, user);
 					return;
 				}
 				const words = paletteWords();
@@ -710,6 +767,7 @@ export const createRoom = (options = {}) => {
 					});
 				}
 				if (applied.length === 0) {
+					refuseAck(client, user);
 					return;
 				}
 				// one op, one seq; vanilla peers get it as per-cell DRAWs
@@ -728,6 +786,13 @@ export const createRoom = (options = {}) => {
 				if (!hasExt(user)) {
 					return;
 				}
+				// a tiny request frame makes the server walk the whole doc:
+				// per-user cooldown (the honest client already has one)
+				const now = Date.now();
+				if (now - user.lastSyncAt < syncCooldownMs) {
+					return;
+				}
+				user.lastSyncAt = now;
 				try {
 					client.send(T0wnzAction.EXT_SYNC, syncPayload());
 				} catch {
@@ -741,16 +806,26 @@ export const createRoom = (options = {}) => {
 				}
 				const palette = sanitizeExtPalette(data.palette);
 				if (!palette) {
+					refuseAck(client, user);
 					return;
 				}
 				doc.ext_palette = palette;
 				// bridge the classic 16 into the vanilla join palette so late
 				// vanilla joiners see them; in-session vanilla peers keep a
-				// stale palette (upstream's own CHANGE_PALETTE precedent)
+				// stale palette (upstream's own CHANGE_PALETTE precedent).
+				// Padded to EXACTLY 16: a short join palette is an
+				// out-of-contract shape vanilla clients index into blindly
+				// (review finding)
+				const bridge = paletteWordsFromJoin(doc.palette);
+				for (let i = 0; i < Math.min(16, palette.length); i++) {
+					bridge[i] = palette[i];
+				}
 				doc.palette = paletteTo6Bit(
-					palette
-						.slice(0, 16)
-						.map(w => [(w >> 16) & 0xff, (w >> 8) & 0xff, w & 0xff]),
+					[...bridge.slice(0, 16)].map(w => [
+						(w >> 16) & 0xff,
+						(w >> 8) & 0xff,
+						w & 0xff,
+					]),
 				);
 				reprojectExtBlocks();
 				const payload = { palette, id: user.id };
@@ -768,6 +843,11 @@ export const createRoom = (options = {}) => {
 				if (!hasExt(user)) {
 					return;
 				}
+				const now = Date.now();
+				if (now - user.lastSyncAt < syncCooldownMs) {
+					return;
+				}
+				user.lastSyncAt = now;
 				try {
 					client.send(T0wnzAction.EXT_TIMELAPSE, {
 						columns: baseline.columns,
@@ -868,7 +948,9 @@ export const createRoom = (options = {}) => {
 			}
 			const savedChat = /** @type {any} */ (saved).chat;
 			if (Array.isArray(savedChat)) {
-				chatHistory.push(...savedChat);
+				chatHistory.push(
+					...savedChat.slice(-ROOM_DEFAULTS.chatHistoryLimit),
+				);
 			}
 			// full-fidelity rider (sidecar or envelope restore): reattach
 			// ext payloads where the vanilla block lost information

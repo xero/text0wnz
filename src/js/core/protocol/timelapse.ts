@@ -54,13 +54,21 @@ export const timelapseToDoc = (
 	payload: Record<string, unknown>,
 	options: { maxFrames?: number } = {},
 ): TimelapseResult => {
-	const maxFrames = Math.max(2, options.maxFrames ?? 120);
 	const { columns, rows } = payload;
 	if (!validDims(columns, rows)) {
 		throw new ProtocolError(
 			`bad timelapse dims ${String(columns)}x${String(rows)}`,
 		);
 	}
+	// aggregate memory bound (review finding): frames x cells respects
+	// the O13 animation budget, so a 10M-cell room gets a 2-frame movie
+	// instead of killing the tab
+	const cells = (columns as number) * (rows as number);
+	const budgetFrames = Math.floor(16_000_000 / cells);
+	const maxFrames = Math.max(
+		2,
+		Math.min(options.maxFrames ?? 120, budgetFrames),
+	);
 	const baseline = expandExtCells(
 		payload.cells,
 		(columns as number) * (rows as number),

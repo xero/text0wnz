@@ -195,6 +195,10 @@ const createSixteenColors = ({ openFile }) => {
 					pack.archive,
 					new Uint8Array(await response.arrayBuffer()),
 				);
+				// a browsing session must not hoard every pack it touched
+				while (cache.zips.size > 3) {
+					cache.zips.delete(cache.zips.keys().next().value);
+				}
 			}
 			const zip = cache.zips.get(pack.archive);
 			const entry = findZipEntry(readZipEntries(zip), file.name);

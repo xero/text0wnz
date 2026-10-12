@@ -140,6 +140,12 @@ describe('blockToExtCell', () => {
 		expect(blockToExtCell({ code: 63, fg: 7, bg: 0, ext })).toEqual(ext);
 	});
 
+	it('folds non-characters to ? instead of poisoning the projection', () => {
+		// a smuggled surrogate here once made every room save throw
+		expect(blockToExtCell({ code: 0xd800, fg: 7, bg: 0 }).u).toBe(63);
+		expect(blockToExtCell({ code: 0x110000, fg: 7, bg: 0 }).u).toBe(63);
+	});
+
 	it('derives cp437 bytes and icy codepoints from vanilla blocks', () => {
 		expect(blockToExtCell({ code: 176, fg: 7, bg: 8 })).toEqual({
 			u: 0x2591,

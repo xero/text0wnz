@@ -201,13 +201,21 @@ export const extCellToBlock = (
  */
 export const blockToExtCell = (
 	block: MoebiusBlock & { ext?: ExtCell },
-): ExtCell =>
-	block.ext ?? {
-		u: block.code <= 0xff ? cp437ToUnicode(block.code) : block.code,
+): ExtCell => {
+	if (block.ext) {
+		return block.ext;
+	}
+	const raw = block.code <= 0xff ? cp437ToUnicode(block.code) : block.code;
+	return {
+		// a non-character here (icy-style surrogate smuggled past a lax
+		// border) would make every later expandExtCells THROW — which
+		// once meant a room that could never save again (review finding)
+		u: isValidCodepoint(raw) ? raw : 63,
 		a: 0,
 		fg: paletteColor(block.fg & 0xff),
 		bg: paletteColor(block.bg & 0xff),
 	};
+};
 
 // --------------------------------------------------------- sync RLE
 
