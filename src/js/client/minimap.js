@@ -112,12 +112,21 @@ const createMinimap = () => {
 		dragging = false;
 	});
 
+	const remember = value => {
+		try {
+			localStorage.setItem('minimapVisible', value);
+		} catch {
+			// storage blocked: the preference just does not persist
+		}
+	};
+
 	const show = () => {
 		visible = true;
 		panel.classList.remove('hide');
 		nav.classList.add('active');
 		render();
 		timer = setInterval(render, 500);
+		remember('true');
 	};
 
 	const hide = () => {
@@ -126,6 +135,7 @@ const createMinimap = () => {
 		nav.classList.remove('active');
 		clearInterval(timer);
 		timer = 0;
+		remember('false');
 	};
 
 	nav.addEventListener('click', () => (visible ? hide() : show()));
@@ -143,6 +153,17 @@ const createMinimap = () => {
 			render();
 		}
 	});
+
+	// ON by default (owner call, 2026-10-12); the toggle is remembered
+	let stored = null;
+	try {
+		stored = localStorage.getItem('minimapVisible');
+	} catch {
+		// storage blocked: default wins
+	}
+	if (stored !== 'false') {
+		show();
+	}
 
 	return { render, show, hide, isVisible: () => visible };
 };

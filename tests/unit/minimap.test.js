@@ -25,6 +25,7 @@ const MARKUP = `
 `;
 
 beforeEach(() => {
+	localStorage.removeItem('minimapVisible');
 	document.body.innerHTML = MARKUP;
 	State.textArtCanvas = {
 		getColumns: () => 4,
@@ -53,12 +54,12 @@ describe('minimap', () => {
 		expect(createMinimap()).toBeNull();
 	});
 
-	it('toggles visibility from the toolbar button and survives jsdom', () => {
+	it('starts VISIBLE by default and remembers the toggle', () => {
 		vi.useFakeTimers();
 		const minimap = createMinimap();
 		const nav = document.getElementById('navMinimap');
 		const panel = document.getElementById('minimapPanel');
-		nav.click();
+		// owner call: on by default
 		expect(minimap.isVisible()).toBe(true);
 		expect(panel.classList.contains('hide')).toBe(false);
 		// the refresh tick must not throw without a 2D context
@@ -66,6 +67,11 @@ describe('minimap', () => {
 		nav.click();
 		expect(minimap.isVisible()).toBe(false);
 		expect(panel.classList.contains('hide')).toBe(true);
+		expect(localStorage.getItem('minimapVisible')).toBe('false');
+		// a remembered OFF stays off on the next boot
+		document.body.innerHTML = MARKUP;
+		const next = createMinimap();
+		expect(next.isVisible()).toBe(false);
 	});
 
 	it('sizes the art canvas to the doc on render', () => {
