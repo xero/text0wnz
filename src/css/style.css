@@ -1244,6 +1244,22 @@
 			}
 		}
 	}
+	#sixteenBar {
+		@apply flex flex-row gap-2 items-center w-full pb-2;
+		button {
+			@apply bg-menu text-fg text-base px-3 py-1 m-0 cursor-pointer;
+		}
+		button:hover,
+		button.active {
+			@apply bg-purp;
+		}
+		input[type='search'] {
+			@apply bg-midnight text-fg text-base px-3 py-1 grow;
+		}
+		#sixteenCrumb {
+			@apply text-subtitle text-base ml-auto pr-1;
+		}
+	}
 	#sixteenList {
 		@apply overflow-y-auto;
 		max-height: 62vh;
@@ -1265,9 +1281,33 @@
 				@apply w-full text-center;
 			}
 		}
-		&[data-view='packs'] {
+		/* artist and crew names run longer than year labels */
+		&[data-view='artists'],
+		&[data-view='crews'] {
+			@apply grid gap-2 content-start;
+			grid-template-columns: repeat(auto-fill, minmax(11em, 1fr));
+			button {
+				@apply w-full text-center break-all;
+			}
+		}
+		&[data-view='packs'],
+		&[data-view='crewpacks'],
+		&[data-view='packsearch'] {
 			@apply grid gap-2 content-start;
 			grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
+		}
+		.sixteenSub {
+			@apply text-subtitle text-xs;
+		}
+		/* an artist's works, one section per pack with its own masonry */
+		.sixteenWorks {
+			@apply flex flex-col w-full gap-2 pb-4;
+			.sixteenWorksHead {
+				@apply w-fit text-cyan;
+			}
+			.sixteenWorksBody {
+				@apply flex flex-row gap-2 items-start w-full;
+			}
 		}
 		.sixteenPack {
 			@apply flex flex-col items-center gap-1 p-1;
