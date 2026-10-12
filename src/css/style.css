@@ -1081,6 +1081,7 @@
 	#colorPanel {
 		/* aside > div makes this a centered flex row; restack it */
 		@apply fixed z-40 dialog-style p-2 flex-col items-stretch text-left;
+		cursor: move;
 		left: 48px;
 		top: var(--header-size);
 		width: 346px;
@@ -1128,9 +1129,12 @@
 	}
 	#framesPanel {
 		@apply fixed z-40 dialog-style p-2 flex flex-row gap-2 items-center;
+		cursor: move;
 		left: 48px;
 		bottom: 8px;
 		max-width: calc(100vw - 64px);
+		/* the close X needs a corner the row's buttons do not reach */
+		padding-right: 1.25rem;
 		button {
 			@apply bg-menu text-fg px-2 cursor-pointer;
 		}
@@ -1481,6 +1485,23 @@
 		canvas {
 			cursor: crosshair;
 			vertical-align: bottom;
+		}
+	}
+
+	/* close chrome for the floated color and frames windows; the brush
+	   windows keep their own higher-specificity copy above */
+	.hidePanel {
+		display: block;
+		position: absolute;
+		top: 0;
+		right: 0;
+		color: #efefef;
+		padding: 2px 5px;
+		font-size: 10px;
+		cursor: pointer;
+
+		&:hover {
+			background: #000;
 		}
 	}
 

@@ -710,6 +710,93 @@ const createViewportController = el => {
 	};
 };
 
+// drag + close chrome for the fixed tool windows (colors, frames),
+// matching the brush windows' behavior. A press on a control is a
+// control gesture, so only free panel area starts a drag
+const makePanelFloat = (panel, onClose) => {
+	const close = document.createElement('div');
+	close.classList.add('hidePanel');
+	close.innerText = 'X';
+	panel.appendChild(close);
+	close.addEventListener('click', onClose);
+
+	const interactive = target =>
+		target.closest('button, input, select, canvas, .colorSwatch, .hidePanel') !==
+		null;
+
+	let startPointer = null;
+	let startPanel = null;
+
+	const setPos = (newX, newY) => {
+		// dropping the bottom anchor keeps a bottom-pinned panel from
+		// stretching once top is set
+		panel.style.bottom = 'auto';
+		panel.style.left = newX + 'px';
+		panel.style.top = newY + 'px';
+	};
+
+	const begin = (px, py) => {
+		startPointer = [px, py];
+		const rect = panel.getBoundingClientRect();
+		startPanel = [rect.left, rect.top];
+	};
+
+	const dragTo = (px, py) => {
+		setPos(
+			startPanel[0] + (px - startPointer[0]),
+			startPanel[1] + (py - startPointer[1]),
+		);
+	};
+
+	const mouseMove = e => {
+		if (startPointer) {
+			e.preventDefault();
+			dragTo(e.clientX, e.clientY);
+		}
+	};
+
+	const mouseUp = () => {
+		startPointer = null;
+		document.removeEventListener('mousemove', mouseMove);
+		document.removeEventListener('mouseup', mouseUp);
+	};
+
+	panel.addEventListener('mousedown', e => {
+		if (interactive(e.target)) {
+			return;
+		}
+		begin(e.clientX, e.clientY);
+		document.addEventListener('mousemove', mouseMove);
+		document.addEventListener('mouseup', mouseUp);
+	});
+
+	const touchMove = e => {
+		if (startPointer) {
+			e.preventDefault();
+			dragTo(e.touches[0].pageX, e.touches[0].pageY);
+		}
+	};
+
+	const touchEnd = () => {
+		startPointer = null;
+		document.removeEventListener('touchmove', touchMove);
+		document.removeEventListener('touchend', touchEnd);
+	};
+
+	panel.addEventListener(
+		'touchstart',
+		e => {
+			if (interactive(e.target)) {
+				return;
+			}
+			begin(e.touches[0].pageX, e.touches[0].pageY);
+			document.addEventListener('touchmove', touchMove, { passive: false });
+			document.addEventListener('touchend', touchEnd);
+		},
+		{ passive: true },
+	);
+};
+
 const createResolutionController = (lbl, txtC, txtR) => {
 	[
 		'onTextCanvasSizeChange',
@@ -1162,6 +1249,7 @@ export {
 	createToolPreview,
 	enforceMaxBytes,
 	createResolutionController,
+	makePanelFloat,
 	createDragDropController,
 	createMenuController,
 	createFontSelect,

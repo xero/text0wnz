@@ -266,6 +266,7 @@ The `++` button under the palette strip opens the extended color panel, one clic
 - **xterm 256 grid** - Click a swatch for the foreground, right-click for the background
 - **RGB** - Pick any truecolor value with the hex color input, then apply it with the `fg` or `bg` buttons
 - **Recent** - Your last ten extended picks, remembered between sessions
+- The panel floats: drag any free spot to move it, close it with the **X** or the `++` button
 
 Formats that cannot hold extended colors list what will be quantized or dropped at export time.
 
@@ -730,7 +731,7 @@ The **Ref Image** button in the viewport toolbar opens a small panel for tracing
 
 # Animation
 
-teXt0wnz edits multi-frame animations. Press the **Frames** button in the viewport toolbar to open the frames panel.
+teXt0wnz edits multi-frame animations. Press the **Frames** button in the viewport toolbar to open the frames panel. The panel floats: drag any free spot to move it, close it with the **X** or the **Frames** button.
 
 ## Frame Timeline
 

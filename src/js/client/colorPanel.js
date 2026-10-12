@@ -13,7 +13,7 @@
  * the panel is inert and says why.
  */
 import State from './state.js';
-import { $ } from './ui.js';
+import { $, makePanelFloat } from './ui.js';
 import { xterm256RGB } from '../core/codecs/dur.js';
 import { paletteColor, rgbColor } from '../core/doc.js';
 
@@ -144,6 +144,7 @@ const createColorPanel = () => {
 				renderRecent();
 			}
 		});
+		makePanelFloat(panel, () => panel.classList.add('hide'));
 	}
 
 	return { hide: () => panel?.classList.add('hide') };

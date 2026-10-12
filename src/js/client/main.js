@@ -38,6 +38,7 @@ import {
 	enforceMaxBytes,
 	createFontSelect,
 	createZoomControl,
+	makePanelFloat,
 } from './ui.js';
 import {
 	createDefaultPalette,
@@ -615,7 +616,15 @@ const initializeAppComponents = async () => {
 	// toolbar view switches, like the grid button
 	const framesPanel = createFramesPanel();
 	if (framesPanel) {
-		createSettingToggle($('navFrames'), framesPanel.isOpen, framesPanel.setOpen);
+		const framesToggle = createSettingToggle(
+			$('navFrames'),
+			framesPanel.isOpen,
+			framesPanel.setOpen,
+		);
+		makePanelFloat($('framesPanel'), () => {
+			framesPanel.setOpen(false);
+			framesToggle.update();
+		});
 	}
 
 	// a partial cell may only ever render at the BOTTOM edge: once any
