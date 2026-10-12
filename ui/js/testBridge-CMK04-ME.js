@@ -1,0 +1,1 @@
+import{A as e}from"./core-CF6XGlxU.js";import{n as o,t}from"./fileops-BQO_lP-y.js";var n=()=>{window.__t0wnz={State:e,Load:t,Save:o},document.dispatchEvent(new CustomEvent("onTestBridgeReady")),console.log("[TestBridge] window.__t0wnz installed")};export{n as installTestBridge};
