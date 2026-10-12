@@ -1,0 +1,47 @@
+# P6: one-shot GitHub Pages preview of a NON-main ref (the owner's
+# artist-friends test of v3 before the real domain updates). Dispatch
+# it on the branch to preview:
+#
+#   gh workflow run pages-preview.yml --ref v3
+#
+# The next main push redeploys main over it through deploy.yml, so the
+# preview needs no cleanup.
+name: pages preview
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: 'pages'
+  cancel-in-progress: false
+jobs:
+  preview:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    name: build and deploy preview
+    steps:
+      - name: checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: setup bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 'latest'
+      - name: install dependencies
+        run: bun i
+      - name: set pages domain
+        run: |
+          sed -i 's!text.0w.nz!xero.github.io/text0wnz!' .env
+      - name: build application
+        run: CI=actions bun bake
+      - name: upload pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: dist
+          retention-days: 3
+      - name: deploy preview
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
