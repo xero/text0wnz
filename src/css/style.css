@@ -1118,6 +1118,47 @@
 	.colorSwatch:hover {
 		outline: 1px solid theme('colors.cyber');
 	}
+	#framesPanel {
+		@apply fixed z-40 dialog-style p-2 flex flex-row gap-2 items-center;
+		left: 48px;
+		bottom: 8px;
+		max-width: calc(100vw - 64px);
+		button {
+			@apply bg-menu text-fg px-2 cursor-pointer;
+		}
+		button:hover:not(:disabled) {
+			@apply bg-purp;
+		}
+		button:disabled {
+			@apply opacity-40 cursor-default;
+		}
+		button.active {
+			@apply bg-purp;
+		}
+		kbd {
+			@apply text-cyan text-sm px-1;
+		}
+		label {
+			@apply text-fg text-xs flex items-center gap-1;
+			input {
+				@apply bg-menu text-fg;
+				width: 54px;
+			}
+		}
+		p {
+			@apply text-fg text-xs;
+		}
+	}
+	#frameStrip {
+		@apply flex flex-row gap-1 overflow-x-auto;
+		max-width: 320px;
+		.frameCell {
+			@apply text-xs px-1;
+		}
+		.frameCell.current {
+			@apply bg-purp;
+		}
+	}
 	#colorRGB {
 		@apply flex flex-row gap-2 items-center;
 		button {

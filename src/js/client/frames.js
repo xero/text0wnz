@@ -1,0 +1,198 @@
+/**
+ * Frames timeline (PLAN §4 P6): the animation panel — frame strip,
+ * add/duplicate/delete, per-frame delay, live-fps playback, onion
+ * skin. Pure UI over the canvas frames API; the doc model has carried
+ * frames since P2 and .dur imports already arrive multi-frame.
+ *
+ * Collab sessions are single-frame by policy (no frame op exists in
+ * the protocol): the controls disable with a visible note while
+ * connected, matching the charset/color lockouts.
+ */
+import State from './state.js';
+import { $ } from './ui.js';
+
+const createFramesPanel = () => {
+	const panel = $('framesPanel');
+	const navButton = $('navFrames');
+	if (!panel || !navButton) {
+		return null;
+	}
+	const strip = $('frameStrip');
+	const label = $('frameLabel');
+	const btnPrev = $('framePrev');
+	const btnNext = $('frameNext');
+	const btnAdd = $('frameAdd');
+	const btnDup = $('frameDup');
+	const btnDel = $('frameDel');
+	const btnPlay = $('framePlay');
+	const btnOnion = $('frameOnion');
+	const inputDelay = $('frameDelay');
+	const inputFps = $('frameFps');
+	const lockNote = $('framesLockNote');
+
+	let playing = false;
+	let playTimer = 0;
+
+	const canvas = () => State.textArtCanvas;
+	const locked = () => State.network?.isConnected?.() === true;
+
+	const stop = () => {
+		if (playTimer) {
+			clearTimeout(playTimer);
+			playTimer = 0;
+		}
+		if (playing) {
+			playing = false;
+			btnPlay.textContent = 'play';
+			btnPlay.classList.remove('active');
+		}
+	};
+
+	const step = () => {
+		const c = canvas();
+		if (!playing || c.getFrameCount() < 2) {
+			stop();
+			return;
+		}
+		const next = (c.getCurrentFrame() + 1) % c.getFrameCount();
+		c.setCurrentFrame(next);
+		const delay = c.getFrameDelay(next) ?? c.getGlobalDelayMs();
+		playTimer = setTimeout(step, Math.max(16, delay));
+	};
+
+	const play = () => {
+		if (locked() || canvas().getFrameCount() < 2) {
+			return;
+		}
+		playing = true;
+		btnPlay.textContent = 'stop';
+		btnPlay.classList.add('active');
+		step();
+	};
+
+	const refresh = () => {
+		const c = canvas();
+		if (!c) {
+			return;
+		}
+		const count = c.getFrameCount();
+		const current = c.getCurrentFrame();
+		label.textContent = `${current + 1}/${count}`;
+		const isLocked = locked();
+		lockNote.classList.toggle('hide', !isLocked);
+		for (const button of [btnPrev, btnNext, btnAdd, btnDup, btnDel, btnPlay]) {
+			button.disabled = isLocked;
+		}
+		inputDelay.disabled = isLocked;
+		inputFps.disabled = isLocked;
+		btnDel.disabled = isLocked || count === 1;
+		const delay = c.getFrameDelay(current);
+		inputDelay.value = delay === undefined ? '' : String(delay);
+		inputDelay.placeholder = String(c.getGlobalDelayMs());
+		inputFps.value = String(Math.round(1000 / c.getGlobalDelayMs()));
+		btnOnion.classList.toggle('active', c.getOnionSkin() === true);
+		// numbered strip: click to jump, current highlighted
+		strip.textContent = '';
+		for (let i = 0; i < count; i++) {
+			const cell = document.createElement('button');
+			cell.textContent = String(i + 1);
+			cell.className = i === current ? 'frameCell current' : 'frameCell';
+			cell.addEventListener('click', () => {
+				stop();
+				canvas().setCurrentFrame(i);
+			});
+			strip.appendChild(cell);
+		}
+		const currentCell = strip.children[current];
+		currentCell?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+	};
+
+	const jump = offset => {
+		stop();
+		const c = canvas();
+		const count = c.getFrameCount();
+		c.setCurrentFrame((c.getCurrentFrame() + offset + count) % count);
+	};
+
+	btnPrev.addEventListener('click', () => jump(-1));
+	btnNext.addEventListener('click', () => jump(1));
+	btnAdd.addEventListener('click', () => {
+		stop();
+		const c = canvas();
+		if (!c.canAddFrame()) {
+			if (
+				!confirm(
+					'This passes the animation memory budget (O13). Add the frame anyway?',
+				)
+			) {
+				return;
+			}
+			const index = c.addFrame({ force: true });
+			c.setCurrentFrame(index);
+			return;
+		}
+		c.setCurrentFrame(c.addFrame({}));
+	});
+	btnDup.addEventListener('click', () => {
+		stop();
+		const c = canvas();
+		if (!c.canAddFrame()) {
+			return;
+		}
+		c.setCurrentFrame(c.addFrame({ copyFrom: c.getCurrentFrame() }));
+	});
+	btnDel.addEventListener('click', () => {
+		stop();
+		const c = canvas();
+		if (c.getFrameCount() > 1) {
+			c.removeFrame(c.getCurrentFrame());
+		}
+	});
+	btnPlay.addEventListener('click', () => {
+		if (playing) {
+			stop();
+		} else {
+			play();
+		}
+	});
+	btnOnion.addEventListener('click', () => {
+		const c = canvas();
+		c.setOnionSkin(!c.getOnionSkin());
+		refresh();
+	});
+	inputDelay.addEventListener('change', () => {
+		const c = canvas();
+		const value = parseInt(inputDelay.value, 10);
+		c.setFrameDelay(
+			c.getCurrentFrame(),
+			Number.isInteger(value) && value >= 16 ? value : undefined,
+		);
+		refresh();
+	});
+	inputFps.addEventListener('change', () => {
+		const fps = parseInt(inputFps.value, 10);
+		if (Number.isInteger(fps) && fps >= 1 && fps <= 60) {
+			canvas().setGlobalDelayMs(Math.round(1000 / fps));
+		}
+		refresh();
+	});
+
+	navButton.addEventListener('click', () => {
+		const show = panel.classList.contains('hide');
+		panel.classList.toggle('hide', !show);
+		navButton.classList.toggle('active', show);
+		if (show) {
+			refresh();
+		} else {
+			stop();
+		}
+	});
+
+	document.addEventListener('onFrameChange', refresh);
+	// editing stops playback (drawing into a flipbook is chaos)
+	document.addEventListener('onTextCanvasDown', stop);
+
+	return { refresh, stop, isPlaying: () => playing };
+};
+
+export { createFramesPanel };

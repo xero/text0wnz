@@ -8,6 +8,7 @@ import { trustedMessage } from './messageGuard.js';
 import { createZoomController } from './zoom.js';
 import { createCharsetPicker } from './charsetPicker.js';
 import { createColorPanel } from './colorPanel.js';
+import { createFramesPanel } from './frames.js';
 import { FontCache } from './fontCache.js';
 import {
 	$,
@@ -551,6 +552,9 @@ const initializeAppComponents = async () => {
 
 	// P5 extended colors: the strip's 256/RGB expansion panel
 	createColorPanel();
+
+	// P6 animation: frames timeline + playback + onion skin
+	createFramesPanel();
 
 	// Credz
 	onClick($('about'), _ => {

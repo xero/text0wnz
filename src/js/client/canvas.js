@@ -15,9 +15,11 @@ import {
 	createPatchArena,
 	encodeStrokeRecord,
 	replayJournal,
+	paletteColor,
 	snapOrigin,
 	unicodeToCp437Strict,
 	v3ToU16,
+	v3ToU16Lossy,
 } from '../core/index';
 import { createJournalStore } from './journalStore.js';
 import { createPointerInput } from './pointer.js';
@@ -104,15 +106,19 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const editor = createEditorCore(doc, {
 		arena,
+		onFrameChange: frameIndex => handleFrameChange(frameIndex),
 		onWrite: ({ index, x, y, word, history }) => {
 			imageData[index] = word;
+			if (onionSkin && onionPlanes) {
+				updateOnionIndex(index);
+			}
 			if (history) {
 				// Moebius-native wire cells (P4): unpacked coordinates, so
 				// the signed (index<<16) row-409 cap is gone for good. The
 				// ext payload carries full fidelity straight off the planes;
 				// network.js sends it in ext sessions and strips it for
 				// vanilla ones (P6 extension suite).
-				const frame = doc.frames[0];
+				const frame = doc.frames[editor.getCurrentFrame()];
 				const glyphValue = frame.glyph[index];
 				const glyphId = glyphValue & 0xffff;
 				drawHistory.push({
@@ -150,6 +156,80 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		},
 	});
 	const iceColorsNow = () => doc.getIceColors();
+
+	// ---- P6 frames: onion-skin compose + current-frame mirror ----------
+	// Onion skin is a DATA-level ghost, GL-only (the chunk fallback's u16
+	// mirror always reflects the real frame): blank cells of the current
+	// frame show the previous frame dimmed to 35%, blink stripped.
+	let onionSkin = false;
+	/** @type {{glyph: Uint32Array, fg: Uint32Array, bg: Uint32Array} | null} */
+	let onionPlanes = null;
+	const BLANK_BG = paletteColor(0);
+
+	const dimWord = word => {
+		const [r, g, b] = State.palette.getRGBAColor(word);
+		return (
+			((Math.floor(r * 0.35) & 0xff) << 16) |
+			((Math.floor(g * 0.35) & 0xff) << 8) |
+			(Math.floor(b * 0.35) & 0xff)
+		);
+	};
+
+	const composeOnionIndex = (prev, cur, i) => {
+		const glyphId = cur.glyph[i] & 0xffff;
+		const blank =
+			(glyphId === 0 || glyphId === 32) && cur.bg[i] === BLANK_BG;
+		if (!blank || !prev) {
+			onionPlanes.glyph[i] = cur.glyph[i];
+			onionPlanes.fg[i] = cur.fg[i];
+			onionPlanes.bg[i] = cur.bg[i];
+		} else {
+			onionPlanes.glyph[i] = prev.glyph[i] & 0xffff; // blink stripped
+			onionPlanes.fg[i] = dimWord(prev.fg[i]);
+			onionPlanes.bg[i] = dimWord(prev.bg[i]);
+		}
+	};
+
+	const updateOnionIndex = index => {
+		const frameIndex = editor.getCurrentFrame();
+		composeOnionIndex(
+			frameIndex > 0 ? doc.frames[frameIndex - 1] : null,
+			doc.frames[frameIndex],
+			index,
+		);
+	};
+
+	const rebuildOnionPlanes = () => {
+		const frameIndex = editor.getCurrentFrame();
+		const cur = doc.frames[frameIndex];
+		const prev = frameIndex > 0 ? doc.frames[frameIndex - 1] : null;
+		if (!onionPlanes || onionPlanes.glyph.length !== cur.glyph.length) {
+			onionPlanes = {
+				glyph: new Uint32Array(cur.glyph.length),
+				fg: new Uint32Array(cur.glyph.length),
+				bg: new Uint32Array(cur.glyph.length),
+			};
+		}
+		for (let i = 0; i < cur.glyph.length; i++) {
+			composeOnionIndex(prev, cur, i);
+		}
+	};
+
+	/** re-mirror + repaint + tell the UI; fired by editor navigation */
+	const handleFrameChange = frameIndex => {
+		imageData = v3ToU16Lossy(doc, frameIndex).imageData;
+		if (onionSkin) {
+			rebuildOnionPlanes();
+		}
+		redrawEntireImage();
+		document.dispatchEvent(
+			new CustomEvent('onFrameChange', {
+				detail: { frame: frameIndex, count: doc.frames.length },
+				bubbles: true,
+				cancelable: false,
+			}),
+		);
+	};
 
 	const chunkSize = 25,
 				viewportState = {
@@ -195,8 +275,13 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				getColumns: () => columns,
 				getRows: () => rows,
 				// GL renders the v3 planes directly (tag-bit colors, attr
-				// blink); the u16 mirror stays for the chunk fallback + collab
-				getPlanes: () => doc.frames[0],
+				// blink); the u16 mirror stays for the chunk fallback +
+				// collab. Frames: the current frame renders; onion mode
+				// substitutes the composed ghost planes (GL-only)
+				getPlanes: () =>
+					onionSkin && onionPlanes
+						? onionPlanes
+						: doc.frames[editor.getCurrentFrame()],
 				getIceColors: iceColorsNow,
 				getGlyphDef: glyphId => doc.glyphTable.get(glyphId),
 				getHexPages: ensureHexPages,
@@ -1107,7 +1192,13 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			editor.resize(newColumnValue, newRowValue);
 			columns = newColumnValue;
 			rows = newRowValue;
-			imageData = editor.toU16().imageData;
+			// LOSSY projection, current frame: the strict one throws on
+			// unicode glyphs and RGB words (latent P5 bug: resizing after
+			// a unicode paste crashed), and the mirror is lossy by contract
+			imageData = v3ToU16Lossy(doc, editor.getCurrentFrame()).imageData;
+			if (onionSkin) {
+				rebuildOnionPlanes();
+			}
 			scheduleJournalKeyframe();
 			createCanvases();
 			updateTimer();
@@ -1311,8 +1402,19 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		scheduleJournalKeyframe();
 		createCanvases();
 		updateTimer();
+		if (onionSkin) {
+			rebuildOnionPlanes();
+		}
 		redrawEntireImage(null, () => {
 			document.dispatchEvent(new CustomEvent('onOpenedFile'));
+			// the frame count may have changed (.dur / envelope imports)
+			document.dispatchEvent(
+				new CustomEvent('onFrameChange', {
+					detail: { frame: 0, count: doc.frames.length },
+					bubbles: true,
+					cancelable: false,
+				}),
+			);
 			if (onComplete) {
 				onComplete();
 			}
@@ -1460,6 +1562,63 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		editor.setAreaU16(area, x, y);
 		processDirtyRegions();
 		sendDrawHistory();
+	};
+
+	// ---- P6 frames API (timeline UI drives these) ----------------------
+	// Collab sessions are single-frame by policy: no frame op exists in
+	// the protocol, so navigation and structure changes refuse while
+	// connected (the timeline UI says why).
+	const framesLocked = () => State.network?.isConnected?.() === true;
+
+	const setCurrentFrame = index => {
+		if (framesLocked()) {
+			return false;
+		}
+		return editor.setCurrentFrame(index);
+	};
+
+	const addFrame = options => {
+		if (framesLocked()) {
+			return -1;
+		}
+		const index = editor.addFrame(options);
+		scheduleJournalKeyframe();
+		State.saveToLocalStorage();
+		document.dispatchEvent(
+			new CustomEvent('onFrameChange', {
+				detail: { frame: editor.getCurrentFrame(), count: doc.frames.length },
+				bubbles: true,
+				cancelable: false,
+			}),
+		);
+		return index;
+	};
+
+	const removeFrame = index => {
+		if (framesLocked() || doc.frames.length === 1) {
+			return false;
+		}
+		editor.removeFrame(index); // fires onFrameChange -> remirror+repaint
+		scheduleJournalKeyframe();
+		State.saveToLocalStorage();
+		return true;
+	};
+
+	const setFrameDelay = (index, delayMs) => {
+		const frame = doc.frames[index];
+		if (!frame) {
+			return;
+		}
+		frame.delayMs = delayMs;
+		scheduleJournalKeyframe();
+	};
+
+	const setOnionSkin = enabled => {
+		onionSkin = enabled === true;
+		if (onionSkin) {
+			rebuildOnionPlanes();
+		}
+		redrawEntireImage();
 	};
 
 	// Network changes: repaint without entering undo or the draw history
@@ -1783,6 +1942,21 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		setArea: setArea,
 		quickDraw: quickDraw,
 		drawRemoteExtCells: drawRemoteExtCells,
+		getFrameCount: () => doc.frames.length,
+		getCurrentFrame: () => editor.getCurrentFrame(),
+		setCurrentFrame: setCurrentFrame,
+		addFrame: addFrame,
+		removeFrame: removeFrame,
+		canAddFrame: () => doc.canAddFrame(),
+		getFrameDelay: index => doc.frames[index]?.delayMs,
+		setFrameDelay: setFrameDelay,
+		getGlobalDelayMs: () => doc.getGlobalDelayMs(),
+		setGlobalDelayMs: ms => {
+			doc.setGlobalDelayMs(ms);
+			scheduleJournalKeyframe();
+		},
+		setOnionSkin: setOnionSkin,
+		getOnionSkin: () => onionSkin,
 		loadJournalSnapshot: loadJournalSnapshot,
 		journalKeyframe: scheduleJournalKeyframe,
 		setMirrorMode: setMirrorMode,

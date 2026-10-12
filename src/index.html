@@ -254,6 +254,12 @@
 							</svg>
 							<kbd>Grid</kbd>
 						</div>
+						<div id="navFrames" class="toolButton">
+							<svg alt="Animation Frames" aria-label="Animation Frames">
+								<use href="img/icons.svg#history"></use>
+							</svg>
+							<kbd>Frames</kbd>
+						</div>
 					</div>
 				</nav>
 				<nav>
@@ -322,6 +328,26 @@
 					<h3>Recent</h3>
 					<div id="colorRecent"></div>
 					<p id="colorLockNote" class="hide">Joined server only speaks 16 colors: extended picks are disabled until you disconnect.</p>
+				</div>
+				<div id="framesPanel" class="hide">
+					<button id="framePrev" title="Previous frame">&#9664;</button>
+					<kbd id="frameLabel">1/1</kbd>
+					<button id="frameNext" title="Next frame">&#9654;</button>
+					<div id="frameStrip"></div>
+					<button id="frameAdd" title="Add blank frame">+</button>
+					<button id="frameDup" title="Duplicate frame">=</button>
+					<button id="frameDel" title="Delete frame">&#215;</button>
+					<label>
+						ms
+						<input id="frameDelay" type="number" title="Per-frame delay (blank = global)" max="60000" min="16" step="10"/>
+					</label>
+					<label>
+						fps
+						<input id="frameFps" type="number" title="Global playback rate" max="60" min="1"/>
+					</label>
+					<button id="framePlay" title="Play / stop">play</button>
+					<button id="frameOnion" title="Onion skin (previous frame ghosted)">onion</button>
+					<p id="framesLockNote" class="hide">Animation editing is local-only: collab sessions stay on one frame.</p>
 				</div>
 				<div id="keyboard">
 					<svg alt="Keyboard" aria-label="Keyboard (k)">
