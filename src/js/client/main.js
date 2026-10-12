@@ -653,6 +653,13 @@ const initializeAppComponents = async () => {
 
 	onClick(sauceDone, () => {
 		State.title = sauceTitle.value;
+		// collab peers hear SAUCE edits (type 12 persists server-side)
+		State.network?.sendSauce?.({
+			title: sauceTitle.value,
+			author: sauceAuthor.value,
+			group: sauceGroup.value,
+			comments: sauceComments.value,
+		});
 		State.modal.close();
 	});
 

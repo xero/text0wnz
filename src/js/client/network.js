@@ -110,6 +110,7 @@ const createWorkerHandler = inputHandle => {
 	let lastSeq = -1;
 	let pendingOps = 0;
 	let syncCooldown = 0;
+	let passwordTried = false;
 	const extActive = () => serverCaps.includes(EXT_SUITE_CAP);
 
 	const onDisconnected = wasConnected => {
@@ -449,8 +450,34 @@ const createWorkerHandler = inputHandle => {
 					requestSync();
 				}
 				break;
+			case MoebiusAction.SAUCE: {
+				// P4 leftover: remote SAUCE edits land in the modal + title
+				applyReceivedSettings = true;
+				try {
+					if (typeof data.title === 'string') {
+						State.title = data.title;
+						const field = document.getElementById('sauceTitle');
+						if (field) {
+							field.value = data.title;
+						}
+					}
+					for (const [key, id] of [
+						['author', 'sauceAuthor'],
+						['group', 'sauceGroup'],
+						['comments', 'sauceComments'],
+					]) {
+						const field = document.getElementById(id);
+						if (field && typeof data[key] === 'string') {
+							field.value = data[key];
+						}
+					}
+				} finally {
+					applyReceivedSettings = false;
+				}
+				break;
+			}
 			default:
-				// STATUS, SAUCE, operations 17-20/22: nothing to render yet
+				// STATUS, operations 17-20/22: nothing to render yet
 				break;
 		}
 	};
@@ -474,10 +501,24 @@ const createWorkerHandler = inputHandle => {
 			case 'connected':
 				await adoptSession(data);
 				break;
-			case 'refused':
-				alert('The collab server refused the connection.');
+			case 'refused': {
+				// P4 leftover: gated rooms get a real password path instead
+				// of a dead-end alert; one retry, then stay local
+				if (!passwordTried) {
+					passwordTried = true;
+					const pass = window.prompt(
+						'This room is password protected. Enter the password:',
+					);
+					if (pass) {
+						joinCollaboration(pass);
+						break;
+					}
+				} else {
+					alert('The collab server refused the connection.');
+				}
 				stayLocal();
 				break;
+			}
 			case 'frame':
 				if (collaborationMode) {
 					await onFrame(data.type, data.data);
@@ -555,6 +596,14 @@ const createWorkerHandler = inputHandle => {
 	const sendIceColorsChange = iceColors =>
 		sendMutation(MoebiusAction.ICE_COLORS, { value: iceColors });
 
+	const sendSauce = meta =>
+		sendMutation(MoebiusAction.SAUCE, {
+			title: meta.title ?? '',
+			author: meta.author ?? '',
+			group: meta.group ?? '',
+			comments: meta.comments ?? '',
+		});
+
 	const sendLetterSpacingChange = letterSpacing =>
 		sendMutation(MoebiusAction.USE_9PX_FONT, { value: letterSpacing });
 
@@ -621,13 +670,13 @@ const createWorkerHandler = inputHandle => {
 		}
 	};
 
-	const joinCollaboration = () => {
+	const joinCollaboration = (pass = '') => {
 		State.modal.loading('Joining the collab session...');
 		State.worker.postMessage({
 			cmd: 'connect',
 			nick: handle,
 			group: '',
-			pass: '',
+			pass,
 			caps: [EXT_SUITE_CAP],
 			url: explicitServer,
 		});
@@ -725,6 +774,7 @@ const createWorkerHandler = inputHandle => {
 		sendFontChange: sendFontChange,
 		sendIceColorsChange: sendIceColorsChange,
 		sendLetterSpacingChange: sendLetterSpacingChange,
+		sendSauce: sendSauce,
 	};
 };
 

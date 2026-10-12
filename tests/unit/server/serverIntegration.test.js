@@ -108,6 +108,14 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 		expect(res.status).toBe(426);
 	});
 
+	it('serves /healthz liveness (P6 Docker target)', async () => {
+		const res = await fetch(`http://127.0.0.1:${port}/healthz`);
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.ok).toBe(true);
+		expect(typeof body.uptime).toBe('number');
+	});
+
 	it('refuses a bad password and unknown room paths', async () => {
 		const { ws, reply } = await connectClient('server', {
 			nick: 'x',

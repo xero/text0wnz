@@ -225,6 +225,14 @@ export const createMoebiusServer = config => {
 	/** @param {Request} req @param {import('bun').Server} server */
 	const fetchHandler = async (req, server) => {
 		const url = new URL(req.url);
+		if (url.pathname === '/healthz') {
+			// liveness for the P6 Docker target: cheap, no room state leaks
+			return Response.json({
+				ok: true,
+				rooms: rooms.size,
+				uptime: Math.floor(process.uptime()),
+			});
+		}
 		if (url.pathname === '/bridge') {
 			// reserve BEFORE the async DNS await: parallel requests in
 			// flight must not all pass the cap check (review finding)
