@@ -1,13 +1,13 @@
 // @vitest-environment node
 /**
- * Interop against the PINNED upstream server (PLAN §5): our codec and
+ * Interop against the PINNED upstream server: our codec and
  * client semantics versus the vendored moebiusXBIN v2.2.0 server
  * running under node. Pins the handshake, join-doc decode through
  * joinDocToDoc, no-self-echo DRAW fanout, the registered-only blind
  * relay (CHANGE_PALETTE included), SET_CANVAS_SIZE round trip, and the
  * upstream spectator quirks our own server deliberately diverges from
- * (password bypass, D12). Everything spawns locally; never a shared
- * server (landmine 4).
+ * (password bypass). Everything spawns locally; never a shared
+ * server.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn } from 'node:child_process';
@@ -190,7 +190,7 @@ describe('upstream moebiusXBIN server interop', () => {
 		await settle(100);
 	});
 
-	it('SET_CANVAS_SIZE resizes and relays with the sender id (landmine 2)', async () => {
+	it('SET_CANVAS_SIZE resizes and relays with the sender id', async () => {
 		const a = await connect(plainPort, { nick: 'resizer', pass: '' });
 		const b = await connect(plainPort, { nick: 'watcher', pass: '' });
 		const bResize = nextFrame(b.ws, A.SET_CANVAS_SIZE);
@@ -210,7 +210,7 @@ describe('upstream moebiusXBIN server interop', () => {
 		await settle(100);
 	});
 
-	it('REFUSED on a bad password; upstream lets nickless users BYPASS it (why D12 exists)', async () => {
+	it('REFUSED on a bad password; upstream lets nickless users BYPASS it', async () => {
 		const wrong = await connect(gatedPort, { nick: 'x', pass: 'nope' });
 		expect(wrong.reply.type).toBe(A.REFUSED);
 		wrong.ws.close();

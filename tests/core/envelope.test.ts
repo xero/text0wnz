@@ -28,7 +28,7 @@ const expectSamePlanes = (
 	});
 };
 
-describe('envelope container (O5)', () => {
+describe('envelope container', () => {
 	it('round-trips a doc that no classic format can hold', async () => {
 		const doc = createDocV3({ columns: 10, rows: 4, mode: 'free' });
 		// Unicode glyph, truecolor fg, bright-bg + blink mix, three frames

@@ -1,6 +1,6 @@
 /**
  * Regenerates src/js/core/blocksData.ts from the vendored Unicode
- * Blocks.txt (PLAN §3.4 charset tables): the block names and ranges
+ * Blocks.txt (charset tables): the block names and ranges
  * behind the charset picker. Committed output, like eawData.ts; it
  * only changes on a Unicode version bump. Runs under bun:
  *

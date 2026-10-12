@@ -518,7 +518,7 @@ describe('Keyboard Utilities', () => {
 		});
 	});
 
-	describe('paste modes (P6 steal)', () => {
+	describe('paste modes', () => {
 		const makeTool = () => {
 			const item = () => document.createElement('div');
 			return createPasteTool(item(), item(), item(), item());

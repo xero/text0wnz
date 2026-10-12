@@ -108,7 +108,7 @@ export const testcardIceBin = () => {
  * (flag bit 4, 512*fontHeight font bytes, custom palette) and rendering
  * the lower page. It cannot exercise upper-page RENDERING, because the
  * u16 doc model holds 8 bits of charCode, so no cell can address glyphs
- * 256-511 anywhere in the editor until the P2 doc model + glyph table.
+ * 256-511 anywhere in the editor until the v3 doc model + glyph table.
  * The upper-page bitmaps are the bitwise inverse of their lower-page
  * counterparts, so the moment upper-page addressing exists, any paging
  * bug flips pixels and the goldens catch it. Ice flag set, bright
@@ -159,7 +159,7 @@ export const testcard512Xb = () => {
 };
 
 /**
- * UTF-8 ANSI testcard (P5): mixed-charset content for the GL unicode
+ * UTF-8 ANSI testcard: mixed-charset content for the GL unicode
  * golden - classic CP437 glyphs, hex-font unicode (sextants, wedges,
  * rounded corners, braille), extended SGR colors (256 + truecolor),
  * and deliberately-unrenderable cells (a wide CJK char and an emoji)

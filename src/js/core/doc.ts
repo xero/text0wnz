@@ -174,7 +174,7 @@ export interface Cell {
 }
 
 /**
- * Frames × cells budget guarded at addFrame (O13). 16M cell-frames =
+ * Frames × cells budget guarded at addFrame. 16M cell-frames =
  * ~192MB of planes (12B/cell/frame), far above any typical ansimation
  * (80×25×50 = 100k).
  */
@@ -220,7 +220,7 @@ export interface DocV3 {
 			bg: Uint32Array;
 		},
 	) => void;
-	/** Budget check without mutating (O13 UI guard hook). */
+	/** Budget check without mutating (UI guard hook). */
 	canAddFrame: () => boolean;
 	addFrame: (options?: { copyFrom?: number; force?: boolean }) => number;
 	removeFrame: (index: number) => void;
@@ -337,7 +337,7 @@ export const createDocV3 = (options: DocV3Options): DocV3 => {
 			const { copyFrom, force } = addOptions ?? {};
 			if (!force && (frames.length + 1) * columns * rows > frameCellBudget) {
 				throw new Error(
-					`[core/doc] frame budget exceeded: ${frames.length + 1} frames x ${columns * rows} cells > ${frameCellBudget} (O13)`,
+					`[core/doc] frame budget exceeded: ${frames.length + 1} frames x ${columns * rows} cells > ${frameCellBudget}`,
 				);
 			}
 			const frame = createBlankPlanes(columns * rows);

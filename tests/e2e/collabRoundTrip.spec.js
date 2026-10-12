@@ -254,7 +254,7 @@ test.describe('collab round trip against a live server', () => {
 		await late.context.close();
 	});
 
-	test('a server-refused resize recovers through EXT_SYNC (review pin)', async ({
+	test('a server-refused resize recovers through EXT_SYNC', async ({
 		browser,
 		browserName,
 	}) => {

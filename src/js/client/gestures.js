@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Touch gesture recognizer (PLAN §3.5). Pure state machine: the
+ * Touch gesture recognizer. Pure state machine: the
  * pointer normalizer feeds it touch pointers only (mouse and pen skip
  * it entirely) and it decides between a draw stroke and the gestures:
  *

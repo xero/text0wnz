@@ -107,7 +107,7 @@ describe('lintDocForFormat', () => {
 	});
 });
 
-describe('ice-blink (review finding 11)', () => {
+describe('ice-blink', () => {
 	it('flags blink attrs inside an ice doc for 16c formats', () => {
 		const doc = createDocV3({ columns: 2, rows: 1, iceColors: true });
 		doc.setCell(0, 0, 0, {

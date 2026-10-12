@@ -46,7 +46,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	// renderer and the vanilla collab protocol.
 	const doc = createDocV3({ columns, rows });
 
-	// OPFS autosave journal (PLAN §3.2): committed strokes append live;
+	// OPFS autosave journal: committed strokes append live;
 	// doc-level changes and undo/redo write a debounced fresh keyframe.
 	// Collab sessions never journal; the server owns that doc.
 	const journal = createJournalStore();
@@ -153,7 +153,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	});
 	const iceColorsNow = () => doc.getIceColors();
 
-	// ---- P6 frames: onion-skin compose + current-frame mirror ----------
+	// ---- frames: onion-skin compose + current-frame mirror ----------
 	// Onion skin is a DATA-level ghost, GL-only (the chunk fallback's u16
 	// mirror always reflects the real frame): blank cells of the current
 	// frame show the previous frame dimmed to 35%, blink stripped.
@@ -1562,7 +1562,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		sendDrawHistory();
 	};
 
-	// ---- P6 frames API (timeline UI drives these) ----------------------
+	// ---- frames API (timeline UI drives these) ----------------------
 	// Collab sessions are single-frame by policy: no frame op exists in
 	// the protocol, so navigation and structure changes refuse while
 	// connected (the timeline UI says why).

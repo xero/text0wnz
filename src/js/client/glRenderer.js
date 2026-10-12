@@ -1,5 +1,5 @@
 /**
- * WebGL2 text renderer (PLAN.md §3.1), the editor's DEFAULT renderer.
+ * WebGL2 text renderer, the editor's DEFAULT renderer.
  * ?renderer=2d forces the legacy chunk renderer, which is also the
  * automatic fallback wherever webgl2 is unavailable.
  *
@@ -11,7 +11,7 @@
  * window, so full repaints, zoom, font, palette, and ice changes all
  * cost well under a frame.
  *
- * Renders the v3 doc planes (PLAN §3.2): per-instance data is the raw
+ * Renders the v3 doc planes: per-instance data is the raw
  * glyph/fg/bg words, and color resolve follows the tag bit in-shader -
  * bit 31 set means a live palette index, clear means frozen 0x00RRGGBB.
  * Blink is attr bit 0 of the glyph word (the editor folds the classic
@@ -19,7 +19,7 @@
  * same 500ms cadence as the 2D path. Exports rasterize on the CPU from
  * the same planes (byte-equal to the 2D glyph blits at integer zoom).
  *
- * Glyph ids are 16-bit (PLAN §3.2): 0-255 address the classic atlas,
+ * Glyph ids are 16-bit: 0-255 address the classic atlas,
  * higher ids are doc glyph-table entries rendered from the hex font
  * pages. The repaint interleave remaps those ids to slots in a
  * second, grow-on-demand atlas texture; a glyph whose block has not
@@ -55,7 +55,7 @@ flat out float v_char;
 flat out vec4 v_fg;
 flat out vec4 v_bg;
 out vec2 v_pix;
-// tag-bit resolve (PLAN §3.2): bit 31 = palette index, else 0x00RRGGBB
+// tag-bit resolve: bit 31 = palette index, else 0x00RRGGBB
 vec4 cellColor(uint word) {
 	if ((word & 0x80000000u) != 0u) {
 		return texelFetch(u_palette, ivec2(int(word & 0xffu), 0), 0);
@@ -124,7 +124,7 @@ void main() {
 	fragColor = bit > 0.5 ? v_fg : v_bg;
 }`;
 
-// CRT post pass (PLAN §3.1): scene renders into an FBO, then one
+// CRT post pass: scene renders into an FBO, then one
 // fullscreen quad applies scanlines (one per glyph pixel row), a soft
 // aperture-grille mask, cheap horizontal phosphor bleed, and a
 // vignette. GL-only, like the minimap and onion skin.
@@ -277,7 +277,7 @@ const createGLRenderer = (canvasContainer, host) => {
 		gl.vertexAttribPointer(cornerLoc, 2, gl.FLOAT, false, 0, 0);
 
 		// per-instance: the three raw plane words, interleaved (12B/cell,
-		// the §3.1 coverage repack - ~100-300KB per repaint window)
+		// the coverage repack - ~100-300KB per repaint window)
 		cellBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, cellBuffer);
 		const cellLoc = gl.getAttribLocation(program, 'a_cell');
@@ -900,7 +900,7 @@ const createGLRenderer = (canvasContainer, host) => {
 		return completeCanvas;
 	};
 
-	// context loss: intercept and rebuild on restore (PLAN.md §3.1)
+	// context loss: intercept and rebuild on restore
 	canvas.addEventListener('webglcontextlost', event => {
 		event.preventDefault();
 		contextLost = true;

@@ -1,5 +1,5 @@
 /**
- * Build-time .hex preprocessing (PLAN §3.4): packs the vendored font
+ * Build-time .hex preprocessing: packs the vendored font
  * sources in assets/hexfonts/ into per-256-codepoint-block binaries
  * under src/fonts/u/ plus a manifest, using the same core module the
  * runtime reads blocks with. Runs under bun (it imports TypeScript):
@@ -50,7 +50,7 @@ const SOURCES = {
 	},
 };
 
-/** credits surface in the app per D10; keep in sync with the sources */
+/** credits surface in the app; keep in sync with the sources */
 const FONT_META = {
 	unscii16: {
 		label: 'unscii-16',

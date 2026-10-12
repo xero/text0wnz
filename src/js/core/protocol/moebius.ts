@@ -16,9 +16,9 @@
  *   above 63 means the whole palette is already 8-bit.
  * - `font_bytes` arrives as Node Buffer JSON ({type:'Buffer',
  *   data:[...]}) from the moebiusXBIN fork; receivers choke on it
- *   unless revived defensively (landmine #3).
+ *   unless revived defensively.
  * - every client->server frame carries `data.id`; SET_CANVAS_SIZE
- *   broadcasts without it crash vanilla Moebius clients (landmine #2).
+ *   broadcasts without it crash vanilla Moebius clients.
  * - icy_draw's Block.code is a u32 unicode codepoint; vanilla Moebius
  *   uses bytes 0-255. The doc conversion accepts both.
  */
@@ -81,8 +81,8 @@ export const encodeFrame = (
 ): string => JSON.stringify({ type, data });
 
 /**
- * Hardened decode: upstream servers crash on malformed frames
- * (landmine #4); ours must not. Throws ProtocolError with a reason the
+ * Hardened decode: upstream servers crash on malformed frames;
+ * ours must not. Throws ProtocolError with a reason the
  * caller can log and drop.
  */
 export const decodeFrame = (raw: unknown): MoebiusFrame => {
@@ -251,8 +251,8 @@ export const uncompressBlocks = (
 export const compress8to6 = (v: number): number => (v >> 2) & 0x3f;
 
 /**
- * Join-doc palettes are 6-bit; 8-bit ones saturate vanilla Moebius
- * (landmine #1). Receiving side auto-detects like icy_draw: any
+ * Join-doc palettes are 6-bit; 8-bit ones saturate vanilla Moebius.
+ * Receiving side auto-detects like icy_draw: any
  * component above 63 means the palette is already 8-bit.
  */
 export const paletteToRGB8 = (
@@ -275,8 +275,8 @@ export const paletteTo6Bit = (rgb8: [number, number, number][]): number[][] =>
 // --------------------------------------------------------- font bytes
 
 /**
- * moebiusXBIN serializes custom font bytes as Node Buffer JSON
- * (landmine #3). Revive every shape defensively; null means "no
+ * moebiusXBIN serializes custom font bytes as Node Buffer JSON.
+ * Revive every shape defensively; null means "no
  * usable font bytes", never a throw.
  */
 export const reviveFontBytes = (value: unknown): Uint8Array | null => {

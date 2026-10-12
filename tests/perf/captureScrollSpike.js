@@ -1,5 +1,5 @@
 /**
- * Capture desktop-Chromium numbers for the P1 scroll spike (PLAN.md §4 P1)
+ * Capture desktop-Chromium numbers for the scroll spike
  * by driving the in-app spike (src/js/client/scrollSpike.js, ?spike) with
  * Playwright.
  *
@@ -10,7 +10,7 @@
  * Numbers are machine-dependent snapshots recorded WITH a hardware
  * descriptor; they are evidence for parameter choices, not a CI gate.
  * Device runs are owner handoffs: open <app>/?spike on the device, fling by
- * hand and/or press "run scripted flings" (PLAN.md O9).
+ * hand and/or press "run scripted flings".
  */
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';

@@ -1,5 +1,5 @@
 /**
- * Server entry: Moebius-native superset server on Bun.serve (O10).
+ * Server entry: Moebius-native superset server on Bun.serve.
  * Loads persisted room docs (native .0wnz, or legacy v2 .bin as the
  * migration), autosaves dirty rooms on the configured interval with
  * hourly sha1-deduped backups, and saves on SIGINT AND SIGTERM

@@ -60,7 +60,7 @@ export const timelapseToDoc = (
 			`bad timelapse dims ${String(columns)}x${String(rows)}`,
 		);
 	}
-	// aggregate memory bound: frames x cells respects the O13 frame
+	// aggregate memory bound: frames x cells respects the frame
 	// budget (doc.ts), so a 10M-cell room gets a 2-frame movie instead
 	// of killing the tab
 	const cells = (columns as number) * (rows as number);

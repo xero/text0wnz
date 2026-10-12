@@ -298,7 +298,7 @@ const createPalette = RGB6Bit => {
 	/**
 	 * RGBA for any color value: classic 0-15 index, tag-bit palette word
 	 * (indexes above 15 resolve through the xterm table), or a raw
-	 * 0x00RRGGBB word (P5 extended colors).
+	 * 0x00RRGGBB word.
 	 * @param {number} value
 	 */
 	const getRGBAColor = value => {

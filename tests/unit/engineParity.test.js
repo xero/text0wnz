@@ -1,5 +1,5 @@
 /**
- * Scripted-stroke identity gate (PLAN.md §4 P2): one seeded op script
+ * Scripted-stroke identity gate: one seeded op script
  * runs against the live v2 textArtCanvas (jsdom, rendering mocked
  * inert), the frozen v2 reference (tests/parity), and the v3 editor
  * core over the three-plane doc; the full u16 image must match

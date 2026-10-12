@@ -41,11 +41,11 @@ const parseArgs = () => {
 		// clients (Moebius, icy_draw); 0 = disabled
 		plainPort: 0,
 		// room password applied to every room without a specific entry;
-		// D12: it gates spectators too
+		// it gates spectators too
 		pass: process.env.ROOM_PASS ?? '',
 		/** per-room passwords from ROOM_PASSWORDS='{"name":"pw"}' */
 		roomPasswords: parseRoomPasswords(process.env.ROOM_PASSWORDS),
-		// O3 env knobs: per-deployment canvas resize wall, in EITHER
+		// env knobs: per-deployment canvas resize wall, in EITHER
 		// direction (jam hosts raise it, cautious hosts lower it);
 		// 0 = use room.js ROOM_DEFAULTS (1000x10000)
 		maxColumns: parseCapEnv(process.env.ROOM_MAX_COLUMNS),

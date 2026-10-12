@@ -1,5 +1,5 @@
 /**
- * Gesture recognizer (PLAN §3.5, D11): stroke vs 2-finger-tap undo vs
+ * Gesture recognizer: stroke vs 2-finger-tap undo vs
  * 3-finger-tap redo vs pinch, driven through an injected clock and
  * scheduler so every timing path is deterministic.
  */

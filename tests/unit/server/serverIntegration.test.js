@@ -5,7 +5,7 @@
  * WebSocket client (node >= 22). Pins the Bun.serve layer: upgrade
  * routing, 426 for plain HTTP, path rooms isolation, password refusal,
  * caps reply, and the no-self-echo draw fanout end to end.
- * Never points at a shared server (PLAN §3.6.2 #4): everything local.
+ * Never points at a shared server: everything local.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn, execSync } from 'node:child_process';
@@ -109,7 +109,7 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 		expect(res.status).toBe(426);
 	});
 
-	it('serves /healthz liveness (P6 Docker target)', async () => {
+	it('serves /healthz liveness', async () => {
 		const res = await fetch(`http://127.0.0.1:${port}/healthz`);
 		expect(res.status).toBe(200);
 		const body = await res.json();

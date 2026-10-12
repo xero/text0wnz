@@ -1,5 +1,5 @@
 /**
- * Room persistence through the shared codecs (PLAN §3.6.3): the live
+ * Room persistence through the shared codecs: the live
  * wire-shaped room doc converts through joinDocToDoc and saves as the
  * native .0wnz envelope. Legacy v2 session files (<room>.bin,
  * BinaryText + SAUCE) migrate on first load through the core BIN

@@ -1,5 +1,5 @@
 /**
- * bun --compile binary matrix (PLAN §3.7 #4): cross-compiles the
+ * bun --compile binary matrix: cross-compiles the
  * collab/static server for every supported target and prints MEASURED
  * sizes (the docs quote no figure on purpose; this script is the
  * source of truth). Output lands in build/bin/ (gitignored). Runs

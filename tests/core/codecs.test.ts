@@ -278,7 +278,7 @@ describe('ans codec', () => {
 		);
 	});
 
-	it('UTF-8 blink mode (D8) round-trips blink cells exactly', () => {
+	it('UTF-8 blink mode round-trips blink cells exactly', () => {
 		const d1 = decodeAns(makeAnsi({ columns: 20, rows: 4, seed: 3 }));
 		const e1 = encodeUtf8(d1.doc, { blinkMode: 'blink', date: FIXED_DATE });
 		const d2 = decodeAns(e1, { utf8: true });
@@ -345,7 +345,7 @@ describe('ans codec', () => {
 	});
 });
 
-describe('ansimation export (P6)', () => {
+describe('ansimation export', () => {
 	it('homes between frames, plays back to the last frame, marks SAUCE ANSiMation', () => {
 		const doc = createDocV3({ columns: 4, rows: 2 });
 		doc.frames[0].glyph[0] = glyphWord(65, 0); // 'A'

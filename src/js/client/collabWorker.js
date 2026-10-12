@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Collab transport worker (PLAN §3.6.3): owns the websocket and speaks
+ * Collab transport worker: owns the websocket and speaks
  * Moebius-native frames through the shared core codec. A MODULE worker
  * bundled by vite (like journalWorker.js), which is what lets it
  * import the codec.

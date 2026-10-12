@@ -1,5 +1,5 @@
 /**
- * Collab bridge (PLAN §3.6.4, D13): a pure byte pipe from a browser's
+ * Collab bridge: a pure byte pipe from a browser's
  * wss connection to a plaintext ws desktop server (Moebius, icy_draw),
  * frames relayed verbatim both ways. The bridge dials from the
  * SERVER's network position, so the lockdown is the feature:
