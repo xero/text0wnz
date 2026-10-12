@@ -28,14 +28,19 @@ const createFramesPanel = () => {
 	const btnOnion = $('frameOnion');
 	const inputDelay = $('frameDelay');
 	const inputFps = $('frameFps');
+	const selBaud = $('frameBaud');
+	const btnBaud = $('frameBaudPlay');
 	const lockNote = $('framesLockNote');
 
 	let playing = false;
 	let playTimer = 0;
+	let baudActive = false;
+	let baudRaf = 0;
 
 	const canvas = () => State.textArtCanvas;
 	const locked = () => State.network?.isConnected?.() === true;
 
+	/** stops BOTH playback modes (frame stepping and the baud reveal) */
 	const stop = () => {
 		if (playTimer) {
 			clearTimeout(playTimer);
@@ -46,6 +51,47 @@ const createFramesPanel = () => {
 			btnPlay.textContent = 'play';
 			btnPlay.classList.remove('active');
 		}
+		if (baudActive) {
+			baudActive = false;
+			cancelAnimationFrame(baudRaf);
+			canvas().setBaudReveal(null);
+			btnBaud.classList.remove('active');
+		}
+	};
+
+	const playBaud = () => {
+		stop();
+		const c = canvas();
+		const offsets = c.getBaudOffsets();
+		// 8N1: one byte costs 10 bits on the wire
+		const bytesPerSecond = parseInt(selBaud.value, 10) / 10;
+		const t0 = performance.now();
+		baudActive = true;
+		btnBaud.classList.add('active');
+		const tick = () => {
+			if (!baudActive) {
+				return;
+			}
+			const bytes = ((performance.now() - t0) / 1000) * bytesPerSecond;
+			// first cell whose cumulative cost exceeds the elapsed bytes
+			let lo = 0;
+			let hi = offsets.length;
+			while (lo < hi) {
+				const mid = (lo + hi) >> 1;
+				if (offsets[mid] <= bytes) {
+					lo = mid + 1;
+				} else {
+					hi = mid;
+				}
+			}
+			canvas().setBaudReveal(lo);
+			if (lo >= offsets.length) {
+				stop();
+				return;
+			}
+			baudRaf = requestAnimationFrame(tick);
+		};
+		tick();
 	};
 
 	const step = () => {
@@ -159,6 +205,13 @@ const createFramesPanel = () => {
 		const c = canvas();
 		c.setOnionSkin(!c.getOnionSkin());
 		refresh();
+	});
+	btnBaud.addEventListener('click', () => {
+		if (baudActive) {
+			stop();
+		} else {
+			playBaud();
+		}
 	});
 	inputDelay.addEventListener('change', () => {
 		const c = canvas();

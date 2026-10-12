@@ -28,6 +28,8 @@ const PANEL_HTML = `
 		<label>fps <input id="frameFps" type="number"/></label>
 		<button id="framePlay">play</button>
 		<button id="frameOnion">onion</button>
+		<select id="frameBaud"><option selected>14400</option></select>
+		<button id="frameBaudPlay">baud</button>
 		<p id="framesLockNote" class="hide"></p>
 	</div>
 `;
@@ -77,6 +79,8 @@ const makeCanvas = () => {
 			onion = enabled;
 		}),
 		getOnionSkin: () => onion,
+		getBaudOffsets: vi.fn(() => Float64Array.from([5, 10, 15])),
+		setBaudReveal: vi.fn(),
 	};
 };
 
@@ -177,6 +181,26 @@ describe('playback', () => {
 	it('refuses to play a single-frame doc', () => {
 		document.getElementById('framePlay').click();
 		expect(panel.isPlaying()).toBe(false);
+	});
+});
+
+describe('baud preview', () => {
+	it('reveals through setBaudReveal and stops cleanly', () => {
+		// keep the rAF loop from free-running in jsdom: schedule nothing
+		const raf = vi
+			.spyOn(window, 'requestAnimationFrame')
+			.mockReturnValue(1);
+		document.getElementById('frameBaudPlay').click();
+		expect(canvas.getBaudOffsets).toHaveBeenCalled();
+		expect(canvas.setBaudReveal).toHaveBeenCalledWith(expect.any(Number));
+		expect(
+			document
+				.getElementById('frameBaudPlay')
+				.classList.contains('active'),
+		).toBe(true);
+		document.getElementById('frameBaudPlay').click();
+		expect(canvas.setBaudReveal).toHaveBeenLastCalledWith(null);
+		raf.mockRestore();
 	});
 });
 

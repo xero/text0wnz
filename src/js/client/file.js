@@ -8,6 +8,8 @@ import {
 	decodeDur,
 	decodeEnvelope,
 	decodeTundra,
+	encodeAnsimation,
+	encodeDur,
 	encodeEnvelope,
 	encodeTundra,
 	encodeUtf8,
@@ -1991,6 +1993,21 @@ const saveModule = () => {
 		}
 	};
 
+	// P6 animation exports: classic ansimation (clear + home-per-frame,
+	// baud is the clock) and the durdraw v8 movie (256-color, utf-8)
+	const ansimation = async () => {
+		if (!(await confirmExport('ans', 'ANSimation')).proceed) {
+			return;
+		}
+		const bytes = encodeAnsimation(State.textArtCanvas.getDoc(), { meta: sauceMeta() });
+		await saveFile(bytes, undefined, State.title + '.ans');
+	};
+
+	const dur = async () => {
+		const bytes = await encodeDur(State.textArtCanvas.getDoc(), sauceMeta());
+		await saveFile(bytes, undefined, State.title + '.dur');
+	};
+
 	const ownz = async () => {
 		const xbData = State.textArtCanvas.getXBFontData();
 		const bytes = await encodeEnvelope(State.textArtCanvas.getDoc(), {
@@ -2032,7 +2049,9 @@ const saveModule = () => {
 
 	return {
 		ans: ans,
+		ansimation: ansimation,
 		bin: bin,
+		dur: dur,
 		ownz: ownz,
 		plainText: plainText,
 		png: png,

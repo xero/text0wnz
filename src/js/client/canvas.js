@@ -215,6 +215,69 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
+	// Baud preview (P6): reveal the current frame in encoded-byte order
+	// at a chosen line rate — another data-level compose, GL-only.
+	/** @type {{glyph: Uint32Array, fg: Uint32Array, bg: Uint32Array} | null} */
+	let baudPlanes = null;
+	let baudReveal = -1;
+
+	/**
+	 * Cumulative estimated ANSI byte cost per cell of the current frame
+	 * (glyph byte + ~11 bytes per SGR change + CRLF per row): honest
+	 * enough pacing without replaying the real encoder.
+	 */
+	const getBaudOffsets = () => {
+		const mirror = v3ToU16Lossy(doc, editor.getCurrentFrame()).imageData;
+		const offsets = new Float64Array(mirror.length);
+		let total = 0;
+		let prevFg = 7;
+		let prevBg = 0;
+		for (let i = 0; i < mirror.length; i++) {
+			const word = mirror[i];
+			const fg = word & 15;
+			const bg = (word >> 4) & 15;
+			if (fg !== prevFg || bg !== prevBg) {
+				total += 11;
+				prevFg = fg;
+				prevBg = bg;
+			}
+			total += 1;
+			if ((i + 1) % columns === 0) {
+				total += 2;
+			}
+			offsets[i] = total;
+		}
+		return offsets;
+	};
+
+	/** @param {number | null} count cells revealed; null ends the preview */
+	const setBaudReveal = count => {
+		if (count === null || count < 0) {
+			baudReveal = -1;
+			baudPlanes = null;
+			redrawEntireImage();
+			return;
+		}
+		const frame = doc.frames[editor.getCurrentFrame()];
+		const size = frame.glyph.length;
+		if (!baudPlanes || baudPlanes.glyph.length !== size) {
+			baudPlanes = {
+				glyph: new Uint32Array(size),
+				fg: new Uint32Array(size),
+				bg: new Uint32Array(size),
+			};
+		}
+		const limit = Math.min(count, size);
+		baudPlanes.glyph.set(frame.glyph.subarray(0, limit));
+		baudPlanes.fg.set(frame.fg.subarray(0, limit));
+		baudPlanes.bg.set(frame.bg.subarray(0, limit));
+		baudPlanes.glyph.fill(0, limit);
+		baudPlanes.fg.fill(BLANK_BG, limit);
+		baudPlanes.bg.fill(BLANK_BG, limit);
+		baudReveal = limit;
+		redrawEntireImage();
+	};
+
 	/** re-mirror + repaint + tell the UI; fired by editor navigation */
 	const handleFrameChange = frameIndex => {
 		imageData = v3ToU16Lossy(doc, frameIndex).imageData;
@@ -278,10 +341,14 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				// blink); the u16 mirror stays for the chunk fallback +
 				// collab. Frames: the current frame renders; onion mode
 				// substitutes the composed ghost planes (GL-only)
-				getPlanes: () =>
-					onionSkin && onionPlanes
+				getPlanes: () => {
+					if (baudReveal >= 0 && baudPlanes) {
+						return baudPlanes;
+					}
+					return onionSkin && onionPlanes
 						? onionPlanes
-						: doc.frames[editor.getCurrentFrame()],
+						: doc.frames[editor.getCurrentFrame()];
+				},
 				getIceColors: iceColorsNow,
 				getGlyphDef: glyphId => doc.glyphTable.get(glyphId),
 				getHexPages: ensureHexPages,
@@ -1957,6 +2024,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		},
 		setOnionSkin: setOnionSkin,
 		getOnionSkin: () => onionSkin,
+		getBaudOffsets: getBaudOffsets,
+		setBaudReveal: setBaudReveal,
 		loadJournalSnapshot: loadJournalSnapshot,
 		journalKeyframe: scheduleJournalKeyframe,
 		setMirrorMode: setMirrorMode,

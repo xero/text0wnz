@@ -37,7 +37,7 @@ import {
 	paletteIndexOf,
 	rgbColor,
 } from '../doc.js';
-import { u16ToV3, v3ToU16 } from '../convert.js';
+import { u16ToV3, v3ToU16, v3ToU16Lossy } from '../convert.js';
 import {
 	cp437ToUnicode,
 	unicodeToCp437,
@@ -653,6 +653,12 @@ export interface EncodeAnsOptions {
 	blinkers?: boolean;
 	/** Plain-text export: no escape codes at all. */
 	stripEscapeCodes?: boolean;
+	/** Which doc frame to encode (ansimation reuses the body per frame). */
+	frameIndex?: number;
+	/** Quantize via the lossy projection instead of the strict one. */
+	lossy?: boolean;
+	/** Body only: no EOF byte, no SAUCE (ansimation assembles its own). */
+	bodyOnly?: boolean;
 	meta?: DocMeta;
 	date?: Date;
 }
@@ -669,7 +675,9 @@ export const encodeAns = (
 	const useUTF8 = options.utf8 ?? false;
 	const blinkers = options.blinkers ?? true;
 	const stripEscapeCodes = options.stripEscapeCodes ?? false;
-	const { imageData, columns, rows, iceColors } = v3ToU16(doc);
+	const { imageData, columns, rows, iceColors } = (
+		options.lossy ? v3ToU16Lossy : v3ToU16
+	)(doc, options.frameIndex ?? 0);
 
 	const output: number[] = stripEscapeCodes ? [] : [27, 91, 48, 109];
 	let currentForeground = DEFAULT_FOREGROUND;
@@ -780,6 +788,9 @@ export const encodeAns = (
 	}
 
 	const payload = new Uint8Array(output);
+	if (options.bodyOnly) {
+		return payload;
+	}
 	if (useUTF8 || stripEscapeCodes) {
 		// v2 appends a lone 0x1a ('' sauce) on UTF-8 saves; preserved
 		return useUTF8 ? concatBytes([payload, Uint8Array.of(0x1a)]) : payload;
@@ -792,6 +803,42 @@ export const encodeAns = (
 		columns,
 		rows,
 		iceColors,
+		letterSpacing: doc.getLetterSpacing(),
+		title: meta.title,
+		author: meta.author,
+		group: meta.group,
+		comments: meta.comments,
+		fontName: meta.fontName,
+		date: options.date,
+	});
+	return concatBytes([payload, Uint8Array.of(0x1a), sauce]);
+};
+
+/**
+ * Classic ansimation (P6): clear once, then every frame homes the
+ * cursor and repaints full-width — playback speed is the medium's
+ * (baud rate), exactly like the scene's .ans animations. CP437 via the
+ * lossy projection per frame; SAUCE marks Character/ANSiMation
+ * (dataType 1, fileType 2).
+ */
+export const encodeAnsimation = (
+	doc: DocV3,
+	options: { meta?: DocMeta; date?: Date } = {},
+): Uint8Array => {
+	const parts: Uint8Array[] = [Uint8Array.of(27, 91, 50, 74)]; // ESC[2J
+	for (let f = 0; f < doc.frames.length; f++) {
+		parts.push(Uint8Array.of(27, 91, 72)); // ESC[H
+		parts.push(encodeAns(doc, { frameIndex: f, lossy: true, bodyOnly: true }));
+	}
+	const payload = concatBytes(parts);
+	const meta = options.meta ?? {};
+	const sauce = buildSauce({
+		dataType: 1,
+		fileType: 2, // ANSiMation
+		fileSize: payload.length,
+		columns: doc.getColumns(),
+		rows: doc.getRows(),
+		iceColors: doc.getIceColors(),
 		letterSpacing: doc.getLetterSpacing(),
 		title: meta.title,
 		author: meta.author,
