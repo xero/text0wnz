@@ -121,16 +121,25 @@ describe('timelapseToDoc', () => {
 		).toThrow(ProtocolError);
 	});
 
-	it('bounds frames x cells by the animation budget', () => {
-		// 4M cells: the budget (16M cell-frames) allows 4 frames
-		const payload = basePayload(4000, 1000);
-		payload.ops = Array.from({ length: 50 }, (_, i) =>
-			extDrawOp(i % 4, 0, 65 + (i % 26)),
-		);
-		const { doc, frames } = timelapseToDoc(payload, { maxFrames: 120 });
-		expect(frames).toBeLessThanOrEqual(5);
-		expect(frames * doc.getColumns() * doc.getRows()).toBeLessThanOrEqual(
-			16_000_000 * 1.3,
-		);
-	});
+	// the doc must be big enough that the budget (not maxFrames or the
+	// op count) decides the stride, but no bigger: frame planes scale
+	// with cells x frames, and a 4M-cell variant of this test blew the
+	// 5s default on slow CI shards. The timeout stays as insurance
+	it(
+		'bounds frames x cells by the animation budget',
+		{ timeout: 30_000 },
+		() => {
+			// 400k cells: the budget (16M cell-frames) allows 40 frames,
+			// under both maxFrames (120) and the 50 ops
+			const payload = basePayload(800, 500);
+			payload.ops = Array.from({ length: 50 }, (_, i) =>
+				extDrawOp(i % 4, 0, 65 + (i % 26)),
+			);
+			const { doc, frames } = timelapseToDoc(payload, { maxFrames: 120 });
+			expect(frames).toBeLessThanOrEqual(41);
+			expect(frames * doc.getColumns() * doc.getRows()).toBeLessThanOrEqual(
+				16_000_000 * 1.3,
+			);
+		},
+	);
 });
