@@ -43,7 +43,7 @@ Container services are carefully managed with:
 
 ### Registry Support
 
-Prebuilt images are avalable in **linux/amd64** & **linux/arm64** flavors from multiple repositories:
+Prebuilt images are available in **linux/amd64** & **linux/arm64** flavors from multiple repositories:
 
 **[DockerHub](https://hub.docker.com/r/xerostyle/text0wnz):**
 
@@ -70,11 +70,17 @@ docker buildx create --name mybuilder --use
 docker buildx build --platform linux/amd64,linux/arm64 -t yourname/text0wnz:latest --push .
 ```
 
+A second image definition, `Dockerfile.distroless`, compiles the server into a single binary on a distroless non-root base. That binary serves the built PWA itself (via `STATIC_DIR`), collab WebSockets, the bridge, and `/healthz`, with no Caddy in the container:
+
+```sh
+docker buildx build -f Dockerfile.distroless --platform linux/amd64,linux/arm64 -t text0wnz:distroless .
+```
+
 ## Running
 
 ### Development Mode:
 
-Development mode provides hot-reloading and detailed logging for an optimized development experience:
+Development mode serves plain HTTP with no automatic HTTPS, handy for local testing:
 
 ```sh
 docker run \
@@ -88,13 +94,12 @@ The application will be available at http://localhost with WebSocket collaborati
 
 ### Production Mode:
 
-For production deployments, use this configuration with your domain and a secure session key:
+For production deployments, use this configuration with your domain:
 
 ```sh
 docker run \
     --cap-add=NET_BIND_SERVICE \
     -e DOMAIN=your.cool.domain.tld \
-    -e SESSION_KEY=secure-production-key \
     -e NODE_ENV=production \
     -p 80:80 -p 443:443 \
     text0wnz:latest
@@ -122,18 +127,20 @@ The container implements a robust startup sequence:
 
 ## Environment Variables
 
-| Variable      | Description                              | Default                   |
-| ------------- | ---------------------------------------- | ------------------------- |
-| `DOMAIN`      | Domain name for the application          | `localhost`               |
-| `PORT`        | _Internal_ port for the WebSocket server | `1337`                    |
-| `NODE_ENV`    | Node environment setting                 | `production`              |
-| `SESSION_KEY` | Session secret key for express           | random, generated at boot |
+| Variable         | Description                                                | Default                   |
+| ---------------- | ---------------------------------------------------------- | ------------------------- |
+| `DOMAIN`         | Domain name for the application                            | `localhost`               |
+| `PORT`           | _Internal_ port for the WebSocket server                   | `1337`                    |
+| `NODE_ENV`       | Node environment setting                                   | `production`              |
+| `ROOM_PASS`      | Password for collaboration rooms (gates spectators too)    | none                      |
+| `ROOM_PASSWORDS` | Per-room passwords as JSON: `{"room":"pw"}`                | none                      |
+| `SESSION_KEY`    | Generated at boot if unset; not read by the current server | random, generated at boot |
 
 ## Advanced Usage
 
 ### Persistent Storage
 
-For persistent data storage across container restarts:
+For persistent data storage across container restarts, mount `/var/lib/caddy` (Caddy data, including certificates) and `/app/sessions` (collaboration session files):
 
 ```sh
 docker run \
@@ -141,6 +148,7 @@ docker run \
     -e DOMAIN=your.domain.tld \
     -e NODE_ENV=production \
     -v text0wnz-data:/var/lib/caddy \
+    -v text0wnz-sessions:/app/sessions \
     -p 80:80 -p 443:443 \
     xerostyle/text0wnz:latest
 ```
@@ -159,7 +167,7 @@ docker run \
 
 ## Health Monitoring
 
-The container includes a health check endpoint at /healthz that returns status information. This endpoint is used by the container's internal health check and can be used by orchestration systems.
+The container's built-in health check probes TCP port 80. A /healthz endpoint also returns status information for orchestration systems.
 
 ---
 

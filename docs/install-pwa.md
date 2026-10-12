@@ -5,6 +5,7 @@
 - [What is a PWA?](#what-is-a-pwa)
 - [Features](#features)
   - [Offline Support](#offline-support)
+  - [Updates](#updates)
   - [File Handling](#file-handling)
 - [Installation by Platform](#installation-by-platform)
   - [Desktop Chrome/Edge](#desktop-chrome)
@@ -27,7 +28,21 @@ Progressive Web Apps (PWAs) are web applications that can be installed on your d
 
 ### Offline Support
 
-Once installed, teXt0wnz works completely offline.
+Once installed, teXt0wnz works completely offline. The service worker precaches every app file during installation, and images refresh in the background through a stale-while-revalidate cache.
+
+### Updates
+
+The app checks for a new version each time you load it. When one is ready, an "Update Available!" prompt appears.
+
+- **Update** reloads the editor once and applies the new version. Save your work first.
+- **Cancel** lets you keep drawing. The prompt returns the next time you open the editor.
+
+Updating keeps your local data. Font favorites, recent colors, and editor settings all survive the reload. You never need to clear site data to get a new version; the service worker detects installs stuck on an old version and repairs them automatically.
+
+"Update Editor" in the file menu opens the same prompt by hand.
+
+> [!CAUTION]
+> When no update is pending, pressing Update in that prompt performs a full reset. It clears saved settings and caches, then reloads. Treat it as a recovery tool, not a refresh button.
 
 ### File Handling
 

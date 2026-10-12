@@ -1,15 +1,55 @@
 # Webserver Configuration
 
-This guide covers webserver setup for serving the teXt0wnz application and proxying WebSocket connections for the collaboration server.
+This guide covers serving the teXt0wnz application, either from the collaboration server itself in single-process mode, or from a webserver that serves the static files and proxies WebSocket connections to the collaboration server.
 
 ## Overview
 
 The teXt0wnz deployment consists of two components:
 
 1. **Static files** - The built application in `dist/` directory
-2. **Collaboration server** - Node.js server for real-time collaboration (optional)
+2. **Collaboration server** - Bun-based WebSocket server for real-time collaboration (optional)
 
-A webserver like nginx serves the static files and proxies WebSocket connections to the collaboration server.
+You can deploy them two ways:
+
+- **Single process** - The collaboration server serves the static app and WebSockets from one port when started with `--static dist`. No separate webserver is needed. See [Single-Process Deployment](#single-process-deployment).
+- **Reverse proxy** - A webserver like nginx serves the static files and proxies WebSocket connections to the collaboration server. Use this when you already run a webserver, want TLS termination there, or host multiple sites.
+
+## Single-Process Deployment
+
+The collaboration server doubles as a static file server. Point it at the built `dist/` directory and one process serves the app, the WebSocket endpoints, and the `/healthz` health check:
+
+```bash
+# From source (requires bun)
+bun server 1337 --static dist
+
+# Or via environment variable
+STATIC_DIR=dist bun server 1337
+```
+
+### Prebuilt Binaries
+
+`bun binaries` (runs `tools/compileBinaries.js`) cross-compiles the server into standalone `t0wnz-*` binaries for eight platforms. Output lands in `build/bin/`:
+
+- `t0wnz-linux-x64`, `t0wnz-linux-arm64`
+- `t0wnz-linux-x64-musl`, `t0wnz-linux-arm64-musl`
+- `t0wnz-darwin-x64`, `t0wnz-darwin-arm64`
+- `t0wnz-windows-x64.exe`, `t0wnz-windows-arm64.exe`
+
+`bun tools/compileBinaries.js host` builds only the current platform as `t0wnz-host`.
+
+The binaries run without a Bun or Node install:
+
+```bash
+./build/bin/t0wnz-linux-x64 1337 --static dist
+```
+
+### Single-Process TLS
+
+Terminate TLS in the process with `--ssl --ssl-dir <dir>` (expects `letsencrypt-domain.pem` and `letsencrypt-domain.key` in that directory), or run the process behind one of the reverse proxies below and let the proxy own certificates.
+
+### Deployment Knobs
+
+The server reads deployment settings from the environment, including `STATIC_DIR` plus `ROOM_MAX_COLUMNS` and `ROOM_MAX_ROWS` to cap collaborative canvas resizes. See [Environment Variables](environment-variables.md) for the full reference, run the server with `--help` for the flag list, and see [Collab Protocol Migration](collab-protocol-migration.md) for the current protocol and its flags.
 
 ## Nginx Configuration
 
@@ -90,7 +130,8 @@ sudo systemctl reload nginx
 **WebSocket Proxy:**
 
 - `proxy_pass` must match your collaboration server port
-- Trailing slash is **required** (`http://localhost:1337/`)
+- The trailing slash in `http://localhost:1337/` strips the `/server` prefix before the request reaches the server; the server maps both `/` and `/server` to the default room, so either form works
+- Rooms are path-based (`/roomname` reaches a named room); forward those paths too if you use named rooms through the proxy
 - WebSocket upgrade headers are essential
 - Long timeout (86400 = 24 hours) for persistent connections
 
@@ -502,7 +543,7 @@ Collaboration server not running:
 
 ```bash
 # Check if server is running
-ps aux | grep node
+ps aux | grep -E 'bun|t0wnz'
 
 # Start server
 bun server 1337
@@ -579,6 +620,21 @@ default_type application/octet-stream;
 
 ## Monitoring
 
+### Collaboration Server Health
+
+The collaboration server answers `GET /healthz` with a small JSON status:
+
+```bash
+curl http://localhost:1337/healthz
+# {"ok":true,"rooms":1,"uptime":120}
+```
+
+The proxy configurations above do not expose it; query the server port directly, or add a proxy location if you want it public. The compiled binary also doubles as its own probe and exits 0 when the server responds:
+
+```bash
+./build/bin/t0wnz-linux-x64 healthcheck 1337
+```
+
 ### Nginx Access Logs
 
 ```bash
@@ -619,6 +675,9 @@ curl http://localhost/nginx_status
 
 ## See Also
 
-- [Collaboration Server](collaboration-server.md) - Server setup and configuration
+- [Collab Protocol Migration](collab-protocol-migration.md) - Current server protocol and flags
+- [Collaboration Server](collaboration-server.md) - The retired Express server, kept for historical reference
+- [Environment Variables](environment-variables.md) - Build and runtime knobs
+- [Docker](docker.md) - Container deployment
 - [Building and Developing](building-and-developing.md) - Build process
 - [Testing](testing.md) - Testing setup

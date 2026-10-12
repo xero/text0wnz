@@ -20,7 +20,8 @@ byte-exact golden tests before anything else moved.
   modem speeds. Exports to ansimation `.ans` and `.dur` v8.
 - **Unicode and truecolor.** Documents hold full UTF-8 text, xterm-256
   indexes, and RGB colors. A new color panel sits one click past the
-  classic 16, and custom hex fonts load with a charset picker.
+  classic 16, and a charset picker with importable charset tables puts
+  unicode glyphs on the keyboard.
 - **Collab extension suite.** v3 clients sync unicode and truecolor
   cells natively over a superset of the Moebius protocol. Classic
   Moebius clients join the same room and see a faithful 16-color
@@ -51,8 +52,6 @@ byte-exact golden tests before anything else moved.
   CRT effect.
 - **Undo.** A byte-budgeted patch arena (64 MB) replaces cell-count
   caps, so huge joints stop eating your history.
-- **Canvas limits.** Walls raised to 1000 columns by 10000 rows, and
-  resizes past 300,000 cells ask before committing.
 - **Collab server.** Speaks native Moebius protocol, so one server
   hosts classic and v3 clients in the same room.
 - **Updates.** The update prompt keeps your localStorage (favorites,

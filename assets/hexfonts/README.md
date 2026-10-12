@@ -33,7 +33,7 @@ the OFL option; the full text is vendored as `OFL-1.1.txt`. The OFL
 requires that the font not be sold by itself and that derivatives stay
 under the OFL, both satisfied here.
 
-Both fonts are credited in the in-app credits UI (D10). The repo's MIT
+Both fonts are credited in the in-app credits UI. The repo's MIT
 license covers the code, not these font files or the artwork under
 `src/ansi/`.
 

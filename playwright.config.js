@@ -48,7 +48,7 @@ export default defineConfig({
 			testMatch: 'e2e/**/*.spec.js',
 			use: {
 				channel: 'chrome',
-				// GL is the default renderer (O11); headless needs software
+				// GL is the default renderer; headless needs software
 				// WebGL2 or the whole e2e rail silently tests the fallback
 				launchOptions: {
 					args: [
@@ -124,7 +124,7 @@ export default defineConfig({
 			},
 		},
 		{
-			// GL rail for the P1 renderer (PLAN.md §4 P0): same SwiftShader
+			// GL rail: same SwiftShader
 			// flags the goldens use; asserts WebGL2 works in CI before any
 			// renderer code depends on it
 			name: 'chromium-gl',

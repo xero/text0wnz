@@ -1,5 +1,10 @@
 # Font Previews
 
+> ## [The Font Picker](#the-font-picker)
+>
+> - [Favorites](#favorites)
+> - [Unicode Characters](#unicode-characters)
+>
 > ## [Modern Fonts](#modern-fonts)
 >
 > - [XBin](#XBIN)
@@ -22,6 +27,26 @@
 > - [Nordic](#Nordic)
 > - [Portuguese](#Portuguese)
 > - [Turkish](#Turkish)
+
+# The Font Picker
+
+Open the font picker with the **Change Font** button, pick a font from the list, and press **Select** to apply it. The preview pane shows the highlighted font before you commit.
+
+## Favorites
+
+Star the fonts you use most to pin them. The star button next to the font name toggles it: ☆ is unstarred, ★ is starred. Starred fonts appear in a **Favorites** group at the top of the list. Click the star again to remove one. Favorites are saved in your browser and survive app updates.
+
+## Unicode Characters
+
+Every bitmap font below covers a single 256-character set. For everything else, the editor renders Unicode glyphs from two bundled hex fonts: [unscii-16](http://viznut.fi/unscii/) by viznut and [GNU Unifont](https://unifoundry.com/unifont/). unscii-16 was drawn for textmode art, so it takes priority; Unifont fills in the rest. Glyph data loads on demand in small per-block chunks, so a plain CP437 piece never fetches any of it.
+
+Open **Character Sets** from the edit menu to browse them:
+
+- Search Unicode blocks by name and preview the glyphs the hex fonts cover.
+- Click a glyph to insert it at the cursor.
+- Import charset tables (durdraw `.ini` or teXt0wnz `.json`). Imported pages ride the F-key bar and cycle with `ctrl+[` and `ctrl+]`.
+
+See the [Editor Manual](manual.md) for more on character sets and the F-key bar.
 
 # Modern Fonts
 

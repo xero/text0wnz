@@ -55,23 +55,25 @@ When using the optional collaboration server, the application implements multipl
 
 **Worker Isolation**: WebSocket communication runs in a dedicated Web Worker, isolating network operations from the main UI thread.
 
-**Mandatory Initialization**: The worker requires an `init` command as its first message to establish a security context. Any other command received first is rejected.
+**Message Origin Guard**: Every postMessage channel validates incoming messages with a shared guard that drops any message claiming a foreign origin or carrying a non-object payload. Unknown worker commands are ignored.
 
-**Trusted URL Construction**: WebSocket URLs are constructed exclusively from the worker's own `location` object:
+**Trusted URL Construction**: WebSocket URLs default to the worker's own `location` object:
 
 - Protocol automatically matches page protocol (`wss:` for HTTPS, `ws:` for HTTP)
 - Hostname matches the page's hostname
 - Port uses the page's port or secure defaults (443/80)
 
-**URL Validation**: All WebSocket URLs are validated using the URL constructor. Malformed URLs are detected and rejected before connection attempts.
+An explicit server URL is honored only when you supply one, and only `ws:` or `wss:` URLs are accepted; anything else falls back to the same-origin default.
 
-**Input Sanitization**: All error messages and unknown commands have sanitized output:
+**URL Validation**: WebSocket construction runs inside try-catch blocks. Malformed URLs are caught and reported as errors without crashing the worker.
+
+**Input Sanitization**: Chat handles, group names, and chat text are sanitized server side:
 
 - Newlines and control characters are stripped
-- String length is limited (max 6 chars for unknown commands)
-- Prevents injection attacks via error messages
+- String length is limited
+- Prevents injection attacks via user-supplied strings
 
-**JSON Protection**: Server messages are parsed with try-catch blocks. Invalid JSON is safely logged without crashing the application.
+**JSON Protection**: Server frames are decoded inside try-catch blocks. Malformed frames are dropped without crashing the application.
 
 **Silent Connection Check**: The application performs a non-intrusive server availability check before prompting users, preventing error dialogs when collaboration is unavailable.
 
@@ -83,10 +85,10 @@ For server-side security best practices, see the [Collaboration Server Security 
 
 **Mitigated Threats:**
 
-- **Uninitialized Worker Exploitation**: Prevented by mandatory initialization sequence [CWE-918][CWE-940]
-- **URL Injection**: Prevented by trusted URL construction from location object [CWE-918][CWE-940]
-- **JSON Injection**: Prevented by try-catch parsing and input sanitization [CWE-20][CWE-117]
-- **Error Message Injection**: Prevented by output sanitization [CWE-20][CWE-117]
+- **Cross-Origin Message Injection**: Prevented by the shared message origin guard on every postMessage channel [CWE-940]
+- **URL Injection**: Prevented by same-origin URL construction and the ws/wss scheme restriction [CWE-918]
+- **Malformed Frame Injection**: Prevented by try-catch frame decoding; bad frames drop silently [CWE-20]
+- **Chat Injection**: Prevented by server-side sanitization of handles, groups, and messages [CWE-20][CWE-117]
 
 **User Responsibility:**
 

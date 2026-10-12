@@ -65,7 +65,7 @@ The default mode when no server is detected or when user chooses local mode.
 - Local storage persistence (IndexedDB)
 - Automatic save/restore
 - File import/export
-- Offline [PWA support](docs/install-pwa.md)
+- Offline [PWA support](install-pwa.md)
 
 **Data Flow:**
 
@@ -128,21 +128,23 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 - Font and palette management
 - Undo/redo history
 
-**Canvas Rendering** (`canvas.js`)
+**Canvas Rendering** (`glRenderer.js`, `canvas.js`)
 
-- Offscreen canvas for performance
+- WebGL2 renderer (`glRenderer.js`) is the default
+- 2D chunk renderer (`canvas.js`) as fallback (`?renderer=2d`, or wherever WebGL2 is unavailable)
 - Dirty region tracking (only redraw changed areas)
 - Character and color rendering
 - Mirror mode support
 - Grid overlay
 
-**Font System** (`font.js`, `lazyFont.js`, `fontCache.js`)
+**Font System** (`font.js`, `lazyFont.js`, `fontCache.js`, `hexFontPages.js`)
 
 - PNG-based bitmap fonts
 - Lazy loading on demand
 - Font caching for performance
 - Support for 100+ classic fonts
 - Letter spacing (9px mode)
+- Packed Unicode glyph pages fetched on demand (`hexFontPages.js`)
 
 **Drawing Tools** (`freehandTools.js`)
 
@@ -193,9 +195,10 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 
 - Offline support and caching
 - Share Target API (Android file sharing)
-- Runtime caching strategies
-- Workbox-based precaching
-- Stale file cleanup
+- Workbox-based precaching (js, css, html, woff2, UI svgs, favicons)
+- One runtime route: stale-while-revalidate for images
+- Legacy cache cleanup and stuck-install recovery on activation
+- Stale shared file cleanup
 
 **PWA Capabilities** (`site.webmanifest`)
 
@@ -222,14 +225,14 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 - Editor settings persistence
 - Run-length encoding for efficiency
 
-**Network** (`network.js`, `websocket.js`)
+**Network** (`network.js`, `collabWorker.js`)
 
-- WebSocket client (in Web Worker with security hardening)
+- WebSocket client (in a module Web Worker with security hardening)
 - Mandatory worker initialization sequence
-- Trusted URL construction from page location
-- Silent connection checks (non-intrusive)
+- Same-origin default server URL; explicit `ws://`/`wss://` for remote dial
+- Silent connection probe (non-intrusive)
 - Connection state management
-- Message protocol handling with input validation
+- Moebius-native protocol handling with input validation
 - Canvas synchronization
 - Chat functionality
 
@@ -285,30 +288,26 @@ Benefits:
 
 ## Server Architecture
 
-### Express Server Structure
+### Server Structure
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                   HTTP/HTTPS Server                     │
-│                     (Express 5.x)                       │
+│                 HTTP/WebSocket Listener                 │
+│          (Bun.serve, optional TLS and static)           │
+│      + optional plaintext listener (--plain-port)       │
 └─────────────────┬───────────────────────────────────────┘
                   │
 ┌─────────────────┴───────────────────────────────────────┐
-│                  Session Middleware                     │
-│                  (express-session)                      │
+│                 Path-Based Room Routing                 │
+│        /  and  /server  reach the default room          │
+│            /roomname  reaches a named room              │
 └─────────────────┬───────────────────────────────────────┘
                   │
 ┌─────────────────┴───────────────────────────────────────┐
-│                   WebSocket Routes                      │
-│             /        (direct connections)               │
-│             /server (proxied connections)               │
-└─────────────────┬───────────────────────────────────────┘
-                  │
-┌─────────────────┴───────────────────────────────────────┐
-│              Collaboration Engine                       │
-│                  (text0wnz.js)                          │
+│                 Collaboration Room                      │
+│                     (room.js)                           │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │ Canvas State │  │ User Sessions│  │ Broadcasting │   │
+│  │ Document     │  │ User Sessions│  │ Broadcasting │   │
 │  └──────────────┘  └──────────────┘  └──────────────┘   │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -318,79 +317,50 @@ Benefits:
 **Configuration** (`config.js`)
 
 - Parse CLI arguments
-- Validate options
+- Parse server environment variables (room passwords, resize walls)
 - Provide defaults
 - Export configuration object
 
-**Server Setup** (`server.js`)
+**WebSocket Layer** (`moebiusServer.js`)
 
-- Express server initialization
-- SSL/TLS configuration
-- Session middleware setup
-- WebSocket routing
-- Error handling
+- Bun.serve listener setup (plus optional plaintext listener)
+- TLS configuration
+- Path-based room routing
+- Frame intake hardening, heartbeat, connection limits
+- Optional static file serving and `/healthz`
 
-**Collaboration Engine** (`text0wnz.js`)
+**Collaboration Room** (`room.js`)
 
-- Canvas state management (imageData object)
+- Moebius-native protocol semantics (transport-free)
 - User session tracking
 - Message broadcasting
-- State persistence
 - Canvas settings synchronization
+- Extension suite for caps-aware clients
 
-**WebSocket Handling** (`websockets.js`)
+**Persistence** (`persistence.js`)
 
-- Connection/disconnection handlers
-- Message routing
-- User cleanup
-- Error handling
-- Logging
+- Native `.0wnz` envelope saves with a JSON sidecar
+- Legacy v2 `.bin` session migration on first load
+- Hourly sha1-deduped timestamped backups
 
-**File I/O** (`fileio.js`)
+**Bridge** (`bridge.js`)
 
-- Binary file operations
-- SAUCE record creation/parsing
-- Canvas dimension extraction
-- Format conversions
-- Timestamped backups
+- Byte pipe from browser connections to plaintext desktop servers
+- Mode gating (`off`, `local`, `port`, `allow`) with address vetting
 
 **Utilities** (`utils.js`)
 
 - Logging helpers
-- Data validation
-- Type conversions
+- Data sanitization
 - Helper functions
 
 ### Message Protocol
 
-**Client to Server:**
+The editor and server speak the Moebius collaboration protocol: JSON frames shaped `{type, data}` with the action ids Moebius, moebiusXBIN, and icy_draw use (CONNECTED, JOIN, LEAVE, DRAW, CHAT, SAUCE, ICE_COLORS, USE_9PX_FONT, CHANGE_FONT, SET_CANVAS_SIZE, CHANGE_PALETTE, and friends). The codec lives in `src/js/core/protocol/` and is shared by the browser worker, the Bun server, and the interop tests.
 
-```javascript
-const clientProto =
-	(['join', username], // Join session
-	['nick', newUsername], // Change username
-	['chat', message], // Send chat message
-	['draw', blocks], // Drawing command
-	['resize', { columns, rows }], // Canvas resize
-	['fontChange', { fontName }], // Font change
-	['iceColorsChange', { iceColors }], // ICE colors toggle
-	['letterSpacingChange', { letterSpacing }]); // Letter spacing toggle
-```
+The handshake is client-first: the client sends `CONNECTED {nick, group, pass, caps}`, and the server replies with `CONNECTED {id, doc, users, chat_history, status}` (or `REFUSED`). Caps-aware clients negotiate an extension suite for full-fidelity cells (Unicode glyphs, extended colors); every extension mutation is down-converted to the nearest vanilla frame for caps-less members.
 
-**Server to Client:**
-
-`start` is the first command run after websocket initialization. It returns the connecting client's session id and the entire shared server state, which the editor caches. If the client chooses to join, the editor is reconfigured with the shared server data and chat features are enabled.
-
-```javascript
-const serverProto =
-	(['start', sessionData, sessionID, userList], // Canvas data, client id, users
-	['join', username, sessionID], // User joined
-	['part', sessionID], // User left
-	['nick', username, sessionID], // Username changed
-	['chat', username, message], // Chat message
-	['draw', blocks], // Drawing broadcast
-	['resize', { columns, rows }]); // Canvas resize
-```
+See [Collab Protocol Migration](collab-protocol-migration.md) for protocol details and compatibility notes.
 
 **Chat Message Display:**
 
@@ -403,16 +373,16 @@ The client displays chat messages differently based on context:
 
 When a user joins:
 
-1. Server sends current canvas state via "start" message
+1. Server replies to `CONNECTED` with the full document (join doc)
 2. Client applies canvas settings (size, font, colors, spacing)
-3. Client renders canvas from imageData
-4. User is added to session list
+3. Client renders the canvas from the document
+4. User is added to the session list
 
 When a drawing occurs:
 
-1. Client sends "draw" message with affected blocks
-2. Server updates internal imageData
-3. Server broadcasts to all other clients
+1. Client sends a `DRAW` frame with the affected blocks
+2. Server bounds-checks the blocks and updates the room document
+3. Server broadcasts to all other clients (the sender applies locally)
 4. Other clients update their canvas
 
 ## Data Flow
@@ -525,7 +495,8 @@ src/
 ├── js/client/
 │   ├── main.js            # Application entry point
 │   ├── state.js           # Global state management
-│   ├── canvas.js          # Canvas rendering engine
+│   ├── glRenderer.js      # WebGL2 renderer (default)
+│   ├── canvas.js          # 2D chunk renderer (fallback)
 │   ├── ui.js              # User interface components
 │   ├── toolbar.js         # Toolbar management
 │   ├── palette.js         # Color palette
@@ -533,13 +504,15 @@ src/
 │   ├── freehandTools.js   # Drawing tools
 │   ├── file.js            # File I/O operations
 │   ├── network.js         # Network communication
-│   ├── websocket.js       # WebSocket worker
+│   ├── collabWorker.js    # Collaboration transport worker
 │   ├── font.js            # Font loading and rendering
 │   ├── lazyFont.js        # Lazy font loading
 │   ├── fontCache.js       # Font caching
 │   ├── storage.js         # IndexedDB persistence
 │   ├── compression.js     # Data compression
-│   └── magicNumbers.js    # Constants and magic values
+│   ├── magicNumbers.js    # Constants and magic values
+│   └── ...                # See project-structure.md for the full list
+├── js/core/               # Shared pure-TS doc model, codecs, and protocol
 └── service.js             # PWA service worker
 ```
 
@@ -549,10 +522,10 @@ src/
 src/js/server/
 ├── main.js              # Entry point
 ├── config.js            # Configuration
-├── server.js            # Express server
-├── text0wnz.js          # Collaboration engine
-├── websockets.js        # WebSocket handlers
-├── fileio.js            # File operations
+├── moebiusServer.js     # Bun.serve WebSocket layer
+├── room.js              # Collaboration room semantics
+├── persistence.js       # Room persistence and backups
+├── bridge.js            # Bridge to desktop servers
 └── utils.js             # Utilities
 ```
 
@@ -582,7 +555,7 @@ main.js
   ├── network.js
   │   ├── state.js
   │   ├── canvas.js
-  │   └── websocket.js (web worker)
+  │   └── collabWorker.js (module web worker)
   ├── storage.js
   │   ├── state.js
   │   └── compression.js
@@ -624,6 +597,8 @@ codeSplitting: {
 ```
 dist/
 ├── index.html
+├── collabWorker-[hash].js        # Collaboration worker
+├── journalWorker-[hash].js       # OPFS journal worker
 ├── ui/js/
 │   ├── editor-[hash].js      # Entry point (~20 KB)
 │   ├── core-[hash].js        # Core modules (~80 KB)
@@ -633,7 +608,7 @@ dist/
 │   ├── network-[hash].js     # Collaboration (~30 KB)
 │   ├── palette-[hash].js     # Palette (~15 KB)
 │   ├── rolldown-runtime-[hash].js # Bundler runtime (<1 KB)
-│   └── websocket.js          # Worker (no hash)
+│   └── ...                   # Lazy chunks (profiler, scrollSpike, testBridge)
 └── ui/
     ├── stylez-[hash].css     # Styles (~30 KB compressed)
     ├── fonts/                # Bitmap fonts (~2 MB)
@@ -658,26 +633,30 @@ dist/
 
 **Images:**
 
-- PNG optimization (fonts)
-- SVG sprite generation
+- PNG bitmap fonts copied as-is
+- SVG icon sprite with a cache-busting hash
 
 ## Storage and Persistence
 
 ### Client Storage (IndexedDB)
 
-**Database: `textArtDB`**
+**Database: `text0wnz`**
 
 **Object Stores:**
 
 1. **`canvasData`**
    - Key: `currentCanvas`
-   - Value: Compressed canvas data
-   - Updates: Debounced (500ms after last change)
+   - Value: Canvas snapshot (Uint16Array plus metadata)
 
-2. **`editorSettings`**
-   - Key: Various setting names
-   - Values: User preferences
-   - Examples: `selectedFont`, `iceColors`, `letterSpacing`, `gridVisible`
+2. **`fontData`**
+   - Key: Font name (e.g. `XBIN`)
+   - Value: Embedded font data
+
+3. **`undoHistory`**
+   - Key: `currentUndoHistory`
+   - Value: none on the current version; the byte-budgeted undo arena does not serialize, so the store stays empty and the undo stack starts fresh each session
+
+Lightweight editor settings live in `localStorage` (`text0wnz-settings`).
 
 **Compression:**
 
@@ -687,13 +666,7 @@ dist/
 
 **Auto-Save Strategy:**
 
-```javascript
-// Debounced save after changes
-const saveToIndexedDB = debounce(() => {
-	const compressed = compress(canvasData);
-	db.put('canvasData', compressed, 'currentCanvas');
-}, 500);
-```
+The OPFS autosave journal (`journalStore.js`, with `journalWorker.js` owning the file) is the source of truth for restoring work in progress. The IndexedDB snapshot is the fallback; restoring it re-seeds the journal.
 
 ### Service Worker Cache (Cache API)
 
@@ -726,36 +699,25 @@ self.addEventListener('fetch', event => {
 
 ### Server Storage (File System)
 
-**Session Files:**
+**Session Files** (in `sessions/`):
 
-1. **`{sessionName}.bin`**
-   - Binary canvas data
-   - Current state
+1. **`{room}.0wnz`**
+   - Native envelope with the full-fidelity document
    - Updated on save interval
 
-2. **`{sessionName}.json`**
-   - Chat history
-   - Metadata
-   - User information
+2. **`{room}.state.json`**
+   - Sidecar with full session fidelity
+   - Chat history, palette, font bytes, comments, extension cells
 
-3. **`{sessionName} {timestamp}.bin`**
-   - Timestamped backups
-   - Created on each save
-   - Manual recovery if needed
+3. **`backups/{room}-{timestamp}.0wnz`**
+   - Timestamped backups, hourly and sha1-deduped
+   - A copy lands only when the content hash changed
 
-**File Format (Binary):**
+Legacy v2 `{room}.bin` session files (BinaryText plus SAUCE) are read on first load and migrate to the native format on the next save.
 
-```
-Canvas Data:
-- Width: 2 bytes (uint16)
-- Height: 2 bytes (uint16)
-- Data: width * height * 2 bytes (character + attribute per cell)
+**File Format (`.0wnz` envelope):**
 
-Attributes Byte:
-- Bits 0-3: Foreground color (0-15)
-- Bits 4-7: Background color (0-7 or 0-15 with ICE)
-- Bit 7: Blink (if not ICE colors)
-```
+A versioned JSON envelope, gzipped through the runtime-native CompressionStream. It holds what the classic formats cannot: Unicode glyph tables, raw-RGB colors, frames with delays, doc mode, and metadata.
 
 ## Design Patterns
 
@@ -842,7 +804,7 @@ function selectTool(toolName) {
 
 ### Canvas Rendering
 
-The canvas rendering system employs multiple optimization strategies for handling canvases of any size efficiently.
+The WebGL2 renderer (`glRenderer.js`) is the default. The strategies below describe the 2D chunk renderer (`canvas.js`), which remains the fallback (`?renderer=2d`, or wherever WebGL2 is unavailable) and employs multiple optimizations for handling canvases of any size efficiently.
 
 #### Virtualized Viewport Rendering
 
@@ -859,12 +821,11 @@ function getOrCreateCanvasChunk(chunkIndex) {
 	if (canvasChunks.has(chunkIndex)) {
 		return canvasChunks.get(chunkIndex);
 	}
-	// Create new chunk with canvas, offscreen canvas for blink
+	// Create new chunk with its canvas and blink-cell tracking
 	const chunk = {
 		canvas: createCanvas(width, height),
 		ctx: ...,
-		onBlinkCanvas: createCanvas(width, height),
-		offBlinkCanvas: createCanvas(width, height),
+		blinkCells: new Set(),
 		rendered: false
 	};
 	canvasChunks.set(chunkIndex, chunk);
@@ -887,7 +848,7 @@ const viewportState = {
 function calculateVisibleChunks() {
 	const viewportTop = viewportState.scrollTop;
 	const viewportBottom = viewportTop + viewportState.containerHeight;
-	const bufferZone = chunkSize * fontHeight; // 1 chunk buffer
+	const bufferZone = chunkSize * 2 * fontHeight; // two chunks of buffer rows
 
 	const startChunk = Math.floor(
 		(viewportTop - bufferZone) / (chunkSize * fontHeight),
@@ -1176,15 +1137,17 @@ Multiple canvas changes sent together:
 ```javascript
 const changes = [];
 // ... collect changes ...
-worker.postMessage({ cmd: 'draw', blocks: changes });
+worker.postMessage({ cmd: 'draw', cells: changes });
 ```
 
 **Web Worker:**
-WebSocket communication in worker thread keeps UI responsive:
+WebSocket communication in a module worker thread keeps UI responsive:
 
 ```javascript
 // Main thread
-const worker = new Worker('websocket.js');
+const worker = new Worker(new URL('./collabWorker.js', import.meta.url), {
+	type: 'module',
+});
 // First message MUST be init to establish security context
 worker.postMessage({ cmd: 'init' });
 
@@ -1198,11 +1161,10 @@ self.onmessage = e => {
 **Security Features:**
 
 - **Mandatory Initialization**: Worker requires `init` command as first message to establish security context
-- **Trusted URL Construction**: WebSocket URLs are constructed only from the worker's own `location` object (protocol, hostname, port)
-- **URL Validation**: Malformed WebSocket URLs are detected and rejected using URL constructor validation
-- **Input Sanitization**: All error messages and unknown commands sanitize output to prevent injection
-- **JSON Parsing Protection**: Invalid JSON from server is caught and safely logged without crashing
-- **Silent Connection Check**: Server availability is tested silently before prompting user, avoiding intrusive errors
+- **Same-Origin Default**: The default server URL is derived from the worker's own `location` (protocol, hostname, port); explicit `ws://`/`wss://` URLs are accepted only for remote dial
+- **Message Guard**: Both sides of the page RPC pass a shared `trustedMessage` check
+- **Frame Protection**: Malformed frames fail the shared codec's decode and are dropped without crashing
+- **Silent Probe**: Server availability is tested with a nickless CONNECTED that closes immediately; nothing joins and no remote state reaches the page until the user consents
 
 **Connection Flow:**
 
@@ -1210,16 +1172,17 @@ self.onmessage = e => {
 // 1. Initialize worker with security context
 worker.postMessage({ cmd: 'init' });
 
-// 2. Worker establishes trusted parameters from its own location
-// allowedHostname = self.location.hostname
-// trustedProtocol = self.location.protocol === 'https:' ? 'wss:' : 'ws:'
-// trustedPort = self.location.port || (https ? '443' : '80')
+// 2. Worker derives the default server URL from its own location
+// protocol = https ? 'wss:' : 'ws:'
+// host = self.location.hostname and port
+// path = '/server'
 
-// 3. Silent connection check (optional)
-worker.postMessage({ cmd: 'connect', silentCheck: true });
+// 3. Silent probe (any reply proves a server exists, then it closes)
+worker.postMessage({ cmd: 'probe' });
 
 // 4. User chooses collaboration or local mode
-// 5. Full connection established if user opts in
+// 5. Full connection if the user opts in
+worker.postMessage({ cmd: 'connect', nick, group, pass, caps });
 ```
 
 ### Storage Optimization

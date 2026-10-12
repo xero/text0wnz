@@ -7,7 +7,7 @@
 
 The tutorials themselves are just normal ANSI art files. Viewing a tutorial simply opens the file in the editor. This allows you to test the techniques and play around with the samples in their native context.
 
-Each entry contains artist and release information linking back to their original sources for further exploration
+Each entry contains artist and release information linking back to their original sources for further exploration.
 
 ## Viewing and Opening Tutorials
 
@@ -21,7 +21,7 @@ Each entry contains artist and release information linking back to their origina
 
 ### Inspo
 
-> Over the years, many people have expressed a desire to drawn text art. But the lack of formal training or educational materials can be intimidating. The goal of this feature (the project) is to empower artists with the tools and information they need to experiment, grow, and create.
+> Over the years, many people have expressed a desire to draw text art. But the lack of formal training or educational materials can be intimidating. The goal of this feature (the project) is to empower artists with the tools and information they need to experiment, grow, and create.
 
 ## Tutorials Preview
 
@@ -111,7 +111,7 @@ Each entry contains artist and release information linking back to their origina
 
 - **Title:** [zeroVision's font tutorial](https://16colo.rs/pack/blocktronics_codename_chris_wirth/zv-fonthow2.ans)
 - **Released:** 2009 in [blocktronics_codename_chris_wirth](https://16colo.rs/pack/blocktronics_codename_chris_wirth2)
-- **Artist:** [zeroVision(https://16colo.rs/artist/zerovision) of [blocktronics](https://16colo.rs/group/blocktronics)
+- **Artist:** [zeroVision](https://16colo.rs/artist/zerovision) of [blocktronics](https://16colo.rs/group/blocktronics)
 
 ### ▓▒░ Ansi Tutorial
 

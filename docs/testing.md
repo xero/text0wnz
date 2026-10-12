@@ -43,8 +43,12 @@ tests/
 │   ├── ...
 │   └── server/                    # Server tests nested
 │       ├── config.test.js
-│       ├── fileio.test.js
+│       ├── room.test.js
 │       └── ...
+├── core/                          # Vitest tests for the shared TS core
+│   ├── moebius.test.ts
+│   ├── envelope.test.ts
+│   └── ...
 ├── dom/                           # Testing Library tests
 │   ├── canvas.test.js
 │   ├── fontPreview.test.js
@@ -53,6 +57,14 @@ tests/
 │   ├── canvas.spec.js
 │   ├── tools.spec.js
 │   └── ...
+├── golden/                        # Playwright pixel-golden tests
+├── gl/                            # Playwright WebGL renderer tests
+├── perf/                          # Performance capture scripts
+├── interop/                       # Cross-editor protocol interop tests
+├── corpus/                        # Round-trip generators
+├── parity/                        # v2 reference engine for parity tests
+├── baselines/                     # Performance baselines (JSON)
+├── fixtures/                      # Shared fixtures
 ├── results/                       # Test results (gitignored)
 │   ├── coverage/                  # Coverage reports
 │   ├── e2e/                       # E2E artifacts
@@ -77,7 +89,11 @@ const ignore = [
 	'docs',
 	'session',
 	'node_modules',
+	// playwright suites, not vitest
 	'tests/e2e/**',
+	'tests/golden/**',
+	'tests/gl/**',
+	'tests/perf/**',
 	'src/img/**',
 	'src/css/**',
 ];
@@ -369,12 +385,11 @@ const debug = msg => {
 - Data manipulation
 - Format conversions
 
-**worker.test.js** - Web Worker
+**collabWorker.test.js** - Collaboration transport worker
 
-- Worker message handling
-- Data processing algorithms
-- Block deduplication logic
-- Message processing
+- Worker RPC handling (init, probe, connect, send, draw)
+- Frame handling
+- Stale socket cleanup
 
 **xbinPersistence.test.js** - XBin format persistence
 
@@ -387,7 +402,7 @@ const debug = msg => {
 >
 > Test files should be **small and focused** on testing specific features rather than entire sections of the editor. Each test file should:
 >
-> - Focus on a single module or feature area (e.g., `file-load.test.js` for loading, `file-formats.test.js` for parsing)
+> - Focus on a single module or feature area (e.g., `fileLoad.test.js` for loading, `fileFormats.test.js` for parsing)
 > - Keep file size under ~500 lines for maintainability
 > - Group related functionality logically (e.g., UI controls vs. UI components)
 > - Make it easy to locate and run tests for specific features
@@ -395,59 +410,45 @@ const debug = msg => {
 >
 > Large monolithic test files (1000+ lines) should be split into focused, feature-specific files as demonstrated by:
 >
-> - `ui-*.test.js` - Split by UI feature groups (basic, controls, components, modals)
-> - `file-*.test.js` - Split by operation type (load, formats, advanced)
-> - `freehand-*.test.js` - Split by tool categories (panels, shapes, advanced)
+> - `ui*.test.js` - Split by UI feature groups (basic, controls, components, modals)
+> - `file*.test.js` - Split by operation type (load, formats, advanced)
+> - `freehand*.test.js` - Split by tool categories (panels, shapes, advanced)
 
 #### Server Modules
 
 **server/config.test.js** - Server configuration
 
-- Configuration parsing
+- CLI argument parsing
+- Environment variable parsing
 - Default values
-- Validation
 
-**server/fileio.test.js** - Server file operations
+**server/room.test.js** - Collaboration room
 
-- SAUCE record creation and parsing
-- Binary data conversions
-- File format validation
-- Canvas dimension extraction
-- Data type conversions
+- Connect, join, and refuse flows
+- Draw broadcasting and chat
+- Canvas settings sync
+- Extension suite and hostile input hardening
 
-**server/main.test.js** - Server main module
+**server/persistence.test.js** - Room persistence
 
-- Module structure validation
-- Configuration integration
-- Component exports
-- Dependency integration
+- Envelope save and load
+- Legacy `.bin` session migration
+- Backup deduplication
 
-**server/server.test.js** - Express server
+**server/bridge.test.js** - Collaboration bridge
 
-- Server initialization
-- Route handling
-- Middleware setup
-- SSL configuration
+- Bridge mode gating (off, local, port, allow)
+- Target address vetting
 
-**server/text0wnz.test.js** - Collaboration engine
+**server/serverIntegration.test.js** - Server integration
 
-- Session management
-- User tracking
-- Canvas state synchronization
-- Message broadcasting
+- WebSocket layer and room routing
 
 **server/utils.test.js** - Server utilities
 
 - Helper functions
 - Data validation
 - Format conversions
-
-**server/websockets.test.js** - WebSocket handlers
-
-- Connection handling
-- Message routing
-- Session cleanup
-- Error handling
 
 ### Writing Unit Tests
 
@@ -635,10 +636,12 @@ it('should load data asynchronously', async () => {
 
 ```javascript
 export default defineConfig({
-	testDir: './tests/e2e',
+	testDir: './tests',
+	testMatch: ['e2e/**/*.spec.js', 'golden/**/*.spec.js', 'gl/**/*.spec.js'],
 	timeout: 30000,
 	retries: 1,
 	outputDir: 'tests/results/e2e',
+	fullyParallel: true,
 	use: {
 		baseURL: 'http://localhost:8060',
 		viewport: { width: 1280, height: 720 },
@@ -650,12 +653,42 @@ export default defineConfig({
 		reuseExistingServer: !process.env.CI,
 	},
 	projects: [
-		{ name: 'Chrome', use: { channel: 'chrome' } },
-		{ name: 'Firefox', use: { browserName: 'firefox' } },
-		{ name: 'WebKit', use: { browserName: 'webkit' } },
+		{
+			name: 'Chrome',
+			testMatch: 'e2e/**/*.spec.js',
+			use: { channel: 'chrome' },
+		},
+		{
+			name: 'Firefox',
+			testMatch: 'e2e/**/*.spec.js',
+			use: { browserName: 'firefox' },
+		},
+		{
+			name: 'WebKit',
+			testMatch: 'e2e/**/*.spec.js',
+			use: { browserName: 'webkit' },
+		},
+		{
+			name: 'golden',
+			testMatch: 'golden/**/*.spec.js',
+			use: { browserName: 'chromium' },
+		},
+		{
+			name: 'golden-gl',
+			testMatch: 'golden/**/*.spec.js',
+			use: { browserName: 'chromium' },
+		},
+		{
+			name: 'chromium-gl',
+			testMatch: 'gl/**/*.spec.js',
+			use: { browserName: 'chromium' },
+		},
 	],
 });
 ```
+
+> [!NOTE]
+> The snippet is abridged. Chromium-based projects add SwiftShader flags for software WebGL2, and golden screenshot assertions run only in CI, where rendering is deterministic.
 
 ### Running E2E Tests
 
@@ -803,6 +836,22 @@ npx playwright show-report tests/results/playwright-report
 - Mouse wheel scrolling of canvas viewport
 - Viewport scroll position tracking and validation
 
+**collabRoundTrip.spec.js** - Collaboration round trip
+
+- Two clients drawing through a live collaboration server
+
+**gestures.spec.js** - Touch gestures
+
+- Touch gesture recognition and zoom shortcuts
+
+**mapping.spec.js** - Pointer-to-cell mapping
+
+- Pointer-to-cell mapping identity across zoom and scroll
+
+**pwaManifest.spec.js** - PWA manifest
+
+- Manifest and service worker registration checks
+
 **editor-keybinds.spec.js** - Comprehensive keybind coverage
 
 - Tool activation shortcuts (K, F, B, N, A, M, G, I)
@@ -887,7 +936,6 @@ Tests run automatically on:
 
 - Every pull request
 - Every commit to main branch
-- Scheduled daily runs
 
 **GitHub Actions workflow:**
 

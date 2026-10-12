@@ -99,16 +99,20 @@ export default Module;
 
 ```
 text0wnz/
-├── .env                    # Environment variables
+├── .env                    # Environment variables (non-secret build defaults)
 ├── .git/                   # Git repository
 ├── .gitattributes          # Git attributes configuration
 ├── .github/                # GitHub Actions workflows and configs
 ├── .gitignore              # Git ignore patterns
 ├── .prettierignore         # Prettier ignore patterns
 ├── .prettierrc             # Prettier configuration
+├── assets/                 # Build inputs (hex fonts, Unicode data)
 ├── banner                  # ASCII art banner script (displayed on commands)
+├── bootup                  # Docker container startup script
 ├── bun.lock                # Bun lockfile
-├── Dockerfile              # Production Docker image
+├── CHANGELOG.md            # Release history
+├── Dockerfile              # Production Docker image (Caddy + Bun)
+├── Dockerfile.distroless   # Single-binary distroless Docker image
 ├── docs/                   # Documentation files
 ├── eslint.config.js        # ESLint configuration
 ├── LICENSE.txt             # MIT license
@@ -118,10 +122,14 @@ text0wnz/
 ├── playwright.config.js    # Playwright E2E test configuration
 ├── postcss.config.js       # PostCSS configuration
 ├── README.md               # Main project documentation
+├── sessions/               # Collaboration session storage (contents gitignored)
 ├── src/                    # Source code
 ├── tailwind.config.js      # Tailwind CSS configuration
 ├── tests/                  # Test files
+├── tools/                  # Build and codegen scripts
+├── tsconfig.json           # TypeScript configuration
 ├── vite.config.js          # Vite build configuration
+├── vite.singlefile.config.js # Single-file build configuration
 └── vitest.config.js        # Vitest unit test configuration
 ```
 
@@ -131,6 +139,7 @@ text0wnz/
 
 ```
 src/
+├── ansi/                  # Tutorial artwork served by the editor
 ├── css/
 │   └── style.css          # Main Tailwind CSS styles
 ├── fonts/                 # Bitmap font assets (PNG format)
@@ -139,6 +148,7 @@ src/
 ├── service.js             # PWA service worker (custom, not auto-generated)
 └── js/
     ├── client/            # Client-side JavaScript modules
+    ├── core/              # Shared pure-TS doc model, codecs, and protocol
     └── server/            # Server-side JavaScript modules
 ```
 
@@ -147,22 +157,40 @@ src/
 ```
 src/js/client/
 ├── main.js                # Application entry point and initialization
-├── canvas.js              # Canvas rendering engine
+├── canvas.js              # 2D chunk renderer (fallback, ?renderer=2d)
+├── charsetPicker.js       # Unicode charset picker modal
+├── collabWorker.js        # Collaboration transport worker (Moebius frames)
+├── colorPanel.js          # Extended color panel (xterm-256, RGB picker)
 ├── compression.js         # Data compression (RLE) for storage
 ├── file.js                # File I/O operations (ANSI, BIN, XBIN, PNG)
 ├── font.js                # Font loading and rendering
 ├── fontCache.js           # Font caching system
+├── frames.js              # Animation frames timeline panel
 ├── freehandTools.js       # Drawing tools implementation
+├── gestures.js            # Touch gesture recognizer
+├── glRenderer.js          # WebGL2 renderer (default)
+├── hexFontPages.js        # Runtime Unicode glyph source
+├── journalStore.js        # OPFS autosave journal store
+├── journalWorker.js       # OPFS journal worker
 ├── keyboard.js            # Keyboard mode and shortcuts
 ├── lazyFont.js            # Lazy font loading
 ├── magicNumbers.js        # Constants and magic values
-├── network.js             # Network layer with non-intrusive connection testing
+├── messageGuard.js        # Shared postMessage origin guard
+├── minimap.js             # Whole-document minimap
+├── network.js             # Network layer with non-intrusive connection probe
 ├── palette.js             # Color palette management
+├── plugins.js             # ES-module plugin surface
+├── pointer.js             # Pointer Events input normalizer
+├── profiler.js            # In-app profiling harness (lazy, ?profile)
+├── referenceImage.js      # Reference-image tracing overlay
+├── scrollSpike.js         # Scroll measurement rig (lazy, ?spike)
+├── sixteenColors.js       # 16colo.rs in-app browser
 ├── state.js               # Global application state
 ├── storage.js             # IndexedDB persistence
+├── testBridge.js          # Playwright test bridge (lazy, ?test)
 ├── toolbar.js             # Toolbar management
 ├── ui.js                  # User interface components
-└── websocket.js           # Security-hardened WebSocket worker
+└── zoom.js                # Zoom controller
 src/service.js             # Service worker (separate from client bundle)
 ```
 
@@ -172,8 +200,9 @@ src/service.js             # Service worker (separate from client bundle)
 
 Located at `src/service.js` (root level, separate from client modules)
 
-- Workbox-based precaching with custom manifest injection
-- Runtime caching strategies (assets, scripts, styles, HTML)
+- Workbox-based precaching with custom manifest injection (js, css, html, woff2, UI svgs, favicons)
+- One runtime route: stale-while-revalidate for images (`img-cache`)
+- Activation janitor for legacy caches, with a recovery path for installs stuck on an old worker
 - Share Target API handler for Android file sharing
 - File Handlers API support for Desktop "Open with"
 - Stale shared file cleanup on activation
@@ -187,22 +216,28 @@ Located at `src/service.js` (root level, separate from client modules)
 - Handles application startup
 - Manages mode selection (local vs collaborative)
 
-**canvas.js** - Canvas System
+**canvas.js** - Canvas System (2D chunk renderer)
 
+- Fallback renderer (`?renderer=2d`, or wherever WebGL2 is unavailable)
 - Offscreen canvas rendering
 - Dirty region tracking
 - Character and color rendering
 - Mirror mode support
 - Grid overlay
 - Cursor positioning
-- Exports: `createCanvas()`
+- Exports: `createTextArtCanvas()`
+
+**glRenderer.js** - WebGL2 Renderer
+
+- The editor's default renderer
+- Falls back to the 2D chunk renderer where WebGL2 is unavailable
 
 **compression.js** - Data Compression
 
 - Run-length encoding (RLE)
 - Canvas data compression for storage
 - Decompression for restoration
-- Exports: `compress()`, `decompress()`
+- Exports: `Compression` object
 
 **file.js** - File Operations
 
@@ -214,7 +249,7 @@ Located at `src/service.js` (root level, separate from client modules)
 - PNG export with canvas rendering
 - SAUCE metadata support
 - Font name conversions
-- Exports: `loadFile()`, `saveFile()`, etc.
+- Exports: `Load`, `Save`
 
 **font.js** - Font System
 
@@ -223,7 +258,7 @@ Located at `src/service.js` (root level, separate from client modules)
 - Glyph rendering
 - Letter spacing (9px mode)
 - Alpha channel support
-- Exports: `loadFont()`, `renderGlyph()`
+- Exports: `loadFontFromImage()`, `loadFontFromXBData()`
 
 **fontCache.js** - Font Caching
 
@@ -254,14 +289,14 @@ Located at `src/service.js` (root level, separate from client modules)
 - Special character insertion (F-keys)
 - Canvas editing shortcuts
 - Cursor movement
-- Exports: `KeyboardMode` object
+- Exports: keyboard controller functions
 
 **lazyFont.js** - Lazy Loading
 
 - On-demand font loading
 - Loading state management
 - Error handling
-- Exports: `loadFontLazy()`
+- Exports: `createLazyFont()`
 
 **magicNumbers.js** - Constants
 
@@ -283,7 +318,7 @@ Located at `src/service.js` (root level, separate from client modules)
 - Server log message display (join/leave/nick)
 - Desktop notifications
 - Collaboration mode selection
-- Exports: `Network` object
+- Exports: `createWorkerHandler()`, `createChatController()`
 
 **palette.js** - Color Management
 
@@ -293,7 +328,7 @@ Located at `src/service.js` (root level, separate from client modules)
 - Color conflict resolution
 - Custom palettes (XBIN)
 - Palette UI
-- Exports: `Palette` object
+- Exports: palette component functions
 
 **state.js** - State Management
 
@@ -334,17 +369,43 @@ Located at `src/service.js` (root level, separate from client modules)
 - Status bar
 - Exports: UI component functions
 
-**websocket.js** - WebSocket Worker
+**collabWorker.js** - Collaboration Transport Worker
 
-- Runs in Web Worker thread
-- Security-hardened WebSocket connection
-- Mandatory initialization sequence
-- Trusted URL construction
-- JSON parsing protection and command validation
-- Message handling with error protection
-- Background communication
+- Runs in a module Web Worker thread (bundled by Vite)
+- Owns the WebSocket and speaks Moebius-native `{type, data}` frames
+- Mandatory initialization sequence (`init` first)
+- Same-origin default server URL; explicit `ws://`/`wss://` URLs for remote dial
+- Silent probe: a nickless CONNECTED proves a server exists, then closes
+- Message guard on both sides of the page RPC
 - Keeps UI responsive
 - Exports: Worker message protocol
+
+### Core Modules
+
+Shared pure-TypeScript code used by the client, the collaboration worker, and the server.
+
+```
+src/js/core/
+├── index.ts               # Entry point (re-exports everything)
+├── doc.ts                 # Document model
+├── editor.ts              # Editing operations over the doc model
+├── convert.ts             # Conversions between doc representations
+├── cellops.ts             # Cell-level operations
+├── journal.ts             # Autosave journal format
+├── migrate.ts             # Legacy data migration
+├── mapping.ts             # Pointer-to-cell mapping
+├── paste.ts               # Paste handling
+├── patchArena.ts          # Patch buffer
+├── width.ts               # Character width handling
+├── charsets.ts            # Charset tables
+├── cp437.ts               # CP437 mapping
+├── hexfont.ts             # Hex font parsing
+├── formatBudget.ts        # Format budget tables
+├── blocksData.ts          # Block character data
+├── eawData.ts             # East Asian width data
+├── codecs/                # File format codecs (SAUCE, BIN, XBIN, ANSI, Tundra, durdraw, .0wnz envelope, zip)
+└── protocol/              # Collab protocol (Moebius dialect, extension suite, timelapse)
+```
 
 ### Server Modules
 
@@ -352,11 +413,11 @@ Located at `src/service.js` (root level, separate from client modules)
 src/js/server/
 ├── main.js                # Server entry point and CLI
 ├── config.js              # Configuration parsing
-├── fileio.js              # File I/O and SAUCE handling
-├── server.js              # Express server setup
-├── text0wnz.js            # Collaboration engine
-├── utils.js               # Utility functions
-└── websockets.js          # WebSocket handlers
+├── moebiusServer.js       # Bun.serve WebSocket layer and routing
+├── room.js                # Collaboration room semantics
+├── persistence.js         # Room persistence and backups
+├── bridge.js              # Bridge to plaintext desktop servers
+└── utils.js               # Utility functions
 ```
 
 #### Server Module Descriptions
@@ -364,66 +425,53 @@ src/js/server/
 **main.js** - Entry Point
 
 - CLI argument processing
-- Server startup
-- Help message display
-- Configuration integration
+- Server startup and room restoration
+- Autosave timer and shutdown saves (SIGINT and SIGTERM)
+- Doubles as its own Docker healthcheck probe
 - Exports: None (executable)
 
 **config.js** - Configuration
 
 - Parse CLI arguments
-- Validate options
+- Parse server environment variables (room passwords, resize walls)
 - Provide defaults
-- Configuration object creation
-- Exports: `parseConfig()`
+- Exports: `parseArgs()`
 
-**fileio.js** - File Operations
+**moebiusServer.js** - WebSocket Layer
 
-- Binary file reading/writing
-- SAUCE record creation
-- SAUCE record parsing
-- Canvas dimension extraction
-- Data type conversions
-- Timestamped backups
-- Exports: File I/O functions
+- Bun.serve HTTP/WebSocket listener (plus optional plaintext listener)
+- Path-based room routing (`/` and `/server` reach the default room)
+- Frame intake hardening, heartbeat, connection limits
+- Optional static file serving and `/healthz`
+- Exports: `createMoebiusServer()`
 
-**server.js** - Express Server
+**room.js** - Collaboration Room
 
-- Server initialization
-- SSL/TLS setup
-- Session middleware
-- WebSocket routing (/ and /server endpoints)
-- Static file serving
-- Error handling
-- Exports: `createServer()`
+- Moebius-native protocol semantics (transport-free)
+- User tracking and message broadcasting
+- Canvas settings sync and room passwords
+- Extension suite for caps-aware clients
+- Exports: `createRoom()`
 
-**text0wnz.js** - Collaboration Engine
+**persistence.js** - Room Persistence
 
-- Canvas state management (imageData)
-- User session tracking
-- Message broadcasting
-- State persistence
-- Canvas settings sync
-- Auto-save at intervals
-- Exports: `CollaborationEngine` class
+- Saves rooms as native `.0wnz` envelopes with a JSON sidecar
+- Loads legacy v2 `.bin` session files as the migration path
+- Hourly sha1-deduped timestamped backups
+- Exports: `saveRoom()`, `loadRoomDoc()`, `backupRoom()`
+
+**bridge.js** - Collaboration Bridge
+
+- Byte pipe from browser connections to plaintext desktop servers
+- Mode gating (`off`, `local`, `port`, `allow`) with address vetting
+- Exports: `createBridgePipe()`, `resolveBridgeTarget()`
 
 **utils.js** - Utilities
 
 - Logging functions
-- Data validation
-- Format conversions
+- Data sanitization
 - Helper functions
 - Exports: Utility functions
-
-**websockets.js** - WebSocket Layer
-
-- Connection handlers
-- Disconnection cleanup
-- Message routing
-- Session management
-- Error handling
-- Logging
-- Exports: WebSocket setup functions
 
 ## Documentation
 
@@ -431,10 +479,15 @@ src/js/server/
 docs/
 ├── README.md                      # Documentation index
 ├── architecture.md                # System architecture
+├── browser-compatibility-analysis-guide.md # Browser compatibility guide
 ├── building-and-developing.md     # Development guide
 ├── cicd.md                        # CI/CD pipeline
-├── collaboration-server.md        # Server documentation
+├── code_of_conduct.md             # Code of conduct
+├── collab-protocol-migration.md   # Collaboration protocol migration
+├── collaboration-server.md        # Server documentation (historical)
+├── contributing.md                # Contribution guide
 ├── docker.md                      # Docker guide
+├── environment-variables.md       # Environment variable reference
 ├── examples/                      # Sample artwork
 │   ├── ansi/                      # ANSI examples
 │   │   ├── x0-defcon25.ans
@@ -451,8 +504,11 @@ docs/
 ├── other-tools.md                 # Additional tools
 ├── pre-commit                     # Git pre-commit hook
 ├── privacy.md                     # Privacy policy
+├── project-structure.md           # This file
 ├── sauce-format.md                # SAUCE specification
+├── security.md                    # Security policy
 ├── testing.md                     # Testing guide
+├── tutorials.md                   # Tutorials
 ├── webserver-configuration.md     # Webserver setup
 └── xb-format.md                   # XBIN specification
 ```
@@ -466,42 +522,69 @@ tests/
 ├── unit/                         # Vitest unit tests
 │   ├── README.md                 # Unit test documentation
 │   ├── canvas.test.js            # Canvas module tests
-│   ├── client/                   # Client-specific tests
-│   │   └── worker.test.js        # WebSocket worker tests
+│   ├── canvasJournal.test.js     # Canvas autosave journal tests
+│   ├── collabWorker.test.js      # Collaboration worker tests
 │   ├── compression.test.js       # Compression tests
-│   ├── fileLoad.test.js          # File I/O - Load and Save tests
-│   ├── fileFormats.test.js       # File I/O - Formats and Parsing tests
+│   ├── engineParity.test.js      # Engine parity tests
+│   ├── file.test.js              # File I/O tests
 │   ├── fileAdvanced.test.js      # File I/O - Advanced operations tests
+│   ├── fileDocNative.test.js     # Native document format tests
+│   ├── fileFormats.test.js       # File I/O - Formats and Parsing tests
+│   ├── fileLoad.test.js          # File I/O - Load and Save tests
+│   ├── fileUtf8.test.js          # UTF-8 file handling tests
 │   ├── font.test.js              # Font system tests
 │   ├── fontCache.test.js         # Font cache tests
+│   ├── frames.test.js            # Animation frames tests
+│   ├── freehandAdvanced.test.js  # Drawing tools - Advanced tools
 │   ├── freehandPanels.test.js    # Drawing tools - Panels and Cursors
 │   ├── freehandShapes.test.js    # Drawing tools - Shapes and Fill
-│   ├── freehandAdvanced.test.js  # Drawing tools - Advanced tools
+│   ├── freehandTools.test.js     # Drawing tools tests
+│   ├── freehandToolsExtended.test.js # Drawing tools - Extended coverage
+│   ├── gestures.test.js          # Touch gesture tests
+│   ├── hexFontPages.test.js      # Unicode glyph source tests
+│   ├── journalStore.test.js      # Journal store tests
+│   ├── journalWorker.test.js     # Journal worker tests
 │   ├── keyboard.test.js          # Keyboard tests
+│   ├── keyboardExtended.test.js  # Keyboard - Extended coverage
 │   ├── lazyFont.test.js          # Lazy loading tests
 │   ├── magicNumbers.test.js      # Constants tests
 │   ├── main.test.js              # Main module tests
+│   ├── messageGuard.test.js      # postMessage guard tests
+│   ├── minimap.test.js           # Minimap tests
 │   ├── network.test.js           # Network tests
 │   ├── palette.test.js           # Palette tests
+│   ├── plugins.test.js           # Plugin surface tests
+│   ├── pointer.test.js           # Pointer input tests
+│   ├── pressure.test.js          # Pen pressure tests
+│   ├── referenceImage.test.js    # Reference image tests
 │   ├── server/                   # Server-specific tests
+│   │   ├── bridge.test.js        # Bridge tests
 │   │   ├── config.test.js        # Config tests
-│   │   ├── fileio.test.js        # Server file I/O tests
-│   │   ├── main.test.js          # Server main tests
-│   │   ├── server.test.js        # Express server tests
-│   │   ├── text0wnz.test.js      # Collaboration tests
-│   │   ├── utils.test.js         # Server utils tests
-│   │   └── websockets.test.js    # WebSocket tests
+│   │   ├── persistence.test.js   # Persistence tests
+│   │   ├── room.test.js          # Room protocol tests
+│   │   ├── serverIntegration.test.js # Server integration tests
+│   │   └── utils.test.js         # Server utils tests
+│   ├── service.test.js           # Service worker tests
+│   ├── sixteenColors.test.js     # 16colo.rs browser tests
 │   ├── state.test.js             # State management tests
 │   ├── storage.test.js           # Storage tests
 │   ├── toolbar.test.js           # Toolbar tests
+│   ├── ui.test.js                # UI tests
 │   ├── uiBasic.test.js           # UI - Basic utilities tests
-│   ├── uiControls.test.js        # UI - Controls and controllers tests
 │   ├── uiComponents.test.js      # UI - Components tests
+│   ├── uiControls.test.js        # UI - Controls and controllers tests
 │   ├── uiModals.test.js          # UI - Advanced utilities tests
 │   ├── utils.test.js             # Client utils tests
-│   ├── websocket.test.js         # WebSocket client tests
-│   ├── worker.test.js            # Worker tests
-│   └── xbinPersistence.test.js   # XBIN tests
+│   ├── xbinCompression.test.js   # XBIN compression tests
+│   ├── xbinPersistence.test.js   # XBIN persistence tests
+│   ├── zoom.test.js              # Zoom tests
+│   └── zoomController.test.js    # Zoom controller tests
+├── core/                         # Vitest tests for the shared TS core
+│   ├── moebius.test.ts           # Moebius protocol codec tests
+│   ├── extensions.test.ts        # Protocol extension suite tests
+│   ├── envelope.test.ts          # .0wnz envelope codec tests
+│   ├── codecs.test.ts            # File format codec tests
+│   └── ...                       # doc, editor, journal, mapping, and more
 ├── dom/                          # Testing Library DOM tests
 │   ├── README.md                 # DOM test documentation
 │   ├── canvas.test.js            # Canvas DOM tests
@@ -512,18 +595,34 @@ tests/
 │   ├── modal.test.js             # Modal tests
 │   ├── palette.test.js           # Palette DOM tests
 │   ├── toggleButton.test.js      # Toggle button tests
-│   └── toolbar.test.js           # Toolbar DOM tests
+│   ├── toolbar.test.js           # Toolbar DOM tests
+│   └── toolPreview.test.js       # Tool preview tests
 ├── e2e/                          # Playwright E2E tests
 │   ├── README.md                 # E2E test documentation
+│   ├── helpers/                  # Shared E2E helpers
 │   ├── canvas.spec.js            # Canvas E2E tests
 │   ├── clipboard.spec.js         # Clipboard tests
 │   ├── collaboration.spec.js     # Collaboration tests
+│   ├── collabRoundTrip.spec.js   # Collaboration round-trip tests
+│   ├── editor-file-open-and-scroll.spec.js # File loading and scrolling
+│   ├── editor-keybinds.spec.js   # Keybind coverage
 │   ├── fileOperations.spec.js    # File operations tests
+│   ├── gestures.spec.js          # Touch gesture tests
 │   ├── keyboard.spec.js          # Keyboard E2E tests
+│   ├── mapping.spec.js           # Pointer-to-cell mapping tests
 │   ├── palette.spec.js           # Palette E2E tests
+│   ├── pwaManifest.spec.js       # PWA manifest tests
 │   ├── tools.spec.js             # Tools E2E tests
 │   ├── ui.spec.js                # UI E2E tests
 │   └── undoRedo.spec.js          # Undo/redo tests
+├── golden/                       # Playwright pixel-golden tests
+├── gl/                           # Playwright WebGL renderer tests
+├── perf/                         # Performance capture scripts
+├── interop/                      # Cross-editor protocol interop tests
+├── corpus/                       # Round-trip generators
+├── parity/                       # v2 reference engine for parity tests
+├── baselines/                    # Performance baselines (JSON)
+├── fixtures/                     # Shared fixtures
 └── results/                      # Test results (gitignored)
     ├── coverage/                 # Unit test coverage
     ├── e2e/                      # E2E artifacts
@@ -540,8 +639,17 @@ tests/
 - Output directory and structure
 - Asset handling
 - Code splitting strategy
-- Plugin configuration (PWA, sitemap, static copy)
+- Plugin configuration (PWA, sitemap, static copy, HTML minifier)
 - Development server settings
+
+**vite.singlefile.config.js** - Single-File Build Configuration
+
+- Builds the editor as one self-contained file (`bun bake:singlefile`)
+
+**tsconfig.json** - TypeScript Configuration
+
+- Compiler options for the TypeScript sources
+- Checked with `bun types:check` (`tsc --noEmit`)
 
 **postcss.config.js** - PostCSS Configuration
 
@@ -567,10 +675,14 @@ tests/
 
 ```json
 {
+	"printWidth": 80,
+	"tabWidth": 2,
 	"useTabs": true,
+	"semi": true,
 	"singleQuote": true,
-	"trailingComma": "es5",
-	"printWidth": 100
+	"trailingComma": "all",
+	"arrowParens": "avoid",
+	"endOfLine": "lf"
 }
 ```
 
@@ -578,9 +690,10 @@ tests/
 
 - `node_modules/`
 - `dist/`
-- `tests/results/`
-- `*.min.js`
-- `*.lock`
+- `sessions/`
+- `banner`
+- `*.js` and `*.html` (ESLint owns JS and HTML formatting)
+- `tests/interop/fixtures/`
 
 ### Testing
 
@@ -594,13 +707,12 @@ tests/
 
 **playwright.config.js** - Playwright Configuration
 
-- Test directory
+- Test directory and match patterns (e2e, golden, gl)
 - Timeout settings
 - Retry configuration
 - Output directory
-- Browser configurations (Chrome, Firefox, WebKit)
+- Browser projects (Chrome, Firefox, WebKit, plus Chromium golden/GL rails)
 - Web server settings
-- Sharding support
 
 ### Docker
 
@@ -612,6 +724,12 @@ tests/
 - Non-root user
 - Health checks
 - Environment variables
+
+**Dockerfile.distroless** - Single-Binary Container
+
+- Multi-stage Bun build
+- Compiles the server to one binary on a distroless non-root base
+- The binary serves the PWA, collab WebSockets, the bridge, and `/healthz`
 
 **.github/ci.Dockerfile** - CI Container
 
@@ -627,9 +745,10 @@ tests/
 - `node_modules/`
 - `dist/`
 - `tests/results/`
-- `.env`
-- `*.lock`
-- Build artifacts
+- `sessions/*.bin` and `sessions/*.json`
+- `src/fonts/u/` (generated font pages)
+- `build/bin/` and `dist-singlefile/`
+- OS and editor noise
 
 **.gitattributes** - Git Attributes
 
@@ -657,9 +776,12 @@ tests/
 ```
 .github/
 ├── ci.Dockerfile              # CI container image
+├── CODE_OF_CONDUCT.md         # Code of conduct
+├── CONTRIBUTING.md            # Contribution guide
 ├── copilot-instructions.md    # Copilot setup instructions
 ├── dependabot.yml             # Dependabot configuration
 ├── FUNDING.yml                # Funding/sponsorship info
+├── SECURITY.md                # Security policy
 └── workflows/                 # GitHub Actions workflows
     ├── build.yml              # Build verification
     ├── ci-docker-build.yml    # CI image builder
@@ -667,14 +789,17 @@ tests/
     ├── deploy.yml             # GitHub Pages deployment
     ├── docker-build.yml       # Docker image builder
     ├── e2e.yml                # E2E tests
+    ├── golden-update.yml      # Pixel golden refresher
     ├── lint.yml               # Code linting
     ├── merge-reports.yml      # E2E report merger
+    ├── pages-preview.yml      # GitHub Pages preview
+    ├── release.yml            # Release pipeline
     ├── test-suite.yml         # Main test orchestrator
     ├── unit.yml               # Unit tests
     └── wiki.yml               # Wiki documentation sync
 ```
 
-> [!INFO]
+> [!NOTE]
 > See [CI/CD Pipeline](cicd.md) for detailed workflow documentation.
 
 ## Build Output
@@ -684,6 +809,9 @@ dist/                          # Generated by `bun bake`
 ├── index.html                 # Main entry point
 ├── site.webmanifest           # PWA manifest
 ├── service.js                 # Service worker
+├── collabWorker-[hash].js     # Collaboration worker (hashed)
+├── journalWorker-[hash].js    # OPFS journal worker (hashed)
+├── ansi/                      # Tutorial artwork
 ├── robots.txt                 # Search engine directives
 ├── sitemap.xml                # Site map
 ├── humans.txt                 # Humans.txt
@@ -702,7 +830,10 @@ dist/                          # Generated by `bun bake`
         ├── fileops-[hash].js  # File operations
         ├── network-[hash].js  # Collaboration
         ├── palette-[hash].js  # Color palette
-        └── websocket.js       # Web Worker (not hashed)
+        ├── profiler-[hash].js # Profiling harness (lazy)
+        ├── scrollSpike-[hash].js # Scroll measurement rig (lazy)
+        ├── testBridge-[hash].js  # Test bridge (lazy)
+        └── rolldown-runtime-[hash].js # Bundler runtime
 ```
 
 ## Related Documentation
