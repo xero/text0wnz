@@ -1,0 +1,21 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"ignorePatterns": ["**/*.js", "**/*.mjs", "tests/parity/"],
+	"categories": {
+		"correctness": "error",
+		"suspicious": "warn"
+	},
+	"rules": {
+		"eqeqeq": "error",
+		"curly": "error",
+		"no-eval": "error",
+		"no-var": "warn",
+		"prefer-const": "warn",
+		"no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+		"no-control-regex": "off",
+		"unicorn/consistent-function-scoping": "off",
+		"unicorn/no-array-sort": "off",
+		"unicorn/no-array-reverse": "off",
+		"unicorn/no-new-array": "off"
+	}
+}

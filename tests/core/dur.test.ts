@@ -111,7 +111,7 @@ describe('dur codec (durdraw v7/v8 import)', () => {
 		const v8 = v8Movie();
 		const m = v8.DurMovie;
 		const transpose = (map: number[][][]): number[][][] =>
-			Array.from({ length: m.columns }, (_, x) =>
+			Array.from({ length: m.columns }, (_unused, x) =>
 				Array.from({ length: m.lines }, (_, y) => map[y][x]),
 			);
 		const v7 = {
