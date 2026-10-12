@@ -63,6 +63,8 @@ let viewport;
 let columnsInput;
 let fontSelect;
 let openFile;
+let referenceImage;
+let refToggle;
 let resizeApply;
 let sauceDone;
 let sauceTitle;
@@ -117,7 +119,26 @@ const $$$$ = () => {
 	navFullscreen = $('fullscreen');
 };
 
+const isImageFile = file => {
+	if (file.type?.startsWith('image/')) {
+		return true;
+	}
+	const ext = file.name.split('.').pop().toLowerCase();
+	return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'avif'].includes(ext);
+};
+
 const openHandler = file => {
+	// images trace, they do not parse: route them to the reference
+	// overlay instead of dumping their bytes into the canvas as text.
+	// iOS widens the picker's accept to */* so they cannot be filtered
+	// out of the dialog itself
+	if (isImageFile(file) && referenceImage) {
+		referenceImage.load(file);
+		referenceImage.setOpen(true);
+		refToggle?.update();
+		openFile.value = '';
+		return;
+	}
 	bodyContainer.classList.add('loading');
 	State.textArtCanvas.clearXBData();
 	State.textArtCanvas.clear();
@@ -547,9 +568,9 @@ const initializeAppComponents = async () => {
 	onClick($('pluginsMenu'), () => pluginManager?.show());
 
 	// reference-image overlay for tracing
-	const referenceImage = createReferenceImage();
+	referenceImage = createReferenceImage();
 	if (referenceImage) {
-		createSettingToggle(
+		refToggle = createSettingToggle(
 			$('navRef'),
 			referenceImage.isOpen,
 			referenceImage.setOpen,

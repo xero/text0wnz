@@ -59,6 +59,9 @@ byte-exact golden tests before anything else moved.
 
 ### Fixed
 
+- **Opening an image traces it.** Picking or dropping a png, jpg, or
+  other image routes it to the reference overlay instead of dumping
+  its raw bytes into the canvas as text.
 - **Selections survive tool switches.** Leaving the selection tool and
   coming back restores the last selection instead of collapsing it to
   a single cell at the cursor. A pre-v3 defect.

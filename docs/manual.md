@@ -734,6 +734,7 @@ The **Ref Image** button in the viewport toolbar opens a small panel for tracing
 - **width** slider sizes the image from 10 to 200 percent of the canvas width
 - Every tool draws straight through the overlay, and it follows zoom and canvas resizes
 - **clear** removes the image
+- Opening an image through **File > Open** or by dropping it on the editor loads it here too, never into the canvas
 
 # Animation
 
