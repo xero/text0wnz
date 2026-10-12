@@ -37,10 +37,14 @@
  */
 
 import {
+	attrsOf,
 	createDefaultPaletteRGB,
+	glyphIdOf,
+	glyphWord,
 	isPaletteColor,
 	paletteColor,
 	paletteIndexOf,
+	type DocV3,
 } from '../doc.js';
 import { quantizeColorWord } from '../convert.js';
 import { cp437ToUnicode, unicodeToCp437 } from '../cp437.js';
@@ -251,6 +255,51 @@ export const expandExtCells = (
 		throw new ProtocolError(
 			`expected ${expectedLength} ext cells, decoded ${out.length}`,
 		);
+	}
+	return out;
+};
+
+export const extCellEquals = (a: ExtCell, b: ExtCell): boolean =>
+	a.u === b.u && a.a === b.a && a.fg === b.fg && a.bg === b.bg;
+
+// --------------------------------------------------------- doc bridge
+
+/**
+ * Write full-fidelity cells into a v3 doc frame (persistence: the
+ * room's .0wnz envelope keeps the real art, not the vanilla
+ * projection). Glyphs intern through the table; a full table degrades
+ * to '?' like the utf8 reader.
+ */
+export const applyExtCells = (doc: DocV3, cells: ExtCell[]): void => {
+	const frame = doc.frames[0];
+	const count = Math.min(cells.length, frame.glyph.length);
+	for (let i = 0; i < count; i++) {
+		const cell = cells[i];
+		let glyphId: number;
+		try {
+			glyphId = doc.glyphTable.idFor(0, cell.u);
+		} catch {
+			glyphId = 63; // '?'
+		}
+		frame.glyph[i] = glyphWord(glyphId, cell.a);
+		frame.fg[i] = cell.fg >>> 0;
+		frame.bg[i] = cell.bg >>> 0;
+	}
+};
+
+/** the full-fidelity view of a v3 doc frame, for sync and persistence */
+export const docToExtCells = (doc: DocV3, frameIndex = 0): ExtCell[] => {
+	const frame = doc.frames[frameIndex];
+	const out: ExtCell[] = new Array(frame.glyph.length);
+	for (let i = 0; i < frame.glyph.length; i++) {
+		const glyphId = glyphIdOf(frame.glyph[i]);
+		const def = doc.glyphTable.get(glyphId);
+		out[i] = {
+			u: def?.codepoint ?? (glyphId <= 0xff ? cp437ToUnicode(glyphId) : 63),
+			a: attrsOf(frame.glyph[i]),
+			fg: normalizeColorWord(frame.fg[i]) ?? 0,
+			bg: normalizeColorWord(frame.bg[i]) ?? 0,
+		};
 	}
 	return out;
 };
