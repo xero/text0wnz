@@ -451,7 +451,7 @@
 	}
 	/* every submenu stacks the icon over its label */
 	.toolButton {
-		@apply text-white flex flex-col text-sm h-[var(--header-size)] px-[5px];
+		@apply text-white flex flex-col text-sm h-[var(--header-size)] px-[5px] mx-0.5;
 
 		&:not(.toolbarDisplayed):hover {
 			@apply bg-hl;
@@ -468,13 +468,6 @@
 		}
 		kbd {
 			@apply text-xs w-full text-center;
-		}
-	}
-
-	#clipboardToolbar,
-	#fontToolbar {
-		.toolButton {
-			@apply mr-1;
 		}
 	}
 
@@ -505,6 +498,21 @@
 		}
 	}
 	#zoomControl {
+		/* icon, label and value share the top row; the slider rides alone
+		   below it */
+		.zoomControl {
+			@apply flex flex-col items-center;
+		}
+		.zoomTop {
+			@apply flex flex-row items-center gap-1;
+
+			svg {
+				@apply mx-0;
+			}
+			label {
+				@apply cursor-pointer;
+			}
+		}
 		#zoomSlider {
 			max-width: 70px;
 			margin-inline: 4px;
@@ -520,9 +528,9 @@
 		}
 		input[type='range']::-webkit-slider-thumb {
 			@apply appearance-none bg-thumb cursor-ew-resize rounded-bl-xs;
-			height: 26px;
+			height: 16px;
 			width: 16px;
-			margin-top: -9px;
+			margin-top: -4px;
 
 			&:hover {
 				@apply bg-cyan;
@@ -530,7 +538,7 @@
 		}
 		input[type='range']::-moz-range-thumb {
 			@apply bg-thumb cursor-ew-resize rounded-bl-xs;
-			height: 25px;
+			height: 16px;
 			width: 16px;
 
 			&:hover {

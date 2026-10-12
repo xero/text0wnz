@@ -1242,8 +1242,13 @@ const createZoomControl = () => {
 	};
 
 	document.addEventListener('keydown', handleKeyboardZoom);
-	container.appendChild(label);
-	container.appendChild(display);
+	// icon, label and value ride the top row (main.js moves the sprite
+	// icon in); the slider gets the full row below
+	const top = document.createElement('div');
+	top.className = 'zoomTop';
+	top.appendChild(label);
+	top.appendChild(display);
+	container.appendChild(top);
 	container.appendChild(slider);
 	return container;
 };
