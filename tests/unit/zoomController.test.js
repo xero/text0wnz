@@ -114,7 +114,6 @@ describe('zoom controller', () => {
 		mocks.setScale(1.5);
 		key('Minus');
 		expect(mocks.state.font.setScaleFactor).toHaveBeenLastCalledWith(1);
-		// ctrl+0 belongs to color 0, the classic scene binding: untouched
 		mocks.setScale(3);
 		mocks.state.font.setScaleFactor.mockClear();
 		key('Digit0');
