@@ -342,7 +342,7 @@ const createCursor = canvasContainer => {
 		show();
 	};
 
-	const move = (newX, newY) => {
+	const move = (newX, newY, follow = true) => {
 		if (State.selectionCursor.isVisible()) {
 			endSelection();
 		}
@@ -358,19 +358,42 @@ const createCursor = canvasContainer => {
 			new CustomEvent('onTextCursorMove', { detail: { x, y } }),
 		);
 
-		scrollViewportToCursor();
+		if (follow) {
+			scrollViewportToCursor();
+		}
+	};
+
+	// stamped whenever the follow-scroll mutates the viewport, so the
+	// scroll listener can tell navigation scrolls from user scrolls
+	let followedAt = 0;
+	const bufferRows = 5;
+
+	// the canvas does not start at the scroll content's top (the
+	// container carries a margin); cell math must work in content space
+	// or every scroll position is off by that gap
+	const contentOffset = () => {
+		if (!viewport) {
+			return { x: 0, y: 0 };
+		}
+		const vr = viewport.getBoundingClientRect();
+		const cr = canvasContainer.getBoundingClientRect();
+		return {
+			x: cr.left - vr.left + viewport.scrollLeft,
+			y: cr.top - vr.top + viewport.scrollTop,
+		};
 	};
 
 	const scrollViewportToCursor = () => {
 		if (!viewport) {
 			return;
 		}
+		followedAt = performance.now();
 		const fontHeight = State.font.getHeight();
 		const fontWidth = State.font.getWidth();
-		const bufferRows = 5;
+		const off = contentOffset();
 
-		const cursorPixelY = y * fontHeight;
-		const cursorPixelX = x * fontWidth;
+		const cursorPixelY = off.y + y * fontHeight;
+		const cursorPixelX = off.x + x * fontWidth;
 		const bufferPixels = bufferRows * fontHeight;
 
 		const viewportHeight = viewport.clientHeight;
@@ -396,6 +419,50 @@ const createCursor = canvasContainer => {
 			viewport.scrollLeft = Math.max(0, cursorRight - viewportWidth);
 		}
 	};
+
+	// scrolling away from the cursor strands it: the next arrow key
+	// snaps the view back to wherever it was left. Once a user scroll
+	// settles with the cursor fully off screen, re-home it to the top
+	// left visible cell, WITHOUT follow (following would tug the view
+	// back by the edge buffer and fight the scroll that just happened)
+	let settleTimer = 0;
+	const onViewportScroll = () => {
+		clearTimeout(settleTimer);
+		settleTimer = setTimeout(() => {
+			if (!visible || State.selectionCursor.isVisible()) {
+				return;
+			}
+			if (performance.now() - followedAt < 250) {
+				return;
+			}
+			const fw = State.font.getWidth();
+			const fh = State.font.getHeight();
+			const off = contentOffset();
+			const first = {
+				x: Math.ceil((viewport.scrollLeft - off.x) / fw),
+				y: Math.ceil((viewport.scrollTop - off.y) / fh),
+			};
+			const last = {
+				x:
+					Math.floor((viewport.scrollLeft - off.x + viewport.clientWidth) / fw) -
+					1,
+				y:
+					Math.floor((viewport.scrollTop - off.y + viewport.clientHeight) / fh) -
+					1,
+			};
+			if (x < first.x || x > last.x || y < first.y || y > last.y) {
+				// land at buffer depth so the next arrow press moves the
+				// cursor without the follow-scroll snapping the view; at the
+				// doc edge the scroll clamps, so no buffer is needed there
+				move(
+					first.x > 0 ? first.x + bufferRows : 0,
+					first.y > 0 ? first.y + bufferRows : 0,
+					false,
+				);
+			}
+		}, 120);
+	};
+	viewport?.addEventListener('scroll', onViewportScroll, { passive: true });
 
 	const updateDimensions = () => {
 		canvas.width = State.font.getWidth() + 1;
