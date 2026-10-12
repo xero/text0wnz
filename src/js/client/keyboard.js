@@ -1416,6 +1416,13 @@ const createKeyboardController = () => {
 	};
 };
 
+// a cell is "blank" for transparency purposes, an empty glyph on
+// black: char 0 and space must agree here or blanks leak through one
+// path and stamp through another (paste modes and move mode share it)
+const isBlankCell = (charCode, background) =>
+	(charCode === 0 || charCode === 32 || charCode === 255) &&
+	background === 0;
+
 const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 	let buffer;
 	let x = 0;
@@ -1480,11 +1487,6 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 			State.textArtCanvas.setArea(buffer, x, y);
 		}
 	};
-
-	/** a cell is "blank" for paste purposes: empty glyph on black */
-	const isBlankCell = (charCode, background) =>
-		(charCode === 0 || charCode === 32 || charCode === 255) &&
-		background === 0;
 
 	/**
 	 * PabloDraw-style paste modes:
@@ -1861,11 +1863,13 @@ const createSelectionTool = () => {
 				for (let px = 0; px < maxWidth; px++) {
 					const srcIndex = py * area.width + px;
 					const sourceAttrib = area.data[srcIndex] || 0;
+					const charCode = sourceAttrib >> 8;
+					const fg = sourceAttrib & 15;
+					const bg = (sourceAttrib >> 4) & 15;
 
-					if (sourceAttrib !== 0) {
-						const charCode = sourceAttrib >> 8;
-						const fg = sourceAttrib & 15;
-						const bg = (sourceAttrib >> 4) & 15;
+					// blanks move transparently, like paste transparent:
+					// a space is as blank as char 0
+					if (!isBlankCell(charCode, bg)) {
 						draw(charCode, fg, bg, x + px, y + py);
 					} else if (
 						targetArea &&

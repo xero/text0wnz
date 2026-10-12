@@ -58,6 +58,10 @@ byte-exact golden tests before anything else moved.
 
 ### Fixed
 
+- **Move mode is transparent over blanks.** Moving a selection no
+  longer stamps its empty cells over artwork: blanks (char 0, space,
+  or nbsp on black, the same rule the paste modes use) let the art
+  underneath show through and survive.
 - **Opening an image traces it.** Picking or dropping a png, jpg, or
   other image routes it to the reference overlay instead of dumping
   its raw bytes into the canvas as text.

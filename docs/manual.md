@@ -480,6 +480,8 @@ Move mode is orange (toggle with `m` key):
 
 ![move](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/move.png)
 
+Blank cells in the selection move transparently, like paste transparent: artwork under the empty parts of the rect shows through and survives the move. A cell counts as blank when it is empty (char 0, space, or nbsp) on a black background, the same rule the paste modes use.
+
 **Keyboard Shortcuts:**
 
 | Key Combo                  | Action                          |

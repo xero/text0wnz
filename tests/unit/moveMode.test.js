@@ -262,6 +262,41 @@ describe('selection move mode', () => {
 		tool.disable();
 	});
 
+	it('moves blank cells transparently over artwork', () => {
+		const buf = State.textArtCanvas._buffer;
+		// floating 'A' with a SPACE beside it (fg set, bg 0: a scene
+		// file blank), moving onto 'B' artwork
+		buf[20 * COLS + 10] = (65 << 8) | 7;
+		buf[20 * COLS + 11] = (32 << 8) | 7;
+		buf[20 * COLS + 30] = (66 << 8) | 7;
+		buf[20 * COLS + 31] = (66 << 8) | 7;
+
+		const tool = createSelectionTool();
+		tool.enable();
+		State.selectionCursor.setStart(10, 20);
+		State.selectionCursor.setEnd(11, 20);
+		tool.toggleMoveMode();
+		const kd = keydownHandlers[keydownHandlers.length - 1];
+		for (let i = 0; i < 20; i++) {
+			kd(key('ArrowRight'));
+		}
+		expect(State.selectionCursor.getSelection()).toEqual({
+			x: 30,
+			y: 20,
+			width: 2,
+			height: 1,
+		});
+
+		const at = x => buf[20 * COLS + x] >> 8;
+		// the glyph lands, the art under the blank survives, and the
+		// origin is clear
+		expect(at(30)).toBe(65);
+		expect(at(31)).toBe(66);
+		expect([at(10), at(11)]).toEqual([0, 0]);
+		tool.toggleMoveMode();
+		tool.disable();
+	});
+
 	it('restores the rect at the moved position after a move mode abort', () => {
 		const buf = State.textArtCanvas._buffer;
 		buf[5 * COLS + 20] = (66 << 8) | 7;
