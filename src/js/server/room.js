@@ -145,12 +145,82 @@ export const createRoom = (options = {}) => {
 	// a gap on their side means a missed op (=> they request EXT_SYNC)
 	let seq = 0;
 
+	// timelapse baseline: the doc state BEFORE the oldest logged op.
+	// Evicted ops are absorbed so baseline + log always replays to the
+	// live doc, however long the session runs.
+	/** @type {{columns: number, rows: number, cells: import('../core/index').ExtCell[]}} */
+	const baseline = { columns: 0, rows: 0, cells: []};
+	const resetBaseline = () => {
+		baseline.columns = doc.columns;
+		baseline.rows = doc.rows;
+		baseline.cells = doc.data.map(blockToExtCell);
+	};
+
+	/** @param {{type: number, data: any}} op */
+	const absorbIntoBaseline = op => {
+		const { type, data } = op;
+		/** @param {any} x @param {any} y @param {import('../core/index').ExtCell | null} cell */
+		const putCell = (x, y, cell) => {
+			if (
+				cell &&
+				Number.isInteger(x) &&
+				Number.isInteger(y) &&
+				x >= 0 &&
+				y >= 0 &&
+				x < baseline.columns &&
+				y < baseline.rows
+			) {
+				baseline.cells[y * baseline.columns + x] = cell;
+			}
+		};
+		if (type === MoebiusAction.DRAW && data?.block) {
+			putCell(data.x, data.y, blockToExtCell(data.block));
+		} else if (type === T0wnzAction.EXT_DRAW) {
+			putCell(data.x, data.y, {
+				u: data.u,
+				a: data.a,
+				fg: data.fg,
+				bg: data.bg,
+			});
+		} else if (type === T0wnzAction.EXT_DRAW_BATCH && Array.isArray(data?.cells)) {
+			for (const cell of data.cells) {
+				putCell(cell.x, cell.y, {
+					u: cell.u,
+					a: cell.a,
+					fg: cell.fg,
+					bg: cell.bg,
+				});
+			}
+		} else if (type === MoebiusAction.SET_CANVAS_SIZE) {
+			const { columns, rows } = data;
+			if (!Number.isInteger(columns) || !Number.isInteger(rows)) {
+				return;
+			}
+			const next = Array.from({ length: columns * rows }, () =>
+				blockToExtCell(blankBlock()));
+			const copyCols = Math.min(columns, baseline.columns);
+			const copyRows = Math.min(rows, baseline.rows);
+			for (let y = 0; y < copyRows; y++) {
+				for (let x = 0; x < copyCols; x++) {
+					next[y * columns + x] =
+						baseline.cells[y * baseline.columns + x];
+				}
+			}
+			baseline.columns = columns;
+			baseline.rows = rows;
+			baseline.cells = next;
+		}
+	};
+
+	resetBaseline();
+
 	/** @param {number} type @param {object} data @returns {number} seq */
 	const pushOp = (type, data) => {
 		seq++;
 		opLog.push({ t: Date.now(), type, data, seq });
-		if (opLog.length > opLogLimit) {
-			opLog.splice(0, opLog.length - opLogLimit);
+		while (opLog.length > opLogLimit) {
+			absorbIntoBaseline(opLog[0]);
+			opLog.shift();
 		}
 		dirty = true;
 		dirtySeq++;
@@ -694,6 +764,23 @@ export const createRoom = (options = {}) => {
 				);
 				return;
 			}
+			case T0wnzAction.EXT_TIMELAPSE: {
+				if (!hasExt(user)) {
+					return;
+				}
+				try {
+					client.send(T0wnzAction.EXT_TIMELAPSE, {
+						columns: baseline.columns,
+						rows: baseline.rows,
+						cells: compressExtCells(baseline.cells),
+						palette: doc.ext_palette ?? null,
+						ops: opLog,
+					});
+				} catch {
+					// dead socket; close() reaps it
+				}
+				return;
+			}
 			case T0wnzAction.EXT_ACK:
 				return; // server-emitted only
 			case MoebiusAction.CONNECTED:
@@ -807,6 +894,8 @@ export const createRoom = (options = {}) => {
 					// corrupt ext rider: the vanilla view stands
 				}
 			}
+			// the restored doc is the new timelapse starting point
+			resetBaseline();
 		},
 		/** full-fidelity state for persistence (RLE runs + ext palette) */
 		extState: () => ({

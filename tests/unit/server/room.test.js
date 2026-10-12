@@ -15,6 +15,7 @@ import {
 	T0wnzAction,
 	EXT_SUITE_CAP,
 	expandExtCells,
+	timelapseToDoc,
 	uncompressBlocks,
 } from '../../../src/js/core/index';
 import { paletteColor } from '../../../src/js/core/doc.js';
@@ -521,6 +522,37 @@ describe('extension suite v1 (t0wnz-ext-1)', () => {
 		});
 		expect(caps.ofType(T0wnzAction.EXT_DRAW)).toHaveLength(0);
 		expect(room.stats().opLogLength).toBe(0);
+	});
+
+	it('EXT_TIMELAPSE replays to the live doc even after op-log eviction', () => {
+		// tiny log: draws 3-6 evict 1-2 into the baseline
+		const room = createRoom({ columns: 4, rows: 1, opLogLimit: 2 });
+		const caps = joinCaps(room, 'caps');
+		for (let i = 0; i < 6; i++) {
+			room.message(caps, {
+				type: T0wnzAction.EXT_DRAW,
+				data: {
+					x: i % 4,
+					y: 0,
+					u: 65 + i,
+					a: 0,
+					fg: paletteColor(7),
+					bg: paletteColor(0),
+					id: 0,
+				},
+			});
+		}
+		room.message(caps, { type: T0wnzAction.EXT_TIMELAPSE, data: { id: 0 } });
+		const reply = caps.ofType(T0wnzAction.EXT_TIMELAPSE)[0];
+		expect(reply.data.ops).toHaveLength(2);
+		const { doc } = timelapseToDoc(reply.data);
+		// the last frame equals the live doc: G(70) at x2, H? no — ops were
+		// A..F across x0-x3 twice; final cells are C D E F with E,F from
+		// the log and C,D absorbed into the baseline
+		const last = doc.frames.length - 1;
+		const codeAt = x =>
+			doc.glyphTable.get(doc.getCell(last, x, 0).glyph & 0xffff)?.codepoint;
+		expect([codeAt(0), codeAt(1), codeAt(2), codeAt(3)]).toEqual([69, 70, 67, 68]);
 	});
 
 	it('extState/loadState round-trips full fidelity across a restart', () => {

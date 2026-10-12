@@ -533,6 +533,7 @@ const initializeAppComponents = async () => {
 	onClick($('saveTundra'), Save.tnd);
 	onClick($('saveDur'), Save.dur);
 	onClick($('saveAnsimation'), Save.ansimation);
+	onClick($('saveTimelapse'), Save.timelapse);
 	onClick($('saveOwnz'), Save.ownz);
 	onClick($('savePng'), Save.png);
 	onClick($('cut'), State.pasteTool.cut);

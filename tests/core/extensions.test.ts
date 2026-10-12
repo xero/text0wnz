@@ -30,7 +30,7 @@ describe('suite constants', () => {
 	it('ids start at the extension base and stay dense', () => {
 		expect(T0wnzAction.EXT_DRAW).toBe(MOEBIUS_EXTENSION_BASE);
 		expect(Object.values(T0wnzAction).sort((a, b) => a - b)).toEqual([
-			23, 24, 25, 26, 27,
+			23, 24, 25, 26, 27, 28,
 		]);
 		expect(EXT_SUITE_CAP).toBe('t0wnz-ext-1');
 		expect(EXT_BATCH_LIMIT).toBeGreaterThan(0);

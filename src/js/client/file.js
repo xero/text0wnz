@@ -10,6 +10,7 @@ import {
 	decodeTundra,
 	encodeAnsimation,
 	encodeDur,
+	timelapseToDoc,
 	encodeEnvelope,
 	encodeTundra,
 	encodeUtf8,
@@ -2008,6 +2009,34 @@ const saveModule = () => {
 		await saveFile(bytes, undefined, State.title + '.dur');
 	};
 
+	// P6 timelapse: baseline + op log from the server, replayed into a
+	// capped multi-frame movie — the shareable session artifact
+	const timelapse = async () => {
+		if (State.network?.extCollab?.() !== true) {
+			alert(
+				'Session timelapse needs a live collab session on a teXt0wnz server.',
+			);
+			return;
+		}
+		const payload = await State.network.requestTimelapse();
+		if (!payload) {
+			alert('The server did not answer the timelapse request.');
+			return;
+		}
+		try {
+			const { doc } = timelapseToDoc(payload);
+			const bytes = await encodeDur(doc, sauceMeta());
+			await saveFile(
+				bytes,
+				undefined,
+				(State.title || 'session') + '.timelapse.dur',
+			);
+		} catch (error) {
+			console.error('[Save] timelapse:', error);
+			alert('Timelapse replay failed.');
+		}
+	};
+
 	const ownz = async () => {
 		const xbData = State.textArtCanvas.getXBFontData();
 		const bytes = await encodeEnvelope(State.textArtCanvas.getDoc(), {
@@ -2055,6 +2084,7 @@ const saveModule = () => {
 		ownz: ownz,
 		plainText: plainText,
 		png: png,
+		timelapse: timelapse,
 		tnd: tnd,
 		utf8: utf8,
 		utf8Blink: utf8Blink,

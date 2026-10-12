@@ -58,6 +58,13 @@ export const T0wnzAction = Object.freeze({
 	EXT_SYNC: 25,
 	EXT_PALETTE: 26,
 	EXT_ACK: 27,
+	/**
+	 * client->server {} requests; server->client {columns, rows, cells,
+	 * ops, palette}: the baseline snapshot (absorbing ops the bounded
+	 * log evicted) plus the op log — the timelapse substrate (PLAN
+	 * §3.6.3). The client replays it into an animation.
+	 */
+	EXT_TIMELAPSE: 28,
 });
 
 /** the whole v1 suite negotiates as one capability string */

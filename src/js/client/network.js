@@ -209,6 +209,36 @@ const createWorkerHandler = inputHandle => {
 		applyReceivedSettings = false;
 	};
 
+	/** @type {((payload: object) => void) | null} */
+	let timelapseWaiter = null;
+
+	/**
+	 * Fetch the room's baseline + op log (EXT_TIMELAPSE); resolves null
+	 * on vanilla sessions or a 10s server silence. The caller (file.js)
+	 * replays it into an exportable animation.
+	 * @returns {Promise<object | null>}
+	 */
+	const requestTimelapse = () =>
+		new Promise(resolve => {
+			if (!connected || !extActive()) {
+				resolve(null);
+				return;
+			}
+			const timer = setTimeout(() => {
+				timelapseWaiter = null;
+				resolve(null);
+			}, 10000);
+			timelapseWaiter = payload => {
+				clearTimeout(timer);
+				resolve(payload);
+			};
+			State.worker.postMessage({
+				cmd: 'send',
+				type: T0wnzAction.EXT_TIMELAPSE,
+				data: {},
+			});
+		});
+
 	/**
 	 * Ask the server for a wholesale resync (seq gap, or a resize racing
 	 * our in-flight ops). Cooldown-coalesced so a burst of gaps costs one
@@ -369,6 +399,12 @@ const createWorkerHandler = inputHandle => {
 				break;
 			case T0wnzAction.EXT_ACK:
 				pendingOps = Math.max(0, pendingOps - 1);
+				break;
+			case T0wnzAction.EXT_TIMELAPSE:
+				if (timelapseWaiter) {
+					timelapseWaiter(data);
+					timelapseWaiter = null;
+				}
 				break;
 			case MoebiusAction.CHAT:
 				onRemoteChat(data);
@@ -681,6 +717,7 @@ const createWorkerHandler = inputHandle => {
 		// unicode cells and extended colors travel natively, so the P5
 		// lockouts lift (vanilla sessions keep them)
 		extCollab: () => connected && extActive(),
+		requestTimelapse: requestTimelapse,
 		joinCollaboration: joinCollaboration,
 		stayLocal: stayLocal,
 		sendCanvasSettings: sendCanvasSettings,
