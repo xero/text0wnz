@@ -29,7 +29,10 @@ const createReferenceImage = () => {
 	};
 
 	const clear = () => {
-		overlay.classList.add('hide');
+		// .canvasOverlay visibility rides the 'enabled' class (the
+		// toolPreview convention): the class hides overlays regardless of
+		// 'hide', which is why the first cut never showed anything
+		overlay.classList.remove('enabled');
 		overlay.removeAttribute('src');
 		if (objectUrl) {
 			URL.revokeObjectURL(objectUrl);
@@ -46,7 +49,7 @@ const createReferenceImage = () => {
 		clear();
 		objectUrl = URL.createObjectURL(file);
 		overlay.src = objectUrl;
-		overlay.classList.remove('hide');
+		overlay.classList.add('enabled');
 		applyStyle();
 		event.target.value = '';
 	});
@@ -66,7 +69,7 @@ const createReferenceImage = () => {
 
 	return {
 		clear,
-		isVisible: () => !overlay.classList.contains('hide'),
+		isVisible: () => overlay.classList.contains('enabled'),
 		applyStyle,
 	};
 };
