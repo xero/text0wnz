@@ -154,14 +154,20 @@ const createMinimap = () => {
 		}
 	});
 
-	// ON by default (owner call, 2026-10-12); the toggle is remembered
+	// ON by default (owner call, 2026-10-12); the toggle is remembered.
+	// ?test pages (goldens, e2e) opt out of the DEFAULT: the panel is a
+	// fixed overlay that would sit inside pixel-golden captures. An
+	// explicit saved 'true' still shows it there.
 	let stored = null;
 	try {
 		stored = localStorage.getItem('minimapVisible');
 	} catch {
 		// storage blocked: default wins
 	}
-	if (stored !== 'false') {
+	const testMode =
+		typeof window !== 'undefined' &&
+		new URLSearchParams(window.location.search).has('test');
+	if (stored === 'true' || (stored === null && !testMode)) {
 		show();
 	}
 
