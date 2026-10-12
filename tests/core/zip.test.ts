@@ -47,7 +47,10 @@ describe('zip reader', () => {
 		]);
 		const entries = readZipEntries(zip);
 		await expect(
-			extractZipEntry(zip.subarray(0, entries[0].headerOffset + 32), entries[0]),
+			extractZipEntry(
+				zip.subarray(0, entries[0].headerOffset + 32),
+				entries[0],
+			),
 		).rejects.toThrow(/truncated|missing/);
 	});
 });

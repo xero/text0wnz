@@ -12,6 +12,7 @@
  */
 /* global Bun */
 
+import path from 'node:path';
 import { decodeFrame, ProtocolError } from '../core/index';
 import { createRoom } from './room.js';
 import { resolveBridgeTarget, createBridgePipe } from './bridge.js';
@@ -45,6 +46,7 @@ export const roomNameFromPath = (pathname, defaultRoom) => {
  * @param {Record<string, string>} [config.roomPasswords]
  * @param {number} [config.maxColumns] resize wall override (0/absent = room default)
  * @param {number} [config.maxRows] resize wall override (0/absent = room default)
+ * @param {string} [config.staticDir] serve the built PWA from here ('' = ws-only)
  * @param {{mode: string, target: string, port: number, allow: string[], maxConnections: number}} [config.bridge]
  * @param {(room: ReturnType<typeof createRoom>) => void} [config.onRoomCreate]
  * @param {(room: ReturnType<typeof createRoom>) => void | Promise<void>} [config.onRoomEmpty]
@@ -222,6 +224,35 @@ export const createMoebiusServer = config => {
 		},
 	};
 
+	// P6 packaging: single-binary / distroless mode serves the built PWA
+	// itself; '' keeps the v2 shape (a proxy owns static, ws-only here)
+	const staticRoot = config.staticDir ? path.resolve(config.staticDir) : null;
+	/** @param {string} pathname */
+	const serveStatic = async pathname => {
+		let clean;
+		try {
+			clean = decodeURIComponent(pathname);
+		} catch {
+			return new Response('bad path', { status: 400 });
+		}
+		if (clean.endsWith('/')) {
+			clean += 'index.html';
+		}
+		const resolved = path.resolve(staticRoot, `.${clean}`);
+		// traversal guard: everything served lives under the static root
+		if (
+			resolved !== staticRoot &&
+			!resolved.startsWith(staticRoot + path.sep)
+		) {
+			return new Response('forbidden', { status: 403 });
+		}
+		const file = Bun.file(resolved);
+		if (await file.exists()) {
+			return new Response(file);
+		}
+		return new Response('not found', { status: 404 });
+	};
+
 	/** @param {Request} req @param {import('bun').Server} server */
 	const fetchHandler = async (req, server) => {
 		const url = new URL(req.url);
@@ -259,6 +290,13 @@ export const createMoebiusServer = config => {
 				return undefined;
 			}
 			return new Response('upgrade required', { status: 426 });
+		}
+		// plain HTTP serves the PWA in static mode; websocket upgrades
+		// (and ws-only deployments) take the room path below
+		const wantsUpgrade =
+			req.headers.get('upgrade')?.toLowerCase() === 'websocket';
+		if (!wantsUpgrade && staticRoot) {
+			return serveStatic(url.pathname);
 		}
 		const roomName = roomNameFromPath(url.pathname, defaultRoom);
 		if (roomName === null) {

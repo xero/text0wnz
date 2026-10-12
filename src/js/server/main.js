@@ -10,6 +10,18 @@
 import path from 'node:path';
 import { readFileSync, existsSync } from 'node:fs';
 import { parseArgs } from './config.js';
+
+// `main.js healthcheck [port]`: distroless images have no shell, so the
+// server binary doubles as its own Docker HEALTHCHECK probe
+if (process.argv[2] === 'healthcheck') {
+	const healthPort = Number(process.argv[3] ?? process.env.PORT ?? 1337);
+	try {
+		const res = await fetch(`http://127.0.0.1:${healthPort}/healthz`);
+		process.exit(res.ok ? 0 : 1);
+	} catch {
+		process.exit(1);
+	}
+}
 import { callout } from './utils.js';
 import { createMoebiusServer } from './moebiusServer.js';
 import { bridgeConfigFromEnv } from './bridge.js';
@@ -54,6 +66,9 @@ const server = createMoebiusServer({
 	sessionName: config.sessionName,
 	pass: config.pass,
 	roomPasswords: config.roomPasswords,
+	maxColumns: config.maxColumns,
+	maxRows: config.maxRows,
+	staticDir: config.staticDir,
 	debug: config.debug,
 	bridge: bridgeConfigFromEnv(),
 	tls,

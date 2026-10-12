@@ -245,11 +245,7 @@ export const expandExtCells = (
 		}
 		const [u, a, fg, bg, count] = run as unknown[];
 		const cell = sanitizeExtCell({ u, a, fg, bg });
-		if (
-			cell === null ||
-			!Number.isInteger(count) ||
-			(count as number) < 1
-		) {
+		if (cell === null || !Number.isInteger(count) || (count as number) < 1) {
 			throw new ProtocolError(`bad ext run ${JSON.stringify(run)}`);
 		}
 		if (out.length + (count as number) > expectedLength) {
@@ -359,7 +355,9 @@ export const extSyncToDoc = (
 	const palette = sanitizeExtPalette(payload.palette);
 	if (palette) {
 		const words = new Uint32Array(Math.max(doc.palette.length, palette.length));
-		words.set(doc.palette.subarray(0, Math.min(doc.palette.length, words.length)));
+		words.set(
+			doc.palette.subarray(0, Math.min(doc.palette.length, words.length)),
+		);
 		for (let i = 0; i < palette.length; i++) {
 			words[i] = palette[i];
 		}
@@ -368,8 +366,7 @@ export const extSyncToDoc = (
 	applyExtCells(doc, cells);
 	return {
 		doc,
-		fontName:
-			typeof payload.font_name === 'string' ? payload.font_name : null,
+		fontName: typeof payload.font_name === 'string' ? payload.font_name : null,
 		use9px: payload.use_9px_font === true,
 		title: typeof payload.title === 'string' ? payload.title : '',
 		author: typeof payload.author === 'string' ? payload.author : '',

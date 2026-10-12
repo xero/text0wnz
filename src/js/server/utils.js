@@ -10,6 +10,7 @@ Options:
   --session-name <name> Default room + session file prefix (default: joint)
   --plain-port <port>   Extra plaintext ws listener for desktop clients
   --pass <password>     Room password (gates spectators too)
+  --static <dir>        Serve the built PWA from <dir> (single-binary mode)
   --debug               Enable verbose console messages
   --help                Show this help message
 

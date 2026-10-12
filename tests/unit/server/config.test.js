@@ -36,6 +36,7 @@ describe('Config Module - parseArgs', () => {
 			roomPasswords: {},
 			maxColumns: 0,
 			maxRows: 0,
+			staticDir: '',
 		});
 	});
 
@@ -127,6 +128,7 @@ describe('Config Module - parseArgs', () => {
 			roomPasswords: {},
 			maxColumns: 0,
 			maxRows: 0,
+			staticDir: '',
 		});
 	});
 

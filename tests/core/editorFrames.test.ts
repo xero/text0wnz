@@ -6,10 +6,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createDocV3, type DocV3 } from '../../src/js/core/doc.js';
-import {
-	createEditorCore,
-	type EditorCore,
-} from '../../src/js/core/editor.js';
+import { createEditorCore, type EditorCore } from '../../src/js/core/editor.js';
 import { createPatchArena } from '../../src/js/core/patchArena.js';
 
 const makeEditor = (onFrameChange = vi.fn()) => {

@@ -272,9 +272,9 @@ describe('encodeDur round trip (P6 export)', () => {
 		expect(decoded.meta.title).toBe('loop');
 		expect(decoded.doc.frames).toHaveLength(2);
 		const cell = decoded.doc.getCell(0, 0, 0);
-		expect(
-			decoded.doc.glyphTable.get(cell.glyph & 0xffff)?.codepoint,
-		).toBe(0x2764);
+		expect(decoded.doc.glyphTable.get(cell.glyph & 0xffff)?.codepoint).toBe(
+			0x2764,
+		);
 		expect(cell.fg).toBe(paletteColor(208));
 		expect(cell.bg).toBe(paletteColor(17));
 		expect(decoded.doc.frames[1].delayMs).toBe(250);

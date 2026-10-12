@@ -24,14 +24,14 @@ const crc32 = (bytes: Uint8Array): number => {
 	return (c ^ 0xffffffff) >>> 0;
 };
 
-
 /** build a real little zip with the given entries */
 export const buildZip = async (
 	files: Array<{ name: string; data: Uint8Array; store?: boolean }>,
 ): Promise<Uint8Array> => {
 	const chunks: number[] = [];
 	const central: number[] = [];
-	const push16 = (arr: number[], v: number) => arr.push(v & 0xff, (v >> 8) & 0xff);
+	const push16 = (arr: number[], v: number) =>
+		arr.push(v & 0xff, (v >> 8) & 0xff);
 	const push32 = (arr: number[], v: number) =>
 		arr.push(v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >>> 24) & 0xff);
 	for (const file of files) {
@@ -82,4 +82,3 @@ export const buildZip = async (
 	push16(chunks, 0); // comment length
 	return Uint8Array.from(chunks);
 };
-

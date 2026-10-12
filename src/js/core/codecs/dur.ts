@@ -245,9 +245,7 @@ export const encodeDur = async (
 		return best;
 	};
 	const toIndex = (word: number): number =>
-		isPaletteColor(word)
-			? paletteIndexOf(word) & 0xff
-			: nearestXterm(word);
+		isPaletteColor(word) ? paletteIndexOf(word) & 0xff : nearestXterm(word);
 	const codepointOf = (glyph: number): number => {
 		const glyphId = glyphIdOf(glyph);
 		return (
@@ -294,7 +292,5 @@ export const encodeDur = async (
 		lines: rows,
 		frames,
 	};
-	return gzip(
-		new TextEncoder().encode(JSON.stringify({ DurMovie: movie })),
-	);
+	return gzip(new TextEncoder().encode(JSON.stringify({ DurMovie: movie })));
 };

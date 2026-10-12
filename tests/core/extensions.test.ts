@@ -22,7 +22,10 @@ import {
 	ProtocolError,
 	MOEBIUS_EXTENSION_BASE,
 } from '../../src/js/core/index.js';
-import { createDefaultPaletteRGB, paletteColor } from '../../src/js/core/doc.js';
+import {
+	createDefaultPaletteRGB,
+	paletteColor,
+} from '../../src/js/core/doc.js';
 
 const defaults = createDefaultPaletteRGB();
 
@@ -51,8 +54,17 @@ describe('normalizeColorWord', () => {
 
 describe('sanitizeExtCell / sanitizeExtDraw', () => {
 	it('accepts a full-fidelity cell and defaults attrs', () => {
-		const cell = sanitizeExtCell({ u: 0x2588, fg: 0xff0000, bg: paletteColor(0) });
-		expect(cell).toEqual({ u: 0x2588, a: 0, fg: 0xff0000, bg: paletteColor(0) });
+		const cell = sanitizeExtCell({
+			u: 0x2588,
+			fg: 0xff0000,
+			bg: paletteColor(0),
+		});
+		expect(cell).toEqual({
+			u: 0x2588,
+			a: 0,
+			fg: 0xff0000,
+			bg: paletteColor(0),
+		});
 	});
 
 	it('rejects surrogates, bad codepoints, and bad colors', () => {
@@ -64,7 +76,14 @@ describe('sanitizeExtCell / sanitizeExtDraw', () => {
 	});
 
 	it('bounds-checks draw coordinates against the live doc', () => {
-		const data = { x: 3, y: 1, u: 65, a: 1, fg: paletteColor(7), bg: paletteColor(0) };
+		const data = {
+			x: 3,
+			y: 1,
+			u: 65,
+			a: 1,
+			fg: paletteColor(7),
+			bg: paletteColor(0),
+		};
 		expect(sanitizeExtDraw(data, 4, 2)).toEqual({ ...data });
 		expect(sanitizeExtDraw({ ...data, x: 4 }, 4, 2)).toBeNull();
 		expect(sanitizeExtDraw({ ...data, y: -1 }, 4, 2)).toBeNull();
@@ -150,9 +169,9 @@ describe('sync RLE', () => {
 	});
 
 	it('refuses hostile lengths before allocating', () => {
-		expect(() =>
-			expandExtCells([[32, 0, 0, 0, 1e9]], 100),
-		).toThrow(ProtocolError);
+		expect(() => expandExtCells([[32, 0, 0, 0, 1e9]], 100)).toThrow(
+			ProtocolError,
+		);
 		expect(() => expandExtCells([[32, 0, 0, 0, 1]], 2)).toThrow(ProtocolError);
 		expect(() => expandExtCells('junk', 1)).toThrow(ProtocolError);
 		expect(() => expandExtCells([[0xd800, 0, 0, 0, 1]], 1)).toThrow(

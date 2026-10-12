@@ -51,6 +51,9 @@ const parseArgs = () => {
 		// 0 = use room.js ROOM_DEFAULTS (1000x10000)
 		maxColumns: parseCapEnv(process.env.ROOM_MAX_COLUMNS),
 		maxRows: parseCapEnv(process.env.ROOM_MAX_ROWS),
+		// P6 packaging: serve the built PWA from this dir (single binary
+		// and the distroless image); '' = ws-only, a proxy serves static
+		staticDir: process.env.STATIC_DIR ?? '',
 	};
 
 	for (let i = 0; i < args.length; i++) {
@@ -97,6 +100,12 @@ const parseArgs = () => {
 			case '--pass':
 				if (nextArg && !nextArg.startsWith('--')) {
 					config.pass = nextArg;
+					i++; // Skip next argument as we consumed it
+				}
+				break;
+			case '--static':
+				if (nextArg && !nextArg.startsWith('--')) {
+					config.staticDir = nextArg;
 					i++; // Skip next argument as we consumed it
 				}
 				break;

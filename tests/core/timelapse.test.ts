@@ -24,9 +24,7 @@ const blankCell = (): ExtCell => ({
 const basePayload = (columns = 3, rows = 2) => ({
 	columns,
 	rows,
-	cells: compressExtCells(
-		Array.from({ length: columns * rows }, blankCell),
-	),
+	cells: compressExtCells(Array.from({ length: columns * rows }, blankCell)),
 	palette: null,
 	ops: [] as unknown[],
 });
@@ -38,7 +36,12 @@ const extDrawOp = (x: number, y: number, u: number) => ({
 	seq: 1,
 });
 
-const glyphAt = (doc: ReturnType<typeof timelapseToDoc>['doc'], frame: number, x: number, y: number) => {
+const glyphAt = (
+	doc: ReturnType<typeof timelapseToDoc>['doc'],
+	frame: number,
+	x: number,
+	y: number,
+) => {
 	const cell = doc.getCell(frame, x, y);
 	return doc.glyphTable.get(cell.glyph & 0xffff)?.codepoint ?? null;
 };
@@ -67,7 +70,8 @@ describe('timelapseToDoc', () => {
 	it('caps the movie at maxFrames with the end state last', () => {
 		const payload = basePayload(4, 1);
 		payload.ops = Array.from({ length: 50 }, (_, i) =>
-			extDrawOp(i % 4, 0, 65 + (i % 26)));
+			extDrawOp(i % 4, 0, 65 + (i % 26)),
+		);
 		const { doc, frames } = timelapseToDoc(payload, { maxFrames: 10 });
 		expect(frames).toBeLessThanOrEqual(11);
 		// the last op drew 65 + (49 % 26) = 88 at x = 1
@@ -98,8 +102,14 @@ describe('timelapseToDoc', () => {
 	it('drops hostile ops and rejects bad payloads', () => {
 		const payload = basePayload();
 		payload.ops = [
-			{ type: T0wnzAction.EXT_DRAW, data: { x: 99, y: 0, u: 65, a: 0, fg: 0, bg: 0 } },
-			{ type: T0wnzAction.EXT_DRAW, data: { x: 0, y: 0, u: 0xd800, a: 0, fg: 0, bg: 0 } },
+			{
+				type: T0wnzAction.EXT_DRAW,
+				data: { x: 99, y: 0, u: 65, a: 0, fg: 0, bg: 0 },
+			},
+			{
+				type: T0wnzAction.EXT_DRAW,
+				data: { x: 0, y: 0, u: 0xd800, a: 0, fg: 0, bg: 0 },
+			},
 			{ type: A.SET_CANVAS_SIZE, data: { columns: 1e9, rows: 1e9 } },
 			'junk',
 			null,

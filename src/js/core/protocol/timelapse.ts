@@ -160,8 +160,7 @@ export const timelapseToDoc = (
 				const copyRows = Math.min(next.rows, grid.rows);
 				for (let y = 0; y < copyRows; y++) {
 					for (let x = 0; x < copyCols; x++) {
-						next.cells[y * next.columns + x] =
-							grid.cells[y * grid.columns + x];
+						next.cells[y * next.columns + x] = grid.cells[y * grid.columns + x];
 					}
 				}
 				grid.columns = next.columns;
@@ -192,7 +191,9 @@ export const timelapseToDoc = (
 	const palette = sanitizeExtPalette(payload.palette);
 	if (palette) {
 		const words = new Uint32Array(Math.max(doc.palette.length, palette.length));
-		words.set(doc.palette.subarray(0, Math.min(doc.palette.length, words.length)));
+		words.set(
+			doc.palette.subarray(0, Math.min(doc.palette.length, words.length)),
+		);
 		for (let i = 0; i < palette.length; i++) {
 			words[i] = palette[i];
 		}
