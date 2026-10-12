@@ -1274,14 +1274,33 @@
 			@apply bg-purp;
 		}
 		.sixteenPager {
-			@apply flex gap-2 items-center text-fg;
+			@apply flex gap-2 items-center justify-between pb-1;
 			grid-column: 1 / -1;
+			span {
+				@apply text-subtitle whitespace-nowrap;
+			}
+			/* paging is the only way deeper into a long list: it must
+			   read as a control against the dark well */
+			button {
+				@apply bg-midnight text-cyan px-6;
+				border: 2px solid var(--cyber);
+			}
+			button:hover:not(:disabled) {
+				@apply bg-purp text-fg;
+				border-color: var(--color-purp);
+			}
+			button:disabled {
+				@apply opacity-30 cursor-default;
+				border-color: var(--iron);
+			}
 		}
-		/* every year cell fits the longest label, "1994 (593)" */
+		/* every year cell fits the longest label, "1994 (593)"; the
+		   full width stays on grid cells (direct children), never on
+		   the pager's buttons */
 		&[data-view='years'] {
 			@apply grid gap-2 content-start;
 			grid-template-columns: repeat(auto-fill, minmax(8.5em, 1fr));
-			button {
+			> button {
 				@apply w-full text-center;
 			}
 		}
@@ -1290,7 +1309,7 @@
 		&[data-view='crews'] {
 			@apply grid gap-2 content-start;
 			grid-template-columns: repeat(auto-fill, minmax(11em, 1fr));
-			button {
+			> button {
 				@apply w-full text-center break-all;
 			}
 		}

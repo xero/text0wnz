@@ -150,18 +150,19 @@ const createSixteenColors = ({ openFile }) => {
 		return el;
 	};
 
+	// both ends always render so the row never shifts; bounds disable
 	const pager = (page, pages, goPage) => {
 		const el = document.createElement('div');
 		el.className = 'sixteenPager';
-		if (page > 1) {
-			el.appendChild(button('< prev', () => goPage(page - 1), ''));
-		}
+		const prev = button('< prev', () => goPage(page - 1), '');
+		prev.disabled = page <= 1;
+		el.appendChild(prev);
 		el.appendChild(
-			Object.assign(document.createElement('span'), { textContent: ` ${page}/${pages} ` }),
+			Object.assign(document.createElement('span'), { textContent: `${page} / ${pages}` }),
 		);
-		if (page < pages) {
-			el.appendChild(button('next >', () => goPage(page + 1), ''));
-		}
+		const next = button('next >', () => goPage(page + 1), '');
+		next.disabled = page >= pages;
+		el.appendChild(next);
 		return el;
 	};
 

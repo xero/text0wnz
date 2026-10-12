@@ -285,6 +285,11 @@ describe('sixteen colors browser', () => {
 		const cards = [...document.querySelectorAll('#sixteenList .sixteenPack')];
 		expect(cards.map(c => c.querySelector('span').textContent)).toEqual(['acdu0193']);
 		expect(cards[0].querySelector('.sixteenSub').textContent).toBe('1993');
+		// the pager keeps both ends in the row, disabling at the bounds
+		const steps = document.querySelectorAll('#sixteenList .sixteenPager button');
+		expect(steps).toHaveLength(2);
+		expect(steps[0].disabled).toBe(true);
+		expect(steps[1].disabled).toBe(false);
 	});
 
 	it('strips spaces from the archive name, as the mirror sync does', async () => {
