@@ -15,7 +15,7 @@
  *   commits the zoom once at pinch end.
  * - ctrl/cmd + wheel: trackpad pinch and mouse-wheel zoom at the
  *   cursor, continuous on GL, debounced commit on the chunk renderer.
- * - the slider and ctrl/cmd +=/-/0 route through zoomIn/zoomOut/reset
+ * - the slider and ctrl/cmd +=/- route through zoomIn/zoomOut
  *   (ui.js keeps its direct fallback when no controller exists, which
  *   is also what its unit tests exercise).
  *

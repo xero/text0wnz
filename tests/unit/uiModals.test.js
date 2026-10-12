@@ -223,6 +223,88 @@ describe('UI Advanced Utilities', () => {
 		});
 	});
 
+	describe('createModalController', () => {
+		const SECTIONS = [
+			'aboutModal',
+			'resizeModal',
+			'fontsModal',
+			'sauceModal',
+			'charsetModal',
+			'exportModal',
+			'sixteenModal',
+			'pluginModal',
+			'choiceModal',
+			'updateModal',
+			'loadingModal',
+			'warningModal',
+			'tutorialsModal',
+		];
+
+		const buildModal = async () => {
+			const { createModalController } = await import('../../src/js/client/ui.js');
+			const modal = document.createElement('dialog');
+			modal.id = 'modal';
+			for (const id of SECTIONS) {
+				const section = document.createElement('section');
+				section.id = id;
+				modal.appendChild(section);
+			}
+			document.body.appendChild(modal);
+			// jsdom dialogs lack showModal; mirror the open attribute
+			modal.showModal = () => modal.setAttribute('open', '');
+			modal.close = () => modal.removeAttribute('open');
+			return { modal, controller: createModalController(modal) };
+		};
+
+		it('survives a double close: the next open stays open', async () => {
+			const { modal, controller } = await buildModal();
+			controller.open('sixteen');
+			expect(modal.hasAttribute('open')).toBe(true);
+			// a backdrop double-tap lands two close() calls before the
+			// close transition ends
+			controller.close();
+			controller.close();
+			modal.dispatchEvent(new Event('transitionend'));
+			expect(modal.hasAttribute('open')).toBe(false);
+			// reopen: when a stale transitionend handler survives, the
+			// enter transition's end closes the dialog right away
+			controller.open('sixteen');
+			modal.dispatchEvent(new Event('transitionend'));
+			expect(modal.hasAttribute('open')).toBe(true);
+		});
+
+		it('keeps one backdrop handler across section switches', async () => {
+			const { modal, controller } = await buildModal();
+			let clicks = 0;
+			const origAdd = modal.addEventListener.bind(modal);
+			const origRemove = modal.removeEventListener.bind(modal);
+			modal.addEventListener = (type, fn, opts) => {
+				if (type === 'click') {
+					clicks++;
+				}
+				origAdd(type, fn, opts);
+			};
+			modal.removeEventListener = (type, fn, opts) => {
+				if (type === 'click') {
+					clicks--;
+				}
+				origRemove(type, fn, opts);
+			};
+			// open over open, the loading -> content flow
+			controller.open('loading');
+			controller.open('sixteen');
+			controller.open('plugin');
+			expect(clicks).toBe(1);
+			// one backdrop tap closes once and cleanly
+			modal.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			modal.dispatchEvent(new Event('transitionend'));
+			expect(modal.hasAttribute('open')).toBe(false);
+			controller.open('sixteen');
+			modal.dispatchEvent(new Event('transitionend'));
+			expect(modal.hasAttribute('open')).toBe(true);
+		});
+	});
+
 	describe('websocketUI', () => {
 		it('should show websocket-specific UI elements', async () => {
 			const { websocketUI } = await import('../../src/js/client/ui.js');

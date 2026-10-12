@@ -162,6 +162,12 @@
 
 	body {
 		@apply w-full h-full m-0 bg-black fixed overflow-hidden overscroll-none left-0 top-0 right-0 bottom-0;
+		/* a fixed box with top-0 bottom-0 sizes to the LAYOUT viewport,
+		   which iOS keeps at toolbar-collapsed height while Safari's
+		   chrome shows: 35px of layout hid under the toolbar. dvh tracks
+		   the real window; height wins over bottom in the over-
+		   constrained box, and h-full stays the fallback */
+		height: 100dvh;
 
 		> div {
 			@apply w-full h-full m-0;
@@ -1209,27 +1215,159 @@
 		outline: 1px solid #000;
 		box-shadow: inset 0 0 0 1px #000;
 	}
-	#sixteenList {
-		@apply flex flex-wrap gap-2 overflow-y-auto content-start;
-		max-height: 55vh;
+	#sixteenModal {
+		/* responsive: the content is scene art of unknowable shapes */
+		width: 80vw;
+		header,
+		nav,
+		article {
+			@apply flex-shrink-0 w-full;
+		}
+		header {
+			@apply w-full flex-row pl-2 my-2.5 place-content-between;
+			h2 {
+				@apply text-cyan text-2xl;
+			}
+		}
+		article {
+			@apply flex min-h-0 flex-col w-full bg-editor p-3;
+		}
+		nav {
+			@apply justify-end border-0 bg-menu w-auto mt-0.5;
+			button {
+				@apply flex bg-midnight justify-center items-center m-2;
+				svg {
+					@apply mr-3.5;
+					width: 37px;
+					height: 37px;
+				}
+			}
+			button:disabled {
+				@apply opacity-40 cursor-default;
+				&:hover {
+					@apply bg-midnight;
+				}
+			}
+		}
+	}
+	#sixteenBar {
+		@apply flex flex-row gap-2 items-center w-full pb-2;
 		button {
-			@apply bg-menu text-fg px-2 py-1 cursor-pointer;
+			@apply bg-menu text-fg text-base px-3 py-1 m-0 cursor-pointer;
+		}
+		button:hover,
+		button.active {
+			@apply bg-purp;
+		}
+		input[type='search'] {
+			@apply bg-midnight text-fg text-base px-3 py-1 grow;
+		}
+		#sixteenCrumb {
+			@apply text-subtitle text-base ml-auto pr-1;
+		}
+	}
+	#sixteenList {
+		@apply overflow-y-auto overflow-x-hidden;
+		max-height: 62vh;
+		/* reaching an edge must not bounce or scroll the page behind */
+		overscroll-behavior: contain;
+		button {
+			/* m-0 kills the dialog-wide mr-6: on the last grid column it
+			   becomes 24px of horizontal scroll */
+			@apply bg-menu text-fg m-0 px-2 py-1 cursor-pointer;
 		}
 		button:hover:not(:disabled) {
 			@apply bg-purp;
 		}
-		button:disabled {
-			@apply opacity-40 cursor-default;
+		/* counts are metadata: small and dim beside the name */
+		button kbd {
+			@apply text-xs pl-2 text-subtitle;
 		}
 		.sixteenPager {
-			@apply w-full flex gap-2 items-center text-fg;
+			@apply flex gap-2 items-center justify-between pb-1;
+			grid-column: 1 / -1;
+			span {
+				@apply text-subtitle whitespace-nowrap;
+			}
+			/* paging is the only way deeper into a long list: it must
+			   read as a control against the dark well */
+			button {
+				@apply bg-midnight text-cyan px-6;
+				border: 2px solid var(--cyber);
+			}
+			button:hover:not(:disabled) {
+				@apply bg-purp text-fg;
+				border-color: var(--color-purp);
+			}
+			button:disabled {
+				@apply opacity-30 cursor-default;
+				border-color: var(--iron);
+			}
+		}
+		/* every year cell fits the longest label, "1994 (593)"; the
+		   full width stays on grid cells (direct children), never on
+		   the pager's buttons */
+		&[data-view='years'] {
+			@apply grid gap-2 content-start;
+			grid-template-columns: repeat(auto-fill, minmax(8.5em, 1fr));
+			> button {
+				@apply w-full text-center;
+			}
+		}
+		/* artist and crew names run longer than year labels */
+		&[data-view='artists'],
+		&[data-view='crews'] {
+			@apply grid gap-2 content-start;
+			grid-template-columns: repeat(auto-fill, minmax(11em, 1fr));
+			> button {
+				@apply w-full text-center break-all;
+			}
+		}
+		&[data-view='packs'],
+		&[data-view='crewpacks'],
+		&[data-view='packsearch'] {
+			@apply grid gap-2 content-start;
+			grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
+		}
+		.sixteenSub {
+			@apply text-subtitle text-xs;
+		}
+		/* an artist's works, one section per pack with its own masonry */
+		.sixteenWorks {
+			@apply flex flex-col w-full gap-2 pb-4;
+			.sixteenWorksHead {
+				@apply w-fit text-cyan;
+			}
+			.sixteenWorksBody {
+				@apply flex flex-row gap-2 items-start w-full;
+			}
+		}
+		.sixteenPack {
+			@apply flex flex-col items-center gap-1 p-1;
+			/* the frame stays a black square when a pack has no diz */
+			.dizFrame {
+				@apply bg-midnight w-full;
+				aspect-ratio: 1;
+				img {
+					@apply w-full h-full;
+					object-fit: contain;
+				}
+			}
+			span {
+				@apply text-xs break-all;
+			}
+		}
+		/* masonry: balanced columns from the API's thumbnail sizes */
+		&[data-view='files'] {
+			@apply flex flex-row gap-2 items-start;
+		}
+		.sixteenCol {
+			@apply flex flex-col gap-2 flex-1 min-w-0;
 		}
 		.sixteenPiece {
-			@apply flex flex-col items-center gap-1 p-1;
-			width: 172px;
+			@apply flex flex-col items-center gap-1 p-1 w-full;
 			img {
-				max-width: 160px;
-				height: auto;
+				@apply w-full h-auto;
 			}
 			span {
 				@apply text-xs break-all;
@@ -1237,7 +1375,10 @@
 		}
 	}
 	#sixteenStatus {
-		@apply text-cyan text-sm;
+		@apply text-cyan text-sm w-full pb-2;
+		&.error {
+			@apply text-red-400;
+		}
 	}
 	#pluginLoaders {
 		@apply flex flex-row gap-2 items-center;

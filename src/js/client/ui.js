@@ -120,6 +120,12 @@ const createModalController = modal => {
 			focus();
 			classList($(section), 'hide', false);
 			modal.showModal();
+			// the old backdrop handler must go first: stacked copies make
+			// one backdrop tap run close() several times over
+			if (typeof backdropHandler === 'function') {
+				backdropHandler();
+				backdropHandler = null;
+			}
 			if (name !== 'update') {
 				backdropHandler = onClick(modal, e => {
 					if (e.target === modal) {
@@ -152,7 +158,10 @@ const createModalController = modal => {
 			cleanupHandler();
 			cleanupHandler = null;
 		}
-		if (!queued()) {
+		// a second close while one is pending must not re-register: the
+		// overwritten handler would outlive cancelPendingClose and close
+		// every future open the moment its enter transition ends
+		if (!queued() && !transitionHandler && !closingTimeout) {
 			classList(modal, 'closing');
 			const finishClose = () => {
 				cancelPendingClose();

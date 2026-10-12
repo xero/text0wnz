@@ -67,6 +67,15 @@ const loadImageAndGetImageData = url => {
 	});
 };
 
+// char 0 is the scene's empty cell and must render as one; some
+// classic PNG atlases ink glyph 0 (Topaz-437 does), which made every
+// deleted cell stamp a visible mark. XB-embedded fonts keep theirs:
+// a custom font's glyph 0 is the author's call.
+const clearGlyphZero = fontData => {
+	fontData.data.fill(0, 0, (fontData.width * fontData.height) / 8);
+	return fontData;
+};
+
 const loadFontFromXBData = (
 	fontBytes,
 	fontWidth,
@@ -269,7 +278,7 @@ const loadFontFromImage = (
 				if (!newFontData) {
 					reject(new Error(`Failed to parse font data for ${fontName}`));
 				} else {
-					fontData = newFontData;
+					fontData = clearGlyphZero(newFontData);
 					createLazyFontInstance();
 
 					resolve({
@@ -321,4 +330,4 @@ const loadFontFromImage = (
 	});
 };
 
-export { loadFontFromXBData, loadFontFromImage };
+export { loadFontFromXBData, loadFontFromImage, clearGlyphZero };

@@ -98,6 +98,19 @@ describe('zoom controller', () => {
 		expect(mocks.state.font.setScaleFactor).toHaveBeenLastCalledWith(1);
 	});
 
+	it('binds no keyboard shortcuts of its own: ui.js owns ctrl +/-', () => {
+		createZoomController(viewport);
+		mocks.state.font.setScaleFactor.mockClear();
+		document.dispatchEvent(
+			new KeyboardEvent('keydown', {
+				code: 'Equal',
+				ctrlKey: true,
+				cancelable: true,
+			}),
+		);
+		expect(mocks.state.font.setScaleFactor).not.toHaveBeenCalled();
+	});
+
 	it('pinch pans the viewport and zooms continuously on GL', () => {
 		createZoomController(viewport);
 		viewport.scrollLeft = 200;
