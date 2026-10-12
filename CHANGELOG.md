@@ -64,3 +64,6 @@ byte-exact golden tests before anything else moved.
   site data by hand is no longer part of updating.
 - **Mirror previews.** Shape tools draw the reflected half while you
   drag, not only on release.
+- **iOS background scroll.** With Safari's toolbar expanded, dragging
+  the background could scroll the page and bare a black bar above the
+  editor. The root is now scroll-locked.

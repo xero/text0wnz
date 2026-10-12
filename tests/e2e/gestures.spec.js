@@ -146,4 +146,22 @@ test.describe('touch gestures and zoom shortcuts', () => {
 				window.__t0wnz.State.palette.getForegroundColor()),
 		).toBe(0);
 	});
+
+	test('the root is scroll-locked', async ({ page }) => {
+		// iOS sizes the root to the layout viewport, which outgrows the
+		// window while Safari's toolbar shows; without the lock that slack
+		// pans and bares the bg above the editor
+		const lock = await page.evaluate(() => {
+			const html = window.getComputedStyle(document.documentElement);
+			window.scrollTo(0, 100);
+			return {
+				overflowY: html.overflowY,
+				overscroll: html.overscrollBehaviorY,
+				scrollY: window.scrollY,
+			};
+		});
+		expect(lock.overflowY).toBe('hidden');
+		expect(lock.overscroll).toBe('none');
+		expect(lock.scrollY).toBe(0);
+	});
 });
