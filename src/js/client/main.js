@@ -9,6 +9,7 @@ import { createZoomController } from './zoom.js';
 import { createCharsetPicker } from './charsetPicker.js';
 import { createColorPanel } from './colorPanel.js';
 import { createFramesPanel } from './frames.js';
+import { createMinimap } from './minimap.js';
 import { FontCache } from './fontCache.js';
 import {
 	$,
@@ -558,6 +559,18 @@ const initializeAppComponents = async () => {
 
 	// P6 animation: frames timeline + playback + onion skin
 	createFramesPanel();
+
+	// P6 polish: minimap + CRT pass (both GL-only)
+	createMinimap();
+	onClick($('navCrt'), () => {
+		const next = !State.textArtCanvas.getCrtEffect();
+		State.textArtCanvas.setCrtEffect(next);
+		// reflects actual support: stays unlit on the chunk fallback
+		$('navCrt').classList.toggle(
+			'active',
+			State.textArtCanvas.getCrtEffect(),
+		);
+	});
 
 	// Credz
 	onClick($('about'), _ => {

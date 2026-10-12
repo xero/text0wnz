@@ -260,6 +260,18 @@
 							</svg>
 							<kbd>Frames</kbd>
 						</div>
+						<div id="navMinimap" class="toolButton">
+							<svg alt="Minimap" aria-label="Minimap">
+								<use href="img/icons.svg#canvas"></use>
+							</svg>
+							<kbd>Minimap</kbd>
+						</div>
+						<div id="navCrt" class="toolButton">
+							<svg alt="CRT Effect" aria-label="CRT Effect">
+								<use href="img/icons.svg#circle"></use>
+							</svg>
+							<kbd>CRT</kbd>
+						</div>
 					</div>
 				</nav>
 				<nav>
@@ -411,6 +423,10 @@
 					</svg>
 				</div>
 			</aside>
+			<div id="minimapPanel" class="hide">
+				<canvas id="minimapArt" height="25" width="80"></canvas>
+				<div id="minimapViewport"></div>
+			</div>
 			<div id="viewport">
 				<div id="canvasContainer">
 					<div id="toolPreview" class="canvasOverlay"></div>
