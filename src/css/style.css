@@ -120,6 +120,9 @@
 		user-select: none !important;
 		-ms-user-select: none !important;
 		-webkit-user-select: none !important;
+		/* panning stays native, but double-tap and pinch zoom belong to
+		   the app everywhere (the gesture guard supplies editor zoom) */
+		touch-action: pan-x pan-y;
 		font-weight: normal;
 		font-style: normal;
 		outline: none;

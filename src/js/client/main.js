@@ -6,6 +6,7 @@ import { createTextArtCanvas } from './canvas.js';
 import { createWorkerHandler, createChatController } from './network.js';
 import { trustedMessage } from './messageGuard.js';
 import { createZoomController } from './zoom.js';
+import { createGestureGuard } from './gestureGuard.js';
 import { createCharsetPicker } from './charsetPicker.js';
 import { createColorPanel } from './colorPanel.js';
 import { createFramesPanel } from './frames.js';
@@ -448,6 +449,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 				const viewportElement = $('viewport');
 				if (viewportElement) {
 					createZoomController(viewportElement);
+					// chrome pinches drive editor zoom too, never the page
+					createGestureGuard(canvasContainer);
 				}
 				const zoomControlContainer = $('zoomControl');
 				if (zoomControlContainer) {

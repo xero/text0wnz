@@ -657,6 +657,7 @@ Visually scale the drawing canvas from 0.5-4x size, while keeping the interface 
 - Select whole number scaling for pixel perfect rendering
 - `ctrl` + mouse wheel (or a trackpad pinch) zooms at the pointer
 - A two-finger pinch zooms at the pinch center on touch screens
+- Pinching anywhere else, menus and panels included, zooms the editor too; the browser's own page zoom and double-tap zoom stay out of the way
 - Preference saved in local storage
 
 **Keyboard Shortcuts:**
