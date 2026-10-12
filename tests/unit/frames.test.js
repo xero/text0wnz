@@ -178,6 +178,21 @@ describe('playback', () => {
 		expect(panel.isPlaying()).toBe(false);
 	});
 
+	it('pressing the button during a baud reveal STOPS it (never stacks playback)', () => {
+		const raf = vi
+			.spyOn(window, 'requestAnimationFrame')
+			.mockReturnValue(1);
+		canvas.addFrame();
+		document.getElementById('frameBaudPlay').click();
+		expect(canvas.setBaudReveal).toHaveBeenCalled();
+		// the play/stop button must stop the baud reveal, not start
+		// frame playback on top of it (owner report)
+		document.getElementById('framePlay').click();
+		expect(canvas.setBaudReveal).toHaveBeenLastCalledWith(null);
+		expect(panel.isPlaying()).toBe(false);
+		raf.mockRestore();
+	});
+
 	it('refuses to play a single-frame doc', () => {
 		document.getElementById('framePlay').click();
 		expect(panel.isPlaying()).toBe(false);

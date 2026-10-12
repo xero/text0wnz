@@ -301,14 +301,21 @@ const viewportTap = view => {
 	});
 
 	view.addEventListener('touchend', event => {
+		// evaluate on the LAST lift: real fingers rarely leave in the
+		// same event frame, so requiring changedTouches === 2 meant the
+		// gesture almost never fired on hardware (the canvas recognizer
+		// learned the same lesson in P3)
+		const remaining = event.touches?.length ?? 0;
 		if (
 			eligible &&
-			event.changedTouches.length === 2 &&
+			remaining === 0 &&
 			Date.now() - touchStartTime < maxTapDuration
 		) {
 			State.textArtCanvas.undo();
 		}
-		eligible = false;
+		if (remaining === 0) {
+			eligible = false;
+		}
 	});
 
 	view.addEventListener('touchcancel', () => {

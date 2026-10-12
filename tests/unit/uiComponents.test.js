@@ -97,6 +97,39 @@ describe('UI Components', () => {
 			vi.useRealTimers();
 		});
 
+		it('fires on the LAST lift when fingers leave separately (hardware reality)', () => {
+			const view = document.createElement('div');
+			document.body.appendChild(view);
+
+			viewportTap(view);
+			State.textArtCanvas.undo.mockClear();
+
+			const touchStartEvent = createEvent('touchstart');
+			touchStartEvent.touches = [{ identifier: 1 }, { identifier: 2 }];
+			view.dispatchEvent(touchStartEvent);
+
+			// finger 1 lifts first; finger 2 is still down
+			const firstLift = createEvent('touchend');
+			firstLift.changedTouches = [{ identifier: 1 }];
+			firstLift.touches = [{ identifier: 2 }];
+			view.dispatchEvent(firstLift);
+			expect(State.textArtCanvas.undo).not.toHaveBeenCalled();
+
+			// finger 2 lifts: NOW it is a tap
+			const lastLift = createEvent('touchend');
+			lastLift.changedTouches = [{ identifier: 2 }];
+			lastLift.touches = [];
+			view.dispatchEvent(lastLift);
+			expect(State.textArtCanvas.undo).toHaveBeenCalledTimes(1);
+
+			// and it fires exactly once (no double-undo on stray events)
+			const stray = createEvent('touchend');
+			stray.changedTouches = [];
+			stray.touches = [];
+			view.dispatchEvent(stray);
+			expect(State.textArtCanvas.undo).toHaveBeenCalledTimes(1);
+		});
+
 		it('taps ON the canvas never undo here (the recognizer owns them)', () => {
 			const view = document.createElement('div');
 			const canvas = document.createElement('div');
