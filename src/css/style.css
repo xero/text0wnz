@@ -1210,6 +1210,34 @@
 	#sixteenStatus {
 		@apply text-cyan text-sm;
 	}
+	#pluginLoaders {
+		@apply flex flex-row gap-2 items-center;
+		input[type='url'] {
+			@apply bg-menu text-fg grow px-2;
+		}
+		button {
+			@apply bg-menu text-fg px-2 cursor-pointer;
+		}
+		button:hover {
+			@apply bg-purp;
+		}
+	}
+	#pluginStatus {
+		@apply text-cyan text-sm pt-2;
+	}
+	#pluginList {
+		@apply flex flex-col gap-1 pt-2 overflow-y-auto;
+		max-height: 40vh;
+		.pluginRow {
+			@apply flex flex-row gap-2 items-center text-fg text-sm;
+			button {
+				@apply bg-menu text-fg px-2 cursor-pointer;
+			}
+			button:hover {
+				@apply bg-purp;
+			}
+		}
+	}
 	#colorRGB {
 		@apply flex flex-row gap-2 items-center;
 		button {

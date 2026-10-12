@@ -463,6 +463,7 @@
 			<article id="saveAnsimation" class="menuItem">Export as ANSimation</article>
 			<article id="saveTimelapse" class="menuItem">Export Session Timelapse</article>
 			<article class="separator"></article>
+			<article id="pluginsMenu" class="menuItem">Plugins</article>
 			<article id="help" class="menuItem">Help!</article>
 			<article id="tutorials" class="menuItem">Tutorials</article>
 			<article id="update" class="menuItem">Update Editor</article>
@@ -844,6 +845,26 @@
 				<nav>
 					<button id="exportCancel">Cancel</button>
 					<button id="exportConfirm">Save</button>
+				</nav>
+			</section>
+			<section id="pluginModal">
+				<h2>Plugins</h2>
+				<article>
+					<p>
+						A plugin is one ES module exporting <code>{name, run(api)}</code>.
+						It runs with full access to this page: only load code you trust.
+					</p>
+					<nav id="pluginLoaders">
+						<button id="pluginLoadFile">Load .js file</button>
+						<input id="pluginFileInput" class="hide" type="file" accept=".js,.mjs"/>
+						<input id="pluginUrlInput" type="url" placeholder="https://.../plugin.js"/>
+						<button id="pluginLoadUrl">Load URL</button>
+					</nav>
+					<p id="pluginStatus" class="hide"></p>
+					<div id="pluginList"></div>
+				</article>
+				<nav>
+					<button id="pluginClose">Close</button>
 				</nav>
 			</section>
 			<section id="sixteenModal">
