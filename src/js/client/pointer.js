@@ -97,7 +97,12 @@ export const createPointerInput = (container, handlers, options = {}) => {
 	const recognizer = createGestureRecognizer(
 		{
 			onStrokeStart: pt => {
-				const cell = handlers.map(pt.clientX, pt.clientY, false);
+				// downs clamp like drags: the container hit box equals the
+				// grid, so out of range only happens via subpixel origin
+				// snapping or a mid zoom metric race, and an unclamped cell
+				// wraps through the cell index to the far side of a
+				// neighboring row in every tool that trusts it
+				const cell = handlers.map(pt.clientX, pt.clientY, true);
 				if (!cell) {
 					return;
 				}
@@ -181,7 +186,8 @@ export const createPointerInput = (container, handlers, options = {}) => {
 		if (strokePointer !== null) {
 			return; // one drawing pointer at a time
 		}
-		const cell = handlers.map(e.clientX, e.clientY, false);
+		// clamped for the same reason as touch stroke starts above
+		const cell = handlers.map(e.clientX, e.clientY, true);
 		if (!cell) {
 			return; // degenerate font metrics mid-swap: skip the event
 		}
