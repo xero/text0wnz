@@ -7,7 +7,14 @@
  */
 import State from './state.js';
 import { $ } from './ui.js';
-import { makeSay, button, amigaImportHints } from './browserKit.js';
+import {
+	makeSay,
+	button,
+	amigaImportHints,
+	baseName,
+	isOpenableName,
+	isArchiveName,
+} from './browserKit.js';
 import {
 	extractLhaEntry,
 	extractZipEntry,
@@ -15,15 +22,7 @@ import {
 	readZipEntries,
 } from '../core/index';
 
-const ARCHIVE = /\.(zip|lha|lzh)$/i;
-/** every format Load.file decodes, plus the bare file_id */
-const OPENABLE = /\.(ans|ansi|asc|diz|nfo|txt|utf8ans|bin|xb|xbin|tnd|dur|0wnz)$/i;
-
-const baseName = name => name.split('/').pop();
-const isOpenable = name =>
-	OPENABLE.test(name) || (/^file_id$/i).test(baseName(name));
-
-const isArchiveFile = file => ARCHIVE.test(file.name);
+const isArchiveFile = file => isArchiveName(file.name);
 
 const createArchiveOpener = ({ openFile }) => {
 	const list = $('archiveList');
@@ -72,7 +71,7 @@ const createArchiveOpener = ({ openFile }) => {
 		try {
 			bytes = new Uint8Array(await file.arrayBuffer());
 			entries = (isZip ? readZipEntries : readLhaEntries)(bytes).filter(e =>
-				isOpenable(e.name));
+				isOpenableName(e.name));
 		} catch (error) {
 			fail(`could not read ${file.name}: ${error.message}`);
 			return;

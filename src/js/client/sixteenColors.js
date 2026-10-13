@@ -21,6 +21,7 @@ import {
 	pager,
 	createTrail,
 	createRenderGate,
+	isOpenableName,
 } from './browserKit.js';
 import {
 	extractZipEntry,
@@ -33,9 +34,7 @@ const GALLERY = 'https://16colo.rs';
 const MIRROR =
 	'https://raw.githubusercontent.com/xero/sixteencolors-archive/master';
 
-/** piece extensions the editor can open, plus the bare file_id */
-const OPENABLE = /\.(ans|asc|diz|nfo|txt|bin|xb|tnd|dur)$/i;
-const isOpenable = name => OPENABLE.test(name) || (/^file_id$/i).test(name);
+const isOpenable = isOpenableName;
 
 /** column the masonry packs around, thumbnail width plus padding */
 const COL_WIDTH = 196;
@@ -75,6 +74,8 @@ const createSixteenColors = ({ openFile }) => {
 	let tab = 'year';
 	const setTab = name => {
 		tab = name;
+		// a pending debounced search must not fire into the new tab
+		clearTimeout(typing);
 		for (const key of Object.keys(TABS)) {
 			$(`sixteenTab${key[0].toUpperCase()}${key.slice(1)}`)?.classList.toggle(
 				'active',

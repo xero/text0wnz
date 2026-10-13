@@ -381,6 +381,95 @@ describe('asciiarena browser', () => {
 		expect(frames[1].querySelector('pre')).toBeNull();
 	});
 
+	it('shares one index download between concurrent views', async () => {
+		fetchMock.mockImplementation(async url => {
+			if (url.endsWith('/api/uhcsearch')) {
+				await flush();
+				return { ok: true, text: async () => INDEX_TSV };
+			}
+			throw new Error(`unexpected fetch ${url}`);
+		});
+		await Promise.all([
+			browser.showSearch('zombie'),
+			browser.showByArtist('Two'),
+		]);
+		const indexCalls = fetchMock.mock.calls.filter(c =>
+			c[0].endsWith('/api/uhcsearch'));
+		expect(indexCalls).toHaveLength(1);
+	});
+
+	it('cancels a pending debounced search on tab switch', async () => {
+		vi.useFakeTimers();
+		fetchMock.mockImplementation(async url => {
+			if (url.includes('/api/artists?')) {
+				return { ok: true, json: async () => []};
+			}
+			if (url.includes('/api/collys?')) {
+				return {
+					ok: true,
+					json: async () => [
+						{
+							filename: 'zmb-wof1.txt',
+							name: 'Wheel of Fortune',
+							artists: 'ZoMbiE',
+							crews: '',
+							cdate: '1994-00-00',
+							total_count: 1,
+						},
+					],
+				};
+			}
+			throw new Error(`unexpected fetch ${url}`);
+		});
+		browser.setTab('artist');
+		const search = document.getElementById('arenaSearch');
+		search.value = 'zom';
+		search.dispatchEvent(new Event('input'));
+		// switch tabs before the 250ms debounce fires
+		browser.setTab('latest');
+		await vi.advanceTimersByTimeAsync(400);
+		vi.useRealTimers();
+		await flush();
+		const list = document.getElementById('arenaList');
+		expect(list.dataset.view).toBe('latest');
+		expect(document.getElementById('arenaCrumb').textContent).toBe('latest');
+	});
+
+	it('drops a stale archive fetch when the user has moved on', async () => {
+		let releaseArchive;
+		fetchMock.mockImplementation(async url => {
+			if (url.endsWith('/api/uhcsearch')) {
+				return { ok: true, text: async () => INDEX_TSV };
+			}
+			if (url.endsWith('/collections/oldskool/oldskool.lha')) {
+				await new Promise(resolve => {
+					releaseArchive = resolve;
+				});
+				return { ok: true, arrayBuffer: async () => realColly().buffer };
+			}
+			if (url.includes('/api/crews?')) {
+				return {
+					ok: true,
+					json: async () => [{ name: 'Up Rough', releases_cnt: 2, total_count: 1 }],
+				};
+			}
+			throw new Error(`unexpected fetch ${url}`);
+		});
+		await browser.showByArtist('Two');
+		const card = [...document.querySelectorAll('#arenaList .arenaColly')].find(
+			c => c.querySelector('span').textContent === 'Amiga Archive',
+		);
+		card.click();
+		await flush();
+		await browser.showCrews('', 1);
+		releaseArchive();
+		await flush();
+		await flush();
+		const list = document.getElementById('arenaList');
+		expect(list.dataset.view).toBe('crews');
+		expect(opened).toHaveLength(0);
+	});
+
 	it('drops a stale fetch instead of stomping the current view', async () => {
 		let releaseLatest;
 		fetchMock.mockImplementation(async url => {

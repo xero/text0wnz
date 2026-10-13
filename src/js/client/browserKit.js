@@ -60,6 +60,17 @@ const pager = (page, pages, goPage, className) => {
 	return el;
 };
 
+/** every format Load.file decodes, plus the bare file_id */
+const OPENABLE = /\.(ans|ansi|asc|diz|nfo|txt|utf8ans|bin|xb|xbin|tnd|dur|0wnz)$/i;
+const ARCHIVE = /\.(zip|lha|lzh)$/i;
+
+const baseName = name => name.split('/').pop();
+
+const isOpenableName = name =>
+	OPENABLE.test(name) || (/^file_id$/i).test(baseName(name));
+
+const isArchiveName = name => ARCHIVE.test(name);
+
 /** the font asciiarena itself renders with (TopazPlus a1200) */
 const AMIGA_FONT = 'Topaz+ 1200 8x16';
 
@@ -148,4 +159,7 @@ export {
 	countHighBytes,
 	validUtf8,
 	amigaImportHints,
+	baseName,
+	isOpenableName,
+	isArchiveName,
 };

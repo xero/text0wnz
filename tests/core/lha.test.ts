@@ -54,10 +54,29 @@ describe('lha header walking', () => {
 		expect(text(extractLhaEntry(bytes, entry))).toBe('level two payload');
 	});
 
-	it('keeps amiga latin-1 filenames intact', () => {
+	it('keeps amiga latin-1 filenames intact, 0x80-0x9F included', () => {
 		const data = new TextEncoder().encode('x');
-		const bytes = buildLha(lha0Entry('c«w-LIG.txt', data));
-		expect(readLhaEntries(bytes)[0].name).toBe('c«w-LIG.txt');
+		// 0x85 tells iso-8859-1 from windows-1252, which maps it to the
+		// ellipsis; amiga names must stay byte-exact
+		const bytes = buildLha(lha0Entry('c«w\u0085LIG.txt', data));
+		expect(readLhaEntries(bytes)[0].name).toBe('c«w\u0085LIG.txt');
+	});
+
+	it('parses a level 2 header sized to a multiple of 256', () => {
+		const data = new TextEncoder().encode('after the big header');
+		// headerSize = 32 + name + dir; 8 + 216 lands exactly on 256,
+		// putting a zero byte where the terminator check looks
+		const dir = 'd'.repeat(215) + '/';
+		const bytes = buildLha(
+			lha0Entry('first.txt', data),
+			lha2Entry('deep.txt', dir, data),
+		);
+		const entries = readLhaEntries(bytes);
+		expect(entries).toHaveLength(2);
+		expect(entries[1].name).toBe(`${dir}deep.txt`);
+		expect(text(extractLhaEntry(bytes, entries[1]))).toBe(
+			'after the big header',
+		);
 	});
 
 	it('rejects bytes that are not an lha archive', () => {

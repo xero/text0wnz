@@ -146,9 +146,12 @@ const openHandler = (file, opts = {}) => {
 		openFile.value = '';
 		return;
 	}
-	// archives unpack client-side; multi-entry ones raise a picker
-	if (isArchiveFile(file) && archiveOpener) {
-		archiveOpener.open(file);
+	// archives unpack client-side; multi-entry ones raise a picker.
+	// created on first use: a PWA launch can deliver a file before the
+	// idle-time init tier builds the opener
+	if (isArchiveFile(file)) {
+		archiveOpener ??= createArchiveOpener({ openFile: openHandler });
+		archiveOpener?.open(file);
 		openFile.value = '';
 		return;
 	}
@@ -196,7 +199,10 @@ const openHandler = (file, opts = {}) => {
 			};
 
 			const closeModal = () => {
-				if (State.modal.isOpen() && State.modal.current === 'loading') {
+				// current is the controller's accessor, not a field: the
+				// old reference compare never matched and left the
+				// loading modal up after every file load
+				if (State.modal.isOpen() && State.modal.current() === 'loading') {
 					State.modal.close();
 				}
 			};
@@ -596,7 +602,7 @@ const initializeAppComponents = async () => {
 	onClick($('browseArena'), () => arena?.show());
 
 	// native zip and lha opens route through the same unpack path
-	archiveOpener = createArchiveOpener({ openFile: openHandler });
+	archiveOpener ??= createArchiveOpener({ openFile: openHandler });
 
 	// ES-module plugin surface (durdraw lineage)
 	const pluginManager = createPluginManager();

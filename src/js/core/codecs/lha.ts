@@ -37,12 +37,20 @@ const MAX_CODE_LENGTH = 16;
 
 const METHOD = /^-l[a-z0-9]{2}-$/;
 
-const latin1 = new TextDecoder('latin1');
+// true ISO-8859-1, byte to codepoint: TextDecoder('latin1') means
+// windows-1252 and would mangle amiga names using 0x80-0x9F
+const latin1 = (raw: Uint8Array): string => {
+	let out = '';
+	for (const byte of raw) {
+		out += String.fromCharCode(byte);
+	}
+	return out;
+};
 
 // generic LHA may carry DOS paths; one separator keeps basename logic
 // in the callers honest
 const cleanName = (raw: Uint8Array): string =>
-	latin1.decode(raw).replaceAll('\\', '/');
+	latin1(raw).replaceAll('\\', '/');
 
 let CRC_TABLE: Uint16Array | null = null;
 
@@ -70,10 +78,15 @@ export const readLhaEntries = (bytes: Uint8Array): LhaEntry[] => {
 	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 	const entries: LhaEntry[] = [];
 	let pos = 0;
-	// a zero byte where the next header size would sit ends the chain
-	while (pos + 21 <= bytes.length && bytes[pos] !== 0) {
-		const method = latin1.decode(bytes.subarray(pos + 2, pos + 7));
+	while (pos + 21 <= bytes.length) {
+		const method = latin1(bytes.subarray(pos + 2, pos + 7));
 		if (!METHOD.test(method)) {
+			// the zero terminator only ends the chain where no header
+			// starts: a level 2 header sized to a multiple of 256 also
+			// opens with a zero byte and must still parse
+			if (bytes[pos] === 0) {
+				break;
+			}
 			throw new CodecError(
 				entries.length ? `lha header torn at ${pos}` : 'not an lha archive',
 			);
@@ -138,7 +151,7 @@ export const readLhaEntries = (bytes: Uint8Array): LhaEntry[] => {
 				if (type === 0x01) {
 					name = cleanName(body);
 				} else if (type === 0x02) {
-					dir = latin1.decode(body).replaceAll('ÿ', '/');
+					dir = latin1(body).replaceAll('ÿ', '/');
 				}
 				const chained = view.getUint16(at + ext - 2, true);
 				at += ext;
@@ -260,9 +273,14 @@ const readLengths = (
 	if (n === 0) {
 		return { single: br.read(nbit) };
 	}
+	// clamping an oversized count would leave codes unread and silently
+	// desync the stream; a torn table must fail here, not at the crc
+	if (n > size) {
+		throw new CodecError('lha huffman table torn');
+	}
 	const lens = new Uint8Array(size);
 	let i = 0;
-	while (i < n && i < size) {
+	while (i < n) {
 		let len = br.read(3);
 		if (len === 7) {
 			while (br.read(1)) {
@@ -286,9 +304,12 @@ const readLiteralLengths = (br: BitReader, temp: Huffman): Huffman => {
 	if (n === 0) {
 		return { single: br.read(9) };
 	}
+	if (n > NC) {
+		throw new CodecError('lha huffman table torn');
+	}
 	const lens = new Uint8Array(NC);
 	let i = 0;
-	while (i < n && i < NC) {
+	while (i < n) {
 		const c = decodeSym(br, temp);
 		if (c === 0) {
 			i++;

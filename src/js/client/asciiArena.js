@@ -23,6 +23,9 @@ import {
 	countHighBytes,
 	validUtf8,
 	amigaImportHints,
+	baseName,
+	isOpenableName,
+	isArchiveName,
 } from './browserKit.js';
 import {
 	extractLhaEntry,
@@ -33,11 +36,6 @@ import {
 
 const SITE = 'https://asciiarena.se';
 const API = `${SITE}/api`;
-
-/** colly extensions the editor can open; zip and lha/lzh archives
- * unpack through the core readers */
-const OPENABLE = /\.(ans|asc|diz|nfo|txt)$/i;
-const ARCHIVE = /\.(zip|lha|lzh)$/i;
 
 const PAGESIZE = 24;
 /** instant search renders at most this many diz cards per query */
@@ -73,6 +71,8 @@ const createAsciiArena = ({ openFile }) => {
 	let tab = 'latest';
 	const setTab = name => {
 		tab = name;
+		// a pending debounced search must not fire into the new tab
+		clearTimeout(typing);
 		for (const key of Object.keys(TABS)) {
 			$(`arenaTab${key[0].toUpperCase()}${key.slice(1)}`)?.classList.toggle(
 				'active',
@@ -126,8 +126,6 @@ const createAsciiArena = ({ openFile }) => {
 		}
 		return new Uint8Array(await response.arrayBuffer());
 	};
-
-	const baseName = name => name.split('/').pop();
 
 	// latin-1 maps bytes to the first 256 codepoints one to one
 	const latin1 = bytes => {
@@ -185,13 +183,15 @@ const createAsciiArena = ({ openFile }) => {
 		if (text === undefined) {
 			try {
 				const response = await fetch(rawUrl(colly, `${colly.filename}.diz`));
+				// a 404 means no diz and caches; a thrown fetch is
+				// transient and must stay retryable
 				text = response.ok
 					? previewText(new Uint8Array(await response.arrayBuffer()))
 					: null;
+				cache.dizzes.set(colly.filename, text);
 			} catch {
 				text = null;
 			}
-			cache.dizzes.set(colly.filename, text);
 		}
 		if (text && frame.isConnected) {
 			const pre = document.createElement('pre');
@@ -258,14 +258,20 @@ const createAsciiArena = ({ openFile }) => {
 				title: cols[4].trimEnd(),
 			}));
 
-	const ensureIndex = async () => {
-		if (!cache.index) {
+	// the cache holds the in-flight promise, not the parsed rows, so
+	// concurrent views share one download of the whole-archive dump; a
+	// failure clears it so the next view retries
+	const ensureIndex = () => {
+		cache.index ??= (async () => {
 			const response = await fetch(`${API}/uhcsearch`);
 			if (!response.ok) {
 				throw new Error(`${response.status} from ${API}/uhcsearch`);
 			}
-			cache.index = parseIndex(await response.text());
-		}
+			return parseIndex(await response.text());
+		})().catch(error => {
+			cache.index = null;
+			throw error;
+		});
 		return cache.index;
 	};
 
@@ -497,45 +503,57 @@ const createAsciiArena = ({ openFile }) => {
 		openFile(new File([bytes], name), amigaImportHints(bytes));
 	};
 
+	// clicking a piece is an explicit open: the editor load itself is
+	// never gated, but listings and status lines from a fetch the user
+	// has navigated away from must not repaint the current view
 	const openArchive = async colly => {
+		const ticket = gate.enter();
 		say(`fetching ${colly.filename}...`);
 		try {
 			const bytes = await fetchBytes(rawUrl(colly));
 			const isZip = (/\.zip$/i).test(colly.filename);
 			const entries = (isZip ? readZipEntries : readLhaEntries)(bytes)
-				.filter(e => OPENABLE.test(e.name));
+				.filter(e => isOpenableName(e.name));
 			const extract = entry => {
 				return isZip ? extractZipEntry(bytes, entry) : extractLhaEntry(bytes, entry);
 			};
-			if (!entries.length) {
-				say('nothing in this archive opens in the editor', true);
-				return;
-			}
 			if (entries.length === 1) {
 				openBytes(await extract(entries[0]), baseName(entries[0].name));
+				return;
+			}
+			if (!gate.current(ticket)) {
+				return;
+			}
+			if (!entries.length) {
+				say('nothing in this archive opens in the editor', true);
 				return;
 			}
 			// the bytes ride the view thunk, freed when the trail drops it
 			visit(() => showArchive(colly, entries, extract));
 		} catch (error) {
-			say(`could not open: ${error.message}`, true);
+			if (gate.current(ticket)) {
+				say(`could not open: ${error.message}`, true);
+			}
 		}
 	};
 
 	const openColly = async colly => {
-		if (ARCHIVE.test(colly.filename)) {
+		if (isArchiveName(colly.filename)) {
 			openArchive(colly);
 			return;
 		}
-		if (!OPENABLE.test(colly.filename)) {
+		if (!isOpenableName(colly.filename)) {
 			say(`the editor cannot open ${colly.filename}`, true);
 			return;
 		}
+		const ticket = gate.enter();
 		say(`fetching ${colly.filename}...`);
 		try {
 			openBytes(await fetchBytes(rawUrl(colly)), colly.filename);
 		} catch (error) {
-			say(`could not open: ${error.message}`, true);
+			if (gate.current(ticket)) {
+				say(`could not open: ${error.message}`, true);
+			}
 		}
 	};
 
