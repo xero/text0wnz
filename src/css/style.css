@@ -1256,7 +1256,10 @@
 	#artpacksChoices {
 		@apply flex flex-row flex-wrap gap-3 w-full;
 		button {
-			@apply flex flex-col gap-3 bg-midnight text-left m-0 p-6 cursor-pointer;
+			/* normal-case, start, stretch: the dialog-wide section button
+			   baseline uppercases and centers everything it touches */
+			@apply flex flex-col gap-3 bg-transparent normal-case justify-start
+				items-stretch text-left m-0 p-6 cursor-pointer;
 			/* each site gets half the row; narrow screens stack them */
 			flex: 1 1 16em;
 			strong {
@@ -1264,6 +1267,9 @@
 			}
 			span {
 				@apply text-fg text-base;
+				/* narrows the measure so the prose fills its three lines
+				   evenly instead of orphaning a fourth */
+				padding-inline: 2rem;
 			}
 		}
 	}
