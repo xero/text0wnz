@@ -25,6 +25,14 @@ const MARKUP = `
 
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));
 
+// stream-backed inflates land on their own schedule: poll until the
+// open arrives instead of counting flush turns (ci shards lag)
+const settle = async (done, tries = 400) => {
+	for (let i = 0; i < tries && !done(); i++) {
+		await flush();
+	}
+};
+
 describe('sixteen colors browser', () => {
 	let fetchMock;
 	let opened;
@@ -145,6 +153,7 @@ describe('sixteen colors browser', () => {
 		art.click();
 		await flush();
 		await flush();
+		await settle(() => opened.length === 1);
 		expect(opened).toHaveLength(1);
 		expect(opened[0].name).toBe('x0-art.ans');
 		expect(State.modal.close).toHaveBeenCalled();
@@ -193,6 +202,7 @@ describe('sixteen colors browser', () => {
 		await flush();
 		await flush();
 		await flush();
+		await settle(() => opened.length === 1);
 		expect(opened).toHaveLength(1);
 		expect(opened[0].name).toBe('x0-art.ans');
 		const mirrorCalls = fetchMock.mock.calls.filter(c =>

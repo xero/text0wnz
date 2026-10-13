@@ -28,6 +28,14 @@ const MARKUP = `
 
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));
 
+// stream-backed inflates land on their own schedule: poll until the
+// open arrives instead of counting flush turns (ci shards lag)
+const settle = async (done, tries = 400) => {
+	for (let i = 0; i < tries && !done(); i++) {
+		await flush();
+	}
+};
+
 const INDEX_TSV = [
 	'Filename\tPath\tArtist(s)\tCrew(s)\tDescription',
 	'zmb-wof1.txt\tcollections/zmb-wof1\tZoMbiE\tIndependent\tWheel of Fortune',
@@ -126,6 +134,7 @@ describe('asciiarena browser', () => {
 		cards[0].click();
 		await flush();
 		await flush();
+		await settle(() => opened.length === 1);
 		expect(opened).toHaveLength(1);
 		expect(opened[0].file.name).toBe('zmb-wof1.txt');
 		// lone high bytes mean scene art: skip the UTF-8 reader, render
@@ -171,6 +180,7 @@ describe('asciiarena browser', () => {
 		release();
 		await flush();
 		await flush();
+		await settle(() => opened.length === 1);
 		expect(opened).toHaveLength(1);
 		const rawCalls = fetchMock.mock.calls.filter(c =>
 			c[0].includes('/collections/zmb-wof1/'));
@@ -226,6 +236,7 @@ describe('asciiarena browser', () => {
 		releaseFirst();
 		await flush();
 		await flush();
+		await settle(() => opened.length === 1);
 		expect(opened).toHaveLength(1);
 		expect(opened[0].file.name).toBe('fzn-tinf.txt');
 		// the supersede really aborted the first fetch's signal: the
@@ -288,6 +299,7 @@ describe('asciiarena browser', () => {
 		releaseZip();
 		await flush();
 		await flush();
+		await settle(() => opened.length === 1);
 		expect(opened).toHaveLength(1);
 		expect(opened[0].file.name).toBe('fzn-tinf.txt');
 	});
@@ -319,6 +331,7 @@ describe('asciiarena browser', () => {
 		entries[1].click();
 		await flush();
 		await flush();
+		await settle(() => opened.length === 1);
 		expect(opened).toHaveLength(1);
 		expect(opened[0].file.name).toBe('iFd-Colly3.txt');
 	});
@@ -530,6 +543,7 @@ describe('asciiarena browser', () => {
 		entries[0].click();
 		await flush();
 		await flush();
+		await settle(() => opened.length === 1);
 		expect(opened).toHaveLength(1);
 		expect(opened[0].file.name).toBe('one.asc');
 		expect(opened[0].opts.preferBytes).toBe(true);
@@ -564,6 +578,7 @@ describe('asciiarena browser', () => {
 		entries[1].click();
 		await flush();
 		await flush();
+		await settle(() => opened.length === 1);
 		expect(opened).toHaveLength(1);
 		expect(opened[0].file.name).toBe('iFd-Colly3.txt');
 		expect(opened[0].opts.font).toBe('Topaz+ 1200 8x16');

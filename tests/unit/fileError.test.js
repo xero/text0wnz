@@ -37,6 +37,14 @@ vi.mock('../../src/js/client/ui.js', () => ({
 
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));
 
+// async decoders reject on their own schedule: poll instead of
+// counting flush turns (ci shards lag)
+const settle = async (done, tries = 400) => {
+	for (let i = 0; i < tries && !done(); i++) {
+		await flush();
+	}
+};
+
 describe('corrupt file error reporting', () => {
 	let Load;
 
@@ -72,8 +80,7 @@ describe('corrupt file error reporting', () => {
 		const onError = vi.fn();
 		// too short for the durdraw gzip header: decodeDur throws async
 		const callback = loadBytes('broken.dur', [1, 2, 3], { onError });
-		await flush();
-		await flush();
+		await settle(() => onError.mock.calls.length > 0);
 		expect(onError).toHaveBeenCalled();
 		expect(callback).not.toHaveBeenCalled();
 	});
@@ -81,8 +88,7 @@ describe('corrupt file error reporting', () => {
 	it('routes a corrupt 0wnz through onError without a callback', async () => {
 		const onError = vi.fn();
 		const callback = loadBytes('broken.0wnz', [0, 0, 0, 0], { onError });
-		await flush();
-		await flush();
+		await settle(() => onError.mock.calls.length > 0);
 		expect(onError).toHaveBeenCalled();
 		expect(callback).not.toHaveBeenCalled();
 	});
