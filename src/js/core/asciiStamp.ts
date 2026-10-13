@@ -42,6 +42,11 @@ const PERIOD = 46; // .
 const COMMA = 44; // ,
 const APOSTROPHE = 39; // '
 const BACKTICK = 96; // `
+const FILL = 36; // $
+const EDGE_D = 100; // d
+const EDGE_B = 98; // b
+const EDGE_P = 80; // P
+const EDGE_Y = 89; // Y
 
 /**
  * Same stroke collision ranks: stems beat run bodies beat AA pebbles,
@@ -49,6 +54,12 @@ const BACKTICK = 96; // `
  * rank resolves to the newest write (the hand knows best).
  */
 const RANK = new Map<number, number>([
+	// roman fill outranks everything so crossing strokes union solid
+	[FILL, 4],
+	[EDGE_D, 3],
+	[EDGE_B, 3],
+	[EDGE_P, 3],
+	[EDGE_Y, 3],
 	[VBAR, 3],
 	[SLASH, 3],
 	[BACKSLASH, 3],
@@ -82,9 +93,21 @@ export interface AsciiStampEngine {
 	move: (x: number, y: number, subY: number) => StampOut[];
 	/** Stroke end; flushes any provisional state. */
 	end: () => StampOut[];
+	/** Stroke width in cells; 1 is the thin style, more is roman. */
+	setWidth: (width: number) => void;
+	getWidth: () => number;
 }
 
-export const createAsciiStampEngine = (): AsciiStampEngine => {
+export interface AsciiStampOptions {
+	width?: number;
+}
+
+export const createAsciiStampEngine = (
+	options: AsciiStampOptions = {},
+): AsciiStampEngine => {
+	const clampWidth = (w: number) =>
+		Math.max(1, Math.min(9, Math.round(w) || 1));
+	let width = clampWidth(options.width ?? 1);
 	let last: Cell | null = null;
 	let trail: Cell[] = [];
 	/** newest path cell, held until its successor resolves it */
@@ -353,6 +376,66 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 	const isStem = (cls: SlopeClass): boolean =>
 		cls === 'vertical' || cls === 'steep' || cls === 'diag';
 
+	// ------------------------------------------------- roman ribbon mode
+
+	/**
+	 * Width above 1 trades the thin glyph vocabulary for the roman
+	 * ribbon: every skeleton cell widens into a horizontal span of fill
+	 * with one chisel glyph per side, the corpus anatomy (lead, $ fill,
+	 * trail; thickness scales fill only, never the edges). A row can
+	 * hold several spans, so a loop's two sides stay two strokes until
+	 * the ribbons genuinely touch, where fill rank unions them solid.
+	 */
+	interface Span {
+		min: number;
+		max: number;
+		cls: SlopeClass;
+		fall: boolean;
+	}
+	const spans = new Map<number, Span[]>();
+
+	/** chisel glyphs by class and lean: [left, right] */
+	const ribbonEdges = (cls: SlopeClass, fall: boolean): [number, number] => {
+		if (cls === 'diag' || cls === 'shallow') {
+			// rising strokes lead low left with d and trail high right
+			// with P; falling strokes mirror through Y and b
+			return fall ? [EDGE_Y, EDGE_B] : [EDGE_D, EDGE_P];
+		}
+		// verticals in the corpus run mostly bare; flat bars read as
+		// solid fill too, their dress is a later refinement
+		return [FILL, FILL];
+	};
+
+	const restampSpan = (out: StampOut[], y: number, s: Span) => {
+		const lext = Math.floor((width - 1) / 2);
+		const rext = Math.ceil((width - 1) / 2);
+		const lo = s.min - lext;
+		const hi = s.max + rext;
+		const [left, right] = ribbonEdges(s.cls, s.fall);
+		for (let x = lo; x <= hi; x++) {
+			emit(out, x, y, x === lo ? left : x === hi ? right : FILL);
+		}
+	};
+
+	const ribbonCell = (out: StampOut[], c: Cell, cls: SlopeClass) => {
+		let row = spans.get(c.y);
+		if (!row) {
+			row = [];
+			spans.set(c.y, row);
+		}
+		let s = row.find(r => c.x >= r.min - 1 && c.x <= r.max + 1);
+		if (!s) {
+			s = { min: c.x, max: c.x, cls, fall: falling() };
+			row.push(s);
+		} else {
+			s.min = Math.min(s.min, c.x);
+			s.max = Math.max(s.max, c.x);
+			s.cls = cls;
+			s.fall = falling();
+		}
+		restampSpan(out, c.y, s);
+	};
+
 	/**
 	 * One Bresenham path cell entering the stroke, resolved with one
 	 * cell of lookahead: a cell is only inked once its successor is
@@ -394,18 +477,32 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 		}
 		mergeStreak = 0;
 		if (pending) {
-			emitCell(out, pending.c, pending.prev, activeClass);
+			resolveCell(out, pending.c, pending.prev, activeClass);
 		}
 		pending = { c, prev };
 	};
 
+	/** Route a resolved cell to the active style. */
+	const resolveCell = (
+		out: StampOut[],
+		c: Cell,
+		prev: Cell | null,
+		cls: SlopeClass,
+	) => {
+		if (width > 1) {
+			ribbonCell(out, c, cls);
+			return;
+		}
+		emitCell(out, c, prev, cls);
+	};
+
 	/**
 	 * Resolve whatever is still uninked at stroke end. A stroke that
-	 * never moved has no class and keeps its tap pebble.
+	 * never moved has no class and keeps its tap mark.
 	 */
 	const drain = (out: StampOut[]) => {
 		if (pending && activeClass !== null) {
-			emitCell(out, pending.c, pending.prev, activeClass);
+			resolveCell(out, pending.c, pending.prev, activeClass);
 		}
 		pending = null;
 	};
@@ -515,7 +612,13 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 			run = null;
 			rowSteps = 0;
 			recentLens = [];
+			spans.clear();
 			const out: StampOut[] = [];
+			if (width > 1) {
+				// a roman tap daubs a full width of fill
+				ribbonCell(out, { x, y }, 'vertical');
+				return out;
+			}
 			// no direction yet: a lone tap leaves a pebble weighted by the
 			// half of the cell it landed in; a drag revises it immediately
 			emit(out, x, y, subY === 0 ? APOSTROPHE : PERIOD);
@@ -556,7 +659,12 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 			dissent = 0;
 			mergeStreak = 0;
 			stamped.clear();
+			spans.clear();
 			return out;
 		},
+		setWidth: w => {
+			width = clampWidth(w);
+		},
+		getWidth: () => width,
 	};
 };

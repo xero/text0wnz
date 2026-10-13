@@ -34,6 +34,9 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	$: vi.fn(() => ({
 		style: { display: 'none' },
 		classList: { add: vi.fn(), remove: vi.fn() },
+		addEventListener: vi.fn(),
+		removeEventListener: vi.fn(),
+		value: '1',
 	})),
 }));
 

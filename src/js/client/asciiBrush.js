@@ -7,6 +7,12 @@ const createAsciiBrushController = () => {
 	let stroking = false;
 	const bar = $('brushToolbar');
 	const nav = $('brushes');
+	const widthMenu = $('aWidth');
+	const widthSelect = $('asciiWidth');
+
+	const applyWidth = () => {
+		engine.setWidth(parseInt(widthSelect.value, 10) || 1);
+	};
 
 	// the engine revises cells as the stroke reveals itself; last wins
 	// inside the stroke's single undo group, so drawing stays fully live
@@ -53,7 +59,10 @@ const createAsciiBrushController = () => {
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
+		widthSelect.addEventListener('change', applyWidth);
+		applyWidth();
 		bar.style.display = 'flex';
+		widthMenu.style.display = 'flex';
 		nav.classList.add('enabled');
 	};
 
@@ -61,7 +70,9 @@ const createAsciiBrushController = () => {
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
+		widthSelect.removeEventListener('change', applyWidth);
 		bar.style.display = 'none';
+		widthMenu.style.display = 'none';
 		nav.classList.remove('enabled');
 	};
 
