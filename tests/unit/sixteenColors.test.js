@@ -39,7 +39,8 @@ describe('sixteen colors browser', () => {
 			if (url.endsWith('/year')) {
 				return {
 					ok: true,
-					json: async () => ({ 1996: { packs: 2 }, 2014: { packs: 1 } }),
+					// the empty year is a site placeholder: never listed
+					json: async () => ({ 1996: { packs: 2 }, 2014: { packs: 1 }, 2020: { packs: 0 } }),
 				};
 			}
 			if (url.includes('/year/2014')) {
@@ -101,6 +102,7 @@ describe('sixteen colors browser', () => {
 		expect(document.getElementById('sixteenBack').disabled).toBe(false);
 		const years = [...document.querySelectorAll('#sixteenList button')];
 		expect(years[0].textContent).toContain('2014'); // newest first
+		expect(years.map(y => y.textContent).join()).not.toContain('2020');
 		years[0].click();
 		await flush();
 		expect(list.dataset.view).toBe('packs');
@@ -174,7 +176,11 @@ describe('sixteen colors browser', () => {
 					ok: true,
 					json: async () => ({
 						page: { pages: 2, page: 1 },
-						results: [{ artist: { name: 'avenger', releases: 373 } }],
+						results: [
+							{ artist: { name: 'avenger', releases: 373 } },
+							// zero-release profiles are site placeholders
+							{ artist: { name: 'avenue ghost', releases: 0 } },
+						],
 					}),
 				};
 			}
@@ -222,6 +228,10 @@ describe('sixteen colors browser', () => {
 			throw new Error(`unexpected fetch ${url}`);
 		});
 		await browser.showArtists('aven', 1);
+		const names = [...document.querySelectorAll('#sixteenList button')].map(
+			b => b.firstChild?.textContent,
+		);
+		expect(names).not.toContain('avenue ghost');
 		// the release count rides a kbd tag beside the name
 		const artist = [...document.querySelectorAll('#sixteenList button')].find(
 			b => b.firstChild?.textContent === 'avenger',
@@ -256,7 +266,11 @@ describe('sixteen colors browser', () => {
 					ok: true,
 					json: async () => ({
 						page: { pages: 1, page: 1 },
-						results: [{ mistigris: { releases: 160 } }],
+						results: [
+							{ mistigris: { releases: 160 } },
+							// zero-release crews are site placeholders
+							{ 'ghost crew': { releases: 0 } },
+						],
 					}),
 				};
 			}
@@ -269,6 +283,10 @@ describe('sixteen colors browser', () => {
 			throw new Error(`unexpected fetch ${url}`);
 		});
 		await browser.showCrews('', 1);
+		const tags = [...document.querySelectorAll('#sixteenList button')].map(
+			b => b.firstChild?.textContent,
+		);
+		expect(tags).not.toContain('ghost crew');
 		const crew = [...document.querySelectorAll('#sixteenList button')].find(
 			b => b.firstChild?.textContent === 'mistigris',
 		);

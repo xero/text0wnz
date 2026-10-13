@@ -285,6 +285,37 @@ const createAsciiArena = ({ openFile, onExit }) => {
 			.map(s => s.trim().toLowerCase())
 			.filter(Boolean);
 
+	// a colly earns a listing only if the editor can do something
+	// with it: open it directly or crack it as an archive; diskmag
+	// releases ride .dms disk images, unreadable here
+	const viewable = row =>
+		isOpenableName(row.filename) || isArchiveName(row.filename);
+
+	// artists and crews qualify by what their destination view will
+	// actually show: at least one viewable colly in the index; the
+	// crew tally doubles as the honest count beside the name
+	const ensureViewable = async () => {
+		const rows = await ensureIndex();
+		if (cache.viewableFor !== rows) {
+			const artists = new Set();
+			const crews = new Map();
+			for (const row of rows) {
+				if (!viewable(row)) {
+					continue;
+				}
+				for (const nick of listNames(row.artists)) {
+					artists.add(nick);
+				}
+				for (const name of listNames(row.crews)) {
+					crews.set(name, (crews.get(name) ?? 0) + 1);
+				}
+			}
+			cache.viewableFor = rows;
+			cache.viewable = { artists, crews };
+		}
+		return cache.viewable;
+	};
+
 	// ------------------------------------------------------------ views
 
 	const showLatest = async page => {
@@ -307,12 +338,19 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		if (!gate.current(ticket)) {
 			return;
 		}
-		say(rows.length ? null : 'no collys on record');
+		const keep = rows.filter(viewable);
+		say(
+			keep.length
+				? null
+				: rows.length
+					? 'nothing on this page opens in the editor'
+					: 'no collys on record',
+		);
 		const pages = Math.ceil((rows[0]?.total_count ?? 0) / PAGESIZE);
 		if (pages > 1) {
 			list.appendChild(pager(page, pages, p => swap(() => showLatest(p)), 'arenaPager'));
 		}
-		for (const row of rows) {
+		for (const row of keep) {
 			list.appendChild(collyCard(fromApi(row)));
 		}
 	};
@@ -322,12 +360,16 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		crumb.textContent = filter ? `artists / ${filter}` : 'artists';
 		clearList('artists');
 		say('loading artists...');
-		let rows;
+		let rows, who;
 		try {
-			rows = await fetchPage(
-				`a:${filter}:${page}`,
-				`${API}/artists?page=${page}&pagesize=${PAGESIZE}&sort=nick&asc=A${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
-			);
+			// the index degrades soft: a dead dump must not kill browsing
+			[rows, who] = await Promise.all([
+				fetchPage(
+					`a:${filter}:${page}`,
+					`${API}/artists?page=${page}&pagesize=${PAGESIZE}&sort=nick&asc=A${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
+				),
+				ensureViewable().catch(() => null),
+			]);
 		} catch (error) {
 			if (gate.current(ticket)) {
 				say(`asciiarena.se did not answer (${error.message})`, true);
@@ -337,12 +379,21 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		if (!gate.current(ticket)) {
 			return;
 		}
-		say(rows.length ? null : 'no artists match');
+		const keep = who
+			? rows.filter(row => who.artists.has(row.nick?.toLowerCase() ?? ''))
+			: rows;
+		say(
+			keep.length
+				? null
+				: rows.length
+					? 'nothing on this page opens in the editor'
+					: 'no artists match',
+		);
 		const pages = Math.ceil((rows[0]?.total_count ?? 0) / PAGESIZE);
 		if (pages > 1) {
 			list.appendChild(pager(page, pages, p => swap(() => showArtists(filter, p)), 'arenaPager'));
 		}
-		for (const row of rows) {
+		for (const row of keep) {
 			// crews are names, not a count: they stack under the nick in
 			// the sub style instead of riding the kbd tag
 			const el = button(row.nick, () =>
@@ -366,7 +417,7 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		try {
 			const needle = nick.toLowerCase();
 			rows = (await ensureIndex()).filter(r =>
-				listNames(r.artists).includes(needle));
+				viewable(r) && listNames(r.artists).includes(needle));
 		} catch (error) {
 			if (gate.current(ticket)) {
 				say(`asciiarena.se did not answer (${error.message})`, true);
@@ -387,12 +438,16 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		crumb.textContent = filter ? `crews / ${filter}` : 'crews';
 		clearList('crews');
 		say('loading crews...');
-		let rows;
+		let rows, who;
 		try {
-			rows = await fetchPage(
-				`g:${filter}:${page}`,
-				`${API}/crews?page=${page}&pagesize=${PAGESIZE}&sort=name&asc=A${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
-			);
+			// the index degrades soft: a dead dump must not kill browsing
+			[rows, who] = await Promise.all([
+				fetchPage(
+					`g:${filter}:${page}`,
+					`${API}/crews?page=${page}&pagesize=${PAGESIZE}&sort=name&asc=A${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
+				),
+				ensureViewable().catch(() => null),
+			]);
 		} catch (error) {
 			if (gate.current(ticket)) {
 				say(`asciiarena.se did not answer (${error.message})`, true);
@@ -402,14 +457,26 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		if (!gate.current(ticket)) {
 			return;
 		}
-		say(rows.length ? null : 'no crews match');
+		// the count beside a crew is what its page will really show
+		const count = row =>
+			(who
+				? (who.crews.get(row.name?.toLowerCase() ?? '') ?? 0)
+				: (row.releases_cnt ?? 0));
+		const keep = rows.filter(row => count(row) > 0);
+		say(
+			keep.length
+				? null
+				: rows.length
+					? 'nothing on this page opens in the editor'
+					: 'no crews match',
+		);
 		const pages = Math.ceil((rows[0]?.total_count ?? 0) / PAGESIZE);
 		if (pages > 1) {
 			list.appendChild(pager(page, pages, p => swap(() => showCrews(filter, p)), 'arenaPager'));
 		}
-		for (const row of rows) {
+		for (const row of keep) {
 			list.appendChild(
-				countButton(row.name, row.releases_cnt ?? 0, () =>
+				countButton(row.name, count(row), () =>
 					visit(() => showByCrew(row.name)), 'arenaItem'),
 			);
 		}
@@ -424,7 +491,7 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		try {
 			const needle = name.toLowerCase();
 			rows = (await ensureIndex()).filter(r =>
-				listNames(r.crews).includes(needle));
+				viewable(r) && listNames(r.crews).includes(needle));
 		} catch (error) {
 			if (gate.current(ticket)) {
 				say(`asciiarena.se did not answer (${error.message})`, true);
@@ -457,12 +524,13 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		if (!gate.current(ticket)) {
 			return;
 		}
+		const pool = index.filter(viewable);
 		if (!query) {
-			say(`type to search ${index.length} collys`);
+			say(`type to search ${pool.length} collys`);
 			return;
 		}
 		const needle = query.toLowerCase();
-		const rows = index.filter(r =>
+		const rows = pool.filter(r =>
 			[r.filename, r.title, r.artists, r.crews].some(f =>
 				f.toLowerCase().includes(needle)));
 		if (!rows.length) {

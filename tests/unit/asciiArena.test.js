@@ -86,6 +86,15 @@ describe('asciiarena browser', () => {
 							cdate: '0000-00-00',
 							total_count: 50,
 						},
+						// a disk image the editor cannot open never lists
+						{
+							filename: 'weird2.dms',
+							name: 'Disk Only',
+							artists: 'Two',
+							crews: 'Up Rough',
+							cdate: '1995-00-00',
+							total_count: 50,
+						},
 					],
 				};
 			}
@@ -171,8 +180,9 @@ describe('asciiarena browser', () => {
 		});
 		browser.setTab('search');
 		await flush();
-		// the bare tab reports the index size and renders nothing
-		expect(document.getElementById('arenaStatus').textContent).toContain('5 collys');
+		// the bare tab reports the VIEWABLE index size (the dms row is
+		// not a colly anyone can open here) and renders nothing
+		expect(document.getElementById('arenaStatus').textContent).toContain('4 collys');
 		const search = document.getElementById('arenaSearch');
 		expect(search.classList.contains('hide')).toBe(false);
 		search.value = 'garbage';
@@ -192,6 +202,13 @@ describe('asciiarena browser', () => {
 		search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
 		await flush();
 		expect([...document.querySelectorAll('#arenaList .arenaColly')]).toHaveLength(2);
+
+		// a query that only matches unviewable rows comes up empty
+		search.value = 'disk image';
+		search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+		await flush();
+		expect([...document.querySelectorAll('#arenaList .arenaColly')]).toHaveLength(0);
+		expect(document.getElementById('arenaStatus').textContent).toBe('no collys match');
 		const indexCalls = fetchMock.mock.calls.filter(c => c[0].endsWith('/api/uhcsearch'));
 		expect(indexCalls).toHaveLength(1);
 	});
@@ -201,7 +218,11 @@ describe('asciiarena browser', () => {
 			if (url.includes('/api/artists?page=1&pagesize=24&sort=nick&asc=A&filter=zom')) {
 				return {
 					ok: true,
-					json: async () => [{ nick: 'ZoMbiE', crews: 'Independent', total_count: 1 }],
+					json: async () => [
+						{ nick: 'ZoMbiE', crews: 'Independent', total_count: 2 },
+						// no viewable colly in the index: never listed
+						{ nick: 'Zombie Ghost', crews: '', total_count: 2 },
+					],
 				};
 			}
 			if (url.endsWith('/api/uhcsearch')) {
@@ -210,6 +231,10 @@ describe('asciiarena browser', () => {
 			throw new Error(`unexpected fetch ${url}`);
 		});
 		await browser.showArtists('zom', 1);
+		const nicks = [...document.querySelectorAll('#arenaList button')].map(
+			b => b.firstChild?.textContent,
+		);
+		expect(nicks).not.toContain('Zombie Ghost');
 		const artist = [...document.querySelectorAll('#arenaList button')].find(
 			b => b.firstChild?.textContent === 'ZoMbiE',
 		);
@@ -235,7 +260,12 @@ describe('asciiarena browser', () => {
 			if (url.includes('/api/crews?page=1&pagesize=24&sort=name&asc=A')) {
 				return {
 					ok: true,
-					json: async () => [{ name: 'Up Rough', releases_cnt: 2, total_count: 1 }],
+					json: async () => [
+						// the site's own placeholder rows carry zero works
+						{ name: '9 design', releases_cnt: 0, total_count: 2 },
+						// the site counts the dms release; the kbd must not
+						{ name: 'Up Rough', releases_cnt: 3, total_count: 2 },
+					],
 				};
 			}
 			if (url.endsWith('/api/uhcsearch')) {
@@ -244,9 +274,14 @@ describe('asciiarena browser', () => {
 			throw new Error(`unexpected fetch ${url}`);
 		});
 		await browser.showCrews('', 1);
+		const names = [...document.querySelectorAll('#arenaList button')].map(
+			b => b.firstChild?.textContent,
+		);
+		expect(names).not.toContain('9 design');
 		const crew = [...document.querySelectorAll('#arenaList button')].find(
 			b => b.firstChild?.textContent === 'Up Rough',
 		);
+		// the count is the viewable tally, not the site's releases_cnt
 		expect(crew.querySelector('kbd').textContent).toBe('2');
 		crew.click();
 		await flush();
@@ -254,8 +289,27 @@ describe('asciiarena browser', () => {
 		expect(cards.map(c => c.querySelector('span').textContent)).toEqual([
 			'Zip Pack',
 			'Amiga Archive',
-			'Disk Image',
 		]);
+	});
+
+	it('says so when a whole page filters down to nothing', async () => {
+		fetchMock.mockImplementation(async url => {
+			if (url.includes('/api/crews?')) {
+				return {
+					ok: true,
+					json: async () => [{ name: '9 design', releases_cnt: 0, total_count: 1 }],
+				};
+			}
+			if (url.endsWith('/api/uhcsearch')) {
+				return { ok: true, text: async () => INDEX_TSV };
+			}
+			throw new Error(`unexpected fetch ${url}`);
+		});
+		await browser.showCrews('', 1);
+		expect(document.querySelectorAll('#arenaList button')).toHaveLength(0);
+		expect(document.getElementById('arenaStatus').textContent).toBe(
+			'nothing on this page opens in the editor',
+		);
 	});
 
 	it('lists a zip colly and opens a piece through the core reader', async () => {
@@ -326,7 +380,7 @@ describe('asciiarena browser', () => {
 		expect(opened[0].opts.font).toBe('Topaz+ 1200 8x16');
 	});
 
-	it('refuses collys in formats the editor cannot open, without a fetch', async () => {
+	it('never lists collys in formats the editor cannot open', async () => {
 		fetchMock.mockImplementation(async url => {
 			if (url.endsWith('/api/uhcsearch')) {
 				return { ok: true, text: async () => INDEX_TSV };
@@ -334,17 +388,12 @@ describe('asciiarena browser', () => {
 			throw new Error(`unexpected fetch ${url}`);
 		});
 		await browser.showByArtist('Two');
-		const card = [...document.querySelectorAll('#arenaList .arenaColly')].find(
-			c => c.querySelector('span').textContent === 'Disk Image',
+		const titles = [...document.querySelectorAll('#arenaList .arenaColly')].map(
+			c => c.querySelector('span').textContent,
 		);
-		card.click();
-		await flush();
-		const status = document.getElementById('arenaStatus');
-		expect(status.textContent).toContain('cannot open');
-		expect(status.classList.contains('error')).toBe(true);
-		const rawCalls = fetchMock.mock.calls.filter(c =>
-			c[0].includes('/collections/'));
-		expect(rawCalls).toHaveLength(0);
+		// the diskmag (.dms disk image) is unviewable: filtered, not
+		// listed-then-refused
+		expect(titles).toEqual(['Zip Pack', 'Amiga Archive']);
 	});
 
 	it('fills diz previews lazily as cards come into view', async () => {

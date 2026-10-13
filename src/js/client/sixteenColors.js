@@ -227,6 +227,10 @@ const createSixteenColors = ({ openFile, onExit }) => {
 		}
 		say(null);
 		for (const year of Object.keys(cache.years).reverse()) {
+			// an empty year leads nowhere worth a click
+			if (!cache.years[year]?.packs) {
+				continue;
+			}
 			list.appendChild(
 				countButton(year, cache.years[year].packs, () =>
 					visit(() => showPacks(Number(year), 1)), 'sixteenItem'),
@@ -319,18 +323,25 @@ const createSixteenColors = ({ openFile, onExit }) => {
 			return;
 		}
 		const results = data.results ?? [];
-		say(results.length ? null : 'no artists match');
+		// zero-release profiles lead nowhere worth a click
+		const rows = results.filter(
+			row => row.artist?.name && (row.artist.releases ?? 0) > 0,
+		);
+		say(
+			rows.length
+				? null
+				: results.length
+					? 'nothing on this page opens in the editor'
+					: 'no artists match',
+		);
 		const pages = data.page?.pages ?? 1;
 		if (pages > 1) {
 			list.appendChild(pager(page, pages, p => swap(() => showArtists(filter, p)), 'sixteenPager'));
 		}
-		for (const row of results) {
-			const name = row.artist?.name;
-			if (!name) {
-				continue;
-			}
+		for (const row of rows) {
+			const name = row.artist.name;
 			list.appendChild(
-				countButton(name, row.artist.releases ?? 0, () =>
+				countButton(name, row.artist.releases, () =>
 					visit(() => showArtistWorks(name)), 'sixteenItem'),
 			);
 		}
@@ -410,19 +421,25 @@ const createSixteenColors = ({ openFile, onExit }) => {
 			return;
 		}
 		const results = data.results ?? [];
-		say(results.length ? null : 'no crews match');
+		// each crew rides as a single-key object: {tag: {releases, ...}};
+		// zero-release crews lead nowhere worth a click
+		const rows = results
+			.map(row => Object.entries(row)[0] ?? [])
+			.filter(([tag, info]) => tag && (info?.releases ?? 0) > 0);
+		say(
+			rows.length
+				? null
+				: results.length
+					? 'nothing on this page opens in the editor'
+					: 'no crews match',
+		);
 		const pages = data.page?.pages ?? 1;
 		if (pages > 1) {
 			list.appendChild(pager(page, pages, p => swap(() => showCrews(filter, p)), 'sixteenPager'));
 		}
-		for (const row of results) {
-			// each crew rides as a single-key object: {tag: {releases, ...}}
-			const [tag, info] = Object.entries(row)[0] ?? [];
-			if (!tag) {
-				continue;
-			}
+		for (const [tag, info] of rows) {
 			list.appendChild(
-				countButton(tag, info?.releases ?? 0, () =>
+				countButton(tag, info.releases, () =>
 					visit(() => showCrewPacks(tag)), 'sixteenItem'),
 			);
 		}
