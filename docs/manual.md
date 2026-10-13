@@ -144,9 +144,9 @@ File operations allowing you to create, open, and save artwork in multiple file 
   their collys; search runs instantly over the whole archive index
 - Collys preview by their `file_id.diz` text, fetched lazily as cards
   scroll into view
-- Click a colly to open it straight in the editor. Zip collys list
-  their openable files first; `.lha` archives stay on the site until
-  the editor learns to unpack them
+- Click a colly to open it straight in the editor. Zip and
+  `.lha`/`.lzh` archives list their openable files first, unpacked in
+  the browser with every entry checked against its CRC
 - Amiga ascii opens the way the site renders it: raw latin-1 bytes in
   Topaz+ 1200, with SAUCE font records still winning when present
 - The search index downloads once and caches for the session

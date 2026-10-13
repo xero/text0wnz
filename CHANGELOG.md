@@ -43,8 +43,11 @@ byte-exact golden tests before anything else moved.
   release, artist, or crew, or search the whole archive instantly from
   a one-shot index. Collys preview by their `file_id.diz` text and open
   straight into the editor as latin-1 in Topaz+ 1200, matching the
-  site's own rendering. Amiga `.txt` files that are not UTF-8 now fall
-  back to the byte loader everywhere instead of failing to open.
+  site's own rendering. Zip and `.lha`/`.lzh` collys unpack in the
+  browser through a new LHA codec (lh0 and lh5, CRC-checked, verified
+  against all 4,190 entries in the arena's archives). Amiga `.txt`
+  files that are not UTF-8 now fall back to the byte loader everywhere
+  instead of failing to open.
 - **Input.** Pen pressure, touch gestures, focal zoom, and a two-finger
   tap for undo.
 - **Crash recovery.** An OPFS journal autosaves your session and

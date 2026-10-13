@@ -405,7 +405,7 @@ src/js/core/
 ├── formatBudget.ts        # Format budget tables
 ├── blocksData.ts          # Block character data
 ├── eawData.ts             # East Asian width data
-├── codecs/                # File format codecs (SAUCE, BIN, XBIN, ANSI, Tundra, durdraw, .0wnz envelope, zip)
+├── codecs/                # File format codecs (SAUCE, BIN, XBIN, ANSI, Tundra, durdraw, .0wnz envelope, zip, lha)
 └── protocol/              # Collab protocol (Moebius dialect, extension suite, timelapse)
 ```
 

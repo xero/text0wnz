@@ -22,16 +22,19 @@ import {
 	createRenderGate,
 } from './browserKit.js';
 import {
+	extractLhaEntry,
 	extractZipEntry,
+	readLhaEntries,
 	readZipEntries,
 } from '../core/index';
 
 const SITE = 'https://asciiarena.se';
 const API = `${SITE}/api`;
 
-/** colly extensions the editor can open; zip unpacks via the core
- * reader, lha/lzh/dms stay on the site until an lha codec exists */
+/** colly extensions the editor can open; zip and lha/lzh archives
+ * unpack through the core readers */
 const OPENABLE = /\.(ans|asc|diz|nfo|txt)$/i;
+const ARCHIVE = /\.(zip|lha|lzh)$/i;
 
 /** the font asciiarena itself renders with (TopazPlus a1200) */
 const AMIGA_FONT = 'Topaz+ 1200 8x16';
@@ -493,18 +496,18 @@ const createAsciiArena = ({ openFile }) => {
 		}
 	};
 
-	const showZip = (colly, zip, entries) => {
+	const showArchive = (colly, entries, extract) => {
 		// a sync render still bumps the gate, or a fetch already in
 		// flight would paint over this list when it lands
 		gate.enter();
 		crumb.textContent = colly.filename;
-		clearList('zip');
+		clearList('archive');
 		say(null);
 		for (const entry of entries) {
 			list.appendChild(
 				button(baseName(entry.name), async () => {
 					try {
-						openBytes(await extractZipEntry(zip, entry), baseName(entry.name));
+						openBytes(await extract(entry), baseName(entry.name));
 					} catch (error) {
 						say(`could not open: ${error.message}`, true);
 					}
@@ -521,33 +524,38 @@ const createAsciiArena = ({ openFile }) => {
 		openFile(new File([bytes], name), importHints(bytes));
 	};
 
-	const openZip = async colly => {
+	const openArchive = async colly => {
 		say(`fetching ${colly.filename}...`);
 		try {
-			const zip = await fetchBytes(rawUrl(colly));
-			const entries = readZipEntries(zip).filter(e => OPENABLE.test(e.name));
+			const bytes = await fetchBytes(rawUrl(colly));
+			const isZip = (/\.zip$/i).test(colly.filename);
+			const entries = (isZip ? readZipEntries : readLhaEntries)(bytes)
+				.filter(e => OPENABLE.test(e.name));
+			const extract = entry => {
+				return isZip ? extractZipEntry(bytes, entry) : extractLhaEntry(bytes, entry);
+			};
 			if (!entries.length) {
-				say('nothing in this zip opens in the editor', true);
+				say('nothing in this archive opens in the editor', true);
 				return;
 			}
 			if (entries.length === 1) {
-				openBytes(await extractZipEntry(zip, entries[0]), baseName(entries[0].name));
+				openBytes(await extract(entries[0]), baseName(entries[0].name));
 				return;
 			}
-			// the zip rides the view thunk, freed when the trail drops it
-			visit(() => showZip(colly, zip, entries));
+			// the bytes ride the view thunk, freed when the trail drops it
+			visit(() => showArchive(colly, entries, extract));
 		} catch (error) {
 			say(`could not open: ${error.message}`, true);
 		}
 	};
 
 	const openColly = async colly => {
-		if ((/\.zip$/i).test(colly.filename)) {
-			openZip(colly);
+		if (ARCHIVE.test(colly.filename)) {
+			openArchive(colly);
 			return;
 		}
 		if (!OPENABLE.test(colly.filename)) {
-			say(`${colly.filename} needs lha to unpack; the editor cannot open it yet`, true);
+			say(`the editor cannot open ${colly.filename}`, true);
 			return;
 		}
 		say(`fetching ${colly.filename}...`);

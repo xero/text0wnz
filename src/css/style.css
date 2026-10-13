@@ -1323,7 +1323,7 @@
 		   spaces and only split a word the cell cannot fit */
 		&[data-view='artists'],
 		&[data-view='crews'],
-		&[data-view='zip'] {
+		&[data-view='archive'] {
 			@apply grid gap-2 content-start;
 			grid-template-columns: repeat(auto-fill, minmax(11em, 1fr));
 			> button {

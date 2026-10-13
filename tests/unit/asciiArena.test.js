@@ -2,11 +2,13 @@
  * asciiarena.se in-app browser: tabbed navigation (latest, artists,
  * crews, instant index search) against a MOCKED api (no network ever
  * leaves the test), the encoding hints that mirror the site's own
- * decode rule, and the zip colly path through the core zip reader.
+ * decode rule, and the archive colly paths through the core zip and
+ * lha readers.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createAsciiArena } from '../../src/js/client/asciiArena.js';
 import { buildZip } from '../corpus/zipFixture.js';
+import { realColly } from '../corpus/lhaFixture.js';
 import State from '../../src/js/client/state.js';
 
 vi.mock('../../src/js/client/state.js', () => ({ default: { modal: { open: vi.fn(), close: vi.fn() } } }));
@@ -32,6 +34,7 @@ const INDEX_TSV = [
 	'c«w-LIG.txt\tcollections/c«w-LIG\tFighter for Future\tCrew\tLive In Garbage',
 	'up-pack.zip\tcollections/up-pack\tTwo,ZoMbiE\tUp Rough\tZip Pack',
 	'oldskool.lha\tcollections/oldskool\tTwo\tUp Rough\tAmiga Archive',
+	'weird.dms\tcollections/weird\tTwo\tUp Rough\tDisk Image',
 ].join('\n');
 
 // 20 lone high bytes: latin-1 scene art, never valid UTF-8
@@ -166,7 +169,7 @@ describe('asciiarena browser', () => {
 		browser.setTab('search');
 		await flush();
 		// the bare tab reports the index size and renders nothing
-		expect(document.getElementById('arenaStatus').textContent).toContain('4 collys');
+		expect(document.getElementById('arenaStatus').textContent).toContain('5 collys');
 		const search = document.getElementById('arenaSearch');
 		expect(search.classList.contains('hide')).toBe(false);
 		search.value = 'garbage';
@@ -248,6 +251,7 @@ describe('asciiarena browser', () => {
 		expect(cards.map(c => c.querySelector('span').textContent)).toEqual([
 			'Zip Pack',
 			'Amiga Archive',
+			'Disk Image',
 		]);
 	});
 
@@ -273,7 +277,7 @@ describe('asciiarena browser', () => {
 		await flush();
 		await flush();
 		const list = document.getElementById('arenaList');
-		expect(list.dataset.view).toBe('zip');
+		expect(list.dataset.view).toBe('archive');
 		expect(document.getElementById('arenaBack').disabled).toBe(false);
 		const entries = [...document.querySelectorAll('#arenaList button')];
 		expect(entries.map(b => b.textContent)).toEqual(['one.asc', 'two.txt']);
@@ -285,10 +289,14 @@ describe('asciiarena browser', () => {
 		expect(opened[0].opts.preferBytes).toBe(true);
 	});
 
-	it('refuses lha collys with a status message, not a fetch', async () => {
+	it('lists an lha colly and opens a piece through the core reader', async () => {
+		const lha = realColly();
 		fetchMock.mockImplementation(async url => {
 			if (url.endsWith('/api/uhcsearch')) {
 				return { ok: true, text: async () => INDEX_TSV };
+			}
+			if (url.endsWith('/collections/oldskool/oldskool.lha')) {
+				return { ok: true, arrayBuffer: async () => lha.buffer };
 			}
 			throw new Error(`unexpected fetch ${url}`);
 		});
@@ -298,8 +306,38 @@ describe('asciiarena browser', () => {
 		);
 		card.click();
 		await flush();
+		await flush();
+		const list = document.getElementById('arenaList');
+		expect(list.dataset.view).toBe('archive');
+		// the readme and the .info icon are not openable and stay hidden
+		const entries = [...document.querySelectorAll('#arenaList button')];
+		expect(entries.map(b => b.textContent)).toEqual([
+			'File_ID.DiZ',
+			'iFd-Colly3.txt',
+		]);
+		entries[1].click();
+		await flush();
+		await flush();
+		expect(opened).toHaveLength(1);
+		expect(opened[0].file.name).toBe('iFd-Colly3.txt');
+		expect(opened[0].opts.font).toBe('Topaz+ 1200 8x16');
+	});
+
+	it('refuses collys in formats the editor cannot open, without a fetch', async () => {
+		fetchMock.mockImplementation(async url => {
+			if (url.endsWith('/api/uhcsearch')) {
+				return { ok: true, text: async () => INDEX_TSV };
+			}
+			throw new Error(`unexpected fetch ${url}`);
+		});
+		await browser.showByArtist('Two');
+		const card = [...document.querySelectorAll('#arenaList .arenaColly')].find(
+			c => c.querySelector('span').textContent === 'Disk Image',
+		);
+		card.click();
+		await flush();
 		const status = document.getElementById('arenaStatus');
-		expect(status.textContent).toContain('lha');
+		expect(status.textContent).toContain('cannot open');
 		expect(status.classList.contains('error')).toBe(true);
 		const rawCalls = fetchMock.mock.calls.filter(c =>
 			c[0].includes('/collections/'));
