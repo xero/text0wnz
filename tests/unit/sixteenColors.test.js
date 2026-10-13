@@ -156,6 +156,42 @@ describe('sixteen colors browser', () => {
 		expect(State.modal.open).toHaveBeenCalledWith('artpacks');
 	});
 
+	it('a different piece supersedes the one still loading', async () => {
+		let releaseZip;
+		const zipGate = new Promise(r => {
+			releaseZip = r;
+		});
+		const realImpl = fetchMock.getMockImplementation();
+		fetchMock.mockImplementation(async url => {
+			if (url.includes('raw.githubusercontent.com')) {
+				await zipGate;
+			}
+			return realImpl(url);
+		});
+		browser.show();
+		await flush();
+		[...document.querySelectorAll('#sixteenList button')]
+			.find(b => b.textContent.includes('2014'))
+			.click();
+		await flush();
+		document
+			.querySelector('#sixteenList .sixteenPack')
+			.click();
+		await flush();
+		const pieces = [...document.querySelectorAll('#sixteenList .sixteenPiece')];
+		// first click stalls on the zip; the second must win even though
+		// both ride the SAME archive (the superseded fetch aborts)
+		pieces.find(p => p.textContent.includes('FILE_ID')).click();
+		await flush();
+		pieces.find(p => p.textContent.includes('x0-art.ans')).click();
+		releaseZip();
+		await flush();
+		await flush();
+		await flush();
+		expect(opened).toHaveLength(1);
+		expect(opened[0].name).toBe('x0-art.ans');
+	});
+
 	it('resumes the current view when shown again mid-session', async () => {
 		browser.show();
 		await flush();

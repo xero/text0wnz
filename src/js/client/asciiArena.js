@@ -20,6 +20,7 @@ import {
 	pager,
 	createTrail,
 	createRenderGate,
+	createOpenGuard,
 	countHighBytes,
 	validUtf8,
 	amigaImportHints,
@@ -126,8 +127,8 @@ const createAsciiArena = ({ openFile, onExit }) => {
 	const rawUrl = (colly, name = colly.filename) =>
 		`${SITE}/collections/${encodeURIComponent(colly.dir)}/${encodeURIComponent(name)}`;
 
-	const fetchBytes = async url => {
-		const response = await fetch(url);
+	const fetchBytes = async (url, signal) => {
+		const response = await fetch(url, { signal });
 		if (!response.ok) {
 			throw new Error(`${response.status} from ${url}`);
 		}
@@ -578,14 +579,23 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		openFile(new File([bytes], name), amigaImportHints(bytes));
 	};
 
-	// clicking a piece is an explicit open: the editor load itself is
-	// never gated, but listings and status lines from a fetch the user
-	// has navigated away from must not repaint the current view
+	// clicking a piece is an explicit open, raced through the guard:
+	// the LAST click wins, a repeat click on the loading piece is a
+	// no-op, and stale fetches neither open nor repaint anything
+	const openGuard = createOpenGuard();
+
 	const openArchive = async colly => {
+		const op = openGuard(`open:${colly.filename}`);
+		if (!op) {
+			return;
+		}
 		const ticket = gate.enter();
 		say(`fetching ${colly.filename}...`);
 		try {
-			const bytes = await fetchBytes(rawUrl(colly));
+			const bytes = await fetchBytes(rawUrl(colly), op.signal);
+			if (!op.current()) {
+				return;
+			}
 			const isZip = (/\.zip$/i).test(colly.filename);
 			const entries = (isZip ? readZipEntries : readLhaEntries)(bytes)
 				.filter(e => isOpenableName(e.name));
@@ -606,9 +616,11 @@ const createAsciiArena = ({ openFile, onExit }) => {
 			// the bytes ride the view thunk, freed when the trail drops it
 			visit(() => showArchive(colly, entries, extract));
 		} catch (error) {
-			if (gate.current(ticket)) {
+			if (op.current() && gate.current(ticket)) {
 				say(`could not open: ${error.message}`, true);
 			}
+		} finally {
+			op.done();
 		}
 	};
 
@@ -621,14 +633,24 @@ const createAsciiArena = ({ openFile, onExit }) => {
 			say(`the editor cannot open ${colly.filename}`, true);
 			return;
 		}
+		const op = openGuard(`open:${colly.filename}`);
+		if (!op) {
+			return;
+		}
 		const ticket = gate.enter();
 		say(`fetching ${colly.filename}...`);
 		try {
-			openBytes(await fetchBytes(rawUrl(colly)), colly.filename);
+			const bytes = await fetchBytes(rawUrl(colly), op.signal);
+			if (!op.current()) {
+				return;
+			}
+			openBytes(bytes, colly.filename);
 		} catch (error) {
-			if (gate.current(ticket)) {
+			if (op.current() && gate.current(ticket)) {
 				say(`could not open: ${error.message}`, true);
 			}
+		} finally {
+			op.done();
 		}
 	};
 

@@ -21,6 +21,7 @@ import {
 	pager,
 	createTrail,
 	createRenderGate,
+	createOpenGuard,
 	isOpenableName,
 } from './browserKit.js';
 import {
@@ -522,9 +523,19 @@ const createSixteenColors = ({ openFile, onExit }) => {
 		openPiece({ name: packName, year: info.year, archive: info.archive }, file);
 	};
 
+	// the LAST clicked piece wins: a repeat click on the loading piece
+	// is a no-op, a different piece aborts the old zip fetch (even a
+	// sibling in the same pack; the refetch is the price of never
+	// letting a slow first click stomp a fast second one)
+	const openGuard = createOpenGuard();
+
 	const openPiece = async (pack, file) => {
 		if (!pack.archive) {
 			say('16colo.rs lists no zip for this pack, so it cannot be opened here', true);
+			return;
+		}
+		const op = openGuard(`open:${pack.name}/${file.name}`);
+		if (!op) {
 			return;
 		}
 		// the mirror strips spaces from archive names on sync
@@ -534,6 +545,7 @@ const createSixteenColors = ({ openFile, onExit }) => {
 			if (!cache.zips.has(zipName)) {
 				const response = await fetch(
 					`${MIRROR}/${pack.year}/${encodeURIComponent(zipName)}`,
+					{ signal: op.signal },
 				);
 				if (!response.ok) {
 					throw new Error(
@@ -549,17 +561,27 @@ const createSixteenColors = ({ openFile, onExit }) => {
 					cache.zips.delete(cache.zips.keys().next().value);
 				}
 			}
+			if (!op.current()) {
+				return;
+			}
 			const zip = cache.zips.get(zipName);
 			const entry = findZipEntry(readZipEntries(zip), file.name);
 			if (!entry) {
 				throw new Error(`${file.name} is not in ${zipName}`);
 			}
 			const bytes = await extractZipEntry(zip, entry);
+			if (!op.current()) {
+				return;
+			}
 			say(null);
 			State.modal.close();
 			openFile(new File([bytes], file.name));
 		} catch (error) {
-			say(`could not open: ${error.message}`, true);
+			if (op.current()) {
+				say(`could not open: ${error.message}`, true);
+			}
+		} finally {
+			op.done();
 		}
 	};
 

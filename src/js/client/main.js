@@ -134,6 +134,14 @@ const isImageFile = file => {
 	return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'avif'].includes(ext);
 };
 
+// loads are not serialized, so completion order can invert click
+// order: every open takes a generation ticket and a stale ticket
+// applies NOTHING. A repeat click on the file already in flight is
+// ignored outright (the key clears when its parse lands, or when any
+// different open supersedes it)
+let openSeq = 0;
+let openInFlight = null;
+
 const openHandler = (file, opts = {}) => {
 	// images trace, they do not parse: route them to the reference
 	// overlay instead of dumping their bytes into the canvas as text.
@@ -156,6 +164,12 @@ const openHandler = (file, opts = {}) => {
 		openFile.value = '';
 		return;
 	}
+	const openKey = `${file.name}:${file.size}`;
+	if (openInFlight === openKey) {
+		return;
+	}
+	const seq = ++openSeq;
+	openInFlight = openKey;
 	bodyContainer.classList.add('loading');
 	State.textArtCanvas.clearXBData();
 	State.textArtCanvas.clear();
@@ -170,6 +184,10 @@ const openHandler = (file, opts = {}) => {
 			fontName,
 			docNative,
 		) => {
+			if (seq !== openSeq) {
+				return;
+			}
+			openInFlight = null;
 			const indexOfPeriod = file.name.lastIndexOf('.');
 			let fileTitle;
 			if (indexOfPeriod !== -1) {
@@ -181,6 +199,10 @@ const openHandler = (file, opts = {}) => {
 			bodyContainer.classList.remove('loading');
 
 			const applyData = () => {
+				// a newer open can land while this one awaits its font
+				if (seq !== openSeq) {
+					return;
+				}
 				if (docNative) {
 					// tnd/dur/0wnz: plane-native load keeps truecolor and
 					// frames; legacy consumers read the lossy u16 mirror

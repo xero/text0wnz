@@ -111,6 +111,35 @@ const createRenderGate = () => {
 	};
 };
 
+// one explicit open in flight per browser, with no UI locking: a
+// repeat click on the target already loading is ignored, a click on
+// a DIFFERENT target supersedes the old open and aborts its fetch
+// (last click wins; completion order can invert click order when a
+// big archive races a small file)
+const createOpenGuard = () => {
+	let currentKey = null;
+	let controller = null;
+	return key => {
+		if (controller && currentKey === key) {
+			return null;
+		}
+		controller?.abort();
+		const mine = new AbortController();
+		controller = mine;
+		currentKey = key;
+		return {
+			signal: mine.signal,
+			current: () => controller === mine,
+			done: () => {
+				if (controller === mine) {
+					controller = null;
+					currentKey = null;
+				}
+			},
+		};
+	};
+};
+
 // back walks a trail of view thunks: every drill-down pushes the
 // view it left, so depth can differ per tab without special cases;
 // an exit thunk keeps back live at the root, stepping out of the
@@ -160,6 +189,7 @@ export {
 	pager,
 	createTrail,
 	createRenderGate,
+	createOpenGuard,
 	countHighBytes,
 	validUtf8,
 	amigaImportHints,

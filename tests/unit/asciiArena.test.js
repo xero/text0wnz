@@ -137,6 +137,99 @@ describe('asciiarena browser', () => {
 		expect(State.modal.close).toHaveBeenCalled();
 	});
 
+	it('ignores a repeat click on the colly already loading', async () => {
+		let release;
+		const gatep = new Promise(r => {
+			release = r;
+		});
+		fetchMock.mockImplementation(async url => {
+			if (url.includes('/api/collys?')) {
+				return {
+					ok: true,
+					json: async () => [
+						{
+							filename: 'zmb-wof1.txt',
+							name: 'Wheel of Fortune',
+							artists: 'ZoMbiE',
+							crews: '',
+							cdate: '1994-00-00',
+							total_count: 1,
+						},
+					],
+				};
+			}
+			if (url.endsWith('/collections/zmb-wof1/zmb-wof1.txt')) {
+				await gatep;
+				return { ok: true, arrayBuffer: async () => amigaBytes().buffer };
+			}
+			throw new Error(`unexpected fetch ${url}`);
+		});
+		await browser.showLatest(1);
+		const card = document.querySelector('#arenaList .arenaColly');
+		card.click();
+		card.click();
+		release();
+		await flush();
+		await flush();
+		expect(opened).toHaveLength(1);
+		const rawCalls = fetchMock.mock.calls.filter(c =>
+			c[0].includes('/collections/zmb-wof1/'));
+		expect(rawCalls).toHaveLength(1);
+	});
+
+	it('a different colly supersedes the one still loading', async () => {
+		let releaseFirst;
+		const firstGate = new Promise(r => {
+			releaseFirst = r;
+		});
+		fetchMock.mockImplementation(async url => {
+			if (url.includes('/api/collys?')) {
+				return {
+					ok: true,
+					json: async () => [
+						{
+							filename: 'zmb-wof1.txt',
+							name: 'Wheel of Fortune',
+							artists: 'ZoMbiE',
+							crews: '',
+							cdate: '1994-00-00',
+							total_count: 2,
+						},
+						{
+							filename: 'fzn-tinf.txt',
+							name: 'Textmode Inferno',
+							artists: 'FuZioN',
+							crews: '',
+							cdate: '2026-09-19',
+							total_count: 2,
+						},
+					],
+				};
+			}
+			if (url.endsWith('/collections/zmb-wof1/zmb-wof1.txt')) {
+				await firstGate;
+				return { ok: true, arrayBuffer: async () => amigaBytes().buffer };
+			}
+			if (url.endsWith('/collections/fzn-tinf/fzn-tinf.txt')) {
+				return { ok: true, arrayBuffer: async () => amigaBytes().buffer };
+			}
+			throw new Error(`unexpected fetch ${url}`);
+		});
+		await browser.showLatest(1);
+		const cards = [...document.querySelectorAll('#arenaList .arenaColly')];
+		cards[0].click();
+		cards[1].click();
+		await flush();
+		await flush();
+		// the slow first fetch lands AFTER the second finished: it must
+		// not reopen the old colly over the one the user wants
+		releaseFirst();
+		await flush();
+		await flush();
+		expect(opened).toHaveLength(1);
+		expect(opened[0].file.name).toBe('fzn-tinf.txt');
+	});
+
 	it('keeps the UTF-8 path for ascii-clean files', async () => {
 		const art = new TextEncoder().encode('plain ascii colly');
 		fetchMock.mockImplementation(async url => {
