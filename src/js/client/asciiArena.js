@@ -19,6 +19,7 @@ import {
 	countButton,
 	pager,
 	createTrail,
+	createRenderGate,
 } from './browserKit.js';
 import {
 	extractZipEntry,
@@ -58,6 +59,7 @@ const createAsciiArena = ({ openFile }) => {
 	// ------------------------------------------------- tabs and history
 
 	const { visit, swap, back, reset } = createTrail(btnBack);
+	const gate = createRenderGate();
 
 	const TABS = {
 		latest: { root: () => showLatest(1), hint: null },
@@ -300,6 +302,7 @@ const createAsciiArena = ({ openFile }) => {
 	// ------------------------------------------------------------ views
 
 	const showLatest = async page => {
+		const ticket = gate.enter();
 		crumb.textContent = 'latest';
 		clearList('latest');
 		say('loading latest collys...');
@@ -310,7 +313,12 @@ const createAsciiArena = ({ openFile }) => {
 				`${API}/collys?page=${page}&pagesize=${PAGESIZE}&sort=cdate&asc=D`,
 			);
 		} catch (error) {
-			say(`asciiarena.se did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`asciiarena.se did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		say(rows.length ? null : 'no collys on record');
@@ -324,6 +332,7 @@ const createAsciiArena = ({ openFile }) => {
 	};
 
 	const showArtists = async (filter, page) => {
+		const ticket = gate.enter();
 		crumb.textContent = filter ? `artists / ${filter}` : 'artists';
 		clearList('artists');
 		say('loading artists...');
@@ -334,7 +343,12 @@ const createAsciiArena = ({ openFile }) => {
 				`${API}/artists?page=${page}&pagesize=${PAGESIZE}&sort=nick&asc=A${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
 			);
 		} catch (error) {
-			say(`asciiarena.se did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`asciiarena.se did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		say(rows.length ? null : 'no artists match');
@@ -343,16 +357,22 @@ const createAsciiArena = ({ openFile }) => {
 			list.appendChild(pager(page, pages, p => swap(() => showArtists(filter, p)), 'arenaPager'));
 		}
 		for (const row of rows) {
-			const open = () => visit(() => showByArtist(row.nick));
-			list.appendChild(
-				row.crews
-					? countButton(row.nick, row.crews, open, 'arenaItem')
-					: button(row.nick, open, 'arenaItem'),
-			);
+			// crews are names, not a count: they stack under the nick in
+			// the sub style instead of riding the kbd tag
+			const el = button(row.nick, () =>
+				visit(() => showByArtist(row.nick)), 'arenaItem');
+			if (row.crews) {
+				const sub = document.createElement('span');
+				sub.className = 'arenaSub';
+				sub.textContent = row.crews;
+				el.appendChild(sub);
+			}
+			list.appendChild(el);
 		}
 	};
 
 	const showByArtist = async nick => {
+		const ticket = gate.enter();
 		crumb.textContent = `artist / ${nick}`;
 		clearList('collys');
 		say(`loading ${nick}...`);
@@ -362,7 +382,12 @@ const createAsciiArena = ({ openFile }) => {
 			rows = (await ensureIndex()).filter(r =>
 				listNames(r.artists).includes(needle));
 		} catch (error) {
-			say(`asciiarena.se did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`asciiarena.se did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		say(rows.length ? null : 'no collys on record for this artist');
@@ -372,6 +397,7 @@ const createAsciiArena = ({ openFile }) => {
 	};
 
 	const showCrews = async (filter, page) => {
+		const ticket = gate.enter();
 		crumb.textContent = filter ? `crews / ${filter}` : 'crews';
 		clearList('crews');
 		say('loading crews...');
@@ -382,7 +408,12 @@ const createAsciiArena = ({ openFile }) => {
 				`${API}/crews?page=${page}&pagesize=${PAGESIZE}&sort=name&asc=A${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
 			);
 		} catch (error) {
-			say(`asciiarena.se did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`asciiarena.se did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		say(rows.length ? null : 'no crews match');
@@ -399,6 +430,7 @@ const createAsciiArena = ({ openFile }) => {
 	};
 
 	const showByCrew = async name => {
+		const ticket = gate.enter();
 		crumb.textContent = `crew / ${name}`;
 		clearList('collys');
 		say(`loading ${name}...`);
@@ -408,7 +440,12 @@ const createAsciiArena = ({ openFile }) => {
 			rows = (await ensureIndex()).filter(r =>
 				listNames(r.crews).includes(needle));
 		} catch (error) {
-			say(`asciiarena.se did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`asciiarena.se did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		say(rows.length ? null : 'no collys on record for this crew');
@@ -418,6 +455,7 @@ const createAsciiArena = ({ openFile }) => {
 	};
 
 	const showSearch = async query => {
+		const ticket = gate.enter();
 		crumb.textContent = query ? `search / ${query}` : 'search';
 		clearList('collys');
 		say('loading the colly index...');
@@ -425,7 +463,12 @@ const createAsciiArena = ({ openFile }) => {
 		try {
 			index = await ensureIndex();
 		} catch (error) {
-			say(`asciiarena.se did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`asciiarena.se did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		if (!query) {
@@ -451,6 +494,9 @@ const createAsciiArena = ({ openFile }) => {
 	};
 
 	const showZip = (colly, zip, entries) => {
+		// a sync render still bumps the gate, or a fetch already in
+		// flight would paint over this list when it lands
+		gate.enter();
 		crumb.textContent = colly.filename;
 		clearList('zip');
 		say(null);

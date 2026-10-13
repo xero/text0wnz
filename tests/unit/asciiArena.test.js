@@ -207,7 +207,10 @@ describe('asciiarena browser', () => {
 		const artist = [...document.querySelectorAll('#arenaList button')].find(
 			b => b.firstChild?.textContent === 'ZoMbiE',
 		);
-		expect(artist.querySelector('kbd').textContent).toBe('Independent');
+		// crews are names, not counts: they stack under the nick in the
+		// sub style, never in a kbd tag
+		expect(artist.querySelector('kbd')).toBeNull();
+		expect(artist.querySelector('.arenaSub').textContent).toBe('Independent');
 		artist.click();
 		await flush();
 		const list = document.getElementById('arenaList');
@@ -338,6 +341,50 @@ describe('asciiarena browser', () => {
 		// ansi color codes strip out of the preview text
 		expect(frames[0].querySelector('pre').textContent).toBe('Wheel of Fortune diz');
 		expect(frames[1].querySelector('pre')).toBeNull();
+	});
+
+	it('drops a stale fetch instead of stomping the current view', async () => {
+		let releaseLatest;
+		fetchMock.mockImplementation(async url => {
+			if (url.includes('/api/collys?')) {
+				await new Promise(resolve => {
+					releaseLatest = resolve;
+				});
+				return {
+					ok: true,
+					json: async () => [
+						{
+							filename: 'late.txt',
+							name: 'Late',
+							artists: '',
+							crews: '',
+							cdate: '2020-01-01',
+							total_count: 1,
+						},
+					],
+				};
+			}
+			if (url.includes('/api/crews?')) {
+				return {
+					ok: true,
+					json: async () => [{ name: 'Up Rough', releases_cnt: 2, total_count: 1 }],
+				};
+			}
+			throw new Error(`unexpected fetch ${url}`);
+		});
+		const latest = browser.showLatest(1);
+		await browser.showCrews('', 1);
+		releaseLatest();
+		await latest;
+		await flush();
+		const list = document.getElementById('arenaList');
+		expect(list.dataset.view).toBe('crews');
+		expect([...list.querySelectorAll('.arenaColly')]).toHaveLength(0);
+		expect(
+			[...list.querySelectorAll('button')].some(
+				b => b.firstChild?.textContent === 'Up Rough',
+			),
+		).toBe(true);
 	});
 
 	it('surfaces API failures in the status line as an error state', async () => {

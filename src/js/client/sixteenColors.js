@@ -20,6 +20,7 @@ import {
 	countButton,
 	pager,
 	createTrail,
+	createRenderGate,
 } from './browserKit.js';
 import {
 	extractZipEntry,
@@ -63,6 +64,7 @@ const createSixteenColors = ({ openFile }) => {
 	// ------------------------------------------------- tabs and history
 
 	const { visit, swap, back, reset, rerun } = createTrail(btnBack);
+	const gate = createRenderGate();
 
 	const TABS = {
 		year: { root: () => showYears(), hint: null },
@@ -202,6 +204,7 @@ const createSixteenColors = ({ openFile }) => {
 	// ------------------------------------------------------------ views
 
 	const showYears = async () => {
+		const ticket = gate.enter();
 		where = { view: 'years' };
 		crumb.textContent = 'years';
 		clearList('years');
@@ -209,7 +212,12 @@ const createSixteenColors = ({ openFile }) => {
 		try {
 			cache.years ??= await fetchJson(`${API}/year`);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`16colo.rs did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		say(null);
@@ -222,6 +230,7 @@ const createSixteenColors = ({ openFile }) => {
 	};
 
 	const showPacks = async (year, page) => {
+		const ticket = gate.enter();
 		where = { view: 'packs', year };
 		crumb.textContent = String(year);
 		clearList('packs');
@@ -233,7 +242,12 @@ const createSixteenColors = ({ openFile }) => {
 				`${API}/year/${year}?page=${page}`,
 			);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`16colo.rs did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		say(null);
@@ -247,6 +261,7 @@ const createSixteenColors = ({ openFile }) => {
 	};
 
 	const showPackSearch = async (query, page) => {
+		const ticket = gate.enter();
 		where = { view: 'packsearch', name: query };
 		crumb.textContent = query ? `search / ${query}` : 'all packs';
 		clearList('packsearch');
@@ -258,7 +273,12 @@ const createSixteenColors = ({ openFile }) => {
 				`${API}/pack?page=${page}${query ? `&filter=${encodeURIComponent(query)}` : ''}`,
 			);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`16colo.rs did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		const results = data.results ?? [];
@@ -273,6 +293,7 @@ const createSixteenColors = ({ openFile }) => {
 	};
 
 	const showArtists = async (filter, page) => {
+		const ticket = gate.enter();
 		where = { view: 'artists', name: filter };
 		crumb.textContent = filter ? `artists / ${filter}` : 'artists';
 		clearList('artists');
@@ -284,7 +305,12 @@ const createSixteenColors = ({ openFile }) => {
 				`${API}/artist?page=${page}${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
 			);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`16colo.rs did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		const results = data.results ?? [];
@@ -306,6 +332,7 @@ const createSixteenColors = ({ openFile }) => {
 	};
 
 	const showArtistWorks = async name => {
+		const ticket = gate.enter();
 		where = { view: 'artistworks', name };
 		crumb.textContent = `artist / ${name}`;
 		clearList('artistworks');
@@ -317,7 +344,12 @@ const createSixteenColors = ({ openFile }) => {
 				`${API}/artist/${encodeURIComponent(name)}`,
 			);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`16colo.rs did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		const years = Object.keys(data.results ?? {}).sort((a, b) => b - a);
@@ -352,6 +384,7 @@ const createSixteenColors = ({ openFile }) => {
 	};
 
 	const showCrews = async (filter, page) => {
+		const ticket = gate.enter();
 		where = { view: 'crews', name: filter };
 		crumb.textContent = filter ? `crews / ${filter}` : 'crews';
 		clearList('crews');
@@ -363,7 +396,12 @@ const createSixteenColors = ({ openFile }) => {
 				`${API}/group?page=${page}${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
 			);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`16colo.rs did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		const results = data.results ?? [];
@@ -386,6 +424,7 @@ const createSixteenColors = ({ openFile }) => {
 	};
 
 	const showCrewPacks = async tag => {
+		const ticket = gate.enter();
 		where = { view: 'crewpacks', name: tag };
 		crumb.textContent = `crew / ${tag}`;
 		clearList('crewpacks');
@@ -397,7 +436,12 @@ const createSixteenColors = ({ openFile }) => {
 				`${API}/group/${encodeURIComponent(tag)}`,
 			);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`16colo.rs did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		const byYear = data.results?.packs ?? {};
@@ -411,6 +455,7 @@ const createSixteenColors = ({ openFile }) => {
 	};
 
 	const showFiles = async pack => {
+		const ticket = gate.enter();
 		where = { view: 'files', pack };
 		crumb.textContent = pack.name;
 		clearList('files');
@@ -419,7 +464,12 @@ const createSixteenColors = ({ openFile }) => {
 		try {
 			info = await loadPack(pack.name);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`16colo.rs did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		const year = pack.year ?? info.year;

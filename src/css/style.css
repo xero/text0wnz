@@ -1319,14 +1319,15 @@
 				@apply w-full text-center;
 			}
 		}
-		/* artist and crew names run longer than year labels */
+		/* artist and crew names run longer than year labels; wrap on
+		   spaces and only split a word the cell cannot fit */
 		&[data-view='artists'],
 		&[data-view='crews'],
 		&[data-view='zip'] {
 			@apply grid gap-2 content-start;
 			grid-template-columns: repeat(auto-fill, minmax(11em, 1fr));
 			> button {
-				@apply w-full text-center break-all;
+				@apply w-full text-center break-words;
 			}
 		}
 		&[data-view='packs'],
@@ -1339,6 +1340,11 @@
 		}
 		.sixteenSub {
 			@apply text-subtitle text-xs;
+		}
+		/* sub lines are names, not counts: they stack on their own row
+		   under the label instead of trailing it like a kbd count */
+		.arenaSub {
+			@apply block text-subtitle text-xs break-words;
 		}
 		/* an artist's works, one section per pack with its own masonry */
 		.sixteenWorks {
@@ -1362,7 +1368,7 @@
 				}
 			}
 			span {
-				@apply text-xs break-all;
+				@apply text-xs break-words;
 			}
 		}
 		/* colly cards preview their diz as text, not a thumbnail: the
@@ -1380,10 +1386,7 @@
 				}
 			}
 			span {
-				@apply text-xs break-all;
-			}
-			.arenaSub {
-				@apply text-subtitle text-xs;
+				@apply text-xs break-words;
 			}
 		}
 		/* masonry: balanced columns from the API's thumbnail sizes */
@@ -1399,9 +1402,14 @@
 				@apply w-full h-auto;
 			}
 			span {
-				@apply text-xs break-all;
+				@apply text-xs break-words;
 			}
 		}
+	}
+	/* arena artist cells stack the nick over the crew names; the 16c
+	   artist list keeps its name-beside-count row layout */
+	#arenaList[data-view='artists'] > button {
+		@apply flex-col items-center;
 	}
 	#sixteenStatus,
 	#arenaStatus {

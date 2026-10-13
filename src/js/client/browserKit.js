@@ -60,6 +60,16 @@ const pager = (page, pages, goPage, className) => {
 	return el;
 };
 
+// every view render takes a ticket and checks it after its fetch: a
+// stale response must not stomp the view the user has moved on to
+const createRenderGate = () => {
+	let run = 0;
+	return {
+		enter: () => ++run,
+		current: ticket => ticket === run,
+	};
+};
+
 // back walks a trail of view thunks: every drill-down pushes the
 // view it left, so depth can differ per tab without special cases
 const createTrail = backButton => {
@@ -96,4 +106,13 @@ const createTrail = backButton => {
 	};
 };
 
-export { makeSay, fetchJson, fetchCached, button, countButton, pager, createTrail };
+export {
+	makeSay,
+	fetchJson,
+	fetchCached,
+	button,
+	countButton,
+	pager,
+	createTrail,
+	createRenderGate,
+};
