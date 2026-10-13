@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createAsciiBrushController } from '../../src/js/client/asciiBrush.js';
 
-const drawCalls = [];
+// last write wins, exactly like editor cells inside one undo group
+const grid = new Map();
+const cellAt = (x, y) => grid.get(`${x},${y}`);
 
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
@@ -13,7 +15,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 			startUndo: vi.fn(),
 			draw: vi.fn(callback => {
 				callback((charCode, fg, bg, x, y) => {
-					drawCalls.push({ charCode, fg, bg, x, y });
+					grid.set(`${x},${y}`, { charCode, fg, bg });
 				});
 			}),
 			getBlock: vi.fn(() => ({
@@ -44,7 +46,7 @@ describe('createAsciiBrushController', () => {
 	let controller;
 
 	beforeEach(() => {
-		drawCalls.length = 0;
+		grid.clear();
 		vi.clearAllMocks();
 		controller = createAsciiBrushController();
 		controller.enable();
@@ -54,10 +56,16 @@ describe('createAsciiBrushController', () => {
 		controller.disable();
 	});
 
-	it('starts an undo group and stamps $ on pointer down', () => {
-		fire('onTextCanvasDown', { x: 5, y: 5, halfBlockY: 10 });
+	it('starts an undo group and leaves a pebble on pointer down', () => {
+		fire('onTextCanvasDown', { x: 5, y: 5, halfBlockY: 11 });
 		expect(State.textArtCanvas.startUndo).toHaveBeenCalledTimes(1);
-		expect(drawCalls).toEqual([{ charCode: 36, fg: 7, bg: 4, x: 5, y: 5 }]);
+		// lower half tap: period
+		expect(cellAt(5, 5)).toMatchObject({ charCode: 46, fg: 7, bg: 4 });
+	});
+
+	it('weights an upper half tap with an apostrophe', () => {
+		fire('onTextCanvasDown', { x: 5, y: 5, halfBlockY: 10 });
+		expect(cellAt(5, 5).charCode).toBe(39);
 	});
 
 	it('preserves the existing cell background', () => {
@@ -66,49 +74,53 @@ describe('createAsciiBrushController', () => {
 			foregroundColor: 15,
 			backgroundColor: 1,
 		});
-		fire('onTextCanvasDown', { x: 0, y: 0, halfBlockY: 0 });
-		expect(drawCalls[0].bg).toBe(1);
+		fire('onTextCanvasDown', { x: 0, y: 0, halfBlockY: 1 });
+		expect(cellAt(0, 0).bg).toBe(1);
 	});
 
-	it('interpolates a continuous path across a fast drag', () => {
-		fire('onTextCanvasDown', { x: 0, y: 0, halfBlockY: 0 });
-		fire('onTextCanvasDrag', { x: 4, y: 4, halfBlockY: 8 });
-		const cells = drawCalls.map(c => [c.x, c.y]);
-		expect(cells).toEqual([
-			[0, 0],
-			[1, 1],
-			[2, 2],
-			[3, 3],
-			[4, 4],
-		]);
-	});
-
-	it('does not restamp the previous cell on adjacent drags', () => {
-		fire('onTextCanvasDown', { x: 3, y: 3, halfBlockY: 6 });
-		fire('onTextCanvasDrag', { x: 4, y: 3, halfBlockY: 6 });
-		expect(drawCalls).toHaveLength(2);
-		expect(drawCalls[1]).toMatchObject({ x: 4, y: 3 });
-	});
-
-	it('ignores drags that stay in the same cell', () => {
-		fire('onTextCanvasDown', { x: 3, y: 3, halfBlockY: 6 });
-		fire('onTextCanvasDrag', { x: 3, y: 3, halfBlockY: 7 });
-		expect(drawCalls).toHaveLength(1);
-	});
-
-	it('resets the stroke on pointer up', () => {
-		fire('onTextCanvasDown', { x: 0, y: 0, halfBlockY: 0 });
+	it('resolves a flat drag to underscores, gap free', () => {
+		fire('onTextCanvasDown', { x: 2, y: 8, halfBlockY: 17 });
+		fire('onTextCanvasDrag', { x: 8, y: 8, halfBlockY: 17 });
 		fire('onTextCanvasUp', {});
-		fire('onTextCanvasDown', { x: 10, y: 0, halfBlockY: 0 });
-		// no interpolation between strokes
-		expect(drawCalls).toHaveLength(2);
+		for (let x = 2; x <= 8; x++) {
+			expect(cellAt(x, 8).charCode).toBe(95);
+		}
+		expect(cellAt(1, 8)).toBeUndefined();
+		expect(cellAt(9, 8)).toBeUndefined();
+	});
+
+	it('resolves a 45 degree drag to backslashes', () => {
+		fire('onTextCanvasDown', { x: 0, y: 0, halfBlockY: 1 });
+		fire('onTextCanvasDrag', { x: 4, y: 4, halfBlockY: 9 });
+		fire('onTextCanvasUp', {});
+		for (let i = 0; i <= 4; i++) {
+			expect(cellAt(i, i).charCode).toBe(92);
+		}
+	});
+
+	it('does not interpolate between strokes', () => {
+		fire('onTextCanvasDown', { x: 0, y: 0, halfBlockY: 1 });
+		fire('onTextCanvasUp', {});
+		fire('onTextCanvasDown', { x: 10, y: 0, halfBlockY: 1 });
+		fire('onTextCanvasUp', {});
+		expect(cellAt(5, 0)).toBeUndefined();
 		expect(State.textArtCanvas.startUndo).toHaveBeenCalledTimes(2);
+	});
+
+	it('ignores drags before a down and after an up', () => {
+		fire('onTextCanvasDrag', { x: 1, y: 1, halfBlockY: 3 });
+		expect(grid.size).toBe(0);
+		fire('onTextCanvasDown', { x: 0, y: 0, halfBlockY: 1 });
+		fire('onTextCanvasUp', {});
+		grid.clear();
+		fire('onTextCanvasDrag', { x: 3, y: 3, halfBlockY: 7 });
+		expect(grid.size).toBe(0);
 	});
 
 	it('stops listening when disabled', () => {
 		controller.disable();
-		fire('onTextCanvasDown', { x: 1, y: 1, halfBlockY: 2 });
-		expect(drawCalls).toHaveLength(0);
+		fire('onTextCanvasDown', { x: 1, y: 1, halfBlockY: 3 });
+		expect(grid.size).toBe(0);
 		controller.enable();
 	});
 });
