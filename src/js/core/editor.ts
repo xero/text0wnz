@@ -322,6 +322,12 @@ export const createEditorCore = (
 	const drawBlocks: EditorCore['drawBlocks'] = (callback, optimise) => {
 		const blocks: Array<[number, number, number]> = [];
 		callback((charCode, foreground, background, x, y) => {
+			// defense in depth (wrap audit): an out of range cell would
+			// wrap through the index to another row; tools clamp, but no
+			// future tool's math may corrupt a neighboring row
+			if (x < 0 || x >= columns() || y < 0 || y >= doc.getRows()) {
+				return;
+			}
 			const index = y * columns() + x;
 			blocks.push([index, x, y]);
 			writeCell(index, { charCode, fg: foreground, bg: background }, true);
@@ -363,6 +369,10 @@ export const createEditorCore = (
 		const blocks: Array<[number, number, number]> = [];
 		callback((foreground, x, y) => {
 			const textY = Math.floor(y / 2);
+			// same wrap guard as drawBlocks, in half block coordinates
+			if (x < 0 || x >= columns() || textY < 0 || textY >= doc.getRows()) {
+				return;
+			}
 			const index = textY * columns() + x;
 			blocks.push([index, x, textY]);
 			paintHalf(index, foreground, y);
@@ -474,8 +484,14 @@ export const createEditorCore = (
 			});
 		},
 		quickDrawU16: blocks => {
+			const frameLength = doc.frames[currentFrame].glyph.length;
 			for (const block of blocks) {
 				const [index, word] = block;
+				// network input: a wrapped or out of range index must not
+				// land in another row or read past the planes
+				if (!Number.isInteger(index) || index < 0 || index >= frameLength) {
+					continue;
+				}
 				const cell: EditCell = {
 					charCode: word >> 8,
 					fg: word & 15,
@@ -492,6 +508,9 @@ export const createEditorCore = (
 			// stays consistent through the same packWord projection
 			const frame = doc.frames[currentFrame];
 			for (const { index, glyph, fg, bg } of cells) {
+				if (!Number.isInteger(index) || index < 0 || index >= frame.glyph.length) {
+					continue;
+				}
 				frame.glyph[index] = glyph >>> 0;
 				frame.fg[index] = fg >>> 0;
 				frame.bg[index] = bg >>> 0;
