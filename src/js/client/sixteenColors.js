@@ -41,7 +41,7 @@ const COL_WIDTH = 196;
 /** caption + padding under each thumbnail, for column balancing */
 const CAPTION_PX = 36;
 
-const createSixteenColors = ({ openFile }) => {
+const createSixteenColors = ({ openFile, onExit }) => {
 	const crumb = $('sixteenCrumb');
 	const list = $('sixteenList');
 	const status = $('sixteenStatus');
@@ -63,8 +63,10 @@ const createSixteenColors = ({ openFile }) => {
 	// ------------------------------------------------- tabs and history
 
 	// backing out of the root view returns to the artpacks landing
-	const { visit, swap, back, reset, rerun } = createTrail(btnBack, () =>
-		State.modal.open('artpacks'));
+	const { visit, swap, back, reset, rerun } = createTrail(
+		btnBack,
+		onExit ?? (() => State.modal.open('artpacks')),
+	);
 	const gate = createRenderGate();
 
 	const TABS = {
@@ -575,9 +577,15 @@ const createSixteenColors = ({ openFile }) => {
 		}
 	});
 
+	// the view DOM survives modal closes, so reopening mid-session
+	// resumes wherever the artist left off; only the first show seeds
+	let started = false;
 	const show = () => {
 		State.modal.open('sixteen');
-		setTab('year');
+		if (!started) {
+			started = true;
+			setTab('year');
+		}
 	};
 
 	return {

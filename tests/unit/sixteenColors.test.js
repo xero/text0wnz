@@ -151,6 +151,22 @@ describe('sixteen colors browser', () => {
 		expect(State.modal.open).toHaveBeenCalledWith('artpacks');
 	});
 
+	it('resumes the current view when shown again mid-session', async () => {
+		browser.show();
+		await flush();
+		const list = document.getElementById('sixteenList');
+		[...document.querySelectorAll('#sixteenList button')]
+			.find(b => b.textContent.includes('2014'))
+			.click();
+		await flush();
+		expect(list.dataset.view).toBe('packs');
+		// a later show (after opening a piece, say) must not reset
+		browser.show();
+		await flush();
+		expect(State.modal.open).toHaveBeenLastCalledWith('sixteen');
+		expect(list.dataset.view).toBe('packs');
+	});
+
 	it('browses artists and opens a piece by hydrating its pack', async () => {
 		fetchMock.mockImplementation(async url => {
 			if (url.includes('/artist?page=1&filter=aven')) {

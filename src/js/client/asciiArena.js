@@ -41,7 +41,7 @@ const PAGESIZE = 24;
 /** instant search renders at most this many diz cards per query */
 const RESULT_CAP = 120;
 
-const createAsciiArena = ({ openFile }) => {
+const createAsciiArena = ({ openFile, onExit }) => {
 	const crumb = $('arenaCrumb');
 	const list = $('arenaList');
 	const status = $('arenaStatus');
@@ -60,8 +60,10 @@ const createAsciiArena = ({ openFile }) => {
 	// ------------------------------------------------- tabs and history
 
 	// backing out of the root view returns to the artpacks landing
-	const { visit, swap, back, reset } = createTrail(btnBack, () =>
-		State.modal.open('artpacks'));
+	const { visit, swap, back, reset } = createTrail(
+		btnBack,
+		onExit ?? (() => State.modal.open('artpacks')),
+	);
 	const gate = createRenderGate();
 
 	const TABS = {
@@ -581,9 +583,15 @@ const createAsciiArena = ({ openFile }) => {
 		}
 	});
 
+	// the view DOM survives modal closes, so reopening mid-session
+	// resumes wherever the artist left off; only the first show seeds
+	let started = false;
 	const show = () => {
 		State.modal.open('arena');
-		setTab('latest');
+		if (!started) {
+			started = true;
+			setTab('latest');
+		}
 	};
 
 	return {

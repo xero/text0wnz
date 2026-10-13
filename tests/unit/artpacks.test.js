@@ -46,6 +46,25 @@ describe('artpacks landing', () => {
 		expect(arena.show).toHaveBeenCalledTimes(1);
 	});
 
+	it('reopens straight into the last visited site', () => {
+		document.getElementById('artpacksSixteen').click();
+		landing.show();
+		expect(sixteen.show).toHaveBeenCalledTimes(2);
+		expect(State.modal.open).not.toHaveBeenCalledWith('artpacks');
+		document.getElementById('artpacksArena').click();
+		landing.show();
+		expect(arena.show).toHaveBeenCalledTimes(2);
+	});
+
+	it('backing out to the landing forgets the site context', () => {
+		document.getElementById('artpacksSixteen').click();
+		landing.showLanding();
+		expect(State.modal.open).toHaveBeenCalledWith('artpacks');
+		landing.show();
+		expect(sixteen.show).toHaveBeenCalledTimes(1);
+		expect(State.modal.open).toHaveBeenLastCalledWith('artpacks');
+	});
+
 	it('closes the modal from the close button', () => {
 		document.getElementById('artpacksClose').click();
 		expect(State.modal.close).toHaveBeenCalledTimes(1);

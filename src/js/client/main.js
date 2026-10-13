@@ -595,10 +595,19 @@ const initializeAppComponents = async () => {
 		openFile.click();
 	});
 	// both artpack site browsers open straight into the editor; one
-	// landing modal fronts them from a single File menu entry
-	const sixteen = createSixteenColors({ openFile: openHandler });
-	const arena = createAsciiArena({ openFile: openHandler });
-	const artpacks = createArtpacksLanding({ sixteen, arena });
+	// landing modal fronts them from a single File menu entry and
+	// remembers which site the artist was last inside
+	let artpacks;
+	const exitToLanding = () => artpacks?.showLanding();
+	const sixteen = createSixteenColors({
+		openFile: openHandler,
+		onExit: exitToLanding,
+	});
+	const arena = createAsciiArena({
+		openFile: openHandler,
+		onExit: exitToLanding,
+	});
+	artpacks = createArtpacksLanding({ sixteen, arena });
 	onClick($('browseArtpacks'), () => artpacks?.show());
 
 	// native zip and lha opens route through the same unpack path
