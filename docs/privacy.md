@@ -25,7 +25,7 @@ We do **not** use cookies, tracking technologies, or similar mechanisms.
 
 ## In-App Art Archive Browsers
 
-The **File → Browse** menu items connect to third-party art archives. These requests happen only when you use the browsers; nothing contacts these services on launch or in the background.
+The **File → Browse Artpacks** entry connects to third-party art archives. These requests happen only when you use the browsers; nothing contacts these services on launch or in the background.
 
 - **16colo.rs**: pack listings and thumbnails load from `api.16colo.rs` and `16colo.rs`; artwork bytes load from the project's archive mirror on `raw.githubusercontent.com`.
 - **aSCIIaRENA**: colly listings, the search index, previews, and artwork load from `asciiarena.se`.

@@ -13,6 +13,7 @@ import { createFramesPanel } from './frames.js';
 import { createMinimap } from './minimap.js';
 import { createSixteenColors } from './sixteenColors.js';
 import { createAsciiArena } from './asciiArena.js';
+import { createArtpacksLanding } from './artpacks.js';
 import { createArchiveOpener, isArchiveFile } from './archiveOpen.js';
 import { createPluginManager } from './plugins.js';
 import { createReferenceImage } from './referenceImage.js';
@@ -133,6 +134,25 @@ const isImageFile = file => {
 	return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'avif'].includes(ext);
 };
 
+// loads are not serialized, so completion order can invert click
+// order: every open takes a generation ticket and a stale ticket
+// applies NOTHING. A repeat click on the file already in flight is
+// ignored outright (the key clears when its parse lands, or when any
+// different open supersedes it)
+let openSeq = 0;
+let openInFlight = null;
+// applyData's own dispatch must not cancel the open that fired it;
+// every OTHER new document (File > New, a collab join) obsoletes any
+// parse still in flight, or its late callback would stamp the old
+// file over the fresh canvas
+let dispatchingOwnOpen = false;
+document.addEventListener('onNewDocument', () => {
+	if (!dispatchingOwnOpen) {
+		openSeq++;
+		openInFlight = null;
+	}
+});
+
 const openHandler = (file, opts = {}) => {
 	// images trace, they do not parse: route them to the reference
 	// overlay instead of dumping their bytes into the canvas as text.
@@ -155,9 +175,34 @@ const openHandler = (file, opts = {}) => {
 		openFile.value = '';
 		return;
 	}
+	// lastModified keeps two same-sized files (two packs' FILE_ID.DIZ)
+	// from colliding; browser repeat clicks dedupe upstream in the
+	// open guards, so the fresh timestamp there costs nothing
+	const openKey = `${file.name}:${file.size}:${file.lastModified ?? 0}`;
+	if (openInFlight === openKey) {
+		return;
+	}
+	const seq = ++openSeq;
+	openInFlight = openKey;
 	bodyContainer.classList.add('loading');
 	State.textArtCanvas.clearXBData();
 	State.textArtCanvas.clear();
+	// a parser throw must not wedge the in-flight key or the loading
+	// veil; the canvas was already cleared, that loss is honest
+	const onError = error => {
+		console.error('[App] could not open file:', error);
+		if (seq === openSeq) {
+			openInFlight = null;
+			bodyContainer.classList.remove('loading');
+			// chromium fires no change event when the picker re-selects
+			// the same filename, so a failed open must clear the input
+			// or it cannot be retried at all
+			openFile.value = '';
+			if (State.modal.isOpen() && State.modal.current() === 'loading') {
+				State.modal.close();
+			}
+		}
+	};
 	Load.file(
 		file,
 		async (
@@ -169,6 +214,10 @@ const openHandler = (file, opts = {}) => {
 			fontName,
 			docNative,
 		) => {
+			if (seq !== openSeq) {
+				return;
+			}
+			openInFlight = null;
 			const indexOfPeriod = file.name.lastIndexOf('.');
 			let fileTitle;
 			if (indexOfPeriod !== -1) {
@@ -180,6 +229,10 @@ const openHandler = (file, opts = {}) => {
 			bodyContainer.classList.remove('loading');
 
 			const applyData = () => {
+				// a newer open can land while this one awaits its font
+				if (seq !== openSeq) {
+					return;
+				}
 				if (docNative) {
 					// tnd/dur/0wnz: plane-native load keeps truecolor and
 					// frames; legacy consumers read the lossy u16 mirror
@@ -193,12 +246,22 @@ const openHandler = (file, opts = {}) => {
 						letterSpacing,
 					);
 				}
+				// the reset event fires only on REAL loads: onOpenedFile
+				// also rides buffer swaps (row ops, collab resyncs) which
+				// must never re-home the cursor, selection, or minimap
+				dispatchingOwnOpen = true;
+				document.dispatchEvent(new CustomEvent('onNewDocument'));
+				dispatchingOwnOpen = false;
 				palettePicker.updatePalette(); // ANSi
 				openFile.value = '';
 				viewport.scrollLeft = viewport.scrollTop = 0;
 			};
 
 			const closeModal = () => {
+				// a superseded open must not yank the winner's modal
+				if (seq !== openSeq) {
+					return;
+				}
 				// current is the controller's accessor, not a field: the
 				// old reference compare never matched and left the
 				// loading modal up after every file load
@@ -212,8 +275,15 @@ const openHandler = (file, opts = {}) => {
 			// an archive browser's font hint beats the NFO heuristic (an
 			// amiga diz wants Topaz, not Topaz-437) but never SAUCE: the
 			// author's record wins over the source's house style
+			// a stale open's font must never land on the winning doc
+			const fontWanted = () => seq === openSeq;
 			if (isSceneFile && !opts.font) {
-				await State.textArtCanvas.setFont(magicNumbers.NFO_FONT, applyData);
+				await State.textArtCanvas.setFont(
+					magicNumbers.NFO_FONT,
+					applyData,
+					undefined,
+					fontWanted,
+				);
 				return; // setFont runs applyData
 			}
 			const isXBFile = file.name.toLowerCase().endsWith('.xb');
@@ -221,13 +291,23 @@ const openHandler = (file, opts = {}) => {
 				// XB files handle font loading internally
 				const appFontName = Load.sauceToAppFont(fontName.trim());
 				if (appFontName) {
-					await State.textArtCanvas.setFont(appFontName, applyData);
+					await State.textArtCanvas.setFont(
+						appFontName,
+						applyData,
+						undefined,
+						fontWanted,
+					);
 					closeModal();
 					return; // setFont runs applyData
 				}
 			}
 			if (opts.font && !isXBFile) {
-				await State.textArtCanvas.setFont(opts.font, applyData);
+				await State.textArtCanvas.setFont(
+					opts.font,
+					applyData,
+					undefined,
+					fontWanted,
+				);
 				closeModal();
 				return; // setFont runs applyData
 			}
@@ -235,7 +315,7 @@ const openHandler = (file, opts = {}) => {
 			palettePicker.updatePalette(); // XB
 			closeModal();
 		},
-		opts,
+		{ ...opts, onError },
 	);
 };
 
@@ -585,6 +665,10 @@ const initializeAppComponents = async () => {
 				State.textArtCanvas.resize(80, 25);
 				State.textArtCanvas.clear();
 				State.textArtCanvas.setIceColors(false);
+				// New is a real load: ride the same reset event as the
+				// file openers instead of hand-copying a subset of it
+				document.dispatchEvent(new CustomEvent('onNewDocument'));
+				viewport.scrollLeft = viewport.scrollTop = 0;
 				bodyContainer.classList.remove('loading');
 				State.modal.close();
 			});
@@ -593,13 +677,21 @@ const initializeAppComponents = async () => {
 	onClick($('open'), () => {
 		openFile.click();
 	});
-	// the 16colo.rs in-app browser opens straight into the editor
-	const sixteen = createSixteenColors({ openFile: openHandler });
-	onClick($('browse16c'), () => sixteen?.show());
-
-	// the asciiarena.se browser does the same for amiga ascii collys
-	const arena = createAsciiArena({ openFile: openHandler });
-	onClick($('browseArena'), () => arena?.show());
+	// both artpack site browsers open straight into the editor; one
+	// landing modal fronts them from a single File menu entry and
+	// remembers which site the artist was last inside
+	let artpacks;
+	const exitToLanding = () => artpacks?.showLanding();
+	const sixteen = createSixteenColors({
+		openFile: openHandler,
+		onExit: exitToLanding,
+	});
+	const arena = createAsciiArena({
+		openFile: openHandler,
+		onExit: exitToLanding,
+	});
+	artpacks = createArtpacksLanding({ sixteen, arena });
+	onClick($('browseArtpacks'), () => artpacks?.show());
 
 	// native zip and lha opens route through the same unpack path
 	archiveOpener ??= createArchiveOpener({ openFile: openHandler });

@@ -20,6 +20,7 @@ import {
 	pager,
 	createTrail,
 	createRenderGate,
+	createOpenGuard,
 	countHighBytes,
 	validUtf8,
 	amigaImportHints,
@@ -41,7 +42,7 @@ const PAGESIZE = 24;
 /** instant search renders at most this many diz cards per query */
 const RESULT_CAP = 120;
 
-const createAsciiArena = ({ openFile }) => {
+const createAsciiArena = ({ openFile, onExit }) => {
 	const crumb = $('arenaCrumb');
 	const list = $('arenaList');
 	const status = $('arenaStatus');
@@ -55,11 +56,17 @@ const createAsciiArena = ({ openFile }) => {
 		pages: new Map(), // list endpoints: cache key -> response json
 		index: null, // uhcsearch rows, fetched once per session
 		dizzes: new Map(), // filename -> preview text (null caches a miss)
+		// ensureViewable adds viewableFor/viewable: index rows identity
+		// and the artist/crew tallies derived from them
 	};
 
 	// ------------------------------------------------- tabs and history
 
-	const { visit, swap, back, reset } = createTrail(btnBack);
+	// backing out of the root view returns to the artpacks landing
+	const { visit, swap, back, reset } = createTrail(
+		btnBack,
+		onExit ?? (() => State.modal.open('artpacks')),
+	);
 	const gate = createRenderGate();
 
 	const TABS = {
@@ -109,6 +116,9 @@ const createAsciiArena = ({ openFile }) => {
 		dizWatch?.disconnect();
 		list.textContent = '';
 		list.dataset.view = view;
+		// every view reads from the top; the pane otherwise keeps the
+		// scroll depth of whatever list stood here before
+		list.scrollTop = 0;
 	};
 
 	// the server keys each colly's folder on the name before the FIRST
@@ -119,8 +129,8 @@ const createAsciiArena = ({ openFile }) => {
 	const rawUrl = (colly, name = colly.filename) =>
 		`${SITE}/collections/${encodeURIComponent(colly.dir)}/${encodeURIComponent(name)}`;
 
-	const fetchBytes = async url => {
-		const response = await fetch(url);
+	const fetchBytes = async (url, signal) => {
+		const response = await fetch(url, { signal });
 		if (!response.ok) {
 			throw new Error(`${response.status} from ${url}`);
 		}
@@ -281,6 +291,41 @@ const createAsciiArena = ({ openFile }) => {
 			.map(s => s.trim().toLowerCase())
 			.filter(Boolean);
 
+	// a colly earns a listing only if the editor can do something
+	// with it: open it directly or crack it as an archive; diskmag
+	// releases ride .dms disk images, unreadable here. The filename
+	// defaults defensively: one malformed api row must not take the
+	// whole view down with it
+	const viewable = row => {
+		const name = row.filename ?? '';
+		return isOpenableName(name) || isArchiveName(name);
+	};
+
+	// artists and crews qualify by what their destination view will
+	// actually show: at least one viewable colly in the index; the
+	// crew tally doubles as the honest count beside the name
+	const ensureViewable = async () => {
+		const rows = await ensureIndex();
+		if (cache.viewableFor !== rows) {
+			const artists = new Set();
+			const crews = new Map();
+			for (const row of rows) {
+				if (!viewable(row)) {
+					continue;
+				}
+				for (const nick of listNames(row.artists)) {
+					artists.add(nick);
+				}
+				for (const name of listNames(row.crews)) {
+					crews.set(name, (crews.get(name) ?? 0) + 1);
+				}
+			}
+			cache.viewableFor = rows;
+			cache.viewable = { artists, crews };
+		}
+		return cache.viewable;
+	};
+
 	// ------------------------------------------------------------ views
 
 	const showLatest = async page => {
@@ -303,12 +348,19 @@ const createAsciiArena = ({ openFile }) => {
 		if (!gate.current(ticket)) {
 			return;
 		}
-		say(rows.length ? null : 'no collys on record');
+		const keep = rows.filter(viewable);
+		say(
+			keep.length
+				? null
+				: rows.length
+					? 'nothing on this page opens in the editor'
+					: 'no collys on record',
+		);
 		const pages = Math.ceil((rows[0]?.total_count ?? 0) / PAGESIZE);
 		if (pages > 1) {
 			list.appendChild(pager(page, pages, p => swap(() => showLatest(p)), 'arenaPager'));
 		}
-		for (const row of rows) {
+		for (const row of keep) {
 			list.appendChild(collyCard(fromApi(row)));
 		}
 	};
@@ -318,12 +370,16 @@ const createAsciiArena = ({ openFile }) => {
 		crumb.textContent = filter ? `artists / ${filter}` : 'artists';
 		clearList('artists');
 		say('loading artists...');
-		let rows;
+		let rows, who;
 		try {
-			rows = await fetchPage(
-				`a:${filter}:${page}`,
-				`${API}/artists?page=${page}&pagesize=${PAGESIZE}&sort=nick&asc=A${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
-			);
+			// the index degrades soft: a dead dump must not kill browsing
+			[rows, who] = await Promise.all([
+				fetchPage(
+					`a:${filter}:${page}`,
+					`${API}/artists?page=${page}&pagesize=${PAGESIZE}&sort=nick&asc=A${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
+				),
+				ensureViewable().catch(() => null),
+			]);
 		} catch (error) {
 			if (gate.current(ticket)) {
 				say(`asciiarena.se did not answer (${error.message})`, true);
@@ -333,12 +389,21 @@ const createAsciiArena = ({ openFile }) => {
 		if (!gate.current(ticket)) {
 			return;
 		}
-		say(rows.length ? null : 'no artists match');
+		const keep = who
+			? rows.filter(row => who.artists.has(row.nick?.toLowerCase() ?? ''))
+			: rows;
+		say(
+			keep.length
+				? null
+				: rows.length
+					? 'nothing on this page opens in the editor'
+					: 'no artists match',
+		);
 		const pages = Math.ceil((rows[0]?.total_count ?? 0) / PAGESIZE);
 		if (pages > 1) {
 			list.appendChild(pager(page, pages, p => swap(() => showArtists(filter, p)), 'arenaPager'));
 		}
-		for (const row of rows) {
+		for (const row of keep) {
 			// crews are names, not a count: they stack under the nick in
 			// the sub style instead of riding the kbd tag
 			const el = button(row.nick, () =>
@@ -362,7 +427,7 @@ const createAsciiArena = ({ openFile }) => {
 		try {
 			const needle = nick.toLowerCase();
 			rows = (await ensureIndex()).filter(r =>
-				listNames(r.artists).includes(needle));
+				viewable(r) && listNames(r.artists).includes(needle));
 		} catch (error) {
 			if (gate.current(ticket)) {
 				say(`asciiarena.se did not answer (${error.message})`, true);
@@ -383,12 +448,16 @@ const createAsciiArena = ({ openFile }) => {
 		crumb.textContent = filter ? `crews / ${filter}` : 'crews';
 		clearList('crews');
 		say('loading crews...');
-		let rows;
+		let rows, who;
 		try {
-			rows = await fetchPage(
-				`g:${filter}:${page}`,
-				`${API}/crews?page=${page}&pagesize=${PAGESIZE}&sort=name&asc=A${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
-			);
+			// the index degrades soft: a dead dump must not kill browsing
+			[rows, who] = await Promise.all([
+				fetchPage(
+					`g:${filter}:${page}`,
+					`${API}/crews?page=${page}&pagesize=${PAGESIZE}&sort=name&asc=A${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
+				),
+				ensureViewable().catch(() => null),
+			]);
 		} catch (error) {
 			if (gate.current(ticket)) {
 				say(`asciiarena.se did not answer (${error.message})`, true);
@@ -398,14 +467,26 @@ const createAsciiArena = ({ openFile }) => {
 		if (!gate.current(ticket)) {
 			return;
 		}
-		say(rows.length ? null : 'no crews match');
+		// the count beside a crew is what its page will really show
+		const count = row =>
+			(who
+				? (who.crews.get(row.name?.toLowerCase() ?? '') ?? 0)
+				: (row.releases_cnt ?? 0));
+		const keep = rows.filter(row => count(row) > 0);
+		say(
+			keep.length
+				? null
+				: rows.length
+					? 'nothing on this page opens in the editor'
+					: 'no crews match',
+		);
 		const pages = Math.ceil((rows[0]?.total_count ?? 0) / PAGESIZE);
 		if (pages > 1) {
 			list.appendChild(pager(page, pages, p => swap(() => showCrews(filter, p)), 'arenaPager'));
 		}
-		for (const row of rows) {
+		for (const row of keep) {
 			list.appendChild(
-				countButton(row.name, row.releases_cnt ?? 0, () =>
+				countButton(row.name, count(row), () =>
 					visit(() => showByCrew(row.name)), 'arenaItem'),
 			);
 		}
@@ -420,7 +501,7 @@ const createAsciiArena = ({ openFile }) => {
 		try {
 			const needle = name.toLowerCase();
 			rows = (await ensureIndex()).filter(r =>
-				listNames(r.crews).includes(needle));
+				viewable(r) && listNames(r.crews).includes(needle));
 		} catch (error) {
 			if (gate.current(ticket)) {
 				say(`asciiarena.se did not answer (${error.message})`, true);
@@ -453,12 +534,13 @@ const createAsciiArena = ({ openFile }) => {
 		if (!gate.current(ticket)) {
 			return;
 		}
+		const pool = index.filter(viewable);
 		if (!query) {
-			say(`type to search ${index.length} collys`);
+			say(`type to search ${pool.length} collys`);
 			return;
 		}
 		const needle = query.toLowerCase();
-		const rows = index.filter(r =>
+		const rows = pool.filter(r =>
 			[r.filename, r.title, r.artists, r.crews].some(f =>
 				f.toLowerCase().includes(needle)));
 		if (!rows.length) {
@@ -475,6 +557,11 @@ const createAsciiArena = ({ openFile }) => {
 		}
 	};
 
+	// clicking a piece is an explicit open, raced through the guard:
+	// the LAST click wins, a repeat click on the loading piece is a
+	// no-op, and stale fetches neither open nor repaint anything
+	const openGuard = createOpenGuard();
+
 	const showArchive = (colly, entries, extract) => {
 		// a sync render still bumps the gate, or a fetch already in
 		// flight would paint over this list when it lands
@@ -485,10 +572,23 @@ const createAsciiArena = ({ openFile }) => {
 		for (const entry of entries) {
 			list.appendChild(
 				button(baseName(entry.name), async () => {
+					// picker entries race like any other open: last wins
+					const op = openGuard(`open:${colly.filename}/${entry.name}`);
+					if (!op) {
+						return;
+					}
 					try {
-						openBytes(await extract(entry), baseName(entry.name));
+						const bytes = await extract(entry);
+						if (!op.current()) {
+							return;
+						}
+						openBytes(bytes, baseName(entry.name));
 					} catch (error) {
-						say(`could not open: ${error.message}`, true);
+						if (op.current()) {
+							say(`could not open: ${error.message}`, true);
+						}
+					} finally {
+						op.done();
 					}
 				}, 'arenaItem'),
 			);
@@ -503,14 +603,18 @@ const createAsciiArena = ({ openFile }) => {
 		openFile(new File([bytes], name), amigaImportHints(bytes));
 	};
 
-	// clicking a piece is an explicit open: the editor load itself is
-	// never gated, but listings and status lines from a fetch the user
-	// has navigated away from must not repaint the current view
 	const openArchive = async colly => {
+		const op = openGuard(`open:${colly.filename}`);
+		if (!op) {
+			return;
+		}
 		const ticket = gate.enter();
 		say(`fetching ${colly.filename}...`);
 		try {
-			const bytes = await fetchBytes(rawUrl(colly));
+			const bytes = await fetchBytes(rawUrl(colly), op.signal);
+			if (!op.current()) {
+				return;
+			}
 			const isZip = (/\.zip$/i).test(colly.filename);
 			const entries = (isZip ? readZipEntries : readLhaEntries)(bytes)
 				.filter(e => isOpenableName(e.name));
@@ -518,7 +622,13 @@ const createAsciiArena = ({ openFile }) => {
 				return isZip ? extractZipEntry(bytes, entry) : extractLhaEntry(bytes, entry);
 			};
 			if (entries.length === 1) {
-				openBytes(await extract(entries[0]), baseName(entries[0].name));
+				const only = await extract(entries[0]);
+				// the extract awaits too: a newer click during the inflate
+				// must not let this one steal a fresher open ticket
+				if (!op.current()) {
+					return;
+				}
+				openBytes(only, baseName(entries[0].name));
 				return;
 			}
 			if (!gate.current(ticket)) {
@@ -531,9 +641,11 @@ const createAsciiArena = ({ openFile }) => {
 			// the bytes ride the view thunk, freed when the trail drops it
 			visit(() => showArchive(colly, entries, extract));
 		} catch (error) {
-			if (gate.current(ticket)) {
+			if (op.current() && gate.current(ticket)) {
 				say(`could not open: ${error.message}`, true);
 			}
+		} finally {
+			op.done();
 		}
 	};
 
@@ -546,14 +658,24 @@ const createAsciiArena = ({ openFile }) => {
 			say(`the editor cannot open ${colly.filename}`, true);
 			return;
 		}
+		const op = openGuard(`open:${colly.filename}`);
+		if (!op) {
+			return;
+		}
 		const ticket = gate.enter();
 		say(`fetching ${colly.filename}...`);
 		try {
-			openBytes(await fetchBytes(rawUrl(colly)), colly.filename);
+			const bytes = await fetchBytes(rawUrl(colly), op.signal);
+			if (!op.current()) {
+				return;
+			}
+			openBytes(bytes, colly.filename);
 		} catch (error) {
-			if (gate.current(ticket)) {
+			if (op.current() && gate.current(ticket)) {
 				say(`could not open: ${error.message}`, true);
 			}
+		} finally {
+			op.done();
 		}
 	};
 
@@ -579,9 +701,15 @@ const createAsciiArena = ({ openFile }) => {
 		}
 	});
 
+	// the view DOM survives modal closes, so reopening mid-session
+	// resumes wherever the artist left off; only the first show seeds
+	let started = false;
 	const show = () => {
 		State.modal.open('arena');
-		setTab('latest');
+		if (!started) {
+			started = true;
+			setTab('latest');
+		}
 	};
 
 	return {

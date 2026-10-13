@@ -21,6 +21,7 @@ import {
 	pager,
 	createTrail,
 	createRenderGate,
+	createOpenGuard,
 	isOpenableName,
 } from './browserKit.js';
 import {
@@ -41,7 +42,7 @@ const COL_WIDTH = 196;
 /** caption + padding under each thumbnail, for column balancing */
 const CAPTION_PX = 36;
 
-const createSixteenColors = ({ openFile }) => {
+const createSixteenColors = ({ openFile, onExit }) => {
 	const crumb = $('sixteenCrumb');
 	const list = $('sixteenList');
 	const status = $('sixteenStatus');
@@ -55,14 +56,18 @@ const createSixteenColors = ({ openFile }) => {
 		years: null,
 		pages: new Map(), // list endpoints: cache key -> response json
 		packs: new Map(), // pack name -> {year, archive, files}
-		zips: new Map(), // archive name -> Uint8Array
+		zips: new Map(), // archive name -> Promise<Uint8Array>, shared
 	};
 	/** @type {{view: string, year?: number, pack?: object, name?: string}} */
 	let where = { view: 'years' };
 
 	// ------------------------------------------------- tabs and history
 
-	const { visit, swap, back, reset, rerun } = createTrail(btnBack);
+	// backing out of the root view returns to the artpacks landing
+	const { visit, swap, back, reset, rerun } = createTrail(
+		btnBack,
+		onExit ?? (() => State.modal.open('artpacks')),
+	);
 	const gate = createRenderGate();
 
 	const TABS = {
@@ -110,6 +115,9 @@ const createSixteenColors = ({ openFile }) => {
 	const clearList = view => {
 		list.textContent = '';
 		list.dataset.view = view;
+		// every view reads from the top; the pane otherwise keeps the
+		// scroll depth of whatever list stood here before
+		list.scrollTop = 0;
 	};
 
 	/** one pack's metadata and openable files, fetched once */
@@ -223,6 +231,10 @@ const createSixteenColors = ({ openFile }) => {
 		}
 		say(null);
 		for (const year of Object.keys(cache.years).reverse()) {
+			// an empty year leads nowhere worth a click
+			if (!cache.years[year]?.packs) {
+				continue;
+			}
 			list.appendChild(
 				countButton(year, cache.years[year].packs, () =>
 					visit(() => showPacks(Number(year), 1)), 'sixteenItem'),
@@ -315,18 +327,25 @@ const createSixteenColors = ({ openFile }) => {
 			return;
 		}
 		const results = data.results ?? [];
-		say(results.length ? null : 'no artists match');
+		// zero-release profiles lead nowhere worth a click
+		const rows = results.filter(
+			row => row.artist?.name && (row.artist.releases ?? 0) > 0,
+		);
+		say(
+			rows.length
+				? null
+				: results.length
+					? 'nothing on this page opens in the editor'
+					: 'no artists match',
+		);
 		const pages = data.page?.pages ?? 1;
 		if (pages > 1) {
 			list.appendChild(pager(page, pages, p => swap(() => showArtists(filter, p)), 'sixteenPager'));
 		}
-		for (const row of results) {
-			const name = row.artist?.name;
-			if (!name) {
-				continue;
-			}
+		for (const row of rows) {
+			const name = row.artist.name;
 			list.appendChild(
-				countButton(name, row.artist.releases ?? 0, () =>
+				countButton(name, row.artist.releases, () =>
 					visit(() => showArtistWorks(name)), 'sixteenItem'),
 			);
 		}
@@ -406,19 +425,25 @@ const createSixteenColors = ({ openFile }) => {
 			return;
 		}
 		const results = data.results ?? [];
-		say(results.length ? null : 'no crews match');
+		// each crew rides as a single-key object: {tag: {releases, ...}};
+		// zero-release crews lead nowhere worth a click
+		const rows = results
+			.map(row => Object.entries(row)[0] ?? [])
+			.filter(([tag, info]) => tag && (info?.releases ?? 0) > 0);
+		say(
+			rows.length
+				? null
+				: results.length
+					? 'nothing on this page opens in the editor'
+					: 'no crews match',
+		);
 		const pages = data.page?.pages ?? 1;
 		if (pages > 1) {
 			list.appendChild(pager(page, pages, p => swap(() => showCrews(filter, p)), 'sixteenPager'));
 		}
-		for (const row of results) {
-			// each crew rides as a single-key object: {tag: {releases, ...}}
-			const [tag, info] = Object.entries(row)[0] ?? [];
-			if (!tag) {
-				continue;
-			}
+		for (const [tag, info] of rows) {
 			list.appendChild(
-				countButton(tag, info?.releases ?? 0, () =>
+				countButton(tag, info.releases, () =>
 					visit(() => showCrewPacks(tag)), 'sixteenItem'),
 			);
 		}
@@ -498,44 +523,77 @@ const createSixteenColors = ({ openFile }) => {
 		openPiece({ name: packName, year: info.year, archive: info.archive }, file);
 	};
 
-	const openPiece = async (pack, file) => {
-		if (!pack.archive) {
-			say('16colo.rs lists no zip for this pack, so it cannot be opened here', true);
-			return;
-		}
-		// the mirror strips spaces from archive names on sync
-		const zipName = pack.archive.replace(/\s+/g, '');
-		say(`fetching ${zipName}...`);
-		try {
-			if (!cache.zips.has(zipName)) {
+	// the LAST clicked piece wins: a repeat click on the loading piece
+	// is a no-op, a different piece supersedes it. The zip download
+	// itself is never aborted: cache.zips holds the PROMISE, so
+	// sibling pieces and superseded clicks share one transfer and a
+	// multi-MB pack never downloads twice
+	const openGuard = createOpenGuard();
+
+	const fetchZip = (year, zipName) => {
+		if (!cache.zips.has(zipName)) {
+			const download = (async () => {
 				const response = await fetch(
-					`${MIRROR}/${pack.year}/${encodeURIComponent(zipName)}`,
+					`${MIRROR}/${year}/${encodeURIComponent(zipName)}`,
 				);
 				if (!response.ok) {
 					throw new Error(
 						`the archive mirror has no ${zipName} (HTTP ${response.status}); the pack may be newer than the last mirror sync`,
 					);
 				}
-				cache.zips.set(
-					zipName,
-					new Uint8Array(await response.arrayBuffer()),
-				);
-				// a browsing session must not hoard every pack it touched
-				while (cache.zips.size > 3) {
-					cache.zips.delete(cache.zips.keys().next().value);
+				return new Uint8Array(await response.arrayBuffer());
+			})().catch(error => {
+				// a failed download must not cache, and must evict only
+				// ITSELF: the cap may have dropped it already and a retry
+				// recached the same name with a healthy transfer
+				if (cache.zips.get(zipName) === download) {
+					cache.zips.delete(zipName);
 				}
+				throw error;
+			});
+			cache.zips.set(zipName, download);
+			// a browsing session must not hoard every pack it touched
+			while (cache.zips.size > 3) {
+				cache.zips.delete(cache.zips.keys().next().value);
 			}
-			const zip = cache.zips.get(zipName);
+		}
+		return cache.zips.get(zipName);
+	};
+
+	const openPiece = async (pack, file) => {
+		if (!pack.archive) {
+			say('16colo.rs lists no zip for this pack, so it cannot be opened here', true);
+			return;
+		}
+		const op = openGuard(`open:${pack.name}/${file.name}`);
+		if (!op) {
+			return;
+		}
+		// the mirror strips spaces from archive names on sync
+		const zipName = pack.archive.replace(/\s+/g, '');
+		say(`fetching ${zipName}...`);
+		try {
+			const zip = await fetchZip(pack.year, zipName);
+			if (!op.current()) {
+				return;
+			}
 			const entry = findZipEntry(readZipEntries(zip), file.name);
 			if (!entry) {
 				throw new Error(`${file.name} is not in ${zipName}`);
 			}
 			const bytes = await extractZipEntry(zip, entry);
+			if (!op.current()) {
+				return;
+			}
 			say(null);
 			State.modal.close();
 			openFile(new File([bytes], file.name));
 		} catch (error) {
-			say(`could not open: ${error.message}`, true);
+			if (op.current()) {
+				say(`could not open: ${error.message}`, true);
+			}
+		} finally {
+			op.done();
 		}
 	};
 
@@ -573,9 +631,15 @@ const createSixteenColors = ({ openFile }) => {
 		}
 	});
 
+	// the view DOM survives modal closes, so reopening mid-session
+	// resumes wherever the artist left off; only the first show seeds
+	let started = false;
 	const show = () => {
 		State.modal.open('sixteen');
-		setTab('year');
+		if (!started) {
+			started = true;
+			setTab('year');
+		}
 	};
 
 	return {

@@ -1215,6 +1215,7 @@
 		outline: 1px solid #000;
 		box-shadow: inset 0 0 0 1px #000;
 	}
+	#artpacksModal,
 	#sixteenModal,
 	#arenaModal,
 	#archiveModal {
@@ -1249,6 +1250,26 @@
 				&:hover {
 					@apply bg-midnight;
 				}
+			}
+		}
+	}
+	#artpacksChoices {
+		@apply flex flex-row flex-wrap gap-3 w-full;
+		button {
+			/* normal-case, start, stretch: the dialog-wide section button
+			   baseline uppercases and centers everything it touches */
+			@apply flex flex-col gap-3 bg-transparent normal-case justify-start
+				items-stretch text-left m-0 p-6 cursor-pointer;
+			/* each site gets half the row; narrow screens stack them */
+			flex: 1 1 16em;
+			strong {
+				@apply text-purp text-2xl;
+			}
+			span {
+				@apply text-fg text-base;
+				/* narrows the measure so the prose fills its three lines
+				   evenly instead of orphaning a fourth */
+				padding-inline: 2rem;
 			}
 		}
 	}

@@ -302,7 +302,9 @@ describe('corpus tier (b): synthetic ANSI', () => {
 		expectSameCells(d2, d1, '132col');
 	});
 
-	it('large documents round-trip (80x2000)', async () => {
+	// 160k cells through encode and decode twice: comfortably fast
+	// locally, but slow CI shards have blown the 5s default
+	it('large documents round-trip (80x2000)', { timeout: 30_000 }, async () => {
 		const bytes = makeAnsi({ columns: 80, rows: 2000, seed: 13 });
 		const d1 = await decode('tall.ans', bytes);
 		expect(d1.rows).toBe(2000);

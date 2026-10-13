@@ -88,6 +88,7 @@ const createArchiveOpener = ({ openFile }) => {
 		say(null);
 		list.textContent = '';
 		list.dataset.view = 'archive';
+		list.scrollTop = 0;
 		for (const entry of entries) {
 			list.appendChild(
 				button(baseName(entry.name), () => openEntry(bytes, entry, isZip)),

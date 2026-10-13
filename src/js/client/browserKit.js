@@ -111,14 +111,47 @@ const createRenderGate = () => {
 	};
 };
 
+// one explicit open in flight per browser, with no UI locking: a
+// repeat click on the target already loading is ignored, a click on
+// a DIFFERENT target supersedes the old open, aborting any fetch
+// tied to the guard's signal (shared downloads like the 16c zip
+// cache deliberately ride on unsignalled; currency checks cancel
+// those opens instead). Last click wins; completion order can
+// invert click order when a big archive races a small file
+const createOpenGuard = () => {
+	let currentKey = null;
+	let controller = null;
+	return key => {
+		if (controller && currentKey === key) {
+			return null;
+		}
+		controller?.abort();
+		const mine = new AbortController();
+		controller = mine;
+		currentKey = key;
+		return {
+			signal: mine.signal,
+			current: () => controller === mine,
+			done: () => {
+				if (controller === mine) {
+					controller = null;
+					currentKey = null;
+				}
+			},
+		};
+	};
+};
+
 // back walks a trail of view thunks: every drill-down pushes the
-// view it left, so depth can differ per tab without special cases
-const createTrail = backButton => {
+// view it left, so depth can differ per tab without special cases;
+// an exit thunk keeps back live at the root, stepping out of the
+// browser entirely instead of going dead
+const createTrail = (backButton, exit) => {
 	let trail = [];
 	let here = () => {};
 	const render = () => {
 		if (backButton) {
-			backButton.disabled = trail.length === 0;
+			backButton.disabled = trail.length === 0 && !exit;
 		}
 		here();
 	};
@@ -136,6 +169,8 @@ const createTrail = backButton => {
 			if (trail.length) {
 				here = trail.pop();
 				render();
+			} else {
+				exit?.();
 			}
 		},
 		reset: thunk => {
@@ -156,6 +191,7 @@ export {
 	pager,
 	createTrail,
 	createRenderGate,
+	createOpenGuard,
 	countHighBytes,
 	validUtf8,
 	amigaImportHints,

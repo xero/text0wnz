@@ -713,6 +713,10 @@ const createWorkerHandler = inputHandle => {
 			if (result.fontName) {
 				await onFontChange(Load.sauceToAppFont(result.fontName) ?? result.fontName);
 			}
+			// joining IS a new document; resyncs later in the session go
+			// through setDocData too and must NOT re-home anything, so
+			// the reset event fires only here
+			document.dispatchEvent(new CustomEvent('onNewDocument'));
 			State.font.setLetterSpacing(result.use9px);
 			if (Array.isArray(data.data.users)) {
 				for (const user of data.data.users) {

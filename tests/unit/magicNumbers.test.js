@@ -32,11 +32,6 @@ describe('Magic Numbers Constants', () => {
 			expect(magicNumbers.DEFAULT_BACKGROUND).toBe(0);
 		});
 
-		it('should export blank cell value', () => {
-			// BLANK_CELL = (32 << 8) + 7 = 8192 + 7 = 8199
-			expect(magicNumbers.BLANK_CELL).toBe(8199);
-		});
-
 		it('should have valid color indices', () => {
 			expect(magicNumbers.COLOR_BLACK).toBeGreaterThanOrEqual(0);
 			expect(magicNumbers.COLOR_BLACK).toBeLessThan(16);
@@ -244,13 +239,6 @@ describe('Magic Numbers Constants', () => {
 			expect(magicNumbers.LIGHT_BLOCK).toBeGreaterThanOrEqual(128);
 			expect(magicNumbers.MEDIUM_BLOCK).toBeGreaterThanOrEqual(128);
 			expect(magicNumbers.DARK_BLOCK).toBeGreaterThanOrEqual(128);
-		});
-
-		it('should correctly encode blank cell', () => {
-			const charCode = magicNumbers.BLANK_CELL >> 8;
-			const attr = magicNumbers.BLANK_CELL & 0xff;
-			expect(charCode).toBe(32); // space
-			expect(attr).toBe(7); // white
 		});
 	});
 

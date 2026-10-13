@@ -1,5 +1,5 @@
 FROM oven/bun:debian AS bun
-FROM mcr.microsoft.com/playwright:v1.59.1-jammy
+FROM mcr.microsoft.com/playwright:v1.64.0-jammy
 
 LABEL org.opencontainers.image.title="text0wnz/ci"
 LABEL org.opencontainers.image.description="cicd unit testing toolchain for the text0wnz editor"
@@ -18,7 +18,7 @@ ENV PATH="/root/.bun/bin:${PATH}"
 RUN apt-get update && apt-get install -y curl unzip
 
 # Testing tools
-RUN bun i -g playwright eslint prettier
+RUN bun i -g playwright@1.64.0 eslint prettier
 
 # Playwright browsers
 RUN playwright install-deps && \

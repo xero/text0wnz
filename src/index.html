@@ -462,8 +462,7 @@
 		<div id="fileList" class="menuList hide">
 			<article id="new" class="menuItem excludedForWebsocket">New</article>
 			<article id="open" class="menuItem excludedForWebsocket">Open</article>
-			<article id="browse16c" class="menuItem excludedForWebsocket">Browse 16colo.rs</article>
-			<article id="browseArena" class="menuItem excludedForWebsocket">Browse asciiarena.se</article>
+			<article id="browseArtpacks" class="menuItem excludedForWebsocket">Browse Artpacks</article>
 			<article class="separator excludedForWebsocket"></article>
 			<article id="saveAnsi" class="menuItem">Save as ANSi</article>
 			<article id="saveBin" class="menuItem">Save as Binary Text</article>
@@ -886,6 +885,37 @@
 				</article>
 				<nav>
 					<button id="pluginClose">Close</button>
+				</nav>
+			</section>
+			<section id="artpacksModal">
+				<header>
+					<h2>Browse Artpacks</h2>
+				</header>
+				<article>
+					<div id="artpacksChoices">
+						<button id="artpacksSixteen">
+							<strong>Sixteen Colors</strong>
+							<span>The online archive for scene artpacks, run by ACiD Productions members, collecting our art from 1990 until today.</span>
+						</button>
+						<button id="artpacksArena">
+							<strong>aSCii aRENA</strong>
+							<span>The premiere Amiga colly hub, run by uP rOUGH and dIVINE sTYLERS, preserving the ASCII art scene from 1993 onward.</span>
+						</button>
+					</div>
+				</article>
+				<nav>
+					<button id="artpacksBack" aria-label="Back" disabled>
+						<svg>
+							<use href="img/icons.svg#left"></use>
+						</svg>
+						Back
+					</button>
+					<button id="artpacksClose" class="close" aria-label="Close">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Close
+					</button>
 				</nav>
 			</section>
 			<section id="sixteenModal">

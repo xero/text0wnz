@@ -280,6 +280,7 @@ describe('UI Utilities', () => {
 				<div id="websocketModal" class="hide"></div>
 				<div id="charsetModal" class="hide"></div>
 				<div id="exportModal" class="hide"></div>
+				<div id="artpacksModal" class="hide"></div>
 				<div id="sixteenModal" class="hide"></div>
 				<div id="arenaModal" class="hide"></div>
 				<div id="archiveModal" class="hide"></div>
@@ -315,6 +316,7 @@ describe('UI Utilities', () => {
 				<div id="sauceModal" class="hide"></div>
 				<div id="charsetModal" class="hide"></div>
 				<div id="exportModal" class="hide"></div>
+				<div id="artpacksModal" class="hide"></div>
 				<div id="sixteenModal" class="hide"></div>
 				<div id="arenaModal" class="hide"></div>
 				<div id="archiveModal" class="hide"></div>
@@ -698,6 +700,7 @@ describe('UI Utilities', () => {
 				'sauce',
 				'charset',
 				'export',
+				'artpacks',
 				'sixteen',
 				'arena',
 				'archive',

@@ -158,6 +158,7 @@ src/
 src/js/client/
 ├── main.js                # Application entry point and initialization
 ├── archiveOpen.js         # Native zip and lha open path with picker modal
+├── artpacks.js            # Browse Artpacks landing fronting both site browsers
 ├── asciiArena.js          # asciiarena.se in-app browser
 ├── browserKit.js          # Shared widgets for the archive browsers
 ├── canvas.js              # 2D chunk renderer (fallback, ?renderer=2d)
@@ -526,6 +527,7 @@ tests/
 ├── unit/                         # Vitest unit tests
 │   ├── README.md                 # Unit test documentation
 │   ├── archiveOpen.test.js       # Native archive open tests
+│   ├── artpacks.test.js          # Browse Artpacks landing tests
 │   ├── asciiArena.test.js        # asciiarena.se browser tests
 │   ├── canvas.test.js            # Canvas module tests
 │   ├── canvasJournal.test.js     # Canvas autosave journal tests

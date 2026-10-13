@@ -25,6 +25,14 @@ const MARKUP = `
 
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));
 
+// stream-backed inflates land on their own schedule: poll until the
+// open arrives instead of counting flush turns (ci shards lag)
+const settle = async (done, tries = 400) => {
+	for (let i = 0; i < tries && !done(); i++) {
+		await flush();
+	}
+};
+
 describe('sixteen colors browser', () => {
 	let fetchMock;
 	let opened;
@@ -34,12 +42,18 @@ describe('sixteen colors browser', () => {
 		document.body.innerHTML = MARKUP;
 		opened = [];
 		const artBytes = new TextEncoder().encode('\u001b[31mhi');
-		const zip = await buildZip([{ name: 'x0-art.ans', data: artBytes }]);
+		// both openable pieces live in the zip, or the supersede test
+		// would pass vacuously when the first click fails extraction
+		const zip = await buildZip([
+			{ name: 'x0-art.ans', data: artBytes },
+			{ name: 'FILE_ID', data: new TextEncoder().encode('diz art') },
+		]);
 		fetchMock = vi.fn(async url => {
 			if (url.endsWith('/year')) {
 				return {
 					ok: true,
-					json: async () => ({ 1996: { packs: 2 }, 2014: { packs: 1 } }),
+					// the empty year is a site placeholder: never listed
+					json: async () => ({ 1996: { packs: 2 }, 2014: { packs: 1 }, 2020: { packs: 0 } }),
 				};
 			}
 			if (url.includes('/year/2014')) {
@@ -97,12 +111,17 @@ describe('sixteen colors browser', () => {
 		await flush();
 		const list = document.getElementById('sixteenList');
 		expect(list.dataset.view).toBe('years');
-		expect(document.getElementById('sixteenBack').disabled).toBe(true);
+		// back stays live at the root: it exits to the artpacks landing
+		expect(document.getElementById('sixteenBack').disabled).toBe(false);
 		const years = [...document.querySelectorAll('#sixteenList button')];
 		expect(years[0].textContent).toContain('2014'); // newest first
+		expect(years.map(y => y.textContent).join()).not.toContain('2020');
+		// a scrolled list must not bleed its depth into the next view
+		list.scrollTop = 400;
 		years[0].click();
 		await flush();
 		expect(list.dataset.view).toBe('packs');
+		expect(list.scrollTop).toBe(0);
 		expect(document.getElementById('sixteenBack').disabled).toBe(false);
 		const packs = [...document.querySelectorAll('#sixteenList .sixteenPack')];
 		expect(packs.map(b => b.textContent)).toContain('blocktronics_wtf4');
@@ -134,18 +153,77 @@ describe('sixteen colors browser', () => {
 		art.click();
 		await flush();
 		await flush();
+		await settle(() => opened.length === 1);
 		expect(opened).toHaveLength(1);
 		expect(opened[0].name).toBe('x0-art.ans');
 		expect(State.modal.close).toHaveBeenCalled();
 
-		// back retraces files -> packs -> years, then disables
+		// back retraces files -> packs -> years, then exits to the landing
 		document.getElementById('sixteenBack').click();
 		await flush();
 		expect(list.dataset.view).toBe('packs');
 		document.getElementById('sixteenBack').click();
 		await flush();
 		expect(list.dataset.view).toBe('years');
-		expect(document.getElementById('sixteenBack').disabled).toBe(true);
+		expect(document.getElementById('sixteenBack').disabled).toBe(false);
+		document.getElementById('sixteenBack').click();
+		expect(State.modal.open).toHaveBeenCalledWith('artpacks');
+	});
+
+	it('a different piece supersedes the one still loading', async () => {
+		let releaseZip;
+		const zipGate = new Promise(r => {
+			releaseZip = r;
+		});
+		const realImpl = fetchMock.getMockImplementation();
+		fetchMock.mockImplementation(async url => {
+			if (url.includes('raw.githubusercontent.com')) {
+				await zipGate;
+			}
+			return realImpl(url);
+		});
+		browser.show();
+		await flush();
+		[...document.querySelectorAll('#sixteenList button')]
+			.find(b => b.textContent.includes('2014'))
+			.click();
+		await flush();
+		document
+			.querySelector('#sixteenList .sixteenPack')
+			.click();
+		await flush();
+		const pieces = [...document.querySelectorAll('#sixteenList .sixteenPiece')];
+		// first click stalls on the zip; the second must win, and both
+		// clicks share ONE download because the cache holds the promise
+		pieces.find(p => p.textContent.includes('FILE_ID')).click();
+		await flush();
+		pieces.find(p => p.textContent.includes('x0-art.ans')).click();
+		releaseZip();
+		await flush();
+		await flush();
+		await flush();
+		await settle(() => opened.length === 1);
+		expect(opened).toHaveLength(1);
+		expect(opened[0].name).toBe('x0-art.ans');
+		const mirrorCalls = fetchMock.mock.calls.filter(c =>
+			c[0].includes('raw.githubusercontent.com'));
+		expect(mirrorCalls).toHaveLength(1);
+	});
+
+	it('resumes the current view when shown again mid-session', async () => {
+		browser.show();
+		await flush();
+		const list = document.getElementById('sixteenList');
+		[...document.querySelectorAll('#sixteenList button')]
+			.find(b => b.textContent.includes('2014'))
+			.click();
+		await flush();
+		expect(list.dataset.view).toBe('packs');
+		// a later show (after opening a piece, say) must not reset
+		browser.show();
+		await flush();
+		expect(State.modal.open).toHaveBeenLastCalledWith('sixteen');
+		expect(list.dataset.view).toBe('packs');
 	});
 
 	it('browses artists and opens a piece by hydrating its pack', async () => {
@@ -155,7 +233,11 @@ describe('sixteen colors browser', () => {
 					ok: true,
 					json: async () => ({
 						page: { pages: 2, page: 1 },
-						results: [{ artist: { name: 'avenger', releases: 373 } }],
+						results: [
+							{ artist: { name: 'avenger', releases: 373 } },
+							// zero-release profiles are site placeholders
+							{ artist: { name: 'avenue ghost', releases: 0 } },
+						],
 					}),
 				};
 			}
@@ -203,6 +285,10 @@ describe('sixteen colors browser', () => {
 			throw new Error(`unexpected fetch ${url}`);
 		});
 		await browser.showArtists('aven', 1);
+		const names = [...document.querySelectorAll('#sixteenList button')].map(
+			b => b.firstChild?.textContent,
+		);
+		expect(names).not.toContain('avenue ghost');
 		// the release count rides a kbd tag beside the name
 		const artist = [...document.querySelectorAll('#sixteenList button')].find(
 			b => b.firstChild?.textContent === 'avenger',
@@ -237,7 +323,11 @@ describe('sixteen colors browser', () => {
 					ok: true,
 					json: async () => ({
 						page: { pages: 1, page: 1 },
-						results: [{ mistigris: { releases: 160 } }],
+						results: [
+							{ mistigris: { releases: 160 } },
+							// zero-release crews are site placeholders
+							{ 'ghost crew': { releases: 0 } },
+						],
 					}),
 				};
 			}
@@ -250,6 +340,10 @@ describe('sixteen colors browser', () => {
 			throw new Error(`unexpected fetch ${url}`);
 		});
 		await browser.showCrews('', 1);
+		const tags = [...document.querySelectorAll('#sixteenList button')].map(
+			b => b.firstChild?.textContent,
+		);
+		expect(tags).not.toContain('ghost crew');
 		const crew = [...document.querySelectorAll('#sixteenList button')].find(
 			b => b.firstChild?.textContent === 'mistigris',
 		);

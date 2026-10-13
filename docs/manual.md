@@ -118,9 +118,27 @@ File operations allowing you to create, open, and save artwork in multiple file 
 - Lightweight settings (theme, zoom, favorites, recent colors) persist in local storage
 - Collaboration sessions never journal; the server owns that document
 
-### 16colo.rs Browser
+### Artpack Browsers
 
-**File → Browse 16colo.rs** opens an in-app browser for the [16colo.rs](https://16colo.rs) artpack archive.
+**File → Browse Artpacks** opens a landing page for the two in-app
+archive browsers. Each site gets a card; click anywhere on a card to
+browse that archive.
+
+**Shared behavior:**
+
+- **Back** retraces your path one view at a time, and from a site's
+  top level it returns to the landing so you can switch archives
+- While the editor stays open, reopening Browse Artpacks returns to
+  the exact view you left, even after opening a piece closed the
+  window. Backing out to the landing forgets that memory
+- Category and search pages only list what the editor can open:
+  years, artists, and crews with nothing viewable never render, and
+  a page the filter empties says so instead of showing a blank well
+- Every request is user-driven; nothing loads in the background
+
+#### 16colo.rs
+
+The [16colo.rs](https://16colo.rs) card browses the artpack archive.
 
 **Features:**
 
@@ -128,7 +146,7 @@ File operations allowing you to create, open, and save artwork in multiple file 
   **search**. Crews and artists list with release counts and a filter
   box; search finds packs by name across the whole archive
 - An artist's page groups their works by year and pack; a crew's page
-  lists every pack they released. Back retraces your path
+  lists every pack they released
 - Browse by year, then by pack, with each pack previewed by its
   `file_id.diz` artwork, the scene's own pack labels
 - Pieces lay out in balanced columns sized from their artwork, like the
@@ -137,12 +155,13 @@ File operations allowing you to create, open, and save artwork in multiple file 
 - Only formats the editor opens are listed (`.ans`, `.asc`, `.diz`,
   `.nfo`, `.txt`, `.bin`, `.xb`, `.tnd`, `.dur`, and the bare
   `file_id`); images, music, and other pack extras are filtered out
-- Pack archives download once and cache for the session
-- Every request is user-driven; nothing loads in the background
+- Pack archives download once and cache for the session, shared even
+  between rapid clicks on different pieces of the same pack
 
-### asciiarena.se Browser
+#### aSCIIaRENA
 
-**File → Browse asciiarena.se** opens an in-app browser for [aSCIIaRENA](https://asciiarena.se), the amiga artscene archive.
+The [aSCIIaRENA](https://asciiarena.se) card browses the amiga
+artscene archive.
 
 **Features:**
 
@@ -158,7 +177,8 @@ File operations allowing you to create, open, and save artwork in multiple file 
 - Amiga ascii opens the way the site renders it: raw latin-1 bytes in
   Topaz+ 1200, with SAUCE font records still winning when present
 - The search index downloads once and caches for the session
-- Every request is user-driven; nothing loads in the background
+- Diskmag releases ride `.dms` disk images the editor cannot read, so
+  they never list
 
 > [!NOTE]
 > Both archive browsers talk to third-party sites, and only while you
