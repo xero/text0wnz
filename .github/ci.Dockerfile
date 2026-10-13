@@ -1,5 +1,5 @@
 FROM oven/bun:debian AS bun
-FROM mcr.microsoft.com/playwright:v1.59.1-jammy
+FROM mcr.microsoft.com/playwright:v1.64.0-jammy
 
 LABEL org.opencontainers.image.title="text0wnz/ci"
 LABEL org.opencontainers.image.description="cicd unit testing toolchain for the text0wnz editor"
