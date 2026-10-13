@@ -680,7 +680,8 @@ const initializeAppComponents = async () => {
 	// both artpack site browsers open straight into the editor; one
 	// landing modal fronts them from a single File menu entry and
 	// remembers which site the artist was last inside
-	let artpacks;
+	// exitToLanding closes over artpacks before its const below exists;
+	// safe because createTrail only calls it from user-driven back()
 	const exitToLanding = () => artpacks?.showLanding();
 	const sixteen = createSixteenColors({
 		openFile: openHandler,
@@ -690,7 +691,7 @@ const initializeAppComponents = async () => {
 		openFile: openHandler,
 		onExit: exitToLanding,
 	});
-	artpacks = createArtpacksLanding({ sixteen, arena });
+	const artpacks = createArtpacksLanding({ sixteen, arena });
 	onClick($('browseArtpacks'), () => artpacks?.show());
 
 	// native zip and lha opens route through the same unpack path
@@ -1145,6 +1146,16 @@ const initializeAppComponents = async () => {
 			enable: characterBrush.enable,
 			ignore: characterBrush.ignore,
 			unignore: characterBrush.unignore,
+		};
+	});
+
+	Toolbar.addLazy($('asciiBrush'), async () => {
+		const { createAsciiBrushController } = await import('./asciiBrush.js');
+		const asciiBrush = createAsciiBrushController();
+		return {
+			onFocus: asciiBrush.enable,
+			onBlur: asciiBrush.disable,
+			enable: asciiBrush.enable,
 		};
 	});
 
