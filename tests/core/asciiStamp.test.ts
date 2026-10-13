@@ -145,6 +145,67 @@ describe('ascii stamp engine, thin style', () => {
 		expect(stroke([[2, 2, 0]])).toBe("'");
 	});
 
+	it('merges same row jitter under stem classes instead of doubling', () => {
+		// hand wobble on a vertical: x oscillates one column
+		expect(
+			stroke([
+				[5, 0],
+				[5, 2],
+				[6, 3],
+				[5, 4],
+				[5, 6],
+				[6, 7],
+				[6, 8],
+				[5, 9],
+				[5, 11],
+			]),
+		).not.toMatch(/\|\|/);
+	});
+
+	it('sweeps a quarter arc without doubles or orphan debris', () => {
+		// flat start steepening to vertical, the cursive upstroke that
+		// shook out doubled columns and lone dashes from the first cut
+		const pts: Array<[number, number]> = [];
+		for (let t = 0; t <= 90; t += 2) {
+			const rad = (t * Math.PI) / 180;
+			const x = Math.round(16 * Math.sin(rad));
+			const y = 16 - Math.round(16 * (1 - Math.cos(rad)));
+			const prev = pts[pts.length - 1];
+			if (!prev || prev[0] !== x || prev[1] !== y) {
+				pts.push([x, y]);
+			}
+		}
+		expect(stroke(pts)).toBe(
+			[
+				'                |',
+				'                |',
+				'                |',
+				'                |',
+				'                |',
+				"               .'",
+				'               |',
+				'               /',
+				'              /',
+				'             /',
+				'             /',
+				'            /',
+				"          ,'",
+				"         ,'",
+				'       _-',
+				'    _.-"',
+				'__.-"',
+			].join('\n'),
+		);
+	});
+
+	it('stamps an upstroke exactly like the downstroke', () => {
+		const down = stroke([[2, 0], [0, 6]]);
+		const up = stroke([[0, 6], [2, 0]]);
+		expect(up).toBe(down);
+		expect(down).toContain(".'");
+		expect(down).not.toContain("'|");
+	});
+
 	it('keeps stems when a run crosses them in one stroke', () => {
 		// vertical first, then a horizontal pass through the same cell
 		const engine = createAsciiStampEngine();
