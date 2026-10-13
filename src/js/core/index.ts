@@ -26,6 +26,7 @@ export * from './codecs/lha.js';
 export * from './protocol/moebius.js';
 export * from './protocol/extensions.js';
 export * from './protocol/timelapse.js';
+export * from './asciiStamp.js';
 export * from './paste.js';
 export * from './width.js';
 export * from './charsets.js';

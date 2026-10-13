@@ -1,12 +1,15 @@
 /**
- * Ascii brush e2e: the P0 skeleton stamps $ (CP437 36) along the
- * pointer path on the full-cell grid, preserves the cell background,
- * and groups a stroke into one undo step. Glyph selection lands in the
- * core stamp engine later; these tests pin the controller wiring.
+ * Ascii brush e2e: the thin stamp engine drives the controller, so
+ * strokes resolve to classic ascii line glyphs by slope, fully live.
+ * Glyph choice itself is pinned by the core goldens; these tests pin
+ * the browser wiring: pointer path in, revised cells out, one undo
+ * group per stroke, backgrounds preserved.
  */
 import { test, expect } from '@playwright/test';
 
-const DOLLAR = 36;
+const UNDERSCORE = 95;
+const BACKSLASH = 92;
+const PERIOD = 46;
 
 const bridgeReady = async page => {
 	await page.waitForSelector('#canvasContainer', { timeout: 10000 });
@@ -14,9 +17,7 @@ const bridgeReady = async page => {
 		state: 'attached',
 		timeout: 10000,
 	});
-	await page.waitForFunction(() => Boolean(window.__t0wnz), null, {
-		timeout: 10000,
-	});
+	await page.waitForFunction(() => Boolean(window.__t0wnz), null, { timeout: 10000 });
 };
 
 const selectAsciiBrush = async page => {
@@ -69,43 +70,37 @@ test.describe('ascii brush', () => {
 		await selectAsciiBrush(page);
 	});
 
-	test('a click stamps $ in the foreground color', async ({ page }) => {
+	test('a tap leaves a pebble in the foreground color', async ({ page }) => {
 		const pt = await cellCenter(page, 6, 4);
+		// cell centers land in the lower half, so the pebble is a period
 		await page.mouse.click(pt.clientX, pt.clientY);
 		const block = await readBlock(page, 6, 4);
-		expect(block.charCode).toBe(DOLLAR);
+		expect(block.charCode).toBe(PERIOD);
 		expect(block.fg).toBe(7);
 	});
 
-	test('a horizontal drag stamps every cell on the row', async ({ page }) => {
+	test('a flat drag resolves to underscores on the row', async ({ page }) => {
 		await drag(page, [5, 8], [20, 8]);
 		for (let x = 5; x <= 20; x++) {
-			expect((await readBlock(page, x, 8)).charCode).toBe(DOLLAR);
+			expect((await readBlock(page, x, 8)).charCode).toBe(UNDERSCORE);
 		}
-		// neighbors stay untouched
-		expect((await readBlock(page, 4, 8)).charCode).not.toBe(DOLLAR);
-		expect((await readBlock(page, 21, 8)).charCode).not.toBe(DOLLAR);
+		expect((await readBlock(page, 4, 8)).charCode).not.toBe(UNDERSCORE);
+		expect((await readBlock(page, 21, 8)).charCode).not.toBe(UNDERSCORE);
 	});
 
-	test('a diagonal drag leaves no row gaps', async ({ page }) => {
+	test('a 45 degree drag resolves to backslashes, gap free', async ({ page }) => {
 		await drag(page, [30, 2], [42, 14]);
-		expect((await readBlock(page, 30, 2)).charCode).toBe(DOLLAR);
-		expect((await readBlock(page, 42, 14)).charCode).toBe(DOLLAR);
-		for (let y = 2; y <= 14; y++) {
-			const row = [];
-			for (let x = 30; x <= 42; x++) {
-				row.push((await readBlock(page, x, y)).charCode);
-			}
-			expect(row).toContain(DOLLAR);
+		for (let i = 0; i <= 12; i++) {
+			expect((await readBlock(page, 30 + i, 2 + i)).charCode).toBe(BACKSLASH);
 		}
 	});
 
 	test('one stroke is one undo step', async ({ page }) => {
 		await drag(page, [50, 5], [60, 5]);
-		expect((await readBlock(page, 55, 5)).charCode).toBe(DOLLAR);
+		expect((await readBlock(page, 55, 5)).charCode).toBe(UNDERSCORE);
 		await page.evaluate(() => window.__t0wnz.State.textArtCanvas.undo());
 		for (let x = 50; x <= 60; x++) {
-			expect((await readBlock(page, x, 5)).charCode).not.toBe(DOLLAR);
+			expect((await readBlock(page, x, 5)).charCode).not.toBe(UNDERSCORE);
 		}
 	});
 });
