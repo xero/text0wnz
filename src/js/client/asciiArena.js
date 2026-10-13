@@ -56,6 +56,8 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		pages: new Map(), // list endpoints: cache key -> response json
 		index: null, // uhcsearch rows, fetched once per session
 		dizzes: new Map(), // filename -> preview text (null caches a miss)
+		// ensureViewable adds viewableFor/viewable: index rows identity
+		// and the artist/crew tallies derived from them
 	};
 
 	// ------------------------------------------------- tabs and history
@@ -551,6 +553,11 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		}
 	};
 
+	// clicking a piece is an explicit open, raced through the guard:
+	// the LAST click wins, a repeat click on the loading piece is a
+	// no-op, and stale fetches neither open nor repaint anything
+	const openGuard = createOpenGuard();
+
 	const showArchive = (colly, entries, extract) => {
 		// a sync render still bumps the gate, or a fetch already in
 		// flight would paint over this list when it lands
@@ -591,11 +598,6 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		State.modal.close();
 		openFile(new File([bytes], name), amigaImportHints(bytes));
 	};
-
-	// clicking a piece is an explicit open, raced through the guard:
-	// the LAST click wins, a repeat click on the loading piece is a
-	// no-op, and stale fetches neither open nor repaint anything
-	const openGuard = createOpenGuard();
 
 	const openArchive = async colly => {
 		const op = openGuard(`open:${colly.filename}`);

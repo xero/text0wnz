@@ -34,6 +34,12 @@ byte-exact golden tests before anything else moved.
   paste skips the blanks in your clipboard.
 - **Plugins.** Load an ES module from a URL or file; it reads the
   document through a small API and writes back as one undoable batch.
+- **Browse Artpacks.** One File menu entry opens a landing page for
+  both archive browsers. Back from a site's top level returns to the
+  landing, the browsers remember where you were for the whole editor
+  session, category and search pages hide anything the editor cannot
+  open, and rapid clicks on pieces resolve to the last one clicked
+  instead of racing.
 - **16colo.rs browser.** Browse artpacks by year, crew, or artist, or
   search the whole archive by pack name, and open pieces straight into
   the editor. Packs preview by their `file_id.diz`, years sit in a
@@ -67,6 +73,11 @@ byte-exact golden tests before anything else moved.
 - **Renderer.** WebGL replaces the 2D canvas chunks.
 - **Undo.** A byte-budgeted patch arena (64 MB) replaces cell-count
   caps, so huge joints stop eating your history.
+- **Row and column ops.** Insert and delete row/column are classic
+  fixed-canvas shifts in the Moebius and PabloDraw tradition: content
+  moves, the canvas keeps its size, and the whole shift is one undo
+  step. In v2 these ops grew or shrank the document and erased the
+  undo history.
 - **Collab server.** Speaks native Moebius protocol, so one server
   hosts classic and v3 clients in the same room.
 - **Updates.** The update prompt keeps your localStorage (favorites,
