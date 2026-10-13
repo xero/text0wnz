@@ -184,8 +184,8 @@ describe('sixteen colors browser', () => {
 			.click();
 		await flush();
 		const pieces = [...document.querySelectorAll('#sixteenList .sixteenPiece')];
-		// first click stalls on the zip; the second must win even though
-		// both ride the SAME archive (the superseded fetch aborts)
+		// first click stalls on the zip; the second must win, and both
+		// clicks share ONE download because the cache holds the promise
 		pieces.find(p => p.textContent.includes('FILE_ID')).click();
 		await flush();
 		pieces.find(p => p.textContent.includes('x0-art.ans')).click();
@@ -195,6 +195,9 @@ describe('sixteen colors browser', () => {
 		await flush();
 		expect(opened).toHaveLength(1);
 		expect(opened[0].name).toBe('x0-art.ans');
+		const mirrorCalls = fetchMock.mock.calls.filter(c =>
+			c[0].includes('raw.githubusercontent.com'));
+		expect(mirrorCalls).toHaveLength(1);
 	});
 
 	it('resumes the current view when shown again mid-session', async () => {

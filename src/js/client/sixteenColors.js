@@ -524,10 +524,37 @@ const createSixteenColors = ({ openFile, onExit }) => {
 	};
 
 	// the LAST clicked piece wins: a repeat click on the loading piece
-	// is a no-op, a different piece aborts the old zip fetch (even a
-	// sibling in the same pack; the refetch is the price of never
-	// letting a slow first click stomp a fast second one)
+	// is a no-op, a different piece supersedes it. The zip download
+	// itself is never aborted: cache.zips holds the PROMISE, so
+	// sibling pieces and superseded clicks share one transfer and a
+	// multi-MB pack never downloads twice
 	const openGuard = createOpenGuard();
+
+	const fetchZip = (year, zipName) => {
+		if (!cache.zips.has(zipName)) {
+			const download = (async () => {
+				const response = await fetch(
+					`${MIRROR}/${year}/${encodeURIComponent(zipName)}`,
+				);
+				if (!response.ok) {
+					throw new Error(
+						`the archive mirror has no ${zipName} (HTTP ${response.status}); the pack may be newer than the last mirror sync`,
+					);
+				}
+				return new Uint8Array(await response.arrayBuffer());
+			})().catch(error => {
+				// a failed download must not cache: the next click retries
+				cache.zips.delete(zipName);
+				throw error;
+			});
+			cache.zips.set(zipName, download);
+			// a browsing session must not hoard every pack it touched
+			while (cache.zips.size > 3) {
+				cache.zips.delete(cache.zips.keys().next().value);
+			}
+		}
+		return cache.zips.get(zipName);
+	};
 
 	const openPiece = async (pack, file) => {
 		if (!pack.archive) {
@@ -542,29 +569,10 @@ const createSixteenColors = ({ openFile, onExit }) => {
 		const zipName = pack.archive.replace(/\s+/g, '');
 		say(`fetching ${zipName}...`);
 		try {
-			if (!cache.zips.has(zipName)) {
-				const response = await fetch(
-					`${MIRROR}/${pack.year}/${encodeURIComponent(zipName)}`,
-					{ signal: op.signal },
-				);
-				if (!response.ok) {
-					throw new Error(
-						`the archive mirror has no ${zipName} (HTTP ${response.status}); the pack may be newer than the last mirror sync`,
-					);
-				}
-				cache.zips.set(
-					zipName,
-					new Uint8Array(await response.arrayBuffer()),
-				);
-				// a browsing session must not hoard every pack it touched
-				while (cache.zips.size > 3) {
-					cache.zips.delete(cache.zips.keys().next().value);
-				}
-			}
+			const zip = await fetchZip(pack.year, zipName);
 			if (!op.current()) {
 				return;
 			}
-			const zip = cache.zips.get(zipName);
 			const entry = findZipEntry(readZipEntries(zip), file.name);
 			if (!entry) {
 				throw new Error(`${file.name} is not in ${zipName}`);

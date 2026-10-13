@@ -881,134 +881,103 @@ const createKeyboardController = () => {
 		State.cursor.left();
 	};
 
-	// Edit actions for insert, delete, and erase operations
+	// Row and column ops are classic fixed-canvas shifts (moebius and
+	// pablodraw lineage): content moves, the canvas never resizes.
+	// Each op is ONE undoable stroke of plane-native cell writes, so
+	// undo works, collab broadcasts it like any draw, animations keep
+	// their other frames, and truecolor/unicode cells survive (the old
+	// buffer rebuild rode the lossy u16 mirror and wiped history).
+	// Mirror mode suspends around the shift or every write would
+	// double against its reflection.
+	const shiftCells = writer => {
+		const mirrored = State.textArtCanvas.getMirrorMode();
+		if (mirrored) {
+			State.textArtCanvas.setMirrorMode(false);
+		}
+		State.textArtCanvas.startUndo();
+		State.textArtCanvas.draw(writer, false);
+		if (mirrored) {
+			State.textArtCanvas.setMirrorMode(true);
+		}
+	};
+
+	const blankCell = (callback, x, y) => {
+		callback(
+			magicNumbers.CHAR_SPACE,
+			magicNumbers.COLOR_WHITE,
+			magicNumbers.COLOR_BLACK,
+			x,
+			y,
+		);
+	};
+
+	const copyCell = (callback, fromX, fromY, toX, toY) => {
+		const cell = State.textArtCanvas.getBlock(fromX, fromY);
+		callback(cell.charCode, cell.foregroundColor, cell.backgroundColor, toX, toY);
+	};
+
 	const insertRow = () => {
 		const currentRows = State.textArtCanvas.getRows();
 		const currentColumns = State.textArtCanvas.getColumns();
 		const cursorY = State.cursor.getY();
-		State.textArtCanvas.startUndo();
-		const newImageData = new Uint16Array(currentColumns * (currentRows + 1));
-		const oldImageData = State.textArtCanvas.getImageData();
-
-		for (let y = 0; y < cursorY; y++) {
-			for (let x = 0; x < currentColumns; x++) {
-				newImageData[y * currentColumns + x] =
-					oldImageData[y * currentColumns + x];
+		shiftCells(callback => {
+			// bottom-up: every row reads before anything overwrites it
+			for (let y = currentRows - 1; y > cursorY; y--) {
+				for (let x = 0; x < currentColumns; x++) {
+					copyCell(callback, x, y - 1, x, y);
+				}
 			}
-		}
-		for (let x = 0; x < currentColumns; x++) {
-			newImageData[cursorY * currentColumns + x] = magicNumbers.BLANK_CELL;
-		}
-		for (let y = cursorY; y < currentRows; y++) {
 			for (let x = 0; x < currentColumns; x++) {
-				newImageData[(y + 1) * currentColumns + x] =
-					oldImageData[y * currentColumns + x];
+				blankCell(callback, x, cursorY);
 			}
-		}
-
-		State.textArtCanvas.setImageData(
-			currentColumns,
-			currentRows + 1,
-			newImageData,
-			State.textArtCanvas.getIceColors(),
-		);
+		});
 	};
 
 	const deleteRow = () => {
 		const currentRows = State.textArtCanvas.getRows();
 		const currentColumns = State.textArtCanvas.getColumns();
 		const cursorY = State.cursor.getY();
-		if (currentRows <= 1) {
-			return;
-		}
-		State.textArtCanvas.startUndo();
-		const newImageData = new Uint16Array(currentColumns * (currentRows - 1));
-		const oldImageData = State.textArtCanvas.getImageData();
-
-		for (let y = 0; y < cursorY; y++) {
-			for (let x = 0; x < currentColumns; x++) {
-				newImageData[y * currentColumns + x] =
-					oldImageData[y * currentColumns + x];
+		shiftCells(callback => {
+			// top-down: every row reads before anything overwrites it
+			for (let y = cursorY; y < currentRows - 1; y++) {
+				for (let x = 0; x < currentColumns; x++) {
+					copyCell(callback, x, y + 1, x, y);
+				}
 			}
-		}
-		for (let y = cursorY + 1; y < currentRows; y++) {
 			for (let x = 0; x < currentColumns; x++) {
-				newImageData[(y - 1) * currentColumns + x] =
-					oldImageData[y * currentColumns + x];
+				blankCell(callback, x, currentRows - 1);
 			}
-		}
-		State.textArtCanvas.setImageData(
-			currentColumns,
-			currentRows - 1,
-			newImageData,
-			State.textArtCanvas.getIceColors(),
-		);
-		if (State.cursor.getY() >= currentRows - 1) {
-			State.cursor.move(State.cursor.getX(), currentRows - 2);
-		}
+		});
 	};
 
 	const insertColumn = () => {
 		const currentRows = State.textArtCanvas.getRows();
 		const currentColumns = State.textArtCanvas.getColumns();
 		const cursorX = State.cursor.getX();
-		State.textArtCanvas.startUndo();
-		const newImageData = new Uint16Array((currentColumns + 1) * currentRows);
-		const oldImageData = State.textArtCanvas.getImageData();
-
-		for (let y = 0; y < currentRows; y++) {
-			for (let x = 0; x < cursorX; x++) {
-				newImageData[y * (currentColumns + 1) + x] =
-					oldImageData[y * currentColumns + x];
+		shiftCells(callback => {
+			for (let y = 0; y < currentRows; y++) {
+				// right-to-left: every cell reads before its overwrite
+				for (let x = currentColumns - 1; x > cursorX; x--) {
+					copyCell(callback, x - 1, y, x, y);
+				}
+				blankCell(callback, cursorX, y);
 			}
-			newImageData[y * (currentColumns + 1) + cursorX] =
-				magicNumbers.BLANK_CELL;
-
-			for (let x = cursorX; x < currentColumns; x++) {
-				newImageData[y * (currentColumns + 1) + x + 1] =
-					oldImageData[y * currentColumns + x];
-			}
-		}
-		State.textArtCanvas.setImageData(
-			currentColumns + 1,
-			currentRows,
-			newImageData,
-			State.textArtCanvas.getIceColors(),
-		);
+		});
 	};
 
 	const deleteColumn = () => {
 		const currentRows = State.textArtCanvas.getRows();
 		const currentColumns = State.textArtCanvas.getColumns();
 		const cursorX = State.cursor.getX();
-		if (currentColumns <= 1) {
-			return;
-		}
-		State.textArtCanvas.startUndo();
-		const newImageData = new Uint16Array((currentColumns - 1) * currentRows);
-		const oldImageData = State.textArtCanvas.getImageData();
-
-		for (let y = 0; y < currentRows; y++) {
-			for (let x = 0; x < cursorX; x++) {
-				newImageData[y * (currentColumns - 1) + x] =
-					oldImageData[y * currentColumns + x];
+		shiftCells(callback => {
+			for (let y = 0; y < currentRows; y++) {
+				// left-to-right: every cell reads before its overwrite
+				for (let x = cursorX; x < currentColumns - 1; x++) {
+					copyCell(callback, x + 1, y, x, y);
+				}
+				blankCell(callback, currentColumns - 1, y);
 			}
-			for (let x = cursorX + 1; x < currentColumns; x++) {
-				newImageData[y * (currentColumns - 1) + x - 1] =
-					oldImageData[y * currentColumns + x];
-			}
-		}
-
-		State.textArtCanvas.setImageData(
-			currentColumns - 1,
-			currentRows,
-			newImageData,
-			State.textArtCanvas.getIceColors(),
-		);
-
-		if (State.cursor.getX() >= currentColumns - 1) {
-			State.cursor.move(currentColumns - 2, State.cursor.getY());
-		}
+		});
 	};
 
 	const eraseRow = () => {

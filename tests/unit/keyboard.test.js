@@ -38,6 +38,8 @@ vi.mock('../../src/js/client/state.js', () => ({
 			setImageData: vi.fn(),
 			getImageData: vi.fn(() => new Uint16Array(2000)),
 			getIceColors: vi.fn(() => false),
+			getMirrorMode: vi.fn(() => false),
+			setMirrorMode: vi.fn(),
 		},
 		cursor: {
 			getX: vi.fn(() => 0),
@@ -381,6 +383,97 @@ describe('Keyboard Utilities', () => {
 			expect(controller).toHaveProperty('deleteColumn');
 			expect(controller).toHaveProperty('eraseRow');
 			expect(controller).toHaveProperty('eraseColumn');
+		});
+
+		describe('fixed-canvas row and column shifts', () => {
+			// a 3x3 virtual grid: pristine cells read a per-coord code so
+			// shift mappings are provable; writes land back in the grid
+			// the way drawBlocks applies them (immediately)
+			const codeAt = (x, y) => 100 + y * 10 + x;
+			let grid;
+
+			afterEach(() => {
+				// the module-level State mock outlives this describe:
+				// hand later tests back the stock implementations
+				State.textArtCanvas.getColumns.mockReturnValue(80);
+				State.textArtCanvas.getRows.mockReturnValue(25);
+				State.textArtCanvas.getBlock.mockReturnValue({
+					charCode: 32,
+					foregroundColor: 7,
+					backgroundColor: 0,
+				});
+				State.textArtCanvas.draw.mockImplementation(() => {});
+				State.cursor.getX.mockReturnValue(0);
+				State.cursor.getY.mockReturnValue(0);
+			});
+			const wireGrid = (cursorX, cursorY) => {
+				grid = new Map();
+				const cellAt = (x, y) =>
+					grid.get(`${x},${y}`) ?? {
+						charCode: codeAt(x, y),
+						foregroundColor: 1,
+						backgroundColor: 2,
+					};
+				State.textArtCanvas.getColumns.mockReturnValue(3);
+				State.textArtCanvas.getRows.mockReturnValue(3);
+				State.textArtCanvas.getBlock.mockImplementation(cellAt);
+				State.textArtCanvas.draw.mockImplementation(writer => {
+					writer((charCode, fg, bg, x, y) => {
+						grid.set(`${x},${y}`, {
+							charCode,
+							foregroundColor: fg,
+							backgroundColor: bg,
+						});
+					});
+				});
+				State.cursor.getX.mockReturnValue(cursorX);
+				State.cursor.getY.mockReturnValue(cursorY);
+				return cellAt;
+			};
+
+			it('insertRow shifts rows down and blanks the cursor row', () => {
+				const cellAt = wireGrid(0, 1);
+				createKeyboardController().insertRow();
+				// the canvas never resizes and no buffer swap happens
+				expect(State.textArtCanvas.setImageData).not.toHaveBeenCalled();
+				expect(State.textArtCanvas.startUndo).toHaveBeenCalledTimes(1);
+				expect(cellAt(2, 2).charCode).toBe(codeAt(2, 1)); // old row 1
+				expect(cellAt(1, 1).charCode).toBe(32); // blank inserted
+				expect(grid.has('0,0')).toBe(false); // row 0 untouched
+			});
+
+			it('deleteRow shifts rows up and blanks the bottom row', () => {
+				const cellAt = wireGrid(0, 0);
+				createKeyboardController().deleteRow();
+				expect(cellAt(0, 0).charCode).toBe(codeAt(0, 1)); // old row 1
+				expect(cellAt(0, 1).charCode).toBe(codeAt(0, 2)); // old row 2
+				expect(cellAt(2, 2).charCode).toBe(32); // bottom blanks
+			});
+
+			it('insertColumn shifts right and blanks the cursor column', () => {
+				const cellAt = wireGrid(1, 0);
+				createKeyboardController().insertColumn();
+				expect(cellAt(2, 0).charCode).toBe(codeAt(1, 0)); // old col 1
+				expect(cellAt(1, 2).charCode).toBe(32); // blank inserted
+				expect(grid.has('0,0')).toBe(false); // col 0 untouched
+			});
+
+			it('deleteColumn shifts left and blanks the last column', () => {
+				const cellAt = wireGrid(0, 0);
+				createKeyboardController().deleteColumn();
+				expect(cellAt(0, 1).charCode).toBe(codeAt(1, 1)); // old col 1
+				expect(cellAt(1, 1).charCode).toBe(codeAt(2, 1)); // old col 2
+				expect(cellAt(2, 1).charCode).toBe(32); // last col blanks
+			});
+
+			it('suspends mirror mode around the shift and restores it', () => {
+				wireGrid(0, 0);
+				State.textArtCanvas.getMirrorMode.mockReturnValue(true);
+				createKeyboardController().insertRow();
+				expect(State.textArtCanvas.setMirrorMode).toHaveBeenNthCalledWith(1, false);
+				expect(State.textArtCanvas.setMirrorMode).toHaveBeenNthCalledWith(2, true);
+				State.textArtCanvas.getMirrorMode.mockReturnValue(false);
+			});
 		});
 
 		it('should enable keyboard controller', () => {
