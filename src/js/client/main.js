@@ -164,7 +164,10 @@ const openHandler = (file, opts = {}) => {
 		openFile.value = '';
 		return;
 	}
-	const openKey = `${file.name}:${file.size}`;
+	// lastModified keeps two same-sized files (two packs' FILE_ID.DIZ)
+	// from colliding; browser repeat clicks dedupe upstream in the
+	// open guards, so the fresh timestamp there costs nothing
+	const openKey = `${file.name}:${file.size}:${file.lastModified ?? 0}`;
 	if (openInFlight === openKey) {
 		return;
 	}
@@ -173,6 +176,18 @@ const openHandler = (file, opts = {}) => {
 	bodyContainer.classList.add('loading');
 	State.textArtCanvas.clearXBData();
 	State.textArtCanvas.clear();
+	// a parser throw must not wedge the in-flight key or the loading
+	// veil; the canvas was already cleared, that loss is honest
+	const onError = error => {
+		console.error('[App] could not open file:', error);
+		if (seq === openSeq) {
+			openInFlight = null;
+			bodyContainer.classList.remove('loading');
+			if (State.modal.isOpen() && State.modal.current() === 'loading') {
+				State.modal.close();
+			}
+		}
+	};
 	Load.file(
 		file,
 		async (
@@ -216,12 +231,20 @@ const openHandler = (file, opts = {}) => {
 						letterSpacing,
 					);
 				}
+				// the reset event fires only on REAL loads: onOpenedFile
+				// also rides buffer swaps (row ops, collab resyncs) which
+				// must never re-home the cursor, selection, or minimap
+				document.dispatchEvent(new CustomEvent('onNewDocument'));
 				palettePicker.updatePalette(); // ANSi
 				openFile.value = '';
 				viewport.scrollLeft = viewport.scrollTop = 0;
 			};
 
 			const closeModal = () => {
+				// a superseded open must not yank the winner's modal
+				if (seq !== openSeq) {
+					return;
+				}
 				// current is the controller's accessor, not a field: the
 				// old reference compare never matched and left the
 				// loading modal up after every file load
@@ -235,8 +258,15 @@ const openHandler = (file, opts = {}) => {
 			// an archive browser's font hint beats the NFO heuristic (an
 			// amiga diz wants Topaz, not Topaz-437) but never SAUCE: the
 			// author's record wins over the source's house style
+			// a stale open's font must never land on the winning doc
+			const fontWanted = () => seq === openSeq;
 			if (isSceneFile && !opts.font) {
-				await State.textArtCanvas.setFont(magicNumbers.NFO_FONT, applyData);
+				await State.textArtCanvas.setFont(
+					magicNumbers.NFO_FONT,
+					applyData,
+					undefined,
+					fontWanted,
+				);
 				return; // setFont runs applyData
 			}
 			const isXBFile = file.name.toLowerCase().endsWith('.xb');
@@ -244,13 +274,23 @@ const openHandler = (file, opts = {}) => {
 				// XB files handle font loading internally
 				const appFontName = Load.sauceToAppFont(fontName.trim());
 				if (appFontName) {
-					await State.textArtCanvas.setFont(appFontName, applyData);
+					await State.textArtCanvas.setFont(
+						appFontName,
+						applyData,
+						undefined,
+						fontWanted,
+					);
 					closeModal();
 					return; // setFont runs applyData
 				}
 			}
 			if (opts.font && !isXBFile) {
-				await State.textArtCanvas.setFont(opts.font, applyData);
+				await State.textArtCanvas.setFont(
+					opts.font,
+					applyData,
+					undefined,
+					fontWanted,
+				);
 				closeModal();
 				return; // setFont runs applyData
 			}
@@ -258,7 +298,7 @@ const openHandler = (file, opts = {}) => {
 			palettePicker.updatePalette(); // XB
 			closeModal();
 		},
-		opts,
+		{ ...opts, onError },
 	);
 };
 
@@ -608,10 +648,9 @@ const initializeAppComponents = async () => {
 				State.textArtCanvas.resize(80, 25);
 				State.textArtCanvas.clear();
 				State.textArtCanvas.setIceColors(false);
-				// clear() never fires onOpenedFile, so the view state the
-				// loaders reset through that event resets here by hand
-				State.cursor.move(0, 0);
-				State.selectionCursor.forget();
+				// New is a real load: ride the same reset event as the
+				// file openers instead of hand-copying a subset of it
+				document.dispatchEvent(new CustomEvent('onNewDocument'));
 				viewport.scrollLeft = viewport.scrollTop = 0;
 				bodyContainer.classList.remove('loading');
 				State.modal.close();

@@ -302,8 +302,9 @@ const createMinimap = () => {
 	});
 	// a new document invalidates the whole map: the panel's own scroll
 	// and the focus box both belong at the top, not wherever the last
-	// (possibly much taller) artwork left them
-	document.addEventListener('onOpenedFile', () => {
+	// (possibly much taller) artwork left them. onNewDocument, not
+	// onOpenedFile: buffer swaps from row ops must not re-home it
+	document.addEventListener('onNewDocument', () => {
 		if (visible) {
 			panel.scrollTop = 0;
 			render();

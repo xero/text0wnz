@@ -1123,8 +1123,23 @@ const loadModule = () => {
 
 	const file = (file, callback, opts = {}) => {
 		const reader = new FileReader();
+		// a corrupt file must surface instead of silently eating the
+		// callback: the caller holds load-state that would wedge
+		const fail = error => {
+			console.error('[Load] failed to parse file:', error);
+			opts.onError?.(error);
+		};
+		// load registers first: test harnesses treat listener zero as
+		// the load handler
 		reader.addEventListener('load', _e => {
-			const data = new Uint8Array(reader.result);
+			try {
+				parse(new Uint8Array(reader.result));
+			} catch (error) {
+				fail(error);
+			}
+		});
+		reader.addEventListener('error', () => fail(reader.error));
+		const parse = data => {
 			let imageData;
 			switch (file.name.split('.').pop().toLowerCase()) {
 				case 'xb':
@@ -1281,7 +1296,7 @@ const loadModule = () => {
 					});
 					break;
 			}
-		});
+		};
 		reader.readAsArrayBuffer(file);
 	};
 

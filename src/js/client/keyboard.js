@@ -662,8 +662,11 @@ const createCursor = canvasContainer => {
 	document.addEventListener('onOpenedFile', updateDimensions);
 	document.addEventListener('onScaleFactorChange', updateDimensions);
 	// a fresh document starts at its own origin; the follow scroll
-	// riding this move is what pins the viewport back to the top
-	document.addEventListener('onOpenedFile', () => move(0, 0));
+	// riding this move is what pins the viewport back to the top.
+	// onNewDocument, never onOpenedFile: the latter fires on ANY u16
+	// buffer swap (row/column ops, collab resyncs), which must not
+	// teleport the artist mid-edit
+	document.addEventListener('onNewDocument', () => move(0, 0));
 	move(x, y);
 
 	return {
@@ -823,12 +826,13 @@ const createSelectionCursor = element => {
 	document.addEventListener('onFontChange', refreshMetrics);
 
 	// the restore memory is per-document: geometry from the old file
-	// must not reappear inside whatever gets loaded next
+	// must not reappear inside whatever gets loaded next. Buffer swaps
+	// (onOpenedFile) keep the memory; only real loads clear it
 	const forget = () => {
 		hide();
 		everSelected = false;
 	};
-	document.addEventListener('onOpenedFile', forget);
+	document.addEventListener('onNewDocument', forget);
 
 	return {
 		show,
@@ -2485,6 +2489,27 @@ const createSelectionTool = () => {
 	const setPendingAction = keyCode => {
 		pendingInitialAction = keyCode;
 	};
+
+	// a new document invalidates every piece of cross-file tool state:
+	// stale move-mode data would stamp the OLD file's cells into the
+	// new one on the next drag, and a stale originalPosition would
+	// deleteArea freshly loaded art on the next toggle
+	document.addEventListener('onNewDocument', () => {
+		if (moveMode) {
+			moveMode = false;
+			moveButton.classList.remove('enabled');
+			State.selectionCursor.getElement().classList.remove('moveMode');
+		}
+		selectionData = null;
+		originalPosition = null;
+		underlyingData = null;
+		isDragging = false;
+		pendingInitialAction = null;
+		selectionStartX = 0;
+		selectionStartY = 0;
+		selectionEndX = 0;
+		selectionEndY = 0;
+	});
 
 	return {
 		enable: enable,

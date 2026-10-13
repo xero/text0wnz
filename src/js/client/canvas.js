@@ -1082,7 +1082,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	const setFont = async (fontName, callback, scaleFactor) => {
+	// stillWanted lets a racing caller disown the swap after the async
+	// font load: a superseded file open must not restyle the document
+	// that beat it
+	const setFont = async (fontName, callback, scaleFactor, stillWanted) => {
 		try {
 			const effectiveScaleFactor =
 				scaleFactor ?? State.font?.getScaleFactor?.() ?? 1;
@@ -1096,6 +1099,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					State.palette,
 					effectiveScaleFactor,
 				);
+				if (stillWanted && !stillWanted()) {
+					return;
+				}
 				State.font = font;
 				currentFontName = fontName;
 
@@ -1121,6 +1127,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					State.palette,
 					effectiveScaleFactor,
 				);
+				if (stillWanted && !stillWanted()) {
+					return;
+				}
 				State.font = font;
 				currentFontName = fallbackFont;
 
@@ -1142,6 +1151,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					State.palette,
 					effectiveScaleFactor,
 				);
+				if (stillWanted && !stillWanted()) {
+					return;
+				}
 				State.font = font;
 				currentFontName = fontName;
 
@@ -1170,6 +1182,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 					State.palette,
 					effectiveScaleFactor,
 				);
+				if (stillWanted && !stillWanted()) {
+					return;
+				}
 				State.font = font;
 				currentFontName = fallbackFont;
 

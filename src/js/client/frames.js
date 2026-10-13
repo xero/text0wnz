@@ -250,6 +250,9 @@ const createFramesPanel = () => {
 	};
 
 	document.addEventListener('onFrameChange', refresh);
+	// New collapses to one frame without any onFrameChange: the strip
+	// must not keep showing the old document's timeline
+	document.addEventListener('onNewDocument', refresh);
 	// editing stops playback (drawing into a flipbook is chaos)
 	document.addEventListener('onTextCanvasDown', stop);
 

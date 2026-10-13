@@ -34,7 +34,12 @@ describe('sixteen colors browser', () => {
 		document.body.innerHTML = MARKUP;
 		opened = [];
 		const artBytes = new TextEncoder().encode('\u001b[31mhi');
-		const zip = await buildZip([{ name: 'x0-art.ans', data: artBytes }]);
+		// both openable pieces live in the zip, or the supersede test
+		// would pass vacuously when the first click fails extraction
+		const zip = await buildZip([
+			{ name: 'x0-art.ans', data: artBytes },
+			{ name: 'FILE_ID', data: new TextEncoder().encode('diz art') },
+		]);
 		fetchMock = vi.fn(async url => {
 			if (url.endsWith('/year')) {
 				return {

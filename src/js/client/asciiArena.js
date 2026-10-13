@@ -561,10 +561,23 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		for (const entry of entries) {
 			list.appendChild(
 				button(baseName(entry.name), async () => {
+					// picker entries race like any other open: last wins
+					const op = openGuard(`open:${colly.filename}/${entry.name}`);
+					if (!op) {
+						return;
+					}
 					try {
-						openBytes(await extract(entry), baseName(entry.name));
+						const bytes = await extract(entry);
+						if (!op.current()) {
+							return;
+						}
+						openBytes(bytes, baseName(entry.name));
 					} catch (error) {
-						say(`could not open: ${error.message}`, true);
+						if (op.current()) {
+							say(`could not open: ${error.message}`, true);
+						}
+					} finally {
+						op.done();
 					}
 				}, 'arenaItem'),
 			);
@@ -603,7 +616,13 @@ const createAsciiArena = ({ openFile, onExit }) => {
 				return isZip ? extractZipEntry(bytes, entry) : extractLhaEntry(bytes, entry);
 			};
 			if (entries.length === 1) {
-				openBytes(await extract(entries[0]), baseName(entries[0].name));
+				const only = await extract(entries[0]);
+				// the extract awaits too: a newer click during the inflate
+				// must not let this one steal a fresher open ticket
+				if (!op.current()) {
+					return;
+				}
+				openBytes(only, baseName(entries[0].name));
 				return;
 			}
 			if (!gate.current(ticket)) {

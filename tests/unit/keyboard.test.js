@@ -261,15 +261,27 @@ describe('Keyboard Utilities', () => {
 			expect(cursor.getY()).toBe(0);
 		});
 
-		it('re-homes to the origin when a new file opens', () => {
+		it('re-homes to the origin when a new document loads', () => {
 			const container = document.createElement('div');
 			const cursor = createCursor(container);
 
 			cursor.move(12, 20);
 			expect(cursor.getY()).toBe(20);
-			document.dispatchEvent(new CustomEvent('onOpenedFile'));
+			document.dispatchEvent(new CustomEvent('onNewDocument'));
 			expect(cursor.getX()).toBe(0);
 			expect(cursor.getY()).toBe(0);
+		});
+
+		it('holds position across plain buffer swaps', () => {
+			const container = document.createElement('div');
+			const cursor = createCursor(container);
+
+			cursor.move(12, 20);
+			// row/column ops and collab resyncs fire onOpenedFile: they
+			// must never teleport the artist mid-edit
+			document.dispatchEvent(new CustomEvent('onOpenedFile'));
+			expect(cursor.getX()).toBe(12);
+			expect(cursor.getY()).toBe(20);
 		});
 
 		it('should have enable and disable methods', () => {
@@ -319,7 +331,7 @@ describe('Keyboard Utilities', () => {
 			});
 		});
 
-		it('forgets the restore memory when a new file opens', () => {
+		it('forgets the restore memory when a new document loads', () => {
 			const container = document.createElement('div');
 			const selectionCursor = createSelectionCursor(container);
 
@@ -327,9 +339,20 @@ describe('Keyboard Utilities', () => {
 			selectionCursor.setEnd(14, 12);
 			selectionCursor.hide();
 			expect(selectionCursor.getLastSelection()).not.toBe(null);
-			document.dispatchEvent(new CustomEvent('onOpenedFile'));
+			document.dispatchEvent(new CustomEvent('onNewDocument'));
 			expect(selectionCursor.getLastSelection()).toBe(null);
 			expect(selectionCursor.getSelection()).toBe(null);
+		});
+
+		it('keeps the restore memory across plain buffer swaps', () => {
+			const container = document.createElement('div');
+			const selectionCursor = createSelectionCursor(container);
+
+			selectionCursor.setStart(10, 10);
+			selectionCursor.setEnd(14, 12);
+			selectionCursor.hide();
+			document.dispatchEvent(new CustomEvent('onOpenedFile'));
+			expect(selectionCursor.getLastSelection()).not.toBe(null);
 		});
 
 		it('exposes forget for loaders that bypass the event', () => {

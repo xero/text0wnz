@@ -228,6 +228,99 @@ describe('asciiarena browser', () => {
 		await flush();
 		expect(opened).toHaveLength(1);
 		expect(opened[0].file.name).toBe('fzn-tinf.txt');
+		// the supersede really aborted the first fetch's signal: the
+		// plumbing from guard to fetch options is load-bearing
+		const zmbCall = fetchMock.mock.calls.find(c =>
+			c[0].endsWith('/collections/zmb-wof1/zmb-wof1.txt'));
+		expect(zmbCall[1].signal.aborted).toBe(true);
+		expect(
+			document.getElementById('arenaStatus').classList.contains('error'),
+		).toBe(false);
+	});
+
+	it('a fast colly beats the slow single-entry archive clicked first', async () => {
+		const zip = await buildZip([{ name: 'logos/one.asc', data: amigaBytes() }]);
+		let releaseZip;
+		const zipGate = new Promise(r => {
+			releaseZip = r;
+		});
+		fetchMock.mockImplementation(async url => {
+			if (url.includes('/api/collys?')) {
+				return {
+					ok: true,
+					json: async () => [
+						{
+							filename: 'up-pack.zip',
+							name: 'Zip Pack',
+							artists: 'Two',
+							crews: 'Up Rough',
+							cdate: '0000-00-00',
+							total_count: 2,
+						},
+						{
+							filename: 'fzn-tinf.txt',
+							name: 'Textmode Inferno',
+							artists: 'FuZioN',
+							crews: '',
+							cdate: '2026-09-19',
+							total_count: 2,
+						},
+					],
+				};
+			}
+			if (url.endsWith('/collections/up-pack/up-pack.zip')) {
+				await zipGate;
+				return { ok: true, arrayBuffer: async () => zip.buffer };
+			}
+			if (url.endsWith('/collections/fzn-tinf/fzn-tinf.txt')) {
+				return { ok: true, arrayBuffer: async () => amigaBytes().buffer };
+			}
+			throw new Error(`unexpected fetch ${url}`);
+		});
+		await browser.showLatest(1);
+		const cards = [...document.querySelectorAll('#arenaList .arenaColly')];
+		cards[0].click();
+		cards[1].click();
+		await flush();
+		await flush();
+		// the archive's single entry auto-opens on arrival; superseded,
+		// it must not steal a fresh ticket from the winning click
+		releaseZip();
+		await flush();
+		await flush();
+		expect(opened).toHaveLength(1);
+		expect(opened[0].file.name).toBe('fzn-tinf.txt');
+	});
+
+	it('rapid picker entry clicks resolve to the last one', async () => {
+		const lha = realColly();
+		fetchMock.mockImplementation(async url => {
+			if (url.endsWith('/api/uhcsearch')) {
+				return { ok: true, text: async () => INDEX_TSV };
+			}
+			if (url.endsWith('/collections/oldskool/oldskool.lha')) {
+				return { ok: true, arrayBuffer: async () => lha.buffer };
+			}
+			throw new Error(`unexpected fetch ${url}`);
+		});
+		await browser.showByArtist('Two');
+		const card = [...document.querySelectorAll('#arenaList .arenaColly')].find(
+			c => c.querySelector('span').textContent === 'Amiga Archive',
+		);
+		card.click();
+		await flush();
+		await flush();
+		const entries = [...document.querySelectorAll('#arenaList button')];
+		expect(entries.map(b => b.textContent)).toEqual([
+			'File_ID.DiZ',
+			'iFd-Colly3.txt',
+		]);
+		entries[0].click();
+		entries[1].click();
+		await flush();
+		await flush();
+		expect(opened).toHaveLength(1);
+		expect(opened[0].file.name).toBe('iFd-Colly3.txt');
 	});
 
 	it('keeps the UTF-8 path for ascii-clean files', async () => {
