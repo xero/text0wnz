@@ -312,16 +312,16 @@ const roman = (
 describe('ascii stamp engine, roman ribbon', () => {
 	it('stamps verticals as bare fill, tapered in, flicked out', () => {
 		expect(roman([[3, 0], [3, 4]], 5)).toBe(
-			[' $$$', '$$$$$', '$$$$$', '$$$$$', '$$$$$', '  .'].join('\n'),
+			[' $$$', '$$$$$', '$$$$$', ' $$$$', '  $$', '  .'].join('\n'),
 		);
 	});
 
 	it('chisels rising strokes with d and P plus row AA', () => {
 		expect(roman([[0, 8], [8, 0]], 5)).toBe(
 			[
-				"             '",
-				"       ,d$$$P'",
-				"      ,d$$$P'",
+				"            '",
+				"         ,dP'",
+				"       ,d$$P'",
 				"     ,d$$$P'",
 				"    ,d$$$P'",
 				"   ,d$$$P'",
@@ -343,9 +343,9 @@ describe('ascii stamp engine, roman ribbon', () => {
 				'   `Y$$$b.',
 				'    `Y$$$b.',
 				'     `Y$$$b.',
-				'      `Y$$$b.',
-				'       `Y$$$b.',
-				'             .',
+				'       `Y$$b.',
+				'         `Yb.',
+				'            .',
 			].join('\n'),
 		);
 	});

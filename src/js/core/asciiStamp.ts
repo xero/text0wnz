@@ -457,8 +457,12 @@ export const createAsciiStampEngine = (
 		max: number;
 		cls: SlopeClass;
 		fall: boolean;
+		/** entry taper: max width frozen when the span was born */
+		cap: number;
 	}
 	const spans = new Map<number, Span[]>();
+	/** the newest spans, frontier first: the stroke's living tip */
+	let tipSpans: Array<{ y: number; s: Span }> = [];
 
 	/** chisel glyphs by class and lean: [left, right] */
 	const ribbonEdges = (cls: SlopeClass, fall: boolean): [number, number] => {
@@ -473,15 +477,23 @@ export const createAsciiStampEngine = (
 	};
 
 	/**
-	 * SAUNA taper: a stroke never opens at full weight; width ramps up
-	 * over the first row advances (1, 3, 5...) like the corpus tendril
-	 * ladders. A closed loop returning to its first rows restamps them
-	 * at full width, which is right, closed shapes do not taper.
+	 * SAUNA entry taper: a stroke never opens at full weight; the cap
+	 * frozen at each span's birth ramps 1, 3, 5... over the first row
+	 * advances like the corpus tendril ladders.
 	 */
-	const effectiveWidth = () => Math.min(width, 1 + rowSteps * 2);
+	const entryCap = () => Math.min(width, 1 + rowSteps * 2);
 
-	const restampSpan = (out: StampOut[], y: number, s: Span) => {
-		const w = effectiveWidth();
+	/**
+	 * SAUNA exit taper, live: the tip's newest rows render narrow and
+	 * widen as the stroke pulls away, so stopping anywhere leaves an
+	 * already tapered tail with no retroactive erasing. Distance 0 is
+	 * the frontier row.
+	 */
+	const tipWidth = (distance: number) =>
+		Math.max(1, Math.ceil((width * (distance + 1)) / 3));
+
+	const restampSpan = (out: StampOut[], y: number, s: Span, maxW = width) => {
+		const w = Math.max(1, Math.min(s.cap, maxW));
 		const lext = Math.floor((w - 1) / 2);
 		const rext = Math.ceil((w - 1) / 2);
 		const lo = s.min - lext;
@@ -512,15 +524,25 @@ export const createAsciiStampEngine = (
 		}
 		let s = row.find(r => c.x >= r.min - 1 && c.x <= r.max + 1);
 		if (!s) {
-			s = { min: c.x, max: c.x, cls, fall: falling() };
+			s = { min: c.x, max: c.x, cls, fall: falling(), cap: entryCap() };
 			row.push(s);
 		} else {
 			s.min = Math.min(s.min, c.x);
 			s.max = Math.max(s.max, c.x);
 			s.cls = cls;
 			s.fall = falling();
+			// a revisited span rejoins the stroke at the current entry cap
+			s.cap = Math.max(s.cap, entryCap());
 		}
-		restampSpan(out, c.y, s);
+		if (tipSpans[0]?.s !== s) {
+			tipSpans = [{ y: c.y, s }, ...tipSpans.filter(t => t.s !== s)];
+			tipSpans.length = Math.min(tipSpans.length, 3);
+		}
+		// the tip renders narrow and trailing rows widen toward full,
+		// so the stroke carries a living tapered point
+		for (let i = 0; i < tipSpans.length; i++) {
+			restampSpan(out, tipSpans[i].y, tipSpans[i].s, tipWidth(i));
+		}
 	};
 
 	/**
@@ -700,6 +722,7 @@ export const createAsciiStampEngine = (
 			rowSteps = 0;
 			recentLens = [];
 			spans.clear();
+			tipSpans = [];
 			const out: StampOut[] = [];
 			if (width > 1) {
 				// a roman tap daubs a full width of fill
@@ -744,8 +767,8 @@ export const createAsciiStampEngine = (
 				if (d.y !== 0) {
 					const sdx = Math.sign(d.x);
 					const sdy = Math.sign(d.y);
-					const w = effectiveWidth();
-					const ext = Math.ceil((w - 1) / 2) + 1;
+					// the flick hangs off the narrow living tip, not full width
+					const ext = Math.ceil((tipWidth(0) - 1) / 2) + 1;
 					const glyph =
 						sdy < 0
 							? sdx < 0
@@ -767,6 +790,7 @@ export const createAsciiStampEngine = (
 			mergeStreak = 0;
 			stamped.clear();
 			spans.clear();
+			tipSpans = [];
 			return out;
 		},
 		setWidth: w => {
