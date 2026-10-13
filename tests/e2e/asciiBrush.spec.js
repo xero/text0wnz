@@ -109,6 +109,21 @@ test.describe('ascii brush', () => {
 		expect((await readBlock(page, 50, 20)).charCode).toBe(124);
 	});
 
+	test('a wide stroke at the left edge never wraps to the right', async ({ page }) => {
+		await page.selectOption('#asciiWidth', '5');
+		// skeleton hugs column 0, so the ribbon reaches x -2
+		await drag(page, [0, 16], [0, 22]);
+		expect((await readBlock(page, 0, 18)).charCode).toBe(36);
+		const columns = await page.evaluate(() =>
+			window.__t0wnz.State.textArtCanvas.getColumns());
+		for (let y = 15; y <= 22; y++) {
+			for (let x = columns - 3; x < columns; x++) {
+				expect((await readBlock(page, x, y)).charCode).not.toBe(36);
+			}
+		}
+		await page.selectOption('#asciiWidth', '1');
+	});
+
 	test('one stroke is one undo step', async ({ page }) => {
 		await drag(page, [50, 5], [60, 5]);
 		expect((await readBlock(page, 55, 5)).charCode).toBe(UNDERSCORE);

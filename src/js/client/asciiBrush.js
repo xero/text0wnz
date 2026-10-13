@@ -21,8 +21,21 @@ const createAsciiBrushController = () => {
 			return;
 		}
 		const fg = State.palette.getForegroundColor();
+		const columns = State.textArtCanvas.getColumns();
+		const rows = State.textArtCanvas.getRows();
 		State.textArtCanvas.draw(draw => {
 			for (const cell of cells) {
+				// ribbon spans and spline overshoot can reach past the
+				// canvas; unclipped writes wrap through the cell index to
+				// the far side of the neighboring row
+				if (
+					cell.x < 0 ||
+					cell.x >= columns ||
+					cell.y < 0 ||
+					cell.y >= rows
+				) {
+					continue;
+				}
 				// fg paints, bg survives: the brush draws strokes, not blocks
 				const bg = State.textArtCanvas.getBlock(
 					cell.x,
