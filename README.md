@@ -67,8 +67,13 @@ A retro text art editor rebooted for the modern web. Draw, edit, and collaborate
   - 16-color ANSI, iCE colors, real-time preview, color conflict resolution
   - Custom XBIN color palette support and selection
 - **Supported file types:**
-  - Import: ANSI, BIN, XBIN, NFO, DIZ, UTF-8 TXT
+  - Import: ANSI, ASCII, BIN, XBIN, NFO, DIZ, UTF-8 TXT
   - Export: all of the above and PNG
+  - Zip and amiga LHA archives unpack in the browser; the art inside opens
+- **In-app art archive browsers**
+  - Browse [16colo.rs](https://16colo.rs) artpacks by year, crew, or artist
+  - Browse [aSCIIaRENA](https://asciiarena.se) amiga collys with instant whole-archive search
+  - Open any piece straight into the editor, amiga ascii in Topaz like the scene drew it
 - **Multi-platform file opening**
   - Desktop: OS "Open with" integration (Chrome/Edge)
   - Android: Share sheet integration
@@ -102,7 +107,10 @@ A retro text art editor rebooted for the modern web. Draw, edit, and collaborate
 | **`.xb`**       | [XBIN](docs/xb-format.md) format       | ░▒▒░ | ░▒▒░ | ░▒▒░ |
 | **`.nfo`**      | Scene release format                   | ░▒▒░ | ░▒▒░ | ░▒▒░ |
 | **`.diz`**      | FILE_ID.DIZ archive metadata files     | ░▒▒░ |      | ░▒▒░ |
+| **`.asc`**      | Amiga and pc scene ascii               | ░▒▒░ |      |      |
 | **`.txt`**      | ASCII or other plain text              | ░▒▒░ | ░▒▒░ |      |
+| **`.zip`**      | Archive; openable art inside unpacks   | ░▒▒░ |      |      |
+| **`.lha`**      | [Amiga archive](docs/lha-format.md), `.lzh` included | ░▒▒░ |      |      |
 | **`.png`**      | Artwork rendered as an image           |      | ░▒▒░ |      |
 
 ## Browser Support
@@ -144,6 +152,7 @@ A retro text art editor rebooted for the modern web. Draw, edit, and collaborate
 
 - [SAUCE Format](docs/sauce-format.md) - SAUCE metadata format specification [**↵**](https://github.com/xero/text0wnz/wiki/sauce-format)
 - [XBin Format](docs/xb-format.md) - XBin file format specification [**↵**](https://github.com/xero/text0wnz/wiki/xb-format)
+- [LHA Format](docs/lha-format.md) - Amiga archive support and decoder notes [**↵**](https://github.com/xero/text0wnz/wiki/lha-format)
 
 **Supplemental**
 

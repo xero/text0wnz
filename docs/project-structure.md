@@ -502,6 +502,7 @@ docs/
 │       └── xz-xero.xb
 ├── fonts.md                       # Font reference
 ├── install-pwa.md                 # PWA installation
+├── lha-format.md                  # Amiga archive support and decoder notes
 ├── logos.md                       # Project logos
 ├── manual.md                      # Frontend documentation
 ├── other-tools.md                 # Additional tools

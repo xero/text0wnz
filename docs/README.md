@@ -137,6 +137,7 @@ What's new: see the [changelog](https://github.com/xero/text0wnz/blob/main/CHANG
 
 - **[SAUCE Format](sauce-format.md)** - SAUCE metadata format specification
 - **[XBin Format](xb-format.md)** - XBin file format specification
+- **[LHA Format](lha-format.md)** - Amiga archive support and decoder notes
 
 ### Policies
 

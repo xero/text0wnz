@@ -77,6 +77,7 @@ File operations allowing you to create, open, and save artwork in multiple file 
 **Supported Formats:**
 
 - **ANSI** (`.ans`) - Classic ANSI text art format
+- **ASCII** (`.asc`) - Plain amiga and pc scene ascii
 - **NFO** (`.nfo`) - Warez scene release format
 - **Binary Text** (`.bin`) - Raw binary (legacy scene format)
 - **XBin** (`.xb`) - Extended Binary format with embedded fonts and palettes
@@ -87,9 +88,12 @@ File operations allowing you to create, open, and save artwork in multiple file 
 - **Plain Text** (`.txt`) - Export as text only
 - **ANSimation** (`.ans`) - Export animation frames as a classic ansimation
 - **PNG** - Export as image
+- **Archives** (`.zip`, `.lha`, `.lzh`) - Containers unpack in the browser; the art inside opens
 
 > [!NOTE]
-> See [xb-format.md](xb-format.md) for technical details on the XBin format.
+> See [xb-format.md](xb-format.md) for technical details on the XBin
+> format, and [lha-format.md](lha-format.md) for the amiga archive
+> support.
 
 ![file-menu](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/file-menu.png)
 
@@ -149,11 +153,17 @@ File operations allowing you to create, open, and save artwork in multiple file 
   scroll into view
 - Click a colly to open it straight in the editor. Zip and
   `.lha`/`.lzh` archives list their openable files first, unpacked in
-  the browser with every entry checked against its CRC
+  the browser with every entry checked against its CRC (see
+  [lha-format.md](lha-format.md))
 - Amiga ascii opens the way the site renders it: raw latin-1 bytes in
   Topaz+ 1200, with SAUCE font records still winning when present
 - The search index downloads once and caches for the session
 - Every request is user-driven; nothing loads in the background
+
+> [!NOTE]
+> Both archive browsers talk to third-party sites, and only while you
+> use them. [privacy.md](privacy.md) lists exactly what loads from
+> where.
 
 ### Plugins
 
