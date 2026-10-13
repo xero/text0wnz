@@ -81,7 +81,8 @@ const createArchiveOpener = ({ openFile }) => {
 			return;
 		}
 		if (entries.length === 1) {
-			openEntry(bytes, entries[0], isZip);
+			// awaited so callers observe the whole open, not just the parse
+			await openEntry(bytes, entries[0], isZip);
 			return;
 		}
 		say(null);
