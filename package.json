@@ -86,7 +86,7 @@
 		"prettier": "^3.8.3",
 		"serve": "^14.2.6",
 		"tailwindcss": "^4.2.4",
-		"terser": "^5.46.2",
+		"terser": "^5.51.2",
 		"typescript": "^7.0.2",
 		"vite": "^8.3.4",
 		"vite-plugin-html-minifier-terser": "^3.8.0",
