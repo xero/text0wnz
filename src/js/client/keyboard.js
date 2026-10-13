@@ -894,10 +894,15 @@ const createKeyboardController = () => {
 		if (mirrored) {
 			State.textArtCanvas.setMirrorMode(false);
 		}
-		State.textArtCanvas.startUndo();
-		State.textArtCanvas.draw(writer, false);
-		if (mirrored) {
-			State.textArtCanvas.setMirrorMode(true);
+		// finally, or an allocation failure mid-stroke on a huge doc
+		// leaves mirror off while the toolbar toggle says otherwise
+		try {
+			State.textArtCanvas.startUndo();
+			State.textArtCanvas.draw(writer, false);
+		} finally {
+			if (mirrored) {
+				State.textArtCanvas.setMirrorMode(true);
+			}
 		}
 	};
 

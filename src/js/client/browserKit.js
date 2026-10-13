@@ -113,9 +113,11 @@ const createRenderGate = () => {
 
 // one explicit open in flight per browser, with no UI locking: a
 // repeat click on the target already loading is ignored, a click on
-// a DIFFERENT target supersedes the old open and aborts its fetch
-// (last click wins; completion order can invert click order when a
-// big archive races a small file)
+// a DIFFERENT target supersedes the old open, aborting any fetch
+// tied to the guard's signal (shared downloads like the 16c zip
+// cache deliberately ride on unsignalled; currency checks cancel
+// those opens instead). Last click wins; completion order can
+// invert click order when a big archive races a small file
 const createOpenGuard = () => {
 	let currentKey = null;
 	let controller = null;

@@ -472,7 +472,6 @@ describe('Keyboard Utilities', () => {
 				createKeyboardController().insertRow();
 				expect(State.textArtCanvas.setMirrorMode).toHaveBeenNthCalledWith(1, false);
 				expect(State.textArtCanvas.setMirrorMode).toHaveBeenNthCalledWith(2, true);
-				State.textArtCanvas.getMirrorMode.mockReturnValue(false);
 			});
 		});
 

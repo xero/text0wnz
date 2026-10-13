@@ -11,7 +11,6 @@ const COLOR_WHITE = 7;
 const COLOR_BLACK = 0;
 const DEFAULT_FOREGROUND = 7;
 const DEFAULT_BACKGROUND = 0;
-const BLANK_CELL = (32 << 8) + 7;
 // CP437 Characters
 const LIGHT_BLOCK = 176; // ░
 const MEDIUM_BLOCK = 177; // ▒
@@ -71,7 +70,6 @@ export default {
 	COLOR_BLACK,
 	DEFAULT_FOREGROUND,
 	DEFAULT_BACKGROUND,
-	BLANK_CELL,
 	LIGHT_BLOCK,
 	MEDIUM_BLOCK,
 	DARK_BLOCK,

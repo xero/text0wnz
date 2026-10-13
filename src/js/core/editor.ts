@@ -188,6 +188,10 @@ export const createEditorCore = (
 	 * read-then-rewrite round trip cannot corrupt it. Values 0-15 and
 	 * words are distinguishable everywhere that matters: index words
 	 * carry bit 31, and the color picker never emits RGB words <= 15.
+	 * Accepted loss: blink folds into the bg only for classic bgs, so
+	 * ATTR_BLINK on an extended bg is invisible here and normalizes
+	 * away on rewrite (still narrower than the u16 area paths, which
+	 * quantize such cells entirely).
 	 */
 	const readCell = (index: number): EditCell => {
 		const frame = doc.frames[currentFrame];

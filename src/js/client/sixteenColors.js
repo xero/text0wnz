@@ -56,7 +56,7 @@ const createSixteenColors = ({ openFile, onExit }) => {
 		years: null,
 		pages: new Map(), // list endpoints: cache key -> response json
 		packs: new Map(), // pack name -> {year, archive, files}
-		zips: new Map(), // archive name -> Uint8Array
+		zips: new Map(), // archive name -> Promise<Uint8Array>, shared
 	};
 	/** @type {{view: string, year?: number, pack?: object, name?: string}} */
 	let where = { view: 'years' };
@@ -543,8 +543,12 @@ const createSixteenColors = ({ openFile, onExit }) => {
 				}
 				return new Uint8Array(await response.arrayBuffer());
 			})().catch(error => {
-				// a failed download must not cache: the next click retries
-				cache.zips.delete(zipName);
+				// a failed download must not cache, and must evict only
+				// ITSELF: the cap may have dropped it already and a retry
+				// recached the same name with a healthy transfer
+				if (cache.zips.get(zipName) === download) {
+					cache.zips.delete(zipName);
+				}
 				throw error;
 			});
 			cache.zips.set(zipName, download);
