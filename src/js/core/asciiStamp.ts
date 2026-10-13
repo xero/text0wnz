@@ -406,9 +406,18 @@ export const createAsciiStampEngine = (
 		return [FILL, FILL];
 	};
 
+	/**
+	 * SAUNA taper: a stroke never opens at full weight; width ramps up
+	 * over the first row advances (1, 3, 5...) like the corpus tendril
+	 * ladders. A closed loop returning to its first rows restamps them
+	 * at full width, which is right, closed shapes do not taper.
+	 */
+	const effectiveWidth = () => Math.min(width, 1 + rowSteps * 2);
+
 	const restampSpan = (out: StampOut[], y: number, s: Span) => {
-		const lext = Math.floor((width - 1) / 2);
-		const rext = Math.ceil((width - 1) / 2);
+		const w = effectiveWidth();
+		const lext = Math.floor((w - 1) / 2);
+		const rext = Math.ceil((w - 1) / 2);
 		const lo = s.min - lext;
 		const hi = s.max + rext;
 		const [left, right] = ribbonEdges(s.cls, s.fall);
@@ -662,6 +671,26 @@ export const createAsciiStampEngine = (
 				walkTo(out, samples[samples.length - 1]);
 			}
 			drain(out);
+			// roman exit flick: one deferential pebble past the final
+			// cell along the direction of travel, the pen lifting off
+			if (width > 1 && last && trail.length >= 2) {
+				const d = windowDelta();
+				if (d.y !== 0) {
+					const sdx = Math.sign(d.x);
+					const sdy = Math.sign(d.y);
+					const w = effectiveWidth();
+					const ext = Math.ceil((w - 1) / 2) + 1;
+					const glyph =
+						sdy < 0
+							? sdx < 0
+								? BACKTICK
+								: APOSTROPHE
+							: sdx < 0
+								? COMMA
+								: PERIOD;
+					emit(out, last.x + sdx * ext, last.y + sdy, glyph);
+				}
+			}
 			finishRun(out);
 			last = null;
 			trail = [];
