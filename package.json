@@ -69,7 +69,7 @@
 	"devDependencies": {
 		"@html-eslint/eslint-plugin": "^0.66.1",
 		"@html-eslint/parser": "^0.66.1",
-		"@playwright/test": "^1.59.1",
+		"@playwright/test": "^1.64.0",
 		"@stylistic/eslint-plugin": "^5.10.0",
 		"@tailwindcss/postcss": "^4.2.4",
 		"@testing-library/dom": "^10.4.1",
