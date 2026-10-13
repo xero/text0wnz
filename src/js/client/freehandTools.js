@@ -7,6 +7,7 @@ import {
 } from './ui.js';
 import Toolbar from './toolbar.js';
 import magicNumbers from './magicNumbers.js';
+import { cellInRange } from '../core/index';
 
 const createPanelCursor = el => {
 	const cursor = createCanvas(0, 0);
@@ -1021,11 +1022,14 @@ const createFillController = () => {
 	const fillPoint = e => {
 		// a seed outside the document floods a phantom wrapped row; the
 		// pointer clamps downs now, but the seed must never trust it
+		// (a blank read for the phantom cell would still seed a flood)
 		if (
-			e.detail.x < 0 ||
-			e.detail.x >= State.textArtCanvas.getColumns() ||
-			e.detail.halfBlockY < 0 ||
-			e.detail.halfBlockY >= State.textArtCanvas.getRows() * 2
+			!cellInRange(
+				e.detail.x,
+				e.detail.halfBlockY,
+				State.textArtCanvas.getColumns(),
+				State.textArtCanvas.getRows() * 2,
+			)
 		) {
 			return;
 		}

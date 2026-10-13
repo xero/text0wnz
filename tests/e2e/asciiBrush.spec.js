@@ -118,7 +118,9 @@ test.describe('ascii brush', () => {
 			window.__t0wnz.State.textArtCanvas.getColumns());
 		for (let y = 15; y <= 22; y++) {
 			for (let x = columns - 3; x < columns; x++) {
-				expect((await readBlock(page, x, y)).charCode).not.toBe(36);
+				// blank, not merely not-fill: a wrapped taper pebble or AA
+				// glyph must fail this too
+				expect([0, 32]).toContain((await readBlock(page, x, y)).charCode);
 			}
 		}
 		await page.selectOption('#asciiWidth', '1');

@@ -196,6 +196,11 @@ export const createEditorCore = (
 	 */
 	const readCell = (index: number): EditCell => {
 		const frame = doc.frames[currentFrame];
+		// out of range reads return a blank cell instead of undefined
+		// plane words; wrapped positive indexes are the callers' guard
+		if (!Number.isInteger(index) || index < 0 || index >= frame.glyph.length) {
+			return { charCode: 0, fg: 0, bg: 0 };
+		}
 		const glyph = frame.glyph[index];
 		const blink = (attrsOf(glyph) & ATTR_BLINK) !== 0;
 		const classic = (word: number): number | null =>
@@ -443,7 +448,11 @@ export const createEditorCore = (
 		doc,
 		arena,
 		getBlock: (x, y) => {
-			const cell = readCell(y * columns() + x);
+			// a wrapped read is as wrong as a wrapped write: out of range
+			// coordinates read as a blank cell, never a neighboring row
+			const cell = cellInRange(x, y, columns(), doc.getRows())
+				? readCell(y * columns() + x)
+				: { charCode: 0, fg: 0, bg: 0 };
 			return {
 				x,
 				y,
@@ -454,7 +463,11 @@ export const createEditorCore = (
 		},
 		getHalfBlockAt: (x, y) => {
 			const textY = Math.floor(y / 2);
-			const info = classifyHalfBlock(readCell(textY * columns() + x));
+			const info = classifyHalfBlock(
+				cellInRange(x, textY, columns(), doc.getRows())
+					? readCell(textY * columns() + x)
+					: { charCode: 0, fg: 0, bg: 0 },
+			);
 			return { x, y, textY, halfBlockY: y % 2, ...info };
 		},
 		drawBlocks,
@@ -470,9 +483,14 @@ export const createEditorCore = (
 		},
 		getAreaU16: (x, y, width, height) => {
 			const data = new Uint16Array(width * height);
+			const cols = columns();
+			const rowCount = doc.getRows();
 			for (let dy = 0, j = 0; dy < height; dy++) {
 				for (let dx = 0; dx < width; dx++, j++) {
-					data[j] = packWord(readCell((y + dy) * columns() + (x + dx)));
+					// cells sampled past an edge read blank, never wrapped
+					data[j] = cellInRange(x + dx, y + dy, cols, rowCount)
+						? packWord(readCell((y + dy) * cols + (x + dx)))
+						: 0;
 				}
 			}
 			return { data, width, height };
