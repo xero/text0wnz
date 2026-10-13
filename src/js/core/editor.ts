@@ -38,6 +38,7 @@ import {
 	optimizeCell,
 	overlayHalfBlock,
 } from './cellops.js';
+import { cellInRange } from './mapping.js';
 import { PatchArena, createPatchArena } from './patchArena.js';
 
 /** One applied cell write, in both v3 and u16 terms. */
@@ -321,20 +322,23 @@ export const createEditorCore = (
 
 	const drawBlocks: EditorCore['drawBlocks'] = (callback, optimise) => {
 		const blocks: Array<[number, number, number]> = [];
+		const cols = columns();
+		const rowCount = doc.getRows();
 		callback((charCode, foreground, background, x, y) => {
-			// defense in depth (wrap audit): an out of range cell would
-			// wrap through the index to another row; tools clamp, but no
-			// future tool's math may corrupt a neighboring row
-			if (x < 0 || x >= columns() || y < 0 || y >= doc.getRows()) {
+			// defense in depth (wrap audit): a fractional or out of range
+			// cell would wrap through the index to another row, or no-op
+			// past the planes while still recording undo and echoing to
+			// collab; tools clamp, but no future tool's math may corrupt
+			if (!cellInRange(x, y, cols, rowCount)) {
 				return;
 			}
-			const index = y * columns() + x;
+			const index = y * cols + x;
 			blocks.push([index, x, y]);
 			writeCell(index, { charCode, fg: foreground, bg: background }, true);
 			if (mirrorMode) {
-				const mx = mirrorX(columns(), x);
-				if (mx >= 0 && mx < columns()) {
-					const mirrorIndex = y * columns() + mx;
+				const mx = mirrorX(cols, x);
+				if (mx >= 0 && mx < cols) {
+					const mirrorIndex = y * cols + mx;
 					blocks.push([mirrorIndex, mx, y]);
 					writeCell(
 						mirrorIndex,
@@ -367,19 +371,21 @@ export const createEditorCore = (
 
 	const drawHalfBlocks: EditorCore['drawHalfBlocks'] = callback => {
 		const blocks: Array<[number, number, number]> = [];
+		const cols = columns();
+		const rowCount = doc.getRows();
 		callback((foreground, x, y) => {
 			const textY = Math.floor(y / 2);
 			// same wrap guard as drawBlocks, in half block coordinates
-			if (x < 0 || x >= columns() || textY < 0 || textY >= doc.getRows()) {
+			if (!cellInRange(x, textY, cols, rowCount)) {
 				return;
 			}
-			const index = textY * columns() + x;
+			const index = textY * cols + x;
 			blocks.push([index, x, textY]);
 			paintHalf(index, foreground, y);
 			if (mirrorMode) {
-				const mx = mirrorX(columns(), x);
-				if (mx >= 0 && mx < columns()) {
-					const mirrorIndex = textY * columns() + mx;
+				const mx = mirrorX(cols, x);
+				if (mx >= 0 && mx < cols) {
+					const mirrorIndex = textY * cols + mx;
 					blocks.push([mirrorIndex, mx, textY]);
 					paintHalf(mirrorIndex, foreground, y);
 				}
@@ -488,8 +494,16 @@ export const createEditorCore = (
 			for (const block of blocks) {
 				const [index, word] = block;
 				// network input: a wrapped or out of range index must not
-				// land in another row or read past the planes
-				if (!Number.isInteger(index) || index < 0 || index >= frameLength) {
+				// land in another row, and a word outside u16 must not
+				// store garbage glyphs that echo back onto the wire
+				if (
+					!Number.isInteger(index) ||
+					index < 0 ||
+					index >= frameLength ||
+					!Number.isInteger(word) ||
+					word < 0 ||
+					word > 0xffff
+				) {
 					continue;
 				}
 				const cell: EditCell = {

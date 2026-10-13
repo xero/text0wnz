@@ -1665,10 +1665,19 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const resolved =
 			unresolved.size > 0 ? await resolveUnicode(unresolved) : new Map();
 		// bounds re-check AFTER the await: a resize during the hex block
-		// fetch must not misplace writes
+		// fetch must not misplace writes; negatives and fractions wrap
+		// through the index into another row, so the full predicate runs
+		// here even though network.js filters its own inputs
 		const writes = [];
 		for (const cell of cells) {
-			if (cell.x >= columns || cell.y >= rows) {
+			if (
+				!Number.isInteger(cell.x) ||
+				!Number.isInteger(cell.y) ||
+				cell.x < 0 ||
+				cell.y < 0 ||
+				cell.x >= columns ||
+				cell.y >= rows
+			) {
 				continue;
 			}
 			const byte = unicodeToCp437Strict(cell.u);

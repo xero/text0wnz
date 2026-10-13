@@ -218,9 +218,10 @@ export const createPointerInput = (container, handlers, options = {}) => {
 		}
 		e.preventDefault();
 		const stroking = strokePointer === e.pointerId;
-		// hover previews clamp during a captured stroke (moves arrive from
-		// outside the canvas); free hover keeps raw coords
-		const hover = handlers.map(e.clientX, e.clientY, stroking);
+		// everything clamps now: captured strokes because moves arrive
+		// from outside the canvas, and free hover because the subpixel
+		// edge band hands out of range cells to preview consumers
+		const hover = handlers.map(e.clientX, e.clientY, true);
 		if (!hover) {
 			return;
 		}

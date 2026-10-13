@@ -120,6 +120,26 @@ export const snapOrigin = (origin: number, dpr: number): number => {
 	return Math.round(origin * dpr) / dpr;
 };
 
+/**
+ * True when (x, y) is an integer cell inside a columns by rows grid.
+ * The one bounds predicate for every write and read guard: fractional
+ * or out of range cells wrap through y * columns + x into a
+ * neighboring row, or no-op past the planes while side effects (undo
+ * records, collab echoes) still fire.
+ */
+export const cellInRange = (
+	x: number,
+	y: number,
+	columns: number,
+	rows: number,
+): boolean =>
+	Number.isInteger(x) &&
+	Number.isInteger(y) &&
+	x >= 0 &&
+	x < columns &&
+	y >= 0 &&
+	y < rows;
+
 /** Clamp a cell to document bounds (capture-time drags leave the canvas). */
 export const clampCell = (
 	cell: CellPoint,
