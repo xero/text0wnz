@@ -97,7 +97,8 @@ describe('sixteen colors browser', () => {
 		await flush();
 		const list = document.getElementById('sixteenList');
 		expect(list.dataset.view).toBe('years');
-		expect(document.getElementById('sixteenBack').disabled).toBe(true);
+		// back stays live at the root: it exits to the artpacks landing
+		expect(document.getElementById('sixteenBack').disabled).toBe(false);
 		const years = [...document.querySelectorAll('#sixteenList button')];
 		expect(years[0].textContent).toContain('2014'); // newest first
 		years[0].click();
@@ -138,14 +139,16 @@ describe('sixteen colors browser', () => {
 		expect(opened[0].name).toBe('x0-art.ans');
 		expect(State.modal.close).toHaveBeenCalled();
 
-		// back retraces files -> packs -> years, then disables
+		// back retraces files -> packs -> years, then exits to the landing
 		document.getElementById('sixteenBack').click();
 		await flush();
 		expect(list.dataset.view).toBe('packs');
 		document.getElementById('sixteenBack').click();
 		await flush();
 		expect(list.dataset.view).toBe('years');
-		expect(document.getElementById('sixteenBack').disabled).toBe(true);
+		expect(document.getElementById('sixteenBack').disabled).toBe(false);
+		document.getElementById('sixteenBack').click();
+		expect(State.modal.open).toHaveBeenCalledWith('artpacks');
 	});
 
 	it('browses artists and opens a piece by hydrating its pack', async () => {

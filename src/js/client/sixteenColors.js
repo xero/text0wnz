@@ -62,7 +62,9 @@ const createSixteenColors = ({ openFile }) => {
 
 	// ------------------------------------------------- tabs and history
 
-	const { visit, swap, back, reset, rerun } = createTrail(btnBack);
+	// backing out of the root view returns to the artpacks landing
+	const { visit, swap, back, reset, rerun } = createTrail(btnBack, () =>
+		State.modal.open('artpacks'));
 	const gate = createRenderGate();
 
 	const TABS = {

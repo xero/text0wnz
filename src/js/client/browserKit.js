@@ -112,13 +112,15 @@ const createRenderGate = () => {
 };
 
 // back walks a trail of view thunks: every drill-down pushes the
-// view it left, so depth can differ per tab without special cases
-const createTrail = backButton => {
+// view it left, so depth can differ per tab without special cases;
+// an exit thunk keeps back live at the root, stepping out of the
+// browser entirely instead of going dead
+const createTrail = (backButton, exit) => {
 	let trail = [];
 	let here = () => {};
 	const render = () => {
 		if (backButton) {
-			backButton.disabled = trail.length === 0;
+			backButton.disabled = trail.length === 0 && !exit;
 		}
 		here();
 	};
@@ -136,6 +138,8 @@ const createTrail = backButton => {
 			if (trail.length) {
 				here = trail.pop();
 				render();
+			} else {
+				exit?.();
 			}
 		},
 		reset: thunk => {

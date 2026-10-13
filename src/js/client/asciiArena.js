@@ -59,7 +59,9 @@ const createAsciiArena = ({ openFile }) => {
 
 	// ------------------------------------------------- tabs and history
 
-	const { visit, swap, back, reset } = createTrail(btnBack);
+	// backing out of the root view returns to the artpacks landing
+	const { visit, swap, back, reset } = createTrail(btnBack, () =>
+		State.modal.open('artpacks'));
 	const gate = createRenderGate();
 
 	const TABS = {

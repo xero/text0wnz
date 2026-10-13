@@ -99,7 +99,10 @@ describe('asciiarena browser', () => {
 		await flush();
 		const list = document.getElementById('arenaList');
 		expect(list.dataset.view).toBe('latest');
-		expect(document.getElementById('arenaBack').disabled).toBe(true);
+		// back stays live at the root: it exits to the artpacks landing
+		expect(document.getElementById('arenaBack').disabled).toBe(false);
+		document.getElementById('arenaBack').click();
+		expect(State.modal.open).toHaveBeenCalledWith('artpacks');
 		const cards = [...document.querySelectorAll('#arenaList .arenaColly')];
 		expect(cards).toHaveLength(2);
 		// captions carry the title; the sub line drops the 0000 year
