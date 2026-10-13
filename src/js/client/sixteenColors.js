@@ -13,6 +13,17 @@
 import State from './state.js';
 import { $ } from './ui.js';
 import {
+	makeSay,
+	fetchJson,
+	fetchCached,
+	button,
+	countButton,
+	pager,
+	createTrail,
+	createRenderGate,
+	isOpenableName,
+} from './browserKit.js';
+import {
 	extractZipEntry,
 	findZipEntry,
 	readZipEntries,
@@ -23,9 +34,7 @@ const GALLERY = 'https://16colo.rs';
 const MIRROR =
 	'https://raw.githubusercontent.com/xero/sixteencolors-archive/master';
 
-/** piece extensions the editor can open, plus the bare file_id */
-const OPENABLE = /\.(ans|asc|diz|nfo|txt|bin|xb|tnd|dur)$/i;
-const isOpenable = name => OPENABLE.test(name) || (/^file_id$/i).test(name);
+const isOpenable = isOpenableName;
 
 /** column the masonry packs around, thumbnail width plus padding */
 const COL_WIDTH = 196;
@@ -53,29 +62,8 @@ const createSixteenColors = ({ openFile }) => {
 
 	// ------------------------------------------------- tabs and history
 
-	// back walks a trail of view thunks: every drill-down pushes the
-	// view it left, so depth can differ per tab without special cases
-	let trail = [];
-	let here = () => showYears();
-	const renderHere = () => {
-		btnBack.disabled = trail.length === 0;
-		here();
-	};
-	const visit = thunk => {
-		trail.push(here);
-		here = thunk;
-		renderHere();
-	};
-	const swap = thunk => {
-		here = thunk;
-		renderHere();
-	};
-	const back = () => {
-		if (trail.length) {
-			here = trail.pop();
-			renderHere();
-		}
-	};
+	const { visit, swap, back, reset, rerun } = createTrail(btnBack);
+	const gate = createRenderGate();
 
 	const TABS = {
 		year: { root: () => showYears(), hint: null },
@@ -86,6 +74,8 @@ const createSixteenColors = ({ openFile }) => {
 	let tab = 'year';
 	const setTab = name => {
 		tab = name;
+		// a pending debounced search must not fire into the new tab
+		clearTimeout(typing);
 		for (const key of Object.keys(TABS)) {
 			$(`sixteenTab${key[0].toUpperCase()}${key.slice(1)}`)?.classList.toggle(
 				'active',
@@ -97,82 +87,29 @@ const createSixteenColors = ({ openFile }) => {
 			searchBox.classList.toggle('hide', !TABS[name].hint);
 			searchBox.placeholder = TABS[name].hint ?? '';
 		}
-		trail = [];
-		here = TABS[name].root;
-		renderHere();
+		reset(TABS[name].root);
 	};
 
 	const applySearch = () => {
 		const q = searchBox.value.trim();
-		trail = [];
 		if (tab === 'artist') {
-			here = () => showArtists(q, 1);
+			reset(() => showArtists(q, 1));
 		} else if (tab === 'crew') {
-			here = () => showCrews(q, 1);
+			reset(() => showCrews(q, 1));
 		} else {
-			here = () => showPackSearch(q, 1);
+			reset(() => showPackSearch(q, 1));
 		}
-		renderHere();
 	};
 
 	// ----------------------------------------------------------- utils
 
-	const say = (text, isError = false) => {
-		status.textContent = text ?? '';
-		status.classList.toggle('hide', !text);
-		status.classList.toggle('error', Boolean(text) && isError);
-	};
+	const say = makeSay(status);
 
-	const fetchJson = async url => {
-		const response = await fetch(url);
-		if (!response.ok) {
-			throw new Error(`${response.status} from ${url}`);
-		}
-		return response.json();
-	};
-
-	const fetchPage = async (key, url) => {
-		const data = cache.pages.get(key) ?? (await fetchJson(url));
-		cache.pages.set(key, data);
-		return data;
-	};
+	const fetchPage = (key, url) => fetchCached(cache.pages, key, url);
 
 	const clearList = view => {
 		list.textContent = '';
 		list.dataset.view = view;
-	};
-
-	const button = (label, onClick, className = 'sixteenItem') => {
-		const el = document.createElement('button');
-		el.textContent = label;
-		el.className = className;
-		el.addEventListener('click', onClick);
-		return el;
-	};
-
-	/** a list button whose release or pack count rides a dim kbd tag */
-	const countButton = (label, count, onClick) => {
-		const el = button(label, onClick);
-		const kbd = document.createElement('kbd');
-		kbd.textContent = String(count);
-		el.appendChild(kbd);
-		return el;
-	};
-
-	// both ends always render so the row never shifts; bounds disable
-	const pager = (page, pages, goPage) => {
-		const el = document.createElement('div');
-		el.className = 'sixteenPager';
-		const prev = button('< prev', () => goPage(page - 1), '');
-		prev.disabled = page <= 1;
-		el.appendChild(prev);
-		el.appendChild(
-			Object.assign(document.createElement('span'), { textContent: `${page} / ${pages}` }),
-		);
-		const next = button('next >', () => goPage(page + 1), '');
-		next.disabled = page >= pages;
-		el.appendChild(next);
-		return el;
 	};
 
 	/** one pack's metadata and openable files, fetched once */
@@ -268,6 +205,7 @@ const createSixteenColors = ({ openFile }) => {
 	// ------------------------------------------------------------ views
 
 	const showYears = async () => {
+		const ticket = gate.enter();
 		where = { view: 'years' };
 		crumb.textContent = 'years';
 		clearList('years');
@@ -275,19 +213,25 @@ const createSixteenColors = ({ openFile }) => {
 		try {
 			cache.years ??= await fetchJson(`${API}/year`);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`16colo.rs did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		say(null);
 		for (const year of Object.keys(cache.years).reverse()) {
 			list.appendChild(
 				countButton(year, cache.years[year].packs, () =>
-					visit(() => showPacks(Number(year), 1))),
+					visit(() => showPacks(Number(year), 1)), 'sixteenItem'),
 			);
 		}
 	};
 
 	const showPacks = async (year, page) => {
+		const ticket = gate.enter();
 		where = { view: 'packs', year };
 		crumb.textContent = String(year);
 		clearList('packs');
@@ -299,13 +243,18 @@ const createSixteenColors = ({ openFile }) => {
 				`${API}/year/${year}?page=${page}`,
 			);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`16colo.rs did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		say(null);
 		const pages = data.page?.pages ?? 1;
 		if (pages > 1) {
-			list.appendChild(pager(page, pages, p => swap(() => showPacks(year, p))));
+			list.appendChild(pager(page, pages, p => swap(() => showPacks(year, p)), 'sixteenPager'));
 		}
 		for (const pack of data.results ?? []) {
 			list.appendChild(packCard(pack));
@@ -313,6 +262,7 @@ const createSixteenColors = ({ openFile }) => {
 	};
 
 	const showPackSearch = async (query, page) => {
+		const ticket = gate.enter();
 		where = { view: 'packsearch', name: query };
 		crumb.textContent = query ? `search / ${query}` : 'all packs';
 		clearList('packsearch');
@@ -324,14 +274,19 @@ const createSixteenColors = ({ openFile }) => {
 				`${API}/pack?page=${page}${query ? `&filter=${encodeURIComponent(query)}` : ''}`,
 			);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`16colo.rs did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		const results = data.results ?? [];
 		say(results.length ? null : 'no packs match');
 		const pages = data.page?.pages ?? 1;
 		if (pages > 1) {
-			list.appendChild(pager(page, pages, p => swap(() => showPackSearch(query, p))));
+			list.appendChild(pager(page, pages, p => swap(() => showPackSearch(query, p)), 'sixteenPager'));
 		}
 		for (const pack of results) {
 			list.appendChild(packCard(pack, true));
@@ -339,6 +294,7 @@ const createSixteenColors = ({ openFile }) => {
 	};
 
 	const showArtists = async (filter, page) => {
+		const ticket = gate.enter();
 		where = { view: 'artists', name: filter };
 		crumb.textContent = filter ? `artists / ${filter}` : 'artists';
 		clearList('artists');
@@ -350,14 +306,19 @@ const createSixteenColors = ({ openFile }) => {
 				`${API}/artist?page=${page}${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
 			);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`16colo.rs did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		const results = data.results ?? [];
 		say(results.length ? null : 'no artists match');
 		const pages = data.page?.pages ?? 1;
 		if (pages > 1) {
-			list.appendChild(pager(page, pages, p => swap(() => showArtists(filter, p))));
+			list.appendChild(pager(page, pages, p => swap(() => showArtists(filter, p)), 'sixteenPager'));
 		}
 		for (const row of results) {
 			const name = row.artist?.name;
@@ -366,12 +327,13 @@ const createSixteenColors = ({ openFile }) => {
 			}
 			list.appendChild(
 				countButton(name, row.artist.releases ?? 0, () =>
-					visit(() => showArtistWorks(name))),
+					visit(() => showArtistWorks(name)), 'sixteenItem'),
 			);
 		}
 	};
 
 	const showArtistWorks = async name => {
+		const ticket = gate.enter();
 		where = { view: 'artistworks', name };
 		crumb.textContent = `artist / ${name}`;
 		clearList('artistworks');
@@ -383,7 +345,12 @@ const createSixteenColors = ({ openFile }) => {
 				`${API}/artist/${encodeURIComponent(name)}`,
 			);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`16colo.rs did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		const years = Object.keys(data.results ?? {}).sort((a, b) => b - a);
@@ -418,6 +385,7 @@ const createSixteenColors = ({ openFile }) => {
 	};
 
 	const showCrews = async (filter, page) => {
+		const ticket = gate.enter();
 		where = { view: 'crews', name: filter };
 		crumb.textContent = filter ? `crews / ${filter}` : 'crews';
 		clearList('crews');
@@ -429,14 +397,19 @@ const createSixteenColors = ({ openFile }) => {
 				`${API}/group?page=${page}${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
 			);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`16colo.rs did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		const results = data.results ?? [];
 		say(results.length ? null : 'no crews match');
 		const pages = data.page?.pages ?? 1;
 		if (pages > 1) {
-			list.appendChild(pager(page, pages, p => swap(() => showCrews(filter, p))));
+			list.appendChild(pager(page, pages, p => swap(() => showCrews(filter, p)), 'sixteenPager'));
 		}
 		for (const row of results) {
 			// each crew rides as a single-key object: {tag: {releases, ...}}
@@ -446,12 +419,13 @@ const createSixteenColors = ({ openFile }) => {
 			}
 			list.appendChild(
 				countButton(tag, info?.releases ?? 0, () =>
-					visit(() => showCrewPacks(tag))),
+					visit(() => showCrewPacks(tag)), 'sixteenItem'),
 			);
 		}
 	};
 
 	const showCrewPacks = async tag => {
+		const ticket = gate.enter();
 		where = { view: 'crewpacks', name: tag };
 		crumb.textContent = `crew / ${tag}`;
 		clearList('crewpacks');
@@ -463,7 +437,12 @@ const createSixteenColors = ({ openFile }) => {
 				`${API}/group/${encodeURIComponent(tag)}`,
 			);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`16colo.rs did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		const byYear = data.results?.packs ?? {};
@@ -477,6 +456,7 @@ const createSixteenColors = ({ openFile }) => {
 	};
 
 	const showFiles = async pack => {
+		const ticket = gate.enter();
 		where = { view: 'files', pack };
 		crumb.textContent = pack.name;
 		clearList('files');
@@ -485,7 +465,12 @@ const createSixteenColors = ({ openFile }) => {
 		try {
 			info = await loadPack(pack.name);
 		} catch (error) {
-			say(`16colo.rs did not answer (${error.message})`, true);
+			if (gate.current(ticket)) {
+				say(`16colo.rs did not answer (${error.message})`, true);
+			}
+			return;
+		}
+		if (!gate.current(ticket)) {
 			return;
 		}
 		const year = pack.year ?? info.year;
@@ -563,7 +548,7 @@ const createSixteenColors = ({ openFile }) => {
 		clearTimeout(refit);
 		refit = setTimeout(() => {
 			if (where.view === 'files' || where.view === 'artistworks') {
-				here();
+				rerun();
 			}
 		}, 150);
 	});

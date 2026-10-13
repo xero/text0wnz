@@ -81,6 +81,9 @@ touched.
 - Never hit `api.16colo.rs` from CI or any automation. Its automation policy
   is undocumented and the root 403s generic clients. The API is for
   interactive in-app browsing only.
+- The same rule covers `asciiarena.se`: its api and `/collections` files are
+  for interactive in-app browsing only. It is a small community server with
+  no mirror, so there is no bulk-conformance path for it at all.
 - Treat downloaded packs as untrusted input. Extract into an isolated
   directory and feed files to the decoders by path.
 - Decode results are assertions about OUR codecs, not the files. A wild file

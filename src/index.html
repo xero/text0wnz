@@ -450,7 +450,7 @@
 			</div>
 		</div>
 		<label for="openFile">
-			<input id="openFile" class="hide" type="file" aria-label="Open File" accept=".ans,.ansi,.xb,.xbin,.bin,.txt,.nfo,.utf8ans,.diz,application/octet-stream"/>
+			<input id="openFile" class="hide" type="file" aria-label="Open File" accept=".ans,.ansi,.asc,.xb,.xbin,.bin,.txt,.nfo,.utf8ans,.diz,.zip,.lha,.lzh,application/octet-stream"/>
 		</label>
 		<label for="customColor">
 			<input id="customColor" class="hide" type="color" aria-label="Select Color"/>
@@ -463,6 +463,7 @@
 			<article id="new" class="menuItem excludedForWebsocket">New</article>
 			<article id="open" class="menuItem excludedForWebsocket">Open</article>
 			<article id="browse16c" class="menuItem excludedForWebsocket">Browse 16colo.rs</article>
+			<article id="browseArena" class="menuItem excludedForWebsocket">Browse asciiarena.se</article>
 			<article class="separator excludedForWebsocket"></article>
 			<article id="saveAnsi" class="menuItem">Save as ANSi</article>
 			<article id="saveBin" class="menuItem">Save as Binary Text</article>
@@ -911,6 +912,54 @@
 						Back
 					</button>
 					<button id="sixteenClose" class="close" aria-label="Close">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Close
+					</button>
+				</nav>
+			</section>
+			<section id="arenaModal">
+				<header>
+					<h2>asciiarena.se</h2>
+				</header>
+				<article>
+					<div id="arenaBar">
+						<button id="arenaTabLatest" class="active">latest</button>
+						<button id="arenaTabArtist">artist</button>
+						<button id="arenaTabCrew">crew</button>
+						<button id="arenaTabSearch">search</button>
+						<input id="arenaSearch" class="hide" type="search" aria-label="Filter" autocomplete="off" placeholder="search all collys"/>
+						<span id="arenaCrumb">latest</span>
+					</div>
+					<p id="arenaStatus" class="hide"></p>
+					<div id="arenaList"></div>
+				</article>
+				<nav>
+					<button id="arenaBack" aria-label="Back" disabled>
+						<svg>
+							<use href="img/icons.svg#left"></use>
+						</svg>
+						Back
+					</button>
+					<button id="arenaClose" class="close" aria-label="Close">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Close
+					</button>
+				</nav>
+			</section>
+			<section id="archiveModal">
+				<header>
+					<h2 id="archiveTitle">archive</h2>
+				</header>
+				<article>
+					<p id="archiveStatus" class="hide"></p>
+					<div id="archiveList"></div>
+				</article>
+				<nav>
+					<button id="archiveClose" class="close" aria-label="Close">
 						<svg>
 							<use href="img/icons.svg#cancel"></use>
 						</svg>

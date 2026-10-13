@@ -39,6 +39,19 @@ byte-exact golden tests before anything else moved.
   the editor. Packs preview by their `file_id.diz`, years sit in a
   uniform grid, pieces pack into balanced columns sized from their
   artwork, and only files the editor opens are listed.
+- **asciiarena.se browser.** Browse amiga ascii collys by latest
+  release, artist, or crew, or search the whole archive instantly from
+  a one-shot index. Collys preview by their `file_id.diz` text and open
+  straight into the editor as latin-1 in Topaz+ 1200, matching the
+  site's own rendering. Zip and `.lha`/`.lzh` collys unpack in the
+  browser through a new LHA codec (lh0 and lh5, CRC-checked, verified
+  against all 4,190 entries in the arena's archives). Amiga `.txt`
+  files that are not UTF-8 now fall back to the byte loader everywhere
+  instead of failing to open.
+- **Native archive opens.** File open, drag-and-drop, and PWA file
+  launches accept `.zip`, `.lha`, and `.lzh` directly: one openable
+  entry loads straight away, several raise a picker modal. Amiga
+  archives open as latin-1 in Topaz+ 1200; zips keep CP437 defaults.
 - **Input.** Pen pressure, touch gestures, focal zoom, and a two-finger
   tap for undo.
 - **Crash recovery.** An OPFS journal autosaves your session and

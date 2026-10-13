@@ -4,6 +4,7 @@ import magicNumbers from './magicNumbers.js';
 import { $, enforceMaxBytes } from './ui.js';
 import { getUTF8, getUnicodeReverseMap } from './palette.js';
 import {
+	CodecError,
 	decodeAns,
 	decodeDur,
 	decodeEnvelope,
@@ -1120,7 +1121,7 @@ const loadModule = () => {
 		enforceMaxBytes();
 	};
 
-	const file = (file, callback) => {
+	const file = (file, callback, opts = {}) => {
 		const reader = new FileReader();
 		reader.addEventListener('load', _e => {
 			const data = new Uint8Array(reader.result);
@@ -1236,24 +1237,36 @@ const loadModule = () => {
 				case 'txt':
 				default:
 					State.textArtCanvas.clearXBData(() => {
-						if (checkUTF8(file.name.toLowerCase())) {
-							// UTF-8 opens go through the core reader, which
-							// builds v3 planes natively (glyph table, extended
-							// colors, LF after wrap); the doc rides the
-							// plane-native callback slot like tnd/dur/0wnz
-							const result = decodeAns(data, { utf8: true });
-							updateSauceModal(result.meta);
-							const u16 = v3ToU16Lossy(result.doc);
-							callback(
-								u16.columns,
-								u16.rows,
-								u16.imageData,
-								u16.iceColors,
-								u16.letterSpacing,
-								result.meta.fontName?.trim() || undefined,
-								result.doc,
-							);
-							return;
+						// callers that know the bytes are scene art (the
+						// asciiarena browser mirrors the site's own decode
+						// rule) skip the UTF-8 reader outright
+						if (checkUTF8(file.name.toLowerCase()) && !opts.preferBytes) {
+							try {
+								// UTF-8 opens go through the core reader, which
+								// builds v3 planes natively (glyph table, extended
+								// colors, LF after wrap); the doc rides the
+								// plane-native callback slot like tnd/dur/0wnz
+								const result = decodeAns(data, { utf8: true });
+								updateSauceModal(result.meta);
+								const u16 = v3ToU16Lossy(result.doc);
+								callback(
+									u16.columns,
+									u16.rows,
+									u16.imageData,
+									u16.iceColors,
+									u16.letterSpacing,
+									result.meta.fontName?.trim() || undefined,
+									result.doc,
+								);
+								return;
+							} catch (error) {
+								// invalid UTF-8 means raw scene bytes (amiga
+								// latin-1 txt), not a broken file: fall through
+								// to the byte loader instead of dying
+								if (!(error instanceof CodecError)) {
+									throw error;
+								}
+							}
 						}
 						imageData = loadAnsi(data, false);
 						updateSauceModal(imageData);

@@ -77,6 +77,7 @@ File operations allowing you to create, open, and save artwork in multiple file 
 **Supported Formats:**
 
 - **ANSI** (`.ans`) - Classic ANSI text art format
+- **ASCII** (`.asc`) - Plain amiga and pc scene ascii
 - **NFO** (`.nfo`) - Warez scene release format
 - **Binary Text** (`.bin`) - Raw binary (legacy scene format)
 - **XBin** (`.xb`) - Extended Binary format with embedded fonts and palettes
@@ -87,9 +88,12 @@ File operations allowing you to create, open, and save artwork in multiple file 
 - **Plain Text** (`.txt`) - Export as text only
 - **ANSimation** (`.ans`) - Export animation frames as a classic ansimation
 - **PNG** - Export as image
+- **Archives** (`.zip`, `.lha`, `.lzh`) - Containers unpack in the browser; the art inside opens
 
 > [!NOTE]
-> See [xb-format.md](xb-format.md) for technical details on the XBin format.
+> See [xb-format.md](xb-format.md) for technical details on the XBin
+> format, and [lha-format.md](lha-format.md) for the amiga archive
+> support.
 
 ![file-menu](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/file-menu.png)
 
@@ -97,6 +101,9 @@ File operations allowing you to create, open, and save artwork in multiple file 
 
 - Load via **File → Open** or **drag-and-drop**
 - Format detection by file extension
+- Zip and amiga `.lha`/`.lzh` archives unpack in the browser: a lone
+  openable file loads straight away, several raise a picker. Amiga
+  archives open as latin-1 in Topaz+ 1200, zips keep CP437 defaults
 - Export options for all supported types and PNG
 - Before an export that cannot hold everything in your piece (unicode glyphs, extended colors, blink), a dialog lists exactly what will be lost so you can decide
 - XBin exports offer an RLE compression toggle
@@ -132,6 +139,31 @@ File operations allowing you to create, open, and save artwork in multiple file 
   `file_id`); images, music, and other pack extras are filtered out
 - Pack archives download once and cache for the session
 - Every request is user-driven; nothing loads in the background
+
+### asciiarena.se Browser
+
+**File → Browse asciiarena.se** opens an in-app browser for [aSCIIaRENA](https://asciiarena.se), the amiga artscene archive.
+
+**Features:**
+
+- Four tabs: **latest** (the default), **artist**, **crew**, and
+  **search**. Artists and crews list with a filter box and drill into
+  their collys; search runs instantly over the whole archive index
+- Collys preview by their `file_id.diz` text, fetched lazily as cards
+  scroll into view
+- Click a colly to open it straight in the editor. Zip and
+  `.lha`/`.lzh` archives list their openable files first, unpacked in
+  the browser with every entry checked against its CRC (see
+  [lha-format.md](lha-format.md))
+- Amiga ascii opens the way the site renders it: raw latin-1 bytes in
+  Topaz+ 1200, with SAUCE font records still winning when present
+- The search index downloads once and caches for the session
+- Every request is user-driven; nothing loads in the background
+
+> [!NOTE]
+> Both archive browsers talk to third-party sites, and only while you
+> use them. [privacy.md](privacy.md) lists exactly what loads from
+> where.
 
 ### Plugins
 

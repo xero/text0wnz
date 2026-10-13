@@ -12,6 +12,8 @@ import { createColorPanel } from './colorPanel.js';
 import { createFramesPanel } from './frames.js';
 import { createMinimap } from './minimap.js';
 import { createSixteenColors } from './sixteenColors.js';
+import { createAsciiArena } from './asciiArena.js';
+import { createArchiveOpener, isArchiveFile } from './archiveOpen.js';
 import { createPluginManager } from './plugins.js';
 import { createReferenceImage } from './referenceImage.js';
 import { FontCache } from './fontCache.js';
@@ -92,6 +94,7 @@ let updateAccepted = false;
 let palettePicker;
 let pendingFile = null;
 let navFullscreen;
+let archiveOpener = null;
 
 const $$$$ = () => {
 	htmlDoc = $$('html');
@@ -130,7 +133,7 @@ const isImageFile = file => {
 	return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'avif'].includes(ext);
 };
 
-const openHandler = file => {
+const openHandler = (file, opts = {}) => {
 	// images trace, they do not parse: route them to the reference
 	// overlay instead of dumping their bytes into the canvas as text.
 	// iOS widens the picker's accept to */* so they cannot be filtered
@@ -140,6 +143,15 @@ const openHandler = file => {
 		referenceImage.setOpen(true);
 		refToggle?.update();
 		refFloat?.focus();
+		openFile.value = '';
+		return;
+	}
+	// archives unpack client-side; multi-entry ones raise a picker.
+	// created on first use: a PWA launch can deliver a file before the
+	// idle-time init tier builds the opener
+	if (isArchiveFile(file)) {
+		archiveOpener ??= createArchiveOpener({ openFile: openHandler });
+		archiveOpener?.open(file);
 		openFile.value = '';
 		return;
 	}
@@ -187,14 +199,20 @@ const openHandler = file => {
 			};
 
 			const closeModal = () => {
-				if (State.modal.isOpen() && State.modal.current === 'loading') {
+				// current is the controller's accessor, not a field: the
+				// old reference compare never matched and left the
+				// loading modal up after every file load
+				if (State.modal.isOpen() && State.modal.current() === 'loading') {
 					State.modal.close();
 				}
 			};
 			const isSceneFile =
 				file.name.toLowerCase().endsWith('.nfo') ||
 				file.name.toLowerCase().endsWith('.diz');
-			if (isSceneFile) {
+			// an archive browser's font hint beats the NFO heuristic (an
+			// amiga diz wants Topaz, not Topaz-437) but never SAUCE: the
+			// author's record wins over the source's house style
+			if (isSceneFile && !opts.font) {
 				await State.textArtCanvas.setFont(magicNumbers.NFO_FONT, applyData);
 				return; // setFont runs applyData
 			}
@@ -208,10 +226,16 @@ const openHandler = file => {
 					return; // setFont runs applyData
 				}
 			}
+			if (opts.font && !isXBFile) {
+				await State.textArtCanvas.setFont(opts.font, applyData);
+				closeModal();
+				return; // setFont runs applyData
+			}
 			applyData();
 			palettePicker.updatePalette(); // XB
 			closeModal();
 		},
+		opts,
 	);
 };
 
@@ -572,6 +596,13 @@ const initializeAppComponents = async () => {
 	// the 16colo.rs in-app browser opens straight into the editor
 	const sixteen = createSixteenColors({ openFile: openHandler });
 	onClick($('browse16c'), () => sixteen?.show());
+
+	// the asciiarena.se browser does the same for amiga ascii collys
+	const arena = createAsciiArena({ openFile: openHandler });
+	onClick($('browseArena'), () => arena?.show());
+
+	// native zip and lha opens route through the same unpack path
+	archiveOpener ??= createArchiveOpener({ openFile: openHandler });
 
 	// ES-module plugin surface (durdraw lineage)
 	const pluginManager = createPluginManager();

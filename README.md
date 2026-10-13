@@ -2,7 +2,7 @@
 
 > ### _Your browser is the canvas_
 
-A retro text art editor rebooted for the modern web. Draw, edit, and collaborate on ANSI, ASCII, NFO, and XBIN files. Offline-first with auto-save/restore via local storage, plus an optional self-hosted server component enabling real-time, multi-user sessions. Crafted for keyboard-centric artists and creators using mouse or touch, _on any device_. Built with modern tools and automated testing for a seamless experience for text artists and developers.
+A retro text art editor rebooted for the modern web. Draw, edit, animate, and collaborate on ANSI, ASCII, NFO, and XBIN files. Offline-first with crash-safe autosave and restore, plus an optional self-hosted server component enabling real-time, multi-user sessions. Crafted for keyboard-centric artists and creators using mouse or touch, _on any device_. Built with modern tools and automated testing for a seamless experience for text artists and developers.
 
 ![preview](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/preview.png)
 
@@ -58,17 +58,30 @@ A retro text art editor rebooted for the modern web. Draw, edit, and collaborate
   - No install required!
   - But easily [installed as a Progressive Web Application](docs/install-pwa.md) to your device
 - **Comprehensive keyboard shortcuts and mouse controls**
-  - Draw using the keyboard, mouse, or touch screen
+  - Draw using the keyboard, mouse, pen, or touch screen
+  - Pen pressure, touch gestures, focal zoom, and a two-finger tap for undo
 - **Classic and modern fonts**
   - Over 100 fonts from IBM PCs, Amiga, C64, and many more vintage/custom
+  - Star favorites to pin them at the top of the picker
 - **Full suite of drawing tools:**
   - Keyboard, freehand brushes, fills, shapes, selection, and mirror mode
 - **Advanced color management**
   - 16-color ANSI, iCE colors, real-time preview, color conflict resolution
+  - xterm-256 and RGB truecolor panel, one click past the classic 16
   - Custom XBIN color palette support and selection
+- **Unicode text art**
+  - Documents hold full UTF-8; a charset picker with importable tables puts unicode glyphs on the keyboard
+- **Animation**
+  - A frame timeline with onion skinning and baud-rate preview playback
+  - Exports to classic ansimation `.ans` and durdraw `.dur` movies
 - **Supported file types:**
-  - Import: ANSI, BIN, XBIN, NFO, DIZ, UTF-8 TXT
-  - Export: all of the above and PNG
+  - Import: ANSI, ASCII, BIN, XBIN, NFO, DIZ, UTF-8 TXT, TundraDraw, durdraw, and teXt0wnz Doc
+  - Export: ANSI, BIN, XBIN, UTF-8, plain text, TundraDraw, durdraw, teXt0wnz Doc, ANSimation, and PNG
+  - Zip and amiga LHA archives unpack in the browser; the art inside opens
+- **In-app art archive browsers**
+  - Browse [16colo.rs](https://16colo.rs) artpacks by year, crew, or artist
+  - Browse [aSCIIaRENA](https://asciiarena.se) amiga collys with instant whole-archive search
+  - Open any piece straight into the editor, amiga ascii in Topaz like the scene drew it
 - **Multi-platform file opening**
   - Desktop: OS "Open with" integration (Chrome/Edge)
   - Android: Share sheet integration
@@ -76,14 +89,18 @@ A retro text art editor rebooted for the modern web. Draw, edit, and collaborate
   - Drag-and-drop support for everyone!
 - **Canvas operations:**
   - Undo/redo, canvas resizing, font selection, and full SAUCE metadata support
+  - Paste-under and transparent paste for collage work
 - **Editor options:**
-  - Canvas zoom, light/dark mode, and grid overlay
+  - Canvas zoom, light/dark mode, grid overlay, and a live minimap
+  - Reference image overlay with opacity and width controls for tracing
+- **Plugins**
+  - ES-module plugins read the canvas through a small API and write back as one undo step
 - **Auto Save/Restore**
-  - Editor Setting saved to local storage for a consistent drawing sessions
-  - Artwork and undo history saved to IndexedDB as you draw, auto-reloads when the app is opened
-  - Optimized binary data storage packing for efficient canvas persistence
+  - Editor settings saved to local storage for consistent drawing sessions
+  - An autosave journal records your edits as you draw and restores the session after a crash, closed tab, or reload
 - **Collaborative server mode**
-  - For real-time multi-user editing
+  - For real-time multi-user editing; classic Moebius clients join the same rooms
+  - Sessions record a timelapse you can export as a durdraw movie
   - Optional and opt-in by users. See: [Privacy](docs/privacy.md)
 - **Build tools:**
   - Bun, Vite, PostCSS
@@ -100,9 +117,15 @@ A retro text art editor rebooted for the modern web. Draw, edit, and collaborate
 | **`.utf8.ans`** | UTF-8 ANSI for modern terminals        | ░▒▒░ | ░▒▒░ |      |
 | **`.bin`**      | DOS-era binary format                  | ░▒▒░ | ░▒▒░ | ░▒▒░ |
 | **`.xb`**       | [XBIN](docs/xb-format.md) format       | ░▒▒░ | ░▒▒░ | ░▒▒░ |
+| **`.tnd`**      | TundraDraw 24-bit color format         | ░▒▒░ | ░▒▒░ | ░▒▒░ |
+| **`.dur`**      | durdraw movie (animation)              | ░▒▒░ | ░▒▒░ |      |
+| **`.0wnz`**     | Native doc: truecolor, unicode, frames, fonts | ░▒▒░ | ░▒▒░ |      |
 | **`.nfo`**      | Scene release format                   | ░▒▒░ | ░▒▒░ | ░▒▒░ |
 | **`.diz`**      | FILE_ID.DIZ archive metadata files     | ░▒▒░ |      | ░▒▒░ |
+| **`.asc`**      | Amiga and pc scene ascii               | ░▒▒░ |      |      |
 | **`.txt`**      | ASCII or other plain text              | ░▒▒░ | ░▒▒░ |      |
+| **`.zip`**      | Archive; openable art inside unpacks   | ░▒▒░ |      |      |
+| **`.lha`**      | [Amiga archive](docs/lha-format.md), `.lzh` included | ░▒▒░ |      |      |
 | **`.png`**      | Artwork rendered as an image           |      | ░▒▒░ |      |
 
 ## Browser Support
@@ -144,6 +167,7 @@ A retro text art editor rebooted for the modern web. Draw, edit, and collaborate
 
 - [SAUCE Format](docs/sauce-format.md) - SAUCE metadata format specification [**↵**](https://github.com/xero/text0wnz/wiki/sauce-format)
 - [XBin Format](docs/xb-format.md) - XBin file format specification [**↵**](https://github.com/xero/text0wnz/wiki/xb-format)
+- [LHA Format](docs/lha-format.md) - Amiga archive support and decoder notes [**↵**](https://github.com/xero/text0wnz/wiki/lha-format)
 
 **Supplemental**
 
@@ -192,8 +216,8 @@ A retro text art editor rebooted for the modern web. Draw, edit, and collaborate
 |:-----------|:-----------------------------------|
 | `d`        | Reset colors to default            |
 | `q`        | Swap foreground/background         |
-| `0`–`7`    | Select basic color                 |
-| `F1`–`F12` | Insert block/character (see below) |
+| `0`-`7`    | Select basic color                 |
+| `F1`-`F12` | Insert block/character (see below) |
 
 **File & Canvas:**
 
@@ -244,7 +268,7 @@ A retro text art editor rebooted for the modern web. Draw, edit, and collaborate
 >
 > In **Move Mode**: `arrow keys`, `page up`, `page down` move the _selected content_ in the same ways the default actions move the _selection area_.
 
-**Function Keys (`F1`–`F12`):** Quick character insert from CP437 font (blocks, symbols, shapes, and more).
+**Function Keys (`F1`-`F12`):** Quick character insert from CP437 font (blocks, symbols, shapes, and more).
 
 **The Classic CP437 ANSI block shortcuts**
 
@@ -287,7 +311,7 @@ Use the toolbar buttons or shortcuts `ctrl [`, `ctrl ]` to cycle predefined sets
 7. Save often (Ctrl+S)
 8. F-keys for quick block chars
 9. Alt+Click to sample colors
-10. Undo/Redo freely (up to 1000 ops)
+10. Undo/Redo freely (a 64MB history budget, not an op count)
 
 > [!NOTE]
 > See the curated collection of [ANSi Tutorials](https://github.com/xero/ansi-art-tutorials/blob/main/README.md) for tips on drawing styles.
@@ -330,6 +354,8 @@ bun www    # or npm run www
 | Script             | Purpose                              |
 |:-------------------|:-------------------------------------|
 | `bake`             | Build for production (Vite)          |
+| `bake:singlefile`  | Build the one-file offline bundle    |
+| `binaries`         | Compile single-binary servers        |
 | `server`           | Start collaboration server           |
 | `www`              | Serve the `/dist` folder for testing |
 | `fix`              | Auto-fix lint and format             |
@@ -338,6 +364,7 @@ bun www    # or npm run www
 | `test:unit`        | Run unit tests (Vitest)              |
 | `test:e2e`         | Run end to end tests (Playwright)    |
 | `test:install`     | Install playwright browsers          |
+| `types:check`      | TypeScript type checking             |
 
 > [!TIP]
 > See: [package.json](package.json) for full commands definitions
@@ -359,29 +386,31 @@ bun www    # or npm run www
 
 ```
 dist/
-├── index.html                 # Main entry point
-├── site.webmanifest           # PWA manifest
-├── service.js                 # Service worker (injectManifest strategy)
-├── robots.txt                 # Search engine directives
-├── sitemap.xml                # SEO Site map
-├── humans.txt                 # Credits
-├── favicon.ico                # Application icon
-├── ansi/                      # ANSI art tutorials (ANS files, PNG previews)
-└── ui/                        # UI assets
-    ├── stylez-[hash].css      # Minified CSS
-    ├── icons-[hash].svg       # Icon sprite
-    ├── topazplus_1200.woff2   # Interface font (Amiga style)
-    ├── fonts/                 # Bitmap fonts (PNG format)
-    ├── img/                   # PWA Images and app icons
-    └── js/                    # JavaScript bundles
-        ├── editor-[hash].js   # Main application entry point
-        ├── core-[hash].js     # Core modules (state, storage, compression)
-        ├── canvas-[hash].js   # Canvas rendering with lazy font loading
-        ├── tools-[hash].js    # Drawing tools
-        ├── fileops-[hash].js  # File operations
-        ├── network-[hash].js  # Collaboration
-        ├── palette-[hash].js  # Color palette
-        └── websocket.js       # Web Worker (not hashed)
+├── index.html                    # Main entry point
+├── site.webmanifest              # PWA manifest
+├── service.js                    # Service worker (injectManifest strategy)
+├── collabWorker-[hash].js        # Collaboration transport worker
+├── journalWorker-[hash].js       # OPFS autosave journal worker
+├── robots.txt                    # Search engine directives
+├── sitemap.xml                   # SEO Site map
+├── humans.txt                    # Credits
+├── favicon.ico                   # Application icon
+├── ansi/                         # ANSI art tutorials (ANS files, PNG previews)
+└── ui/                           # UI assets
+    ├── stylez-[hash].css         # Minified CSS
+    ├── icons-[hash].svg          # Icon sprite
+    ├── topazplus_1200.woff2      # Interface font (Amiga style)
+    ├── fonts/                    # Bitmap fonts (PNG format)
+    ├── img/                      # PWA Images and app icons
+    └── js/                       # JavaScript bundles
+        ├── editor-[hash].js      # Main application entry point
+        ├── core-[hash].js        # 0wnzlib document model and codecs
+        ├── canvas-[hash].js      # Rendering (WebGL2, 2D fallback, lazy fonts)
+        ├── tools-[hash].js       # Drawing tools
+        ├── fileops-[hash].js     # File operations
+        ├── network-[hash].js     # Collaboration
+        ├── palette-[hash].js     # Color palette
+        └── profiler-[hash].js    # Lazy measurement rigs (?profile, ?test, ?spike)
 ```
 
 **Code Standards & Style**
@@ -389,6 +418,7 @@ dist/
 - **HTML 5**: Semantic tagging
 - **CSS 4**: Modern nesting
 - **ES6 JavaScript**: Vanilla & framework free
+- **TypeScript core**: The document model and codecs (0wnzlib) are pure TS
 - Sources use all `lowercase` or `camelCase` names
 
 ## Collaborative Server
@@ -558,11 +588,11 @@ All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/mai
 
 ## Project History
 
-The story of this project traces back to 2018, when AndyH joined [Blocktronics](https://16colo.rs/group/blocktronics)—the legendary masters of the ANSI art scene. During his early days there, he created the original “ansiedit,” laying the groundwork for this application. However, his focus soon shifted to developing a desktop-only editor, which evolved into Moebius.
+The story of this project traces back to 2018, when AndyH joined [Blocktronics](https://16colo.rs/group/blocktronics), the legendary masters of the ANSI art scene. During his early days there, he created the original “ansiedit,” laying the groundwork for this application. However, his focus soon shifted to developing a desktop-only editor, which evolved into Moebius.
 
 Around that time, xeR0 (then a member of [Impure!ASCii](https://16colo.rs/group/impure) and a devoted PabloDraw user) joined Blocktronics shortly after ansiedit’s release. xeR0 played the role of testing and debugging the app alongside Andy as he learned the dark arts of the blocks.
 
-Fast forward a decade: xeR0 found himself sad he was still unable to use the new MoebiusXBIN fork to create text art on his iPad. With Andy’s blessing, xeR0 decided to revive the project—reimagining it from the ground up as a modern Progressive Web App. New features like optimized off-screen canvas', dirty pixel rendering, local storage sync, were added. But without Andy's core math this project would not be possible.
+Fast forward a decade: xeR0 found himself sad he was still unable to use the new MoebiusXBIN fork to create text art on his iPad. With Andy’s blessing, xeR0 decided to revive the project, reimagining it from the ground up as a modern Progressive Web App. New features like optimized off-screen canvas', dirty pixel rendering, local storage sync, were added. But without Andy's core math this project would not be possible.
 
 ## License & Greetz
 
