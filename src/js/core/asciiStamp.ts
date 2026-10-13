@@ -415,6 +415,18 @@ export const createAsciiStampEngine = (
 		for (let x = lo; x <= hi; x++) {
 			emit(out, x, y, x === lo ? left : x === hi ? right : FILL);
 		}
+		// corpus row AA: sloped rows wear pebbles just outside the
+		// chisels (,d$$$P' rising, `Y$$$b. falling); rank one keeps them
+		// deferential, any neighboring row's fill overwrites them
+		if (s.cls === 'diag' || s.cls === 'shallow') {
+			if (s.fall) {
+				emit(out, lo - 1, y, BACKTICK);
+				emit(out, hi + 1, y, PERIOD);
+			} else {
+				emit(out, lo - 1, y, COMMA);
+				emit(out, hi + 1, y, APOSTROPHE);
+			}
+		}
 	};
 
 	const ribbonCell = (out: StampOut[], c: Cell, cls: SlopeClass) => {
