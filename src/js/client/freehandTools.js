@@ -1019,6 +1019,16 @@ const createFillController = () => {
 	const bar = $('brushToolbar');
 	const nav = $('brushes');
 	const fillPoint = e => {
+		// a seed outside the document floods a phantom wrapped row; the
+		// pointer clamps downs now, but the seed must never trust it
+		if (
+			e.detail.x < 0 ||
+			e.detail.x >= State.textArtCanvas.getColumns() ||
+			e.detail.halfBlockY < 0 ||
+			e.detail.halfBlockY >= State.textArtCanvas.getRows() * 2
+		) {
+			return;
+		}
 		let block = State.textArtCanvas.getHalfBlock(
 			e.detail.x,
 			e.detail.halfBlockY,
