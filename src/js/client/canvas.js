@@ -1200,6 +1200,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				}
 			} catch (fallbackError) {
 				console.error('[Canvas] Failed to load fallback font:', fallbackError);
+				// the previous font is still live, so the caller's flow
+				// must continue: XB opens hang their whole load on this
+				// callback and a swallowed one wedges the open state
+				if (callback) {
+					callback();
+				}
 			}
 		}
 	};

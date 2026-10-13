@@ -141,6 +141,17 @@ const isImageFile = file => {
 // different open supersedes it)
 let openSeq = 0;
 let openInFlight = null;
+// applyData's own dispatch must not cancel the open that fired it;
+// every OTHER new document (File > New, a collab join) obsoletes any
+// parse still in flight, or its late callback would stamp the old
+// file over the fresh canvas
+let dispatchingOwnOpen = false;
+document.addEventListener('onNewDocument', () => {
+	if (!dispatchingOwnOpen) {
+		openSeq++;
+		openInFlight = null;
+	}
+});
 
 const openHandler = (file, opts = {}) => {
 	// images trace, they do not parse: route them to the reference
@@ -183,6 +194,10 @@ const openHandler = (file, opts = {}) => {
 		if (seq === openSeq) {
 			openInFlight = null;
 			bodyContainer.classList.remove('loading');
+			// chromium fires no change event when the picker re-selects
+			// the same filename, so a failed open must clear the input
+			// or it cannot be retried at all
+			openFile.value = '';
 			if (State.modal.isOpen() && State.modal.current() === 'loading') {
 				State.modal.close();
 			}
@@ -234,7 +249,9 @@ const openHandler = (file, opts = {}) => {
 				// the reset event fires only on REAL loads: onOpenedFile
 				// also rides buffer swaps (row ops, collab resyncs) which
 				// must never re-home the cursor, selection, or minimap
+				dispatchingOwnOpen = true;
 				document.dispatchEvent(new CustomEvent('onNewDocument'));
+				dispatchingOwnOpen = false;
 				palettePicker.updatePalette(); // ANSi
 				openFile.value = '';
 				viewport.scrollLeft = viewport.scrollTop = 0;

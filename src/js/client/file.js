@@ -1129,6 +1129,16 @@ const loadModule = () => {
 			console.error('[Load] failed to parse file:', error);
 			opts.onError?.(error);
 		};
+		// clearXBData fires its callback synchronously and drops the
+		// returned promise, so async decoders need their own net or a
+		// throw becomes an unhandled rejection fail never sees
+		const guarded = fn => async () => {
+			try {
+				await fn();
+			} catch (error) {
+				fail(error);
+			}
+		};
 		// load registers first: test harnesses treat listener zero as
 		// the load handler
 		reader.addEventListener('load', _e => {
@@ -1195,7 +1205,7 @@ const loadModule = () => {
 				case 'dur':
 					// durdraw v7/v8 movie: frames import with the doc; frame 0
 					// displays
-					State.textArtCanvas.clearXBData(async () => {
+					State.textArtCanvas.clearXBData(guarded(async () => {
 						const result = await decodeDur(data);
 						updateSauceModal({
 							title: result.meta.title,
@@ -1211,11 +1221,11 @@ const loadModule = () => {
 							undefined,
 							result.doc,
 						);
-					});
+					}));
 					break;
 				case '0wnz':
 					// native t0wnz-doc envelope
-					State.textArtCanvas.clearXBData(async () => {
+					State.textArtCanvas.clearXBData(guarded(async () => {
 						const result = await decodeEnvelope(data);
 						if (result.fontBytes) {
 							const fontValid = State.textArtCanvas.setXBFontData(
@@ -1244,7 +1254,7 @@ const loadModule = () => {
 							undefined,
 							result.doc,
 						);
-					});
+					}));
 					break;
 				case 'ans':
 				case 'diz':

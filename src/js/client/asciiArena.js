@@ -293,9 +293,13 @@ const createAsciiArena = ({ openFile, onExit }) => {
 
 	// a colly earns a listing only if the editor can do something
 	// with it: open it directly or crack it as an archive; diskmag
-	// releases ride .dms disk images, unreadable here
-	const viewable = row =>
-		isOpenableName(row.filename) || isArchiveName(row.filename);
+	// releases ride .dms disk images, unreadable here. The filename
+	// defaults defensively: one malformed api row must not take the
+	// whole view down with it
+	const viewable = row => {
+		const name = row.filename ?? '';
+		return isOpenableName(name) || isArchiveName(name);
+	};
 
 	// artists and crews qualify by what their destination view will
 	// actually show: at least one viewable colly in the index; the
