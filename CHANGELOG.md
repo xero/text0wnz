@@ -48,6 +48,10 @@ byte-exact golden tests before anything else moved.
   against all 4,190 entries in the arena's archives). Amiga `.txt`
   files that are not UTF-8 now fall back to the byte loader everywhere
   instead of failing to open.
+- **Native archive opens.** File open, drag-and-drop, and PWA file
+  launches accept `.zip`, `.lha`, and `.lzh` directly: one openable
+  entry loads straight away, several raise a picker modal. Amiga
+  archives open as latin-1 in Topaz+ 1200; zips keep CP437 defaults.
 - **Input.** Pen pressure, touch gestures, focal zoom, and a two-finger
   tap for undo.
 - **Crash recovery.** An OPFS journal autosaves your session and

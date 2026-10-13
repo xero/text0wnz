@@ -73,6 +73,7 @@ const createModalController = modal => {
 		$('exportModal'),
 		$('sixteenModal'),
 		$('arenaModal'),
+		$('archiveModal'),
 		$('pluginModal'),
 		$('choiceModal'),
 		$('updateModal'),

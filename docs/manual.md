@@ -97,6 +97,9 @@ File operations allowing you to create, open, and save artwork in multiple file 
 
 - Load via **File → Open** or **drag-and-drop**
 - Format detection by file extension
+- Zip and amiga `.lha`/`.lzh` archives unpack in the browser: a lone
+  openable file loads straight away, several raise a picker. Amiga
+  archives open as latin-1 in Topaz+ 1200, zips keep CP437 defaults
 - Export options for all supported types and PNG
 - Before an export that cannot hold everything in your piece (unicode glyphs, extended colors, blink), a dialog lists exactly what will be lost so you can decide
 - XBin exports offer an RLE compression toggle

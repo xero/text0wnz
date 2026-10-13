@@ -13,6 +13,7 @@ import { createFramesPanel } from './frames.js';
 import { createMinimap } from './minimap.js';
 import { createSixteenColors } from './sixteenColors.js';
 import { createAsciiArena } from './asciiArena.js';
+import { createArchiveOpener, isArchiveFile } from './archiveOpen.js';
 import { createPluginManager } from './plugins.js';
 import { createReferenceImage } from './referenceImage.js';
 import { FontCache } from './fontCache.js';
@@ -93,6 +94,7 @@ let updateAccepted = false;
 let palettePicker;
 let pendingFile = null;
 let navFullscreen;
+let archiveOpener = null;
 
 const $$$$ = () => {
 	htmlDoc = $$('html');
@@ -141,6 +143,12 @@ const openHandler = (file, opts = {}) => {
 		referenceImage.setOpen(true);
 		refToggle?.update();
 		refFloat?.focus();
+		openFile.value = '';
+		return;
+	}
+	// archives unpack client-side; multi-entry ones raise a picker
+	if (isArchiveFile(file) && archiveOpener) {
+		archiveOpener.open(file);
 		openFile.value = '';
 		return;
 	}
@@ -586,6 +594,9 @@ const initializeAppComponents = async () => {
 	// the asciiarena.se browser does the same for amiga ascii collys
 	const arena = createAsciiArena({ openFile: openHandler });
 	onClick($('browseArena'), () => arena?.show());
+
+	// native zip and lha opens route through the same unpack path
+	archiveOpener = createArchiveOpener({ openFile: openHandler });
 
 	// ES-module plugin surface (durdraw lineage)
 	const pluginManager = createPluginManager();

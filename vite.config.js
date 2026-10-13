@@ -295,15 +295,19 @@ export default ({ mode }) => {
 							name: 'Text Art Files',
 							accept: {
 								'text/plain': ['.txt'],
+								'application/zip': ['.zip'],
 								'application/octet-stream': [
 									'.ans',
 									'.ansi',
+									'.asc',
 									'.bin',
 									'.xb',
 									'.xbin',
 									'.nfo',
 									'.diz',
-									'.utf8ans'
+									'.utf8ans',
+									'.lha',
+									'.lzh'
 								],
 								'text/*': []
 							}

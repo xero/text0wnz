@@ -450,7 +450,7 @@
 			</div>
 		</div>
 		<label for="openFile">
-			<input id="openFile" class="hide" type="file" aria-label="Open File" accept=".ans,.ansi,.asc,.xb,.xbin,.bin,.txt,.nfo,.utf8ans,.diz,application/octet-stream"/>
+			<input id="openFile" class="hide" type="file" aria-label="Open File" accept=".ans,.ansi,.asc,.xb,.xbin,.bin,.txt,.nfo,.utf8ans,.diz,.zip,.lha,.lzh,application/octet-stream"/>
 		</label>
 		<label for="customColor">
 			<input id="customColor" class="hide" type="color" aria-label="Select Color"/>
@@ -943,6 +943,23 @@
 						Back
 					</button>
 					<button id="arenaClose" class="close" aria-label="Close">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Close
+					</button>
+				</nav>
+			</section>
+			<section id="archiveModal">
+				<header>
+					<h2 id="archiveTitle">archive</h2>
+				</header>
+				<article>
+					<p id="archiveStatus" class="hide"></p>
+					<div id="archiveList"></div>
+				</article>
+				<nav>
+					<button id="archiveClose" class="close" aria-label="Close">
 						<svg>
 							<use href="img/icons.svg#cancel"></use>
 						</svg>

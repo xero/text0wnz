@@ -41,6 +41,7 @@ describe('Modal DOM Tests', () => {
 			'exportModal',
 			'sixteenModal',
 			'arenaModal',
+			'archiveModal',
 			'pluginModal',
 			'choiceModal',
 			'updateModal',

@@ -60,6 +60,36 @@ const pager = (page, pages, goPage, className) => {
 	return el;
 };
 
+/** the font asciiarena itself renders with (TopazPlus a1200) */
+const AMIGA_FONT = 'Topaz+ 1200 8x16';
+
+const countHighBytes = bytes => {
+	let n = 0;
+	for (const b of bytes) {
+		if (b > 127) {
+			n++;
+		}
+	}
+	return n;
+};
+
+const validUtf8 = bytes => {
+	try {
+		new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+		return true;
+	} catch {
+		return false;
+	}
+};
+
+// mirrors asciiarena's own decodeReleaseText: a file with 16 or more
+// high bytes is scene art whatever UTF-8 validation says, because
+// genuine multibyte text always halves the high char count
+const amigaImportHints = bytes => ({
+	font: AMIGA_FONT,
+	preferBytes: countHighBytes(bytes) >= 16 || !validUtf8(bytes),
+});
+
 // every view render takes a ticket and checks it after its fetch: a
 // stale response must not stomp the view the user has moved on to
 const createRenderGate = () => {
@@ -115,4 +145,7 @@ export {
 	pager,
 	createTrail,
 	createRenderGate,
+	countHighBytes,
+	validUtf8,
+	amigaImportHints,
 };

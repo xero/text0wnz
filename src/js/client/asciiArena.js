@@ -20,6 +20,9 @@ import {
 	pager,
 	createTrail,
 	createRenderGate,
+	countHighBytes,
+	validUtf8,
+	amigaImportHints,
 } from './browserKit.js';
 import {
 	extractLhaEntry,
@@ -35,9 +38,6 @@ const API = `${SITE}/api`;
  * unpack through the core readers */
 const OPENABLE = /\.(ans|asc|diz|nfo|txt)$/i;
 const ARCHIVE = /\.(zip|lha|lzh)$/i;
-
-/** the font asciiarena itself renders with (TopazPlus a1200) */
-const AMIGA_FONT = 'Topaz+ 1200 8x16';
 
 const PAGESIZE = 24;
 /** instant search renders at most this many diz cards per query */
@@ -129,25 +129,6 @@ const createAsciiArena = ({ openFile }) => {
 
 	const baseName = name => name.split('/').pop();
 
-	const countHighBytes = bytes => {
-		let n = 0;
-		for (const b of bytes) {
-			if (b > 127) {
-				n++;
-			}
-		}
-		return n;
-	};
-
-	const validUtf8 = bytes => {
-		try {
-			new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-			return true;
-		} catch {
-			return false;
-		}
-	};
-
 	// latin-1 maps bytes to the first 256 codepoints one to one
 	const latin1 = bytes => {
 		let out = '';
@@ -156,14 +137,6 @@ const createAsciiArena = ({ openFile }) => {
 		}
 		return out;
 	};
-
-	// mirrors the site's own decodeReleaseText: a file with 16 or more
-	// high bytes is scene art whatever UTF-8 validation says, because
-	// genuine multibyte text always halves the high char count
-	const importHints = bytes => ({
-		font: AMIGA_FONT,
-		preferBytes: countHighBytes(bytes) >= 16 || !validUtf8(bytes),
-	});
 
 	const sceneText = bytes =>
 		(countHighBytes(bytes) < 16 && validUtf8(bytes)
@@ -521,7 +494,7 @@ const createAsciiArena = ({ openFile }) => {
 	const openBytes = (bytes, name) => {
 		say(null);
 		State.modal.close();
-		openFile(new File([bytes], name), importHints(bytes));
+		openFile(new File([bytes], name), amigaImportHints(bytes));
 	};
 
 	const openArchive = async colly => {
