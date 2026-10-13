@@ -1,17 +1,14 @@
 /**
  * asciiarena.se in-app browser: tabs for latest releases, artists,
- * crews, and search, opening amiga ascii collys straight into the
- * editor. Lists ride the official /api/v1 (CORS-open, 120 req/min,
- * {data, meta} envelopes, mags already split out of /collys) with
- * ONE exception: the latest rail stays on the legacy /api because
- * v1 has no upload-date sort (sort=date floats the undated year-0
- * block first even descending; reported upstream). FILE BYTES come
- * from the site's /collections raw files, never /collys/{id}/text,
- * whose server-side decode would cost the byte-exact latin-1 the
- * Topaz render needs. Decoding mirrors the site's own rule: scene
- * art full of high bytes is glyph-indexed latin-1 even when it
- * happens to validate as UTF-8. Politeness: every request is
- * user-driven and cached; NOTHING here runs in CI.
+ * crews, and instant whole-archive search, opening amiga ascii collys
+ * straight into the editor. Everything rides the site's public JSON
+ * api and its /collections raw files, both CORS-open, so no proxy or
+ * mirror is involved. Search runs client-side over the one-shot
+ * uhcsearch index instead of paging the api per keystroke. Decoding
+ * mirrors the site's own rule: scene art full of high bytes is
+ * glyph-indexed latin-1 even when it happens to validate as UTF-8,
+ * and renders in the same Topaz the site uses. Politeness: every
+ * request is user-driven and cached; NOTHING here runs in CI.
  */
 import State from './state.js';
 import { $ } from './ui.js';
@@ -38,11 +35,11 @@ import {
 } from '../core/index';
 
 const SITE = 'https://asciiarena.se';
-/** legacy internals: only the latest rail still needs them */
 const API = `${SITE}/api`;
-const V1 = `${SITE}/api/v1`;
 
 const PAGESIZE = 24;
+/** instant search renders at most this many diz cards per query */
+const RESULT_CAP = 120;
 
 const createAsciiArena = ({ openFile, onExit }) => {
 	const crumb = $('arenaCrumb');
@@ -56,6 +53,7 @@ const createAsciiArena = ({ openFile, onExit }) => {
 
 	const cache = {
 		pages: new Map(), // list endpoints: cache key -> response json
+		index: null, // uhcsearch rows, fetched once per session
 		dizzes: new Map(), // filename -> preview text (null caches a miss)
 	};
 
@@ -109,12 +107,6 @@ const createAsciiArena = ({ openFile, onExit }) => {
 	const say = makeSay(status);
 
 	const fetchPage = (key, url) => fetchCached(cache.pages, key, url);
-
-	/** v1 lists ride {data, meta} envelopes; legacy rows ride bare */
-	const fetchV1 = async (key, path) => {
-		const json = await fetchPage(key, `${V1}${path}`);
-		return { rows: json.data ?? [], pages: json.meta?.total_pages ?? 1 };
-	};
 
 	const clearList = view => {
 		// pending previews of a view being torn down must not fetch
@@ -245,20 +237,84 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		cdate: row.cdate,
 	});
 
-	const fromV1 = row => ({
+	const fromIndex = row => ({
 		filename: row.filename,
-		dir: dirOf(row.filename),
-		title: row.name,
-		artists: (row.artists ?? []).join(', '),
-		crews: (row.crews ?? []).join(', '),
-		// the card only reads the year; 0000 renders as no year at all
-		cdate: String(row.year ?? 0).padStart(4, '0'),
+		dir: row.dir,
+		title: row.title,
+		artists: row.artists,
+		crews: row.crews,
+		cdate: null,
 	});
 
-	// v1 already splits diskmags out of /collys server-side; this net
-	// still catches oddball formats and the legacy latest rows
+	// ------------------------------------------------------------ index
+
+	const parseIndex = text =>
+		text
+			.split('\n')
+			.slice(1)
+			.map(line => line.split('\t'))
+			.filter(cols => cols.length >= 5 && cols[0])
+			.map(cols => ({
+				filename: cols[0],
+				dir: cols[1].replace(/^collections\//, ''),
+				artists: cols[2],
+				crews: cols[3],
+				title: cols[4].trimEnd(),
+			}));
+
+	// the cache holds the in-flight promise, not the parsed rows, so
+	// concurrent views share one download of the whole-archive dump; a
+	// failure clears it so the next view retries
+	const ensureIndex = () => {
+		cache.index ??= (async () => {
+			const response = await fetch(`${API}/uhcsearch`);
+			if (!response.ok) {
+				throw new Error(`${response.status} from ${API}/uhcsearch`);
+			}
+			return parseIndex(await response.text());
+		})().catch(error => {
+			cache.index = null;
+			throw error;
+		});
+		return cache.index;
+	};
+
+	const listNames = csv =>
+		csv
+			.split(',')
+			.map(s => s.trim().toLowerCase())
+			.filter(Boolean);
+
+	// a colly earns a listing only if the editor can do something
+	// with it: open it directly or crack it as an archive; diskmag
+	// releases ride .dms disk images, unreadable here
 	const viewable = row =>
 		isOpenableName(row.filename) || isArchiveName(row.filename);
+
+	// artists and crews qualify by what their destination view will
+	// actually show: at least one viewable colly in the index; the
+	// crew tally doubles as the honest count beside the name
+	const ensureViewable = async () => {
+		const rows = await ensureIndex();
+		if (cache.viewableFor !== rows) {
+			const artists = new Set();
+			const crews = new Map();
+			for (const row of rows) {
+				if (!viewable(row)) {
+					continue;
+				}
+				for (const nick of listNames(row.artists)) {
+					artists.add(nick);
+				}
+				for (const name of listNames(row.crews)) {
+					crews.set(name, (crews.get(name) ?? 0) + 1);
+				}
+			}
+			cache.viewableFor = rows;
+			cache.viewable = { artists, crews };
+		}
+		return cache.viewable;
+	};
 
 	// ------------------------------------------------------------ views
 
@@ -269,8 +325,6 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		say('loading latest collys...');
 		let rows;
 		try {
-			// legacy endpoint on purpose: v1 cannot sort by upload or
-			// release date yet, and this rail is nothing without it
 			rows = await fetchPage(
 				`l:${page}`,
 				`${API}/collys?page=${page}&pagesize=${PAGESIZE}&sort=cdate&asc=D`,
@@ -306,12 +360,16 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		crumb.textContent = filter ? `artists / ${filter}` : 'artists';
 		clearList('artists');
 		say('loading artists...');
-		let got;
+		let rows, who;
 		try {
-			got = await fetchV1(
-				`a:${filter}:${page}`,
-				`/artists?page=${page}&per_page=${PAGESIZE}&sort=nick&order=asc${filter ? `&q=${encodeURIComponent(filter)}` : ''}`,
-			);
+			// the index degrades soft: a dead dump must not kill browsing
+			[rows, who] = await Promise.all([
+				fetchPage(
+					`a:${filter}:${page}`,
+					`${API}/artists?page=${page}&pagesize=${PAGESIZE}&sort=nick&asc=A${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
+				),
+				ensureViewable().catch(() => null),
+			]);
 		} catch (error) {
 			if (gate.current(ticket)) {
 				say(`asciiarena.se did not answer (${error.message})`, true);
@@ -321,45 +379,45 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		if (!gate.current(ticket)) {
 			return;
 		}
-		// logo-only profiles carry no collys: nowhere worth a click
-		const keep = got.rows.filter(row => (row.colly_count ?? 0) > 0);
+		const keep = who
+			? rows.filter(row => who.artists.has(row.nick?.toLowerCase() ?? ''))
+			: rows;
 		say(
 			keep.length
 				? null
-				: got.rows.length
+				: rows.length
 					? 'nothing on this page opens in the editor'
 					: 'no artists match',
 		);
-		if (got.pages > 1) {
-			list.appendChild(pager(page, got.pages, p => swap(() => showArtists(filter, p)), 'arenaPager'));
+		const pages = Math.ceil((rows[0]?.total_count ?? 0) / PAGESIZE);
+		if (pages > 1) {
+			list.appendChild(pager(page, pages, p => swap(() => showArtists(filter, p)), 'arenaPager'));
 		}
 		for (const row of keep) {
 			// crews are names, not a count: they stack under the nick in
 			// the sub style instead of riding the kbd tag
 			const el = button(row.nick, () =>
 				visit(() => showByArtist(row.nick)), 'arenaItem');
-			const crews = (row.crews ?? []).join(', ');
-			if (crews) {
+			if (row.crews) {
 				const sub = document.createElement('span');
 				sub.className = 'arenaSub';
-				sub.textContent = crews;
+				sub.textContent = row.crews;
 				el.appendChild(sub);
 			}
 			list.appendChild(el);
 		}
 	};
 
-	const showByArtist = async (nick, page = 1) => {
+	const showByArtist = async nick => {
 		const ticket = gate.enter();
 		crumb.textContent = `artist / ${nick}`;
 		clearList('collys');
 		say(`loading ${nick}...`);
-		let got;
+		let rows;
 		try {
-			got = await fetchV1(
-				`va:${nick}:${page}`,
-				`/collys?artist=${encodeURIComponent(nick)}&page=${page}&per_page=${PAGESIZE}`,
-			);
+			const needle = nick.toLowerCase();
+			rows = (await ensureIndex()).filter(r =>
+				viewable(r) && listNames(r.artists).includes(needle));
 		} catch (error) {
 			if (gate.current(ticket)) {
 				say(`asciiarena.se did not answer (${error.message})`, true);
@@ -369,19 +427,9 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		if (!gate.current(ticket)) {
 			return;
 		}
-		const keep = got.rows.filter(viewable);
-		say(
-			keep.length
-				? null
-				: got.rows.length
-					? 'nothing on this page opens in the editor'
-					: 'no collys on record for this artist',
-		);
-		if (got.pages > 1) {
-			list.appendChild(pager(page, got.pages, p => swap(() => showByArtist(nick, p)), 'arenaPager'));
-		}
-		for (const row of keep) {
-			list.appendChild(collyCard(fromV1(row)));
+		say(rows.length ? null : 'no collys on record for this artist');
+		for (const row of rows) {
+			list.appendChild(collyCard(fromIndex(row)));
 		}
 	};
 
@@ -390,12 +438,16 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		crumb.textContent = filter ? `crews / ${filter}` : 'crews';
 		clearList('crews');
 		say('loading crews...');
-		let got;
+		let rows, who;
 		try {
-			got = await fetchV1(
-				`g:${filter}:${page}`,
-				`/crews?page=${page}&per_page=${PAGESIZE}&sort=name&order=asc${filter ? `&q=${encodeURIComponent(filter)}` : ''}`,
-			);
+			// the index degrades soft: a dead dump must not kill browsing
+			[rows, who] = await Promise.all([
+				fetchPage(
+					`g:${filter}:${page}`,
+					`${API}/crews?page=${page}&pagesize=${PAGESIZE}&sort=name&asc=A${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
+				),
+				ensureViewable().catch(() => null),
+			]);
 		} catch (error) {
 			if (gate.current(ticket)) {
 				say(`asciiarena.se did not answer (${error.message})`, true);
@@ -405,38 +457,41 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		if (!gate.current(ticket)) {
 			return;
 		}
-		// release_count already excludes mags; zero means the crew is
-		// only known through tagged logos and its page would be bare
-		const keep = got.rows.filter(row => (row.release_count ?? 0) > 0);
+		// the count beside a crew is what its page will really show
+		const count = row =>
+			(who
+				? (who.crews.get(row.name?.toLowerCase() ?? '') ?? 0)
+				: (row.releases_cnt ?? 0));
+		const keep = rows.filter(row => count(row) > 0);
 		say(
 			keep.length
 				? null
-				: got.rows.length
+				: rows.length
 					? 'nothing on this page opens in the editor'
 					: 'no crews match',
 		);
-		if (got.pages > 1) {
-			list.appendChild(pager(page, got.pages, p => swap(() => showCrews(filter, p)), 'arenaPager'));
+		const pages = Math.ceil((rows[0]?.total_count ?? 0) / PAGESIZE);
+		if (pages > 1) {
+			list.appendChild(pager(page, pages, p => swap(() => showCrews(filter, p)), 'arenaPager'));
 		}
 		for (const row of keep) {
 			list.appendChild(
-				countButton(row.name, row.release_count, () =>
+				countButton(row.name, count(row), () =>
 					visit(() => showByCrew(row.name)), 'arenaItem'),
 			);
 		}
 	};
 
-	const showByCrew = async (name, page = 1) => {
+	const showByCrew = async name => {
 		const ticket = gate.enter();
 		crumb.textContent = `crew / ${name}`;
 		clearList('collys');
 		say(`loading ${name}...`);
-		let got;
+		let rows;
 		try {
-			got = await fetchV1(
-				`vc:${name}:${page}`,
-				`/collys?crew=${encodeURIComponent(name)}&page=${page}&per_page=${PAGESIZE}`,
-			);
+			const needle = name.toLowerCase();
+			rows = (await ensureIndex()).filter(r =>
+				viewable(r) && listNames(r.crews).includes(needle));
 		} catch (error) {
 			if (gate.current(ticket)) {
 				say(`asciiarena.se did not answer (${error.message})`, true);
@@ -446,49 +501,20 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		if (!gate.current(ticket)) {
 			return;
 		}
-		const keep = got.rows.filter(viewable);
-		say(
-			keep.length
-				? null
-				: got.rows.length
-					? 'nothing on this page opens in the editor'
-					: 'no collys on record for this crew',
-		);
-		if (got.pages > 1) {
-			list.appendChild(pager(page, got.pages, p => swap(() => showByCrew(name, p)), 'arenaPager'));
-		}
-		for (const row of keep) {
-			list.appendChild(collyCard(fromV1(row)));
+		say(rows.length ? null : 'no collys on record for this crew');
+		for (const row of rows) {
+			list.appendChild(collyCard(fromIndex(row)));
 		}
 	};
 
-	const showSearch = async (query, page = 1) => {
+	const showSearch = async query => {
 		const ticket = gate.enter();
 		crumb.textContent = query ? `search / ${query}` : 'search';
 		clearList('collys');
-		if (!query) {
-			// the stats call only dresses the empty state: a miss there
-			// must not block typing a query
-			try {
-				const json = await fetchPage('stats', `${V1}/stats`);
-				const total = (json.data ?? json).collys;
-				if (gate.current(ticket)) {
-					say(total ? `type to search ${total} collys` : 'type to search the collys');
-				}
-			} catch {
-				if (gate.current(ticket)) {
-					say('type to search the collys');
-				}
-			}
-			return;
-		}
-		say('searching...');
-		let got;
+		say('loading the colly index...');
+		let index;
 		try {
-			got = await fetchV1(
-				`q:${query}:${page}`,
-				`/collys?q=${encodeURIComponent(query)}&page=${page}&per_page=${PAGESIZE}`,
-			);
+			index = await ensureIndex();
 		} catch (error) {
 			if (gate.current(ticket)) {
 				say(`asciiarena.se did not answer (${error.message})`, true);
@@ -498,19 +524,26 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		if (!gate.current(ticket)) {
 			return;
 		}
-		const keep = got.rows.filter(viewable);
-		say(
-			keep.length
-				? null
-				: got.rows.length
-					? 'nothing on this page opens in the editor'
-					: 'no collys match',
-		);
-		if (got.pages > 1) {
-			list.appendChild(pager(page, got.pages, p => swap(() => showSearch(query, p)), 'arenaPager'));
+		const pool = index.filter(viewable);
+		if (!query) {
+			say(`type to search ${pool.length} collys`);
+			return;
 		}
-		for (const row of keep) {
-			list.appendChild(collyCard(fromV1(row)));
+		const needle = query.toLowerCase();
+		const rows = pool.filter(r =>
+			[r.filename, r.title, r.artists, r.crews].some(f =>
+				f.toLowerCase().includes(needle)));
+		if (!rows.length) {
+			say('no collys match');
+			return;
+		}
+		say(
+			rows.length > RESULT_CAP
+				? `${rows.length} collys match, showing the first ${RESULT_CAP}`
+				: null,
+		);
+		for (const row of rows.slice(0, RESULT_CAP)) {
+			list.appendChild(collyCard(fromIndex(row)));
 		}
 	};
 
