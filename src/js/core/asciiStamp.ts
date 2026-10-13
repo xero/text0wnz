@@ -84,7 +84,11 @@ export interface AsciiStampEngine {
 export const createAsciiStampEngine = (): AsciiStampEngine => {
 	let last: Cell | null = null;
 	let trail: Cell[] = [];
-	let pendingStart: Cell | null = null;
+	/** newest path cell, held until its successor resolves it */
+	let pending: { c: Cell; prev: Cell | null } | null = null;
+	let activeClass: SlopeClass | null = null;
+	/** consecutive windows disagreeing with activeClass */
+	let dissent = 0;
 	let subYNow = 1;
 	/** y changes seen this stroke; zero means a genuinely flat stroke. */
 	let rowSteps = 0;
@@ -253,24 +257,34 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 			return;
 		}
 		// steep: straight rows take the bar; a column step row takes the
-		// pebble pair so the jog reads as a curve, apostrophe under the
-		// column of the row above, period under the column of the row
-		// below, which is direction free by construction
+		// pebble pair so the jog reads as a curve. The pair is defined
+		// geometrically, period under the lower row's column, apostrophe
+		// under the upper row's column, bar on the upper cell itself, so
+		// an upstroke stamps exactly what a downstroke does. The period
+		// is forced because an upstroke has already barred the lower
+		// cell before the step is known.
 		if (prev && prev.x !== c.x && prev.y !== c.y) {
 			const upper = prev.y < c.y ? prev : c;
 			const lower = prev.y < c.y ? c : prev;
+			emit(out, lower.x, lower.y, PERIOD, true);
 			emit(out, upper.x, lower.y, APOSTROPHE);
-			emit(out, lower.x, lower.y, PERIOD);
+			emit(out, upper.x, upper.y, VBAR);
 			return;
 		}
 		emit(out, c.x, c.y, VBAR);
 	};
 
+	const isStem = (cls: SlopeClass): boolean =>
+		cls === 'vertical' || cls === 'steep' || cls === 'diag';
+
 	/**
-	 * One Bresenham path cell entering the stroke. The stroke's first
-	 * cell waits here until a second cell gives the window a direction,
-	 * then both replay through the same class logic; its begin pebble
-	 * is rank 1, so the revision always lands.
+	 * One Bresenham path cell entering the stroke, resolved with one
+	 * cell of lookahead: a cell is only inked once its successor is
+	 * known. That buys two things hand input needs. Same row jitter
+	 * under a stem class merges away instead of doubling columns, and
+	 * the stroke's first cell inherits a real direction. Hysteresis on
+	 * the class kills the lone dash or slash a single noisy window
+	 * would otherwise drop at every transition.
 	 */
 	const consume = (out: StampOut[], c: Cell, prev: Cell | null) => {
 		trail.push(c);
@@ -281,12 +295,34 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 			rowSteps++;
 		}
 		const cls = classify();
-		if (pendingStart) {
-			const start = pendingStart;
-			pendingStart = null;
-			emitCell(out, start, null, cls);
+		if (activeClass === null || cls === activeClass) {
+			activeClass = cls;
+			dissent = 0;
+		} else if (++dissent >= 2) {
+			activeClass = cls;
+			dissent = 0;
 		}
-		emitCell(out, c, prev, cls);
+		if (pending && isStem(activeClass) && pending.c.y === c.y) {
+			// wobble: two columns on one row under a stem class; the
+			// newer cell wins and the jittered one is never inked
+			pending = { c, prev: pending.prev };
+			return;
+		}
+		if (pending) {
+			emitCell(out, pending.c, pending.prev, activeClass);
+		}
+		pending = { c, prev };
+	};
+
+	/**
+	 * Resolve whatever is still uninked at stroke end. A stroke that
+	 * never moved has no class and keeps its tap pebble.
+	 */
+	const drain = (out: StampOut[]) => {
+		if (pending && activeClass !== null) {
+			emitCell(out, pending.c, pending.prev, activeClass);
+		}
+		pending = null;
 	};
 
 	const bresenham = (a: Cell, b: Cell, visit: (c: Cell) => void) => {
@@ -319,7 +355,9 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 		begin: (x, y, subY) => {
 			last = { x, y };
 			trail = [last];
-			pendingStart = last;
+			pending = { c: last, prev: null };
+			activeClass = null;
+			dissent = 0;
 			subYNow = subY;
 			stamped.clear();
 			run = null;
@@ -356,10 +394,13 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 		},
 		end: () => {
 			const out: StampOut[] = [];
+			drain(out);
 			finishRun(out);
 			last = null;
 			trail = [];
-			pendingStart = null;
+			pending = null;
+			activeClass = null;
+			dissent = 0;
 			stamped.clear();
 			return out;
 		},
