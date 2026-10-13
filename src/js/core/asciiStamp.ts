@@ -37,6 +37,7 @@ const BACKSLASH = 92; // \
 const DASH = 45; // -
 const UNDERSCORE = 95; // _
 const DQUOTE = 34; // "
+const CARET = 94; // ^
 const PERIOD = 46; // .
 const COMMA = 44; // ,
 const APOSTROPHE = 39; // '
@@ -58,14 +59,16 @@ const RANK = new Map<number, number>([
 	[COMMA, 1],
 	[APOSTROPHE, 1],
 	[BACKTICK, 1],
+	[CARET, 1],
 ]);
 
 /** Long shallow runs band by position: low to high for rising rows. */
 const LONG_RAMP_RISING = [UNDERSCORE, PERIOD, DASH, DQUOTE];
 
 // direction window: long enough to ride out one noisy step, short
-// enough that a deliberate curve changes class within a few cells
-const WINDOW = 6;
+// enough that cursive letterforms a handful of cells tall still get
+// local tangents rather than half a letter ago
+const WINDOW = 5;
 
 interface Cell {
 	x: number;
@@ -96,8 +99,23 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 	let recentLens: number[] = [];
 	/** charCode already emitted this stroke, by cell key. */
 	const stamped = new Map<number, number>();
-	/** x positions of the shallow run growing on the current row. */
-	let run: { y: number; xs: number[] } | null = null;
+	/**
+	 * The shallow run growing on the current row. xs is in arrival
+	 * order; dir is the sign of its x movement so a reversal (a valley
+	 * or apex revisiting the row) can split into two ramps instead of
+	 * sorting into one false monotone.
+	 */
+	let run: {
+		y: number;
+		xs: number[];
+		dir: number;
+		/** vertical direction entering the row: +1 from above, -1 below */
+		entry: number;
+	} | null = null;
+	/** same row cells already merged for the pending cell */
+	let mergeStreak = 0;
+	/** last few successfully emitted cell keys, the revisable frontier */
+	let recentKeys: number[] = [];
 
 	const key = (x: number, y: number) => y * 65536 + x;
 
@@ -113,16 +131,24 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 		if (prev === charCode) {
 			return;
 		}
+		const prevRank = prev === undefined ? -1 : (RANK.get(prev) ?? 0);
+		const newRank = RANK.get(charCode) ?? 0;
 		// rank guards cross path collisions only; run restamps must be
 		// free to demote a cell as its row grows and rebands
-		if (
-			!force &&
-			prev !== undefined &&
-			(RANK.get(prev) ?? 0) > (RANK.get(charCode) ?? 0)
-		) {
+		if (!force && prevRank > newRank) {
+			return;
+		}
+		// even forced, a stem only yields to a lesser glyph at the
+		// stroke's frontier (the upstroke pair revising the bar it just
+		// laid); an old stem a run crosses later stays a stem
+		if (force && prevRank >= 3 && newRank < 3 && !recentKeys.includes(k)) {
 			return;
 		}
 		stamped.set(k, charCode);
+		recentKeys.push(k);
+		if (recentKeys.length > 4) {
+			recentKeys.shift();
+		}
 		out.push({ x, y, charCode });
 	};
 
@@ -183,23 +209,50 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 	 * is reserved for strokes that never left their row; a sloped
 	 * stroke's long rows always ramp.
 	 */
-	const restampRun = (out: StampOut[]) => {
+	const restampRun = (out: StampOut[], exit = 0) => {
 		if (!run) {
 			return;
 		}
-		const xs = run.xs;
+		const xs = [...run.xs].sort((a, b) => a - b);
 		const len = xs.length;
 		const fall = falling();
 		const banded = rowRhythm(len) >= 5;
+		// a row entered rising and left falling is a cap, the reverse a
+		// bowl; left to right turns never reverse x, so only the
+		// vertical context can voice them (ends low and middle high for
+		// caps, ends high and middle low for bowls)
+		const cap = run.entry === -1 && exit === 1;
+		const bowl = run.entry === 1 && exit === -1;
+		const half = Math.max(len / 2, 1);
 		for (let i = 0; i < len; i++) {
 			// position measured low to high within the row: rising rows
 			// climb left to right, falling rows climb right to left
 			const pos = fall ? len - 1 - i : i;
+			const edge = Math.min(i, len - 1 - i);
 			let charCode: number;
 			if (rowSteps === 0) {
 				charCode = subYNow === 1 ? UNDERSCORE : DASH;
+			} else if (cap) {
+				if (len === 1) {
+					charCode = CARET;
+				} else if (edge === 0) {
+					charCode = PERIOD;
+				} else {
+					charCode = Math.floor((edge * 4) / half) >= 2 ? DQUOTE : DASH;
+				}
+			} else if (bowl) {
+				if (len === 1) {
+					charCode = COMMA;
+				} else if (edge === 0) {
+					charCode = i === 0 ? BACKTICK : APOSTROPHE;
+				} else {
+					charCode = Math.floor((edge * 4) / half) >= 2 ? UNDERSCORE : DASH;
+				}
 			} else if (len === 1) {
-				charCode = DASH;
+				// a lone cell row is a turning point or a slope near two
+				// cells per row; a dash reads as debris there, a pebble
+				// continues the line
+				charCode = fall ? BACKTICK : APOSTROPHE;
 			} else if (banded) {
 				charCode = LONG_RAMP_RISING[Math.floor((pos * 4) / len)];
 			} else if (pos === 0) {
@@ -219,8 +272,8 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 	 * horizontal), so a closing run restamps under the class the window
 	 * knows NOW before it is abandoned.
 	 */
-	const finishRun = (out: StampOut[]) => {
-		restampRun(out);
+	const finishRun = (out: StampOut[], exit = 0) => {
+		restampRun(out, exit);
 		if (run && run.xs.length > 0) {
 			recentLens.push(run.xs.length);
 			if (recentLens.length > 3) {
@@ -239,11 +292,21 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 	) => {
 		if (cls === 'shallow' || cls === 'horizontal') {
 			if (!run || run.y !== c.y) {
-				finishRun(out);
-				run = { y: c.y, xs: [] };
+				const entry = run && prev ? Math.sign(c.y - run.y) : prev ? Math.sign(c.y - prev.y) : 0;
+				finishRun(out, run ? Math.sign(c.y - run.y) : 0);
+				run = { y: c.y, xs: [], dir: 0, entry };
+			} else if (run.xs.length > 0) {
+				const step = Math.sign(c.x - run.xs[run.xs.length - 1]);
+				if (step !== 0 && run.dir !== 0 && step !== run.dir) {
+					// a valley or apex re-enters the row going the other
+					// way; two ramps read right, one sorted monotone lies
+					finishRun(out);
+					run = { y: c.y, xs: [], dir: 0, entry: 0 };
+				} else if (step !== 0) {
+					run.dir = step;
+				}
 			}
 			run.xs.push(c.x);
-			run.xs.sort((a, b) => a - b);
 			restampRun(out);
 			return;
 		}
@@ -256,18 +319,31 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 			emit(out, c.x, c.y, falling() ? BACKSLASH : SLASH);
 			return;
 		}
-		// steep: straight rows take the bar; a column step row takes the
-		// pebble pair so the jog reads as a curve. The pair is defined
-		// geometrically, period under the lower row's column, apostrophe
-		// under the upper row's column, bar on the upper cell itself, so
-		// an upstroke stamps exactly what a downstroke does. The period
-		// is forced because an upstroke has already barred the lower
-		// cell before the step is known.
+		// steep: straight rows take the bar; a column step row takes a
+		// pebble ramp on the lower row so the jog reads as a curve. The
+		// ramp is defined geometrically, low pebble under the lower
+		// row's column climbing to the high pebble under the upper
+		// row's column, bar on the upper cell itself, so an upstroke
+		// stamps exactly what a downstroke does, and a merged jitter
+		// cell widening the step to two columns ramps across the gap
+		// instead of leaving a hole. The low cell is forced because an
+		// upstroke has already barred it before the step is known.
 		if (prev && prev.x !== c.x && prev.y !== c.y) {
 			const upper = prev.y < c.y ? prev : c;
 			const lower = prev.y < c.y ? c : prev;
-			emit(out, lower.x, lower.y, PERIOD, true);
-			emit(out, upper.x, lower.y, APOSTROPHE);
+			const dir = upper.x > lower.x ? 1 : -1;
+			const span = Math.abs(upper.x - lower.x);
+			for (let i = 0; i <= span; i++) {
+				let glyph: number;
+				if (i === 0) {
+					glyph = span === 1 ? PERIOD : COMMA;
+				} else if (i === span) {
+					glyph = dir > 0 ? APOSTROPHE : BACKTICK;
+				} else {
+					glyph = DASH;
+				}
+				emit(out, lower.x + i * dir, lower.y, glyph, i === 0);
+			}
 			emit(out, upper.x, upper.y, VBAR);
 			return;
 		}
@@ -303,11 +379,20 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 			dissent = 0;
 		}
 		if (pending && isStem(activeClass) && pending.c.y === c.y) {
-			// wobble: two columns on one row under a stem class; the
-			// newer cell wins and the jittered one is never inked
-			pending = { c, prev: pending.prev };
-			return;
+			if (mergeStreak === 0 && Math.abs(c.x - pending.c.x) === 1) {
+				// wobble: one adjacent column on the same row under a stem
+				// class; the newer cell wins, the jittered one never inks
+				pending = { c, prev: pending.prev };
+				mergeStreak = 1;
+				return;
+			}
+			// a second same row cell is the stroke genuinely flattening,
+			// a valley or a bowl; eating it would cut the line, so the
+			// class switches now rather than waiting out the hysteresis
+			activeClass = 'shallow';
+			dissent = 0;
 		}
+		mergeStreak = 0;
 		if (pending) {
 			emitCell(out, pending.c, pending.prev, activeClass);
 		}
@@ -358,6 +443,8 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 			pending = { c: last, prev: null };
 			activeClass = null;
 			dissent = 0;
+			mergeStreak = 0;
+			recentKeys = [];
 			subYNow = subY;
 			stamped.clear();
 			run = null;
@@ -401,6 +488,7 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 			pending = null;
 			activeClass = null;
 			dissent = 0;
+			mergeStreak = 0;
 			stamped.clear();
 			return out;
 		},

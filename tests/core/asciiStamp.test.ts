@@ -184,18 +184,39 @@ describe('ascii stamp engine, thin style', () => {
 				'                |',
 				"               .'",
 				'               |',
-				'               /',
-				'              /',
-				'             /',
+				'               |',
+				"              .'",
+				"             .'",
 				'             /',
 				'            /',
-				"          ,'",
-				"         ,'",
+				'           /',
+				'          /',
 				'       _-',
 				'    _.-"',
 				'__.-"',
 			].join('\n'),
 		);
+	});
+
+	it('caps a left to right turn with the circle idiom', () => {
+		// a hump: rising in, falling out, x never reversing
+		const pts: Array<[number, number]> = [];
+		for (let x = 0; x <= 24; x++) {
+			pts.push([x, Math.round(10 * Math.pow((x - 12) / 12, 2))]);
+		}
+		const art = stroke(pts);
+		expect(art).toContain('."".');
+		expect(art).not.toMatch(/`-+\./);
+	});
+
+	it('bowls a valley so left to right curves connect', () => {
+		// two sine humps at sparse fast writing samples; the valley
+		// between them must read as one connected bowl
+		const pts: Array<[number, number]> = [];
+		for (let x = 0; x <= 60; x += 3) {
+			pts.push([x, 6 + Math.round(5 * Math.sin((x / 60) * Math.PI * 3))]);
+		}
+		expect(stroke(pts)).toContain('`-__-\'');
 	});
 
 	it('stamps an upstroke exactly like the downstroke', () => {
