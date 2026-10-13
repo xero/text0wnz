@@ -1,6 +1,6 @@
 import State from './state.js';
 import { $ } from './ui.js';
-import { createAsciiStampEngine, mergeGlyphs } from '../core/index';
+import { cellInRange, createAsciiStampEngine, mergeGlyphs } from '../core/index';
 
 const createAsciiBrushController = () => {
 	const engine = createAsciiStampEngine();
@@ -32,12 +32,7 @@ const createAsciiBrushController = () => {
 				// ribbon spans and spline overshoot can reach past the
 				// canvas; unclipped writes wrap through the cell index to
 				// the far side of the neighboring row
-				if (
-					cell.x < 0 ||
-					cell.x >= columns ||
-					cell.y < 0 ||
-					cell.y >= rows
-				) {
+				if (!cellInRange(cell.x, cell.y, columns, rows)) {
 					continue;
 				}
 				// fg paints, bg survives: the brush draws strokes, not blocks
