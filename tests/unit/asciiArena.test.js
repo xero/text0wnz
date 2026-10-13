@@ -28,14 +28,61 @@ const MARKUP = `
 
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));
 
-const INDEX_TSV = [
-	'Filename\tPath\tArtist(s)\tCrew(s)\tDescription',
-	'zmb-wof1.txt\tcollections/zmb-wof1\tZoMbiE\tIndependent\tWheel of Fortune',
-	'c«w-LIG.txt\tcollections/c«w-LIG\tFighter for Future\tCrew\tLive In Garbage',
-	'up-pack.zip\tcollections/up-pack\tTwo,ZoMbiE\tUp Rough\tZip Pack',
-	'oldskool.lha\tcollections/oldskool\tTwo\tUp Rough\tAmiga Archive',
-	'weird.dms\tcollections/weird\tTwo\tUp Rough\tDisk Image',
-].join('\n');
+/** official v1 list envelope: {data, meta} */
+const v1List = (rows, pages = 1) => ({
+	ok: true,
+	json: async () => ({
+		data: rows,
+		meta: { page: 1, per_page: 24, total: rows.length, total_pages: pages },
+	}),
+});
+
+const WOF = {
+	id: 1,
+	name: 'Wheel of Fortune',
+	filename: 'zmb-wof1.txt',
+	type: 'ASCII',
+	year: 1994,
+	artists: ['ZoMbiE'],
+	crews: ['Independent'],
+};
+const LIG = {
+	id: 2,
+	name: 'Live In Garbage',
+	filename: 'c«w-LIG.txt',
+	type: 'ASCII',
+	year: 0,
+	artists: ['Fighter for Future'],
+	crews: ['Crew'],
+};
+const ZIPPACK = {
+	id: 3,
+	name: 'Zip Pack',
+	filename: 'up-pack.zip',
+	type: 'ASCII',
+	year: 0,
+	artists: ['Two', 'ZoMbiE'],
+	crews: ['Up Rough'],
+};
+const LHAPACK = {
+	id: 4,
+	name: 'Amiga Archive',
+	filename: 'oldskool.lha',
+	type: 'ASCII',
+	year: 0,
+	artists: ['Two'],
+	crews: ['Up Rough'],
+};
+/** an oddball format the client-side net must still catch */
+const ODDBALL = {
+	id: 5,
+	name: 'Weird Icon',
+	filename: 'weird.info',
+	type: 'ASCII',
+	year: 0,
+	artists: ['Two'],
+	crews: ['Up Rough'],
+};
 
 // 20 lone high bytes: latin-1 scene art, never valid UTF-8
 const amigaBytes = () => {
@@ -167,11 +214,20 @@ describe('asciiarena browser', () => {
 		expect(opened[0].opts.font).toBe('Topaz+ 1200 8x16');
 	});
 
-	it('searches the whole index instantly and encodes raw urls as UTF-8', async () => {
+	it('searches collys through the official api and encodes raw urls as UTF-8', async () => {
 		const art = amigaBytes();
 		fetchMock.mockImplementation(async url => {
-			if (url.endsWith('/api/uhcsearch')) {
-				return { ok: true, text: async () => INDEX_TSV };
+			if (url.endsWith('/api/v1/stats')) {
+				return { ok: true, json: async () => ({ data: { collys: 3993 } }) };
+			}
+			if (url.includes('/api/v1/collys?q=garbage&')) {
+				return v1List([LIG]);
+			}
+			if (url.includes('/api/v1/collys?q=zombie&')) {
+				return v1List([WOF, ZIPPACK]);
+			}
+			if (url.includes('/api/v1/collys?q=nothing%20here&')) {
+				return v1List([]);
 			}
 			if (url === 'https://asciiarena.se/collections/c%C2%ABw-LIG/c%C2%ABw-LIG.txt') {
 				return { ok: true, arrayBuffer: async () => art.buffer };
@@ -180,9 +236,8 @@ describe('asciiarena browser', () => {
 		});
 		browser.setTab('search');
 		await flush();
-		// the bare tab reports the VIEWABLE index size (the dms row is
-		// not a colly anyone can open here) and renders nothing
-		expect(document.getElementById('arenaStatus').textContent).toContain('4 collys');
+		// the bare tab dresses the empty state with the stats total
+		expect(document.getElementById('arenaStatus').textContent).toContain('3993 collys');
 		const search = document.getElementById('arenaSearch');
 		expect(search.classList.contains('hide')).toBe(false);
 		search.value = 'garbage';
@@ -197,36 +252,29 @@ describe('asciiarena browser', () => {
 		await flush();
 		expect(opened[0].file.name).toBe('c«w-LIG.txt');
 
-		// the index fetched once; the second query reuses it
 		search.value = 'zombie';
 		search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
 		await flush();
 		expect([...document.querySelectorAll('#arenaList .arenaColly')]).toHaveLength(2);
 
-		// a query that only matches unviewable rows comes up empty
-		search.value = 'disk image';
+		search.value = 'nothing here';
 		search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
 		await flush();
 		expect([...document.querySelectorAll('#arenaList .arenaColly')]).toHaveLength(0);
 		expect(document.getElementById('arenaStatus').textContent).toBe('no collys match');
-		const indexCalls = fetchMock.mock.calls.filter(c => c[0].endsWith('/api/uhcsearch'));
-		expect(indexCalls).toHaveLength(1);
 	});
 
-	it('browses artists into their collys through the index', async () => {
+	it('browses artists into their collys through the official api', async () => {
 		fetchMock.mockImplementation(async url => {
-			if (url.includes('/api/artists?page=1&pagesize=24&sort=nick&asc=A&filter=zom')) {
-				return {
-					ok: true,
-					json: async () => [
-						{ nick: 'ZoMbiE', crews: 'Independent', total_count: 2 },
-						// no viewable colly in the index: never listed
-						{ nick: 'Zombie Ghost', crews: '', total_count: 2 },
-					],
-				};
+			if (url.includes('/api/v1/artists?page=1&per_page=24&sort=nick&order=asc&q=zom')) {
+				return v1List([
+					{ nick: 'ZoMbiE', crews: ['Independent'], colly_count: 2 },
+					// logo-only profile, zero collys: never listed
+					{ nick: 'Zombie Ghost', crews: [], colly_count: 0 },
+				]);
 			}
-			if (url.endsWith('/api/uhcsearch')) {
-				return { ok: true, text: async () => INDEX_TSV };
+			if (url.includes('/api/v1/collys?artist=ZoMbiE&')) {
+				return v1List([WOF, ZIPPACK]);
 			}
 			throw new Error(`unexpected fetch ${url}`);
 		});
@@ -247,7 +295,6 @@ describe('asciiarena browser', () => {
 		const list = document.getElementById('arenaList');
 		expect(list.dataset.view).toBe('collys');
 		expect(document.getElementById('arenaCrumb').textContent).toBe('artist / ZoMbiE');
-		// the comma-split match finds the shared zip colly too
 		const cards = [...document.querySelectorAll('#arenaList .arenaColly')];
 		expect(cards.map(c => c.querySelector('span').textContent)).toEqual([
 			'Wheel of Fortune',
@@ -255,21 +302,17 @@ describe('asciiarena browser', () => {
 		]);
 	});
 
-	it('browses crews into their collys through the index', async () => {
+	it('browses crews into their collys through the official api', async () => {
 		fetchMock.mockImplementation(async url => {
-			if (url.includes('/api/crews?page=1&pagesize=24&sort=name&asc=A')) {
-				return {
-					ok: true,
-					json: async () => [
-						// the site's own placeholder rows carry zero works
-						{ name: '9 design', releases_cnt: 0, total_count: 2 },
-						// the site counts the dms release; the kbd must not
-						{ name: 'Up Rough', releases_cnt: 3, total_count: 2 },
-					],
-				};
+			if (url.includes('/api/v1/crews?page=1&per_page=24&sort=name&order=asc')) {
+				return v1List([
+					// logo-only placeholder: zero releases, never listed
+					{ name: '9 design', release_count: 0, logo_count: 5 },
+					{ name: 'Up Rough', release_count: 2, logo_count: 40 },
+				]);
 			}
-			if (url.endsWith('/api/uhcsearch')) {
-				return { ok: true, text: async () => INDEX_TSV };
+			if (url.includes('/api/v1/collys?crew=Up%20Rough&')) {
+				return v1List([ZIPPACK, LHAPACK]);
 			}
 			throw new Error(`unexpected fetch ${url}`);
 		});
@@ -281,7 +324,7 @@ describe('asciiarena browser', () => {
 		const crew = [...document.querySelectorAll('#arenaList button')].find(
 			b => b.firstChild?.textContent === 'Up Rough',
 		);
-		// the count is the viewable tally, not the site's releases_cnt
+		// release_count already excludes mags, so it rides the kbd as-is
 		expect(crew.querySelector('kbd').textContent).toBe('2');
 		crew.click();
 		await flush();
@@ -294,14 +337,8 @@ describe('asciiarena browser', () => {
 
 	it('says so when a whole page filters down to nothing', async () => {
 		fetchMock.mockImplementation(async url => {
-			if (url.includes('/api/crews?')) {
-				return {
-					ok: true,
-					json: async () => [{ name: '9 design', releases_cnt: 0, total_count: 1 }],
-				};
-			}
-			if (url.endsWith('/api/uhcsearch')) {
-				return { ok: true, text: async () => INDEX_TSV };
+			if (url.includes('/api/v1/crews?')) {
+				return v1List([{ name: '9 design', release_count: 0, logo_count: 5 }]);
 			}
 			throw new Error(`unexpected fetch ${url}`);
 		});
@@ -318,8 +355,8 @@ describe('asciiarena browser', () => {
 			{ name: 'two.txt', data: new TextEncoder().encode('plain') },
 		]);
 		fetchMock.mockImplementation(async url => {
-			if (url.endsWith('/api/uhcsearch')) {
-				return { ok: true, text: async () => INDEX_TSV };
+			if (url.includes('/api/v1/collys?crew=Up%20Rough&')) {
+				return v1List([ZIPPACK, LHAPACK]);
 			}
 			if (url.endsWith('/collections/up-pack/up-pack.zip')) {
 				return { ok: true, arrayBuffer: async () => zip.buffer };
@@ -349,8 +386,8 @@ describe('asciiarena browser', () => {
 	it('lists an lha colly and opens a piece through the core reader', async () => {
 		const lha = realColly();
 		fetchMock.mockImplementation(async url => {
-			if (url.endsWith('/api/uhcsearch')) {
-				return { ok: true, text: async () => INDEX_TSV };
+			if (url.includes('/api/v1/collys?artist=Two&')) {
+				return v1List([ZIPPACK, LHAPACK]);
 			}
 			if (url.endsWith('/collections/oldskool/oldskool.lha')) {
 				return { ok: true, arrayBuffer: async () => lha.buffer };
@@ -382,8 +419,8 @@ describe('asciiarena browser', () => {
 
 	it('never lists collys in formats the editor cannot open', async () => {
 		fetchMock.mockImplementation(async url => {
-			if (url.endsWith('/api/uhcsearch')) {
-				return { ok: true, text: async () => INDEX_TSV };
+			if (url.includes('/api/v1/collys?artist=Two&')) {
+				return v1List([ZIPPACK, LHAPACK, ODDBALL]);
 			}
 			throw new Error(`unexpected fetch ${url}`);
 		});
@@ -391,8 +428,8 @@ describe('asciiarena browser', () => {
 		const titles = [...document.querySelectorAll('#arenaList .arenaColly')].map(
 			c => c.querySelector('span').textContent,
 		);
-		// the diskmag (.dms disk image) is unviewable: filtered, not
-		// listed-then-refused
+		// v1 splits diskmags out server-side; the client net still
+		// catches oddball formats like amiga .info icons
 		expect(titles).toEqual(['Zip Pack', 'Amiga Archive']);
 	});
 
@@ -413,8 +450,8 @@ describe('asciiarena browser', () => {
 		vi.stubGlobal('IntersectionObserver', FakeIO);
 		const diz = new TextEncoder().encode('\u001b[31mWheel of Fortune diz\u001b[0m   ');
 		fetchMock.mockImplementation(async url => {
-			if (url.endsWith('/api/uhcsearch')) {
-				return { ok: true, text: async () => INDEX_TSV };
+			if (url.includes('/api/v1/collys?artist=ZoMbiE&')) {
+				return v1List([WOF, ZIPPACK]);
 			}
 			if (url.endsWith('/collections/zmb-wof1/zmb-wof1.txt.diz')) {
 				return { ok: true, arrayBuffer: async () => diz.buffer };
@@ -433,28 +470,34 @@ describe('asciiarena browser', () => {
 		expect(frames[1].querySelector('pre')).toBeNull();
 	});
 
-	it('shares one index download between concurrent views', async () => {
+	it('pages a long crew through the api', async () => {
 		fetchMock.mockImplementation(async url => {
-			if (url.endsWith('/api/uhcsearch')) {
-				await flush();
-				return { ok: true, text: async () => INDEX_TSV };
+			if (url.includes('/api/v1/collys?crew=Up%20Rough&page=1&')) {
+				return v1List([ZIPPACK], 2);
+			}
+			if (url.includes('/api/v1/collys?crew=Up%20Rough&page=2&')) {
+				return v1List([LHAPACK], 2);
 			}
 			throw new Error(`unexpected fetch ${url}`);
 		});
-		await Promise.all([
-			browser.showSearch('zombie'),
-			browser.showByArtist('Two'),
-		]);
-		const indexCalls = fetchMock.mock.calls.filter(c =>
-			c[0].endsWith('/api/uhcsearch'));
-		expect(indexCalls).toHaveLength(1);
+		await browser.showByCrew('Up Rough');
+		const steps = document.querySelectorAll('#arenaList .arenaPager button');
+		expect(steps).toHaveLength(2);
+		expect(steps[0].disabled).toBe(true);
+		steps[1].click();
+		await flush();
+		const cards = [...document.querySelectorAll('#arenaList .arenaColly')];
+		expect(cards.map(c => c.querySelector('span').textContent)).toEqual(['Amiga Archive']);
+		expect(
+			document.querySelectorAll('#arenaList .arenaPager button')[1].disabled,
+		).toBe(true);
 	});
 
 	it('cancels a pending debounced search on tab switch', async () => {
 		vi.useFakeTimers();
 		fetchMock.mockImplementation(async url => {
-			if (url.includes('/api/artists?')) {
-				return { ok: true, json: async () => []};
+			if (url.includes('/api/v1/artists?')) {
+				return v1List([]);
 			}
 			if (url.includes('/api/collys?')) {
 				return {
@@ -490,8 +533,8 @@ describe('asciiarena browser', () => {
 	it('drops a stale archive fetch when the user has moved on', async () => {
 		let releaseArchive;
 		fetchMock.mockImplementation(async url => {
-			if (url.endsWith('/api/uhcsearch')) {
-				return { ok: true, text: async () => INDEX_TSV };
+			if (url.includes('/api/v1/collys?artist=Two&')) {
+				return v1List([ZIPPACK, LHAPACK]);
 			}
 			if (url.endsWith('/collections/oldskool/oldskool.lha')) {
 				await new Promise(resolve => {
@@ -499,11 +542,8 @@ describe('asciiarena browser', () => {
 				});
 				return { ok: true, arrayBuffer: async () => realColly().buffer };
 			}
-			if (url.includes('/api/crews?')) {
-				return {
-					ok: true,
-					json: async () => [{ name: 'Up Rough', releases_cnt: 2, total_count: 1 }],
-				};
+			if (url.includes('/api/v1/crews?')) {
+				return v1List([{ name: 'Up Rough', release_count: 2 }]);
 			}
 			throw new Error(`unexpected fetch ${url}`);
 		});
@@ -543,11 +583,8 @@ describe('asciiarena browser', () => {
 					],
 				};
 			}
-			if (url.includes('/api/crews?')) {
-				return {
-					ok: true,
-					json: async () => [{ name: 'Up Rough', releases_cnt: 2, total_count: 1 }],
-				};
+			if (url.includes('/api/v1/crews?')) {
+				return v1List([{ name: 'Up Rough', release_count: 2 }]);
 			}
 			throw new Error(`unexpected fetch ${url}`);
 		});
