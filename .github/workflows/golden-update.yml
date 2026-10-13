@@ -26,6 +26,12 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: install project dependencies
         run: bun i
+      # same browser sync as e2e.yml: goldens must capture with the
+      # exact playwright build the test suite runs
+      - name: sync playwright browsers
+        run: bunx playwright install
+        env:
+          HOME: /root
       - name: set localhost domain
         run: |
           sed -i 's!text.0w.nz!localhost!' .env
