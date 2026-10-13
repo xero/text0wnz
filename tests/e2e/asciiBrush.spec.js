@@ -95,6 +95,20 @@ test.describe('ascii brush', () => {
 		}
 	});
 
+	test('the width knob turns strokes roman', async ({ page }) => {
+		await page.selectOption('#asciiWidth', '5');
+		await drag(page, [40, 18], [40, 23]);
+		// a width five vertical is a solid five column fill ribbon
+		for (let y = 19; y <= 22; y++) {
+			for (let x = 38; x <= 42; x++) {
+				expect((await readBlock(page, x, y)).charCode).toBe(36);
+			}
+		}
+		await page.selectOption('#asciiWidth', '1');
+		await drag(page, [50, 18], [50, 23]);
+		expect((await readBlock(page, 50, 20)).charCode).toBe(124);
+	});
+
 	test('one stroke is one undo step', async ({ page }) => {
 		await drag(page, [50, 5], [60, 5]);
 		expect((await readBlock(page, 55, 5)).charCode).toBe(UNDERSCORE);

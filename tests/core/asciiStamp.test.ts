@@ -242,6 +242,17 @@ describe('ascii stamp engine, thin style', () => {
 		expect(down).not.toContain("'|");
 	});
 
+	it('keeps the thin vocabulary at width one after a width round trip', () => {
+		const engine = createAsciiStampEngine({ width: 5 });
+		engine.setWidth(1);
+		expect(engine.getWidth()).toBe(1);
+		const grid = new Map<string, number>();
+		engine.begin(3, 0, 1).forEach(c => grid.set(`${c.x},${c.y}`, c.charCode));
+		engine.move(3, 4, 1).forEach(c => grid.set(`${c.x},${c.y}`, c.charCode));
+		engine.end().forEach(c => grid.set(`${c.x},${c.y}`, c.charCode));
+		expect(grid.get('3,2')).toBe(124);
+	});
+
 	it('keeps stems when a run crosses them in one stroke', () => {
 		// vertical first, then a horizontal pass through the same cell
 		const engine = createAsciiStampEngine();
@@ -254,5 +265,121 @@ describe('ascii stamp engine, thin style', () => {
 		apply(engine.move(6, 3, 1));
 		apply(engine.end());
 		expect(grid.get('3,3')).toBe(124);
+	});
+});
+
+/** Roman ribbon: width above 1 stamps corpus anatomy around the
+ * same skeleton (lead chisel, $ fill, trail chisel). */
+const roman = (
+	points: Array<[number, number]>,
+	width: number,
+): string => {
+	const engine = createAsciiStampEngine({ width });
+	const grid = new Map<string, number>();
+	const apply = (cells: Array<{ x: number; y: number; charCode: number }>) =>
+		cells.forEach(c => grid.set(`${c.x},${c.y}`, c.charCode));
+	points.forEach(([x, y], i) => {
+		if (i === 0) {
+			apply(engine.begin(x, y, 1));
+		} else {
+			apply(engine.move(x, y, 1));
+		}
+	});
+	apply(engine.end());
+	let minX = Infinity;
+	let minY = Infinity;
+	let maxX = -Infinity;
+	let maxY = -Infinity;
+	for (const k of grid.keys()) {
+		const [x, y] = k.split(',').map(Number);
+		minX = Math.min(minX, x);
+		minY = Math.min(minY, y);
+		maxX = Math.max(maxX, x);
+		maxY = Math.max(maxY, y);
+	}
+	const lines: string[] = [];
+	for (let y = minY; y <= maxY; y++) {
+		let line = '';
+		for (let x = minX; x <= maxX; x++) {
+			const c = grid.get(`${x},${y}`);
+			line += c === undefined ? ' ' : String.fromCharCode(c);
+		}
+		lines.push(line.replace(/\s+$/, ''));
+	}
+	return lines.join('\n');
+};
+
+describe('ascii stamp engine, roman ribbon', () => {
+	it('stamps verticals as bare fill columns', () => {
+		expect(roman([[3, 0], [3, 4]], 5)).toBe(
+			['$$$$$', '$$$$$', '$$$$$', '$$$$$', '$$$$$'].join('\n'),
+		);
+	});
+
+	it('chisels rising strokes with d and P', () => {
+		expect(roman([[0, 8], [8, 0]], 5)).toBe(
+			[
+				'        d$$$P',
+				'       d$$$P',
+				'      d$$$P',
+				'     d$$$P',
+				'    d$$$P',
+				'   d$$$P',
+				'  d$$$P',
+				' d$$$P',
+				'$$$$$',
+			].join('\n'),
+		);
+	});
+
+	it('chisels falling strokes with Y and b', () => {
+		expect(roman([[0, 0], [8, 8]], 5)).toBe(
+			[
+				'$$$$$',
+				' Y$$$b',
+				'  Y$$$b',
+				'   Y$$$b',
+				'    Y$$$b',
+				'     Y$$$b',
+				'      Y$$$b',
+				'       Y$$$b',
+				'        Y$$$b',
+			].join('\n'),
+		);
+	});
+
+	it('width two is the bare edge pair', () => {
+		const art = roman([[0, 6], [6, 0]], 2);
+		expect(art).toContain('dP');
+		expect(art).not.toContain('$d');
+	});
+
+	it('rides waves with alternating chisel sides and solid bowls', () => {
+		const pts: Array<[number, number]> = [];
+		for (let x = 0; x <= 60; x += 3) {
+			pts.push([x, 6 + Math.round(5 * Math.sin((x / 60) * Math.PI * 3))]);
+		}
+		const art = roman(pts, 3);
+		expect(art).toContain('Y$b');
+		expect(art).toContain('d$P');
+		expect(art).toContain('$$$$$$$$$$');
+	});
+
+	it('unions a closed loop solid where the ribbons meet', () => {
+		const pts: Array<[number, number]> = [];
+		for (let t = 0; t <= 100; t += 3) {
+			const a = (t / 100) * Math.PI * 2;
+			const x = 12 + Math.round(9 * Math.cos(Math.PI / 2 - a));
+			const y = 7 + Math.round(6 * Math.sin(Math.PI / 2 - a));
+			const prev = pts[pts.length - 1];
+			if (!prev || prev[0] !== x || prev[1] !== y) {
+				pts.push([x, y]);
+			}
+		}
+		const art = roman(pts, 3);
+		expect(art).toContain('d$$');
+		expect(art).toContain('Y$$');
+		// the seam where start meets end must be fill, not edge debris
+		expect(art.split('\n')[0].trim()).toMatch(/^\$+$/);
 	});
 });

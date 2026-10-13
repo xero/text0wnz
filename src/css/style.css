@@ -285,6 +285,7 @@
 	}
 
 	#aSize,
+	#aWidth,
 	#chatIconCloseText {
 		@apply hidden;
 	}
@@ -598,7 +599,8 @@
 		}
 	}
 
-	#aSize {
+	#aSize,
+	#aWidth {
 		@apply flex-col;
 		label {
 			@apply text-xs text-fg text-left pl-[4px] pt-[2px];
