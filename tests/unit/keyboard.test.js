@@ -261,6 +261,17 @@ describe('Keyboard Utilities', () => {
 			expect(cursor.getY()).toBe(0);
 		});
 
+		it('re-homes to the origin when a new file opens', () => {
+			const container = document.createElement('div');
+			const cursor = createCursor(container);
+
+			cursor.move(12, 20);
+			expect(cursor.getY()).toBe(20);
+			document.dispatchEvent(new CustomEvent('onOpenedFile'));
+			expect(cursor.getX()).toBe(0);
+			expect(cursor.getY()).toBe(0);
+		});
+
 		it('should have enable and disable methods', () => {
 			const container = document.createElement('div');
 			const cursor = createCursor(container);
@@ -306,6 +317,30 @@ describe('Keyboard Utilities', () => {
 				width: 5,
 				height: 3,
 			});
+		});
+
+		it('forgets the restore memory when a new file opens', () => {
+			const container = document.createElement('div');
+			const selectionCursor = createSelectionCursor(container);
+
+			selectionCursor.setStart(10, 10);
+			selectionCursor.setEnd(14, 12);
+			selectionCursor.hide();
+			expect(selectionCursor.getLastSelection()).not.toBe(null);
+			document.dispatchEvent(new CustomEvent('onOpenedFile'));
+			expect(selectionCursor.getLastSelection()).toBe(null);
+			expect(selectionCursor.getSelection()).toBe(null);
+		});
+
+		it('exposes forget for loaders that bypass the event', () => {
+			const container = document.createElement('div');
+			const selectionCursor = createSelectionCursor(container);
+
+			selectionCursor.setStart(2, 2);
+			selectionCursor.setEnd(4, 4);
+			selectionCursor.forget();
+			expect(selectionCursor.getLastSelection()).toBe(null);
+			expect(selectionCursor.isVisible()).toBe(false);
 		});
 	});
 

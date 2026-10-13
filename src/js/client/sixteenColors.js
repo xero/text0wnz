@@ -114,6 +114,9 @@ const createSixteenColors = ({ openFile, onExit }) => {
 	const clearList = view => {
 		list.textContent = '';
 		list.dataset.view = view;
+		// every view reads from the top; the pane otherwise keeps the
+		// scroll depth of whatever list stood here before
+		list.scrollTop = 0;
 	};
 
 	/** one pack's metadata and openable files, fetched once */

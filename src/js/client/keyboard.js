@@ -661,6 +661,9 @@ const createCursor = canvasContainer => {
 	document.addEventListener('onFontChange', updateDimensions);
 	document.addEventListener('onOpenedFile', updateDimensions);
 	document.addEventListener('onScaleFactorChange', updateDimensions);
+	// a fresh document starts at its own origin; the follow scroll
+	// riding this move is what pins the viewport back to the top
+	document.addEventListener('onOpenedFile', () => move(0, 0));
 	move(x, y);
 
 	return {
@@ -819,6 +822,14 @@ const createSelectionCursor = element => {
 	document.addEventListener('onLetterSpacingChange', refreshMetrics);
 	document.addEventListener('onFontChange', refreshMetrics);
 
+	// the restore memory is per-document: geometry from the old file
+	// must not reappear inside whatever gets loaded next
+	const forget = () => {
+		hide();
+		everSelected = false;
+	};
+	document.addEventListener('onOpenedFile', forget);
+
 	return {
 		show,
 		hide,
@@ -828,6 +839,7 @@ const createSelectionCursor = element => {
 		getPos,
 		getSelection,
 		getLastSelection,
+		forget,
 		getElement: () => cursor,
 	};
 };

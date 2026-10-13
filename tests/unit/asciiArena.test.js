@@ -283,8 +283,11 @@ describe('asciiarena browser', () => {
 		);
 		// the count is the viewable tally, not the site's releases_cnt
 		expect(crew.querySelector('kbd').textContent).toBe('2');
+		// a scrolled list must not bleed its depth into the next view
+		document.getElementById('arenaList').scrollTop = 400;
 		crew.click();
 		await flush();
+		expect(document.getElementById('arenaList').scrollTop).toBe(0);
 		const cards = [...document.querySelectorAll('#arenaList .arenaColly')];
 		expect(cards.map(c => c.querySelector('span').textContent)).toEqual([
 			'Zip Pack',

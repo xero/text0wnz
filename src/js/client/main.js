@@ -586,6 +586,11 @@ const initializeAppComponents = async () => {
 				State.textArtCanvas.resize(80, 25);
 				State.textArtCanvas.clear();
 				State.textArtCanvas.setIceColors(false);
+				// clear() never fires onOpenedFile, so the view state the
+				// loaders reset through that event resets here by hand
+				State.cursor.move(0, 0);
+				State.selectionCursor.forget();
+				viewport.scrollLeft = viewport.scrollTop = 0;
 				bodyContainer.classList.remove('loading');
 				State.modal.close();
 			});

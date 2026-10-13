@@ -103,9 +103,12 @@ describe('sixteen colors browser', () => {
 		const years = [...document.querySelectorAll('#sixteenList button')];
 		expect(years[0].textContent).toContain('2014'); // newest first
 		expect(years.map(y => y.textContent).join()).not.toContain('2020');
+		// a scrolled list must not bleed its depth into the next view
+		list.scrollTop = 400;
 		years[0].click();
 		await flush();
 		expect(list.dataset.view).toBe('packs');
+		expect(list.scrollTop).toBe(0);
 		expect(document.getElementById('sixteenBack').disabled).toBe(false);
 		const packs = [...document.querySelectorAll('#sixteenList .sixteenPack')];
 		expect(packs.map(b => b.textContent)).toContain('blocktronics_wtf4');

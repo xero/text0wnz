@@ -300,6 +300,15 @@ const createMinimap = () => {
 			render();
 		}
 	});
+	// a new document invalidates the whole map: the panel's own scroll
+	// and the focus box both belong at the top, not wherever the last
+	// (possibly much taller) artwork left them
+	document.addEventListener('onOpenedFile', () => {
+		if (visible) {
+			panel.scrollTop = 0;
+			render();
+		}
+	});
 
 	// ON by default; the toggle is remembered.
 	// ?test pages (goldens, e2e) opt out of the DEFAULT: the panel is a

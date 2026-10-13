@@ -113,6 +113,9 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		dizWatch?.disconnect();
 		list.textContent = '';
 		list.dataset.view = view;
+		// every view reads from the top; the pane otherwise keeps the
+		// scroll depth of whatever list stood here before
+		list.scrollTop = 0;
 	};
 
 	// the server keys each colly's folder on the name before the FIRST
