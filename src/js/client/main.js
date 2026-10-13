@@ -13,6 +13,7 @@ import { createFramesPanel } from './frames.js';
 import { createMinimap } from './minimap.js';
 import { createSixteenColors } from './sixteenColors.js';
 import { createAsciiArena } from './asciiArena.js';
+import { createArtpacksLanding } from './artpacks.js';
 import { createArchiveOpener, isArchiveFile } from './archiveOpen.js';
 import { createPluginManager } from './plugins.js';
 import { createReferenceImage } from './referenceImage.js';
@@ -593,13 +594,12 @@ const initializeAppComponents = async () => {
 	onClick($('open'), () => {
 		openFile.click();
 	});
-	// the 16colo.rs in-app browser opens straight into the editor
+	// both artpack site browsers open straight into the editor; one
+	// landing modal fronts them from a single File menu entry
 	const sixteen = createSixteenColors({ openFile: openHandler });
-	onClick($('browse16c'), () => sixteen?.show());
-
-	// the asciiarena.se browser does the same for amiga ascii collys
 	const arena = createAsciiArena({ openFile: openHandler });
-	onClick($('browseArena'), () => arena?.show());
+	const artpacks = createArtpacksLanding({ sixteen, arena });
+	onClick($('browseArtpacks'), () => artpacks?.show());
 
 	// native zip and lha opens route through the same unpack path
 	archiveOpener ??= createArchiveOpener({ openFile: openHandler });

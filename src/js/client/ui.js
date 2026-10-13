@@ -71,6 +71,7 @@ const createModalController = modal => {
 		$('sauceModal'),
 		$('charsetModal'),
 		$('exportModal'),
+		$('artpacksModal'),
 		$('sixteenModal'),
 		$('arenaModal'),
 		$('archiveModal'),

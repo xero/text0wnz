@@ -39,6 +39,7 @@ describe('Modal DOM Tests', () => {
 			'sauceModal',
 			'charsetModal',
 			'exportModal',
+			'artpacksModal',
 			'sixteenModal',
 			'arenaModal',
 			'archiveModal',

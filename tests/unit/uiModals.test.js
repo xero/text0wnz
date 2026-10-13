@@ -231,6 +231,7 @@ describe('UI Advanced Utilities', () => {
 			'sauceModal',
 			'charsetModal',
 			'exportModal',
+			'artpacksModal',
 			'sixteenModal',
 			'arenaModal',
 			'archiveModal',
