@@ -209,14 +209,29 @@ describe('ascii stamp engine, thin style', () => {
 		expect(art).not.toMatch(/`-+\./);
 	});
 
-	it('bowls a valley so left to right curves connect', () => {
-		// two sine humps at sparse fast writing samples; the valley
-		// between them must read as one connected bowl
+	it('smooths sparse fast samples into connected waves', () => {
+		// two sine humps at normal writing speed sampling; chords used
+		// to kink the curves and cut the valleys, the spline restores
+		// them, and both valleys must read as connected bowls
 		const pts: Array<[number, number]> = [];
 		for (let x = 0; x <= 60; x += 3) {
 			pts.push([x, 6 + Math.round(5 * Math.sin((x / 60) * Math.PI * 3))]);
 		}
-		expect(stroke(pts)).toContain('`-__-\'');
+		expect(stroke(pts)).toBe(
+			[
+				'                            .-"-.',
+				"                          ,-'   `--.",
+				"                        ,'         `-.",
+				'                       /             `.',
+				'                      /                 \\',
+				'`.                  /                   \\                   /',
+				' `.                 /                    \\                 /',
+				'   `.              /                       \\             /',
+				"    `.          ,'                          \\          ,'",
+				"      `.      ,-'                            `.      ,-'",
+				"       `-____-'                               `-____-'",
+			].join('\n'),
+		);
 	});
 
 	it('stamps an upstroke exactly like the downstroke', () => {

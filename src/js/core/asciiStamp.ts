@@ -436,10 +436,75 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 		}
 	};
 
+	/** advance the consumed path to target, Bresenham filling the gap */
+	const walkTo = (out: StampOut[], target: Cell) => {
+		if (!last || (last.x === target.x && last.y === target.y)) {
+			last = target;
+			return;
+		}
+		let prev: Cell | null = last;
+		let first = true;
+		bresenham(last, target, c => {
+			// the first visited cell is last itself, already consumed
+			if (first) {
+				first = false;
+				return;
+			}
+			consume(out, c, prev);
+			prev = c;
+		});
+		last = target;
+	};
+
+	/**
+	 * Fast writing delivers pointer samples many cells apart; straight
+	 * chords between them turn curves into kinked segments, which is
+	 * why slow deliberate strokes rendered better than normal writing
+	 * speed. Each segment is therefore drawn one sample late as a
+	 * Catmull Rom arc through its neighbors; one pointer event of lag
+	 * is imperceptible and buys the chord the curvature the hand
+	 * actually made. Dense samples degrade to the straight walk.
+	 */
+	const drawSmoothed = (out: StampOut[], s: Cell[]) => {
+		const n = s.length;
+		const p0 = s[n - 4] ?? s[n - 3];
+		const p1 = s[n - 3];
+		const p2 = s[n - 2];
+		const p3 = s[n - 1];
+		const dist = Math.max(Math.abs(p2.x - p1.x), Math.abs(p2.y - p1.y));
+		if (dist <= 1) {
+			walkTo(out, p2);
+			return;
+		}
+		const steps = dist * 4;
+		for (let i = 1; i <= steps; i++) {
+			const t = i / steps;
+			const t2 = t * t;
+			const t3 = t2 * t;
+			const cx =
+				0.5 *
+				(2 * p1.x +
+					(-p0.x + p2.x) * t +
+					(2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
+					(-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3);
+			const cy =
+				0.5 *
+				(2 * p1.y +
+					(-p0.y + p2.y) * t +
+					(2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
+					(-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3);
+			walkTo(out, { x: Math.round(cx), y: Math.round(cy) });
+		}
+		walkTo(out, p2);
+	};
+
+	let samples: Cell[] = [];
+
 	return {
 		begin: (x, y, subY) => {
 			last = { x, y };
 			trail = [last];
+			samples = [last];
 			pending = { c: last, prev: null };
 			activeClass = null;
 			dissent = 0;
@@ -462,29 +527,30 @@ export const createAsciiStampEngine = (): AsciiStampEngine => {
 			if (!last) {
 				return out;
 			}
-			if (last.x === x && last.y === y) {
+			const tail = samples[samples.length - 1];
+			if (tail.x === x && tail.y === y) {
 				return out;
 			}
-			let prev: Cell | null = last;
-			let first = true;
-			bresenham(last, { x, y }, c => {
-				// the first visited cell is last itself, already consumed
-				if (first) {
-					first = false;
-					return;
-				}
-				consume(out, c, prev);
-				prev = c;
-			});
-			last = { x, y };
+			samples.push({ x, y });
+			if (samples.length > 4) {
+				samples.shift();
+			}
+			if (samples.length >= 3) {
+				drawSmoothed(out, samples);
+			}
 			return out;
 		},
 		end: () => {
 			const out: StampOut[] = [];
+			// the live segment still owed one sample of lag
+			if (samples.length >= 2) {
+				walkTo(out, samples[samples.length - 1]);
+			}
 			drain(out);
 			finishRun(out);
 			last = null;
 			trail = [];
+			samples = [];
 			pending = null;
 			activeClass = null;
 			dissent = 0;
