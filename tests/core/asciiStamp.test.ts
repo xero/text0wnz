@@ -316,34 +316,34 @@ describe('ascii stamp engine, roman ribbon', () => {
 		);
 	});
 
-	it('chisels rising strokes with d and P', () => {
+	it('chisels rising strokes with d and P plus row AA', () => {
 		expect(roman([[0, 8], [8, 0]], 5)).toBe(
 			[
-				'        d$$$P',
-				'       d$$$P',
-				'      d$$$P',
-				'     d$$$P',
-				'    d$$$P',
-				'   d$$$P',
-				'  d$$$P',
-				' d$$$P',
-				'$$$$$',
+				"        ,d$$$P'",
+				"       ,d$$$P'",
+				"      ,d$$$P'",
+				"     ,d$$$P'",
+				"    ,d$$$P'",
+				"   ,d$$$P'",
+				"  ,d$$$P'",
+				" ,d$$$P'",
+				",$$$$$'",
 			].join('\n'),
 		);
 	});
 
-	it('chisels falling strokes with Y and b', () => {
+	it('chisels falling strokes with Y and b plus row AA', () => {
 		expect(roman([[0, 0], [8, 8]], 5)).toBe(
 			[
-				'$$$$$',
-				' Y$$$b',
-				'  Y$$$b',
-				'   Y$$$b',
-				'    Y$$$b',
-				'     Y$$$b',
-				'      Y$$$b',
-				'       Y$$$b',
-				'        Y$$$b',
+				'`$$$$$.',
+				' `Y$$$b.',
+				'  `Y$$$b.',
+				'   `Y$$$b.',
+				'    `Y$$$b.',
+				'     `Y$$$b.',
+				'      `Y$$$b.',
+				'       `Y$$$b.',
+				'        `Y$$$b.',
 			].join('\n'),
 		);
 	});
@@ -379,7 +379,8 @@ describe('ascii stamp engine, roman ribbon', () => {
 		const art = roman(pts, 3);
 		expect(art).toContain('d$$');
 		expect(art).toContain('Y$$');
-		// the seam where start meets end must be fill, not edge debris
-		expect(art.split('\n')[0].trim()).toMatch(/^\$+$/);
+		// the seam where start meets end must be fill; a single rank one
+		// pebble flick outside the union reads as corpus flourish
+		expect(art.split('\n')[0].trim()).toMatch(/^\$+['.`,]?$/);
 	});
 });
