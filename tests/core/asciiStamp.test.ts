@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createAsciiStampEngine } from '../../src/js/core/asciiStamp.js';
+import { createAsciiStampEngine, mergeGlyphs } from '../../src/js/core/asciiStamp.js';
 
 /**
  * Golden harness: run a stroke through the engine, render the stamped
@@ -384,5 +384,36 @@ describe('ascii stamp engine, roman ribbon', () => {
 		// the seam where start meets end must be fill; a single rank one
 		// pebble flick outside the union reads as corpus flourish
 		expect(art.split('\n')[0].trim()).toMatch(/^\$+['.`,]?$/);
+	});
+});
+
+describe('additive stroke contact', () => {
+	it('holds the same glyph', () => {
+		expect(mergeGlyphs(36, 36)).toBe(36);
+	});
+
+	it('never carves a heavier mark', () => {
+		expect(mergeGlyphs(36, 46)).toBe(36);
+		expect(mergeGlyphs(36, 124)).toBe(36);
+		expect(mergeGlyphs(100, 44)).toBe(100);
+		expect(mergeGlyphs(124, 39)).toBe(124);
+	});
+
+	it('a heavier touch wins over lighter ink', () => {
+		expect(mergeGlyphs(46, 36)).toBe(36);
+		expect(mergeGlyphs(45, 124)).toBe(124);
+	});
+
+	it('densifies equal weight contact', () => {
+		expect(mergeGlyphs(46, 39)).toBe(58);
+		expect(mergeGlyphs(45, 95)).toBe(61);
+		expect(mergeGlyphs(47, 92)).toBe(88);
+		expect(mergeGlyphs(124, 47)).toBe(88);
+		expect(mergeGlyphs(100, 89)).toBe(36);
+	});
+
+	it('paints over ink outside the brush vocabulary', () => {
+		expect(mergeGlyphs(65, 36)).toBe(36);
+		expect(mergeGlyphs(219, 46)).toBe(46);
 	});
 });

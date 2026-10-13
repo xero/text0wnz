@@ -120,6 +120,35 @@ describe('createAsciiBrushController', () => {
 		expect(grid.size).toBe(0);
 	});
 
+	it('builds up on existing ink instead of carving it', () => {
+		// the canvas already holds roman fill where this stroke passes
+		State.textArtCanvas.getBlock.mockReturnValue({
+			charCode: 36,
+			foregroundColor: 7,
+			backgroundColor: 0,
+		});
+		fire('onTextCanvasDown', { x: 2, y: 8, halfBlockY: 17 });
+		fire('onTextCanvasDrag', { x: 8, y: 8, halfBlockY: 17 });
+		fire('onTextCanvasUp', {});
+		for (let x = 2; x <= 8; x++) {
+			expect(cellAt(x, 8).charCode).toBe(36);
+		}
+	});
+
+	it('merges crossing stems from separate strokes to a junction', () => {
+		State.textArtCanvas.getBlock.mockReturnValue({
+			charCode: 47,
+			foregroundColor: 7,
+			backgroundColor: 0,
+		});
+		fire('onTextCanvasDown', { x: 0, y: 0, halfBlockY: 1 });
+		fire('onTextCanvasDrag', { x: 4, y: 4, halfBlockY: 9 });
+		fire('onTextCanvasUp', {});
+		for (let i = 0; i <= 4; i++) {
+			expect(cellAt(i, i).charCode).toBe(88);
+		}
+	});
+
 	it('stops listening when disabled', () => {
 		controller.disable();
 		fire('onTextCanvasDown', { x: 1, y: 1, halfBlockY: 3 });

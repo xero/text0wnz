@@ -76,6 +76,72 @@ const RANK = new Map<number, number>([
 /** Long shallow runs band by position: low to high for rising rows. */
 const LONG_RAMP_RISING = [UNDERSCORE, PERIOD, DASH, DQUOTE];
 
+// ------------------------------------------------- additive merging
+
+const X_JUNCTION = 88; // X
+const COLON = 58; // :
+const EQUALS = 61; // =
+
+/**
+ * Ink weight for cross stroke contact: a touch never carves a heavier
+ * mark, and equal weights densify instead of replacing.
+ */
+const WEIGHT = new Map<number, number>([
+	[PERIOD, 1],
+	[COMMA, 1],
+	[APOSTROPHE, 1],
+	[BACKTICK, 1],
+	[CARET, 1],
+	[COLON, 2],
+	[DASH, 2],
+	[UNDERSCORE, 2],
+	[DQUOTE, 2],
+	[EQUALS, 2],
+	[VBAR, 3],
+	[SLASH, 3],
+	[BACKSLASH, 3],
+	[X_JUNCTION, 3],
+	[EDGE_D, 4],
+	[EDGE_B, 4],
+	[EDGE_P, 4],
+	[EDGE_Y, 4],
+	[FILL, 5],
+]);
+
+const PROMOTE: Record<number, number> = {
+	1: COLON,
+	2: EQUALS,
+	3: X_JUNCTION,
+	4: FILL,
+	5: FILL,
+};
+
+/**
+ * Additive contact between strokes (shading brush spirit): same glyph
+ * holds, the heavier mark survives a lighter touch, and two different
+ * marks of equal weight merge to a denser one (two pebbles to a
+ * colon, crossing slashes to an X, meeting chisels to fill). Existing
+ * ink outside the brush vocabulary is painted over, a brush still
+ * paints.
+ */
+export const mergeGlyphs = (existing: number, incoming: number): number => {
+	if (existing === incoming) {
+		return incoming;
+	}
+	const we = WEIGHT.get(existing);
+	if (we === undefined) {
+		return incoming;
+	}
+	const wi = WEIGHT.get(incoming) ?? 0;
+	if (we > wi) {
+		return existing;
+	}
+	if (wi > we) {
+		return incoming;
+	}
+	return PROMOTE[wi];
+};
+
 // direction window: long enough to ride out one noisy step, short
 // enough that cursive letterforms a handful of cells tall still get
 // local tangents rather than half a letter ago
