@@ -1,10 +1,14 @@
 import State from './state.js';
 import { $ } from './ui.js';
-import { createAsciiStampEngine } from '../core/index';
+import { createAsciiStampEngine, mergeGlyphs } from '../core/index';
 
 const createAsciiBrushController = () => {
 	const engine = createAsciiStampEngine();
 	let stroking = false;
+	// what each touched cell held BEFORE this stroke: additive contact
+	// merges against that, never against our own live revisions, or a
+	// revised cell would escalate against itself
+	const strokeOriginals = new Map();
 	const bar = $('brushToolbar');
 	const nav = $('brushes');
 	const widthMenu = $('aWidth');
@@ -37,11 +41,20 @@ const createAsciiBrushController = () => {
 					continue;
 				}
 				// fg paints, bg survives: the brush draws strokes, not blocks
-				const bg = State.textArtCanvas.getBlock(
+				const block = State.textArtCanvas.getBlock(cell.x, cell.y);
+				const key = cell.y * 65536 + cell.x;
+				let original = strokeOriginals.get(key);
+				if (original === undefined) {
+					original = block.charCode;
+					strokeOriginals.set(key, original);
+				}
+				draw(
+					mergeGlyphs(original, cell.charCode),
+					fg,
+					block.backgroundColor,
 					cell.x,
 					cell.y,
-				).backgroundColor;
-				draw(cell.charCode, fg, bg, cell.x, cell.y);
+				);
 			}
 		}, false);
 	};
@@ -49,6 +62,7 @@ const createAsciiBrushController = () => {
 	const canvasDown = e => {
 		State.textArtCanvas.startUndo();
 		stroking = true;
+		strokeOriginals.clear();
 		apply(engine.begin(e.detail.x, e.detail.y, e.detail.halfBlockY % 2));
 		State.positionInfo.update(e.detail.x, e.detail.y);
 	};
