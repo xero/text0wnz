@@ -157,6 +157,8 @@ src/
 ```
 src/js/client/
 ├── main.js                # Application entry point and initialization
+├── asciiArena.js          # asciiarena.se in-app browser
+├── browserKit.js          # Shared widgets for the archive browsers
 ├── canvas.js              # 2D chunk renderer (fallback, ?renderer=2d)
 ├── charsetPicker.js       # Unicode charset picker modal
 ├── collabWorker.js        # Collaboration transport worker (Moebius frames)
@@ -521,6 +523,7 @@ tests/
 ├── setupTests.js                 # Test environment setup
 ├── unit/                         # Vitest unit tests
 │   ├── README.md                 # Unit test documentation
+│   ├── asciiArena.test.js        # asciiarena.se browser tests
 │   ├── canvas.test.js            # Canvas module tests
 │   ├── canvasJournal.test.js     # Canvas autosave journal tests
 │   ├── collabWorker.test.js      # Collaboration worker tests
@@ -530,6 +533,7 @@ tests/
 │   ├── fileAdvanced.test.js      # File I/O - Advanced operations tests
 │   ├── fileDocNative.test.js     # Native document format tests
 │   ├── fileFormats.test.js       # File I/O - Formats and Parsing tests
+│   ├── fileLatin1.test.js        # Latin-1 txt fallback tests
 │   ├── fileLoad.test.js          # File I/O - Load and Save tests
 │   ├── fileUtf8.test.js          # UTF-8 file handling tests
 │   ├── font.test.js              # Font system tests

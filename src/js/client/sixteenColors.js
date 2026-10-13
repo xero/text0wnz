@@ -13,6 +13,15 @@
 import State from './state.js';
 import { $ } from './ui.js';
 import {
+	makeSay,
+	fetchJson,
+	fetchCached,
+	button,
+	countButton,
+	pager,
+	createTrail,
+} from './browserKit.js';
+import {
 	extractZipEntry,
 	findZipEntry,
 	readZipEntries,
@@ -53,29 +62,7 @@ const createSixteenColors = ({ openFile }) => {
 
 	// ------------------------------------------------- tabs and history
 
-	// back walks a trail of view thunks: every drill-down pushes the
-	// view it left, so depth can differ per tab without special cases
-	let trail = [];
-	let here = () => showYears();
-	const renderHere = () => {
-		btnBack.disabled = trail.length === 0;
-		here();
-	};
-	const visit = thunk => {
-		trail.push(here);
-		here = thunk;
-		renderHere();
-	};
-	const swap = thunk => {
-		here = thunk;
-		renderHere();
-	};
-	const back = () => {
-		if (trail.length) {
-			here = trail.pop();
-			renderHere();
-		}
-	};
+	const { visit, swap, back, reset, rerun } = createTrail(btnBack);
 
 	const TABS = {
 		year: { root: () => showYears(), hint: null },
@@ -97,82 +84,29 @@ const createSixteenColors = ({ openFile }) => {
 			searchBox.classList.toggle('hide', !TABS[name].hint);
 			searchBox.placeholder = TABS[name].hint ?? '';
 		}
-		trail = [];
-		here = TABS[name].root;
-		renderHere();
+		reset(TABS[name].root);
 	};
 
 	const applySearch = () => {
 		const q = searchBox.value.trim();
-		trail = [];
 		if (tab === 'artist') {
-			here = () => showArtists(q, 1);
+			reset(() => showArtists(q, 1));
 		} else if (tab === 'crew') {
-			here = () => showCrews(q, 1);
+			reset(() => showCrews(q, 1));
 		} else {
-			here = () => showPackSearch(q, 1);
+			reset(() => showPackSearch(q, 1));
 		}
-		renderHere();
 	};
 
 	// ----------------------------------------------------------- utils
 
-	const say = (text, isError = false) => {
-		status.textContent = text ?? '';
-		status.classList.toggle('hide', !text);
-		status.classList.toggle('error', Boolean(text) && isError);
-	};
+	const say = makeSay(status);
 
-	const fetchJson = async url => {
-		const response = await fetch(url);
-		if (!response.ok) {
-			throw new Error(`${response.status} from ${url}`);
-		}
-		return response.json();
-	};
-
-	const fetchPage = async (key, url) => {
-		const data = cache.pages.get(key) ?? (await fetchJson(url));
-		cache.pages.set(key, data);
-		return data;
-	};
+	const fetchPage = (key, url) => fetchCached(cache.pages, key, url);
 
 	const clearList = view => {
 		list.textContent = '';
 		list.dataset.view = view;
-	};
-
-	const button = (label, onClick, className = 'sixteenItem') => {
-		const el = document.createElement('button');
-		el.textContent = label;
-		el.className = className;
-		el.addEventListener('click', onClick);
-		return el;
-	};
-
-	/** a list button whose release or pack count rides a dim kbd tag */
-	const countButton = (label, count, onClick) => {
-		const el = button(label, onClick);
-		const kbd = document.createElement('kbd');
-		kbd.textContent = String(count);
-		el.appendChild(kbd);
-		return el;
-	};
-
-	// both ends always render so the row never shifts; bounds disable
-	const pager = (page, pages, goPage) => {
-		const el = document.createElement('div');
-		el.className = 'sixteenPager';
-		const prev = button('< prev', () => goPage(page - 1), '');
-		prev.disabled = page <= 1;
-		el.appendChild(prev);
-		el.appendChild(
-			Object.assign(document.createElement('span'), { textContent: `${page} / ${pages}` }),
-		);
-		const next = button('next >', () => goPage(page + 1), '');
-		next.disabled = page >= pages;
-		el.appendChild(next);
-		return el;
 	};
 
 	/** one pack's metadata and openable files, fetched once */
@@ -282,7 +216,7 @@ const createSixteenColors = ({ openFile }) => {
 		for (const year of Object.keys(cache.years).reverse()) {
 			list.appendChild(
 				countButton(year, cache.years[year].packs, () =>
-					visit(() => showPacks(Number(year), 1))),
+					visit(() => showPacks(Number(year), 1)), 'sixteenItem'),
 			);
 		}
 	};
@@ -305,7 +239,7 @@ const createSixteenColors = ({ openFile }) => {
 		say(null);
 		const pages = data.page?.pages ?? 1;
 		if (pages > 1) {
-			list.appendChild(pager(page, pages, p => swap(() => showPacks(year, p))));
+			list.appendChild(pager(page, pages, p => swap(() => showPacks(year, p)), 'sixteenPager'));
 		}
 		for (const pack of data.results ?? []) {
 			list.appendChild(packCard(pack));
@@ -331,7 +265,7 @@ const createSixteenColors = ({ openFile }) => {
 		say(results.length ? null : 'no packs match');
 		const pages = data.page?.pages ?? 1;
 		if (pages > 1) {
-			list.appendChild(pager(page, pages, p => swap(() => showPackSearch(query, p))));
+			list.appendChild(pager(page, pages, p => swap(() => showPackSearch(query, p)), 'sixteenPager'));
 		}
 		for (const pack of results) {
 			list.appendChild(packCard(pack, true));
@@ -357,7 +291,7 @@ const createSixteenColors = ({ openFile }) => {
 		say(results.length ? null : 'no artists match');
 		const pages = data.page?.pages ?? 1;
 		if (pages > 1) {
-			list.appendChild(pager(page, pages, p => swap(() => showArtists(filter, p))));
+			list.appendChild(pager(page, pages, p => swap(() => showArtists(filter, p)), 'sixteenPager'));
 		}
 		for (const row of results) {
 			const name = row.artist?.name;
@@ -366,7 +300,7 @@ const createSixteenColors = ({ openFile }) => {
 			}
 			list.appendChild(
 				countButton(name, row.artist.releases ?? 0, () =>
-					visit(() => showArtistWorks(name))),
+					visit(() => showArtistWorks(name)), 'sixteenItem'),
 			);
 		}
 	};
@@ -436,7 +370,7 @@ const createSixteenColors = ({ openFile }) => {
 		say(results.length ? null : 'no crews match');
 		const pages = data.page?.pages ?? 1;
 		if (pages > 1) {
-			list.appendChild(pager(page, pages, p => swap(() => showCrews(filter, p))));
+			list.appendChild(pager(page, pages, p => swap(() => showCrews(filter, p)), 'sixteenPager'));
 		}
 		for (const row of results) {
 			// each crew rides as a single-key object: {tag: {releases, ...}}
@@ -446,7 +380,7 @@ const createSixteenColors = ({ openFile }) => {
 			}
 			list.appendChild(
 				countButton(tag, info?.releases ?? 0, () =>
-					visit(() => showCrewPacks(tag))),
+					visit(() => showCrewPacks(tag)), 'sixteenItem'),
 			);
 		}
 	};
@@ -563,7 +497,7 @@ const createSixteenColors = ({ openFile }) => {
 		clearTimeout(refit);
 		refit = setTimeout(() => {
 			if (where.view === 'files' || where.view === 'artistworks') {
-				here();
+				rerun();
 			}
 		}, 150);
 	});

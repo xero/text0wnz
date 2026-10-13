@@ -1,0 +1,554 @@
+/**
+ * asciiarena.se in-app browser: tabs for latest releases, artists,
+ * crews, and instant whole-archive search, opening amiga ascii collys
+ * straight into the editor. Everything rides the site's public JSON
+ * api and its /collections raw files, both CORS-open, so no proxy or
+ * mirror is involved. Search runs client-side over the one-shot
+ * uhcsearch index instead of paging the api per keystroke. Decoding
+ * mirrors the site's own rule: scene art full of high bytes is
+ * glyph-indexed latin-1 even when it happens to validate as UTF-8,
+ * and renders in the same Topaz the site uses. Politeness: every
+ * request is user-driven and cached; NOTHING here runs in CI.
+ */
+import State from './state.js';
+import { $ } from './ui.js';
+import {
+	makeSay,
+	fetchCached,
+	button,
+	countButton,
+	pager,
+	createTrail,
+} from './browserKit.js';
+import {
+	extractZipEntry,
+	readZipEntries,
+} from '../core/index';
+
+const SITE = 'https://asciiarena.se';
+const API = `${SITE}/api`;
+
+/** colly extensions the editor can open; zip unpacks via the core
+ * reader, lha/lzh/dms stay on the site until an lha codec exists */
+const OPENABLE = /\.(ans|asc|diz|nfo|txt)$/i;
+
+/** the font asciiarena itself renders with (TopazPlus a1200) */
+const AMIGA_FONT = 'Topaz+ 1200 8x16';
+
+const PAGESIZE = 24;
+/** instant search renders at most this many diz cards per query */
+const RESULT_CAP = 120;
+
+const createAsciiArena = ({ openFile }) => {
+	const crumb = $('arenaCrumb');
+	const list = $('arenaList');
+	const status = $('arenaStatus');
+	const btnBack = $('arenaBack');
+	const searchBox = $('arenaSearch');
+	if (!list) {
+		return null;
+	}
+
+	const cache = {
+		pages: new Map(), // list endpoints: cache key -> response json
+		index: null, // uhcsearch rows, fetched once per session
+		dizzes: new Map(), // filename -> preview text (null caches a miss)
+	};
+
+	// ------------------------------------------------- tabs and history
+
+	const { visit, swap, back, reset } = createTrail(btnBack);
+
+	const TABS = {
+		latest: { root: () => showLatest(1), hint: null },
+		artist: { root: () => showArtists('', 1), hint: 'filter artists' },
+		crew: { root: () => showCrews('', 1), hint: 'filter crews' },
+		search: { root: () => showSearch(''), hint: 'search all collys' },
+	};
+	let tab = 'latest';
+	const setTab = name => {
+		tab = name;
+		for (const key of Object.keys(TABS)) {
+			$(`arenaTab${key[0].toUpperCase()}${key.slice(1)}`)?.classList.toggle(
+				'active',
+				key === name,
+			);
+		}
+		if (searchBox) {
+			searchBox.value = '';
+			searchBox.classList.toggle('hide', !TABS[name].hint);
+			searchBox.placeholder = TABS[name].hint ?? '';
+		}
+		reset(TABS[name].root);
+	};
+
+	const applySearch = () => {
+		const q = searchBox.value.trim();
+		if (tab === 'artist') {
+			reset(() => showArtists(q, 1));
+		} else if (tab === 'crew') {
+			reset(() => showCrews(q, 1));
+		} else {
+			reset(() => showSearch(q));
+		}
+	};
+
+	// ----------------------------------------------------------- utils
+
+	const say = makeSay(status);
+
+	const fetchPage = (key, url) => fetchCached(cache.pages, key, url);
+
+	const clearList = view => {
+		// pending previews of a view being torn down must not fetch
+		dizWatch?.disconnect();
+		list.textContent = '';
+		list.dataset.view = view;
+	};
+
+	// the server keys each colly's folder on the name before the FIRST
+	// dot, not the last (filenames on the site never carry more than
+	// one, but the rule matters for matching its layout exactly)
+	const dirOf = filename => filename.split('.')[0];
+
+	const rawUrl = (colly, name = colly.filename) =>
+		`${SITE}/collections/${encodeURIComponent(colly.dir)}/${encodeURIComponent(name)}`;
+
+	const fetchBytes = async url => {
+		const response = await fetch(url);
+		if (!response.ok) {
+			throw new Error(`${response.status} from ${url}`);
+		}
+		return new Uint8Array(await response.arrayBuffer());
+	};
+
+	const baseName = name => name.split('/').pop();
+
+	const countHighBytes = bytes => {
+		let n = 0;
+		for (const b of bytes) {
+			if (b > 127) {
+				n++;
+			}
+		}
+		return n;
+	};
+
+	const validUtf8 = bytes => {
+		try {
+			new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+			return true;
+		} catch {
+			return false;
+		}
+	};
+
+	// latin-1 maps bytes to the first 256 codepoints one to one
+	const latin1 = bytes => {
+		let out = '';
+		for (let i = 0; i < bytes.length; i += 0x8000) {
+			out += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+		}
+		return out;
+	};
+
+	// mirrors the site's own decodeReleaseText: a file with 16 or more
+	// high bytes is scene art whatever UTF-8 validation says, because
+	// genuine multibyte text always halves the high char count
+	const importHints = bytes => ({
+		font: AMIGA_FONT,
+		preferBytes: countHighBytes(bytes) >= 16 || !validUtf8(bytes),
+	});
+
+	const sceneText = bytes =>
+		(countHighBytes(bytes) < 16 && validUtf8(bytes)
+			? new TextDecoder().decode(bytes)
+			: latin1(bytes));
+
+	const previewText = bytes => {
+		// previews only need the top of the file; a cut multibyte char
+		// just tips the decode to latin-1, which previews fine
+		const text = sceneText(bytes.subarray(0, 4096));
+		// eslint-disable-next-line no-control-regex
+		return text.replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, '').trimEnd();
+	};
+
+	// ------------------------------------------------------------ cards
+
+	// previews fetch lazily as cards scroll into view: a crew page can
+	// hold a hundred collys and most are never looked at
+	const dizMeta = new WeakMap();
+	let dizWatch = null;
+	const watchDiz = (frame, colly) => {
+		if (typeof IntersectionObserver === 'undefined') {
+			return;
+		}
+		dizMeta.set(frame, colly);
+		dizWatch ??= new IntersectionObserver(
+			hits => {
+				for (const hit of hits) {
+					if (hit.isIntersecting) {
+						dizWatch.unobserve(hit.target);
+						fillDiz(hit.target);
+					}
+				}
+			},
+			{ root: list, rootMargin: '25%' },
+		);
+		dizWatch.observe(frame);
+	};
+
+	const fillDiz = async frame => {
+		const colly = dizMeta.get(frame);
+		if (!colly) {
+			return;
+		}
+		let text = cache.dizzes.get(colly.filename);
+		if (text === undefined) {
+			try {
+				const response = await fetch(rawUrl(colly, `${colly.filename}.diz`));
+				text = response.ok
+					? previewText(new Uint8Array(await response.arrayBuffer()))
+					: null;
+			} catch {
+				text = null;
+			}
+			cache.dizzes.set(colly.filename, text);
+		}
+		if (text && frame.isConnected) {
+			const pre = document.createElement('pre');
+			pre.textContent = text;
+			frame.appendChild(pre);
+		}
+	};
+
+	const collyCard = colly => {
+		const item = document.createElement('button');
+		item.className = 'arenaColly';
+		const frame = document.createElement('div');
+		frame.className = 'dizFrame';
+		item.appendChild(frame);
+		watchDiz(frame, colly);
+		const caption = document.createElement('span');
+		caption.textContent = colly.title || colly.filename;
+		item.appendChild(caption);
+		const year = colly.cdate?.slice(0, 4);
+		const subText = [colly.artists, year !== '0000' ? year : null]
+			.filter(Boolean)
+			.join(' / ');
+		if (subText) {
+			const sub = document.createElement('span');
+			sub.className = 'arenaSub';
+			sub.textContent = subText;
+			item.appendChild(sub);
+		}
+		item.addEventListener('click', () => openColly(colly));
+		return item;
+	};
+
+	const fromApi = row => ({
+		filename: row.filename,
+		dir: dirOf(row.filename),
+		title: row.name,
+		artists: row.artists,
+		crews: row.crews,
+		cdate: row.cdate,
+	});
+
+	const fromIndex = row => ({
+		filename: row.filename,
+		dir: row.dir,
+		title: row.title,
+		artists: row.artists,
+		crews: row.crews,
+		cdate: null,
+	});
+
+	// ------------------------------------------------------------ index
+
+	const parseIndex = text =>
+		text
+			.split('\n')
+			.slice(1)
+			.map(line => line.split('\t'))
+			.filter(cols => cols.length >= 5 && cols[0])
+			.map(cols => ({
+				filename: cols[0],
+				dir: cols[1].replace(/^collections\//, ''),
+				artists: cols[2],
+				crews: cols[3],
+				title: cols[4].trimEnd(),
+			}));
+
+	const ensureIndex = async () => {
+		if (!cache.index) {
+			const response = await fetch(`${API}/uhcsearch`);
+			if (!response.ok) {
+				throw new Error(`${response.status} from ${API}/uhcsearch`);
+			}
+			cache.index = parseIndex(await response.text());
+		}
+		return cache.index;
+	};
+
+	const listNames = csv =>
+		csv
+			.split(',')
+			.map(s => s.trim().toLowerCase())
+			.filter(Boolean);
+
+	// ------------------------------------------------------------ views
+
+	const showLatest = async page => {
+		crumb.textContent = 'latest';
+		clearList('latest');
+		say('loading latest collys...');
+		let rows;
+		try {
+			rows = await fetchPage(
+				`l:${page}`,
+				`${API}/collys?page=${page}&pagesize=${PAGESIZE}&sort=cdate&asc=D`,
+			);
+		} catch (error) {
+			say(`asciiarena.se did not answer (${error.message})`, true);
+			return;
+		}
+		say(rows.length ? null : 'no collys on record');
+		const pages = Math.ceil((rows[0]?.total_count ?? 0) / PAGESIZE);
+		if (pages > 1) {
+			list.appendChild(pager(page, pages, p => swap(() => showLatest(p)), 'arenaPager'));
+		}
+		for (const row of rows) {
+			list.appendChild(collyCard(fromApi(row)));
+		}
+	};
+
+	const showArtists = async (filter, page) => {
+		crumb.textContent = filter ? `artists / ${filter}` : 'artists';
+		clearList('artists');
+		say('loading artists...');
+		let rows;
+		try {
+			rows = await fetchPage(
+				`a:${filter}:${page}`,
+				`${API}/artists?page=${page}&pagesize=${PAGESIZE}&sort=nick&asc=A${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
+			);
+		} catch (error) {
+			say(`asciiarena.se did not answer (${error.message})`, true);
+			return;
+		}
+		say(rows.length ? null : 'no artists match');
+		const pages = Math.ceil((rows[0]?.total_count ?? 0) / PAGESIZE);
+		if (pages > 1) {
+			list.appendChild(pager(page, pages, p => swap(() => showArtists(filter, p)), 'arenaPager'));
+		}
+		for (const row of rows) {
+			const open = () => visit(() => showByArtist(row.nick));
+			list.appendChild(
+				row.crews
+					? countButton(row.nick, row.crews, open, 'arenaItem')
+					: button(row.nick, open, 'arenaItem'),
+			);
+		}
+	};
+
+	const showByArtist = async nick => {
+		crumb.textContent = `artist / ${nick}`;
+		clearList('collys');
+		say(`loading ${nick}...`);
+		let rows;
+		try {
+			const needle = nick.toLowerCase();
+			rows = (await ensureIndex()).filter(r =>
+				listNames(r.artists).includes(needle));
+		} catch (error) {
+			say(`asciiarena.se did not answer (${error.message})`, true);
+			return;
+		}
+		say(rows.length ? null : 'no collys on record for this artist');
+		for (const row of rows) {
+			list.appendChild(collyCard(fromIndex(row)));
+		}
+	};
+
+	const showCrews = async (filter, page) => {
+		crumb.textContent = filter ? `crews / ${filter}` : 'crews';
+		clearList('crews');
+		say('loading crews...');
+		let rows;
+		try {
+			rows = await fetchPage(
+				`g:${filter}:${page}`,
+				`${API}/crews?page=${page}&pagesize=${PAGESIZE}&sort=name&asc=A${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`,
+			);
+		} catch (error) {
+			say(`asciiarena.se did not answer (${error.message})`, true);
+			return;
+		}
+		say(rows.length ? null : 'no crews match');
+		const pages = Math.ceil((rows[0]?.total_count ?? 0) / PAGESIZE);
+		if (pages > 1) {
+			list.appendChild(pager(page, pages, p => swap(() => showCrews(filter, p)), 'arenaPager'));
+		}
+		for (const row of rows) {
+			list.appendChild(
+				countButton(row.name, row.releases_cnt ?? 0, () =>
+					visit(() => showByCrew(row.name)), 'arenaItem'),
+			);
+		}
+	};
+
+	const showByCrew = async name => {
+		crumb.textContent = `crew / ${name}`;
+		clearList('collys');
+		say(`loading ${name}...`);
+		let rows;
+		try {
+			const needle = name.toLowerCase();
+			rows = (await ensureIndex()).filter(r =>
+				listNames(r.crews).includes(needle));
+		} catch (error) {
+			say(`asciiarena.se did not answer (${error.message})`, true);
+			return;
+		}
+		say(rows.length ? null : 'no collys on record for this crew');
+		for (const row of rows) {
+			list.appendChild(collyCard(fromIndex(row)));
+		}
+	};
+
+	const showSearch = async query => {
+		crumb.textContent = query ? `search / ${query}` : 'search';
+		clearList('collys');
+		say('loading the colly index...');
+		let index;
+		try {
+			index = await ensureIndex();
+		} catch (error) {
+			say(`asciiarena.se did not answer (${error.message})`, true);
+			return;
+		}
+		if (!query) {
+			say(`type to search ${index.length} collys`);
+			return;
+		}
+		const needle = query.toLowerCase();
+		const rows = index.filter(r =>
+			[r.filename, r.title, r.artists, r.crews].some(f =>
+				f.toLowerCase().includes(needle)));
+		if (!rows.length) {
+			say('no collys match');
+			return;
+		}
+		say(
+			rows.length > RESULT_CAP
+				? `${rows.length} collys match, showing the first ${RESULT_CAP}`
+				: null,
+		);
+		for (const row of rows.slice(0, RESULT_CAP)) {
+			list.appendChild(collyCard(fromIndex(row)));
+		}
+	};
+
+	const showZip = (colly, zip, entries) => {
+		crumb.textContent = colly.filename;
+		clearList('zip');
+		say(null);
+		for (const entry of entries) {
+			list.appendChild(
+				button(baseName(entry.name), async () => {
+					try {
+						openBytes(await extractZipEntry(zip, entry), baseName(entry.name));
+					} catch (error) {
+						say(`could not open: ${error.message}`, true);
+					}
+				}, 'arenaItem'),
+			);
+		}
+	};
+
+	// ------------------------------------------------------------ open
+
+	const openBytes = (bytes, name) => {
+		say(null);
+		State.modal.close();
+		openFile(new File([bytes], name), importHints(bytes));
+	};
+
+	const openZip = async colly => {
+		say(`fetching ${colly.filename}...`);
+		try {
+			const zip = await fetchBytes(rawUrl(colly));
+			const entries = readZipEntries(zip).filter(e => OPENABLE.test(e.name));
+			if (!entries.length) {
+				say('nothing in this zip opens in the editor', true);
+				return;
+			}
+			if (entries.length === 1) {
+				openBytes(await extractZipEntry(zip, entries[0]), baseName(entries[0].name));
+				return;
+			}
+			// the zip rides the view thunk, freed when the trail drops it
+			visit(() => showZip(colly, zip, entries));
+		} catch (error) {
+			say(`could not open: ${error.message}`, true);
+		}
+	};
+
+	const openColly = async colly => {
+		if ((/\.zip$/i).test(colly.filename)) {
+			openZip(colly);
+			return;
+		}
+		if (!OPENABLE.test(colly.filename)) {
+			say(`${colly.filename} needs lha to unpack; the editor cannot open it yet`, true);
+			return;
+		}
+		say(`fetching ${colly.filename}...`);
+		try {
+			openBytes(await fetchBytes(rawUrl(colly)), colly.filename);
+		} catch (error) {
+			say(`could not open: ${error.message}`, true);
+		}
+	};
+
+	// ------------------------------------------------------------ wire
+
+	btnBack?.addEventListener('click', back);
+	$('arenaClose')?.addEventListener('click', () => State.modal.close());
+	for (const key of Object.keys(TABS)) {
+		$(`arenaTab${key[0].toUpperCase()}${key.slice(1)}`)?.addEventListener(
+			'click',
+			() => setTab(key),
+		);
+	}
+	let typing = 0;
+	searchBox?.addEventListener('input', () => {
+		clearTimeout(typing);
+		typing = setTimeout(applySearch, 250);
+	});
+	searchBox?.addEventListener('keydown', event => {
+		if (event.key === 'Enter') {
+			clearTimeout(typing);
+			applySearch();
+		}
+	});
+
+	const show = () => {
+		State.modal.open('arena');
+		setTab('latest');
+	};
+
+	return {
+		show,
+		setTab,
+		showLatest,
+		showArtists,
+		showByArtist,
+		showCrews,
+		showByCrew,
+		showSearch,
+	};
+};
+
+export { createAsciiArena };

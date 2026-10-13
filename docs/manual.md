@@ -133,6 +133,25 @@ File operations allowing you to create, open, and save artwork in multiple file 
 - Pack archives download once and cache for the session
 - Every request is user-driven; nothing loads in the background
 
+### asciiarena.se Browser
+
+**File → Browse asciiarena.se** opens an in-app browser for [aSCIIaRENA](https://asciiarena.se), the amiga artscene archive.
+
+**Features:**
+
+- Four tabs: **latest** (the default), **artist**, **crew**, and
+  **search**. Artists and crews list with a filter box and drill into
+  their collys; search runs instantly over the whole archive index
+- Collys preview by their `file_id.diz` text, fetched lazily as cards
+  scroll into view
+- Click a colly to open it straight in the editor. Zip collys list
+  their openable files first; `.lha` archives stay on the site until
+  the editor learns to unpack them
+- Amiga ascii opens the way the site renders it: raw latin-1 bytes in
+  Topaz+ 1200, with SAUCE font records still winning when present
+- The search index downloads once and caches for the session
+- Every request is user-driven; nothing loads in the background
+
 ### Plugins
 
 **File → Plugins** loads and runs ES-module plugins, in the durdraw lineage.

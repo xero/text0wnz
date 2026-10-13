@@ -232,6 +232,7 @@ describe('UI Advanced Utilities', () => {
 			'charsetModal',
 			'exportModal',
 			'sixteenModal',
+			'arenaModal',
 			'pluginModal',
 			'choiceModal',
 			'updateModal',
