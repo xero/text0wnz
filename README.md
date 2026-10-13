@@ -79,9 +79,9 @@ A retro text art editor rebooted for the modern web. Draw, edit, animate, and co
   - Export: ANSI, BIN, XBIN, UTF-8, plain text, TundraDraw, durdraw, teXt0wnz Doc, ANSimation, and PNG
   - Zip and amiga LHA archives unpack in the browser; the art inside opens
 - **In-app art archive browsers**
-  - One **Browse Artpacks** landing fronts both sites and remembers where you were browsing all session
-  - Browse [16colo.rs](https://16colo.rs) artpacks by year, crew, or artist
-  - Browse [aSCIIaRENA](https://asciiarena.se) amiga collys with instant whole-archive search
+  - **Browse Artpacks** view, search, and edit files from the scene's top sites
+  - [16colo.rs](https://16colo.rs) artpacks by year, crew, or artist
+  - [aSCIIaRENA](https://asciiarena.se) amiga collys with instant whole-archive search
   - Open any piece straight into the editor, amiga ascii in Topaz like the scene drew it
 - **Multi-platform file opening**
   - Desktop: OS "Open with" integration (Chrome/Edge)
