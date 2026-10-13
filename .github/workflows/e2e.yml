@@ -24,7 +24,7 @@ jobs:
       # built with; a bumped @playwright/test needs its own builds, and
       # this is a fast no-op whenever the image already matches
       - name: sync playwright browsers
-        run: bunx playwright install
+        run: bun x playwright install
         env:
           HOME: /root
       - name: set localhost domain
