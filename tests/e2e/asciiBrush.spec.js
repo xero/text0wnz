@@ -349,6 +349,18 @@ test.describe('shape tool brush modes', () => {
 		expect((await readBlock(page, 55, 9)).charCode).toBe(45);
 	});
 
+	test('a thin drag grows into a two column box', async ({ page }) => {
+		await page.locator('#square').click();
+		await page.selectOption('#squareMode', 'ascii');
+		await pacedDrag(page, [70, 4], [70, 8]);
+		expect((await readBlock(page, 70, 4)).charCode).toBe(PERIOD);
+		expect((await readBlock(page, 71, 4)).charCode).toBe(PERIOD);
+		expect((await readBlock(page, 70, 8)).charCode).toBe(96);
+		expect((await readBlock(page, 71, 8)).charCode).toBe(39);
+		expect((await readBlock(page, 70, 6)).charCode).toBe(124);
+		expect((await readBlock(page, 71, 6)).charCode).toBe(124);
+	});
+
 	test('a square crossing another voices plus and keeps its bars', async ({ page }) => {
 		await page.locator('#square').click();
 		await page.selectOption('#squareMode', 'ascii');
@@ -364,6 +376,32 @@ test.describe('shape tool brush modes', () => {
 			expect((await readBlock(page, x, 5)).charCode).toBe(124);
 			expect((await readBlock(page, x, 3)).charCode).toBe(PERIOD);
 		}
+	});
+
+	test('boxes hanging off a line voice terminal joints', async ({ page }) => {
+		await page.locator('#square').click();
+		await page.selectOption('#squareMode', 'ascii');
+		await pacedDrag(page, [10, 6], [30, 10]);
+		// a box hanging below the line stands its top corners as tees
+		await pacedDrag(page, [15, 10], [25, 14]);
+		expect((await readBlock(page, 15, 10)).charCode).toBe(84);
+		expect((await readBlock(page, 25, 10)).charCode).toBe(84);
+		// a box standing on the line roots its bottom corners as plus
+		await pacedDrag(page, [15, 2], [25, 6]);
+		expect((await readBlock(page, 15, 6)).charCode).toBe(43);
+		expect((await readBlock(page, 25, 6)).charCode).toBe(43);
+	});
+
+	test('an edge over a buried bar end reconnects it', async ({ page }) => {
+		await page.locator('#square').click();
+		await page.selectOption('#squareMode', 'ascii');
+		await pacedDrag(page, [10, 6], [30, 10]);
+		// the second box's top edge is collinear with the first box's
+		// bottom line: the feet with bars above them voice plus instead
+		// of drowning under plain dashes
+		await pacedDrag(page, [5, 10], [35, 14]);
+		expect((await readBlock(page, 10, 10)).charCode).toBe(43);
+		expect((await readBlock(page, 30, 10)).charCode).toBe(43);
 	});
 
 	test('an ascii square is one undo group', async ({ page }) => {
