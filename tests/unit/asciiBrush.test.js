@@ -308,6 +308,29 @@ describe('createAsciiBrushController', () => {
 			expect(cellAt(9, 8).charCode).toBe(55);
 		});
 
+		it('a corner cap braced by its edge survives the sweep', () => {
+			// a box corner: bar col 9 capped by a period at y 4 with the
+			// box's dash edge beside it; a stroke crossing right under the
+			// cap voices the plus and the cap is structure, not a crumb
+			State.textArtCanvas.getBlock.mockImplementation((x, y) => ({
+				charCode:
+					x === 9 && y >= 5 && y <= 8
+						? 124
+						: x === 9 && y === 4
+							? 46
+							: y === 4 && x >= 5 && x <= 8
+								? 45
+								: 32,
+				foregroundColor: 7,
+				backgroundColor: 0,
+			}));
+			fire('onTextCanvasDown', { x: 5, y: 5, halfBlockY: 11 });
+			fire('onTextCanvasDrag', { x: 13, y: 5, halfBlockY: 11 });
+			fire('onTextCanvasUp', {});
+			expect(cellAt(9, 5).charCode).toBe(43);
+			expect(cellAt(9, 4)).toBeUndefined();
+		});
+
 		it('a crossing junction sweeps dangling taper crumbs off the line', () => {
 			// the underscore line dies at x 10; a bar crossing at x 9
 			// voices the plus and the lone trailing crumb gets swept,
