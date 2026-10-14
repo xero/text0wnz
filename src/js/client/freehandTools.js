@@ -1308,6 +1308,10 @@ const createSquareController = () => {
 	let endXY;
 	let outlineMode = true;
 
+	// the toggle lives inside the tool button; a tap on it must not
+	// bubble into the button's click handler
+	panel.addEventListener('click', e => e.stopPropagation());
+
 	const outlineToggle = createToggleButton(
 		'Outline',
 		'Filled',
@@ -1446,6 +1450,10 @@ const createCircleController = () => {
 	let startXY;
 	let endXY;
 	let outlineMode = true;
+
+	// the toggle lives inside the tool button; a tap on it must not
+	// bubble into the button's click handler
+	panel.addEventListener('click', e => e.stopPropagation());
 
 	const outlineToggle = createToggleButton(
 		'Outline',

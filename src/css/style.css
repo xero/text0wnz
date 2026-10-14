@@ -493,11 +493,17 @@
 		}
 	}
 
-	/* buttons with a size config flow as a row so the config sits
-	   inside the active highlight beside the icon and label */
+	/* buttons with a config flow as a row so the config sits inside
+	   the active highlight beside the icon and label */
 	#asciiBrush,
-	#attrib {
+	#attrib,
+	#square,
+	#circle {
 		@apply flex-row gap-2;
+
+		.toggleButtonContainer {
+			margin: auto 0;
+		}
 	}
 
 	#cut {
