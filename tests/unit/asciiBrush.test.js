@@ -396,4 +396,47 @@ describe('createAsciiStrokePainter', () => {
 		painter.preview(strokeCells());
 		expect(grid.size).toBe(0);
 	});
+
+	it('a sweep mid batch cannot split ghost from commit', () => {
+		// two bars one column apart cross the dying end of a dash line;
+		// the first bar's junction sweeps the end cell, and the second
+		// bar must merge against what stood there before the sweep in
+		// both paths or the ghost promises a junction the commit mutes
+		const art = (x, y) =>
+			y === 4 && x >= 1 && x <= 4
+				? { charCode: 45, foregroundColor: 7, backgroundColor: 0 }
+				: { charCode: 32, foregroundColor: 7, backgroundColor: 0 };
+		const bars = [];
+		for (const x of [3, 4]) {
+			for (let y = 3; y <= 5; y++) {
+				bars.push({ x: x, y: y, charCode: 124 });
+			}
+		}
+
+		// commit reads the live canvas, so the mock serves fresh writes
+		State.textArtCanvas.getBlock.mockImplementation((x, y) => {
+			const hit = grid.get(`${x},${y}`);
+			return hit
+				? {
+						charCode: hit.charCode,
+						foregroundColor: hit.fg,
+						backgroundColor: hit.bg,
+					}
+				: art(x, y);
+		});
+		const committer = createAsciiStrokePainter();
+		committer.begin();
+		committer.commit(bars);
+		const committed = cellAt(4, 4).charCode;
+
+		grid.clear();
+		State.textArtCanvas.getBlock.mockImplementation((x, y) => art(x, y));
+		const previewer = createAsciiStrokePainter();
+		previewer.begin();
+		const ghost = previewer.preview(bars);
+		const ghosted = ghost.find(g => g.x === 4 && g.y === 4).charCode;
+
+		expect(committed).toBe(43);
+		expect(ghosted).toBe(committed);
+	});
 });

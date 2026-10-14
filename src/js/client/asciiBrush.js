@@ -74,24 +74,40 @@ const createAsciiStrokePainter = () => {
 				// a light cell braced by line ink square to the walk is a
 				// corner cap anchored to its own structure, not a crumb: a
 				// box top dies into blank by design and must survive its
-				// bar's junctions
+				// bar's junctions. the brace reads pre stroke state so a
+				// ghost and its commit agree
 				const braced = [
 					[x - axis.dy, y + axis.dx],
 					[x + axis.dy, y - axis.dx],
 				].some(([bx, by]) => {
-					if (!cellInRange(bx, by, columns, rows)) {
-						return false;
-					}
-					const n = lineAxis(State.textArtCanvas.getBlock(bx, by).charCode);
+					const n = lineAxis(originalAt(bx, by, columns, rows));
 					return n !== null && n.dx * axis.dx + n.dy * axis.dy === 0;
 				});
 				if (braced) {
 					break;
 				}
-				run.push({ x: x, y: y, fg: block.foregroundColor, bg: block.backgroundColor });
+				run.push({
+					x: x,
+					y: y,
+					charCode: block.charCode,
+					fg: block.foregroundColor,
+					bg: block.backgroundColor,
+				});
 			}
 			if (dangling) {
 				for (const c of run) {
+					// the erasure registers as stroke state: later cells in
+					// the same batch must merge against what stood here
+					// before the sweep, or a ghost built without canvas
+					// writes diverges from its commit
+					const key = c.y * 65536 + c.x;
+					if (!strokeOriginals.has(key)) {
+						strokeOriginals.set(key, {
+							charCode: c.charCode,
+							fg: c.fg,
+							bg: c.bg,
+						});
+					}
 					draw(32, c.fg, c.bg, c.x, c.y);
 				}
 			}
@@ -214,6 +230,22 @@ const createAsciiStrokePainter = () => {
 			// canvas; unclipped writes wrap through the cell index to
 			// the far side of the neighboring row
 			if (!cellInRange(cell.x, cell.y, columns, rows)) {
+				continue;
+			}
+			// a controller voiced junction lands raw, like tipJunction's
+			// own picks: the weight tables would eat a period knot on
+			// the very underscore that earned it
+			if (cell.joint) {
+				const jBlock = State.textArtCanvas.getBlock(cell.x, cell.y);
+				const jKey = cell.y * 65536 + cell.x;
+				if (!strokeOriginals.has(jKey)) {
+					strokeOriginals.set(jKey, {
+						charCode: jBlock.charCode,
+						fg: jBlock.foregroundColor,
+						bg: jBlock.backgroundColor,
+					});
+				}
+				draw(cell.charCode, fg, jBlock.backgroundColor, cell.x, cell.y);
 				continue;
 			}
 			// fg paints, bg survives: the brush draws strokes, not blocks

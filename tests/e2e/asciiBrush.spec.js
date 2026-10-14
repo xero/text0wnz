@@ -392,6 +392,32 @@ test.describe('shape tool brush modes', () => {
 		expect((await readBlock(page, 25, 6)).charCode).toBe(43);
 	});
 
+	test('three row and three column boxes rule true edges', async ({ page }) => {
+		await page.locator('#square').click();
+		await page.selectOption('#squareMode', 'ascii');
+		// one cell paths once stamped the engine's lone tap apostrophe
+		await pacedDrag(page, [10, 2], [20, 4]);
+		expect((await readBlock(page, 10, 3)).charCode).toBe(124);
+		expect((await readBlock(page, 20, 3)).charCode).toBe(124);
+		expect((await readBlock(page, 15, 2)).charCode).toBe(45);
+		expect((await readBlock(page, 15, 4)).charCode).toBe(45);
+		await pacedDrag(page, [30, 2], [32, 6]);
+		expect((await readBlock(page, 31, 2)).charCode).toBe(45);
+		expect((await readBlock(page, 31, 6)).charCode).toBe(45);
+		expect((await readBlock(page, 30, 4)).charCode).toBe(124);
+		expect((await readBlock(page, 32, 4)).charCode).toBe(124);
+	});
+
+	test('corners landing on an underscore voice the period knot', async ({ page }) => {
+		await page.selectOption('#lineMode', 'ascii');
+		await pacedDrag(page, [5, 8], [25, 8]);
+		await page.locator('#square').click();
+		await page.selectOption('#squareMode', 'ascii');
+		await pacedDrag(page, [10, 8], [20, 12]);
+		expect((await readBlock(page, 10, 8)).charCode).toBe(PERIOD);
+		expect((await readBlock(page, 20, 8)).charCode).toBe(PERIOD);
+	});
+
 	test('a crossing under a corner cap leaves the cap alone', async ({ page }) => {
 		await page.locator('#square').click();
 		await page.selectOption('#squareMode', 'ascii');

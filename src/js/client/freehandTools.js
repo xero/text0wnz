@@ -1468,15 +1468,18 @@ const createSquareController = () => {
 	);
 
 	// thin ascii has no fill vocabulary: any fill char reads amiga, so
-	// the pill naps until the mode offers one
-	modeSelect.addEventListener('change', () => {
+	// the pill naps until the mode offers one. synced on enable too,
+	// since browser form restoration can set the select without firing
+	// a change event
+	const syncFillPill = () => {
 		const noFill = modeSelect.value === 'ascii';
 		panel.classList.toggle('dimmed', noFill);
 		if (noFill) {
 			outlineMode = true;
 			outlineToggle.setStateOne();
 		}
-	});
+	};
+	modeSelect.addEventListener('change', syncFillPill);
 
 	const asciiMode = () =>
 		modeSelect.value === 'ascii' || modeSelect.value === 'amiga';
@@ -1492,7 +1495,10 @@ const createSquareController = () => {
 
 	// a corner landing on an existing line voices the tip vocabulary
 	// instead of melting into the heavier ink: the box's bar is the
-	// stem, hanging below top corners and rising above bottom ones
+	// stem, hanging below top corners and rising above bottom ones.
+	// a voiced pick is a deliberate junction and marks itself so the
+	// painter draws it raw: the weight tables would eat a period knot
+	// on the underscore that earned it
 	const cornerCell = (x, cy, dy, plain) => {
 		const glyph = junctionForTip(
 			{ dx: 0, dy: dy, cls: 'vertical' },
@@ -1500,8 +1506,15 @@ const createSquareController = () => {
 			originalCode(x - 1, cy),
 			originalCode(x + 1, cy),
 		);
-		return { x: x, y: cy, charCode: glyph || plain };
+		if (glyph) {
+			return { x: x, y: cy, charCode: glyph, joint: true };
+		}
+		return { x: x, y: cy, charCode: plain };
 	};
+
+	// terminal glyphs a second touch must not escalate: a plus joint
+	// over a standing T would densify to X through the merge
+	const TERMINALS = [84, 55, 114, 74, 76];
 
 	// an existing bar ending flush against an edge row reconnects;
 	// plain dashes would bury the contact. bars crossing the row and
@@ -1510,13 +1523,13 @@ const createSquareController = () => {
 		const joints = [];
 		for (let x = xa; x <= xb; x++) {
 			const own = originalCode(x, cy);
-			if (own === 124 || isJunctionGlyph(own)) {
+			if (own === 124 || isJunctionGlyph(own) || TERMINALS.includes(own)) {
 				continue;
 			}
 			if (originalCode(x, cy - 1) === 124) {
-				joints.push({ x: x, y: cy, charCode: 43 });
+				joints.push({ x: x, y: cy, charCode: 43, joint: true });
 			} else if (originalCode(x, cy + 1) === 124) {
-				joints.push({ x: x, y: cy, charCode: 84 });
+				joints.push({ x: x, y: cy, charCode: 84, joint: true });
 			}
 		}
 		return joints;
@@ -1573,18 +1586,33 @@ const createSquareController = () => {
 		// land last so they win their cells. both edges ride the upper
 		// half and voice dashes: per half voicing let stacked boxes land
 		// an underscore on a hyphen and densify the shared line to an
-		// equals sign
+		// equals sign. a path of one cell skips the engine, whose lone
+		// tap stamps an apostrophe pebble instead of line ink
 		if (x1 - 1 >= x0 + 1) {
-			cells.push(...shapeStrokeCells(hPathPoints(x0 + 1, x1 - 1, cy0 * 2), 1));
-			cells.push(...shapeStrokeCells(hPathPoints(x0 + 1, x1 - 1, cy1 * 2), 1));
+			if (x1 - 1 === x0 + 1) {
+				cells.push({ x: x0 + 1, y: cy0, charCode: 45 });
+				cells.push({ x: x0 + 1, y: cy1, charCode: 45 });
+			} else {
+				cells.push(
+					...shapeStrokeCells(hPathPoints(x0 + 1, x1 - 1, cy0 * 2), 1),
+				);
+				cells.push(
+					...shapeStrokeCells(hPathPoints(x0 + 1, x1 - 1, cy1 * 2), 1),
+				);
+			}
 			cells.push(...edgeJoints(x0 + 1, x1 - 1, cy0));
 			cells.push(...edgeJoints(x0 + 1, x1 - 1, cy1));
 		}
 		const barTop = (cy0 + 1) * 2;
 		const barBottom = cy1 * 2 - 1;
 		if (barBottom >= barTop) {
-			cells.push(...shapeStrokeCells(vPathPoints(x0, barTop, barBottom), 1));
-			cells.push(...shapeStrokeCells(vPathPoints(x1, barTop, barBottom), 1));
+			if (Math.floor(barBottom / 2) === Math.floor(barTop / 2)) {
+				cells.push({ x: x0, y: Math.floor(barTop / 2), charCode: 124 });
+				cells.push({ x: x1, y: Math.floor(barTop / 2), charCode: 124 });
+			} else {
+				cells.push(...shapeStrokeCells(vPathPoints(x0, barTop, barBottom), 1));
+				cells.push(...shapeStrokeCells(vPathPoints(x1, barTop, barBottom), 1));
+			}
 		}
 		const [tl, tr] = SQUARE_CORNERS.top;
 		const [bl, br] = SQUARE_CORNERS.bottom;
@@ -1620,6 +1648,10 @@ const createSquareController = () => {
 	};
 
 	const canvasUp = () => {
+		// a color sample tap fires an up without a down
+		if (startXY === undefined) {
+			return;
+		}
 		State.toolPreview.clear();
 		const coords = processCoords();
 		State.textArtCanvas.startUndo();
@@ -1704,6 +1736,7 @@ const createSquareController = () => {
 		bar.style.display = 'flex';
 		modeMenu.style.display = 'flex';
 		nav.classList.add('enabled');
+		syncFillPill();
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
