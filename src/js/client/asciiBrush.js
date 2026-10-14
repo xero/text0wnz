@@ -7,27 +7,20 @@ import {
 	mergeGlyphs,
 } from '../core/index';
 
-const createAsciiBrushController = () => {
-	const engine = createAsciiStampEngine();
-	let stroking = false;
+/**
+ * Applies engine stamp output to the document: additive contact
+ * merges, bg preservation, and tip/root junction voicing. Shared by
+ * the freehand brush and the line tool, whose straight strokes earn
+ * the same joins. commit() writes to the canvas; preview() runs the
+ * identical pipeline and captures the writes instead, so a ghost can
+ * be pixel-faithful to what a commit would produce.
+ */
+const createAsciiStrokePainter = () => {
 	// what each touched cell held BEFORE this stroke: additive contact
 	// merges against that, never against our own live revisions, or a
 	// revised cell would escalate against itself; the full block is
 	// kept so snap-back can restore a whisker cell faithfully
 	const strokeOriginals = new Map();
-	const bar = $('brushToolbar');
-	const nav = $('brushes');
-	const widthMenu = $('aWidth');
-	const widthSelect = $('asciiWidth');
-
-	// the width config lives inside the tool button; a tap on it must
-	// not bubble into the button's click handler, whose preventDefault
-	// would keep the picker from opening on touch
-	widthMenu.addEventListener('click', e => e.stopPropagation());
-
-	const applyWidth = () => {
-		engine.setWidth(parseInt(widthSelect.value, 10) || 1);
-	};
 
 	// what a cell held BEFORE this stroke, whether or not we inked it:
 	// junctions must read the canvas the stroke landed on, not its own
@@ -108,71 +101,114 @@ const createAsciiBrushController = () => {
 		return false;
 	};
 
-	// the engine revises cells as the stroke reveals itself; last wins
-	// inside the stroke's single undo group, so drawing stays fully live
-	const apply = cells => {
-		if (cells.length === 0) {
-			return;
-		}
+	const applyCells = (cells, draw) => {
 		const fg = State.palette.getForegroundColor();
 		const columns = State.textArtCanvas.getColumns();
 		const rows = State.textArtCanvas.getRows();
-		State.textArtCanvas.draw(draw => {
-			for (const cell of cells) {
-				if (
-					cell.tip &&
-					tipJunction(cell, cell.tip, true, fg, draw, columns, rows)
-				) {
-					continue;
-				}
-				if (
-					cell.root &&
-					tipJunction(
-						cell,
-						{ dx: -cell.root.dx, dy: -cell.root.dy, cls: cell.root.cls },
-						false,
-						fg,
-						draw,
-						columns,
-						rows,
-					)
-				) {
-					continue;
-				}
-				// ribbon spans and spline overshoot can reach past the
-				// canvas; unclipped writes wrap through the cell index to
-				// the far side of the neighboring row
-				if (!cellInRange(cell.x, cell.y, columns, rows)) {
-					continue;
-				}
-				// fg paints, bg survives: the brush draws strokes, not blocks
-				const block = State.textArtCanvas.getBlock(cell.x, cell.y);
-				const key = cell.y * 65536 + cell.x;
-				let original = strokeOriginals.get(key);
-				if (original === undefined) {
-					original = {
-						charCode: block.charCode,
-						fg: block.foregroundColor,
-						bg: block.backgroundColor,
-					};
-					strokeOriginals.set(key, original);
-				}
-				draw(
-					mergeGlyphs(original.charCode, cell.charCode),
-					fg,
-					block.backgroundColor,
-					cell.x,
-					cell.y,
-				);
+		for (const cell of cells) {
+			if (
+				cell.tip &&
+				tipJunction(cell, cell.tip, true, fg, draw, columns, rows)
+			) {
+				continue;
 			}
+			if (
+				cell.root &&
+				tipJunction(
+					cell,
+					{ dx: -cell.root.dx, dy: -cell.root.dy, cls: cell.root.cls },
+					false,
+					fg,
+					draw,
+					columns,
+					rows,
+				)
+			) {
+				continue;
+			}
+			// ribbon spans and spline overshoot can reach past the
+			// canvas; unclipped writes wrap through the cell index to
+			// the far side of the neighboring row
+			if (!cellInRange(cell.x, cell.y, columns, rows)) {
+				continue;
+			}
+			// fg paints, bg survives: the brush draws strokes, not blocks
+			const block = State.textArtCanvas.getBlock(cell.x, cell.y);
+			const key = cell.y * 65536 + cell.x;
+			let original = strokeOriginals.get(key);
+			if (original === undefined) {
+				original = {
+					charCode: block.charCode,
+					fg: block.foregroundColor,
+					bg: block.backgroundColor,
+				};
+				strokeOriginals.set(key, original);
+			}
+			draw(
+				mergeGlyphs(original.charCode, cell.charCode),
+				fg,
+				block.backgroundColor,
+				cell.x,
+				cell.y,
+			);
+		}
+	};
+
+	const begin = () => {
+		strokeOriginals.clear();
+	};
+
+	// the engine revises cells as the stroke reveals itself; last wins
+	// inside the stroke's single undo group, so drawing stays fully live
+	const commit = cells => {
+		if (cells.length === 0) {
+			return;
+		}
+		State.textArtCanvas.draw(draw => {
+			applyCells(cells, draw);
 		}, false);
+	};
+
+	// same pipeline, writes captured last-wins instead of landing on
+	// the canvas; the caller blits the survivors onto the ghost overlay
+	const preview = cells => {
+		const ghost = new Map();
+		applyCells(cells, (charCode, fg, _bg, x, y) => {
+			ghost.set(y * 65536 + x, { charCode: charCode, fg: fg, x: x, y: y });
+		});
+		return [...ghost.values()];
+	};
+
+	return {
+		begin: begin,
+		commit: commit,
+		preview: preview,
+	};
+};
+
+const createAsciiBrushController = () => {
+	const engine = createAsciiStampEngine();
+	const painter = createAsciiStrokePainter();
+	let stroking = false;
+	const bar = $('brushToolbar');
+	const nav = $('brushes');
+	const widthMenu = $('aWidth');
+	const widthSelect = $('asciiWidth');
+
+	// the width config lives inside the tool button; a tap on it must
+	// not bubble into the button's click handler, whose preventDefault
+	// would keep the picker from opening on touch
+	widthMenu.addEventListener('click', e => e.stopPropagation());
+
+	const applyWidth = () => {
+		engine.setWidth(parseInt(widthSelect.value, 10) || 1);
 	};
 
 	const canvasDown = e => {
 		State.textArtCanvas.startUndo();
 		stroking = true;
-		strokeOriginals.clear();
-		apply(engine.begin(e.detail.x, e.detail.y, e.detail.halfBlockY % 2));
+		painter.begin();
+		painter.commit(engine.begin(e.detail.x, e.detail.y, e.detail.halfBlockY % 2));
 		State.positionInfo.update(e.detail.x, e.detail.y);
 	};
 
@@ -180,13 +216,13 @@ const createAsciiBrushController = () => {
 		if (!stroking) {
 			return;
 		}
-		apply(engine.move(e.detail.x, e.detail.y, e.detail.halfBlockY % 2));
+		painter.commit(engine.move(e.detail.x, e.detail.y, e.detail.halfBlockY % 2));
 		State.positionInfo.update(e.detail.x, e.detail.y);
 	};
 
 	const canvasUp = () => {
 		if (stroking) {
-			apply(engine.end());
+			painter.commit(engine.end());
 			stroking = false;
 		}
 	};
@@ -218,4 +254,4 @@ const createAsciiBrushController = () => {
 	};
 };
 
-export { createAsciiBrushController };
+export { createAsciiBrushController, createAsciiStrokePainter };

@@ -169,3 +169,78 @@ test.describe('ascii brush', () => {
 		}
 	});
 });
+
+test.describe('line tool brush modes', () => {
+	// the line tool commits once on release from the last drag event;
+	// an unpaced synthetic drag can land the up before any coalesced
+	// move flushes, committing a start-to-start pebble instead
+	const pacedDrag = async (page, from, to) => {
+		const a = await cellCenter(page, from[0], from[1]);
+		const b = await cellCenter(page, to[0], to[1]);
+		await page.mouse.move(a.clientX, a.clientY);
+		await page.mouse.down();
+		await page.waitForTimeout(50);
+		await page.mouse.move(b.clientX, b.clientY, { steps: 12 });
+		await page.waitForTimeout(100);
+		await page.mouse.up();
+	};
+
+	test.beforeEach(async ({ page }) => {
+		await page.goto('/?test');
+		await bridgeReady(page);
+		await page.locator('#shapes').click();
+		await page.locator('#line').click();
+		await expect(page.locator('#line')).toHaveClass(/toolbarDisplayed/);
+		// the first synthetic drag on a fresh page loses its coalesced
+		// moves (hand testing on real pointers is unaffected); one
+		// throwaway drag on an unread row warms the pipeline
+		await pacedDrag(page, [60, 24], [63, 24]);
+	});
+
+	test('block mode draws half blocks like before', async ({ page }) => {
+		await page.selectOption('#lineMode', 'block');
+		await pacedDrag(page, [5, 8], [20, 8]);
+		expect([220, 223, 219]).toContain((await readBlock(page, 10, 8)).charCode);
+	});
+
+	test('ascii mode rules a flat line of underscores', async ({ page }) => {
+		await page.selectOption('#lineMode', 'ascii');
+		await pacedDrag(page, [5, 12], [20, 12]);
+		for (let x = 6; x <= 19; x++) {
+			expect((await readBlock(page, x, 12)).charCode).toBe(UNDERSCORE);
+		}
+	});
+
+	test('ascii mode rules a 45 degree line of backslashes', async ({ page }) => {
+		await page.selectOption('#lineMode', 'ascii');
+		await pacedDrag(page, [30, 2], [42, 14]);
+		// the first two cells voice the entry curl; the body is diagonal
+		for (let i = 2; i <= 12; i++) {
+			expect((await readBlock(page, 30 + i, 2 + i)).charCode).toBe(BACKSLASH);
+		}
+	});
+
+	test('amiga mode rules a dollar fill ribbon', async ({ page }) => {
+		await page.selectOption('#lineMode', 'amiga');
+		await pacedDrag(page, [10, 18], [30, 21]);
+		let dollars = 0;
+		for (let y = 17; y <= 23; y++) {
+			for (let x = 8; x <= 32; x++) {
+				if ((await readBlock(page, x, y)).charCode === 36) {
+					dollars++;
+				}
+			}
+		}
+		expect(dollars).toBeGreaterThan(5);
+	});
+
+	test('an ascii line is one undo group', async ({ page }) => {
+		await page.selectOption('#lineMode', 'ascii');
+		await pacedDrag(page, [5, 16], [20, 16]);
+		expect((await readBlock(page, 10, 16)).charCode).toBe(UNDERSCORE);
+		await page.keyboard.press('Control+z');
+		for (let x = 5; x <= 20; x++) {
+			expect([0, 32]).toContain((await readBlock(page, x, 16)).charCode);
+		}
+	});
+});

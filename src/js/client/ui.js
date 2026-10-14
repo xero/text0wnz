@@ -1,6 +1,7 @@
 import State from './state.js';
 import { loadFontFromXBData } from './font.js';
 import { getZoomController } from './zoom.js';
+import { mirrorCharCode } from '../core/index';
 
 // Utilities for DOM manipulation
 const D = document,
@@ -648,6 +649,31 @@ const createToolPreview = el => {
 		}
 	};
 
+	const drawOneGlyph = (charCode, foreground, x, y) => {
+		const ctxIndex = Math.floor(y / 25);
+		if (ctxIndex >= 0 && ctxIndex < Math.ceil(rows / 25)) {
+			State.font.drawWithAlpha(
+				charCode,
+				foreground,
+				getOrCreateCtx(ctxIndex),
+				x,
+				y % 25,
+			);
+		}
+	};
+
+	const drawGlyph = (charCode, foreground, x, y) => {
+		drawOneGlyph(charCode, foreground, x, y);
+		// commit mirroring lives in the editor core and flips the glyph;
+		// the ghost has to match both the position and the flip
+		if (State.textArtCanvas.getMirrorMode?.()) {
+			const mirrorX = State.textArtCanvas.getMirrorX(x);
+			if (mirrorX !== x && mirrorX >= 0 && mirrorX < columns) {
+				drawOneGlyph(mirrorCharCode(charCode), foreground, mirrorX, y);
+			}
+		}
+	};
+
 	const clear = () => {
 		for (let i = 0; i < ctxs.length; i++) {
 			if (ctxs[i]) {
@@ -671,6 +697,7 @@ const createToolPreview = el => {
 	return {
 		clear: clear,
 		drawHalfBlock: drawHalfBlock,
+		drawGlyph: drawGlyph,
 	};
 };
 

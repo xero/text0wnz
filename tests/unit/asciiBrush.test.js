@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { createAsciiBrushController } from '../../src/js/client/asciiBrush.js';
+import {
+	createAsciiBrushController,
+	createAsciiStrokePainter,
+} from '../../src/js/client/asciiBrush.js';
+import { createAsciiStampEngine } from '../../src/js/core/index';
 
 // last write wins, exactly like editor cells inside one undo group
 const grid = new Map();
@@ -247,5 +251,53 @@ describe('createAsciiBrushController', () => {
 			expect(cellAt(9, 9).charCode).toBe(124);
 			expect(cellAt(9, 8).charCode).toBe(84);
 		});
+	});
+});
+
+describe('createAsciiStrokePainter', () => {
+	// a straight synthetic stroke, the same way the line tool builds one
+	const strokeCells = () => {
+		const engine = createAsciiStampEngine({ width: 2 });
+		const out = [...engine.begin(2, 2, 0)];
+		for (let x = 3; x <= 14; x++) {
+			out.push(...engine.move(x, 2 + Math.floor((x - 2) / 3), (x - 2) % 2));
+		}
+		out.push(...engine.end());
+		return out;
+	};
+
+	beforeEach(() => {
+		grid.clear();
+		vi.clearAllMocks();
+		State.textArtCanvas.getBlock.mockReturnValue({
+			charCode: 32,
+			foregroundColor: 7,
+			backgroundColor: 0,
+		});
+	});
+
+	it('preview captures exactly what commit draws', () => {
+		const cells = strokeCells();
+
+		const committer = createAsciiStrokePainter();
+		committer.begin();
+		committer.commit(cells);
+
+		const previewer = createAsciiStrokePainter();
+		previewer.begin();
+		const ghost = previewer.preview(cells);
+
+		expect(ghost.length).toBeGreaterThan(0);
+		expect(ghost.length).toBe(grid.size);
+		for (const g of ghost) {
+			expect(cellAt(g.x, g.y).charCode).toBe(g.charCode);
+		}
+	});
+
+	it('preview leaves the canvas untouched', () => {
+		const painter = createAsciiStrokePainter();
+		painter.begin();
+		painter.preview(strokeCells());
+		expect(grid.size).toBe(0);
 	});
 });
