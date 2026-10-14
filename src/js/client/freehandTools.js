@@ -1411,13 +1411,13 @@ const createLineController = () => {
 	};
 };
 
-// thin ruled squares pick their corner glyphs from the half each edge
-// rides in: a dash edge hooks r/7 at the top and rests on backtick and
-// quote at the bottom, an underscore edge sits on period feet up top
-// and L/J below, the box idioms the junction vocabulary already voices
+// thin ruled squares wear soft corners in both edge halves: period
+// shoulders up top, backtick and quote feet below. the r/7/L/J family
+// stays reserved for junctions against other lines, where the stem
+// has an existing stroke to hook into
 const SQUARE_CORNERS = {
-	top: { 0: [114, 55], 1: [46, 46]},
-	bottom: { 0: [96, 39], 1: [76, 74]},
+	top: [46, 46],
+	bottom: [96, 39],
 };
 
 const createSquareController = () => {
@@ -1507,13 +1507,13 @@ const createSquareController = () => {
 				cells.push(...asciiStrokeCells(vPathPoints(x1, barTop, barBottom), 1));
 			}
 		}
-		const [tl, tr] = SQUARE_CORNERS.top[y0 % 2];
+		const [tl, tr] = SQUARE_CORNERS.top;
 		cells.push({ x: x0, y: cy0, charCode: tl });
 		if (x1 !== x0) {
 			cells.push({ x: x1, y: cy0, charCode: tr });
 		}
 		if (cy1 !== cy0) {
-			const [bl, br] = SQUARE_CORNERS.bottom[y1 % 2];
+			const [bl, br] = SQUARE_CORNERS.bottom;
 			cells.push({ x: x0, y: cy1, charCode: bl });
 			if (x1 !== x0) {
 				cells.push({ x: x1, y: cy1, charCode: br });
