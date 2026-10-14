@@ -142,6 +142,16 @@ test.describe('ascii brush', () => {
 		await page.selectOption('#asciiWidth', '1');
 	});
 
+	test('crossings and terminal contacts voice junctions', async ({ page }) => {
+		await drag(page, [5, 8], [20, 8]);
+		// a second stroke passing through the line reads as a crossing
+		await drag(page, [12, 4], [12, 12]);
+		expect((await readBlock(page, 12, 8)).charCode).toBe(43);
+		// a stroke rising from below and ENDING on the line takes the T
+		await drag(page, [16, 12], [16, 8]);
+		expect((await readBlock(page, 16, 8)).charCode).toBe(84);
+	});
+
 	test('one stroke is one undo step', async ({ page }) => {
 		await drag(page, [50, 5], [60, 5]);
 		expect((await readBlock(page, 55, 5)).charCode).toBe(UNDERSCORE);

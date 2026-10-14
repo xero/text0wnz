@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	createAsciiStampEngine,
+	junctionForTip,
 	mergeGlyphs,
 } from '../../src/js/core/asciiStamp.js';
 
@@ -292,8 +293,10 @@ describe('ascii stamp engine, thin style', () => {
 		expect(grid.get('3,2')).toBe(124);
 	});
 
-	it('keeps stems when a run crosses them in one stroke', () => {
-		// vertical first, then a horizontal pass through the same cell
+	it('voices a self crossing as a junction, held against rebanding', () => {
+		// vertical first, then a horizontal pass through the same cell:
+		// the shared cell takes the + and the run growing past it must
+		// not demote it back to a ramp glyph
 		const engine = createAsciiStampEngine();
 		const grid = new Map<string, number>();
 		const apply = (cells: Array<{ x: number; y: number; charCode: number }>) =>
@@ -303,7 +306,7 @@ describe('ascii stamp engine, thin style', () => {
 		apply(engine.move(0, 3, 1));
 		apply(engine.move(6, 3, 1));
 		apply(engine.end());
-		expect(grid.get('3,3')).toBe(124);
+		expect(grid.get('3,3')).toBe(43);
 	});
 });
 
@@ -469,7 +472,7 @@ describe('additive stroke contact', () => {
 
 	it('a heavier touch wins over lighter ink', () => {
 		expect(mergeGlyphs(46, 36)).toBe(36);
-		expect(mergeGlyphs(45, 124)).toBe(124);
+		expect(mergeGlyphs(46, 124)).toBe(124);
 	});
 
 	it('densifies equal weight contact', () => {
@@ -480,8 +483,68 @@ describe('additive stroke contact', () => {
 		expect(mergeGlyphs(100, 89)).toBe(36);
 	});
 
+	it('voices pass-through crossings as junctions', () => {
+		// bar through horizontal ink: + in either order
+		expect(mergeGlyphs(45, 124)).toBe(43);
+		expect(mergeGlyphs(124, 95)).toBe(43);
+		expect(mergeGlyphs(61, 124)).toBe(43);
+		expect(mergeGlyphs(126, 124)).toBe(43);
+		// diagonal through horizontal ink: %
+		expect(mergeGlyphs(45, 47)).toBe(37);
+		expect(mergeGlyphs(95, 92)).toBe(37);
+		expect(mergeGlyphs(34, 47)).toBe(37);
+	});
+
+	it('junction glyphs are sticky under repeat contact', () => {
+		expect(mergeGlyphs(43, 45)).toBe(43);
+		expect(mergeGlyphs(43, 124)).toBe(43);
+		expect(mergeGlyphs(37, 47)).toBe(37);
+		expect(mergeGlyphs(37, 95)).toBe(37);
+		expect(mergeGlyphs(88, 92)).toBe(88);
+		expect(mergeGlyphs(88, 124)).toBe(88);
+	});
+
 	it('paints over ink outside the brush vocabulary', () => {
 		expect(mergeGlyphs(65, 36)).toBe(36);
 		expect(mergeGlyphs(219, 46)).toBe(46);
+	});
+});
+
+describe('terminal joins', () => {
+	const UND = 95;
+	const SPACE = 32;
+	const tip = (
+		dx: number,
+		dy: number,
+		cls: import('../../src/js/core/asciiStamp.js').SlopeClass = 'steep',
+	) => ({ dx, dy, cls });
+
+	it('a rising tip hangs its leg below the bar', () => {
+		// Rowan's 7 fix: / climbing right into a line
+		expect(junctionForTip(tip(1, -1), UND, UND, UND)).toBe(55);
+		// mirror lean takes r
+		expect(junctionForTip(tip(-1, -1), UND, UND, UND)).toBe(114);
+		// dead vertical from below takes T
+		expect(junctionForTip(tip(0, -1, 'vertical'), UND, UND, UND)).toBe(84);
+	});
+
+	it('a falling tip hooks toward where the line continues', () => {
+		expect(junctionForTip(tip(0, 1, 'vertical'), UND, SPACE, UND)).toBe(76);
+		expect(junctionForTip(tip(0, 1, 'vertical'), UND, UND, SPACE)).toBe(74);
+		expect(junctionForTip(tip(0, 1, 'vertical'), UND, UND, UND)).toBe(43);
+		// diagonals point the hook back along their own travel
+		expect(junctionForTip(tip(1, 1), UND, UND, UND)).toBe(74);
+		expect(junctionForTip(tip(-1, 1), UND, UND, UND)).toBe(76);
+	});
+
+	it('a sideways tip against a bar takes the plus', () => {
+		expect(junctionForTip(tip(1, 0, 'shallow'), 124, SPACE, SPACE)).toBe(43);
+	});
+
+	it('grazes and empty contact stay silent', () => {
+		// parallel touch on horizontal ink is a graze, not a join
+		expect(junctionForTip(tip(1, 0, 'shallow'), UND, UND, UND)).toBe(0);
+		expect(junctionForTip(tip(1, -1), SPACE, UND, UND)).toBe(0);
+		expect(junctionForTip(tip(1, -1), 36, 36, 36)).toBe(0);
 	});
 });

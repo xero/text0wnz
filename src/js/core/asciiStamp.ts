@@ -22,6 +22,8 @@ export interface StampOut {
 	x: number;
 	y: number;
 	charCode: number;
+	/** set on the final cell of a thin stroke: terminal join context */
+	tip?: TipInfo;
 }
 
 export type SlopeClass =
@@ -47,6 +49,14 @@ const X_JUNCTION = 88; // X
 const COLON = 58; // :
 const SEMICOLON = 59; // ;
 const EQUALS = 61; // =
+const TILDE = 126; // ~
+const PLUS = 43; // +
+const PERCENT = 37; // %
+const SEVEN = 55; // 7
+const TEE = 84; // T
+const AR = 114; // r
+const EL = 76; // L
+const JAY = 74; // J
 const EDGE_D = 100; // d
 const EDGE_B = 98; // b
 const EDGE_P = 80; // P
@@ -67,6 +77,9 @@ const RANK = new Map<number, number>([
 	[VBAR, 3],
 	[SLASH, 3],
 	[BACKSLASH, 3],
+	[X_JUNCTION, 3],
+	[PLUS, 3],
+	[PERCENT, 3],
 	[DASH, 2],
 	[UNDERSCORE, 2],
 	[DQUOTE, 2],
@@ -100,10 +113,18 @@ const WEIGHT = new Map<number, number>([
 	[UNDERSCORE, 2],
 	[DQUOTE, 2],
 	[EQUALS, 2],
+	[TILDE, 2],
 	[VBAR, 3],
 	[SLASH, 3],
 	[BACKSLASH, 3],
 	[X_JUNCTION, 3],
+	[PLUS, 3],
+	[PERCENT, 3],
+	[SEVEN, 3],
+	[TEE, 3],
+	[AR, 3],
+	[EL, 3],
+	[JAY, 3],
 	[EDGE_D, 4],
 	[EDGE_B, 4],
 	[EDGE_P, 4],
@@ -120,6 +141,36 @@ const PROMOTE: Record<number, number> = {
 };
 
 /**
+ * Junction vocabulary for pass-through crossings (BRUSH.md, Rowan
+ * Crawford): a line crossing another line voices the shared cell with
+ * a glyph that points along both, instead of the heavier mark simply
+ * punching through. Bars crossing horizontals read as plus, diagonals
+ * crossing horizontals as percent, diagonals crossing bars or each
+ * other as X. Junction glyphs are sticky: repeat contact keeps them.
+ */
+const HORIZ_INK = [DASH, UNDERSCORE, EQUALS, DQUOTE, TILDE];
+
+const joinKey = (a: number, b: number) => (a < b ? (a << 8) | b : (b << 8) | a);
+
+const JOIN = new Map<number, number>();
+for (const h of HORIZ_INK) {
+	JOIN.set(joinKey(VBAR, h), PLUS);
+	JOIN.set(joinKey(SLASH, h), PERCENT);
+	JOIN.set(joinKey(BACKSLASH, h), PERCENT);
+	JOIN.set(joinKey(PLUS, h), PLUS);
+	JOIN.set(joinKey(PERCENT, h), PERCENT);
+}
+JOIN.set(joinKey(SLASH, BACKSLASH), X_JUNCTION);
+JOIN.set(joinKey(VBAR, SLASH), X_JUNCTION);
+JOIN.set(joinKey(VBAR, BACKSLASH), X_JUNCTION);
+JOIN.set(joinKey(PLUS, VBAR), PLUS);
+JOIN.set(joinKey(PERCENT, SLASH), PERCENT);
+JOIN.set(joinKey(PERCENT, BACKSLASH), PERCENT);
+JOIN.set(joinKey(X_JUNCTION, VBAR), X_JUNCTION);
+JOIN.set(joinKey(X_JUNCTION, SLASH), X_JUNCTION);
+JOIN.set(joinKey(X_JUNCTION, BACKSLASH), X_JUNCTION);
+
+/**
  * Additive contact between strokes (shading brush spirit): same glyph
  * holds, the heavier mark survives a lighter touch, and two different
  * marks of equal weight merge to a denser one (two pebbles to a
@@ -130,6 +181,10 @@ const PROMOTE: Record<number, number> = {
 export const mergeGlyphs = (existing: number, incoming: number): number => {
 	if (existing === incoming) {
 		return incoming;
+	}
+	const joined = JOIN.get(joinKey(existing, incoming));
+	if (joined !== undefined) {
+		return joined;
 	}
 	const we = WEIGHT.get(existing);
 	if (we === undefined) {
@@ -143,6 +198,71 @@ export const mergeGlyphs = (existing: number, incoming: number): number => {
 		return incoming;
 	}
 	return PROMOTE[wi];
+};
+
+/** Which line family a glyph belongs to, for terminal joins. */
+const lineInk = (c: number): 'h' | 'v' | null => {
+	if (HORIZ_INK.includes(c)) {
+		return 'h';
+	}
+	return c === VBAR ? 'v' : null;
+};
+
+export interface TipInfo {
+	/** approach direction signs over the closing window */
+	dx: number;
+	dy: number;
+	cls: SlopeClass;
+}
+
+/**
+ * Terminal joins (BRUSH.md intersections): a stroke ENDING against an
+ * existing line wants a glyph whose bar continues the line and whose
+ * leg continues the stroke, Rowan's "7" fix. Rising tips hang their
+ * leg below the bar (7 leaning right, r leaning left, T dead
+ * vertical); falling tips point the leg up and hook toward where the
+ * line continues (L right, J left, + both ways). A tip running
+ * parallel to the ink it touched is a graze, not a join; the additive
+ * merge already handles it. Returns 0 when no junction applies.
+ */
+export const junctionForTip = (
+	tip: TipInfo,
+	contact: number,
+	left: number,
+	right: number,
+): number => {
+	const ink = lineInk(contact);
+	if (ink === 'v') {
+		// a sideways tip against a bar: the bar continues both ways
+		return tip.cls === 'shallow' || tip.cls === 'horizontal' ? PLUS : 0;
+	}
+	if (ink !== 'h') {
+		return 0;
+	}
+	if (tip.cls === 'shallow' || tip.cls === 'horizontal') {
+		return 0;
+	}
+	if (tip.dy < 0) {
+		if (tip.dx === 0) {
+			return TEE;
+		}
+		return tip.dx > 0 ? SEVEN : AR;
+	}
+	if (tip.dy > 0) {
+		if (tip.dx === 0) {
+			const l = lineInk(left) === 'h';
+			const r = lineInk(right) === 'h';
+			if (l && !r) {
+				return JAY;
+			}
+			if (r && !l) {
+				return EL;
+			}
+			return PLUS;
+		}
+		return tip.dx > 0 ? JAY : EL;
+	}
+	return 0;
 };
 
 // direction window: long enough to ride out one noisy step, short
@@ -220,6 +340,18 @@ export const createAsciiStampEngine = (
 	) => {
 		const k = key(x, y);
 		const prev = stamped.get(k);
+		// self crossing: the path returning to a cell it inked long ago
+		// (outside the revisable frontier) is a genuine crossing, so the
+		// shared cell takes the junction voice; frontier revisits are the
+		// stroke revising itself and keep the newest-wins rules below
+		let joined = false;
+		if (prev !== undefined && prev !== charCode && !recentKeys.includes(k)) {
+			const j = JOIN.get(joinKey(prev, charCode));
+			if (j !== undefined) {
+				charCode = j;
+				joined = true;
+			}
+		}
 		if (prev === charCode) {
 			return;
 		}
@@ -237,9 +369,13 @@ export const createAsciiStampEngine = (
 			return;
 		}
 		stamped.set(k, charCode);
-		recentKeys.push(k);
-		if (recentKeys.length > 4) {
-			recentKeys.shift();
+		// a junction cell never rejoins the revisable frontier: the run
+		// that crossed it would reband it back down to a ramp glyph
+		if (!joined) {
+			recentKeys.push(k);
+			if (recentKeys.length > 4) {
+				recentKeys.shift();
+			}
 		}
 		out.push({ x, y, charCode });
 	};
@@ -795,6 +931,27 @@ export const createAsciiStampEngine = (
 				}
 			}
 			finishRun(out);
+			// thin terminal join: re-emit the final cell carrying the
+			// approach context, so the controller can voice a junction
+			// where the tip meets existing ink; emitted after finishRun so
+			// no later restamp in this batch shadows the junction cell
+			if (width === 1 && last && activeClass !== null && trail.length >= 2) {
+				const d = windowDelta();
+				if (d.x !== 0 || d.y !== 0) {
+					out.push({
+						x: last.x,
+						y: last.y,
+						charCode:
+							stamped.get(key(last.x, last.y)) ??
+							(subYNow === 0 ? APOSTROPHE : PERIOD),
+						tip: {
+							dx: Math.sign(d.x),
+							dy: Math.sign(d.y),
+							cls: activeClass,
+						},
+					});
+				}
+			}
 			last = null;
 			trail = [];
 			samples = [];
