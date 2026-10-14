@@ -489,7 +489,9 @@
 			@apply text-xs w-full text-center;
 		}
 		.stack {
-			@apply flex flex-col;
+			/* full height or the unshrunk icon overflows the button and
+			   shoves the label below its siblings */
+			@apply flex flex-col h-full;
 		}
 	}
 
@@ -500,9 +502,25 @@
 	#square,
 	#circle {
 		@apply flex-row gap-2;
+	}
 
+	/* inside a button the pill stacks and slims down to fit the bar */
+	#square,
+	#circle {
 		.toggleButtonContainer {
+			@apply flex-col w-auto;
 			margin: auto 0;
+			font-size: 12px;
+		}
+		.toggleButton {
+			@apply py-0 items-center;
+
+			&.left {
+				@apply border-r-2 border-b-0;
+			}
+			&.right {
+				@apply border-l-2 border-t-0;
+			}
 		}
 	}
 
