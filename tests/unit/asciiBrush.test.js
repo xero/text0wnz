@@ -281,6 +281,33 @@ describe('createAsciiBrushController', () => {
 			expect(cellAt(9, 8).charCode).toBe(46);
 		});
 
+		it('a horizontal ending under a bar end voices the corner', () => {
+			// the bar was drawn first and stops one row above the stroke,
+			// so no row probe can see it; the corner stands a J with its
+			// stem to the bar and its foot back along the line
+			State.textArtCanvas.getBlock.mockImplementation((x, y) => ({
+				charCode: x === 9 && y >= 3 && y <= 7 ? 124 : 32,
+				foregroundColor: 7,
+				backgroundColor: 0,
+			}));
+			fire('onTextCanvasDown', { x: 3, y: 8, halfBlockY: 17 });
+			fire('onTextCanvasDrag', { x: 9, y: 8, halfBlockY: 17 });
+			fire('onTextCanvasUp', {});
+			expect(cellAt(9, 8).charCode).toBe(74);
+		});
+
+		it('a horizontal ending over a bar end voices the corner too', () => {
+			State.textArtCanvas.getBlock.mockImplementation((x, y) => ({
+				charCode: x === 9 && y >= 9 && y <= 13 ? 124 : 32,
+				foregroundColor: 7,
+				backgroundColor: 0,
+			}));
+			fire('onTextCanvasDown', { x: 3, y: 8, halfBlockY: 17 });
+			fire('onTextCanvasDrag', { x: 9, y: 8, halfBlockY: 17 });
+			fire('onTextCanvasUp', {});
+			expect(cellAt(9, 8).charCode).toBe(55);
+		});
+
 		it('a crossing junction sweeps dangling taper crumbs off the line', () => {
 			// the underscore line dies at x 10; a bar crossing at x 9
 			// voices the plus and the lone trailing crumb gets swept,
