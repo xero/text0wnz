@@ -43,6 +43,10 @@ const COMMA = 44; // ,
 const APOSTROPHE = 39; // '
 const BACKTICK = 96; // `
 const FILL = 36; // $
+const X_JUNCTION = 88; // X
+const COLON = 58; // :
+const SEMICOLON = 59; // ;
+const EQUALS = 61; // =
 const EDGE_D = 100; // d
 const EDGE_B = 98; // b
 const EDGE_P = 80; // P
@@ -71,6 +75,8 @@ const RANK = new Map<number, number>([
 	[APOSTROPHE, 1],
 	[BACKTICK, 1],
 	[CARET, 1],
+	[COLON, 1],
+	[SEMICOLON, 1],
 ]);
 
 /** Long shallow runs band by position: low to high for rising rows. */
@@ -78,9 +84,7 @@ const LONG_RAMP_RISING = [UNDERSCORE, PERIOD, DASH, DQUOTE];
 
 // ------------------------------------------------- additive merging
 
-const X_JUNCTION = 88; // X
-const COLON = 58; // :
-const EQUALS = 61; // =
+
 
 /**
  * Ink weight for cross stroke contact: a touch never carves a heavier
@@ -93,6 +97,7 @@ const WEIGHT = new Map<number, number>([
 	[BACKTICK, 1],
 	[CARET, 1],
 	[COLON, 2],
+	[SEMICOLON, 2],
 	[DASH, 2],
 	[UNDERSCORE, 2],
 	[DQUOTE, 2],
@@ -760,24 +765,30 @@ export const createAsciiStampEngine = (
 				walkTo(out, samples[samples.length - 1]);
 			}
 			drain(out);
-			// roman exit flick: one deferential pebble past the final
-			// cell along the direction of travel, the pen lifting off
+			// roman exit: a two cell sputter ramp past the tapered tip,
+			// middle weight first then the light pebble, so the tip's own
+			// AA plus the ramp reads like the corpus endings (,:' rising,
+			// backtick ;, falling), never a lone quote in the void
 			if (width > 1 && last && trail.length >= 2) {
 				const d = windowDelta();
 				if (d.y !== 0) {
 					const sdx = Math.sign(d.x);
 					const sdy = Math.sign(d.y);
-					// the flick hangs off the narrow living tip, not full width
+					// the ramp hangs off the narrow living tip, not full width
 					const ext = Math.ceil((tipWidth(0) - 1) / 2) + 1;
-					const glyph =
-						sdy < 0
-							? sdx < 0
-								? BACKTICK
-								: APOSTROPHE
-							: sdx < 0
-								? COMMA
-								: PERIOD;
-					emit(out, last.x + sdx * ext, last.y + sdy, glyph);
+					const rising = sdy < 0;
+					const mid = rising ? COLON : SEMICOLON;
+					const far = rising
+						? sdx < 0
+							? BACKTICK
+							: APOSTROPHE
+						: sdx < 0
+							? COMMA
+							: PERIOD;
+					const bx = last.x + sdx * ext;
+					const by = last.y + sdy;
+					emit(out, bx, by, mid);
+					emit(out, bx + sdx, by + sdy, far);
 				}
 			}
 			finishRun(out);
