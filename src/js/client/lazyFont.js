@@ -159,47 +159,39 @@ export const createLazyFont = (
 		const key = `${charCode}-${foreground}-${scaleFactor}`;
 
 		if (!alphaGlyphCache.has(key)) {
-			if (
-				charCode === LOWER_HALF ||
-				charCode === UPPER_HALF ||
-				charCode === magicNumbers.CHAR_SLASH ||
-				charCode === magicNumbers.CHAR_PIPE ||
-				charCode === magicNumbers.CHAR_CAPITAL_X
+			const imageData = ctx.createImageData(fontData.width, fontData.height);
+
+			for (
+				let i = 0, j = charCode * fontData.width * fontData.height;
+				i < fontData.width * fontData.height;
+				i += 1, j += 1
 			) {
-				const imageData = ctx.createImageData(fontData.width, fontData.height);
-
-				for (
-					let i = 0, j = charCode * fontData.width * fontData.height;
-					i < fontData.width * fontData.height;
-					i += 1, j += 1
-				) {
-					if (bits[j] === 1) {
-						imageData.data.set(palette.getRGBAColor(foreground), i * 4);
-					}
+				if (bits[j] === 1) {
+					imageData.data.set(palette.getRGBAColor(foreground), i * 4);
 				}
+			}
 
-				const tempCanvas = createCanvas(fontData.width, fontData.height);
-				tempCanvas.getContext('2d').putImageData(imageData, 0, 0);
+			const tempCanvas = createCanvas(fontData.width, fontData.height);
+			tempCanvas.getContext('2d').putImageData(imageData, 0, 0);
 
-				if (scaleFactor === 1) {
-					alphaGlyphCache.set(key, tempCanvas);
-				} else {
-					const scaledCanvas = createCanvas(scaledWidth, scaledHeight);
-					const scaledCtx = scaledCanvas.getContext('2d');
-					scaledCtx.imageSmoothingEnabled = false;
-					scaledCtx.drawImage(
-						tempCanvas,
-						0,
-						0,
-						fontData.width,
-						fontData.height,
-						0,
-						0,
-						scaledWidth,
-						scaledHeight,
-					);
-					alphaGlyphCache.set(key, scaledCanvas);
-				}
+			if (scaleFactor === 1) {
+				alphaGlyphCache.set(key, tempCanvas);
+			} else {
+				const scaledCanvas = createCanvas(scaledWidth, scaledHeight);
+				const scaledCtx = scaledCanvas.getContext('2d');
+				scaledCtx.imageSmoothingEnabled = false;
+				scaledCtx.drawImage(
+					tempCanvas,
+					0,
+					0,
+					fontData.width,
+					fontData.height,
+					0,
+					0,
+					scaledWidth,
+					scaledHeight,
+				);
+				alphaGlyphCache.set(key, scaledCanvas);
 			}
 		}
 
@@ -324,19 +316,14 @@ export const createLazyFont = (
 		 * @param {number} y - Y coordinate in character grid
 		 */
 		drawWithAlpha: (charCode, foreground, drawCtx, x, y) => {
-			// Use fallback character (X) if requested character has no alpha glyph
-			const effectiveCharCode = getAlphaGlyph(charCode, foreground)
-				? charCode
-				: magicNumbers.CHAR_CAPITAL_X;
-
-			const canvasToUse = getAlphaGlyph(effectiveCharCode, foreground);
+			const canvasToUse = getAlphaGlyph(charCode, foreground);
 
 			if (letterSpacing) {
 				const effectiveWidth = scaledWidth + Math.floor(1 * scaleFactor);
 				drawCtx.drawImage(canvasToUse, x * effectiveWidth, y * scaledHeight);
 
 				// 0xC0-0xDF extend into the ninth column (VGA rule)
-				if (effectiveCharCode >= 192 && effectiveCharCode <= 223) {
+				if (charCode >= 192 && charCode <= 223) {
 					drawCtx.drawImage(
 						canvasToUse,
 						scaledWidth - 1,

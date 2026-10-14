@@ -198,10 +198,20 @@
 					</div>
 					<div id="shapesToolbar">
 						<div id="line" class="toolButton">
-							<svg alt="Line" aria-label="Line">
-								<use href="img/icons.svg#line"></use>
-							</svg>
-							<kbd>Line</kbd>
+							<span class="stack">
+								<svg alt="Line" aria-label="Line">
+									<use href="img/icons.svg#line"></use>
+								</svg>
+								<kbd>Line</kbd>
+							</span>
+							<div id="lMode">
+								<label for="lineMode">Mode</label>
+								<select id="lineMode">
+									<option value="block" selected>Block</option>
+									<option value="ascii">Ascii</option>
+									<option value="amiga">Amiga</option>
+								</select>
+							</div>
 						</div>
 						<div id="square" class="toolButton">
 							<span class="stack">

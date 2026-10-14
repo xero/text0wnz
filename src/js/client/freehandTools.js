@@ -7,7 +7,8 @@ import {
 } from './ui.js';
 import Toolbar from './toolbar.js';
 import magicNumbers from './magicNumbers.js';
-import { cellInRange } from '../core/index';
+import { cellInRange, createAsciiStampEngine } from '../core/index';
+import { createAsciiStrokePainter } from './asciiBrush.js';
 
 const createPanelCursor = el => {
 	const cursor = createCanvas(0, 0);
@@ -1192,8 +1193,18 @@ const createShapesController = () => {
 const createLineController = () => {
 	const panel = $('shapesToolbar');
 	const nav = $('shapes');
+	const modeMenu = $('lMode');
+	const modeSelect = $('lineMode');
+	const painter = createAsciiStrokePainter();
 	let startXY;
 	let endXY;
+
+	// the mode config lives inside the tool button; a tap on it must
+	// not bubble into the button's click handler
+	modeMenu.addEventListener('click', e => e.stopPropagation());
+
+	const asciiMode = () =>
+		modeSelect.value === 'ascii' || modeSelect.value === 'amiga';
 
 	const canvasDown = e => {
 		startXY = e.detail;
@@ -1224,23 +1235,54 @@ const createLineController = () => {
 		}
 	};
 
+	// the straight path replayed as a synthetic brush stroke: dense
+	// Bresenham samples keep the engine on its straight walk, so the
+	// same endpoints always voice the same glyphs and the ghost is
+	// exactly what a commit produces
+	const asciiLineCells = (x0, y0, x1, y1) => {
+		const engine = createAsciiStampEngine({ width: modeSelect.value === 'amiga' ? 2 : 1 });
+		const out = [];
+		let begun = false;
+		line(x0, y0, x1, y1, (x, hb) => {
+			const cells = begun
+				? engine.move(x, Math.floor(hb / 2), hb % 2)
+				: engine.begin(x, Math.floor(hb / 2), hb % 2);
+			begun = true;
+			out.push(...cells);
+		});
+		out.push(...engine.end());
+		return out;
+	};
+
 	const canvasUp = () => {
 		if (startXY) {
 			State.toolPreview.clear();
-			const foreground = State.palette.getForegroundColor();
+			const endPoint = endXY || startXY;
 			State.textArtCanvas.startUndo();
-			State.textArtCanvas.drawHalfBlock(draw => {
-				const endPoint = endXY || startXY;
-				line(
-					startXY.x,
-					startXY.halfBlockY,
-					endPoint.x,
-					endPoint.halfBlockY,
-					(lineX, lineY) => {
-						draw(foreground, lineX, lineY);
-					},
+			if (asciiMode()) {
+				painter.begin();
+				painter.commit(
+					asciiLineCells(
+						startXY.x,
+						startXY.halfBlockY,
+						endPoint.x,
+						endPoint.halfBlockY,
+					),
 				);
-			});
+			} else {
+				const foreground = State.palette.getForegroundColor();
+				State.textArtCanvas.drawHalfBlock(draw => {
+					line(
+						startXY.x,
+						startXY.halfBlockY,
+						endPoint.x,
+						endPoint.halfBlockY,
+						(lineX, lineY) => {
+							draw(foreground, lineX, lineY);
+						},
+					);
+				});
+			}
 			startXY = undefined;
 			endXY = undefined;
 		}
@@ -1264,22 +1306,38 @@ const createLineController = () => {
 					State.toolPreview.clear();
 				}
 				endXY = e.detail;
-				const foreground = State.palette.getForegroundColor();
-				line(
-					startXY.x,
-					startXY.halfBlockY,
-					endXY.x,
-					endXY.halfBlockY,
-					(lineX, lineY) => {
-						State.toolPreview.drawHalfBlock(foreground, lineX, lineY);
-					},
-				);
+				if (asciiMode()) {
+					painter.begin();
+					const ghost = painter.preview(
+						asciiLineCells(
+							startXY.x,
+							startXY.halfBlockY,
+							endXY.x,
+							endXY.halfBlockY,
+						),
+					);
+					for (const g of ghost) {
+						State.toolPreview.drawGlyph(g.charCode, g.fg, g.x, g.y);
+					}
+				} else {
+					const foreground = State.palette.getForegroundColor();
+					line(
+						startXY.x,
+						startXY.halfBlockY,
+						endXY.x,
+						endXY.halfBlockY,
+						(lineX, lineY) => {
+							State.toolPreview.drawHalfBlock(foreground, lineX, lineY);
+						},
+					);
+				}
 			}
 		}
 	};
 
 	const enable = () => {
 		panel.style.display = 'flex';
+		modeMenu.style.display = 'flex';
 		nav.classList.add('enabled');
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);
@@ -1288,6 +1346,7 @@ const createLineController = () => {
 
 	const disable = () => {
 		panel.style.display = 'none';
+		modeMenu.style.display = 'none';
 		nav.classList.remove('enabled');
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);

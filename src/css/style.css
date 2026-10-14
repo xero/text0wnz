@@ -295,6 +295,7 @@
 
 	#aSize,
 	#aWidth,
+	#lMode,
 	#chatIconCloseText {
 		@apply hidden;
 	}
@@ -499,6 +500,7 @@
 	   the active highlight beside the icon and label */
 	#asciiBrush,
 	#attrib,
+	#line,
 	#square,
 	#circle {
 		@apply flex-row gap-2;
@@ -643,7 +645,8 @@
 	}
 
 	#aSize,
-	#aWidth {
+	#aWidth,
+	#lMode {
 		@apply flex-col;
 		label {
 			@apply text-xs text-fg text-left pl-[4px] pt-[2px];
