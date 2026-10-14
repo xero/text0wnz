@@ -40,8 +40,10 @@ const createAsciiStrokePainter = () => {
 	// probe forgives a near miss by one cell on either side. meta is
 	// the approach: the tip's own for endings, the negated departure
 	// for a stroke that STARTED against the line. allowBack enables
-	// snap-back, which only makes sense at the tip: behind the root
-	// lies the stroke body, not a whisker
+	// snap-back for both ends: one step behind in meta terms is the
+	// crossed cell, which for the root is the stroke's second cell, so
+	// a touch down that overshot through a line by one leaves no
+	// whisker either
 	const tipJunction = (cell, meta, allowBack, fg, draw, columns, rows) => {
 		const { dx, dy } = meta;
 		const joinAt = (jx, jy) => {
@@ -117,7 +119,7 @@ const createAsciiStrokePainter = () => {
 				tipJunction(
 					cell,
 					{ dx: -cell.root.dx, dy: -cell.root.dy, cls: cell.root.cls },
-					false,
+					true,
 					fg,
 					draw,
 					columns,

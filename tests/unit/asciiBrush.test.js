@@ -227,6 +227,25 @@ describe('createAsciiBrushController', () => {
 			expect(cellAt(10, 9).charCode).toBe(32);
 		});
 
+		it('the begin side snaps back a one cell overshoot too', () => {
+			// touch down one cell past the line and draw away from it;
+			// the crossed second cell takes the join and the start cell
+			// comes back off the canvas
+			fire('onTextCanvasDown', { x: 10, y: 9, halfBlockY: 19 });
+			fire('onTextCanvasDrag', { x: 4, y: 3, halfBlockY: 7 });
+			fire('onTextCanvasUp', {});
+			expect(cellAt(10, 9).charCode).toBe(32);
+			expect(cellAt(9, 8).charCode).toBe(74);
+		});
+
+		it('a begin two cells past the line stays a deliberate crossing', () => {
+			fire('onTextCanvasDown', { x: 11, y: 10, halfBlockY: 21 });
+			fire('onTextCanvasDrag', { x: 4, y: 3, halfBlockY: 7 });
+			fire('onTextCanvasUp', {});
+			expect(cellAt(10, 9).charCode).toBe(92);
+			expect(cellAt(9, 8).charCode).toBe(37);
+		});
+
 		it('two cells past the line stays a deliberate crossing', () => {
 			fire('onTextCanvasDown', { x: 4, y: 3, halfBlockY: 7 });
 			fire('onTextCanvasDrag', { x: 11, y: 10, halfBlockY: 21 });
