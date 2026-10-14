@@ -99,11 +99,27 @@ test.describe('ascii brush', () => {
 		await page.selectOption('#asciiWidth', '5');
 		await drag(page, [40, 18], [40, 23]);
 		// a width five vertical is a solid five column fill ribbon
-		for (let y = 19; y <= 22; y++) {
+		for (let y = 19; y <= 21; y++) {
 			for (let x = 38; x <= 42; x++) {
 				expect((await readBlock(page, x, y)).charCode).toBe(36);
 			}
 		}
+		// the live tip taper narrows the last rows toward the exit, so
+		// the ribbon stays continuous but sheds columns monotonically
+		const fills = async y => {
+			let n = 0;
+			for (let x = 36; x <= 44; x++) {
+				if ((await readBlock(page, x, y)).charCode === 36) {
+					n++;
+				}
+			}
+			return n;
+		};
+		expect((await readBlock(page, 40, 22)).charCode).toBe(36);
+		const tail = await fills(23);
+		expect(tail).toBeGreaterThan(0);
+		expect(await fills(22)).toBeLessThan(5);
+		expect(tail).toBeLessThan(await fills(22));
 		await page.selectOption('#asciiWidth', '1');
 		await drag(page, [50, 18], [50, 23]);
 		expect((await readBlock(page, 50, 20)).charCode).toBe(124);

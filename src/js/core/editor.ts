@@ -540,7 +540,11 @@ export const createEditorCore = (
 			// stays consistent through the same packWord projection
 			const frame = doc.frames[currentFrame];
 			for (const { index, glyph, fg, bg } of cells) {
-				if (!Number.isInteger(index) || index < 0 || index >= frame.glyph.length) {
+				if (
+					!Number.isInteger(index) ||
+					index < 0 ||
+					index >= frame.glyph.length
+				) {
 					continue;
 				}
 				frame.glyph[index] = glyph >>> 0;
