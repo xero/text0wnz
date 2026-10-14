@@ -51,7 +51,6 @@ const COMMA = 44; // ,
 const APOSTROPHE = 39; // '
 const BACKTICK = 96; // `
 const FILL = 36; // $
-const HASH = 35; // #
 const X_JUNCTION = 88; // X
 const COLON = 58; // :
 const SEMICOLON = 59; // ;
@@ -137,8 +136,6 @@ const WEIGHT = new Map<number, number>([
 	[EDGE_P, 4],
 	[EDGE_Y, 4],
 	[FILL, 5],
-	// the woven knot outweighs fill so repeat contact keeps it
-	[HASH, 6],
 ]);
 
 const PROMOTE: Record<number, number> = {
@@ -239,13 +236,6 @@ export const isLightInk = (c: number): boolean => (WEIGHT.get(c) ?? 0) <= 2;
  * paints.
  */
 export const mergeGlyphs = (existing: number, incoming: number): number => {
-	// cross stroke fill on fill weaves a dither knot, SAUNA's #S#
-	// joints, instead of a solid union; only the painter consults this
-	// path, so a stroke crossing itself still unions solid through the
-	// engine's rank table
-	if (existing === FILL && incoming === FILL) {
-		return HASH;
-	}
 	if (existing === incoming) {
 		return incoming;
 	}
