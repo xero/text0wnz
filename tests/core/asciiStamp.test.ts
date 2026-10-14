@@ -476,7 +476,16 @@ describe('ascii stamp engine, roman ribbon', () => {
 
 describe('additive stroke contact', () => {
 	it('holds the same glyph', () => {
-		expect(mergeGlyphs(36, 36)).toBe(36);
+		expect(mergeGlyphs(45, 45)).toBe(45);
+		expect(mergeGlyphs(124, 124)).toBe(124);
+	});
+
+	it('weaves a dither knot where two fills cross', () => {
+		// SAUNA's #S# joints: cross stroke fill never unions solid, and
+		// the knot holds under repeat contact
+		expect(mergeGlyphs(36, 36)).toBe(35);
+		expect(mergeGlyphs(35, 36)).toBe(35);
+		expect(mergeGlyphs(36, 35)).toBe(35);
 	});
 
 	it('never carves a heavier mark', () => {
