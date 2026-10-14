@@ -50,6 +50,14 @@ const MIRROR_CHARS = new Map<number, number>([
 	[62, 60],
 	[57, 80], // 9 P
 	[80, 57],
+	// ascii brush junction glyphs: hooks and leans swap sides
+	[74, 76], // J L
+	[76, 74],
+	[55, 114], // 7 r
+	[114, 55],
+	// roman ribbon chisels
+	[100, 98], // d b
+	[98, 100],
 ]);
 
 export const mirrorCharCode = (charCode: number): number =>

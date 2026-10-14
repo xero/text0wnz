@@ -39,6 +39,11 @@ describe('cellops', () => {
 		expect(mirrorCharCode(40)).toBe(41);
 		expect(mirrorCharCode(92)).toBe(47);
 		expect(mirrorCharCode(57)).toBe(80); // 9 <-> P
+		expect(mirrorCharCode(74)).toBe(76); // J <-> L
+		expect(mirrorCharCode(76)).toBe(74);
+		expect(mirrorCharCode(55)).toBe(114); // 7 <-> r
+		expect(mirrorCharCode(114)).toBe(55);
+		expect(mirrorCharCode(100)).toBe(98); // d <-> b
 		expect(mirrorCharCode(65)).toBe(65);
 		// odd canvas: the center column has no mirror
 		expect(mirrorX(81, 40)).toBe(-1);
