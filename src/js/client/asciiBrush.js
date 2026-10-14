@@ -12,7 +12,8 @@ const createAsciiBrushController = () => {
 	let stroking = false;
 	// what each touched cell held BEFORE this stroke: additive contact
 	// merges against that, never against our own live revisions, or a
-	// revised cell would escalate against itself
+	// revised cell would escalate against itself; the full block is
+	// kept so snap-back can restore a whisker cell faithfully
 	const strokeOriginals = new Map();
 	const bar = $('brushToolbar');
 	const nav = $('brushes');
@@ -33,26 +34,21 @@ const createAsciiBrushController = () => {
 		const held = strokeOriginals.get(y * 65536 + x);
 		return held === undefined
 			? State.textArtCanvas.getBlock(x, y).charCode
-			: held;
+			: held.charCode;
 	};
 
 	// a stroke ending against a line voices the contact as a junction
-	// glyph; the junction may sit on the tip cell itself or one cell
-	// past it, where the path would have continued into the line. meta
-	// is the approach: the tip's own for endings, the negated departure
-	// for a stroke that STARTED against the line
-	const tipJunction = (cell, meta, fg, draw, columns, rows) => {
+	// glyph; at 1x zoom the pen rarely stops on the exact cell, so the
+	// probe forgives a near miss by one cell on either side. meta is
+	// the approach: the tip's own for endings, the negated departure
+	// for a stroke that STARTED against the line. allowBack enables
+	// snap-back, which only makes sense at the tip: behind the root
+	// lies the stroke body, not a whisker
+	const tipJunction = (cell, meta, allowBack, fg, draw, columns, rows) => {
 		const { dx, dy } = meta;
-		const candidates = [
-			[cell.x, cell.y],
-			[cell.x + dx, cell.y + dy],
-		];
-		if (dx !== 0 && dy !== 0) {
-			candidates.push([cell.x, cell.y + dy]);
-		}
-		for (const [jx, jy] of candidates) {
+		const joinAt = (jx, jy) => {
 			if (!cellInRange(jx, jy, columns, rows)) {
-				continue;
+				return false;
 			}
 			const glyph = junctionForTip(
 				meta,
@@ -60,11 +56,49 @@ const createAsciiBrushController = () => {
 				originalAt(jx - 1, jy, columns, rows),
 				originalAt(jx + 1, jy, columns, rows),
 			);
-			if (glyph !== 0) {
-				const bg = State.textArtCanvas.getBlock(jx, jy).backgroundColor;
-				draw(glyph, fg, bg, jx, jy);
+			if (glyph === 0) {
+				return false;
+			}
+			const bg = State.textArtCanvas.getBlock(jx, jy).backgroundColor;
+			draw(glyph, fg, bg, jx, jy);
+			return true;
+		};
+		// the stroke ended on the line itself
+		if (joinAt(cell.x, cell.y)) {
+			return true;
+		}
+		// snap-back: overshot by exactly one cell; the crossed cell one
+		// step behind the tip becomes the join and the whisker cell is
+		// restored to what it held before the stroke. two or more cells
+		// past stays a deliberate crossing
+		if (allowBack) {
+			const held = strokeOriginals.get((cell.y - dy) * 65536 + (cell.x - dx));
+			if (held !== undefined && joinAt(cell.x - dx, cell.y - dy)) {
+				const tip = strokeOriginals.get(cell.y * 65536 + cell.x);
+				if (tip !== undefined) {
+					draw(tip.charCode, tip.fg, tip.bg, cell.x, cell.y);
+				}
 				return true;
 			}
+		}
+		// stopped one short: join where the path would have continued
+		if (joinAt(cell.x + dx, cell.y + dy)) {
+			return true;
+		}
+		if (dx !== 0 && dy !== 0 && joinAt(cell.x, cell.y + dy)) {
+			return true;
+		}
+		// stopped two short with a clean gap: bridge the blank cell with
+		// the stroke's own leg glyph so the join connects
+		const mid = originalAt(cell.x + dx, cell.y + dy, columns, rows);
+		if ((mid === 0 || mid === 32) && joinAt(cell.x + 2 * dx, cell.y + 2 * dy)) {
+			const leg = dx === 0 ? 124 : dx * dy > 0 ? 92 : dy === 0 ? 95 : 47;
+			const bg = State.textArtCanvas.getBlock(
+				cell.x + dx,
+				cell.y + dy,
+			).backgroundColor;
+			draw(leg, fg, bg, cell.x + dx, cell.y + dy);
+			return true;
 		}
 		return false;
 	};
@@ -80,7 +114,10 @@ const createAsciiBrushController = () => {
 		const rows = State.textArtCanvas.getRows();
 		State.textArtCanvas.draw(draw => {
 			for (const cell of cells) {
-				if (cell.tip && tipJunction(cell, cell.tip, fg, draw, columns, rows)) {
+				if (
+					cell.tip &&
+					tipJunction(cell, cell.tip, true, fg, draw, columns, rows)
+				) {
 					continue;
 				}
 				if (
@@ -88,6 +125,7 @@ const createAsciiBrushController = () => {
 					tipJunction(
 						cell,
 						{ dx: -cell.root.dx, dy: -cell.root.dy, cls: cell.root.cls },
+						false,
 						fg,
 						draw,
 						columns,
@@ -107,11 +145,15 @@ const createAsciiBrushController = () => {
 				const key = cell.y * 65536 + cell.x;
 				let original = strokeOriginals.get(key);
 				if (original === undefined) {
-					original = block.charCode;
+					original = {
+						charCode: block.charCode,
+						fg: block.foregroundColor,
+						bg: block.backgroundColor,
+					};
 					strokeOriginals.set(key, original);
 				}
 				draw(
-					mergeGlyphs(original, cell.charCode),
+					mergeGlyphs(original.charCode, cell.charCode),
 					fg,
 					block.backgroundColor,
 					cell.x,
