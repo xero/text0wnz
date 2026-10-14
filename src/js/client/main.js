@@ -432,6 +432,36 @@ const fetchTutorial = async url => {
 
 const isIOS = (/iPad|iPhone|iPod/).test(navigator.userAgent);
 
+// dvh tracks Safari's url bar but not the fullscreen title bar: that
+// chrome shrinks the window while the layout viewport, dvh, and even
+// innerHeight go stale, leaving pannable slack above the header. the
+// visualViewport is the one honest height, so it feeds the body
+// sizing var, and a pan that settles off origin snaps back flush.
+// not gated on isIOS: iPadOS masquerades as macOS in its default
+// desktop-site mode, and elsewhere this is a no-op
+const lockVisualViewport = () => {
+	const vv = window.visualViewport;
+	if (!vv) {
+		return;
+	}
+	let settle = 0;
+	const apply = () => {
+		if (vv.scale !== 1) {
+			return;
+		}
+		htmlDoc.style.setProperty('--app-height', `${vv.height}px`);
+		clearTimeout(settle);
+		settle = setTimeout(() => {
+			if (vv.scale === 1 && (vv.pageTop !== 0 || vv.offsetTop !== 0)) {
+				window.scrollTo(0, 0);
+			}
+		}, 150);
+	};
+	vv.addEventListener('resize', apply);
+	vv.addEventListener('scroll', apply);
+	apply();
+};
+
 const handleIOS = () => {
 	const isWindowed =
 		window.navigator.standalone ||
@@ -629,6 +659,7 @@ const initializeAppComponents = async () => {
 		document.addEventListener('webkitfullscreenchange', handleIOS);
 		window.addEventListener('resize', handleIOS);
 	}
+	lockVisualViewport();
 
 	document.addEventListener('keydown', undoAndRedo);
 	createResolutionController(
