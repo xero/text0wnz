@@ -1507,9 +1507,11 @@ const createSquareController = () => {
 			return cells;
 		}
 		// thin: edges run between the corner cells and the corner glyphs
-		// land last so they win their cells
+		// land last so they win their cells. the top edge always rides
+		// the upper half: an underscore top hangs its ink at the row's
+		// bottom, detached from the period shoulders
 		if (x1 - 1 >= x0 + 1) {
-			cells.push(...shapeStrokeCells(hPathPoints(x0 + 1, x1 - 1, y0), 1));
+			cells.push(...shapeStrokeCells(hPathPoints(x0 + 1, x1 - 1, cy0 * 2), 1));
 			if (cy1 !== cy0) {
 				cells.push(...shapeStrokeCells(hPathPoints(x0 + 1, x1 - 1, y1), 1));
 			}

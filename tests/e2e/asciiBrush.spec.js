@@ -264,13 +264,13 @@ test.describe('shape tool brush modes', () => {
 		await page.locator('#square').click();
 		await page.selectOption('#squareMode', 'ascii');
 		await pacedDrag(page, [5, 5], [20, 12]);
-		// period shoulders up top, backtick and quote feet below,
-		// underscore edges, bar sides
+		// period shoulders over a dash top edge, backtick and quote
+		// feet below, underscore bottom, bar sides
 		expect((await readBlock(page, 5, 5)).charCode).toBe(PERIOD);
 		expect((await readBlock(page, 20, 5)).charCode).toBe(PERIOD);
 		expect((await readBlock(page, 5, 12)).charCode).toBe(96);
 		expect((await readBlock(page, 20, 12)).charCode).toBe(39);
-		expect((await readBlock(page, 10, 5)).charCode).toBe(UNDERSCORE);
+		expect((await readBlock(page, 10, 5)).charCode).toBe(45);
 		expect((await readBlock(page, 10, 12)).charCode).toBe(UNDERSCORE);
 		expect((await readBlock(page, 5, 8)).charCode).toBe(VBAR);
 		expect((await readBlock(page, 20, 8)).charCode).toBe(VBAR);
@@ -358,7 +358,7 @@ test.describe('shape tool brush modes', () => {
 		await page.locator('#square').click();
 		await page.selectOption('#squareMode', 'ascii');
 		await pacedDrag(page, [5, 16], [15, 20]);
-		expect((await readBlock(page, 10, 16)).charCode).toBe(UNDERSCORE);
+		expect((await readBlock(page, 10, 16)).charCode).toBe(45);
 		await page.keyboard.press('Control+z');
 		for (let y = 16; y <= 20; y++) {
 			for (let x = 5; x <= 15; x++) {
