@@ -505,6 +505,13 @@ export const createAsciiStampEngine = (
 		if (recentLens.length === 0) {
 			return len;
 		}
+		// a single closed row is only the entry: a partial band cut
+		// wherever the pen landed, as short as one cell, so trusting it
+		// alone starves a long second row into the unbanded dash blob;
+		// the closing row itself is the better witness of the two
+		if (recentLens.length === 1) {
+			return Math.max(recentLens[0], len);
+		}
 		const sorted = [...recentLens].sort((a, b) => a - b);
 		return sorted[Math.floor(sorted.length / 2)];
 	};
@@ -591,12 +598,7 @@ export const createAsciiStampEngine = (
 	const finishRun = (out: StampOut[], exit = 0) => {
 		restampRun(out, exit);
 		if (run && run.xs.length > 0) {
-			// a row entered by a vertical step is a full band and votes
-			// its length; the entry row and reversal splits are partial
-			// bands (the pen lands or turns mid row), half the true
-			// rhythm on average, so they vote doubled, or a long second
-			// row starves into the unbanded dash blob
-			recentLens.push(run.entry !== 0 ? run.xs.length : run.xs.length * 2);
+			recentLens.push(run.xs.length);
 			if (recentLens.length > 3) {
 				recentLens.shift();
 			}
