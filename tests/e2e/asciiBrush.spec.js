@@ -147,12 +147,13 @@ test.describe('ascii brush', () => {
 		// a second stroke passing through the line reads as a crossing
 		await drag(page, [12, 4], [12, 12]);
 		expect((await readBlock(page, 12, 8)).charCode).toBe(43);
-		// a stroke rising from below and ENDING on the line takes the T
+		// a stroke rising from below and ENDING on the underscore line
+		// knots with a period: underscore ink hugs the cell bottom
 		await drag(page, [16, 12], [16, 8]);
-		expect((await readBlock(page, 16, 8)).charCode).toBe(84);
+		expect((await readBlock(page, 16, 8)).charCode).toBe(PERIOD);
 		// and one STARTING mid line and dropping away joins the same way
 		await drag(page, [18, 8], [18, 12]);
-		expect((await readBlock(page, 18, 8)).charCode).toBe(84);
+		expect((await readBlock(page, 18, 8)).charCode).toBe(PERIOD);
 		// a diagonal overshooting the line by one cell snaps back: the
 		// crossing cell takes the hook, the whisker comes off
 		await drag(page, [7, 5], [11, 9]);

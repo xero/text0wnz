@@ -136,6 +136,23 @@ const createAsciiStrokePainter = () => {
 		if (dx !== 0 && dy !== 0 && joinAt(cell.x, cell.y + dy)) {
 			return true;
 		}
+		// corner joins: a horizontal stroke meeting a bar that ends one
+		// row above or below its endpoint never sees it through the row
+		// probes; the corner glyph stands its stem toward the bar with
+		// the foot back along the stroke
+		if (dy === 0 && dx !== 0 && cellInRange(cell.x, cell.y, columns, rows)) {
+			const above = originalAt(cell.x, cell.y - 1, columns, rows) === 124;
+			const below = originalAt(cell.x, cell.y + 1, columns, rows) === 124;
+			if (above !== below) {
+				const glyph = above ? (dx > 0 ? 74 : 76) : dx > 0 ? 55 : 114;
+				const bg = State.textArtCanvas.getBlock(
+					cell.x,
+					cell.y,
+				).backgroundColor;
+				draw(glyph, fg, bg, cell.x, cell.y);
+				return true;
+			}
+		}
 		// stopped two short with a clean gap: bridge the blank cell with
 		// the stroke's own leg glyph so the join connects
 		const mid = originalAt(cell.x + dx, cell.y + dy, columns, rows);
