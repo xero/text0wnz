@@ -185,7 +185,19 @@ describe('createAsciiBrushController', () => {
 			expect(cellAt(9, 8).charCode).toBe(43);
 		});
 
-		it('a rising vertical from below takes the T', () => {
+		it('a rising vertical knots an underscore line with a period', () => {
+			fire('onTextCanvasDown', { x: 9, y: 12, halfBlockY: 25 });
+			fire('onTextCanvasDrag', { x: 9, y: 8, halfBlockY: 17 });
+			fire('onTextCanvasUp', {});
+			expect(cellAt(9, 8).charCode).toBe(46);
+		});
+
+		it('a rising vertical onto a dash line still takes the T', () => {
+			State.textArtCanvas.getBlock.mockImplementation((x, y) => ({
+				charCode: y === 8 && x >= 5 ? 45 : 32,
+				foregroundColor: 7,
+				backgroundColor: 0,
+			}));
 			fire('onTextCanvasDown', { x: 9, y: 12, halfBlockY: 25 });
 			fire('onTextCanvasDrag', { x: 9, y: 8, halfBlockY: 17 });
 			fire('onTextCanvasUp', {});
@@ -196,24 +208,22 @@ describe('createAsciiBrushController', () => {
 			fire('onTextCanvasDown', { x: 2, y: 12, halfBlockY: 25 });
 			fire('onTextCanvasDrag', { x: 6, y: 9, halfBlockY: 19 });
 			fire('onTextCanvasUp', {});
-			// the 7 lands one cell past the tip, on the line itself
-			expect(cellAt(7, 8).charCode).toBe(55);
+			// the knot lands one cell past the tip, on the line itself
+			expect(cellAt(7, 8).charCode).toBe(46);
 		});
 
-		it('a stroke starting mid line and dropping away takes the T', () => {
+		it('a stroke starting mid underscore line knots a period', () => {
 			fire('onTextCanvasDown', { x: 9, y: 8, halfBlockY: 17 });
 			fire('onTextCanvasDrag', { x: 9, y: 12, halfBlockY: 25 });
 			fire('onTextCanvasUp', {});
-			expect(cellAt(9, 8).charCode).toBe(84);
+			expect(cellAt(9, 8).charCode).toBe(46);
 		});
 
-		it('a stroke starting on the line end leans the bar along it', () => {
-			// departure straight down from the line's left end: the bar
-			// continues right only, so the junction reads r
+		it('a stroke starting on an underscore line end knots a period', () => {
 			fire('onTextCanvasDown', { x: 5, y: 8, halfBlockY: 17 });
 			fire('onTextCanvasDrag', { x: 5, y: 12, halfBlockY: 25 });
 			fire('onTextCanvasUp', {});
-			expect(cellAt(5, 8).charCode).toBe(114);
+			expect(cellAt(5, 8).charCode).toBe(46);
 		});
 
 		it('snaps back a one cell overshoot into a terminal join', () => {
@@ -268,7 +278,24 @@ describe('createAsciiBrushController', () => {
 			fire('onTextCanvasDrag', { x: 9, y: 14, halfBlockY: 29 });
 			fire('onTextCanvasUp', {});
 			expect(cellAt(9, 9).charCode).toBe(124);
-			expect(cellAt(9, 8).charCode).toBe(84);
+			expect(cellAt(9, 8).charCode).toBe(46);
+		});
+
+		it('a crossing junction sweeps dangling taper crumbs off the line', () => {
+			// the underscore line dies at x 10; a bar crossing at x 9
+			// voices the plus and the lone trailing crumb gets swept,
+			// while the long side of the line stays
+			State.textArtCanvas.getBlock.mockImplementation((x, y) => ({
+				charCode: y === 8 && x >= 5 && x <= 10 ? 95 : 32,
+				foregroundColor: 7,
+				backgroundColor: 0,
+			}));
+			fire('onTextCanvasDown', { x: 9, y: 4, halfBlockY: 9 });
+			fire('onTextCanvasDrag', { x: 9, y: 12, halfBlockY: 25 });
+			fire('onTextCanvasUp', {});
+			expect(cellAt(9, 8).charCode).toBe(43);
+			expect(cellAt(10, 8).charCode).toBe(32);
+			expect(cellAt(8, 8)).toBeUndefined();
 		});
 	});
 });
