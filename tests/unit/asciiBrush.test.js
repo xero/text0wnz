@@ -195,5 +195,21 @@ describe('createAsciiBrushController', () => {
 			// the 7 lands one cell past the tip, on the line itself
 			expect(cellAt(7, 8).charCode).toBe(55);
 		});
+
+		it('a stroke starting mid line and dropping away takes the T', () => {
+			fire('onTextCanvasDown', { x: 9, y: 8, halfBlockY: 17 });
+			fire('onTextCanvasDrag', { x: 9, y: 12, halfBlockY: 25 });
+			fire('onTextCanvasUp', {});
+			expect(cellAt(9, 8).charCode).toBe(84);
+		});
+
+		it('a stroke starting on the line end leans the bar along it', () => {
+			// departure straight down from the line's left end: the bar
+			// continues right only, so the junction reads r
+			fire('onTextCanvasDown', { x: 5, y: 8, halfBlockY: 17 });
+			fire('onTextCanvasDrag', { x: 5, y: 12, halfBlockY: 25 });
+			fire('onTextCanvasUp', {});
+			expect(cellAt(5, 8).charCode).toBe(114);
+		});
 	});
 });
