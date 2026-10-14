@@ -364,6 +364,12 @@ export interface AsciiStampEngine {
 
 export interface AsciiStampOptions {
 	width?: number;
+	/**
+	 * Calligraphic ends: the exit sputter ramp past the tip and the
+	 * tapered final rows. On for freehand strokes; a ruled line turns
+	 * it off and ends square at full weight.
+	 */
+	swoop?: boolean;
 }
 
 export const createAsciiStampEngine = (
@@ -372,6 +378,7 @@ export const createAsciiStampEngine = (
 	const clampWidth = (w: number) =>
 		Math.max(1, Math.min(9, Math.round(w) || 1));
 	let width = clampWidth(options.width ?? 1);
+	const swoop = options.swoop ?? true;
 	let last: Cell | null = null;
 	let trail: Cell[] = [];
 	/** newest path cell, held until its successor resolves it */
@@ -491,10 +498,18 @@ export const createAsciiStampEngine = (
 		return 'shallow';
 	};
 
+	/** slope sign at the last row step, for windows gone flat */
+	let lastFall = false;
+
 	/** True when the stroke falls to the right (y grows as x grows). */
 	const falling = (): boolean => {
 		const d = windowDelta();
-		return d.x === 0 ? false : d.x * d.y > 0;
+		if (d.x !== 0 && d.y !== 0) {
+			return d.x * d.y > 0;
+		}
+		// the window flattens inside long rows and tall columns, but the
+		// last row step still knows the slope
+		return rowSteps > 0 ? lastFall : false;
 	};
 
 	/**
@@ -753,20 +768,64 @@ export const createAsciiStampEngine = (
 		const rext = Math.ceil((w - 1) / 2);
 		const lo = s.min - lext;
 		const hi = s.max + rext;
-		const [left, right] = ribbonEdges(s.cls, s.fall);
+		let [left, right] = ribbonEdges(s.cls, s.fall);
+		// a long flat row dresses only the ends that step to another
+		// row, with the colon density bridge; the stroke's tips stay
+		// bare fill, and a bowl or cap row, whose two ends connect the
+		// same way, stays solid like the corpus
+		let dressLeft = false;
+		let dressRight = false;
+		if (s.cls === 'horizontal') {
+			const near = (row: Span[] | undefined, x: number) =>
+				!!row?.some(r => x >= r.min - w - 1 && x <= r.max + w + 1);
+			const up = spans.get(y - 1);
+			const down = spans.get(y + 1);
+			const uL = near(up, lo);
+			const uR = near(up, hi);
+			const dL = near(down, lo);
+			const dR = near(down, hi);
+			dressLeft = s.fall ? uL && !uR : dL && !dR;
+			dressRight = s.fall ? dR && !dL : uR && !uL;
+			left = dressLeft ? COLON : FILL;
+			right = dressRight ? COLON : FILL;
+		}
 		for (let x = lo; x <= hi; x++) {
 			emit(out, x, y, x === lo ? left : x === hi ? right : FILL);
 		}
 		// corpus row AA: sloped rows wear pebbles just outside the
 		// chisels (,d$$$P' rising, `Y$$$b. falling); rank one keeps them
 		// deferential, any neighboring row's fill overwrites them
-		if (s.cls === 'diag' || s.cls === 'shallow') {
+		if (
+			s.cls === 'diag' ||
+			s.cls === 'shallow' ||
+			(s.cls === 'horizontal' && (dressLeft || dressRight))
+		) {
 			if (s.fall) {
-				emit(out, lo - 1, y, BACKTICK);
-				emit(out, hi + 1, y, PERIOD);
+				if (s.cls !== 'horizontal' || dressLeft) {
+					emit(out, lo - 1, y, BACKTICK);
+				}
+				if (s.cls !== 'horizontal' || dressRight) {
+					emit(out, hi + 1, y, PERIOD);
+				}
 			} else {
-				emit(out, lo - 1, y, COMMA);
-				emit(out, hi + 1, y, APOSTROPHE);
+				if (s.cls !== 'horizontal' || dressLeft) {
+					emit(out, lo - 1, y, COMMA);
+				}
+				if (s.cls !== 'horizontal' || dressRight) {
+					emit(out, hi + 1, y, APOSTROPHE);
+				}
+			}
+		}
+		// steep column jogs wear shoulder pebbles: a period above the
+		// incoming column's poke and a backtick below the vacated side
+		if (s.cls === 'steep' || s.cls === 'vertical') {
+			const n = spans.get(y + 1)?.find(r => Math.abs(r.min - s.min) <= w + 1);
+			if (n && n.min !== s.min) {
+				emit(out, n.min > s.min ? n.max + rext : n.min - lext, y, PERIOD);
+			}
+			const p = spans.get(y - 1)?.find(r => Math.abs(r.min - s.min) <= w + 1);
+			if (p && p.min !== s.min) {
+				emit(out, p.min < s.min ? p.min - lext : p.max + rext, y, BACKTICK);
 			}
 		}
 	};
@@ -816,6 +875,10 @@ export const createAsciiStampEngine = (
 		}
 		if (prev && prev.y !== c.y) {
 			rowSteps++;
+			const wd = windowDelta();
+			if (wd.x !== 0) {
+				lastFall = Math.sign(c.y - prev.y) * Math.sign(wd.x) > 0;
+			}
 		}
 		const cls = classify();
 		if (activeClass === null || cls === activeClass) {
@@ -1029,11 +1092,18 @@ export const createAsciiStampEngine = (
 				walkTo(out, samples[samples.length - 1]);
 			}
 			drain(out);
+			if (!swoop && width > 1) {
+				// a ruled line ends square: no sputter and no tapered tip,
+				// the final rows restamp at full weight
+				for (const t of tipSpans) {
+					restampSpan(out, t.y, t.s);
+				}
+			}
 			// roman exit: a two cell sputter ramp past the tapered tip,
 			// middle weight first then the light pebble, so the tip's own
 			// AA plus the ramp reads like the corpus endings (,:' rising,
 			// backtick ;, falling), never a lone quote in the void
-			if (width > 1 && last && trail.length >= 2) {
+			if (swoop && width > 1 && last && trail.length >= 2) {
 				const d = windowDelta();
 				if (d.y !== 0) {
 					const sdx = Math.sign(d.x);
