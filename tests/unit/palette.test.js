@@ -337,6 +337,25 @@ describe('Palette Utilities', () => {
 			expect(typeof touchHandlerCall[1]).toBe('function');
 		});
 
+		it('selects a color from changedTouches on touchend', async () => {
+			// a touchend fires with touches already empty; the lifted
+			// finger's coords only exist on changedTouches
+			const State = (await import('../../src/js/client/state.js')).default;
+			State.palette.setForegroundColor.mockClear();
+			createPalettePicker(mockCanvas);
+			const touchEnd = mockCanvas.addEventListener.mock.calls.find(
+				call => call[0] === 'touchend',
+			)[1];
+			expect(() =>
+				touchEnd({
+					touches: [],
+					changedTouches: [{ pageX: 50, pageY: 20 }],
+				})).not.toThrow();
+			expect(State.palette.setForegroundColor).toHaveBeenCalled();
+			// a ghost touchend with no coordinate source at all stays quiet
+			expect(() => touchEnd({ touches: []})).not.toThrow();
+		});
+
 		it('should handle mouse events for color selection', () => {
 			createPalettePicker(mockCanvas);
 

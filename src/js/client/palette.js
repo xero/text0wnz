@@ -526,14 +526,19 @@ const createPalettePicker = canvas => {
 	};
 
 	/**
-	 * Shared tap/click handler; touch events carry coords on touches[0]
+	 * Shared tap/click handler; a touchend fires with touches already
+	 * empty, so the lifted finger's coords live on changedTouches
 	 * @param {*} e TouchEvent or MouseEvent
 	 * @param {boolean} isTouch
 	 */
 	const processEvent = (e, isTouch) => {
+		const touch = isTouch ? (e.changedTouches?.[0] ?? e.touches?.[0]) : null;
+		if (isTouch && !touch) {
+			return;
+		}
 		const rect = canvas.getBoundingClientRect();
 		const coords = isTouch
-			? { x: e.touches[0].pageX, y: e.touches[0].pageY }
+			? { x: touch.pageX, y: touch.pageY }
 			: { x: e.clientX, y: e.clientY };
 
 		const x = Math.floor((coords.x - rect.left) / (canvas.width / 2));
