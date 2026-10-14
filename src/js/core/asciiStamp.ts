@@ -591,7 +591,12 @@ export const createAsciiStampEngine = (
 	const finishRun = (out: StampOut[], exit = 0) => {
 		restampRun(out, exit);
 		if (run && run.xs.length > 0) {
-			recentLens.push(run.xs.length);
+			// a row entered by a vertical step is a full band and votes
+			// its length; the entry row and reversal splits are partial
+			// bands (the pen lands or turns mid row), half the true
+			// rhythm on average, so they vote doubled, or a long second
+			// row starves into the unbanded dash blob
+			recentLens.push(run.entry !== 0 ? run.xs.length : run.xs.length * 2);
 			if (recentLens.length > 3) {
 				recentLens.shift();
 			}
