@@ -71,6 +71,23 @@ const createAsciiStrokePainter = () => {
 				if (!isLightInk(block.charCode) || run.length >= 2) {
 					break;
 				}
+				// a light cell braced by line ink square to the walk is a
+				// corner cap anchored to its own structure, not a crumb: a
+				// box top dies into blank by design and must survive its
+				// bar's junctions
+				const braced = [
+					[x - axis.dy, y + axis.dx],
+					[x + axis.dy, y - axis.dx],
+				].some(([bx, by]) => {
+					if (!cellInRange(bx, by, columns, rows)) {
+						return false;
+					}
+					const n = lineAxis(State.textArtCanvas.getBlock(bx, by).charCode);
+					return n !== null && n.dx * axis.dx + n.dy * axis.dy === 0;
+				});
+				if (braced) {
+					break;
+				}
 				run.push({ x: x, y: y, fg: block.foregroundColor, bg: block.backgroundColor });
 			}
 			if (dangling) {

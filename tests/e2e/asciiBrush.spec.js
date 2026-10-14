@@ -392,6 +392,17 @@ test.describe('shape tool brush modes', () => {
 		expect((await readBlock(page, 25, 6)).charCode).toBe(43);
 	});
 
+	test('a crossing under a corner cap leaves the cap alone', async ({ page }) => {
+		await page.locator('#square').click();
+		await page.selectOption('#squareMode', 'ascii');
+		await pacedDrag(page, [10, 4], [20, 9]);
+		// the second box's bottom edge crosses the first box's bar one
+		// row under its corner cap; the junction sweep once ate the cap
+		await pacedDrag(page, [14, 2], [24, 5]);
+		expect((await readBlock(page, 20, 5)).charCode).toBe(43);
+		expect((await readBlock(page, 20, 4)).charCode).toBe(PERIOD);
+	});
+
 	test('an edge over a buried bar end reconnects it', async ({ page }) => {
 		await page.locator('#square').click();
 		await page.selectOption('#squareMode', 'ascii');
