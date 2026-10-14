@@ -479,6 +479,16 @@
 		kbd {
 			@apply text-xs w-full text-center;
 		}
+		.stack {
+			@apply flex flex-col;
+		}
+	}
+
+	/* buttons with a size config flow as a row so the config sits
+	   inside the active highlight beside the icon and label */
+	#asciiBrush,
+	#attrib {
+		@apply flex-row gap-2;
 	}
 
 	#cut {
