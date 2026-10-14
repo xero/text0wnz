@@ -7,7 +7,12 @@ import {
 } from './ui.js';
 import Toolbar from './toolbar.js';
 import magicNumbers from './magicNumbers.js';
-import { cellInRange, createAsciiStampEngine } from '../core/index';
+import {
+	cellInRange,
+	createAsciiStampEngine,
+	isJunctionGlyph,
+	junctionForTip,
+} from '../core/index';
 import { createAsciiStrokePainter } from './asciiBrush.js';
 
 const createPanelCursor = el => {
@@ -1476,17 +1481,66 @@ const createSquareController = () => {
 	const asciiMode = () =>
 		modeSelect.value === 'ascii' || modeSelect.value === 'amiga';
 
+	const originalCode = (x, y) => {
+		const columns = State.textArtCanvas.getColumns();
+		const rows = State.textArtCanvas.getRows();
+		if (!cellInRange(x, y, columns, rows)) {
+			return 0;
+		}
+		return State.textArtCanvas.getBlock(x, y).charCode;
+	};
+
+	// a corner landing on an existing line voices the tip vocabulary
+	// instead of melting into the heavier ink: the box's bar is the
+	// stem, hanging below top corners and rising above bottom ones
+	const cornerCell = (x, cy, dy, plain) => {
+		const glyph = junctionForTip(
+			{ dx: 0, dy: dy, cls: 'vertical' },
+			originalCode(x, cy),
+			originalCode(x - 1, cy),
+			originalCode(x + 1, cy),
+		);
+		return { x: x, y: cy, charCode: glyph || plain };
+	};
+
+	// an existing bar ending flush against an edge row reconnects;
+	// plain dashes would bury the contact. bars crossing the row and
+	// standing junctions already voice through the merge tables
+	const edgeJoints = (xa, xb, cy) => {
+		const joints = [];
+		for (let x = xa; x <= xb; x++) {
+			const own = originalCode(x, cy);
+			if (own === 124 || isJunctionGlyph(own)) {
+				continue;
+			}
+			if (originalCode(x, cy - 1) === 124) {
+				joints.push({ x: x, y: cy, charCode: 43 });
+			} else if (originalCode(x, cy + 1) === 124) {
+				joints.push({ x: x, y: cy, charCode: 84 });
+			}
+		}
+		return joints;
+	};
+
 	const asciiSquareCells = coords => {
-		const { x0, x1 } = coords;
+		let { x0, x1 } = coords;
 		let cy0 = Math.floor(coords.y0 / 2);
 		let cy1 = Math.floor(coords.y1 / 2);
-		// a box needs a distinct top and bottom line: a drag inside one
-		// cell row grows a row instead of flattening into a bare edge
+		// a box needs a distinct line on every side: a drag inside one
+		// cell row or column grows one instead of flattening into a
+		// bare edge or a capped bar
 		if (cy1 === cy0) {
 			if (cy1 + 1 < State.textArtCanvas.getRows()) {
 				cy1 += 1;
 			} else {
 				cy0 -= 1;
+			}
+		}
+		if (x1 === x0) {
+			if (x1 + 1 < State.textArtCanvas.getColumns()) {
+				x1 += 1;
+			} else {
+				x0 -= 1;
 			}
 		}
 		const cells = [];
@@ -1523,23 +1577,21 @@ const createSquareController = () => {
 		if (x1 - 1 >= x0 + 1) {
 			cells.push(...shapeStrokeCells(hPathPoints(x0 + 1, x1 - 1, cy0 * 2), 1));
 			cells.push(...shapeStrokeCells(hPathPoints(x0 + 1, x1 - 1, cy1 * 2), 1));
+			cells.push(...edgeJoints(x0 + 1, x1 - 1, cy0));
+			cells.push(...edgeJoints(x0 + 1, x1 - 1, cy1));
 		}
 		const barTop = (cy0 + 1) * 2;
 		const barBottom = cy1 * 2 - 1;
 		if (barBottom >= barTop) {
 			cells.push(...shapeStrokeCells(vPathPoints(x0, barTop, barBottom), 1));
-			if (x1 !== x0) {
-				cells.push(...shapeStrokeCells(vPathPoints(x1, barTop, barBottom), 1));
-			}
+			cells.push(...shapeStrokeCells(vPathPoints(x1, barTop, barBottom), 1));
 		}
 		const [tl, tr] = SQUARE_CORNERS.top;
 		const [bl, br] = SQUARE_CORNERS.bottom;
-		cells.push({ x: x0, y: cy0, charCode: tl });
-		cells.push({ x: x0, y: cy1, charCode: bl });
-		if (x1 !== x0) {
-			cells.push({ x: x1, y: cy0, charCode: tr });
-			cells.push({ x: x1, y: cy1, charCode: br });
-		}
+		cells.push(cornerCell(x0, cy0, -1, tl));
+		cells.push(cornerCell(x0, cy1, 1, bl));
+		cells.push(cornerCell(x1, cy0, -1, tr));
+		cells.push(cornerCell(x1, cy1, 1, br));
 		return cells;
 	};
 
