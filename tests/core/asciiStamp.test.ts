@@ -138,7 +138,7 @@ describe('ascii stamp engine, thin style', () => {
 				[14, 4],
 			]),
 		).toBe(
-			['`.', '  `--.', '      `-.', '         `--.', '             `.'].join(
+			['-.', '  `--.', '      `-.', '         `--.', '             `.'].join(
 				'\n',
 			),
 		);
@@ -243,6 +243,22 @@ describe('ascii stamp engine, thin style', () => {
 		expect(art).not.toMatch(/`-+\./);
 	});
 
+	it('a lower half start voices its entry row at mid height', () => {
+		// the pen never crossed the top of its first cell, so top ink
+		// there would hook at twice the true slope; an upper half start
+		// did cross it and keeps the full ramp
+		const low = stroke([
+			[0, 3, 1],
+			[14, 7, 1],
+		]);
+		const high = stroke([
+			[0, 2, 0],
+			[14, 6, 0],
+		]);
+		expect(low.split('\n')[0]).toBe('-.');
+		expect(high.split('\n')[0]).toBe('`.');
+	});
+
 	it('smooths sparse fast samples into connected waves', () => {
 		// two sine humps at normal writing speed sampling; chords used
 		// to kink the curves and cut the valleys, the spline restores
@@ -258,7 +274,7 @@ describe('ascii stamp engine, thin style', () => {
 				"                        ,'         `-.",
 				'                       /             `.',
 				'                      /                 \\',
-				'`.                  /                   \\                   /',
+				'-.                  /                   \\                   /',
 				' `.                 /                    \\                 /',
 				'   `.              /                       \\             /',
 				"    `.          ,'                          \\          ,'",
