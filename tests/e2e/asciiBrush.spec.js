@@ -337,6 +337,23 @@ test.describe('shape tool brush modes', () => {
 		expect((await readBlock(page, 40, 16)).charCode).toBe(DOLLAR);
 	});
 
+	test('a square crossing another voices plus and keeps its bars', async ({ page }) => {
+		await page.locator('#square').click();
+		await page.selectOption('#squareMode', 'ascii');
+		await pacedDrag(page, [10, 6], [30, 10]);
+		await pacedDrag(page, [15, 3], [25, 14]);
+		// the second box's bars cross the first box's edges: plus at
+		// every crossing, and the bar cells between its own corner and
+		// the crossing survive (a root snap-back once ate them)
+		for (const x of [15, 25]) {
+			expect((await readBlock(page, x, 6)).charCode).toBe(43);
+			expect((await readBlock(page, x, 10)).charCode).toBe(43);
+			expect((await readBlock(page, x, 4)).charCode).toBe(124);
+			expect((await readBlock(page, x, 5)).charCode).toBe(124);
+			expect((await readBlock(page, x, 3)).charCode).toBe(PERIOD);
+		}
+	});
+
 	test('an ascii square is one undo group', async ({ page }) => {
 		await page.locator('#square').click();
 		await page.selectOption('#squareMode', 'ascii');

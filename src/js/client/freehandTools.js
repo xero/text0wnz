@@ -1212,6 +1212,21 @@ const asciiStrokeCells = (points, width) => {
 	return out;
 };
 
+// a shape's edges and arcs always end against its own geometry, so a
+// tip or root junction probe can only misread nearby art: a bar that
+// starts one cell past a crossed line loses its first cell to the
+// snap-back meant for touch down overshoot, breaking the shape. the
+// stroke metadata comes off and crossings voice through the merge
+// tables instead
+const shapeStrokeCells = (points, width) => {
+	return asciiStrokeCells(points, width).map(cell => {
+		if (cell.tip || cell.root) {
+			return { x: cell.x, y: cell.y, charCode: cell.charCode };
+		}
+		return cell;
+	});
+};
+
 const hPathPoints = (x0, x1, hb) => {
 	const points = [];
 	for (let x = x0; x <= x1; x++) {
@@ -1481,30 +1496,30 @@ const createSquareController = () => {
 			// the right path column pulls in one so the 2 wide ribbon
 			// stays inside the drag rect
 			const rightX = Math.max(x1 - 1, x0);
-			cells.push(...asciiStrokeCells(vPathPoints(x0, y0, y1), 2));
+			cells.push(...shapeStrokeCells(vPathPoints(x0, y0, y1), 2));
 			if (rightX !== x0) {
-				cells.push(...asciiStrokeCells(vPathPoints(rightX, y0, y1), 2));
+				cells.push(...shapeStrokeCells(vPathPoints(rightX, y0, y1), 2));
 			}
-			cells.push(...asciiStrokeCells(hPathPoints(x0, x1, y0), 2));
+			cells.push(...shapeStrokeCells(hPathPoints(x0, x1, y0), 2));
 			if (cy1 !== cy0) {
-				cells.push(...asciiStrokeCells(hPathPoints(x0, x1, y1), 2));
+				cells.push(...shapeStrokeCells(hPathPoints(x0, x1, y1), 2));
 			}
 			return cells;
 		}
 		// thin: edges run between the corner cells and the corner glyphs
 		// land last so they win their cells
 		if (x1 - 1 >= x0 + 1) {
-			cells.push(...asciiStrokeCells(hPathPoints(x0 + 1, x1 - 1, y0), 1));
+			cells.push(...shapeStrokeCells(hPathPoints(x0 + 1, x1 - 1, y0), 1));
 			if (cy1 !== cy0) {
-				cells.push(...asciiStrokeCells(hPathPoints(x0 + 1, x1 - 1, y1), 1));
+				cells.push(...shapeStrokeCells(hPathPoints(x0 + 1, x1 - 1, y1), 1));
 			}
 		}
 		const barTop = (cy0 + 1) * 2;
 		const barBottom = cy1 * 2 - 1;
 		if (barBottom >= barTop) {
-			cells.push(...asciiStrokeCells(vPathPoints(x0, barTop, barBottom), 1));
+			cells.push(...shapeStrokeCells(vPathPoints(x0, barTop, barBottom), 1));
 			if (x1 !== x0) {
-				cells.push(...asciiStrokeCells(vPathPoints(x1, barTop, barBottom), 1));
+				cells.push(...shapeStrokeCells(vPathPoints(x1, barTop, barBottom), 1));
 			}
 		}
 		const [tl, tr] = SQUARE_CORNERS.top;
@@ -1705,13 +1720,13 @@ const createCircleController = () => {
 		const w = modeSelect.value === 'amiga' ? 2 : 1;
 		const cells = [];
 		cells.push(
-			...asciiStrokeCells(
+			...shapeStrokeCells(
 				arcPathPoints(sx, sy, width, height, Math.PI, 2 * Math.PI),
 				w,
 			),
 		);
 		cells.push(
-			...asciiStrokeCells(arcPathPoints(sx, sy, width, height, Math.PI, 0), w),
+			...shapeStrokeCells(arcPathPoints(sx, sy, width, height, Math.PI, 0), w),
 		);
 		if (w > 1 && !outlineMode && width > 0 && height > 0) {
 			// the slab stops at cells the rim already inked so the
