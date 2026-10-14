@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { createAsciiStampEngine, mergeGlyphs } from '../../src/js/core/asciiStamp.js';
+import {
+	createAsciiStampEngine,
+	mergeGlyphs,
+} from '../../src/js/core/asciiStamp.js';
 
 /**
  * Golden harness: run a stroke through the engine, render the stamped
@@ -52,91 +55,121 @@ const stroke = (
 
 describe('ascii stamp engine, thin style', () => {
 	it('stamps a vertical bar line', () => {
-		expect(stroke([[3, 0], [3, 4]])).toBe(['|', '|', '|', '|', '|'].join('\n'));
+		expect(
+			stroke([
+				[3, 0],
+				[3, 4],
+			]),
+		).toBe(['|', '|', '|', '|', '|'].join('\n'));
 	});
 
 	it('stamps 45 degree rising as slashes', () => {
 		// drawn bottom left to top right
-		expect(stroke([[0, 4], [4, 0]])).toBe(
-			['    /', '   /', '  /', ' /', '/'].join('\n'),
-		);
+		expect(
+			stroke([
+				[0, 4],
+				[4, 0],
+			]),
+		).toBe(['    /', '   /', '  /', ' /', '/'].join('\n'));
 	});
 
 	it('stamps 45 degree falling as backslashes', () => {
-		expect(stroke([[0, 0], [4, 4]])).toBe(
-			['\\', ' \\', '  \\', '   \\', '    \\'].join('\n'),
-		);
+		expect(
+			stroke([
+				[0, 0],
+				[4, 4],
+			]),
+		).toBe(['\\', ' \\', '  \\', '   \\', '    \\'].join('\n'));
 	});
 
 	it('breaks steep column steps with pebble pairs', () => {
 		// BRUSH.md line 1 vocabulary; Bresenham phases the steps a row
 		// later than the hand drawn ideal, which reads identically
-		expect(stroke([[2, 0], [0, 4]])).toBe(
-			['  |', '  |', " .'", ' |', ".'"].join('\n'),
-		);
+		expect(
+			stroke([
+				[2, 0],
+				[0, 4],
+			]),
+		).toBe(['  |', '  |', " .'", ' |', ".'"].join('\n'));
 	});
 
 	it('stamps shallow two per row as comma quote pairs', () => {
 		// BRUSH.md line 3
-		expect(stroke([[0, 4], [9, 0]])).toBe(
-			[
-				"        ,'",
-				"      ,'",
-				"    ,'",
-				"  ,'",
-				",'",
-			].join('\n'),
-		);
+		expect(
+			stroke([
+				[0, 4],
+				[9, 0],
+			]),
+		).toBe(["        ,'", "      ,'", "    ,'", "  ,'", ",'"].join('\n'));
 	});
 
 	it('stamps shallow rows in one pebble voice despite length jitter', () => {
 		// BRUSH.md line 4 vocabulary; Bresenham deals rows of 2 to 4
 		// cells for this slope and the rhythm keeps them all pebble runs
-		expect(stroke([[0, 4], [14, 0]])).toBe(
-			[
-				"             ,'",
-				"         ,--'",
-				"      ,-'",
-				"  ,--'",
-				",'",
-			].join('\n'),
+		expect(
+			stroke([
+				[0, 4],
+				[14, 0],
+			]),
+		).toBe(
+			["             ,'", "         ,--'", "      ,-'", "  ,--'", ",'"].join(
+				'\n',
+			),
 		);
 	});
 
 	it('bands long shallow rows through the underscore ramp', () => {
 		// BRUSH.md line 5 vocabulary across Bresenham's 6/12/6 row deal
-		expect(stroke([[0, 2], [23, 0]])).toBe(
-			[
-				'                  __.--"',
-				'      ___...---"""',
-				'__.--"',
-			].join('\n'),
+		expect(
+			stroke([
+				[0, 2],
+				[23, 0],
+			]),
+		).toBe(
+			['                  __.--"', '      ___...---"""', '__.--"'].join('\n'),
 		);
 	});
 
 	it('mirrors shallow falling rows high to low', () => {
-		expect(stroke([[0, 0], [14, 4]])).toBe(
-			[
-				'`.',
-				'  `--.',
-				'      `-.',
-				'         `--.',
-				'             `.',
-			].join('\n'),
+		expect(
+			stroke([
+				[0, 0],
+				[14, 4],
+			]),
+		).toBe(
+			['`.', '  `--.', '      `-.', '         `--.', '             `.'].join(
+				'\n',
+			),
 		);
 	});
 
 	it('stamps horizontal in the lower band as underscores', () => {
-		expect(stroke([[0, 0, 1], [7, 0, 1]])).toBe('________');
+		expect(
+			stroke([
+				[0, 0, 1],
+				[7, 0, 1],
+			]),
+		).toBe('________');
 	});
 
 	it('stamps horizontal in the upper band as dashes', () => {
-		expect(stroke([[0, 0, 0], [7, 0, 0]])).toBe('--------');
+		expect(
+			stroke([
+				[0, 0, 0],
+				[7, 0, 0],
+			]),
+		).toBe('--------');
 	});
 
 	it('is invariant under draw direction', () => {
-		const leftToRight = stroke([[0, 4], [14, 0]]);
-		const rightToLeft = stroke([[14, 0], [0, 4]]);
+		const leftToRight = stroke([
+			[0, 4],
+			[14, 0],
+		]);
+		const rightToLeft = stroke([
+			[14, 0],
+			[0, 4],
+		]);
 		expect(rightToLeft).toBe(leftToRight);
 	});
 
@@ -235,8 +268,14 @@ describe('ascii stamp engine, thin style', () => {
 	});
 
 	it('stamps an upstroke exactly like the downstroke', () => {
-		const down = stroke([[2, 0], [0, 6]]);
-		const up = stroke([[0, 6], [2, 0]]);
+		const down = stroke([
+			[2, 0],
+			[0, 6],
+		]);
+		const up = stroke([
+			[0, 6],
+			[2, 0],
+		]);
 		expect(up).toBe(down);
 		expect(down).toContain(".'");
 		expect(down).not.toContain("'|");
@@ -270,10 +309,7 @@ describe('ascii stamp engine, thin style', () => {
 
 /** Roman ribbon: width above 1 stamps corpus anatomy around the
  * same skeleton (lead chisel, $ fill, trail chisel). */
-const roman = (
-	points: Array<[number, number]>,
-	width: number,
-): string => {
+const roman = (points: Array<[number, number]>, width: number): string => {
 	const engine = createAsciiStampEngine({ width });
 	const grid = new Map<string, number>();
 	const apply = (cells: Array<{ x: number; y: number; charCode: number }>) =>
@@ -311,16 +347,32 @@ const roman = (
 
 describe('ascii stamp engine, roman ribbon', () => {
 	it('stamps verticals as bare fill, tapered in, flicked out', () => {
-		expect(roman([[3, 0], [3, 4]], 5)).toBe(
+		expect(
+			roman(
+				[
+					[3, 0],
+					[3, 4],
+				],
+				5,
+			),
+		).toBe(
 			[' $$$', '$$$$$', '$$$$$', ' $$$$', '  $$', '  ;', '  .'].join('\n'),
 		);
 	});
 
 	it('chisels rising strokes with d and P plus row AA', () => {
-		expect(roman([[0, 8], [8, 0]], 5)).toBe(
+		expect(
+			roman(
+				[
+					[0, 8],
+					[8, 0],
+				],
+				5,
+			),
+		).toBe(
 			[
 				"             '",
-				"            :",
+				'            :',
 				"         ,dP'",
 				"       ,d$$P'",
 				"     ,d$$$P'",
@@ -335,7 +387,15 @@ describe('ascii stamp engine, roman ribbon', () => {
 	});
 
 	it('chisels falling strokes with Y and b plus row AA', () => {
-		expect(roman([[0, 0], [8, 8]], 5)).toBe(
+		expect(
+			roman(
+				[
+					[0, 0],
+					[8, 8],
+				],
+				5,
+			),
+		).toBe(
 			[
 				'`Y$b.',
 				'`Y$$$b.',
@@ -353,7 +413,13 @@ describe('ascii stamp engine, roman ribbon', () => {
 	});
 
 	it('width two is the bare edge pair', () => {
-		const art = roman([[0, 6], [6, 0]], 2);
+		const art = roman(
+			[
+				[0, 6],
+				[6, 0],
+			],
+			2,
+		);
 		expect(art).toContain('dP');
 		expect(art).not.toContain('$d');
 	});

@@ -84,8 +84,6 @@ const LONG_RAMP_RISING = [UNDERSCORE, PERIOD, DASH, DQUOTE];
 
 // ------------------------------------------------- additive merging
 
-
-
 /**
  * Ink weight for cross stroke contact: a touch never carves a heavier
  * mark, and equal weights densify instead of replacing.
@@ -386,7 +384,12 @@ export const createAsciiStampEngine = (
 	) => {
 		if (cls === 'shallow' || cls === 'horizontal') {
 			if (!run || run.y !== c.y) {
-				const entry = run && prev ? Math.sign(c.y - run.y) : prev ? Math.sign(c.y - prev.y) : 0;
+				const entry =
+					run && prev
+						? Math.sign(c.y - run.y)
+						: prev
+							? Math.sign(c.y - prev.y)
+							: 0;
 				finishRun(out, run ? Math.sign(c.y - run.y) : 0);
 				run = { y: c.y, xs: [], dir: 0, entry };
 			} else if (run.xs.length > 0) {
