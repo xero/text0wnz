@@ -177,6 +177,57 @@ JOIN.set(joinKey(X_JUNCTION, SLASH), X_JUNCTION);
 JOIN.set(joinKey(X_JUNCTION, BACKSLASH), X_JUNCTION);
 
 /**
+ * Light ramp ink carries shallow lines between their dash and
+ * underscore bands, so a line crossing a bar or diagonal on a dot
+ * band cell deserves the same junction the heavier bands get.
+ * Cross stroke contact only: a stroke grazing its own light ink mid
+ * curve must not voice junctions, so the engine's self crossing path
+ * keeps consulting JOIN alone.
+ */
+const LIGHT_RAMP_INK = [
+	PERIOD,
+	COMMA,
+	APOSTROPHE,
+	BACKTICK,
+	CARET,
+	COLON,
+	SEMICOLON,
+];
+const CROSS_JOIN = new Map<number, number>();
+for (const l of LIGHT_RAMP_INK) {
+	CROSS_JOIN.set(joinKey(VBAR, l), PLUS);
+	CROSS_JOIN.set(joinKey(SLASH, l), PERCENT);
+	CROSS_JOIN.set(joinKey(BACKSLASH, l), PERCENT);
+	CROSS_JOIN.set(joinKey(PLUS, l), PLUS);
+	CROSS_JOIN.set(joinKey(PERCENT, l), PERCENT);
+	CROSS_JOIN.set(joinKey(X_JUNCTION, l), X_JUNCTION);
+}
+
+/** Junction glyphs a crossing can voice, for the painter's stub sweep. */
+export const isJunctionGlyph = (c: number): boolean =>
+	c === PLUS || c === PERCENT || c === X_JUNCTION;
+
+/** The axis a line glyph runs along, for stub sweeps at junctions. */
+export const lineAxis = (c: number): { dx: number; dy: number } | null => {
+	if (HORIZ_INK.includes(c)) {
+		return { dx: 1, dy: 0 };
+	}
+	if (c === VBAR) {
+		return { dx: 0, dy: 1 };
+	}
+	if (c === SLASH) {
+		return { dx: 1, dy: -1 };
+	}
+	if (c === BACKSLASH) {
+		return { dx: 1, dy: 1 };
+	}
+	return null;
+};
+
+/** Ink light enough for a junction stub sweep to clear. */
+export const isLightInk = (c: number): boolean => (WEIGHT.get(c) ?? 0) <= 2;
+
+/**
  * Additive contact between strokes (shading brush spirit): same glyph
  * holds, the heavier mark survives a lighter touch, and two different
  * marks of equal weight merge to a denser one (two pebbles to a
@@ -188,7 +239,9 @@ export const mergeGlyphs = (existing: number, incoming: number): number => {
 	if (existing === incoming) {
 		return incoming;
 	}
-	const joined = JOIN.get(joinKey(existing, incoming));
+	const joined =
+		JOIN.get(joinKey(existing, incoming)) ??
+		CROSS_JOIN.get(joinKey(existing, incoming));
 	if (joined !== undefined) {
 		return joined;
 	}
@@ -247,6 +300,12 @@ export const junctionForTip = (
 	}
 	if (tip.cls === 'shallow' || tip.cls === 'horizontal') {
 		return 0;
+	}
+	if (contact === UNDERSCORE && tip.dy < 0) {
+		// underscore ink hugs the cell bottom; a top barred 7, r, or T
+		// floats above it, while a period knots the stem to the
+		// baseline it already touches
+		return PERIOD;
 	}
 	if (tip.dy < 0) {
 		if (tip.dx === 0) {

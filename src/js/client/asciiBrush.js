@@ -3,7 +3,10 @@ import { $ } from './ui.js';
 import {
 	cellInRange,
 	createAsciiStampEngine,
+	isJunctionGlyph,
+	isLightInk,
 	junctionForTip,
+	lineAxis,
 	mergeGlyphs,
 } from '../core/index';
 
@@ -35,6 +38,49 @@ const createAsciiStrokePainter = () => {
 			: held.charCode;
 	};
 
+	// a junction inherits its line's loose ends: taper crumbs from the
+	// stroke that drew the joined line often dangle a cell or two past
+	// the contact, and they read as whiskers once a junction anchors
+	// the corner. a short run of light ink that dies into blank space
+	// within two cells along the line's axis is such a crumb and gets
+	// swept; a run that keeps going, or meets heavy ink, is the line
+	// itself and stays
+	const sweepStubs = (jx, jy, axis, draw, columns, rows) => {
+		if (!axis) {
+			return;
+		}
+		for (const dir of [1, -1]) {
+			const run = [];
+			let dangling = false;
+			for (let step = 1; step <= 3; step++) {
+				const x = jx + axis.dx * dir * step;
+				const y = jy + axis.dy * dir * step;
+				if (!cellInRange(x, y, columns, rows)) {
+					dangling = true;
+					break;
+				}
+				// the current stroke owns its own cells
+				if (strokeOriginals.has(y * 65536 + x)) {
+					break;
+				}
+				const block = State.textArtCanvas.getBlock(x, y);
+				if (block.charCode === 0 || block.charCode === 32) {
+					dangling = true;
+					break;
+				}
+				if (!isLightInk(block.charCode) || run.length >= 2) {
+					break;
+				}
+				run.push({ x: x, y: y, fg: block.foregroundColor, bg: block.backgroundColor });
+			}
+			if (dangling) {
+				for (const c of run) {
+					draw(32, c.fg, c.bg, c.x, c.y);
+				}
+			}
+		}
+	};
+
 	// a stroke ending against a line voices the contact as a junction
 	// glyph; at 1x zoom the pen rarely stops on the exact cell, so the
 	// probe forgives a near miss by one cell on either side. meta is
@@ -50,9 +96,10 @@ const createAsciiStrokePainter = () => {
 			if (!cellInRange(jx, jy, columns, rows)) {
 				return false;
 			}
+			const contact = originalAt(jx, jy, columns, rows);
 			const glyph = junctionForTip(
 				meta,
-				originalAt(jx, jy, columns, rows),
+				contact,
 				originalAt(jx - 1, jy, columns, rows),
 				originalAt(jx + 1, jy, columns, rows),
 			);
@@ -61,6 +108,7 @@ const createAsciiStrokePainter = () => {
 			}
 			const bg = State.textArtCanvas.getBlock(jx, jy).backgroundColor;
 			draw(glyph, fg, bg, jx, jy);
+			sweepStubs(jx, jy, lineAxis(contact), draw, columns, rows);
 			return true;
 		};
 		// the stroke ended on the line itself
@@ -146,13 +194,18 @@ const createAsciiStrokePainter = () => {
 				};
 				strokeOriginals.set(key, original);
 			}
-			draw(
-				mergeGlyphs(original.charCode, cell.charCode),
-				fg,
-				block.backgroundColor,
-				cell.x,
-				cell.y,
-			);
+			const merged = mergeGlyphs(original.charCode, cell.charCode);
+			draw(merged, fg, block.backgroundColor, cell.x, cell.y);
+			if (merged !== original.charCode && isJunctionGlyph(merged)) {
+				sweepStubs(
+					cell.x,
+					cell.y,
+					lineAxis(original.charCode),
+					draw,
+					columns,
+					rows,
+				);
+			}
 		}
 	};
 

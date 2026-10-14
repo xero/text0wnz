@@ -467,12 +467,10 @@ describe('additive stroke contact', () => {
 		expect(mergeGlyphs(36, 46)).toBe(36);
 		expect(mergeGlyphs(36, 124)).toBe(36);
 		expect(mergeGlyphs(100, 44)).toBe(100);
-		expect(mergeGlyphs(124, 39)).toBe(124);
 	});
 
 	it('a heavier touch wins over lighter ink', () => {
 		expect(mergeGlyphs(46, 36)).toBe(36);
-		expect(mergeGlyphs(46, 124)).toBe(124);
 	});
 
 	it('densifies equal weight contact', () => {
@@ -493,6 +491,14 @@ describe('additive stroke contact', () => {
 		expect(mergeGlyphs(45, 47)).toBe(37);
 		expect(mergeGlyphs(95, 92)).toBe(37);
 		expect(mergeGlyphs(34, 47)).toBe(37);
+		// the light dot and tick bands of a shallow line junction too,
+		// in either drawing order, so a crossing cannot vanish just
+		// because it landed between the heavier bands
+		expect(mergeGlyphs(46, 124)).toBe(43);
+		expect(mergeGlyphs(124, 39)).toBe(43);
+		expect(mergeGlyphs(47, 46)).toBe(37);
+		expect(mergeGlyphs(44, 92)).toBe(37);
+		expect(mergeGlyphs(88, 46)).toBe(88);
 	});
 
 	it('junction glyphs are sticky under repeat contact', () => {
@@ -520,15 +526,25 @@ describe('terminal joins', () => {
 	) => ({ dx, dy, cls });
 
 	it('a rising tip hangs its leg below the bar', () => {
+		const DASH = 45;
 		// Rowan's 7 fix: / climbing right into a line
-		expect(junctionForTip(tip(1, -1), UND, UND, UND)).toBe(55);
+		expect(junctionForTip(tip(1, -1), DASH, DASH, DASH)).toBe(55);
 		// mirror lean takes r
-		expect(junctionForTip(tip(-1, -1), UND, UND, UND)).toBe(114);
+		expect(junctionForTip(tip(-1, -1), DASH, DASH, DASH)).toBe(114);
 		// dead vertical from below takes T mid line
-		expect(junctionForTip(tip(0, -1, 'vertical'), UND, UND, UND)).toBe(84);
+		expect(junctionForTip(tip(0, -1, 'vertical'), DASH, DASH, DASH)).toBe(84);
 		// at a line end the bar leans along the line instead
-		expect(junctionForTip(tip(0, -1, 'vertical'), UND, UND, SPACE)).toBe(55);
-		expect(junctionForTip(tip(0, -1, 'vertical'), UND, SPACE, UND)).toBe(114);
+		expect(junctionForTip(tip(0, -1, 'vertical'), DASH, DASH, SPACE)).toBe(55);
+		expect(junctionForTip(tip(0, -1, 'vertical'), DASH, SPACE, DASH)).toBe(114);
+	});
+
+	it('a rising tip knots an underscore line with a period', () => {
+		// underscore ink hugs the cell bottom: a top barred 7, r, or T
+		// floats above it, the period sits on the baseline the stem
+		// already touches
+		expect(junctionForTip(tip(0, -1, 'vertical'), UND, UND, UND)).toBe(46);
+		expect(junctionForTip(tip(1, -1), UND, UND, UND)).toBe(46);
+		expect(junctionForTip(tip(-1, -1), UND, UND, UND)).toBe(46);
 	});
 
 	it('a stroke end emits tip and root metadata for the controller', () => {
