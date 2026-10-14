@@ -211,5 +211,41 @@ describe('createAsciiBrushController', () => {
 			fire('onTextCanvasUp', {});
 			expect(cellAt(5, 8).charCode).toBe(114);
 		});
+
+		it('snaps back a one cell overshoot into a terminal join', () => {
+			// diagonal crosses the line and carries one whisker cell past
+			// it; the crossing cell takes the join and the whisker comes
+			// back off the canvas
+			fire('onTextCanvasDown', { x: 4, y: 3, halfBlockY: 7 });
+			fire('onTextCanvasDrag', { x: 10, y: 9, halfBlockY: 19 });
+			fire('onTextCanvasUp', {});
+			expect(cellAt(9, 8).charCode).toBe(74);
+			expect(cellAt(10, 9).charCode).toBe(32);
+		});
+
+		it('two cells past the line stays a deliberate crossing', () => {
+			fire('onTextCanvasDown', { x: 4, y: 3, halfBlockY: 7 });
+			fire('onTextCanvasDrag', { x: 11, y: 10, halfBlockY: 21 });
+			fire('onTextCanvasUp', {});
+			expect(cellAt(9, 8).charCode).toBe(37);
+			expect(cellAt(10, 9).charCode).toBe(92);
+			expect(cellAt(11, 10).charCode).toBe(92);
+		});
+
+		it('reaches across one blank cell and bridges the gap', () => {
+			fire('onTextCanvasDown', { x: 9, y: 3, halfBlockY: 7 });
+			fire('onTextCanvasDrag', { x: 9, y: 6, halfBlockY: 13 });
+			fire('onTextCanvasUp', {});
+			expect(cellAt(9, 7).charCode).toBe(124);
+			expect(cellAt(9, 8).charCode).toBe(43);
+		});
+
+		it('the begin side reaches across a gap too', () => {
+			fire('onTextCanvasDown', { x: 9, y: 10, halfBlockY: 21 });
+			fire('onTextCanvasDrag', { x: 9, y: 14, halfBlockY: 29 });
+			fire('onTextCanvasUp', {});
+			expect(cellAt(9, 9).charCode).toBe(124);
+			expect(cellAt(9, 8).charCode).toBe(84);
+		});
 	});
 });

@@ -153,6 +153,11 @@ test.describe('ascii brush', () => {
 		// and one STARTING mid line and dropping away joins the same way
 		await drag(page, [18, 8], [18, 12]);
 		expect((await readBlock(page, 18, 8)).charCode).toBe(84);
+		// a diagonal overshooting the line by one cell snaps back: the
+		// crossing cell takes the hook, the whisker comes off
+		await drag(page, [7, 5], [11, 9]);
+		expect((await readBlock(page, 10, 8)).charCode).toBe(74);
+		expect([0, 32]).toContain((await readBlock(page, 11, 9)).charCode);
 	});
 
 	test('one stroke is one undo step', async ({ page }) => {
