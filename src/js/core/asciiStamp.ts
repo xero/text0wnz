@@ -380,6 +380,10 @@ export const createAsciiStampEngine = (
 	/** consecutive windows disagreeing with activeClass */
 	let dissent = 0;
 	let subYNow = 1;
+	/** sub cell position at stroke begin, for entry row voicing */
+	let beginSubY = 1;
+	/** the current run is still the stroke's first row */
+	let entryRun = false;
 	/** y changes seen this stroke; zero means a genuinely flat stroke. */
 	let rowSteps = 0;
 	/** lengths of the last few closed rows, the stroke's rhythm. */
@@ -539,6 +543,11 @@ export const createAsciiStampEngine = (
 			wd.y !== 0 || run.entry === 0
 				? falling()
 				: run.entry * (run.dir || wd.x || 1) > 0;
+		// the entry row claims only the band the pen actually crossed: a
+		// lower half start on a falling row never reached the top of its
+		// cell, so top ink there invents a hook at twice the true slope,
+		// mirrored for a rising row entered in the upper half
+		const midEntry = entryRun && (fall ? beginSubY === 1 : beginSubY === 0);
 		const banded = rowRhythm(len) >= 5;
 		// a row entered rising and left falling is a cap, the reverse a
 		// bowl; left to right turns never reverse x, so only the
@@ -575,13 +584,17 @@ export const createAsciiStampEngine = (
 				// a lone cell row is a turning point or a slope near two
 				// cells per row; a dash reads as debris there, a pebble
 				// continues the line
-				charCode = fall ? BACKTICK : APOSTROPHE;
+				charCode = fall ? (midEntry ? PERIOD : BACKTICK) : APOSTROPHE;
 			} else if (banded) {
-				charCode = LONG_RAMP_RISING[Math.floor((pos * 4) / len)];
+				let band = Math.floor((pos * 4) / len);
+				if (midEntry) {
+					band = fall ? Math.min(band, 2) : Math.max(band, 1);
+				}
+				charCode = LONG_RAMP_RISING[band];
 			} else if (pos === 0) {
-				charCode = fall ? PERIOD : COMMA;
+				charCode = fall ? PERIOD : midEntry ? DASH : COMMA;
 			} else if (pos === len - 1) {
-				charCode = fall ? BACKTICK : APOSTROPHE;
+				charCode = fall ? (midEntry ? DASH : BACKTICK) : APOSTROPHE;
 			} else {
 				charCode = DASH;
 			}
@@ -622,6 +635,9 @@ export const createAsciiStampEngine = (
 							? Math.sign(c.y - prev.y)
 							: 0;
 				finishRun(out, run ? Math.sign(c.y - run.y) : 0);
+				if (entry !== 0) {
+					entryRun = false;
+				}
 				run = { y: c.y, xs: [], dir: 0, entry };
 			} else if (run.xs.length > 0) {
 				const step = Math.sign(c.x - run.xs[run.xs.length - 1]);
@@ -968,6 +984,8 @@ export const createAsciiStampEngine = (
 			strokeStart = { x, y };
 			rootDir = null;
 			subYNow = subY;
+			beginSubY = subY;
+			entryRun = true;
 			stamped.clear();
 			run = null;
 			rowSteps = 0;
