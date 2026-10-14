@@ -1731,6 +1731,12 @@ const createAttributeBrushController = () => {
 	let lastCoord = null;
 	const bar = $('brushToolbar');
 	const menu = $('aSize');
+
+	// the size config lives inside the tool button; a tap on it must
+	// not bubble into the button's click handler, whose preventDefault
+	// would keep the picker from opening on touch
+	menu.addEventListener('click', e => e.stopPropagation());
+
 	let brushSize = 1;
 	let previewCursor = null;
 	let lastPreviewX = -1;

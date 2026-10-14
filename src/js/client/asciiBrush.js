@@ -20,6 +20,11 @@ const createAsciiBrushController = () => {
 	const widthMenu = $('aWidth');
 	const widthSelect = $('asciiWidth');
 
+	// the width config lives inside the tool button; a tap on it must
+	// not bubble into the button's click handler, whose preventDefault
+	// would keep the picker from opening on touch
+	widthMenu.addEventListener('click', e => e.stopPropagation());
+
 	const applyWidth = () => {
 		engine.setWidth(parseInt(widthSelect.value, 10) || 1);
 	};
