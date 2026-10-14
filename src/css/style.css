@@ -165,9 +165,10 @@
 		/* a fixed box with top-0 bottom-0 sizes to the LAYOUT viewport,
 		   which iOS keeps at toolbar-collapsed height while Safari's
 		   chrome shows: 35px of layout hid under the toolbar. dvh tracks
-		   the real window; height wins over bottom in the over-
-		   constrained box, and h-full stays the fallback */
-		height: 100dvh;
+		   the url bar but NOT the fullscreen title bar, so main.js feeds
+		   the real window height from visualViewport into the var; height
+		   wins over bottom in the over-constrained box */
+		height: var(--app-height, 100dvh);
 
 		> div {
 			@apply w-full h-full m-0;
@@ -213,6 +214,14 @@
 	aside,
 	#positionInfo {
 		@apply bg-menu;
+	}
+
+	header,
+	aside {
+		/* when Safari grants viewport slack (fullscreen title bar), a
+		   native pan starting on the app chrome drags the whole page;
+		   nothing in these bars scrolls, so gestures here stay ours */
+		touch-action: none;
 	}
 
 	header {
