@@ -38,9 +38,11 @@ const createAsciiBrushController = () => {
 
 	// a stroke ending against a line voices the contact as a junction
 	// glyph; the junction may sit on the tip cell itself or one cell
-	// past it, where the path would have continued into the line
-	const tipJunction = (cell, fg, draw, columns, rows) => {
-		const { dx, dy } = cell.tip;
+	// past it, where the path would have continued into the line. meta
+	// is the approach: the tip's own for endings, the negated departure
+	// for a stroke that STARTED against the line
+	const tipJunction = (cell, meta, fg, draw, columns, rows) => {
+		const { dx, dy } = meta;
 		const candidates = [
 			[cell.x, cell.y],
 			[cell.x + dx, cell.y + dy],
@@ -53,7 +55,7 @@ const createAsciiBrushController = () => {
 				continue;
 			}
 			const glyph = junctionForTip(
-				cell.tip,
+				meta,
 				originalAt(jx, jy, columns, rows),
 				originalAt(jx - 1, jy, columns, rows),
 				originalAt(jx + 1, jy, columns, rows),
@@ -78,7 +80,20 @@ const createAsciiBrushController = () => {
 		const rows = State.textArtCanvas.getRows();
 		State.textArtCanvas.draw(draw => {
 			for (const cell of cells) {
-				if (cell.tip && tipJunction(cell, fg, draw, columns, rows)) {
+				if (cell.tip && tipJunction(cell, cell.tip, fg, draw, columns, rows)) {
+					continue;
+				}
+				if (
+					cell.root &&
+					tipJunction(
+						cell,
+						{ dx: -cell.root.dx, dy: -cell.root.dy, cls: cell.root.cls },
+						fg,
+						draw,
+						columns,
+						rows,
+					)
+				) {
 					continue;
 				}
 				// ribbon spans and spline overshoot can reach past the

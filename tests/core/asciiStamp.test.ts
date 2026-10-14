@@ -524,8 +524,30 @@ describe('terminal joins', () => {
 		expect(junctionForTip(tip(1, -1), UND, UND, UND)).toBe(55);
 		// mirror lean takes r
 		expect(junctionForTip(tip(-1, -1), UND, UND, UND)).toBe(114);
-		// dead vertical from below takes T
+		// dead vertical from below takes T mid line
 		expect(junctionForTip(tip(0, -1, 'vertical'), UND, UND, UND)).toBe(84);
+		// at a line end the bar leans along the line instead
+		expect(junctionForTip(tip(0, -1, 'vertical'), UND, UND, SPACE)).toBe(55);
+		expect(junctionForTip(tip(0, -1, 'vertical'), UND, SPACE, UND)).toBe(114);
+	});
+
+	it('a stroke end emits tip and root metadata for the controller', () => {
+		const engine = createAsciiStampEngine();
+		engine.begin(3, 8, 1);
+		engine.move(3, 12, 1);
+		const out = engine.end();
+		const tipCell = out.find(c => c.tip);
+		const rootCell = out.find(c => c.root);
+		expect(tipCell).toMatchObject({
+			x: 3,
+			y: 12,
+			tip: { dx: 0, dy: 1, cls: 'vertical' },
+		});
+		expect(rootCell).toMatchObject({
+			x: 3,
+			y: 8,
+			root: { dx: 0, dy: 1, cls: 'vertical' },
+		});
 	});
 
 	it('a falling tip hooks toward where the line continues', () => {

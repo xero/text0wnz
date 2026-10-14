@@ -150,6 +150,9 @@ test.describe('ascii brush', () => {
 		// a stroke rising from below and ENDING on the line takes the T
 		await drag(page, [16, 12], [16, 8]);
 		expect((await readBlock(page, 16, 8)).charCode).toBe(84);
+		// and one STARTING mid line and dropping away joins the same way
+		await drag(page, [18, 8], [18, 12]);
+		expect((await readBlock(page, 18, 8)).charCode).toBe(84);
 	});
 
 	test('one stroke is one undo step', async ({ page }) => {

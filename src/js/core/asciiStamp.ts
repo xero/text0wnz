@@ -24,6 +24,12 @@ export interface StampOut {
 	charCode: number;
 	/** set on the final cell of a thin stroke: terminal join context */
 	tip?: TipInfo;
+	/**
+	 * set on the first cell of a thin stroke: departure direction, so a
+	 * stroke STARTING against a line can join it too (a departure at
+	 * dx,dy is geometrically a tip arriving at -dx,-dy)
+	 */
+	root?: TipInfo;
 }
 
 export type SlopeClass =
@@ -244,6 +250,16 @@ export const junctionForTip = (
 	}
 	if (tip.dy < 0) {
 		if (tip.dx === 0) {
+			// a dead vertical leg under a line end leans its bar along
+			// the line; mid line the T carries both sides
+			const l = lineInk(left) === 'h';
+			const r = lineInk(right) === 'h';
+			if (l && !r) {
+				return SEVEN;
+			}
+			if (r && !l) {
+				return AR;
+			}
 			return TEE;
 		}
 		return tip.dx > 0 ? SEVEN : AR;
@@ -328,6 +344,10 @@ export const createAsciiStampEngine = (
 	let mergeStreak = 0;
 	/** last few successfully emitted cell keys, the revisable frontier */
 	let recentKeys: number[] = [];
+	/** the stroke's first cell, held for the begin side join */
+	let strokeStart: Cell | null = null;
+	/** departure direction, frozen once the window first settles */
+	let rootDir: TipInfo | null = null;
 
 	const key = (x: number, y: number) => y * 65536 + x;
 
@@ -714,6 +734,16 @@ export const createAsciiStampEngine = (
 			activeClass = cls;
 			dissent = 0;
 		}
+		if (!rootDir && trail.length >= 3) {
+			const d = windowDelta();
+			if (d.x !== 0 || d.y !== 0) {
+				rootDir = {
+					dx: Math.sign(d.x),
+					dy: Math.sign(d.y),
+					cls: activeClass,
+				};
+			}
+		}
 		if (pending && isStem(activeClass) && pending.c.y === c.y) {
 			if (mergeStreak === 0 && Math.abs(c.x - pending.c.x) === 1) {
 				// wobble: one adjacent column on the same row under a stem
@@ -860,6 +890,8 @@ export const createAsciiStampEngine = (
 			dissent = 0;
 			mergeStreak = 0;
 			recentKeys = [];
+			strokeStart = { x, y };
+			rootDir = null;
 			subYNow = subY;
 			stamped.clear();
 			run = null;
@@ -952,6 +984,18 @@ export const createAsciiStampEngine = (
 					});
 				}
 			}
+			// begin side of the same idea: the first cell re-emitted with
+			// the departure the window froze when the stroke took shape
+			if (width === 1 && strokeStart && rootDir) {
+				out.push({
+					x: strokeStart.x,
+					y: strokeStart.y,
+					charCode:
+						stamped.get(key(strokeStart.x, strokeStart.y)) ??
+						(subYNow === 0 ? APOSTROPHE : PERIOD),
+					root: rootDir,
+				});
+			}
 			last = null;
 			trail = [];
 			samples = [];
@@ -962,6 +1006,8 @@ export const createAsciiStampEngine = (
 			stamped.clear();
 			spans.clear();
 			tipSpans = [];
+			strokeStart = null;
+			rootDir = null;
 			return out;
 		},
 		setWidth: w => {
