@@ -67,6 +67,14 @@ const EDGE_D = 100; // d
 const EDGE_B = 98; // b
 const EDGE_P = 80; // P
 const EDGE_Y = 89; // Y
+// amiga circle rim ink (circleStamp.ts); unweighted glyphs lose every
+// merge, which would punch holes in a rim crossing existing art
+const EIGHT = 56; // 8
+const GEE = 103; // g
+const AY = 97; // a
+const FLOURISH_R = 82; // R
+const LPAREN = 40; // (
+const RPAREN = 41; // )
 
 /**
  * Same stroke collision ranks: stems beat run bodies beat AA pebbles,
@@ -135,6 +143,12 @@ const WEIGHT = new Map<number, number>([
 	[EDGE_B, 4],
 	[EDGE_P, 4],
 	[EDGE_Y, 4],
+	[EIGHT, 4],
+	[GEE, 4],
+	[AY, 4],
+	[FLOURISH_R, 4],
+	[LPAREN, 4],
+	[RPAREN, 4],
 	[FILL, 5],
 ]);
 

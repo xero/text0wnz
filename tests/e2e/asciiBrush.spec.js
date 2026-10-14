@@ -314,19 +314,26 @@ test.describe('shape tool brush modes', () => {
 		expect([0, 32]).toContain((await readBlock(page, 40, 16)).charCode);
 	});
 
-	test('amiga circle inks a hollow dollar ring', async ({ page }) => {
+	test('amiga circle rims a hollow eight body ring', async ({ page }) => {
 		await page.locator('#circle').click();
 		await page.selectOption('#circleMode', 'amiga');
 		await pacedDrag(page, [40, 16], [46, 23]);
+		// single cell rim in the quadrant grammar: 8 bodies down the
+		// sides, a hollow center, and no dollar ribbon anywhere
+		let eights = 0;
 		let dollars = 0;
 		for (let y = 9; y <= 24; y++) {
 			for (let x = 32; x <= 48; x++) {
-				if ((await readBlock(page, x, y)).charCode === DOLLAR) {
+				const code = (await readBlock(page, x, y)).charCode;
+				if (code === 56) {
+					eights++;
+				} else if (code === DOLLAR) {
 					dollars++;
 				}
 			}
 		}
-		expect(dollars).toBeGreaterThan(10);
+		expect(eights).toBeGreaterThanOrEqual(4);
+		expect(dollars).toBe(0);
 		expect([0, 32]).toContain((await readBlock(page, 40, 16)).charCode);
 	});
 

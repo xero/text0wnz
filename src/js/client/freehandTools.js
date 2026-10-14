@@ -8,6 +8,7 @@ import {
 import Toolbar from './toolbar.js';
 import magicNumbers from './magicNumbers.js';
 import {
+	amigaCircleCells,
 	cellInRange,
 	createAsciiStampEngine,
 	isJunctionGlyph,
@@ -1793,59 +1794,65 @@ const createCircleController = () => {
 	);
 
 	// thin ascii has no fill vocabulary: any fill char reads amiga, so
-	// the pill naps until the mode offers one
-	modeSelect.addEventListener('change', () => {
+	// the pill naps until the mode offers one. synced on enable too,
+	// since browser form restoration can set the select without firing
+	// a change event
+	const syncFillPill = () => {
 		const noFill = modeSelect.value === 'ascii';
 		panel.classList.toggle('dimmed', noFill);
 		if (noFill) {
 			outlineMode = true;
 			outlineToggle.setStateOne();
 		}
-	});
+	};
+	modeSelect.addEventListener('change', syncFillPill);
 
 	const asciiMode = () =>
 		modeSelect.value === 'ascii' || modeSelect.value === 'amiga';
 
 	const asciiEllipseCells = coords => {
 		const { sx, sy, width, height } = coords;
-		const w = modeSelect.value === 'amiga' ? 2 : 1;
+		if (modeSelect.value === 'amiga') {
+			const cells = amigaCircleCells(sx, sy, width, height);
+			if (!outlineMode && width > 0 && height > 0) {
+				// the slab stops at cells the rim already inked so the
+				// dressed edges stay visible; a cell joins the fill only
+				// when both its halves sit inside the ellipse
+				const rim = new Set();
+				for (const c of cells) {
+					rim.add(c.y * 65536 + c.x);
+				}
+				const inside = (x, hb) => {
+					const nx = (x - sx) / width;
+					const nhb = (hb - sy) / height;
+					return nx * nx + nhb * nhb < 1;
+				};
+				const cy0 = Math.floor((sy - height) / 2);
+				const cy1 = Math.floor((sy + height) / 2);
+				for (let cy = cy0; cy <= cy1; cy++) {
+					for (let x = sx - width; x <= sx + width; x++) {
+						if (
+							!rim.has(cy * 65536 + x) &&
+							inside(x, cy * 2) &&
+							inside(x, cy * 2 + 1)
+						) {
+							cells.push({ x: x, y: cy, charCode: 36 });
+						}
+					}
+				}
+			}
+			return cells;
+		}
 		const cells = [];
 		cells.push(
 			...shapeStrokeCells(
 				arcPathPoints(sx, sy, width, height, Math.PI, 2 * Math.PI),
-				w,
+				1,
 			),
 		);
 		cells.push(
-			...shapeStrokeCells(arcPathPoints(sx, sy, width, height, Math.PI, 0), w),
+			...shapeStrokeCells(arcPathPoints(sx, sy, width, height, Math.PI, 0), 1),
 		);
-		if (w > 1 && !outlineMode && width > 0 && height > 0) {
-			// the slab stops at cells the rim already inked so the
-			// dressed edges stay visible; a cell joins the fill only
-			// when both its halves sit inside the ellipse
-			const rim = new Set();
-			for (const c of cells) {
-				rim.add(c.y * 65536 + c.x);
-			}
-			const inside = (x, hb) => {
-				const nx = (x - sx) / width;
-				const nhb = (hb - sy) / height;
-				return nx * nx + nhb * nhb < 1;
-			};
-			const cy0 = Math.floor((sy - height) / 2);
-			const cy1 = Math.floor((sy + height) / 2);
-			for (let cy = cy0; cy <= cy1; cy++) {
-				for (let x = sx - width; x <= sx + width; x++) {
-					if (
-						!rim.has(cy * 65536 + x) &&
-						inside(x, cy * 2) &&
-						inside(x, cy * 2 + 1)
-					) {
-						cells.push({ x: x, y: cy, charCode: 36 });
-					}
-				}
-			}
-		}
 		return cells;
 	};
 
@@ -1950,6 +1957,10 @@ const createCircleController = () => {
 	};
 
 	const canvasUp = () => {
+		// a color sample tap fires an up without a down
+		if (startXY === undefined) {
+			return;
+		}
 		State.toolPreview.clear();
 		const coords = processCoords();
 		State.textArtCanvas.startUndo();
@@ -2058,6 +2069,7 @@ const createCircleController = () => {
 		bar.style.display = 'flex';
 		modeMenu.style.display = 'flex';
 		nav.classList.add('enabled');
+		syncFillPill();
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
