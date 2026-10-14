@@ -85,6 +85,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 				classList: {
 					add: vi.fn(),
 					remove: vi.fn(),
+					toggle: vi.fn(),
 				},
 			})),
 		},
@@ -131,6 +132,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 			classList: {
 				add: vi.fn(),
 				remove: vi.fn(),
+				toggle: vi.fn(),
 			},
 			addEventListener: vi.fn(),
 			removeEventListener: vi.fn(),
@@ -152,7 +154,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 			height: 100,
 			firstChild: {
 				style: {},
-				classList: { add: vi.fn(), remove: vi.fn() },
+				classList: { add: vi.fn(), remove: vi.fn(), toggle: vi.fn() },
 			},
 		};
 		return mockElement;
@@ -166,6 +168,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 			classList: {
 				add: vi.fn(),
 				remove: vi.fn(),
+				toggle: vi.fn(),
 			},
 			addEventListener: vi.fn(),
 			removeEventListener: vi.fn(),
@@ -200,6 +203,7 @@ const mockDocument = {
 		classList: {
 			add: vi.fn(),
 			remove: vi.fn(),
+			toggle: vi.fn(),
 		},
 		addEventListener: vi.fn(),
 		removeEventListener: vi.fn(),
