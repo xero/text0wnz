@@ -1477,9 +1477,18 @@ const createSquareController = () => {
 		modeSelect.value === 'ascii' || modeSelect.value === 'amiga';
 
 	const asciiSquareCells = coords => {
-		const { x0, y0, x1, y1 } = coords;
-		const cy0 = Math.floor(y0 / 2);
-		const cy1 = Math.floor(y1 / 2);
+		const { x0, x1 } = coords;
+		let cy0 = Math.floor(coords.y0 / 2);
+		let cy1 = Math.floor(coords.y1 / 2);
+		// a box needs a distinct top and bottom line: a drag inside one
+		// cell row grows a row instead of flattening into a bare edge
+		if (cy1 === cy0) {
+			if (cy1 + 1 < State.textArtCanvas.getRows()) {
+				cy1 += 1;
+			} else {
+				cy0 -= 1;
+			}
+		}
 		const cells = [];
 		if (modeSelect.value === 'amiga') {
 			if (!outlineMode) {
@@ -1496,25 +1505,24 @@ const createSquareController = () => {
 			// the right path column pulls in one so the 2 wide ribbon
 			// stays inside the drag rect
 			const rightX = Math.max(x1 - 1, x0);
-			cells.push(...shapeStrokeCells(vPathPoints(x0, y0, y1), 2));
+			cells.push(...shapeStrokeCells(vPathPoints(x0, cy0 * 2, cy1 * 2 + 1), 2));
 			if (rightX !== x0) {
-				cells.push(...shapeStrokeCells(vPathPoints(rightX, y0, y1), 2));
+				cells.push(
+					...shapeStrokeCells(vPathPoints(rightX, cy0 * 2, cy1 * 2 + 1), 2),
+				);
 			}
-			cells.push(...shapeStrokeCells(hPathPoints(x0, x1, y0), 2));
-			if (cy1 !== cy0) {
-				cells.push(...shapeStrokeCells(hPathPoints(x0, x1, y1), 2));
-			}
+			cells.push(...shapeStrokeCells(hPathPoints(x0, x1, cy0 * 2), 2));
+			cells.push(...shapeStrokeCells(hPathPoints(x0, x1, cy1 * 2), 2));
 			return cells;
 		}
 		// thin: edges run between the corner cells and the corner glyphs
-		// land last so they win their cells. the top edge always rides
-		// the upper half: an underscore top hangs its ink at the row's
-		// bottom, detached from the period shoulders
+		// land last so they win their cells. both edges ride the upper
+		// half and voice dashes: per half voicing let stacked boxes land
+		// an underscore on a hyphen and densify the shared line to an
+		// equals sign
 		if (x1 - 1 >= x0 + 1) {
 			cells.push(...shapeStrokeCells(hPathPoints(x0 + 1, x1 - 1, cy0 * 2), 1));
-			if (cy1 !== cy0) {
-				cells.push(...shapeStrokeCells(hPathPoints(x0 + 1, x1 - 1, y1), 1));
-			}
+			cells.push(...shapeStrokeCells(hPathPoints(x0 + 1, x1 - 1, cy1 * 2), 1));
 		}
 		const barTop = (cy0 + 1) * 2;
 		const barBottom = cy1 * 2 - 1;
@@ -1525,16 +1533,12 @@ const createSquareController = () => {
 			}
 		}
 		const [tl, tr] = SQUARE_CORNERS.top;
+		const [bl, br] = SQUARE_CORNERS.bottom;
 		cells.push({ x: x0, y: cy0, charCode: tl });
+		cells.push({ x: x0, y: cy1, charCode: bl });
 		if (x1 !== x0) {
 			cells.push({ x: x1, y: cy0, charCode: tr });
-		}
-		if (cy1 !== cy0) {
-			const [bl, br] = SQUARE_CORNERS.bottom;
-			cells.push({ x: x0, y: cy1, charCode: bl });
-			if (x1 !== x0) {
-				cells.push({ x: x1, y: cy1, charCode: br });
-			}
+			cells.push({ x: x1, y: cy1, charCode: br });
 		}
 		return cells;
 	};

@@ -264,14 +264,15 @@ test.describe('shape tool brush modes', () => {
 		await page.locator('#square').click();
 		await page.selectOption('#squareMode', 'ascii');
 		await pacedDrag(page, [5, 5], [20, 12]);
-		// period shoulders over a dash top edge, backtick and quote
-		// feet below, underscore bottom, bar sides
+		// period shoulders, backtick and quote feet, dash edges top and
+		// bottom (per half voicing densified stacked boxes to equals),
+		// bar sides
 		expect((await readBlock(page, 5, 5)).charCode).toBe(PERIOD);
 		expect((await readBlock(page, 20, 5)).charCode).toBe(PERIOD);
 		expect((await readBlock(page, 5, 12)).charCode).toBe(96);
 		expect((await readBlock(page, 20, 12)).charCode).toBe(39);
 		expect((await readBlock(page, 10, 5)).charCode).toBe(45);
-		expect((await readBlock(page, 10, 12)).charCode).toBe(UNDERSCORE);
+		expect((await readBlock(page, 10, 12)).charCode).toBe(45);
 		expect((await readBlock(page, 5, 8)).charCode).toBe(VBAR);
 		expect((await readBlock(page, 20, 8)).charCode).toBe(VBAR);
 	});
@@ -335,6 +336,17 @@ test.describe('shape tool brush modes', () => {
 		await page.locator('#circleToolbar .toggleButton.right').click();
 		await pacedDrag(page, [40, 16], [46, 23]);
 		expect((await readBlock(page, 40, 16)).charCode).toBe(DOLLAR);
+	});
+
+	test('a flat drag grows into a two row box', async ({ page }) => {
+		await page.locator('#square').click();
+		await page.selectOption('#squareMode', 'ascii');
+		await pacedDrag(page, [50, 8], [60, 8]);
+		expect((await readBlock(page, 50, 8)).charCode).toBe(PERIOD);
+		expect((await readBlock(page, 55, 8)).charCode).toBe(45);
+		expect((await readBlock(page, 50, 9)).charCode).toBe(96);
+		expect((await readBlock(page, 60, 9)).charCode).toBe(39);
+		expect((await readBlock(page, 55, 9)).charCode).toBe(45);
 	});
 
 	test('a square crossing another voices plus and keeps its bars', async ({ page }) => {
