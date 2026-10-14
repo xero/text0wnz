@@ -1240,7 +1240,11 @@ const createLineController = () => {
 	// same endpoints always voice the same glyphs and the ghost is
 	// exactly what a commit produces
 	const asciiLineCells = (x0, y0, x1, y1) => {
-		const engine = createAsciiStampEngine({ width: modeSelect.value === 'amiga' ? 2 : 1 });
+		const engine = createAsciiStampEngine({
+			width: modeSelect.value === 'amiga' ? 2 : 1,
+			// a ruled line ends square, no calligraphic swoop
+			swoop: false,
+		});
 		const out = [];
 		let begun = false;
 		line(x0, y0, x1, y1, (x, hb) => {
