@@ -522,7 +522,16 @@ export const createAsciiStampEngine = (
 		}
 		const xs = [...run.xs].sort((a, b) => a - b);
 		const len = xs.length;
-		const fall = falling();
+		// the direction window flattens inside a long final row, since
+		// no step out ever follows it, and a flat window reads as
+		// rising: the closing restamp then mirrors the ramp into a
+		// hook. the row's entry step and x direction still know the
+		// true slope, so they break the tie
+		const wd = windowDelta();
+		const fall =
+			wd.y !== 0 || run.entry === 0
+				? falling()
+				: run.entry * (run.dir || wd.x || 1) > 0;
 		const banded = rowRhythm(len) >= 5;
 		// a row entered rising and left falling is a cap, the reverse a
 		// bowl; left to right turns never reverse x, so only the
