@@ -296,6 +296,8 @@
 	#aSize,
 	#aWidth,
 	#lMode,
+	#sqMode,
+	#cMode,
 	#chatIconCloseText {
 		@apply hidden;
 	}
@@ -526,6 +528,14 @@
 		}
 	}
 
+	/* thin ascii offers no fill, so the pill naps until it does */
+	#squareToolbar,
+	#circleToolbar {
+		&.dimmed {
+			@apply opacity-40 pointer-events-none;
+		}
+	}
+
 	#cut {
 		margin-left: 4px !important;
 	}
@@ -646,7 +656,9 @@
 
 	#aSize,
 	#aWidth,
-	#lMode {
+	#lMode,
+	#sqMode,
+	#cMode {
 		@apply flex-col;
 		label {
 			@apply text-xs text-fg text-left pl-[4px] pt-[2px];

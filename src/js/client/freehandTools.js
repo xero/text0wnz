@@ -1190,6 +1190,69 @@ const createShapesController = () => {
 	};
 };
 
+// a ruled path replayed as a synthetic brush stroke: dense samples in
+// half-block space keep the engine on a deterministic walk, so the
+// same shape always voices the same glyphs and the ghost is exactly
+// what a commit produces
+const asciiStrokeCells = (points, width) => {
+	const engine = createAsciiStampEngine({
+		width: width,
+		// ruled shapes end square, no calligraphic swoop
+		swoop: false,
+	});
+	const out = [];
+	points.forEach(([x, hb], i) => {
+		const cells =
+			i === 0
+				? engine.begin(x, Math.floor(hb / 2), hb % 2)
+				: engine.move(x, Math.floor(hb / 2), hb % 2);
+		out.push(...cells);
+	});
+	out.push(...engine.end());
+	return out;
+};
+
+const hPathPoints = (x0, x1, hb) => {
+	const points = [];
+	for (let x = x0; x <= x1; x++) {
+		points.push([x, hb]);
+	}
+	return points;
+};
+
+const vPathPoints = (x, hb0, hb1) => {
+	const points = [];
+	for (let hb = hb0; hb <= hb1; hb++) {
+		points.push([x, hb]);
+	}
+	return points;
+};
+
+// one half of a ruled ellipse in half-block space. the ellipse walks
+// as two arcs that meet at 3 and 9 o'clock where both strokes run
+// vertical, so the seam melts into the side bars instead of voicing
+// a junction glyph
+const arcPathPoints = (cx, chb, rx, rhb, a0, a1) => {
+	const points = [];
+	const steps = Math.max(
+		32,
+		Math.ceil(Math.abs(a1 - a0) * Math.max(rx, rhb) * 2),
+	);
+	let lastX;
+	let lastHb;
+	for (let i = 0; i <= steps; i++) {
+		const t = a0 + ((a1 - a0) * i) / steps;
+		const x = Math.round(cx + rx * Math.cos(t));
+		const hb = Math.round(chb + rhb * Math.sin(t));
+		if (x !== lastX || hb !== lastHb) {
+			points.push([x, hb]);
+			lastX = x;
+			lastHb = hb;
+		}
+	}
+	return points;
+};
+
 const createLineController = () => {
 	const panel = $('shapesToolbar');
 	const nav = $('shapes');
@@ -1235,27 +1298,12 @@ const createLineController = () => {
 		}
 	};
 
-	// the straight path replayed as a synthetic brush stroke: dense
-	// Bresenham samples keep the engine on its straight walk, so the
-	// same endpoints always voice the same glyphs and the ghost is
-	// exactly what a commit produces
 	const asciiLineCells = (x0, y0, x1, y1) => {
-		const engine = createAsciiStampEngine({
-			width: modeSelect.value === 'amiga' ? 2 : 1,
-			// a ruled line ends square, no calligraphic swoop
-			swoop: false,
-		});
-		const out = [];
-		let begun = false;
+		const points = [];
 		line(x0, y0, x1, y1, (x, hb) => {
-			const cells = begun
-				? engine.move(x, Math.floor(hb / 2), hb % 2)
-				: engine.begin(x, Math.floor(hb / 2), hb % 2);
-			begun = true;
-			out.push(...cells);
+			points.push([x, hb]);
 		});
-		out.push(...engine.end());
-		return out;
+		return asciiStrokeCells(points, modeSelect.value === 'amiga' ? 2 : 1);
 	};
 
 	const canvasUp = () => {
@@ -1363,10 +1411,22 @@ const createLineController = () => {
 	};
 };
 
+// thin ruled squares pick their corner glyphs from the half each edge
+// rides in: a dash edge hooks r/7 at the top and rests on backtick and
+// quote at the bottom, an underscore edge sits on period feet up top
+// and L/J below, the box idioms the junction vocabulary already voices
+const SQUARE_CORNERS = {
+	top: { 0: [114, 55], 1: [46, 46]},
+	bottom: { 0: [96, 39], 1: [76, 74]},
+};
+
 const createSquareController = () => {
 	const panel = $('squareToolbar');
 	const bar = $('shapesToolbar');
 	const nav = $('shapes');
+	const modeMenu = $('sqMode');
+	const modeSelect = $('squareMode');
+	const painter = createAsciiStrokePainter();
 	let startXY;
 	let endXY;
 	let outlineMode = true;
@@ -1374,6 +1434,7 @@ const createSquareController = () => {
 	// the toggle lives inside the tool button; a tap on it must not
 	// bubble into the button's click handler
 	panel.addEventListener('click', e => e.stopPropagation());
+	modeMenu.addEventListener('click', e => e.stopPropagation());
 
 	const outlineToggle = createToggleButton(
 		'Outline',
@@ -1385,6 +1446,81 @@ const createSquareController = () => {
 			outlineMode = false;
 		},
 	);
+
+	// thin ascii has no fill vocabulary: any fill char reads amiga, so
+	// the pill naps until the mode offers one
+	modeSelect.addEventListener('change', () => {
+		const noFill = modeSelect.value === 'ascii';
+		panel.classList.toggle('dimmed', noFill);
+		if (noFill) {
+			outlineMode = true;
+			outlineToggle.setStateOne();
+		}
+	});
+
+	const asciiMode = () =>
+		modeSelect.value === 'ascii' || modeSelect.value === 'amiga';
+
+	const asciiSquareCells = coords => {
+		const { x0, y0, x1, y1 } = coords;
+		const cy0 = Math.floor(y0 / 2);
+		const cy1 = Math.floor(y1 / 2);
+		const cells = [];
+		if (modeSelect.value === 'amiga') {
+			if (!outlineMode) {
+				// a filled ribbon square is a solid slab; the rim is the
+				// same fill ink so no outline pass is needed
+				for (let cy = cy0; cy <= cy1; cy++) {
+					for (let x = x0; x <= x1; x++) {
+						cells.push({ x: x, y: cy, charCode: 36 });
+					}
+				}
+				return cells;
+			}
+			// full length edges overlap at the corners and merge solid;
+			// the right path column pulls in one so the 2 wide ribbon
+			// stays inside the drag rect
+			const rightX = Math.max(x1 - 1, x0);
+			cells.push(...asciiStrokeCells(vPathPoints(x0, y0, y1), 2));
+			if (rightX !== x0) {
+				cells.push(...asciiStrokeCells(vPathPoints(rightX, y0, y1), 2));
+			}
+			cells.push(...asciiStrokeCells(hPathPoints(x0, x1, y0), 2));
+			if (cy1 !== cy0) {
+				cells.push(...asciiStrokeCells(hPathPoints(x0, x1, y1), 2));
+			}
+			return cells;
+		}
+		// thin: edges run between the corner cells and the corner glyphs
+		// land last so they win their cells
+		if (x1 - 1 >= x0 + 1) {
+			cells.push(...asciiStrokeCells(hPathPoints(x0 + 1, x1 - 1, y0), 1));
+			if (cy1 !== cy0) {
+				cells.push(...asciiStrokeCells(hPathPoints(x0 + 1, x1 - 1, y1), 1));
+			}
+		}
+		const barTop = (cy0 + 1) * 2;
+		const barBottom = cy1 * 2 - 1;
+		if (barBottom >= barTop) {
+			cells.push(...asciiStrokeCells(vPathPoints(x0, barTop, barBottom), 1));
+			if (x1 !== x0) {
+				cells.push(...asciiStrokeCells(vPathPoints(x1, barTop, barBottom), 1));
+			}
+		}
+		const [tl, tr] = SQUARE_CORNERS.top[y0 % 2];
+		cells.push({ x: x0, y: cy0, charCode: tl });
+		if (x1 !== x0) {
+			cells.push({ x: x1, y: cy0, charCode: tr });
+		}
+		if (cy1 !== cy0) {
+			const [bl, br] = SQUARE_CORNERS.bottom[y1 % 2];
+			cells.push({ x: x0, y: cy1, charCode: bl });
+			if (x1 !== x0) {
+				cells.push({ x: x1, y: cy1, charCode: br });
+			}
+		}
+		return cells;
+	};
 
 	const canvasDown = e => {
 		startXY = e.detail;
@@ -1413,8 +1549,15 @@ const createSquareController = () => {
 	const canvasUp = () => {
 		State.toolPreview.clear();
 		const coords = processCoords();
-		const foreground = State.palette.getForegroundColor();
 		State.textArtCanvas.startUndo();
+		if (asciiMode()) {
+			painter.begin();
+			painter.commit(asciiSquareCells(coords));
+			startXY = undefined;
+			endXY = undefined;
+			return;
+		}
+		const foreground = State.palette.getForegroundColor();
 		State.textArtCanvas.drawHalfBlock(draw => {
 			if (outlineMode) {
 				for (let px = coords.x0; px <= coords.x1; px++) {
@@ -1455,6 +1598,14 @@ const createSquareController = () => {
 			}
 			endXY = e.detail;
 			const coords = processCoords();
+			if (asciiMode()) {
+				painter.begin();
+				const ghost = painter.preview(asciiSquareCells(coords));
+				for (const g of ghost) {
+					State.toolPreview.drawGlyph(g.charCode, g.fg, g.x, g.y);
+				}
+				return;
+			}
 			const foreground = State.palette.getForegroundColor();
 			if (outlineMode) {
 				for (let px = coords.x0; px <= coords.x1; px++) {
@@ -1478,6 +1629,7 @@ const createSquareController = () => {
 	const enable = () => {
 		panel.classList.remove('hide');
 		bar.style.display = 'flex';
+		modeMenu.style.display = 'flex';
 		nav.classList.add('enabled');
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);
@@ -1487,6 +1639,7 @@ const createSquareController = () => {
 	const disable = () => {
 		panel.classList.add('hide');
 		bar.style.display = 'none';
+		modeMenu.style.display = 'none';
 		nav.classList.remove('enabled');
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
@@ -1510,6 +1663,9 @@ const createCircleController = () => {
 	const bar = $('shapesToolbar');
 	const panel = $('circleToolbar');
 	const nav = $('shapes');
+	const modeMenu = $('cMode');
+	const modeSelect = $('circleMode');
+	const painter = createAsciiStrokePainter();
 	let startXY;
 	let endXY;
 	let outlineMode = true;
@@ -1517,6 +1673,7 @@ const createCircleController = () => {
 	// the toggle lives inside the tool button; a tap on it must not
 	// bubble into the button's click handler
 	panel.addEventListener('click', e => e.stopPropagation());
+	modeMenu.addEventListener('click', e => e.stopPropagation());
 
 	const outlineToggle = createToggleButton(
 		'Outline',
@@ -1528,6 +1685,63 @@ const createCircleController = () => {
 			outlineMode = false;
 		},
 	);
+
+	// thin ascii has no fill vocabulary: any fill char reads amiga, so
+	// the pill naps until the mode offers one
+	modeSelect.addEventListener('change', () => {
+		const noFill = modeSelect.value === 'ascii';
+		panel.classList.toggle('dimmed', noFill);
+		if (noFill) {
+			outlineMode = true;
+			outlineToggle.setStateOne();
+		}
+	});
+
+	const asciiMode = () =>
+		modeSelect.value === 'ascii' || modeSelect.value === 'amiga';
+
+	const asciiEllipseCells = coords => {
+		const { sx, sy, width, height } = coords;
+		const w = modeSelect.value === 'amiga' ? 2 : 1;
+		const cells = [];
+		cells.push(
+			...asciiStrokeCells(
+				arcPathPoints(sx, sy, width, height, Math.PI, 2 * Math.PI),
+				w,
+			),
+		);
+		cells.push(
+			...asciiStrokeCells(arcPathPoints(sx, sy, width, height, Math.PI, 0), w),
+		);
+		if (w > 1 && !outlineMode && width > 0 && height > 0) {
+			// the slab stops at cells the rim already inked so the
+			// dressed edges stay visible; a cell joins the fill only
+			// when both its halves sit inside the ellipse
+			const rim = new Set();
+			for (const c of cells) {
+				rim.add(c.y * 65536 + c.x);
+			}
+			const inside = (x, hb) => {
+				const nx = (x - sx) / width;
+				const nhb = (hb - sy) / height;
+				return nx * nx + nhb * nhb < 1;
+			};
+			const cy0 = Math.floor((sy - height) / 2);
+			const cy1 = Math.floor((sy + height) / 2);
+			for (let cy = cy0; cy <= cy1; cy++) {
+				for (let x = sx - width; x <= sx + width; x++) {
+					if (
+						!rim.has(cy * 65536 + x) &&
+						inside(x, cy * 2) &&
+						inside(x, cy * 2 + 1)
+					) {
+						cells.push({ x: x, y: cy, charCode: 36 });
+					}
+				}
+			}
+		}
+		return cells;
+	};
 
 	const canvasDown = e => {
 		startXY = e.detail;
@@ -1632,8 +1846,15 @@ const createCircleController = () => {
 	const canvasUp = () => {
 		State.toolPreview.clear();
 		const coords = processCoords();
-		const foreground = State.palette.getForegroundColor();
 		State.textArtCanvas.startUndo();
+		if (asciiMode()) {
+			painter.begin();
+			painter.commit(asciiEllipseCells(coords));
+			startXY = undefined;
+			endXY = undefined;
+			return;
+		}
+		const foreground = State.palette.getForegroundColor();
 		const columns = State.textArtCanvas.getColumns();
 		const rows = State.textArtCanvas.getRows();
 		const doubleRows = rows * 2;
@@ -1686,6 +1907,14 @@ const createCircleController = () => {
 			}
 			endXY = e.detail;
 			const coords = processCoords();
+			if (asciiMode()) {
+				painter.begin();
+				const ghost = painter.preview(asciiEllipseCells(coords));
+				for (const g of ghost) {
+					State.toolPreview.drawGlyph(g.charCode, g.fg, g.x, g.y);
+				}
+				return;
+			}
 			const foreground = State.palette.getForegroundColor();
 			const columns = State.textArtCanvas.getColumns();
 			const rows = State.textArtCanvas.getRows();
@@ -1721,6 +1950,7 @@ const createCircleController = () => {
 	const enable = () => {
 		panel.classList.remove('hide');
 		bar.style.display = 'flex';
+		modeMenu.style.display = 'flex';
 		nav.classList.add('enabled');
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);
@@ -1730,6 +1960,7 @@ const createCircleController = () => {
 	const disable = () => {
 		panel.classList.add('hide');
 		bar.style.display = 'none';
+		modeMenu.style.display = 'none';
 		nav.classList.remove('enabled');
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);

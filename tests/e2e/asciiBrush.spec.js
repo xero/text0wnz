@@ -63,6 +63,20 @@ const drag = async (page, from, to, steps = 12) => {
 	await page.mouse.up();
 };
 
+// ruled tools commit once on release from the last drag event; an
+// unpaced synthetic drag can land the up before any coalesced move
+// flushes, committing a start-to-start pebble instead
+const pacedDrag = async (page, from, to) => {
+	const a = await cellCenter(page, from[0], from[1]);
+	const b = await cellCenter(page, to[0], to[1]);
+	await page.mouse.move(a.clientX, a.clientY);
+	await page.mouse.down();
+	await page.waitForTimeout(50);
+	await page.mouse.move(b.clientX, b.clientY, { steps: 12 });
+	await page.waitForTimeout(100);
+	await page.mouse.up();
+};
+
 test.describe('ascii brush', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/?test');
@@ -172,20 +186,6 @@ test.describe('ascii brush', () => {
 });
 
 test.describe('line tool brush modes', () => {
-	// the line tool commits once on release from the last drag event;
-	// an unpaced synthetic drag can land the up before any coalesced
-	// move flushes, committing a start-to-start pebble instead
-	const pacedDrag = async (page, from, to) => {
-		const a = await cellCenter(page, from[0], from[1]);
-		const b = await cellCenter(page, to[0], to[1]);
-		await page.mouse.move(a.clientX, a.clientY);
-		await page.mouse.down();
-		await page.waitForTimeout(50);
-		await page.mouse.move(b.clientX, b.clientY, { steps: 12 });
-		await page.waitForTimeout(100);
-		await page.mouse.up();
-	};
-
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/?test');
 		await bridgeReady(page);
@@ -242,6 +242,111 @@ test.describe('line tool brush modes', () => {
 		await page.keyboard.press('Control+z');
 		for (let x = 5; x <= 20; x++) {
 			expect([0, 32]).toContain((await readBlock(page, x, 16)).charCode);
+		}
+	});
+});
+
+test.describe('shape tool brush modes', () => {
+	const DOLLAR = 36;
+	const VBAR = 124;
+
+	test.beforeEach(async ({ page }) => {
+		await page.goto('/?test');
+		await bridgeReady(page);
+		await page.locator('#shapes').click();
+		// the first synthetic drag on a fresh page loses its coalesced
+		// moves (hand testing on real pointers is unaffected); one
+		// throwaway drag on an unread row warms the pipeline
+		await pacedDrag(page, [60, 24], [63, 24]);
+	});
+
+	test('ascii square rules box edges with corner glyphs', async ({ page }) => {
+		await page.locator('#square').click();
+		await page.selectOption('#squareMode', 'ascii');
+		await pacedDrag(page, [5, 5], [20, 12]);
+		// pointer centers land in the lower half: period feet up top,
+		// L/J below, underscore edges, bar sides
+		expect((await readBlock(page, 5, 5)).charCode).toBe(PERIOD);
+		expect((await readBlock(page, 20, 5)).charCode).toBe(PERIOD);
+		expect((await readBlock(page, 5, 12)).charCode).toBe(76);
+		expect((await readBlock(page, 20, 12)).charCode).toBe(74);
+		expect((await readBlock(page, 10, 5)).charCode).toBe(UNDERSCORE);
+		expect((await readBlock(page, 10, 12)).charCode).toBe(UNDERSCORE);
+		expect((await readBlock(page, 5, 8)).charCode).toBe(VBAR);
+		expect((await readBlock(page, 20, 8)).charCode).toBe(VBAR);
+	});
+
+	test('amiga square rules a hollow dollar rim', async ({ page }) => {
+		await page.locator('#square').click();
+		await page.selectOption('#squareMode', 'amiga');
+		await pacedDrag(page, [40, 5], [60, 12]);
+		expect((await readBlock(page, 50, 5)).charCode).toBe(DOLLAR);
+		expect((await readBlock(page, 50, 12)).charCode).toBe(DOLLAR);
+		expect((await readBlock(page, 40, 8)).charCode).toBe(DOLLAR);
+		expect((await readBlock(page, 60, 8)).charCode).toBe(DOLLAR);
+		expect([0, 32]).toContain((await readBlock(page, 50, 8)).charCode);
+	});
+
+	test('amiga filled square pours a dollar slab', async ({ page }) => {
+		await page.locator('#square').click();
+		await page.selectOption('#squareMode', 'amiga');
+		await page.locator('#squareToolbar .toggleButton.right').click();
+		await pacedDrag(page, [40, 15], [60, 22]);
+		expect((await readBlock(page, 50, 18)).charCode).toBe(DOLLAR);
+		expect((await readBlock(page, 40, 15)).charCode).toBe(DOLLAR);
+		expect((await readBlock(page, 60, 22)).charCode).toBe(DOLLAR);
+	});
+
+	test('ascii circle voices bars at its sides', async ({ page }) => {
+		await page.locator('#circle').click();
+		await page.selectOption('#circleMode', 'ascii');
+		await pacedDrag(page, [40, 16], [46, 23]);
+		let bars = 0;
+		for (let y = 10; y <= 22; y++) {
+			for (const x of [34, 46]) {
+				if ((await readBlock(page, x, y)).charCode === VBAR) {
+					bars++;
+				}
+			}
+		}
+		expect(bars).toBeGreaterThanOrEqual(4);
+		expect([0, 32]).toContain((await readBlock(page, 40, 16)).charCode);
+	});
+
+	test('amiga circle inks a hollow dollar ring', async ({ page }) => {
+		await page.locator('#circle').click();
+		await page.selectOption('#circleMode', 'amiga');
+		await pacedDrag(page, [40, 16], [46, 23]);
+		let dollars = 0;
+		for (let y = 9; y <= 24; y++) {
+			for (let x = 32; x <= 48; x++) {
+				if ((await readBlock(page, x, y)).charCode === DOLLAR) {
+					dollars++;
+				}
+			}
+		}
+		expect(dollars).toBeGreaterThan(10);
+		expect([0, 32]).toContain((await readBlock(page, 40, 16)).charCode);
+	});
+
+	test('amiga filled circle pours the slab', async ({ page }) => {
+		await page.locator('#circle').click();
+		await page.selectOption('#circleMode', 'amiga');
+		await page.locator('#circleToolbar .toggleButton.right').click();
+		await pacedDrag(page, [40, 16], [46, 23]);
+		expect((await readBlock(page, 40, 16)).charCode).toBe(DOLLAR);
+	});
+
+	test('an ascii square is one undo group', async ({ page }) => {
+		await page.locator('#square').click();
+		await page.selectOption('#squareMode', 'ascii');
+		await pacedDrag(page, [5, 16], [15, 20]);
+		expect((await readBlock(page, 10, 16)).charCode).toBe(UNDERSCORE);
+		await page.keyboard.press('Control+z');
+		for (let y = 16; y <= 20; y++) {
+			for (let x = 5; x <= 15; x++) {
+				expect([0, 32]).toContain((await readBlock(page, x, y)).charCode);
+			}
 		}
 	});
 });
