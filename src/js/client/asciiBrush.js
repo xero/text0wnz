@@ -1,6 +1,11 @@
 import State from './state.js';
 import { $ } from './ui.js';
-import { cellInRange, createAsciiStampEngine, mergeGlyphs } from '../core/index';
+import {
+	cellInRange,
+	createAsciiStampEngine,
+	junctionForTip,
+	mergeGlyphs,
+} from '../core/index';
 
 const createAsciiBrushController = () => {
 	const engine = createAsciiStampEngine();
@@ -18,6 +23,50 @@ const createAsciiBrushController = () => {
 		engine.setWidth(parseInt(widthSelect.value, 10) || 1);
 	};
 
+	// what a cell held BEFORE this stroke, whether or not we inked it:
+	// junctions must read the canvas the stroke landed on, not its own
+	// fresh marks
+	const originalAt = (x, y, columns, rows) => {
+		if (!cellInRange(x, y, columns, rows)) {
+			return 0;
+		}
+		const held = strokeOriginals.get(y * 65536 + x);
+		return held === undefined
+			? State.textArtCanvas.getBlock(x, y).charCode
+			: held;
+	};
+
+	// a stroke ending against a line voices the contact as a junction
+	// glyph; the junction may sit on the tip cell itself or one cell
+	// past it, where the path would have continued into the line
+	const tipJunction = (cell, fg, draw, columns, rows) => {
+		const { dx, dy } = cell.tip;
+		const candidates = [
+			[cell.x, cell.y],
+			[cell.x + dx, cell.y + dy],
+		];
+		if (dx !== 0 && dy !== 0) {
+			candidates.push([cell.x, cell.y + dy]);
+		}
+		for (const [jx, jy] of candidates) {
+			if (!cellInRange(jx, jy, columns, rows)) {
+				continue;
+			}
+			const glyph = junctionForTip(
+				cell.tip,
+				originalAt(jx, jy, columns, rows),
+				originalAt(jx - 1, jy, columns, rows),
+				originalAt(jx + 1, jy, columns, rows),
+			);
+			if (glyph !== 0) {
+				const bg = State.textArtCanvas.getBlock(jx, jy).backgroundColor;
+				draw(glyph, fg, bg, jx, jy);
+				return true;
+			}
+		}
+		return false;
+	};
+
 	// the engine revises cells as the stroke reveals itself; last wins
 	// inside the stroke's single undo group, so drawing stays fully live
 	const apply = cells => {
@@ -29,6 +78,9 @@ const createAsciiBrushController = () => {
 		const rows = State.textArtCanvas.getRows();
 		State.textArtCanvas.draw(draw => {
 			for (const cell of cells) {
+				if (cell.tip && tipJunction(cell, fg, draw, columns, rows)) {
+					continue;
+				}
 				// ribbon spans and spline overshoot can reach past the
 				// canvas; unclipped writes wrap through the cell index to
 				// the far side of the neighboring row

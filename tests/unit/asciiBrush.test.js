@@ -155,4 +155,45 @@ describe('createAsciiBrushController', () => {
 		expect(grid.size).toBe(0);
 		controller.enable();
 	});
+
+	describe('terminal joins against a drawn line', () => {
+		beforeEach(() => {
+			// a horizontal line of underscores on row 8 from column 5 on
+			State.textArtCanvas.getBlock.mockImplementation((x, y) => ({
+				charCode: y === 8 && x >= 5 ? 95 : 32,
+				foregroundColor: 7,
+				backgroundColor: 0,
+			}));
+		});
+
+		it('a vertical ending on the line end hooks along it', () => {
+			fire('onTextCanvasDown', { x: 5, y: 4, halfBlockY: 9 });
+			fire('onTextCanvasDrag', { x: 5, y: 8, halfBlockY: 17 });
+			fire('onTextCanvasUp', {});
+			// line continues right only: L
+			expect(cellAt(5, 8).charCode).toBe(76);
+		});
+
+		it('a vertical ending mid line takes the plus', () => {
+			fire('onTextCanvasDown', { x: 9, y: 4, halfBlockY: 9 });
+			fire('onTextCanvasDrag', { x: 9, y: 8, halfBlockY: 17 });
+			fire('onTextCanvasUp', {});
+			expect(cellAt(9, 8).charCode).toBe(43);
+		});
+
+		it('a rising vertical from below takes the T', () => {
+			fire('onTextCanvasDown', { x: 9, y: 12, halfBlockY: 25 });
+			fire('onTextCanvasDrag', { x: 9, y: 8, halfBlockY: 17 });
+			fire('onTextCanvasUp', {});
+			expect(cellAt(9, 8).charCode).toBe(84);
+		});
+
+		it('a rising diagonal stopping short joins where the path continues', () => {
+			fire('onTextCanvasDown', { x: 2, y: 12, halfBlockY: 25 });
+			fire('onTextCanvasDrag', { x: 6, y: 9, halfBlockY: 19 });
+			fire('onTextCanvasUp', {});
+			// the 7 lands one cell past the tip, on the line itself
+			expect(cellAt(7, 8).charCode).toBe(55);
+		});
+	});
 });
