@@ -264,12 +264,12 @@ test.describe('shape tool brush modes', () => {
 		await page.locator('#square').click();
 		await page.selectOption('#squareMode', 'ascii');
 		await pacedDrag(page, [5, 5], [20, 12]);
-		// pointer centers land in the lower half: period feet up top,
-		// L/J below, underscore edges, bar sides
+		// period shoulders up top, backtick and quote feet below,
+		// underscore edges, bar sides
 		expect((await readBlock(page, 5, 5)).charCode).toBe(PERIOD);
 		expect((await readBlock(page, 20, 5)).charCode).toBe(PERIOD);
-		expect((await readBlock(page, 5, 12)).charCode).toBe(76);
-		expect((await readBlock(page, 20, 12)).charCode).toBe(74);
+		expect((await readBlock(page, 5, 12)).charCode).toBe(96);
+		expect((await readBlock(page, 20, 12)).charCode).toBe(39);
 		expect((await readBlock(page, 10, 5)).charCode).toBe(UNDERSCORE);
 		expect((await readBlock(page, 10, 12)).charCode).toBe(UNDERSCORE);
 		expect((await readBlock(page, 5, 8)).charCode).toBe(VBAR);
