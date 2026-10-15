@@ -15,8 +15,6 @@ export interface CircleCell {
 	charCode: number;
 }
 
-const EIGHT = 56;
-
 const HMIRROR = new Map<number, number>([
 	[100, 98], // d b
 	[98, 100],
@@ -245,6 +243,12 @@ export const amigaCircleCells = (
 	// band, corners on the band's edge rows, bars between. caps land
 	// after the mirror pass with their own shoulder rules
 	const cells: CircleCell[] = [];
+	// wall rows read thin against the dressed quadrants, so band bars
+	// wear an inner colon. plateaus inside the step zones repeat the
+	// steep dress instead (the reference voices its two row plateau as
+	// stacked `8, rows): a bare bar one column off the wall line reads
+	// flipped
+	const bar = '8:';
 	let prevChisel = true;
 	for (let i = 1; i < rows - 1; i++) {
 		const x = xb[i];
@@ -252,7 +256,7 @@ export const amigaCircleCells = (
 		if (i < eqStart) {
 			const step = xb[i - 1] - x;
 			if (step === 0) {
-				cells.push({ x: x, y: y, charCode: EIGHT });
+				putRun(cells, x - 1, y, stepTop(1, prevChisel, false));
 				prevChisel = false;
 				continue;
 			}
@@ -260,7 +264,7 @@ export const amigaCircleCells = (
 			putRun(cells, x - 1, y, stepTop(step, prevChisel, nextChisel));
 			prevChisel = step > 1;
 		} else if (i === eqStart && i === eqEnd) {
-			cells.push({ x: x, y: y, charCode: EIGHT });
+			putRun(cells, x, y, bar);
 			prevChisel = false;
 		} else if (i === eqStart) {
 			putRun(cells, x, y, cornerTop(xb[i - 1] - x));
@@ -269,12 +273,12 @@ export const amigaCircleCells = (
 			putRun(cells, x, y, cornerBottom(xb[i + 1] - x));
 			prevChisel = false;
 		} else if (i < eqEnd) {
-			cells.push({ x: x, y: y, charCode: EIGHT });
+			putRun(cells, x, y, bar);
 			prevChisel = false;
 		} else {
 			const step = x - xb[i - 1];
 			if (step === 0) {
-				cells.push({ x: x, y: y, charCode: EIGHT });
+				putRun(cells, x - 1, y, stepBottom(1, prevChisel, false));
 				prevChisel = false;
 				continue;
 			}
