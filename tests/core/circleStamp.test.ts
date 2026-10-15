@@ -411,12 +411,19 @@ describe('old skool circle stamp, proposal sizes (field tuned)', () => {
 		);
 	});
 
-	it('stretches the five row cap with its own quote fill when wide', () => {
-		// wide flat caps are an open owner call: this pins the tier fill
-		// variant until the field round judges it against dash caps
-		expect(renderBox(30, 5).split('\n')[0]).toBe(
-			'  .-' + '"'.repeat(22) + '-.',
+	it('leaves the quote family for dash caps when wide', () => {
+		// owner pick: quotes read as a slab past their widest drawn cap
+		expect(renderBox(30, 5)).toBe(
+			[
+				'  _.' + '-'.repeat(22) + '._',
+				' /' + ' '.repeat(26) + '\\',
+				'|' + ' '.repeat(28) + '|',
+				' \\' + ' '.repeat(26) + '/',
+				"  '-." + '_'.repeat(20) + ".-'",
+			].join('\n'),
 		);
+		// the owner drawn 5x12 ref keeps its quotes untouched
+		expect(renderBox(12, 5).split('\n')[0]).toBe('  .-""""-.');
 	});
 
 	it('renders one row as a cap tail lens and grows two rows to three', () => {

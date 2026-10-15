@@ -539,16 +539,28 @@ const fullRows = (w: number, h: number): ProfileRun[][] => {
 	return rows;
 };
 
-/** Quote cap corner for shorter or narrower rings (the 5x12 ref). */
+/**
+ * Quote cap corner for shorter or narrower rings (the 5x12 ref).
+ * Past the widest owner drawn quote cap the fill reads as a slab, so
+ * wide caps leave the quote family for dashes and underscores.
+ */
 const quoteRows = (w: number, h: number): ProfileRun[][] => {
+	const wide = w >= 13;
 	const rows: ProfileRun[][] = [];
-	rows.push([[2, '.-' + '"'.repeat(w - 8) + '-.']]);
+	rows.push([
+		[2, wide ? '_.' + dashes(w - 8) + '._' : '.-' + '"'.repeat(w - 8) + '-.'],
+	]);
 	rows.push(sideRuns(w, 1, '/', '\\'));
 	for (let i = 0; i < h - 4; i++) {
 		rows.push(sideRuns(w, 0, '|', '|'));
 	}
 	rows.push(sideRuns(w, 1, '\\', '/'));
-	rows.push([[2, '`-' + '.'.repeat(w - 8) + "-'"]]);
+	rows.push([
+		[
+			2,
+			wide ? "'-." + unders(w - 10) + ".-'" : '`-' + '.'.repeat(w - 8) + "-'",
+		],
+	]);
 	return rows;
 };
 
