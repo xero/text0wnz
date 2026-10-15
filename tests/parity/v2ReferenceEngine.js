@@ -91,12 +91,9 @@ export const createV2ReferenceEngine = (initialColumns, initialRows) => {
 				return 62;
 			case 62:
 				return 60;
-			case 57:
-				return 80;
-			case 80:
-				return 57;
 			// v3 additions, kept in lockstep so the fuzz stays meaningful:
-			// junction hooks/leans and nu skool chisels swap sides
+			// junction hooks/leans and nu skool chisels swap sides; P pairs
+			// with Y (9 one way for old art), comma flips to period one way
 			case 74:
 				return 76;
 			case 76:
@@ -109,6 +106,14 @@ export const createV2ReferenceEngine = (initialColumns, initialRows) => {
 				return 98;
 			case 98:
 				return 100;
+			case 80:
+				return 89;
+			case 89:
+				return 80;
+			case 57:
+				return 80;
+			case 44:
+				return 46;
 			default:
 				return charCode;
 		}
