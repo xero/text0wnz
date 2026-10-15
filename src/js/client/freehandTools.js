@@ -8,9 +8,9 @@ import {
 import Toolbar from './toolbar.js';
 import magicNumbers from './magicNumbers.js';
 import {
-	amigaCircleCells,
-	amigaCircleFilledCells,
-	asciiCircleCells,
+	nuskoolCircleCells,
+	nuskoolCircleFilledCells,
+	oldskoolCircleCells,
 	cellInRange,
 	createAsciiStampEngine,
 	isJunctionGlyph,
@@ -1265,7 +1265,7 @@ const createLineController = () => {
 	modeMenu.addEventListener('click', e => e.stopPropagation());
 
 	const asciiMode = () =>
-		modeSelect.value === 'ascii' || modeSelect.value === 'amiga';
+		modeSelect.value === 'oldskool' || modeSelect.value === 'nuskool';
 
 	const canvasDown = e => {
 		startXY = e.detail;
@@ -1301,7 +1301,7 @@ const createLineController = () => {
 		line(x0, y0, x1, y1, (x, hb) => {
 			points.push([x, hb]);
 		});
-		return asciiStrokeCells(points, modeSelect.value === 'amiga' ? 2 : 1);
+		return asciiStrokeCells(points, modeSelect.value === 'nuskool' ? 2 : 1);
 	};
 
 	const canvasUp = () => {
@@ -1409,7 +1409,7 @@ const createLineController = () => {
 	};
 };
 
-// thin ruled squares wear soft corners in both edge halves: period
+// old skool ruled squares wear soft corners in both edge halves: period
 // shoulders up top, backtick and quote feet below. the r/7/L/J family
 // stays reserved for junctions against other lines, where the stem
 // has an existing stroke to hook into
@@ -1445,12 +1445,12 @@ const createSquareController = () => {
 		},
 	);
 
-	// thin ascii has no fill vocabulary: any fill char reads amiga, so
+	// old skool has no fill vocabulary: any fill char reads nu skool, so
 	// the pill naps until the mode offers one. synced on enable too,
 	// since browser form restoration can set the select without firing
 	// a change event
 	const syncFillPill = () => {
-		const noFill = modeSelect.value === 'ascii';
+		const noFill = modeSelect.value === 'oldskool';
 		panel.classList.toggle('dimmed', noFill);
 		if (noFill) {
 			outlineMode = true;
@@ -1460,7 +1460,7 @@ const createSquareController = () => {
 	modeSelect.addEventListener('change', syncFillPill);
 
 	const asciiMode = () =>
-		modeSelect.value === 'ascii' || modeSelect.value === 'amiga';
+		modeSelect.value === 'oldskool' || modeSelect.value === 'nuskool';
 
 	const originalCode = (x, y) => {
 		const columns = State.textArtCanvas.getColumns();
@@ -1535,7 +1535,7 @@ const createSquareController = () => {
 			}
 		}
 		const cells = [];
-		if (modeSelect.value === 'amiga') {
+		if (modeSelect.value === 'nuskool') {
 			if (!outlineMode) {
 				// a filled ribbon square is a solid slab; the rim is the
 				// same fill ink so no outline pass is needed
@@ -1560,7 +1560,7 @@ const createSquareController = () => {
 			cells.push(...shapeStrokeCells(hPathPoints(x0, x1, cy1 * 2), 2));
 			return cells;
 		}
-		// thin: edges run between the corner cells and the corner glyphs
+		// old skool: edges run between the corner cells and the corner glyphs
 		// land last so they win their cells. both edges ride the upper
 		// half and voice dashes: per half voicing let stacked boxes land
 		// an underscore on a hyphen and densify the shared line to an
@@ -1770,12 +1770,12 @@ const createCircleController = () => {
 		},
 	);
 
-	// thin ascii has no fill vocabulary: any fill char reads amiga, so
+	// old skool has no fill vocabulary: any fill char reads nu skool, so
 	// the pill naps until the mode offers one. synced on enable too,
 	// since browser form restoration can set the select without firing
 	// a change event
 	const syncFillPill = () => {
-		const noFill = modeSelect.value === 'ascii';
+		const noFill = modeSelect.value === 'oldskool';
 		panel.classList.toggle('dimmed', noFill);
 		if (noFill) {
 			outlineMode = true;
@@ -1785,16 +1785,16 @@ const createCircleController = () => {
 	modeSelect.addEventListener('change', syncFillPill);
 
 	const asciiMode = () =>
-		modeSelect.value === 'ascii' || modeSelect.value === 'amiga';
+		modeSelect.value === 'oldskool' || modeSelect.value === 'nuskool';
 
 	const asciiEllipseCells = coords => {
 		const { sx, sy, width, height } = coords;
-		if (modeSelect.value === 'amiga') {
+		if (modeSelect.value === 'nuskool') {
 			return outlineMode
-				? amigaCircleCells(sx, sy, width, height)
-				: amigaCircleFilledCells(sx, sy, width, height);
+				? nuskoolCircleCells(sx, sy, width, height)
+				: nuskoolCircleFilledCells(sx, sy, width, height);
 		}
-		return asciiCircleCells(sx, sy, width, height);
+		return oldskoolCircleCells(sx, sy, width, height);
 	};
 
 	const canvasDown = e => {

@@ -1,6 +1,6 @@
 /**
  * Ascii line stamp engine: turns a freehand cell path into classic
- * ascii line art glyphs (BRUSH.md thin style). Pure and renderer free
+ * ascii line art glyphs (BRUSH.md old skool style). Pure and renderer free
  * so goldens can pin every slope class without a browser, and so the
  * same engine carries into v3 unchanged.
  *
@@ -22,10 +22,10 @@ export interface StampOut {
 	x: number;
 	y: number;
 	charCode: number;
-	/** set on the final cell of a thin stroke: terminal join context */
+	/** set on the final cell of an old skool stroke: terminal join context */
 	tip?: TipInfo;
 	/**
-	 * set on the first cell of a thin stroke: departure direction, so a
+	 * set on the first cell of an old skool stroke: departure direction, so a
 	 * stroke STARTING against a line can join it too (a departure at
 	 * dx,dy is geometrically a tip arriving at -dx,-dy)
 	 */
@@ -67,7 +67,7 @@ const EDGE_D = 100; // d
 const EDGE_B = 98; // b
 const EDGE_P = 80; // P
 const EDGE_Y = 89; // Y
-// amiga circle rim ink (circleStamp.ts); unweighted glyphs lose every
+// nu skool circle rim ink (circleStamp.ts); unweighted glyphs lose every
 // merge, which would punch holes in a rim crossing existing art
 const EIGHT = 56; // 8
 const GEE = 103; // g
@@ -82,7 +82,7 @@ const RPAREN = 41; // )
  * rank resolves to the newest write (the hand knows best).
  */
 const RANK = new Map<number, number>([
-	// roman fill outranks everything so crossing strokes union solid
+	// nu skool fill outranks everything so crossing strokes union solid
 	[FILL, 4],
 	[EDGE_D, 3],
 	[EDGE_B, 3],
@@ -371,7 +371,7 @@ export interface AsciiStampEngine {
 	move: (x: number, y: number, subY: number) => StampOut[];
 	/** Stroke end; flushes any provisional state. */
 	end: () => StampOut[];
-	/** Stroke width in cells; 1 is the thin style, more is roman. */
+	/** Stroke width in cells; 1 is the old skool style, more is nu skool. */
 	setWidth: (width: number) => void;
 	getWidth: () => number;
 }
@@ -726,10 +726,10 @@ export const createAsciiStampEngine = (
 	const isStem = (cls: SlopeClass): boolean =>
 		cls === 'vertical' || cls === 'steep' || cls === 'diag';
 
-	// ------------------------------------------------- roman ribbon mode
+	// ------------------------------------------------- nu skool ribbon mode
 
 	/**
-	 * Width above 1 trades the thin glyph vocabulary for the roman
+	 * Width above 1 trades the old skool glyph vocabulary for the nu skool
 	 * ribbon: every skeleton cell widens into a horizontal span of fill
 	 * with one chisel glyph per side, the corpus anatomy (lead, $ fill,
 	 * trail; thickness scales fill only, never the edges). A row can
@@ -1071,7 +1071,7 @@ export const createAsciiStampEngine = (
 			tipSpans = [];
 			const out: StampOut[] = [];
 			if (width > 1) {
-				// a roman tap daubs a full width of fill
+				// a nu skool tap daubs a full width of fill
 				ribbonCell(out, { x, y }, 'vertical');
 				return out;
 			}
@@ -1113,7 +1113,7 @@ export const createAsciiStampEngine = (
 					restampSpan(out, t.y, t.s);
 				}
 			}
-			// roman exit: a two cell sputter ramp past the tapered tip,
+			// nu skool exit: a two cell sputter ramp past the tapered tip,
 			// middle weight first then the light pebble, so the tip's own
 			// AA plus the ramp reads like the corpus endings (,:' rising,
 			// backtick ;, falling), never a lone quote in the void
@@ -1140,7 +1140,7 @@ export const createAsciiStampEngine = (
 				}
 			}
 			finishRun(out);
-			// thin terminal join: re-emit the final cell carrying the
+			// old skool terminal join: re-emit the final cell carrying the
 			// approach context, so the controller can voice a junction
 			// where the tip meets existing ink; emitted after finishRun so
 			// no later restamp in this batch shadows the junction cell

@@ -96,7 +96,7 @@ export const createV2ReferenceEngine = (initialColumns, initialRows) => {
 			case 80:
 				return 57;
 			// v3 additions, kept in lockstep so the fuzz stays meaningful:
-			// junction hooks/leans and roman chisels swap sides
+			// junction hooks/leans and nu skool chisels swap sides
 			case 74:
 				return 76;
 			case 76:

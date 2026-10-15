@@ -6,7 +6,7 @@
  * half is voiced from per row boundary spans; the right half mirrors
  * glyphwise. One geometry walker serves every dialect; each mode
  * supplies a voice (mirror pairs, wall bars, step and corner strings,
- * cap rows). The smallest amiga sizes stop reading as curves row by
+ * cap rows). The smallest nu skool sizes stop reading as curves row by
  * row, so they come from whole templates drawn by the owner (the R
  * flourish is deliberate and has no good left side mirror, so
  * templates never mirror).
@@ -22,7 +22,7 @@ interface CircleVoice {
 	mirror: (c: number) => number;
 	/**
 	 * how far inside the apex each cap row measures its width, in half
-	 * blocks: thin tops run narrow while bottoms anchor wide, a split
+	 * blocks: old skool tops run narrow while bottoms anchor wide, a split
 	 * the owner draws in both dialects. exact caps measure at the
 	 * inset regardless of where the row's centers fall; clamped caps
 	 * only widen degenerate rows
@@ -33,7 +33,7 @@ interface CircleVoice {
 	/**
 	 * where a row measures the curve, per half: at its widest crossing
 	 * (the half block nearest the equator, the ribbon dialect's full
-	 * footprint) or its narrowest (toward the apex). The thin
+	 * footprint) or its narrowest (toward the apex). The old skool
 	 * reference art measures tops narrow so steps ease 3, 2, 1 instead
 	 * of blowing out wide below the cap and reading pointed, while
 	 * bottoms measure wide and hang heavy
@@ -251,16 +251,16 @@ const walkCircle = (
 	return out;
 };
 
-// ------------------------------------------------------ amiga voice
+// ------------------------------------------------------ nu skool voice
 
-const AMIGA_MIRROR = mirrorMap([
+const NUSKOOL_MIRROR = mirrorMap([
 	['d', 'b'],
 	['P', 'Y'],
 	["'", '`'],
 	['(', ')'],
 ]);
 
-const amigaMirror = (c: number): number => AMIGA_MIRROR.get(c) ?? c;
+const nuskoolMirror = (c: number): number => NUSKOOL_MIRROR.get(c) ?? c;
 
 /**
  * Smallest circles, verbatim from the owner. Spaces stay unwritten so
@@ -291,7 +291,7 @@ const capRow = (half: string, keepShoulders: boolean): string => {
 	for (let i = half.length - 2; i >= 0; i--) {
 		const c = half.charCodeAt(i);
 		const flipped =
-			keepShoulders && (c === 80 || c === 89) ? c : amigaMirror(c);
+			keepShoulders && (c === 80 || c === 89) ? c : nuskoolMirror(c);
 		right += String.fromCharCode(flipped);
 	}
 	return half + right;
@@ -337,8 +337,8 @@ const capBottomHalf = (h: number): string => {
  * the top rim. Wall bars wear an inner colon: bare 8 columns read
  * thin against the dressed quadrants.
  */
-const AMIGA_VOICE: CircleVoice = {
-	mirror: amigaMirror,
+const NUSKOOL_VOICE: CircleVoice = {
+	mirror: nuskoolMirror,
 	capInsetTop: 1.5,
 	capInsetBottom: 1.5,
 	capExact: false,
@@ -408,7 +408,7 @@ const FILL = 36; // $
 const fillInk = (n: number): string => '$'.repeat(Math.max(0, n));
 
 /**
- * The solid dialect wraps the roman ribbon anatomy (asciiStamp.ts
+ * The solid dialect wraps the nu skool ribbon anatomy (asciiStamp.ts
  * ribbonEdges) around the disc: rising walls lead ,d and trail P',
  * falling walls lead `Y and trail b, with $ ink between. The hollow
  * rim's inner dressing (colons, inner quotes and pebbles, tucked
@@ -418,8 +418,8 @@ const fillInk = (n: number): string => '$'.repeat(Math.max(0, n));
  * lands on the top left (owner rule shared with the hollow steps), so
  * the right half speaks for itself instead of mirroring.
  */
-const AMIGA_FILL_VOICE: CircleVoice = {
-	mirror: amigaMirror,
+const NUSKOOL_FILL_VOICE: CircleVoice = {
+	mirror: nuskoolMirror,
 	capInsetTop: 1.5,
 	capInsetBottom: 1.5,
 	capExact: false,
@@ -535,10 +535,10 @@ const floodRows = (cells: CircleCell[]): CircleCell[] => {
 	return out;
 };
 
-// ------------------------------------------------------- thin voice
+// ------------------------------------------------------- old skool voice
 
 /**
- * The thin dialect speaks the owner's ascii reference set: bar walls,
+ * The old skool dialect speaks the owner's ascii reference set: bar walls,
  * slash diagonals, short dressed shoulders with no anticipating lead
  * (`.-'` is its whole span), caps keyed by width (bare underscores at
  * mid sizes, a tilde apex at large, quotes small), and bottoms that
@@ -547,7 +547,7 @@ const floodRows = (cells: CircleCell[]): CircleCell[] => {
  * to apostrophe and comma to period, while period and apostrophe
  * stand on both sides.
  */
-const THIN_MIRROR = new Map<number, number>([
+const OLDSKOOL_MIRROR = new Map<number, number>([
 	[47, 92], // / to backslash
 	[92, 47],
 	[40, 41], // ( )
@@ -556,8 +556,8 @@ const THIN_MIRROR = new Map<number, number>([
 	[44, 46], // comma to period, never back
 ]);
 
-const THIN_VOICE: CircleVoice = {
-	mirror: (c: number) => THIN_MIRROR.get(c) ?? c,
+const OLDSKOOL_VOICE: CircleVoice = {
+	mirror: (c: number) => OLDSKOOL_MIRROR.get(c) ?? c,
 	capInsetTop: 0.5,
 	capInsetBottom: 1.5,
 	capExact: true,
@@ -565,7 +565,7 @@ const THIN_VOICE: CircleVoice = {
 	measureBottom: 'wide',
 	fold: true,
 	bar: '|',
-	// a leading space keeps the shared anchor: thin shoulders start on
+	// a leading space keeps the shared anchor: old skool shoulders start on
 	// the boundary itself and spaces stay unwritten
 	stepTop: step => {
 		if (step === 1) {
@@ -633,10 +633,10 @@ const THIN_VOICE: CircleVoice = {
 };
 
 /**
- * Smallest thin rings, from the owner's reference set: paren sides
+ * Smallest old skool rings, from the owner's reference set: paren sides
  * and dash caps. Three rows is the floor; anything smaller grows in.
  */
-const THIN_TINY = [
+const OLDSKOOL_TINY = [
 	{
 		left: -2,
 		rows: [' ,-.', '(   )', " `-'"],
@@ -655,7 +655,7 @@ const THIN_TINY = [
  * too small for the grammar grow into the smallest template instead
  * of stamping crumbs.
  */
-export const amigaCircleCells = (
+export const nuskoolCircleCells = (
 	cx: number,
 	cyHb: number,
 	rx: number,
@@ -672,11 +672,11 @@ export const amigaCircleCells = (
 		});
 		return cells;
 	}
-	return walkCircle(cx, cyHb, rx, rhb, AMIGA_VOICE);
+	return walkCircle(cx, cyHb, rx, rhb, NUSKOOL_VOICE);
 };
 
 /** Same geometry as the hollow walk, voiced solid and flooded. */
-export const amigaCircleFilledCells = (
+export const nuskoolCircleFilledCells = (
 	cx: number,
 	cyHb: number,
 	rx: number,
@@ -693,11 +693,11 @@ export const amigaCircleFilledCells = (
 		});
 		return cells;
 	}
-	return floodRows(walkCircle(cx, cyHb, rx, rhb, AMIGA_FILL_VOICE));
+	return floodRows(walkCircle(cx, cyHb, rx, rhb, NUSKOOL_FILL_VOICE));
 };
 
-/** Same walk and mirror in the thin line vocabulary. */
-export const asciiCircleCells = (
+/** Same walk and mirror in the old skool line vocabulary. */
+export const oldskoolCircleCells = (
 	cx: number,
 	cyHb: number,
 	rx: number,
@@ -707,12 +707,12 @@ export const asciiCircleCells = (
 	rhb = Math.max(0, Math.round(rhb));
 	if (rx <= 3 && rhb <= 3) {
 		const cells: CircleCell[] = [];
-		const t = rx >= 3 ? THIN_TINY[1] : THIN_TINY[0];
+		const t = rx >= 3 ? OLDSKOOL_TINY[1] : OLDSKOOL_TINY[0];
 		const yTop = Math.floor(cyHb / 2) - 1;
 		t.rows.forEach((row, i) => {
 			putRun(cells, cx + t.left, yTop + i, row);
 		});
 		return cells;
 	}
-	return walkCircle(cx, cyHb, rx, rhb, THIN_VOICE);
+	return walkCircle(cx, cyHb, rx, rhb, OLDSKOOL_VOICE);
 };
