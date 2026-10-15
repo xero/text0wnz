@@ -9,6 +9,7 @@ import Toolbar from './toolbar.js';
 import magicNumbers from './magicNumbers.js';
 import {
 	amigaCircleCells,
+	amigaCircleFilledCells,
 	asciiCircleCells,
 	cellInRange,
 	createAsciiStampEngine,
@@ -1789,35 +1790,9 @@ const createCircleController = () => {
 	const asciiEllipseCells = coords => {
 		const { sx, sy, width, height } = coords;
 		if (modeSelect.value === 'amiga') {
-			const cells = amigaCircleCells(sx, sy, width, height);
-			if (!outlineMode && width > 0 && height > 0) {
-				// the slab stops at cells the rim already inked so the
-				// dressed edges stay visible; a cell joins the fill only
-				// when both its halves sit inside the ellipse
-				const rim = new Set();
-				for (const c of cells) {
-					rim.add(c.y * 65536 + c.x);
-				}
-				const inside = (x, hb) => {
-					const nx = (x - sx) / width;
-					const nhb = (hb - sy) / height;
-					return nx * nx + nhb * nhb < 1;
-				};
-				const cy0 = Math.floor((sy - height) / 2);
-				const cy1 = Math.floor((sy + height) / 2);
-				for (let cy = cy0; cy <= cy1; cy++) {
-					for (let x = sx - width; x <= sx + width; x++) {
-						if (
-							!rim.has(cy * 65536 + x) &&
-							inside(x, cy * 2) &&
-							inside(x, cy * 2 + 1)
-						) {
-							cells.push({ x: x, y: cy, charCode: 36 });
-						}
-					}
-				}
-			}
-			return cells;
+			return outlineMode
+				? amigaCircleCells(sx, sy, width, height)
+				: amigaCircleFilledCells(sx, sy, width, height);
 		}
 		return asciiCircleCells(sx, sy, width, height);
 	};
