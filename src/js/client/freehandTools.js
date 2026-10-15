@@ -1788,13 +1788,13 @@ const createCircleController = () => {
 		modeSelect.value === 'oldskool' || modeSelect.value === 'nuskool';
 
 	const asciiEllipseCells = coords => {
-		const { sx, sy, width, height } = coords;
 		if (modeSelect.value === 'nuskool') {
+			const { sx, sy, width, height } = coords;
 			return outlineMode
 				? nuskoolCircleCells(sx, sy, width, height)
 				: nuskoolCircleFilledCells(sx, sy, width, height);
 		}
-		return oldskoolCircleCells(sx, sy, width, height);
+		return oldskoolCircleCells(coords.x0, coords.yTop, coords.boxW, coords.boxH);
 	};
 
 	const canvasDown = e => {
@@ -1803,15 +1803,25 @@ const createCircleController = () => {
 
 	const processCoords = () => {
 		const endPoint = endXY || startXY;
-		const sx = startXY.x;
-		const sy = startXY.halfBlockY;
-		const width = Math.abs(endPoint.x - startXY.x);
-		const height = Math.abs(endPoint.halfBlockY - startXY.halfBlockY);
+		// box drag like the square tool next door: the drag rect IS the
+		// circle's box. old skool fills it exactly, both width parities;
+		// block and nu skool keep their center anchored odd grammars and
+		// inscribe inside it
+		const x0 = Math.min(startXY.x, endPoint.x);
+		const x1 = Math.max(startXY.x, endPoint.x);
+		const hb0 = Math.min(startXY.halfBlockY, endPoint.halfBlockY);
+		const hb1 = Math.max(startXY.halfBlockY, endPoint.halfBlockY);
+		const rx = (x1 - x0) >> 1;
+		const rhb = (hb1 - hb0) >> 1;
 		return {
-			sx: sx,
-			sy: sy,
-			width: width,
-			height: height,
+			sx: x0 + rx,
+			sy: hb0 + rhb,
+			width: rx,
+			height: rhb,
+			x0: x0,
+			yTop: Math.floor(hb0 / 2),
+			boxW: x1 - x0 + 1,
+			boxH: Math.floor(hb1 / 2) - Math.floor(hb0 / 2) + 1,
 		};
 	};
 

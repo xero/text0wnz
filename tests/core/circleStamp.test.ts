@@ -55,12 +55,34 @@ const renderWith = (
 const render = (cx: number, cyHb: number, rx: number, rhb: number): string =>
 	renderWith(nuskoolCircleCells, cx, cyHb, rx, rhb);
 
-const renderOldskool = (
-	cx: number,
-	cyHb: number,
-	rx: number,
-	rhb: number,
-): string => renderWith(oldskoolCircleCells, cx, cyHb, rx, rhb);
+/** Old skool stamps are box true: left column, top row, width, height. */
+const renderBox = (w: number, h: number): string => {
+	const grid = new Map<string, number>();
+	for (const c of oldskoolCircleCells(0, 0, w, h)) {
+		grid.set(`${c.x},${c.y}`, c.charCode);
+	}
+	let minX = Infinity;
+	let minY = Infinity;
+	let maxX = -Infinity;
+	let maxY = -Infinity;
+	for (const k of grid.keys()) {
+		const [x, y] = k.split(',').map(Number);
+		minX = Math.min(minX, x);
+		minY = Math.min(minY, y);
+		maxX = Math.max(maxX, x);
+		maxY = Math.max(maxY, y);
+	}
+	const lines: string[] = [];
+	for (let y = minY; y <= maxY; y++) {
+		let line = '';
+		for (let x = minX; x <= maxX; x++) {
+			const c = grid.get(`${x},${y}`);
+			line += c === undefined ? ' ' : String.fromCharCode(c);
+		}
+		lines.push(line.replace(/\s+$/, ''));
+	}
+	return lines.join('\n');
+};
 
 /** Mirror pair check shared by both dialect property tests. */
 const expectMirrored = (
@@ -249,83 +271,221 @@ describe('nu skool circle stamp', () => {
 	});
 });
 
-describe('old skool circle stamp', () => {
-	it('voices a medium circle in the owner reference vocabulary', () => {
-		expect(renderOldskool(60, 60, 11, 12)).toBe(
+describe('old skool circle stamp, owner goldens (circles.txt)', () => {
+	it('stamps the golden eight row circle byte exact', () => {
+		expect(renderBox(16, 8)).toBe(
 			[
-				'        .-"""-.',
-				"    .--'       '--.",
+				'    _.----._',
+				"  .'        '.",
+				' /            \\',
+				'|              |',
+				'|              |',
+				'\\              /',
+				" `.          .'",
+				"   '-.____.-'",
+			].join('\n'),
+		);
+	});
+
+	it('narrows the cap, never the corners (14 wide ref)', () => {
+		expect(renderBox(14, 8)).toBe(
+			[
+				'    _.--._',
+				"  .'      '.",
+				' /          \\',
+				'|            |',
+				'|            |',
+				'\\            /',
+				" `.        .'",
+				"   '-.__.-'",
+			].join('\n'),
+		);
+	});
+
+	it('stretches width through the cap dashes alone (good wide ref)', () => {
+		expect(renderBox(23, 7)).toBe(
+			[
+				'    _.-----------._',
 				"  .'               '.",
 				' /                   \\',
 				'|                     |',
-				'|                     |',
-				'|                     |',
-				'|                     |',
-				'|                     |',
-				' \\                   /',
-				"  `.               .'",
-				"    `--.       .--'",
-				"        `-___-'",
+				'\\                     /',
+				" `.                 .'",
+				"   '-.___________.-'",
 			].join('\n'),
 		);
 	});
 
-	it('condenses to a clean ring at small sizes', () => {
-		expect(renderOldskool(60, 60, 4, 5)).toBe(
+	it('stretches height through the wall rows alone (good tall ref)', () => {
+		expect(renderBox(15, 11)).toBe(
 			[
-				'  .-"-.',
-				' /     \\',
-				'|       |',
-				'|       |',
-				' \\     /',
-				"  `-_-'",
+				'    _.---._',
+				"  .'       '.",
+				' /           \\',
+				'|             |',
+				'|             |',
+				'|             |',
+				'|             |',
+				'|             |',
+				'\\             /',
+				" `.         .'",
+				"   '-.___.-'",
 			].join('\n'),
 		);
 	});
 
-	it('stamps the paren ring templates at the smallest sizes', () => {
-		expect(renderOldskool(60, 60, 3, 3)).toBe(
-			[' ,---.', '(     )', " `---'"].join('\n'),
-		);
-		expect(renderOldskool(60, 60, 2, 2)).toBe(
-			[' ,-.', '(   )', " `-'"].join('\n'),
-		);
-		expect(renderOldskool(60, 60, 0, 0)).toBe(renderOldskool(60, 60, 2, 2));
-	});
-
-	it('mirrors old skool circles with the pebble pairs swapped', () => {
-		expectMirrored(
-			oldskoolCircleCells,
-			new Map([
-				[47, 92],
-				[92, 47],
-				[40, 41],
-				[41, 40],
-				[96, 39],
-				[44, 46],
-			]),
+	it('voices five rows with the quote cap corner (5x12 ref)', () => {
+		expect(renderBox(12, 5)).toBe(
 			[
-				[7, 8],
-				[11, 12],
-				[23, 21],
-				[16, 7],
-				[5, 14],
-				[30, 4],
-				[6, 40],
-				[4, 5],
-				[1, 12],
-			],
-			// the cap rows stand their period leads on both ends
-			[46],
+				'  .-""""-.',
+				' /        \\',
+				'|          |',
+				' \\        /',
+				"  `-....-'",
+			].join('\n'),
 		);
 	});
 
-	it('emits finite old skool cells for every size up to huge radii', () => {
-		for (let rx = 0; rx <= 30; rx += 3) {
-			for (let rhb = 0; rhb <= 30; rhb += 3) {
-				for (const c of oldskoolCircleCells(50, 50, rx, rhb)) {
+	it('voices four rows wall free (4x8 ref)', () => {
+		expect(renderBox(8, 4)).toBe(
+			[" ,-''-.", '/      \\', '\\      /', " `-..-'"].join('\n'),
+		);
+	});
+
+	it('rings three rows in the canon paren family', () => {
+		expect(renderBox(7, 3)).toBe([' ,---.', '(     )', " `---'"].join('\n'));
+		expect(renderBox(5, 3)).toBe([' ,-.', '(   )', " `-'"].join('\n'));
+		// the six wide ref was drawn in the period family; the canon
+		// comma and backtick family renders its size
+		expect(renderBox(6, 3)).toBe([' ,--.', '(    )', " `--'"].join('\n'));
+	});
+});
+
+describe('old skool circle stamp, proposal sizes (field tuned)', () => {
+	it('keeps the full corner with zero walls at six rows', () => {
+		expect(renderBox(14, 6)).toBe(
+			[
+				'    _.--._',
+				"  .'      '.",
+				' /          \\',
+				'\\            /',
+				" `.        .'",
+				"   '-.__.-'",
+			].join('\n'),
+		);
+	});
+
+	it('sits a lone apostrophe on the odd four row axis', () => {
+		expect(renderBox(9, 4)).toBe(
+			[" ,--'--.", '/       \\', '\\       /', " `--.--'"].join('\n'),
+		);
+	});
+
+	it('sheds a narrow tall ring to the quote cap corner', () => {
+		expect(renderBox(10, 8)).toBe(
+			[
+				'  .-""-.',
+				' /      \\',
+				'|        |',
+				'|        |',
+				'|        |',
+				'|        |',
+				' \\      /',
+				"  `-..-'",
+			].join('\n'),
+		);
+	});
+
+	it('carries the narrowest tall rings on paren walls', () => {
+		expect(renderBox(5, 8)).toBe(
+			[
+				' ,-.',
+				'(   )',
+				'(   )',
+				'(   )',
+				'(   )',
+				'(   )',
+				'(   )',
+				" `-'",
+			].join('\n'),
+		);
+	});
+
+	it('stretches the five row cap with its own quote fill when wide', () => {
+		// wide flat caps are an open owner call: this pins the tier fill
+		// variant until the field round judges it against dash caps
+		expect(renderBox(30, 5).split('\n')[0]).toBe(
+			'  .-' + '"'.repeat(22) + '-.',
+		);
+	});
+
+	it('renders one row as a cap tail lens and grows two rows to three', () => {
+		expect(renderBox(12, 1)).toBe('_.--------._');
+		expect(renderBox(9, 2)).toBe(
+			[' ,-----.', '(       )', " `-----'"].join('\n'),
+		);
+	});
+
+	it('grows boxes under the smallest ring around their center', () => {
+		expect(renderBox(3, 3)).toBe(renderBox(5, 3));
+		expect(renderBox(1, 1)).toBe(renderBox(5, 1));
+	});
+});
+
+describe('old skool circle stamp, contracts', () => {
+	// symmetry is by table, not by construction: every left glyph must
+	// find its scene pair on the mirrored column, so a one char typo in
+	// a right run cannot ship silently
+	const DIR_PAIR = new Map([
+		[',', '.'],
+		['`', "'"],
+		['/', '\\'],
+		['\\', '/'],
+		['(', ')'],
+	]);
+	const STANDS = new Set(['.', "'", '-', '_', '"', '|', ' ']);
+
+	it('mirrors every row of every size through the scene pairs', () => {
+		for (const w of [5, 6, 7, 8, 9, 12, 13, 14, 16, 23, 30]) {
+			for (const h of [1, 2, 3, 4, 5, 6, 7, 8, 11, 20]) {
+				const rows = renderBox(w, h).split('\n');
+				for (const row of rows) {
+					const full = row.padEnd(
+						rows.reduce((m, r) => Math.max(m, r.length), 0),
+					);
+					const n = full.length;
+					for (let i = 0; i * 2 < n - 1; i++) {
+						const l = full[i];
+						const r = full[n - 1 - i];
+						const want = DIR_PAIR.get(l) ?? (STANDS.has(l) ? l : undefined);
+						expect(
+							want,
+							`unpaired glyph '${l}' at ${i} in '${full}' (${w}x${h})`,
+						).toBeDefined();
+						expect(r, `mirror mismatch at ${i} in '${full}' (${w}x${h})`).toBe(
+							want,
+						);
+					}
+					if (n % 2 === 1) {
+						const c = full[(n - 1) >> 1];
+						expect(
+							STANDS.has(c),
+							`axis glyph '${c}' not self mirrored in '${full}' (${w}x${h})`,
+						).toBe(true);
+					}
+				}
+			}
+		}
+	});
+
+	it('emits finite cells inside the box for every size', () => {
+		for (let w = 5; w <= 32; w += 3) {
+			for (let h = 1; h <= 32; h += 3) {
+				for (const c of oldskoolCircleCells(0, 0, w, h)) {
 					expect(Number.isFinite(c.x)).toBe(true);
 					expect(Number.isFinite(c.y)).toBe(true);
+					expect(c.x).toBeGreaterThanOrEqual(0);
+					expect(c.x).toBeLessThan(w);
 					expect(c.charCode).toBeGreaterThan(32);
 				}
 			}
