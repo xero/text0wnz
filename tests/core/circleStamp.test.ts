@@ -252,7 +252,7 @@ describe('thin circle stamp', () => {
 	it('voices a medium circle in the owner reference vocabulary', () => {
 		expect(renderThin(60, 60, 11, 12)).toBe(
 			[
-				'        _.-~-._',
+				'        .-"""-.',
 				"    .--'       '--.",
 				"  .'               '.",
 				' /                   \\',
@@ -264,7 +264,7 @@ describe('thin circle stamp', () => {
 				' \\                   /',
 				"  `.               .'",
 				"    `--.       .--'",
-				"        `-._.-'",
+				"        `-___-'",
 			].join('\n'),
 		);
 	});
@@ -272,7 +272,7 @@ describe('thin circle stamp', () => {
 	it('condenses to a clean ring at small sizes', () => {
 		expect(renderThin(60, 60, 4, 5)).toBe(
 			[
-				'  .-~-.',
+				'  .-"-.',
 				' /     \\',
 				'|       |',
 				'|       |',
