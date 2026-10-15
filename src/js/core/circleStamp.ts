@@ -625,6 +625,25 @@ const profileRows = (w: number, h: number): ProfileRun[][] => {
 // ---------------------------------------------------------- exports
 
 /**
+ * min/max and round pass non finite values through, and an Infinity
+ * extent runs the row loops forever: public core api sanitizes once
+ * at each export. Signed values (box corners) keep their sign.
+ */
+const finite = (v: number, floor: number, signed = false): number =>
+	Number.isFinite(v)
+		? signed
+			? Math.round(v)
+			: Math.max(floor, Math.round(v))
+		: floor;
+
+/**
+ * a drag long in one dimension and flat in the other asked for a lens
+ * or a bar, not a grown template: templates only replace drags that
+ * are small in both dimensions
+ */
+const sliver = (rx: number, rhb: number): boolean => rx >= 2 !== rhb >= 2;
+
+/**
  * cx and rx in cell columns, cyHb and rhb in half block rows (the
  * controller's native drag space). Output rows are cell rows. Drags
  * too small for the grammar grow into the smallest template instead
@@ -636,9 +655,11 @@ export const nuskoolCircleCells = (
 	rx: number,
 	rhb: number,
 ): CircleCell[] => {
-	rx = Math.max(0, Math.round(rx));
-	rhb = Math.max(0, Math.round(rhb));
-	if (rx <= 4 && rhb <= 6) {
+	cx = finite(cx, 0);
+	cyHb = finite(cyHb, 0);
+	rx = finite(rx, 0);
+	rhb = finite(rhb, 0);
+	if (rx <= 4 && rhb <= 6 && !sliver(rx, rhb)) {
 		const cells: CircleCell[] = [];
 		const t = rx >= 4 || rhb >= 5 ? TINY[1] : TINY[0];
 		const yTop = Math.floor(cyHb / 2) - (t.rows.length >> 1);
@@ -657,9 +678,11 @@ export const nuskoolCircleFilledCells = (
 	rx: number,
 	rhb: number,
 ): CircleCell[] => {
-	rx = Math.max(0, Math.round(rx));
-	rhb = Math.max(0, Math.round(rhb));
-	if (rx <= 4 && rhb <= 6) {
+	cx = finite(cx, 0);
+	cyHb = finite(cyHb, 0);
+	rx = finite(rx, 0);
+	rhb = finite(rhb, 0);
+	if (rx <= 4 && rhb <= 6 && !sliver(rx, rhb)) {
 		const cells: CircleCell[] = [];
 		const t = rx >= 4 || rhb >= 5 ? TINY_FILL[1] : TINY_FILL[0];
 		const yTop = Math.floor(cyHb / 2) - (t.rows.length >> 1);
@@ -684,8 +707,10 @@ export const oldskoolCircleCells = (
 	w: number,
 	h: number,
 ): CircleCell[] => {
-	w = Math.max(1, Math.round(w));
-	h = Math.max(1, Math.round(h));
+	xLeft = finite(xLeft, 0, true);
+	yTop = finite(yTop, 0, true);
+	w = finite(w, 1);
+	h = finite(h, 1);
 	if (w < 5) {
 		xLeft -= (5 - w) >> 1;
 		w = 5;
