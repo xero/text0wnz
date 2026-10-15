@@ -1,15 +1,15 @@
 /**
  * Circle stamp for the ruled shape tools (owner reference art:
- * circles.txt). A circle is a double mirror: one quadrant's grammar
- * flipped and rotated into the other three, so symmetry comes by
- * construction instead of hoping two engine strokes agree. The left
+ * circles.txt). Nu skool circles are a double mirror: one quadrant's
+ * grammar flipped and rotated into the other three, so symmetry comes
+ * by construction instead of hoping two engine strokes agree. The left
  * half is voiced from per row boundary spans; the right half mirrors
- * glyphwise. One geometry walker serves every dialect; each mode
- * supplies a voice (mirror pairs, wall bars, step and corner strings,
- * cap rows). The smallest nu skool sizes stop reading as curves row by
- * row, so they come from whole templates drawn by the owner (the R
- * flourish is deliberate and has no good left side mirror, so
- * templates never mirror).
+ * glyphwise. Old skool circles instead follow the owner's scaling law
+ * and compose from fixed profile tables (see the old skool section).
+ * The smallest nu skool sizes stop reading as curves row by row, so
+ * they come from whole templates drawn by the owner (the R flourish is
+ * deliberate and has no good left side mirror, so templates never
+ * mirror).
  */
 
 export interface CircleCell {
@@ -22,30 +22,10 @@ interface CircleVoice {
 	mirror: (c: number) => number;
 	/**
 	 * how far inside the apex each cap row measures its width, in half
-	 * blocks: old skool tops run narrow while bottoms anchor wide, a split
-	 * the owner draws in both dialects. exact caps measure at the
-	 * inset regardless of where the row's centers fall; clamped caps
-	 * only widen degenerate rows
+	 * blocks, so cap width covers the gap to the first stepping row
 	 */
 	capInsetTop: number;
 	capInsetBottom: number;
-	capExact: boolean;
-	/**
-	 * where a row measures the curve, per half: at its widest crossing
-	 * (the half block nearest the equator, the ribbon dialect's full
-	 * footprint) or its narrowest (toward the apex). The old skool
-	 * reference art measures tops narrow so steps ease 3, 2, 1 instead
-	 * of blowing out wide below the cap and reading pointed, while
-	 * bottoms measure wide and hang heavy
-	 */
-	measureTop: 'wide' | 'narrow';
-	measureBottom: 'wide' | 'narrow';
-	/**
-	 * folded circles are one quarter section mirrored and rotated: the
-	 * top half's ladder reflects onto the bottom cell for cell, so the
-	 * caps match width and every shoulder row has an equal twin
-	 */
-	fold: boolean;
 	/** wall rows inside the equator band */
 	bar: string;
 	stepTop: (step: number, prevChisel: boolean, nextChisel: boolean) => string;
@@ -117,29 +97,18 @@ const walkCircle = (
 	const xb: number[] = [];
 	for (let i = 0; i < rows; i++) {
 		const y = yTop + i;
-		const half = y * 2 + 1 <= cyHb ? voice.measureTop : voice.measureBottom;
-		const pick = half === 'narrow' ? Math.max : Math.min;
 		let dy = Math.min(
 			rhb,
-			pick(Math.abs(y * 2 + 0.5 - cyHb), Math.abs(y * 2 + 1.5 - cyHb)),
+			Math.min(Math.abs(y * 2 + 0.5 - cyHb), Math.abs(y * 2 + 1.5 - cyHb)),
 		);
 		if (i === 0) {
-			dy = voice.capExact
-				? rhb - voice.capInsetTop
-				: Math.min(dy, rhb - voice.capInsetTop);
+			dy = Math.min(dy, rhb - voice.capInsetTop);
 		}
 		if (i === rows - 1) {
-			dy = voice.capExact
-				? rhb - voice.capInsetBottom
-				: Math.min(dy, rhb - voice.capInsetBottom);
+			dy = Math.min(dy, rhb - voice.capInsetBottom);
 		}
 		const t = Math.min(1, Math.max(0, dy) / Math.max(1, rhb));
 		xb.push(Math.round(cx - rx * Math.sqrt(Math.max(0, 1 - t * t))));
-	}
-	if (voice.fold) {
-		for (let i = 0; i < rows; i++) {
-			xb[i] = xb[Math.min(i, rows - 1 - i)];
-		}
 	}
 	if (rows === 1) {
 		// a flat drag is a lens: one dressed cap row
@@ -203,18 +172,12 @@ const walkCircle = (
 			rrun = R?.bar;
 			prevChisel = false;
 		} else {
-			// folded bottoms measure toward the narrower row below, the
-			// true mirror of the top walking toward the row above;
-			// unfolded dialects keep the row above as their basis, since
-			// their wide anchored caps absorb the final jump themselves
+			// bottoms measure against the row above: the wide anchored
+			// caps absorb the final jump themselves
 			anchor = x - 1;
-			const raw = voice.fold ? xb[i + 1] - x : x - xb[i - 1];
+			const raw = x - xb[i - 1];
 			const step = raw === 0 ? 1 : raw;
-			const nextChisel =
-				raw !== 0 &&
-				(voice.fold
-					? i + 1 < rows - 1 && xb[i + 2] - xb[i + 1] > 1
-					: i + 1 < rows && xb[i + 1] - x > 1);
+			const nextChisel = raw !== 0 && i + 1 < rows && xb[i + 1] - x > 1;
 			run = voice.stepBottom(step, prevChisel, nextChisel);
 			rrun = R?.stepBottom(step, prevChisel, nextChisel);
 			prevChisel = raw > 1;
@@ -341,10 +304,6 @@ const NUSKOOL_VOICE: CircleVoice = {
 	mirror: nuskoolMirror,
 	capInsetTop: 1.5,
 	capInsetBottom: 1.5,
-	capExact: false,
-	measureTop: 'wide',
-	measureBottom: 'wide',
-	fold: false,
 	bar: '8:',
 	stepTop: (step, prevChisel, nextChisel) => {
 		if (step === 1) {
@@ -422,10 +381,6 @@ const NUSKOOL_FILL_VOICE: CircleVoice = {
 	mirror: nuskoolMirror,
 	capInsetTop: 1.5,
 	capInsetBottom: 1.5,
-	capExact: false,
-	measureTop: 'wide',
-	measureBottom: 'wide',
-	fold: false,
 	bar: '8',
 	stepTop: (step, _prevChisel, nextChisel) => {
 		if (step === 1) {
@@ -535,117 +490,115 @@ const floodRows = (cells: CircleCell[]): CircleCell[] => {
 	return out;
 };
 
-// ------------------------------------------------------- old skool voice
+// ---------------------------------------------- old skool profiles
 
 /**
- * The old skool dialect speaks the owner's ascii reference set: bar walls,
- * slash diagonals, short dressed shoulders with no anticipating lead
- * (`.-'` is its whole span), caps keyed by width (bare underscores at
- * mid sizes, a tilde apex at large, quotes small), and bottoms that
- * anchor wider than their tops with a dot nestled into the tails.
- * The mirror runs one way where the art demands it: backtick flips
- * to apostrophe and comma to period, while period and apostrophe
- * stand on both sides.
+ * Old skool circles speak the owner's scaling law (circles.txt): the
+ * corner anatomy never changes with size. Height stretches only the
+ * wall rows and width only the dash and underscore cap fills; copying
+ * any other row flattens the curve into facets. Rows compose
+ * directly, a left run at its inset plus a right run anchored off the
+ * box's right edge, so both width parities land exactly and no glyph
+ * mirror is needed. Tiers shed as the box shrinks: the full corner
+ * needs thirteen columns, the quote cap eight, the apostrophe cap
+ * seven, then paren walls carry the rest.
  */
-const OLDSKOOL_MIRROR = new Map<number, number>([
-	[47, 92], // / to backslash
-	[92, 47],
-	[40, 41], // ( )
-	[41, 40],
-	[96, 39], // backtick to apostrophe, never back
-	[44, 46], // comma to period, never back
-]);
 
-const OLDSKOOL_VOICE: CircleVoice = {
-	mirror: (c: number) => OLDSKOOL_MIRROR.get(c) ?? c,
-	capInsetTop: 0.5,
-	capInsetBottom: 1.5,
-	capExact: true,
-	measureTop: 'narrow',
-	measureBottom: 'wide',
-	fold: true,
-	bar: '|',
-	// a leading space keeps the shared anchor: old skool shoulders start on
-	// the boundary itself and spaces stay unwritten
-	stepTop: step => {
-		if (step === 1) {
-			return ' /';
-		}
-		return ' .' + '-'.repeat(step - 2) + "'";
-	},
-	stepBottom: step => {
-		if (step === 1) {
-			return ' \\';
-		}
-		return ' `' + '-'.repeat(step - 2) + '.';
-	},
-	// a two cell jog wants the bare diagonal floating mid jog, like
-	// the reference rows; wider jogs keep a dressed tail
-	cornerTop: jog => {
-		if (jog <= 1) {
-			return '|';
-		}
-		if (jog === 2) {
-			return ' /';
-		}
-		return '/' + '-'.repeat(jog - 1);
-	},
-	cornerBottom: jog => {
-		if (jog <= 1) {
-			return '|';
-		}
-		if (jog === 2) {
-			return ' \\';
-		}
-		return '\\' + '_'.repeat(jog - 1);
-	},
-	// the tilde apex and underscore tails only read round when dash
-	// flanks dilute them (the owner's large reference keeps them at
-	// nine wide and up); narrower caps ride flat on quotes and
-	// underscores or the peak profiles into a diamond facet
-	capTopRow: h => {
-		const w = 2 * h - 1;
-		if (w >= 9) {
-			const flank = '-'.repeat((w - 7) >> 1);
-			return '_.-' + flank + '~' + flank + '-._';
-		}
-		if (w >= 5) {
-			return '.-' + '"'.repeat(w - 4) + '-.';
-		}
-		if (w >= 3) {
-			return '.-.';
-		}
-		return '-'.repeat(Math.max(1, w));
-	},
-	capBottomRow: h => {
-		const w = 2 * h - 1;
-		if (w >= 9) {
-			return '`-.' + '_'.repeat(w - 6) + ".-'";
-		}
-		if (w >= 5) {
-			return '`-' + '_'.repeat(w - 4) + "-'";
-		}
-		if (w >= 3) {
-			return "`-'";
-		}
-		return '_'.repeat(Math.max(1, w));
-	},
+type ProfileRun = [number, string];
+
+const dashes = (n: number): string => '-'.repeat(Math.max(0, n));
+const unders = (n: number): string => '_'.repeat(Math.max(0, n));
+
+const sideRuns = (
+	w: number,
+	inset: number,
+	left: string,
+	right: string,
+): ProfileRun[] => [
+	[inset, left],
+	[w - inset - right.length, right],
+];
+
+/**
+ * Full corner (golden and both good scalings): cap tails over one
+ * shoulder pair over one diagonal. The bottom hangs one column
+ * heavier than the top in every owner reference: its diagonal rides
+ * the wall column and its cap anchors a column wider.
+ */
+const fullRows = (w: number, h: number): ProfileRun[][] => {
+	const rows: ProfileRun[][] = [];
+	rows.push([[4, '_.' + dashes(w - 12) + '._']]);
+	rows.push(sideRuns(w, 2, ".'", "'."));
+	rows.push(sideRuns(w, 1, '/', '\\'));
+	for (let i = 0; i < h - 6; i++) {
+		rows.push(sideRuns(w, 0, '|', '|'));
+	}
+	rows.push(sideRuns(w, 0, '\\', '/'));
+	rows.push(sideRuns(w, 1, '`.', ".'"));
+	rows.push([[3, "'-." + unders(w - 12) + ".-'"]]);
+	return rows;
+};
+
+/** Quote cap corner for shorter or narrower rings (the 5x12 ref). */
+const quoteRows = (w: number, h: number): ProfileRun[][] => {
+	const rows: ProfileRun[][] = [];
+	rows.push([[2, '.-' + '"'.repeat(w - 8) + '-.']]);
+	rows.push(sideRuns(w, 1, '/', '\\'));
+	for (let i = 0; i < h - 4; i++) {
+		rows.push(sideRuns(w, 0, '|', '|'));
+	}
+	rows.push(sideRuns(w, 1, '\\', '/'));
+	rows.push([[2, '`-' + '.'.repeat(w - 8) + "-'"]]);
+	return rows;
 };
 
 /**
- * Smallest old skool rings, from the owner's reference set: paren sides
- * and dash caps. Three rows is the floor; anything smaller grows in.
+ * Four rows have no walls at all (the 4x8 ref); an apostrophe pair
+ * sits the even axis, a lone apostrophe the odd one, and dashes carry
+ * the stretch so the pair never widens.
  */
-const OLDSKOOL_TINY = [
-	{
-		left: -2,
-		rows: [' ,-.', '(   )', " `-'"],
-	},
-	{
-		left: -3,
-		rows: [' ,---.', '(     )', " `---'"],
-	},
-];
+const flatRows = (w: number): ProfileRun[][] => {
+	const even = w % 2 === 0;
+	const fill = dashes((even ? w - 8 : w - 7) >> 1);
+	const core = even ? "''" : "'";
+	const dot = even ? '..' : '.';
+	return [
+		[[1, ',-' + fill + core + fill + '-.']],
+		sideRuns(w, 0, '/', '\\'),
+		sideRuns(w, 0, '\\', '/'),
+		[[1, '`-' + fill + dot + fill + "-'"]],
+	];
+};
+
+/**
+ * Paren walls with dash caps: the three row canon family (comma and
+ * backtick, per the owner) and the narrow tall fallback in one shape.
+ */
+const parenRows = (w: number, h: number): ProfileRun[][] => {
+	const rows: ProfileRun[][] = [[[1, ',' + dashes(w - 4) + '.']]];
+	for (let i = 0; i < h - 2; i++) {
+		rows.push(sideRuns(w, 0, '(', ')'));
+	}
+	rows.push([[1, '`' + dashes(w - 4) + "'"]]);
+	return rows;
+};
+
+const profileRows = (w: number, h: number): ProfileRun[][] => {
+	if (h === 1) {
+		// a flat drag is a lens: one cap tail row
+		return [[[0, '_.' + dashes(w - 4) + '._']]];
+	}
+	if (h === 3 || w < 7) {
+		return parenRows(w, h);
+	}
+	if (h === 4) {
+		return flatRows(w);
+	}
+	if (h >= 6 && w >= 13) {
+		return fullRows(w, h);
+	}
+	return w >= 8 ? quoteRows(w, h) : parenRows(w, h);
+};
 
 // ---------------------------------------------------------- exports
 
@@ -696,23 +649,33 @@ export const nuskoolCircleFilledCells = (
 	return floodRows(walkCircle(cx, cyHb, rx, rhb, NUSKOOL_FILL_VOICE));
 };
 
-/** Same walk and mirror in the old skool line vocabulary. */
+/**
+ * Box true stamp in the old skool profile grammar: xLeft and w in
+ * cell columns, yTop and h in cell rows (the controller derives rows
+ * from its half block drag box). Boxes under the smallest ring grow
+ * around their center; a two row box grows down into the three row
+ * floor.
+ */
 export const oldskoolCircleCells = (
-	cx: number,
-	cyHb: number,
-	rx: number,
-	rhb: number,
+	xLeft: number,
+	yTop: number,
+	w: number,
+	h: number,
 ): CircleCell[] => {
-	rx = Math.max(0, Math.round(rx));
-	rhb = Math.max(0, Math.round(rhb));
-	if (rx <= 3 && rhb <= 3) {
-		const cells: CircleCell[] = [];
-		const t = rx >= 3 ? OLDSKOOL_TINY[1] : OLDSKOOL_TINY[0];
-		const yTop = Math.floor(cyHb / 2) - 1;
-		t.rows.forEach((row, i) => {
-			putRun(cells, cx + t.left, yTop + i, row);
-		});
-		return cells;
+	w = Math.max(1, Math.round(w));
+	h = Math.max(1, Math.round(h));
+	if (w < 5) {
+		xLeft -= (5 - w) >> 1;
+		w = 5;
 	}
-	return walkCircle(cx, cyHb, rx, rhb, OLDSKOOL_VOICE);
+	if (h === 2) {
+		h = 3;
+	}
+	const cells: CircleCell[] = [];
+	profileRows(w, h).forEach((runs, i) => {
+		for (const [inset, run] of runs) {
+			putRun(cells, xLeft + inset, yTop + i, run);
+		}
+	});
+	return cells;
 };

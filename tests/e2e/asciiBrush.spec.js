@@ -298,32 +298,31 @@ test.describe('shape tool brush modes', () => {
 		expect((await readBlock(page, 60, 22)).charCode).toBe(DOLLAR);
 	});
 
-	test('ascii circle voices bars at its sides', async ({ page }) => {
+	test('old skool circle fills its drag box with the golden anatomy', async ({ page }) => {
 		await page.locator('#circle').click();
 		await page.selectOption('#circleMode', 'oldskool');
-		await pacedDrag(page, [40, 16], [46, 23]);
-		let bars = 0;
-		for (let y = 10; y <= 22; y++) {
-			for (const x of [34, 46]) {
-				if ((await readBlock(page, x, y)).charCode === VBAR) {
-					bars++;
-				}
-			}
-		}
-		expect(bars).toBeGreaterThanOrEqual(4);
-		expect([0, 32]).toContain((await readBlock(page, 40, 16)).charCode);
+		// a 16 x 8 box drag stamps the owner's golden circle box true
+		await pacedDrag(page, [36, 16], [51, 23]);
+		expect((await readBlock(page, 36, 19)).charCode).toBe(VBAR);
+		expect((await readBlock(page, 51, 19)).charCode).toBe(VBAR);
+		expect((await readBlock(page, 51, 20)).charCode).toBe(VBAR);
+		expect((await readBlock(page, 36, 21)).charCode).toBe(92); // \
+		expect((await readBlock(page, 51, 21)).charCode).toBe(47); // /
+		expect((await readBlock(page, 40, 16)).charCode).toBe(95); // _ cap tail
+		expect([0, 32]).toContain((await readBlock(page, 43, 19)).charCode);
 	});
 
 	test('nu skool circle rims a hollow eight body ring', async ({ page }) => {
 		await page.locator('#circle').click();
 		await page.selectOption('#circleMode', 'nuskool');
-		await pacedDrag(page, [40, 16], [46, 23]);
+		// nu skool inscribes its center anchored ring inside the drag box
+		await pacedDrag(page, [37, 16], [49, 23]);
 		// single cell rim in the quadrant grammar: 8 bodies down the
 		// sides, a hollow center, and no dollar ribbon anywhere
 		let eights = 0;
 		let dollars = 0;
 		for (let y = 9; y <= 24; y++) {
-			for (let x = 32; x <= 48; x++) {
+			for (let x = 32; x <= 52; x++) {
 				const code = (await readBlock(page, x, y)).charCode;
 				if (code === 56) {
 					eights++;
@@ -334,15 +333,15 @@ test.describe('shape tool brush modes', () => {
 		}
 		expect(eights).toBeGreaterThanOrEqual(4);
 		expect(dollars).toBe(0);
-		expect([0, 32]).toContain((await readBlock(page, 40, 16)).charCode);
+		expect([0, 32]).toContain((await readBlock(page, 43, 20)).charCode);
 	});
 
 	test('nu skool filled circle pours the slab', async ({ page }) => {
 		await page.locator('#circle').click();
 		await page.selectOption('#circleMode', 'nuskool');
 		await page.locator('#circleToolbar .toggleButton.right').click();
-		await pacedDrag(page, [40, 16], [46, 23]);
-		expect((await readBlock(page, 40, 16)).charCode).toBe(DOLLAR);
+		await pacedDrag(page, [37, 16], [49, 23]);
+		expect((await readBlock(page, 43, 20)).charCode).toBe(DOLLAR);
 	});
 
 	test('a flat drag grows into a two row box', async ({ page }) => {
