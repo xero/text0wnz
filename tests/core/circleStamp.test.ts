@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	amigaCircleCells,
+	amigaCircleFilledCells,
 	asciiCircleCells,
 } from '../../src/js/core/circleStamp.js';
 
@@ -321,6 +322,101 @@ describe('thin circle stamp', () => {
 		for (let rx = 0; rx <= 30; rx += 3) {
 			for (let rhb = 0; rhb <= 30; rhb += 3) {
 				for (const c of asciiCircleCells(50, 50, rx, rhb)) {
+					expect(Number.isFinite(c.x)).toBe(true);
+					expect(Number.isFinite(c.y)).toBe(true);
+					expect(c.charCode).toBeGreaterThan(32);
+				}
+			}
+		}
+	});
+});
+
+describe('amiga filled circle stamp', () => {
+	const renderFilled = (
+		cx: number,
+		cyHb: number,
+		rx: number,
+		rhb: number,
+	): string => renderWith(amigaCircleFilledCells, cx, cyHb, rx, rhb);
+
+	it('voices the owner hand reference verbatim', () => {
+		// owner drew the hollow tool output at this size, then hand
+		// edited it solid on canvas; this golden IS that edit
+		expect(renderFilled(40, 40, 9, 9)).toBe(
+			[
+				'    ,,d$$$$$b,,',
+				'  ,d$$$$$$$$$$$b,',
+				',d$$$$$$$$$$$$$$Yb,',
+				'd$$$$$$$$$$$$$$$$$b',
+				'8$$$$$$$$$$$$$$$$$8',
+				'8$$$$$$$$$$$$$$$$$8',
+				'Y$$$$$$$$$$$$$$$$$P',
+				"`Y$$$$$$$$$$$$$$$P'",
+				"  `Y$$$$$$$$$$$P'",
+				'    `"Y$$$$$P"\'',
+			].join('\n'),
+		);
+	});
+
+	it('grows small drags into the solid templates', () => {
+		expect(renderFilled(40, 40, 2, 3)).toBe(
+			[' ,d$$b,', 'd$$$$$$b', 'Y$$$$$$P', " `Y$$P'"].join('\n'),
+		);
+		expect(renderFilled(40, 40, 4, 5)).toBe(
+			[' ,d$$$b,', 'd$$$$$$$b', '8$$$$$$$8', 'Y$$$$$$$P', " `Y$$$P'"].join(
+				'\n',
+			),
+		);
+	});
+
+	it('leaves no hole between the walls at any size', () => {
+		for (const [rx, rhb] of [
+			[6, 7],
+			[9, 9],
+			[14, 13],
+			[24, 22],
+			[12, 4],
+			[5, 12],
+		]) {
+			for (const row of renderFilled(40, 40, rx, rhb).split('\n')) {
+				expect(row.trim(), `rx ${rx} rhb ${rhb}`).not.toContain(' ');
+			}
+		}
+	});
+
+	it('keeps the hollow silhouette row for row', () => {
+		// same drag, same disc: only the dress changes between the
+		// hollow and solid dialects
+		const spans = (
+			cells: Array<{ x: number; y: number; charCode: number }>,
+		) => {
+			const rows = new Map<number, [number, number]>();
+			for (const c of cells) {
+				const s = rows.get(c.y) ?? [Infinity, -Infinity];
+				rows.set(c.y, [Math.min(s[0], c.x), Math.max(s[1], c.x)]);
+			}
+			return rows;
+		};
+		for (const [rx, rhb] of [
+			[6, 7],
+			[9, 9],
+			[14, 13],
+			[16, 7],
+			[5, 12],
+		]) {
+			const hollow = spans(amigaCircleCells(40, 40, rx, rhb));
+			const solid = spans(amigaCircleFilledCells(40, 40, rx, rhb));
+			expect(solid.size, `rx ${rx} rhb ${rhb}`).toBe(hollow.size);
+			for (const [y, s] of hollow) {
+				expect(solid.get(y), `row ${y} rx ${rx} rhb ${rhb}`).toEqual(s);
+			}
+		}
+	});
+
+	it('emits finite solid cells for every size up to huge radii', () => {
+		for (let rx = 0; rx <= 30; rx += 3) {
+			for (let rhb = 0; rhb <= 30; rhb += 3) {
+				for (const c of amigaCircleFilledCells(50, 50, rx, rhb)) {
 					expect(Number.isFinite(c.x)).toBe(true);
 					expect(Number.isFinite(c.y)).toBe(true);
 					expect(c.charCode).toBeGreaterThan(32);

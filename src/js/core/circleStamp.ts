@@ -59,6 +59,24 @@ interface CircleVoice {
 	/** full cap rows, anchored at the row's left boundary */
 	capTopRow: (h: number) => string;
 	capBottomRow: (h: number) => string;
+	/**
+	 * a voice that speaks its right half directly instead of glyph
+	 * mirroring the left: the fill dialect keeps the Y shoulder
+	 * standing on the right rim while the left swallows its P, which
+	 * no per glyph mirror can produce. Runs anchor so their last char
+	 * lands on the mirror of the left run's anchor column
+	 */
+	right?: {
+		bar: string;
+		stepTop: (step: number, prevChisel: boolean, nextChisel: boolean) => string;
+		stepBottom: (
+			step: number,
+			prevChisel: boolean,
+			nextChisel: boolean,
+		) => string;
+		cornerTop: (jog: number) => string;
+		cornerBottom: (jog: number) => string;
+	};
 }
 
 const mirrorMap = (pairs: Array<[string, string]>): Map<number, number> => {
@@ -148,59 +166,84 @@ const walkCircle = (
 	// plateaus inside the step zones repeat the steep dress instead of
 	// taking wall bars (the reference voices its two row plateau as
 	// stacked `8, rows): a bare bar one column off the wall line reads
-	// flipped
+	// flipped. A plateau's raw step of 0 voices as a lone step of 1
+	// with no next chisel
 	const cells: CircleCell[] = [];
+	const rcells: CircleCell[] = [];
+	const R = voice.right;
 	let prevChisel = true;
 	for (let i = 1; i < rows - 1; i++) {
 		const x = xb[i];
 		const y = yTop + i;
+		let anchor = x;
+		let run: string;
+		let rrun: string | undefined;
 		if (i < eqStart) {
-			const step = xb[i - 1] - x;
-			if (step === 0) {
-				putRun(cells, x - 1, y, voice.stepTop(1, prevChisel, false));
-				prevChisel = false;
-				continue;
-			}
-			const nextChisel = x - xb[i + 1] > 1;
-			putRun(cells, x - 1, y, voice.stepTop(step, prevChisel, nextChisel));
-			prevChisel = step > 1;
+			anchor = x - 1;
+			const raw = xb[i - 1] - x;
+			const step = raw === 0 ? 1 : raw;
+			const nextChisel = raw !== 0 && x - xb[i + 1] > 1;
+			run = voice.stepTop(step, prevChisel, nextChisel);
+			rrun = R?.stepTop(step, prevChisel, nextChisel);
+			prevChisel = raw > 1;
 		} else if (i === eqStart && i === eqEnd) {
-			putRun(cells, x, y, voice.bar);
+			run = voice.bar;
+			rrun = R?.bar;
 			prevChisel = false;
 		} else if (i === eqStart) {
-			putRun(cells, x, y, voice.cornerTop(xb[i - 1] - x));
+			run = voice.cornerTop(xb[i - 1] - x);
+			rrun = R?.cornerTop(xb[i - 1] - x);
 			prevChisel = false;
 		} else if (i === eqEnd) {
-			putRun(cells, x, y, voice.cornerBottom(xb[i + 1] - x));
+			run = voice.cornerBottom(xb[i + 1] - x);
+			rrun = R?.cornerBottom(xb[i + 1] - x);
 			prevChisel = false;
 		} else if (i < eqEnd) {
-			putRun(cells, x, y, voice.bar);
+			run = voice.bar;
+			rrun = R?.bar;
 			prevChisel = false;
 		} else {
 			// folded bottoms measure toward the narrower row below, the
 			// true mirror of the top walking toward the row above;
 			// unfolded dialects keep the row above as their basis, since
 			// their wide anchored caps absorb the final jump themselves
-			const step = voice.fold ? xb[i + 1] - x : x - xb[i - 1];
-			if (step === 0) {
-				putRun(cells, x - 1, y, voice.stepBottom(1, prevChisel, false));
-				prevChisel = false;
-				continue;
-			}
-			const nextChisel = voice.fold
-				? i + 1 < rows - 1 && xb[i + 2] - xb[i + 1] > 1
-				: i + 1 < rows && xb[i + 1] - x > 1;
-			putRun(cells, x - 1, y, voice.stepBottom(step, prevChisel, nextChisel));
-			prevChisel = step > 1;
+			anchor = x - 1;
+			const raw = voice.fold ? xb[i + 1] - x : x - xb[i - 1];
+			const step = raw === 0 ? 1 : raw;
+			const nextChisel =
+				raw !== 0 &&
+				(voice.fold
+					? i + 1 < rows - 1 && xb[i + 2] - xb[i + 1] > 1
+					: i + 1 < rows && xb[i + 1] - x > 1);
+			run = voice.stepBottom(step, prevChisel, nextChisel);
+			rrun = R?.stepBottom(step, prevChisel, nextChisel);
+			prevChisel = raw > 1;
+		}
+		putRun(cells, anchor, y, run);
+		if (rrun !== undefined) {
+			putRun(rcells, 2 * cx - anchor - rrun.length + 1, y, rrun);
 		}
 	}
-	// right half mirrors glyphwise across the center column; runs that
-	// reach the axis stop there so no unmirrored ink leaks past it
+	// right half mirrors glyphwise across the center column unless the
+	// voice spoke it directly; runs that reach the axis stop there so
+	// no unmirrored ink leaks past it
 	const left = cells.filter(c => c.x <= cx);
 	const out: CircleCell[] = left.slice();
-	for (const c of left) {
-		if (c.x < cx) {
-			out.push({ x: 2 * cx - c.x, y: c.y, charCode: voice.mirror(c.charCode) });
+	if (R) {
+		for (const c of rcells) {
+			if (c.x > cx) {
+				out.push(c);
+			}
+		}
+	} else {
+		for (const c of left) {
+			if (c.x < cx) {
+				out.push({
+					x: 2 * cx - c.x,
+					y: c.y,
+					charCode: voice.mirror(c.charCode),
+				});
+			}
 		}
 	}
 	putRun(out, xb[0], yTop, voice.capTopRow(cx - xb[0] + 1));
@@ -358,6 +401,140 @@ const AMIGA_VOICE: CircleVoice = {
 	capBottomRow: h => capRow(capBottomHalf(h), false),
 };
 
+// ------------------------------------------------------- fill voice
+
+const FILL = 36; // $
+
+const fillInk = (n: number): string => '$'.repeat(Math.max(0, n));
+
+/**
+ * The solid dialect wraps the roman ribbon anatomy (asciiStamp.ts
+ * ribbonEdges) around the disc: rising walls lead ,d and trail P',
+ * falling walls lead `Y and trail b, with $ ink between. The hollow
+ * rim's inner dressing (colons, inner quotes and pebbles, tucked
+ * chisel trails) reads as holes punched in solid ink, so fill walls
+ * keep only the outward silhouette. The Y shoulder stands on the
+ * right rim where the hollow dialect drew it, but its P mirror never
+ * lands on the top left (owner rule shared with the hollow steps), so
+ * the right half speaks for itself instead of mirroring.
+ */
+const AMIGA_FILL_VOICE: CircleVoice = {
+	mirror: amigaMirror,
+	capInsetTop: 1.5,
+	capInsetBottom: 1.5,
+	capExact: false,
+	measureTop: 'wide',
+	measureBottom: 'wide',
+	fold: false,
+	bar: '8',
+	stepTop: (step, _prevChisel, nextChisel) => {
+		if (step === 1) {
+			return nextChisel ? ',d' : ',8';
+		}
+		return step === 2 ? ',d' : ',gd';
+	},
+	stepBottom: (step, prevChisel) => {
+		if (step >= 3) {
+			return '`"Y';
+		}
+		return (prevChisel ? '"' : '`') + 'Y';
+	},
+	cornerTop: () => 'd',
+	cornerBottom: () => 'Y',
+	capTopRow: h => {
+		const w = 2 * h - 1;
+		if (h >= 8) {
+			return ',,ggd' + fillInk(w - 10) + 'bgg,,';
+		}
+		if (h >= 5) {
+			return ',,d' + fillInk(w - 6) + 'b,,';
+		}
+		if (h >= 3) {
+			return ',d' + fillInk(w - 4) + 'b,';
+		}
+		return fillInk(Math.max(1, w));
+	},
+	capBottomRow: h => {
+		const w = 2 * h - 1;
+		if (h >= 8) {
+			return '``""Y' + fillInk(w - 10) + 'P""\'\'';
+		}
+		if (h >= 5) {
+			return '`"Y' + fillInk(w - 6) + 'P"\'';
+		}
+		if (h >= 3) {
+			return '`Y' + fillInk(w - 4) + "P'";
+		}
+		return fillInk(Math.max(1, w));
+	},
+	right: {
+		bar: '8',
+		stepTop: (step, _prevChisel, nextChisel) => {
+			if (step === 1) {
+				return nextChisel ? 'b,' : '8,';
+			}
+			return step === 2 ? 'Yb,' : 'Ybg,';
+		},
+		stepBottom: (step, prevChisel) => {
+			if (step >= 3) {
+				return 'P"\'';
+			}
+			return 'P' + (prevChisel ? '"' : "'");
+		},
+		cornerTop: jog => (jog <= 1 ? 'b' : 'Yb'),
+		cornerBottom: () => 'P',
+	},
+};
+
+/**
+ * Smallest solid circles. Grammar rows this tight collapse to walls
+ * touching walls, so like the hollow tinies they are whole templates.
+ * Drawn by extrapolation from the owner's solid reference, pending
+ * owner art.
+ */
+const TINY_FILL = [
+	{
+		left: -4,
+		rows: [' ,d$$b,', 'd$$$$$$b', 'Y$$$$$$P', " `Y$$P'"],
+	},
+	{
+		left: -4,
+		rows: [' ,d$$$b,', 'd$$$$$$$b', '8$$$$$$$8', 'Y$$$$$$$P', " `Y$$$P'"],
+	},
+];
+
+/**
+ * Pour $ into every unwritten cell between each row's walls. Fill
+ * spans come from the stamped rim itself, not the ellipse equation:
+ * asymmetric walls can never strand a gap between geometry and ink.
+ */
+const floodRows = (cells: CircleCell[]): CircleCell[] => {
+	const rows = new Map<number, Set<number>>();
+	for (const c of cells) {
+		let s = rows.get(c.y);
+		if (s === undefined) {
+			s = new Set();
+			rows.set(c.y, s);
+		}
+		s.add(c.x);
+	}
+	const out = cells.slice();
+	for (const [y, s] of rows) {
+		let lo = Infinity;
+		let hi = -Infinity;
+		for (const x of s) {
+			lo = Math.min(lo, x);
+			hi = Math.max(hi, x);
+		}
+		for (let x = lo + 1; x < hi; x++) {
+			if (!s.has(x)) {
+				out.push({ x: x, y: y, charCode: FILL });
+			}
+		}
+	}
+	return out;
+};
+
 // ------------------------------------------------------- thin voice
 
 /**
@@ -496,6 +673,27 @@ export const amigaCircleCells = (
 		return cells;
 	}
 	return walkCircle(cx, cyHb, rx, rhb, AMIGA_VOICE);
+};
+
+/** Same geometry as the hollow walk, voiced solid and flooded. */
+export const amigaCircleFilledCells = (
+	cx: number,
+	cyHb: number,
+	rx: number,
+	rhb: number,
+): CircleCell[] => {
+	rx = Math.max(0, Math.round(rx));
+	rhb = Math.max(0, Math.round(rhb));
+	if (rx <= 4 && rhb <= 6) {
+		const cells: CircleCell[] = [];
+		const t = rx >= 4 || rhb >= 5 ? TINY_FILL[1] : TINY_FILL[0];
+		const yTop = Math.floor(cyHb / 2) - (t.rows.length >> 1);
+		t.rows.forEach((row, i) => {
+			putRun(cells, cx + t.left, yTop + i, row);
+		});
+		return cells;
+	}
+	return floodRows(walkCircle(cx, cyHb, rx, rhb, AMIGA_FILL_VOICE));
 };
 
 /** Same walk and mirror in the thin line vocabulary. */
