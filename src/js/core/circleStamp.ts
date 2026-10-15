@@ -30,6 +30,16 @@ interface CircleVoice {
 	capInsetTop: number;
 	capInsetBottom: number;
 	capExact: boolean;
+	/**
+	 * where a row measures the curve, per half: at its widest crossing
+	 * (the half block nearest the equator, the ribbon dialect's full
+	 * footprint) or its narrowest (toward the apex). The thin
+	 * reference art measures tops narrow so steps ease 3, 2, 1 instead
+	 * of blowing out wide below the cap and reading pointed, while
+	 * bottoms measure wide and hang heavy
+	 */
+	measureTop: 'wide' | 'narrow';
+	measureBottom: 'wide' | 'narrow';
 	/** wall rows inside the equator band */
 	bar: string;
 	stepTop: (step: number, prevChisel: boolean, nextChisel: boolean) => string;
@@ -83,9 +93,11 @@ const walkCircle = (
 	const xb: number[] = [];
 	for (let i = 0; i < rows; i++) {
 		const y = yTop + i;
+		const half = y * 2 + 1 <= cyHb ? voice.measureTop : voice.measureBottom;
+		const pick = half === 'narrow' ? Math.max : Math.min;
 		let dy = Math.min(
-			Math.abs(y * 2 + 0.5 - cyHb),
-			Math.abs(y * 2 + 1.5 - cyHb),
+			rhb,
+			pick(Math.abs(y * 2 + 0.5 - cyHb), Math.abs(y * 2 + 1.5 - cyHb)),
 		);
 		if (i === 0) {
 			dy = voice.capExact
@@ -270,6 +282,8 @@ const AMIGA_VOICE: CircleVoice = {
 	capInsetTop: 1.5,
 	capInsetBottom: 1.5,
 	capExact: false,
+	measureTop: 'wide',
+	measureBottom: 'wide',
 	bar: '8:',
 	stepTop: (step, prevChisel, nextChisel) => {
 		if (step === 1) {
@@ -352,6 +366,8 @@ const THIN_VOICE: CircleVoice = {
 	capInsetTop: 0.5,
 	capInsetBottom: 1.5,
 	capExact: true,
+	measureTop: 'narrow',
+	measureBottom: 'wide',
 	bar: '|',
 	// a leading space keeps the shared anchor: thin shoulders start on
 	// the boundary itself and spaces stay unwritten
