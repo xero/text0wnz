@@ -1826,6 +1826,16 @@ const createCircleController = () => {
 	};
 
 	const ellipseOutline = (sx, sy, width, height, callback) => {
+		// a zero radius spins the bresenham walk forever (0 <= 0 never
+		// breaks); sub cell drags plot their bar directly
+		if (width <= 0 || height <= 0) {
+			for (let px = -width; px <= width; px++) {
+				for (let py = -height; py <= height; py++) {
+					callback(sx + px, sy + py);
+				}
+			}
+			return;
+		}
 		const a2 = width * width;
 		const b2 = height * height;
 		const fa2 = 4 * a2;
@@ -1863,6 +1873,15 @@ const createCircleController = () => {
 	};
 
 	const ellipseFilled = (sx, sy, width, height, callback) => {
+		// same zero radius guard as the outline walk
+		if (width <= 0 || height <= 0) {
+			for (let px = -width; px <= width; px++) {
+				for (let py = -height; py <= height; py++) {
+					callback(sx + px, sy + py);
+				}
+			}
+			return;
+		}
 		const a2 = width * width;
 		const b2 = height * height;
 		const fa2 = 4 * a2;
