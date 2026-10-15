@@ -55,7 +55,7 @@ const MIRROR_CHARS = new Map<number, number>([
 	[76, 74],
 	[55, 114], // 7 r
 	[114, 55],
-	// roman ribbon chisels
+	// nu skool ribbon chisels
 	[100, 98], // d b
 	[98, 100],
 ]);

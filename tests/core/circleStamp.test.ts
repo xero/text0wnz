@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-	amigaCircleCells,
-	amigaCircleFilledCells,
-	asciiCircleCells,
+	nuskoolCircleCells,
+	nuskoolCircleFilledCells,
+	oldskoolCircleCells,
 } from '../../src/js/core/circleStamp.js';
 
 type Stamp = (
@@ -53,14 +53,14 @@ const renderWith = (
 };
 
 const render = (cx: number, cyHb: number, rx: number, rhb: number): string =>
-	renderWith(amigaCircleCells, cx, cyHb, rx, rhb);
+	renderWith(nuskoolCircleCells, cx, cyHb, rx, rhb);
 
-const renderThin = (
+const renderOldskool = (
 	cx: number,
 	cyHb: number,
 	rx: number,
 	rhb: number,
-): string => renderWith(asciiCircleCells, cx, cyHb, rx, rhb);
+): string => renderWith(oldskoolCircleCells, cx, cyHb, rx, rhb);
 
 /** Mirror pair check shared by both dialect property tests. */
 const expectMirrored = (
@@ -84,7 +84,7 @@ const expectMirrored = (
 				twin,
 				`missing mirror of ${x},${y} at rx ${rx} rhb ${rhb}`,
 			).toBeDefined();
-			// one way maps (thin backtick to apostrophe) pass in either
+			// one way maps (old skool backtick to apostrophe) pass in either
 			// direction; standing glyphs hold their own ground
 			const flipped = pairs.get(c) ?? c;
 			const ok =
@@ -99,7 +99,7 @@ const expectMirrored = (
 	}
 };
 
-describe('amiga circle stamp', () => {
+describe('nu skool circle stamp', () => {
 	it('voices a medium circle in the quadrant grammar', () => {
 		expect(render(60, 60, 11, 12)).toBe(
 			[
@@ -200,7 +200,7 @@ describe('amiga circle stamp', () => {
 		// cap shoulders stand unmirrored (Y both sides up top),
 		// everything else swaps through the pair map
 		expectMirrored(
-			amigaCircleCells,
+			nuskoolCircleCells,
 			new Map([
 				[100, 98],
 				[98, 100],
@@ -229,7 +229,7 @@ describe('amiga circle stamp', () => {
 	it('emits finite cells for every size up to huge radii', () => {
 		for (let rx = 0; rx <= 30; rx += 3) {
 			for (let rhb = 0; rhb <= 30; rhb += 3) {
-				for (const c of amigaCircleCells(50, 50, rx, rhb)) {
+				for (const c of nuskoolCircleCells(50, 50, rx, rhb)) {
 					expect(Number.isFinite(c.x)).toBe(true);
 					expect(Number.isFinite(c.y)).toBe(true);
 					expect(c.charCode).toBeGreaterThan(32);
@@ -239,19 +239,19 @@ describe('amiga circle stamp', () => {
 	});
 
 	it('shrugs off degenerate and negative inputs', () => {
-		expect(() => amigaCircleCells(10, 10, -3, -5)).not.toThrow();
-		expect(() => amigaCircleCells(10, 10, -1, 20)).not.toThrow();
-		expect(() => amigaCircleCells(10, 10, 20, -1)).not.toThrow();
-		for (const c of amigaCircleCells(10, 10, -1, 20)) {
+		expect(() => nuskoolCircleCells(10, 10, -3, -5)).not.toThrow();
+		expect(() => nuskoolCircleCells(10, 10, -1, 20)).not.toThrow();
+		expect(() => nuskoolCircleCells(10, 10, 20, -1)).not.toThrow();
+		for (const c of nuskoolCircleCells(10, 10, -1, 20)) {
 			expect(Number.isFinite(c.x)).toBe(true);
 			expect(Number.isFinite(c.y)).toBe(true);
 		}
 	});
 });
 
-describe('thin circle stamp', () => {
+describe('old skool circle stamp', () => {
 	it('voices a medium circle in the owner reference vocabulary', () => {
-		expect(renderThin(60, 60, 11, 12)).toBe(
+		expect(renderOldskool(60, 60, 11, 12)).toBe(
 			[
 				'        .-"""-.',
 				"    .--'       '--.",
@@ -271,7 +271,7 @@ describe('thin circle stamp', () => {
 	});
 
 	it('condenses to a clean ring at small sizes', () => {
-		expect(renderThin(60, 60, 4, 5)).toBe(
+		expect(renderOldskool(60, 60, 4, 5)).toBe(
 			[
 				'  .-"-.',
 				' /     \\',
@@ -284,16 +284,18 @@ describe('thin circle stamp', () => {
 	});
 
 	it('stamps the paren ring templates at the smallest sizes', () => {
-		expect(renderThin(60, 60, 3, 3)).toBe(
+		expect(renderOldskool(60, 60, 3, 3)).toBe(
 			[' ,---.', '(     )', " `---'"].join('\n'),
 		);
-		expect(renderThin(60, 60, 2, 2)).toBe([' ,-.', '(   )', " `-'"].join('\n'));
-		expect(renderThin(60, 60, 0, 0)).toBe(renderThin(60, 60, 2, 2));
+		expect(renderOldskool(60, 60, 2, 2)).toBe(
+			[' ,-.', '(   )', " `-'"].join('\n'),
+		);
+		expect(renderOldskool(60, 60, 0, 0)).toBe(renderOldskool(60, 60, 2, 2));
 	});
 
-	it('mirrors thin circles with the pebble pairs swapped', () => {
+	it('mirrors old skool circles with the pebble pairs swapped', () => {
 		expectMirrored(
-			asciiCircleCells,
+			oldskoolCircleCells,
 			new Map([
 				[47, 92],
 				[92, 47],
@@ -318,10 +320,10 @@ describe('thin circle stamp', () => {
 		);
 	});
 
-	it('emits finite thin cells for every size up to huge radii', () => {
+	it('emits finite old skool cells for every size up to huge radii', () => {
 		for (let rx = 0; rx <= 30; rx += 3) {
 			for (let rhb = 0; rhb <= 30; rhb += 3) {
-				for (const c of asciiCircleCells(50, 50, rx, rhb)) {
+				for (const c of oldskoolCircleCells(50, 50, rx, rhb)) {
 					expect(Number.isFinite(c.x)).toBe(true);
 					expect(Number.isFinite(c.y)).toBe(true);
 					expect(c.charCode).toBeGreaterThan(32);
@@ -331,13 +333,13 @@ describe('thin circle stamp', () => {
 	});
 });
 
-describe('amiga filled circle stamp', () => {
+describe('nu skool filled circle stamp', () => {
 	const renderFilled = (
 		cx: number,
 		cyHb: number,
 		rx: number,
 		rhb: number,
-	): string => renderWith(amigaCircleFilledCells, cx, cyHb, rx, rhb);
+	): string => renderWith(nuskoolCircleFilledCells, cx, cyHb, rx, rhb);
 
 	it('voices the owner hand reference verbatim', () => {
 		// owner drew the hollow tool output at this size, then hand
@@ -404,8 +406,8 @@ describe('amiga filled circle stamp', () => {
 			[16, 7],
 			[5, 12],
 		]) {
-			const hollow = spans(amigaCircleCells(40, 40, rx, rhb));
-			const solid = spans(amigaCircleFilledCells(40, 40, rx, rhb));
+			const hollow = spans(nuskoolCircleCells(40, 40, rx, rhb));
+			const solid = spans(nuskoolCircleFilledCells(40, 40, rx, rhb));
 			expect(solid.size, `rx ${rx} rhb ${rhb}`).toBe(hollow.size);
 			for (const [y, s] of hollow) {
 				expect(solid.get(y), `row ${y} rx ${rx} rhb ${rhb}`).toEqual(s);
@@ -416,7 +418,7 @@ describe('amiga filled circle stamp', () => {
 	it('emits finite solid cells for every size up to huge radii', () => {
 		for (let rx = 0; rx <= 30; rx += 3) {
 			for (let rhb = 0; rhb <= 30; rhb += 3) {
-				for (const c of amigaCircleFilledCells(50, 50, rx, rhb)) {
+				for (const c of nuskoolCircleFilledCells(50, 50, rx, rhb)) {
 					expect(Number.isFinite(c.x)).toBe(true);
 					expect(Number.isFinite(c.y)).toBe(true);
 					expect(c.charCode).toBeGreaterThan(32);

@@ -1,5 +1,5 @@
 /**
- * Ascii brush e2e: the thin stamp engine drives the controller, so
+ * Ascii brush e2e: the old skool stamp engine drives the controller, so
  * strokes resolve to classic ascii line glyphs by slope, fully live.
  * Glyph choice itself is pinned by the core goldens; these tests pin
  * the browser wiring: pointer path in, revised cells out, one undo
@@ -109,7 +109,7 @@ test.describe('ascii brush', () => {
 		}
 	});
 
-	test('the width knob turns strokes roman', async ({ page }) => {
+	test('the width knob turns strokes nu skool', async ({ page }) => {
 		await page.selectOption('#asciiWidth', '5');
 		await drag(page, [40, 18], [40, 23]);
 		// a width five vertical is a solid five column fill ribbon
@@ -205,7 +205,7 @@ test.describe('line tool brush modes', () => {
 	});
 
 	test('ascii mode rules a flat line of underscores', async ({ page }) => {
-		await page.selectOption('#lineMode', 'ascii');
+		await page.selectOption('#lineMode', 'oldskool');
 		await pacedDrag(page, [5, 12], [20, 12]);
 		for (let x = 6; x <= 19; x++) {
 			expect((await readBlock(page, x, 12)).charCode).toBe(UNDERSCORE);
@@ -213,7 +213,7 @@ test.describe('line tool brush modes', () => {
 	});
 
 	test('ascii mode rules a 45 degree line of backslashes', async ({ page }) => {
-		await page.selectOption('#lineMode', 'ascii');
+		await page.selectOption('#lineMode', 'oldskool');
 		await pacedDrag(page, [30, 2], [42, 14]);
 		// the first two cells voice the entry curl; the body is diagonal
 		for (let i = 2; i <= 12; i++) {
@@ -221,8 +221,8 @@ test.describe('line tool brush modes', () => {
 		}
 	});
 
-	test('amiga mode rules a dollar fill ribbon', async ({ page }) => {
-		await page.selectOption('#lineMode', 'amiga');
+	test('nu skool mode rules a dollar fill ribbon', async ({ page }) => {
+		await page.selectOption('#lineMode', 'nuskool');
 		await pacedDrag(page, [10, 18], [30, 21]);
 		let dollars = 0;
 		for (let y = 17; y <= 23; y++) {
@@ -236,7 +236,7 @@ test.describe('line tool brush modes', () => {
 	});
 
 	test('an ascii line is one undo group', async ({ page }) => {
-		await page.selectOption('#lineMode', 'ascii');
+		await page.selectOption('#lineMode', 'oldskool');
 		await pacedDrag(page, [5, 16], [20, 16]);
 		expect((await readBlock(page, 10, 16)).charCode).toBe(UNDERSCORE);
 		await page.keyboard.press('Control+z');
@@ -262,7 +262,7 @@ test.describe('shape tool brush modes', () => {
 
 	test('ascii square rules box edges with corner glyphs', async ({ page }) => {
 		await page.locator('#square').click();
-		await page.selectOption('#squareMode', 'ascii');
+		await page.selectOption('#squareMode', 'oldskool');
 		await pacedDrag(page, [5, 5], [20, 12]);
 		// period shoulders, backtick and quote feet, dash edges top and
 		// bottom (per half voicing densified stacked boxes to equals),
@@ -277,9 +277,9 @@ test.describe('shape tool brush modes', () => {
 		expect((await readBlock(page, 20, 8)).charCode).toBe(VBAR);
 	});
 
-	test('amiga square rules a hollow dollar rim', async ({ page }) => {
+	test('nu skool square rules a hollow dollar rim', async ({ page }) => {
 		await page.locator('#square').click();
-		await page.selectOption('#squareMode', 'amiga');
+		await page.selectOption('#squareMode', 'nuskool');
 		await pacedDrag(page, [40, 5], [60, 12]);
 		expect((await readBlock(page, 50, 5)).charCode).toBe(DOLLAR);
 		expect((await readBlock(page, 50, 12)).charCode).toBe(DOLLAR);
@@ -288,9 +288,9 @@ test.describe('shape tool brush modes', () => {
 		expect([0, 32]).toContain((await readBlock(page, 50, 8)).charCode);
 	});
 
-	test('amiga filled square pours a dollar slab', async ({ page }) => {
+	test('nu skool filled square pours a dollar slab', async ({ page }) => {
 		await page.locator('#square').click();
-		await page.selectOption('#squareMode', 'amiga');
+		await page.selectOption('#squareMode', 'nuskool');
 		await page.locator('#squareToolbar .toggleButton.right').click();
 		await pacedDrag(page, [40, 15], [60, 22]);
 		expect((await readBlock(page, 50, 18)).charCode).toBe(DOLLAR);
@@ -300,7 +300,7 @@ test.describe('shape tool brush modes', () => {
 
 	test('ascii circle voices bars at its sides', async ({ page }) => {
 		await page.locator('#circle').click();
-		await page.selectOption('#circleMode', 'ascii');
+		await page.selectOption('#circleMode', 'oldskool');
 		await pacedDrag(page, [40, 16], [46, 23]);
 		let bars = 0;
 		for (let y = 10; y <= 22; y++) {
@@ -314,9 +314,9 @@ test.describe('shape tool brush modes', () => {
 		expect([0, 32]).toContain((await readBlock(page, 40, 16)).charCode);
 	});
 
-	test('amiga circle rims a hollow eight body ring', async ({ page }) => {
+	test('nu skool circle rims a hollow eight body ring', async ({ page }) => {
 		await page.locator('#circle').click();
-		await page.selectOption('#circleMode', 'amiga');
+		await page.selectOption('#circleMode', 'nuskool');
 		await pacedDrag(page, [40, 16], [46, 23]);
 		// single cell rim in the quadrant grammar: 8 bodies down the
 		// sides, a hollow center, and no dollar ribbon anywhere
@@ -337,9 +337,9 @@ test.describe('shape tool brush modes', () => {
 		expect([0, 32]).toContain((await readBlock(page, 40, 16)).charCode);
 	});
 
-	test('amiga filled circle pours the slab', async ({ page }) => {
+	test('nu skool filled circle pours the slab', async ({ page }) => {
 		await page.locator('#circle').click();
-		await page.selectOption('#circleMode', 'amiga');
+		await page.selectOption('#circleMode', 'nuskool');
 		await page.locator('#circleToolbar .toggleButton.right').click();
 		await pacedDrag(page, [40, 16], [46, 23]);
 		expect((await readBlock(page, 40, 16)).charCode).toBe(DOLLAR);
@@ -347,7 +347,7 @@ test.describe('shape tool brush modes', () => {
 
 	test('a flat drag grows into a two row box', async ({ page }) => {
 		await page.locator('#square').click();
-		await page.selectOption('#squareMode', 'ascii');
+		await page.selectOption('#squareMode', 'oldskool');
 		await pacedDrag(page, [50, 8], [60, 8]);
 		expect((await readBlock(page, 50, 8)).charCode).toBe(PERIOD);
 		expect((await readBlock(page, 55, 8)).charCode).toBe(45);
@@ -358,7 +358,7 @@ test.describe('shape tool brush modes', () => {
 
 	test('a thin drag grows into a two column box', async ({ page }) => {
 		await page.locator('#square').click();
-		await page.selectOption('#squareMode', 'ascii');
+		await page.selectOption('#squareMode', 'oldskool');
 		await pacedDrag(page, [70, 4], [70, 8]);
 		expect((await readBlock(page, 70, 4)).charCode).toBe(PERIOD);
 		expect((await readBlock(page, 71, 4)).charCode).toBe(PERIOD);
@@ -370,7 +370,7 @@ test.describe('shape tool brush modes', () => {
 
 	test('a square crossing another voices plus and keeps its bars', async ({ page }) => {
 		await page.locator('#square').click();
-		await page.selectOption('#squareMode', 'ascii');
+		await page.selectOption('#squareMode', 'oldskool');
 		await pacedDrag(page, [10, 6], [30, 10]);
 		await pacedDrag(page, [15, 3], [25, 14]);
 		// the second box's bars cross the first box's edges: plus at
@@ -387,7 +387,7 @@ test.describe('shape tool brush modes', () => {
 
 	test('boxes hanging off a line voice terminal joints', async ({ page }) => {
 		await page.locator('#square').click();
-		await page.selectOption('#squareMode', 'ascii');
+		await page.selectOption('#squareMode', 'oldskool');
 		await pacedDrag(page, [10, 6], [30, 10]);
 		// a box hanging below the line stands its top corners as tees
 		await pacedDrag(page, [15, 10], [25, 14]);
@@ -401,7 +401,7 @@ test.describe('shape tool brush modes', () => {
 
 	test('three row and three column boxes rule true edges', async ({ page }) => {
 		await page.locator('#square').click();
-		await page.selectOption('#squareMode', 'ascii');
+		await page.selectOption('#squareMode', 'oldskool');
 		// one cell paths once stamped the engine's lone tap apostrophe
 		await pacedDrag(page, [10, 2], [20, 4]);
 		expect((await readBlock(page, 10, 3)).charCode).toBe(124);
@@ -416,10 +416,10 @@ test.describe('shape tool brush modes', () => {
 	});
 
 	test('corners landing on an underscore voice the period knot', async ({ page }) => {
-		await page.selectOption('#lineMode', 'ascii');
+		await page.selectOption('#lineMode', 'oldskool');
 		await pacedDrag(page, [5, 8], [25, 8]);
 		await page.locator('#square').click();
-		await page.selectOption('#squareMode', 'ascii');
+		await page.selectOption('#squareMode', 'oldskool');
 		await pacedDrag(page, [10, 8], [20, 12]);
 		expect((await readBlock(page, 10, 8)).charCode).toBe(PERIOD);
 		expect((await readBlock(page, 20, 8)).charCode).toBe(PERIOD);
@@ -427,7 +427,7 @@ test.describe('shape tool brush modes', () => {
 
 	test('a crossing under a corner cap leaves the cap alone', async ({ page }) => {
 		await page.locator('#square').click();
-		await page.selectOption('#squareMode', 'ascii');
+		await page.selectOption('#squareMode', 'oldskool');
 		await pacedDrag(page, [10, 4], [20, 9]);
 		// the second box's bottom edge crosses the first box's bar one
 		// row under its corner cap; the junction sweep once ate the cap
@@ -438,7 +438,7 @@ test.describe('shape tool brush modes', () => {
 
 	test('an edge over a buried bar end reconnects it', async ({ page }) => {
 		await page.locator('#square').click();
-		await page.selectOption('#squareMode', 'ascii');
+		await page.selectOption('#squareMode', 'oldskool');
 		await pacedDrag(page, [10, 6], [30, 10]);
 		// the second box's top edge is collinear with the first box's
 		// bottom line: the feet with bars above them voice plus instead
@@ -450,7 +450,7 @@ test.describe('shape tool brush modes', () => {
 
 	test('an ascii square is one undo group', async ({ page }) => {
 		await page.locator('#square').click();
-		await page.selectOption('#squareMode', 'ascii');
+		await page.selectOption('#squareMode', 'oldskool');
 		await pacedDrag(page, [5, 16], [15, 20]);
 		expect((await readBlock(page, 10, 16)).charCode).toBe(45);
 		await page.keyboard.press('Control+z');

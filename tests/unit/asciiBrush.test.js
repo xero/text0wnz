@@ -125,7 +125,7 @@ describe('createAsciiBrushController', () => {
 	});
 
 	it('builds up on existing ink instead of carving it', () => {
-		// the canvas already holds roman fill where this stroke passes
+		// the canvas already holds nu skool fill where this stroke passes
 		State.textArtCanvas.getBlock.mockReturnValue({
 			charCode: 36,
 			foregroundColor: 7,

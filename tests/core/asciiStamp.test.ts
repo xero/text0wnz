@@ -54,7 +54,7 @@ const stroke = (
 	return lines.join('\n');
 };
 
-describe('ascii stamp engine, thin style', () => {
+describe('ascii stamp engine, old skool style', () => {
 	it('stamps a vertical bar line', () => {
 		expect(
 			stroke([
@@ -298,7 +298,7 @@ describe('ascii stamp engine, thin style', () => {
 		expect(down).not.toContain("'|");
 	});
 
-	it('keeps the thin vocabulary at width one after a width round trip', () => {
+	it('keeps the old skool vocabulary at width one after a width round trip', () => {
 		const engine = createAsciiStampEngine({ width: 5 });
 		engine.setWidth(1);
 		expect(engine.getWidth()).toBe(1);
@@ -326,9 +326,9 @@ describe('ascii stamp engine, thin style', () => {
 	});
 });
 
-/** Roman ribbon: width above 1 stamps corpus anatomy around the
+/** Nu skool ribbon: width above 1 stamps corpus anatomy around the
  * same skeleton (lead chisel, $ fill, trail chisel). */
-const roman = (points: Array<[number, number]>, width: number): string => {
+const nuskool = (points: Array<[number, number]>, width: number): string => {
 	const engine = createAsciiStampEngine({ width });
 	const grid = new Map<string, number>();
 	const apply = (cells: Array<{ x: number; y: number; charCode: number }>) =>
@@ -364,10 +364,10 @@ const roman = (points: Array<[number, number]>, width: number): string => {
 	return lines.join('\n');
 };
 
-describe('ascii stamp engine, roman ribbon', () => {
+describe('ascii stamp engine, nu skool ribbon', () => {
 	it('stamps verticals as bare fill, tapered in, flicked out', () => {
 		expect(
-			roman(
+			nuskool(
 				[
 					[3, 0],
 					[3, 4],
@@ -381,7 +381,7 @@ describe('ascii stamp engine, roman ribbon', () => {
 
 	it('chisels rising strokes with d and P plus row AA', () => {
 		expect(
-			roman(
+			nuskool(
 				[
 					[0, 8],
 					[8, 0],
@@ -407,7 +407,7 @@ describe('ascii stamp engine, roman ribbon', () => {
 
 	it('chisels falling strokes with Y and b plus row AA', () => {
 		expect(
-			roman(
+			nuskool(
 				[
 					[0, 0],
 					[8, 8],
@@ -432,7 +432,7 @@ describe('ascii stamp engine, roman ribbon', () => {
 	});
 
 	it('width two is the bare edge pair', () => {
-		const art = roman(
+		const art = nuskool(
 			[
 				[0, 6],
 				[6, 0],
@@ -448,7 +448,7 @@ describe('ascii stamp engine, roman ribbon', () => {
 		for (let x = 0; x <= 60; x += 3) {
 			pts.push([x, 6 + Math.round(5 * Math.sin((x / 60) * Math.PI * 3))]);
 		}
-		const art = roman(pts, 3);
+		const art = nuskool(pts, 3);
 		expect(art).toContain('Y$b');
 		expect(art).toContain('d$P');
 		expect(art).toContain('$$$$$$$$$$');
@@ -465,7 +465,7 @@ describe('ascii stamp engine, roman ribbon', () => {
 				pts.push([x, y]);
 			}
 		}
-		const art = roman(pts, 3);
+		const art = nuskool(pts, 3);
 		expect(art).toContain('d$$');
 		expect(art).toContain('Y$$');
 		// the seam where start meets end must be fill; a single rank one

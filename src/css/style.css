@@ -528,7 +528,7 @@
 		}
 	}
 
-	/* thin ascii offers no fill, so the pill naps until it does */
+	/* old skool offers no fill, so the pill naps until it does */
 	#squareToolbar,
 	#circleToolbar {
 		&.dimmed {
