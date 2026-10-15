@@ -711,6 +711,15 @@ export const oldskoolCircleCells = (
 	yTop = finite(yTop, 0, true);
 	w = finite(w, 1);
 	h = finite(h, 1);
+	if (w < 5 && h < 3) {
+		// a tap grows into the smallest good ring centered on itself,
+		// like the nu skool templates; the lens only answers a
+		// deliberate wide flat drag
+		xLeft -= (5 - w) >> 1;
+		yTop -= h === 1 ? 1 : 0;
+		w = 5;
+		h = 3;
+	}
 	if (w < 5) {
 		xLeft -= (5 - w) >> 1;
 		w = 5;
