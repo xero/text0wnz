@@ -20,6 +20,16 @@ export interface CircleCell {
 
 interface CircleVoice {
 	mirror: (c: number) => number;
+	/**
+	 * how far inside the apex each cap row measures its width, in half
+	 * blocks: thin tops run narrow while bottoms anchor wide, a split
+	 * the owner draws in both dialects. exact caps measure at the
+	 * inset regardless of where the row's centers fall; clamped caps
+	 * only widen degenerate rows
+	 */
+	capInsetTop: number;
+	capInsetBottom: number;
+	capExact: boolean;
 	/** wall rows inside the equator band */
 	bar: string;
 	stepTop: (step: number, prevChisel: boolean, nextChisel: boolean) => string;
@@ -77,8 +87,15 @@ const walkCircle = (
 			Math.abs(y * 2 + 0.5 - cyHb),
 			Math.abs(y * 2 + 1.5 - cyHb),
 		);
-		if (i === 0 || i === rows - 1) {
-			dy = Math.min(dy, rhb - 1.5);
+		if (i === 0) {
+			dy = voice.capExact
+				? rhb - voice.capInsetTop
+				: Math.min(dy, rhb - voice.capInsetTop);
+		}
+		if (i === rows - 1) {
+			dy = voice.capExact
+				? rhb - voice.capInsetBottom
+				: Math.min(dy, rhb - voice.capInsetBottom);
 		}
 		const t = Math.min(1, Math.max(0, dy) / Math.max(1, rhb));
 		xb.push(Math.round(cx - rx * Math.sqrt(Math.max(0, 1 - t * t))));
@@ -250,6 +267,9 @@ const capBottomHalf = (h: number): string => {
  */
 const AMIGA_VOICE: CircleVoice = {
 	mirror: amigaMirror,
+	capInsetTop: 1.5,
+	capInsetBottom: 1.5,
+	capExact: false,
 	bar: '8:',
 	stepTop: (step, prevChisel, nextChisel) => {
 		if (step === 1) {
@@ -309,39 +329,52 @@ const AMIGA_VOICE: CircleVoice = {
 // ------------------------------------------------------- thin voice
 
 /**
- * The thin dialect speaks the classic line vocabulary: bar walls,
- * slash diagonals, comma and period pebbles leading dashed shallow
- * runs, quote caps up top and underscore caps below. Pebbles swap
- * low for low across the axis (a comma leading left mirrors to a
- * period trailing right), and caps are symmetric strings outright.
+ * The thin dialect speaks the owner's ascii reference set: bar walls,
+ * slash diagonals, short dressed shoulders with no anticipating lead
+ * (`.-'` is its whole span), caps keyed by width (bare underscores at
+ * mid sizes, a tilde apex at large, quotes small), and bottoms that
+ * anchor wider than their tops with a dot nestled into the tails.
+ * The mirror runs one way where the art demands it: backtick flips
+ * to apostrophe and comma to period, while period and apostrophe
+ * stand on both sides.
  */
-const THIN_MIRROR = mirrorMap([
-	['/', '\\'],
-	["'", '`'],
-	[',', '.'],
-	['(', ')'],
+const THIN_MIRROR = new Map<number, number>([
+	[47, 92], // / to backslash
+	[92, 47],
+	[40, 41], // ( )
+	[41, 40],
+	[96, 39], // backtick to apostrophe, never back
+	[44, 46], // comma to period, never back
 ]);
 
 const THIN_VOICE: CircleVoice = {
 	mirror: (c: number) => THIN_MIRROR.get(c) ?? c,
+	capInsetTop: 0.5,
+	capInsetBottom: 1.5,
+	capExact: true,
 	bar: '|',
-	// a leading space keeps the shared anchor: steps land one column
-	// outside the boundary and spaces stay unwritten
+	// a leading space keeps the shared anchor: thin shoulders start on
+	// the boundary itself and spaces stay unwritten
 	stepTop: step => {
 		if (step === 1) {
 			return ' /';
 		}
-		return ',' + '-'.repeat(step - 1) + "'";
+		return ' .' + '-'.repeat(step - 2) + "'";
 	},
 	stepBottom: step => {
 		if (step === 1) {
 			return ' \\';
 		}
-		return '`' + '-'.repeat(step - 1) + '.';
+		return '`' + '-'.repeat(step - 2) + '.';
 	},
+	// a two cell jog wants the bare diagonal floating mid jog, like
+	// the reference rows; wider jogs keep a dressed tail
 	cornerTop: jog => {
 		if (jog <= 1) {
 			return '|';
+		}
+		if (jog === 2) {
+			return ' /';
 		}
 		return '/' + '-'.repeat(jog - 1);
 	},
@@ -349,22 +382,29 @@ const THIN_VOICE: CircleVoice = {
 		if (jog <= 1) {
 			return '|';
 		}
+		if (jog === 2) {
+			return ' \\';
+		}
 		return '\\' + '_'.repeat(jog - 1);
 	},
 	capTopRow: h => {
 		const w = 2 * h - 1;
+		if (w >= 7) {
+			const flank = '-'.repeat((w - 7) >> 1);
+			return '_.-' + flank + '~' + flank + '-._';
+		}
 		if (w >= 5) {
-			return '.-' + '"'.repeat(w - 4) + '-.';
+			return '.-~-.';
 		}
-		if (w >= 3) {
-			return '.-.';
-		}
-		return '-'.repeat(Math.max(1, w));
+		return '_'.repeat(Math.max(1, w));
 	},
 	capBottomRow: h => {
 		const w = 2 * h - 1;
+		if (w >= 9) {
+			return '`-.' + '_'.repeat(w - 6) + ".-'";
+		}
 		if (w >= 5) {
-			return '`-' + '_'.repeat(w - 4) + "-'";
+			return '`-' + '.'.repeat(w - 4) + "-'";
 		}
 		if (w >= 3) {
 			return "`-'";
@@ -372,6 +412,21 @@ const THIN_VOICE: CircleVoice = {
 		return '_'.repeat(Math.max(1, w));
 	},
 };
+
+/**
+ * Smallest thin rings, from the owner's reference set: paren sides
+ * and dash caps. Three rows is the floor; anything smaller grows in.
+ */
+const THIN_TINY = [
+	{
+		left: -2,
+		rows: [' ,-.', '(   )', " `-'"],
+	},
+	{
+		left: -3,
+		rows: [' ,---.', '(     )', " `---'"],
+	},
+];
 
 // ---------------------------------------------------------- exports
 
@@ -410,5 +465,14 @@ export const asciiCircleCells = (
 ): CircleCell[] => {
 	rx = Math.max(0, Math.round(rx));
 	rhb = Math.max(0, Math.round(rhb));
+	if (rx <= 3 && rhb <= 3) {
+		const cells: CircleCell[] = [];
+		const t = rx >= 3 ? THIN_TINY[1] : THIN_TINY[0];
+		const yTop = Math.floor(cyHb / 2) - 1;
+		t.rows.forEach((row, i) => {
+			putRun(cells, cx + t.left, yTop + i, row);
+		});
+		return cells;
+	}
 	return walkCircle(cx, cyHb, rx, rhb, THIN_VOICE);
 };
