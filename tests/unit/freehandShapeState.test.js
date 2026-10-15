@@ -1,0 +1,115 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+/**
+ * Drag state lifecycle pins: stale corners once survived disable() and
+ * the drag comparator once ignored moves landing back on the start
+ * cell. Both commit wrong shapes, so they are pinned at the committed
+ * cell level in block mode.
+ */
+const hoisted = vi.hoisted(() => ({ draws: []}));
+
+vi.mock('../../src/js/client/state.js', () => ({
+	default: {
+		palette: {
+			getForegroundColor: vi.fn(() => 7),
+			getBackgroundColor: vi.fn(() => 0),
+		},
+		textArtCanvas: {
+			startUndo: vi.fn(),
+			drawHalfBlock: vi.fn(callback => {
+				callback((_fg, x, y) => hoisted.draws.push({ x, y }));
+			}),
+			draw: vi.fn(callback => {
+				callback(() => {});
+			}),
+			getBlock: vi.fn(() => ({
+				charCode: 32,
+				foregroundColor: 7,
+				backgroundColor: 0,
+			})),
+			getColumns: vi.fn(() => 80),
+			getRows: vi.fn(() => 25),
+		},
+		toolPreview: {
+			clear: vi.fn(),
+			drawHalfBlock: vi.fn(),
+			drawGlyph: vi.fn(),
+		},
+	},
+}));
+
+vi.mock('../../src/js/client/ui.js', () => ({
+	$: vi.fn(() => ({
+		style: {},
+		classList: { add: vi.fn(), remove: vi.fn(), toggle: vi.fn() },
+		addEventListener: vi.fn(),
+		removeEventListener: vi.fn(),
+		appendChild: vi.fn(),
+		append: vi.fn(),
+		prepend: vi.fn(),
+		insertBefore: vi.fn(),
+		value: 'block',
+	})),
+	$$: vi.fn(() => ({ textContent: 'mock' })),
+	createToggleButton: vi.fn(() => ({
+		getElement: vi.fn(() => ({ appendChild: vi.fn(), style: {} })),
+		setStateOne: vi.fn(),
+		setStateTwo: vi.fn(),
+	})),
+}));
+
+const mockDocument = {
+	addEventListener: vi.fn(),
+	removeEventListener: vi.fn(),
+	dispatchEvent: vi.fn(),
+	createElement: vi.fn(() => ({
+		style: {},
+		classList: { add: vi.fn(), remove: vi.fn() },
+		addEventListener: vi.fn(),
+		appendChild: vi.fn(),
+	})),
+};
+vi.stubGlobal('document', mockDocument);
+
+const { createSquareController } = await import(
+	'../../src/js/client/freehandTools.js'
+);
+
+const handler = name =>
+	mockDocument.addEventListener.mock.calls
+		.filter(c => c[0] === name)
+		.at(-1)[1];
+
+const at = (x, halfBlockY) => ({ detail: { x: x, y: halfBlockY >> 1, halfBlockY: halfBlockY } });
+
+describe('shape drag state lifecycle', () => {
+	beforeEach(() => {
+		hoisted.draws.length = 0;
+	});
+
+	it('forgets a drag that never saw its up when the tool is disabled', () => {
+		const square = createSquareController();
+		square.enable();
+		handler('onTextCanvasDown')(at(20, 16));
+		handler('onTextCanvasDrag')(at(30, 20));
+		square.disable();
+		square.enable();
+		handler('onTextCanvasDown')(at(60, 8));
+		handler('onTextCanvasUp')();
+		const xs = hoisted.draws.map(d => d.x);
+		// a stale corner once stretched this tap into a 20..60 box
+		expect(Math.min(...xs)).toBeGreaterThanOrEqual(59);
+	});
+
+	it('honors a drag that returns to its start cell', () => {
+		const square = createSquareController();
+		square.enable();
+		handler('onTextCanvasDown')(at(5, 8));
+		handler('onTextCanvasDrag')(at(10, 8));
+		handler('onTextCanvasDrag')(at(5, 8));
+		handler('onTextCanvasUp')();
+		const xs = hoisted.draws.map(d => d.x);
+		// the comparator once ignored the move back, committing 5..10
+		expect(Math.max(...xs)).toBeLessThanOrEqual(6);
+	});
+});

@@ -24,6 +24,7 @@ const createAsciiStrokePainter = () => {
 	// revised cell would escalate against itself; the full block is
 	// kept so snap-back can restore a whisker cell faithfully
 	const strokeOriginals = new Map();
+	const sweptKeys = new Set();
 
 	// what a cell held BEFORE this stroke, whether or not we inked it:
 	// junctions must read the canvas the stroke landed on, not its own
@@ -32,7 +33,13 @@ const createAsciiStrokePainter = () => {
 		if (!cellInRange(x, y, columns, rows)) {
 			return 0;
 		}
-		const held = strokeOriginals.get(y * 65536 + x);
+		const key = y * 65536 + x;
+		if (sweptKeys.has(key)) {
+			// a swept whisker is blank now: merging against its pre sweep
+			// char would voice junctions into empty space
+			return 32;
+		}
+		const held = strokeOriginals.get(key);
 		return held === undefined
 			? State.textArtCanvas.getBlock(x, y).charCode
 			: held.charCode;
@@ -108,6 +115,7 @@ const createAsciiStrokePainter = () => {
 							bg: c.bg,
 						});
 					}
+					sweptKeys.add(key);
 					draw(32, c.fg, c.bg, c.x, c.y);
 				}
 			}
@@ -125,6 +133,19 @@ const createAsciiStrokePainter = () => {
 	// whisker either
 	const tipJunction = (cell, meta, allowBack, fg, draw, columns, rows) => {
 		const { dx, dy } = meta;
+		// junction writes register like any other stroke write: a later
+		// cell revisiting one must merge against the real canvas content
+		const holdOriginal = (jx, jy) => {
+			const key = jy * 65536 + jx;
+			if (!strokeOriginals.has(key)) {
+				const b = State.textArtCanvas.getBlock(jx, jy);
+				strokeOriginals.set(key, {
+					charCode: b.charCode,
+					fg: b.foregroundColor,
+					bg: b.backgroundColor,
+				});
+			}
+		};
 		const joinAt = (jx, jy) => {
 			if (!cellInRange(jx, jy, columns, rows)) {
 				return false;
@@ -140,6 +161,7 @@ const createAsciiStrokePainter = () => {
 				return false;
 			}
 			const bg = State.textArtCanvas.getBlock(jx, jy).backgroundColor;
+			holdOriginal(jx, jy);
 			draw(glyph, fg, bg, jx, jy);
 			sweepStubs(jx, jy, lineAxis(contact), draw, columns, rows);
 			return true;
@@ -182,6 +204,7 @@ const createAsciiStrokePainter = () => {
 					cell.x,
 					cell.y,
 				).backgroundColor;
+				holdOriginal(cell.x, cell.y);
 				draw(glyph, fg, bg, cell.x, cell.y);
 				return true;
 			}
@@ -195,6 +218,7 @@ const createAsciiStrokePainter = () => {
 				cell.x + dx,
 				cell.y + dy,
 			).backgroundColor;
+			holdOriginal(cell.x + dx, cell.y + dy);
 			draw(leg, fg, bg, cell.x + dx, cell.y + dy);
 			return true;
 		}
@@ -277,6 +301,7 @@ const createAsciiStrokePainter = () => {
 
 	const begin = () => {
 		strokeOriginals.clear();
+		sweptKeys.clear();
 	};
 
 	// the engine revises cells as the stroke reveals itself; last wins

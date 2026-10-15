@@ -1264,11 +1264,16 @@ const createLineController = () => {
 	// not bubble into the button's click handler
 	modeMenu.addEventListener('click', e => e.stopPropagation());
 
-	const asciiMode = () =>
-		modeSelect.value === 'oldskool' || modeSelect.value === 'nuskool';
+	// the mode latches at down: a select touched mid drag must not
+	// commit a different vocabulary than the ghost showed
+	let dragMode;
+
+	const asciiMode = () => dragMode === 'oldskool' || dragMode === 'nuskool';
 
 	const canvasDown = e => {
 		startXY = e.detail;
+		endXY = undefined;
+		dragMode = modeSelect.value;
 	};
 
 	const line = (x0, y0, x1, y1, callback) => {
@@ -1301,7 +1306,7 @@ const createLineController = () => {
 		line(x0, y0, x1, y1, (x, hb) => {
 			points.push([x, hb]);
 		});
-		return asciiStrokeCells(points, modeSelect.value === 'nuskool' ? 2 : 1);
+		return asciiStrokeCells(points, dragMode === 'nuskool' ? 2 : 1);
 	};
 
 	const canvasUp = () => {
@@ -1401,6 +1406,11 @@ const createLineController = () => {
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
+		// a tool switch mid drag never sees the up: stale corners would
+		// commit a phantom shape on the next tap
+		startXY = undefined;
+		endXY = undefined;
+		State.toolPreview.clear();
 	};
 
 	return {
@@ -1459,8 +1469,12 @@ const createSquareController = () => {
 	};
 	modeSelect.addEventListener('change', syncFillPill);
 
-	const asciiMode = () =>
-		modeSelect.value === 'oldskool' || modeSelect.value === 'nuskool';
+	// mode and fill latch at down: a select or pill touched mid drag
+	// must not commit a different shape than the ghost showed
+	let dragMode;
+	let dragOutline = true;
+
+	const asciiMode = () => dragMode === 'oldskool' || dragMode === 'nuskool';
 
 	const originalCode = (x, y) => {
 		const columns = State.textArtCanvas.getColumns();
@@ -1535,8 +1549,8 @@ const createSquareController = () => {
 			}
 		}
 		const cells = [];
-		if (modeSelect.value === 'nuskool') {
-			if (!outlineMode) {
+		if (dragMode === 'nuskool') {
+			if (!dragOutline) {
 				// a filled ribbon square is a solid slab; the rim is the
 				// same fill ink so no outline pass is needed
 				for (let cy = cy0; cy <= cy1; cy++) {
@@ -1603,6 +1617,9 @@ const createSquareController = () => {
 
 	const canvasDown = e => {
 		startXY = e.detail;
+		endXY = undefined;
+		dragMode = modeSelect.value;
+		dragOutline = outlineMode;
 	};
 
 	const processCoords = () => {
@@ -1642,7 +1659,7 @@ const createSquareController = () => {
 		}
 		const foreground = State.palette.getForegroundColor();
 		State.textArtCanvas.drawHalfBlock(draw => {
-			if (outlineMode) {
+			if (dragOutline) {
 				for (let px = coords.x0; px <= coords.x1; px++) {
 					draw(foreground, px, coords.y0);
 					draw(foreground, px, coords.y1);
@@ -1675,7 +1692,7 @@ const createSquareController = () => {
 	};
 
 	const canvasDrag = e => {
-		if (startXY !== undefined && hasEndPointChanged(e.detail, startXY)) {
+		if (startXY !== undefined && hasEndPointChanged(e.detail, endXY || startXY)) {
 			if (endXY !== undefined) {
 				State.toolPreview.clear();
 			}
@@ -1690,7 +1707,7 @@ const createSquareController = () => {
 				return;
 			}
 			const foreground = State.palette.getForegroundColor();
-			if (outlineMode) {
+			if (dragOutline) {
 				for (let px = coords.x0; px <= coords.x1; px++) {
 					State.toolPreview.drawHalfBlock(foreground, px, coords.y0);
 					State.toolPreview.drawHalfBlock(foreground, px, coords.y1);
@@ -1728,6 +1745,11 @@ const createSquareController = () => {
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
+		// a tool switch mid drag never sees the up: stale corners would
+		// commit a phantom shape on the next tap
+		startXY = undefined;
+		endXY = undefined;
+		State.toolPreview.clear();
 	};
 
 	panel.append(outlineToggle.getElement());
@@ -1784,21 +1806,59 @@ const createCircleController = () => {
 	};
 	modeSelect.addEventListener('change', syncFillPill);
 
-	const asciiMode = () =>
-		modeSelect.value === 'oldskool' || modeSelect.value === 'nuskool';
+	// mode and fill latch at down: a select or pill touched mid drag
+	// must not commit a different vocabulary than the ghost showed
+	let dragMode;
+	let dragOutline = true;
+
+	const asciiMode = () => dragMode === 'oldskool' || dragMode === 'nuskool';
 
 	const asciiEllipseCells = coords => {
-		if (modeSelect.value === 'nuskool') {
+		let cells;
+		if (dragMode === 'nuskool') {
 			const { sx, sy, width, height } = coords;
-			return outlineMode
+			cells = dragOutline
 				? nuskoolCircleCells(sx, sy, width, height)
 				: nuskoolCircleFilledCells(sx, sy, width, height);
+		} else {
+			cells = oldskoolCircleCells(
+				coords.x0,
+				coords.yTop,
+				coords.boxW,
+				coords.boxH,
+			);
 		}
-		return oldskoolCircleCells(coords.x0, coords.yTop, coords.boxW, coords.boxH);
+		// grown boxes and tiny templates can poke past the canvas; shifted
+		// whole they stay closed rings instead of losing walls and caps to
+		// the range guards
+		if (cells.length === 0) {
+			return cells;
+		}
+		let minX = Infinity;
+		let maxX = -Infinity;
+		let minY = Infinity;
+		let maxY = -Infinity;
+		for (const c of cells) {
+			minX = Math.min(minX, c.x);
+			maxX = Math.max(maxX, c.x);
+			minY = Math.min(minY, c.y);
+			maxY = Math.max(maxY, c.y);
+		}
+		const cols = State.textArtCanvas.getColumns();
+		const rows = State.textArtCanvas.getRows();
+		const dx = minX < 0 ? -minX : Math.min(0, cols - 1 - maxX);
+		const dy = minY < 0 ? -minY : Math.min(0, rows - 1 - maxY);
+		if (dx === 0 && dy === 0) {
+			return cells;
+		}
+		return cells.map(c => ({ x: c.x + dx, y: c.y + dy, charCode: c.charCode }));
 	};
 
 	const canvasDown = e => {
 		startXY = e.detail;
+		endXY = undefined;
+		dragMode = modeSelect.value;
+		dragOutline = outlineMode;
 	};
 
 	const processCoords = () => {
@@ -1891,7 +1951,9 @@ const createCircleController = () => {
 			b2 * px <= a2 * py;
 			px += 1
 		) {
-			const amount = px * 2;
+			// through the rim column: px * 2 stopped one short of the right
+			// wall and skipped the apexes entirely at px = 0
+			const amount = px * 2 + 1;
 			const start = sx - px;
 			const y0 = sy + py;
 			const y1 = sy - py;
@@ -1910,7 +1972,9 @@ const createCircleController = () => {
 			a2 * py <= b2 * px;
 			py += 1
 		) {
-			const amount = px * 2;
+			// through the rim column: px * 2 stopped one short of the right
+			// wall and skipped the apexes entirely at px = 0
+			const amount = px * 2 + 1;
 			const start = sx - px;
 			const y0 = sy + py;
 			const y1 = sy - py;
@@ -1946,7 +2010,7 @@ const createCircleController = () => {
 		const rows = State.textArtCanvas.getRows();
 		const doubleRows = rows * 2;
 		State.textArtCanvas.drawHalfBlock(draw => {
-			if (outlineMode) {
+			if (dragOutline) {
 				ellipseOutline(
 					coords.sx,
 					coords.sy,
@@ -1988,7 +2052,7 @@ const createCircleController = () => {
 	};
 
 	const canvasDrag = e => {
-		if (startXY !== undefined && hasEndPointChanged(e.detail, startXY)) {
+		if (startXY !== undefined && hasEndPointChanged(e.detail, endXY || startXY)) {
 			if (endXY !== undefined) {
 				State.toolPreview.clear();
 			}
@@ -2006,7 +2070,7 @@ const createCircleController = () => {
 			const columns = State.textArtCanvas.getColumns();
 			const rows = State.textArtCanvas.getRows();
 			const doubleRows = rows * 2;
-			if (outlineMode) {
+			if (dragOutline) {
 				ellipseOutline(
 					coords.sx,
 					coords.sy,
@@ -2053,6 +2117,11 @@ const createCircleController = () => {
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
+		// a tool switch mid drag never sees the up: stale corners would
+		// commit a phantom shape on the next tap
+		startXY = undefined;
+		endXY = undefined;
+		State.toolPreview.clear();
 	};
 
 	panel.append(outlineToggle.getElement());

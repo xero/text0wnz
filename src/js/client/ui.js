@@ -356,6 +356,18 @@ const createPaintShortcuts = keyPair => {
 		!keyPair[e.key].classList.contains('excludedForWebsocket');
 
 	const keyDown = e => {
+		const t = e.target;
+		const tag = t && t.tagName;
+		if (
+			tag === 'SELECT' ||
+			tag === 'INPUT' ||
+			tag === 'TEXTAREA' ||
+			(t && t.isContentEditable)
+		) {
+			// the shape toolbars put selects inside tool buttons: typing
+			// in one must configure it, never fire a paint shortcut
+			return;
+		}
 		if (!ignored) {
 			if (!e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
 				if (e.key >= '0' && e.key <= '7') {
