@@ -529,11 +529,18 @@ const fullRows = (w: number, h: number): ProfileRun[][] => {
 	const rows: ProfileRun[][] = [];
 	rows.push([[4, '_.' + dashes(w - 12) + '._']]);
 	rows.push(sideRuns(w, 2, ".'", "'."));
-	rows.push(sideRuns(w, 1, '/', '\\'));
-	for (let i = 0; i < h - 6; i++) {
-		rows.push(sideRuns(w, 0, '|', '|'));
+	if (h === 6) {
+		// with no wall band between them, adjacent diagonals read
+		// pointy; the pair stands up as pipes one column in
+		rows.push(sideRuns(w, 1, '|', '|'));
+		rows.push(sideRuns(w, 1, '|', '|'));
+	} else {
+		rows.push(sideRuns(w, 1, '/', '\\'));
+		for (let i = 0; i < h - 6; i++) {
+			rows.push(sideRuns(w, 0, '|', '|'));
+		}
+		rows.push(sideRuns(w, 0, '\\', '/'));
 	}
-	rows.push(sideRuns(w, 0, '\\', '/'));
 	rows.push(sideRuns(w, 1, '`.', ".'"));
 	rows.push([[3, "'-." + unders(w - 12) + ".-'"]]);
 	return rows;
@@ -570,15 +577,18 @@ const quoteRows = (w: number, h: number): ProfileRun[][] => {
  * the stretch so the pair never widens.
  */
 const flatRows = (w: number): ProfileRun[][] => {
-	const even = w % 2 === 0;
-	const fill = dashes((even ? w - 8 : w - 7) >> 1);
-	const core = even ? "''" : "'";
-	const dot = even ? '..' : '.';
+	// the cap interior splits in thirds, dash flank / core band / dash
+	// flank: the owner's tiny ref and wide pill both obey it. A short
+	// core keeps the period pebble pair; a run becomes an underscore
+	// floor so the whisker reads exaggerated, never dotted
+	const interior = w - 4;
+	const flank = dashes(Math.floor(interior / 3));
+	const core = interior - 2 * flank.length;
 	return [
-		[[1, ',-' + fill + core + fill + '-.']],
+		[[1, ',' + flank + "'".repeat(core) + flank + '.']],
 		sideRuns(w, 0, '/', '\\'),
 		sideRuns(w, 0, '\\', '/'),
-		[[1, '`-' + fill + dot + fill + "-'"]],
+		[[1, '`' + flank + (core <= 2 ? '.' : '_').repeat(core) + flank + "'"]],
 	];
 };
 

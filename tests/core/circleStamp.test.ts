@@ -352,6 +352,30 @@ describe('old skool circle stamp, owner goldens (circles.txt)', () => {
 		);
 	});
 
+	it('stands tight six row rings on inset pipes (tweak ref)', () => {
+		expect(renderBox(13, 6)).toBe(
+			[
+				'   _.-._',
+				" .'     '.",
+				'|         |',
+				'|         |',
+				"`.       .'",
+				"  '-._.-'",
+			].join('\n'),
+		);
+	});
+
+	it('exaggerates the pill whisker into a core band (tweak ref)', () => {
+		expect(renderBox(21, 4)).toBe(
+			[
+				" ,-----'''''''-----.",
+				'/                   \\',
+				'\\                   /',
+				" `-----_______-----'",
+			].join('\n'),
+		);
+	});
+
 	it('rings three rows in the canon paren family', () => {
 		expect(renderBox(7, 3)).toBe([' ,---.', '(     )', " `---'"].join('\n'));
 		expect(renderBox(5, 3)).toBe([' ,-.', '(   )', " `-'"].join('\n'));
@@ -365,19 +389,19 @@ describe('old skool circle stamp, proposal sizes (field tuned)', () => {
 	it('keeps the full corner with zero walls at six rows', () => {
 		expect(renderBox(14, 6)).toBe(
 			[
-				'    _.--._',
-				"  .'      '.",
-				' /          \\',
-				'\\            /',
-				" `.        .'",
-				"   '-.__.-'",
+				'   _.--._',
+				" .'      '.",
+				'|          |',
+				'|          |',
+				"`.        .'",
+				"  '-.__.-'",
 			].join('\n'),
 		);
 	});
 
-	it('sits a lone apostrophe on the odd four row axis', () => {
+	it('bands the odd four row axis in thirds', () => {
 		expect(renderBox(9, 4)).toBe(
-			[" ,--'--.", '/       \\', '\\       /', " `--.--'"].join('\n'),
+			[" ,-'''-.", '/       \\', '\\       /', " `-___-'"].join('\n'),
 		);
 	});
 
