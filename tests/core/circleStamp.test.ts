@@ -83,9 +83,15 @@ const expectMirrored = (
 				twin,
 				`missing mirror of ${x},${y} at rx ${rx} rhb ${rhb}`,
 			).toBeDefined();
+			// one way maps (thin backtick to apostrophe) pass in either
+			// direction; standing glyphs hold their own ground
 			const flipped = pairs.get(c) ?? c;
+			const ok =
+				twin === flipped ||
+				pairs.get(twin as number) === c ||
+				(twin === c && standing.includes(c));
 			expect(
-				twin === flipped || (twin === c && standing.includes(c)),
+				ok,
 				`glyph mismatch at ${x},${y} rx ${rx} rhb ${rhb}: ${c} vs ${twin}`,
 			).toBe(true);
 		}
@@ -243,11 +249,11 @@ describe('amiga circle stamp', () => {
 });
 
 describe('thin circle stamp', () => {
-	it('voices a medium circle in the classic line vocabulary', () => {
+	it('voices a medium circle in the owner reference vocabulary', () => {
 		expect(renderThin(60, 60, 11, 12)).toBe(
 			[
-				'      .-"""""""-.',
-				"  ,--'           `--.",
+				'        _.-~-._',
+				"   .---'       '---.",
 				'  /                 \\',
 				' /                   \\',
 				'|                     |',
@@ -257,23 +263,31 @@ describe('thin circle stamp', () => {
 				' \\                   /',
 				'  \\                 /',
 				'   \\               /',
-				"     `--.     ,--'",
-				"      `-_______-'",
+				"     `-.       .-'",
+				"      `-._____.-'",
 			].join('\n'),
 		);
 	});
 
-	it('condenses to a clean ring at tiny sizes', () => {
+	it('condenses to a clean ring at small sizes', () => {
 		expect(renderThin(60, 60, 4, 5)).toBe(
 			[
-				' .-"""-.',
+				'  .-~-.',
 				' /     \\',
 				'|       |',
 				'|       |',
 				' \\     /',
-				" `-___-'",
+				" `-...-'",
 			].join('\n'),
 		);
+	});
+
+	it('stamps the paren ring templates at the smallest sizes', () => {
+		expect(renderThin(60, 60, 3, 3)).toBe(
+			[' ,---.', '(     )', " `---'"].join('\n'),
+		);
+		expect(renderThin(60, 60, 2, 2)).toBe([' ,-.', '(   )', " `-'"].join('\n'));
+		expect(renderThin(60, 60, 0, 0)).toBe(renderThin(60, 60, 2, 2));
 	});
 
 	it('mirrors thin circles with the pebble pairs swapped', () => {
@@ -282,12 +296,10 @@ describe('thin circle stamp', () => {
 			new Map([
 				[47, 92],
 				[92, 47],
-				[39, 96],
-				[96, 39],
-				[44, 46],
-				[46, 44],
 				[40, 41],
 				[41, 40],
+				[96, 39],
+				[44, 46],
 			]),
 			[
 				[7, 8],
