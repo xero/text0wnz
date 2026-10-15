@@ -298,6 +298,15 @@ test.describe('shape tool brush modes', () => {
 		expect((await readBlock(page, 60, 22)).charCode).toBe(DOLLAR);
 	});
 
+	test('a block circle survives a sub cell drag', async ({ page }) => {
+		await page.locator('#circle').click();
+		await page.selectOption('#circleMode', 'block');
+		// zero radii once spun the ellipse walk forever and froze the
+		// page; the degenerate drag must land ink and return
+		await pacedDrag(page, [40, 16], [40, 16]);
+		expect([220, 223]).toContain((await readBlock(page, 40, 16)).charCode);
+	});
+
 	test('old skool circle fills its drag box with the golden anatomy', async ({ page }) => {
 		await page.locator('#circle').click();
 		await page.selectOption('#circleMode', 'oldskool');
