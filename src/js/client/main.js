@@ -649,7 +649,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 const initializeAppComponents = async () => {
 	// a pending launch file wins over the autosave restore
 	if (!pendingFile) {
-		State.restoreStateFromLocalStorage();
+		State.restoreStateFromLocalStorage().then(() => {
+			// the restore's loading modal clobbers a pending update prompt,
+			// and one cancel would then pin the old worker's stale chunks
+			// through every future reload: re-offer once the modal is free
+			const reofferUpdate = () => {
+				if (!swRegistration?.waiting || !navigator.serviceWorker.controller) {
+					return;
+				}
+				if (State.modal.current()) {
+					setTimeout(reofferUpdate, 1000);
+					return;
+				}
+				State.modal.open('update');
+			};
+			reofferUpdate();
+		});
 	}
 	// iOS quirks
 	if (isIOS) {

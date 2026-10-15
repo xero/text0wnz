@@ -35,7 +35,9 @@ const cellCenter = async (page, x, y) =>
 				.getBoundingClientRect();
 			return {
 				clientX: rect.left + cx * s.font.getWidth() + s.font.getWidth() / 2,
-				clientY: rect.top + cy * s.font.getHeight() + s.font.getHeight() / 2,
+				// three quarters down the cell: the half block seam sits at
+				// exactly h/2, where any subpixel origin flips the parity
+				clientY: rect.top + cy * s.font.getHeight() + (s.font.getHeight() * 3) / 4,
 			};
 		},
 		[x, y],
