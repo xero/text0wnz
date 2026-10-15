@@ -48,16 +48,22 @@ const MIRROR_CHARS = new Map<number, number>([
 	[39, 96],
 	[60, 62], // < >
 	[62, 60],
-	[57, 80], // 9 P
-	[80, 57],
 	// ascii brush junction glyphs: hooks and leans swap sides
 	[74, 76], // J L
 	[76, 74],
 	[55, 114], // 7 r
 	[114, 55],
-	// nu skool ribbon chisels
+	// nu skool ribbon chisels: P pairs with Y, not the legacy 9, so a
+	// mirrored chisel keeps its merge weight and leans the right way;
+	// 9 still mirrors to P one way for old art
 	[100, 98], // d b
 	[98, 100],
+	[80, 89], // P Y
+	[89, 80],
+	[57, 80], // 9 to P, never back
+	// old skool pebbles run one way: comma flips to period, period
+	// stands on both sides like the cap rows draw it
+	[44, 46],
 ]);
 
 export const mirrorCharCode = (charCode: number): number =>

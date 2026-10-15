@@ -104,3 +104,17 @@ describe('cellops', () => {
 		expect(shadeCycle(65, 7, 7, true)).toBe(32);
 	});
 });
+
+describe('mirror vocabulary, nu skool chisels and old skool pebbles', () => {
+	it('pairs P with Y so mirrored chisels keep their merge weight', () => {
+		expect(mirrorCharCode(80)).toBe(89);
+		expect(mirrorCharCode(89)).toBe(80);
+		// legacy 9 still finds a chisel one way
+		expect(mirrorCharCode(57)).toBe(80);
+	});
+
+	it('flips comma to period one way, period stands', () => {
+		expect(mirrorCharCode(44)).toBe(46);
+		expect(mirrorCharCode(46)).toBe(46);
+	});
+});
