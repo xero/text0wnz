@@ -40,6 +40,12 @@ interface CircleVoice {
 	 */
 	measureTop: 'wide' | 'narrow';
 	measureBottom: 'wide' | 'narrow';
+	/**
+	 * folded circles are one quarter section mirrored and rotated: the
+	 * top half's ladder reflects onto the bottom cell for cell, so the
+	 * caps match width and every shoulder row has an equal twin
+	 */
+	fold: boolean;
 	/** wall rows inside the equator band */
 	bar: string;
 	stepTop: (step: number, prevChisel: boolean, nextChisel: boolean) => string;
@@ -112,6 +118,11 @@ const walkCircle = (
 		const t = Math.min(1, Math.max(0, dy) / Math.max(1, rhb));
 		xb.push(Math.round(cx - rx * Math.sqrt(Math.max(0, 1 - t * t))));
 	}
+	if (voice.fold) {
+		for (let i = 0; i < rows; i++) {
+			xb[i] = xb[Math.min(i, rows - 1 - i)];
+		}
+	}
 	if (rows === 1) {
 		// a flat drag is a lens: one dressed cap row
 		const out: CircleCell[] = [];
@@ -166,13 +177,19 @@ const walkCircle = (
 			putRun(cells, x, y, voice.bar);
 			prevChisel = false;
 		} else {
-			const step = x - xb[i - 1];
+			// folded bottoms measure toward the narrower row below, the
+			// true mirror of the top walking toward the row above;
+			// unfolded dialects keep the row above as their basis, since
+			// their wide anchored caps absorb the final jump themselves
+			const step = voice.fold ? xb[i + 1] - x : x - xb[i - 1];
 			if (step === 0) {
 				putRun(cells, x - 1, y, voice.stepBottom(1, prevChisel, false));
 				prevChisel = false;
 				continue;
 			}
-			const nextChisel = i + 1 < rows && xb[i + 1] - x > 1;
+			const nextChisel = voice.fold
+				? i + 1 < rows - 1 && xb[i + 2] - xb[i + 1] > 1
+				: i + 1 < rows && xb[i + 1] - x > 1;
 			putRun(cells, x - 1, y, voice.stepBottom(step, prevChisel, nextChisel));
 			prevChisel = step > 1;
 		}
@@ -284,6 +301,7 @@ const AMIGA_VOICE: CircleVoice = {
 	capExact: false,
 	measureTop: 'wide',
 	measureBottom: 'wide',
+	fold: false,
 	bar: '8:',
 	stepTop: (step, prevChisel, nextChisel) => {
 		if (step === 1) {
@@ -368,6 +386,7 @@ const THIN_VOICE: CircleVoice = {
 	capExact: true,
 	measureTop: 'narrow',
 	measureBottom: 'wide',
+	fold: true,
 	bar: '|',
 	// a leading space keeps the shared anchor: thin shoulders start on
 	// the boundary itself and spaces stay unwritten
@@ -381,7 +400,7 @@ const THIN_VOICE: CircleVoice = {
 		if (step === 1) {
 			return ' \\';
 		}
-		return '`' + '-'.repeat(step - 2) + '.';
+		return ' `' + '-'.repeat(step - 2) + '.';
 	},
 	// a two cell jog wants the bare diagonal floating mid jog, like
 	// the reference rows; wider jogs keep a dressed tail
@@ -416,11 +435,11 @@ const THIN_VOICE: CircleVoice = {
 	},
 	capBottomRow: h => {
 		const w = 2 * h - 1;
-		if (w >= 9) {
+		if (w >= 7) {
 			return '`-.' + '_'.repeat(w - 6) + ".-'";
 		}
 		if (w >= 5) {
-			return '`-' + '.'.repeat(w - 4) + "-'";
+			return "`-_-'";
 		}
 		if (w >= 3) {
 			return "`-'";
