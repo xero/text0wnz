@@ -459,7 +459,13 @@ describe('old skool circle stamp, proposal sizes (field tuned)', () => {
 
 	it('grows boxes under the smallest ring around their center', () => {
 		expect(renderBox(3, 3)).toBe(renderBox(5, 3));
-		expect(renderBox(1, 1)).toBe(renderBox(5, 1));
+	});
+
+	it('answers a tap with the smallest good ring, not a lens', () => {
+		expect(renderBox(1, 1)).toBe([' ,-.', '(   )', " `-'"].join('\n'));
+		expect(renderBox(3, 2)).toBe(renderBox(1, 1));
+		// a deliberate wide flat drag keeps its lens
+		expect(renderBox(12, 1)).toBe('_.--------._');
 	});
 });
 
