@@ -422,24 +422,31 @@ const THIN_VOICE: CircleVoice = {
 		}
 		return '\\' + '_'.repeat(jog - 1);
 	},
+	// the tilde apex and underscore tails only read round when dash
+	// flanks dilute them (the owner's large reference keeps them at
+	// nine wide and up); narrower caps ride flat on quotes and
+	// underscores or the peak profiles into a diamond facet
 	capTopRow: h => {
 		const w = 2 * h - 1;
-		if (w >= 7) {
+		if (w >= 9) {
 			const flank = '-'.repeat((w - 7) >> 1);
 			return '_.-' + flank + '~' + flank + '-._';
 		}
 		if (w >= 5) {
-			return '.-~-.';
+			return '.-' + '"'.repeat(w - 4) + '-.';
 		}
-		return '_'.repeat(Math.max(1, w));
+		if (w >= 3) {
+			return '.-.';
+		}
+		return '-'.repeat(Math.max(1, w));
 	},
 	capBottomRow: h => {
 		const w = 2 * h - 1;
-		if (w >= 7) {
+		if (w >= 9) {
 			return '`-.' + '_'.repeat(w - 6) + ".-'";
 		}
 		if (w >= 5) {
-			return "`-_-'";
+			return '`-' + '_'.repeat(w - 4) + "-'";
 		}
 		if (w >= 3) {
 			return "`-'";
