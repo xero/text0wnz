@@ -9,6 +9,7 @@ import Toolbar from './toolbar.js';
 import magicNumbers from './magicNumbers.js';
 import {
 	amigaCircleCells,
+	asciiCircleCells,
 	cellInRange,
 	createAsciiStampEngine,
 	isJunctionGlyph,
@@ -1249,31 +1250,6 @@ const vPathPoints = (x, hb0, hb1) => {
 	return points;
 };
 
-// one half of a ruled ellipse in half-block space. the ellipse walks
-// as two arcs that meet at 3 and 9 o'clock where both strokes run
-// vertical, so the seam melts into the side bars instead of voicing
-// a junction glyph
-const arcPathPoints = (cx, chb, rx, rhb, a0, a1) => {
-	const points = [];
-	const steps = Math.max(
-		32,
-		Math.ceil(Math.abs(a1 - a0) * Math.max(rx, rhb) * 2),
-	);
-	let lastX;
-	let lastHb;
-	for (let i = 0; i <= steps; i++) {
-		const t = a0 + ((a1 - a0) * i) / steps;
-		const x = Math.round(cx + rx * Math.cos(t));
-		const hb = Math.round(chb + rhb * Math.sin(t));
-		if (x !== lastX || hb !== lastHb) {
-			points.push([x, hb]);
-			lastX = x;
-			lastHb = hb;
-		}
-	}
-	return points;
-};
-
 const createLineController = () => {
 	const panel = $('shapesToolbar');
 	const nav = $('shapes');
@@ -1843,17 +1819,7 @@ const createCircleController = () => {
 			}
 			return cells;
 		}
-		const cells = [];
-		cells.push(
-			...shapeStrokeCells(
-				arcPathPoints(sx, sy, width, height, Math.PI, 2 * Math.PI),
-				1,
-			),
-		);
-		cells.push(
-			...shapeStrokeCells(arcPathPoints(sx, sy, width, height, Math.PI, 0), 1),
-		);
-		return cells;
+		return asciiCircleCells(sx, sy, width, height);
 	};
 
 	const canvasDown = e => {

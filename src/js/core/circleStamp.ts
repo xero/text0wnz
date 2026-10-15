@@ -1,12 +1,15 @@
 /**
- * Amiga style circle stamp (owner reference art: circles.txt). A
- * circle is a double mirror: one quadrant's grammar flipped and
- * rotated into the other three, so symmetry comes by construction
- * instead of hoping two engine strokes agree. The left half is voiced
- * from per row boundary spans; the right half mirrors glyphwise. The
- * smallest sizes stop reading as curves row by row, so they come from
- * whole templates drawn by the owner (the R flourish is deliberate
- * and has no good left side mirror, so templates never mirror).
+ * Circle stamp for the ruled shape tools (owner reference art:
+ * circles.txt). A circle is a double mirror: one quadrant's grammar
+ * flipped and rotated into the other three, so symmetry comes by
+ * construction instead of hoping two engine strokes agree. The left
+ * half is voiced from per row boundary spans; the right half mirrors
+ * glyphwise. One geometry walker serves every dialect; each mode
+ * supplies a voice (mirror pairs, wall bars, step and corner strings,
+ * cap rows). The smallest amiga sizes stop reading as curves row by
+ * row, so they come from whole templates drawn by the owner (the R
+ * flourish is deliberate and has no good left side mirror, so
+ * templates never mirror).
  */
 
 export interface CircleCell {
@@ -15,18 +18,160 @@ export interface CircleCell {
 	charCode: number;
 }
 
-const HMIRROR = new Map<number, number>([
-	[100, 98], // d b
-	[98, 100],
-	[80, 89], // P Y
-	[89, 80],
-	[39, 96], // ' `
-	[96, 39],
-	[40, 41], // ( )
-	[41, 40],
+interface CircleVoice {
+	mirror: (c: number) => number;
+	/** wall rows inside the equator band */
+	bar: string;
+	stepTop: (step: number, prevChisel: boolean, nextChisel: boolean) => string;
+	stepBottom: (
+		step: number,
+		prevChisel: boolean,
+		nextChisel: boolean,
+	) => string;
+	cornerTop: (jog: number) => string;
+	cornerBottom: (jog: number) => string;
+	/** full cap rows, anchored at the row's left boundary */
+	capTopRow: (h: number) => string;
+	capBottomRow: (h: number) => string;
+}
+
+const mirrorMap = (pairs: Array<[string, string]>): Map<number, number> => {
+	const m = new Map<number, number>();
+	for (const [a, b] of pairs) {
+		m.set(a.charCodeAt(0), b.charCodeAt(0));
+		m.set(b.charCodeAt(0), a.charCodeAt(0));
+	}
+	return m;
+};
+
+const putRun = (cells: CircleCell[], x: number, y: number, run: string) => {
+	for (let i = 0; i < run.length; i++) {
+		if (run[i] !== ' ') {
+			cells.push({ x: x + i, y: y, charCode: run.charCodeAt(i) });
+		}
+	}
+};
+
+/**
+ * Shared geometry: per row leftmost rim columns from the half block
+ * center nearest the equator, cap rows measured just inside the apex
+ * so their width covers the gap to the first stepping row, clamped
+ * monotone toward the equator so rounding never zigzags. The walk
+ * classifies each row (cap, step, corner, bar), voices the left half,
+ * mirrors it, and lands the caps last as full rows.
+ */
+const walkCircle = (
+	cx: number,
+	cyHb: number,
+	rx: number,
+	rhb: number,
+	voice: CircleVoice,
+): CircleCell[] => {
+	const yTop = Math.floor((cyHb - rhb) / 2);
+	const yBot = Math.floor((cyHb + rhb) / 2);
+	const rows = yBot - yTop + 1;
+	const xb: number[] = [];
+	for (let i = 0; i < rows; i++) {
+		const y = yTop + i;
+		let dy = Math.min(
+			Math.abs(y * 2 + 0.5 - cyHb),
+			Math.abs(y * 2 + 1.5 - cyHb),
+		);
+		if (i === 0 || i === rows - 1) {
+			dy = Math.min(dy, rhb - 1.5);
+		}
+		const t = Math.min(1, Math.max(0, dy) / Math.max(1, rhb));
+		xb.push(Math.round(cx - rx * Math.sqrt(Math.max(0, 1 - t * t))));
+	}
+	if (rows === 1) {
+		// a flat drag is a lens: one dressed cap row
+		const out: CircleCell[] = [];
+		putRun(out, xb[0], yTop, voice.capTopRow(cx - xb[0] + 1));
+		return out;
+	}
+	let eqStart = 0;
+	for (let i = 1; i < rows; i++) {
+		if (xb[i] < xb[eqStart]) {
+			eqStart = i;
+		}
+	}
+	for (let i = 1; i <= eqStart; i++) {
+		xb[i] = Math.min(xb[i], xb[i - 1]);
+	}
+	for (let i = eqStart + 1; i < rows; i++) {
+		xb[i] = Math.max(xb[i], xb[i - 1]);
+	}
+	let eqEnd = eqStart;
+	while (eqEnd + 1 < rows && xb[eqEnd + 1] === xb[eqStart]) {
+		eqEnd += 1;
+	}
+	// plateaus inside the step zones repeat the steep dress instead of
+	// taking wall bars (the reference voices its two row plateau as
+	// stacked `8, rows): a bare bar one column off the wall line reads
+	// flipped
+	const cells: CircleCell[] = [];
+	let prevChisel = true;
+	for (let i = 1; i < rows - 1; i++) {
+		const x = xb[i];
+		const y = yTop + i;
+		if (i < eqStart) {
+			const step = xb[i - 1] - x;
+			if (step === 0) {
+				putRun(cells, x - 1, y, voice.stepTop(1, prevChisel, false));
+				prevChisel = false;
+				continue;
+			}
+			const nextChisel = x - xb[i + 1] > 1;
+			putRun(cells, x - 1, y, voice.stepTop(step, prevChisel, nextChisel));
+			prevChisel = step > 1;
+		} else if (i === eqStart && i === eqEnd) {
+			putRun(cells, x, y, voice.bar);
+			prevChisel = false;
+		} else if (i === eqStart) {
+			putRun(cells, x, y, voice.cornerTop(xb[i - 1] - x));
+			prevChisel = false;
+		} else if (i === eqEnd) {
+			putRun(cells, x, y, voice.cornerBottom(xb[i + 1] - x));
+			prevChisel = false;
+		} else if (i < eqEnd) {
+			putRun(cells, x, y, voice.bar);
+			prevChisel = false;
+		} else {
+			const step = x - xb[i - 1];
+			if (step === 0) {
+				putRun(cells, x - 1, y, voice.stepBottom(1, prevChisel, false));
+				prevChisel = false;
+				continue;
+			}
+			const nextChisel = i + 1 < rows && xb[i + 1] - x > 1;
+			putRun(cells, x - 1, y, voice.stepBottom(step, prevChisel, nextChisel));
+			prevChisel = step > 1;
+		}
+	}
+	// right half mirrors glyphwise across the center column; runs that
+	// reach the axis stop there so no unmirrored ink leaks past it
+	const left = cells.filter(c => c.x <= cx);
+	const out: CircleCell[] = left.slice();
+	for (const c of left) {
+		if (c.x < cx) {
+			out.push({ x: 2 * cx - c.x, y: c.y, charCode: voice.mirror(c.charCode) });
+		}
+	}
+	putRun(out, xb[0], yTop, voice.capTopRow(cx - xb[0] + 1));
+	putRun(out, xb[rows - 1], yBot, voice.capBottomRow(cx - xb[rows - 1] + 1));
+	return out;
+};
+
+// ------------------------------------------------------ amiga voice
+
+const AMIGA_MIRROR = mirrorMap([
+	['d', 'b'],
+	['P', 'Y'],
+	["'", '`'],
+	['(', ')'],
 ]);
 
-const mirror = (c: number): number => HMIRROR.get(c) ?? c;
+const amigaMirror = (c: number): number => AMIGA_MIRROR.get(c) ?? c;
 
 /**
  * Smallest circles, verbatim from the owner. Spaces stay unwritten so
@@ -44,19 +189,11 @@ const TINY = [
 	},
 ];
 
-const putRun = (cells: CircleCell[], x: number, y: number, run: string) => {
-	for (let i = 0; i < run.length; i++) {
-		if (run[i] !== ' ') {
-			cells.push({ x: x + i, y: y, charCode: run.charCodeAt(i) });
-		}
-	}
-};
-
 /**
  * Cap rows read as one dressed run from the rim boundary over the
  * apex and back: pebble leads, low chisels, a Y shoulder, flat ink
  * across the top. The top cap's Y shoulder stands on both sides in
- * the reference art, so caps mirror with their own map (chisels and
+ * the reference art, so caps mirror with their own rule (chisels and
  * pebbles swap, shoulders stand). A cap half always ends in a self
  * mirror glyph: its last char sits on the symmetry axis.
  */
@@ -64,7 +201,8 @@ const capRow = (half: string, keepShoulders: boolean): string => {
 	let right = '';
 	for (let i = half.length - 2; i >= 0; i--) {
 		const c = half.charCodeAt(i);
-		const flipped = keepShoulders && (c === 80 || c === 89) ? c : mirror(c);
+		const flipped =
+			keepShoulders && (c === 80 || c === 89) ? c : amigaMirror(c);
 		right += String.fromCharCode(flipped);
 	}
 	return half + right;
@@ -107,72 +245,135 @@ const capBottomHalf = (h: number): string => {
  * than an apostrophe under a bare 8. Long runs chisel at most two
  * deep and fill with flat ink, like the reference caps; the Y
  * shoulder stays out of step runs so the mirror never lands a P on
- * the top rim.
+ * the top rim. Wall bars wear an inner colon: bare 8 columns read
+ * thin against the dressed quadrants.
  */
-const stepTop = (
-	step: number,
-	prevChisel: boolean,
-	nextChisel: boolean,
-): string => {
-	if (step === 1) {
-		// a lone steep row between chisel rows keeps the ribbon
-		// diagonal; bare 8 is for runs that lean on the vertical zone
-		if (nextChisel) {
-			return ',d"';
+const AMIGA_VOICE: CircleVoice = {
+	mirror: amigaMirror,
+	bar: '8:',
+	stepTop: (step, prevChisel, nextChisel) => {
+		if (step === 1) {
+			// a lone steep row between chisel rows keeps the ribbon
+			// diagonal; bare 8 is for runs that lean on the vertical zone
+			if (nextChisel) {
+				return ',d"';
+			}
+			return prevChisel ? ',8"' : ",8'";
 		}
-		return prevChisel ? ',8"' : ",8'";
-	}
-	if (step === 2) {
-		return ',dP"';
-	}
-	if (step === 3) {
-		return ',gdP"';
-	}
-	if (step === 4) {
-		return ',agd""\'';
-	}
-	return ',,ggdd' + '"'.repeat(step - 4) + "'";
+		if (step === 2) {
+			return ',dP"';
+		}
+		if (step === 3) {
+			return ',gdP"';
+		}
+		if (step === 4) {
+			return ',agd""\'';
+		}
+		return ',,ggdd' + '"'.repeat(step - 4) + "'";
+	},
+	stepBottom: (step, prevChisel, nextChisel) => {
+		if (step === 1) {
+			if (nextChisel) {
+				return (prevChisel ? '"' : '`') + 'Ya';
+			}
+			return (prevChisel ? '"' : '`') + '8,';
+		}
+		if (step === 2) {
+			return (prevChisel ? '"' : '`') + 'Yba';
+		}
+		if (step === 3) {
+			return '`"Yba,';
+		}
+		return '`"YYbb' + 'a'.repeat(step - 4) + ',';
+	},
+	// the equator band's first and last rows are the corners, voiced
+	// at the wall column like the reference draws them: the chisel
+	// rounds the rim into the bar and its dress spans any jog left by
+	// a steep approach, so wide flat shoulders never tear
+	cornerTop: jog => {
+		if (jog <= 1) {
+			return "d'";
+		}
+		return 'dP' + '"'.repeat(jog - 1);
+	},
+	cornerBottom: jog => {
+		if (jog <= 1) {
+			return 'Y,';
+		}
+		return 'Yb' + 'a'.repeat(Math.max(0, jog - 2)) + ',';
+	},
+	capTopRow: h => capRow(capTopHalf(h), true),
+	capBottomRow: h => capRow(capBottomHalf(h), false),
 };
 
-const stepBottom = (
-	step: number,
-	prevChisel: boolean,
-	nextChisel: boolean,
-): string => {
-	if (step === 1) {
-		if (nextChisel) {
-			return (prevChisel ? '"' : '`') + 'Ya';
-		}
-		return (prevChisel ? '"' : '`') + '8,';
-	}
-	if (step === 2) {
-		return (prevChisel ? '"' : '`') + 'Yba';
-	}
-	if (step === 3) {
-		return '`"Yba,';
-	}
-	return '`"YYbb' + 'a'.repeat(step - 4) + ',';
-};
+// ------------------------------------------------------- thin voice
 
 /**
- * The equator band's first and last rows are the corners, voiced at
- * the wall column like the reference draws them: the chisel rounds
- * the rim into the bar and its dress spans any jog left by a steep
- * approach, so wide flat shoulders never tear.
+ * The thin dialect speaks the classic line vocabulary: bar walls,
+ * slash diagonals, comma and period pebbles leading dashed shallow
+ * runs, quote caps up top and underscore caps below. Pebbles swap
+ * low for low across the axis (a comma leading left mirrors to a
+ * period trailing right), and caps are symmetric strings outright.
  */
-const cornerTop = (jog: number): string => {
-	if (jog <= 1) {
-		return "d'";
-	}
-	return 'dP' + '"'.repeat(jog - 1);
+const THIN_MIRROR = mirrorMap([
+	['/', '\\'],
+	["'", '`'],
+	[',', '.'],
+	['(', ')'],
+]);
+
+const THIN_VOICE: CircleVoice = {
+	mirror: (c: number) => THIN_MIRROR.get(c) ?? c,
+	bar: '|',
+	// a leading space keeps the shared anchor: steps land one column
+	// outside the boundary and spaces stay unwritten
+	stepTop: step => {
+		if (step === 1) {
+			return ' /';
+		}
+		return ',' + '-'.repeat(step - 1) + "'";
+	},
+	stepBottom: step => {
+		if (step === 1) {
+			return ' \\';
+		}
+		return '`' + '-'.repeat(step - 1) + '.';
+	},
+	cornerTop: jog => {
+		if (jog <= 1) {
+			return '|';
+		}
+		return '/' + '-'.repeat(jog - 1);
+	},
+	cornerBottom: jog => {
+		if (jog <= 1) {
+			return '|';
+		}
+		return '\\' + '_'.repeat(jog - 1);
+	},
+	capTopRow: h => {
+		const w = 2 * h - 1;
+		if (w >= 5) {
+			return '.-' + '"'.repeat(w - 4) + '-.';
+		}
+		if (w >= 3) {
+			return '.-.';
+		}
+		return '-'.repeat(Math.max(1, w));
+	},
+	capBottomRow: h => {
+		const w = 2 * h - 1;
+		if (w >= 5) {
+			return '`-' + '_'.repeat(w - 4) + "-'";
+		}
+		if (w >= 3) {
+			return "`-'";
+		}
+		return '_'.repeat(Math.max(1, w));
+	},
 };
 
-const cornerBottom = (jog: number): string => {
-	if (jog <= 1) {
-		return 'Y,';
-	}
-	return 'Yb' + 'a'.repeat(jog - 2) + ',';
-};
+// ---------------------------------------------------------- exports
 
 /**
  * cx and rx in cell columns, cyHb and rhb in half block rows (the
@@ -197,111 +398,17 @@ export const amigaCircleCells = (
 		});
 		return cells;
 	}
-	const yTop = Math.floor((cyHb - rhb) / 2);
-	const yBot = Math.floor((cyHb + rhb) / 2);
-	const rows = yBot - yTop + 1;
-	// each row's leftmost rim column, from the half block center
-	// nearest the equator; cap rows measure just inside the apex so
-	// their width covers the gap to the first stepping row. clamped
-	// monotone toward the equator so rounding never zigzags
-	const xb: number[] = [];
-	for (let i = 0; i < rows; i++) {
-		const y = yTop + i;
-		let dy = Math.min(
-			Math.abs(y * 2 + 0.5 - cyHb),
-			Math.abs(y * 2 + 1.5 - cyHb),
-		);
-		if (i === 0 || i === rows - 1) {
-			dy = Math.min(dy, rhb - 1.5);
-		}
-		const t = Math.min(1, Math.max(0, dy) / Math.max(1, rhb));
-		xb.push(Math.round(cx - rx * Math.sqrt(Math.max(0, 1 - t * t))));
-	}
-	if (rows === 1) {
-		// a flat drag is a lens: one dressed cap row
-		const out: CircleCell[] = [];
-		putRun(out, xb[0], yTop, capRow(capTopHalf(cx - xb[0] + 1), true));
-		return out;
-	}
-	let eqStart = 0;
-	for (let i = 1; i < rows; i++) {
-		if (xb[i] < xb[eqStart]) {
-			eqStart = i;
-		}
-	}
-	for (let i = 1; i <= eqStart; i++) {
-		xb[i] = Math.min(xb[i], xb[i - 1]);
-	}
-	for (let i = eqStart + 1; i < rows; i++) {
-		xb[i] = Math.max(xb[i], xb[i - 1]);
-	}
-	let eqEnd = eqStart;
-	while (eqEnd + 1 < rows && xb[eqEnd + 1] === xb[eqStart]) {
-		eqEnd += 1;
-	}
-	// one walk, each row classified: step rows above and below the
-	// band, corners on the band's edge rows, bars between. caps land
-	// after the mirror pass with their own shoulder rules
-	const cells: CircleCell[] = [];
-	// wall rows read thin against the dressed quadrants, so band bars
-	// wear an inner colon. plateaus inside the step zones repeat the
-	// steep dress instead (the reference voices its two row plateau as
-	// stacked `8, rows): a bare bar one column off the wall line reads
-	// flipped
-	const bar = '8:';
-	let prevChisel = true;
-	for (let i = 1; i < rows - 1; i++) {
-		const x = xb[i];
-		const y = yTop + i;
-		if (i < eqStart) {
-			const step = xb[i - 1] - x;
-			if (step === 0) {
-				putRun(cells, x - 1, y, stepTop(1, prevChisel, false));
-				prevChisel = false;
-				continue;
-			}
-			const nextChisel = x - xb[i + 1] > 1;
-			putRun(cells, x - 1, y, stepTop(step, prevChisel, nextChisel));
-			prevChisel = step > 1;
-		} else if (i === eqStart && i === eqEnd) {
-			putRun(cells, x, y, bar);
-			prevChisel = false;
-		} else if (i === eqStart) {
-			putRun(cells, x, y, cornerTop(xb[i - 1] - x));
-			prevChisel = false;
-		} else if (i === eqEnd) {
-			putRun(cells, x, y, cornerBottom(xb[i + 1] - x));
-			prevChisel = false;
-		} else if (i < eqEnd) {
-			putRun(cells, x, y, bar);
-			prevChisel = false;
-		} else {
-			const step = x - xb[i - 1];
-			if (step === 0) {
-				putRun(cells, x - 1, y, stepBottom(1, prevChisel, false));
-				prevChisel = false;
-				continue;
-			}
-			const nextChisel = i + 1 < rows && xb[i + 1] - x > 1;
-			putRun(cells, x - 1, y, stepBottom(step, prevChisel, nextChisel));
-			prevChisel = step > 1;
-		}
-	}
-	// right half mirrors glyphwise across the center column; runs that
-	// reach the axis stop there so no unmirrored ink leaks past it
-	const left = cells.filter(c => c.x <= cx);
-	const out: CircleCell[] = left.slice();
-	for (const c of left) {
-		if (c.x < cx) {
-			out.push({ x: 2 * cx - c.x, y: c.y, charCode: mirror(c.charCode) });
-		}
-	}
-	putRun(out, xb[0], yTop, capRow(capTopHalf(cx - xb[0] + 1), true));
-	putRun(
-		out,
-		xb[rows - 1],
-		yBot,
-		capRow(capBottomHalf(cx - xb[rows - 1] + 1), false),
-	);
-	return out;
+	return walkCircle(cx, cyHb, rx, rhb, AMIGA_VOICE);
+};
+
+/** Same walk and mirror in the thin line vocabulary. */
+export const asciiCircleCells = (
+	cx: number,
+	cyHb: number,
+	rx: number,
+	rhb: number,
+): CircleCell[] => {
+	rx = Math.max(0, Math.round(rx));
+	rhb = Math.max(0, Math.round(rhb));
+	return walkCircle(cx, cyHb, rx, rhb, THIN_VOICE);
 };

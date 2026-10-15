@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { amigaCircleCells } from '../../src/js/core/circleStamp.js';
+import {
+	amigaCircleCells,
+	asciiCircleCells,
+} from '../../src/js/core/circleStamp.js';
+
+type Stamp = (
+	cx: number,
+	cyHb: number,
+	rx: number,
+	rhb: number,
+) => Array<{ x: number; y: number; charCode: number }>;
 
 /**
  * Golden harness: render the stamped cells as text and compare against
@@ -7,9 +17,15 @@ import { amigaCircleCells } from '../../src/js/core/circleStamp.js';
  * owner tuned by feel, so a golden moving is fine when the change is
  * the intended look; symmetry and safety are the hard contracts.
  */
-const render = (cx: number, cyHb: number, rx: number, rhb: number): string => {
+const renderWith = (
+	stamp: Stamp,
+	cx: number,
+	cyHb: number,
+	rx: number,
+	rhb: number,
+): string => {
 	const grid = new Map<string, number>();
-	for (const c of amigaCircleCells(cx, cyHb, rx, rhb)) {
+	for (const c of stamp(cx, cyHb, rx, rhb)) {
 		grid.set(`${c.x},${c.y}`, c.charCode);
 	}
 	let minX = Infinity;
@@ -33,6 +49,47 @@ const render = (cx: number, cyHb: number, rx: number, rhb: number): string => {
 		lines.push(line.replace(/\s+$/, ''));
 	}
 	return lines.join('\n');
+};
+
+const render = (cx: number, cyHb: number, rx: number, rhb: number): string =>
+	renderWith(amigaCircleCells, cx, cyHb, rx, rhb);
+
+const renderThin = (
+	cx: number,
+	cyHb: number,
+	rx: number,
+	rhb: number,
+): string => renderWith(asciiCircleCells, cx, cyHb, rx, rhb);
+
+/** Mirror pair check shared by both dialect property tests. */
+const expectMirrored = (
+	stamp: Stamp,
+	pairs: Map<number, number>,
+	sizes: Array<[number, number]>,
+	standing: number[] = [],
+) => {
+	for (const [rx, rhb] of sizes) {
+		const grid = new Map<string, number>();
+		for (const c of stamp(40, 40, rx, rhb)) {
+			grid.set(`${c.x},${c.y}`, c.charCode);
+		}
+		for (const [k, c] of grid) {
+			const [x, y] = k.split(',').map(Number);
+			if (x === 40) {
+				continue;
+			}
+			const twin = grid.get(`${80 - x},${y}`);
+			expect(
+				twin,
+				`missing mirror of ${x},${y} at rx ${rx} rhb ${rhb}`,
+			).toBeDefined();
+			const flipped = pairs.get(c) ?? c;
+			expect(
+				twin === flipped || (twin === c && standing.includes(c)),
+				`glyph mismatch at ${x},${y} rx ${rx} rhb ${rhb}: ${c} vs ${twin}`,
+			).toBe(true);
+		}
+	}
 };
 
 describe('amiga circle stamp', () => {
@@ -133,50 +190,33 @@ describe('amiga circle stamp', () => {
 	});
 
 	it('mirrors generated circles cell for cell across the center', () => {
-		const pairs = new Map([
-			[100, 98],
-			[98, 100],
-			[80, 89],
+		// cap shoulders stand unmirrored (Y both sides up top),
+		// everything else swaps through the pair map
+		expectMirrored(
+			amigaCircleCells,
+			new Map([
+				[100, 98],
+				[98, 100],
+				[80, 89],
+				[89, 80],
+				[39, 96],
+				[96, 39],
+				[40, 41],
+				[41, 40],
+			]),
+			[
+				[7, 8],
+				[11, 12],
+				[23, 21],
+				[16, 7],
+				[5, 14],
+				[30, 4],
+				[6, 40],
+				[1, 12],
+				[2, 48],
+			],
 			[89, 80],
-			[39, 96],
-			[96, 39],
-			[40, 41],
-			[41, 40],
-		]);
-		for (const [rx, rhb] of [
-			[7, 8],
-			[11, 12],
-			[23, 21],
-			[16, 7],
-			[5, 14],
-			[30, 4],
-			[6, 40],
-			[1, 12],
-			[2, 48],
-		]) {
-			const grid = new Map<string, number>();
-			for (const c of amigaCircleCells(40, 40, rx, rhb)) {
-				grid.set(`${c.x},${c.y}`, c.charCode);
-			}
-			for (const [k, c] of grid) {
-				const [x, y] = k.split(',').map(Number);
-				if (x === 40) {
-					continue;
-				}
-				const twin = grid.get(`${80 - x},${y}`);
-				expect(
-					twin,
-					`missing mirror of ${x},${y} at rx ${rx} rhb ${rhb}`,
-				).toBeDefined();
-				// cap shoulders stand unmirrored (Y both sides up top),
-				// everything else swaps through the pair map
-				const flipped = pairs.get(c) ?? c;
-				expect(
-					twin === flipped || (twin === c && (c === 89 || c === 80)),
-					`glyph mismatch at ${x},${y} rx ${rx} rhb ${rhb}: ${c} vs ${twin}`,
-				).toBe(true);
-			}
-		}
+		);
 	});
 
 	it('emits finite cells for every size up to huge radii', () => {
@@ -198,6 +238,82 @@ describe('amiga circle stamp', () => {
 		for (const c of amigaCircleCells(10, 10, -1, 20)) {
 			expect(Number.isFinite(c.x)).toBe(true);
 			expect(Number.isFinite(c.y)).toBe(true);
+		}
+	});
+});
+
+describe('thin circle stamp', () => {
+	it('voices a medium circle in the classic line vocabulary', () => {
+		expect(renderThin(60, 60, 11, 12)).toBe(
+			[
+				'      .-"""""""-.',
+				"  ,--'           `--.",
+				'  /                 \\',
+				' /                   \\',
+				'|                     |',
+				'|                     |',
+				'|                     |',
+				'|                     |',
+				' \\                   /',
+				'  \\                 /',
+				'   \\               /',
+				"     `--.     ,--'",
+				"      `-_______-'",
+			].join('\n'),
+		);
+	});
+
+	it('condenses to a clean ring at tiny sizes', () => {
+		expect(renderThin(60, 60, 4, 5)).toBe(
+			[
+				' .-"""-.',
+				' /     \\',
+				'|       |',
+				'|       |',
+				' \\     /',
+				" `-___-'",
+			].join('\n'),
+		);
+	});
+
+	it('mirrors thin circles with the pebble pairs swapped', () => {
+		expectMirrored(
+			asciiCircleCells,
+			new Map([
+				[47, 92],
+				[92, 47],
+				[39, 96],
+				[96, 39],
+				[44, 46],
+				[46, 44],
+				[40, 41],
+				[41, 40],
+			]),
+			[
+				[7, 8],
+				[11, 12],
+				[23, 21],
+				[16, 7],
+				[5, 14],
+				[30, 4],
+				[6, 40],
+				[4, 5],
+				[1, 12],
+			],
+			// the cap rows stand their period leads on both ends
+			[46],
+		);
+	});
+
+	it('emits finite thin cells for every size up to huge radii', () => {
+		for (let rx = 0; rx <= 30; rx += 3) {
+			for (let rhb = 0; rhb <= 30; rhb += 3) {
+				for (const c of asciiCircleCells(50, 50, rx, rhb)) {
+					expect(Number.isFinite(c.x)).toBe(true);
+					expect(Number.isFinite(c.y)).toBe(true);
+					expect(c.charCode).toBeGreaterThan(32);
+				}
+			}
 		}
 	});
 });
