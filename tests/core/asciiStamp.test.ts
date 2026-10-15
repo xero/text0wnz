@@ -602,3 +602,85 @@ describe('terminal joins', () => {
 		expect(junctionForTip(tip(1, -1), 36, 36, 36)).toBe(0);
 	});
 });
+
+describe('ascii stamp engine, input hardening and stroke isolation', () => {
+	type Cells = Array<{ x: number; y: number; charCode: number }>;
+
+	const strokeOn = (
+		engine: ReturnType<typeof createAsciiStampEngine>,
+		points: Array<[number, number]>,
+	): string => {
+		const grid = new Map<string, number>();
+		const apply = (cells: Cells) =>
+			cells.forEach(c => grid.set(`${c.x},${c.y}`, c.charCode));
+		points.forEach(([x, y], i) => {
+			if (i === 0) {
+				apply(engine.begin(x, y, 1));
+			} else {
+				apply(engine.move(x, y, 1));
+			}
+		});
+		apply(engine.end());
+		return [...grid.entries()]
+			.sort()
+			.map(([k, c]) => `${k}:${String.fromCharCode(c)}`)
+			.join(' ');
+	};
+
+	it('returns promptly for fractional and non finite coordinates', () => {
+		// a fractional or NaN target can never equal the integer walk:
+		// bresenham once spun forever on exactly these inputs
+		const e = createAsciiStampEngine();
+		e.begin(0, 0, 1);
+		e.move(5.5, 3, 1);
+		expect(e.end()).toBeDefined();
+		const f = createAsciiStampEngine();
+		f.begin(NaN, NaN, 1);
+		f.move(4, 2, 1);
+		f.move(8, 2, 1);
+		expect(f.end()).toBeDefined();
+		const g = createAsciiStampEngine({ width: 3 });
+		g.begin(1, 1, 1);
+		g.move(Infinity, 2, 1);
+		g.move(6, 2, 1);
+		expect(g.end()).toBeDefined();
+	});
+
+	it('keeps strokes independent on a reused engine', () => {
+		// lastFall once leaked between strokes: one falling diagonal
+		// mirrored the flat ramp banding of every later L stroke
+		const L: Array<[number, number]> = [
+			[0, 0],
+			[0, 2],
+			[0, 4],
+			[0, 6],
+			[3, 6],
+			[6, 6],
+			[9, 6],
+			[12, 6],
+		];
+		const reused = createAsciiStampEngine();
+		strokeOn(reused, [
+			[0, 0],
+			[2, 2],
+			[4, 4],
+			[6, 6],
+		]);
+		const second = strokeOn(reused, L);
+		const fresh = strokeOn(createAsciiStampEngine(), L);
+		expect(second).toBe(fresh);
+	});
+
+	it('daubs a tap to the full ribbon width', () => {
+		const engine = createAsciiStampEngine({ width: 5 });
+		const grid = new Map<number, number>();
+		for (const c of [...engine.begin(10, 10, 1), ...engine.end()]) {
+			if (c.y === 10) {
+				grid.set(c.x, c.charCode);
+			}
+		}
+		for (let x = 8; x <= 12; x++) {
+			expect(grid.get(x), `fill at ${x}`).toBe(36);
+		}
+	});
+});

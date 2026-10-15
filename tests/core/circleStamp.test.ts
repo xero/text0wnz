@@ -618,3 +618,43 @@ describe('nu skool filled circle stamp', () => {
 		}
 	});
 });
+
+describe('circle stamps, input hardening and drag intent', () => {
+	it('sanitizes non finite sizes instead of walking forever', () => {
+		// Infinity extents once ran the row loops unbounded and NaN
+		// widths leaked NaN coordinate cells
+		expect(nuskoolCircleCells(100, 100, 10, Infinity)).toBeDefined();
+		expect(nuskoolCircleFilledCells(100, 100, Infinity, 10)).toBeDefined();
+		expect(oldskoolCircleCells(100, 100, NaN, 10)).toBeDefined();
+		for (const c of oldskoolCircleCells(NaN, NaN, NaN, NaN)) {
+			expect(Number.isFinite(c.x)).toBe(true);
+			expect(Number.isFinite(c.y)).toBe(true);
+		}
+	});
+
+	it('keeps templates for taps but not for slivers', () => {
+		// a drag long in one dimension asked for a lens or a bar; the
+		// grown template only answers drags small in both
+		expect(renderWith(nuskoolCircleCells, 100, 80, 0, 0)).toBe(
+			[' ,gPRg,', "dP'  `Yb", 'Yb    dP', ' "8gg8"'].join('\n'),
+		);
+		expect(renderWith(nuskoolCircleCells, 100, 80, 4, 0)).toBe(',,dd"bb,,');
+		expect(renderWith(nuskoolCircleCells, 100, 80, 0, 6)).toBe(
+			['"', '8', '8', '8', '8', '8', 'a'].join('\n'),
+		);
+	});
+
+	it('voices a lone widest row as a bare wall at odd centers', () => {
+		// half of real drags center between half blocks; the owner keeps
+		// the bare 8: wall here pending a field look
+		expect(renderWith(nuskoolCircleCells, 100, 81, 30, 4)).toBe(
+			[
+				'       ,,ggddY' + '"'.repeat(33) + 'Ybbgg,,',
+				' ,,ggdd"\'' + ' '.repeat(43) + '`"bbgg,,',
+				'8:' + ' '.repeat(57) + ':8',
+				' `Yba' + ' '.repeat(51) + "adP'",
+				'       ``""YYb' + 'a'.repeat(32) + 'adPP""\'\'',
+			].join('\n'),
+		);
+	});
+});

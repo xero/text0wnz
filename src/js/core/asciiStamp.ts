@@ -986,7 +986,19 @@ export const createAsciiStampEngine = (
 
 	/** advance the consumed path to target, Bresenham filling the gap */
 	const walkTo = (out: StampOut[], target: Cell) => {
-		if (!last || (last.x === target.x && last.y === target.y)) {
+		// pointer layers floor their cells, but this is public core api:
+		// a fractional or non finite target can never equal the integer
+		// walk and bresenham would spin forever
+		if (!Number.isFinite(target.x) || !Number.isFinite(target.y)) {
+			return;
+		}
+		target = { x: Math.round(target.x), y: Math.round(target.y) };
+		if (
+			!last ||
+			!Number.isFinite(last.x) ||
+			!Number.isFinite(last.y) ||
+			(last.x === target.x && last.y === target.y)
+		) {
 			last = target;
 			return;
 		}
@@ -1050,6 +1062,9 @@ export const createAsciiStampEngine = (
 
 	return {
 		begin: (x, y, subY) => {
+			x = Math.round(x);
+			y = Math.round(y);
+			lastFall = false;
 			last = { x, y };
 			trail = [last];
 			samples = [last];
@@ -1071,7 +1086,8 @@ export const createAsciiStampEngine = (
 			tipSpans = [];
 			const out: StampOut[] = [];
 			if (width > 1) {
-				// a nu skool tap daubs a full width of fill
+				// the ribbon opens at the entry taper; end() daubs a stroke
+				// that never advances out to full width
 				ribbonCell(out, { x, y }, 'vertical');
 				return out;
 			}
@@ -1083,9 +1099,14 @@ export const createAsciiStampEngine = (
 		move: (x, y, subY) => {
 			const out: StampOut[] = [];
 			subYNow = subY;
-			if (!last) {
+			// reject poisoned samples at intake: a non finite point in the
+			// smoothing window turns its distance loop infinite before the
+			// walk guard ever sees a target
+			if (!last || !Number.isFinite(x) || !Number.isFinite(y)) {
 				return out;
 			}
+			x = Math.round(x);
+			y = Math.round(y);
 			const tail = samples[samples.length - 1];
 			if (tail.x === x && tail.y === y) {
 				return out;
@@ -1106,7 +1127,17 @@ export const createAsciiStampEngine = (
 				walkTo(out, samples[samples.length - 1]);
 			}
 			drain(out);
-			if (!swoop && width > 1) {
+			if (width > 1 && trail.length < 2) {
+				// a tap never advances a row, so the entry taper would
+				// leave a lone crumb; the smallest good ribbon is one full
+				// width row
+				for (const [y, row] of spans) {
+					for (const s of row) {
+						restampSpan(out, y, { ...s, cap: width }, width);
+					}
+				}
+			}
+			if (!swoop && width > 1 && trail.length >= 2) {
 				// a ruled line ends square: no sputter and no tapered tip,
 				// the final rows restamp at full weight
 				for (const t of tipSpans) {

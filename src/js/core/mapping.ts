@@ -146,8 +146,11 @@ export const clampCell = (
 	columns: number,
 	rows: number,
 ): CellPoint => {
-	const x = Math.min(Math.max(cell.x, 0), columns - 1);
-	const y = Math.min(Math.max(cell.y, 0), rows - 1);
-	const halfBlockY = Math.min(Math.max(cell.halfBlockY, 0), rows * 2 - 1);
+	// min/max pass NaN through untouched, and a NaN cell downstream can
+	// spin the stamp engine's bresenham walk forever
+	const n = (v: number) => (Number.isFinite(v) ? v : 0);
+	const x = Math.min(Math.max(n(cell.x), 0), columns - 1);
+	const y = Math.min(Math.max(n(cell.y), 0), rows - 1);
+	const halfBlockY = Math.min(Math.max(n(cell.halfBlockY), 0), rows * 2 - 1);
 	return { x, y, halfBlockY };
 };
