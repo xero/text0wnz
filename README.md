@@ -65,6 +65,8 @@ A retro text art editor rebooted for the modern web. Draw, edit, animate, and co
   - Star favorites to pin them at the top of the picker
 - **Full suite of drawing tools:**
   - Keyboard, freehand brushes, fills, shapes, selection, and mirror mode
+  - An ascii brush that paints scene line art live: old skool at width 1, nu skool `$` ribbons at 2-9
+  - Ruled lines, squares, and circles in block, old skool, and nu skool styles, with junction glyphs where they meet your art
 - **Advanced color management**
   - 16-color ANSI, iCE colors, real-time preview, color conflict resolution
   - xterm-256 and RGB truecolor panel, one click past the classic 16
