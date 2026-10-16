@@ -24,8 +24,8 @@
 >   - [Brushes](#-brushes)
 >     - [Block / Freehand Brush](#block--freehand-brush)
 >     - [Shading Brush](#shading-brush)
->     - [Character Brush](#character-brush)
 >     - [ASCII Brush](#ascii-brush)
+>     - [Character Brush](#character-brush)
 >     - [Colorize/Attribute Brush](#colorizeattribute-brush)
 >   - [Fill Tool](#-fill-tool)
 >   - [Shapes](#-shapes)
@@ -444,19 +444,6 @@ Draw with shading blocks (`░▒▓`). 'Reduce mode' when holding Shift. Ideal 
 - Draggable gradient picker panel
 - Press the **'X'** to hide, reopens on tool reselection
 
-### Character Brush
-
-Draw with any character from the font. Includes a character picker for selecting specific glyphs.
-
-![character-panel](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/character-panel.png)
-
-**Features:**
-
-- Access to full character set
-- Interactive character picker
-- Draw with any glyph from the active font
-- Press the **'X'** to hide, reopens on tool reselection
-
 ### ASCII Brush
 
 Draw freehand ascii line art. The stroke reads the slope under your hand and picks its glyphs live, revising as you go, so curves land the way the scene types them.
@@ -475,6 +462,19 @@ The Width knob picks the style:
 - Additive contact never carves existing ink; the heavier mark survives and equal weights densify
 - A tap leaves a pebble at width 1 and a full width daub at width 2 and up
 - Plays well with mirror mode
+
+### Character Brush
+
+Draw with any character from the font. Includes a character picker for selecting specific glyphs.
+
+![character-panel](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/character-panel.png)
+
+**Features:**
+
+- Access to full character set
+- Interactive character picker
+- Draw with any glyph from the active font
+- Press the **'X'** to hide, reopens on tool reselection
 
 ### Colorize/Attribute Brush
 
