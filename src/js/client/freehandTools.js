@@ -2191,8 +2191,12 @@ const createAttributeBrushController = () => {
 		applySize(n);
 		State.toolSettings.set('attribSize', n);
 	});
-	mountSetting('attrib', 'Size', sizeSlider);
-	State.toolSettings.mount('attrib', sizeReadout);
+	// the readout rides the heading, so the label is built by hand
+	const sizeLabel = document.createElement('LABEL');
+	sizeLabel.innerText = 'Size';
+	sizeLabel.appendChild(sizeReadout);
+	State.toolSettings.mount('attrib', sizeLabel);
+	State.toolSettings.mount('attrib', sizeSlider);
 	applySize(State.toolSettings.get('attribSize', 1));
 
 	const enable = () => {
