@@ -618,6 +618,7 @@ Sync the editor foreground/background color and brush tool with the selected cel
 - Pick colors from existing artwork
 - Copy character and color attributes
 - Quick tool for color matching
+- Turns [Mirror Mode](#-mirror-mode) off when selected
 
 **Keyboard Shortcut:**
 
@@ -636,6 +637,7 @@ Horizontally mirrors any drawing tool on the opposite side of the canvas. Ideal 
 - Automatic horizontal mirroring
 - Works with all drawing tools
 - Perfect for creating symmetrical designs
+- Exclusive with the [Sample Tool](#-sample-tool); enabling it there returns you to your previous tool
 
 **Keyboard Shortcut:**
 

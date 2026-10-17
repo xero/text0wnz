@@ -1292,6 +1292,19 @@ const initializeAppComponents = async () => {
 
 	Toolbar.add($('clipboard'), withHide(clipboard.enable), clipboard.disable);
 
+	// mirror and sample exclude each other: both light their nav
+	// buttons, and two lit buttons read as two active tools
+	const mirrorToggle = createSettingToggle(
+		$('mirror'),
+		State.textArtCanvas.getMirrorMode,
+		enabled => {
+			State.textArtCanvas.setMirrorMode(enabled);
+			if (enabled && Toolbar.getCurrentTool() === 'sample') {
+				Toolbar.returnToPreviousTool();
+			}
+		},
+	);
+
 	Toolbar.addLazy($('sample'), async () => {
 		const { createSampleTool } = await import('./freehandTools.js');
 		await ensureBrushesLoaded();
@@ -1302,18 +1315,19 @@ const initializeAppComponents = async () => {
 			characterBrush,
 			$('characterBrush'),
 		);
+		const focusSample = () => {
+			if (State.textArtCanvas.getMirrorMode()) {
+				State.textArtCanvas.setMirrorMode(false);
+				mirrorToggle.update();
+			}
+			State.sampleTool.enable();
+		};
 		return {
-			onFocus: State.sampleTool.enable,
+			onFocus: focusSample,
 			onBlur: State.sampleTool.disable,
-			enable: State.sampleTool.enable,
+			enable: focusSample,
 		};
 	});
-
-	createSettingToggle(
-		$('mirror'),
-		State.textArtCanvas.getMirrorMode,
-		State.textArtCanvas.setMirrorMode,
-	);
 
 	State.modal.focusEvents(
 		() => {
