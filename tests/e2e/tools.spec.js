@@ -47,7 +47,7 @@ test.describe('Drawing Tools', () => {
 		await page.locator('#shapes').click();
 		await page.waitForTimeout(300);
 
-		const lineTool = page.locator('#line');
+		const lineTool = page.locator('#line .stack');
 		await lineTool.click();
 		await page.waitForTimeout(300);
 
@@ -68,7 +68,7 @@ test.describe('Drawing Tools', () => {
 		await page.locator('#shapes').click();
 		await page.waitForTimeout(300);
 
-		const squareTool = page.locator('#square');
+		const squareTool = page.locator('#square .stack');
 		await squareTool.click();
 		await page.waitForTimeout(300);
 
@@ -89,7 +89,7 @@ test.describe('Drawing Tools', () => {
 		await page.locator('#shapes').click();
 		await page.waitForTimeout(300);
 
-		const circleTool = page.locator('#circle');
+		const circleTool = page.locator('#circle .stack');
 		await circleTool.click();
 		await page.waitForTimeout(300);
 
@@ -158,7 +158,7 @@ test.describe('Drawing Tools', () => {
 			// Click shapes to show shapes toolbar, then select line
 			await page.locator('#shapes').click();
 			await page.waitForTimeout(300);
-			await page.locator('#line').click();
+			await page.locator('#line .stack').click();
 			await page.waitForTimeout(300);
 
 			await page.mouse.move(box.x + 60, box.y + 60);
@@ -168,7 +168,7 @@ test.describe('Drawing Tools', () => {
 			await page.waitForTimeout(300);
 
 			// Square is also in shapes toolbar
-			await page.locator('#square').click();
+			await page.locator('#square .stack').click();
 			await page.waitForTimeout(300);
 
 			await page.mouse.move(box.x + Math.min(120, box.width - 50), box.y + 20);

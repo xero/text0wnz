@@ -123,13 +123,13 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#shapes').click();
 		await page.waitForTimeout(300);
 
-		await page.locator('#line').click();
+		await page.locator('#line .stack').click();
 		await page.waitForTimeout(200);
 
-		await page.locator('#circle').click();
+		await page.locator('#circle .stack').click();
 		await page.waitForTimeout(200);
 
-		await page.locator('#square').click();
+		await page.locator('#square .stack').click();
 		await page.waitForTimeout(200);
 
 		await page.locator('#selection').click();
