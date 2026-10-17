@@ -1521,6 +1521,14 @@
 		.dimmed {
 			@apply opacity-40 pointer-events-none;
 		}
+		/* picker sections: the swatch cursor overlays its canvas stack */
+		> div > div {
+			position: relative;
+		}
+		canvas {
+			cursor: crosshair;
+			vertical-align: bottom;
+		}
 	}
 
 	.segmented {
@@ -1740,37 +1748,6 @@
 		@apply fixed top-[60px] left-[40px] h-0 w-0;
 	}
 
-	.floatingPanel {
-		@apply fixed hidden cursor-move bg-panel pr-1 pl-1 pb-1 pt-4 z-30 transition-none!;
-		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
-
-		&.enabled {
-			display: block;
-		}
-		div {
-			position: relative;
-			display: block;
-		}
-		.hidePanel {
-			display: block;
-			position: absolute;
-			top: 0;
-			right: 0;
-			color: #efefef;
-			padding: 2px 5px;
-			font-size: 10px;
-			cursor: pointer;
-
-			&:hover {
-				background: #000;
-			}
-		}
-		canvas {
-			cursor: crosshair;
-			vertical-align: bottom;
-		}
-	}
-
 	/* close chrome for the floated color and frames windows; the brush
 	   windows keep their own higher-specificity copy above. The X rides
 	   up into the border drag strip (absolute offsets anchor to the
@@ -1788,27 +1765,6 @@
 
 		&:hover {
 			background: #000;
-		}
-	}
-
-	.toggleButtonContainer {
-		@apply w-[120px] text-center flex flex-row;
-		margin: 0px auto;
-		color: rgb(200, 200, 200);
-		font-size: 14px;
-	}
-
-	.toggleButton {
-		@apply bg-menu inline-flex justify-center p-[2px] w-[66px];
-
-		&.enabled {
-			@apply bg-purp;
-		}
-		&.left {
-			@apply border-black border-t-2 border-l-2 border-b-2 border-r-0;
-		}
-		&.right {
-			@apply border-black border-t-2 border-r-2 border-b-2 border-l-0;
 		}
 	}
 
@@ -1849,7 +1805,6 @@
 	button,
 	.button,
 	.hover,
-	.toggleButton,
 	.toolButton,
 	.menuItem:hover,
 	.menuTitle:hover,

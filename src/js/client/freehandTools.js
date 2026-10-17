@@ -1,10 +1,5 @@
 import State from './state.js';
-import {
-	$,
-	createCanvas,
-	createSegmentedControl,
-	registerFloatingPanel,
-} from './ui.js';
+import { $, createCanvas, createSegmentedControl } from './ui.js';
 import Toolbar from './toolbar.js';
 import magicNumbers from './magicNumbers.js';
 import {
@@ -46,216 +41,6 @@ const createPanelCursor = el => {
 		hide: hide,
 		resize: resize,
 		setPos: setPos,
-	};
-};
-
-const createFloatingPanel = (x, y) => {
-	const panel = document.createElement('DIV');
-	const hide = document.createElement('DIV');
-	panel.classList.add('floatingPanel');
-	hide.classList.add('hidePanel');
-	hide.innerText = 'X';
-	panel.appendChild(hide);
-	$('bodyContainer').appendChild(panel);
-	hide.addEventListener('click', _ => panel.classList.remove('enabled'));
-	const focus = registerFloatingPanel(panel);
-
-	let dragStartPointer = null; // [x, y]
-	let dragStartPanel = null; // [x, y]
-
-	const mousedown = e => {
-		dragStartPointer = [e.clientX, e.clientY];
-		const rect = panel.getBoundingClientRect();
-		dragStartPanel = [rect.left, rect.top];
-		document.addEventListener('mousemove', mouseMove);
-		document.addEventListener('mouseup', mouseUp);
-	};
-
-	const mouseMove = e => {
-		if (dragStartPointer && dragStartPanel) {
-			e.preventDefault();
-			e.stopPropagation();
-			const dx = e.clientX - dragStartPointer[0];
-			const dy = e.clientY - dragStartPointer[1];
-			setPos(dragStartPanel[0] + dx, dragStartPanel[1] + dy);
-		}
-	};
-
-	const mouseUp = () => {
-		dragStartPointer = null;
-		dragStartPanel = null;
-		document.removeEventListener('mousemove', mouseMove);
-		document.removeEventListener('mouseup', mouseUp);
-	};
-
-	const touchstart = e => {
-		dragStartPointer = [e.touches[0].pageX, e.touches[0].pageY];
-		const rect = panel.getBoundingClientRect();
-		dragStartPanel = [rect.left, rect.top];
-		document.addEventListener('touchmove', touchMove, { passive: false });
-		document.addEventListener('touchend', touchEnd, { passive: false });
-	};
-
-	const touchMove = e => {
-		if (dragStartPointer && dragStartPanel) {
-			e.preventDefault();
-			e.stopPropagation();
-			const dx = e.touches[0].pageX - dragStartPointer[0];
-			const dy = e.touches[0].pageY - dragStartPointer[1];
-			setPos(dragStartPanel[0] + dx, dragStartPanel[1] + dy);
-		}
-	};
-
-	const touchEnd = () => {
-		dragStartPointer = null;
-		dragStartPanel = null;
-		document.removeEventListener('touchmove', touchMove, { passive: false });
-		document.removeEventListener('touchend', touchEnd, { passive: false });
-	};
-
-	const setPos = (newX, newY) => {
-		panel.style.left = newX + 'px';
-		x = newX;
-		panel.style.top = newY + 'px';
-		y = newY;
-	};
-
-	const enable = () => {
-		panel.classList.add('enabled');
-		focus();
-		document.addEventListener('touchmove', touchMove, { passive: false });
-		document.addEventListener('mousemove', mouseMove);
-		document.addEventListener('mouseup', mouseUp);
-		document.addEventListener('touchend', mouseUp, { passive: false });
-	};
-
-	const disable = () => {
-		panel.classList.remove('enabled');
-		document.removeEventListener('touchmove', touchMove, { passive: false });
-		document.removeEventListener('mousemove', mouseMove);
-		document.removeEventListener('mouseup', mouseUp);
-		document.removeEventListener('touchend', mouseUp, { passive: false });
-	};
-
-	const append = element => {
-		panel.appendChild(element);
-	};
-
-	setPos(x, y);
-	panel.addEventListener('touchstart', touchstart, { passive: false });
-	panel.addEventListener('mousedown', mousedown);
-
-	return {
-		setPos: setPos,
-		enable: enable,
-		disable: disable,
-		append: append,
-	};
-};
-
-const createFloatingPanelPalette = (width, height) => {
-	const canvasContainer = document.createElement('DIV');
-	const cursor = createPanelCursor(canvasContainer);
-	const canvas = createCanvas(width, height);
-	canvasContainer.appendChild(canvas);
-	const ctx = canvas.getContext('2d');
-	const imageData = new Array(16);
-
-	const generateSwatch = color => {
-		imageData[color] = ctx.createImageData(width / 8, height / 2);
-		const rgba = State.palette.getRGBAColor(color);
-		for (let y = 0, i = 0; y < imageData[color].height; y++) {
-			for (let x = 0; x < imageData[color].width; x++, i += 4) {
-				imageData[color].data.set(rgba, i);
-			}
-		}
-	};
-
-	const generateSwatches = () => {
-		for (let color = 0; color < 16; color++) {
-			generateSwatch(color);
-		}
-	};
-
-	const redrawSwatch = color => {
-		ctx.putImageData(
-			imageData[color],
-			(color % 8) * (width / 8),
-			color > 7 ? 0 : height / 2,
-		);
-	};
-
-	const redrawSwatches = () => {
-		for (let color = 0; color < 16; color++) {
-			redrawSwatch(color);
-		}
-	};
-
-	const mouseDown = e => {
-		const rect = canvas.getBoundingClientRect();
-		const mouseX = e.clientX - rect.left;
-		const mouseY = e.clientY - rect.top;
-		const color =
-			Math.floor(mouseX / (width / 8)) + (mouseY < height / 2 ? 8 : 0);
-		if (!e.ctrlKey && !e.altKey) {
-			State.palette.setForegroundColor(color);
-		} else {
-			State.palette.setBackgroundColor(color);
-		}
-	};
-
-	const onPaletteChange = _ => {
-		updatePalette();
-	};
-
-	const updateColor = color => {
-		generateSwatch(color);
-		redrawSwatch(color);
-	};
-
-	const updatePalette = () => {
-		for (let color = 0; color < 16; color++) {
-			updateColor(color);
-		}
-	};
-
-	const getElement = () => canvasContainer;
-
-	const updateCursor = color => {
-		cursor.resize(width / 8, height / 2);
-		cursor.setPos((color % 8) * (width / 8), color > 7 ? 0 : height / 2);
-	};
-
-	const onForegroundChange = e => {
-		updateCursor(e.detail);
-	};
-
-	const resize = (newWidth, newHeight) => {
-		width = newWidth;
-		height = newHeight;
-		canvas.width = width;
-		canvas.height = height;
-		generateSwatches();
-		redrawSwatches();
-		updateCursor(State.palette.getForegroundColor());
-	};
-
-	generateSwatches();
-	redrawSwatches();
-	updateCursor(State.palette.getForegroundColor());
-	canvas.addEventListener('mousedown', mouseDown);
-	canvas.addEventListener('contextmenu', e => {
-		e.preventDefault();
-	});
-	document.addEventListener('onForegroundChange', onForegroundChange);
-	document.addEventListener('onPaletteChange', onPaletteChange);
-	return {
-		updateColor: updateColor,
-		updatePalette: updatePalette,
-		getElement: getElement,
-		showCursor: cursor.show,
-		hideCursor: cursor.hide,
-		resize: resize,
 	};
 };
 
@@ -538,9 +323,7 @@ const createShadingController = (panel, charMode) => {
 		panel.enable();
 		bar.style.display = 'flex';
 		nav.classList.add('enabled');
-		// the brush windows stay their own floats this phase, but only
-		// one settings surface shows at a time
-		State.toolSettings.hide();
+		State.toolSettings.show(charMode ? 'character' : 'shading');
 	};
 
 	const disable = () => {
@@ -567,12 +350,10 @@ const createShadingController = (panel, charMode) => {
 const createShadingPanel = async () => {
 	let panelFont = null;
 	let ignored = false;
-	const panel = createFloatingPanel(150, 150);
 	const canvasContainer = document.createElement('div');
 
 	const cursor = createPanelCursor(canvasContainer);
 	let canvases = new Array(16);
-	const nav = $('brushes');
 	let halfBlockMode = false;
 	let x = 0;
 	let y = 0;
@@ -711,14 +492,10 @@ const createShadingPanel = async () => {
 
 	const enable = () => {
 		document.addEventListener('keydown', keyDown);
-		panel.enable();
-		nav.classList.add('enabled');
 	};
 
 	const disable = () => {
 		document.removeEventListener('keydown', keyDown);
-		panel.disable();
-		nav.classList.remove('enabled');
 	};
 
 	const ignore = () => {
@@ -820,7 +597,7 @@ const createShadingPanel = async () => {
 		panelCanvas(State.palette.getForegroundColor()),
 		canvasContainer.firstChild,
 	);
-	panel.append(canvasContainer);
+	State.toolSettings.mount('shading', canvasContainer);
 	cursor.show();
 
 	return {
@@ -835,7 +612,6 @@ const createShadingPanel = async () => {
 
 const createCharacterBrushPanel = async () => {
 	let ignored = false;
-	const panel = createFloatingPanel(100, 100);
 	const canvasContainer = document.createElement('div');
 	const cursor = createPanelCursor(canvasContainer);
 	let canvas = createCanvas(
@@ -844,7 +620,6 @@ const createCharacterBrushPanel = async () => {
 	);
 	let x = 0;
 	let y = 0;
-	const nav = $('brushes');
 
 	// Create a 1x scale font for rendering the panel (unaffected by zoom)
 	const get1xFont = async () => {
@@ -941,15 +716,11 @@ const createCharacterBrushPanel = async () => {
 
 	const enable = () => {
 		document.addEventListener('keydown', keyDown);
-		panel.enable();
-		nav.classList.add('enabled');
 		redrawCanvas();
 	};
 
 	const disable = () => {
 		document.removeEventListener('keydown', keyDown);
-		panel.disable();
-		nav.classList.remove('enabled');
 	};
 
 	const getMode = () => {
@@ -1011,7 +782,7 @@ const createCharacterBrushPanel = async () => {
 	document.addEventListener('onOpenedFile', redrawGlyphs);
 
 	canvasContainer.appendChild(canvas);
-	panel.append(canvasContainer);
+	State.toolSettings.mount('character', canvasContainer);
 	await redrawCanvas();
 	updateCursor();
 	cursor.show();
@@ -2464,8 +2235,6 @@ const createAttributeBrushController = () => {
 
 export {
 	createPanelCursor,
-	createFloatingPanel,
-	createFloatingPanelPalette,
 	createBrushController,
 	createHalfBlockController,
 	createShadingController,

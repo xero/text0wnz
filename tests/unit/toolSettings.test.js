@@ -31,6 +31,8 @@ const fixture = () => {
 			<div id="tsCircle" class="hide"></div>
 			<div id="tsAscii" class="hide"></div>
 			<div id="tsAttrib" class="hide"></div>
+			<div id="tsShading" class="hide"></div>
+			<div id="tsCharacter" class="hide"></div>
 		</div>`;
 };
 
@@ -64,6 +66,18 @@ describe('createToolSettings', () => {
 			ts.show('circle');
 			expect(hidden('tsLine')).toBe(true);
 			expect(hidden('tsCircle')).toBe(false);
+		});
+
+		it('the picker sections ride the same law', () => {
+			const ts = createToolSettings();
+			ts.show('shading');
+			expect(hidden('tsShading')).toBe(false);
+			expect(document.getElementById('toolSettingsTitle').innerText).toBe(
+				'Shading Brush',
+			);
+			ts.show('character');
+			expect(hidden('tsShading')).toBe(true);
+			expect(hidden('tsCharacter')).toBe(false);
 		});
 
 		it('an unknown section changes nothing', () => {
