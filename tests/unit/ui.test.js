@@ -12,7 +12,6 @@ import {
 	createModalController,
 	undoAndRedo,
 	createGenericController,
-	createToggleButton,
 	enforceMaxBytes,
 	websocketUI,
 	toggleFullscreen,
@@ -410,82 +409,6 @@ describe('UI Utilities', () => {
 		});
 	});
 
-	describe('createToggleButton', () => {
-		it('should create toggle button with two states', () => {
-			const stateOneClick = vi.fn();
-			const stateTwoClick = vi.fn();
-
-			const toggle = createToggleButton(
-				'State One',
-				'State Two',
-				stateOneClick,
-				stateTwoClick,
-			);
-
-			expect(toggle).toHaveProperty('getElement');
-			expect(toggle).toHaveProperty('setStateOne');
-			expect(toggle).toHaveProperty('setStateTwo');
-
-			const element = toggle.getElement();
-			expect(element.classList.contains('toggleButtonContainer')).toBe(true);
-		});
-
-		it('should trigger state one click when state one is clicked', () => {
-			const stateOneClick = vi.fn();
-			const stateTwoClick = vi.fn();
-
-			const toggle = createToggleButton(
-				'State One',
-				'State Two',
-				stateOneClick,
-				stateTwoClick,
-			);
-			const element = toggle.getElement();
-			const stateOneDiv = element.querySelector('.left');
-
-			stateOneDiv.click();
-
-			expect(stateOneClick).toHaveBeenCalled();
-		});
-
-		it('should trigger state two click when state two is clicked', () => {
-			const stateOneClick = vi.fn();
-			const stateTwoClick = vi.fn();
-
-			const toggle = createToggleButton(
-				'State One',
-				'State Two',
-				stateOneClick,
-				stateTwoClick,
-			);
-			const element = toggle.getElement();
-			const stateTwoDiv = element.querySelector('.right');
-
-			stateTwoDiv.click();
-
-			expect(stateTwoClick).toHaveBeenCalled();
-		});
-
-		it('should set visual state correctly', () => {
-			const toggle = createToggleButton(
-				'State One',
-				'State Two',
-				vi.fn(),
-				vi.fn(),
-			);
-			const element = toggle.getElement();
-			const stateOneDiv = element.querySelector('.left');
-			const stateTwoDiv = element.querySelector('.right');
-
-			toggle.setStateOne();
-			expect(stateOneDiv.classList.contains('enabled')).toBe(true);
-			expect(stateTwoDiv.classList.contains('enabled')).toBe(false);
-
-			toggle.setStateTwo();
-			expect(stateOneDiv.classList.contains('enabled')).toBe(false);
-			expect(stateTwoDiv.classList.contains('enabled')).toBe(true);
-		});
-	});
 
 	describe('createGenericController', () => {
 		it('should create controller with enable and disable methods', () => {

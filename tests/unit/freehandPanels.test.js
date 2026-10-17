@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
 	createPanelCursor,
-	createFloatingPanelPalette,
-	createFloatingPanel,
 	createBrushController,
 	createHalfBlockController,
 	createShadingController,
@@ -304,71 +302,6 @@ describe('Freehand Tools - Panels and Cursors', () => {
 
 			cursor.setPos(10, 20);
 			expect(typeof cursor.setPos).toBe('function');
-		});
-	});
-
-	describe('createFloatingPanelPalette', () => {
-		it('should create a floating panel palette with proper methods', () => {
-			const palette = createFloatingPanelPalette(128, 64);
-
-			expect(palette).toHaveProperty('updateColor');
-			expect(palette).toHaveProperty('updatePalette');
-			expect(palette).toHaveProperty('getElement');
-			expect(palette).toHaveProperty('showCursor');
-			expect(palette).toHaveProperty('hideCursor');
-			expect(palette).toHaveProperty('resize');
-		});
-
-		it('should handle color updates', () => {
-			const palette = createFloatingPanelPalette(128, 64);
-
-			expect(() => {
-				palette.updateColor(5);
-			}).not.toThrow();
-		});
-
-		it('should handle palette updates', () => {
-			const palette = createFloatingPanelPalette(128, 64);
-
-			expect(() => {
-				palette.updatePalette();
-			}).not.toThrow();
-		});
-
-		it('should handle resize', () => {
-			const palette = createFloatingPanelPalette(128, 64);
-
-			expect(() => {
-				palette.resize(256, 128);
-			}).not.toThrow();
-		});
-	});
-
-	describe('createFloatingPanel', () => {
-		it('should create a floating panel with drag functionality', () => {
-			const panel = createFloatingPanel(100, 50);
-
-			expect(panel).toHaveProperty('setPos');
-			expect(panel).toHaveProperty('enable');
-			expect(panel).toHaveProperty('disable');
-			expect(panel).toHaveProperty('append');
-		});
-
-		it('should handle position setting', () => {
-			const panel = createFloatingPanel(100, 50);
-
-			expect(() => {
-				panel.setPos(200, 150);
-			}).not.toThrow();
-		});
-
-		it('should handle enable/disable', () => {
-			const panel = createFloatingPanel(100, 50);
-
-			expect(() => {
-				panel.enable();
-				panel.disable();
-			}).not.toThrow();
 		});
 	});
 

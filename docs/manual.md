@@ -21,6 +21,7 @@
 > - [Toolbar & Drawing Tools](#toolbar--drawing-tools)
 >   - [Keyboard Mode](#-keyboard-mode)
 >     - [Screen-Aware Navigation](#screen-aware-navigation)
+>   - [Tool Settings Window](#tool-settings-window)
 >   - [Brushes](#-brushes)
 >     - [Block / Freehand Brush](#block--freehand-brush)
 >     - [Shading Brush](#shading-brush)
@@ -414,6 +415,18 @@ Full text input with navigation controls. Type characters directly onto the canv
 
 This makes navigation much faster and more intuitive on large text art pieces.
 
+## Tool Settings Window
+
+Tools with options share one floating window. It opens when you select a tool that has settings, swaps its content to match the tool (the title strip names it), and hides for tools that have none.
+
+**Features:**
+
+- Mode and Style picks are tappable pills; each mode wears a glyph preview of its vocabulary
+- The shading gradient picker and the character picker live here too
+- Drag the title strip to move the window; it remembers its spot
+- Press the **'X'** to hide it; selecting any tool with settings reopens it
+- Modes, width, size, and the outline/filled choice persist across reloads
+
 ## ![brush](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/brush.png) Brushes
 
 ![brush-menu](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/brush-menu.png)
@@ -432,7 +445,7 @@ Draw with blocks for pixel-like drawing. Hold Shift for straight lines. Think of
 
 ### Shading Brush
 
-Draw with shading blocks (`░▒▓`). 'Reduce mode' when holding Shift. Ideal for gradients and texture effects. Includes a block color gradient picker. Click the **X** to close it, or drag it around using the top area.
+Draw with shading blocks (`░▒▓`). 'Reduce mode' when holding Shift. Ideal for gradients and texture effects. The block color gradient picker rides the [Tool Settings Window](#tool-settings-window).
 
 ![shading-panel](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/shading-panel.png)
 
@@ -441,14 +454,13 @@ Draw with shading blocks (`░▒▓`). 'Reduce mode' when holding Shift. Ideal 
 - Multiple shading levels: light (`░`), medium (`▒`), dark (`▓`), full (`█`)
 - Reduce mode with Shift key
 - A pressure-sensitive pen picks its shade from pressure directly; press lighter or harder to shade
-- Draggable gradient picker panel
-- Press the **'X'** to hide, reopens on tool reselection
+- The gradient picker follows the active foreground color
 
 ### ASCII Brush
 
 Draw freehand ascii line art. The stroke reads the slope under your hand and picks its glyphs live, revising as you go, so curves land the way the scene types them.
 
-The Width knob picks the style:
+The Width row in the [Tool Settings Window](#tool-settings-window) picks the style, each stop wearing a swatch of its stroke:
 
 **Width 1 is old skool.** The thin line vocabulary: `|` verticals, `/` and `\` diagonals, `.'` pebble pairs on steep steps, `,-'` and `__..--""` shallow runs, and dressed caps and bowls on turns.
 
@@ -465,20 +477,19 @@ The Width knob picks the style:
 
 ### Character Brush
 
-Draw with any character from the font. Includes a character picker for selecting specific glyphs.
+Draw with any character from the font. The 256 glyph picker rides the [Tool Settings Window](#tool-settings-window).
 
 ![character-panel](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/character-panel.png)
 
 **Features:**
 
 - Access to full character set
-- Interactive character picker
+- Interactive character picker in the current colors
 - Draw with any glyph from the active font
-- Press the **'X'** to hide, reopens on tool reselection
 
 ### Colorize/Attribute Brush
 
-Paint/recolor the foreground and background colors of the selected cell. Use the size dropdown to adjust the brush size to paint larger/smaller areas.
+Paint/recolor the foreground and background colors of the selected cell. The Size slider in the [Tool Settings Window](#tool-settings-window) paints larger or smaller areas.
 
 **Brush size x1** _(default)_
 
@@ -518,7 +529,7 @@ Draw geometric shapes with automatic color conflict resolution and real-time pre
 
 ### Line Tool
 
-Draw straight ruled lines. The Mode select inside the tool button picks the vocabulary:
+Draw straight ruled lines. The Mode pills in the [Tool Settings Window](#tool-settings-window) pick the vocabulary:
 
 - **Block.** The classic half block line with automatic color conflict resolution.
 - **Old Skool.** The thin ascii vocabulary with square ends.
@@ -535,7 +546,7 @@ Draw straight ruled lines. The Mode select inside the tool button picks the voca
 
 ### Square/Circle Tool
 
-Draw rectangles, circles, and ellipses. Each tool hosts its Mode select and its Outline/Filled toggle inside the tool button:
+Draw rectangles, circles, and ellipses. Each tool's Mode pills and its Outline/Filled Style toggle live in the [Tool Settings Window](#tool-settings-window):
 
 - **Block.** Classic half block shapes with automatic color conflict resolution.
 - **Old Skool.** The thin ascii vocabulary. Squares wear the canon box idioms: period shoulders over dash edges, backtick and quote feet, and pipe sides. Circles follow the scene scaling law: the corner anatomy never changes with size, height stretches the walls, and width stretches the cap dashes and underscores.

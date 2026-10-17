@@ -434,55 +434,6 @@ const createPaintShortcuts = keyPair => {
 	};
 };
 
-const createToggleButton = (
-	stateOneName,
-	stateTwoName,
-	stateOneClick,
-	stateTwoClick,
-) => {
-	const container = document.createElement('DIV');
-	container.classList.add('toggleButtonContainer');
-	const stateOne = document.createElement('DIV');
-	stateOne.classList.add('toggleButton');
-	stateOne.classList.add('left');
-	stateOne.textContent = stateOneName;
-	const stateTwo = document.createElement('DIV');
-	stateTwo.classList.add('toggleButton');
-	stateTwo.classList.add('right');
-	stateTwo.textContent = stateTwoName;
-	container.appendChild(stateOne);
-	container.appendChild(stateTwo);
-
-	const getElement = () => {
-		return container;
-	};
-
-	const setStateOne = () => {
-		stateOne.classList.add('enabled');
-		stateTwo.classList.remove('enabled');
-	};
-
-	const setStateTwo = () => {
-		stateTwo.classList.add('enabled');
-		stateOne.classList.remove('enabled');
-	};
-
-	stateOne.addEventListener('click', _ => {
-		setStateOne();
-		stateOneClick();
-	});
-
-	stateTwo.addEventListener('click', _ => {
-		setStateTwo();
-		stateTwoClick();
-	});
-
-	return {
-		getElement: getElement,
-		setStateOne: setStateOne,
-		setStateTwo: setStateTwo,
-	};
-};
 
 /**
  * An n-way radio row in the toggle button's visual family. Options are
@@ -1428,7 +1379,6 @@ export {
 	createGenericController,
 	createPaintShortcuts,
 	createSegmentedControl,
-	createToggleButton,
 	createGrid,
 	createToolPreview,
 	enforceMaxBytes,
