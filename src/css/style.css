@@ -471,8 +471,11 @@
 	.toolButton {
 		@apply text-white flex flex-col text-sm h-[var(--header-size)] px-[5px] mx-0.5;
 
-		&:not(.toolbarDisplayed):hover {
-			@apply bg-hl;
+		/* mouse only, same touch rule as the aside tools */
+		@media (hover: hover) {
+			&:not(.toolbarDisplayed):hover {
+				@apply bg-hl;
+			}
 		}
 		&.enabled {
 			@apply bg-indigo;
@@ -680,8 +683,12 @@
 		> div {
 			@apply text-center h-fit flex justify-center items-center py-1 mx-auto;
 
-			&:hover {
-				@apply bg-hl;
+			/* hover is mouse only: touch screens glue :hover to the last
+			   tap, which paints the selected tool hl black over its indigo */
+			@media (hover: hover) {
+				&:not(.toolbarDisplayed):not(.enabled):not(.enabledParent):hover {
+					@apply bg-hl;
+				}
 			}
 		}
 		svg {
