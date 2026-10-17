@@ -150,6 +150,30 @@ test.describe('tool settings window', () => {
 		expect(topId).toBe('toolSettings');
 	});
 
+	test('an open menu drops above the tool window', async ({ page }) => {
+		await openLine(page);
+		const panel = page.locator('#toolSettings');
+		const pbox = await panel.boundingBox();
+		// top the panel stack first so the menu has something to beat
+		await page.mouse.click(pbox.x + 100, pbox.y + 8);
+
+		await page.locator('#fileMenu').click();
+		const menu = page.locator('#fileList');
+		await expect(menu).toBeVisible();
+		const mbox = await menu.boundingBox();
+
+		// a point inside both rectangles must land on the menu
+		const x = Math.max(mbox.x, pbox.x) + 10;
+		const y = Math.max(mbox.y, pbox.y) + 10;
+		const topId = await page.evaluate(
+			([px, py]) =>
+				document.elementFromPoint(px, py)?.closest('#fileList, #toolSettings')
+					?.id,
+			[x, y],
+		);
+		expect(topId).toBe('fileList');
+	});
+
 	test('the width setting survives a reload and still drives ink', async ({ page }) => {
 		await page.locator('#brushes').click();
 		await clickTool(page, 'asciiBrush');

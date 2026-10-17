@@ -741,7 +741,8 @@
 	}
 
 	.menuList {
-		@apply inline cursor-default absolute w-[300px] h-fit bg-file border-4 border-solid border-menu z-40;
+		/* above the tool window stack (40-43), below the top layer modals */
+		@apply inline cursor-default absolute w-[300px] h-fit bg-file border-4 border-solid border-menu z-[45];
 		top: var(--header-size);
 		box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
 	}
