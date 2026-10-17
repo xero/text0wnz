@@ -17,6 +17,7 @@ import { createArtpacksLanding } from './artpacks.js';
 import { createArchiveOpener, isArchiveFile } from './archiveOpen.js';
 import { createPluginManager } from './plugins.js';
 import { createReferenceImage } from './referenceImage.js';
+import { createToolSettings } from './toolSettings.js';
 import { FontCache } from './fontCache.js';
 import {
 	$,
@@ -961,6 +962,10 @@ const initializeAppComponents = async () => {
 		i: $('navICE'),
 		m: $('mirror'),
 	});
+	// the settings window must exist before any tool enables: the
+	// keyboard tool boots enabled below and hides it
+	State.toolSettings = createToolSettings();
+
 	const keyboard = createKeyboardController();
 	Toolbar.add(
 		$('keyboard'),
@@ -968,6 +973,7 @@ const initializeAppComponents = async () => {
 			paintShortcuts.disable();
 			State.menus.close();
 			keyboard.enable();
+			State.toolSettings.hide();
 			$('keyboardToolbar').classList.remove('hide');
 		},
 		() => {
@@ -983,6 +989,7 @@ const initializeAppComponents = async () => {
 			paintShortcuts.disable();
 			State.menus.close();
 			State.selectionTool.enable();
+			State.toolSettings.hide();
 			$('selectionToolbar').classList.remove('hide');
 		},
 		() => {
@@ -1220,9 +1227,6 @@ const initializeAppComponents = async () => {
 			'./freehandTools.js'
 		);
 		const attributeBrush = createAttributeBrushController();
-		$('attribSize').addEventListener('change', e => {
-			attributeBrush.setBrushSize(parseInt(e.target.value, 10));
-		});
 		return {
 			onFocus: attributeBrush.enable,
 			onBlur: attributeBrush.disable,
@@ -1270,17 +1274,23 @@ const initializeAppComponents = async () => {
 		};
 	});
 
+	// the generic controllers stay window-agnostic; the hide calls for
+	// these settings-less tools wrap their registrations instead
+	const withHide = enable => () => {
+		State.toolSettings.hide();
+		enable();
+	};
 	const fonts = createGenericController($('fontToolbar'), $('fonts'));
-	Toolbar.add($('fonts'), fonts.enable, fonts.disable);
+	Toolbar.add($('fonts'), withHide(fonts.enable), fonts.disable);
 	const clipboard = createGenericController(
 		$('clipboardToolbar'),
 		$('clipboard'),
 	);
 
 	const view = createViewportController($('viewportToolbar'));
-	Toolbar.add($('navView'), view.enable, view.disable);
+	Toolbar.add($('navView'), withHide(view.enable), view.disable);
 
-	Toolbar.add($('clipboard'), clipboard.enable, clipboard.disable);
+	Toolbar.add($('clipboard'), withHide(clipboard.enable), clipboard.disable);
 
 	Toolbar.addLazy($('sample'), async () => {
 		const { createSampleTool } = await import('./freehandTools.js');
