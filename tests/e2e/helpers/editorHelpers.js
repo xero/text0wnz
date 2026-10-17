@@ -69,6 +69,61 @@ export async function readBlock(page, x, y) {
 }
 
 /**
+ * Read a rectangular region as one string per row in a single page
+ * evaluation; charCode 0 reads as space
+ */
+export async function readRegion(page, x0, y0, x1, y1) {
+	return page.evaluate(
+		([ax, ay, bx, by]) => {
+			const c = window.__t0wnz.State.textArtCanvas;
+			const rows = [];
+			for (let y = ay; y <= by; y++) {
+				let row = '';
+				for (let x = ax; x <= bx; x++) {
+					const code = c.getBlock(x, y).charCode;
+					row += code === 0 ? ' ' : String.fromCharCode(code);
+				}
+				rows.push(row);
+			}
+			return rows;
+		},
+		[x0, y0, x1, y1],
+	);
+}
+
+/**
+ * Tool settings seam: specs change modes and knobs only through
+ * these, so a settings UI redesign edits the bodies here and never
+ * touches a spec
+ */
+export async function setLineMode(page, mode) {
+	await page.selectOption('#lineMode', mode);
+}
+
+export async function setSquareMode(page, mode) {
+	await page.selectOption('#squareMode', mode);
+}
+
+export async function setCircleMode(page, mode) {
+	await page.selectOption('#circleMode', mode);
+}
+
+export async function setFill(page, tool, filled) {
+	await page
+		.locator(`#${tool}Toolbar .toggleButton.${filled ? 'right' : 'left'}`)
+		.click();
+}
+
+export async function setAsciiWidth(page, width) {
+	await page.selectOption('#asciiWidth', String(width));
+}
+
+export async function setAttribSize(page, size) {
+	// the select stores the squared cell count; the seam speaks 1-16
+	await page.selectOption('#attribSize', String(size * size));
+}
+
+/**
  * Drag a stroke between two cells with interpolated pointer moves
  */
 export async function drag(page, from, to, steps = 12) {
