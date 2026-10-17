@@ -1482,7 +1482,7 @@
 	}
 	#toolSettings {
 		/* floating-window chrome, thicker top border = drag strip */
-		@apply fixed z-40 bg-menu p-2 flex flex-col gap-1 items-start;
+		@apply fixed z-40 bg-menu flex flex-col gap-1 items-start;
 		border: 4px solid var(--color-panel);
 		border-top-width: 16px;
 		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
@@ -1501,7 +1501,12 @@
 			padding: 2px 5px;
 		}
 		> div {
-			@apply flex flex-col gap-1 items-start;
+			@apply flex flex-col gap-1 items-start p-2;
+		}
+		/* the picker sections are all canvas and sit flush in the frame */
+		#tsShading,
+		#tsCharacter {
+			@apply p-0;
 		}
 		label {
 			@apply text-cyan text-xs;
@@ -1512,7 +1517,7 @@
 			}
 		}
 		output {
-			@apply text-fg text-xs;
+			@apply text-fg text-xs ml-1;
 		}
 		input[type='range'] {
 			width: 160px;
