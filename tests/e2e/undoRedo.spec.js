@@ -1,10 +1,17 @@
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import {
+	bridgeReady,
+	clickTool,
+	drag,
+	readBlock,
+} from './helpers/editorHelpers.js';
 
 test.describe('Advanced Undo/Redo Operations', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
+		// the ?test bridge lets the shape tests read cells back across
+		// the undo/redo cycle
+		await page.goto('/?test');
+		await bridgeReady(page);
 	});
 
 	test('should undo and redo multiple drawing operations', async ({ page }) => {
@@ -71,49 +78,33 @@ test.describe('Advanced Undo/Redo Operations', () => {
 	});
 
 	test('should handle undo/redo with line tool', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-
 		await page.locator('#shapes').click();
-		await page.waitForTimeout(300);
-		await page.locator('#line .stack').click();
-		await page.waitForTimeout(300);
+		await clickTool(page, 'line');
+		await expect(page.locator('#line')).toHaveClass(/toolbarDisplayed/);
 
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			await canvas.click({ position: { x: 50, y: 50 } });
-			await page.waitForTimeout(100);
-			await canvas.click({ position: { x: 150, y: 150 } });
-			await page.waitForTimeout(300);
-		}
+		await drag(page, [10, 5], [20, 5]);
+		expect([0, 32]).not.toContain((await readBlock(page, 15, 5)).charCode);
 
 		await page.keyboard.press('Control+z');
-		await page.waitForTimeout(200);
+		expect([0, 32]).toContain((await readBlock(page, 15, 5)).charCode);
 
 		await page.keyboard.press('Control+y');
-		await page.waitForTimeout(200);
+		expect([0, 32]).not.toContain((await readBlock(page, 15, 5)).charCode);
 	});
 
 	test('should handle undo/redo with filled shapes', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-
 		await page.locator('#shapes').click();
-		await page.waitForTimeout(300);
-		await page.locator('#square .stack').click();
-		await page.waitForTimeout(300);
+		await clickTool(page, 'square');
+		await expect(page.locator('#square')).toHaveClass(/toolbarDisplayed/);
 
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			await canvas.click({ position: { x: 50, y: 50 } });
-			await page.waitForTimeout(100);
-			await canvas.click({ position: { x: 150, y: 150 } });
-			await page.waitForTimeout(300);
-		}
+		await drag(page, [10, 8], [20, 14]);
+		expect([0, 32]).not.toContain((await readBlock(page, 10, 8)).charCode);
 
 		await page.keyboard.press('Control+z');
-		await page.waitForTimeout(200);
+		expect([0, 32]).toContain((await readBlock(page, 10, 8)).charCode);
 
 		await page.keyboard.press('Control+y');
-		await page.waitForTimeout(200);
+		expect([0, 32]).not.toContain((await readBlock(page, 10, 8)).charCode);
 	});
 
 	test('should handle undo after fill operation', async ({ page }) => {
