@@ -75,7 +75,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 
 		await page.locator('#shapes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#line').click();
+		await page.locator('#line .stack').click();
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
@@ -98,7 +98,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 
 		await page.locator('#shapes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#square').click();
+		await page.locator('#square .stack').click();
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
