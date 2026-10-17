@@ -141,24 +141,14 @@ test.describe('Character Palette', () => {
 
 	test('should open character selection', async ({ page }) => {
 		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
+		await page.locator('#characterBrush').click();
 
-		const charButton = page.locator('#characterBrush');
-		const count = await charButton.count();
-
-		if (count > 0) {
-			await charButton.first().click();
-			await page.waitForTimeout(500);
-
-			const charGrid = page.locator(
-				'.characterGrid, .charSelector, #characterBrushSelector',
-			);
-			const gridCount = await charGrid.count();
-
-			if (gridCount > 0) {
-				await expect(charGrid.first()).toBeVisible();
-			}
-		}
+		// the 256 glyph picker rides the settings window now
+		await expect(page.locator('#toolSettings')).toBeVisible();
+		await expect(page.locator('#toolSettingsTitle')).toHaveText(
+			'Character Brush',
+		);
+		await expect(page.locator('#tsCharacter canvas').first()).toBeVisible();
 	});
 
 	test('should allow character selection for drawing', async ({ page }) => {

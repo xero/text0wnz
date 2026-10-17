@@ -24,6 +24,8 @@ const createToolSettings = () => {
 		circle: { el: $('tsCircle'), title: 'Circle' },
 		ascii: { el: $('tsAscii'), title: 'Ascii Brush' },
 		attrib: { el: $('tsAttrib'), title: 'Color Brush' },
+		shading: { el: $('tsShading'), title: 'Shading Brush' },
+		character: { el: $('tsCharacter'), title: 'Character Brush' },
 	};
 
 	const savePos = (x, y) => {

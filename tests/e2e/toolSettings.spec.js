@@ -56,6 +56,16 @@ test.describe('tool settings window', () => {
 		await clickTool(page, 'attrib');
 		await expect(page.locator('#tsAttrib')).toBeVisible();
 
+		await page.locator('#shadingBrush').click();
+		await expect(page.locator('#tsShading')).toBeVisible();
+		await expect(page.locator('#toolSettingsTitle')).toHaveText(
+			'Shading Brush',
+		);
+
+		await page.locator('#characterBrush').click();
+		await expect(page.locator('#tsCharacter')).toBeVisible();
+		await expect(page.locator('#tsCharacter canvas').first()).toBeVisible();
+
 		await page.locator('#fill').click();
 		await expect(panel).toBeHidden();
 	});
