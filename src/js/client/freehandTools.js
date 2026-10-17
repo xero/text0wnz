@@ -1489,7 +1489,7 @@ const createSquareController = () => {
 		},
 	);
 	mountSetting(tsSection, 'Mode', modeControl.getElement());
-	State.toolSettings.mount(tsSection, fillControl.getElement());
+	mountSetting(tsSection, 'Style', fillControl.getElement());
 	modeControl.set(State.toolSettings.get(tsSection + 'Mode', 'block'));
 	syncFill();
 
@@ -1822,7 +1822,7 @@ const createCircleController = () => {
 		},
 	);
 	mountSetting(tsSection, 'Mode', modeControl.getElement());
-	State.toolSettings.mount(tsSection, fillControl.getElement());
+	mountSetting(tsSection, 'Style', fillControl.getElement());
 	modeControl.set(State.toolSettings.get(tsSection + 'Mode', 'block'));
 	syncFill();
 
