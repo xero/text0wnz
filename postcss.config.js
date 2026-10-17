@@ -16,9 +16,9 @@ export default {
 				normalizeCharset: {
 					add: false,
 				},
-				zindex: {
-					startIndex: 1,
-				}
+				// the panel stack assigns z-index inline from js, so rebasing
+				// the stylesheet's values breaks the layering contract
+				zindex: false
 			}],
 		}),
 	],

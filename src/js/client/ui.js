@@ -799,7 +799,8 @@ const createViewportController = el => {
 
 // one shared stack so overlapping tool windows focus on press: any
 // pointer down inside a registered window lifts it above its siblings.
-// The whole range stays below the z-50 modals and menus
+// The whole band (40 to 40 + count) stays below the z-[45] menu lists;
+// modals open through showModal and the top layer beats any z-index
 const panelStack = [];
 const PANEL_BASE_Z = 40;
 const restackPanels = () => {
