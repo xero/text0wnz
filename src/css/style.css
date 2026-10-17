@@ -1505,6 +1505,11 @@
 		}
 		label {
 			@apply text-cyan text-xs;
+
+			/* a second heading in a section breathes above its control */
+			&:not(:first-child) {
+				@apply mt-[6px];
+			}
 		}
 		output {
 			@apply text-fg text-xs;
