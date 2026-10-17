@@ -2,7 +2,7 @@ import State from './state.js';
 import {
 	$,
 	createCanvas,
-	createToggleButton,
+	createSegmentedControl,
 	registerFloatingPanel,
 } from './ui.js';
 import Toolbar from './toolbar.js';
@@ -348,6 +348,7 @@ const createHalfBlockController = () => {
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
 		bar.style.display = 'flex';
 		nav.classList.add('enabled');
+		State.toolSettings.hide();
 	};
 
 	const disable = () => {
@@ -537,6 +538,9 @@ const createShadingController = (panel, charMode) => {
 		panel.enable();
 		bar.style.display = 'flex';
 		nav.classList.add('enabled');
+		// the brush windows stay their own floats this phase, but only
+		// one settings surface shows at a time
+		State.toolSettings.hide();
 	};
 
 	const disable = () => {
@@ -1169,6 +1173,7 @@ const createFillController = () => {
 		document.addEventListener('onTextCanvasDown', fillPoint);
 		bar.style.display = 'flex';
 		nav.classList.add('enabled');
+		State.toolSettings.hide();
 	};
 
 	const disable = () => {
@@ -1251,18 +1256,32 @@ const vPathPoints = (x, hb0, hb1) => {
 	return points;
 };
 
+// the three shape vocabularies, each with a glyph taste of itself
+const SHAPE_MODES = [
+	{ value: 'block', label: 'Block', glyph: '▀▄▀' },
+	{ value: 'oldskool', label: 'Old Skool', glyph: '.-\'' },
+	{ value: 'nuskool', label: 'Nu Skool', glyph: ',d$P' },
+];
+
+// a labeled control row in the tool settings window
+const mountSetting = (section, text, element) => {
+	const label = document.createElement('LABEL');
+	label.innerText = text;
+	State.toolSettings.mount(section, label);
+	State.toolSettings.mount(section, element);
+};
+
 const createLineController = () => {
 	const panel = $('shapesToolbar');
 	const nav = $('shapes');
-	const modeMenu = $('lMode');
-	const modeSelect = $('lineMode');
 	const painter = createAsciiStrokePainter();
 	let startXY;
 	let endXY;
 
-	// the mode config lives inside the tool button; a tap on it must
-	// not bubble into the button's click handler
-	modeMenu.addEventListener('click', e => e.stopPropagation());
+	const modeControl = createSegmentedControl('lineMode', SHAPE_MODES, mode =>
+		State.toolSettings.set('lineMode', mode));
+	mountSetting('line', 'Mode', modeControl.getElement());
+	modeControl.set(State.toolSettings.get('lineMode', 'block'));
 
 	// the mode latches at down: a select touched mid drag must not
 	// commit a different vocabulary than the ghost showed
@@ -1273,7 +1292,7 @@ const createLineController = () => {
 	const canvasDown = e => {
 		startXY = e.detail;
 		endXY = undefined;
-		dragMode = modeSelect.value;
+		dragMode = modeControl.value();
 	};
 
 	const line = (x0, y0, x1, y1, callback) => {
@@ -1392,8 +1411,8 @@ const createLineController = () => {
 
 	const enable = () => {
 		panel.style.display = 'flex';
-		modeMenu.style.display = 'flex';
 		nav.classList.add('enabled');
+		State.toolSettings.show('line');
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
@@ -1401,7 +1420,6 @@ const createLineController = () => {
 
 	const disable = () => {
 		panel.style.display = 'none';
-		modeMenu.style.display = 'none';
 		nav.classList.remove('enabled');
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
@@ -1429,45 +1447,51 @@ const SQUARE_CORNERS = {
 };
 
 const createSquareController = () => {
-	const panel = $('squareToolbar');
+	const tsSection = 'square';
 	const bar = $('shapesToolbar');
 	const nav = $('shapes');
-	const modeMenu = $('sqMode');
-	const modeSelect = $('squareMode');
 	const painter = createAsciiStrokePainter();
 	let startXY;
 	let endXY;
 	let outlineMode = true;
 
-	// the toggle lives inside the tool button; a tap on it must not
-	// bubble into the button's click handler
-	panel.addEventListener('click', e => e.stopPropagation());
-	modeMenu.addEventListener('click', e => e.stopPropagation());
-
-	const outlineToggle = createToggleButton(
-		'Outline',
-		'Filled',
-		() => {
-			outlineMode = true;
-		},
-		() => {
-			outlineMode = false;
+	const fillControl = createSegmentedControl(
+		tsSection + 'Fill',
+		[
+			{ value: 'outline', label: 'Outline' },
+			{ value: 'filled', label: 'Filled' },
+		],
+		fill => {
+			outlineMode = fill === 'outline';
+			State.toolSettings.set(tsSection + 'Fill', fill);
 		},
 	);
 
-	// old skool has no fill vocabulary: any fill char reads nu skool, so
-	// the pill naps until the mode offers one. synced on enable too,
-	// since browser form restoration can set the select without firing
-	// a change event
-	const syncFillPill = () => {
-		const noFill = modeSelect.value === 'oldskool';
-		panel.classList.toggle('dimmed', noFill);
-		if (noFill) {
-			outlineMode = true;
-			outlineToggle.setStateOne();
-		}
+	// old skool has no fill vocabulary: any fill char reads nu skool,
+	// so the fill pair naps while the mode offers none, and the
+	// persisted choice returns when it does
+	const syncFill = () => {
+		const noFill = modeControl.value() === 'oldskool';
+		fillControl.getElement().classList.toggle('dimmed', noFill);
+		const fill = noFill
+			? 'outline'
+			: State.toolSettings.get(tsSection + 'Fill', 'outline');
+		fillControl.set(fill);
+		outlineMode = fill === 'outline';
 	};
-	modeSelect.addEventListener('change', syncFillPill);
+
+	const modeControl = createSegmentedControl(
+		tsSection + 'Mode',
+		SHAPE_MODES,
+		mode => {
+			State.toolSettings.set(tsSection + 'Mode', mode);
+			syncFill();
+		},
+	);
+	mountSetting(tsSection, 'Mode', modeControl.getElement());
+	State.toolSettings.mount(tsSection, fillControl.getElement());
+	modeControl.set(State.toolSettings.get(tsSection + 'Mode', 'block'));
+	syncFill();
 
 	// mode and fill latch at down: a select or pill touched mid drag
 	// must not commit a different shape than the ghost showed
@@ -1618,7 +1642,7 @@ const createSquareController = () => {
 	const canvasDown = e => {
 		startXY = e.detail;
 		endXY = undefined;
-		dragMode = modeSelect.value;
+		dragMode = modeControl.value();
 		dragOutline = outlineMode;
 	};
 
@@ -1727,20 +1751,17 @@ const createSquareController = () => {
 	};
 
 	const enable = () => {
-		panel.classList.remove('hide');
 		bar.style.display = 'flex';
-		modeMenu.style.display = 'flex';
 		nav.classList.add('enabled');
-		syncFillPill();
+		syncFill();
+		State.toolSettings.show(tsSection);
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
 	};
 
 	const disable = () => {
-		panel.classList.add('hide');
 		bar.style.display = 'none';
-		modeMenu.style.display = 'none';
 		nav.classList.remove('enabled');
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
@@ -1752,13 +1773,6 @@ const createSquareController = () => {
 		State.toolPreview.clear();
 	};
 
-	panel.append(outlineToggle.getElement());
-	if (outlineMode) {
-		outlineToggle.setStateOne();
-	} else {
-		outlineToggle.setStateTwo();
-	}
-
 	return {
 		enable: enable,
 		disable: disable,
@@ -1766,45 +1780,51 @@ const createSquareController = () => {
 };
 
 const createCircleController = () => {
+	const tsSection = 'circle';
 	const bar = $('shapesToolbar');
-	const panel = $('circleToolbar');
 	const nav = $('shapes');
-	const modeMenu = $('cMode');
-	const modeSelect = $('circleMode');
 	const painter = createAsciiStrokePainter();
 	let startXY;
 	let endXY;
 	let outlineMode = true;
 
-	// the toggle lives inside the tool button; a tap on it must not
-	// bubble into the button's click handler
-	panel.addEventListener('click', e => e.stopPropagation());
-	modeMenu.addEventListener('click', e => e.stopPropagation());
-
-	const outlineToggle = createToggleButton(
-		'Outline',
-		'Filled',
-		() => {
-			outlineMode = true;
-		},
-		() => {
-			outlineMode = false;
+	const fillControl = createSegmentedControl(
+		tsSection + 'Fill',
+		[
+			{ value: 'outline', label: 'Outline' },
+			{ value: 'filled', label: 'Filled' },
+		],
+		fill => {
+			outlineMode = fill === 'outline';
+			State.toolSettings.set(tsSection + 'Fill', fill);
 		},
 	);
 
-	// old skool has no fill vocabulary: any fill char reads nu skool, so
-	// the pill naps until the mode offers one. synced on enable too,
-	// since browser form restoration can set the select without firing
-	// a change event
-	const syncFillPill = () => {
-		const noFill = modeSelect.value === 'oldskool';
-		panel.classList.toggle('dimmed', noFill);
-		if (noFill) {
-			outlineMode = true;
-			outlineToggle.setStateOne();
-		}
+	// old skool has no fill vocabulary: any fill char reads nu skool,
+	// so the fill pair naps while the mode offers none, and the
+	// persisted choice returns when it does
+	const syncFill = () => {
+		const noFill = modeControl.value() === 'oldskool';
+		fillControl.getElement().classList.toggle('dimmed', noFill);
+		const fill = noFill
+			? 'outline'
+			: State.toolSettings.get(tsSection + 'Fill', 'outline');
+		fillControl.set(fill);
+		outlineMode = fill === 'outline';
 	};
-	modeSelect.addEventListener('change', syncFillPill);
+
+	const modeControl = createSegmentedControl(
+		tsSection + 'Mode',
+		SHAPE_MODES,
+		mode => {
+			State.toolSettings.set(tsSection + 'Mode', mode);
+			syncFill();
+		},
+	);
+	mountSetting(tsSection, 'Mode', modeControl.getElement());
+	State.toolSettings.mount(tsSection, fillControl.getElement());
+	modeControl.set(State.toolSettings.get(tsSection + 'Mode', 'block'));
+	syncFill();
 
 	// mode and fill latch at down: a select or pill touched mid drag
 	// must not commit a different vocabulary than the ghost showed
@@ -1857,7 +1877,7 @@ const createCircleController = () => {
 	const canvasDown = e => {
 		startXY = e.detail;
 		endXY = undefined;
-		dragMode = modeSelect.value;
+		dragMode = modeControl.value();
 		dragOutline = outlineMode;
 	};
 
@@ -2099,20 +2119,17 @@ const createCircleController = () => {
 	};
 
 	const enable = () => {
-		panel.classList.remove('hide');
 		bar.style.display = 'flex';
-		modeMenu.style.display = 'flex';
 		nav.classList.add('enabled');
-		syncFillPill();
+		syncFill();
+		State.toolSettings.show(tsSection);
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
 	};
 
 	const disable = () => {
-		panel.classList.add('hide');
 		bar.style.display = 'none';
-		modeMenu.style.display = 'none';
 		nav.classList.remove('enabled');
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
@@ -2123,13 +2140,6 @@ const createCircleController = () => {
 		endXY = undefined;
 		State.toolPreview.clear();
 	};
-
-	panel.append(outlineToggle.getElement());
-	if (outlineMode) {
-		outlineToggle.setStateOne();
-	} else {
-		outlineToggle.setStateTwo();
-	}
 
 	return {
 		enable: enable,
@@ -2172,6 +2182,7 @@ const createSampleTool = async (
 
 	const enable = () => {
 		document.addEventListener('onTextCanvasDown', canvasDown);
+		State.toolSettings.hide();
 	};
 
 	const disable = () => {
@@ -2189,13 +2200,6 @@ const createAttributeBrushController = () => {
 	let isActive = false;
 	let lastCoord = null;
 	const bar = $('brushToolbar');
-	const menu = $('aSize');
-
-	// the size config lives inside the tool button; a tap on it must
-	// not bubble into the button's click handler, whose preventDefault
-	// would keep the picker from opening on touch
-	menu.addEventListener('click', e => e.stopPropagation());
-
 	let brushSize = 1;
 	let previewCursor = null;
 	let lastPreviewX = -1;
@@ -2398,6 +2402,28 @@ const createAttributeBrushController = () => {
 
 	const getBrushSize = () => brushSize;
 
+	// the slider speaks 1-16; the brush itself wants the squared cell
+	// count its validator expects
+	const sizeSlider = document.createElement('INPUT');
+	sizeSlider.type = 'range';
+	sizeSlider.id = 'attribSize';
+	sizeSlider.min = '1';
+	sizeSlider.max = '16';
+	const sizeReadout = document.createElement('OUTPUT');
+	const applySize = n => {
+		sizeSlider.value = String(n);
+		sizeReadout.innerText = String(n);
+		setBrushSize(n * n);
+	};
+	sizeSlider.addEventListener('input', () => {
+		const n = parseInt(sizeSlider.value, 10) || 1;
+		applySize(n);
+		State.toolSettings.set('attribSize', n);
+	});
+	mountSetting('attrib', 'Size', sizeSlider);
+	State.toolSettings.mount('attrib', sizeReadout);
+	applySize(State.toolSettings.get('attribSize', 1));
+
 	const enable = () => {
 		if (!previewCursor) {
 			previewCursor = createPreviewCursor();
@@ -2407,7 +2433,7 @@ const createAttributeBrushController = () => {
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		bar.style.display = 'flex';
-		menu.style.display = 'flex';
+		State.toolSettings.show('attrib');
 		showPreview();
 	};
 
@@ -2417,7 +2443,6 @@ const createAttributeBrushController = () => {
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
 		bar.style.display = 'none';
-		menu.style.display = 'none';
 		isActive = false;
 		lastCoord = null;
 		lastPreviewX = -1;

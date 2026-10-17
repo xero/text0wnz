@@ -69,6 +69,20 @@ export async function readBlock(page, x, y) {
 }
 
 /**
+ * Park the settings window clear of the canvas before the page loads:
+ * its default perch covers the canvas's top left corner, where most
+ * test strokes land. Call before page.goto.
+ */
+export async function parkToolSettings(page) {
+	await page.addInitScript(() => {
+		localStorage.setItem(
+			'toolSettingsPos',
+			JSON.stringify({ x: 960, y: 560 }),
+		);
+	});
+}
+
+/**
  * Read a rectangular region as one string per row in a single page
  * evaluation; charCode 0 reads as space
  */
@@ -97,30 +111,34 @@ export async function readRegion(page, x0, y0, x1, y1) {
  * touches a spec
  */
 export async function setLineMode(page, mode) {
-	await page.selectOption('#lineMode', mode);
+	await page.locator(`#lineMode [data-value="${mode}"]`).click();
 }
 
 export async function setSquareMode(page, mode) {
-	await page.selectOption('#squareMode', mode);
+	await page.locator(`#squareMode [data-value="${mode}"]`).click();
 }
 
 export async function setCircleMode(page, mode) {
-	await page.selectOption('#circleMode', mode);
+	await page.locator(`#circleMode [data-value="${mode}"]`).click();
 }
 
 export async function setFill(page, tool, filled) {
 	await page
-		.locator(`#${tool}Toolbar .toggleButton.${filled ? 'right' : 'left'}`)
+		.locator(`#${tool}Fill [data-value="${filled ? 'filled' : 'outline'}"]`)
 		.click();
 }
 
 export async function setAsciiWidth(page, width) {
-	await page.selectOption('#asciiWidth', String(width));
+	await page.locator(`#asciiWidth [data-value="${width}"]`).click();
 }
 
 export async function setAttribSize(page, size) {
-	// the select stores the squared cell count; the seam speaks 1-16
-	await page.selectOption('#attribSize', String(size * size));
+	// a range input takes no fill(); set the value and announce it the
+	// way a thumb drag would
+	await page.locator('#attribSize').evaluate((el, v) => {
+		el.value = v;
+		el.dispatchEvent(new Event('input', { bubbles: true }));
+	}, String(size));
 }
 
 /**

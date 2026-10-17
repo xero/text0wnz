@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import {
+	parkToolSettings,
 	bridgeReady,
 	clickTool,
 	drag,
@@ -10,6 +11,7 @@ test.describe('Drawing Tools', () => {
 	test.beforeEach(async ({ page }) => {
 		// the ?test bridge lets these tests read cells back, so a drag
 		// that silently dies fails instead of passing green
+		await parkToolSettings(page);
 		await page.goto('/?test');
 		await bridgeReady(page);
 	});

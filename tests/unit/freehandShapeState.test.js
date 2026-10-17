@@ -30,6 +30,13 @@ vi.mock('../../src/js/client/state.js', () => ({
 			getColumns: vi.fn(() => 80),
 			getRows: vi.fn(() => 25),
 		},
+		toolSettings: {
+			show: vi.fn(),
+			hide: vi.fn(),
+			mount: vi.fn(),
+			get: vi.fn((_key, fallback) => fallback),
+			set: vi.fn(),
+		},
 		toolPreview: {
 			clear: vi.fn(),
 			drawHalfBlock: vi.fn(),
@@ -39,6 +46,28 @@ vi.mock('../../src/js/client/state.js', () => ({
 }));
 
 vi.mock('../../src/js/client/ui.js', () => ({
+	createSegmentedControl: vi.fn((id, options, onChange) => {
+		let current = options[0]?.value;
+		const el = {
+			id: id,
+			style: {},
+			classList: { add: vi.fn(), remove: vi.fn(), toggle: vi.fn() },
+			appendChild: vi.fn(),
+		};
+		return {
+			getElement: () => el,
+			value: () => current,
+			set: value => {
+				current = value;
+			},
+			select: value => {
+				current = value;
+				if (onChange) {
+					onChange(value);
+				}
+			},
+		};
+	}),
 	$: vi.fn(() => ({
 		style: {},
 		classList: { add: vi.fn(), remove: vi.fn(), toggle: vi.fn() },
