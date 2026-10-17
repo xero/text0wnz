@@ -192,8 +192,10 @@
 	a,
 	a:visited {
 		@apply decoration-0 text-cyan;
-		&:hover {
-			@apply bg-cyan text-fg;
+		@media (hover: hover) {
+			&:hover {
+				@apply bg-cyan text-fg;
+			}
 		}
 	}
 
@@ -252,8 +254,10 @@
 		#currentFontDisplay {
 			@apply h-[var(--header-size)];
 		}
-		button:hover {
-			@apply bg-hl;
+		@media (hover: hover) {
+			button:hover {
+				@apply bg-hl;
+			}
 		}
 		#resolution kbd {
 			@apply mr-0.5;
@@ -263,9 +267,11 @@
 		}
 		#resolution,
 		#currentFontDisplay {
-			&:hover {
-				kbd {
-					@apply bg-purp;
+			@media (hover: hover) {
+				&:hover {
+					kbd {
+						@apply bg-purp;
+					}
 				}
 			}
 		}
@@ -337,8 +343,10 @@
 				#closeChat {
 					@apply text-fg flex flex-grow-0 cursor-pointer m-auto px-1.5;
 
-					&:hover svg {
-						@apply fill-cyan;
+					@media (hover: hover) {
+						&:hover svg {
+							@apply fill-cyan;
+						}
 					}
 				}
 				#notificationSetting {
@@ -506,8 +514,10 @@
 
 		span {
 			@apply flex flex-col my-auto mx-1;
-			&:hover canvas {
-				outline: 1px solid var(--cyber);
+			@media (hover: hover) {
+				&:hover canvas {
+					outline: 1px solid var(--cyber);
+				}
 			}
 			canvas {
 				scale: 1 !important;
@@ -562,8 +572,10 @@
 			width: 16px;
 			margin-top: -4px;
 
-			&:hover {
-				@apply bg-cyan;
+			@media (hover: hover) {
+				&:hover {
+					@apply bg-cyan;
+				}
 			}
 		}
 		input[type='range']::-moz-range-thumb {
@@ -571,8 +583,10 @@
 			height: 16px;
 			width: 16px;
 
-			&:hover {
-				@apply bg-cyan;
+			@media (hover: hover) {
+				&:hover {
+					@apply bg-cyan;
+				}
 			}
 		}
 		input[type='range']::-webkit-slider-runnable-track {
@@ -598,10 +612,12 @@
 	#fkeySetPrev,
 	#fkeySetNext {
 		height: calc(var(--header-size) - 8px);
-		&:hover {
-			background: transparent;
-			svg {
-				fill: var(--color-cyan);
+		@media (hover: hover) {
+			&:hover {
+				background: transparent;
+				svg {
+					fill: var(--color-cyan);
+				}
 			}
 		}
 		&:active svg {
@@ -750,8 +766,10 @@
 	}
 
 	.menuItem {
-		&:hover {
-			@apply bg-indigo text-white;
+		@media (hover: hover) {
+			&:hover {
+				@apply bg-indigo text-white;
+			}
 		}
 
 		&.disabled {
@@ -849,9 +867,13 @@
 			nav {
 				@apply justify-end;
 
-				button:hover,
 				button:focus {
 					@apply bg-purp;
+				}
+				@media (hover: hover) {
+					button:hover {
+						@apply bg-purp;
+					}
 				}
 			}
 		}
@@ -897,9 +919,13 @@
 		}
 		nav {
 			@apply justify-end bg-editor;
-			button:hover,
 			button:focus {
 				@apply bg-purp;
+			}
+			@media (hover: hover) {
+				button:hover {
+					@apply bg-purp;
+				}
 			}
 		}
 		label {
@@ -999,8 +1025,10 @@
 	#fontSelect::-webkit-scrollbar-track {
 		@apply bg-editor;
 	}
-	#fontSelect::-webkit-scrollbar-thumb:hover {
-		@apply bg-file;
+	@media (hover: hover) {
+		#fontSelect::-webkit-scrollbar-thumb:hover {
+			@apply bg-file;
+		}
 	}
 	#fontSelect::-webkit-scrollbar-button {
 		@apply bg-editor w-5 h-5;
@@ -1066,8 +1094,10 @@
 		@apply cursor-pointer;
 		image-rendering: pixelated;
 	}
-	.charsetGlyph:hover {
-		outline: 1px solid theme('colors.cyber');
+	@media (hover: hover) {
+		.charsetGlyph:hover {
+			outline: 1px solid theme('colors.cyber');
+		}
 	}
 	.charsetMore {
 		@apply bg-menu text-fg px-2 cursor-pointer;
@@ -1075,16 +1105,20 @@
 	#charsetImportLabel {
 		@apply text-fg bg-menu px-3 py-1 cursor-pointer;
 	}
-	#charsetImportLabel:hover {
-		@apply bg-purp;
+	@media (hover: hover) {
+		#charsetImportLabel:hover {
+			@apply bg-purp;
+		}
 	}
 	#paletteMore {
 		@apply text-fg bg-menu text-center cursor-pointer select-none;
 		width: 40px;
 		line-height: 20px;
 	}
-	#paletteMore:hover {
-		@apply bg-purp;
+	@media (hover: hover) {
+		#paletteMore:hover {
+			@apply bg-purp;
+		}
 	}
 	#colorPanel {
 		/* aside > div makes this a centered flex row; restack it.
@@ -1147,8 +1181,10 @@
 	.colorSwatch {
 		@apply cursor-pointer;
 	}
-	.colorSwatch:hover {
-		outline: 1px solid theme('colors.cyber');
+	@media (hover: hover) {
+		.colorSwatch:hover {
+			outline: 1px solid theme('colors.cyber');
+		}
 	}
 	#framesPanel {
 		/* floating-window chrome, thicker top border = drag strip */
@@ -1163,8 +1199,10 @@
 		button {
 			@apply bg-menu text-fg px-2 cursor-pointer;
 		}
-		button:hover:not(:disabled) {
-			@apply bg-purp;
+		@media (hover: hover) {
+			button:hover:not(:disabled) {
+				@apply bg-purp;
+			}
 		}
 		button:disabled {
 			@apply opacity-40 cursor-default;
@@ -1290,9 +1328,13 @@
 		button {
 			@apply bg-menu text-fg text-base px-3 py-1 m-0 cursor-pointer;
 		}
-		button:hover,
 		button.active {
 			@apply bg-purp;
+		}
+		@media (hover: hover) {
+			button:hover {
+				@apply bg-purp;
+			}
 		}
 		input[type='search'] {
 			@apply bg-midnight text-fg text-base px-3 py-1 grow;
@@ -1314,8 +1356,10 @@
 			   becomes 24px of horizontal scroll */
 			@apply bg-menu text-fg m-0 px-2 py-1 cursor-pointer;
 		}
-		button:hover:not(:disabled) {
-			@apply bg-purp;
+		@media (hover: hover) {
+			button:hover:not(:disabled) {
+				@apply bg-purp;
+			}
 		}
 		/* counts are metadata: small and dim beside the name */
 		button kbd {
@@ -1334,9 +1378,11 @@
 				@apply bg-midnight text-cyan px-6;
 				border: 2px solid var(--cyber);
 			}
-			button:hover:not(:disabled) {
-				@apply bg-purp text-fg;
-				border-color: var(--color-purp);
+			@media (hover: hover) {
+				button:hover:not(:disabled) {
+					@apply bg-purp text-fg;
+					border-color: var(--color-purp);
+				}
 			}
 			button:disabled {
 				@apply opacity-30 cursor-default;
@@ -1461,8 +1507,10 @@
 		button {
 			@apply bg-menu text-fg px-2 cursor-pointer;
 		}
-		button:hover {
-			@apply bg-purp;
+		@media (hover: hover) {
+			button:hover {
+				@apply bg-purp;
+			}
 		}
 	}
 	#pluginStatus {
@@ -1480,8 +1528,10 @@
 		button {
 			@apply bg-menu text-fg px-2 cursor-pointer;
 		}
-		button:hover {
-			@apply bg-purp;
+		@media (hover: hover) {
+			button:hover {
+				@apply bg-purp;
+			}
 		}
 		label {
 			@apply text-fg text-xs flex items-center gap-1;
@@ -1587,8 +1637,10 @@
 			button {
 				@apply bg-menu text-fg px-2 cursor-pointer;
 			}
-			button:hover {
-				@apply bg-purp;
+			@media (hover: hover) {
+				button:hover {
+					@apply bg-purp;
+				}
 			}
 		}
 	}
@@ -1597,8 +1649,10 @@
 		button {
 			@apply bg-menu text-fg px-3 cursor-pointer;
 		}
-		button:hover {
-			@apply bg-purp;
+		@media (hover: hover) {
+			button:hover {
+				@apply bg-purp;
+			}
 		}
 	}
 	#sauceModal {
@@ -1671,10 +1725,12 @@
 				&:focus {
 					@apply bg-tools text-midnight;
 				}
-				&:hover {
-					@apply bg-purp text-fg;
-					svg {
-						@apply fill-fg;
+				@media (hover: hover) {
+					&:hover {
+						@apply bg-purp text-fg;
+						svg {
+							@apply fill-fg;
+						}
 					}
 				}
 				svg {
@@ -1710,6 +1766,8 @@
 
 			main {
 				@apply flex flex-col relative;
+				/* stays bare on purpose: the stuck tap hover is how touch
+				   reveals the button under the preview */
 				&:hover {
 					button {
 						@apply flex relative w-full bg-purp;
@@ -1736,8 +1794,10 @@
 					i {
 						@apply italic;
 					}
-					button:hover {
-						@apply bg-purp;
+					@media (hover: hover) {
+						button:hover {
+							@apply bg-purp;
+						}
 					}
 				}
 			}
@@ -1775,8 +1835,10 @@
 		line-height: 12px;
 		cursor: pointer;
 
-		&:hover {
-			background: #000;
+		@media (hover: hover) {
+			&:hover {
+				background: #000;
+			}
 		}
 	}
 
