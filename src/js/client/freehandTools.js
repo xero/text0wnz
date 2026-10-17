@@ -1,10 +1,5 @@
 import State from './state.js';
-import {
-	$,
-	createCanvas,
-	createToggleButton,
-	registerFloatingPanel,
-} from './ui.js';
+import { $, createCanvas, createSegmentedControl } from './ui.js';
 import Toolbar from './toolbar.js';
 import magicNumbers from './magicNumbers.js';
 import {
@@ -46,216 +41,6 @@ const createPanelCursor = el => {
 		hide: hide,
 		resize: resize,
 		setPos: setPos,
-	};
-};
-
-const createFloatingPanel = (x, y) => {
-	const panel = document.createElement('DIV');
-	const hide = document.createElement('DIV');
-	panel.classList.add('floatingPanel');
-	hide.classList.add('hidePanel');
-	hide.innerText = 'X';
-	panel.appendChild(hide);
-	$('bodyContainer').appendChild(panel);
-	hide.addEventListener('click', _ => panel.classList.remove('enabled'));
-	const focus = registerFloatingPanel(panel);
-
-	let dragStartPointer = null; // [x, y]
-	let dragStartPanel = null; // [x, y]
-
-	const mousedown = e => {
-		dragStartPointer = [e.clientX, e.clientY];
-		const rect = panel.getBoundingClientRect();
-		dragStartPanel = [rect.left, rect.top];
-		document.addEventListener('mousemove', mouseMove);
-		document.addEventListener('mouseup', mouseUp);
-	};
-
-	const mouseMove = e => {
-		if (dragStartPointer && dragStartPanel) {
-			e.preventDefault();
-			e.stopPropagation();
-			const dx = e.clientX - dragStartPointer[0];
-			const dy = e.clientY - dragStartPointer[1];
-			setPos(dragStartPanel[0] + dx, dragStartPanel[1] + dy);
-		}
-	};
-
-	const mouseUp = () => {
-		dragStartPointer = null;
-		dragStartPanel = null;
-		document.removeEventListener('mousemove', mouseMove);
-		document.removeEventListener('mouseup', mouseUp);
-	};
-
-	const touchstart = e => {
-		dragStartPointer = [e.touches[0].pageX, e.touches[0].pageY];
-		const rect = panel.getBoundingClientRect();
-		dragStartPanel = [rect.left, rect.top];
-		document.addEventListener('touchmove', touchMove, { passive: false });
-		document.addEventListener('touchend', touchEnd, { passive: false });
-	};
-
-	const touchMove = e => {
-		if (dragStartPointer && dragStartPanel) {
-			e.preventDefault();
-			e.stopPropagation();
-			const dx = e.touches[0].pageX - dragStartPointer[0];
-			const dy = e.touches[0].pageY - dragStartPointer[1];
-			setPos(dragStartPanel[0] + dx, dragStartPanel[1] + dy);
-		}
-	};
-
-	const touchEnd = () => {
-		dragStartPointer = null;
-		dragStartPanel = null;
-		document.removeEventListener('touchmove', touchMove, { passive: false });
-		document.removeEventListener('touchend', touchEnd, { passive: false });
-	};
-
-	const setPos = (newX, newY) => {
-		panel.style.left = newX + 'px';
-		x = newX;
-		panel.style.top = newY + 'px';
-		y = newY;
-	};
-
-	const enable = () => {
-		panel.classList.add('enabled');
-		focus();
-		document.addEventListener('touchmove', touchMove, { passive: false });
-		document.addEventListener('mousemove', mouseMove);
-		document.addEventListener('mouseup', mouseUp);
-		document.addEventListener('touchend', mouseUp, { passive: false });
-	};
-
-	const disable = () => {
-		panel.classList.remove('enabled');
-		document.removeEventListener('touchmove', touchMove, { passive: false });
-		document.removeEventListener('mousemove', mouseMove);
-		document.removeEventListener('mouseup', mouseUp);
-		document.removeEventListener('touchend', mouseUp, { passive: false });
-	};
-
-	const append = element => {
-		panel.appendChild(element);
-	};
-
-	setPos(x, y);
-	panel.addEventListener('touchstart', touchstart, { passive: false });
-	panel.addEventListener('mousedown', mousedown);
-
-	return {
-		setPos: setPos,
-		enable: enable,
-		disable: disable,
-		append: append,
-	};
-};
-
-const createFloatingPanelPalette = (width, height) => {
-	const canvasContainer = document.createElement('DIV');
-	const cursor = createPanelCursor(canvasContainer);
-	const canvas = createCanvas(width, height);
-	canvasContainer.appendChild(canvas);
-	const ctx = canvas.getContext('2d');
-	const imageData = new Array(16);
-
-	const generateSwatch = color => {
-		imageData[color] = ctx.createImageData(width / 8, height / 2);
-		const rgba = State.palette.getRGBAColor(color);
-		for (let y = 0, i = 0; y < imageData[color].height; y++) {
-			for (let x = 0; x < imageData[color].width; x++, i += 4) {
-				imageData[color].data.set(rgba, i);
-			}
-		}
-	};
-
-	const generateSwatches = () => {
-		for (let color = 0; color < 16; color++) {
-			generateSwatch(color);
-		}
-	};
-
-	const redrawSwatch = color => {
-		ctx.putImageData(
-			imageData[color],
-			(color % 8) * (width / 8),
-			color > 7 ? 0 : height / 2,
-		);
-	};
-
-	const redrawSwatches = () => {
-		for (let color = 0; color < 16; color++) {
-			redrawSwatch(color);
-		}
-	};
-
-	const mouseDown = e => {
-		const rect = canvas.getBoundingClientRect();
-		const mouseX = e.clientX - rect.left;
-		const mouseY = e.clientY - rect.top;
-		const color =
-			Math.floor(mouseX / (width / 8)) + (mouseY < height / 2 ? 8 : 0);
-		if (!e.ctrlKey && !e.altKey) {
-			State.palette.setForegroundColor(color);
-		} else {
-			State.palette.setBackgroundColor(color);
-		}
-	};
-
-	const onPaletteChange = _ => {
-		updatePalette();
-	};
-
-	const updateColor = color => {
-		generateSwatch(color);
-		redrawSwatch(color);
-	};
-
-	const updatePalette = () => {
-		for (let color = 0; color < 16; color++) {
-			updateColor(color);
-		}
-	};
-
-	const getElement = () => canvasContainer;
-
-	const updateCursor = color => {
-		cursor.resize(width / 8, height / 2);
-		cursor.setPos((color % 8) * (width / 8), color > 7 ? 0 : height / 2);
-	};
-
-	const onForegroundChange = e => {
-		updateCursor(e.detail);
-	};
-
-	const resize = (newWidth, newHeight) => {
-		width = newWidth;
-		height = newHeight;
-		canvas.width = width;
-		canvas.height = height;
-		generateSwatches();
-		redrawSwatches();
-		updateCursor(State.palette.getForegroundColor());
-	};
-
-	generateSwatches();
-	redrawSwatches();
-	updateCursor(State.palette.getForegroundColor());
-	canvas.addEventListener('mousedown', mouseDown);
-	canvas.addEventListener('contextmenu', e => {
-		e.preventDefault();
-	});
-	document.addEventListener('onForegroundChange', onForegroundChange);
-	document.addEventListener('onPaletteChange', onPaletteChange);
-	return {
-		updateColor: updateColor,
-		updatePalette: updatePalette,
-		getElement: getElement,
-		showCursor: cursor.show,
-		hideCursor: cursor.hide,
-		resize: resize,
 	};
 };
 
@@ -348,6 +133,7 @@ const createHalfBlockController = () => {
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
 		bar.style.display = 'flex';
 		nav.classList.add('enabled');
+		State.toolSettings.hide();
 	};
 
 	const disable = () => {
@@ -537,6 +323,7 @@ const createShadingController = (panel, charMode) => {
 		panel.enable();
 		bar.style.display = 'flex';
 		nav.classList.add('enabled');
+		State.toolSettings.show(charMode ? 'character' : 'shading');
 	};
 
 	const disable = () => {
@@ -563,12 +350,10 @@ const createShadingController = (panel, charMode) => {
 const createShadingPanel = async () => {
 	let panelFont = null;
 	let ignored = false;
-	const panel = createFloatingPanel(150, 150);
 	const canvasContainer = document.createElement('div');
 
 	const cursor = createPanelCursor(canvasContainer);
 	let canvases = new Array(16);
-	const nav = $('brushes');
 	let halfBlockMode = false;
 	let x = 0;
 	let y = 0;
@@ -707,14 +492,10 @@ const createShadingPanel = async () => {
 
 	const enable = () => {
 		document.addEventListener('keydown', keyDown);
-		panel.enable();
-		nav.classList.add('enabled');
 	};
 
 	const disable = () => {
 		document.removeEventListener('keydown', keyDown);
-		panel.disable();
-		nav.classList.remove('enabled');
 	};
 
 	const ignore = () => {
@@ -816,7 +597,7 @@ const createShadingPanel = async () => {
 		panelCanvas(State.palette.getForegroundColor()),
 		canvasContainer.firstChild,
 	);
-	panel.append(canvasContainer);
+	State.toolSettings.mount('shading', canvasContainer);
 	cursor.show();
 
 	return {
@@ -831,7 +612,6 @@ const createShadingPanel = async () => {
 
 const createCharacterBrushPanel = async () => {
 	let ignored = false;
-	const panel = createFloatingPanel(100, 100);
 	const canvasContainer = document.createElement('div');
 	const cursor = createPanelCursor(canvasContainer);
 	let canvas = createCanvas(
@@ -840,7 +620,6 @@ const createCharacterBrushPanel = async () => {
 	);
 	let x = 0;
 	let y = 0;
-	const nav = $('brushes');
 
 	// Create a 1x scale font for rendering the panel (unaffected by zoom)
 	const get1xFont = async () => {
@@ -937,15 +716,11 @@ const createCharacterBrushPanel = async () => {
 
 	const enable = () => {
 		document.addEventListener('keydown', keyDown);
-		panel.enable();
-		nav.classList.add('enabled');
 		redrawCanvas();
 	};
 
 	const disable = () => {
 		document.removeEventListener('keydown', keyDown);
-		panel.disable();
-		nav.classList.remove('enabled');
 	};
 
 	const getMode = () => {
@@ -1007,7 +782,7 @@ const createCharacterBrushPanel = async () => {
 	document.addEventListener('onOpenedFile', redrawGlyphs);
 
 	canvasContainer.appendChild(canvas);
-	panel.append(canvasContainer);
+	State.toolSettings.mount('character', canvasContainer);
 	await redrawCanvas();
 	updateCursor();
 	cursor.show();
@@ -1169,6 +944,7 @@ const createFillController = () => {
 		document.addEventListener('onTextCanvasDown', fillPoint);
 		bar.style.display = 'flex';
 		nav.classList.add('enabled');
+		State.toolSettings.hide();
 	};
 
 	const disable = () => {
@@ -1251,18 +1027,32 @@ const vPathPoints = (x, hb0, hb1) => {
 	return points;
 };
 
+// the three shape vocabularies, each with a glyph taste of itself
+const SHAPE_MODES = [
+	{ value: 'block', label: 'Block', glyph: '▀▄▀' },
+	{ value: 'oldskool', label: 'Old Skool', glyph: '.-\'' },
+	{ value: 'nuskool', label: 'Nu Skool', glyph: ',d$P' },
+];
+
+// a labeled control row in the tool settings window
+const mountSetting = (section, text, element) => {
+	const label = document.createElement('LABEL');
+	label.innerText = text;
+	State.toolSettings.mount(section, label);
+	State.toolSettings.mount(section, element);
+};
+
 const createLineController = () => {
 	const panel = $('shapesToolbar');
 	const nav = $('shapes');
-	const modeMenu = $('lMode');
-	const modeSelect = $('lineMode');
 	const painter = createAsciiStrokePainter();
 	let startXY;
 	let endXY;
 
-	// the mode config lives inside the tool button; a tap on it must
-	// not bubble into the button's click handler
-	modeMenu.addEventListener('click', e => e.stopPropagation());
+	const modeControl = createSegmentedControl('lineMode', SHAPE_MODES, mode =>
+		State.toolSettings.set('lineMode', mode));
+	mountSetting('line', 'Mode', modeControl.getElement());
+	modeControl.set(State.toolSettings.get('lineMode', 'block'));
 
 	// the mode latches at down: a select touched mid drag must not
 	// commit a different vocabulary than the ghost showed
@@ -1273,7 +1063,7 @@ const createLineController = () => {
 	const canvasDown = e => {
 		startXY = e.detail;
 		endXY = undefined;
-		dragMode = modeSelect.value;
+		dragMode = modeControl.value();
 	};
 
 	const line = (x0, y0, x1, y1, callback) => {
@@ -1392,8 +1182,8 @@ const createLineController = () => {
 
 	const enable = () => {
 		panel.style.display = 'flex';
-		modeMenu.style.display = 'flex';
 		nav.classList.add('enabled');
+		State.toolSettings.show('line');
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
@@ -1401,7 +1191,6 @@ const createLineController = () => {
 
 	const disable = () => {
 		panel.style.display = 'none';
-		modeMenu.style.display = 'none';
 		nav.classList.remove('enabled');
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
@@ -1429,45 +1218,51 @@ const SQUARE_CORNERS = {
 };
 
 const createSquareController = () => {
-	const panel = $('squareToolbar');
+	const tsSection = 'square';
 	const bar = $('shapesToolbar');
 	const nav = $('shapes');
-	const modeMenu = $('sqMode');
-	const modeSelect = $('squareMode');
 	const painter = createAsciiStrokePainter();
 	let startXY;
 	let endXY;
 	let outlineMode = true;
 
-	// the toggle lives inside the tool button; a tap on it must not
-	// bubble into the button's click handler
-	panel.addEventListener('click', e => e.stopPropagation());
-	modeMenu.addEventListener('click', e => e.stopPropagation());
-
-	const outlineToggle = createToggleButton(
-		'Outline',
-		'Filled',
-		() => {
-			outlineMode = true;
-		},
-		() => {
-			outlineMode = false;
+	const fillControl = createSegmentedControl(
+		tsSection + 'Fill',
+		[
+			{ value: 'outline', label: 'Outline' },
+			{ value: 'filled', label: 'Filled' },
+		],
+		fill => {
+			outlineMode = fill === 'outline';
+			State.toolSettings.set(tsSection + 'Fill', fill);
 		},
 	);
 
-	// old skool has no fill vocabulary: any fill char reads nu skool, so
-	// the pill naps until the mode offers one. synced on enable too,
-	// since browser form restoration can set the select without firing
-	// a change event
-	const syncFillPill = () => {
-		const noFill = modeSelect.value === 'oldskool';
-		panel.classList.toggle('dimmed', noFill);
-		if (noFill) {
-			outlineMode = true;
-			outlineToggle.setStateOne();
-		}
+	// old skool has no fill vocabulary: any fill char reads nu skool,
+	// so the fill pair naps while the mode offers none, and the
+	// persisted choice returns when it does
+	const syncFill = () => {
+		const noFill = modeControl.value() === 'oldskool';
+		fillControl.getElement().classList.toggle('dimmed', noFill);
+		const fill = noFill
+			? 'outline'
+			: State.toolSettings.get(tsSection + 'Fill', 'outline');
+		fillControl.set(fill);
+		outlineMode = fill === 'outline';
 	};
-	modeSelect.addEventListener('change', syncFillPill);
+
+	const modeControl = createSegmentedControl(
+		tsSection + 'Mode',
+		SHAPE_MODES,
+		mode => {
+			State.toolSettings.set(tsSection + 'Mode', mode);
+			syncFill();
+		},
+	);
+	mountSetting(tsSection, 'Mode', modeControl.getElement());
+	mountSetting(tsSection, 'Style', fillControl.getElement());
+	modeControl.set(State.toolSettings.get(tsSection + 'Mode', 'block'));
+	syncFill();
 
 	// mode and fill latch at down: a select or pill touched mid drag
 	// must not commit a different shape than the ghost showed
@@ -1618,7 +1413,7 @@ const createSquareController = () => {
 	const canvasDown = e => {
 		startXY = e.detail;
 		endXY = undefined;
-		dragMode = modeSelect.value;
+		dragMode = modeControl.value();
 		dragOutline = outlineMode;
 	};
 
@@ -1727,20 +1522,17 @@ const createSquareController = () => {
 	};
 
 	const enable = () => {
-		panel.classList.remove('hide');
 		bar.style.display = 'flex';
-		modeMenu.style.display = 'flex';
 		nav.classList.add('enabled');
-		syncFillPill();
+		syncFill();
+		State.toolSettings.show(tsSection);
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
 	};
 
 	const disable = () => {
-		panel.classList.add('hide');
 		bar.style.display = 'none';
-		modeMenu.style.display = 'none';
 		nav.classList.remove('enabled');
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
@@ -1752,13 +1544,6 @@ const createSquareController = () => {
 		State.toolPreview.clear();
 	};
 
-	panel.append(outlineToggle.getElement());
-	if (outlineMode) {
-		outlineToggle.setStateOne();
-	} else {
-		outlineToggle.setStateTwo();
-	}
-
 	return {
 		enable: enable,
 		disable: disable,
@@ -1766,45 +1551,51 @@ const createSquareController = () => {
 };
 
 const createCircleController = () => {
+	const tsSection = 'circle';
 	const bar = $('shapesToolbar');
-	const panel = $('circleToolbar');
 	const nav = $('shapes');
-	const modeMenu = $('cMode');
-	const modeSelect = $('circleMode');
 	const painter = createAsciiStrokePainter();
 	let startXY;
 	let endXY;
 	let outlineMode = true;
 
-	// the toggle lives inside the tool button; a tap on it must not
-	// bubble into the button's click handler
-	panel.addEventListener('click', e => e.stopPropagation());
-	modeMenu.addEventListener('click', e => e.stopPropagation());
-
-	const outlineToggle = createToggleButton(
-		'Outline',
-		'Filled',
-		() => {
-			outlineMode = true;
-		},
-		() => {
-			outlineMode = false;
+	const fillControl = createSegmentedControl(
+		tsSection + 'Fill',
+		[
+			{ value: 'outline', label: 'Outline' },
+			{ value: 'filled', label: 'Filled' },
+		],
+		fill => {
+			outlineMode = fill === 'outline';
+			State.toolSettings.set(tsSection + 'Fill', fill);
 		},
 	);
 
-	// old skool has no fill vocabulary: any fill char reads nu skool, so
-	// the pill naps until the mode offers one. synced on enable too,
-	// since browser form restoration can set the select without firing
-	// a change event
-	const syncFillPill = () => {
-		const noFill = modeSelect.value === 'oldskool';
-		panel.classList.toggle('dimmed', noFill);
-		if (noFill) {
-			outlineMode = true;
-			outlineToggle.setStateOne();
-		}
+	// old skool has no fill vocabulary: any fill char reads nu skool,
+	// so the fill pair naps while the mode offers none, and the
+	// persisted choice returns when it does
+	const syncFill = () => {
+		const noFill = modeControl.value() === 'oldskool';
+		fillControl.getElement().classList.toggle('dimmed', noFill);
+		const fill = noFill
+			? 'outline'
+			: State.toolSettings.get(tsSection + 'Fill', 'outline');
+		fillControl.set(fill);
+		outlineMode = fill === 'outline';
 	};
-	modeSelect.addEventListener('change', syncFillPill);
+
+	const modeControl = createSegmentedControl(
+		tsSection + 'Mode',
+		SHAPE_MODES,
+		mode => {
+			State.toolSettings.set(tsSection + 'Mode', mode);
+			syncFill();
+		},
+	);
+	mountSetting(tsSection, 'Mode', modeControl.getElement());
+	mountSetting(tsSection, 'Style', fillControl.getElement());
+	modeControl.set(State.toolSettings.get(tsSection + 'Mode', 'block'));
+	syncFill();
 
 	// mode and fill latch at down: a select or pill touched mid drag
 	// must not commit a different vocabulary than the ghost showed
@@ -1857,7 +1648,7 @@ const createCircleController = () => {
 	const canvasDown = e => {
 		startXY = e.detail;
 		endXY = undefined;
-		dragMode = modeSelect.value;
+		dragMode = modeControl.value();
 		dragOutline = outlineMode;
 	};
 
@@ -2099,20 +1890,17 @@ const createCircleController = () => {
 	};
 
 	const enable = () => {
-		panel.classList.remove('hide');
 		bar.style.display = 'flex';
-		modeMenu.style.display = 'flex';
 		nav.classList.add('enabled');
-		syncFillPill();
+		syncFill();
+		State.toolSettings.show(tsSection);
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
 	};
 
 	const disable = () => {
-		panel.classList.add('hide');
 		bar.style.display = 'none';
-		modeMenu.style.display = 'none';
 		nav.classList.remove('enabled');
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
@@ -2123,13 +1911,6 @@ const createCircleController = () => {
 		endXY = undefined;
 		State.toolPreview.clear();
 	};
-
-	panel.append(outlineToggle.getElement());
-	if (outlineMode) {
-		outlineToggle.setStateOne();
-	} else {
-		outlineToggle.setStateTwo();
-	}
 
 	return {
 		enable: enable,
@@ -2172,6 +1953,7 @@ const createSampleTool = async (
 
 	const enable = () => {
 		document.addEventListener('onTextCanvasDown', canvasDown);
+		State.toolSettings.hide();
 	};
 
 	const disable = () => {
@@ -2189,13 +1971,6 @@ const createAttributeBrushController = () => {
 	let isActive = false;
 	let lastCoord = null;
 	const bar = $('brushToolbar');
-	const menu = $('aSize');
-
-	// the size config lives inside the tool button; a tap on it must
-	// not bubble into the button's click handler, whose preventDefault
-	// would keep the picker from opening on touch
-	menu.addEventListener('click', e => e.stopPropagation());
-
 	let brushSize = 1;
 	let previewCursor = null;
 	let lastPreviewX = -1;
@@ -2398,6 +2173,32 @@ const createAttributeBrushController = () => {
 
 	const getBrushSize = () => brushSize;
 
+	// the slider speaks 1-16; the brush itself wants the squared cell
+	// count its validator expects
+	const sizeSlider = document.createElement('INPUT');
+	sizeSlider.type = 'range';
+	sizeSlider.id = 'attribSize';
+	sizeSlider.min = '1';
+	sizeSlider.max = '16';
+	const sizeReadout = document.createElement('OUTPUT');
+	const applySize = n => {
+		sizeSlider.value = String(n);
+		sizeReadout.innerText = String(n);
+		setBrushSize(n * n);
+	};
+	sizeSlider.addEventListener('input', () => {
+		const n = parseInt(sizeSlider.value, 10) || 1;
+		applySize(n);
+		State.toolSettings.set('attribSize', n);
+	});
+	// the readout rides the heading, so the label is built by hand
+	const sizeLabel = document.createElement('LABEL');
+	sizeLabel.innerText = 'Size';
+	sizeLabel.appendChild(sizeReadout);
+	State.toolSettings.mount('attrib', sizeLabel);
+	State.toolSettings.mount('attrib', sizeSlider);
+	applySize(State.toolSettings.get('attribSize', 1));
+
 	const enable = () => {
 		if (!previewCursor) {
 			previewCursor = createPreviewCursor();
@@ -2407,7 +2208,7 @@ const createAttributeBrushController = () => {
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		bar.style.display = 'flex';
-		menu.style.display = 'flex';
+		State.toolSettings.show('attrib');
 		showPreview();
 	};
 
@@ -2417,7 +2218,6 @@ const createAttributeBrushController = () => {
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
 		bar.style.display = 'none';
-		menu.style.display = 'none';
 		isActive = false;
 		lastCoord = null;
 		lastPreviewX = -1;
@@ -2439,8 +2239,6 @@ const createAttributeBrushController = () => {
 
 export {
 	createPanelCursor,
-	createFloatingPanel,
-	createFloatingPanelPalette,
 	createBrushController,
 	createHalfBlockController,
 	createShadingController,

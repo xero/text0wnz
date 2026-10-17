@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import {
+	parkToolSettings,
 	bridgeReady,
 	clickTool,
 	drag,
@@ -10,6 +11,7 @@ test.describe('Drawing Tools', () => {
 	test.beforeEach(async ({ page }) => {
 		// the ?test bridge lets these tests read cells back, so a drag
 		// that silently dies fails instead of passing green
+		await parkToolSettings(page);
 		await page.goto('/?test');
 		await bridgeReady(page);
 	});
@@ -147,6 +149,24 @@ test.describe('Drawing Tools', () => {
 		await drag(page, [30, 3], [38, 9]);
 		expect([0, 32]).not.toContain((await readBlock(page, 30, 3)).charCode);
 		expect([0, 32]).not.toContain((await readBlock(page, 38, 9)).charCode);
+	});
+
+	test('mirror and the sample tool exclude each other', async ({ page }) => {
+		await page.locator('#brushes').click();
+		await clickTool(page, 'attrib');
+		await page.locator('#mirror').click();
+		await expect(page.locator('#mirror')).toHaveClass(/enabled/);
+
+		// picking the sampler drops mirror
+		await page.locator('#sample').click();
+		await expect(page.locator('#sample')).toHaveClass(/toolbarDisplayed/);
+		await expect(page.locator('#mirror')).not.toHaveClass(/enabled/);
+
+		// arming mirror mid sample bounces back to the previous tool
+		await page.locator('#mirror').click();
+		await expect(page.locator('#mirror')).toHaveClass(/enabled/);
+		await expect(page.locator('#sample')).not.toHaveClass(/toolbarDisplayed/);
+		await expect(page.locator('#attrib')).toHaveClass(/toolbarDisplayed/);
 	});
 });
 

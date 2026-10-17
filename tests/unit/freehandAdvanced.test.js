@@ -3,7 +3,6 @@ import {
 	createBrushController,
 	createHalfBlockController,
 	createShadingPanel,
-	createFloatingPanelPalette,
 	createCharacterBrushPanel,
 	createFillController,
 	createLineController,
@@ -74,6 +73,13 @@ vi.mock('../../src/js/client/state.js', () => ({
 			drawHalfBlock: vi.fn(),
 		},
 		positionInfo: { update: vi.fn() },
+		toolSettings: {
+			show: vi.fn(),
+			hide: vi.fn(),
+			mount: vi.fn(),
+			get: vi.fn((_key, fallback) => fallback),
+			set: vi.fn(),
+		},
 		selectionCursor: {
 			getSelection: vi.fn(() => ({
 				x: 10,
@@ -130,6 +136,28 @@ vi.mock('../../src/js/client/toolbar.js', () => ({
 }));
 
 vi.mock('../../src/js/client/ui.js', () => ({
+	createSegmentedControl: vi.fn((id, options, onChange) => {
+		let current = options[0]?.value;
+		const el = {
+			id: id,
+			style: {},
+			classList: { add: vi.fn(), remove: vi.fn(), toggle: vi.fn() },
+			appendChild: vi.fn(),
+		};
+		return {
+			getElement: () => el,
+			value: () => current,
+			set: value => {
+				current = value;
+			},
+			select: value => {
+				current = value;
+				if (onChange) {
+					onChange(value);
+				}
+			},
+		};
+	}),
 	$: vi.fn(_ => {
 		const mockElement = {
 			style: { display: 'block' },
@@ -538,16 +566,13 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 		it('should handle multiple panel instances', async () => {
 			const panel1 = await createShadingPanel();
 			const panel2 = await createCharacterBrushPanel();
-			const panel3 = createFloatingPanelPalette(128, 64);
 
 			expect(() => {
 				panel1.enable();
 				panel2.enable();
-				panel3.showCursor();
 
 				panel1.disable();
 				panel2.disable();
-				panel3.hideCursor();
 			}).not.toThrow();
 		});
 	});
@@ -659,38 +684,6 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 				'onTextCanvasDrag',
 				expect.any(Function),
 			);
-		});
-	});
-
-	describe('FloatingPanelPalette conditional logic', () => {
-		let panelPalette;
-
-		beforeEach(() => {
-			panelPalette = createFloatingPanelPalette(160, 32);
-		});
-
-		it('should create floating panel palette with proper interface', () => {
-			expect(panelPalette).toHaveProperty('getElement');
-			expect(typeof panelPalette.getElement).toBe('function');
-
-			const element = panelPalette.getElement();
-			expect(element).toBeDefined();
-		});
-
-		it('should handle palette generation and updates', () => {
-			expect(() => {
-				panelPalette.getElement();
-				panelPalette.updateColor(0);
-				// Note: redrawSwatches method may not be exposed in the public API
-			}).not.toThrow();
-		});
-
-		it('should handle color position calculations for different positions', () => {
-			expect(() => {
-				for (let i = 0; i < 16; i++) {
-					panelPalette.updateColor(i);
-				}
-			}).not.toThrow();
 		});
 	});
 });

@@ -89,20 +89,6 @@
 								</svg>
 								<kbd>Ascii</kbd>
 							</span>
-							<div id="aWidth">
-								<label for="asciiWidth">Width</label>
-								<select id="asciiWidth">
-									<option value="1" selected>1</option>
-									<option value="2">2</option>
-									<option value="3">3</option>
-									<option value="4">4</option>
-									<option value="5">5</option>
-									<option value="6">6</option>
-									<option value="7">7</option>
-									<option value="8">8</option>
-									<option value="9">9</option>
-								</select>
-							</div>
 						</div>
 						<div id="characterBrush" class="toolButton">
 							<svg alt="Character Brush" aria-label="Character Brush (b)">
@@ -117,27 +103,6 @@
 								</svg>
 								<kbd>Color</kbd>
 							</span>
-							<div id="aSize">
-								<label for="attribSize">Size</label>
-								<select id="attribSize">
-									<option value="1">1</option>
-									<option value="4">2</option>
-									<option value="9">3</option>
-									<option value="16">4</option>
-									<option value="25">5</option>
-									<option value="36">6</option>
-									<option value="49">7</option>
-									<option value="64">8</option>
-									<option value="81">9</option>
-									<option value="100">10</option>
-									<option value="121">11</option>
-									<option value="144">12</option>
-									<option value="169">13</option>
-									<option value="196">14</option>
-									<option value="225">15</option>
-									<option value="256">16</option>
-								</select>
-							</div>
 						</div>
 						<div id="fill" class="toolButton">
 							<svg alt="Fill" aria-label="Fill (n)">
@@ -204,14 +169,6 @@
 								</svg>
 								<kbd>Line</kbd>
 							</span>
-							<div id="lMode">
-								<label for="lineMode">Mode</label>
-								<select id="lineMode">
-									<option value="block" selected>Block</option>
-									<option value="oldskool">Old Skool</option>
-									<option value="nuskool">Nu Skool</option>
-								</select>
-							</div>
 						</div>
 						<div id="square" class="toolButton">
 							<span class="stack">
@@ -220,15 +177,6 @@
 								</svg>
 								<kbd>Square</kbd>
 							</span>
-							<div id="squareToolbar" class="hide"></div>
-							<div id="sqMode">
-								<label for="squareMode">Mode</label>
-								<select id="squareMode">
-									<option value="block" selected>Block</option>
-									<option value="oldskool">Old Skool</option>
-									<option value="nuskool">Nu Skool</option>
-								</select>
-							</div>
 						</div>
 						<div id="circle" class="toolButton">
 							<span class="stack">
@@ -237,15 +185,6 @@
 								</svg>
 								<kbd>Circle</kbd>
 							</span>
-							<div id="circleToolbar" class="hide"></div>
-							<div id="cMode">
-								<label for="circleMode">Mode</label>
-								<select id="circleMode">
-									<option value="block" selected>Block</option>
-									<option value="oldskool">Old Skool</option>
-									<option value="nuskool">Nu Skool</option>
-								</select>
-							</div>
 						</div>
 					</div>
 					<div id="clipboardToolbar">
@@ -494,6 +433,16 @@
 					<input id="refScale" type="range" value="100" max="200" min="10"/>
 				</label>
 				<button id="refClear">clear</button>
+			</div>
+			<div id="toolSettings" class="hide">
+				<h3 id="toolSettingsTitle"></h3>
+				<div id="tsLine" class="hide"></div>
+				<div id="tsSquare" class="hide"></div>
+				<div id="tsCircle" class="hide"></div>
+				<div id="tsAscii" class="hide"></div>
+				<div id="tsAttrib" class="hide"></div>
+				<div id="tsShading" class="hide"></div>
+				<div id="tsCharacter" class="hide"></div>
 			</div>
 			<div id="viewport">
 				<div id="canvasContainer">

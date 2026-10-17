@@ -40,6 +40,13 @@ const mocks = vi.hoisted(() => {
 				getMirrorMode: vi.fn(() => false),
 			},
 			positionInfo: { update: vi.fn() },
+			toolSettings: {
+				show: vi.fn(),
+				hide: vi.fn(),
+				mount: vi.fn(),
+				get: vi.fn((_key, fallback) => fallback),
+				set: vi.fn(),
+			},
 			toolPreview: { clear: vi.fn(), drawHalfBlock: vi.fn() },
 			font: { getWidth: vi.fn(() => 8), getHeight: vi.fn(() => 16) },
 		},
@@ -48,6 +55,28 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('../../src/js/client/state.js', () => ({ default: mocks.state }));
 vi.mock('../../src/js/client/ui.js', () => ({
+	createSegmentedControl: vi.fn((id, options, onChange) => {
+		let current = options[0]?.value;
+		const el = {
+			id: id,
+			style: {},
+			classList: { add: vi.fn(), remove: vi.fn(), toggle: vi.fn() },
+			appendChild: vi.fn(),
+		};
+		return {
+			getElement: () => el,
+			value: () => current,
+			set: value => {
+				current = value;
+			},
+			select: value => {
+				current = value;
+				if (onChange) {
+					onChange(value);
+				}
+			},
+		};
+	}),
 	$: () => {
 		const el = document.createElement('div');
 		el.classList.add('stub');
