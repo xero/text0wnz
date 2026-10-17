@@ -11,6 +11,76 @@ export async function waitForEditorReady(page, timeout = 10000) {
 }
 
 /**
+ * Wait for the test bridge: window.__t0wnz only exists when the page
+ * was opened with /?test (main.js gates the import)
+ */
+export async function bridgeReady(page, timeout = 10000) {
+	await page.waitForSelector('#canvasContainer', { timeout });
+	await page.waitForSelector('#bodyContainer[data-ready]', { state: 'attached', timeout });
+	await page.waitForFunction(() => Boolean(window.__t0wnz), null, { timeout });
+}
+
+/**
+ * Activate a tool through its icon stack, never the button center.
+ * Tool buttons embed a native mode select there, and a chromium click
+ * on a native select arms a stale pointerup that ends the next canvas
+ * stroke early.
+ */
+export async function clickTool(page, id) {
+	await page.locator(`#${id} .stack`).click();
+}
+
+/**
+ * Client coordinates of a canvas cell, for synthetic pointer input
+ */
+export async function cellCenter(page, x, y) {
+	return page.evaluate(
+		([cx, cy]) => {
+			const s = window.__t0wnz.State;
+			const rect = document
+				.getElementById('canvasContainer')
+				.getBoundingClientRect();
+			return {
+				clientX: rect.left + cx * s.font.getWidth() + s.font.getWidth() / 2,
+				// three quarters down the cell: the half block seam sits at
+				// exactly h/2, where any subpixel origin flips the parity
+				clientY: rect.top + cy * s.font.getHeight() + (s.font.getHeight() * 3) / 4,
+			};
+		},
+		[x, y],
+	);
+}
+
+/**
+ * Read one canvas cell through the test bridge
+ */
+export async function readBlock(page, x, y) {
+	return page.evaluate(
+		([cx, cy]) => {
+			const b = window.__t0wnz.State.textArtCanvas.getBlock(cx, cy);
+			return {
+				charCode: b.charCode,
+				fg: b.foregroundColor,
+				bg: b.backgroundColor,
+			};
+		},
+		[x, y],
+	);
+}
+
+/**
+ * Drag a stroke between two cells with interpolated pointer moves
+ */
+export async function drag(page, from, to, steps = 12) {
+	const a = await cellCenter(page, from[0], from[1]);
+	const b = await cellCenter(page, to[0], to[1]);
+	await page.mouse.move(a.clientX, a.clientY);
+	await page.mouse.down();
+	await page.mouse.move(b.clientX, b.clientY, { steps });
+	await page.mouse.up();
+}
+
+/**
  * Focus the canvas element for keyboard input
  * TODO: Replace timeout with focus state validation
  */

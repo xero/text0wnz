@@ -1,10 +1,17 @@
 import { test, expect } from '@playwright/test';
+import {
+	bridgeReady,
+	clickTool,
+	drag,
+	readBlock,
+} from './helpers/editorHelpers.js';
 
 test.describe('Drawing Tools', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
+		// the ?test bridge lets these tests read cells back, so a drag
+		// that silently dies fails instead of passing green
+		await page.goto('/?test');
+		await bridgeReady(page);
 	});
 
 	test('should activate halfblock drawing tool', async ({ page }) => {
@@ -45,64 +52,51 @@ test.describe('Drawing Tools', () => {
 	test('should activate line tool', async ({ page }) => {
 		// Click on shapes sidebar button to show shapes toolbar
 		await page.locator('#shapes').click();
-		await page.waitForTimeout(300);
+		await clickTool(page, 'line');
+		await expect(page.locator('#line')).toHaveClass(/toolbarDisplayed/);
 
-		const lineTool = page.locator('#line .stack');
-		await lineTool.click();
-		await page.waitForTimeout(300);
-
-		const canvas = page.locator('#canvasContainer canvas').first();
-		const box = await canvas.boundingBox();
-
-		if (box) {
-			await page.mouse.move(box.x + 50, box.y + 50);
-			await page.mouse.down();
-			await page.mouse.move(box.x + 150, box.y + 150);
-			await page.mouse.up();
-			await page.waitForTimeout(300);
-		}
+		await drag(page, [10, 5], [20, 10]);
+		// endpoint ink proves the drag reached the tool
+		expect([0, 32]).not.toContain((await readBlock(page, 10, 5)).charCode);
+		expect([0, 32]).not.toContain((await readBlock(page, 20, 10)).charCode);
 	});
 
 	test('should activate square tool', async ({ page }) => {
 		// Click on shapes sidebar button to show shapes toolbar
 		await page.locator('#shapes').click();
-		await page.waitForTimeout(300);
+		await clickTool(page, 'square');
+		await expect(page.locator('#square')).toHaveClass(/toolbarDisplayed/);
 
-		const squareTool = page.locator('#square .stack');
-		await squareTool.click();
-		await page.waitForTimeout(300);
-
-		const canvas = page.locator('#canvasContainer canvas').first();
-		const box = await canvas.boundingBox();
-
-		if (box) {
-			await page.mouse.move(box.x + 50, box.y + 50);
-			await page.mouse.down();
-			await page.mouse.move(box.x + 100, box.y + 100);
-			await page.mouse.up();
-			await page.waitForTimeout(300);
-		}
+		await drag(page, [30, 5], [40, 10]);
+		// every corner carries ink when the drag really lands
+		expect([0, 32]).not.toContain((await readBlock(page, 30, 5)).charCode);
+		expect([0, 32]).not.toContain((await readBlock(page, 40, 5)).charCode);
+		expect([0, 32]).not.toContain((await readBlock(page, 30, 10)).charCode);
+		expect([0, 32]).not.toContain((await readBlock(page, 40, 10)).charCode);
 	});
 
 	test('should activate circle tool', async ({ page }) => {
 		// Click on shapes sidebar button to show shapes toolbar
 		await page.locator('#shapes').click();
-		await page.waitForTimeout(300);
+		await clickTool(page, 'circle');
+		await expect(page.locator('#circle')).toHaveClass(/toolbarDisplayed/);
 
-		const circleTool = page.locator('#circle .stack');
-		await circleTool.click();
-		await page.waitForTimeout(300);
-
-		const canvas = page.locator('#canvasContainer canvas').first();
-		const box = await canvas.boundingBox();
-
-		if (box) {
-			await page.mouse.move(box.x + 50, box.y + 50);
-			await page.mouse.down();
-			await page.mouse.move(box.x + 100, box.y + 100);
-			await page.mouse.up();
-			await page.waitForTimeout(300);
-		}
+		await drag(page, [50, 8], [56, 12]);
+		// rim placement differs by mode, so pin only that ink landed
+		const inked = await page.evaluate(() => {
+			const c = window.__t0wnz.State.textArtCanvas;
+			let n = 0;
+			for (let y = 0; y < c.getRows(); y++) {
+				for (let x = 0; x < c.getColumns(); x++) {
+					const code = c.getBlock(x, y).charCode;
+					if (code !== 0 && code !== 32) {
+						n++;
+					}
+				}
+			}
+			return n;
+		});
+		expect(inked).toBeGreaterThan(0);
 	});
 
 	test('should activate selection tool', async ({ page }) => {
@@ -133,50 +127,26 @@ test.describe('Drawing Tools', () => {
 	});
 
 	test('should draw with multiple tools in sequence', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-		const box = await canvas.boundingBox();
+		// Click brushes to show brush toolbar, then select halfblock
+		await page.locator('#brushes').click();
+		await page.locator('#halfblock').click();
+		await expect(page.locator('#halfblock')).toHaveClass(/toolbarDisplayed/);
+		await drag(page, [5, 5], [10, 8]);
+		expect([0, 32]).not.toContain((await readBlock(page, 5, 5)).charCode);
 
-		expect(box).not.toBeNull();
+		// Click shapes to show shapes toolbar, then select line
+		await page.locator('#shapes').click();
+		await clickTool(page, 'line');
+		await expect(page.locator('#line')).toHaveClass(/toolbarDisplayed/);
+		await drag(page, [15, 10], [25, 10]);
+		expect([0, 32]).not.toContain((await readBlock(page, 20, 10)).charCode);
 
-		if (box) {
-			// Click brushes to show brush toolbar, then select halfblock
-			await page.locator('#brushes').click();
-			await page.waitForTimeout(300);
-			await page.locator('#halfblock').click();
-			await page.waitForTimeout(300);
-
-			// Use conservative coordinates that stay within canvas bounds
-			await page.mouse.move(box.x + 20, box.y + 20);
-			await page.mouse.down();
-			await page.mouse.move(
-				box.x + Math.min(40, box.width - 10),
-				box.y + Math.min(40, box.height - 10),
-			);
-			await page.mouse.up();
-			await page.waitForTimeout(300);
-
-			// Click shapes to show shapes toolbar, then select line
-			await page.locator('#shapes').click();
-			await page.waitForTimeout(300);
-			await page.locator('#line .stack').click();
-			await page.waitForTimeout(300);
-
-			await page.mouse.move(box.x + 60, box.y + 60);
-			await page.mouse.down();
-			await page.mouse.move(box.x + Math.min(100, box.width - 10), box.y + 60);
-			await page.mouse.up();
-			await page.waitForTimeout(300);
-
-			// Square is also in shapes toolbar
-			await page.locator('#square .stack').click();
-			await page.waitForTimeout(300);
-
-			await page.mouse.move(box.x + Math.min(120, box.width - 50), box.y + 20);
-			await page.mouse.down();
-			await page.mouse.move(box.x + Math.min(160, box.width - 10), box.y + 60);
-			await page.mouse.up();
-			await page.waitForTimeout(300);
-		}
+		// Square is also in shapes toolbar
+		await clickTool(page, 'square');
+		await expect(page.locator('#square')).toHaveClass(/toolbarDisplayed/);
+		await drag(page, [30, 3], [38, 9]);
+		expect([0, 32]).not.toContain((await readBlock(page, 30, 3)).charCode);
+		expect([0, 32]).not.toContain((await readBlock(page, 38, 9)).charCode);
 	});
 });
 

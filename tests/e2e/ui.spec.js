@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { clickTool } from './helpers/editorHelpers.js';
 
 test.describe('UI Elements', () => {
 	test.beforeEach(async ({ page }) => {
@@ -123,13 +124,13 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#shapes').click();
 		await page.waitForTimeout(300);
 
-		await page.locator('#line .stack').click();
+		await clickTool(page, 'line');
 		await page.waitForTimeout(200);
 
-		await page.locator('#circle .stack').click();
+		await clickTool(page, 'circle');
 		await page.waitForTimeout(200);
 
-		await page.locator('#square .stack').click();
+		await clickTool(page, 'square');
 		await page.waitForTimeout(200);
 
 		await page.locator('#selection').click();
