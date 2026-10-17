@@ -1,5 +1,5 @@
 import State from './state.js';
-import { $ } from './ui.js';
+import { $, createSegmentedControl } from './ui.js';
 import {
 	cellInRange,
 	createAsciiStampEngine,
@@ -338,17 +338,28 @@ const createAsciiBrushController = () => {
 	let stroking = false;
 	const bar = $('brushToolbar');
 	const nav = $('brushes');
-	const widthMenu = $('aWidth');
-	const widthSelect = $('asciiWidth');
 
-	// the width config lives inside the tool button; a tap on it must
-	// not bubble into the button's click handler, whose preventDefault
-	// would keep the picker from opening on touch
-	widthMenu.addEventListener('click', e => e.stopPropagation());
-
-	const applyWidth = () => {
-		engine.setWidth(parseInt(widthSelect.value, 10) || 1);
-	};
+	// each swatch previews the stroke footprint: thin pebbles at one
+	// and two, then the dollar ribbon growing with its fill rank
+	const widthSwatch = n => (n === 1 ? '.' : n === 2 ? ':' : '$'.repeat(n - 2));
+	const widthControl = createSegmentedControl(
+		'asciiWidth',
+		[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => ({
+			value: n,
+			label: String(n),
+			glyph: widthSwatch(n),
+		})),
+		width => {
+			engine.setWidth(width);
+			State.toolSettings.set('asciiWidth', width);
+		},
+	);
+	const widthLabel = document.createElement('LABEL');
+	widthLabel.innerText = 'Width';
+	State.toolSettings.mount('ascii', widthLabel);
+	State.toolSettings.mount('ascii', widthControl.getElement());
+	widthControl.set(State.toolSettings.get('asciiWidth', 1));
+	engine.setWidth(widthControl.value());
 
 	const canvasDown = e => {
 		State.textArtCanvas.startUndo();
@@ -377,20 +388,16 @@ const createAsciiBrushController = () => {
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
-		widthSelect.addEventListener('change', applyWidth);
-		applyWidth();
 		bar.style.display = 'flex';
-		widthMenu.style.display = 'flex';
 		nav.classList.add('enabled');
+		State.toolSettings.show('ascii');
 	};
 
 	const disable = () => {
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
-		widthSelect.removeEventListener('change', applyWidth);
 		bar.style.display = 'none';
-		widthMenu.style.display = 'none';
 		nav.classList.remove('enabled');
 	};
 

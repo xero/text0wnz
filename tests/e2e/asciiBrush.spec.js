@@ -8,6 +8,7 @@
 import { test, expect } from '@playwright/test';
 import {
 	bridgeReady,
+	parkToolSettings,
 	cellCenter,
 	clickTool,
 	drag,
@@ -32,6 +33,7 @@ const selectAsciiBrush = async page => {
 
 test.describe('ascii brush', () => {
 	test.beforeEach(async ({ page }) => {
+		await parkToolSettings(page);
 		await page.goto('/?test');
 		await bridgeReady(page);
 		await selectAsciiBrush(page);
@@ -140,6 +142,7 @@ test.describe('ascii brush', () => {
 
 test.describe('line tool brush modes', () => {
 	test.beforeEach(async ({ page }) => {
+		await parkToolSettings(page);
 		await page.goto('/?test');
 		await bridgeReady(page);
 		await page.locator('#shapes').click();
@@ -202,6 +205,7 @@ test.describe('shape tool brush modes', () => {
 	const VBAR = 124;
 
 	test.beforeEach(async ({ page }) => {
+		await parkToolSettings(page);
 		await page.goto('/?test');
 		await bridgeReady(page);
 		await page.locator('#shapes').click();

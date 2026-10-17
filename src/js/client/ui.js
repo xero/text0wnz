@@ -484,6 +484,91 @@ const createToggleButton = (
 	};
 };
 
+/**
+ * An n-way radio row in the toggle button's visual family. Options are
+ * {value, label, glyph?}; a glyph renders as a small vocabulary
+ * preview above the label. set() moves the selection without firing
+ * onChange, so controllers can restore persisted values silently.
+ */
+const createSegmentedControl = (id, options, onChange) => {
+	const group = document.createElement('DIV');
+	group.id = id;
+	group.classList.add('segmented');
+	group.setAttribute('role', 'radiogroup');
+	let current = options[0]?.value;
+	const order = options.map(opt => opt.value);
+	const buttons = new Map();
+
+	const paint = () => {
+		buttons.forEach((btn, value) => {
+			const on = value === current;
+			btn.classList.toggle('enabled', on);
+			btn.setAttribute('aria-checked', on ? 'true' : 'false');
+			btn.tabIndex = on ? 0 : -1;
+		});
+	};
+
+	const select = value => {
+		if (value === current || !buttons.has(value)) {
+			return;
+		}
+		current = value;
+		paint();
+		if (typeof onChange === 'function') {
+			onChange(current);
+		}
+	};
+
+	options.forEach(opt => {
+		const btn = document.createElement('BUTTON');
+		btn.type = 'button';
+		btn.classList.add('segment');
+		btn.setAttribute('role', 'radio');
+		btn.dataset.value = String(opt.value);
+		if (opt.glyph) {
+			const glyph = document.createElement('SAMP');
+			glyph.textContent = opt.glyph;
+			btn.appendChild(glyph);
+		}
+		const label = document.createElement('SPAN');
+		label.textContent = opt.label;
+		btn.appendChild(label);
+		btn.addEventListener('click', _ => select(opt.value));
+		buttons.set(opt.value, btn);
+		group.appendChild(btn);
+	});
+
+	group.addEventListener('keydown', e => {
+		let step = 0;
+		if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+			step = 1;
+		} else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+			step = -1;
+		}
+		if (step === 0) {
+			return;
+		}
+		e.preventDefault();
+		const next =
+			order[(order.indexOf(current) + step + order.length) % order.length];
+		select(next);
+		buttons.get(next)?.focus();
+	});
+
+	paint();
+
+	return {
+		getElement: () => group,
+		value: () => current,
+		set: value => {
+			if (buttons.has(value)) {
+				current = value;
+				paint();
+			}
+		},
+	};
+};
+
 const createGrid = el => {
 	let canvases = [];
 	let enabled = false;
@@ -790,8 +875,10 @@ const registerFloatingPanel = panel => {
 
 // drag + close chrome for the fixed tool windows (colors, frames),
 // matching the brush windows' behavior. A press on a control is a
-// control gesture, so only free panel area starts a drag
-const makePanelFloat = (panel, onClose) => {
+// control gesture, so only free panel area starts a drag. Extras ride
+// opt-in options so legacy panels keep their exact behavior:
+// onMoved(left, top) fires when a drag ends
+const makePanelFloat = (panel, onClose, options = {}) => {
 	const focus = registerFloatingPanel(panel);
 	const close = document.createElement('div');
 	close.classList.add('hidePanel');
@@ -835,7 +922,15 @@ const makePanelFloat = (panel, onClose) => {
 		}
 	};
 
+	const moved = () => {
+		if (startPointer && typeof options.onMoved === 'function') {
+			const rect = panel.getBoundingClientRect();
+			options.onMoved(rect.left, rect.top);
+		}
+	};
+
 	const mouseUp = () => {
+		moved();
 		startPointer = null;
 		document.removeEventListener('mousemove', mouseMove);
 		document.removeEventListener('mouseup', mouseUp);
@@ -858,6 +953,7 @@ const makePanelFloat = (panel, onClose) => {
 	};
 
 	const touchEnd = () => {
+		moved();
 		startPointer = null;
 		document.removeEventListener('touchmove', touchMove);
 		document.removeEventListener('touchend', touchEnd);
@@ -1331,6 +1427,7 @@ export {
 	createViewportController,
 	createGenericController,
 	createPaintShortcuts,
+	createSegmentedControl,
 	createToggleButton,
 	createGrid,
 	createToolPreview,
