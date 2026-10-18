@@ -48,8 +48,14 @@ const createToolSettings = () => {
 		if (!pos || typeof pos.x !== 'number' || typeof pos.y !== 'number') {
 			return;
 		}
-		const x = Math.min(Math.max(pos.x, 0), window.innerWidth - CLAMP_MARGIN);
-		const y = Math.min(Math.max(pos.y, 0), window.innerHeight - CLAMP_MARGIN);
+		const x = Math.min(
+			Math.max(pos.x, 0),
+			Math.max(0, window.innerWidth - CLAMP_MARGIN),
+		);
+		const y = Math.min(
+			Math.max(pos.y, 0),
+			Math.max(0, window.innerHeight - CLAMP_MARGIN),
+		);
 		panel.style.left = x + 'px';
 		panel.style.top = y + 'px';
 	};
@@ -57,20 +63,29 @@ const createToolSettings = () => {
 	const readAll = () => {
 		try {
 			const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY));
-			return parsed && typeof parsed === 'object' ? parsed : {};
+			// an array survives the typeof check but drops named keys on
+			// stringify, bricking every future write
+			return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+				? parsed
+				: {};
 		} catch {
 			return {};
 		}
 	};
 
+	// in-session truth lives in memory: a blocked store must not reset
+	// a choice made this session when a controller re-reads on enable
+	const cache = readAll();
+
 	const get = (key, fallback) => {
-		const value = readAll()[key];
+		const value = cache[key];
 		return value === undefined ? fallback : value;
 	};
 
-	// read-modify-write every time: controllers are created lazily, so
-	// a snapshot taken at creation would erase keys written in between
+	// the persisted write still read-modify-writes so keys another tab
+	// stored between our writes survive
 	const set = (key, value) => {
+		cache[key] = value;
 		try {
 			const all = readAll();
 			all[key] = value;

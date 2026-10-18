@@ -112,9 +112,11 @@ test.describe('tool settings window', () => {
 		await page.goto('/?test');
 		await bridgeReady(page);
 		await openLine(page);
+		// the exact clamp edge: anything looser also passes at the
+		// default perch, which proves nothing about the restore path
 		const box = await page.locator('#toolSettings').boundingBox();
-		expect(box.x).toBeLessThanOrEqual(1280 - 80);
-		expect(box.y).toBeLessThanOrEqual(720 - 80);
+		expect(box.x).toBe(1280 - 80);
+		expect(box.y).toBe(720 - 80);
 	});
 
 	test('pressing the window lifts it above the frames panel', async ({ page }) => {

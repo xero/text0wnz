@@ -52,17 +52,14 @@ Tests for modal dialog functionality:
 - Error modal display
 - Edge cases (rapid open/close, non-existent modals)
 
-### Toggle Button Tests (`toggleButton.test.js`)
-Tests for two-state toggle button components:
-- Toggle button rendering (left/right states)
-- State callbacks on button clicks
-- Visual state management (enabled class)
-- Programmatic state control (setStateOne, setStateTwo)
-- Keyboard accessibility
-- Multiple independent toggle buttons
-- ARIA attributes (aria-pressed)
-- Use cases (on/off toggle, mode selector, view toggle)
-- Edge cases (rapid clicking, empty names, undefined callbacks)
+### Segmented Control Tests (`segmentedControl.test.js`)
+Tests for the radiogroup segmented controls in the tool settings window:
+- Rendering (buttons, glyph previews, labels, data-value hooks)
+- Selection by click and the single onChange per change
+- Silent programmatic set() vs user select()
+- Keyboard navigation (arrow keys, wrap, roving tabindex)
+- ARIA attributes (radiogroup, radio, aria-checked, aria-disabled)
+- Disabled state (dimmed, out of tab order, inert to input)
 
 ### Keyboard Tests (`keyboard.test.js`)
 Tests for keyboard shortcuts and navigation:
@@ -344,15 +341,16 @@ DOM tests should focus on:
 - Modal and overlay behavior
 - Dynamic content updates
 
-Current coverage: **9 test files, 205 tests**
-- toolbar.test.js: 18 tests
-- palette.test.js: 19 tests
-- modal.test.js: 33 tests
-- toggleButton.test.js: 25 tests
-- keyboard.test.js: 26 tests
-- **menu.test.js: 14 tests** ⬆ (NEW)
-- **canvas.test.js: 22 tests** ⬆ (NEW)
-- **fontPreview.test.js: 32 tests** ⬆ (NEW)
-- **fullscreen.test.js: 16 tests** ⬆ (NEW)
+Current suites (vitest reports the live counts):
+- canvas.test.js
+- fontPreview.test.js
+- fullscreen.test.js
+- keyboard.test.js
+- menu.test.js
+- modal.test.js
+- palette.test.js
+- segmentedControl.test.js
+- toolbar.test.js
+- toolPreview.test.js
 
 **Note**: DOM tests focus on user-visible behavior and accessibility, complementing the unit tests that cover business logic and state management.

@@ -1625,8 +1625,10 @@
 	#fontFavToggle {
 		@apply bg-menu text-cyan px-2 cursor-pointer text-base;
 	}
-	#fontFavToggle:hover {
-		@apply bg-purp;
+	@media (hover: hover) {
+		#fontFavToggle:hover {
+			@apply bg-purp;
+		}
 	}
 	.favoriteOption {
 		@apply text-cyan;

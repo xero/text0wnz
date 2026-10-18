@@ -146,6 +146,28 @@ describe('createToolSettings', () => {
 			expect(() => ts.set('lineMode', 'nuskool')).not.toThrow();
 			spy.mockRestore();
 		});
+
+		it('a choice made this session survives a dead store', () => {
+			const ts = createToolSettings();
+			const spy = vi
+				.spyOn(Object.getPrototypeOf(localStorage), 'setItem')
+				.mockImplementation(() => {
+					throw new Error('quota');
+				});
+			ts.set('squareFill', 'filled');
+			// a controller re-reads on every enable; memory is the truth
+			expect(ts.get('squareFill', 'outline')).toBe('filled');
+			spy.mockRestore();
+		});
+
+		it('an array under the key reads as defaults and writes recover', () => {
+			localStorage.setItem('toolSettings', '[]');
+			const ts = createToolSettings();
+			expect(ts.get('lineMode', 'block')).toBe('block');
+			ts.set('lineMode', 'nuskool');
+			expect(ts.get('lineMode', 'block')).toBe('nuskool');
+			expect(JSON.parse(localStorage.getItem('toolSettings'))).toEqual({ lineMode: 'nuskool' });
+		});
 	});
 
 	describe('position', () => {
@@ -174,6 +196,19 @@ describe('createToolSettings', () => {
 			);
 			createToolSettings();
 			expect(panel().style.left).toBe('720px');
+			expect(panel().style.top).toBe('0px');
+			vi.unstubAllGlobals();
+		});
+
+		it('a viewport under the margin clamps to zero, never negative', () => {
+			vi.stubGlobal('innerWidth', 60);
+			vi.stubGlobal('innerHeight', 40);
+			localStorage.setItem(
+				'toolSettingsPos',
+				JSON.stringify({ x: 500, y: 500 }),
+			);
+			createToolSettings();
+			expect(panel().style.left).toBe('0px');
 			expect(panel().style.top).toBe('0px');
 			vi.unstubAllGlobals();
 		});

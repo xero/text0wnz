@@ -447,6 +447,7 @@ const createSegmentedControl = (id, options, onChange) => {
 	group.classList.add('segmented');
 	group.setAttribute('role', 'radiogroup');
 	let current = options[0]?.value;
+	let enabled = true;
 	const order = options.map(opt => opt.value);
 	const buttons = new Map();
 
@@ -455,12 +456,14 @@ const createSegmentedControl = (id, options, onChange) => {
 			const on = value === current;
 			btn.classList.toggle('enabled', on);
 			btn.setAttribute('aria-checked', on ? 'true' : 'false');
-			btn.tabIndex = on ? 0 : -1;
+			// a napping control must drop out of the tab order too, or
+			// the keyboard reaches what pointer-events: none fences off
+			btn.tabIndex = enabled && on ? 0 : -1;
 		});
 	};
 
 	const select = value => {
-		if (value === current || !buttons.has(value)) {
+		if (!enabled || value === current || !buttons.has(value)) {
 			return;
 		}
 		current = value;
@@ -490,6 +493,9 @@ const createSegmentedControl = (id, options, onChange) => {
 	});
 
 	group.addEventListener('keydown', e => {
+		if (!enabled) {
+			return;
+		}
 		let step = 0;
 		if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
 			step = 1;
@@ -516,6 +522,12 @@ const createSegmentedControl = (id, options, onChange) => {
 				current = value;
 				paint();
 			}
+		},
+		setEnabled: on => {
+			enabled = Boolean(on);
+			group.classList.toggle('dimmed', !enabled);
+			group.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+			paint();
 		},
 	};
 };
