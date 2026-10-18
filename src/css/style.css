@@ -1558,7 +1558,8 @@
 			line-height: 12px;
 			padding: 2px 5px;
 		}
-		> div {
+		/* sections only: the close chrome is also a direct div child */
+		> div:not(.hidePanel) {
 			@apply flex flex-col gap-1 items-start p-2;
 		}
 		/* the picker sections are all canvas and sit flush in the frame */
