@@ -28,7 +28,10 @@ const INK = new Map([
 const createMinimap = () => {
 	const panel = $('minimapPanel');
 	const nav = $('navMinimap');
-	if (!panel || !nav) {
+	// the inner wrapper scrolls so the autoscroll menu above it never
+	// enters the scrub gesture code; the panel only shows and hides
+	const scroller = $('minimapScroll');
+	if (!panel || !nav || !scroller) {
 		return null;
 	}
 	const art = $('minimapArt');
@@ -36,10 +39,10 @@ const createMinimap = () => {
 	let visible = false;
 	let timer = 0;
 
-	// native panel panning only exists when the map meaningfully
-	// overflows the panel; a few stray pixels must not steal touch drags
+	// native panning only exists when the map meaningfully overflows
+	// its slice; a few stray pixels must not steal touch drags
 	const overflowsMeaningfully = () =>
-		panel.scrollHeight > panel.clientHeight + 8;
+		scroller.scrollHeight > scroller.clientHeight + 8;
 
 	const viewport = () => document.getElementById('viewport');
 
@@ -89,7 +92,7 @@ const createMinimap = () => {
 		}
 		// a fitting map leaves Safari nothing to pan; take the touch
 		// gesture for scrubbing before the browser claims and cancels it
-		panel.style.touchAction = overflowsMeaningfully() ? '' : 'none';
+		scroller.style.touchAction = overflowsMeaningfully() ? '' : 'none';
 		const ctx = art.getContext('2d');
 		if (!ctx) {
 			return;
@@ -157,7 +160,7 @@ const createMinimap = () => {
 	// the finger is half a box height away: hand off to the pin exactly
 	// there and the box is already flush, no jump either direction
 	const edgeDirection = clientY => {
-		const view = panel.getBoundingClientRect();
+		const view = scroller.getBoundingClientRect();
 		const reach = frameRect.offsetHeight / 2;
 		if (clientY < view.top + reach) {
 			return -1;
@@ -180,15 +183,15 @@ const createMinimap = () => {
 		const scaleY = art.clientHeight / docPx;
 		const frameTop =
 			direction === 1
-				? panel.scrollTop + panel.clientHeight - frameRect.offsetHeight
-				: panel.scrollTop;
+				? scroller.scrollTop + scroller.clientHeight - frameRect.offsetHeight
+				: scroller.scrollTop;
 		vp.scrollTop = (frameTop - art.offsetTop) / scaleY;
 		positionRect();
 	};
 	const autoScrollTick = () => {
 		const direction = edgeDirection(lastClientY);
 		if (direction !== 0) {
-			panel.scrollTop += direction * EDGE_RATE;
+			scroller.scrollTop += direction * EDGE_RATE;
 			pinBoxToEdge(direction);
 		}
 		autoScroll = requestAnimationFrame(autoScrollTick);
@@ -206,9 +209,9 @@ const createMinimap = () => {
 		if (pending || performance.now() - panelTouchedAt < 300) {
 			return;
 		}
-		panel.scrollTop = frameRect.offsetTop;
+		scroller.scrollTop = frameRect.offsetTop;
 	};
-	panel.addEventListener('pointerdown', e => {
+	scroller.addEventListener('pointerdown', e => {
 		panelTouchedAt = performance.now();
 		pending = {
 			x: e.clientX,
@@ -219,7 +222,7 @@ const createMinimap = () => {
 		};
 		scrubbing = false;
 	});
-	panel.addEventListener('pointermove', e => {
+	scroller.addEventListener('pointermove', e => {
 		if (
 			!pending ||
 			(e.pointerType === 'touch' &&
@@ -230,7 +233,7 @@ const createMinimap = () => {
 		}
 		if (!scrubbing && travel(e) > magicNumbers.GESTURE_SLOP_PX) {
 			scrubbing = true;
-			panel.setPointerCapture?.(e.pointerId);
+			scroller.setPointerCapture?.(e.pointerId);
 		}
 		if (scrubbing) {
 			lastClientY = e.clientY;
@@ -244,7 +247,7 @@ const createMinimap = () => {
 			}
 		}
 	});
-	panel.addEventListener('pointerup', e => {
+	scroller.addEventListener('pointerup', e => {
 		if (pending && !scrubbing && travel(e) <= magicNumbers.GESTURE_SLOP_PX) {
 			scrollTo(e.clientY);
 		}
@@ -253,7 +256,7 @@ const createMinimap = () => {
 		stopAutoScroll();
 		panelTouchedAt = performance.now();
 	});
-	panel.addEventListener('pointercancel', () => {
+	scroller.addEventListener('pointercancel', () => {
 		pending = null;
 		scrubbing = false;
 		stopAutoScroll();
@@ -306,7 +309,7 @@ const createMinimap = () => {
 	// onOpenedFile: buffer swaps from row ops must not re-home it
 	document.addEventListener('onNewDocument', () => {
 		if (visible) {
-			panel.scrollTop = 0;
+			scroller.scrollTop = 0;
 			render();
 		}
 	});
