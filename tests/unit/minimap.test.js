@@ -18,8 +18,12 @@ vi.mock('../../src/js/client/state.js', () => ({
 const MARKUP = `
 	<div id="navMinimap"></div>
 	<div id="minimapPanel" class="hide">
-		<canvas id="minimapArt" width="80" height="25"></canvas>
-		<div id="minimapViewport"></div>
+		<button id="minimapMenuToggle"></button>
+		<div id="minimapMenu" class="hide"></div>
+		<div id="minimapScroll">
+			<canvas id="minimapArt" width="80" height="25"></canvas>
+			<div id="minimapViewport"></div>
+		</div>
 	</div>
 	<div id="viewport"></div>
 `;
@@ -85,17 +89,17 @@ describe('minimap', () => {
 	describe('tap vs drag', () => {
 		// art rect 100px tall, doc 2 rows x 16px = 32 doc px: a pointer at
 		// y=50 is fraction 0.5, so scrollTop lands at 16
-		let panel;
+		let scroller;
 		let vp;
 		const point = (type, y, pointerType = 'mouse') => {
 			const e = new MouseEvent(type, { clientY: y, bubbles: true });
 			Object.defineProperty(e, 'pointerType', { value: pointerType });
-			panel.dispatchEvent(e);
+			scroller.dispatchEvent(e);
 		};
 
 		beforeEach(() => {
 			createMinimap();
-			panel = document.getElementById('minimapPanel');
+			scroller = document.getElementById('minimapScroll');
 			vp = document.getElementById('viewport');
 			vp.scrollTop = 0;
 			document.getElementById('minimapArt').getBoundingClientRect = () => ({
@@ -107,8 +111,8 @@ describe('minimap', () => {
 				height: 100,
 			});
 			// jsdom rects are zero-sized, which would put every pointer in
-			// the auto-scroll edge zone; give the panel a real slice
-			panel.getBoundingClientRect = () => ({
+			// the auto-scroll edge zone; give the slice a real height
+			scroller.getBoundingClientRect = () => ({
 				top: 0,
 				bottom: 400,
 				left: 0,
@@ -126,11 +130,11 @@ describe('minimap', () => {
 		});
 
 		it('a touch drag pans natively when the map overflows the panel', () => {
-			Object.defineProperty(panel, 'scrollHeight', {
+			Object.defineProperty(scroller, 'scrollHeight', {
 				value: 200,
 				configurable: true,
 			});
-			Object.defineProperty(panel, 'clientHeight', {
+			Object.defineProperty(scroller, 'clientHeight', {
 				value: 100,
 				configurable: true,
 			});
@@ -141,11 +145,11 @@ describe('minimap', () => {
 		});
 
 		it('a touch drag on the focus box scrubs even when the map overflows', () => {
-			Object.defineProperty(panel, 'scrollHeight', {
+			Object.defineProperty(scroller, 'scrollHeight', {
 				value: 200,
 				configurable: true,
 			});
-			Object.defineProperty(panel, 'clientHeight', {
+			Object.defineProperty(scroller, 'clientHeight', {
 				value: 100,
 				configurable: true,
 			});

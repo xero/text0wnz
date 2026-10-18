@@ -1236,15 +1236,142 @@
 		}
 	}
 	#minimapPanel {
-		@apply fixed z-30 dialog-style p-1;
+		@apply fixed z-30 dialog-style p-1 flex flex-col;
 		right: 8px;
 		top: var(--header-size);
 		/* 100% of the ICB, not 100vh: iOS vh units outgrow the window and
 		   push the bottom border off screen on long files */
 		max-height: calc(100% - var(--header-size));
+	}
+	#minimapMenuToggle {
+		/* floats over the art's corner: chromeless until hovered so the
+		   glyph reads without walling off the pixels under it */
+		@apply absolute bg-transparent border-0 cursor-pointer p-0.5;
+		top: 6px;
+		right: 6px;
+		z-index: 2;
+		svg {
+			display: block;
+			width: 16px;
+			height: 16px;
+			fill: #efefef;
+		}
+		@media (hover: hover) {
+			&:hover {
+				@apply bg-hl;
+			}
+		}
+	}
+	#minimapMenu {
+		@apply flex flex-col gap-1 text-fg text-xs p-1;
+		/* never wider than the art: a wider menu stretches the panel
+		   and bares a dead strip beside the fixed-width map */
+		width: 128px;
+		/* the close chrome owns the top right corner; the transport sits
+		   beside its title like the spec sketch */
+		#autoscrollTransport {
+			@apply flex flex-row items-center gap-1;
+			span {
+				@apply text-cyan;
+			}
+		}
+		/* :not(.segment): an id-scoped button rule would steamroll the
+		   segmented control's own selection styling */
+		button:not(.segment) {
+			@apply bg-menu text-fg cursor-pointer border-0 p-0.5;
+			svg {
+				display: block;
+				width: 14px;
+				height: 14px;
+				fill: #efefef;
+			}
+			@media (hover: hover) {
+				&:hover {
+					@apply bg-purp;
+				}
+			}
+		}
+		#autoscrollModeRow {
+			/* wraps while the pill carries text labels; the icon pill
+			   will pull the count cluster back onto this line */
+			@apply flex flex-row flex-wrap items-center gap-1;
+			.segmented .segment {
+				@apply px-1 py-0.5;
+				svg {
+					width: 12px;
+					height: 12px;
+					fill: #efefef;
+				}
+				span {
+					font-size: 10px;
+				}
+			}
+		}
+		#autoscrollCount {
+			@apply flex flex-row items-center gap-0.5 ml-auto;
+			label {
+				@apply text-cyan pr-0.5;
+			}
+			button {
+				@apply px-1;
+				font-size: 10px;
+				line-height: 14px;
+			}
+		}
+		#autoscrollSpeedRow {
+			@apply flex flex-row items-center gap-1 text-cyan cursor-pointer;
+			input {
+				/* zero width so the input's intrinsic size never widens
+				   the panel; flex stretches it back to the row */
+				width: 0;
+				min-width: 0;
+				flex: 1;
+			}
+			/* the zoom slider's dress, cut down to the narrow row */
+			input[type='range'] {
+				@apply appearance-none bg-transparent;
+			}
+			input[type='range']:focus {
+				outline: none;
+			}
+			input[type='range']::-webkit-slider-thumb {
+				@apply appearance-none bg-thumb cursor-ew-resize rounded-bl-xs;
+				height: 14px;
+				width: 14px;
+				margin-top: -3px;
+
+				@media (hover: hover) {
+					&:hover {
+						@apply bg-cyan;
+					}
+				}
+			}
+			input[type='range']::-moz-range-thumb {
+				@apply bg-thumb cursor-ew-resize rounded-bl-xs;
+				height: 14px;
+				width: 14px;
+
+				@media (hover: hover) {
+					&:hover {
+						@apply bg-cyan;
+					}
+				}
+			}
+			input[type='range']::-webkit-slider-runnable-track {
+				@apply bg-midnight cursor-ew-resize w-full;
+				height: 8px;
+			}
+			input[type='range']::-moz-range-track {
+				@apply bg-midnight cursor-ew-resize w-full;
+				height: 8px;
+			}
+		}
+	}
+	#minimapScroll {
+		position: relative;
 		overflow-y: auto;
+		min-height: 0;
 		cursor: pointer;
-		position: fixed;
 	}
 	#minimapArt {
 		display: block;
@@ -1254,8 +1381,8 @@
 	}
 	#minimapViewport {
 		@apply absolute;
-		left: 4px;
-		right: 4px;
+		left: 0;
+		right: 0;
 		/* the frame doubles as a scrollbar thumb: gestures starting on it
 		   must stay ours (scrub), while the rest of the panel pans */
 		touch-action: none;

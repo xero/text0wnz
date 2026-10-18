@@ -436,10 +436,26 @@ const createPaintShortcuts = keyPair => {
 
 
 /**
+ * The bake hashes icons.svg and rewrites every static use href, so a
+ * hardcoded sprite path only resolves in dev. Steal the baked base
+ * from any sprite reference already in the DOM and swap fragments.
+ */
+let iconBase = null;
+const iconHref = name => {
+	iconBase ??=
+		document
+			.querySelector('use[href*=".svg#"]')
+			?.getAttribute('href')
+			.split('#')[0] ?? 'img/icons.svg';
+	return `${iconBase}#${name}`;
+};
+
+/**
  * An n-way radio row in the toggle button's visual family. Options are
- * {value, label, glyph?}; a glyph renders as a small vocabulary
- * preview above the label. set() moves the selection without firing
- * onChange, so controllers can restore persisted values silently.
+ * {value, label, glyph?, icon?}; a glyph renders as a small vocabulary
+ * preview above the label, an icon as a sprite from icons.svg. set()
+ * moves the selection without firing onChange, so controllers can
+ * restore persisted values silently.
  */
 const createSegmentedControl = (id, options, onChange) => {
 	const group = document.createElement('DIV');
@@ -483,6 +499,13 @@ const createSegmentedControl = (id, options, onChange) => {
 			const glyph = document.createElement('SAMP');
 			glyph.textContent = opt.glyph;
 			btn.appendChild(glyph);
+		}
+		if (opt.icon) {
+			const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+			const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+			use.setAttribute('href', iconHref(opt.icon));
+			svg.appendChild(use);
+			btn.appendChild(svg);
 		}
 		const label = document.createElement('SPAN');
 		label.textContent = opt.label;
@@ -1392,6 +1415,7 @@ export {
 	createGenericController,
 	createPaintShortcuts,
 	createSegmentedControl,
+	iconHref,
 	createGrid,
 	createToolPreview,
 	enforceMaxBytes,

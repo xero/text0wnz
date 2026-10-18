@@ -11,6 +11,7 @@ import { createCharsetPicker } from './charsetPicker.js';
 import { createColorPanel } from './colorPanel.js';
 import { createFramesPanel } from './frames.js';
 import { createMinimap } from './minimap.js';
+import { createAutoScroller } from './autoScroller.js';
 import { createSixteenColors } from './sixteenColors.js';
 import { createAsciiArena } from './asciiArena.js';
 import { createArtpacksLanding } from './artpacks.js';
@@ -858,6 +859,9 @@ const initializeAppComponents = async () => {
 	if (minimap) {
 		createSettingToggle($('navMinimap'), minimap.isVisible, visible =>
 			(visible ? minimap.show() : minimap.hide()));
+		// playback outlives a hidden minimap on purpose: reopening the
+		// panel from the menu is the way back to the transport
+		createAutoScroller();
 	}
 
 	// Credz

@@ -418,8 +418,37 @@
 				</div>
 			</aside>
 			<div id="minimapPanel" class="hide">
-				<canvas id="minimapArt" height="25" width="80"></canvas>
-				<div id="minimapViewport"></div>
+				<button id="minimapMenuToggle" type="button" aria-label="Autoscroll Menu" aria-expanded="false">
+					<svg aria-hidden="true">
+						<use href="img/icons.svg#loop"></use>
+					</svg>
+				</button>
+				<div id="minimapMenu" class="hide">
+					<div id="autoscrollTransport">
+						<span>autoscroll</span>
+						<button id="autoscrollToggle" aria-label="Play">
+							<svg aria-hidden="true">
+								<use href="img/icons.svg#play"></use>
+							</svg>
+						</button>
+					</div>
+					<div id="autoscrollModeRow">
+						<div id="autoscrollCount">
+							<label>count</label>
+							<button id="autoscrollCountDown" aria-label="Fewer Passes">-</button>
+							<span id="autoscrollCountValue">1</span>
+							<button id="autoscrollCountUp" aria-label="More Passes">+</button>
+						</div>
+					</div>
+					<label id="autoscrollSpeedRow">
+						speed
+						<input id="autoscrollSpeed" type="range" value="4" max="10" min="1" step="1"/>
+					</label>
+				</div>
+				<div id="minimapScroll">
+					<canvas id="minimapArt" height="25" width="80"></canvas>
+					<div id="minimapViewport"></div>
+				</div>
 			</div>
 			<div id="refPanel" class="hide">
 				<button id="refLoad">load image</button>
