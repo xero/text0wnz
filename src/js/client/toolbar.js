@@ -67,16 +67,24 @@ const Toolbar = (() => {
 			closeMenu();
 
 			if (!tool.isLoaded) {
+				// single flight: a second click mid load must share the one
+				// construction or the controller builds and mounts twice
+				if (!tool.loading) {
+					tool.loading = tool.toolLoader();
+				}
 				try {
-					const loadedTool = await tool.toolLoader();
-					tool.onFocus = loadedTool.onFocus;
-					tool.onBlur = loadedTool.onBlur;
-					tool.isLoaded = true;
-					tool.enable = () => {
-						closeMenu();
-						_activateTool(tool, tool.onFocus);
-					};
+					const loadedTool = await tool.loading;
+					if (!tool.isLoaded) {
+						tool.onFocus = loadedTool.onFocus;
+						tool.onBlur = loadedTool.onBlur;
+						tool.isLoaded = true;
+						tool.enable = () => {
+							closeMenu();
+							_activateTool(tool, tool.onFocus);
+						};
+					}
 				} catch (error) {
+					tool.loading = null;
 					console.error(`Failed to load tool for ${button.id}:`, error);
 					return;
 				}

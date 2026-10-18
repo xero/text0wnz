@@ -1162,22 +1162,29 @@ const initializeAppComponents = async () => {
 	let shadeBrush = null;
 	let characterBrush = null;
 
-	const ensureBrushesLoaded = async () => {
-		if (!shadeBrush) {
-			const { createShadingController, createShadingPanel } = await import(
-				'./freehandTools.js'
-			);
-			shadeBrush = createShadingController(await createShadingPanel(), false);
+	// single flight: concurrent callers share one construction, or the
+	// losing pickers mount into the settings window as duplicates
+	let brushesLoading = null;
+	const ensureBrushesLoaded = () => {
+		if (!brushesLoading) {
+			brushesLoading = (async () => {
+				const {
+					createShadingController,
+					createShadingPanel,
+					createCharacterBrushPanel,
+				} = await import('./freehandTools.js');
+				shadeBrush = createShadingController(await createShadingPanel(), false);
+				characterBrush = createShadingController(
+					await createCharacterBrushPanel(),
+					true,
+				);
+				return { shadeBrush, characterBrush };
+			})().catch(error => {
+				brushesLoading = null;
+				throw error;
+			});
 		}
-		if (!characterBrush) {
-			const { createShadingController, createCharacterBrushPanel } =
-				await import('./freehandTools.js');
-			characterBrush = createShadingController(
-				await createCharacterBrushPanel(),
-				true,
-			);
-		}
-		return { shadeBrush, characterBrush };
+		return brushesLoading;
 	};
 
 	Toolbar.addLazy($('shadingBrush'), async () => {

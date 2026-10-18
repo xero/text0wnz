@@ -153,6 +153,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 					onChange(value);
 				}
 			},
+			setEnabled: vi.fn(),
 		};
 	}),
 	$: vi.fn(_ => {

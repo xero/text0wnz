@@ -1243,7 +1243,7 @@ const createSquareController = () => {
 	// persisted choice returns when it does
 	const syncFill = () => {
 		const noFill = modeControl.value() === 'oldskool';
-		fillControl.getElement().classList.toggle('dimmed', noFill);
+		fillControl.setEnabled(!noFill);
 		const fill = noFill
 			? 'outline'
 			: State.toolSettings.get(tsSection + 'Fill', 'outline');
@@ -1576,7 +1576,7 @@ const createCircleController = () => {
 	// persisted choice returns when it does
 	const syncFill = () => {
 		const noFill = modeControl.value() === 'oldskool';
-		fillControl.getElement().classList.toggle('dimmed', noFill);
+		fillControl.setEnabled(!noFill);
 		const fill = noFill
 			? 'outline'
 			: State.toolSettings.get(tsSection + 'Fill', 'outline');

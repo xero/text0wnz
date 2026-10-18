@@ -333,6 +333,52 @@ describe('Toolbar', () => {
 			await expect(tool.enable()).resolves.not.toThrow();
 		});
 
+		it('concurrent enables share one construction', async () => {
+			const button = document.createElement('div');
+			button.id = 'lazy-single-flight-test';
+
+			const onFocus = vi.fn();
+			let release;
+			const gate = new Promise(resolve => {
+				release = resolve;
+			});
+			const toolLoader = vi.fn(async () => {
+				await gate;
+				return { onFocus: onFocus, onBlur: vi.fn() };
+			});
+
+			const tool = Toolbar.addLazy(button, toolLoader);
+
+			// a double click lands both enables before the loader resolves
+			const first = tool.enable();
+			const second = tool.enable();
+			release();
+			await Promise.all([first, second]);
+
+			expect(toolLoader).toHaveBeenCalledOnce();
+			expect(onFocus).toHaveBeenCalled();
+		});
+
+		it('a failed load can retry with a fresh construction', async () => {
+			const button = document.createElement('div');
+			button.id = 'lazy-retry-test';
+
+			const onFocus = vi.fn();
+			const toolLoader = vi
+				.fn()
+				.mockRejectedValueOnce(new Error('network'))
+				.mockResolvedValueOnce({ onFocus: onFocus, onBlur: vi.fn() });
+
+			const tool = Toolbar.addLazy(button, toolLoader);
+
+			await tool.enable();
+			expect(onFocus).not.toHaveBeenCalled();
+
+			await tool.enable();
+			expect(toolLoader).toHaveBeenCalledTimes(2);
+			expect(onFocus).toHaveBeenCalled();
+		});
+
 		it('should switch from regular tool to lazy tool', async () => {
 			const regularButton = document.createElement('div');
 			regularButton.id = 'regular-for-lazy-test';

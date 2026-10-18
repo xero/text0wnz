@@ -128,4 +128,46 @@ describe('Segmented Control DOM Tests', () => {
 			expect(control.value()).toBe('block');
 		});
 	});
+
+	describe('disabled state', () => {
+		it('setEnabled(false) dims and leaves the tab order', () => {
+			const control = build(vi.fn());
+			control.setEnabled(false);
+			expect(control.getElement()).toHaveClass('dimmed');
+			expect(control.getElement()).toHaveAttribute('aria-disabled', 'true');
+			expect(segment('block').tabIndex).toBe(-1);
+			expect(segment('oldskool').tabIndex).toBe(-1);
+			expect(segment('nuskool').tabIndex).toBe(-1);
+		});
+
+		it('a disabled control ignores clicks and arrows', async () => {
+			const onChange = vi.fn();
+			const control = build(onChange);
+			control.setEnabled(false);
+			await user.click(segment('oldskool'));
+			segment('block').focus();
+			await user.keyboard('{ArrowRight}');
+			expect(control.value()).toBe('block');
+			expect(onChange).not.toHaveBeenCalled();
+		});
+
+		it('silent set still works while disabled', () => {
+			const control = build(vi.fn());
+			control.setEnabled(false);
+			control.set('nuskool');
+			expect(control.value()).toBe('nuskool');
+			expect(segment('nuskool')).toHaveClass('enabled');
+		});
+
+		it('setEnabled(true) restores input and the tab order', async () => {
+			const onChange = vi.fn();
+			const control = build(onChange);
+			control.setEnabled(false);
+			control.setEnabled(true);
+			expect(control.getElement()).not.toHaveClass('dimmed');
+			expect(segment('block').tabIndex).toBe(0);
+			await user.click(segment('oldskool'));
+			expect(onChange).toHaveBeenCalledExactlyOnceWith('oldskool');
+		});
+	});
 });
