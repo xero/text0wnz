@@ -301,6 +301,23 @@ describe('autoscroll menu', () => {
 		expect(up.disabled).toBe(false);
 	});
 
+	it('raises the transition kill switch only while playing', () => {
+		const engine = createAutoScroller();
+		const vp = document.getElementById('viewport');
+		Object.defineProperty(vp, 'scrollHeight', {
+			value: 1000,
+			configurable: true,
+		});
+		Object.defineProperty(vp, 'clientHeight', {
+			value: 200,
+			configurable: true,
+		});
+		engine.play();
+		expect(document.body.classList.contains('autoscrolling')).toBe(true);
+		engine.pause();
+		expect(document.body.classList.contains('autoscrolling')).toBe(false);
+	});
+
 	it('persists the speed tick and restores its rows per second', () => {
 		const engine = createAutoScroller();
 		const slider = document.getElementById('autoscrollSpeed');

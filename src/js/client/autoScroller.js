@@ -201,6 +201,9 @@ const createAutoScroller = () => {
 				iconHref(playing ? 'pause' : 'play'),
 			);
 			transport.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+			// the stylesheet drops canvas stack transitions while this
+			// class is up; easing fights the per frame scrollTop writes
+			document.body.classList.toggle('autoscrolling', playing);
 		},
 	});
 
