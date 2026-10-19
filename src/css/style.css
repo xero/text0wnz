@@ -1713,15 +1713,15 @@
 			@apply text-fg text-xs flex items-center gap-1;
 		}
 		#refDrag {
-			@apply flex items-center self-stretch;
+			@apply flex items-center self-stretch p-px;
 			svg {
 				@apply pointer-events-none;
-				width: 14px;
-				height: 14px;
+				width: 22px;
+				height: 22px;
 				fill: currentColor;
 			}
 			&[aria-pressed='true'] {
-				@apply bg-cyber text-midnight;
+				@apply bg-indigo;
 			}
 		}
 	}
@@ -1803,7 +1803,8 @@
 	}
 
 	#refOverlay {
-		@apply absolute pointer-events-none;
+		/* the global transition eases transform and drags lag the pointer */
+		@apply absolute pointer-events-none transition-none!;
 		left: 0;
 		top: 0;
 		height: auto;
@@ -1817,8 +1818,8 @@
 			   as shadows so toggling drag mode never shifts the trace */
 			box-shadow:
 				0 0 0 1px #000,
-				0 0 0 3px theme('colors.cyber'),
-				0 0 0 4px #000;
+				0 0 0 5px theme('colors.cyber'),
+				0 0 0 6px #000;
 			/* the grid and tool preview overlays sit at z-10 and would
 			   otherwise swallow the pointer before it reaches the image */
 			z-index: 11;
