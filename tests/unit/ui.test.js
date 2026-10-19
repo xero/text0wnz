@@ -1052,6 +1052,20 @@ describe('UI Utilities', () => {
 				}
 			}).not.toThrow();
 		});
+
+		it('restores a saved preference at creation', async () => {
+			const { createGrid } = await import('../../src/js/client/ui.js');
+			localStorage.setItem('gridVisible', 'true');
+			const container = document.createElement('div');
+			document.body.appendChild(container);
+			const grid = createGrid(container);
+			expect(grid.isShown()).toBe(true);
+			expect(container.classList.contains('enabled')).toBe(true);
+			// font metrics are available here, so the eager build runs; a
+			// racing boot font instead leaves it to the onFontChange rebuild
+			expect(container.querySelector('canvas')).not.toBeNull();
+			localStorage.removeItem('gridVisible');
+		});
 	});
 
 	describe('createToolPreview', () => {
