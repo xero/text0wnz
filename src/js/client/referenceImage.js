@@ -161,6 +161,10 @@ const createReferenceImage = (deps = {}) => {
 			overlay.classList.add('enabled');
 			loaded = true;
 			applyStyle();
+			// a restored trace behaves like a fresh load: panel open, and
+			// the toolbar toggle resyncs through the caller (it owns it)
+			setOpen(true);
+			deps.onRestore?.();
 		});
 	};
 

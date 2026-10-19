@@ -87,6 +87,10 @@ test.describe('Reference image', () => {
 			'aria-pressed',
 			'false',
 		);
+		// a restored trace reopens its panel and relights the nav button
+		await expect(page.locator('#refPanel')).toBeVisible();
+		await page.locator('#navView').click();
+		await expect(page.locator('#navRef')).toHaveClass(/enabled/);
 	});
 
 	test('clear resets the tool and its storage to defaults', async ({ page }) => {

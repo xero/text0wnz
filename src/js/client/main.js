@@ -750,7 +750,14 @@ const initializeAppComponents = async () => {
 	onClick($('pluginsMenu'), () => pluginManager?.show());
 
 	// reference-image overlay for tracing
-	referenceImage = createReferenceImage();
+	referenceImage = createReferenceImage({
+		// the async restore reopens the panel; the nav button must light
+		// up with it or the menu reads as off while the overlay shows
+		onRestore: () => {
+			refToggle?.update();
+			refFloat?.focus();
+		},
+	});
 	if (referenceImage) {
 		refFloat = makePanelFloat($('refPanel'), () => {
 			referenceImage.setOpen(false);
