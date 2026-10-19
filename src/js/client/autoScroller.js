@@ -48,13 +48,20 @@ const createScrollEngine = deps => {
 	let count = 1;
 	let runsLeft = 0;
 	let speed = SPEED_DEFAULT;
-	// float accumulator: at slow speeds a frame moves under a pixel,
-	// and read-modify-write on the browser's rounded scrollTop stalls
 	let pos = 0;
 	let expected = 0;
 	let pauseLeft = 0;
 	let lastTs = 0;
 	let rafId = 0;
+	// the browser rounds scrollTop writes, so a fractional rate aliases
+	// into runs of N px frames broken by an N-1 px frame, a rhythmic
+	// judder whose beat tracks the speed. Gliding instead advances a
+	// UNIFORM whole px count per frame (or one px every few frames when
+	// slow), snapping the true rate to the nearest beatless one
+	let frameMs = deps.frameMs ?? 1000 / 60;
+	const fixedFrame = Boolean(deps.frameMs);
+	let owedFrames = 0;
+	let slowPhase = 0;
 	// a parked hold fires no scroll events, so the app's row settle
 	// snap (main.js) rewrites scrollTop once; one sub-row nudge per
 	// hold is that snap, anything more is the user grabbing the scroll
@@ -97,32 +104,54 @@ const createScrollEngine = deps => {
 				return;
 			}
 		}
-		const dt = Math.min((ts - lastTs) / 1000, MAX_DT_S);
+		const dtMs = Math.min(ts - lastTs, MAX_DT_S * 1000);
 		lastTs = ts;
-		if (phase === 'down') {
-			pos = Math.min(pos + speed * State.font.getHeight() * dt, max);
-			if (pos >= max) {
-				phase = 'bottomPause';
-				pauseLeft = BOTTOM_PAUSE_MS;
-				adopted = false;
+		if (gliding) {
+			if (!fixedFrame) {
+				// display cadence, with stalls kept out of the average
+				frameMs += (Math.min(dtMs, 50) - frameMs) * 0.1;
 			}
-		} else if (phase === 'up') {
-			pos = Math.max(pos - speed * State.font.getHeight() * dt, 0);
-			if (pos <= 0) {
-				// a round trip ends back at the top
-				if (mode === 'count' && --runsLeft <= 0) {
-					vp.scrollTop = 0;
-					setPlaying(false);
-					return;
+			// whole frames elapsed; a dropped frame owes two steps
+			owedFrames += dtMs / frameMs;
+			const frames = Math.floor(owedFrames);
+			owedFrames -= frames;
+			const ideal = (speed * State.font.getHeight() * frameMs) / 1000;
+			let px = 0;
+			if (ideal >= 1) {
+				px = Math.round(ideal) * frames;
+			} else {
+				const every = Math.max(1, Math.round(1 / ideal));
+				slowPhase += frames;
+				px = Math.floor(slowPhase / every);
+				slowPhase %= every;
+			}
+			if (phase === 'down') {
+				pos = Math.min(pos + px, max);
+				if (pos >= max) {
+					phase = 'bottomPause';
+					pauseLeft = BOTTOM_PAUSE_MS;
+					adopted = false;
 				}
-				phase = 'topPause';
-				pauseLeft = TOP_PAUSE_MS;
-				adopted = false;
+			} else {
+				pos = Math.max(pos - px, 0);
+				if (pos <= 0) {
+					// a round trip ends back at the top
+					if (mode === 'count' && --runsLeft <= 0) {
+						vp.scrollTop = 0;
+						setPlaying(false);
+						return;
+					}
+					phase = 'topPause';
+					pauseLeft = TOP_PAUSE_MS;
+					adopted = false;
+				}
 			}
 		} else {
-			pauseLeft -= dt * 1000;
+			pauseLeft -= dtMs;
 			if (pauseLeft <= 0) {
 				phase = phase === 'bottomPause' ? 'up' : 'down';
+				owedFrames = 0;
+				slowPhase = 0;
 			}
 		}
 		vp.scrollTop = pos;
@@ -150,6 +179,8 @@ const createScrollEngine = deps => {
 		// resume always heads down first; starting at the bottom just
 		// means the bottom hold arrives on the first tick
 		phase = 'down';
+		owedFrames = 0;
+		slowPhase = 0;
 		lastTs = now();
 		setPlaying(true);
 		rafId = raf(tick);
