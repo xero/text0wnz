@@ -35,8 +35,8 @@ describe('reference image overlay', () => {
 	let overlay;
 	let storage;
 
-	const init = () => {
-		ref = createReferenceImage({ storage });
+	const init = (extra = {}) => {
+		ref = createReferenceImage({ storage, ...extra });
 		overlay = document.getElementById('refOverlay');
 	};
 
@@ -175,12 +175,17 @@ describe('reference image overlay', () => {
 				'clientWidth',
 				{ value: 640, configurable: true },
 			);
-			init();
+			const onRestore = vi.fn();
+			init({ onRestore });
 			await flush();
 			expect(overlay.classList.contains('enabled')).toBe(true);
 			expect(overlay.style.opacity).toBe('0.55');
 			expect(overlay.style.width).toBe('960px');
 			expect(overlay.style.transform).toBe('translate(64px, 32px)');
+			// the toolbar toggle syncs at creation, before the async
+			// restore lands: the panel opens and the caller resyncs
+			expect(ref.isOpen()).toBe(true);
+			expect(onRestore).toHaveBeenCalledOnce();
 		});
 
 		it('orphaned settings without a stored blob are dropped', async () => {
@@ -204,12 +209,15 @@ describe('reference image overlay', () => {
 				}),
 			);
 			document.body.innerHTML = MARKUP;
-			init();
+			const onRestore = vi.fn();
+			init({ onRestore });
 			document.dispatchEvent(new CustomEvent('onNewDocument'));
 			release({ buffer: Uint8Array.of(1).buffer, type: 'image/png' });
 			await flush();
 			expect(overlay.classList.contains('enabled')).toBe(false);
 			expect(localStorage.getItem('refImage')).toBeNull();
+			expect(ref.isOpen()).toBe(false);
+			expect(onRestore).not.toHaveBeenCalled();
 		});
 	});
 
