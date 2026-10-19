@@ -17,6 +17,12 @@ const TOP_PAUSE_MS = 1500;
 const ESCAPE_PX = 2;
 // background tabs stop rAF; cap the hold arithmetic or it teleports
 const MAX_DT_MS = 100;
+// CP437 shade glyphs are checkerboards with a two px vertical period;
+// any odd per frame displacement shifts them a HALF period, inverting
+// every dither cell each frame, a fixed point flicker the eye reads
+// as flashing cells (120Hz displays hit this at speeds that land on
+// one px per frame). Glide steps are quantized to whole periods
+const PERIOD_PX = 2;
 // displays a vsync period can belong to; electing the base from this
 // set keeps one dropped frame from ever reading as a cadence change
 const CANON_MS = [
@@ -153,9 +159,11 @@ const createScrollEngine = deps => {
 			const key = `${base}|${speed}|${State.font.getHeight()}`;
 			if (key !== stepKey) {
 				stepKey = key;
-				const ideal = (speed * State.font.getHeight() * base) / 1000;
-				stepPx = ideal >= 1 ? Math.round(ideal) : 0;
-				stepEvery = ideal >= 1 ? 1 : Math.max(1, Math.round(1 / ideal));
+				const periods =
+					(speed * State.font.getHeight() * base) / 1000 / PERIOD_PX;
+				stepPx = periods >= 1 ? PERIOD_PX * Math.round(periods) : 0;
+				stepEvery =
+					periods >= 1 ? 1 : Math.max(1, Math.round(1 / periods));
 				slowPhase = 0;
 			}
 			let px;
@@ -163,7 +171,7 @@ const createScrollEngine = deps => {
 				px = stepPx * vsyncs;
 			} else {
 				slowPhase += vsyncs;
-				px = Math.floor(slowPhase / stepEvery);
+				px = Math.floor(slowPhase / stepEvery) * PERIOD_PX;
 				slowPhase %= stepEvery;
 			}
 			if (phase === 'down') {

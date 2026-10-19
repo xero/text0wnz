@@ -82,19 +82,20 @@ describe('scroll engine', () => {
 		});
 	});
 
-	it('glides down in uniform whole pixel frames', () => {
+	it('glides down in uniform whole dither period frames', () => {
 		engine.play();
 		expect(states).toEqual([true]);
-		// default 7 rows/s * 16px * 0.1s is 11.2px, snapped to 11 flat
+		// default 7 rows/s * 16px * 0.1s is 11.2px, 5.6 dither periods,
+		// snapped to 12px flat: an odd step would invert shade glyphs
 		step();
-		expect(vp.scrollTop).toBe(11);
+		expect(vp.scrollTop).toBe(12);
 		step();
-		expect(vp.scrollTop).toBe(22);
+		expect(vp.scrollTop).toBe(24);
 		step();
-		expect(vp.scrollTop).toBe(33);
+		expect(vp.scrollTop).toBe(36);
 	});
 
-	it('crawls at one pixel every few frames when slow', () => {
+	it('crawls one dither period every few frames when slow', () => {
 		const crawler = createScrollEngine({
 			viewport: () => vp,
 			now: () => clock,
@@ -104,11 +105,11 @@ describe('scroll engine', () => {
 		});
 		crawler.setSpeed(1);
 		crawler.play();
-		// 16px/s at a 25ms frame is 0.4px: one pixel every third frame
-		for (let i = 0; i < 9; i++) {
+		// 16px/s at a 25ms frame is 0.2 periods: 2px every fifth frame
+		for (let i = 0; i < 10; i++) {
 			step(25);
 		}
-		expect(vp.scrollTop).toBe(3);
+		expect(vp.scrollTop).toBe(4);
 		crawler.pause();
 	});
 
@@ -166,8 +167,9 @@ describe('scroll engine', () => {
 		const firstBottom = clock;
 		stepUntil(() => !engine.isPlaying(), 1000);
 		// still ahead: the ride up, the top hold, and a whole second lap
+		// at the period locked 120px/s effective rate
 		expect(clock - firstBottom).toBeGreaterThan(
-			1500 + 1500 + 3 * (800 / 112) * 1000,
+			1500 + 1500 + 3 * (800 / 120) * 1000,
 		);
 		expect(vp.scrollTop).toBe(0);
 	});
@@ -237,17 +239,17 @@ describe('scroll engine', () => {
 			tops.push(vp.scrollTop);
 		}
 		const deltas = tops.slice(1).map((v, i) => v - tops[i]);
-		// 5 rows/s at 120Hz is 0.67px per frame, exactly on the old
-		// round(1.5) flap boundary: frozen now at one px every two
-		// frames, so steps only ever alternate zero and one
-		expect(deltas.every(d => d === 0 || d === 1)).toBe(true);
+		// 5 rows/s at 120Hz is a third of a period per frame, frozen at
+		// one 2px period every third frame; steps never flap and never
+		// land odd, which would invert shade glyphs
+		expect(deltas.every(d => d === 0 || d === 2)).toBe(true);
 		let run = 0;
 		let longest = 0;
 		deltas.forEach(d => {
 			run = d === 0 ? run + 1 : 0;
 			longest = Math.max(longest, run);
 		});
-		expect(longest).toBeLessThanOrEqual(1);
+		expect(longest).toBeLessThanOrEqual(2);
 		live.pause();
 	});
 
