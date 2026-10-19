@@ -348,7 +348,7 @@ describe('autoscroll menu', () => {
 			<button id="minimapMenuToggle" aria-expanded="false">
 				<svg><use href="img/icons.svg#loop"></use></svg>
 			</button>
-			<div id="minimapMenu" class="hide">
+			<div id="minimapMenu">
 				<div id="autoscrollTransport">
 					<span>autoscroll</span>
 					<button id="autoscrollToggle"><svg><use href="img/icons.svg#play"></use></svg></button>
@@ -385,13 +385,13 @@ describe('autoscroll menu', () => {
 		const toggle = document.getElementById('minimapMenuToggle');
 		const menu = document.getElementById('minimapMenu');
 		toggle.click();
-		expect(menu.classList.contains('hide')).toBe(false);
+		expect(menu.classList.contains('open')).toBe(true);
 		expect(toggle.getAttribute('aria-expanded')).toBe('true');
 		expect(toggle.querySelector('use').getAttribute('href')).toContain(
 			'#cancel',
 		);
 		toggle.click();
-		expect(menu.classList.contains('hide')).toBe(true);
+		expect(menu.classList.contains('open')).toBe(false);
 		expect(toggle.querySelector('use').getAttribute('href')).toContain(
 			'#loop',
 		);
