@@ -57,11 +57,11 @@ describe('scroll engine', () => {
 	it('glides down at rows per second times font height', () => {
 		engine.play();
 		expect(states).toEqual([true]);
-		// default 4 rows/s * 16px = 64px/s, so 6.4px per 100ms frame
+		// default 7 rows/s * 16px = 112px/s, so 11.2px per 100ms frame
 		step();
-		expect(vp.scrollTop).toBeCloseTo(6.4, 1);
+		expect(vp.scrollTop).toBeCloseTo(11.2, 1);
 		step();
-		expect(vp.scrollTop).toBeCloseTo(12.8, 1);
+		expect(vp.scrollTop).toBeCloseTo(22.4, 1);
 	});
 
 	it('holds at the bottom before snapping home', () => {
@@ -90,7 +90,7 @@ describe('scroll engine', () => {
 		const firstBottom = clock;
 		stepUntil(() => !engine.isPlaying());
 		// the second pass needs the hold, the glide, and another hold
-		expect(clock - firstBottom).toBeGreaterThan(1500 + (800 / 64) * 1000);
+		expect(clock - firstBottom).toBeGreaterThan(1500 + (800 / 112) * 1000);
 		expect(vp.scrollTop).toBe(0);
 	});
 
@@ -170,7 +170,7 @@ describe('scroll engine', () => {
 
 	it('clamps speed and count to their rails', () => {
 		engine.setSpeed(99);
-		expect(engine.getSpeed()).toBe(10);
+		expect(engine.getSpeed()).toBe(25);
 		engine.setSpeed(-3);
 		expect(engine.getSpeed()).toBe(1);
 		engine.setCount(9);
@@ -198,17 +198,16 @@ describe('autoscroll menu', () => {
 					<span>autoscroll</span>
 					<button id="autoscrollToggle"><svg><use href="img/icons.svg#play"></use></svg></button>
 				</div>
-				<div id="autoscrollModeRow">
-					<div id="autoscrollCount">
-						<label>count</label>
-						<button id="autoscrollCountDown">-</button>
-						<span id="autoscrollCountValue">1</span>
-						<button id="autoscrollCountUp">+</button>
-					</div>
+				<div id="autoscrollModeRow"></div>
+				<div id="autoscrollCount">
+					<label>count</label>
+					<button id="autoscrollCountDown">-</button>
+					<span id="autoscrollCountValue">1</span>
+					<button id="autoscrollCountUp">+</button>
 				</div>
 				<label id="autoscrollSpeedRow">
 					speed
-					<input id="autoscrollSpeed" type="range" value="4" max="10" min="1" step="1"/>
+					<input id="autoscrollSpeed" type="range" value="5" max="9" min="1" step="1"/>
 				</label>
 			</div>
 			<div id="minimapScroll"></div>
@@ -257,28 +256,32 @@ describe('autoscroll menu', () => {
 		expect(engine.getCount()).toBe(5);
 	});
 
-	it('loop mode blanks the count cluster', () => {
+	it('loop mode dims and disables the count row', () => {
 		createAutoScroller();
 		const cluster = document.getElementById('autoscrollCount');
-		const loopBtn = document.querySelector(
-			'#autoscrollMode [data-value="loop"]',
-		);
-		loopBtn.click();
-		expect(cluster.classList.contains('hide')).toBe(true);
+		const down = document.getElementById('autoscrollCountDown');
+		const up = document.getElementById('autoscrollCountUp');
+		document.querySelector('#autoscrollMode [data-value="loop"]').click();
+		expect(cluster.classList.contains('dimmed')).toBe(true);
+		expect(down.disabled).toBe(true);
+		expect(up.disabled).toBe(true);
 		document.querySelector('#autoscrollMode [data-value="count"]').click();
-		expect(cluster.classList.contains('hide')).toBe(false);
+		expect(cluster.classList.contains('dimmed')).toBe(false);
+		expect(down.disabled).toBe(false);
+		expect(up.disabled).toBe(false);
 	});
 
-	it('persists speed and restores it on the next boot', () => {
+	it('persists the speed tick and restores its rows per second', () => {
 		const engine = createAutoScroller();
 		const slider = document.getElementById('autoscrollSpeed');
 		slider.value = '7';
 		slider.dispatchEvent(new Event('input'));
-		expect(engine.getSpeed()).toBe(7);
+		// tick seven on the curve is fourteen rows per second
+		expect(engine.getSpeed()).toBe(14);
 		expect(localStorage.getItem('autoscrollSpeed')).toBe('7');
 		document.body.innerHTML = MARKUP;
 		const next = createAutoScroller();
-		expect(next.getSpeed()).toBe(7);
+		expect(next.getSpeed()).toBe(14);
 		expect(document.getElementById('autoscrollSpeed').value).toBe('7');
 	});
 });

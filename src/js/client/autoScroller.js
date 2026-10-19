@@ -19,9 +19,13 @@ const ESCAPE_PX = 2;
 const MAX_DT_S = 0.1;
 
 const SPEED_KEY = 'autoscrollSpeed';
-const SPEED_DEFAULT = 4;
+const SPEED_DEFAULT = 7;
 const SPEED_MIN = 1;
-const SPEED_MAX = 10;
+const SPEED_MAX = 25;
+// slider tick to rows per second: the old ceiling of ten sits one
+// tick above the middle default, so the top third is new headroom
+const SPEED_ROWS = [1, 2, 3, 5, 7, 10, 14, 19, 25];
+const SPEED_TICKS = SPEED_ROWS.length;
 const COUNT_MIN = 1;
 const COUNT_MAX = 5;
 
@@ -218,24 +222,35 @@ const createAutoScroller = () => {
 	const paintCount = () => {
 		countValue.textContent = String(engine.getCount());
 	};
+	const stepDown = $('autoscrollCountDown');
+	const stepUp = $('autoscrollCountUp');
 	const modeControl = createSegmentedControl(
 		'autoscrollMode',
 		[
-			{ value: 'count', label: 'scroll', icon: 'play' },
+			{ value: 'count', label: 'scroll', icon: 'loop' },
 			{ value: 'loop', label: 'loop', icon: 'infinite' },
 		],
 		value => {
 			engine.setMode(value);
-			countCluster?.classList.toggle('hide', value !== 'count');
+			// forever mode has no use for a pass count: dim the row and
+			// fence it off rather than reflowing the menu
+			const off = value !== 'count';
+			countCluster?.classList.toggle('dimmed', off);
+			if (stepDown) {
+				stepDown.disabled = off;
+			}
+			if (stepUp) {
+				stepUp.disabled = off;
+			}
 		},
 	);
 	modeRow.prepend(modeControl.getElement());
 
-	$('autoscrollCountDown')?.addEventListener('click', () => {
+	stepDown?.addEventListener('click', () => {
 		engine.setCount(engine.getCount() - 1);
 		paintCount();
 	});
-	$('autoscrollCountUp')?.addEventListener('click', () => {
+	stepUp?.addEventListener('click', () => {
 		engine.setCount(engine.getCount() + 1);
 		paintCount();
 	});
@@ -248,15 +263,15 @@ const createAutoScroller = () => {
 		} catch {
 			// storage blocked: the default rules
 		}
-		if (stored >= SPEED_MIN && stored <= SPEED_MAX) {
-			engine.setSpeed(stored);
+		if (stored >= 1 && stored <= SPEED_TICKS) {
+			engine.setSpeed(SPEED_ROWS[stored - 1]);
 			speedSlider.value = String(stored);
 		}
 		speedSlider.addEventListener('input', e => {
-			const value = parseInt(e.target.value, 10);
-			engine.setSpeed(value);
+			const tick = parseInt(e.target.value, 10);
+			engine.setSpeed(SPEED_ROWS[tick - 1] ?? SPEED_DEFAULT);
 			try {
-				localStorage.setItem(SPEED_KEY, String(value));
+				localStorage.setItem(SPEED_KEY, String(tick));
 			} catch {
 				// storage blocked: the speed just does not persist
 			}

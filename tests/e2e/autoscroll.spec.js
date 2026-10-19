@@ -87,18 +87,21 @@ test.describe('Minimap autoscroll', () => {
 		expect(resumed.scrollTop).toBeGreaterThan(frozen.scrollTop);
 	});
 
-	test('loop mode blanks the count cluster', async ({ page }) => {
+	test('loop mode dims and disables the count row', async ({ page }) => {
 		await page.locator('#minimapMenuToggle').click();
 		const cluster = page.locator('#autoscrollCount');
-		await expect(cluster).toBeVisible();
+		const up = page.locator('#autoscrollCountUp');
+		await expect(cluster).not.toHaveClass(/dimmed/);
 		await page
 			.locator('#autoscrollMode .segment[data-value="loop"]')
 			.click();
-		await expect(cluster).toBeHidden();
+		await expect(cluster).toHaveClass(/dimmed/);
+		await expect(up).toBeDisabled();
 		await page
 			.locator('#autoscrollMode .segment[data-value="count"]')
 			.click();
-		await expect(cluster).toBeVisible();
+		await expect(cluster).not.toHaveClass(/dimmed/);
+		await expect(up).toBeEnabled();
 	});
 
 	test('speed survives a reload', async ({ page }) => {
