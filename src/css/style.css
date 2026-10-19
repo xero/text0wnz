@@ -1809,6 +1809,10 @@
 		top: 0;
 		height: auto;
 		z-index: 5;
+		/* preflight caps img at its container; overscaling is the point,
+		   and chunky pixels beat blur when tracing blown-up art */
+		max-width: none;
+		image-rendering: pixelated;
 
 		&.dragging {
 			@apply pointer-events-auto cursor-move;
