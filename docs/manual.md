@@ -851,7 +851,7 @@ The **Ref Image** button in the viewport toolbar opens a small panel for tracing
 **Features:**
 
 - **load image** floats a translucent image over the canvas; the file stays local and is never uploaded
-- **opacity** slider from 5 to 95 percent
+- **opacity** slider from 0 to 95 percent
 - **width** slider sizes the image from 10 to 400 percent of the canvas width
 - Every tool draws straight through the overlay, and it follows zoom and canvas resizes
 - The **move image** button toggles drag mode: a cyan ring marks the image and pointer or touch drags reposition it anywhere over the art. The sliders and buttons all keep working; toggle again to lock the image back down and return the pointer to the tools

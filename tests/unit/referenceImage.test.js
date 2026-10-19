@@ -13,7 +13,7 @@ const MARKUP = `
 	<div id="refPanel" class="hide">
 		<button id="refLoad"></button>
 		<input id="refFileInput" type="file"/>
-		<input id="refOpacity" type="range" value="40" max="95" min="5"/>
+		<input id="refOpacity" type="range" value="40" max="95" min="0"/>
 		<input id="refScale" type="range" value="100" max="400" min="10"/>
 		<button id="refDrag" aria-pressed="false"></button>
 		<button id="refClear"></button>
