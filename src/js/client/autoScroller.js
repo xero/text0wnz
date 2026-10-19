@@ -289,13 +289,13 @@ const createAutoScroller = () => {
 	// panel's flex column crops the map from the bottom on its own
 	const toggleUse = toggle.querySelector('use');
 	const setOpen = open => {
-		menu.classList.toggle('hide', !open);
+		menu.classList.toggle('open', open);
 		toggle.setAttribute('aria-expanded', String(open));
 		toggle.setAttribute('aria-label', open ? 'Close Autoscroll Menu' : 'Autoscroll Menu');
 		toggleUse?.setAttribute('href', iconHref(open ? 'cancel' : 'loop'));
 	};
 	toggle.addEventListener('click', () => {
-		setOpen(menu.classList.contains('hide'));
+		setOpen(!menu.classList.contains('open'));
 	});
 
 	transport.addEventListener('click', () => engine.toggle());

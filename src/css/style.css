@@ -1274,6 +1274,27 @@
 		/* never wider than the art: a wider menu stretches the panel
 		   and bares a dead strip beside the fixed-width map */
 		width: 128px;
+		/* the global ease animates the reveal; display cannot
+		   transition, so closed collapses to zero height and
+		   visibility flips at the transition's end instead */
+		max-height: 0;
+		overflow: hidden;
+		visibility: hidden;
+		/* overflow hidden zeroes the flex minimum, and a tall map
+		   would crush the open menu to a sliver; only the map slice
+		   below is allowed to shrink */
+		flex-shrink: 0;
+		/* a border box cannot shrink under its own padding, so closed
+		   zeroes the vertical padding too or an 8px lip stays above
+		   the map */
+		padding-top: 0;
+		padding-bottom: 0;
+		&.open {
+			/* just past the menu's real height, or the ease lands late */
+			max-height: 128px;
+			visibility: visible;
+			@apply py-1;
+		}
 		/* the close chrome owns the top right corner; the transport sits
 		   beside its title like the spec sketch */
 		#autoscrollTransport {
