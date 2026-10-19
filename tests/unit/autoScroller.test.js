@@ -21,17 +21,32 @@ vi.mock('../../src/js/client/state.js', () => ({
 describe('scroll engine', () => {
 	let vp;
 	let queue;
+	let rafSeq;
 	let clock;
 	let states;
 	let engine;
+
+	// rAF stand-in that cancels by id: popping an arbitrary callback
+	// would cancel the wrong tick when more than one engine is live
+	const raf = cb => {
+		rafSeq++;
+		queue.push({ id: rafSeq, cb });
+		return rafSeq;
+	};
+	const caf = id => {
+		const at = queue.findIndex(entry => entry.id === id);
+		if (at >= 0) {
+			queue.splice(at, 1);
+		}
+	};
 
 	// one queued rAF callback per frame; 100ms steps stay inside the
 	// engine's dt clamp so simulated time is never discarded
 	const step = (ms = 100) => {
 		clock += ms;
-		const cb = queue.shift();
-		if (cb) {
-			cb(clock);
+		const entry = queue.shift();
+		if (entry) {
+			entry.cb(clock);
 		}
 	};
 	const stepUntil = (predicate, limit = 500) => {
@@ -40,15 +55,26 @@ describe('scroll engine', () => {
 		}
 	};
 
+	// an engine on live cadence election instead of an injected base
+	const electingEngine = () =>
+		createScrollEngine({
+			viewport: () => vp,
+			raf,
+			caf,
+			now: () => clock,
+			onState: () => {},
+		});
+
 	beforeEach(() => {
 		vp = { scrollTop: 0, scrollHeight: 1000, clientHeight: 200 };
 		queue = [];
+		rafSeq = 0;
 		clock = 0;
 		states = [];
 		engine = createScrollEngine({
 			viewport: () => vp,
-			raf: cb => queue.push(cb) && queue.length,
-			caf: () => queue.pop(),
+			raf,
+			caf,
 			now: () => clock,
 			onState: playing => states.push(playing),
 			// a fixed cadence so each step() is exactly one frame
@@ -72,8 +98,8 @@ describe('scroll engine', () => {
 		const crawler = createScrollEngine({
 			viewport: () => vp,
 			now: () => clock,
-			raf: cb => queue.push(cb) && queue.length,
-			caf: () => queue.pop(),
+			raf,
+			caf,
 			frameMs: 25,
 		});
 		crawler.setSpeed(1);
@@ -161,6 +187,81 @@ describe('scroll engine', () => {
 		}
 		expect(passes).toBe(3);
 		expect(engine.isPlaying()).toBe(true);
+	});
+
+	it('vsync jitter never stalls a frame or changes the step', () => {
+		const live = electingEngine();
+		live.play();
+		const jitter = [1.5, -1.2, 0.8, -1.5, 1.1, -0.4, 0.2, -0.9];
+		const tops = [];
+		for (let i = 0; i < 300; i++) {
+			step(16.7 + jitter[i % jitter.length]);
+			tops.push(vp.scrollTop);
+		}
+		const deltas = tops.slice(1).map((v, i) => v - tops[i]);
+		// 7 rows/s at a 60Hz base is 1.87px, snapped to a flat 2: no
+		// zero px stall frames, no step size flap, ever
+		expect(deltas.every(d => d === 2)).toBe(true);
+		live.pause();
+	});
+
+	it('a dropped frame owes one whole catch-up, nothing after', () => {
+		const live = electingEngine();
+		live.play();
+		for (let i = 0; i < 20; i++) {
+			step(16.7);
+		}
+		const before = vp.scrollTop;
+		step(33.4);
+		// two vsyncs passed: exactly one doubled step
+		expect(vp.scrollTop - before).toBe(4);
+		const tops = [];
+		for (let i = 0; i < 20; i++) {
+			step(16.7);
+			tops.push(vp.scrollTop);
+		}
+		const deltas = tops.slice(1).map((v, i) => v - tops[i]);
+		// the hitch must not leave a cadence wobble tail
+		expect(deltas.every(d => d === 2)).toBe(true);
+		live.pause();
+	});
+
+	it('a rounding-boundary rate holds one schedule at 120Hz', () => {
+		const live = electingEngine();
+		live.setSpeed(5);
+		live.play();
+		const tops = [];
+		const jitter = [0.9, -0.7, 0.4, -1, 0.6, -0.2];
+		for (let i = 0; i < 80; i++) {
+			step(8.33 + jitter[i % jitter.length]);
+			tops.push(vp.scrollTop);
+		}
+		const deltas = tops.slice(1).map((v, i) => v - tops[i]);
+		// 5 rows/s at 120Hz is 0.67px per frame, exactly on the old
+		// round(1.5) flap boundary: frozen now at one px every two
+		// frames, so steps only ever alternate zero and one
+		expect(deltas.every(d => d === 0 || d === 1)).toBe(true);
+		let run = 0;
+		let longest = 0;
+		deltas.forEach(d => {
+			run = d === 0 ? run + 1 : 0;
+			longest = Math.max(longest, run);
+		});
+		expect(longest).toBeLessThanOrEqual(1);
+		live.pause();
+	});
+
+	it('clamps a backwards first timestamp to zero dt', () => {
+		const live = electingEngine();
+		clock = 1000;
+		live.play();
+		clock = 999;
+		const entry = queue.shift();
+		entry.cb(clock);
+		expect(Number.isFinite(vp.scrollTop)).toBe(true);
+		expect(vp.scrollTop).toBeGreaterThanOrEqual(0);
+		expect(live.isPlaying()).toBe(true);
+		live.pause();
 	});
 
 	it('adopts the row settle snap once per hold, then escapes', () => {
