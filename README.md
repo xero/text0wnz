@@ -96,7 +96,7 @@ A retro text art editor rebooted for the modern web. Draw, edit, animate, and co
 - **Editor options:**
   - Canvas zoom, light/dark mode, grid overlay, and a live minimap
   - Compo-style autoscroll playback with pass count, loop mode, and speed control
-  - Reference image overlay with opacity and width controls for tracing
+  - Reference image overlay with opacity, width, and drag positioning for tracing, remembered across reloads
 - **Plugins**
   - ES-module plugins read the canvas through a small API and write back as one undo step
 - **Auto Save/Restore**

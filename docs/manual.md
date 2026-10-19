@@ -854,7 +854,9 @@ The **Ref Image** button in the viewport toolbar opens a small panel for tracing
 - **opacity** slider from 5 to 95 percent
 - **width** slider sizes the image from 10 to 200 percent of the canvas width
 - Every tool draws straight through the overlay, and it follows zoom and canvas resizes
-- **clear** removes the image
+- The **move image** button toggles drag mode: a cyan ring marks the image and pointer or touch drags reposition it anywhere over the art. The sliders and buttons all keep working; toggle again to lock the image back down and return the pointer to the tools
+- **clear** removes the image and returns every setting to its default
+- Once an image is loaded, the image and its settings persist in the browser and survive a reload. Pressing **clear** or starting new artwork (File > New, opening a file) resets the tool completely
 - Opening an image through **File > Open** or by dropping it on the editor loads it here too, never into the canvas
 - The panel floats: drag any free spot to move it, close it with the **X** or the **Ref Image** button
 

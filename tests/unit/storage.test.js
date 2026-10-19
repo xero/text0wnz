@@ -161,6 +161,30 @@ describe('Storage Utilities', () => {
 			expect(typeof Storage.clearAll).toBe('function');
 		});
 
+		it('should have reference image methods', () => {
+			expect(typeof Storage.saveRefImage).toBe('function');
+			expect(typeof Storage.loadRefImage).toBe('function');
+			expect(typeof Storage.clearRefImage).toBe('function');
+		});
+
+		it('should handle saveRefImage without crashing', async () => {
+			const result = await Storage.saveRefImage({
+				buffer: Uint8Array.of(1, 2, 3).buffer,
+				type: 'image/png',
+			});
+			expect(typeof result).toBe('boolean');
+		});
+
+		it('should handle loadRefImage without crashing', async () => {
+			const result = await Storage.loadRefImage();
+			expect(result === null || typeof result === 'object').toBe(true);
+		});
+
+		it('should handle clearRefImage without crashing', async () => {
+			const result = await Storage.clearRefImage();
+			expect(typeof result).toBe('boolean');
+		});
+
 		it('should handle saveCanvasData without crashing', async () => {
 			const canvasData = {
 				imageData: new Uint16Array([1, 2, 3]),
@@ -222,11 +246,13 @@ describe('Storage Utilities', () => {
 	describe('Clear All Storage', () => {
 		it('should clear localStorage items', async () => {
 			localStorage.setItem('text0wnz-settings', 'test data');
+			localStorage.setItem('refImage', 'ref settings');
 			localStorage.setItem('editorState', 'legacy data');
 
 			await Storage.clearAll();
 
 			expect(localStorage.getItem('text0wnz-settings')).toBeNull();
+			expect(localStorage.getItem('refImage')).toBeNull();
 			expect(localStorage.getItem('editorState')).toBeNull();
 		});
 	});

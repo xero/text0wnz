@@ -8,7 +8,7 @@
 /** @returns {Promise<IDBDatabase>} */
 const dbPromise = () => {
 	return new Promise((resolve, reject) => {
-		const request = indexedDB.open('text0wnz', 3);
+		const request = indexedDB.open('text0wnz', 4);
 
 		request.onupgradeneeded = _e => {
 			const db = request.result;
@@ -23,6 +23,10 @@ const dbPromise = () => {
 
 			if (!db.objectStoreNames.contains('undoHistory')) {
 				db.createObjectStore('undoHistory');
+			}
+
+			if (!db.objectStoreNames.contains('refImage')) {
+				db.createObjectStore('refImage');
 			}
 		};
 
@@ -166,6 +170,65 @@ export const Storage = {
 	},
 
 	/**
+	 * Save the reference image blob to IndexedDB
+	 * @param {Blob} blob
+	 */
+	async saveRefImage(blob) {
+		try {
+			const db = await dbPromise();
+			const tx = db.transaction('refImage', 'readwrite');
+			const store = tx.objectStore('refImage');
+
+			await /** @type {Promise<void>} */(new Promise((resolve, reject) => {
+				const request = store.put(blob, 'currentRef');
+				request.onsuccess = () => resolve();
+				request.onerror = () => reject(request.error);
+			}));
+
+			return true;
+		} catch (error) {
+			console.error('[Storage] Error saving reference image:', error);
+			return false;
+		}
+	},
+
+	/**
+	 * Load the reference image blob from IndexedDB
+	 */
+	async loadRefImage() {
+		try {
+			const db = await dbPromise();
+			const tx = db.transaction('refImage', 'readonly');
+			const store = tx.objectStore('refImage');
+
+			return await new Promise((resolve, reject) => {
+				const request = store.get('currentRef');
+				request.onsuccess = () => resolve(request.result);
+				request.onerror = () => reject(request.error);
+			});
+		} catch (error) {
+			console.error('[Storage] Error loading reference image:', error);
+			return null;
+		}
+	},
+
+	/**
+	 * Drop the stored reference image blob
+	 */
+	async clearRefImage() {
+		try {
+			const db = await dbPromise();
+			const tx = db.transaction('refImage', 'readwrite');
+			const store = tx.objectStore('refImage');
+			store.clear();
+			return true;
+		} catch (error) {
+			console.error('[Storage] Error clearing reference image:', error);
+			return false;
+		}
+	},
+
+	/**
 	 * Save lightweight settings to localStorage
 	 * @param {object} settings
 	 */
@@ -197,6 +260,7 @@ export const Storage = {
 	 */
 	async clearAll() {
 		localStorage.removeItem('text0wnz-settings');
+		localStorage.removeItem('refImage');
 		localStorage.removeItem('editorState'); // legacy key
 
 		try {
@@ -212,6 +276,10 @@ export const Storage = {
 			const tx3 = db.transaction('undoHistory', 'readwrite');
 			const store3 = tx3.objectStore('undoHistory');
 			store3.clear();
+
+			const tx4 = db.transaction('refImage', 'readwrite');
+			const store4 = tx4.objectStore('refImage');
+			store4.clear();
 
 			return true;
 		} catch (error) {

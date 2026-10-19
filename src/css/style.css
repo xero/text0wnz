@@ -1712,6 +1712,18 @@
 		label {
 			@apply text-fg text-xs flex items-center gap-1;
 		}
+		#refDrag {
+			@apply flex items-center self-stretch;
+			svg {
+				@apply pointer-events-none;
+				width: 14px;
+				height: 14px;
+				fill: currentColor;
+			}
+			&[aria-pressed='true'] {
+				@apply bg-cyber text-midnight;
+			}
+		}
 	}
 	#toolSettings {
 		/* floating-window chrome, thicker top border = drag strip */
@@ -1796,6 +1808,21 @@
 		top: 0;
 		height: auto;
 		z-index: 5;
+
+		&.dragging {
+			@apply pointer-events-auto cursor-move;
+			/* drag gestures are ours, not the viewport's pan */
+			touch-action: none;
+			/* the minimap frame's cyber ring with its dark halo, drawn
+			   as shadows so toggling drag mode never shifts the trace */
+			box-shadow:
+				0 0 0 1px #000,
+				0 0 0 3px theme('colors.cyber'),
+				0 0 0 4px #000;
+			/* the grid and tool preview overlays sit at z-10 and would
+			   otherwise swallow the pointer before it reaches the image */
+			z-index: 11;
+		}
 	}
 	#fontFavToggle {
 		@apply bg-menu text-cyan px-2 cursor-pointer text-base;
