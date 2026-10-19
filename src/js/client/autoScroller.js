@@ -15,8 +15,21 @@ const TOP_PAUSE_MS = 1500;
 // a tick lands within a pixel of what it wrote; anything farther is
 // the user grabbing the scroll away from us
 const ESCAPE_PX = 2;
-// background tabs stop rAF; cap dt or the art teleports on return
-const MAX_DT_S = 0.1;
+// background tabs stop rAF; cap the hold arithmetic or it teleports
+const MAX_DT_MS = 100;
+// displays a vsync period can belong to; electing the base from this
+// set keeps one dropped frame from ever reading as a cadence change
+const CANON_MS = [
+	1000 / 240,
+	1000 / 165,
+	1000 / 144,
+	1000 / 120,
+	1000 / 90,
+	1000 / 75,
+	1000 / 60,
+	1000 / 48,
+	1000 / 30,
+];
 
 const SPEED_KEY = 'autoscrollSpeed';
 const SPEED_DEFAULT = 7;
@@ -55,12 +68,19 @@ const createScrollEngine = deps => {
 	let rafId = 0;
 	// the browser rounds scrollTop writes, so a fractional rate aliases
 	// into runs of N px frames broken by an N-1 px frame, a rhythmic
-	// judder whose beat tracks the speed. Gliding instead advances a
-	// UNIFORM whole px count per frame (or one px every few frames when
-	// slow), snapping the true rate to the nearest beatless one
-	let frameMs = deps.frameMs ?? 1000 / 60;
+	// judder whose beat tracks the speed; on dither glyphs that beat
+	// reads as a luminance pulse. Gliding instead advances a UNIFORM
+	// whole px count per vsync (or one px every few vsyncs when slow),
+	// snapping the true rate to the nearest beatless one. The base
+	// vsync period is the median of recent deltas snapped to a
+	// canonical display rate with hysteresis, so a hitch can neither
+	// stall a frame nor poison the cadence into a wobble tail
+	let base = deps.frameMs ?? 1000 / 60;
 	const fixedFrame = Boolean(deps.frameMs);
-	let owedFrames = 0;
+	const recent = [];
+	let stepKey = '';
+	let stepPx = 0;
+	let stepEvery = 1;
 	let slowPhase = 0;
 	// a parked hold fires no scroll events, so the app's row settle
 	// snap (main.js) rewrites scrollTop once; one sub-row nudge per
@@ -104,26 +124,47 @@ const createScrollEngine = deps => {
 				return;
 			}
 		}
-		const dtMs = Math.min(ts - lastTs, MAX_DT_S * 1000);
+		// WebKit can hand the first tick a timestamp older than play()'s
+		// clock sample; a negative delta must not reach the arithmetic
+		const dtMs = Math.max(0, Math.min(ts - lastTs, MAX_DT_MS));
 		lastTs = ts;
 		if (gliding) {
-			if (!fixedFrame) {
-				// display cadence, with stalls kept out of the average
-				frameMs += (Math.min(dtMs, 50) - frameMs) * 0.1;
+			if (!fixedFrame && dtMs > 1 && dtMs < 50) {
+				recent.push(dtMs);
+				if (recent.length > 8) {
+					recent.shift();
+				}
+				const sorted = [...recent].sort((a, b) => a - b);
+				const median = sorted[sorted.length >> 1];
+				const candidate = CANON_MS.reduce((best, period) =>
+					(Math.abs(period - median) < Math.abs(best - median)
+						? period
+						: best));
+				// hysteresis: jitter never reelects, a real rate change does
+				if (Math.abs(candidate - base) / base > 0.2) {
+					base = candidate;
+				}
 			}
-			// whole frames elapsed; a dropped frame owes two steps
-			owedFrames += dtMs / frameMs;
-			const frames = Math.floor(owedFrames);
-			owedFrames -= frames;
-			const ideal = (speed * State.font.getHeight() * frameMs) / 1000;
-			let px = 0;
-			if (ideal >= 1) {
-				px = Math.round(ideal) * frames;
+			// every rAF callback IS a frame: at least one vsync passed, and
+			// a dropped frame owes whole catch-up steps, never a stall
+			const vsyncs = Math.max(1, Math.min(12, Math.round(dtMs / base)));
+			// the step sizes are frozen per cadence and speed, so a rate
+			// that lands on a rounding boundary cannot flap frame to frame
+			const key = `${base}|${speed}|${State.font.getHeight()}`;
+			if (key !== stepKey) {
+				stepKey = key;
+				const ideal = (speed * State.font.getHeight() * base) / 1000;
+				stepPx = ideal >= 1 ? Math.round(ideal) : 0;
+				stepEvery = ideal >= 1 ? 1 : Math.max(1, Math.round(1 / ideal));
+				slowPhase = 0;
+			}
+			let px;
+			if (stepPx > 0) {
+				px = stepPx * vsyncs;
 			} else {
-				const every = Math.max(1, Math.round(1 / ideal));
-				slowPhase += frames;
-				px = Math.floor(slowPhase / every);
-				slowPhase %= every;
+				slowPhase += vsyncs;
+				px = Math.floor(slowPhase / stepEvery);
+				slowPhase %= stepEvery;
 			}
 			if (phase === 'down') {
 				pos = Math.min(pos + px, max);
@@ -150,7 +191,6 @@ const createScrollEngine = deps => {
 			pauseLeft -= dtMs;
 			if (pauseLeft <= 0) {
 				phase = phase === 'bottomPause' ? 'up' : 'down';
-				owedFrames = 0;
 				slowPhase = 0;
 			}
 		}
@@ -179,7 +219,6 @@ const createScrollEngine = deps => {
 		// resume always heads down first; starting at the bottom just
 		// means the bottom hold arrives on the first tick
 		phase = 'down';
-		owedFrames = 0;
 		slowPhase = 0;
 		lastTs = now();
 		setPlaying(true);
