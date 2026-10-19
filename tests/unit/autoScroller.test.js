@@ -51,17 +51,39 @@ describe('scroll engine', () => {
 			caf: () => queue.pop(),
 			now: () => clock,
 			onState: playing => states.push(playing),
+			// a fixed cadence so each step() is exactly one frame
+			frameMs: 100,
 		});
 	});
 
-	it('glides down at rows per second times font height', () => {
+	it('glides down in uniform whole pixel frames', () => {
 		engine.play();
 		expect(states).toEqual([true]);
-		// default 7 rows/s * 16px = 112px/s, so 11.2px per 100ms frame
+		// default 7 rows/s * 16px * 0.1s is 11.2px, snapped to 11 flat
 		step();
-		expect(vp.scrollTop).toBeCloseTo(11.2, 1);
+		expect(vp.scrollTop).toBe(11);
 		step();
-		expect(vp.scrollTop).toBeCloseTo(22.4, 1);
+		expect(vp.scrollTop).toBe(22);
+		step();
+		expect(vp.scrollTop).toBe(33);
+	});
+
+	it('crawls at one pixel every few frames when slow', () => {
+		const crawler = createScrollEngine({
+			viewport: () => vp,
+			now: () => clock,
+			raf: cb => queue.push(cb) && queue.length,
+			caf: () => queue.pop(),
+			frameMs: 25,
+		});
+		crawler.setSpeed(1);
+		crawler.play();
+		// 16px/s at a 25ms frame is 0.4px: one pixel every third frame
+		for (let i = 0; i < 9; i++) {
+			step(25);
+		}
+		expect(vp.scrollTop).toBe(3);
+		crawler.pause();
 	});
 
 	it('holds at the bottom before gliding back up', () => {
