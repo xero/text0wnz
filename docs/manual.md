@@ -805,6 +805,7 @@ Toggles the visual grid. Useful for creating precise layouts, aligning elements,
 - Visual cell boundaries
 - Helps with alignment and spacing
 - Non-destructive overlay (doesn't affect artwork)
+- Preference saved in local storage
 
 **Keyboard Shortcut:**
 

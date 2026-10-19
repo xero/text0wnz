@@ -656,7 +656,30 @@ const createGrid = el => {
 			el.classList.add('enabled');
 			enabled = true;
 		}
+		try {
+			localStorage.setItem('gridVisible', String(enabled));
+		} catch {
+			// storage blocked: the preference just does not persist
+		}
 	};
+
+	// the preference survives reloads, like the minimap's
+	let stored = null;
+	try {
+		stored = localStorage.getItem('gridVisible');
+	} catch {
+		// storage blocked: default wins
+	}
+	if (stored === 'true') {
+		// the boot font races this restore: build now when it already
+		// landed, otherwise its onFontChange rebuild draws the first grid
+		try {
+			show(true);
+		} catch {
+			el.classList.add('enabled');
+			enabled = true;
+		}
+	}
 
 	return {
 		isShown: isShown,

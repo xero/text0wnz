@@ -1408,15 +1408,36 @@ const initializeAppComponents = async () => {
 	createSettingToggle($('chatButton'), State.chat.isEnabled, State.chat.toggle);
 	State.network = createWorkerHandler($('handleInput'));
 
+	const applyDark = dark => {
+		htmlDoc.classList.toggle('dark', dark);
+		navDarkmode.setAttribute('aria-pressed', dark);
+		metaTheme.setAttribute('content', dark ? '#333333' : '#4f4f4f');
+		lblDarkmode.innerText = dark ? 'Night' : 'Light';
+	};
 	const darkToggle = () => {
-		htmlDoc.classList.toggle('dark');
-		const isDark = htmlDoc.classList.contains('dark');
-		navDarkmode.setAttribute('aria-pressed', isDark);
-		metaTheme.setAttribute('content', isDark ? '#333333' : '#4f4f4f');
-		lblDarkmode.innerText = isDark ? 'Night' : 'Light';
+		const dark = !htmlDoc.classList.contains('dark');
+		applyDark(dark);
+		try {
+			localStorage.setItem('darkMode', String(dark));
+		} catch {
+			// storage blocked: the preference just does not persist
+		}
 	};
 	onClick(navDarkmode, darkToggle);
-	window.matchMedia('(prefers-color-scheme: dark)').matches && darkToggle();
+	// an explicit choice beats the OS preference; first visits follow it
+	let storedDark = null;
+	try {
+		storedDark = localStorage.getItem('darkMode');
+	} catch {
+		// storage blocked: the OS preference wins
+	}
+	if (
+		storedDark === 'true' ||
+		(storedDark === null &&
+		  window.matchMedia('(prefers-color-scheme: dark)').matches)
+	) {
+		applyDark(true);
+	}
 
 	document.addEventListener('onTextCanvasUp', save);
 	document.addEventListener('keypress', save);
