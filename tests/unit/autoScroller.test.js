@@ -64,7 +64,7 @@ describe('scroll engine', () => {
 		expect(vp.scrollTop).toBeCloseTo(22.4, 1);
 	});
 
-	it('holds at the bottom before snapping home', () => {
+	it('holds at the bottom before gliding back up', () => {
 		engine.play();
 		stepUntil(() => vp.scrollTop >= 800);
 		expect(vp.scrollTop).toBe(800);
@@ -75,6 +75,34 @@ describe('scroll engine', () => {
 		expect(vp.scrollTop).toBe(800);
 	});
 
+	it('reverses up smoothly instead of snapping home', () => {
+		engine.setMode('loop');
+		engine.play();
+		stepUntil(() => vp.scrollTop >= 800);
+		// ride out the hold until the first upward tick
+		stepUntil(() => vp.scrollTop < 800, 50);
+		expect(vp.scrollTop).toBeGreaterThan(0);
+		const partway = vp.scrollTop;
+		step();
+		expect(vp.scrollTop).toBeLessThan(partway);
+		expect(vp.scrollTop).toBeGreaterThan(0);
+	});
+
+	it('holds at the top between round trips', () => {
+		engine.setMode('loop');
+		engine.play();
+		stepUntil(() => vp.scrollTop >= 800);
+		stepUntil(() => vp.scrollTop === 0, 600);
+		// 1500ms top hold: still parked a second in
+		for (let i = 0; i < 10; i++) {
+			step();
+		}
+		expect(vp.scrollTop).toBe(0);
+		expect(engine.isPlaying()).toBe(true);
+		stepUntil(() => vp.scrollTop > 0, 100);
+		expect(engine.isPlaying()).toBe(true);
+	});
+
 	it('a single counted run parks back at the top and stops', () => {
 		engine.setCount(1);
 		engine.play();
@@ -83,14 +111,16 @@ describe('scroll engine', () => {
 		expect(states).toEqual([true, false]);
 	});
 
-	it('count 2 makes two full passes before stopping', () => {
+	it('count 2 makes two full round trips before stopping', () => {
 		engine.setCount(2);
 		engine.play();
 		stepUntil(() => vp.scrollTop >= 800);
 		const firstBottom = clock;
-		stepUntil(() => !engine.isPlaying());
-		// the second pass needs the hold, the glide, and another hold
-		expect(clock - firstBottom).toBeGreaterThan(1500 + (800 / 112) * 1000);
+		stepUntil(() => !engine.isPlaying(), 1000);
+		// still ahead: the ride up, the top hold, and a whole second lap
+		expect(clock - firstBottom).toBeGreaterThan(
+			1500 + 1500 + 3 * (800 / 112) * 1000,
+		);
 		expect(vp.scrollTop).toBe(0);
 	});
 

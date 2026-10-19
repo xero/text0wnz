@@ -1,17 +1,17 @@
 /**
  * Compo-style autoscroll: glides the viewport to the bottom of the
- * artwork, holds a beat, snaps back to the top, and runs again, a set
- * number of passes or forever. Speed is rows per second so playback
- * reads the same at any zoom or font size. A manual scroll anywhere
- * (wheel, minimap scrub, keyboard) pauses playback in place, the
- * PabloDraw escape hatch. Scroll speed persists; mode, count, and
- * transport state are session-only by design.
+ * artwork, holds a beat, glides back up to the top, holds again, and
+ * repeats the round trip a set number of times or forever. Speed is
+ * rows per second so playback reads the same at any zoom or font
+ * size. A manual scroll anywhere (wheel, minimap scrub, keyboard)
+ * pauses playback in place, the PabloDraw escape hatch. Scroll speed
+ * persists; mode, count, and transport state are session-only.
  */
 import State from './state.js';
 import { $, createSegmentedControl, iconHref } from './ui.js';
 
 const BOTTOM_PAUSE_MS = 1500;
-const TOP_PAUSE_MS = 500;
+const TOP_PAUSE_MS = 1500;
 // a tick lands within a pixel of what it wrote; anything farther is
 // the user grabbing the scroll away from us
 const ESCAPE_PX = 2;
@@ -43,7 +43,7 @@ const createScrollEngine = deps => {
 	const onState = deps.onState ?? (() => {});
 
 	let playing = false;
-	let phase = 'scroll';
+	let phase = 'down';
 	let mode = 'count';
 	let count = 1;
 	let runsLeft = 0;
@@ -86,13 +86,10 @@ const createScrollEngine = deps => {
 			setPlaying(false);
 			return;
 		}
+		const gliding = phase === 'down' || phase === 'up';
 		const drift = Math.abs(vp.scrollTop - expected);
 		if (drift > ESCAPE_PX) {
-			if (
-				phase !== 'scroll' &&
-				!adopted &&
-				drift < State.font.getHeight()
-			) {
+			if (!gliding && !adopted && drift < State.font.getHeight()) {
 				adopted = true;
 				pos = vp.scrollTop;
 			} else {
@@ -102,29 +99,30 @@ const createScrollEngine = deps => {
 		}
 		const dt = Math.min((ts - lastTs) / 1000, MAX_DT_S);
 		lastTs = ts;
-		if (phase === 'scroll') {
+		if (phase === 'down') {
 			pos = Math.min(pos + speed * State.font.getHeight() * dt, max);
 			if (pos >= max) {
 				phase = 'bottomPause';
 				pauseLeft = BOTTOM_PAUSE_MS;
 				adopted = false;
 			}
+		} else if (phase === 'up') {
+			pos = Math.max(pos - speed * State.font.getHeight() * dt, 0);
+			if (pos <= 0) {
+				// a round trip ends back at the top
+				if (mode === 'count' && --runsLeft <= 0) {
+					vp.scrollTop = 0;
+					setPlaying(false);
+					return;
+				}
+				phase = 'topPause';
+				pauseLeft = TOP_PAUSE_MS;
+				adopted = false;
+			}
 		} else {
 			pauseLeft -= dt * 1000;
 			if (pauseLeft <= 0) {
-				if (phase === 'bottomPause') {
-					pos = 0;
-					if (mode === 'count' && --runsLeft <= 0) {
-						vp.scrollTop = 0;
-						setPlaying(false);
-						return;
-					}
-					phase = 'topPause';
-					pauseLeft = TOP_PAUSE_MS;
-					adopted = false;
-				} else {
-					phase = 'scroll';
-				}
+				phase = phase === 'bottomPause' ? 'up' : 'down';
 			}
 		}
 		vp.scrollTop = pos;
@@ -149,7 +147,9 @@ const createScrollEngine = deps => {
 		}
 		pos = vp.scrollTop;
 		expected = vp.scrollTop;
-		phase = 'scroll';
+		// resume always heads down first; starting at the bottom just
+		// means the bottom hold arrives on the first tick
+		phase = 'down';
 		lastTs = now();
 		setPlaying(true);
 		rafId = raf(tick);
@@ -277,6 +277,14 @@ const createAutoScroller = () => {
 			}
 		});
 	}
+
+	// a wheel over the art is unambiguous takeover: escape on the event
+	// itself, because Firefox animates wheel scrolls and the early
+	// frames can duck under the drift threshold while the engine's own
+	// writes cancel the rest of the animation
+	document
+		.getElementById('viewport')
+		?.addEventListener('wheel', () => engine.pause(), { passive: true });
 
 	// a buffer swap mid-glide would strand the old position; new art
 	// starts parked like everything else in the panel
