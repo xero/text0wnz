@@ -47,6 +47,7 @@
 >     - [Light/Dark Mode](#-lightdark-mode)
 >     - [Grid Overlay](#-grid-overlay)
 >     - [Minimap](#minimap)
+>       - [Autoscroll](#autoscroll)
 >     - [Reference Image](#reference-image)
 > - [Animation](#animation)
 >   - [Frame Timeline](#frame-timeline)
@@ -823,6 +824,26 @@ A live overview of the whole canvas, one pixel per cell, docked beside the viewp
 - Refreshes twice a second while open
 - Toggle it with the **Minimap** button in the viewport toolbar; the choice is remembered
 
+#### Autoscroll
+
+Plays the artwork like a compo screen: the canvas glides to the bottom, holds a moment, glides back to the top, holds again, and repeats. Hosts at demoparties run exactly this to show tall pieces during voting, the same trick Moebius and PabloDraw are known for.
+
+Click the loop icon in the minimap's top right corner to open the autoscroll menu. The icon becomes an **X** that closes it again.
+
+**Controls:**
+
+- **Play/pause** sits beside the autoscroll title. Play starts or resumes the ride, pause freezes it in place
+- The **scroll | loop** pill picks between a set number of passes and looping forever
+- In scroll mode, **count** sets 1 to 5 round trips with the **-** and **+** stepper; the run parks at the top when they finish. In loop mode the count row dims
+- **speed** sets the glide rate in rows per second, from a slow crawl to a fast 25 rows per second. Only the speed is remembered between sessions
+
+**Behavior:**
+
+- Scrolling anywhere by hand (wheel, touch, the minimap, or the scrollbar) pauses playback right where you are; press play to resume
+- Opening a new piece stops playback; your mode, count, and speed stay as you set them
+- Playback keeps running if you hide the minimap; reopen it from the viewport toolbar to reach the controls
+- The glide moves in whole dither periods at your display's refresh rate, so shaded blocks stay rock solid instead of shimmering, and a short piece that already fits on screen has nowhere to go, so play declines politely
+
 ### Reference Image
 
 The **Ref Image** button in the viewport toolbar opens a small panel for tracing over a picture.
@@ -906,6 +927,7 @@ The editor treats mouse, pen, and touch as first-class input.
 > 9. Alt+Click to sample colors from artwork
 > 10. Undo/Redo freely
 > 11. Open the minimap to keep your bearings on large pieces
+> 12. Hosting a compo? Autoscroll in the minimap menu plays tall pieces hands-free
 
 # Tutorials
 
