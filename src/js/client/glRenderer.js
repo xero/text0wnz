@@ -35,11 +35,15 @@ import State from './state.js';
 import { createCanvas } from './ui.js';
 import { xterm256RGB } from '../core/codecs/dur.js';
 
-// Baselined in tests/baselines/p1-scroll-spike.json: zero blank frames
-// at every tested velocity; tolerance well under half the slack so
-// re-anchoring never degenerates to every-frame thrash
-const SLACK_SCREENS = 1.5;
+// Baselined in tests/baselines/p1-scroll-spike.json for zero blank
+// frames; the baseline never measured frame TIME, and a re-anchor is
+// a whole synchronous repaint, so steady scrolling also needs them
+// RARE: deep slack plus direction-biased anchoring buys over a
+// viewport-height of travel between re-anchors instead of a quarter
+const SLACK_SCREENS = 2;
 const TOLERANCE_SCREENS = 0.5;
+// how much runway to leave BEHIND the travel direction on re-anchor
+const BEHIND_SCREENS = 0.25;
 
 const VERTEX_SRC = `#version 300 es
 in vec2 a_corner;
@@ -583,19 +587,36 @@ const createGLRenderer = (canvasContainer, host) => {
 		anchorTo(Math.round((scrollTop() + viewportH() / 2) / cellH - canvasRows / 2));
 	};
 
-	// slack-buffer scroll: act only when the viewport nears a drawn edge
+	// slack-buffer scroll: act only when the viewport nears the drawn
+	// edge it is travelling TOWARD, and anchor biased along that
+	// direction so steady scrolling gets the whole remaining slack as
+	// runway. Centering here would spend most of the slack behind the
+	// viewer and fire a repaint every quarter screen; reacting to the
+	// edge behind would ping-pong, because a biased anchor deliberately
+	// parks that edge inside the tolerance zone
+	let lastScrollTop = 0;
 	const onScroll = () => {
 		const top = scrollTop();
-		const bottom = top + viewportH();
+		const down = top >= lastScrollTop;
+		lastScrollTop = top;
+		const vh = viewportH();
+		const bottom = top + vh;
 		const drawnTop = anchorRow * cellH;
 		const drawnBottom = (anchorRow + coverageRows) * cellH;
-		const tolerance = TOLERANCE_SCREENS * viewportH();
+		const tolerance = TOLERANCE_SCREENS * vh;
 		const rows = host.getRows();
-		const nearTop = top - drawnTop < tolerance && anchorRow > 0;
+		const nearTop =
+			!down && top - drawnTop < tolerance && anchorRow > 0;
 		const nearBottom =
-			drawnBottom - bottom < tolerance && anchorRow + coverageRows < rows;
+			down &&
+			drawnBottom - bottom < tolerance &&
+			anchorRow + coverageRows < rows;
 		if (nearTop || nearBottom) {
-			centerOnViewport();
+			const behind = BEHIND_SCREENS * vh;
+			const anchorPx = nearBottom
+				? top - behind
+				: bottom + behind - canvasRows * cellH;
+			anchorTo(Math.round(anchorPx / cellH));
 		}
 	};
 
