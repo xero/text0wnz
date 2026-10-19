@@ -70,8 +70,33 @@ test.describe('Reference image', () => {
 		await page.locator('#refOpacity').fill('65');
 		await page.locator('#refDrag').click();
 		await dragOverlay(page, 96, 48);
-		// the image blob write to IndexedDB is fire and forget; let it land
-		await page.waitForTimeout(400);
+		// the image blob write to IndexedDB is fire and forget; poll the
+		// store instead of trusting a sleep on a slow runner
+		await expect
+			.poll(() =>
+				page.evaluate(
+					() =>
+						new Promise(resolve => {
+							const req = indexedDB.open('text0wnz');
+							req.onsuccess = () => {
+								const db = req.result;
+								const get = db
+									.transaction('refImage', 'readonly')
+									.objectStore('refImage')
+									.get('currentRef');
+								get.onsuccess = () => {
+									resolve(Boolean(get.result));
+									db.close();
+								};
+								get.onerror = () => {
+									resolve(false);
+									db.close();
+								};
+							};
+							req.onerror = () => resolve(false);
+						}),
+				))
+			.toBe(true);
 
 		await page.reload();
 		await waitForEditorReady(page);

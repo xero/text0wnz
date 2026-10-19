@@ -1424,18 +1424,9 @@ const initializeAppComponents = async () => {
 		}
 	};
 	onClick(navDarkmode, darkToggle);
-	// an explicit choice beats the OS preference; first visits follow it
-	let storedDark = null;
-	try {
-		storedDark = localStorage.getItem('darkMode');
-	} catch {
-		// storage blocked: the OS preference wins
-	}
-	if (
-		storedDark === 'true' ||
-		(storedDark === null &&
-		  window.matchMedia('(prefers-color-scheme: dark)').matches)
-	) {
+	// the head script already decided the theme before first paint (an
+	// explicit choice beats the OS preference); sync the chrome to it
+	if (htmlDoc.classList.contains('dark')) {
 		applyDark(true);
 	}
 

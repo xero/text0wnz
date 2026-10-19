@@ -618,8 +618,10 @@ const createGrid = el => {
 	};
 
 	const destroyGrid = () => {
+		// remove() tolerates canvases a failed build never appended,
+		// where removeChild would throw and wedge every later resize
 		canvases.forEach(canvas => {
-			el.removeChild(canvas);
+			canvas.remove();
 		});
 		canvases = [];
 	};

@@ -24,7 +24,8 @@ const MARKUP = `
 
 const fakeStorage = () => ({
 	saveRefImage: vi.fn(async () => true),
-	loadRefImage: vi.fn(async () => null),
+	// undefined means an empty store; null means the read failed
+	loadRefImage: vi.fn(async () => undefined),
 	clearRefImage: vi.fn(async () => true),
 });
 
@@ -129,6 +130,39 @@ describe('reference image overlay', () => {
 			expect(overlay.style.transform).toBe('translate(0px, 0px)');
 		});
 
+		it('a second pointer cannot steal the drag base', () => {
+			loadFile();
+			document.getElementById('refDrag').click();
+			point('pointerdown', 100, 100);
+			point('pointerdown', 500, 500);
+			point('pointermove', 164, 132);
+			// motion still measures from the first pointer's base
+			expect(overlay.style.transform).toBe('translate(64px, 32px)');
+		});
+
+		it('a release anywhere disarms the drag', () => {
+			loadFile();
+			document.getElementById('refDrag').click();
+			point('pointerdown', 100, 100);
+			// capture can fail, so the up may land off the overlay
+			document.body.dispatchEvent(
+				new MouseEvent('pointerup', { bubbles: true }),
+			);
+			point('pointermove', 200, 200);
+			expect(overlay.style.transform).toBe('translate(0px, 0px)');
+		});
+
+		it('a reset mid-drag freezes the image and saves nothing', () => {
+			loadFile();
+			document.getElementById('refDrag').click();
+			point('pointerdown', 100, 100);
+			document.dispatchEvent(new CustomEvent('onNewDocument'));
+			point('pointermove', 300, 300);
+			point('pointerup', 300, 300);
+			expect(overlay.style.transform).toBe('');
+			expect(localStorage.getItem('refImage')).toBeNull();
+		});
+
 		it('drag events never reach the canvas pointer normalizer', () => {
 			loadFile();
 			document.getElementById('refDrag').click();
@@ -195,6 +229,74 @@ describe('reference image overlay', () => {
 			await flush();
 			expect(overlay.classList.contains('enabled')).toBe(false);
 			expect(localStorage.getItem('refImage')).toBeNull();
+		});
+
+		it('a failed read keeps the settings for a later boot', async () => {
+			localStorage.setItem('refImage', JSON.stringify({ opacity: 55 }));
+			storage.loadRefImage.mockResolvedValue(null);
+			document.body.innerHTML = MARKUP;
+			init();
+			await flush();
+			// a blocked db is transient: wiping now would lose the trace
+			expect(overlay.classList.contains('enabled')).toBe(false);
+			expect(localStorage.getItem('refImage')).not.toBeNull();
+		});
+
+		it('a fresh load voids a restore still in flight', async () => {
+			localStorage.setItem(
+				'refImage',
+				JSON.stringify({ opacity: 55, width: 150, x: 0.1, y: 0.05 }),
+			);
+			let release;
+			storage.loadRefImage.mockReturnValue(
+				new Promise(resolve => {
+					release = resolve;
+				}),
+			);
+			document.body.innerHTML = MARKUP;
+			const onRestore = vi.fn();
+			init({ onRestore });
+			loadFile();
+			release({ buffer: Uint8Array.of(9).buffer, type: 'image/png' });
+			await flush();
+			// the restore lost: the fresh image keeps its own sliders
+			expect(document.getElementById('refOpacity').value).toBe('40');
+			expect(onRestore).not.toHaveBeenCalled();
+			expect(overlay.classList.contains('enabled')).toBe(true);
+		});
+
+		it('quick image swaps persist in load order', async () => {
+			let releaseA;
+			const slowRead = new Promise(resolve => {
+				releaseA = resolve;
+			});
+			ref.load({ type: 'image/png', arrayBuffer: () => slowRead });
+			ref.load({
+				type: 'image/png',
+				arrayBuffer: async () => Uint8Array.of(2).buffer,
+			});
+			await flush();
+			releaseA(Uint8Array.of(1, 1).buffer);
+			await flush();
+			// the slow first read must not stamp its bytes over the second
+			expect(storage.saveRefImage).toHaveBeenCalledOnce();
+			expect(
+				storage.saveRefImage.mock.calls[0][0].buffer.byteLength,
+			).toBe(1);
+		});
+
+		it('a pending save dies with the clear that outran it', async () => {
+			let release;
+			const slowRead = new Promise(resolve => {
+				release = resolve;
+			});
+			ref.load({ type: 'image/png', arrayBuffer: () => slowRead });
+			document.getElementById('refClear').click();
+			release(Uint8Array.of(1).buffer);
+			await flush();
+			// the late write must not resurrect bytes the user wiped
+			expect(storage.saveRefImage).not.toHaveBeenCalled();
+			expect(storage.clearRefImage).toHaveBeenCalled();
 		});
 
 		it('a new document voids a restore still in flight', async () => {
