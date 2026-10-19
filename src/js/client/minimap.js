@@ -69,6 +69,9 @@ const createMinimap = () => {
 		);
 		frameRect.style.top = `${top}px`;
 		frameRect.style.height = `${height}px`;
+		// handed to followFocus so it never reads offsetTop back: a
+		// write-then-read here forces a synchronous layout every frame
+		return top;
 	};
 
 	const render = () => {
@@ -205,11 +208,18 @@ const createMinimap = () => {
 	// so the map pages along with you; never while a finger is on the
 	// panel (or just left it), where the box answers to the gesture
 	let panelTouchedAt = 0;
-	const followFocus = () => {
-		if (pending || performance.now() - panelTouchedAt < 300) {
+	const followFocus = top => {
+		if (
+			top === undefined ||
+			pending ||
+			performance.now() - panelTouchedAt < 300
+		) {
 			return;
 		}
-		scroller.scrollTop = frameRect.offsetTop;
+		// sub pixel writes churn the scroll position for nothing
+		if (Math.abs(scroller.scrollTop - top) >= 1) {
+			scroller.scrollTop = top;
+		}
 	};
 	scroller.addEventListener('pointerdown', e => {
 		panelTouchedAt = performance.now();
@@ -275,7 +285,14 @@ const createMinimap = () => {
 		visible = true;
 		panel.classList.remove('hide');
 		render();
-		timer = setInterval(render, 500);
+		// the doc cannot change during autoscroll playback, and this
+		// walk is every cell of it: skip the tick while the engine
+		// drives, repaint on the first tick after the class drops
+		timer = setInterval(() => {
+			if (!document.body.classList.contains('autoscrolling')) {
+				render();
+			}
+		}, 500);
 		remember('true');
 	};
 
@@ -292,8 +309,7 @@ const createMinimap = () => {
 		'scroll',
 		() => {
 			if (visible) {
-				positionRect();
-				followFocus();
+				followFocus(positionRect());
 			}
 		},
 		{ passive: true },
