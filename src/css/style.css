@@ -1270,7 +1270,7 @@
 		/* the close chrome owns the top right corner; the transport sits
 		   beside its title like the spec sketch */
 		#autoscrollTransport {
-			@apply flex flex-row items-center gap-1;
+			@apply flex flex-row items-center gap-2;
 			span {
 				@apply text-cyan;
 			}
@@ -1292,11 +1292,15 @@
 			}
 		}
 		#autoscrollModeRow {
-			/* wraps while the pill carries text labels; the icon pill
-			   will pull the count cluster back onto this line */
-			@apply flex flex-row flex-wrap items-center gap-1;
+			@apply flex flex-row;
+			/* the pill owns the whole row, half per mode */
+			.segmented {
+				@apply w-full;
+			}
 			.segmented .segment {
-				@apply px-1 py-0.5;
+				/* the full width row has the room to seat the icon beside
+				   its label instead of the stacked default */
+				@apply flex-1 flex-row items-center justify-center gap-1 py-0.5;
 				svg {
 					width: 12px;
 					height: 12px;
@@ -1308,14 +1312,26 @@
 			}
 		}
 		#autoscrollCount {
-			@apply flex flex-row items-center gap-0.5 ml-auto;
+			@apply flex flex-row items-center gap-0.5;
 			label {
-				@apply text-cyan pr-0.5;
+				@apply text-cyan;
 			}
 			button {
 				@apply px-1;
 				font-size: 10px;
 				line-height: 14px;
+			}
+			/* auto margins float the stepper to the middle of the space
+			   left of the label, not flush against the edge */
+			#autoscrollCountDown {
+				@apply ml-auto;
+			}
+			#autoscrollCountUp {
+				@apply mr-auto;
+			}
+			/* forever mode: the row stays put but reads switched off */
+			&.dimmed {
+				@apply opacity-40 pointer-events-none;
 			}
 		}
 		#autoscrollSpeedRow {
