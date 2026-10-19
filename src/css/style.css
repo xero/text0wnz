@@ -1824,9 +1824,10 @@
 				0 0 0 1px #000,
 				0 0 0 5px theme('colors.cyber'),
 				0 0 0 6px #000;
-			/* the grid and tool preview overlays sit at z-10 and would
-			   otherwise swallow the pointer before it reaches the image */
-			z-index: 11;
+			/* the grid and tool preview sit at z-10 and the caret canvases
+			   at z-20: any of them over the image would swallow the
+			   pointer and the bubbled event paints under the drag */
+			z-index: 21;
 		}
 	}
 	#fontFavToggle {

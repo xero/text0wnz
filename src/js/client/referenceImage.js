@@ -30,6 +30,7 @@ const createReferenceImage = (deps = {}) => {
 	let objectUrl = null;
 	let loaded = false;
 	let dragMode = false;
+	let drag = null;
 	// x/y share the width slider's canvas-width basis so zoom and
 	// resize move the trace with the art instead of leaving it behind
 	const pos = { x: 0, y: 0 };
@@ -76,6 +77,11 @@ const createReferenceImage = (deps = {}) => {
 
 	const setDragMode = on => {
 		dragMode = on;
+		if (!on) {
+			// a reset mid-drag must not leave a captured pointer steering
+			// pos from a stale base
+			drag = null;
+		}
 		overlay.classList.toggle('dragging', on);
 		dragToggle?.setAttribute('aria-pressed', String(on));
 	};
@@ -114,6 +120,12 @@ const createReferenceImage = (deps = {}) => {
 	// tracing setup belongs to the artist, not the file
 	const load = file => {
 		unload();
+		// a fresh load obsoletes a boot restore or an older load's save
+		// still in flight, or slow reads and writes land out of order:
+		// quick swaps could persist the wrong image, and a pending save
+		// could resurrect bytes a clear just wiped
+		generation++;
+		const gen = generation;
 		objectUrl = URL.createObjectURL(file);
 		overlay.src = objectUrl;
 		overlay.classList.add('enabled');
@@ -123,7 +135,16 @@ const createReferenceImage = (deps = {}) => {
 		// Safari can drop a File cloned into IndexedDB; raw bytes survive
 		file
 			.arrayBuffer()
-			.then(buffer => store.saveRefImage({ buffer, type: file.type }));
+			.then(buffer => {
+				if (gen === generation) {
+					store.saveRefImage({ buffer, type: file.type });
+				}
+			})
+			.catch(() => {
+				// the picked file vanished mid-read: the overlay still shows
+				// from its object URL, and the orphaned settings drop on the
+				// next boot
+			});
 	};
 
 	const restore = () => {
@@ -141,6 +162,11 @@ const createReferenceImage = (deps = {}) => {
 			if (gen !== generation) {
 				return;
 			}
+			if (image === null) {
+				// the read itself failed (db blocked by an old tab, broken
+				// IndexedDB): keep the settings so a later boot can retry
+				return;
+			}
 			if (!image?.buffer) {
 				// orphaned settings (the image save failed): drop them so
 				// the next boot skips the IndexedDB read
@@ -154,8 +180,11 @@ const createReferenceImage = (deps = {}) => {
 			if (scale) {
 				scale.value = String(saved.width ?? DEFAULTS.width);
 			}
-			pos.x = Number(saved.x) || 0;
-			pos.y = Number(saved.y) || 0;
+			// corrupt storage must not strand the trace unreachably far:
+			// 500 canvas widths dwarfs any real tracing offset
+			const clamp = v => Math.max(-500, Math.min(500, Number(v) || 0));
+			pos.x = clamp(saved.x);
+			pos.y = clamp(saved.y);
 			objectUrl = URL.createObjectURL(blob);
 			overlay.src = objectUrl;
 			overlay.classList.add('enabled');
@@ -189,23 +218,33 @@ const createReferenceImage = (deps = {}) => {
 	// the canvas pointer normalizer listens on the container in the
 	// bubble phase: stopping propagation here keeps a drag from also
 	// painting a stroke under the image
-	let drag = null;
 	overlay.addEventListener('pointerdown', e => {
 		if (!dragMode) {
 			return;
 		}
 		e.preventDefault();
 		e.stopPropagation();
+		// one pointer owns the drag: a second finger must neither reset
+		// the base mid-move nor fall through and paint on the canvas
+		if (drag) {
+			return;
+		}
 		try {
 			overlay.setPointerCapture?.(e.pointerId);
 		} catch {
 			// a pointer can lift between dispatch and capture; the drag
 			// still tracks through events that bubble to the overlay
 		}
-		drag = { px: e.clientX, py: e.clientY, x: pos.x, y: pos.y };
+		drag = {
+			id: e.pointerId,
+			px: e.clientX,
+			py: e.clientY,
+			x: pos.x,
+			y: pos.y,
+		};
 	});
 	overlay.addEventListener('pointermove', e => {
-		if (!drag) {
+		if (!drag || e.pointerId !== drag.id) {
 			return;
 		}
 		e.stopPropagation();
@@ -218,7 +257,7 @@ const createReferenceImage = (deps = {}) => {
 		applyStyle();
 	});
 	const endDrag = e => {
-		if (!drag) {
+		if (!drag || e.pointerId !== drag.id) {
 			return;
 		}
 		e.stopPropagation();
@@ -227,6 +266,12 @@ const createReferenceImage = (deps = {}) => {
 	};
 	overlay.addEventListener('pointerup', endDrag);
 	overlay.addEventListener('pointercancel', endDrag);
+	// capture can fail (the guarded throw above) or vanish without an
+	// up; a release anywhere must disarm the drag, or the image would
+	// glide under a buttonless hover
+	overlay.addEventListener('lostpointercapture', endDrag);
+	document.addEventListener('pointerup', endDrag);
+	document.addEventListener('pointercancel', endDrag);
 	// an img ghost-drags natively and that steals the pointer capture
 	overlay.addEventListener('dragstart', e => e.preventDefault());
 

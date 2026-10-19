@@ -30,8 +30,17 @@ const dbPromise = () => {
 			}
 		};
 
-		request.onsuccess = _e => resolve(request.result);
+		request.onsuccess = _e => {
+			// close when a newer version opens elsewhere, or that tab's
+			// upgrade blocks forever on this connection
+			request.result.onversionchange = () => request.result.close();
+			resolve(request.result);
+		};
 		request.onerror = _e => reject(request.error);
+		// an old-version tab without the close hook above wedges this
+		// open: settle the promise so callers degrade instead of hanging
+		request.onblocked = _e =>
+			reject(new Error('text0wnz db held open by an older tab'));
 	});
 };
 
@@ -170,17 +179,18 @@ export const Storage = {
 	},
 
 	/**
-	 * Save the reference image blob to IndexedDB
-	 * @param {Blob} blob
+	 * Save the reference image to IndexedDB. Raw bytes, never a Blob or
+	 * File: Safari drops those in a structured clone.
+	 * @param {{buffer: ArrayBuffer, type: string}} image
 	 */
-	async saveRefImage(blob) {
+	async saveRefImage(image) {
 		try {
 			const db = await dbPromise();
 			const tx = db.transaction('refImage', 'readwrite');
 			const store = tx.objectStore('refImage');
 
 			await /** @type {Promise<void>} */(new Promise((resolve, reject) => {
-				const request = store.put(blob, 'currentRef');
+				const request = store.put(image, 'currentRef');
 				request.onsuccess = () => resolve();
 				request.onerror = () => reject(request.error);
 			}));
@@ -193,7 +203,10 @@ export const Storage = {
 	},
 
 	/**
-	 * Load the reference image blob from IndexedDB
+	 * Load the reference image from IndexedDB
+	 * @returns the stored record, undefined when nothing is stored, or
+	 * null when the read itself failed (callers treat these differently:
+	 * a failure must not be mistaken for an empty store)
 	 */
 	async loadRefImage() {
 		try {
@@ -220,7 +233,13 @@ export const Storage = {
 			const db = await dbPromise();
 			const tx = db.transaction('refImage', 'readwrite');
 			const store = tx.objectStore('refImage');
-			store.clear();
+
+			await /** @type {Promise<void>} */(new Promise((resolve, reject) => {
+				const request = store.clear();
+				request.onsuccess = () => resolve();
+				request.onerror = () => reject(request.error);
+			}));
+
 			return true;
 		} catch (error) {
 			console.error('[Storage] Error clearing reference image:', error);
