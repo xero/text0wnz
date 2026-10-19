@@ -147,6 +147,13 @@
 		#toolSettings {
 			@apply transition-none!;
 		}
+		/* autoscroll writes scrollTop every frame: easing that looks
+		   lush on a manual fling fights a sixty hertz glide, so every
+		   transition goes raw while the engine drives */
+		body.autoscrolling,
+		body.autoscrolling * {
+			@apply transition-none!;
+		}
 	}
 
 	.scrollable {
