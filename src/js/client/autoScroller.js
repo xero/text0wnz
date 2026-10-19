@@ -222,7 +222,7 @@ const createAutoScroller = () => {
 		'autoscrollMode',
 		[
 			{ value: 'count', label: 'scroll', icon: 'play' },
-			{ value: 'loop', label: 'loop', icon: 'loop' },
+			{ value: 'loop', label: 'loop', icon: 'infinite' },
 		],
 		value => {
 			engine.setMode(value);
