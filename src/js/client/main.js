@@ -20,6 +20,7 @@ import { createPluginManager } from './plugins.js';
 import { createReferenceImage } from './referenceImage.js';
 import { createToolSettings } from './toolSettings.js';
 import { createPanelManager } from './panels.js';
+import { fitGlyphs, armPixelRatioWatch } from './glyphScale.js';
 import { FontCache } from './fontCache.js';
 import {
 	$,
@@ -627,6 +628,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 					});
 					State.panels.layout();
 				}
+				// a glyph preview's pixel fit depends on its panel's mode
+				// and the monitor's pixel ratio; both re-fit everything
+				document.addEventListener('onPanelLayout', () => fitGlyphs());
+				armPixelRatioWatch(() => fitGlyphs());
 
 				// Tier 3: Secondary tools - defer with requestIdleCallback
 				const initSecondaryTools = () => {
@@ -828,9 +833,11 @@ const initializeAppComponents = async () => {
 	onClick($('navUndo'), State.textArtCanvas.undo);
 	onClick($('navRedo'), State.textArtCanvas.redo);
 
-	// charset picker (durdraw lineage)
+	// charset picker (durdraw lineage); the keyboard section's charset
+	// button opens the same dialog as the File menu item
 	const charsetPicker = createCharsetPicker();
 	onClick($('charsetPicker'), charsetPicker.show);
+	onClick($('charsetButton'), charsetPicker.show);
 
 	// extended colors: the strip's 256/RGB expansion panel
 	createColorPanel();
@@ -1016,7 +1023,7 @@ const initializeAppComponents = async () => {
 		m: $('mirror'),
 	});
 	// the settings window must exist before any tool enables: the
-	// keyboard tool boots enabled below and hides it
+	// keyboard tool boots enabled below and shows its section
 	State.toolSettings = createToolSettings();
 
 	const keyboard = createKeyboardController();
@@ -1026,14 +1033,12 @@ const initializeAppComponents = async () => {
 			paintShortcuts.disable();
 			State.menus.close();
 			keyboard.enable();
-			State.toolSettings.hide();
-			$('keyboardToolbar').classList.remove('hide');
+			State.toolSettings.show('keyboard');
 		},
 		() => {
 			paintShortcuts.enable();
 			keyboard.disable();
 			State.menus.close();
-			$('keyboardToolbar').classList.add('hide');
 		},
 	).enable();
 	Toolbar.add(

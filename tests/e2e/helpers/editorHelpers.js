@@ -158,9 +158,10 @@ export async function drag(page, from, to, steps = 12) {
  * TODO: Replace timeout with focus state validation
  */
 export async function focusCanvas(page) {
-	// Click on viewport instead of canvas to avoid toolPreview overlay interference
+	// Click on viewport instead of canvas to avoid toolPreview overlay
+	// interference, below the tool settings float that boots at (58,54)
 	const viewport = page.locator('#viewport');
-	await viewport.click({ position: { x: 100, y: 100 } });
+	await viewport.click({ position: { x: 100, y: 340 } });
 	// TODO: Wait for specific focus state or activeElement change
 	await page.waitForTimeout(200);
 }

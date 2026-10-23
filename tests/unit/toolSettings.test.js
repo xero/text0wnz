@@ -30,6 +30,7 @@ const fixture = () => {
 				<b class="modTitle" id="toolSettingsTitle"></b>
 			</header>
 			<div class="modBody"><div class="modContent">
+				<div id="tsKeyboard" class="hide"></div>
 				<div id="tsLine" class="hide"></div>
 				<div id="tsSquare" class="hide"></div>
 				<div id="tsCircle" class="hide"></div>
@@ -115,6 +116,33 @@ describe('createToolSettings', () => {
 			el.id = 'mounted';
 			ts.mount('ascii', el);
 			expect(document.querySelector('#tsAscii #mounted')).not.toBeNull();
+		});
+
+		it('the keyboard rides the rotation like any section', () => {
+			const ts = createToolSettings();
+			ts.show('keyboard');
+			expect(hidden('tsKeyboard')).toBe(false);
+			expect(hidden('tsLine')).toBe(true);
+			expect(document.getElementById('toolSettingsTitle').innerText).toBe(
+				'Keyboard',
+			);
+		});
+
+		it('brush and shape sections carry a bar title, the keyboard none', () => {
+			createToolSettings();
+			const lineTitle = document.querySelector('#tsLine .barTitle');
+			expect(lineTitle).not.toBeNull();
+			expect(lineTitle.innerText).toBe('Line');
+			expect(document.querySelector('#tsKeyboard .barTitle')).toBeNull();
+		});
+
+		it('only the character section flags the panel for the map CSS', () => {
+			const ts = createToolSettings();
+			const panel = document.getElementById('toolSettings');
+			ts.show('character');
+			expect(panel.classList.contains('charMap')).toBe(true);
+			ts.show('line');
+			expect(panel.classList.contains('charMap')).toBe(false);
 		});
 	});
 

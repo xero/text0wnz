@@ -356,8 +356,11 @@ const createAsciiBrushController = () => {
 	);
 	const widthLabel = document.createElement('LABEL');
 	widthLabel.innerText = 'Width';
-	State.toolSettings.mount('ascii', widthLabel);
-	State.toolSettings.mount('ascii', widthControl.getElement());
+	const widthRow = document.createElement('DIV');
+	widthRow.className = 'settingRow';
+	widthRow.appendChild(widthLabel);
+	widthRow.appendChild(widthControl.getElement());
+	State.toolSettings.mount('ascii', widthRow);
 	widthControl.set(State.toolSettings.get('asciiWidth', 1));
 	engine.setWidth(widthControl.value());
 

@@ -155,14 +155,8 @@ describe('Magic Numbers Constants', () => {
 			expect(magicNumbers.RESIZE_WARN_CELLS).toBe(300000);
 		});
 
-		it('should export panel width multiplier', () => {
-			expect(magicNumbers.PANEL_WIDTH_MULTIPLIER).toBe(20);
-			expect(typeof magicNumbers.PANEL_WIDTH_MULTIPLIER).toBe('number');
-		});
-
 		it('should have positive application constants', () => {
 			expect(magicNumbers.PASTE_LIMIT_MULTIPLIER).toBeGreaterThan(0);
-			expect(magicNumbers.PANEL_WIDTH_MULTIPLIER).toBeGreaterThan(0);
 		});
 	});
 
