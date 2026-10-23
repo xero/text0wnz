@@ -137,3 +137,5 @@ yarn-error.log*
 # compiled server binaries (tools/compileBinaries.js)
 build/bin/
 dist-singlefile/
+sessions/*.0wnz
+sessions/backups/

@@ -49,20 +49,15 @@ test.describe('Color Palette', () => {
 	});
 
 	test('should have ICE colors toggle', async ({ page }) => {
-		// Click fonts sidebar button to show font toolbar
-		await page.locator('#fonts').click();
+		// the iCE chip lives in the sidebar canvas panel, always visible
+		const iceToggle = page.locator('#navICE');
+		await expect(iceToggle).toBeVisible();
+
+		await iceToggle.click();
 		await page.waitForTimeout(300);
 
-		const iceToggle = page.locator('#navICE');
-		const count = await iceToggle.count();
-
-		if (count > 0) {
-			await iceToggle.first().click();
-			await page.waitForTimeout(300);
-
-			await iceToggle.first().click();
-			await page.waitForTimeout(300);
-		}
+		await iceToggle.click();
+		await page.waitForTimeout(300);
 	});
 
 	test('should support keyboard shortcuts for colors', async ({ page }) => {

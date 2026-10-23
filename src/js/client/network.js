@@ -1,5 +1,5 @@
 import State from './state.js';
-import { $, $$, websocketUI } from './ui.js';
+import { $, websocketUI } from './ui.js';
 import { createDefaultPalette, createPalette } from './palette.js';
 import { trustedMessage } from './messageGuard.js';
 import {
@@ -76,7 +76,7 @@ const createRemoteCursors = () => {
 const createWorkerHandler = inputHandle => {
 	const btnJoin = $('joinCollaboration');
 	const btnLocal = $('stayLocal');
-	const lblFont = $$('#currentFontDisplay kbd');
+	const lblFont = $('currentFontDisplay');
 	const selFont = $('fontSelect');
 	const btn9pt = $('nav9pt');
 	const btnIce = $('navICE');

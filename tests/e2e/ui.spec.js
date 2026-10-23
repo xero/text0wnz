@@ -169,9 +169,6 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#redo').click();
 		await page.waitForTimeout(200);
 
-		await page.locator('#fonts').click();
-		await page.waitForTimeout(300);
-
 		await page.locator('#navICE').click();
 		await page.waitForTimeout(200);
 
@@ -197,14 +194,16 @@ test.describe('Toolbar Interactions', () => {
 	});
 
 	test('should toggle toolbars or panels', async ({ page }) => {
-		const fontToolbar = page.locator('#fonts');
+		// the fonts rail button opens the fonts dialog now
+		const fontsButton = page.locator('#fonts');
 		const clipboardToolbar = page.locator('#clipboard');
 
-		if (await fontToolbar.isVisible()) {
-			await fontToolbar.click();
+		if (await fontsButton.isVisible()) {
+			await fontsButton.click();
 			await page.waitForTimeout(300);
+			await expect(page.locator('#fontsModal')).toBeVisible();
 
-			await fontToolbar.click();
+			await page.locator('#fontsCancel').click();
 			await page.waitForTimeout(300);
 		}
 
