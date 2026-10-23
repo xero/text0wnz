@@ -286,8 +286,36 @@
 		grid-column: 2;
 		min-width: 0;
 
-		&:empty {
+		&:empty,
+		&:not(:has(.mod:not([hidden]), .dph)) {
 			display: none;
+		}
+		&.dropping {
+			background: #2a2a3c;
+		}
+		> .dph {
+			margin: 4px 6px;
+		}
+	}
+
+	.drow {
+		@apply flex items-stretch;
+		min-width: 0;
+		border-top: 1px solid #0008;
+
+		&:first-child {
+			border-top: 0;
+		}
+		&:not(:has(.mod:not([hidden]), .dph)) {
+			display: none;
+		}
+		> .mod {
+			flex: 1 1 0;
+			min-width: 0;
+		}
+		/* columns share the row with a divider between visible mates */
+		> .mod:not([hidden]) ~ .mod:not([hidden]) {
+			border-left: 1px solid #0008;
 		}
 	}
 	#dockTop {
@@ -583,11 +611,15 @@
 		border: 0;
 		padding: 0;
 
+		/* bold enough to survive 1x antialiasing: a 2px diagonal reads
+		   half-tone grey on low-density screens. Longhands on purpose:
+		   the color must never ride a shorthand reset to currentColor */
 		b {
-			width: 7px;
-			height: 7px;
-			border: solid var(--color-fg);
-			border-width: 2px 0 0 2px;
+			width: 9px;
+			height: 9px;
+			border-style: solid;
+			border-color: var(--color-fg);
+			border-width: 3px 0 0 3px;
 			transform: translateY(2px) rotate(45deg);
 		}
 		&[aria-expanded='false'] b {
@@ -632,6 +664,10 @@
 			}
 		}
 	}
+	/* a shuttered panel shows only its strip: title, line, chevron */
+	.mod.shaded .modHeader .modTool {
+		display: none;
+	}
 	.modBody {
 		display: grid;
 		grid-template-rows: 1fr;
@@ -644,14 +680,27 @@
 			@apply flex flex-col;
 			min-height: 0;
 			overflow: hidden;
+
+			@media (prefers-reduced-motion: no-preference) {
+				transition: padding 0.2s ease;
+			}
 		}
 	}
 	.mod.shaded .modBody {
 		grid-template-rows: 0fr;
 
+		/* border-box padding would hold a 0fr track open as a sliver
+		   below the title strip; it shutters with the row */
 		> div {
 			visibility: hidden;
+			padding-block: 0;
 			transition: visibility 0s 0.2s;
+
+			@media (prefers-reduced-motion: no-preference) {
+				transition:
+					visibility 0s 0.2s,
+					padding 0.2s ease;
+			}
 		}
 	}
 	.modContent {
@@ -780,7 +829,8 @@
 		);
 	}
 
-	/* the one drop marker: a dashed slot that animates open */
+	/* the one drop marker: a dashed slot that animates open; stacking
+	   slots animate height, column slots animate width */
 	.dph {
 		flex: none;
 		height: 0;
@@ -797,6 +847,83 @@
 		}
 		&.out {
 			opacity: 0;
+		}
+	}
+	.dph.v {
+		height: auto;
+		width: 0;
+		margin: 4px;
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition:
+				width 0.18s ease,
+				opacity 0.18s;
+		}
+	}
+
+	/* bars: a top or bottom dock row; no header, a dotted grip on the
+	   left edge, and shading never applies */
+	.mod.tb {
+		@apply flex-row items-stretch;
+		cursor: grab;
+
+		&::before {
+			content: '';
+			flex: none;
+			width: 12px;
+			margin: 8px 0 8px 6px;
+			background: radial-gradient(circle, #888 1px, transparent 1.6px) 0 0 / 6px
+				6px;
+		}
+		.modHeader {
+			display: none;
+		}
+		.modBody {
+			flex: 1;
+			min-width: 0;
+			grid-template-rows: 1fr !important;
+
+			> div {
+				visibility: visible !important;
+			}
+		}
+		.modContent {
+			@apply flex-row items-center flex-wrap;
+			gap: 6px 14px;
+			padding: 6px 10px;
+		}
+		#navSauce {
+			flex: 1 1 200px;
+		}
+		.panelSpec {
+			flex: 1 1 200px;
+		}
+		#positionInfo {
+			@apply flex-row items-center;
+			flex: 1 1 260px;
+			gap: 10px;
+
+			.depthBar {
+				flex: 1 1 160px;
+			}
+		}
+		#zoomControl {
+			flex: 0 1 240px;
+		}
+		&#framesPanel .modContent {
+			flex-wrap: nowrap;
+			overflow-x: auto;
+			scrollbar-width: thin;
+		}
+		&#refPanel label {
+			flex: 1 1 160px;
+		}
+		&#toolSettings .modContent {
+			align-items: stretch;
+		}
+		&#toolSettings .modContent > div {
+			@apply flex-row items-center;
+			gap: 6px 14px;
 		}
 	}
 

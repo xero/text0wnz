@@ -611,10 +611,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 					});
 					State.panels.register('frames', {
 						el: $('framesPanel'),
+						big: true,
 						visible: () => framesPanel?.isOpen() === true,
 					});
 					State.panels.register('tool', {
 						el: $('toolSettings'),
+						big: true,
 						closable: true,
 						visible: () => State.toolSettings?.hasSection() === true,
 					});

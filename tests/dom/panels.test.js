@@ -28,6 +28,9 @@ const fixture = () => {
 	document.body.innerHTML = `
 		<div id="bodyContainer">
 			<button id="sidebarGrip" aria-expanded="true"><i></i></button>
+			<div id="dockTop"></div>
+			<div id="viewport"></div>
+			<div id="dockBottom"></div>
 			<div id="sidebar">
 				${['sauce', 'canvas', 'pos', 'zoom', 'ref', 'map'].map(moduleMarkup).join('')}
 			</div>
@@ -38,6 +41,11 @@ const fixture = () => {
 const el = key => document.querySelector(`.mod[data-m="${key}"]`);
 const sidebarKeys = () =>
 	[...document.querySelectorAll('#sidebar > .mod')].map(m => m.dataset.m);
+const dockRows = dock =>
+	[...document.querySelectorAll(`#${dock} > .drow`)].map(row =>
+		[...row.children]
+			.filter(c => c.classList.contains('mod'))
+			.map(c => c.dataset.m));
 
 const registerAll = (manager, overrides = {}) => {
 	manager.register('sauce', {});
@@ -46,8 +54,12 @@ const registerAll = (manager, overrides = {}) => {
 	manager.register('zoom', {});
 	manager.register('ref', { visible: overrides.ref ?? (() => false) });
 	manager.register('map', { grow: true, visible: overrides.map ?? (() => true) });
-	manager.register('frames', { visible: overrides.frames ?? (() => false) });
+	manager.register('frames', {
+		big: true,
+		visible: overrides.frames ?? (() => false),
+	});
 	manager.register('tool', {
+		big: true,
 		closable: true,
 		visible: overrides.tool ?? (() => true),
 	});
@@ -75,8 +87,83 @@ describe('panel manager', () => {
 			}
 			expect(el('tool')).toHaveClass('fl');
 			expect(el('tool').style.getPropertyValue('--mx')).toBe('58px');
-			expect(el('frames')).toHaveClass('fl');
+			// frames defaults to the bottom dock as a bar
+			expect(el('frames')).toHaveClass('tb');
+			expect(dockRows('dockBottom')).toEqual([['frames']]);
 			expect(el('frames').hidden).toBe(true);
+		});
+
+		it('builds dock rows from ORD with ln joining columns when wide', () => {
+			localStorage.setItem(
+				'panelLayout',
+				JSON.stringify({
+					v: 2,
+					MOD: {
+						sauce: { dk: 'top' },
+						canvas: { dk: 'top', ln: 1 },
+						zoom: { dk: 'top' },
+					},
+				}),
+			);
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			expect(dockRows('dockTop')).toEqual([['sauce', 'canvas'], ['zoom']]);
+			expect(el('sauce')).toHaveClass('tb');
+			expect(el('canvas')).toHaveClass('tb');
+		});
+
+		it('narrow screens split every bar onto its own row but keep ln', () => {
+			vi.stubGlobal('innerWidth', 500);
+			localStorage.setItem(
+				'panelLayout',
+				JSON.stringify({
+					v: 2,
+					MOD: {
+						sauce: { dk: 'top' },
+						canvas: { dk: 'top', ln: 1 },
+					},
+				}),
+			);
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			expect(dockRows('dockTop')).toEqual([['sauce'], ['canvas']]);
+			const saved = JSON.parse(localStorage.getItem('panelLayout'));
+			expect(saved.MOD.canvas.ln).toBe(1);
+			vi.unstubAllGlobals();
+		});
+
+		it('a big module never joins a column row', () => {
+			localStorage.setItem(
+				'panelLayout',
+				JSON.stringify({
+					v: 2,
+					ORD: ['sauce', 'tool', 'canvas'],
+					MOD: {
+						sauce: { dk: 'top' },
+						tool: { dk: 'top', ln: 1 },
+						canvas: { dk: 'top', ln: 1 },
+					},
+				}),
+			);
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			// tool is big: its ln is ignored and small canvas cannot join it
+			expect(dockRows('dockTop')).toEqual([
+				['sauce'],
+				['tool'],
+				['canvas'],
+			]);
+		});
+
+		it('a grow module docked in a bar snaps back to the sidebar', () => {
+			localStorage.setItem(
+				'panelLayout',
+				JSON.stringify({ v: 2, MOD: { map: { dk: 'top' } } }),
+			);
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			expect(el('map')).toHaveClass('dk');
+			expect(el('map').parentNode.id).toBe('sidebar');
 		});
 
 		it('derives visibility from the registered predicates', () => {
