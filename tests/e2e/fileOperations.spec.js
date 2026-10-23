@@ -145,29 +145,31 @@ test.describe('Canvas Operations', () => {
 	});
 
 	test('should toggle ICE colors', async ({ page }) => {
-		// Click fonts sidebar button to show font toolbar
-		await page.locator('#fonts').click();
-		await page.waitForTimeout(300);
-
+		// the iCE chip lives in the sidebar canvas panel, always visible
 		const iceToggle = page.locator('#navICE');
+		await expect(iceToggle).toBeVisible();
 
-		if ((await iceToggle.count()) > 0) {
-			await iceToggle.click();
-			await page.waitForTimeout(300);
-		}
+		await iceToggle.click();
+		await page.waitForTimeout(300);
+		await expect(iceToggle).toHaveClass(/enabled/);
+
+		await iceToggle.click();
+		await page.waitForTimeout(300);
+		await expect(iceToggle).not.toHaveClass(/enabled/);
 	});
 
 	test('should toggle 9px font spacing', async ({ page }) => {
-		// Click fonts sidebar button to show font toolbar
-		await page.locator('#fonts').click();
-		await page.waitForTimeout(300);
-
+		// the 9pt chip lives in the sidebar canvas panel, always visible
 		const spacingToggle = page.locator('#nav9pt');
+		await expect(spacingToggle).toBeVisible();
 
-		if ((await spacingToggle.count()) > 0) {
-			await spacingToggle.click();
-			await page.waitForTimeout(300);
-		}
+		await spacingToggle.click();
+		await page.waitForTimeout(300);
+		await expect(spacingToggle).toHaveClass(/enabled/);
+
+		await spacingToggle.click();
+		await page.waitForTimeout(300);
+		await expect(spacingToggle).not.toHaveClass(/enabled/);
 	});
 
 	test('should have font selection', async ({ page }) => {
