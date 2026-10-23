@@ -547,6 +547,8 @@ const createWorkerHandler = inputHandle => {
 				} finally {
 					applyDepth = Math.max(0, applyDepth - 1);
 				}
+				// the sidebar sauce block mirrors these fields
+				document.dispatchEvent(new CustomEvent('onSauceChange'));
 				break;
 			}
 			default:
