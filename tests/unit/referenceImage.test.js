@@ -90,12 +90,12 @@ describe('reference image overlay', () => {
 	});
 
 	it('panel open state rides the settings-toggle surface', () => {
-		const panel = document.getElementById('refPanel');
+		// the panel manager renders the flag; this surface only tracks it
 		expect(ref.isOpen()).toBe(false);
 		ref.setOpen(true);
-		expect(panel.classList.contains('hide')).toBe(false);
+		expect(ref.isOpen()).toBe(true);
 		ref.setOpen(false);
-		expect(panel.classList.contains('hide')).toBe(true);
+		expect(ref.isOpen()).toBe(false);
 	});
 
 	describe('drag mode', () => {

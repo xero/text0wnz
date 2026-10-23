@@ -158,9 +158,9 @@ test.describe('Advanced Undo/Redo Operations', () => {
 			await page.waitForTimeout(200);
 		}
 
-		const settingsButton = page.locator(
-			'button:has-text("Settings"), button[aria-label*="Settings"]',
-		);
+		const settingsButton = page
+			.locator('button:has-text("Settings"), button[aria-label*="Settings"]')
+			.first();
 		if (await settingsButton.isVisible()) {
 			await settingsButton.click();
 			await page.waitForTimeout(300);

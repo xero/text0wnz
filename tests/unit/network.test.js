@@ -326,11 +326,6 @@ describe('Network Module', () => {
 		let mockElements;
 
 		beforeEach(() => {
-			const mockHeader = {
-				addEventListener: vi.fn(),
-				style: { cursor: '' },
-			};
-
 			mockElements = {
 				divChatButton: {
 					classList: {
@@ -338,15 +333,6 @@ describe('Network Module', () => {
 						remove: vi.fn(),
 						contains: vi.fn(() => false),
 					},
-				},
-				divChatWindow: {
-					classList: {
-						add: vi.fn(),
-						remove: vi.fn(),
-						contains: vi.fn(() => false),
-					},
-					querySelector: vi.fn(() => mockHeader),
-					style: { transform: '' },
 				},
 				divMessageWindow: {
 					appendChild: vi.fn(),
@@ -378,7 +364,6 @@ describe('Network Module', () => {
 
 			const controller = createChatController(
 				mockElements.divChatButton,
-				mockElements.divChatWindow,
 				mockElements.divMessageWindow,
 				mockElements.divUserList,
 				mockElements.inputHandle,
@@ -407,7 +392,6 @@ describe('Network Module', () => {
 
 			createChatController(
 				mockElements.divChatButton,
-				mockElements.divChatWindow,
 				mockElements.divMessageWindow,
 				mockElements.divUserList,
 				mockElements.inputHandle,
@@ -456,7 +440,6 @@ describe('Network Module', () => {
 
 			createChatController(
 				mockElements.divChatButton,
-				mockElements.divChatWindow,
 				mockElements.divMessageWindow,
 				mockElements.divUserList,
 				mockElements.inputHandle,
@@ -475,7 +458,6 @@ describe('Network Module', () => {
 
 			createChatController(
 				mockElements.divChatButton,
-				mockElements.divChatWindow,
 				mockElements.divMessageWindow,
 				mockElements.divUserList,
 				mockElements.inputHandle,
@@ -499,7 +481,6 @@ describe('Network Module', () => {
 
 			const controller = createChatController(
 				mockElements.divChatButton,
-				mockElements.divChatWindow,
 				mockElements.divMessageWindow,
 				mockElements.divUserList,
 				mockElements.inputHandle,
@@ -513,9 +494,6 @@ describe('Network Module', () => {
 			expect(controller.isEnabled()).toBe(false);
 
 			controller.toggle();
-			expect(mockElements.divChatWindow.classList.remove).toHaveBeenCalledWith(
-				'hide',
-			);
 			expect(mockElements.inputMessage.focus).toHaveBeenCalled();
 			expect(mockElements.divChatButton.classList.add).toHaveBeenCalledWith(
 				'active',
@@ -527,9 +505,6 @@ describe('Network Module', () => {
 			expect(controller.isEnabled()).toBe(true);
 
 			controller.toggle();
-			expect(mockElements.divChatWindow.classList.add).toHaveBeenCalledWith(
-				'hide',
-			);
 			expect(mockElements.divChatButton.classList.remove).toHaveBeenCalledWith(
 				'active',
 			);
@@ -540,7 +515,6 @@ describe('Network Module', () => {
 		it('should handle user join functionality', () => {
 			const controller = createChatController(
 				mockElements.divChatButton,
-				mockElements.divChatWindow,
 				mockElements.divMessageWindow,
 				mockElements.divUserList,
 				mockElements.inputHandle,
@@ -558,7 +532,6 @@ describe('Network Module', () => {
 		it('should handle user part functionality', () => {
 			const controller = createChatController(
 				mockElements.divChatButton,
-				mockElements.divChatWindow,
 				mockElements.divMessageWindow,
 				mockElements.divUserList,
 				mockElements.inputHandle,
@@ -578,7 +551,6 @@ describe('Network Module', () => {
 		it('should handle nick changes', () => {
 			const controller = createChatController(
 				mockElements.divChatButton,
-				mockElements.divChatWindow,
 				mockElements.divMessageWindow,
 				mockElements.divUserList,
 				mockElements.inputHandle,
@@ -599,7 +571,6 @@ describe('Network Module', () => {
 		it('should handle conversation addition', () => {
 			const controller = createChatController(
 				mockElements.divChatButton,
-				mockElements.divChatWindow,
 				mockElements.divMessageWindow,
 				mockElements.divUserList,
 				mockElements.inputHandle,
@@ -617,7 +588,6 @@ describe('Network Module', () => {
 		it('should handle notification when chat disabled and notification flag set', () => {
 			const controller = createChatController(
 				mockElements.divChatButton,
-				mockElements.divChatWindow,
 				mockElements.divMessageWindow,
 				mockElements.divUserList,
 				mockElements.inputHandle,

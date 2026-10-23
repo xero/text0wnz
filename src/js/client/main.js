@@ -19,7 +19,7 @@ import { createArchiveOpener, isArchiveFile } from './archiveOpen.js';
 import { createPluginManager } from './plugins.js';
 import { createReferenceImage } from './referenceImage.js';
 import { createToolSettings } from './toolSettings.js';
-import { createSidebarGrip } from './panels.js';
+import { createPanelManager } from './panels.js';
 import { FontCache } from './fontCache.js';
 import {
 	$,
@@ -45,7 +45,6 @@ import {
 	enforceMaxBytes,
 	createFontSelect,
 	createZoomControl,
-	makePanelFloat,
 } from './ui.js';
 import {
 	createDefaultPalette,
@@ -73,7 +72,8 @@ let fontSelect;
 let openFile;
 let referenceImage;
 let refToggle;
-let refFloat;
+let framesPanel;
+let minimap;
 let resizeApply;
 let sauceDone;
 let sauceTitle;
@@ -164,8 +164,9 @@ const openHandler = (file, opts = {}) => {
 	if (isImageFile(file) && referenceImage) {
 		referenceImage.load(file);
 		referenceImage.setOpen(true);
+		State.panels?.layout();
 		refToggle?.update();
-		refFloat?.focus();
+		State.panels?.focus('ref');
 		openFile.value = '';
 		return;
 	}
@@ -590,7 +591,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 					createGestureGuard(canvasContainer);
 				}
 				createZoomControl();
-				createSidebarGrip();
+				// the module registry owns every panel's placement; late
+				// controllers reference the hoisted vars, so a predicate
+				// registered now still reads them once they exist
+				State.panels = createPanelManager();
+				if (State.panels) {
+					State.panels.register('sauce', { el: $('saucePanel') });
+					State.panels.register('canvas', { el: $('canvasPanel') });
+					State.panels.register('pos', { el: $('cursorPanel') });
+					State.panels.register('zoom', { el: $('zoomPanel') });
+					State.panels.register('ref', {
+						el: $('refPanel'),
+						visible: () => referenceImage?.isOpen() === true,
+					});
+					State.panels.register('map', {
+						el: $('minimapPanel'),
+						grow: true,
+						visible: () => minimap?.isVisible() === true,
+					});
+					State.panels.register('frames', {
+						el: $('framesPanel'),
+						visible: () => framesPanel?.isOpen() === true,
+					});
+					State.panels.register('tool', {
+						el: $('toolSettings'),
+						closable: true,
+						visible: () => State.toolSettings?.hasSection() === true,
+					});
+					State.panels.register('chat', {
+						el: $('chatWindow'),
+						floatOnly: true,
+						visible: () => State.chat?.isEnabled() === true,
+					});
+					State.panels.layout();
+				}
 
 				// Tier 3: Secondary tools - defer with requestIdleCallback
 				const initSecondaryTools = () => {
@@ -748,22 +782,19 @@ const initializeAppComponents = async () => {
 		// the async restore reopens the panel; the nav button must light
 		// up with it or the menu reads as off while the overlay shows
 		onRestore: () => {
+			State.panels?.layout();
 			refToggle?.update();
-			refFloat?.focus();
 		},
 	});
 	if (referenceImage) {
-		refFloat = makePanelFloat($('refPanel'), () => {
-			referenceImage.setOpen(false);
-			refToggle.update();
-		});
 		refToggle = createSettingToggle(
 			$('navRef'),
 			referenceImage.isOpen,
 			open => {
 				referenceImage.setOpen(open);
+				State.panels?.layout();
 				if (open) {
-					refFloat.focus();
+					State.panels?.focus('ref');
 				}
 			},
 		);
@@ -805,22 +836,15 @@ const initializeAppComponents = async () => {
 	// frames timeline + playback + onion skin; the toolbar buttons ride
 	// createSettingToggle so the 'enabled' highlight persists across
 	// toolbar view switches, like the grid button
-	const framesPanel = createFramesPanel();
+	framesPanel = createFramesPanel();
 	if (framesPanel) {
-		const framesFloat = makePanelFloat($('framesPanel'), () => {
-			framesPanel.setOpen(false);
-			framesToggle.update();
+		createSettingToggle($('navFrames'), framesPanel.isOpen, open => {
+			framesPanel.setOpen(open);
+			State.panels?.layout();
+			if (open) {
+				State.panels?.focus('frames');
+			}
 		});
-		const framesToggle = createSettingToggle(
-			$('navFrames'),
-			framesPanel.isOpen,
-			open => {
-				framesPanel.setOpen(open);
-				if (open) {
-					framesFloat.focus();
-				}
-			},
-		);
 	}
 
 	// a partial cell may only ever render at the BOTTOM edge: once any
@@ -856,7 +880,7 @@ const initializeAppComponents = async () => {
 	}
 
 	// minimap (GL-only)
-	const minimap = createMinimap();
+	minimap = createMinimap();
 	if (minimap) {
 		createSettingToggle($('navMinimap'), minimap.isVisible, visible =>
 			(visible ? minimap.show() : minimap.hide()));
@@ -903,6 +927,9 @@ const initializeAppComponents = async () => {
 
 	onClick($('update'), _ => {
 		State.modal.open('update');
+	});
+	onClick($('resetLayout'), _ => {
+		State.panels?.reset();
 	});
 	onClick(reload, _ => {
 		if (swRegistration?.waiting) {
@@ -1387,7 +1414,6 @@ const initializeAppComponents = async () => {
 	// Initialize chat before creating network handler
 	State.chat = createChatController(
 		$('chatButton'),
-		$('chatWindow'),
 		$('messageWindow'),
 		$('userList'),
 		$('handleInput'),

@@ -283,7 +283,7 @@ const createMinimap = () => {
 
 	const show = () => {
 		visible = true;
-		panel.classList.remove('hide');
+		State.panels?.layout();
 		render();
 		// the doc cannot change during autoscroll playback, and this
 		// walk is every cell of it: skip the tick while the engine
@@ -298,7 +298,7 @@ const createMinimap = () => {
 
 	const hide = () => {
 		visible = false;
-		panel.classList.add('hide');
+		State.panels?.layout();
 		clearInterval(timer);
 		timer = 0;
 		remember('false');
