@@ -275,9 +275,14 @@ const createReferenceImage = (deps = {}) => {
 	// an img ghost-drags natively and that steals the pointer capture
 	overlay.addEventListener('dragstart', e => e.preventDefault());
 
-	// the toolbar button wires through createSettingToggle in main.js
-	const isOpen = () => !panel.classList.contains('hide');
-	const setOpen = open => panel.classList.toggle('hide', !open);
+	// the toolbar button wires through createSettingToggle in main.js;
+	// the panel manager derives the module's visibility from this flag,
+	// so callers follow a setOpen with a layout
+	let open = false;
+	const isOpen = () => open;
+	const setOpen = value => {
+		open = Boolean(value);
+	};
 
 	// the canvas width moves under zoom and resizes; the trace follows
 	document.addEventListener('onCanvasLayoutChange', applyStyle);

@@ -1,0 +1,257 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import '@testing-library/jest-dom';
+import {
+	createPanelManager,
+	promoteRowLead,
+} from '../../src/js/client/panels.js';
+
+vi.mock('../../src/js/client/state.js', () => ({ default: {} }));
+
+/**
+ * The module registry: layout() placement from data, persistence with
+ * the tolerant merge, the legacy position migration, and the row lead
+ * promotion rule the phase 3 docks will render.
+ */
+const moduleMarkup = key => `
+	<section class="mod" data-m="${key}" aria-label="${key}">
+		<header class="modHeader">
+			<b class="modTitle">${key}</b>
+			<i class="modLine"></i>
+			<button class="modShade" type="button" aria-expanded="true"><b></b></button>
+			${key === 'tool' ? '<button class="modClose" type="button">x</button>' : ''}
+		</header>
+		<div class="modBody"><div class="modContent"></div></div>
+		${key === 'map' ? '<i class="modResize"></i>' : ''}
+	</section>`;
+
+const fixture = () => {
+	document.body.innerHTML = `
+		<div id="bodyContainer">
+			<button id="sidebarGrip" aria-expanded="true"><i></i></button>
+			<div id="sidebar">
+				${['sauce', 'canvas', 'pos', 'zoom', 'ref', 'map'].map(moduleMarkup).join('')}
+			</div>
+			${['frames', 'tool', 'chat'].map(moduleMarkup).join('')}
+		</div>`;
+};
+
+const el = key => document.querySelector(`.mod[data-m="${key}"]`);
+const sidebarKeys = () =>
+	[...document.querySelectorAll('#sidebar > .mod')].map(m => m.dataset.m);
+
+const registerAll = (manager, overrides = {}) => {
+	manager.register('sauce', {});
+	manager.register('canvas', {});
+	manager.register('pos', {});
+	manager.register('zoom', {});
+	manager.register('ref', { visible: overrides.ref ?? (() => false) });
+	manager.register('map', { grow: true, visible: overrides.map ?? (() => true) });
+	manager.register('frames', { visible: overrides.frames ?? (() => false) });
+	manager.register('tool', {
+		closable: true,
+		visible: overrides.tool ?? (() => true),
+	});
+	manager.register('chat', {
+		floatOnly: true,
+		visible: overrides.chat ?? (() => false),
+	});
+	return manager;
+};
+
+describe('panel manager', () => {
+	beforeEach(() => {
+		localStorage.clear();
+		fixture();
+	});
+
+	describe('layout from data', () => {
+		it('docks the default sidebar modules in order and floats the rest', () => {
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			expect(sidebarKeys()).toEqual(['sauce', 'canvas', 'pos', 'zoom', 'ref', 'map']);
+			for (const key of ['sauce', 'canvas', 'pos', 'zoom']) {
+				expect(el(key)).toHaveClass('dk');
+				expect(el(key).hidden).toBe(false);
+			}
+			expect(el('tool')).toHaveClass('fl');
+			expect(el('tool').style.getPropertyValue('--mx')).toBe('58px');
+			expect(el('frames')).toHaveClass('fl');
+			expect(el('frames').hidden).toBe(true);
+		});
+
+		it('derives visibility from the registered predicates', () => {
+			let refOn = false;
+			const manager = registerAll(createPanelManager(), { ref: () => refOn });
+			manager.layout();
+			expect(el('ref').hidden).toBe(true);
+			refOn = true;
+			manager.layout();
+			expect(el('ref').hidden).toBe(false);
+		});
+
+		it('an X-closed closable module hides until reopened', () => {
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			expect(el('tool').hidden).toBe(false);
+			manager.close('tool');
+			expect(el('tool').hidden).toBe(true);
+			manager.reopen('tool');
+			expect(el('tool').hidden).toBe(false);
+		});
+
+		it('floating stack order follows focus', () => {
+			const manager = registerAll(createPanelManager(), { chat: () => true });
+			manager.layout();
+			manager.focus('tool');
+			const toolZ = parseInt(el('tool').style.zIndex, 10);
+			const chatZ = parseInt(el('chat').style.zIndex, 10);
+			expect(toolZ).toBeGreaterThan(chatZ);
+			manager.focus('chat');
+			expect(parseInt(el('chat').style.zIndex, 10)).toBeGreaterThan(
+				parseInt(el('tool').style.zIndex, 10),
+			);
+		});
+
+		it('shade state renders as the shaded class and aria', () => {
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			manager.toggleShade('sauce');
+			expect(el('sauce')).toHaveClass('shaded');
+			expect(
+				el('sauce').querySelector('.modShade').getAttribute('aria-expanded'),
+			).toBe('false');
+		});
+
+		it('folds the sidebar column away when nothing docked is visible', () => {
+			const manager = createPanelManager();
+			manager.register('ref', { visible: () => false });
+			manager.register('tool', { closable: true, visible: () => true });
+			manager.layout();
+			expect(document.getElementById('bodyContainer')).toHaveClass('noSidebar');
+			const populated = registerAll(createPanelManager());
+			populated.layout();
+			expect(document.getElementById('bodyContainer')).not.toHaveClass(
+				'noSidebar',
+			);
+		});
+	});
+
+	describe('persistence', () => {
+		it('round-trips shade, order, and collapse through the store', () => {
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			manager.toggleShade('canvas');
+			document.getElementById('sidebarGrip').click();
+			const saved = JSON.parse(localStorage.getItem('panelLayout'));
+			expect(saved.v).toBe(2);
+			expect(saved.MOD.canvas.sh).toBe(1);
+			expect(saved.sidebarCollapsed).toBe(true);
+
+			fixture();
+			const next = registerAll(createPanelManager());
+			next.layout();
+			expect(el('canvas')).toHaveClass('shaded');
+			expect(next.isCollapsed()).toBe(true);
+		});
+
+		it('merges a saved order tolerantly: unknown keys drop, missing append', () => {
+			localStorage.setItem(
+				'panelLayout',
+				JSON.stringify({
+					v: 2,
+					ORD: ['zoom', 'ghost', 'sauce'],
+					MOD: { ghost: { dk: 'side' } },
+				}),
+			);
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			const keys = sidebarKeys();
+			expect(keys[0]).toBe('zoom');
+			expect(keys[1]).toBe('sauce');
+			expect(keys).not.toContain('ghost');
+			expect(keys).toContain('map');
+		});
+
+		it('migrates the legacy tool position key once', () => {
+			localStorage.setItem(
+				'toolSettingsPos',
+				JSON.stringify({ x: 123, y: 45 }),
+			);
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			expect(el('tool').style.getPropertyValue('--mx')).toBe('123px');
+			expect(el('tool').style.getPropertyValue('--my')).toBe('45px');
+			expect(localStorage.getItem('toolSettingsPos')).toBeNull();
+		});
+
+		it('a saved tool position beats the legacy key', () => {
+			localStorage.setItem(
+				'panelLayout',
+				JSON.stringify({ v: 2, MOD: { tool: { x: 300, y: 200 } } }),
+			);
+			localStorage.setItem('toolSettingsPos', JSON.stringify({ x: 9, y: 9 }));
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			expect(el('tool').style.getPropertyValue('--mx')).toBe('300px');
+			expect(localStorage.getItem('toolSettingsPos')).toBeNull();
+		});
+
+		it('reset returns every module to its defaults', () => {
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			manager.toggleShade('sauce');
+			manager.close('tool');
+			manager.reset();
+			expect(el('sauce')).not.toHaveClass('shaded');
+			expect(el('tool').hidden).toBe(false);
+			expect(sidebarKeys()).toEqual(['sauce', 'canvas', 'pos', 'zoom', 'ref', 'map']);
+		});
+	});
+
+	describe('row lead promotion', () => {
+		it('the next module in the dock inherits a leaving lead', () => {
+			const ORD = ['sauce', 'canvas', 'pos'];
+			const MOD = {
+				sauce: { dk: 'top', ln: 0 },
+				canvas: { dk: 'top', ln: 1 },
+				pos: { dk: 'top', ln: 1 },
+			};
+			promoteRowLead(ORD, MOD, 'sauce', 'top');
+			expect(MOD.canvas.ln).toBe(0);
+			expect(MOD.pos.ln).toBe(1);
+		});
+
+		it('a non-lead leaving promotes nobody', () => {
+			const ORD = ['sauce', 'canvas', 'pos'];
+			const MOD = {
+				sauce: { dk: 'top', ln: 0 },
+				canvas: { dk: 'top', ln: 1 },
+				pos: { dk: 'top', ln: 1 },
+			};
+			promoteRowLead(ORD, MOD, 'canvas', 'top');
+			expect(MOD.pos.ln).toBe(1);
+		});
+
+		it('promotion skips modules docked elsewhere', () => {
+			const ORD = ['sauce', 'frames', 'canvas'];
+			const MOD = {
+				sauce: { dk: 'top', ln: 0 },
+				frames: { dk: 'bot', ln: 1 },
+				canvas: { dk: 'top', ln: 1 },
+			};
+			promoteRowLead(ORD, MOD, 'sauce', 'top');
+			expect(MOD.frames.ln).toBe(1);
+			expect(MOD.canvas.ln).toBe(0);
+		});
+
+		it('no dock of origin means no promotion', () => {
+			const ORD = ['sauce', 'canvas'];
+			const MOD = {
+				sauce: { dk: 0, ln: 0 },
+				canvas: { dk: 'top', ln: 1 },
+			};
+			promoteRowLead(ORD, MOD, 'sauce', null);
+			expect(MOD.canvas.ln).toBe(1);
+		});
+	});
+});

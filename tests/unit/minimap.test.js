@@ -61,16 +61,13 @@ describe('minimap', () => {
 	it('starts VISIBLE by default and remembers the toggle', () => {
 		vi.useFakeTimers();
 		const minimap = createMinimap();
-		const panel = document.getElementById('minimapPanel');
-		// owner call: on by default
+		// owner call: on by default; the panel manager renders the flag
 		expect(minimap.isVisible()).toBe(true);
-		expect(panel.classList.contains('hide')).toBe(false);
 		// the refresh tick must not throw without a 2D context
 		expect(() => vi.advanceTimersByTime(1100)).not.toThrow();
 		// main.js wires the button through createSettingToggle
 		minimap.hide();
 		expect(minimap.isVisible()).toBe(false);
-		expect(panel.classList.contains('hide')).toBe(true);
 		expect(localStorage.getItem('minimapVisible')).toBe('false');
 		// a remembered OFF stays off on the next boot
 		document.body.innerHTML = MARKUP;

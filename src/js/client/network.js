@@ -861,7 +861,6 @@ const createWorkerHandler = inputHandle => {
 
 const createChatController = (
 	btnChat,
-	winChat,
 	winMsg,
 	winUsers,
 	txtHandle,
@@ -882,48 +881,7 @@ const createChatController = (
 	}
 	checkNotifications.checked = notifications;
 
-	const chatHeader = winChat.querySelector('header');
 	const close = $('closeChat');
-	let isDragging = false;
-	let currentX = 0;
-	let currentY = 0;
-	let initialX = 0;
-	let initialY = 0;
-
-	const dragStart = e => {
-		// header/h2 only: child inputs must stay clickable
-		if (
-			e.target === chatHeader ||
-			e.target.tagName === 'H2' ||
-			e.target.parentElement?.tagName === 'H2'
-		) {
-			initialX = e.clientX - currentX;
-			initialY = e.clientY - currentY;
-			isDragging = true;
-			chatHeader.style.cursor = 'grabbing';
-			winChat.classList.add('drag');
-		}
-	};
-
-	const dragEnd = () => {
-		isDragging = false;
-		chatHeader.style.cursor = 'grab';
-		winChat.classList.remove('drag');
-	};
-
-	const drag = e => {
-		if (isDragging) {
-			e.preventDefault();
-			currentX = e.clientX - initialX;
-			currentY = e.clientY - initialY;
-
-			winChat.style.transform = `translate(${currentX}px, ${currentY}px)`;
-		}
-	};
-
-	chatHeader.addEventListener('mousedown', dragStart);
-	document.addEventListener('mouseup', dragEnd);
-	document.addEventListener('mousemove', drag);
 
 	const scrollToBottom = () => {
 		const rect = winMsg.getBoundingClientRect();
@@ -1024,15 +982,18 @@ const createChatController = (
 	txtHandle.addEventListener('keypress', keypressHandle);
 	txtMsg.addEventListener('keypress', keypressMessage);
 
+	// the panel manager derives the chat module's visibility from the
+	// enabled flag; placement and focus belong to it too
 	const toggle = _ => {
 		if (enabled) {
-			winChat.classList.add('hide');
 			enabled = false;
+			State.panels?.layout();
 			onBlurCallback();
 			btnChat.classList.remove('active');
 		} else {
-			winChat.classList.remove('hide');
 			enabled = true;
+			State.panels?.layout();
+			State.panels?.focus('chat');
 			scrollToBottom();
 			onFocusCallback();
 			txtMsg.focus();

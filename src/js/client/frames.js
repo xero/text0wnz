@@ -238,10 +238,13 @@ const createFramesPanel = () => {
 
 	// the toolbar button wires through createSettingToggle in main.js
 	// (the house pattern: the 'enabled' highlight persists across
-	// toolbar view switches, like the grid button)
-	const isOpen = () => !panel.classList.contains('hide');
-	const setOpen = open => {
-		panel.classList.toggle('hide', !open);
+	// toolbar view switches, like the grid button); the panel manager
+	// derives the module's visibility from this flag, so callers follow
+	// a setOpen with a layout
+	let open = false;
+	const isOpen = () => open;
+	const setOpen = value => {
+		open = Boolean(value);
 		if (open) {
 			refresh();
 		} else {

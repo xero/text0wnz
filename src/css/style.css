@@ -136,15 +136,14 @@
 		* {
 			@apply transition-all ease-in-out;
 		}
-		/* anything that tracks input or scroll must not ease behind it */
+		/* anything that tracks input or scroll must not ease behind it:
+		   a floating module's left/top ride the drag pointer directly */
 		canvas,
 		#viewport,
 		#canvasContainer,
 		#minimapViewport,
 		#colorPanel,
-		#framesPanel,
-		#refPanel,
-		#toolSettings {
+		.mod.fl {
 			@apply transition-none!;
 		}
 		/* autoscroll writes scrollTop every frame: easing that looks
@@ -328,18 +327,6 @@
 	}
 
 	#chatWindow {
-		@apply flex fixed top-[var(--header-size)] right-0 z-50 scale-y-100 opacity-100 z-30
-      w-[45vw] min-w-[30vw] max-w-full min-h-[300px] max-h-screen /*height intentionally omitted*/
-      dialog-style;
-		transform-origin: top;
-		transition:
-			scale 0.7s ease-out,
-			opacity 0.7s ease-out,
-			transform 0.7s ease-out;
-
-		&.hide {
-			@apply scale-y-0 opacity-0 flex! pointer-events-none;
-		}
 		#chatRoom {
 			@apply flex flex-col h-full min-h-0 w-full max-h-[50vh];
 
@@ -352,10 +339,8 @@
 			header {
 				@apply w-full flex-row pl-2 pr-0 place-content-between min-h-0 bg-header select-none flex;
 				flex-wrap: balance;
-				cursor: grab;
 				h2 {
 					@apply text-cyan text-2xl mt-1 flex flex-grow select-none;
-					cursor: grab;
 				}
 				button {
 					@apply p-0 pb-0.5;
@@ -535,26 +520,323 @@
 		.sidebarCollapsed & {
 			overflow: hidden;
 		}
-		> section {
-			@apply flex flex-col flex-none;
-			gap: 6px;
-			padding: 4px 10px 8px;
+		&.dropping {
+			background: #2a2a3c;
 		}
 	}
 
-	#saucePanel {
-		/* the sidebar's top panel carries the PWA window drag region the
-		   old header gave up; controls inside it stay interactive */
+	/* the sidebar's top divider strip carries the PWA window drag region
+	   the old header gave up; its buttons stay interactive */
+	#sidebar > .mod:first-of-type .modHeader {
 		app-region: drag;
 		-webkit-app-region: drag;
 
-		button,
-		input,
-		label,
-		textarea {
+		button {
 			app-region: no-drag;
 			-webkit-app-region: no-drag;
 		}
+	}
+
+	/* when nothing is docked the sidebar column and grip fold away; a
+	   drag hovering the right edge peeks them back open as a target */
+	#bodyContainer.noSidebar {
+		grid-template-columns: 48px minmax(0, 1fr) 0 0;
+
+		#sidebarGrip {
+			display: none;
+		}
+	}
+	#bodyContainer.sidebarPeek {
+		grid-template-columns: 48px minmax(0, 1fr) 14px 236px;
+	}
+
+	/* <--//-----------------------------------------------------------[modules] */
+	.mod {
+		@apply flex flex-col bg-menu relative;
+		min-height: 0;
+
+		&[hidden] {
+			display: none !important;
+		}
+	}
+	.modHeader {
+		@apply flex items-center flex-none select-none;
+		gap: 6px;
+		touch-action: none;
+	}
+	.modLine {
+		flex: 1;
+		height: 1px;
+		background: var(--iron);
+	}
+	.modTitle {
+		@apply whitespace-nowrap overflow-hidden text-ellipsis;
+		flex: 1;
+		font-weight: normal;
+	}
+	.modShade {
+		@apply grid place-items-center bg-transparent cursor-pointer;
+		flex: none;
+		width: 18px;
+		height: 18px;
+		border: 0;
+		padding: 0;
+
+		b {
+			width: 7px;
+			height: 7px;
+			border: solid var(--color-fg);
+			border-width: 2px 0 0 2px;
+			transform: translateY(2px) rotate(45deg);
+		}
+		&[aria-expanded='false'] b {
+			transform: translateY(-2px) rotate(225deg);
+		}
+	}
+	.modClose {
+		@apply bg-transparent text-fg cursor-pointer;
+		flex: none;
+		width: 22px;
+		height: 18px;
+		border: 0;
+		padding: 0;
+		font-size: 14px;
+		line-height: 18px;
+
+		@media (hover: hover) {
+			&:hover {
+				@apply bg-hl;
+			}
+		}
+	}
+	.modTool {
+		@apply grid place-items-center bg-transparent cursor-pointer;
+		flex: none;
+		width: 26px;
+		height: 20px;
+		border: 0;
+		padding: 0;
+
+		svg {
+			width: 16px;
+			height: 16px;
+			fill: var(--color-fg);
+		}
+		&.enabled {
+			@apply bg-indigo;
+		}
+		@media (hover: hover) {
+			&:not(.enabled):hover {
+				@apply bg-hl;
+			}
+		}
+	}
+	.modBody {
+		display: grid;
+		grid-template-rows: 1fr;
+		min-height: 0;
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition: grid-template-rows 0.2s ease;
+		}
+		> div {
+			@apply flex flex-col;
+			min-height: 0;
+			overflow: hidden;
+		}
+	}
+	.mod.shaded .modBody {
+		grid-template-rows: 0fr;
+
+		> div {
+			visibility: hidden;
+			transition: visibility 0s 0.2s;
+		}
+	}
+	.modContent {
+		@apply flex flex-col;
+		gap: 6px;
+		padding: 4px 10px 8px;
+	}
+
+	/* docked: a divider strip with a small cyan title */
+	.mod.dk {
+		flex: none;
+
+		.modHeader {
+			height: 22px;
+			padding: 0 3px 0 10px;
+			cursor: grab;
+		}
+		.modTitle {
+			flex: none;
+			font-size: 12px;
+			color: var(--cyan);
+			max-width: 70%;
+		}
+		.modClose {
+			display: none;
+		}
+		@media (hover: hover) {
+			.modHeader:hover {
+				background: #3a3a3a;
+
+				.modLine {
+					background: #888;
+				}
+			}
+		}
+	}
+	.mod.dk.grow:not(.shaded) {
+		flex: 1 1 auto;
+		min-height: 140px;
+	}
+	.mod.grow .modBody {
+		flex: 1 1 auto;
+	}
+	.mod.grow.shaded .modBody {
+		flex: none;
+	}
+
+	/* floating: a title bar window */
+	.mod.fl {
+		@apply fixed;
+		z-index: 40;
+		left: var(--mx);
+		top: var(--my);
+		width: var(--mw, 236px);
+		max-height: calc(100% - 8px);
+		border: 4px solid var(--color-panel);
+		border-top: 0;
+		box-shadow: 0 2px 10px #000a;
+
+		.modHeader {
+			height: 18px;
+			padding-left: 6px;
+			background: var(--color-panel);
+			cursor: move;
+			font-size: 12px;
+			color: var(--subtitle);
+		}
+		.modLine {
+			display: none;
+		}
+		&.focus {
+			box-shadow:
+				0 2px 14px #000,
+				0 0 0 1px #666;
+
+			.modHeader {
+				background: #5a5a5a;
+				color: #fff;
+			}
+		}
+		&.grow:not(.shaded) {
+			height: var(--mh, 340px);
+		}
+	}
+	.mod[data-m='tool'].fl {
+		width: max-content;
+		min-width: 210px;
+		max-width: min(340px, calc(100% - 70px));
+	}
+	.mod[data-m='chat'].fl {
+		width: 45vw;
+		min-width: 300px;
+		max-width: calc(100% - 56px);
+	}
+	.mod.drag {
+		z-index: 90 !important;
+		pointer-events: none;
+		opacity: 0.9;
+		box-shadow: 8px 8px 0 #0009 !important;
+	}
+	.mod.drag.over {
+		opacity: 0.55;
+	}
+	.modResize {
+		display: none;
+	}
+	.mod.fl.grow:not(.shaded) .modResize {
+		display: block;
+		position: absolute;
+		right: -4px;
+		bottom: -4px;
+		width: 16px;
+		height: 16px;
+		cursor: nwse-resize;
+		touch-action: none;
+		background: linear-gradient(
+			135deg,
+			transparent 50%,
+			#888 50%,
+			#888 60%,
+			transparent 60%,
+			transparent 70%,
+			#888 70%,
+			#888 80%,
+			transparent 80%
+		);
+	}
+
+	/* the one drop marker: a dashed slot that animates open */
+	.dph {
+		flex: none;
+		height: 0;
+		margin: 0 6px;
+		outline: 2px dashed var(--cyan);
+		outline-offset: -2px;
+		background: #22d3ee12;
+		overflow: hidden;
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition:
+				height 0.18s ease,
+				opacity 0.18s;
+		}
+		&.out {
+			opacity: 0;
+		}
+	}
+
+	/* tool select feedback; the shaded strip double-flashes brighter */
+	@keyframes modFlash {
+		0%,
+		35% {
+			background: #3b3d8f;
+		}
+		100% {
+			background: var(--color-menu);
+		}
+	}
+	.mod.flash,
+	.mod.flash .modHeader {
+		animation: modFlash 0.8s ease-out;
+	}
+	@keyframes modFlashShaded {
+		0%,
+		14% {
+			background: #4a4dc0;
+		}
+		30% {
+			background: var(--color-menu);
+		}
+		46%,
+		60% {
+			background: #4a4dc0;
+		}
+		100% {
+			background: var(--color-menu);
+		}
+	}
+	.mod.shaded.flash,
+	.mod.shaded.flash .modHeader {
+		animation: modFlashShaded 1.6s ease-in-out;
+	}
+
+	.panelChips {
+		@apply flex flex-wrap;
+		gap: 3px;
 	}
 
 	#navSauce {
@@ -924,8 +1206,9 @@
 	}
 
 	.menuList {
-		/* above the tool window stack (40-43), below the top layer modals */
-		@apply inline cursor-default absolute w-[300px] h-fit bg-file border-4 border-solid border-menu z-[45];
+		/* flyouts and menus band: above every floating module (40+) and
+		   the drag ghost (90); dialogs ride the top layer regardless */
+		@apply inline cursor-default absolute w-[300px] h-fit bg-file border-4 border-solid border-menu z-[200];
 		top: var(--header-size);
 		box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
 	}
@@ -1371,15 +1654,10 @@
 		}
 	}
 	#framesPanel {
-		/* floating-window chrome, thicker top border = drag strip */
-		@apply fixed z-40 bg-menu p-2 flex flex-row gap-2 items-center;
-		border: 4px solid var(--color-panel);
-		border-top-width: 16px;
-		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
-		cursor: move;
-		left: 48px;
-		bottom: 8px;
-		max-width: calc(100vw - 64px);
+		.modContent {
+			@apply flex-row flex-wrap items-center;
+			gap: 8px;
+		}
 		button {
 			@apply bg-menu text-fg px-2 cursor-pointer;
 		}
@@ -1418,43 +1696,9 @@
 			@apply bg-purp;
 		}
 	}
-	#minimapPanel {
-		@apply fixed z-30 dialog-style p-1 flex flex-col;
-		/* floats over the canvas, clear of the sidebar column and grip */
-		right: 258px;
-		top: var(--header-size);
-		/* 100% of the ICB, not 100vh: iOS vh units outgrow the window and
-		   push the bottom border off screen on long files */
-		max-height: calc(100% - var(--header-size));
-	}
-	#minimapMenuToggle {
-		/* floats over the art's corner: chromeless until hovered so the
-		   glyph reads without walling off the pixels under it */
-		@apply absolute bg-transparent border-0 cursor-pointer p-0.5;
-		top: 6px;
-		right: 6px;
-		z-index: 2;
-		svg {
-			display: block;
-			width: 16px;
-			height: 16px;
-			fill: #efefef;
-			/* the focus box trick for a glyph: a hard black halo traced
-			   around the icon's own shape, so it reads over white art */
-			filter: drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000)
-				drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000);
-		}
-		@media (hover: hover) {
-			&:hover {
-				@apply bg-hl;
-			}
-		}
-	}
 	#minimapMenu {
 		@apply flex flex-col gap-1 text-fg text-xs p-1;
-		/* never wider than the art: a wider menu stretches the panel
-		   and bares a dead strip beside the fixed-width map */
-		width: 128px;
+		width: auto;
 		/* the global ease animates the reveal; display cannot
 		   transition, so closed collapses to zero height and
 		   visibility flips at the transition's end instead */
@@ -1475,14 +1719,6 @@
 			max-height: 128px;
 			visibility: visible;
 			@apply py-1;
-		}
-		/* the close chrome owns the top right corner; the transport sits
-		   beside its title like the spec sketch */
-		#autoscrollTransport {
-			@apply flex flex-row items-center gap-2;
-			span {
-				@apply text-cyan;
-			}
 		}
 		/* :not(.segment): an id-scoped button rule would steamroll the
 		   segmented control's own selection styling */
@@ -1600,7 +1836,7 @@
 	}
 	#minimapArt {
 		display: block;
-		width: 128px;
+		width: 100%;
 		height: auto;
 		image-rendering: pixelated;
 	}
@@ -1870,31 +2106,31 @@
 		@apply text-cyan text-sm pt-2;
 	}
 	#refPanel {
-		/* floating-window chrome, thicker top border = drag strip */
-		@apply fixed z-40 bg-menu p-2 flex flex-row gap-3 items-center;
-		border: 4px solid var(--color-panel);
-		border-top-width: 16px;
-		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
-		cursor: move;
-		right: 8px;
-		bottom: 8px;
-		button {
-			@apply bg-menu text-fg px-2 cursor-pointer;
+		.panelChips button {
+			@apply bg-editor text-fg px-2 cursor-pointer;
+			border: 0;
+			padding-block: 3px;
+			font-size: 14px;
 		}
 		@media (hover: hover) {
-			button:hover {
+			.panelChips button:hover {
 				@apply bg-purp;
 			}
 		}
 		label {
-			@apply text-fg text-xs flex items-center gap-1;
+			@apply text-cyan text-xs flex items-center gap-2;
+
+			input[type='range'] {
+				flex: 1;
+				accent-color: var(--indigo);
+			}
 		}
 		#refDrag {
-			@apply flex items-center self-stretch p-px;
+			@apply flex items-center gap-1;
 			svg {
 				@apply pointer-events-none;
-				width: 22px;
-				height: 22px;
+				width: 18px;
+				height: 18px;
 				fill: currentColor;
 			}
 			&[aria-pressed='true'] {
@@ -1903,27 +2139,12 @@
 		}
 	}
 	#toolSettings {
-		/* floating-window chrome, thicker top border = drag strip */
-		@apply fixed z-40 bg-menu flex flex-col gap-1 items-start;
-		border: 4px solid var(--color-panel);
-		border-top-width: 16px;
-		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
-		cursor: move;
-		left: 48px;
-		top: calc(var(--header-size) + 8px);
-
-		h3 {
-			/* the title rides the drag strip like the close chrome */
-			position: absolute;
-			top: -16px;
-			left: 0;
-			color: #efefef;
-			font-size: 10px;
-			line-height: 12px;
-			padding: 2px 5px;
+		.modContent {
+			@apply items-start;
+			gap: 4px;
+			padding: 0;
 		}
-		/* sections only: the close chrome is also a direct div child */
-		> div:not(.hidePanel) {
+		.modContent > div {
 			@apply flex flex-col gap-1 items-start p-2;
 		}
 		/* the picker sections are all canvas and sit flush in the frame */
@@ -1950,7 +2171,7 @@
 			@apply opacity-40 pointer-events-none;
 		}
 		/* picker sections: the swatch cursor overlays its canvas stack */
-		> div > div {
+		.modContent > div > div {
 			position: relative;
 		}
 		canvas {
