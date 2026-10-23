@@ -105,7 +105,14 @@ const createPanelManager = () => {
 	const container = $('bodyContainer');
 	const sidebar = $('sidebar');
 	const grip = $('sidebarGrip');
-	if (!container || !sidebar) {
+	// real elements only: unit harnesses stub the DOM lookups, and a
+	// manager built over stubs would throw from its async layout calls
+	if (
+		!container ||
+		!sidebar ||
+		typeof container.querySelector !== 'function' ||
+		typeof sidebar.insertBefore !== 'function'
+	) {
 		return null;
 	}
 
@@ -351,7 +358,11 @@ const createPanelManager = () => {
 
 	const register = (key, cfg = {}) => {
 		const el = cfg.el ?? container.querySelector(`.mod[data-m="${key}"]`);
-		if (!el || !MODULE_KEYS.includes(key)) {
+		if (
+			!el ||
+			typeof el.querySelector !== 'function' ||
+			!MODULE_KEYS.includes(key)
+		) {
 			return;
 		}
 		const reg = {
