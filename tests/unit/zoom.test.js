@@ -92,14 +92,22 @@ describe('Zoom Functionality', () => {
 	});
 
 	describe('zoomControl UI component', () => {
-		let container;
+		let scaleValue;
 
 		beforeEach(() => {
+			scaleValue = 1;
+			document.body.innerHTML =
+				'<button id="zoomOut"></button>' +
+				'<output id="zoomValue"></output>' +
+				'<button id="zoomIn"></button>';
+			vi.resetModules();
 			vi.doMock('../../src/js/client/state.js', () => ({
 				default: {
 					font: {
-						getScaleFactor: vi.fn(() => 1),
-						setScaleFactor: vi.fn(),
+						getScaleFactor: vi.fn(() => scaleValue),
+						setScaleFactor: vi.fn(value => {
+							scaleValue = value;
+						}),
 					},
 					waitFor: vi.fn((_key, callback) => callback()),
 				},
@@ -109,61 +117,55 @@ describe('Zoom Functionality', () => {
 		afterEach(() => {
 			vi.clearAllMocks();
 			vi.doUnmock('../../src/js/client/state.js');
+			document.body.innerHTML = '';
 		});
 
-		it('should create zoom control container', async () => {
+		it('should wire the sidebar zoom buttons when they exist', async () => {
 			const { createZoomControl } = await import('../../src/js/client/ui.js');
-			container = createZoomControl();
+			const control = createZoomControl();
 
-			expect(container).toBeDefined();
-			expect(container.className).toBe('zoomControl');
+			expect(control).toBeDefined();
+			expect(typeof control.refresh).toBe('function');
 		});
 
-		it('should have label, slider, and display elements', async () => {
+		it('should return null without the sidebar zoom elements', async () => {
+			document.body.innerHTML = '';
 			const { createZoomControl } = await import('../../src/js/client/ui.js');
-			container = createZoomControl();
 
-			const label = container.querySelector('label');
-			const slider = container.querySelector('input[type="range"]');
-			const display = container.querySelector('.zoomDisplay');
-
-			expect(label).toBeDefined();
-			expect(label.textContent).toBe('Zoom');
-			expect(slider).toBeDefined();
-			expect(display).toBeDefined();
+			expect(createZoomControl()).toBeNull();
 		});
 
-		it('should configure slider with correct attributes', async () => {
+		it('should show whole scales without a decimal', async () => {
 			const { createZoomControl } = await import('../../src/js/client/ui.js');
-			container = createZoomControl();
+			createZoomControl();
 
-			const slider = container.querySelector('input[type="range"]');
-
-			expect(slider.min).toBe('0.5');
-			expect(slider.max).toBe('4');
-			expect(slider.step).toBe('0.5');
-			expect(slider.value).toBe('1');
+			expect(document.getElementById('zoomValue').textContent).toBe('1x');
 		});
 
-		it('should initialize display from current font scale', async () => {
+		it('should show fractional scales with their decimal', async () => {
 			const { createZoomControl } = await import('../../src/js/client/ui.js');
-			container = createZoomControl();
+			const control = createZoomControl();
 
-			const display = container.querySelector('.zoomDisplay');
-			expect(display.textContent).toBe('1.0x');
+			scaleValue = 1.5;
+			control.refresh();
+
+			expect(document.getElementById('zoomValue').textContent).toBe('1.5x');
 		});
 
-		it('should update display when slider input changes', async () => {
+		it('should step the scale through the font fallback on click', async () => {
+			// no zoom controller registers in unit tests, so the button
+			// routes through the font scale fallback
+			const State = (await import('../../src/js/client/state.js')).default;
 			const { createZoomControl } = await import('../../src/js/client/ui.js');
-			container = createZoomControl();
+			createZoomControl();
 
-			const slider = container.querySelector('input[type="range"]');
-			const display = container.querySelector('.zoomDisplay');
+			document.getElementById('zoomIn').click();
+			expect(State.font.setScaleFactor).toHaveBeenCalledWith(1.5);
+			expect(document.getElementById('zoomValue').textContent).toBe('1.5x');
 
-			slider.value = '2';
-			slider.dispatchEvent(new Event('input'));
-
-			expect(display.textContent).toBe('2.0x');
+			document.getElementById('zoomOut').click();
+			expect(State.font.setScaleFactor).toHaveBeenCalledWith(1);
+			expect(document.getElementById('zoomValue').textContent).toBe('1x');
 		});
 	});
 

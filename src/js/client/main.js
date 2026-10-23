@@ -19,6 +19,7 @@ import { createArchiveOpener, isArchiveFile } from './archiveOpen.js';
 import { createPluginManager } from './plugins.js';
 import { createReferenceImage } from './referenceImage.js';
 import { createToolSettings } from './toolSettings.js';
+import { createSidebarGrip } from './panels.js';
 import { FontCache } from './fontCache.js';
 import {
 	$,
@@ -111,7 +112,7 @@ const $$$$ = () => {
 	sauceTitle = $('sauceTitle');
 	swapColors = $('swapColors');
 	rowsInput = $('rowsInput');
-	fontDisplay = $$('#currentFontDisplay kbd');
+	fontDisplay = $('currentFontDisplay');
 	changeFont = $('changeFont');
 	applyFont = $('fontsApply');
 	previewInfo = $('fontPreviewInfo');
@@ -588,15 +589,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 					// chrome pinches drive editor zoom too, never the page
 					createGestureGuard(canvasContainer);
 				}
-				const zoomControlContainer = $('zoomControl');
-				if (zoomControlContainer) {
-					const zoomControl = createZoomControl();
-					const icon = zoomControlContainer.querySelector?.('svg');
-					if (icon) {
-						zoomControl.querySelector('.zoomTop')?.prepend(icon);
-					}
-					zoomControlContainer.appendChild(zoomControl);
-				}
+				createZoomControl();
+				createSidebarGrip();
 
 				// Tier 3: Secondary tools - defer with requestIdleCallback
 				const initSecondaryTools = () => {
@@ -944,6 +938,24 @@ const initializeAppComponents = async () => {
 		State.modal.open('sauce');
 	});
 
+	// the sidebar sauce block mirrors the modal fields, which stay the
+	// single source of truth (file.js and network.js write them directly)
+	const sauceInfoTitle = $('sauceInfoTitle');
+	const sauceInfoByline = $('sauceInfoByline');
+	const updateSauceDisplay = () => {
+		sauceInfoTitle.textContent = sauceTitle.value || State.title || 'Untitled';
+		sauceInfoByline.textContent = [
+			sauceAuthor.value || 'anonymous',
+			sauceGroup.value,
+		]
+			.filter(Boolean)
+			.join(' / ');
+	};
+	['onOpenedFile', 'onNewDocument', 'onSauceChange'].forEach(e => {
+		document.addEventListener(e, updateSauceDisplay);
+	});
+	updateSauceDisplay();
+
 	onClick(sauceDone, () => {
 		State.title = sauceTitle.value;
 		// collab peers hear SAUCE edits (type 12 persists server-side)
@@ -954,6 +966,7 @@ const initializeAppComponents = async () => {
 			comments: sauceComments.value,
 		});
 		State.modal.close();
+		updateSauceDisplay();
 	});
 
 	sauceComments.addEventListener('input', enforceMaxBytes);
@@ -1103,7 +1116,7 @@ const initializeAppComponents = async () => {
 
 	const updateFontDisplay = () => {
 		const currentFont = State.textArtCanvas.getCurrentFontName();
-		fontDisplay.textContent = currentFont.replace(/\s\d+x\d+$/, '');
+		fontDisplay.textContent = currentFont;
 		fontSelect.setValue(currentFont);
 		nav9pt.sync(State.font.getLetterSpacing, State.font.setLetterSpacing);
 		navICE.update();
@@ -1113,10 +1126,6 @@ const initializeAppComponents = async () => {
 			document.addEventListener(e, updateFontDisplay);
 		},
 	);
-	onClick(fontDisplay, () => {
-		State.menus.close();
-		changeFont.click();
-	});
 	const syncFavStar = () => {
 		$('fontFavToggle').innerHTML = fontSelect.isFavorite()
 			? '&#9733;'
@@ -1298,8 +1307,9 @@ const initializeAppComponents = async () => {
 		State.toolSettings.hide();
 		enable();
 	};
-	const fonts = createGenericController($('fontToolbar'), $('fonts'));
-	Toolbar.add($('fonts'), withHide(fonts.enable), fonts.disable);
+	// the fonts rail button opens the dialog straight away now that the
+	// font value lives in the sidebar canvas panel instead of a toolbar
+	onClick($('fonts'), () => changeFont.click());
 	const clipboard = createGenericController(
 		$('clipboardToolbar'),
 		$('clipboard'),

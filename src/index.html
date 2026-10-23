@@ -54,11 +54,6 @@
 							</button>
 						</div>
 					</div>
-					<button id="navSauce" aria-label="Sauce Menu">
-						<svg>
-							<use href="img/icons.svg#sauce"></use>
-						</svg>
-					</button>
 				</nav>
 				<nav>
 					<div id="keyboardToolbar">
@@ -217,32 +212,7 @@
 							<kbd>Redo</kbd>
 						</div>
 					</div>
-					<div id="fontToolbar">
-						<div id="changeFont" class="toolButton">
-							<svg alt="Change Font" aria-label="Change Font">
-								<use href="img/icons.svg#font"></use>
-							</svg>
-							<kbd>Change Font</kbd>
-						</div>
-						<div id="navICE" class="toolButton">
-							<svg alt="Use iCE Colors" aria-label="Toggle iCE Colors">
-								<use href="img/icons.svg#ice"></use>
-							</svg>
-							<kbd>ICE Colors</kbd>
-						</div>
-						<div id="nav9pt" class="toolButton">
-							<svg alt="Use 9px Font" aria-label="Toggle 9px Font">
-								<use href="img/icons.svg#spacing"></use>
-							</svg>
-							<kbd>9pt Font</kbd>
-						</div>
-					</div>
 					<div id="viewportToolbar">
-						<div id="zoomControl" class="toolButton">
-							<svg alt="Zoom" aria-label="Zoom (Ctrl +/-)">
-								<use href="img/icons.svg#zoom"></use>
-							</svg>
-						</div>
 						<div id="navDarkmode" class="toolButton">
 							<svg class="sunAndMoon" aria-hidden="true" viewBox="1 0 24 24">
 								<mask id="moonMask" class="moon">
@@ -327,16 +297,6 @@
 							</nav>
 						</div>
 					</div>
-					<div id="resolution">
-						<svg id="navRes" alt="Change Resolution" aria-label="Change Resolution">
-							<use href="img/icons.svg#resolution"></use>
-						</svg>
-						<kbd id="resolutionLabel">80x25</kbd>
-					</div>
-					<div id="currentFontDisplay">
-						<kbd></kbd>
-					</div>
-					<div id="positionInfo"></div>
 				</nav>
 			</header>
 			<aside>
@@ -433,6 +393,47 @@
 					</svg>
 				</div>
 			</aside>
+			<div id="dockTop"></div>
+			<div id="dockBottom"></div>
+			<button id="sidebarGrip" type="button" title="Hide Sidebar" aria-label="Hide Sidebar" aria-expanded="true"><i></i></button>
+			<div id="sidebar">
+				<section id="saucePanel">
+					<button id="navSauce" title="Edit sauce metadata" aria-label="Edit Sauce Metadata">
+						<svg>
+							<use href="img/icons.svg#sauce"></use>
+						</svg>
+						<span><b id="sauceInfoTitle">Untitled</b><small id="sauceInfoByline">anonymous</small></span>
+					</button>
+				</section>
+				<section id="canvasPanel">
+					<div class="panelSpec">
+						<button id="resolution" class="panelValue" title="Resize canvas" aria-label="Change Resolution">
+							<svg>
+								<use href="img/icons.svg#resolution"></use>
+							</svg>
+							<kbd id="resolutionLabel">80x25</kbd>
+						</button>
+						<button id="navICE" class="panelChip" title="iCE colors: all 16 backgrounds" aria-label="Toggle iCE Colors"><kbd>iCE</kbd></button>
+						<button id="changeFont" class="panelValue" title="Change font" aria-label="Change Font">
+							<svg>
+								<use href="img/icons.svg#font"></use>
+							</svg>
+							<kbd id="currentFontDisplay"></kbd>
+						</button>
+						<button id="nav9pt" class="panelChip" title="9pt: nine pixel wide letters" aria-label="Toggle 9px Font"><kbd>9pt</kbd></button>
+					</div>
+				</section>
+				<section id="cursorPanel">
+					<div id="positionInfo"></div>
+				</section>
+				<section id="zoomPanel">
+					<div id="zoomControl">
+						<button id="zoomOut" class="zoomGlyph" title="Zoom out (Ctrl -)" aria-label="Zoom Out"></button>
+						<output id="zoomValue" aria-live="polite">1x</output>
+						<button id="zoomIn" class="zoomGlyph plus" title="Zoom in (Ctrl +)" aria-label="Zoom In"></button>
+					</div>
+				</section>
+			</div>
 			<div id="minimapPanel" class="hide">
 				<button id="minimapMenuToggle" type="button" aria-label="Autoscroll Menu" aria-expanded="false">
 					<svg aria-hidden="true">

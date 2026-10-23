@@ -206,8 +206,21 @@
 		}
 	}
 
+	/* app shell: rail | center (bar, top dock, canvas, bottom dock) |
+	   grip | sidebar. The bar row is transitional chrome that later
+	   phases empty and remove */
 	#bodyContainer {
-		@apply w-full h-full overflow-y-hidden;
+		@apply w-full h-full overflow-hidden;
+		display: grid;
+		grid-template-columns: 48px minmax(0, 1fr) 14px 236px;
+		grid-template-rows: auto auto minmax(0, 1fr) auto;
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition: grid-template-columns 0.22s ease;
+		}
+		&.sidebarCollapsed {
+			grid-template-columns: 48px minmax(0, 1fr) 14px 0;
+		}
 	}
 
 	.loading * {
@@ -222,12 +235,17 @@
 	}
 	header,
 	aside,
-	#positionInfo {
+	#sidebar,
+	#sidebarGrip,
+	#dockTop,
+	#dockBottom {
 		@apply bg-menu;
 	}
 
 	header,
-	aside {
+	aside,
+	#sidebar,
+	#sidebarGrip {
 		/* when Safari grants viewport slack (fullscreen title bar), a
 		   native pan starting on the app chrome drags the whole page;
 		   nothing in these bars scrolls, so gestures here stay ours */
@@ -235,20 +253,17 @@
 	}
 
 	header {
-		@apply w-full flex justify-between h-[var(--header-size)];
+		@apply flex justify-between h-[var(--header-size)];
+		grid-column: 2;
+		grid-row: 1;
+		min-width: 0;
+		overflow-x: auto;
+		scrollbar-width: none;
 
-		&.dynamic {
-			-webkit-app-region: drag;
-			app-region: drag;
-			padding-left: calc(env(titlebar-area-x, 0px) + 2px);
-			padding-right: calc(env(titlebar-area-x, 0px) + 25px);
-		}
 		* {
 			@apply my-auto;
 		}
 		nav {
-			-webkit-app-region: no-drag;
-			app-region: no-drag;
 			div {
 				@apply flex;
 			}
@@ -256,9 +271,7 @@
 		svg {
 			@apply fill-fg h-[30px] w-[30px];
 		}
-		button,
-		#resolution,
-		#currentFontDisplay {
+		button {
 			@apply h-[var(--header-size)];
 		}
 		@media (hover: hover) {
@@ -266,22 +279,25 @@
 				@apply bg-hl;
 			}
 		}
-		#resolution kbd {
-			@apply mr-0.5;
+	}
+
+	#dockTop,
+	#dockBottom {
+		@apply flex flex-col;
+		grid-column: 2;
+		min-width: 0;
+
+		&:empty {
+			display: none;
 		}
-		#currentFontDisplay kbd {
-			@apply mx-1;
-		}
-		#resolution,
-		#currentFontDisplay {
-			@media (hover: hover) {
-				&:hover {
-					kbd {
-						@apply bg-purp;
-					}
-				}
-			}
-		}
+	}
+	#dockTop {
+		grid-row: 2;
+		border-bottom: 1px solid var(--midnight);
+	}
+	#dockBottom {
+		grid-row: 4;
+		border-top: 1px solid var(--midnight);
 	}
 
 	#chatButton {
@@ -436,11 +452,15 @@
 	}
 
 	aside {
-		float: left;
-		width: 40px;
-		height: calc(100% - 40px);
+		grid-column: 1;
+		grid-row: 1 / -1;
+		overflow-y: auto;
+		overflow-x: hidden;
+		scrollbar-width: none;
+		border-right: 1px solid var(--midnight);
 
 		> canvas {
+			@apply block mx-auto;
 			vertical-align: bottom;
 		}
 	}
@@ -451,9 +471,10 @@
 
 	#viewport {
 		@apply bg-editor;
-		margin-left: 40px;
-		width: calc(100% - 40px);
-		height: calc(100% - 40px);
+		grid-column: 2;
+		grid-row: 3;
+		min-width: 0;
+		min-height: 0;
 		text-align: center;
 		overflow: auto;
 		user-select: none;
@@ -461,6 +482,260 @@
 		-khtml-user-select: none;
 		-webkit-user-select: none;
 		-o-user-select: none;
+	}
+
+	#sidebarGrip {
+		@apply flex flex-col items-center justify-center bg-menu cursor-pointer;
+		grid-column: 3;
+		grid-row: 1 / -1;
+		gap: 8px;
+		border: 0;
+		border-left: 1px solid var(--midnight);
+		padding: 0;
+		overflow: hidden;
+
+		&::before,
+		&::after {
+			content: '';
+			width: 6px;
+			height: 30px;
+			background: radial-gradient(circle, #888 1px, transparent 1.6px) 0 0 / 6px 6px;
+		}
+		i {
+			flex: none;
+			width: 7px;
+			height: 7px;
+			border: solid var(--color-fg);
+			border-width: 2px 2px 0 0;
+			transform: translateX(-2px) rotate(45deg);
+		}
+		.sidebarCollapsed & i {
+			transform: translateX(2px) rotate(225deg);
+		}
+		@media (hover: hover) {
+			&:hover {
+				@apply bg-hl;
+			}
+		}
+	}
+
+	#sidebar {
+		@apply flex flex-col;
+		grid-column: 4;
+		grid-row: 1 / -1;
+		min-width: 0;
+		min-height: 0;
+		overflow-y: auto;
+		overflow-x: hidden;
+		scrollbar-width: none;
+		/* installed PWA with window controls overlay: keep the panel
+		   content clear of the OS titlebar strip */
+		padding-top: env(titlebar-area-height, 0px);
+
+		.sidebarCollapsed & {
+			overflow: hidden;
+		}
+		> section {
+			@apply flex flex-col flex-none;
+			gap: 6px;
+			padding: 4px 10px 8px;
+		}
+	}
+
+	#saucePanel {
+		/* the sidebar's top panel carries the PWA window drag region the
+		   old header gave up; controls inside it stay interactive */
+		app-region: drag;
+		-webkit-app-region: drag;
+
+		button,
+		input,
+		label,
+		textarea {
+			app-region: no-drag;
+			-webkit-app-region: no-drag;
+		}
+	}
+
+	#navSauce {
+		@apply flex items-start text-left bg-transparent cursor-pointer w-full;
+		gap: 8px;
+		border: 0;
+		padding: 2px 0;
+
+		svg {
+			@apply fill-fg;
+			flex: none;
+			width: 22px;
+			height: 22px;
+			margin-top: 1px;
+			opacity: 0.85;
+		}
+		span {
+			@apply block;
+			min-width: 0;
+		}
+		b {
+			@apply block text-fg whitespace-nowrap overflow-hidden text-ellipsis;
+			font-weight: normal;
+		}
+		small {
+			@apply block text-subtitle whitespace-nowrap overflow-hidden text-ellipsis;
+			font-size: 12px;
+		}
+		@media (hover: hover) {
+			&:hover {
+				@apply bg-hl;
+			}
+		}
+	}
+
+	.panelSpec {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 3px;
+	}
+
+	.panelValue {
+		@apply flex items-center text-left bg-editor text-fg cursor-pointer whitespace-nowrap;
+		gap: 8px;
+		border: 0;
+		min-width: 0;
+		padding: 4px 6px;
+		font-size: 14px;
+
+		svg {
+			@apply fill-fg;
+			flex: none;
+			width: 16px;
+			height: 16px;
+		}
+		kbd {
+			@apply bg-lbl overflow-hidden text-ellipsis;
+			padding: 1px 8px;
+		}
+		@media (hover: hover) {
+			&:hover kbd {
+				@apply bg-purp;
+			}
+		}
+	}
+
+	.panelChip {
+		@apply flex items-center justify-center bg-editor text-fg cursor-pointer;
+		border: 0;
+		min-width: 46px;
+		padding: 4px 6px;
+		font-size: 14px;
+
+		&.enabled {
+			@apply bg-indigo;
+		}
+		@media (hover: hover) {
+			&:not(.enabled):hover {
+				@apply bg-hl;
+			}
+		}
+	}
+
+	#positionInfo {
+		@apply flex flex-col text-fg;
+		gap: 5px;
+
+		.cursorReadout {
+			@apply flex items-baseline whitespace-nowrap;
+			gap: 6px;
+			font-size: 16px;
+
+			span {
+				@apply text-cyan;
+			}
+			b {
+				font-weight: normal;
+				min-width: 2ch;
+				margin-right: 6px;
+			}
+			button {
+				all: unset;
+				cursor: text;
+				min-width: 3ch;
+				text-decoration: underline dotted var(--iron);
+				text-underline-offset: 3px;
+			}
+			input {
+				@apply bg-editor text-fg;
+				width: 6ch;
+				border: 1px solid var(--cyan);
+				padding: 0 3px;
+			}
+			i {
+				@apply text-subtitle not-italic;
+			}
+		}
+		.depthBar {
+			@apply relative bg-editor cursor-pointer;
+			height: 10px;
+			touch-action: none;
+
+			i {
+				@apply absolute bg-purp;
+				left: 0;
+				top: 0;
+				bottom: 0;
+			}
+			s {
+				@apply absolute;
+				top: -2px;
+				bottom: -2px;
+				width: 2px;
+				background: var(--color-fg);
+			}
+		}
+	}
+
+	#zoomControl {
+		display: grid;
+		grid-template-columns: 44px 1fr 44px;
+		gap: 3px;
+
+		output {
+			@apply bg-editor text-fg text-center;
+			height: 30px;
+			line-height: 30px;
+		}
+	}
+
+	.zoomGlyph {
+		@apply relative bg-editor text-fg cursor-pointer;
+		border: 0;
+		padding: 0;
+		height: 30px;
+
+		/* Topaz draws a minus near the baseline, so the glyphs are CSS
+		   bars instead of font characters */
+		&::before,
+		&.plus::after {
+			content: '';
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			background: currentColor;
+		}
+		&::before {
+			width: 10px;
+			height: 2px;
+			margin: -1px 0 0 -5px;
+		}
+		&.plus::after {
+			width: 2px;
+			height: 10px;
+			margin: -5px 0 0 -1px;
+		}
+		@media (hover: hover) {
+			&:hover {
+				@apply bg-hl;
+			}
+		}
 	}
 
 	header nav {
@@ -532,87 +807,11 @@
 			}
 		}
 	}
-	#navDarkmode,
-	#zoomControl {
+	#navDarkmode {
 		&:hover,
 		&:focus,
 		&:focus-within {
 			@apply bg-transparent!;
-		}
-	}
-	#zoomControl {
-		/* icon, label and value share the top row; the slider rides alone
-		   below it */
-		.zoomControl {
-			@apply flex flex-col items-center;
-		}
-		.zoomTop {
-			@apply flex flex-row items-center;
-
-			svg {
-				@apply mx-0;
-			}
-			/* wider break after the icon, tighter label-to-value pair */
-			label {
-				@apply cursor-pointer pl-2 pr-1;
-			}
-		}
-		/* the slider spans exactly the row above it: zero width keeps
-		   the input's intrinsic size from widening the column, and the
-		   min-width stretches it back to the row */
-		#zoomSlider {
-			width: 0;
-			min-width: 100%;
-		}
-		input[type='range'] {
-			@apply appearance-none bg-transparent;
-		}
-		input[type='range']::-webkit-slider-thumb {
-			@apply appearance-none bg-transparent;
-		}
-		input[type='range']:focus {
-			outline: none;
-		}
-		input[type='range']::-webkit-slider-thumb {
-			@apply appearance-none bg-thumb cursor-ew-resize rounded-bl-xs;
-			height: 16px;
-			width: 16px;
-			margin-top: -4px;
-
-			@media (hover: hover) {
-				&:hover {
-					@apply bg-cyan;
-				}
-			}
-		}
-		input[type='range']::-moz-range-thumb {
-			@apply bg-thumb cursor-ew-resize rounded-bl-xs;
-			height: 16px;
-			width: 16px;
-
-			@media (hover: hover) {
-				&:hover {
-					@apply bg-cyan;
-				}
-			}
-		}
-		input[type='range']::-webkit-slider-runnable-track {
-			@apply bg-midnight cursor-ew-resize w-full;
-			height: 8.4px;
-		}
-		input[type='range']:active:-webkit-slider-runnable-track {
-			@apply bg-tools;
-		}
-		input[type='range']::-moz-range-track {
-			@apply bg-midnight cursor-ew-resize w-full;
-			height: 8.4px;
-		}
-
-		label {
-			@apply text-sm text-fg p-1;
-		}
-		span {
-			@apply text-sm text-chat mx-0.5;
 		}
 	}
 
@@ -638,33 +837,10 @@
 		}
 	}
 
-	#currentFontDisplay {
-		user-select: none;
-	}
-
-	#resolution {
-		@apply flex flex-row;
-		line-height: 20px;
-		svg {
-			margin-top: 10px;
-		}
-	}
-
 	header kbd {
 		color: rgb(200, 200, 200);
 		font-size: 14px;
 		line-height: 20px;
-	}
-
-	#resolution kbd,
-	#currentFontDisplay kbd {
-		@apply bg-lbl px-[8px] py-[1px];
-	}
-
-	#positionInfo {
-		@apply flex flex-row text-fg text-xs mr-1 min-w-[50px];
-		padding: 5px 2px 2px 3px;
-		word-spacing: -6px;
 	}
 
 	#canvasContainer {
@@ -754,7 +930,7 @@
 		box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
 	}
 	#editList {
-		left: 40px;
+		left: 48px;
 	}
 
 	.menuItem {
@@ -1244,7 +1420,8 @@
 	}
 	#minimapPanel {
 		@apply fixed z-30 dialog-style p-1 flex flex-col;
-		right: 8px;
+		/* floats over the canvas, clear of the sidebar column and grip */
+		right: 258px;
 		top: var(--header-size);
 		/* 100% of the ICB, not 100vh: iOS vh units outgrow the window and
 		   push the bottom border off screen on long files */

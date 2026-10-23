@@ -244,13 +244,14 @@ describe('UI Basic Utilities', () => {
 			expect(posInfo).toHaveProperty('update');
 		});
 
-		it('should update element text content with 1-based coordinates', () => {
+		it('should render 1-based coordinates into the readout', () => {
 			const div = document.createElement('div');
 			const posInfo = createPositionInfo(div);
 
 			posInfo.update(5, 10);
 
-			expect(div.textContent).toBe('6, 11');
+			expect(div.querySelector('.cursorReadout b').textContent).toBe('6');
+			expect(div.querySelector('.cursorReadout button').textContent).toBe('11');
 		});
 	});
 

@@ -33,44 +33,51 @@ describe('Canvas and Position Info DOM Tests', () => {
 
 		positionInfo = document.createElement('div');
 		positionInfo.id = 'position-info';
-		positionInfo.textContent = '1, 1';
 		document.body.appendChild(positionInfo);
 
 		positionController = createPositionInfo(positionInfo);
 	});
 
+	// the readout renders col and row as separate elements; collapse
+	// them back to 'col, row' so the expectations stay readable
+	const readout = () => {
+		const col = positionInfo.querySelector('.cursorReadout b').textContent;
+		const row = positionInfo.querySelector('.cursorReadout button').textContent;
+		return `${col}, ${row}`;
+	};
+
 	describe('Position Info Display', () => {
 		it('should display initial position as 1, 1', () => {
-			expect(positionInfo.textContent).toBe('1, 1');
+			expect(readout()).toBe('1, 1');
 		});
 
 		it('should update position info when update is called', () => {
 			positionController.update(5, 10);
-			expect(positionInfo.textContent).toBe('6, 11');
+			expect(readout()).toBe('6, 11');
 		});
 
 		it('should display 1-indexed coordinates (adding 1 to 0-based)', () => {
 			positionController.update(0, 0);
-			expect(positionInfo.textContent).toBe('1, 1');
+			expect(readout()).toBe('1, 1');
 
 			positionController.update(9, 24);
-			expect(positionInfo.textContent).toBe('10, 25');
+			expect(readout()).toBe('10, 25');
 		});
 
 		it('should handle large coordinate values', () => {
 			positionController.update(79, 49);
-			expect(positionInfo.textContent).toBe('80, 50');
+			expect(readout()).toBe('80, 50');
 		});
 
 		it('should update position info multiple times', () => {
 			positionController.update(0, 0);
-			expect(positionInfo.textContent).toBe('1, 1');
+			expect(readout()).toBe('1, 1');
 
 			positionController.update(5, 5);
-			expect(positionInfo.textContent).toBe('6, 6');
+			expect(readout()).toBe('6, 6');
 
 			positionController.update(10, 10);
-			expect(positionInfo.textContent).toBe('11, 11');
+			expect(readout()).toBe('11, 11');
 		});
 	});
 
@@ -142,7 +149,7 @@ describe('Canvas and Position Info DOM Tests', () => {
 			expect(charY).toBe(10);
 
 			positionController.update(charX, charY);
-			expect(positionInfo.textContent).toBe('11, 11');
+			expect(readout()).toBe('11, 11');
 		});
 
 		it('should handle clicks at different canvas positions', () => {
@@ -153,19 +160,19 @@ describe('Canvas and Position Info DOM Tests', () => {
 			let charX = Math.floor(0 / charWidth);
 			let charY = Math.floor(0 / charHeight);
 			positionController.update(charX, charY);
-			expect(positionInfo.textContent).toBe('1, 1');
+			expect(readout()).toBe('1, 1');
 
 			// Middle of canvas
 			charX = Math.floor(320 / charWidth);
 			charY = Math.floor(200 / charHeight);
 			positionController.update(charX, charY);
-			expect(positionInfo.textContent).toBe('41, 13');
+			expect(readout()).toBe('41, 13');
 
 			// Near bottom-right
 			charX = Math.floor(632 / charWidth);
 			charY = Math.floor(384 / charHeight);
 			positionController.update(charX, charY);
-			expect(positionInfo.textContent).toBe('80, 25');
+			expect(readout()).toBe('80, 25');
 		});
 	});
 
@@ -184,7 +191,7 @@ describe('Canvas and Position Info DOM Tests', () => {
 			expect(cursor.style.top).toBe('80px');
 
 			positionController.update(charX, charY);
-			expect(positionInfo.textContent).toBe('11, 6');
+			expect(readout()).toBe('11, 6');
 		});
 
 		it('should synchronize cursor position with position info', () => {
@@ -203,7 +210,7 @@ describe('Canvas and Position Info DOM Tests', () => {
 				cursor.style.top = pos.y * charHeight + 'px';
 				positionController.update(pos.x, pos.y);
 
-				expect(positionInfo.textContent).toBe(
+				expect(readout()).toBe(
 					`${pos.displayX}, ${pos.displayY}`,
 				);
 			});
