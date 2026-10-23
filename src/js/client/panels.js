@@ -42,7 +42,7 @@ const FLOAT_MIN_H = 120;
 // its own buttons keep their click behavior
 const NO_DRAG =
 	'button, input, select, textarea, canvas, summary, a, label, output, ' +
-	'form, .depthBar, .segmented, #minimapScroll, #minimapMenu, ' +
+	'form, .depthBar, .segmented, .mapGrip, #minimapScroll, #minimapMenu, ' +
 	'#frameStrip, #messageWindow, #userList';
 
 const DEFAULTS = {
@@ -385,6 +385,9 @@ const createPanelManager = () => {
 		container.classList.toggle('sidebarCollapsed', collapsed && anyDocked);
 		syncGrip();
 		save();
+		// mode-dependent chrome (glyph preview sizing, the character
+		// map's reflow) re-measures off this instead of polling classes
+		document.dispatchEvent(new CustomEvent('onPanelLayout'));
 	};
 
 	const focus = key => {
@@ -1039,6 +1042,21 @@ const createPanelManager = () => {
 
 	restore();
 
+	// content-owned grips (the character map's corner) set a float's
+	// width without owning the rest of the module's geometry
+	const setFloatWidth = (key, width) => {
+		const m = MOD[key];
+		const reg = registry.get(key);
+		if (!m || !reg) {
+			return;
+		}
+		m.w = Math.min(Math.max(Math.round(width), FLOAT_MIN_W), FLOAT_MAX_W);
+		if (reg.el.classList.contains('fl')) {
+			applyFloatPosition(key, reg.el);
+		}
+		save();
+	};
+
 	return {
 		register,
 		setVisible,
@@ -1049,6 +1067,7 @@ const createPanelManager = () => {
 		close,
 		reset,
 		toggleShade,
+		setFloatWidth,
 		isDocked: key => MOD[key]?.dk === 'side',
 		isCollapsed: () => collapsed,
 	};

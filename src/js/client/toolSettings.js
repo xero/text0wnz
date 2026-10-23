@@ -13,8 +13,10 @@ import { $ } from './ui.js';
 const SETTINGS_KEY = 'toolSettings';
 
 const createToolSettings = () => {
+	const panel = $('toolSettings');
 	const title = $('toolSettingsTitle');
 	const sections = {
+		keyboard: { el: $('tsKeyboard'), title: 'Keyboard' },
 		line: { el: $('tsLine'), title: 'Line' },
 		square: { el: $('tsSquare'), title: 'Square' },
 		circle: { el: $('tsCircle'), title: 'Circle' },
@@ -24,6 +26,18 @@ const createToolSettings = () => {
 		character: { el: $('tsCharacter'), title: 'Character Brush' },
 	};
 	let current = null;
+
+	// a bar has no title strip, so each section carries the tool name
+	// itself; the keyboard bar alone goes nameless per the spec
+	Object.entries(sections).forEach(([name, s]) => {
+		if (name === 'keyboard' || !s.el) {
+			return;
+		}
+		const barTitle = document.createElement('B');
+		barTitle.className = 'barTitle';
+		barTitle.innerText = s.title;
+		s.el.prepend(barTitle);
+	});
 
 	const readAll = () => {
 		try {
@@ -69,6 +83,9 @@ const createToolSettings = () => {
 			s.el.classList.toggle('hide', name !== section);
 		});
 		title.innerText = target.title;
+		// the character map drives its own floating width and resize
+		// grip, so the panel flags that section for the CSS
+		panel?.classList.toggle('charMap', section === 'character');
 		current = section;
 		// reopen clears an X-close, re-lays out, and flashes the panel
 		State.panels?.reopen('tool');

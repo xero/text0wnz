@@ -709,6 +709,15 @@
 		padding: 4px 10px 8px;
 	}
 
+	/* glyph previews: a 1x backing store that glyphScale.js sizes to a
+	   whole device-pixel multiple of the --gw target */
+	canvas.gc {
+		--gw: 16;
+		image-rendering: pixelated;
+		display: block;
+		flex: none;
+	}
+
 	/* docked: a divider strip with a small cyan title */
 	.mod.dk {
 		flex: none;
@@ -1201,49 +1210,11 @@
 		margin-left: 4px !important;
 	}
 
-	#keyboardToolbar {
-		@apply flex text-fg text-xs;
-
-		span {
-			@apply flex flex-col my-auto mx-1;
-			@media (hover: hover) {
-				&:hover canvas {
-					outline: 1px solid var(--cyber);
-				}
-			}
-			canvas {
-				scale: 1 !important;
-				margin: auto;
-			}
-		}
-	}
 	#navDarkmode {
 		&:hover,
 		&:focus,
 		&:focus-within {
 			@apply bg-transparent!;
-		}
-	}
-
-	#fkeySetPrev,
-	#fkeySetNext {
-		height: calc(var(--header-size) - 8px);
-		@media (hover: hover) {
-			&:hover {
-				background: transparent;
-				svg {
-					fill: var(--color-cyan);
-				}
-			}
-		}
-		&:active svg {
-			fill: var(--color-cyber);
-		}
-
-		svg {
-			width: 25px;
-			height: 25px;
-			margin-top: 5px;
 		}
 	}
 
@@ -2268,25 +2239,19 @@
 	}
 	#toolSettings {
 		.modContent {
-			@apply items-start;
 			gap: 4px;
 			padding: 0;
 		}
 		.modContent > div {
-			@apply flex flex-col gap-1 items-start p-2;
+			@apply flex flex-col items-start p-2;
+			gap: 6px;
+			align-self: stretch;
 		}
-		/* the picker sections are all canvas and sit flush in the frame */
-		#tsShading,
-		#tsCharacter {
-			@apply p-0;
-		}
-		label {
-			@apply text-cyan text-xs;
-
-			/* a second heading in a section breathes above its control */
-			&:not(:first-child) {
-				@apply mt-[6px];
-			}
+		/* label hierarchy: tool names ride .barTitle, panel titles the
+		   strip; setting labels stay quiet grey */
+		label,
+		.settingLabel {
+			@apply text-subtitle text-xs;
 		}
 		output {
 			@apply text-fg text-xs ml-1;
@@ -2298,13 +2263,341 @@
 		.dimmed {
 			@apply opacity-40 pointer-events-none;
 		}
-		/* picker sections: the swatch cursor overlays its canvas stack */
-		.modContent > div > div {
-			position: relative;
-		}
 		canvas {
-			cursor: crosshair;
 			vertical-align: bottom;
+		}
+
+		/* one structure per setting: a label above (or beside) its
+		   control */
+		.settingRow {
+			@apply flex flex-col items-start;
+			gap: 4px;
+		}
+		/* a bar has no title strip, so the section carries the name */
+		.barTitle {
+			display: none;
+			font-weight: normal;
+			font-size: 16px;
+			color: var(--color-fg);
+			white-space: nowrap;
+			flex: none;
+			align-self: center;
+			margin-right: 16px;
+		}
+		.settingHint {
+			@apply text-subtitle text-xs;
+		}
+
+		/* keyboard: the F-key group, then the charset button */
+		#tsKeyboard {
+			@apply flex-row flex-wrap items-center justify-between;
+			gap: 6px;
+		}
+		.fkeyGroup {
+			@apply flex items-stretch;
+			width: 100%;
+			min-width: 0;
+
+			> button {
+				@apply grid place-items-center bg-transparent cursor-pointer;
+				flex: none;
+				width: 28px;
+				border: 0;
+				padding: 0;
+
+				svg {
+					width: 18px;
+					height: 18px;
+					fill: var(--color-fg);
+				}
+			}
+		}
+		.fkeyRow {
+			display: grid;
+			grid-template-columns: repeat(12, minmax(22px, 1fr));
+			gap: 0;
+			flex: 1;
+			min-width: 0;
+		}
+		.fkey {
+			@apply flex flex-col items-center bg-transparent cursor-pointer;
+			gap: 1px;
+			border: 0;
+			padding: 2px 0 3px;
+			min-width: 0;
+
+			small {
+				font-size: 10px;
+				color: var(--subtitle);
+
+				i {
+					font-style: normal;
+				}
+			}
+		}
+		#charsetButton {
+			@apply flex items-center bg-transparent cursor-pointer text-left;
+			gap: 8px;
+			border: 0;
+			padding: 5px 10px;
+			width: 100%;
+			font-size: 14px;
+			white-space: nowrap;
+			overflow: hidden;
+
+			svg {
+				flex: none;
+				width: 20px;
+				height: 20px;
+				fill: var(--color-fg);
+			}
+			small {
+				color: var(--cyan);
+				font-size: inherit;
+			}
+			b {
+				font-weight: normal;
+				color: var(--color-fg);
+			}
+			i {
+				font-style: normal;
+				color: var(--subtitle);
+			}
+		}
+		@media (hover: hover) {
+			.fkey:hover,
+			.fkeyGroup > button:hover,
+			#charsetButton:hover {
+				background: var(--color-editor);
+			}
+		}
+
+		/* shading: 16 colors by 4 shade bands, packed edge to edge like
+		   the character map */
+		.shadeGrid {
+			display: grid;
+			grid-template-columns: repeat(16, min-content);
+			gap: 0;
+			width: max-content;
+		}
+		.shadeChip {
+			@apply block cursor-pointer;
+			border: 0;
+			background: #000;
+			padding: 0;
+
+			&.enabled {
+				outline: 1px solid var(--cyan);
+				outline-offset: -1px;
+			}
+		}
+
+		/* character brush: the reflowing 256-glyph map */
+		.charMapPanel {
+			position: relative;
+			align-self: stretch;
+		}
+		.charMapWrap {
+			overflow-x: hidden;
+			overflow-y: auto;
+			background: #111;
+			scrollbar-width: thin;
+			scrollbar-color: #555 #111;
+		}
+		.charMap {
+			display: block;
+			image-rendering: pixelated;
+			cursor: pointer;
+			touch-action: manipulation;
+		}
+		.mapGrip {
+			display: none;
+		}
+		.charMeta {
+			@apply flex items-center justify-between;
+			gap: 10px;
+			align-self: stretch;
+		}
+		.charPreview {
+			@apply flex items-center text-subtitle;
+			gap: 8px;
+			font-size: 14px;
+		}
+		.cellSize {
+			@apply flex items-center;
+			gap: 2px;
+
+			.zoomGlyph {
+				width: 28px;
+				height: 26px;
+			}
+			span {
+				@apply grid place-items-center;
+				width: 28px;
+
+				svg {
+					width: 20px;
+					height: 20px;
+					fill: var(--color-fg);
+				}
+			}
+		}
+
+		/* sidebar: tighter previews, stacked Mode options, no F prefix */
+		&.dk {
+			.fkeyRow {
+				grid-template-columns: repeat(12, minmax(0, 1fr));
+			}
+			.fkeyRow .gc {
+				--gw: 8;
+			}
+			.fkey small i {
+				display: none;
+			}
+			.fkeyGroup > button {
+				width: 22px;
+			}
+			.shadeGrid .gc {
+				--gw: 12;
+			}
+			.segmented[id$='Mode'] {
+				flex-direction: column;
+				align-items: stretch;
+
+				.segment {
+					flex-direction: row;
+					justify-content: flex-start;
+					gap: 6px;
+
+					&:not(:first-child) {
+						@apply border-l-0 border-t-2 border-midnight border-solid;
+					}
+				}
+			}
+		}
+
+		&.fl {
+			.fkeyRow {
+				grid-template-columns: repeat(12, 22px);
+			}
+			/* the resize grip anchors to the window corner, not the map */
+			.charMapPanel {
+				position: static;
+			}
+		}
+		&.fl.charMap {
+			width: var(--mw, 300px);
+			min-width: 220px;
+			max-width: calc(100% - 70px);
+
+			.mapGrip {
+				display: block;
+				position: absolute;
+				right: -4px;
+				bottom: -4px;
+				width: 16px;
+				height: 16px;
+				cursor: nwse-resize;
+				touch-action: none;
+				background: linear-gradient(
+					135deg,
+					transparent 50%,
+					#888 50%,
+					#888 60%,
+					transparent 60%,
+					transparent 70%,
+					#888 70%,
+					#888 80%,
+					transparent 80%
+				);
+			}
+		}
+
+		/* bar: groups spread evenly and fill the row's height */
+		&.tb {
+			.barTitle {
+				display: block;
+			}
+			.settingRow {
+				flex-direction: row;
+				align-items: center;
+				gap: 8px;
+				flex: none;
+			}
+			.modContent:has(#tsKeyboard:not(.hide)) {
+				padding-block: 0;
+			}
+			#tsKeyboard {
+				flex-wrap: nowrap;
+				justify-content: space-evenly;
+				align-self: stretch;
+				align-items: stretch;
+				flex: 1 1 100%;
+				padding-block: 0;
+			}
+			.fkeyGroup {
+				width: auto;
+				flex: 0 1 auto;
+
+				> button {
+					width: 40px;
+
+					svg {
+						width: 28px;
+						height: 28px;
+					}
+				}
+			}
+			.fkeyRow {
+				grid-template-columns: repeat(12, 28px);
+			}
+			#charsetButton {
+				display: grid;
+				grid-template-columns: auto auto auto;
+				grid-template-areas: 't t t' 'i n p';
+				align-content: center;
+				justify-content: start;
+				gap: 3px 8px;
+				width: auto;
+				padding: 0 14px;
+
+				small {
+					grid-area: t;
+					font-size: 12px;
+				}
+				svg {
+					grid-area: i;
+				}
+				b {
+					grid-area: n;
+				}
+				i {
+					grid-area: p;
+				}
+			}
+			.shadeGrid {
+				grid-template-columns: repeat(32, min-content);
+				flex: none;
+			}
+			.settingHint {
+				flex: none;
+				max-width: 90px;
+				white-space: normal;
+				line-height: 1.2;
+			}
+			.charMapPanel {
+				flex: 1 1 300px;
+				min-width: 0;
+				align-self: auto;
+			}
+			.charMeta {
+				flex-direction: column;
+				align-items: stretch;
+				justify-content: center;
+				gap: 6px;
+				flex: none;
+				align-self: auto;
+			}
 		}
 	}
 
@@ -2624,7 +2917,6 @@
 	#resolution,
 	#selectionToolbar .toolButton,
 	#currentFontDisplay,
-	#keyboardToolbar span,
 	#chatButton {
 		@apply cursor-pointer;
 	}

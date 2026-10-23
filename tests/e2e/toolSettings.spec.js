@@ -28,8 +28,9 @@ test.describe('tool settings window', () => {
 
 	test('each settings tool shows its section, the rest hide the window', async ({ page }) => {
 		const panel = page.locator('#toolSettings');
-		// the keyboard tool boots enabled: no settings, no window
-		await expect(panel).toBeHidden();
+		// the keyboard tool boots enabled and brings its own section
+		await expect(panel).toBeVisible();
+		await expect(page.locator('#tsKeyboard')).toBeVisible();
 
 		// the shapes group lands on the line tool
 		await openLine(page);

@@ -12,10 +12,8 @@ test.describe('Editor Keybinds', () => {
 			await page.keyboard.press('k');
 			await page.waitForTimeout(300);
 
-			const keyboardToolbar = page.locator('#keyboardToolbar');
-			// TODO: assert on however keyboard mode is indicated in the UI
-			const isVisible = await keyboardToolbar.isVisible();
-			expect(isVisible).toBeDefined();
+			// keyboard mode shows its section in the tool settings module
+			await expect(page.locator('#tsKeyboard')).toBeVisible();
 		});
 
 		test('activates freehand/halfblock tool with F key', async ({ page }) => {

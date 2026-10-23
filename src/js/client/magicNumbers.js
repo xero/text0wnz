@@ -40,8 +40,6 @@ const CHAR_CAPITAL_P = 80; // P
 const CHAR_DIGIT_9 = 57; // 9
 // Browser clipboard limiter (multiplier of canvas columns/rows)
 const PASTE_LIMIT_MULTIPLIER = 3;
-// Multiplier to calculate panel width
-const PANEL_WIDTH_MULTIPLIER = 20;
 // Canvas resize limits
 const MAX_COLUMNS = 1000;
 const MAX_ROWS = 10000;
@@ -97,7 +95,6 @@ export default {
 	CHAR_CAPITAL_P,
 	CHAR_DIGIT_9,
 	PASTE_LIMIT_MULTIPLIER,
-	PANEL_WIDTH_MULTIPLIER,
 	MAX_COLUMNS,
 	MAX_ROWS,
 	RESIZE_WARN_CELLS,

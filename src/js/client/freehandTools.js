@@ -1,7 +1,7 @@
 import State from './state.js';
-import { $, createCanvas, createSegmentedControl } from './ui.js';
+import { $, createCanvas, createSegmentedControl, iconHref } from './ui.js';
 import Toolbar from './toolbar.js';
-import magicNumbers from './magicNumbers.js';
+import { fitGlyphCanvas } from './glyphScale.js';
 import {
 	nuskoolCircleCells,
 	nuskoolCircleFilledCells,
@@ -12,37 +12,6 @@ import {
 	junctionForTip,
 } from '../core/index';
 import { createAsciiStrokePainter } from './asciiBrush.js';
-
-const createPanelCursor = el => {
-	const cursor = createCanvas(0, 0);
-	cursor.classList.add('cursor');
-	el.appendChild(cursor);
-
-	const show = () => {
-		cursor.style.display = 'block';
-	};
-
-	const hide = () => {
-		cursor.style.display = 'none';
-	};
-
-	const resize = (width, height) => {
-		cursor.style.width = width + 'px';
-		cursor.style.height = height + 'px';
-	};
-
-	const setPos = (x, y) => {
-		cursor.style.left = x - 1 + 'px';
-		cursor.style.top = y - 1 + 'px';
-	};
-
-	return {
-		show: show,
-		hide: hide,
-		resize: resize,
-		setPos: setPos,
-	};
-};
 
 const createBrushController = () => {
 	const panel = $('brushToolbar');
@@ -347,16 +316,22 @@ const createShadingController = (panel, charMode) => {
 	};
 };
 
-const createShadingPanel = async () => {
-	let panelFont = null;
-	let ignored = false;
-	const canvasContainer = document.createElement('div');
+// the shade ramp the picker, the sampler, and the brush cycle share,
+// lightest to solid
+const SHADE_RAMP = [176, 177, 178, 219];
 
-	const cursor = createPanelCursor(canvasContainer);
-	let canvases = new Array(16);
-	let halfBlockMode = false;
-	let x = 0;
-	let y = 0;
+const createShadingPanel = async () => {
+	let ignored = false;
+	// 4 shade bands by 16 colors; the picked color IS the palette
+	// foreground, so the panel keeps only the band
+	let band = 0;
+	const grid = document.createElement('DIV');
+	grid.className = 'shadeGrid';
+	const hint = document.createElement('SPAN');
+	hint.className = 'settingHint';
+	hint.innerText = 'hold shift to reduce';
+	// chip references live here, never read back off the DOM
+	const chips = [];
 
 	const get1xFont = async () => {
 		if (!State.font || !State.font.getData) {
@@ -369,124 +344,84 @@ const createShadingPanel = async () => {
 		return createLazyFont(fontData, palette, letterSpacing, 1);
 	};
 
-	const updateCursor = () => {
-		const i = canvases.length - 1;
-		const width = canvases[i].width / 5;
-		const height = canvases[i].height / 15;
-		cursor.resize(width, height);
-		cursor.setPos(x * width, y * height);
-	};
-
-	const mouseDownGenerator = color => {
-		return e => {
-			const rect = canvases[color].getBoundingClientRect();
-			const mouseX = e.clientX - rect.left;
-			const mouseY = e.clientY - rect.top;
-			halfBlockMode = false;
-			x = Math.floor(mouseX / (canvases[color].width / 5));
-			y = Math.floor(mouseY / (canvases[color].height / 15));
-			updateCursor();
-			cursor.show();
-		};
-	};
-
-	const generateCanvases = async () => {
-		canvases.forEach(c => {
-			if (canvasContainer.contains(c)) {
-				canvasContainer.removeChild(c);
-			}
+	const highlight = () => {
+		const fg = State.palette.getForegroundColor();
+		chips.forEach((chip, i) => {
+			chip.btn.classList.toggle('enabled', i >> 4 === band && i % 16 === fg);
 		});
+	};
 
-		panelFont = await get1xFont();
+	const paintChips = async () => {
+		const panelFont = await get1xFont();
 		if (!panelFont) {
 			return;
 		}
-		canvases = new Array(16);
-
-		for (let foreground = 0; foreground < 16; foreground++) {
-			const canvas = createCanvas(
-				State.fontWidth * magicNumbers.PANEL_WIDTH_MULTIPLIER,
-				State.fontHeight * 15,
+		chips.forEach((chip, i) => {
+			chip.canvas.width = panelFont.getWidth();
+			chip.canvas.height = panelFont.getHeight();
+			fitGlyphCanvas(chip.canvas);
+			panelFont.draw(
+				SHADE_RAMP[i >> 4],
+				i % 16,
+				0,
+				chip.canvas.getContext('2d'),
+				0,
+				0,
 			);
-			const ctx = canvas.getContext('2d');
-			let y = 0;
-			for (let background = 0; background < 8; background++) {
-				if (foreground !== background) {
-					for (let i = 0; i < 4; i++) {
-						panelFont.draw(219, foreground, background, ctx, i, y);
-					}
-					for (let i = 4; i < 8; i++) {
-						panelFont.draw(178, foreground, background, ctx, i, y);
-					}
-					for (let i = 8; i < 12; i++) {
-						panelFont.draw(177, foreground, background, ctx, i, y);
-					}
-					for (let i = 12; i < 16; i++) {
-						panelFont.draw(176, foreground, background, ctx, i, y);
-					}
-					for (let i = 16; i < 20; i++) {
-						panelFont.draw(0, foreground, background, ctx, i, y);
-					}
-					y += 1;
-				}
-			}
-			for (let background = 8; background < 16; background++) {
-				if (foreground !== background) {
-					for (let i = 0; i < 4; i++) {
-						panelFont.draw(219, foreground, background, ctx, i, y);
-					}
-					for (let i = 4; i < 8; i++) {
-						panelFont.draw(178, foreground, background, ctx, i, y);
-					}
-					for (let i = 8; i < 12; i++) {
-						panelFont.draw(177, foreground, background, ctx, i, y);
-					}
-					for (let i = 12; i < 16; i++) {
-						panelFont.draw(176, foreground, background, ctx, i, y);
-					}
-					for (let i = 16; i < 20; i++) {
-						panelFont.draw(0, foreground, background, ctx, i, y);
-					}
-					y += 1;
-				}
-			}
-			canvas.addEventListener('mousedown', mouseDownGenerator(foreground));
-			canvases[foreground] = canvas;
-		}
+		});
+		highlight();
 	};
 
+	for (let i = 0; i < 64; i++) {
+		const btn = document.createElement('BUTTON');
+		btn.type = 'button';
+		btn.className = 'shadeChip';
+		btn.setAttribute(
+			'aria-label',
+			`Shade ${SHADE_RAMP[i >> 4]} color ${i % 16}`,
+		);
+		const canvas = createCanvas(State.fontWidth, State.fontHeight);
+		canvas.className = 'gc';
+		btn.appendChild(canvas);
+		btn.addEventListener('click', () => {
+			band = i >> 4;
+			State.palette.setForegroundColor(i % 16);
+			highlight();
+		});
+		chips.push({ btn: btn, canvas: canvas });
+		grid.appendChild(btn);
+	}
+
 	const keyDown = e => {
-		if (!ignored) {
-			if (!halfBlockMode) {
-				switch (e.code) {
-					case 'ArrowLeft':
-						e.preventDefault();
-						x = Math.max(x - 1, 0);
-						updateCursor();
-						break;
-					case 'ArrowUp':
-						e.preventDefault();
-						y = Math.max(y - 1, 0);
-						updateCursor();
-						break;
-					case 'ArrowRight':
-						e.preventDefault();
-						x = Math.min(x + 1, 4);
-						updateCursor();
-						break;
-					case 'ArrowDown':
-						e.preventDefault();
-						y = Math.min(y + 1, 14);
-						updateCursor();
-						break;
-					default:
-						break;
-				}
-			} else if (e.code.startsWith('Arrow')) {
+		if (ignored) {
+			return;
+		}
+		const fg = State.palette.getForegroundColor();
+		switch (e.code) {
+			case 'ArrowLeft':
 				e.preventDefault();
-				halfBlockMode = false;
-				cursor.show();
-			}
+				if (fg > 0 && fg <= 15) {
+					State.palette.setForegroundColor(fg - 1);
+				}
+				break;
+			case 'ArrowRight':
+				e.preventDefault();
+				if (fg < 15) {
+					State.palette.setForegroundColor(fg + 1);
+				}
+				break;
+			case 'ArrowUp':
+				e.preventDefault();
+				band = Math.max(band - 1, 0);
+				highlight();
+				break;
+			case 'ArrowDown':
+				e.preventDefault();
+				band = Math.min(band + 1, SHADE_RAMP.length - 1);
+				highlight();
+				break;
+			default:
+				break;
 		}
 	};
 
@@ -506,99 +441,34 @@ const createShadingPanel = async () => {
 		ignored = false;
 	};
 
-	const getMode = () => {
-		let charCode = 0;
-		switch (x) {
-			case 0:
-				charCode = 219;
-				break;
-			case 1:
-				charCode = 178;
-				break;
-			case 2:
-				charCode = 177;
-				break;
-			case 3:
-				charCode = 176;
-				break;
-			case 4:
-				charCode = 0;
-				break;
-			default:
-				break;
-		}
-		const foreground = State.palette.getForegroundColor();
-		let background = y;
-		if (y >= foreground) {
-			background += 1;
-		}
-		return {
-			halfBlockMode: halfBlockMode,
-			foreground: foreground,
-			background: background,
-			charCode: charCode,
-		};
-	};
+	// fg and bg both ride the palette now; the band only steers what a
+	// sample re-selects and what the picker highlights
+	const getMode = () => ({
+		halfBlockMode: false,
+		foreground: State.palette.getForegroundColor(),
+		background: State.palette.getBackgroundColor(),
+		charCode: SHADE_RAMP[band],
+	});
 
-	// the preview panel is classic16 by design: an extended color word
-	// previews as white, while the actual paint path reads the real
-	// value from State.palette
-	const panelCanvas = value =>
-		canvases[value] ?? canvases[magicNumbers.DEFAULT_FOREGROUND ?? 7];
-
-	const foregroundChange = e => {
-		canvasContainer.removeChild(canvasContainer.firstChild);
-		canvasContainer.insertBefore(
-			panelCanvas(e.detail),
-			canvasContainer.firstChild,
-		);
-		cursor.show();
-		halfBlockMode = true;
-	};
-
-	const onChange = async () => {
-		await generateCanvases().then(() => {
-			if (canvasContainer.childElementCount > 1) {
-				canvasContainer.removeChild(canvasContainer.firstChild);
-			}
-			canvasContainer.insertBefore(
-				panelCanvas(State.palette.getForegroundColor()),
-				canvasContainer.firstChild,
-			);
-			updateCursor();
-			cursor.show();
-		});
-	};
-
+	/** the sample tool hands back a shade char to re-highlight */
 	const select = async charCode => {
-		halfBlockMode = false;
-		x = 3 - (charCode - 176);
-		const bg = State.palette.getBackgroundColor();
-		const fg = State.palette.getForegroundColor();
-		// extended words have no panel row; anchor the cursor at 0
-		y = bg >= 0 && bg <= 15 ? bg : 0;
-		if (fg >= 0 && fg <= 15 && y > fg) {
-			y -= 1;
+		const i = SHADE_RAMP.indexOf(charCode);
+		if (i !== -1) {
+			band = i;
 		}
-		updateCursor();
-		cursor.show();
+		highlight();
 	};
 
-	document.addEventListener('onForegroundChange', foregroundChange);
-	document.addEventListener('onPaletteChange', onChange);
-	document.addEventListener('onLetterSpacingChange', onChange);
-	document.addEventListener('onFontChange', onChange);
-	document.addEventListener('onXBFontLoaded', onChange);
-	document.addEventListener('onOpenedFile', onChange);
+	document.addEventListener('onForegroundChange', highlight);
+	document.addEventListener('onPaletteChange', paintChips);
+	document.addEventListener('onLetterSpacingChange', paintChips);
+	document.addEventListener('onFontChange', paintChips);
+	document.addEventListener('onXBFontLoaded', paintChips);
+	document.addEventListener('onOpenedFile', paintChips);
 
-	await generateCanvases();
-	updateCursor();
-	canvasContainer.insertBefore(
-		panelCanvas(State.palette.getForegroundColor()),
-		canvasContainer.firstChild,
-	);
-	State.toolSettings.mount('shading', canvasContainer);
-	cursor.show();
+	await paintChips();
+	State.toolSettings.mount('shading', grid);
+	State.toolSettings.mount('shading', hint);
 
 	return {
 		enable: enable,
@@ -612,16 +482,67 @@ const createShadingPanel = async () => {
 
 const createCharacterBrushPanel = async () => {
 	let ignored = false;
-	const canvasContainer = document.createElement('div');
-	const cursor = createPanelCursor(canvasContainer);
-	let canvas = createCanvas(
-		State.fontWidth * magicNumbers.PANEL_WIDTH_MULTIPLIER,
-		State.fontHeight * magicNumbers.PANEL_WIDTH_MULTIPLIER,
-	);
-	let x = 0;
-	let y = 0;
+	let selected = 219;
+	const clampZoom = z => Math.min(Math.max(Math.round(z) || 1, 1), 4);
+	let cellZoom = clampZoom(State.toolSettings.get('charCellSize', 1));
+	let maxFloatH = State.toolSettings.get('charMapMaxH', 320);
+	let cols = 16;
+	let glyphW = State.fontWidth || 8;
+	let glyphH = State.fontHeight || 16;
 
-	// Create a 1x scale font for rendering the panel (unaffected by zoom)
+	const panelEl = $('toolSettings');
+	const isFloating = () => panelEl?.classList.contains('fl') === true;
+
+	const mapPanel = document.createElement('DIV');
+	mapPanel.className = 'charMapPanel';
+	const mapWrap = document.createElement('DIV');
+	mapWrap.className = 'charMapWrap';
+	const mapCanvas = createCanvas(0, 0);
+	mapCanvas.className = 'charMap';
+	mapWrap.appendChild(mapCanvas);
+	const grip = document.createElement('I');
+	grip.className = 'mapGrip';
+	grip.title = 'Drag to resize';
+	mapPanel.appendChild(mapWrap);
+	mapPanel.appendChild(grip);
+
+	const meta = document.createElement('DIV');
+	meta.className = 'charMeta';
+	const previewBox = document.createElement('DIV');
+	previewBox.className = 'charPreview';
+	const previewCanvas = createCanvas(glyphW, glyphH);
+	previewCanvas.className = 'gc';
+	const previewLabel = document.createElement('SPAN');
+	previewBox.appendChild(previewCanvas);
+	previewBox.appendChild(previewLabel);
+	const sizeBox = document.createElement('DIV');
+	sizeBox.className = 'cellSize';
+	const makeZoomButton = (label, cls) => {
+		const btn = document.createElement('BUTTON');
+		btn.type = 'button';
+		btn.className = cls;
+		btn.title = label;
+		btn.setAttribute('aria-label', label);
+		return btn;
+	};
+	const smaller = makeZoomButton('Smaller cells', 'zoomGlyph');
+	const bigger = makeZoomButton('Bigger cells', 'zoomGlyph plus');
+	const eye = document.createElement('SPAN');
+	{
+		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+		svg.setAttribute('aria-hidden', 'true');
+		const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+		use.setAttribute('href', iconHref('eye'));
+		svg.appendChild(use);
+		eye.appendChild(svg);
+	}
+	eye.title = `Cell size ${cellZoom}x`;
+	sizeBox.appendChild(smaller);
+	sizeBox.appendChild(eye);
+	sizeBox.appendChild(bigger);
+	meta.appendChild(previewBox);
+	meta.appendChild(sizeBox);
+
 	const get1xFont = async () => {
 		if (!State.font || !State.font.getData) {
 			return null;
@@ -633,130 +554,190 @@ const createCharacterBrushPanel = async () => {
 		return createLazyFont(fontData, palette, letterSpacing, 1);
 	};
 
-	const updateCursor = () => {
-		const width = canvas.width / 16;
-		const height = canvas.height / 16;
-		cursor.resize(width, height);
-		cursor.setPos(x * width, y * height);
-	};
-
-	const redrawCanvas = async () => {
+	const drawPreview = async () => {
 		const panelFont = await get1xFont();
 		if (!panelFont) {
 			return;
 		}
-
-		const fontWidth = panelFont.getWidth();
-		const fontHeight = panelFont.getHeight();
-		const foreground = State.palette.getForegroundColor();
-		const background = State.palette.getBackgroundColor();
-
-		if (canvasContainer.contains(canvas)) {
-			canvasContainer.removeChild(canvas);
-		}
-
-		canvas = createCanvas(
-			panelFont.getWidth() * 16,
-			panelFont.getHeight() * 16,
+		previewCanvas.width = panelFont.getWidth();
+		previewCanvas.height = panelFont.getHeight();
+		fitGlyphCanvas(previewCanvas);
+		panelFont.draw(
+			selected,
+			State.palette.getForegroundColor(),
+			State.palette.getBackgroundColor(),
+			previewCanvas.getContext('2d'),
+			0,
+			0,
 		);
-
-		const ctx = canvas.getContext('2d');
-
-		for (let y = 0; y < 16; y++) {
-			for (let x = 0; x < 16; x++) {
-				const charCode = y * 16 + x;
-				panelFont.draw(charCode, foreground, background, ctx, x, y);
-			}
-		}
-
-		canvas.addEventListener('click', e => {
-			const rect = canvas.getBoundingClientRect();
-			const x = Math.floor((e.clientX - rect.left) / fontWidth);
-			const y = Math.floor((e.clientY - rect.top) / fontHeight);
-			const charCode = y * 16 + x;
-			if (charCode < 256) {
-				select(charCode);
-			}
-		});
-		// font/color changes replace the canvas, so mouseUp must ride
-		// each rebuilt instance
-		canvas.addEventListener('mouseup', mouseUp);
-
-		canvasContainer.appendChild(canvas);
+		previewLabel.innerText = `#${selected}`;
 	};
 
+	const sizeWindow = () => {
+		if (isFloating()) {
+			// the window follows the zoomed map up to the user's maximum
+			mapWrap.style.height = `${Math.min(
+				mapCanvas.height * cellZoom,
+				maxFloatH,
+			)}px`;
+		} else {
+			// docked: the 1x height of the full set at this width, so 1x
+			// always fits exactly and zooming scrolls inside
+			const width = mapWrap.clientWidth || 200;
+			const cols1x = Math.min(Math.max(Math.floor(width / glyphW), 1), 256);
+			mapWrap.style.height = `${Math.ceil(256 / cols1x) * glyphH}px`;
+		}
+	};
+
+	// the map is 1x in the backing store, cells packed edge to edge; CSS
+	// scales it by the cell zoom so glyph pixels stay whole multiples
+	const drawMap = async () => {
+		const panelFont = await get1xFont();
+		if (!panelFont) {
+			return;
+		}
+		glyphW = panelFont.getWidth();
+		glyphH = panelFont.getHeight();
+		const width = mapWrap.clientWidth || 200;
+		const z = cellZoom;
+		cols = Math.min(Math.max(Math.floor(width / (glyphW * z)), 1), 256);
+		const rows = Math.ceil(256 / cols);
+		mapCanvas.width = cols * glyphW;
+		mapCanvas.height = rows * glyphH;
+		mapCanvas.style.width = `${mapCanvas.width * z}px`;
+		mapCanvas.style.height = `${mapCanvas.height * z}px`;
+		const ctx = mapCanvas.getContext('2d');
+		const fg = State.palette.getForegroundColor();
+		const bg = State.palette.getBackgroundColor();
+		for (let i = 0; i < 256; i++) {
+			ctx.putImageData(
+				panelFont.getGlyph(i, fg, bg),
+				(i % cols) * glyphW,
+				Math.floor(i / cols) * glyphH,
+			);
+		}
+		// cells pack edge to edge, so the ring draws inside its cell
+		ctx.strokeStyle = '#22d3ee';
+		ctx.lineWidth = 1;
+		ctx.strokeRect(
+			(selected % cols) * glyphW + 0.5,
+			Math.floor(selected / cols) * glyphH + 0.5,
+			glyphW - 1,
+			glyphH - 1,
+		);
+		sizeWindow();
+	};
+
+	const select = async charCode => {
+		selected = Math.min(Math.max(charCode, 0), 255);
+		await drawMap();
+		await drawPreview();
+	};
+
+	mapCanvas.addEventListener('click', e => {
+		const rect = mapCanvas.getBoundingClientRect();
+		if (!rect.width || !rect.height) {
+			return;
+		}
+		const px = ((e.clientX - rect.left) / rect.width) * mapCanvas.width;
+		const py = ((e.clientY - rect.top) / rect.height) * mapCanvas.height;
+		const x = Math.floor(px / glyphW);
+		const y = Math.floor(py / glyphH);
+		const charCode = y * cols + x;
+		if (x < cols && charCode < 256) {
+			select(charCode);
+		}
+	});
+
+	const setZoom = z => {
+		cellZoom = clampZoom(z);
+		State.toolSettings.set('charCellSize', cellZoom);
+		eye.title = `Cell size ${cellZoom}x`;
+		drawMap();
+	};
+	smaller.addEventListener('click', () => setZoom(cellZoom - 1));
+	bigger.addEventListener('click', () => setZoom(cellZoom + 1));
+
+	// floating only (CSS hides it docked): width rides the panel
+	// manager, the height cap stays with the map
+	let gripDrag = null;
+	grip.addEventListener('pointerdown', e => {
+		e.preventDefault();
+		e.stopPropagation();
+		gripDrag = {
+			x: e.clientX,
+			y: e.clientY,
+			h: mapWrap.offsetHeight,
+			w: panelEl?.offsetWidth || 300,
+		};
+		try {
+			grip.setPointerCapture(e.pointerId);
+		} catch {
+			// no capture: moves that still bubble here keep resizing
+		}
+	});
+	grip.addEventListener('pointermove', e => {
+		if (!gripDrag) {
+			return;
+		}
+		maxFloatH = Math.min(
+			Math.max(Math.round(gripDrag.h + e.clientY - gripDrag.y), 48),
+			Math.max(48, window.innerHeight - 140),
+		);
+		State.panels?.setFloatWidth('tool', gripDrag.w + e.clientX - gripDrag.x);
+		drawMap();
+	});
+	const gripEnd = () => {
+		if (gripDrag) {
+			gripDrag = null;
+			State.toolSettings.set('charMapMaxH', maxFloatH);
+		}
+	};
+	grip.addEventListener('pointerup', gripEnd);
+	grip.addEventListener('pointercancel', gripEnd);
+
 	const keyDown = e => {
-		if (!ignored) {
-			switch (e.code) {
-				case 'ArrowLeft':
-					e.preventDefault();
-					x = Math.max(x - 1, 0);
-					updateCursor();
-					break;
-				case 'ArrowUp':
-					e.preventDefault();
-					y = Math.max(y - 1, 0);
-					updateCursor();
-					break;
-				case 'ArrowRight':
-					e.preventDefault();
-					x = Math.min(x + 1, 15);
-					updateCursor();
-					break;
-				case 'ArrowDown':
-					e.preventDefault();
-					y = Math.min(y + 1, 15);
-					updateCursor();
-					break;
-				default:
-					break;
-			}
+		if (ignored) {
+			return;
+		}
+		let next = selected;
+		switch (e.code) {
+			case 'ArrowLeft':
+				next = Math.max(selected - 1, 0);
+				break;
+			case 'ArrowRight':
+				next = Math.min(selected + 1, 255);
+				break;
+			case 'ArrowUp':
+				next = selected - cols;
+				break;
+			case 'ArrowDown':
+				next = selected + cols;
+				break;
+			default:
+				return;
+		}
+		e.preventDefault();
+		if (next >= 0 && next <= 255) {
+			select(next);
 		}
 	};
 
 	const enable = () => {
 		document.addEventListener('keydown', keyDown);
-		redrawCanvas();
+		refresh();
 	};
 
 	const disable = () => {
 		document.removeEventListener('keydown', keyDown);
 	};
 
-	const getMode = () => {
-		const charCode = y * 16 + x;
-		return {
-			halfBlockMode: false,
-			foreground: State.palette.getForegroundColor(),
-			background: State.palette.getBackgroundColor(),
-			charCode: charCode,
-		};
-	};
-
-	const resizeCanvas = () => {
-		canvas.width = State.fontWidth * 16;
-		canvas.height = State.fontHeight * 16;
-		redrawCanvas();
-		updateCursor();
-	};
-
-	const mouseUp = e => {
-		const rect = canvas.getBoundingClientRect();
-		const mouseX = e.clientX - rect.left;
-		const mouseY = e.clientY - rect.top;
-		x = Math.floor(mouseX / (canvas.width / 16));
-		y = Math.floor(mouseY / (canvas.height / 16));
-		updateCursor();
-	};
-
-	const select = async charCode => {
-		await redrawCanvas().then(() => {
-			x = charCode % 16;
-			y = Math.floor(charCode / 16);
-			updateCursor();
-			cursor.show();
-		});
-	};
+	const getMode = () => ({
+		halfBlockMode: false,
+		foreground: State.palette.getForegroundColor(),
+		background: State.palette.getBackgroundColor(),
+		charCode: selected,
+	});
 
 	const ignore = () => {
 		ignored = true;
@@ -766,26 +747,36 @@ const createCharacterBrushPanel = async () => {
 		ignored = false;
 	};
 
-	const redrawGlyphs = () => {
-		setTimeout(() => {
-			resizeCanvas();
-			redrawCanvas();
-		}, 500);
+	const refresh = () => {
+		drawMap();
+		drawPreview();
 	};
 
-	document.addEventListener('onForegroundChange', redrawCanvas);
-	document.addEventListener('onBackgroundChange', redrawCanvas);
-	document.addEventListener('onLetterSpacingChange', resizeCanvas);
+	const redrawGlyphs = () => {
+		// a font swap streams glyph data in; measure after it settles
+		setTimeout(refresh, 500);
+	};
+
+	document.addEventListener('onForegroundChange', refresh);
+	document.addEventListener('onBackgroundChange', refresh);
+	document.addEventListener('onLetterSpacingChange', refresh);
 	document.addEventListener('onFontChange', redrawGlyphs);
-	document.addEventListener('onPaletteChange', redrawCanvas);
+	document.addEventListener('onPaletteChange', refresh);
 	document.addEventListener('onXBFontLoaded', redrawGlyphs);
 	document.addEventListener('onOpenedFile', redrawGlyphs);
+	// float vs dock changes which height rule applies
+	document.addEventListener('onPanelLayout', sizeWindow);
+	if (window.ResizeObserver) {
+		new window.ResizeObserver(() => {
+			if (mapWrap.clientWidth) {
+				drawMap();
+			}
+		}).observe(mapWrap);
+	}
 
-	canvasContainer.appendChild(canvas);
-	State.toolSettings.mount('character', canvasContainer);
-	await redrawCanvas();
-	updateCursor();
-	cursor.show();
+	State.toolSettings.mount('character', mapPanel);
+	State.toolSettings.mount('character', meta);
+	await refresh();
 
 	return {
 		enable: enable,
@@ -1034,12 +1025,16 @@ const SHAPE_MODES = [
 	{ value: 'nuskool', label: 'Nu Skool', glyph: ',d$P' },
 ];
 
-// a labeled control row in the tool settings window
+// a labeled control row in the tool settings window; the row keeps the
+// pair together so a bar can lay them out side by side
 const mountSetting = (section, text, element) => {
+	const row = document.createElement('DIV');
+	row.className = 'settingRow';
 	const label = document.createElement('LABEL');
 	label.innerText = text;
-	State.toolSettings.mount(section, label);
-	State.toolSettings.mount(section, element);
+	row.appendChild(label);
+	row.appendChild(element);
+	State.toolSettings.mount(section, row);
 };
 
 const createLineController = () => {
@@ -2195,8 +2190,11 @@ const createAttributeBrushController = () => {
 	const sizeLabel = document.createElement('LABEL');
 	sizeLabel.innerText = 'Size';
 	sizeLabel.appendChild(sizeReadout);
-	State.toolSettings.mount('attrib', sizeLabel);
-	State.toolSettings.mount('attrib', sizeSlider);
+	const sizeRow = document.createElement('DIV');
+	sizeRow.className = 'settingRow';
+	sizeRow.appendChild(sizeLabel);
+	sizeRow.appendChild(sizeSlider);
+	State.toolSettings.mount('attrib', sizeRow);
 	applySize(State.toolSettings.get('attribSize', 1));
 
 	const enable = () => {
@@ -2238,7 +2236,6 @@ const createAttributeBrushController = () => {
 };
 
 export {
-	createPanelCursor,
 	createBrushController,
 	createHalfBlockController,
 	createShadingController,

@@ -56,30 +56,6 @@
 					</div>
 				</nav>
 				<nav>
-					<div id="keyboardToolbar">
-						<button id="fkeySetPrev" aria-label="Previous">
-							<svg>
-								<use href="img/icons.svg#left"></use>
-							</svg>
-						</button>
-						<span id="fkey0w">F1<canvas id="fkey0" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey1w">F2<canvas id="fkey1" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey2w">F3<canvas id="fkey2" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey3w">F4<canvas id="fkey3" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey4w">F5<canvas id="fkey4" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey5w">F6<canvas id="fkey5" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey6w">F7<canvas id="fkey6" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey7w">F8<canvas id="fkey7" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey8w">F9<canvas id="fkey8" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey9w">F10<canvas id="fkey9" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey10w">F11<canvas id="fkey10" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey11w">F12<canvas id="fkey11" class="fkey" height="0" width="0"></canvas></span>
-						<button id="fkeySetNext" aria-label="Next">
-							<svg>
-								<use href="img/icons.svg#right"></use>
-							</svg>
-						</button>
-					</div>
 					<div id="brushToolbar">
 						<div id="halfblock" class="toolButton">
 							<svg alt="Block" aria-label="Block (f)">
@@ -530,6 +506,42 @@
 				</header>
 				<div class="modBody">
 					<div class="modContent">
+						<div id="tsKeyboard" class="hide">
+							<div class="fkeyGroup">
+								<button id="fkeySetPrev" type="button" aria-label="Previous character set page">
+									<svg aria-hidden="true">
+										<use href="img/icons.svg#left"></use>
+									</svg>
+								</button>
+								<div class="fkeyRow">
+									<button id="fkey0w" class="fkey" type="button" title="F1"><small><i>F</i>1</small><canvas id="fkey0" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey1w" class="fkey" type="button" title="F2"><small><i>F</i>2</small><canvas id="fkey1" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey2w" class="fkey" type="button" title="F3"><small><i>F</i>3</small><canvas id="fkey2" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey3w" class="fkey" type="button" title="F4"><small><i>F</i>4</small><canvas id="fkey3" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey4w" class="fkey" type="button" title="F5"><small><i>F</i>5</small><canvas id="fkey4" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey5w" class="fkey" type="button" title="F6"><small><i>F</i>6</small><canvas id="fkey5" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey6w" class="fkey" type="button" title="F7"><small><i>F</i>7</small><canvas id="fkey6" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey7w" class="fkey" type="button" title="F8"><small><i>F</i>8</small><canvas id="fkey7" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey8w" class="fkey" type="button" title="F9"><small><i>F</i>9</small><canvas id="fkey8" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey9w" class="fkey" type="button" title="F10"><small><i>F</i>10</small><canvas id="fkey9" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey10w" class="fkey" type="button" title="F11"><small><i>F</i>11</small><canvas id="fkey10" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey11w" class="fkey" type="button" title="F12"><small><i>F</i>12</small><canvas id="fkey11" class="gc" height="0" width="0"></canvas></button>
+								</div>
+								<button id="fkeySetNext" type="button" aria-label="Next character set page">
+									<svg aria-hidden="true">
+										<use href="img/icons.svg#right"></use>
+									</svg>
+								</button>
+							</div>
+							<button id="charsetButton" type="button" title="Choose a character set">
+								<svg aria-hidden="true">
+									<use href="img/icons.svg#charmap"></use>
+								</svg>
+								<small>Character Set</small>
+								<b id="charsetName"></b>
+								<i id="charsetPage"></i>
+							</button>
+						</div>
 						<div id="tsLine" class="hide"></div>
 						<div id="tsSquare" class="hide"></div>
 						<div id="tsCircle" class="hide"></div>
