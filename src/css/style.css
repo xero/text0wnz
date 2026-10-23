@@ -484,7 +484,8 @@
 			content: '';
 			width: 6px;
 			height: 30px;
-			background: radial-gradient(circle, #888 1px, transparent 1.6px) 0 0 / 6px 6px;
+			background: radial-gradient(circle, #888 1px, transparent 1.6px) 0 0 / 6px
+				6px;
 		}
 		i {
 			flex: none;
