@@ -270,14 +270,29 @@ const createAutoScroller = () => {
 		return null;
 	}
 
-	const transportUse = transport.querySelector('use');
+	// a fresh node instead of a href write: iPadOS WebKit can drop the
+	// shadow content of an external-sprite use after its button moves
+	// containers (panel docking moves these), and only a remount
+	// reliably re-resolves it. Deferred a microtask: swapping inside the
+	// click dispatch detaches the event target mid-bubble, and ancestor
+	// handlers (the divider strip's shade) can no longer tell the press
+	// came from a button
+	const swapUse = (button, name) => {
+		Promise.resolve().then(() => {
+			const old = button.querySelector('use');
+			if (!old) {
+				return;
+			}
+			const fresh = old.cloneNode(false);
+			fresh.setAttribute('href', iconHref(name));
+			old.replaceWith(fresh);
+		});
+	};
+
 	const engine = createScrollEngine({
 		viewport: () => document.getElementById('viewport'),
 		onState: playing => {
-			transportUse?.setAttribute(
-				'href',
-				iconHref(playing ? 'pause' : 'play'),
-			);
+			swapUse(transport, playing ? 'pause' : 'play');
 			transport.setAttribute('aria-label', playing ? 'Pause' : 'Play');
 			// the stylesheet drops canvas stack transitions while this
 			// class is up; easing fights the per frame scrollTop writes
@@ -287,12 +302,11 @@ const createAutoScroller = () => {
 
 	// menu expand/collapse: the loop glyph becomes the close X, and the
 	// panel's flex column crops the map from the bottom on its own
-	const toggleUse = toggle.querySelector('use');
 	const setOpen = open => {
 		menu.classList.toggle('open', open);
 		toggle.setAttribute('aria-expanded', String(open));
 		toggle.setAttribute('aria-label', open ? 'Close Autoscroll Menu' : 'Autoscroll Menu');
-		toggleUse?.setAttribute('href', iconHref(open ? 'cancel' : 'loop'));
+		swapUse(toggle, open ? 'cancel' : 'loop');
 	};
 	toggle.addEventListener('click', () => {
 		setOpen(!menu.classList.contains('open'));
