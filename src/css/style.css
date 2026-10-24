@@ -1690,6 +1690,44 @@
 			margin: 1px 2px;
 			flex: none;
 		}
+		/* collapsible groups keep the first view short; children wear a
+		   disk icon where the demo left a bare indent */
+		.menuGroup {
+			summary {
+				@apply flex items-center cursor-pointer text-sm text-fg;
+				list-style: none;
+				padding: 3px 6px;
+				line-height: 1.15;
+
+				&::-webkit-details-marker {
+					display: none;
+				}
+				&::after {
+					content: '\25B8';
+					margin-left: auto;
+					color: var(--subtitle);
+				}
+				@media (hover: hover) {
+					&:hover {
+						@apply bg-indigo text-white;
+					}
+				}
+			}
+			&[open] summary::after {
+				content: '\25BE';
+			}
+			.menuItem {
+				/* the disk marks the nesting; no extra indent on top */
+				gap: 8px;
+
+				svg {
+					flex: none;
+					width: 14px;
+					height: 14px;
+					fill: var(--subtitle);
+				}
+			}
+		}
 	}
 	.menuPane {
 		@apply flex flex-col;

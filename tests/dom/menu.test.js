@@ -23,6 +23,11 @@ const fixture = () => {
 			<div id="fileList" class="menuPane">
 				<article id="new" class="menuItem">New</article>
 				<article id="open" class="menuItem">Open</article>
+				<details class="menuGroup">
+					<summary>Save as</summary>
+					<article id="saveAnsi" class="menuItem">ANSi</article>
+				</details>
+				<article id="help" class="menuItem">Help!</article>
 			</div>
 			<div id="editList" class="menuPane hide">
 				<article id="navUndo" class="menuItem">Undo</article>
@@ -110,6 +115,28 @@ describe('flyout manager', () => {
 		fly.toggle('menu', menu, document.getElementById('fileMenu'));
 		expect(document.activeElement).toBe(
 			document.getElementById('menuTabFile'),
+		);
+	});
+
+	it('folded groups walk as one row; open ones expose their children', () => {
+		const menu = document.getElementById('mainMenu');
+		fly.toggle('menu', menu, document.getElementById('fileMenu'));
+		document.getElementById('open').focus();
+		const walk = () =>
+			document.dispatchEvent(
+				new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }),
+			);
+		// closed: the summary is next and the child never takes focus
+		walk();
+		expect(document.activeElement.tagName).toBe('SUMMARY');
+		walk();
+		expect(document.activeElement).toBe(document.getElementById('help'));
+		// open: the child joins the walk after its summary
+		document.querySelector('.menuGroup').open = true;
+		document.querySelector('.menuGroup summary').focus();
+		walk();
+		expect(document.activeElement).toBe(
+			document.getElementById('saveAnsi'),
 		);
 	});
 

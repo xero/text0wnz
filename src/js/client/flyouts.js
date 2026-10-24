@@ -148,10 +148,17 @@ const createFlyoutManager = () => {
 		}
 		const arrow = e.key === 'ArrowDown' || e.key === 'ArrowUp';
 		if (arrow || e.key === 'Tab') {
-			// visibility by markup (hidden panes wear .hide), not layout:
+			// visibility by markup (hidden panes wear .hide, folded groups
+			// hide their children but not their summary), not layout:
 			// offsetParent reads null in the layoutless test DOM
 			const items = [...open.el.querySelectorAll(ITEM_SELECTOR)].filter(
-				item => !item.closest('.hide, [hidden]'),
+				item => {
+					if (item.closest('.hide, [hidden]')) {
+						return false;
+					}
+					const folded = item.closest('details:not([open])');
+					return !folded || (item.tagName === 'SUMMARY' && item.parentElement === folded);
+				},
 			);
 			const at = items.indexOf(document.activeElement);
 			if (arrow && at === -1 && !open.el.contains(document.activeElement)) {
