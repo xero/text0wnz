@@ -1,7 +1,7 @@
 import State from './state.js';
-import { $, createCanvas, createSegmentedControl, iconHref } from './ui.js';
+import { $, createCanvas, createSegmentedControl, iconSvg } from './ui.js';
 import Toolbar from './toolbar.js';
-import { fitGlyphCanvas } from './glyphScale.js';
+import { fitGlyphCanvas, get1xFont } from './glyphScale.js';
 import {
 	nuskoolCircleCells,
 	nuskoolCircleFilledCells,
@@ -312,17 +312,6 @@ const createShadingPanel = async () => {
 	// chip references live here, never read back off the DOM
 	const chips = [];
 
-	const get1xFont = async () => {
-		if (!State.font || !State.font.getData) {
-			return null;
-		}
-		const { createLazyFont } = await import('./lazyFont.js');
-		const fontData = State.font.getData();
-		const palette = State.palette;
-		const letterSpacing = State.font.getLetterSpacing?.() ?? false;
-		return createLazyFont(fontData, palette, letterSpacing, 1);
-	};
-
 	const highlight = () => {
 		const fg = State.palette.getForegroundColor();
 		chips.forEach((chip, i) => {
@@ -331,7 +320,7 @@ const createShadingPanel = async () => {
 	};
 
 	const paintChips = async () => {
-		const panelFont = await get1xFont();
+		const panelFont = get1xFont();
 		if (!panelFont) {
 			return;
 		}
@@ -507,14 +496,9 @@ const createCharacterBrushPanel = async () => {
 	const smaller = makeZoomButton('Smaller cells', 'zoomGlyph');
 	const bigger = makeZoomButton('Bigger cells', 'zoomGlyph plus');
 	const eye = document.createElement('SPAN');
-	{
-		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-		svg.setAttribute('aria-hidden', 'true');
-		const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-		use.setAttribute('href', iconHref('eye'));
-		svg.appendChild(use);
-		eye.appendChild(svg);
-	}
+	const eyeSvg = iconSvg('eye');
+	eyeSvg.setAttribute('aria-hidden', 'true');
+	eye.appendChild(eyeSvg);
 	eye.title = `Cell size ${cellZoom}x`;
 	sizeBox.appendChild(smaller);
 	sizeBox.appendChild(eye);
@@ -522,19 +506,8 @@ const createCharacterBrushPanel = async () => {
 	meta.appendChild(previewBox);
 	meta.appendChild(sizeBox);
 
-	const get1xFont = async () => {
-		if (!State.font || !State.font.getData) {
-			return null;
-		}
-		const { createLazyFont } = await import('./lazyFont.js');
-		const fontData = State.font.getData();
-		const palette = State.palette;
-		const letterSpacing = State.font.getLetterSpacing?.() ?? false;
-		return createLazyFont(fontData, palette, letterSpacing, 1);
-	};
-
 	const drawPreview = async () => {
-		const panelFont = await get1xFont();
+		const panelFont = get1xFont();
 		if (!panelFont) {
 			return;
 		}
@@ -584,7 +557,7 @@ const createCharacterBrushPanel = async () => {
 	};
 
 	const drawMap = async () => {
-		const panelFont = await get1xFont();
+		const panelFont = get1xFont();
 		if (!panelFont) {
 			return;
 		}
@@ -612,7 +585,7 @@ const createCharacterBrushPanel = async () => {
 		selected = Math.min(Math.max(charCode, 0), 255);
 		// a full redraw per arrow-key repeat janks the iPad; only the
 		// two touched cells change, so only they repaint
-		const panelFont = await get1xFont();
+		const panelFont = get1xFont();
 		if (!panelFont || !cols || !glyphW) {
 			await drawMap();
 		} else {
@@ -1012,6 +985,67 @@ const mountSetting = (section, text, element) => {
 	return label;
 };
 
+const pointChanged = (e, prev) => {
+	if (prev === undefined) {
+		return true;
+	}
+	return (
+		e.halfBlockY !== prev.halfBlockY ||
+		e.x !== prev.x ||
+		e.y !== prev.y
+	);
+};
+
+// square and circle speak the same settings vocabulary: a shape mode
+// pick plus an outline/filled pair, persisted under the tool's keys
+const createShapeSettings = tsSection => {
+	let outlineMode = true;
+
+	const fillControl = createSegmentedControl(
+		tsSection + 'Fill',
+		[
+			{ value: 'outline', label: 'Outline' },
+			{ value: 'filled', label: 'Filled' },
+		],
+		fill => {
+			outlineMode = fill === 'outline';
+			State.toolSettings.set(tsSection + 'Fill', fill);
+		},
+	);
+
+	// old skool has no fill vocabulary: any fill char reads nu skool,
+	// so the fill pair naps while the mode offers none, and the
+	// persisted choice returns when it does
+	const syncFill = () => {
+		const noFill = modeControl.value() === 'oldskool';
+		fillControl.setEnabled(!noFill);
+		const fill = noFill
+			? 'outline'
+			: State.toolSettings.get(tsSection + 'Fill', 'outline');
+		fillControl.set(fill);
+		outlineMode = fill === 'outline';
+	};
+
+	const modeControl = createSegmentedControl(
+		tsSection + 'Mode',
+		SHAPE_MODES,
+		mode => {
+			State.toolSettings.set(tsSection + 'Mode', mode);
+			syncFill();
+		},
+	);
+	mountSetting(tsSection, 'Mode', modeControl.getElement());
+	mountSetting(tsSection, 'Style', fillControl.getElement());
+	modeControl.set(State.toolSettings.get(tsSection + 'Mode', 'block'));
+	syncFill();
+
+	return {
+		mode: () => modeControl.value(),
+		outline: () => outlineMode,
+		sync: syncFill,
+	};
+};
+
 const createLineController = () => {
 	const nav = $('shapes');
 	const painter = createAsciiStrokePainter();
@@ -1102,20 +1136,9 @@ const createLineController = () => {
 		}
 	};
 
-	const hasEndPointChanged = (e, endPoint = undefined) => {
-		if (endPoint === undefined) {
-			return true;
-		}
-		return (
-			e.halfBlockY !== endPoint.halfBlockY ||
-			e.x !== endPoint.x ||
-			e.y !== endPoint.y
-		);
-	};
-
 	const canvasDrag = e => {
 		if (startXY !== undefined) {
-			if (hasEndPointChanged(e.detail, endXY)) {
+			if (pointChanged(e.detail, endXY)) {
 				if (endXY !== undefined) {
 					State.toolPreview.clear();
 				}
@@ -1190,45 +1213,7 @@ const createSquareController = () => {
 	const painter = createAsciiStrokePainter();
 	let startXY;
 	let endXY;
-	let outlineMode = true;
-
-	const fillControl = createSegmentedControl(
-		tsSection + 'Fill',
-		[
-			{ value: 'outline', label: 'Outline' },
-			{ value: 'filled', label: 'Filled' },
-		],
-		fill => {
-			outlineMode = fill === 'outline';
-			State.toolSettings.set(tsSection + 'Fill', fill);
-		},
-	);
-
-	// old skool has no fill vocabulary: any fill char reads nu skool,
-	// so the fill pair naps while the mode offers none, and the
-	// persisted choice returns when it does
-	const syncFill = () => {
-		const noFill = modeControl.value() === 'oldskool';
-		fillControl.setEnabled(!noFill);
-		const fill = noFill
-			? 'outline'
-			: State.toolSettings.get(tsSection + 'Fill', 'outline');
-		fillControl.set(fill);
-		outlineMode = fill === 'outline';
-	};
-
-	const modeControl = createSegmentedControl(
-		tsSection + 'Mode',
-		SHAPE_MODES,
-		mode => {
-			State.toolSettings.set(tsSection + 'Mode', mode);
-			syncFill();
-		},
-	);
-	mountSetting(tsSection, 'Mode', modeControl.getElement());
-	mountSetting(tsSection, 'Style', fillControl.getElement());
-	modeControl.set(State.toolSettings.get(tsSection + 'Mode', 'block'));
-	syncFill();
+	const settings = createShapeSettings(tsSection);
 
 	// mode and fill latch at down: a select or pill touched mid drag
 	// must not commit a different shape than the ghost showed
@@ -1379,8 +1364,8 @@ const createSquareController = () => {
 	const canvasDown = e => {
 		startXY = e.detail;
 		endXY = undefined;
-		dragMode = modeControl.value();
-		dragOutline = outlineMode;
+		dragMode = settings.mode();
+		dragOutline = settings.outline();
 	};
 
 	const processCoords = () => {
@@ -1441,19 +1426,8 @@ const createSquareController = () => {
 		endXY = undefined;
 	};
 
-	const hasEndPointChanged = (e, startPoint = undefined) => {
-		if (startPoint === undefined) {
-			return true;
-		}
-		return (
-			e.halfBlockY !== startPoint.halfBlockY ||
-			e.x !== startPoint.x ||
-			e.y !== startPoint.y
-		);
-	};
-
 	const canvasDrag = e => {
-		if (startXY !== undefined && hasEndPointChanged(e.detail, endXY || startXY)) {
+		if (startXY !== undefined && pointChanged(e.detail, endXY || startXY)) {
 			if (endXY !== undefined) {
 				State.toolPreview.clear();
 			}
@@ -1489,7 +1463,7 @@ const createSquareController = () => {
 
 	const enable = () => {
 		nav.classList.add('enabled');
-		syncFill();
+		settings.sync();
 		State.toolSettings.show(tsSection);
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);
@@ -1520,45 +1494,7 @@ const createCircleController = () => {
 	const painter = createAsciiStrokePainter();
 	let startXY;
 	let endXY;
-	let outlineMode = true;
-
-	const fillControl = createSegmentedControl(
-		tsSection + 'Fill',
-		[
-			{ value: 'outline', label: 'Outline' },
-			{ value: 'filled', label: 'Filled' },
-		],
-		fill => {
-			outlineMode = fill === 'outline';
-			State.toolSettings.set(tsSection + 'Fill', fill);
-		},
-	);
-
-	// old skool has no fill vocabulary: any fill char reads nu skool,
-	// so the fill pair naps while the mode offers none, and the
-	// persisted choice returns when it does
-	const syncFill = () => {
-		const noFill = modeControl.value() === 'oldskool';
-		fillControl.setEnabled(!noFill);
-		const fill = noFill
-			? 'outline'
-			: State.toolSettings.get(tsSection + 'Fill', 'outline');
-		fillControl.set(fill);
-		outlineMode = fill === 'outline';
-	};
-
-	const modeControl = createSegmentedControl(
-		tsSection + 'Mode',
-		SHAPE_MODES,
-		mode => {
-			State.toolSettings.set(tsSection + 'Mode', mode);
-			syncFill();
-		},
-	);
-	mountSetting(tsSection, 'Mode', modeControl.getElement());
-	mountSetting(tsSection, 'Style', fillControl.getElement());
-	modeControl.set(State.toolSettings.get(tsSection + 'Mode', 'block'));
-	syncFill();
+	const settings = createShapeSettings(tsSection);
 
 	// mode and fill latch at down: a select or pill touched mid drag
 	// must not commit a different vocabulary than the ghost showed
@@ -1611,8 +1547,8 @@ const createCircleController = () => {
 	const canvasDown = e => {
 		startXY = e.detail;
 		endXY = undefined;
-		dragMode = modeControl.value();
-		dragOutline = outlineMode;
+		dragMode = settings.mode();
+		dragOutline = settings.outline();
 	};
 
 	const processCoords = () => {
@@ -1794,19 +1730,8 @@ const createCircleController = () => {
 		endXY = undefined;
 	};
 
-	const hasEndPointChanged = (e, startPoint = undefined) => {
-		if (startPoint === undefined) {
-			return true;
-		}
-		return (
-			e.halfBlockY !== startPoint.halfBlockY ||
-			e.x !== startPoint.x ||
-			e.y !== startPoint.y
-		);
-	};
-
 	const canvasDrag = e => {
-		if (startXY !== undefined && hasEndPointChanged(e.detail, endXY || startXY)) {
+		if (startXY !== undefined && pointChanged(e.detail, endXY || startXY)) {
 			if (endXY !== undefined) {
 				State.toolPreview.clear();
 			}
@@ -1854,7 +1779,7 @@ const createCircleController = () => {
 
 	const enable = () => {
 		nav.classList.add('enabled');
-		syncFill();
+		settings.sync();
 		State.toolSettings.show(tsSection);
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);

@@ -10,7 +10,7 @@
  */
 import State from './state.js';
 import { $ } from './ui.js';
-import { fitGlyphCanvas } from './glyphScale.js';
+import { fitGlyphCanvas, get1xFont } from './glyphScale.js';
 import { pageFromString, pagesForRange } from '../core/charsets.js';
 
 const createFKeys = () => {
@@ -171,22 +171,15 @@ const createFKeys = () => {
 		}
 	};
 
-	const updateFKeyDisplays = async () => {
+	const updateFKeyDisplays = () => {
 		const currentPage = fkeySets[currentSetIndex];
 		const currentSet = currentPage.chars;
 		updateCharsetButton(currentPage);
-		// previews are chrome, not canvas: they draw through their own 1x
-		// font (like the brush panels) so zoom can never scale or crop
-		// them, and the backing store stays at base glyph size
-		let previewFont = State.font;
-		if (State.font?.getData) {
-			const { createLazyFont } = await import('./lazyFont.js');
-			previewFont = createLazyFont(
-				State.font.getData(),
-				State.palette,
-				State.font.getLetterSpacing?.() ?? false,
-				1,
-			);
+		// no font yet means nothing to draw; the font load event reruns
+		// this, and drawing through a zoomed State.font would crop tiles
+		const previewFont = get1xFont();
+		if (!previewFont) {
+			return;
 		}
 		for (let i = 0; i < 12; i++) {
 			const canvas = $('fkey' + i);

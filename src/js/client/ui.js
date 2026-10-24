@@ -629,6 +629,14 @@ const remountUses = el => {
 	}
 };
 
+const iconSvg = name => {
+	const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+	const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+	use.setAttribute('href', iconHref(name));
+	svg.appendChild(use);
+	return svg;
+};
+
 /**
  * An n-way radio row in the toggle button's visual family. Options are
  * {value, label, glyph?, icon?}; a glyph renders as a small vocabulary
@@ -680,11 +688,7 @@ const createSegmentedControl = (id, options, onChange) => {
 			btn.appendChild(glyph);
 		}
 		if (opt.icon) {
-			const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-			const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-			use.setAttribute('href', iconHref(opt.icon));
-			svg.appendChild(use);
-			btn.appendChild(svg);
+			btn.appendChild(iconSvg(opt.icon));
 		}
 		const label = document.createElement('SPAN');
 		label.textContent = opt.label;
@@ -1359,6 +1363,7 @@ export {
 	createPaintShortcuts,
 	createSegmentedControl,
 	iconHref,
+	iconSvg,
 	remountUse,
 	remountUses,
 	createGrid,

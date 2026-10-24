@@ -76,6 +76,63 @@ const clearGlyphZero = fontData => {
 	return fontData;
 };
 
+// one facade over a parsed font: the handle owns the lazy font's
+// lifecycle so spacing and zoom rebuilds behave the same for every
+// loader
+const createFontHandle = (fontData, palette, letterSpacing, scaleFactor) => {
+	let lazyFont = null;
+	let currentScaleFactor = scaleFactor;
+
+	const createLazyFontInstance = () => {
+		// Cancel the outgoing instance's idle pregeneration drain, or rapid
+		// zoom/font changes stack stale drains filling orphaned caches
+		if (lazyFont) {
+			lazyFont.dispose();
+		}
+		lazyFont = createLazyFont(
+			fontData,
+			palette,
+			letterSpacing,
+			currentScaleFactor,
+		);
+	};
+
+	createLazyFontInstance();
+
+	return {
+		getData: () => fontData,
+		getWidth: () => lazyFont.getWidth(),
+		getHeight: () => lazyFont.getHeight(),
+		setLetterSpacing: newLetterSpacing => {
+			if (newLetterSpacing !== letterSpacing) {
+				letterSpacing = newLetterSpacing;
+				createLazyFontInstance();
+				document.dispatchEvent(
+					new CustomEvent('onLetterSpacingChange', { detail: letterSpacing }),
+				);
+			}
+		},
+		getLetterSpacing: () => letterSpacing,
+		setScaleFactor: newScaleFactor => {
+			if (newScaleFactor !== currentScaleFactor && newScaleFactor > 0) {
+				currentScaleFactor = newScaleFactor;
+				createLazyFontInstance();
+				document.dispatchEvent(
+					new CustomEvent('onScaleFactorChange', { detail: currentScaleFactor }),
+				);
+			}
+		},
+		getScaleFactor: () => currentScaleFactor,
+		// createLazyFontInstance ran above, so lazyFont is never null and
+		// delegation needs no guard
+		draw: (charCode, foreground, background, ctx, x, y) =>
+			lazyFont.draw(charCode, foreground, background, ctx, x, y),
+		drawWithAlpha: (charCode, foreground, ctx, x, y) =>
+			lazyFont.drawWithAlpha(charCode, foreground, ctx, x, y),
+		redraw: () => createLazyFontInstance(),
+	};
+};
+
 const loadFontFromXBData = (
 	fontBytes,
 	fontWidth,
@@ -85,10 +142,6 @@ const loadFontFromXBData = (
 	scaleFactor = 1,
 ) => {
 	return new Promise((resolve, reject) => {
-		let fontData = {};
-		let lazyFont = null;
-		let currentScaleFactor = scaleFactor;
-
 		const parseXBFontData = (fontBytes, fontWidth, fontHeight) => {
 			if (!fontBytes || fontBytes.length === 0) {
 				console.error(
@@ -127,21 +180,7 @@ const loadFontFromXBData = (
 			};
 		};
 
-		const createLazyFontInstance = () => {
-			// Cancel the outgoing instance's idle pregeneration drain, or rapid
-			// zoom/font changes stack stale drains filling orphaned caches
-			if (lazyFont) {
-				lazyFont.dispose();
-			}
-			lazyFont = createLazyFont(
-				fontData,
-				palette,
-				letterSpacing,
-				currentScaleFactor,
-			);
-		};
-
-		fontData = parseXBFontData(fontBytes, fontWidth, fontHeight);
+		const fontData = parseXBFontData(fontBytes, fontWidth, fontHeight);
 		if (
 			!fontData ||
 			!fontData.width ||
@@ -154,48 +193,7 @@ const loadFontFromXBData = (
 			return;
 		}
 
-		createLazyFontInstance();
-
-		resolve({
-			getData: () => fontData,
-			getWidth: () => (lazyFont ? lazyFont.getWidth() : fontData.width),
-			getHeight: () => (lazyFont ? lazyFont.getHeight() : fontData.height),
-			setLetterSpacing: newLetterSpacing => {
-				if (newLetterSpacing !== letterSpacing) {
-					letterSpacing = newLetterSpacing;
-					createLazyFontInstance();
-					document.dispatchEvent(
-						new CustomEvent('onLetterSpacingChange', { detail: letterSpacing }),
-					);
-				}
-			},
-			getLetterSpacing: () => letterSpacing,
-			setScaleFactor: newScaleFactor => {
-				if (newScaleFactor !== currentScaleFactor && newScaleFactor > 0) {
-					currentScaleFactor = newScaleFactor;
-					createLazyFontInstance();
-					document.dispatchEvent(
-						new CustomEvent('onScaleFactorChange', { detail: currentScaleFactor }),
-					);
-				}
-			},
-			getScaleFactor: () => currentScaleFactor,
-			draw: (charCode, foreground, background, ctx, x, y) => {
-				if (!lazyFont) {
-					console.warn('[Font] XB Lazy font not initialized');
-					return;
-				}
-				lazyFont.draw(charCode, foreground, background, ctx, x, y);
-			},
-			drawWithAlpha: (charCode, foreground, ctx, x, y) => {
-				if (!lazyFont) {
-					console.warn('[Font] XB Lazy font not initialized');
-					return;
-				}
-				lazyFont.drawWithAlpha(charCode, foreground, ctx, x, y);
-			},
-			redraw: () => createLazyFontInstance(),
-		});
+		resolve(createFontHandle(fontData, palette, letterSpacing, scaleFactor));
 	});
 };
 
@@ -206,10 +204,6 @@ const loadFontFromImage = (
 	scaleFactor = 1,
 ) => {
 	return new Promise((resolve, reject) => {
-		let fontData = {};
-		let lazyFont = null;
-		let currentScaleFactor = scaleFactor;
-
 		const parseFontData = imageData => {
 			const fontWidth = imageData.width / 16;
 			const fontHeight = imageData.height / 16;
@@ -257,20 +251,6 @@ const loadFontFromImage = (
 			return undefined;
 		};
 
-		const createLazyFontInstance = () => {
-			// Cancel the outgoing instance's idle pregeneration drain, or rapid
-			// zoom/font changes stack stale drains filling orphaned caches
-			if (lazyFont) {
-				lazyFont.dispose();
-			}
-			lazyFont = createLazyFont(
-				fontData,
-				palette,
-				letterSpacing,
-				currentScaleFactor,
-			);
-		};
-
 		loadImageAndGetImageData(`${State.fontDir}${fontName}.png`)
 			.then(imageData => {
 				const newFontData = parseFontData(imageData);
@@ -278,50 +258,14 @@ const loadFontFromImage = (
 				if (!newFontData) {
 					reject(new Error(`Failed to parse font data for ${fontName}`));
 				} else {
-					fontData = clearGlyphZero(newFontData);
-					createLazyFontInstance();
-
-					resolve({
-						getData: () => fontData,
-						getWidth: () => (lazyFont ? lazyFont.getWidth() : fontData.width),
-						getHeight: () =>
-							lazyFont ? lazyFont.getHeight() : fontData.height,
-						setLetterSpacing: newLetterSpacing => {
-							if (newLetterSpacing !== letterSpacing) {
-								letterSpacing = newLetterSpacing;
-								createLazyFontInstance();
-								document.dispatchEvent(
-									new CustomEvent('onLetterSpacingChange', { detail: letterSpacing }),
-								);
-							}
-						},
-						getLetterSpacing: () => letterSpacing,
-						setScaleFactor: newScaleFactor => {
-							if (newScaleFactor !== currentScaleFactor && newScaleFactor > 0) {
-								currentScaleFactor = newScaleFactor;
-								createLazyFontInstance();
-								document.dispatchEvent(
-									new CustomEvent('onScaleFactorChange', { detail: currentScaleFactor }),
-								);
-							}
-						},
-						getScaleFactor: () => currentScaleFactor,
-						draw: (charCode, foreground, background, ctx, x, y) => {
-							if (!lazyFont) {
-								console.warn('[Font] Lazy font not initialized');
-								return;
-							}
-							lazyFont.draw(charCode, foreground, background, ctx, x, y);
-						},
-						drawWithAlpha: (charCode, foreground, ctx, x, y) => {
-							if (!lazyFont) {
-								console.warn('[Font] Lazy font not initialized');
-								return;
-							}
-							lazyFont.drawWithAlpha(charCode, foreground, ctx, x, y);
-						},
-						redraw: () => createLazyFontInstance(),
-					});
+					resolve(
+						createFontHandle(
+							clearGlyphZero(newFontData),
+							palette,
+							letterSpacing,
+							scaleFactor,
+						),
+					);
 				}
 			})
 			.catch(err => {
