@@ -369,9 +369,10 @@
 			article {
 				@apply flex-shrink-0 w-full;
 			}
+			/* the old global header rules carried this strip's height and
+			   icon fill; the module era styles it on its own */
 			header {
-				@apply w-full flex-row pl-2 pr-0 place-content-between min-h-0 bg-header select-none flex;
-				flex-wrap: balance;
+				@apply w-full flex-row items-center pl-2 pr-0 place-content-between bg-header select-none flex;
 				h2 {
 					@apply text-cyan text-2xl mt-1 flex flex-grow select-none;
 				}
@@ -384,6 +385,11 @@
 				#closeChat {
 					@apply text-fg flex flex-grow-0 cursor-pointer m-auto px-1.5;
 
+					svg {
+						fill: var(--color-fg);
+						width: 30px;
+						height: 30px;
+					}
 					@media (hover: hover) {
 						&:hover svg {
 							@apply fill-cyan;
@@ -444,7 +450,7 @@
 				}
 			}
 			nav {
-				@apply pl-2 border-t-4 border-hl bg-editor flex-row;
+				@apply flex pl-2 border-t-4 border-hl bg-editor flex-row;
 				* {
 					@apply m-0 h-[25px];
 				}
