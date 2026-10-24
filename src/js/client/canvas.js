@@ -1565,7 +1565,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const startUndo = () => {
 		// the editor drops the arena's redo tail here unconditionally
 		State.historyLabels?.redoCleared();
+		// flushes the previous stroke first, whose commit consumes ITS
+		// snapshot; then the new stroke stamps its label and clock
 		editor.startUndo();
+		State.historyLabels?.opened();
 	};
 
 	// strokes commit lazily at the next flush point, so the history

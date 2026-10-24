@@ -6,7 +6,7 @@
  * tolerant merge, so new modules never reset a saved layout.
  */
 import State from './state.js';
-import { $ } from './ui.js';
+import { $, remountUses } from './ui.js';
 
 const LAYOUT_KEY = 'panelLayout';
 const LAYOUT_VERSION = 2;
@@ -261,14 +261,9 @@ const createPanelManager = () => {
 		}
 	};
 
-	// iPadOS WebKit drops the shadow content of external-sprite use
-	// nodes when their subtree reparents, re-resolving lazily or never;
-	// remounting each one right after a move makes it deterministic
-	const refreshUses = el => {
-		for (const use of el.querySelectorAll('use')) {
-			use.replaceWith(use.cloneNode(false));
-		}
-	};
+	// every real reparent remounts sprite uses (the WebKit workaround
+	// lives in ui.js beside its sibling for href swaps)
+	const refreshUses = remountUses;
 
 	const wideColumns = () => window.innerWidth >= WIDE_COLUMNS_PX;
 
@@ -866,12 +861,20 @@ const createPanelManager = () => {
 				toggleShade(key);
 			}
 		});
-		// right-click anywhere on the module (text fields keep their
-		// native menus) or shift F10 from a focused control opens the
-		// docking menu; the menu key's synthesized contextmenu is
-		// cancelled on keydown so it cannot re-place the menu at 0,0
+		// right-click or shift F10 opens the docking menu, but only where
+		// ours will actually open: text fields and text-bearing regions
+		// keep the native menu, and a floatOnly or phone module must not
+		// eat the right-click and offer nothing in its place. The menu
+		// key's synthesized contextmenu is cancelled on keydown so it
+		// cannot re-place the menu at 0,0
+		const menuBlocked = target =>
+			target.closest(
+				'input, textarea, select, #messageWindow, #userList',
+			) ||
+			reg.floatOnly ||
+			isNarrow();
 		el.addEventListener('contextmenu', e => {
-			if (e.target.closest('input, textarea, select')) {
+			if (menuBlocked(e.target)) {
 				return;
 			}
 			e.preventDefault();
@@ -881,7 +884,7 @@ const createPanelManager = () => {
 			if (e.key !== 'ContextMenu' && !(e.shiftKey && e.key === 'F10')) {
 				return;
 			}
-			if (e.target.closest('input, textarea, select')) {
+			if (menuBlocked(e.target)) {
 				return;
 			}
 			e.preventDefault();
@@ -1204,6 +1207,13 @@ const createPanelManager = () => {
 
 	container.addEventListener('pointermove', e => {
 		if (!drag) {
+			return;
+		}
+		// a press released outside the window never sends pointerup here
+		// (no capture before the threshold); a buttonless move means the
+		// drag died out there, or a hover would lift the panel
+		if (!drag.started && !drag.resize && e.buttons === 0) {
+			drag = null;
 			return;
 		}
 		if (drag.resize) {

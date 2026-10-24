@@ -66,9 +66,21 @@ const createHistoryLabels = () => {
 		pending = label;
 	};
 
+	// strokes commit lazily at the NEXT flush point, so a row stamped at
+	// commit time would wear the next stroke's tool and clock; the
+	// snapshot is taken when the stroke opens instead
+	let snapshot = null;
+	const opened = () => {
+		snapshot = { label: pending ?? fallbackLabel(), time: Date.now() };
+		pending = null;
+	};
+
 	const committed = () => {
 		rows.splice(cursor);
-		rows.push({ label: pending ?? fallbackLabel(), time: Date.now() });
+		rows.push(
+			snapshot ?? { label: pending ?? fallbackLabel(), time: Date.now() },
+		);
+		snapshot = null;
 		cursor = rows.length;
 		pending = null;
 		notify();
@@ -180,6 +192,7 @@ const createHistoryLabels = () => {
 
 	return {
 		pend,
+		opened,
 		committed,
 		undone,
 		redone,

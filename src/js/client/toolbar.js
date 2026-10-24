@@ -129,8 +129,9 @@ const Toolbar = (() => {
 		closeMenu();
 	};
 
+	// a getter with no side effects: the old closeMenu() here let the
+	// history label fallback close the History flyout as it opened
 	const getCurrentTool = () => {
-		closeMenu();
 		return currentButton ? currentButton.id : null;
 	};
 

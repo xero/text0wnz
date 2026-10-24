@@ -7,6 +7,7 @@
  * canvas resizing), and window resizes. Keys keep working without it.
  */
 import State from './state.js';
+import Toolbar from './toolbar.js';
 import { $ } from './ui.js';
 
 const BAR_GAP_PX = 6;
@@ -18,7 +19,12 @@ const createSelectionBar = () => {
 	const sizeReadout = $('selectionSize');
 	const deselect = $('deselect');
 
-	const active = () => State.selectionCursor?.isVisible?.() === true;
+	// the bar belongs to the selection tool alone; keyboard mode makes
+	// shift-arrow selections too, and before the tool's first enable no
+	// inline display gate exists to keep the bar off the canvas
+	const active = () =>
+		State.selectionCursor?.isVisible?.() === true &&
+		Toolbar.getCurrentTool() === 'selection';
 
 	const place = () => {
 		if (!bar) {

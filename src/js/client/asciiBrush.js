@@ -1,5 +1,6 @@
 import State from './state.js';
 import { $, createSegmentedControl } from './ui.js';
+import { mountSetting } from './freehandTools.js';
 import {
 	cellInRange,
 	createAsciiStampEngine,
@@ -353,13 +354,7 @@ const createAsciiBrushController = () => {
 			State.toolSettings.set('asciiWidth', width);
 		},
 	);
-	const widthLabel = document.createElement('LABEL');
-	widthLabel.innerText = 'Width';
-	const widthRow = document.createElement('DIV');
-	widthRow.className = 'settingRow';
-	widthRow.appendChild(widthLabel);
-	widthRow.appendChild(widthControl.getElement());
-	State.toolSettings.mount('ascii', widthRow);
+	mountSetting('ascii', 'Width', widthControl.getElement());
 	widthControl.set(State.toolSettings.get('asciiWidth', 1));
 	engine.setWidth(widthControl.value());
 

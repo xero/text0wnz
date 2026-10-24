@@ -1158,6 +1158,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 
 	const deleteSelection = () => {
 		if (State.selectionCursor.isVisible() || State.cursor.isVisible()) {
+			State.historyLabels?.pend('Delete');
 			State.textArtCanvas.startUndo();
 			State.textArtCanvas.deleteArea(
 				x,
@@ -1181,6 +1182,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 			buffer !== undefined &&
 			(State.selectionCursor.isVisible() || State.cursor.isVisible())
 		) {
+			State.historyLabels?.pend('Paste');
 			State.textArtCanvas.startUndo();
 			State.textArtCanvas.setArea(buffer, x, y);
 		}
@@ -1199,6 +1201,9 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 		) {
 			return;
 		}
+		State.historyLabels?.pend(
+			mode === 'transparent' ? 'Paste transparent' : 'Paste under',
+		);
 		State.textArtCanvas.startUndo();
 		const columns = State.textArtCanvas.getColumns();
 		const rows = State.textArtCanvas.getRows();
@@ -1274,6 +1279,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 							? await State.textArtCanvas.resolveUnicode(unmapped)
 							: new Map();
 
+					State.historyLabels?.pend('System paste');
 					State.textArtCanvas.startUndo();
 					// re-read bounds: the resolve above awaits network block
 					// fetches, and the doc may have been resized meanwhile
@@ -1473,6 +1479,7 @@ const createSelectionTool = () => {
 		if (!selection) {
 			return;
 		}
+		State.historyLabels?.pend('Flip horizontal');
 		State.textArtCanvas.startUndo();
 		for (let y = 0; y < selection.height; y++) {
 			const blocks = [];
@@ -1514,6 +1521,7 @@ const createSelectionTool = () => {
 		if (!selection) {
 			return;
 		}
+		State.historyLabels?.pend('Flip vertical');
 		State.textArtCanvas.startUndo();
 		for (let x = 0; x < selection.width; x++) {
 			const blocks = [];

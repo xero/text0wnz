@@ -8,7 +8,7 @@
  * persists; mode, count, and transport state are session-only.
  */
 import State from './state.js';
-import { $, createSegmentedControl, iconHref } from './ui.js';
+import { $, createSegmentedControl, iconHref, remountUse } from './ui.js';
 
 const BOTTOM_PAUSE_MS = 1500;
 const TOP_PAUSE_MS = 1500;
@@ -278,14 +278,14 @@ const createAutoScroller = () => {
 	// handlers (the divider strip's shade) can no longer tell the press
 	// came from a button
 	const swapUse = (button, name) => {
+		// deferred a microtask: replacing the node inside the click
+		// dispatch detaches e.target mid-bubble and ancestors misread
+		// the press
 		Promise.resolve().then(() => {
 			const old = button.querySelector('use');
-			if (!old) {
-				return;
+			if (old) {
+				remountUse(old, iconHref(name));
 			}
-			const fresh = old.cloneNode(false);
-			fresh.setAttribute('href', iconHref(name));
-			old.replaceWith(fresh);
 		});
 	};
 
