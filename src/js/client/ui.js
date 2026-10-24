@@ -312,11 +312,16 @@ const createPositionInfo = el => {
 	el.append(row, depth);
 
 	const viewport = $('viewport');
+	// the phone top strip carries a compact copy of the readout
+	const stripPos = $('topStripPos');
 	const rowCount = () => State.textArtCanvas?.getRows?.() ?? 0;
 
 	const update = (x, y) => {
 		colValue.textContent = String(x + 1);
 		rowButton.textContent = String(y + 1);
+		if (stripPos) {
+			stripPos.textContent = `${x + 1},${y + 1}`;
+		}
 	};
 
 	const refreshTotal = () => {

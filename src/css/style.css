@@ -964,6 +964,309 @@
 		animation: modFlashShaded 1.6s ease-in-out;
 	}
 
+	/* phone minimap strip: autoscroll buttons stacked over the map,
+	   no title chrome; the settings menu hangs out to the left */
+	.mod.st {
+		flex: 1 1 auto;
+		min-height: 0;
+
+		.modHeader {
+			flex-direction: column;
+			height: auto;
+			gap: 2px;
+			padding: 2px 0;
+		}
+		.modTitle,
+		.modLine,
+		.modShade {
+			display: none;
+		}
+		.modTool {
+			width: 100%;
+			height: 36px;
+
+			svg {
+				width: 24px;
+				height: 24px;
+			}
+		}
+		.modBody {
+			flex: 1 1 auto;
+			grid-template-rows: 1fr !important;
+
+			> div {
+				visibility: visible !important;
+				overflow: visible;
+			}
+		}
+		#minimapScroll {
+			flex: 1 1 auto;
+		}
+		#minimapMenu {
+			@apply absolute bg-menu;
+			right: 100%;
+			top: 0;
+			width: 210px;
+			z-index: 30;
+			border: 4px solid var(--color-panel);
+			border-right: 0;
+
+			&:not(.open) {
+				border-width: 0;
+			}
+		}
+	}
+
+	/* phone tool settings sheet: a grab handle, a slim title strip, and
+	   snap points panels.js drives through --sh */
+	.modHandle {
+		display: none;
+	}
+	.mod.sheet {
+		@apply fixed;
+		z-index: 40;
+		left: 0;
+		right: 0;
+		bottom: var(--dock, 0px);
+		height: var(--sh, auto);
+		max-height: calc(100% - var(--dock, 0px) - 46px);
+		border-top: 1px solid var(--midnight);
+		box-shadow: 0 -6px 0 #0006;
+		/* the height rides the drag pointer directly, like .mod.fl: the
+		   global ease would trail the finger and restart on every move */
+		transition: none;
+
+		&.snap {
+			@media (prefers-reduced-motion: no-preference) {
+				transition: height 0.18s ease;
+			}
+		}
+		.modHandle {
+			display: block;
+			flex: none;
+			position: relative;
+			height: 20px;
+			background: var(--color-panel);
+			touch-action: none;
+			cursor: grab;
+
+			&::after {
+				content: '';
+				position: absolute;
+				left: 50%;
+				top: 8px;
+				width: 44px;
+				height: 4px;
+				margin-left: -22px;
+				background: #888;
+			}
+		}
+		.modHeader {
+			height: 22px;
+			padding-left: 6px;
+			background: var(--color-panel);
+			font-size: 12px;
+			color: var(--subtitle);
+			touch-action: none;
+		}
+		.modLine,
+		.modShade {
+			display: none;
+		}
+		.modBody {
+			flex: 1 1 auto;
+			grid-template-rows: 1fr !important;
+
+			> div {
+				visibility: visible !important;
+				overflow-y: auto;
+			}
+		}
+	}
+
+	/* the phone chrome exists only below the breakpoint */
+	#topStrip,
+	#mapStrip {
+		display: none;
+	}
+
+	/* <--//-------------------------------------------------------------[phone] */
+	/* below 720px: a 42px top strip whose title opens the sidebar as a
+	   drawer, the minimap as a strip beside the canvas, the rail as a
+	   bottom dock, and no top dock. Saved docks, floats, and the
+	   collapsed flag all stay put for the next wide layout */
+	@media (max-width: 720px) {
+		#bodyContainer,
+		#bodyContainer.noSidebar,
+		#bodyContainer.sidebarCollapsed,
+		#bodyContainer.sidebarPeek {
+			grid-template-columns: minmax(0, 1fr) auto;
+			grid-template-rows: auto minmax(0, 1fr) auto auto;
+		}
+		#topStrip {
+			@apply flex items-center bg-menu relative;
+			grid-column: 1 / -1;
+			grid-row: 1;
+			z-index: 46;
+			height: 42px;
+			padding-left: 4px;
+			border-bottom: 1px solid var(--midnight);
+
+			#drawerButton {
+				@apply flex items-center bg-transparent text-left cursor-pointer;
+				flex: 1;
+				min-width: 0;
+				gap: 8px;
+				height: 42px;
+				border: 0;
+				padding: 0 6px;
+
+				svg {
+					flex: none;
+					width: 20px;
+					height: 20px;
+					fill: var(--color-fg);
+				}
+				span {
+					@apply whitespace-nowrap overflow-hidden text-ellipsis;
+					min-width: 0;
+					font-size: 14px;
+				}
+				i {
+					flex: none;
+					width: 7px;
+					height: 7px;
+					border: solid var(--color-fg);
+					border-width: 0 2px 2px 0;
+					transform: translateY(-2px) rotate(45deg);
+
+					@media (prefers-reduced-motion: no-preference) {
+						transition: transform 0.2s ease;
+					}
+				}
+				&[aria-expanded='true'] i {
+					transform: translateY(2px) rotate(225deg);
+				}
+			}
+			#topStripPos {
+				@apply text-cyan whitespace-nowrap;
+				font-size: 14px;
+				padding: 0 8px;
+			}
+			#stripUndo,
+			#stripRedo {
+				@apply grid place-items-center bg-transparent cursor-pointer;
+				flex: none;
+				width: 44px;
+				height: 42px;
+				border: 0;
+				padding: 0;
+
+				svg {
+					width: 24px;
+					height: 24px;
+					fill: var(--color-fg);
+				}
+			}
+		}
+		#viewport {
+			grid-column: 1;
+			grid-row: 2;
+		}
+		#mapStrip {
+			@apply flex flex-col bg-menu relative;
+			grid-column: 2;
+			grid-row: 2;
+			width: 58px;
+			min-height: 0;
+			border-left: 1px solid var(--midnight);
+
+			&:not(:has(.mod:not([hidden]))) {
+				display: none;
+			}
+		}
+		#dockTop {
+			display: none;
+		}
+		#dockBottom {
+			grid-column: 1 / -1;
+		}
+		#sidebarGrip {
+			display: none;
+		}
+		/* the rail rides the bottom edge; the palette folds into the
+		   swatch (its flyout) and history folds into the top strip */
+		aside {
+			@apply flex;
+			grid-column: 1 / -1;
+			grid-row: 4;
+			overflow-x: auto;
+			overflow-y: hidden;
+			border-right: 0;
+			border-top: 1px solid var(--midnight);
+			/* a crowded rail must pan by touch; pinches stay the app's */
+			touch-action: pan-x;
+
+			> div {
+				flex: 1 0 40px;
+				height: 50px;
+				margin: 0;
+				padding: 0;
+			}
+			> canvas {
+				flex: none;
+				align-self: center;
+				margin: 0 4px;
+			}
+			.separator,
+			#clipboard,
+			#palettePicker,
+			#paletteMore {
+				display: none;
+			}
+		}
+		/* the sidebar becomes a drawer under the top strip; its modules
+		   keep their divider strips and saved order */
+		#sidebar {
+			@apply fixed;
+			left: 0;
+			right: 0;
+			top: 42px;
+			z-index: 44;
+			max-height: calc(100% - 42px - var(--dock, 0px));
+			overflow-y: auto;
+			box-shadow: 0 6px 0 #0008;
+			transform: translateY(calc(-100% - 50px));
+			/* the drawer scrolls by touch; drags are off on phones */
+			touch-action: pan-y;
+
+			@media (prefers-reduced-motion: no-preference) {
+				transition: transform 0.22s ease;
+			}
+			&.open {
+				transform: none;
+			}
+		}
+	}
+
+	/* the phone palette flyout adopts the real picker canvas, scaled up
+	   to finger size, beside the ++ chip */
+	#paletteFlyout {
+		min-width: 0;
+	}
+	#paletteFlyoutBody {
+		@apply flex items-start;
+		gap: 8px;
+		padding: 4px 8px;
+
+		#palettePicker {
+			@apply pxl8;
+			width: 80px;
+			height: 320px;
+			margin: 0;
+		}
+	}
+
 	.panelChips {
 		@apply flex flex-wrap;
 		gap: 3px;

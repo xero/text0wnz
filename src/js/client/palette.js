@@ -541,8 +541,13 @@ const createPalettePicker = canvas => {
 			? { x: touch.pageX, y: touch.pageY }
 			: { x: e.clientX, y: e.clientY };
 
-		const x = Math.floor((coords.x - rect.left) / (canvas.width / 2));
-		const y = Math.floor((coords.y - rect.top) / (canvas.height / 8));
+		// fractions of the rendered rect, not the backing store: the
+		// phone palette flyout scales the canvas with CSS
+		const x = Math.floor(((coords.x - rect.left) / rect.width) * 2);
+		const y = Math.min(
+			7,
+			Math.max(0, Math.floor(((coords.y - rect.top) / rect.height) * 8)),
+		);
 
 		const currentTime = new Date().getTime();
 		const lastTime = isTouch ? lastTouchTime : lastMouseTime;

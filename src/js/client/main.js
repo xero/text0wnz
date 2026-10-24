@@ -19,7 +19,7 @@ import { createArchiveOpener, isArchiveFile } from './archiveOpen.js';
 import { createPluginManager } from './plugins.js';
 import { createReferenceImage } from './referenceImage.js';
 import { createToolSettings } from './toolSettings.js';
-import { createPanelManager } from './panels.js';
+import { createPanelManager, isPhone } from './panels.js';
 import { createFlyoutManager } from './flyouts.js';
 import { createHistoryLabels } from './historyLabels.js';
 import { createSelectionBar } from './selectionBar.js';
@@ -991,8 +991,12 @@ const initializeAppComponents = async () => {
 	// single source of truth (file.js and network.js write them directly)
 	const sauceInfoTitle = $('sauceInfoTitle');
 	const sauceInfoByline = $('sauceInfoByline');
+	const topStripTitle = $('topStripTitle');
 	const updateSauceDisplay = () => {
 		sauceInfoTitle.textContent = sauceTitle.value || State.title || 'Untitled';
+		if (topStripTitle) {
+			topStripTitle.textContent = sauceInfoTitle.textContent;
+		}
 		sauceInfoByline.textContent = [
 			sauceAuthor.value || 'anonymous',
 			sauceGroup.value,
@@ -1074,6 +1078,9 @@ const initializeAppComponents = async () => {
 
 	onClick($('undo'), State.textArtCanvas.undo);
 	onClick($('redo'), State.textArtCanvas.redo);
+	// the phone top strip carries its own pair
+	onClick($('stripUndo'), State.textArtCanvas.undo);
+	onClick($('stripRedo'), State.textArtCanvas.redo);
 	onClick($('resolution'), () => {
 		State.menus.close();
 		State.modal.open('resize');
@@ -1133,10 +1140,43 @@ const initializeAppComponents = async () => {
 		State.palette.setBackgroundColor(tempForeground);
 	});
 	onClick($('palettePreview'), () => {
+		// the phone rail folds the palette into the swatch, so the tap
+		// opens the picker flyout there instead of swapping
+		if (isPhone()) {
+			State.flyouts.toggle(
+				'palette',
+				$('paletteFlyout'),
+				$('palettePreview'),
+			);
+			return;
+		}
 		const tempForeground = State.palette.getForegroundColor();
 		State.palette.setForegroundColor(State.palette.getBackgroundColor());
 		State.palette.setBackgroundColor(tempForeground);
 	});
+
+	// the picker canvas and the ++ chip live in the rail on wide
+	// screens and inside the swatch flyout on phones; both carry their
+	// listeners along, so the move is just a reparent either way
+	const paletteFlyoutBody = $('paletteFlyoutBody');
+	const syncPaletteHome = () => {
+		const picker = $('palettePicker');
+		const more = $('paletteMore');
+		if (!paletteFlyoutBody || !picker || !more) {
+			return;
+		}
+		if (isPhone()) {
+			if (picker.parentNode !== paletteFlyoutBody) {
+				paletteFlyoutBody.append(picker, more);
+			}
+		} else if (picker.parentNode === paletteFlyoutBody) {
+			const anchor = $('keyboard');
+			anchor.parentNode.insertBefore(picker, anchor);
+			anchor.parentNode.insertBefore(more, anchor);
+		}
+	};
+	document.addEventListener('onPanelLayout', syncPaletteHome);
+	syncPaletteHome();
 
 	const navICE = createSettingToggle(
 		$('navICE'),

@@ -7,6 +7,8 @@
  * Escape closes and hands focus back to the opener.
  */
 
+import { isPhone } from './panels.js';
+
 const ITEM_SELECTOR = 'button, .toolButton, .menuItem, summary, [tabindex]';
 
 const createFlyoutManager = () => {
@@ -32,6 +34,19 @@ const createFlyoutManager = () => {
 
 	const place = (el, from, opts) => {
 		const r = from.getBoundingClientRect();
+		if (isPhone() && from.closest?.('aside')) {
+			// the rail rides the bottom edge on phones, so its flyouts
+			// open upward, centered over the opener and clamped on screen
+			const width = el.offsetWidth;
+			el.style.left = `${Math.round(
+				Math.min(
+					Math.max(r.left + r.width / 2 - width / 2, 8),
+					Math.max(8, window.innerWidth - width - 8),
+				),
+			)}px`;
+			el.style.top = `${Math.max(8, Math.round(r.top - el.offsetHeight - 6))}px`;
+			return;
+		}
 		if (opts.flush) {
 			// the File/Edit menu sits flush with the app's top edge and
 			// the rail's right edge, no gap
