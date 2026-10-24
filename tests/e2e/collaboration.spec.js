@@ -45,7 +45,7 @@ test.describe('Collaboration and Chat Features', () => {
 			await page.waitForTimeout(500);
 			await expect(page.locator('#chatWindow')).toBeVisible();
 
-			// the chat module has no close chrome; its button toggles it
+			// the chat button toggles the window; the title bar X does too
 			await chatButton.click();
 			await page.waitForTimeout(500);
 			await expect(page.locator('#chatWindow')).toBeHidden();

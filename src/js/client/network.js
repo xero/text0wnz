@@ -1003,6 +1003,9 @@ const createChatController = (
 		}
 	};
 	close.addEventListener('click', toggle);
+	// the title bar X reads as close where the inner door does not; it
+	// only shows while the window does, so toggle always means close
+	$('chatModClose')?.addEventListener('click', toggle);
 
 	const isEnabled = () => {
 		return enabled;
