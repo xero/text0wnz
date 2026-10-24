@@ -15,6 +15,13 @@ const LEGACY_TOOL_POS_KEY = 'toolSettingsPos';
 // flyouts and menus 200, toasts 210; dialogs ride the top layer
 const FLOAT_BASE_Z = 40;
 
+// below this width the layout becomes the phone shell: top strip,
+// drawer, minimap strip, bottom rail, and the tool settings sheet
+const PHONE_QUERY = '(max-width: 720px)';
+const isPhone = () =>
+	typeof window !== 'undefined' &&
+	window.matchMedia?.(PHONE_QUERY).matches === true;
+
 const DRAG_THRESHOLD_PX = 6;
 // a drop reads as sidebar once the pointer is a quarter of the way in
 const SIDEBAR_DROP_FRACTION = 0.25;
@@ -37,6 +44,13 @@ const BAR_SLOT_PX = 52;
 const FLOAT_MIN_W = 180;
 const FLOAT_MAX_W = 640;
 const FLOAT_MIN_H = 120;
+// the sheet never shrinks below a grabbable sliver, and it stops short
+// of the top strip so the strip's controls stay reachable
+const SHEET_MIN_PX = 30;
+const SHEET_TOP_GAP_PX = 46;
+// a first control row taller than this (the character map) peeks at a
+// usable slice instead of swallowing the screen
+const SHEET_PEEK_ROW_MAX_PX = 140;
 
 // presses on controls never start a drag; the header overrides, but
 // its own buttons keep their click behavior
@@ -133,6 +147,12 @@ const createPanelManager = () => {
 		top: $('dockTop'),
 		bot: $('dockBottom'),
 	};
+	const strip = $('mapStrip');
+	const phoneMql =
+		typeof window !== 'undefined' && window.matchMedia
+			? window.matchMedia(PHONE_QUERY)
+			: null;
+	const isNarrow = () => phoneMql?.matches === true;
 
 	const registry = new Map();
 	const MOD = cloneDefaults();
@@ -219,9 +239,9 @@ const createPanelManager = () => {
 	};
 
 	const setMode = (el, mode) => {
-		el.classList.toggle('dk', mode === 'dk');
-		el.classList.toggle('tb', mode === 'tb');
-		el.classList.toggle('fl', mode === 'fl');
+		for (const name of ['dk', 'tb', 'fl', 'st', 'sheet']) {
+			el.classList.toggle(name, mode === name);
+		}
 	};
 
 	// iPadOS WebKit drops the shadow content of external-sprite use
@@ -327,9 +347,138 @@ const createPanelManager = () => {
 		grip.title = label;
 	};
 
+	// the sheet and the drawer hang above everything below the canvas
+	// (the bottom dock plus the rail); one variable carries that height.
+	// It lives on :root because the sheet rides document.body (Firefox
+	// and WebKit size an abspos grid child by grid alignment and ignore
+	// its height, so the sheet cannot stay inside the grid container)
+	const rootStyle = document.documentElement.style;
+	let dockVarRaf = 0;
+	const syncDockVar = narrow => {
+		if (!narrow) {
+			rootStyle.removeProperty('--dock');
+			return;
+		}
+		if (dockVarRaf || !viewportEl) {
+			return;
+		}
+		dockVarRaf = requestAnimationFrame(() => {
+			dockVarRaf = 0;
+			if (!isNarrow()) {
+				return;
+			}
+			const below =
+				container.getBoundingClientRect().bottom -
+				viewportEl.getBoundingClientRect().bottom;
+			rootStyle.setProperty('--dock', `${Math.max(0, Math.round(below))}px`);
+		});
+	};
+
+	const sheetAvail = () => {
+		const dock = parseFloat(rootStyle.getPropertyValue('--dock')) || 0;
+		return Math.max(SHEET_MIN_PX, container.clientHeight - dock - SHEET_TOP_GAP_PX);
+	};
+
+	/** The peek snap shows the sheet chrome plus exactly the first
+	 * control row of the visible section (the F-key row for the
+	 * keyboard). Content is top-anchored inside the bottom-anchored
+	 * sheet, so row offsets hold at any current height. */
+	const sheetPeek = el => {
+		const section = [...el.querySelectorAll('.modContent > div')].find(
+			div => !div.classList.contains('hide'),
+		);
+		const row =
+			section && [...section.children].find(child => child.offsetHeight > 0);
+		if (!row) {
+			return Math.min(el.scrollHeight || SHEET_MIN_PX, sheetAvail());
+		}
+		const rect = row.getBoundingClientRect();
+		const relTop = rect.top - el.getBoundingClientRect().top;
+		return Math.min(
+			Math.round(relTop + Math.min(rect.height, SHEET_PEEK_ROW_MAX_PX)) + 10,
+			sheetAvail(),
+		);
+	};
+
+	const sheetToPeek = () => {
+		const el = registry.get('tool')?.el;
+		if (!el || !el.classList.contains('sheet') || el.hidden) {
+			return;
+		}
+		// after the frame that settles --dock and the section swap
+		requestAnimationFrame(() => {
+			if (el.classList.contains('sheet') && !el.hidden) {
+				el.style.setProperty('--sh', `${sheetPeek(el)}px`);
+			}
+		});
+	};
+
+	// the sheet drag binds on the module itself (not the container):
+	// in sheet mode the element rides document.body, outside the
+	// container's drag machinery, and the demo's capture-on-handle
+	// pattern keeps moves flowing wherever the finger wanders
+	let sheetDrag = null;
+	const armSheetDrag = el => {
+		el.addEventListener('pointerdown', e => {
+			if (!el.classList.contains('sheet') || e.button > 0 || sheetDrag) {
+				return;
+			}
+			const handle = e.target.closest('.modHandle, .modHeader');
+			if (!handle || e.target.closest('button')) {
+				return;
+			}
+			el.classList.remove('snap');
+			sheetDrag = { y0: e.clientY, h0: el.offsetHeight };
+			try {
+				handle.setPointerCapture(e.pointerId);
+			} catch {
+				// no capture: moves that bubble through el still resize
+			}
+			e.preventDefault();
+		});
+		el.addEventListener('pointermove', e => {
+			if (!sheetDrag) {
+				return;
+			}
+			el.style.setProperty(
+				'--sh',
+				`${Math.min(
+					Math.max(sheetDrag.h0 - (e.clientY - sheetDrag.y0), SHEET_MIN_PX),
+					sheetAvail(),
+				)}px`,
+			);
+		});
+		const endSheetDrag = () => {
+			if (!sheetDrag) {
+				return;
+			}
+			sheetDrag = null;
+			const height = el.offsetHeight;
+			const peek = sheetPeek(el);
+			el.classList.add('snap');
+			if (height < peek * 0.6) {
+				// pulled below the peek: dismissed; the next tool select
+				// reopens it through reopen()
+				MOD[el.dataset.m].hid = 1;
+				el.style.removeProperty('--sh');
+				layout();
+				return;
+			}
+			const avail = sheetAvail();
+			const snap = [peek, avail * 0.5, avail].reduce((a, b) =>
+				Math.abs(b - height) < Math.abs(a - height) ? b : a);
+			el.style.setProperty('--sh', `${Math.round(snap)}px`);
+		};
+		el.addEventListener('pointerup', endSheetDrag);
+		el.addEventListener('pointercancel', endSheetDrag);
+	};
+
 	const layout = () => {
+		const narrow = isNarrow();
+		container.classList.toggle('phone', narrow);
 		let sidebarIndex = 0;
 		let anyDocked = false;
+		let sheetNeedsPeek = false;
 		const bars = { top: [], bot: []};
 		for (const key of ORD) {
 			const reg = registry.get(key);
@@ -340,14 +489,24 @@ const createPanelManager = () => {
 			const el = reg.el;
 			const vis = visibleOf(key);
 			el.hidden = !vis;
-			const mode =
-				m.dk === 'side'
+			// the phone shell routes by module, never by the saved dock, so
+			// the wide layout survives every width flip untouched
+			const mode = narrow
+				? key === 'map' && strip
+					? 'st'
+					: key === 'tool'
+						? 'sheet'
+						: key === 'frames' && BOXES.bot
+							? 'tb'
+							: 'dk'
+				: m.dk === 'side'
 					? 'dk'
 					: (m.dk === 'top' || m.dk === 'bot') && BOXES[m.dk]
 							? 'tb'
 							: 'fl';
-			// bars cannot shade; the flag survives for the next dock
-			const shaded = !!m.sh && mode !== 'tb';
+			// only divider strips and floating windows shade; the flag
+			// survives for the next dock
+			const shaded = !!m.sh && (mode === 'dk' || mode === 'fl');
 			el.classList.toggle('shaded', shaded);
 			reg.shade?.setAttribute('aria-expanded', String(!shaded));
 			setMode(el, mode);
@@ -366,9 +525,26 @@ const createPanelManager = () => {
 					anyDocked = true;
 				}
 			} else if (mode === 'tb') {
-				bars[m.dk].push(key);
+				bars[narrow ? 'bot' : m.dk].push(key);
 				el.style.zIndex = '';
 				el.classList.remove('focus');
+			} else if (mode === 'st') {
+				if (el.parentNode !== strip) {
+					strip.append(el);
+					refreshUses(el);
+				}
+				el.style.zIndex = '';
+				el.classList.remove('focus');
+			} else if (mode === 'sheet') {
+				if (el.parentNode !== document.body) {
+					document.body.append(el);
+					refreshUses(el);
+				}
+				el.style.zIndex = '';
+				el.classList.remove('focus');
+				if (vis && !el.style.getPropertyValue('--sh')) {
+					sheetNeedsPeek = true;
+				}
 			} else {
 				if (el.parentNode !== container) {
 					container.append(el);
@@ -381,13 +557,23 @@ const createPanelManager = () => {
 		buildDock(BOXES.top, bars.top);
 		buildDock(BOXES.bot, bars.bot);
 		applyStack();
-		container.classList.toggle('noSidebar', !anyDocked);
-		container.classList.toggle('sidebarCollapsed', collapsed && anyDocked);
+		container.classList.toggle('noSidebar', !narrow && !anyDocked);
+		container.classList.toggle(
+			'sidebarCollapsed',
+			!narrow && collapsed && anyDocked,
+		);
+		if (narrow) {
+			container.classList.remove('sidebarPeek');
+		}
 		syncGrip();
+		syncDockVar(narrow);
 		save();
 		// mode-dependent chrome (glyph preview sizing, the character
 		// map's reflow) re-measures off this instead of polling classes
 		document.dispatchEvent(new CustomEvent('onPanelLayout'));
+		if (sheetNeedsPeek) {
+			sheetToPeek();
+		}
 	};
 
 	const focus = key => {
@@ -445,6 +631,10 @@ const createPanelManager = () => {
 		}
 		layout();
 		flash(key);
+		// a tool switch re-measures the sheet's peek for the new section
+		if (key === 'tool') {
+			sheetToPeek();
+		}
 	};
 
 	const close = key => {
@@ -495,6 +685,10 @@ const createPanelManager = () => {
 		}
 		if (reg.floatOnly) {
 			MOD[key].dk = 0;
+		}
+		// tool settings is the one module that sheets on phones
+		if (key === 'tool') {
+			armSheetDrag(el);
 		}
 		registry.set(key, reg);
 		reg.shade?.addEventListener('click', e => {
@@ -550,6 +744,32 @@ const createPanelManager = () => {
 	// ---- sidebar grip ----
 	grip?.addEventListener('click', () => {
 		collapsed = !collapsed;
+		layout();
+	});
+
+	// ---- phone drawer: the top strip's title drops the sidebar open ----
+	const drawerButton = $('drawerButton');
+	const setDrawer = openState => {
+		sidebar.classList.toggle('open', openState);
+		drawerButton?.setAttribute('aria-expanded', String(openState));
+	};
+	drawerButton?.addEventListener('click', () => {
+		setDrawer(!sidebar.classList.contains('open'));
+	});
+	/** Escape's drawer stop: close an open drawer and report it */
+	const closeDrawer = () => {
+		if (!sidebar.classList.contains('open')) {
+			return false;
+		}
+		setDrawer(false);
+		return true;
+	};
+
+	// a width flip drops phone-session state (sheet height, drawer) so
+	// each side of the boundary comes back exactly as it was saved
+	phoneMql?.addEventListener?.('change', () => {
+		registry.get('tool')?.el.style.removeProperty('--sh');
+		setDrawer(false);
 		layout();
 	});
 
@@ -745,6 +965,11 @@ const createPanelManager = () => {
 
 	container.addEventListener('pointerdown', e => {
 		if (e.button > 0 || drag) {
+			return;
+		}
+		if (isNarrow()) {
+			// phones have no panel drags; the sheet's own handle drag is
+			// bound on its element because the sheet lives outside here
 			return;
 		}
 		const gripEl = e.target.closest?.('.modResize');
@@ -1070,8 +1295,10 @@ const createPanelManager = () => {
 		setFloatWidth,
 		isDocked: key => MOD[key]?.dk === 'side',
 		isCollapsed: () => collapsed,
+		isNarrow,
+		closeDrawer,
 	};
 };
 
-export { createPanelManager, promoteRowLead };
-export default { createPanelManager, promoteRowLead };
+export { createPanelManager, promoteRowLead, isPhone };
+export default { createPanelManager, promoteRowLead, isPhone };

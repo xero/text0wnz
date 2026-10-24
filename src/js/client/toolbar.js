@@ -136,12 +136,15 @@ const Toolbar = (() => {
 		State.flyouts?.close();
 	};
 
-	// Escape walks outward: an open flyout first, then an active
-	// selection, then back to the previous tool
+	// Escape walks outward: an open flyout first, then the phone
+	// drawer, then an active selection, then back to the previous tool
 	document.addEventListener('keydown', e => {
 		if (e.code === 'Escape') {
 			e.preventDefault();
 			if (State.flyouts?.closeAndFocus()) {
+				return;
+			}
+			if (State.panels?.closeDrawer?.()) {
 				return;
 			}
 			if (State.selectionBar?.dismiss?.()) {

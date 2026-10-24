@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import '@testing-library/jest-dom';
 import {
 	createPanelManager,
@@ -27,10 +27,14 @@ const moduleMarkup = key => `
 const fixture = () => {
 	document.body.innerHTML = `
 		<div id="bodyContainer">
+			<div id="topStrip">
+				<button id="drawerButton" aria-expanded="false"></button>
+			</div>
 			<button id="sidebarGrip" aria-expanded="true"><i></i></button>
 			<div id="dockTop"></div>
 			<div id="viewport"></div>
 			<div id="dockBottom"></div>
+			<div id="mapStrip"></div>
 			<div id="sidebar">
 				${['sauce', 'canvas', 'pos', 'zoom', 'ref', 'map'].map(moduleMarkup).join('')}
 			</div>
@@ -292,6 +296,121 @@ describe('panel manager', () => {
 			expect(el('sauce')).not.toHaveClass('shaded');
 			expect(el('tool').hidden).toBe(false);
 			expect(sidebarKeys()).toEqual(['sauce', 'canvas', 'pos', 'zoom', 'ref', 'map']);
+		});
+	});
+
+	describe('phone layout', () => {
+		const realMatchMedia = window.matchMedia;
+		let media;
+
+		beforeEach(() => {
+			media = {
+				matches: true,
+				addEventListener: vi.fn(),
+				removeEventListener: vi.fn(),
+			};
+			window.matchMedia = () => media;
+		});
+
+		afterEach(() => {
+			window.matchMedia = realMatchMedia;
+		});
+
+		const phoneManager = overrides =>
+			registerAll(createPanelManager(), {
+				map: () => true,
+				frames: () => true,
+				...overrides,
+			});
+
+		it('routes by module: strip, sheet, bottom bar, and the drawer', () => {
+			const manager = phoneManager();
+			manager.layout();
+			const container = document.getElementById('bodyContainer');
+			expect(container).toHaveClass('phone');
+			expect(el('map')).toHaveClass('st');
+			expect(el('map').parentNode.id).toBe('mapStrip');
+			expect(el('tool')).toHaveClass('sheet');
+			// the sheet rides document.body: grid containers size abspos
+			// children by alignment and ignore their height in FF/WebKit
+			expect(el('tool').parentNode).toBe(document.body);
+			expect(el('frames')).toHaveClass('tb');
+			expect(dockRows('dockBottom')).toEqual([['frames']]);
+			for (const key of ['sauce', 'canvas', 'pos', 'zoom']) {
+				expect(el(key)).toHaveClass('dk');
+			}
+			// hidden modules (ref, chat) hold their drawer slots like the
+			// wide sidebar; chat routes here because floats do not exist
+			expect(sidebarKeys()).toEqual([
+				'sauce',
+				'canvas',
+				'pos',
+				'zoom',
+				'ref',
+				'chat',
+			]);
+		});
+
+		it('a floating module rides the drawer without losing its home', () => {
+			localStorage.setItem(
+				'panelLayout',
+				JSON.stringify({ v: 2, MOD: { sauce: { dk: 0, x: 111, y: 222 } } }),
+			);
+			const manager = phoneManager();
+			manager.layout();
+			expect(el('sauce')).toHaveClass('dk');
+			expect(sidebarKeys()).toContain('sauce');
+			// the flip back re-reads the untouched data
+			media.matches = false;
+			manager.layout();
+			expect(el('sauce')).toHaveClass('fl');
+			expect(el('sauce').style.getPropertyValue('--mx')).toBe('111px');
+			expect(el('map')).toHaveClass('dk');
+			expect(el('map').parentNode.id).toBe('sidebar');
+			expect(el('tool')).toHaveClass('fl');
+		});
+
+		it('the drawer button opens the sidebar and closeDrawer shuts it', () => {
+			const manager = phoneManager();
+			manager.layout();
+			const button = document.getElementById('drawerButton');
+			const sidebar = document.getElementById('sidebar');
+			expect(manager.closeDrawer()).toBe(false);
+			button.click();
+			expect(sidebar).toHaveClass('open');
+			expect(button.getAttribute('aria-expanded')).toBe('true');
+			expect(manager.closeDrawer()).toBe(true);
+			expect(sidebar).not.toHaveClass('open');
+			expect(button.getAttribute('aria-expanded')).toBe('false');
+		});
+
+		it('sheets and strips never shade, and the flags survive', () => {
+			const manager = phoneManager();
+			manager.toggleShade('tool');
+			manager.toggleShade('map');
+			expect(el('tool')).not.toHaveClass('shaded');
+			expect(el('map')).not.toHaveClass('shaded');
+			media.matches = false;
+			manager.layout();
+			// tool floats shaded, map docks shaded: the flags held
+			expect(el('tool')).toHaveClass('shaded');
+			expect(el('map')).toHaveClass('shaded');
+		});
+
+		it('the collapse and noSidebar classes stay off the phone shell', () => {
+			localStorage.setItem(
+				'panelLayout',
+				JSON.stringify({ v: 2, sidebarCollapsed: true }),
+			);
+			const manager = phoneManager();
+			manager.layout();
+			const container = document.getElementById('bodyContainer');
+			expect(container).not.toHaveClass('sidebarCollapsed');
+			expect(container).not.toHaveClass('noSidebar');
+			// the flag itself survives for the wide layout
+			media.matches = false;
+			manager.layout();
+			expect(container).toHaveClass('sidebarCollapsed');
 		});
 	});
 

@@ -36,6 +36,26 @@
 	</head>
 	<body>
 		<div id="bodyContainer" class="loading">
+			<div id="topStrip">
+				<button id="drawerButton" type="button" aria-label="Document, cursor and view panels" aria-controls="sidebar" aria-expanded="false">
+					<svg aria-hidden="true">
+						<use href="img/icons.svg#sauce"></use>
+					</svg>
+					<span id="topStripTitle">Untitled</span>
+					<i></i>
+				</button>
+				<span id="topStripPos">1,1</span>
+				<button id="stripUndo" type="button" title="Undo" aria-label="Undo">
+					<svg aria-hidden="true">
+						<use href="img/icons.svg#undo"></use>
+					</svg>
+				</button>
+				<button id="stripRedo" type="button" title="Redo" aria-label="Redo">
+					<svg aria-hidden="true">
+						<use href="img/icons.svg#redo"></use>
+					</svg>
+				</button>
+			</div>
 			<aside>
 				<div id="fileMenu" title="File and edit menu">
 					<button id="file" aria-label="File and Edit Menu">
@@ -92,6 +112,7 @@
 			</aside>
 			<div id="dockTop"></div>
 			<div id="dockBottom"></div>
+			<div id="mapStrip"></div>
 			<button id="sidebarGrip" type="button" title="Hide Sidebar" aria-label="Hide Sidebar" aria-expanded="true"><i></i></button>
 			<div id="sidebar">
 				<section id="saucePanel" class="mod" aria-label="Sauce" data-m="sauce">
@@ -285,6 +306,7 @@
 				</div>
 			</section>
 			<section id="toolSettings" class="mod" aria-label="Tool Settings" data-m="tool" hidden>
+				<div class="modHandle" aria-hidden="true"></div>
 				<header class="modHeader">
 					<b id="toolSettingsTitle" class="modTitle">Tool Settings</b>
 					<i class="modLine"></i>
@@ -597,6 +619,10 @@
 			<h3>Recent</h3>
 			<div id="colorRecent"></div>
 			<p id="colorLockNote" class="hide">Joined server only speaks 16 colors: extended picks are disabled until you disconnect.</p>
+		</div>
+		<div id="paletteFlyout" class="flyout" hidden>
+			<b class="flyHead">colors</b>
+			<div id="paletteFlyoutBody"></div>
 		</div>
 		<div id="mainMenu" class="flyout" hidden>
 			<nav class="menuTabs">
