@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForEditorReady } from './helpers/editorHelpers.js';
+import { clickTool, waitForEditorReady } from './helpers/editorHelpers.js';
 
 test.describe('Editor Keybinds', () => {
 	test.beforeEach(async ({ page }) => {
@@ -36,8 +36,8 @@ test.describe('Editor Keybinds', () => {
 
 		test('activates fill tool with N key', async ({ page }) => {
 			// paint shortcuts are letters, so they only fire outside
-			// keyboard typing mode; fill lives in the brush submenu
-			await page.locator('#brushes').click();
+			// keyboard typing mode: leave typing mode first
+			await clickTool(page, 'halfblock');
 			await page.waitForTimeout(300);
 			await page.keyboard.press('n');
 			await page.waitForTimeout(300);
@@ -45,6 +45,9 @@ test.describe('Editor Keybinds', () => {
 			const errors = await page.locator('.error').count();
 			expect(errors).toBe(0);
 
+			// activating a tool closes the flyout; reopen it to see the
+			// lit item
+			await page.locator('#brushes').click();
 			const fillTool = page.locator('#fill');
 			await expect(fillTool).toBeVisible();
 			await expect(fillTool).toHaveClass(/toolbarDisplayed/);

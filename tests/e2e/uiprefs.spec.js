@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { waitForEditorReady } from './helpers/editorHelpers.js';
+import {
+	clickViewToggle,
+	waitForEditorReady,
+} from './helpers/editorHelpers.js';
 
 const isDark = page =>
 	page.evaluate(() => document.documentElement.classList.contains('dark'));
@@ -15,7 +18,7 @@ test.describe('UI preferences', () => {
 		// so flip from whatever it is and pin the flipped state
 		const before = await isDark(page);
 		await page.locator('#navView').click();
-		await page.locator('#navDarkmode').click();
+		await clickViewToggle(page, 'navDarkmode');
 		expect(await isDark(page)).toBe(!before);
 
 		await page.reload();
@@ -25,7 +28,7 @@ test.describe('UI preferences', () => {
 
 	test('the grid survives a reload and relights its button', async ({ page }) => {
 		await page.locator('#navView').click();
-		await page.locator('#navGrid').click();
+		await clickViewToggle(page, 'navGrid');
 		const grid = page.locator('#grid');
 		await expect(grid).toHaveClass(/enabled/);
 
@@ -37,7 +40,7 @@ test.describe('UI preferences', () => {
 		await expect(grid.locator('canvas').first()).toBeAttached();
 
 		await page.locator('#navView').click();
-		await page.locator('#navGrid').click();
+		await clickViewToggle(page, 'navGrid');
 		await expect(grid).not.toHaveClass(/enabled/);
 		await page.reload();
 		await waitForEditorReady(page);

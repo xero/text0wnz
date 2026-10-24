@@ -80,7 +80,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}, magicNumbers.JOURNAL_KEYFRAME_DEBOUNCE_MS);
 	};
 	const arena = createPatchArena({
+		// the label table mirrors the ring so the History flyout can
+		// name and jump to any step
+		onEvict: () => State.historyLabels?.evicted(),
 		onCommit: stroke => {
+			State.historyLabels?.committed();
 			if (State.network?.isConnected?.()) {
 				return;
 			}
@@ -1540,6 +1544,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const undo = () => {
 		if (editor.undo()) {
+			State.historyLabels?.undone();
 			processDirtyRegions();
 			sendDrawHistory();
 			scheduleJournalKeyframe();
@@ -1549,6 +1554,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const redo = () => {
 		if (editor.redo()) {
+			State.historyLabels?.redone();
 			processDirtyRegions();
 			sendDrawHistory();
 			scheduleJournalKeyframe();
@@ -1557,7 +1563,15 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const startUndo = () => {
+		// the editor drops the arena's redo tail here unconditionally
+		State.historyLabels?.redoCleared();
 		editor.startUndo();
+	};
+
+	// strokes commit lazily at the next flush point, so the history
+	// flyout settles the open one before it renders
+	const endUndo = () => {
+		editor.endUndo();
 	};
 
 	const drawEntryPoint = (callback, optimise) => {
@@ -1963,6 +1977,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		getHalfBlock: getHalfBlock,
 		drawHalfBlock: drawHalfBlockEntryPoint,
 		startUndo: startUndo,
+		endUndo: endUndo,
 		undo: undo,
 		redo: redo,
 		getUndoHistory: getUndoHistory,

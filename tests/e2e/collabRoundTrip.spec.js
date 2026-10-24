@@ -6,6 +6,7 @@
  * logic is unit-tested engine-neutrally.
  */
 import { test, expect } from '@playwright/test';
+import { clickTool } from './helpers/editorHelpers.js';
 import { spawn, execSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -90,7 +91,7 @@ const joinPage = async (browser, nick) => {
 const drawAt = async (page, cx, cy) => {
 	await page.locator('#brushes').click();
 	await page.waitForTimeout(200);
-	await page.locator('#halfblock').click();
+	await clickTool(page, 'halfblock');
 	await page.waitForTimeout(200);
 	const point = await page.evaluate(
 		([x, y]) => {

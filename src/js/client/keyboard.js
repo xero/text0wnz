@@ -441,6 +441,8 @@ const createSelectionCursor = element => {
 			cancelAnimationFrame(animationId);
 			animationId = null;
 		}
+		// the selection action bar follows the rect's life
+		document.dispatchEvent(new CustomEvent('onSelectionChange'));
 	};
 
 	const updateCursor = () => {
@@ -463,6 +465,7 @@ const createSelectionCursor = element => {
 		height = 1;
 		updateCursor();
 		State.pasteTool.setSelection(x, y, width, height);
+		document.dispatchEvent(new CustomEvent('onSelectionChange'));
 	};
 
 	const setEnd = (endX, endY) => {
@@ -475,6 +478,7 @@ const createSelectionCursor = element => {
 		visible = true;
 		everSelected = true;
 		State.positionInfo.update(x, y);
+		document.dispatchEvent(new CustomEvent('onSelectionChange'));
 	};
 
 	const isVisible = () => visible;

@@ -985,165 +985,6 @@ const enforceMaxBytes = () => {
 	$('sauceBytes').value = `${bytes}/${SAUCE_MAX_BYTES} bytes`;
 };
 
-const createGenericController = (panel, nav) => {
-	const enable = () => {
-		panel.style.display = 'flex';
-		nav.classList.add('enabledParent');
-	};
-	const disable = () => {
-		panel.style.display = 'none';
-		nav.classList.remove('enabledParent');
-	};
-	return {
-		enable: enable,
-		disable: disable,
-	};
-};
-
-const createViewportController = el => {
-	const panel = el;
-	const enable = () => {
-		panel.style.display = 'flex';
-	};
-	const disable = () => {
-		panel.style.display = 'none';
-	};
-	return {
-		enable: enable,
-		disable: disable,
-	};
-};
-
-// one shared stack so overlapping tool windows focus on press: any
-// pointer down inside a registered window lifts it above its siblings.
-// The whole band (40 to 40 + count) stays below the z-[45] menu lists;
-// modals open through showModal and the top layer beats any z-index
-const panelStack = [];
-const PANEL_BASE_Z = 40;
-const restackPanels = () => {
-	panelStack.forEach((p, i) => {
-		p.style.zIndex = String(PANEL_BASE_Z + i);
-	});
-};
-const registerFloatingPanel = panel => {
-	const focus = () => {
-		const i = panelStack.indexOf(panel);
-		if (i === panelStack.length - 1) {
-			return;
-		}
-		panelStack.splice(i, 1);
-		panelStack.push(panel);
-		restackPanels();
-	};
-	panelStack.push(panel);
-	restackPanels();
-	panel.addEventListener('mousedown', focus, true);
-	panel.addEventListener('touchstart', focus, { capture: true, passive: true });
-	return focus;
-};
-
-// drag + close chrome for the fixed tool windows (colors, frames),
-// matching the brush windows' behavior. A press on a control is a
-// control gesture, so only free panel area starts a drag. Extras ride
-// opt-in options so legacy panels keep their exact behavior:
-// onMoved(left, top) fires when a drag ends
-const makePanelFloat = (panel, onClose, options = {}) => {
-	const focus = registerFloatingPanel(panel);
-	const close = document.createElement('div');
-	close.classList.add('hidePanel');
-	close.innerText = 'X';
-	panel.appendChild(close);
-	close.addEventListener('click', onClose);
-
-	const interactive = target =>
-		target.closest('button, input, select, canvas, .colorSwatch, .hidePanel') !==
-		null;
-
-	let startPointer = null;
-	let startPanel = null;
-
-	const setPos = (newX, newY) => {
-		// dropping the far-edge anchors keeps a bottom- or right-pinned
-		// panel from stretching once top and left are set
-		panel.style.bottom = 'auto';
-		panel.style.right = 'auto';
-		panel.style.left = newX + 'px';
-		panel.style.top = newY + 'px';
-	};
-
-	const begin = (px, py) => {
-		startPointer = [px, py];
-		const rect = panel.getBoundingClientRect();
-		startPanel = [rect.left, rect.top];
-	};
-
-	const dragTo = (px, py) => {
-		setPos(
-			startPanel[0] + (px - startPointer[0]),
-			startPanel[1] + (py - startPointer[1]),
-		);
-	};
-
-	const mouseMove = e => {
-		if (startPointer) {
-			e.preventDefault();
-			dragTo(e.clientX, e.clientY);
-		}
-	};
-
-	const moved = () => {
-		if (startPointer && typeof options.onMoved === 'function') {
-			const rect = panel.getBoundingClientRect();
-			options.onMoved(rect.left, rect.top);
-		}
-	};
-
-	const mouseUp = () => {
-		moved();
-		startPointer = null;
-		document.removeEventListener('mousemove', mouseMove);
-		document.removeEventListener('mouseup', mouseUp);
-	};
-
-	panel.addEventListener('mousedown', e => {
-		if (interactive(e.target)) {
-			return;
-		}
-		begin(e.clientX, e.clientY);
-		document.addEventListener('mousemove', mouseMove);
-		document.addEventListener('mouseup', mouseUp);
-	});
-
-	const touchMove = e => {
-		if (startPointer) {
-			e.preventDefault();
-			dragTo(e.touches[0].pageX, e.touches[0].pageY);
-		}
-	};
-
-	const touchEnd = () => {
-		moved();
-		startPointer = null;
-		document.removeEventListener('touchmove', touchMove);
-		document.removeEventListener('touchend', touchEnd);
-	};
-
-	panel.addEventListener(
-		'touchstart',
-		e => {
-			if (interactive(e.target)) {
-				return;
-			}
-			begin(e.touches[0].pageX, e.touches[0].pageY);
-			document.addEventListener('touchmove', touchMove, { passive: false });
-			document.addEventListener('touchend', touchEnd);
-		},
-		{ passive: true },
-	);
-
-	return { focus };
-};
-
 const createResolutionController = (lbl, txtC, txtR) => {
 	[
 		'onTextCanvasSizeChange',
@@ -1193,47 +1034,6 @@ const createDragDropController = (handler, el) => {
 			handler(files[0]);
 		}
 	});
-};
-
-const createMenuController = (elements, canvas, view) => {
-	const menus = [];
-	let current = null;
-
-	const closeAll = () => {
-		menus.forEach(menu => {
-			classList(menu, 'hide', true);
-		});
-		canvas.focus();
-	};
-	const close = _ => {
-		current = null;
-		closeAll();
-	};
-
-	const toggle = menu => {
-		current = has(menu, 'hide') ? menu : null;
-		closeAll();
-		if (current) {
-			classList(current, 'hide', false);
-			menu.focus();
-		} else {
-			canvas.focus();
-		}
-	};
-	elements.forEach(el => {
-		const button = el.button;
-		const menu = el.menu;
-		menus.push(menu);
-		onClick(button, _ => {
-			toggle(menu);
-		});
-		menu.querySelectorAll('.menuItem').forEach(item => {
-			onClick(item, close);
-		});
-		menu.addEventListener('blur', close);
-	});
-	onClick(view, close);
-	return { close: closeAll };
 };
 
 const createFontSelect = (el, lbl, img, btn) => {
@@ -1534,8 +1334,6 @@ export {
 	createPositionInfo,
 	undoAndRedo,
 	viewportTap,
-	createViewportController,
-	createGenericController,
 	createPaintShortcuts,
 	createSegmentedControl,
 	iconHref,
@@ -1543,10 +1341,7 @@ export {
 	createToolPreview,
 	enforceMaxBytes,
 	createResolutionController,
-	makePanelFloat,
-	registerFloatingPanel,
 	createDragDropController,
-	createMenuController,
 	createFontSelect,
 	createZoomControl,
 	websocketUI,

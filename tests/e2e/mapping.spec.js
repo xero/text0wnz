@@ -8,6 +8,7 @@
  * end-to-end round trip of the one shared mapping.
  */
 import { test, expect } from '@playwright/test';
+import { clickTool } from './helpers/editorHelpers.js';
 
 const ZOOMS = [0.5, 1, 1.5, 2, 3];
 
@@ -120,7 +121,7 @@ test.describe('pointer-to-cell mapping identity', () => {
 		// half-block brush: a click paints one half cell
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(300);
 	});
 

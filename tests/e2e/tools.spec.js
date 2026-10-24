@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 import {
-	parkToolSettings,
 	bridgeReady,
 	clickTool,
 	drag,
+	parkToolSettings,
 	readBlock,
 } from './helpers/editorHelpers.js';
 
@@ -131,7 +131,7 @@ test.describe('Drawing Tools', () => {
 	test('should draw with multiple tools in sequence', async ({ page }) => {
 		// Click brushes to show brush toolbar, then select halfblock
 		await page.locator('#brushes').click();
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await expect(page.locator('#halfblock')).toHaveClass(/toolbarDisplayed/);
 		await drag(page, [5, 5], [10, 8]);
 		expect([0, 32]).not.toContain((await readBlock(page, 5, 5)).charCode);
@@ -185,7 +185,7 @@ test.describe('Tool Features', () => {
 			// Click brushes to show brush toolbar, then select halfblock
 			await page.locator('#brushes').click();
 			await page.waitForTimeout(200);
-			await page.locator('#halfblock').click();
+			await clickTool(page, 'halfblock');
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
 			await page.mouse.move(box.x + 100, box.y + 100);
@@ -207,7 +207,7 @@ test.describe('Tool Features', () => {
 			// Click brushes to show brush toolbar, then select halfblock
 			await page.locator('#brushes').click();
 			await page.waitForTimeout(200);
-			await page.locator('#halfblock').click();
+			await clickTool(page, 'halfblock');
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
 			await page.mouse.move(box.x + 100, box.y + 100);
@@ -234,7 +234,7 @@ test.describe('Tool Features', () => {
 			// Click brushes to show the brush toolbar
 			await page.locator('#brushes').click();
 			await page.waitForTimeout(200);
-			await page.locator('#halfblock').click();
+			await clickTool(page, 'halfblock');
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
 			await page.mouse.move(box.x + 70, box.y + 70);

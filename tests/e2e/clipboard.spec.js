@@ -1,4 +1,5 @@
 import { test } from '@playwright/test';
+import { clickTool } from './helpers/editorHelpers.js';
 
 test.describe('Advanced Clipboard Operations', () => {
 	test.beforeEach(async ({ page }) => {
@@ -23,7 +24,7 @@ test.describe('Advanced Clipboard Operations', () => {
 
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
@@ -85,7 +86,7 @@ test.describe('Advanced Clipboard Operations', () => {
 
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#characterBrush').click();
+		await clickTool(page, 'characterBrush');
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
@@ -158,7 +159,7 @@ test.describe('Advanced Clipboard Operations', () => {
 
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
@@ -182,7 +183,7 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.keyboard.press('Control+c');
 			await page.waitForTimeout(300);
 
-			await page.locator('#characterBrush').click();
+			await clickTool(page, 'characterBrush');
 			await page.waitForTimeout(300);
 
 			if (bbox) {
@@ -215,7 +216,7 @@ test.describe('Advanced Clipboard Operations', () => {
 
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
@@ -256,7 +257,7 @@ test.describe('Advanced Clipboard Operations', () => {
 
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
@@ -311,7 +312,7 @@ test.describe('Advanced Clipboard Operations', () => {
 		// drawing after the empty paste proves the canvas still works
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
@@ -326,7 +327,7 @@ test.describe('Advanced Clipboard Operations', () => {
 
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
@@ -393,7 +394,7 @@ test.describe('Advanced Clipboard Operations', () => {
 
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#characterBrush').click();
+		await clickTool(page, 'characterBrush');
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();

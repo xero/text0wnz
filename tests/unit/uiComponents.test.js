@@ -5,7 +5,6 @@ import {
 	createPaintShortcuts,
 	createResolutionController,
 	createDragDropController,
-	createMenuController,
 	createGrid,
 	createToolPreview,
 } from '../../src/js/client/ui.js';
@@ -331,83 +330,6 @@ describe('UI Components', () => {
 			document.dispatchEvent(dragLeaveEvent);
 
 			expect(el.style.display).toBe('none');
-		});
-	});
-
-	describe('createMenuController', () => {
-		it('should create menu controller with close method', () => {
-			const button1 = document.createElement('button');
-			const menu1 = document.createElement('div');
-			const button2 = document.createElement('button');
-			const menu2 = document.createElement('div');
-			const canvas = document.createElement('div');
-			const view = document.createElement('div');
-			canvas.focus = vi.fn();
-			view.focus = vi.fn();
-
-			const controller = createMenuController(
-				[
-					{ button: button1, menu: menu1 },
-					{ button: button2, menu: menu2 },
-				],
-				canvas,
-				view,
-			);
-
-			expect(controller).toHaveProperty('close');
-		});
-
-		it('should toggle menu open state on click', () => {
-			vi.useFakeTimers();
-
-			const button = document.createElement('button');
-			const menu = document.createElement('div');
-			menu.classList.add('hide');
-			const canvas = document.createElement('canvas');
-			const view = document.createElement('div');
-			canvas.focus = vi.fn();
-			view.focus = vi.fn();
-			menu.focus = vi.fn();
-			document.body.appendChild(button);
-			document.body.appendChild(menu);
-
-			createMenuController([{ button, menu }], canvas, view);
-
-			const clickEvent = createEvent('click');
-			button.dispatchEvent(clickEvent);
-
-			expect(menu.classList.contains('hide')).toBe(false);
-
-			vi.useRealTimers();
-		});
-
-		it('should close all menus when close is called', () => {
-			vi.useFakeTimers();
-
-			const button1 = document.createElement('button');
-			const menu1 = document.createElement('div');
-			const button2 = document.createElement('button');
-			const menu2 = document.createElement('div');
-			const canvas = document.createElement('canvas');
-			const view = document.createElement('div');
-			canvas.focus = vi.fn();
-			view.focus = vi.fn();
-
-			const controller = createMenuController(
-				[
-					{ button: button1, menu: menu1 },
-					{ button: button2, menu: menu2 },
-				],
-				canvas,
-				view,
-			);
-
-			controller.close();
-
-			expect(menu1.classList.contains('hide')).toBe(true);
-			expect(menu2.classList.contains('hide')).toBe(true);
-
-			vi.useRealTimers();
 		});
 	});
 });

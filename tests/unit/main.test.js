@@ -168,7 +168,6 @@ vi.mock('../../src/js/client/ui.js', () => ({
 		ignore: vi.fn(),
 		unignore: vi.fn(),
 	})),
-	createGenericController: vi.fn(() => ({ enable: vi.fn(), disable: vi.fn() })),
 	createGrid: vi.fn(() => ({ isShown: vi.fn(() => false), show: vi.fn() })),
 	menuHover: vi.fn(),
 	enforceMaxBytes: vi.fn(),

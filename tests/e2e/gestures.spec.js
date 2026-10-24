@@ -6,6 +6,7 @@
  * tested, and the mapping spec covers all three engines.
  */
 import { test, expect } from '@playwright/test';
+import { clickTool } from './helpers/editorHelpers.js';
 
 const bridgeReady = async page => {
 	await page.waitForSelector('#canvasContainer', { timeout: 10000 });
@@ -50,7 +51,7 @@ test.describe('touch gestures and zoom shortcuts', () => {
 		await bridgeReady(page);
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(300);
 	});
 

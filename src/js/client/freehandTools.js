@@ -13,24 +13,8 @@ import {
 } from '../core/index';
 import { createAsciiStrokePainter } from './asciiBrush.js';
 
-const createBrushController = () => {
-	const panel = $('brushToolbar');
-	const enable = () => {
-		panel.style.display = 'flex';
-		$('halfblock').click();
-	};
-	const disable = () => {
-		panel.style.display = 'none';
-	};
-	return {
-		enable: enable,
-		disable: disable,
-	};
-};
-
 const createHalfBlockController = () => {
 	let prev = {};
-	const bar = $('brushToolbar');
 	const nav = $('brushes');
 
 	const line = (x0, y0, x1, y1, callback) => {
@@ -100,7 +84,6 @@ const createHalfBlockController = () => {
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
-		bar.style.display = 'flex';
 		nav.classList.add('enabled');
 		State.toolSettings.hide();
 	};
@@ -109,7 +92,6 @@ const createHalfBlockController = () => {
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
-		bar.style.display = 'none';
 		nav.classList.remove('enabled');
 	};
 
@@ -120,7 +102,6 @@ const createHalfBlockController = () => {
 };
 
 const createShadingController = (panel, charMode) => {
-	const bar = $('brushToolbar');
 	const nav = $('brushes');
 	let prev = {};
 	let drawMode;
@@ -290,7 +271,6 @@ const createShadingController = (panel, charMode) => {
 		document.addEventListener('keydown', keyDown);
 		document.addEventListener('keyup', keyUp);
 		panel.enable();
-		bar.style.display = 'flex';
 		nav.classList.add('enabled');
 		State.toolSettings.show(charMode ? 'character' : 'shading');
 	};
@@ -302,7 +282,6 @@ const createShadingController = (panel, charMode) => {
 		document.removeEventListener('keydown', keyDown);
 		document.removeEventListener('keyup', keyUp);
 		panel.disable();
-		bar.style.display = 'none';
 		nav.classList.remove('enabled');
 	};
 
@@ -792,7 +771,6 @@ const createCharacterBrushPanel = async () => {
 const createFillController = () => {
 	// fill lives in the brush submenu, so like its siblings it keeps
 	// the bar open and the brushes nav lit while active
-	const bar = $('brushToolbar');
 	const nav = $('brushes');
 	const fillPoint = e => {
 		// a seed outside the document floods a phantom wrapped row; the
@@ -933,32 +911,15 @@ const createFillController = () => {
 
 	const enable = () => {
 		document.addEventListener('onTextCanvasDown', fillPoint);
-		bar.style.display = 'flex';
 		nav.classList.add('enabled');
 		State.toolSettings.hide();
 	};
 
 	const disable = () => {
 		document.removeEventListener('onTextCanvasDown', fillPoint);
-		bar.style.display = 'none';
 		nav.classList.remove('enabled');
 	};
 
-	return {
-		enable: enable,
-		disable: disable,
-	};
-};
-
-const createShapesController = () => {
-	const panel = $('shapesToolbar');
-	const enable = () => {
-		panel.style.display = 'flex';
-		$('line').click();
-	};
-	const disable = () => {
-		panel.style.display = 'none';
-	};
 	return {
 		enable: enable,
 		disable: disable,
@@ -1038,7 +999,6 @@ const mountSetting = (section, text, element) => {
 };
 
 const createLineController = () => {
-	const panel = $('shapesToolbar');
 	const nav = $('shapes');
 	const painter = createAsciiStrokePainter();
 	let startXY;
@@ -1176,7 +1136,6 @@ const createLineController = () => {
 	};
 
 	const enable = () => {
-		panel.style.display = 'flex';
 		nav.classList.add('enabled');
 		State.toolSettings.show('line');
 		document.addEventListener('onTextCanvasDown', canvasDown);
@@ -1185,7 +1144,6 @@ const createLineController = () => {
 	};
 
 	const disable = () => {
-		panel.style.display = 'none';
 		nav.classList.remove('enabled');
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
@@ -1214,7 +1172,6 @@ const SQUARE_CORNERS = {
 
 const createSquareController = () => {
 	const tsSection = 'square';
-	const bar = $('shapesToolbar');
 	const nav = $('shapes');
 	const painter = createAsciiStrokePainter();
 	let startXY;
@@ -1517,7 +1474,6 @@ const createSquareController = () => {
 	};
 
 	const enable = () => {
-		bar.style.display = 'flex';
 		nav.classList.add('enabled');
 		syncFill();
 		State.toolSettings.show(tsSection);
@@ -1527,7 +1483,6 @@ const createSquareController = () => {
 	};
 
 	const disable = () => {
-		bar.style.display = 'none';
 		nav.classList.remove('enabled');
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
@@ -1547,7 +1502,6 @@ const createSquareController = () => {
 
 const createCircleController = () => {
 	const tsSection = 'circle';
-	const bar = $('shapesToolbar');
 	const nav = $('shapes');
 	const painter = createAsciiStrokePainter();
 	let startXY;
@@ -1885,7 +1839,6 @@ const createCircleController = () => {
 	};
 
 	const enable = () => {
-		bar.style.display = 'flex';
 		nav.classList.add('enabled');
 		syncFill();
 		State.toolSettings.show(tsSection);
@@ -1895,7 +1848,6 @@ const createCircleController = () => {
 	};
 
 	const disable = () => {
-		bar.style.display = 'none';
 		nav.classList.remove('enabled');
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
@@ -1965,7 +1917,6 @@ const createSampleTool = async (
 const createAttributeBrushController = () => {
 	let isActive = false;
 	let lastCoord = null;
-	const bar = $('brushToolbar');
 	let brushSize = 1;
 	let previewCursor = null;
 	let lastPreviewX = -1;
@@ -2205,7 +2156,6 @@ const createAttributeBrushController = () => {
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
 		document.addEventListener('onTextCanvasUp', canvasUp);
-		bar.style.display = 'flex';
 		State.toolSettings.show('attrib');
 		showPreview();
 	};
@@ -2215,7 +2165,6 @@ const createAttributeBrushController = () => {
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
-		bar.style.display = 'none';
 		isActive = false;
 		lastCoord = null;
 		lastPreviewX = -1;
@@ -2236,14 +2185,12 @@ const createAttributeBrushController = () => {
 };
 
 export {
-	createBrushController,
 	createHalfBlockController,
 	createShadingController,
 	createShadingPanel,
 	createCharacterBrushPanel,
 	createFillController,
 	createLineController,
-	createShapesController,
 	createSquareController,
 	createCircleController,
 	createAttributeBrushController,

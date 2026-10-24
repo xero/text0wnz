@@ -13,7 +13,7 @@
  * the panel is inert and says why.
  */
 import State from './state.js';
-import { $, makePanelFloat } from './ui.js';
+import { $ } from './ui.js';
 import { xterm256RGB } from '../core/codecs/dur.js';
 import { paletteColor, rgbColor } from '../core/doc.js';
 
@@ -148,12 +148,9 @@ const createColorPanel = () => {
 		bgButton.addEventListener('click', () => apply(rgbFromInput(), true));
 	}
 	if (toggleButton && panel) {
-		const floater = makePanelFloat(panel, () => panel.classList.add('hide'));
 		toggleButton.addEventListener('click', () => {
-			const opening = panel.classList.contains('hide');
-			panel.classList.toggle('hide');
-			if (opening) {
-				floater.focus();
+			const opened = State.flyouts?.toggle('colors', panel, toggleButton);
+			if (opened) {
 				if (lockNote) {
 					lockNote.classList.toggle('hide', !locked());
 				}
@@ -166,7 +163,13 @@ const createColorPanel = () => {
 		});
 	}
 
-	return { hide: () => panel?.classList.add('hide') };
+	return {
+		hide: () => {
+			if (State.flyouts?.isOpen('colors')) {
+				State.flyouts.close();
+			}
+		},
+	};
 };
 
 export { createColorPanel };

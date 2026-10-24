@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-	createGenericController,
 	enforceMaxBytes,
 	websocketUI,
 	toggleFullscreen,
@@ -40,41 +39,6 @@ describe('UI Controls and Controllers', () => {
 	afterEach(() => {
 		document.body.innerHTML = '';
 		vi.restoreAllMocks();
-	});
-
-	describe('createGenericController', () => {
-		it('should create controller with enable and disable methods', () => {
-			const panel = document.createElement('div');
-			const nav = document.createElement('div');
-
-			const controller = createGenericController(panel, nav);
-
-			expect(controller).toHaveProperty('enable');
-			expect(controller).toHaveProperty('disable');
-		});
-
-		it('should show panel and add enabledParent class on enable', () => {
-			const panel = document.createElement('div');
-			const nav = document.createElement('div');
-
-			const controller = createGenericController(panel, nav);
-			controller.enable();
-
-			expect(panel.style.display).toBe('flex');
-			expect(nav.classList.contains('enabledParent')).toBe(true);
-		});
-
-		it('should hide panel and remove enabledParent class on disable', () => {
-			const panel = document.createElement('div');
-			const nav = document.createElement('div');
-			nav.classList.add('enabledParent');
-
-			const controller = createGenericController(panel, nav);
-			controller.disable();
-
-			expect(panel.style.display).toBe('none');
-			expect(nav.classList.contains('enabledParent')).toBe(false);
-		});
 	});
 
 	describe('enforceMaxBytes', () => {

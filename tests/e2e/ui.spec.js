@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { clickTool } from './helpers/editorHelpers.js';
+import {
+	clickHistoryAction,
+	clickTool,
+	clickViewToggle,
+} from './helpers/editorHelpers.js';
 
 test.describe('UI Elements', () => {
 	test.beforeEach(async ({ page }) => {
@@ -112,13 +116,13 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
 
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(200);
 
-		await page.locator('#characterBrush').click();
+		await clickTool(page, 'characterBrush');
 		await page.waitForTimeout(200);
 
-		await page.locator('#shadingBrush').click();
+		await clickTool(page, 'shadingBrush');
 		await page.waitForTimeout(200);
 
 		await page.locator('#shapes').click();
@@ -163,10 +167,10 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#clipboard').click();
 		await page.waitForTimeout(300);
 
-		await page.locator('#undo').click();
+		await clickHistoryAction(page, 'undo');
 		await page.waitForTimeout(200);
 
-		await page.locator('#redo').click();
+		await clickHistoryAction(page, 'redo');
 		await page.waitForTimeout(200);
 
 		await page.locator('#navICE').click();
@@ -186,7 +190,7 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#navGrid').evaluate(el => el.click());
 		await page.waitForTimeout(300);
 
-		await page.locator('#navDarkmode').click();
+		await clickViewToggle(page, 'navDarkmode');
 		await page.waitForTimeout(500);
 
 		const errors = await page.locator('.error, .errorMessage').count();
@@ -195,7 +199,7 @@ test.describe('Toolbar Interactions', () => {
 
 	test('should toggle toolbars or panels', async ({ page }) => {
 		// the fonts rail button opens the fonts dialog now
-		const fontsButton = page.locator('#fonts');
+		const fontsButton = page.locator('#changeFont');
 		const clipboardToolbar = page.locator('#clipboard');
 
 		if (await fontsButton.isVisible()) {

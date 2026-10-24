@@ -1,13 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-	createBrushController,
 	createHalfBlockController,
 	createShadingController,
 	createShadingPanel,
 	createCharacterBrushPanel,
 	createFillController,
 	createLineController,
-	createShapesController,
 	createSquareController,
 	createCircleController,
 	createAttributeBrushController,
@@ -201,7 +199,6 @@ vi.mock('../../src/js/client/ui.js', () => ({
 		return mockElement;
 	}),
 	$$: vi.fn(() => ({ textContent: 'mock' })),
-	registerFloatingPanel: vi.fn(() => vi.fn()),
 	createCanvas: vi.fn((width, height) => {
 		const mockCanvas = {
 			width: width || 100,
@@ -298,26 +295,6 @@ describe('Freehand Tools', () => {
 
 	afterEach(() => {
 		vi.restoreAllMocks();
-	});
-
-	describe('createBrushController', () => {
-		it('should create a brush controller with enable/disable methods', () => {
-			const controller = createBrushController();
-
-			expect(controller).toHaveProperty('enable');
-			expect(controller).toHaveProperty('disable');
-			expect(typeof controller.enable).toBe('function');
-			expect(typeof controller.disable).toBe('function');
-		});
-
-		it('should handle enable/disable lifecycle', () => {
-			const controller = createBrushController();
-
-			expect(() => {
-				controller.enable();
-				controller.disable();
-			}).not.toThrow();
-		});
 	});
 
 	describe('createHalfBlockController', () => {
@@ -526,24 +503,6 @@ describe('Freehand Tools', () => {
 				'onTextCanvasDown',
 				expect.any(Function),
 			);
-		});
-	});
-
-	describe('createShapesController', () => {
-		it('should create a shapes controller', () => {
-			const controller = createShapesController();
-
-			expect(controller).toHaveProperty('enable');
-			expect(controller).toHaveProperty('disable');
-		});
-
-		it('should handle enable/disable operations', () => {
-			const controller = createShapesController();
-
-			expect(() => {
-				controller.enable();
-				controller.disable();
-			}).not.toThrow();
 		});
 	});
 
@@ -1018,16 +977,13 @@ describe('Freehand Tools', () => {
 		});
 
 		it('should handle multiple tool activations', () => {
-			const brush = createBrushController();
 			const fill = createFillController();
 			const line = createLineController();
 
 			expect(() => {
-				brush.enable();
 				fill.enable();
 				line.enable();
 
-				brush.disable();
 				fill.disable();
 				line.disable();
 			}).not.toThrow();

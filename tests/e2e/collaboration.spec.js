@@ -43,19 +43,12 @@ test.describe('Collaboration and Chat Features', () => {
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
 			await page.waitForTimeout(500);
+			await expect(page.locator('#chatWindow')).toBeVisible();
 
-			const closeButton = page.locator(
-				'#chatClose, .chatClose, button:has-text("Close")',
-			);
-			const closeCount = await closeButton.count();
-
-			if (closeCount > 0) {
-				await closeButton.first().click();
-				await page.waitForTimeout(500);
-			} else {
-				await chatButton.click();
-				await page.waitForTimeout(500);
-			}
+			// the chat module has no close chrome; its button toggles it
+			await chatButton.click();
+			await page.waitForTimeout(500);
+			await expect(page.locator('#chatWindow')).toBeHidden();
 		}
 	});
 
@@ -282,7 +275,9 @@ test.describe('Chat Window Drag Functionality', () => {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
-			const chatHeader = page.locator('#chatWindow header');
+			// the chat window is a floating module: its title strip is the
+			// drag handle and wears the move cursor
+			const chatHeader = page.locator('#chatWindow .modHeader');
 			const headerCount = await chatHeader.count();
 
 			if (headerCount > 0) {
@@ -290,7 +285,7 @@ test.describe('Chat Window Drag Functionality', () => {
 					return window.getComputedStyle(el).cursor;
 				});
 
-				expect(cursor).toBe('grab');
+				expect(cursor).toBe('move');
 			}
 		}
 	});
@@ -303,27 +298,25 @@ test.describe('Chat Window Drag Functionality', () => {
 			await page.waitForTimeout(500);
 
 			const chatWindow = page.locator('#chatWindow');
-			const chatHeader = page.locator('#chatWindow header h2');
+			const chatHeader = page.locator('#chatWindow .modHeader');
 
 			const windowCount = await chatWindow.count();
 			if (windowCount > 0) {
+				const before = await chatWindow.boundingBox();
 				const headerBox = await chatHeader.boundingBox();
-				if (headerBox) {
-					await page.mouse.move(
-						headerBox.x + headerBox.width / 2,
-						headerBox.y + headerBox.height / 2,
-					);
+				if (headerBox && before) {
+					// grab clear of the strip's buttons
+					await page.mouse.move(headerBox.x + 60, headerBox.y + 8);
 					await page.mouse.down();
-					await page.mouse.move(headerBox.x + 100, headerBox.y + 50);
+					const to = { x: headerBox.x + 160, y: headerBox.y + 58 };
+					await page.mouse.move(to.x, to.y, { steps: 8 });
 					await page.mouse.up();
 					await page.waitForTimeout(300);
 
-					const newTransform = await chatWindow.evaluate(el => {
-						return el.style.transform || '';
-					});
-
-					expect(newTransform).toContain('translate');
-					expect(newTransform).toMatch(/translate\(.+px,\s*.+px\)/);
+					// the module registry moves the window, never a transform
+					const after = await chatWindow.boundingBox();
+					expect(Math.round(after.x - before.x)).toBe(100);
+					expect(Math.round(after.y - before.y)).toBe(50);
 				}
 			}
 		}
@@ -336,7 +329,7 @@ test.describe('Chat Window Drag Functionality', () => {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 
-			const chatHeader = page.locator('#chatWindow header');
+			const chatHeader = page.locator('#chatWindow .modHeader');
 			const headerCount = await chatHeader.count();
 
 			if (headerCount > 0) {

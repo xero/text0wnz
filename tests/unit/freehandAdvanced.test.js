@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-	createBrushController,
 	createHalfBlockController,
 	createShadingPanel,
 	createCharacterBrushPanel,
@@ -195,7 +194,6 @@ vi.mock('../../src/js/client/ui.js', () => ({
 		return mockElement;
 	}),
 	$$: vi.fn(() => ({ textContent: 'mock' })),
-	registerFloatingPanel: vi.fn(() => vi.fn()),
 	createCanvas: vi.fn((width, height) => {
 		const mockCanvas = {
 			width: width || 100,
@@ -540,16 +538,13 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 		});
 
 		it('should handle multiple tool activations', () => {
-			const brush = createBrushController();
 			const fill = createFillController();
 			const line = createLineController();
 
 			expect(() => {
-				brush.enable();
 				fill.enable();
 				line.enable();
 
-				brush.disable();
 				fill.disable();
 				line.disable();
 			}).not.toThrow();
