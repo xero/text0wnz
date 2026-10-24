@@ -36,271 +36,345 @@
 	</head>
 	<body>
 		<div id="bodyContainer" class="loading">
-			<header class="dynamic">
-				<nav>
-					<div id="fileNav">
-						<div id="fileMenu" class="menuTitle" tabindex="0">
-							<button id="file" aria-label="File Menu">
-								<svg alt="File" aria-label="File">
-									<use href="img/icons.svg#save"></use>
+			<div id="topStrip">
+				<button id="drawerButton" type="button" aria-label="Document, cursor and view panels" aria-controls="sidebar" aria-expanded="false">
+					<svg aria-hidden="true">
+						<use href="img/icons.svg#sauce"></use>
+					</svg>
+					<span id="topStripTitle">Untitled</span>
+					<i></i>
+				</button>
+				<span id="topStripPos">1,1</span>
+				<button id="stripUndo" type="button" title="Undo" aria-label="Undo">
+					<svg aria-hidden="true">
+						<use href="img/icons.svg#undo"></use>
+					</svg>
+				</button>
+				<button id="stripRedo" type="button" title="Redo" aria-label="Redo">
+					<svg aria-hidden="true">
+						<use href="img/icons.svg#redo"></use>
+					</svg>
+				</button>
+			</div>
+			<aside>
+				<div id="fileMenu" title="File and edit menu">
+					<button id="file" aria-label="File and Edit Menu">
+						<svg alt="Menu" aria-hidden="true">
+							<use href="img/icons.svg#save"></use>
+						</svg>
+					</button>
+				</div>
+				<canvas id="palettePreview" height="40" width="40"></canvas>
+				<canvas id="palettePicker" height="160" width="40"></canvas>
+				<div id="paletteMore" title="More colors (256 + RGB)">++</div>
+				<div id="keyboard">
+					<svg alt="Keyboard" aria-label="Keyboard (k)">
+						<use href="img/icons.svg#keeb"></use>
+					</svg>
+				</div>
+				<div id="brushes">
+					<svg alt="Brushes" aria-label="Brushes">
+						<use href="img/icons.svg#brush"></use>
+					</svg>
+					<i class="flyTick"></i>
+				</div>
+				<div id="shapes">
+					<svg alt="Shapes" aria-label="Shapes">
+						<use href="img/icons.svg#shapes"></use>
+					</svg>
+					<i class="flyTick"></i>
+				</div>
+				<div class="separator"></div>
+				<div id="selection">
+					<svg alt="Selection" aria-label="Selection">
+						<use href="img/icons.svg#select"></use>
+					</svg>
+				</div>
+				<div id="sample">
+					<svg alt="Sample" aria-label="Sample (alt)">
+						<use href="img/icons.svg#dropper"></use>
+					</svg>
+				</div>
+				<div id="mirror">
+					<svg alt="Mirror Mode" aria-label="Mirror Mode (Ctrl+M)">
+						<use href="img/icons.svg#mirror"></use>
+					</svg>
+				</div>
+				<div class="separator"></div>
+				<div id="clipboard">
+					<svg alt="Undo" aria-label="Undo">
+						<use href="img/icons.svg#history"></use>
+					</svg>
+					<i class="flyTick"></i>
+				</div>
+				<div id="navView">
+					<svg alt="Viewport Options" aria-label="Viewport Options">
+						<use href="img/icons.svg#canvas"></use>
+					</svg>
+					<i class="flyTick"></i>
+				</div>
+			</aside>
+			<div id="dockTop"></div>
+			<div id="dockBottom"></div>
+			<div id="mapStrip"></div>
+			<button id="sidebarGrip" type="button" title="Hide Sidebar" aria-label="Hide Sidebar" aria-expanded="true"><i></i></button>
+			<div id="sidebar">
+				<section id="saucePanel" class="mod" aria-label="Sauce" data-m="sauce">
+					<header class="modHeader">
+						<b class="modTitle">Sauce</b>
+						<i class="modLine"></i>
+						<button class="modShade" type="button" title="Shade" aria-label="Shade Sauce" aria-expanded="true"><b></b></button>
+					</header>
+					<div class="modBody">
+						<div class="modContent">
+							<button id="navSauce" title="Edit sauce metadata" aria-label="Edit Sauce Metadata">
+								<svg>
+									<use href="img/icons.svg#sauce"></use>
+								</svg>
+								<span><b id="sauceInfoTitle">Untitled</b><small id="sauceInfoByline">anonymous</small></span>
+							</button>
+							<button id="networkButton" class="hide" aria-label="Join Collab">
+								<svg alt="Join Collab" aria-label="Join Collab">
+									<use href="img/icons.svg#collab"></use>
+								</svg>
+							</button>
+							<button id="chatButton" class="includedForWebsocket" aria-label="Chat">
+								<svg alt="Toggle Chat" aria-label="Toggle Chat">
+									<use href="img/icons.svg#group"></use>
 								</svg>
 							</button>
 						</div>
-						<div id="editMenu" class="menuTitle" tabindex="0">
-							<button id="edit" aria-label="Edit Menu">
-								<svg alt="Edit" aria-label="Edit">
-									<use href="img/icons.svg#settings"></use>
-								</svg>
-							</button>
+					</div>
+				</section>
+				<section id="canvasPanel" class="mod" aria-label="Canvas" data-m="canvas">
+					<header class="modHeader">
+						<b class="modTitle">Canvas</b>
+						<i class="modLine"></i>
+						<button class="modShade" type="button" title="Shade" aria-label="Shade Canvas" aria-expanded="true"><b></b></button>
+					</header>
+					<div class="modBody">
+						<div class="modContent">
+							<div class="panelSpec">
+								<button id="resolution" class="panelValue" title="Resize canvas" aria-label="Change Resolution">
+									<svg>
+										<use href="img/icons.svg#resolution"></use>
+									</svg>
+									<kbd id="resolutionLabel">80x25</kbd>
+								</button>
+								<button id="navICE" class="panelChip" title="iCE colors: all 16 backgrounds" aria-label="Toggle iCE Colors"><kbd>iCE</kbd></button>
+								<button id="changeFont" class="panelValue" title="Change font" aria-label="Change Font">
+									<svg>
+										<use href="img/icons.svg#font"></use>
+									</svg>
+									<kbd id="currentFontDisplay"></kbd>
+								</button>
+								<button id="nav9pt" class="panelChip" title="9pt: nine pixel wide letters" aria-label="Toggle 9px Font"><kbd>9pt</kbd></button>
+							</div>
 						</div>
 					</div>
-					<button id="navSauce" aria-label="Sauce Menu">
-						<svg>
-							<use href="img/icons.svg#sauce"></use>
-						</svg>
-					</button>
-				</nav>
-				<nav>
-					<div id="keyboardToolbar">
-						<button id="fkeySetPrev" aria-label="Previous">
-							<svg>
-								<use href="img/icons.svg#left"></use>
+				</section>
+				<section id="cursorPanel" class="mod" aria-label="Cursor" data-m="pos">
+					<header class="modHeader">
+						<b class="modTitle">Cursor</b>
+						<i class="modLine"></i>
+						<button class="modShade" type="button" title="Shade" aria-label="Shade Cursor" aria-expanded="true"><b></b></button>
+					</header>
+					<div class="modBody">
+						<div class="modContent">
+							<div id="positionInfo"></div>
+						</div>
+					</div>
+				</section>
+				<section id="zoomPanel" class="mod" aria-label="Zoom" data-m="zoom">
+					<header class="modHeader">
+						<b class="modTitle">Zoom</b>
+						<i class="modLine"></i>
+						<button class="modShade" type="button" title="Shade" aria-label="Shade Zoom" aria-expanded="true"><b></b></button>
+					</header>
+					<div class="modBody">
+						<div class="modContent">
+							<div id="zoomControl">
+								<button id="zoomOut" class="zoomGlyph" title="Zoom out (Ctrl -)" aria-label="Zoom Out"></button>
+								<output id="zoomValue" aria-live="polite">1x</output>
+								<button id="zoomIn" class="zoomGlyph plus" title="Zoom in (Ctrl +)" aria-label="Zoom In"></button>
+							</div>
+						</div>
+					</div>
+				</section>
+				<section id="refPanel" class="mod" aria-label="Reference Image" data-m="ref" hidden>
+					<header class="modHeader">
+						<b class="modTitle">Reference Image</b>
+						<i class="modLine"></i>
+						<button class="modShade" type="button" title="Shade" aria-label="Shade Reference Image" aria-expanded="true"><b></b></button>
+					</header>
+					<div class="modBody">
+						<div class="modContent">
+							<div class="panelChips">
+								<button id="refLoad">load image</button>
+								<button id="refDrag" type="button" aria-label="Move Image" aria-pressed="false">
+									<svg aria-hidden="true">
+										<use href="img/icons.svg#dragmove"></use>
+									</svg>
+									move
+								</button>
+								<button id="refClear">clear</button>
+							</div>
+							<input id="refFileInput" class="hide" type="file" accept="image/*"/>
+							<label>
+								opacity
+								<input id="refOpacity" type="range" value="40" max="95" min="0"/>
+							</label>
+							<label>
+								width
+								<input id="refScale" type="range" value="100" max="400" min="10"/>
+							</label>
+						</div>
+					</div>
+				</section>
+				<section id="minimapPanel" class="mod" aria-label="Minimap" data-m="map" hidden>
+					<header class="modHeader">
+						<b class="modTitle">Minimap</b>
+						<i class="modLine"></i>
+						<button id="autoscrollToggle" class="modTool" type="button" title="Autoscroll" aria-label="Play">
+							<svg aria-hidden="true">
+								<use href="img/icons.svg#play"></use>
 							</svg>
 						</button>
-						<span id="fkey0w">F1<canvas id="fkey0" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey1w">F2<canvas id="fkey1" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey2w">F3<canvas id="fkey2" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey3w">F4<canvas id="fkey3" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey4w">F5<canvas id="fkey4" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey5w">F6<canvas id="fkey5" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey6w">F7<canvas id="fkey6" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey7w">F8<canvas id="fkey7" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey8w">F9<canvas id="fkey8" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey9w">F10<canvas id="fkey9" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey10w">F11<canvas id="fkey10" class="fkey" height="0" width="0"></canvas></span>
-						<span id="fkey11w">F12<canvas id="fkey11" class="fkey" height="0" width="0"></canvas></span>
-						<button id="fkeySetNext" aria-label="Next">
-							<svg>
-								<use href="img/icons.svg#right"></use>
+						<button id="minimapMenuToggle" class="modTool" type="button" title="Autoscroll settings" aria-label="Autoscroll Menu" aria-expanded="false">
+							<svg aria-hidden="true">
+								<use href="img/icons.svg#loop"></use>
 							</svg>
 						</button>
-					</div>
-					<div id="brushToolbar">
-						<div id="halfblock" class="toolButton">
-							<svg alt="Block" aria-label="Block (f)">
-								<use href="img/icons.svg#blockBrush"></use>
-							</svg>
-							<kbd>Block</kbd>
-						</div>
-						<div id="shadingBrush" class="toolButton">
-							<svg alt="Shading" aria-label="Shading (f)">
-								<use href="img/icons.svg#shadeBrush"></use>
-							</svg>
-							<kbd>Shading</kbd>
-						</div>
-						<div id="asciiBrush" class="toolButton">
-							<span class="stack">
-								<svg alt="Ascii Brush" aria-label="Ascii Brush">
-									<use href="img/icons.svg#ascii"></use>
-								</svg>
-								<kbd>Ascii</kbd>
-							</span>
-						</div>
-						<div id="characterBrush" class="toolButton">
-							<svg alt="Character Brush" aria-label="Character Brush (b)">
-								<use href="img/icons.svg#character"></use>
-							</svg>
-							<kbd>Character</kbd>
-						</div>
-						<div id="attrib" class="toolButton">
-							<span class="stack">
-								<svg alt="Color" aria-label="Color">
-									<use href="img/icons.svg#roller"></use>
-								</svg>
-								<kbd>Color</kbd>
-							</span>
-						</div>
-						<div id="fill" class="toolButton">
-							<svg alt="Fill" aria-label="Fill (n)">
-								<use href="img/icons.svg#fill"></use>
-							</svg>
-							<kbd>Fill</kbd>
+						<button class="modShade" type="button" title="Shade" aria-label="Shade Minimap" aria-expanded="true"><b></b></button>
+					</header>
+					<div class="modBody">
+						<div>
+							<div id="minimapMenu">
+								<div id="autoscrollModeRow"></div>
+								<div id="autoscrollCount">
+									<label>count</label>
+									<button id="autoscrollCountDown" aria-label="Fewer Passes">-</button>
+									<span id="autoscrollCountValue">1</span>
+									<button id="autoscrollCountUp" aria-label="More Passes">+</button>
+								</div>
+								<label id="autoscrollSpeedRow">
+									speed
+									<input id="autoscrollSpeed" type="range" value="5" max="9" min="1" step="1"/>
+								</label>
+							</div>
+							<div id="minimapScroll">
+								<canvas id="minimapArt" height="25" width="80"></canvas>
+								<div id="minimapViewport"></div>
+							</div>
 						</div>
 					</div>
-					<div id="selectionToolbar">
-						<div id="flipHorizontal" class="toolButton">
-							<svg class="sm" alt="Flip Horizontal" aria-label="Flip Horizontal ([)">
-								<use href="img/icons.svg#fliph"></use>
-							</svg>
-							<kbd>Mirror</kbd>
-						</div>
-						<div id="flipVertical" class="toolButton">
-							<svg class="sm" alt="Flip Vertical" aria-label="Flip Vertical (])">
-								<use href="img/icons.svg#flipv"></use>
-							</svg>
-							<kbd>Flip</kbd>
-						</div>
-						<div id="moveBlocks" class="toolButton">
-							<svg>
-								<use href="img/icons.svg#move"></use>
-							</svg>
-							<kbd>Move</kbd>
-						</div>
-						<div id="cut" class="toolButton">
-							<svg transform="matrix(-1,0,0,1,0,0)">
-								<use href="img/icons.svg#cut"></use>
-							</svg>
-							<kbd>Cut</kbd>
-						</div>
-						<div id="delete" class="toolButton">
-							<svg>
-								<use href="img/icons.svg#delete"></use>
-							</svg>
-							<kbd>Delete</kbd>
-						</div>
-						<div id="copy" class="toolButton">
-							<svg>
-								<use href="img/icons.svg#copy"></use>
-							</svg>
-							<kbd>Copy</kbd>
-						</div>
-						<div id="paste" class="toolButton">
-							<svg>
-								<use href="img/icons.svg#paste"></use>
-							</svg>
-							<kbd>Paste</kbd>
-						</div>
-						<div id="systemPaste" class="toolButton">
-							<svg transform="rotate(90)">
-								<use href="img/icons.svg#paste"></use>
-							</svg>
-							<kbd>System</kbd>
-						</div>
+					<i class="modResize" title="Resize" aria-hidden="true"></i>
+				</section>
+			</div>
+			<section id="framesPanel" class="mod" aria-label="Frames" data-m="frames" hidden>
+				<header class="modHeader">
+					<b class="modTitle">Frames</b>
+					<i class="modLine"></i>
+					<button class="modShade" type="button" title="Shade" aria-label="Shade Frames" aria-expanded="true"><b></b></button>
+				</header>
+				<div class="modBody">
+					<div class="modContent">
+						<button id="framePrev" title="Previous frame">&#9664;</button>
+						<kbd id="frameLabel">1/1</kbd>
+						<button id="frameNext" title="Next frame">&#9654;</button>
+						<div id="frameStrip"></div>
+						<button id="frameAdd" title="Add blank frame">+</button>
+						<button id="frameDup" title="Duplicate frame">=</button>
+						<button id="frameDel" title="Delete frame">&#215;</button>
+						<label>
+							ms
+							<input id="frameDelay" type="number" title="Per-frame delay (blank = global)" max="60000" min="16" step="10"/>
+						</label>
+						<label>
+							fps
+							<input id="frameFps" type="number" title="Global playback rate" max="60" min="1"/>
+						</label>
+						<button id="framePlay" title="Play / stop">play</button>
+						<button id="frameOnion" title="Onion skin (previous frame ghosted)">onion</button>
+						<select id="frameBaud" title="Line rate for the baud preview">
+							<option>2400</option>
+							<option>9600</option>
+							<option selected>14400</option>
+							<option>28800</option>
+							<option>57600</option>
+							<option>115200</option>
+						</select>
+						<button id="frameBaudPlay" title="Preview the current frame at the chosen baud rate">baud</button>
+						<p id="framesLockNote" class="hide">Animation editing is local-only: collab sessions stay on one frame.</p>
 					</div>
-					<div id="shapesToolbar">
-						<div id="line" class="toolButton">
-							<span class="stack">
-								<svg alt="Line" aria-label="Line">
-									<use href="img/icons.svg#line"></use>
-								</svg>
-								<kbd>Line</kbd>
-							</span>
+				</div>
+			</section>
+			<section id="toolSettings" class="mod" aria-label="Tool Settings" data-m="tool" hidden>
+				<div class="modHandle" aria-hidden="true"></div>
+				<header class="modHeader">
+					<b id="toolSettingsTitle" class="modTitle">Tool Settings</b>
+					<i class="modLine"></i>
+					<button class="modShade" type="button" title="Shade" aria-label="Shade Tool Settings" aria-expanded="true"><b></b></button>
+					<button class="modClose" type="button" title="Close" aria-label="Close Tool Settings">&#215;</button>
+				</header>
+				<div class="modBody">
+					<div class="modContent">
+						<div id="tsKeyboard" class="hide">
+							<div class="fkeyGroup">
+								<button id="fkeySetPrev" type="button" aria-label="Previous character set page">
+									<svg aria-hidden="true">
+										<use href="img/icons.svg#left"></use>
+									</svg>
+								</button>
+								<div class="fkeyRow">
+									<button id="fkey0w" class="fkey" type="button" title="F1"><small><i>F</i>1</small><canvas id="fkey0" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey1w" class="fkey" type="button" title="F2"><small><i>F</i>2</small><canvas id="fkey1" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey2w" class="fkey" type="button" title="F3"><small><i>F</i>3</small><canvas id="fkey2" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey3w" class="fkey" type="button" title="F4"><small><i>F</i>4</small><canvas id="fkey3" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey4w" class="fkey" type="button" title="F5"><small><i>F</i>5</small><canvas id="fkey4" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey5w" class="fkey" type="button" title="F6"><small><i>F</i>6</small><canvas id="fkey5" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey6w" class="fkey" type="button" title="F7"><small><i>F</i>7</small><canvas id="fkey6" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey7w" class="fkey" type="button" title="F8"><small><i>F</i>8</small><canvas id="fkey7" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey8w" class="fkey" type="button" title="F9"><small><i>F</i>9</small><canvas id="fkey8" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey9w" class="fkey" type="button" title="F10"><small><i>F</i>10</small><canvas id="fkey9" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey10w" class="fkey" type="button" title="F11"><small><i>F</i>11</small><canvas id="fkey10" class="gc" height="0" width="0"></canvas></button>
+									<button id="fkey11w" class="fkey" type="button" title="F12"><small><i>F</i>12</small><canvas id="fkey11" class="gc" height="0" width="0"></canvas></button>
+								</div>
+								<button id="fkeySetNext" type="button" aria-label="Next character set page">
+									<svg aria-hidden="true">
+										<use href="img/icons.svg#right"></use>
+									</svg>
+								</button>
+							</div>
+							<div class="charsetWrap">
+								<button id="charsetButton" type="button" title="Choose a character set">
+									<svg aria-hidden="true">
+										<use href="img/icons.svg#charmap"></use>
+									</svg>
+									<small>Character Set</small>
+									<b id="charsetName"></b>
+									<i id="charsetPage"></i>
+								</button>
+							</div>
 						</div>
-						<div id="square" class="toolButton">
-							<span class="stack">
-								<svg alt="Square" aria-label="Square">
-									<use href="img/icons.svg#square"></use>
-								</svg>
-								<kbd>Square</kbd>
-							</span>
-						</div>
-						<div id="circle" class="toolButton">
-							<span class="stack">
-								<svg alt="Circle" aria-label="Circle">
-									<use href="img/icons.svg#circle"></use>
-								</svg>
-								<kbd>Circle</kbd>
-							</span>
-						</div>
+						<div id="tsLine" class="hide"></div>
+						<div id="tsSquare" class="hide"></div>
+						<div id="tsCircle" class="hide"></div>
+						<div id="tsAscii" class="hide"></div>
+						<div id="tsAttrib" class="hide"></div>
+						<div id="tsShading" class="hide"></div>
+						<div id="tsCharacter" class="hide"></div>
 					</div>
-					<div id="clipboardToolbar">
-						<div id="undo" class="toolButton">
-							<svg alt="Undo" aria-label="Undo">
-								<use href="img/icons.svg#undo"></use>
-							</svg>
-							<kbd>Undo</kbd>
-						</div>
-						<div id="redo" class="toolButton">
-							<svg alt="Redo" aria-label="Redo">
-								<use href="img/icons.svg#redo"></use>
-							</svg>
-							<kbd>Redo</kbd>
-						</div>
-					</div>
-					<div id="fontToolbar">
-						<div id="changeFont" class="toolButton">
-							<svg alt="Change Font" aria-label="Change Font">
-								<use href="img/icons.svg#font"></use>
-							</svg>
-							<kbd>Change Font</kbd>
-						</div>
-						<div id="navICE" class="toolButton">
-							<svg alt="Use iCE Colors" aria-label="Toggle iCE Colors">
-								<use href="img/icons.svg#ice"></use>
-							</svg>
-							<kbd>ICE Colors</kbd>
-						</div>
-						<div id="nav9pt" class="toolButton">
-							<svg alt="Use 9px Font" aria-label="Toggle 9px Font">
-								<use href="img/icons.svg#spacing"></use>
-							</svg>
-							<kbd>9pt Font</kbd>
-						</div>
-					</div>
-					<div id="viewportToolbar">
-						<div id="zoomControl" class="toolButton">
-							<svg alt="Zoom" aria-label="Zoom (Ctrl +/-)">
-								<use href="img/icons.svg#zoom"></use>
-							</svg>
-						</div>
-						<div id="navDarkmode" class="toolButton">
-							<svg class="sunAndMoon" aria-hidden="true" viewBox="1 0 24 24">
-								<mask id="moonMask" class="moon">
-									<rect fill="white" height="100%" width="100%" x="0" y="0"/>
-									<circle cx="0" cy="10" fill="black" r="6"/>
-								</mask>
-								<circle class="sun" cx="12" cy="12" fill="currentColor" mask="url(#moonMask)" r="6"/>
-								<g class="sunBeams" stroke="currentColor">
-									<line x1="12" x2="12" y1="1" y2="3"/>
-									<line x1="12" x2="12" y1="21" y2="23"/>
-									<line x1="4.22" x2="5.64" y1="4.22" y2="5.64"/>
-									<line x1="18.36" x2="19.78" y1="18.36" y2="19.78"/>
-									<line x1="1" x2="3" y1="12" y2="12"/>
-									<line x1="21" x2="23" y1="12" y2="12"/>
-									<line x1="4.22" x2="5.64" y1="19.78" y2="18.36"/>
-									<line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/>
-								</g>
-							</svg>
-							<kbd id="mode">Night</kbd>
-						</div>
-						<div id="navGrid" class="toolButton">
-							<svg alt="Toggle Grid (Ctrl-G)" aria-label="Toggle Grid (Ctrl-G)">
-								<use href="img/icons.svg#grid"></use>
-							</svg>
-							<kbd>Grid</kbd>
-						</div>
-						<div id="navFrames" class="toolButton">
-							<svg alt="Animation Frames" aria-label="Animation Frames">
-								<use href="img/icons.svg#history"></use>
-							</svg>
-							<kbd>Frames</kbd>
-						</div>
-						<div id="navMinimap" class="toolButton">
-							<svg alt="Minimap" aria-label="Minimap">
-								<use href="img/icons.svg#map"></use>
-							</svg>
-							<kbd>Minimap</kbd>
-						</div>
-						<div id="navRef" class="toolButton">
-							<svg alt="Reference Image" aria-label="Reference Image">
-								<use href="img/icons.svg#dropper"></use>
-							</svg>
-							<kbd>Ref Image</kbd>
-						</div>
-					</div>
-				</nav>
-				<nav>
-					<button id="networkButton" class="hide" aria-label="Join Collab">
-						<svg alt="Join Collab" aria-label="Join Collab">
-							<use href="img/icons.svg#group"></use>
-						</svg>
-					</button>
-					<button id="chatButton" class="includedForWebsocket" aria-label="Chat">
-						<svg alt="Toggle Chat" aria-label="Toggle Chat">
-							<use href="img/icons.svg#group"></use>
-						</svg>
-					</button>
-					<div id="chatWindow" class="hide">
+				</div>
+			</section>
+			<section id="chatWindow" class="mod" aria-label="Chat" data-m="chat" hidden>
+				<header class="modHeader">
+					<b class="modTitle">Chat</b>
+					<i class="modLine"></i>
+					<button class="modShade" type="button" title="Shade" aria-label="Shade Chat" aria-expanded="true"><b></b></button>
+				</header>
+				<div class="modBody">
+					<div>
 						<div id="chatRoom">
 							<header>
 								<h2>chatz</h2>
@@ -327,172 +401,8 @@
 							</nav>
 						</div>
 					</div>
-					<div id="resolution">
-						<svg id="navRes" alt="Change Resolution" aria-label="Change Resolution">
-							<use href="img/icons.svg#resolution"></use>
-						</svg>
-						<kbd id="resolutionLabel">80x25</kbd>
-					</div>
-					<div id="currentFontDisplay">
-						<kbd></kbd>
-					</div>
-					<div id="positionInfo"></div>
-				</nav>
-			</header>
-			<aside>
-				<canvas id="palettePreview" height="40" width="40"></canvas>
-				<canvas id="palettePicker" height="160" width="40"></canvas>
-				<div id="paletteMore" title="More colors (256 + RGB)">++</div>
-				<div id="colorPanel" class="hide">
-					<h3>xterm 256 <small>click: fg, right-click: bg</small></h3>
-					<div id="colorGrid"></div>
-					<h3>RGB</h3>
-					<div id="colorRGB">
-						<input id="colorHexInput" type="color" aria-label="Pick RGB Color" value="#ff00ff"/>
-						<button id="colorRGBfg">fg</button>
-						<button id="colorRGBbg">bg</button>
-					</div>
-					<h3>Recent</h3>
-					<div id="colorRecent"></div>
-					<p id="colorLockNote" class="hide">Joined server only speaks 16 colors: extended picks are disabled until you disconnect.</p>
 				</div>
-				<div id="framesPanel" class="hide">
-					<button id="framePrev" title="Previous frame">&#9664;</button>
-					<kbd id="frameLabel">1/1</kbd>
-					<button id="frameNext" title="Next frame">&#9654;</button>
-					<div id="frameStrip"></div>
-					<button id="frameAdd" title="Add blank frame">+</button>
-					<button id="frameDup" title="Duplicate frame">=</button>
-					<button id="frameDel" title="Delete frame">&#215;</button>
-					<label>
-						ms
-						<input id="frameDelay" type="number" title="Per-frame delay (blank = global)" max="60000" min="16" step="10"/>
-					</label>
-					<label>
-						fps
-						<input id="frameFps" type="number" title="Global playback rate" max="60" min="1"/>
-					</label>
-					<button id="framePlay" title="Play / stop">play</button>
-					<button id="frameOnion" title="Onion skin (previous frame ghosted)">onion</button>
-					<select id="frameBaud" title="Line rate for the baud preview">
-						<option>2400</option>
-						<option>9600</option>
-						<option selected>14400</option>
-						<option>28800</option>
-						<option>57600</option>
-						<option>115200</option>
-					</select>
-					<button id="frameBaudPlay" title="Preview the current frame at the chosen baud rate">baud</button>
-					<p id="framesLockNote" class="hide">Animation editing is local-only: collab sessions stay on one frame.</p>
-				</div>
-				<div id="keyboard">
-					<svg alt="Keyboard" aria-label="Keyboard (k)">
-						<use href="img/icons.svg#keeb"></use>
-					</svg>
-				</div>
-				<div id="brushes">
-					<svg alt="Brushes" aria-label="Brushes">
-						<use href="img/icons.svg#brush"></use>
-					</svg>
-				</div>
-				<div id="shapes">
-					<svg alt="Shapes" aria-label="Shapes">
-						<use href="img/icons.svg#shapes"></use>
-					</svg>
-				</div>
-				<div class="separator"></div>
-				<div id="selection">
-					<svg alt="Selection" aria-label="Selection">
-						<use href="img/icons.svg#select"></use>
-					</svg>
-				</div>
-				<div id="sample">
-					<svg alt="Sample" aria-label="Sample (alt)">
-						<use href="img/icons.svg#dropper"></use>
-					</svg>
-				</div>
-				<div id="mirror">
-					<svg alt="Mirror Mode" aria-label="Mirror Mode (Ctrl+M)">
-						<use href="img/icons.svg#mirror"></use>
-					</svg>
-				</div>
-				<div class="separator"></div>
-				<div id="clipboard">
-					<svg alt="Undo" aria-label="Undo">
-						<use href="img/icons.svg#history"></use>
-					</svg>
-				</div>
-				<div id="fonts">
-					<svg alt="Change Font" aria-label="Change Font">
-						<use href="img/icons.svg#font"></use>
-					</svg>
-				</div>
-				<div id="navView">
-					<svg alt="Viewport Options" aria-label="Viewport Options">
-						<use href="img/icons.svg#canvas"></use>
-					</svg>
-				</div>
-			</aside>
-			<div id="minimapPanel" class="hide">
-				<button id="minimapMenuToggle" type="button" aria-label="Autoscroll Menu" aria-expanded="false">
-					<svg aria-hidden="true">
-						<use href="img/icons.svg#loop"></use>
-					</svg>
-				</button>
-				<div id="minimapMenu">
-					<div id="autoscrollTransport">
-						<span>autoscroll</span>
-						<button id="autoscrollToggle" aria-label="Play">
-							<svg aria-hidden="true">
-								<use href="img/icons.svg#play"></use>
-							</svg>
-						</button>
-					</div>
-					<div id="autoscrollModeRow"></div>
-					<div id="autoscrollCount">
-						<label>count</label>
-						<button id="autoscrollCountDown" aria-label="Fewer Passes">-</button>
-						<span id="autoscrollCountValue">1</span>
-						<button id="autoscrollCountUp" aria-label="More Passes">+</button>
-					</div>
-					<label id="autoscrollSpeedRow">
-						speed
-						<input id="autoscrollSpeed" type="range" value="5" max="9" min="1" step="1"/>
-					</label>
-				</div>
-				<div id="minimapScroll">
-					<canvas id="minimapArt" height="25" width="80"></canvas>
-					<div id="minimapViewport"></div>
-				</div>
-			</div>
-			<div id="refPanel" class="hide">
-				<button id="refLoad">load image</button>
-				<input id="refFileInput" class="hide" type="file" accept="image/*"/>
-				<label>
-					opacity
-					<input id="refOpacity" type="range" value="40" max="95" min="0"/>
-				</label>
-				<label>
-					width
-					<input id="refScale" type="range" value="100" max="400" min="10"/>
-				</label>
-				<button id="refDrag" type="button" aria-label="Move Image" aria-pressed="false">
-					<svg aria-hidden="true">
-						<use href="img/icons.svg#dragmove"></use>
-					</svg>
-				</button>
-				<button id="refClear">clear</button>
-			</div>
-			<div id="toolSettings" class="hide">
-				<h3 id="toolSettingsTitle"></h3>
-				<div id="tsLine" class="hide"></div>
-				<div id="tsSquare" class="hide"></div>
-				<div id="tsCircle" class="hide"></div>
-				<div id="tsAscii" class="hide"></div>
-				<div id="tsAttrib" class="hide"></div>
-				<div id="tsShading" class="hide"></div>
-				<div id="tsCharacter" class="hide"></div>
-			</div>
+			</section>
 			<div id="viewport">
 				<div id="canvasContainer">
 					<img id="refOverlay" class="canvasOverlay" alt=""/>
@@ -511,59 +421,383 @@
 			<kbd>Drop your file<br/>anywhere to load</kbd>
 		</div>
 
-		<div id="fileList" class="menuList hide">
-			<article id="new" class="menuItem excludedForWebsocket">New</article>
-			<article id="open" class="menuItem excludedForWebsocket">Open</article>
-			<article id="browseArtpacks" class="menuItem excludedForWebsocket">Browse Artpacks</article>
-			<article class="separator excludedForWebsocket"></article>
-			<article id="saveAnsi" class="menuItem">Save as ANSi</article>
-			<article id="saveBin" class="menuItem">Save as Binary Text</article>
-			<article id="saveXbin" class="menuItem">Save as XBin</article>
-			<article id="saveTundra" class="menuItem">Save as TundraDraw</article>
-			<article id="saveDur" class="menuItem">Save as durdraw Movie</article>
-			<article id="saveOwnz" class="menuItem">Save as teXt0wnz Doc</article>
-			<article class="separator"></article>
-			<article id="savePng" class="menuItem">Export as PNG</article>
-			<article id="saveUtf8" class="menuItem">Export as UTF-8 Text</article>
-			<article id="saveUtf8Blink" class="menuItem">Export as UTF-8 (blink)</article>
-			<article id="savePlaintext" class="menuItem">Export as Plain Text</article>
-			<article id="saveAnsimation" class="menuItem">Export as ANSimation</article>
-			<article id="saveTimelapse" class="menuItem">Export Session Timelapse</article>
-			<article class="separator"></article>
-			<article id="pluginsMenu" class="menuItem">Plugins</article>
-			<article id="help" class="menuItem">Help!</article>
-			<article id="tutorials" class="menuItem">Tutorials</article>
-			<article id="update" class="menuItem">Update Editor</article>
-			<article id="about" class="menuItem">About teXt0wnz</article>
+		<div id="brushToolbar" class="flyout" hidden>
+			<b class="flyHead">brushes</b>
+			<div id="halfblock" class="toolButton">
+				<svg alt="Block" aria-label="Block (f)">
+					<use href="img/icons.svg#blockBrush"></use>
+				</svg>
+				<kbd>Block</kbd>
+				<i class="hotkey">f</i>
+			</div>
+			<div id="shadingBrush" class="toolButton">
+				<svg alt="Shading" aria-label="Shading">
+					<use href="img/icons.svg#shadeBrush"></use>
+				</svg>
+				<kbd>Shading</kbd>
+			</div>
+			<div id="asciiBrush" class="toolButton">
+				<span class="stack">
+					<svg alt="Ascii Brush" aria-label="Ascii Brush">
+						<use href="img/icons.svg#ascii"></use>
+					</svg>
+					<kbd>Ascii</kbd>
+				</span>
+			</div>
+			<div id="characterBrush" class="toolButton">
+				<svg alt="Character Brush" aria-label="Character Brush (b)">
+					<use href="img/icons.svg#character"></use>
+				</svg>
+				<kbd>Character</kbd>
+				<i class="hotkey">b</i>
+			</div>
+			<div id="attrib" class="toolButton">
+				<span class="stack">
+					<svg alt="Color" aria-label="Color (a)">
+						<use href="img/icons.svg#roller"></use>
+					</svg>
+					<kbd>Color</kbd>
+				</span>
+				<i class="hotkey">a</i>
+			</div>
+			<div id="fill" class="toolButton">
+				<svg alt="Fill" aria-label="Fill (n)">
+					<use href="img/icons.svg#fill"></use>
+				</svg>
+				<kbd>Fill</kbd>
+				<i class="hotkey">n</i>
+			</div>
 		</div>
-		<div id="editList" class="menuList hide">
-			<article id="navCut" class="menuItem disabled">Cut <kbd>Ctrl-X</kbd></article>
-			<article id="navCopy" class="menuItem disabled">Copy <kbd>Ctrl-C</kbd></article>
-			<article id="navPaste" class="menuItem disabled">Paste <kbd>Ctrl-V</kbd></article>
-			<article id="navPasteTransparent" class="menuItem">Paste Transparent</article>
-			<article id="navPasteUnder" class="menuItem">Paste Under</article>
-			<article id="navSystemPaste" class="menuItem">System Paste <kbd>Ctrl-Shift-V</kbd></article>
-			<article id="navDelete" class="menuItem disabled">Delete <kbd>Ctrl-Backspace</kbd></article>
+		<div id="shapesToolbar" class="flyout" hidden>
+			<b class="flyHead">shapes</b>
+			<div id="line" class="toolButton">
+				<span class="stack">
+					<svg alt="Line" aria-label="Line">
+						<use href="img/icons.svg#line"></use>
+					</svg>
+					<kbd>Line</kbd>
+				</span>
+			</div>
+			<div id="square" class="toolButton">
+				<span class="stack">
+					<svg alt="Square" aria-label="Square">
+						<use href="img/icons.svg#square"></use>
+					</svg>
+					<kbd>Square</kbd>
+				</span>
+			</div>
+			<div id="circle" class="toolButton">
+				<span class="stack">
+					<svg alt="Circle" aria-label="Circle">
+						<use href="img/icons.svg#circle"></use>
+					</svg>
+					<kbd>Circle</kbd>
+				</span>
+			</div>
+		</div>
+		<div id="clipboardToolbar" class="flyout" hidden>
+			<b class="flyHead">history</b>
+			<div class="historyActions">
+				<div id="undo" class="toolButton">
+					<svg alt="Undo" aria-label="Undo">
+						<use href="img/icons.svg#undo"></use>
+					</svg>
+					<kbd>Undo</kbd>
+					<i class="hotkey">ctrl z</i>
+				</div>
+				<div id="redo" class="toolButton">
+					<svg alt="Redo" aria-label="Redo">
+						<use href="img/icons.svg#redo"></use>
+					</svg>
+					<kbd>Redo</kbd>
+					<i class="hotkey">ctrl y</i>
+				</div>
+			</div>
+			<div id="historyList"></div>
+		</div>
+		<div id="viewportToolbar" class="flyout" hidden>
+			<b class="flyHead">view</b>
+			<div id="navDarkmode" class="toolButton">
+				<svg class="sunAndMoon" aria-hidden="true" viewBox="1 0 24 24">
+					<mask id="moonMask" class="moon">
+						<rect fill="white" height="100%" width="100%" x="0" y="0"/>
+						<circle cx="0" cy="10" fill="black" r="6"/>
+					</mask>
+					<circle class="sun" cx="12" cy="12" fill="currentColor" mask="url(#moonMask)" r="6"/>
+					<g class="sunBeams" stroke="currentColor">
+						<line x1="12" x2="12" y1="1" y2="3"/>
+						<line x1="12" x2="12" y1="21" y2="23"/>
+						<line x1="4.22" x2="5.64" y1="4.22" y2="5.64"/>
+						<line x1="18.36" x2="19.78" y1="18.36" y2="19.78"/>
+						<line x1="1" x2="3" y1="12" y2="12"/>
+						<line x1="21" x2="23" y1="12" y2="12"/>
+						<line x1="4.22" x2="5.64" y1="19.78" y2="18.36"/>
+						<line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/>
+					</g>
+				</svg>
+				<kbd id="mode">Night</kbd>
+			</div>
+			<div id="navGrid" class="toolButton">
+				<svg alt="Toggle Grid (Ctrl-G)" aria-label="Toggle Grid (Ctrl-G)">
+					<use href="img/icons.svg#grid"></use>
+				</svg>
+				<kbd>Grid</kbd>
+				<i class="hotkey">ctrl g</i>
+			</div>
+			<div id="navFrames" class="toolButton">
+				<svg alt="Animation Frames" aria-label="Animation Frames">
+					<use href="img/icons.svg#history"></use>
+				</svg>
+				<kbd>Frames</kbd>
+			</div>
+			<div id="navMinimap" class="toolButton">
+				<svg alt="Minimap" aria-label="Minimap">
+					<use href="img/icons.svg#map"></use>
+				</svg>
+				<kbd>Minimap</kbd>
+			</div>
+			<div id="navRef" class="toolButton">
+				<svg alt="Reference Image" aria-label="Reference Image">
+					<use href="img/icons.svg#dropper"></use>
+				</svg>
+				<kbd>Ref Image</kbd>
+			</div>
+		</div>
+		<div id="selectionToolbar" hidden>
+			<kbd id="selectionSize"></kbd>
+			<div id="flipHorizontal" class="toolButton">
+				<svg class="sm" alt="Flip Horizontal" aria-label="Flip Horizontal ([)">
+					<use href="img/icons.svg#fliph"></use>
+				</svg>
+				<kbd>Mirror</kbd>
+			</div>
+			<div id="flipVertical" class="toolButton">
+				<svg class="sm" alt="Flip Vertical" aria-label="Flip Vertical (])">
+					<use href="img/icons.svg#flipv"></use>
+				</svg>
+				<kbd>Flip</kbd>
+			</div>
+			<div id="moveBlocks" class="toolButton">
+				<svg>
+					<use href="img/icons.svg#move"></use>
+				</svg>
+				<kbd>Move</kbd>
+			</div>
+			<div id="cut" class="toolButton">
+				<svg transform="matrix(-1,0,0,1,0,0)">
+					<use href="img/icons.svg#cut"></use>
+				</svg>
+				<kbd>Cut</kbd>
+			</div>
+			<div id="delete" class="toolButton">
+				<svg>
+					<use href="img/icons.svg#delete"></use>
+				</svg>
+				<kbd>Delete</kbd>
+			</div>
+			<div id="copy" class="toolButton">
+				<svg>
+					<use href="img/icons.svg#copy"></use>
+				</svg>
+				<kbd>Copy</kbd>
+			</div>
+			<div id="pasteMenu" class="toolButton">
+				<svg alt="Paste" aria-label="Paste Options">
+					<use href="img/icons.svg#paste"></use>
+				</svg>
+				<kbd>Paste</kbd>
+				<i class="flyTick"></i>
+			</div>
+			<div id="deselect" class="toolButton">
+				<svg alt="Deselect" aria-label="Deselect (Esc)">
+					<use href="img/icons.svg#cancel"></use>
+				</svg>
+				<kbd>Deselect</kbd>
+			</div>
+			<div id="pasteBack" class="toolButton pasteSub">
+				<svg alt="Back" aria-label="Back to Selection Actions">
+					<use href="img/icons.svg#left"></use>
+				</svg>
+				<kbd>Back</kbd>
+			</div>
+			<div id="paste" class="toolButton pasteSub">
+				<svg alt="Paste" aria-label="Paste (Ctrl-V)">
+					<use href="img/icons.svg#paste"></use>
+				</svg>
+				<kbd>Paste</kbd>
+			</div>
+			<div id="pasteTransparent" class="toolButton pasteSub">
+				<svg alt="Paste Transparent" aria-label="Paste Transparent">
+					<use href="img/icons.svg#paste"></use>
+				</svg>
+				<kbd>Transparent</kbd>
+			</div>
+			<div id="pasteUnder" class="toolButton pasteSub">
+				<svg alt="Paste Under" aria-label="Paste Under">
+					<use href="img/icons.svg#paste"></use>
+				</svg>
+				<kbd>Under</kbd>
+			</div>
+			<div id="systemPaste" class="toolButton pasteSub">
+				<svg transform="rotate(90)">
+					<use href="img/icons.svg#paste"></use>
+				</svg>
+				<kbd>System</kbd>
+			</div>
+		</div>
+		<div id="colorPanel" class="flyout" hidden>
+			<h3>xterm 256 <small>click: fg, right-click: bg</small></h3>
+			<div id="colorGrid"></div>
+			<h3>RGB</h3>
+			<div id="colorRGB">
+				<input id="colorHexInput" type="color" aria-label="Pick RGB Color" value="#ff00ff"/>
+				<button id="colorRGBfg">fg</button>
+				<button id="colorRGBbg">bg</button>
+			</div>
+			<h3>Recent</h3>
+			<div id="colorRecent"></div>
+			<p id="colorLockNote" class="hide">Joined server only speaks 16 colors: extended picks are disabled until you disconnect.</p>
+		</div>
+		<div id="panelMenu" class="flyout" hidden role="menu">
+			<b id="panelMenuTitle" class="flyHead"></b>
+			<article id="panelDockSide" class="menuItem" role="menuitem">Dock Right</article>
+			<article id="panelDockTop" class="menuItem" role="menuitem">Dock Top</article>
+			<article id="panelDockBottom" class="menuItem" role="menuitem">Dock Bottom</article>
+			<article id="panelFloat" class="menuItem" role="menuitem">Float</article>
 			<article class="separator"></article>
-			<article id="navUndo" class="menuItem">Undo <kbd>Ctrl-Z</kbd></article>
-			<article id="navRedo" class="menuItem">Redo <kbd>Ctrl-Y</kbd></article>
-			<article class="separator"></article>
-			<article id="insertRow" class="menuItem">Insert Row <kbd>Alt+Up</kbd></article>
-			<article id="deleteRow" class="menuItem">Delete Row <kbd>Alt+Down</kbd></article>
-			<article id="insertColumn" class="menuItem">Insert Column <kbd>Alt+Right</kbd></article>
-			<article id="deleteColumn" class="menuItem">Delete Column <kbd>Alt+Left</kbd></article>
-			<article id="eraseRow" class="menuItem">Erase Row <kbd>Alt+E</kbd></article>
-			<article id="eraseRowStart" class="menuItem">Erase to Start of Row <kbd>Alt+Home</kbd></article>
-			<article id="eraseRowEnd" class="menuItem">Erase to End of Row <kbd>Alt+End</kbd></article>
-			<article id="eraseColumn" class="menuItem">Erase Column <kbd>Alt+Shift+E</kbd></article>
-			<article id="eraseColumnStart" class="menuItem">Erase to Start of Column <kbd>Alt+Page Up</kbd></article>
-			<article id="eraseColumnEnd" class="menuItem">Erase to End of Column <kbd>Alt+Page Down</kbd></article>
-			<article class="separator"></article>
-			<article id="defaultColor" class="menuItem">Default Color <kbd>Ctrl-D</kbd></article>
-			<article id="swapColors" class="menuItem">Swap Colors <kbd>Ctrl-Q</kbd></article>
-			<article class="separator"></article>
-			<article id="charsetPicker" class="menuItem">Character Sets</article>
-			<article id="fullscreen" class="menuItem">Toggle Fullscreen Mode</article>
+			<article id="panelMoveUp" class="menuItem" role="menuitem">Move Up</article>
+			<article id="panelMoveDown" class="menuItem" role="menuitem">Move Down</article>
+		</div>
+		<div id="paletteFlyout" class="flyout" hidden>
+			<b class="flyHead">colors</b>
+			<div id="paletteFlyoutBody"></div>
+		</div>
+		<div id="mainMenu" class="flyout" hidden>
+			<nav class="menuTabs">
+				<button id="menuTabFile" class="on" type="button">File</button>
+				<button id="menuTabEdit" type="button">Edit</button>
+			</nav>
+			<div id="fileList" class="menuPane">
+				<article id="new" class="menuItem excludedForWebsocket">New</article>
+				<article id="open" class="menuItem excludedForWebsocket">Open</article>
+				<article id="browseArtpacks" class="menuItem excludedForWebsocket">Browse Artpacks</article>
+				<article class="separator excludedForWebsocket"></article>
+				<details class="menuGroup">
+					<summary>Save as</summary>
+					<article id="saveAnsi" class="menuItem">
+						<svg aria-hidden="true">
+							<use href="img/icons.svg#save"></use>
+						</svg>
+						ANSi
+					</article>
+					<article id="saveBin" class="menuItem">
+						<svg aria-hidden="true">
+							<use href="img/icons.svg#save"></use>
+						</svg>
+						Binary Text
+					</article>
+					<article id="saveXbin" class="menuItem">
+						<svg aria-hidden="true">
+							<use href="img/icons.svg#save"></use>
+						</svg>
+						XBin
+					</article>
+					<article id="saveTundra" class="menuItem">
+						<svg aria-hidden="true">
+							<use href="img/icons.svg#save"></use>
+						</svg>
+						TundraDraw
+					</article>
+					<article id="saveDur" class="menuItem">
+						<svg aria-hidden="true">
+							<use href="img/icons.svg#save"></use>
+						</svg>
+						durdraw Movie
+					</article>
+					<article id="saveOwnz" class="menuItem">
+						<svg aria-hidden="true">
+							<use href="img/icons.svg#save"></use>
+						</svg>
+						teXt0wnz Doc
+					</article>
+				</details>
+				<details class="menuGroup">
+					<summary>Export as</summary>
+					<article id="savePng" class="menuItem">
+						<svg aria-hidden="true">
+							<use href="img/icons.svg#save"></use>
+						</svg>
+						PNG
+					</article>
+					<article id="saveUtf8" class="menuItem">
+						<svg aria-hidden="true">
+							<use href="img/icons.svg#save"></use>
+						</svg>
+						UTF-8 Text
+					</article>
+					<article id="saveUtf8Blink" class="menuItem">
+						<svg aria-hidden="true">
+							<use href="img/icons.svg#save"></use>
+						</svg>
+						UTF-8 (blink)
+					</article>
+					<article id="savePlaintext" class="menuItem">
+						<svg aria-hidden="true">
+							<use href="img/icons.svg#save"></use>
+						</svg>
+						Plain Text
+					</article>
+					<article id="saveAnsimation" class="menuItem">
+						<svg aria-hidden="true">
+							<use href="img/icons.svg#save"></use>
+						</svg>
+						ANSimation
+					</article>
+					<article id="saveTimelapse" class="menuItem">
+						<svg aria-hidden="true">
+							<use href="img/icons.svg#save"></use>
+						</svg>
+						Session Timelapse
+					</article>
+				</details>
+				<article class="separator"></article>
+				<article id="pluginsMenu" class="menuItem">Plugins</article>
+				<article id="help" class="menuItem">Help!</article>
+				<article id="tutorials" class="menuItem">Tutorials</article>
+				<article id="update" class="menuItem">Update Editor</article>
+				<article id="about" class="menuItem">About teXt0wnz</article>
+				<article class="separator"></article>
+				<article id="resetLayout" class="menuItem">Reset Panel Layout</article>
+			</div>
+			<div id="editList" class="menuPane hide">
+				<article id="navCut" class="menuItem disabled">Cut <kbd>Ctrl-X</kbd></article>
+				<article id="navCopy" class="menuItem disabled">Copy <kbd>Ctrl-C</kbd></article>
+				<article id="navPaste" class="menuItem disabled">Paste <kbd>Ctrl-V</kbd></article>
+				<article id="navPasteTransparent" class="menuItem">Paste Transparent</article>
+				<article id="navPasteUnder" class="menuItem">Paste Under</article>
+				<article id="navSystemPaste" class="menuItem">System Paste <kbd>Ctrl-Shift-V</kbd></article>
+				<article id="navDelete" class="menuItem disabled">Delete <kbd>Ctrl-Backspace</kbd></article>
+				<article class="separator"></article>
+				<article id="navUndo" class="menuItem">Undo <kbd>Ctrl-Z</kbd></article>
+				<article id="navRedo" class="menuItem">Redo <kbd>Ctrl-Y</kbd></article>
+				<article class="separator"></article>
+				<article id="insertRow" class="menuItem">Insert Row <kbd>Alt+Up</kbd></article>
+				<article id="deleteRow" class="menuItem">Delete Row <kbd>Alt+Down</kbd></article>
+				<article id="insertColumn" class="menuItem">Insert Column <kbd>Alt+Right</kbd></article>
+				<article id="deleteColumn" class="menuItem">Delete Column <kbd>Alt+Left</kbd></article>
+				<article id="eraseRow" class="menuItem">Erase Row <kbd>Alt+E</kbd></article>
+				<article id="eraseRowStart" class="menuItem">Erase to Start of Row <kbd>Alt+Home</kbd></article>
+				<article id="eraseRowEnd" class="menuItem">Erase to End of Row <kbd>Alt+End</kbd></article>
+				<article id="eraseColumn" class="menuItem">Erase Column <kbd>Alt+Shift+E</kbd></article>
+				<article id="eraseColumnStart" class="menuItem">Erase to Start of Column <kbd>Alt+Page Up</kbd></article>
+				<article id="eraseColumnEnd" class="menuItem">Erase to End of Column <kbd>Alt+Page Down</kbd></article>
+				<article class="separator"></article>
+				<article id="defaultColor" class="menuItem">Default Color <kbd>Ctrl-D</kbd></article>
+				<article id="swapColors" class="menuItem">Swap Colors <kbd>Ctrl-Q</kbd></article>
+				<article class="separator"></article>
+				<article id="charsetPicker" class="menuItem">Character Sets</article>
+				<article id="fullscreen" class="menuItem">Toggle Fullscreen Mode</article>
+			</div>
 		</div>
 		<dialog id="modal">
 			<section id="resizeModal">

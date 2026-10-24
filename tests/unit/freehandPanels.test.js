@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-	createPanelCursor,
-	createBrushController,
 	createHalfBlockController,
 	createShadingController,
 	createShadingPanel,
@@ -132,6 +130,7 @@ vi.mock('../../src/js/client/toolbar.js', () => ({
 }));
 
 vi.mock('../../src/js/client/ui.js', () => ({
+	iconHref: vi.fn(name => `img/icons.svg#${name}`),
 	createSegmentedControl: vi.fn((id, options, onChange) => {
 		let current = options[0]?.value;
 		const el = {
@@ -161,6 +160,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 			classList: {
 				add: vi.fn(),
 				remove: vi.fn(),
+				contains: vi.fn(() => false),
 			},
 			addEventListener: vi.fn(),
 			removeEventListener: vi.fn(),
@@ -188,7 +188,6 @@ vi.mock('../../src/js/client/ui.js', () => ({
 		return mockElement;
 	}),
 	$$: vi.fn(() => ({ textContent: 'mock' })),
-	registerFloatingPanel: vi.fn(() => vi.fn()),
 	createCanvas: vi.fn((width, height) => {
 		const mockCanvas = {
 			width: width || 100,
@@ -208,6 +207,8 @@ vi.mock('../../src/js/client/ui.js', () => ({
 				})),
 				putImageData: vi.fn(),
 				drawImage: vi.fn(),
+				fillRect: vi.fn(),
+				strokeRect: vi.fn(),
 			})),
 			toDataURL: vi.fn(() => 'data:image/png;base64,mock'),
 		};
@@ -230,7 +231,11 @@ const mockDocument = {
 		classList: {
 			add: vi.fn(),
 			remove: vi.fn(),
+			toggle: vi.fn(),
 		},
+		setAttribute: vi.fn(),
+		append: vi.fn(),
+		prepend: vi.fn(),
 		addEventListener: vi.fn(),
 		removeEventListener: vi.fn(),
 		appendChild: vi.fn(),
@@ -249,6 +254,10 @@ const mockDocument = {
 		width: 100,
 		height: 100,
 		tagName: tag.toUpperCase(),
+	})),
+	createElementNS: vi.fn(() => ({
+		setAttribute: vi.fn(),
+		appendChild: vi.fn(),
 	})),
 	addEventListener: vi.fn(),
 	removeEventListener: vi.fn(),
@@ -270,60 +279,6 @@ describe('Freehand Tools - Panels and Cursors', () => {
 
 	afterEach(() => {
 		vi.restoreAllMocks();
-	});
-
-	describe('createPanelCursor', () => {
-		it('should create a cursor with show/hide functionality', () => {
-			const mockElement = document.createElement('div');
-			const cursor = createPanelCursor(mockElement);
-
-			expect(cursor).toHaveProperty('show');
-			expect(cursor).toHaveProperty('hide');
-			expect(cursor).toHaveProperty('resize');
-			expect(cursor).toHaveProperty('setPos');
-
-			cursor.show();
-			expect(typeof cursor.show).toBe('function');
-
-			cursor.hide();
-			expect(typeof cursor.hide).toBe('function');
-		});
-
-		it('should resize cursor correctly', () => {
-			const mockElement = document.createElement('div');
-			const cursor = createPanelCursor(mockElement);
-
-			cursor.resize(50, 30);
-			expect(typeof cursor.resize).toBe('function');
-		});
-
-		it('should set cursor position correctly', () => {
-			const mockElement = document.createElement('div');
-			const cursor = createPanelCursor(mockElement);
-
-			cursor.setPos(10, 20);
-			expect(typeof cursor.setPos).toBe('function');
-		});
-	});
-
-	describe('createBrushController', () => {
-		it('should create a brush controller with enable/disable methods', () => {
-			const controller = createBrushController();
-
-			expect(controller).toHaveProperty('enable');
-			expect(controller).toHaveProperty('disable');
-			expect(typeof controller.enable).toBe('function');
-			expect(typeof controller.disable).toBe('function');
-		});
-
-		it('should handle enable/disable lifecycle', () => {
-			const controller = createBrushController();
-
-			expect(() => {
-				controller.enable();
-				controller.disable();
-			}).not.toThrow();
-		});
 	});
 
 	describe('createHalfBlockController', () => {

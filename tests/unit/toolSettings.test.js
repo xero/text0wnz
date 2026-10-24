@@ -1,42 +1,47 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 /**
- * The unified settings window controller: section exclusivity, the
- * reopen rule, single-owner persistence, and position restore with
- * viewport clamping.
+ * The unified settings module controller: section exclusivity, the
+ * reopen rule through the panel manager, and single-owner persistence.
+ * Placement, shading, and the close chrome belong to panels.js now.
  */
 const mocks = vi.hoisted(() => ({
-	focus: vi.fn(),
-	onClose: null,
-	floatOptions: null,
+	reopen: vi.fn(),
+	layout: vi.fn(),
 }));
 
-vi.mock('../../src/js/client/ui.js', () => ({
-	$: vi.fn(id => document.getElementById(id)),
-	makePanelFloat: vi.fn((_panel, onClose, options) => {
-		mocks.onClose = onClose;
-		mocks.floatOptions = options;
-		return { focus: mocks.focus };
-	}),
+vi.mock('../../src/js/client/ui.js', () => ({ $: vi.fn(id => document.getElementById(id)) }));
+
+vi.mock('../../src/js/client/state.js', () => ({
+	default: {
+		panels: {
+			reopen: mocks.reopen,
+			layout: mocks.layout,
+		},
+	},
 }));
 
 import { createToolSettings } from '../../src/js/client/toolSettings.js';
 
 const fixture = () => {
 	document.body.innerHTML = `
-		<div id="toolSettings" class="hide">
-			<h3 id="toolSettingsTitle"></h3>
-			<div id="tsLine" class="hide"></div>
-			<div id="tsSquare" class="hide"></div>
-			<div id="tsCircle" class="hide"></div>
-			<div id="tsAscii" class="hide"></div>
-			<div id="tsAttrib" class="hide"></div>
-			<div id="tsShading" class="hide"></div>
-			<div id="tsCharacter" class="hide"></div>
-		</div>`;
+		<section id="toolSettings" class="mod" data-m="tool" hidden>
+			<header class="modHeader">
+				<b class="modTitle" id="toolSettingsTitle"></b>
+			</header>
+			<div class="modBody"><div class="modContent">
+				<div id="tsKeyboard" class="hide"></div>
+				<div id="tsLine" class="hide"></div>
+				<div id="tsSquare" class="hide"></div>
+				<div id="tsCircle" class="hide"></div>
+				<div id="tsAscii" class="hide"></div>
+				<div id="tsAttrib" class="hide"></div>
+				<div id="tsShading" class="hide"></div>
+				<div id="tsCharacter" class="hide"></div>
+			</div></div>
+		</section>`;
 };
 
-const panel = () => document.getElementById('toolSettings');
 const hidden = id => document.getElementById(id).classList.contains('hide');
 
 describe('createToolSettings', () => {
@@ -47,17 +52,17 @@ describe('createToolSettings', () => {
 	});
 
 	describe('sections', () => {
-		it('show reveals the window and exactly one section', () => {
+		it('show reveals exactly one section and reopens the module', () => {
 			const ts = createToolSettings();
 			ts.show('line');
-			expect(panel().classList.contains('hide')).toBe(false);
 			expect(hidden('tsLine')).toBe(false);
 			expect(hidden('tsSquare')).toBe(true);
 			expect(hidden('tsAttrib')).toBe(true);
 			expect(document.getElementById('toolSettingsTitle').innerText).toBe(
 				'Line',
 			);
-			expect(mocks.focus).toHaveBeenCalled();
+			expect(ts.hasSection()).toBe(true);
+			expect(mocks.reopen).toHaveBeenCalledWith('tool');
 		});
 
 		it('show swaps sections in place', () => {
@@ -83,26 +88,26 @@ describe('createToolSettings', () => {
 		it('an unknown section changes nothing', () => {
 			const ts = createToolSettings();
 			ts.show('bogus');
-			expect(panel().classList.contains('hide')).toBe(true);
+			expect(ts.hasSection()).toBe(false);
+			expect(mocks.reopen).not.toHaveBeenCalled();
 		});
 
-		it('hide hides, and the next show reopens', () => {
+		it('hide drops the section, and the next show reopens', () => {
 			const ts = createToolSettings();
 			ts.show('line');
 			ts.hide();
-			expect(panel().classList.contains('hide')).toBe(true);
+			expect(ts.hasSection()).toBe(false);
+			expect(mocks.layout).toHaveBeenCalled();
 			ts.show('square');
-			expect(panel().classList.contains('hide')).toBe(false);
+			expect(ts.hasSection()).toBe(true);
 			expect(hidden('tsSquare')).toBe(false);
 		});
 
-		it('the close chrome hides the window the same way', () => {
+		it('every show reopens, so an X-closed module always comes back', () => {
 			const ts = createToolSettings();
 			ts.show('line');
-			mocks.onClose();
-			expect(panel().classList.contains('hide')).toBe(true);
 			ts.show('line');
-			expect(panel().classList.contains('hide')).toBe(false);
+			expect(mocks.reopen).toHaveBeenCalledTimes(2);
 		});
 
 		it('mount appends into the named section', () => {
@@ -111,6 +116,33 @@ describe('createToolSettings', () => {
 			el.id = 'mounted';
 			ts.mount('ascii', el);
 			expect(document.querySelector('#tsAscii #mounted')).not.toBeNull();
+		});
+
+		it('the keyboard rides the rotation like any section', () => {
+			const ts = createToolSettings();
+			ts.show('keyboard');
+			expect(hidden('tsKeyboard')).toBe(false);
+			expect(hidden('tsLine')).toBe(true);
+			expect(document.getElementById('toolSettingsTitle').innerText).toBe(
+				'Keyboard',
+			);
+		});
+
+		it('brush and shape sections carry a bar title, the keyboard none', () => {
+			createToolSettings();
+			const lineTitle = document.querySelector('#tsLine .barTitle');
+			expect(lineTitle).not.toBeNull();
+			expect(lineTitle.innerText).toBe('Line');
+			expect(document.querySelector('#tsKeyboard .barTitle')).toBeNull();
+		});
+
+		it('only the character section flags the panel for the map CSS', () => {
+			const ts = createToolSettings();
+			const panel = document.getElementById('toolSettings');
+			ts.show('character');
+			expect(panel.classList.contains('charMap')).toBe(true);
+			ts.show('line');
+			expect(panel.classList.contains('charMap')).toBe(false);
 		});
 	});
 
@@ -167,56 +199,6 @@ describe('createToolSettings', () => {
 			ts.set('lineMode', 'nuskool');
 			expect(ts.get('lineMode', 'block')).toBe('nuskool');
 			expect(JSON.parse(localStorage.getItem('toolSettings'))).toEqual({ lineMode: 'nuskool' });
-		});
-	});
-
-	describe('position', () => {
-		it('a drag end saves the spot', () => {
-			createToolSettings();
-			mocks.floatOptions.onMoved(120, 240);
-			expect(JSON.parse(localStorage.getItem('toolSettingsPos'))).toEqual({
-				x: 120,
-				y: 240,
-			});
-		});
-
-		it('a saved spot restores at creation', () => {
-			localStorage.setItem('toolSettingsPos', JSON.stringify({ x: 99, y: 77 }));
-			createToolSettings();
-			expect(panel().style.left).toBe('99px');
-			expect(panel().style.top).toBe('77px');
-		});
-
-		it('an off screen spot clamps back into the viewport', () => {
-			vi.stubGlobal('innerWidth', 800);
-			vi.stubGlobal('innerHeight', 600);
-			localStorage.setItem(
-				'toolSettingsPos',
-				JSON.stringify({ x: 5000, y: -50 }),
-			);
-			createToolSettings();
-			expect(panel().style.left).toBe('720px');
-			expect(panel().style.top).toBe('0px');
-			vi.unstubAllGlobals();
-		});
-
-		it('a viewport under the margin clamps to zero, never negative', () => {
-			vi.stubGlobal('innerWidth', 60);
-			vi.stubGlobal('innerHeight', 40);
-			localStorage.setItem(
-				'toolSettingsPos',
-				JSON.stringify({ x: 500, y: 500 }),
-			);
-			createToolSettings();
-			expect(panel().style.left).toBe('0px');
-			expect(panel().style.top).toBe('0px');
-			vi.unstubAllGlobals();
-		});
-
-		it('garbage position data leaves the default spot alone', () => {
-			localStorage.setItem('toolSettingsPos', '"sideways"');
-			createToolSettings();
-			expect(panel().style.left).toBe('');
 		});
 	});
 });

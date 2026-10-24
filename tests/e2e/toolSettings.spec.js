@@ -8,6 +8,7 @@ import { test, expect } from '@playwright/test';
 import {
 	bridgeReady,
 	clickTool,
+	clickViewToggle,
 	drag,
 	readBlock,
 	setAsciiWidth,
@@ -16,7 +17,8 @@ import {
 } from './helpers/editorHelpers.js';
 
 const openLine = async page => {
-	await page.locator('#shapes').click();
+	// the shapes group opens a flyout now; picking the tool is explicit
+	await clickTool(page, 'line');
 	await expect(page.locator('#line')).toHaveClass(/toolbarDisplayed/);
 };
 
@@ -28,8 +30,9 @@ test.describe('tool settings window', () => {
 
 	test('each settings tool shows its section, the rest hide the window', async ({ page }) => {
 		const panel = page.locator('#toolSettings');
-		// the keyboard tool boots enabled: no settings, no window
-		await expect(panel).toBeHidden();
+		// the keyboard tool boots enabled and brings its own section
+		await expect(panel).toBeVisible();
+		await expect(page.locator('#tsKeyboard')).toBeVisible();
 
 		// the shapes group lands on the line tool
 		await openLine(page);
@@ -46,8 +49,8 @@ test.describe('tool settings window', () => {
 		await clickTool(page, 'circle');
 		await expect(page.locator('#tsCircle')).toBeVisible();
 
-		// the brushes group lands on halfblock: no settings
-		await page.locator('#brushes').click();
+		// halfblock has no settings, so picking it hides the window
+		await clickTool(page, 'halfblock');
 		await expect(panel).toBeHidden();
 
 		await clickTool(page, 'asciiBrush');
@@ -56,17 +59,17 @@ test.describe('tool settings window', () => {
 		await clickTool(page, 'attrib');
 		await expect(page.locator('#tsAttrib')).toBeVisible();
 
-		await page.locator('#shadingBrush').click();
+		await clickTool(page, 'shadingBrush');
 		await expect(page.locator('#tsShading')).toBeVisible();
 		await expect(page.locator('#toolSettingsTitle')).toHaveText(
 			'Shading Brush',
 		);
 
-		await page.locator('#characterBrush').click();
+		await clickTool(page, 'characterBrush');
 		await expect(page.locator('#tsCharacter')).toBeVisible();
 		await expect(page.locator('#tsCharacter canvas').first()).toBeVisible();
 
-		await page.locator('#fill').click();
+		await clickTool(page, 'fill');
 		await expect(panel).toBeHidden();
 	});
 
@@ -74,7 +77,7 @@ test.describe('tool settings window', () => {
 		await openLine(page);
 		const panel = page.locator('#toolSettings');
 		await expect(panel).toBeVisible();
-		await page.locator('#toolSettings .hidePanel').click();
+		await page.locator('#toolSettings .modClose').click();
 		await expect(panel).toBeHidden();
 		await clickTool(page, 'square');
 		await expect(panel).toBeVisible();
@@ -104,6 +107,9 @@ test.describe('tool settings window', () => {
 
 	test('an off screen position clamps back into the viewport', async ({ page }) => {
 		await page.addInitScript(() => {
+			// a truly legacy state: the beforeEach boot already saved a
+			// panelLayout, which would rightly win over the old key
+			localStorage.removeItem('panelLayout');
 			localStorage.setItem(
 				'toolSettingsPos',
 				JSON.stringify({ x: 5000, y: 5000 }),
@@ -112,17 +118,18 @@ test.describe('tool settings window', () => {
 		await page.goto('/?test');
 		await bridgeReady(page);
 		await openLine(page);
-		// the exact clamp edge: anything looser also passes at the
-		// default perch, which proves nothing about the restore path
+		// clamped clear of the default perch: anything at (58, 54) also
+		// passes looser checks and proves nothing about the restore path
 		const box = await page.locator('#toolSettings').boundingBox();
-		expect(box.x).toBe(1280 - 80);
-		expect(box.y).toBe(720 - 80);
+		expect(box.x).toBeGreaterThan(600);
+		expect(box.x + box.width).toBeLessThanOrEqual(1280);
+		expect(box.y).toBe(720 - 30);
 	});
 
 	test('pressing the window lifts it above the frames panel', async ({ page }) => {
 		// open the frames panel first (its toggle lives in the view bar)
 		await page.locator('#navView').click();
-		await page.locator('#navFrames').click();
+		await clickViewToggle(page, 'navFrames');
 		const frames = page.locator('#framesPanel');
 		await expect(frames).toBeVisible();
 

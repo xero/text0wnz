@@ -19,6 +19,11 @@ import { createArchiveOpener, isArchiveFile } from './archiveOpen.js';
 import { createPluginManager } from './plugins.js';
 import { createReferenceImage } from './referenceImage.js';
 import { createToolSettings } from './toolSettings.js';
+import { createPanelManager, isPhone } from './panels.js';
+import { createFlyoutManager } from './flyouts.js';
+import { createHistoryLabels } from './historyLabels.js';
+import { createSelectionBar } from './selectionBar.js';
+import { fitGlyphs, armPixelRatioWatch } from './glyphScale.js';
 import { FontCache } from './fontCache.js';
 import {
 	$,
@@ -35,16 +40,12 @@ import {
 	undoAndRedo,
 	viewportTap,
 	createPaintShortcuts,
-	createViewportController,
-	createGenericController,
 	createResolutionController,
 	createGrid,
 	createToolPreview,
-	createMenuController,
 	enforceMaxBytes,
 	createFontSelect,
 	createZoomControl,
-	makePanelFloat,
 } from './ui.js';
 import {
 	createDefaultPalette,
@@ -72,7 +73,8 @@ let fontSelect;
 let openFile;
 let referenceImage;
 let refToggle;
-let refFloat;
+let framesPanel;
+let minimap;
 let resizeApply;
 let sauceDone;
 let sauceTitle;
@@ -111,7 +113,7 @@ const $$$$ = () => {
 	sauceTitle = $('sauceTitle');
 	swapColors = $('swapColors');
 	rowsInput = $('rowsInput');
-	fontDisplay = $$('#currentFontDisplay kbd');
+	fontDisplay = $('currentFontDisplay');
 	changeFont = $('changeFont');
 	applyFont = $('fontsApply');
 	previewInfo = $('fontPreviewInfo');
@@ -163,8 +165,9 @@ const openHandler = (file, opts = {}) => {
 	if (isImageFile(file) && referenceImage) {
 		referenceImage.load(file);
 		referenceImage.setOpen(true);
+		State.panels?.layout();
 		refToggle?.update();
-		refFloat?.focus();
+		State.panels?.focus('ref');
 		openFile.value = '';
 		return;
 	}
@@ -563,6 +566,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 		// Tier 1: Core UI and Canvas (most critical)
 		State.modal = createModalController($('modal'));
 		State.palette = createDefaultPalette();
+		// before the canvas: the arena's first commit must find the table
+		State.historyLabels = createHistoryLabels();
+		State.flyouts = createFlyoutManager();
 		State.pasteTool = createPasteTool(
 			$('cut'),
 			$('copy'),
@@ -588,15 +594,47 @@ document.addEventListener('DOMContentLoaded', async () => {
 					// chrome pinches drive editor zoom too, never the page
 					createGestureGuard(canvasContainer);
 				}
-				const zoomControlContainer = $('zoomControl');
-				if (zoomControlContainer) {
-					const zoomControl = createZoomControl();
-					const icon = zoomControlContainer.querySelector?.('svg');
-					if (icon) {
-						zoomControl.querySelector('.zoomTop')?.prepend(icon);
-					}
-					zoomControlContainer.appendChild(zoomControl);
+				createZoomControl();
+				// the module registry owns every panel's placement; late
+				// controllers reference the hoisted vars, so a predicate
+				// registered now still reads them once they exist
+				State.panels = createPanelManager();
+				if (State.panels) {
+					State.panels.register('sauce', { el: $('saucePanel') });
+					State.panels.register('canvas', { el: $('canvasPanel') });
+					State.panels.register('pos', { el: $('cursorPanel') });
+					State.panels.register('zoom', { el: $('zoomPanel') });
+					State.panels.register('ref', {
+						el: $('refPanel'),
+						visible: () => referenceImage?.isOpen() === true,
+					});
+					State.panels.register('map', {
+						el: $('minimapPanel'),
+						grow: true,
+						visible: () => minimap?.isVisible() === true,
+					});
+					State.panels.register('frames', {
+						el: $('framesPanel'),
+						big: true,
+						visible: () => framesPanel?.isOpen() === true,
+					});
+					State.panels.register('tool', {
+						el: $('toolSettings'),
+						big: true,
+						closable: true,
+						visible: () => State.toolSettings?.hasSection() === true,
+					});
+					State.panels.register('chat', {
+						el: $('chatWindow'),
+						floatOnly: true,
+						visible: () => State.chat?.isEnabled() === true,
+					});
+					State.panels.layout();
 				}
+				// a glyph preview's pixel fit depends on its panel's mode
+				// and the monitor's pixel ratio; both re-fit everything
+				document.addEventListener('onPanelLayout', () => fitGlyphs());
+				armPixelRatioWatch(() => fitGlyphs());
 
 				// Tier 3: Secondary tools - defer with requestIdleCallback
 				const initSecondaryTools = () => {
@@ -684,20 +722,34 @@ const initializeAppComponents = async () => {
 		$('columnsInput'),
 		$('rowsInput'),
 	);
-	State.menus = createMenuController(
-		[
-			{
-				button: $('fileMenu'),
-				menu: $('fileList'),
-			},
-			{
-				button: $('editMenu'),
-				menu: $('editList'),
-			},
-		],
-		canvasContainer,
-		viewport,
-	);
+	const menuPanes = { file: $('fileList'), edit: $('editList') };
+	const menuTabs = { file: $('menuTabFile'), edit: $('menuTabEdit') };
+	const showMenuTab = name => {
+		Object.entries(menuPanes).forEach(([key, pane]) => {
+			pane.classList.toggle('hide', key !== name);
+			menuTabs[key].classList.toggle('on', key === name);
+		});
+	};
+	onClick($('menuTabFile'), () => showMenuTab('file'));
+	onClick($('menuTabEdit'), () => showMenuTab('edit'));
+	onClick($('fileMenu'), () => {
+		showMenuTab('file');
+		// the collapsible groups greet every open folded, so the menu
+		// starts short no matter how the last visit left them
+		$('mainMenu')
+			.querySelectorAll('details[open]')
+			.forEach(group => {
+				group.open = false;
+			});
+		const opts = { flush: true };
+		State.flyouts.toggle('menu', $('mainMenu'), $('fileMenu'), opts);
+	});
+	// an item press acts through its own handler and shuts the menu
+	$('mainMenu').addEventListener('click', e => {
+		if (e.target.closest('.menuItem')) {
+			State.flyouts.close();
+		}
+	});
 	onClick($('new'), () => {
 		State.modal.open('warning');
 	});
@@ -754,22 +806,19 @@ const initializeAppComponents = async () => {
 		// the async restore reopens the panel; the nav button must light
 		// up with it or the menu reads as off while the overlay shows
 		onRestore: () => {
+			State.panels?.layout();
 			refToggle?.update();
-			refFloat?.focus();
 		},
 	});
 	if (referenceImage) {
-		refFloat = makePanelFloat($('refPanel'), () => {
-			referenceImage.setOpen(false);
-			refToggle.update();
-		});
 		refToggle = createSettingToggle(
 			$('navRef'),
 			referenceImage.isOpen,
 			open => {
 				referenceImage.setOpen(open);
+				State.panels?.layout();
 				if (open) {
-					refFloat.focus();
+					State.panels?.focus('ref');
 				}
 			},
 		);
@@ -790,6 +839,9 @@ const initializeAppComponents = async () => {
 	onClick($('copy'), State.pasteTool.copy);
 	onClick($('paste'), State.pasteTool.paste);
 	onClick($('systemPaste'), State.pasteTool.systemPaste);
+	// the bar's paste submenu mirrors the Edit menu's variants
+	onClick($('pasteTransparent'), State.pasteTool.pasteTransparent);
+	onClick($('pasteUnder'), State.pasteTool.pasteUnder);
 	onClick($('delete'), State.pasteTool.deleteSelection);
 	onClick($('navCut'), State.pasteTool.cut);
 	onClick($('navCopy'), State.pasteTool.copy);
@@ -801,9 +853,11 @@ const initializeAppComponents = async () => {
 	onClick($('navUndo'), State.textArtCanvas.undo);
 	onClick($('navRedo'), State.textArtCanvas.redo);
 
-	// charset picker (durdraw lineage)
+	// charset picker (durdraw lineage); the keyboard section's charset
+	// button opens the same dialog as the File menu item
 	const charsetPicker = createCharsetPicker();
 	onClick($('charsetPicker'), charsetPicker.show);
+	onClick($('charsetButton'), charsetPicker.show);
 
 	// extended colors: the strip's 256/RGB expansion panel
 	createColorPanel();
@@ -811,22 +865,15 @@ const initializeAppComponents = async () => {
 	// frames timeline + playback + onion skin; the toolbar buttons ride
 	// createSettingToggle so the 'enabled' highlight persists across
 	// toolbar view switches, like the grid button
-	const framesPanel = createFramesPanel();
+	framesPanel = createFramesPanel();
 	if (framesPanel) {
-		const framesFloat = makePanelFloat($('framesPanel'), () => {
-			framesPanel.setOpen(false);
-			framesToggle.update();
+		createSettingToggle($('navFrames'), framesPanel.isOpen, open => {
+			framesPanel.setOpen(open);
+			State.panels?.layout();
+			if (open) {
+				State.panels?.focus('frames');
+			}
 		});
-		const framesToggle = createSettingToggle(
-			$('navFrames'),
-			framesPanel.isOpen,
-			open => {
-				framesPanel.setOpen(open);
-				if (open) {
-					framesFloat.focus();
-				}
-			},
-		);
 	}
 
 	// a partial cell may only ever render at the BOTTOM edge: once any
@@ -862,7 +909,7 @@ const initializeAppComponents = async () => {
 	}
 
 	// minimap (GL-only)
-	const minimap = createMinimap();
+	minimap = createMinimap();
 	if (minimap) {
 		createSettingToggle($('navMinimap'), minimap.isVisible, visible =>
 			(visible ? minimap.show() : minimap.hide()));
@@ -910,6 +957,9 @@ const initializeAppComponents = async () => {
 	onClick($('update'), _ => {
 		State.modal.open('update');
 	});
+	onClick($('resetLayout'), _ => {
+		State.panels?.reset();
+	});
 	onClick(reload, _ => {
 		if (swRegistration?.waiting) {
 			// normal update path: activate the waiting worker and reload on
@@ -940,9 +990,31 @@ const initializeAppComponents = async () => {
 	createDragDropController(openHandler, $('dragdrop'));
 
 	onClick(navSauce, () => {
-		State.menus.close();
+		State.flyouts.close();
 		State.modal.open('sauce');
 	});
+
+	// the sidebar sauce block mirrors the modal fields, which stay the
+	// single source of truth (file.js and network.js write them directly)
+	const sauceInfoTitle = $('sauceInfoTitle');
+	const sauceInfoByline = $('sauceInfoByline');
+	const topStripTitle = $('topStripTitle');
+	const updateSauceDisplay = () => {
+		sauceInfoTitle.textContent = sauceTitle.value || State.title || 'Untitled';
+		if (topStripTitle) {
+			topStripTitle.textContent = sauceInfoTitle.textContent;
+		}
+		sauceInfoByline.textContent = [
+			sauceAuthor.value || 'anonymous',
+			sauceGroup.value,
+		]
+			.filter(Boolean)
+			.join(' / ');
+	};
+	['onOpenedFile', 'onNewDocument', 'onSauceChange'].forEach(e => {
+		document.addEventListener(e, updateSauceDisplay);
+	});
+	updateSauceDisplay();
 
 	onClick(sauceDone, () => {
 		State.title = sauceTitle.value;
@@ -954,6 +1026,7 @@ const initializeAppComponents = async () => {
 			comments: sauceComments.value,
 		});
 		State.modal.close();
+		updateSauceDisplay();
 	});
 
 	sauceComments.addEventListener('input', enforceMaxBytes);
@@ -965,7 +1038,9 @@ const initializeAppComponents = async () => {
 		d: $('defaultColor'),
 		q: swapColors,
 		k: $('keyboard'),
-		f: $('brushes'),
+		// f lands on the block brush itself: the group button only opens
+		// a flyout now and never picks a tool
+		f: $('halfblock'),
 		b: $('characterBrush'),
 		n: $('fill'),
 		a: $('attrib'),
@@ -974,7 +1049,7 @@ const initializeAppComponents = async () => {
 		m: $('mirror'),
 	});
 	// the settings window must exist before any tool enables: the
-	// keyboard tool boots enabled below and hides it
+	// keyboard tool boots enabled below and shows its section
 	State.toolSettings = createToolSettings();
 
 	const keyboard = createKeyboardController();
@@ -982,38 +1057,39 @@ const initializeAppComponents = async () => {
 		$('keyboard'),
 		() => {
 			paintShortcuts.disable();
-			State.menus.close();
+			State.flyouts.close();
 			keyboard.enable();
-			State.toolSettings.hide();
-			$('keyboardToolbar').classList.remove('hide');
+			State.toolSettings.show('keyboard');
 		},
 		() => {
 			paintShortcuts.enable();
 			keyboard.disable();
-			State.menus.close();
-			$('keyboardToolbar').classList.add('hide');
+			State.flyouts.close();
 		},
 	).enable();
 	Toolbar.add(
 		$('selection'),
 		() => {
 			paintShortcuts.disable();
-			State.menus.close();
+			State.flyouts.close();
 			State.selectionTool.enable();
 			State.toolSettings.hide();
-			$('selectionToolbar').classList.remove('hide');
 		},
 		() => {
 			paintShortcuts.enable();
 			State.selectionTool.disable();
-			$('selectionToolbar').classList.add('hide');
 		},
 	);
+	// the floating action bar follows the selection rect itself
+	State.selectionBar = createSelectionBar();
 
 	onClick($('undo'), State.textArtCanvas.undo);
 	onClick($('redo'), State.textArtCanvas.redo);
+	// the phone top strip carries its own pair
+	onClick($('stripUndo'), State.textArtCanvas.undo);
+	onClick($('stripRedo'), State.textArtCanvas.redo);
 	onClick($('resolution'), () => {
-		State.menus.close();
+		State.flyouts.close();
 		State.modal.open('resize');
 		columnsInput.value = State.textArtCanvas.getColumns();
 		rowsInput.value = State.textArtCanvas.getRows();
@@ -1071,10 +1147,43 @@ const initializeAppComponents = async () => {
 		State.palette.setBackgroundColor(tempForeground);
 	});
 	onClick($('palettePreview'), () => {
+		// the phone rail folds the palette into the swatch, so the tap
+		// opens the picker flyout there instead of swapping
+		if (isPhone()) {
+			State.flyouts.toggle(
+				'palette',
+				$('paletteFlyout'),
+				$('palettePreview'),
+			);
+			return;
+		}
 		const tempForeground = State.palette.getForegroundColor();
 		State.palette.setForegroundColor(State.palette.getBackgroundColor());
 		State.palette.setBackgroundColor(tempForeground);
 	});
+
+	// the picker canvas and the ++ chip live in the rail on wide
+	// screens and inside the swatch flyout on phones; both carry their
+	// listeners along, so the move is just a reparent either way
+	const paletteFlyoutBody = $('paletteFlyoutBody');
+	const syncPaletteHome = () => {
+		const picker = $('palettePicker');
+		const more = $('paletteMore');
+		if (!paletteFlyoutBody || !picker || !more) {
+			return;
+		}
+		if (isPhone()) {
+			if (picker.parentNode !== paletteFlyoutBody) {
+				paletteFlyoutBody.append(picker, more);
+			}
+		} else if (picker.parentNode === paletteFlyoutBody) {
+			const anchor = $('keyboard');
+			anchor.parentNode.insertBefore(picker, anchor);
+			anchor.parentNode.insertBefore(more, anchor);
+		}
+	};
+	document.addEventListener('onPanelLayout', syncPaletteHome);
+	syncPaletteHome();
 
 	const navICE = createSettingToggle(
 		$('navICE'),
@@ -1103,7 +1212,7 @@ const initializeAppComponents = async () => {
 
 	const updateFontDisplay = () => {
 		const currentFont = State.textArtCanvas.getCurrentFontName();
-		fontDisplay.textContent = currentFont.replace(/\s\d+x\d+$/, '');
+		fontDisplay.textContent = currentFont;
 		fontSelect.setValue(currentFont);
 		nav9pt.sync(State.font.getLetterSpacing, State.font.setLetterSpacing);
 		navICE.update();
@@ -1113,17 +1222,13 @@ const initializeAppComponents = async () => {
 			document.addEventListener(e, updateFontDisplay);
 		},
 	);
-	onClick(fontDisplay, () => {
-		State.menus.close();
-		changeFont.click();
-	});
 	const syncFavStar = () => {
 		$('fontFavToggle').innerHTML = fontSelect.isFavorite()
 			? '&#9733;'
 			: '&#9734;';
 	};
 	onClick(changeFont, async () => {
-		State.menus.close();
+		State.flyouts.close();
 		State.modal.open('fonts');
 		fontSelect.focus();
 		syncFavStar();
@@ -1149,15 +1254,43 @@ const initializeAppComponents = async () => {
 	createSettingToggle($('navGrid'), grid.isShown, grid.show);
 
 	// everything past the default keyboard mode lazy-loads on first click
-	Toolbar.addLazy($('brushes'), async () => {
-		const { createBrushController } = await import('./freehandTools.js');
-		const brushes = createBrushController();
-		return {
-			onFocus: brushes.enable,
-			onBlur: brushes.disable,
-			enable: brushes.enable,
-		};
-	});
+	// the group buttons are not tools: the first click opens the group's
+	// flyout without switching, and the same click closes it again
+	onClick($('brushes'), () =>
+		State.flyouts.toggle('brushes', $('brushToolbar'), $('brushes')));
+	onClick($('shapes'), () =>
+		State.flyouts.toggle('shapes', $('shapesToolbar'), $('shapes')));
+
+	// a static group icon says nothing about which tool a press would
+	// find lit, so the tooltip names the group's last active tool; the
+	// flyout rows' own labels are the single source for the names
+	const GROUP_TOOLS = {
+		brushes: [
+			'halfblock',
+			'shadingBrush',
+			'asciiBrush',
+			'characterBrush',
+			'attrib',
+			'fill',
+		],
+		shapes: ['line', 'square', 'circle'],
+	};
+	const groupLastTool = {};
+	const syncGroupTitles = toolId => {
+		for (const [group, toolIds] of Object.entries(GROUP_TOOLS)) {
+			if (toolId && toolIds.includes(toolId)) {
+				groupLastTool[group] = toolId;
+			}
+			const active = groupLastTool[group] ?? toolIds[0];
+			const name = $(active)?.querySelector('kbd')?.textContent;
+			if (name) {
+				$(group).title = `${name} (tap again for more)`;
+			}
+		}
+	};
+	document.addEventListener('onToolChange', e =>
+		syncGroupTitles(e.detail.id));
+	syncGroupTitles(null);
 
 	Toolbar.addLazy($('halfblock'), async () => {
 		const { createHalfBlockController } = await import('./freehandTools.js');
@@ -1252,16 +1385,6 @@ const initializeAppComponents = async () => {
 		};
 	});
 
-	Toolbar.addLazy($('shapes'), async () => {
-		const { createShapesController } = await import('./freehandTools.js');
-		const shapes = createShapesController();
-		return {
-			onFocus: shapes.enable,
-			onBlur: shapes.disable,
-			enable: shapes.enable,
-		};
-	});
-
 	Toolbar.addLazy($('line'), async () => {
 		const { createLineController } = await import('./freehandTools.js');
 		const line = createLineController();
@@ -1292,23 +1415,29 @@ const initializeAppComponents = async () => {
 		};
 	});
 
-	// the generic controllers stay window-agnostic; the hide calls for
-	// these settings-less tools wrap their registrations instead
-	const withHide = enable => () => {
-		State.toolSettings.hide();
-		enable();
+	// history and view are flyouts, not tools: opening one changes
+	// nothing about the active tool
+	const historyList = $('historyList');
+	const renderHistory = () => {
+		// settle the lazily committed open stroke so it gets its row
+		State.textArtCanvas.endUndo();
+		State.historyLabels.render(historyList);
 	};
-	const fonts = createGenericController($('fontToolbar'), $('fonts'));
-	Toolbar.add($('fonts'), withHide(fonts.enable), fonts.disable);
-	const clipboard = createGenericController(
-		$('clipboardToolbar'),
-		$('clipboard'),
-	);
-
-	const view = createViewportController($('viewportToolbar'));
-	Toolbar.add($('navView'), withHide(view.enable), view.disable);
-
-	Toolbar.add($('clipboard'), withHide(clipboard.enable), clipboard.disable);
+	onClick($('clipboard'), () => {
+		State.flyouts.toggle(
+			'history',
+			$('clipboardToolbar'),
+			$('clipboard'),
+			{ onOpen: renderHistory },
+		);
+	});
+	State.historyLabels.onChange(() => {
+		if (State.flyouts.isOpen('history')) {
+			State.historyLabels.render(historyList);
+		}
+	});
+	onClick($('navView'), () =>
+		State.flyouts.toggle('view', $('viewportToolbar'), $('navView')));
 
 	// mirror and sample exclude each other: both light their nav
 	// buttons, and two lit buttons read as two active tools
@@ -1377,7 +1506,6 @@ const initializeAppComponents = async () => {
 	// Initialize chat before creating network handler
 	State.chat = createChatController(
 		$('chatButton'),
-		$('chatWindow'),
 		$('messageWindow'),
 		$('userList'),
 		$('handleInput'),

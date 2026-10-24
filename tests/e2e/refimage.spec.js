@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { waitForEditorReady } from './helpers/editorHelpers.js';
+import {
+	clickViewToggle,
+	waitForEditorReady,
+} from './helpers/editorHelpers.js';
 
 // 1x1 png: the overlay math only needs a real decodable image
 const PNG = Buffer.from(
@@ -10,7 +13,7 @@ const PNG = Buffer.from(
 const loadRef = async page => {
 	// the ref toggle lives in the viewport toolbar behind the View tool
 	await page.locator('#navView').click();
-	await page.locator('#navRef').click();
+	await clickViewToggle(page, 'navRef');
 	await page.locator('#refFileInput').setInputFiles({
 		name: 'trace.png',
 		mimeType: 'image/png',

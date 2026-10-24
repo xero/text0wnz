@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
 	createFillController,
 	createLineController,
-	createShapesController,
 	createSquareController,
 	createCircleController,
 	createAttributeBrushController,
@@ -296,24 +295,6 @@ describe('Freehand Tools - Shapes and Fill', () => {
 				'onTextCanvasDown',
 				expect.any(Function),
 			);
-		});
-	});
-
-	describe('createShapesController', () => {
-		it('should create a shapes controller', () => {
-			const controller = createShapesController();
-
-			expect(controller).toHaveProperty('enable');
-			expect(controller).toHaveProperty('disable');
-		});
-
-		it('should handle enable/disable operations', () => {
-			const controller = createShapesController();
-
-			expect(() => {
-				controller.enable();
-				controller.disable();
-			}).not.toThrow();
 		});
 	});
 

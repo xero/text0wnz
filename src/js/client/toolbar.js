@@ -28,6 +28,11 @@ const Toolbar = (() => {
 			blur();
 			tool.button.classList.add('toolbarDisplayed');
 			currentButton = tool.button;
+			// chrome that mirrors the active tool (group tooltips) hangs
+			// off this instead of wrapping every enable path
+			document.dispatchEvent(
+				new CustomEvent('onToolChange', { detail: { id: tool.button.id } }),
+			);
 		}
 		if (typeof onFocus === 'function') {
 			onFocus();
@@ -130,15 +135,23 @@ const Toolbar = (() => {
 	};
 
 	const closeMenu = () => {
-		if (State.menus) {
-			State.menus.close();
-		}
+		State.flyouts?.close();
 	};
 
-	// Escape key - return to previous tool
+	// Escape walks outward: an open flyout first, then the phone
+	// drawer, then an active selection, then back to the previous tool
 	document.addEventListener('keydown', e => {
 		if (e.code === 'Escape') {
 			e.preventDefault();
+			if (State.flyouts?.closeAndFocus()) {
+				return;
+			}
+			if (State.panels?.closeDrawer?.()) {
+				return;
+			}
+			if (State.selectionBar?.dismiss?.()) {
+				return;
+			}
 			returnToPreviousTool();
 		}
 	});

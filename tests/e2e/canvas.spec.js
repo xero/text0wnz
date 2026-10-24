@@ -47,7 +47,7 @@ test.describe('Basic Canvas Functionality', () => {
 	});
 
 	test('should allow resizing canvas', async ({ page }) => {
-		const resizeButton = page.locator('#navRes');
+		const resizeButton = page.locator('#resolution');
 		await resizeButton.click();
 
 		await page.waitForSelector('#resizeModal', { timeout: 5000 });

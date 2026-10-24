@@ -107,6 +107,16 @@ const prepPage = async (page, testInfo) => {
 			'#canvasContainer canvas.selectionCursor' +
 			'{display:none !important}',
 	});
+	// The pixel gate judges the renderer, never the panel layout: pin
+	// the viewport to the whole window and drop the app chrome, so dock
+	// and sidebar phases cannot shift the capture clip under the shots
+	await page.addStyleTag({
+		content:
+			'#viewport{position:fixed !important;inset:0 !important}' +
+			'#bodyContainer > aside,#bodyContainer > header,#sidebar,' +
+			'#sidebarGrip,#dockTop,#dockBottom,.mod' +
+			'{display:none !important}',
+	});
 };
 
 const openFixture = async (page, fixture) => {

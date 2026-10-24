@@ -1,216 +1,230 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, waitFor, fireEvent } from '@testing-library/dom';
-import userEvent from '@testing-library/user-event';
+import { describe, it, expect, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
-import { createMenuController } from '../../src/js/client/ui.js';
+import { createFlyoutManager } from '../../src/js/client/flyouts.js';
 
-vi.mock('../../src/js/client/state.js', () => ({ default: {} }));
+/**
+ * The flyout manager carries every rail popover, the tabbed File/Edit
+ * menu included: toggle semantics, outside-press close, Escape with
+ * focus return, and arrow-key walking.
+ */
 
-describe('Menu DOM Tests', () => {
-	let user;
-	let fileButton;
-	let fileMenuList;
-	let editButton;
-	let editMenuList;
-	let canvas;
-	let view;
-	let menuController;
+const fixture = () => {
+	document.body.innerHTML = `
+		<div id="rail">
+			<button id="fileMenu" aria-label="File and Edit Menu"></button>
+			<button id="brushes" aria-label="Brushes"></button>
+			<button id="elsewhere"></button>
+		</div>
+		<div id="mainMenu" class="flyout" hidden>
+			<nav class="menuTabs">
+				<button id="menuTabFile" class="on">File</button>
+				<button id="menuTabEdit">Edit</button>
+			</nav>
+			<div id="fileList" class="menuPane">
+				<article id="new" class="menuItem">New</article>
+				<article id="open" class="menuItem">Open</article>
+				<details class="menuGroup">
+					<summary>Save as</summary>
+					<article id="saveAnsi" class="menuItem">ANSi</article>
+				</details>
+				<article id="help" class="menuItem">Help!</article>
+			</div>
+			<div id="editList" class="menuPane hide">
+				<article id="navUndo" class="menuItem">Undo</article>
+			</div>
+		</div>
+		<div id="brushToolbar" class="flyout" hidden>
+			<div id="halfblock" class="toolButton"></div>
+			<div id="shadingBrush" class="toolButton"></div>
+		</div>`;
+};
+
+// happy-dom lacks PointerEvent; the manager only reads target
+const press = el =>
+	el.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+
+describe('flyout manager', () => {
+	let fly;
 
 	beforeEach(() => {
-		document.body.innerHTML = '';
-		user = userEvent.setup();
-		vi.clearAllMocks();
+		fixture();
+		fly = createFlyoutManager();
+	});
 
-		canvas = document.createElement('canvas');
-		canvas.id = 'canvas';
-		canvas.tabIndex = 0;
-		document.body.appendChild(canvas);
+	it('toggle opens, the same id closes, another id swaps', () => {
+		const menu = document.getElementById('mainMenu');
+		const brushes = document.getElementById('brushToolbar');
+		fly.toggle('menu', menu, document.getElementById('fileMenu'));
+		expect(menu.hidden).toBe(false);
+		expect(fly.isOpen('menu')).toBe(true);
 
-		view = document.createElement('div');
-		view.id = 'view';
-		view.tabIndex = 0;
-		document.body.appendChild(view);
+		fly.toggle('brushes', brushes, document.getElementById('brushes'));
+		expect(menu.hidden).toBe(true);
+		expect(brushes.hidden).toBe(false);
 
-		fileButton = document.createElement('button');
-		fileButton.id = 'fileMenu';
-		fileButton.setAttribute('aria-label', 'File Menu');
-		document.body.appendChild(fileButton);
+		fly.toggle('brushes', brushes, document.getElementById('brushes'));
+		expect(brushes.hidden).toBe(true);
+		expect(fly.isOpen()).toBe(false);
+	});
 
-		fileMenuList = document.createElement('div');
-		fileMenuList.id = 'fileList';
-		fileMenuList.className = 'menuList hide';
+	it('a press outside closes, a press inside does not', () => {
+		const menu = document.getElementById('mainMenu');
+		fly.toggle('menu', menu, document.getElementById('fileMenu'));
+		press(document.getElementById('new'));
+		expect(menu.hidden).toBe(false);
+		press(document.getElementById('elsewhere'));
+		expect(menu.hidden).toBe(true);
+	});
 
-		const newItem = document.createElement('article');
-		newItem.id = 'new';
-		newItem.className = 'menuItem';
-		newItem.textContent = 'New';
-		fileMenuList.appendChild(newItem);
+	it('a press on the opener leaves the toggle to its own handler', () => {
+		const menu = document.getElementById('mainMenu');
+		const opener = document.getElementById('fileMenu');
+		fly.toggle('menu', menu, opener);
+		press(opener);
+		expect(menu.hidden).toBe(false);
+	});
 
-		const openItem = document.createElement('article');
-		openItem.id = 'open';
-		openItem.className = 'menuItem';
-		openItem.textContent = 'Open';
-		fileMenuList.appendChild(openItem);
+	it('closeAndFocus reports whether anything closed and refocuses', () => {
+		const menu = document.getElementById('mainMenu');
+		const opener = document.getElementById('fileMenu');
+		expect(fly.closeAndFocus()).toBe(false);
+		fly.toggle('menu', menu, opener);
+		expect(fly.closeAndFocus()).toBe(true);
+		expect(document.activeElement).toBe(opener);
+	});
 
-		document.body.appendChild(fileMenuList);
+	it('arrow keys walk the items and skip hidden panes', () => {
+		const menu = document.getElementById('mainMenu');
+		fly.toggle('menu', menu, document.getElementById('fileMenu'));
+		document.getElementById('menuTabFile').focus();
+		const walk = () =>
+			document.dispatchEvent(
+				new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }),
+			);
+		walk();
+		expect(document.activeElement).toBe(
+			document.getElementById('menuTabEdit'),
+		);
+		walk();
+		// the edit pane wears .hide, so its items never take focus
+		expect(document.activeElement).toBe(document.getElementById('new'));
+	});
 
-		editButton = document.createElement('button');
-		editButton.id = 'editMenu';
-		editButton.setAttribute('aria-label', 'Edit Menu');
-		document.body.appendChild(editButton);
+	it('the opener wears flyOpen only while its flyout shows', () => {
+		const menu = document.getElementById('mainMenu');
+		const opener = document.getElementById('fileMenu');
+		fly.toggle('menu', menu, opener);
+		expect(opener.classList.contains('flyOpen')).toBe(true);
+		// an outside press closes and unlights
+		press(document.getElementById('elsewhere'));
+		expect(opener.classList.contains('flyOpen')).toBe(false);
+		// switching flyouts moves the mark to the new opener
+		fly.toggle('menu', menu, opener);
+		const brushes = document.getElementById('brushes');
+		fly.toggle('brushes', document.getElementById('brushToolbar'), brushes);
+		expect(opener.classList.contains('flyOpen')).toBe(false);
+		expect(brushes.classList.contains('flyOpen')).toBe(true);
+	});
 
-		editMenuList = document.createElement('div');
-		editMenuList.id = 'editList';
-		editMenuList.className = 'menuList hide';
-
-		const undoItem = document.createElement('article');
-		undoItem.id = 'nav-undo';
-		undoItem.className = 'menuItem';
-		undoItem.textContent = 'Undo';
-		editMenuList.appendChild(undoItem);
-
-		const redoItem = document.createElement('article');
-		redoItem.id = 'nav-redo';
-		redoItem.className = 'menuItem';
-		redoItem.textContent = 'Redo';
-		editMenuList.appendChild(redoItem);
-
-		document.body.appendChild(editMenuList);
-
-		menuController = createMenuController(
-			[
-				{ button: fileButton, menu: fileMenuList },
-				{ button: editButton, menu: editMenuList },
-			],
-			canvas,
-			view,
+	it('focuses the active item when opening', () => {
+		const menu = document.getElementById('mainMenu');
+		fly.toggle('menu', menu, document.getElementById('fileMenu'));
+		expect(document.activeElement).toBe(
+			document.getElementById('menuTabFile'),
 		);
 	});
 
-	describe('Menu Opening and Closing', () => {
-		it('should open file menu on click', async () => {
-			expect(fileMenuList.classList.contains('hide')).toBe(true);
-
-			await user.click(fileButton);
-
-			expect(fileMenuList.classList.contains('hide')).toBe(false);
-		});
-
-		it('should close file menu on second click', async () => {
-			await user.click(fileButton);
-			expect(fileMenuList.classList.contains('hide')).toBe(false);
-
-			await waitFor(() => {
-				expect(fileMenuList.classList.contains('hide')).toBe(false);
-			});
-
-			await user.click(fileButton);
-
-			await waitFor(() => {
-				expect(fileMenuList.classList.contains('hide')).toBe(true);
-			});
-		});
-
-		it('should open edit menu on click', async () => {
-			expect(editMenuList.classList.contains('hide')).toBe(true);
-
-			await user.click(editButton);
-
-			expect(editMenuList.classList.contains('hide')).toBe(false);
-		});
-
-		it('should close menu on blur', async () => {
-			await user.click(fileButton);
-			expect(fileMenuList.classList.contains('hide')).toBe(false);
-
-			fireEvent.blur(fileMenuList);
-
-			await waitFor(() => {
-				expect(fileMenuList.classList.contains('hide')).toBe(true);
-			});
-		});
-
-		it('should focus view when menu closes', async () => {
-			await user.click(fileButton);
-			expect(fileMenuList.classList.contains('hide')).toBe(false);
-
-			fireEvent.blur(fileMenuList);
-
-			await waitFor(() => {
-				// moving focus to the view is the controller's job; assert the close
-				expect(fileMenuList.classList.contains('hide')).toBe(true);
-			});
-		});
-
-		it('should close all menus when closeAll is called', async () => {
-			await user.click(fileButton);
-
-			expect(fileMenuList.classList.contains('hide')).toBe(false);
-
-			menuController.close();
-
-			expect(fileMenuList.classList.contains('hide')).toBe(true);
-			expect(editMenuList.classList.contains('hide')).toBe(true);
-		});
+	it('folded groups walk as one row; open ones expose their children', () => {
+		const menu = document.getElementById('mainMenu');
+		fly.toggle('menu', menu, document.getElementById('fileMenu'));
+		document.getElementById('open').focus();
+		const walk = () =>
+			document.dispatchEvent(
+				new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }),
+			);
+		// closed: the summary is next and the child never takes focus
+		walk();
+		expect(document.activeElement.tagName).toBe('SUMMARY');
+		walk();
+		expect(document.activeElement).toBe(document.getElementById('help'));
+		// open: the child joins the walk after its summary
+		document.querySelector('.menuGroup').open = true;
+		document.querySelector('.menuGroup summary').focus();
+		walk();
+		expect(document.activeElement).toBe(
+			document.getElementById('saveAnsi'),
+		);
 	});
 
-	describe('Menu Items', () => {
-		it('should display file menu items when menu is open', async () => {
-			await user.click(fileButton);
-
-			const newItem = screen.getByText('New');
-			const openItem = screen.getByText('Open');
-
-			expect(newItem).toBeInTheDocument();
-			expect(openItem).toBeInTheDocument();
-		});
-
-		it('should display edit menu items when menu is open', async () => {
-			await user.click(editButton);
-
-			const undoItem = screen.getByText('Undo');
-			const redoItem = screen.getByText('Redo');
-
-			expect(undoItem).toBeInTheDocument();
-			expect(redoItem).toBeInTheDocument();
-		});
-
-		it('should have correct menu item classes', () => {
-			const newItem = document.querySelector('#new');
-			const undoItem = document.querySelector('#nav-undo');
-
-			expect(newItem).toHaveClass('menuItem');
-			expect(undoItem).toHaveClass('menuItem');
-		});
+	it('Tab cycles inside the flyout instead of leaving it', () => {
+		const menu = document.getElementById('mainMenu');
+		fly.toggle('menu', menu, document.getElementById('fileMenu'));
+		document.getElementById('menuTabFile').focus();
+		const tab = shiftKey =>
+			document.dispatchEvent(
+				new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true }),
+			);
+		tab(false);
+		expect(document.activeElement).toBe(
+			document.getElementById('menuTabEdit'),
+		);
+		// shift-tab walks back, never out the top
+		tab(true);
+		expect(document.activeElement).toBe(
+			document.getElementById('menuTabFile'),
+		);
+		tab(true);
+		expect(document.activeElement.id).not.toBe('');
+		expect(menu.contains(document.activeElement)).toBe(true);
 	});
 
-	describe('Menu Accessibility', () => {
-		it('should have proper tabindex on menu elements', () => {
-			// Canvas and view should have tabindex, not the buttons necessarily
-			expect(canvas).toHaveAttribute('tabindex', '0');
-			expect(view).toHaveAttribute('tabindex', '0');
-		});
+	it('Tab pulls wandering focus back into the open flyout', () => {
+		const menu = document.getElementById('mainMenu');
+		fly.toggle('menu', menu, document.getElementById('fileMenu'));
+		document.body.focus?.();
+		document.getElementById('fileMenu').focus();
+		document.dispatchEvent(
+			new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }),
+		);
+		expect(menu.contains(document.activeElement)).toBe(true);
+	});
+});
 
-		it('should have proper aria-label on menu buttons', () => {
-			expect(fileButton).toHaveAttribute('aria-label', 'File Menu');
-			expect(editButton).toHaveAttribute('aria-label', 'Edit Menu');
-		});
+describe('menu tab panes', () => {
+	// the tab wiring lives in main.js; this covers the pane contract the
+	// markup and CSS rely on
+	beforeEach(fixture);
 
-		it('should focus menu when opened', async () => {
-			await user.click(fileButton);
-
-			expect(fileMenuList.classList.contains('hide')).toBe(false);
-		});
+	it('one pane shows at a time through the hide class', () => {
+		const file = document.getElementById('fileList');
+		const edit = document.getElementById('editList');
+		expect(file.classList.contains('hide')).toBe(false);
+		expect(edit.classList.contains('hide')).toBe(true);
+		file.classList.add('hide');
+		edit.classList.remove('hide');
+		expect(file.classList.contains('hide')).toBe(true);
+		expect(edit.classList.contains('hide')).toBe(false);
 	});
 
-	describe('Menu Event Handling', () => {
-		it('should prevent default on menu click', async () => {
-			const clickEvent = new MouseEvent('click', { bubbles: true });
-			const preventDefault = vi.spyOn(clickEvent, 'preventDefault');
+	it('menu items keep their action ids', () => {
+		expect(document.querySelector('#fileList #new')).not.toBeNull();
+		expect(document.querySelector('#fileList #open')).not.toBeNull();
+		expect(document.querySelector('#editList #navUndo')).not.toBeNull();
+	});
+});
 
-			fileButton.dispatchEvent(clickEvent);
+describe('escape handling', () => {
+	beforeEach(fixture);
 
-			expect(preventDefault).toHaveBeenCalled();
-		});
+	it('swallows nothing when closed and closes when open', () => {
+		const fly = createFlyoutManager();
+		const menu = document.getElementById('mainMenu');
+		const opener = document.getElementById('fileMenu');
+		// toolbar.js owns the global Escape ordering; the manager's
+		// contract is just closeAndFocus's return value
+		expect(fly.closeAndFocus()).toBe(false);
+		fly.toggle('menu', menu, opener);
+		expect(fly.closeAndFocus()).toBe(true);
+		expect(menu.hidden).toBe(true);
 	});
 });

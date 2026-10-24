@@ -44,12 +44,9 @@ vi.mock('../../src/js/client/state.js', () => ({
 vi.mock('../../src/js/client/ui.js', () => ({
 	createSegmentedControl: vi.fn((id, options, onChange) => {
 		let current = options[0]?.value;
-		const el = {
-			id: id,
-			style: {},
-			classList: { add: vi.fn(), remove: vi.fn(), toggle: vi.fn() },
-			appendChild: vi.fn(),
-		};
+		// a real node: the controller mounts it into a real settingRow
+		const el = document.createElement('div');
+		el.id = id;
 		return {
 			getElement: () => el,
 			value: () => current,

@@ -380,18 +380,22 @@ describe('autoscroll menu', () => {
 		expect(createAutoScroller()).toBeNull();
 	});
 
-	it('the toggle swaps loop for the close X and expands the menu', () => {
+	it('the toggle swaps loop for the close X and expands the menu', async () => {
 		createAutoScroller();
 		const toggle = document.getElementById('minimapMenuToggle');
 		const menu = document.getElementById('minimapMenu');
 		toggle.click();
 		expect(menu.classList.contains('open')).toBe(true);
 		expect(toggle.getAttribute('aria-expanded')).toBe('true');
+		// the icon remount defers a microtask so it never detaches the
+		// node mid click dispatch; flush it before reading the glyph
+		await Promise.resolve();
 		expect(toggle.querySelector('use').getAttribute('href')).toContain(
 			'#cancel',
 		);
 		toggle.click();
 		expect(menu.classList.contains('open')).toBe(false);
+		await Promise.resolve();
 		expect(toggle.querySelector('use').getAttribute('href')).toContain(
 			'#loop',
 		);

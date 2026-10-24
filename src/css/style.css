@@ -35,7 +35,6 @@
 	--silver: #c0c0c0;
 	--iron: #666;
 	--midnight: #000;
-	--header-size: 43px;
 	--icon-size: 46px;
 	--icon-size-sm: 36px;
 	--palette-width: 200px;
@@ -136,15 +135,13 @@
 		* {
 			@apply transition-all ease-in-out;
 		}
-		/* anything that tracks input or scroll must not ease behind it */
+		/* anything that tracks input or scroll must not ease behind it:
+		   a floating module's left/top ride the drag pointer directly */
 		canvas,
 		#viewport,
 		#canvasContainer,
 		#minimapViewport,
-		#colorPanel,
-		#framesPanel,
-		#refPanel,
-		#toolSettings {
+		.mod.fl {
 			@apply transition-none!;
 		}
 		/* autoscroll writes scrollTop every frame: easing that looks
@@ -153,6 +150,18 @@
 		body.autoscrolling,
 		body.autoscrolling * {
 			@apply transition-none!;
+		}
+	}
+
+	/* the per-rule guards above opt decoration in; this is the net
+	   under them, so a missed guard can never animate against the
+	   user's reduced motion preference */
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			transition: none !important;
+			animation: none !important;
 		}
 	}
 
@@ -206,8 +215,21 @@
 		}
 	}
 
+	/* app shell: rail | center (bar, top dock, canvas, bottom dock) |
+	   grip | sidebar. The bar row is transitional chrome that later
+	   phases empty and remove */
 	#bodyContainer {
-		@apply w-full h-full overflow-y-hidden;
+		@apply w-full h-full overflow-hidden;
+		display: grid;
+		grid-template-columns: 48px minmax(0, 1fr) 14px 236px;
+		grid-template-rows: auto minmax(0, 1fr) auto;
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition: grid-template-columns 0.22s ease;
+		}
+		&.sidebarCollapsed {
+			grid-template-columns: 48px minmax(0, 1fr) 14px 0;
+		}
 	}
 
 	.loading * {
@@ -220,66 +242,92 @@
 	section h2 {
 		@apply text-2xl text-cyan;
 	}
-	header,
 	aside,
-	#positionInfo {
+	#sidebar,
+	#sidebarGrip,
+	#dockTop,
+	#dockBottom {
 		@apply bg-menu;
 	}
 
-	header,
-	aside {
+	aside,
+	#sidebar,
+	#sidebarGrip {
 		/* when Safari grants viewport slack (fullscreen title bar), a
 		   native pan starting on the app chrome drags the whole page;
 		   nothing in these bars scrolls, so gestures here stay ours */
 		touch-action: none;
 	}
 
-	header {
-		@apply w-full flex justify-between h-[var(--header-size)];
+	#dockTop,
+	#dockBottom {
+		@apply flex flex-col;
+		grid-column: 2;
+		min-width: 0;
 
-		&.dynamic {
-			-webkit-app-region: drag;
-			app-region: drag;
-			padding-left: calc(env(titlebar-area-x, 0px) + 2px);
-			padding-right: calc(env(titlebar-area-x, 0px) + 25px);
+		&:empty,
+		&:not(:has(.mod:not([hidden]), .dph)) {
+			display: none;
 		}
-		* {
-			@apply my-auto;
+		&.dropping {
+			background: #2a2a3c;
 		}
-		nav {
-			-webkit-app-region: no-drag;
-			app-region: no-drag;
-			div {
-				@apply flex;
-			}
+		> .dph {
+			margin: 4px 6px;
 		}
-		svg {
-			@apply fill-fg h-[30px] w-[30px];
+	}
+
+	.drow {
+		@apply flex items-stretch;
+		min-width: 0;
+		border-top: 1px solid #0008;
+
+		&:first-child {
+			border-top: 0;
 		}
-		button,
-		#resolution,
-		#currentFontDisplay {
-			@apply h-[var(--header-size)];
+		&:not(:has(.mod:not([hidden]), .dph)) {
+			display: none;
 		}
-		@media (hover: hover) {
-			button:hover {
-				@apply bg-hl;
-			}
+		> .mod {
+			flex: 1 1 0;
+			min-width: 0;
 		}
-		#resolution kbd {
-			@apply mr-0.5;
+		/* columns share the row with a divider between visible mates */
+		> .mod:not([hidden]) ~ .mod:not([hidden]) {
+			border-left: 1px solid #0008;
 		}
-		#currentFontDisplay kbd {
-			@apply mx-1;
+	}
+	#dockTop {
+		grid-row: 1;
+		border-bottom: 1px solid var(--midnight);
+	}
+	#dockBottom {
+		grid-row: 3;
+		border-top: 1px solid var(--midnight);
+	}
+
+	/* collab status and chat ride the sauce panel as square buttons
+	   beside the title, per the panel spec */
+	#saucePanel .modContent {
+		@apply flex-row items-center;
+
+		#navSauce {
+			flex: 1;
+			min-width: 0;
 		}
-		#resolution,
-		#currentFontDisplay {
-			@media (hover: hover) {
-				&:hover {
-					kbd {
-						@apply bg-purp;
-					}
-				}
+		#networkButton,
+		#chatButton {
+			@apply grid place-items-center bg-editor;
+			flex: none;
+			width: 32px;
+			height: 32px;
+			border: 0;
+			padding: 0;
+
+			svg {
+				width: 20px;
+				height: 20px;
+				fill: var(--color-fg);
 			}
 		}
 	}
@@ -312,18 +360,6 @@
 	}
 
 	#chatWindow {
-		@apply flex fixed top-[var(--header-size)] right-0 z-50 scale-y-100 opacity-100 z-30
-      w-[45vw] min-w-[30vw] max-w-full min-h-[300px] max-h-screen /*height intentionally omitted*/
-      dialog-style;
-		transform-origin: top;
-		transition:
-			scale 0.7s ease-out,
-			opacity 0.7s ease-out,
-			transform 0.7s ease-out;
-
-		&.hide {
-			@apply scale-y-0 opacity-0 flex! pointer-events-none;
-		}
 		#chatRoom {
 			@apply flex flex-col h-full min-h-0 w-full max-h-[50vh];
 
@@ -336,10 +372,8 @@
 			header {
 				@apply w-full flex-row pl-2 pr-0 place-content-between min-h-0 bg-header select-none flex;
 				flex-wrap: balance;
-				cursor: grab;
 				h2 {
 					@apply text-cyan text-2xl mt-1 flex flex-grow select-none;
-					cursor: grab;
 				}
 				button {
 					@apply p-0 pb-0.5;
@@ -436,11 +470,15 @@
 	}
 
 	aside {
-		float: left;
-		width: 40px;
-		height: calc(100% - 40px);
+		grid-column: 1;
+		grid-row: 1 / -1;
+		overflow-y: auto;
+		overflow-x: hidden;
+		scrollbar-width: none;
+		border-right: 1px solid var(--midnight);
 
 		> canvas {
+			@apply block mx-auto;
 			vertical-align: bottom;
 		}
 	}
@@ -451,9 +489,10 @@
 
 	#viewport {
 		@apply bg-editor;
-		margin-left: 40px;
-		width: calc(100% - 40px);
-		height: calc(100% - 40px);
+		grid-column: 2;
+		grid-row: 2;
+		min-width: 0;
+		min-height: 0;
 		text-align: center;
 		overflow: auto;
 		user-select: none;
@@ -463,28 +502,1039 @@
 		-o-user-select: none;
 	}
 
-	header nav {
-		@apply flex flex-row justify-start w-auto;
+	#sidebarGrip {
+		@apply flex flex-col items-center justify-center bg-menu cursor-pointer;
+		grid-column: 3;
+		grid-row: 1 / -1;
+		gap: 8px;
+		border: 0;
+		border-left: 1px solid var(--midnight);
+		padding: 0;
+		overflow: hidden;
 
-		.enabled {
-			@apply bg-black;
+		&::before,
+		&::after {
+			content: '';
+			width: 6px;
+			height: 30px;
+			background: radial-gradient(circle, #888 1px, transparent 1.6px) 0 0 / 6px
+				6px;
+		}
+		i {
+			flex: none;
+			width: 7px;
+			height: 7px;
+			border: solid var(--color-fg);
+			border-width: 2px 2px 0 0;
+			transform: translateX(-2px) rotate(45deg);
+		}
+		.sidebarCollapsed & i {
+			transform: translateX(2px) rotate(225deg);
+		}
+		@media (hover: hover) {
+			&:hover {
+				@apply bg-hl;
+			}
 		}
 	}
 
-	#viewportToolbar,
-	#clipboardToolbar,
-	#fontToolbar,
-	#brushToolbar,
-	#shapesToolbar,
+	#sidebar {
+		@apply flex flex-col;
+		grid-column: 4;
+		grid-row: 1 / -1;
+		min-width: 0;
+		min-height: 0;
+		overflow-y: auto;
+		overflow-x: hidden;
+		scrollbar-width: none;
+		/* installed PWA with window controls overlay: keep the panel
+		   content clear of the OS titlebar strip */
+		padding-top: env(titlebar-area-height, 0px);
+
+		.sidebarCollapsed & {
+			overflow: hidden;
+		}
+		&.dropping {
+			background: #2a2a3c;
+		}
+	}
+
+	/* the sidebar's top divider strip carries the PWA window drag region
+	   the old header gave up; its buttons stay interactive */
+	#sidebar > .mod:first-of-type .modHeader {
+		app-region: drag;
+		-webkit-app-region: drag;
+
+		button {
+			app-region: no-drag;
+			-webkit-app-region: no-drag;
+		}
+	}
+
+	/* when nothing is docked the sidebar column and grip fold away; a
+	   drag hovering the right edge peeks them back open as a target */
+	#bodyContainer.noSidebar {
+		grid-template-columns: 48px minmax(0, 1fr) 0 0;
+
+		#sidebarGrip {
+			display: none;
+		}
+	}
+	#bodyContainer.sidebarPeek {
+		grid-template-columns: 48px minmax(0, 1fr) 14px 236px;
+	}
+
+	/* <--//-----------------------------------------------------------[modules] */
+	.mod {
+		@apply flex flex-col bg-menu relative;
+		min-height: 0;
+
+		&[hidden] {
+			display: none !important;
+		}
+	}
+	.modHeader {
+		@apply flex items-center flex-none select-none;
+		gap: 6px;
+		touch-action: none;
+	}
+	.modLine {
+		flex: 1;
+		height: 1px;
+		background: var(--iron);
+	}
+	.modTitle {
+		@apply whitespace-nowrap overflow-hidden text-ellipsis;
+		flex: 1;
+		font-weight: normal;
+	}
+	.modShade {
+		@apply grid place-items-center bg-transparent cursor-pointer;
+		flex: none;
+		width: 18px;
+		height: 18px;
+		border: 0;
+		padding: 0;
+
+		/* bold enough to survive 1x antialiasing: a 2px diagonal reads
+		   half-tone grey on low-density screens. Longhands on purpose:
+		   the color must never ride a shorthand reset to currentColor */
+		b {
+			width: 9px;
+			height: 9px;
+			border-style: solid;
+			border-color: var(--color-fg);
+			border-width: 3px 0 0 3px;
+			transform: translateY(2px) rotate(45deg);
+		}
+		&[aria-expanded='false'] b {
+			transform: translateY(-2px) rotate(225deg);
+		}
+	}
+	.modClose {
+		@apply bg-transparent text-fg cursor-pointer;
+		flex: none;
+		width: 22px;
+		height: 18px;
+		border: 0;
+		padding: 0;
+		font-size: 14px;
+		line-height: 18px;
+
+		@media (hover: hover) {
+			&:hover {
+				@apply bg-hl;
+			}
+		}
+	}
+	.modTool {
+		@apply grid place-items-center bg-transparent cursor-pointer;
+		flex: none;
+		width: 26px;
+		height: 20px;
+		border: 0;
+		padding: 0;
+
+		svg {
+			width: 16px;
+			height: 16px;
+			fill: var(--color-fg);
+		}
+		&.enabled {
+			@apply bg-indigo;
+		}
+		@media (hover: hover) {
+			&:not(.enabled):hover {
+				@apply bg-hl;
+			}
+		}
+	}
+	/* a shuttered panel shows only its strip: title, line, chevron */
+	.mod.shaded .modHeader .modTool {
+		display: none;
+	}
+	.modBody {
+		display: grid;
+		grid-template-rows: 1fr;
+		min-height: 0;
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition: grid-template-rows 0.2s ease;
+		}
+		> div {
+			@apply flex flex-col;
+			min-height: 0;
+			overflow: hidden;
+
+			@media (prefers-reduced-motion: no-preference) {
+				transition: padding 0.2s ease;
+			}
+		}
+	}
+	.mod.shaded .modBody {
+		grid-template-rows: 0fr;
+
+		/* border-box padding would hold a 0fr track open as a sliver
+		   below the title strip; it shutters with the row */
+		> div {
+			visibility: hidden;
+			padding-block: 0;
+			transition: visibility 0s 0.2s;
+
+			@media (prefers-reduced-motion: no-preference) {
+				transition:
+					visibility 0s 0.2s,
+					padding 0.2s ease;
+			}
+		}
+	}
+	.modContent {
+		@apply flex flex-col;
+		gap: 6px;
+		padding: 4px 10px 8px;
+	}
+
+	/* glyph previews: a 1x backing store that glyphScale.js sizes to a
+	   whole device-pixel multiple of the --gw target */
+	canvas.gc {
+		--gw: 16;
+		image-rendering: pixelated;
+		display: block;
+		flex: none;
+	}
+
+	/* docked: a divider strip with a small cyan title */
+	.mod.dk {
+		flex: none;
+
+		.modHeader {
+			height: 22px;
+			padding: 0 3px 0 10px;
+			cursor: grab;
+		}
+		.modTitle {
+			flex: none;
+			font-size: 12px;
+			color: var(--cyan);
+			max-width: 70%;
+		}
+		.modClose {
+			display: none;
+		}
+		@media (hover: hover) {
+			.modHeader:hover {
+				background: #3a3a3a;
+
+				.modLine {
+					background: #888;
+				}
+			}
+		}
+	}
+	.mod.dk.grow:not(.shaded) {
+		flex: 1 1 auto;
+		min-height: 140px;
+	}
+	.mod.grow .modBody {
+		flex: 1 1 auto;
+	}
+	.mod.grow.shaded .modBody {
+		flex: none;
+	}
+
+	/* floating: a title bar window */
+	.mod.fl {
+		@apply fixed;
+		z-index: 40;
+		left: var(--mx);
+		top: var(--my);
+		width: var(--mw, 236px);
+		max-height: calc(100% - 8px);
+		border: 4px solid var(--color-panel);
+		border-top: 0;
+		box-shadow: 0 2px 10px #000a;
+
+		.modHeader {
+			height: 18px;
+			padding-left: 6px;
+			background: var(--color-panel);
+			cursor: move;
+			font-size: 12px;
+			color: var(--subtitle);
+		}
+		.modLine {
+			display: none;
+		}
+		&.focus {
+			box-shadow:
+				0 2px 14px #000,
+				0 0 0 1px #666;
+
+			.modHeader {
+				background: #5a5a5a;
+				color: #fff;
+			}
+		}
+		&.grow:not(.shaded) {
+			height: var(--mh, 340px);
+		}
+	}
+	.mod[data-m='tool'].fl {
+		width: max-content;
+		min-width: 210px;
+		max-width: min(340px, calc(100% - 70px));
+	}
+	.mod[data-m='chat'].fl {
+		width: 45vw;
+		min-width: 300px;
+		max-width: calc(100% - 56px);
+	}
+	.mod.drag {
+		z-index: 90 !important;
+		pointer-events: none;
+		opacity: 0.9;
+		box-shadow: 8px 8px 0 #0009 !important;
+	}
+	.mod.drag.over {
+		opacity: 0.55;
+	}
+	.modResize {
+		display: none;
+	}
+	.mod.fl.grow:not(.shaded) .modResize {
+		display: block;
+		position: absolute;
+		right: -4px;
+		bottom: -4px;
+		width: 16px;
+		height: 16px;
+		cursor: nwse-resize;
+		touch-action: none;
+		background: linear-gradient(
+			135deg,
+			transparent 50%,
+			#888 50%,
+			#888 60%,
+			transparent 60%,
+			transparent 70%,
+			#888 70%,
+			#888 80%,
+			transparent 80%
+		);
+	}
+
+	/* the one drop marker: a dashed slot that animates open; stacking
+	   slots animate height, column slots animate width */
+	.dph {
+		flex: none;
+		height: 0;
+		margin: 0 6px;
+		outline: 2px dashed var(--cyan);
+		outline-offset: -2px;
+		background: #22d3ee12;
+		overflow: hidden;
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition:
+				height 0.18s ease,
+				opacity 0.18s;
+		}
+		&.out {
+			opacity: 0;
+		}
+	}
+	.dph.v {
+		height: auto;
+		width: 0;
+		margin: 4px;
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition:
+				width 0.18s ease,
+				opacity 0.18s;
+		}
+	}
+
+	/* bars: a top or bottom dock row; no header, a dotted grip on the
+	   left edge, and shading never applies */
+	.mod.tb {
+		@apply flex-row items-stretch;
+		cursor: grab;
+
+		&::before {
+			content: '';
+			flex: none;
+			width: 12px;
+			margin: 8px 0 8px 6px;
+			background: radial-gradient(circle, #888 1px, transparent 1.6px) 0 0 / 6px
+				6px;
+		}
+		.modHeader {
+			display: none;
+		}
+		.modBody {
+			flex: 1;
+			min-width: 0;
+			grid-template-rows: 1fr !important;
+
+			> div {
+				visibility: visible !important;
+			}
+		}
+		.modContent {
+			@apply flex-row items-center flex-wrap;
+			gap: 6px 14px;
+			padding: 6px 10px;
+		}
+		#navSauce {
+			flex: 1 1 200px;
+		}
+		.panelSpec {
+			flex: 1 1 200px;
+		}
+		#positionInfo {
+			@apply flex-row items-center;
+			flex: 1 1 260px;
+			gap: 10px;
+
+			.depthBar {
+				flex: 1 1 160px;
+			}
+		}
+		#zoomControl {
+			flex: 0 1 240px;
+		}
+		&#framesPanel .modContent {
+			flex-wrap: nowrap;
+			overflow-x: auto;
+			scrollbar-width: thin;
+		}
+		&#refPanel label {
+			flex: 1 1 160px;
+		}
+		&#toolSettings .modContent {
+			align-items: stretch;
+		}
+		&#toolSettings .modContent > div {
+			@apply flex-row items-center;
+			gap: 6px 14px;
+		}
+	}
+
+	/* tool select feedback; the shaded strip double-flashes brighter */
+	@keyframes modFlash {
+		0%,
+		35% {
+			background: #3b3d8f;
+		}
+		100% {
+			background: var(--color-menu);
+		}
+	}
+	.mod.flash,
+	.mod.flash .modHeader {
+		animation: modFlash 0.8s ease-out;
+	}
+	@keyframes modFlashShaded {
+		0%,
+		14% {
+			background: #4a4dc0;
+		}
+		30% {
+			background: var(--color-menu);
+		}
+		46%,
+		60% {
+			background: #4a4dc0;
+		}
+		100% {
+			background: var(--color-menu);
+		}
+	}
+	.mod.shaded.flash,
+	.mod.shaded.flash .modHeader {
+		animation: modFlashShaded 1.6s ease-in-out;
+	}
+
+	/* phone minimap strip: autoscroll buttons stacked over the map,
+	   no title chrome; the settings menu hangs out to the left */
+	.mod.st {
+		flex: 1 1 auto;
+		min-height: 0;
+
+		.modHeader {
+			flex-direction: column;
+			height: auto;
+			gap: 2px;
+			padding: 2px 0;
+		}
+		.modTitle,
+		.modLine,
+		.modShade {
+			display: none;
+		}
+		.modTool {
+			width: 100%;
+			height: 36px;
+
+			svg {
+				width: 24px;
+				height: 24px;
+			}
+		}
+		.modBody {
+			flex: 1 1 auto;
+			grid-template-rows: 1fr !important;
+
+			> div {
+				visibility: visible !important;
+				overflow: visible;
+			}
+		}
+		#minimapScroll {
+			flex: 1 1 auto;
+		}
+		#minimapMenu {
+			@apply absolute bg-menu;
+			right: 100%;
+			top: 0;
+			width: 210px;
+			z-index: 30;
+			border: 4px solid var(--color-panel);
+			border-right: 0;
+
+			&:not(.open) {
+				border-width: 0;
+			}
+		}
+	}
+
+	/* phone tool settings sheet: a grab handle, a slim title strip, and
+	   snap points panels.js drives through --sh */
+	.modHandle {
+		display: none;
+	}
+	.mod.sheet {
+		@apply fixed;
+		z-index: 40;
+		left: 0;
+		right: 0;
+		bottom: var(--dock, 0px);
+		height: var(--sh, auto);
+		max-height: calc(100% - var(--dock, 0px) - 46px);
+		border-top: 1px solid var(--midnight);
+		box-shadow: 0 -6px 0 #0006;
+		/* the height rides the drag pointer directly, like .mod.fl: the
+		   global ease would trail the finger and restart on every move */
+		transition: none;
+
+		&.snap {
+			@media (prefers-reduced-motion: no-preference) {
+				transition: height 0.18s ease;
+			}
+		}
+		.modHandle {
+			display: block;
+			flex: none;
+			position: relative;
+			height: 20px;
+			background: var(--color-panel);
+			touch-action: none;
+			cursor: grab;
+
+			&::after {
+				content: '';
+				position: absolute;
+				left: 50%;
+				top: 8px;
+				width: 44px;
+				height: 4px;
+				margin-left: -22px;
+				background: #888;
+			}
+		}
+		.modHeader {
+			height: 22px;
+			padding-left: 6px;
+			background: var(--color-panel);
+			font-size: 12px;
+			color: var(--subtitle);
+			touch-action: none;
+		}
+		.modLine,
+		.modShade {
+			display: none;
+		}
+		.modBody {
+			flex: 1 1 auto;
+			grid-template-rows: 1fr !important;
+
+			> div {
+				visibility: visible !important;
+				overflow-y: auto;
+			}
+		}
+	}
+
+	/* the phone chrome exists only below the breakpoint */
+	#topStrip,
+	#mapStrip {
+		display: none;
+	}
+
+	/* <--//-------------------------------------------------------------[phone] */
+	/* below 720px: a 42px top strip whose title opens the sidebar as a
+	   drawer, the minimap as a strip beside the canvas, the rail as a
+	   bottom dock, and no top dock. Saved docks, floats, and the
+	   collapsed flag all stay put for the next wide layout */
+	@media (max-width: 720px) {
+		#bodyContainer,
+		#bodyContainer.noSidebar,
+		#bodyContainer.sidebarCollapsed,
+		#bodyContainer.sidebarPeek {
+			grid-template-columns: minmax(0, 1fr) auto;
+			grid-template-rows: auto minmax(0, 1fr) auto auto;
+		}
+		#topStrip {
+			@apply flex items-center bg-menu relative;
+			grid-column: 1 / -1;
+			grid-row: 1;
+			z-index: 46;
+			height: 42px;
+			padding-left: 4px;
+			border-bottom: 1px solid var(--midnight);
+
+			#drawerButton {
+				/* buttons default to the UA's black, not the theme text */
+				@apply flex items-center bg-transparent text-fg text-left cursor-pointer;
+				flex: 1;
+				min-width: 0;
+				gap: 8px;
+				height: 42px;
+				border: 0;
+				padding: 0 6px;
+
+				svg {
+					flex: none;
+					width: 20px;
+					height: 20px;
+					fill: var(--color-fg);
+				}
+				span {
+					@apply whitespace-nowrap overflow-hidden text-ellipsis;
+					min-width: 0;
+					font-size: 14px;
+				}
+				i {
+					flex: none;
+					width: 7px;
+					height: 7px;
+					border: solid var(--color-fg);
+					border-width: 0 2px 2px 0;
+					transform: translateY(-2px) rotate(45deg);
+
+					@media (prefers-reduced-motion: no-preference) {
+						transition: transform 0.2s ease;
+					}
+				}
+				&[aria-expanded='true'] i {
+					transform: translateY(2px) rotate(225deg);
+				}
+			}
+			#topStripPos {
+				@apply text-cyan whitespace-nowrap;
+				font-size: 14px;
+				padding: 0 8px;
+			}
+			#stripUndo,
+			#stripRedo {
+				@apply grid place-items-center bg-transparent cursor-pointer;
+				flex: none;
+				width: 44px;
+				height: 42px;
+				border: 0;
+				padding: 0;
+
+				svg {
+					width: 24px;
+					height: 24px;
+					fill: var(--color-fg);
+				}
+			}
+		}
+		#viewport {
+			grid-column: 1;
+			grid-row: 2;
+		}
+		#mapStrip {
+			@apply flex flex-col bg-menu relative;
+			grid-column: 2;
+			grid-row: 2;
+			width: 58px;
+			min-height: 0;
+			border-left: 1px solid var(--midnight);
+
+			&:not(:has(.mod:not([hidden]))) {
+				display: none;
+			}
+		}
+		#dockTop {
+			display: none;
+		}
+		#dockBottom {
+			grid-column: 1 / -1;
+		}
+		#sidebarGrip {
+			display: none;
+		}
+		/* the rail rides the bottom edge; the palette folds into the
+		   swatch (its flyout) and history folds into the top strip */
+		aside {
+			@apply flex;
+			grid-column: 1 / -1;
+			grid-row: 4;
+			overflow-x: auto;
+			overflow-y: hidden;
+			border-right: 0;
+			border-top: 1px solid var(--midnight);
+			/* a crowded rail must pan by touch; pinches stay the app's */
+			touch-action: pan-x;
+
+			> div {
+				flex: 1 0 40px;
+				height: 50px;
+				margin: 0;
+				padding: 0;
+			}
+			/* the wide rail's gap under the menu button would knock the
+			   horizontal row out of line */
+			#fileMenu {
+				margin-bottom: 0;
+			}
+			> canvas {
+				flex: none;
+				align-self: center;
+				margin: 0 4px;
+			}
+			.separator,
+			#clipboard,
+			#palettePicker,
+			#paletteMore {
+				display: none;
+			}
+		}
+		/* the sidebar becomes a drawer under the top strip; its modules
+		   keep their divider strips and saved order */
+		#sidebar {
+			@apply fixed;
+			left: 0;
+			right: 0;
+			top: 42px;
+			z-index: 44;
+			max-height: calc(100% - 42px - var(--dock, 0px));
+			overflow-y: auto;
+			box-shadow: 0 6px 0 #0008;
+			transform: translateY(calc(-100% - 50px));
+			/* the drawer scrolls by touch; drags are off on phones */
+			touch-action: pan-y;
+
+			@media (prefers-reduced-motion: no-preference) {
+				transition: transform 0.22s ease;
+			}
+			&.open {
+				transform: none;
+			}
+		}
+	}
+
+	/* the panel docking menu: compact context rows like the main menu */
+	#panelMenu {
+		min-width: 160px;
+
+		.menuItem {
+			padding: 3px 8px;
+			line-height: 1.15;
+		}
+		.separator {
+			@apply bg-menu;
+			height: 2px;
+			margin: 1px 2px;
+			flex: none;
+		}
+	}
+
+	/* the phone palette flyout adopts the real picker canvas, scaled up
+	   to finger size, beside the ++ chip */
+	#paletteFlyout {
+		min-width: 0;
+	}
+	#paletteFlyoutBody {
+		@apply flex items-start;
+		gap: 8px;
+		padding: 4px 8px;
+
+		#palettePicker {
+			@apply pxl8;
+			width: 80px;
+			height: 320px;
+			margin: 0;
+		}
+	}
+
+	.panelChips {
+		@apply flex flex-wrap;
+		gap: 3px;
+	}
+
+	#navSauce {
+		@apply flex items-start text-left bg-transparent cursor-pointer w-full;
+		gap: 8px;
+		border: 0;
+		padding: 2px 0;
+
+		svg {
+			@apply fill-fg;
+			flex: none;
+			width: 22px;
+			height: 22px;
+			margin-top: 1px;
+			opacity: 0.85;
+		}
+		span {
+			@apply block;
+			min-width: 0;
+		}
+		b {
+			@apply block text-fg whitespace-nowrap overflow-hidden text-ellipsis;
+			font-weight: normal;
+		}
+		small {
+			@apply block text-subtitle whitespace-nowrap overflow-hidden text-ellipsis;
+			font-size: 12px;
+		}
+		@media (hover: hover) {
+			&:hover {
+				@apply bg-hl;
+			}
+		}
+	}
+
+	.panelSpec {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 3px;
+	}
+
+	.panelValue {
+		@apply flex items-center text-left bg-editor text-fg cursor-pointer whitespace-nowrap;
+		gap: 8px;
+		border: 0;
+		min-width: 0;
+		padding: 4px 6px;
+		font-size: 14px;
+
+		svg {
+			@apply fill-fg;
+			flex: none;
+			width: 16px;
+			height: 16px;
+		}
+		kbd {
+			@apply bg-lbl overflow-hidden text-ellipsis;
+			padding: 1px 8px;
+		}
+		@media (hover: hover) {
+			&:hover kbd {
+				@apply bg-purp;
+			}
+		}
+	}
+
+	.panelChip {
+		@apply flex items-center justify-center bg-editor text-fg cursor-pointer;
+		border: 0;
+		min-width: 46px;
+		padding: 4px 6px;
+		font-size: 14px;
+
+		&.enabled {
+			@apply bg-indigo;
+		}
+		@media (hover: hover) {
+			&:not(.enabled):hover {
+				@apply bg-hl;
+			}
+		}
+	}
+
+	#positionInfo {
+		@apply flex flex-col text-fg;
+		gap: 5px;
+
+		.cursorReadout {
+			@apply flex items-baseline whitespace-nowrap;
+			gap: 6px;
+			font-size: 16px;
+
+			span {
+				@apply text-cyan;
+			}
+			b {
+				font-weight: normal;
+				min-width: 2ch;
+				margin-right: 6px;
+			}
+			button {
+				all: unset;
+				cursor: text;
+				min-width: 3ch;
+				text-decoration: underline dotted var(--iron);
+				text-underline-offset: 3px;
+			}
+			input {
+				@apply bg-editor text-fg;
+				width: 6ch;
+				border: 1px solid var(--cyan);
+				padding: 0 3px;
+			}
+			i {
+				@apply text-subtitle not-italic;
+			}
+		}
+		.depthBar {
+			@apply relative bg-editor cursor-pointer;
+			height: 10px;
+			touch-action: none;
+
+			i {
+				@apply absolute bg-purp;
+				left: 0;
+				top: 0;
+				bottom: 0;
+			}
+			s {
+				@apply absolute;
+				top: -2px;
+				bottom: -2px;
+				width: 2px;
+				background: var(--color-fg);
+			}
+		}
+	}
+
+	#zoomControl {
+		display: grid;
+		grid-template-columns: 44px 1fr 44px;
+		gap: 3px;
+
+		output {
+			@apply bg-editor text-fg text-center;
+			height: 30px;
+			line-height: 30px;
+		}
+	}
+
+	.zoomGlyph {
+		@apply relative bg-editor text-fg cursor-pointer;
+		border: 0;
+		padding: 0;
+		height: 30px;
+
+		/* Topaz draws a minus near the baseline, so the glyphs are CSS
+		   bars instead of font characters */
+		&::before,
+		&.plus::after {
+			content: '';
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			background: currentColor;
+		}
+		&::before {
+			width: 10px;
+			height: 2px;
+			margin: -1px 0 0 -5px;
+		}
+		&.plus::after {
+			width: 2px;
+			height: 10px;
+			margin: -5px 0 0 -1px;
+		}
+		@media (hover: hover) {
+			&:hover {
+				@apply bg-hl;
+			}
+		}
+	}
+
+	/* the selection action bar floats over the canvas at z 150, under
+	   the flyouts and menus at 200 */
 	#selectionToolbar {
-		@apply hidden w-auto flex-row justify-start;
+		@apply fixed flex flex-row items-center bg-menu;
+		z-index: 150;
+		width: max-content;
+		height: max-content;
+		border: 4px solid var(--color-panel);
+		box-shadow: 0 2px 10px #000a;
+
+		&[hidden] {
+			display: none !important;
+		}
+		.toolButton {
+			/* anchors the paste opener's corner tick */
+			position: relative;
+			padding: 3px 6px;
+
+			svg {
+				fill: var(--color-fg);
+				width: 24px;
+				height: 24px;
+			}
+			kbd {
+				font-size: 11px;
+			}
+		}
+		/* the bar has two faces: actions, or the paste submenu */
+		&.pasteOpen > :not(.pasteSub) {
+			display: none;
+		}
+		&:not(.pasteOpen) > .pasteSub {
+			display: none;
+		}
+	}
+	#selectionSize {
+		@apply text-subtitle;
+		font-size: 12px;
+		padding: 0 8px;
+		white-space: nowrap;
+		font-variant-numeric: tabular-nums;
 	}
 	#navDarkmode > kbd {
 		width: max-content;
 	}
 	/* every submenu stacks the icon over its label */
 	.toolButton {
-		@apply text-white flex flex-col text-sm h-[var(--header-size)] px-[5px] mx-0.5;
+		@apply text-white flex flex-col text-sm px-[5px] mx-0.5;
 
 		/* mouse only, same touch rule as the aside tools */
 		@media (hover: hover) {
@@ -514,157 +1564,6 @@
 
 	#cut {
 		margin-left: 4px !important;
-	}
-
-	#keyboardToolbar {
-		@apply flex text-fg text-xs;
-
-		span {
-			@apply flex flex-col my-auto mx-1;
-			@media (hover: hover) {
-				&:hover canvas {
-					outline: 1px solid var(--cyber);
-				}
-			}
-			canvas {
-				scale: 1 !important;
-				margin: auto;
-			}
-		}
-	}
-	#navDarkmode,
-	#zoomControl {
-		&:hover,
-		&:focus,
-		&:focus-within {
-			@apply bg-transparent!;
-		}
-	}
-	#zoomControl {
-		/* icon, label and value share the top row; the slider rides alone
-		   below it */
-		.zoomControl {
-			@apply flex flex-col items-center;
-		}
-		.zoomTop {
-			@apply flex flex-row items-center;
-
-			svg {
-				@apply mx-0;
-			}
-			/* wider break after the icon, tighter label-to-value pair */
-			label {
-				@apply cursor-pointer pl-2 pr-1;
-			}
-		}
-		/* the slider spans exactly the row above it: zero width keeps
-		   the input's intrinsic size from widening the column, and the
-		   min-width stretches it back to the row */
-		#zoomSlider {
-			width: 0;
-			min-width: 100%;
-		}
-		input[type='range'] {
-			@apply appearance-none bg-transparent;
-		}
-		input[type='range']::-webkit-slider-thumb {
-			@apply appearance-none bg-transparent;
-		}
-		input[type='range']:focus {
-			outline: none;
-		}
-		input[type='range']::-webkit-slider-thumb {
-			@apply appearance-none bg-thumb cursor-ew-resize rounded-bl-xs;
-			height: 16px;
-			width: 16px;
-			margin-top: -4px;
-
-			@media (hover: hover) {
-				&:hover {
-					@apply bg-cyan;
-				}
-			}
-		}
-		input[type='range']::-moz-range-thumb {
-			@apply bg-thumb cursor-ew-resize rounded-bl-xs;
-			height: 16px;
-			width: 16px;
-
-			@media (hover: hover) {
-				&:hover {
-					@apply bg-cyan;
-				}
-			}
-		}
-		input[type='range']::-webkit-slider-runnable-track {
-			@apply bg-midnight cursor-ew-resize w-full;
-			height: 8.4px;
-		}
-		input[type='range']:active:-webkit-slider-runnable-track {
-			@apply bg-tools;
-		}
-		input[type='range']::-moz-range-track {
-			@apply bg-midnight cursor-ew-resize w-full;
-			height: 8.4px;
-		}
-
-		label {
-			@apply text-sm text-fg p-1;
-		}
-		span {
-			@apply text-sm text-chat mx-0.5;
-		}
-	}
-
-	#fkeySetPrev,
-	#fkeySetNext {
-		height: calc(var(--header-size) - 8px);
-		@media (hover: hover) {
-			&:hover {
-				background: transparent;
-				svg {
-					fill: var(--color-cyan);
-				}
-			}
-		}
-		&:active svg {
-			fill: var(--color-cyber);
-		}
-
-		svg {
-			width: 25px;
-			height: 25px;
-			margin-top: 5px;
-		}
-	}
-
-	#currentFontDisplay {
-		user-select: none;
-	}
-
-	#resolution {
-		@apply flex flex-row;
-		line-height: 20px;
-		svg {
-			margin-top: 10px;
-		}
-	}
-
-	header kbd {
-		color: rgb(200, 200, 200);
-		font-size: 14px;
-		line-height: 20px;
-	}
-
-	#resolution kbd,
-	#currentFontDisplay kbd {
-		@apply bg-lbl px-[8px] py-[1px];
-	}
-
-	#positionInfo {
-		@apply flex flex-row text-fg text-xs mr-1 min-w-[50px];
-		padding: 5px 2px 2px 3px;
-		word-spacing: -6px;
 	}
 
 	#canvasContainer {
@@ -697,14 +1596,9 @@
 		image-rendering: pixelated;
 	}
 
-	header > div > div.button {
-		@apply text-xs text-fg text-center;
-		box-shadow: 0px 1px 0px rgba(0, 0, 0, 0.7);
-	}
-
 	aside {
 		> div {
-			@apply text-center h-fit flex justify-center items-center py-1 mx-auto;
+			@apply text-center h-fit flex justify-center items-center py-1 mx-auto relative;
 
 			/* hover is mouse only: touch screens glue :hover to the last
 			   tap, which paints the selected tool hl black over its indigo */
@@ -732,6 +1626,18 @@
 		@apply bg-indigo;
 	}
 
+	/* a corner tick marks the rail buttons that open a flyout */
+	.flyTick {
+		position: absolute;
+		right: 4px;
+		bottom: 4px;
+		border: 3px solid transparent;
+		border-right-color: var(--color-fg);
+		border-bottom-color: var(--color-fg);
+		opacity: 0.75;
+		pointer-events: none;
+	}
+
 	aside > div {
 		&.enabledParent,
 		&.enabled {
@@ -739,34 +1645,247 @@
 		}
 	}
 
-	.menuTitle {
-		@apply w-auto h-[var(--header-size)] text-fg bg-menu;
+	/* the open menu lights its rail button like an active tool, on the
+	   flyout's own state rather than the tool logic; the gap keeps the
+	   lit box clear of the swatch below it */
+	#fileMenu {
+		margin-bottom: 6px;
+	}
+	#fileMenu.flyOpen {
+		@apply bg-indigo;
+	}
 
-		button {
-			@apply h-[40px] w-[40px] pr-1 border-none bg-transparent;
+	/* the rail's menu entry keeps an inner button for accessibility */
+	#fileMenu button {
+		@apply flex bg-transparent cursor-pointer;
+		border: 0;
+		padding: 0;
+	}
+
+	/* the tabbed File/Edit menu: flush with the rail, compact rows. No
+	   top border, and tabs as tall as the rail's menu button, so the
+	   lit tab and the lit button form one indigo band across the top */
+	#mainMenu {
+		width: 300px;
+		border-top: 0;
+
+		.menuTabs {
+			@apply flex bg-menu;
+
+			button {
+				@apply bg-transparent text-fg cursor-pointer;
+				flex: 1;
+				border: 0;
+				height: 38px;
+				padding: 0 6px;
+				font-size: 14px;
+
+				&.on {
+					@apply bg-indigo;
+				}
+				@media (hover: hover) {
+					&:not(.on):hover {
+						@apply bg-hl;
+					}
+				}
+			}
+		}
+		.menuItem {
+			@apply flex items-center;
+			padding: 3px 6px;
+			/* text-sm ships a 20px leading that puffs every row; the
+			   compact spec is 3px of padding around tight text */
+			line-height: 1.15;
+
+			kbd {
+				margin-left: auto;
+				padding: 2px 6px;
+				font-size: 12px;
+				line-height: 1.2;
+			}
+		}
+		.separator {
+			@apply bg-menu;
+			height: 2px;
+			margin: 1px 2px;
+			flex: none;
+		}
+		/* collapsible groups keep the first view short; children wear a
+		   disk icon where the demo left a bare indent */
+		.menuGroup {
+			summary {
+				@apply flex items-center cursor-pointer text-sm text-fg;
+				list-style: none;
+				padding: 3px 6px;
+				line-height: 1.15;
+
+				&::-webkit-details-marker {
+					display: none;
+				}
+				&::after {
+					content: '\25B8';
+					margin-left: auto;
+					color: var(--subtitle);
+				}
+				@media (hover: hover) {
+					&:hover {
+						@apply bg-indigo text-white;
+					}
+				}
+			}
+			&[open] summary::after {
+				content: '\25BE';
+			}
+			.menuItem {
+				/* the disk marks the nesting; no extra indent on top */
+				gap: 8px;
+
+				svg {
+					flex: none;
+					width: 14px;
+					height: 14px;
+					fill: var(--cyber);
+					stroke: #000;
+				}
+			}
 		}
 	}
-
-	.menuList {
-		/* above the tool window stack (40-43), below the top layer modals */
-		@apply inline cursor-default absolute w-[300px] h-fit bg-file border-4 border-solid border-menu z-[45];
-		top: var(--header-size);
-		box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
+	.menuPane {
+		@apply flex flex-col;
 	}
-	#editList {
-		left: 40px;
+
+	/* rail flyouts: fixed panels beside their opener, in the menu band,
+	   showing and hiding without ever reparenting their contents */
+	.flyout {
+		@apply fixed flex flex-col bg-file border-4 border-solid border-menu z-[200];
+		/* a grid parent stretches an auto-sized fixed child, so both
+		   axes pin to the content instead */
+		width: max-content;
+		height: max-content;
+		min-width: 210px;
+		max-width: calc(100% - 16px);
+		max-height: calc(100% - 16px);
+		overflow: auto;
+		box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
+
+		&[hidden] {
+			display: none !important;
+		}
+	}
+	.flyHead {
+		@apply text-cyan;
+		font-size: 12px;
+		font-weight: normal;
+		padding: 6px 8px 3px;
+	}
+	/* tool buttons rendered as flyout rows, icon beside the name */
+	.flyout .toolButton {
+		@apply flex-row items-center text-left;
+		height: auto;
+		min-height: 34px;
+		gap: 10px;
+		margin: 0;
+		padding: 4px 8px;
+		width: 100%;
+
+		.stack {
+			@apply flex-row items-center;
+			gap: 10px;
+			flex: 1 1 auto;
+			width: auto;
+			height: auto;
+		}
+		svg {
+			/* the header carried the icon fill; rows own it now. The
+			   sprite paths inherit this, elements with their own fill
+			   (the sunAndMoon mask) keep theirs */
+			fill: var(--color-fg);
+			width: 22px;
+			height: 22px;
+			flex: none;
+			margin: 0;
+		}
+		kbd {
+			@apply text-left w-auto;
+			font-size: 14px;
+			margin: 0;
+		}
+		/* the right-aligned hotkey chip, demo style */
+		.hotkey {
+			@apply text-fg bg-editor not-italic;
+			flex: none;
+			margin-left: auto;
+			padding: 2px 5px;
+			font-size: 12px;
+			white-space: nowrap;
+		}
+		&.toolbarDisplayed {
+			@apply bg-indigo text-white;
+		}
+		@media (hover: hover) {
+			&:not(.toolbarDisplayed):hover {
+				@apply bg-indigo;
+			}
+		}
+	}
+	.historyActions {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 2px;
+		padding: 0 4px 4px;
+
+		.toolButton {
+			@apply bg-editor;
+		}
+	}
+	#historyList {
+		max-height: 260px;
+		overflow-y: auto;
+		border-top: 1px solid var(--color-menu);
+		scrollbar-width: thin;
+	}
+	.historyStep {
+		@apply flex items-center bg-transparent text-fg cursor-pointer text-left w-full;
+		gap: 10px;
+		border: 0;
+		min-height: 30px;
+		padding: 4px 8px;
+		font-size: 14px;
+
+		span {
+			flex: 1;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		em {
+			@apply text-subtitle not-italic;
+			font-size: 12px;
+			font-variant-numeric: tabular-nums;
+		}
+		&.current {
+			@apply bg-indigo text-white;
+		}
+		&.future {
+			opacity: 0.45;
+		}
+		@media (hover: hover) {
+			&:not(.current):hover {
+				@apply bg-hl;
+			}
+		}
 	}
 
 	.menuItem {
 		@apply cursor-pointer text-sm text-fg px-1.5 py-1;
 
 		kbd {
-			@apply text-fg bg-editor ml-2.5 p-1;
+			@apply bg-editor ml-2.5 p-1;
+			/* off white, one step under the row label, readable on the
+			   dark chip in both themes */
+			color: var(--silver);
 			font-size: 13px;
 		}
-	}
-	.dark .menuItem kbd {
-		@apply text-tools;
 	}
 
 	.menuList .separator {
@@ -1129,16 +2248,8 @@
 		}
 	}
 	#colorPanel {
-		/* aside > div makes this a centered flex row; restack it.
-		   floating-window chrome: solid dark border, thicker on top
-		   to mark the drag strip, like the brush windows */
-		@apply fixed z-40 bg-menu p-2 flex-col items-stretch text-left;
-		border: 4px solid var(--color-panel);
-		border-top-width: 16px;
-		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
-		cursor: move;
-		left: 48px;
-		top: var(--header-size);
+		/* a flyout from the rail's ++ button; the manager owns placement */
+		@apply p-2 items-stretch text-left;
 		width: 354px;
 		h3 {
 			@apply text-cyan text-sm pt-1 pb-1;
@@ -1195,15 +2306,10 @@
 		}
 	}
 	#framesPanel {
-		/* floating-window chrome, thicker top border = drag strip */
-		@apply fixed z-40 bg-menu p-2 flex flex-row gap-2 items-center;
-		border: 4px solid var(--color-panel);
-		border-top-width: 16px;
-		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
-		cursor: move;
-		left: 48px;
-		bottom: 8px;
-		max-width: calc(100vw - 64px);
+		.modContent {
+			@apply flex-row flex-wrap items-center;
+			gap: 8px;
+		}
 		button {
 			@apply bg-menu text-fg px-2 cursor-pointer;
 		}
@@ -1242,42 +2348,9 @@
 			@apply bg-purp;
 		}
 	}
-	#minimapPanel {
-		@apply fixed z-30 dialog-style p-1 flex flex-col;
-		right: 8px;
-		top: var(--header-size);
-		/* 100% of the ICB, not 100vh: iOS vh units outgrow the window and
-		   push the bottom border off screen on long files */
-		max-height: calc(100% - var(--header-size));
-	}
-	#minimapMenuToggle {
-		/* floats over the art's corner: chromeless until hovered so the
-		   glyph reads without walling off the pixels under it */
-		@apply absolute bg-transparent border-0 cursor-pointer p-0.5;
-		top: 6px;
-		right: 6px;
-		z-index: 2;
-		svg {
-			display: block;
-			width: 16px;
-			height: 16px;
-			fill: #efefef;
-			/* the focus box trick for a glyph: a hard black halo traced
-			   around the icon's own shape, so it reads over white art */
-			filter: drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000)
-				drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000);
-		}
-		@media (hover: hover) {
-			&:hover {
-				@apply bg-hl;
-			}
-		}
-	}
 	#minimapMenu {
 		@apply flex flex-col gap-1 text-fg text-xs p-1;
-		/* never wider than the art: a wider menu stretches the panel
-		   and bares a dead strip beside the fixed-width map */
-		width: 128px;
+		width: auto;
 		/* the global ease animates the reveal; display cannot
 		   transition, so closed collapses to zero height and
 		   visibility flips at the transition's end instead */
@@ -1298,14 +2371,6 @@
 			max-height: 128px;
 			visibility: visible;
 			@apply py-1;
-		}
-		/* the close chrome owns the top right corner; the transport sits
-		   beside its title like the spec sketch */
-		#autoscrollTransport {
-			@apply flex flex-row items-center gap-2;
-			span {
-				@apply text-cyan;
-			}
 		}
 		/* :not(.segment): an id-scoped button rule would steamroll the
 		   segmented control's own selection styling */
@@ -1423,7 +2488,7 @@
 	}
 	#minimapArt {
 		display: block;
-		width: 128px;
+		width: 100%;
 		height: auto;
 		image-rendering: pixelated;
 	}
@@ -1693,31 +2758,31 @@
 		@apply text-cyan text-sm pt-2;
 	}
 	#refPanel {
-		/* floating-window chrome, thicker top border = drag strip */
-		@apply fixed z-40 bg-menu p-2 flex flex-row gap-3 items-center;
-		border: 4px solid var(--color-panel);
-		border-top-width: 16px;
-		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
-		cursor: move;
-		right: 8px;
-		bottom: 8px;
-		button {
-			@apply bg-menu text-fg px-2 cursor-pointer;
+		.panelChips button {
+			@apply bg-editor text-fg px-2 cursor-pointer;
+			border: 0;
+			padding-block: 3px;
+			font-size: 14px;
 		}
 		@media (hover: hover) {
-			button:hover {
+			.panelChips button:hover {
 				@apply bg-purp;
 			}
 		}
 		label {
-			@apply text-fg text-xs flex items-center gap-1;
+			@apply text-cyan text-xs flex items-center gap-2;
+
+			input[type='range'] {
+				flex: 1;
+				accent-color: var(--indigo);
+			}
 		}
 		#refDrag {
-			@apply flex items-center self-stretch p-px;
+			@apply flex items-center gap-1;
 			svg {
 				@apply pointer-events-none;
-				width: 22px;
-				height: 22px;
+				width: 18px;
+				height: 18px;
 				fill: currentColor;
 			}
 			&[aria-pressed='true'] {
@@ -1726,41 +2791,20 @@
 		}
 	}
 	#toolSettings {
-		/* floating-window chrome, thicker top border = drag strip */
-		@apply fixed z-40 bg-menu flex flex-col gap-1 items-start;
-		border: 4px solid var(--color-panel);
-		border-top-width: 16px;
-		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
-		cursor: move;
-		left: 48px;
-		top: calc(var(--header-size) + 8px);
-
-		h3 {
-			/* the title rides the drag strip like the close chrome */
-			position: absolute;
-			top: -16px;
-			left: 0;
-			color: #efefef;
-			font-size: 10px;
-			line-height: 12px;
-			padding: 2px 5px;
+		.modContent {
+			gap: 4px;
+			padding: 0;
 		}
-		/* sections only: the close chrome is also a direct div child */
-		> div:not(.hidePanel) {
-			@apply flex flex-col gap-1 items-start p-2;
+		.modContent > div {
+			@apply flex flex-col items-start p-2;
+			gap: 6px;
+			align-self: stretch;
 		}
-		/* the picker sections are all canvas and sit flush in the frame */
-		#tsShading,
-		#tsCharacter {
-			@apply p-0;
-		}
-		label {
-			@apply text-cyan text-xs;
-
-			/* a second heading in a section breathes above its control */
-			&:not(:first-child) {
-				@apply mt-[6px];
-			}
+		/* label hierarchy: tool names ride .barTitle, panel titles the
+		   strip; setting labels stay quiet grey */
+		label,
+		.settingLabel {
+			@apply text-subtitle text-xs;
 		}
 		output {
 			@apply text-fg text-xs ml-1;
@@ -1772,13 +2816,373 @@
 		.dimmed {
 			@apply opacity-40 pointer-events-none;
 		}
-		/* picker sections: the swatch cursor overlays its canvas stack */
-		> div > div {
-			position: relative;
-		}
 		canvas {
-			cursor: crosshair;
 			vertical-align: bottom;
+		}
+
+		/* one structure per setting: a label above (or beside) its
+		   control */
+		.settingRow {
+			@apply flex flex-col items-start;
+			gap: 4px;
+		}
+		/* a bar has no title strip, so the section carries the name */
+		.barTitle {
+			display: none;
+			font-weight: normal;
+			font-size: 16px;
+			color: var(--color-fg);
+			white-space: nowrap;
+			flex: none;
+			align-self: center;
+			margin-right: 16px;
+		}
+		.settingHint {
+			@apply text-subtitle text-xs;
+		}
+
+		/* keyboard: the F-key group, then the charset button */
+		#tsKeyboard {
+			@apply flex-row flex-wrap items-center justify-between;
+			gap: 6px;
+		}
+		.fkeyGroup {
+			@apply flex items-stretch;
+			width: 100%;
+			min-width: 0;
+
+			> button {
+				@apply grid place-items-center bg-transparent cursor-pointer;
+				flex: none;
+				width: 28px;
+				border: 0;
+				padding: 0;
+
+				svg {
+					width: 18px;
+					height: 18px;
+					fill: var(--color-fg);
+				}
+			}
+		}
+		.fkeyRow {
+			display: grid;
+			grid-template-columns: repeat(12, minmax(22px, 1fr));
+			gap: 0;
+			flex: 1;
+			min-width: 0;
+		}
+		.fkey {
+			@apply flex flex-col items-center bg-transparent cursor-pointer;
+			gap: 1px;
+			border: 0;
+			padding: 2px 0 3px;
+			min-width: 0;
+
+			small {
+				font-size: 10px;
+				color: var(--subtitle);
+
+				i {
+					font-style: normal;
+				}
+			}
+		}
+		/* the wrapper owns the row slot so bar modes can widen the slot
+		   without inflating the button past its text */
+		.charsetWrap {
+			width: 100%;
+		}
+		#charsetButton {
+			@apply flex items-center bg-transparent cursor-pointer text-left;
+			gap: 8px;
+			border: 0;
+			padding: 5px 10px;
+			width: 100%;
+			font-size: 14px;
+			white-space: nowrap;
+			overflow: hidden;
+
+			svg {
+				flex: none;
+				width: 20px;
+				height: 20px;
+				fill: var(--color-fg);
+			}
+			small {
+				color: var(--cyan);
+				font-size: inherit;
+			}
+			b {
+				font-weight: normal;
+				color: var(--color-fg);
+			}
+			i {
+				font-style: normal;
+				color: var(--subtitle);
+			}
+		}
+		@media (hover: hover) {
+			.fkey:hover,
+			.fkeyGroup > button:hover,
+			#charsetButton:hover {
+				background: var(--color-editor);
+			}
+		}
+
+		/* shading: 16 colors by 4 shade bands, packed edge to edge like
+		   the character map */
+		.shadeGrid {
+			display: grid;
+			grid-template-columns: repeat(16, min-content);
+			gap: 0;
+			width: max-content;
+		}
+		.shadeChip {
+			@apply block cursor-pointer;
+			border: 0;
+			background: #000;
+			padding: 0;
+
+			&.enabled {
+				outline: 1px solid var(--cyan);
+				outline-offset: -1px;
+			}
+		}
+
+		/* character brush: the reflowing 256-glyph map */
+		.charMapPanel {
+			position: relative;
+			align-self: stretch;
+		}
+		.charMapWrap {
+			overflow-x: hidden;
+			overflow-y: auto;
+			background: #111;
+			scrollbar-width: thin;
+			scrollbar-color: #555 #111;
+		}
+		.charMap {
+			display: block;
+			image-rendering: pixelated;
+			cursor: pointer;
+			touch-action: manipulation;
+		}
+		.mapGrip {
+			display: none;
+		}
+		.charMeta {
+			@apply flex items-center justify-between;
+			gap: 10px;
+			align-self: stretch;
+		}
+		.charPreview {
+			@apply flex items-center text-subtitle;
+			gap: 8px;
+			font-size: 14px;
+		}
+		.cellSize {
+			@apply flex items-center;
+			gap: 2px;
+
+			.zoomGlyph {
+				width: 28px;
+				height: 26px;
+			}
+			span {
+				@apply grid place-items-center;
+				width: 28px;
+
+				svg {
+					width: 20px;
+					height: 20px;
+					fill: var(--color-fg);
+				}
+			}
+		}
+
+		/* sidebar: tighter previews, stacked Mode options, no F prefix */
+		&.dk {
+			.fkeyRow {
+				grid-template-columns: repeat(12, minmax(0, 1fr));
+			}
+			.fkeyRow .gc {
+				--gw: 8;
+			}
+			.fkey small i {
+				display: none;
+			}
+			.fkeyGroup > button {
+				width: 22px;
+			}
+			.shadeGrid .gc {
+				--gw: 12;
+			}
+			.segmented[id$='Mode'] {
+				flex-direction: column;
+				align-items: stretch;
+
+				.segment {
+					flex-direction: row;
+					justify-content: flex-start;
+					gap: 6px;
+
+					&:not(:first-child) {
+						@apply border-l-0 border-t-2 border-midnight border-solid;
+					}
+				}
+			}
+		}
+
+		&.fl {
+			.fkeyRow {
+				grid-template-columns: repeat(12, 22px);
+			}
+			/* the resize grip anchors to the window corner, not the map */
+			.charMapPanel {
+				position: static;
+			}
+		}
+		&.fl.charMap {
+			width: var(--mw, 300px);
+			min-width: 220px;
+			max-width: calc(100% - 70px);
+
+			.mapGrip {
+				display: block;
+				position: absolute;
+				right: -4px;
+				bottom: -4px;
+				width: 16px;
+				height: 16px;
+				cursor: nwse-resize;
+				touch-action: none;
+				background: linear-gradient(
+					135deg,
+					transparent 50%,
+					#888 50%,
+					#888 60%,
+					transparent 60%,
+					transparent 70%,
+					#888 70%,
+					#888 80%,
+					transparent 80%
+				);
+			}
+		}
+
+		/* bar: groups spread evenly and fill the row's height */
+		&.tb {
+			.barTitle {
+				display: block;
+			}
+			.settingRow {
+				flex-direction: row;
+				align-items: center;
+				gap: 8px;
+				flex: none;
+			}
+			.modContent:has(#tsKeyboard:not(.hide)) {
+				padding-block: 0;
+			}
+			#tsKeyboard {
+				flex-wrap: nowrap;
+				justify-content: space-evenly;
+				align-self: stretch;
+				align-items: stretch;
+				flex: 1 1 100%;
+				padding-block: 0;
+			}
+			.fkeyGroup {
+				width: auto;
+				flex: 0 1 auto;
+
+				> button {
+					width: 40px;
+
+					svg {
+						width: 28px;
+						height: 28px;
+					}
+				}
+			}
+			.fkeyRow {
+				grid-template-columns: repeat(12, 28px);
+			}
+			.charsetWrap {
+				@apply flex;
+				width: auto;
+				flex: none;
+			}
+			#charsetButton {
+				display: grid;
+				grid-template-columns: auto auto auto;
+				grid-template-areas: 't t t' 'i n p';
+				align-content: center;
+				justify-content: start;
+				gap: 3px 8px;
+				width: auto;
+				padding: 0 14px;
+
+				small {
+					grid-area: t;
+					font-size: 12px;
+				}
+				svg {
+					grid-area: i;
+				}
+				b {
+					grid-area: n;
+				}
+				i {
+					grid-area: p;
+				}
+			}
+			.shadeGrid {
+				grid-template-columns: repeat(32, min-content);
+				flex: none;
+			}
+			.settingHint {
+				flex: none;
+				max-width: 90px;
+				white-space: normal;
+				line-height: 1.2;
+			}
+			.charMapPanel {
+				flex: 1 1 300px;
+				min-width: 0;
+				align-self: auto;
+			}
+			.charMeta {
+				flex-direction: column;
+				align-items: stretch;
+				justify-content: center;
+				gap: 6px;
+				flex: none;
+				align-self: auto;
+			}
+		}
+	}
+
+	/* top-docked keyboard bar: the charset column rides the right edge
+	   and a flexible spacer balances it, so the F keys sit at the
+	   bar's true center, which is the canvas's center. Only with room
+	   to breathe: the fixed F key row plus two balanced columns need
+	   about 1120px of window, and below that the spacer would shove
+	   the charset under the sidebar, so the packed layout returns */
+	@media (min-width: 1120px) {
+		#dockTop #toolSettings.tb {
+			#tsKeyboard::before {
+				content: '';
+				flex: 1 1 0;
+			}
+			/* the wrapper takes the flexible column; the button inside
+			   stays sized to its text */
+			.charsetWrap {
+				flex: 1 1 0;
+				justify-content: flex-end;
+				min-width: 0;
+			}
 		}
 	}
 
@@ -2036,23 +3440,6 @@
 	   windows keep their own higher-specificity copy above. The X rides
 	   up into the border drag strip (absolute offsets anchor to the
 	   padding box, which sits below the thick top border) */
-	.hidePanel {
-		display: block;
-		position: absolute;
-		top: -16px;
-		right: -4px;
-		color: #efefef;
-		padding: 2px 5px;
-		font-size: 10px;
-		line-height: 12px;
-		cursor: pointer;
-
-		@media (hover: hover) {
-			&:hover {
-				background: #000;
-			}
-		}
-	}
 
 	@keyframes blink {
 		50% {
@@ -2071,8 +3458,10 @@
 		}
 	}
 
+	/* the drop overlay outranks every band: nothing may look clickable
+	   while a file hangs over the window */
 	#dragdrop {
-		@apply fixed inset-0 hidden justify-center pointer-events-none top-0 left-0 bottom-0 right-0 w-full h-full bg-menu/90 z-50;
+		@apply fixed inset-0 hidden justify-center pointer-events-none top-0 left-0 bottom-0 right-0 w-full h-full bg-menu/90 z-[220];
 		kbd {
 			@apply text-cyan text-center m-auto text-[4rem];
 		}
@@ -2093,12 +3482,10 @@
 	.hover,
 	.toolButton,
 	.menuItem:hover,
-	.menuTitle:hover,
 	.fkey,
 	#resolution,
 	#selectionToolbar .toolButton,
 	#currentFontDisplay,
-	#keyboardToolbar span,
 	#chatButton {
 		@apply cursor-pointer;
 	}
@@ -2185,10 +3572,9 @@
 		}
 	}
 	#navDarkmode {
-		@apply bg-none cursor-pointer aspect-square;
+		@apply bg-none cursor-pointer;
 		-webkit-tap-highlight-color: transparent;
 		touch-action: manipulation;
-		transition: transform 1s linear !important;
 		svg {
 			stroke-linecap: round;
 		}

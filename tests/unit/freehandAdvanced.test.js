@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-	createBrushController,
 	createHalfBlockController,
 	createShadingPanel,
 	createCharacterBrushPanel,
@@ -136,6 +135,7 @@ vi.mock('../../src/js/client/toolbar.js', () => ({
 }));
 
 vi.mock('../../src/js/client/ui.js', () => ({
+	iconHref: vi.fn(name => `img/icons.svg#${name}`),
 	createSegmentedControl: vi.fn((id, options, onChange) => {
 		let current = options[0]?.value;
 		const el = {
@@ -165,6 +165,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 			classList: {
 				add: vi.fn(),
 				remove: vi.fn(),
+				contains: vi.fn(() => false),
 				toggle: vi.fn(),
 			},
 			addEventListener: vi.fn(),
@@ -193,7 +194,6 @@ vi.mock('../../src/js/client/ui.js', () => ({
 		return mockElement;
 	}),
 	$$: vi.fn(() => ({ textContent: 'mock' })),
-	registerFloatingPanel: vi.fn(() => vi.fn()),
 	createCanvas: vi.fn((width, height) => {
 		const mockCanvas = {
 			width: width || 100,
@@ -244,6 +244,9 @@ const mockDocument = {
 			remove: vi.fn(),
 			toggle: vi.fn(),
 		},
+		setAttribute: vi.fn(),
+		append: vi.fn(),
+		prepend: vi.fn(),
 		addEventListener: vi.fn(),
 		removeEventListener: vi.fn(),
 		appendChild: vi.fn(),
@@ -262,6 +265,10 @@ const mockDocument = {
 		width: 100,
 		height: 100,
 		tagName: tag.toUpperCase(),
+	})),
+	createElementNS: vi.fn(() => ({
+		setAttribute: vi.fn(),
+		appendChild: vi.fn(),
 	})),
 	addEventListener: vi.fn(),
 	removeEventListener: vi.fn(),
@@ -531,16 +538,13 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 		});
 
 		it('should handle multiple tool activations', () => {
-			const brush = createBrushController();
 			const fill = createFillController();
 			const line = createLineController();
 
 			expect(() => {
-				brush.enable();
 				fill.enable();
 				line.enable();
 
-				brush.disable();
 				fill.disable();
 				line.disable();
 			}).not.toThrow();

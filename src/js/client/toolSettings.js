@@ -1,24 +1,22 @@
 /**
- * The unified tool settings window: one floating panel whose sections
- * swap with the selected tool. A tool with settings calls
- * show(section) from its enable, unconditionally, so selecting a tool
- * always reopens an X-closed window; a tool without settings calls
- * hide(). Also the single owner of the persisted settings values, so
- * lazily created controllers can never clobber each other's keys.
+ * The unified tool settings module: one panel whose sections swap with
+ * the selected tool. A tool with settings calls show(section) from its
+ * enable, unconditionally, so selecting a tool always reopens an
+ * X-closed panel; a tool without settings calls hide(). Placement
+ * (dock, float, shade, close) belongs to the panel manager; this stays
+ * the single owner of the persisted settings values, so lazily created
+ * controllers can never clobber each other's keys.
  */
-import { $, makePanelFloat } from './ui.js';
+import State from './state.js';
+import { $ } from './ui.js';
 
-const POS_KEY = 'toolSettingsPos';
 const SETTINGS_KEY = 'toolSettings';
-
-// keep at least a drag strip's worth of panel reachable when a saved
-// position comes back on a smaller viewport (iPad rotation)
-const CLAMP_MARGIN = 80;
 
 const createToolSettings = () => {
 	const panel = $('toolSettings');
 	const title = $('toolSettingsTitle');
 	const sections = {
+		keyboard: { el: $('tsKeyboard'), title: 'Keyboard' },
 		line: { el: $('tsLine'), title: 'Line' },
 		square: { el: $('tsSquare'), title: 'Square' },
 		circle: { el: $('tsCircle'), title: 'Circle' },
@@ -27,38 +25,19 @@ const createToolSettings = () => {
 		shading: { el: $('tsShading'), title: 'Shading Brush' },
 		character: { el: $('tsCharacter'), title: 'Character Brush' },
 	};
+	let current = null;
 
-	const savePos = (x, y) => {
-		try {
-			localStorage.setItem(POS_KEY, JSON.stringify({ x, y }));
-		} catch {
-			// private windows etc.: the position just does not persist
-		}
-	};
-
-	const floater = makePanelFloat(panel, () => panel.classList.add('hide'), { onMoved: savePos });
-
-	const restorePos = () => {
-		let pos = null;
-		try {
-			pos = JSON.parse(localStorage.getItem(POS_KEY));
-		} catch {
+	// a bar has no title strip, so each section carries the tool name
+	// itself; the keyboard bar alone goes nameless per the spec
+	Object.entries(sections).forEach(([name, s]) => {
+		if (name === 'keyboard' || !s.el) {
 			return;
 		}
-		if (!pos || typeof pos.x !== 'number' || typeof pos.y !== 'number') {
-			return;
-		}
-		const x = Math.min(
-			Math.max(pos.x, 0),
-			Math.max(0, window.innerWidth - CLAMP_MARGIN),
-		);
-		const y = Math.min(
-			Math.max(pos.y, 0),
-			Math.max(0, window.innerHeight - CLAMP_MARGIN),
-		);
-		panel.style.left = x + 'px';
-		panel.style.top = y + 'px';
-	};
+		const barTitle = document.createElement('B');
+		barTitle.className = 'barTitle';
+		barTitle.innerText = s.title;
+		s.el.prepend(barTitle);
+	});
 
 	const readAll = () => {
 		try {
@@ -104,23 +83,29 @@ const createToolSettings = () => {
 			s.el.classList.toggle('hide', name !== section);
 		});
 		title.innerText = target.title;
-		panel.classList.remove('hide');
-		floater.focus();
+		// the character map drives its own floating width and resize
+		// grip, so the panel flags that section for the CSS
+		panel?.classList.toggle('charMap', section === 'character');
+		current = section;
+		// reopen clears an X-close, re-lays out, and flashes the panel
+		State.panels?.reopen('tool');
 	};
 
 	const hide = () => {
-		panel.classList.add('hide');
+		current = null;
+		State.panels?.layout();
 	};
+
+	const hasSection = () => current !== null;
 
 	const mount = (section, element) => {
 		sections[section]?.el.appendChild(element);
 	};
 
-	restorePos();
-
 	return {
 		show: show,
 		hide: hide,
+		hasSection: hasSection,
 		mount: mount,
 		get: get,
 		set: set,

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { clickTool } from './helpers/editorHelpers.js';
 
 test.describe('Color Palette', () => {
 	test.beforeEach(async ({ page }) => {
@@ -49,20 +50,15 @@ test.describe('Color Palette', () => {
 	});
 
 	test('should have ICE colors toggle', async ({ page }) => {
-		// Click fonts sidebar button to show font toolbar
-		await page.locator('#fonts').click();
+		// the iCE chip lives in the sidebar canvas panel, always visible
+		const iceToggle = page.locator('#navICE');
+		await expect(iceToggle).toBeVisible();
+
+		await iceToggle.click();
 		await page.waitForTimeout(300);
 
-		const iceToggle = page.locator('#navICE');
-		const count = await iceToggle.count();
-
-		if (count > 0) {
-			await iceToggle.first().click();
-			await page.waitForTimeout(300);
-
-			await iceToggle.first().click();
-			await page.waitForTimeout(300);
-		}
+		await iceToggle.click();
+		await page.waitForTimeout(300);
 	});
 
 	test('should support keyboard shortcuts for colors', async ({ page }) => {
@@ -115,7 +111,7 @@ test.describe('Sample Tool (Color Picker)', () => {
 			// Click brushes to show brush toolbar, then select halfblock
 			await page.locator('#brushes').click();
 			await page.waitForTimeout(200);
-			await page.locator('#halfblock').click();
+			await clickTool(page, 'halfblock');
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
 			await page.mouse.move(box.x + 70, box.y + 70);
@@ -141,7 +137,7 @@ test.describe('Character Palette', () => {
 
 	test('should open character selection', async ({ page }) => {
 		await page.locator('#brushes').click();
-		await page.locator('#characterBrush').click();
+		await clickTool(page, 'characterBrush');
 
 		// the 256 glyph picker rides the settings window now
 		await expect(page.locator('#toolSettings')).toBeVisible();

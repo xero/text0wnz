@@ -282,10 +282,172 @@ const onFileChange = (el, func) => {
 	});
 };
 
+/**
+ * The sidebar cursor panel: col/row readout sized for 5-digit rows, a
+ * jump-to-row field behind the row number, and a scrubbable depth bar.
+ */
 const createPositionInfo = el => {
+	const row = document.createElement('div');
+	row.className = 'cursorReadout';
+	const colLabel = document.createElement('span');
+	colLabel.textContent = 'col';
+	const colValue = document.createElement('b');
+	colValue.textContent = '1';
+	const rowLabel = document.createElement('span');
+	rowLabel.textContent = 'row';
+	const rowButton = document.createElement('button');
+	rowButton.type = 'button';
+	rowButton.title = 'Jump to row';
+	rowButton.textContent = '1';
+	const total = document.createElement('i');
+	row.append(colLabel, colValue, rowLabel, rowButton, total);
+
+	const depth = document.createElement('div');
+	depth.className = 'depthBar';
+	depth.title = 'Scroll depth: drag to scroll';
+	const fill = document.createElement('i');
+	const mark = document.createElement('s');
+	depth.append(fill, mark);
+
+	el.append(row, depth);
+
+	const viewport = $('viewport');
+	// the phone top strip carries a compact copy of the readout
+	const stripPos = $('topStripPos');
+	const rowCount = () => State.textArtCanvas?.getRows?.() ?? 0;
+
 	const update = (x, y) => {
-		el.textContent = x + 1 + ', ' + (y + 1);
+		colValue.textContent = String(x + 1);
+		rowButton.textContent = String(y + 1);
+		if (stripPos) {
+			stripPos.textContent = `${x + 1},${y + 1}`;
+		}
 	};
+
+	const refreshTotal = () => {
+		const rows = rowCount();
+		total.textContent = rows ? `/ ${rows}` : '';
+	};
+
+	const syncDepth = () => {
+		if (!viewport) {
+			return;
+		}
+		const height = viewport.scrollHeight || 1;
+		const top = Math.min(1, viewport.scrollTop / height);
+		const bottom = Math.min(
+			1,
+			(viewport.scrollTop + viewport.clientHeight) / height,
+		);
+		fill.style.width = `${bottom * 100}%`;
+		mark.style.left = `calc(${top * 100}% - 1px)`;
+	};
+
+	[
+		'onTextCanvasSizeChange',
+		'onFontChange',
+		'onXBFontLoaded',
+		'onOpenedFile',
+		'onLetterSpacingChange',
+	].forEach(e =>
+		document.addEventListener(e, () => {
+			refreshTotal();
+			syncDepth();
+		}));
+
+	if (viewport) {
+		viewport.addEventListener('scroll', syncDepth, { passive: true });
+
+		let scrubbing = false;
+		const scrub = e => {
+			const rect = depth.getBoundingClientRect();
+			const fraction = Math.min(
+				Math.max((e.clientX - rect.left) / rect.width, 0),
+				1,
+			);
+			viewport.scrollTop =
+				fraction * viewport.scrollHeight - viewport.clientHeight / 2;
+		};
+		depth.addEventListener('pointerdown', e => {
+			scrubbing = true;
+			depth.setPointerCapture(e.pointerId);
+			scrub(e);
+		});
+		depth.addEventListener('pointermove', e => {
+			if (scrubbing) {
+				scrub(e);
+			}
+		});
+		const scrubEnd = () => {
+			scrubbing = false;
+		};
+		depth.addEventListener('pointerup', scrubEnd);
+		depth.addEventListener('pointercancel', scrubEnd);
+
+		const jumpTo = targetRow => {
+			const rows = rowCount();
+			const container = $('canvasContainer');
+			if (!rows || !container) {
+				return;
+			}
+			const clamped = Math.min(Math.max(targetRow, 1), rows);
+			// the canvas sits below a container margin, so anchor row math
+			// in content space like the scroll snap in main.js does
+			const offY =
+				container.getBoundingClientRect().top -
+				viewport.getBoundingClientRect().top +
+				viewport.scrollTop;
+			viewport.scrollTop =
+				offY +
+				((clamped - 1) / rows) * container.clientHeight -
+				viewport.clientHeight / 3;
+		};
+
+		rowButton.addEventListener('click', () => {
+			const input = document.createElement('input');
+			input.type = 'text';
+			input.inputMode = 'numeric';
+			input.setAttribute('aria-label', 'Jump to Row');
+			input.value = rowButton.textContent;
+			rowButton.replaceWith(input);
+			input.select();
+			let finished = false;
+			const done = go => {
+				if (finished) {
+					return;
+				}
+				finished = true;
+				if (go) {
+					const target = parseInt(input.value, 10);
+					if (!isNaN(target)) {
+						jumpTo(target);
+					}
+				}
+				input.replaceWith(rowButton);
+			};
+			// the keyboard tool and shortcut maps listen on document:
+			// keys typed here must never paint glyphs or fire actions
+			input.addEventListener('keydown', e => {
+				e.stopPropagation();
+				if (e.key === 'Enter') {
+					done(true);
+				}
+				if (e.key === 'Escape') {
+					done(false);
+				}
+			});
+			input.addEventListener('keypress', e => e.stopPropagation());
+			input.addEventListener('keyup', e => e.stopPropagation());
+			input.addEventListener('blur', () => {
+				if (input.isConnected) {
+					done(true);
+				}
+			});
+		});
+	}
+
+	refreshTotal();
+	syncDepth();
 
 	return { update: update };
 };
@@ -300,7 +462,7 @@ const viewportTap = view => {
 	let eligible = false;
 
 	view.addEventListener('touchstart', event => {
-		State.menus.close();
+		State.flyouts?.close();
 		const onCanvas =
 			typeof event.target?.closest === 'function' &&
 			event.target.closest('#canvasContainer') !== null;
@@ -828,165 +990,6 @@ const enforceMaxBytes = () => {
 	$('sauceBytes').value = `${bytes}/${SAUCE_MAX_BYTES} bytes`;
 };
 
-const createGenericController = (panel, nav) => {
-	const enable = () => {
-		panel.style.display = 'flex';
-		nav.classList.add('enabledParent');
-	};
-	const disable = () => {
-		panel.style.display = 'none';
-		nav.classList.remove('enabledParent');
-	};
-	return {
-		enable: enable,
-		disable: disable,
-	};
-};
-
-const createViewportController = el => {
-	const panel = el;
-	const enable = () => {
-		panel.style.display = 'flex';
-	};
-	const disable = () => {
-		panel.style.display = 'none';
-	};
-	return {
-		enable: enable,
-		disable: disable,
-	};
-};
-
-// one shared stack so overlapping tool windows focus on press: any
-// pointer down inside a registered window lifts it above its siblings.
-// The whole band (40 to 40 + count) stays below the z-[45] menu lists;
-// modals open through showModal and the top layer beats any z-index
-const panelStack = [];
-const PANEL_BASE_Z = 40;
-const restackPanels = () => {
-	panelStack.forEach((p, i) => {
-		p.style.zIndex = String(PANEL_BASE_Z + i);
-	});
-};
-const registerFloatingPanel = panel => {
-	const focus = () => {
-		const i = panelStack.indexOf(panel);
-		if (i === panelStack.length - 1) {
-			return;
-		}
-		panelStack.splice(i, 1);
-		panelStack.push(panel);
-		restackPanels();
-	};
-	panelStack.push(panel);
-	restackPanels();
-	panel.addEventListener('mousedown', focus, true);
-	panel.addEventListener('touchstart', focus, { capture: true, passive: true });
-	return focus;
-};
-
-// drag + close chrome for the fixed tool windows (colors, frames),
-// matching the brush windows' behavior. A press on a control is a
-// control gesture, so only free panel area starts a drag. Extras ride
-// opt-in options so legacy panels keep their exact behavior:
-// onMoved(left, top) fires when a drag ends
-const makePanelFloat = (panel, onClose, options = {}) => {
-	const focus = registerFloatingPanel(panel);
-	const close = document.createElement('div');
-	close.classList.add('hidePanel');
-	close.innerText = 'X';
-	panel.appendChild(close);
-	close.addEventListener('click', onClose);
-
-	const interactive = target =>
-		target.closest('button, input, select, canvas, .colorSwatch, .hidePanel') !==
-		null;
-
-	let startPointer = null;
-	let startPanel = null;
-
-	const setPos = (newX, newY) => {
-		// dropping the far-edge anchors keeps a bottom- or right-pinned
-		// panel from stretching once top and left are set
-		panel.style.bottom = 'auto';
-		panel.style.right = 'auto';
-		panel.style.left = newX + 'px';
-		panel.style.top = newY + 'px';
-	};
-
-	const begin = (px, py) => {
-		startPointer = [px, py];
-		const rect = panel.getBoundingClientRect();
-		startPanel = [rect.left, rect.top];
-	};
-
-	const dragTo = (px, py) => {
-		setPos(
-			startPanel[0] + (px - startPointer[0]),
-			startPanel[1] + (py - startPointer[1]),
-		);
-	};
-
-	const mouseMove = e => {
-		if (startPointer) {
-			e.preventDefault();
-			dragTo(e.clientX, e.clientY);
-		}
-	};
-
-	const moved = () => {
-		if (startPointer && typeof options.onMoved === 'function') {
-			const rect = panel.getBoundingClientRect();
-			options.onMoved(rect.left, rect.top);
-		}
-	};
-
-	const mouseUp = () => {
-		moved();
-		startPointer = null;
-		document.removeEventListener('mousemove', mouseMove);
-		document.removeEventListener('mouseup', mouseUp);
-	};
-
-	panel.addEventListener('mousedown', e => {
-		if (interactive(e.target)) {
-			return;
-		}
-		begin(e.clientX, e.clientY);
-		document.addEventListener('mousemove', mouseMove);
-		document.addEventListener('mouseup', mouseUp);
-	});
-
-	const touchMove = e => {
-		if (startPointer) {
-			e.preventDefault();
-			dragTo(e.touches[0].pageX, e.touches[0].pageY);
-		}
-	};
-
-	const touchEnd = () => {
-		moved();
-		startPointer = null;
-		document.removeEventListener('touchmove', touchMove);
-		document.removeEventListener('touchend', touchEnd);
-	};
-
-	panel.addEventListener(
-		'touchstart',
-		e => {
-			if (interactive(e.target)) {
-				return;
-			}
-			begin(e.touches[0].pageX, e.touches[0].pageY);
-			document.addEventListener('touchmove', touchMove, { passive: false });
-			document.addEventListener('touchend', touchEnd);
-		},
-		{ passive: true },
-	);
-
-	return { focus };
-};
-
 const createResolutionController = (lbl, txtC, txtR) => {
 	[
 		'onTextCanvasSizeChange',
@@ -1036,47 +1039,6 @@ const createDragDropController = (handler, el) => {
 			handler(files[0]);
 		}
 	});
-};
-
-const createMenuController = (elements, canvas, view) => {
-	const menus = [];
-	let current = null;
-
-	const closeAll = () => {
-		menus.forEach(menu => {
-			classList(menu, 'hide', true);
-		});
-		canvas.focus();
-	};
-	const close = _ => {
-		current = null;
-		closeAll();
-	};
-
-	const toggle = menu => {
-		current = has(menu, 'hide') ? menu : null;
-		closeAll();
-		if (current) {
-			classList(current, 'hide', false);
-			menu.focus();
-		} else {
-			canvas.focus();
-		}
-	};
-	elements.forEach(el => {
-		const button = el.button;
-		const menu = el.menu;
-		menus.push(menu);
-		onClick(button, _ => {
-			toggle(menu);
-		});
-		menu.querySelectorAll('.menuItem').forEach(item => {
-			onClick(item, close);
-		});
-		menu.addEventListener('blur', close);
-	});
-	onClick(view, close);
-	return { close: closeAll };
 };
 
 const createFontSelect = (el, lbl, img, btn) => {
@@ -1289,127 +1251,68 @@ const createFontSelect = (el, lbl, img, btn) => {
 	};
 };
 
+/**
+ * The sidebar zoom panel: minus and plus buttons around the current
+ * scale, routed through the zoom controller so pinch, wheel, keys, and
+ * buttons all share the same clamped stepping and focal anchoring.
+ */
 const createZoomControl = () => {
-	const container = document.createElement('div');
-	container.className = 'zoomControl';
-	container.setAttribute('aria-label', 'Canvas Zoom Control');
+	const zoomOut = $('zoomOut');
+	const zoomIn = $('zoomIn');
+	const display = $('zoomValue');
+	if (!zoomOut || !zoomIn || !display) {
+		return null;
+	}
 
-	const label = document.createElement('label');
-	label.textContent = 'Zoom';
-	label.htmlFor = 'zoomSlider';
+	const format = scale =>
+		`${Number.isInteger(scale) ? scale : parseFloat(scale.toFixed(2))}x`;
 
-	const slider = document.createElement('input');
-	slider.type = 'range';
-	slider.id = 'zoomSlider';
-	slider.min = '0.5';
-	slider.max = '4';
-	slider.step = '0.5';
-	slider.value = '1';
-	slider.setAttribute('aria-valuemin', '0.5');
-	slider.setAttribute('aria-valuemax', '4');
-	slider.setAttribute('aria-valuenow', '1');
-	slider.setAttribute('aria-label', 'Canvas zoom level');
+	const current = () => State.font?.getScaleFactor?.() ?? 1;
 
-	const display = document.createElement('span');
-	display.className = 'zoomDisplay';
-	display.textContent = '1.0x';
-	display.setAttribute('aria-live', 'polite');
+	const refresh = () => {
+		display.textContent = format(current());
+	};
 
-	const updateZoom = value => {
-		const scale = parseFloat(value);
-		display.textContent = `${scale.toFixed(1)}x`;
-		slider.setAttribute('aria-valuenow', value);
-
+	const nudge = direction => {
 		const zoom = getZoomController();
 		if (zoom) {
-			zoom.setZoom(scale);
-		} else if (State.font && State.font.setScaleFactor) {
-			State.font.setScaleFactor(scale);
+			if (direction > 0) {
+				zoom.zoomIn();
+			} else {
+				zoom.zoomOut();
+			}
+		} else if (State.font?.setScaleFactor) {
+			State.font.setScaleFactor(
+				Math.min(4, Math.max(0.5, current() + direction * 0.5)),
+			);
 		}
-	};
-
-	const updateSliderFromState = () => {
-		if (State.font && State.font.getScaleFactor) {
-			const currentScale = State.font.getScaleFactor();
-			slider.value = currentScale.toString();
-			display.textContent = `${currentScale.toFixed(1)}x`;
-			slider.setAttribute('aria-valuenow', currentScale.toString());
-		}
-	};
-
-	State.waitFor('font', updateSliderFromState);
-
-	document.addEventListener(
-		'onStateRestorationComplete',
-		updateSliderFromState,
-	);
-
-	// pinch and wheel zoom change the scale outside the slider; mirror it
-	document.addEventListener('onScaleFactorChange', updateSliderFromState);
-
-	// Event listeners
-	slider.addEventListener('input', e => {
-		// Update display during drag (preview)
-		const scale = parseFloat(e.target.value);
-		display.textContent = `${scale.toFixed(1)}x`;
-	});
-
-	slider.addEventListener('change', e => {
-		// Apply zoom on release
-		updateZoom(e.target.value);
-		// Save immediately to state (don't wait for debounced save)
+		refresh();
 		if (State.saveToLocalStorage) {
 			State.saveToLocalStorage();
 		}
-	});
-
-	// Keyboard zoom (ctrl/cmd + = / - / 0). The controller path anchors
-	// at the viewport center and saves; the slider fallback covers
-	// contexts without a controller.
-	const handleKeyboardZoom = e => {
-		if ((e.ctrlKey || e.metaKey) && e.key === '=') {
-			// Ctrl/Cmd + Plus: Zoom in
-			e.preventDefault();
-			const zoom = getZoomController();
-			if (zoom) {
-				zoom.zoomIn();
-				return;
-			}
-			const currentValue = parseFloat(slider.value);
-			const newValue = Math.min(4, currentValue + 0.5);
-			slider.value = newValue.toString();
-			updateZoom(newValue.toString());
-			if (State.saveToLocalStorage) {
-				State.saveToLocalStorage();
-			}
-		} else if ((e.ctrlKey || e.metaKey) && e.key === '-') {
-			// Ctrl/Cmd + Minus: Zoom out
-			e.preventDefault();
-			const zoom = getZoomController();
-			if (zoom) {
-				zoom.zoomOut();
-				return;
-			}
-			const currentValue = parseFloat(slider.value);
-			const newValue = Math.max(0.5, currentValue - 0.5);
-			slider.value = newValue.toString();
-			updateZoom(newValue.toString());
-			if (State.saveToLocalStorage) {
-				State.saveToLocalStorage();
-			}
-		}
 	};
 
+	zoomOut.addEventListener('click', () => nudge(-1));
+	zoomIn.addEventListener('click', () => nudge(1));
+
+	State.waitFor('font', refresh);
+	document.addEventListener('onStateRestorationComplete', refresh);
+	// pinch and wheel zoom change the scale outside the buttons; mirror it
+	document.addEventListener('onScaleFactorChange', refresh);
+
+	const handleKeyboardZoom = e => {
+		if ((e.ctrlKey || e.metaKey) && e.key === '=') {
+			e.preventDefault();
+			nudge(1);
+		} else if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+			e.preventDefault();
+			nudge(-1);
+		}
+	};
 	document.addEventListener('keydown', handleKeyboardZoom);
-	// icon, label and value ride the top row (main.js moves the sprite
-	// icon in); the slider gets the full row below
-	const top = document.createElement('div');
-	top.className = 'zoomTop';
-	top.appendChild(label);
-	top.appendChild(display);
-	container.appendChild(top);
-	container.appendChild(slider);
-	return container;
+
+	refresh();
+	return { refresh: refresh };
 };
 
 const websocketUI = show => {
@@ -1436,8 +1339,6 @@ export {
 	createPositionInfo,
 	undoAndRedo,
 	viewportTap,
-	createViewportController,
-	createGenericController,
 	createPaintShortcuts,
 	createSegmentedControl,
 	iconHref,
@@ -1445,10 +1346,7 @@ export {
 	createToolPreview,
 	enforceMaxBytes,
 	createResolutionController,
-	makePanelFloat,
-	registerFloatingPanel,
 	createDragDropController,
-	createMenuController,
 	createFontSelect,
 	createZoomControl,
 	websocketUI,
