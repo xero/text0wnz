@@ -1125,7 +1125,8 @@
 			border-bottom: 1px solid var(--midnight);
 
 			#drawerButton {
-				@apply flex items-center bg-transparent text-left cursor-pointer;
+				/* buttons default to the UA's black, not the theme text */
+				@apply flex items-center bg-transparent text-fg text-left cursor-pointer;
 				flex: 1;
 				min-width: 0;
 				gap: 8px;
@@ -2887,6 +2888,11 @@
 				}
 			}
 		}
+		/* the wrapper owns the row slot so bar modes can widen the slot
+		   without inflating the button past its text */
+		.charsetWrap {
+			width: 100%;
+		}
 		#charsetButton {
 			@apply flex items-center bg-transparent cursor-pointer text-left;
 			gap: 8px;
@@ -3103,6 +3109,11 @@
 			.fkeyRow {
 				grid-template-columns: repeat(12, 28px);
 			}
+			.charsetWrap {
+				@apply flex;
+				width: auto;
+				flex: none;
+			}
 			#charsetButton {
 				display: grid;
 				grid-template-columns: auto auto auto;
@@ -3149,6 +3160,28 @@
 				gap: 6px;
 				flex: none;
 				align-self: auto;
+			}
+		}
+	}
+
+	/* top-docked keyboard bar: the charset column rides the right edge
+	   and a flexible spacer balances it, so the F keys sit at the
+	   bar's true center, which is the canvas's center. Only with room
+	   to breathe: the fixed F key row plus two balanced columns need
+	   about 1120px of window, and below that the spacer would shove
+	   the charset under the sidebar, so the packed layout returns */
+	@media (min-width: 1120px) {
+		#dockTop #toolSettings.tb {
+			#tsKeyboard::before {
+				content: '';
+				flex: 1 1 0;
+			}
+			/* the wrapper takes the flexible column; the button inside
+			   stays sized to its text */
+			.charsetWrap {
+				flex: 1 1 0;
+				justify-content: flex-end;
+				min-width: 0;
 			}
 		}
 	}
