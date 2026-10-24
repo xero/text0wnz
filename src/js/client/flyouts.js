@@ -19,6 +19,9 @@ const createFlyoutManager = () => {
 			return false;
 		}
 		open.el.hidden = true;
+		// the opener wears flyOpen while its flyout shows, so chrome can
+		// light it (the rail's menu button) apart from the tool logic
+		open.from?.classList?.remove('flyOpen');
 		open = null;
 		return true;
 	};
@@ -81,6 +84,7 @@ const createFlyoutManager = () => {
 	const show = (id, el, from, opts = {}) => {
 		close();
 		open = { id, el, from };
+		from?.classList?.add('flyOpen');
 		el.hidden = false;
 		place(el, from, opts);
 		opts.onOpen?.();

@@ -110,6 +110,22 @@ describe('flyout manager', () => {
 		expect(document.activeElement).toBe(document.getElementById('new'));
 	});
 
+	it('the opener wears flyOpen only while its flyout shows', () => {
+		const menu = document.getElementById('mainMenu');
+		const opener = document.getElementById('fileMenu');
+		fly.toggle('menu', menu, opener);
+		expect(opener.classList.contains('flyOpen')).toBe(true);
+		// an outside press closes and unlights
+		press(document.getElementById('elsewhere'));
+		expect(opener.classList.contains('flyOpen')).toBe(false);
+		// switching flyouts moves the mark to the new opener
+		fly.toggle('menu', menu, opener);
+		const brushes = document.getElementById('brushes');
+		fly.toggle('brushes', document.getElementById('brushToolbar'), brushes);
+		expect(opener.classList.contains('flyOpen')).toBe(false);
+		expect(brushes.classList.contains('flyOpen')).toBe(true);
+	});
+
 	it('focuses the active item when opening', () => {
 		const menu = document.getElementById('mainMenu');
 		fly.toggle('menu', menu, document.getElementById('fileMenu'));
