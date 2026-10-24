@@ -7,6 +7,56 @@
  * device pixel boundaries.
  */
 
+import State from './state.js';
+import { createLazyFont } from './lazyFont.js';
+
+// previews are chrome, not canvas: panels and fkey tiles draw through
+// a shared 1x font so zoom can never scale or crop them, and the
+// backing store stays at base glyph size. One cached instance serves
+// every preview; building per call would stack orphaned pregeneration
+// drains and rerasterize every glyph. Null until a font loads
+let oneXFont = null;
+let oneXKey = null;
+
+const get1xFont = () => {
+	if (!State.font || !State.font.getData) {
+		return null;
+	}
+	const data = State.font.getData();
+	const spacing = State.font.getLetterSpacing?.() ?? false;
+	if (
+		!oneXFont ||
+		oneXKey.data !== data ||
+		oneXKey.palette !== State.palette ||
+		oneXKey.spacing !== spacing
+	) {
+		oneXFont?.dispose();
+		oneXFont = createLazyFont(data, State.palette, spacing, 1);
+		oneXKey = { data: data, palette: State.palette, spacing: spacing };
+	}
+	return oneXFont;
+};
+
+const drop1xFont = () => {
+	oneXFont?.dispose();
+	oneXFont = null;
+	oneXKey = null;
+};
+
+// a palette edit mutates State.palette in place, invisible to the key
+// compare above, so every event that repaints a preview retires the
+// cache first. Consumers import this module before they register their
+// own listeners, so these always run ahead of the repaints
+for (const name of [
+	'onPaletteChange',
+	'onLetterSpacingChange',
+	'onFontChange',
+	'onXBFontLoaded',
+	'onOpenedFile',
+]) {
+	document.addEventListener(name, drop1xFont);
+}
+
 const fitGlyphCanvas = canvas => {
 	let style;
 	try {
@@ -61,5 +111,5 @@ const armPixelRatioWatch = onChange => {
 	arm();
 };
 
-export { fitGlyphCanvas, fitGlyphs, armPixelRatioWatch };
-export default { fitGlyphCanvas, fitGlyphs, armPixelRatioWatch };
+export { fitGlyphCanvas, fitGlyphs, armPixelRatioWatch, get1xFont };
+export default { fitGlyphCanvas, fitGlyphs, armPixelRatioWatch, get1xFont };
