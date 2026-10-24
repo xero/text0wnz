@@ -1225,6 +1225,11 @@
 				margin: 0;
 				padding: 0;
 			}
+			/* the wide rail's gap under the menu button would knock the
+			   horizontal row out of line */
+			#fileMenu {
+				margin-bottom: 0;
+			}
 			> canvas {
 				flex: none;
 				align-self: center;
@@ -1640,7 +1645,11 @@
 	}
 
 	/* the open menu lights its rail button like an active tool, on the
-	   flyout's own state rather than the tool logic */
+	   flyout's own state rather than the tool logic; the gap keeps the
+	   lit box clear of the swatch below it */
+	#fileMenu {
+		margin-bottom: 6px;
+	}
 	#fileMenu.flyOpen {
 		@apply bg-indigo;
 	}
@@ -1652,9 +1661,12 @@
 		padding: 0;
 	}
 
-	/* the tabbed File/Edit menu: flush with the rail, compact rows */
+	/* the tabbed File/Edit menu: flush with the rail, compact rows. No
+	   top border, and tabs as tall as the rail's menu button, so the
+	   lit tab and the lit button form one indigo band across the top */
 	#mainMenu {
 		width: 300px;
+		border-top: 0;
 
 		.menuTabs {
 			@apply flex bg-menu;
@@ -1663,7 +1675,8 @@
 				@apply bg-transparent text-fg cursor-pointer;
 				flex: 1;
 				border: 0;
-				padding: 6px;
+				height: 38px;
+				padding: 0 6px;
 				font-size: 14px;
 
 				&.on {
@@ -1730,7 +1743,8 @@
 					flex: none;
 					width: 14px;
 					height: 14px;
-					fill: var(--subtitle);
+					fill: var(--cyber);
+					stroke: #000;
 				}
 			}
 		}
