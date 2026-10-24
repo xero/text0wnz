@@ -81,6 +81,9 @@ const createSelectionBar = () => {
 	document.addEventListener('onSelectionChange', sync);
 	viewport?.addEventListener('scroll', sync, { passive: true });
 	window.addEventListener('resize', sync);
+	// a sidebar collapse or dock change shifts the canvas without
+	// resizing it, so the bar follows layout changes too
+	document.addEventListener('onPanelLayout', sync);
 	// zoom and resolution both resize the canvas under the selection
 	const canvas = $('canvasContainer');
 	if (canvas && window.ResizeObserver) {

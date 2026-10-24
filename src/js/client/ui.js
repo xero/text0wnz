@@ -462,7 +462,7 @@ const viewportTap = view => {
 	let eligible = false;
 
 	view.addEventListener('touchstart', event => {
-		State.menus.close();
+		State.flyouts?.close();
 		const onCanvas =
 			typeof event.target?.closest === 'function' &&
 			event.target.closest('#canvasContainer') !== null;

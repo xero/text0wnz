@@ -722,9 +722,6 @@ const initializeAppComponents = async () => {
 		$('columnsInput'),
 		$('rowsInput'),
 	);
-	// the tabbed File/Edit menu is a flyout flush with the rail; the
-	// legacy State.menus.close callers just need everything shut
-	State.menus = { close: () => State.flyouts.close() };
 	const menuPanes = { file: $('fileList'), edit: $('editList') };
 	const menuTabs = { file: $('menuTabFile'), edit: $('menuTabEdit') };
 	const showMenuTab = name => {
@@ -986,7 +983,7 @@ const initializeAppComponents = async () => {
 	createDragDropController(openHandler, $('dragdrop'));
 
 	onClick(navSauce, () => {
-		State.menus.close();
+		State.flyouts.close();
 		State.modal.open('sauce');
 	});
 
@@ -1053,21 +1050,21 @@ const initializeAppComponents = async () => {
 		$('keyboard'),
 		() => {
 			paintShortcuts.disable();
-			State.menus.close();
+			State.flyouts.close();
 			keyboard.enable();
 			State.toolSettings.show('keyboard');
 		},
 		() => {
 			paintShortcuts.enable();
 			keyboard.disable();
-			State.menus.close();
+			State.flyouts.close();
 		},
 	).enable();
 	Toolbar.add(
 		$('selection'),
 		() => {
 			paintShortcuts.disable();
-			State.menus.close();
+			State.flyouts.close();
 			State.selectionTool.enable();
 			State.toolSettings.hide();
 		},
@@ -1085,7 +1082,7 @@ const initializeAppComponents = async () => {
 	onClick($('stripUndo'), State.textArtCanvas.undo);
 	onClick($('stripRedo'), State.textArtCanvas.redo);
 	onClick($('resolution'), () => {
-		State.menus.close();
+		State.flyouts.close();
 		State.modal.open('resize');
 		columnsInput.value = State.textArtCanvas.getColumns();
 		rowsInput.value = State.textArtCanvas.getRows();
@@ -1224,7 +1221,7 @@ const initializeAppComponents = async () => {
 			: '&#9734;';
 	};
 	onClick(changeFont, async () => {
-		State.menus.close();
+		State.flyouts.close();
 		State.modal.open('fonts');
 		fontSelect.focus();
 		syncFavStar();

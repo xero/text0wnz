@@ -40,7 +40,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 			drawWithAlpha: vi.fn(),
 		},
 		network: { isConnected: vi.fn(() => false) },
-		menus: { close: vi.fn() },
+		flyouts: { close: vi.fn() },
 	},
 }));
 
@@ -706,12 +706,12 @@ describe('UI Utilities', () => {
 
 			viewportTap(view);
 			State.textArtCanvas.undo.mockClear();
-			State.menus.close.mockClear();
+			State.flyouts.close.mockClear();
 
 			const touchStartEvent = createEvent('touchstart');
 			touchStartEvent.touches = [{ identifier: 1 }, { identifier: 2 }];
 			view.dispatchEvent(touchStartEvent);
-			expect(State.menus.close).toHaveBeenCalled();
+			expect(State.flyouts.close).toHaveBeenCalled();
 
 			const touchEndEvent = createEvent('touchend');
 			touchEndEvent.changedTouches = [{ identifier: 1 }, { identifier: 2 }];
