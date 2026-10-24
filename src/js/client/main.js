@@ -734,6 +734,13 @@ const initializeAppComponents = async () => {
 	onClick($('menuTabEdit'), () => showMenuTab('edit'));
 	onClick($('fileMenu'), () => {
 		showMenuTab('file');
+		// the collapsible groups greet every open folded, so the menu
+		// starts short no matter how the last visit left them
+		$('mainMenu')
+			.querySelectorAll('details[open]')
+			.forEach(group => {
+				group.open = false;
+			});
 		const opts = { flush: true };
 		State.flyouts.toggle('menu', $('mainMenu'), $('fileMenu'), opts);
 	});
