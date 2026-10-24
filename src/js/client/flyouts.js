@@ -113,20 +113,27 @@ const createFlyoutManager = () => {
 		if (!open) {
 			return;
 		}
-		if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+		const arrow = e.key === 'ArrowDown' || e.key === 'ArrowUp';
+		if (arrow || e.key === 'Tab') {
 			// visibility by markup (hidden panes wear .hide), not layout:
 			// offsetParent reads null in the layoutless test DOM
 			const items = [...open.el.querySelectorAll(ITEM_SELECTOR)].filter(
 				item => !item.closest('.hide, [hidden]'),
 			);
 			const at = items.indexOf(document.activeElement);
-			if (at === -1 && !open.el.contains(document.activeElement)) {
+			if (arrow && at === -1 && !open.el.contains(document.activeElement)) {
 				return;
 			}
 			e.preventDefault();
 			e.stopPropagation();
-			const step = e.key === 'ArrowDown' ? 1 : -1;
-			items[(at + step + items.length) % items.length]?.focus?.();
+			const back = e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey);
+			// Tab is trapped: from outside it re-enters at an end, inside
+			// it cycles, so focus can never wander out behind the flyout
+			const target =
+				at === -1
+					? items[back ? items.length - 1 : 0]
+					: items[(at + (back ? -1 : 1) + items.length) % items.length];
+			target?.focus?.();
 		}
 	});
 

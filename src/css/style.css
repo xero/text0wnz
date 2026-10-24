@@ -153,6 +153,18 @@
 		}
 	}
 
+	/* the per-rule guards above opt decoration in; this is the net
+	   under them, so a missed guard can never animate against the
+	   user's reduced motion preference */
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			transition: none !important;
+			animation: none !important;
+		}
+	}
+
 	.scrollable {
 		scrollbar-width: auto;
 		scrollbar-color: var(--menu) var(--editor);
@@ -1467,6 +1479,8 @@
 			display: none !important;
 		}
 		.toolButton {
+			/* anchors the paste opener's corner tick */
+			position: relative;
 			padding: 3px 6px;
 
 			svg {
@@ -1477,6 +1491,13 @@
 			kbd {
 				font-size: 11px;
 			}
+		}
+		/* the bar has two faces: actions, or the paste submenu */
+		&.pasteOpen > :not(.pasteSub) {
+			display: none;
+		}
+		&:not(.pasteOpen) > .pasteSub {
+			display: none;
 		}
 	}
 	#selectionSize {
@@ -3330,8 +3351,10 @@
 		}
 	}
 
+	/* the drop overlay outranks every band: nothing may look clickable
+	   while a file hangs over the window */
 	#dragdrop {
-		@apply fixed inset-0 hidden justify-center pointer-events-none top-0 left-0 bottom-0 right-0 w-full h-full bg-menu/90 z-50;
+		@apply fixed inset-0 hidden justify-center pointer-events-none top-0 left-0 bottom-0 right-0 w-full h-full bg-menu/90 z-[220];
 		kbd {
 			@apply text-cyan text-center m-auto text-[4rem];
 		}

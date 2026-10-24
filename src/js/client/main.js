@@ -835,6 +835,9 @@ const initializeAppComponents = async () => {
 	onClick($('copy'), State.pasteTool.copy);
 	onClick($('paste'), State.pasteTool.paste);
 	onClick($('systemPaste'), State.pasteTool.systemPaste);
+	// the bar's paste submenu mirrors the Edit menu's variants
+	onClick($('pasteTransparent'), State.pasteTool.pasteTransparent);
+	onClick($('pasteUnder'), State.pasteTool.pasteUnder);
 	onClick($('delete'), State.pasteTool.deleteSelection);
 	onClick($('navCut'), State.pasteTool.cut);
 	onClick($('navCopy'), State.pasteTool.copy);
@@ -1253,6 +1256,37 @@ const initializeAppComponents = async () => {
 		State.flyouts.toggle('brushes', $('brushToolbar'), $('brushes')));
 	onClick($('shapes'), () =>
 		State.flyouts.toggle('shapes', $('shapesToolbar'), $('shapes')));
+
+	// a static group icon says nothing about which tool a press would
+	// find lit, so the tooltip names the group's last active tool; the
+	// flyout rows' own labels are the single source for the names
+	const GROUP_TOOLS = {
+		brushes: [
+			'halfblock',
+			'shadingBrush',
+			'asciiBrush',
+			'characterBrush',
+			'attrib',
+			'fill',
+		],
+		shapes: ['line', 'square', 'circle'],
+	};
+	const groupLastTool = {};
+	const syncGroupTitles = toolId => {
+		for (const [group, toolIds] of Object.entries(GROUP_TOOLS)) {
+			if (toolId && toolIds.includes(toolId)) {
+				groupLastTool[group] = toolId;
+			}
+			const active = groupLastTool[group] ?? toolIds[0];
+			const name = $(active)?.querySelector('kbd')?.textContent;
+			if (name) {
+				$(group).title = `${name} (tap again for more)`;
+			}
+		}
+	};
+	document.addEventListener('onToolChange', e =>
+		syncGroupTitles(e.detail.id));
+	syncGroupTitles(null);
 
 	Toolbar.addLazy($('halfblock'), async () => {
 		const { createHalfBlockController } = await import('./freehandTools.js');

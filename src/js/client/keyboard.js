@@ -2059,6 +2059,9 @@ const createSelectionTool = () => {
 
 	const enable = () => {
 		State.selectionCursor.show();
+		// the bar belongs to this tool alone: keyboard mode keeps its
+		// shift-arrow selections bare, or the bar would squat over the
+		// canvas and swallow the next click
 		panel.style.display = 'flex';
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasDrag', canvasDrag);

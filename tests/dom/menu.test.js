@@ -112,6 +112,39 @@ describe('flyout manager', () => {
 			document.getElementById('menuTabFile'),
 		);
 	});
+
+	it('Tab cycles inside the flyout instead of leaving it', () => {
+		const menu = document.getElementById('mainMenu');
+		fly.toggle('menu', menu, document.getElementById('fileMenu'));
+		document.getElementById('menuTabFile').focus();
+		const tab = shiftKey =>
+			document.dispatchEvent(
+				new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true }),
+			);
+		tab(false);
+		expect(document.activeElement).toBe(
+			document.getElementById('menuTabEdit'),
+		);
+		// shift-tab walks back, never out the top
+		tab(true);
+		expect(document.activeElement).toBe(
+			document.getElementById('menuTabFile'),
+		);
+		tab(true);
+		expect(document.activeElement.id).not.toBe('');
+		expect(menu.contains(document.activeElement)).toBe(true);
+	});
+
+	it('Tab pulls wandering focus back into the open flyout', () => {
+		const menu = document.getElementById('mainMenu');
+		fly.toggle('menu', menu, document.getElementById('fileMenu'));
+		document.body.focus?.();
+		document.getElementById('fileMenu').focus();
+		document.dispatchEvent(
+			new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }),
+		);
+		expect(menu.contains(document.activeElement)).toBe(true);
+	});
 });
 
 describe('menu tab panes', () => {
