@@ -1821,12 +1821,12 @@
 		@apply cursor-pointer text-sm text-fg px-1.5 py-1;
 
 		kbd {
-			@apply text-fg bg-editor ml-2.5 p-1;
+			@apply bg-editor ml-2.5 p-1;
+			/* off white, one step under the row label, readable on the
+			   dark chip in both themes */
+			color: var(--silver);
 			font-size: 13px;
 		}
-	}
-	.dark .menuItem kbd {
-		@apply text-tools;
 	}
 
 	.menuList .separator {
