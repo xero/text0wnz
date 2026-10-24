@@ -1636,9 +1636,15 @@
 		.menuItem {
 			@apply flex items-center;
 			padding: 3px 6px;
+			/* text-sm ships a 20px leading that puffs every row; the
+			   compact spec is 3px of padding around tight text */
+			line-height: 1.15;
 
 			kbd {
 				margin-left: auto;
+				padding: 1px 5px;
+				font-size: 12px;
+				line-height: 1.2;
 			}
 		}
 		.separator {
