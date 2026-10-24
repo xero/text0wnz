@@ -1470,6 +1470,7 @@
 			padding: 3px 6px;
 
 			svg {
+				fill: var(--color-fg);
 				width: 24px;
 				height: 24px;
 			}
@@ -1554,7 +1555,7 @@
 
 	aside {
 		> div {
-			@apply text-center h-fit flex justify-center items-center py-1 mx-auto;
+			@apply text-center h-fit flex justify-center items-center py-1 mx-auto relative;
 
 			/* hover is mouse only: touch screens glue :hover to the last
 			   tap, which paints the selected tool hl black over its indigo */
@@ -1580,6 +1581,18 @@
 
 	.toolbarDisplayed {
 		@apply bg-indigo;
+	}
+
+	/* a corner tick marks the rail buttons that open a flyout */
+	.flyTick {
+		position: absolute;
+		right: 4px;
+		bottom: 4px;
+		border: 3px solid transparent;
+		border-right-color: var(--color-fg);
+		border-bottom-color: var(--color-fg);
+		opacity: 0.75;
+		pointer-events: none;
 	}
 
 	aside > div {
@@ -1676,10 +1689,15 @@
 		.stack {
 			@apply flex-row items-center;
 			gap: 10px;
-			width: 100%;
+			flex: 1 1 auto;
+			width: auto;
 			height: auto;
 		}
 		svg {
+			/* the header carried the icon fill; rows own it now. The
+			   sprite paths inherit this, elements with their own fill
+			   (the sunAndMoon mask) keep theirs */
+			fill: var(--color-fg);
 			width: 22px;
 			height: 22px;
 			flex: none;
@@ -1690,8 +1708,22 @@
 			font-size: 14px;
 			margin: 0;
 		}
+		/* the right-aligned hotkey chip, demo style */
+		.hotkey {
+			@apply text-fg bg-editor not-italic;
+			flex: none;
+			margin-left: auto;
+			padding: 2px 5px;
+			font-size: 12px;
+			white-space: nowrap;
+		}
 		&.toolbarDisplayed {
 			@apply bg-indigo text-white;
+		}
+		@media (hover: hover) {
+			&:not(.toolbarDisplayed):hover {
+				@apply bg-indigo;
+			}
 		}
 	}
 	.historyActions {
