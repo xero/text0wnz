@@ -1924,9 +1924,10 @@ const createAttributeBrushController = () => {
 
 	const createPreviewCursor = () => {
 		const cursor = createCanvas(0, 0);
+		// the cursor class carries the canvas overlay band z; anything
+		// higher would paint over app chrome (flyouts sit at 200)
 		cursor.classList.add('cursor');
 		cursor.style.pointerEvents = 'none';
-		cursor.style.zIndex = '1000';
 		$('canvasContainer').appendChild(cursor);
 		return cursor;
 	};

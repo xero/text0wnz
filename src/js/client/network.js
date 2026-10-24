@@ -38,7 +38,8 @@ const createRemoteCursors = () => {
 			el.style.position = 'absolute';
 			el.style.pointerEvents = 'none';
 			el.style.border = '1px solid #ff7518';
-			el.style.zIndex = '900';
+			// top of the canvas overlay band, below every piece of chrome
+			el.style.zIndex = '30';
 			host.appendChild(el);
 			cursors.set(id, el);
 		}
