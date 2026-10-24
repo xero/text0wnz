@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 import {
-	parkToolSettings,
 	bridgeReady,
 	clickTool,
 	drag,
+	parkToolSettings,
 	readBlock,
 } from './helpers/editorHelpers.js';
 
@@ -21,7 +21,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
@@ -56,7 +56,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
@@ -65,7 +65,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 			await page.waitForTimeout(200);
 		}
 
-		await page.locator('#characterBrush').click();
+		await clickTool(page, 'characterBrush');
 		await page.waitForTimeout(300);
 
 		if (bbox) {
@@ -114,7 +114,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
@@ -149,7 +149,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
@@ -179,7 +179,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
@@ -206,7 +206,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
@@ -235,7 +235,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();
@@ -302,7 +302,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
-		await page.locator('#halfblock').click();
+		await clickTool(page, 'halfblock');
 		await page.waitForTimeout(300);
 
 		const bbox = await canvas.boundingBox();

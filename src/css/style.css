@@ -35,7 +35,6 @@
 	--silver: #c0c0c0;
 	--iron: #666;
 	--midnight: #000;
-	--header-size: 43px;
 	--icon-size: 46px;
 	--icon-size-sm: 36px;
 	--palette-width: 200px;
@@ -142,7 +141,6 @@
 		#viewport,
 		#canvasContainer,
 		#minimapViewport,
-		#colorPanel,
 		.mod.fl {
 			@apply transition-none!;
 		}
@@ -212,7 +210,7 @@
 		@apply w-full h-full overflow-hidden;
 		display: grid;
 		grid-template-columns: 48px minmax(0, 1fr) 14px 236px;
-		grid-template-rows: auto auto minmax(0, 1fr) auto;
+		grid-template-rows: auto minmax(0, 1fr) auto;
 
 		@media (prefers-reduced-motion: no-preference) {
 			transition: grid-template-columns 0.22s ease;
@@ -232,7 +230,6 @@
 	section h2 {
 		@apply text-2xl text-cyan;
 	}
-	header,
 	aside,
 	#sidebar,
 	#sidebarGrip,
@@ -241,7 +238,6 @@
 		@apply bg-menu;
 	}
 
-	header,
 	aside,
 	#sidebar,
 	#sidebarGrip {
@@ -249,35 +245,6 @@
 		   native pan starting on the app chrome drags the whole page;
 		   nothing in these bars scrolls, so gestures here stay ours */
 		touch-action: none;
-	}
-
-	header {
-		@apply flex justify-between h-[var(--header-size)];
-		grid-column: 2;
-		grid-row: 1;
-		min-width: 0;
-		overflow-x: auto;
-		scrollbar-width: none;
-
-		* {
-			@apply my-auto;
-		}
-		nav {
-			div {
-				@apply flex;
-			}
-		}
-		svg {
-			@apply fill-fg h-[30px] w-[30px];
-		}
-		button {
-			@apply h-[var(--header-size)];
-		}
-		@media (hover: hover) {
-			button:hover {
-				@apply bg-hl;
-			}
-		}
 	}
 
 	#dockTop,
@@ -319,12 +286,38 @@
 		}
 	}
 	#dockTop {
-		grid-row: 2;
+		grid-row: 1;
 		border-bottom: 1px solid var(--midnight);
 	}
 	#dockBottom {
-		grid-row: 4;
+		grid-row: 3;
 		border-top: 1px solid var(--midnight);
+	}
+
+	/* collab status and chat ride the sauce panel as square buttons
+	   beside the title, per the panel spec */
+	#saucePanel .modContent {
+		@apply flex-row items-center;
+
+		#navSauce {
+			flex: 1;
+			min-width: 0;
+		}
+		#networkButton,
+		#chatButton {
+			@apply grid place-items-center bg-editor;
+			flex: none;
+			width: 32px;
+			height: 32px;
+			border: 0;
+			padding: 0;
+
+			svg {
+				width: 20px;
+				height: 20px;
+				fill: var(--color-fg);
+			}
+		}
 	}
 
 	#chatButton {
@@ -485,7 +478,7 @@
 	#viewport {
 		@apply bg-editor;
 		grid-column: 2;
-		grid-row: 3;
+		grid-row: 2;
 		min-width: 0;
 		min-height: 0;
 		text-align: center;
@@ -1157,28 +1150,44 @@
 		}
 	}
 
-	header nav {
-		@apply flex flex-row justify-start w-auto;
+	/* the selection action bar floats over the canvas at z 150, under
+	   the flyouts and menus at 200 */
+	#selectionToolbar {
+		@apply fixed flex flex-row items-center bg-menu;
+		z-index: 150;
+		width: max-content;
+		height: max-content;
+		border: 4px solid var(--color-panel);
+		box-shadow: 0 2px 10px #000a;
 
-		.enabled {
-			@apply bg-black;
+		&[hidden] {
+			display: none !important;
+		}
+		.toolButton {
+			padding: 3px 6px;
+
+			svg {
+				width: 24px;
+				height: 24px;
+			}
+			kbd {
+				font-size: 11px;
+			}
 		}
 	}
-
-	#viewportToolbar,
-	#clipboardToolbar,
-	#fontToolbar,
-	#brushToolbar,
-	#shapesToolbar,
-	#selectionToolbar {
-		@apply hidden w-auto flex-row justify-start;
+	#selectionSize {
+		@apply text-subtitle;
+		font-size: 12px;
+		padding: 0 8px;
+		white-space: nowrap;
+		font-variant-numeric: tabular-nums;
 	}
 	#navDarkmode > kbd {
 		width: max-content;
 	}
 	/* every submenu stacks the icon over its label */
 	.toolButton {
-		@apply text-white flex flex-col text-sm h-[var(--header-size)] px-[5px] mx-0.5;
+		@apply text-white flex flex-col text-sm px-[5px] mx-0.5;
 
 		/* mouse only, same touch rule as the aside tools */
 		@media (hover: hover) {
@@ -1210,20 +1219,6 @@
 		margin-left: 4px !important;
 	}
 
-	#navDarkmode {
-		&:hover,
-		&:focus,
-		&:focus-within {
-			@apply bg-transparent!;
-		}
-	}
-
-	header kbd {
-		color: rgb(200, 200, 200);
-		font-size: 14px;
-		line-height: 20px;
-	}
-
 	#canvasContainer {
 		@apply relative cursor-crosshair bg-black;
 		margin: 16px auto;
@@ -1252,11 +1247,6 @@
 		image-rendering: optimizeSpeed;
 		image-rendering: crisp-edges;
 		image-rendering: pixelated;
-	}
-
-	header > div > div.button {
-		@apply text-xs text-fg text-center;
-		box-shadow: 0px 1px 0px rgba(0, 0, 0, 0.7);
 	}
 
 	aside {
@@ -1296,23 +1286,157 @@
 		}
 	}
 
-	.menuTitle {
-		@apply w-auto h-[var(--header-size)] text-fg bg-menu;
+	/* the rail's menu entry keeps an inner button for accessibility */
+	#fileMenu button {
+		@apply flex bg-transparent cursor-pointer;
+		border: 0;
+		padding: 0;
+	}
 
-		button {
-			@apply h-[40px] w-[40px] pr-1 border-none bg-transparent;
+	/* the tabbed File/Edit menu: flush with the rail, compact rows */
+	#mainMenu {
+		width: 300px;
+
+		.menuTabs {
+			@apply flex bg-menu;
+
+			button {
+				@apply bg-transparent text-fg cursor-pointer;
+				flex: 1;
+				border: 0;
+				padding: 6px;
+				font-size: 14px;
+
+				&.on {
+					@apply bg-indigo;
+				}
+				@media (hover: hover) {
+					&:not(.on):hover {
+						@apply bg-hl;
+					}
+				}
+			}
+		}
+		.menuItem {
+			@apply flex items-center;
+			padding: 3px 6px;
+
+			kbd {
+				margin-left: auto;
+			}
+		}
+		.separator {
+			@apply bg-menu;
+			height: 2px;
+			margin: 1px 2px;
+			flex: none;
 		}
 	}
-
-	.menuList {
-		/* flyouts and menus band: above every floating module (40+) and
-		   the drag ghost (90); dialogs ride the top layer regardless */
-		@apply inline cursor-default absolute w-[300px] h-fit bg-file border-4 border-solid border-menu z-[200];
-		top: var(--header-size);
-		box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
+	.menuPane {
+		@apply flex flex-col;
 	}
-	#editList {
-		left: 48px;
+
+	/* rail flyouts: fixed panels beside their opener, in the menu band,
+	   showing and hiding without ever reparenting their contents */
+	.flyout {
+		@apply fixed flex flex-col bg-file border-4 border-solid border-menu z-[200];
+		/* a grid parent stretches an auto-sized fixed child, so both
+		   axes pin to the content instead */
+		width: max-content;
+		height: max-content;
+		min-width: 210px;
+		max-width: calc(100% - 16px);
+		max-height: calc(100% - 16px);
+		overflow: auto;
+		box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
+
+		&[hidden] {
+			display: none !important;
+		}
+	}
+	.flyHead {
+		@apply text-cyan;
+		font-size: 12px;
+		font-weight: normal;
+		padding: 6px 8px 3px;
+	}
+	/* tool buttons rendered as flyout rows, icon beside the name */
+	.flyout .toolButton {
+		@apply flex-row items-center text-left;
+		height: auto;
+		min-height: 34px;
+		gap: 10px;
+		margin: 0;
+		padding: 4px 8px;
+		width: 100%;
+
+		.stack {
+			@apply flex-row items-center;
+			gap: 10px;
+			width: 100%;
+			height: auto;
+		}
+		svg {
+			width: 22px;
+			height: 22px;
+			flex: none;
+			margin: 0;
+		}
+		kbd {
+			@apply text-left w-auto;
+			font-size: 14px;
+			margin: 0;
+		}
+		&.toolbarDisplayed {
+			@apply bg-indigo text-white;
+		}
+	}
+	.historyActions {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 2px;
+		padding: 0 4px 4px;
+
+		.toolButton {
+			@apply bg-editor;
+		}
+	}
+	#historyList {
+		max-height: 260px;
+		overflow-y: auto;
+		border-top: 1px solid var(--color-menu);
+		scrollbar-width: thin;
+	}
+	.historyStep {
+		@apply flex items-center bg-transparent text-fg cursor-pointer text-left w-full;
+		gap: 10px;
+		border: 0;
+		min-height: 30px;
+		padding: 4px 8px;
+		font-size: 14px;
+
+		span {
+			flex: 1;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		em {
+			@apply text-subtitle not-italic;
+			font-size: 12px;
+			font-variant-numeric: tabular-nums;
+		}
+		&.current {
+			@apply bg-indigo text-white;
+		}
+		&.future {
+			opacity: 0.45;
+		}
+		@media (hover: hover) {
+			&:not(.current):hover {
+				@apply bg-hl;
+			}
+		}
 	}
 
 	.menuItem {
@@ -1687,16 +1811,8 @@
 		}
 	}
 	#colorPanel {
-		/* aside > div makes this a centered flex row; restack it.
-		   floating-window chrome: solid dark border, thicker on top
-		   to mark the drag strip, like the brush windows */
-		@apply fixed z-40 bg-menu p-2 flex-col items-stretch text-left;
-		border: 4px solid var(--color-panel);
-		border-top-width: 16px;
-		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.3);
-		cursor: move;
-		left: 48px;
-		top: var(--header-size);
+		/* a flyout from the rail's ++ button; the manager owns placement */
+		@apply p-2 items-stretch text-left;
 		width: 354px;
 		h3 {
 			@apply text-cyan text-sm pt-1 pb-1;
@@ -2855,23 +2971,6 @@
 	   windows keep their own higher-specificity copy above. The X rides
 	   up into the border drag strip (absolute offsets anchor to the
 	   padding box, which sits below the thick top border) */
-	.hidePanel {
-		display: block;
-		position: absolute;
-		top: -16px;
-		right: -4px;
-		color: #efefef;
-		padding: 2px 5px;
-		font-size: 10px;
-		line-height: 12px;
-		cursor: pointer;
-
-		@media (hover: hover) {
-			&:hover {
-				background: #000;
-			}
-		}
-	}
 
 	@keyframes blink {
 		50% {
@@ -2912,7 +3011,6 @@
 	.hover,
 	.toolButton,
 	.menuItem:hover,
-	.menuTitle:hover,
 	.fkey,
 	#resolution,
 	#selectionToolbar .toolButton,
@@ -3003,10 +3101,9 @@
 		}
 	}
 	#navDarkmode {
-		@apply bg-none cursor-pointer aspect-square;
+		@apply bg-none cursor-pointer;
 		-webkit-tap-highlight-color: transparent;
 		touch-action: manipulation;
-		transition: transform 1s linear !important;
 		svg {
 			stroke-linecap: round;
 		}

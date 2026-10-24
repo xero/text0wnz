@@ -91,6 +91,13 @@ export interface PatchArenaOptions {
 	 * bookkeeping: the OPFS journal's append hook.
 	 */
 	onCommit?: (stroke: CommittedStroke) => void;
+	/**
+	 * Fires once per stroke the byte cap evicts, oldest first, so a
+	 * client-side mirror (the history label table) can shift with the
+	 * ring. Core strokes stay label-free; labels in StrokeMeta would
+	 * bump the journal format.
+	 */
+	onEvict?: () => void;
 }
 
 export const createPatchArena = (
@@ -125,6 +132,7 @@ export const createPatchArena = (
 			}
 			bytes -= evicted.bytes;
 			cursor--;
+			options.onEvict?.();
 		}
 	};
 

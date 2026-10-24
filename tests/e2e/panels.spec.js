@@ -5,7 +5,10 @@
  * the dock geometry end to end.
  */
 import { test, expect } from '@playwright/test';
-import { bridgeReady } from './helpers/editorHelpers.js';
+import {
+	bridgeReady,
+	clickViewToggle,
+} from './helpers/editorHelpers.js';
 
 const dragPanel = async (page, from, to) => {
 	await page.mouse.move(from.x, from.y);
@@ -85,7 +88,7 @@ test.describe('panel docking', () => {
 
 	test('frames opens docked to the bottom by default', async ({ page }) => {
 		await page.locator('#navView').click();
-		await page.locator('#navFrames').click();
+		await clickViewToggle(page, 'navFrames');
 		const frames = page.locator('#framesPanel');
 		await expect(frames).toBeVisible();
 		await expect(frames).toHaveClass(/tb/);

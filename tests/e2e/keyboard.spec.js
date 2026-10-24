@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { clickTool } from './helpers/editorHelpers.js';
 
 test.describe('Keyboard Shortcuts', () => {
 	test.beforeEach(async ({ page }) => {
@@ -15,7 +16,7 @@ test.describe('Keyboard Shortcuts', () => {
 			// Click brushes to show brush toolbar, then select halfblock
 			await page.locator('#brushes').click();
 			await page.waitForTimeout(200);
-			await page.locator('#halfblock').click();
+			await clickTool(page, 'halfblock');
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
 			await page.mouse.move(box.x + 100, box.y + 100);
@@ -35,7 +36,7 @@ test.describe('Keyboard Shortcuts', () => {
 			// Click brushes to show brush toolbar, then select halfblock
 			await page.locator('#brushes').click();
 			await page.waitForTimeout(200);
-			await page.locator('#halfblock').click();
+			await clickTool(page, 'halfblock');
 			await page.mouse.move(box.x + 50, box.y + 50);
 			await page.mouse.down();
 			await page.mouse.move(box.x + 100, box.y + 100);

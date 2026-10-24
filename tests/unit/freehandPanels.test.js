@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-	createBrushController,
 	createHalfBlockController,
 	createShadingController,
 	createShadingPanel,
@@ -189,7 +188,6 @@ vi.mock('../../src/js/client/ui.js', () => ({
 		return mockElement;
 	}),
 	$$: vi.fn(() => ({ textContent: 'mock' })),
-	registerFloatingPanel: vi.fn(() => vi.fn()),
 	createCanvas: vi.fn((width, height) => {
 		const mockCanvas = {
 			width: width || 100,
@@ -281,26 +279,6 @@ describe('Freehand Tools - Panels and Cursors', () => {
 
 	afterEach(() => {
 		vi.restoreAllMocks();
-	});
-
-	describe('createBrushController', () => {
-		it('should create a brush controller with enable/disable methods', () => {
-			const controller = createBrushController();
-
-			expect(controller).toHaveProperty('enable');
-			expect(controller).toHaveProperty('disable');
-			expect(typeof controller.enable).toBe('function');
-			expect(typeof controller.disable).toBe('function');
-		});
-
-		it('should handle enable/disable lifecycle', () => {
-			const controller = createBrushController();
-
-			expect(() => {
-				controller.enable();
-				controller.disable();
-			}).not.toThrow();
-		});
 	});
 
 	describe('createHalfBlockController', () => {

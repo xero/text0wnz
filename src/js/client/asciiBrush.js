@@ -336,7 +336,6 @@ const createAsciiBrushController = () => {
 	const engine = createAsciiStampEngine();
 	const painter = createAsciiStrokePainter();
 	let stroking = false;
-	const bar = $('brushToolbar');
 	const nav = $('brushes');
 
 	// each swatch previews the stroke footprint: thin pebbles at one
@@ -391,7 +390,6 @@ const createAsciiBrushController = () => {
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasUp', canvasUp);
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
-		bar.style.display = 'flex';
 		nav.classList.add('enabled');
 		State.toolSettings.show('ascii');
 	};
@@ -400,7 +398,6 @@ const createAsciiBrushController = () => {
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
-		bar.style.display = 'none';
 		nav.classList.remove('enabled');
 	};
 

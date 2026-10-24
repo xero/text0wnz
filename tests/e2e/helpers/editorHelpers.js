@@ -21,13 +21,69 @@ export async function bridgeReady(page, timeout = 10000) {
 }
 
 /**
- * Activate a tool through its icon stack, never the button center.
- * Tool buttons embed a native mode select there, and a chromium click
- * on a native select arms a stale pointerup that ends the next canvas
- * stroke early.
+ * Activate a tool. Group members live in rail flyouts now, so the
+ * group opens first when its item is hidden. Tools with an icon stack
+ * are clicked through it, never the button center: those buttons embed
+ * a native mode select there, and a chromium click on a native select
+ * arms a stale pointerup that ends the next canvas stroke early.
  */
+const TOOL_GROUPS = {
+	halfblock: 'brushes',
+	shadingBrush: 'brushes',
+	asciiBrush: 'brushes',
+	characterBrush: 'brushes',
+	attrib: 'brushes',
+	fill: 'brushes',
+	line: 'shapes',
+	square: 'shapes',
+	circle: 'shapes',
+};
+
 export async function clickTool(page, id) {
-	await page.locator(`#${id} .stack`).click();
+	const group = TOOL_GROUPS[id];
+	if (group && !(await page.locator(`#${id}`).isVisible())) {
+		await page.locator(`#${group}`).click();
+	}
+	const stack = page.locator(`#${id} .stack`);
+	if (await stack.count()) {
+		await stack.click();
+	} else {
+		await page.locator(`#${id}`).click();
+	}
+}
+
+/**
+ * Undo and redo buttons live in the history flyout; open it when the
+ * button is hidden. The flyout stays open across presses.
+ */
+export async function clickHistoryAction(page, id) {
+	if (!(await page.locator(`#${id}`).isVisible())) {
+		await page.locator('#clipboard').click();
+	}
+	await page.locator(`#${id}`).click();
+}
+
+/**
+ * View toggles (grid, dark mode, frames, minimap, ref image) live in
+ * the View flyout.
+ */
+export async function clickViewToggle(page, id) {
+	if (!(await page.locator(`#${id}`).isVisible())) {
+		await page.locator('#navView').click();
+	}
+	await page.locator(`#${id}`).click();
+}
+
+/**
+ * Open the tabbed File/Edit menu on the given tab.
+ */
+export async function openMenu(page, tab = 'file') {
+	if (!(await page.locator('#mainMenu').isVisible())) {
+		await page.locator('#fileMenu').click();
+	}
+	await page
+		.locator(tab === 'edit' ? '#menuTabEdit' : '#menuTabFile')
+		.click();
 }
 
 /**

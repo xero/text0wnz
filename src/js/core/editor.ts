@@ -142,6 +142,8 @@ export interface EditorCore {
 		}>,
 	) => void;
 	startUndo: () => void;
+	/** Commit the open stroke now instead of at the next flush point. */
+	endUndo: () => void;
 	undo: () => boolean;
 	redo: () => boolean;
 	setMirrorMode: (enabled: boolean) => void;
@@ -556,6 +558,9 @@ export const createEditorCore = (
 		startUndo: () => {
 			flushStroke();
 			arena.dropRedo();
+		},
+		endUndo: () => {
+			flushStroke();
 		},
 		undo: () => {
 			flushStroke();

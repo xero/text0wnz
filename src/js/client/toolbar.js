@@ -133,12 +133,20 @@ const Toolbar = (() => {
 		if (State.menus) {
 			State.menus.close();
 		}
+		State.flyouts?.close();
 	};
 
-	// Escape key - return to previous tool
+	// Escape walks outward: an open flyout first, then an active
+	// selection, then back to the previous tool
 	document.addEventListener('keydown', e => {
 		if (e.code === 'Escape') {
 			e.preventDefault();
+			if (State.flyouts?.closeAndFocus()) {
+				return;
+			}
+			if (State.selectionBar?.dismiss?.()) {
+				return;
+			}
 			returnToPreviousTool();
 		}
 	});

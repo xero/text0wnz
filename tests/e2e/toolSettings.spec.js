@@ -8,6 +8,7 @@ import { test, expect } from '@playwright/test';
 import {
 	bridgeReady,
 	clickTool,
+	clickViewToggle,
 	drag,
 	readBlock,
 	setAsciiWidth,
@@ -16,7 +17,8 @@ import {
 } from './helpers/editorHelpers.js';
 
 const openLine = async page => {
-	await page.locator('#shapes').click();
+	// the shapes group opens a flyout now; picking the tool is explicit
+	await clickTool(page, 'line');
 	await expect(page.locator('#line')).toHaveClass(/toolbarDisplayed/);
 };
 
@@ -47,8 +49,8 @@ test.describe('tool settings window', () => {
 		await clickTool(page, 'circle');
 		await expect(page.locator('#tsCircle')).toBeVisible();
 
-		// the brushes group lands on halfblock: no settings
-		await page.locator('#brushes').click();
+		// halfblock has no settings, so picking it hides the window
+		await clickTool(page, 'halfblock');
 		await expect(panel).toBeHidden();
 
 		await clickTool(page, 'asciiBrush');
@@ -57,17 +59,17 @@ test.describe('tool settings window', () => {
 		await clickTool(page, 'attrib');
 		await expect(page.locator('#tsAttrib')).toBeVisible();
 
-		await page.locator('#shadingBrush').click();
+		await clickTool(page, 'shadingBrush');
 		await expect(page.locator('#tsShading')).toBeVisible();
 		await expect(page.locator('#toolSettingsTitle')).toHaveText(
 			'Shading Brush',
 		);
 
-		await page.locator('#characterBrush').click();
+		await clickTool(page, 'characterBrush');
 		await expect(page.locator('#tsCharacter')).toBeVisible();
 		await expect(page.locator('#tsCharacter canvas').first()).toBeVisible();
 
-		await page.locator('#fill').click();
+		await clickTool(page, 'fill');
 		await expect(panel).toBeHidden();
 	});
 
@@ -127,7 +129,7 @@ test.describe('tool settings window', () => {
 	test('pressing the window lifts it above the frames panel', async ({ page }) => {
 		// open the frames panel first (its toggle lives in the view bar)
 		await page.locator('#navView').click();
-		await page.locator('#navFrames').click();
+		await clickViewToggle(page, 'navFrames');
 		const frames = page.locator('#framesPanel');
 		await expect(frames).toBeVisible();
 

@@ -20,6 +20,9 @@ import { createPluginManager } from './plugins.js';
 import { createReferenceImage } from './referenceImage.js';
 import { createToolSettings } from './toolSettings.js';
 import { createPanelManager } from './panels.js';
+import { createFlyoutManager } from './flyouts.js';
+import { createHistoryLabels } from './historyLabels.js';
+import { createSelectionBar } from './selectionBar.js';
 import { fitGlyphs, armPixelRatioWatch } from './glyphScale.js';
 import { FontCache } from './fontCache.js';
 import {
@@ -37,12 +40,9 @@ import {
 	undoAndRedo,
 	viewportTap,
 	createPaintShortcuts,
-	createViewportController,
-	createGenericController,
 	createResolutionController,
 	createGrid,
 	createToolPreview,
-	createMenuController,
 	enforceMaxBytes,
 	createFontSelect,
 	createZoomControl,
@@ -566,6 +566,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 		// Tier 1: Core UI and Canvas (most critical)
 		State.modal = createModalController($('modal'));
 		State.palette = createDefaultPalette();
+		// before the canvas: the arena's first commit must find the table
+		State.historyLabels = createHistoryLabels();
+		State.flyouts = createFlyoutManager();
 		State.pasteTool = createPasteTool(
 			$('cut'),
 			$('copy'),
@@ -719,20 +722,30 @@ const initializeAppComponents = async () => {
 		$('columnsInput'),
 		$('rowsInput'),
 	);
-	State.menus = createMenuController(
-		[
-			{
-				button: $('fileMenu'),
-				menu: $('fileList'),
-			},
-			{
-				button: $('editMenu'),
-				menu: $('editList'),
-			},
-		],
-		canvasContainer,
-		viewport,
-	);
+	// the tabbed File/Edit menu is a flyout flush with the rail; the
+	// legacy State.menus.close callers just need everything shut
+	State.menus = { close: () => State.flyouts.close() };
+	const menuPanes = { file: $('fileList'), edit: $('editList') };
+	const menuTabs = { file: $('menuTabFile'), edit: $('menuTabEdit') };
+	const showMenuTab = name => {
+		Object.entries(menuPanes).forEach(([key, pane]) => {
+			pane.classList.toggle('hide', key !== name);
+			menuTabs[key].classList.toggle('on', key === name);
+		});
+	};
+	onClick($('menuTabFile'), () => showMenuTab('file'));
+	onClick($('menuTabEdit'), () => showMenuTab('edit'));
+	onClick($('fileMenu'), () => {
+		showMenuTab('file');
+		const opts = { flush: true };
+		State.flyouts.toggle('menu', $('mainMenu'), $('fileMenu'), opts);
+	});
+	// an item press acts through its own handler and shuts the menu
+	$('mainMenu').addEventListener('click', e => {
+		if (e.target.closest('.menuItem')) {
+			State.flyouts.close();
+		}
+	});
 	onClick($('new'), () => {
 		State.modal.open('warning');
 	});
@@ -1014,7 +1027,9 @@ const initializeAppComponents = async () => {
 		d: $('defaultColor'),
 		q: swapColors,
 		k: $('keyboard'),
-		f: $('brushes'),
+		// f lands on the block brush itself: the group button only opens
+		// a flyout now and never picks a tool
+		f: $('halfblock'),
 		b: $('characterBrush'),
 		n: $('fill'),
 		a: $('attrib'),
@@ -1048,14 +1063,14 @@ const initializeAppComponents = async () => {
 			State.menus.close();
 			State.selectionTool.enable();
 			State.toolSettings.hide();
-			$('selectionToolbar').classList.remove('hide');
 		},
 		() => {
 			paintShortcuts.enable();
 			State.selectionTool.disable();
-			$('selectionToolbar').classList.add('hide');
 		},
 	);
+	// the floating action bar follows the selection rect itself
+	State.selectionBar = createSelectionBar();
 
 	onClick($('undo'), State.textArtCanvas.undo);
 	onClick($('redo'), State.textArtCanvas.redo);
@@ -1192,15 +1207,12 @@ const initializeAppComponents = async () => {
 	createSettingToggle($('navGrid'), grid.isShown, grid.show);
 
 	// everything past the default keyboard mode lazy-loads on first click
-	Toolbar.addLazy($('brushes'), async () => {
-		const { createBrushController } = await import('./freehandTools.js');
-		const brushes = createBrushController();
-		return {
-			onFocus: brushes.enable,
-			onBlur: brushes.disable,
-			enable: brushes.enable,
-		};
-	});
+	// the group buttons are not tools: the first click opens the group's
+	// flyout without switching, and the same click closes it again
+	onClick($('brushes'), () =>
+		State.flyouts.toggle('brushes', $('brushToolbar'), $('brushes')));
+	onClick($('shapes'), () =>
+		State.flyouts.toggle('shapes', $('shapesToolbar'), $('shapes')));
 
 	Toolbar.addLazy($('halfblock'), async () => {
 		const { createHalfBlockController } = await import('./freehandTools.js');
@@ -1295,16 +1307,6 @@ const initializeAppComponents = async () => {
 		};
 	});
 
-	Toolbar.addLazy($('shapes'), async () => {
-		const { createShapesController } = await import('./freehandTools.js');
-		const shapes = createShapesController();
-		return {
-			onFocus: shapes.enable,
-			onBlur: shapes.disable,
-			enable: shapes.enable,
-		};
-	});
-
 	Toolbar.addLazy($('line'), async () => {
 		const { createLineController } = await import('./freehandTools.js');
 		const line = createLineController();
@@ -1335,24 +1337,29 @@ const initializeAppComponents = async () => {
 		};
 	});
 
-	// the generic controllers stay window-agnostic; the hide calls for
-	// these settings-less tools wrap their registrations instead
-	const withHide = enable => () => {
-		State.toolSettings.hide();
-		enable();
+	// history and view are flyouts, not tools: opening one changes
+	// nothing about the active tool
+	const historyList = $('historyList');
+	const renderHistory = () => {
+		// settle the lazily committed open stroke so it gets its row
+		State.textArtCanvas.endUndo();
+		State.historyLabels.render(historyList);
 	};
-	// the fonts rail button opens the dialog straight away now that the
-	// font value lives in the sidebar canvas panel instead of a toolbar
-	onClick($('fonts'), () => changeFont.click());
-	const clipboard = createGenericController(
-		$('clipboardToolbar'),
-		$('clipboard'),
-	);
-
-	const view = createViewportController($('viewportToolbar'));
-	Toolbar.add($('navView'), withHide(view.enable), view.disable);
-
-	Toolbar.add($('clipboard'), withHide(clipboard.enable), clipboard.disable);
+	onClick($('clipboard'), () => {
+		State.flyouts.toggle(
+			'history',
+			$('clipboardToolbar'),
+			$('clipboard'),
+			{ onOpen: renderHistory },
+		);
+	});
+	State.historyLabels.onChange(() => {
+		if (State.flyouts.isOpen('history')) {
+			State.historyLabels.render(historyList);
+		}
+	});
+	onClick($('navView'), () =>
+		State.flyouts.toggle('view', $('viewportToolbar'), $('navView')));
 
 	// mirror and sample exclude each other: both light their nav
 	// buttons, and two lit buttons read as two active tools
