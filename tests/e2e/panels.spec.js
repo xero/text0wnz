@@ -100,6 +100,58 @@ test.describe('panel docking', () => {
 	});
 });
 
+test.describe('panel docking menu', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto('/?test');
+		await bridgeReady(page);
+	});
+
+	test('right-click opens the menu and docks the panel to the top', async ({ page }) => {
+		await page.locator('#saucePanel .modHeader').click({ button: 'right' });
+		await expect(page.locator('#panelMenu')).toBeVisible();
+		// the panel's current home reads disabled
+		await expect(page.locator('#panelDockSide')).toHaveClass(/disabled/);
+		await page.locator('#panelDockTop').click();
+		await expect(page.locator('#panelMenu')).toBeHidden();
+		await expect(page.locator('#saucePanel')).toHaveClass(/tb/);
+		expect(await page.locator('#dockTop .drow #saucePanel').count()).toBe(1);
+	});
+
+	test('float from the menu lifts a docked panel', async ({ page }) => {
+		await page.locator('#zoomPanel .modHeader').click({ button: 'right' });
+		await page.locator('#panelFloat').click();
+		await expect(page.locator('#zoomPanel')).toHaveClass(/fl/);
+	});
+
+	test('the menu works without a pointer end to end', async ({ page }) => {
+		await page.locator('#saucePanel .modShade').focus();
+		await page.keyboard.press('Shift+F10');
+		await expect(page.locator('#panelMenu')).toBeVisible();
+		// walk from the disabled Dock Left row to Dock Top and take it
+		await page.keyboard.press('ArrowDown');
+		await page.keyboard.press('Enter');
+		await expect(page.locator('#panelMenu')).toBeHidden();
+		await expect(page.locator('#saucePanel')).toHaveClass(/tb/);
+	});
+
+	test('move down reorders and keeps the menu open for repeats', async ({ page }) => {
+		await page.locator('#saucePanel .modHeader').click({ button: 'right' });
+		await page.locator('#panelMoveDown').click();
+		await expect(page.locator('#panelMenu')).toBeVisible();
+		let keys = await page.$$eval('#sidebar > .mod', els =>
+			els.map(m => m.dataset.m));
+		expect(keys[1]).toBe('sauce');
+		await page.locator('#panelMoveDown').click();
+		keys = await page.$$eval('#sidebar > .mod', els =>
+			els.map(m => m.dataset.m));
+		expect(keys[2]).toBe('sauce');
+		// Escape shuts the menu and hands focus back to the strip
+		await page.keyboard.press('Escape');
+		await expect(page.locator('#panelMenu')).toBeHidden();
+		await expect(page.locator('#saucePanel .modShade')).toBeFocused();
+	});
+});
+
 test.describe('phone layout', () => {
 	test.use({ viewport: { width: 390, height: 844 } });
 

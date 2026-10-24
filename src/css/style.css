@@ -1261,6 +1261,22 @@
 		}
 	}
 
+	/* the panel docking menu: compact context rows like the main menu */
+	#panelMenu {
+		min-width: 160px;
+
+		.menuItem {
+			padding: 3px 8px;
+			line-height: 1.15;
+		}
+		.separator {
+			@apply bg-menu;
+			height: 2px;
+			margin: 1px 2px;
+			flex: none;
+		}
+	}
+
 	/* the phone palette flyout adopts the real picker canvas, scaled up
 	   to finger size, beside the ++ chip */
 	#paletteFlyout {

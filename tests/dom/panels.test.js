@@ -299,6 +299,106 @@ describe('panel manager', () => {
 		});
 	});
 
+	describe('keyboard docking verbs', () => {
+		it('dockTo moves a panel between every home the drag reaches', () => {
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			manager.dockTo('sauce', 'top');
+			expect(el('sauce')).toHaveClass('tb');
+			expect(dockRows('dockTop')).toEqual([['sauce']]);
+			manager.dockTo('sauce', 'bot');
+			expect(dockRows('dockBottom')).toContainEqual(['sauce']);
+			manager.dockTo('sauce', 0);
+			expect(el('sauce')).toHaveClass('fl');
+			manager.dockTo('sauce', 'side');
+			expect(el('sauce')).toHaveClass('dk');
+			expect(sidebarKeys()).toContain('sauce');
+		});
+
+		it('a grow module refuses the bars and floatOnly refuses docks', () => {
+			const manager = registerAll(createPanelManager(), { chat: () => true });
+			manager.layout();
+			manager.dockTo('map', 'top');
+			expect(el('map')).toHaveClass('dk');
+			manager.dockTo('chat', 'side');
+			expect(el('chat')).toHaveClass('fl');
+		});
+
+		it('docking to the sidebar reopens a collapsed one', () => {
+			localStorage.setItem(
+				'panelLayout',
+				JSON.stringify({ v: 2, sidebarCollapsed: true }),
+			);
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			const container = document.getElementById('bodyContainer');
+			expect(container).toHaveClass('sidebarCollapsed');
+			manager.dockTo('frames', 'side');
+			expect(container).not.toHaveClass('sidebarCollapsed');
+		});
+
+		it('a leaving row lead hands the row to its mate', () => {
+			localStorage.setItem(
+				'panelLayout',
+				JSON.stringify({
+					v: 2,
+					MOD: {
+						sauce: { dk: 'top', ln: 0 },
+						canvas: { dk: 'top', ln: 1 },
+					},
+					ORD: ['sauce', 'canvas'],
+				}),
+			);
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			manager.dockTo('sauce', 0);
+			expect(el('canvas')).toHaveClass('tb');
+			expect(dockRows('dockTop')).toEqual([['canvas']]);
+		});
+
+		it('nudge swaps a panel with its visible dock neighbor', () => {
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			expect(sidebarKeys()).toEqual([
+				'sauce',
+				'canvas',
+				'pos',
+				'zoom',
+				'ref',
+				'map',
+			]);
+			manager.nudge('canvas', -1);
+			expect(sidebarKeys()).toEqual([
+				'canvas',
+				'sauce',
+				'pos',
+				'zoom',
+				'ref',
+				'map',
+			]);
+			// ref is hidden, so zoom's next visible neighbor is map
+			manager.nudge('zoom', 1);
+			expect(sidebarKeys()).toEqual([
+				'canvas',
+				'sauce',
+				'pos',
+				'map',
+				'ref',
+				'zoom',
+			]);
+			// the first slot has nowhere up to go
+			manager.nudge('canvas', -1);
+			expect(sidebarKeys()[0]).toBe('canvas');
+		});
+
+		it('nudge is a no-op for floating panels', () => {
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			manager.nudge('tool', 1);
+			expect(el('tool')).toHaveClass('fl');
+		});
+	});
+
 	describe('phone layout', () => {
 		const realMatchMedia = window.matchMedia;
 		let media;

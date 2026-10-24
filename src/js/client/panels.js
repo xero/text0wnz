@@ -5,6 +5,7 @@
  * the source of truth. Persists under one versioned key with a
  * tolerant merge, so new modules never reset a saved layout.
  */
+import State from './state.js';
 import { $ } from './ui.js';
 
 const LAYOUT_KEY = 'panelLayout';
@@ -658,6 +659,130 @@ const createPanelManager = () => {
 		layout();
 	};
 
+	// ---- docking without a pointer: the drag's outcomes as verbs ----
+	const dockTo = (key, dk) => {
+		const reg = registry.get(key);
+		const m = MOD[key];
+		if (!reg || !m || m.dk === dk) {
+			return;
+		}
+		if (reg.floatOnly && dk !== 0) {
+			return;
+		}
+		if (reg.grow && (dk === 'top' || dk === 'bot')) {
+			return;
+		}
+		promoteRowLead(
+			ORD,
+			MOD,
+			key,
+			m.dk === 'top' || m.dk === 'bot' ? m.dk : null,
+		);
+		m.ln = 0;
+		m.dk = dk;
+		if (dk === 0) {
+			focused = key;
+			ZO = [...ZO.filter(other => other !== key), key];
+		} else if (dk === 'side') {
+			// docking into a collapsed sidebar must land somewhere visible
+			collapsed = false;
+		}
+		layout();
+		flash(key);
+	};
+
+	/** Move a module one slot among its dock's visible peers. The two
+	 * slots trade ln flags, so a bar row keeps its shape while the
+	 * occupants swap. */
+	const nudge = (key, dir) => {
+		const m = MOD[key];
+		if (!m || !m.dk) {
+			return;
+		}
+		const peers = ORD.filter(
+			other =>
+				MOD[other]?.dk === m.dk && (other === key || visibleOf(other)),
+		);
+		const swapWith = peers[peers.indexOf(key) + dir];
+		if (!swapWith) {
+			return;
+		}
+		const i = ORD.indexOf(key);
+		const j = ORD.indexOf(swapWith);
+		[ORD[i], ORD[j]] = [ORD[j], ORD[i]];
+		[MOD[key].ln, MOD[swapWith].ln] = [MOD[swapWith].ln, MOD[key].ln];
+		layout();
+		flash(key);
+	};
+
+	// ---- the panel menu: right-click or the menu key on any panel ----
+	const menuEl = $('panelMenu');
+	let menuKey = null;
+
+	const syncPanelMenu = () => {
+		const reg = registry.get(menuKey);
+		const m = MOD[menuKey];
+		if (!reg || !m || !menuEl) {
+			return;
+		}
+		const title = menuEl.querySelector('#panelMenuTitle');
+		if (title) {
+			title.textContent =
+				reg.el.querySelector('.modTitle')?.textContent || menuKey;
+		}
+		const set = (id, disabled) => $(id)?.classList.toggle('disabled', disabled);
+		set('panelDockSide', m.dk === 'side');
+		set('panelDockTop', reg.grow || m.dk === 'top');
+		set('panelDockBottom', reg.grow || m.dk === 'bot');
+		set('panelFloat', m.dk === 0);
+		const peers = m.dk
+			? ORD.filter(
+					other =>
+						MOD[other]?.dk === m.dk &&
+						(other === menuKey || visibleOf(other)),
+				)
+			: [];
+		const at = peers.indexOf(menuKey);
+		set('panelMoveUp', at <= 0);
+		set('panelMoveDown', at === -1 || at === peers.length - 1);
+	};
+
+	const openPanelMenu = (key, from, at) => {
+		const reg = registry.get(key);
+		if (!menuEl || !reg || reg.floatOnly || isNarrow() || !State.flyouts) {
+			return;
+		}
+		menuKey = key;
+		syncPanelMenu();
+		State.flyouts.show('panelMenu', menuEl, from, at ? { at } : {});
+	};
+
+	menuEl?.addEventListener('click', e => {
+		const item = e.target.closest('.menuItem');
+		if (!item || item.classList.contains('disabled') || !menuKey) {
+			return;
+		}
+		if (item.id === 'panelMoveUp' || item.id === 'panelMoveDown') {
+			nudge(menuKey, item.id === 'panelMoveUp' ? -1 : 1);
+			// the menu stays up for repeat nudges, re-armed for the new
+			// neighborhood
+			syncPanelMenu();
+			item.focus?.({ preventScroll: true });
+			return;
+		}
+		const key = menuKey;
+		State.flyouts?.close();
+		if (item.id === 'panelFloat') {
+			dockTo(key, 0);
+		} else if (item.id === 'panelDockSide') {
+			dockTo(key, 'side');
+		} else if (item.id === 'panelDockTop') {
+			dockTo(key, 'top');
+		} else if (item.id === 'panelDockBottom') {
+			dockTo(key, 'bot');
+		}
+	});
+
 	const register = (key, cfg = {}) => {
 		const el = cfg.el ?? container.querySelector(`.mod[data-m="${key}"]`);
 		if (
@@ -716,6 +841,31 @@ const createPanelManager = () => {
 			if (el.classList.contains('fl') && !e.target.closest('button')) {
 				toggleShade(key);
 			}
+		});
+		// right-click anywhere on the module (text fields keep their
+		// native menus) or shift F10 from a focused control opens the
+		// docking menu; the menu key's synthesized contextmenu is
+		// cancelled on keydown so it cannot re-place the menu at 0,0
+		el.addEventListener('contextmenu', e => {
+			if (e.target.closest('input, textarea, select')) {
+				return;
+			}
+			e.preventDefault();
+			openPanelMenu(key, reg.shade || el, { x: e.clientX, y: e.clientY });
+		});
+		el.addEventListener('keydown', e => {
+			if (e.key !== 'ContextMenu' && !(e.shiftKey && e.key === 'F10')) {
+				return;
+			}
+			if (e.target.closest('input, textarea, select')) {
+				return;
+			}
+			e.preventDefault();
+			const rect = (reg.header || el).getBoundingClientRect();
+			openPanelMenu(key, reg.shade || el, {
+				x: rect.left + 12,
+				y: rect.bottom + 2,
+			});
 		});
 	};
 
@@ -1293,6 +1443,8 @@ const createPanelManager = () => {
 		close,
 		reset,
 		toggleShade,
+		dockTo,
+		nudge,
 		setFloatWidth,
 		isDocked: key => MOD[key]?.dk === 'side',
 		isCollapsed: () => collapsed,
