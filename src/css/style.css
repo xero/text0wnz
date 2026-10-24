@@ -1639,6 +1639,12 @@
 		}
 	}
 
+	/* the open menu lights its rail button like an active tool, on the
+	   flyout's own state rather than the tool logic */
+	#fileMenu.flyOpen {
+		@apply bg-indigo;
+	}
+
 	/* the rail's menu entry keeps an inner button for accessibility */
 	#fileMenu button {
 		@apply flex bg-transparent cursor-pointer;
