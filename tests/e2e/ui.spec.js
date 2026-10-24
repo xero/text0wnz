@@ -158,9 +158,12 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#copy').click();
 		await page.waitForTimeout(200);
 
+		// paste actions live behind the bar's submenu face now
+		await page.locator('#pasteMenu').click();
 		await page.locator('#paste').click();
 		await page.waitForTimeout(200);
 
+		await page.locator('#pasteMenu').click();
 		await page.locator('#systemPaste').click();
 		await page.waitForTimeout(200);
 

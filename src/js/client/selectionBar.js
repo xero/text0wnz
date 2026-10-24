@@ -27,6 +27,8 @@ const createSelectionBar = () => {
 		const show = active();
 		bar.hidden = !show;
 		if (!show) {
+			// the next selection greets the main face, not a stale submenu
+			bar.classList.remove('pasteOpen');
 			return;
 		}
 		const rectEl = State.selectionCursor.getElement?.();
@@ -85,6 +87,21 @@ const createSelectionBar = () => {
 		new window.ResizeObserver(sync).observe(canvas);
 	}
 	deselect?.addEventListener('click', dismiss);
+
+	// the paste button swaps the bar for its submenu face; an action
+	// there (or back) returns to the main face, re-centered either way
+	const setPasteMode = openState => {
+		bar?.classList.toggle('pasteOpen', openState);
+		sync();
+	};
+	$('pasteMenu')?.addEventListener('click', () => setPasteMode(true));
+	$('pasteBack')?.addEventListener('click', () => setPasteMode(false));
+	bar?.addEventListener('click', e => {
+		const sub = e.target.closest?.('.pasteSub');
+		if (sub && sub.id !== 'pasteBack') {
+			setPasteMode(false);
+		}
+	});
 
 	return {
 		sync,

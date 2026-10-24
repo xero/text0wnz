@@ -599,23 +599,48 @@
 				</svg>
 				<kbd>Copy</kbd>
 			</div>
-			<div id="paste" class="toolButton">
-				<svg>
+			<div id="pasteMenu" class="toolButton">
+				<svg alt="Paste" aria-label="Paste Options">
 					<use href="img/icons.svg#paste"></use>
 				</svg>
 				<kbd>Paste</kbd>
-			</div>
-			<div id="systemPaste" class="toolButton">
-				<svg transform="rotate(90)">
-					<use href="img/icons.svg#paste"></use>
-				</svg>
-				<kbd>System</kbd>
+				<i class="flyTick"></i>
 			</div>
 			<div id="deselect" class="toolButton">
 				<svg alt="Deselect" aria-label="Deselect (Esc)">
 					<use href="img/icons.svg#cancel"></use>
 				</svg>
 				<kbd>Deselect</kbd>
+			</div>
+			<div id="pasteBack" class="toolButton pasteSub">
+				<svg alt="Back" aria-label="Back to Selection Actions">
+					<use href="img/icons.svg#left"></use>
+				</svg>
+				<kbd>Back</kbd>
+			</div>
+			<div id="paste" class="toolButton pasteSub">
+				<svg alt="Paste" aria-label="Paste (Ctrl-V)">
+					<use href="img/icons.svg#paste"></use>
+				</svg>
+				<kbd>Paste</kbd>
+			</div>
+			<div id="pasteTransparent" class="toolButton pasteSub">
+				<svg alt="Paste Transparent" aria-label="Paste Transparent">
+					<use href="img/icons.svg#paste"></use>
+				</svg>
+				<kbd>Transparent</kbd>
+			</div>
+			<div id="pasteUnder" class="toolButton pasteSub">
+				<svg alt="Paste Under" aria-label="Paste Under">
+					<use href="img/icons.svg#paste"></use>
+				</svg>
+				<kbd>Under</kbd>
+			</div>
+			<div id="systemPaste" class="toolButton pasteSub">
+				<svg transform="rotate(90)">
+					<use href="img/icons.svg#paste"></use>
+				</svg>
+				<kbd>System</kbd>
 			</div>
 		</div>
 		<div id="colorPanel" class="flyout" hidden>

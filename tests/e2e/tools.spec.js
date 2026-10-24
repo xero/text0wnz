@@ -253,6 +253,7 @@ test.describe('Tool Features', () => {
 				await copyButton.click();
 				await page.waitForTimeout(300);
 
+				await page.locator('#pasteMenu').click();
 				const pasteButton = page.locator('#paste');
 				if (await pasteButton.isVisible()) {
 					await pasteButton.click();

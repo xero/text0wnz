@@ -12,7 +12,8 @@ const LAYOUT_VERSION = 2;
 const LEGACY_TOOL_POS_KEY = 'toolSettingsPos';
 
 // z bands: floating modules 40+, drag ghost 90, selection bar 150,
-// flyouts and menus 200, toasts 210; dialogs ride the top layer
+// flyouts and menus 200, toasts 210, drop overlay 220; dialogs ride
+// the top layer
 const FLOAT_BASE_Z = 40;
 
 // below this width the layout becomes the phone shell: top strip,

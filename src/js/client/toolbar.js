@@ -28,6 +28,11 @@ const Toolbar = (() => {
 			blur();
 			tool.button.classList.add('toolbarDisplayed');
 			currentButton = tool.button;
+			// chrome that mirrors the active tool (group tooltips) hangs
+			// off this instead of wrapping every enable path
+			document.dispatchEvent(
+				new CustomEvent('onToolChange', { detail: { id: tool.button.id } }),
+			);
 		}
 		if (typeof onFocus === 'function') {
 			onFocus();
