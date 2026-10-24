@@ -127,7 +127,7 @@ test.describe('panel docking menu', () => {
 		await page.locator('#saucePanel .modShade').focus();
 		await page.keyboard.press('Shift+F10');
 		await expect(page.locator('#panelMenu')).toBeVisible();
-		// walk from the disabled Dock Left row to Dock Top and take it
+		// walk from the disabled Dock Right row to Dock Top and take it
 		await page.keyboard.press('ArrowDown');
 		await page.keyboard.press('Enter');
 		await expect(page.locator('#panelMenu')).toBeHidden();

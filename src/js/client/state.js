@@ -29,7 +29,6 @@ const EditorState = {
 	pasteTool: null,
 	chat: null,
 	sampleTool: null,
-	menus: null,
 
 	// Network/collaboration
 	network: null,
@@ -305,7 +304,6 @@ class StateManager {
 			network: null,
 			worker: null,
 			title: null,
-			menus: null,
 			initialized: false,
 			initializing: false,
 			dependenciesReady: {
@@ -926,12 +924,6 @@ const State = {
 	},
 	set worker(value) {
 		stateManager.set('worker', value);
-	},
-	get menus() {
-		return stateManager.state.menus;
-	},
-	set menus(value) {
-		stateManager.set('menus', value);
 	},
 	get title() {
 		return stateManager.state.title;

@@ -299,6 +299,29 @@ describe('panel manager', () => {
 		});
 	});
 
+	describe('size persistence and reset', () => {
+		it('a saved float size restores even without a default', () => {
+			localStorage.setItem(
+				'panelLayout',
+				JSON.stringify({ v: 2, MOD: { tool: { dk: 0, w: 321 } } }),
+			);
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			expect(el('tool').style.getPropertyValue('--mw')).toBe('321px');
+		});
+
+		it('reset drops custom sizes, their inline vars, and the save', () => {
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			manager.setFloatWidth('tool', 480);
+			expect(el('tool').style.getPropertyValue('--mw')).toBe('480px');
+			manager.reset();
+			expect(el('tool').style.getPropertyValue('--mw')).toBe('');
+			const saved = JSON.parse(localStorage.getItem('panelLayout'));
+			expect(saved.MOD.tool.w).toBeUndefined();
+		});
+	});
+
 	describe('keyboard docking verbs', () => {
 		it('dockTo moves a panel between every home the drag reaches', () => {
 			const manager = registerAll(createPanelManager());

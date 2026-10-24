@@ -186,10 +186,10 @@ const createPanelManager = () => {
 						if (value === 0 || value === 1) {
 							MOD[key][field] = value;
 						}
-					} else if (
-						value !== undefined &&
-						typeof value === typeof MOD[key][field]
-					) {
+					} else if (typeof value === 'number' && Number.isFinite(value)) {
+						// by expected type, not by the default's: w and h have
+						// no defaults on most modules, and typeof undefined
+						// would silently drop their saved values
 						MOD[key][field] = value;
 					}
 				}
@@ -216,6 +216,7 @@ const createPanelManager = () => {
 		}
 	};
 
+	let lastSaved = '';
 	const save = () => {
 		const persisted = {};
 		for (const key of MODULE_KEYS) {
@@ -226,7 +227,21 @@ const createPanelManager = () => {
 				}
 			}
 		}
-		writeLayout({ MOD: persisted, ORD, ZO, sidebarCollapsed: collapsed });
+		const payload = {
+			MOD: persisted,
+			ORD,
+			ZO,
+			sidebarCollapsed: collapsed,
+		};
+		// layout() runs on hot paths (every tool switch and visibility
+		// toggle); the localStorage round-trip only pays when something
+		// actually moved
+		const serialized = JSON.stringify(payload);
+		if (serialized === lastSaved) {
+			return;
+		}
+		lastSaved = serialized;
+		writeLayout(payload);
 	};
 
 	const visibleOf = key => {
@@ -651,7 +666,16 @@ const createPanelManager = () => {
 	const reset = () => {
 		const fresh = cloneDefaults();
 		for (const key of MODULE_KEYS) {
+			// a merge alone would keep fields the defaults never had
+			// (custom w/h from grips, ln), so reset wipes them first,
+			// along with the inline vars a custom size left behind
+			for (const field of PERSISTED_FIELDS) {
+				delete MOD[key][field];
+			}
 			Object.assign(MOD[key], fresh[key]);
+			const el = registry.get(key)?.el;
+			el?.style.removeProperty('--mw');
+			el?.style.removeProperty('--mh');
 		}
 		ORD = [...MODULE_KEYS];
 		ZO = [...MODULE_KEYS];
@@ -1398,8 +1422,15 @@ const createPanelManager = () => {
 		} else {
 			dropPlaceholder();
 			m.dk = 0;
-			m.x = parseFloat(el.style.getPropertyValue('--mx')) || m.x;
-			m.y = parseFloat(el.style.getPropertyValue('--my')) || m.y;
+			// an edge drop reads 0px, which || would throw away
+			const dropX = parseFloat(el.style.getPropertyValue('--mx'));
+			const dropY = parseFloat(el.style.getPropertyValue('--my'));
+			if (Number.isFinite(dropX)) {
+				m.x = dropX;
+			}
+			if (Number.isFinite(dropY)) {
+				m.y = dropY;
+			}
 			focused = key;
 			ZO = [...ZO.filter(other => other !== key), key];
 		}

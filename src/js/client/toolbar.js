@@ -135,9 +135,6 @@ const Toolbar = (() => {
 	};
 
 	const closeMenu = () => {
-		if (State.menus) {
-			State.menus.close();
-		}
 		State.flyouts?.close();
 	};
 

@@ -93,9 +93,13 @@ const createFKeys = () => {
 		if (!State.textArtCanvas) {
 			return;
 		}
+		// the real cell size, like the display path: warming 8x16 under
+		// an 8x8 or 9px font fills a cache nothing reads
+		const width = State.fontWidth || 8;
+		const height = State.fontHeight || 16;
 		for (const token of fkeySets[currentSetIndex].chars) {
 			if (token < 0) {
-				State.textArtCanvas.unicodeGlyphBits(~token, 8, 16);
+				State.textArtCanvas.unicodeGlyphBits(~token, width, height);
 			}
 		}
 	};

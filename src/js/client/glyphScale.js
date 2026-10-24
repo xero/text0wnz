@@ -29,6 +29,13 @@ const fitGlyphCanvas = canvas => {
 
 const fitGlyphs = (root = document) => {
 	for (const canvas of root.querySelectorAll('canvas.gc')) {
+		// hidden sections re-fit when they reveal (every reveal lays out
+		// again); measuring them on each layout is pure waste. Markup
+		// visibility (.hide, [hidden]), not geometry: the layoutless
+		// test DOM reports zero rects for everything
+		if (canvas.closest?.('.hide, [hidden]')) {
+			continue;
+		}
 		fitGlyphCanvas(canvas);
 	}
 };
