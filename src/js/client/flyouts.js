@@ -33,6 +33,22 @@ const createFlyoutManager = () => {
 	};
 
 	const place = (el, from, opts) => {
+		if (opts.at) {
+			// context menus land at the pointer, clamped on screen
+			el.style.left = `${Math.round(
+				Math.min(
+					Math.max(opts.at.x, 8),
+					Math.max(8, window.innerWidth - el.offsetWidth - 8),
+				),
+			)}px`;
+			el.style.top = `${Math.round(
+				Math.min(
+					Math.max(opts.at.y, 8),
+					Math.max(8, window.innerHeight - el.offsetHeight - 8),
+				),
+			)}px`;
+			return;
+		}
 		const r = from.getBoundingClientRect();
 		if (isPhone() && from.closest?.('aside')) {
 			// the rail rides the bottom edge on phones, so its flyouts
@@ -112,6 +128,23 @@ const createFlyoutManager = () => {
 	document.addEventListener('keydown', e => {
 		if (!open) {
 			return;
+		}
+		// div and article rows have no native key activation; buttons,
+		// links, and summaries do, and a second click would double-fire
+		if (
+			(e.key === 'Enter' || e.key === ' ') &&
+			open.el.contains(document.activeElement)
+		) {
+			const item = document.activeElement;
+			if (
+				item.matches?.(ITEM_SELECTOR) &&
+				!['BUTTON', 'A', 'SUMMARY', 'INPUT'].includes(item.tagName)
+			) {
+				e.preventDefault();
+				e.stopPropagation();
+				item.click();
+				return;
+			}
 		}
 		const arrow = e.key === 'ArrowDown' || e.key === 'ArrowUp';
 		if (arrow || e.key === 'Tab') {
