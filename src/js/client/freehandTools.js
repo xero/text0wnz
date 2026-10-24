@@ -570,6 +570,19 @@ const createCharacterBrushPanel = async () => {
 
 	// the map is 1x in the backing store, cells packed edge to edge; CSS
 	// scales it by the cell zoom so glyph pixels stay whole multiples
+	/** one cell's glyph, with the selection ring when it wears it; the
+	 * ring draws inside the cell, so repainting a cell erases its ring */
+	const paintCell = (ctx, panelFont, index, fg, bg, ring) => {
+		const x = (index % cols) * glyphW;
+		const y = Math.floor(index / cols) * glyphH;
+		ctx.putImageData(panelFont.getGlyph(index, fg, bg), x, y);
+		if (ring) {
+			ctx.strokeStyle = '#22d3ee';
+			ctx.lineWidth = 1;
+			ctx.strokeRect(x + 0.5, y + 0.5, glyphW - 1, glyphH - 1);
+		}
+	};
+
 	const drawMap = async () => {
 		const panelFont = await get1xFont();
 		if (!panelFont) {
@@ -589,27 +602,26 @@ const createCharacterBrushPanel = async () => {
 		const fg = State.palette.getForegroundColor();
 		const bg = State.palette.getBackgroundColor();
 		for (let i = 0; i < 256; i++) {
-			ctx.putImageData(
-				panelFont.getGlyph(i, fg, bg),
-				(i % cols) * glyphW,
-				Math.floor(i / cols) * glyphH,
-			);
+			paintCell(ctx, panelFont, i, fg, bg, i === selected);
 		}
-		// cells pack edge to edge, so the ring draws inside its cell
-		ctx.strokeStyle = '#22d3ee';
-		ctx.lineWidth = 1;
-		ctx.strokeRect(
-			(selected % cols) * glyphW + 0.5,
-			Math.floor(selected / cols) * glyphH + 0.5,
-			glyphW - 1,
-			glyphH - 1,
-		);
 		sizeWindow();
 	};
 
 	const select = async charCode => {
+		const previous = selected;
 		selected = Math.min(Math.max(charCode, 0), 255);
-		await drawMap();
+		// a full redraw per arrow-key repeat janks the iPad; only the
+		// two touched cells change, so only they repaint
+		const panelFont = await get1xFont();
+		if (!panelFont || !cols || !glyphW) {
+			await drawMap();
+		} else {
+			const ctx = mapCanvas.getContext('2d');
+			const fg = State.palette.getForegroundColor();
+			const bg = State.palette.getBackgroundColor();
+			paintCell(ctx, panelFont, previous, fg, bg, false);
+			paintCell(ctx, panelFont, selected, fg, bg, true);
+		}
 		await drawPreview();
 	};
 
@@ -987,7 +999,8 @@ const SHAPE_MODES = [
 ];
 
 // a labeled control row in the tool settings window; the row keeps the
-// pair together so a bar can lay them out side by side
+// pair together so a bar can lay them out side by side. Returns the
+// label so a caller can hang a readout off it
 const mountSetting = (section, text, element) => {
 	const row = document.createElement('DIV');
 	row.className = 'settingRow';
@@ -996,6 +1009,7 @@ const mountSetting = (section, text, element) => {
 	row.appendChild(label);
 	row.appendChild(element);
 	State.toolSettings.mount(section, row);
+	return label;
 };
 
 const createLineController = () => {
@@ -2138,15 +2152,8 @@ const createAttributeBrushController = () => {
 		applySize(n);
 		State.toolSettings.set('attribSize', n);
 	});
-	// the readout rides the heading, so the label is built by hand
-	const sizeLabel = document.createElement('LABEL');
-	sizeLabel.innerText = 'Size';
-	sizeLabel.appendChild(sizeReadout);
-	const sizeRow = document.createElement('DIV');
-	sizeRow.className = 'settingRow';
-	sizeRow.appendChild(sizeLabel);
-	sizeRow.appendChild(sizeSlider);
-	State.toolSettings.mount('attrib', sizeRow);
+	// the readout rides the heading mountSetting hands back
+	mountSetting('attrib', 'Size', sizeSlider).appendChild(sizeReadout);
 	applySize(State.toolSettings.get('attribSize', 1));
 
 	const enable = () => {
@@ -2186,6 +2193,7 @@ const createAttributeBrushController = () => {
 };
 
 export {
+	mountSetting,
 	createHalfBlockController,
 	createShadingController,
 	createShadingPanel,

@@ -612,6 +612,23 @@ const iconHref = name => {
 	return `${iconBase}#${name}`;
 };
 
+// iPadOS WebKit drops external-sprite use content when a subtree
+// reparents or its href swaps, re-resolving lazily or never; cloning
+// the node back in is the one deterministic fix
+const remountUse = (use, href) => {
+	const fresh = use.cloneNode(false);
+	if (href) {
+		fresh.setAttribute('href', href);
+	}
+	use.replaceWith(fresh);
+};
+
+const remountUses = el => {
+	for (const use of el.querySelectorAll('use')) {
+		remountUse(use);
+	}
+};
+
 /**
  * An n-way radio row in the toggle button's visual family. Options are
  * {value, label, glyph?, icon?}; a glyph renders as a small vocabulary
@@ -1342,6 +1359,8 @@ export {
 	createPaintShortcuts,
 	createSegmentedControl,
 	iconHref,
+	remountUse,
+	remountUses,
 	createGrid,
 	createToolPreview,
 	enforceMaxBytes,
