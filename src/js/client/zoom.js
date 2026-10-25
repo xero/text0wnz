@@ -33,13 +33,15 @@
 
 import State from './state.js';
 
+// the bounds export as the clamp's test seam; the tuning constants
+// below are module-internal and were never imported anywhere
 export const ZOOM_MIN = 0.5;
 export const ZOOM_MAX = 4;
-export const ZOOM_STEP = 0.5;
-export const WHEEL_ZOOM_SENSITIVITY = 0.002;
-export const WHEEL_IDLE_MS = 250;
-export const CHUNK_WHEEL_COMMIT_MS = 150;
-export const FOCAL_PENDING_TIMEOUT_MS = 1000;
+const ZOOM_STEP = 0.5;
+const WHEEL_ZOOM_SENSITIVITY = 0.002;
+const WHEEL_IDLE_MS = 250;
+const CHUNK_WHEEL_COMMIT_MS = 150;
+const FOCAL_PENDING_TIMEOUT_MS = 1000;
 
 /** @type {{isInteractive: () => boolean, dispose: () => void} | null} */
 let singleton = null;

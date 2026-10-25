@@ -348,13 +348,10 @@ const createPalette = RGB6Bit => {
 	const getPalette = () => RGBAColors;
 
 	return {
-		getUTF8: getUTF8,
-		getUnicode: getUnicode,
-		rgbToXbin: rgbaToXbin,
-		rgbaToHex: rgbaToHex,
-		hexToRbga: hexToRbga,
+		// conversion helpers stay module-internal (the module exports
+		// getUTF8/getUnicode for the writers); only hexToXbin is read
+		// off an instance (the custom color input)
 		hexToXbin: hexToXbin,
-		xbinToRgba: xbinToRgba,
 		getPalette: getPalette,
 		getRGBColor: getRGBColor,
 		getRGBAColor: getRGBAColor,

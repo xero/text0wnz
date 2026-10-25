@@ -8,13 +8,27 @@
 import { describe, it, expect } from 'vitest';
 import {
 	cellFromPoint,
-	pointFromCell,
-	cellCenter,
-	halfBlockCenter,
 	snapOrigin,
 	clampCell,
 	MappingError,
+	type CellMetrics,
 } from '../../src/js/core/mapping';
+
+// probe generators, local since the sweep is their only caller: the
+// top-left corner and the center points whose round trip through
+// cellFromPoint is the mapping's spec
+const pointFromCell = (x: number, y: number, m: CellMetrics) => ({
+	clientX: m.originX + x * m.cellWidth,
+	clientY: m.originY + y * m.cellHeight,
+});
+const cellCenter = (x: number, y: number, m: CellMetrics) => ({
+	clientX: m.originX + x * m.cellWidth + m.cellWidth / 2,
+	clientY: m.originY + y * m.cellHeight + m.cellHeight / 2,
+});
+const halfBlockCenter = (x: number, halfBlockY: number, m: CellMetrics) => ({
+	clientX: m.originX + x * m.cellWidth + m.cellWidth / 2,
+	clientY: m.originY + (halfBlockY * m.cellHeight) / 2 + m.cellHeight / 4,
+});
 
 const mulberry32 = (seed: number) => () => {
 	seed |= 0;

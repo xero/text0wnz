@@ -9,7 +9,6 @@ import { Load, Save } from './file.js';
 
 const installTestBridge = () => {
 	/** @type {*} */ (window).__t0wnz = { State, Load, Save };
-	document.dispatchEvent(new CustomEvent('onTestBridgeReady'));
 	console.log('[TestBridge] window.__t0wnz installed');
 };
 

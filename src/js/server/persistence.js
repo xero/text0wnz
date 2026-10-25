@@ -214,4 +214,3 @@ const withData = join => {
 	return join;
 };
 
-export const expandJoinData = withData;

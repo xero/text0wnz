@@ -252,7 +252,6 @@ export const createJournalStore = (options = {}) => {
 	};
 
 	return {
-		backendKind: backend.kind,
 		/** Raw journal bytes as persisted (may be empty). */
 		open: () => enqueue(() => backend.read()),
 		/**
@@ -279,13 +278,7 @@ export const createJournalStore = (options = {}) => {
 				bytesSinceKeyframe = 0;
 				strokesSinceKeyframe = 0;
 			}),
-		wipe: () =>
-			enqueue(async () => {
-				await backend.wipe();
-				bytesSinceKeyframe = 0;
-				strokesSinceKeyframe = 0;
-			}),
-		stats: () => ({ bytesSinceKeyframe, strokesSinceKeyframe }),
-		close: () => enqueue(() => backend.close()),
+		// wipe/stats/close and backendKind had no production callers;
+		// the backend contract keeps wipe/close for the worker protocol
 	};
 };

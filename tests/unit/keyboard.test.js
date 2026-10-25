@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
-	createFKeys,
 	createCursor,
 	createSelectionCursor,
 	createKeyboardController,
 	createPasteTool,
 	createSelectionTool,
 } from '../../src/js/client/keyboard.js';
+import { createFKeys } from '../../src/js/client/fkeys.js';
 import State from '../../src/js/client/state.js';
 
 vi.mock('../../src/js/client/state.js', () => ({

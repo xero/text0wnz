@@ -1,10 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
 	printHelp,
-	cleanHeaders,
-	createTimestampedFilename,
 	sanitize,
-	anonymizeIp,
 	callout,
 } from '../../../src/js/server/utils.js';
 
@@ -38,112 +35,6 @@ describe('Utils Module', () => {
 				expect.stringContaining('--debug'),
 			);
 			expect(processExitSpy).toHaveBeenCalledWith(0);
-		});
-	});
-
-	describe('cleanHeaders', () => {
-		it('should redact sensitive headers', () => {
-			const headers = {
-				'authorization': 'Bearer token123',
-				'cookie': 'sessionid=abc123',
-				'set-cookie': 'auth=xyz789',
-				'proxy-authorization': 'Basic credentials',
-				'x-api-key': 'secret-key',
-				'content-type': 'application/json',
-				'user-agent': 'Mozilla/5.0',
-			};
-
-			const cleaned = cleanHeaders(headers);
-
-			expect(cleaned.authorization).toBe('[REDACTED]');
-			expect(cleaned.cookie).toBe('[REDACTED]');
-			expect(cleaned['set-cookie']).toBe('[REDACTED]');
-			expect(cleaned['proxy-authorization']).toBe('[REDACTED]');
-			expect(cleaned['x-api-key']).toBe('[REDACTED]');
-			expect(cleaned['content-type']).toBe('application/json');
-			expect(cleaned['user-agent']).toBe('Mozilla/5.0');
-		});
-
-		it('should handle case-insensitive header names', () => {
-			const headers = {
-				'Authorization': 'Bearer token123',
-				'COOKIE': 'sessionid=abc123',
-				'Content-Type': 'application/json',
-			};
-
-			const cleaned = cleanHeaders(headers);
-
-			expect(cleaned.Authorization).toBe('[REDACTED]');
-			expect(cleaned.COOKIE).toBe('[REDACTED]');
-			expect(cleaned['Content-Type']).toBe('application/json');
-		});
-
-		it('should handle empty headers object', () => {
-			const headers = {};
-			const cleaned = cleanHeaders(headers);
-
-			expect(cleaned).toEqual({});
-		});
-
-		it('should not modify the original headers object', () => {
-			const headers = {
-				'authorization': 'Bearer token123',
-				'content-type': 'application/json',
-			};
-			const originalHeaders = { ...headers };
-
-			cleanHeaders(headers);
-
-			expect(headers).toEqual(originalHeaders);
-		});
-	});
-
-	describe('createTimestampedFilename', () => {
-		let originalToISOString;
-
-		beforeEach(() => {
-			// Mock Date.prototype.toISOString to return a consistent timestamp
-			originalToISOString = Date.prototype.toISOString;
-			Date.prototype.toISOString = vi
-				.fn()
-				.mockReturnValue('2023-12-25T10:30:45.123Z');
-		});
-
-		afterEach(() => {
-			Date.prototype.toISOString = originalToISOString;
-		});
-
-		it('should create timestamped filename with session name and extension', () => {
-			const filename = createTimestampedFilename('myart', 'bin');
-
-			expect(filename).toBe('myart-2023-12-25T10-30-45.123Z.bin');
-		});
-
-		it('should replace colons with hyphens for Windows compatibility', () => {
-			const filename = createTimestampedFilename('session', 'json');
-
-			expect(filename).not.toContain(':');
-			expect(filename).toBe('session-2023-12-25T10-30-45.123Z.json');
-		});
-
-		it('should work with different session names and extensions', () => {
-			const filename1 = createTimestampedFilename('art-session', 'backup');
-			const filename2 = createTimestampedFilename('collaborative', 'data');
-
-			expect(filename1).toBe('art-session-2023-12-25T10-30-45.123Z.backup');
-			expect(filename2).toBe('collaborative-2023-12-25T10-30-45.123Z.data');
-		});
-
-		it('should handle empty session name', () => {
-			const filename = createTimestampedFilename('', 'bin');
-
-			expect(filename).toBe('-2023-12-25T10-30-45.123Z.bin');
-		});
-
-		it('should handle session names with special characters', () => {
-			const filename = createTimestampedFilename('my-art_session.v2', 'bin');
-
-			expect(filename).toBe('my-art_session.v2-2023-12-25T10-30-45.123Z.bin');
 		});
 	});
 
@@ -203,71 +94,6 @@ describe('Utils Module', () => {
 		it('should use default quote=true when not specified', () => {
 			const result = sanitize('test');
 			expect(result).toBe('\'test\'');
-		});
-	});
-
-	describe('anonymizeIp', () => {
-		describe('IPv4 addresses', () => {
-			it('should anonymize standard IPv4 addresses', () => {
-				expect(anonymizeIp('192.168.1.100')).toBe('192.168.1.X');
-				expect(anonymizeIp('10.0.0.1')).toBe('10.0.0.X');
-				expect(anonymizeIp('172.16.254.1')).toBe('172.16.254.X');
-			});
-
-			it('should handle IPv4-mapped IPv6 addresses', () => {
-				expect(anonymizeIp('::ffff:192.168.1.100')).toBe('192.168.1.X');
-				expect(anonymizeIp('::ffff:10.0.0.1')).toBe('10.0.0.X');
-			});
-
-			it('should return "invalid ip" for malformed IPv4', () => {
-				expect(anonymizeIp('192.168.1')).toBe('invalid ip');
-				expect(anonymizeIp('192.168.1.1.1')).toBe('invalid ip');
-			});
-		});
-
-		describe('IPv6 addresses', () => {
-			it('should anonymize full IPv6 addresses', () => {
-				const result = anonymizeIp('2001:0db8:85a3:0000:0000:8a2e:0370:7334');
-				expect(result).toBe('2001:0db8:85a3:0000:X:X:X:X');
-			});
-
-			it('should anonymize compressed IPv6 addresses', () => {
-				const result = anonymizeIp('2001:db8::1');
-				expect(result).toBe('2001:db8:0:0:X:X:X:X');
-			});
-
-			it('should handle IPv6 with double colon at start', () => {
-				const result = anonymizeIp('::1');
-				expect(result).toBe('0:0:0:0:X:X:X:X');
-			});
-
-			it('should handle IPv6 with double colon at end', () => {
-				const result = anonymizeIp('fe80::');
-				expect(result).toBe('fe80:0:0:0:X:X:X:X');
-			});
-
-			it('should handle IPv6 with double colon in middle', () => {
-				const result = anonymizeIp('2001:db8::8a2e:370:7334');
-				expect(result).toBe('2001:db8:0:0:X:X:X:X');
-			});
-
-			it('should return "invalid ip" for malformed IPv6', () => {
-				expect(anonymizeIp('2001:db8')).toBe('invalid ip');
-				// Note: anonymizeIp doesn't validate hex characters, only structure
-			});
-		});
-
-		describe('Edge cases', () => {
-			it('should handle null/undefined/empty input', () => {
-				expect(anonymizeIp(null)).toBe('unknown');
-				expect(anonymizeIp(undefined)).toBe('unknown');
-				expect(anonymizeIp('')).toBe('unknown');
-			});
-
-			it('should handle malformed input', () => {
-				expect(anonymizeIp('not-an-ip')).toBe('unknown');
-				expect(anonymizeIp('192.168')).toBe('invalid ip');
-			});
 		});
 	});
 

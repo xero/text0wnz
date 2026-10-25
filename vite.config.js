@@ -399,6 +399,14 @@ export default ({ mode }) => {
 						'favicon.ico',
 						'ui/img/favicon.ico',
 					],
+					// opt-in instrumentation (?test/?profile flags): a normal
+					// session never loads these chunks, so they stay out of
+					// every visitor's PWA install
+					globIgnores: [
+						'**/scrollSpike-*.js',
+						'**/profiler-*.js',
+						'**/testBridge-*.js',
+					],
 					maximumFileSizeToCacheInBytes: 3000000,// 3mb max
 					manifestTransforms: [
 						entries => ({

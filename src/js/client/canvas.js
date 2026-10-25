@@ -1797,8 +1797,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 
-	const getDefaultFontName = () => magicNumbers.DEFAULT_FONT;
-
 	const getCurrentFontName = () => currentFontName;
 
 	const setXBFontData = (fontBytes, fontWidth, fontHeight) => {
@@ -2042,23 +2040,26 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		getBaudOffsets: getBaudOffsets,
 		setBaudReveal: setBaudReveal,
 		loadJournalSnapshot: loadJournalSnapshot,
-		journalKeyframe: scheduleJournalKeyframe,
 		setMirrorMode: setMirrorMode,
 		getMirrorMode: getMirrorMode,
 		getMirrorX: getMirrorX,
 		getCurrentFontName: getCurrentFontName,
-		getDefaultFontName: getDefaultFontName,
 		setXBFontData: setXBFontData,
 		setXBPaletteData: setXBPaletteData,
 		clearXBData: clearXBData,
 		getXBPaletteData: getXBPaletteData,
 		getXBFontData: getXBFontData,
-		drawRegion: drawRegion,
-		enqueueDirtyRegion: enqueueDirtyRegion,
-		enqueueDirtyCell: enqueueDirtyCell,
-		processDirtyRegions: processDirtyRegions,
-		patchBufferAndEnqueueDirty: patchBufferAndEnqueueDirty,
-		coalesceRegions: coalesceRegions,
+		// one EXPLICIT test seam for the chunk renderer's dirty-region
+		// internals: nothing in production reaches them from outside, and
+		// scattering them across the public surface read as API
+		_chunkTestSeam: {
+			drawRegion,
+			enqueueDirtyRegion,
+			enqueueDirtyCell,
+			processDirtyRegions,
+			patchBufferAndEnqueueDirty,
+			coalesceRegions,
+		},
 	};
 };
 export { createTextArtCanvas };
