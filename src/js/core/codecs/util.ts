@@ -222,8 +222,18 @@ const pumpThrough = async (
 export const gzip = (bytes: Uint8Array): Promise<Uint8Array> =>
 	pumpThrough(bytes, new CompressionStream('gzip'));
 
-export const gunzip = (bytes: Uint8Array): Promise<Uint8Array> =>
-	pumpThrough(bytes, new DecompressionStream('gzip'));
+/**
+ * Default gunzip ceiling: comfortably above the largest legal doc
+ * (10M cells x 12 plane bytes) and far below what a 50KB gzip bomb
+ * used to buffer. The zip path always capped; this one did not.
+ */
+export const MAX_GUNZIP_BYTES = 256 * 1024 * 1024;
+
+export const gunzip = (
+	bytes: Uint8Array,
+	maxBytes: number = MAX_GUNZIP_BYTES,
+): Promise<Uint8Array> =>
+	pumpThrough(bytes, new DecompressionStream('gzip'), maxBytes);
 
 export const deflateRaw = (bytes: Uint8Array): Promise<Uint8Array> =>
 	pumpThrough(bytes, new CompressionStream('deflate-raw'));

@@ -20,6 +20,7 @@
  */
 
 import {
+	MAX_DOC_CELLS,
 	ATTR_BLINK,
 	DocV3,
 	attrsOf,
@@ -135,6 +136,11 @@ export const decodeTundra = (bytes: Uint8Array): DecodeResult => {
 
 	const finalY = parse();
 	const rows = Math.max(1, Math.min(finalY, MAX_TUNDRA_ROWS - 1) + 1);
+	if (columns * rows > MAX_DOC_CELLS) {
+		// SAUCE TInfo1 and the cursor row are both u16: a crafted pair
+		// implied a 4.3B cell allocation
+		throw new CodecError(`TUNDRA ${columns}x${rows} exceeds the cell ceiling`);
+	}
 	const doc = createDocV3({
 		columns,
 		rows,

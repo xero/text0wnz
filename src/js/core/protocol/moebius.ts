@@ -23,7 +23,9 @@
  *   uses bytes 0-255. The doc conversion accepts both.
  */
 
+import { isValidCodepoint } from './extensions.js';
 import {
+	MAX_DOC_CELLS,
 	createDocV3,
 	expand6to8,
 	glyphWord,
@@ -186,8 +188,8 @@ export const compressBlocks = (
 };
 
 // absolute decode ceiling when the caller gives no expected length:
-// the client-side doc cap (1000 x 10000 cells)
-const MAX_RLE_CELLS = 10_000_000;
+// the shared doc cap (doc.ts MAX_DOC_CELLS)
+const MAX_RLE_CELLS = MAX_DOC_CELLS;
 
 const expandRuns = (
 	runs: RleRun[],
@@ -324,6 +326,13 @@ export const joinDocToDoc = (join: MoebiusJoinDoc): JoinDocResult => {
 		throw new ProtocolError(`bad join doc size ${join.columns}x${join.rows}`);
 	}
 	const cells = join.columns * join.rows;
+	if (cells > MAX_DOC_CELLS) {
+		// the RLE expander's only other limit is the frame's OWN
+		// expectedLength, which a hostile ?server= join controls
+		throw new ProtocolError(
+			`join doc ${join.columns}x${join.rows} exceeds the cell ceiling`,
+		);
+	}
 	const blocks =
 		join.data ??
 		uncompressBlocks(
@@ -352,7 +361,11 @@ export const joinDocToDoc = (join: MoebiusJoinDoc): JoinDocResult => {
 	const frame = doc.frames[0];
 	for (let i = 0; i < cells; i++) {
 		const block = blocks[i];
-		const code = Number.isInteger(block.code) ? block.code : 0;
+		const rawCode = Number.isInteger(block.code) ? block.code : 0;
+		// a lone surrogate interned here is the exact poison the DRAW
+		// intake and blockToExtCell both reject: later exports would
+		// emit invalid UTF-8
+		const code = rawCode <= 0xff || isValidCodepoint(rawCode) ? rawCode : 63;
 		const glyphId = code <= 0xff ? code : doc.glyphTable.idFor(0, code);
 		frame.glyph[i] = glyphWord(glyphId, 0);
 		frame.fg[i] = paletteColor((block.fg ?? 7) & 0xff);

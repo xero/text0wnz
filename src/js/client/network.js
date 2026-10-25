@@ -34,6 +34,11 @@ const createRemoteCursors = () => {
 		}
 		let el = cursors.get(id);
 		if (!el) {
+			// forged ids must not grow unbounded DOM in every peer's tab;
+			// real rooms hold a handful of members
+			if (cursors.size >= 64) {
+				return;
+			}
 			el = document.createElement('div');
 			el.className = 'remoteCursor';
 			el.style.position = 'absolute';

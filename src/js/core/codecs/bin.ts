@@ -7,6 +7,7 @@
 
 import { DocV3 } from '../doc.js';
 import { u16ToV3, v3ToU16Lossy } from '../convert.js';
+import { MAX_DOC_CELLS } from '../doc.js';
 import { SauceRecord, buildSauce, parseSauce } from './sauce.js';
 import {
 	CodecError,
@@ -49,6 +50,9 @@ export const decodeBin = (bytes: Uint8Array): DecodeResult => {
 	// a trailing partial row pads instead of flooring away: PabloDraw
 	// and moebiusXBIN both keep it
 	const rows = Math.max(1, Math.ceil(payloadSize / columns / 2));
+	if (columns * rows > MAX_DOC_CELLS) {
+		throw new CodecError(`BIN ${columns}x${rows} exceeds the cell ceiling`);
+	}
 	const imageData = bytesToU16Cells(
 		bytes,
 		0,

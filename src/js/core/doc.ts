@@ -197,6 +197,13 @@ export interface Cell {
  */
 export const DEFAULT_FRAME_CELL_BUDGET = 16_000_000;
 
+/**
+ * Hard ceiling for decoder allocations driven by untrusted headers:
+ * the client doc cap (1000 x 10000) with headroom. A crafted
+ * 65535x65535 header must die at the gate, not in the allocator.
+ */
+export const MAX_DOC_CELLS = 10_000_000;
+
 export const DEFAULT_GLOBAL_DELAY_MS = 100;
 
 export interface DocV3 {

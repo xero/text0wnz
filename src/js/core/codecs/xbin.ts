@@ -9,6 +9,7 @@
 import { DocV3, expand6to8, rgbColor } from '../doc.js';
 import { u16ToV3, v3ToU16Lossy } from '../convert.js';
 import {
+	MAX_DOC_CELLS,
 	FONT_SLOT_XB,
 	XB_UPPER_BASE,
 	attrsOf,
@@ -174,6 +175,11 @@ export const decodeXBin = (bytes: Uint8Array): XBinDecodeResult => {
 	const sauce = parseSauce(bytes);
 	const columns = (bytes[6] << 8) + bytes[5];
 	const rows = (bytes[8] << 8) + bytes[7];
+	if (columns * rows > MAX_DOC_CELLS) {
+		// header-sized allocation: a crafted 65535x65535 died in the
+		// allocator before this gate existed
+		throw new CodecError(`XBin ${columns}x${rows} exceeds the cell ceiling`);
+	}
 	// the spec allows 1-32; moebiusXBIN defaults a zero to 16 and a raw
 	// read made a Fontsize-0 file show different art in the two editors
 	const fontHeight = bytes[9] === 0 ? 16 : bytes[9];
