@@ -13,12 +13,15 @@
 /* global Bun */
 
 import path from 'node:path';
-import { decodeFrame, ProtocolError } from '../core/index';
+import { MoebiusAction, decodeFrame, ProtocolError } from '../core/index';
 import { createRoom } from './room.js';
 import { resolveBridgeTarget, createBridgePipe } from './bridge.js';
 
 export const SERVER_LIMITS = Object.freeze({
-	maxPayloadBytes: 1024 * 1024,
+	// vanilla PASTE_AS_SELECTION frames run tens of MB (the ancestor's
+	// ws default is 100MiB); 1MB closed real clients mid-session. The
+	// room's byte-bounded op log holds memory regardless.
+	maxPayloadBytes: 32 * 1024 * 1024,
 	idleTimeoutSeconds: 120,
 	heartbeatMs: 30000,
 	maxClientsPerRoom: 64,
@@ -56,9 +59,19 @@ export const roomNameFromPath = (pathname, defaultRoom) => {
  */
 export const createMoebiusServer = config => {
 	const log = config.log ?? (config.debug ? console.log : () => {});
-	const defaultRoom = config.sessionName ?? 'joint';
+	// the default room rides persistence paths like any other; a name
+	// that skips the room-name grammar could escape ./sessions
+	const requestedDefault = config.sessionName ?? 'joint';
+	if (!ROOM_NAME_RE.test(requestedDefault)) {
+		throw new Error(
+			`session name '${requestedDefault}' must match ${ROOM_NAME_RE}`,
+		);
+	}
+	const defaultRoom = requestedDefault.toLowerCase();
 	/** @type {Map<string, ReturnType<typeof createRoom>>} */
 	const rooms = new Map();
+	/** @type {WeakMap<ReturnType<typeof createRoom>, Promise<unknown>>} */
+	const roomReady = new WeakMap();
 	/** sockets per room INCLUDING ones that never sent CONNECTED */
 	const socketCounts = new Map();
 
@@ -77,9 +90,12 @@ export const createMoebiusServer = config => {
 			});
 			rooms.set(name, room);
 			// lazy restore hook: the host loads any persisted doc for this
-			// room; without it a named room boots blank and its next
-			// autosave overwrites the saved art
-			config.onRoomCreate?.(room);
+			// room. Connects WAIT on it: a client racing the async load
+			// used to adopt the blank boot doc with no resync ever coming
+			roomReady.set(
+				room,
+				Promise.resolve(config.onRoomCreate?.(room)).catch(() => undefined),
+			);
 		}
 		return room;
 	};
@@ -127,19 +143,16 @@ export const createMoebiusServer = config => {
 				return;
 			}
 			// cap on SOCKETS, not registered members: idle pre-CONNECTED
-			// sockets count too
+			// sockets count too. The ROOM is not created here: that waits
+			// for a CONNECTED frame with a valid password, or 64 junk
+			// sockets could exhaust maxRooms on a protected server
 			const open = socketCounts.get(ws.data.roomName) ?? 0;
-			const room =
-				open < SERVER_LIMITS.maxClientsPerRoom
-					? getRoom(ws.data.roomName)
-					: null;
-			if (!room) {
+			if (open >= SERVER_LIMITS.maxClientsPerRoom) {
 				ws.close(1013, 'room full');
 				return;
 			}
 			socketCounts.set(ws.data.roomName, open + 1);
 			ws.data.counted = true;
-			ws.data.room = room;
 			sockets.add(ws);
 		},
 		/** @param {import('bun').ServerWebSocket<any>} ws @param {string | Buffer} raw */
@@ -149,10 +162,6 @@ export const createMoebiusServer = config => {
 				ws.data.pipe?.fromBrowser(
 					typeof raw === 'string' ? raw : new Uint8Array(raw),
 				);
-				return;
-			}
-			const room = ws.data.room;
-			if (!room) {
 				return;
 			}
 			let frame;
@@ -171,12 +180,41 @@ export const createMoebiusServer = config => {
 				if (frame.type !== 0) {
 					return;
 				}
-				ws.data.connected = room.connect(client, frame.data);
-				if (!ws.data.connected) {
-					// a refused socket closes: no wire-speed password
-					// brute force on a held connection
+				// the configured password gates room CREATION too: the
+				// room only comes alive for a caller who already passed
+				const expected =
+					config.roomPasswords?.[ws.data.roomName] ?? config.pass ?? '';
+				const offered =
+					typeof frame.data?.pass === 'string' ? frame.data.pass : '';
+				if (expected !== '' && offered !== expected && !ws.data.room) {
+					// same wire shape as room.connect's refusal: vanilla
+					// clients wait for the frame, not the close code
+					client.send(MoebiusAction.REFUSED, {});
 					ws.close(1008, 'refused');
+					return;
 				}
+				const room = ws.data.room ?? getRoom(ws.data.roomName);
+				if (!room) {
+					ws.close(1013, 'room full');
+					return;
+				}
+				ws.data.room = room;
+				const connectData = frame.data;
+				(roomReady.get(room) ?? Promise.resolve()).then(() => {
+					if (ws.readyState !== 1 || ws.data.connected) {
+						return;
+					}
+					ws.data.connected = room.connect(client, connectData);
+					if (!ws.data.connected) {
+						// a refused socket closes: no wire-speed password
+						// brute force on a held connection
+						ws.close(1008, 'refused');
+					}
+				});
+				return;
+			}
+			const room = ws.data.room;
+			if (!room) {
 				return;
 			}
 			room.message(client, frame);
@@ -211,7 +249,12 @@ export const createMoebiusServer = config => {
 					}
 				};
 				if (room.isDirty() && config.onRoomEmpty) {
-					Promise.resolve(config.onRoomEmpty(room)).then(finish, finish);
+					// a FAILED save must keep the room resident (disk-full
+					// silently destroyed unsaved art while the server looked
+					// healthy); the next empty or interval save retries
+					Promise.resolve(config.onRoomEmpty(room)).then(finish, error => {
+						log(`save failed for ${room.name}; kept resident: ${error}`);
+					});
 				} else if (!room.isDirty()) {
 					finish();
 				}
@@ -301,6 +344,16 @@ export const createMoebiusServer = config => {
 		const roomName = roomNameFromPath(url.pathname, defaultRoom);
 		if (roomName === null) {
 			return new Response('no such room', { status: 404 });
+		}
+		// configured allowlist: browser pages carry an Origin, desktop
+		// clients send none (always allowed). Without the knob the
+		// behavior stays open, matching the ancestor
+		if (wantsUpgrade && Array.isArray(config.allowedOrigins)) {
+			const origin = req.headers.get('origin');
+			if (origin && !config.allowedOrigins.includes(origin)) {
+				log(`upgrade refused for origin ${origin}`);
+				return new Response('forbidden origin', { status: 403 });
+			}
 		}
 		if (
 			server.upgrade(req, { data: { roomName, connected: false, alive: true } })

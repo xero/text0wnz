@@ -67,6 +67,9 @@ export const ROOM_DEFAULTS = Object.freeze({
 	maxColumns: 1000,
 	maxRows: 10000,
 	opLogLimit: 10000,
+	// count alone let 10000 batches of 4096 cells hold ~40M objects;
+	// one EXT_TIMELAPSE stringified the lot
+	opLogByteLimit: 8 * 1024 * 1024,
 });
 
 /** capability names our server advertises to caps-aware clients */
@@ -135,7 +138,7 @@ export const createRoom = (options = {}) => {
 	const members = new Map();
 	/** @type {{id: number, nick: string, group: string, text: string, time: number}[]} */
 	const chatHistory = [];
-	/** @type {{t: number, type: number, data: object, seq: number}[]} */
+	/** @type {{t: number, type: number, data: object, seq: number, weight: number}[]} */
 	const opLog = [];
 	let nextId = 0;
 	let dirty = false;
@@ -216,12 +219,22 @@ export const createRoom = (options = {}) => {
 
 	resetBaseline();
 
+	let opLogBytes = 0;
 	/** @param {number} type @param {object} data @returns {number} seq */
 	const pushOp = (type, data) => {
 		seq++;
-		opLog.push({ t: Date.now(), type, data, seq });
-		while (opLog.length > opLogLimit) {
-			absorbIntoBaseline(opLog[0]);
+		// a rough byte weight per op bounds MEMORY, not just count: big
+		// paste batches weigh thousands of count-one entries
+		const weight = JSON.stringify(data)?.length ?? 64;
+		opLog.push({ t: Date.now(), type, data, seq, weight });
+		opLogBytes += weight;
+		while (
+			opLog.length > opLogLimit ||
+			opLogBytes > ROOM_DEFAULTS.opLogByteLimit
+		) {
+			const oldest = opLog[0];
+			absorbIntoBaseline(oldest);
+			opLogBytes -= oldest.weight ?? 0;
 			opLog.shift();
 		}
 		dirty = true;
@@ -393,6 +406,12 @@ export const createRoom = (options = {}) => {
 		doc.data = next;
 	};
 
+	// wire-speed brute force: repeated failures open an exponential
+	// cooldown window during which every attempt refuses instantly
+	// (the first couple of tries stay free: humans typo)
+	let authFailures = 0;
+	let authCooldownUntil = 0;
+
 	/**
 	 * @param {RoomClient} client
 	 * @param {Record<string, unknown>} data CONNECTED frame data
@@ -402,10 +421,24 @@ export const createRoom = (options = {}) => {
 		const nick = typeof data.nick === 'string' ? sanitize(data.nick, ROOM_DEFAULTS.nickLimit, false) : undefined;
 		const pass = typeof data.pass === 'string' ? data.pass : '';
 		// the password gates EVERYONE, spectators included
-		if (password !== '' && pass !== password) {
-			client.send(MoebiusAction.REFUSED, {});
-			log(`${nick ?? 'spectator'} refused (bad password)`);
-			return false;
+		if (password !== '') {
+			if (Date.now() < authCooldownUntil) {
+				client.send(MoebiusAction.REFUSED, {});
+				log('refused (auth cooldown)');
+				return false;
+			}
+			if (pass !== password) {
+				authFailures++;
+				if (authFailures >= 3) {
+					authCooldownUntil =
+						Date.now() +
+						Math.min(30_000, 250 * 2 ** Math.min(authFailures - 2, 7));
+				}
+				client.send(MoebiusAction.REFUSED, {});
+				log(`${nick ?? 'spectator'} refused (bad password)`);
+				return false;
+			}
+			authFailures = 0;
 		}
 		const isSpectator = nick === undefined;
 		if (isSpectator && !spectators.enabled) {
@@ -526,7 +559,12 @@ export const createRoom = (options = {}) => {
 				if (user.role === 'viewer' && !spectators.canChat) {
 					return;
 				}
-				const nick = typeof data.nick === 'string' ? sanitize(data.nick, ROOM_DEFAULTS.nickLimit, false) : (user.nick ?? '');
+				// a nickless spectator could broadcast ANY nick the frame
+				// claimed; viewers speak as themselves, editors may rename
+				const nick =
+					user.role === 'editor' && typeof data.nick === 'string'
+						? sanitize(data.nick, ROOM_DEFAULTS.nickLimit, false)
+						: (user.nick ?? 'spectator');
 				const text = typeof data.text === 'string' ? sanitize(data.text, ROOM_DEFAULTS.chatTextLimit, false) : '';
 				if (text === '') {
 					return;
@@ -549,6 +587,9 @@ export const createRoom = (options = {}) => {
 					chatHistory.shift();
 				}
 				dirty = true;
+				// without the seq bump a chat landing mid-save was marked
+				// clean by that save's token and lost when the room emptied
+				dirtySeq++;
 				// spectators chat and HEAR chat on our server. Explicit
 				// shape: relaying junk fields would let a client smuggle a
 				// fake `seq` into caps peers' streams
@@ -991,6 +1032,12 @@ export const createRoom = (options = {}) => {
 			dirty,
 		}),
 		chatHistory: () => [...chatHistory],
+		/** blank art and silent chat: nothing worth a session file */
+		isBlank: () =>
+			chatHistory.length === 0 &&
+			doc.data.every(
+				block => (block.code === 32 || block.code === 0) && block.bg === 0,
+			),
 		opLog: () => [...opLog],
 		/** capture before a save begins; pass back to markClean */
 		dirtyToken: () => dirtySeq,

@@ -10,9 +10,49 @@
  */
 
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile, copyFile } from 'node:fs/promises';
+import {
+	copyFile,
+	mkdir,
+	readFile,
+	rename,
+	rm,
+	writeFile,
+} from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+
+/**
+ * Crash-safe replace: write a sibling temp file, then rename over the
+ * target (atomic on POSIX). A crash mid-write used to tear the
+ * envelope or the sidecar in place.
+ * @param {string} file @param {Uint8Array | string} data
+ */
+const writeFileAtomic = async (file, data) => {
+	const tmp = `${file}.tmp-${process.pid}`;
+	await writeFile(tmp, data);
+	await rename(tmp, file);
+};
+
+/**
+ * One save at a time per room: the interval timer, onRoomEmpty, and
+ * shutdown used to interleave truncating writes to the same files.
+ * @type {Map<string, Promise<unknown>>}
+ */
+const saveQueues = new Map();
+/**
+ * @template T
+ * @param {string} roomName @param {() => Promise<T>} job
+ * @returns {Promise<T>}
+ */
+const serialized = (roomName, job) => {
+	const tail = saveQueues.get(roomName) ?? Promise.resolve();
+	const next = tail.then(job, job);
+	saveQueues.set(
+		roomName,
+		next.catch(() => undefined),
+	);
+	return next;
+};
 import {
 	applyExtCells,
 	compressExtCells,
@@ -37,7 +77,14 @@ export const roomFile = (dir, roomName) =>
  * @param {ReturnType<import('./room.js').createRoom>} room
  * @param {string} dir
  */
-export const saveRoom = async (room, dir) => {
+export const saveRoom = (room, dir) =>
+	serialized(room.name, () => saveRoomNow(room, dir));
+
+/**
+ * @param {ReturnType<import('./room.js').createRoom>} room
+ * @param {string} dir
+ */
+const saveRoomNow = async (room, dir) => {
 	await mkdir(dir, { recursive: true });
 	// token BEFORE the writes: mutations landing mid-write must keep
 	// the room dirty for the next save
@@ -58,11 +105,11 @@ export const saveRoom = async (room, dir) => {
 			group: join.group,
 		},
 	});
-	await writeFile(roomFile(dir, room.name), bytes);
+	await writeFileAtomic(roomFile(dir, room.name), bytes);
 	// the sidecar keeps full session fidelity (palette, font bytes,
 	// comments, chat, ext cells) so a restart never degrades the live
 	// room
-	await writeFile(
+	await writeFileAtomic(
 		stateFile(dir, room.name),
 		JSON.stringify({ join, chat: room.chatHistory(), ext }),
 	);
@@ -87,13 +134,26 @@ export const backupRoom = async (dir, roomName, bytes, lastHashes) => {
 	if (lastHashes.get(roomName) === sha1) {
 		return null;
 	}
-	lastHashes.set(roomName, sha1);
 	const backupDir = path.join(dir, 'backups');
 	await mkdir(backupDir, { recursive: true });
 	const stamp = new Date().toISOString().replace(/[:]/g, '-');
 	const file = path.join(backupDir, `${roomName}-${stamp}.0wnz`);
 	await copyFile(roomFile(dir, roomName), file);
+	// the hash records only a backup that EXISTS: a transient copy
+	// failure used to skip this content forever
+	lastHashes.set(roomName, sha1);
 	return file;
+};
+
+/**
+ * A throwaway room (blank art, no chat) leaves nothing behind:
+ * client-chosen names used to grow two session files and a backup
+ * each with no deletion path anywhere.
+ * @param {string} dir @param {string} roomName
+ */
+export const removeRoomFiles = async (dir, roomName) => {
+	await rm(roomFile(dir, roomName), { force: true });
+	await rm(stateFile(dir, roomName), { force: true });
 };
 
 /**

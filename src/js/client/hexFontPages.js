@@ -140,7 +140,12 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 	};
 	const xbUpperBits = (codepoint, fontW, fontH) => {
 		if (!embedded) {
-			return null; // the font left with its doc: substitute box
+			// UNDEFINED, not null: null is a definitive miss the renderer
+			// caches forever, and a paint racing setXBFontData would pin
+			// substitute boxes on whichever cells it reached first (the
+			// xb512 goldens caught this as cross-run pixel lottery).
+			// Pending stays uncached; the onXBFontLoaded repaint resolves.
+			return undefined;
 		}
 		const index = codepoint - XB_UPPER_BASE + 256;
 		if (index < 256 || index > 511) {

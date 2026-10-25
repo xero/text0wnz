@@ -100,6 +100,12 @@ const parseArgs = () => {
 				if (nextArg && !nextArg.startsWith('--')) {
 					config.pass = nextArg;
 					i++;
+				} else {
+					// silence here booted an UNPROTECTED server the operator
+					// believed was passworded
+					console.warn(
+						'[Server] --pass given without a value; running UNPROTECTED',
+					);
 				}
 				break;
 			case '--static':
