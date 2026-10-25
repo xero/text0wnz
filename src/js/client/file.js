@@ -1509,13 +1509,15 @@ const saveModule = () => {
 		if (!(await confirmExport('tnd', 'TundraDraw')).proceed) {
 			return;
 		}
-		// encodeTundra appends its own SAUCE; it throws on content tundra
-		// cannot hold (unicode glyphs, blink attrs)
+		// encodeTundra appends its own SAUCE and degrades what tundra
+		// cannot hold (the lint fronted it); anything left throwing is a
+		// real failure the artist must see, not a console whisper
 		try {
 			const bytes = encodeTundra(State.textArtCanvas.getDoc(), { meta: sauceMeta() });
 			await saveFile(bytes, undefined, State.title + '.tnd');
 		} catch (error) {
 			console.error('[Save] tundra:', error);
+			alert(`Tundra export failed: ${error.message}`);
 		}
 	};
 

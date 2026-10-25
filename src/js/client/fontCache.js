@@ -1,8 +1,30 @@
+/* global __BUILD_STAMP__ */
 /**
  * Font cache: preloads and caches font PNGs for faster switching.
  */
 import State from './state.js';
 import magicNumbers from './magicNumbers.js';
+
+// the cache name carries the build stamp: cached atlases used to be
+// served forever outside every SW cache route, so a deploy that fixed
+// an existing font never reached returning users
+const FONT_CACHE_NAME = `text0wnz-fonts-${
+	typeof __BUILD_STAMP__ === 'undefined' ? 'dev' : __BUILD_STAMP__
+}`;
+let stalePurged = false;
+const openFontCache = async () => {
+	const cache = await globalThis.caches.open(FONT_CACHE_NAME);
+	if (!stalePurged) {
+		stalePurged = true;
+		const names = await globalThis.caches.keys();
+		for (const name of names) {
+			if (name.startsWith('text0wnz-fonts') && name !== FONT_CACHE_NAME) {
+				globalThis.caches.delete(name);
+			}
+		}
+	}
+	return cache;
+};
 
 export const FontCache = {
 	// In-memory cache for browsers without Cache API
@@ -20,7 +42,7 @@ export const FontCache = {
 
 		if (this._hasCacheAPI()) {
 			try {
-				const cache = await globalThis.caches.open('text0wnz-fonts');
+				const cache = await openFontCache();
 
 				await Promise.all(
 					commonFonts.map(async fontName => {
@@ -62,7 +84,7 @@ export const FontCache = {
 
 		if (this._hasCacheAPI()) {
 			try {
-				const cache = await globalThis.caches.open('text0wnz-fonts');
+				const cache = await openFontCache();
 				const response = await cache.match(fontUrl);
 
 				if (response) {
@@ -81,7 +103,7 @@ export const FontCache = {
 
 			if (response.ok) {
 				if (this._hasCacheAPI()) {
-					const cache = await globalThis.caches.open('text0wnz-fonts');
+					const cache = await openFontCache();
 					cache.put(fontUrl, response.clone());
 				} else {
 					response
@@ -103,7 +125,7 @@ export const FontCache = {
 	async clearCache() {
 		if (this._hasCacheAPI()) {
 			try {
-				await globalThis.caches.delete('text0wnz-fonts');
+				await globalThis.caches.delete(FONT_CACHE_NAME);
 			} catch (error) {
 				console.error('[FontCache] Error clearing cache:', error);
 			}

@@ -28,6 +28,8 @@ const makeCanvas = () => {
 	return {
 		getColumns: () => 4,
 		getRows: () => 2,
+		// the u16 mirror the eager snapshot copies: blank = space on 7/0
+		getImageData: () => new Uint16Array(8).fill((32 << 8) | 7),
 		getBlock: vi.fn((x, y) => ({
 			charCode: cells.get(`${x},${y}`)?.[0] ?? 32,
 			foregroundColor: 7,

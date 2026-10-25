@@ -203,9 +203,14 @@ const openHandler = (file, opts = {}) => {
 			// the same filename, so a failed open must clear the input
 			// or it cannot be retried at all
 			openFile.value = '';
-			if (State.modal.isOpen() && State.modal.current() === 'loading') {
-				State.modal.close();
-			}
+			// the message lands in innerHTML, so the filename gets escaped
+			const safeName = file.name.replace(
+				/[<>&]/g,
+				c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c],
+			);
+			State.modal.error(
+				`Could not open <kbd>${safeName}</kbd>.<br/>The file may be corrupt or mislabeled.`,
+			);
 		}
 	};
 	Load.file(
@@ -257,7 +262,9 @@ const openHandler = (file, opts = {}) => {
 				dispatchingOwnOpen = true;
 				document.dispatchEvent(new CustomEvent('onNewDocument'));
 				dispatchingOwnOpen = false;
-				palettePicker.updatePalette(); // ANSi
+				// tier-3 init assigns this; a share-target open on a slow
+				// device lands first and must not abort the UI resets
+				palettePicker?.updatePalette(); // ANSi
 				openFile.value = '';
 				viewport.scrollLeft = viewport.scrollTop = 0;
 			};
@@ -948,10 +955,12 @@ const initializeAppComponents = async () => {
 		State.modal.onClose(() => {
 			removers.forEach(remove => remove());
 		});
+	});
 
-		onClick($('tutorialsCancel'), _ => {
-			State.modal.close();
-		});
+	// once, outside the open handler: every open used to stack another
+	// cancel listener and discard its remover
+	onClick($('tutorialsCancel'), _ => {
+		State.modal.close();
 	});
 
 	onClick($('update'), _ => {

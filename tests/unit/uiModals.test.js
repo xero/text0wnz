@@ -240,6 +240,7 @@ describe('UI Advanced Utilities', () => {
 			'updateModal',
 			'loadingModal',
 			'warningModal',
+			'errorModal',
 			'tutorialsModal',
 		];
 

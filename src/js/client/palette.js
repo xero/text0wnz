@@ -3,6 +3,7 @@
 import State from './state.js';
 import { $ } from './ui.js';
 import { xterm256RGB } from '../core/codecs/dur.js';
+import { expand6to8 } from '../core/doc.js';
 
 /** @type {Map<number, number>} */
 const charCodeToUnicode = new Map([
@@ -209,13 +210,12 @@ const rgbaToXbin = ({ r, g, b, a }) => [
 
 /** @param {number[]} xbin 6-bit [r, g, b, a] @returns {number[]} */
 const xbinToRgba = ([r, g, b, a]) => [
-	// high-bit replication, the canonical expansion (doc.ts expand6to8
-	// and createPalette below agree); the old round(v/63*255) differed
-	// by one LSB on ten of 64 values, so a load, autosave, reload
-	// cycle shifted colors
-	(r << 2) | (r >> 4),
-	(g << 2) | (g >> 4),
-	(b << 2) | (b >> 4),
+	// the canonical expansion lives in ONE place (doc.ts); the old
+	// round(v/63*255) inline twin differed by one LSB on ten of 64
+	// values, so a load, autosave, reload cycle shifted colors
+	expand6to8(r),
+	expand6to8(g),
+	expand6to8(b),
 	a, // Alpha remains unchanged
 ];
 
@@ -246,9 +246,9 @@ const rgbaToHex = rgbColor => {
 const createPalette = RGB6Bit => {
 	const RGBAColors = RGB6Bit.map(RGB6Bit => {
 		return new Uint8Array([
-			(RGB6Bit[0] << 2) | (RGB6Bit[0] >> 4),
-			(RGB6Bit[1] << 2) | (RGB6Bit[1] >> 4),
-			(RGB6Bit[2] << 2) | (RGB6Bit[2] >> 4),
+			expand6to8(RGB6Bit[0]),
+			expand6to8(RGB6Bit[1]),
+			expand6to8(RGB6Bit[2]),
 			255,
 		]);
 	});
@@ -586,6 +586,9 @@ const createPalettePicker = canvas => {
 
 	/** @param {TouchEvent} e */
 	const touchEnd = e => {
+		// without this the browser follows up with a synthetic mouseup
+		// and mouseEnd processes the same tap a second time
+		e.preventDefault();
 		if (e.touches.length === 0) {
 			processEvent(e, true);
 		}

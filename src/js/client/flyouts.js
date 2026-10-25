@@ -8,6 +8,7 @@
  */
 
 import { isPhone } from './panels.js';
+import State from './state.js';
 
 const ITEM_SELECTOR = 'button, .toolButton, .menuItem, summary, [tabindex]';
 
@@ -35,7 +36,7 @@ const createFlyoutManager = () => {
 		return true;
 	};
 
-	const place = (el, from, opts) => {
+	const place = (el, from, opts, anchorRect) => {
 		if (opts.at) {
 			// context menus land at the pointer, clamped on screen
 			el.style.left = `${Math.round(
@@ -52,7 +53,7 @@ const createFlyoutManager = () => {
 			)}px`;
 			return;
 		}
-		const r = from.getBoundingClientRect();
+		const r = anchorRect ?? from.getBoundingClientRect();
 		if (isPhone() && from.closest?.('aside')) {
 			// the rail rides the bottom edge on phones, so its flyouts
 			// open upward, centered over the opener and clamped on screen
@@ -82,11 +83,15 @@ const createFlyoutManager = () => {
 	};
 
 	const show = (id, el, from, opts = {}) => {
+		// measure the opener BEFORE close(): a flyout chained from inside
+		// the closing one (the phone ++ chip) reads a 0,0 rect once its
+		// host is hidden and lands detached at the screen corner
+		const anchorRect = from?.getBoundingClientRect?.();
 		close();
 		open = { id, el, from };
 		from?.classList?.add('flyOpen');
 		el.hidden = false;
-		place(el, from, opts);
+		place(el, from, opts, anchorRect);
 		opts.onOpen?.();
 		// divs need a tabindex before focus() lands, and the active item
 		// is where arrow keys should start
@@ -131,6 +136,12 @@ const createFlyoutManager = () => {
 
 	document.addEventListener('keydown', e => {
 		if (!open) {
+			return;
+		}
+		// a dialog on top owns the keyboard: the trap used to
+		// preventDefault Tab and aim focus at the inert flyout underneath,
+		// stranding keyboard users inside the modal
+		if (State.modal?.isOpen?.()) {
 			return;
 		}
 		// div and article rows have no native key activation; buttons,

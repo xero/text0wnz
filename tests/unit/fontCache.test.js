@@ -34,6 +34,8 @@ describe('FontCache Module', () => {
 		globalThis.caches = {
 			open: vi.fn().mockResolvedValue(mockCache),
 			delete: vi.fn().mockResolvedValue(true),
+			// the versioned helper purges stale generations on first open
+			keys: vi.fn().mockResolvedValue([]),
 		};
 
 		mockFetch = vi.fn();
@@ -59,7 +61,7 @@ describe('FontCache Module', () => {
 
 			await FontCache.preloadCommonFonts();
 
-			expect(globalThis.caches.open).toHaveBeenCalledWith('text0wnz-fonts');
+			expect(globalThis.caches.open).toHaveBeenCalledWith('text0wnz-fonts-dev');
 			expect(mockCache.match).toHaveBeenCalledWith('/ui/fonts/CP437 8x16.png');
 			expect(mockCache.match).toHaveBeenCalledWith(
 				'/ui/fonts/Topaz-437 8x16.png',
@@ -128,7 +130,7 @@ describe('FontCache Module', () => {
 
 			const result = await FontCache.getFont('CP437 8x16');
 
-			expect(globalThis.caches.open).toHaveBeenCalledWith('text0wnz-fonts');
+			expect(globalThis.caches.open).toHaveBeenCalledWith('text0wnz-fonts-dev');
 			expect(mockCache.match).toHaveBeenCalledWith('/ui/fonts/CP437 8x16.png');
 			expect(result).toBe(mockResponse);
 		});
@@ -222,7 +224,7 @@ describe('FontCache Module', () => {
 		it('should clear Cache API', async () => {
 			await FontCache.clearCache();
 
-			expect(globalThis.caches.delete).toHaveBeenCalledWith('text0wnz-fonts');
+			expect(globalThis.caches.delete).toHaveBeenCalledWith('text0wnz-fonts-dev');
 		});
 
 		it('should handle Cache API delete errors', async () => {

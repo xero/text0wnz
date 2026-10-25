@@ -38,8 +38,13 @@ const STORAGE_KEY = 'pluginUrls';
 const createPluginApi = canvas => {
 	const columns = canvas.getColumns();
 	const rows = canvas.getRows();
-	// snapshot reads so a plugin's gets are stable while it writes
-	const before = new Map();
+	// one EAGER u16 snapshot at run start: the old lazy per-cell memo
+	// captured whatever stood at first read, so a local or collab edit
+	// landing mid-run leaked into "start-of-run" state. The plugin API
+	// is u16-shaped anyway (put masks to CP437 + classic colors)
+	const snapshot = Uint16Array.from(
+		canvas.getImageData?.() ?? new Uint16Array(columns * rows),
+	);
 	const keyOf = (x, y) => y * columns + x;
 	const inBounds = (x, y) =>
 		Number.isInteger(x) &&
@@ -65,16 +70,12 @@ const createPluginApi = canvas => {
 			if (!inBounds(x, y)) {
 				return { code: 32, fg: 7, bg: 0 };
 			}
-			const key = keyOf(x, y);
-			if (!before.has(key)) {
-				const block = canvas.getBlock(x, y);
-				before.set(key, {
-					code: block.charCode,
-					fg: block.foregroundColor ?? block.fg ?? 7,
-					bg: block.backgroundColor ?? block.bg ?? 0,
-				});
-			}
-			return { ...before.get(key) };
+			const word = snapshot[keyOf(x, y)];
+			return {
+				code: word >> 8,
+				fg: word & 15,
+				bg: (word >> 4) & 15,
+			};
 		},
 		/**
 		 * Buffer one cell write; glyph ids 0-255 are CP437, colors are

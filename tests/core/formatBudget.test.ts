@@ -31,7 +31,7 @@ describe('lintDocForFormat', () => {
 		}
 	});
 
-	it('utf8 and ownz never report issues', () => {
+	it('utf8 and ownz hold unicode and truecolor without issues', () => {
 		const doc = makeDoc();
 		const han = doc.glyphTable.idFor(FONT_SLOT_UNSCII, 0x4e2d);
 		doc.setCell(0, 1, 0, {
@@ -40,6 +40,23 @@ describe('lintDocForFormat', () => {
 			bg: paletteColor(0),
 		});
 		expect(lintDocForFormat(doc, 'utf8').ok).toBe(true);
+		expect(lintDocForFormat(doc, 'ownz').ok).toBe(true);
+	});
+
+	it('flags the control positions the character writers substitute', () => {
+		const doc = makeDoc();
+		doc.setCell(0, 1, 0, {
+			glyph: glyphWord(10, 0), // LF position: the writers voice 9
+			fg: paletteColor(7),
+			bg: paletteColor(0),
+		});
+		for (const format of ['utf8', 'ans', 'txt'] as const) {
+			const report = lintDocForFormat(doc, format);
+			expect(
+				report.issues.some(issue => issue.kind === 'control-lookalike'),
+			).toBe(true);
+		}
+		// ownz emits them verbatim
 		expect(lintDocForFormat(doc, 'ownz').ok).toBe(true);
 	});
 
@@ -64,9 +81,45 @@ describe('lintDocForFormat', () => {
 		expect(kinds['unicode-glyph'].count).toBe(1);
 		expect(kinds['unicode-glyph'].firstIndex).toBe(1);
 		expect(kinds['color-beyond-16'].count).toBe(2);
-		// txt ignores color, flags glyphs
+		// the plain-text writer emits REAL codepoints: flagging unicode
+		// cells there was a false positive on every such export
 		const txt = lintDocForFormat(doc, 'txt');
-		expect(txt.issues.map(issue => issue.kind)).toEqual(['unicode-glyph']);
+		expect(txt.ok).toBe(true);
+	});
+
+	it('scans every frame, not just the first', () => {
+		const doc = makeDoc();
+		doc.addFrame();
+		const han = doc.glyphTable.idFor(FONT_SLOT_UNSCII, 0x4e2d);
+		doc.setCell(1, 1, 0, {
+			glyph: glyphWord(han, 0),
+			fg: paletteColor(7),
+			bg: paletteColor(0),
+		});
+		const report = lintDocForFormat(doc, 'ans');
+		expect(report.issues.some(issue => issue.kind === 'unicode-glyph')).toBe(
+			true,
+		);
+	});
+
+	it('tnd flags glyph 0 only when it has a background to lose', () => {
+		const doc = makeDoc();
+		// a fresh doc is full of glyph-0 cells on default bg: clean
+		expect(
+			lintDocForFormat(doc, 'tnd').issues.some(
+				issue => issue.kind === 'tnd-control-glyph',
+			),
+		).toBe(false);
+		doc.setCell(0, 1, 0, {
+			glyph: glyphWord(0, 0),
+			fg: paletteColor(7),
+			bg: paletteColor(4),
+		});
+		expect(
+			lintDocForFormat(doc, 'tnd').issues.some(
+				issue => issue.kind === 'tnd-control-glyph',
+			),
+		).toBe(true);
 	});
 
 	it('flags tundra control glyphs and blink', () => {

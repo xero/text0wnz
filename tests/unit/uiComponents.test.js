@@ -62,7 +62,12 @@ describe('UI Components', () => {
 			State.flyouts.close.mockClear();
 
 			const touchStartEvent = createEvent('touchstart');
-			touchStartEvent.touches = [{ identifier: 1 }, { identifier: 2 }];
+			// real Touch objects carry their own target; the margin
+			// gesture judges every touch, not just the event target
+			touchStartEvent.touches = [
+				{ identifier: 1, target: view },
+				{ identifier: 2, target: view },
+			];
 			view.dispatchEvent(touchStartEvent);
 			expect(State.flyouts.close).toHaveBeenCalled();
 
@@ -81,7 +86,12 @@ describe('UI Components', () => {
 			State.textArtCanvas.undo.mockClear();
 
 			const touchStartEvent = createEvent('touchstart');
-			touchStartEvent.touches = [{ identifier: 1 }, { identifier: 2 }];
+			// real Touch objects carry their own target; the margin
+			// gesture judges every touch, not just the event target
+			touchStartEvent.touches = [
+				{ identifier: 1, target: view },
+				{ identifier: 2, target: view },
+			];
 			view.dispatchEvent(touchStartEvent);
 			vi.advanceTimersByTime(400);
 			const touchEndEvent = createEvent('touchend');
@@ -99,7 +109,12 @@ describe('UI Components', () => {
 			State.textArtCanvas.undo.mockClear();
 
 			const touchStartEvent = createEvent('touchstart');
-			touchStartEvent.touches = [{ identifier: 1 }, { identifier: 2 }];
+			// real Touch objects carry their own target; the margin
+			// gesture judges every touch, not just the event target
+			touchStartEvent.touches = [
+				{ identifier: 1, target: view },
+				{ identifier: 2, target: view },
+			];
 			view.dispatchEvent(touchStartEvent);
 
 			// finger 1 lifts first; finger 2 is still down
@@ -135,7 +150,12 @@ describe('UI Components', () => {
 			State.textArtCanvas.undo.mockClear();
 
 			const touchStartEvent = createEvent('touchstart');
-			touchStartEvent.touches = [{ identifier: 1 }, { identifier: 2 }];
+			// real Touch objects carry their own target; the margin
+			// gesture judges every touch, not just the event target
+			touchStartEvent.touches = [
+				{ identifier: 1, target: canvas },
+				{ identifier: 2, target: canvas },
+			];
 			canvas.dispatchEvent(touchStartEvent);
 			const touchEndEvent = createEvent('touchend');
 			touchEndEvent.changedTouches = [{ identifier: 1 }, { identifier: 2 }];

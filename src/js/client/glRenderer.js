@@ -256,6 +256,7 @@ const createGLRenderer = (canvasContainer, host) => {
 		return bits;
 	};
 
+	let atlasTexture = null;
 	const buildAtlas = () => {
 		const atlasW = fontW * 16;
 		const atlasH = fontH * 16;
@@ -270,9 +271,14 @@ const createGLRenderer = (canvasContainer, host) => {
 				}
 			}
 		}
-		const texture = gl.createTexture();
+		// every rebuild used to orphan the previous texture; continuous
+		// pinch zoom leaked one per frame until the context GC bothered
+		if (atlasTexture) {
+			gl.deleteTexture(atlasTexture);
+		}
+		atlasTexture = gl.createTexture();
 		gl.activeTexture(gl.TEXTURE0);
-		gl.bindTexture(gl.TEXTURE_2D, texture);
+		gl.bindTexture(gl.TEXTURE_2D, atlasTexture);
 		gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 		gl.texImage2D(
 			gl.TEXTURE_2D,

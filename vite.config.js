@@ -21,6 +21,11 @@ export default ({ mode }) => {
 	return defineConfig({
 		root: './src',
 		base: './', // output relative urls
+		// page-context caches (fontCache) key their generation on this so
+		// a deploy invalidates them; the SW precache versions separately
+		define: {
+			__BUILD_STAMP__: JSON.stringify(cacheBuster()),
+		},
 		build: {
 			emptyOutDir: true,
 			outDir: '../dist',
