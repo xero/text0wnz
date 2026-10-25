@@ -371,6 +371,38 @@ describe('UI Basic Utilities', () => {
 			expect(State.textArtCanvas.redo).toHaveBeenCalled();
 		});
 
+		it('redoes on Ctrl+Shift+Z instead of walking history back', async () => {
+			const { default: State } = await import('../../src/js/client/state.js');
+
+			const ctrlShiftZEvent = new window.KeyboardEvent('keydown', {
+				code: 'KeyZ',
+				ctrlKey: true,
+				shiftKey: true,
+			});
+
+			undoAndRedo(ctrlShiftZEvent);
+
+			expect(State.textArtCanvas.redo).toHaveBeenCalled();
+			expect(State.textArtCanvas.undo).not.toHaveBeenCalled();
+		});
+
+		it('stays inert while a text field has focus', async () => {
+			const { default: State } = await import('../../src/js/client/state.js');
+
+			undoAndRedo({
+				target: { tagName: 'INPUT' },
+				ctrlKey: true,
+				shiftKey: false,
+				altKey: false,
+				metaKey: false,
+				code: 'KeyZ',
+				preventDefault: () => {},
+			});
+
+			expect(State.textArtCanvas.undo).not.toHaveBeenCalled();
+			expect(State.textArtCanvas.redo).not.toHaveBeenCalled();
+		});
+
 		it('should not trigger on other key combinations', async () => {
 			const { default: State } = await import('../../src/js/client/state.js');
 

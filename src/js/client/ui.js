@@ -494,16 +494,44 @@ const viewportTap = view => {
 	});
 };
 
+/**
+ * True when the keydown target is a text-entry surface (chat, SAUCE
+ * fields, shape-toolbar selects): document-level shortcut handlers
+ * must stay inert there or typing fires app actions underneath.
+ * @param {EventTarget | null} t
+ */
+const isTextEntry = t => {
+	const tag = /** @type {{tagName?: string}} */ (t)?.tagName;
+	return (
+		tag === 'SELECT' ||
+		tag === 'INPUT' ||
+		tag === 'TEXTAREA' ||
+		/** @type {{isContentEditable?: boolean}} */ (t)?.isContentEditable ===
+		true
+	);
+};
+
 const undoAndRedo = e => {
-	if ((e.ctrlKey || (e.metaKey && !e.shiftKey)) && e.code === 'KeyZ') {
+	if (isTextEntry(e.target)) {
+		// native text-field undo belongs to the field
+		return;
+	}
+	if (
+		(e.ctrlKey || e.metaKey) &&
+		!e.shiftKey &&
+		!e.altKey &&
+		e.code === 'KeyZ'
+	) {
 		// Ctrl/Cmd+Z - Undo
 		e.preventDefault();
 		State.textArtCanvas.undo();
 	} else if (
-		(e.ctrlKey && e.code === 'KeyY') ||
-		(e.metaKey && e.shiftKey && e.code === 'KeyZ')
+		(e.ctrlKey && !e.shiftKey && e.code === 'KeyY') ||
+		((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyZ')
 	) {
-		// Ctrl+Y or Cmd+Shift+Z - Redo
+		// Ctrl+Y, Ctrl+Shift+Z, or Cmd+Shift+Z - Redo (the old ctrl
+		// branch never looked at shift, so Ctrl+Shift+Z walked history
+		// backwards)
 		e.preventDefault();
 		State.textArtCanvas.redo();
 	}
@@ -518,14 +546,7 @@ const createPaintShortcuts = keyPair => {
 		!keyPair[e.key].classList.contains('excludedForWebsocket');
 
 	const keyDown = e => {
-		const t = e.target;
-		const tag = t && t.tagName;
-		if (
-			tag === 'SELECT' ||
-			tag === 'INPUT' ||
-			tag === 'TEXTAREA' ||
-			(t && t.isContentEditable)
-		) {
+		if (isTextEntry(e.target)) {
 			// the shape toolbars put selects inside tool buttons: typing
 			// in one must configure it, never fire a paint shortcut
 			return;
@@ -1359,6 +1380,7 @@ export {
 	onFileChange,
 	createPositionInfo,
 	undoAndRedo,
+	isTextEntry,
 	viewportTap,
 	createPaintShortcuts,
 	createSegmentedControl,
