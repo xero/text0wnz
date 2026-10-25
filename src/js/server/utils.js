@@ -65,11 +65,17 @@ const sanitize = (input, limit = 100, quote = true) => {
 	if (input === null || input === undefined) {
 		return '';
 	}
-	const str = String(input)
-		.trim()
-		.replace(/\p{C}/gu, '')
-		.replace(/[\n\r]/g, '')
-		.substring(0, limit);
+	const str = [
+		...String(input)
+			.trim()
+			.replace(/\p{C}/gu, '')
+			.replace(/[\n\r]/g, ''),
+	]
+		// code points, not UTF-16 units: a substring cut at the limit
+		// could split a surrogate pair, re-creating the lone surrogate
+		// the control strip just removed
+		.slice(0, limit)
+		.join('');
 	return quote ? `'${str}'` : str;
 };
 
