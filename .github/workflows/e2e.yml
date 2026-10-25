@@ -13,8 +13,13 @@ jobs:
   e2e-tests:
     runs-on: ubuntu-latest
     container:
+      # ipc=host lifts the Docker default 64MB /dev/shm, which six
+      # parallel browser workers exhaust; Chromium dodges it with
+      # --disable-dev-shm-usage but Firefox has no such flag and
+      # stalls silently when shm runs dry (the chronic FF e2e flake).
+      # shm-size is the fallback if ipc ever changes.
       image: ghcr.io/xero/text0wnz/ci:latest
-      options: --user root
+      options: --user root --ipc=host --shm-size=2gb
     steps:
       - name: checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
