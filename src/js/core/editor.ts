@@ -22,6 +22,8 @@ import {
 	Cell,
 	DocV3,
 	attrsOf,
+	createCP437GlyphTable,
+	DEFAULT_GLOBAL_DELAY_MS,
 	glyphIdOf,
 	glyphWord,
 	isPaletteColor,
@@ -672,6 +674,15 @@ export const createEditorCore = (
 			currentFrame = 0; // silent: callers rebuild wholesale
 			doc.resize(newColumns, newRows);
 			doc.setIceColors(iceColors);
+			// u16 content is a single classic frame: extra frames, delays,
+			// and a glyph table grown by a previous doc must not leak into
+			// it (they would ride every later save and keyframe)
+			while (doc.frames.length > 1) {
+				doc.removeFrame(doc.frames.length - 1);
+			}
+			doc.frames[0].delayMs = undefined;
+			doc.setGlobalDelayMs(DEFAULT_GLOBAL_DELAY_MS);
+			doc.glyphTable = createCP437GlyphTable();
 			const frame = doc.frames[0];
 			for (let i = 0; i < imageData.length && i < frame.glyph.length; i++) {
 				const word = imageData[i];
@@ -706,6 +717,12 @@ export const createEditorCore = (
 			frame.fg.fill(paletteColor(0));
 			frame.bg.fill(paletteColor(0));
 			doc.setIceColors(false);
+			// new-document means ALL document state: a kept frame delay,
+			// global delay, or grown glyph table would ride every save
+			// and keyframe of the fresh doc
+			frame.delayMs = undefined;
+			doc.setGlobalDelayMs(DEFAULT_GLOBAL_DELAY_MS);
+			doc.glyphTable = createCP437GlyphTable();
 		},
 	};
 };

@@ -180,6 +180,8 @@ export interface Cell {
  */
 export const DEFAULT_FRAME_CELL_BUDGET = 16_000_000;
 
+export const DEFAULT_GLOBAL_DELAY_MS = 100;
+
 export interface DocV3 {
 	readonly mode: DocMode;
 	getColumns: () => number;
@@ -258,7 +260,7 @@ export const createDocV3 = (options: DocV3Options): DocV3 => {
 	let rows = options.rows;
 	let iceColors = options.iceColors ?? false;
 	let letterSpacing = options.letterSpacing ?? false;
-	let globalDelayMs = options.globalDelayMs ?? 100;
+	let globalDelayMs = options.globalDelayMs ?? DEFAULT_GLOBAL_DELAY_MS;
 	const frameCellBudget = options.frameCellBudget ?? DEFAULT_FRAME_CELL_BUDGET;
 	const palette = options.palette ?? createDefaultPaletteRGB();
 	const glyphTable = options.glyphTable ?? createCP437GlyphTable();
