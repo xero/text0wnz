@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { u16ToV3 } from '../../src/js/core/convert.js';
 
 const mockState = {
 	title: 'test-artwork',
@@ -9,6 +10,16 @@ const mockState = {
 		getIceColors: vi.fn(() => false),
 		getCurrentFontName: vi.fn(() => 'CP437 8x16'),
 		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)),
+		// the save path reads the doc now; derive it from the u16 mocks
+		getDoc: vi.fn(() =>
+			u16ToV3({
+				imageData: mockState.textArtCanvas.getImageData(),
+				columns: mockState.textArtCanvas.getColumns(),
+				rows: mockState.textArtCanvas.getRows(),
+				iceColors: mockState.textArtCanvas.getIceColors(),
+				letterSpacing: false,
+			})),
+		getCurrentFrame: vi.fn(() => 0),
 	},
 	font: {
 		getWidth: vi.fn(() => 8),

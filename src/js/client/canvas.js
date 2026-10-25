@@ -1924,57 +1924,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const setUndoHistory = _history => {};
 
-	const loadXBFileSequential = (imageData, finalCallback) => {
-		clearXBData(() => {
-			if (imageData.paletteData) {
-				setXBPaletteData(imageData.paletteData);
-			}
-			if (imageData.fontData) {
-				const fontDataValid = setXBFontData(
-					imageData.fontData.bytes,
-					imageData.fontData.width,
-					imageData.fontData.height,
-				);
-				if (fontDataValid) {
-					setFont('XBIN', () => {
-						finalCallback(
-							imageData.columns,
-							imageData.rows,
-							imageData.data,
-							imageData.iceColors,
-							imageData.letterSpacing,
-							imageData.fontName,
-						);
-					});
-				} else {
-					const fallbackFont = magicNumbers.DEFAULT_FONT;
-					setFont(fallbackFont, () => {
-						finalCallback(
-							imageData.columns,
-							imageData.rows,
-							imageData.data,
-							imageData.iceColors,
-							imageData.letterSpacing,
-							fallbackFont,
-						);
-					});
-				}
-			} else {
-				const fallbackFont = magicNumbers.DEFAULT_FONT;
-				setFont(fallbackFont, () => {
-					finalCallback(
-						imageData.columns,
-						imageData.rows,
-						imageData.data,
-						imageData.iceColors,
-						imageData.letterSpacing,
-						fallbackFont,
-					);
-				});
-			}
-		});
-	};
-
 	setFont(currentFontName, _ => {
 		callback();
 	});
@@ -2084,7 +2033,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		clearXBData: clearXBData,
 		getXBPaletteData: getXBPaletteData,
 		getXBFontData: getXBFontData,
-		loadXBFileSequential: loadXBFileSequential,
 		drawRegion: drawRegion,
 		enqueueDirtyRegion: enqueueDirtyRegion,
 		enqueueDirtyCell: enqueueDirtyCell,

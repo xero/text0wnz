@@ -6,7 +6,7 @@
  */
 
 import { DocV3 } from '../doc.js';
-import { u16ToV3, v3ToU16 } from '../convert.js';
+import { u16ToV3, v3ToU16Lossy } from '../convert.js';
 import { SauceRecord, buildSauce, parseSauce } from './sauce.js';
 import {
 	CodecError,
@@ -68,6 +68,8 @@ export const decodeBin = (bytes: Uint8Array): DecodeResult => {
 };
 
 export interface EncodeBinOptions {
+	/** Frame to export (BIN holds one); defaults to the first. */
+	frameIndex?: number;
 	meta?: DocMeta;
 	date?: Date;
 }
@@ -77,7 +79,12 @@ export const encodeBin = (
 	doc: DocV3,
 	options: EncodeBinOptions = {},
 ): Uint8Array => {
-	const { imageData, columns, rows, iceColors } = v3ToU16(doc);
+	// lossy on purpose: the export modal already warned about anything
+	// the format cannot hold, so quantize instead of throwing
+	const { imageData, columns, rows, iceColors } = v3ToU16Lossy(
+		doc,
+		options.frameIndex ?? 0,
+	);
 	if (columns % 2 !== 0) {
 		throw new CodecError(`BIN needs an even column count, got ${columns}`);
 	}
