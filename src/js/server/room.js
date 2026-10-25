@@ -51,7 +51,6 @@ import {
 	expandExtCells,
 	extCellEquals,
 	extCellToBlock,
-	paletteTo6Bit,
 	paletteWordsFromJoin,
 	sanitizeExtDraw,
 	sanitizeExtPalette,
@@ -122,7 +121,7 @@ export const createRoom = (options = {}) => {
 		author: '',
 		group: '',
 		comments: '',
-		/** @type {number[][] | undefined} */
+		/** @type {import('../core/index').MoebiusPaletteEntry[] | undefined} */
 		palette: undefined,
 		/** @type {unknown} */
 		font_bytes: undefined,
@@ -852,18 +851,18 @@ export const createRoom = (options = {}) => {
 				// vanilla joiners see them; in-session vanilla peers keep a
 				// stale palette (upstream's own CHANGE_PALETTE precedent).
 				// Padded to EXACTLY 16: a short join palette is an
-				// out-of-contract shape vanilla clients index into blindly
+				// out-of-contract shape vanilla clients index into blindly.
+				// 8-bit {r,g,b} objects, the ancestor's own join shape: it
+				// resolves 6-bit arrays to black
 				const bridge = paletteWordsFromJoin(doc.palette);
 				for (let i = 0; i < Math.min(16, palette.length); i++) {
 					bridge[i] = palette[i];
 				}
-				doc.palette = paletteTo6Bit(
-					[...bridge.slice(0, 16)].map(w => [
-						(w >> 16) & 0xff,
-						(w >> 8) & 0xff,
-						w & 0xff,
-					]),
-				);
+				doc.palette = [...bridge.slice(0, 16)].map(w => ({
+					r: (w >> 16) & 0xff,
+					g: (w >> 8) & 0xff,
+					b: w & 0xff,
+				}));
 				reprojectExtBlocks();
 				const payload = { palette, id: user.id };
 				fanoutMutation(

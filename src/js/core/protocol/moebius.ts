@@ -129,6 +129,16 @@ export interface MoebiusCompressedData {
 	bg: RleRun[];
 }
 
+/**
+ * Vanilla moebiusXBIN serializes join palettes as 8-bit {r,g,b}
+ * objects; our own wire and some forks use number triples (6-bit,
+ * with icy's 8-bit auto-detection). Both shapes are live on real
+ * servers, so both parse.
+ */
+export type MoebiusPaletteEntry =
+	| number[]
+	| { r: number; g: number; b: number };
+
 export interface MoebiusJoinDoc {
 	columns: number;
 	rows: number;
@@ -136,7 +146,7 @@ export interface MoebiusJoinDoc {
 	author?: string;
 	group?: string;
 	date?: string;
-	palette?: number[][];
+	palette?: MoebiusPaletteEntry[];
 	font_bytes?: unknown;
 	font_name?: string;
 	ice_colors?: boolean;
@@ -253,18 +263,23 @@ export const uncompressBlocks = (
 export const compress8to6 = (v: number): number => (v >> 2) & 0x3f;
 
 /**
- * Join-doc palettes are 6-bit; 8-bit ones saturate vanilla Moebius.
- * Receiving side auto-detects like icy_draw: any
- * component above 63 means the palette is already 8-bit.
+ * Array join-doc palettes are 6-bit; the receiving side auto-detects
+ * like icy_draw: any component above 63 means the palette is already
+ * 8-bit. {r,g,b} object entries are moebiusXBIN's shape and carry
+ * 8-bit components by contract, so the heuristic never touches them.
  */
 export const paletteToRGB8 = (
-	palette: number[][],
+	palette: MoebiusPaletteEntry[],
 ): [number, number, number][] => {
-	const sixBit = palette.every(entry =>
-		entry.every(component => component <= 63),
+	const triple = (entry: MoebiusPaletteEntry): [number, number, number] =>
+		Array.isArray(entry)
+			? [entry[0], entry[1], entry[2]]
+			: [entry.r, entry.g, entry.b];
+	const sixBit = palette.every(
+		entry => Array.isArray(entry) && entry.every(component => component <= 63),
 	);
 	return palette.map(entry => {
-		const [r, g, b] = entry;
+		const [r, g, b] = triple(entry);
 		return sixBit
 			? [expand6to8(r), expand6to8(g), expand6to8(b)]
 			: [r & 0xff, g & 0xff, b & 0xff];
@@ -385,8 +400,8 @@ export const joinDocToDoc = (join: MoebiusJoinDoc): JoinDocResult => {
 
 /**
  * v3 doc -> join doc for vanilla consumers: quantized to 16 colors
- * through the same lossy projection the u16 mirror used, palette in
- * 6-bit components.
+ * through the same lossy projection the u16 mirror used. No palette
+ * rides along; receivers fall back to the classic defaults.
  */
 export const docToJoinDoc = (
 	doc: DocV3,

@@ -461,10 +461,12 @@ describe('extension suite v1 (t0wnz-ext-1)', () => {
 		);
 		// vanilla peers get nothing in-session (upstream precedent)...
 		expect(vanilla.ofType(T0wnzAction.EXT_PALETTE)).toHaveLength(0);
-		// ...but late vanilla joiners see the classic 16 in 6-bit form
+		// ...but late vanilla joiners see the classic 16 as the
+		// ancestor's 8-bit {r,g,b} shape (it resolves 6-bit arrays to
+		// black)
 		const late = joinEditor(room, 'late');
 		const joinPalette = late.ofType(A.CONNECTED)[0].data.doc.palette;
-		expect(joinPalette[1]).toEqual([0x12 >> 2, 0x34 >> 2, 0x56 >> 2]);
+		expect(joinPalette[1]).toEqual({ r: 0x12, g: 0x34, b: 0x56 });
 	});
 
 	it('ice toggles reproject stored blink folds for vanilla viewers', () => {
@@ -669,7 +671,7 @@ describe('hostile input hardening', () => {
 		const late = joinEditor(room, 'late');
 		const joinPalette = late.ofType(A.CONNECTED)[0].data.doc.palette;
 		expect(joinPalette).toHaveLength(16);
-		expect(joinPalette[0]).toEqual([0xff >> 2, 0, 0]);
+		expect(joinPalette[0]).toEqual({ r: 0xff, g: 0, b: 0 });
 	});
 
 	it('rate-limits EXT_SYNC requests per user', () => {

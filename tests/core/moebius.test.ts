@@ -193,6 +193,20 @@ describe('palettes', () => {
 		expect(paletteToRGB8(eightBit)[1]).toEqual([170, 85, 255]);
 	});
 
+	it('accepts moebiusXBIN {r,g,b} object palettes as 8-bit', () => {
+		const ancestor = [
+			{ r: 0, g: 0, b: 0 },
+			{ r: 170, g: 85, b: 255 },
+			// low components must NOT trip the 6-bit array heuristic
+			{ r: 42, g: 21, b: 63 },
+		];
+		expect(paletteToRGB8(ancestor)).toEqual([
+			[0, 0, 0],
+			[170, 85, 255],
+			[42, 21, 63],
+		]);
+	});
+
 	it('emits 6-bit components for vanilla consumers', () => {
 		expect(paletteTo6Bit([[255, 0, 170]])).toEqual([[63, 0, 42]]);
 	});
@@ -273,6 +287,18 @@ describe('join doc to v3 doc', () => {
 			fontSlot: 0,
 			codepoint: 0x2603,
 		});
+	});
+
+	it('adopts a real-ancestor {r,g,b} palette verbatim', () => {
+		const result = joinDocToDoc({
+			...join(),
+			palette: Array.from({ length: 16 }, (_, i) => ({
+				r: i * 16,
+				g: 8,
+				b: 255 - i * 16,
+			})),
+		});
+		expect(result.doc.palette[1]).toBe((16 << 16) | (8 << 8) | 239);
 	});
 
 	it('rejects size lies', () => {
