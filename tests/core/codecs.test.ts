@@ -13,7 +13,7 @@ import {
 	encodeUtf8,
 } from '../../src/js/core/codecs/ans.js';
 import { parseSauce as readSauce } from '../../src/js/core/codecs/sauce.js';
-import { v3ToU16 } from '../../src/js/core/convert.js';
+import { v3ToU16, v3ToU16Lossy } from '../../src/js/core/convert.js';
 import {
 	FONT_SLOT_UNSCII,
 	createDocV3,
@@ -198,7 +198,11 @@ describe('xbin codec', () => {
 		expect(d2.font512).toBe(true);
 		expect(d2.fontBytes).toEqual(font);
 		expect(d2.palette6).toEqual(palette);
-		expect(v3ToU16(d2.doc).imageData).toEqual(v3ToU16(d1.doc).imageData);
+		// lossy: the upper page is non-identity glyph defs by design now
+		expect(v3ToU16Lossy(d2.doc).imageData).toEqual(
+			v3ToU16Lossy(d1.doc).imageData,
+		);
+		expect(d2.doc.glyphTable.size()).toBe(d1.doc.glyphTable.size());
 	});
 
 	it('compression engages only when it wins', () => {

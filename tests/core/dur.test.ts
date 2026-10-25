@@ -230,7 +230,7 @@ describe('dur codec (durdraw v7/v8 import)', () => {
 			decodeDur(
 				await pack({ DurMovie: { ...base.DurMovie, formatVersion: 6 } }),
 			),
-		).rejects.toThrow(/predates/);
+		).rejects.toThrow(/legacy palette/);
 		await expect(
 			decodeDur(
 				await pack({ DurMovie: { ...base.DurMovie, formatVersion: 9 } }),

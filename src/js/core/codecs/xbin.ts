@@ -8,6 +8,14 @@
 
 import { DocV3, expand6to8, rgbColor } from '../doc.js';
 import { u16ToV3, v3ToU16Lossy } from '../convert.js';
+import {
+	FONT_SLOT_XB,
+	XB_UPPER_BASE,
+	attrsOf,
+	glyphIdOf,
+	glyphWord,
+	paletteColor,
+} from '../doc.js';
 import { SauceRecord, buildSauce, parseSauce } from './sauce.js';
 import {
 	CodecError,
@@ -166,7 +174,9 @@ export const decodeXBin = (bytes: Uint8Array): XBinDecodeResult => {
 	const sauce = parseSauce(bytes);
 	const columns = (bytes[6] << 8) + bytes[5];
 	const rows = (bytes[8] << 8) + bytes[7];
-	const fontHeight = bytes[9];
+	// the spec allows 1-32; moebiusXBIN defaults a zero to 16 and a raw
+	// read made a Fontsize-0 file show different art in the two editors
+	const fontHeight = bytes[9] === 0 ? 16 : bytes[9];
 	const flags = bytes[10];
 	const paletteFlag = (flags & 0x01) === 1;
 	const fontFlag = ((flags >> 1) & 0x01) === 1;
@@ -199,6 +209,25 @@ export const decodeXBin = (bytes: Uint8Array): XBinDecodeResult => {
 		: bytesToU16Cells(bytes, dataIndex, columns * rows * 2);
 
 	const doc = u16ToV3({ imageData, columns, rows, iceColors });
+	if (font512 && fontBytes) {
+		// 512-glyph mode: the fg intensity bit selects glyphs 256-511
+		// instead of a bright color (the spec and PabloDraw agree;
+		// moebiusXBIN refuses such files). The upper page lives in the
+		// glyph table as private-use codepoints so exports stay valid
+		// and the renderer's slot machinery serves the bits.
+		const frame = doc.frames[0];
+		for (let i = 0; i < frame.glyph.length; i++) {
+			const fgIndex = imageData[i] & 15;
+			if (fgIndex >= 8) {
+				const id = doc.glyphTable.idFor(
+					FONT_SLOT_XB,
+					XB_UPPER_BASE + (imageData[i] >> 8),
+				);
+				frame.glyph[i] = glyphWord(id, attrsOf(frame.glyph[i]));
+				frame.fg[i] = paletteColor(fgIndex & 7);
+			}
+		}
+	}
 	if (palette6) {
 		for (let i = 0; i < 16; i++) {
 			doc.palette[i] = rgbColor(
@@ -279,6 +308,20 @@ export const encodeXBin = (
 		flags |= 1 << 3;
 	}
 
+	if (fontBytes && fontBytes.length === fontHeight * 512) {
+		// reverse of the decode transform: upper-page glyph defs become
+		// char + intensity bit so the file round-trips byte-identically
+		const frame = doc.frames[options.frameIndex ?? 0];
+		for (let i = 0; i < imageData.length; i++) {
+			const def = doc.glyphTable.get(glyphIdOf(frame.glyph[i]));
+			if (def && def.fontSlot === FONT_SLOT_XB) {
+				imageData[i] =
+					(((def.codepoint - XB_UPPER_BASE) & 0xff) << 8) |
+					(imageData[i] & 0x00f0) |
+					((imageData[i] & 7) | 8);
+			}
+		}
+	}
 	const rawBytes = u16CellsToBytes(imageData);
 	let imageBytes = rawBytes;
 	if (compress) {

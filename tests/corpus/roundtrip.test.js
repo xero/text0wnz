@@ -29,6 +29,7 @@ import {
 	encodeBin as coreEncodeBin,
 	encodeXBin as coreEncodeXBin,
 	v3ToU16,
+	v3ToU16Lossy,
 	u16ToV3,
 } from '../../src/js/core/index';
 import {
@@ -602,7 +603,9 @@ const coreDecode = (name, bytes) => {
 const expectCoreParity = async (name, bytes) => {
 	const v2 = await decode(name, bytes);
 	const result = coreDecode(name, bytes);
-	const u16 = v3ToU16(result.doc);
+	// lossy: a 512-glyph XBin's upper page lives as non-identity glyph
+	// defs now, and the strict projection throws on those by contract
+	const u16 = v3ToU16Lossy(result.doc);
 	expect(u16.columns, `${name}: core columns`).toBe(v2.columns);
 	expect(u16.rows, `${name}: core rows`).toBe(v2.rows);
 	expect(u16.imageData, `${name}: core cells`).toEqual(v2.data);
@@ -793,9 +796,9 @@ describe('core codec parity: XBin', () => {
 				encoded,
 			);
 			expect(
-				v3ToU16(reResult.doc).imageData,
+				v3ToU16Lossy(reResult.doc).imageData,
 				`${name}: cells after core encode`,
-			).toEqual(v3ToU16(result.doc).imageData);
+			).toEqual(v3ToU16Lossy(result.doc).imageData);
 		}
 	});
 });

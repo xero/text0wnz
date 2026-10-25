@@ -1809,6 +1809,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			width: fontWidth,
 			height: fontHeight,
 		};
+		// a 512-glyph font's upper page renders through the unicode slot
+		// machinery; hand the pages the live bytes
+		ensureHexPages().setEmbeddedFont(fontBytes, fontHeight);
 		scheduleJournalKeyframe(true);
 		return true;
 	};
@@ -1851,6 +1854,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const clearXBData = callback => {
 		xbFontData = null;
+		ensureHexPages().setEmbeddedFont(null, 0);
 		scheduleJournalKeyframe(true);
 		State.palette = createDefaultPalette();
 		document.dispatchEvent(
