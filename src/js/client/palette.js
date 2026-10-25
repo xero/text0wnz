@@ -209,10 +209,13 @@ const rgbaToXbin = ({ r, g, b, a }) => [
 
 /** @param {number[]} xbin 6-bit [r, g, b, a] @returns {number[]} */
 const xbinToRgba = ([r, g, b, a]) => [
-	// Scale 6-bit to 8-bit
-	Math.round((r / 63) * 255),
-	Math.round((g / 63) * 255),
-	Math.round((b / 63) * 255),
+	// high-bit replication, the canonical expansion (doc.ts expand6to8
+	// and createPalette below agree); the old round(v/63*255) differed
+	// by one LSB on ten of 64 values, so a load, autosave, reload
+	// cycle shifted colors
+	(r << 2) | (r >> 4),
+	(g << 2) | (g >> 4),
+	(b << 2) | (b >> 4),
 	a, // Alpha remains unchanged
 ];
 
