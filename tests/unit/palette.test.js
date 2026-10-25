@@ -348,12 +348,13 @@ describe('Palette Utilities', () => {
 			)[1];
 			expect(() =>
 				touchEnd({
+					preventDefault: () => {},
 					touches: [],
 					changedTouches: [{ pageX: 50, pageY: 20 }],
 				})).not.toThrow();
 			expect(State.palette.setForegroundColor).toHaveBeenCalled();
 			// a ghost touchend with no coordinate source at all stays quiet
-			expect(() => touchEnd({ touches: []})).not.toThrow();
+			expect(() => touchEnd({ preventDefault: () => {}, touches: []})).not.toThrow();
 		});
 
 		it('should handle mouse events for color selection', () => {

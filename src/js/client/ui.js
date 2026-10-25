@@ -81,8 +81,12 @@ const createModalController = modal => {
 		$('updateModal'),
 		$('loadingModal'),
 		$('warningModal'),
+		$('errorModal'),
 		$('tutorialsModal'),
-	];
+		// a missing section must not poison the arithmetic: queued()
+		// counts hidden sections against the list length, and a null
+		// entry can never read as hidden, wedging every close forever
+	].filter(Boolean);
 	let current = false;
 	let closingTimeout = null;
 	let transitionHandler = null;
@@ -138,8 +142,12 @@ const createModalController = modal => {
 				});
 			}
 		} else {
-			error(`Unknown modal: <kbd>#{section}</kbd>`);
-			console.error(`Unknown modal: <kbd>#{section}</kbd>`);
+			// the template was Ruby-spelled (#{}) and printed literally;
+			// never recurse when the error modal ITSELF is the unknown
+			console.error(`Unknown modal: ${section}`);
+			if (name !== 'error') {
+				error(`Unknown modal: <kbd>${section}</kbd>`);
+			}
 		}
 	};
 
@@ -194,7 +202,10 @@ const createModalController = modal => {
 	};
 
 	const error = message => {
-		$('modalError').innerHTML = message;
+		const el = $('modalError');
+		if (el) {
+			el.innerHTML = message;
+		}
 		open('error');
 	};
 
@@ -463,10 +474,15 @@ const viewportTap = view => {
 
 	view.addEventListener('touchstart', event => {
 		State.flyouts?.close();
-		const onCanvas =
-			typeof event.target?.closest === 'function' &&
-			event.target.closest('#canvasContainer') !== null;
-		eligible = event.touches.length === 2 && !onCanvas;
+		// judge EVERY touch, not just the one that fired this event: one
+		// finger on the canvas and one off used to undo here AND in the
+		// canvas gesture recognizer
+		const anyOnCanvas = [...event.touches].some(
+			touch =>
+				typeof touch.target?.closest === 'function' &&
+				touch.target.closest('#canvasContainer') !== null,
+		);
+		eligible = event.touches.length === 2 && !anyOnCanvas;
 		if (eligible) {
 			touchStartTime = Date.now();
 		}

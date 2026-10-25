@@ -95,7 +95,7 @@ const installProfiler = () => {
 	const setupDoc = (columns, rows) =>
 		new Promise(resolve => {
 			const data = buildDoc(columns, rows);
-			State.textArtCanvas.setImageData(columns, rows, data, false, null, () => {
+			State.textArtCanvas.setImageData(columns, rows, data, false, undefined, null, () => {
 				resolve();
 			});
 		});

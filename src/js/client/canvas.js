@@ -721,12 +721,16 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	let blinkTimerMutex = Promise.resolve();
 
-	const acquireBlinkTimerMutex = async () => {
-		await blinkTimerMutex;
+	const acquireBlinkTimerMutex = () => {
+		// the tail reassignment happens SYNCHRONOUSLY before any await:
+		// the old await-then-assign version woke every queued waiter at
+		// once (setFont queues two acquisitions in one task) and a later
+		// restart could run two blink loops at double cadence
 		let release;
-		const hold = new Promise(resolve => (release = resolve));
-		blinkTimerMutex = hold;
-		return release;
+		const held = new Promise(resolve => (release = resolve));
+		const turn = blinkTimerMutex.then(() => release);
+		blinkTimerMutex = blinkTimerMutex.then(() => held);
+		return turn;
 	};
 
 	const updateBlinkTimer = async () => {
@@ -1008,9 +1012,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	let pendingScrollUpdate = false;
 
 	const handleScroll = () => {
-		pendingScrollUpdate = true;
-
 		if (scrollScheduled) {
+			// only a scroll landing DURING the pass earns a trailing one;
+			// setting the flag unconditionally made the tail call re-arm
+			// itself and the loop ran every frame until the page closed
+			pendingScrollUpdate = true;
 			return;
 		}
 
@@ -1394,10 +1400,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			if (!chunk) {
 				chunk = getOrCreateCanvasChunk(chunkIndex);
 			}
-			if (!chunk.rendered) {
-				renderChunk(chunk);
-				chunk.rendered = true;
-			}
+			// ALWAYS re-render under the pinned phase: an already-rendered
+			// chunk still wears whatever phase the 500ms tick last painted,
+			// so about half of all exports dropped their blink glyphs (the
+			// live view self-heals on the next tick)
+			renderChunk(chunk);
+			chunk.rendered = true;
 			const yPosition = chunkIndex * chunkSize * fontHeight;
 			ctx.drawImage(chunk.canvas, 0, yPosition);
 		}
@@ -1428,9 +1436,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			if (!chunk) {
 				chunk = getOrCreateCanvasChunk(chunkIndex);
 			}
-			if (!chunk.rendered) {
-				renderChunk(chunk);
-			}
+			// same pinned-phase re-render as getImage: a rendered chunk
+			// wears the tick's last phase otherwise
+			renderChunk(chunk);
+			chunk.rendered = true;
 			const chunkData = chunk.ctx.getImageData(
 				0,
 				0,
@@ -1453,6 +1462,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		newRowValue,
 		newImageData,
 		newIceColors,
+		newLetterSpacing,
 		onProgress,
 		onComplete,
 	) => {
@@ -1461,6 +1471,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		rows = newRowValue;
 		// Adopt the caller's array as the mirror
 		imageData = newImageData;
+		if (typeof newLetterSpacing === 'boolean') {
+			// the SAUCE 9px flag gets its own parameter: it used to ride
+			// the onProgress slot, where a truthy flag was CALLED as a
+			// function mid-redraw and aborted the open
+			State.font.setLetterSpacing(newLetterSpacing);
+		}
 		scheduleJournalKeyframe(true);
 		createCanvases();
 		updateTimer();
@@ -1839,10 +1855,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 		State.palette = createPalette(rgb6BitPalette);
 
-		// Force regeneration of font glyphs with new palette
-		if (State.font && State.font.setLetterSpacing) {
-			State.font.setLetterSpacing(State.font.getLetterSpacing());
-		}
+		// a REAL glyph rebuild: the old setLetterSpacing(getLetterSpacing())
+		// was a guarded no-op, so the font handle kept the palette captured
+		// at load and a plain .ans opened after an .xb wore the XB colors
+		State.font?.redraw?.();
 		document.dispatchEvent(
 			new CustomEvent('onPaletteChange', {
 				detail: State.palette,
@@ -1857,6 +1873,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		ensureHexPages().setEmbeddedFont(null, 0);
 		scheduleJournalKeyframe(true);
 		State.palette = createDefaultPalette();
+		// rebuild BEFORE the dispatch so listeners repaint with glyphs in
+		// the restored palette, not the XB one the handle had pinned
+		State.font?.redraw?.();
 		document.dispatchEvent(
 			new CustomEvent('onPaletteChange', {
 				detail: State.palette,
@@ -1864,9 +1883,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				cancelable: false,
 			}),
 		);
-		if (State.font && State.font.setLetterSpacing) {
-			State.font.setLetterSpacing(State.font.getLetterSpacing());
-		}
 		if (callback) {
 			callback();
 		}

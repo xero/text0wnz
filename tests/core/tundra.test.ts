@@ -187,14 +187,17 @@ describe('tundra codec', () => {
 		expect(back.getCell(0, 2, 0).fg).toBe(paletteColor(12));
 	});
 
-	it('rejects non-CP437 glyphs and blink attrs', () => {
+	it('degrades non-CP437 glyphs and blink attrs as the lint promised', () => {
+		// a confirmed export must deliver the degradation the modal
+		// described, never throw with nothing saved
 		const unicode = createDocV3({ columns: 2, rows: 1, mode: 'free' });
 		unicode.setCell(0, 0, 0, {
 			glyph: glyphWord(unicode.glyphTable.idFor(0, 0x2603), 0),
 			fg: paletteColor(7),
 			bg: paletteColor(0),
 		});
-		expect(() => encodeTundra(unicode)).toThrow(/not CP437/);
+		const back = decodeTundra(encodeTundra(unicode));
+		expect(back.doc.getCell(0, 0, 0).glyph).toBe(glyphWord(63, 0)); // '?'
 
 		const blink = createDocV3({ columns: 2, rows: 1 });
 		blink.setCell(0, 0, 0, {
@@ -202,7 +205,9 @@ describe('tundra codec', () => {
 			fg: paletteColor(7),
 			bg: paletteColor(0),
 		});
-		expect(() => encodeTundra(blink)).toThrow(/blink/);
+		const steady = decodeTundra(encodeTundra(blink));
+		// the attr drops: tundra's ice colors are always on
+		expect(steady.doc.getCell(0, 0, 0).glyph).toBe(glyphWord(65, 0));
 	});
 
 	it('stops cleanly on a truncated color command', () => {

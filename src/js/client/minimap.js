@@ -138,7 +138,11 @@ const createMinimap = () => {
 			vp.getBoundingClientRect().top +
 			vp.scrollTop
 			: 0;
-		vp.scrollTop = offY + Math.round((target - offY) / fh) * fh;
+		// target is CANVAS space; the grid of row-aligned scroll positions
+		// is offY + k*fh. Subtracting offY before the snap treated target
+		// as scroll space and centered one row low whenever the container
+		// margin matched the font height
+		vp.scrollTop = offY + Math.round(target / fh) * fh;
 		// the viewport scroll event arrives async; track the frame NOW so
 		// drag-follow math never works from a stale position
 		positionRect();

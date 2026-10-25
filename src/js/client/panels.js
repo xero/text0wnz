@@ -944,8 +944,11 @@ const createPanelManager = () => {
 	};
 
 	// a width flip drops phone-session state (sheet height, drawer) so
-	// each side of the boundary comes back exactly as it was saved
+	// each side of the boundary comes back exactly as it was saved;
+	// a drag crossing the boundary aborts first or endDrag commits
+	// stale dock state against the rebuilt DOM
 	phoneMql?.addEventListener?.('change', () => {
+		cancelDrag();
 		registry.get('tool')?.el.style.removeProperty('--sh');
 		setDrawer(false);
 		layout();
@@ -1340,6 +1343,31 @@ const createPanelManager = () => {
 		}
 	});
 
+	/**
+	 * Abort a drag WITHOUT committing: a layout() mid-drag (breakpoint
+	 * flip, resize debounce) rebuilds the DOM the drag references, so
+	 * endDrag would read stale placeholder siblings and commit a wrong
+	 * dock. Strip the visuals, drop the placeholder, and let layout()
+	 * restore the saved placement.
+	 */
+	const cancelDrag = () => {
+		if (!drag) {
+			return;
+		}
+		if (drag.resize || !drag.started) {
+			drag = null;
+			return;
+		}
+		const { el } = drag;
+		el.classList.remove('drag', 'over');
+		sidebar.classList.remove('dropping');
+		BOXES.top?.classList.remove('dropping');
+		BOXES.bot?.classList.remove('dropping');
+		container.classList.remove('sidebarPeek');
+		dropPlaceholder();
+		drag = null;
+	};
+
 	const endDrag = () => {
 		if (!drag) {
 			return;
@@ -1450,11 +1478,15 @@ const createPanelManager = () => {
 	container.addEventListener('pointerup', endDrag);
 	container.addEventListener('pointercancel', endDrag);
 
-	// floats clamp back into reach when the window shrinks
+	// floats clamp back into reach when the window shrinks; an active
+	// drag aborts first for the same reason as the breakpoint flip
 	let resizeTimer = 0;
 	window.addEventListener('resize', () => {
 		clearTimeout(resizeTimer);
-		resizeTimer = setTimeout(layout, 100);
+		resizeTimer = setTimeout(() => {
+			cancelDrag();
+			layout();
+		}, 100);
 	});
 
 	restore();

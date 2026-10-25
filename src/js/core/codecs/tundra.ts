@@ -21,9 +21,7 @@
 
 import {
 	MAX_DOC_CELLS,
-	ATTR_BLINK,
 	DocV3,
-	attrsOf,
 	createDefaultPaletteRGB,
 	createDocV3,
 	glyphIdOf,
@@ -35,6 +33,7 @@ import {
 } from '../doc.js';
 import { cp437ToUnicode } from '../cp437.js';
 import { DecodeResult, DocMeta } from './bin.js';
+import { xterm256RGB } from './dur.js';
 import { buildSauce, parseSauce } from './sauce.js';
 import { CodecError, bytesToString, concatBytes } from './util.js';
 
@@ -192,15 +191,17 @@ export const encodeTundra = (
 	const frame = doc.frames[0];
 	const table = doc.glyphTable;
 
-	const resolveRGB = (word: number, index: number): number => {
+	const resolveRGB = (word: number): number => {
 		if (!isPaletteColor(word)) {
 			return word;
 		}
 		const slot = paletteIndexOf(word);
 		if (slot >= doc.palette.length) {
-			throw new CodecError(
-				`cell ${index}: palette index ${slot} outside the doc palette`,
-			);
+			// degrade as the export modal promises: tundra speaks
+			// truecolor natively, so an index the doc palette cannot
+			// resolve voices the canonical xterm value instead of
+			// refusing the whole export after confirmation
+			return xterm256RGB(slot);
 		}
 		return doc.palette[slot];
 	};
@@ -232,33 +233,30 @@ export const encodeTundra = (
 				continue;
 			}
 			const def = table.get(char);
-			if (
+			// the format lint warned about these and the export modal
+			// promised degradation, so deliver it: non-CP437 glyphs voice
+			// '?' like every 16-color writer, and the blink attr drops
+			// (tundra's ice colors are always on). Throwing here aborted
+			// confirmed exports with nothing saved.
+			const encodeChar =
 				char > 255 ||
 				!def ||
 				def.fontSlot !== 0 ||
 				def.codepoint !== cp437ToUnicode(char)
-			) {
-				throw new CodecError(
-					`cell ${index}: glyph ${char} is not CP437, tundra cannot hold it`,
-				);
-			}
-			if (attrsOf(word) & ATTR_BLINK) {
-				throw new CodecError(
-					`cell ${index}: tundra has no blink (ice colors are always on)`,
-				);
-			}
+					? 63
+					: char;
 			if (blank) {
 				out.push(1);
 				writeBE32(out, y);
 				writeBE32(out, x);
 				blank = false;
 			}
-			const fg = resolveRGB(frame.fg[index], index);
-			const bg = resolveRGB(frame.bg[index], index);
+			const fg = resolveRGB(frame.fg[index]);
+			const bg = resolveRGB(frame.bg[index]);
 			let notice = 0;
 			// A space never carries a foreground (PabloDraw quirk: its fg
 			// is invisible, so the stream state is left untouched)
-			if (char !== 32 && fg !== currentFg) {
+			if (encodeChar !== 32 && fg !== currentFg) {
 				notice |= 2;
 				currentFg = fg;
 			}
@@ -269,7 +267,7 @@ export const encodeTundra = (
 			if (notice !== 0) {
 				out.push(notice);
 			}
-			out.push(char);
+			out.push(encodeChar);
 			if (notice & 2) {
 				// TundraDraw requires 0 in the unused alpha byte, not 255
 				out.push(0, (currentFg >>> 16) & 0xff);
