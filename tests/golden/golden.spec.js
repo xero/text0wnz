@@ -175,6 +175,13 @@ const seedSkip = (testInfo, name) =>
 test.describe('golden renderer screenshots', () => {
 	for (const combo of MATRIX) {
 		test(shotName(combo), async ({ page }, testInfo) => {
+			// the 512-glyph upper page renders on the GL path only; the
+			// chunk fallback shows the lossy '?' mirror by design
+			// (unit-pinned), so one golden cannot gate both renderers
+			test.skip(
+				combo.fixture === 'xb512' && testInfo.project.name !== 'golden-gl',
+				'the 512-glyph upper page renders on the GL path only',
+			);
 			seedSkip(testInfo, shotName(combo));
 			await prepPage(page, testInfo);
 			await openFixture(page, combo.fixture);
