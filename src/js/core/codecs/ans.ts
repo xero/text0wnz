@@ -24,6 +24,7 @@
  */
 
 import {
+	MAX_DOC_CELLS,
 	ATTR_BLINK,
 	DocV3,
 	FONT_SLOT_UNSCII,
@@ -139,7 +140,13 @@ const createScreen = (width: number) => {
 	let cells = new Uint16Array(width * 100);
 	let maxY = 0;
 	const extend = (y: number) => {
-		const next = new Uint16Array(width * (y + 100) + cells.length);
+		const nextLength = width * (y + 100) + cells.length;
+		if (nextLength > MAX_DOC_CELLS) {
+			// content-driven growth: a hostile file can spam newlines far
+			// past any sane canvas; die at the gate, not in the allocator
+			throw new CodecError('ANSI content exceeds the cell ceiling');
+		}
+		const next = new Uint16Array(nextLength);
 		next.set(cells, 0);
 		cells = next;
 	};
@@ -178,7 +185,12 @@ const createV3Screen = (width: number) => {
 	let planes = alloc(width * 100);
 	let maxY = 0;
 	const extend = (y: number) => {
-		const next = alloc(width * (y + 100) + planes.glyph.length);
+		const nextLength = width * (y + 100) + planes.glyph.length;
+		if (nextLength > MAX_DOC_CELLS) {
+			// same gate as createScreen: hostile growth dies loud
+			throw new CodecError('ANSI content exceeds the cell ceiling');
+		}
+		const next = alloc(nextLength);
 		next.glyph.set(planes.glyph, 0);
 		next.fg.set(planes.fg, 0);
 		next.bg.set(planes.bg, 0);

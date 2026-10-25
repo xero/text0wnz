@@ -37,6 +37,7 @@
  */
 
 import {
+	MAX_DOC_CELLS,
 	attrsOf,
 	createDefaultPaletteRGB,
 	createDocV3,
@@ -92,7 +93,7 @@ export interface ExtDraw extends ExtCell {
 /** [u, a, fg, bg, count] with count >= 1 */
 export type ExtRun = [number, number, number, number, number];
 
-const isValidCodepoint = (u: unknown): u is number =>
+export const isValidCodepoint = (u: unknown): u is number =>
 	Number.isInteger(u) &&
 	(u as number) >= 0 &&
 	(u as number) <= 0x10ffff &&
@@ -326,8 +327,8 @@ export interface ExtSyncResult {
 	comments: string;
 }
 
-// same ceiling as the join-doc RLE decode (1000 x 10000 client cap)
-const MAX_SYNC_CELLS = 10_000_000;
+// same ceiling as the join-doc decode (doc.ts MAX_DOC_CELLS)
+const MAX_SYNC_CELLS = MAX_DOC_CELLS;
 
 /**
  * EXT_SYNC payload -> a fresh v3 doc the client adopts wholesale.

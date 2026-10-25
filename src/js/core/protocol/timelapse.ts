@@ -8,7 +8,12 @@
  * doc is built at the FINAL dimensions (earlier snapshots crop or pad).
  */
 
-import { createDocV3, glyphWord, type DocV3 } from '../doc.js';
+import {
+	DEFAULT_FRAME_CELL_BUDGET,
+	createDocV3,
+	glyphWord,
+	type DocV3,
+} from '../doc.js';
 import { MoebiusAction, ProtocolError } from './moebius.js';
 import {
 	blockToExtCell,
@@ -64,7 +69,7 @@ export const timelapseToDoc = (
 	// budget (doc.ts), so a 10M-cell room gets a 2-frame movie instead
 	// of killing the tab
 	const cells = (columns as number) * (rows as number);
-	const budgetFrames = Math.floor(16_000_000 / cells);
+	const budgetFrames = Math.floor(DEFAULT_FRAME_CELL_BUDGET / cells);
 	const maxFrames = Math.max(
 		2,
 		Math.min(options.maxFrames ?? 120, budgetFrames),
@@ -108,6 +113,20 @@ export const timelapseToDoc = (
 	const stride = Math.max(1, Math.ceil(ops.length / (maxFrames - 1)));
 	const snapshots: Grid[] = [snapshotOf()];
 	let sinceSnapshot = 0;
+	// the frame budget was computed from BASELINE dims, but logged
+	// SET_CANVAS_SIZE ops can grow the grid mid-movie; an aggregate
+	// cell cap holds regardless, dropping intermediate frames instead
+	// of allocating the tab to death
+	let snapshotCells = grid.columns * grid.rows;
+	const pushSnapshot = () => {
+		const cellsNow = grid.columns * grid.rows;
+		if (snapshotCells + cellsNow > DEFAULT_FRAME_CELL_BUDGET) {
+			snapshots[snapshots.length - 1] = snapshotOf();
+			return;
+		}
+		snapshotCells += cellsNow;
+		snapshots.push(snapshotOf());
+	};
 
 	for (const op of ops) {
 		const data =
@@ -181,12 +200,12 @@ export const timelapseToDoc = (
 		}
 		sinceSnapshot++;
 		if (sinceSnapshot >= stride) {
-			snapshots.push(snapshotOf());
+			pushSnapshot();
 			sinceSnapshot = 0;
 		}
 	}
 	if (sinceSnapshot > 0) {
-		snapshots.push(snapshotOf()); // the final state is always a frame
+		pushSnapshot(); // the final state is always a frame
 	}
 
 	const finalColumns = grid.columns;

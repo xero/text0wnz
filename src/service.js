@@ -123,6 +123,13 @@ self.addEventListener('fetch', event => {
 
 async function handleShareTarget(request) {
 	try {
+		// the OS share sheet and our own origin arrive as same-origin or
+		// none; a hostile page's cross-site POST must not force bytes
+		// into every open editor tab
+		const fetchSite = request.headers.get('sec-fetch-site');
+		if (fetchSite === 'cross-site') {
+			return Response.redirect('/', 303);
+		}
 		const formData = await request.formData();
 		const file = formData.get('file');
 
