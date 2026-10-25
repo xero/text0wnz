@@ -5,6 +5,7 @@
 
 import { Compression } from './compression.js';
 import { Storage } from './storage.js';
+import { migrateV2Autosave } from '../core/index';
 import magicNumbers from './magicNumbers.js';
 
 const EditorState = {
@@ -584,10 +585,13 @@ class StateManager {
 			const scaleFactor = this.state.font?.getScaleFactor() ?? 1;
 			const hasNonDefaultZoom = scaleFactor !== 1;
 
-			// Skip saving if state is default (unless zoom changed) or connected to network
+			// Skip saving if state is default (unless zoom changed) or connected
+			// to network. The network slot is optional: a collab worker that
+			// failed to construct must not cost every autosave of the session.
 			if (
 				!hasNonDefaultZoom &&
-				(this.isDefaultState() || stateManager.state.network.isConnected())
+				(this.isDefaultState() ||
+				  stateManager.state.network?.isConnected?.() === true)
 			) {
 				return;
 			}
@@ -772,21 +776,27 @@ class StateManager {
 					}
 
 					// Load canvas data: the OPFS autosave journal is the source
-					// of truth; the legacy IndexedDB snapshot is the fallback,
-					// and restoring it re-seeds the journal via setImageData's
-					// keyframe trigger (the IndexedDB -> OPFS migration).
+					// of truth and restores plane-native (frames, truecolor,
+					// and unicode survive; the u16 projection flattened all
+					// three and the restore's keyframe then destroyed them in
+					// the journal too). The legacy IndexedDB snapshot is the
+					// fallback, migrated through core/migrate so restoring it
+					// re-seeds the journal via setDocData's keyframe trigger.
 					setTimeout(async () => {
-						const canvasData =
-							(await this.state.textArtCanvas?.loadJournalSnapshot?.()) ??
-							(await Storage.loadCanvasData());
+						const journalData =
+							await this.state.textArtCanvas?.loadJournalSnapshot?.();
 
-						if (canvasData && this.state.textArtCanvas) {
-							this.state.textArtCanvas.setImageData(
-								canvasData.columns,
-								canvasData.rows,
-								canvasData.imageData,
-								true, // Temporarily use ice colors
-							);
+						if (journalData?.doc && this.state.textArtCanvas) {
+							this.state.textArtCanvas.setDocData(journalData.doc);
+						} else if (this.state.textArtCanvas) {
+							const migrated = migrateV2Autosave({
+								canvasData: await Storage.loadCanvasData(),
+								settings: settings,
+								xbFont: xbFontData,
+							});
+							if (migrated) {
+								this.state.textArtCanvas.setDocData(migrated.doc);
+							}
 						}
 
 						const undoHistory = await Storage.loadUndoHistory();

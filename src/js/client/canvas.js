@@ -17,7 +17,6 @@ import {
 	paletteColor,
 	snapOrigin,
 	unicodeToCp437Strict,
-	v3ToU16,
 	v3ToU16Lossy,
 } from '../core/index';
 import { createJournalStore } from './journalStore.js';
@@ -47,7 +46,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const doc = createDocV3({ columns, rows });
 
 	// OPFS autosave journal: committed strokes append live;
-	// doc-level changes and undo/redo write a debounced fresh keyframe.
+	// doc-level changes and undo/redo write a fresh keyframe.
 	// Collab sessions never journal; the server owns that doc.
 	const journal = createJournalStore();
 	let keyframeTimer = null;
@@ -55,29 +54,78 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	// held before (a previous session, a torn tail): strokes may only
 	// replay on top of a keyframe written by THIS session.
 	let sessionKeyframeWritten = false;
-	const scheduleJournalKeyframe = () => {
-		if (keyframeTimer !== null) {
-			clearTimeout(keyframeTimer);
+	// Epoch accounting keeps the journal tail honest: every committed
+	// stroke and doc-level change bumps docEpoch; docOpEpoch remembers
+	// the last doc-level change; keyframeEpoch is what the last
+	// COMPLETED rewrite captured. A stroke may only append while
+	// keyframeEpoch >= docOpEpoch, or a crash would replay it against
+	// a baseline missing the resize/ice/frame change it was drawn on.
+	let docEpoch = 0;
+	let docOpEpoch = 0;
+	let keyframeEpoch = 0;
+	let keyframeRunning = false;
+	let keyframeQueued = false;
+
+	const writeKeyframe = async () => {
+		if (State.network?.isConnected?.()) {
+			return;
 		}
-		keyframeTimer = setTimeout(async () => {
-			keyframeTimer = null;
-			if (State.network?.isConnected?.()) {
+		if (keyframeRunning) {
+			keyframeQueued = true;
+			return;
+		}
+		keyframeRunning = true;
+		// strokes landing during the serialize/gzip await bump docEpoch
+		// past this capture; the finally block takes another keyframe so
+		// the rewrite can never clobber an append it did not contain
+		const epoch = docEpoch;
+		try {
+			await journal.rewrite(
+				await createJournal(
+					doc,
+					xbFontData
+						? { fontBytes: xbFontData.bytes, fontHeight: xbFontData.height }
+						: {},
+				),
+			);
+			sessionKeyframeWritten = true;
+			keyframeEpoch = epoch;
+		} catch (error) {
+			console.warn('[Canvas] journal keyframe failed:', error);
+		} finally {
+			keyframeRunning = false;
+			if (keyframeQueued || docEpoch !== epoch) {
+				keyframeQueued = false;
+				queueKeyframe(true);
+			}
+		}
+	};
+
+	const queueKeyframe = immediate => {
+		if (keyframeTimer !== null) {
+			if (!immediate) {
+				// an earlier timer is already pending; extending it would
+				// only widen the crash-loss window
 				return;
 			}
-			try {
-				await journal.rewrite(
-					await createJournal(
-						doc,
-						xbFontData
-							? { fontBytes: xbFontData.bytes, fontHeight: xbFontData.height }
-							: {},
-					),
-				);
-				sessionKeyframeWritten = true;
-			} catch (error) {
-				console.warn('[Canvas] journal keyframe failed:', error);
-			}
-		}, magicNumbers.JOURNAL_KEYFRAME_DEBOUNCE_MS);
+			clearTimeout(keyframeTimer);
+		}
+		keyframeTimer = setTimeout(
+			() => {
+				keyframeTimer = null;
+				writeKeyframe();
+			},
+			immediate ? 0 : magicNumbers.JOURNAL_KEYFRAME_DEBOUNCE_MS,
+		);
+	};
+
+	// doc-level change (resize, ice, frames, loads, fonts): the tail
+	// goes stale until a fresh keyframe completes. Rare one-shot ops
+	// pass immediate; spammable ones (undo/redo, delay slider) debounce.
+	const scheduleJournalKeyframe = (immediate = false) => {
+		docEpoch += 1;
+		docOpEpoch = docEpoch;
+		queueKeyframe(immediate);
 	};
 	const arena = createPatchArena({
 		// the label table mirrors the ring so the History flyout can
@@ -88,16 +136,24 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			if (State.network?.isConnected?.()) {
 				return;
 			}
+			docEpoch += 1;
+			if (keyframeEpoch < docOpEpoch) {
+				// a doc-level change has no completed keyframe yet; an
+				// appended stroke would replay against that stale baseline,
+				// so the keyframe captures this stroke instead
+				queueKeyframe(true);
+				return;
+			}
 			if (!sessionKeyframeWritten) {
 				// a rewrite is already pending or due; it captures this
 				// stroke's effect, so appending too stays consistent
-				scheduleJournalKeyframe();
+				queueKeyframe(false);
 			}
 			journal
 				.appendStroke(encodeStrokeRecord(stroke))
 				.then(compactionDue => {
 					if (compactionDue) {
-						scheduleJournalKeyframe();
+						queueKeyframe(false);
 					}
 				})
 				.catch(error =>
@@ -1230,7 +1286,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			if (onionSkin) {
 				rebuildOnionPlanes();
 			}
-			scheduleJournalKeyframe();
+			scheduleJournalKeyframe(true);
 			createCanvases();
 			updateTimer();
 			redrawEntireImage();
@@ -1248,9 +1304,14 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		if (doc.getIceColors() !== newIceColors) {
 			// Refolds the planes (u16 mirror words are invariant under it)
 			editor.setIceColors(newIceColors);
-			scheduleJournalKeyframe();
+			scheduleJournalKeyframe(true);
 			updateTimer();
 			redrawEntireImage();
+			// the autosave listens for this; without it an ice toggle on
+			// an otherwise untouched doc reverted on reload
+			document.dispatchEvent(
+				new CustomEvent('onIceColorsChange', { detail: newIceColors }),
+			);
 		}
 	};
 
@@ -1398,7 +1459,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		rows = newRowValue;
 		// Adopt the caller's array as the mirror
 		imageData = newImageData;
-		scheduleJournalKeyframe();
+		scheduleJournalKeyframe(true);
 		createCanvases();
 		updateTimer();
 
@@ -1426,7 +1487,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		if (doc.glyphTable.size() > 256) {
 			ensureHexPages().preload(doc.glyphTable.entries());
 		}
-		scheduleJournalKeyframe();
+		scheduleJournalKeyframe(true);
 		createCanvases();
 		updateTimer();
 		if (onionSkin) {
@@ -1464,7 +1525,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		State.title = '';
 		editor.clear(); // blank planes, history gone, ice back to default
 		imageData = new Uint16Array(columns * rows);
-		scheduleJournalKeyframe();
+		scheduleJournalKeyframe(true);
 		updateTimer(); // Restart blink timer if needed
 		redrawEntireImage();
 	};
@@ -1621,7 +1682,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return -1;
 		}
 		const index = editor.addFrame(options);
-		scheduleJournalKeyframe();
+		scheduleJournalKeyframe(true);
 		State.saveToLocalStorage();
 		document.dispatchEvent(
 			new CustomEvent('onFrameChange', {
@@ -1638,7 +1699,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return false;
 		}
 		editor.removeFrame(index); // fires onFrameChange -> remirror+repaint
-		scheduleJournalKeyframe();
+		scheduleJournalKeyframe(true);
 		State.saveToLocalStorage();
 		return true;
 	};
@@ -1741,7 +1802,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			width: fontWidth,
 			height: fontHeight,
 		};
-		scheduleJournalKeyframe();
+		scheduleJournalKeyframe(true);
 		return true;
 	};
 
@@ -1783,7 +1844,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const clearXBData = callback => {
 		xbFontData = null;
-		scheduleJournalKeyframe();
+		scheduleJournalKeyframe(true);
 		State.palette = createDefaultPalette();
 		document.dispatchEvent(
 			new CustomEvent('onPaletteChange', {
@@ -1826,11 +1887,13 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	 * (see core/migrate.ts).
 	 */
 	/**
-	 * Restore source for state.js: replay the autosave journal into v2
-	 * shapes. Returns null when the journal is empty, unreadable, or
-	 * holds a doc the u16 model cannot express yet (then the legacy
-	 * IndexedDB snapshot is the fallback, and its restore re-seeds the
-	 * journal through setImageData's keyframe trigger).
+	 * Restore source for state.js: replay the autosave journal and hand
+	 * back the NATIVE doc for setDocData. Projecting through v3ToU16
+	 * here flattened animations to frame 0 and dropped truecolor and
+	 * unicode, and the restore's own keyframe trigger then rewrote the
+	 * journal with the flattened doc, destroying the autosave. Returns
+	 * null when the journal is empty or unreadable (then the legacy
+	 * IndexedDB snapshot is the fallback).
 	 */
 	const loadJournalSnapshot = async () => {
 		try {
@@ -1839,13 +1902,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				return null;
 			}
 			const replay = await replayJournal(bytes);
-			const u16 = v3ToU16(replay.doc);
 			return {
-				columns: u16.columns,
-				rows: u16.rows,
-				imageData: u16.imageData,
-				iceColors: u16.iceColors,
-				letterSpacing: u16.letterSpacing,
+				doc: replay.doc,
 				fontBytes: replay.fontBytes,
 				fontHeight: replay.fontHeight,
 			};

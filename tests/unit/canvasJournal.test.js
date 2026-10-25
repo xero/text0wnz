@@ -77,6 +77,7 @@ vi.mock('../../src/js/client/palette.js', () => ({
 }));
 
 import { createTextArtCanvas } from '../../src/js/client/canvas.js';
+import { v3ToU16Lossy } from '../../src/js/core/index';
 import magicNumbers from '../../src/js/client/magicNumbers.js';
 
 const makeCanvas = () =>
@@ -118,9 +119,9 @@ describe('canvas autosave journal wiring', () => {
 
 		const snapshot = await canvas.loadJournalSnapshot();
 		expect(snapshot).not.toBeNull();
-		expect(snapshot.columns).toBe(80);
-		expect(snapshot.rows).toBe(25);
-		expect(Array.from(snapshot.imageData)).toEqual(
+		expect(snapshot.doc.getColumns()).toBe(80);
+		expect(snapshot.doc.getRows()).toBe(25);
+		expect(Array.from(v3ToU16Lossy(snapshot.doc).imageData)).toEqual(
 			Array.from(canvas.getImageData()),
 		);
 	});
@@ -135,10 +136,11 @@ describe('canvas autosave journal wiring', () => {
 		await settle();
 
 		const snapshot = await canvas.loadJournalSnapshot();
-		expect(Array.from(snapshot.imageData)).toEqual(
+		const u16 = v3ToU16Lossy(snapshot.doc);
+		expect(Array.from(u16.imageData)).toEqual(
 			Array.from(canvas.getImageData()),
 		);
-		expect(snapshot.imageData[5 * 80 + 5]).toBe(0);
+		expect(u16.imageData[5 * 80 + 5]).toBe(0);
 	});
 
 	it('never journals while a collab session is connected', async () => {
@@ -162,7 +164,41 @@ describe('canvas autosave journal wiring', () => {
 		await settle();
 
 		const snapshot = await canvas.loadJournalSnapshot();
-		expect(snapshot.iceColors).toBe(true);
-		expect(snapshot.imageData[1 * 80 + 1]).toBe((219 << 8) | (9 << 4) | 7);
+		expect(snapshot.doc.getIceColors()).toBe(true);
+		expect(v3ToU16Lossy(snapshot.doc).imageData[1 * 80 + 1]).toBe(
+			(219 << 8) | (9 << 4) | 7,
+		);
+	});
+
+	it('restores every frame of an animation, not frame 0 alone', async () => {
+		const canvas = await makeCanvas();
+		canvas.startUndo();
+		canvas.draw(cb => cb(219, 14, 1, 3, 2));
+		canvas.startUndo();
+		canvas.addFrame();
+		canvas.draw(cb => cb(177, 7, 0, 5, 5));
+		canvas.startUndo();
+		await settle();
+
+		const snapshot = await canvas.loadJournalSnapshot();
+		expect(snapshot).not.toBeNull();
+		expect(snapshot.doc.frames.length).toBe(2);
+	});
+
+	it('a stroke right after a resize survives the restore', async () => {
+		const canvas = await makeCanvas();
+		canvas.resize(40, 20);
+		// no settle: the stroke lands inside the keyframe window, where
+		// an appended record would replay against the pre-resize grid
+		canvas.startUndo();
+		canvas.draw(cb => cb(219, 14, 1, 39, 19));
+		canvas.startUndo();
+		await settle();
+
+		const snapshot = await canvas.loadJournalSnapshot();
+		expect(snapshot.doc.getColumns()).toBe(40);
+		expect(v3ToU16Lossy(snapshot.doc).imageData[19 * 40 + 39]).toBe(
+			(219 << 8) | (1 << 4) | 14,
+		);
 	});
 });
