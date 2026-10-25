@@ -5,6 +5,11 @@ import {
 	createWorkerHandler,
 	createChatController,
 } from '../../src/js/client/network.js';
+import {
+	EXT_SUITE_CAP,
+	T0wnzAction,
+	compressExtCells,
+} from '../../src/js/core/index.js';
 
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
@@ -13,10 +18,14 @@ vi.mock('../../src/js/client/state.js', () => ({
 		title: '',
 		textArtCanvas: {
 			setImageData: vi.fn(),
+			setDocData: vi.fn(),
+			drawRemoteExtCells: vi.fn(),
 			resize: vi.fn(),
 			setFont: vi.fn(),
 			setIceColors: vi.fn(),
 			quickDraw: vi.fn(),
+			getColumns: vi.fn(() => 80),
+			getRows: vi.fn(() => 25),
 		},
 		chat: {
 			addConversation: vi.fn(),
@@ -39,6 +48,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 		classList: {
 			add: vi.fn(),
 			remove: vi.fn(),
+			toggle: vi.fn(),
 			contains: vi.fn(() => false),
 		},
 		addEventListener: vi.fn(),
@@ -57,6 +67,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 		classList: {
 			add: vi.fn(),
 			remove: vi.fn(),
+			toggle: vi.fn(),
 			contains: vi.fn(() => false),
 		},
 		addEventListener: vi.fn(),
@@ -90,6 +101,7 @@ vi.stubGlobal('document', {
 		classList: {
 			add: vi.fn(),
 			remove: vi.fn(),
+			toggle: vi.fn(),
 			contains: vi.fn(() => false),
 		},
 		addEventListener: vi.fn(),
@@ -304,6 +316,48 @@ describe('Network Module', () => {
 			expect(cmds).not.toContain('send');
 		});
 
+		it('replays own in-flight ops after an EXT_SYNC snapshot', async () => {
+			const handler = createWorkerHandler(mockInputHandle);
+			const messageListener = mockWorker.addEventListener.mock.calls.find(
+				call => call[0] === 'message',
+			)[1];
+			const blank = { code: 32, fg: 7, bg: 0 };
+			await messageListener({
+				data: {
+					cmd: 'connected',
+					data: {
+						caps: [EXT_SUITE_CAP],
+						doc: { columns: 2, rows: 1, data: [blank, blank]},
+						users: [],
+						chat_history: [],
+					},
+				},
+			});
+			// an in-flight resize: sent, unacked
+			handler.sendResize(100, 30);
+			State.textArtCanvas.resize.mockClear();
+			State.textArtCanvas.setDocData.mockClear();
+			// the sync snapshot was cut before our resize and the server
+			// never echoes our own ops back: without the replay the local
+			// doc silently reverts to the snapshot's dimensions
+			await messageListener({
+				data: {
+					cmd: 'frame',
+					type: T0wnzAction.EXT_SYNC,
+					data: {
+						columns: 2,
+						rows: 1,
+						cells: compressExtCells(
+							Array.from({ length: 2 }, () => ({ u: 32, a: 0, fg: 7, bg: 0 })),
+						),
+						seq: 5,
+					},
+				},
+			});
+			expect(State.textArtCanvas.setDocData).toHaveBeenCalled();
+			expect(State.textArtCanvas.resize).toHaveBeenCalledWith(100, 30);
+		});
+
 		it('should handle canvas settings when not in collaboration mode', () => {
 			const handler = createWorkerHandler(mockInputHandle);
 
@@ -468,10 +522,25 @@ describe('Network Module', () => {
 				vi.fn(),
 			);
 
-			expect(global.localStorage.setItem).toHaveBeenCalledWith(
-				'notifications',
-				false,
+			expect(mockElements.inputNotificationCheckbox.checked).toBe(false);
+		});
+
+		it('treats a corrupted notifications value as off, never throws', () => {
+			// the old JSON.parse path threw on garbage and killed the boot
+			global.localStorage.getItem.mockReturnValue('{broken');
+
+			createChatController(
+				mockElements.divChatButton,
+				mockElements.divMessageWindow,
+				mockElements.divUserList,
+				mockElements.inputHandle,
+				mockElements.inputMessage,
+				mockElements.inputButton,
+				mockElements.inputNotificationCheckbox,
+				vi.fn(),
+				vi.fn(),
 			);
+
 			expect(mockElements.inputNotificationCheckbox.checked).toBe(false);
 		});
 

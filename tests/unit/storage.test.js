@@ -142,6 +142,18 @@ describe('Storage Utilities', () => {
 	});
 
 	describe('IndexedDB Operations', () => {
+		it('shares one connection across ops instead of opening per call', async () => {
+			await Storage.saveFontData('A', [1]);
+			await Storage.loadFontData('A');
+			await Storage.saveUndoHistory([]);
+			// the old per-call dbPromise opened one connection per op
+			// (three here) and never closed any; the shared handle opens
+			// at most once (zero when an earlier test already owns it)
+			expect(
+				global.indexedDB.open.mock.calls.length,
+			).toBeLessThanOrEqual(1);
+		});
+
 		it('should have canvas data methods', () => {
 			expect(typeof Storage.saveCanvasData).toBe('function');
 			expect(typeof Storage.loadCanvasData).toBe('function');

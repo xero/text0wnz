@@ -5,8 +5,11 @@
  */
 
 // IndexedDB setup
+/** @type {Promise<IDBDatabase> | null} */
+let sharedDb = null;
+
 /** @returns {Promise<IDBDatabase>} */
-const dbPromise = () => {
+const openDb = () => {
 	return new Promise((resolve, reject) => {
 		const request = indexedDB.open('text0wnz', 4);
 
@@ -31,10 +34,19 @@ const dbPromise = () => {
 		};
 
 		request.onsuccess = _e => {
+			const db = request.result;
 			// close when a newer version opens elsewhere, or that tab's
-			// upgrade blocks forever on this connection
-			request.result.onversionchange = () => request.result.close();
-			resolve(request.result);
+			// upgrade blocks forever on this connection; drop the shared
+			// handle so the next op reopens instead of using a dead one
+			db.onversionchange = () => {
+				db.close();
+				sharedDb = null;
+			};
+			// abnormal closes only (script close() never fires it)
+			db.onclose = () => {
+				sharedDb = null;
+			};
+			resolve(db);
 		};
 		request.onerror = _e => reject(request.error);
 		// an old-version tab without the close hook above wedges this
@@ -42,6 +54,21 @@ const dbPromise = () => {
 		request.onblocked = _e =>
 			reject(new Error('text0wnz db held open by an older tab'));
 	});
+};
+
+/**
+ * One shared connection for every op: the old per-call open never
+ * closed its connection, leaking one handle per storage call.
+ * @returns {Promise<IDBDatabase>}
+ */
+const dbPromise = () => {
+	if (!sharedDb) {
+		sharedDb = openDb().catch(error => {
+			sharedDb = null;
+			throw error;
+		});
+	}
+	return sharedDb;
 };
 
 // Storage API
