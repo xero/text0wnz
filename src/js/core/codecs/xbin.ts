@@ -7,7 +7,7 @@
  */
 
 import { DocV3, expand6to8, rgbColor } from '../doc.js';
-import { u16ToV3, v3ToU16 } from '../convert.js';
+import { u16ToV3, v3ToU16Lossy } from '../convert.js';
 import { SauceRecord, buildSauce, parseSauce } from './sauce.js';
 import {
 	CodecError,
@@ -235,6 +235,8 @@ export interface EncodeXBinOptions {
 	fontHeight?: number;
 	/** RLE-compress when it wins (default true, the v2 behavior). */
 	compress?: boolean;
+	/** Frame to export (XBin holds one); defaults to the first. */
+	frameIndex?: number;
 	meta?: DocMeta;
 	date?: Date;
 }
@@ -255,7 +257,12 @@ export const encodeXBin = (
 	doc: DocV3,
 	options: EncodeXBinOptions = {},
 ): Uint8Array => {
-	const { imageData, columns, rows, iceColors } = v3ToU16(doc);
+	// lossy on purpose: the export modal already warned about anything
+	// the format cannot hold, so quantize instead of throwing
+	const { imageData, columns, rows, iceColors } = v3ToU16Lossy(
+		doc,
+		options.frameIndex ?? 0,
+	);
 	const palette6 = options.palette6 ?? palette6FromDoc(doc);
 	const fontBytes = options.fontBytes ?? null;
 	const fontHeight = options.fontHeight ?? 16;

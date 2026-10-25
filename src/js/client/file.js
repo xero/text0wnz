@@ -17,6 +17,10 @@ import {
 	encodeUtf8,
 	describeIssue,
 	lintDocForFormat,
+	buildSauce,
+	decodeXBin,
+	encodeBin,
+	encodeXBin,
 	v3ToU16Lossy,
 } from '../core/index';
 
@@ -1000,117 +1004,6 @@ const loadModule = () => {
 		};
 	};
 
-	const uncompress = (bytes, dataIndex, fileSize, column, rows) => {
-		const data = new Uint16Array(column * rows);
-		let i, value, count, j, k, char, attribute;
-		for (i = dataIndex, j = 0; i < fileSize;) {
-			value = bytes[i++];
-			count = value & 0x3f;
-			switch (value >> 6) {
-				case 1:
-					char = bytes[i++];
-					for (k = 0; k <= count; k++) {
-						data[j++] = (char << 8) + bytes[i++];
-					}
-					break;
-				case 2:
-					attribute = bytes[i++];
-					for (k = 0; k <= count; k++) {
-						data[j++] = (bytes[i++] << 8) + attribute;
-					}
-					break;
-				case 3:
-					char = bytes[i++];
-					attribute = bytes[i++];
-					for (k = 0; k <= count; k++) {
-						data[j++] = (char << 8) + attribute;
-					}
-					break;
-				default:
-					for (k = 0; k <= count; k++) {
-						data[j++] = (bytes[i++] << 8) + bytes[i++];
-					}
-					break;
-			}
-		}
-		return data;
-	};
-
-	const loadXBin = bytes => {
-		const sauce = getSauce(bytes);
-		let columns,
-				rows,
-				fontHeight,
-				flags,
-				paletteData,
-				paletteFlag,
-				fontFlag,
-				compressFlag,
-				iceColorsFlag,
-				font512Flag,
-				dataIndex,
-				data,
-				fontData,
-				fontName;
-		if (bytesToString(bytes, 0, 4) === 'XBIN' && bytes[4] === 0x1a) {
-			columns = (bytes[6] << 8) + bytes[5];
-			rows = (bytes[8] << 8) + bytes[7];
-			fontHeight = bytes[9];
-			flags = bytes[10];
-			paletteFlag = (flags & 0x01) === 1;
-			fontFlag = ((flags >> 1) & 0x01) === 1;
-			compressFlag = ((flags >> 2) & 0x01) === 1;
-			iceColorsFlag = ((flags >> 3) & 0x01) === 1;
-			font512Flag = ((flags >> 4) & 0x01) === 1;
-			dataIndex = 11;
-
-			paletteData = null;
-			if (paletteFlag) {
-				paletteData = new Uint8Array(48);
-				for (let i = 0; i < 48; i++) {
-					paletteData[i] = bytes[dataIndex + i];
-				}
-				dataIndex += 48;
-			}
-
-			fontData = null;
-			const fontCharCount = font512Flag ? 512 : 256;
-			if (fontFlag) {
-				const fontDataSize = fontCharCount * fontHeight;
-				fontData = new Uint8Array(fontDataSize);
-				for (let i = 0; i < fontDataSize; i++) {
-					fontData[i] = bytes[dataIndex + i];
-				}
-				dataIndex += fontDataSize;
-			}
-
-			if (compressFlag) {
-				data = uncompress(bytes, dataIndex, sauce.fileSize, columns, rows);
-			} else {
-				data = convertUInt8ToUint16(bytes, dataIndex, columns * rows * 2);
-			}
-
-			// XB files always report the XBIN font name
-			fontName = 'XBIN';
-		}
-		return {
-			columns: columns,
-			rows: rows,
-			data: data,
-			iceColors: iceColorsFlag,
-			letterSpacing: false,
-			title: sauce.title,
-			author: sauce.author,
-			group: sauce.group,
-			comments: sauce.comments,
-			fontName: fontName,
-			paletteData: paletteData,
-			fontData: fontData
-				? { bytes: fontData, width: 8, height: fontHeight }
-				: null,
-		};
-	};
-
 	const checkUTF8 = file => file.endsWith('.utf8.ans') || file.endsWith('.txt');
 
 	const updateSauceModal = imageData => {
@@ -1153,19 +1046,40 @@ const loadModule = () => {
 			let imageData;
 			switch (file.name.split('.').pop().toLowerCase()) {
 				case 'xb':
-					imageData = loadXBin(data);
-					updateSauceModal(imageData);
-
-					// sequential load: font + palette land before the image data
-					State.textArtCanvas.loadXBFileSequential(
-						imageData,
-						(columns, rows, data, iceColors, letterSpacing, fontName) => {
-							callback(columns, rows, data, iceColors, letterSpacing, fontName);
-						},
-					);
-					document.dispatchEvent(new CustomEvent('onXBFontLoaded'));
-					State.textArtCanvas.redrawEntireImage();
+				case 'xbin': {
+					// core decoder: the doc rides the plane-native callback slot
+					// like tnd/dur/0wnz, and 512-glyph fonts keep their bytes
+					const result = decodeXBin(data);
+					updateSauceModal(result.meta);
+					State.textArtCanvas.clearXBData(async () => {
+						if (result.palette6) {
+							State.textArtCanvas.setXBPaletteData(result.palette6);
+						}
+						if (result.fontBytes) {
+							const fontValid = State.textArtCanvas.setXBFontData(
+								result.fontBytes,
+								8,
+								result.fontHeight || 16,
+							);
+							if (fontValid) {
+								await new Promise(resolve =>
+									State.textArtCanvas.setFont('XBIN', resolve));
+							}
+						}
+						document.dispatchEvent(new CustomEvent('onXBFontLoaded'));
+						const u16 = v3ToU16Lossy(result.doc);
+						callback(
+							u16.columns,
+							u16.rows,
+							u16.imageData,
+							u16.iceColors,
+							u16.letterSpacing,
+							undefined,
+							result.doc,
+						);
+					});
 					break;
+				}
 				case 'bin':
 					// Clear any previous XB data to avoid palette persistence
 					State.textArtCanvas.clearXBData(() => {
@@ -1389,124 +1303,6 @@ const saveModule = () => {
 		}
 	};
 
-	const createSauce = (datatype, filetype, filesize, doFlagsAndTInfoS) => {
-		const addText = (text, maxlength, index) => {
-			let i;
-			for (i = 0; i < maxlength; i += 1) {
-				sauce[i + index] = i < text.length ? text.charCodeAt(i) : 0x20;
-			}
-		};
-
-		const commentsText = $('sauceComments').value.trim();
-		const commentLines = commentsText ? commentsText.split('\n') : [];
-
-		let processedComments = '';
-		let commentsCount = 0;
-		for (let i = 0; i < commentLines.length; i++) {
-			const comment = commentLines[i];
-			let pos = 0;
-			while (pos < comment.length) {
-				const line = comment.substring(pos, pos + 64).trim();
-				if (line.length === 0) {
-					break;
-				}
-				commentsCount++;
-				processedComments += line.padEnd(64, ' ');
-				pos += 64;
-			}
-		}
-		let commentBlock = null;
-		if (commentsCount > 0) {
-			const commentBlockSize = 5 + commentsCount * 64; // "COMNT" + comment lines
-			commentBlock = new Uint8Array(commentBlockSize);
-
-			commentBlock.set(new Uint8Array([0x43, 0x4f, 0x4d, 0x4e, 0x54]), 0); // "COMNT"
-			const commentBytes = new TextEncoder().encode(processedComments);
-			commentBlock.set(commentBytes.slice(0, commentsCount * 64), 5);
-		}
-
-		const sauce = new Uint8Array(128);
-
-		addText('SAUCE00', 7, 0);
-
-		const titleBytes = new TextEncoder().encode($('sauceTitle').value);
-		const authorBytes = new TextEncoder().encode($('sauceAuthor').value);
-		const groupBytes = new TextEncoder().encode($('sauceGroup').value);
-
-		sauce.fill(0x20, 7, 42); // Clear title field
-		sauce.set(titleBytes.slice(0, 35), 7);
-
-		sauce.fill(0x20, 42, 62); // Clear author field
-		sauce.set(authorBytes.slice(0, 20), 42);
-
-		sauce.fill(0x20, 62, 82); // Clear group field
-		sauce.set(groupBytes.slice(0, 20), 62);
-
-		// Date (CCYYMMDD format)
-		const date = new Date();
-		const year = date.getFullYear().toString(10);
-		const month = (date.getMonth() + 1).toString(10).padStart(2, '0');
-		const day = date.getDate().toString(10).padStart(2, '0');
-		addText(`${year}${month}${day}`, 8, 82);
-
-		// File size (bytes 90-93)
-		sauce[90] = filesize & 0xff;
-		sauce[91] = (filesize >> 8) & 0xff;
-		sauce[92] = (filesize >> 16) & 0xff;
-		sauce[93] = filesize >> 24;
-
-		sauce[94] = datatype;
-
-		const columns = State.textArtCanvas.getColumns();
-		const rows = State.textArtCanvas.getRows();
-
-		// File type and dimensions - different handling for BIN format
-		if (datatype === 5) {
-			// BIN format
-			sauce[95] = columns / 2;
-			// For BIN, columns and rows aren't stored in typical TInfo1/TInfo2 positions
-		} else {
-			sauce[95] = filetype;
-			sauce[96] = columns & 0xff;
-			sauce[97] = columns >> 8;
-			sauce[98] = rows & 0xff;
-			sauce[99] = rows >> 8;
-		}
-
-		// Comments count (byte 104)
-		sauce[104] = commentsCount;
-
-		// Flags and font info (only for non-XBIN formats)
-		if (datatype !== 6 && doFlagsAndTInfoS) {
-			let flags = 0;
-			if (State.textArtCanvas.getIceColors()) {
-				flags += 1;
-			}
-			if (State.font.getLetterSpacing()) {
-				flags += 1 << 2; // 9px font spacing
-			} else {
-				flags += 1 << 1; // 8px font spacing
-			}
-			flags += 1 << 4; // Set aspect ratio flag
-			sauce[105] = flags;
-
-			// Font name (bytes 106-127)
-			const currentAppFontName = State.textArtCanvas.getCurrentFontName();
-			const sauceFontName = Load.appToSauceFont(currentAppFontName);
-			if (sauceFontName) {
-				addText(sauceFontName, Math.min(sauceFontName.length, 22), 106);
-			}
-		}
-
-		if (commentBlock) {
-			const combined = new Uint8Array(commentBlock.length + sauce.length);
-			combined.set(commentBlock, 0);
-			combined.set(sauce, commentBlock.length);
-			return combined;
-		}
-		return sauce;
-	};
-
 	const encodeANSi = async (
 		useUTF8,
 		blinkers = true,
@@ -1661,7 +1457,7 @@ const saveModule = () => {
 			output.push(27, 91, 48, 109); // ESC[0m
 		}
 
-		const sauce = useUTF8 ? '' : createSauce(1, 1, output.length, true);
+		const sauce = useUTF8 ? '' : buildSauceRecord(1, 1, output.length);
 		let fname;
 		if (stripEscapeCodes) {
 			fname = State.title + '.txt';
@@ -1752,109 +1548,24 @@ const saveModule = () => {
 		await saveFile(bytes, undefined, State.title + '.txt');
 	};
 
-	const convert16BitArrayTo8BitArray = Uint16s => {
-		const Uint8s = new Uint8Array(Uint16s.length * 2);
-		for (let i = 0, j = 0; i < Uint16s.length; i++, j += 2) {
-			Uint8s[j] = Uint16s[i] >> 8;
-			Uint8s[j + 1] = Uint16s[i] & 255;
-		}
-		return Uint8s;
-	};
-
 	const bin = async () => {
 		if (!(await confirmExport('bin', 'Binary Text')).proceed) {
 			return;
 		}
-		const columns = State.textArtCanvas.getColumns();
-		if (columns % 2 === 0) {
-			const imageData = convert16BitArrayTo8BitArray(
-				State.textArtCanvas.getImageData(),
-			);
-			const sauce = createSauce(5, columns / 2, imageData.length, true);
-			const fname = State.title;
-			await saveFile(imageData, sauce, fname + '.bin');
-		}
-	};
-
-	const compressXBin = (imageData, columns, rows) => {
-		// XBin RLE: counter byte = (runType << 6) | (runLength - 1), max run 64
-		// Run types: 0 = none, 1 = repeated char, 2 = repeated attribute, 3 = both
-		// Runs never cross row boundaries per the XBin spec
-		const output = [];
-		for (let row = 0; row < rows; row++) {
-			const rowStart = row * columns;
-			const rowEnd = rowStart + columns;
-			let i = rowStart;
-			while (i < rowEnd) {
-				const cell = imageData[i];
-				const char = cell >> 8;
-				const attr = cell & 255;
-				let runBoth = 1;
-				while (
-					i + runBoth < rowEnd &&
-					runBoth < 64 &&
-					imageData[i + runBoth] === cell
-				) {
-					runBoth++;
-				}
-				let runChar = 1;
-				while (
-					i + runChar < rowEnd &&
-					runChar < 64 &&
-					imageData[i + runChar] >> 8 === char
-				) {
-					runChar++;
-				}
-				let runAttr = 1;
-				while (
-					i + runAttr < rowEnd &&
-					runAttr < 64 &&
-					(imageData[i + runAttr] & 255) === attr
-				) {
-					runAttr++;
-				}
-				if (runBoth > 1 && runBoth >= runChar && runBoth >= runAttr) {
-					output.push(0xc0 | (runBoth - 1), char, attr);
-					i += runBoth;
-				} else if (runChar > 1 && runChar >= runAttr) {
-					output.push(0x40 | (runChar - 1), char);
-					for (let k = 0; k < runChar; k++) {
-						output.push(imageData[i + k] & 255);
-					}
-					i += runChar;
-				} else if (runAttr > 1) {
-					output.push(0x80 | (runAttr - 1), attr);
-					for (let k = 0; k < runAttr; k++) {
-						output.push(imageData[i + k] >> 8);
-					}
-					i += runAttr;
-				} else {
-					// Collect literal cells until the next run of two or more
-					let literal = 1;
-					while (i + literal + 1 < rowEnd && literal < 64) {
-						const next = imageData[i + literal];
-						const after = imageData[i + literal + 1];
-						if (
-							next === after ||
-							next >> 8 === after >> 8 ||
-							(next & 255) === (after & 255)
-						) {
-							break;
-						}
-						literal++;
-					}
-					if (i + literal === rowEnd - 1 && literal < 64) {
-						literal++;
-					}
-					output.push(literal - 1);
-					for (let k = 0; k < literal; k++) {
-						output.push(imageData[i + k] >> 8, imageData[i + k] & 255);
-					}
-					i += literal;
-				}
+		try {
+			const bytes = encodeBin(State.textArtCanvas.getDoc(), {
+				meta: sauceMetaWithFont(),
+				frameIndex: State.textArtCanvas.getCurrentFrame?.() ?? 0,
+			});
+			await saveFile(bytes, undefined, State.title + '.bin');
+		} catch (error) {
+			if (error instanceof CodecError) {
+				// odd column counts used to no-op silently after the confirm
+				alert(`BIN export failed: ${error.message}`);
+				return;
 			}
+			throw error;
 		}
-		return new Uint8Array(output);
 	};
 
 	const xb = async compress => {
@@ -1871,16 +1582,9 @@ const saveModule = () => {
 	};
 
 	const writeXb = async (compress = true) => {
-		const rawImageData = State.textArtCanvas.getImageData();
-		const imageData = convert16BitArrayTo8BitArray(rawImageData);
-		const columns = State.textArtCanvas.getColumns();
-		const rows = State.textArtCanvas.getRows();
-		const iceColors = State.textArtCanvas.getIceColors();
-
-		// Get current palette and font data for embedding. Prefer the
-		// original embedded XB font bytes (full 512-glyph fonts survive);
-		// the live font object only holds the 256 renderable glyphs
-		const xbPaletteData = State.textArtCanvas.getXBPaletteData();
+		// Prefer the original embedded XB font bytes (full 512-glyph
+		// fonts survive); the live font object only holds the 256
+		// renderable glyphs
 		const embeddedFont =
 			State.textArtCanvas.getCurrentFontName() === 'XBIN'
 				? State.textArtCanvas.getXBFontData?.()
@@ -1895,74 +1599,15 @@ const saveModule = () => {
 			(embeddedFont && embeddedFont.height) ||
 			(liveFontData && liveFontData.height) ||
 			State.font.getHeight();
-
-		let flags = 0;
-		let additionalDataSize = 0;
-
-		// Always embed palette data
-		flags |= 1; // Set palette flag (bit 0)
-		additionalDataSize += 48; // Palette data size (16 colors * 3 bytes each)
-
-		if (fontBytes) {
-			flags |= 1 << 1; // Set font flag (bit 1)
-			additionalDataSize += fontBytes.length;
-			// XBin fonts are 8px wide, so bytes = height * glyph count
-			if (fontBytes.length === fontHeight * 512) {
-				flags |= 1 << 4; // Set 512-glyph font flag (bit 4)
-			}
-		}
-
-		// RLE-compress the image data, keeping raw output when it is smaller
-		let imageBytes = imageData;
-		if (compress) {
-			const compressed = compressXBin(rawImageData, columns, rows);
-			if (compressed.length < imageData.length) {
-				imageBytes = compressed;
-				flags |= 1 << 2; // Set compression flag (bit 2)
-			}
-		}
-
-		if (iceColors) {
-			flags |= 1 << 3; // ice colors flag (bit 3)
-		}
-
-		const totalSize = 11 + additionalDataSize + imageBytes.length;
-		const output = new Uint8Array(totalSize);
-
-		output.set(
-			new Uint8Array([
-				88, // 'X'
-				66, // 'B'
-				73, // 'I'
-				78, // 'N'
-				26, // EOF marker
-				columns & 255,
-				columns >> 8,
-				rows & 255,
-				rows >> 8,
-				fontHeight,
-				flags,
-			]),
-			0,
-		);
-
-		let dataOffset = 11;
-
-		if (xbPaletteData) {
-			output.set(xbPaletteData, dataOffset);
-			dataOffset += 48;
-		}
-
-		if (fontBytes) {
-			output.set(fontBytes, dataOffset);
-			dataOffset += fontBytes.length;
-		}
-
-		output.set(imageBytes, dataOffset);
-
-		const sauce = createSauce(6, 0, totalSize, false);
-		const fname = State.title;
-		await saveFile(output, sauce, fname + '.xb');
+		const bytes = encodeXBin(State.textArtCanvas.getDoc(), {
+			palette6: State.textArtCanvas.getXBPaletteData(),
+			fontBytes: fontBytes,
+			fontHeight: fontHeight,
+			compress: compress,
+			frameIndex: State.textArtCanvas.getCurrentFrame?.() ?? 0,
+			meta: sauceMeta(),
+		});
+		await saveFile(bytes, undefined, State.title + '.xb');
 	};
 
 	const dataUrlToBytes = dataURL => {
@@ -1981,6 +1626,27 @@ const saveModule = () => {
 		author: $('sauceAuthor').value,
 		comments: $('sauceComments').value.trim() || undefined,
 	});
+
+	const sauceMetaWithFont = () => ({
+		...sauceMeta(),
+		fontName:
+			Load.appToSauceFont(State.textArtCanvas.getCurrentFontName()) ||
+			undefined,
+	});
+
+	// one core-writer call for every classic save, so the SAUCE
+	// compliance fixes live in a single place
+	const buildSauceRecord = (dataType, fileType, fileSize) =>
+		buildSauce({
+			dataType: dataType,
+			fileType: fileType,
+			fileSize: fileSize,
+			columns: State.textArtCanvas.getColumns(),
+			rows: State.textArtCanvas.getRows(),
+			iceColors: State.textArtCanvas.getIceColors(),
+			letterSpacing: State.font.getLetterSpacing(),
+			...sauceMetaWithFont(),
+		});
 
 	const tnd = async () => {
 		// the linter fronts the throw cases (unicode glyphs, blink) plus

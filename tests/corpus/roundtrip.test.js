@@ -29,6 +29,7 @@ import {
 	encodeBin as coreEncodeBin,
 	encodeXBin as coreEncodeXBin,
 	v3ToU16,
+	u16ToV3,
 } from '../../src/js/core/index';
 import {
 	makeAnsi,
@@ -70,7 +71,20 @@ const mockState = {
 		getIceColors: vi.fn(() => false),
 		getCurrentFontName: vi.fn(() => 'CP437 8x16'),
 		getXBPaletteData: vi.fn(() => DEFAULT_XB_PALETTE),
-		loadXBFileSequential: vi.fn(),
+		setXBPaletteData: vi.fn(),
+		setXBFontData: vi.fn(() => true),
+		setFont: vi.fn((name, cb) => cb && cb()),
+		// the save paths read the doc now; derive it from the wired u16
+		// mocks at call time so wireDoc keeps working untouched
+		getDoc: vi.fn(() =>
+			u16ToV3({
+				imageData: mockState.textArtCanvas.getImageData(),
+				columns: mockState.textArtCanvas.getColumns(),
+				rows: mockState.textArtCanvas.getRows(),
+				iceColors: mockState.textArtCanvas.getIceColors(),
+				letterSpacing: mockState.font.getLetterSpacing(),
+			})),
+		getCurrentFrame: vi.fn(() => 0),
 		clearXBData: vi.fn(callback => callback()),
 		redrawEntireImage: vi.fn(),
 	},
@@ -152,29 +166,27 @@ const decode = (name, bytes) =>
 			() => reject(new Error(`decode timed out for ${name}`)),
 			10000,
 		);
-		if (name.toLowerCase().endsWith('.xb')) {
-			mockState.textArtCanvas.loadXBFileSequential.mockImplementation(
-				imageData => {
-					clearTimeout(timer);
-					resolve({
-						columns: imageData.columns,
-						rows: imageData.rows,
-						data: imageData.data,
-						iceColors: imageData.iceColors,
-						letterSpacing: imageData.letterSpacing,
-						fontName: imageData.fontName,
-						paletteData: imageData.paletteData,
-						fontData: imageData.fontData,
-					});
-				},
-			);
-			Load.file(file, () => {});
-		} else {
-			Load.file(file, (columns, rows, data, iceColors, letterSpacing, fontName) => {
-				clearTimeout(timer);
-				resolve({ columns, rows, data, iceColors, letterSpacing, fontName });
+		// XB palette/font land through canvas calls now that the client
+		// rides core decodeXBin; capture them off the mocks
+		mockState.textArtCanvas.setXBPaletteData.mockClear();
+		mockState.textArtCanvas.setXBFontData.mockClear();
+		Load.file(file, (columns, rows, data, iceColors, letterSpacing, fontName) => {
+			clearTimeout(timer);
+			const pal = mockState.textArtCanvas.setXBPaletteData.mock.calls.at(-1);
+			const font = mockState.textArtCanvas.setXBFontData.mock.calls.at(-1);
+			resolve({
+				columns,
+				rows,
+				data,
+				iceColors,
+				letterSpacing,
+				fontName: fontName ?? (font ? 'XBIN' : undefined),
+				paletteData: pal ? pal[0] : null,
+				fontData: font
+					? { bytes: font[0], width: font[1], height: font[2] }
+					: null,
 			});
-		}
+		});
 	});
 
 /** Point the mocked State at a decoded doc so Save.* reads it back out. */

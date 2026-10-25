@@ -19,6 +19,7 @@ const mockState = {
 		redrawEntireImage: vi.fn(),
 		getImage: vi.fn(() => ({ toDataURL: vi.fn(() => canvasDataURL) })),
 		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)), // Mock 6-bit palette data
+		getCurrentFrame: vi.fn(() => 0),
 	},
 	font: {
 		getWidth: vi.fn(() => 8),
@@ -340,6 +341,9 @@ describe('File Module - Load and Save Operations', () => {
 
 			it('should not save BIN files when width is odd', async () => {
 				mockState.textArtCanvas.getColumns.mockReturnValue(81); // Odd width
+				mockState.textArtCanvas.getDoc.mockReturnValue(
+					createDocV3({ columns: 81, rows: 25 }),
+				);
 				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
 
 				await Save.bin();

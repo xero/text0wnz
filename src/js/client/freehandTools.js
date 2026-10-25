@@ -10,6 +10,7 @@ import {
 	createAsciiStampEngine,
 	isJunctionGlyph,
 	junctionForTip,
+	shadeCycle,
 } from '../core/index';
 import { createAsciiStrokePainter } from './asciiBrush.js';
 
@@ -145,48 +146,12 @@ const createShadingController = (panel, charMode) => {
 
 	const calculateShadingCharacter = (x, y) => {
 		const block = State.textArtCanvas.getBlock(x, y);
-		let code = block.charCode;
-		const currentFG = block.foregroundColor;
-		const fg = State.palette.getForegroundColor();
-
-		if (reduce) {
-			// lighten (backwards in the cycle, or erase if already lightest)
-			switch (code) {
-				case 176:
-					code = 32;
-					break;
-				case 177:
-					code = 176;
-					break;
-				case 178:
-					code = 177;
-					break;
-				case 219:
-					code = currentFG === fg ? 178 : 176;
-					break;
-				default:
-					code = 32;
-			}
-		} else {
-			// darken (forwards in the cycle)
-			switch (code) {
-				case 219:
-					code = currentFG !== fg ? 176 : 219;
-					break;
-				case 178:
-					code = 219;
-					break;
-				case 177:
-					code = 178;
-					break;
-				case 176:
-					code = 177;
-					break;
-				default:
-					code = 176;
-			}
-		}
-		return code;
+		return shadeCycle(
+			block.charCode,
+			block.foregroundColor,
+			State.palette.getForegroundColor(),
+			reduce,
+		);
 	};
 
 	// A pen picks its shade from pressure directly ("pen draws

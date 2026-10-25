@@ -19,6 +19,7 @@ const mockState = {
 		redrawEntireImage: vi.fn(),
 		getImage: vi.fn(() => ({ toDataURL: vi.fn(() => canvasDataURL) })),
 		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)), // Mock 6-bit palette data
+		getCurrentFrame: vi.fn(() => 0),
 	},
 	font: {
 		getWidth: vi.fn(() => 8),
@@ -182,6 +183,9 @@ describe('File Module - Advanced Operations', () => {
 			// Test with even width (should succeed)
 			mockState.textArtCanvas.getColumns.mockReturnValue(80);
 			mockState.textArtCanvas.getRows.mockReturnValue(25);
+			mockState.textArtCanvas.getDoc.mockReturnValue(
+				createDocV3({ columns: 80, rows: 25 }),
+			);
 
 			const binImageData = new Uint16Array(80 * 25);
 			for (let i = 0; i < binImageData.length; i++) {
@@ -197,6 +201,9 @@ describe('File Module - Advanced Operations', () => {
 
 			// Test with odd width (should not create file)
 			mockState.textArtCanvas.getColumns.mockReturnValue(81);
+			mockState.textArtCanvas.getDoc.mockReturnValue(
+				createDocV3({ columns: 81, rows: 25 }),
+			);
 			await Save.bin();
 
 			expect(global.Blob).not.toHaveBeenCalled();

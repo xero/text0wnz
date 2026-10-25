@@ -262,11 +262,9 @@ export const createJournal = async (
 		header[i] = JOURNAL_MAGIC.charCodeAt(i);
 	}
 	header[4] = JOURNAL_VERSION;
-	const keyframe = frameRecord(
-		RECORD_KEYFRAME,
-		await encodeEnvelope(doc, options),
-	);
-	return concatBytes([header, keyframe]);
+	// the same record a doc-level mutation appends; inlining it here
+	// once let the two drift apart
+	return concatBytes([header, await encodeKeyframeRecord(doc, options)]);
 };
 
 /** Bytes to append for one committed stroke. */

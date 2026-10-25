@@ -322,8 +322,8 @@ describe('Canvas Module', () => {
 		it('should handle sequential XB file loading', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			expect(canvas.loadXBFileSequential).toBeDefined();
-			expect(typeof canvas.loadXBFileSequential).toBe('function');
+			expect(canvas.getCurrentFrame).toBeDefined();
+			expect(typeof canvas.getCurrentFrame).toBe('function');
 		});
 	});
 
