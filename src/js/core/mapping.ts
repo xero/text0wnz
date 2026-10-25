@@ -68,45 +68,6 @@ export const cellFromPoint = (
 	};
 };
 
-/** Top-left corner of a cell, in client CSS px. */
-export const pointFromCell = (
-	x: number,
-	y: number,
-	m: CellMetrics,
-): { clientX: number; clientY: number } => {
-	checkMetrics(m);
-	return {
-		clientX: m.originX + x * m.cellWidth,
-		clientY: m.originY + y * m.cellHeight,
-	};
-};
-
-/** Center of a cell: the stable round-trip probe point. */
-export const cellCenter = (
-	x: number,
-	y: number,
-	m: CellMetrics,
-): { clientX: number; clientY: number } => {
-	checkMetrics(m);
-	return {
-		clientX: m.originX + x * m.cellWidth + m.cellWidth / 2,
-		clientY: m.originY + y * m.cellHeight + m.cellHeight / 2,
-	};
-};
-
-/** Center of a half-block (halfBlockY counts half-rows). */
-export const halfBlockCenter = (
-	x: number,
-	halfBlockY: number,
-	m: CellMetrics,
-): { clientX: number; clientY: number } => {
-	checkMetrics(m);
-	return {
-		clientX: m.originX + x * m.cellWidth + m.cellWidth / 2,
-		clientY: m.originY + (halfBlockY * m.cellHeight) / 2 + m.cellHeight / 4,
-	};
-};
-
 /**
  * Quantize a fractional bounding-rect origin to the device pixel grid.
  * At dpr > 1 getBoundingClientRect can report origins between device

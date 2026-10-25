@@ -128,7 +128,9 @@ export const readLhaEntries = (bytes: Uint8Array): LhaEntry[] => {
 				while (ext) {
 					extTotal += ext;
 					at += ext;
-					if (at - 2 < 0 || at > bytes.length) {
+					// at only grows from headerEnd (>= 22), so at - 2 < 0 can
+					// never fire; the real tear check is the upper bound
+					if (at > bytes.length) {
 						throw new CodecError(`lha header torn at ${pos}`);
 					}
 					ext = view.getUint16(at - 2, true);

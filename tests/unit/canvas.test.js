@@ -259,9 +259,9 @@ describe('Canvas Module', () => {
 		it('should handle dirty region operations', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			expect(canvas.enqueueDirtyRegion).toBeDefined();
-			expect(canvas.enqueueDirtyCell).toBeDefined();
-			expect(canvas.processDirtyRegions).toBeDefined();
+			expect(canvas._chunkTestSeam.enqueueDirtyRegion).toBeDefined();
+			expect(canvas._chunkTestSeam.enqueueDirtyCell).toBeDefined();
+			expect(canvas._chunkTestSeam.processDirtyRegions).toBeDefined();
 		});
 
 		it('should handle region coalescing', () => {
@@ -272,7 +272,7 @@ describe('Canvas Module', () => {
 				{ x: 5, y: 5, w: 10, h: 10 },
 			];
 
-			const coalesced = canvas.coalesceRegions(regions);
+			const coalesced = canvas._chunkTestSeam.coalesceRegions(regions);
 			expect(coalesced).toBeDefined();
 			expect(Array.isArray(coalesced)).toBe(true);
 		});
@@ -280,8 +280,8 @@ describe('Canvas Module', () => {
 		it('should handle patch buffer operations', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			expect(canvas.patchBufferAndEnqueueDirty).toBeDefined();
-			expect(typeof canvas.patchBufferAndEnqueueDirty).toBe('function');
+			expect(canvas._chunkTestSeam.patchBufferAndEnqueueDirty).toBeDefined();
+			expect(typeof canvas._chunkTestSeam.patchBufferAndEnqueueDirty).toBe('function');
 		});
 
 		it('should handle image data operations', () => {
@@ -315,8 +315,8 @@ describe('Canvas Module', () => {
 		it('should handle region drawing', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			expect(canvas.drawRegion).toBeDefined();
-			expect(typeof canvas.drawRegion).toBe('function');
+			expect(canvas._chunkTestSeam.drawRegion).toBeDefined();
+			expect(typeof canvas._chunkTestSeam.drawRegion).toBe('function');
 		});
 
 		it('should handle sequential XB file loading', () => {
@@ -466,7 +466,7 @@ describe('Canvas Module', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
 
 			expect(() => {
-				canvas.enqueueDirtyCell(10, 5);
+				canvas._chunkTestSeam.enqueueDirtyCell(10, 5);
 			}).not.toThrow();
 		});
 
@@ -474,8 +474,8 @@ describe('Canvas Module', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
 
 			expect(() => {
-				canvas.enqueueDirtyCell(-5, -5);
-				canvas.enqueueDirtyCell(100, 100);
+				canvas._chunkTestSeam.enqueueDirtyCell(-5, -5);
+				canvas._chunkTestSeam.enqueueDirtyCell(100, 100);
 			}).not.toThrow();
 		});
 
@@ -483,9 +483,9 @@ describe('Canvas Module', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
 
 			expect(() => {
-				canvas.enqueueDirtyCell(0, 0);
-				canvas.enqueueDirtyCell(10, 10);
-				canvas.enqueueDirtyCell(20, 20);
+				canvas._chunkTestSeam.enqueueDirtyCell(0, 0);
+				canvas._chunkTestSeam.enqueueDirtyCell(10, 10);
+				canvas._chunkTestSeam.enqueueDirtyCell(20, 20);
 			}).not.toThrow();
 		});
 	});
@@ -613,13 +613,13 @@ describe('Canvas Module', () => {
 		it('should support coalesce regions', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			expect(typeof canvas.coalesceRegions).toBe('function');
+			expect(typeof canvas._chunkTestSeam.coalesceRegions).toBe('function');
 		});
 
 		it('should support patch buffer and enqueue dirty', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			expect(typeof canvas.patchBufferAndEnqueueDirty).toBe('function');
+			expect(typeof canvas._chunkTestSeam.patchBufferAndEnqueueDirty).toBe('function');
 		});
 	});
 
@@ -676,7 +676,7 @@ describe('Canvas Module', () => {
 		it('should support draw region', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			expect(typeof canvas.drawRegion).toBe('function');
+			expect(typeof canvas._chunkTestSeam.drawRegion).toBe('function');
 		});
 
 		it('should support drawHalfBlock', () => {

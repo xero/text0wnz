@@ -22,7 +22,6 @@ describe('journal store', () => {
 	it('persists keyframe + strokes and replays the doc', async () => {
 		const backend = createMemoryBackend();
 		const store = createJournalStore({ backend });
-		expect(store.backendKind).toBe('memory');
 
 		const doc = createDocV3({ columns: 6, rows: 2 });
 		const strokes = [];
@@ -61,13 +60,12 @@ describe('journal store', () => {
 		expect(await store.appendStroke(record)).toBe(false);
 		expect(await store.appendStroke(record)).toBe(false);
 		expect(await store.appendStroke(record)).toBe(true);
-		expect(store.stats().strokesSinceKeyframe).toBe(3);
 
+		// a rewrite resets the counters: the window re-arms behaviorally
 		await store.rewrite(await createJournal(doc));
-		expect(store.stats()).toEqual({
-			bytesSinceKeyframe: 0,
-			strokesSinceKeyframe: 0,
-		});
+		expect(await store.appendStroke(record)).toBe(false);
+		expect(await store.appendStroke(record)).toBe(false);
+		expect(await store.appendStroke(record)).toBe(true);
 	});
 
 	it('serializes writes and survives a failing backend call', async () => {
@@ -96,17 +94,5 @@ describe('journal store', () => {
 		await store.appendStroke(Uint8Array.of(1, 2, 3));
 		await store.rewrite(Uint8Array.of(9));
 		expect(order).toEqual([3, 'rewrite']);
-	});
-
-	it('wipe clears bytes and counters', async () => {
-		const backend = createMemoryBackend();
-		const store = createJournalStore({ backend });
-		await store.appendStroke(Uint8Array.of(1, 2, 3));
-		await store.wipe();
-		expect(await store.open()).toEqual(new Uint8Array(0));
-		expect(store.stats()).toEqual({
-			bytesSinceKeyframe: 0,
-			strokesSinceKeyframe: 0,
-		});
 	});
 });

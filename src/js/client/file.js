@@ -2,7 +2,6 @@ import { encode as encodePng } from 'fast-png';
 import State from './state.js';
 import magicNumbers from './magicNumbers.js';
 import { $, enforceMaxBytes } from './ui.js';
-import { getUnicodeReverseMap } from './palette.js';
 import {
 	CodecError,
 	decodeAns,
@@ -255,7 +254,9 @@ const loadModule = () => {
 		}
 	}
 
-	const loadAnsi = (bytes, isUTF8 = false) => {
+	// the utf8 pipeline is core decodeAns/encodeUtf8; this legacy parser
+	// only ever reads CP437 bytes (its one caller passed literal false)
+	const loadAnsi = bytes => {
 		let escaped,
 				escapeCode,
 				j,
@@ -271,74 +272,6 @@ const loadModule = () => {
 				bold,
 				blink,
 				inverse;
-
-		const validate = (condition, message) => {
-			if (!condition) {
-				throw new Error(message);
-			}
-		};
-
-		const decodeUtf8 = (bytes, startIndex) => {
-			let charCode = bytes[startIndex];
-			if ((charCode & 0x80) === 0) {
-				// 1-byte sequence (ASCII)
-				return { charCode, bytesConsumed: 1 };
-			} else if ((charCode & 0xe0) === 0xc0) {
-				// 2-byte sequence
-				validate(
-					startIndex + 1 < bytes.length,
-					`[File] Unexpected end of data at position ${startIndex} for 2-byte UTF-8 sequence`,
-				);
-				const secondByte = bytes[startIndex + 1];
-				validate(
-					(secondByte & 0xc0) === 0x80,
-					`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1} for 2-byte UTF-8 sequence`,
-				);
-				charCode = ((charCode & 0x1f) << 6) | (secondByte & 0x3f);
-				return { charCode, bytesConsumed: 2 };
-			} else if ((charCode & 0xf0) === 0xe0) {
-				// 3-byte sequence
-				validate(
-					startIndex + 2 < bytes.length,
-					`[File] Unexpected end of data at position ${startIndex} for 3-byte UTF-8 sequence`,
-				);
-				const secondByte = bytes[startIndex + 1];
-				const thirdByte = bytes[startIndex + 2];
-				validate(
-					(secondByte & 0xc0) === 0x80 && (thirdByte & 0xc0) === 0x80,
-					`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1} or ${startIndex + 2}`,
-				);
-				charCode =
-					((charCode & 0x0f) << 12) |
-					((secondByte & 0x3f) << 6) |
-					(thirdByte & 0x3f);
-				return { charCode, bytesConsumed: 3 };
-			} else if ((charCode & 0xf8) === 0xf0) {
-				// 4-byte sequence
-				validate(
-					startIndex + 3 < bytes.length,
-					`[File] Unexpected end of data at position ${startIndex} for 4-byte UTF-8 sequence`,
-				);
-				const secondByte = bytes[startIndex + 1];
-				const thirdByte = bytes[startIndex + 2];
-				const fourthByte = bytes[startIndex + 3];
-				validate(
-					(secondByte & 0xc0) === 0x80 &&
-					(thirdByte & 0xc0) === 0x80 &&
-					(fourthByte & 0xc0) === 0x80,
-					`[File] Invalid UTF-8 continuation byte at position ${startIndex + 1}, ${startIndex + 2}, or ${startIndex + 3}`,
-				);
-				charCode =
-					((charCode & 0x07) << 18) |
-					((secondByte & 0x3f) << 12) |
-					((thirdByte & 0x3f) << 6) |
-					(fourthByte & 0x3f);
-				return { charCode, bytesConsumed: 4 };
-			}
-			throw new Error(
-				`[File] Invalid UTF-8 byte sequence at position ${startIndex}: 0x${bytes[startIndex].toString(16).padStart(2, '0')}`,
-			);
-		};
 
 		const sauceData = getSauce(bytes, 80);
 		x = 1;
@@ -385,19 +318,6 @@ const loadModule = () => {
 
 		while (!file.eof()) {
 			code = file.get();
-			let bytesConsumed;
-			if (isUTF8) {
-				const decoded = decodeUtf8(bytes, file.getPos() - 1);
-				code = decoded.charCode;
-				bytesConsumed = decoded.bytesConsumed;
-				code = getUnicodeReverseMap.get(code) ?? code;
-				if (code > 255) {
-					// Substitute '?' for codepoints outside CP437
-					code = 63;
-				}
-			} else {
-				bytesConsumed = 1;
-			}
 
 			if (escaped) {
 				escapeCode += String.fromCharCode(code);
@@ -525,10 +445,6 @@ const loadModule = () => {
 							}
 						}
 				}
-			}
-			if (bytesConsumed > 1) {
-				// file.get() already consumed the first byte
-				file.seek(file.getPos() + (bytesConsumed - 1));
 			}
 		}
 
@@ -881,27 +797,12 @@ const loadModule = () => {
 			);
 		};
 
+		// the old content-derived column/row scan was dead work: the
+		// default always clobbered its columns, and every caller derives
+		// rows itself (the ANSI parser from the stream, BIN from payload
+		// size)
 		if (defaultColumnValue) {
-			let maxColumns = 0;
-			let currentColumns = 0;
-			for (let i = 0; i < bytes.length; i++) {
-				const byte = bytes[i];
-				if (byte === 10) {
-					rows += 1;
-					maxColumns = Math.max(maxColumns, currentColumns);
-					currentColumns = 0;
-				} else {
-					currentColumns += 1;
-				}
-			}
-			if (currentColumns > 0) {
-				rows += 1;
-				maxColumns = Math.max(maxColumns, currentColumns);
-			}
-			columns = maxColumns;
-			if (defaultColumnValue > 0) {
-				columns = defaultColumnValue;
-			}
+			columns = defaultColumnValue;
 		}
 
 		if (bytes.length >= 128) {
@@ -921,7 +822,7 @@ const loadModule = () => {
 					}
 				} else {
 					// TInfo of 0 means "unspecified" in wild files: keep the
-					// content-derived fallback instead of a 0-column document
+					// caller's default instead of a 0-column document
 					const tinfo1 = readLE16(sauce, 96);
 					const tinfo2 = readLE16(sauce, 98);
 					if (tinfo1 > 0) {
@@ -1224,7 +1125,7 @@ const loadModule = () => {
 								}
 							}
 						}
-						imageData = loadAnsi(data, false);
+						imageData = loadAnsi(data);
 						updateSauceModal(imageData, imageData.sauceFlags ?? null);
 						callback(
 							imageData.width,

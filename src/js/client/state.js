@@ -3,7 +3,6 @@
  * eventing system so components see consistent state without races.
  */
 
-import { Compression } from './compression.js';
 import { Storage } from './storage.js';
 import { migrateV2Autosave } from '../core/index';
 import magicNumbers from './magicNumbers.js';
@@ -57,19 +56,8 @@ const EditorState = {
 	},
 };
 
-const stateListeners = new Map();
 const dependencyWaitQueue = new Map();
 
-// Keys to sync to localStorage
-const STATE_SYNC_KEYS = {
-	CANVAS_DATA: 'canvasData',
-	FONT_NAME: 'fontName',
-	PALETTE_COLORS: 'paletteColors',
-	ICE_COLORS: 'iceColors',
-	LETTER_SPACING: 'letterSpacing',
-	XBIN_FONT_DATA: 'xbinFontData',
-	SCALE_FACTOR: 'scaleFactor',
-};
 
 /**
  * Global State Management System
@@ -77,7 +65,6 @@ const STATE_SYNC_KEYS = {
 class StateManager {
 	constructor() {
 		this.state = EditorState;
-		this.listeners = stateListeners;
 		this.waitQueue = dependencyWaitQueue;
 		this.loadingFromStorage = false;
 
@@ -89,17 +76,11 @@ class StateManager {
 		// Bind methods to ensure `this` is preserved when passed as callbacks
 		this.set = this.set.bind(this);
 		this.get = this.get.bind(this);
-		this.on = this.on.bind(this);
-		this.off = this.off.bind(this);
-		this.emit = this.emit.bind(this);
 		this.waitFor = this.waitFor.bind(this);
 		this.checkDependencyQueue = this.checkDependencyQueue.bind(this);
 		this.checkInitializationComplete =
 			this.checkInitializationComplete.bind(this);
 		this.startInitialization = this.startInitialization.bind(this);
-		this.reset = this.reset.bind(this);
-		this.getInitializationStatus = this.getInitializationStatus.bind(this);
-		this.safely = this.safely.bind(this);
 		this.saveToLocalStorage = this.saveToLocalStorage.bind(this);
 		this.saveUndoHistory = this.saveUndoHistory.bind(this);
 		this.restoreStateFromLocalStorage =
@@ -109,10 +90,9 @@ class StateManager {
 	}
 
 	/**
-	 * Set a state property and notify listeners
+	 * Set a state property and settle any dependency waits on it
 	 */
 	set(key, value) {
-		const oldValue = this.state[key];
 		this.state[key] = value;
 
 		if (
@@ -121,7 +101,6 @@ class StateManager {
 			this.state.dependenciesReady[key] = value !== null && value !== undefined;
 		}
 
-		this.emit(`${key}:changed`, { key, value, oldValue });
 		this.checkDependencyQueue(key);
 		this.checkInitializationComplete();
 		return this;
@@ -132,52 +111,6 @@ class StateManager {
 	 */
 	get(key) {
 		return this.state[key];
-	}
-
-	/**
-	 * Subscribe to state changes
-	 */
-	on(event, callback) {
-		if (!this.listeners.has(event)) {
-			this.listeners.set(event, []);
-		}
-		this.listeners.get(event).push(callback);
-		return this;
-	}
-
-	/**
-	 * Unsubscribe from state changes
-	 */
-	off(event, callback) {
-		if (this.listeners.has(event)) {
-			const callbacks = this.listeners.get(event);
-			const index = callbacks.indexOf(callback);
-			if (index > -1) {
-				callbacks.splice(index, 1);
-			}
-		}
-		return this;
-	}
-
-	/**
-	 * Emit an event to all listeners
-	 */
-	emit(event, data) {
-		if (this.listeners.has(event)) {
-			const callbacks = this.listeners.get(event);
-			callbacks.forEach((callback, idx) => {
-				try {
-					callback(data);
-				} catch (error) {
-					const callbackName = callback.name || 'anonymous';
-					console.error(
-						`[State] Error in state listener for event "${event}" (listener ${idx + 1}/${callbacks.length}, function: ${callbackName}):`,
-						error,
-					);
-				}
-			});
-		}
-		return this;
 	}
 
 	/**
@@ -266,7 +199,6 @@ class StateManager {
 		if (coreReady && !this.state.initialized && this.state.initializing) {
 			this.state.initialized = true;
 			this.state.initializing = false;
-			this.emit('app:initialized', { state: this.state });
 		}
 	}
 
@@ -280,218 +212,6 @@ class StateManager {
 		}
 
 		this.state.initializing = true;
-		this.emit('app:initializing', { state: this.state });
-	}
-
-	/**
-	 * Reset the entire state (for testing or new files)
-	 */
-	reset() {
-		Object.assign(this.state, {
-			textArtCanvas: null,
-			palette: null,
-			font: null,
-			fontWidth: null,
-			fontHeight: null,
-			modal: null,
-			cursor: null,
-			selectionCursor: null,
-			selectionTool: null,
-			positionInfo: null,
-			toolPreview: null,
-			pasteTool: null,
-			chat: null,
-			sampleTool: null,
-			network: null,
-			worker: null,
-			title: null,
-			initialized: false,
-			initializing: false,
-			dependenciesReady: {
-				palette: false,
-				textArtCanvas: false,
-				font: false,
-				modal: false,
-				cursor: false,
-				selectionCursor: false,
-				selectionTool: false,
-				positionInfo: false,
-				toolPreview: false,
-				pasteTool: false,
-			},
-		});
-		this.emit('app:reset', { state: this.state });
-	}
-
-	/**
-	 * Get current initialization status
-	 */
-	getInitializationStatus() {
-		return {
-			initialized: this.state.initialized,
-			initializing: this.state.initializing,
-			dependenciesReady: { ...this.state.dependenciesReady },
-			readyCount: Object.values(this.state.dependenciesReady).filter(Boolean)
-				.length,
-			totalCount: Object.keys(this.state.dependenciesReady).length,
-		};
-	}
-
-	/**
-	 * Helper method to safely access nested properties
-	 */
-	safely(callback) {
-		try {
-			return callback(this.state);
-		} catch (error) {
-			console.error('[State] Error accessing:', error);
-			return null;
-		}
-	}
-
-	/**
-	 * Convert Uint16Array to base64 string (optimized for localStorage)
-	 */
-	_uint16ArrayToBase64(uint16Array) {
-		// Convert Uint16Array to Uint8Array (viewing the same buffer)
-		const uint8Array = new Uint8Array(
-			uint16Array.buffer,
-			uint16Array.byteOffset,
-			uint16Array.byteLength,
-		);
-
-		// Convert to binary string in chunks to avoid stack overflow on large arrays
-		const chunkSize = 8192;
-		let binary = '';
-		for (let i = 0; i < uint8Array.length; i += chunkSize) {
-			const chunk = uint8Array.subarray(
-				i,
-				Math.min(i + chunkSize, uint8Array.length),
-			);
-			binary += String.fromCharCode.apply(null, chunk);
-		}
-
-		return btoa(binary);
-	}
-
-	/**
-	 * Convert Uint8Array to base64 string (optimized for localStorage)
-	 */
-	_uint8ArrayToBase64(uint8Array) {
-		// Convert to binary string in chunks to avoid stack overflow on large arrays
-		const chunkSize = 8192;
-		let binary = '';
-		for (let i = 0; i < uint8Array.length; i += chunkSize) {
-			const chunk = uint8Array.subarray(
-				i,
-				Math.min(i + chunkSize, uint8Array.length),
-			);
-			binary += String.fromCharCode.apply(null, chunk);
-		}
-
-		return btoa(binary);
-	}
-
-	/**
-	 * Serialize application state for localStorage
-	 */
-	serializeState() {
-		const serialized = {};
-
-		try {
-			if (
-				this.state.textArtCanvas &&
-				typeof this.state.textArtCanvas.getImageData === 'function'
-			) {
-				const imageData = this.state.textArtCanvas.getImageData();
-				const columns = this.state.textArtCanvas.getColumns();
-				const rows = this.state.textArtCanvas.getRows();
-				const iceColors = this.state.textArtCanvas.getIceColors();
-
-				const compressed = Compression.compressUint16Array(imageData);
-
-				if (compressed) {
-					serialized[STATE_SYNC_KEYS.CANVAS_DATA] = {
-						imageData: Compression.compressedToBase64(compressed),
-						columns: columns,
-						rows: rows,
-						compressed: true,
-						originalLength: imageData.length,
-					};
-				} else {
-					serialized[STATE_SYNC_KEYS.CANVAS_DATA] = {
-						imageData: this._uint16ArrayToBase64(imageData),
-						columns: columns,
-						rows: rows,
-						compressed: false,
-					};
-				}
-
-				serialized[STATE_SYNC_KEYS.ICE_COLORS] = iceColors;
-			}
-
-			if (
-				this.state.textArtCanvas &&
-				typeof this.state.textArtCanvas.getCurrentFontName === 'function'
-			) {
-				serialized[STATE_SYNC_KEYS.FONT_NAME] =
-					this.state.textArtCanvas.getCurrentFontName();
-			}
-
-			if (
-				this.state.font &&
-				typeof this.state.font.getLetterSpacing === 'function'
-			) {
-				serialized[STATE_SYNC_KEYS.LETTER_SPACING] =
-					this.state.font.getLetterSpacing();
-			}
-
-			if (
-				this.state.font &&
-				typeof this.state.font.getScaleFactor === 'function'
-			) {
-				serialized[STATE_SYNC_KEYS.SCALE_FACTOR] =
-					this.state.font.getScaleFactor();
-			} else {
-				serialized[STATE_SYNC_KEYS.SCALE_FACTOR] = 1; // Default
-			}
-
-			if (this.state.palette) {
-				if (typeof this.state.palette.getPalette === 'function') {
-					const paletteColors = this.state.palette.getPalette();
-					// 8-bit RGBA to 6-bit RGB, matching the XBIN format
-					serialized[STATE_SYNC_KEYS.PALETTE_COLORS] = paletteColors.map(
-						color => {
-							return [
-								Math.min(color[0] >> 2, 63),
-								Math.min(color[1] >> 2, 63),
-								Math.min(color[2] >> 2, 63),
-								color[3],
-							];
-						},
-					);
-				}
-			}
-
-			if (
-				this.state.textArtCanvas &&
-				typeof this.state.textArtCanvas.getXBFontData === 'function'
-			) {
-				const xbFontData = this.state.textArtCanvas.getXBFontData();
-				if (xbFontData && xbFontData.bytes) {
-					// Use base64 encoding instead of Array.from for much better performance
-					serialized[STATE_SYNC_KEYS.XBIN_FONT_DATA] = {
-						bytes: this._uint8ArrayToBase64(xbFontData.bytes),
-						width: xbFontData.width,
-						height: xbFontData.height,
-					};
-				}
-			}
-		} catch (error) {
-			console.error('[State] Error serializing state:', error);
-		}
-
-		return serialized;
 	}
 
 	/**
@@ -676,32 +396,6 @@ class StateManager {
 	}
 
 	/**
-	 * Convert base64 string to Uint16Array (optimized deserialization)
-	 */
-	_base64ToUint16Array(base64String) {
-		const binaryString = atob(base64String);
-		const len = binaryString.length;
-		const bytes = new Uint8Array(len);
-		for (let i = 0; i < len; i++) {
-			bytes[i] = binaryString.charCodeAt(i);
-		}
-		return new Uint16Array(bytes.buffer);
-	}
-
-	/**
-	 * Convert base64 string to Uint8Array (optimized deserialization)
-	 */
-	_base64ToUint8Array(base64String) {
-		const binaryString = atob(base64String);
-		const len = binaryString.length;
-		const bytes = new Uint8Array(len);
-		for (let i = 0; i < len; i++) {
-			bytes[i] = binaryString.charCodeAt(i);
-		}
-		return bytes;
-	}
-
-	/**
 	 * Restore state from localStorage after components are initialized,
 	 * dispatching events so the UI updates. Reads compressed,
 	 * uncompressed, and legacy storage formats.
@@ -714,19 +408,6 @@ class StateManager {
 
 		stateManager.state.modal.loading('Reloading editor from local storage...');
 		this.loadingFromStorage = true;
-
-		if (this.state.textArtCanvas) {
-			// Temporarily set iceColors to true to prevent blink timer from starting
-			const originalStopBlinkTimer = this.state.textArtCanvas.stopBlinkTimer;
-			const restorationComplete = false;
-			// Override stopBlinkTimer to prevent it from restarting
-			this.state.textArtCanvas.stopBlinkTimer = () => {
-				if (!restorationComplete) {
-					// During restoration, just stop it without allowing restart
-					originalStopBlinkTimer();
-				}
-			};
-		}
 
 		const closeModal = () => {
 			if (
@@ -967,13 +648,7 @@ const State = {
 
 	// Utility methods
 	waitFor: stateManager.waitFor,
-	on: stateManager.on,
-	off: stateManager.off,
-	emit: stateManager.emit,
-	reset: stateManager.reset,
 	startInitialization: stateManager.startInitialization,
-	getInitializationStatus: stateManager.getInitializationStatus,
-	safely: stateManager.safely,
 
 	// LocalStorage sync methods
 	saveToLocalStorage: stateManager.saveToLocalStorage,

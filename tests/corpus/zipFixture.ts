@@ -3,7 +3,31 @@
  * inverse of core/codecs/zip.ts, kept test-side on purpose (the editor
  * never writes zips).
  */
-import { deflateRaw } from '../../src/js/core/codecs/util.js';
+// the one deflate COMPRESSOR in the tree: production only inflates,
+// so the fixture builder owns this helper (writer/reader pump, since
+// jsdom's Blob has no stream())
+const deflateRaw = async (bytes: Uint8Array): Promise<Uint8Array> => {
+	const cs = new CompressionStream('deflate-raw');
+	const writer = cs.writable.getWriter();
+	void writer.write(new Uint8Array(bytes));
+	void writer.close();
+	const chunks: Uint8Array[] = [];
+	const reader = cs.readable.getReader();
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) {
+			break;
+		}
+		chunks.push(value);
+	}
+	const out = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0));
+	let at = 0;
+	for (const chunk of chunks) {
+		out.set(chunk, at);
+		at += chunk.length;
+	}
+	return out;
+};
 
 const crcTable = (() => {
 	const table = new Uint32Array(256);

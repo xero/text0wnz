@@ -2249,7 +2249,6 @@ const createSelectionTool = () => {
 	};
 };
 export {
-	createFKeys,
 	createCursor,
 	createSelectionCursor,
 	createKeyboardController,
