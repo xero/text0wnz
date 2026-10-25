@@ -182,12 +182,27 @@ export const overlayHalfBlock = (
 /**
  * v2 optimizeBlocks per-cell pass: rewrite bright-background (bg >= 8)
  * blocky cells into equivalent dim-background forms so they stay legal
- * without ice colors. Returns the replacement or null to keep the cell.
+ * without ice colors, plus moebiusXBIN's black-foreground
+ * normalization (black ink cannot be told from background, so those
+ * cells canonicalize to the form every other editor writes). Returns
+ * the replacement or null to keep the cell.
  */
 export const optimizeCell = (cell: EditCell): EditCell | null => {
 	const { charCode, fg, bg } = cell;
-	// the bright-bg rewrite is classic16 ice semantics only; extended
-	// color words pass through untouched
+	// both rewrites are classic16 semantics only; extended color words
+	// pass through untouched
+	if (fg === 0 && bg >= 0 && bg <= 15) {
+		if (bg === 0 || charCode === FULL_BLOCK) {
+			// all-black pixels regardless of glyph shape
+			return { charCode: 32, fg: 7, bg: 0 };
+		}
+		if (charCode === LOWER_HALF) {
+			return { charCode: UPPER_HALF, fg: bg, bg: 0 };
+		}
+		if (charCode === UPPER_HALF) {
+			return { charCode: LOWER_HALF, fg: bg, bg: 0 };
+		}
+	}
 	if (bg < 8 || bg > 15) {
 		return null;
 	}

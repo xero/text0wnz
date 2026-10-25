@@ -140,6 +140,32 @@ const buildEngines = async () => {
 	const live = await makeV2();
 	live.resize(COLUMNS, ROWS);
 	live.name = 'v2-live';
+	// the canvas area ops went plane native (selection fidelity); the
+	// parity script speaks u16, and on classic content the EditCell
+	// nibble mapping is exact, so these adapters stay lossless here
+	live.getArea = (x, y, w, h) => {
+		const area = live.getAreaCells(x, y, w, h);
+		const data = new Uint16Array(w * h);
+		for (let i = 0; i < data.length; i++) {
+			const c = area.cells[i];
+			data[i] = ((c.charCode & 0xff) << 8) | ((c.bg & 15) << 4) | (c.fg & 15);
+		}
+		return { data, width: w, height: h };
+	};
+	live.setArea = (area, x, y) =>
+		live.setAreaCells(
+			{
+				cells: Array.from(area.data, word => ({
+					charCode: word >> 8,
+					fg: word & 15,
+					bg: (word >> 4) & 15,
+				})),
+				width: area.width,
+				height: area.height,
+			},
+			x,
+			y,
+		);
 	const reference = createV2ReferenceEngine(COLUMNS, ROWS);
 	reference.name = 'v2-reference';
 	return [live, reference, wrapV3()];

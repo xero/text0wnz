@@ -127,3 +127,29 @@ describe('ice-blink', () => {
 		expect(lintDocForFormat(plain, 'ans').ok).toBe(true);
 	});
 });
+
+describe('bright-bg-folds', () => {
+	it('flags steady bright backgrounds in non-ice docs', () => {
+		const doc = createDocV3({ columns: 2, rows: 1, mode: 'free' });
+		doc.setCell(0, 0, 0, {
+			glyph: glyphWord(65, 0),
+			fg: paletteColor(7),
+			bg: paletteColor(9),
+		});
+		const report = lintDocForFormat(doc, 'ans');
+		const kinds = report.issues.map(i => i.kind);
+		expect(kinds).toContain('bright-bg-folds');
+	});
+
+	it('stays quiet under ice and for folded blink cells', () => {
+		const ice = createDocV3({ columns: 1, rows: 1, iceColors: true });
+		ice.setCell(0, 0, 0, {
+			glyph: glyphWord(65, 0),
+			fg: paletteColor(7),
+			bg: paletteColor(9),
+		});
+		expect(lintDocForFormat(ice, 'ans').issues.map(i => i.kind)).not.toContain(
+			'bright-bg-folds',
+		);
+	});
+});

@@ -318,6 +318,24 @@ export const createV2ReferenceEngine = (initialColumns, initialRows) => {
 			const attribute = imageData[index];
 			const background = (attribute >> 4) & 15;
 			let foreground;
+			// post-v2, deliberate: moebiusXBIN's black-foreground
+			// normalization, adopted across every engine (2026-10 audit).
+			// Black ink is indistinguishable from background, so those
+			// cells canonicalize to the form the ancestor writes.
+			if ((attribute & 15) === 0) {
+				if (background === 0 || attribute >> 8 === FULL_BLOCK) {
+					draw(index, CHAR_SPACE, 7, 0, block[1], block[2]);
+					return;
+				}
+				if (attribute >> 8 === UPPER_HALFBLOCK) {
+					draw(index, LOWER_HALFBLOCK, background, 0, block[1], block[2]);
+					return;
+				}
+				if (attribute >> 8 === LOWER_HALFBLOCK) {
+					draw(index, UPPER_HALFBLOCK, background, 0, block[1], block[2]);
+					return;
+				}
+			}
 			if (background >= 8) {
 				switch (attribute >> 8) {
 					case CHAR_NULL:

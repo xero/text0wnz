@@ -31,19 +31,21 @@ vi.mock('../../src/js/client/state.js', () => {
 		},
 		getColumns: () => 80,
 		getRows: () => 25,
-		getArea: (x, y, width, height) => {
-			const data = new Uint16Array(width * height);
+		getAreaCells: (x, y, width, height) => {
+			const cells = new Array(width * height);
 			for (let dy = 0, j = 0; dy < height; dy++) {
 				for (let dx = 0; dx < width; dx++, j++) {
-					data[j] = buffer[(y + dy) * 80 + (x + dx)];
+					const w = buffer[(y + dy) * 80 + (x + dx)];
+					cells[j] = { charCode: w >> 8, fg: w & 15, bg: (w >> 4) & 15 };
 				}
 			}
-			return { data, width, height };
+			return { cells, width, height };
 		},
-		setArea: (area, x, y) => {
+		setAreaCells: (area, x, y) => {
 			for (let py = 0; py < area.height; py++) {
 				for (let px = 0; px < area.width; px++) {
-					buffer[(y + py) * 80 + (x + px)] = area.data[py * area.width + px];
+					const c = area.cells[py * area.width + px];
+					buffer[(y + py) * 80 + (x + px)] = pack(c.charCode, c.fg, c.bg);
 				}
 			}
 		},

@@ -29,6 +29,15 @@ export const attrsOf = (word: number): number => (word >>> 16) & 0xff;
 
 export const PALETTE_TAG = 0x80000000;
 
+/**
+ * EditCell boundary tag for frozen RGB words that collide with the
+ * classic index range 0-15 (tundra near-black fades): bit 30, above
+ * the 24 RGB bits and below PALETTE_TAG. The editor applies it on
+ * read and strips it on write; everything between treats the value as
+ * an opaque extended color instead of a bright palette index.
+ */
+export const RGB_EDIT_TAG = 0x40000000;
+
 export const paletteColor = (index: number): number =>
 	(PALETTE_TAG | (index & 0x00ffffff)) >>> 0;
 export const rgbColor = (r: number, g: number, b: number): number =>

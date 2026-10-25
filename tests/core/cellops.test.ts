@@ -87,6 +87,37 @@ describe('cellops', () => {
 		expect(optimizeCell({ charCode: 32, fg: 7, bg: 2 })).toBeNull();
 	});
 
+	it('normalizes black foreground cells like moebiusXBIN', () => {
+		// all-black pixels collapse to the canonical blank
+		expect(optimizeCell({ charCode: 65, fg: 0, bg: 0 })).toEqual({
+			charCode: 32,
+			fg: 7,
+			bg: 0,
+		});
+		expect(optimizeCell({ charCode: FULL_BLOCK, fg: 0, bg: 3 })).toEqual({
+			charCode: 32,
+			fg: 7,
+			bg: 0,
+		});
+		// black half blocks flip so the color rides the foreground
+		expect(optimizeCell({ charCode: LOWER_HALF, fg: 0, bg: 3 })).toEqual({
+			charCode: UPPER_HALF,
+			fg: 3,
+			bg: 0,
+		});
+		expect(optimizeCell({ charCode: UPPER_HALF, fg: 0, bg: 3 })).toEqual({
+			charCode: LOWER_HALF,
+			fg: 3,
+			bg: 0,
+		});
+		// non-blocky dim cells stay, like the ancestor
+		expect(optimizeCell({ charCode: 65, fg: 0, bg: 3 })).toBeNull();
+		// extended color words pass through untouched
+		expect(
+			optimizeCell({ charCode: FULL_BLOCK, fg: 0, bg: 0x80000009 }),
+		).toBeNull();
+	});
+
 	it('shade cycle walks both directions like the v2 brush', () => {
 		expect(shadeCycle(65, 7, 7, false)).toBe(SHADE_LIGHT);
 		expect(shadeCycle(SHADE_LIGHT, 7, 7, false)).toBe(SHADE_MEDIUM);

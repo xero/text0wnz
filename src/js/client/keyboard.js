@@ -1152,7 +1152,9 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 	};
 
 	const copy = () => {
-		buffer = State.textArtCanvas.getArea(x, y, width, height);
+		// plane-native cells: the u16 area would quantize truecolor and
+		// turn unicode into '?' on every copy/paste round trip
+		buffer = State.textArtCanvas.getAreaCells(x, y, width, height);
 		pasteItem.classList.remove('disabled');
 	};
 
@@ -1184,7 +1186,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 		) {
 			State.historyLabels?.pend('Paste');
 			State.textArtCanvas.startUndo();
-			State.textArtCanvas.setArea(buffer, x, y);
+			State.textArtCanvas.setAreaCells(buffer, x, y);
 		}
 	};
 
@@ -1215,11 +1217,8 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 					if (targetX >= columns || targetY >= rows) {
 						continue;
 					}
-					const word = buffer.data[py * buffer.width + px];
-					const code = word >> 8;
-					const fg = word & 15;
-					const bg = (word >> 4) & 15;
-					if (mode === 'transparent' && isBlankCell(code, bg)) {
+					const cell = buffer.cells[py * buffer.width + px];
+					if (mode === 'transparent' && isBlankCell(cell.charCode, cell.bg)) {
 						continue;
 					}
 					if (mode === 'under') {
@@ -1230,7 +1229,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 							continue;
 						}
 					}
-					draw(code, fg, bg, targetX, targetY);
+					draw(cell.charCode, cell.fg, cell.bg, targetX, targetY);
 				}
 			}
 		}, false);
@@ -1567,27 +1566,21 @@ const createSelectionTool = () => {
 		State.textArtCanvas.draw(draw => {
 			for (let py = 0; py < maxHeight; py++) {
 				for (let px = 0; px < maxWidth; px++) {
-					const srcIndex = py * area.width + px;
-					const sourceAttrib = area.data[srcIndex] || 0;
-					const charCode = sourceAttrib >> 8;
-					const fg = sourceAttrib & 15;
-					const bg = (sourceAttrib >> 4) & 15;
+					const cell = area.cells[py * area.width + px];
 
 					// blanks move transparently, like paste transparent:
 					// a space is as blank as char 0
-					if (!isBlankCell(charCode, bg)) {
-						draw(charCode, fg, bg, x + px, y + py);
+					if (cell && !isBlankCell(cell.charCode, cell.bg)) {
+						draw(cell.charCode, cell.fg, cell.bg, x + px, y + py);
 					} else if (
 						targetArea &&
 						px < targetArea.width &&
 						py < targetArea.height
 					) {
-						const tgtIndex = py * targetArea.width + px;
-						const targetAttrib = targetArea.data[tgtIndex] || 0;
-						const charCode = targetAttrib >> 8;
-						const fg = targetAttrib & 15;
-						const bg = (targetAttrib >> 4) & 15;
-						draw(charCode, fg, bg, x + px, y + py);
+						const t = targetArea.cells[py * targetArea.width + px];
+						if (t) {
+							draw(t.charCode, t.fg, t.bg, x + px, y + py);
+						}
 					}
 					// else: leave existing canvas pixel alone
 				}
@@ -1619,7 +1612,7 @@ const createSelectionTool = () => {
 		}
 		State.textArtCanvas.startUndo();
 		if (!selectionData) {
-			selectionData = State.textArtCanvas.getArea(
+			selectionData = State.textArtCanvas.getAreaCells(
 				selection.x,
 				selection.y,
 				selection.width,
@@ -1628,10 +1621,10 @@ const createSelectionTool = () => {
 		}
 		// Restore what was underneath the current position (if any)
 		if (underlyingData) {
-			State.textArtCanvas.setArea(underlyingData, selection.x, selection.y);
+			State.textArtCanvas.setAreaCells(underlyingData, selection.x, selection.y);
 		}
 		// Store what's underneath the new position
-		underlyingData = State.textArtCanvas.getArea(
+		underlyingData = State.textArtCanvas.getAreaCells(
 			newX,
 			newY,
 			selection.width,
@@ -1646,17 +1639,16 @@ const createSelectionTool = () => {
 		);
 	};
 
-	const createEmptyArea = (width, height) => {
-		const data = new Uint16Array(width * height);
-		for (let i = 0; i < data.length; i++) {
-			data[i] = 0; // char code 0, foreground 0, background 0
-		}
-		return {
-			data: data,
-			width: width,
-			height: height,
-		};
-	};
+	const createEmptyArea = (width, height) => ({
+		// char code 0, foreground 0, background 0
+		cells: Array.from({ length: width * height }, () => ({
+			charCode: 0,
+			fg: 0,
+			bg: 0,
+		})),
+		width: width,
+		height: height,
+	});
 
 	const toggleMoveMode = () => {
 		moveMode = !moveMode;
@@ -1665,7 +1657,7 @@ const createSelectionTool = () => {
 			State.selectionCursor.getElement().classList.add('moveMode');
 			const selection = State.selectionCursor.getSelection();
 			if (selection) {
-				selectionData = State.textArtCanvas.getArea(
+				selectionData = State.textArtCanvas.getAreaCells(
 					selection.x,
 					selection.y,
 					selection.width,
@@ -1705,7 +1697,7 @@ const createSelectionTool = () => {
 						originalPosition.height,
 					);
 					// the original position now holds part of the moved selection
-					const currentAtOriginal = State.textArtCanvas.getArea(
+					const currentAtOriginal = State.textArtCanvas.getAreaCells(
 						originalPosition.x,
 						originalPosition.y,
 						originalPosition.width,

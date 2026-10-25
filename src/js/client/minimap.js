@@ -104,8 +104,10 @@ const createMinimap = () => {
 		const data = image.data;
 		for (let i = 0, j = 0; i < columns * rows; i++, j += 4) {
 			const ink = INK.get(frame.glyph[i] & 0xffff) ?? 0.35;
-			const fg = State.palette.getRGBAColor(frame.fg[i]);
-			const bg = State.palette.getRGBAColor(frame.bg[i]);
+			// plane words, not indexes: the index resolver paints raw RGB
+			// words 0-15 (tundra near-black fades) as bright palette entries
+			const fg = State.palette.getRGBAColorForWord(frame.fg[i]);
+			const bg = State.palette.getRGBAColorForWord(frame.bg[i]);
 			data[j] = bg[0] * (1 - ink) + fg[0] * ink;
 			data[j + 1] = bg[1] * (1 - ink) + fg[1] * ink;
 			data[j + 2] = bg[2] * (1 - ink) + fg[2] * ink;

@@ -140,8 +140,8 @@ describe('Canvas Module', () => {
 			expect(canvas.undo).toBeDefined();
 			expect(canvas.redo).toBeDefined();
 			expect(canvas.deleteArea).toBeDefined();
-			expect(canvas.getArea).toBeDefined();
-			expect(canvas.setArea).toBeDefined();
+			expect(canvas.getAreaCells).toBeDefined();
+			expect(canvas.setAreaCells).toBeDefined();
 			expect(canvas.quickDraw).toBeDefined();
 			expect(canvas.setMirrorMode).toBeDefined();
 			expect(canvas.getMirrorMode).toBeDefined();
@@ -212,8 +212,8 @@ describe('Canvas Module', () => {
 		it('should handle area operations', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			expect(canvas.getArea).toBeDefined();
-			expect(canvas.setArea).toBeDefined();
+			expect(canvas.getAreaCells).toBeDefined();
+			expect(canvas.setAreaCells).toBeDefined();
 			expect(canvas.deleteArea).toBeDefined();
 		});
 
@@ -494,21 +494,29 @@ describe('Canvas Module', () => {
 		it('should support get area operation', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			expect(typeof canvas.getArea).toBe('function');
+			expect(typeof canvas.getAreaCells).toBe('function');
 
-			const result = canvas.getArea(0, 0, 5, 5);
+			const result = canvas.getAreaCells(0, 0, 5, 5);
 			expect(result).toBeDefined();
-			expect(result).toHaveProperty('data');
+			expect(result).toHaveProperty('cells');
 		});
 
 		it('should support set area operation', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			expect(typeof canvas.setArea).toBe('function');
+			expect(typeof canvas.setAreaCells).toBe('function');
 
-			const areaData = { data: new Uint16Array(25), width: 5, height: 5 };
+			const areaData = {
+				cells: Array.from({ length: 25 }, () => ({
+					charCode: 0,
+					fg: 0,
+					bg: 0,
+				})),
+				width: 5,
+				height: 5,
+			};
 			expect(() => {
-				canvas.setArea(0, 0, areaData);
+				canvas.setAreaCells(areaData, 0, 0);
 			}).not.toThrow();
 		});
 
