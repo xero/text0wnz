@@ -100,6 +100,13 @@ export const readLhaEntries = (bytes: Uint8Array): LhaEntry[] => {
 		let next = 0;
 		if (level === 0 || level === 1) {
 			const headerEnd = pos + 2 + bytes[pos];
+			// the loop guard stops at pos + 21, one short of the name
+			// length byte: reading past the end made nameLength NaN, and
+			// NaN comparisons waved the torn-header guard through into a
+			// phantom entry
+			if (pos + 22 > bytes.length) {
+				throw new CodecError(`lha header torn at ${pos}`);
+			}
 			const nameLength = bytes[pos + 21];
 			if (
 				pos + 22 + nameLength + 2 > bytes.length ||

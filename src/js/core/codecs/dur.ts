@@ -112,8 +112,10 @@ export const decodeDur = async (
 	}
 	const version = movie.formatVersion ?? 0;
 	if (version < DUR_MIN_VERSION) {
+		// v5/6 are JSON too (legacy palette semantics this reader does
+		// not translate); the old message blamed the container format
 		throw new CodecError(
-			`durdraw format version ${version} predates the JSON container (v7+)`,
+			`durdraw format version ${version} uses the legacy palette (v7+ only)`,
 		);
 	}
 	if (version > DUR_MAX_VERSION) {
@@ -268,9 +270,13 @@ export const encodeDur = async (
 			colorMap.push(rowColors);
 		}
 		return {
-			...(frame.delayMs !== undefined && frame.delayMs > 0
-				? { delay: frame.delayMs / 1000 }
-				: {}),
+			// durdraw subscripts frame['delay'] unguarded and always writes
+			// the key itself; omitting it made every static .dur we wrote
+			// fail to load there. Zero is durdraw's own "no delay" value.
+			delay:
+				frame.delayMs !== undefined && frame.delayMs > 0
+					? frame.delayMs / 1000
+					: 0,
 			contents,
 			colorMap,
 		};

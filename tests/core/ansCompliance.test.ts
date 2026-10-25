@@ -180,3 +180,54 @@ describe('SAUCE writer compliance', () => {
 		expect(parsed!.payloadSize).toBe(payload.length);
 	});
 });
+
+describe('XBin 512-glyph mode', () => {
+	it('fg intensity selects the upper page and round-trips', async () => {
+		const { makeXBin, makeXBinFont, makeXBinPalette } =
+			await import('../corpus/generators.js');
+		const { decodeXBin, encodeXBin } =
+			await import('../../src/js/core/codecs/xbin.js');
+		const columns = 4;
+		const rows = 1;
+		// cell 0: char 65 with BRIGHT fg 12 = upper glyph 65, dim fg 4;
+		// cell 1: char 65 with dim fg 4 = classic glyph, untouched
+		const cells = Uint16Array.from([
+			(65 << 8) | 12,
+			(65 << 8) | 4,
+			32 << 8,
+			32 << 8,
+		]);
+		const font = makeXBinFont(512, 16);
+		const fileBytes = makeXBin({
+			columns,
+			rows,
+			palette: makeXBinPalette(),
+			font,
+			font512: true,
+			rawCells: cells,
+			sauce: {},
+		});
+		const result = decodeXBin(fileBytes);
+		expect(result.font512).toBe(true);
+		const upper = result.doc.getCell(0, 0, 0);
+		const classic = result.doc.getCell(0, 1, 0);
+		const upperDef = result.doc.glyphTable.get(upper.glyph & 0xffff);
+		expect(upperDef?.fontSlot).toBe(3);
+		expect(upperDef?.codepoint).toBe(0xe000 + 65);
+		expect(upper.fg).toBe(paletteColor(4));
+		expect(classic.glyph & 0xffff).toBe(65);
+		expect(classic.fg).toBe(paletteColor(4));
+
+		const reencoded = encodeXBin(result.doc, {
+			palette6: result.palette6,
+			fontBytes: result.fontBytes,
+			fontHeight: result.fontHeight,
+			compress: false,
+		});
+		const second = decodeXBin(reencoded);
+		const roundTripped = second.doc.getCell(0, 0, 0);
+		const rtDef = second.doc.glyphTable.get(roundTripped.glyph & 0xffff);
+		expect(rtDef?.codepoint).toBe(0xe000 + 65);
+		expect(roundTripped.fg).toBe(paletteColor(4));
+	});
+});

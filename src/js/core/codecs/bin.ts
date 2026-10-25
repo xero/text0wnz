@@ -42,13 +42,18 @@ export const decodeBin = (bytes: Uint8Array): DecodeResult => {
 		sauce && sauce.dataType === 5 && sauce.fileType > 0
 			? sauce.fileType * 2
 			: DEFAULT_BIN_COLUMNS;
-	const payloadSize = sauce
-		? sauce.fileSize > 0
-			? sauce.fileSize
-			: bytes.length
-		: bytes.length;
-	const rows = Math.floor(payloadSize / columns / 2);
-	const imageData = bytesToU16Cells(bytes, 0, columns * rows * 2);
+	// payloadSize already subtracts the COMNT block and EOF when the
+	// record's fileSize is 0; the old whole-length fallback decoded the
+	// SAUCE trailer as extra canvas rows
+	const payloadSize = sauce ? sauce.payloadSize : bytes.length;
+	// a trailing partial row pads instead of flooring away: PabloDraw
+	// and moebiusXBIN both keep it
+	const rows = Math.max(1, Math.ceil(payloadSize / columns / 2));
+	const imageData = bytesToU16Cells(
+		bytes,
+		0,
+		Math.min(columns * rows * 2, payloadSize),
+	);
 	const doc = u16ToV3({
 		imageData,
 		columns,
@@ -91,6 +96,11 @@ export const encodeBin = (
 	);
 	if (columns % 2 !== 0) {
 		throw new CodecError(`BIN needs an even column count, got ${columns}`);
+	}
+	if (columns > 510) {
+		// the SAUCE FileType byte holds width/2; wider silently wrapped
+		// mod 256 and reloaded scrambled
+		throw new CodecError(`BIN caps at 510 columns, got ${columns}`);
 	}
 	const payload = u16CellsToBytes(imageData);
 	const meta = options.meta ?? {};

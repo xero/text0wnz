@@ -25,7 +25,7 @@ import {
 	HEX_CELL_WIDTH,
 	readBlock,
 } from '../core/hexfont.js';
-import { FONT_SLOT_UNIFONT, FONT_SLOT_UNSCII } from '../core/doc.js';
+import { FONT_SLOT_UNIFONT, FONT_SLOT_UNSCII, FONT_SLOT_XB, XB_UPPER_BASE } from '../core/doc.js';
 
 const SLOT_KEYS = new Map([
 	[FONT_SLOT_UNSCII, 'unscii16'],
@@ -129,6 +129,38 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 		return out;
 	};
 
+	// the 512-glyph XB upper page: bits come from the live embedded
+	// font (8px wide, one byte per row), never from network blocks
+	let embedded = null;
+	const setEmbeddedFont = (bytes, height) => {
+		embedded =
+			bytes && height > 0 && bytes.length === height * 512
+				? { bytes, height }
+				: null;
+	};
+	const xbUpperBits = (codepoint, fontW, fontH) => {
+		if (!embedded) {
+			return null; // the font left with its doc: substitute box
+		}
+		const index = codepoint - XB_UPPER_BASE + 256;
+		if (index < 256 || index > 511) {
+			return null;
+		}
+		const rows = embedded.bytes.subarray(
+			index * embedded.height,
+			(index + 1) * embedded.height,
+		);
+		const out = new Uint8Array(fontW * fontH);
+		for (let y = 0; y < fontH; y++) {
+			const sy = Math.floor((y * embedded.height) / fontH);
+			for (let x = 0; x < fontW; x++) {
+				const sx = Math.floor((x * 8) / fontW);
+				out[y * fontW + x] = (rows[sy] >> (7 - sx)) & 1;
+			}
+		}
+		return out;
+	};
+
 	/** single-font lookup; glyphBits layers the cross-font fallback */
 	const glyphBitsIn = (fontKey, codepoint, fontW, fontH) => {
 		if (!fontHasBlock(fontKey, codepoint)) {
@@ -165,6 +197,9 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 	 * Unifont). Only a definitive miss everywhere returns null.
 	 */
 	const glyphBits = (fontSlot, codepoint, fontW, fontH) => {
+		if (fontSlot === FONT_SLOT_XB) {
+			return xbUpperBits(codepoint, fontW, fontH);
+		}
 		const primary = SLOT_KEYS.get(fontSlot);
 		if (!primary) {
 			return null;
@@ -265,6 +300,7 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 		previewBits,
 		pickSlot,
 		preload,
+		setEmbeddedFont,
 		loadManifest,
 		/** test/debug visibility */
 		stats: () => ({

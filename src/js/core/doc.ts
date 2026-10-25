@@ -106,6 +106,14 @@ export interface GlyphDef {
 export const FONT_SLOT_CLASSIC = 0;
 export const FONT_SLOT_UNSCII = 1;
 export const FONT_SLOT_UNIFONT = 2;
+/**
+ * The upper page of a 512-glyph embedded XB font: codepoints are
+ * 0xE000 + upper glyph index (private use, so UTF-8 exports stay
+ * valid), bits served from the live font bytes, substitute box when
+ * the font is gone.
+ */
+export const FONT_SLOT_XB = 3;
+export const XB_UPPER_BASE = 0xe000;
 
 export interface GlyphTable {
 	get: (glyphId: number) => GlyphDef | undefined;
