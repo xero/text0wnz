@@ -106,6 +106,13 @@ export default ({ mode }) => {
 					}
 				}
 			},
+			{
+				// the favicon hrefs hardcode ./ui/; a custom VITE_UI_DIR used
+				// to break every icon link while the assets moved with it
+				name: 'ui-dir-hrefs',
+				transformIndexHtml: html =>
+					uiDir === 'ui/' ? html : html.replaceAll('"./ui/', `"./${uiDir}`),
+			},
 			htmlMinifierTerser({
 				minify: true,
 				html5: true,
@@ -395,9 +402,12 @@ export default ({ mode }) => {
 				injectManifest: {
 					globPatterns: [
 						'**/*.{js,css,html,woff2}',
-						'ui/*.svg',
+						// derived from VITE_UI_DIR like every emitted path: a
+						// custom ui dir used to silently drop these from the
+						// precache
+						`${uiDir}*.svg`,
 						'favicon.ico',
-						'ui/img/favicon.ico',
+						`${uiDir}img/favicon.ico`,
 					],
 					// opt-in instrumentation (?test/?profile flags): a normal
 					// session never loads these chunks, so they stay out of

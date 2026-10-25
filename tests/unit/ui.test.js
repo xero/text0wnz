@@ -458,7 +458,7 @@ describe('UI Utilities', () => {
 			websocketUI(true);
 
 			expect(excludedEl.style.display).toBe('none');
-			expect(includedEl.style.display).toBe('block');
+			expect(includedEl.style.display).toBe('');
 		});
 
 		it('should hide websocket elements when show is false', () => {
@@ -472,7 +472,7 @@ describe('UI Utilities', () => {
 
 			websocketUI(false);
 
-			expect(excludedEl.style.display).toBe('block');
+			expect(excludedEl.style.display).toBe('');
 			expect(includedEl.style.display).toBe('none');
 		});
 	});
@@ -1131,12 +1131,12 @@ describe('UI Utilities', () => {
 			document.body.appendChild(includedDiv);
 
 			websocketUI(true);
-			expect(includedDiv.style.display).toBe('block');
+			expect(includedDiv.style.display).toBe('');
 			expect(excludedDiv.style.display).toBe('none');
 
 			websocketUI(false);
 			expect(includedDiv.style.display).toBe('none');
-			expect(excludedDiv.style.display).toBe('block');
+			expect(excludedDiv.style.display).toBe('');
 		});
 
 		it('should handle multiple elements with websocket classes', async () => {
@@ -1158,8 +1158,8 @@ describe('UI Utilities', () => {
 
 			websocketUI(true);
 
-			expect(included1.style.display).toBe('block');
-			expect(included2.style.display).toBe('block');
+			expect(included1.style.display).toBe('');
+			expect(included2.style.display).toBe('');
 			expect(excluded1.style.display).toBe('none');
 			expect(excluded2.style.display).toBe('none');
 		});

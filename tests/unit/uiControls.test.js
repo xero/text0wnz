@@ -90,7 +90,7 @@ describe('UI Controls and Controllers', () => {
 			websocketUI(true);
 
 			expect(excludedEl.style.display).toBe('none');
-			expect(includedEl.style.display).toBe('block');
+			expect(includedEl.style.display).toBe('');
 		});
 
 		it('should hide websocket elements when show is false', () => {
@@ -104,7 +104,7 @@ describe('UI Controls and Controllers', () => {
 
 			websocketUI(false);
 
-			expect(excludedEl.style.display).toBe('block');
+			expect(excludedEl.style.display).toBe('');
 			expect(includedEl.style.display).toBe('none');
 		});
 	});

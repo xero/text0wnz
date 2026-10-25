@@ -322,12 +322,12 @@ describe('UI Advanced Utilities', () => {
 			document.body.appendChild(includedDiv);
 
 			websocketUI(true);
-			expect(includedDiv.style.display).toBe('block');
+			expect(includedDiv.style.display).toBe('');
 			expect(excludedDiv.style.display).toBe('none');
 
 			websocketUI(false);
 			expect(includedDiv.style.display).toBe('none');
-			expect(excludedDiv.style.display).toBe('block');
+			expect(excludedDiv.style.display).toBe('');
 		});
 
 		it('should handle multiple elements with websocket classes', async () => {
@@ -349,8 +349,8 @@ describe('UI Advanced Utilities', () => {
 
 			websocketUI(true);
 
-			expect(included1.style.display).toBe('block');
-			expect(included2.style.display).toBe('block');
+			expect(included1.style.display).toBe('');
+			expect(included2.style.display).toBe('');
 			expect(excluded1.style.display).toBe('none');
 			expect(excluded2.style.display).toBe('none');
 		});

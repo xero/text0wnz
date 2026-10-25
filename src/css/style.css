@@ -28,6 +28,13 @@
 	--dark-purp: #6e2aa5;
 	--indigo: #6366f1;
 	--cyber: #00bad7;
+	/* the darkmode toggle's easings (open props lineage): these were
+	   never declared, so its transitions computed to initial and the
+	   sun and beams snapped instead of easing */
+	--ease: cubic-bezier(0.25, 0, 0.3, 1);
+	--ease-out: cubic-bezier(0, 0, 0, 1);
+	--ease-elastic-1: cubic-bezier(0.5, 1.25, 0.75, 1.25);
+	--ease-elastic-2: cubic-bezier(0.5, 1.5, 0.75, 1.25);
 	--cyan: #22d3ee;
 	--header: #5f5f5f;
 	--subtitle: #999;
@@ -163,11 +170,6 @@
 			transition: none !important;
 			animation: none !important;
 		}
-	}
-
-	.scrollable {
-		scrollbar-width: auto;
-		scrollbar-color: var(--menu) var(--editor);
 	}
 
 	html {
@@ -332,12 +334,10 @@
 		}
 	}
 
+	/* state colors only: the legacy float/font/padding could never
+	   apply (the button is a flex item, outspecified by the rail rule),
+	   and the chatIcon text-swap elements were never created */
 	#chatButton {
-		@apply float-right text-fg;
-		font-size: 10px;
-		line-height: 19px;
-		padding: 0px 8px;
-
 		&.enabled,
 		&.active {
 			@apply bg-indigo;
@@ -345,18 +345,6 @@
 		&.notification {
 			@apply bg-purp!;
 		}
-		&.active {
-			#chatIconText {
-				@apply hidden;
-			}
-			#chatIconCloseText {
-				@apply block;
-			}
-		}
-	}
-
-	#chatIconCloseText {
-		@apply hidden;
 	}
 
 	#chatWindow {
@@ -1894,10 +1882,6 @@
 		}
 	}
 
-	.menuList .separator {
-		@apply m-0.5 bg-menu h-[4px];
-	}
-
 	.menuItem {
 		@media (hover: hover) {
 			&:hover {
@@ -1975,20 +1959,6 @@
 			}
 		}
 
-		.overlay {
-			@apply z-60 fixed left-0 top-0 right-0 bottom-0 w-full h-full hidden;
-			background: linear-gradient(
-				to bottom,
-				rgba(0, 0, 0, 0) 0px,
-				rgba(0, 0, 0, 0) 20px,
-				rgba(0, 0, 0, 0.8) 21px,
-				rgba(0, 0, 0, 0.2) 100%
-			);
-
-			&.enabled {
-				@apply block;
-			}
-		}
 		section {
 			p,
 			h2,
@@ -2121,9 +2091,6 @@
 	}
 	#fontsModal {
 		@apply p-5;
-		#fontMeta {
-			@apply text-xl text-subtitle pl-4 pt-1.5;
-		}
 		article {
 			aside {
 				@apply flex flex-col min-w-[107px] w-fit h-auto;
@@ -3473,19 +3440,14 @@
 		}
 	}
 
-	/* ios 26 quirk */
-	.ios header.dynamic {
-		padding-left: 75px;
-	}
-
 	.includedForWebsocket {
 		@apply hidden;
 	}
 
+	/* .button and .hover matched nothing; the rest is the deliberate
+	   belt-and-braces pointer roll-up */
 	aside svg,
 	button,
-	.button,
-	.hover,
 	.toolButton,
 	.menuItem:hover,
 	.fkey,
