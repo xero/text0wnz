@@ -17,6 +17,23 @@ import {
 import { Load } from './file.js';
 import magicNumbers from './magicNumbers.js';
 
+// blocked site data must not abort the boot: localStorage access
+// throws under some privacy modes, and every other module guards it
+const readLocal = key => {
+	try {
+		return localStorage.getItem(key);
+	} catch {
+		return null;
+	}
+};
+const writeLocal = (key, value) => {
+	try {
+		localStorage.setItem(key, value);
+	} catch {
+		// the preference simply does not persist this session
+	}
+};
+
 /**
  * Remote collaborator cursors (native CURSOR/SELECTION frames): one
  * positioned box per peer id, placed through the same scaled font
@@ -95,10 +112,10 @@ const createWorkerHandler = inputHandle => {
 		console.error('[Network] Failed to load collab worker:', error);
 		return;
 	}
-	let handle = localStorage.getItem('handle');
+	let handle = readLocal('handle');
 	if (handle === null) {
 		handle = 'Anonymous';
-		localStorage.setItem('handle', handle);
+		writeLocal('handle', handle);
 	}
 	inputHandle.value = handle;
 	let connected = false;
@@ -114,11 +131,15 @@ const createWorkerHandler = inputHandle => {
 	/** id -> nick, for rename detection (renames ride CHAT upstream) */
 	const peerNicks = new Map();
 	// extension suite state (t0wnz-ext-1): negotiated caps, the seq
-	// stream position, and how many of our own mutations await an ack
+	// stream position, and our own mutations still awaiting an ack
+	// (kept as payloads, not a count: a resync adopts a snapshot cut
+	// BEFORE these ops, and the server never echoes them back to us,
+	// so they replay locally after the adoption or the work vanishes)
 	/** @type {string[]} */
 	let serverCaps = [];
 	let lastSeq = -1;
-	let pendingOps = 0;
+	/** @type {{type: number, data: object}[]} */
+	const pendingSends = [];
 	let syncCooldown = 0;
 	let syncQueued = false;
 	let syncRetryTimer = 0;
@@ -131,7 +152,7 @@ const createWorkerHandler = inputHandle => {
 		collaborationMode = false;
 		serverCaps = [];
 		lastSeq = -1;
-		pendingOps = 0;
+		pendingSends.length = 0;
 		syncQueued = false;
 		clearTimeout(syncRetryTimer);
 		syncRetryTimer = 0;
@@ -209,12 +230,14 @@ const createWorkerHandler = inputHandle => {
 	};
 
 	const onFontChange = async fontName => {
-		applyDepth++; // prevents re-broadcasting received settings
+		// no applyDepth hold: nothing echoes a font apply back out (all
+		// settings sends ride direct user clicks), and holding the depth
+		// across this await starved every mutation send for the whole
+		// font load
 		await State.textArtCanvas.setFont(fontName, () => {
 			lblFont.textContent = fontName;
 			selFont.value = fontName;
 		});
-		applyDepth = Math.max(0, applyDepth - 1);
 	};
 
 	const onIceColorsChange = iceColors => {
@@ -414,12 +437,59 @@ const createWorkerHandler = inputHandle => {
 		}
 	};
 
+	/**
+	 * Replay one of our own in-flight mutations onto a freshly adopted
+	 * snapshot, through the same handlers remote frames use. SAUCE is
+	 * deliberately absent: its fields are local UI state the user still
+	 * sees, and the server applies the op regardless.
+	 * @param {number} type @param {any} data
+	 */
+	const applyOwnOp = async (type, data) => {
+		switch (type) {
+			case T0wnzAction.EXT_DRAW_BATCH:
+				if (Array.isArray(data.cells)) {
+					await onRemoteExtDraw(data.cells);
+				}
+				return;
+			case T0wnzAction.EXT_PALETTE:
+				onRemoteExtPalette(data);
+				return;
+			case MoebiusAction.SET_CANVAS_SIZE:
+				onResize(data.columns, data.rows);
+				return;
+			case MoebiusAction.CHANGE_FONT:
+				if (typeof data.font_name === 'string') {
+					await onFontChange(
+						Load.sauceToAppFont(data.font_name) ?? data.font_name,
+					);
+				}
+				return;
+			case MoebiusAction.ICE_COLORS:
+				onIceColorsChange(data.value === true);
+				return;
+			case MoebiusAction.USE_9PX_FONT:
+				onLetterSpacingChange(data.value === true);
+				return;
+			default:
+				return;
+		}
+	};
+
 	/** adopt the full-fidelity doc (join follow-up or requested resync) */
 	const applyExtSync = async payload => {
 		applyDepth++;
 		try {
 			const result = extSyncToDoc(payload);
 			State.textArtCanvas.setDocData(result.doc);
+			// seq and sync state settle BEFORE any awaited tail: a frame
+			// landing during the font load must not get judged against
+			// the pre-sync seq and trigger a spurious resync round trip
+			if (Number.isInteger(payload.seq)) {
+				lastSeq = payload.seq;
+			}
+			syncQueued = false;
+			clearTimeout(syncRetryTimer);
+			syncRetryTimer = 0;
 			if (result.fontName) {
 				await onFontChange(
 					Load.sauceToAppFont(result.fontName) ?? result.fontName,
@@ -434,13 +504,14 @@ const createWorkerHandler = inputHandle => {
 					adoptClassic16(palette);
 				}
 			}
-			if (Number.isInteger(payload.seq)) {
-				lastSeq = payload.seq;
+			// ops sent after the sync request are not in the snapshot and
+			// the server excludes the sender from echo, so without this
+			// replay our own strokes vanish with no seq gap to recover
+			// them; set-cell ops are idempotent, so replaying one the
+			// snapshot already holds is harmless
+			for (const op of pendingSends.slice()) {
+				await applyOwnOp(op.type, op.data);
 			}
-			pendingOps = 0;
-			syncQueued = false;
-			clearTimeout(syncRetryTimer);
-			syncRetryTimer = 0;
 		} catch (error) {
 			console.warn('[Network] dropped malformed EXT_SYNC:', error);
 		} finally {
@@ -455,7 +526,7 @@ const createWorkerHandler = inputHandle => {
 		// stale, so recovery would never apply)
 		if (type === T0wnzAction.EXT_ACK) {
 			noteSeqAdvance(data);
-			pendingOps = Math.max(0, pendingOps - 1);
+			pendingSends.shift();
 			if (data?.refused === true) {
 				// the server dropped an op this client already applied
 				// locally; nothing else reconciles that
@@ -533,7 +604,7 @@ const createWorkerHandler = inputHandle => {
 				// a remote resize racing our in-flight ops is the one
 				// divergence the vanilla dialect can't detect; with the
 				// suite negotiated, recover wholesale
-				if (extActive() && pendingOps > 0) {
+				if (extActive() && pendingSends.length > 0) {
 					requestSync();
 				}
 				break;
@@ -630,10 +701,24 @@ const createWorkerHandler = inputHandle => {
 		return false;
 	};
 
+	/**
+	 * Chat and cursor frames are never echoes of a remote apply, so the
+	 * applyDepth gate must not swallow them: a line typed while a sync
+	 * or font load applies used to echo locally and never broadcast.
+	 * @param {number} type @param {object} data @returns {boolean} sent
+	 */
+	const sendLive = (type, data) => {
+		if (collaborationMode && connected) {
+			State.worker.postMessage({ cmd: 'send', type, data });
+			return true;
+		}
+		return false;
+	};
+
 	/** a doc mutation of ours: the ext ack bookkeeping rides the send */
 	const sendMutation = (type, data) => {
 		if (sendFrame(type, data) && extActive()) {
-			pendingOps++;
+			pendingSends.push({ type, data });
 		}
 	};
 
@@ -656,11 +741,12 @@ const createWorkerHandler = inputHandle => {
 				}
 			}
 			for (let i = 0; i < extCells.length; i += EXT_BATCH_LIMIT) {
-				pendingOps++;
+				const data = { cells: extCells.slice(i, i + EXT_BATCH_LIMIT) };
+				pendingSends.push({ type: T0wnzAction.EXT_DRAW_BATCH, data });
 				State.worker.postMessage({
 					cmd: 'send',
 					type: T0wnzAction.EXT_DRAW_BATCH,
-					data: { cells: extCells.slice(i, i + EXT_BATCH_LIMIT) },
+					data,
 				});
 			}
 			return;
@@ -711,7 +797,7 @@ const createWorkerHandler = inputHandle => {
 			? data.data.caps.filter(cap => typeof cap === 'string')
 			: [];
 		lastSeq = -1;
-		pendingOps = 0;
+		pendingSends.length = 0;
 		try {
 			State.modal.loading(
 				'Updating editor with data from the collab session...',
@@ -792,14 +878,14 @@ const createWorkerHandler = inputHandle => {
 	const setHandle = newHandle => {
 		if (handle !== newHandle) {
 			handle = newHandle;
-			localStorage.setItem('handle', handle);
+			writeLocal('handle', handle);
 			// moebius has no NICK frame: renames ride the next CHAT
 		}
 	};
 
 	const sendChat = text => {
 		if (connected) {
-			sendFrame(MoebiusAction.CHAT, { nick: handle, group: '', text });
+			sendLive(MoebiusAction.CHAT, { nick: handle, group: '', text });
 			// the server excludes the sender: render our own line locally
 			State.chat.addConversation(handle, text, false);
 		}
@@ -824,7 +910,7 @@ const createWorkerHandler = inputHandle => {
 				setTimeout(() => {
 					cursorTimer = 0;
 					if (cursorPending && connected) {
-						sendFrame(MoebiusAction.CURSOR, {
+						sendLive(MoebiusAction.CURSOR, {
 							x: cursorPending.x,
 							y: cursorPending.y,
 						});
@@ -886,13 +972,9 @@ const createChatController = (
 ) => {
 	let enabled = false;
 	const userList = {};
-	let notifications = localStorage.getItem('notifications');
-	if (notifications === null) {
-		notifications = false;
-		localStorage.setItem('notifications', notifications);
-	} else {
-		notifications = JSON.parse(notifications);
-	}
+	// a strict string compare instead of JSON.parse: a corrupted value
+	// must read as "off", never throw during boot
+	let notifications = readLocal('notifications') === 'true';
 	checkNotifications.checked = notifications;
 
 	const close = $('closeChat');
@@ -903,17 +985,32 @@ const createChatController = (
 	};
 
 	const newNotification = text => {
-		const notification = new Notification('text.0w.nz', {
-			body: text,
-			icon: `${State.uiDir}img/favicon.svg`,
-		});
-		const notificationTimer = setTimeout(() => {
-			notification.close();
-		}, 7000);
+		// the pref gates every desktop popup, and the page-context
+		// constructor throws on Android Chrome: a popup must never
+		// abort the chat log line that lands after it
+		if (
+			!notifications ||
+			typeof Notification === 'undefined' ||
+			Notification.permission !== 'granted'
+		) {
+			return;
+		}
+		try {
+			const notification = new Notification('text.0w.nz', {
+				body: text,
+				icon: `${State.uiDir}img/favicon.svg`,
+			});
+			const notificationTimer = setTimeout(() => {
+				notification.close();
+			}, 7000);
 
-		notification.addEventListener('close', () => {
-			clearTimeout(notificationTimer);
-		});
+			notification.addEventListener('close', () => {
+				clearTimeout(notificationTimer);
+			});
+		} catch {
+			// no page-context notifications here; the chat button dot
+			// still signals
+		}
 	};
 
 	const addConversation = (handle, text, showNotification, log = false) => {
@@ -927,6 +1024,12 @@ const createChatController = (
 				newNotification(text);
 			}
 		} else {
+			// chat was the one event class with NO popup path; joins and
+			// quits had one. Popup only while the chat window is closed,
+			// matching the button dot
+			if (showNotification && !enabled) {
+				newNotification(`${handle}: ${text}`);
+			}
 			const spanHandle = document.createElement('SPAN');
 			const spanSeparator = document.createElement('SPAN');
 			const spanText = document.createElement('SPAN');
@@ -1053,24 +1156,33 @@ const createChatController = (
 			const msg = `${handle} has quit`;
 			winUsers.removeChild(userList[sessionID].div);
 			delete userList[sessionID];
-			addConversation(handle, msg, notifications, true);
+			// newNotification itself gates on the pref now, the same as
+			// joins and renames; quit was the only one that checked
+			addConversation(handle, msg, true, true);
 		}
 	};
 
 	const notificationCheckboxClicked = _ => {
 		if (checkNotifications.checked) {
+			if (typeof Notification === 'undefined') {
+				// no Notification API in this context (some webviews)
+				notifications = false;
+				checkNotifications.checked = false;
+				writeLocal('notifications', notifications);
+				return;
+			}
 			if (Notification.permission !== 'granted') {
 				Notification.requestPermission(_permission => {
 					notifications = true;
-					localStorage.setItem('notifications', notifications);
+					writeLocal('notifications', notifications);
 				});
 			} else {
 				notifications = true;
-				localStorage.setItem('notifications', notifications);
+				writeLocal('notifications', notifications);
 			}
 		} else {
 			notifications = false;
-			localStorage.setItem('notifications', notifications);
+			writeLocal('notifications', notifications);
 		}
 	};
 
