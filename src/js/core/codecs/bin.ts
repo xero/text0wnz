@@ -22,6 +22,10 @@ export interface DocMeta {
 	comments?: string;
 	/** SAUCE font name (TInfoS), raw. */
 	fontName?: string;
+	/** Raw SAUCE AR bits carried from an opened file (round trip). */
+	aspect?: number;
+	/** Raw SAUCE LS bits; 0 keeps an opened file's "no preference". */
+	letterSpacingMode?: number;
 }
 
 export interface DecodeResult {
@@ -102,6 +106,8 @@ export const encodeBin = (
 		group: meta.group,
 		comments: meta.comments,
 		fontName: meta.fontName,
+		aspect: meta.aspect,
+		letterSpacingMode: meta.letterSpacingMode,
 		date: options.date,
 	});
 	return concatBytes([payload, Uint8Array.of(0x1a), sauce]);

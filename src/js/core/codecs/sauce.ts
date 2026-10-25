@@ -5,6 +5,7 @@
  * trailing whitespace trims, comment chunks of 64).
  */
 
+import { unicodeToCp437 } from '../cp437.js';
 import {
 	readLE16,
 	readLE32,
@@ -35,8 +36,10 @@ export interface SauceRecord {
 	letterSpacing: boolean;
 	/**
 	 * Payload length the record implies: fileSize when sane, else
-	 * total length minus the 128-byte record (v2 File.size semantics,
-	 * comment block deliberately NOT subtracted, quirk and all).
+	 * everything before the COMNT block (when present) and the EOF
+	 * byte, like PabloDraw. v2 kept the comment block in the fallback,
+	 * which decoded comment text as art rows; 2026-10 audit retired
+	 * that quirk.
 	 */
 	payloadSize: number;
 }
@@ -70,18 +73,23 @@ export const parseSauce = (bytes: Uint8Array): SauceRecord | null => {
 		payloadSize: 0,
 	};
 	const commentsCount = bytes[at + 104];
+	let payloadEnd = at;
 	if (commentsCount > 0) {
 		const blockStart = bytes.length - 128 - commentsCount * 64 - 5;
 		if (blockStart >= 0 && stringField(bytes, blockStart, 5) === 'COMNT') {
 			for (let i = 0; i < commentsCount; i++) {
 				record.comments.push(stringField(bytes, blockStart + 5 + i * 64, 64));
 			}
+			payloadEnd = blockStart;
 		}
+	}
+	if (payloadEnd > 0 && bytes[payloadEnd - 1] === 0x1a) {
+		payloadEnd -= 1;
 	}
 	record.payloadSize =
 		record.fileSize > 0 && record.fileSize < bytes.length
 			? record.fileSize
-			: bytes.length - 128;
+			: payloadEnd;
 	return record;
 };
 
@@ -102,6 +110,18 @@ export interface BuildSauceOptions {
 	fontName?: string;
 	/** XBin passes false: no flags byte, no font name (v2 createSauce). */
 	flagsAndTInfo?: boolean;
+	/**
+	 * Raw AR bits ((flags >> 3) & 3) carried from an opened file so a
+	 * resave round-trips the author's intent verbatim; new docs write
+	 * 0 (no preference) like moebiusXBIN. v2 forced 10 on every save.
+	 */
+	aspect?: number;
+	/**
+	 * Raw LS bits; 0 means "no preference" and survives a resave when
+	 * the artist never touched letter spacing. Defaults to the explicit
+	 * 1/2 encoding of the letterSpacing boolean.
+	 */
+	letterSpacingMode?: number;
 	/** Defaults to now; injectable for byte-stable tests. */
 	date?: Date;
 }
@@ -124,20 +144,46 @@ export const buildSauce = (options: BuildSauceOptions): Uint8Array => {
 		flagsAndTInfo = true,
 	} = options;
 
-	// Chunk comment lines to 64 chars, trimming each chunk and stopping a
-	// line at the first empty chunk (v2 createSauce semantics)
+	// the spec defines every SAUCE text field as CP437 bytes; writing
+	// UTF-8 here mangled non-ASCII metadata on our own save/reopen and
+	// for every other reader
+	const cp437Bytes = (text: string): number[] => {
+		const out: number[] = [];
+		for (const ch of text) {
+			out.push(unicodeToCp437(ch.codePointAt(0) ?? 63) ?? 63);
+		}
+		return out;
+	};
+
+	// Chunk comment lines into 64 BYTE slots (CP437 is one byte per
+	// char, so chunking the encoded bytes keeps slots aligned for every
+	// reader; v2 chunked UTF-16 chars and wrote UTF-8 bytes, shifting
+	// every slot after a non-ASCII char). The count byte caps at 255
+	// like moebius-web: past it, v2 wrapped mod 256 and orphaned the
+	// whole block.
 	const commentLines = comments.trim() ? comments.trim().split('\n') : [];
-	let processed = '';
+	const commentBytes: number[] = [];
 	let commentsCount = 0;
 	for (const line of commentLines) {
+		const lineBytes = cp437Bytes(line);
 		let pos = 0;
-		while (pos < line.length) {
-			const chunk = line.substring(pos, pos + 64).trim();
+		while (pos < lineBytes.length && commentsCount < 255) {
+			let chunk = lineBytes.slice(pos, pos + 64);
+			// trim byte-space padding the way v2 trimmed chunk strings
+			while (chunk.length > 0 && chunk[0] === 0x20) {
+				chunk = chunk.slice(1);
+			}
+			while (chunk.length > 0 && chunk[chunk.length - 1] === 0x20) {
+				chunk = chunk.slice(0, -1);
+			}
 			if (chunk.length === 0) {
 				break;
 			}
 			commentsCount++;
-			processed += chunk.padEnd(64, ' ');
+			while (chunk.length < 64) {
+				chunk.push(0x20);
+			}
+			commentBytes.push(...chunk);
 			pos += 64;
 		}
 	}
@@ -145,11 +191,9 @@ export const buildSauce = (options: BuildSauceOptions): Uint8Array => {
 	const record = new Uint8Array(128);
 	writeText(record, 0, 7, 'SAUCE00');
 	record.fill(0x20, 7, 82);
-	// v2 writes these fields as UTF-8 bytes sliced to field width
-	const encoder = new TextEncoder();
-	record.set(encoder.encode(title).slice(0, 35), 7);
-	record.set(encoder.encode(author).slice(0, 20), 42);
-	record.set(encoder.encode(group).slice(0, 20), 62);
+	record.set(cp437Bytes(title).slice(0, 35), 7);
+	record.set(cp437Bytes(author).slice(0, 20), 42);
+	record.set(cp437Bytes(group).slice(0, 20), 62);
 
 	const date = options.date ?? new Date();
 	const stamp =
@@ -173,11 +217,12 @@ export const buildSauce = (options: BuildSauceOptions): Uint8Array => {
 	record[104] = commentsCount;
 
 	if (dataType !== 6 && flagsAndTInfo) {
-		let flags = 1 << 4; // aspect ratio flag, always set by v2
+		let flags = (options.aspect ?? 0) << 3;
 		if (iceColors) {
 			flags |= 1;
 		}
-		flags |= letterSpacing ? 1 << 2 : 1 << 1;
+		const lsMode = options.letterSpacingMode ?? (letterSpacing ? 2 : 1);
+		flags |= (lsMode & 0x03) << 1;
 		record[105] = flags;
 		if (fontName) {
 			writeText(record, 106, 22, fontName);
@@ -189,7 +234,7 @@ export const buildSauce = (options: BuildSauceOptions): Uint8Array => {
 	}
 	const block = new Uint8Array(5 + commentsCount * 64 + 128);
 	writeText(block, 0, 5, 'COMNT');
-	block.set(encoder.encode(processed).slice(0, commentsCount * 64), 5);
+	block.set(commentBytes, 5);
 	block.set(record, 5 + commentsCount * 64);
 	return block;
 };

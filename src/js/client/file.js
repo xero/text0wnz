@@ -2,7 +2,7 @@ import { encode as encodePng } from 'fast-png';
 import State from './state.js';
 import magicNumbers from './magicNumbers.js';
 import { $, enforceMaxBytes } from './ui.js';
-import { getUTF8, getUnicodeReverseMap } from './palette.js';
+import { getUnicodeReverseMap } from './palette.js';
 import {
 	CodecError,
 	decodeAns,
@@ -17,12 +17,24 @@ import {
 	encodeUtf8,
 	describeIssue,
 	lintDocForFormat,
-	buildSauce,
 	decodeXBin,
+	encodeAns,
 	encodeBin,
 	encodeXBin,
 	v3ToU16Lossy,
 } from '../core/index';
+
+// SAUCE flags round trip: the AR bits and an LS "no preference" from
+// an opened file survive a resave verbatim; v2 rewrote author intent
+// with a forced AR 10 and LS 01 on every save. An LS the artist
+// touches after open writes the explicit bit instead. Module scope:
+// the Load side stashes, the Save side reads.
+let openedSauceFlags = null;
+let lsTouchedSinceOpen = false;
+// optional chain: test harnesses stub document with createElement only
+document.addEventListener?.('onLetterSpacingChange', () => {
+	lsTouchedSinceOpen = true;
+});
 
 const loadModule = () => {
 	class File {
@@ -531,6 +543,7 @@ const loadModule = () => {
 			comments: sauceData.comments,
 			fontName: sauceData.fontName,
 			letterSpacing: sauceData.letterSpacing,
+			sauceFlags: sauceData.sauceFlags,
 		};
 	};
 
@@ -955,6 +968,7 @@ const loadModule = () => {
 					letterSpacing: letterSpacingBits === 2, // true for 9-pixel fonts
 					fontName: removeTrailingWhitespace(bytesToString(sauce, 106, 22)),
 					comments: comments,
+					sauceFlags: flags,
 				};
 			}
 		}
@@ -969,6 +983,7 @@ const loadModule = () => {
 			letterSpacing: false,
 			fontName: '',
 			comments: '',
+			sauceFlags: null,
 		};
 	};
 
@@ -1006,11 +1021,13 @@ const loadModule = () => {
 
 	const checkUTF8 = file => file.endsWith('.utf8.ans') || file.endsWith('.txt');
 
-	const updateSauceModal = imageData => {
+	const updateSauceModal = (imageData, sauceFlags = null) => {
 		$('sauceTitle').value = imageData.title || '';
 		$('sauceGroup').value = imageData.group || '';
 		$('sauceAuthor').value = imageData.author || '';
 		$('sauceComments').value = imageData.comments || '';
+		openedSauceFlags = sauceFlags;
+		lsTouchedSinceOpen = false;
 		enforceMaxBytes();
 	};
 
@@ -1050,7 +1067,7 @@ const loadModule = () => {
 					// core decoder: the doc rides the plane-native callback slot
 					// like tnd/dur/0wnz, and 512-glyph fonts keep their bytes
 					const result = decodeXBin(data);
-					updateSauceModal(result.meta);
+					updateSauceModal(result.meta, result.sauce?.flags ?? null);
 					State.textArtCanvas.clearXBData(async () => {
 						if (result.palette6) {
 							State.textArtCanvas.setXBPaletteData(result.palette6);
@@ -1186,7 +1203,7 @@ const loadModule = () => {
 								// colors, LF after wrap); the doc rides the
 								// plane-native callback slot like tnd/dur/0wnz
 								const result = decodeAns(data, { utf8: true });
-								updateSauceModal(result.meta);
+								updateSauceModal(result.meta, result.sauce?.flags ?? null);
 								const u16 = v3ToU16Lossy(result.doc);
 								callback(
 									u16.columns,
@@ -1208,7 +1225,7 @@ const loadModule = () => {
 							}
 						}
 						imageData = loadAnsi(data, false);
-						updateSauceModal(imageData);
+						updateSauceModal(imageData, imageData.sauceFlags ?? null);
 						callback(
 							imageData.width,
 							imageData.height,
@@ -1303,171 +1320,6 @@ const saveModule = () => {
 		}
 	};
 
-	const encodeANSi = async (
-		useUTF8,
-		blinkers = true,
-		stripEscapeCodes = false,
-	) => {
-		const ansiColor = binColor => {
-			switch (binColor) {
-				case 1:
-					return 4;
-				case 3:
-					return 6;
-				case 4:
-					return 1;
-				case 6:
-					return 3;
-				default:
-					return binColor;
-			}
-		};
-
-		const imageData = State.textArtCanvas.getImageData();
-		const columns = State.textArtCanvas.getColumns();
-		const rows = State.textArtCanvas.getRows();
-		const output = stripEscapeCodes ? [] : [27, 91, 48, 109]; // Start with a full reset (ESC[0m) if not stripping codes
-		let bold = false;
-		let blink = false;
-		let currentForeground = magicNumbers.DEFAULT_FOREGROUND;
-		let currentBackground = magicNumbers.DEFAULT_BACKGROUND;
-		let currentBold = false;
-		let currentBlink = false;
-
-		for (let row = 0; row < rows; row++) {
-			let lineOutput = [];
-			let lineForeground = currentForeground;
-			let lineBackground = currentBackground;
-			let lineBold = currentBold;
-			let lineBlink = currentBlink;
-
-			for (let col = 0; col < columns; col++) {
-				const inputIndex = row * columns + col;
-				const attribs = [];
-				let charCode = imageData[inputIndex] >> 8;
-				let foreground = imageData[inputIndex] & 15;
-				let background = (imageData[inputIndex] >> 4) & 15;
-
-				// Map special cases for control characters
-				switch (charCode) {
-					case 10:
-						charCode = 9;
-						break;
-					case 13:
-						charCode = 14;
-						break;
-					case 26:
-						charCode = 16;
-						break;
-					case 27:
-						charCode = 17;
-						break;
-					default:
-						break;
-				}
-
-				if (foreground > 7) {
-					bold = true;
-					foreground -= 8;
-				} else {
-					bold = false;
-				}
-				if (background > 7) {
-					blink = true;
-					background -= 8;
-				} else {
-					blink = false;
-				}
-
-				if (!stripEscapeCodes) {
-					if ((lineBold && !bold) || (lineBlink && !blink)) {
-						attribs.push([48]); // Reset attributes (ESC[0m)
-						lineForeground = magicNumbers.DEFAULT_FOREGROUND;
-						lineBackground = magicNumbers.DEFAULT_BACKGROUND;
-						lineBold = false;
-						lineBlink = false;
-					}
-
-					if (bold && !lineBold) {
-						attribs.push([49]); // Bold on (ESC[1m)
-						lineBold = true;
-					}
-					if (blink && !lineBlink) {
-						if (!useUTF8 || blinkers) {
-							attribs.push([53]); // Blink on (ESC[5m)
-						}
-						lineBlink = true;
-					}
-
-					if (foreground !== lineForeground) {
-						attribs.push([51, 48 + ansiColor(foreground)]); // Set foreground color (ESC[3Xm)
-						lineForeground = foreground;
-					}
-					if (background !== lineBackground) {
-						attribs.push([52, 48 + ansiColor(background)]); // Set background color (ESC[4Xm)
-						lineBackground = background;
-					}
-
-					if (attribs.length) {
-						lineOutput.push(27, 91); // ESC[
-						for (
-							let attribIndex = 0;
-							attribIndex < attribs.length;
-							attribIndex++
-						) {
-							lineOutput = lineOutput.concat(attribs[attribIndex]);
-							if (attribIndex !== attribs.length - 1) {
-								lineOutput.push(59); // ;
-							} else {
-								lineOutput.push(109); // m
-							}
-						}
-					}
-				}
-
-				if (useUTF8) {
-					getUTF8(charCode).forEach(utf8Code => {
-						lineOutput.push(utf8Code);
-					});
-				} else {
-					lineOutput.push(charCode);
-				}
-			}
-
-			if (useUTF8) {
-				// Every column emits exactly one cell, so lines are already
-				// full width and need no padding
-				if (!stripEscapeCodes) {
-					lineOutput.push(27, 91, 48, 109); // Full reset (ESC[0m)
-				}
-				lineOutput.push(10); // Newline (LF)
-			}
-
-			for (let i = 0; i < lineOutput.length; i++) {
-				output.push(lineOutput[i]);
-			}
-
-			currentForeground = lineForeground;
-			currentBackground = lineBackground;
-			currentBold = lineBold;
-			currentBlink = lineBlink;
-		}
-
-		if (!stripEscapeCodes) {
-			output.push(27, 91, 48, 109); // ESC[0m
-		}
-
-		const sauce = useUTF8 ? '' : buildSauceRecord(1, 1, output.length);
-		let fname;
-		if (stripEscapeCodes) {
-			fname = State.title + '.txt';
-		} else if (useUTF8) {
-			fname = State.title + '.utf8.ans';
-		} else {
-			fname = State.title + '.ans';
-		}
-		await saveFile(new Uint8Array(output), sauce, fname);
-	};
 	// Format-budget linter + compression toggle: lossy saves confirm
 	// through the export modal when the doc holds anything the target
 	// format cannot; XBin always shows it, because the RLE checkbox
@@ -1519,9 +1371,17 @@ const saveModule = () => {
 		});
 
 	const ans = async () => {
-		if ((await confirmExport('ans', 'ANSi')).proceed) {
-			await encodeANSi(false);
+		if (!(await confirmExport('ans', 'ANSi')).proceed) {
+			return;
 		}
+		// the core writer: lossy per the modal's warnings, and 24-bit
+		// plane colors ride PabloDraw t sequences over the SGR base
+		const bytes = encodeAns(State.textArtCanvas.getDoc(), {
+			lossy: true,
+			frameIndex: State.textArtCanvas.getCurrentFrame?.() ?? 0,
+			meta: sauceMetaWithFont(),
+		});
+		await saveFile(bytes, undefined, State.title + '.ans');
 	};
 
 	// UTF-8 and plain-text exports go through the core v3 writer: one
@@ -1627,26 +1487,21 @@ const saveModule = () => {
 		comments: $('sauceComments').value.trim() || undefined,
 	});
 
-	const sauceMetaWithFont = () => ({
-		...sauceMeta(),
-		fontName:
-			Load.appToSauceFont(State.textArtCanvas.getCurrentFontName()) ||
-			undefined,
-	});
-
-	// one core-writer call for every classic save, so the SAUCE
-	// compliance fixes live in a single place
-	const buildSauceRecord = (dataType, fileType, fileSize) =>
-		buildSauce({
-			dataType: dataType,
-			fileType: fileType,
-			fileSize: fileSize,
-			columns: State.textArtCanvas.getColumns(),
-			rows: State.textArtCanvas.getRows(),
-			iceColors: State.textArtCanvas.getIceColors(),
-			letterSpacing: State.font.getLetterSpacing(),
-			...sauceMetaWithFont(),
-		});
+	const sauceMetaWithFont = () => {
+		const lsNoPreference =
+			openedSauceFlags !== null &&
+			((openedSauceFlags >> 1) & 0x03) === 0 &&
+			!lsTouchedSinceOpen;
+		return {
+			...sauceMeta(),
+			fontName:
+				Load.appToSauceFont(State.textArtCanvas.getCurrentFontName()) ||
+				undefined,
+			aspect:
+				openedSauceFlags !== null ? (openedSauceFlags >> 3) & 0x03 : 0,
+			letterSpacingMode: lsNoPreference ? 0 : undefined,
+		};
+	};
 
 	const tnd = async () => {
 		// the linter fronts the throw cases (unicode glyphs, blink) plus
