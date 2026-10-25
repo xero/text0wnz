@@ -70,8 +70,10 @@ class StateManager {
 
 		// Environment var or defaults
 		this.urlPrefix = import.meta.env.BASE_URL || '';
-		this.uiDir = this.urlPrefix + import.meta.env.VITE_UI_DIR || 'ui/';
-		this.fontDir = this.uiDir + import.meta.env.VITE_FONT_DIR || 'fonts/';
+		// parenthesized: `a + b || c` concatenates "undefined" into the
+		// path (truthy), so the fallbacks could never fire
+		this.uiDir = this.urlPrefix + (import.meta.env.VITE_UI_DIR || 'ui/');
+		this.fontDir = this.uiDir + (import.meta.env.VITE_FONT_DIR || 'fonts/');
 
 		// Bind methods to ensure `this` is preserved when passed as callbacks
 		this.set = this.set.bind(this);

@@ -1379,7 +1379,10 @@ const websocketUI = show => {
 		['includedForWebsocket', show],
 	].forEach(([sel, prop]) =>
 		[...D.getElementsByClassName(sel)].forEach(
-			el => (el.style.display = prop ? 'block' : 'none'),
+			// clearing the inline value hands display back to the
+			// stylesheet: the hardcoded 'block' defeated #chatButton's
+			// grid centering in every collab session
+			el => (el.style.display = prop ? '' : 'none'),
 		));
 };
 
