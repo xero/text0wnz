@@ -10,7 +10,10 @@ import State from '../../src/js/client/state.js';
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		font: { getHeight: () => 16, getWidth: () => 8 },
-		palette: { getRGBAColor: vi.fn(() => [255, 0, 0, 255]) },
+		palette: {
+			getRGBAColor: vi.fn(() => [255, 0, 0, 255]),
+			getRGBAColorForWord: vi.fn(() => [255, 0, 0, 255]),
+		},
 		textArtCanvas: null,
 	},
 }));

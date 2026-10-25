@@ -30,7 +30,9 @@ export interface BudgetIssue {
 		/** tundra has no blink; these cells refuse to encode */
 		| 'tnd-blink'
 		/** blink attrs inside an ice doc fold away in 16c exports */
-		| 'ice-blink';
+		| 'ice-blink'
+		/** steady bright bg without ice folds to dim (blink owns the nibble) */
+		| 'bright-bg-folds';
 	count: number;
 	/** first offending cell, for a future jump-to-cell affordance */
 	firstIndex: number;
@@ -93,6 +95,15 @@ export const lintDocForFormat = (
 				paletteIndexOf(frame.bg[i]) > 15
 			) {
 				hit('color-beyond-16', i);
+			} else if (
+				!doc.getIceColors() &&
+				!blinkAttr &&
+				paletteIndexOf(frame.bg[i]) > 7
+			) {
+				// without ice the bright bg nibble MEANS blink, so the u16
+				// projection folds a steady bright bg to its dim neighbor;
+				// the artist can turn on ice colors instead of losing it
+				hit('bright-bg-folds', i);
 			}
 		}
 	}
@@ -113,5 +124,7 @@ export const describeIssue = (issue: BudgetIssue): string => {
 			return `${issue.count} blinking cell${issue.count === 1 ? '' : 's'}: TundraDraw has no blink`;
 		case 'ice-blink':
 			return `${issue.count} blinking cell${issue.count === 1 ? '' : 's'} fold away (ice is on)`;
+		case 'bright-bg-folds':
+			return `${issue.count} bright background${issue.count === 1 ? '' : 's'} dim without ice colors`;
 	}
 };

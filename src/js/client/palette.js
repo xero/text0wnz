@@ -325,6 +325,21 @@ const createPalette = RGB6Bit => {
 			255,
 		]);
 	};
+	// strict PLANE WORD resolver: bit 31 tags a palette or xterm index,
+	// a clear bit 31 is frozen RGB even for values 0-15 (tundra near
+	// black fades), which getRGBAColor's index branch paints bright
+	/** @param {number} word */
+	const getRGBAColorForWord = word => {
+		if ((word & 0x80000000) !== 0) {
+			return getRGBAColor(word);
+		}
+		return new Uint8Array([
+			(word >> 16) & 0xff,
+			(word >> 8) & 0xff,
+			word & 0xff,
+			255,
+		]);
+	};
 	const getForegroundColor = () => foreground;
 	const getBackgroundColor = () => background;
 	const getPalette = () => RGBAColors;
@@ -340,6 +355,7 @@ const createPalette = RGB6Bit => {
 		getPalette: getPalette,
 		getRGBColor: getRGBColor,
 		getRGBAColor: getRGBAColor,
+		getRGBAColorForWord: getRGBAColorForWord,
 		setRGBAColor: setRGBAColor,
 		getForegroundColor: getForegroundColor,
 		getBackgroundColor: getBackgroundColor,

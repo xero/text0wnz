@@ -7,6 +7,7 @@ import {
 	EXT_SUITE_CAP,
 	MoebiusAction,
 	T0wnzAction,
+	blockToExtCell,
 	compress8to6,
 	extSyncToDoc,
 	joinDocToDoc,
@@ -157,6 +158,13 @@ const createWorkerHandler = inputHandle => {
 			typeof block !== 'object' ||
 			block === null
 		) {
+			return;
+		}
+		if (block.code > 0xff) {
+			// icy-style raw codepoint on the vanilla wire: join and resync
+			// intern these, so the live view must too or the two diverge
+			// until the next sync
+			State.textArtCanvas.drawRemoteExtCells([{ x: x, y: y, ...blockToExtCell(block) }]);
 			return;
 		}
 		const word =

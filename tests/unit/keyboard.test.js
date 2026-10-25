@@ -32,8 +32,8 @@ vi.mock('../../src/js/client/state.js', () => ({
 				foregroundColor: 7,
 				backgroundColor: 0,
 			})),
-			getArea: vi.fn(() => ({ data: [], width: 1, height: 1 })),
-			setArea: vi.fn(),
+			getAreaCells: vi.fn(() => ({ cells: [], width: 1, height: 1 })),
+			setAreaCells: vi.fn(),
 			deleteArea: vi.fn(),
 			setImageData: vi.fn(),
 			getImageData: vi.fn(() => new Uint16Array(2000)),
@@ -733,8 +733,11 @@ describe('Keyboard Utilities', () => {
 			State.selectionCursor.isVisible = vi.fn(() => true);
 			State.cursor.isVisible = vi.fn(() => false);
 			// clipboard: [blank space, red full block]
-			State.textArtCanvas.getArea = vi.fn(() => ({
-				data: Uint16Array.from([32 << 8, (219 << 8) | 4]),
+			State.textArtCanvas.getAreaCells = vi.fn(() => ({
+				cells: [
+					{ charCode: 32, fg: 0, bg: 0 },
+					{ charCode: 219, fg: 4, bg: 0 },
+				],
 				width: 2,
 				height: 1,
 			}));

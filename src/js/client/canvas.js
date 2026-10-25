@@ -223,7 +223,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const BLANK_BG = paletteColor(0);
 
 	const dimWord = word => {
-		const [r, g, b] = State.palette.getRGBAColor(word);
+		// plane word, not an index: the index resolver reads raw RGB
+		// words 0-15 as bright palette entries
+		const [r, g, b] = State.palette.getRGBAColorForWord(word);
 		return (
 			((Math.floor(r * 0.35) & 0xff) << 16) |
 			((Math.floor(g * 0.35) & 0xff) << 8) |
@@ -1656,10 +1658,15 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		sendDrawHistory();
 	};
 
-	const getArea = (x, y, width, height) => editor.getAreaU16(x, y, width, height);
+	// plane-native area ops: selection move and the clipboard rearrange
+	// existing art, and the u16 twins would quantize truecolor and
+	// degrade unicode to '?' on every move (the flips read getBlock for
+	// the same reason)
+	const getAreaCells = (x, y, width, height) =>
+		editor.getAreaCells(x, y, width, height);
 
-	const setArea = (area, x, y) => {
-		editor.setAreaU16(area, x, y);
+	const setAreaCells = (area, x, y) => {
+		editor.setAreaCells(area, x, y);
 		processDirtyRegions();
 		sendDrawHistory();
 	};
@@ -2044,8 +2051,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		getUndoHistory: getUndoHistory,
 		setUndoHistory: setUndoHistory,
 		deleteArea: deleteArea,
-		getArea: getArea,
-		setArea: setArea,
+		getAreaCells: getAreaCells,
+		setAreaCells: setAreaCells,
 		quickDraw: quickDraw,
 		drawRemoteExtCells: drawRemoteExtCells,
 		getFrameCount: () => doc.frames.length,

@@ -29,6 +29,7 @@ import {
 	isPaletteColor,
 	paletteColor,
 	paletteIndexOf,
+	RGB_EDIT_TAG,
 } from './doc.js';
 import { U16Doc, quantizeColorWord, v3ToU16, v3ToU16Lossy } from './convert.js';
 import { unicodeToCp437Strict } from './cp437.js';
@@ -128,6 +129,22 @@ export interface EditorCore {
 		x: number,
 		y: number,
 	) => void;
+	/**
+	 * Plane-native area ops for selection move and the clipboard: the
+	 * u16 twins quantize truecolor and degrade unicode to '?', so
+	 * anything that rearranges existing art must ride these.
+	 */
+	getAreaCells: (
+		x: number,
+		y: number,
+		width: number,
+		height: number,
+	) => { cells: EditCell[]; width: number; height: number };
+	setAreaCells: (
+		area: { cells: EditCell[]; width: number; height: number },
+		x: number,
+		y: number,
+	) => void;
 	/** Network writes: [index, u16word, x, y][], never undoable. */
 	quickDrawU16: (blocks: ReadonlyArray<ReadonlyArray<number>>) => void;
 	getCurrentFrame: () => number;
@@ -188,11 +205,14 @@ export const createEditorCore = (
 
 	/**
 	 * Cell view for the tools. Colors are classic 0-15 indexes when the
-	 * plane word is one; anything else (extended colors: tag-bit
-	 * indexes above 15, raw RGB words) passes through as the WORD so a
-	 * read-then-rewrite round trip cannot corrupt it. Values 0-15 and
-	 * words are distinguishable everywhere that matters: index words
-	 * carry bit 31, and the color picker never emits RGB words <= 15.
+	 * plane word is one AND the u16 cell model can express it; anything
+	 * else passes through as the WORD so a read-then-rewrite round trip
+	 * cannot corrupt it. Two collisions need care: a raw RGB word <= 15
+	 * (tundra near-black fades) would read as a bright palette index,
+	 * so it wears RGB_EDIT_TAG until planeWords/packWord strip it; and
+	 * a steady bright classic bg without ice has no u16 nibble (bright
+	 * means blink there), so it stays a word and quantizes exactly like
+	 * the v3ToU16Lossy rebuild, keeping the mirror path-independent.
 	 * Accepted loss: blink folds into the bg only for classic bgs, so
 	 * ATTR_BLINK on an extended bg is invisible here and normalizes
 	 * away on rewrite (still narrower than the u16 area paths, which
@@ -211,17 +231,23 @@ export const createEditorCore = (
 			isPaletteColor(word) && paletteIndexOf(word) <= 15
 				? paletteIndexOf(word)
 				: null;
+		const asWord = (word: number): number =>
+			!isPaletteColor(word) && (word & 0x00ffffff) <= 15
+				? (word | RGB_EDIT_TAG) >>> 0
+				: word >>> 0;
 		const fgIndex = classic(frame.fg[index]);
 		const bgIndex = classic(frame.bg[index]);
 		return {
 			charCode: glyphIdOf(glyph),
-			fg: fgIndex ?? frame.fg[index] >>> 0,
+			fg: fgIndex ?? asWord(frame.fg[index]),
 			bg:
 				bgIndex !== null
 					? blink
 						? bgIndex | 8
-						: bgIndex
-					: frame.bg[index] >>> 0,
+						: bgIndex > 7 && !doc.getIceColors()
+							? frame.bg[index] >>> 0
+							: bgIndex
+					: asWord(frame.bg[index]),
 		};
 	};
 
@@ -239,10 +265,14 @@ export const createEditorCore = (
 		// mirror, the wire, and the lossy projection can never disagree
 		const fgIndex = isClassic(cell.fg)
 			? cell.fg & 15
-			: quantizeColorWord(cell.fg >>> 0, doc, 16);
+			: quantizeColorWord((cell.fg & ~RGB_EDIT_TAG) >>> 0, doc, 16);
 		const bgNibble = isClassic(cell.bg)
 			? cell.bg & 15
-			: quantizeColorWord(cell.bg >>> 0, doc, doc.getIceColors() ? 16 : 8);
+			: quantizeColorWord(
+					(cell.bg & ~RGB_EDIT_TAG) >>> 0,
+					doc,
+					doc.getIceColors() ? 16 : 8,
+				);
 		return (charCode << 8) | (bgNibble << 4) | fgIndex;
 	};
 
@@ -252,10 +282,12 @@ export const createEditorCore = (
 		const blink = !doc.getIceColors() && classicBg && cell.bg > 7;
 		return {
 			glyph: glyphWord(cell.charCode, blink ? ATTR_BLINK : 0),
-			fg: isClassic(cell.fg) ? paletteColor(cell.fg & 15) : cell.fg >>> 0,
+			fg: isClassic(cell.fg)
+				? paletteColor(cell.fg & 15)
+				: (cell.fg & ~RGB_EDIT_TAG) >>> 0,
 			bg: classicBg
 				? paletteColor(blink ? cell.bg & 7 : cell.bg & 15)
-				: cell.bg >>> 0,
+				: (cell.bg & ~RGB_EDIT_TAG) >>> 0,
 		};
 	};
 
@@ -507,6 +539,35 @@ export const createEditorCore = (
 					for (let px = 0; px < maxWidth; px++) {
 						const attrib = area.data[py * area.width + px];
 						draw(attrib >> 8, attrib & 15, (attrib >> 4) & 15, x + px, y + py);
+					}
+				}
+			});
+		},
+		getAreaCells: (x, y, width, height) => {
+			const cells: EditCell[] = new Array(width * height);
+			const cols = columns();
+			const rowCount = doc.getRows();
+			for (let dy = 0, j = 0; dy < height; dy++) {
+				for (let dx = 0; dx < width; dx++, j++) {
+					// cells sampled past an edge read blank, never wrapped
+					cells[j] = cellInRange(x + dx, y + dy, cols, rowCount)
+						? readCell((y + dy) * cols + (x + dx))
+						: { charCode: 0, fg: 0, bg: 0 };
+				}
+			}
+			return { cells, width, height };
+		},
+		setAreaCells: (area, x, y) => {
+			const maxWidth = Math.min(area.width, columns() - x);
+			const maxHeight = Math.min(area.height, doc.getRows() - y);
+			// through drawBlocks like the u16 twin: mirror mode and the
+			// wrap guard live there, and extended color words pass through
+			// writeCell untouched
+			drawBlocks(draw => {
+				for (let py = 0; py < maxHeight; py++) {
+					for (let px = 0; px < maxWidth; px++) {
+						const cell = area.cells[py * area.width + px];
+						draw(cell.charCode, cell.fg, cell.bg, x + px, y + py);
 					}
 				}
 			});
