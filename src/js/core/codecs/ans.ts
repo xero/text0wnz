@@ -40,7 +40,6 @@ import { u16ToV3, v3ToU16, v3ToU16Lossy } from '../convert.js';
 import {
 	cp437ToUnicode,
 	unicodeToCp437,
-	unicodeToCp437Strict,
 } from '../cp437.js';
 import { buildSauce, parseSauce } from './sauce.js';
 import { CodecError, concatBytes, utf8Encode } from './util.js';
@@ -240,7 +239,29 @@ export const decodeAns = (
 		}
 	}
 	const size = sauce ? sauce.payloadSize : bytes.length;
-	const iceColors = sauce?.iceColors ?? false;
+	// ESC[?33h/l can override the SAUCE flag mid-stream (Pablo honors
+	// it; SAUCE-less ice ANSIs rendered blink here before)
+	let iceColors = sauce?.iceColors ?? false;
+	// ESC[?7l pins the cursor at the right edge instead of wrapping
+	let autowrap = true;
+	// PabloDraw 24-bit sequences (ESC[1;r;g;bt fg, ESC[0;r;g;bt bg):
+	// the classic u16 screen cannot hold RGB, so live RGB channels ride
+	// an overlay keyed by cell index and land on the doc planes after
+	// u16ToV3; SGR 0 or a base color set clears the channel
+	let rgbFg: number | null = null;
+	let rgbBg: number | null = null;
+	const rgbOverlay = new Map<
+		number,
+		{ fg: number | null; bg: number | null }
+	>();
+	const overlayCell = (px: number, py: number) => {
+		const index = py * columns + px;
+		if (rgbFg !== null || rgbBg !== null) {
+			rgbOverlay.set(index, { fg: rgbFg, bg: rgbBg });
+		} else {
+			rgbOverlay.delete(index);
+		}
+	};
 
 	const screen = createScreen(columns);
 	// UTF-8 mode renders into v3 planes instead (tag-bit colors, doc
@@ -285,6 +306,8 @@ export const decodeAns = (
 		bgBright = false;
 		fgExt = null;
 		bgExt = null;
+		rgbFg = null;
+		rgbBg = null;
 	};
 	const newLine = () => {
 		x = 1;
@@ -296,15 +319,18 @@ export const decodeAns = (
 	};
 	const setPos = (newX: number, newY: number) => {
 		x = Math.min(columns, Math.max(1, newX));
-		y = Math.min(26, Math.max(1, newY));
+		// 25 is the bottom of the scroll window (newLine agrees); v2's 26
+		// let ESC[26;..H escape it and a later ESC[1B snapped the cursor
+		// up over painted rows. PabloDraw clamps to the canvas rect.
+		y = Math.min(25, Math.max(1, newY));
 	};
-	const getValues = (): number[] =>
+	const getValues = (missing = 1): number[] =>
 		escapeCode
 			.slice(1, -1)
 			.split(';')
 			.map(value => {
 				const parsed = parseInt(value, 10);
-				return isNaN(parsed) ? 1 : parsed;
+				return isNaN(parsed) ? missing : parsed;
 			});
 
 	/**
@@ -443,18 +469,22 @@ export const decodeAns = (
 			bytesConsumed = decoded.bytesConsumed;
 			codepoint = decoded.charCode;
 			// dispatch value for the state machine (controls are ASCII);
-			// the cell write below uses the real codepoint instead
-			code = unicodeToCp437Strict(decoded.charCode) ?? decoded.charCode;
-			if (code > 255) {
-				code = 63;
-			}
+			// the cell write below uses the real codepoint instead. The
+			// old strict reverse map here turned printable glyphs that
+			// LIVE on cp437 control bytes (U+25D9 is 0x0A) into controls,
+			// so moebiusXBIN's own UTF-8 exports corrupted on open
+			code = decoded.charCode <= 0x7f ? decoded.charCode : 63;
 		}
 
 		if (escaped) {
 			escapeCode += String.fromCharCode(code);
 			if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
 				escaped = false;
-				const values = getValues();
+				// an empty SGR param means 0 (ESC[m resets; PabloDraw,
+				// moebiusXBIN, and ANSI.SYS agree); cursor moves default 1
+				const values = getValues(
+					escapeCode.charAt(escapeCode.length - 1) === 'm' ? 0 : 1,
+				);
 				if (escapeCode.charAt(0) === '[') {
 					// every CSI except SGR moves or edits, ending a deferred
 					// wrap; SGR between a wrap and its LF must not
@@ -478,6 +508,9 @@ export const decodeAns = (
 							x = Math.max(1, x - values[0]);
 							break;
 						case 'H':
+						// HVP: ANSI.SYS and both references alias it to CUP;
+						// v2 dropped it on the floor
+						case 'f':
 							if (values.length === 1) {
 								setPos(1, values[0]);
 							} else {
@@ -490,6 +523,7 @@ export const decodeAns = (
 								y = 1;
 								screen.reset();
 								v3screen.reset();
+								rgbOverlay.clear();
 							}
 							break;
 						case 'K':
@@ -510,8 +544,10 @@ export const decodeAns = (
 							for (const value of values) {
 								if (value >= 30 && value <= 37) {
 									foreground = value - 30;
+									rgbFg = null;
 								} else if (value >= 40 && value <= 47) {
 									background = value - 40;
+									rgbBg = null;
 								} else {
 									switch (value) {
 										case 0:
@@ -539,6 +575,43 @@ export const decodeAns = (
 								}
 							}
 							break;
+						case 'h':
+						case 'l': {
+							// private modes Pablo honors: ?33 ice colors,
+							// ?7 autowrap (moebiusXBIN ignores both)
+							if (escapeCode.charAt(1) === '?') {
+								const mode = parseInt(escapeCode.slice(2), 10);
+								const enable = escapeCode.charAt(escapeCode.length - 1) === 'h';
+								if (mode === 33) {
+									iceColors = enable;
+								} else if (mode === 7) {
+									autowrap = enable;
+								}
+							}
+							break;
+						}
+						case 't': {
+							// PabloDraw 24-bit color: ESC[0;r;g;bt bg, ESC[1;r;g;bt fg
+							if (values.length === 4) {
+								const word = rgbColor(
+									values[1] & 0xff,
+									values[2] & 0xff,
+									values[3] & 0xff,
+								);
+								if (isUTF8) {
+									if (values[0] === 1) {
+										fgExt = word;
+									} else if (values[0] === 0) {
+										bgExt = word;
+									}
+								} else if (values[0] === 1) {
+									rgbFg = word;
+								} else if (values[0] === 0) {
+									rgbBg = word;
+								}
+							}
+							break;
+						}
 						case 's':
 							savedX = x;
 							savedY = y;
@@ -587,6 +660,7 @@ export const decodeAns = (
 								bold ? foreground + 8 : foreground,
 								blink ? background + 8 : background,
 							);
+							overlayCell(x - 1, y - 1 + topOfScreen);
 						} else {
 							screen.set(
 								x - 1,
@@ -595,11 +669,22 @@ export const decodeAns = (
 								bold ? background + 8 : background,
 								blink ? foreground + 8 : foreground,
 							);
+							// inverse swaps the RGB channels with the bases
+							const index = (y - 1 + topOfScreen) * columns + (x - 1);
+							if (rgbFg !== null || rgbBg !== null) {
+								rgbOverlay.set(index, { fg: rgbBg, bg: rgbFg });
+							} else {
+								rgbOverlay.delete(index);
+							}
 						}
 						x += 1;
 						if (x === columns + 1) {
-							newLine();
-							wrappedPending = isUTF8;
+							if (autowrap) {
+								newLine();
+								wrappedPending = isUTF8;
+							} else {
+								x = columns;
+							}
 						}
 					}
 			}
@@ -630,6 +715,20 @@ export const decodeAns = (
 			iceColors,
 			letterSpacing: sauce?.letterSpacing ?? false,
 		});
+		if (rgbOverlay.size > 0) {
+			const frame = doc.frames[0];
+			for (const [index, colors] of rgbOverlay) {
+				if (index >= frame.fg.length) {
+					continue;
+				}
+				if (colors.fg !== null) {
+					frame.fg[index] = colors.fg;
+				}
+				if (colors.bg !== null) {
+					frame.bg[index] = colors.bg;
+				}
+			}
+		}
 	}
 	return {
 		doc,
@@ -683,6 +782,27 @@ export const encodeAns = (
 	let currentBackground = DEFAULT_BACKGROUND;
 	let currentBold = false;
 	let currentBlink = false;
+	// 24-bit channels ride PabloDraw t sequences (ESC[1;r;g;bt fg,
+	// ESC[0;r;g;bt bg) over the quantized SGR base, so t-aware readers
+	// keep the truecolor and everyone else degrades to the 16c view.
+	// Only the lossy projection can reach cells with RGB plane words
+	// (the strict one throws), and classic CP437 output alone carries
+	// them (the UTF-8 writer already speaks 38;2).
+	const planeFrame = doc.frames[options.frameIndex ?? 0];
+	const emitRgb = !useUTF8 && !stripEscapeCodes && planeFrame !== undefined;
+	let currentRgbFg: number | null = null;
+	let currentRgbBg: number | null = null;
+	const tSequence = (channel: number, word: number): number[] => {
+		const seq: number[] = [27, 91, 48 + channel];
+		for (const v of [(word >>> 16) & 0xff, (word >>> 8) & 0xff, word & 0xff]) {
+			seq.push(59);
+			for (const digit of String(v)) {
+				seq.push(digit.charCodeAt(0));
+			}
+		}
+		seq.push(116);
+		return seq;
+	};
 
 	for (let row = 0; row < rows; row++) {
 		let lineOutput: number[] = [];
@@ -690,6 +810,8 @@ export const encodeAns = (
 		let lineBackground = currentBackground;
 		let lineBold: boolean = currentBold;
 		let lineBlink: boolean = currentBlink;
+		let lineRgbFg: number | null = currentRgbFg;
+		let lineRgbBg: number | null = currentRgbBg;
 
 		for (let col = 0; col < columns; col++) {
 			const word = imageData[row * columns + col];
@@ -725,6 +847,11 @@ export const encodeAns = (
 				background -= 8;
 			}
 
+			const cellIndex = row * columns + col;
+			const rawFg = emitRgb ? planeFrame.fg[cellIndex] >>> 0 : 0;
+			const rawBg = emitRgb ? planeFrame.bg[cellIndex] >>> 0 : 0;
+			const fgIsRgb = emitRgb && !isPaletteColor(rawFg);
+			const bgIsRgb = emitRgb && !isPaletteColor(rawBg);
 			if (!stripEscapeCodes) {
 				if ((lineBold && !bold) || (lineBlink && !blink)) {
 					attribs.push([48]); // 0: reset
@@ -732,6 +859,8 @@ export const encodeAns = (
 					lineBackground = DEFAULT_BACKGROUND;
 					lineBold = false;
 					lineBlink = false;
+					lineRgbFg = null;
+					lineRgbBg = null;
 				}
 				if (bold && !lineBold) {
 					attribs.push([49]); // 1: bold
@@ -746,10 +875,17 @@ export const encodeAns = (
 				if (foreground !== lineForeground) {
 					attribs.push([51, 48 + ansiColor(foreground)]);
 					lineForeground = foreground;
+				} else if (lineRgbFg !== null && !fgIsRgb) {
+					// leaving a 24-bit channel needs an explicit SGR even
+					// when the quantized value matches the line state, or
+					// t-aware readers keep painting RGB
+					attribs.push([51, 48 + ansiColor(foreground)]);
 				}
 				if (background !== lineBackground) {
 					attribs.push([52, 48 + ansiColor(background)]);
 					lineBackground = background;
+				} else if (lineRgbBg !== null && !bgIsRgb) {
+					attribs.push([52, 48 + ansiColor(background)]);
 				}
 				if (attribs.length) {
 					lineOutput.push(27, 91);
@@ -758,6 +894,19 @@ export const encodeAns = (
 						lineOutput.push(index === attribs.length - 1 ? 109 : 59);
 					});
 				}
+			}
+
+			if (fgIsRgb && rawFg !== lineRgbFg) {
+				lineOutput.push(...tSequence(1, rawFg));
+				lineRgbFg = rawFg;
+			} else if (!fgIsRgb) {
+				lineRgbFg = null;
+			}
+			if (bgIsRgb && rawBg !== lineRgbBg) {
+				lineOutput.push(...tSequence(0, rawBg));
+				lineRgbBg = rawBg;
+			} else if (!bgIsRgb) {
+				lineRgbBg = null;
 			}
 
 			if (useUTF8) {
@@ -780,6 +929,8 @@ export const encodeAns = (
 		currentBackground = lineBackground;
 		currentBold = lineBold;
 		currentBlink = lineBlink;
+		currentRgbFg = lineRgbFg;
+		currentRgbBg = lineRgbBg;
 	}
 
 	if (!stripEscapeCodes) {
@@ -808,6 +959,8 @@ export const encodeAns = (
 		group: meta.group,
 		comments: meta.comments,
 		fontName: meta.fontName,
+		aspect: meta.aspect,
+		letterSpacingMode: meta.letterSpacingMode,
 		date: options.date,
 	});
 	return concatBytes([payload, Uint8Array.of(0x1a), sauce]);
@@ -844,6 +997,8 @@ export const encodeAnsimation = (
 		group: meta.group,
 		comments: meta.comments,
 		fontName: meta.fontName,
+		aspect: meta.aspect,
+		letterSpacingMode: meta.letterSpacingMode,
 		date: options.date,
 	});
 	return concatBytes([payload, Uint8Array.of(0x1a), sauce]);
@@ -1039,6 +1194,8 @@ export const encodeUtf8 = (
 		group: meta.group,
 		comments: meta.comments,
 		fontName: meta.fontName,
+		aspect: meta.aspect,
+		letterSpacingMode: meta.letterSpacingMode,
 		date: options.date,
 	});
 	return concatBytes([payload, Uint8Array.of(0x1a), sauce]);

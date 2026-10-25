@@ -291,6 +291,8 @@ export const encodeTundra = (
 		group: meta.group,
 		comments: meta.comments,
 		fontName: meta.fontName,
+		aspect: meta.aspect,
+		letterSpacingMode: meta.letterSpacingMode,
 		date: options.date,
 	});
 	return concatBytes([payload, Uint8Array.of(0x1a), sauce]);
