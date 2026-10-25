@@ -68,16 +68,25 @@ const createHalfBlockController = () => {
 		}
 	};
 
+	let stroking = false;
+
 	const canvasUp = () => {
 		prev = {};
+		stroking = false;
 	};
 
 	const canvasDown = e => {
 		State.textArtCanvas.startUndo();
+		stroking = true;
 		draw(e.detail);
 	};
 
 	const canvasDrag = e => {
+		// a drag surviving a mid-hold tool switch has no stroke open and
+		// no undo group; painting from it lines back to a stale endpoint
+		if (!stroking) {
+			return;
+		}
 		draw(e.detail);
 	};
 
@@ -93,6 +102,10 @@ const createHalfBlockController = () => {
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
+		// a mid-drag switch must not leave the stroke armed: the next
+		// stroke would draw a phantom line from the stale endpoint
+		prev = {};
+		stroking = false;
 		nav.classList.remove('enabled');
 	};
 
@@ -107,6 +120,7 @@ const createShadingController = (panel, charMode) => {
 	let prev = {};
 	let drawMode;
 	let reduce = false;
+	let stroking = false;
 
 	const line = (x0, y0, x1, y1, callback) => {
 		const dx = Math.abs(x1 - x0);
@@ -182,11 +196,10 @@ const createShadingController = (panel, charMode) => {
 			penPressure !== null
 				? shadeFromPressure(penPressure)
 				: calculateShadingCharacter(x, y);
-		if (
-			prev.x !== coords.x ||
-			prev.y !== coords.y ||
-			prev.halfBlockY !== coords.halfBlockY
-		) {
+		// whole cells only: judging halfBlockY here let a half-row wiggle
+		// inside one cell count as a new point and advance the shade ramp
+		// twice in a single pass (uneven 176/177 mixes)
+		if (prev.x !== coords.x || prev.y !== coords.y) {
 			if (Math.abs(prev.x - coords.x) > 1 || Math.abs(prev.y - coords.y) > 1) {
 				State.textArtCanvas.draw(callback => {
 					line(prev.x, prev.y, coords.x, coords.y, (x, y) => {
@@ -217,15 +230,23 @@ const createShadingController = (panel, charMode) => {
 
 	const canvasUp = () => {
 		prev = {};
+		stroking = false;
 	};
 
 	const canvasDown = e => {
 		drawMode = panel.getMode();
 		State.textArtCanvas.startUndo();
+		stroking = true;
 		draw(e.detail);
 	};
 
 	const canvasDrag = e => {
+		// a drag with no down (mid-hold tool switch, alt+click sample)
+		// has no drawMode and no undo group; it used to throw or paint
+		// with stale state
+		if (!stroking) {
+			return;
+		}
 		draw(e.detail);
 	};
 
@@ -246,6 +267,11 @@ const createShadingController = (panel, charMode) => {
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
 		document.removeEventListener('keydown', keyDown);
 		document.removeEventListener('keyup', keyUp);
+		// removing the keyup listener mid-hold used to stick the shift
+		// flag on, and the stale endpoint drew phantom Bresenham lines
+		prev = {};
+		stroking = false;
+		reduce = false;
 		panel.disable();
 		nav.classList.remove('enabled');
 	};
@@ -809,7 +835,11 @@ const createFillController = () => {
 								if (coord[0] > 0) {
 									queue.push([coord[0] - 1, coord[1], 0]);
 								}
-								if (coord[1] > 2) {
+								// > 1, not > 2: parity picks the branch (even pushes
+							// -1, odd pushes -2) so the single bound is exact,
+							// like the downward twin; > 2 blocked propagation
+							// from half-row 2 entirely
+								if (coord[1] > 1) {
 									if (block.halfBlockY === 1) {
 										queue.push([coord[0], coord[1] - 2, 2]);
 									} else {
@@ -837,7 +867,11 @@ const createFillController = () => {
 								if (coord[0] > 0) {
 									queue.push([coord[0] - 1, coord[1], 0]);
 								}
-								if (coord[1] > 2) {
+								// > 1, not > 2: parity picks the branch (even pushes
+							// -1, odd pushes -2) so the single bound is exact,
+							// like the downward twin; > 2 blocked propagation
+							// from half-row 2 entirely
+								if (coord[1] > 1) {
 									if (block.halfBlockY === 1) {
 										queue.push([coord[0], coord[1] - 2, 2]);
 									} else {

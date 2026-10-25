@@ -1,6 +1,6 @@
 import State from './state.js';
 import Toolbar from './toolbar.js';
-import { $, createCanvas } from './ui.js';
+import { $, createCanvas, isTextEntry } from './ui.js';
 import magicNumbers from './magicNumbers.js';
 import {
 	PASTE_NEWLINE,
@@ -188,10 +188,27 @@ const createCursor = canvasContainer => {
 	};
 	viewport?.addEventListener('scroll', onViewportScroll, { passive: true });
 
+	// metric/buffer refreshes arrive from PERMANENT listeners: while
+	// the cursor is hidden (another tool active, or a live shift
+	// selection) they must only reposition the box, never end the
+	// selection, send cursor frames, or scroll the viewport; a zoom or
+	// collab resync used to do all three through move()
+	const reclamp = () => {
+		x = Math.min(Math.max(x, 0), State.textArtCanvas.getColumns() - 1);
+		y = Math.min(Math.max(y, 0), State.textArtCanvas.getRows() - 1);
+		canvas.style.left = x * State.font.getWidth() - 1 + 'px';
+		canvas.style.top = y * State.font.getHeight() - 1 + 'px';
+	};
+
 	const updateDimensions = () => {
 		canvas.width = State.font.getWidth() + 1;
 		canvas.height = State.font.getHeight() + 1;
-		move(x, y);
+		if (visible) {
+			// no follow: a metric refresh must not tug the view either
+			move(x, y, false);
+		} else {
+			reclamp();
+		}
 	};
 
 	const getX = () => {
@@ -802,6 +819,17 @@ const createKeyboardController = () => {
 						deleteText();
 					}
 				}
+			} else if (e.ctrlKey && !e.altKey && !e.metaKey && e.code === 'KeyU') {
+				// Ctrl+U color pickup lives here because keypress never
+				// fires for ctrl combos in modern browsers; the old keypress
+				// branch was dead
+				e.preventDefault();
+				const block = State.textArtCanvas.getBlock(
+					State.cursor.getX(),
+					State.cursor.getY(),
+				);
+				State.palette.setForegroundColor(block.foregroundColor);
+				State.palette.setBackgroundColor(block.backgroundColor);
 			} else if (e.altKey && !e.ctrlKey && !e.metaKey) {
 				switch (e.code) {
 					// Alt+Up Arrow - Insert Row
@@ -1000,12 +1028,38 @@ const createKeyboardController = () => {
 	 */
 	const convertUnicode = keyCode => unicodeMapping.get(keyCode) ?? keyCode;
 
+	// typed glyphs resolve in order even when the glyph table interning
+	// awaits: a later keystroke must never land before an earlier one
+	let typeQueue = Promise.resolve();
+
+	const drawTyped = key => {
+		// astral chars are two UTF-16 units; charCodeAt(0) was a lone
+		// surrogate half
+		const codepoint = key.codePointAt(0);
+		const mapped = convertUnicode(codepoint);
+		if (codepoint < 0x80 || mapped !== codepoint) {
+			// ASCII, or a codepoint the CP437 table speaks natively
+			draw(mapped);
+			return;
+		}
+		// outside CP437: intern through the doc glyph table like paste
+		// and the F-keys; writing the raw codepoint as a glyph id aliased
+		// interned glyphs (256+ collides with the interning sequence) and
+		// degraded to '?' on the wire and in exports
+		typeQueue = typeQueue.then(async () => {
+			const resolved = await State.textArtCanvas.resolveUnicode(
+				new Set([codepoint]),
+			);
+			draw(resolved.get(codepoint) ?? PASTE_SUBSTITUTE);
+		});
+	};
+
 	const keyPress = e => {
 		if (!ignored) {
 			if (!e.altKey && !e.ctrlKey && !e.metaKey) {
-				if (e.key.length === 1) {
+				if (e.key.length <= 2 && [...e.key].length === 1) {
 					e.preventDefault();
-					draw(convertUnicode(e.key.charCodeAt(0)));
+					drawTyped(e.key);
 				} else if (e.key === 'Enter') {
 					e.preventDefault();
 					State.cursor.newLine();
@@ -1014,17 +1068,6 @@ const createKeyboardController = () => {
 					if (State.cursor.getX() > 0) {
 						deleteText();
 					}
-				}
-			} else if (e.ctrlKey) {
-				if (e.key === 'u' || e.key === 'U') {
-					// Ctrl+U - Pick up colors from current position
-					e.preventDefault();
-					const block = State.textArtCanvas.getBlock(
-						State.cursor.getX(),
-						State.cursor.getY(),
-					);
-					State.palette.setForegroundColor(block.foregroundColor);
-					State.palette.setBackgroundColor(block.backgroundColor);
 				}
 			}
 		}
@@ -1320,6 +1363,12 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 	};
 
 	const keyDown = e => {
+		if (isTextEntry(e.target)) {
+			// this handler is PERMANENT: Cmd+V in the SAUCE title field
+			// used to stamp the buffer onto the canvas, and Ctrl+Backspace
+			// in chat deleted the selection
+			return;
+		}
 		if (enabled) {
 			if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
 				switch (e.code) {
@@ -1960,6 +2009,11 @@ const createSelectionTool = () => {
 	};
 
 	const keyDown = e => {
+		if (isTextEntry(e.target)) {
+			// typing in chat used to toggle move mode, flip the selected
+			// art on [ and ], and switch tools on Enter
+			return;
+		}
 		// These keys work with or without modifiers
 		if (e.code === 'Enter') {
 			// Enter - exit selection and use default cursor behavior

@@ -143,6 +143,12 @@ const Toolbar = (() => {
 	// drawer, then an active selection, then back to the previous tool
 	document.addEventListener('keydown', e => {
 		if (e.code === 'Escape') {
+			// a native dialog owns Escape while it is open: preventDefault
+			// here blocked its close and then dismissed selections or
+			// switched tools underneath it
+			if (State.modal?.isOpen?.()) {
+				return;
+			}
 			e.preventDefault();
 			if (State.flyouts?.closeAndFocus()) {
 				return;

@@ -167,6 +167,7 @@ vi.stubGlobal('document', {
 });
 
 vi.mock('../../src/js/client/ui.js', () => ({
+	isTextEntry: () => false,
 	$: () => ({
 		style: {},
 		classList: { add() {}, remove() {} },

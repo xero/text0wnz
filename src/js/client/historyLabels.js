@@ -77,12 +77,17 @@ const createHistoryLabels = () => {
 
 	const committed = () => {
 		rows.splice(cursor);
-		rows.push(
-			snapshot ?? { label: pending ?? fallbackLabel(), time: Date.now() },
-		);
-		snapshot = null;
+		if (snapshot) {
+			rows.push(snapshot);
+			snapshot = null;
+			// pending stays: it belongs to the NEXT stroke, pended before
+			// startUndo; the prior stroke's async flush used to wipe it
+			// and the history row wore the previous tool's label
+		} else {
+			rows.push({ label: pending ?? fallbackLabel(), time: Date.now() });
+			pending = null;
+		}
 		cursor = rows.length;
-		pending = null;
 		notify();
 	};
 

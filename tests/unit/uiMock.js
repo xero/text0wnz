@@ -3,6 +3,7 @@ import { vi } from 'vitest';
 // one ui.js mock for every freehand suite: a new ui export lands here
 // once instead of in three hand-synced copies
 export const createUiMock = () => ({
+	isTextEntry: vi.fn(() => false),
 	iconHref: vi.fn(name => `img/icons.svg#${name}`),
 	iconSvg: vi.fn(() =>
 		document.createElementNS('http://www.w3.org/2000/svg', 'svg')),

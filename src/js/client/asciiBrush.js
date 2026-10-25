@@ -393,6 +393,9 @@ const createAsciiBrushController = () => {
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
+		// a mid-drag switch plus Escape return used to feed engine.move()
+		// into the abandoned stroke with no fresh undo group
+		stroking = false;
 		nav.classList.remove('enabled');
 	};
 

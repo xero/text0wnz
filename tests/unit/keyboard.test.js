@@ -519,6 +519,47 @@ describe('Keyboard Utilities', () => {
 			expect(drawn).toEqual([{ code: 21, x: 0, y: 0 }]);
 			expect(State.textArtCanvas.startUndo).toHaveBeenCalledTimes(1);
 		});
+
+		it('interns typed non-CP437 glyphs instead of aliasing ids', async () => {
+			vi.clearAllMocks();
+			const drawn = [];
+			State.textArtCanvas.draw = vi.fn(callback =>
+				callback(code => drawn.push(code)));
+			// the doc glyph table hands back an interned id, like paste
+			State.textArtCanvas.resolveUnicode = vi.fn(
+				async () => new Map([[0x2603, 300]]),
+			);
+			const controller = createKeyboardController();
+			controller.enable();
+			document.dispatchEvent(new KeyboardEvent('keypress', { key: '☃' }));
+			controller.disable();
+			await new Promise(resolve => setTimeout(resolve, 0));
+			expect(State.textArtCanvas.resolveUnicode).toHaveBeenCalledWith(
+				new Set([0x2603]),
+			);
+			// the raw codepoint as a glyph id aliased interned glyphs and
+			// quantized to '?' everywhere downstream
+			expect(drawn).toEqual([300]);
+		});
+
+		it('picks up colors on Ctrl+U through keydown', () => {
+			vi.clearAllMocks();
+			State.textArtCanvas.getBlock = vi.fn(() => ({
+				charCode: 65,
+				foregroundColor: 12,
+				backgroundColor: 3,
+			}));
+			const controller = createKeyboardController();
+			controller.enable();
+			// keypress never fires for ctrl combos in modern browsers, so
+			// the old keypress branch was dead
+			document.dispatchEvent(
+				new KeyboardEvent('keydown', { code: 'KeyU', ctrlKey: true }),
+			);
+			controller.disable();
+			expect(State.palette.setForegroundColor).toHaveBeenCalledWith(12);
+			expect(State.palette.setBackgroundColor).toHaveBeenCalledWith(3);
+		});
 	});
 
 	describe('createPasteTool', () => {
