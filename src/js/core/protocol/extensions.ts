@@ -51,7 +51,7 @@ import {
 import { quantizeColorWord } from '../convert.js';
 import { cp437ToUnicode, unicodeToCp437 } from '../cp437.js';
 import { paletteToRGB8, ProtocolError } from './moebius.js';
-import type { MoebiusBlock } from './moebius.js';
+import type { MoebiusBlock, MoebiusPaletteEntry } from './moebius.js';
 
 export const T0wnzAction = Object.freeze({
 	EXT_DRAW: 23,
@@ -157,11 +157,13 @@ export const sanitizeExtDraw = (
 };
 
 /**
- * Join-doc palette (6-bit triples, possibly absent) -> the 16 resolve
- * words quantization matches against. Mirrors joinDocToDoc's palette
- * adoption.
+ * Join-doc palette (either wire shape, possibly absent) -> the 16
+ * resolve words quantization matches against. Mirrors joinDocToDoc's
+ * palette adoption.
  */
-export const paletteWordsFromJoin = (palette?: number[][]): Uint32Array => {
+export const paletteWordsFromJoin = (
+	palette?: MoebiusPaletteEntry[],
+): Uint32Array => {
 	const words = createDefaultPaletteRGB();
 	if (palette && palette.length > 0) {
 		const rgb8 = paletteToRGB8(palette);
