@@ -246,6 +246,11 @@ const openHandler = (file, opts = {}) => {
 				if (docNative) {
 					// tnd/dur/0wnz: plane-native load keeps truecolor and
 					// frames; legacy consumers read the lossy u16 mirror
+					if (typeof letterSpacing === 'boolean') {
+						// setDocData has no spacing seam; an explicit SAUCE
+						// flag lands on the font like the u16 path's
+						State.font.setLetterSpacing(letterSpacing);
+					}
 					State.textArtCanvas.setDocData(docNative);
 				} else {
 					State.textArtCanvas.setImageData(
@@ -763,6 +768,7 @@ const initializeAppComponents = async () => {
 	onClick($('warningYes'), async () => {
 		bodyContainer.classList.add('loading');
 		State.clearLocalStorage();
+		Load.resetSauceFlags();
 		State.textArtCanvas.clearXBData(async _ => {
 			State.palette = createDefaultPalette();
 			palettePicker.updatePalette();

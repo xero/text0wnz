@@ -1467,6 +1467,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		onComplete,
 	) => {
 		editor.loadU16(newImageData, newColumnValue, newRowValue, newIceColors);
+		// loadU16 keeps doc spacing untouched; adopt the session's so a
+		// fresh save cannot resurrect a stale open-time value
+		doc.setLetterSpacing(State.font ? State.font.getLetterSpacing() : false);
 		columns = newColumnValue;
 		rows = newRowValue;
 		// Adopt the caller's array as the mirror
@@ -1497,6 +1500,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	 */
 	const setDocData = (sourceDoc, onComplete) => {
 		editor.loadDoc(sourceDoc);
+		// loadDoc copied the source doc's collapsed boolean; the session
+		// toggle is the live truth
+		doc.setLetterSpacing(State.font ? State.font.getLetterSpacing() : false);
 		columns = doc.getColumns();
 		rows = doc.getRows();
 		imageData = editor.toU16Lossy().imageData;
@@ -1578,6 +1584,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const getHalfBlock = (x, y) => editor.getHalfBlockAt(x, y);
 
+	document.addEventListener('onLetterSpacingChange', e => {
+		// utf8/tnd/envelope saves and journal keyframes read doc spacing;
+		// mirror the toggle or they persist the open-time value
+		doc.setLetterSpacing(e.detail === true);
+	});
 	document.addEventListener('onLetterSpacingChange', onCriticalChange);
 	document.addEventListener('onPaletteChange', onCriticalChange);
 	document.addEventListener('onScaleFactorChange', onCriticalChange);

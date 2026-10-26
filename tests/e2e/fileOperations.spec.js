@@ -1,5 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { clickTool } from './helpers/editorHelpers.js';
+import {
+	concatBytes,
+	makeAnsi,
+	makeSauce,
+	makeUtf8Ansi,
+} from '../corpus/generators.js';
 
 test.describe('File Operations', () => {
 	test.beforeEach(async ({ page }) => {
@@ -171,6 +177,40 @@ test.describe('Canvas Operations', () => {
 		await spacingToggle.click();
 		await page.waitForTimeout(300);
 		await expect(spacingToggle).not.toHaveClass(/enabled/);
+	});
+
+	test('opening a SAUCE-less file keeps the 9px toggle', async ({ page }) => {
+		const spacingToggle = page.locator('#nav9pt');
+		await spacingToggle.click();
+		await page.waitForTimeout(300);
+		await expect(spacingToggle).toHaveClass(/enabled/);
+		// no SAUCE record states no preference: the artist's toggle holds
+		await page.locator('#openFile').setInputFiles({
+			name: 'plain.ans',
+			mimeType: 'application/octet-stream',
+			buffer: Buffer.from(makeAnsi({ columns: 10, rows: 2 })),
+		});
+		await page.waitForTimeout(1000);
+		await expect(spacingToggle).toHaveClass(/enabled/);
+	});
+
+	test('a 9px SAUCE flag applies on a utf8 open', async ({ page }) => {
+		const body = makeUtf8Ansi({ columns: 10, rows: 2 });
+		const bytes = concatBytes([
+			body,
+			new Uint8Array([0x1a]),
+			makeSauce({ fileSize: body.length, tinfo1: 10, flags: 0b00000100 }),
+		]);
+		const spacingToggle = page.locator('#nav9pt');
+		await expect(spacingToggle).not.toHaveClass(/enabled/);
+		// the docNative open path applies the explicit flag end to end
+		await page.locator('#openFile').setInputFiles({
+			name: 'art.utf8.ans',
+			mimeType: 'application/octet-stream',
+			buffer: Buffer.from(bytes),
+		});
+		await page.waitForTimeout(1000);
+		await expect(spacingToggle).toHaveClass(/enabled/);
 	});
 
 	test('should have font selection', async ({ page }) => {
