@@ -1321,6 +1321,12 @@ const saveModule = () => {
 	// cell per column, LF endings, unicode glyphs ride the doc glyph
 	// table, ice-vs-blink per the artist's choice
 	const utf8 = async () => {
+		// the default ice presentation drops blink over extended
+		// backgrounds; the lint names it, the artist decides.
+		// utf8Blink stays unwired: its writer keeps the attr
+		if (!(await confirmExport('utf8', 'UTF-8 ANSi')).proceed) {
+			return;
+		}
 		const bytes = encodeUtf8(State.textArtCanvas.getDoc(), { meta: sauceMeta() });
 		await saveFile(bytes, undefined, State.title + '.utf8.ans');
 	};
@@ -1362,9 +1368,10 @@ const saveModule = () => {
 	};
 
 	const xb = async compress => {
-		// programmatic escape hatch: an explicit argument skips the
-		// export modal entirely
-		if (compress !== undefined) {
+		// programmatic escape hatch: only a real boolean skips the
+		// export modal, because ui.js onClick hands menu clicks the
+		// click event as the first argument
+		if (typeof compress === 'boolean') {
 			await writeXb(compress);
 			return;
 		}
@@ -1392,15 +1399,25 @@ const saveModule = () => {
 			(embeddedFont && embeddedFont.height) ||
 			(liveFontData && liveFontData.height) ||
 			State.font.getHeight();
-		const bytes = encodeXBin(State.textArtCanvas.getDoc(), {
-			palette6: State.textArtCanvas.getXBPaletteData(),
-			fontBytes: fontBytes,
-			fontHeight: fontHeight,
-			compress: compress,
-			frameIndex: State.textArtCanvas.getCurrentFrame?.() ?? 0,
-			meta: sauceMeta(),
-		});
-		await saveFile(bytes, undefined, State.title + '.xb');
+		try {
+			const bytes = encodeXBin(State.textArtCanvas.getDoc(), {
+				palette6: State.textArtCanvas.getXBPaletteData(),
+				fontBytes: fontBytes,
+				fontHeight: fontHeight,
+				compress: compress,
+				frameIndex: State.textArtCanvas.getCurrentFrame?.() ?? 0,
+				meta: sauceMeta(),
+			});
+			await saveFile(bytes, undefined, State.title + '.xb');
+		} catch (error) {
+			if (error instanceof CodecError) {
+				// the zoom-scaled getHeight fallback can hand the encoder a
+				// height the header byte cannot hold; refuse loudly like bin
+				alert(`XBin export failed: ${error.message}`);
+				return;
+			}
+			throw error;
+		}
 	};
 
 	const dataUrlToBytes = dataURL => {

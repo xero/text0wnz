@@ -285,6 +285,28 @@ describe('xbin codec', () => {
 		expect(d2.doc.getCell(0, 0, 0).glyph & 0xffff).toBe(65);
 	});
 
+	it('encode refuses font heights the header byte cannot hold', () => {
+		const d = decodeXBin(
+			makeXBin({
+				columns: 2,
+				rows: 1,
+				rawCells: Uint16Array.from([(65 << 8) | 7, 32 << 8]),
+				sauce: {},
+			}),
+		);
+		const font = makeXBinFont(256, 16);
+		// 300 used to wrap the header byte to 44 and corrupt every reader
+		expect(() =>
+			encodeXBin(d.doc, { fontBytes: font, fontHeight: 300 }),
+		).toThrow(/font height/);
+		expect(() => encodeXBin(d.doc, { fontBytes: font, fontHeight: 0 })).toThrow(
+			/font height/,
+		);
+		expect(() =>
+			encodeXBin(d.doc, { fontBytes: font, fontHeight: 1.5 }),
+		).toThrow(/font height/);
+	});
+
 	it('defaults a zero font height to 16', () => {
 		const bytes = makeXBin({
 			columns: 2,

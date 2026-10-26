@@ -303,6 +303,11 @@ export const encodeXBin = (
 	const palette6 = options.palette6 ?? palette6FromDoc(doc);
 	const fontBytes = options.fontBytes ?? null;
 	const fontHeight = options.fontHeight ?? 16;
+	if (!Number.isInteger(fontHeight) || fontHeight < 1 || fontHeight > 255) {
+		// the header byte wraps silently past 255 (300 wrote 44); 33-255
+		// stays writable so raw-read decodes can round-trip
+		throw new CodecError(`XBin font height ${fontHeight} out of range 1-255`);
+	}
 	const compress = options.compress ?? true;
 
 	let flags = 0x01; // palette always embedded (v2 behavior)
