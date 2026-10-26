@@ -3,6 +3,7 @@ import {
 	printHelp,
 	sanitize,
 	callout,
+	authCooldownMs,
 } from '../../../src/js/server/utils.js';
 
 describe('Utils Module', () => {
@@ -138,6 +139,17 @@ describe('Utils Module', () => {
 			// The message should be truncated to 100 chars (not counting the box chars)
 			expect(call).toContain('a'.repeat(100));
 			expect(call).not.toContain('a'.repeat(150));
+		});
+	});
+
+	describe('authCooldownMs', () => {
+		it('gives two free tries then doubles to a 30s cap', () => {
+			expect(authCooldownMs(1)).toBe(0);
+			expect(authCooldownMs(2)).toBe(0);
+			expect(authCooldownMs(3)).toBe(500);
+			expect(authCooldownMs(4)).toBe(1000);
+			expect(authCooldownMs(9)).toBe(30_000);
+			expect(authCooldownMs(50)).toBe(30_000);
 		});
 	});
 });

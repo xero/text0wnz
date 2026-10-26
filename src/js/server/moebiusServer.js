@@ -16,6 +16,7 @@ import path from 'node:path';
 import { MoebiusAction, decodeFrame, ProtocolError } from '../core/index';
 import { createRoom } from './room.js';
 import { resolveBridgeTarget, createBridgePipe } from './bridge.js';
+import { ROOM_NAME_RE, authCooldownMs } from './utils.js';
 
 export const SERVER_LIMITS = Object.freeze({
 	// vanilla PASTE_AS_SELECTION frames run tens of MB (the ancestor's
@@ -27,8 +28,6 @@ export const SERVER_LIMITS = Object.freeze({
 	maxClientsPerRoom: 64,
 	maxRooms: 64,
 });
-
-const ROOM_NAME_RE = /^[a-z0-9_-]{1,32}$/i;
 
 /** @param {string} pathname @param {string} defaultRoom */
 export const roomNameFromPath = (pathname, defaultRoom) => {
@@ -47,6 +46,7 @@ export const roomNameFromPath = (pathname, defaultRoom) => {
  * @param {string} [config.sessionName]
  * @param {string} [config.pass]
  * @param {Record<string, string>} [config.roomPasswords]
+ * @param {string[]} [config.allowedOrigins] upgrade Origin allowlist; empty Origin (desktop clients) always allowed
  * @param {number} [config.maxColumns] resize wall override (0/absent = room default)
  * @param {number} [config.maxRows] resize wall override (0/absent = room default)
  * @param {string} [config.staticDir] serve the built PWA from here ('' = ws-only)
@@ -74,8 +74,34 @@ export const createMoebiusServer = config => {
 	const roomReady = new WeakMap();
 	/** sockets per room INCLUDING ones that never sent CONNECTED */
 	const socketCounts = new Map();
+	/** pre-room auth backoff keyed by room name (the room may not
+	 * exist yet); bounded so hostile name churn is not itself a leak */
+	const AUTH_GATE_LIMIT = 4096;
+	const authGates = new Map();
+	const authGateFor = name => {
+		let gate = authGates.get(name);
+		if (!gate) {
+			if (authGates.size >= AUTH_GATE_LIMIT) {
+				const now = Date.now();
+				for (const [key, g] of authGates) {
+					if (now >= g.cooldownUntil && now - g.lastAt > 60_000) {
+						authGates.delete(key);
+					}
+				}
+			}
+			if (authGates.size >= AUTH_GATE_LIMIT) {
+				return null; // fail closed: a flood gets no fresh tries
+			}
+			gate = { failures: 0, cooldownUntil: 0, lastAt: 0 };
+			authGates.set(name, gate);
+		}
+		return gate;
+	};
 
-	const getRoom = name => {
+	const getRoom = requested => {
+		// one casing rule for every caller: paths arrive lowercased,
+		// main.js hands in the raw --session-name
+		const name = requested.toLowerCase();
 		let room = rooms.get(name);
 		if (!room) {
 			if (rooms.size >= SERVER_LIMITS.maxRooms) {
@@ -186,12 +212,29 @@ export const createMoebiusServer = config => {
 					config.roomPasswords?.[ws.data.roomName] ?? config.pass ?? '';
 				const offered =
 					typeof frame.data?.pass === 'string' ? frame.data.pass : '';
-				if (expected !== '' && offered !== expected && !ws.data.room) {
-					// same wire shape as room.connect's refusal: vanilla
-					// clients wait for the frame, not the close code
-					client.send(MoebiusAction.REFUSED, {});
-					ws.close(1008, 'refused');
-					return;
+				if (expected !== '' && !ws.data.room) {
+					// stateless refusal here let passwords brute-force at
+					// wire speed; the gate shares room.connect's backoff.
+					// Same wire shape as the room's refusal either way:
+					// vanilla clients wait for the frame, not the close code
+					const gate = authGateFor(ws.data.roomName);
+					const now = Date.now();
+					if (!gate || now < gate.cooldownUntil) {
+						client.send(MoebiusAction.REFUSED, {});
+						ws.close(1008, 'refused');
+						log(`refused (auth cooldown) for '${ws.data.roomName}'`);
+						return;
+					}
+					if (offered !== expected) {
+						gate.failures++;
+						gate.lastAt = now;
+						gate.cooldownUntil = now + authCooldownMs(gate.failures);
+						client.send(MoebiusAction.REFUSED, {});
+						ws.close(1008, 'refused');
+						log(`refused (bad password) for '${ws.data.roomName}'`);
+						return;
+					}
+					authGates.delete(ws.data.roomName);
 				}
 				const room = ws.data.room ?? getRoom(ws.data.roomName);
 				if (!room) {

@@ -13,13 +13,15 @@ import { createHash } from 'node:crypto';
 import {
 	copyFile,
 	mkdir,
+	open,
+	readdir,
 	readFile,
 	rename,
 	rm,
-	writeFile,
 } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { ROOM_NAME_RE } from './utils.js';
 
 /**
  * Crash-safe replace: write a sibling temp file, then rename over the
@@ -29,8 +31,61 @@ import path from 'node:path';
  */
 const writeFileAtomic = async (file, data) => {
 	const tmp = `${file}.tmp-${process.pid}`;
-	await writeFile(tmp, data);
+	const handle = await open(tmp, 'w');
+	try {
+		// fsync before rename: the rename can survive a power loss the
+		// data did not, leaving a truncated file at the final name
+		await handle.writeFile(data);
+		await handle.sync();
+	} finally {
+		await handle.close();
+	}
 	await rename(tmp, file);
+};
+
+/** crash leftovers: .tmp-<pid> siblings a crash never renamed */
+export const sweepTempFiles = async dir => {
+	let entries;
+	try {
+		entries = await readdir(dir);
+	} catch {
+		return; // no sessions dir yet
+	}
+	for (const entry of entries) {
+		if ((/\.tmp-\d+$/).test(entry)) {
+			await rm(path.join(dir, entry), { force: true });
+		}
+	}
+};
+
+/** pre-lowercase servers wrote session files under mixed-case room
+ * names; those files are unreachable now, so boot renames them
+ * (lowercase twin present = ambiguous, leave both, warn) */
+export const migrateSessionCase = async dir => {
+	let entries;
+	try {
+		entries = await readdir(dir);
+	} catch {
+		return; // no sessions dir yet
+	}
+	// judge twins against the real listing, not existsSync: on a
+	// case-insensitive filesystem existsSync(lower) sees the SAME file
+	// and would skip the legal case-change rename
+	const names = new Set(entries);
+	for (const entry of entries) {
+		const match = entry.match(/^(.+?)\.(0wnz|state\.json|bin)$/);
+		if (!match || !ROOM_NAME_RE.test(match[1]) || !(/[A-Z]/).test(match[1])) {
+			continue;
+		}
+		const lower = `${match[1].toLowerCase()}.${match[2]}`;
+		if (names.has(lower)) {
+			console.warn(`[Server] ${entry} shadowed by ${lower}; left in place`);
+			continue;
+		}
+		await rename(path.join(dir, entry), path.join(dir, lower));
+		// two mixed-case twins lowering to one name: the second keeps
+		names.add(lower);
+	}
 };
 
 /**
@@ -47,12 +102,21 @@ const saveQueues = new Map();
 const serialized = (roomName, job) => {
 	const tail = saveQueues.get(roomName) ?? Promise.resolve();
 	const next = tail.then(job, job);
-	saveQueues.set(
-		roomName,
-		next.catch(() => undefined),
-	);
+	const settled = next
+		.catch(() => undefined)
+		.then(() => {
+			// a drained queue frees its key: client-chosen names must
+			// not grow the map for the life of the process
+			if (saveQueues.get(roomName) === settled) {
+				saveQueues.delete(roomName);
+			}
+		});
+	saveQueues.set(roomName, settled);
 	return next;
 };
+
+/** test seam and ops debugging: queues currently holding a key */
+export const pendingSaves = () => saveQueues.size;
 import {
 	applyExtCells,
 	compressExtCells,
@@ -121,6 +185,9 @@ const saveRoomNow = async (room, dir) => {
 export const stateFile = (dir, roomName) =>
 	path.join(dir, `${roomName}.state.json`);
 
+/** legacy v2 session file (BinaryText + SAUCE) */
+const legacyFile = (dir, roomName) => path.join(dir, `${roomName}.bin`);
+
 /**
  * Hourly sha1-deduped backup: copies the saved envelope aside when the
  * hash changed since the last backup.
@@ -146,15 +213,19 @@ export const backupRoom = async (dir, roomName, bytes, lastHashes) => {
 };
 
 /**
- * A throwaway room (blank art, no chat) leaves nothing behind:
- * client-chosen names used to grow two session files and a backup
- * each with no deletion path anywhere.
+ * A throwaway room (blank art, no chat) leaves nothing behind,
+ * the legacy .bin included, or erasing a migrated room's art
+ * silently resurrected it on the next join. Serialized behind the
+ * room's save queue: racing an in-flight save re-created the files
+ * this exists to delete.
  * @param {string} dir @param {string} roomName
  */
-export const removeRoomFiles = async (dir, roomName) => {
-	await rm(roomFile(dir, roomName), { force: true });
-	await rm(stateFile(dir, roomName), { force: true });
-};
+export const removeRoomFiles = (dir, roomName) =>
+	serialized(roomName, async () => {
+		await rm(roomFile(dir, roomName), { force: true });
+		await rm(stateFile(dir, roomName), { force: true });
+		await rm(legacyFile(dir, roomName), { force: true });
+	});
 
 /**
  * Load a room doc: native envelope first, then the legacy v2 .bin
@@ -192,7 +263,7 @@ export const loadRoomDoc = async (dir, roomName) => {
 		};
 		return join;
 	}
-	const legacy = path.join(dir, `${roomName}.bin`);
+	const legacy = legacyFile(dir, roomName);
 	if (existsSync(legacy)) {
 		// legacy v2 .bin is BinaryText + SAUCE; the core codec decodes it
 		// to a v3 doc, and docToJoinDoc projects to wire blocks

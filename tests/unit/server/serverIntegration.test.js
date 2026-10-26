@@ -9,8 +9,9 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn, execSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import http from 'node:http';
 import path from 'node:path';
 import { MoebiusAction as A } from '../../../src/js/core/index';
 
@@ -241,6 +242,187 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 		expect(Array.isArray(reply.data.caps)).toBe(true);
 		ws.close();
 	});
+
+	it(
+		'the pre-room gate cools down after repeated bad passwords',
+		{ timeout: 15000 },
+		async () => {
+			// a dedicated room path keeps the long-lived server's other
+			// rooms clean
+			for (let i = 0; i < 3; i++) {
+				const { ws, reply } = await connectClient('gatecool', {
+					nick: 'g',
+					pass: 'wrong',
+				});
+				expect(reply.type).toBe(A.REFUSED);
+				ws.close();
+			}
+			// inside the window even the right password refuses
+			const blocked = await connectClient('gatecool', {
+				nick: 'g',
+				pass: PASS,
+			});
+			expect(blocked.reply.type).toBe(A.REFUSED);
+			blocked.ws.close();
+			// blocked attempts do not extend the window; poll until in
+			const deadline = Date.now() + 10_000;
+			for (;;) {
+				const { ws, reply } = await connectClient('gatecool', {
+					nick: 'g',
+					pass: PASS,
+				});
+				ws.close();
+				if (reply.type === A.CONNECTED) {
+					break;
+				}
+				expect(Date.now()).toBeLessThan(deadline);
+				await new Promise(r => setTimeout(r, 200));
+			}
+		},
+	);
+
+	it(
+		'a mixed case --session-name lands clients in one room and lowercase files',
+		{ timeout: 30000 },
+		async () => {
+			const cwd = mkdtempSync(path.join(tmpdir(), 't0wnz-case-'));
+			const casePort = 20000 + Math.floor(Math.random() * 20000);
+			const caseChild = spawn(
+				'bun',
+				[
+					path.join(repoRoot, 'src/js/server/main.js'),
+					String(casePort),
+					'--session-name',
+					'ArtJam',
+				],
+				{ cwd, stdio: ['ignore', 'pipe', 'pipe']},
+			);
+			try {
+				const deadline = Date.now() + 15000;
+				for (;;) {
+					try {
+						const res = await fetch(`http://127.0.0.1:${casePort}/healthz`);
+						if (res.ok) {
+							break;
+						}
+					} catch {
+						// not up yet
+					}
+					if (Date.now() > deadline) {
+						throw new Error('case server did not come up');
+					}
+					await new Promise(r => setTimeout(r, 150));
+				}
+				const ws = new WebSocket(`ws://127.0.0.1:${casePort}/`);
+				await new Promise((resolve, reject) => {
+					ws.addEventListener('open', resolve, { once: true });
+					ws.addEventListener('error', reject, { once: true });
+				});
+				const joined = nextFrame(ws, A.CONNECTED);
+				send(ws, A.CONNECTED, { nick: 'c', pass: '' });
+				await joined;
+				// one normalized room, not a mixed-case orphan plus a twin
+				const health = await (
+					await fetch(`http://127.0.0.1:${casePort}/healthz`)
+				).json();
+				expect(health.rooms).toBe(1);
+				send(ws, A.DRAW, {
+					x: 0,
+					y: 0,
+					block: { code: 65, fg: 7, bg: 0 },
+					id: 0,
+				});
+				await new Promise(r => setTimeout(r, 100));
+				ws.close();
+				const fileDeadline = Date.now() + 5000;
+				const saved = path.join(cwd, 'sessions', 'artjam.0wnz');
+				for (;;) {
+					if (existsSync(saved)) {
+						break;
+					}
+					if (Date.now() > fileDeadline) {
+						throw new Error('lowercase session file never appeared');
+					}
+					await new Promise(r => setTimeout(r, 150));
+				}
+				// case-insensitive filesystems alias the two names, so the
+				// absence check only means something on case-sensitive ones
+				if (process.platform !== 'darwin') {
+					expect(
+						existsSync(path.join(cwd, 'sessions', 'ArtJam.0wnz')),
+					).toBe(false);
+				}
+			} finally {
+				caseChild.kill('SIGKILL');
+				rmSync(cwd, { recursive: true, force: true });
+			}
+		},
+	);
+
+	it(
+		'ALLOWED_ORIGINS gates browser upgrades and leaves desktop clients open',
+		{ timeout: 30000 },
+		async () => {
+			const cwd = mkdtempSync(path.join(tmpdir(), 't0wnz-origin-'));
+			const originPort = 20000 + Math.floor(Math.random() * 20000);
+			const originChild = spawn(
+				'bun',
+				[path.join(repoRoot, 'src/js/server/main.js'), String(originPort)],
+				{
+					cwd,
+					stdio: ['ignore', 'pipe', 'pipe'],
+					env: { ...process.env, ALLOWED_ORIGINS: 'http://ok.example' },
+				},
+			);
+			try {
+				const deadline = Date.now() + 15000;
+				for (;;) {
+					try {
+						const res = await fetch(
+							`http://127.0.0.1:${originPort}/healthz`,
+						);
+						if (res.ok) {
+							break;
+						}
+					} catch {
+						// not up yet
+					}
+					if (Date.now() > deadline) {
+						throw new Error('origin server did not come up');
+					}
+					await new Promise(r => setTimeout(r, 150));
+				}
+				// raw requests: fetch strips the forbidden upgrade headers.
+				// No sec-websocket-key, so a PASSING origin falls through
+				// the failed upgrade to the 426, which is the point: the
+				// gate ran and let it by
+				const rawStatus = origin =>
+					new Promise((resolve, reject) => {
+						const req = http.request(
+							{
+								host: '127.0.0.1',
+								port: originPort,
+								path: '/',
+								headers: {
+									connection: 'Upgrade',
+									upgrade: 'websocket',
+									...(origin ? { origin } : {}),
+								},
+							},
+							res => resolve(res.statusCode),
+						);
+						req.on('error', reject);
+						req.end();
+					});
+				expect(await rawStatus('http://evil.example')).toBe(403);
+				expect(await rawStatus('http://ok.example')).toBe(426);
+				expect(await rawStatus(null)).toBe(426);
+			} finally {
+				originChild.kill('SIGKILL');
+				rmSync(cwd, { recursive: true, force: true });
+			}
+		},
+	);
 });
 
 describe.skipIf(!canRun)('bridge over real sockets', () => {

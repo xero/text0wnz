@@ -797,6 +797,165 @@ describe('convergence fuzz', () => {
 });
 
 describe('review-pass regressions', () => {
+	it('repeated bad passwords open a cooldown that refuses even the right one', () => {
+		vi.useFakeTimers();
+		try {
+			vi.setSystemTime(1_000_000);
+			const room = createRoom({ password: 'pw' });
+			const bad = () => {
+				const c = fakeClient();
+				return room.connect(c, { nick: 'x', pass: 'nope' });
+			};
+			expect(bad()).toBe(false);
+			expect(bad()).toBe(false);
+			expect(bad()).toBe(false);
+			// three failures opened a 500ms window; the right password
+			// still refuses inside it
+			const blocked = fakeClient();
+			expect(room.connect(blocked, { nick: 'x', pass: 'pw' })).toBe(false);
+			vi.advanceTimersByTime(600);
+			const fresh = fakeClient();
+			expect(room.connect(fresh, { nick: 'x', pass: 'pw' })).toBe(true);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('loadState renormalizes 6-bit array join palettes from old sidecars', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const palette = Array.from({ length: 16 }, () => [0, 0, 0]);
+		palette[1] = [4, 12, 32];
+		room.loadState({
+			columns: 2,
+			rows: 1,
+			data: Array.from({ length: 2 }, () => ({ code: 32, fg: 7, bg: 0 })),
+			palette,
+		});
+		const van = joinEditor(room, 'van');
+		const joined = van.ofType(A.CONNECTED)[0].data.doc;
+		// expand6to8 top-two-bit replication: 4 -> 16, 12 -> 48, 32 -> 130
+		expect(joined.palette[1]).toEqual({ r: 16, g: 48, b: 130 });
+	});
+
+	it('loadState rebuilds the vanilla bridge from exact ext palette words', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const words = new Array(16).fill(0);
+		words[0] = 0x123456;
+		room.loadState({
+			columns: 2,
+			rows: 1,
+			data: Array.from({ length: 2 }, () => ({ code: 32, fg: 7, bg: 0 })),
+			palette: Array.from({ length: 16 }, () => [0, 0, 0]),
+			ext: { palette: words },
+		});
+		const van = joinEditor(room, 'van');
+		const joined = van.ofType(A.CONNECTED)[0].data.doc;
+		// the 6-bit join shape lost the low bits; the ext words did not
+		expect(joined.palette[0]).toEqual({ r: 0x12, g: 0x34, b: 0x56 });
+	});
+
+	it('EXT_TIMELAPSE ops carry only the wire fields', () => {
+		const room = createRoom({ columns: 2, rows: 1, syncCooldownMs: 0 });
+		const caps = joinEditor(room, 'caps', { caps: [EXT_SUITE_CAP]});
+		room.message(caps, {
+			type: T0wnzAction.EXT_DRAW,
+			data: {
+				x: 0,
+				y: 0,
+				u: 65,
+				a: 0,
+				fg: paletteColor(7),
+				bg: paletteColor(0),
+				id: 0,
+			},
+		});
+		room.message(caps, {
+			type: A.SET_CANVAS_SIZE,
+			data: { columns: 3, rows: 1, id: 0 },
+		});
+		room.message(caps, { type: T0wnzAction.EXT_TIMELAPSE, data: {} });
+		const reply = caps.ofType(T0wnzAction.EXT_TIMELAPSE)[0];
+		expect(reply.data.ops.length).toBeGreaterThanOrEqual(2);
+		for (const op of reply.data.ops) {
+			// weight is internal byte accounting, never wire contract
+			expect(Object.keys(op).sort()).toEqual(['data', 'seq', 't', 'type']);
+		}
+	});
+
+	it('isBlank sees near-black ext art as content', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const caps = joinEditor(room, 'caps', { caps: [EXT_SUITE_CAP]});
+		room.message(caps, {
+			type: T0wnzAction.EXT_DRAW,
+			data: {
+				x: 0,
+				y: 0,
+				u: 32,
+				a: 0,
+				fg: paletteColor(7),
+				bg: 0x0a0a0a,
+				id: 0,
+			},
+		});
+		// the vanilla mirror quantizes the bg to 0, but the rider is art
+		expect(room.isBlank()).toBe(false);
+	});
+
+	it('isBlank sees an ext palette as content', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const caps = joinEditor(room, 'caps', { caps: [EXT_SUITE_CAP]});
+		room.message(caps, {
+			type: T0wnzAction.EXT_PALETTE,
+			data: { palette: new Array(16).fill(0x101010), id: 0 },
+		});
+		expect(room.isBlank()).toBe(false);
+	});
+
+	it('isBlank sees sauce metadata as content', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const editor = joinEditor(room, 'e');
+		room.message(editor, { type: A.SAUCE, data: { title: 't', id: 0 } });
+		expect(room.isBlank()).toBe(false);
+	});
+
+	it('isBlank sees a font change as content', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const editor = joinEditor(room, 'e');
+		room.message(editor, {
+			type: A.CHANGE_FONT,
+			data: { font_name: 'Topaz 437 8x16', id: 0 },
+		});
+		expect(room.isBlank()).toBe(false);
+	});
+
+	it('isBlank: draw then erase is blank again', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const editor = joinEditor(room, 'e');
+		room.message(editor, {
+			type: A.DRAW,
+			data: { x: 0, y: 0, block: { code: 65, fg: 7, bg: 0 }, id: 0 },
+		});
+		expect(room.isBlank()).toBe(false);
+		room.message(editor, {
+			type: A.DRAW,
+			data: { x: 0, y: 0, block: { code: 32, fg: 7, bg: 0 }, id: 0 },
+		});
+		expect(room.isBlank()).toBe(true);
+	});
+
+	it('isBlank: ice and 9px toggles alone stay blank', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const editor = joinEditor(room, 'e');
+		room.message(editor, { type: A.ICE_COLORS, data: { value: true, id: 0 } });
+		room.message(editor, {
+			type: A.USE_9PX_FONT,
+			data: { value: true, id: 0 },
+		});
+		// one-click toggles are not content; counting them would make
+		// nearly every dirty room undeletable
+		expect(room.isBlank()).toBe(true);
+	});
+
 	it('a mid-session CONNECTED is never relayed (no pass leak)', () => {
 		const room = createRoom();
 		const a = joinEditor(room, 'a');

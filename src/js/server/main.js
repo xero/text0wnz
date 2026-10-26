@@ -24,7 +24,14 @@ if (process.argv[2] === 'healthcheck') {
 import { callout } from './utils.js';
 import { createMoebiusServer } from './moebiusServer.js';
 import { bridgeConfigFromEnv } from './bridge.js';
-import { saveRoom, backupRoom, loadRoomDoc, removeRoomFiles } from './persistence.js';
+import {
+	saveRoom,
+	backupRoom,
+	loadRoomDoc,
+	migrateSessionCase,
+	removeRoomFiles,
+	sweepTempFiles,
+} from './persistence.js';
 
 const sessionsDirEarly = path.resolve('./sessions');
 
@@ -46,6 +53,11 @@ const restoreRoomState = room =>
 
 const config = parseArgs();
 const sessionsDir = path.resolve('./sessions');
+// boot hygiene before any room exists: crash temp leftovers go, and
+// mixed-case session files from pre-lowercase servers rename so the
+// normalized rooms can actually restore them
+await sweepTempFiles(sessionsDir);
+await migrateSessionCase(sessionsDir);
 const lastBackupHashes = new Map();
 
 let tls;
@@ -65,6 +77,7 @@ const server = createMoebiusServer({
 	sessionName: config.sessionName,
 	pass: config.pass,
 	roomPasswords: config.roomPasswords,
+	allowedOrigins: config.allowedOrigins,
 	maxColumns: config.maxColumns,
 	maxRows: config.maxRows,
 	staticDir: config.staticDir,

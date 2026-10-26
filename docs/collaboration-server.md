@@ -94,15 +94,16 @@ The server starts on port 1337 by default.
 
 ## Command-Line Options
 
-| Option                 | Description                                      | Default            |
-| ---------------------- | ------------------------------------------------ | ------------------ |
-| `[port]`               | Port to run the server on                        | `1337`             |
-| `--ssl`                | Enable SSL (requires certificates in `ssl-dir`)  | Disabled           |
-| `--ssl-dir <path>`     | SSL certificate directory                        | `/etc/ssl/private` |
-| `--save-interval <n>`  | Auto-save interval in minutes                    | `30` (minutes)     |
-| `--session-name <str>` | Session file prefix (for state and chat backups) | `joint`            |
-| `--debug`              | Enable verbose logging                           | `false`            |
-| `--help`               | Show help message and usage examples             | -                  |
+| Option                     | Description                                                                                                                         | Default            |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| `[port]`                   | Port to run the server on                                                                                                           | `1337`             |
+| `--ssl`                    | Enable SSL (requires certificates in `ssl-dir`)                                                                                     | Disabled           |
+| `--ssl-dir <path>`         | SSL certificate directory                                                                                                           | `/etc/ssl/private` |
+| `--save-interval <n>`      | Auto-save interval in minutes                                                                                                       | `30` (minutes)     |
+| `--session-name <str>`     | Session file prefix (for state and chat backups)                                                                                    | `joint`            |
+| `--allowed-origins <list>` | Origin allowlist for websocket upgrades, comma-separated. Unset keeps upgrades open; desktop clients send no Origin and always pass | unset              |
+| `--debug`                  | Enable verbose logging                                                                                                              | `false`            |
+| `--help`                   | Show help message and usage examples                                                                                                | -                  |
 
 ### Examples
 
