@@ -39,6 +39,16 @@ const fixture = () => {
 				${['sauce', 'canvas', 'pos', 'zoom', 'ref', 'map'].map(moduleMarkup).join('')}
 			</div>
 			${['frames', 'tool', 'chat'].map(moduleMarkup).join('')}
+		</div>
+		<div id="panelMenu" class="flyout" hidden role="menu">
+			<b id="panelMenuTitle" class="flyHead"></b>
+			<article id="panelDockSide" class="menuItem" role="menuitem">Dock Right</article>
+			<article id="panelDockTop" class="menuItem" role="menuitem">Dock Top</article>
+			<article id="panelDockBottom" class="menuItem" role="menuitem">Dock Bottom</article>
+			<article id="panelFloat" class="menuItem" role="menuitem">Float</article>
+			<article class="separator"></article>
+			<article id="panelMoveUp" class="menuItem" role="menuitem">Move Up</article>
+			<article id="panelMoveDown" class="menuItem" role="menuitem">Move Down</article>
 		</div>`;
 };
 
@@ -475,6 +485,115 @@ describe('panel manager', () => {
 		});
 	});
 
+	describe('wide long-press', () => {
+		let State;
+
+		beforeEach(async () => {
+			State = (await import('../../src/js/client/state.js')).default;
+			State.flyouts = {
+				show: vi.fn((_id, menuEl) => {
+					menuEl.hidden = false;
+				}),
+				close: vi.fn(),
+				isOpen: vi.fn(() => false),
+			};
+		});
+
+		afterEach(() => {
+			delete State.flyouts;
+		});
+
+		const pev = (type, props) =>
+			Object.assign(new Event(type, { bubbles: true }), {
+				pointerId: 7,
+				...props,
+			});
+
+		const touchDown = (target, props = {}) =>
+			target.dispatchEvent(
+				pev('pointerdown', {
+					pointerType: 'touch',
+					isPrimary: true,
+					clientX: 30,
+					clientY: 10,
+					...props,
+				}),
+			);
+
+		it('a stationary wide hold opens the full docking menu', () => {
+			vi.useFakeTimers();
+			try {
+				const manager = registerAll(createPanelManager());
+				manager.layout();
+				const header = el('canvas').querySelector('.modHeader');
+				touchDown(header);
+				vi.advanceTimersByTime(500);
+				expect(State.flyouts.show).toHaveBeenCalledWith(
+					'panelMenu',
+					document.getElementById('panelMenu'),
+					expect.anything(),
+					expect.objectContaining({ at: { x: 30, y: 10 } }),
+				);
+				// wide keeps every verb on the table
+				expect(document.getElementById('panelDockSide').hidden).toBe(false);
+				expect(document.getElementById('panelFloat').hidden).toBe(false);
+				// the hold stood the armed drag down: a late move must not
+				// lift the panel into a drag
+				document.getElementById('bodyContainer').dispatchEvent(
+					pev('pointermove', { buttons: 1, clientX: 70, clientY: 60 }),
+				);
+				expect(document.querySelector('.dph')).toBeFalsy();
+			} finally {
+				vi.useRealTimers();
+			}
+		});
+
+		it('a live drag outlives the timer: no menu, no shootdown', () => {
+			vi.useFakeTimers();
+			try {
+				const manager = registerAll(createPanelManager());
+				manager.layout();
+				const header = el('sauce').querySelector('.modHeader');
+				touchDown(header);
+				// the move rides the container, as pointer capture would
+				// retarget it, so the header's slop guard never sees it
+				document.getElementById('bodyContainer').dispatchEvent(
+					pev('pointermove', { buttons: 1, clientX: 60, clientY: 40 }),
+				);
+				expect(el('sauce')).toHaveClass('drag');
+				vi.advanceTimersByTime(600);
+				expect(State.flyouts.show).not.toHaveBeenCalled();
+				// only cancelDrag strips the lift class; the hold timer
+				// must have stood down
+				expect(el('sauce')).toHaveClass('drag');
+				document
+					.getElementById('bodyContainer')
+					.dispatchEvent(pev('pointerup', {}));
+			} finally {
+				vi.useRealTimers();
+			}
+		});
+
+		it('a lift the header never sees still disarms the hold', () => {
+			vi.useFakeTimers();
+			try {
+				const manager = registerAll(createPanelManager());
+				manager.layout();
+				const header = el('canvas').querySelector('.modHeader');
+				touchDown(header);
+				// capture retargets the lift away from the header; the
+				// document still sees it
+				document
+					.getElementById('bodyContainer')
+					.dispatchEvent(pev('pointerup', {}));
+				vi.advanceTimersByTime(600);
+				expect(State.flyouts.show).not.toHaveBeenCalled();
+			} finally {
+				vi.useRealTimers();
+			}
+		});
+	});
+
 	describe('phone layout', () => {
 		const realMatchMedia = window.matchMedia;
 		let media;
@@ -656,6 +775,221 @@ describe('panel manager', () => {
 			media.matches = false;
 			manager.layout();
 			expect(container).toHaveClass('sidebarCollapsed');
+		});
+
+		describe('stack reorder and the long-press menu', () => {
+			let State;
+
+			beforeEach(async () => {
+				State = (await import('../../src/js/client/state.js')).default;
+				State.flyouts = {
+					show: vi.fn((_id, menuEl) => {
+						menuEl.hidden = false;
+					}),
+					close: vi.fn(),
+					isOpen: vi.fn(() => false),
+				};
+			});
+
+			afterEach(() => {
+				delete State.flyouts;
+			});
+
+			const touchDown = (target, props = {}) =>
+				target.dispatchEvent(
+					Object.assign(new Event('pointerdown', { bubbles: true }), {
+						pointerType: 'touch',
+						isPrimary: true,
+						clientX: 30,
+						clientY: 10,
+						...props,
+					}),
+				);
+
+			it('nudge hops a stack mate even across other ORD entries', () => {
+				const manager = phoneManager({ chat: () => true });
+				manager.layout();
+				// map strips, tool sheets, frames bars: the stack is the rest
+				expect(sidebarKeys()).toEqual([
+					'sauce',
+					'canvas',
+					'pos',
+					'zoom',
+					'ref',
+					'chat',
+				]);
+				// ref is hidden, and map, frames, and tool sit between zoom
+				// and chat in ORD without riding the stack
+				manager.nudge('chat', -1);
+				expect(sidebarKeys()).toEqual([
+					'sauce',
+					'canvas',
+					'pos',
+					'chat',
+					'zoom',
+					'ref',
+				]);
+				manager.nudge('chat', -1);
+				manager.nudge('chat', -1);
+				manager.nudge('chat', -1);
+				expect(sidebarKeys()[0]).toBe('chat');
+				// the top slot has nowhere up to go
+				manager.nudge('chat', -1);
+				expect(sidebarKeys()[0]).toBe('chat');
+			});
+
+			it('a phone reorder mirrors wide only where the dock is shared', () => {
+				const manager = phoneManager({ chat: () => true });
+				manager.layout();
+				// chat hops over zoom, but chat never docks wide, so the
+				// wide sidebar must not feel it; pos hops over canvas, and
+				// both live in the wide sidebar, so that one mirrors
+				manager.nudge('chat', -1);
+				manager.nudge('pos', -1);
+				media.matches = false;
+				manager.layout();
+				expect(el('chat')).toHaveClass('fl');
+				expect(sidebarKeys()).toEqual([
+					'sauce',
+					'pos',
+					'canvas',
+					'zoom',
+					'ref',
+					'map',
+				]);
+			});
+
+			it('nudge stays a no-op for modules off the stack', () => {
+				const manager = phoneManager();
+				manager.layout();
+				const before = sidebarKeys();
+				manager.nudge('tool', -1);
+				manager.nudge('map', 1);
+				expect(sidebarKeys()).toEqual(before);
+			});
+
+			it('a header long-press opens the menu with only the stack verbs', () => {
+				vi.useFakeTimers();
+				try {
+					const manager = phoneManager({ chat: () => true });
+					manager.layout();
+					const header = el('canvas').querySelector('.modHeader');
+					touchDown(header);
+					vi.advanceTimersByTime(500);
+					expect(State.flyouts.show).toHaveBeenCalledWith(
+						'panelMenu',
+						document.getElementById('panelMenu'),
+						expect.anything(),
+						expect.objectContaining({ at: { x: 30, y: 10 } }),
+					);
+					// dock and float verbs would lie on the phone shell
+					for (const id of [
+						'panelDockSide',
+						'panelDockTop',
+						'panelDockBottom',
+						'panelFloat',
+					]) {
+						expect(document.getElementById(id).hidden).toBe(true);
+					}
+					expect(document.querySelector('#panelMenu .separator').hidden).toBe(
+						true,
+					);
+					expect(document.getElementById('panelMoveUp').hidden).toBe(false);
+					expect(
+						document.getElementById('panelMoveUp').classList.contains('disabled'),
+					).toBe(false);
+				} finally {
+					vi.useRealTimers();
+				}
+			});
+
+			it('the menu Move Up entry hops the stack', () => {
+				vi.useFakeTimers();
+				try {
+					const manager = phoneManager({ chat: () => true });
+					manager.layout();
+					const header = el('canvas').querySelector('.modHeader');
+					touchDown(header);
+					vi.advanceTimersByTime(500);
+					document
+						.getElementById('panelMoveUp')
+						.dispatchEvent(new Event('click', { bubbles: true }));
+					expect(sidebarKeys().slice(0, 2)).toEqual(['canvas', 'sauce']);
+				} finally {
+					vi.useRealTimers();
+				}
+			});
+
+			it('the lift after a hold never shades the strip', () => {
+				vi.useFakeTimers();
+				try {
+					const manager = phoneManager({ chat: () => true });
+					manager.layout();
+					const header = el('canvas').querySelector('.modHeader');
+					touchDown(header);
+					vi.advanceTimersByTime(500);
+					header.dispatchEvent(new Event('click', { bubbles: true }));
+					expect(el('canvas')).not.toHaveClass('shaded');
+					// the next plain tap shades as always
+					header.dispatchEvent(new Event('click', { bubbles: true }));
+					expect(el('canvas')).toHaveClass('shaded');
+				} finally {
+					vi.useRealTimers();
+				}
+			});
+
+			it('a wandering or lifted touch never opens the menu', () => {
+				vi.useFakeTimers();
+				try {
+					const manager = phoneManager({ chat: () => true });
+					manager.layout();
+					const header = el('canvas').querySelector('.modHeader');
+					touchDown(header);
+					header.dispatchEvent(
+						Object.assign(new Event('pointermove', { bubbles: true }), {
+							clientX: 60,
+							clientY: 10,
+						}),
+					);
+					vi.advanceTimersByTime(600);
+					touchDown(header);
+					header.dispatchEvent(new Event('pointerup', { bubbles: true }));
+					vi.advanceTimersByTime(600);
+					expect(State.flyouts.show).not.toHaveBeenCalled();
+				} finally {
+					vi.useRealTimers();
+				}
+			});
+
+			it('a mouse press never arms the hold', () => {
+				vi.useFakeTimers();
+				try {
+					const manager = phoneManager({ chat: () => true });
+					manager.layout();
+					const header = el('canvas').querySelector('.modHeader');
+					touchDown(header, { pointerType: 'mouse' });
+					vi.advanceTimersByTime(600);
+					expect(State.flyouts.show).not.toHaveBeenCalled();
+				} finally {
+					vi.useRealTimers();
+				}
+			});
+
+			it('the sheet and strip modules offer no menu', () => {
+				vi.useFakeTimers();
+				try {
+					const manager = phoneManager({ chat: () => true });
+					manager.layout();
+					for (const key of ['tool', 'map']) {
+						const header = el(key).querySelector('.modHeader');
+						touchDown(header);
+						vi.advanceTimersByTime(600);
+					}
+					expect(State.flyouts.show).not.toHaveBeenCalled();
+				} finally {
+					vi.useRealTimers();
+				}
+			});
 		});
 	});
 

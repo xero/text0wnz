@@ -53,6 +53,10 @@ const SHEET_TOP_GAP_PX = 46;
 // a first control row taller than this (the character map) peeks at a
 // usable slice instead of swallowing the screen
 const SHEET_PEEK_ROW_MAX_PX = 140;
+// a touch hold on a header this long opens the panel menu; wandering
+// past the slop is a drag or a scroll, never a hold
+const LONG_PRESS_MS = 500;
+const LONG_PRESS_SLOP_PX = 8;
 
 // presses on controls never start a drag; the header overrides, but
 // its own buttons keep their click behavior
@@ -155,6 +159,17 @@ const createPanelManager = () => {
 			? window.matchMedia(PHONE_QUERY)
 			: null;
 	const isNarrow = () => phoneMql?.matches === true;
+	// the phone shell routes by module, never by the saved dock, so the
+	// wide layout survives every width flip untouched; the panel menu
+	// and its nudge need the same routing to know who shares the stack
+	const narrowModeOf = key =>
+		(key === 'map' && strip
+			? 'st'
+			: key === 'tool'
+				? 'sheet'
+				: key === 'frames' && BOXES.bot
+					? 'tb'
+					: 'dk');
 
 	const registry = new Map();
 	const MOD = cloneDefaults();
@@ -536,16 +551,8 @@ const createPanelManager = () => {
 			const el = reg.el;
 			const vis = visibleOf(key);
 			el.hidden = !vis;
-			// the phone shell routes by module, never by the saved dock, so
-			// the wide layout survives every width flip untouched
 			const mode = narrow
-				? key === 'map' && strip
-					? 'st'
-					: key === 'tool'
-						? 'sheet'
-						: key === 'frames' && BOXES.bot
-							? 'tb'
-							: 'dk'
+				? narrowModeOf(key)
 				: m.dk === 'side'
 					? 'dk'
 					: (m.dk === 'top' || m.dk === 'bot') && BOXES[m.dk]
@@ -745,10 +752,41 @@ const createPanelManager = () => {
 		flash(key);
 	};
 
+	/** The modules the phone stack shows, in stack order: everything
+	 * the narrow shell routes to the sidebar, however it docks when
+	 * wide. The nudging module counts even while hidden mid-toggle. */
+	const narrowPeers = key =>
+		ORD.filter(
+			other =>
+				narrowModeOf(other) === 'dk' &&
+				registry.has(other) &&
+				(other === key || visibleOf(other)),
+		);
+
 	/** Move a module one slot among its dock's visible peers. The two
 	 * slots trade ln flags, so a bar row keeps its shape while the
-	 * occupants swap. */
+	 * occupants swap. On phones the peers are the stack mates instead,
+	 * and the hop is a splice: stack neighbors can sit far apart in
+	 * ORD, so a bare index swap could reshuffle the wide docks. The
+	 * splice can still carry the module past hidden wide dockmates
+	 * parked between the two stack slots, which reads the same on the
+	 * phone and stays a legal wide order. ln flags stay put because
+	 * rows are a wide-layout concept. */
 	const nudge = (key, dir) => {
+		if (isNarrow()) {
+			const peers = narrowPeers(key);
+			const at = peers.indexOf(key);
+			const swapWith = at === -1 ? undefined : peers[at + dir];
+			if (!swapWith) {
+				return;
+			}
+			ORD = ORD.filter(other => other !== key);
+			const j = ORD.indexOf(swapWith);
+			ORD.splice(dir < 0 ? j : j + 1, 0, key);
+			layout();
+			flash(key);
+			return;
+		}
 		const m = MOD[key];
 		if (!m || !m.dk) {
 			return;
@@ -773,6 +811,19 @@ const createPanelManager = () => {
 	const menuEl = $('panelMenu');
 	let menuKey = null;
 
+	// the menu follows the module's verbs: a floatOnly window has none
+	// while wide, and on a phone only stack members have somewhere to go
+	const menuAllowed = key => {
+		const reg = registry.get(key);
+		if (!reg) {
+			return false;
+		}
+		if (isNarrow()) {
+			return narrowModeOf(key) === 'dk';
+		}
+		return !reg.floatOnly;
+	};
+
 	const syncPanelMenu = () => {
 		const reg = registry.get(menuKey);
 		const m = MOD[menuKey];
@@ -784,18 +835,38 @@ const createPanelManager = () => {
 			title.textContent =
 				reg.el.querySelector('.modTitle')?.textContent || menuKey;
 		}
+		// the phone shell routes docks itself, so dock and float verbs
+		// would lie there; the stack hops are the whole menu
+		const narrow = isNarrow();
+		for (const id of [
+			'panelDockSide',
+			'panelDockTop',
+			'panelDockBottom',
+			'panelFloat',
+		]) {
+			const item = $(id);
+			if (item) {
+				item.hidden = narrow;
+			}
+		}
+		const sep = menuEl.querySelector('.separator');
+		if (sep) {
+			sep.hidden = narrow;
+		}
 		const set = (id, disabled) => $(id)?.classList.toggle('disabled', disabled);
 		set('panelDockSide', m.dk === 'side');
 		set('panelDockTop', reg.grow || m.dk === 'top');
 		set('panelDockBottom', reg.grow || m.dk === 'bot');
 		set('panelFloat', m.dk === 0);
-		const peers = m.dk
-			? ORD.filter(
-					other =>
-						MOD[other]?.dk === m.dk &&
-						(other === menuKey || visibleOf(other)),
-				)
-			: [];
+		const peers = narrow
+			? narrowPeers(menuKey)
+			: m.dk
+				? ORD.filter(
+						other =>
+							MOD[other]?.dk === m.dk &&
+							(other === menuKey || visibleOf(other)),
+					)
+				: [];
 		const at = peers.indexOf(menuKey);
 		set('panelMoveUp', at <= 0);
 		set('panelMoveDown', at === -1 || at === peers.length - 1);
@@ -803,12 +874,95 @@ const createPanelManager = () => {
 
 	const openPanelMenu = (key, from, at) => {
 		const reg = registry.get(key);
-		if (!menuEl || !reg || reg.floatOnly || isNarrow() || !State.flyouts) {
+		if (!menuEl || !reg || !State.flyouts || !menuAllowed(key)) {
 			return;
 		}
 		menuKey = key;
 		syncPanelMenu();
 		State.flyouts.show('panelMenu', menuEl, from, at ? { at } : {});
+	};
+
+	// a touch hold on the header opens the same menu: iOS never
+	// synthesizes contextmenu for a touch hold, and Android's native
+	// one arrives wrapped in selection chrome, so the hold gets its
+	// own timer; mice, pens and trackpads keep the real contextmenu
+	const armLongPress = (key, reg) => {
+		const head = reg.header;
+		if (!head) {
+			return;
+		}
+		let hold = null;
+		let swallowClick = false;
+		const disarm = () => {
+			if (hold) {
+				clearTimeout(hold.timer);
+				hold = null;
+			}
+		};
+		head.addEventListener('pointerdown', e => {
+			swallowClick = false;
+			if (e.pointerType !== 'touch' || !e.isPrimary) {
+				return;
+			}
+			if (e.target.closest('button') || !menuAllowed(key)) {
+				return;
+			}
+			disarm();
+			const { clientX: x, clientY: y, pointerId } = e;
+			hold = {
+				x,
+				y,
+				pointerId,
+				timer: setTimeout(() => {
+					hold = null;
+					// a wide drag past its threshold captured the pointer, so
+					// the slop guard here went blind; the hold must never
+					// shoot a live drag down, and an armed-only drag just
+					// stands aside for the menu
+					if (drag?.started) {
+						return;
+					}
+					swallowClick = true;
+					cancelDrag();
+					if (!State.flyouts?.isOpen?.('panelMenu')) {
+						openPanelMenu(key, reg.shade || reg.el, { x, y });
+					}
+				}, LONG_PRESS_MS),
+			};
+		});
+		head.addEventListener('pointermove', e => {
+			if (
+				hold &&
+				Math.hypot(e.clientX - hold.x, e.clientY - hold.y) >
+				LONG_PRESS_SLOP_PX
+			) {
+				disarm();
+			}
+		});
+		// lifts land on the document even when a drag's pointer capture
+		// retargets them away from the header; a hold must never survive
+		// its own finger
+		const disarmOnLift = e => {
+			if (hold && e.pointerId === hold.pointerId) {
+				disarm();
+			}
+		};
+		document.addEventListener('pointerup', disarmOnLift, true);
+		document.addEventListener('pointercancel', disarmOnLift, true);
+		// the finger lift after a hold still clicks, which would shade
+		// the strip; capture wins for child targets, and registering
+		// before the shade listener wins when the header is the target
+		head.addEventListener(
+			'click',
+			e => {
+				if (swallowClick) {
+					swallowClick = false;
+					e.preventDefault();
+					e.stopImmediatePropagation();
+				}
+			},
+			true,
+		);
 	};
 
 	menuEl?.addEventListener('click', e => {
@@ -871,6 +1025,7 @@ const createPanelManager = () => {
 			armSheetDrag(el);
 		}
 		registry.set(key, reg);
+		armLongPress(key, reg);
 		reg.shade?.addEventListener('click', e => {
 			e.stopPropagation();
 			toggleShade(key);
@@ -898,21 +1053,27 @@ const createPanelManager = () => {
 		});
 		// right-click or shift F10 opens the docking menu, but only where
 		// ours will actually open: text fields and text-bearing regions
-		// keep the native menu, and a floatOnly or phone module must not
-		// eat the right-click and offer nothing in its place. The menu
-		// key's synthesized contextmenu is cancelled on keydown so it
-		// cannot re-place the menu at 0,0
+		// keep the native menu, and a module with no menu verbs (floatOnly
+		// while wide, off the stack while narrow) must not eat the
+		// right-click and offer nothing in its place. The menu key's
+		// synthesized contextmenu is cancelled on keydown so it cannot
+		// re-place the menu at 0,0
 		const menuBlocked = target =>
 			target.closest(
 				'input, textarea, select, #messageWindow, #userList',
-			) ||
-			reg.floatOnly ||
-			isNarrow();
+			) || !menuAllowed(key);
 		el.addEventListener('contextmenu', e => {
 			if (menuBlocked(e.target)) {
 				return;
 			}
 			e.preventDefault();
+			// a touch hold already opened it on this same press (the
+			// native long-press contextmenu trails the timer); reopening
+			// would flicker and re-place. A fresh right-click elsewhere
+			// never sees this: its pointerdown closed the flyout first
+			if (State.flyouts?.isOpen?.('panelMenu')) {
+				return;
+			}
 			openPanelMenu(key, reg.shade || el, { x: e.clientX, y: e.clientY });
 		});
 		el.addEventListener('keydown', e => {

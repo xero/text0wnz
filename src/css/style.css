@@ -136,6 +136,14 @@
 		&:focus {
 			outline: none;
 		}
+
+		/* the outline reset above blinds keyboard users: focus-visible
+		   only matches keyboard and assistive focus, so pointer presses
+		   keep the chrome quiet while tabbing stays traceable */
+		&:focus-visible {
+			outline: 2px solid var(--cyber);
+			outline-offset: -2px;
+		}
 	}
 
 	@media (prefers-reduced-motion: no-preference) {
@@ -2416,12 +2424,12 @@
 				min-width: 0;
 				flex: 1;
 			}
-			/* the zoom slider's dress, cut down to the narrow row */
+			/* the zoom slider's dress, cut down to the narrow row; the
+			   base reset already quiets plain :focus, and a bespoke
+			   outline: none here would out-rank the focus-visible ring
+			   and blind keyboard focus on an arrow-key control */
 			input[type='range'] {
 				@apply appearance-none bg-transparent;
-			}
-			input[type='range']:focus {
-				outline: none;
 			}
 			input[type='range']::-webkit-slider-thumb {
 				@apply appearance-none bg-thumb cursor-ew-resize rounded-bl-xs;

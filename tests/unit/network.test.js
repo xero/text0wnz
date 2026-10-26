@@ -5,6 +5,7 @@ import {
 	createWorkerHandler,
 	createChatController,
 } from '../../src/js/client/network.js';
+import { onEnter } from '../../src/js/client/ui.js';
 import {
 	EXT_SUITE_CAP,
 	T0wnzAction,
@@ -85,6 +86,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	showOverlay: vi.fn(),
 	hideOverlay: vi.fn(),
 	websocketUI: vi.fn(),
+	onEnter: vi.fn(),
 }));
 
 vi.mock('../../src/js/client/palette.js', () => ({
@@ -528,14 +530,22 @@ describe('Network Module', () => {
 				'blur',
 				expect.any(Function),
 			);
-			expect(mockElements.inputHandle.addEventListener).toHaveBeenCalledWith(
-				'keypress',
+			// Enter rides the shared onEnter detector, never keypress:
+			// Android IMEs skip keypress and ship an empty e.code
+			expect(onEnter).toHaveBeenCalledWith(
+				mockElements.inputHandle,
 				expect.any(Function),
 			);
-			expect(mockElements.inputMessage.addEventListener).toHaveBeenCalledWith(
-				'keypress',
+			expect(onEnter).toHaveBeenCalledWith(
+				mockElements.inputMessage,
 				expect.any(Function),
 			);
+			expect(
+				mockElements.inputHandle.addEventListener,
+			).not.toHaveBeenCalledWith('keypress', expect.any(Function));
+			expect(
+				mockElements.inputMessage.addEventListener,
+			).not.toHaveBeenCalledWith('keypress', expect.any(Function));
 			expect(mockElements.inputButton.addEventListener).toHaveBeenCalledWith(
 				'click',
 				expect.any(Function),
@@ -543,6 +553,70 @@ describe('Network Module', () => {
 			expect(
 				mockElements.inputNotificationCheckbox.addEventListener,
 			).toHaveBeenCalledWith('click', expect.any(Function));
+		});
+
+		it('sends and clears the message box on Enter', () => {
+			createChatController(
+				mockElements.divChatButton,
+				mockElements.divMessageWindow,
+				mockElements.divUserList,
+				mockElements.inputHandle,
+				mockElements.inputMessage,
+				mockElements.inputButton,
+				mockElements.inputNotificationCheckbox,
+				vi.fn(),
+				vi.fn(),
+			);
+
+			const send = onEnter.mock.calls.find(
+				([el]) => el === mockElements.inputMessage,
+			)[1];
+			mockElements.inputMessage.value = 'hello scene';
+			send();
+			expect(State.network.sendChat).toHaveBeenCalledWith('hello scene');
+			expect(mockElements.inputMessage.value).toBe('');
+		});
+
+		it('does not send an empty message on Enter', () => {
+			createChatController(
+				mockElements.divChatButton,
+				mockElements.divMessageWindow,
+				mockElements.divUserList,
+				mockElements.inputHandle,
+				mockElements.inputMessage,
+				mockElements.inputButton,
+				mockElements.inputNotificationCheckbox,
+				vi.fn(),
+				vi.fn(),
+			);
+
+			State.network.sendChat.mockClear();
+			const send = onEnter.mock.calls.find(
+				([el]) => el === mockElements.inputMessage,
+			)[1];
+			mockElements.inputMessage.value = '';
+			send();
+			expect(State.network.sendChat).not.toHaveBeenCalled();
+		});
+
+		it('moves focus from the handle to the message box on Enter', () => {
+			createChatController(
+				mockElements.divChatButton,
+				mockElements.divMessageWindow,
+				mockElements.divUserList,
+				mockElements.inputHandle,
+				mockElements.inputMessage,
+				mockElements.inputButton,
+				mockElements.inputNotificationCheckbox,
+				vi.fn(),
+				vi.fn(),
+			);
+
+			const hop = onEnter.mock.calls.find(
+				([el]) => el === mockElements.inputHandle,
+			)[1];
+			hop();
+			expect(mockElements.inputMessage.focus).toHaveBeenCalled();
 		});
 
 		it('should handle notification settings from localStorage', () => {
