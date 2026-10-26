@@ -1028,9 +1028,18 @@ const createKeyboardController = () => {
 	 */
 	const convertUnicode = keyCode => unicodeMapping.get(keyCode) ?? keyCode;
 
-	// typed glyphs resolve in order even when the glyph table interning
+	// typed input resolves in order even when glyph table interning
 	// awaits: a later keystroke must never land before an earlier one
 	let typeQueue = Promise.resolve();
+
+	// every link catches its own failure or one rejection strands the
+	// chain and unicode typing dies until reload; the keystroke drops,
+	// logged like systemPaste's clipboard catch
+	const enqueueTyped = step => {
+		typeQueue = typeQueue.then(step).catch(err => {
+			console.error('[Keyboard] typed input dropped:', err);
+		});
+	};
 
 	const drawTyped = key => {
 		// astral chars are two UTF-16 units; charCodeAt(0) was a lone
@@ -1038,15 +1047,19 @@ const createKeyboardController = () => {
 		const codepoint = key.codePointAt(0);
 		const mapped = convertUnicode(codepoint);
 		if (codepoint < 0x80 || mapped !== codepoint) {
-			// ASCII, or a codepoint the CP437 table speaks natively
-			draw(mapped);
+			// ASCII, or a codepoint the CP437 table speaks natively; it
+			// still rides the queue because a sync draw here overtook
+			// unicode awaiting resolveUnicode and transposed mixed typing;
+			// an idle queue runs this on the same task's microtask queue,
+			// before paint
+			enqueueTyped(() => draw(mapped));
 			return;
 		}
 		// outside CP437: intern through the doc glyph table like paste
 		// and the F-keys; writing the raw codepoint as a glyph id aliased
 		// interned glyphs (256+ collides with the interning sequence) and
 		// degraded to '?' on the wire and in exports
-		typeQueue = typeQueue.then(async () => {
+		enqueueTyped(async () => {
 			const resolved = await State.textArtCanvas.resolveUnicode(
 				new Set([codepoint]),
 			);
@@ -1062,12 +1075,18 @@ const createKeyboardController = () => {
 					drawTyped(e.key);
 				} else if (e.key === 'Enter') {
 					e.preventDefault();
-					State.cursor.newLine();
+					// queued: a sync newline ahead of a pending glyph dropped
+					// the glyph onto the next row
+					enqueueTyped(() => State.cursor.newLine());
 				} else if (e.key === 'Backspace') {
 					e.preventDefault();
-					if (State.cursor.getX() > 0) {
-						deleteText();
-					}
+					// the edge guard moves inside the link: it must judge the
+					// cursor the preceding link left behind
+					enqueueTyped(() => {
+						if (State.cursor.getX() > 0) {
+							deleteText();
+						}
+					});
 				}
 			}
 		}

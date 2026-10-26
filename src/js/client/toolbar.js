@@ -1,4 +1,5 @@
 import State from './state.js';
+import { isTextEntry } from './ui.js';
 
 const Toolbar = (() => {
 	let currentButton;
@@ -147,6 +148,12 @@ const Toolbar = (() => {
 			// here blocked its close and then dismissed selections or
 			// switched tools underneath it
 			if (State.modal?.isOpen?.()) {
+				return;
+			}
+			// a text entry owns its keys: Escape while typing in chat must
+			// not dismiss a selection or switch tools underneath the caret,
+			// and it keeps its native default (no preventDefault)
+			if (isTextEntry(e.target)) {
 				return;
 			}
 			e.preventDefault();

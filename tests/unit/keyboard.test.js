@@ -507,7 +507,7 @@ describe('Keyboard Utilities', () => {
 			expect(State.cursor.move).toHaveBeenCalledWith(7, 9, false);
 		});
 
-		it('draws CP437 21 exactly once per § keypress', () => {
+		it('draws CP437 21 exactly once per § keypress', async () => {
 			vi.clearAllMocks();
 			const drawn = [];
 			State.textArtCanvas.draw = vi.fn(callback =>
@@ -516,6 +516,8 @@ describe('Keyboard Utilities', () => {
 			controller.enable();
 			document.dispatchEvent(new KeyboardEvent('keypress', { key: '§' }));
 			controller.disable();
+			// typed input rides the queue now: flush the microtask hop
+			await new Promise(resolve => setTimeout(resolve, 0));
 			expect(drawn).toEqual([{ code: 21, x: 0, y: 0 }]);
 			expect(State.textArtCanvas.startUndo).toHaveBeenCalledTimes(1);
 		});
@@ -559,6 +561,91 @@ describe('Keyboard Utilities', () => {
 			controller.disable();
 			expect(State.palette.setForegroundColor).toHaveBeenCalledWith(12);
 			expect(State.palette.setBackgroundColor).toHaveBeenCalledWith(3);
+		});
+
+		it('keeps keystroke order when ascii follows in flight unicode', async () => {
+			vi.clearAllMocks();
+			const drawn = [];
+			let cx = 0;
+			State.cursor.getX = vi.fn(() => cx);
+			State.cursor.right = vi.fn(() => {
+				cx++;
+			});
+			State.textArtCanvas.draw = vi.fn(callback =>
+				callback((code, fg, bg, x) => drawn.push({ code, x })));
+			let release;
+			State.textArtCanvas.resolveUnicode = vi.fn(
+				() =>
+					new Promise(resolve => {
+						release = resolve;
+					}),
+			);
+			const controller = createKeyboardController();
+			controller.enable();
+			document.dispatchEvent(new KeyboardEvent('keypress', { key: '☃' }));
+			document.dispatchEvent(new KeyboardEvent('keypress', { key: 'A' }));
+			// let the first link start (the queue defers it a microtask);
+			// the ascii keystroke must still wait behind the pending resolve
+			await new Promise(resolve => setTimeout(resolve, 0));
+			expect(drawn).toEqual([]);
+			release(new Map([[0x2603, 300]]));
+			await new Promise(resolve => setTimeout(resolve, 0));
+			controller.disable();
+			expect(drawn).toEqual([
+				{ code: 300, x: 0 },
+				{ code: 65, x: 1 },
+			]);
+			State.cursor.getX = vi.fn(() => 0);
+			State.cursor.right = vi.fn();
+		});
+
+		it('keeps the typing queue alive after a rejected resolve', async () => {
+			vi.clearAllMocks();
+			const drawn = [];
+			State.textArtCanvas.draw = vi.fn(callback =>
+				callback(code => drawn.push(code)));
+			const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+			State.textArtCanvas.resolveUnicode = vi
+				.fn()
+				.mockRejectedValueOnce(new Error('glyph table full'))
+				.mockResolvedValueOnce(new Map([[0x2603, 300]]));
+			const controller = createKeyboardController();
+			controller.enable();
+			document.dispatchEvent(new KeyboardEvent('keypress', { key: '☃' }));
+			await new Promise(resolve => setTimeout(resolve, 0));
+			document.dispatchEvent(new KeyboardEvent('keypress', { key: 'A' }));
+			document.dispatchEvent(new KeyboardEvent('keypress', { key: '☃' }));
+			await new Promise(resolve => setTimeout(resolve, 0));
+			controller.disable();
+			expect(drawn).toEqual([65, 300]);
+			expect(errSpy).toHaveBeenCalledTimes(1);
+		});
+
+		it('queues Enter behind a pending unicode glyph', async () => {
+			vi.clearAllMocks();
+			const log = [];
+			State.cursor.newLine = vi.fn(() => log.push('nl'));
+			State.textArtCanvas.draw = vi.fn(callback =>
+				callback(code => log.push(code)));
+			let release;
+			State.textArtCanvas.resolveUnicode = vi.fn(
+				() =>
+					new Promise(resolve => {
+						release = resolve;
+					}),
+			);
+			const controller = createKeyboardController();
+			controller.enable();
+			document.dispatchEvent(new KeyboardEvent('keypress', { key: '☃' }));
+			document.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter' }));
+			// the newline must wait behind the pending resolve
+			await new Promise(resolve => setTimeout(resolve, 0));
+			expect(log).toEqual([]);
+			release(new Map([[0x2603, 300]]));
+			await new Promise(resolve => setTimeout(resolve, 0));
+			controller.disable();
+			expect(log).toEqual([300, 'nl']);
+			State.cursor.newLine = vi.fn();
 		});
 	});
 
