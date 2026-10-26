@@ -142,7 +142,42 @@ const createModalController = modal => {
 
 	const clear = () => modals.forEach(s => classList(s, 'hide'));
 
+	// the two boot modals have a fixed order: the update question
+	// outranks the collab invitation, because accepting it reloads the
+	// page and the invitation returns fresh. Whichever yields is never
+	// lost: a late update takes the choice modal's place and hands it
+	// back on dismissal, and a choice arriving under a live update
+	// waits here instead of replacing it
+	let deferredChoice = false;
+
 	const open = name => {
+		if (
+			name === 'choice' &&
+			current === 'update' &&
+			modal.open &&
+			!closingTimeout &&
+			!transitionHandler
+		) {
+			deferredChoice = true;
+			return;
+		}
+		if (
+			name === 'update' &&
+			current === 'choice' &&
+			modal.open &&
+			!closingTimeout &&
+			!transitionHandler
+		) {
+			// mid-close means the user already answered the invitation; an
+			// update landing in that window must not resurrect it
+			deferredChoice = true;
+		}
+		if (name !== 'update' && name !== 'choice') {
+			// any other screen replacing the pair ends the boot handoff: a
+			// stranded flag would hand a long-dead invitation back behind a
+			// menu-opened update modal much later
+			deferredChoice = false;
+		}
 		current = name;
 		const section = name + 'Modal';
 		if ($(section)) {
@@ -197,6 +232,17 @@ const createModalController = modal => {
 			cleanupHandler();
 			cleanupHandler = null;
 		}
+		// the update question answered with a dismissal hands the stage
+		// back to the collab invitation it interrupted (accepting never
+		// lands here: the page reloads on controllerchange instead).
+		// current drops first or the deferral guard would re-defer the
+		// very handback it exists to deliver
+		if (current === 'update' && deferredChoice) {
+			deferredChoice = false;
+			current = false;
+			open('choice');
+			return;
+		}
 		// a second close while one is pending must not re-register: the
 		// overwritten handler would outlive cancelPendingClose and close
 		// every future open the moment its enter transition ends
@@ -241,6 +287,14 @@ const createModalController = modal => {
 	};
 
 	$$$('.close').forEach(b => onClick(b, _ => close()));
+
+	// Escape fires the dialog's native cancel, which would slam it shut
+	// past the closing transition, the cleanup handlers, and the
+	// deferred-choice handback; route it through close() instead
+	modal.addEventListener('cancel', e => {
+		e.preventDefault();
+		close();
+	});
 
 	return {
 		isOpen: () => modal.open,
