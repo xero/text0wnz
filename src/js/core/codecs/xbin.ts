@@ -181,7 +181,9 @@ export const decodeXBin = (bytes: Uint8Array): XBinDecodeResult => {
 		throw new CodecError(`XBin ${columns}x${rows} exceeds the cell ceiling`);
 	}
 	// the spec allows 1-32; moebiusXBIN defaults a zero to 16 and a raw
-	// read made a Fontsize-0 file show different art in the two editors
+	// read made a Fontsize-0 file show different art in the two editors.
+	// 33-255 reads raw like PabloDraw: the height sizes the font block,
+	// so a clamp here would misread everything after it
 	const fontHeight = bytes[9] === 0 ? 16 : bytes[9];
 	const flags = bytes[10];
 	const paletteFlag = (flags & 0x01) === 1;

@@ -8,6 +8,7 @@ import { gzip, gunzip, CodecError } from '../../src/js/core/codecs/util.js';
 import { decodeBin } from '../../src/js/core/codecs/bin.js';
 import { decodeXBin } from '../../src/js/core/codecs/xbin.js';
 import { decodeAns } from '../../src/js/core/codecs/ans.js';
+import { buildSauce } from '../../src/js/core/codecs/sauce.js';
 import { joinDocToDoc } from '../../src/js/core/protocol/moebius.js';
 
 describe('gunzip ceiling', () => {
@@ -47,6 +48,46 @@ describe('decoder cell ceilings', () => {
 		bytes.fill(10);
 		bytes[130_000] = 88;
 		expect(() => decodeAns(bytes)).toThrow(/cell ceiling/);
+	});
+
+	// one glyph + LF per row at SAUCE-declared 65535 columns: wide
+	// enough that the old allocation gate refused legal content
+	const tallWide = (rows: number) => {
+		const payload = new Uint8Array(rows * 2);
+		for (let i = 0; i < rows; i++) {
+			payload[i * 2] = 88;
+			payload[i * 2 + 1] = 10;
+		}
+		const sauce = buildSauce({
+			dataType: 1,
+			fileType: 1,
+			fileSize: payload.length,
+			columns: 65535,
+			rows,
+		});
+		const file = new Uint8Array(payload.length + 1 + sauce.length);
+		file.set(payload, 0);
+		file[payload.length] = 0x1a;
+		file.set(sauce, payload.length + 1);
+		return file;
+	};
+
+	it('decodes tall wide ANSIs the allocation gate refused', () => {
+		// 65535 x 101 = 6.6M content cells, well under the 10M ceiling
+		const file = tallWide(101);
+		const classic = decodeAns(file);
+		expect(classic.doc.getColumns()).toBe(65535);
+		expect(classic.doc.getRows()).toBe(101);
+		const v3 = decodeAns(file, { utf8: true });
+		expect(v3.doc.getColumns()).toBe(65535);
+		expect(v3.doc.getRows()).toBe(101);
+	});
+
+	it('still refuses content past the ceiling in both readers', () => {
+		// 65535 x 153 = 10,026,855 cells, just over the line
+		const file = tallWide(153);
+		expect(() => decodeAns(file)).toThrow(/cell ceiling/);
+		expect(() => decodeAns(file, { utf8: true })).toThrow(/cell ceiling/);
 	});
 });
 

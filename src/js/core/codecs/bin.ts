@@ -53,10 +53,11 @@ export const decodeBin = (bytes: Uint8Array): DecodeResult => {
 	if (columns * rows > MAX_DOC_CELLS) {
 		throw new CodecError(`BIN ${columns}x${rows} exceeds the cell ceiling`);
 	}
-	const imageData = bytesToU16Cells(
-		bytes,
-		0,
-		Math.min(columns * rows * 2, payloadSize),
+	// allocate whole rows; the copy stops at the payload so the SAUCE
+	// trailer never leaks into cells and the tail pads with zeros
+	const imageData = new Uint16Array(columns * rows);
+	imageData.set(
+		bytesToU16Cells(bytes, 0, Math.min(columns * rows * 2, payloadSize)),
 	);
 	const doc = u16ToV3({
 		imageData,

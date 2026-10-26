@@ -140,12 +140,18 @@ const createScreen = (width: number) => {
 	let cells = new Uint16Array(width * 100);
 	let maxY = 0;
 	const extend = (y: number) => {
-		const nextLength = width * (y + 100) + cells.length;
-		if (nextLength > MAX_DOC_CELLS) {
-			// content-driven growth: a hostile file can spam newlines far
-			// past any sane canvas; die at the gate, not in the allocator
+		// hostile newline spam dies at the gate, not in the allocator;
+		// gate on content cells: the amortized allocation overshoots by
+		// up to double and refused legal tall files
+		if (width * (y + 1) > MAX_DOC_CELLS) {
 			throw new CodecError('ANSI content exceeds the cell ceiling');
 		}
+		// grow whole rows and never past the ceiling: row-aligned
+		// capacity means a row can never half fit the buffer
+		const nextLength = Math.min(
+			width * (y + 100) + cells.length,
+			MAX_DOC_CELLS - (MAX_DOC_CELLS % width),
+		);
 		const next = new Uint16Array(nextLength);
 		next.set(cells, 0);
 		cells = next;
@@ -185,11 +191,15 @@ const createV3Screen = (width: number) => {
 	let planes = alloc(width * 100);
 	let maxY = 0;
 	const extend = (y: number) => {
-		const nextLength = width * (y + 100) + planes.glyph.length;
-		if (nextLength > MAX_DOC_CELLS) {
-			// same gate as createScreen: hostile growth dies loud
+		// same gate as createScreen: hostile growth dies loud, legal
+		// tall content passes, capacity stays row aligned under the cap
+		if (width * (y + 1) > MAX_DOC_CELLS) {
 			throw new CodecError('ANSI content exceeds the cell ceiling');
 		}
+		const nextLength = Math.min(
+			width * (y + 100) + planes.glyph.length,
+			MAX_DOC_CELLS - (MAX_DOC_CELLS % width),
+		);
 		const next = alloc(nextLength);
 		next.glyph.set(planes.glyph, 0);
 		next.fg.set(planes.fg, 0);
@@ -535,16 +545,22 @@ export const decodeAns = (
 								rgbOverlay.clear();
 							}
 							break;
-						case 'K':
+						case 'K': {
+							// EL erases cursor to EOL whatever the param, the v2
+							// shape; cleared cells drop their RGB riders like
+							// ESC[2J clears them
+							const py = y - 1 + topOfScreen;
 							for (let j = x - 1; j < columns; j += 1) {
 								if (isUTF8) {
 									const blankWord = paletteColor(0);
-									v3screen.set(j, y - 1 + topOfScreen, 0, blankWord, blankWord);
+									v3screen.set(j, py, 0, blankWord, blankWord);
 								} else {
-									screen.set(j, y - 1 + topOfScreen, 0, 0, 0);
+									screen.set(j, py, 0, 0, 0);
+									rgbOverlay.delete(py * columns + j);
 								}
 							}
 							break;
+						}
 						case 'm':
 							if (isUTF8) {
 								applySgrUtf8(values);
