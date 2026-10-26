@@ -142,6 +142,44 @@ describe('bin codec', () => {
 		d1.doc.resize(159, 2);
 		expect(() => encodeBin(d1.doc)).toThrow(/even column/);
 	});
+
+	it('pads a trailing partial row instead of throwing', () => {
+		// 160 default columns, 1.5 rows of payload: the tail row pads
+		const d = decodeBin(new Uint8Array(480).fill(0x41));
+		expect(d.doc.getColumns()).toBe(160);
+		expect(d.doc.getRows()).toBe(2);
+		const u16 = v3ToU16(d.doc).imageData;
+		expect(u16[239]).toBe(0x4141);
+		expect(u16[240]).toBe(0);
+		expect(u16[319]).toBe(0);
+	});
+
+	it('drops a lone trailing byte rather than pairing it with the trailer', () => {
+		const d = decodeBin(new Uint8Array(481).fill(0x41));
+		expect(d.doc.getRows()).toBe(2);
+		const u16 = v3ToU16(d.doc).imageData;
+		expect(u16[239]).toBe(0x4141);
+		expect(u16[240]).toBe(0);
+	});
+
+	it('pads partial rows under a SAUCE record without reading the trailer', () => {
+		const payload = new Uint8Array(480).fill(0x41);
+		const sauce = buildSauce({
+			dataType: 5,
+			fileSize: 480,
+			columns: 160,
+			rows: 2,
+			date: FIXED_DATE,
+		});
+		const file = new Uint8Array(payload.length + 1 + sauce.length);
+		file.set(payload, 0);
+		file[payload.length] = 0x1a;
+		file.set(sauce, payload.length + 1);
+		const d = decodeBin(file);
+		expect(d.doc.getRows()).toBe(2);
+		const u16 = v3ToU16(d.doc).imageData;
+		expect(u16[240]).toBe(0);
+	});
 });
 
 describe('xbin codec', () => {
@@ -218,6 +256,45 @@ describe('xbin codec', () => {
 			uniform.doc.getRows(),
 		);
 		expect(rle.length).toBeLessThan(160 * 4 * 2);
+	});
+
+	it('reads oversize font heights raw like PabloDraw and round-trips them', () => {
+		// the height sizes the font block: a clamp would misread the
+		// image offset; 33-255 stays raw by deliberate disposition
+		const font = makeXBinFont(256, 200);
+		const bytes = makeXBin({
+			columns: 4,
+			rows: 1,
+			rawCells: Uint16Array.from([(65 << 8) | 7, 32 << 8, 32 << 8, 32 << 8]),
+			font,
+			fontHeight: 200,
+			sauce: {},
+		});
+		const d1 = decodeXBin(bytes);
+		expect(d1.fontHeight).toBe(200);
+		expect(d1.fontBytes?.length).toBe(256 * 200);
+		// image offset math held through the big font block
+		expect(d1.doc.getCell(0, 0, 0).glyph & 0xffff).toBe(65);
+		const encoded = encodeXBin(d1.doc, {
+			fontBytes: d1.fontBytes,
+			fontHeight: d1.fontHeight,
+			date: FIXED_DATE,
+		});
+		const d2 = decodeXBin(encoded);
+		expect(d2.fontHeight).toBe(200);
+		expect(d2.doc.getCell(0, 0, 0).glyph & 0xffff).toBe(65);
+	});
+
+	it('defaults a zero font height to 16', () => {
+		const bytes = makeXBin({
+			columns: 2,
+			rows: 1,
+			rawCells: Uint16Array.from([(66 << 8) | 7, 32 << 8]),
+			font: makeXBinFont(256, 16),
+			fontHeight: 0,
+			sauce: {},
+		});
+		expect(decodeXBin(bytes).fontHeight).toBe(16);
 	});
 
 	it('rejects bad magic', () => {

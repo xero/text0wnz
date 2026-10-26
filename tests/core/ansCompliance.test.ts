@@ -105,6 +105,35 @@ describe('PabloDraw 24-bit t sequences', () => {
 	});
 });
 
+describe('EL erase and the RGB overlay', () => {
+	it('ESC[K clears RGB overlay entries on erased cells', () => {
+		const { doc } = decodeAns(bytes('\x1b[0;255;0;0tA\x1b[1;1H\x1b[0m\x1b[K'));
+		const cell = cellAt(doc, 0, 0);
+		expect(cell.bg).toBe(paletteColor(0));
+		expect(cell.glyph).toBe(0);
+	});
+
+	it('ESC[K erases from the cursor and keeps RGB left of it', () => {
+		const { doc } = decodeAns(bytes('\x1b[0;255;0;0tAB\x1b[1;2H\x1b[0m\x1b[K'));
+		expect(cellAt(doc, 0, 0).bg).toBe(rgbColor(255, 0, 0));
+		expect(cellAt(doc, 1, 0).bg).toBe(paletteColor(0));
+	});
+
+	it('ESC[1K and ESC[2K keep the erase-to-EOL shape', () => {
+		// param-blind EL is the v2 lineage; this pin makes a future real
+		// EL 1/2 a conscious change instead of a silent one
+		const twoK = decodeAns(bytes('\x1b[0;255;0;0tAB\x1b[1;1H\x1b[0m\x1b[2K'));
+		expect(cellAt(twoK.doc, 0, 0).glyph).toBe(0);
+		expect(cellAt(twoK.doc, 1, 0).glyph).toBe(0);
+		expect(cellAt(twoK.doc, 0, 0).bg).toBe(paletteColor(0));
+		expect(cellAt(twoK.doc, 1, 0).bg).toBe(paletteColor(0));
+		const oneK = decodeAns(bytes('\x1b[0;255;0;0tAB\x1b[1;1H\x1b[0m\x1b[1K'));
+		expect(cellAt(oneK.doc, 0, 0).glyph).toBe(0);
+		expect(cellAt(oneK.doc, 1, 0).glyph).toBe(0);
+		expect(cellAt(oneK.doc, 1, 0).bg).toBe(paletteColor(0));
+	});
+});
+
 describe('UTF-8 control-byte lookalikes', () => {
 	it('glyphs living on cp437 control bytes stay cells', () => {
 		// U+25D9 is cp437 0x0A: the old reverse-mapped dispatch turned it

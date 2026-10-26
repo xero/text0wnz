@@ -5,10 +5,18 @@
  * anything. Only the native .0wnz envelope holds everything: utf8
  * still substitutes lookalikes for the four control positions its
  * writer cannot emit, and plain .txt drops color by definition (but
- * keeps real unicode codepoints), so neither counts those.
+ * keeps real unicode codepoints), so neither counts those. utf8's one
+ * other loss, blink over an extended background under its default ice
+ * presentation, is flagged as utf8-ext-blink.
  */
 
-import { ATTR_BLINK, DocV3, glyphIdOf, isPaletteColor } from './doc.js';
+import {
+	ATTR_BLINK,
+	DocV3,
+	FONT_SLOT_XB,
+	glyphIdOf,
+	isPaletteColor,
+} from './doc.js';
 import { cp437ToUnicode } from './cp437.js';
 import { paletteIndexOf } from './doc.js';
 
@@ -35,7 +43,9 @@ export interface BudgetIssue {
 		/** blink attrs inside an ice doc fold away in 16c exports */
 		| 'ice-blink'
 		/** steady bright bg without ice folds to dim (blink owns the nibble) */
-		| 'bright-bg-folds';
+		| 'bright-bg-folds'
+		/** utf8's ice presentation cannot brighten an extended bg; blink drops */
+		| 'utf8-ext-blink';
 	count: number;
 	/** first offending cell, for a future jump-to-cell affordance */
 	firstIndex: number;
@@ -62,7 +72,8 @@ export const lintDocForFormat = (
 ): BudgetReport => {
 	const table = doc.glyphTable;
 	// utf8 holds everything EXCEPT the four control positions its writer
-	// substitutes; ownz alone is fully lossless
+	// substitutes and blink over extended backgrounds (flagged below);
+	// ownz alone is fully lossless
 	const lossless = format === 'ownz' || format === 'utf8';
 	// the plain-text writer emits real codepoints, so unicode cells are
 	// NOT lost there (flagging them was a false positive on every export)
@@ -88,8 +99,13 @@ export const lintDocForFormat = (
 				def !== undefined &&
 				def.fontSlot === 0 &&
 				def.codepoint === cp437ToUnicode(glyphId);
+			// the xbin writer reverses FONT_SLOT_XB defs into char plus
+			// intensity bit when the embedded 512 font rides the save, so
+			// upper-page cells survive an xbin export instead of becoming '?'
+			const xbHeld =
+				format === 'xbin' && def !== undefined && def.fontSlot === FONT_SLOT_XB;
 			if (!classic) {
-				if (checkUnicode) {
+				if (checkUnicode && !xbHeld) {
 					hit('unicode-glyph', i);
 				}
 			} else if (
@@ -108,10 +124,20 @@ export const lintDocForFormat = (
 					hit('tnd-control-glyph', i);
 				}
 			}
+			const blinkAttr = (frame.glyph[i] & (ATTR_BLINK << 16)) !== 0;
+			// encodeUtf8's default ice presentation cannot brighten an
+			// extended background, so the attr silently drops there; the one
+			// exception to utf8 losslessness besides the control lookalikes
+			if (
+				format === 'utf8' &&
+				blinkAttr &&
+				(!isPaletteColor(frame.bg[i]) || paletteIndexOf(frame.bg[i]) > 15)
+			) {
+				hit('utf8-ext-blink', i);
+			}
 			if (lossless) {
 				continue;
 			}
-			const blinkAttr = (frame.glyph[i] & (ATTR_BLINK << 16)) !== 0;
 			if (format === 'tnd' && blinkAttr) {
 				hit('tnd-blink', i);
 			}
@@ -162,5 +188,7 @@ export const describeIssue = (issue: BudgetIssue): string => {
 			return `${issue.count} blinking cell${issue.count === 1 ? '' : 's'} fold away (ice is on)`;
 		case 'bright-bg-folds':
 			return `${issue.count} bright background${issue.count === 1 ? '' : 's'} dim without ice colors`;
+		case 'utf8-ext-blink':
+			return `${issue.count} blinking cell${issue.count === 1 ? '' : 's'} stop blinking: utf8 ice mode cannot brighten extended backgrounds`;
 	}
 };

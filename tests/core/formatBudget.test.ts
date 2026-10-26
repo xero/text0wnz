@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
 	FONT_SLOT_UNSCII,
+	FONT_SLOT_XB,
+	XB_UPPER_BASE,
 	createDocV3,
 	glyphWord,
 	paletteColor,
@@ -204,5 +206,107 @@ describe('bright-bg-folds', () => {
 		expect(lintDocForFormat(ice, 'ans').issues.map(i => i.kind)).not.toContain(
 			'bright-bg-folds',
 		);
+	});
+});
+
+describe('xbin upper-page holds', () => {
+	it('xbin holds upper-page XB glyphs; classic formats still flag them', () => {
+		const doc = makeDoc();
+		const xb = doc.glyphTable.idFor(FONT_SLOT_XB, XB_UPPER_BASE + 65);
+		doc.setCell(0, 1, 0, {
+			glyph: glyphWord(xb, 0),
+			fg: paletteColor(7),
+			bg: paletteColor(0),
+		});
+		expect(
+			lintDocForFormat(doc, 'xbin').issues.some(
+				issue => issue.kind === 'unicode-glyph',
+			),
+		).toBe(false);
+		for (const format of ['ans', 'bin'] as const) {
+			const issue = lintDocForFormat(doc, format).issues.find(
+				i => i.kind === 'unicode-glyph',
+			);
+			expect(issue?.count).toBe(1);
+		}
+	});
+
+	it('xbin still flags interned unicode beside XB defs', () => {
+		const doc = makeDoc();
+		const xb = doc.glyphTable.idFor(FONT_SLOT_XB, XB_UPPER_BASE + 65);
+		doc.setCell(0, 1, 0, {
+			glyph: glyphWord(xb, 0),
+			fg: paletteColor(7),
+			bg: paletteColor(0),
+		});
+		const han = doc.glyphTable.idFor(FONT_SLOT_UNSCII, 0x4e2d);
+		doc.setCell(0, 2, 0, {
+			glyph: glyphWord(han, 0),
+			fg: paletteColor(7),
+			bg: paletteColor(0),
+		});
+		const issue = lintDocForFormat(doc, 'xbin').issues.find(
+			i => i.kind === 'unicode-glyph',
+		);
+		expect(issue?.count).toBe(1);
+		expect(issue?.firstIndex).toBe(2);
+	});
+});
+
+describe('utf8-ext-blink', () => {
+	it('flags blink on extended backgrounds the ice writer drops', () => {
+		const doc = createDocV3({ columns: 4, rows: 1, mode: 'free' });
+		doc.setCell(0, 0, 0, {
+			glyph: glyphWord(65, ATTR_BLINK),
+			fg: paletteColor(7),
+			bg: rgbColor(10, 20, 30),
+		});
+		const report = lintDocForFormat(doc, 'utf8');
+		expect(report.ok).toBe(false);
+		const issue = report.issues.find(i => i.kind === 'utf8-ext-blink');
+		expect(issue?.count).toBe(1);
+		expect(lintDocForFormat(doc, 'ownz').ok).toBe(true);
+	});
+
+	it('stays quiet for 16c backgrounds and steady cells', () => {
+		const brightens = createDocV3({ columns: 2, rows: 1, mode: 'free' });
+		brightens.setCell(0, 0, 0, {
+			glyph: glyphWord(65, ATTR_BLINK),
+			fg: paletteColor(7),
+			bg: paletteColor(4),
+		});
+		expect(
+			lintDocForFormat(brightens, 'utf8').issues.some(
+				i => i.kind === 'utf8-ext-blink',
+			),
+		).toBe(false);
+		const steady = createDocV3({ columns: 2, rows: 1, mode: 'free' });
+		steady.setCell(0, 0, 0, {
+			glyph: glyphWord(65, 0),
+			fg: paletteColor(7),
+			bg: rgbColor(10, 20, 30),
+		});
+		expect(
+			lintDocForFormat(steady, 'utf8').issues.some(
+				i => i.kind === 'utf8-ext-blink',
+			),
+		).toBe(false);
+		const extIndex = createDocV3({ columns: 2, rows: 1, mode: 'free' });
+		extIndex.setCell(0, 0, 0, {
+			glyph: glyphWord(65, ATTR_BLINK),
+			fg: paletteColor(7),
+			bg: paletteColor(200),
+		});
+		expect(
+			lintDocForFormat(extIndex, 'utf8').issues.some(
+				i => i.kind === 'utf8-ext-blink',
+			),
+		).toBe(true);
+	});
+
+	it('describes the drop', () => {
+		expect(
+			describeIssue({ kind: 'utf8-ext-blink', count: 2, firstIndex: 0 }),
+		).toContain('stop blinking');
 	});
 });
