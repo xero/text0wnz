@@ -563,6 +563,128 @@ describe('Keyboard Utilities', () => {
 			expect(State.palette.setBackgroundColor).toHaveBeenCalledWith(3);
 		});
 
+		it('Tab draws the tab glyph while the canvas scope holds focus', async () => {
+			vi.clearAllMocks();
+			const drawn = [];
+			State.textArtCanvas.draw = vi.fn(callback =>
+				callback(code => drawn.push(code)));
+			const controller = createKeyboardController();
+			controller.enable();
+			// jsdom parks focus on body, the post-click state on the page
+			const e = new KeyboardEvent('keydown', {
+				code: 'Tab',
+				cancelable: true,
+			});
+			document.dispatchEvent(e);
+			controller.disable();
+			await new Promise(resolve => setTimeout(resolve, 0));
+			expect(drawn).toEqual([9]);
+			expect(e.defaultPrevented).toBe(true);
+		});
+
+		it('Tab types from inside the canvas container too', async () => {
+			vi.clearAllMocks();
+			const drawn = [];
+			State.textArtCanvas.draw = vi.fn(callback =>
+				callback(code => drawn.push(code)));
+			const cc = document.createElement('div');
+			cc.id = 'canvasContainer';
+			cc.tabIndex = 0;
+			document.body.appendChild(cc);
+			cc.focus();
+			const controller = createKeyboardController();
+			controller.enable();
+			const e = new KeyboardEvent('keydown', {
+				code: 'Tab',
+				cancelable: true,
+				bubbles: true,
+			});
+			cc.dispatchEvent(e);
+			controller.disable();
+			cc.remove();
+			await new Promise(resolve => setTimeout(resolve, 0));
+			expect(drawn).toEqual([9]);
+			expect(e.defaultPrevented).toBe(true);
+		});
+
+		it('Tab from a focused control walks instead of typing', async () => {
+			vi.clearAllMocks();
+			const drawn = [];
+			State.textArtCanvas.draw = vi.fn(callback =>
+				callback(code => drawn.push(code)));
+			const button = document.createElement('button');
+			document.body.appendChild(button);
+			button.focus();
+			const controller = createKeyboardController();
+			controller.enable();
+			const e = new KeyboardEvent('keydown', {
+				code: 'Tab',
+				cancelable: true,
+				bubbles: true,
+			});
+			button.dispatchEvent(e);
+			controller.disable();
+			button.remove();
+			await new Promise(resolve => setTimeout(resolve, 0));
+			expect(drawn).toEqual([]);
+			expect(e.defaultPrevented).toBe(false);
+		});
+
+		it('Enter on a focused control activates it instead of newlining', async () => {
+			vi.clearAllMocks();
+			const button = document.createElement('button');
+			document.body.appendChild(button);
+			button.focus();
+			const controller = createKeyboardController();
+			controller.enable();
+			const e = new KeyboardEvent('keypress', {
+				key: 'Enter',
+				cancelable: true,
+				bubbles: true,
+			});
+			button.dispatchEvent(e);
+			controller.disable();
+			button.remove();
+			await new Promise(resolve => setTimeout(resolve, 0));
+			// the default survives so the browser clicks the button
+			expect(e.defaultPrevented).toBe(false);
+			expect(State.cursor.newLine).not.toHaveBeenCalled();
+		});
+
+		it('Enter still newlines while the canvas scope holds focus', async () => {
+			vi.clearAllMocks();
+			const controller = createKeyboardController();
+			controller.enable();
+			const e = new KeyboardEvent('keypress', {
+				key: 'Enter',
+				cancelable: true,
+			});
+			document.dispatchEvent(e);
+			controller.disable();
+			await new Promise(resolve => setTimeout(resolve, 0));
+			expect(e.defaultPrevented).toBe(true);
+			expect(State.cursor.newLine).toHaveBeenCalledTimes(1);
+		});
+
+		it('shift Tab always walks, so the keyboard can leave the canvas', async () => {
+			vi.clearAllMocks();
+			const drawn = [];
+			State.textArtCanvas.draw = vi.fn(callback =>
+				callback(code => drawn.push(code)));
+			const controller = createKeyboardController();
+			controller.enable();
+			const e = new KeyboardEvent('keydown', {
+				code: 'Tab',
+				shiftKey: true,
+				cancelable: true,
+			});
+			document.dispatchEvent(e);
+			controller.disable();
+			await new Promise(resolve => setTimeout(resolve, 0));
+			expect(drawn).toEqual([]);
+			expect(e.defaultPrevented).toBe(false);
+		});
+
 		it('keeps keystroke order when ascii follows in flight unicode', async () => {
 			vi.clearAllMocks();
 			const drawn = [];
