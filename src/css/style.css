@@ -143,11 +143,14 @@
 			@apply transition-all ease-in-out;
 		}
 		/* anything that tracks input or scroll must not ease behind it:
-		   a floating module's left/top ride the drag pointer directly */
+		   a floating module's left/top ride the drag pointer directly,
+		   and flyout popups place at the pointer, so a reused one must
+		   never glide over from wherever it last opened */
 		canvas,
 		#viewport,
 		#canvasContainer,
 		#minimapViewport,
+		.flyout,
 		.mod.fl {
 			@apply transition-none!;
 		}
