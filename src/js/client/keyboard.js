@@ -807,12 +807,48 @@ const createKeyboardController = () => {
 		}
 	};
 
+	// Enter on a real control outside the canvas scope is activation,
+	// not canvas input: its keypress default must survive so the
+	// browser clicks the focused button, or the tab stops the focus
+	// walk reaches would not be operable. Text entries never get here
+	// (they ride the ignored flag), and the canvas scope keeps Enter
+	// as the newline it always was
+	const activationTarget = () => {
+		const active = document.activeElement;
+		if (
+			!active ||
+			active === document.body ||
+			active === document.documentElement ||
+			active.closest?.('#canvasContainer')
+		) {
+			return false;
+		}
+		return (
+			typeof active.matches === 'function' &&
+			active.matches('button, a[href], summary, [tabindex]')
+		);
+	};
+
 	const keyDown = e => {
 		if (!ignored) {
 			if (!e.altKey && !e.ctrlKey && !e.metaKey) {
 				if (e.code === 'Tab') {
-					e.preventDefault();
-					draw(9); // Tab character code
+					// Tab is canvas input only while the canvas scope holds
+					// focus (body after a plain click, or the container's own
+					// tab stop); from any real control it stays the browser's
+					// focus walk, and shift always walks so the keyboard can
+					// back out of the canvas instead of being trapped
+					const active = document.activeElement;
+					const canvasOwns =
+						!active ||
+						active === document.body ||
+						active === document.documentElement ||
+						(typeof active.closest === 'function' &&
+						  active.closest('#canvasContainer'));
+					if (canvasOwns && !e.shiftKey) {
+						e.preventDefault();
+						draw(9); // Tab character code
+					}
 				} else if (e.code === 'Backspace') {
 					e.preventDefault();
 					if (State.cursor.getX() > 0) {
@@ -1074,6 +1110,9 @@ const createKeyboardController = () => {
 					e.preventDefault();
 					drawTyped(e.key);
 				} else if (e.key === 'Enter') {
+					if (activationTarget()) {
+						return;
+					}
 					e.preventDefault();
 					// queued: a sync newline ahead of a pending glyph dropped
 					// the glyph onto the next row

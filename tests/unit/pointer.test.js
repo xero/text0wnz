@@ -294,6 +294,19 @@ describe('touch', () => {
 		expect(redo).toHaveBeenCalledTimes(1);
 	});
 
+	it('touch pulls focus at the lift, never inside the stroke', () => {
+		const { container } = makeHarness();
+		container.focus = vi.fn();
+		container.dispatchEvent(touch('pointerdown', 10, 40, 40));
+		container.dispatchEvent(touch('pointermove', 10, 80, 40));
+		// blur side effects (soft keyboard collapse, jump-row commit)
+		// must not resize the viewport mid-stroke
+		expect(container.focus).not.toHaveBeenCalled();
+		container.dispatchEvent(touch('pointerup', 10, 80, 40));
+		expect(container.focus).toHaveBeenCalledTimes(1);
+		expect(container.focus).toHaveBeenCalledWith({ preventScroll: true });
+	});
+
 	it('pinch emits PinchStart/Move/End document events', () => {
 		const { container, events } = makeHarness();
 		container.dispatchEvent(touch('pointerdown', 10, 100, 100));

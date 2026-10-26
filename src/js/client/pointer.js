@@ -258,6 +258,12 @@ export const createPointerInput = (container, handlers, options = {}) => {
 			} else {
 				recognizer.up(e.pointerId);
 			}
+			// the down's preventDefault suppressed the focus hop a mouse
+			// press gets for free; pulling it at the lift keeps blur side
+			// effects (soft keyboard collapse, jump-row commit) out of the
+			// stroke, where a viewport resize would skew cell mapping, and
+			// Tab still reads the canvas as focused after touch drawing
+			container.focus?.({ preventScroll: true });
 			return;
 		}
 		penLifted(e.pointerId);
