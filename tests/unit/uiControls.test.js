@@ -3,6 +3,7 @@ import {
 	enforceMaxBytes,
 	websocketUI,
 	toggleFullscreen,
+	armFullscreenIcon,
 	createModalController,
 } from '../../src/js/client/ui.js';
 
@@ -128,6 +129,53 @@ describe('UI Controls and Controllers', () => {
 			toggleFullscreen();
 
 			expect(document.exitFullscreen).toHaveBeenCalled();
+		});
+	});
+
+	describe('armFullscreenIcon', () => {
+		const makeChip = () => {
+			const button = document.createElement('div');
+			const svg = document.createElementNS(
+				'http://www.w3.org/2000/svg',
+				'svg',
+			);
+			const use = document.createElementNS(
+				'http://www.w3.org/2000/svg',
+				'use',
+			);
+			use.setAttribute('href', 'img/icons.svg#expand');
+			svg.appendChild(use);
+			button.appendChild(svg);
+			return button;
+		};
+
+		// the helper remounts the use node (the iPadOS swap fix), so
+		// assertions re-query it and stay agnostic of the baked base
+		const href = button => button.querySelector('use').getAttribute('href');
+
+		it('follows the document fullscreen state, not the click', () => {
+			const button = makeChip();
+			document.fullscreenElement = null;
+			armFullscreenIcon(button);
+			expect(href(button)).toContain('#expand');
+			const mounted = button.querySelector('use');
+			// F11 or an OS gesture: no button click, the event alone
+			document.fullscreenElement = document.documentElement;
+			document.dispatchEvent(new Event('fullscreenchange'));
+			expect(href(button)).toContain('#contract');
+			// the swap remounted the node instead of mutating it in place
+			expect(button.querySelector('use')).not.toBe(mounted);
+			document.fullscreenElement = null;
+			document.dispatchEvent(new Event('fullscreenchange'));
+			expect(href(button)).toContain('#expand');
+		});
+
+		it('syncs the glyph at arm time for a browser already fullscreen', () => {
+			const button = makeChip();
+			document.fullscreenElement = document.documentElement;
+			armFullscreenIcon(button);
+			expect(href(button)).toContain('#contract');
+			document.fullscreenElement = null;
 		});
 	});
 

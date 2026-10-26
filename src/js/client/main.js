@@ -31,6 +31,7 @@ import {
 	$$$,
 	createDragDropController,
 	toggleFullscreen,
+	armFullscreenIcon,
 	createModalController,
 	createSettingToggle,
 	onClick,
@@ -98,6 +99,7 @@ let swRegistration = null;
 let updateAccepted = false;
 let palettePicker;
 let pendingFile = null;
+let menuFullscreen;
 let navFullscreen;
 let archiveOpener = null;
 
@@ -127,7 +129,8 @@ const $$$$ = () => {
 	metaTheme = $$('meta[name="theme-color"]');
 	saveTimeout = null;
 	reload = $('updateReload');
-	navFullscreen = $('fullscreen');
+	menuFullscreen = $('fullscreen');
+	navFullscreen = $('navFullscreen');
 };
 
 const isImageFile = file => {
@@ -495,6 +498,7 @@ const handleIOS = () => {
 	);
 	const needsPadding = isWebkitFullscreen || (isWindowed && !isMaximized);
 	htmlDoc.classList.toggle('ios', needsPadding);
+	menuFullscreen.classList.toggle('disabled', isWindowed);
 	navFullscreen.classList.toggle('disabled', isWindowed);
 };
 
@@ -1153,7 +1157,11 @@ const initializeAppComponents = async () => {
 	onClick($('eraseColumn'), keyboard.eraseColumn);
 	onClick($('eraseColumnStart'), keyboard.eraseToStartOfColumn);
 	onClick($('eraseColumnEnd'), keyboard.eraseToEndOfColumn);
+	onClick(menuFullscreen, toggleFullscreen);
 	onClick(navFullscreen, toggleFullscreen);
+	// the glyph tracks the BROWSER's state (F11, Esc, OS gestures),
+	// independent of which button toggled it
+	armFullscreenIcon(navFullscreen);
 
 	onClick($('defaultColor'), () => {
 		State.palette.setForegroundColor(7);

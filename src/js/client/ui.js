@@ -30,6 +30,8 @@ const toggleFullscreen = () => {
 	if (!isFullscreenEnabled) {
 		console.warn('[UI] Fullscreen not supported');
 		$('fullscreen').classList.add('disabled');
+		// the view-flyout chip mirrors the menu item, disabled included
+		$('navFullscreen')?.classList?.add('disabled');
 		return;
 	}
 
@@ -61,6 +63,31 @@ const toggleFullscreen = () => {
 	} catch {
 		console.error('[UI] Failed toggling fullscreen mode');
 	}
+};
+
+/** keep a fullscreen chip's icon honest: the browser can enter or
+ * leave fullscreen without the button (F11, Esc, OS gestures), so the
+ * glyph follows the document state, never the click */
+const armFullscreenIcon = button => {
+	if (!button?.querySelector('use')) {
+		return;
+	}
+	const sync = () => {
+		const active =
+			document.fullscreenElement ||
+			document.webkitFullscreenElement ||
+			document.webkitCurrentFullScreenElement;
+		// iconHref: the bake hashes the sprite, a literal path dies in
+		// prod. remountUse replaces the node (the iPadOS swap fix), so
+		// the chip's use is re-queried every sync, never captured
+		remountUse(
+			button.querySelector('use'),
+			iconHref(active ? 'contract' : 'expand'),
+		);
+	};
+	document.addEventListener('fullscreenchange', sync);
+	document.addEventListener('webkitfullscreenchange', sync);
+	sync();
 };
 
 // Modal
@@ -1392,6 +1419,7 @@ export {
 	$$$,
 	createCanvas,
 	toggleFullscreen,
+	armFullscreenIcon,
 	createModalController,
 	createSettingToggle,
 	onClick,
