@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { screen } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import Toolbar from '../../src/js/client/toolbar.js';
+import State from '../../src/js/client/state.js';
 
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
@@ -356,6 +357,99 @@ describe('Toolbar DOM Tests', () => {
 				expect(activeButtons).toHaveLength(1);
 				expect(activeButtons[0]).toBe(button);
 			}
+		});
+	});
+
+	describe('Escape chain focus guard', () => {
+		let chain;
+
+		beforeEach(() => {
+			chain = {
+				modal: { isOpen: vi.fn(() => false) },
+				// close() is required: tool enable() calls closeMenu
+				flyouts: { close: vi.fn(), closeAndFocus: vi.fn(() => false) },
+				panels: { closeDrawer: vi.fn(() => false) },
+				selectionBar: { dismiss: vi.fn(() => false) },
+			};
+			Object.assign(State, chain);
+		});
+
+		afterEach(() => {
+			delete State.modal;
+			delete State.flyouts;
+			delete State.panels;
+			delete State.selectionBar;
+		});
+
+		const pressEscape = target => {
+			const event = new KeyboardEvent('keydown', {
+				code: 'Escape',
+				bubbles: true,
+				cancelable: true,
+			});
+			target.dispatchEvent(event);
+			return event;
+		};
+
+		const addTool = id => {
+			const button = document.createElement('button');
+			button.id = id;
+			button.setAttribute('aria-label', id);
+			document.body.appendChild(button);
+			Toolbar.add(button, vi.fn(), vi.fn());
+			return button;
+		};
+
+		it('Escape in the chat input leaves selection and tool alone', async () => {
+			const tool = addTool('escape-chat-tool');
+			await user.click(tool);
+			const input = document.createElement('input');
+			input.type = 'text';
+			input.id = 'messageInput';
+			document.body.appendChild(input);
+			input.focus();
+			const event = pressEscape(input);
+			expect(event.defaultPrevented).toBe(false);
+			expect(chain.flyouts.closeAndFocus).not.toHaveBeenCalled();
+			expect(chain.panels.closeDrawer).not.toHaveBeenCalled();
+			expect(chain.selectionBar.dismiss).not.toHaveBeenCalled();
+			expect(Toolbar.getCurrentTool()).toBe('escape-chat-tool');
+		});
+
+		it('Escape in contentEditable stays inert', () => {
+			const editor = document.createElement('div');
+			// jsdom does not implement the real isContentEditable getter
+			Object.defineProperty(editor, 'isContentEditable', { value: true });
+			document.body.appendChild(editor);
+			const event = pressEscape(editor);
+			expect(event.defaultPrevented).toBe(false);
+			expect(chain.flyouts.closeAndFocus).not.toHaveBeenCalled();
+		});
+
+		it('Escape under an open dialog never preventDefaults', () => {
+			chain.modal.isOpen.mockReturnValue(true);
+			const event = pressEscape(document.body);
+			expect(event.defaultPrevented).toBe(false);
+			expect(chain.flyouts.closeAndFocus).not.toHaveBeenCalled();
+		});
+
+		it('Escape from the canvas walks flyout, drawer, selection, previous tool', async () => {
+			chain.flyouts.closeAndFocus.mockReturnValueOnce(true);
+			let event = pressEscape(document.body);
+			expect(event.defaultPrevented).toBe(true);
+			expect(chain.panels.closeDrawer).not.toHaveBeenCalled();
+			expect(chain.selectionBar.dismiss).not.toHaveBeenCalled();
+
+			chain.panels.closeDrawer.mockReturnValueOnce(true);
+			event = pressEscape(document.body);
+			expect(chain.selectionBar.dismiss).not.toHaveBeenCalled();
+
+			const t1 = addTool('escape-walk-t1');
+			const t2 = addTool('escape-walk-t2');
+			await user.click(t1);
+			await user.click(t2);
+			pressEscape(document.body);
+			expect(Toolbar.getCurrentTool()).toBe('escape-walk-t1');
 		});
 	});
 });
