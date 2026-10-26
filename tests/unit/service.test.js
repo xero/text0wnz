@@ -197,3 +197,26 @@ describe('wedged-generation recovery', () => {
 		expect(fakeSelf.clients.claim).not.toHaveBeenCalled();
 	});
 });
+
+describe('runtime cache routing', () => {
+	it('the img cache route matches a slashless VITE_UI_DIR', async () => {
+		const { registerRoute } = await import('workbox-routing');
+		try {
+			vi.stubEnv('VITE_UI_DIR', 'assets');
+			vi.resetModules();
+			await import('../../src/service.js');
+			// the freshest registration carries the normalized dir
+			const matcher = registerRoute.mock.calls.at(-1)[0];
+			// the matcher returns a match result, not a strict boolean
+			expect(
+				matcher({ url: new URL('http://localhost:3000/assets/img/a.png') }),
+			).toBeTruthy();
+			expect(
+				matcher({ url: new URL('http://localhost:3000/ui/img/a.png') }),
+			).toBeFalsy();
+		} finally {
+			vi.unstubAllEnvs();
+			vi.resetModules();
+		}
+	});
+});

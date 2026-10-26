@@ -70,10 +70,15 @@ class StateManager {
 
 		// Environment var or defaults
 		this.urlPrefix = import.meta.env.BASE_URL || '';
+		// vite.config normalizes VITE_UI_DIR the same way before naming
+		// the emitted dirs; the runtime must derive the identical path
+		// or every font fetch 404s on slashless env forms
+		const dirSlash = dir => dir.replace(/^\/|\/?$/g, '') + '/';
 		// parenthesized: `a + b || c` concatenates "undefined" into the
 		// path (truthy), so the fallbacks could never fire
-		this.uiDir = this.urlPrefix + (import.meta.env.VITE_UI_DIR || 'ui/');
-		this.fontDir = this.uiDir + (import.meta.env.VITE_FONT_DIR || 'fonts/');
+		this.uiDir = this.urlPrefix + dirSlash(import.meta.env.VITE_UI_DIR || 'ui');
+		this.fontDir =
+			this.uiDir + dirSlash(import.meta.env.VITE_FONT_DIR || 'fonts');
 
 		// Bind methods to ensure `this` is preserved when passed as callbacks
 		this.set = this.set.bind(this);

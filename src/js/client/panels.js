@@ -440,7 +440,14 @@ const createPanelManager = () => {
 				return;
 			}
 			el.classList.remove('snap');
-			sheetDrag = { y0: e.clientY, h0: el.offsetHeight };
+			sheetDrag = {
+				el,
+				handle,
+				pointerId: e.pointerId,
+				y0: e.clientY,
+				h0: el.offsetHeight,
+				sh0: el.style.getPropertyValue('--sh'),
+			};
 			try {
 				handle.setPointerCapture(e.pointerId);
 			} catch {
@@ -485,7 +492,35 @@ const createPanelManager = () => {
 		el.addEventListener('pointercancel', endSheetDrag);
 	};
 
+	/** Abort a live sheet drag WITHOUT committing: the persistent
+	 * handle listeners gate on sheetDrag, so nulling it disarms them;
+	 * the capture releases and the pre-drag height comes back. */
+	const cancelSheetDrag = () => {
+		if (!sheetDrag) {
+			return;
+		}
+		const { el, handle, pointerId, sh0 } = sheetDrag;
+		sheetDrag = null;
+		try {
+			handle.releasePointerCapture(pointerId);
+		} catch {
+			// capture already gone: pointerup or a reparent released it
+		}
+		el.classList.add('snap');
+		if (sh0) {
+			el.style.setProperty('--sh', sh0);
+		} else {
+			el.style.removeProperty('--sh');
+		}
+	};
+
 	const layout = () => {
+		// every caller rebuilds DOM a live drag references; abort both
+		// drag kinds here instead of auditing eleven call sites (the
+		// end handlers null their state before calling layout, so
+		// commits pass through untouched)
+		cancelDrag();
+		cancelSheetDrag();
 		const narrow = isNarrow();
 		container.classList.toggle('phone', narrow);
 		let sidebarIndex = 0;
@@ -949,6 +984,9 @@ const createPanelManager = () => {
 	// stale dock state against the rebuilt DOM
 	phoneMql?.addEventListener?.('change', () => {
 		cancelDrag();
+		// the sheet cancel MUST precede the --sh removal or its height
+		// restore resurrects the stale phone-mode value this strips
+		cancelSheetDrag();
 		registry.get('tool')?.el.style.removeProperty('--sh');
 		setDrawer(false);
 		layout();

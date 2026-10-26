@@ -280,6 +280,27 @@ test.describe('Export Operations', () => {
 		await page.waitForTimeout(1000);
 	});
 
+	test('Save XBin routes through the export modal', async ({ page }) => {
+		// the menu click used to arrive as xb's compress argument and
+		// skip the modal entirely, forcing RLE on
+		await page.locator('#fileMenu button').click();
+		await page.waitForTimeout(200);
+		// the save items sit inside the collapsed "Save as" group
+		await page
+			.locator('#fileList summary', { hasText: 'Save as' })
+			.click();
+		await page.waitForTimeout(200);
+		await page.locator('#saveXbin').click();
+		await page.waitForTimeout(300);
+		const modal = page.locator('#exportModal');
+		await expect(modal).toBeVisible();
+		await expect(page.locator('#exportFormatLabel')).toHaveText('XBin');
+		await expect(page.locator('#exportCompress')).toBeVisible();
+		await page.locator('#exportCancel').click();
+		await page.waitForTimeout(200);
+		await expect(modal).not.toBeVisible();
+	});
+
 	test('should have export options available', async ({ page }) => {
 		const canvas = page.locator('#canvasContainer canvas').first();
 		const box = await canvas.boundingBox();

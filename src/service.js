@@ -163,9 +163,10 @@ async function handleShareTarget(request) {
 	}
 }
 
-// escaped: uiDir interpolates into the RegExp below
-const uiDir = (import.meta.env.VITE_UI_DIR || 'ui/')
-	.slice(0, -1)
+// escaped: uiDir interpolates into the RegExp below; normalized like
+// vite.config so slashless env forms still match the emitted tree
+const uiDir = (import.meta.env.VITE_UI_DIR || 'ui')
+	.replace(/^\/|\/?$/g, '')
 	.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Everything hash-named lives in the precache; the only runtime cache

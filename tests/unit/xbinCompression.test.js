@@ -1,5 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { u16ToV3 } from '../../src/js/core/convert.js';
+import {
+	ATTR_BLINK,
+	createDocV3,
+	glyphWord,
+	paletteColor,
+	rgbColor,
+} from '../../src/js/core/doc.js';
+
+// memoized per id so routing tests can fire captured button handlers;
+// cleared per test, and the plain-value shape keeps the compression
+// tests (which only read .value) untouched
+const uiStubs = vi.hoisted(() => new Map());
 
 const mockState = {
 	title: 'test-artwork',
@@ -32,7 +44,21 @@ const mockState = {
 vi.mock('../../src/js/client/state.js', () => ({ default: mockState }));
 
 vi.mock('../../src/js/client/ui.js', () => ({
-	$: vi.fn(() => ({ value: '' })),
+	$: vi.fn(id => {
+		if (!uiStubs.has(id)) {
+			uiStubs.set(id, {
+				value: '',
+				textContent: '',
+				checked: true,
+				classList: { toggle: vi.fn() },
+				replaceChildren: vi.fn(),
+				appendChild: vi.fn(),
+				addEventListener: vi.fn(),
+				removeEventListener: vi.fn(),
+			});
+		}
+		return uiStubs.get(id);
+	}),
 	enforceMaxBytes: vi.fn(),
 }));
 
@@ -224,5 +250,115 @@ describe('XBin Save Compression', () => {
 		const { flags, dataIndex, dataEnd } = parseSavedXBin();
 		expect((flags >> 2) & 0x01).toBe(0);
 		expect(dataEnd - dataIndex).toBe(imageData.length * 2);
+	});
+});
+
+describe('export modal routing', () => {
+	let Save;
+	let savedBytes;
+
+	beforeEach(async () => {
+		vi.clearAllMocks();
+		uiStubs.clear();
+		savedBytes = null;
+		// the compression tests above depend on State.modal being ABSENT
+		// (confirmExport's headless fallback); this describe stubs it and
+		// deletes it again in afterEach
+		mockState.modal = { open: vi.fn(), close: vi.fn(), onClose: vi.fn() };
+		// the compression tests above install mockReturnValues that
+		// survive clearAllMocks; pin this describe's own canvas shape
+		mockState.textArtCanvas.getColumns.mockImplementation(() => 80);
+		mockState.textArtCanvas.getRows.mockImplementation(() => 25);
+		mockState.textArtCanvas.getImageData.mockImplementation(
+			() => new Uint16Array(80 * 25).fill(0x2007),
+		);
+		mockState.textArtCanvas.getIceColors.mockImplementation(() => false);
+		mockState.textArtCanvas.getDoc.mockImplementation(() =>
+			u16ToV3({
+				imageData: mockState.textArtCanvas.getImageData(),
+				columns: mockState.textArtCanvas.getColumns(),
+				rows: mockState.textArtCanvas.getRows(),
+				iceColors: mockState.textArtCanvas.getIceColors(),
+				letterSpacing: false,
+			}));
+
+		global.window = {};
+		global.Blob = vi.fn(function (parts, options) {
+			savedBytes = parts[0];
+			this.parts = parts;
+			this.options = options;
+			return this;
+		});
+		const mockURL = vi.fn(function (url) {
+			this.href = url;
+			return this;
+		});
+		mockURL.createObjectURL = vi.fn(() => 'blob:mock-url');
+		mockURL.revokeObjectURL = vi.fn();
+		global.URL = mockURL;
+		vi.stubGlobal('navigator', { userAgent: 'Chrome/90.0' });
+		vi.stubGlobal('document', {
+			createElement: vi.fn(() => ({
+				href: '',
+				download: '',
+				click: vi.fn(),
+				textContent: '',
+			})),
+			dispatchEvent: vi.fn(),
+		});
+
+		const fileModule = await import('../../src/js/client/file.js');
+		Save = fileModule.Save;
+	});
+
+	afterEach(() => {
+		delete mockState.modal;
+		vi.unstubAllGlobals();
+		vi.resetModules();
+	});
+
+	const confirmClick = () => {
+		const stub = uiStubs.get('exportConfirm');
+		const handler = stub.addEventListener.mock.calls.find(
+			call => call[0] === 'click',
+		)[1];
+		handler();
+	};
+
+	it('a click event argument opens the export modal instead of forcing compression', async () => {
+		const pending = Save.xb({ type: 'click' });
+		// the menu click reaches the modal, not the programmatic hatch
+		expect(mockState.modal.open).toHaveBeenCalledWith('export');
+		expect(savedBytes).toBeNull();
+		confirmClick();
+		await pending;
+		expect(savedBytes).not.toBeNull();
+		// the modal's checkbox stub is checked, so compression is on
+		expect((savedBytes[10] >> 2) & 0x01).toBe(1);
+	});
+
+	it('boolean arguments still skip the modal in both polarities', async () => {
+		await Save.xb(false);
+		expect(mockState.modal.open).not.toHaveBeenCalled();
+		expect((savedBytes[10] >> 2) & 0x01).toBe(0);
+		savedBytes = null;
+		await Save.xb(true);
+		expect(mockState.modal.open).not.toHaveBeenCalled();
+		expect((savedBytes[10] >> 2) & 0x01).toBe(1);
+	});
+
+	it('utf8 export consults the lint modal when the doc degrades', async () => {
+		const doc = createDocV3({ columns: 2, rows: 1, mode: 'free' });
+		doc.setCell(0, 0, 0, {
+			glyph: glyphWord(65, ATTR_BLINK),
+			fg: paletteColor(7),
+			bg: rgbColor(10, 20, 30),
+		});
+		mockState.textArtCanvas.getDoc.mockReturnValue(doc);
+		const pending = Save.utf8();
+		expect(mockState.modal.open).toHaveBeenCalledWith('export');
+		confirmClick();
+		await pending;
+		expect(savedBytes).not.toBeNull();
 	});
 });

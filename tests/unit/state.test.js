@@ -371,4 +371,44 @@ describe('State Management System', () => {
 			expect(get('title')).toBe('Bound Test');
 		});
 	});
+
+	describe('environment path derivation', () => {
+		afterEach(() => {
+			vi.unstubAllEnvs();
+			vi.resetModules();
+		});
+
+		const freshState = async () => {
+			vi.resetModules();
+			return (await import('../../src/js/client/state.js')).default;
+		};
+
+		it.each(['assets', '/assets', 'assets/'])(
+			'uiDir normalizes VITE_UI_DIR form %s like the build',
+			async form => {
+				vi.stubEnv('BASE_URL', './');
+				vi.stubEnv('VITE_UI_DIR', form);
+				const S = await freshState();
+				expect(S.uiDir).toBe('./assets/');
+				expect(S.fontDir).toBe('./assets/fonts/');
+			},
+		);
+
+		it('fontDir normalizes VITE_FONT_DIR the same way', async () => {
+			vi.stubEnv('BASE_URL', './');
+			vi.stubEnv('VITE_UI_DIR', 'ui/');
+			vi.stubEnv('VITE_FONT_DIR', 'bitmapfonts');
+			const S = await freshState();
+			expect(S.fontDir).toBe('./ui/bitmapfonts/');
+		});
+
+		it('empty vars fall back to ui/ and fonts/', async () => {
+			vi.stubEnv('BASE_URL', './');
+			vi.stubEnv('VITE_UI_DIR', '');
+			vi.stubEnv('VITE_FONT_DIR', '');
+			const S = await freshState();
+			expect(S.uiDir).toBe('./ui/');
+			expect(S.fontDir).toBe('./ui/fonts/');
+		});
+	});
 });

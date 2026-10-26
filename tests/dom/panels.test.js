@@ -422,6 +422,59 @@ describe('panel manager', () => {
 		});
 	});
 
+	describe('drag cancellation', () => {
+		const pev = (type, props) =>
+			Object.assign(new Event(type, { bubbles: true }), props);
+
+		const startDragPastThreshold = () => {
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			const sauce = el('sauce');
+			const header = sauce.querySelector('.modHeader');
+			header.dispatchEvent(
+				pev('pointerdown', { button: 0, pointerId: 3, clientX: 10, clientY: 10 }),
+			);
+			sauce.dispatchEvent(
+				pev('pointermove', {
+					buttons: 1,
+					pointerId: 3,
+					clientX: 40,
+					clientY: 40,
+				}),
+			);
+			expect(document.querySelector('.dph')).toBeTruthy();
+			return { manager, sauce };
+		};
+
+		it('layout aborts a live container drag instead of committing stale state', () => {
+			const before = ['sauce', 'canvas', 'pos', 'zoom', 'ref', 'map'];
+			const { manager, sauce } = startDragPastThreshold();
+			// a real mid-drag relayout trigger (tool switch class)
+			manager.toggleShade('sauce');
+			// cancelDrag animates the placeholder out; gone or dismissing
+			const ph = document.querySelector('.dph');
+			expect(!ph || ph.classList.contains('out')).toBe(true);
+			sauce.dispatchEvent(pev('pointerup', { pointerId: 3 }));
+			expect(sidebarKeys()).toEqual(before);
+		});
+
+		it('the resize debounce cancels both drag kinds', () => {
+			vi.useFakeTimers();
+			try {
+				const before = ['sauce', 'canvas', 'pos', 'zoom', 'ref', 'map'];
+				const { sauce } = startDragPastThreshold();
+				window.dispatchEvent(new Event('resize'));
+				vi.advanceTimersByTime(150);
+				const ph = document.querySelector('.dph');
+				expect(!ph || ph.classList.contains('out')).toBe(true);
+				sauce.dispatchEvent(pev('pointerup', { pointerId: 3 }));
+				expect(sidebarKeys()).toEqual(before);
+			} finally {
+				vi.useRealTimers();
+			}
+		});
+	});
+
 	describe('phone layout', () => {
 		const realMatchMedia = window.matchMedia;
 		let media;
@@ -445,6 +498,75 @@ describe('panel manager', () => {
 				frames: () => true,
 				...overrides,
 			});
+
+		const pev = (type, props) =>
+			Object.assign(new Event(type, { bubbles: true }), props);
+
+		it('a breakpoint flip mid drag disarms the sheet handle', () => {
+			const manager = phoneManager();
+			manager.layout();
+			const tool = el('tool');
+			const header = tool.querySelector('.modHeader');
+			header.dispatchEvent(
+				pev('pointerdown', { button: 0, clientY: 500, pointerId: 7 }),
+			);
+			tool.dispatchEvent(pev('pointermove', { clientY: 400, pointerId: 7 }));
+			expect(tool.style.getPropertyValue('--sh')).not.toBe('');
+			media.matches = false;
+			const flip = media.addEventListener.mock.calls.find(
+				call => call[0] === 'change',
+			)[1];
+			flip();
+			// the persistent handle listeners are disarmed: a later move
+			// must not resurrect the stripped --sh, and the up must not
+			// commit sheet decisions against the desktop DOM
+			tool.dispatchEvent(pev('pointermove', { clientY: 300, pointerId: 7 }));
+			expect(tool.style.getPropertyValue('--sh')).toBe('');
+			tool.dispatchEvent(pev('pointerup', { pointerId: 7 }));
+			expect(tool.style.getPropertyValue('--sh')).toBe('');
+		});
+
+		it('a cancelled sheet drag restores the pre drag height', () => {
+			const manager = phoneManager();
+			manager.layout();
+			const tool = el('tool');
+			tool.style.setProperty('--sh', '200px');
+			const header = tool.querySelector('.modHeader');
+			header.dispatchEvent(
+				pev('pointerdown', { button: 0, clientY: 500, pointerId: 7 }),
+			);
+			tool.dispatchEvent(pev('pointermove', { clientY: 400, pointerId: 7 }));
+			expect(tool.style.getPropertyValue('--sh')).not.toBe('200px');
+			// any layout() mid drag takes the guard path and aborts
+			manager.layout();
+			expect(tool.style.getPropertyValue('--sh')).toBe('200px');
+			expect(tool.classList.contains('snap')).toBe(true);
+			tool.dispatchEvent(pev('pointerup', { pointerId: 7 }));
+			expect(tool.style.getPropertyValue('--sh')).toBe('200px');
+		});
+
+		it('pointerup still snaps a normal sheet drag', () => {
+			const manager = phoneManager();
+			manager.layout();
+			const tool = el('tool');
+			const header = tool.querySelector('.modHeader');
+			header.dispatchEvent(
+				pev('pointerdown', { button: 0, clientY: 500, pointerId: 7 }),
+			);
+			tool.dispatchEvent(pev('pointermove', { clientY: 400, pointerId: 7 }));
+			// jsdom has no layout: hand the commit a height above the
+			// dismiss threshold so the snap branch runs
+			Object.defineProperty(tool, 'offsetHeight', {
+				value: 300,
+				configurable: true,
+			});
+			tool.dispatchEvent(pev('pointerup', { pointerId: 7 }));
+			expect(tool.style.getPropertyValue('--sh')).not.toBe('');
+			expect(tool.classList.contains('snap')).toBe(true);
+			const settled = tool.style.getPropertyValue('--sh');
+			tool.dispatchEvent(pev('pointermove', { clientY: 100, pointerId: 7 }));
+			expect(tool.style.getPropertyValue('--sh')).toBe(settled);
+		});
 
 		it('routes by module: strip, sheet, bottom bar, and the drawer', () => {
 			const manager = phoneManager();

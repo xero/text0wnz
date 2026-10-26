@@ -303,7 +303,10 @@ const openHandler = (file, opts = {}) => {
 				);
 				return; // setFont runs applyData
 			}
-			const isXBFile = file.name.toLowerCase().endsWith('.xb');
+			// both aliases, split like the loader's own dispatch, or an
+			// archive font hint stomps the embedded XBIN font
+			const ext = file.name.split('.').pop().toLowerCase();
+			const isXBFile = ext === 'xb' || ext === 'xbin';
 			if (fontName && !isXBFile) {
 				// XB files handle font loading internally
 				const appFontName = Load.sauceToAppFont(fontName.trim());
@@ -329,7 +332,7 @@ const openHandler = (file, opts = {}) => {
 				return; // setFont runs applyData
 			}
 			applyData();
-			palettePicker.updatePalette(); // XB
+			palettePicker?.updatePalette(); // XB
 			closeModal();
 		},
 		{ ...opts, onError },
