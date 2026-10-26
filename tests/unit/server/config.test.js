@@ -157,6 +157,38 @@ describe('Config Module - parseArgs', () => {
 		});
 	});
 
+	describe('ALLOWED_ORIGINS / --allowed-origins', () => {
+		afterEach(() => {
+			delete process.env.ALLOWED_ORIGINS;
+		});
+
+		it('parses a comma separated allowlist, trimming entries and trailing slashes', () => {
+			process.argv = ['node', 'server.js'];
+			process.env.ALLOWED_ORIGINS = ' https://a.example , http://b.example/ ';
+			expect(parseArgs().allowedOrigins).toEqual([
+				'https://a.example',
+				'http://b.example',
+			]);
+		});
+
+		it('blank values mean unset so the gate stays open', () => {
+			process.argv = ['node', 'server.js'];
+			process.env.ALLOWED_ORIGINS = ' , ';
+			expect(parseArgs().allowedOrigins).toBeUndefined();
+		});
+
+		it('the flag overrides the env', () => {
+			process.argv = [
+				'node',
+				'server.js',
+				'--allowed-origins',
+				'http://flag.example',
+			];
+			process.env.ALLOWED_ORIGINS = 'http://env.example';
+			expect(parseArgs().allowedOrigins).toEqual(['http://flag.example']);
+		});
+	});
+
 	it('should handle help flag and exit', () => {
 		process.argv = ['node', 'server.js', '--help'];
 		parseArgs();

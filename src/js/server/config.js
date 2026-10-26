@@ -28,6 +28,18 @@ const parseCapEnv = raw => {
 	return Number.isInteger(value) && value > 0 ? value : 0;
 };
 
+/** comma-separated Origin allowlist; absent = open (ancestor behavior) */
+const parseAllowedOrigins = raw => {
+	if (typeof raw !== 'string') {
+		return undefined;
+	}
+	const list = raw
+		.split(',')
+		.map(s => s.trim().replace(/\/+$/, ''))
+		.filter(s => s !== '');
+	return list.length > 0 ? list : undefined;
+};
+
 const parseArgs = () => {
 	const args = process.argv.slice(2);
 	const config = {
@@ -45,6 +57,8 @@ const parseArgs = () => {
 		pass: process.env.ROOM_PASS ?? '',
 		/** per-room passwords from ROOM_PASSWORDS='{"name":"pw"}' */
 		roomPasswords: parseRoomPasswords(process.env.ROOM_PASSWORDS),
+		/** ws upgrade Origin allowlist; unset keeps upgrades open */
+		allowedOrigins: parseAllowedOrigins(process.env.ALLOWED_ORIGINS),
 		// env knobs: per-deployment canvas resize wall, in EITHER
 		// direction (jam hosts raise it, cautious hosts lower it);
 		// 0 = use room.js ROOM_DEFAULTS (1000x10000)
@@ -106,6 +120,12 @@ const parseArgs = () => {
 					console.warn(
 						'[Server] --pass given without a value; running UNPROTECTED',
 					);
+				}
+				break;
+			case '--allowed-origins':
+				if (nextArg && !nextArg.startsWith('--')) {
+					config.allowedOrigins = parseAllowedOrigins(nextArg);
+					i++;
 				}
 				break;
 			case '--static':

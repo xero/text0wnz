@@ -55,7 +55,7 @@ import {
 	sanitizeExtDraw,
 	sanitizeExtPalette,
 } from '../core/index';
-import { sanitize } from './utils.js';
+import { authCooldownMs, sanitize } from './utils.js';
 
 export const ROOM_DEFAULTS = Object.freeze({
 	columns: 80,
@@ -69,6 +69,7 @@ export const ROOM_DEFAULTS = Object.freeze({
 	// count alone let 10000 batches of 4096 cells hold ~40M objects;
 	// one EXT_TIMELAPSE stringified the lot
 	opLogByteLimit: 8 * 1024 * 1024,
+	fontName: 'CP437 8x16',
 });
 
 /** capability names our server advertises to caps-aware clients */
@@ -76,6 +77,29 @@ export const ROOM_DEFAULTS = Object.freeze({
 export const SERVER_CAPS = Object.freeze([EXT_SUITE_CAP]);
 
 const blankBlock = () => ({ code: 32, fg: 7, bg: 0 });
+
+/** 0x00RRGGBB words -> the 16 {r,g,b} entries vanilla joiners expect
+ * @param {number[] | Uint32Array} words */
+const rgb8FromWords = words =>
+	[...words.slice(0, 16)].map(w => ({
+		r: (w >> 16) & 0xff,
+		g: (w >> 8) & 0xff,
+		b: w & 0xff,
+	}));
+
+/** old sidecars hold 6-bit number[][] join palettes; the ancestor
+ * resolves that shape to black, so restores renormalize
+ * @param {*} palette the sidecar's join.palette, shape untrusted */
+const normalizeJoinPalette = palette => {
+	if (!Array.isArray(palette) || palette.length === 0) {
+		return undefined;
+	}
+	try {
+		return rgb8FromWords(paletteWordsFromJoin(palette));
+	} catch {
+		return undefined; // corrupt sidecar palette: defaults stand
+	}
+};
 
 /**
  * @typedef {object} RoomClient anything with a send; the server layer
@@ -125,13 +149,24 @@ export const createRoom = (options = {}) => {
 		palette: undefined,
 		/** @type {unknown} */
 		font_bytes: undefined,
-		font_name: 'CP437 8x16',
+		/** @type {string} */
+		font_name: ROOM_DEFAULTS.fontName,
 		ice_colors: false,
 		use_9px_font: false,
 		/** @type {number[] | undefined} full ext palette, 0x00RRGGBB words */
 		ext_palette: undefined,
 	};
 	doc.data = Array.from({ length: doc.columns * doc.rows }, blankBlock);
+
+	/** fold the ext palette's classic 16 into the vanilla join shape
+	 * @param {number[]} palette full ext palette, 0x00RRGGBB words */
+	const bridgeToVanillaPalette = palette => {
+		const bridge = paletteWordsFromJoin(doc.palette);
+		for (let i = 0; i < Math.min(16, palette.length); i++) {
+			bridge[i] = palette[i];
+		}
+		return rgb8FromWords(bridge);
+	};
 
 	/** @type {Map<RoomClient, {id: number, nick: string | undefined, group: string, status: number, role: 'viewer' | 'editor', caps: string[] | null, lastSyncAt: number}>} */
 	const members = new Map();
@@ -428,11 +463,7 @@ export const createRoom = (options = {}) => {
 			}
 			if (pass !== password) {
 				authFailures++;
-				if (authFailures >= 3) {
-					authCooldownUntil =
-						Date.now() +
-						Math.min(30_000, 250 * 2 ** Math.min(authFailures - 2, 7));
-				}
+				authCooldownUntil = Date.now() + authCooldownMs(authFailures);
 				client.send(MoebiusAction.REFUSED, {});
 				log(`${nick ?? 'spectator'} refused (bad password)`);
 				return false;
@@ -854,15 +885,7 @@ export const createRoom = (options = {}) => {
 				// out-of-contract shape vanilla clients index into blindly.
 				// 8-bit {r,g,b} objects, the ancestor's own join shape: it
 				// resolves 6-bit arrays to black
-				const bridge = paletteWordsFromJoin(doc.palette);
-				for (let i = 0; i < Math.min(16, palette.length); i++) {
-					bridge[i] = palette[i];
-				}
-				doc.palette = [...bridge.slice(0, 16)].map(w => ({
-					r: (w >> 16) & 0xff,
-					g: (w >> 8) & 0xff,
-					b: w & 0xff,
-				}));
+				doc.palette = bridgeToVanillaPalette(palette);
 				reprojectExtBlocks();
 				const payload = { palette, id: user.id };
 				fanoutMutation(
@@ -890,7 +913,13 @@ export const createRoom = (options = {}) => {
 						rows: baseline.rows,
 						cells: compressExtCells(baseline.cells),
 						palette: doc.ext_palette ?? null,
-						ops: opLog,
+						// weight is op-log byte accounting, not wire contract
+						ops: opLog.map(({ t, type, data, seq }) => ({
+							t,
+							type,
+							data,
+							seq,
+						})),
 					});
 				} catch {
 					// dead socket; close() reaps it
@@ -976,7 +1005,7 @@ export const createRoom = (options = {}) => {
 				doc.author = saved.author ?? '';
 				doc.group = saved.group ?? '';
 				doc.comments = saved.comments ?? '';
-				doc.palette = saved.palette;
+				doc.palette = normalizeJoinPalette(saved.palette);
 				doc.font_bytes = saved.font_bytes;
 				doc.font_name = saved.font_name ?? doc.font_name;
 				doc.ice_colors = saved.ice_colors === true;
@@ -995,6 +1024,9 @@ export const createRoom = (options = {}) => {
 				const palette = sanitizeExtPalette(savedExt.palette);
 				if (palette) {
 					doc.ext_palette = palette;
+					// the 6-bit join shape lost the low bits; the ext words
+					// did not, so re-derive the exact classic 16 from them
+					doc.palette = bridgeToVanillaPalette(palette);
 				}
 			}
 			if (savedExt && Array.isArray(savedExt.cells)) {
@@ -1031,13 +1063,26 @@ export const createRoom = (options = {}) => {
 			dirty,
 		}),
 		chatHistory: () => [...chatHistory],
-		/** blank art and silent chat: nothing worth a session file */
+		/** nothing a session file should keep: no art (vanilla or ext
+		 * rider), no chat, no sauce text, no palette or font setup.
+		 * ice/9px/dims stay out: a blank canvas renders the same under
+		 * them and counting one-click toggles would make nearly every
+		 * dirty room undeletable */
 		isBlank: () =>
 			chatHistory.length === 0 &&
+			doc.title === '' &&
+			doc.author === '' &&
+			doc.group === '' &&
+			doc.comments === '' &&
+			doc.ext_palette === undefined &&
+			doc.font_bytes === undefined &&
+			doc.font_name === ROOM_DEFAULTS.fontName &&
 			doc.data.every(
-				block => (block.code === 32 || block.code === 0) && block.bg === 0,
+				block =>
+					!block.ext &&
+					(block.code === 32 || block.code === 0) &&
+					block.bg === 0,
 			),
-		opLog: () => [...opLog],
 		/** capture before a save begins; pass back to markClean */
 		dirtyToken: () => dirtySeq,
 		/** @param {number} [token] clears dirty only if nothing mutated since */

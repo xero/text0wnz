@@ -174,6 +174,18 @@ ROOM_PASSWORDS='{"room":"pw"}' bun server
 
 **Purpose:** Serve the built PWA from this directory. Same as the `--static` flag; used by the single-binary and distroless deployments.
 
+### ALLOWED_ORIGINS
+
+**Default:** none (websocket upgrades stay open, the ancestor behavior)
+
+**Purpose:** Comma-separated Origin allowlist for websocket upgrades. Same as the `--allowed-origins` flag (the flag wins when both are set). Matching is exact strings, so list every scheme and port variant you serve from.
+
+```bash
+ALLOWED_ORIGINS="https://text.0w.nz,https://staging.0w.nz" bun src/js/server/main.js
+```
+
+Desktop clients (Moebius, icy_draw) send no Origin header and always pass; the allowlist gates browsers only.
+
 ### BRIDGE / BRIDGE_TARGET / BRIDGE_PORT / BRIDGE_ALLOW
 
 **Default:** `BRIDGE=off`, `BRIDGE_TARGET=ws://127.0.0.1:8000`, `BRIDGE_PORT=8000`
@@ -426,9 +438,10 @@ jobs:
 
 1. **Keep secrets out of `.env`** - It is committed with non-secret build defaults
 2. **Use strong room passwords** - Set via `--pass`, `ROOM_PASS`, or `ROOM_PASSWORDS`
-3. **Rotate secrets regularly** - Update Docker/CI secrets periodically
-4. **Limit token permissions** - Give minimum required permissions
-5. **Use environment-specific configs** - Different keys for dev/staging/prod
+3. **Pin browser origins on public servers** - Set `ALLOWED_ORIGINS` so foreign pages cannot open websocket sessions from a visitor's browser
+4. **Rotate secrets regularly** - Update Docker/CI secrets periodically
+5. **Limit token permissions** - Give minimum required permissions
+6. **Use environment-specific configs** - Different keys for dev/staging/prod
 
 ## Related Documentation
 
