@@ -113,6 +113,15 @@ const createFontHandle = (fontData, palette, letterSpacing, scaleFactor) => {
 			}
 		},
 		getLetterSpacing: () => letterSpacing,
+		// a reassigned State.palette never reaches the closure on its own:
+		// rebind then rebuild; in-place edits of the SAME object use
+		// redraw(). Callers own the onPaletteChange dispatch.
+		setPalette: newPalette => {
+			if (newPalette && newPalette !== palette) {
+				palette = newPalette;
+				createLazyFontInstance();
+			}
+		},
 		setScaleFactor: newScaleFactor => {
 			if (newScaleFactor !== currentScaleFactor && newScaleFactor > 0) {
 				currentScaleFactor = newScaleFactor;

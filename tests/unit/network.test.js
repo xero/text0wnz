@@ -26,6 +26,8 @@ vi.mock('../../src/js/client/state.js', () => ({
 			quickDraw: vi.fn(),
 			getColumns: vi.fn(() => 80),
 			getRows: vi.fn(() => 25),
+			getDoc: vi.fn(() => ({ palette: new Uint32Array(16) })),
+			redrawEntireImage: vi.fn(),
 		},
 		chat: {
 			addConversation: vi.fn(),
@@ -33,7 +35,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 			part: vi.fn(),
 			nick: vi.fn(),
 		},
-		font: { setLetterSpacing: vi.fn() },
+		font: { setLetterSpacing: vi.fn(), setPalette: vi.fn() },
 		network: {
 			setHandle: vi.fn(),
 			sendChat: vi.fn(),
@@ -85,7 +87,10 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	websocketUI: vi.fn(),
 }));
 
-vi.mock('../../src/js/client/palette.js', () => ({ createDefaultPalette: vi.fn(() => ({})) }));
+vi.mock('../../src/js/client/palette.js', () => ({
+	createDefaultPalette: vi.fn(() => ({})),
+	createPalette: vi.fn(() => ({})),
+}));
 
 vi.stubGlobal('document', {
 	getElementsByClassName: vi.fn(() => []),
@@ -314,6 +319,57 @@ describe('Network Module', () => {
 			// not connected: nothing hits the wire and nothing renders
 			const cmds = mockWorker.postMessage.mock.calls.map(c => c[0].cmd);
 			expect(cmds).not.toContain('send');
+		});
+
+		it('the collab join rebinds the font to the default palette', async () => {
+			createWorkerHandler(mockInputHandle);
+			const messageListener = mockWorker.addEventListener.mock.calls.find(
+				call => call[0] === 'message',
+			)[1];
+			const blank = { code: 32, fg: 7, bg: 0 };
+			State.font.setPalette.mockClear();
+			await messageListener({
+				data: {
+					cmd: 'connected',
+					data: {
+						caps: [],
+						doc: { columns: 2, rows: 1, data: [blank, blank]},
+						users: [],
+						chat_history: [],
+					},
+				},
+			});
+			// without the rebind the later setLetterSpacing rebuild runs
+			// against the handle's stale palette ref
+			expect(State.font.setPalette).toHaveBeenCalledWith(State.palette);
+		});
+
+		it('EXT_PALETTE rebinds the live font handle', async () => {
+			createWorkerHandler(mockInputHandle);
+			const messageListener = mockWorker.addEventListener.mock.calls.find(
+				call => call[0] === 'message',
+			)[1];
+			const blank = { code: 32, fg: 7, bg: 0 };
+			await messageListener({
+				data: {
+					cmd: 'connected',
+					data: {
+						caps: [EXT_SUITE_CAP],
+						doc: { columns: 2, rows: 1, data: [blank, blank]},
+						users: [],
+						chat_history: [],
+					},
+				},
+			});
+			State.font.setPalette.mockClear();
+			await messageListener({
+				data: {
+					cmd: 'frame',
+					type: T0wnzAction.EXT_PALETTE,
+					data: { palette: Array.from({ length: 16 }, (_, i) => i) },
+				},
+			});
+			expect(State.font.setPalette).toHaveBeenCalledWith(State.palette);
 		});
 
 		it('replays own in-flight ops after an EXT_SYNC snapshot', async () => {
