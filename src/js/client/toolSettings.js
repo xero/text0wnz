@@ -87,8 +87,9 @@ const createToolSettings = () => {
 		// grip, so the panel flags that section for the CSS
 		panel?.classList.toggle('charMap', section === 'character');
 		current = section;
-		// reopen clears an X-close, re-lays out, and flashes the panel
-		State.panels?.reopen('tool');
+		// reopen clears an X-close, re-lays out, and flashes the panel;
+		// the section rides along as the tool identity pins key on
+		State.panels?.reopen('tool', section);
 	};
 
 	const hide = () => {
