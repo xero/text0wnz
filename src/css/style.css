@@ -1277,8 +1277,22 @@
 		min-width: 160px;
 
 		.menuItem {
+			@apply flex items-center;
+			gap: 8px;
 			padding: 3px 8px;
 			line-height: 1.15;
+
+			svg {
+				flex: none;
+				width: 14px;
+				height: 14px;
+				fill: var(--cyber);
+				stroke: #000;
+			}
+			/* a napping verb dims its icon with its label */
+			&.disabled svg {
+				fill: var(--color-editor);
+			}
 		}
 		.separator {
 			@apply bg-menu;

@@ -62,7 +62,8 @@ describe('createToolSettings', () => {
 				'Line',
 			);
 			expect(ts.hasSection()).toBe(true);
-			expect(mocks.reopen).toHaveBeenCalledWith('tool');
+			// the section rides along as the per-tool pin key
+			expect(mocks.reopen).toHaveBeenCalledWith('tool', 'line');
 		});
 
 		it('show swaps sections in place', () => {

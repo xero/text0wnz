@@ -177,9 +177,56 @@ const createPanelManager = () => {
 	let ZO = [...MODULE_KEYS];
 	let collapsed = false;
 	let focused = 'tool';
+	// per-tool pins for the tool settings module: one module slot, but
+	// each tool section can own a remembered placement that reopen()
+	// applies when its tool arms. The section name is the key; panels
+	// never needs to know the section list
+	let PINS = {};
+	let toolSub = null;
+
+	// a pin keeps only what reopen may apply: never hid (reopen's
+	// clear-on-select contract and the phone sheet own it), never an
+	// ORD slot (per-tool splicing would reshuffle everyone else's
+	// saved order on every switch)
+	const sanitizePin = entry => {
+		if (!entry || typeof entry !== 'object') {
+			return null;
+		}
+		if (
+			entry.dk !== 0 &&
+			entry.dk !== 'side' &&
+			entry.dk !== 'top' &&
+			entry.dk !== 'bot'
+		) {
+			return null;
+		}
+		const pin = { dk: entry.dk };
+		for (const field of ['x', 'y', 'w', 'h']) {
+			if (typeof entry[field] === 'number' && Number.isFinite(entry[field])) {
+				pin[field] = entry[field];
+			}
+		}
+		if (entry.sh === 0 || entry.sh === 1) {
+			pin.sh = entry.sh;
+		}
+		return pin;
+	};
 
 	const restore = () => {
 		const saved = readLayout();
+		// pins live as their own top-level payload key: fields inside
+		// MOD[key] outside PERSISTED_FIELDS are wiped on both save and
+		// restore, while unknown top-level keys survive older builds'
+		// read-merge-write untouched
+		PINS = {};
+		if (saved.pins && typeof saved.pins === 'object') {
+			for (const [sub, entry] of Object.entries(saved.pins)) {
+				const pin = sanitizePin(entry);
+				if (pin) {
+					PINS[sub] = pin;
+				}
+			}
+		}
 		if (saved.MOD && typeof saved.MOD === 'object') {
 			for (const key of MODULE_KEYS) {
 				const entry = saved.MOD[key];
@@ -247,6 +294,7 @@ const createPanelManager = () => {
 			ORD,
 			ZO,
 			sidebarCollapsed: collapsed,
+			pins: PINS,
 		};
 		// layout() runs on hot paths (every tool switch and visibility
 		// toggle); the localStorage round-trip only pays when something
@@ -672,16 +720,123 @@ const createPanelManager = () => {
 
 	const toggleShade = key => {
 		MOD[key].sh = MOD[key].sh ? 0 : 1;
+		retrainPin(key);
 		layout();
 	};
 
-	const reopen = key => {
+	// ---- per-tool pins: follow semantics, every gesture retrains ----
+	const PIN_FIELDS = ['dk', 'x', 'y', 'w', 'h', 'sh'];
+
+	const snapshotPin = key => {
+		const pin = {};
+		for (const field of PIN_FIELDS) {
+			if (MOD[key][field] !== undefined) {
+				pin[field] = MOD[key][field];
+			}
+		}
+		return pin;
+	};
+
+	/** While the active tool is pinned, every deliberate placement
+	 * gesture retrains its pin from the values the gesture itself just
+	 * wrote, never from post-layout state: clampFloat rewrites x and y
+	 * to the current window on every layout, and copying those back
+	 * would drift the pin on small screens. */
+	const retrainPin = key => {
+		// pins are wide-layout truth: no narrow surface reaches a tool
+		// gesture today, and the gate keeps a future one from writing
+		// phone-shell state into a pin
+		if (key === 'tool' && toolSub && PINS[toolSub] && !isNarrow()) {
+			PINS[toolSub] = snapshotPin(key);
+		}
+	};
+
+	const isPinned = () => Boolean(toolSub && PINS[toolSub]);
+
+	const togglePin = () => {
+		if (!toolSub) {
+			return;
+		}
+		if (PINS[toolSub]) {
+			delete PINS[toolSub];
+		} else {
+			PINS[toolSub] = snapshotPin('tool');
+		}
+		save();
+	};
+
+	/** Write the active tool's pin into the module record ahead of the
+	 * layout() the caller is about to run. Mirrors dockTo's
+	 * bookkeeping; legality guards are moot because the tool module is
+	 * big (always its own bar row) and neither grow nor floatOnly. */
+	const applyPin = () => {
+		const pin = toolSub ? PINS[toolSub] : null;
+		if (!pin) {
+			return;
+		}
+		const m = MOD.tool;
+		const el = registry.get('tool')?.el;
+		// dock bookkeeping only when the dock actually changes, like
+		// dockTo's short-circuit: a same-dock reapply must not pop a
+		// collapsed sidebar or shuffle z-order on every tool switch
+		if (m.dk !== pin.dk) {
+			promoteRowLead(
+				ORD,
+				MOD,
+				'tool',
+				m.dk === 'top' || m.dk === 'bot' ? m.dk : null,
+			);
+			m.ln = 0;
+			m.dk = pin.dk;
+			if (pin.dk === 0) {
+				focused = 'tool';
+				ZO = [...ZO.filter(other => other !== 'tool'), 'tool'];
+			} else if (pin.dk === 'side') {
+				// docking into a collapsed sidebar must land somewhere visible
+				collapsed = false;
+			}
+		}
+		for (const field of ['x', 'y']) {
+			if (pin[field] !== undefined) {
+				m[field] = pin[field];
+			}
+		}
+		for (const field of ['w', 'h', 'sh']) {
+			if (pin[field] !== undefined) {
+				m[field] = pin[field];
+			} else {
+				delete m[field];
+			}
+		}
+		// a pin without a custom size must not inherit the previous
+		// tool's inline vars; applyFloatPosition only ever adds them
+		if (!pin.w) {
+			el?.style.removeProperty('--mw');
+		}
+		if (!pin.h) {
+			el?.style.removeProperty('--mh');
+		}
+	};
+
+	const reopen = (key, sub) => {
 		const reg = registry.get(key);
 		if (!reg) {
 			return;
 		}
 		if (reg.closable) {
 			MOD[key].hid = 0;
+		}
+		if (key === 'tool') {
+			// the section is the tool's identity: pins key on it, and
+			// gestures retrain whichever one is armed here. Pins are
+			// wide-layout truth, so the phone shell never applies them;
+			// the breakpoint flip re-asserts the armed one instead
+			if (sub) {
+				toolSub = sub;
+			}
+			if (!isNarrow()) {
+				applyPin();
+			}
 		}
 		layout();
 		flash(key);
@@ -717,6 +872,9 @@ const createPanelManager = () => {
 		ORD = [...MODULE_KEYS];
 		ZO = [...MODULE_KEYS];
 		collapsed = false;
+		// writeLayout's merge keeps unknown keys, so stale pins would
+		// re-assert on the next tool switch unless reset clears them
+		PINS = {};
 		layout();
 	};
 
@@ -748,6 +906,7 @@ const createPanelManager = () => {
 			// docking into a collapsed sidebar must land somewhere visible
 			collapsed = false;
 		}
+		retrainPin(key);
 		layout();
 		flash(key);
 	};
@@ -870,6 +1029,23 @@ const createPanelManager = () => {
 		const at = peers.indexOf(menuKey);
 		set('panelMoveUp', at <= 0);
 		set('panelMoveDown', at === -1 || at === peers.length - 1);
+		// the pin verb exists only for the tool module on wide layouts
+		// (the phone shell routes the sheet itself), labeled for the
+		// tool the panel is currently wearing
+		const showPin = menuKey === 'tool' && !narrow && Boolean(toolSub);
+		const pinItem = $('panelPin');
+		if (pinItem) {
+			pinItem.hidden = !showPin;
+		}
+		const pinSep = $('panelPinSep');
+		if (pinSep) {
+			pinSep.hidden = !showPin;
+		}
+		const pinLabel = $('panelPinLabel');
+		if (showPin && pinLabel) {
+			const toolName = $('toolSettingsTitle')?.textContent || 'this tool';
+			pinLabel.textContent = `${isPinned() ? 'Unpin' : 'Pin'} ${toolName}`;
+		}
 	};
 
 	const openPanelMenu = (key, from, at) => {
@@ -974,6 +1150,13 @@ const createPanelManager = () => {
 			nudge(menuKey, item.id === 'panelMoveUp' ? -1 : 1);
 			// the menu stays up for repeat nudges, re-armed for the new
 			// neighborhood
+			syncPanelMenu();
+			item.focus?.({ preventScroll: true });
+			return;
+		}
+		if (item.id === 'panelPin') {
+			togglePin();
+			// the menu stays up so the flip to Unpin is visible
 			syncPanelMenu();
 			item.focus?.({ preventScroll: true });
 			return;
@@ -1150,6 +1333,10 @@ const createPanelManager = () => {
 		cancelSheetDrag();
 		registry.get('tool')?.el.style.removeProperty('--sh');
 		setDrawer(false);
+		// phone switches never applied the armed pin; landing wide does
+		if (!isNarrow()) {
+			applyPin();
+		}
 		layout();
 	});
 
@@ -1572,7 +1759,9 @@ const createPanelManager = () => {
 			return;
 		}
 		if (drag.resize) {
+			const resizedKey = drag.key;
 			drag = null;
+			retrainPin(resizedKey);
 			save();
 			return;
 		}
@@ -1671,6 +1860,8 @@ const createPanelManager = () => {
 			focused = key;
 			ZO = [...ZO.filter(other => other !== key), key];
 		}
+		// the gesture's own values retrain the pin before layout clamps
+		retrainPin(key);
 		drag = null;
 		layout();
 	};
@@ -1702,6 +1893,9 @@ const createPanelManager = () => {
 		if (reg.el.classList.contains('fl')) {
 			applyFloatPosition(key, reg.el);
 		}
+		// the character map's corner grip lands here: a deliberate size
+		// gesture like any other, so a pinned tool keeps the new width
+		retrainPin(key);
 		save();
 	};
 
@@ -1717,6 +1911,8 @@ const createPanelManager = () => {
 		toggleShade,
 		dockTo,
 		nudge,
+		togglePin,
+		isPinned,
 		setFloatWidth,
 		isDocked: key => MOD[key]?.dk === 'side',
 		isCollapsed: () => collapsed,

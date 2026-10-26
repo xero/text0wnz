@@ -49,6 +49,10 @@ const fixture = () => {
 			<article class="separator"></article>
 			<article id="panelMoveUp" class="menuItem" role="menuitem">Move Up</article>
 			<article id="panelMoveDown" class="menuItem" role="menuitem">Move Down</article>
+			<article id="panelPinSep" class="separator" hidden></article>
+			<article id="panelPin" class="menuItem" role="menuitem" hidden>
+				<span id="panelPinLabel">Pin</span>
+			</article>
 		</div>`;
 };
 
@@ -485,6 +489,196 @@ describe('panel manager', () => {
 		});
 	});
 
+	describe('per-tool pins', () => {
+		const storedPins = () =>
+			JSON.parse(localStorage.getItem('panelLayout') || '{}').pins;
+
+		it('a pinned tool reopens into its pinned placement', () => {
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			manager.reopen('tool', 'line');
+			manager.dockTo('tool', 'top');
+			manager.togglePin();
+			expect(manager.isPinned()).toBe(true);
+			// square wanders off somewhere else
+			manager.reopen('tool', 'square');
+			manager.dockTo('tool', 0);
+			expect(el('tool')).toHaveClass('fl');
+			// line comes back pinned to the top bar
+			manager.reopen('tool', 'line');
+			expect(el('tool')).toHaveClass('tb');
+			expect(dockRows('dockTop')).toEqual([['tool']]);
+		});
+
+		it('a gesture while pinned retrains the pin', () => {
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			manager.reopen('tool', 'square');
+			manager.togglePin();
+			// follow semantics: the dock verb rewrites square's pin
+			manager.dockTo('tool', 'bot');
+			manager.reopen('tool', 'line');
+			manager.dockTo('tool', 0);
+			manager.reopen('tool', 'square');
+			expect(el('tool')).toHaveClass('tb');
+			expect(dockRows('dockBottom')).toContainEqual(['tool']);
+			expect(storedPins().square.dk).toBe('bot');
+		});
+
+		it('unpinned tools share the wander placement', () => {
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			manager.reopen('tool', 'line');
+			manager.dockTo('tool', 'top');
+			manager.reopen('tool', 'square');
+			expect(el('tool')).toHaveClass('tb');
+			expect(storedPins()).toEqual({});
+		});
+
+		it('unpin keeps the current placement as the wander state', () => {
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			manager.reopen('tool', 'line');
+			manager.dockTo('tool', 'top');
+			manager.togglePin();
+			manager.togglePin();
+			expect(manager.isPinned()).toBe(false);
+			expect(storedPins()).toEqual({});
+			expect(el('tool')).toHaveClass('tb');
+		});
+
+		it('pins survive a reload and garbage entries are dropped', () => {
+			localStorage.setItem(
+				'panelLayout',
+				JSON.stringify({
+					v: 2,
+					pins: {
+						line: { dk: 'side', sh: 1, hid: 1 },
+						square: { dk: 'nope', x: 5 },
+						circle: { dk: 0, x: 40, y: 50, w: 'wide' },
+					},
+				}),
+			);
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			manager.reopen('tool', 'line');
+			// only strips and floats shade, so the sh pin rides a side dock
+			expect(el('tool')).toHaveClass('dk');
+			expect(el('tool')).toHaveClass('shaded');
+			// hid never rides a pin: reopen's clear-on-select contract
+			expect(el('tool').hidden).toBe(false);
+			manager.reopen('tool', 'circle');
+			expect(el('tool')).toHaveClass('fl');
+			expect(el('tool').style.getPropertyValue('--mx')).toBe('40px');
+			// the garbage dk pin fell out entirely
+			manager.layout();
+			expect(storedPins().square).toBeUndefined();
+			expect(storedPins().circle.w).toBeUndefined();
+		});
+
+		it('a pin without a size sheds the previous size vars', () => {
+			localStorage.setItem(
+				'panelLayout',
+				JSON.stringify({
+					v: 2,
+					pins: {
+						square: { dk: 0, x: 10, y: 10, w: 300, h: 200 },
+						line: { dk: 0, x: 20, y: 20 },
+					},
+				}),
+			);
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			manager.reopen('tool', 'square');
+			expect(el('tool').style.getPropertyValue('--mw')).toBe('300px');
+			manager.reopen('tool', 'line');
+			expect(el('tool').style.getPropertyValue('--mw')).toBe('');
+			expect(el('tool').style.getPropertyValue('--mh')).toBe('');
+		});
+
+		it('the corner grip width gesture retrains the pin too', () => {
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			manager.reopen('tool', 'character');
+			manager.togglePin();
+			manager.setFloatWidth('tool', 320);
+			manager.reopen('tool', 'line');
+			manager.reopen('tool', 'character');
+			expect(el('tool').style.getPropertyValue('--mw')).toBe('320px');
+			expect(storedPins().character.w).toBe(320);
+		});
+
+		it('a same-dock reapply never pops a collapsed sidebar', () => {
+			localStorage.setItem(
+				'panelLayout',
+				JSON.stringify({
+					v: 2,
+					MOD: { tool: { dk: 'side' } },
+					sidebarCollapsed: true,
+					pins: { line: { dk: 'side' } },
+				}),
+			);
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			manager.reopen('tool', 'line');
+			expect(manager.isCollapsed()).toBe(true);
+		});
+
+		it('reset clears every pin, in memory and on disk', () => {
+			const manager = registerAll(createPanelManager());
+			manager.layout();
+			manager.reopen('tool', 'line');
+			manager.togglePin();
+			expect(storedPins()).not.toEqual({});
+			manager.reset();
+			expect(manager.isPinned()).toBe(false);
+			expect(storedPins()).toEqual({});
+		});
+
+		it('the menu offers Pin only for the tool module, labeled and flipping', async () => {
+			const State = (await import('../../src/js/client/state.js')).default;
+			State.flyouts = {
+				show: vi.fn((_id, menuEl) => {
+					menuEl.hidden = false;
+				}),
+				close: vi.fn(),
+				isOpen: vi.fn(() => false),
+			};
+			try {
+				const manager = registerAll(createPanelManager());
+				manager.layout();
+				manager.reopen('tool', 'line');
+				el('tool').dispatchEvent(
+					Object.assign(new Event('contextmenu', { bubbles: true }), {
+						clientX: 20,
+						clientY: 20,
+					}),
+				);
+				const pin = document.getElementById('panelPin');
+				expect(pin.hidden).toBe(false);
+				expect(document.getElementById('panelPinSep').hidden).toBe(false);
+				expect(document.getElementById('panelPinLabel').textContent).toBe(
+					'Pin this tool',
+				);
+				pin.dispatchEvent(new Event('click', { bubbles: true }));
+				expect(manager.isPinned()).toBe(true);
+				expect(document.getElementById('panelPinLabel').textContent).toBe(
+					'Unpin this tool',
+				);
+				// another module's menu keeps the verb hidden
+				el('canvas').dispatchEvent(
+					Object.assign(new Event('contextmenu', { bubbles: true }), {
+						clientX: 20,
+						clientY: 20,
+					}),
+				);
+				expect(pin.hidden).toBe(true);
+			} finally {
+				delete State.flyouts;
+			}
+		});
+	});
+
 	describe('wide long-press', () => {
 		let State;
 
@@ -775,6 +969,27 @@ describe('panel manager', () => {
 			media.matches = false;
 			manager.layout();
 			expect(container).toHaveClass('sidebarCollapsed');
+		});
+
+		it('the phone shell defers pins to the breakpoint flip', () => {
+			localStorage.setItem(
+				'panelLayout',
+				JSON.stringify({ v: 2, pins: { line: { dk: 'top' } } }),
+			);
+			const manager = phoneManager();
+			manager.layout();
+			manager.reopen('tool', 'line');
+			// the sheet stays a sheet; wide truth is untouched by the
+			// phone switch
+			expect(el('tool')).toHaveClass('sheet');
+			// landing wide re-asserts the armed pin
+			media.matches = false;
+			const flip = media.addEventListener.mock.calls.find(
+				([name]) => name === 'change',
+			)[1];
+			flip();
+			expect(el('tool')).toHaveClass('tb');
+			expect(dockRows('dockTop')).toContainEqual(['tool']);
 		});
 
 		describe('stack reorder and the long-press menu', () => {
