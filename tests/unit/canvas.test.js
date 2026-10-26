@@ -10,6 +10,8 @@ vi.mock('../../src/js/client/state.js', () => ({
 			getHeight: vi.fn(() => 16),
 			setLetterSpacing: vi.fn(),
 			getLetterSpacing: vi.fn(() => false),
+			setPalette: vi.fn(),
+			redraw: vi.fn(),
 		},
 		palette: {
 			getRGBAColor: vi.fn(() => [255, 255, 255, 255]),
@@ -114,6 +116,87 @@ describe('Canvas Module', () => {
 		if (global.gc) {
 			global.gc();
 		}
+	});
+
+	describe('blink loop generations', () => {
+		let State;
+
+		beforeEach(async () => {
+			State = (await import('../../src/js/client/state.js')).default;
+			vi.useFakeTimers();
+		});
+
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+
+		const blinkDraws = () =>
+			State.font.draw.mock.calls.filter(call => call[0] === 65).length;
+
+		// one blink cell (bg nibble 8), setup loop drained by a bare stop
+		const seeded = async () => {
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			const data = new Uint16Array(80 * 25);
+			data[0] = (65 << 8) | (8 << 4) | 7;
+			canvas.setImageData(80, 25, data, false, undefined);
+			canvas._blinkTestSeam.stopBlinkTimer();
+			await vi.advanceTimersByTimeAsync(600);
+			State.font.draw.mockClear();
+			return canvas._blinkTestSeam;
+		};
+
+		it('rapid updates leave exactly one live loop', async () => {
+			const seam = await seeded();
+			for (let i = 0; i < 5; i++) {
+				seam.updateBlinkTimer();
+			}
+			// let the starter chain drain, then measure a 2000ms window:
+			// one loop ticks 4-5 times depending on start phase; five
+			// loops would tick twenty-plus
+			await vi.advanceTimersByTimeAsync(0);
+			await vi.advanceTimersByTimeAsync(2000);
+			expect(blinkDraws()).toBeGreaterThanOrEqual(4);
+			expect(blinkDraws()).toBeLessThanOrEqual(5);
+		});
+
+		it('a bare stop stays stopped', async () => {
+			const seam = await seeded();
+			seam.updateBlinkTimer();
+			await vi.advanceTimersByTimeAsync(600);
+			seam.stopBlinkTimer();
+			await vi.advanceTimersByTimeAsync(600);
+			State.font.draw.mockClear();
+			await vi.advanceTimersByTimeAsync(2000);
+			// a starved waiter used to grab the released mutex here and
+			// restart blink mid-relayout
+			expect(blinkDraws()).toBe(0);
+		});
+
+		it('stop then update restarts', async () => {
+			const seam = await seeded();
+			seam.updateBlinkTimer();
+			await vi.advanceTimersByTimeAsync(600);
+			seam.stopBlinkTimer();
+			await vi.advanceTimersByTimeAsync(600);
+			State.font.draw.mockClear();
+			seam.updateBlinkTimer();
+			await vi.advanceTimersByTimeAsync(600);
+			expect(blinkDraws()).toBeGreaterThan(0);
+		});
+
+		it('ice on silences blink and queued starters', async () => {
+			const seam = await seeded();
+			seam.updateBlinkTimer();
+			await vi.advanceTimersByTimeAsync(600);
+			canvas.setIceColors(true);
+			await vi.advanceTimersByTimeAsync(600);
+			State.font.draw.mockClear();
+			await vi.advanceTimersByTimeAsync(2000);
+			expect(blinkDraws()).toBe(0);
+			canvas.setIceColors(false);
+			await vi.advanceTimersByTimeAsync(600);
+			expect(blinkDraws()).toBeGreaterThan(0);
+		});
 	});
 
 	describe('letter spacing seams', () => {
@@ -591,6 +674,27 @@ describe('Canvas Module', () => {
 	});
 
 	describe('XBin Data Management', () => {
+		it('clearXBData rebinds the font to the restored default palette', async () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+			const State = (await import('../../src/js/client/state.js')).default;
+			// pin the LIVE handle: setFont replaces State.font async, so a
+			// later read could race a prior test's replacement
+			const font = State.font;
+			font.setPalette = vi.fn();
+			canvas.clearXBData();
+			// identity: the rebind must hand the handle the NEW object
+			expect(font.setPalette).toHaveBeenCalledWith(State.palette);
+		});
+
+		it('setXBPaletteData rebinds the font to the XB palette', async () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+			const State = (await import('../../src/js/client/state.js')).default;
+			const font = State.font;
+			font.setPalette = vi.fn();
+			canvas.setXBPaletteData(new Uint8Array(48));
+			expect(font.setPalette).toHaveBeenCalledWith(State.palette);
+		});
+
 		it('should support clearing XB data', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
 

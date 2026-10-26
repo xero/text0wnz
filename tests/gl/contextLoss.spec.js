@@ -68,12 +68,26 @@ test('gl renderer survives context loss and restore', async ({ page }) => {
 				litPixels++;
 			}
 		}
-		return { lostDuring, restored: !gl.isContextLost(), litPixels };
+		// drain the GL error queue: a stale gl.deleteTexture on a handle
+		// from the lost context latches INVALID_OPERATION by now (the
+		// renderer's restore handler ran before this listener resolved)
+		const glErrors = [];
+		for (let i = 0; i < 8; i++) {
+			const err = gl.getError();
+			if (err === gl.NO_ERROR) {
+				break;
+			}
+			glErrors.push(err);
+		}
+
+		return { lostDuring, restored: !gl.isContextLost(), litPixels, glErrors };
 	});
 
 	expect(result.error).toBeUndefined();
 	expect(result.lostDuring).toBe(true);
 	expect(result.restored).toBe(true);
+	// 0x0502 INVALID_OPERATION: the stale-delete pollution this pins
+	expect(result.glErrors).not.toContain(0x0502);
 	// 20 full-block cells of white pixels must be back on screen
 	expect(result.litPixels).toBeGreaterThan(1000);
 });

@@ -719,54 +719,47 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		});
 	};
 
-	let blinkTimerMutex = Promise.resolve();
+	// each update chains ONE starter onto the prior loop's promise, so
+	// at most one loop ever runs; the generation token lets stops and
+	// rapid restarts cancel queued starters instead of stacking waiters
+	// (the old lifetime-held mutex grew one starved waiter per open,
+	// font change, resize, and zoom, and a bare stop handed the lock to
+	// a stale waiter that restarted blink mid-relayout)
+	let blinkGen = 0;
+	let blinkLoopTail = Promise.resolve();
 
-	const acquireBlinkTimerMutex = () => {
-		// the tail reassignment happens SYNCHRONOUSLY before any await:
-		// the old await-then-assign version woke every queued waiter at
-		// once (setFont queues two acquisitions in one task) and a later
-		// restart could run two blink loops at double cadence
-		let release;
-		const held = new Promise(resolve => (release = resolve));
-		const turn = blinkTimerMutex.then(() => release);
-		blinkTimerMutex = blinkTimerMutex.then(() => held);
-		return turn;
-	};
-
-	const updateBlinkTimer = async () => {
-		const releaseMutex = await acquireBlinkTimerMutex();
+	const runBlinkLoop = async gen => {
+		// superseded while waiting for the prior loop to wind down
+		if (gen !== blinkGen) {
+			return;
+		}
+		blinkStop = false;
+		if (iceColorsNow()) {
+			return;
+		}
+		blinkOn = false;
 		try {
-			if (blinkTimerRunning) {
-				return;
+			while (!blinkStop) {
+				blink();
+				await new Promise(resolve => setTimeout(resolve, 500));
 			}
-			blinkTimerRunning = true;
-			blinkStop = false;
-
-			if (!iceColorsNow()) {
-				blinkOn = false;
-				try {
-					while (!blinkStop) {
-						blink();
-						await new Promise(resolve => setTimeout(resolve, 500));
-					}
-				} catch (error) {
-					console.error('[Canvas] Blink timer error:', error);
-				}
-			}
-		} finally {
-			blinkTimerRunning = false;
-			releaseMutex();
+		} catch (error) {
+			console.error('[Canvas] Blink timer error:', error);
 		}
 	};
 
-	let blinkTimerRunning = false;
+	const updateBlinkTimer = () => {
+		const gen = ++blinkGen;
+		blinkStop = true;
+		blinkLoopTail = blinkLoopTail.then(() => runBlinkLoop(gen));
+		return blinkLoopTail;
+	};
 
 	const stopBlinkTimer = () => {
+		// the bump cancels queued starters: stop means stop until the
+		// next explicit updateBlinkTimer
+		blinkGen++;
 		blinkStop = true;
-		// Wait for timer to actually stop
-		setTimeout(() => {
-			blinkTimerRunning = false;
-		}, 10);
 	};
 
 	const calculateVisibleChunks = () => {
@@ -1864,10 +1857,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 		State.palette = createPalette(rgb6BitPalette);
 
-		// a REAL glyph rebuild: the old setLetterSpacing(getLetterSpacing())
-		// was a guarded no-op, so the font handle kept the palette captured
-		// at load and a plain .ans opened after an .xb wore the XB colors
-		State.font?.redraw?.();
+		// rebind, not just redraw: the handle closes over the palette it
+		// was created with, so a bare redraw() rebuilds in the OLD colors
+		State.font?.setPalette?.(State.palette);
 		document.dispatchEvent(
 			new CustomEvent('onPaletteChange', {
 				detail: State.palette,
@@ -1882,9 +1874,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		ensureHexPages().setEmbeddedFont(null, 0);
 		scheduleJournalKeyframe(true);
 		State.palette = createDefaultPalette();
-		// rebuild BEFORE the dispatch so listeners repaint with glyphs in
+		// rebind BEFORE the dispatch so listeners repaint with glyphs in
 		// the restored palette, not the XB one the handle had pinned
-		State.font?.redraw?.();
+		State.font?.setPalette?.(State.palette);
 		document.dispatchEvent(
 			new CustomEvent('onPaletteChange', {
 				detail: State.palette,
@@ -2060,6 +2052,13 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		clearXBData: clearXBData,
 		getXBPaletteData: getXBPaletteData,
 		getXBFontData: getXBFontData,
+		// blink lifecycle seam: a bare stop is unreachable in isolation
+		// from the public surface (onCriticalChange always follows it
+		// with createCanvases), and the tests must pin stop semantics
+		_blinkTestSeam: {
+			updateBlinkTimer,
+			stopBlinkTimer,
+		},
 		// one EXPLICIT test seam for the chunk renderer's dirty-region
 		// internals: nothing in production reaches them from outside, and
 		// scattering them across the public surface read as API

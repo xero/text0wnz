@@ -387,6 +387,9 @@ const createWorkerHandler = inputHandle => {
 			]);
 		}
 		State.palette = createPalette(triples);
+		// rebind before the dispatch; onCriticalChange repaints from the
+		// handle, and a bare redraw() rebuilt in the OLD colors
+		State.font?.setPalette?.(State.palette);
 		document.dispatchEvent(
 			new CustomEvent('onPaletteChange', {
 				detail: State.palette,
@@ -394,7 +397,6 @@ const createWorkerHandler = inputHandle => {
 				cancelable: false,
 			}),
 		);
-		State.font?.redraw();
 	};
 
 	const onRemoteExtPalette = data => {
@@ -803,6 +805,9 @@ const createWorkerHandler = inputHandle => {
 				'Updating editor with data from the collab session...',
 			);
 			State.palette = createDefaultPalette();
+			// the join replaces the palette; without the rebind the later
+			// setLetterSpacing rebuild runs against the stale handle ref
+			State.font?.setPalette?.(State.palette);
 			document.dispatchEvent(
 				new CustomEvent('onPaletteChange', {
 					detail: State.palette,

@@ -240,6 +240,74 @@ describe('Font Module - Basic Tests', () => {
 		});
 	});
 
+	describe('handle palette rebinding', () => {
+		const makeCtx = () => ({ drawImage: vi.fn(), putImageData: vi.fn() });
+
+		const makeRebindPalette = shade => ({
+			getRGBAColor: vi.fn(() => [shade, shade, shade, 255]),
+			getForegroundColor: vi.fn(() => 7),
+			getBackgroundColor: vi.fn(() => 0),
+		});
+
+		it('setPalette rebuilds glyphs from the new palette', async () => {
+			const palA = makeRebindPalette(10);
+			const palB = makeRebindPalette(200);
+			const handle = await loadFontFromXBData(
+				new Uint8Array(1024),
+				8,
+				4,
+				false,
+				palA,
+			);
+			handle.draw(65, 7, 0, makeCtx(), 0, 0);
+			expect(palA.getRGBAColor).toHaveBeenCalled();
+			handle.setPalette(palB);
+			palA.getRGBAColor.mockClear();
+			palB.getRGBAColor.mockClear();
+			handle.draw(65, 7, 0, makeCtx(), 0, 0);
+			expect(palB.getRGBAColor).toHaveBeenCalled();
+			expect(palA.getRGBAColor).not.toHaveBeenCalled();
+		});
+
+		it('setPalette with the same ref keeps the glyph cache', async () => {
+			const pal = makeRebindPalette(10);
+			const handle = await loadFontFromXBData(
+				new Uint8Array(1024),
+				8,
+				4,
+				false,
+				pal,
+			);
+			handle.draw(65, 7, 0, makeCtx(), 0, 0);
+			pal.getRGBAColor.mockClear();
+			handle.draw(65, 7, 0, makeCtx(), 0, 0);
+			// the second draw hits the lazy cache
+			expect(pal.getRGBAColor).not.toHaveBeenCalled();
+			handle.setPalette(pal);
+			handle.draw(65, 7, 0, makeCtx(), 0, 0);
+			// a same-ref rebind must not flush the cache
+			expect(pal.getRGBAColor).not.toHaveBeenCalled();
+		});
+
+		it('redraw keeps reading the bound palette', async () => {
+			const palA = makeRebindPalette(10);
+			const palB = makeRebindPalette(200);
+			const handle = await loadFontFromXBData(
+				new Uint8Array(1024),
+				8,
+				4,
+				false,
+				palA,
+			);
+			handle.setPalette(palB);
+			handle.redraw();
+			palB.getRGBAColor.mockClear();
+			handle.draw(65, 7, 0, makeCtx(), 0, 0);
+			// setRGBAColor-style cache flushes compose with the rebind
+			expect(palB.getRGBAColor).toHaveBeenCalled();
+		});
+	});
+
 	describe('Error Handling', () => {
 		it('should handle corrupted XB font data gracefully', async () => {
 			const corruptedBytes = new Uint8Array(10); // Too small

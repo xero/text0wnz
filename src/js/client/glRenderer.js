@@ -797,6 +797,7 @@ const createGLRenderer = (canvasContainer, host) => {
 		contextLost = false;
 		console.warn('[GLRenderer] context restored; rebuilding');
 		// GL object handles died with the old context
+		atlasTexture = null;
 		paletteTexture = null;
 		unicodeTexture = null;
 		initGL();
