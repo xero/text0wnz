@@ -291,14 +291,62 @@ const createSettingToggle = (el, getter, setter) => {
 	};
 };
 
-const onReturn = (el, target) => {
-	el.addEventListener('keypress', e => {
-		if (!e.altKey && !e.ctrlKey && !e.metaKey && e.code === 'Enter') {
+// an Enter keydown this close after compositionend is the IME's
+// commit stroke, not a request to act: WebKit hands it over in the
+// same cycle, while a human commit-then-send double press sits well
+// above 50ms, and on engines without a beforeinput fallback a window
+// any wider would swallow that second press
+const IME_COMMIT_WINDOW_MS = 40;
+
+/* Android IMEs skip keypress and leave e.code empty for the action
+   key, so Enter activation listens on keydown by e.key, with a
+   beforeinput fallback for keyboards that only commit the press
+   through the input pipeline. An Enter that lands while composing
+   belongs to the IME: Chrome flags it isComposing, but WebKit fires
+   compositionend first and hands over a bare keydown (keyCode still
+   229) right after, so a fresh compositionend or a 229 mutes it too;
+   a muted keydown keeps its default, and a real action key then still
+   arrives through beforeinput. Cancelled keydowns never reach
+   beforeinput, so the paths cannot double-fire. In a textarea a line
+   break is content, never submission, so only the keydown path (the
+   old desktop behavior) acts there and soft keyboards keep their
+   newline. */
+const onEnter = (el, fn) => {
+	let composedAt = 0;
+	el.addEventListener('compositionend', () => {
+		composedAt = Date.now();
+	});
+	el.addEventListener('keydown', e => {
+		if (
+			e.altKey ||
+			e.ctrlKey ||
+			e.metaKey ||
+			e.key !== 'Enter' ||
+			e.isComposing ||
+			e.keyCode === 229 ||
+			Date.now() - composedAt < IME_COMMIT_WINDOW_MS
+		) {
+			return;
+		}
+		e.preventDefault();
+		e.stopPropagation();
+		fn(e);
+	});
+	el.addEventListener('beforeinput', e => {
+		if (
+			e.inputType === 'insertLineBreak' &&
+			!e.isComposing &&
+			el.tagName !== 'TEXTAREA'
+		) {
 			e.preventDefault();
 			e.stopPropagation();
-			target.click();
+			fn(e);
 		}
 	});
+};
+
+const onReturn = (el, target) => {
+	onEnter(el, () => target.click());
 };
 
 const onClick = (el, func) => {
@@ -1423,6 +1471,7 @@ export {
 	createModalController,
 	createSettingToggle,
 	onClick,
+	onEnter,
 	onReturn,
 	onFileChange,
 	createPositionInfo,

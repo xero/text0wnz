@@ -1,5 +1,5 @@
 import State from './state.js';
-import { $, websocketUI } from './ui.js';
+import { $, onEnter, websocketUI } from './ui.js';
 import { createDefaultPalette, createPalette } from './palette.js';
 import { trustedMessage } from './messageGuard.js';
 import {
@@ -1072,37 +1072,22 @@ const createChatController = (
 		State.network.setHandle(txtHandle.value);
 	};
 
-	const keypressHandle = e => {
-		if (e.code === 'Enter') {
-			txtMsg.focus();
-		}
-	};
-
-	const onClick = _ => {
+	const sendMessage = _ => {
 		if (txtMsg.value !== '') {
 			const text = txtMsg.value;
 			txtMsg.value = '';
 			State.network.sendChat(text);
 		}
 	};
-	const keypressMessage = e => {
-		if (e.code === 'Enter') {
-			if (txtMsg.value !== '') {
-				const text = txtMsg.value;
-				txtMsg.value = '';
-				State.network.sendChat(text);
-			}
-		}
-	};
 
-	btnInput.addEventListener('click', onClick);
+	btnInput.addEventListener('click', sendMessage);
 	txtHandle.addEventListener('focus', onFocus);
 	txtHandle.addEventListener('blur', onBlur);
 	txtMsg.addEventListener('focus', onFocus);
 	txtMsg.addEventListener('blur', onBlur);
 	txtHandle.addEventListener('blur', blurHandle);
-	txtHandle.addEventListener('keypress', keypressHandle);
-	txtMsg.addEventListener('keypress', keypressMessage);
+	onEnter(txtHandle, () => txtMsg.focus());
+	onEnter(txtMsg, sendMessage);
 
 	// the panel manager derives the chat module's visibility from the
 	// enabled flag; placement and focus belong to it too

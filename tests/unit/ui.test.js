@@ -168,8 +168,11 @@ describe('UI Utilities', () => {
 
 				onReturn(sourceDiv, targetDiv);
 
-				const enterEvent = new window.KeyboardEvent('keypress', {
-					code: 'Enter',
+				// keydown by key, never keypress: Android IMEs skip keypress
+				// and ship an empty e.code for the action key
+				const enterEvent = new window.KeyboardEvent('keydown', {
+					key: 'Enter',
+					code: '',
 					altKey: false,
 					ctrlKey: false,
 					metaKey: false,
@@ -186,8 +189,8 @@ describe('UI Utilities', () => {
 
 				onReturn(sourceDiv, targetDiv);
 
-				const enterEvent = new window.KeyboardEvent('keypress', {
-					code: 'Enter',
+				const enterEvent = new window.KeyboardEvent('keydown', {
+					key: 'Enter',
 					ctrlKey: true,
 				});
 				sourceDiv.dispatchEvent(enterEvent);

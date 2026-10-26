@@ -12,6 +12,20 @@ import State from './state.js';
 
 const ITEM_SELECTOR = 'button, .toolButton, .menuItem, summary, [tabindex]';
 
+// visibility by markup (hidden panes wear .hide, folded groups hide
+// their children but not their summary), not layout: offsetParent
+// reads null in the layoutless test DOM
+const visibleItems = root =>
+	[...root.querySelectorAll(ITEM_SELECTOR)].filter(item => {
+		if (item.closest('.hide, [hidden]')) {
+			return false;
+		}
+		const folded = item.closest('details:not([open])');
+		return (
+			!folded || (item.tagName === 'SUMMARY' && item.parentElement === folded)
+		);
+	});
+
 const createFlyoutManager = () => {
 	let open = null;
 
@@ -101,8 +115,13 @@ const createFlyoutManager = () => {
 				item.tabIndex = -1;
 			}
 		}
+		// a hidden pick would no-op focus() and strand the arrow keys
+		// outside the flyout, so the landing spot skips what the open
+		// mode hides
+		const vis = visibleItems(el);
 		const target =
-			el.querySelector('.toolbarDisplayed, .enabled, .on') || items[0];
+			vis.find(item => item.matches('.toolbarDisplayed, .enabled, .on')) ||
+			vis[0];
 		target?.focus?.({ preventScroll: true });
 	};
 
@@ -163,18 +182,7 @@ const createFlyoutManager = () => {
 		}
 		const arrow = e.key === 'ArrowDown' || e.key === 'ArrowUp';
 		if (arrow || e.key === 'Tab') {
-			// visibility by markup (hidden panes wear .hide, folded groups
-			// hide their children but not their summary), not layout:
-			// offsetParent reads null in the layoutless test DOM
-			const items = [...open.el.querySelectorAll(ITEM_SELECTOR)].filter(
-				item => {
-					if (item.closest('.hide, [hidden]')) {
-						return false;
-					}
-					const folded = item.closest('details:not([open])');
-					return !folded || (item.tagName === 'SUMMARY' && item.parentElement === folded);
-				},
-			);
+			const items = visibleItems(open.el);
 			const at = items.indexOf(document.activeElement);
 			if (arrow && at === -1 && !open.el.contains(document.activeElement)) {
 				return;
