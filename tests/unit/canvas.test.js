@@ -116,6 +116,34 @@ describe('Canvas Module', () => {
 		}
 	});
 
+	describe('letter spacing seams', () => {
+		it('setImageData applies a boolean letter spacing', async () => {
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			const State = (await import('../../src/js/client/state.js')).default;
+			canvas.setImageData(2, 2, new Uint16Array(4), false, true);
+			expect(State.font.setLetterSpacing).toHaveBeenCalledWith(true);
+		});
+
+		it('setImageData with undefined letter spacing leaves the toggle alone', async () => {
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			const State = (await import('../../src/js/client/state.js')).default;
+			canvas.setImageData(2, 2, new Uint16Array(4), false, undefined);
+			expect(State.font.setLetterSpacing).not.toHaveBeenCalled();
+		});
+
+		it('the doc mirrors letter spacing changes', () => {
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			document.dispatchEvent(
+				new CustomEvent('onLetterSpacingChange', { detail: true }),
+			);
+			expect(canvas.getDoc().getLetterSpacing()).toBe(true);
+			document.dispatchEvent(
+				new CustomEvent('onLetterSpacingChange', { detail: false }),
+			);
+			expect(canvas.getDoc().getLetterSpacing()).toBe(false);
+		});
+	});
+
 	describe('createTextArtCanvas', () => {
 		it('should create text art canvas with default dimensions', async () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);

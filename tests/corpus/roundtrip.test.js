@@ -45,6 +45,7 @@ import {
 	textToBytes,
 	concatBytes,
 } from './generators.js';
+import { parseSauce } from '../../src/js/core/codecs/sauce.js';
 
 // Persistent fake UI elements so SAUCE fields survive load -> save
 const mockUIElements = {};
@@ -364,6 +365,68 @@ describe('corpus tier (b): weird SAUCE records', () => {
 		expect(getElement('sauceTitle').value).toBe('T'.repeat(35));
 	});
 
+	it('LS bits decode tri-state', async () => {
+		const noPref = await decode(
+			'nopref.ans',
+			makeAnsi({
+				columns: 80,
+				rows: 5,
+				seed: 2,
+				sauce: { tinfo1: 80, tinfo2: 5, flags: 0 },
+			}),
+		);
+		// bits 00 state no preference: the toggle stays the artist's
+		expect(noPref.letterSpacing).toBeUndefined();
+		const eightPx = await decode(
+			'8px.ans',
+			makeAnsi({
+				columns: 80,
+				rows: 5,
+				seed: 2,
+				sauce: { tinfo1: 80, tinfo2: 5, flags: 0b00000010 },
+			}),
+		);
+		expect(eightPx.letterSpacing).toBe(false);
+		const sauceless = await decode(
+			'bare.ans',
+			makeAnsi({ columns: 80, rows: 5, seed: 2 }),
+		);
+		expect(sauceless.letterSpacing).toBeUndefined();
+	});
+
+	it('LS no preference survives an untouched resave', async () => {
+		const d1 = await decode(
+			'nopref.ans',
+			makeAnsi({
+				columns: 80,
+				rows: 5,
+				seed: 2,
+				sauce: { tinfo1: 80, tinfo2: 5, flags: 0 },
+			}),
+		);
+		expect(d1.letterSpacing).toBeUndefined();
+		wireDoc(d1);
+		const record = parseSauce(await encode('ans'));
+		expect((record.flags >> 1) & 0x03).toBe(0);
+		const d2 = await decode('rt.ans', await encode('ans'));
+		expect(d2.letterSpacing).toBeUndefined();
+	});
+
+	it('aspect bits ride a resave verbatim', async () => {
+		const d1 = await decode(
+			'aspect.ans',
+			makeAnsi({
+				columns: 80,
+				rows: 5,
+				seed: 2,
+				sauce: { tinfo1: 80, tinfo2: 5, flags: 0b00001000 },
+			}),
+		);
+		wireDoc(d1);
+		const record = parseSauce(await encode('ans'));
+		expect((record.flags >> 3) & 0x03).toBe(1);
+	});
+
 	it('a trailing SAUCE-sized text file without signature is not misread', async () => {
 		// 128+ bytes of plain text; must parse as content, not SAUCE
 		const bytes = concatBytes([
@@ -391,6 +454,41 @@ describe('corpus tier (b): weird SAUCE records', () => {
 });
 
 describe('corpus tier (b): BIN', () => {
+	it('BIN SAUCE populates the modal and round-trips its flags', async () => {
+		const d1 = await decode(
+			'flags.bin',
+			makeBin({
+				columns: 160,
+				rows: 5,
+				seed: 3,
+				sauce: { title: 'bin fixture', flags: 0b00001000 },
+			}),
+		);
+		expect(getElement('sauceTitle').value).toBe('bin fixture');
+		wireDoc(d1);
+		const record = parseSauce(await encode('bin'));
+		expect((record.flags >> 3) & 0x03).toBe(1);
+	});
+
+	it('a BIN open replaces the previous file stashed flags', async () => {
+		// the review's exact repro: A.ans carries AR bits, then a
+		// SAUCE-less BIN opens; its save must not inherit A's flags
+		await decode(
+			'a.ans',
+			makeAnsi({
+				columns: 80,
+				rows: 5,
+				seed: 2,
+				sauce: { tinfo1: 80, tinfo2: 5, flags: 0b00001000 },
+			}),
+		);
+		const bin = await decode('b.bin', makeBin({ columns: 160, rows: 5 }));
+		wireDoc(bin);
+		const record = parseSauce(await encode('bin'));
+		expect((record.flags >> 3) & 0x03).toBe(0);
+		expect((record.flags >> 1) & 0x03).not.toBe(0);
+	});
+
 	it('BIN with SAUCE round-trips byte-identically in the image region', async () => {
 		const bytes = makeBin({
 			columns: 160,
@@ -453,6 +551,12 @@ describe('corpus tier (b): BIN', () => {
 });
 
 describe('corpus tier (b): XBin', () => {
+	it('XBin opens leave the spacing toggle alone', async () => {
+		// XBin SAUCE defines no LS bits (DataType 6, no TFlags)
+		const d1 = await decode('plain.xb', makeXBin({ sauce: {} }));
+		expect(d1.letterSpacing).toBeUndefined();
+	});
+
 	it('RLE data with all four run types decodes to the expected cells', async () => {
 		const columns = 16;
 		const { cells, rle } = makeXBinRleRuns(columns);
@@ -550,6 +654,28 @@ describe('corpus tier (b): XBin', () => {
 });
 
 describe('corpus tier (b): UTF-8 ANSI', () => {
+	it('utf8 SAUCE LS decodes tri-state', async () => {
+		const body = makeUtf8Ansi({ columns: 10, rows: 2 });
+		const ninePx = await decode(
+			'x.utf8.ans',
+			concatBytes([
+				body,
+				new Uint8Array([0x1a]),
+				makeSauce({ fileSize: body.length, tinfo1: 10, flags: 0b00000100 }),
+			]),
+		);
+		expect(ninePx.letterSpacing).toBe(true);
+		const noPref = await decode(
+			'y.utf8.ans',
+			concatBytes([
+				body,
+				new Uint8Array([0x1a]),
+				makeSauce({ fileSize: body.length, tinfo1: 10, flags: 0 }),
+			]),
+		);
+		expect(noPref.letterSpacing).toBeUndefined();
+	});
+
 	it('multibyte rows decode through the CP437 reverse map', async () => {
 		const bytes = makeUtf8Ansi({ columns: 40, rows: 10, seed: 71 });
 		const d1 = await decode('fixture.utf8.ans', bytes);

@@ -35,6 +35,29 @@ document.addEventListener?.('onLetterSpacingChange', () => {
 	lsTouchedSinceOpen = true;
 });
 
+// SAUCE LS bits (flags >> 1): 10 forces 9px, 01 forces 8px, 00 or a
+// missing record states no preference, so opens leave the session
+// toggle alone (the appliers act on booleans only). Every loader maps
+// flags through here; hand-collapsed bits would resurrect the forced
+// toggle this exists to end
+const lsFromSauceFlags = flags => {
+	const bits = ((flags ?? 0) >> 1) & 0x03;
+	if (bits === 2) {
+		return true;
+	}
+	if (bits === 1) {
+		return false;
+	}
+	return undefined;
+};
+
+// File New and other whole-doc replacements owe nothing to the last
+// opened file's SAUCE flags
+const resetSauceFlags = () => {
+	openedSauceFlags = null;
+	lsTouchedSinceOpen = false;
+};
+
 const loadModule = () => {
 	class File {
 		constructor(bytes) {
@@ -833,7 +856,6 @@ const loadModule = () => {
 					}
 				}
 				flags = sauce[105];
-				const letterSpacingBits = (flags >> 1) & 0x03;
 
 				comments = '';
 				if (commentsCount > 0) {
@@ -866,7 +888,7 @@ const loadModule = () => {
 					columns: columns,
 					rows: rows,
 					iceColors: (flags & 0x01) === 1,
-					letterSpacing: letterSpacingBits === 2, // true for 9-pixel fonts
+					letterSpacing: lsFromSauceFlags(flags),
 					fontName: removeTrailingWhitespace(bytesToString(sauce, 106, 22)),
 					comments: comments,
 					sauceFlags: flags,
@@ -881,7 +903,7 @@ const loadModule = () => {
 			columns: columns,
 			rows: rows,
 			iceColors: false,
-			letterSpacing: false,
+			letterSpacing: undefined,
 			fontName: '',
 			comments: '',
 			sauceFlags: null,
@@ -917,6 +939,7 @@ const loadModule = () => {
 			author: sauce.author,
 			group: sauce.group,
 			comments: sauce.comments,
+			sauceFlags: sauce.sauceFlags,
 		};
 	};
 
@@ -991,7 +1014,7 @@ const loadModule = () => {
 							u16.rows,
 							u16.imageData,
 							u16.iceColors,
-							u16.letterSpacing,
+							undefined, // XBin SAUCE defines no LS bits
 							undefined,
 							result.doc,
 						);
@@ -1002,6 +1025,9 @@ const loadModule = () => {
 					// Clear any previous XB data to avoid palette persistence
 					State.textArtCanvas.clearXBData(() => {
 						imageData = loadBin(data);
+						// BIN SAUCE is real (BinaryText defines the flags), so
+						// it joins the modal and the round-trip stash like ans
+						updateSauceModal(imageData, imageData.sauceFlags ?? null);
 						callback(
 							imageData.columns,
 							imageData.rows,
@@ -1016,19 +1042,24 @@ const loadModule = () => {
 					// u16 projection feeds legacy consumers
 					State.textArtCanvas.clearXBData(() => {
 						const result = decodeTundra(data);
-						updateSauceModal({
-							title: result.meta.title,
-							group: result.meta.group,
-							author: result.meta.author,
-							comments: result.meta.comments,
-						});
+						// TundraDraw files carry real ANSiFlags, so the stash
+						// round-trips them like an .ans open would
+						updateSauceModal(
+							{
+								title: result.meta.title,
+								group: result.meta.group,
+								author: result.meta.author,
+								comments: result.meta.comments,
+							},
+							result.sauce?.flags ?? null,
+						);
 						const u16 = v3ToU16Lossy(result.doc);
 						callback(
 							u16.columns,
 							u16.rows,
 							u16.imageData,
 							u16.iceColors,
-							u16.letterSpacing,
+							lsFromSauceFlags(result.sauce?.flags),
 							undefined,
 							result.doc,
 						);
@@ -1049,7 +1080,7 @@ const loadModule = () => {
 							u16.rows,
 							u16.imageData,
 							u16.iceColors,
-							u16.letterSpacing,
+							undefined, // durdraw has no spacing concept
 							undefined,
 							result.doc,
 						);
@@ -1111,7 +1142,7 @@ const loadModule = () => {
 									u16.rows,
 									u16.imageData,
 									u16.iceColors,
-									u16.letterSpacing,
+									lsFromSauceFlags(result.sauce?.flags),
 									result.meta.fontName?.trim() || undefined,
 									result.doc,
 								);
@@ -1146,6 +1177,7 @@ const loadModule = () => {
 		file: file,
 		sauceToAppFont: sauceToAppFont,
 		appToSauceFont: appToSauceFont,
+		resetSauceFlags: resetSauceFlags,
 	};
 };
 
@@ -1400,7 +1432,13 @@ const saveModule = () => {
 				undefined,
 			aspect:
 				openedSauceFlags !== null ? (openedSauceFlags >> 3) & 0x03 : 0,
-			letterSpacingMode: lsNoPreference ? 0 : undefined,
+			// the doc's spacing can predate the artist's toggle, so the
+			// explicit bit reads the live font state instead
+			letterSpacingMode: lsNoPreference
+				? 0
+				: State.font.getLetterSpacing()
+					? 2
+					: 1,
 		};
 	};
 
