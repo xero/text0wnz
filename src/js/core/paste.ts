@@ -12,7 +12,7 @@
  * the doc.
  *
  * Token stream semantics (pinned by tests):
- *   PASTE_NEWLINE (-1)  line break (CRLF, LF, and CR are one each)
+ *   PASTE_NEWLINE (-1)  line break (CRLF, LF, CR, NEL, LS, PS: one each)
  *   0..255              CP437 charCode, ready to draw
  *   other negatives     ~codepoint - outside CP437, resolve through
  *                       the glyph table (or substitute on failure)
@@ -56,6 +56,9 @@ const BLANKS = new Set([
 	0x3000, // ideographic space (wide, but a blank is a blank)
 ]);
 
+/** line breaks beyond CRLF/LF/CR: NEL plus the unicode separators */
+const NEWLINES = new Set(['\r\n', '\n', '\r', '\u0085', '\u2028', '\u2029']);
+
 export interface PasteTokens {
 	tokens: number[];
 	/** codepoints flagged ~cp in tokens, for glyph-table resolution */
@@ -66,7 +69,7 @@ export const tokenizePasteText = (text: string): PasteTokens => {
 	const tokens: number[] = [];
 	const unmapped = new Set<number>();
 	for (const cluster of segmentGraphemes(text.normalize('NFC'))) {
-		if (cluster === '\r\n' || cluster === '\n' || cluster === '\r') {
+		if (NEWLINES.has(cluster)) {
 			tokens.push(PASTE_NEWLINE);
 			continue;
 		}
@@ -84,6 +87,9 @@ export const tokenizePasteText = (text: string): PasteTokens => {
 			codepoint === 9 ||
 			codepoint < 32 ||
 			codepoint === 127 ||
+			// C1 controls have no glyph and flatten like C0 (NEL already
+			// broke the line above)
+			(codepoint >= 0x80 && codepoint <= 0x9f) ||
 			BLANKS.has(codepoint)
 		) {
 			tokens.push(32);

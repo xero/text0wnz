@@ -213,10 +213,11 @@ export const createEditorCore = (
 	 * a steady bright classic bg without ice has no u16 nibble (bright
 	 * means blink there), so it stays a word and quantizes exactly like
 	 * the v3ToU16Lossy rebuild, keeping the mirror path-independent.
-	 * Accepted loss: blink folds into the bg only for classic bgs, so
-	 * ATTR_BLINK on an extended bg is invisible here and normalizes
-	 * away on rewrite (still narrower than the u16 area paths, which
-	 * quantize such cells entirely).
+	 * ATTR_BLINK on an extended bg rides the optional blink flag, so
+	 * packWord blinks the quantized nibble exactly like the
+	 * v3ToU16Lossy rebuild and planeWords stores the attr back on
+	 * write; the flag exists only for non classic bgs (classic bgs
+	 * fold blink into indexes 8-15 as always).
 	 */
 	const readCell = (index: number): EditCell => {
 		const frame = doc.frames[currentFrame];
@@ -237,7 +238,7 @@ export const createEditorCore = (
 				: word >>> 0;
 		const fgIndex = classic(frame.fg[index]);
 		const bgIndex = classic(frame.bg[index]);
-		return {
+		const cell: EditCell = {
 			charCode: glyphIdOf(glyph),
 			fg: fgIndex ?? asWord(frame.fg[index]),
 			bg:
@@ -249,6 +250,12 @@ export const createEditorCore = (
 							: bgIndex
 					: asWord(frame.bg[index]),
 		};
+		if (blink && bgIndex === null) {
+			// no nibble can hold it; the flag keeps packWord and
+			// planeWords in step with v3ToU16Lossy
+			cell.blink = true;
+		}
+		return cell;
 	};
 
 	const isClassic = (value: number): boolean => value >= 0 && value <= 15;
@@ -266,13 +273,14 @@ export const createEditorCore = (
 		const fgIndex = isClassic(cell.fg)
 			? cell.fg & 15
 			: quantizeColorWord((cell.fg & ~RGB_EDIT_TAG) >>> 0, doc, 16);
+		const blinkBg = cell.blink === true && !doc.getIceColors();
 		const bgNibble = isClassic(cell.bg)
 			? cell.bg & 15
 			: quantizeColorWord(
 					(cell.bg & ~RGB_EDIT_TAG) >>> 0,
 					doc,
 					doc.getIceColors() ? 16 : 8,
-				);
+				) | (blinkBg ? 8 : 0);
 		return (charCode << 8) | (bgNibble << 4) | fgIndex;
 	};
 
@@ -280,8 +288,11 @@ export const createEditorCore = (
 	const planeWords = (cell: EditCell): Cell => {
 		const classicBg = isClassic(cell.bg);
 		const blink = !doc.getIceColors() && classicBg && cell.bg > 7;
+		// a blink rider on an ext bg stores as the attr so the planes
+		// agree with the word packWord just emitted
+		const extBlink = !classicBg && cell.blink === true;
 		return {
-			glyph: glyphWord(cell.charCode, blink ? ATTR_BLINK : 0),
+			glyph: glyphWord(cell.charCode, blink || extBlink ? ATTR_BLINK : 0),
 			fg: isClassic(cell.fg)
 				? paletteColor(cell.fg & 15)
 				: (cell.fg & ~RGB_EDIT_TAG) >>> 0,

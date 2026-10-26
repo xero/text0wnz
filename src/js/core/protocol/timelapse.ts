@@ -57,7 +57,7 @@ const validDims = (columns: unknown, rows: unknown): boolean =>
 
 export const timelapseToDoc = (
 	payload: Record<string, unknown>,
-	options: { maxFrames?: number } = {},
+	options: { maxFrames?: number; frameCellBudget?: number } = {},
 ): TimelapseResult => {
 	const { columns, rows } = payload;
 	if (!validDims(columns, rows)) {
@@ -65,15 +65,7 @@ export const timelapseToDoc = (
 			`bad timelapse dims ${String(columns)}x${String(rows)}`,
 		);
 	}
-	// aggregate memory bound: frames x cells respects the frame
-	// budget (doc.ts), so a 10M-cell room gets a 2-frame movie instead
-	// of killing the tab
 	const cells = (columns as number) * (rows as number);
-	const budgetFrames = Math.floor(DEFAULT_FRAME_CELL_BUDGET / cells);
-	const maxFrames = Math.max(
-		2,
-		Math.min(options.maxFrames ?? 120, budgetFrames),
-	);
 	const baseline = expandExtCells(
 		payload.cells,
 		(columns as number) * (rows as number),
@@ -84,6 +76,31 @@ export const timelapseToDoc = (
 			typeof op === 'object' &&
 			op !== null &&
 			MUTATING.has((op as { type?: number }).type as number),
+	);
+	// every output frame allocates at FINAL dims (addFrame force below),
+	// so the budget divides by the last valid logged resize, not the
+	// baseline: a 1x1 baseline must not buy 120 frames of 10M cells.
+	// this pre-scan and the replay's resize arm must stay twins on
+	// SET_CANVAS_SIZE acceptance (same data normalization, same
+	// validDims gate)
+	let finalCells = cells;
+	for (const op of ops) {
+		if (op.type !== MoebiusAction.SET_CANVAS_SIZE) {
+			continue;
+		}
+		const d =
+			typeof op.data === 'object' && op.data !== null
+				? (op.data as Record<string, unknown>)
+				: {};
+		if (validDims(d.columns, d.rows)) {
+			finalCells = (d.columns as number) * (d.rows as number);
+		}
+	}
+	const frameBudget = options.frameCellBudget ?? DEFAULT_FRAME_CELL_BUDGET;
+	const budgetFrames = Math.floor(frameBudget / finalCells);
+	const maxFrames = Math.max(
+		2,
+		Math.min(options.maxFrames ?? 120, budgetFrames),
 	);
 
 	const grid: Grid = {
@@ -113,14 +130,15 @@ export const timelapseToDoc = (
 	const stride = Math.max(1, Math.ceil(ops.length / (maxFrames - 1)));
 	const snapshots: Grid[] = [snapshotOf()];
 	let sinceSnapshot = 0;
-	// the frame budget was computed from BASELINE dims, but logged
-	// SET_CANVAS_SIZE ops can grow the grid mid-movie; an aggregate
-	// cell cap holds regardless, dropping intermediate frames instead
-	// of allocating the tab to death
+	// the frame budget above is final-dims; this aggregate cap bounds
+	// the retained snapshot arrays when the grid grows mid-movie
 	let snapshotCells = grid.columns * grid.rows;
 	const pushSnapshot = () => {
 		const cellsNow = grid.columns * grid.rows;
-		if (snapshotCells + cellsNow > DEFAULT_FRAME_CELL_BUDGET) {
+		if (snapshotCells + cellsNow > frameBudget) {
+			// the replaced snapshot leaves the sum and the replacement
+			// enters it, or later pushes judge against a stale total
+			snapshotCells += cellsNow - snapshots[snapshots.length - 1].cells.length;
 			snapshots[snapshots.length - 1] = snapshotOf();
 			return;
 		}

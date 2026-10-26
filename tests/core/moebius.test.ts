@@ -163,6 +163,14 @@ describe('join doc RLE', () => {
 			}),
 		).toThrow(ProtocolError);
 	});
+
+	it('rejects negative codes in compressed streams before expansion', () => {
+		// the join-doc border check covers the data path; this pins why
+		// the compressed path needs nothing more
+		expect(() =>
+			uncompressBlocks({ code: [[-1, 0]], fg: [[7, 0]], bg: [[0, 0]] }, 1),
+		).toThrow(ProtocolError);
+	});
 });
 
 describe('palettes', () => {

@@ -21,6 +21,8 @@ export interface EditCell {
 	charCode: number;
 	fg: number;
 	bg: number;
+	/** blink attr riding a non classic bg; classic bgs fold it into 8-15 */
+	blink?: boolean;
 }
 
 // ---------------------------------------------------------------- mirror

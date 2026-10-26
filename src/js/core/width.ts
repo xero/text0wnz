@@ -29,5 +29,7 @@ export const segmentGraphemes = (text: string): string[] => {
 		}
 		return out;
 	}
-	return [...text];
+	// CRLF must stay one cluster (GB3) or paste doubles its newlines;
+	// the u flag keeps surrogate pairs whole like the spread did
+	return text.match(/\r\n|./gsu) ?? [];
 };

@@ -8,6 +8,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+	ATTR_BLINK,
 	createDocV3,
 	glyphWord,
 	paletteColor,
@@ -55,6 +56,56 @@ describe('mirror path independence', () => {
 		expect(incremental).toBe(rebuild);
 		expect(incremental & 15).toBe(0); // nearest palette entry is black
 	});
+
+	it('blink on an RGB bg projects blinking on both paths', () => {
+		const { doc, editor } = makeEditor(false);
+		doc.setCell(0, 2, 0, {
+			glyph: glyphWord(65, ATTR_BLINK),
+			fg: paletteColor(7),
+			bg: rgbColor(100, 0, 0),
+		});
+		const rebuild = v3ToU16Lossy(doc).imageData[2];
+		const incremental = editor.getAreaU16(2, 0, 1, 1).data[0];
+		expect(incremental).toBe(rebuild);
+		expect((incremental >> 4) & 8).toBe(8);
+	});
+
+	it('blink on a high palette index bg projects the same', () => {
+		const { doc, editor } = makeEditor(false);
+		doc.setCell(0, 2, 0, {
+			glyph: glyphWord(65, ATTR_BLINK),
+			fg: paletteColor(7),
+			bg: paletteColor(42),
+		});
+		expect(editor.getAreaU16(2, 0, 1, 1).data[0]).toBe(
+			v3ToU16Lossy(doc).imageData[2],
+		);
+	});
+
+	it('bright fg rides beside an ext bg blink untouched', () => {
+		const { doc, editor } = makeEditor(false);
+		doc.setCell(0, 2, 0, {
+			glyph: glyphWord(65, ATTR_BLINK),
+			fg: paletteColor(15),
+			bg: rgbColor(100, 0, 0),
+		});
+		const word = editor.getAreaU16(2, 0, 1, 1).data[0];
+		expect(word).toBe(v3ToU16Lossy(doc).imageData[2]);
+		expect(word & 15).toBe(15);
+		expect((word >> 4) & 8).toBe(8);
+	});
+
+	it('ice drops the ext bg blink on both paths alike', () => {
+		const { doc, editor } = makeEditor(true);
+		doc.setCell(0, 2, 0, {
+			glyph: glyphWord(65, ATTR_BLINK),
+			fg: paletteColor(7),
+			bg: rgbColor(100, 0, 0),
+		});
+		expect(editor.getAreaU16(2, 0, 1, 1).data[0]).toBe(
+			v3ToU16Lossy(doc).imageData[2],
+		);
+	});
 });
 
 describe('plane native area round trips', () => {
@@ -93,6 +144,20 @@ describe('plane native area round trips', () => {
 		editor.setAreaCells(area, 1, 1);
 		expect(editor.getAreaU16(1, 1, 1, 1).data[0]).toBe(
 			editor.getAreaU16(0, 0, 1, 1).data[0],
+		);
+	});
+
+	it('an ext bg blink cell stays path independent after a move', () => {
+		const { doc, editor } = makeEditor(false);
+		doc.setCell(0, 0, 0, {
+			glyph: glyphWord(65, ATTR_BLINK),
+			fg: paletteColor(7),
+			bg: rgbColor(100, 0, 0),
+		});
+		const area = editor.getAreaCells(0, 0, 1, 1);
+		editor.setAreaCells(area, 2, 1);
+		expect(editor.getAreaU16(2, 1, 1, 1).data[0]).toBe(
+			v3ToU16Lossy(doc).imageData[6],
 		);
 	});
 });
