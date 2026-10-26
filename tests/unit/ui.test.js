@@ -272,6 +272,9 @@ describe('UI Utilities', () => {
 				open: false,
 				showModal: vi.fn(),
 				close: vi.fn(),
+				// the controller routes the dialog's native cancel (Escape)
+				// through its own close()
+				addEventListener: vi.fn(),
 			};
 
 			document.body.innerHTML = `

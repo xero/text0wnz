@@ -567,4 +567,92 @@ describe('Modal DOM Tests', () => {
 			expect(cleanup1).toHaveBeenCalledTimes(1);
 		});
 	});
+
+	describe('boot modal ordering: update outranks the collab choice', () => {
+		const visible = id => !document.getElementById(id).classList.contains('hide');
+
+		it('a late update replaces the choice and hands it back on dismissal', () => {
+			modalController.open('choice');
+			expect(visible('choiceModal')).toBe(true);
+			modalController.open('update');
+			expect(visible('updateModal')).toBe(true);
+			expect(visible('choiceModal')).toBe(false);
+			// declining the update restores the interrupted invitation
+			modalController.close();
+			expect(visible('choiceModal')).toBe(true);
+			expect(modal.open).toBe(true);
+			expect(modal).not.toHaveClass('closing');
+		});
+
+		it('a choice arriving under a live update waits its turn', () => {
+			modalController.open('update');
+			modalController.open('choice');
+			expect(visible('updateModal')).toBe(true);
+			expect(visible('choiceModal')).toBe(false);
+			modalController.close();
+			expect(visible('choiceModal')).toBe(true);
+		});
+
+		it('no deferral once the update modal is gone', () => {
+			modalController.open('update');
+			modalController.close();
+			fireEvent.transitionEnd(modal);
+			expect(modal.open).toBe(false);
+			modalController.open('choice');
+			expect(visible('choiceModal')).toBe(true);
+			// and dismissing the choice closes for real, no resurrection
+			modalController.close();
+			fireEvent.transitionEnd(modal);
+			expect(modal.open).toBe(false);
+		});
+
+		it('Escape routes through close and honors the handback', () => {
+			modalController.open('choice');
+			modalController.open('update');
+			const cancel = new Event('cancel', { cancelable: true });
+			modal.dispatchEvent(cancel);
+			// the native slam is suppressed; our close ran the handback
+			expect(cancel.defaultPrevented).toBe(true);
+			expect(visible('choiceModal')).toBe(true);
+			expect(modal.open).toBe(true);
+		});
+
+		it('an update landing in the choice closing window stays an update only', () => {
+			modalController.open('choice');
+			// the user answers the invitation; its close is still easing out
+			modalController.close();
+			modalController.open('update');
+			modalController.close();
+			fireEvent.transitionEnd(modal);
+			// the answered invitation stays answered
+			expect(visible('choiceModal')).toBe(false);
+			expect(modal.open).toBe(false);
+		});
+
+		it('a screen outside the pair clears a stranded deferral', () => {
+			modalController.open('update');
+			modalController.open('choice');
+			// the boot handoff dies when something else takes the stage
+			modalController.error('probe socket dropped');
+			modalController.close();
+			fireEvent.transitionEnd(modal);
+			// a menu-opened update much later closes plainly, no resurrection
+			modalController.open('update');
+			modalController.close();
+			fireEvent.transitionEnd(modal);
+			expect(visible('choiceModal')).toBe(false);
+			expect(modal.open).toBe(false);
+		});
+
+		it('ordinary screen swaps never defer', () => {
+			modalController.open('sauce');
+			modalController.open('about');
+			expect(visible('aboutModal')).toBe(true);
+			expect(visible('sauceModal')).toBe(false);
+			modalController.close();
+			fireEvent.transitionEnd(modal);
+			expect(visible('sauceModal')).toBe(false);
+			expect(modal.open).toBe(false);
+		});
+	});
 });
