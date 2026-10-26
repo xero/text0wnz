@@ -142,4 +142,63 @@ describe('timelapseToDoc', () => {
 			);
 		},
 	);
+
+	it('budgets frames against final dims, not the baseline', () => {
+		// a 1x1 baseline must not buy 120 frames of the final canvas
+		const payload = basePayload(1, 1);
+		payload.ops = [
+			...Array.from({ length: 11 }, () => extDrawOp(0, 0, 65)),
+			{
+				t: 0,
+				type: A.SET_CANVAS_SIZE,
+				data: { columns: 20, rows: 20, id: 0 },
+				seq: 2,
+			},
+		];
+		const { doc, frames } = timelapseToDoc(payload, { frameCellBudget: 1200 });
+		expect(doc.getColumns()).toBe(20);
+		expect(frames).toBeLessThanOrEqual(3);
+		expect(frames * 20 * 20).toBeLessThanOrEqual(1200);
+	});
+
+	it('sheds replaced snapshot cells from the budget accounting', () => {
+		const payload = basePayload(2, 2);
+		payload.ops = [
+			extDrawOp(0, 0, 65),
+			extDrawOp(1, 1, 66),
+			{
+				t: 0,
+				type: A.SET_CANVAS_SIZE,
+				data: { columns: 1, rows: 1, id: 0 },
+				seq: 2,
+			},
+			extDrawOp(0, 0, 67),
+		];
+		const { doc, frames } = timelapseToDoc(payload, { frameCellBudget: 12 });
+		// stale accounting would force the last draw into another
+		// replacement: 3 frames and no dedicated resize frame
+		expect(frames).toBe(4);
+		expect(glyphAt(doc, 3, 0, 0)).toBe(67);
+		expect(glyphAt(doc, 2, 0, 0)).toBe(65);
+	});
+
+	it('keeps the full movie when the canvas shrinks mid-log', () => {
+		const payload = basePayload(10, 10);
+		payload.ops = [
+			extDrawOp(0, 0, 66),
+			{
+				t: 0,
+				type: A.SET_CANVAS_SIZE,
+				data: { columns: 2, rows: 2, id: 0 },
+				seq: 2,
+			},
+			extDrawOp(1, 1, 67),
+		];
+		const { doc, frames } = timelapseToDoc(payload);
+		expect(doc.getColumns()).toBe(2);
+		expect(doc.getRows()).toBe(2);
+		expect(frames).toBe(4);
+		expect(glyphAt(doc, 3, 0, 0)).toBe(66);
+		expect(glyphAt(doc, 3, 1, 1)).toBe(67);
+	});
 });

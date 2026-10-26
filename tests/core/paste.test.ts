@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
 	PASTE_NEWLINE,
 	PASTE_SUBSTITUTE,
@@ -68,5 +68,45 @@ describe('tokenizePasteText', () => {
 		const { tokens, unmapped } = tokenizePasteText('©');
 		expect(tokens).toEqual([~0xa9]);
 		expect([...unmapped]).toEqual([0xa9]);
+	});
+
+	it('breaks lines on NEL and the unicode line separators', () => {
+		const LS = String.fromCharCode(0x2028);
+		const PS = String.fromCharCode(0x2029);
+		const { tokens, unmapped } = tokenizePasteText(`A\u0085B${LS}C${PS}D`);
+		expect(tokens).toEqual([
+			65,
+			PASTE_NEWLINE,
+			66,
+			PASTE_NEWLINE,
+			67,
+			PASTE_NEWLINE,
+			68,
+		]);
+		expect(unmapped.size).toBe(0);
+	});
+
+	it('flattens C1 controls to spaces instead of glyph requests', () => {
+		const { tokens, unmapped } = tokenizePasteText('A\u0080B\u009cC');
+		expect(tokens).toEqual([65, 32, 66, 32, 67]);
+		expect(unmapped.size).toBe(0);
+	});
+
+	it('emits one newline per CRLF in the no-Segmenter fallback', async () => {
+		vi.resetModules();
+		const original = Intl.Segmenter;
+		// @ts-expect-error force the per codepoint fallback
+		delete Intl.Segmenter;
+		try {
+			const fresh = await import('../../src/js/core/paste.js');
+			expect(fresh.tokenizePasteText('a\r\nb').tokens).toEqual([
+				97,
+				fresh.PASTE_NEWLINE,
+				98,
+			]);
+		} finally {
+			(Intl as { Segmenter?: typeof Intl.Segmenter }).Segmenter = original;
+			vi.resetModules();
+		}
 	});
 });

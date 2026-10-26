@@ -110,4 +110,17 @@ describe('join doc gates', () => {
 		});
 		expect(result.doc.getCell(0, 0, 0).glyph & 0xffff).toBe(63);
 	});
+
+	it('normalizes negative and non-integer cell codes to a question mark', () => {
+		const result = joinDocToDoc({
+			columns: 2,
+			rows: 1,
+			data: [
+				{ code: -27, fg: 7, bg: 0 },
+				{ code: 1.5, fg: 7, bg: 0 },
+			],
+		});
+		expect(result.doc.getCell(0, 0, 0).glyph & 0xffff).toBe(63);
+		expect(result.doc.getCell(0, 1, 0).glyph & 0xffff).toBe(63);
+	});
 });

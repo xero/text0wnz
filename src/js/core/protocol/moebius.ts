@@ -376,11 +376,10 @@ export const joinDocToDoc = (join: MoebiusJoinDoc): JoinDocResult => {
 	const frame = doc.frames[0];
 	for (let i = 0; i < cells; i++) {
 		const block = blocks[i];
-		const rawCode = Number.isInteger(block.code) ? block.code : 0;
-		// a lone surrogate interned here is the exact poison the DRAW
-		// intake and blockToExtCell both reject: later exports would
-		// emit invalid UTF-8
-		const code = rawCode <= 0xff || isValidCodepoint(rawCode) ? rawCode : 63;
+		// a lone surrogate or negative interned here is the poison the
+		// DRAW intake and blockToExtCell both reject; bad codes
+		// normalize to '?' at the border like blockToExtCell
+		const code = isValidCodepoint(block.code) ? block.code : 63;
 		const glyphId = code <= 0xff ? code : doc.glyphTable.idFor(0, code);
 		frame.glyph[i] = glyphWord(glyphId, 0);
 		frame.fg[i] = paletteColor((block.fg ?? 7) & 0xff);
