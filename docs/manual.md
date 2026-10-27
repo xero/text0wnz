@@ -955,6 +955,8 @@ The tutorials themselves are just normal ANSI art files. Viewing a tutorial simp
 
 When the editor is served alongside a collaboration server, a prompt at launch asks whether to join the session in progress or continue offline.
 
+To join a server anywhere else, click the collab button in the sauce panel; it reads `local` while you work alone. Type the server as `host:port/room`, the way Moebius's connect dialog reads it. A bare host means port 8000 and the default joint. The form keeps your handle, your group, and the last few servers you joined. Vanilla Moebius servers are plaintext, so from an https page the editor goes through the site's bridge when the host allows it; see [collab-protocol-migration.md](./collab-protocol-migration.md).
+
 - Everyone in a session draws on the same canvas in real time, with live peer cursors, synced fonts, canvas sizes, iCE colors, and SAUCE metadata
 - Between teXt0wnz clients, unicode characters and extended colors travel natively
 - Classic Moebius clients can join the same session; the server down-converts extended cells to their nearest 16-color CP437 equivalents for them, so mixed rooms stay coherent
@@ -963,7 +965,7 @@ When the editor is served alongside a collaboration server, a prompt at launch a
 
 ## Chat Window
 
-The chat window is available when connected to a collaboration server. It provides real-time communication with other users and displays server activity logs.
+The chat window is available when connected to a collaboration server. It provides real-time communication with other users and displays server activity logs. The chat button appears once you are connected; while local, the same slot reads `local` and opens the Connect form.
 
 ![chat window](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/chat.png)
 

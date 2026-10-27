@@ -26,6 +26,12 @@ byte-exact golden tests before anything else moved.
   cells natively over a superset of the Moebius protocol. Classic
   Moebius clients join the same room and see a faithful 16-color
   down-conversion. Sessions record a timelapse you can export.
+- **Connect to any server.** The collab button in the sauce panel
+  opens a Connect form that takes `host:port/room` the way Moebius's
+  own dialog does, remembers recent servers, your handle, and your
+  group, and reports a dead or refused dial in the form instead of
+  hanging. From an https page a plaintext Moebius server routes
+  through the host's bridge when `BRIDGE=port` is set.
 - **Minimap.** A live overview with a draggable viewport, on by
   default.
 - **Reference image.** Load an image over the canvas with opacity and
@@ -85,6 +91,17 @@ byte-exact golden tests before anything else moved.
 
 ### Fixed
 
+- **Passworded rooms stay joinable.** The silent server probe counted
+  as a failed login, so a `--pass` room drifted into a cooldown that
+  refused the right password. Blank passwords no longer count, and a
+  typo gets a fresh prompt without a reload.
+- **Vanilla Moebius palettes at full brightness.** A vanilla server's
+  6-bit `{r,g,b}` join palette decoded as 8-bit, a quarter of the
+  intended brightness. Depth is detected per palette now.
+- **The chat button waits for a session.** It opened while local; it
+  now stands down under a `local` label until you join.
+- **The bridge honors the Origin allowlist.** A foreign page could dial
+  out through it when `ALLOWED_ORIGINS` was set.
 - **Move mode is transparent over blanks.** Moving a selection no
   longer stamps its empty cells over artwork: blanks (char 0, space,
   or nbsp on black, the same rule the paste modes use) let the art

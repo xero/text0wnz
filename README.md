@@ -427,14 +427,20 @@ dist/
 
 ## Collaborative Server
 
-Enable real-time multi-user editing with the built-in server.
+Enable real-time multi-user editing with the built-in server, or join someone else's.
 
 **Features:**
 
+- Speaks the Moebius protocol, so Moebius and moebiusXBIN clients share the room
+- Rooms by path, passwords that gate spectators too
 - Canvas/chat persistence
-- SSL/HTTP support
+- SSL/HTTP support, plus a bridge for plaintext desktop servers
 - Custom session names, save intervals
 - Minimal overhead for real-time editing
+
+**Joining a server:**
+
+Click the `local` button in the sauce panel and type the server as `host:port/room`, the way Moebius's own dialog reads it. Vanilla Moebius servers are plaintext, so from an https page the editor goes through the host's bridge when `BRIDGE=port` is set. See [docs/collab-protocol-migration](docs/collab-protocol-migration.md).
 
 **Starting the server:**
 
@@ -455,7 +461,11 @@ node src/js/server/main.js
 | `--ssl`                | Enable SSL (requires certificates in `ssl-dir`)  | _Disabled_         |
 | `--ssl-dir <path>`     | SSL certificate directory                        | `/etc/ssl/private` |
 | `--save-interval <n>`  | Auto-save interval in minutes                    | `30` (minutes)     |
-| `--session-name <str>` | Session file prefix (for state and chat backups) | `joint`            |
+| `--session-name <str>` | Default room and session file prefix             | `joint`            |
+| `--pass <password>`    | Room password (gates spectators too)             | _none_             |
+| `--plain-port <port>`  | Extra plaintext listener for desktop clients     | _Disabled_         |
+| `--allowed-origins <l>`| Comma-separated Origin allowlist for upgrades    | _open_             |
+| `--static <dir>`       | Serve the built PWA from `<dir>`                 | _Disabled_         |
 | `--debug`              | Enable verbose logging                           | `false`            |
 | `--help`               | Show help message and usage examples             | -                  |
 

@@ -199,6 +199,8 @@ Desktop clients (Moebius, icy_draw) send no Origin header and always pass; the a
 - `port` - caller-chosen host pinned to `BRIDGE_PORT`; private addresses are denied
 - `allow` - only targets on the `BRIDGE_ALLOW` list (comma-separated `host:port`)
 
+The editor uses the bridge on its own. A page served over https that is asked to join a plaintext server dials `wss://<this host>/bridge?host=...&port=...&room=...` instead, since the browser blocks the direct socket as mixed content. With `BRIDGE=off` the Connect form tells the visitor the site does not allow it. The `port` mode fits a public editor host best: visitors pick the server, the port stays pinned, and private addresses are refused.
+
 ### XDG_DATA_HOME
 
 **Default:** `/var/lib/caddy` (Docker only)
