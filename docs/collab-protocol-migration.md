@@ -67,12 +67,13 @@ While you work locally the sauce panel shows a collab button that reads
 `local`. Click it to open the Connect form and type a server the way
 Moebius's own dialog reads one:
 
-| You type                  | The editor dials                                              |
-| ------------------------- | ------------------------------------------------------------- |
-| `jam.example`             | `ws://jam.example:8000/` (the Moebius default port and joint) |
-| `jam.example:1337/lounge` | `ws://jam.example:1337/lounge`                                |
-| `text.0w.nz:443/server`   | `wss://text.0w.nz/server` (port 443 means wss)                |
-| `wss://host/room`         | exactly that                                                  |
+| You type                       | The editor dials                                              |
+| ------------------------------ | ------------------------------------------------------------- |
+| `jam.example`                  | `ws://jam.example:8000/` (the Moebius default port and joint) |
+| `jam.example:1337/lounge`      | `ws://jam.example:1337/lounge`                                |
+| `text.0w.nz:443/server`        | `wss://text.0w.nz/server` (port 443 means wss)                |
+| `text.0w.nz:443/server/lounge` | the named room `lounge` on that server, through its proxy     |
+| `wss://host/room`              | exactly that                                                  |
 
 The form remembers the last eight servers you joined, your handle, and
 your group. It never stores passwords. The `?server=` query parameter
@@ -90,7 +91,10 @@ content, and no header can allow it. You have two ways through:
   own machine, the page dials the server directly.
 - **Let the host bridge.** From an https page the editor routes a
   plaintext target through the page's own host at `/bridge`, a byte pipe
-  the operator enables with `BRIDGE=port` (default off). See
+  the operator enables with `BRIDGE=port` (default off) and whose
+  reverse proxy forwards `/bridge` to the server (the Docker image and
+  the examples in
+  [webserver-configuration.md](./webserver-configuration.md) do). See
   [environment-variables.md](./environment-variables.md). When the host
   keeps it off, the form says so.
 

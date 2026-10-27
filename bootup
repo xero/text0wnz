@@ -62,8 +62,17 @@ $DOMAIN {
 	root * /app/dist
 	file_server
 	
-	# WebSocket Handler
+	# WebSocket Handler: rooms at /server and /server/<room>, and the
+	# bridge for plaintext desktop servers (BRIDGE=port to enable)
 	handle /server* {
+		reverse_proxy 127.0.0.1:$PORT {
+			header_up Host {host}
+			header_up X-Real-IP {remote}
+			header_up Connection {http.request.header.Connection}
+			header_up Upgrade {http.request.header.Upgrade}
+		}
+	}
+	handle /bridge* {
 		reverse_proxy 127.0.0.1:$PORT {
 			header_up Host {host}
 			header_up X-Real-IP {remote}
@@ -112,8 +121,17 @@ http://$DOMAIN {
 	root * /app/dist
 	file_server
 	
-	# WebSocket Handler
+	# WebSocket Handler: rooms at /server and /server/<room>, and the
+	# bridge for plaintext desktop servers (BRIDGE=port to enable)
 	handle /server* {
+		reverse_proxy 127.0.0.1:$PORT {
+			header_up Host {host}
+			header_up X-Real-IP {remote}
+			header_up Connection {http.request.header.Connection}
+			header_up Upgrade {http.request.header.Upgrade}
+		}
+	}
+	handle /bridge* {
 		reverse_proxy 127.0.0.1:$PORT {
 			header_up Host {host}
 			header_up X-Real-IP {remote}
