@@ -725,7 +725,11 @@ const createWorkerHandler = inputHandle => {
 					joining = false;
 					stayLocal();
 					if (pendingTarget !== null) {
-						openConnectModal(`Could not connect to ${pendingTarget}.`);
+						openConnectModal(
+							data.bridged
+								? `Could not reach ${pendingTarget} through this site's bridge. The site may not allow it, or the server is down.`
+								: `Could not connect to ${pendingTarget}.`,
+						);
 					} else {
 						State.modal.error('Could not reach the collab server.');
 					}

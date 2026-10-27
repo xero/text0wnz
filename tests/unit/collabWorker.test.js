@@ -47,6 +47,7 @@ const fakeSelf = {
 		origin: 'http://localhost:3000',
 		protocol: 'http:',
 		hostname: 'localhost',
+		host: 'localhost:3000',
 		port: '3000',
 	},
 };
@@ -134,6 +135,41 @@ describe('collab worker', () => {
 		});
 	});
 
+	it('dials a typed plaintext server direct from a plain page', () => {
+		toWorker({ cmd: 'connect', nick: 'xero', url: 'jam.example/lounge' });
+		expect(sockets.at(-1).url).toBe('ws://jam.example:8000/lounge');
+	});
+
+	it('routes a plaintext server through the host bridge from a secure page', () => {
+		const plain = { ...fakeSelf.location };
+		Object.assign(fakeSelf.location, {
+			origin: 'https://text.0w.nz',
+			protocol: 'https:',
+			hostname: 'text.0w.nz',
+			host: 'text.0w.nz',
+			port: '',
+		});
+		try {
+			toWorker({ cmd: 'connect', nick: 'xero', url: 'ws://jam.example:8000/lounge' });
+			const ws = sockets.at(-1);
+			expect(ws.url).toBe(
+				'wss://text.0w.nz/bridge?host=jam.example&port=8000&room=lounge',
+			);
+			// a dead bridged dial tells the page which leg to blame
+			ws.close();
+			expect(pageMessages().at(-1)).toEqual({
+				cmd: 'closed',
+				wasConnected: false,
+				bridged: true,
+			});
+			// the same-origin default never bridges
+			toWorker({ cmd: 'probe' });
+			expect(sockets.at(-1).url).toBe('wss://text.0w.nz:443/server');
+		} finally {
+			Object.assign(fakeSelf.location, plain);
+		}
+	});
+
 	it('reports refusal and closes', () => {
 		toWorker({ cmd: 'connect', nick: 'xero' });
 		const ws = sockets.at(-1);
@@ -148,7 +184,11 @@ describe('collab worker', () => {
 		ws.emit('open');
 		ws.emit('message', { data: JSON.stringify({ type: 0, data: { id: 1, doc: {} } }) });
 		ws.close();
-		expect(pageMessages().at(-1)).toEqual({ cmd: 'closed', wasConnected: true });
+		expect(pageMessages().at(-1)).toEqual({
+			cmd: 'closed',
+			wasConnected: true,
+			bridged: false,
+		});
 	});
 
 	it('drops malformed frames without forwarding', () => {

@@ -103,3 +103,30 @@ export const defaultServerUrl = location => {
 	const port = location.port || (location.protocol === 'https:' ? '443' : '80');
 	return `${protocol}//${location.hostname}:${port}/server`;
 };
+
+/**
+ * Which socket to open for a target from THIS page. A secure page
+ * cannot open plaintext websockets (mixed content, no header can
+ * allow it), and every Moebius server is plaintext, so an https page
+ * reaches one through its own host's bridge, a byte pipe the host
+ * enables with BRIDGE=port (default off). Everything else dials
+ * direct. No url at all means the same-origin default.
+ * @param {{protocol: string, hostname: string, host: string, port: string}} location
+ * @param {unknown} explicit the dial url the page chose, if any
+ * @returns {{url: string, bridged: boolean}}
+ */
+export const resolveTransport = (location, explicit) => {
+	const target = typeof explicit === 'string' ? parseTarget(explicit) : null;
+	if (!target) {
+		return { url: defaultServerUrl(location), bridged: false };
+	}
+	if (target.protocol === 'ws:' && location.protocol === 'https:') {
+		const query = new URLSearchParams({
+			host: target.host,
+			port: String(target.port),
+			room: targetRoom(target),
+		});
+		return { url: `wss://${location.host}/bridge?${query}`, bridged: true };
+	}
+	return { url: targetToUrl(target), bridged: false };
+};

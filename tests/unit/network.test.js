@@ -355,6 +355,14 @@ describe('Network Module', () => {
 			expect(global.alert).not.toHaveBeenCalled();
 		});
 
+		it('a dead bridged dial blames the site, not the server alone', async () => {
+			createWorkerHandler(mockInputHandle);
+			elementFor('connectServer').value = 'jam.example';
+			clickOn('connectJoin');
+			await listenerOf()({ data: { cmd: 'closed', wasConnected: false, bridged: true } });
+			expect(elementFor('connectStatus').textContent).toMatch(/bridge/);
+		});
+
 		it('a bad address never dials', () => {
 			createWorkerHandler(mockInputHandle);
 			elementFor('connectServer').value = 'http://nope';
