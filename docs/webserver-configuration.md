@@ -108,6 +108,19 @@ server {
         proxy_redirect off;
         proxy_pass http://localhost:1337/;  # Note the trailing slash
     }
+
+    # The bridge: browsers on this https page reach plaintext desktop
+    # servers through it (BRIDGE=port on the server enables it). No
+    # trailing slash: the path and query must arrive intact
+    location /bridge {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 86400;
+        proxy_pass http://localhost:1337;
+    }
 }
 ```
 
@@ -131,7 +144,8 @@ sudo systemctl reload nginx
 
 - `proxy_pass` must match your collaboration server port
 - The trailing slash in `http://localhost:1337/` strips the `/server` prefix before the request reaches the server; the server maps both `/` and `/server` to the default room, so either form works
-- Rooms are path-based (`/roomname` reaches a named room); forward those paths too if you use named rooms through the proxy
+- Rooms are path-based: `/server/roomname` reaches a named room through this same location, so no rule per room is needed
+- The `/bridge` location is what lets browsers on your https page join plaintext Moebius servers; it does nothing until the server runs with `BRIDGE=port` (see [Environment Variables](./environment-variables.md))
 - WebSocket upgrade headers are essential
 - Long timeout (86400 = 24 hours) for persistent connections
 
@@ -480,8 +494,12 @@ text.0w.nz {
     # SPA routing
     try_files {path} /index.html
 
-    # WebSocket proxy for collaboration
+    # WebSocket proxy for collaboration: rooms at /server and
+    # /server/<room>, and the bridge to plaintext desktop servers
     handle /server* {
+        reverse_proxy localhost:1337
+    }
+    handle /bridge* {
         reverse_proxy localhost:1337
     }
 

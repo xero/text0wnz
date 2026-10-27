@@ -233,6 +233,26 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 		lounge.ws.close();
 	});
 
+	it('/server/<room> lands in the same room as /<room>', async () => {
+		// the deployed proxies forward /server* only; this spelling
+		// reaches named rooms without a rule per room
+		const bare = await connectClient('annex', { nick: 'bare', pass: PASS });
+		const viaProxy = await connectClient('server/annex', {
+			nick: 'proxied',
+			pass: PASS,
+		});
+		const seen = nextFrame(bare.ws, 9);
+		send(viaProxy.ws, 9, {
+			x: 1,
+			y: 1,
+			block: { code: 66, fg: 7, bg: 0 },
+			id: viaProxy.reply.data.id,
+		});
+		expect((await seen).data.block.code).toBe(66);
+		bare.ws.close();
+		viaProxy.ws.close();
+	});
+
 	it('caps-aware clients get a caps reply field', async () => {
 		const { ws, reply } = await connectClient('server', {
 			nick: 'c',

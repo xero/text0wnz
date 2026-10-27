@@ -127,14 +127,18 @@ The container implements a robust startup sequence:
 
 ## Environment Variables
 
-| Variable         | Description                                                | Default                   |
-| ---------------- | ---------------------------------------------------------- | ------------------------- |
-| `DOMAIN`         | Domain name for the application                            | `localhost`               |
-| `PORT`           | _Internal_ port for the WebSocket server                   | `1337`                    |
-| `NODE_ENV`       | Node environment setting                                   | `production`              |
-| `ROOM_PASS`      | Password for collaboration rooms (gates spectators too)    | none                      |
-| `ROOM_PASSWORDS` | Per-room passwords as JSON: `{"room":"pw"}`                | none                      |
-| `SESSION_KEY`    | Generated at boot if unset; not read by the current server | random, generated at boot |
+| Variable         | Description                                                                   | Default                   |
+| ---------------- | ----------------------------------------------------------------------------- | ------------------------- |
+| `DOMAIN`         | Domain name for the application                                               | `localhost`               |
+| `PORT`           | _Internal_ port for the WebSocket server                                      | `1337`                    |
+| `NODE_ENV`       | Node environment setting                                                      | `production`              |
+| `ROOM_PASS`      | Password for collaboration rooms (gates spectators too)                       | none                      |
+| `ROOM_PASSWORDS` | Per-room passwords as JSON: `{"room":"pw"}`                                   | none                      |
+| `SESSION_KEY`    | Generated at boot if unset; not read by the current server                    | random, generated at boot |
+| `BRIDGE`         | Bridge mode for plaintext desktop servers: `off`, `local`, `port`, or `allow` | `off`                     |
+| `BRIDGE_PORT`    | The one port `port` mode dials                                                | `8000`                    |
+| `BRIDGE_TARGET`  | The fixed target `local` mode dials                                           | `ws://127.0.0.1:8000`     |
+| `BRIDGE_ALLOW`   | Comma-separated `host:port` list for `allow` mode                             | none                      |
 
 ## Advanced Usage
 

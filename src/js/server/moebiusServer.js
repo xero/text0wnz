@@ -31,9 +31,13 @@ export const SERVER_LIMITS = Object.freeze({
 
 /** @param {string} pathname @param {string} defaultRoom */
 export const roomNameFromPath = (pathname, defaultRoom) => {
-	// '/' and '/server' (the deployed Caddy proxy path) hit the default
-	const trimmed = pathname.replace(/^\/+|\/+$/g, '');
-	if (trimmed === '' || trimmed === 'server') {
+	// '/' and '/server' (the deployed Caddy proxy path) hit the default;
+	// '/server/<room>' reaches a named room through that same proxy
+	// rule, so operators need no rule per room
+	const trimmed = pathname
+		.replace(/^\/+|\/+$/g, '')
+		.replace(/^server(\/+|$)/i, '');
+	if (trimmed === '') {
 		return defaultRoom;
 	}
 	return ROOM_NAME_RE.test(trimmed) ? trimmed.toLowerCase() : null;
