@@ -27,12 +27,17 @@ const fixture = path.join(
 const PASS = 'gatekeeper';
 let plain = null;
 let gated = null;
+let fonted = null;
 let plainPort = 0;
 let gatedPort = 0;
+let fontedPort = 0;
 
-const bootFixture = (port, pass) =>
+const bootFixture = (port, pass, env = {}) =>
 	new Promise((resolve, reject) => {
-		const child = spawn('node', [fixture, String(port), pass ?? ''], { stdio: ['ignore', 'pipe', 'pipe']});
+		const child = spawn('node', [fixture, String(port), pass ?? ''], {
+			stdio: ['ignore', 'pipe', 'pipe'],
+			env: { ...process.env, ...env },
+		});
 		const timer = setTimeout(
 			() => reject(new Error('fixture did not boot')),
 			15000,
@@ -52,15 +57,18 @@ const bootFixture = (port, pass) =>
 beforeAll(async () => {
 	plainPort = 24000 + Math.floor(Math.random() * 8000);
 	gatedPort = plainPort + 1;
-	[plain, gated] = await Promise.all([
+	fontedPort = plainPort + 2;
+	[plain, gated, fonted] = await Promise.all([
 		bootFixture(plainPort, ''),
 		bootFixture(gatedPort, PASS),
+		bootFixture(fontedPort, '', { FIXTURE_FONT_BYTES: '1' }),
 	]);
 }, 30000);
 
 afterAll(() => {
 	plain?.kill('SIGKILL');
 	gated?.kill('SIGKILL');
+	fonted?.kill('SIGKILL');
 });
 
 const send = (ws, type, data = {}) => ws.send(JSON.stringify({ type, data }));
@@ -117,8 +125,27 @@ describe('upstream moebiusXBIN server interop', () => {
 		expect(result.doc.getColumns()).toBe(80);
 		expect(result.doc.getRows()).toBe(25);
 		expect(result.fontName).toBe('IBM VGA');
-		// the fixture palette is 6-bit; entry 1 (blue) expands to 0xaa
-		expect(result.doc.palette[1] & 0xff).toBe(expand6to8(0x2a));
+		// the fork ships 8-bit {r,g,b} objects (vanilla sends 6-bit);
+		// the receiver must detect that and NOT expand them again
+		expect(reply.data.doc.palette[1]).toEqual({ r: 0, g: 0, b: 0xaa });
+		expect(result.doc.palette[1] & 0xff).toBe(0xaa);
+		expect(result.doc.palette[9] & 0xff).toBe(0xff);
+		expect(expand6to8(0x2a)).toBe(0xaa); // the two spellings agree
+		ws.close();
+		await settle(100);
+	});
+
+	it('an embedded font arrives as Buffer JSON and revives to bytes', async () => {
+		// an .xb server file with its font flag set: the fork's own
+		// clients throw on this shape (bytes.length is undefined)
+		const { ws, reply } = await connect(fontedPort, { nick: 'xb', pass: '' });
+		expect(reply.type).toBe(A.CONNECTED);
+		expect(reply.data.doc.font_bytes).toMatchObject({ type: 'Buffer' });
+		expect(reply.data.doc.font_bytes.data).toHaveLength(4096);
+		const result = joinDocToDoc(reply.data.doc);
+		expect(result.fontBytes).toBeInstanceOf(Uint8Array);
+		expect(result.fontBytes).toHaveLength(4096);
+		expect(result.fontBytes[4095]).toBe(0xff);
 		ws.close();
 		await settle(100);
 	});

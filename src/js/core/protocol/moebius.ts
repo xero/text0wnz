@@ -130,10 +130,10 @@ export interface MoebiusCompressedData {
 }
 
 /**
- * Vanilla moebiusXBIN serializes join palettes as 8-bit {r,g,b}
- * objects; our own wire and some forks use number triples (6-bit,
- * with icy's 8-bit auto-detection). Both shapes are live on real
- * servers, so both parse.
+ * Moebius and moebiusXBIN serialize join palettes as {r,g,b} objects
+ * (6-bit and 8-bit components respectively); old sidecars and some
+ * forks use number triples. Both shapes are live on real servers, so
+ * both parse, and depth is detected per palette, never per shape.
  */
 export type MoebiusPaletteEntry =
 	| number[]
@@ -263,10 +263,13 @@ export const uncompressBlocks = (
 export const compress8to6 = (v: number): number => (v >> 2) & 0x3f;
 
 /**
- * Array join-doc palettes are 6-bit; the receiving side auto-detects
- * like icy_draw: any component above 63 means the palette is already
- * 8-bit. {r,g,b} object entries are moebiusXBIN's shape and carry
- * 8-bit components by contract, so the heuristic never touches them.
+ * Join-doc palettes come in two depths under ONE shape: vanilla
+ * Moebius sends 6-bit {r,g,b} objects (palette.js `ega`), moebiusXBIN
+ * sends 8-bit ones (palette_4bit, raw). Old sidecars add 6-bit
+ * arrays. The receiving side auto-detects like icy_draw: any
+ * component above 63 means the palette is already 8-bit. Treating
+ * objects as 8-bit by contract rendered every vanilla server's
+ * palette at a quarter of its brightness.
  */
 export const paletteToRGB8 = (
 	palette: MoebiusPaletteEntry[],
@@ -275,8 +278,8 @@ export const paletteToRGB8 = (
 		Array.isArray(entry)
 			? [entry[0], entry[1], entry[2]]
 			: [entry.r, entry.g, entry.b];
-	const sixBit = palette.every(
-		entry => Array.isArray(entry) && entry.every(component => component <= 63),
+	const sixBit = palette.every(entry =>
+		triple(entry).every(component => component <= 63),
 	);
 	return palette.map(entry => {
 		const [r, g, b] = triple(entry);
