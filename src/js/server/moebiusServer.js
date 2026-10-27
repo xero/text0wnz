@@ -213,6 +213,15 @@ export const createMoebiusServer = config => {
 				const offered =
 					typeof frame.data?.pass === 'string' ? frame.data.pass : '';
 				if (expected !== '' && !ws.data.room) {
+					if (offered === '') {
+						// the probe's shape (every page load sends one), not a
+						// guess: counting it walked public rooms into a 30s
+						// cooldown that refused the RIGHT password
+						client.send(MoebiusAction.REFUSED, {});
+						ws.close(1008, 'refused');
+						log(`refused (no password) for '${ws.data.roomName}'`);
+						return;
+					}
 					// stateless refusal here let passwords brute-force at
 					// wire speed; the gate shares room.connect's backoff.
 					// Same wire shape as the room's refusal either way:
@@ -350,6 +359,19 @@ export const createMoebiusServer = config => {
 				uptime: Math.floor(process.uptime()),
 			});
 		}
+		const wantsUpgrade =
+			req.headers.get('upgrade')?.toLowerCase() === 'websocket';
+		// configured allowlist: browser pages carry an Origin, desktop
+		// clients send none (always allowed). Without the knob the
+		// behavior stays open, matching the ancestor. Checked ahead of
+		// the bridge: a foreign page must not dial out through it either
+		if (wantsUpgrade && Array.isArray(config.allowedOrigins)) {
+			const origin = req.headers.get('origin');
+			if (origin && !config.allowedOrigins.includes(origin)) {
+				log(`upgrade refused for origin ${origin}`);
+				return new Response('forbidden origin', { status: 403 });
+			}
+		}
 		if (url.pathname === '/bridge') {
 			// reserve BEFORE the async DNS await: parallel requests in
 			// flight must not all pass the cap check
@@ -379,24 +401,12 @@ export const createMoebiusServer = config => {
 		}
 		// plain HTTP serves the PWA in static mode; websocket upgrades
 		// (and ws-only deployments) take the room path below
-		const wantsUpgrade =
-			req.headers.get('upgrade')?.toLowerCase() === 'websocket';
 		if (!wantsUpgrade && staticRoot) {
 			return serveStatic(url.pathname);
 		}
 		const roomName = roomNameFromPath(url.pathname, defaultRoom);
 		if (roomName === null) {
 			return new Response('no such room', { status: 404 });
-		}
-		// configured allowlist: browser pages carry an Origin, desktop
-		// clients send none (always allowed). Without the knob the
-		// behavior stays open, matching the ancestor
-		if (wantsUpgrade && Array.isArray(config.allowedOrigins)) {
-			const origin = req.headers.get('origin');
-			if (origin && !config.allowedOrigins.includes(origin)) {
-				log(`upgrade refused for origin ${origin}`);
-				return new Response('forbidden origin', { status: 403 });
-			}
 		}
 		if (
 			server.upgrade(req, { data: { roomName, connected: false, alive: true } })

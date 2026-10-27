@@ -281,6 +281,23 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 		},
 	);
 
+	it('an empty password refuses without counting toward the gate', async () => {
+		// the client's silent probe (nickless, no password) lands on a
+		// protected room at every page load; it must never open the
+		// cooldown that refuses the right password
+		for (let i = 0; i < 4; i++) {
+			const { ws, reply } = await connectClient('probegate', {});
+			expect(reply.type).toBe(A.REFUSED);
+			ws.close();
+		}
+		const { ws, reply } = await connectClient('probegate', {
+			nick: 'p',
+			pass: PASS,
+		});
+		expect(reply.type).toBe(A.CONNECTED);
+		ws.close();
+	});
+
 	it(
 		'a mixed case --session-name lands clients in one room and lowercase files',
 		{ timeout: 30000 },
@@ -371,7 +388,12 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 				{
 					cwd,
 					stdio: ['ignore', 'pipe', 'pipe'],
-					env: { ...process.env, ALLOWED_ORIGINS: 'http://ok.example' },
+					env: {
+						...process.env,
+						ALLOWED_ORIGINS: 'http://ok.example',
+						// the bridge must sit behind the same gate
+						BRIDGE: 'local',
+					},
 				},
 			);
 			try {
@@ -396,13 +418,13 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 				// No sec-websocket-key, so a PASSING origin falls through
 				// the failed upgrade to the 426, which is the point: the
 				// gate ran and let it by
-				const rawStatus = origin =>
+				const rawStatus = (origin, path = '/') =>
 					new Promise((resolve, reject) => {
 						const req = http.request(
 							{
 								host: '127.0.0.1',
 								port: originPort,
-								path: '/',
+								path,
 								headers: {
 									connection: 'Upgrade',
 									upgrade: 'websocket',
@@ -417,6 +439,10 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 				expect(await rawStatus('http://evil.example')).toBe(403);
 				expect(await rawStatus('http://ok.example')).toBe(426);
 				expect(await rawStatus(null)).toBe(426);
+				// a foreign page dialing OUT through the bridge is refused
+				// by the origin gate, not merely by the bridge's own vet
+				expect(await rawStatus('http://evil.example', '/bridge')).toBe(403);
+				expect(await rawStatus('http://ok.example', '/bridge')).toBe(426);
 			} finally {
 				originChild.kill('SIGKILL');
 				rmSync(cwd, { recursive: true, force: true });

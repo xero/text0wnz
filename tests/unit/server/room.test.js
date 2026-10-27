@@ -88,6 +88,17 @@ describe('connect', () => {
 		expect(room.connect(ok, { nick: 'x', pass: 'hunter2' })).toBe(true);
 	});
 
+	it('an empty password refuses without opening the cooldown', () => {
+		const room = createRoom({ password: 'pw' });
+		for (let i = 0; i < 4; i++) {
+			const probe = fakeClient();
+			expect(room.connect(probe, {})).toBe(false);
+			expect(probe.last().type).toBe(A.REFUSED);
+		}
+		const ok = fakeClient();
+		expect(room.connect(ok, { nick: 'x', pass: 'pw' })).toBe(true);
+	});
+
 	it('spectators can be disabled entirely', () => {
 		const room = createRoom({ spectators: { enabled: false } });
 		const spectator = fakeClient();
