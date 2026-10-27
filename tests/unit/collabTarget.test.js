@@ -9,6 +9,7 @@ import {
 	defaultServerUrl,
 	formatTarget,
 	parseTarget,
+	resolveTransport,
 	targetRoom,
 	targetToUrl,
 } from '../../src/js/client/collabTarget.js';
@@ -128,5 +129,50 @@ describe('defaultServerUrl', () => {
 		expect(
 			defaultServerUrl({ protocol: 'http:', hostname: 'localhost', port: '3000' }),
 		).toBe('ws://localhost:3000/server');
+	});
+});
+
+describe('resolveTransport', () => {
+	const http = { protocol: 'http:', hostname: 'localhost', host: 'localhost:8060', port: '8060' };
+	const https = { protocol: 'https:', hostname: 'text.0w.nz', host: 'text.0w.nz', port: '' };
+
+	it('dials plaintext servers direct from a plain page', () => {
+		expect(resolveTransport(http, 'jam.example/lounge')).toEqual({
+			url: 'ws://jam.example:8000/lounge',
+			bridged: false,
+		});
+	});
+
+	it('routes plaintext servers through the host bridge from a secure page', () => {
+		expect(resolveTransport(https, 'jam.example/lounge')).toEqual({
+			url: 'wss://text.0w.nz/bridge?host=jam.example&port=8000&room=lounge',
+			bridged: true,
+		});
+		expect(resolveTransport(https, 'ws://10.0.0.5:1337')).toEqual({
+			url: 'wss://text.0w.nz/bridge?host=10.0.0.5&port=1337&room=',
+			bridged: true,
+		});
+	});
+
+	it('dials secure servers direct from anywhere', () => {
+		expect(resolveTransport(https, 'wss://other.example/server')).toEqual({
+			url: 'wss://other.example:443/server',
+			bridged: false,
+		});
+		expect(resolveTransport(http, 'other.example:443')).toEqual({
+			url: 'wss://other.example:443/',
+			bridged: false,
+		});
+	});
+
+	it('falls back to the same-origin default without a usable url', () => {
+		expect(resolveTransport(http, undefined)).toEqual({
+			url: 'ws://localhost:8060/server',
+			bridged: false,
+		});
+		expect(resolveTransport(https, 'not a host')).toEqual({
+			url: 'wss://text.0w.nz:443/server',
+			bridged: false,
+		});
 	});
 });

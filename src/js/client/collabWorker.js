@@ -27,30 +27,22 @@
 
 import { decodeFrame, encodeFrame, MoebiusAction } from '../core/index';
 import { trustedMessage } from './messageGuard.js';
+import { resolveTransport } from './collabTarget.js';
 
 /** @type {WebSocket | null} */
 let socket = null;
 let myId = -1;
 let connected = false;
+// whether the live socket rides the host's bridge: the page words a
+// dead dial differently when the host, not the server, may be at fault
+let bridged = false;
 
 /**
- * Same-origin default server, or an explicit ws/wss url (remote dial
- * and the e2e round trip pass one).
+ * Same-origin default server, or the page's explicit target (remote
+ * dial and the e2e round trip pass one) routed for THIS origin.
  * @param {unknown} explicit
  */
-const serverUrl = explicit => {
-	if (
-		typeof explicit === 'string' &&
-		(explicit.startsWith('ws://') || explicit.startsWith('wss://'))
-	) {
-		return explicit;
-	}
-	const protocol = self.location.protocol === 'https:' ? 'wss:' : 'ws:';
-	const port =
-		self.location.port ||
-		(self.location.protocol === 'https:' ? '443' : '80');
-	return `${protocol}//${self.location.hostname}:${port}/server`;
-};
+const serverUrl = explicit => resolveTransport(self.location, explicit);
 
 /** @param {object} msg */
 const toPage = msg => self.postMessage(msg);
@@ -75,7 +67,7 @@ const closeSocket = () => {
 const probe = (explicitUrl = undefined) => {
 	let ws;
 	try {
-		ws = new WebSocket(serverUrl(explicitUrl));
+		ws = new WebSocket(serverUrl(explicitUrl).url);
 	} catch {
 		toPage({ cmd: 'probeResult', found: false });
 		return;
@@ -105,14 +97,16 @@ const probe = (explicitUrl = undefined) => {
 /** @param {{nick?: string, group?: string, pass?: string, caps?: string[], url?: string}} options */
 const connect = options => {
 	closeSocket();
+	const route = serverUrl(options.url);
 	let ws;
 	try {
-		ws = new WebSocket(serverUrl(options.url));
+		ws = new WebSocket(route.url);
 	} catch (error) {
 		toPage({ cmd: 'error', error: String(error) });
 		return;
 	}
 	socket = ws;
+	bridged = route.bridged;
 	ws.addEventListener('open', () => {
 		ws.send(
 			encodeFrame(MoebiusAction.CONNECTED, {
@@ -154,7 +148,7 @@ const connect = options => {
 		const wasConnected = connected;
 		connected = false;
 		socket = null;
-		toPage({ cmd: 'closed', wasConnected });
+		toPage({ cmd: 'closed', wasConnected, bridged });
 	});
 	ws.addEventListener('error', () => {
 		if (socket === ws) {
