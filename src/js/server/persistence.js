@@ -155,7 +155,8 @@ const saveRoomNow = async (room, dir) => {
 	const token = room.dirtyToken();
 	const join = room.toJoinDoc();
 	const ext = room.extState();
-	const { doc } = joinDocToDoc(join);
+	// the room's join palette is our own 8-bit objects: never guess
+	const { doc } = joinDocToDoc(join, { paletteDepth: 8 });
 	// the envelope keeps the FULL-fidelity art (unicode cells, extended
 	// colors), not the vanilla projection the wire blocks carry
 	applyExtCells(doc, expandExtCells(ext.cells, join.columns * join.rows));

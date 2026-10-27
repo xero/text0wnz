@@ -83,14 +83,29 @@ describe('resolveBridgeTarget', () => {
 		const resolver = async () => ['93.184.216.34'];
 		const result = await resolveBridgeTarget(
 			{ ...base, mode: 'port', port: 8000 },
-			{ host: 'tiles.example', port: '22', room: 'lounge' },
+			{ host: 'tiles.example', port: '8000', room: 'lounge' },
 			resolver,
 		);
-		// the dial uses the RESOLVED ip (rebinding moot) and OUR port
+		// the dial uses the RESOLVED ip (rebinding moot)
 		expect(result).toEqual({
 			ok: true,
 			url: 'ws://93.184.216.34:8000/lounge',
 		});
+		// no port named means the pinned one
+		const unnamed = await resolveBridgeTarget(
+			{ ...base, mode: 'port', port: 8000 },
+			{ host: 'tiles.example', port: null, room: '' },
+			resolver,
+		);
+		expect(unnamed).toEqual({ ok: true, url: 'ws://93.184.216.34:8000/' });
+		// a port it will not dial is refused, never silently rewritten
+		const other = await resolveBridgeTarget(
+			{ ...base, mode: 'port', port: 8000 },
+			{ host: 'tiles.example', port: '22', room: 'lounge' },
+			resolver,
+		);
+		expect(other.ok).toBe(false);
+		expect(other.reason).toMatch(/not allowed/);
 	});
 
 	it('port mode refuses private resolutions, ip literals, and rebinders', async () => {
@@ -142,9 +157,9 @@ describe('resolveBridgeTarget', () => {
 			{ host: 'ok.example', room: '../../etc' },
 			resolver,
 		);
-		// bad room collapses to the default room, never a path escape
-		expect(weirdRoom.ok).toBe(true);
-		expect(weirdRoom.url.endsWith(':8000/')).toBe(true);
+		// a bad room is refused outright: never a path escape, and never
+		// a silent swap for the default joint
+		expect(weirdRoom).toEqual({ ok: false, reason: 'bad room' });
 	});
 
 	it('allow mode admits exactly the listed host:port pairs', async () => {

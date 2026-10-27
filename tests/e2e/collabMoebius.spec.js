@@ -18,7 +18,10 @@ const fixture = path.join(repoRoot, 'tests/interop/fixtures/moebius/start.js');
 let child = null;
 let port = 0;
 
-test.beforeAll(async () => {
+test.beforeAll(async ({ browserName }) => {
+	if (browserName !== 'chromium') {
+		return; // every test below skips there; no fixture to boot
+	}
 	port = 41000 + Math.floor(Math.random() * 10000);
 	child = await new Promise((resolve, reject) => {
 		const proc = spawn('node', [fixture, String(port), ''], { stdio: ['ignore', 'pipe', 'pipe']});

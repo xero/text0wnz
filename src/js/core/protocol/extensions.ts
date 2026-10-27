@@ -163,10 +163,11 @@ export const sanitizeExtDraw = (
  */
 export const paletteWordsFromJoin = (
 	palette?: MoebiusPaletteEntry[],
+	depth?: 6 | 8,
 ): Uint32Array => {
 	const words = createDefaultPaletteRGB();
 	if (palette && palette.length > 0) {
-		const rgb8 = paletteToRGB8(palette);
+		const rgb8 = paletteToRGB8(palette, depth);
 		for (let i = 0; i < Math.min(rgb8.length, words.length); i++) {
 			const [r, g, b] = rgb8[i];
 			words[i] = (r << 16) | (g << 8) | b;

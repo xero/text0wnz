@@ -16,6 +16,7 @@ import State from './state.js';
 import { $ } from './ui.js';
 import { xterm256RGB } from '../core/codecs/dur.js';
 import { paletteColor, rgbColor } from '../core/doc.js';
+import { createRecentList } from './recentList.js';
 
 const RECENT_LIMIT = 10;
 const RECENT_KEY = 'recentColors';
@@ -36,27 +37,15 @@ const createColorPanel = () => {
 		State.network?.isConnected?.() === true &&
 		State.network?.extCollab?.() !== true;
 
-	const loadRecent = () => {
-		try {
-			const parsed = JSON.parse(localStorage.getItem(RECENT_KEY)) ?? [];
-			return Array.isArray(parsed)
-				? parsed.filter(value => typeof value === 'number')
-				: [];
-		} catch {
-			return [];
-		}
-	};
+	const recentStore = createRecentList(
+		RECENT_KEY,
+		RECENT_LIMIT,
+		/** @returns {value is number} */ value => typeof value === 'number',
+	);
+	const loadRecent = recentStore.load;
 
 	const saveRecent = value => {
-		const list = [value, ...loadRecent().filter(v => v !== value)].slice(
-			0,
-			RECENT_LIMIT,
-		);
-		try {
-			localStorage.setItem(RECENT_KEY, JSON.stringify(list));
-		} catch {
-			// private windows etc.: recents just don't persist
-		}
+		recentStore.remember(value);
 		renderRecent();
 	};
 

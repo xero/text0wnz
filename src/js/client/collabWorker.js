@@ -36,6 +36,9 @@ let connected = false;
 // whether the live socket rides the host's bridge: the page words a
 // dead dial differently when the host, not the server, may be at fault
 let bridged = false;
+// a black-holed host would hold the Joining modal until the OS gives
+// up on the TCP attempt; the probe caps itself, the dial must too
+const DIAL_TIMEOUT_MS = 15000;
 
 /**
  * Same-origin default server, or the page's explicit target (remote
@@ -107,6 +110,15 @@ const connect = options => {
 	}
 	socket = ws;
 	bridged = route.bridged;
+	const dialTimer = setTimeout(() => {
+		if (socket === ws && !connected) {
+			try {
+				ws.close();
+			} catch {
+				// gone already
+			}
+		}
+	}, DIAL_TIMEOUT_MS);
 	ws.addEventListener('open', () => {
 		ws.send(
 			encodeFrame(MoebiusAction.CONNECTED, {
@@ -129,6 +141,7 @@ const connect = options => {
 		}
 		if (!connected) {
 			if (frame.type === MoebiusAction.CONNECTED) {
+				clearTimeout(dialTimer);
 				connected = true;
 				myId = typeof frame.data.id === 'number' ? frame.data.id : -1;
 				toPage({ cmd: 'connected', id: myId, data: frame.data });
@@ -141,6 +154,7 @@ const connect = options => {
 		toPage({ cmd: 'frame', type: frame.type, data: frame.data });
 	});
 	ws.addEventListener('close', () => {
+		clearTimeout(dialTimer);
 		// a stale socket's close must not clobber a newer connection
 		if (socket !== ws) {
 			return;

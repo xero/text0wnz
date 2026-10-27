@@ -88,14 +88,18 @@ const rgb8FromWords = words =>
 	}));
 
 /** old sidecars hold 6-bit number[][] join palettes; the ancestor
- * resolves that shape to black, so restores renormalize
+ * resolves that shape to black, so restores renormalize. The shape
+ * names the depth here (arrays are the old 6-bit writer, objects
+ * are this server's 8-bit one), so the wire heuristic never guesses
+ * at a file we wrote: a dark 8-bit palette would come back brighter
  * @param {*} palette the sidecar's join.palette, shape untrusted */
 const normalizeJoinPalette = palette => {
 	if (!Array.isArray(palette) || palette.length === 0) {
 		return undefined;
 	}
 	try {
-		return rgb8FromWords(paletteWordsFromJoin(palette));
+		const depth = Array.isArray(palette[0]) ? 6 : 8;
+		return rgb8FromWords(paletteWordsFromJoin(palette, depth));
 	} catch {
 		return undefined; // corrupt sidecar palette: defaults stand
 	}
@@ -161,7 +165,8 @@ export const createRoom = (options = {}) => {
 	/** fold the ext palette's classic 16 into the vanilla join shape
 	 * @param {number[]} palette full ext palette, 0x00RRGGBB words */
 	const bridgeToVanillaPalette = palette => {
-		const bridge = paletteWordsFromJoin(doc.palette);
+		// doc.palette is always this server's 8-bit objects
+		const bridge = paletteWordsFromJoin(doc.palette, 8);
 		for (let i = 0; i < Math.min(16, palette.length); i++) {
 			bridge[i] = palette[i];
 		}
@@ -306,7 +311,7 @@ export const createRoom = (options = {}) => {
 	const paletteWords = () =>
 		doc.ext_palette
 			? Uint32Array.from(doc.ext_palette)
-			: paletteWordsFromJoin(doc.palette);
+			: paletteWordsFromJoin(doc.palette, 8);
 
 	/**
 	 * Mutation fanout: caps members get the native frame with seq,

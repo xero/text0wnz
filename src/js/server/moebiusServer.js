@@ -213,34 +213,34 @@ export const createMoebiusServer = config => {
 				const offered =
 					typeof frame.data?.pass === 'string' ? frame.data.pass : '';
 				if (expected !== '' && !ws.data.room) {
+					// same wire shape as the room's refusal whatever the
+					// reason: vanilla clients wait for the frame, not the
+					// close code
+					const refuse = reason => {
+						client.send(MoebiusAction.REFUSED, {});
+						ws.close(1008, 'refused');
+						log(`refused (${reason}) for '${ws.data.roomName}'`);
+					};
 					if (offered === '') {
 						// the probe's shape (every page load sends one), not a
 						// guess: counting it walked public rooms into a 30s
 						// cooldown that refused the RIGHT password
-						client.send(MoebiusAction.REFUSED, {});
-						ws.close(1008, 'refused');
-						log(`refused (no password) for '${ws.data.roomName}'`);
+						refuse('no password');
 						return;
 					}
 					// stateless refusal here let passwords brute-force at
-					// wire speed; the gate shares room.connect's backoff.
-					// Same wire shape as the room's refusal either way:
-					// vanilla clients wait for the frame, not the close code
+					// wire speed; the gate shares room.connect's backoff
 					const gate = authGateFor(ws.data.roomName);
 					const now = Date.now();
 					if (!gate || now < gate.cooldownUntil) {
-						client.send(MoebiusAction.REFUSED, {});
-						ws.close(1008, 'refused');
-						log(`refused (auth cooldown) for '${ws.data.roomName}'`);
+						refuse('auth cooldown');
 						return;
 					}
 					if (offered !== expected) {
 						gate.failures++;
 						gate.lastAt = now;
 						gate.cooldownUntil = now + authCooldownMs(gate.failures);
-						client.send(MoebiusAction.REFUSED, {});
-						ws.close(1008, 'refused');
-						log(`refused (bad password) for '${ws.data.roomName}'`);
+						refuse('bad password');
 						return;
 					}
 					authGates.delete(ws.data.roomName);

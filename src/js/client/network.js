@@ -22,6 +22,7 @@ import {
 	parseTarget,
 	targetToUrl,
 } from './collabTarget.js';
+import { createRecentList } from './recentList.js';
 
 // blocked site data must not abort the boot: localStorage access
 // throws under some privacy modes, and every other module guards it
@@ -123,6 +124,10 @@ const createWorkerHandler = inputHandle => {
 		State.worker = new Worker(new URL('./collabWorker.js', import.meta.url), { type: 'module' });
 	} catch (error) {
 		console.error('[Network] Failed to load collab worker:', error);
+		// no worker, no dial: the local button must not invite a tap
+		// nothing answers (the form is bound below, after this return)
+		btnNet.hidden = true;
+		btnNet.disabled = true;
 		return;
 	}
 	let handle = readLocal('handle');
@@ -135,9 +140,10 @@ const createWorkerHandler = inputHandle => {
 	let connected = false;
 	let collaborationMode = false;
 	// explicit server url (?server=ws://...): remote dial on explicit
-	// user intent; same-origin default otherwise
+	// user intent; same-origin default otherwise. A blank value (an
+	// unset variable in a scripted launcher) counts as absent
 	const explicitServer =
-		new URLSearchParams(window.location.search).get('server') ?? undefined;
+		new URLSearchParams(window.location.search).get('server') || undefined;
 	// depth, not a boolean: nested remote-apply helpers (font change
 	// inside a sync inside adoption) each balance their own ++/--
 	let applyDepth = 0;
@@ -158,11 +164,12 @@ const createWorkerHandler = inputHandle => {
 	let syncQueued = false;
 	let syncRetryTimer = 0;
 	let passwordTried = false;
-	// the attempt in flight: its dial url, and the typed spelling when
-	// it came from the connect form (null = the same-origin invitation)
-	let pendingUrl = explicitServer;
-	let pendingTarget = null;
-	let joining = false;
+	// the dial in flight, one object so every path that ends it (adopt,
+	// refusal, dead socket, dismissal, stay local) clears the same
+	// thing: its url, and the typed spelling when it came from the
+	// connect form (null spelling = the same-origin invitation)
+	/** @type {{url: string | undefined, spelling: string | null} | null} */
+	let attempt = null;
 	let sameOriginFound = false;
 	const extActive = () => serverCaps.includes(EXT_SUITE_CAP);
 
@@ -685,8 +692,12 @@ const createWorkerHandler = inputHandle => {
 				await adoptSession(data);
 				break;
 			case 'refused': {
-				joining = false;
-				if (pendingTarget !== null) {
+				const { url, spelling } = attempt ?? {
+					url: explicitServer,
+					spelling: null,
+				};
+				attempt = null;
+				if (spelling !== null) {
 					// the typed path keeps its form: back to it with the
 					// reason and the password field ready for another go
 					stayLocal();
@@ -704,7 +715,7 @@ const createWorkerHandler = inputHandle => {
 						'This room is password protected. Enter the password:',
 					);
 					if (pass) {
-						joinCollaboration(pass);
+						joinCollaboration(pass, url);
 						break;
 					}
 				} else {
@@ -719,26 +730,19 @@ const createWorkerHandler = inputHandle => {
 				}
 				break;
 			case 'closed':
-				if (joining && !connected) {
-					// a dial that died before the handshake used to leave
-					// the Joining modal up with nothing behind it
-					joining = false;
-					stayLocal();
-					if (pendingTarget !== null) {
-						openConnectModal(
-							data.bridged
-								? `Could not reach ${pendingTarget} through this site's bridge. The site may not allow it, or the server is down.`
-								: `Could not connect to ${pendingTarget}.`,
-						);
-					} else {
-						State.modal.error('Could not reach the collab server.');
-					}
+				if (attempt && !connected) {
+					failJoin(data.bridged === true);
 					break;
 				}
 				onDisconnected(data.wasConnected);
 				break;
 			case 'error':
 				console.warn('[Network] worker error:', data.error);
+				if (attempt && !connected) {
+					// a socket the browser refuses to construct posts an
+					// error and never a close; the dial still has to end
+					failJoin(false);
+				}
 				break;
 		}
 	};
@@ -843,7 +847,13 @@ const createWorkerHandler = inputHandle => {
 	const adoptSession = async data => {
 		connected = true;
 		collaborationMode = true;
-		joining = false;
+		const spelling = attempt?.spelling ?? null;
+		attempt = null;
+		if (spelling !== null) {
+			// only a server that answered earns a place in the recent
+			// list; a typo must not become tomorrow's prefill
+			recentServers.remember(spelling);
+		}
 		applyDepth++;
 		serverCaps = Array.isArray(data.data.caps)
 			? data.data.caps.filter(cap => typeof cap === 'string')
@@ -902,7 +912,7 @@ const createWorkerHandler = inputHandle => {
 		}
 	};
 
-	const joinCollaboration = (pass, url = pendingUrl) => {
+	const joinCollaboration = (pass, url = explicitServer, spelling = null) => {
 		// callers include DOM click handlers: only a real string is a
 		// password (a PointerEvent breaks the worker clone)
 		const offered = typeof pass === 'string' ? pass : '';
@@ -911,9 +921,17 @@ const createWorkerHandler = inputHandle => {
 			// after one typo, turning every later refusal into a dead alert
 			passwordTried = false;
 		}
-		pendingUrl = url;
-		joining = true;
+		attempt = { url, spelling };
 		State.modal.loading('Joining the collab session...');
+		// a dismissed Joining modal (backdrop, Escape) must end the dial:
+		// a late failure used to pop the form over local work, a late
+		// success adopted a session nobody was waiting for
+		State.modal.onClose(() => {
+			if (attempt) {
+				attempt = null;
+				State.worker.postMessage({ cmd: 'disconnect' });
+			}
+		});
 		State.worker.postMessage({
 			cmd: 'connect',
 			nick: handle,
@@ -925,6 +943,7 @@ const createWorkerHandler = inputHandle => {
 	};
 
 	const stayLocal = () => {
+		attempt = null;
 		State.modal.close();
 		collaborationMode = false;
 		connected = false;
@@ -932,20 +951,26 @@ const createWorkerHandler = inputHandle => {
 		State.worker.postMessage({ cmd: 'disconnect' });
 	};
 
-	const RECENT_KEY = 'collabServers';
-	const RECENT_LIMIT = 8;
-	const readRecent = () => {
-		try {
-			const list = JSON.parse(readLocal(RECENT_KEY) ?? '[]');
-			return Array.isArray(list) ? list.filter(s => typeof s === 'string') : [];
-		} catch {
-			return [];
+	/** a dial that died before the handshake: say so where the user is */
+	const failJoin = bridged => {
+		const spelling = attempt?.spelling ?? null;
+		stayLocal();
+		if (spelling !== null) {
+			openConnectModal(
+				bridged
+					? `Could not reach ${spelling} through this site's bridge. The site may not allow it, or the server is down.`
+					: `Could not connect to ${spelling}.`,
+			);
+		} else {
+			State.modal.error('Could not reach the collab server.');
 		}
 	};
-	const remember = spelling => {
-		const list = [spelling, ...readRecent().filter(s => s !== spelling)];
-		writeLocal(RECENT_KEY, JSON.stringify(list.slice(0, RECENT_LIMIT)));
-	};
+
+	const recentServers = createRecentList(
+		'collabServers',
+		8,
+		/** @returns {value is string} */ value => typeof value === 'string',
+	);
 
 	const setConnectStatus = text => {
 		connectStatus.textContent = text;
@@ -959,7 +984,7 @@ const createWorkerHandler = inputHandle => {
 	 * never clobbered.
 	 */
 	const openConnectModal = (status = '') => {
-		const recent = readRecent();
+		const recent = recentServers.load();
 		listRecent.innerHTML = '';
 		for (const entry of recent) {
 			const option = document.createElement('option');
@@ -991,10 +1016,7 @@ const createWorkerHandler = inputHandle => {
 		inputHandle.value = nick;
 		group = inGroup.value.trim();
 		writeLocal('group', group);
-		const spelling = formatTarget(target);
-		remember(spelling);
-		pendingTarget = spelling;
-		joinCollaboration(inPass.value, targetToUrl(target));
+		joinCollaboration(inPass.value, targetToUrl(target), formatTarget(target));
 	};
 	btnConnect.addEventListener('click', connectFromModal);
 	for (const field of [inServer, inPass, inNick, inGroup]) {
@@ -1065,10 +1087,7 @@ const createWorkerHandler = inputHandle => {
 	}
 
 	// wrapped: the click event must never become the password argument
-	btnJoin.addEventListener('click', () => {
-		pendingTarget = null;
-		joinCollaboration(undefined, explicitServer);
-	});
+	btnJoin.addEventListener('click', () => joinCollaboration());
 	btnLocal.addEventListener('click', stayLocal);
 
 	return {
