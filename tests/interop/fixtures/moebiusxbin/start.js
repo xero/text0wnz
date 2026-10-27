@@ -4,6 +4,10 @@
  * Prints FIXTURE_READY on stdout once listening.
  */
 /* eslint-disable */
+// upstream's url.parse (server.js, the upgrade handler) trips Node's
+// DEP0169 notice once per boot; the file is vendored verbatim, so the
+// launcher mutes it rather than patching the server
+process.noDeprecation = true;
 const server = require('./server');
 const port = parseInt(process.argv[2], 10) || 8000;
 const pass = process.argv[3] || '';
