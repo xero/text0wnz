@@ -105,6 +105,7 @@ const createModalController = modal => {
 		$('archiveModal'),
 		$('pluginModal'),
 		$('choiceModal'),
+		$('connectModal'),
 		$('updateModal'),
 		$('loadingModal'),
 		$('warningModal'),

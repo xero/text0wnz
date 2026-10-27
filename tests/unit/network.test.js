@@ -5,7 +5,7 @@ import {
 	createWorkerHandler,
 	createChatController,
 } from '../../src/js/client/network.js';
-import { onEnter } from '../../src/js/client/ui.js';
+import { $, onEnter } from '../../src/js/client/ui.js';
 import {
 	EXT_SUITE_CAP,
 	T0wnzAction,
@@ -15,7 +15,7 @@ import {
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		worker: null,
-		modal: { close: vi.fn(), open: vi.fn(), loading: vi.fn() },
+		modal: { close: vi.fn(), open: vi.fn(), loading: vi.fn(), error: vi.fn() },
 		title: '',
 		textArtCanvas: {
 			setImageData: vi.fn(),
@@ -283,6 +283,85 @@ describe('Network Module', () => {
 			)[1];
 			messageListener({ data: { cmd: 'probeResult', found: false } });
 			expect(State.modal.open).not.toHaveBeenCalled();
+		});
+
+		// the ui mock hands out a fresh element per lookup; find the one
+		// the handler captured for an id and fire its click
+		const elementFor = id => {
+			const index = $.mock.calls.findIndex(call => call[0] === id);
+			return $.mock.results[index].value;
+		};
+		const clickOn = id => {
+			const el = elementFor(id);
+			el.addEventListener.mock.calls.find(call => call[0] === 'click')[1]();
+		};
+		const listenerOf = () =>
+			mockWorker.addEventListener.mock.calls.find(
+				call => call[0] === 'message',
+			)[1];
+
+		it('the network button opens the connect form with the handle filled in', () => {
+			global.localStorage.getItem.mockImplementation(key =>
+				(key === 'handle' ? 'xero' : null));
+			createWorkerHandler(mockInputHandle);
+			clickOn('networkButton');
+			expect(State.modal.open).toHaveBeenCalledWith('connect');
+			expect(elementFor('connectNick').value).toBe('xero');
+		});
+
+		it('connecting from the form dials the parsed address and remembers it', () => {
+			createWorkerHandler(mockInputHandle);
+			elementFor('connectServer').value = '127.0.0.1:9000/jam';
+			elementFor('connectPass').value = 'pw';
+			elementFor('connectNick').value = 'xero';
+			elementFor('connectGroup').value = 'impure';
+			clickOn('connectJoin');
+			expect(mockWorker.postMessage).toHaveBeenCalledWith({
+				cmd: 'connect',
+				nick: 'xero',
+				group: 'impure',
+				pass: 'pw',
+				caps: [EXT_SUITE_CAP],
+				url: 'ws://127.0.0.1:9000/jam',
+			});
+			expect(global.localStorage.setItem).toHaveBeenCalledWith(
+				'collabServers',
+				JSON.stringify(['127.0.0.1:9000/jam']),
+			);
+			expect(global.localStorage.setItem).toHaveBeenCalledWith('group', 'impure');
+		});
+
+		it('a refusal on the typed path returns to the form instead of prompting', async () => {
+			createWorkerHandler(mockInputHandle);
+			global.window.prompt = vi.fn();
+			elementFor('connectServer').value = 'jam.example';
+			clickOn('connectJoin');
+			await listenerOf()({ data: { cmd: 'refused' } });
+			expect(global.window.prompt).not.toHaveBeenCalled();
+			expect(State.modal.open).toHaveBeenLastCalledWith('connect');
+			expect(elementFor('connectStatus').textContent).toMatch(/refused/);
+		});
+
+		it('a dial that dies before the handshake reports instead of stranding the loading modal', async () => {
+			createWorkerHandler(mockInputHandle);
+			elementFor('connectServer').value = 'jam.example';
+			clickOn('connectJoin');
+			expect(State.modal.loading).toHaveBeenCalled();
+			await listenerOf()({ data: { cmd: 'closed', wasConnected: false } });
+			expect(State.modal.close).toHaveBeenCalled();
+			expect(elementFor('connectStatus').textContent).toMatch(
+				/Could not connect to jam\.example/,
+			);
+			expect(global.alert).not.toHaveBeenCalled();
+		});
+
+		it('a bad address never dials', () => {
+			createWorkerHandler(mockInputHandle);
+			elementFor('connectServer').value = 'http://nope';
+			clickOn('connectJoin');
+			const cmds = mockWorker.postMessage.mock.calls.map(c => c[0].cmd);
+			expect(cmds).not.toContain('connect');
+			expect(elementFor('connectStatus').textContent).toMatch(/host:port/);
 		});
 
 		it('should handle connection state management', () => {
