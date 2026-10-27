@@ -79,34 +79,17 @@ describe('UI Controls and Controllers', () => {
 	});
 
 	describe('websocketUI', () => {
-		it('should show websocket elements when show is true', () => {
-			const excludedEl = document.createElement('div');
-			excludedEl.classList.add('excludedForWebsocket');
-			const includedEl = document.createElement('div');
-			includedEl.classList.add('includedForWebsocket');
-
-			document.body.appendChild(excludedEl);
-			document.body.appendChild(includedEl);
-
+		// the stylesheet gates .includedForWebsocket and
+		// .excludedForWebsocket on this one attribute; inline display
+		// writes are gone (they lost to the sauce panel's id rule)
+		it('marks the document collab-on when show is true', () => {
 			websocketUI(true);
-
-			expect(excludedEl.style.display).toBe('none');
-			expect(includedEl.style.display).toBe('');
+			expect(document.documentElement.dataset.collab).toBe('on');
 		});
 
-		it('should hide websocket elements when show is false', () => {
-			const excludedEl = document.createElement('div');
-			excludedEl.classList.add('excludedForWebsocket');
-			const includedEl = document.createElement('div');
-			includedEl.classList.add('includedForWebsocket');
-
-			document.body.appendChild(excludedEl);
-			document.body.appendChild(includedEl);
-
+		it('marks the document collab-off when show is false', () => {
 			websocketUI(false);
-
-			expect(excludedEl.style.display).toBe('');
-			expect(includedEl.style.display).toBe('none');
+			expect(document.documentElement.dataset.collab).toBe('off');
 		});
 	});
 

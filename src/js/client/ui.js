@@ -1504,16 +1504,11 @@ const createZoomControl = () => {
 };
 
 const websocketUI = show => {
-	[
-		['excludedForWebsocket', !show],
-		['includedForWebsocket', show],
-	].forEach(([sel, prop]) =>
-		[...D.getElementsByClassName(sel)].forEach(
-			// clearing the inline value hands display back to the
-			// stylesheet: the hardcoded 'block' defeated #chatButton's
-			// grid centering in every collab session
-			el => (el.style.display = prop ? '' : 'none'),
-		));
+	// one attribute, the stylesheet does the rest: inline display
+	// writes could never both hide and reveal elements whose own rules
+	// set display (the chat button is a flex column in the sauce
+	// panel), so the local state leaked
+	D.documentElement.dataset.collab = show ? 'on' : 'off';
 };
 
 export {

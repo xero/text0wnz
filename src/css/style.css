@@ -330,17 +330,21 @@
 		}
 		#networkButton,
 		#chatButton {
-			@apply grid place-items-center bg-editor;
+			@apply flex flex-col items-center justify-center bg-editor;
 			flex: none;
-			width: 32px;
-			height: 32px;
+			width: 46px;
 			border: 0;
-			padding: 0;
+			padding: 3px 0;
+			gap: 2px;
 
 			svg {
 				width: 20px;
 				height: 20px;
 				fill: var(--color-fg);
+			}
+			small {
+				@apply text-fg opacity-70 leading-none;
+				font-size: 10px;
 			}
 		}
 	}
@@ -3483,8 +3487,13 @@
 		}
 	}
 
-	.includedForWebsocket {
-		@apply hidden;
+	/* the collab state rides <html data-collab>: a bare class rule lost
+	   to the sauce panel's id rule, so the chat button showed (and
+	   opened) while local. The gate needs !important for the same
+	   reason */
+	html[data-collab='on'] .excludedForWebsocket,
+	html:not([data-collab='on']) .includedForWebsocket {
+		display: none !important;
 	}
 
 	/* .button and .hover matched nothing; the rest is the deliberate
