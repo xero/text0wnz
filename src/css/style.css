@@ -2135,7 +2135,31 @@
 			@apply min-w-[18rem];
 		}
 		#connectStatus {
-			@apply block w-full max-w-none bg-editor text-cyber pt-0 pb-5;
+			@apply block w-full max-w-none bg-editor text-red-400 pt-0 pb-5;
+		}
+		/* phones: the two-up rows outgrew the viewport and half of each
+		   row hid behind a horizontal scroll; stack label over input,
+		   one column, inside the screen */
+		@media (max-width: 720px) {
+			@apply max-w-[calc(100vw-1rem)];
+			article {
+				@apply flex-col px-3 py-2;
+				label {
+					@apply flex flex-col w-full mx-0 my-1 px-0;
+				}
+				input {
+					@apply w-full mr-0 my-1;
+				}
+			}
+			article + article {
+				@apply pt-0;
+			}
+			#connectServer {
+				min-width: 0;
+			}
+			#connectStatus {
+				@apply px-3 pb-3;
+			}
 		}
 	}
 	#fontsModal {
