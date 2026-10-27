@@ -2075,20 +2075,6 @@
 			@apply px-3 py-1 h-fit mr-2 my-2 bg-midnight text-fg;
 		}
 	}
-	#connectModal {
-		article {
-			@apply pb-0;
-		}
-		article + article {
-			@apply pt-0;
-		}
-		#connectServer {
-			@apply min-w-[18rem];
-		}
-		#connectStatus {
-			@apply bg-editor text-cyber pt-0 pb-5;
-		}
-	}
 	#resizeModal,
 	#connectModal {
 		header,
@@ -2134,6 +2120,22 @@
 					height: 37px;
 				}
 			}
+		}
+	}
+	#connectModal {
+		/* rows start from one left edge: centered rows of unequal width
+		   read as a stagger */
+		article {
+			@apply justify-start pl-4 pb-0;
+		}
+		article + article {
+			@apply pt-2;
+		}
+		#connectServer {
+			@apply min-w-[18rem];
+		}
+		#connectStatus {
+			@apply block w-full max-w-none bg-editor text-cyber pt-0 pb-5;
 		}
 	}
 	#fontsModal {

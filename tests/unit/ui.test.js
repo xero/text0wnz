@@ -452,34 +452,17 @@ describe('UI Utilities', () => {
 	});
 
 	describe('websocketUI', () => {
-		it('should show websocket elements when show is true', () => {
-			const excludedEl = document.createElement('div');
-			excludedEl.classList.add('excludedForWebsocket');
-			const includedEl = document.createElement('div');
-			includedEl.classList.add('includedForWebsocket');
-
-			document.body.appendChild(excludedEl);
-			document.body.appendChild(includedEl);
-
+		// the stylesheet gates .includedForWebsocket and
+		// .excludedForWebsocket on one document attribute; inline
+		// display writes lost to the sauce panel's id rule
+		it('marks the document collab-on when show is true', () => {
 			websocketUI(true);
-
-			expect(excludedEl.style.display).toBe('none');
-			expect(includedEl.style.display).toBe('');
+			expect(document.documentElement.dataset.collab).toBe('on');
 		});
 
-		it('should hide websocket elements when show is false', () => {
-			const excludedEl = document.createElement('div');
-			excludedEl.classList.add('excludedForWebsocket');
-			const includedEl = document.createElement('div');
-			includedEl.classList.add('includedForWebsocket');
-
-			document.body.appendChild(excludedEl);
-			document.body.appendChild(includedEl);
-
+		it('marks the document collab-off when show is false', () => {
 			websocketUI(false);
-
-			expect(excludedEl.style.display).toBe('');
-			expect(includedEl.style.display).toBe('none');
+			expect(document.documentElement.dataset.collab).toBe('off');
 		});
 	});
 
@@ -1125,49 +1108,34 @@ describe('UI Utilities', () => {
 	});
 
 	describe('websocketUI', () => {
-		it('should show websocket-specific UI elements', async () => {
+		// the stylesheet gates .includedForWebsocket and
+		// .excludedForWebsocket on one document attribute; inline
+		// display writes lost to the sauce panel's id rule
+		it('flips the document attribute both ways', async () => {
 			const { websocketUI } = await import('../../src/js/client/ui.js');
 
-			const excludedDiv = document.createElement('div');
-			excludedDiv.className = 'excludedForWebsocket';
-			const includedDiv = document.createElement('div');
-			includedDiv.className = 'includedForWebsocket';
-
-			document.body.appendChild(excludedDiv);
-			document.body.appendChild(includedDiv);
-
 			websocketUI(true);
-			expect(includedDiv.style.display).toBe('');
-			expect(excludedDiv.style.display).toBe('none');
+			expect(document.documentElement.dataset.collab).toBe('on');
 
 			websocketUI(false);
-			expect(includedDiv.style.display).toBe('none');
-			expect(excludedDiv.style.display).toBe('');
+			expect(document.documentElement.dataset.collab).toBe('off');
 		});
 
-		it('should handle multiple elements with websocket classes', async () => {
+		it('never writes inline display on the gated elements', async () => {
 			const { websocketUI } = await import('../../src/js/client/ui.js');
 
-			const excluded1 = document.createElement('div');
-			excluded1.className = 'excludedForWebsocket';
-			const excluded2 = document.createElement('div');
-			excluded2.className = 'excludedForWebsocket';
-			const included1 = document.createElement('div');
-			included1.className = 'includedForWebsocket';
-			const included2 = document.createElement('div');
-			included2.className = 'includedForWebsocket';
-
-			document.body.appendChild(excluded1);
-			document.body.appendChild(excluded2);
-			document.body.appendChild(included1);
-			document.body.appendChild(included2);
+			const excluded = document.createElement('div');
+			excluded.className = 'excludedForWebsocket';
+			const included = document.createElement('div');
+			included.className = 'includedForWebsocket';
+			document.body.appendChild(excluded);
+			document.body.appendChild(included);
 
 			websocketUI(true);
+			websocketUI(false);
 
-			expect(included1.style.display).toBe('');
-			expect(included2.style.display).toBe('');
-			expect(excluded1.style.display).toBe('none');
-			expect(excluded2.style.display).toBe('none');
+			expect(included.style.display).toBe('');
+			expect(excluded.style.display).toBe('');
 		});
 	});
 });
