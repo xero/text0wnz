@@ -8,6 +8,10 @@
  * inert stand-in instead of adding the dependency.
  */
 /* eslint-disable */
+// upstream's url.parse (server.js, the upgrade handler) trips Node's
+// DEP0169 notice once per boot; the file is vendored verbatim, so the
+// launcher mutes it rather than patching the server
+process.noDeprecation = true;
 const Module = require('module');
 const originalRequire = Module.prototype.require;
 Module.prototype.require = function (id) {
