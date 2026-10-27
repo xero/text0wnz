@@ -832,6 +832,25 @@ describe('review-pass regressions', () => {
 		}
 	});
 
+	it('loadState keeps a dark 8-bit object palette exact', () => {
+		// what this server writes: {r,g,b} objects, 8-bit. All under 64
+		// here, which the wire heuristic would have brightened fourfold
+		// on every restart
+		const room = createRoom();
+		const dark = Array.from({ length: 16 }, (_, i) => ({
+			r: i,
+			g: 8,
+			b: 32,
+		}));
+		room.loadState({
+			columns: 1,
+			rows: 1,
+			data: [{ code: 32, fg: 7, bg: 0 }],
+			palette: dark,
+		});
+		expect(room.toJoinDoc().palette[3]).toEqual({ r: 3, g: 8, b: 32 });
+	});
+
 	it('loadState renormalizes 6-bit array join palettes from old sidecars', () => {
 		const room = createRoom({ columns: 2, rows: 1 });
 		const palette = Array.from({ length: 16 }, () => [0, 0, 0]);

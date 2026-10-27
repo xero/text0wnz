@@ -170,6 +170,25 @@ describe('collab worker', () => {
 		}
 	});
 
+	it('gives up on a dial that never answers', () => {
+		vi.useFakeTimers();
+		try {
+			toWorker({ cmd: 'connect', nick: 'xero', url: 'blackhole.example' });
+			const ws = sockets.at(-1);
+			vi.advanceTimersByTime(14999);
+			expect(ws.closed).toBe(false);
+			vi.advanceTimersByTime(1);
+			expect(ws.closed).toBe(true);
+			expect(pageMessages().at(-1)).toEqual({
+				cmd: 'closed',
+				wasConnected: false,
+				bridged: false,
+			});
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it('reports refusal and closes', () => {
 		toWorker({ cmd: 'connect', nick: 'xero' });
 		const ws = sockets.at(-1);

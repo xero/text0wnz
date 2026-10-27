@@ -125,13 +125,20 @@ export const resolveBridgeTarget = async (
 	if (!(/^[a-z0-9.-]{1,253}$/i).test(host)) {
 		return { ok: false, reason: 'bad host' };
 	}
-	const room =
-		typeof requested.room === 'string' &&
-		(/^[a-z0-9_-]{0,32}$/i).test(requested.room)
-			? requested.room
-			: '';
+	const room = typeof requested.room === 'string' ? requested.room : '';
+	if (!(/^[a-z0-9_-]{0,32}$/i).test(room)) {
+		// refused, not swapped for the default joint: a silent swap
+		// lands the caller in the wrong room or blames the server
+		return { ok: false, reason: 'bad room' };
+	}
 	if (mode === 'port') {
 		const port = config.port || BRIDGE_DEFAULTS.port;
+		const asked = requested.port;
+		if (asked !== null && asked !== undefined && asked !== '' && Number(asked) !== port) {
+			// dialing a port the caller never asked for only sends them a
+			// wrong-sounding failure
+			return { ok: false, reason: `port ${asked} not allowed (pinned to ${port})` };
+		}
 		const addresses = isIP(host)
 			? [host]
 			: await resolveHost(host).catch(() => []);

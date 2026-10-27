@@ -230,6 +230,24 @@ describe('palettes', () => {
 		]);
 	});
 
+	it('a caller that knows the depth bypasses the heuristic', () => {
+		// our own server reading a dark palette it wrote: every component
+		// under 64, which the wire heuristic would expand
+		const dark = [{ r: 16, g: 8, b: 32 }];
+		expect(paletteToRGB8(dark)).toEqual([[65, 32, 130]]);
+		expect(paletteToRGB8(dark, 8)).toEqual([[16, 8, 32]]);
+		expect(paletteToRGB8([[63, 0, 0]], 6)).toEqual([[255, 0, 0]]);
+		const join = {
+			columns: 1,
+			rows: 1,
+			data: [{ code: 32, fg: 7, bg: 0 }],
+			palette: dark,
+		};
+		expect(joinDocToDoc(join, { paletteDepth: 8 }).doc.palette[0]).toBe(
+			(16 << 16) | (8 << 8) | 32,
+		);
+	});
+
 	it('emits 6-bit components for vanilla consumers', () => {
 		expect(paletteTo6Bit([[255, 0, 170]])).toEqual([[63, 0, 42]]);
 	});

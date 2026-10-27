@@ -269,18 +269,26 @@ export const compress8to6 = (v: number): number => (v >> 2) & 0x3f;
  * arrays. The receiving side auto-detects like icy_draw: any
  * component above 63 means the palette is already 8-bit. Treating
  * objects as 8-bit by contract rendered every vanilla server's
- * palette at a quarter of its brightness.
+ * palette at a quarter of its brightness. The heuristic is for wire
+ * shapes whose depth only the sender knew; a caller reading a
+ * palette it wrote itself (our server, its sidecars) passes the
+ * depth, since a dark 8-bit palette would otherwise read as 6-bit
+ * and come back four times brighter.
  */
 export const paletteToRGB8 = (
 	palette: MoebiusPaletteEntry[],
+	depth?: 6 | 8,
 ): [number, number, number][] => {
 	const triple = (entry: MoebiusPaletteEntry): [number, number, number] =>
 		Array.isArray(entry)
 			? [entry[0], entry[1], entry[2]]
 			: [entry.r, entry.g, entry.b];
-	const sixBit = palette.every(entry =>
-		triple(entry).every(component => component <= 63),
-	);
+	const sixBit =
+		depth === undefined
+			? palette.every(entry =>
+					triple(entry).every(component => component <= 63),
+				)
+			: depth === 6;
 	return palette.map(entry => {
 		const [r, g, b] = triple(entry);
 		return sixBit
@@ -334,7 +342,10 @@ export interface JoinDocResult {
  * table. fg/bg are palette indices and stay live (tag-bit) so a later
  * CHANGE_PALETTE recolors the doc.
  */
-export const joinDocToDoc = (join: MoebiusJoinDoc): JoinDocResult => {
+export const joinDocToDoc = (
+	join: MoebiusJoinDoc,
+	options: { paletteDepth?: 6 | 8 } = {},
+): JoinDocResult => {
 	if (
 		!Number.isInteger(join.columns) ||
 		!Number.isInteger(join.rows) ||
@@ -370,7 +381,7 @@ export const joinDocToDoc = (join: MoebiusJoinDoc): JoinDocResult => {
 	doc.setIceColors(join.ice_colors === true);
 	doc.setLetterSpacing(join.use_9px_font === true);
 	if (join.palette) {
-		const rgb8 = paletteToRGB8(join.palette);
+		const rgb8 = paletteToRGB8(join.palette, options.paletteDepth);
 		for (let i = 0; i < Math.min(rgb8.length, doc.palette.length); i++) {
 			const [r, g, b] = rgb8[i];
 			doc.palette[i] = (r << 16) | (g << 8) | b;

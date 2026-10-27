@@ -15,7 +15,13 @@ import {
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		worker: null,
-		modal: { close: vi.fn(), open: vi.fn(), loading: vi.fn(), error: vi.fn() },
+		modal: {
+			close: vi.fn(),
+			open: vi.fn(),
+			loading: vi.fn(),
+			error: vi.fn(),
+			onClose: vi.fn(),
+		},
 		title: '',
 		textArtCanvas: {
 			setImageData: vi.fn(),
@@ -309,7 +315,7 @@ describe('Network Module', () => {
 			expect(elementFor('connectNick').value).toBe('xero');
 		});
 
-		it('connecting from the form dials the parsed address and remembers it', () => {
+		it('connecting from the form dials the parsed address and remembers it', async () => {
 			createWorkerHandler(mockInputHandle);
 			elementFor('connectServer').value = '127.0.0.1:9000/jam';
 			elementFor('connectPass').value = 'pw';
@@ -324,11 +330,83 @@ describe('Network Module', () => {
 				caps: [EXT_SUITE_CAP],
 				url: 'ws://127.0.0.1:9000/jam',
 			});
+			expect(global.localStorage.setItem).toHaveBeenCalledWith('group', 'impure');
+			// the recent list waits for a server that answers
+			expect(global.localStorage.setItem).not.toHaveBeenCalledWith(
+				'collabServers',
+				expect.anything(),
+			);
+			const blank = { code: 32, fg: 7, bg: 0 };
+			await listenerOf()({
+				data: {
+					cmd: 'connected',
+					data: { caps: [], doc: { columns: 1, rows: 1, data: [blank]}, users: []},
+				},
+			});
 			expect(global.localStorage.setItem).toHaveBeenCalledWith(
 				'collabServers',
 				JSON.stringify(['127.0.0.1:9000/jam']),
 			);
-			expect(global.localStorage.setItem).toHaveBeenCalledWith('group', 'impure');
+		});
+
+		it('a typo never enters the recent list', async () => {
+			createWorkerHandler(mockInputHandle);
+			elementFor('connectServer').value = 'jam.exmaple';
+			clickOn('connectJoin');
+			await listenerOf()({ data: { cmd: 'closed', wasConnected: false } });
+			expect(global.localStorage.setItem).not.toHaveBeenCalledWith(
+				'collabServers',
+				expect.anything(),
+			);
+		});
+
+		it('dismissing the Joining modal ends the dial', () => {
+			createWorkerHandler(mockInputHandle);
+			elementFor('connectServer').value = 'jam.example';
+			clickOn('connectJoin');
+			const dismissed = State.modal.onClose.mock.calls.at(-1)[0];
+			mockWorker.postMessage.mockClear();
+			dismissed();
+			expect(mockWorker.postMessage).toHaveBeenCalledWith({ cmd: 'disconnect' });
+			// the dial is over: a late close must not pop the form back up
+			State.modal.open.mockClear();
+			return listenerOf()({ data: { cmd: 'closed', wasConnected: false } }).then(
+				() => {
+					expect(State.modal.open).not.toHaveBeenCalled();
+				},
+			);
+		});
+
+		it('a worker error before the handshake reports like a dead socket', async () => {
+			createWorkerHandler(mockInputHandle);
+			elementFor('connectServer').value = 'jam.example';
+			clickOn('connectJoin');
+			await listenerOf()({ data: { cmd: 'error', error: 'SecurityError' } });
+			expect(State.modal.close).toHaveBeenCalled();
+			expect(elementFor('connectStatus').textContent).toMatch(/Could not connect/);
+		});
+
+		it('a blank ?server= counts as absent', () => {
+			global.window.location.search = '?server=';
+			try {
+				createWorkerHandler(mockInputHandle);
+				listenerOf()({ data: { cmd: 'probeResult', found: true } });
+				clickOn('networkButton');
+				expect(elementFor('connectServer').value).toBe(
+					'ws://localhost:3000/server',
+				);
+			} finally {
+				global.window.location.search = '';
+			}
+		});
+
+		it('a worker that will not construct hides the local button', () => {
+			global.Worker.mockImplementation(() => {
+				throw new Error('no module workers here');
+			});
+			expect(createWorkerHandler(mockInputHandle)).toBeUndefined();
+			expect(elementFor('networkButton').hidden).toBe(true);
+			expect(elementFor('networkButton').disabled).toBe(true);
 		});
 
 		it('a refusal on the typed path returns to the form instead of prompting', async () => {
