@@ -854,14 +854,20 @@ const createWorkerHandler = inputHandle => {
 	};
 
 	const joinCollaboration = pass => {
+		// callers include DOM click handlers: only a real string is a
+		// password (a PointerEvent breaks the worker clone)
+		const offered = typeof pass === 'string' ? pass : '';
+		if (offered === '') {
+			// a fresh attempt earns a fresh prompt: the flag used to stick
+			// after one typo, turning every later refusal into a dead alert
+			passwordTried = false;
+		}
 		State.modal.loading('Joining the collab session...');
 		State.worker.postMessage({
 			cmd: 'connect',
 			nick: handle,
 			group: '',
-			// callers include DOM click handlers: only a real string is a
-			// password (a PointerEvent breaks the worker clone)
-			pass: typeof pass === 'string' ? pass : '',
+			pass: offered,
 			caps: [EXT_SUITE_CAP],
 			url: explicitServer,
 		});

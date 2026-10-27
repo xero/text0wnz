@@ -456,6 +456,13 @@ export const createRoom = (options = {}) => {
 		const pass = typeof data.pass === 'string' ? data.pass : '';
 		// the password gates EVERYONE, spectators included
 		if (password !== '') {
+			if (pass === '') {
+				// the probe's shape, never a guess: it must not open the
+				// cooldown (the pre-room gate applies the same rule)
+				client.send(MoebiusAction.REFUSED, {});
+				log(`${nick ?? 'spectator'} refused (no password)`);
+				return false;
+			}
 			if (Date.now() < authCooldownUntil) {
 				client.send(MoebiusAction.REFUSED, {});
 				log('refused (auth cooldown)');

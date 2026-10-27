@@ -257,6 +257,25 @@ describe('Network Module', () => {
 			expect(cmds).not.toContain('connect');
 		});
 
+		it('a fresh join after a wrong password prompts again', async () => {
+			const handler = createWorkerHandler(mockInputHandle);
+			const messageListener = mockWorker.addEventListener.mock.calls.find(
+				call => call[0] === 'message',
+			)[1];
+			global.window.prompt = vi.fn(() => 'typo');
+			handler.joinCollaboration();
+			await messageListener({ data: { cmd: 'refused' } });
+			expect(global.window.prompt).toHaveBeenCalledTimes(1);
+			// the typo is refused: alert, back to local
+			await messageListener({ data: { cmd: 'refused' } });
+			expect(global.alert).toHaveBeenCalledTimes(1);
+			// the next click on the network button must prompt again, not
+			// alert forever until a reload
+			handler.joinCollaboration();
+			await messageListener({ data: { cmd: 'refused' } });
+			expect(global.window.prompt).toHaveBeenCalledTimes(2);
+		});
+
 		it('ignores a probe that finds nothing', () => {
 			createWorkerHandler(mockInputHandle);
 			const messageListener = mockWorker.addEventListener.mock.calls.find(
