@@ -58,3 +58,47 @@ only via the moebiusXBIN `CHANGE_PALETTE` relay (icy_draw clients drop
 it), and late joiners can see stale palettes exactly as they do
 between Moebius clients. These are upstream semantics; teXt0wnz
 reproduces them deliberately.
+
+---
+
+## Connecting to other servers
+
+While you work locally the sauce panel shows a collab button that reads
+`local`. Click it to open the Connect form and type a server the way
+Moebius's own dialog reads one:
+
+| You type                  | The editor dials                                              |
+| ------------------------- | ------------------------------------------------------------- |
+| `jam.example`             | `ws://jam.example:8000/` (the Moebius default port and joint) |
+| `jam.example:1337/lounge` | `ws://jam.example:1337/lounge`                                |
+| `text.0w.nz:443/server`   | `wss://text.0w.nz/server` (port 443 means wss)                |
+| `wss://host/room`         | exactly that                                                  |
+
+The form remembers the last eight servers you joined, your handle, and
+your group. It never stores passwords. The `?server=` query parameter
+still works for scripted launches and the e2e suite, and the form
+prefills from it. The installed app launches with no query string, so
+the form is its way in.
+
+### Secure pages and plaintext servers
+
+Every Moebius and moebiusXBIN server speaks plaintext `ws://`, and a
+page served over https may not open one. The browser blocks it as mixed
+content, and no header can allow it. You have two ways through:
+
+- **Serve the editor over http.** On a LAN, or from `bun www` on your
+  own machine, the page dials the server directly.
+- **Let the host bridge.** From an https page the editor routes a
+  plaintext target through the page's own host at `/bridge`, a byte pipe
+  the operator enables with `BRIDGE=port` (default off). See
+  [environment-variables.md](./environment-variables.md). When the host
+  keeps it off, the form says so.
+
+### What vanilla servers do differently
+
+Vanilla Moebius checks its password only when a nick is given; nickless
+connections bypass it and may draw. It keys joints by URL path but
+starts one per process at `--path`, and it has no keepalive, so a quiet
+spectator is never reaped. Our server gates everyone, reaps dead
+sockets, and hosts many rooms. The interop suite in `tests/interop/`
+pins these differences against vendored copies of both upstream servers.
