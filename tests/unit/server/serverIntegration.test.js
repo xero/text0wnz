@@ -571,8 +571,94 @@ describe.skipIf(!canRun)('bridge over real sockets', () => {
 		steer.close();
 	});
 
-	it('off mode (the default server) refuses /bridge with 403', async () => {
+	it('off mode (the default server) refuses /bridge, and a plain GET gets no further than 426', async () => {
+		// no upgrade, no resolution: the bridge is a socket or nothing
 		const res = await fetch(`http://127.0.0.1:${port}/bridge?host=a.example`);
-		expect(res.status).toBe(403);
+		expect(res.status).toBe(426);
+		const refused = await new Promise((resolve, reject) => {
+			const req = http.request(
+				{
+					host: '127.0.0.1',
+					port,
+					path: '/bridge?host=a.example',
+					headers: { connection: 'Upgrade', upgrade: 'websocket' },
+				},
+				res => {
+					let body = '';
+					res.on('data', chunk => (body += chunk));
+					res.on('end', () => resolve({ status: res.statusCode, body }));
+				},
+			);
+			req.on('error', reject);
+			req.end();
+		});
+		expect(refused.status).toBe(403);
+		expect(refused.body).toBe('bridge refused');
 	});
+
+	it(
+		'port mode never echoes what the host resolver knows',
+		{ timeout: 30000 },
+		async () => {
+			const cwd = mkdtempSync(path.join(tmpdir(), 't0wnz-oracle-'));
+			const oraclePort = 20000 + Math.floor(Math.random() * 20000);
+			let logged = '';
+			const child = spawn(
+				'bun',
+				[path.join(repoRoot, 'src/js/server/main.js'), String(oraclePort)],
+				{
+					cwd,
+					stdio: ['ignore', 'pipe', 'pipe'],
+					env: { ...process.env, BRIDGE: 'port', BRIDGE_PORT: '8000' },
+				},
+			);
+			child.stdout.on('data', chunk => (logged += chunk));
+			try {
+				const deadline = Date.now() + 15000;
+				for (;;) {
+					try {
+						const res = await fetch(`http://127.0.0.1:${oraclePort}/healthz`);
+						if (res.ok) {
+							break;
+						}
+					} catch {
+						// not up yet
+					}
+					if (Date.now() > deadline) {
+						throw new Error('oracle server did not come up');
+					}
+					await new Promise(r => setTimeout(r, 150));
+				}
+				const refused = await new Promise((resolve, reject) => {
+					const req = http.request(
+						{
+							host: '127.0.0.1',
+							port: oraclePort,
+							path: '/bridge?host=localhost&port=8000',
+							headers: { connection: 'Upgrade', upgrade: 'websocket' },
+						},
+						res => {
+							let body = '';
+							res.on('data', chunk => (body += chunk));
+							res.on('end', () => resolve({ status: res.statusCode, body }));
+						},
+					);
+					req.on('error', reject);
+					req.end();
+				});
+				// localhost resolves to loopback: refused, but the body must
+				// not say what it resolved to
+				expect(refused.status).toBe(403);
+				expect(refused.body).toBe('bridge refused');
+				await new Promise(r => setTimeout(r, 200));
+				// the operator's log carries the reason and the requester
+				expect(logged).toMatch(
+					/bridge refused 127\.0\.0\.1: private address/,
+				);
+			} finally {
+				child.kill('SIGKILL');
+				rmSync(cwd, { recursive: true, force: true });
+			}
+		},
+	);
 });

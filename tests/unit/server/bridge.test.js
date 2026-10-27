@@ -5,11 +5,14 @@
  * and the explicit allow list. All pure: DNS is injected.
  */
 import { describe, it, expect } from 'vitest';
+import { vi } from 'vitest';
 import {
 	isPrivateAddress,
 	vetResolvedAddresses,
 	resolveBridgeTarget,
 	bridgeConfigFromEnv,
+	validateBridgeConfig,
+	createBridgePipe,
 	BRIDGE_DEFAULTS,
 } from '../../../src/js/server/bridge.js';
 
@@ -32,6 +35,15 @@ describe('isPrivateAddress', () => {
 			'fd12:3456::1',
 			'::ffff:10.0.0.1', // v4-mapped v6
 			'::ffff:127.0.0.1',
+			// the review's gaps: never dial these either
+			'255.255.255.255',
+			'224.0.0.1', // multicast
+			'240.0.0.1', // reserved
+			'192.0.0.8', // IETF protocol assignments
+			'198.18.0.1', // benchmarking
+			'198.19.255.255',
+			'168.63.129.16', // Azure wireserver
+			'2002:c000:204::1', // 6to4
 		]) {
 			expect(isPrivateAddress(ip), ip).toBe(true);
 		}
@@ -220,5 +232,178 @@ describe('v6 encoding bypasses (review pass)', () => {
 		// global unicast stays public
 		expect(isPrivateAddress('2606:2800:220:1::1')).toBe(false);
 		expect(isPrivateAddress('2001:db8::1')).toBe(false);
+	});
+});
+
+describe('bridge hardening (security review)', () => {
+	const base = { mode: 'off', target: '', port: 8000, allow: []};
+
+	it('refuses a port that is not plain digits, in every mode', async () => {
+		const resolver = async () => ['93.184.216.34'];
+		for (const port of ['0xa494', '8000.0', '+8000', '8000\n[Server] forged', '']) {
+			const inPort = await resolveBridgeTarget(
+				{ ...base, mode: 'port' },
+				{ host: 'ok.example', port, room: '' },
+				resolver,
+			);
+			if (port === '') {
+				expect(inPort.ok).toBe(true); // nothing asked = the pinned port
+			} else {
+				expect(inPort).toEqual({ ok: false, reason: 'bad port' });
+			}
+		}
+		const inAllow = await resolveBridgeTarget(
+			{ ...base, mode: 'allow', allow: ['ok.example:42132']},
+			{ host: 'ok.example', port: '0xa494', room: '' },
+			resolver,
+		);
+		expect(inAllow).toEqual({ ok: false, reason: 'bad port' });
+	});
+
+	it('gives up on a resolver that never answers', async () => {
+		const stalled = () => new Promise(() => {});
+		const result = await resolveBridgeTarget(
+			{ ...base, mode: 'port' },
+			{ host: 'slow.example', room: '' },
+			stalled,
+			20,
+		);
+		expect(result).toEqual({ ok: false, reason: 'unresolvable host' });
+	});
+
+	it('reads BRIDGE_MAX', () => {
+		expect(bridgeConfigFromEnv({ BRIDGE_MAX: '4' }).maxConnections).toBe(4);
+		expect(bridgeConfigFromEnv({ BRIDGE_MAX: 'lots' }).maxConnections).toBe(
+			BRIDGE_DEFAULTS.maxConnections,
+		);
+	});
+
+	it('validates the env at boot', () => {
+		const app = { port: 1337, plainPort: 8000 };
+		expect(() => validateBridgeConfig({ ...base }, app)).not.toThrow();
+		expect(() => validateBridgeConfig({ ...base, mode: 'sideways' }, app)).toThrow(
+			/not off, local, port, or allow/,
+		);
+		expect(() =>
+			validateBridgeConfig({ ...base, mode: 'port', port: 8000 }, app)).toThrow(/own listeners/);
+		expect(() =>
+			validateBridgeConfig({ ...base, mode: 'port', port: 1337 }, app)).toThrow(/own listeners/);
+		expect(() =>
+			validateBridgeConfig({ ...base, mode: 'port', port: 9000 }, app)).not.toThrow();
+		expect(() =>
+			validateBridgeConfig(
+				{ ...base, mode: 'local', target: 'ws://127.0.0.1:1337/bridge?host=x' },
+				app,
+			)).toThrow(/\/bridge path/);
+		expect(() =>
+			validateBridgeConfig({ ...base, mode: 'local', target: 'http://x' }, app)).toThrow(/ws:\/\//);
+		expect(() =>
+			validateBridgeConfig({ ...base, mode: 'local', target: 'nope' }, app)).toThrow(/not a url/);
+		expect(() =>
+			validateBridgeConfig(
+				{ ...base, mode: 'local', target: 'ws://127.0.0.1:8000/' },
+				app,
+			)).not.toThrow();
+	});
+});
+
+describe('bridge pipe bounds (security review)', () => {
+	class FakeUpstream {
+		constructor(url) {
+			this.url = url;
+			this.readyState = 0;
+			this.sent = [];
+			this.bufferedAmount = 0;
+			this.closed = false;
+			this.listeners = new Map();
+			FakeUpstream.last = this;
+		}
+
+		addEventListener(name, fn) {
+			this.listeners.set(name, fn);
+		}
+
+		emit(name, event = {}) {
+			this.listeners.get(name)?.(event);
+		}
+
+		send(frame) {
+			this.sent.push(frame);
+		}
+
+		close() {
+			this.closed = true;
+		}
+	}
+	const browser = (buffered = 0) => ({
+		sent: [],
+		closed: false,
+		send(frame) {
+			this.sent.push(frame);
+		},
+		close() {
+			this.closed = true;
+		},
+		getBufferedAmount: () => buffered,
+	});
+
+	it('queues before connect, relays after, and closes both on upstream backpressure', () => {
+		vi.stubGlobal('WebSocket', FakeUpstream);
+		try {
+			const page = browser();
+			const pipe = createBridgePipe(page, 'ws://up.example:8000/', () => {}, { backpressureLimit: 10 });
+			const up = FakeUpstream.last;
+			pipe.fromBrowser('early');
+			expect(up.sent).toEqual([]);
+			up.readyState = 1;
+			up.emit('open');
+			expect(up.sent).toEqual(['early']);
+			up.emit('message', { data: 'hello' });
+			expect(page.sent).toEqual(['hello']);
+			up.bufferedAmount = 11;
+			pipe.fromBrowser('too much');
+			expect(up.closed).toBe(true);
+			expect(page.closed).toBe(true);
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
+
+	it('closes both when the browser side stops draining', () => {
+		vi.stubGlobal('WebSocket', FakeUpstream);
+		try {
+			const page = browser(11);
+			createBridgePipe(page, 'ws://up.example:8000/', () => {}, { backpressureLimit: 10 });
+			const up = FakeUpstream.last;
+			up.readyState = 1;
+			up.emit('open');
+			up.emit('message', { data: 'x' });
+			expect(page.closed).toBe(true);
+			expect(up.closed).toBe(true);
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
+
+	it('reaps a pipe that goes quiet both ways', () => {
+		vi.useFakeTimers();
+		vi.stubGlobal('WebSocket', FakeUpstream);
+		try {
+			const page = browser();
+			const pipe = createBridgePipe(page, 'ws://up.example:8000/', () => {}, { idleMs: 1000 });
+			const up = FakeUpstream.last;
+			up.readyState = 1;
+			up.emit('open');
+			vi.advanceTimersByTime(900);
+			pipe.fromBrowser('still here');
+			vi.advanceTimersByTime(900);
+			expect(page.closed).toBe(false);
+			vi.advanceTimersByTime(1100);
+			expect(page.closed).toBe(true);
+			expect(up.closed).toBe(true);
+		} finally {
+			vi.unstubAllGlobals();
+			vi.useRealTimers();
+		}
 	});
 });

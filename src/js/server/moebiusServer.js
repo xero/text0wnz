@@ -16,7 +16,7 @@ import path from 'node:path';
 import { MoebiusAction, decodeFrame, ProtocolError } from '../core/index';
 import { createRoom } from './room.js';
 import { resolveBridgeTarget, createBridgePipe } from './bridge.js';
-import { ROOM_NAME_RE, authCooldownMs } from './utils.js';
+import { ROOM_NAME_RE, authCooldownMs, sanitize } from './utils.js';
 
 export const SERVER_LIMITS = Object.freeze({
 	// vanilla PASTE_AS_SELECTION frames run tens of MB (the ancestor's
@@ -59,10 +59,12 @@ export const roomNameFromPath = (pathname, defaultRoom) => {
  * @param {(room: ReturnType<typeof createRoom>) => void | Promise<void>} [config.onRoomEmpty]
  * @param {boolean} [config.debug]
  * @param {{cert: string, key: string} | undefined} [config.tls]
- * @param {(line: string) => void} [config.log]
+ * @param {(line: string) => void} [config.log] debug chatter
+ * @param {(line: string) => void} [config.audit] always-on lines an operator answers abuse reports with
  */
 export const createMoebiusServer = config => {
 	const log = config.log ?? (config.debug ? console.log : () => {});
+	const audit = config.audit ?? (line => console.log(`[Server] ${line}`));
 	// the default room rides persistence paths like any other; a name
 	// that skips the room-name grammar could escape ./sessions
 	const requestedDefault = config.sessionName ?? 'joint';
@@ -168,8 +170,10 @@ export const createMoebiusServer = config => {
 			ws.data.alive = true;
 			if (ws.data.kind === 'bridge') {
 				bridgeCount++;
-				log(`bridge open -> ${ws.data.targetUrl}`);
+				audit(`bridge open ${ws.data.requester} -> ${ws.data.targetUrl}`);
 				ws.data.pipe = createBridgePipe(ws, ws.data.targetUrl, log);
+				// the heartbeat reaps a dead browser side like any socket
+				sockets.add(ws);
 				return;
 			}
 			// cap on SOCKETS, not registered members: idle pre-CONNECTED
@@ -281,6 +285,7 @@ export const createMoebiusServer = config => {
 			if (ws.data.kind === 'bridge') {
 				bridgeCount = Math.max(0, bridgeCount - 1);
 				ws.data.pipe?.close();
+				audit(`bridge closed ${ws.data.requester} -> ${ws.data.targetUrl}`);
 				return;
 			}
 			if (ws.data.counted) {
@@ -377,12 +382,30 @@ export const createMoebiusServer = config => {
 			}
 		}
 		if (url.pathname === '/bridge') {
+			// a plain GET never resolves anything: the bridge is an
+			// upgrade or nothing, or a curl loop reads the host's resolver
+			if (!wantsUpgrade) {
+				return new Response('upgrade required', { status: 426 });
+			}
+			// who asked: the socket's address, and the proxy's claim of
+			// the real one when there is a proxy (the audit line carries
+			// both; trust is the operator's call)
+			const claimed = req.headers.get('x-real-ip');
+			// dual-stack listeners report v4 callers as ::ffff:a.b.c.d
+			const requester =
+				sanitize(
+					(server.requestIP(req)?.address ?? '?').replace(/^::ffff:/i, ''),
+					64,
+					false,
+				) +
+				(claimed ? ` (x-real-ip ${sanitize(claimed, 64, false)})` : '');
 			// reserve BEFORE the async DNS await: parallel requests in
 			// flight must not all pass the cap check
 			if (
 				bridgeCount + bridgePending >=
 				(bridgeConfig.maxConnections ?? 16)
 			) {
+				audit(`bridge busy, refused ${requester}`);
 				return new Response('bridge busy', { status: 503 });
 			}
 			bridgePending++;
@@ -393,11 +416,13 @@ export const createMoebiusServer = config => {
 			});
 			bridgePending = Math.max(0, bridgePending - 1);
 			if (!vet.ok) {
-				log(`bridge refused: ${vet.reason}`);
-				return new Response(vet.reason, { status: 403 });
+				// the reason names resolved addresses: log only, or the
+				// bridge doubles as a resolver for the host's own DNS
+				audit(`bridge refused ${requester}: ${sanitize(vet.reason, 200, false)}`);
+				return new Response('bridge refused', { status: 403 });
 			}
 			if (
-				server.upgrade(req, { data: { kind: 'bridge', targetUrl: vet.url, alive: true } })
+				server.upgrade(req, { data: { kind: 'bridge', targetUrl: vet.url, requester, alive: true } })
 			) {
 				return undefined;
 			}
