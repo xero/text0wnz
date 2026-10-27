@@ -12,10 +12,14 @@
 - `libtextmode/libtextmode.js` is a minimal shim: `compress`,
   `uncompress`, and `resize_canvas` transcribed verbatim from
   upstream (`resize_canvas` minus its electron window probe, dead in
-  node); `read_file` returns a fresh 80x25 document; `write_file` is
+  node); `read_file` returns a fresh 80x25 document carrying the
+  fork's `palette_4bit` as sixteen `{r, g, b}` objects in 8-bit
+  components (the fork ships these raw where vanilla sends 6-bit),
+  and, with `FIXTURE_FONT_BYTES=1` in the environment, `font_bytes`
+  as a node Buffer the way an `.xb` server file with an embedded
+  font arrives (it crosses the wire as Buffer JSON); `write_file` is
   a no-op.
 - `hourly_saver.js` is a no-op stub (the fixture never persists).
 - `start.js` boots the room at `/fixture` on the given port.
 
-Runtime: node (the upstream server targets node + the `ws` package,
-which rides devDependencies).
+Runtime: node and the `ws` package from this repo's devDependencies.

@@ -4,8 +4,13 @@
  * uncompress, and resize_canvas transcribed VERBATIM from upstream
  * (libtextmode.js / textmode.js; resize_canvas minus its electron
  * window probe, which is dead in node). read_file returns a fresh
- * 80x25 document with the upstream 4-bit palette in 6-bit components,
- * write_file is a no-op (the fixture never persists).
+ * 80x25 document shaped like the fork's own: `palette_4bit` as
+ * sixteen {r, g, b} objects in 8-BIT components (palette.js:2-19; the
+ * fork dropped vanilla's 6-bit palette and ships these raw), plus,
+ * when FIXTURE_FONT_BYTES is set, `font_bytes` as a node Buffer the
+ * way an .xb server file with an embedded font arrives (xbin.js:68
+ * via fs.readFile), which JSON.stringify turns into Buffer JSON on
+ * the wire. write_file is a no-op (the fixture never persists).
  *
  * Source: https://github.com/hlotvonen/moebiusXBIN (v2.2.0, commit
  * 3e792e5). Upstream license: Apache-2.0. Vendored for protocol
@@ -14,15 +19,25 @@
 
 /* eslint-disable */
 
-// upstream palette_4bit (palette.js), converted to the 6-bit
-// components join docs carry (upstream stores 8-bit and compresses
-// on save; join docs historically ship 6-bit)
-const palette_6bit = [
-	[0x00, 0x00, 0x00], [0x00, 0x00, 0x2a], [0x00, 0x2a, 0x00], [0x00, 0x2a, 0x2a],
-	[0x2a, 0x00, 0x00], [0x2a, 0x00, 0x2a], [0x2a, 0x15, 0x00], [0x2a, 0x2a, 0x2a],
-	[0x15, 0x15, 0x15], [0x15, 0x15, 0x3f], [0x15, 0x3f, 0x15], [0x15, 0x3f, 0x3f],
-	[0x3f, 0x15, 0x15], [0x3f, 0x15, 0x3f], [0x3f, 0x3f, 0x15], [0x3f, 0x3f, 0x3f],
+// upstream palette_4bit (palette.js), the join doc palette as sent
+const palette_4bit = [
+    { r: 0x00, g: 0x00, b: 0x00 }, { r: 0x00, g: 0x00, b: 0xaa },
+    { r: 0x00, g: 0xaa, b: 0x00 }, { r: 0x00, g: 0xaa, b: 0xaa },
+    { r: 0xaa, g: 0x00, b: 0x00 }, { r: 0xaa, g: 0x00, b: 0xaa },
+    { r: 0xaa, g: 0x55, b: 0x00 }, { r: 0xaa, g: 0xaa, b: 0xaa },
+    { r: 0x55, g: 0x55, b: 0x55 }, { r: 0x55, g: 0x55, b: 0xff },
+    { r: 0x55, g: 0xff, b: 0x55 }, { r: 0x55, g: 0xff, b: 0xff },
+    { r: 0xff, g: 0x55, b: 0x55 }, { r: 0xff, g: 0x55, b: 0xff },
+    { r: 0xff, g: 0xff, b: 0x55 }, { r: 0xff, g: 0xff, b: 0xff },
 ];
+
+// an 8x16 font blob the size the fork embeds (256 glyphs * 16 rows),
+// patterned so a receiver can prove it revived the bytes, not a stub
+function fixture_font_bytes() {
+    const bytes = Buffer.alloc(4096);
+    for (let i = 0; i < bytes.length; i++) bytes[i] = i & 0xff;
+    return bytes;
+}
 
 function compress(doc) {
     const compressed_data = { code: [], fg: [], bg: [] };
@@ -110,7 +125,8 @@ async function read_file(_file) {
         author: '',
         group: '',
         date: '',
-        palette: palette_6bit,
+        palette: [...palette_4bit],
+        font_bytes: process.env.FIXTURE_FONT_BYTES ? fixture_font_bytes() : undefined,
         font_name: 'IBM VGA',
         ice_colors: false,
         use_9px_font: false,

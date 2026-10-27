@@ -215,6 +215,21 @@ describe('palettes', () => {
 		]);
 	});
 
+	it('expands vanilla Moebius 6-bit {r,g,b} object palettes', () => {
+		// palette.js `ega` on the wire: objects, 6-bit; the vanilla
+		// server fixture pins the same end to end
+		const vanilla = [
+			{ r: 0, g: 0, b: 0 },
+			{ r: 0, g: 0, b: 42 },
+			{ r: 63, g: 63, b: 21 },
+		];
+		expect(paletteToRGB8(vanilla)).toEqual([
+			[0, 0, 0],
+			[0, 0, 170],
+			[255, 255, 85],
+		]);
+	});
+
 	it('emits 6-bit components for vanilla consumers', () => {
 		expect(paletteTo6Bit([[255, 0, 170]])).toEqual([[63, 0, 42]]);
 	});
