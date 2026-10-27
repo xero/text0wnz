@@ -30,6 +30,13 @@ Environment:
   ROOM_MAX_COLUMNS      Canvas resize width wall (default 1000; raise or lower)
   ROOM_MAX_ROWS         Canvas resize height wall (default 10000; raise or lower)
                         Walls gate resizes only; restored docs keep their size
+  BRIDGE                off (default) | local | port | allow: relay browsers on
+                        this host to plaintext desktop servers; every open,
+                        close, and refusal is logged with the requester
+  BRIDGE_TARGET         local mode's one fixed target (default ws://127.0.0.1:8000)
+  BRIDGE_PORT           port mode's one pinned port (default 8000)
+  BRIDGE_ALLOW          allow mode's host:port list, comma-separated
+  BRIDGE_MAX            concurrent bridged connections (default 16)
 
 Examples:
   bun server 8080 --ssl --session-name myart --debug

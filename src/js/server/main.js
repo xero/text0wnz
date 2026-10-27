@@ -23,7 +23,7 @@ if (process.argv[2] === 'healthcheck') {
 }
 import { callout } from './utils.js';
 import { createMoebiusServer } from './moebiusServer.js';
-import { bridgeConfigFromEnv } from './bridge.js';
+import { bridgeConfigFromEnv, validateBridgeConfig } from './bridge.js';
 import {
 	saveRoom,
 	backupRoom,
@@ -71,6 +71,17 @@ if (config.ssl) {
 	}
 }
 
+// a bad bridge env stops the boot with a sentence: a bridge aimed at
+// the app's own listener or its own /bridge path is never what the
+// operator meant
+const bridge = bridgeConfigFromEnv();
+try {
+	validateBridgeConfig(bridge, { port: config.port, plainPort: config.plainPort });
+} catch (error) {
+	console.error(`[Server] ${error.message}`);
+	process.exit(1);
+}
+
 const server = createMoebiusServer({
 	port: config.port,
 	plainPort: config.plainPort,
@@ -82,9 +93,12 @@ const server = createMoebiusServer({
 	maxRows: config.maxRows,
 	staticDir: config.staticDir,
 	debug: config.debug,
-	bridge: bridgeConfigFromEnv(),
+	bridge,
 	tls,
 	log: config.debug ? console.log : () => {},
+	// bridge opens, closes, and refusals print with or without --debug:
+	// a relay from this host's address must leave a trail
+	audit: line => console.log(`[Server] ${line}`),
 	onRoomCreate: restoreRoomState,
 	// an emptied dirty room persists before the server GCs it; a
 	// BLANK one (throwaway name, no art, no chat) leaves nothing,

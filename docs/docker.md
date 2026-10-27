@@ -139,6 +139,7 @@ The container implements a robust startup sequence:
 | `BRIDGE_PORT`    | The one port `port` mode dials                                                | `8000`                    |
 | `BRIDGE_TARGET`  | The fixed target `local` mode dials                                           | `ws://127.0.0.1:8000`     |
 | `BRIDGE_ALLOW`   | Comma-separated `host:port` list for `allow` mode                             | none                      |
+| `BRIDGE_MAX`     | Concurrent bridged connections                                                | `16`                      |
 
 ## Advanced Usage
 
