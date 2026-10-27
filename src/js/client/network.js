@@ -16,6 +16,12 @@ import {
 } from '../core/index';
 import { Load } from './file.js';
 import magicNumbers from './magicNumbers.js';
+import {
+	defaultServerUrl,
+	formatTarget,
+	parseTarget,
+	targetToUrl,
+} from './collabTarget.js';
 
 // blocked site data must not abort the boot: localStorage access
 // throws under some privacy modes, and every other module guards it
@@ -105,6 +111,13 @@ const createWorkerHandler = inputHandle => {
 	const btn9pt = $('nav9pt');
 	const btnIce = $('navICE');
 	const btnNet = $('networkButton');
+	const btnConnect = $('connectJoin');
+	const inServer = $('connectServer');
+	const inPass = $('connectPass');
+	const inNick = $('connectNick');
+	const inGroup = $('connectGroup');
+	const listRecent = $('connectRecent');
+	const connectStatus = $('connectStatus');
 
 	try {
 		State.worker = new Worker(new URL('./collabWorker.js', import.meta.url), { type: 'module' });
@@ -118,6 +131,7 @@ const createWorkerHandler = inputHandle => {
 		writeLocal('handle', handle);
 	}
 	inputHandle.value = handle;
+	let group = readLocal('group') ?? '';
 	let connected = false;
 	let collaborationMode = false;
 	// explicit server url (?server=ws://...): remote dial on explicit
@@ -144,6 +158,12 @@ const createWorkerHandler = inputHandle => {
 	let syncQueued = false;
 	let syncRetryTimer = 0;
 	let passwordTried = false;
+	// the attempt in flight: its dial url, and the typed spelling when
+	// it came from the connect form (null = the same-origin invitation)
+	let pendingUrl = explicitServer;
+	let pendingTarget = null;
+	let joining = false;
+	let sameOriginFound = false;
 	const extActive = () => serverCaps.includes(EXT_SUITE_CAP);
 
 	const onDisconnected = wasConnected => {
@@ -657,6 +677,7 @@ const createWorkerHandler = inputHandle => {
 				break;
 			case 'probeResult':
 				if (data.found) {
+					sameOriginFound = explicitServer === undefined;
 					showCollaborationChoice();
 				}
 				break;
@@ -664,7 +685,19 @@ const createWorkerHandler = inputHandle => {
 				await adoptSession(data);
 				break;
 			case 'refused': {
-				// password-gated rooms get one prompt and retry, then stay local
+				joining = false;
+				if (pendingTarget !== null) {
+					// the typed path keeps its form: back to it with the
+					// reason and the password field ready for another go
+					stayLocal();
+					openConnectModal(
+						'The server refused the connection. Check the password.',
+					);
+					inPass.focus();
+					break;
+				}
+				// the same-origin invitation gets one prompt and retry,
+				// then stays local
 				if (!passwordTried) {
 					passwordTried = true;
 					const pass = window.prompt(
@@ -686,6 +719,18 @@ const createWorkerHandler = inputHandle => {
 				}
 				break;
 			case 'closed':
+				if (joining && !connected) {
+					// a dial that died before the handshake used to leave
+					// the Joining modal up with nothing behind it
+					joining = false;
+					stayLocal();
+					if (pendingTarget !== null) {
+						openConnectModal(`Could not connect to ${pendingTarget}.`);
+					} else {
+						State.modal.error('Could not reach the collab server.');
+					}
+					break;
+				}
 				onDisconnected(data.wasConnected);
 				break;
 			case 'error':
@@ -794,6 +839,7 @@ const createWorkerHandler = inputHandle => {
 	const adoptSession = async data => {
 		connected = true;
 		collaborationMode = true;
+		joining = false;
 		applyDepth++;
 		serverCaps = Array.isArray(data.data.caps)
 			? data.data.caps.filter(cap => typeof cap === 'string')
@@ -841,7 +887,6 @@ const createWorkerHandler = inputHandle => {
 					);
 				}
 			}
-			btnNet.classList.add('hide');
 			websocketUI(true);
 			State.title = 'collab mode';
 		} catch (error) {
@@ -853,7 +898,7 @@ const createWorkerHandler = inputHandle => {
 		}
 	};
 
-	const joinCollaboration = pass => {
+	const joinCollaboration = (pass, url = pendingUrl) => {
 		// callers include DOM click handlers: only a real string is a
 		// password (a PointerEvent breaks the worker clone)
 		const offered = typeof pass === 'string' ? pass : '';
@@ -862,14 +907,16 @@ const createWorkerHandler = inputHandle => {
 			// after one typo, turning every later refusal into a dead alert
 			passwordTried = false;
 		}
+		pendingUrl = url;
+		joining = true;
 		State.modal.loading('Joining the collab session...');
 		State.worker.postMessage({
 			cmd: 'connect',
 			nick: handle,
-			group: '',
+			group,
 			pass: offered,
 			caps: [EXT_SUITE_CAP],
-			url: explicitServer,
+			url,
 		});
 	};
 
@@ -879,11 +926,79 @@ const createWorkerHandler = inputHandle => {
 		connected = false;
 		websocketUI(false);
 		State.worker.postMessage({ cmd: 'disconnect' });
-		btnNet.classList.remove('hide');
 	};
+
+	const RECENT_KEY = 'collabServers';
+	const RECENT_LIMIT = 8;
+	const readRecent = () => {
+		try {
+			const list = JSON.parse(readLocal(RECENT_KEY) ?? '[]');
+			return Array.isArray(list) ? list.filter(s => typeof s === 'string') : [];
+		} catch {
+			return [];
+		}
+	};
+	const remember = spelling => {
+		const list = [spelling, ...readRecent().filter(s => s !== spelling)];
+		writeLocal(RECENT_KEY, JSON.stringify(list.slice(0, RECENT_LIMIT)));
+	};
+
+	const setConnectStatus = text => {
+		connectStatus.textContent = text;
+		connectStatus.classList.toggle('hide', text === '');
+	};
+
+	/**
+	 * The manual path: any server, any room, Moebius included. The
+	 * address prefills from the query string, the last one used, or
+	 * the same-origin server the probe found, and a half-typed one is
+	 * never clobbered.
+	 */
+	const openConnectModal = (status = '') => {
+		const recent = readRecent();
+		listRecent.innerHTML = '';
+		for (const entry of recent) {
+			const option = document.createElement('option');
+			option.value = entry;
+			listRecent.appendChild(option);
+		}
+		if (inServer.value === '') {
+			inServer.value =
+				explicitServer ??
+				recent[0] ??
+				(sameOriginFound ? defaultServerUrl(window.location) : '');
+		}
+		inNick.value = handle;
+		inGroup.value = group;
+		setConnectStatus(status);
+		State.modal.open('connect');
+		inServer.focus();
+	};
+
+	const connectFromModal = () => {
+		const target = parseTarget(inServer.value);
+		if (!target) {
+			setConnectStatus('Enter a server as host:port/room, or a ws:// url.');
+			inServer.focus();
+			return;
+		}
+		const nick = inNick.value.trim() || 'Anonymous';
+		setHandle(nick);
+		inputHandle.value = nick;
+		group = inGroup.value.trim();
+		writeLocal('group', group);
+		const spelling = formatTarget(target);
+		remember(spelling);
+		pendingTarget = spelling;
+		joinCollaboration(inPass.value, targetToUrl(target));
+	};
+	btnConnect.addEventListener('click', connectFromModal);
+	for (const field of [inServer, inPass, inNick, inGroup]) {
+		onEnter(field, connectFromModal);
+	}
 	// bound once, not per stayLocal call, or listeners stack
 	btnNet.addEventListener('click', _ => {
-		showCollaborationChoice();
+		openConnectModal();
 	});
 
 	const setHandle = newHandle => {
@@ -896,7 +1011,7 @@ const createWorkerHandler = inputHandle => {
 
 	const sendChat = text => {
 		if (connected) {
-			sendLive(MoebiusAction.CHAT, { nick: handle, group: '', text });
+			sendLive(MoebiusAction.CHAT, { nick: handle, group, text });
 			// the server excludes the sender: render our own line locally
 			State.chat.addConversation(handle, text, false);
 		}
@@ -946,7 +1061,10 @@ const createWorkerHandler = inputHandle => {
 	}
 
 	// wrapped: the click event must never become the password argument
-	btnJoin.addEventListener('click', () => joinCollaboration());
+	btnJoin.addEventListener('click', () => {
+		pendingTarget = null;
+		joinCollaboration(undefined, explicitServer);
+	});
 	btnLocal.addEventListener('click', stayLocal);
 
 	return {

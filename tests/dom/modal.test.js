@@ -45,6 +45,7 @@ describe('Modal DOM Tests', () => {
 			'archiveModal',
 			'pluginModal',
 			'choiceModal',
+			'connectModal',
 			'updateModal',
 			'loadingModal',
 			'warningModal',

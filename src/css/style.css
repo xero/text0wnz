@@ -2026,6 +2026,7 @@
 	}
 	#aboutModal,
 	#resizeModal,
+	#connectModal,
 	#sauceModal,
 	#loadingModal,
 	#choiceModal,
@@ -2065,11 +2066,27 @@
 		}
 		input[type='text'],
 		input[type='number'],
+		input[type='password'],
 		textarea {
 			@apply px-3 py-1 h-fit mr-2 my-2 bg-midnight text-fg;
 		}
 	}
-	#resizeModal {
+	#connectModal {
+		article {
+			@apply pb-0;
+		}
+		article + article {
+			@apply pt-0;
+		}
+		#connectServer {
+			@apply min-w-[18rem];
+		}
+		#connectStatus {
+			@apply bg-editor text-cyber pt-0 pb-5;
+		}
+	}
+	#resizeModal,
+	#connectModal {
 		header,
 		section,
 		nav,
@@ -2098,6 +2115,7 @@
 			}
 			input[type='text'],
 			input[type='number'],
+			input[type='password'],
 			textarea {
 				@apply px-3 py-1 h-fit mr-2 my-2 bg-midnight text-fg;
 			}

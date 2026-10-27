@@ -133,8 +133,8 @@
 								</svg>
 								<span><b id="sauceInfoTitle">Untitled</b><small id="sauceInfoByline">anonymous</small></span>
 							</button>
-							<button id="networkButton" class="hide" aria-label="Join Collab">
-								<svg alt="Join Collab" aria-label="Join Collab">
+							<button id="networkButton" class="excludedForWebsocket" title="Connect to a collab server" aria-label="Connect to a collab server">
+								<svg alt="Connect to a collab server" aria-label="Connect to a collab server">
 									<use href="img/icons.svg#collab"></use>
 								</svg>
 							</button>
@@ -1093,6 +1093,49 @@
 							<use href="img/icons.svg#chatLeave"></use>
 						</svg>
 						Stay Local
+					</button>
+				</nav>
+			</section>
+			<section id="connectModal">
+				<header>
+					<h2>Connect to a server</h2>
+				</header>
+				<section>
+					<article>
+						<label for="connectServer">
+							Server:
+							<input id="connectServer" type="text" autocapitalize="off" autocomplete="off" enterkeyhint="go" list="connectRecent" placeholder="host:port/room" spellcheck="false"/>
+							<datalist id="connectRecent"></datalist>
+						</label>
+						<label for="connectPass">
+							Password:
+							<input id="connectPass" type="password" autocomplete="off" enterkeyhint="go"/>
+						</label>
+					</article>
+					<article>
+						<label for="connectNick">
+							Handle:
+							<input id="connectNick" type="text" autocomplete="off" enterkeyhint="go" maxlength="14" spellcheck="false"/>
+						</label>
+						<label for="connectGroup">
+							Group:
+							<input id="connectGroup" type="text" autocomplete="off" enterkeyhint="go" maxlength="20" spellcheck="false"/>
+						</label>
+					</article>
+					<p id="connectStatus" class="hide" aria-live="polite"></p>
+				</section>
+				<nav>
+					<button id="connectJoin" aria-label="Connect">
+						<svg>
+							<use href="img/icons.svg#collab"></use>
+						</svg>
+						Connect
+					</button>
+					<button class="close" aria-label="Cancel">
+						<svg>
+							<use href="img/icons.svg#cancel"></use>
+						</svg>
+						Cancel
 					</button>
 				</nav>
 			</section>

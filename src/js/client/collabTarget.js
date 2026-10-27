@@ -1,0 +1,105 @@
+// @ts-check
+/**
+ * Server address grammar shared by the page and the transport worker:
+ * `host[:port][/room]` the way Moebius's connect dialog reads it, or a
+ * full ws:// or wss:// url. A bare address assumes plaintext ws on
+ * port 8000 (the Moebius default); port 443 alone means wss, since
+ * nothing serves plaintext websockets there. Pure: no DOM, no sockets,
+ * so both sides parse one way and the unit tests need no browser.
+ */
+
+export const MOEBIUS_PORT = 8000;
+
+/**
+ * @typedef {object} CollabTarget
+ * @property {'ws:' | 'wss:'} protocol
+ * @property {string} host hostname, or a bracketed v6 literal
+ * @property {number} port
+ * @property {string} path '' or a leading-slash room path
+ */
+
+/**
+ * @param {unknown} input
+ * @returns {CollabTarget | null} null when nothing dialable was typed
+ */
+export const parseTarget = input => {
+	if (typeof input !== 'string') {
+		return null;
+	}
+	const text = input.trim();
+	if (text === '') {
+		return null;
+	}
+	const explicit = (/^wss?:\/\//i).test(text);
+	if (!explicit && (/^[a-z][a-z0-9+.-]*:\/\//i).test(text)) {
+		// a pasted http(s) url is not a websocket endpoint; parsing it
+		// as a bare host would dial a host named 'http'
+		return null;
+	}
+	let url;
+	try {
+		url = new URL(explicit ? text : `ws://${text}`);
+	} catch {
+		return null;
+	}
+	if (!url.hostname) {
+		return null;
+	}
+	// the URL parser blanks a port that equals the scheme default
+	// (ws://h:80 reads back as ''), which would turn a typed :80 into
+	// the Moebius default; read the port off the authority instead
+	const authority = text.replace(/^wss?:\/\//i, '').split('/')[0];
+	const typed = authority.match(/:(\d{1,5})$/);
+	const specified = typed ? Number(typed[1]) : 0;
+	let protocol = /** @type {'ws:' | 'wss:'} */ (
+		url.protocol === 'wss:' ? 'wss:' : 'ws:'
+	);
+	let port = specified;
+	if (port <= 0 || port > 65535) {
+		port = explicit ? (protocol === 'wss:' ? 443 : 80) : MOEBIUS_PORT;
+	}
+	if (!explicit && port === 443) {
+		protocol = 'wss:';
+	}
+	const path = url.pathname === '/' ? '' : url.pathname.replace(/\/+$/, '');
+	return { protocol, host: url.hostname, port, path };
+};
+
+/** @param {CollabTarget} target */
+export const targetToUrl = target =>
+	`${target.protocol}//${target.host}:${target.port}${target.path || '/'}`;
+
+/**
+ * The shortest spelling that parses back to the same target: what the
+ * recent-servers list stores and the address field shows.
+ * @param {CollabTarget} target
+ */
+export const formatTarget = target => {
+	const { protocol, host, port, path } = target;
+	if (protocol === 'wss:') {
+		return `wss://${host}${port === 443 ? '' : `:${port}`}${path}`;
+	}
+	if (port === 443) {
+		// bare :443 would read back as wss; keep the scheme explicit
+		return `ws://${host}:443${path}`;
+	}
+	return `${host}${port === MOEBIUS_PORT ? '' : `:${port}`}${path}`;
+};
+
+/**
+ * The room path as the server's bridge wants it: no slash, '' for the
+ * default room.
+ * @param {CollabTarget} target
+ */
+export const targetRoom = target => target.path.replace(/^\/+/, '');
+
+/**
+ * The same-origin default: the page's own host, matching scheme, at
+ * the /server path the deployed proxies forward.
+ * @param {{protocol: string, hostname: string, port: string}} location
+ */
+export const defaultServerUrl = location => {
+	const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+	const port = location.port || (location.protocol === 'https:' ? '443' : '80');
+	return `${protocol}//${location.hostname}:${port}/server`;
+};
