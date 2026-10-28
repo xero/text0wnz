@@ -289,44 +289,13 @@ const openHandler = (file, opts = {}) => {
 					State.modal.close();
 				}
 			};
-			const isSceneFile =
-				file.name.toLowerCase().endsWith('.nfo') ||
-				file.name.toLowerCase().endsWith('.diz');
-			// an archive browser's font hint beats the NFO heuristic (an
-			// amiga diz wants Topaz, not Topaz-437) but never SAUCE: the
-			// author's record wins over the source's house style
 			// a stale open's font must never land on the winning doc
 			const fontWanted = () => seq === openSeq;
-			if (isSceneFile && !opts.font) {
+			// XB files load their own font inside applyData
+			const font = Load.fontForFile(file.name, fontName, opts.font);
+			if (font) {
 				await State.textArtCanvas.setFont(
-					magicNumbers.NFO_FONT,
-					applyData,
-					undefined,
-					fontWanted,
-				);
-				return; // setFont runs applyData
-			}
-			// both aliases, split like the loader's own dispatch, or an
-			// archive font hint stomps the embedded XBIN font
-			const ext = file.name.split('.').pop().toLowerCase();
-			const isXBFile = ext === 'xb' || ext === 'xbin';
-			if (fontName && !isXBFile) {
-				// XB files handle font loading internally
-				const appFontName = Load.sauceToAppFont(fontName.trim());
-				if (appFontName) {
-					await State.textArtCanvas.setFont(
-						appFontName,
-						applyData,
-						undefined,
-						fontWanted,
-					);
-					closeModal();
-					return; // setFont runs applyData
-				}
-			}
-			if (opts.font && !isXBFile) {
-				await State.textArtCanvas.setFont(
-					opts.font,
+					font,
 					applyData,
 					undefined,
 					fontWanted,

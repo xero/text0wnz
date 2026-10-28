@@ -117,10 +117,10 @@ File operations allowing you to create, open, and save artwork in multiple file 
 - Zip and amiga `.lha`/`.lzh` archives unpack in the browser: a lone
   openable file loads straight away, several raise a picker. Amiga
   archives open as latin-1 in Topaz+ 1200, zips keep CP437 defaults
-- `.nfo` and `.diz` files open in Topaz-437 8x16, even when they carry
-  a SAUCE font record. Opened from an archive browser, the browser's
-  font hint replaces that default, and a SAUCE font record beats the
-  hint
+- A SAUCE font record wins on open. `.nfo` and `.diz` files without one
+  fall back to Topaz-437 8x16, the font most of the scene drew them in;
+  opened from an archive browser, the browser's font hint replaces that
+  fallback
 - Export options for all supported types and PNG
 - Before an export that cannot hold everything in your piece (unicode glyphs, extended colors, blink), a dialog lists exactly what will be lost so you can decide
 - XBin exports offer an RLE compression toggle

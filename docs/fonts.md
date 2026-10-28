@@ -81,7 +81,7 @@ Saving as `.ans`, `.utf8.ans`, `.bin`, or `.tnd` writes the current font into th
 
 **Other code pages.** CP737, CP775, CP851, CP853, CP855, CP857, CP860, CP861, CP862, CP863, CP864, CP865, CP866, and CP869 have no SAUCE name in the editor. They save as plain `IBM VGA`, which reopens as CP437 8x16, and the spec's `IBM VGA 866` style names for them are not recognised on open. Pick the code page by hand after opening.
 
-**Unrecognised names.** A name the reader does not know leaves the current font in place. On `.nfo` and `.diz` files opened outside an archive, the Topaz 437 default is applied before any SAUCE name is read.
+**Unrecognised names.** A name the reader does not know leaves the current font in place. On `.nfo` and `.diz` files whose SAUCE names no font, or names one the reader does not know, the Topaz 437 default applies; a recognised SAUCE name wins.
 
 > [!NOTE]
 > Two names do not round-trip. `Zoids 8x8` saves as `Zoids` but the reader expects `Zoids 8x8`, and `FM-TOWNS 8x8` saves as `FM-TOWNS` but the reader expects `FM-TOWNSx`. A file saved in either font reopens without a font switch; select the font again.
