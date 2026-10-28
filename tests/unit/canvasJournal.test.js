@@ -126,6 +126,20 @@ describe('canvas autosave journal wiring', () => {
 		);
 	});
 
+	it('restores what boot found, whatever the session writes first', async () => {
+		// the restore runs after boot work that keyframes (its own
+		// setIceColors does), so it must see the journal as the last
+		// session left it: empty here, not this session's keyframe
+		const canvas = await makeCanvas();
+		canvas.setIceColors(true);
+		canvas.startUndo();
+		canvas.draw(cb => cb(219, 14, 1, 3, 2));
+		canvas.startUndo();
+		await settle();
+		expect(await canvas.loadJournalSnapshot()).not.toBeNull();
+		expect(await canvas.loadBootSnapshot()).toBeNull();
+	});
+
 	it('undo rewrites the keyframe so replay matches the rewound doc', async () => {
 		const canvas = await makeCanvas();
 		canvas.startUndo();

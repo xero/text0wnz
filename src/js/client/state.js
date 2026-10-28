@@ -472,7 +472,7 @@ class StateManager {
 					// re-seeds the journal via setDocData's keyframe trigger.
 					setTimeout(async () => {
 						const journalData =
-							await this.state.textArtCanvas?.loadJournalSnapshot?.();
+							await this.state.textArtCanvas?.loadBootSnapshot?.();
 
 						if (journalData?.doc && this.state.textArtCanvas) {
 							this.state.textArtCanvas.setDocData(journalData.doc);

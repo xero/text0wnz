@@ -49,6 +49,14 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	// doc-level changes and undo/redo write a fresh keyframe.
 	// Collab sessions never journal; the server owns that doc.
 	const journal = createJournalStore();
+	// What the previous session left, read before this session can queue
+	// a keyframe over it: the restore runs after boot work that already
+	// keyframes the blank boot doc (its own setIceColors does), and the
+	// store runs calls in the order they arrive
+	let bootJournal = journal.open().catch(error => {
+		console.warn('[Canvas] journal read failed:', error);
+		return null;
+	});
 	let keyframeTimer = null;
 	// The first keyframe of a session supersedes whatever the journal
 	// held before (a previous session, a torn tail): strokes may only
@@ -1915,26 +1923,44 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	 * (see core/migrate.ts).
 	 */
 	/**
-	 * Restore source for state.js: replay the autosave journal and hand
-	 * back the NATIVE doc for setDocData. Projecting through v3ToU16
-	 * here flattened animations to frame 0 and dropped truecolor and
-	 * unicode, and the restore's own keyframe trigger then rewrote the
-	 * journal with the flattened doc, destroying the autosave. Returns
-	 * null when the journal is empty or unreadable (then the legacy
-	 * IndexedDB snapshot is the fallback).
+	 * Replays to the NATIVE doc for setDocData: projecting through
+	 * v3ToU16 would flatten animations to frame 0 and drop truecolor and
+	 * unicode, and the restore's own keyframe would then write that loss
+	 * back into the journal.
 	 */
+	const snapshotOf = async bytes => {
+		if (!bytes || bytes.length === 0) {
+			return null;
+		}
+		const replay = await replayJournal(bytes);
+		return {
+			doc: replay.doc,
+			fontBytes: replay.fontBytes,
+			fontHeight: replay.fontHeight,
+		};
+	};
+
+	/** The journal as it stands now. */
 	const loadJournalSnapshot = async () => {
 		try {
-			const bytes = await journal.open();
-			if (!bytes || bytes.length === 0) {
-				return null;
-			}
-			const replay = await replayJournal(bytes);
-			return {
-				doc: replay.doc,
-				fontBytes: replay.fontBytes,
-				fontHeight: replay.fontHeight,
-			};
+			return await snapshotOf(await journal.open());
+		} catch (error) {
+			console.warn('[Canvas] journal restore failed:', error);
+			return null;
+		}
+	};
+
+	/**
+	 * Restore source for state.js: the journal exactly as the previous
+	 * session left it, whatever this session has written since. Taken
+	 * once; null (empty or unreadable) sends the restore to the legacy
+	 * IndexedDB snapshot.
+	 */
+	const loadBootSnapshot = async () => {
+		const pending = bootJournal;
+		bootJournal = null;
+		try {
+			return await snapshotOf(await pending);
 		} catch (error) {
 			console.warn('[Canvas] journal restore failed:', error);
 			return null;
@@ -2043,6 +2069,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		getBaudOffsets: getBaudOffsets,
 		setBaudReveal: setBaudReveal,
 		loadJournalSnapshot: loadJournalSnapshot,
+		loadBootSnapshot: loadBootSnapshot,
 		setMirrorMode: setMirrorMode,
 		getMirrorMode: getMirrorMode,
 		getMirrorX: getMirrorX,
