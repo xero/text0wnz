@@ -616,7 +616,8 @@ const createAsciiArena = ({ openFile, onExit }) => {
 				return;
 			}
 			const isZip = (/\.zip$/i).test(colly.filename);
-			const entries = (isZip ? readZipEntries : readLhaEntries)(bytes)
+			// arena zips come off amigas: latin-1 names, like the lha ones
+			const entries = (isZip ? readZipEntries(bytes, 'latin1') : readLhaEntries(bytes))
 				.filter(e => isOpenableName(e.name));
 			const extract = entry => {
 				return isZip ? extractZipEntry(bytes, entry) : extractLhaEntry(bytes, entry);

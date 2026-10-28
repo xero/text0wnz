@@ -69,4 +69,51 @@ describe('zip reader', () => {
 			/exceeds|inflated/,
 		);
 	});
+
+	describe('names', () => {
+		const raw = (...parts: Array<string | number>): Uint8Array =>
+			Uint8Array.from(
+				parts.flatMap(part =>
+					typeof part === 'number'
+						? [part]
+						: Array.from(part, c => c.charCodeAt(0)),
+				),
+			);
+		const one = Uint8Array.of(65);
+
+		it('reads DOS names as cp437 and amiga names as latin-1', async () => {
+			const zip = await buildZip([
+				{ name: '', rawName: raw('X', 0xc5, 'C.NFO'), data: one, store: true },
+			]);
+			expect(readZipEntries(zip)[0].name).toBe('X┼C.NFO');
+			expect(readZipEntries(zip, 'latin1')[0].name).toBe('XÅC.NFO');
+		});
+
+		it('matches a listing that spells high bytes in another codepage', async () => {
+			// the 16colo.rs API decodes names as CP866: 0xEE reads ю there,
+			// ε in cp437
+			const zip = await buildZip([
+				{ name: '', rawName: raw('I', 0xee, '.TXT'), data: one, store: true },
+				{
+					name: '',
+					rawName: raw('FILE_ID', 0xff, '.DIZ'),
+					data: one,
+					store: true,
+				},
+			]);
+			const entries = readZipEntries(zip);
+			expect(findZipEntry(entries, 'Iю.TXT')?.name).toBe('Iε.TXT');
+			expect(findZipEntry(entries, 'FILE_ID\u00a0.DIZ')?.name).toBe(
+				'FILE_ID\u00a0.DIZ',
+			);
+		});
+
+		it('refuses to guess between names that differ only in high bytes', async () => {
+			const zip = await buildZip([
+				{ name: '', rawName: raw('I', 0xee, '.TXT'), data: one, store: true },
+				{ name: '', rawName: raw('I', 0xe0, '.TXT'), data: one, store: true },
+			]);
+			expect(findZipEntry(readZipEntries(zip), 'Iю.TXT')).toBeNull();
+		});
+	});
 });

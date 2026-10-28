@@ -50,7 +50,14 @@ const crc32 = (bytes: Uint8Array): number => {
 
 /** build a real little zip with the given entries */
 export const buildZip = async (
-	files: Array<{ name: string; data: Uint8Array; store?: boolean }>,
+	// rawName writes the name bytes as-is without the UTF-8 flag, the way
+	// DOS and amiga packers did
+	files: Array<{
+		name: string;
+		data: Uint8Array;
+		store?: boolean;
+		rawName?: Uint8Array;
+	}>,
 ): Promise<Uint8Array> => {
 	const chunks: number[] = [];
 	const central: number[] = [];
@@ -59,13 +66,14 @@ export const buildZip = async (
 	const push32 = (arr: number[], v: number) =>
 		arr.push(v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >>> 24) & 0xff);
 	for (const file of files) {
-		const nameBytes = new TextEncoder().encode(file.name);
+		const nameBytes = file.rawName ?? new TextEncoder().encode(file.name);
+		const flags = file.rawName ? 0 : 0x800;
 		const method = file.store ? 0 : 8;
 		const packed = file.store ? file.data : await deflateRaw(file.data);
 		const offset = chunks.length;
 		push32(chunks, 0x04034b50);
 		push16(chunks, 20); // version needed
-		push16(chunks, 0x800); // utf-8 names
+		push16(chunks, flags);
 		push16(chunks, method);
 		push16(chunks, 0); // time
 		push16(chunks, 0); // date
@@ -78,7 +86,7 @@ export const buildZip = async (
 		push32(central, 0x02014b50);
 		push16(central, 20);
 		push16(central, 20);
-		push16(central, 0x800);
+		push16(central, flags);
 		push16(central, method);
 		push16(central, 0);
 		push16(central, 0);

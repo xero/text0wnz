@@ -7,7 +7,8 @@
  * else throws a CodecError).
  */
 
-import { CodecError, crc32 } from './util.js';
+import { cp437ToUnicode } from '../cp437.js';
+import { CodecError, bytesToString, crc32 } from './util.js';
 import { inflateRaw } from './flate.js';
 
 const EOCD_SIG = 0x06054b50;
@@ -34,17 +35,38 @@ export interface ZipEntry {
 	crc32: number;
 }
 
-const decodeName = (bytes: Uint8Array, flags: number): string =>
-	// bit 11 = UTF-8 name; everything else in old packs is cp437-ish,
-	// where latin1 keeps the bytes readable enough for matching.
+/**
+ * How names without the UTF-8 flag (bit 11) decode: DOS packers wrote
+ * cp437, amiga ones latin-1.
+ */
+export type ZipNameCharset = 'cp437' | 'latin1';
+
+const decodeName = (
+	bytes: Uint8Array,
+	flags: number,
+	charset: ZipNameCharset,
+): string => {
+	let name = '';
+	if (flags & 0x800) {
+		name = new TextDecoder('utf-8').decode(bytes);
+	} else if (charset === 'latin1') {
+		// true ISO-8859-1; TextDecoder('latin1') means windows-1252
+		name = bytesToString(bytes, 0, bytes.length);
+	} else {
+		for (const byte of bytes) {
+			name += String.fromCodePoint(cp437ToUnicode(byte));
+		}
+	}
 	// DOS-era packers wrote backslash separators, which defeated
 	// basename matching (lha.ts converts them; PabloDraw trims both)
-	new TextDecoder(flags & 0x800 ? 'utf-8' : 'latin1')
-		.decode(bytes)
-		.replaceAll('\\', '/');
+	return name.replaceAll('\\', '/');
+};
 
 /** parse the central directory into an entry list */
-export const readZipEntries = (bytes: Uint8Array): ZipEntry[] => {
+export const readZipEntries = (
+	bytes: Uint8Array,
+	charset: ZipNameCharset = 'cp437',
+): ZipEntry[] => {
 	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 	// EOCD: scan backward over the (max 64KB) trailing comment
 	const floor = Math.max(0, bytes.length - 65557);
@@ -103,6 +125,7 @@ export const readZipEntries = (bytes: Uint8Array): ZipEntry[] => {
 			name: decodeName(
 				bytes.subarray(offset + 46, offset + 46 + nameLength),
 				flags,
+				charset,
 			),
 			method,
 			compressedSize,
@@ -173,15 +196,31 @@ export const extractZipEntry = async (
 	return verified(inflated);
 };
 
-/** find an entry by exact name, then by basename (packs may nest) */
+// every non-ASCII character becomes one wildcard slot
+const skeleton = (name: string): string =>
+	name.replace(/[^\x00-\x7f]/gu, '\u0000').toLowerCase();
+
+const sameName = (entryName: string, wanted: string): boolean =>
+	entryName === wanted || entryName.endsWith(`/${wanted}`);
+
+/**
+ * Find an entry by exact name, then by basename (packs may nest). A
+ * listing can spell high bytes in another codepage than the pack (the
+ * 16colo.rs API decodes them as CP866), so a last pass lets non-ASCII
+ * characters stand in for each other, and takes only a unique fit.
+ */
 export const findZipEntry = (
 	entries: ZipEntry[],
 	name: string,
 ): ZipEntry | null => {
 	const lower = name.toLowerCase();
-	return (
-		entries.find(entry => entry.name.toLowerCase() === lower) ??
-		entries.find(entry => entry.name.toLowerCase().endsWith(`/${lower}`)) ??
-		null
+	const exact = entries.find(entry =>
+		sameName(entry.name.toLowerCase(), lower),
 	);
+	if (exact) {
+		return exact;
+	}
+	const wanted = skeleton(name);
+	const fits = entries.filter(entry => sameName(skeleton(entry.name), wanted));
+	return fits.length === 1 ? fits[0] : null;
 };
