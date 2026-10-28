@@ -3,7 +3,7 @@
  * and hardened failure modes. Fixtures are built in-test with the same
  * CompressionStream the extractor inverts.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
 	extractZipEntry,
 	findZipEntry,
@@ -172,6 +172,24 @@ describe('zip reader', () => {
 			expect(piece.damage).toBe(
 				'ROT.ANS is damaged: showing the first 9 of 23 bytes',
 			);
+		});
+
+		it('salvages the same with no native stream to try first', async () => {
+			const { zip, entry } = await only({
+				name: 'ROT.ANS',
+				data: ascii('GOOD PART, then the rot'),
+				packed: Uint8Array.from([...stored(false, 'GOOD PART'), 0xff, 0xff]),
+			});
+			vi.stubGlobal('DecompressionStream', undefined);
+			try {
+				const piece = await salvageZipEntry(zip, entry);
+				expect(String.fromCharCode(...piece.bytes)).toBe('GOOD PART');
+				expect(piece.damage).toBe(
+					'ROT.ANS is damaged: showing the first 9 of 23 bytes',
+				);
+			} finally {
+				vi.unstubAllGlobals();
+			}
 		});
 
 		it('opens junk after a whole stream as clean', async () => {

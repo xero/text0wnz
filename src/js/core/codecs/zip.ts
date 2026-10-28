@@ -15,7 +15,7 @@ import {
 	crc32,
 	salvaged,
 } from './util.js';
-import { inflateRaw, inflateRawSalvage } from './flate.js';
+import { inflateRaw, inflateRawNative, inflateRawSalvage } from './flate.js';
 import { explode, unshrink } from './pkzip1.js';
 
 const EOCD_SIG = 0x06054b50;
@@ -238,10 +238,11 @@ export const extractZipEntry = async (
 
 /**
  * Open an entry in spite of damage, for the archive browsers: decades
- * of copying have left bit rot in scene packs. Each entry decodes once,
- * as far as its stream allows, and the checksum decides how much to
- * trust it; deflate tries the fast native stream first and falls back
- * to the plain inflater, which stops exactly where the damage starts.
+ * of copying have left bit rot in scene packs. Each entry decodes as far
+ * as its stream allows, and the checksum decides how much to trust it;
+ * deflate tries the fast native stream first and, only where that
+ * refuses or is missing, the plain inflater, which stops exactly where
+ * the damage starts.
  * Encryption, oversize entries, and a missing local header still
  * refuse, since there is nothing honest to show.
  */
@@ -252,17 +253,11 @@ export const salvageZipEntry = async (
 	const { data, short } = locate(bytes, entry);
 	let out: Uint8Array;
 	if (entry.method === 8) {
-		if (!short) {
-			try {
-				const quick = await inflateRaw(data, entry.size);
-				if (quick.length === entry.size && crc32(quick) === entry.crc32) {
-					return { bytes: quick, damage: null };
-				}
-			} catch {
-				// the plain inflater below decodes what it can
-			}
-		}
-		out = inflateRawSalvage(data, entry.size).bytes;
+		// a stream the engine decodes whole reads the same everywhere, so
+		// its bytes stand, checksum and all; where the engine refuses or
+		// has no stream, the plain inflater decodes what it can, once
+		const native = short ? null : await inflateRawNative(data, entry.size);
+		out = native ?? inflateRawSalvage(data, entry.size).bytes;
 	} else {
 		out = decodeLocal(data, entry, true);
 	}

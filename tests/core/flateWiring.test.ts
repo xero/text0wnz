@@ -6,10 +6,12 @@
  */
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import {
+	deflateRawSync,
 	gunzip,
 	gzip,
 	gzipSync,
 	inflateRaw,
+	inflateRawNative,
 } from '../../src/js/core/codecs/flate.js';
 import { CodecError } from '../../src/js/core/codecs/util.js';
 import {
@@ -181,5 +183,15 @@ describe('one error contract', () => {
 		await expect(
 			inflateRaw(Uint8Array.of(0xff, 0xff, 0xff)),
 		).rejects.toBeInstanceOf(CodecError);
+	});
+});
+
+describe('inflateRawNative, for callers with their own fallback', () => {
+	it('answers null where the engine has no stream or refuses the data', async () => {
+		const data = sample();
+		expect(await inflateRawNative(deflateRawSync(data))).toEqual(data);
+		expect(await inflateRawNative(Uint8Array.of(0xff, 0xff, 0xff))).toBeNull();
+		vi.stubGlobal('DecompressionStream', undefined);
+		expect(await inflateRawNative(deflateRawSync(data))).toBeNull();
 	});
 });
