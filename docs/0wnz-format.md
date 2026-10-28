@@ -36,7 +36,11 @@ UTF-8 JSON document. The codec is extension-agnostic; the editor keys
 on `.0wnz` when opening and saving. Every number is a plain JSON
 number, every byte array is base64, and the cell planes are
 little-endian regardless of the saving host, so the same document
-saves byte for byte on every platform.
+writes the same JSON on every platform. The gzip bytes around it can
+differ between engines. Each native compressor writes its own DEFLATE
+output, and where the engine has no working compression stream, the
+fallback in `src/js/core/codecs/flate.ts` writes fixed-Huffman blocks,
+or stored ones for incompressible input. Any gzip reader opens either.
 
 ## Envelope Fields
 

@@ -318,7 +318,7 @@ Benefits:
 **Configuration** (`config.js`)
 
 - Parse CLI arguments
-- Parse server environment variables (room passwords, resize walls)
+- Parse server environment variables (room passwords, resize walls, the guess budget in `ROOM_MAX_GUESSES`, and trusted proxies in `TRUST_PROXY`)
 - Provide defaults
 - Export configuration object
 
@@ -337,6 +337,14 @@ Benefits:
 - Message broadcasting
 - Canvas settings synchronization
 - Extension suite for caps-aware clients
+
+**Password Backoff** (`authGate.js`)
+
+- `moebiusServer.js` keeps a gate per room name for the pre-room password check, and each room keeps its own
+- Each client backs off alone; two tries stay free, then its refusal window doubles up to 30 seconds
+- A room's budget for every address together is a burst of 20 wrong passwords, refilling one every 3 seconds; `ROOM_MAX_GUESSES` sets the 20, and a spent budget refuses everyone
+- Keys on a salted hash of the client address, with IPv6 cut to its /64, never the address itself
+- Takes the client address from `X-Real-IP` or the last `X-Forwarded-For` hop only when the peer is loopback or listed in `TRUST_PROXY`; when both headers name different addresses, one is forged, and the request counts as the proxy's own
 
 **Persistence** (`persistence.js`)
 
@@ -488,7 +496,7 @@ When a drawing occurs:
 └─────────────┘
 ```
 
-The OPFS journal records the same commits independently (see Storage and Persistence). The undo history itself never leaves memory, so a reload restores your work with an empty history.
+The autosave journal records the same commits independently (see Storage and Persistence). The undo history itself never leaves memory, so a reload restores your work with an empty history.
 
 ## Module Structure
 
@@ -527,6 +535,7 @@ src/js/server/
 ├── config.js            # Configuration
 ├── moebiusServer.js     # Bun.serve WebSocket layer
 ├── room.js              # Collaboration room semantics
+├── authGate.js          # Per-client password backoff and room guess budget
 ├── persistence.js       # Room persistence and backups
 ├── bridge.js            # Bridge to desktop servers
 └── utils.js             # Utilities
@@ -708,7 +717,7 @@ The OPFS autosave journal (`journalStore.js`, with `journalWorker.js` owning the
 
 Clearing local storage, which File > New and Update Editor with no update waiting both do, wipes the journal too, because the restore prefers it. Stopping the journal closes the store. The `?profile` rig, a restore that fails before it adopts the saved doc, and the reset all stop it. Closing releases the OPFS lock for another tab, and later calls reject at once. A clear after a stop still empties the persisted journal, through a store opened for the wipe alone. A page hide writes any keyframe still waiting out its debounce, because a hidden tab throttles or freezes timers. Leaving a collab session commits any open group and writes a keyframe, so the autosave holds what the screen shows.
 
-The store probes for its backend once. Where `navigator.storage.getDirectory()` rejects, as in Firefox private windows and Playwright's WebKit, the journal keeps an IndexedDB record log instead, and where IndexedDB refuses too, a memory log that dies with the tab. An OPFS call that fails after the probe never falls back. A second tab, for example, cannot take the lock on the journal file, and an IndexedDB log there may hold an older episode's journal, which would restore worse than the snapshot does. A worker whose setup fails retries on its next call, so a second tab starts journaling once the first one closes.
+The store probes for its backend once, and gives up on a probe that has not answered after 10 seconds of visible time (`OPFS_PROBE_MS`), since every journal call waits on the choice. Where `navigator.storage.getDirectory()` rejects or gives up, as in Firefox private windows and Playwright's WebKit, the journal keeps an IndexedDB record log instead, and where IndexedDB refuses too, a memory log that dies with the tab. The `text0wnz-journal-opfs` flag in `localStorage` marks a profile whose journal lives in OPFS and keeps it there through a failed probe, so one bad boot cannot fork the journal into IndexedDB, where the next boot would never look. An OPFS call that fails after the probe never falls back. A second tab, for example, cannot take the lock on the journal file, and an IndexedDB log there may hold an older episode's journal, which would restore worse than the snapshot does. A worker whose setup fails retries on its next call, so a second tab starts journaling once the first one closes.
 
 Two limits remain. The IndexedDB log has no cross-tab lock, so two tabs on it interleave their records. A tab that cannot journal still saves settings and the snapshot, so a reload of the tab that can restores its own art under the other tab's settings.
 
@@ -761,7 +770,7 @@ Legacy v2 `{room}.bin` session files (BinaryText plus SAUCE) are read on first l
 
 **File Format (`.0wnz` envelope):**
 
-A versioned JSON envelope, gzipped through the runtime-native CompressionStream. It holds what the classic formats cannot: Unicode glyph tables, raw-RGB colors, frames with delays, doc mode, and metadata.
+A versioned JSON envelope, gzipped and gunzipped by `src/js/core/codecs/flate.ts`. That module uses the engine's native streams where they behave (gzip output must decode back to the input, and gunzip output must match the gzip trailer) and its own DEFLATE code otherwise. The envelope holds what the classic formats cannot: Unicode glyph tables, raw-RGB colors, frames with delays, doc mode, and metadata.
 
 ## Design Patterns
 

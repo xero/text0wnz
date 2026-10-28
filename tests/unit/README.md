@@ -48,7 +48,7 @@ Each entry names the module under test and the behavior the file pins.
 - **engineParity.test.js:** The live canvas, the v2 reference engine, and the v3 editor core stay word-identical through a seeded 400-op script and deep undo.
 - **file.test.js:** `file.js` font choice per file (SAUCE, then archive hint, then scene default) and ANSI and BIN opens with their SAUCE records.
 - **fileAdvanced.test.js:** `file.js` ANSI, UTF-8, XBin, and BIN save output, plus empty, huge, corrupt, and oddly named files.
-- **fileDocNative.test.js:** `.tnd`, PabloDraw 24-bit `.ans`, `.dur`, and `.0wnz` opens and saves through the v3 doc.
+- **fileDocNative.test.js:** `.tnd`, PabloDraw 24-bit `.ans`, `.dur`, and `.0wnz` opens and saves through the v3 doc, and a failing `.dur` or `.0wnz` save that tells the artist.
 - **fileError.test.js:** Corrupt `.dur` and `.0wnz` opens report through `onError`, and allocation ceilings refuse oversized `.ans` and `.bin` opens.
 - **fileFormats.test.js:** `file.js` load error handling, FileReader wiring for ANSI, BIN, XBin, and UTF-8 opens, SAUCE extension detection, and parser setup.
 - **fileLatin1.test.js:** A `.txt` that is not UTF-8 falls back to the CP437 reader.
@@ -68,7 +68,7 @@ Each entry names the module under test and the behavior the file pins.
 - **glyphScale.test.js:** `glyphScale.js` fits glyph canvases to whole device pixels and re-arms its watch on each pixel ratio change.
 - **hexFontPages.test.js:** `hexFontPages.js` lazy hex font block loads, glyph scaling, Unscii then Unifont slot fallback, failed blocks the repaint path never refetches, even after a retry fails, a 30 s retry cooldown, a later pick or preload that retries, and preload.
 - **historyLabels.test.js:** `historyLabels.js` labels history rows from the pend placed before each stroke.
-- **journalStore.test.js:** `journalStore.js` keyframe and stroke persistence, replay, compaction, serialized writes, the per-session baseline, the drops after a failed rewrite or a torn append, a closed store that rejects every call, and the backend probe that falls back to IndexedDB or memory only where OPFS refuses.
+- **journalStore.test.js:** `journalStore.js` keyframe and stroke persistence, replay, compaction, serialized writes, the per-session baseline, the drops after a failed rewrite or a torn append, a closed store that rejects every call, the backend probe that falls back to IndexedDB or memory only where OPFS refuses or never answers, and the journal home that keeps a profile's journal where it first landed.
 - **journalWorker.test.js:** `journalWorker.js` setup, which retries after a failure and lets go of the handles it opened, and the message guard that drops foreign-origin and malformed messages and answers same-context ones.
 - **keyboard.test.js:** `keyboard.js` and `fkeys.js` F-key sets, cursor and selection rects, row and column edits, typed glyph order, the 10 second glyph wait, CP437 parity with paste, Tab and Enter, cut, copy, the paste modes, and the selection keys that seed a cell on a bare pick. It also covers the keys a focused control keeps in keyboard mode and the selection tool: Enter, Space, and the arrows on a control the keyboard reached, a range slider's Home, End, PageUp, and PageDown, every key in a text field, and dialog keys left to the dialog.
 - **lazyFont.test.js:** `lazyFont.js` on-demand glyphs, cache bounds, 9px letter spacing glyphs, and idle pre-generation that stops on dispose.
@@ -107,14 +107,15 @@ Each entry names the module under test and the behavior the file pins.
 
 ### Server Modules
 
-- **server/bridge.test.js:** `bridge.js` private address denial, DNS rebinding defense, the off, local, port, and allow modes, env parsing, and pipe bounds.
-- **server/config.test.js:** `config.js` `parseArgs` flags and defaults, room size env knobs, and the allowed origins list.
+- **server/authGate.test.js:** `authGate.js` client addresses behind loopback and `TRUST_PROXY` proxies, forwarded names that disagree, salted keys with one per IPv6 /64, per-client cooldowns, the shared room budget and its operator override, returning joiners, and shedding keys gone quiet.
+- **server/bridge.test.js:** `bridge.js` private address denial, DNS rebinding defense, the off, local, port, and allow modes, allow-mode name pins by kind of address, env parsing, and pipe bounds.
+- **server/config.test.js:** `config.js` `parseArgs` flags and defaults, room size and `ROOM_MAX_GUESSES` env knobs, `TRUST_PROXY`, and the allowed origins list.
 - **server/persistence.test.js:** `persistence.js` room save and reload, save queues, session case migration, temp file sweeps, legacy `.bin` sessions, backups, and palette fidelity.
 - **server/persistenceAtomic.test.js:** Atomic room writes sync the temp file before the rename.
-- **server/room.test.js:** `room.js` connect, draw, chat, settings, relay tiers, the extension suite, hostile input, convergence fuzz, and room invariants.
+- **server/room.test.js:** `room.js` connect, draw, chat, settings, relay tiers, the extension suite, hostile input, convergence fuzz, room invariants, live SAUCE pre-swapped for vanilla peers, 6-bit join palettes for vanilla Moebius, and the per-client password gate.
 - **server/roomPath.test.js:** `moebiusServer.js` `roomNameFromPath` maps request paths to rooms.
-- **server/serverIntegration.test.js:** Spawns the Bun server from `main.js` and tests rooms, passwords, origins, static mode, health checks, the backlog close for a member that stops reading, and the bridge over real sockets. It skips without `bun` on the PATH.
-- **server/utils.test.js:** `utils.js` help output, `sanitize`, `callout`, and the auth cooldown.
+- **server/serverIntegration.test.js:** Spawns the Bun server from `main.js` and tests rooms, passwords, origins, static mode, health checks, the backlog close for a member that stops reading, per-client backoff behind a loopback proxy, `ROOM_MAX_GUESSES`, and the bridge over real sockets. It skips without `bun` on the PATH.
+- **server/utils.test.js:** `utils.js` help output, `sanitize`, `callout`, the auth cooldown, and the join palette depth read from a client's user agent.
 
 ### Helpers
 
