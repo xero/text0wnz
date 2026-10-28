@@ -141,6 +141,8 @@ const normalizeJoinPalette = palette => {
  * @param {number} [options.rows]
  * @param {number} [options.maxColumns] resize wall
  * @param {number} [options.maxRows] resize wall
+ * @param {number} [options.maxGuesses] wrong passwords a minute, all
+ *   addresses together (absent = the gate's default)
  * @param {number} [options.opLogLimit]
  * @param {number} [options.syncCooldownMs] per-user EXT_SYNC/TIMELAPSE rate limit
  * @param {(line: string) => void} [options.log]
@@ -457,7 +459,7 @@ export const createRoom = (options = {}) => {
 	// repeated failures open an exponential cooldown during which that
 	// client's attempts refuse instantly, or passwords brute-force at
 	// wire speed (the first couple of tries stay free: humans typo)
-	const authGate = createAuthGate();
+	const authGate = createAuthGate({ budget: options.maxGuesses });
 
 	/**
 	 * @param {RoomClient} client

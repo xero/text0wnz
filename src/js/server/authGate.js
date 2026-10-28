@@ -21,9 +21,9 @@ import { authCooldownMs } from './utils.js';
 
 const SALT = randomBytes(32);
 
-/** wrong guesses a minute one room takes from every address together */
+/** wrong guesses a minute one room takes from every address together,
+ * unless ROOM_MAX_GUESSES sets another */
 export const AUTH_ROOM_BUDGET = 20;
-const REFILL_MS = 60_000 / AUTH_ROOM_BUDGET;
 /** client keys one gate holds; past it, unknown keys are refused */
 export const AUTH_GATE_KEYS = 4096;
 /** a settled key is forgotten this long after its last failure */
@@ -94,15 +94,20 @@ export const addressKey = address => {
 		.slice(0, 22);
 };
 
-/** one room's gate; `now` is injectable for tests */
-export const createAuthGate = () => {
+/**
+ * One room's gate; `now` is injectable for tests.
+ * @param {{budget?: number}} [options] wrong guesses a minute, all
+ *   addresses together
+ */
+export const createAuthGate = ({ budget = AUTH_ROOM_BUDGET } = {}) => {
 	/** @type {Map<string, {failures: number, cooldownUntil: number, lastAt: number}>} */
 	const keys = new Map();
-	let budget = AUTH_ROOM_BUDGET;
-	let budgetAt = 0;
+	const refillMs = 60_000 / budget;
+	let left = budget;
+	let leftAt = 0;
 	const refill = now => {
-		budget = Math.min(AUTH_ROOM_BUDGET, budget + (now - budgetAt) / REFILL_MS);
-		budgetAt = now;
+		left = Math.min(budget, left + (now - leftAt) / refillMs);
+		leftAt = now;
 	};
 	const shed = now => {
 		for (const [key, entry] of keys) {
@@ -116,7 +121,7 @@ export const createAuthGate = () => {
 		 * @param {string} key @param {number} [now] */
 		open(key, now = Date.now()) {
 			refill(now);
-			if (budget < 1) {
+			if (left < 1) {
 				return false;
 			}
 			const entry = keys.get(key);
@@ -133,7 +138,7 @@ export const createAuthGate = () => {
 		 * @param {string} key @param {number} [now] */
 		fail(key, now = Date.now()) {
 			refill(now);
-			budget = Math.max(0, budget - 1);
+			left = Math.max(0, left - 1);
 			let entry = keys.get(key);
 			if (!entry) {
 				entry = { failures: 0, cooldownUntil: 0, lastAt: 0 };
@@ -153,7 +158,7 @@ export const createAuthGate = () => {
 		idle(now = Date.now()) {
 			refill(now);
 			shed(now);
-			return keys.size === 0 && budget >= AUTH_ROOM_BUDGET;
+			return keys.size === 0 && left >= budget;
 		},
 	};
 };
