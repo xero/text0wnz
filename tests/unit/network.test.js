@@ -12,6 +12,7 @@ import {
 	MoebiusAction,
 	T0wnzAction,
 	compressExtCells,
+	paletteColor,
 } from '../../src/js/core/index.js';
 
 vi.mock('../../src/js/client/state.js', () => ({
@@ -1571,6 +1572,24 @@ describe('Network Module', () => {
 				handler.sendSauce({ ...room, comments: Load.commentsOf(fields.sauceComments) });
 				const blankLine = { ...room, comments: ' ' };
 				expect(sent()).toEqual([{ type: MoebiusAction.SAUCE, data: blankLine }]);
+			});
+		});
+
+		describe('live DRAW', () => {
+			afterEach(resetCanvasMocks);
+
+			it('a fork color past the classic 16 keeps its index', async () => {
+				const handler = createWorkerHandler(mockInputHandle);
+				await join(handler, { caps: []});
+				const draw = block => frame(MoebiusAction.DRAW, { id: 2, x: 1, y: 0, block });
+				// moebiusXBIN paints from a 256-color palette, and a u16 word
+				// keeps four bits a color
+				await draw({ code: 65, fg: 196, bg: 17 });
+				expect(State.textArtCanvas.drawRemoteExtCells).toHaveBeenCalledWith([{ x: 1, y: 0, u: 65, a: 0, fg: paletteColor(196), bg: paletteColor(17) }]);
+				expect(State.textArtCanvas.quickDraw).not.toHaveBeenCalled();
+				// the classic 16 stay on the fast path
+				await draw({ code: 65, fg: 12, bg: 1 });
+				expect(State.textArtCanvas.quickDraw).toHaveBeenCalledWith([[1, (65 << 8) | (1 << 4) | 12, 1, 0]]);
 			});
 		});
 
