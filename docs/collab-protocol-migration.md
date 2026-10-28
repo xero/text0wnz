@@ -250,6 +250,13 @@ vanilla projection the server writes on save, and hands to a vanilla
 joiner, folds everything back to 16 colors. The teXt0wnz live view
 keeps the full index on a vanilla `DRAW`, as the join document does.
 
+**SAUCE author and group.** Moebius 1.0.29 and moebiusXBIN 2.2.0 both
+swap author and group when a live `SAUCE` frame arrives (their `doc.js`
+hands the fields to its handler in the wrong order); join documents
+read correctly. The server sends live `SAUCE` to caps-less members with
+the two fields swapped, so those clients show them right. teXt0wnz
+clients and the stored document keep the real order.
+
 **Codepoints on the vanilla wire.** icy_draw's `block.code` is a u32
 Unicode codepoint where Moebius uses bytes 0 to 255. Codes above 255
 intern through the glyph table on join, resync, and live `DRAW` alike,

@@ -28,6 +28,8 @@
  * - resize is row-aware (a linear copy scrambles late joiners).
  * - malformed frames are dropped with a log line, never a crash.
  * - every mutation lands in a bounded op log (timelapse substrate).
+ * - live SAUCE reaches caps-less members with author and group
+ *   swapped, because both upstream clients swap them back on receive.
  *
  * Extension suite v1 (ids 23-27, cap "t0wnz-ext-1"):
  * caps-aware clients get full-fidelity cells (unicode + v3 color
@@ -676,7 +678,13 @@ export const createRoom = (options = {}) => {
 					user,
 					pushOp(type, payload),
 					{ type, data: payload },
-					{ type, data: payload },
+					// Moebius 1.0.29 and moebiusXBIN 2.2.0 both hand a live
+					// SAUCE to a handler wanting author before group, group
+					// first (doc.js:272); swapped going out, they land right
+					{
+						type,
+						data: { ...payload, author: payload.group, group: payload.author },
+					},
 					{ spectators: true },
 				);
 				return;

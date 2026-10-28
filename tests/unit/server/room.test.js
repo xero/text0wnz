@@ -659,6 +659,28 @@ describe('hostile input hardening', () => {
 		expect(frame.data.seq).toBe(1);
 	});
 
+	it('vanilla peers get SAUCE pre-swapped for their swapped receive', () => {
+		const room = createRoom();
+		const sender = joinEditor(room, 'a');
+		const vanilla = joinEditor(room, 'b');
+		const caps = joinCaps(room, 'c');
+		room.message(sender, {
+			type: A.SAUCE,
+			data: { title: 't', author: 'xero', group: 'impure', comments: '' },
+		});
+		// upstream's receive path flips the pair back, so they see it right
+		expect(vanilla.ofType(A.SAUCE)[0].data).toMatchObject({
+			author: 'impure',
+			group: 'xero',
+		});
+		// our clients and the stored doc keep the truth
+		expect(caps.ofType(A.SAUCE)[0].data).toMatchObject({
+			author: 'xero',
+			group: 'impure',
+		});
+		expect(room.toJoinDoc()).toMatchObject({ author: 'xero', group: 'impure' });
+	});
+
 	it('CHAT never relays smuggled fields to peers', () => {
 		const room = createRoom();
 		const sender = joinEditor(room, 'a');
