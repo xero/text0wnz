@@ -121,11 +121,10 @@ The container requires `NET_BIND_SERVICE` capability to bind to privileged ports
 
 The container implements a robust startup sequence:
 
-1. Validates environment variables and generates defaults if needed
-2. Starts the Bun backend server for WebSocket collaboration
-3. Performs readiness checks to ensure the backend is fully operational
-4. Configures and launches Caddy with the appropriate environment settings
-5. Sets up health monitoring endpoints and graceful shutdown handlers
+1. Starts the Bun backend server for WebSocket collaboration
+2. Performs readiness checks to ensure the backend is fully operational
+3. Configures and launches Caddy with the appropriate environment settings
+4. Sets up health monitoring endpoints and graceful shutdown handlers
 
 ## Environment Variables
 
