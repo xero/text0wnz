@@ -50,6 +50,7 @@ Tests for modal dialog functionality:
 - Keyboard navigation (Escape key, Enter on buttons)
 - Accessibility (dialog role, headings, focus)
 - Error modal display
+- Notice modal display (its own section, and it stays up when raised as the loading modal closes)
 - Edge cases (rapid open/close, non-existent modals)
 
 ### Segmented Control Tests (`segmentedControl.test.js`)

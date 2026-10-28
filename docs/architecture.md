@@ -317,7 +317,7 @@ Benefits:
 **Configuration** (`config.js`)
 
 - Parse CLI arguments
-- Parse server environment variables (room passwords, resize walls)
+- Parse server environment variables (room passwords, resize walls, the guess budget in `ROOM_MAX_GUESSES`, and trusted proxies in `TRUST_PROXY`)
 - Provide defaults
 - Export configuration object
 
@@ -336,6 +336,14 @@ Benefits:
 - Message broadcasting
 - Canvas settings synchronization
 - Extension suite for caps-aware clients
+
+**Password Backoff** (`authGate.js`)
+
+- `moebiusServer.js` keeps a gate per room name for the pre-room password check, and each room keeps its own
+- Each client backs off alone; two tries stay free, then its refusal window doubles up to 30 seconds
+- A room's budget for every address together is a burst of 20 wrong passwords, refilling one every 3 seconds; `ROOM_MAX_GUESSES` sets the 20, and a spent budget refuses everyone
+- Keys on a salted hash of the client address, with IPv6 cut to its /64, never the address itself
+- Takes the client address from `X-Real-IP` or the last `X-Forwarded-For` hop only when the peer is loopback or listed in `TRUST_PROXY`; when both headers name different addresses, one is forged, and the request counts as the proxy's own
 
 **Persistence** (`persistence.js`)
 
@@ -487,7 +495,7 @@ When a drawing occurs:
 └─────────────┘
 ```
 
-The OPFS journal records the same commits independently (see Storage and Persistence). Undo history is written separately, only on idle, `visibilitychange`, and `pagehide`.
+The autosave journal records the same commits independently (see Storage and Persistence). Undo history is written separately, only on idle, `visibilitychange`, and `pagehide`.
 
 ## Module Structure
 
@@ -526,6 +534,7 @@ src/js/server/
 ├── config.js            # Configuration
 ├── moebiusServer.js     # Bun.serve WebSocket layer
 ├── room.js              # Collaboration room semantics
+├── authGate.js          # Per-client password backoff and room guess budget
 ├── persistence.js       # Room persistence and backups
 ├── bridge.js            # Bridge to desktop servers
 └── utils.js             # Utilities
@@ -600,7 +609,7 @@ main.js
 codeSplitting: {
     includeDependenciesRecursively: false,
     groups: [
-        { name: 'core',    test: /(magicNumbers|state|storage|compression|ui)\.js$/ },
+        { name: 'core',    test: /(magicNumbers|state|storage|ui)\.js$/ },
         { name: 'canvas',  test: /(canvas|font|lazyFont|fontCache)\.js$/ },
         { name: 'tools',   test: /(freehandTools|keyboard|toolbar)\.js$/ },
         { name: 'fileops', test: /file\.js$/ },
@@ -703,7 +712,12 @@ The database is at version 4; `storage.js` opens one shared connection and reope
 
 **Auto-Save Strategy:**
 
-The OPFS autosave journal (`journalStore.js`, with `journalWorker.js` owning the file) is the source of truth for restoring work in progress. The IndexedDB snapshot is the fallback; restoring it re-seeds the journal.
+The autosave journal (`journalStore.js`, with `journalWorker.js` owning the OPFS file) is the source of truth for restoring work in progress. The IndexedDB snapshot is the fallback; restoring it re-seeds the journal.
+
+- `journalStore.js` probes OPFS once per page load and gives up after `OPFS_PROBE_MS` (10 seconds), since every journal call waits on the choice. A failed probe puts the journal in an IndexedDB record log (database `text0wnz-journal`, separate from the snapshot store); where the `indexedDB` global is missing or throws, the journal lives in memory and does not survive a reload
+- The `text0wnz-journal-opfs` flag in `localStorage` marks a profile whose journal lives in OPFS and keeps it there through a failed probe, so one bad boot cannot fork the journal into IndexedDB, where the next boot would never look
+- `canvas.js` reads the journal as soon as it creates the store, before boot work queues a keyframe of the blank boot document over it (the store runs calls in the order they arrive). `loadBootSnapshot()` hands that read to the restore once, replayed to the native document, and returns null for an empty or unreadable journal, which sends the restore to the IndexedDB snapshot
+- A boot snapshot nobody takes is released after `JOURNAL_BOOT_SNAPSHOT_MS` (60 seconds, in `magicNumbers.js`)
 
 ### Service Worker Cache (Cache API)
 
@@ -754,7 +768,7 @@ Legacy v2 `{room}.bin` session files (BinaryText plus SAUCE) are read on first l
 
 **File Format (`.0wnz` envelope):**
 
-A versioned JSON envelope, gzipped through the runtime-native CompressionStream. It holds what the classic formats cannot: Unicode glyph tables, raw-RGB colors, frames with delays, doc mode, and metadata.
+A versioned JSON envelope, gzipped and gunzipped by `src/js/core/codecs/flate.ts`. That module uses the engine's native streams where they behave (gzip output must decode back to the input, and gunzip output must match the gzip trailer) and its own DEFLATE code otherwise. The envelope holds what the classic formats cannot: Unicode glyph tables, raw-RGB colors, frames with delays, doc mode, and metadata.
 
 ## Design Patterns
 

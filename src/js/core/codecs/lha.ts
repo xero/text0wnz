@@ -4,8 +4,9 @@
  * 0, 1, and 2 and decodes -lh0- (stored) and -lh5- (static huffman
  * over an 8KB LZSS window), which covers every entry in the arena's
  * archives (4,190 of them verified against this decoder). Every
- * extraction checks the header's CRC-16, so a rotten scene file fails
- * loud instead of rendering garbage.
+ * extraction checks the header's CRC-16: the strict path refuses a
+ * rotten scene file, and salvage opens what decoded with a note naming
+ * the damage, so garbage never renders without a word.
  */
 
 import { CodecError, Salvaged, salvaged } from './util.js';

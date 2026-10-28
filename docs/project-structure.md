@@ -190,7 +190,7 @@ src/js/client/
 ├── glyphScale.js          # Pixel-exact sizing for glyph preview canvases
 ├── hexFontPages.js        # Runtime Unicode glyph source
 ├── historyLabels.js       # Client-side labels for the undo history
-├── journalStore.js        # OPFS autosave journal store
+├── journalStore.js        # Autosave journal store (OPFS, else IndexedDB, else memory)
 ├── journalWorker.js       # OPFS journal worker
 ├── keyboard.js            # Keyboard mode and shortcuts
 ├── lazyFont.js            # Lazy font loading
@@ -504,7 +504,9 @@ src/js/core/
 │   ├── bin.ts             # BinaryText (.bin)
 │   ├── dur.ts             # durdraw
 │   ├── envelope.ts        # Native .0wnz envelope
+│   ├── flate.ts           # DEFLATE and gzip in plain TS, native streams where they work
 │   ├── lha.ts             # LHA/LZH archives
+│   ├── pkzip1.ts          # PKZIP 1.x Shrink and Implode decoders
 │   ├── sauce.ts           # SAUCE records
 │   ├── tundra.ts          # TundraDraw
 │   ├── util.ts            # Shared byte helpers and CodecError
@@ -524,6 +526,7 @@ src/js/server/
 ├── config.js              # Configuration parsing
 ├── moebiusServer.js       # Bun.serve WebSocket layer and routing
 ├── room.js                # Collaboration room semantics
+├── authGate.js            # Per-client password backoff and room guess budget
 ├── persistence.js         # Room persistence and backups
 ├── bridge.js              # Bridge to plaintext desktop servers
 └── utils.js               # Utility functions
@@ -543,7 +546,7 @@ src/js/server/
 **config.js** - Configuration
 
 - Parse CLI arguments
-- Parse server environment variables (room passwords, resize walls)
+- Parse server environment variables (room passwords, resize walls, the guess budget in `ROOM_MAX_GUESSES`, and trusted proxies in `TRUST_PROXY`)
 - Provide defaults
 - Exports: `parseArgs()`
 
@@ -564,6 +567,14 @@ src/js/server/
 - Extension suite for caps-aware clients
 - Exports: `createRoom()`
 
+**authGate.js** - Password Backoff
+
+- A gate per room name for the pre-room password check in `moebiusServer.js`, and one inside each room
+- Each client backs off alone (two tries free, then a refusal window doubling up to 30 seconds), and a room's budget for every address together is a burst of 20 wrong passwords, refilling one every 3 seconds (`ROOM_MAX_GUESSES` sets the 20)
+- Keys on a salted hash of the client address, with IPv6 cut to its /64; the address itself is never kept
+- Believes `X-Real-IP` or the last `X-Forwarded-For` hop only from loopback or a `TRUST_PROXY` peer, and counts a request as the proxy's own when the two headers disagree
+- Exports: `createAuthGate()`, `clientAddress()`, `addressKey()`
+
 **persistence.js** - Room Persistence
 
 - Saves rooms as native `.0wnz` envelopes with a JSON sidecar
@@ -576,7 +587,7 @@ src/js/server/
 - Byte pipe from browser connections to plaintext desktop servers
 - Mode gating (`off`, `local`, `port`, `allow`) with address vetting and bounded lookups
 - Delivery bounds in both directions (ping-confirmed toward the server, progress-based toward the browser), idle reaper, dial timeout
-- Exports: `createBridgePipe()`, `resolveBridgeTarget()`, `bridgeConfigFromEnv()`, `validateBridgeConfig()`, `isPrivateAddress()`, `vetResolvedAddresses()`
+- Exports: `createBridgePipe()`, `resolveBridgeTarget()`, `bridgeConfigFromEnv()`, `validateBridgeConfig()`, `addressKind()`, `isPrivateAddress()`, `vetResolvedAddresses()`
 
 **utils.js** - Utilities
 
@@ -687,6 +698,7 @@ tests/
 │   ├── recentList.test.js        # Recent list tests
 │   ├── referenceImage.test.js    # Reference image tests
 │   ├── server/                   # Server-specific tests
+│   │   ├── authGate.test.js      # Per-client password backoff and room guess budget tests
 │   │   ├── bridge.test.js        # Bridge tests
 │   │   ├── config.test.js        # Config tests
 │   │   ├── persistence.test.js   # Persistence tests
@@ -726,6 +738,8 @@ tests/
 │   ├── editorFrames.test.ts      # Editor frame operations
 │   ├── envelope.test.ts          # .0wnz envelope codec
 │   ├── extensions.test.ts        # Protocol extension suite
+│   ├── flate.test.ts             # Plain-TS DEFLATE and gzip: hand-built corner streams, caps, native round trips
+│   ├── flateWiring.test.ts       # Native or plain codec path under each faked engine
 │   ├── formatBudget.test.ts      # Format budget tables
 │   ├── hexfont.test.ts           # Hex font parsing
 │   ├── journal.test.ts           # Autosave journal format
@@ -737,6 +751,7 @@ tests/
 │   ├── moebius.test.ts           # Moebius protocol codec
 │   ├── paste.test.ts             # Paste handling
 │   ├── patchArena.test.ts        # Patch buffer
+│   ├── pkzip1.test.ts            # PKZIP 1.x Shrink and Implode decoders
 │   ├── securityCaps.test.ts      # Security caps
 │   ├── timelapse.test.ts         # Timelapse protocol
 │   ├── tundra.test.ts            # TundraDraw codec
@@ -759,15 +774,19 @@ tests/
 ├── e2e/                          # Playwright E2E tests
 │   ├── README.md                 # E2E test documentation
 │   ├── helpers/                  # Shared E2E helpers
+│   │   ├── archiveFixtures.js    # Zip and durdraw fixtures built in node
 │   │   ├── editorHelpers.js      # Editor readiness, focus, tool, and scroll helpers
 │   │   └── openFile.js           # File opening helpers
 │   ├── asciiBrush.spec.js        # Ascii brush and brush modes for line and shape tools
+│   ├── autosave.spec.js          # Autosave journal restore across a reload
 │   ├── autoscroll.spec.js        # Minimap autoscroll playback
 │   ├── canvas.spec.js            # Canvas E2E tests
 │   ├── clipboard.spec.js         # Clipboard tests
 │   ├── collaboration.spec.js     # Chat window tests (skip without a live session)
 │   ├── collabMoebius.spec.js     # Join a vanilla Moebius server through the Connect form
 │   ├── collabRoundTrip.spec.js   # Collaboration round-trip tests
+│   ├── compressionFallback.spec.js # Zips, movies, .0wnz saves, and autosave without compression streams
+│   ├── damagedArchives.spec.js   # A damaged zip entry opens as far as it decodes, with a note
 │   ├── editor-file-open-and-scroll.spec.js # File loading and scrolling
 │   ├── editor-keybinds.spec.js   # Keybind coverage
 │   ├── fileOperations.spec.js    # File operations tests
@@ -799,9 +818,11 @@ tests/
 │   └── fixtures/                 # The vendored servers, their shims, and launchers
 ├── corpus/                       # Round-trip corpus
 │   ├── roundtrip.test.js         # Vitest harness: committed artwork and synthetic fixtures
+│   ├── flateZlib.test.js         # Plain-TS DEFLATE checked against node's zlib
 │   ├── generators.js             # Seeded synthetic fixture generators
 │   ├── generators.d.ts           # Types for the generators
 │   ├── lhaFixture.ts             # LHA archive fixtures
+│   ├── pkzip1Fixture.ts          # Test-side Shrink and Implode encoders
 │   └── zipFixture.ts             # Zip archive fixtures
 ├── parity/                       # Frozen v2 engine for parity tests
 │   └── v2ReferenceEngine.js      # Verbatim v2 doc-mutation subset, read by engineParity.test.js
