@@ -62,8 +62,11 @@ Updating keeps your local data. Font favorites, recent colors, and editor settin
 - Manual file picker accepts all file types
 - Drag-and-drop from Files app
 
-**Supported File Types:**
-.ans, .ansi, .xb, .xbin, .bin, .txt, .nfo, .diz, .utf8ans
+**Registered File Types:**
+
+- Android share sheet: `.ans`, `.ansi`, `.xb`, `.xbin`, `.bin`, `.txt`, `.nfo`, `.diz`, `.utf8ans`, and any `text/*` file
+- Desktop "Open with": the same list plus `.asc`, `.zip`, `.lha`, and `.lzh`
+- `.tnd`, `.dur`, and `.0wnz` are not registered with the OS; open them from File → Open or by drag-and-drop
 
 ## Installation by Platform
 
@@ -98,12 +101,12 @@ This document provides step-by-step instructions for installing a Progressive We
 **Steps:**
 
 1. Open the website in Safari on your Mac.
-2. Click the "Share" button in the Safari toolbar.
-3. Select "Add to Home Screen."
-4. The PWA will be added to your Launchpad and can be opened like a native app.
+2. Choose **File → Add to Dock**.
+3. Confirm the name and icon.
+4. The web app lands in your Dock and Launchpad and opens like a native app.
 
-> **Note:** As of macOS Sonoma and later, Safari supports installation of web apps to the dock, similar to PWAs.
-> For older versions, home screen installation is limited or unavailable.
+> [!NOTE]
+> Web apps in the Dock need macOS Sonoma or later. Older versions of macOS Safari cannot install web apps.
 
 **Reference:**
 

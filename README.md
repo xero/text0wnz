@@ -190,8 +190,8 @@ A retro text art editor rebooted for the modern web. Draw, edit, animate, and co
 | Tool Name              | Description                                                                    |
 |:-----------------------|:-------------------------------------------------------------------------------|
 | **Keyboard Mode**      | Type characters onto the canvas, using full keyboard navigation                |
-| **Half Block Brush**   | Draw half-blocks with the mouse or touchscreen, pressure-sensitive             |
-| **Shading Brush**      | Draw shading blocks with the mouse or touchscreen, 'reduce mode' with shift    |
+| **Half Block Brush**   | Draw half-blocks with the mouse or touchscreen                                 |
+| **Shading Brush**      | Draw shading blocks; shift reduces, and pen pressure picks the shade           |
 | **Character Brush**    | Draw any ASCII/extended character in the font using a mouse, includes a picker |
 | **Fill Tool**          | Flood fill for color/text, smart attribute handling                            |
 | **Colorizer**          | Paint colors only, hold alt for background colors                              |
@@ -207,7 +207,7 @@ A retro text art editor rebooted for the modern web. Draw, edit, animate, and co
 | Key | Tool/Action            |
 |:----|:-----------------------|
 | `k` | Keyboard Mode          |
-| `f` | Freestyle (half-block) |
+| `f` | Block brush (half-block) |
 | `b` | Character Brush        |
 | `n` | Fill Tool              |
 | `a` | Attribute Brush        |
@@ -230,7 +230,7 @@ A retro text art editor rebooted for the modern web. Draw, edit, animate, and co
 |:----------------------------------------- |:---------------------------|
 | `ctrl z` / `ctrl y`                       | Undo / Redo                |
 | `ctrl x`/`ctrl c`/`ctrl v`/`ctrl shift v` | Cut/Copy/Paste/SystemPaste |
-| `ctrl delete`                             | Delete selection           |
+| `ctrl backspace`                          | Delete selection           |
 
 **Navigation (Keyboard Mode):**
 
@@ -267,13 +267,12 @@ A retro text art editor rebooted for the modern web. Draw, edit, animate, and co
 | `shift arrow keys`       | Expand/shrink selection           |
 | `home` / `end`           | Expand selection to row start/end |
 | `page up` / `page down`  | Move selection by screen height   |
-| `cmd left` / `cmd right` | Expand selection to row start/end |
 
 > [!IMPORTANT]
 >
 > In **Move Mode**: `arrow keys`, `page up`, `page down` move the _selected content_ in the same ways the default actions move the _selection area_.
 
-**Function Keys (`F1`-`F12`):** Quick character insert from CP437 font (blocks, symbols, shapes, and more).
+**Function Keys (`F1`-`F12`):** Quick character insert from the active page: CP437 pages, unicode blocks, and imported charsets.
 
 **The Classic CP437 ANSI block shortcuts**
 
@@ -288,13 +287,13 @@ A retro text art editor rebooted for the modern web. Draw, edit, animate, and co
 | `F7`  | `▌`       | Left half block    |
 | `F8`  | `▐`       | Right half block   |
 | `F9`  | `■`       | Small solid square  [**_‡_**](https://16colo.rs/artist/alla%20xul) |
-| `F10` | `○`       | Circle             |
+| `F10` | `·`       | Middle dot         |
 | `F11` | `•`       | Bullet             |
-| `F12` | `NULL`    | Blank/transparent  |
+| `F12` | ` `       | Space              |
 
 **Cycling character sets:**
 
-Use the toolbar buttons or shortcuts `ctrl [`, `ctrl ]` to cycle predefined sets (blocks, box-drawing, symbols, accents, etc).
+Use the arrow buttons at either end of the F-key bar, or `ctrl [` and `ctrl ]`, to cycle pages: CP437 (blocks, box-drawing, symbols, accents), unicode blocks, and any charsets you import.
 
 ### Mouse / Touch Controls
 
@@ -309,11 +308,11 @@ Use the toolbar buttons or shortcuts `ctrl [`, `ctrl ]` to cycle predefined sets
 
 1. Start with Keyboard Mode for layout
 2. Use Grid for alignment
-3. Freestyle for shading/art
+3. Block brush for shading/art
 4. Character Brush for textures
 5. Fill Tool for color blocks
 6. Selection Tool for moving/copying
-7. Save often (Ctrl+S)
+7. Autosave has your back, but export your work often
 8. F-keys for quick block chars
 9. Alt+Click to sample colors
 10. Undo/Redo freely (a 64MB history budget, not an op count)
