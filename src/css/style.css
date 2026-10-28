@@ -1996,6 +1996,13 @@
 			blockquote {
 				@apply flex flex-row w-full h-auto p-1;
 			}
+			/* the message lines take markup, which a flex row shreds: the
+			   space before a <kbd> collapses and a <br/> strands the rest
+			   of the line at the far edge */
+			#modalError,
+			#modalNotice {
+				@apply block;
+			}
 			nav {
 				@apply justify-end;
 
