@@ -387,9 +387,17 @@ export const createMoebiusServer = config => {
 			if (!wantsUpgrade) {
 				return new Response('upgrade required', { status: 426 });
 			}
+			if (bridgeConfig.mode === 'off') {
+				// the privacy policy promises the stock server records no
+				// address, and off is the stock setting: a refusal here
+				// neither reads nor writes one
+				return new Response('bridge refused', { status: 403 });
+			}
 			// who asked: the socket's address, and the proxy's claim of
 			// the real one when there is a proxy (the audit line carries
-			// both; trust is the operator's call)
+			// both; trust is the operator's call). Logged only while the
+			// bridge is on: enabling the relay is the operator opting into
+			// address logging for this one feature, and the policy says so
 			const claimed = req.headers.get('x-real-ip');
 			// dual-stack listeners report v4 callers as ::ffff:a.b.c.d
 			const requester =

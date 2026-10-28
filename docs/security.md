@@ -57,13 +57,9 @@ When using the optional collaboration server, the application implements multipl
 
 **Message Origin Guard**: Every postMessage channel validates incoming messages with a shared guard that drops any message claiming a foreign origin or carrying a non-object payload. Unknown worker commands are ignored.
 
-**Trusted URL Construction**: WebSocket URLs default to the worker's own `location` object:
+**Server Selection**: With no server named, the client dials its own origin: `wss:` on HTTPS pages and `ws:` otherwise, the page's own host, and the `/server` path. The Connect form accepts a server as `host[:port][/room]` or as a full `ws://` or `wss://` URL, and nothing else; any other scheme is rejected before a socket is opened. A `?server=` query parameter prefills the same form.
 
-- Protocol automatically matches page protocol (`wss:` for HTTPS, `ws:` for HTTP)
-- Hostname matches the page's hostname
-- Port uses the page's port or secure defaults (443/80)
-
-An explicit server URL is honored only when you supply one, and only `ws:` or `wss:` URLs are accepted; anything else falls back to the same-origin default.
+**Mixed Content and the Bridge**: A page served over HTTPS cannot open a plaintext `ws://` socket; the browser enforces that, not the editor. For a plaintext target, the client dials its own host's `/bridge` endpoint over `wss:` and lets the server relay. The target travels as a query string the server validates; the server never dials anything the client did not name, and a host with the bridge off refuses, which the form reports.
 
 **URL Validation**: WebSocket construction runs inside try-catch blocks. Malformed URLs are caught and reported as errors without crashing the worker.
 
@@ -81,6 +77,18 @@ An explicit server URL is honored only when you supply one, and only `ws:` or `w
 
 For server-side security best practices, see the [Collaboration Server Security section](https://github.com/xero/text0wnz/wiki/collaboration-server#security-best-practices).
 
+### The Collaboration Bridge
+
+The server can relay a browser's socket to a plaintext Moebius server (the `BRIDGE` setting, off by default). The relay dials from the server's own address, so the server treats it as the most exposed thing it does:
+
+- **The destination is scoped by mode, never by the client alone.** `local` dials one fixed target. `port` lets the client name a host but pins the port, resolves the name, refuses private, loopback, link-local, multicast, reserved, and cloud metadata addresses, and dials the resolved address, so DNS rebinding gains nothing. `allow` admits only a listed set of `host:port` pairs.
+- **Every request is logged with the requester's address while the bridge is on.** See the [Privacy Policy](https://github.com/xero/text0wnz/wiki/privacy). Refusals reach the caller as a bare `403` with no reason, so the endpoint cannot be used to read the host's DNS.
+- **Every pipe is bounded.** A connection cap, a backpressure limit in both directions, an idle reaper, and timeouts on the dial and the lookup.
+- **The Origin allowlist gates the bridge** exactly as it gates room upgrades.
+- **Traffic past the bridge is plaintext to the destination**, passwords included, because that is what Moebius servers speak. The bridge changes who the destination sees (the bridge host), not what it sees.
+
+A public host in `port` mode is a relay from its own address to any public websocket server on one port, by design. Read the [Environment Variables](https://github.com/xero/text0wnz/wiki/environment-variables#bridge) guide before enabling it.
+
 ### Threat Model
 
 **Mitigated Threats:**
@@ -89,9 +97,12 @@ For server-side security best practices, see the [Collaboration Server Security 
 - **URL Injection**: Prevented by same-origin URL construction and the ws/wss scheme restriction [CWE-918]
 - **Malformed Frame Injection**: Prevented by try-catch frame decoding; bad frames drop silently [CWE-20]
 - **Chat Injection**: Prevented by server-side sanitization of handles, groups, and messages [CWE-20][CWE-117]
+- **Server-Side Request Forgery via the bridge**: Prevented by mode-scoped destinations, resolve-then-vet address denial, dial-by-resolved-address, and reason-free refusals [CWE-918]
+- **Relay abuse via the bridge**: Reduced by the Origin allowlist, connection and buffer bounds, and per-connection logging of the requester; a public `port`-mode host remains a relay by design [CWE-441]
 
 **User Responsibility:**
 
 - Users should only connect to trusted collaboration servers
 - HTTPS/WSS is strongly recommended for production use
 - Server certificate validation is handled by the browser
+- Connecting through a host's bridge means that host logs the address you connect from, and the destination sees the host's address instead of yours

@@ -186,9 +186,11 @@ ALLOWED_ORIGINS="https://text.0w.nz,https://staging.0w.nz" bun src/js/server/mai
 
 Desktop clients (Moebius, icy_draw) send no Origin header and always pass; the allowlist gates browsers only.
 
-### BRIDGE / BRIDGE_TARGET / BRIDGE_PORT / BRIDGE_ALLOW
+### BRIDGE
 
-**Default:** `BRIDGE=off`, `BRIDGE_TARGET=ws://127.0.0.1:8000`, `BRIDGE_PORT=8000`
+Companions: `BRIDGE_TARGET`, `BRIDGE_PORT`, `BRIDGE_ALLOW`, `BRIDGE_MAX`.
+
+**Default:** `BRIDGE=off`, `BRIDGE_TARGET=ws://127.0.0.1:8000`, `BRIDGE_PORT=8000`, `BRIDGE_MAX=16`
 
 **Purpose:** Control the collaboration bridge, a byte pipe from browser connections to plaintext desktop servers (Moebius, icy_draw).
 

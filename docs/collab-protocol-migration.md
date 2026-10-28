@@ -95,8 +95,8 @@ content, and no header can allow it. You have two ways through:
   reverse proxy forwards `/bridge` to the server (the Docker image and
   the examples in
   [webserver-configuration.md](./webserver-configuration.md) do). See
-  [environment-variables.md](./environment-variables.md). When the host
-  keeps it off, the form says so.
+  [environment-variables.md](./environment-variables.md#bridge). When
+  the host keeps it off, the form says so.
 
 ### What vanilla servers do differently
 

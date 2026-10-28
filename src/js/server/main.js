@@ -97,8 +97,9 @@ const server = createMoebiusServer({
 	tls,
 	log: config.debug ? console.log : () => {},
 	// bridge opens, closes, and refusals print with or without --debug:
-	// a relay from this host's address must leave a trail
-	audit: line => console.log(`[Server] ${line}`),
+	// a relay from this host's address must leave a trail, and the
+	// privacy policy promises each entry carries its own time
+	audit: line => console.log(`[Server] ${new Date().toISOString()} ${line}`),
 	onRoomCreate: restoreRoomState,
 	// an emptied dirty room persists before the server GCs it; a
 	// BLANK one (throwaway name, no art, no chat) leaves nothing,

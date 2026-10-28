@@ -946,8 +946,12 @@ const initializeAppComponents = async () => {
 		window.location.href = 'https://github.com/xero/text0wnz/releases/latest';
 	});
 	onClick($('aboutPrivacy'), _ => {
-		window.location.href =
-			'https://github.com/xero/teXt0wnz/blob/main/docs/privacy.md';
+		// a new tab, like help: reading the policy must not end a live
+		// collab session by navigating the editor away
+		window.open(
+			'https://github.com/xero/teXt0wnz/blob/main/docs/privacy.md',
+			'_blank',
+		);
 	});
 
 	onClick($('help'), _ => {
