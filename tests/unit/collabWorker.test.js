@@ -165,6 +165,16 @@ describe('collab worker', () => {
 			// the same-origin default never bridges
 			toWorker({ cmd: 'probe' });
 			expect(sockets.at(-1).url).toBe('wss://text.0w.nz:443/server');
+			// a link-chosen plaintext target is not probed through the
+			// bridge: no consent yet, so no outbound dial from the host
+			const before = sockets.length;
+			fakeSelf.postMessage.mockClear();
+			toWorker({ cmd: 'probe', url: 'jam.example/lounge' });
+			expect(sockets.length).toBe(before);
+			expect(pageMessages().at(-1)).toEqual({ cmd: 'probeResult', found: false });
+			// a secure target still probes direct
+			toWorker({ cmd: 'probe', url: 'wss://other.example/server' });
+			expect(sockets.at(-1).url).toBe('wss://other.example:443/server');
 		} finally {
 			Object.assign(fakeSelf.location, plain);
 		}

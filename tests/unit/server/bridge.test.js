@@ -313,7 +313,7 @@ describe('bridge pipe bounds (security review)', () => {
 			this.url = url;
 			this.readyState = 0;
 			this.sent = [];
-			this.bufferedAmount = 0;
+			this.pings = [];
 			this.closed = false;
 			this.listeners = new Map();
 			FakeUpstream.last = this;
@@ -331,12 +331,21 @@ describe('bridge pipe bounds (security review)', () => {
 			this.sent.push(frame);
 		}
 
+		ping(payload) {
+			this.pings.push(payload);
+		}
+
+		pong(payload) {
+			this.emit('pong', { data: payload });
+		}
+
 		close() {
 			this.closed = true;
 		}
 	}
-	const browser = (buffered = 0) => ({
+	const browser = () => ({
 		sent: [],
+		buffered: 0,
 		closed: false,
 		send(frame) {
 			this.sent.push(frame);
@@ -344,14 +353,23 @@ describe('bridge pipe bounds (security review)', () => {
 		close() {
 			this.closed = true;
 		},
-		getBufferedAmount: () => buffered,
+		getBufferedAmount() {
+			return this.buffered;
+		},
 	});
+	const openPipe = (page, options) => {
+		const pipe = createBridgePipe(page, 'ws://up.example:8000/', () => {}, options);
+		const up = FakeUpstream.last;
+		up.readyState = 1;
+		up.emit('open');
+		return { pipe, up };
+	};
 
-	it('queues before connect, relays after, and closes both on upstream backpressure', () => {
+	it('queues before connect and relays after', () => {
 		vi.stubGlobal('WebSocket', FakeUpstream);
 		try {
 			const page = browser();
-			const pipe = createBridgePipe(page, 'ws://up.example:8000/', () => {}, { backpressureLimit: 10 });
+			const pipe = createBridgePipe(page, 'ws://up.example:8000/');
 			const up = FakeUpstream.last;
 			pipe.fromBrowser('early');
 			expect(up.sent).toEqual([]);
@@ -360,8 +378,69 @@ describe('bridge pipe bounds (security review)', () => {
 			expect(up.sent).toEqual(['early']);
 			up.emit('message', { data: 'hello' });
 			expect(page.sent).toEqual(['hello']);
-			up.bufferedAmount = 11;
-			pipe.fromBrowser('too much');
+			pipe.close();
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
+
+	it('pings for delivery and closes when the server never answers', () => {
+		// Bun's client socket reports no buffered amount, so a pong is
+		// the only proof the far side is still taking delivery
+		vi.useFakeTimers();
+		vi.stubGlobal('WebSocket', FakeUpstream);
+		try {
+			const page = browser();
+			const { pipe, up } = openPipe(page, { stallMs: 3000 });
+			pipe.fromBrowser('data');
+			vi.advanceTimersByTime(1000);
+			expect(up.pings).toHaveLength(1);
+			// the stall is judged on the tick after the window elapses
+			vi.advanceTimersByTime(3000);
+			expect(up.closed).toBe(false);
+			vi.advanceTimersByTime(1000);
+			expect(up.closed).toBe(true);
+			expect(page.closed).toBe(true);
+		} finally {
+			vi.unstubAllGlobals();
+			vi.useRealTimers();
+		}
+	});
+
+	it('a server that answers pings keeps the pipe open and clears the count', () => {
+		vi.useFakeTimers();
+		vi.stubGlobal('WebSocket', FakeUpstream);
+		try {
+			const page = browser();
+			const { pipe, up } = openPipe(page, { stallMs: 3000, backpressureLimit: 10 });
+			pipe.fromBrowser('123456');
+			vi.advanceTimersByTime(1000);
+			up.pong(up.pings.at(-1));
+			// delivery confirmed: six more bytes fit under the limit again
+			pipe.fromBrowser('abcdef');
+			expect(up.closed).toBe(false);
+			vi.advanceTimersByTime(1000);
+			up.pong(up.pings.at(-1));
+			vi.advanceTimersByTime(10_000);
+			expect(up.closed).toBe(false);
+			// a stale pong confirms nothing
+			pipe.fromBrowser('xyz');
+			vi.advanceTimersByTime(1000);
+			up.pong('999');
+			vi.advanceTimersByTime(4000);
+			expect(up.closed).toBe(true);
+		} finally {
+			vi.unstubAllGlobals();
+			vi.useRealTimers();
+		}
+	});
+
+	it('closes at once when more than the limit is unconfirmed', () => {
+		vi.stubGlobal('WebSocket', FakeUpstream);
+		try {
+			const page = browser();
+			const { pipe, up } = openPipe(page, { backpressureLimit: 10 });
+			pipe.fromBrowser({ byteLength: 11 });
 			expect(up.closed).toBe(true);
 			expect(page.closed).toBe(true);
 		} finally {
@@ -369,19 +448,45 @@ describe('bridge pipe bounds (security review)', () => {
 		}
 	});
 
-	it('closes both when the browser side stops draining', () => {
+	it('closes when the browser stops taking delivery', () => {
+		vi.useFakeTimers();
 		vi.stubGlobal('WebSocket', FakeUpstream);
 		try {
-			const page = browser(11);
-			createBridgePipe(page, 'ws://up.example:8000/', () => {}, { backpressureLimit: 10 });
-			const up = FakeUpstream.last;
-			up.readyState = 1;
-			up.emit('open');
-			up.emit('message', { data: 'x' });
+			const page = browser();
+			const { up } = openPipe(page, { stallMs: 3000 });
+			up.emit('message', { data: 'hello' });
+			page.buffered = 5; // nothing delivered, nothing draining
+			vi.advanceTimersByTime(3000);
+			expect(page.closed).toBe(false);
+			vi.advanceTimersByTime(2000);
 			expect(page.closed).toBe(true);
 			expect(up.closed).toBe(true);
 		} finally {
 			vi.unstubAllGlobals();
+			vi.useRealTimers();
+		}
+	});
+
+	it('a browser that drains, however slowly, stays open; one over the limit does not', () => {
+		vi.useFakeTimers();
+		vi.stubGlobal('WebSocket', FakeUpstream);
+		try {
+			const page = browser();
+			const { up } = openPipe(page, { stallMs: 3000, backpressureLimit: 100 });
+			up.emit('message', { data: 'x'.repeat(50) });
+			page.buffered = 50; // a large frame sits buffered for a moment
+			vi.advanceTimersByTime(1000);
+			page.buffered = 40;
+			vi.advanceTimersByTime(1000);
+			page.buffered = 30;
+			vi.advanceTimersByTime(5000);
+			expect(page.closed).toBe(false);
+			page.buffered = 101;
+			vi.advanceTimersByTime(1000);
+			expect(page.closed).toBe(true);
+		} finally {
+			vi.unstubAllGlobals();
+			vi.useRealTimers();
 		}
 	});
 
@@ -390,12 +495,10 @@ describe('bridge pipe bounds (security review)', () => {
 		vi.stubGlobal('WebSocket', FakeUpstream);
 		try {
 			const page = browser();
-			const pipe = createBridgePipe(page, 'ws://up.example:8000/', () => {}, { idleMs: 1000 });
-			const up = FakeUpstream.last;
-			up.readyState = 1;
-			up.emit('open');
+			const { pipe, up } = openPipe(page, { idleMs: 1000 });
 			vi.advanceTimersByTime(900);
 			pipe.fromBrowser('still here');
+			up.pong('1'); // never let the delivery rule speak first
 			vi.advanceTimersByTime(900);
 			expect(page.closed).toBe(false);
 			vi.advanceTimersByTime(1100);

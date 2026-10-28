@@ -282,6 +282,20 @@ describe('Network Module', () => {
 			expect(global.window.prompt).toHaveBeenCalledTimes(2);
 		});
 
+		it('the invitation names a link-chosen server', () => {
+			global.window.location.search = '?server=ws://jam.example:8000/lounge';
+			try {
+				createWorkerHandler(mockInputHandle);
+				listenerOf()({ data: { cmd: 'probeResult', found: true } });
+				expect(State.modal.open).toHaveBeenCalledWith('choice');
+				expect(elementFor('choiceServer').textContent).toBe(
+					' at jam.example/lounge',
+				);
+			} finally {
+				global.window.location.search = '';
+			}
+		});
+
 		it('ignores a probe that finds nothing', () => {
 			createWorkerHandler(mockInputHandle);
 			const messageListener = mockWorker.addEventListener.mock.calls.find(

@@ -107,6 +107,7 @@ const createRemoteCursors = () => {
 const createWorkerHandler = inputHandle => {
 	const btnJoin = $('joinCollaboration');
 	const btnLocal = $('stayLocal');
+	const choiceServer = $('choiceServer');
 	const lblFont = $('currentFontDisplay');
 	const selFont = $('fontSelect');
 	const btn9pt = $('nav9pt');
@@ -678,13 +679,21 @@ const createWorkerHandler = inputHandle => {
 		const data = msg.data;
 		switch (data.cmd) {
 			case 'initialized':
-				// scoped probe: same-origin default server only; no join and
-				// no remote state until the user consents
+				// the probe dials the same-origin default, or a link's target
+				// direct from this browser; the worker refuses to route a
+				// probe through the bridge. No join and no remote state
+				// until the user consents
 				State.worker.postMessage({ cmd: 'probe', url: explicitServer });
 				break;
 			case 'probeResult':
 				if (data.found) {
 					sameOriginFound = explicitServer === undefined;
+					// a link chose the server: the invitation must say which,
+					// or the visitor consents to a session they cannot name
+					const target = explicitServer ? parseTarget(explicitServer) : null;
+					choiceServer.textContent = explicitServer
+						? ` at ${target ? formatTarget(target) : explicitServer}`
+						: '';
 					showCollaborationChoice();
 				}
 				break;

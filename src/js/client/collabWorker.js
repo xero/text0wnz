@@ -68,9 +68,18 @@ const closeSocket = () => {
  * server exists; the socket closes either way and the page decides.
  */
 const probe = (explicitUrl = undefined) => {
+	const route = serverUrl(explicitUrl);
+	if (route.bridged) {
+		// a probe runs before consent: it must never make the host dial
+		// out on a visitor's behalf (and log that visitor) on the
+		// strength of a link someone else wrote; the Connect form is
+		// the consenting path for a bridged target
+		toPage({ cmd: 'probeResult', found: false });
+		return;
+	}
 	let ws;
 	try {
-		ws = new WebSocket(serverUrl(explicitUrl).url);
+		ws = new WebSocket(route.url);
 	} catch {
 		toPage({ cmd: 'probeResult', found: false });
 		return;
