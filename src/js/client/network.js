@@ -698,13 +698,19 @@ const createWorkerHandler = inputHandle => {
 				}
 				break;
 			case 'connected':
+				if (!attempt) {
+					// a reply already in the queue when the dial was dismissed
+					// is nobody's session; the worker drops the socket
+					State.worker.postMessage({ cmd: 'disconnect' });
+					break;
+				}
 				await adoptSession(data);
 				break;
 			case 'refused': {
-				const { url, spelling } = attempt ?? {
-					url: explicitServer,
-					spelling: null,
-				};
+				if (!attempt) {
+					break; // ditto: no attempt, no prompt
+				}
+				const { url, spelling } = attempt;
 				attempt = null;
 				if (spelling !== null) {
 					// the typed path keeps its form: back to it with the
@@ -885,7 +891,9 @@ const createWorkerHandler = inputHandle => {
 					cancelable: false,
 				}),
 			);
-			const result = joinDocToDoc(data.data.doc);
+			// a caps reply is our own server, whose join palette is 8-bit
+			// by construction; everyone else's depth only the wire can tell
+			const result = joinDocToDoc(data.data.doc, { paletteDepth: extActive() ? 8 : undefined });
 			State.textArtCanvas.setDocData(result.doc);
 			if (result.fontName) {
 				await onFontChange(Load.sauceToAppFont(result.fontName) ?? result.fontName);

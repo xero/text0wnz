@@ -469,6 +469,46 @@ describe('Network Module', () => {
 			expect(elementFor('connectStatus').textContent).toMatch(/bridge/);
 		});
 
+		it('the join palette of our own server is read at the depth we know', async () => {
+			const handler = createWorkerHandler(mockInputHandle);
+			handler.joinCollaboration();
+			const blank = { code: 32, fg: 7, bg: 0 };
+			// every component under 64: the wire heuristic would expand it
+			const dark = Array.from({ length: 16 }, () => ({ r: 16, g: 8, b: 32 }));
+			await listenerOf()({
+				data: {
+					cmd: 'connected',
+					data: {
+						caps: [EXT_SUITE_CAP],
+						doc: { columns: 1, rows: 1, data: [blank], palette: dark },
+						users: [],
+					},
+				},
+			});
+			const doc = State.textArtCanvas.setDocData.mock.calls.at(-1)[0];
+			expect(doc.palette[1]).toBe((16 << 16) | (8 << 8) | 32);
+		});
+
+		it('a reply after dismissal adopts nothing and prompts nothing', async () => {
+			const handler = createWorkerHandler(mockInputHandle);
+			global.window.prompt = vi.fn();
+			handler.joinCollaboration();
+			State.modal.onClose.mock.calls.at(-1)[0]();
+			mockWorker.postMessage.mockClear();
+			State.textArtCanvas.setDocData.mockClear();
+			const blank = { code: 32, fg: 7, bg: 0 };
+			await listenerOf()({
+				data: {
+					cmd: 'connected',
+					data: { caps: [], doc: { columns: 1, rows: 1, data: [blank]}, users: []},
+				},
+			});
+			expect(State.textArtCanvas.setDocData).not.toHaveBeenCalled();
+			expect(mockWorker.postMessage).toHaveBeenCalledWith({ cmd: 'disconnect' });
+			await listenerOf()({ data: { cmd: 'refused' } });
+			expect(global.window.prompt).not.toHaveBeenCalled();
+		});
+
 		it('a bad address never dials', () => {
 			createWorkerHandler(mockInputHandle);
 			elementFor('connectServer').value = 'http://nope';
@@ -536,10 +576,11 @@ describe('Network Module', () => {
 		});
 
 		it('the collab join rebinds the font to the default palette', async () => {
-			createWorkerHandler(mockInputHandle);
+			const handler = createWorkerHandler(mockInputHandle);
 			const messageListener = mockWorker.addEventListener.mock.calls.find(
 				call => call[0] === 'message',
 			)[1];
+			handler.joinCollaboration();
 			const blank = { code: 32, fg: 7, bg: 0 };
 			State.font.setPalette.mockClear();
 			await messageListener({
@@ -559,10 +600,11 @@ describe('Network Module', () => {
 		});
 
 		it('EXT_PALETTE rebinds the live font handle', async () => {
-			createWorkerHandler(mockInputHandle);
+			const handler = createWorkerHandler(mockInputHandle);
 			const messageListener = mockWorker.addEventListener.mock.calls.find(
 				call => call[0] === 'message',
 			)[1];
+			handler.joinCollaboration();
 			const blank = { code: 32, fg: 7, bg: 0 };
 			await messageListener({
 				data: {
@@ -591,6 +633,7 @@ describe('Network Module', () => {
 			const messageListener = mockWorker.addEventListener.mock.calls.find(
 				call => call[0] === 'message',
 			)[1];
+			handler.joinCollaboration();
 			const blank = { code: 32, fg: 7, bg: 0 };
 			await messageListener({
 				data: {
