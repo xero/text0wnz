@@ -1,7 +1,7 @@
 # Browser Compatibility Analysis Guide
 
-- **Version:** 1.0
-- **Last Updated:** 2025-11-13 17:13:56 UTC
+- **Version:** 1.1
+- **Last Updated:** 2026-10-28
 - **Authors:** @xero @copilot
 - **Purpose:** Guide for analyzing browser compatibility using caniuse.com data
 
@@ -11,10 +11,10 @@
 
 | Browser                                                         | Chrome                                                                                                 | Firefox                                                                                                 | Safari                                                                                                 | Edge                                                                                                 | Opera                                                                                                 | iOS                                                                                                 | iPadOS                                                                                                 | Android                                                                                                 |
 | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| **Updated:** <br> [2025-11-13](https://github.com/Fyrd/caniuse) | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/chrome.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/firefox.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/safari.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/edge.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/opera.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/ios.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/ipados.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/android.svg" width="50" height="50"> |
+| **Updated:** <br> [2025-11-20](https://github.com/Fyrd/caniuse) | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/chrome.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/firefox.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/safari.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/edge.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/opera.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/ios.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/ipados.svg" width="50" height="50"> | <img src="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/android.svg" width="50" height="50"> |
 | **Supported**                                                   | 95.0+                                                                                                  | 93.0+                                                                                                   | 15.0+                                                                                                  | 95.0+                                                                                                | 81.0+                                                                                                 | 15.0+                                                                                               | 15.0+                                                                                                  | 95.0+                                                                                                   |
-| _**Unsupported**_                                               | < 94.0                                                                                                 | < 92.0                                                                                                  | < 14.0                                                                                                 | < 94.0                                                                                               | < 80.0                                                                                                | < 14.0                                                                                              | < 14.0                                                                                                 | < 94.0                                                                                                  |
-| **Latest Dev**                                                  | Canary                                                                                                 | Nightly                                                                                                 | -                                                                                                      | -                                                                                                    | -                                                                                                     | -                                                                                                   | -                                                                                                      | -                                                                                                       |
+| _**Unsupported**_                                               | < 94.x                                                                                                 | < 92.x                                                                                                  | < 14.x                                                                                                 | < 94.x                                                                                               | < 80.x                                                                                                | < 14.x                                                                                              | < 14.x                                                                                                 | < 94.x                                                                                                  |
+| **Latest Dev**                                                  | Canary                                                                                                 | Nightly                                                                                                 | Preview                                                                                                | Dev                                                                                                  | -                                                                                                     | -                                                                                                   | -                                                                                                      | -                                                                                                       |
 
 ---
 
@@ -224,20 +224,23 @@ Fyrd/caniuse/
 // Service Worker
 if ('serviceWorker' in navigator) { ... }
 
-// IndexedDB (via State.js)
+// localStorage (via State.js)
 State.saveToLocalStorage()
 
-// requestIdleCallback
-if ('requestIdleCallback' in window) { ... }
+// requestIdleCallback, with a synchronous fallback
+if ('requestIdleCallback' in window) {
+	requestIdleCallback(() => State.saveUndoHistory());
+} else {
+	State.saveUndoHistory();
+}
 ```
 
 ### Step 2: Retrieve Caniuse Data
 
-Use the GitHub Read tool to fetch feature data:
+Fetch each feature file straight from the Fyrd/caniuse repository:
 
-```
-Tool: githubread
-Query: "Get the content of features-json/[feature-name].json from Fyrd/caniuse repository"
+```sh
+curl -L https://raw.githubusercontent.com/Fyrd/caniuse/main/features-json/[feature-name].json -o [feature-name].json
 ```
 
 **Process in batches** to avoid overwhelming the API:
@@ -301,7 +304,7 @@ if (featureSupport <= targetChrome) {
 	"requestidlecallback": {
 		"safari": "NOT_SUPPORTED",
 		"status": "✅ FULLY_SUPPORTED",
-		"notes": "Has setTimeout fallback in code"
+		"notes": "Has a synchronous fallback in code"
 	}
 }
 ```
@@ -529,7 +532,7 @@ Edge switched to Chromium in version 79:
 - Edge 12-18: Old EdgeHTML engine
 - Edge 79+: Chromium-based (same as Chrome)
 
-**Solution:** Use Edge 79+ as minimum (aligns with Chrome 95+)
+**Solution:** Use Edge 95+ as the minimum. Every Edge release from 79 on shares Chrome's engine, so Edge's floor tracks Chrome's.
 
 ---
 
@@ -542,28 +545,18 @@ Let's walk through analyzing `requestIdleCallback`:
 ```javascript
 // src/js/client/main.js
 if ('requestIdleCallback' in window) {
-	requestIdleCallback(initSecondaryTools);
+	requestIdleCallback(() => State.saveUndoHistory());
 } else {
-	setTimeout(initSecondaryTools, 100);
+	State.saveUndoHistory();
 }
 ```
 
 ### 2. Retrieve Caniuse Data
 
-Retrieve feature data from the Fyrd/caniuse GitHub repository:
-You can fetch the content of `features-json/[feature-name].json` using the GitHub API or by downloading directly from the repository.
-
-**Example using curl:**
+Fetch `features-json/requestidlecallback.json` from the Fyrd/caniuse repository, through the GitHub API or straight from the raw file:
 
 ```sh
-curl -L https://raw.githubusercontent.com/Fyrd/caniuse/main/features-json/[feature-name].json -o [feature-name].json
-```
-
-Alternatively, use a tool like `githubread`:
-
-```
-Tool: githubread
-Query: "Get the content of features-json/requestidlecallback.json from Fyrd/caniuse"
+curl -L https://raw.githubusercontent.com/Fyrd/caniuse/main/features-json/requestidlecallback.json -o requestidlecallback.json
 ```
 
 ### 3. Parse Key Data
@@ -592,7 +585,7 @@ Query: "Get the content of features-json/requestidlecallback.json from Fyrd/cani
 ```javascript
 // Code has fallback!
 } else {
-    setTimeout(initSecondaryTools, 100);
+	State.saveUndoHistory();
 }
 ```
 
@@ -607,7 +600,7 @@ Query: "Get the content of features-json/requestidlecallback.json from Fyrd/cani
 		"iphone": "NOT_SUPPORTED",
 		"ipad": "NOT_SUPPORTED",
 		"status": "✅ FULLY_SUPPORTED",
-		"notes": "Safari/iOS not supported, but setTimeout fallback implemented"
+		"notes": "Safari/iOS not supported, but a synchronous fallback is implemented"
 	}
 }
 ```
@@ -664,8 +657,8 @@ rg "localStorage|sessionStorage" src/
 
 ### Retrieve Caniuse Data
 
-```
-githubread query: "Get the content of features-json/[NAME].json from Fyrd/caniuse repository"
+```sh
+curl -L https://raw.githubusercontent.com/Fyrd/caniuse/main/features-json/[NAME].json -o [NAME].json
 ```
 
 ### Common Feature Mappings
@@ -687,9 +680,10 @@ githubread query: "Get the content of features-json/[NAME].json from Fyrd/canius
 
 ## Version History
 
-| Version | Date       | Changes                                   |
-| ------- | ---------- | ----------------------------------------- |
-| 1.0     | 2025-11-13 | Initial documentation from first analysis |
+| Version | Date       | Changes                                                                                                                |
+| ------- | ---------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 2025-11-13 | Initial documentation from first analysis                                                                              |
+| 1.1     | 2026-10-28 | Support table synced with the README, code examples match `main.js`, Copilot-only retrieval steps replaced with `curl` |
 
 ---
 

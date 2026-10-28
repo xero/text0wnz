@@ -118,13 +118,13 @@ A retro text art editor rebooted for the modern web. Draw, edit, animate, and co
 | Extension       | Description                            | Import | Export | [Sauce](docs/sauce-format.md) |
 |:----------------|:---------------------------------------|:-----|:-----|:-----|
 | **`.ans`**      | ANSI art                               | ░▒▒░ | ░▒▒░ | ░▒▒░ |
-| **`.utf8.ans`** | UTF-8 ANSI for modern terminals        | ░▒▒░ | ░▒▒░ |      |
+| **`.utf8.ans`** | UTF-8 ANSI for modern terminals        | ░▒▒░ | ░▒▒░ | ░▒▒░ |
 | **`.bin`**      | DOS-era binary format                  | ░▒▒░ | ░▒▒░ | ░▒▒░ |
 | **`.xb`**       | [XBIN](docs/xb-format.md) format       | ░▒▒░ | ░▒▒░ | ░▒▒░ |
 | **`.tnd`**      | TundraDraw 24-bit color format         | ░▒▒░ | ░▒▒░ | ░▒▒░ |
 | **`.dur`**      | durdraw movie (animation)              | ░▒▒░ | ░▒▒░ |      |
 | **`.0wnz`**     | Native doc: truecolor, unicode, frames, fonts | ░▒▒░ | ░▒▒░ |      |
-| **`.nfo`**      | Scene release format                   | ░▒▒░ | ░▒▒░ | ░▒▒░ |
+| **`.nfo`**      | Scene release format                   | ░▒▒░ |      | ░▒▒░ |
 | **`.diz`**      | FILE_ID.DIZ archive metadata files     | ░▒▒░ |      | ░▒▒░ |
 | **`.asc`**      | Amiga and pc scene ascii               | ░▒▒░ |      |      |
 | **`.txt`**      | ASCII or other plain text              | ░▒▒░ | ░▒▒░ |      |
@@ -171,7 +171,8 @@ A retro text art editor rebooted for the modern web. Draw, edit, animate, and co
 
 - [SAUCE Format](docs/sauce-format.md) - SAUCE metadata format specification [**↵**](https://github.com/xero/text0wnz/wiki/sauce-format)
 - [XBin Format](docs/xb-format.md) - XBin file format specification [**↵**](https://github.com/xero/text0wnz/wiki/xb-format)
-- [LHA Format](docs/lha-format.md) - Amiga archive support and decoder notes [**↵**](https://github.com/xero/text0wnz/wiki/lha-format)
+- [teXt0wnz Doc Format](docs/0wnz-format.md) - Native `.0wnz` container specification [**↵**](https://github.com/xero/text0wnz/wiki/0wnz-format)
+- [Archive Support](docs/lha-format.md) - Zip and amiga archive support and decoder notes [**↵**](https://github.com/xero/text0wnz/wiki/lha-format)
 
 **Supplemental**
 
