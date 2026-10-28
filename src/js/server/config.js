@@ -1,4 +1,5 @@
 import { printHelp } from './utils.js';
+import { unmapped } from './authGate.js';
 
 const parseRoomPasswords = raw => {
 	if (!raw) {
@@ -45,7 +46,7 @@ const parseAllowedOrigins = raw => {
 const parseTrustProxy = raw =>
 	(raw ?? '')
 		.split(',')
-		.map(s => s.trim().replace(/^::ffff:/i, ''))
+		.map(s => unmapped(s.trim()))
 		.filter(s => s !== '');
 
 const parseArgs = () => {

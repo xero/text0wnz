@@ -570,7 +570,7 @@ src/js/server/
 **authGate.js** - Password Backoff
 
 - A gate per room name for the pre-room password check in `moebiusServer.js`, and one inside each room
-- Each client backs off alone (two tries free, then a refusal window doubling up to 30 seconds), and a room's budget for every address together is a burst of 20 wrong passwords, refilling one every 3 seconds (`ROOM_MAX_GUESSES` sets the 20)
+- Each client backs off alone (two tries free, then a refusal window doubling up to 30 seconds), and a room's budget for every address together is a burst of 20 wrong passwords, refilling one every 3 seconds (`ROOM_MAX_GUESSES` sets the 20), which addresses that have joined before bypass
 - Keys on a salted hash of the client address, with IPv6 cut to its /64; the address itself is never kept
 - Believes `X-Real-IP` or the last `X-Forwarded-For` hop only from loopback or a `TRUST_PROXY` peer, and counts a request as the proxy's own when the two headers disagree
 - Exports: `createAuthGate()`, `clientAddress()`, `addressKey()`

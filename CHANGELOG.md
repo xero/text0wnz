@@ -138,8 +138,9 @@ byte-exact golden tests before anything else moved.
   their index on live draws.
 - **One guesser cannot shut a passworded room.** The password backoff
   was per room, so one client could hold a room shut against everyone.
-  It is per address now, with a room-wide guess budget, and forwarded
-  addresses count only from loopback and `TRUST_PROXY`.
+  It is per address now, with a room-wide guess budget that artists who
+  already joined get through, and forwarded addresses count only from
+  loopback and `TRUST_PROXY`.
 - **Allowed bridge names stay where they pointed.** In `allow` mode a
   listed name dials the address it resolves to, and a name that later
   resolves to another kind of address, such as a public name turned

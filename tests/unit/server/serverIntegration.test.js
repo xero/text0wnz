@@ -383,6 +383,9 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 		);
 		try {
 			await awaitListening(guessChild, `http://127.0.0.1:${guessPort}/healthz`, res => res.ok, 'guess server');
+			// an artist who joined before the trouble started
+			const early = await connectForwarded('budget', { nick: 'e', pass: PASS }, '198.51.100.9', guessPort);
+			expect(early.type).toBe(A.CONNECTED);
 			for (const ip of ['198.51.100.1', '198.51.100.2']) {
 				const reply = await connectForwarded('budget', { nick: 'g', pass: 'wrong' }, ip, guessPort);
 				expect(reply.type).toBe(A.REFUSED);
@@ -390,6 +393,9 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 			// one wrong guess each from two addresses spent the room's two
 			const late = await connectForwarded('budget', { nick: 'a', pass: PASS }, '198.51.100.3', guessPort);
 			expect(late.type).toBe(A.REFUSED);
+			// ...but the artist who already joined gets back in after a drop
+			const back = await connectForwarded('budget', { nick: 'e', pass: PASS }, '198.51.100.9', guessPort);
+			expect(back.type).toBe(A.CONNECTED);
 		} finally {
 			guessChild.kill('SIGKILL');
 			rmSync(cwd, { recursive: true, force: true });

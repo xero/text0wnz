@@ -262,10 +262,9 @@ export const createMoebiusServer = config => {
 						refuse('bad password');
 						return;
 					}
+					// the gate stays to know this joiner when the room is
+					// under fire; a full table evicts idle gates first
 					gate.pass(ws.data.who);
-					if (gate.idle()) {
-						authGates.delete(ws.data.roomName);
-					}
 				}
 				const room = ws.data.room ?? getRoom(ws.data.roomName);
 				if (!room) {

@@ -341,7 +341,7 @@ Benefits:
 
 - `moebiusServer.js` keeps a gate per room name for the pre-room password check, and each room keeps its own
 - Each client backs off alone; two tries stay free, then its refusal window doubles up to 30 seconds
-- A room's budget for every address together is a burst of 20 wrong passwords, refilling one every 3 seconds; `ROOM_MAX_GUESSES` sets the 20, and a spent budget refuses everyone
+- A room's budget for every address together is a burst of 20 wrong passwords, refilling one every 3 seconds; `ROOM_MAX_GUESSES` sets the 20, and a spent budget refuses every address but those that have joined before
 - Keys on a salted hash of the client address, with IPv6 cut to its /64, never the address itself
 - Takes the client address from `X-Real-IP` or the last `X-Forwarded-For` hop only when the peer is loopback or listed in `TRUST_PROXY`; when both headers name different addresses, one is forged, and the request counts as the proxy's own
 
