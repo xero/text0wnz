@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import State from '../../src/js/client/state.js';
+import { Storage } from '../../src/js/client/storage.js';
 
 // test-local isolation for the shared singleton: production never
 // resets state (the deleted reset() had no callers outside this file)
@@ -410,5 +411,20 @@ describe('State Management System', () => {
 			expect(S.uiDir).toBe('./ui/');
 			expect(S.fontDir).toBe('./ui/fonts/');
 		});
+	});
+});
+
+describe('restoreStateFromLocalStorage', () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+		resetState();
+	});
+
+	it('with no saved settings, lets the boot snapshot go', async () => {
+		vi.spyOn(Storage, 'loadSettings').mockReturnValue(null);
+		const releaseBootSnapshot = vi.fn();
+		State._manager.state.textArtCanvas = { releaseBootSnapshot };
+		await State.restoreStateFromLocalStorage();
+		expect(releaseBootSnapshot).toHaveBeenCalledOnce();
 	});
 });

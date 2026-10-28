@@ -717,7 +717,7 @@ The autosave journal (`journalStore.js`, with `journalWorker.js` owning the OPFS
 - `journalStore.js` probes OPFS once per page load and gives up after `OPFS_PROBE_MS` (10 seconds), since every journal call waits on the choice. A failed probe puts the journal in an IndexedDB record log (database `text0wnz-journal`, separate from the snapshot store); where the `indexedDB` global is missing or throws, the journal lives in memory and does not survive a reload
 - The `text0wnz-journal-opfs` flag in `localStorage` marks a profile whose journal lives in OPFS and keeps it there through a failed probe, so one bad boot cannot fork the journal into IndexedDB, where the next boot would never look
 - `canvas.js` reads the journal as soon as it creates the store, before boot work queues a keyframe of the blank boot document over it (the store runs calls in the order they arrive). `loadBootSnapshot()` hands that read to the restore once, replayed to the native document, and returns null for an empty or unreadable journal, which sends the restore to the IndexedDB snapshot
-- A boot snapshot nobody takes is released after `JOURNAL_BOOT_SNAPSHOT_MS` (60 seconds, in `magicNumbers.js`)
+- When no restore will come (no saved settings, or a launch file opening instead), `releaseBootSnapshot()` lets the snapshot go; it is never dropped on a clock, since a slow boot can reach the restore minutes later
 
 ### Service Worker Cache (Cache API)
 

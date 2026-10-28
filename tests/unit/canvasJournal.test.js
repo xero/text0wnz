@@ -167,6 +167,38 @@ describe('canvas autosave journal wiring', () => {
 		);
 	});
 
+	it('a restore minutes into a slow boot still finds the last session', async () => {
+		const first = await makeCanvas();
+		first.startUndo();
+		first.draw(cb => cb(219, 14, 1, 3, 2));
+		first.startUndo();
+		await settle();
+		// a background tab or a cold font load can hold the restore back
+		// well past a minute; the snapshot must not expire on a clock
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout']});
+		try {
+			const second = await makeCanvas();
+			await vi.advanceTimersByTimeAsync(5 * 60_000);
+			const snapshot = await second.loadBootSnapshot();
+			expect(v3ToU16Lossy(snapshot.doc).imageData[2 * 80 + 3]).toBe(
+				(219 << 8) | (1 << 4) | 14,
+			);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('a skipped restore lets the boot snapshot go', async () => {
+		const first = await makeCanvas();
+		first.startUndo();
+		first.draw(cb => cb(219, 14, 1, 3, 2));
+		first.startUndo();
+		await settle();
+		const second = await makeCanvas();
+		second.releaseBootSnapshot();
+		expect(await second.loadBootSnapshot()).toBeNull();
+	});
+
 	it('undo rewrites the keyframe so replay matches the rewound doc', async () => {
 		const canvas = await makeCanvas();
 		canvas.startUndo();

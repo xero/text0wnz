@@ -678,8 +678,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 const initializeAppComponents = async () => {
-	// a pending launch file wins over the autosave restore
-	if (!pendingFile) {
+	// a pending launch file wins over the autosave restore, which then
+	// never takes the boot snapshot
+	if (pendingFile) {
+		State.textArtCanvas?.releaseBootSnapshot?.();
+	} else {
 		State.restoreStateFromLocalStorage().then(() => {
 			// the restore's loading modal clobbers a pending update prompt,
 			// and one cancel would then pin the old worker's stale chunks

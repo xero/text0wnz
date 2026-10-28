@@ -410,6 +410,7 @@ class StateManager {
 	async restoreStateFromLocalStorage() {
 		const settings = Storage.loadSettings();
 		if (!settings) {
+			this.state.textArtCanvas?.releaseBootSnapshot?.();
 			return;
 		}
 

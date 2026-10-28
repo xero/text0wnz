@@ -52,14 +52,13 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	// What the previous session left, read before this session can queue
 	// a keyframe over it: the restore runs after boot work that already
 	// keyframes the blank boot doc (its own setIceColors does), and the
-	// store runs calls in the order they arrive
+	// store runs calls in the order they arrive. Held until the restore
+	// takes it or is skipped, never on a clock: a slow boot (a background
+	// tab, a cold font load) may reach the restore minutes later
 	let bootJournal = journal.open().catch(error => {
 		console.warn('[Canvas] journal read failed:', error);
 		return null;
 	});
-	setTimeout(() => {
-		bootJournal = null;
-	}, magicNumbers.JOURNAL_BOOT_SNAPSHOT_MS);
 	let keyframeTimer = null;
 	// The first keyframe of a session supersedes whatever the journal
 	// held before (a previous session, a torn tail): strokes may only
@@ -1972,6 +1971,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
+	/** no restore is coming (no saved settings, a launch file instead):
+	 * the previous session's bytes need not live as long as the app */
+	const releaseBootSnapshot = () => {
+		bootJournal = null;
+	};
+
 	const getUndoHistory = () => null;
 
 	const setUndoHistory = _history => {};
@@ -2074,6 +2079,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		getBaudOffsets: getBaudOffsets,
 		setBaudReveal: setBaudReveal,
 		loadBootSnapshot: loadBootSnapshot,
+		releaseBootSnapshot,
 		setMirrorMode: setMirrorMode,
 		getMirrorMode: getMirrorMode,
 		getMirrorX: getMirrorX,
