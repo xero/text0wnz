@@ -177,27 +177,32 @@ password applies to spectators too. This is a deliberate difference
 from upstream Moebius, where a nickless connection bypasses the password
 and may draw.
 
-Wrong passwords back off per client: two tries stay free (humans typo),
-then the refusal window doubles up to 30 seconds for that client's
-address, so one guesser cannot hold a room shut against everyone else.
-Each room also takes at most 20 wrong guesses a minute from all
-addresses together (`ROOM_MAX_GUESSES`), so many addresses still guess
-slowly. A blank password never counts; it is the shape of the editor's
-silent server probe, and counting it would lock a public room against
-its own password after a few page views.
+Wrong passwords back off per address: two tries stay free (humans typo),
+then the refusal window doubles up to 30 seconds for that address, so
+one address cannot hold a room shut against everyone else. Each room
+also keeps a budget for every address together: a burst of 20 wrong
+guesses, then one more every 3 seconds (`ROOM_MAX_GUESSES` sets the 20,
+and the refill follows at 60/N seconds). While the budget is spent the
+room refuses everyone, the right password included; at the default,
+about ten addresses guessing steadily can keep it spent. A blank
+password never counts; it is the shape of the editor's silent server
+probe, and counting it would lock a public room against its own password
+after a few page views.
 
 The gate never holds an address. It keys on a hash under a salt the
 process mints at start, with IPv6 cut to its /64 (one subscriber holds
 the whole block), and none of it is logged or written down. Behind a
 reverse proxy the address comes from `X-Real-IP` or the last
 `X-Forwarded-For` hop, believed only from loopback and from the exact
-addresses in `TRUST_PROXY`. The proxy must write the header itself:
-when both headers arrive and disagree, one was forged, and the request
-counts as the proxy's own. The Docker image's Caddy and the examples in
-[webserver-configuration.md](./webserver-configuration.md) set it. Before a room exists the same backoff lives in a gate
-bounded at 4096 room names; when it is full, fresh names are refused
+addresses in `TRUST_PROXY`. The proxy must write the header itself: when
+both headers arrive and disagree, one was forged, and the request counts
+as the proxy's own. The Docker image's Caddy and the examples in
+[webserver-configuration.md](./webserver-configuration.md) set it. Every
+passworded join first passes a gate keyed by room name, bounded at 4096
+names; when that table is full, a name without a live gate is refused
 with `auth cooldown` until stale entries age out, so hostile name churn
-cannot grow it.
+cannot grow it. Each room's gate holds up to 4096 addresses and sheds
+the ones gone quiet first.
 
 Handles are kept to 100 characters, chat lines to 140, and a room holds
 the last 128 chat lines for late joiners. SAUCE fields are clamped at
@@ -250,18 +255,18 @@ the newest one on disk.
 
 ## Limits and Hardening
 
-| Limit             | Value                                                                                                                                                                                    |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Frame size        | 32 MB (vanilla `PASTE_AS_SELECTION` frames run tens of MB)                                                                                                                               |
-| Idle sockets      | Reaped after 120 seconds; a 30 second heartbeat ping keeps quiet spectators alive                                                                                                        |
-| Sockets per room  | 64, handshake pending or not                                                                                                                                                             |
-| Rooms per process | 64                                                                                                                                                                                       |
-| Bridged pipes     | `BRIDGE_MAX` at once (default 16); a pipe closes after 30 minutes without a frame either way, 15 seconds without delivery progress, or 64 MB unconfirmed (see [The Bridge](#the-bridge)) |
-| Bridge dial       | 3 second DNS lookup, 10 second connect, and 256 KB of browser frames queued before the upstream answers                                                                                  |
-| Operation log     | 10,000 operations or 8 MB per room, the timelapse substrate; older operations fold into a baseline                                                                                       |
-| Chat history      | 128 lines                                                                                                                                                                                |
-| SAUCE fields      | Title 35, author 20, group 20, comments 4096, font name 100 characters                                                                                                                   |
-| Auth gate         | 4096 room names with a pending backoff, fresh names refused while it is full; per room, 20 wrong guesses a minute across all addresses (`ROOM_MAX_GUESSES`)                              |
+| Limit             | Value                                                                                                                                                                                     |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frame size        | 32 MB (vanilla `PASTE_AS_SELECTION` frames run tens of MB)                                                                                                                                |
+| Idle sockets      | Reaped after 120 seconds; a 30 second heartbeat ping keeps quiet spectators alive                                                                                                         |
+| Sockets per room  | 64, handshake pending or not                                                                                                                                                              |
+| Rooms per process | 64                                                                                                                                                                                        |
+| Bridged pipes     | `BRIDGE_MAX` at once (default 16); a pipe closes after 30 minutes without a frame either way, 15 seconds without delivery progress, or 64 MB unconfirmed (see [The Bridge](#the-bridge))  |
+| Bridge dial       | 3 second DNS lookup, 10 second connect, and 256 KB of browser frames queued before the upstream answers                                                                                   |
+| Operation log     | 10,000 operations or 8 MB per room, the timelapse substrate; older operations fold into a baseline                                                                                        |
+| Chat history      | 128 lines                                                                                                                                                                                 |
+| SAUCE fields      | Title 35, author 20, group 20, comments 4096, font name 100 characters                                                                                                                    |
+| Auth gate         | 4096 room names with a pending backoff, fresh names refused while it is full; per room, 4096 addresses and a burst of 20 wrong guesses refilling one every 3 seconds (`ROOM_MAX_GUESSES`) |
 
 Malformed frames are dropped with a log line, never a crash, which the
 upstream servers do not survive. Frames before `CONNECTED` are dropped.
@@ -465,7 +470,9 @@ the same request gets the file server's 404 instead.
 
 **Refused with the right password.** Check `ROOM_PASSWORDS` for a
 per-room entry that overrides `--pass`, and remember the backoff after
-repeated wrong tries from your address. Behind a proxy that reaches the
+repeated wrong tries from your address, and the room's guess budget,
+which wrong tries from anyone can spend for a while
+(`ROOM_MAX_GUESSES`). Behind a proxy that reaches the
 server from another address, list that exact address in `TRUST_PROXY`,
 or every visitor shares it and one guesser's backoff refuses them all.
 The Docker image behind another proxy needs a mounted Caddyfile that

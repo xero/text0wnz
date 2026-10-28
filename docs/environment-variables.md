@@ -168,7 +168,7 @@ ROOM_PASSWORDS='{"room":"pw"}' bun server
 
 **Default:** `20`
 
-**Purpose:** Wrong passwords a room takes in a minute from every address together, on top of each address's own backoff. The budget refills one guess every 60 / N seconds. While it is spent, the room refuses everyone, the right password included, so too low a number lets a few addresses hold a room shut. Raise it for a big jam where many people might mistype at once; lower it to slow a guesser spread across many addresses. Anything but a positive whole number keeps the default.
+**Purpose:** A room's budget of wrong passwords from every address together, on top of each address's own backoff: a burst of N, then one more every 60 / N seconds. While it is spent, the room refuses everyone, the right password included, so too low a number lets a few addresses hold a room shut; at the default, about ten addresses guessing steadily can. Raise it for a big jam where many people might mistype at once; lower it to slow a guesser spread across many addresses. Anything but a positive whole number keeps the default.
 
 ```bash
 ROOM_MAX_GUESSES=60 ROOM_PASS=hunter2 bun server

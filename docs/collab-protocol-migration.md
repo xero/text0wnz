@@ -238,7 +238,8 @@ objects with 6-bit components; moebiusXBIN sends the same shape with
 8-bit components. The receiver auto-detects as icy_draw does: any
 component above 63 means the whole palette is 8-bit, and 6-bit values
 expand by replicating the top two bits (63 becomes 255). Our own
-server's palettes are always 8-bit and read as such.
+server sends teXt0wnz clients 8-bit palettes, and they read them as
+such.
 
 Going the other way, vanilla Moebius expands every join palette from 6
 bits, and moebiusXBIN reads it raw as 8, yet both send the same
@@ -254,12 +255,15 @@ and keeps only the verdict.
 JSON, `{type: "Buffer", data: [...]}`. teXt0wnz revives that shape, a
 plain array, and a `Uint8Array` alike; anything else reads as no font.
 
-**Colors above 15.** Vanilla Moebius uses palette indices 0 to 15. The
-server accepts `fg` and `bg` from 0 to 255 on a `DRAW` and stores them,
-and a join document reads them as palette-index words the same way. The
-vanilla projection the server writes on save, and hands to a vanilla
-joiner, folds everything back to 16 colors. The teXt0wnz live view
-keeps the full index on a vanilla `DRAW`, as the join document does.
+**Colors above 15.** Vanilla Moebius uses palette indices 0 to 15, and
+moebiusXBIN paints from 256. The server accepts `fg` and `bg` from 0 to
+255 on a `DRAW`, stores them, and relays them as sent, so join
+documents and saves carry them too. teXt0wnz reads them as
+palette-index words in a join document and on a live `DRAW` alike. Only
+extended cells (unicode and truecolor from teXt0wnz clients) fold to the
+classic 16 for caps-less members, so an index past 15 from the fork
+reaches a vanilla Moebius client unchanged, a color it has no entry
+for.
 
 **SAUCE author and group.** Moebius 1.0.29 and moebiusXBIN 2.2.0 both
 swap author and group when a live `SAUCE` frame arrives (their `doc.js`
