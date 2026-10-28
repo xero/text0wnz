@@ -107,16 +107,18 @@ The E2E tests validate the application's functionality in a real browser environ
   - Help and information panels
 
 - **asciiBrush.spec.js** - Ascii brush strokes in line and square modes
-- **autosave.spec.js** - The autosave journal across reloads: draws, iCE colors, a resize, a new frame, a selection still floating in move mode, and the last edit before a reload come back (skipped where the browser refuses both OPFS and IndexedDB), and the idle commit never splits a held drag or a paused selection move. A floating move stepped just before a reload keeps that step (best effort, skipped on WebKit), and Update Editor with no update waiting clears the art for good
+- **autosave.spec.js** - The autosave journal across reloads: draws, iCE colors, a resize, a new frame, an opened two-frame movie, a selection still floating in move mode, and the last edit before a reload come back (skipped where the browser refuses both OPFS and IndexedDB), and the idle commit never splits a held drag or a paused selection move. A floating move stepped just before a reload keeps that step (best effort, skipped on WebKit), and Update Editor with no update waiting clears the art for good
 - **autoscroll.spec.js** - Minimap autoscroll stepping and escape
 - **collabMoebius.spec.js** - Joins the vendored vanilla Moebius fixture through the Connect form (Chromium only)
 - **collabRoundTrip.spec.js** - Two browsers drawing through the bun server, a late joiner keeping the room's SAUCE, and a peer SAUCE that waits while the Sauce Editor is open
+- **compressionFallback.spec.js** - Zips, durdraw movies, `.0wnz` saves, and the autosave journal with the compression streams deleted
+- **damagedArchives.spec.js** - A damaged zip entry opens as far as it decodes, with a note; a newer open silences a stale one's note
 - **darkMode.spec.js** - The dark mode toggle's hover, and the OS theme when storage is blocked
 - **editor-file-open-and-scroll.spec.js** - Opening a file and scrolling the canvas
 - **editor-keybinds.spec.js** - Editor key bindings end to end
 - **gestures.spec.js** - Touch and pointer gestures
 - **lazyTools.spec.js** - Freehand tools fetch on first use, never at boot
-- **mapping.spec.js** - Character and color mapping tools
+- **mapping.spec.js** - Clicking a cell's center paints that cell, across zooms and scroll offsets
 - **panels.spec.js** - Panel docking, shading, pinning, and the phone shell
 - **pwaManifest.spec.js** - PWA manifest and service worker registration
 - **refimage.spec.js** - Reference image loading, drag, and persistence
