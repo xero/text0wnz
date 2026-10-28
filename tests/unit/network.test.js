@@ -8,6 +8,7 @@ import {
 import { $, onEnter } from '../../src/js/client/ui.js';
 import {
 	EXT_SUITE_CAP,
+	MoebiusAction,
 	T0wnzAction,
 	compressExtCells,
 } from '../../src/js/core/index.js';
@@ -669,6 +670,58 @@ describe('Network Module', () => {
 			});
 			expect(State.textArtCanvas.setDocData).toHaveBeenCalled();
 			expect(State.textArtCanvas.resize).toHaveBeenCalledWith(100, 30);
+		});
+
+		it('a settings change made while a sync loads its font still goes out', async () => {
+			const handler = createWorkerHandler(mockInputHandle);
+			const messageListener = mockWorker.addEventListener.mock.calls.find(
+				call => call[0] === 'message',
+			)[1];
+			handler.joinCollaboration();
+			const blank = { code: 32, fg: 7, bg: 0 };
+			await messageListener({
+				data: {
+					cmd: 'connected',
+					data: {
+						caps: [EXT_SUITE_CAP],
+						doc: { columns: 2, rows: 1, data: [blank, blank]},
+						users: [],
+						chat_history: [],
+					},
+				},
+			});
+			// the join's follow-up sync names a font; hold the load open
+			let finishFont;
+			State.textArtCanvas.setFont.mockImplementationOnce(
+				() => new Promise(resolve => (finishFont = resolve)),
+			);
+			const syncing = messageListener({
+				data: {
+					cmd: 'frame',
+					type: T0wnzAction.EXT_SYNC,
+					data: {
+						columns: 2,
+						rows: 1,
+						cells: compressExtCells(
+							Array.from({ length: 2 }, () => ({ u: 32, a: 0, fg: 7, bg: 0 })),
+						),
+						seq: 5,
+						font_name: 'IBM VGA',
+					},
+				},
+			});
+			await vi.waitFor(() => expect(finishFont).toBeTypeOf('function'));
+			mockWorker.postMessage.mockClear();
+			// the artist resizes mid-load: applied locally, so it has to
+			// reach the server or the room diverges with no seq gap to tell
+			handler.sendResize(100, 30);
+			expect(mockWorker.postMessage).toHaveBeenCalledWith({
+				cmd: 'send',
+				type: MoebiusAction.SET_CANVAS_SIZE,
+				data: { columns: 100, rows: 30 },
+			});
+			finishFont();
+			await syncing;
 		});
 
 		it('should handle canvas settings when not in collaboration mode', () => {
