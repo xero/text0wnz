@@ -69,7 +69,7 @@ export default ({ mode }) => {
 						includeDependenciesRecursively: false,
 						groups: [
 							// also holds vite's dynamic import helper, otherwise it lands in the entry chunk & tools imports the editor back
-							{ name: 'core', test: /[\\/]src[\\/]js[\\/]client[\\/](magicNumbers|state|storage|compression|ui)\.js$|vite[\\/]preload-helper/ },
+							{ name: 'core', test: /[\\/]src[\\/]js[\\/]client[\\/](magicNumbers|state|storage|ui)\.js$|vite[\\/]preload-helper/ },
 							{ name: 'canvas', test: /[\\/]src[\\/]js[\\/]client[\\/](canvas|font|lazyFont|fontCache)\.js$/ },
 							{ name: 'tools', test: /[\\/]src[\\/]js[\\/]client[\\/](freehandTools|keyboard|toolbar)\.js$/ },
 							{ name: 'fileops', test: /[\\/]src[\\/]js[\\/]client[\\/]file\.js$/ },
