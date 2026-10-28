@@ -229,8 +229,9 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 
 - WebSocket client (in a module Web Worker with security hardening)
 - Mandatory worker initialization sequence
-- Same-origin default server URL; explicit `ws://`/`wss://` for remote dial
-- Silent connection probe (non-intrusive)
+- Same-origin default server, or any server typed into the Connect form as `host[:port][/room]` or a `ws://`/`wss://` url
+- Transport choice per origin: direct from plain pages, through the host's `/bridge` from https pages (plaintext targets)
+- Silent connection probe of the same-origin server, or a link's target direct from the browser, never through the bridge
 - Connection state management
 - Moebius-native protocol handling with input validation
 - Canvas synchronization
@@ -300,7 +301,7 @@ Benefits:
 ┌─────────────────┴───────────────────────────────────────┐
 │                 Path-Based Room Routing                 │
 │        /  and  /server  reach the default room          │
-│            /roomname  reaches a named room              │
+│   /server/roomname  and  /roomname  reach a named room  │
 └─────────────────┬───────────────────────────────────────┘
                   │
 ┌─────────────────┴───────────────────────────────────────┐
@@ -346,7 +347,8 @@ Benefits:
 **Bridge** (`bridge.js`)
 
 - Byte pipe from browser connections to plaintext desktop servers
-- Mode gating (`off`, `local`, `port`, `allow`) with address vetting
+- Mode gating (`off`, `local`, `port`, `allow`) with address vetting and bounded lookups
+- Delivery bounds in both directions, an idle reaper, a dial timeout, and an audit line per open, close, and refusal
 
 **Utilities** (`utils.js`)
 

@@ -955,7 +955,15 @@ The tutorials themselves are just normal ANSI art files. Viewing a tutorial simp
 
 When the editor is served alongside a collaboration server, a prompt at launch asks whether to join the session in progress or continue offline.
 
-To join a server anywhere else, click the collab button in the sauce panel; it reads `local` while you work alone. Type the server as `host:port/room`, the way Moebius's connect dialog reads it. A bare host means port 8000 and the default joint. The form keeps your handle, your group, and the last few servers you joined. Vanilla Moebius servers are plaintext, so from an https page the editor goes through the site's bridge when the host allows it; see [collab-protocol-migration.md](./collab-protocol-migration.md).
+## Connecting to a Server
+
+To join a server anywhere else, click the collab button in the sauce panel; it reads `local` while you work alone. The Connect form asks for:
+
+- **Server** as `host:port/room`, the way Moebius's connect dialog reads it. A bare host means port 8000 and the default room; port 443 means a secure server; a full `ws://` or `wss://` url is taken as written. The last eight servers you joined are offered as you type.
+- **Password**, when the room has one. It is never stored.
+- **Handle** and **Group**, which the form remembers.
+
+A refusal or a dead server reports in the form. Vanilla Moebius servers are plaintext, so from an https page the editor goes through the site's bridge when the host allows it, and says so when it does not; see [collab-protocol-migration.md](./collab-protocol-migration.md). The launch invitation names the server a link chose for you.
 
 - Everyone in a session draws on the same canvas in real time, with live peer cursors, synced fonts, canvas sizes, iCE colors, and SAUCE metadata
 - Between teXt0wnz clients, unicode characters and extended colors travel natively

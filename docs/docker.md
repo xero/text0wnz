@@ -141,6 +141,8 @@ The container implements a robust startup sequence:
 | `BRIDGE_ALLOW`   | Comma-separated `host:port` list for `allow` mode                             | none                      |
 | `BRIDGE_MAX`     | Concurrent bridged connections                                                | `16`                      |
 
+Both images forward `/bridge*` to the server, so setting `BRIDGE=port` is all an https deployment needs for its visitors to reach plaintext Moebius servers. Enabling it turns the host into a relay from its own address and switches on an audit line per bridged connection; read the [bridge section of the environment variables guide](./environment-variables.md#bridge) first.
+
 ## Advanced Usage
 
 ### Persistent Storage
