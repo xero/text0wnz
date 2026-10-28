@@ -795,6 +795,26 @@ export const gunzip = async (
 	return gunzipSync(bytes, maxBytes);
 };
 
+/**
+ * The engine's deflate-raw alone, for a caller with its own plain
+ * fallback (zip salvage): null when there is no stream or it refuses
+ * the data, so a damaged entry costs one plain decode, not two.
+ */
+export const inflateRawNative = async (
+	bytes: Uint8Array,
+	maxBytes = Infinity,
+): Promise<Uint8Array | null> => {
+	const stream = nativeStream(globalThis.DecompressionStream, 'deflate-raw');
+	if (!stream) {
+		return null;
+	}
+	try {
+		return await pumpThrough(bytes, stream, maxBytes);
+	} catch {
+		return null;
+	}
+};
+
 export const inflateRaw = async (
 	bytes: Uint8Array,
 	maxBytes = Infinity,
