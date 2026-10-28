@@ -4,6 +4,7 @@ import {
 	sanitize,
 	callout,
 	authCooldownMs,
+	joinPaletteDepth,
 } from '../../../src/js/server/utils.js';
 
 describe('Utils Module', () => {
@@ -150,6 +151,29 @@ describe('Utils Module', () => {
 			expect(authCooldownMs(4)).toBe(1000);
 			expect(authCooldownMs(9)).toBe(30_000);
 			expect(authCooldownMs(50)).toBe(30_000);
+		});
+	});
+
+	describe('joinPaletteDepth', () => {
+		// Electron's default agent carries the app's name/version token
+		const electron = token =>
+			`Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) ${token} Chrome/120.0.6099.56 Electron/28.0.0 Safari/537.36`;
+
+		it('reads 6 bits only for vanilla Moebius', () => {
+			expect(joinPaletteDepth(electron('moebius/1.0.29'))).toBe(6);
+			expect(joinPaletteDepth(electron('Moebius/1.0.29'))).toBe(6);
+		});
+
+		it('gives everyone else the 8 this server writes', () => {
+			expect(joinPaletteDepth(electron('moebius/2.2.0'))).toBe(8);
+			expect(joinPaletteDepth(electron('MoebiusXBIN/2.2.0'))).toBe(8);
+			expect(
+				joinPaletteDepth(
+					'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+				),
+			).toBe(8);
+			expect(joinPaletteDepth(null)).toBe(8);
+			expect(joinPaletteDepth(undefined)).toBe(8);
 		});
 	});
 });

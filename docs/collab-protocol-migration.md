@@ -211,9 +211,10 @@ payload into an exportable animation
 
 `EXT_PALETTE` swaps the whole extended palette (editors only, 1 to 256
 words). The first 16 entries also become the vanilla join palette, as
-8-bit `{r, g, b}` objects, so vanilla clients joining later see them;
-vanilla members already in the room keep their palette, which is
-upstream's own `CHANGE_PALETTE` behavior.
+`{r, g, b}` objects (at the depth each joiner reads; see Palette depth
+below), so vanilla clients joining later see them; vanilla members
+already in the room keep their palette, which is upstream's own
+`CHANGE_PALETTE` behavior.
 
 ### Limits the server enforces
 
@@ -238,6 +239,16 @@ objects with 6-bit components; moebiusXBIN sends the same shape with
 component above 63 means the whole palette is 8-bit, and 6-bit values
 expand by replicating the top two bits (63 becomes 255). Our own
 server's palettes are always 8-bit and read as such.
+
+Going the other way, vanilla Moebius expands every join palette from 6
+bits, and moebiusXBIN reads it raw as 8, yet both send the same
+`CONNECTED` frame. The server tells them apart by the upgrade request's
+user agent: Electron's default carries the app token, `moebius/1.x` for
+vanilla and `2.x` for the fork. A client matching vanilla gets 6-bit
+components; everyone else, unknown agents included, gets 8. The stock
+16 survive either way (their bit patterns repeat), so only custom
+palettes depend on the guess. The server reads the header at the door
+and keeps only the verdict.
 
 **Font bytes.** moebiusXBIN serializes an embedded font as Node Buffer
 JSON, `{type: "Buffer", data: [...]}`. teXt0wnz revives that shape, a

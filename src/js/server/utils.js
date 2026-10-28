@@ -1,6 +1,15 @@
 /** room name grammar shared by the ws router and persistence */
 const ROOM_NAME_RE = /^[a-z0-9_-]{1,32}$/i;
 
+/** vanilla Moebius expands join palettes from 6 bits and moebiusXBIN
+ * reads them as 8, yet both send the same CONNECTED: only Electron's
+ * user agent token, app name and version, tells them apart (vanilla is
+ * moebius/1.x, the fork 2.x). Anything else gets 8, the depth this
+ * server writes, so a miss costs nothing new
+ * @param {string | null | undefined} userAgent */
+const joinPaletteDepth = userAgent =>
+	(typeof userAgent === 'string' && (/\bmoebius\/1\.\d/i).test(userAgent) ? 6 : 8);
+
 /** shared wire-auth backoff: two tries stay free (humans typo),
  * then the refusal window doubles up to a 30s cap */
 const authCooldownMs = failures =>
@@ -77,4 +86,5 @@ export {
 	sanitize,
 	ROOM_NAME_RE,
 	authCooldownMs,
+	joinPaletteDepth,
 };

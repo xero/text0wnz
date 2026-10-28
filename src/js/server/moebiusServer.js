@@ -16,7 +16,12 @@ import path from 'node:path';
 import { MoebiusAction, decodeFrame, ProtocolError } from '../core/index';
 import { createRoom } from './room.js';
 import { resolveBridgeTarget, createBridgePipe } from './bridge.js';
-import { ROOM_NAME_RE, authCooldownMs, sanitize } from './utils.js';
+import {
+	ROOM_NAME_RE,
+	authCooldownMs,
+	joinPaletteDepth,
+	sanitize,
+} from './utils.js';
 
 export const SERVER_LIMITS = Object.freeze({
 	// vanilla PASTE_AS_SELECTION frames run tens of MB (the ancestor's
@@ -148,6 +153,7 @@ export const createMoebiusServer = config => {
 				send: (type, data) => {
 					ws.send(JSON.stringify({ type, data }));
 				},
+				paletteDepth: ws.data.paletteDepth,
 			};
 		}
 		return ws.data.client;
@@ -473,8 +479,11 @@ export const createMoebiusServer = config => {
 		if (roomName === null) {
 			return new Response('no such room', { status: 404 });
 		}
+		// read once at the door: the user agent is the only thing that
+		// tells vanilla Moebius from moebiusXBIN, and it is not kept
+		const paletteDepth = joinPaletteDepth(req.headers.get('user-agent'));
 		if (
-			server.upgrade(req, { data: { roomName, connected: false, alive: true } })
+			server.upgrade(req, { data: { roomName, connected: false, alive: true, paletteDepth } })
 		) {
 			return undefined;
 		}
