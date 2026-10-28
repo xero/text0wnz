@@ -116,7 +116,8 @@ describe('a Chromium 80-102 engine', () => {
 		expect([...(await extractZipEntry(zip, entry))]).toEqual([...piece]);
 		const data = sample();
 		expect(await gunzip(await gzip(data))).toEqual(data);
-		expect(formats).toEqual(['gzip']);
+		// native gzip both ways (the save check decodes too), never deflate-raw
+		expect(new Set(formats)).toEqual(new Set(['gzip']));
 	});
 });
 
