@@ -673,6 +673,39 @@ describe('Network Module', () => {
 			expect(State.textArtCanvas.resize).toHaveBeenCalledWith(100, 30);
 		});
 
+		it('a remote apply that throws leaves settings sends working', async () => {
+			const handler = createWorkerHandler(mockInputHandle);
+			const messageListener = mockWorker.addEventListener.mock.calls.find(
+				call => call[0] === 'message',
+			)[1];
+			handler.joinCollaboration();
+			const blank = { code: 32, fg: 7, bg: 0 };
+			await messageListener({
+				data: {
+					cmd: 'connected',
+					data: {
+						caps: [EXT_SUITE_CAP],
+						doc: { columns: 2, rows: 1, data: [blank, blank]},
+						users: [],
+						chat_history: [],
+					},
+				},
+			});
+			// a low-memory phone failing to allocate a peer's huge canvas
+			State.textArtCanvas.resize.mockImplementationOnce(() => {
+				throw new RangeError('canvas too large');
+			});
+			await messageListener({ data: { cmd: 'frame', type: MoebiusAction.SET_CANVAS_SIZE, data: { id: 1, columns: 900, rows: 9000 } } }).catch(() => {});
+			mockWorker.postMessage.mockClear();
+			handler.sendResize(100, 30);
+			// a stuck depth would mute this, and every later setting, in silence
+			expect(mockWorker.postMessage).toHaveBeenCalledWith({
+				cmd: 'send',
+				type: MoebiusAction.SET_CANVAS_SIZE,
+				data: { columns: 100, rows: 30 },
+			});
+		});
+
 		it('a settings change made while a sync loads its font still goes out', async () => {
 			const handler = createWorkerHandler(mockInputHandle);
 			const messageListener = mockWorker.addEventListener.mock.calls.find(

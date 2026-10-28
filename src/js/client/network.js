@@ -264,9 +264,7 @@ const createWorkerHandler = inputHandle => {
 		) {
 			return;
 		}
-		applyDepth++; // prevents re-broadcasting received settings
-		State.textArtCanvas.resize(columns, rows);
-		applyDepth = Math.max(0, applyDepth - 1);
+		muted(() => State.textArtCanvas.resize(columns, rows));
 	};
 
 	const onFontChange = async fontName => {
@@ -280,27 +278,17 @@ const createWorkerHandler = inputHandle => {
 		});
 	};
 
-	const onIceColorsChange = iceColors => {
-		applyDepth++; // prevents re-broadcasting received settings
-		State.textArtCanvas.setIceColors(iceColors);
-		if (iceColors) {
-			btnIce.classList.add('enabled');
-		} else {
-			btnIce.classList.remove('enabled');
-		}
-		applyDepth = Math.max(0, applyDepth - 1);
-	};
+	const onIceColorsChange = iceColors =>
+		muted(() => {
+			State.textArtCanvas.setIceColors(iceColors);
+			btnIce.classList.toggle('enabled', iceColors);
+		});
 
-	const onLetterSpacingChange = letterSpacing => {
-		applyDepth++; // prevents re-broadcasting received settings
-		State.font.setLetterSpacing(letterSpacing);
-		if (letterSpacing) {
-			btn9pt.classList.add('enabled');
-		} else {
-			btn9pt.classList.remove('enabled');
-		}
-		applyDepth = Math.max(0, applyDepth - 1);
-	};
+	const onLetterSpacingChange = letterSpacing =>
+		muted(() => {
+			State.font.setLetterSpacing(letterSpacing);
+			btn9pt.classList.toggle('enabled', letterSpacing);
+		});
 
 	/** @type {((payload: object) => void) | null} */
 	let timelapseWaiter = null;
