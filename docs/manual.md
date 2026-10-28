@@ -3,16 +3,20 @@
 > # Table o' Contents
 >
 > - [Visual Reference](#visual-reference)
-> - [Top Bar](#top-bar)
+> - [Menus and Panels](#menus-and-panels)
 >   - [Editor Menus](#-editor-menus)
 >     - [File Menu](#file-menu)
->     - [16colo.rs Browser](#16colors)
+>     - [Artpack Browsers](#artpack-browsers)
+>       - [16colo.rs](#16colors)
+>       - [aSCIIaRENA](#asciiarena)
 >     - [Plugins](#plugins)
 >     - [Updating the Editor](#updating-the-editor)
 >     - [Edit Menu](#edit-menu)
 >     - [Character Sets & Unicode](#character-sets--unicode)
 >     - [Sauce Editor](#sauce-editor)
 >   - [Status Display](#-status-display)
+>   - [Panels and Layout](#panels-and-layout)
+>   - [Phone Layout](#phone-layout)
 >   - [Canvas Resolution / Size](#canvas-resolution--size)
 > - [Color Management](#color-management)
 >   - [Current Colors](#current-colors)
@@ -59,6 +63,7 @@
 > - [Tutorials](#tutorials)
 >   - [Viewing and Opening Tutorials](#viewing-and-opening-tutorials)
 > - [Collaboration Features](#collaboration-features)
+>   - [Connecting to a Server](#connecting-to-a-server)
 >   - [Chat Window](#chat-window)
 >     - [Features](#features)
 >     - [Usage](#usage)
@@ -69,9 +74,11 @@
 
 ![overview](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/overview.png)
 
-# Top Bar
+# Menus and Panels
 
 ## ![top-left-nav](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/top-left-nav.png) Editor Menus
+
+The floppy disk button at the top of the left rail opens the menu flyout. It has two tabs, **File** and **Edit**, and the sections below walk through both.
 
 ### File Menu
 
@@ -79,24 +86,27 @@ File operations allowing you to create, open, and save artwork in multiple file 
 
 **Supported Formats:**
 
-- **ANSI** (`.ans`) - Classic ANSI text art format
+- **ANSI** (`.ans`, also opens `.ansi`) - Classic ANSI text art format
 - **ASCII** (`.asc`) - Plain amiga and pc scene ascii
 - **NFO** (`.nfo`) - Warez scene release format
 - **Binary Text** (`.bin`) - Raw binary (legacy scene format)
-- **XBin** (`.xb`) - Extended Binary format with embedded fonts and palettes
+- **XBin** (`.xb`, also opens `.xbin`) - Extended Binary format with embedded fonts and palettes
 - **TundraDraw** (`.tnd`) - 24-bit color text art format
-- **durdraw Movie** (`.dur`) - Animation format (gzipped JSON, 256 colors, UTF-8)
+- **durdraw Movie** (`.dur`) - Animation format. Saves write version 8 as gzipped JSON with 256 colors and UTF-8; opens also take version 7, 16-color, CP437, and plain JSON movies
 - **teXt0wnz Doc** (`.0wnz`) - Native format; keeps truecolor, unicode, animation frames, and embedded fonts
-- **UTF-8** (`.utf8.ans`) - Export as text with shell color escape codes, with or without blink
+- **UTF-8** (`.utf8.ans`, also opens `.utf8ans`) - Export as text with shell color escape codes. **UTF-8 Text** presents blink cells as bright backgrounds and sets the SAUCE iCE flag; **UTF-8 (blink)** writes them as real blink
 - **Plain Text** (`.txt`) - Export as text only
 - **ANSimation** (`.ans`) - Export animation frames as a classic ansimation
 - **PNG** - Export as image
-- **Archives** (`.zip`, `.lha`, `.lzh`) - Containers unpack in the browser; the art inside opens
+- **Archives** (`.zip`, `.lha`, `.lzh`) - Containers unpack in the browser and the art inside opens. Zips must be stored or deflated, without zip64 or encryption, with entries under 32 MB
 
 > [!NOTE]
 > See [xb-format.md](xb-format.md) for technical details on the XBin
-> format, and [lha-format.md](lha-format.md) for the amiga archive
-> support.
+> format, [0wnz-format.md](0wnz-format.md) for the native `.0wnz`
+> container, [lha-format.md](lha-format.md) for the zip and amiga
+> archive support, and the implementation notes in
+> [sauce-format.md](sauce-format.md#text0wnz-implementation-notes)
+> for how the editor writes and reads SAUCE.
 
 ![file-menu](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/file-menu.png)
 
@@ -107,17 +117,29 @@ File operations allowing you to create, open, and save artwork in multiple file 
 - Zip and amiga `.lha`/`.lzh` archives unpack in the browser: a lone
   openable file loads straight away, several raise a picker. Amiga
   archives open as latin-1 in Topaz+ 1200, zips keep CP437 defaults
+- `.nfo` and `.diz` files open in Topaz-437 8x16, even when they carry
+  a SAUCE font record. Opened from an archive browser, the browser's
+  font hint replaces that default, and a SAUCE font record beats the
+  hint
 - Export options for all supported types and PNG
 - Before an export that cannot hold everything in your piece (unicode glyphs, extended colors, blink), a dialog lists exactly what will be lost so you can decide
 - XBin exports offer an RLE compression toggle
-- **Export Session Timelapse** replays a collaboration session into a durdraw movie (requires a teXt0wnz collaboration server)
+- **Export as → Session Timelapse** replays a collaboration session into a durdraw movie (requires a teXt0wnz collaboration server)
+
+**Menu Items:**
+
+- **New** asks "All data will be lost. Are you sure?" and then resets to an 80 × 25 canvas, the CP437 8x16 font, the default palette, iCE colors off, and 9pt off
+- **Save as** and **Export as** are two collapsible groups. Save as holds ANSi, Binary Text, XBin, TundraDraw, durdraw Movie, and teXt0wnz Doc; Export as holds PNG, UTF-8 Text, UTF-8 (blink), Plain Text, ANSimation, and Session Timelapse
+- **Help!** opens this manual in a new tab
+- **About teXt0wnz** shows the license, the privacy notice, and the font credits, with **Privacy** and **Download** buttons
+- **Reset Panel Layout** returns every panel to its default dock (see [Panels and Layout](#panels-and-layout))
 
 **Auto Save/Restore:**
 
 - Every committed stroke appends to an autosave journal in your browser's private origin storage (OPFS)
 - Larger changes like resizes, file opens, and undo/redo write fresh journal keyframes
 - After a crash, a closed tab, or a reload, the journal replays and your session restores where you left off
-- Browsers without OPFS fall back to an IndexedDB snapshot; private windows that block both lose autosave for that tab only
+- Browsers without OPFS keep the same journal as an IndexedDB record log; private windows that block both lose autosave for that tab only
 - Lightweight settings (theme, zoom, favorites, recent colors) persist in local storage
 - Collaboration sessions never journal; the server owns that document
 
@@ -155,9 +177,10 @@ The [16colo.rs](https://16colo.rs) card browses the artpack archive.
 - Pieces lay out in balanced columns sized from their artwork, like the
   real gallery
 - Click a piece to open it straight in the editor
-- Only formats the editor opens are listed (`.ans`, `.asc`, `.diz`,
-  `.nfo`, `.txt`, `.bin`, `.xb`, `.tnd`, `.dur`, and the bare
-  `file_id`); images, music, and other pack extras are filtered out
+- Only formats the editor opens are listed (`.ans`, `.ansi`, `.asc`,
+  `.diz`, `.nfo`, `.txt`, `.utf8ans`, `.bin`, `.xb`, `.xbin`, `.tnd`,
+  `.dur`, `.0wnz`, and the bare `file_id`); images, music, and other
+  pack extras are filtered out
 - Pack archives download once and cache for the session, shared even
   between rapid clicks on different pieces of the same pack
 
@@ -178,7 +201,9 @@ artscene archive.
   the browser with every entry checked against its CRC (see
   [lha-format.md](lha-format.md))
 - Amiga ascii opens the way the site renders it: raw latin-1 bytes in
-  Topaz+ 1200, with SAUCE font records still winning when present
+  Topaz+ 1200, with SAUCE font records still winning when present. A
+  file with 16 or more high bytes, or any invalid UTF-8, counts as raw
+  bytes
 - The search index downloads once and caches for the session
 - Diskmag releases ride `.dms` disk images the editor cannot read, so
   they never list
@@ -238,6 +263,8 @@ Beyond plain paste, the Edit menu offers two PabloDraw-style compositing pastes.
 
 Either way the paste applies as one undo step.
 
+System paste reads the OS clipboard as plain text and refuses content wider than three times the canvas columns or taller than three times its rows.
+
 ### Character Sets & Unicode
 
 **Edit → Character Sets** opens a picker covering every Unicode block.
@@ -246,8 +273,8 @@ Either way the paste applies as one undo step.
 
 - Search blocks by name and preview which glyphs the bundled fonts cover
 - Click a glyph to insert it at the cursor
-- Selecting a block also loads it into the F-key bar as the active page
-- Import charset tables (durdraw `.ini` or teXt0wnz `.json`); imported pages ride the F-key bar and persist between sessions
+- **Import charset** takes a durdraw `.ini` (a `[Character Set]` section with `name:`, then `[block N]` sections holding `f1:` to `f12:`) or a teXt0wnz `.json` (`{ "name": "...", "pages": [["░", "▒", ...], ...] }`). Pages hold 12 characters, and the format is sniffed from the content, not the extension
+- Imported pages ride the F-key bar and persist between sessions. Characters CP437 can express draw from the active font; the rest stay unicode
 
 Unicode glyphs render from [unscii-16](http://viznut.fi/unscii/) (purpose-built for textmode art) with [GNU Unifont](https://unifoundry.com/unifont/) covering the rest. A glyph neither font covers renders as a hollow box and inserts as `?`.
 
@@ -256,19 +283,65 @@ Unicode glyphs render from [unscii-16](http://viznut.fi/unscii/) (purpose-built 
 
 ### Sauce Editor
 
-_"[Sauce](sauce-format.md)"_ is a special metadata format created by the ANSI text art scene. It allows for embedding title, author, release group, and comments into files.
+_"[Sauce](sauce-format.md)"_ is a special metadata format created by the ANSI text art scene. It allows for embedding title, author, release group, and comments into files. The current font is written to the record's FontName field; [Fonts: SAUCE Font Names](fonts.md#sauce-font-names) lists what each font writes and which names switch the font on open.
+
+The **Sauce** module at the top of the sidebar shows the current title and byline. Click it to open the editor.
 
 ![sauce](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/sauce.png)
 
+**Fields:**
+
+- **Title** holds 35 characters, **Author** and **Group** 20 each
+- **Comments** shows a live byte counter out of 16320; lines wrap into 64-byte slots, 255 slots at most
+- **Save** writes the record and **Cancel** discards your edits
+
+Text fields save as CP437 bytes, the way the spec defines them, so characters outside CP437 land as `?`. The `.0wnz` and `.dur` formats carry the title and author in their own JSON instead of a SAUCE record.
+
 ## ![top-right-nav](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/top-right-nav.png) Status Display
 
-This section of the UI displays the current canvas size, font, and cursor position. Clicking the Resolution or Font Name will open their respective options menus.
+The right sidebar shows the document's status in small modules. The **Canvas** module holds the resolution and the font name as buttons, with **iCE** and **9pt** chips beside them; the **Cursor** module shows the cursor position. Clicking the resolution or the font name opens its options.
 
 **Status Elements:**
 
-- **Resolution** - Current canvas size (columns × rows)
-- **Font Name** - Active font (click to change)
+- **Resolution** - Current canvas size (columns × rows); click to resize
+- **Font Name** - Active font; click to change
+- **iCE** and **9pt** - Toggle chips for iCE colors and the nine pixel letter spacing
 - **Cursor Position** - Current cell coordinates (column, row)
+
+On phones a top strip carries the title, the cursor position, and undo/redo buttons instead; see [Phone Layout](#phone-layout).
+
+## Panels and Layout
+
+Every sidebar module (Sauce, Canvas, Cursor, Zoom, Reference Image, Minimap, Frames, Tool Settings, and Chat) is a movable panel with a title strip.
+
+**Moving panels:**
+
+- Drag a title strip to move the panel. Drop it on the sidebar to dock it there, near the top or bottom edge of the canvas to dock it in the top or bottom bar, or anywhere else to float it. Dragging within a dock reorders it
+- Right-click a title strip, press `shift F10` on it, or hold a finger on it for half a second to open the panel menu: **Dock Right**, **Dock Top**, **Dock Bottom**, **Float**, **Move Up**, and **Move Down**
+- The **Shade** button at the right end of a title strip folds the panel to its strip. Clicking a docked strip, or double-clicking a floating one, shades it too
+- In the top and bottom bars, dropping a panel beside another puts the two side by side on screens 768 px and wider
+- The grip on the sidebar's edge hides the whole sidebar and brings it back
+- The Minimap docks in the sidebar or floats; it never joins a bar. **Chat** always floats
+- **Chat** and **Tool Settings** close with the **X** in their title strips; Tool Settings reopens when you pick a tool that has settings. **Frames**, **Minimap**, and **Ref Image** open and close from the view flyout
+
+**Remembering:**
+
+- Every dock, order, position, size, and shade state persists in local storage
+- **File → Reset Panel Layout** returns everything to the defaults
+- Tool Settings can remember a placement per tool. With a tool's settings showing, pick **Pin** followed by the tool's name in the panel menu; from then on that tool's settings return to the pinned spot, and every move you make while pinned retrains the pin. **Unpin** forgets it. Pins apply on wide layouts only
+
+## Phone Layout
+
+At 720 px wide and under the editor switches to a phone shell:
+
+- A top strip holds the document title, the cursor position, and undo/redo buttons. Tap the title to slide the sidebar open as a drawer; tap it again, or press `escape`, to close it
+- The tool rail moves to the bottom edge and its flyouts open upward
+- Tool Settings becomes a bottom sheet; drag its handle or title strip to size it
+- The palette folds into the preview swatch, and tapping the swatch opens the palette as a flyout instead of swapping colors
+- The minimap becomes a strip beside the canvas, and Frames rides the bottom bar
+- Panels in the drawer keep a panel menu with just **Move Up** and **Move Down**
+
+Your wide layout stays saved and comes back when the screen is wide again.
 
 ## Canvas Resolution / Size
 
@@ -299,7 +372,7 @@ The color system anchors on the classic 16-color ANSI palette, with optional iCE
 ## Current Colors
 
 - Foreground and background color selection
-- Click the preview swatch to swap foreground/background colors
+- Click the preview swatch to swap foreground/background colors (on phones the swatch opens the palette flyout instead; swap with `q` or **Edit → Swap Colors**)
 - Keyboard shortcut: `q` to quickly swap colors (`ctrl q` in keyboard mode)
 - Keyboard shortcut: `d` for default colors (`ctrl d` in keyboard mode)
 
@@ -331,7 +404,7 @@ The `++` button under the palette strip opens the extended color panel, one clic
 - **xterm 256 grid** - Click a swatch for the foreground, right-click for the background
 - **RGB** - Pick any truecolor value with the hex color input, then apply it with the `fg` or `bg` buttons
 - **Recent** - Your last ten extended picks, remembered between sessions
-- The panel floats: drag any free spot to move it, close it with the **X** or the `++` button
+- The panel is a flyout beside the `++` button. Press `++` again, click anywhere outside it, or press `escape` to close it
 
 Formats that cannot hold extended colors list what will be quantized or dropped at export time.
 
@@ -345,22 +418,27 @@ Formats that cannot hold extended colors list what will be quantized or dropped 
 > [!TIP]
 > The currently selected tool will be highlighted (keyboard mode in this case)
 
-Some tools such as "Brushes" have many options or sub-tools. Clicking the tool icon from the left menu will update (or clear) the current tool options section of the top bar.
+Some rail buttons, such as **Brushes** and **Shapes**, open a flyout of tools rather than picking one. The first click opens the flyout; pick a tool inside it. Tools with options show them in the [Tool Settings Window](#tool-settings-window), which hides for tools that have none.
+
+Flyouts take the keyboard too: `up`/`down` or `tab` walk the items, `enter` or `space` activates one, and `escape` closes the flyout and returns focus to its button.
 
 > [!TIP]
-> Press `escape` to switch back to the previous tool
+> `escape` works outward. It closes an open flyout first, then the phone drawer, then an active selection, and only then switches back to the previous tool.
 
 **Available Tools:**
 
+- Menu - The File and Edit menus, behind the floppy disk button
+- Palette - The 16-color strip, the preview swatch, and the `++` extended colors button
 - Keyboard Mode - Full text input
-- Brushes - Freehand, shading, character, and attribute brushes, plus flood fill
-- Shapes - Lines, rectangles, circles, and ellipses
+- Brushes - Block, shading, ASCII, character, and color brushes, plus flood fill
+- Shapes - Lines, squares, and circles
 - Selection - Select, move, copy, and transform areas
 - Sample - Pick colors and characters from canvas
 - Mirror Mode - Symmetrical drawing
-- History - Undo/redo operations
-- Font Selection - Choose from many classic fonts
-- Viewport Options - Zoom, theme, grid, animation frames, minimap, and reference image
+- History - Undo/redo and the step list
+- Viewport Options - Night/Light theme, fullscreen, grid, animation frames, minimap, and reference image
+
+Fonts, iCE colors, 9pt, and zoom live in the sidebar's Canvas and Zoom modules rather than on the rail.
 
 ## ![keyboard](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/keyboard.png) Keyboard Mode
 
@@ -371,6 +449,7 @@ Full text input with navigation controls. Type characters directly onto the canv
 - Direct character input
 - F-key character insertion from the active page
 - `ctrl+[`, `ctrl+]` or the arrow buttons at either end of the bar cycle pages; pages cover all of CP437, unicode blocks (rounded corners and diagonals, sextants, wedges, eighth blocks), and any charsets you import
+- The F-key bar rides the [Tool Settings Window](#tool-settings-window) while Keyboard Mode is active, with a **Character Set** button that opens the picker
 - `ctrl+u` picks up the colors of the cell under the cursor
 - Traditional ANSI editor workflow
 - `shift+arrow keys` switch to the Selection Tool
@@ -382,16 +461,17 @@ Full text input with navigation controls. Type characters directly onto the canv
 
 **Navigation Shortcuts:**
 
-| Key                    | Action                   |
-| ---------------------- | ------------------------ |
-| `arrow keys`           | Move cursor              |
-| `shift arrow keys`     | Switch to selection tool |
-| `home`                 | To start of row          |
-| `end`                  | To end of row            |
-| `page up`/`page down`  | Move by viewport screen  |
-| `cmd left`/`cmd right` | Start/end of row         |
-| `tab`/`backspace`      | Insert/delete left tab   |
-| `enter`                | New line                 |
+| Key                    | Action                                      |
+| ---------------------- | ------------------------------------------- |
+| `arrow keys`           | Move cursor                                 |
+| `shift arrow keys`     | Switch to selection tool                    |
+| `home`                 | To start of row                             |
+| `end`                  | To end of row                               |
+| `page up`/`page down`  | Move by viewport screen                     |
+| `cmd left`/`cmd right` | Start/end of row                            |
+| `tab`                  | Write the tab glyph (code 9) and step right |
+| `backspace`            | Erase the cell to the left                  |
+| `enter`                | New line                                    |
 
 ## Screen-Aware Navigation
 
@@ -418,14 +498,16 @@ This makes navigation much faster and more intuitive on large text art pieces.
 
 ## Tool Settings Window
 
-Tools with options share one floating window. It opens when you select a tool that has settings, swaps its content to match the tool (the title strip names it), and hides for tools that have none.
+Tools with options share one panel, floating by default. It opens when you select a tool that has settings, swaps its content to match the tool (the title strip names it), and hides for tools that have none.
 
 **Features:**
 
 - Mode and Style picks are tappable pills; each mode wears a glyph preview of its vocabulary
-- The shading gradient picker and the character picker live here too
-- Drag the title strip to move the window; it remembers its spot
+- The shading gradient picker, the character picker, and the F-key bar live here too
+- Drag the title strip to move the window, or dock it in the sidebar or a bar like any panel (see [Panels and Layout](#panels-and-layout)); it remembers its spot
+- Right-click the title strip and pick **Pin** followed by the tool's name to remember a placement for that tool alone; each tool can own its own spot
 - Press the **'X'** to hide it; selecting any tool with settings reopens it
+- On phones it is a bottom sheet; drag the handle to size it
 - Modes, width, size, and the outline/filled choice persist across reloads
 
 ## ![brush](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/brush.png) Brushes
@@ -436,12 +518,12 @@ Multiple brush types for different drawing techniques. Each brush has unique pro
 
 ### Block / Freehand Brush
 
-Draw with blocks for pixel-like drawing. Hold Shift for straight lines. Think of this tool as your pen.
+Draw with half blocks for pixel-like drawing. Think of this tool as your pen.
 
 **Features:**
 
 - Pixel-precise drawing with half-block characters
-- Hold `shift` for straight line constraints
+- Fast strokes stay solid; the gap between two pointer samples fills with a straight segment
 - Ideal for detailed artwork
 
 ### Shading Brush
@@ -487,6 +569,8 @@ Draw with any character from the font. The 256 glyph picker rides the [Tool Sett
 - Access to full character set
 - Interactive character picker in the current colors
 - Draw with any glyph from the active font
+- A cell size stepper scales the picker from 1x to 4x; the choice persists
+- While the window floats, a grip in the picker's corner resizes the map
 
 ### Colorize/Attribute Brush
 
@@ -504,6 +588,7 @@ Paint/recolor the foreground and background colors of the selected cell. The Siz
 
 - Change colors without affecting characters
 - Alt+click repaints only the background
+- `shift` + click draws a straight line from the last painted point, the only brush with a shift line
 - Preserve existing artwork structure
 - Quick color corrections
 - Repaint large areas faster with brush sizes up to 16
@@ -562,17 +647,28 @@ Draw rectangles, circles, and ellipses. Each tool's Mode pills and its Outline/F
 - Shapes drag corner to corner; old skool circles fill the drag box exactly at any width, block and nu skool inscribe inside it
 - A single tap stamps the smallest good shape for the mode instead of a crumb
 - Corners and edges landing on existing lines voice junction glyphs, and stacked boxes share their edge invisibly
-- Outline or filled; old skool circles have no fill vocabulary, so the toggle naps in that mode
+- Outline or filled; old skool has no fill vocabulary, so the Style toggle naps for both squares and circles in that mode
 - Real-time preview while dragging
 
 ## ![selection tool](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/selectiontool.png) Selection Tool
 
 ![selection-menu](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/selection-menu.png)
 
-Select rectangular canvas areas for manipulation, copying, or transformation. Position updates live in status bar.
+Select rectangular canvas areas for manipulation, copying, or transformation. A floating action bar sits over the selection with its size readout.
 
 > [!NOTE]
-> Single clicks move the cursor without creating a selection. Drag to create a selection to prevent accidental single-cell selections.
+> A single click selects one cell; drag to grow the selection. Press `escape` or **Deselect** to clear it.
+
+**Action Bar:**
+
+A bar floats above the selection (below it when there is no headroom) and follows it through scrolling and zoom:
+
+- The **WxH** readout shows the selection size
+- **Mirror** and **Flip** flip the contents horizontally and vertically (`[` and `]`)
+- **Move** toggles move mode (`m`)
+- **Cut**, **Delete**, and **Copy** act on the contents
+- **Paste** opens a submenu: **Paste**, **Transparent**, **Under**, **System**, and **Back**
+- **Deselect** clears the selection (`escape`)
 
 **Selection Modes:**
 
@@ -599,16 +695,17 @@ Blank cells in the selection move transparently, like paste transparent: artwork
 | `ctrl c`                   | Copy                            |
 | `ctrl v`                   | Paste from **editor** clipboard |
 | `ctrl shift v`             | Paste from **system** clipboard |
+| `ctrl backspace`           | Delete the contents             |
 | `[`/`]`                    | Flip horizontally/vertically    |
 | `m`                        | Toggle move mode (orange)       |
 | `enter`                    | Return to keyboard mode         |
+| `escape`                   | Deselect                        |
 
 **Mouse/Touch:**
 
-- **Click in unselected area** - Create new selection
-- **Click and drag** - Create or expand selection to different cell
-- **Within a selection (default mode)** - Move the selection box
-- **Within a selection (move mode)** - Move the selection _and its contents_
+- **Click (default mode)** - Start a new one-cell selection at that cell
+- **Click and drag (default mode)** - Grow the selection to the dragged cell
+- **Drag within the selection (move mode)** - Move the selection _and its contents_
 
 ## ![sample](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/sample.png) Sample Tool
 
@@ -654,6 +751,8 @@ Full undo/redo support for all drawing operations.
 
 - Deep undo capped by memory (64 MB of change data), not a fixed step count
 - Works with all tools and operations
+- The History flyout lists every step with a label and its age; click a step to jump there, backwards or forwards. Consecutive typing within 2.5 seconds groups as one step
+- On phones the top strip carries undo and redo buttons
 - Your artwork survives reloads through the autosave journal; the undo stack itself starts fresh each session
 
 **Supported Operations:**
@@ -678,11 +777,11 @@ Full undo/redo support for all drawing operations.
 
 ![font-menu](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/font-menu.png)
 
-Change the font options for your artwork. teXt0wnz supports a wide variety of classic and modern fonts.
+Change the font options for your artwork. The **Canvas** module in the sidebar shows the current font name; click it to open the font picker, and use the **iCE** and **9pt** chips beside it for the two toggles. teXt0wnz supports a wide variety of classic and modern fonts.
 
 ### Font Select
 
-Choose from classic ANSI fonts and modern XBin fonts. See [fonts.md](fonts.md) for a complete list of available fonts with previews.
+Choose from classic PC code pages, amiga and C64 fonts, and modern scene fonts. The picker is a modal with a live preview, a star to favorite the font, and a **Select** button. See [fonts.md](fonts.md) for a complete list of available fonts with previews.
 
 ![font-select](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/font-select.png)
 
@@ -703,14 +802,14 @@ Star the fonts you use most and they pin to a **Favorites** group at the top of 
 
 ### iCE Colors
 
-Extended 16-color background palette (normally only 8 are available in ANSI). Required for certain artwork styles.
+Extended 16-color background palette (normally only 8 are available in ANSI). Required for certain artwork styles. Toggle it with the **iCE** chip in the Canvas module, or press `i` (`ctrl i` in keyboard mode).
 
 > [!IMPORTANT]
 > iCE colors use the blink bit for additional background colors, disabling blinking text.
 
 ### 9pt Font
 
-A special "extra pixel" wide mode for letter spacing.
+A special "extra pixel" wide mode for letter spacing. Toggle it with the **9pt** chip in the Canvas module; it has no keyboard shortcut.
 
 **Use Cases:**
 
@@ -720,11 +819,11 @@ A special "extra pixel" wide mode for letter spacing.
 
 #### Font Examples
 
-**Font**: XBIN topaz_437
+**Font**: Topaz 437 (Modern group)
 
 ![topaz437](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/topaz437.png)
 
-**Font**: XBIN topaz_437 with 9pt
+**Font**: Topaz 437 with 9pt
 
 ![9pt](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/9pt.png)
 
@@ -747,20 +846,20 @@ A special "extra pixel" wide mode for letter spacing.
 
 ![viewport toolbar](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/viewport-toolbar.png)
 
-Customize your editing experience with these interface options. This toolbar also holds the toggles for the animation frames panel, the minimap, and the reference image.
+The **view** flyout on the rail holds the Night/Light theme toggle, **Fullscreen**, **Grid**, and the toggles for the **Frames** panel, the **Minimap**, and the **Ref Image** panel. Fullscreen is disabled when the editor runs as an installed app in its own window. Zoom has its own sidebar module and is described next.
 
 > [!NOTE]
 > The editor renders with WebGL and falls back to a 2D renderer where WebGL2 is unavailable (append `?renderer=2d` to the URL to force it). The minimap and onion skin need the WebGL renderer.
 
 ### Zoom
 
-Visually scale the drawing canvas from 0.5-4x size, while keeping the interface elements unchanged.
+Visually scale the drawing canvas from 0.5-4x size, while keeping the interface elements unchanged. The **Zoom** module in the sidebar shows the current scale between a zoom out and a zoom in button.
 
 ![zoom-x1](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/zoom-x1.png)
 
 ![zoom-x2](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/zoom-x2.png)
 
-- Use the slider to adjust the zoom
+- Use the **Zoom** module's zoom out and zoom in buttons
 - Provides half size steps for greater control
 - Select whole number scaling for pixel perfect rendering
 - `ctrl` + mouse wheel (or a trackpad pinch) zooms at the pointer
@@ -790,6 +889,7 @@ Toggles between **light** and **night** mode interface colors. Choose the theme 
 
 - Night mode for low-light environments
 - Light mode for bright environments
+- Until you pick one, the theme follows your OS dark mode preference
 - Preference saved in local storage
 - Instant switching without reload
 - Slick visual transition
@@ -813,7 +913,7 @@ Toggles the visual grid. Useful for creating precise layouts, aligning elements,
 
 ### Minimap
 
-A live overview of the whole canvas, one pixel per cell, docked beside the viewport. It is on by default.
+A live overview of the whole canvas, one pixel per cell, docked in the sidebar by default. It is on by default.
 
 **Features:**
 
@@ -823,17 +923,18 @@ A live overview of the whole canvas, one pixel per cell, docked beside the viewp
 - Drag the focus box like a scrollbar thumb to scrub the canvas; hold it at the map's top or bottom edge and the map auto-scrolls until you release or back away
 - On maps taller than the panel, dragging outside the focus box pans the map itself
 - Refreshes twice a second while open
-- Toggle it with the **Minimap** button in the viewport toolbar; the choice is remembered
+- A grip in the panel's corner resizes it
+- Toggle it with the **Minimap** button in the view flyout; the choice is remembered
 
 #### Autoscroll
 
 Plays the artwork like a compo screen: the canvas glides to the bottom, holds a moment, glides back to the top, holds again, and repeats. Hosts at demoparties run exactly this to show tall pieces during voting, the same trick Moebius and PabloDraw are known for.
 
-Click the loop icon in the minimap's top right corner to open the autoscroll menu. The icon becomes an **X** that closes it again.
+The Minimap panel's title strip carries two buttons: a play/pause transport and a loop icon that opens the autoscroll menu. The loop icon becomes an **X** that closes the menu again.
 
 **Controls:**
 
-- **Play/pause** sits beside the autoscroll title. Play starts or resumes the ride, pause freezes it in place
+- **Play/pause** sits in the Minimap title strip. Play starts or resumes the ride, pause freezes it in place
 - The **scroll | loop** pill picks between a set number of passes and looping forever
 - In scroll mode, **count** sets 1 to 5 round trips with the **-** and **+** stepper; the run parks at the top when they finish. In loop mode the count row dims
 - **speed** sets the glide rate in rows per second, from a slow crawl to a fast 25 rows per second. Only the speed is remembered between sessions
@@ -842,12 +943,12 @@ Click the loop icon in the minimap's top right corner to open the autoscroll men
 
 - Scrolling anywhere by hand (wheel, touch, the minimap, or the scrollbar) pauses playback right where you are; press play to resume
 - Opening a new piece stops playback; your mode, count, and speed stay as you set them
-- Playback keeps running if you hide the minimap; reopen it from the viewport toolbar to reach the controls
+- Playback keeps running if you hide the minimap; reopen it from the view flyout to reach the controls
 - The glide moves in whole dither periods at your display's refresh rate, so shaded blocks stay rock solid instead of shimmering, and a short piece that already fits on screen has nowhere to go, so play declines politely
 
 ### Reference Image
 
-The **Ref Image** button in the viewport toolbar opens a small panel for tracing over a picture.
+The **Ref Image** button in the view flyout opens the **Reference Image** panel, docked in the sidebar by default, for tracing over a picture.
 
 **Features:**
 
@@ -855,15 +956,15 @@ The **Ref Image** button in the viewport toolbar opens a small panel for tracing
 - **opacity** slider from 0 to 95 percent
 - **width** slider sizes the image from 10 to 400 percent of the canvas width
 - Every tool draws straight through the overlay, and it follows zoom and canvas resizes
-- The **move image** button toggles drag mode: a cyan ring marks the image and pointer or touch drags reposition it anywhere over the art. The sliders and buttons all keep working; toggle again to lock the image back down and return the pointer to the tools
+- The **move** button toggles drag mode: a cyan ring marks the image and pointer or touch drags reposition it anywhere over the art. The sliders and buttons all keep working; toggle again to lock the image back down and return the pointer to the tools
 - **clear** removes the image and returns every setting to its default
 - Once an image is loaded, the image and its settings persist in the browser and survive a reload. Pressing **clear** or starting new artwork (File > New, opening a file) resets the tool completely
 - Opening an image through **File > Open** or by dropping it on the editor loads it here too, never into the canvas
-- The panel floats: drag any free spot to move it, close it with the **X** or the **Ref Image** button
+- The panel docks, floats, and shades like any other (see [Panels and Layout](#panels-and-layout)); the **Ref Image** button hides it again
 
 # Animation
 
-teXt0wnz edits multi-frame animations. Press the **Frames** button in the viewport toolbar to open the frames panel. The panel floats: drag any free spot to move it, close it with the **X** or the **Frames** button.
+teXt0wnz edits multi-frame animations. Press the **Frames** button in the view flyout to open the **Frames** panel, which docks in the bottom bar by default. Drag its title strip to move it elsewhere (see [Panels and Layout](#panels-and-layout)); the **Frames** button hides it again.
 
 ## Frame Timeline
 
@@ -915,6 +1016,8 @@ The editor treats mouse, pen, and touch as first-class input.
 - Pressure drives the Shading Brush: press lighter or harder to pick the shade
 - Palm rejection ignores touch while the pen is down and for a moment after it lifts
 
+On phones the layout itself changes; see [Phone Layout](#phone-layout).
+
 # Workflows
 
 > [!TIP]
@@ -961,7 +1064,7 @@ To join a server anywhere else, click the collab button in the sauce panel; it r
 
 - **Server** as `host:port/room`, the way Moebius's connect dialog reads it. A bare host means port 8000 and the default room; port 443 means a secure server; a full `ws://` or `wss://` url is taken as written. The last eight servers you joined are offered as you type.
 - **Password**, when the room has one. It is never stored.
-- **Handle** and **Group**, which the form remembers.
+- **Handle** (14 characters) and **Group** (20), which the form remembers.
 
 A refusal or a dead server reports in the form. Vanilla Moebius servers are plaintext, so from an https page the editor goes through the site's bridge when the host allows it, and says so when it does not; see [collab-protocol-migration.md](./collab-protocol-migration.md). The launch invitation names the server a link chose for you.
 
@@ -969,7 +1072,7 @@ A refusal or a dead server reports in the form. Vanilla Moebius servers are plai
 - Between teXt0wnz clients, unicode characters and extended colors travel natively
 - Classic Moebius clients can join the same session; the server down-converts extended cells to their nearest 16-color CP437 equivalents for them, so mixed rooms stay coherent
 - Connected to a classic server, the editor locks what that wire cannot carry: extended colors, unicode input, and animation editing disable while connected, and each panel says so
-- On a teXt0wnz server, **File → Export Session Timelapse** replays the session's history into a durdraw movie
+- On a teXt0wnz server, **File → Export as → Session Timelapse** replays the session's history into a durdraw movie
 
 ## Chat Window
 
@@ -990,8 +1093,9 @@ The chat window is available when connected to a collaboration server. It provid
 
 - Type your message in the input field and press Enter or click "send"
 - Change your username by editing the handle field
+- Handles run up to 14 characters and messages up to 140
 - Enable/disable notifications with the checkbox in the header
-- Drag the header to reposition the window (position does not persist between sessions)
+- Drag the title strip to reposition the window; the position persists between sessions
 
 > [!NOTE]
 > See [collaboration-server.md](collaboration-server.md) for details on setting up and using the collaboration server.
@@ -1000,34 +1104,34 @@ The chat window is available when connected to a collaboration server. It provid
 
 **Main Tool Shortcuts:**
 
-These work whenever you are not typing in Keyboard Mode. Hold `ctrl` to use them from Keyboard Mode too (for example `ctrl m` for mirror, `ctrl g` for grid).
+These single keys work in every tool except Keyboard Mode and the Selection Tool, where plain letters have other jobs. Hold `ctrl` to use them anywhere (for example `ctrl m` for mirror, `ctrl g` for grid).
 
-| Key      | Tool/Action                |
-| -------- | -------------------------- |
-| `k`      | Keyboard Mode              |
-| `f`      | Brushes                    |
-| `b`      | Character Brush            |
-| `n`      | Fill Tool                  |
-| `a`      | Colorize/Attribute Brush   |
-| `g`      | Grid Toggle                |
-| `i`      | iCE Colors Toggle          |
-| `m`      | Mirror Mode                |
-| `d`      | Reset colors to default    |
-| `q`      | Swap foreground/background |
-| `escape` | Back to the previous tool  |
+| Key      | Tool/Action                                                                           |
+| -------- | ------------------------------------------------------------------------------------- |
+| `k`      | Keyboard Mode                                                                         |
+| `f`      | Brushes                                                                               |
+| `b`      | Character Brush                                                                       |
+| `n`      | Fill Tool                                                                             |
+| `a`      | Colorize/Attribute Brush                                                              |
+| `g`      | Grid Toggle                                                                           |
+| `i`      | iCE Colors Toggle                                                                     |
+| `m`      | Mirror Mode                                                                           |
+| `d`      | Reset colors to default                                                               |
+| `q`      | Swap foreground/background                                                            |
+| `escape` | Close a flyout, the phone drawer, or a selection; otherwise back to the previous tool |
 
 **Color & Character:**
 
-| Key/Combo                | Action                                            |
-| ------------------------ | ------------------------------------------------- |
-| `0`-`7`                  | Foreground color (press again for bright)         |
-| `ctrl 0`-`7`             | Foreground color, works in keyboard mode          |
-| `alt 0`-`7`              | Background color (press again for bright)         |
-| `ctrl up`/`ctrl down`    | Previous/next foreground color                    |
-| `ctrl left`/`ctrl right` | Previous/next background color                    |
-| `ctrl u`                 | Pick up colors under the cursor (keyboard mode)   |
-| `F1`-`F12`               | Insert character from the active page (see below) |
-| `ctrl [` / `ctrl ]`      | Previous/next character page                      |
+| Key/Combo                | Action                                                                        |
+| ------------------------ | ----------------------------------------------------------------------------- |
+| `0`-`7`                  | Foreground color (press again for bright); not in keyboard or selection tools |
+| `ctrl 0`-`7`             | Foreground color, works in keyboard mode                                      |
+| `alt 0`-`7`              | Background color (press again for bright)                                     |
+| `ctrl up`/`ctrl down`    | Previous/next foreground color                                                |
+| `ctrl left`/`ctrl right` | Previous/next background color                                                |
+| `ctrl u`                 | Pick up colors under the cursor (keyboard mode)                               |
+| `F1`-`F12`               | Insert character from the active page (see below)                             |
+| `ctrl [` / `ctrl ]`      | Previous/next character page                                                  |
 
 **File & Canvas:**
 
@@ -1065,6 +1169,7 @@ These work whenever you are not typing in Keyboard Mode. Hold `ctrl` to use them
 | `[` / `]` | Flip selection          |
 | `m`       | Move mode               |
 | `enter`   | Return to keyboard mode |
+| `escape`  | Deselect                |
 
 **Selection Navigation:**
 
@@ -1104,9 +1209,9 @@ These work whenever you are not typing in Keyboard Mode. Hold `ctrl` to use them
 
 - **left click:** Draw, place cursor
 - **click & drag:** Draw/Shape or select region
-- **shift click:** Straight line with freehand
+- **shift click:** Straight line from the last point (Colorize brush only)
 - **alt click:** Sample colors (any tool)
-- **right click:** Set the background color (in the color panels); on the canvas the browser context menu is suppressed
+- **right click:** Set the background color in the xterm 256 flyout; on the 16-color strip a right click sets the foreground like a left click, and on the canvas the browser context menu is suppressed
 
 ## Related Documentation
 
