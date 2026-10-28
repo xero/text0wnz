@@ -23,12 +23,15 @@ test.beforeAll(async ({ browserName }) => {
 		return; // every test below skips there; no fixture to boot
 	}
 	port = 41000 + Math.floor(Math.random() * 10000);
-	child = await new Promise((resolve, reject) => {
+	await new Promise((resolve, reject) => {
 		const proc = spawn('node', [fixture, String(port), ''], { stdio: ['ignore', 'pipe', 'pipe']});
-		const timer = setTimeout(
-			() => reject(new Error('moebius fixture did not boot')),
-			15000,
-		);
+		// held from the spawn, not the resolve: a boot that times out
+		// must still be killed, or it keeps its port for the whole job
+		child = proc;
+		const timer = setTimeout(() => {
+			proc.kill('SIGKILL');
+			reject(new Error('moebius fixture did not boot'));
+		}, 15000);
 		proc.stdout.on('data', chunk => {
 			if (String(chunk).includes('FIXTURE_READY')) {
 				clearTimeout(timer);

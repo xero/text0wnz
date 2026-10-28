@@ -22,18 +22,22 @@ const repoRoot = path.resolve(import.meta.dirname, '../..');
 const fixture = path.join(repoRoot, 'tests/interop/fixtures/moebius/start.js');
 
 const PASS = 'gatekeeper';
-let plain = null;
-let gated = null;
 let plainPort = 0;
 let gatedPort = 0;
+
+/** every child ever spawned, resolved or not */
+const spawned = [];
 
 const bootFixture = (port, pass) =>
 	new Promise((resolve, reject) => {
 		const child = spawn('node', [fixture, String(port), pass ?? ''], { stdio: ['ignore', 'pipe', 'pipe']});
-		const timer = setTimeout(
-			() => reject(new Error('fixture did not boot')),
-			15000,
-		);
+		// tracked from the spawn: a boot that times out, or a sibling that
+		// fails inside Promise.all, must still be killed in afterAll
+		spawned.push(child);
+		const timer = setTimeout(() => {
+			child.kill('SIGKILL');
+			reject(new Error('fixture did not boot'));
+		}, 15000);
 		child.stdout.on('data', chunk => {
 			if (String(chunk).includes('FIXTURE_READY')) {
 				clearTimeout(timer);
@@ -49,15 +53,16 @@ const bootFixture = (port, pass) =>
 beforeAll(async () => {
 	plainPort = 34000 + Math.floor(Math.random() * 8000);
 	gatedPort = plainPort + 1;
-	[plain, gated] = await Promise.all([
+	await Promise.all([
 		bootFixture(plainPort, ''),
 		bootFixture(gatedPort, PASS),
 	]);
 }, 30000);
 
 afterAll(() => {
-	plain?.kill('SIGKILL');
-	gated?.kill('SIGKILL');
+	for (const child of spawned) {
+		child.kill('SIGKILL');
+	}
 });
 
 const send = (ws, type, data = {}) => ws.send(JSON.stringify({ type, data }));

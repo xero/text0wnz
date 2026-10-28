@@ -25,12 +25,12 @@ const fixture = path.join(
 );
 
 const PASS = 'gatekeeper';
-let plain = null;
-let gated = null;
-let fonted = null;
 let plainPort = 0;
 let gatedPort = 0;
 let fontedPort = 0;
+
+/** every child ever spawned, resolved or not */
+const spawned = [];
 
 const bootFixture = (port, pass, env = {}) =>
 	new Promise((resolve, reject) => {
@@ -38,10 +38,13 @@ const bootFixture = (port, pass, env = {}) =>
 			stdio: ['ignore', 'pipe', 'pipe'],
 			env: { ...process.env, ...env },
 		});
-		const timer = setTimeout(
-			() => reject(new Error('fixture did not boot')),
-			15000,
-		);
+		// tracked from the spawn: a boot that times out, or a sibling that
+		// fails inside Promise.all, must still be killed in afterAll
+		spawned.push(child);
+		const timer = setTimeout(() => {
+			child.kill('SIGKILL');
+			reject(new Error('fixture did not boot'));
+		}, 15000);
 		child.stdout.on('data', chunk => {
 			if (String(chunk).includes('FIXTURE_READY')) {
 				clearTimeout(timer);
@@ -58,7 +61,7 @@ beforeAll(async () => {
 	plainPort = 24000 + Math.floor(Math.random() * 8000);
 	gatedPort = plainPort + 1;
 	fontedPort = plainPort + 2;
-	[plain, gated, fonted] = await Promise.all([
+	await Promise.all([
 		bootFixture(plainPort, ''),
 		bootFixture(gatedPort, PASS),
 		bootFixture(fontedPort, '', { FIXTURE_FONT_BYTES: '1' }),
@@ -66,9 +69,9 @@ beforeAll(async () => {
 }, 30000);
 
 afterAll(() => {
-	plain?.kill('SIGKILL');
-	gated?.kill('SIGKILL');
-	fonted?.kill('SIGKILL');
+	for (const child of spawned) {
+		child.kill('SIGKILL');
+	}
 });
 
 const send = (ws, type, data = {}) => ws.send(JSON.stringify({ type, data }));
