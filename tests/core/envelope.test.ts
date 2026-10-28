@@ -10,7 +10,8 @@ import {
 	encodeEnvelope,
 	isEnvelope,
 } from '../../src/js/core/codecs/envelope.js';
-import { CodecError, gzip } from '../../src/js/core/codecs/util.js';
+import { CodecError } from '../../src/js/core/codecs/util.js';
+import { gzip } from '../../src/js/core/codecs/flate.js';
 import { decodeAns } from '../../src/js/core/codecs/ans.js';
 import { v3ToU16 } from '../../src/js/core/convert.js';
 import { makeAnsi } from '../corpus/generators.js';
@@ -126,7 +127,7 @@ describe('envelope container', () => {
 		const bytes = await encodeEnvelope(doc);
 		const json = JSON.parse(
 			new TextDecoder().decode(
-				await (await import('../../src/js/core/codecs/util.js')).gunzip(bytes),
+				await (await import('../../src/js/core/codecs/flate.js')).gunzip(bytes),
 			),
 		);
 		json.rows = 8; // planes no longer match the claimed dims
