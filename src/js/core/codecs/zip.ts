@@ -2,13 +2,13 @@
  * Minimal ZIP reader for the 16colo.rs in-app browser: enough to open
  * one piece out of a scene pack zip fetched from the archive mirror.
  * Central-directory driven, store (0) and deflate (8) methods only,
- * inflated through the runtime-native
- * DecompressionStream('deflate-raw') like the other codecs; no
- * dependency, no zip64, no encryption (scene packs are small flat
- * archives; anything else throws a CodecError).
+ * inflated through flate.ts like the other codecs; no dependency, no
+ * zip64, no encryption (scene packs are small flat archives; anything
+ * else throws a CodecError).
  */
 
-import { CodecError, crc32, inflateRaw } from './util.js';
+import { CodecError, crc32 } from './util.js';
+import { inflateRaw } from './flate.js';
 
 const EOCD_SIG = 0x06054b50;
 const CENTRAL_SIG = 0x02014b50;

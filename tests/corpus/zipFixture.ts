@@ -3,8 +3,8 @@
  * inverse of core/codecs/zip.ts, kept test-side on purpose (the editor
  * never writes zips).
  */
-// the one deflate COMPRESSOR in the tree: production only inflates,
-// so the fixture builder owns this helper (writer/reader pump, since
+// the runtime's own compressor, not flate.ts, so zip tests read bytes
+// the inflater under test did not write (writer/reader pump, since
 // jsdom's Blob has no stream())
 const deflateRaw = async (bytes: Uint8Array): Promise<Uint8Array> => {
 	const cs = new CompressionStream('deflate-raw');

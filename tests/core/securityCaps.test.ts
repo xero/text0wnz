@@ -4,7 +4,8 @@
  * at a ceiling instead of in the allocator.
  */
 import { describe, it, expect } from 'vitest';
-import { gzip, gunzip, CodecError } from '../../src/js/core/codecs/util.js';
+import { CodecError } from '../../src/js/core/codecs/util.js';
+import { gzip, gunzip } from '../../src/js/core/codecs/flate.js';
 import { decodeBin } from '../../src/js/core/codecs/bin.js';
 import { decodeXBin } from '../../src/js/core/codecs/xbin.js';
 import { decodeAns } from '../../src/js/core/codecs/ans.js';

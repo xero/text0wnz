@@ -1,7 +1,6 @@
 /**
- * The native container: a versioned JSON envelope gzipped through the
- * runtime-native CompressionStream, saved as `.0wnz` (the codec itself
- * is extension-agnostic). It holds everything the classic formats
+ * The native container: a versioned JSON envelope, gzipped, saved as
+ * `.0wnz` (the codec itself is extension-agnostic). It holds everything the classic formats
  * cannot:
  * unicode glyph tables, raw-RGB colors, frames with delays, doc mode,
  * and metadata. UTF-8 ANSI remains the interchange format; a binary
@@ -22,13 +21,8 @@ import {
 } from '../doc.js';
 import { cp437ToUnicode } from '../cp437.js';
 import { DocMeta } from './bin.js';
-import {
-	CodecError,
-	base64ToBytes,
-	bytesToBase64,
-	gunzip,
-	gzip,
-} from './util.js';
+import { CodecError, base64ToBytes, bytesToBase64 } from './util.js';
+import { gunzip, gzip } from './flate.js';
 
 export const ENVELOPE_FORMAT = 't0wnz-doc';
 export const ENVELOPE_VERSION = 1;

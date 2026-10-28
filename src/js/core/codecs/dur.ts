@@ -34,7 +34,8 @@ import {
 } from '../doc.js';
 import { cp437ToUnicode } from '../cp437.js';
 import { DocMeta } from './bin.js';
-import { CodecError, gunzip, gzip } from './util.js';
+import { CodecError } from './util.js';
+import { gunzip, gzip } from './flate.js';
 
 export const DUR_MIN_VERSION = 7;
 export const DUR_MAX_VERSION = 8;

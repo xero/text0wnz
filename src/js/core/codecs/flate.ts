@@ -1,17 +1,20 @@
 /**
- * DEFLATE (RFC 1951) and gzip (RFC 1952) in plain TS, for engines that
- * lack CompressionStream / DecompressionStream or their deflate-raw
- * format. The inflater accepts what zlib accepts, since zlib sits
- * behind every native implementation, and refuses what every engine
- * refuses: truncation, bytes after the end, a second gzip member. Its
- * output cap holds while it decodes, so a bomb dies early.
+ * DEFLATE (RFC 1951) and gzip (RFC 1952) for the codecs. The async
+ * gzip / gunzip / inflateRaw prefer the engine's native streams and
+ * fall back to the plain TS codec below wherever those are missing,
+ * lack a format, or misbehave, so callers see one contract.
+ *
+ * The inflater accepts what zlib accepts, since zlib sits behind every
+ * native implementation, and refuses what every engine refuses:
+ * truncation, bytes after the end, a second gzip member. Its output
+ * cap holds while it decodes, so a bomb dies early.
  *
  * The deflater is LZ77 over a 32KB window coded with the fixed Huffman
  * tables: about 15% larger than zlib level 6 on envelope and durdraw
  * JSON, for a fraction of the code dynamic trees would cost.
  */
 
-import { CodecError, crc32, readLE32, writeLE32 } from './util.js';
+import { CodecError, concatBytes, crc32, readLE32, writeLE32 } from './util.js';
 
 // ------------------------------------------------------------------ tables
 
@@ -619,4 +622,152 @@ export const gzipSync = (bytes: Uint8Array): Uint8Array => {
 	writeLE32(out, GZIP_HEADER_SIZE + body.length, crc32(bytes));
 	writeLE32(out, GZIP_HEADER_SIZE + body.length + 4, bytes.length);
 	return out;
+};
+
+// ------------------------------------------------------------------ native
+
+/**
+ * Default gunzip ceiling: comfortably above the largest legal doc
+ * (10M cells x 12 plane bytes) and far below what a 50KB gzip bomb
+ * expands to.
+ */
+export const MAX_GUNZIP_BYTES = 256 * 1024 * 1024;
+
+interface Transform {
+	readable: ReadableStream<Uint8Array>;
+	writable: WritableStream<BufferSource>;
+}
+
+type TransformCtor = new (format: CompressionFormat) => Transform;
+
+// Each call asks for the one format it needs: Chromium 80-102 builds
+// gzip streams but throws on deflate-raw.
+const nativeStream = (
+	ctor: TransformCtor | undefined,
+	format: CompressionFormat,
+): Transform | null => {
+	if (typeof ctor !== 'function') {
+		return null;
+	}
+	try {
+		return new ctor(format);
+	} catch {
+		return null;
+	}
+};
+
+// Built on bare ReadableStream (no Blob/Response: jsdom's Blob lacks
+// .stream() and the fewer globals the codec touches, the more hosts it
+// runs in).
+const pumpThrough = async (
+	bytes: Uint8Array,
+	transform: Transform,
+	maxBytes = Infinity,
+): Promise<Uint8Array> => {
+	const writer = transform.writable.getWriter();
+	// Copy guarantees ArrayBuffer backing for the BufferSource write
+	// (callers may hand views over any buffer type)
+	const chunk = new Uint8Array(bytes);
+	// Errors surface through the read side; the write promise is observed
+	// in finally so a transform failure never leaves a dangling rejection
+	const writing = writer
+		.write(chunk)
+		.then(() => writer.close())
+		.catch(() => undefined);
+	const reader = transform.readable.getReader();
+	const chunks: Uint8Array[] = [];
+	try {
+		let total = 0;
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done) {
+				break;
+			}
+			total += value.length;
+			if (total > maxBytes) {
+				// a decompression bomb must die DURING the read, not after
+				// it has been buffered
+				await reader.cancel();
+				throw new CodecError(`decompressed stream exceeds ${maxBytes} bytes`);
+			}
+			chunks.push(value);
+		}
+	} finally {
+		await writing;
+	}
+	return concatBytes(chunks);
+};
+
+const sameBytes = (a: Uint8Array, b: Uint8Array): boolean => {
+	if (a.length !== b.length) {
+		return false;
+	}
+	for (let i = 0; i < a.length; i++) {
+		if (a[i] !== b[i]) {
+			return false;
+		}
+	}
+	return true;
+};
+
+export const gzip = async (bytes: Uint8Array): Promise<Uint8Array> => {
+	const stream = nativeStream(globalThis.CompressionStream, 'gzip');
+	if (stream) {
+		try {
+			const out = await pumpThrough(bytes, stream);
+			// Safari 16.4 shipped a CompressionStream that cut large output
+			// short without an error, so native bytes ship only once they
+			// decode back to the input
+			if (sameBytes(gunzipSync(out, bytes.length), bytes)) {
+				return out;
+			}
+		} catch {
+			// the plain deflater below has the last word
+		}
+	}
+	return gzipSync(bytes);
+};
+
+export const gunzip = async (
+	bytes: Uint8Array,
+	maxBytes: number = MAX_GUNZIP_BYTES,
+): Promise<Uint8Array> => {
+	const stream = nativeStream(globalThis.DecompressionStream, 'gzip');
+	if (stream) {
+		try {
+			const out = await pumpThrough(bytes, stream, maxBytes);
+			// engines check the trailer themselves; this catches one that
+			// drops output on the way out instead
+			if (
+				bytes.length >= GZIP_HEADER_SIZE + GZIP_TRAILER_SIZE &&
+				readLE32(bytes, bytes.length - 4) === out.length >>> 0 &&
+				readLE32(bytes, bytes.length - 8) === crc32(out)
+			) {
+				return out;
+			}
+		} catch (error) {
+			// the cap is a verdict; an engine failure gets a second opinion
+			if (error instanceof CodecError) {
+				throw error;
+			}
+		}
+	}
+	return gunzipSync(bytes, maxBytes);
+};
+
+export const inflateRaw = async (
+	bytes: Uint8Array,
+	maxBytes = Infinity,
+): Promise<Uint8Array> => {
+	const stream = nativeStream(globalThis.DecompressionStream, 'deflate-raw');
+	if (stream) {
+		try {
+			return await pumpThrough(bytes, stream, maxBytes);
+		} catch (error) {
+			if (error instanceof CodecError) {
+				throw error;
+			}
+		}
+	}
+	return inflateRawSync(bytes, maxBytes);
 };

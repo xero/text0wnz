@@ -10,7 +10,7 @@ import { createEditorCore } from '../../src/js/core/editor.js';
 import { decodeAns } from '../../src/js/core/codecs/ans.js';
 import { decodeDur } from '../../src/js/core/codecs/dur.js';
 import { decodeTundra } from '../../src/js/core/codecs/tundra.js';
-import { gzip } from '../../src/js/core/codecs/util.js';
+import { gzip } from '../../src/js/core/codecs/flate.js';
 import { makeAnsi } from '../corpus/generators.js';
 
 const packDur = (json: unknown): Promise<Uint8Array> =>
