@@ -73,8 +73,9 @@ export const shrink = (
 		while (code < CODES && parent[code] !== -1) {
 			code++;
 		}
+		// a full table stops growing, as the decoder's does
 		if (code >= CODES) {
-			throw new Error('fixture shrink table full: clear more often');
+			return;
 		}
 		parent[code] = prefix;
 		suffix[code] = byte;
