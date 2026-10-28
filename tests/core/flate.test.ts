@@ -8,6 +8,7 @@ import {
 	deflateRawSync,
 	gunzipSync,
 	gzipSync,
+	inflateRawSalvage,
 	inflateRawSync,
 } from '../../src/js/core/codecs/flate.js';
 import {
@@ -367,6 +368,35 @@ describe('inflateRawSync refuses what zlib refuses', () => {
 		};
 		rejects(header(287, 1));
 		rejects(header(257, 31));
+	});
+});
+
+describe('inflateRawSalvage', () => {
+	it('keeps what decoded before the fault, and names the fault', () => {
+		const torn = block(0, 0)
+			.bytes(4, 0, 0xfb, 0xff, 71, 79, 79, 68)
+			.put(1, 1)
+			.put(3, 2)
+			.done();
+		const { bytes, damage } = inflateRawSalvage(torn, 100);
+		expect(text(bytes)).toBe('GOOD');
+		expect(damage).toMatch(/reserved/);
+		expect(inflateRawSalvage(torn.subarray(0, 6), 100).damage).toMatch(
+			/truncated/,
+		);
+	});
+
+	it('takes bytes after the final block as no fault at all', () => {
+		const whole = block(1, 1)
+			.code(...LIT('A'))
+			.code(...EOB)
+			.done();
+		const { bytes, damage } = inflateRawSalvage(
+			concatBytes([whole, Uint8Array.of(9, 9)]),
+			100,
+		);
+		expect(text(bytes)).toBe('A');
+		expect(damage).toBeNull();
 	});
 });
 
