@@ -360,7 +360,7 @@ const fakeIndexedDB = ({ refuse = false } = {}) => {
 describe('journal backend probe', () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();
-		localStorage.removeItem('text0wnz-journal-opfs');
+		localStorage.removeItem('text0wnz-journal-home');
 	});
 
 	// an OPFS worker answers every call with `error`, as one does where
@@ -480,6 +480,27 @@ describe('journal backend probe', () => {
 		}
 	});
 
+	it('keeps a journal left in IndexedDB there once OPFS answers', async () => {
+		const idb = fakeIndexedDB();
+		const workers = environment({ opfs: true, idb });
+		// the first boot's probe runs out of time: the journal lands in
+		// IndexedDB and the profile remembers that
+		vi.useFakeTimers();
+		try {
+			vi.stubGlobal('navigator', { storage: { getDirectory: () => new Promise(() => {}) } });
+			const written = createJournalStore().rewrite(Uint8Array.of(9, 9));
+			await vi.advanceTimersByTimeAsync(10100);
+			await written;
+		} finally {
+			vi.useRealTimers();
+		}
+		expect(localStorage.getItem('text0wnz-journal-home')).toBe('idb');
+		// the next boot's probe answers at once, and must not abandon it
+		vi.stubGlobal('navigator', { storage: { getDirectory: () => Promise.resolve({}) } });
+		expect([...(await createJournalStore().open())]).toEqual([9, 9]);
+		expect(workers).toHaveLength(0);
+	});
+
 	it('stays on OPFS when its calls fail after the probe, leaving an older IndexedDB journal unread', async () => {
 		const idb = fakeIndexedDB();
 		idb.records.push(await createJournal(doc()));
@@ -495,13 +516,13 @@ describe('journal backend probe', () => {
 		);
 		expect(workers).toHaveLength(1);
 		expect(idb.opens).toBe(0);
-		expect(localStorage.getItem('text0wnz-journal-opfs')).toBe('1');
+		expect(localStorage.getItem('text0wnz-journal-home')).toBe('opfs');
 	});
 
 	it('keeps a journal that lives in OPFS there through a failed probe', async () => {
 		// one bad boot must not fork the journal into IndexedDB, where
 		// the next boot would never look
-		localStorage.setItem('text0wnz-journal-opfs', '1');
+		localStorage.setItem('text0wnz-journal-home', 'opfs');
 		const idb = fakeIndexedDB();
 		const workers = environment({ opfs: false, idb });
 		const store = createJournalStore();
