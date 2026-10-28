@@ -2123,9 +2123,8 @@
 		}
 	}
 	#connectModal {
-		/* rows start from one left edge: centered rows of unequal width
-		   read as a stagger */
-		/* four equal fields: label over input, every box the same size */
+		/* four equal fields from one left edge: label over input, every
+		   box the same size */
 		article {
 			@apply justify-start pl-4 pb-0;
 			label {

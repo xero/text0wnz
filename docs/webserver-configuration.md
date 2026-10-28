@@ -488,19 +488,22 @@ text.0w.nz {
     # Document root
     root * /var/www/text0wnz/dist
 
-    # Enable file server
-    file_server
-
-    # SPA routing
-    try_files {path} /index.html
-
     # WebSocket proxy for collaboration: rooms at /server and
-    # /server/<room>, and the bridge to plaintext desktop servers
+    # /server/<room>, and the bridge to plaintext desktop servers.
+    # Caddy runs try_files before handle, so the SPA rewrite lives
+    # inside the catch-all handle below; at site level it would send
+    # these paths to index.html before the proxy ever saw them
     handle /server* {
         reverse_proxy localhost:1337
     }
     handle /bridge* {
         reverse_proxy localhost:1337
+    }
+
+    # Everything else: SPA routing and the file server
+    handle {
+        try_files {path} /index.html
+        file_server
     }
 
     # Compression

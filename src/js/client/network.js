@@ -935,15 +935,15 @@ const createWorkerHandler = inputHandle => {
 		// password (a PointerEvent breaks the worker clone)
 		const offered = typeof pass === 'string' ? pass : '';
 		if (offered === '') {
-			// a fresh attempt earns a fresh prompt: the flag used to stick
-			// after one typo, turning every later refusal into a dead alert
+			// a fresh attempt earns a fresh prompt; only a retry inside the
+			// same attempt may give up on the user
 			passwordTried = false;
 		}
 		attempt = { url, spelling };
 		State.modal.loading('Joining the collab session...');
-		// a dismissed Joining modal (backdrop, Escape) must end the dial:
-		// a late failure used to pop the form over local work, a late
-		// success adopted a session nobody was waiting for
+		// a dismissed Joining modal (backdrop, Escape) ends the dial, so
+		// neither a late failure nor a late success can act on a session
+		// nobody is waiting for
 		State.modal.onClose(() => {
 			if (attempt) {
 				attempt = null;

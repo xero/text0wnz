@@ -96,7 +96,8 @@ content, and no header can allow it. You have two ways through:
   the examples in
   [webserver-configuration.md](./webserver-configuration.md) do). See
   [environment-variables.md](./environment-variables.md#bridge). When
-  the host keeps it off, the form says so.
+  the host keeps it off, the dial fails and the form says the site
+  may not allow it.
 
 ### What vanilla servers do differently
 

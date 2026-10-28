@@ -468,7 +468,7 @@ src/js/server/
 
 - Byte pipe from browser connections to plaintext desktop servers
 - Mode gating (`off`, `local`, `port`, `allow`) with address vetting
-- Exports: `createBridgePipe()`, `resolveBridgeTarget()`
+- Exports: `createBridgePipe()`, `resolveBridgeTarget()`, `bridgeConfigFromEnv()`, `validateBridgeConfig()`, `isPrivateAddress()`, `vetResolvedAddresses()`
 
 **utils.js** - Utilities
 
