@@ -3,7 +3,7 @@
  * open -> append -> compact -> rewrite lifecycle, write serialization,
  * and end-to-end replay through the core journal format.
  */
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import {
 	createJournalStore,
 	createMemoryBackend,
@@ -94,5 +94,63 @@ describe('journal store', () => {
 		await store.appendStroke(Uint8Array.of(1, 2, 3));
 		await store.rewrite(Uint8Array.of(9));
 		expect(order).toEqual([3, 'rewrite']);
+	});
+
+	describe('backend choice', () => {
+		const workers = [];
+
+		// answers every op like journalWorker.js would
+		class FakeWorker {
+			constructor() {
+				workers.push(this);
+				this.ops = [];
+				this.stored = new Uint8Array(0);
+			}
+
+			postMessage({ id, op, bytes }) {
+				this.ops.push(op);
+				if (op === 'rewrite') {
+					this.stored = bytes;
+				}
+				Promise.resolve().then(() =>
+					this.onmessage({ data: { id, ok: true, bytes: op === 'read' ? this.stored : null } }));
+			}
+
+			terminate() {}
+		}
+
+		const storage = getDirectory => {
+			Object.defineProperty(navigator, 'storage', {
+				configurable: true,
+				value: { getDirectory },
+			});
+		};
+
+		afterEach(() => {
+			vi.unstubAllGlobals();
+			delete navigator.storage;
+			workers.length = 0;
+		});
+
+		it('keeps journaling when OPFS exists but refuses', async () => {
+			// WebKit private sessions: the method is there, the call rejects
+			vi.stubGlobal('Worker', FakeWorker);
+			storage(() =>
+				Promise.reject(Object.assign(new Error('transient'), { name: 'UnknownError' })));
+			const store = createJournalStore();
+			await store.rewrite(Uint8Array.of(1, 2, 3));
+			expect([...(await store.open())]).toEqual([1, 2, 3]);
+			expect(workers).toEqual([]);
+		});
+
+		it('takes OPFS when it answers', async () => {
+			vi.stubGlobal('Worker', FakeWorker);
+			storage(() => Promise.resolve({}));
+			const store = createJournalStore();
+			await store.rewrite(Uint8Array.of(4, 5));
+			expect([...(await store.open())]).toEqual([4, 5]);
+			expect(workers).toHaveLength(1);
+			expect(workers[0].ops).toEqual(['rewrite', 'read']);
+		});
 	});
 });

@@ -3,9 +3,10 @@
  * Autosave journal store: the client side of the OPFS
  * journal. Picks a backend at open time:
  * - OPFS sync-access handles in a worker (journalWorker.js) wherever
- *   `navigator.storage.getDirectory` exists (Safari 15.2+, Chromium,
+ *   `navigator.storage.getDirectory` answers (Safari 15.2+, Chromium,
  *   Firefox 111+),
- * - an IndexedDB record log otherwise (Safari 15.0-15.1),
+ * - an IndexedDB record log otherwise (Safari 15.0-15.1, and private
+ *   windows whose OPFS refuses while IndexedDB still works),
  * - an in-memory log as the last resort (private windows that refuse
  *   both; autosave then simply does not survive the tab).
  *
@@ -203,8 +204,13 @@ export const createMemoryBackend = () => {
 	};
 };
 
-/** @returns {JournalBackend} */
-const pickBackend = () => {
+/**
+ * OPFS can exist and still refuse: WebKit's ephemeral sessions (Safari
+ * private windows, Playwright) reject getDirectory while IndexedDB
+ * works, so the probe decides, not the method's presence.
+ * @returns {Promise<JournalBackend>}
+ */
+const pickBackend = async () => {
 	try {
 		if (
 			typeof navigator !== 'undefined' &&
@@ -212,6 +218,7 @@ const pickBackend = () => {
 			typeof navigator.storage.getDirectory === 'function' &&
 			typeof Worker !== 'undefined'
 		) {
+			await navigator.storage.getDirectory();
 			return createOpfsBackend();
 		}
 	} catch {
@@ -233,7 +240,9 @@ const pickBackend = () => {
  * @param {{bytes?: number, strokes?: number}} [options.compactLimits]
  */
 export const createJournalStore = (options = {}) => {
-	const backend = options.backend ?? pickBackend();
+	const ready = options.backend
+		? Promise.resolve(options.backend)
+		: pickBackend();
 	let bytesSinceKeyframe = 0;
 	let strokesSinceKeyframe = 0;
 	/** @type {Promise<unknown>} */
@@ -253,14 +262,14 @@ export const createJournalStore = (options = {}) => {
 
 	return {
 		/** Raw journal bytes as persisted (may be empty). */
-		open: () => enqueue(() => backend.read()),
+		open: () => enqueue(async () => (await ready).read()),
 		/**
 		 * Append one stroke record. Resolves true when compaction is due.
 		 * @param {Uint8Array} bytes
 		 */
 		appendStroke: bytes =>
 			enqueue(async () => {
-				await backend.append(bytes);
+				await (await ready).append(bytes);
 				bytesSinceKeyframe += bytes.length;
 				strokesSinceKeyframe += 1;
 				return shouldCompact(
@@ -274,7 +283,7 @@ export const createJournalStore = (options = {}) => {
 		 */
 		rewrite: bytes =>
 			enqueue(async () => {
-				await backend.rewrite(bytes);
+				await (await ready).rewrite(bytes);
 				bytesSinceKeyframe = 0;
 				strokesSinceKeyframe = 0;
 			}),
