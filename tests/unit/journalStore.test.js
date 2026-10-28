@@ -360,6 +360,7 @@ const fakeIndexedDB = ({ refuse = false } = {}) => {
 describe('journal backend probe', () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();
+		localStorage.removeItem('text0wnz-journal-opfs');
 	});
 
 	// an OPFS worker answers every call with `error`, as one does where
@@ -470,7 +471,7 @@ describe('journal backend probe', () => {
 			vi.stubGlobal('navigator', { storage: { getDirectory: () => new Promise(() => {}) } });
 			const store = createJournalStore();
 			const written = store.rewrite(Uint8Array.of(7));
-			await vi.advanceTimersByTimeAsync(3100);
+			await vi.advanceTimersByTimeAsync(10100);
 			await written;
 			expect(workers).toHaveLength(0);
 			expect(idb.records.map(r => [...r])).toEqual([[7]]);
@@ -492,6 +493,19 @@ describe('journal backend probe', () => {
 		await expect(store.rewrite(createJournal(doc()))).rejects.toThrow(
 			/NoModificationAllowedError/,
 		);
+		expect(workers).toHaveLength(1);
+		expect(idb.opens).toBe(0);
+		expect(localStorage.getItem('text0wnz-journal-opfs')).toBe('1');
+	});
+
+	it('keeps a journal that lives in OPFS there through a failed probe', async () => {
+		// one bad boot must not fork the journal into IndexedDB, where
+		// the next boot would never look
+		localStorage.setItem('text0wnz-journal-opfs', '1');
+		const idb = fakeIndexedDB();
+		const workers = environment({ opfs: false, idb });
+		const store = createJournalStore();
+		await expect(store.rewrite(Uint8Array.of(8))).rejects.toThrow(/UnknownError/);
 		expect(workers).toHaveLength(1);
 		expect(idb.opens).toBe(0);
 	});
