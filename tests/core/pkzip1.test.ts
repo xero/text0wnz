@@ -65,6 +65,25 @@ describe('unshrink', () => {
 		expect([...unshrink(bytes, data.length).out]).toEqual([...data]);
 	});
 
+	it('keeps decoding once its table is full', () => {
+		const data = noisy(60000, 21);
+		const { bytes, width } = shrink(data);
+		expect(width).toBe(13);
+		expect([...unshrink(bytes, data.length).out]).toEqual([...data]);
+	});
+
+	it('takes the next code before it exists, and no other', () => {
+		// A, then code 257 before the table holds it: the KwKwK case, AAA
+		const w = bitWriter();
+		w.put(65, 9);
+		w.put(257, 9);
+		expect([...unshrink(w.done(), 3).out]).toEqual([65, 65, 65]);
+		const bad = bitWriter();
+		bad.put(65, 9);
+		bad.put(300, 9);
+		expect(() => unshrink(bad.done(), 3)).toThrow(/not in the table/);
+	});
+
 	it('takes a lone literal and an empty entry', () => {
 		expect([...unshrink(shrink(Uint8Array.of(42)).bytes, 1).out]).toEqual([42]);
 		expect(unshrink(new Uint8Array(0), 0).out.length).toBe(0);
