@@ -193,7 +193,25 @@ const locate = (
 	};
 };
 
-/** extract one entry's bytes (store or deflate) */
+/**
+ * Store, shrink, and implode decode alike strict or salvaging; only the
+ * verdict differs. A stored entry is its own bytes, and anything past
+ * the declared size is not content.
+ */
+const decodeLocal = (
+	data: Uint8Array,
+	entry: ZipEntry,
+	salvage: boolean,
+): Uint8Array => {
+	if (entry.method === 0) {
+		return data.slice(0, entry.size);
+	}
+	return entry.method === 1
+		? unshrink(data, entry.size, salvage).out
+		: explode(data, entry.size, entry.flags, salvage).out;
+};
+
+/** extract one entry's bytes */
 export const extractZipEntry = async (
 	bytes: Uint8Array,
 	entry: ZipEntry,
@@ -202,36 +220,28 @@ export const extractZipEntry = async (
 	if (short) {
 		throw new CodecError(`zip data truncated for ${entry.name}`);
 	}
-	// bit-rotted packs fail loud instead of opening as mojibake
-	const verified = (out: Uint8Array): Uint8Array => {
-		if (crc32(out) !== entry.crc32) {
-			throw new CodecError(`zip entry ${entry.name} failed its CRC-32`);
-		}
-		return out;
-	};
-	if (entry.method === 0) {
-		return verified(data.slice());
-	}
-	if (entry.method === 1) {
-		return verified(unshrink(data, entry.size).out);
-	}
-	if (entry.method === 6) {
-		return verified(explode(data, entry.size, entry.flags).out);
-	}
-	const inflated = await inflateRaw(data, entry.size);
-	if (inflated.length !== entry.size) {
+	const out =
+		entry.method === 8
+			? await inflateRaw(data, entry.size)
+			: decodeLocal(data, entry, false);
+	if (out.length !== entry.size) {
 		throw new CodecError(
-			`zip entry ${entry.name} inflated to ${inflated.length}, expected ${entry.size}`,
+			`zip entry ${entry.name} inflated to ${out.length}, expected ${entry.size}`,
 		);
 	}
-	return verified(inflated);
+	// bit-rotted packs fail loud instead of opening as mojibake
+	if (crc32(out) !== entry.crc32) {
+		throw new CodecError(`zip entry ${entry.name} failed its CRC-32`);
+	}
+	return out;
 };
 
 /**
  * Open an entry in spite of damage, for the archive browsers: decades
- * of copying have left bit rot in scene packs. The strict path answers
- * first; when it refuses, the plain inflater decodes as far as the
- * stream allows and the checksum decides how much to trust it.
+ * of copying have left bit rot in scene packs. Each entry decodes once,
+ * as far as its stream allows, and the checksum decides how much to
+ * trust it; deflate tries the fast native stream first and falls back
+ * to the plain inflater, which stops exactly where the damage starts.
  * Encryption, oversize entries, and a missing local header still
  * refuse, since there is nothing honest to show.
  */
@@ -240,21 +250,22 @@ export const salvageZipEntry = async (
 	entry: ZipEntry,
 ): Promise<Salvaged> => {
 	const { data, short } = locate(bytes, entry);
-	if (!short) {
-		try {
-			return { bytes: await extractZipEntry(bytes, entry), damage: null };
-		} catch {
-			// the slow road below says what is wrong
+	let out: Uint8Array;
+	if (entry.method === 8) {
+		if (!short) {
+			try {
+				const quick = await inflateRaw(data, entry.size);
+				if (quick.length === entry.size && crc32(quick) === entry.crc32) {
+					return { bytes: quick, damage: null };
+				}
+			} catch {
+				// the plain inflater below decodes what it can
+			}
 		}
+		out = inflateRawSalvage(data, entry.size).bytes;
+	} else {
+		out = decodeLocal(data, entry, true);
 	}
-	const out =
-		entry.method === 0
-			? data.slice()
-			: entry.method === 1
-				? unshrink(data, entry.size, true).out
-				: entry.method === 6
-					? explode(data, entry.size, entry.flags, true).out
-					: inflateRawSalvage(data, entry.size).bytes;
 	return salvaged(entry.name, out, entry.size, crc32(out) === entry.crc32);
 };
 

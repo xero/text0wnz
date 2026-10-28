@@ -145,6 +145,7 @@ describe('zip reader', () => {
 			name: string;
 			data: Uint8Array;
 			packed?: Uint8Array;
+			store?: boolean;
 		}) => {
 			const zip = await buildZip([file]);
 			return { zip, entry: readZipEntries(zip)[0] };
@@ -198,6 +199,21 @@ describe('zip reader', () => {
 			expect(piece.damage).toBe(
 				'CRC.ANS failed its checksum and may show damage',
 			);
+		});
+
+		it('stops a stored entry at its declared size', async () => {
+			const { zip, entry } = await only({
+				name: 'LONG.ANS',
+				data: ascii('ABCD'),
+				packed: ascii('ABCDjunk'),
+				store: true,
+			});
+			expect(String.fromCharCode(...(await extractZipEntry(zip, entry)))).toBe(
+				'ABCD',
+			);
+			const piece = await salvageZipEntry(zip, entry);
+			expect(piece.damage).toBeNull();
+			expect(String.fromCharCode(...piece.bytes)).toBe('ABCD');
 		});
 
 		it('refuses when nothing decodes at all', async () => {
