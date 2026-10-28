@@ -79,10 +79,10 @@ These variables are used when running the collaboration server.
 
 ```bash
 # Command line (the bare server takes the port as an argument)
-bun server 8060
+bun server 8080
 
 # Docker (the startup script passes PORT to the server)
-docker run -e PORT=8060 text0wnz:latest
+docker run -e PORT=8080 text0wnz:latest
 ```
 
 **Note:** The server reads `PORT` directly only in its `healthcheck` probe mode; otherwise the port comes from the CLI argument.
@@ -154,7 +154,7 @@ ROOM_PASS=hunter2 bun server
 
 **Default:** none
 
-**Purpose:** Per-room passwords as JSON.
+**Purpose:** Per-room passwords as JSON. A room with its own entry ignores `ROOM_PASS`.
 
 **Usage:**
 
@@ -162,11 +162,13 @@ ROOM_PASS=hunter2 bun server
 ROOM_PASSWORDS='{"room":"pw"}' bun server
 ```
 
+**Note:** Keys are lowercased to match normalized room names. A value that is not valid JSON logs `[Config] ROOM_PASSWORDS is not valid JSON; ignored` and the server boots with no per-room entries.
+
 ### ROOM_MAX_COLUMNS / ROOM_MAX_ROWS
 
 **Default:** `1000` columns, `10000` rows
 
-**Purpose:** Canvas resize walls, in either direction. The walls gate resizes only; restored documents keep their size.
+**Purpose:** Canvas resize walls. The walls gate resizes only; restored documents keep their size. Lowering them binds every client. Raising them above the defaults reaches only Moebius, moebiusXBIN, and icy_draw clients: the teXt0wnz editor refuses to apply a resize past 1000 by 10000 on its own side, so a raised wall splits a mixed room.
 
 ### STATIC_DIR
 
@@ -203,7 +205,7 @@ Companions: `BRIDGE_TARGET`, `BRIDGE_PORT`, `BRIDGE_ALLOW`, `BRIDGE_MAX`.
 
 The editor uses the bridge on its own. A page served over https that is asked to join a plaintext server dials `wss://<this host>/bridge?host=...&port=...&room=...` instead, since the browser blocks the direct socket as mixed content. With `BRIDGE=off` the dial fails and the Connect form tells the visitor the site may not allow it (the browser cannot tell a refusal from a dead host). The `port` mode fits a public editor host best: visitors pick the server, the port stays pinned, and private addresses are refused. Behind a reverse proxy, `/bridge` must be forwarded to the server like `/server` is; the Docker image and the examples in [webserver-configuration.md](./webserver-configuration.md) already do.
 
-**What you take on.** In `port` mode your host relays, from its own address, to any public websocket server on that one port, for anyone who can reach `/bridge`. Pin browsers with `ALLOWED_ORIGINS` (desktop clients send no Origin and pass regardless), prefer `allow` when the set of servers is known, and keep the logs: every open, close, and refusal prints with the requester's address (and the proxy's `X-Real-IP` claim when there is one) whether or not `--debug` is on, so an abuse report has an answer. Refusals reach the caller as a bare `403`; the reason, which can name resolved addresses, goes to the log only. The bridge also bounds itself: `BRIDGE_MAX` concurrent pipes (default `16`), a delivery bound in each direction (a side that stops taking delivery for 15 seconds, or leaves more than 64 MB unconfirmed, closes the pipe), a 30 minute idle reaper, and timeouts on the dial and the DNS lookup. A `BRIDGE_PORT` equal to one of the server's own listeners, or a `BRIDGE_TARGET` pointing at a `/bridge` path, stops the boot.
+**What you take on.** In `port` mode your host relays, from its own address, to any public websocket server on that one port, for anyone who can reach `/bridge`. Pin browsers with `ALLOWED_ORIGINS` (desktop clients send no Origin and pass regardless), prefer `allow` when the set of servers is known, and keep the logs: every open, close, and refusal prints with the requester's address (and the proxy's `X-Real-IP` claim when there is one) whether or not `--debug` is on, so an abuse report has an answer. Refusals reach the caller as a bare `403` (mode `off`, a vetoed target, or an Origin outside the allowlist), the cap as `503 bridge busy`, and a request without a websocket handshake as `426`; the reason, which can name resolved addresses, goes to the log only. The bridge also bounds itself: `BRIDGE_MAX` concurrent pipes (default `16`, counted while a lookup is still pending), a 3 second DNS lookup and a 10 second dial, 256 KB of browser frames queued before the upstream answers, a delivery bound in each direction (a side that stops taking delivery for 15 seconds, or leaves more than 64 MB unconfirmed, closes the pipe), and a 30 minute idle reaper. A `BRIDGE_PORT` equal to one of the server's own listeners, or a `BRIDGE_TARGET` pointing at a `/bridge` path, stops the boot.
 
 ### XDG_DATA_HOME
 
@@ -386,7 +388,6 @@ docker run --env-file docker.env text0wnz:latest
 **Option 3: docker-compose.yml**
 
 ```yaml
-version: '3.8'
 services:
   text0wnz:
     image: text0wnz:latest

@@ -446,8 +446,8 @@ Click the `local` button in the sauce panel and type the server as `host:port/ro
 
 ```sh
 bun server [port] [options]
-# or
-node src/js/server/main.js
+# or the compiled binary
+./t0wnz [port] [options]
 ```
 
 > [!TIP]
@@ -512,7 +512,7 @@ docker buildx build --platform linux/amd64,linux/arm64 -t yourname/text0wnz:late
 
 ### Running in Development Mode
 
-Development mode provides hot-reloading and detailed logging for an optimized development experience:
+Development mode serves plain HTTP with no automatic HTTPS, handy for local testing:
 
 ```sh
 docker run \
@@ -595,7 +595,7 @@ All tests run automatically in [CI/CD](https://github.com/xero/text0wnz/tree/mai
 > - Lower save interval for busy sessions
 > - Use SSL in production (Let's Encrypt via Certbot, ACME-nginx, etc)
 > - WebSocket debugging: browser dev tools
-> - Restore session: rename backups in the **`sessions`** folder
+> - Restore a session: stop the server, copy a file from `sessions/backups/` over `sessions/<room>.0wnz`, and delete `sessions/<room>.state.json` (the sidecar wins over the envelope); see [docs/collaboration-server.md](docs/collaboration-server.md#persistence)
 > - Run using the **`--debug`** flag and review logs for details
 >
 > See: [docs/trouble_shooting](docs/webserver-configuration.md#troubleshooting) for more help.
