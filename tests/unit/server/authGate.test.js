@@ -102,6 +102,37 @@ describe('createAuthGate', () => {
 		expect(gate.open('fresh', 60_000 / AUTH_ROOM_BUDGET)).toBe(true);
 	});
 
+	it('a spent budget still lets a returning joiner in, and no stranger', () => {
+		const gate = createAuthGate();
+		gate.pass('artist');
+		for (let i = 0; i < AUTH_ROOM_BUDGET; i++) {
+			gate.fail(`bot${i}`, 0);
+		}
+		// an artist reconnecting after a drop mid-attack
+		expect(gate.open('artist', 0)).toBe(true);
+		expect(gate.open('stranger', 0)).toBe(false);
+		// the exemption skips the budget, never the key's own backoff
+		for (let i = 0; i < 3; i++) {
+			gate.fail('artist', 0);
+		}
+		expect(gate.open('artist', 0)).toBe(false);
+	});
+
+	it('a key that fails again outlives the quiet ones around it', () => {
+		const gate = createAuthGate();
+		gate.fail('early', 0);
+		gate.fail('later', 25_000);
+		gate.fail('later', 30_000);
+		gate.fail('early', 50_000);
+		// at 100s 'later' has been quiet 70s and goes, count and all, even
+		// though 'early' entered first; 'early', quiet only 50s, keeps its
+		// count, so its third failure opens a cooldown
+		gate.fail('early', 100_000);
+		expect(gate.open('early', 100_100)).toBe(false);
+		gate.fail('later', 100_000);
+		expect(gate.open('later', 100_100)).toBe(true);
+	});
+
 	it('an operator budget replaces the default, refill rate and all', () => {
 		const gate = createAuthGate({ budget: 3 });
 		for (let i = 0; i < 3; i++) {

@@ -4,8 +4,9 @@
  * passworded room shut for everyone, the right password included. A
  * gate (one per room) keeps a backoff per client address, two tries
  * free and then the shared doubling to a 30 second cap, plus a room
- * budget of wrong guesses a minute, so many addresses together still
- * guess slowly.
+ * budget of wrong guesses, so many addresses together still guess
+ * slowly. A spent budget still lets in an address that has given the
+ * right password before: a jam's artists reconnect after a drop.
  *
  * No address enters a gate as text: the key is a hash under a salt
  * minted per process, never logged or written down. IPv6 is cut to its
@@ -17,6 +18,7 @@
 
 import { createHmac, randomBytes } from 'node:crypto';
 import { isIP } from 'node:net';
+import { addressKind } from './bridge.js';
 import { authCooldownMs } from './utils.js';
 
 const SALT = randomBytes(32);
@@ -24,8 +26,10 @@ const SALT = randomBytes(32);
 /** wrong guesses a minute one room takes from every address together,
  * unless ROOM_MAX_GUESSES sets another */
 export const AUTH_ROOM_BUDGET = 20;
-/** client keys one gate holds; past it, unknown keys are refused */
+/** failing keys one gate holds; past it, unknown keys are refused */
 export const AUTH_GATE_KEYS = 4096;
+/** keys one gate remembers as having joined, oldest forgotten first */
+export const AUTH_KNOWN_KEYS = 256;
 /** a settled key is forgotten this long after its last failure */
 const AUTH_KEY_IDLE_MS = 60_000;
 
@@ -40,10 +44,9 @@ const stripPort = value => {
 	return v4 ? v4[1] : value;
 };
 
-const unmapped = address => address.replace(/^::ffff:/i, '');
-
-const isLoopback = address =>
-	address === '::1' || (isIP(address) === 4 && address.startsWith('127.'));
+/** a v4-mapped v6 address as its v4 spelling
+ * @param {string} address */
+export const unmapped = address => address.replace(/^::ffff:/i, '');
 
 /**
  * The address a request speaks for: the socket's peer, unless that peer
@@ -59,7 +62,7 @@ const isLoopback = address =>
  */
 export const clientAddress = (peer, headers, trusted = []) => {
 	const from = unmapped(peer);
-	if (!isLoopback(from) && !trusted.includes(from)) {
+	if (addressKind(from) !== 'loopback' && !trusted.includes(from)) {
 		return from;
 	}
 	// Caddy's {remote} placeholder carries the port
@@ -107,8 +110,15 @@ export const addressKey = address => {
  *   addresses together
  */
 export const createAuthGate = ({ budget = AUTH_ROOM_BUDGET } = {}) => {
-	/** @type {Map<string, {failures: number, cooldownUntil: number, lastAt: number}>} */
+	/**
+	 * Failing keys, oldest failure first: a failure moves its key to the
+	 * back, so shedding stops at the first key still fresh. The budget
+	 * admits a few dozen failures a minute, so this stays small.
+	 * @type {Map<string, {failures: number, cooldownUntil: number, lastAt: number}>}
+	 */
 	const keys = new Map();
+	/** keys that gave the right password, oldest first */
+	const known = new Set();
 	const refillMs = 60_000 / budget;
 	let left = budget;
 	let leftAt = 0;
@@ -117,10 +127,12 @@ export const createAuthGate = ({ budget = AUTH_ROOM_BUDGET } = {}) => {
 		leftAt = now;
 	};
 	const shed = now => {
+		// cooldowns end before keys idle out, so age alone decides
 		for (const [key, entry] of keys) {
-			if (now >= entry.cooldownUntil && now - entry.lastAt > AUTH_KEY_IDLE_MS) {
-				keys.delete(key);
+			if (now - entry.lastAt <= AUTH_KEY_IDLE_MS) {
+				break;
 			}
+			keys.delete(key);
 		}
 	};
 	return {
@@ -128,39 +140,41 @@ export const createAuthGate = ({ budget = AUTH_ROOM_BUDGET } = {}) => {
 		 * @param {string} key @param {number} [now] */
 		open(key, now = Date.now()) {
 			refill(now);
-			if (left < 1) {
+			shed(now);
+			const entry = keys.get(key);
+			if (entry && now < entry.cooldownUntil) {
 				return false;
 			}
-			const entry = keys.get(key);
-			if (entry) {
-				return now >= entry.cooldownUntil;
-			}
-			if (keys.size >= AUTH_GATE_KEYS) {
-				shed(now);
+			if (left < 1 && !known.has(key)) {
+				return false;
 			}
 			// fail closed: a flood of fresh keys gets no fresh tries
-			return keys.size < AUTH_GATE_KEYS;
+			return Boolean(entry) || keys.size < AUTH_GATE_KEYS;
 		},
 		/** a wrong password from this key
 		 * @param {string} key @param {number} [now] */
 		fail(key, now = Date.now()) {
 			refill(now);
+			shed(now);
 			left = Math.max(0, left - 1);
-			let entry = keys.get(key);
-			if (!entry) {
-				entry = { failures: 0, cooldownUntil: 0, lastAt: 0 };
-				keys.set(key, entry);
-			}
+			const entry = keys.get(key) ?? { failures: 0, cooldownUntil: 0, lastAt: 0 };
+			keys.delete(key);
 			entry.failures++;
 			entry.lastAt = now;
 			entry.cooldownUntil = now + authCooldownMs(entry.failures);
+			keys.set(key, entry);
 		},
-		/** the right password: this key starts over
+		/** the right password: this key starts over, and is known from now on
 		 * @param {string} key */
 		pass(key) {
 			keys.delete(key);
+			known.delete(key);
+			known.add(key);
+			if (known.size > AUTH_KNOWN_KEYS) {
+				known.delete(known.values().next().value);
+			}
 		},
-		/** nothing left worth keeping, so the gate itself can go
+		/** nothing pending (known keys never hold a gate), so it can go
 		 * @param {number} [now] */
 		idle(now = Date.now()) {
 			refill(now);
