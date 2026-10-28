@@ -1,18 +1,6 @@
 #!/bin/sh
 set -e
 CI=x0 sh /app/banner
-# Validate required environment variables
-if [ -z "$SESSION_KEY" ]; then
-    echo "[$(date)] SESSION_KEY not provided, generating one..."
-    if [ -e /dev/urandom ]; then
-        SESSION_KEY=$(tr -dc "a-z0-9" < /dev/urandom | head -c 20)
-        echo "[$(date)] Generated SESSION_KEY"
-    else
-        echo "[$(date)] ERROR: Cannot generate secure SESSION_KEY, /dev/urandom not available"
-        exit 1
-    fi
-fi
-export SESSION_KEY
 echo "[$(date)] Starting text0wnz at: $DOMAIN on port $PORT (Environment: $NODE_ENV)"
 
 # Create log directory

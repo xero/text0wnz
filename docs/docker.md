@@ -129,22 +129,21 @@ The container implements a robust startup sequence:
 
 ## Environment Variables
 
-| Variable           | Description                                                                   | Default                   |
-| ------------------ | ----------------------------------------------------------------------------- | ------------------------- |
-| `DOMAIN`           | Domain name for the application                                               | `localhost`               |
-| `PORT`             | _Internal_ port for the WebSocket server                                      | `1337`                    |
-| `NODE_ENV`         | Node environment setting                                                      | `production`              |
-| `ROOM_PASS`        | Password for collaboration rooms (gates spectators too)                       | none                      |
-| `ROOM_PASSWORDS`   | Per-room passwords as JSON: `{"room":"pw"}`                                   | none                      |
-| `SESSION_KEY`      | Generated at boot if unset; not read by the current server                    | random, generated at boot |
-| `BRIDGE`           | Bridge mode for plaintext desktop servers: `off`, `local`, `port`, or `allow` | `off`                     |
-| `BRIDGE_PORT`      | The one port `port` mode dials                                                | `8000`                    |
-| `BRIDGE_TARGET`    | The fixed target `local` mode dials                                           | `ws://127.0.0.1:8000`     |
-| `BRIDGE_ALLOW`     | Comma-separated `host:port` list for `allow` mode                             | none                      |
-| `BRIDGE_MAX`       | Concurrent bridged connections                                                | `16`                      |
-| `ALLOWED_ORIGINS`  | Comma-separated Origin allowlist for websocket upgrades                       | none (open)               |
-| `ROOM_MAX_COLUMNS` | Canvas resize wall, columns                                                   | `1000`                    |
-| `ROOM_MAX_ROWS`    | Canvas resize wall, rows                                                      | `10000`                   |
+| Variable           | Description                                                                   | Default               |
+| ------------------ | ----------------------------------------------------------------------------- | --------------------- |
+| `DOMAIN`           | Domain name for the application                                               | `localhost`           |
+| `PORT`             | _Internal_ port for the WebSocket server                                      | `1337`                |
+| `NODE_ENV`         | Node environment setting                                                      | `production`          |
+| `ROOM_PASS`        | Password for collaboration rooms (gates spectators too)                       | none                  |
+| `ROOM_PASSWORDS`   | Per-room passwords as JSON: `{"room":"pw"}`                                   | none                  |
+| `BRIDGE`           | Bridge mode for plaintext desktop servers: `off`, `local`, `port`, or `allow` | `off`                 |
+| `BRIDGE_PORT`      | The one port `port` mode dials                                                | `8000`                |
+| `BRIDGE_TARGET`    | The fixed target `local` mode dials                                           | `ws://127.0.0.1:8000` |
+| `BRIDGE_ALLOW`     | Comma-separated `host:port` list for `allow` mode                             | none                  |
+| `BRIDGE_MAX`       | Concurrent bridged connections                                                | `16`                  |
+| `ALLOWED_ORIGINS`  | Comma-separated Origin allowlist for websocket upgrades                       | none (open)           |
+| `ROOM_MAX_COLUMNS` | Canvas resize wall, columns                                                   | `1000`                |
+| `ROOM_MAX_ROWS`    | Canvas resize wall, rows                                                      | `10000`               |
 
 The startup script hands its whole environment to the server, so every server variable in [environment-variables.md](./environment-variables.md) works here; the table lists the ones most deployments set.
 
