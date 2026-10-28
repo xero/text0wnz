@@ -19,13 +19,8 @@ import {
 } from '../doc.js';
 import { cp437ToUnicode } from '../cp437.js';
 import { DocMeta } from './bin.js';
-import {
-	CodecError,
-	base64ToBytes,
-	bytesToBase64,
-	gunzip,
-	gzip,
-} from './util.js';
+import { CodecError, base64ToBytes, bytesToBase64 } from './util.js';
+import { gunzip, gzip } from './flate.js';
 
 export const ENVELOPE_FORMAT = 't0wnz-doc';
 export const ENVELOPE_VERSION = 1;

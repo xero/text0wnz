@@ -2,12 +2,12 @@
  * Minimal ZIP reader for the 16colo.rs and aSCIIaRENA browsers and
  * native opens: enough to open one piece out of a scene pack.
  * Central-directory driven, store (0) and deflate (8) only, inflated
- * through the runtime-native DecompressionStream('deflate-raw'); no
- * dependency, no zip64, no encryption (scene packs are small flat
- * archives; anything else throws a CodecError).
+ * through flate.ts; no dependency, no zip64, no encryption (scene
+ * packs are small flat archives; anything else throws a CodecError).
  */
 
-import { CodecError, crc32, inflateRaw } from './util.js';
+import { CodecError, crc32 } from './util.js';
+import { inflateRaw } from './flate.js';
 
 const EOCD_SIG = 0x06054b50;
 const CENTRAL_SIG = 0x02014b50;

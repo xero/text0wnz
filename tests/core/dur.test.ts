@@ -6,7 +6,7 @@ import {
 	encodeDur,
 } from '../../src/js/core/codecs/dur.js';
 import { createDocV3 } from '../../src/js/core/doc.js';
-import { gzip } from '../../src/js/core/codecs/util.js';
+import { gzip } from '../../src/js/core/codecs/flate.js';
 import { v3ToU16 } from '../../src/js/core/convert.js';
 
 const pack = (json: unknown): Promise<Uint8Array> =>
