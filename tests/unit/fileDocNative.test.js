@@ -37,6 +37,8 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('../../src/js/client/state.js', () => ({ default: mocks.state }));
 vi.mock('../../src/js/client/ui.js', () => ({
+	escapeHtml: text =>
+		text.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c]),
 	$: id => mocks.ui[id] || { value: '' },
 	enforceMaxBytes: () => {},
 }));
@@ -182,6 +184,28 @@ describe('doc-native file formats', () => {
 		const back = decodeTundra(bytes);
 		expect(back.meta.title).toBe('roundtrip');
 		expect(back.doc.getCell(0, 0, 0).fg).toBe(rgbColor(9, 8, 7));
+	});
+
+	it('a failing .0wnz or .dur save tells the artist', async () => {
+		// the menu drops the save promise, so an uncaught throw here
+		// used to vanish without a word
+		const getDoc = mocks.state.textArtCanvas.getDoc;
+		mocks.state.textArtCanvas.getDoc = () => {
+			throw new Error('doc gone');
+		};
+		const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+		const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+		try {
+			await expect(Save.ownz()).resolves.toBeUndefined();
+			await expect(Save.dur()).resolves.toBeUndefined();
+			const messages = alert.mock.calls.map(([message]) => message);
+			expect(messages[0]).toMatch(/^\.0wnz save failed: /);
+			expect(messages[1]).toBe('durdraw export failed: doc gone');
+		} finally {
+			alert.mockRestore();
+			quiet.mockRestore();
+			mocks.state.textArtCanvas.getDoc = getDoc;
+		}
 	});
 
 	it('exposes tnd and ownz on the Save surface', () => {

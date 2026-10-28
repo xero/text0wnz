@@ -29,10 +29,10 @@ import {
 	isArchiveName,
 } from './browserKit.js';
 import {
-	extractLhaEntry,
-	extractZipEntry,
 	readLhaEntries,
 	readZipEntries,
+	salvageLhaEntry,
+	salvageZipEntry,
 } from '../core/index';
 
 const SITE = 'https://asciiarena.se';
@@ -578,11 +578,11 @@ const createAsciiArena = ({ openFile, onExit }) => {
 						return;
 					}
 					try {
-						const bytes = await extract(entry);
+						const piece = await extract(entry);
 						if (!op.current()) {
 							return;
 						}
-						openBytes(bytes, baseName(entry.name));
+						openBytes(piece.bytes, baseName(entry.name), piece.damage);
 					} catch (error) {
 						if (op.current()) {
 							say(`could not open: ${error.message}`, true);
@@ -597,10 +597,13 @@ const createAsciiArena = ({ openFile, onExit }) => {
 
 	// ------------------------------------------------------------ open
 
-	const openBytes = (bytes, name) => {
+	const openBytes = (bytes, name, notice = null) => {
 		say(null);
 		State.modal.close();
-		openFile(new File([bytes], name), amigaImportHints(bytes));
+		openFile(new File([bytes], name), {
+			...amigaImportHints(bytes),
+			...(notice ? { notice } : {}),
+		});
 	};
 
 	const openArchive = async colly => {
@@ -616,10 +619,12 @@ const createAsciiArena = ({ openFile, onExit }) => {
 				return;
 			}
 			const isZip = (/\.zip$/i).test(colly.filename);
-			const entries = (isZip ? readZipEntries : readLhaEntries)(bytes)
+			// arena zips come off amigas: latin-1 names, like the lha ones
+			const entries = (isZip ? readZipEntries(bytes, 'latin1') : readLhaEntries(bytes))
 				.filter(e => isOpenableName(e.name));
+			// damaged pieces open as far as they decode, with a note
 			const extract = entry => {
-				return isZip ? extractZipEntry(bytes, entry) : extractLhaEntry(bytes, entry);
+				return isZip ? salvageZipEntry(bytes, entry) : salvageLhaEntry(bytes, entry);
 			};
 			if (entries.length === 1) {
 				const only = await extract(entries[0]);
@@ -628,7 +633,7 @@ const createAsciiArena = ({ openFile, onExit }) => {
 				if (!op.current()) {
 					return;
 				}
-				openBytes(only, baseName(entries[0].name));
+				openBytes(only.bytes, baseName(entries[0].name), only.damage);
 				return;
 			}
 			if (!gate.current(ticket)) {

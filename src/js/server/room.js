@@ -28,6 +28,10 @@
  * - resize is row-aware (a linear copy scrambles late joiners).
  * - malformed frames are dropped with a log line, never a crash.
  * - every mutation lands in a bounded op log (timelapse substrate).
+ * - live SAUCE reaches caps-less members with author and group
+ *   swapped, because both upstream clients swap them back on receive.
+ * - a client the socket layer knows as vanilla Moebius gets its join
+ *   palette at 6 bits; everyone else gets the 8 this server writes.
  *
  * Extension suite v1 (ids 23-27, cap "t0wnz-ext-1"):
  * caps-aware clients get full-fidelity cells (unicode + v3 color
@@ -51,11 +55,13 @@ import {
 	expandExtCells,
 	extCellEquals,
 	extCellToBlock,
+	compress8to6,
 	paletteWordsFromJoin,
 	sanitizeExtDraw,
 	sanitizeExtPalette,
 } from '../core/index';
-import { authCooldownMs, sanitize } from './utils.js';
+import { sanitize } from './utils.js';
+import { createAuthGate } from './authGate.js';
 
 export const ROOM_DEFAULTS = Object.freeze({
 	columns: 80,
@@ -87,6 +93,17 @@ const rgb8FromWords = words =>
 		b: w & 0xff,
 	}));
 
+/** the same entries at 6 bits, for vanilla Moebius: it expands every
+ * join component from 6 bits, where moebiusXBIN and our own client
+ * read 8 (the stock 16 survive either way, a custom palette does not)
+ * @param {import('../core/index').MoebiusPaletteEntry[]} palette 8-bit */
+const sixBitPalette = palette =>
+	Array.from(paletteWordsFromJoin(palette, 8), w => ({
+		r: compress8to6((w >> 16) & 0xff),
+		g: compress8to6((w >> 8) & 0xff),
+		b: compress8to6(w & 0xff),
+	}));
+
 /** old sidecars hold 6-bit number[][] join palettes; the ancestor
  * resolves that shape to black, so restores renormalize. The shape
  * names the depth here (arrays are the old 6-bit writer, objects
@@ -109,6 +126,10 @@ const normalizeJoinPalette = palette => {
  * @typedef {object} RoomClient anything with a send; the server layer
  *   wraps sockets, tests pass plain objects
  * @property {(type: number, data: object) => void} send
+ * @property {6 | 8} [paletteDepth] the join palette depth a caps-less
+ *   client reads, when the socket layer could tell (vanilla Moebius 6)
+ * @property {string} [who] the auth gate key for the client's address
+ *   (a salted hash, never the address); absent keys share one backoff
  */
 
 /**
@@ -120,6 +141,8 @@ const normalizeJoinPalette = palette => {
  * @param {number} [options.rows]
  * @param {number} [options.maxColumns] resize wall (env knob; either direction)
  * @param {number} [options.maxRows] resize wall (env knob; either direction)
+ * @param {number} [options.maxGuesses] wrong passwords a minute, all
+ *   addresses together (env knob; absent = the gate's default)
  * @param {number} [options.opLogLimit]
  * @param {number} [options.syncCooldownMs] per-user EXT_SYNC/TIMELAPSE rate limit
  * @param {(line: string) => void} [options.log]
@@ -412,14 +435,16 @@ export const createRoom = (options = {}) => {
 			status: u.status,
 		}));
 
-	const toJoinDoc = () => ({
+	/** @param {6 | 8} [paletteDepth] */
+	const toJoinDoc = (paletteDepth = 8) => ({
 		columns: doc.columns,
 		rows: doc.rows,
 		title: doc.title,
 		author: doc.author,
 		group: doc.group,
 		comments: doc.comments,
-		palette: doc.palette,
+		palette:
+			paletteDepth === 6 && doc.palette ? sixBitPalette(doc.palette) : doc.palette,
 		font_bytes: doc.font_bytes,
 		font_name: doc.font_name,
 		ice_colors: doc.ice_colors,
@@ -446,10 +471,9 @@ export const createRoom = (options = {}) => {
 	};
 
 	// wire-speed brute force: repeated failures open an exponential
-	// cooldown window during which every attempt refuses instantly
-	// (the first couple of tries stay free: humans typo)
-	let authFailures = 0;
-	let authCooldownUntil = 0;
+	// cooldown window during which that client's attempts refuse
+	// instantly (the first couple of tries stay free: humans typo)
+	const authGate = createAuthGate({ budget: options.maxGuesses });
 
 	/**
 	 * @param {RoomClient} client
@@ -468,19 +492,19 @@ export const createRoom = (options = {}) => {
 				log(`${nick ?? 'spectator'} refused (no password)`);
 				return false;
 			}
-			if (Date.now() < authCooldownUntil) {
+			const who = client.who ?? '';
+			if (!authGate.open(who)) {
 				client.send(MoebiusAction.REFUSED, {});
 				log('refused (auth cooldown)');
 				return false;
 			}
 			if (pass !== password) {
-				authFailures++;
-				authCooldownUntil = Date.now() + authCooldownMs(authFailures);
+				authGate.fail(who);
 				client.send(MoebiusAction.REFUSED, {});
 				log(`${nick ?? 'spectator'} refused (bad password)`);
 				return false;
 			}
-			authFailures = 0;
+			authGate.pass(who);
 		}
 		const isSpectator = nick === undefined;
 		if (isSpectator && !spectators.enabled) {
@@ -503,13 +527,14 @@ export const createRoom = (options = {}) => {
 			caps,
 			lastSyncAt: 0,
 		};
+		const depth = !hasExt(user) && client.paletteDepth === 6 ? 6 : 8;
 		// upstream reply shapes, verbatim; caps ride along only for
 		// caps-aware clients (vanilla must see exactly vanilla)
 		const reply = isSpectator
-			? { id, doc: toJoinDoc() }
+			? { id, doc: toJoinDoc(depth) }
 			: {
 					id,
-					doc: toJoinDoc(),
+					doc: toJoinDoc(depth),
 					users: usersList(),
 					chat_history: chatHistory,
 					status: MoebiusStatus.ACTIVE,
@@ -532,7 +557,10 @@ export const createRoom = (options = {}) => {
 			group: user.group,
 			status: user.status,
 		});
-		log(`${nick ?? 'spectator'} joined ${name} as #${id}`);
+		// the depth rides the log so a field check can see the guess
+		log(
+			`${nick ?? 'spectator'} joined ${name} as #${id}${depth === 6 ? ' (6-bit palette)' : ''}`,
+		);
 		return true;
 	};
 
@@ -676,7 +704,13 @@ export const createRoom = (options = {}) => {
 					user,
 					pushOp(type, payload),
 					{ type, data: payload },
-					{ type, data: payload },
+					// Moebius 1.0.29 and moebiusXBIN 2.2.0 both hand a live
+					// SAUCE to a handler wanting author before group, group
+					// first (doc.js:272); swapped going out, they land right
+					{
+						type,
+						data: { ...payload, author: payload.group, group: payload.author },
+					},
 					{ spectators: true },
 				);
 				return;

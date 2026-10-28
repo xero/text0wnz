@@ -1519,9 +1519,16 @@ const saveModule = () => {
 		await saveFile(bytes, undefined, State.title + '.ans');
 	};
 
+	// the menu handler drops this promise, so a failure the artist
+	// cannot see here is a failure nobody sees
 	const dur = async () => {
-		const bytes = await encodeDur(State.textArtCanvas.getDoc(), sauceMeta());
-		await saveFile(bytes, undefined, State.title + '.dur');
+		try {
+			const bytes = await encodeDur(State.textArtCanvas.getDoc(), sauceMeta());
+			await saveFile(bytes, undefined, State.title + '.dur');
+		} catch (error) {
+			console.error('[Save] dur:', error);
+			alert(`durdraw export failed: ${error.message}`);
+		}
 	};
 
 	// Timelapse: baseline + op log from the server, replayed into a
@@ -1553,13 +1560,18 @@ const saveModule = () => {
 	};
 
 	const ownz = async () => {
-		const xbData = State.textArtCanvas.getXBFontData();
-		const bytes = await encodeEnvelope(State.textArtCanvas.getDoc(), {
-			meta: sauceMeta(),
-			fontBytes: xbData ? xbData.bytes : null,
-			fontHeight: xbData ? xbData.height : undefined,
-		});
-		await saveFile(bytes, undefined, State.title + '.0wnz');
+		try {
+			const xbData = State.textArtCanvas.getXBFontData();
+			const bytes = await encodeEnvelope(State.textArtCanvas.getDoc(), {
+				meta: sauceMeta(),
+				fontBytes: xbData ? xbData.bytes : null,
+				fontHeight: xbData ? xbData.height : undefined,
+			});
+			await saveFile(bytes, undefined, State.title + '.0wnz');
+		} catch (error) {
+			console.error('[Save] 0wnz:', error);
+			alert(`.0wnz save failed: ${error.message}`);
+		}
 	};
 
 	const png = async () => {

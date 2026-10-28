@@ -596,6 +596,7 @@ src/
         ├── config.js
         ├── moebiusServer.js
         ├── room.js
+        ├── authGate.js
         ├── persistence.js
         ├── bridge.js
         └── utils.js

@@ -480,6 +480,32 @@ describe('extension suite v1 (t0wnz-ext-1)', () => {
 		expect(joinPalette[1]).toEqual({ r: 0x12, g: 0x34, b: 0x56 });
 	});
 
+	it('a client known as vanilla Moebius gets its join palette at 6 bits', () => {
+		const room = createRoom({ columns: 2, rows: 1 });
+		const sender = joinCaps(room, 'sender');
+		const palette = new Array(16).fill(0x000000);
+		palette[1] = 0x123456;
+		palette[15] = 0xffffff;
+		room.message(sender, { type: T0wnzAction.EXT_PALETTE, data: { palette, id: 0 } });
+		const joinWith = (depth, extra = {}) => {
+			const client = { ...fakeClient(), paletteDepth: depth };
+			room.connect(client, { nick: 'late', group: '', pass: '', ...extra });
+			return client.ofType(A.CONNECTED)[0].data.doc.palette;
+		};
+		// it expands each component (v << 2) | (v >> 4), so 0x12 must go
+		// out as 4 to land near 0x12 instead of wrapping to garbage
+		const vanilla = joinWith(6);
+		expect(vanilla[1]).toEqual({ r: 0x04, g: 0x0d, b: 0x15 });
+		expect(vanilla[15]).toEqual({ r: 63, g: 63, b: 63 });
+		// moebiusXBIN and unknown agents keep the 8 bits they read raw
+		expect(joinWith(8)[1]).toEqual({ r: 0x12, g: 0x34, b: 0x56 });
+		expect(joinWith(undefined)[1]).toEqual({ r: 0x12, g: 0x34, b: 0x56 });
+		// a caps client never takes the vanilla guess
+		expect(joinWith(6, { caps: [EXT_SUITE_CAP]})[1]).toEqual({ r: 0x12, g: 0x34, b: 0x56 });
+		// the stored doc stays 8-bit
+		expect(room.toJoinDoc().palette[1]).toEqual({ r: 0x12, g: 0x34, b: 0x56 });
+	});
+
 	it('ice toggles reproject stored blink folds for vanilla viewers', () => {
 		const room = createRoom({ columns: 2, rows: 1 });
 		const caps = joinCaps(room, 'caps');
@@ -659,6 +685,28 @@ describe('hostile input hardening', () => {
 		expect(frame.data.seq).toBe(1);
 	});
 
+	it('vanilla peers get SAUCE pre-swapped for their swapped receive', () => {
+		const room = createRoom();
+		const sender = joinEditor(room, 'a');
+		const vanilla = joinEditor(room, 'b');
+		const caps = joinCaps(room, 'c');
+		room.message(sender, {
+			type: A.SAUCE,
+			data: { title: 't', author: 'xero', group: 'impure', comments: '' },
+		});
+		// upstream's receive path flips the pair back, so they see it right
+		expect(vanilla.ofType(A.SAUCE)[0].data).toMatchObject({
+			author: 'impure',
+			group: 'xero',
+		});
+		// our clients and the stored doc keep the truth
+		expect(caps.ofType(A.SAUCE)[0].data).toMatchObject({
+			author: 'xero',
+			group: 'impure',
+		});
+		expect(room.toJoinDoc()).toMatchObject({ author: 'xero', group: 'impure' });
+	});
+
 	it('CHAT never relays smuggled fields to peers', () => {
 		const room = createRoom();
 		const sender = joinEditor(room, 'a');
@@ -830,6 +878,32 @@ describe('review-pass regressions', () => {
 		} finally {
 			vi.useRealTimers();
 		}
+	});
+
+	it('a guesser cools down alone; another client still gets in', () => {
+		vi.useFakeTimers();
+		try {
+			vi.setSystemTime(1_000_000);
+			const room = createRoom({ password: 'pw' });
+			const from = who => ({ ...fakeClient(), who });
+			for (let i = 0; i < 3; i++) {
+				expect(room.connect(from('guesser'), { nick: 'g', pass: 'nope' })).toBe(false);
+			}
+			expect(room.connect(from('guesser'), { nick: 'g', pass: 'pw' })).toBe(false);
+			// keyed by room alone, the guesser held everyone out
+			expect(room.connect(from('artist'), { nick: 'a', pass: 'pw' })).toBe(true);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('ROOM_MAX_GUESSES sets the room budget every address shares', () => {
+		const room = createRoom({ password: 'pw', maxGuesses: 2 });
+		const from = who => ({ ...fakeClient(), who });
+		expect(room.connect(from('one'), { nick: 'a', pass: 'nope' })).toBe(false);
+		expect(room.connect(from('two'), { nick: 'b', pass: 'nope' })).toBe(false);
+		// two wrong guesses spent it: the room refuses even the right one
+		expect(room.connect(from('three'), { nick: 'c', pass: 'pw' })).toBe(false);
 	});
 
 	it('loadState keeps a dark 8-bit object palette exact', () => {

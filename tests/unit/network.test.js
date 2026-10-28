@@ -8,8 +8,10 @@ import {
 import { $, onEnter } from '../../src/js/client/ui.js';
 import {
 	EXT_SUITE_CAP,
+	MoebiusAction,
 	T0wnzAction,
 	compressExtCells,
+	paletteColor,
 } from '../../src/js/core/index.js';
 
 vi.mock('../../src/js/client/state.js', () => ({
@@ -669,6 +671,123 @@ describe('Network Module', () => {
 			});
 			expect(State.textArtCanvas.setDocData).toHaveBeenCalled();
 			expect(State.textArtCanvas.resize).toHaveBeenCalledWith(100, 30);
+		});
+
+		it('a remote apply that throws leaves settings sends working', async () => {
+			const handler = createWorkerHandler(mockInputHandle);
+			const messageListener = mockWorker.addEventListener.mock.calls.find(
+				call => call[0] === 'message',
+			)[1];
+			handler.joinCollaboration();
+			const blank = { code: 32, fg: 7, bg: 0 };
+			await messageListener({
+				data: {
+					cmd: 'connected',
+					data: {
+						caps: [EXT_SUITE_CAP],
+						doc: { columns: 2, rows: 1, data: [blank, blank]},
+						users: [],
+						chat_history: [],
+					},
+				},
+			});
+			// a low-memory phone failing to allocate a peer's huge canvas
+			State.textArtCanvas.resize.mockImplementationOnce(() => {
+				throw new RangeError('canvas too large');
+			});
+			await messageListener({ data: { cmd: 'frame', type: MoebiusAction.SET_CANVAS_SIZE, data: { id: 1, columns: 900, rows: 9000 } } }).catch(() => {});
+			mockWorker.postMessage.mockClear();
+			handler.sendResize(100, 30);
+			// a stuck depth would mute this, and every later setting, in silence
+			expect(mockWorker.postMessage).toHaveBeenCalledWith({
+				cmd: 'send',
+				type: MoebiusAction.SET_CANVAS_SIZE,
+				data: { columns: 100, rows: 30 },
+			});
+		});
+
+		it('a settings change made while a sync loads its font still goes out', async () => {
+			const handler = createWorkerHandler(mockInputHandle);
+			const messageListener = mockWorker.addEventListener.mock.calls.find(
+				call => call[0] === 'message',
+			)[1];
+			handler.joinCollaboration();
+			const blank = { code: 32, fg: 7, bg: 0 };
+			await messageListener({
+				data: {
+					cmd: 'connected',
+					data: {
+						caps: [EXT_SUITE_CAP],
+						doc: { columns: 2, rows: 1, data: [blank, blank]},
+						users: [],
+						chat_history: [],
+					},
+				},
+			});
+			// the join's follow-up sync names a font; hold the load open
+			let finishFont;
+			State.textArtCanvas.setFont.mockImplementationOnce(
+				() => new Promise(resolve => (finishFont = resolve)),
+			);
+			const syncing = messageListener({
+				data: {
+					cmd: 'frame',
+					type: T0wnzAction.EXT_SYNC,
+					data: {
+						columns: 2,
+						rows: 1,
+						cells: compressExtCells(
+							Array.from({ length: 2 }, () => ({ u: 32, a: 0, fg: 7, bg: 0 })),
+						),
+						seq: 5,
+						font_name: 'IBM VGA',
+					},
+				},
+			});
+			await vi.waitFor(() => expect(finishFont).toBeTypeOf('function'));
+			mockWorker.postMessage.mockClear();
+			// the artist resizes mid-load: applied locally, so it has to
+			// reach the server or the room diverges with no seq gap to tell
+			handler.sendResize(100, 30);
+			expect(mockWorker.postMessage).toHaveBeenCalledWith({
+				cmd: 'send',
+				type: MoebiusAction.SET_CANVAS_SIZE,
+				data: { columns: 100, rows: 30 },
+			});
+			finishFont();
+			await syncing;
+		});
+
+		it('a fork color past the classic 16 keeps its index on a live DRAW', async () => {
+			const handler = createWorkerHandler(mockInputHandle);
+			const messageListener = mockWorker.addEventListener.mock.calls.find(
+				call => call[0] === 'message',
+			)[1];
+			handler.joinCollaboration();
+			const blank = { code: 32, fg: 7, bg: 0 };
+			await messageListener({
+				data: {
+					cmd: 'connected',
+					data: {
+						caps: [],
+						doc: { columns: 2, rows: 1, data: [blank, blank]},
+						users: [],
+						chat_history: [],
+					},
+				},
+			});
+			State.textArtCanvas.drawRemoteExtCells.mockClear();
+			State.textArtCanvas.quickDraw.mockClear();
+			const draw = block =>
+				messageListener({ data: { cmd: 'frame', type: MoebiusAction.DRAW, data: { id: 1, x: 1, y: 0, block } } });
+			// moebiusXBIN paints from a 256-color palette; a u16 word keeps
+			// four bits a color, so 196 on 17 used to land as 4 on 1
+			await draw({ code: 65, fg: 196, bg: 17 });
+			expect(State.textArtCanvas.drawRemoteExtCells).toHaveBeenCalledWith([{ x: 1, y: 0, u: 65, a: 0, fg: paletteColor(196), bg: paletteColor(17) }]);
+			expect(State.textArtCanvas.quickDraw).not.toHaveBeenCalled();
+			// the classic 16 stay on the fast path
+			await draw({ code: 65, fg: 12, bg: 1 });
+			expect(State.textArtCanvas.quickDraw).toHaveBeenCalledWith([[1, (65 << 8) | (1 << 4) | 12, 1, 0]]);
 		});
 
 		it('should handle canvas settings when not in collaboration mode', () => {

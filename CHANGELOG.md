@@ -76,15 +76,27 @@ byte-exact golden tests before anything else moved.
   launches accept `.zip`, `.lha`, and `.lzh` directly: one openable
   entry loads straight away, several raise a picker modal. Amiga
   archives open as latin-1 in Topaz+ 1200; zips keep CP437 defaults.
+- **Old packs open.** Zips shrunk or imploded by PKZIP 1.x, the bulk of
+  the 16colo.rs archive from 1990 to 1993, open alongside stored and
+  deflated ones.
+- **Damaged pieces open.** A zip or lha entry with bit rot opens as far
+  as it decodes, with a note saying how much survived or that it failed
+  its checksum. Only an entry that decodes to nothing is refused.
+- **Compression of our own.** Zip opens, `.dur` and `.0wnz` files, and
+  the autosave journal no longer depend on the browser's compression
+  streams: a built-in deflate takes over wherever they are missing or
+  misbehave.
 - **Input.** Pen pressure, touch gestures, focal zoom, and a two-finger
   tap for undo.
-- **Crash recovery.** An OPFS journal autosaves your session and
+- **Crash recovery.** A journal in the origin private file system
+  (IndexedDB where the browser refuses it) autosaves your session and
   restores it after a crash or reload.
 - **Font favorites.** Star fonts to pin them at the top of the picker.
 - **Server packaging.** Single-binary builds for eight platforms, a
   `--static` mode that serves the app and websockets from one process,
   a `/healthz` endpoint, a distroless Docker image, and
-  `ROOM_MAX_COLUMNS`/`ROOM_MAX_ROWS` knobs for admins.
+  `ROOM_MAX_COLUMNS`/`ROOM_MAX_ROWS`, `ROOM_MAX_GUESSES`, and
+  `TRUST_PROXY` knobs for admins.
 
 ### Changed
 
@@ -102,6 +114,37 @@ byte-exact golden tests before anything else moved.
   recent colors, settings) instead of clearing it.
 
 ### Fixed
+
+- **A reload keeps the art.** The restore wrote a keyframe of the blank
+  boot document before it read the journal, so a reload brought back an
+  empty canvas. The journal is read first now, and Safari's private
+  windows, where the file system API refuses, keep theirs in IndexedDB.
+- **Failed saves say so.** A `.dur` or `.0wnz` save that failed vanished
+  without a word; it raises an alert now.
+- **16colo.rs pieces with accented names open.** The archive spells
+  high-byte names in CP866 while the reader decoded windows-1252, so
+  those pieces failed with "not in the zip". Names decode as CP437 now
+  (latin-1 for aSCIIaRENA), with a wildcard pass for codepage drift.
+- **Dialogs stay up.** The relayout after a file open closed whatever
+  modal was showing, the damage note included, and in a collab session
+  a peer's letter spacing change closed the one you had open. The error
+  dialog's message reads as one sentence again, too.
+- **Settings changes reach the room during a resync.** A resize, iCE,
+  9px, font, or SAUCE change made while the session's font loaded was
+  applied locally and never sent.
+- **Mixed rooms agree on more.** Vanilla Moebius gets custom palettes at
+  the depth it reads and live SAUCE edits with author and group the
+  right way round, and moebiusXBIN's colors past the classic 16 keep
+  their index on live draws.
+- **One guesser cannot shut a passworded room.** The password backoff
+  was per room, so one client could hold a room shut against everyone.
+  It is per address now, with a room-wide guess budget that artists who
+  already joined get through, and forwarded addresses count only from
+  loopback and `TRUST_PROXY`.
+- **Allowed bridge names stay where they pointed.** In `allow` mode a
+  listed name dials the address it resolves to, and a name that later
+  resolves to another kind of address, such as a public name turned
+  inward, is refused.
 
 - **SAUCE fonts win on NFO and DIZ files.** A scene file opened in
   Topaz-437 even when its SAUCE record named a font; the default now
@@ -167,3 +210,8 @@ byte-exact golden tests before anything else moved.
 - **iOS background scroll.** With Safari's toolbar expanded, dragging
   the background could scroll the page and bare a black bar above the
   editor. The root is now scroll-locked.
+
+### Removed
+
+- **`SESSION_KEY`.** The Docker image no longer generates one; nothing
+  in the server ever read it.

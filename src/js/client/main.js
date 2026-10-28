@@ -26,6 +26,7 @@ import { createSelectionBar } from './selectionBar.js';
 import { fitGlyphs, armPixelRatioWatch } from './glyphScale.js';
 import { FontCache } from './fontCache.js';
 import {
+	escapeHtml,
 	$,
 	$$,
 	$$$,
@@ -207,12 +208,8 @@ const openHandler = (file, opts = {}) => {
 			// or it cannot be retried at all
 			openFile.value = '';
 			// the message lands in innerHTML, so the filename gets escaped
-			const safeName = file.name.replace(
-				/[<>&]/g,
-				c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c],
-			);
 			State.modal.error(
-				`Could not open <kbd>${safeName}</kbd>.<br/>The file may be corrupt or mislabeled.`,
+				`Could not open <kbd>${escapeHtml(file.name)}</kbd>.<br/>The file may be corrupt or mislabeled.`,
 			);
 		}
 	};
@@ -277,8 +274,9 @@ const openHandler = (file, opts = {}) => {
 				viewport.scrollLeft = viewport.scrollTop = 0;
 			};
 
-			const closeModal = () => {
-				// a superseded open must not yank the winner's modal
+			const settleModal = () => {
+				// a superseded open must not yank the winner's modal, or
+				// speak over it
 				if (seq !== openSeq) {
 					return;
 				}
@@ -287,6 +285,11 @@ const openHandler = (file, opts = {}) => {
 				// loading modal up after every file load
 				if (State.modal.isOpen() && State.modal.current() === 'loading') {
 					State.modal.close();
+				}
+				// a salvaged archive entry says what it lost once its art
+				// is on screen
+				if (opts.notice) {
+					State.modal.notice(escapeHtml(opts.notice));
 				}
 			};
 			// a stale open's font must never land on the winning doc
@@ -300,12 +303,12 @@ const openHandler = (file, opts = {}) => {
 					undefined,
 					fontWanted,
 				);
-				closeModal();
+				settleModal();
 				return; // setFont runs applyData
 			}
 			applyData();
 			palettePicker?.updatePalette(); // XB
-			closeModal();
+			settleModal();
 		},
 		{ ...opts, onError },
 	);
@@ -675,8 +678,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 const initializeAppComponents = async () => {
-	// a pending launch file wins over the autosave restore
-	if (!pendingFile) {
+	// a pending launch file wins over the autosave restore, which then
+	// never takes the boot snapshot
+	if (pendingFile) {
+		State.textArtCanvas?.releaseBootSnapshot?.();
+	} else {
 		State.restoreStateFromLocalStorage().then(() => {
 			// the restore's loading modal clobbers a pending update prompt,
 			// and one cancel would then pin the old worker's stale chunks

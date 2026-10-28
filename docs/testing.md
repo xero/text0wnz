@@ -73,8 +73,10 @@ tests/
 │   └── fixtures/                  # the servers, shims, and launchers
 ├── corpus/                        # Round-trip corpus
 │   ├── roundtrip.test.js          # committed artwork and synthetic fixtures
+│   ├── flateZlib.test.js          # plain-TS DEFLATE checked against node's zlib
 │   ├── generators.js              # seeded fixture generators
 │   ├── lhaFixture.ts              # LHA archive fixtures
+│   ├── pkzip1Fixture.ts           # Shrink and Implode encoders for the decoder tests
 │   └── zipFixture.ts              # Zip archive fixtures
 ├── parity/                        # Frozen v2 engine for parity tests
 │   └── v2ReferenceEngine.js
@@ -184,7 +186,7 @@ npx vitest --ui
 
 ### What `bun test:unit` Runs
 
-`vitest run` picks up every `*.test.js` and `*.test.ts` file outside the excludes in `vitest.config.js`. At the time of writing that is 75 files in `tests/unit` (server tests under `server/`), 29 in `tests/core`, 12 in `tests/dom`, 2 in `tests/interop`, and 1 in `tests/corpus`. `bunx vitest list --filesOnly` prints the live list. The Playwright directories (`e2e`, `golden`, `gl`) and the `perf` scripts are excluded.
+`vitest run` picks up every `*.test.js` and `*.test.ts` file outside the excludes in `vitest.config.js`. At the time of writing that is 76 files in `tests/unit` (server tests under `server/`), 32 in `tests/core`, 12 in `tests/dom`, 2 in `tests/interop`, and 2 in `tests/corpus`. `bunx vitest list --filesOnly` prints the live list. The Playwright directories (`e2e`, `golden`, `gl`) and the `perf` scripts are excluded.
 
 ### Test Coverage
 
@@ -458,6 +460,12 @@ const debug = msg => {
 - Canvas settings sync
 - Extension suite and hostile input hardening
 
+**server/authGate.test.js** - Password backoff
+
+- The client address behind loopback and `TRUST_PROXY` proxies, and forwarded names that disagree
+- Salted address keys, one per IPv6 /64
+- Per-client cooldowns, the shared room guess budget and its operator override, and shedding keys gone quiet
+
 **server/persistence.test.js** - Room persistence
 
 - Envelope save and load
@@ -492,10 +500,10 @@ const debug = msg => {
 
 #### Core Modules
 
-`tests/core/` holds 29 TypeScript suites for the shared core under `src/js/core/`. They run in the same Vitest process as the client tests (`tsconfig.json` includes `tests/**/*.ts`) and import the modules directly. Grouped by area:
+`tests/core/` holds 32 TypeScript suites for the shared core under `src/js/core/`. They run in the same Vitest process as the client tests (`tsconfig.json` includes `tests/**/*.ts`) and import the modules directly. Grouped by area:
 
 - **Document model and editing:** `doc`, `editorFrames`, `cellops`, `convert`, `patchArena`, `paste`, `mapping`, `migrate`, `loadDoc`, `mirrorParity`, `journal`
-- **Codecs:** `codecs` (SAUCE, BIN, XBin, ANSI), `ansCompliance`, `dur`, `tundra`, `envelope`, `zip`, `lha`, `formatBudget`
+- **Codecs:** `codecs` (SAUCE, BIN, XBin, ANSI), `ansCompliance`, `dur`, `tundra`, `envelope`, `flate`, `flateWiring` (native or plain path per engine), `zip`, `pkzip1`, `lha`, `formatBudget`
 - **Protocol:** `moebius`, `extensions`, `timelapse`, `securityCaps`
 - **Text and glyphs:** `cp437`, `charsets`, `width`, `hexfont`, `asciiStamp`, `circleStamp`
 
@@ -655,10 +663,12 @@ fixture through the editor's Connect form and draws both ways.
 `tests/corpus/roundtrip.test.js` runs under `bun test:unit` and pins the codecs in three tiers:
 
 - **Tier A, committed artwork.** Every piece in `src/ansi/` must decode, re-encode, and decode again to the identical cell grid, and the encoder must be a fixed point (`encode(decode(encode))` is byte-identical).
-- **Tier B, synthetic fixtures.** `generators.js` builds seeded, deterministic fixtures for the edge cases wild files cannot guarantee: odd SAUCE records, ice color ANSI, 132-column and large documents, XBin RLE with all four run types, 512-glyph XBin fonts, and UTF-8 multibyte rows. No binary blobs live in the repo. `lhaFixture.ts` and `zipFixture.ts` build archive fixtures for the core and client archive tests.
+- **Tier B, synthetic fixtures.** `generators.js` builds seeded, deterministic fixtures for the edge cases wild files cannot guarantee: odd SAUCE records, ice color ANSI, 132-column and large documents, XBin RLE with all four run types, 512-glyph XBin fonts, and UTF-8 multibyte rows. No binary blobs live in the repo. `lhaFixture.ts`, `zipFixture.ts`, and `pkzip1Fixture.ts` build archive fixtures for the core and client archive tests. Nothing in the tree writes Shrink or Implode, so `pkzip1Fixture.ts` holds test-side encoders for the PKZIP 1.x decoders to read.
 - **Tier C, bulk conformance.** Not run here. It targets the owner's pinned mirror of the sixteencolors archive and is manual only; `tests/fixtures/README.md` holds the pin, the fetch mechanics, and the rules (never hit `api.16colo.rs` or `asciiarena.se` from automation).
 
 Known codec defects are pinned with `it.fails` and a comment. When a fix lands, the test flips to red; promote it to a plain `it()`.
+
+`tests/corpus/flateZlib.test.js` checks the plain-TS DEFLATE code in `src/js/core/codecs/flate.ts` against node's zlib, the library behind every engine's native streams. Seeded payloads that zlib deflates across its levels, strategies, windows, and memory settings must inflate, what the plain deflater writes must inflate in zlib, and damaged streams must get zlib's verdict. The one exception is bytes after the final block, which the inflater refuses as every browser does, where zlib's sync API ignores them.
 
 ## Parity (Frozen v2 Engine)
 
@@ -997,6 +1007,20 @@ npx playwright show-report tests/results/playwright-report
 
 - Dark mode and view toggles and their persistence
 
+**autosave.spec.js** - Autosave journal
+
+- A two-frame movie survives a reload with both frames, which only the journal keeps, on the engine's own compression streams
+
+**compressionFallback.spec.js** - Engines without compression streams
+
+- Deletes `CompressionStream` and `DecompressionStream` before any app code runs, in every project
+- Opens a zipped piece and a durdraw movie, saves a `.0wnz` that node's zlib reads back and reopens it, and restores the autosave journal after a reload, all on the plain TS codec
+
+**damagedArchives.spec.js** - Damaged archives
+
+- A zipped piece whose stream breaks partway opens as far as it decodes, and its note arrives in its own modal, not the error modal
+- An open overtaken by a newer one never shows its note
+
 ### E2E Test Helpers
 
 The E2E test suite includes reusable helper modules in `tests/e2e/helpers/`:
@@ -1015,6 +1039,12 @@ The E2E test suite includes reusable helper modules in `tests/e2e/helpers/`:
 - `openFile(page, filePath)` - Open file using file input element and setInputFiles
 - `openFileViaDragDrop(page, filePath)` - Placeholder for drag-and-drop file opening
 - `openFileViaURL(page, fileURL)` - Open file via window.Load API (if exposed)
+
+**archiveFixtures.js** - Archive and movie fixtures built in node, so specs carry no binary blobs
+
+- `zipOf(name, data, body)` - One deflated entry in the smallest zip the reader opens; pass `body` to swap in a hand-built stream while the CRC and size still describe `data`
+- `durOf(...frames)` - A durdraw v8 movie, one frame per array of lines
+- `openBuffer(page, name, buffer)` - Hand the open-file input a file built in memory
 
 **Example usage:**
 

@@ -148,6 +148,17 @@ const createWorkerHandler = inputHandle => {
 	// depth, not a boolean: nested remote-apply helpers (font change
 	// inside a sync inside adoption) each balance their own ++/--
 	let applyDepth = 0;
+	/** a synchronous remote apply, its echoes muted. Never an await:
+	 * the depth gates every settings send, so a hold across a font load
+	 * swallowed each resize or toggle the artist made while it loaded */
+	const muted = fn => {
+		applyDepth++;
+		try {
+			return fn();
+		} finally {
+			applyDepth = Math.max(0, applyDepth - 1);
+		}
+	};
 	const remoteCursors = createRemoteCursors();
 	/** id -> nick, for rename detection (renames ride CHAT upstream) */
 	const peerNicks = new Map();
@@ -214,10 +225,11 @@ const createWorkerHandler = inputHandle => {
 		) {
 			return;
 		}
-		if (block.code > 0xff) {
-			// icy-style raw codepoint on the vanilla wire: join and resync
-			// intern these, so the live view must too or the two diverge
-			// until the next sync
+		if (block.code > 0xff || block.fg > 15 || block.bg > 15) {
+			// icy-style raw codepoints and moebiusXBIN's colors past the
+			// classic 16 ride the vanilla wire too: join and resync intern
+			// these, so the live view must too or the two diverge until the
+			// next sync (the u16 word below holds four bits a color)
 			State.textArtCanvas.drawRemoteExtCells([{ x: x, y: y, ...blockToExtCell(block) }]);
 			return;
 		}
@@ -252,9 +264,7 @@ const createWorkerHandler = inputHandle => {
 		) {
 			return;
 		}
-		applyDepth++; // prevents re-broadcasting received settings
-		State.textArtCanvas.resize(columns, rows);
-		applyDepth = Math.max(0, applyDepth - 1);
+		muted(() => State.textArtCanvas.resize(columns, rows));
 	};
 
 	const onFontChange = async fontName => {
@@ -268,27 +278,17 @@ const createWorkerHandler = inputHandle => {
 		});
 	};
 
-	const onIceColorsChange = iceColors => {
-		applyDepth++; // prevents re-broadcasting received settings
-		State.textArtCanvas.setIceColors(iceColors);
-		if (iceColors) {
-			btnIce.classList.add('enabled');
-		} else {
-			btnIce.classList.remove('enabled');
-		}
-		applyDepth = Math.max(0, applyDepth - 1);
-	};
+	const onIceColorsChange = iceColors =>
+		muted(() => {
+			State.textArtCanvas.setIceColors(iceColors);
+			btnIce.classList.toggle('enabled', iceColors);
+		});
 
-	const onLetterSpacingChange = letterSpacing => {
-		applyDepth++; // prevents re-broadcasting received settings
-		State.font.setLetterSpacing(letterSpacing);
-		if (letterSpacing) {
-			btn9pt.classList.add('enabled');
-		} else {
-			btn9pt.classList.remove('enabled');
-		}
-		applyDepth = Math.max(0, applyDepth - 1);
-	};
+	const onLetterSpacingChange = letterSpacing =>
+		muted(() => {
+			State.font.setLetterSpacing(letterSpacing);
+			btn9pt.classList.toggle('enabled', letterSpacing);
+		});
 
 	/** @type {((payload: object) => void) | null} */
 	let timelapseWaiter = null;
@@ -507,10 +507,12 @@ const createWorkerHandler = inputHandle => {
 
 	/** adopt the full-fidelity doc (join follow-up or requested resync) */
 	const applyExtSync = async payload => {
-		applyDepth++;
 		try {
-			const result = extSyncToDoc(payload);
-			State.textArtCanvas.setDocData(result.doc);
+			const result = muted(() => {
+				const synced = extSyncToDoc(payload);
+				State.textArtCanvas.setDocData(synced.doc);
+				return synced;
+			});
 			// seq and sync state settle BEFORE any awaited tail: a frame
 			// landing during the font load must not get judged against
 			// the pre-sync seq and trigger a spurious resync round trip
@@ -525,27 +527,28 @@ const createWorkerHandler = inputHandle => {
 					Load.sauceToAppFont(result.fontName) ?? result.fontName,
 				);
 			}
-			State.font.setLetterSpacing(result.use9px);
-			btn9pt.classList.toggle('enabled', result.use9px);
-			btnIce.classList.toggle('enabled', result.doc.getIceColors());
-			if (Array.isArray(payload.palette)) {
-				const palette = sanitizeExtPalette(payload.palette);
-				if (palette) {
-					adoptClassic16(palette);
+			muted(() => {
+				State.font.setLetterSpacing(result.use9px);
+				btn9pt.classList.toggle('enabled', result.use9px);
+				btnIce.classList.toggle('enabled', result.doc.getIceColors());
+				if (Array.isArray(payload.palette)) {
+					const palette = sanitizeExtPalette(payload.palette);
+					if (palette) {
+						adoptClassic16(palette);
+					}
 				}
-			}
+			});
 			// ops sent after the sync request are not in the snapshot and
 			// the server excludes the sender from echo, so without this
 			// replay our own strokes vanish with no seq gap to recover
 			// them; set-cell ops are idempotent, so replaying one the
-			// snapshot already holds is harmless
+			// snapshot already holds is harmless. Each handler mutes its
+			// own apply
 			for (const op of pendingSends.slice()) {
 				await applyOwnOp(op.type, op.data);
 			}
 		} catch (error) {
 			console.warn('[Network] dropped malformed EXT_SYNC:', error);
-		} finally {
-			applyDepth = Math.max(0, applyDepth - 1);
 		}
 	};
 
@@ -870,7 +873,6 @@ const createWorkerHandler = inputHandle => {
 			// list; a typo must not become tomorrow's prefill
 			recentServers.remember(spelling);
 		}
-		applyDepth++;
 		serverCaps = Array.isArray(data.data.caps)
 			? data.data.caps.filter(cap => typeof cap === 'string')
 			: [];
@@ -880,29 +882,34 @@ const createWorkerHandler = inputHandle => {
 			State.modal.loading(
 				'Updating editor with data from the collab session...',
 			);
-			State.palette = createDefaultPalette();
-			// the join replaces the palette; without the rebind the later
-			// setLetterSpacing rebuild runs against the stale handle ref
-			State.font?.setPalette?.(State.palette);
-			document.dispatchEvent(
-				new CustomEvent('onPaletteChange', {
-					detail: State.palette,
-					bubbles: true,
-					cancelable: false,
-				}),
-			);
-			// a caps reply is our own server, whose join palette is 8-bit
-			// by construction; everyone else's depth only the wire can tell
-			const result = joinDocToDoc(data.data.doc, { paletteDepth: extActive() ? 8 : undefined });
-			State.textArtCanvas.setDocData(result.doc);
+			const result = muted(() => {
+				State.palette = createDefaultPalette();
+				// the join replaces the palette; without the rebind the later
+				// setLetterSpacing rebuild runs against the stale handle ref
+				State.font?.setPalette?.(State.palette);
+				document.dispatchEvent(
+					new CustomEvent('onPaletteChange', {
+						detail: State.palette,
+						bubbles: true,
+						cancelable: false,
+					}),
+				);
+				// a caps reply is our own server, whose join palette is 8-bit
+				// by construction; everyone else's depth only the wire can tell
+				const joined = joinDocToDoc(data.data.doc, { paletteDepth: extActive() ? 8 : undefined });
+				State.textArtCanvas.setDocData(joined.doc);
+				return joined;
+			});
 			if (result.fontName) {
 				await onFontChange(Load.sauceToAppFont(result.fontName) ?? result.fontName);
 			}
-			// joining IS a new document; resyncs later in the session go
-			// through setDocData too and must NOT re-home anything, so
-			// the reset event fires only here
-			document.dispatchEvent(new CustomEvent('onNewDocument'));
-			State.font.setLetterSpacing(result.use9px);
+			muted(() => {
+				// joining IS a new document; resyncs later in the session go
+				// through setDocData too and must NOT re-home anything, so
+				// the reset event fires only here
+				document.dispatchEvent(new CustomEvent('onNewDocument'));
+				State.font.setLetterSpacing(result.use9px);
+			});
 			if (Array.isArray(data.data.users)) {
 				for (const user of data.data.users) {
 					const nick = typeof user.nick === 'string' ? user.nick : 'guest';
@@ -925,7 +932,6 @@ const createWorkerHandler = inputHandle => {
 			console.error('[Network] failed to adopt session doc:', error);
 			stayLocal();
 		} finally {
-			applyDepth = Math.max(0, applyDepth - 1);
 			State.modal.close();
 		}
 	};

@@ -142,14 +142,23 @@ surface later as a confusing checksum error.
 ## Integrity
 
 - **Every extraction is CRC-checked.** The header's CRC-16 (the ARC
-  polynomial, `0xA001` reflected) is computed over the decoded bytes
-  and must match, for stored and compressed entries alike. A rotten
-  scene file fails loud instead of rendering garbage.
+  polynomial, `0xA001` reflected) is computed over the decoded bytes,
+  for stored and compressed entries alike. The strict extractor,
+  `extractLhaEntry`, refuses a mismatch.
+- **Damaged entries open as far as they decode.** Native opens and the
+  aSCIIaRENA browser use `salvageLhaEntry` instead. A CRC mismatch or
+  an lh5 stream that breaks partway opens with what decoded and a note
+  naming the damage, so garbage never renders without a word. Salvage
+  still refuses an entry that decodes to nothing, one past the size cap
+  or in an unsupported method, and an archive that ends before the
+  entry's data does.
 - **Size caps run before decoding.** An entry declaring more than 32MB
   in either direction is rejected up front, so a forged header cannot
   balloon the output buffer.
-- **Match distances are bounds-checked**, and reads past the stream's
-  end pad with zeros that the CRC then catches.
+- **Match distances are bounds-checked**, and in the strict extractor
+  reads past the stream's end pad with zeros that the CRC then
+  catches. Salvage stops at the first read past the end, so no byte
+  decoded from padding reaches the output.
 
 ## Verification
 
@@ -164,35 +173,52 @@ The decoder was built against the live aSCIIaRENA corpus and a fuzzer:
 
 Unit tests in `tests/core/lha.test.ts` cover each header level with
 hand-crafted stored archives, the lh5 path with a real 1.6KB colly
-embedded as a fixture, and the failure modes.
+embedded as a fixture, the failure modes, and salvage.
 
 ## Zip Archives
 
 The PC scene shipped packs as `.zip`, so the 16colo.rs browser, the
 aSCIIaRENA browser, and native opens all need to read them. They share
 one minimal reader in `src/js/core/codecs/zip.ts` that walks the
-central directory and extracts one entry at a time.
+central directory and extracts one entry at a time. Deflate decodes
+through `src/js/core/codecs/flate.ts`, which uses the engine's native
+stream where one works and its own inflater otherwise. Shrink and
+Implode, the PKZIP 1.x methods older scene packs still carry, decode
+through `src/js/core/codecs/pkzip1.ts`.
 
-| Capability                                        | Supported                                                         |
-| :------------------------------------------------ | :---------------------------------------------------------------- |
-| Store (method 0)                                  | yes                                                               |
-| Deflate (method 8)                                | yes                                                               |
-| Other methods (deflate64, bzip2, LZMA, and so on) | no; extraction throws a clear error                               |
-| Encrypted entries                                 | no; refused before extraction                                     |
-| Zip64                                             | no; saturated count, size, or offset fields are refused           |
-| Archive comment                                   | skipped, up to the 64KB the format allows                         |
-| Prepended data (SFX stubs)                        | yes; offsets are corrected from where the directory actually sits |
+| Capability                                                | Supported                                                         |
+| :-------------------------------------------------------- | :---------------------------------------------------------------- |
+| Store (method 0)                                          | yes                                                               |
+| Shrink (method 1)                                         | yes                                                               |
+| Implode (method 6)                                        | yes                                                               |
+| Deflate (method 8)                                        | yes                                                               |
+| Other methods (reduce, deflate64, bzip2, LZMA, and so on) | no; extraction throws a clear error                               |
+| Encrypted entries                                         | no; refused before extraction                                     |
+| Zip64                                                     | no; saturated count, size, or offset fields are refused           |
+| Archive comment                                           | skipped, up to the 64KB the format allows                         |
+| Prepended data (SFX stubs)                                | yes; offsets are corrected from where the directory actually sits |
 
 - **Names.** An entry flagged UTF-8 (general purpose bit 11) decodes
-  as UTF-8; everything else decodes as latin1, which keeps CP437-era
-  names matchable. Backslashes normalize to `/`. Lookup by name tries
-  an exact match, then a basename match, so a piece nested in a folder
-  still resolves.
+  as UTF-8. Everything else decodes as CP437, the codepage DOS packers
+  wrote, unless the caller asks for latin-1. The aSCIIaRENA browser
+  asks, since its zips come off amigas. Backslashes normalize to `/`.
+  Lookup by name (`findZipEntry`) tries an exact match, then a
+  basename match, so a piece nested in a folder still resolves. A
+  listing can spell high bytes in another codepage than the pack (the
+  16colo.rs API decodes them as CP866), so two last passes, exact then
+  basename, let any non-ASCII character stand in for any other and take
+  only a unique fit.
 - **Integrity.** Every extraction is checked against the central
-  directory's CRC-32, and an inflated entry must match its declared
-  size. An entry declaring more than 32MB in either direction is
-  refused before inflation, and inflation aborts the moment the output
-  passes the declared size, so a lying header cannot balloon memory.
+  directory's CRC-32 and the entry's declared size. The strict
+  extractor, `extractZipEntry`, refuses a mismatch. Native opens and
+  both archive browsers use `salvageZipEntry` instead, which opens a
+  CRC mismatch or a stream that breaks partway as far as it decoded,
+  with a note naming the damage. Salvage still refuses an entry that
+  decodes to nothing, an encrypted entry, one in an unsupported method,
+  and one whose local header is missing. An entry declaring more than
+  32MB in either direction is refused before decoding, and decoding
+  stops the moment the output would pass the declared size, so a lying
+  header cannot balloon memory.
 - **Opening.** A zip handed to File → Open, drag-and-drop, or a PWA
   file launch lists the entries the editor can open; a lone entry opens
   straight away, several raise a picker. Zip entries keep the editor's
@@ -200,7 +226,11 @@ central directory and extracts one entry at a time.
 
 Unit tests in `tests/core/zip.test.ts` cover store and deflate
 extraction, basename matching inside nested packs, torn directories
-and truncated data, and declared and lying decompression bombs.
+and truncated data, declared and lying decompression bombs, CP437 and
+latin-1 names with the wildcard lookup, and salvage.
+`tests/core/pkzip1.test.ts` round trips Shrink and Implode through the
+test-side encoders in `tests/corpus/pkzip1Fixture.ts`, pins APPNOTE's
+corner cases with hand-built streams, and salvages damaged entries.
 
 ## References
 

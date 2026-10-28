@@ -211,9 +211,10 @@ payload into an exportable animation
 
 `EXT_PALETTE` swaps the whole extended palette (editors only, 1 to 256
 words). The first 16 entries also become the vanilla join palette, as
-8-bit `{r, g, b}` objects, so vanilla clients joining later see them;
-vanilla members already in the room keep their palette, which is
-upstream's own `CHANGE_PALETTE` behavior.
+`{r, g, b}` objects (at the depth each joiner reads; see Palette depth
+below), so vanilla clients joining later see them; vanilla members
+already in the room keep their palette, which is upstream's own
+`CHANGE_PALETTE` behavior.
 
 ### Limits the server enforces
 
@@ -237,18 +238,39 @@ objects with 6-bit components; moebiusXBIN sends the same shape with
 8-bit components. The receiver auto-detects as icy_draw does: any
 component above 63 means the whole palette is 8-bit, and 6-bit values
 expand by replicating the top two bits (63 becomes 255). Our own
-server's palettes are always 8-bit and read as such.
+server sends teXt0wnz clients 8-bit palettes, and they read them as
+such.
+
+Going the other way, vanilla Moebius expands every join palette from 6
+bits, and moebiusXBIN reads it raw as 8, yet both send the same
+`CONNECTED` frame. The server tells them apart by the upgrade request's
+user agent: Electron's default carries the app token, `moebius/1.x` for
+vanilla and `2.x` for the fork. A client matching vanilla gets 6-bit
+components; everyone else, unknown agents included, gets 8. The stock
+16 survive either way (their bit patterns repeat), so only custom
+palettes depend on the guess. The server reads the header at the door
+and keeps only the verdict.
 
 **Font bytes.** moebiusXBIN serializes an embedded font as Node Buffer
 JSON, `{type: "Buffer", data: [...]}`. teXt0wnz revives that shape, a
 plain array, and a `Uint8Array` alike; anything else reads as no font.
 
-**Colors above 15.** Vanilla Moebius uses palette indices 0 to 15. The
-server accepts `fg` and `bg` from 0 to 255 on a `DRAW` and stores them,
-and a join document reads them as palette-index words the same way. The
-vanilla projection the server writes on save, and hands to a vanilla
-joiner, folds everything back to 16 colors, and the teXt0wnz live view
-masks a vanilla `DRAW` to the low four bits as well.
+**Colors above 15.** Vanilla Moebius uses palette indices 0 to 15, and
+moebiusXBIN paints from 256. The server accepts `fg` and `bg` from 0 to
+255 on a `DRAW`, stores them, and relays them as sent, so join
+documents and saves carry them too. teXt0wnz reads them as
+palette-index words in a join document and on a live `DRAW` alike. Only
+extended cells (unicode and truecolor from teXt0wnz clients) fold to the
+classic 16 for caps-less members, so an index past 15 from the fork
+reaches a vanilla Moebius client unchanged, a color it has no entry
+for.
+
+**SAUCE author and group.** Moebius 1.0.29 and moebiusXBIN 2.2.0 both
+swap author and group when a live `SAUCE` frame arrives (their `doc.js`
+hands the fields to its handler in the wrong order); join documents
+read correctly. The server sends live `SAUCE` to caps-less members with
+the two fields swapped, so those clients show them right. teXt0wnz
+clients and the stored document keep the real order.
 
 **Codepoints on the vanilla wire.** icy_draw's `block.code` is a u32
 Unicode codepoint where Moebius uses bytes 0 to 255. Codes above 255

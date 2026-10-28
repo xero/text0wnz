@@ -1,6 +1,15 @@
 /** room name grammar shared by the ws router and persistence */
 const ROOM_NAME_RE = /^[a-z0-9_-]{1,32}$/i;
 
+/** vanilla Moebius expands join palettes from 6 bits and moebiusXBIN
+ * reads them as 8, yet both send the same CONNECTED: only Electron's
+ * user agent token, app name and version, tells them apart (vanilla is
+ * moebius/1.x, the fork 2.x). Anything else gets 8, the depth this
+ * server writes, so a miss costs nothing new
+ * @param {string | null | undefined} userAgent */
+const joinPaletteDepth = userAgent =>
+	(typeof userAgent === 'string' && (/\bmoebius\/1\.\d/i).test(userAgent) ? 6 : 8);
+
 /** shared wire-auth backoff: two tries stay free (humans typo),
  * then the refusal window doubles up to a 30s cap */
 const authCooldownMs = failures =>
@@ -27,9 +36,14 @@ Environment:
   ROOM_PASSWORDS        Per-room passwords as JSON: {"room":"pw"}
   ALLOWED_ORIGINS       Same as --allowed-origins (desktop clients send
                         no Origin and always pass)
+  TRUST_PROXY           Comma-separated proxy addresses whose X-Real-IP or
+                        X-Forwarded-For names the client (loopback is
+                        always trusted)
   ROOM_MAX_COLUMNS      Canvas resize width wall (default 1000; raise or lower)
   ROOM_MAX_ROWS         Canvas resize height wall (default 10000; raise or lower)
                         Walls gate resizes only; restored docs keep their size
+  ROOM_MAX_GUESSES      Wrong passwords a room takes a minute, every address
+                        together (default 20)
   BRIDGE                off (default) | local | port | allow: relay browsers on
                         this host to plaintext desktop servers; every open,
                         close, and refusal is logged with the requester
@@ -77,4 +91,5 @@ export {
 	sanitize,
 	ROOM_NAME_RE,
 	authCooldownMs,
+	joinPaletteDepth,
 };

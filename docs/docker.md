@@ -121,30 +121,30 @@ The container requires `NET_BIND_SERVICE` capability to bind to privileged ports
 
 The container implements a robust startup sequence:
 
-1. Validates environment variables and generates defaults if needed
-2. Starts the Bun backend server for WebSocket collaboration
-3. Performs readiness checks to ensure the backend is fully operational
-4. Configures and launches Caddy with the appropriate environment settings
-5. Sets up health monitoring endpoints and graceful shutdown handlers
+1. Starts the Bun backend server for WebSocket collaboration
+2. Performs readiness checks to ensure the backend is fully operational
+3. Configures and launches Caddy with the appropriate environment settings
+4. Sets up health monitoring endpoints and graceful shutdown handlers
 
 ## Environment Variables
 
-| Variable           | Description                                                                   | Default                   |
-| ------------------ | ----------------------------------------------------------------------------- | ------------------------- |
-| `DOMAIN`           | Domain name for the application                                               | `localhost`               |
-| `PORT`             | _Internal_ port for the WebSocket server                                      | `1337`                    |
-| `NODE_ENV`         | Node environment setting                                                      | `production`              |
-| `ROOM_PASS`        | Password for collaboration rooms (gates spectators too)                       | none                      |
-| `ROOM_PASSWORDS`   | Per-room passwords as JSON: `{"room":"pw"}`                                   | none                      |
-| `SESSION_KEY`      | Generated at boot if unset; not read by the current server                    | random, generated at boot |
-| `BRIDGE`           | Bridge mode for plaintext desktop servers: `off`, `local`, `port`, or `allow` | `off`                     |
-| `BRIDGE_PORT`      | The one port `port` mode dials                                                | `8000`                    |
-| `BRIDGE_TARGET`    | The fixed target `local` mode dials                                           | `ws://127.0.0.1:8000`     |
-| `BRIDGE_ALLOW`     | Comma-separated `host:port` list for `allow` mode                             | none                      |
-| `BRIDGE_MAX`       | Concurrent bridged connections                                                | `16`                      |
-| `ALLOWED_ORIGINS`  | Comma-separated Origin allowlist for websocket upgrades                       | none (open)               |
-| `ROOM_MAX_COLUMNS` | Canvas resize wall, columns                                                   | `1000`                    |
-| `ROOM_MAX_ROWS`    | Canvas resize wall, rows                                                      | `10000`                   |
+| Variable           | Description                                                                   | Default               |
+| ------------------ | ----------------------------------------------------------------------------- | --------------------- |
+| `DOMAIN`           | Domain name for the application                                               | `localhost`           |
+| `PORT`             | _Internal_ port for the WebSocket server                                      | `1337`                |
+| `NODE_ENV`         | Node environment setting                                                      | `production`          |
+| `ROOM_PASS`        | Password for collaboration rooms (gates spectators too)                       | none                  |
+| `ROOM_PASSWORDS`   | Per-room passwords as JSON: `{"room":"pw"}`                                   | none                  |
+| `BRIDGE`           | Bridge mode for plaintext desktop servers: `off`, `local`, `port`, or `allow` | `off`                 |
+| `BRIDGE_PORT`      | The one port `port` mode dials                                                | `8000`                |
+| `BRIDGE_TARGET`    | The fixed target `local` mode dials                                           | `ws://127.0.0.1:8000` |
+| `BRIDGE_ALLOW`     | Comma-separated `host:port` list for `allow` mode                             | none                  |
+| `BRIDGE_MAX`       | Concurrent bridged connections                                                | `16`                  |
+| `ALLOWED_ORIGINS`  | Comma-separated Origin allowlist for websocket upgrades                       | none (open)           |
+| `TRUST_PROXY`      | Proxies beyond loopback whose `X-Real-IP` names the client                    | none (loopback only)  |
+| `ROOM_MAX_COLUMNS` | Canvas resize wall, columns                                                   | `1000`                |
+| `ROOM_MAX_ROWS`    | Canvas resize wall, rows                                                      | `10000`               |
+| `ROOM_MAX_GUESSES` | Wrong passwords a room takes a minute, every address together                 | `20`                  |
 
 The startup script hands its whole environment to the server, so every server variable in [environment-variables.md](./environment-variables.md) works here; the table lists the ones most deployments set.
 
@@ -179,7 +179,9 @@ docker run \
     xerostyle/text0wnz:latest
 ```
 
-Your file replaces the generated one entirely, so it has to do everything that one does: serve `/app/dist`, reverse proxy `/server*` and `/bridge*` to `127.0.0.1:1337` (the backend's `PORT`) with the path intact, and listen on port 80, which the container health check probes. The generated file inside [`bootup`](https://github.com/xero/text0wnz/blob/main/bootup) is the template to start from. `DOMAIN`, `NODE_ENV`, and the TLS settings shape only the generated file and have no effect on a mounted one. Mount it read-only; the script never writes to it, and a stray edit cannot reach your source.
+Your file replaces the generated one entirely, so it has to do everything that one does: serve `/app/dist`, reverse proxy `/server*` and `/bridge*` to `127.0.0.1:1337` (the backend's `PORT`) with the path intact and `header_up X-Real-IP {remote_host}` (the password backoff keys on it), and listen on port 80, which the container health check probes. The generated file inside [`bootup`](https://github.com/xero/text0wnz/blob/main/bootup) is the template to start from. `DOMAIN`, `NODE_ENV`, and the TLS settings shape only the generated file and have no effect on a mounted one. Mount it read-only; the script never writes to it, and a stray edit cannot reach your source.
+
+Behind another proxy, the image's Caddy sees only that proxy, so every visitor would share its address in the backoff. List the outer proxy in a `trusted_proxies` block and send both `header_up X-Real-IP {client_ip}` and `header_up X-Forwarded-For {client_ip}` instead. Both then name the visitor the outer proxy reported; left alone, Caddy ends `X-Forwarded-For` with the outer proxy's address, and the server counts two names that disagree as the proxy's own.
 
 ## Health Monitoring
 

@@ -98,7 +98,7 @@ File operations allowing you to create, open, and save artwork in multiple file 
 - **Plain Text** (`.txt`) - Export as text only
 - **ANSimation** (`.ans`) - Export animation frames as a classic ansimation
 - **PNG** - Export as image
-- **Archives** (`.zip`, `.lha`, `.lzh`) - Containers unpack in the browser and the art inside opens. Zips must be stored or deflated, without zip64 or encryption, with entries under 32 MB
+- **Archives** (`.zip`, `.lha`, `.lzh`) - Containers unpack in the browser and the art inside opens. Zips must be stored, deflated, shrunk, or imploded, without zip64 or encryption, with entries up to 32 MB
 
 > [!NOTE]
 > See [xb-format.md](xb-format.md) for technical details on the XBin
@@ -116,7 +116,9 @@ File operations allowing you to create, open, and save artwork in multiple file 
 - Format detection by file extension
 - Zip and amiga `.lha`/`.lzh` archives unpack in the browser: a lone
   openable file loads straight away, several raise a picker. Amiga
-  archives open as latin-1 in Topaz+ 1200, zips keep CP437 defaults
+  archives open as latin-1 in Topaz+ 1200, zips keep CP437 defaults.
+  A damaged entry opens as far as it decodes, and a note says how much
+  of it survived or that it failed its checksum
 - A SAUCE font record wins on open. `.nfo` and `.diz` files without one
   fall back to Topaz-437 8x16, the font most of the scene drew them in;
   opened from an archive browser, the browser's font hint replaces that
@@ -139,7 +141,7 @@ File operations allowing you to create, open, and save artwork in multiple file 
 - Every committed stroke appends to an autosave journal in your browser's private origin storage (OPFS)
 - Larger changes like resizes, file opens, and undo/redo write fresh journal keyframes
 - After a crash, a closed tab, or a reload, the journal replays and your session restores where you left off
-- Browsers without OPFS keep the same journal as an IndexedDB record log; private windows that block both lose autosave for that tab only
+- Browsers without OPFS, or whose OPFS refuses (Safari private windows), keep the same journal as an IndexedDB record log. A window that blocks both keeps the journal in memory only, so autosave does not survive a reload there
 - Lightweight settings (theme, zoom, favorites, recent colors) persist in local storage
 - Collaboration sessions never journal; the server owns that document
 
@@ -159,6 +161,8 @@ browse that archive.
 - Category and search pages only list what the editor can open:
   years, artists, and crews with nothing viewable never render, and
   a page the filter empties says so instead of showing a blank well
+- A piece damaged inside its archive opens as far as it decodes, and a
+  note says how much of it survived or that it failed its checksum
 - Every request is user-driven; nothing loads in the background
 
 #### 16colo.rs

@@ -79,19 +79,6 @@ The E2E tests validate the application's functionality in a real browser environ
   - Enter and Backspace keys
 
 - **ui.spec.js** - User interface elements and interactions tests
-- **asciiBrush.spec.js** - Ascii brush strokes in line and square modes
-- **autoscroll.spec.js** - Minimap autoscroll stepping and escape
-- **collabMoebius.spec.js** - Joins the vendored vanilla Moebius fixture through the Connect form (Chromium only)
-- **collabRoundTrip.spec.js** - Two browsers drawing through the bun server
-- **editor-file-open-and-scroll.spec.js** - Opening a file and scrolling the canvas
-- **editor-keybinds.spec.js** - Editor key bindings end to end
-- **gestures.spec.js** - Touch and pointer gestures
-- **mapping.spec.js** - Character and color mapping tools
-- **panels.spec.js** - Panel docking, shading, pinning, and the phone shell
-- **pwaManifest.spec.js** - PWA manifest and service worker registration
-- **refimage.spec.js** - Reference image loading, drag, and persistence
-- **toolSettings.spec.js** - The unified tool settings window
-- **uiprefs.spec.js** - UI preferences and their persistence
   - Main UI element visibility
   - Responsive layout
   - Position information display
@@ -102,6 +89,22 @@ The E2E tests validate the application's functionality in a real browser environ
   - Tool highlighting
   - Modal dialogs
   - Help and information panels
+- **asciiBrush.spec.js** - Ascii brush strokes in line and square modes
+- **autoscroll.spec.js** - Minimap autoscroll stepping and escape
+- **autosave.spec.js** - A reload restores the autosave journal, every frame of it
+- **compressionFallback.spec.js** - Zips, durdraw movies, `.0wnz` saves, and the autosave journal with the compression streams deleted
+- **damagedArchives.spec.js** - A damaged zip entry opens as far as it decodes, with a note; a newer open silences a stale one's note
+- **collabMoebius.spec.js** - Joins the vendored vanilla Moebius fixture through the Connect form (Chromium only)
+- **collabRoundTrip.spec.js** - Two browsers drawing through the bun server
+- **editor-file-open-and-scroll.spec.js** - Opening a file and scrolling the canvas
+- **editor-keybinds.spec.js** - Editor key bindings end to end
+- **gestures.spec.js** - Touch and pointer gestures
+- **mapping.spec.js** - Clicking a cell's center paints that cell, across zooms and scroll offsets
+- **panels.spec.js** - Panel docking, shading, pinning, and the phone shell
+- **pwaManifest.spec.js** - PWA manifest and service worker registration
+- **refimage.spec.js** - Reference image loading, drag, and persistence
+- **toolSettings.spec.js** - The unified tool settings window
+- **uiprefs.spec.js** - UI preferences and their persistence
 
 ## Running the Tests
 

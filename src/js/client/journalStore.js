@@ -3,9 +3,10 @@
  * Autosave journal store: the client side of the OPFS
  * journal. Picks a backend at open time:
  * - OPFS sync-access handles in a worker (journalWorker.js) wherever
- *   `navigator.storage.getDirectory` exists (Safari 15.2+, Chromium,
+ *   `navigator.storage.getDirectory` answers (Safari 15.2+, Chromium,
  *   Firefox 111+),
- * - an IndexedDB record log otherwise (Safari 15.0-15.1),
+ * - an IndexedDB record log otherwise (Safari 15.0-15.1, and private
+ *   windows whose OPFS refuses while IndexedDB still works),
  * - an in-memory log as the last resort (private windows that refuse
  *   both; autosave then simply does not survive the tab).
  *
@@ -203,8 +204,72 @@ export const createMemoryBackend = () => {
 	};
 };
 
-/** @returns {JournalBackend} */
-const pickBackend = () => {
+// every journal call waits on the pick, so a probe that never answers
+// must give up like a dead worker does, not wedge the restore
+const OPFS_PROBE_MS = 10000;
+
+// where this profile's journal lives, 'opfs' or 'idb', set by the first
+// backend that holds it: the next boot looks for it there, so neither a
+// slow probe nor a fast one may move it
+const JOURNAL_HOME = 'text0wnz-journal-home';
+
+const journalHome = () => {
+	try {
+		return localStorage.getItem(JOURNAL_HOME);
+	} catch {
+		return null;
+	}
+};
+
+/** @param {'opfs' | 'idb'} home */
+const settleHome = home => {
+	try {
+		localStorage.setItem(JOURNAL_HOME, home);
+	} catch {
+		// the flag only steadies the next boot's choice
+	}
+};
+
+/** @returns {Promise<unknown>} */
+const probeOpfs = () =>
+	new Promise((resolve, reject) => {
+		const timer = setTimeout(
+			() => reject(new Error('OPFS probe timed out')),
+			OPFS_PROBE_MS,
+		);
+		navigator.storage.getDirectory().then(
+			dir => {
+				clearTimeout(timer);
+				resolve(dir);
+			},
+			error => {
+				clearTimeout(timer);
+				reject(error);
+			},
+		);
+	});
+
+/**
+ * OPFS can exist and still refuse: WebKit's ephemeral sessions (Safari
+ * private windows, Playwright) reject getDirectory while IndexedDB
+ * works, so the probe decides, not the method's presence. Once a
+ * backend holds this profile's journal it stays the home: a journal in
+ * OPFS rides out a slow or failed probe (the worker's own deadlines
+ * degrade a truly dead OPFS), and one in IndexedDB, left there by a
+ * first probe that ran out of time, is not abandoned when a later
+ * probe answers. Either move would fork the journal where the next
+ * boot never looks.
+ * @returns {Promise<JournalBackend>}
+ */
+const pickBackend = async () => {
+	const home = journalHome();
+	try {
+		if (home === 'idb' && typeof indexedDB !== 'undefined') {
+			return createIdbBackend();
+		}
+	} catch {
+		// fall through
+	}
 	try {
 		if (
 			typeof navigator !== 'undefined' &&
@@ -212,6 +277,14 @@ const pickBackend = () => {
 			typeof navigator.storage.getDirectory === 'function' &&
 			typeof Worker !== 'undefined'
 		) {
+			try {
+				await probeOpfs();
+			} catch (error) {
+				if (home !== 'opfs') {
+					throw error;
+				}
+			}
+			settleHome('opfs');
 			return createOpfsBackend();
 		}
 	} catch {
@@ -219,7 +292,9 @@ const pickBackend = () => {
 	}
 	try {
 		if (typeof indexedDB !== 'undefined') {
-			return createIdbBackend();
+			const backend = createIdbBackend();
+			settleHome('idb');
+			return backend;
 		}
 	} catch {
 		// fall through
@@ -233,7 +308,9 @@ const pickBackend = () => {
  * @param {{bytes?: number, strokes?: number}} [options.compactLimits]
  */
 export const createJournalStore = (options = {}) => {
-	const backend = options.backend ?? pickBackend();
+	const ready = options.backend
+		? Promise.resolve(options.backend)
+		: pickBackend();
 	let bytesSinceKeyframe = 0;
 	let strokesSinceKeyframe = 0;
 	/** @type {Promise<unknown>} */
@@ -253,14 +330,14 @@ export const createJournalStore = (options = {}) => {
 
 	return {
 		/** Raw journal bytes as persisted (may be empty). */
-		open: () => enqueue(() => backend.read()),
+		open: () => enqueue(async () => (await ready).read()),
 		/**
 		 * Append one stroke record. Resolves true when compaction is due.
 		 * @param {Uint8Array} bytes
 		 */
 		appendStroke: bytes =>
 			enqueue(async () => {
-				await backend.append(bytes);
+				await (await ready).append(bytes);
 				bytesSinceKeyframe += bytes.length;
 				strokesSinceKeyframe += 1;
 				return shouldCompact(
@@ -274,7 +351,7 @@ export const createJournalStore = (options = {}) => {
 		 */
 		rewrite: bytes =>
 			enqueue(async () => {
-				await backend.rewrite(bytes);
+				await (await ready).rewrite(bytes);
 				bytesSinceKeyframe = 0;
 				strokesSinceKeyframe = 0;
 			}),

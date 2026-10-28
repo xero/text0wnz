@@ -25,7 +25,12 @@ vi.mock('../../src/js/client/state.js', () => ({
 			getForegroundColor: vi.fn(() => 7),
 			getBackgroundColor: vi.fn(() => 0),
 		},
-		modal: { loading: vi.fn(), close: vi.fn() },
+		modal: {
+			loading: vi.fn(),
+			close: vi.fn(),
+			isOpen: vi.fn(() => false),
+			current: vi.fn(() => false),
+		},
 		loadingFromStorage: false,
 		saveToLocalStorage: vi.fn(),
 		saveUndoHistory: vi.fn(),

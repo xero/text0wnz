@@ -16,8 +16,13 @@
  *                 equivalents are denied), and the connection dials
  *                 the vetted IP, which also defeats DNS rebinding.
  * - BRIDGE=allow  only targets on the explicit BRIDGE_ALLOW list
- *                 (comma-separated host:port); private entries are
- *                 informed consent and dial as given.
+ *                 (comma-separated host:port). A listed address is
+ *                 informed consent, private or not, and dials as given.
+ *                 A listed name dials the address it resolves to, and
+ *                 its first answer pins its kind (public, private,
+ *                 loopback, link-local): a name that later resolves to
+ *                 another kind (a hijacked record, a rebind aimed
+ *                 inward) is refused.
  *
  * Always on, whatever the mode: a connection cap (BRIDGE_MAX), a
  * delivery bound in both directions (a side that stops taking
@@ -46,62 +51,80 @@ export const BRIDGE_DEFAULTS = Object.freeze({
 });
 
 /**
- * Private, loopback, link-local, CGNAT, and unspecified addresses, v4
- * and v6 (including v4-mapped v6): everything the `port` mode denies.
+ * What kind of address `ip` is: public; private (site networks, CGNAT,
+ * ULA); loopback; link-local, the cloud metadata address among them;
+ * or reserved, everything else that is not global unicast. v4-mapped
+ * v6 reads as its v4 address.
  * @param {string} ip
+ * @returns {'public' | 'private' | 'loopback' | 'link-local' | 'reserved'}
  */
-export const isPrivateAddress = ip => {
+export const addressKind = ip => {
 	let addr = ip.toLowerCase();
 	if (addr.startsWith('::ffff:')) {
 		addr = addr.slice(7); // v4-mapped v6
 	}
 	if (isIP(addr) === 4) {
-		const parts = addr.split('.').map(Number);
-		const [a, b, c, d] = parts;
-		if (a === 0 || a === 10 || a === 127) {
-			return true;
-		}
-		if (a >= 224) {
-			return true; // multicast 224/4, reserved 240/4, broadcast
-		}
-		if (a === 192 && b === 0 && c === 0) {
-			return true; // IETF protocol assignments 192.0.0/24
-		}
-		if (a === 198 && (b === 18 || b === 19)) {
-			return true; // benchmarking 198.18/15
-		}
-		if (a === 168 && b === 63 && c === 129 && d === 16) {
-			return true; // Azure wireserver, the other metadata classic
-		}
-		if (a === 100 && b >= 64 && b <= 127) {
-			return true; // CGNAT 100.64/10
+		const [a, b, c, d] = addr.split('.').map(Number);
+		if (a === 127) {
+			return 'loopback';
 		}
 		if (a === 169 && b === 254) {
-			return true; // link-local incl. 169.254.169.254
+			return 'link-local'; // incl. 169.254.169.254
 		}
-		if (a === 172 && b >= 16 && b <= 31) {
-			return true;
+		if (
+			a === 10 ||
+			(a === 172 && b >= 16 && b <= 31) ||
+			(a === 192 && b === 168) ||
+			(a === 100 && b >= 64 && b <= 127) // CGNAT 100.64/10
+		) {
+			return 'private';
 		}
-		if (a === 192 && b === 168) {
-			return true;
+		if (
+			a === 0 ||
+			a >= 224 || // multicast 224/4, reserved 240/4, broadcast
+			(a === 192 && b === 0 && c === 0) || // IETF protocol assignments
+			(a === 198 && (b === 18 || b === 19)) || // benchmarking 198.18/15
+			(a === 168 && b === 63 && c === 129 && d === 16) // Azure wireserver
+		) {
+			return 'reserved';
 		}
-		return false;
+		return 'public';
 	}
 	// v6: only global unicast 2000::/3 counts as public. Everything
 	// else is denied, which closes the encodings the dotted check
 	// misses: hex v4-mapped (::ffff:7f00:1), v4-compatible (::7f00:1),
-	// NAT64 (64:ff9b::/96), ULA, link-local, loopback.
+	// NAT64 (64:ff9b::/96), and 6to4 (2002::/16, which wraps a v4
+	// address this check cannot see)
 	if (isIP(addr) === 6) {
-		const first = addr.split(':', 1)[0] || '0';
-		const firstGroup = parseInt(first, 16) || 0;
-		if (firstGroup === 0x2002) {
-			return true; // 6to4 wraps a v4 address this check cannot see
+		if (addr === '::1') {
+			return 'loopback';
 		}
-		return !(firstGroup >= 0x2000 && firstGroup <= 0x3fff);
+		const first = parseInt(addr.split(':', 1)[0] || '0', 16) || 0;
+		if (first >= 0xfe80 && first <= 0xfebf) {
+			return 'link-local';
+		}
+		if (first >= 0xfc00 && first <= 0xfdff) {
+			return 'private'; // ULA
+		}
+		if (first >= 0x2000 && first <= 0x3fff && first !== 0x2002) {
+			return 'public';
+		}
+		return 'reserved';
 	}
 	// not a recognizable address at all: never dial it
-	return true;
+	return 'reserved';
 };
+
+/**
+ * Everything the `port` mode denies: any address that is not public.
+ * @param {string} ip
+ */
+export const isPrivateAddress = ip => addressKind(ip) !== 'public';
+
+/** an IPv4 answer first when the name has one: a host with no v6 route
+ * (many containers) cannot dial an AAAA the resolver listed first
+ * @param {string[]} addresses */
+const preferV4 = addresses => addresses.find(a => isIP(a) === 4) ?? addresses[0];
 
 /**
  * Pure vet of already-resolved addresses (unit-tested without DNS):
@@ -118,18 +141,22 @@ export const vetResolvedAddresses = addresses => {
 			return { ok: false, reason: `private address ${address}` };
 		}
 	}
-	return { ok: true, address: addresses[0] };
+	return { ok: true, address: preferV4(addresses) };
 };
 
 /**
  * Decide the upstream url for a bridge request. Pure except for DNS
  * in `port` mode (injectable for tests).
  *
- * @param {{mode: string, target: string, port: number, allow: string[]}} config
+ * @param {{mode: string, target: string, port: number, allow: string[], pins?: Map<string, string>}} config
+ *   `pins` holds the kind of address each allow-mode name first
+ *   resolved to
  * @param {{host?: string | null, port?: string | number | null, room?: string | null}} requested
  * @param {(host: string) => Promise<string[]>} [resolveHost]
  * @param {number} [lookupTimeoutMs] a stalled resolver must not pin a slot
- * @returns {Promise<{ok: true, url: string} | {ok: false, reason: string}>}
+ * @returns {Promise<{ok: true, url: string, hostHeader?: string} | {ok: false, reason: string}>}
+ *   `hostHeader` names the host the caller asked for: the dial goes to
+ *   the checked address, and a name-routed upstream still sees the name
  */
 export const resolveBridgeTarget = async (
 	config,
@@ -184,14 +211,49 @@ export const resolveBridgeTarget = async (
 		const dialHost = vet.address.includes(':')
 			? `[${vet.address}]`
 			: vet.address;
-		return { ok: true, url: `ws://${dialHost}:${port}/${room}` };
+		return {
+			ok: true,
+			url: `ws://${dialHost}:${port}/${room}`,
+			...(isIP(host) ? {} : { hostHeader: `${host}:${port}` }),
+		};
 	}
 	if (mode === 'allow') {
 		const entry = `${host}:${asked ?? ''}`;
 		if (asked === null || !config.allow.includes(entry)) {
 			return { ok: false, reason: `${entry} not on the allow list` };
 		}
-		return { ok: true, url: `ws://${host}:${asked}/${room}` };
+		if (isIP(host)) {
+			return { ok: true, url: `ws://${host}:${asked}/${room}` };
+		}
+		const addresses = await boundedLookup(resolveHost, host, lookupTimeoutMs);
+		if (addresses.length === 0) {
+			return { ok: false, reason: 'unresolvable host' };
+		}
+		const kinds = [...new Set(addresses.map(addressKind))];
+		if (kinds.length > 1) {
+			return { ok: false, reason: `${host} resolves to ${kinds.join(' and ')} addresses` };
+		}
+		// the operator listed a name, not a network: the kind of its
+		// first answer is the consent (a private name may move within
+		// private ranges, never to loopback or the metadata address), and
+		// the config object carries the pins for the life of the process
+		const [kind] = kinds;
+		const pins = (config.pins ??= new Map());
+		const name = host.toLowerCase();
+		const pinned = pins.get(name);
+		if (pinned === undefined) {
+			pins.set(name, kind);
+		} else if (pinned !== kind) {
+			return { ok: false, reason: `${host} resolved ${kind}, pinned ${pinned}` };
+		}
+		// dial the checked address: a rebind between check and dial is moot
+		const address = preferV4(addresses);
+		const dialHost = address.includes(':') ? `[${address}]` : address;
+		return {
+			ok: true,
+			url: `ws://${dialHost}:${asked}/${room}`,
+			hostHeader: `${host}:${asked}`,
+		};
 	}
 	return { ok: false, reason: `unknown bridge mode ${mode}` };
 };
@@ -309,7 +371,7 @@ export const BRIDGE_TICK_MS = 1000;
  * @param {object} browserWs the server-side socket (close, send, getBufferedAmount)
  * @param {string} targetUrl
  * @param {(line: string) => void} [log]
- * @param {{idleMs?: number, backpressureLimit?: number, stallMs?: number}} [options]
+ * @param {{idleMs?: number, backpressureLimit?: number, stallMs?: number, hostHeader?: string}} [options]
  */
 export const createBridgePipe = (browserWs, targetUrl, log = () => {}, options = {}) => {
 	const idleMs = options.idleMs ?? BRIDGE_IDLE_MS;
@@ -407,7 +469,11 @@ export const createBridgePipe = (browserWs, targetUrl, log = () => {}, options =
 	const ticker = setInterval(tick, Math.min(BRIDGE_TICK_MS, idleMs));
 
 	try {
-		upstream = new WebSocket(targetUrl);
+		// Bun's client takes a Host override: the dial goes to the checked
+		// address while a name-routed upstream still sees the name asked
+		upstream = options.hostHeader
+			? new WebSocket(targetUrl, { headers: { Host: options.hostHeader } })
+			: new WebSocket(targetUrl);
 	} catch (error) {
 		log(`bridge dial failed: ${String(error)}`);
 		closeBoth();

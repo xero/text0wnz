@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { vi } from 'vitest';
 import {
+	addressKind,
 	isPrivateAddress,
 	vetResolvedAddresses,
 	resolveBridgeTarget,
@@ -15,6 +16,32 @@ import {
 	createBridgePipe,
 	BRIDGE_DEFAULTS,
 } from '../../../src/js/server/bridge.js';
+
+describe('addressKind', () => {
+	it('names each kind of address a pin can hold', () => {
+		for (const [ip, kind] of [
+			['8.8.8.8', 'public'],
+			['2606:4700::1111', 'public'],
+			['10.1.2.3', 'private'],
+			['172.20.0.1', 'private'],
+			['192.168.1.9', 'private'],
+			['100.100.100.100', 'private'],
+			['fd12::1', 'private'],
+			['127.0.0.1', 'loopback'],
+			['::1', 'loopback'],
+			['::ffff:127.0.0.1', 'loopback'],
+			['169.254.169.254', 'link-local'],
+			['fe80::1', 'link-local'],
+			['0.0.0.0', 'reserved'],
+			['224.0.0.1', 'reserved'],
+			['2002:7f00:1::1', 'reserved'],
+			['::7f00:1', 'reserved'],
+			['not-an-ip', 'reserved'],
+		]) {
+			expect(addressKind(ip), ip).toBe(kind);
+		}
+	});
+});
 
 describe('isPrivateAddress', () => {
 	it('denies every private, loopback, link-local, and CGNAT range', () => {
@@ -98,10 +125,12 @@ describe('resolveBridgeTarget', () => {
 			{ host: 'tiles.example', port: '8000', room: 'lounge' },
 			resolver,
 		);
-		// the dial uses the RESOLVED ip (rebinding moot)
+		// the dial uses the RESOLVED ip (rebinding moot), and the name rides
+		// along as Host for a name-routed upstream
 		expect(result).toEqual({
 			ok: true,
 			url: 'ws://93.184.216.34:8000/lounge',
+			hostHeader: 'tiles.example:8000',
 		});
 		// no port named means the pinned one
 		const unnamed = await resolveBridgeTarget(
@@ -109,7 +138,19 @@ describe('resolveBridgeTarget', () => {
 			{ host: 'tiles.example', port: null, room: '' },
 			resolver,
 		);
-		expect(unnamed).toEqual({ ok: true, url: 'ws://93.184.216.34:8000/' });
+		expect(unnamed).toEqual({
+			ok: true,
+			url: 'ws://93.184.216.34:8000/',
+			hostHeader: 'tiles.example:8000',
+		});
+		// a v4 answer first, where the name has one: many containers have
+		// no v6 route
+		const dual = await resolveBridgeTarget(
+			{ ...base, mode: 'port', port: 8000 },
+			{ host: 'tiles.example', port: '8000', room: '' },
+			async () => ['2606:2800:220:1::1', '93.184.216.34'],
+		);
+		expect(dual.url).toBe('ws://93.184.216.34:8000/');
 		// a port it will not dial is refused, never silently rewritten
 		const other = await resolveBridgeTarget(
 			{ ...base, mode: 'port', port: 8000 },
@@ -200,6 +241,63 @@ describe('resolveBridgeTarget', () => {
 			(await resolveBridgeTarget(config, { host: 'other.example', port: '9999' }))
 				.ok,
 		).toBe(false);
+	});
+
+	it('a private pin never stretches to loopback or the metadata address', async () => {
+		const config = { ...base, mode: 'allow', allow: ['moebius:8000']};
+		let answer = ['172.18.0.5'];
+		const ask = () =>
+			resolveBridgeTarget(config, { host: 'moebius', port: '8000', room: 'art' }, async () => answer);
+		expect((await ask()).ok).toBe(true);
+		// a compose service may move within private ranges...
+		answer = ['10.0.0.7'];
+		expect((await ask()).ok).toBe(true);
+		// ...but not to another kind of inward address
+		answer = ['169.254.169.254'];
+		expect(await ask()).toEqual({ ok: false, reason: 'moebius resolved link-local, pinned private' });
+		answer = ['127.0.0.1'];
+		expect(await ask()).toEqual({ ok: false, reason: 'moebius resolved loopback, pinned private' });
+	});
+
+	it('allow mode dials a listed name where it resolves, and pins its class', async () => {
+		const config = {
+			...base,
+			mode: 'allow',
+			allow: ['tiles.example:9999', 'moebius:8000', 'split.example:8000'],
+		};
+		let answer = ['203.0.113.7'];
+		const resolver = async () => answer;
+		const ask = host =>
+			resolveBridgeTarget(config, { host, port: host === 'tiles.example' ? '9999' : '8000', room: 'art' }, resolver);
+		// the checked address is the one dialed
+		expect(await ask('tiles.example')).toEqual({
+			ok: true,
+			url: 'ws://203.0.113.7:9999/art',
+			hostHeader: 'tiles.example:9999',
+		});
+		// a public name whose record turns inward is refused...
+		answer = ['10.0.0.9'];
+		expect(await ask('tiles.example')).toEqual({
+			ok: false,
+			reason: 'tiles.example resolved private, pinned public',
+		});
+		// ...while a name that was private from the start (a compose
+		// service) keeps working
+		expect(await ask('moebius')).toEqual({
+			ok: true,
+			url: 'ws://10.0.0.9:8000/art',
+			hostHeader: 'moebius:8000',
+		});
+		answer = ['203.0.113.8'];
+		expect((await ask('moebius')).ok).toBe(false);
+		// half and half is never consent to either
+		answer = ['203.0.113.8', '127.0.0.1'];
+		expect(await ask('split.example')).toEqual({
+			ok: false,
+			reason: 'split.example resolves to public and loopback addresses',
+		});
+		answer = [];
+		expect(await ask('split.example')).toEqual({ ok: false, reason: 'unresolvable host' });
 	});
 });
 
@@ -333,8 +431,9 @@ describe('bridge hardening (security review)', () => {
 
 describe('bridge pipe bounds (security review)', () => {
 	class FakeUpstream {
-		constructor(url) {
+		constructor(url, options) {
 			this.url = url;
+			this.options = options;
 			this.readyState = 0;
 			this.sent = [];
 			this.pings = [];
@@ -388,6 +487,19 @@ describe('bridge pipe bounds (security review)', () => {
 		up.emit('open');
 		return { pipe, up };
 	};
+
+	it('dials the checked address under the name the caller asked for', () => {
+		vi.stubGlobal('WebSocket', FakeUpstream);
+		try {
+			createBridgePipe(browser(), 'ws://203.0.113.7:9999/art', () => {}, { hostHeader: 'tiles.example:9999' });
+			expect(FakeUpstream.last.options).toEqual({ headers: { Host: 'tiles.example:9999' } });
+			// an address the caller typed has no name to send
+			createBridgePipe(browser(), 'ws://192.168.1.50:8000/art');
+			expect(FakeUpstream.last.options).toBeUndefined();
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
 
 	it('queues before connect and relays after', () => {
 		vi.stubGlobal('WebSocket', FakeUpstream);

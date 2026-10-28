@@ -3,8 +3,8 @@
  * inverse of core/codecs/zip.ts, kept test-side on purpose (the editor
  * never writes zips).
  */
-// the one deflate COMPRESSOR in the tree: production only inflates,
-// so the fixture builder owns this helper (writer/reader pump, since
+// the runtime's own compressor, not flate.ts, so zip tests read bytes
+// the inflater under test did not write (writer/reader pump, since
 // jsdom's Blob has no stream())
 const deflateRaw = async (bytes: Uint8Array): Promise<Uint8Array> => {
 	const cs = new CompressionStream('deflate-raw');
@@ -50,7 +50,18 @@ const crc32 = (bytes: Uint8Array): number => {
 
 /** build a real little zip with the given entries */
 export const buildZip = async (
-	files: Array<{ name: string; data: Uint8Array; store?: boolean }>,
+	// rawName writes the name bytes as-is without the UTF-8 flag, the way
+	// DOS and amiga packers did; packed stands in a hand-built stream for
+	// any method, while the CRC and size still describe data
+	files: Array<{
+		name: string;
+		data: Uint8Array;
+		store?: boolean;
+		rawName?: Uint8Array;
+		packed?: Uint8Array;
+		method?: number;
+		flags?: number;
+	}>,
 ): Promise<Uint8Array> => {
 	const chunks: number[] = [];
 	const central: number[] = [];
@@ -59,13 +70,15 @@ export const buildZip = async (
 	const push32 = (arr: number[], v: number) =>
 		arr.push(v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >>> 24) & 0xff);
 	for (const file of files) {
-		const nameBytes = new TextEncoder().encode(file.name);
-		const method = file.store ? 0 : 8;
-		const packed = file.store ? file.data : await deflateRaw(file.data);
+		const nameBytes = file.rawName ?? new TextEncoder().encode(file.name);
+		const flags = (file.rawName ? 0 : 0x800) | (file.flags ?? 0);
+		const method = file.method ?? (file.store ? 0 : 8);
+		const packed =
+			file.packed ?? (file.store ? file.data : await deflateRaw(file.data));
 		const offset = chunks.length;
 		push32(chunks, 0x04034b50);
 		push16(chunks, 20); // version needed
-		push16(chunks, 0x800); // utf-8 names
+		push16(chunks, flags);
 		push16(chunks, method);
 		push16(chunks, 0); // time
 		push16(chunks, 0); // date
@@ -78,7 +91,7 @@ export const buildZip = async (
 		push32(central, 0x02014b50);
 		push16(central, 20);
 		push16(central, 20);
-		push16(central, 0x800);
+		push16(central, flags);
 		push16(central, method);
 		push16(central, 0);
 		push16(central, 0);

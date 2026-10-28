@@ -13,7 +13,6 @@ import {
 	JOURNAL_VERSION,
 	RECORD_STROKE,
 	createJournal,
-	crc32,
 	decodeStrokePayload,
 	encodeKeyframeRecord,
 	encodeStrokeRecord,
@@ -21,7 +20,11 @@ import {
 	scanJournal,
 	shouldCompact,
 } from '../../src/js/core/journal.js';
-import { CodecError, concatBytes } from '../../src/js/core/codecs/util.js';
+import {
+	CodecError,
+	concatBytes,
+	crc32,
+} from '../../src/js/core/codecs/util.js';
 
 const strokeOf = (
 	frame: number,

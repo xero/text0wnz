@@ -105,6 +105,63 @@ export const concatBytes = (parts: ReadonlyArray<Uint8Array>): Uint8Array => {
 	return out;
 };
 
+const CRC_TABLE = (() => {
+	const table = new Uint32Array(256);
+	for (let n = 0; n < 256; n++) {
+		let c = n;
+		for (let k = 0; k < 8; k++) {
+			c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+		}
+		table[n] = c >>> 0;
+	}
+	return table;
+})();
+
+/** CRC-32 (reflected, poly 0xEDB88320): zip, gzip, and the journal. */
+export const crc32 = (bytes: Uint8Array): number => {
+	let crc = 0xffffffff;
+	for (let i = 0; i < bytes.length; i++) {
+		crc = CRC_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+	}
+	return (crc ^ 0xffffffff) >>> 0;
+};
+
+/** An archive entry opened in spite of damage, and what to tell the artist. */
+export interface Salvaged {
+	bytes: Uint8Array;
+	/** null when the content is whole and its checksum agrees */
+	damage: string | null;
+}
+
+/**
+ * The verdict on a damaged entry: whole with a good checksum is clean
+ * (junk after the stream, or an engine bug, never touched the
+ * content), whole with a bad one opens with a warning, a partial one
+ * opens as far as it decoded, and nothing at all is a refusal.
+ */
+export const salvaged = (
+	name: string,
+	out: Uint8Array,
+	size: number,
+	checksumOk: boolean,
+): Salvaged => {
+	const base = name.split('/').pop() || name;
+	if (out.length === size && checksumOk) {
+		return { bytes: out, damage: null };
+	}
+	if (out.length === 0) {
+		throw new CodecError(`${base} is damaged beyond recovery`);
+	}
+	const count = (n: number): string => n.toLocaleString('en-US');
+	return {
+		bytes: out,
+		damage:
+			out.length === size
+				? `${base} failed its checksum and may show damage`
+				: `${base} is damaged: showing the first ${count(out.length)} of ${count(size)} bytes`,
+	};
+};
+
 /** UTF-8 bytes for one codepoint (v2 unicodeToArray port). */
 export const utf8Encode = (codepoint: number): number[] => {
 	if (codepoint < 0x80) {
@@ -172,71 +229,3 @@ export const base64ToBytes = (text: string): Uint8Array => {
 	}
 	return out;
 };
-
-// gzip/gunzip through the runtime-native CompressionStream. Built on
-// bare ReadableStream (no Blob/Response: jsdom's Blob lacks .stream()
-// and the fewer globals the codec touches, the more hosts it runs in).
-
-const pumpThrough = async (
-	bytes: Uint8Array,
-	transform: {
-		readable: ReadableStream<Uint8Array>;
-		writable: WritableStream<BufferSource>;
-	},
-	maxBytes = Infinity,
-): Promise<Uint8Array> => {
-	const writer = transform.writable.getWriter();
-	// Copy guarantees ArrayBuffer backing for the BufferSource write
-	// (callers may hand views over any buffer type)
-	const chunk = new Uint8Array(bytes);
-	// Errors surface through the read side; the write promise is observed
-	// in finally so a transform failure never leaves a dangling rejection
-	const writing = writer
-		.write(chunk)
-		.then(() => writer.close())
-		.catch(() => undefined);
-	const reader = transform.readable.getReader();
-	const chunks: Uint8Array[] = [];
-	try {
-		let total = 0;
-		for (;;) {
-			const { done, value } = await reader.read();
-			if (done) {
-				break;
-			}
-			total += value.length;
-			if (total > maxBytes) {
-				// a decompression bomb must die DURING the read, not after
-				// it has been buffered
-				await reader.cancel();
-				throw new CodecError(`decompressed stream exceeds ${maxBytes} bytes`);
-			}
-			chunks.push(value);
-		}
-	} finally {
-		await writing;
-	}
-	return concatBytes(chunks);
-};
-
-export const gzip = (bytes: Uint8Array): Promise<Uint8Array> =>
-	pumpThrough(bytes, new CompressionStream('gzip'));
-
-/**
- * Default gunzip ceiling: comfortably above the largest legal doc
- * (10M cells x 12 plane bytes) and far below what a 50KB gzip bomb
- * used to buffer. The zip path always capped; this one did not.
- */
-export const MAX_GUNZIP_BYTES = 256 * 1024 * 1024;
-
-export const gunzip = (
-	bytes: Uint8Array,
-	maxBytes: number = MAX_GUNZIP_BYTES,
-): Promise<Uint8Array> =>
-	pumpThrough(bytes, new DecompressionStream('gzip'), maxBytes);
-
-export const inflateRaw = (
-	bytes: Uint8Array,
-	maxBytes = Infinity,
-): Promise<Uint8Array> =>
-	pumpThrough(bytes, new DecompressionStream('deflate-raw'), maxBytes);

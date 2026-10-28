@@ -51,6 +51,7 @@ describe('Modal DOM Tests', () => {
 			'warningModal',
 			'tutorialsModal',
 			'errorModal', // For error tests
+			'noticeModal',
 		];
 
 		sections.forEach(id => {
@@ -63,6 +64,10 @@ describe('Modal DOM Tests', () => {
 		const errorDiv = document.createElement('div');
 		errorDiv.id = 'modalError';
 		document.getElementById('errorModal').appendChild(errorDiv);
+
+		const noticeDiv = document.createElement('div');
+		noticeDiv.id = 'modalNotice';
+		document.getElementById('noticeModal').appendChild(noticeDiv);
 
 		modalController = createModalController(modal);
 	});
@@ -383,6 +388,27 @@ describe('Modal DOM Tests', () => {
 			errorSection.classList.remove('hide');
 
 			expect(errorSection).not.toHaveClass('hide');
+		});
+
+		it('a notice takes its own section, not the error one', () => {
+			modalController.notice('ROT.ANS is damaged');
+			expect(document.getElementById('modalNotice')).toHaveTextContent(
+				'ROT.ANS is damaged',
+			);
+			expect(document.getElementById('noticeModal')).not.toHaveClass('hide');
+			expect(document.getElementById('errorModal')).toHaveClass('hide');
+			expect(modal.open).toBe(true);
+		});
+
+		it('a notice raised as the loading modal closes stays up', () => {
+			// an open's last step: the loading modal goes, the note arrives
+			modalController.open('loading');
+			modalController.close();
+			modalController.notice('ROT.ANS is damaged');
+			fireEvent.transitionEnd(modal);
+			expect(modal.open).toBe(true);
+			expect(document.getElementById('noticeModal')).not.toHaveClass('hide');
+			expect(document.getElementById('loadingModal')).toHaveClass('hide');
 		});
 	});
 

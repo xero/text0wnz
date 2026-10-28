@@ -16,7 +16,8 @@ import path from 'node:path';
 import { MoebiusAction, decodeFrame, ProtocolError } from '../core/index';
 import { createRoom } from './room.js';
 import { resolveBridgeTarget, createBridgePipe } from './bridge.js';
-import { ROOM_NAME_RE, authCooldownMs, sanitize } from './utils.js';
+import { ROOM_NAME_RE, joinPaletteDepth, sanitize } from './utils.js';
+import { addressKey, clientAddress, createAuthGate } from './authGate.js';
 
 export const SERVER_LIMITS = Object.freeze({
 	// vanilla PASTE_AS_SELECTION frames run tens of MB (the ancestor's
@@ -53,8 +54,10 @@ export const roomNameFromPath = (pathname, defaultRoom) => {
  * @param {string} [config.pass]
  * @param {Record<string, string>} [config.roomPasswords]
  * @param {string[]} [config.allowedOrigins] upgrade Origin allowlist; empty Origin (desktop clients) always allowed
+ * @param {string[]} [config.trustProxy] proxies beyond loopback whose X-Real-IP or X-Forwarded-For names the client
  * @param {number} [config.maxColumns] resize wall override (0/absent = room default)
  * @param {number} [config.maxRows] resize wall override (0/absent = room default)
+ * @param {number} [config.maxGuesses] room guess budget override (0/absent = gate default)
  * @param {string} [config.staticDir] serve the built PWA from here ('' = ws-only)
  * @param {{mode: string, target: string, port: number, allow: string[], maxConnections: number}} [config.bridge]
  * @param {(room: ReturnType<typeof createRoom>) => void} [config.onRoomCreate]
@@ -86,9 +89,11 @@ export const createMoebiusServer = config => {
 	const roomReady = new WeakMap();
 	/** sockets per room INCLUDING ones that never sent CONNECTED */
 	const socketCounts = new Map();
-	/** pre-room auth backoff keyed by room name (the room may not
-	 * exist yet); bounded so hostile name churn is not itself a leak */
+	/** pre-room auth backoff, a gate per room name (the room may not
+	 * exist yet) keyed by client inside; bounded so hostile name churn
+	 * is not itself a leak */
 	const AUTH_GATE_LIMIT = 4096;
+	/** @type {Map<string, ReturnType<typeof createAuthGate>>} */
 	const authGates = new Map();
 	const authGateFor = name => {
 		let gate = authGates.get(name);
@@ -96,7 +101,7 @@ export const createMoebiusServer = config => {
 			if (authGates.size >= AUTH_GATE_LIMIT) {
 				const now = Date.now();
 				for (const [key, g] of authGates) {
-					if (now >= g.cooldownUntil && now - g.lastAt > 60_000) {
+					if (g.idle(now)) {
 						authGates.delete(key);
 					}
 				}
@@ -104,7 +109,7 @@ export const createMoebiusServer = config => {
 			if (authGates.size >= AUTH_GATE_LIMIT) {
 				return null; // fail closed: a flood gets no fresh tries
 			}
-			gate = { failures: 0, cooldownUntil: 0, lastAt: 0 };
+			gate = createAuthGate({ budget: config.maxGuesses || undefined });
 			authGates.set(name, gate);
 		}
 		return gate;
@@ -124,6 +129,7 @@ export const createMoebiusServer = config => {
 				password: config.roomPasswords?.[name] ?? config.pass ?? '',
 				maxColumns: config.maxColumns || undefined,
 				maxRows: config.maxRows || undefined,
+				maxGuesses: config.maxGuesses || undefined,
 				log,
 			});
 			rooms.set(name, room);
@@ -148,6 +154,8 @@ export const createMoebiusServer = config => {
 				send: (type, data) => {
 					ws.send(JSON.stringify({ type, data }));
 				},
+				paletteDepth: ws.data.paletteDepth,
+				who: ws.data.who,
 			};
 		}
 		return ws.data.client;
@@ -177,7 +185,7 @@ export const createMoebiusServer = config => {
 			if (ws.data.kind === 'bridge') {
 				bridgeCount++;
 				audit(`bridge open ${ws.data.requester} -> ${ws.data.targetUrl}`);
-				ws.data.pipe = createBridgePipe(ws, ws.data.targetUrl, log);
+				ws.data.pipe = createBridgePipe(ws, ws.data.targetUrl, log, { hostHeader: ws.data.hostHeader });
 				// the heartbeat reaps a dead browser side like any socket
 				sockets.add(ws);
 				return;
@@ -245,19 +253,18 @@ export const createMoebiusServer = config => {
 					// stateless refusal here let passwords brute-force at
 					// wire speed; the gate shares room.connect's backoff
 					const gate = authGateFor(ws.data.roomName);
-					const now = Date.now();
-					if (!gate || now < gate.cooldownUntil) {
+					if (!gate || !gate.open(ws.data.who)) {
 						refuse('auth cooldown');
 						return;
 					}
 					if (offered !== expected) {
-						gate.failures++;
-						gate.lastAt = now;
-						gate.cooldownUntil = now + authCooldownMs(gate.failures);
+						gate.fail(ws.data.who);
 						refuse('bad password');
 						return;
 					}
-					authGates.delete(ws.data.roomName);
+					// the gate stays to know this joiner when the room is
+					// under fire; a full table evicts idle gates first
+					gate.pass(ws.data.who);
 				}
 				const room = ws.data.room ?? getRoom(ws.data.roomName);
 				if (!room) {
@@ -458,7 +465,15 @@ export const createMoebiusServer = config => {
 				return new Response('bridge refused', { status: 403 });
 			}
 			if (
-				server.upgrade(req, { data: { kind: 'bridge', targetUrl: vet.url, requester, alive: true } })
+				server.upgrade(req, {
+					data: {
+						kind: 'bridge',
+						targetUrl: vet.url,
+						hostHeader: vet.hostHeader,
+						requester,
+						alive: true,
+					},
+				})
 			) {
 				return undefined;
 			}
@@ -473,8 +488,20 @@ export const createMoebiusServer = config => {
 		if (roomName === null) {
 			return new Response('no such room', { status: 404 });
 		}
+		// read once at the door: the user agent is the only thing that
+		// tells vanilla Moebius from moebiusXBIN, and it is not kept
+		const paletteDepth = joinPaletteDepth(req.headers.get('user-agent'));
+		// the auth gates key on a salted hash of the client's address;
+		// the address itself is never kept
+		const who = addressKey(
+			clientAddress(
+				server.requestIP(req)?.address ?? '',
+				req.headers,
+				config.trustProxy,
+			),
+		);
 		if (
-			server.upgrade(req, { data: { roomName, connected: false, alive: true } })
+			server.upgrade(req, { data: { roomName, connected: false, alive: true, paletteDepth, who } })
 		) {
 			return undefined;
 		}

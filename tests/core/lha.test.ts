@@ -10,6 +10,7 @@ import {
 	MAX_LHA_ENTRY_BYTES,
 	extractLhaEntry,
 	readLhaEntries,
+	salvageLhaEntry,
 } from '../../src/js/core/index';
 import {
 	buildLha,
@@ -145,5 +146,54 @@ describe('lha guard rails', () => {
 		const broken = bytes.slice();
 		broken[entry.dataOffset] ^= 0xff;
 		expect(() => extractLhaEntry(broken, entry)).toThrow(/crc mismatch/);
+	});
+});
+
+describe('lha salvage', () => {
+	const lh5 = () => {
+		const bytes = realColly();
+		const entry = readLhaEntries(bytes).find(e => e.method === '-lh5-');
+		if (!entry) {
+			throw new Error('fixture lost its lh5 entry');
+		}
+		return { bytes, entry };
+	};
+
+	it('opens a clean entry without a note', () => {
+		const { bytes, entry } = lh5();
+		const piece = salvageLhaEntry(bytes, entry);
+		expect(piece.damage).toBeNull();
+		expect([...piece.bytes]).toEqual([...extractLhaEntry(bytes, entry)]);
+	});
+
+	it('opens whole content with a checksum warning', () => {
+		const { bytes, entry } = lh5();
+		const piece = salvageLhaEntry(bytes, { ...entry, crc: entry.crc ^ 1 });
+		expect(piece.bytes.length).toBe(entry.size);
+		expect(piece.damage).toMatch(/failed its checksum/);
+	});
+
+	it('stops where the data stops instead of decoding padding', () => {
+		const { bytes, entry } = lh5();
+		const clean = extractLhaEntry(bytes, entry);
+		const short = { ...entry, compressedSize: entry.compressedSize >> 1 };
+		expect(() => extractLhaEntry(bytes, short)).toThrow(CodecError);
+		const piece = salvageLhaEntry(bytes, short);
+		expect(piece.damage).toMatch(/damaged: showing the first/);
+		expect(piece.bytes.length).toBeLessThan(entry.size);
+		expect([...piece.bytes]).toEqual([
+			...clean.subarray(0, piece.bytes.length),
+		]);
+	});
+
+	it('opens a rotten stream as far as it decodes, with a note', () => {
+		const { bytes, entry } = lh5();
+		const rotten = bytes.slice();
+		const middle = entry.dataOffset + (entry.compressedSize >> 1);
+		rotten.fill(0xff, middle, middle + 16);
+		expect(() => extractLhaEntry(rotten, entry)).toThrow(CodecError);
+		const piece = salvageLhaEntry(rotten, entry);
+		expect(piece.bytes.length).toBeLessThanOrEqual(entry.size);
+		expect(piece.damage).toMatch(/damaged|checksum/);
 	});
 });

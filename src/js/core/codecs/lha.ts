@@ -4,11 +4,12 @@
  * 0, 1, and 2 and decodes -lh0- (stored) and -lh5- (static huffman
  * over an 8KB LZSS window), which covers every entry in the arena's
  * archives (4,190 of them verified against this decoder). Every
- * extraction checks the header's CRC-16, so a rotten scene file fails
- * loud instead of rendering garbage.
+ * extraction checks the header's CRC-16: the strict path refuses a
+ * rotten scene file, and salvage opens what decoded with a note naming
+ * the damage, so garbage never renders without a word.
  */
 
-import { CodecError } from './util.js';
+import { CodecError, Salvaged, salvaged } from './util.js';
 
 /**
  * Per-entry extraction cap, mirroring the zip reader: scene pieces are
@@ -200,11 +201,19 @@ class BitReader {
 		this.pos = start;
 	}
 
+	/** set once a read reaches past the entry's data */
+	padded = false;
+
 	/** reads past the end pad with zeros; the CRC check catches it */
 	read(n: number): number {
 		while (this.have < n) {
-			this.buf =
-				(this.buf << 8) | (this.pos < this.end ? this.bytes[this.pos++] : 0);
+			let byte = 0;
+			if (this.pos < this.end) {
+				byte = this.bytes[this.pos++];
+			} else {
+				this.padded = true;
+			}
+			this.buf = (this.buf << 8) | byte;
 			this.have += 8;
 		}
 		this.have -= n;
@@ -333,7 +342,11 @@ const readLiteralLengths = (br: BitReader, temp: Huffman): Huffman => {
 	return buildHuffman(lens);
 };
 
-const decodeLh5 = (bytes: Uint8Array, entry: LhaEntry): Uint8Array => {
+const decodeLh5 = (
+	bytes: Uint8Array,
+	entry: LhaEntry,
+	salvage = false,
+): Uint8Array => {
 	const br = new BitReader(
 		bytes,
 		entry.dataOffset,
@@ -344,43 +357,58 @@ const decodeLh5 = (bytes: Uint8Array, entry: LhaEntry): Uint8Array => {
 	let block = 0;
 	let literals: Huffman | null = null;
 	let positions: Huffman | null = null;
-	while (o < out.length) {
-		if (block === 0) {
-			block = br.read(16);
+	// a valid stream never reads past its data, so a salvage that does
+	// is decoding invented zeros and stops before writing them
+	const overrun = (): void => {
+		if (salvage && br.padded) {
+			throw new CodecError(`lha stream runs past its data in ${entry.name}`);
+		}
+	};
+	try {
+		while (o < out.length) {
 			if (block === 0) {
-				throw new CodecError(`lha stream torn in ${entry.name}`);
+				block = br.read(16);
+				if (block === 0) {
+					throw new CodecError(`lha stream torn in ${entry.name}`);
+				}
+				const temp = readLengths(br, NT, 5, 3);
+				literals = readLiteralLengths(br, temp);
+				positions = readLengths(br, NP, 4, -1);
+				overrun();
 			}
-			const temp = readLengths(br, NT, 5, 3);
-			literals = readLiteralLengths(br, temp);
-			positions = readLengths(br, NP, 4, -1);
+			block--;
+			const c = decodeSym(br, literals as Huffman);
+			overrun();
+			if (c < 256) {
+				out[o++] = c;
+			} else {
+				const length = c - 256 + THRESHOLD;
+				let p = decodeSym(br, positions as Huffman);
+				if (p !== 0) {
+					p = (1 << (p - 1)) + br.read(p - 1);
+				}
+				overrun();
+				let from = o - p - 1;
+				if (from < 0) {
+					throw new CodecError(`lha stream torn in ${entry.name}`);
+				}
+				for (let k = 0; k < length && o < out.length; k++) {
+					out[o++] = out[from++];
+				}
+			}
 		}
-		block--;
-		const c = decodeSym(br, literals as Huffman);
-		if (c < 256) {
-			out[o++] = c;
-		} else {
-			const length = c - 256 + THRESHOLD;
-			let p = decodeSym(br, positions as Huffman);
-			if (p !== 0) {
-				p = (1 << (p - 1)) + br.read(p - 1);
-			}
-			let from = o - p - 1;
-			if (from < 0) {
-				throw new CodecError(`lha stream torn in ${entry.name}`);
-			}
-			for (let k = 0; k < length && o < out.length; k++) {
-				out[o++] = out[from++];
-			}
+	} catch (error) {
+		// salvage keeps what decoded before the tear
+		if (salvage && error instanceof CodecError) {
+			return out.slice(0, o);
 		}
+		throw error;
 	}
 	return out;
 };
 
-/** extract one entry's bytes (lh0 or lh5), CRC-verified */
-export const extractLhaEntry = (
-	bytes: Uint8Array,
-	entry: LhaEntry,
-): Uint8Array => {
+/** the guards strict and salvage share: past these there is nothing honest to show */
+const checkLhaEntry = (bytes: Uint8Array, entry: LhaEntry): void => {
 	if (
 		entry.size > MAX_LHA_ENTRY_BYTES ||
 		entry.compressedSize > MAX_LHA_ENTRY_BYTES
@@ -389,24 +417,54 @@ export const extractLhaEntry = (
 			`lha entry ${entry.name} exceeds ${MAX_LHA_ENTRY_BYTES} bytes`,
 		);
 	}
+	// a truncated archive refuses even for salvage: the bit reader would
+	// pad the gap with invented bytes
 	if (entry.dataOffset + entry.compressedSize > bytes.length) {
 		throw new CodecError(`lha data truncated for ${entry.name}`);
 	}
-	let out: Uint8Array;
-	if (entry.method === '-lh0-') {
-		out = bytes.slice(
-			entry.dataOffset,
-			entry.dataOffset + entry.compressedSize,
-		);
-	} else if (entry.method === '-lh5-') {
-		out = decodeLh5(bytes, entry);
-	} else {
+	if (entry.method !== '-lh0-' && entry.method !== '-lh5-') {
 		throw new CodecError(
 			`lha method ${entry.method} unsupported for ${entry.name}`,
 		);
 	}
+};
+
+/** stored bytes stop at the declared size; anything past it is not content */
+const decodeLha = (
+	bytes: Uint8Array,
+	entry: LhaEntry,
+	salvage: boolean,
+): Uint8Array =>
+	entry.method === '-lh0-'
+		? bytes.slice(
+				entry.dataOffset,
+				entry.dataOffset + Math.min(entry.compressedSize, entry.size),
+			)
+		: decodeLh5(bytes, entry, salvage);
+
+/** extract one entry's bytes (lh0 or lh5), CRC-verified */
+export const extractLhaEntry = (
+	bytes: Uint8Array,
+	entry: LhaEntry,
+): Uint8Array => {
+	checkLhaEntry(bytes, entry);
+	const out = decodeLha(bytes, entry, false);
 	if (out.length !== entry.size || crc16(out) !== entry.crc) {
 		throw new CodecError(`lha entry ${entry.name} is corrupt (crc mismatch)`);
 	}
 	return out;
+};
+
+/**
+ * Open an entry in spite of damage, for the arena browser: torn lh5
+ * streams open as far as they decode, and a CRC-16 mismatch opens with
+ * a warning.
+ */
+export const salvageLhaEntry = (
+	bytes: Uint8Array,
+	entry: LhaEntry,
+): Salvaged => {
+	checkLhaEntry(bytes, entry);
+	const out = decodeLha(bytes, entry, true);
+	return salvaged(entry.name, out, entry.size, crc16(out) === entry.crc);
 };

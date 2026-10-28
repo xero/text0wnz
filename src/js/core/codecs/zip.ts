@@ -1,14 +1,22 @@
 /**
  * Minimal ZIP reader for the 16colo.rs in-app browser: enough to open
  * one piece out of a scene pack zip fetched from the archive mirror.
- * Central-directory driven, store (0) and deflate (8) methods only,
- * inflated through the runtime-native
- * DecompressionStream('deflate-raw') like the other codecs; no
+ * Central-directory driven: store (0), deflate (8) through flate.ts,
+ * and the PKZIP 1.x shrink (1) and implode (6) older packs carry; no
  * dependency, no zip64, no encryption (scene packs are small flat
  * archives; anything else throws a CodecError).
  */
 
-import { CodecError, inflateRaw } from './util.js';
+import { cp437ToUnicode } from '../cp437.js';
+import {
+	CodecError,
+	Salvaged,
+	bytesToString,
+	crc32,
+	salvaged,
+} from './util.js';
+import { inflateRaw, inflateRawNative, inflateRawSalvage } from './flate.js';
+import { explode, unshrink } from './pkzip1.js';
 
 const EOCD_SIG = 0x06054b50;
 const CENTRAL_SIG = 0x02014b50;
@@ -28,37 +36,46 @@ export interface ZipEntry {
 	compressedSize: number;
 	size: number;
 	headerOffset: number;
+	/** general purpose flags; implode reads its window and trees here */
+	flags: number;
 	/** general purpose flag bit 0: contents are ciphertext */
 	encrypted: boolean;
 	/** central directory CRC-32, verified after extraction */
 	crc32: number;
 }
 
-// standard table-less CRC-32 (reflected, poly 0xEDB88320), the same
-// check lha.ts runs as CRC-16: bit-rotted packs fail loud instead of
-// opening as mojibake
-const crc32Of = (bytes: Uint8Array): number => {
-	let crc = 0xffffffff;
-	for (let i = 0; i < bytes.length; i++) {
-		crc ^= bytes[i];
-		for (let b = 0; b < 8; b++) {
-			crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+/**
+ * How names without the UTF-8 flag (bit 11) decode: DOS packers wrote
+ * cp437, amiga ones latin-1.
+ */
+export type ZipNameCharset = 'cp437' | 'latin1';
+
+const decodeName = (
+	bytes: Uint8Array,
+	flags: number,
+	charset: ZipNameCharset,
+): string => {
+	let name = '';
+	if (flags & 0x800) {
+		name = new TextDecoder('utf-8').decode(bytes);
+	} else if (charset === 'latin1') {
+		// true ISO-8859-1; TextDecoder('latin1') means windows-1252
+		name = bytesToString(bytes, 0, bytes.length);
+	} else {
+		for (const byte of bytes) {
+			name += String.fromCodePoint(cp437ToUnicode(byte));
 		}
 	}
-	return (crc ^ 0xffffffff) >>> 0;
-};
-
-const decodeName = (bytes: Uint8Array, flags: number): string =>
-	// bit 11 = UTF-8 name; everything else in old packs is cp437-ish,
-	// where latin1 keeps the bytes readable enough for matching.
 	// DOS-era packers wrote backslash separators, which defeated
 	// basename matching (lha.ts converts them; PabloDraw trims both)
-	new TextDecoder(flags & 0x800 ? 'utf-8' : 'latin1')
-		.decode(bytes)
-		.replaceAll('\\', '/');
+	return name.replaceAll('\\', '/');
+};
 
 /** parse the central directory into an entry list */
-export const readZipEntries = (bytes: Uint8Array): ZipEntry[] => {
+export const readZipEntries = (
+	bytes: Uint8Array,
+	charset: ZipNameCharset = 'cp437',
+): ZipEntry[] => {
 	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 	// EOCD: scan backward over the (max 64KB) trailing comment
 	const floor = Math.max(0, bytes.length - 65557);
@@ -99,7 +116,7 @@ export const readZipEntries = (bytes: Uint8Array): ZipEntry[] => {
 		}
 		const flags = view.getUint16(offset + 8, true);
 		const method = view.getUint16(offset + 10, true);
-		const crc32 = view.getUint32(offset + 16, true);
+		const checksum = view.getUint32(offset + 16, true);
 		const compressedSize = view.getUint32(offset + 20, true);
 		const size = view.getUint32(offset + 24, true);
 		const nameLength = view.getUint16(offset + 28, true);
@@ -117,24 +134,30 @@ export const readZipEntries = (bytes: Uint8Array): ZipEntry[] => {
 			name: decodeName(
 				bytes.subarray(offset + 46, offset + 46 + nameLength),
 				flags,
+				charset,
 			),
 			method,
 			compressedSize,
 			size,
 			headerOffset: headerOffset + displacement,
+			flags,
 			encrypted: (flags & 0x01) !== 0,
-			crc32,
+			crc32: checksum,
 		});
 		offset += 46 + nameLength + extraLength + commentLength;
 	}
 	return entries;
 };
 
-/** extract one entry's bytes (store or deflate) */
-export const extractZipEntry = async (
+/**
+ * An entry's compressed bytes. `short` marks an archive that ends
+ * before the entry does; the strict reader refuses it, salvage reads
+ * what is there.
+ */
+const locate = (
 	bytes: Uint8Array,
 	entry: ZipEntry,
-): Promise<Uint8Array> => {
+): { data: Uint8Array; short: boolean } => {
 	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 	if (entry.encrypted) {
 		// flag bit 0 was read but never tested: stored entries returned
@@ -150,6 +173,11 @@ export const extractZipEntry = async (
 			`zip entry ${entry.name} exceeds ${MAX_ZIP_ENTRY_BYTES} bytes`,
 		);
 	}
+	if (![0, 1, 6, 8].includes(entry.method)) {
+		throw new CodecError(
+			`zip method ${entry.method} unsupported for ${entry.name}`,
+		);
+	}
 	const at = entry.headerOffset;
 	if (at + 30 > bytes.length || view.getUint32(at, true) !== LOCAL_SIG) {
 		throw new CodecError(`zip local header missing for ${entry.name}`);
@@ -159,42 +187,118 @@ export const extractZipEntry = async (
 	const extraLength = view.getUint16(at + 28, true);
 	const start = at + 30 + nameLength + extraLength;
 	const end = start + entry.compressedSize;
-	if (end > bytes.length) {
-		throw new CodecError(`zip data truncated for ${entry.name}`);
-	}
-	const data = bytes.subarray(start, end);
-	const verified = (out: Uint8Array): Uint8Array => {
-		if (crc32Of(out) !== entry.crc32) {
-			throw new CodecError(`zip entry ${entry.name} failed its CRC-32`);
-		}
-		return out;
+	return {
+		data: bytes.subarray(start, Math.min(end, bytes.length)),
+		short: end > bytes.length,
 	};
-	if (entry.method === 0) {
-		return verified(data.slice());
-	}
-	if (entry.method !== 8) {
-		throw new CodecError(
-			`zip method ${entry.method} unsupported for ${entry.name}`,
-		);
-	}
-	const inflated = await inflateRaw(data, entry.size);
-	if (inflated.length !== entry.size) {
-		throw new CodecError(
-			`zip entry ${entry.name} inflated to ${inflated.length}, expected ${entry.size}`,
-		);
-	}
-	return verified(inflated);
 };
 
-/** find an entry by exact name, then by basename (packs may nest) */
+/**
+ * Store, shrink, and implode decode alike strict or salvaging; only the
+ * verdict differs. A stored entry is its own bytes, and anything past
+ * the declared size is not content.
+ */
+const decodeLocal = (
+	data: Uint8Array,
+	entry: ZipEntry,
+	salvage: boolean,
+): Uint8Array => {
+	if (entry.method === 0) {
+		return data.slice(0, entry.size);
+	}
+	return entry.method === 1
+		? unshrink(data, entry.size, salvage).out
+		: explode(data, entry.size, entry.flags, salvage).out;
+};
+
+/** extract one entry's bytes */
+export const extractZipEntry = async (
+	bytes: Uint8Array,
+	entry: ZipEntry,
+): Promise<Uint8Array> => {
+	const { data, short } = locate(bytes, entry);
+	if (short) {
+		throw new CodecError(`zip data truncated for ${entry.name}`);
+	}
+	const out =
+		entry.method === 8
+			? await inflateRaw(data, entry.size)
+			: decodeLocal(data, entry, false);
+	if (out.length !== entry.size) {
+		throw new CodecError(
+			`zip entry ${entry.name} inflated to ${out.length}, expected ${entry.size}`,
+		);
+	}
+	// bit-rotted packs fail loud instead of opening as mojibake
+	if (crc32(out) !== entry.crc32) {
+		throw new CodecError(`zip entry ${entry.name} failed its CRC-32`);
+	}
+	return out;
+};
+
+/**
+ * Open an entry in spite of damage, for the archive browsers: decades
+ * of copying have left bit rot in scene packs. Each entry decodes as far
+ * as its stream allows, and the checksum decides how much to trust it;
+ * deflate tries the fast native stream first and, only where that
+ * refuses or is missing, the plain inflater, which stops exactly where
+ * the damage starts.
+ * Encryption, oversize entries, and a missing local header still
+ * refuse, since there is nothing honest to show.
+ */
+export const salvageZipEntry = async (
+	bytes: Uint8Array,
+	entry: ZipEntry,
+): Promise<Salvaged> => {
+	const { data, short } = locate(bytes, entry);
+	let out: Uint8Array;
+	if (entry.method === 8) {
+		// a stream the engine decodes whole reads the same everywhere, so
+		// its bytes stand, checksum and all; where the engine refuses or
+		// has no stream, the plain inflater decodes what it can, once
+		const native = short ? null : await inflateRawNative(data, entry.size);
+		out = native ?? inflateRawSalvage(data, entry.size).bytes;
+	} else {
+		out = decodeLocal(data, entry, true);
+	}
+	return salvaged(entry.name, out, entry.size, crc32(out) === entry.crc32);
+};
+
+// every non-ASCII character becomes one wildcard slot
+const skeleton = (name: string): string =>
+	name.replace(/[^\x00-\x7f]/gu, '\u0000').toLowerCase();
+
+/** the whole name first, then the basename, as two separate passes */
+const PASSES = [
+	(entryName: string, wanted: string): boolean => entryName === wanted,
+	(entryName: string, wanted: string): boolean =>
+		entryName.endsWith(`/${wanted}`),
+];
+
+/**
+ * Find an entry by exact name, then by basename (packs may nest); an
+ * exact match beats an earlier nested one. A listing can spell high
+ * bytes in another codepage than the pack (the 16colo.rs API decodes
+ * them as CP866), so last passes let non-ASCII characters stand in for
+ * each other, and take only a unique fit.
+ */
 export const findZipEntry = (
 	entries: ZipEntry[],
 	name: string,
 ): ZipEntry | null => {
 	const lower = name.toLowerCase();
-	return (
-		entries.find(entry => entry.name.toLowerCase() === lower) ??
-		entries.find(entry => entry.name.toLowerCase().endsWith(`/${lower}`)) ??
-		null
-	);
+	for (const pass of PASSES) {
+		const hit = entries.find(entry => pass(entry.name.toLowerCase(), lower));
+		if (hit) {
+			return hit;
+		}
+	}
+	const wanted = skeleton(name);
+	for (const pass of PASSES) {
+		const fits = entries.filter(entry => pass(skeleton(entry.name), wanted));
+		if (fits.length) {
+			return fits.length === 1 ? fits[0] : null;
+		}
+	}
+	return null;
 };

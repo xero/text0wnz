@@ -132,12 +132,6 @@ docker run -e DOMAIN=text.example.com text0wnz:latest
 - SSL certificate generation
 - WebSocket endpoint configuration
 
-### SESSION_KEY
-
-**Default:** generated at boot (Docker only)
-
-**Purpose:** The Docker startup script generates and exports this value when it is not provided. The collaboration server does not read it; room access control uses `ROOM_PASS` and `ROOM_PASSWORDS` instead.
-
 ### ROOM_PASS
 
 **Default:** none
@@ -170,6 +164,16 @@ ROOM_PASSWORDS='{"room":"pw"}' bun server
 
 **Purpose:** Canvas resize walls. The walls gate resizes only; restored documents keep their size. Lowering them binds every client. Raising them above the defaults reaches only Moebius, moebiusXBIN, and icy_draw clients: the teXt0wnz editor refuses to apply a resize past 1000 by 10000 on its own side, so a raised wall splits a mixed room.
 
+### ROOM_MAX_GUESSES
+
+**Default:** `20`
+
+**Purpose:** A room's budget of wrong passwords from every address together, on top of each address's own backoff: a burst of N, then one more every 60 / N seconds. While it is spent, the room refuses every address that has not joined it, the right password included, so too low a number lets a few addresses keep newcomers out (at the default, about ten addresses guessing steadily can). An address that has joined with the right password still gets back in. Raise it for a big jam where many people might mistype at once; lower it to slow a guesser spread across many addresses. Anything but a positive whole number keeps the default.
+
+```bash
+ROOM_MAX_GUESSES=60 ROOM_PASS=hunter2 bun server
+```
+
 ### STATIC_DIR
 
 **Default:** none (WebSocket-only; a proxy serves static files)
@@ -188,6 +192,20 @@ ALLOWED_ORIGINS="https://text.0w.nz,https://staging.0w.nz" bun src/js/server/mai
 
 Desktop clients (Moebius, icy_draw) send no Origin header and always pass; the allowlist gates browsers only.
 
+### TRUST_PROXY
+
+**Default:** none (loopback only)
+
+**Purpose:** Comma-separated addresses of reverse proxies whose `X-Real-IP` or last `X-Forwarded-For` hop names the client. The password backoff keys on the client's address, so a proxy's own address would make every visitor share one backoff. Loopback is always trusted, which covers the Docker image's Caddy and any proxy on the same host. List a proxy that connects from another address, such as another container or a Docker bridge gateway, by its exact address; ranges do not match:
+
+```bash
+TRUST_PROXY=172.18.0.2 bun src/js/server/main.js
+```
+
+A trusted proxy must write the header itself, over whatever the visitor sent; the nginx, Apache, and Caddy examples in [webserver-configuration.md](./webserver-configuration.md) do. When both headers arrive and name different addresses, one was forged, so the request counts as the proxy's own. Headers from anyone else are ignored, or a guesser could forge a fresh address for every try.
+
+Only the proxy that connects to the server is consulted. With the Docker image behind another proxy, the image's Caddy is that proxy and names the outer one, so mount a Caddyfile that trusts the outer proxy and sends `{client_ip}` in both headers (see [docker.md](./docker.md)).
+
 ### BRIDGE
 
 Companions: `BRIDGE_TARGET`, `BRIDGE_PORT`, `BRIDGE_ALLOW`, `BRIDGE_MAX`.
@@ -201,7 +219,7 @@ Companions: `BRIDGE_TARGET`, `BRIDGE_PORT`, `BRIDGE_ALLOW`, `BRIDGE_MAX`.
 - `off` - every bridge request is refused (default)
 - `local` - only the preconfigured `BRIDGE_TARGET` is dialed
 - `port` - caller-chosen host pinned to `BRIDGE_PORT`; private addresses are denied
-- `allow` - only targets on the `BRIDGE_ALLOW` list (comma-separated `host:port`), dialed by name exactly as listed with no private-address check; list only hosts whose DNS you trust
+- `allow` - only targets on the `BRIDGE_ALLOW` list (comma-separated `host:port`). A listed address dials as given, private or not. A listed name dials the address it resolves to (an IPv4 one where there is one) with the name as its `Host`, and its first answer pins its kind (public, private, loopback, or link-local) for the life of the process; a later answer of another kind, or a mix of kinds, is refused
 
 The editor uses the bridge on its own. A page served over https that is asked to join a plaintext server dials `wss://<this host>/bridge?host=...&port=...&room=...` instead, since the browser blocks the direct socket as mixed content. With `BRIDGE=off` the dial fails and the Connect form tells the visitor the site may not allow it (the browser cannot tell a refusal from a dead host). The `port` mode fits a public editor host best: visitors pick the server, the port stays pinned, and private addresses are refused. Behind a reverse proxy, `/bridge` must be forwarded to the server like `/server` is; the Docker image and the examples in [webserver-configuration.md](./webserver-configuration.md) already do.
 

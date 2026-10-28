@@ -49,6 +49,16 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	// doc-level changes and undo/redo write a fresh keyframe.
 	// Collab sessions never journal; the server owns that doc.
 	const journal = createJournalStore();
+	// What the previous session left, read before this session can queue
+	// a keyframe over it: the restore runs after boot work that already
+	// keyframes the blank boot doc (its own setIceColors does), and the
+	// store runs calls in the order they arrive. Held until the restore
+	// takes it or is skipped, never on a clock: a slow boot (a background
+	// tab, a cold font load) may reach the restore minutes later
+	let bootJournal = journal.open().catch(error => {
+		console.warn('[Canvas] journal read failed:', error);
+		return null;
+	});
 	let keyframeTimer = null;
 	// The first keyframe of a session supersedes whatever the journal
 	// held before (a previous session, a torn tail): strokes may only
@@ -1350,7 +1360,13 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			// continuous zoom (pinch, wheel) relayouts every frame on GL;
 			// flashing the settings modal per frame would be unusable
 			const interactive = isInteractiveZoom();
-			if (!interactive) {
+			// the veil is a courtesy: it must not cover a modal someone is
+			// reading (a damaged file's note, an update prompt), since its
+			// close takes down whatever it covered
+			const veil =
+				!interactive &&
+				(!State.modal.isOpen() || State.modal.current() === 'loading');
+			if (veil) {
 				State.modal.loading('Updating editor with new settings...');
 			}
 			stopBlinkTimer();
@@ -1362,7 +1378,13 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			await new Promise(resolve => {
 				redrawEntireImage(null, () => {
 					updateTimer();
-					if (!interactive && !State.loadingFromStorage) {
+					// and it closes only itself: a modal opened mid-relayout
+					// stays up
+					if (
+						veil &&
+						!State.loadingFromStorage &&
+						State.modal.current() === 'loading'
+					) {
 						State.modal.close();
 					}
 					resolve();
@@ -1915,30 +1937,44 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	 * (see core/migrate.ts).
 	 */
 	/**
-	 * Restore source for state.js: replay the autosave journal and hand
-	 * back the NATIVE doc for setDocData. Projecting through v3ToU16
-	 * here flattened animations to frame 0 and dropped truecolor and
-	 * unicode, and the restore's own keyframe trigger then rewrote the
-	 * journal with the flattened doc, destroying the autosave. Returns
-	 * null when the journal is empty or unreadable (then the legacy
-	 * IndexedDB snapshot is the fallback).
+	 * Replays to the NATIVE doc for setDocData: projecting through
+	 * v3ToU16 would flatten animations to frame 0 and drop truecolor and
+	 * unicode, and the restore's own keyframe would then write that loss
+	 * back into the journal.
 	 */
-	const loadJournalSnapshot = async () => {
+	const snapshotOf = async bytes => {
+		if (!bytes || bytes.length === 0) {
+			return null;
+		}
+		const replay = await replayJournal(bytes);
+		return {
+			doc: replay.doc,
+			fontBytes: replay.fontBytes,
+			fontHeight: replay.fontHeight,
+		};
+	};
+
+	/**
+	 * Restore source for state.js: the journal exactly as the previous
+	 * session left it, whatever this session has written since. Taken
+	 * once; null (empty or unreadable) sends the restore to the legacy
+	 * IndexedDB snapshot.
+	 */
+	const loadBootSnapshot = async () => {
+		const pending = bootJournal;
+		bootJournal = null;
 		try {
-			const bytes = await journal.open();
-			if (!bytes || bytes.length === 0) {
-				return null;
-			}
-			const replay = await replayJournal(bytes);
-			return {
-				doc: replay.doc,
-				fontBytes: replay.fontBytes,
-				fontHeight: replay.fontHeight,
-			};
+			return await snapshotOf(await pending);
 		} catch (error) {
 			console.warn('[Canvas] journal restore failed:', error);
 			return null;
 		}
+	};
+
+	/** no restore is coming (no saved settings, a launch file instead):
+	 * the previous session's bytes need not live as long as the app */
+	const releaseBootSnapshot = () => {
+		bootJournal = null;
 	};
 
 	const getUndoHistory = () => null;
@@ -2042,7 +2078,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		getOnionSkin: () => onionSkin,
 		getBaudOffsets: getBaudOffsets,
 		setBaudReveal: setBaudReveal,
-		loadJournalSnapshot: loadJournalSnapshot,
+		loadBootSnapshot: loadBootSnapshot,
+		releaseBootSnapshot,
 		setMirrorMode: setMirrorMode,
 		getMirrorMode: getMirrorMode,
 		getMirrorX: getMirrorX,

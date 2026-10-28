@@ -11,7 +11,7 @@ The makers of the [teXt0wnz](https://github.com/xero/teXt0wnz) application value
 This application uses your device’s browser storage to save the following information:
 
 - **CANVAS_DATA**, **XBIN_FONT_DATA**: The raw drawing data for your current artwork, custom font data, and undo history (IndexedDB).
-- **AUTOSAVE_JOURNAL**: A rolling journal of your recent edits, used for crash recovery (origin private file system).
+- **AUTOSAVE_JOURNAL**: A rolling journal of your recent edits, used for crash recovery (origin private file system, or IndexedDB where the browser refuses it; a window that allows neither keeps it in memory only).
 - **FONT_NAME**, **PALETTE_COLORS**, **ICE_COLORS**, **LETTER_SPACING**, **SCALE_FACTOR**: Editor font and configuration settings to ensure a consistent experience (localStorage).
 - **FAVORITES**: Font favorites, recent colors, custom character sets, and plugin URLs (localStorage).
 - **HANDLE**, **GROUP**, **SEND_NOTIFICATION**, **RECENT_SERVERS**: Your chat handle, group, notification preference, and the last eight collaboration servers you typed into the Connect form (localStorage). Passwords are never stored.
@@ -41,6 +41,7 @@ When you opt into collaboration mode, the server processes the following data to
 - **CHAT_HISTORY**: Recent chat messages (handle, group, text, and timestamp), kept so new joiners see the conversation.
 - **CANVAS_DATA**: The shared raw drawing data for the collaborative session.
 - **FONT_NAME**, **PALETTE_COLORS**, **ICE_COLORS**, **LETTER_SPACING**, **XBIN_FONT_DATA**: Editor font and configuration settings shared for consistent rendering.
+- **CONNECTION_ADDRESS**, **USER_AGENT**: Read when your connection opens. The server keeps a salted hash of your address in memory, only for the password gate (to slow guessing, and to let you back in after a drop), and keeps nothing of your user agent but whether it names vanilla Moebius, which reads palettes differently. Neither is logged or written to disk, and the salt dies with the server process.
 
 **Data Handling Details:**
 

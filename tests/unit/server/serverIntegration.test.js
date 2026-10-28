@@ -12,6 +12,7 @@ import { spawn, execSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import http from 'node:http';
+import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { MoebiusAction as A } from '../../../src/js/core/index';
 
@@ -84,6 +85,58 @@ const nextFrame = (ws, wantType, timeoutMs = 5000) =>
 			clearTimeout(timer);
 			reject(new Error('socket error'));
 		});
+	});
+
+/**
+ * A raw websocket client, because the global WebSocket cannot set
+ * headers: it speaks as a loopback proxy forwarding `realIp`, sends one
+ * CONNECTED, and resolves the server's first frame.
+ */
+const connectForwarded = (room, data, realIp, toPort = port) =>
+	new Promise((resolve, reject) => {
+		const req = http.request({
+			host: '127.0.0.1',
+			port: toPort,
+			path: `/${room}`,
+			headers: {
+				'connection': 'Upgrade',
+				'upgrade': 'websocket',
+				'sec-websocket-version': '13',
+				'sec-websocket-key': randomBytes(16).toString('base64'),
+				'x-real-ip': realIp,
+			},
+		});
+		req.on('error', reject);
+		req.on('upgrade', (_res, socket) => {
+			const payload = Buffer.from(JSON.stringify({ type: 0, data }));
+			const mask = randomBytes(4);
+			// client frames are masked; these stay under 126 bytes
+			socket.write(
+				Buffer.concat([
+					Buffer.from([0x81, 0x80 | payload.length]),
+					mask,
+					payload.map((byte, i) => byte ^ mask[i % 4]),
+				]),
+			);
+			let buffered = Buffer.alloc(0);
+			socket.on('data', chunk => {
+				buffered = Buffer.concat([buffered, chunk]);
+				let length = buffered[1] & 0x7f;
+				let at = 2;
+				if (length === 126) {
+					length = buffered.readUInt16BE(2);
+					at = 4;
+				} else if (length === 127) {
+					length = Number(buffered.readBigUInt64BE(2));
+					at = 10;
+				}
+				if (buffered.length >= at + length) {
+					socket.destroy();
+					resolve(JSON.parse(buffered.subarray(at, at + length).toString()));
+				}
+			});
+		});
+		req.end();
 	});
 
 const connectClient = async (room, data) => {
@@ -302,6 +355,52 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 			}
 		},
 	);
+
+	it('behind a loopback proxy, each forwarded client keeps its own backoff', async () => {
+		// a guesser's failures cool down the guesser's address...
+		for (let i = 0; i < 4; i++) {
+			const reply = await connectForwarded('gatekeys', { nick: 'g', pass: 'wrong' }, '198.51.100.7');
+			expect(reply.type).toBe(A.REFUSED);
+		}
+		const blocked = await connectForwarded('gatekeys', { nick: 'g', pass: PASS }, '198.51.100.7');
+		expect(blocked.type).toBe(A.REFUSED);
+		// ...not the room: an artist at another address walks in
+		const artist = await connectForwarded('gatekeys', { nick: 'a', pass: PASS }, '198.51.100.8:40001');
+		expect(artist.type).toBe(A.CONNECTED);
+	});
+
+	it('ROOM_MAX_GUESSES sets the budget the pre-room gate spends', { timeout: 15000 }, async () => {
+		const cwd = mkdtempSync(path.join(tmpdir(), 't0wnz-guess-'));
+		const guessPort = 20000 + Math.floor(Math.random() * 20000);
+		const guessChild = spawn(
+			'bun',
+			[path.join(repoRoot, 'src/js/server/main.js'), String(guessPort), '--pass', PASS],
+			{
+				cwd,
+				stdio: ['ignore', 'pipe', 'pipe'],
+				env: { ...process.env, ROOM_MAX_GUESSES: '2' },
+			},
+		);
+		try {
+			await awaitListening(guessChild, `http://127.0.0.1:${guessPort}/healthz`, res => res.ok, 'guess server');
+			// an artist who joined before the trouble started
+			const early = await connectForwarded('budget', { nick: 'e', pass: PASS }, '198.51.100.9', guessPort);
+			expect(early.type).toBe(A.CONNECTED);
+			for (const ip of ['198.51.100.1', '198.51.100.2']) {
+				const reply = await connectForwarded('budget', { nick: 'g', pass: 'wrong' }, ip, guessPort);
+				expect(reply.type).toBe(A.REFUSED);
+			}
+			// one wrong guess each from two addresses spent the room's two
+			const late = await connectForwarded('budget', { nick: 'a', pass: PASS }, '198.51.100.3', guessPort);
+			expect(late.type).toBe(A.REFUSED);
+			// ...but the artist who already joined gets back in after a drop
+			const back = await connectForwarded('budget', { nick: 'e', pass: PASS }, '198.51.100.9', guessPort);
+			expect(back.type).toBe(A.CONNECTED);
+		} finally {
+			guessChild.kill('SIGKILL');
+			rmSync(cwd, { recursive: true, force: true });
+		}
+	});
 
 	it('an empty password refuses without counting toward the gate', async () => {
 		// the client's silent probe (nickless, no password) lands on a

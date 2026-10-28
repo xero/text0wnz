@@ -110,6 +110,7 @@ const createModalController = modal => {
 		$('loadingModal'),
 		$('warningModal'),
 		$('errorModal'),
+		$('noticeModal'),
 		$('tutorialsModal'),
 		// a missing section must not poison the arithmetic: queued()
 		// counts hidden sections against the list length, and a null
@@ -275,13 +276,17 @@ const createModalController = modal => {
 		open('loading');
 	};
 
-	const error = message => {
-		const el = $('modalError');
+	// both lines take markup: callers escape anything they did not write
+	const say = (name, id) => message => {
+		const el = $(id);
 		if (el) {
 			el.innerHTML = message;
 		}
-		open('error');
+		open(name);
 	};
+	const error = say('error', 'modalError');
+	// news that is not a failure, like a damaged file that still opened
+	const notice = say('notice', 'modalNotice');
 
 	const onClose = handler => {
 		cleanupHandler = handler;
@@ -303,6 +308,7 @@ const createModalController = modal => {
 		open: open,
 		close: close,
 		error: error,
+		notice,
 		focusEvents: focusEvents,
 		loading: loading,
 		onClose: onClose,
@@ -403,6 +409,10 @@ const onEnter = (el, fn) => {
 const onReturn = (el, target) => {
 	onEnter(el, () => target.click());
 };
+
+/** text bound for innerHTML (the modal's message lines take markup) */
+const escapeHtml = text =>
+	text.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c]);
 
 const onClick = (el, func) => {
 	const handler = e => {
@@ -1537,6 +1547,7 @@ export {
 	createGrid,
 	createToolPreview,
 	enforceMaxBytes,
+	escapeHtml,
 	createResolutionController,
 	createDragDropController,
 	createFontSelect,

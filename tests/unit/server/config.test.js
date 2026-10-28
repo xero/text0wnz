@@ -34,7 +34,9 @@ describe('Config Module - parseArgs', () => {
 			roomPasswords: {},
 			maxColumns: 0,
 			maxRows: 0,
+			maxGuesses: 0,
 			staticDir: '',
+			trustProxy: [],
 		});
 	});
 
@@ -126,7 +128,9 @@ describe('Config Module - parseArgs', () => {
 			roomPasswords: {},
 			maxColumns: 0,
 			maxRows: 0,
+			maxGuesses: 0,
 			staticDir: '',
+			trustProxy: [],
 		});
 	});
 
@@ -154,6 +158,34 @@ describe('Config Module - parseArgs', () => {
 			const config = parseArgs();
 			expect(config.maxColumns).toBe(0);
 			expect(config.maxRows).toBe(0);
+		});
+	});
+
+	describe('ROOM_MAX_GUESSES', () => {
+		afterEach(() => {
+			delete process.env.ROOM_MAX_GUESSES;
+		});
+
+		it('takes a positive whole number; anything else keeps the default', () => {
+			process.argv = ['node', 'server.js'];
+			process.env.ROOM_MAX_GUESSES = '60';
+			expect(parseArgs().maxGuesses).toBe(60);
+			for (const junk of ['lots', '0', '-3', '']) {
+				process.env.ROOM_MAX_GUESSES = junk;
+				expect(parseArgs().maxGuesses).toBe(0);
+			}
+		});
+	});
+
+	describe('TRUST_PROXY', () => {
+		afterEach(() => {
+			delete process.env.TRUST_PROXY;
+		});
+
+		it('lists proxy addresses, trimmed and unmapped', () => {
+			process.argv = ['node', 'server.js'];
+			process.env.TRUST_PROXY = ' 172.18.0.2 , ::ffff:10.0.0.5,, ';
+			expect(parseArgs().trustProxy).toEqual(['172.18.0.2', '10.0.0.5']);
 		});
 	});
 
