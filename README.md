@@ -381,7 +381,6 @@ bun www    # or npm run www
 - Customizable options via `.env` variables:
   - `VITE_DOMAIN='https://text.0w.nz'`
   - `VITE_UI_DIR='ui/'`
-  - `VITE_WORKER_FILE='websocket.js'`
 
 > [!IMPORTANT]
 > **`VITE_DOMAIN`** is _only_ used for robots.txt and sitemap.xml generation, **all app urls are relative**
@@ -470,7 +469,7 @@ node src/js/server/main.js
 | `--help`               | Show help message and usage examples             | -                  |
 
 > [!NOTE]
-> See: [docs/collaboration-server](docs/collaboration-server) for more info.
+> See: [docs/collaboration-server](docs/collaboration-server.md) for more info.
 
 ## Docker Containerization
 
@@ -526,13 +525,13 @@ The editor client will be available at http://localhost with WebSocket collabora
 
 ### Running in Production Mode
 
-For production deployments, use this configuration with your domain and a secure session key:
+For production deployments, use this configuration with your domain and a room password:
 
 ```sh
 docker run \
     --cap-add=NET_BIND_SERVICE \
     -e DOMAIN=your.cool.domain.tld \
-    -e SESSION_KEY=secure-production-key \
+    -e ROOM_PASS=secure-room-password \
     -e NODE_ENV=production \
     -p 80:80 -p 443:443 \
     text0wnz:latest

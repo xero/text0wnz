@@ -32,6 +32,16 @@ byte-exact golden tests before anything else moved.
   group, and reports a dead or refused dial in the form instead of
   hanging. From an https page a plaintext Moebius server routes
   through the host's bridge when `BRIDGE=port` is set.
+- **Rooms through one proxy rule.** `/server/<room>` reaches a named
+  room, so a deployment that already forwards `/server*` hosts every
+  room without a rule each.
+- **A bridge that keeps a ledger.** With `BRIDGE` on, every bridged
+  connection opened, closed, or refused logs with its time, the
+  requester's address, and the server asked for; the pipe bounds
+  itself (delivery confirmed by pings toward the server, progress
+  toward the browser, an idle reaper, timeouts), and a bad bridge
+  environment stops the boot with a sentence. The privacy and
+  security policies describe all of it.
 - **Minimap.** A live overview with a draggable viewport, on by
   default.
 - **Reference image.** Load an image over the canvas with opacity and
@@ -102,6 +112,10 @@ byte-exact golden tests before anything else moved.
   now stands down under a `local` label until you join.
 - **The bridge honors the Origin allowlist.** A foreign page could dial
   out through it when `ALLOWED_ORIGINS` was set.
+- **Nobody dials before consent.** A `?server=` link no longer makes
+  the host's bridge dial the named server on page load; the probe runs
+  direct from the browser or not at all, and the invitation names the
+  server.
 - **Move mode is transparent over blanks.** Moving a selection no
   longer stamps its empty cells over artwork: blanks (char 0, space,
   or nbsp on black, the same rule the paste modes use) let the art

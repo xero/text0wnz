@@ -61,6 +61,9 @@ tests/
 ├── gl/                            # Playwright WebGL renderer tests
 ├── perf/                          # Performance capture scripts
 ├── interop/                       # Cross-editor protocol interop tests
+│   ├── moebius.test.js            # vendored vanilla Moebius 1.0.29
+│   ├── moebiusxbin.test.js        # vendored moebiusXBIN 2.2.0
+│   └── fixtures/                  # the servers, shims, and launchers
 ├── corpus/                        # Round-trip generators
 ├── parity/                        # v2 reference engine for parity tests
 ├── baselines/                     # Performance baselines (JSON)
@@ -316,10 +319,10 @@ const debug = msg => {
 
 **network.test.js** - Network and collaboration
 
-- WebSocket connection
-- Message handling
-- Chat functionality
-- User session management
+- The probe and the launch invitation
+- The Connect form: address parsing, recent servers, refusals, dead and bridged dials, dismissal
+- Session adoption, palette depth, extension suite replay
+- Chat functionality and user sessions
 - Drawing synchronization
 
 **palette.test.js** - Color palette management
@@ -388,8 +391,19 @@ const debug = msg => {
 **collabWorker.test.js** - Collaboration transport worker
 
 - Worker RPC handling (init, probe, connect, send, draw)
-- Frame handling
-- Stale socket cleanup
+- Transport routing: direct or through the bridge, and a probe that never bridges
+- The dial timeout and the route carried on errors and closes
+- Frame handling and stale socket cleanup
+
+**collabTarget.test.js** - Server address grammar
+
+- Bare hosts, ports, rooms, explicit urls, v6 literals, rejections
+- Display spelling round trips
+- Transport resolution per page origin
+
+**recentList.test.js** - Recent lists
+
+- Tolerant reads, deduped and trimmed writes, storage failures
 
 **xbinPersistence.test.js** - XBin format persistence
 
@@ -438,11 +452,18 @@ const debug = msg => {
 **server/bridge.test.js** - Collaboration bridge
 
 - Bridge mode gating (off, local, port, allow)
-- Target address vetting
+- Target address vetting, strict ports, bounded lookups
+- Environment validation at boot
+- Pipe bounds: ping-confirmed delivery toward the server, progress toward the browser, the idle reaper
+
+**server/roomPath.test.js** - Path to room
+
+- The default room under every spelling, named rooms bare or behind `/server/`, the grammar
 
 **server/serverIntegration.test.js** - Server integration
 
-- WebSocket layer and room routing
+- Real sockets against a spawned server: routing, password gate and backoff, Origin allowlist
+- The bridge over real sockets, refusals without a reason in the body, audit lines
 
 **server/utils.test.js** - Server utilities
 
@@ -576,6 +597,30 @@ const spy = vi.spyOn(object, 'method');
 6. Avoid implementation details - test behavior
 7. Keep tests fast - unit tests should run quickly
 8. Clean up - remove event listeners, restore mocks
+
+## Interop (Upstream Servers)
+
+`tests/interop/` runs the codec and the client semantics against the
+real upstream servers, vendored verbatim: vanilla Moebius 1.0.29 (the
+one the scene runs) and moebiusXBIN 2.2.0. Each fixture directory holds
+the upstream `app/server.js` untouched, a minimal `libtextmode` shim
+with `compress`, `uncompress`, and `resize_canvas` transcribed from
+upstream and a `read_file` that returns a fresh document in that
+server's own palette shape (vanilla sends 6-bit `{r, g, b}` objects,
+the fork 8-bit), a no-op hourly saver, and a launcher.
+
+The launchers run under node and spawn locally per test run, never
+against a shared host. `FIXTURE_FONT_BYTES=1` makes the fork's fixture
+ship an embedded font as a node Buffer, which crosses the wire as Buffer
+JSON. The suites are part of `bun test:unit`. To boot one by hand:
+
+```sh
+node tests/interop/fixtures/moebius/start.js 8000        # joint at /fixture
+FIXTURE_FONT_BYTES=1 node tests/interop/fixtures/moebiusxbin/start.js 8001
+```
+
+The Chrome-only `tests/e2e/collabMoebius.spec.js` joins the vanilla
+fixture through the editor's Connect form and draws both ways.
 
 ## Testing Library (DOM/Component Testing)
 

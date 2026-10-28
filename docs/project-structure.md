@@ -163,6 +163,7 @@ src/js/client/
 ├── browserKit.js          # Shared widgets for the archive browsers
 ├── canvas.js              # 2D chunk renderer (fallback, ?renderer=2d)
 ├── charsetPicker.js       # Unicode charset picker modal
+├── collabTarget.js        # Collab server address grammar and transport choice
 ├── collabWorker.js        # Collaboration transport worker (Moebius frames)
 ├── colorPanel.js          # Extended color panel (xterm-256, RGB picker)
 ├── compression.js         # Data compression (RLE) for storage
@@ -181,11 +182,12 @@ src/js/client/
 ├── magicNumbers.js        # Constants and magic values
 ├── messageGuard.js        # Shared postMessage origin guard
 ├── minimap.js             # Whole-document minimap
-├── network.js             # Network layer with non-intrusive connection probe
+├── network.js             # Collab session, Connect form, and chat
 ├── palette.js             # Color palette management
 ├── plugins.js             # ES-module plugin surface
 ├── pointer.js             # Pointer Events input normalizer
 ├── profiler.js            # In-app profiling harness (lazy, ?profile)
+├── recentList.js          # Bounded recent list in localStorage
 ├── referenceImage.js      # Reference-image tracing overlay
 ├── scrollSpike.js         # Scroll measurement rig (lazy, ?spike)
 ├── sixteenColors.js       # 16colo.rs in-app browser
@@ -310,19 +312,27 @@ Located at `src/service.js` (root level, separate from client modules)
 - Character codes
 - Exports: Constant values
 
-**network.js** - Network Layer
+**network.js** - Collab Session
 
-- WebSocket client management
-- Worker initialization and state management
-- Non-intrusive connection testing
-- Connection state management
-- Message protocol handling
-- Canvas synchronization
-- Chat functionality with repositionable window
-- Server log message display (join/leave/nick)
-- Desktop notifications
-- Collaboration mode selection
+- Worker lifecycle and the silent same-origin probe
+- The launch invitation and the Connect form (server, password, handle, group, recent servers)
+- One attempt object per dial: adopt, refuse, dead socket, dismissal
+- Session adoption, extension suite negotiation, resync and timelapse requests
+- Remote cursors, chat window, server log lines, desktop notifications
 - Exports: `createWorkerHandler()`, `createChatController()`
+
+**collabTarget.js** - Server Addresses
+
+- Parses `host[:port][/room]` or a full `ws://`/`wss://` url the way Moebius's dialog does
+- Display spelling that round-trips, the room name for the bridge, the same-origin default
+- `resolveTransport()`: direct from plain pages, through the host's `/bridge` from https pages
+- Exports: `parseTarget()`, `formatTarget()`, `targetToUrl()`, `targetRoom()`, `defaultServerUrl()`, `resolveTransport()`
+
+**recentList.js** - Recent Lists
+
+- Bounded most-recent-first list in localStorage, tolerant of blocked or corrupt storage
+- Shared by the color panel's recent swatches and the Connect form's servers
+- Exports: `createRecentList()`
 
 **palette.js** - Color Management
 
@@ -431,6 +441,7 @@ src/js/server/
 - CLI argument processing
 - Server startup and room restoration
 - Autosave timer and shutdown saves (SIGINT and SIGTERM)
+- Validates the bridge environment at boot
 - Doubles as its own Docker healthcheck probe
 - Exports: None (executable)
 
@@ -444,8 +455,9 @@ src/js/server/
 **moebiusServer.js** - WebSocket Layer
 
 - Bun.serve HTTP/WebSocket listener (plus optional plaintext listener)
-- Path-based room routing (`/` and `/server` reach the default room)
-- Frame intake hardening, heartbeat, connection limits
+- Path-based room routing (`/` and `/server` reach the default room, `/server/<room>` and `/<room>` a named one)
+- Pre-room password gate with backoff, Origin allowlist, frame intake hardening, heartbeat, connection limits
+- The `/bridge` endpoint with an always-on audit line per open, close, and refusal
 - Optional static file serving and `/healthz`
 - Exports: `createMoebiusServer()`
 
@@ -467,7 +479,8 @@ src/js/server/
 **bridge.js** - Collaboration Bridge
 
 - Byte pipe from browser connections to plaintext desktop servers
-- Mode gating (`off`, `local`, `port`, `allow`) with address vetting
+- Mode gating (`off`, `local`, `port`, `allow`) with address vetting and bounded lookups
+- Delivery bounds in both directions (ping-confirmed toward the server, progress-based toward the browser), idle reaper, dial timeout
 - Exports: `createBridgePipe()`, `resolveBridgeTarget()`, `bridgeConfigFromEnv()`, `validateBridgeConfig()`, `isPrivateAddress()`, `vetResolvedAddresses()`
 
 **utils.js** - Utilities
@@ -531,6 +544,7 @@ tests/
 │   ├── asciiArena.test.js        # asciiarena.se browser tests
 │   ├── canvas.test.js            # Canvas module tests
 │   ├── canvasJournal.test.js     # Canvas autosave journal tests
+│   ├── collabTarget.test.js      # Server address grammar tests
 │   ├── collabWorker.test.js      # Collaboration worker tests
 │   ├── compression.test.js       # Compression tests
 │   ├── engineParity.test.js      # Engine parity tests
@@ -565,12 +579,14 @@ tests/
 │   ├── plugins.test.js           # Plugin surface tests
 │   ├── pointer.test.js           # Pointer input tests
 │   ├── pressure.test.js          # Pen pressure tests
+│   ├── recentList.test.js        # Recent list tests
 │   ├── referenceImage.test.js    # Reference image tests
 │   ├── server/                   # Server-specific tests
 │   │   ├── bridge.test.js        # Bridge tests
 │   │   ├── config.test.js        # Config tests
 │   │   ├── persistence.test.js   # Persistence tests
 │   │   ├── room.test.js          # Room protocol tests
+│   │   ├── roomPath.test.js      # Path to room mapping tests
 │   │   ├── serverIntegration.test.js # Server integration tests
 │   │   └── utils.test.js         # Server utils tests
 │   ├── service.test.js           # Service worker tests
@@ -611,7 +627,8 @@ tests/
 │   ├── helpers/                  # Shared E2E helpers
 │   ├── canvas.spec.js            # Canvas E2E tests
 │   ├── clipboard.spec.js         # Clipboard tests
-│   ├── collaboration.spec.js     # Collaboration tests
+│   ├── collaboration.spec.js     # Chat window tests (skip without a live session)
+│   ├── collabMoebius.spec.js     # Join a vanilla Moebius server through the Connect form
 │   ├── collabRoundTrip.spec.js   # Collaboration round-trip tests
 │   ├── editor-file-open-and-scroll.spec.js # File loading and scrolling
 │   ├── editor-keybinds.spec.js   # Keybind coverage
@@ -628,6 +645,9 @@ tests/
 ├── gl/                           # Playwright WebGL renderer tests
 ├── perf/                         # Performance capture scripts
 ├── interop/                      # Cross-editor protocol interop tests
+│   ├── moebius.test.js           # Against the vendored vanilla Moebius 1.0.29 server
+│   ├── moebiusxbin.test.js       # Against the vendored moebiusXBIN 2.2.0 server
+│   └── fixtures/                 # The vendored servers, their shims, and launchers
 ├── corpus/                       # Round-trip generators
 ├── parity/                       # v2 reference engine for parity tests
 ├── baselines/                    # Performance baselines (JSON)
