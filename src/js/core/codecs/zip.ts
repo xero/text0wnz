@@ -262,27 +262,37 @@ export const salvageZipEntry = async (
 const skeleton = (name: string): string =>
 	name.replace(/[^\x00-\x7f]/gu, '\u0000').toLowerCase();
 
-const sameName = (entryName: string, wanted: string): boolean =>
-	entryName === wanted || entryName.endsWith(`/${wanted}`);
+/** the whole name first, then the basename, as two separate passes */
+const PASSES = [
+	(entryName: string, wanted: string): boolean => entryName === wanted,
+	(entryName: string, wanted: string): boolean =>
+		entryName.endsWith(`/${wanted}`),
+];
 
 /**
- * Find an entry by exact name, then by basename (packs may nest). A
- * listing can spell high bytes in another codepage than the pack (the
- * 16colo.rs API decodes them as CP866), so a last pass lets non-ASCII
- * characters stand in for each other, and takes only a unique fit.
+ * Find an entry by exact name, then by basename (packs may nest); an
+ * exact match beats an earlier nested one. A listing can spell high
+ * bytes in another codepage than the pack (the 16colo.rs API decodes
+ * them as CP866), so last passes let non-ASCII characters stand in for
+ * each other, and take only a unique fit.
  */
 export const findZipEntry = (
 	entries: ZipEntry[],
 	name: string,
 ): ZipEntry | null => {
 	const lower = name.toLowerCase();
-	const exact = entries.find(entry =>
-		sameName(entry.name.toLowerCase(), lower),
-	);
-	if (exact) {
-		return exact;
+	for (const pass of PASSES) {
+		const hit = entries.find(entry => pass(entry.name.toLowerCase(), lower));
+		if (hit) {
+			return hit;
+		}
 	}
 	const wanted = skeleton(name);
-	const fits = entries.filter(entry => sameName(skeleton(entry.name), wanted));
-	return fits.length === 1 ? fits[0] : null;
+	for (const pass of PASSES) {
+		const fits = entries.filter(entry => pass(skeleton(entry.name), wanted));
+		if (fits.length) {
+			return fits.length === 1 ? fits[0] : null;
+		}
+	}
+	return null;
 };

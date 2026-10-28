@@ -110,6 +110,16 @@ describe('zip reader', () => {
 			);
 		});
 
+		it('prefers an exact name over an earlier nested one', async () => {
+			const zip = await buildZip([
+				{ name: 'ART/LOGO.ANS', data: Uint8Array.of(1), store: true },
+				{ name: 'LOGO.ANS', data: Uint8Array.of(2), store: true },
+			]);
+			expect(findZipEntry(readZipEntries(zip), 'logo.ans')?.name).toBe(
+				'LOGO.ANS',
+			);
+		});
+
 		it('refuses to guess between names that differ only in high bytes', async () => {
 			const zip = await buildZip([
 				{ name: '', rawName: raw('I', 0xee, '.TXT'), data: one, store: true },
