@@ -74,7 +74,8 @@ export const clientAddress = (peer, headers, trusted = []) => {
 	// append the true hop to X-Forwarded-For but pass a visitor's own
 	// X-Real-IP through, and an nginx that sets only X-Real-IP passes a
 	// forged X-Forwarded-For along. Two names that disagree mean one is
-	// forged, so the request counts as the proxy's own
+	// forged, so the request counts as the proxy's own (a Caddy behind
+	// another proxy must name the visitor in both; the docs say how)
 	if (named.length === 2 && named[0] !== named[1]) {
 		return from;
 	}

@@ -479,7 +479,8 @@ it. Behind a proxy that reaches the
 server from another address, list that exact address in `TRUST_PROXY`,
 or every visitor shares it and one guesser's backoff refuses them all.
 The Docker image behind another proxy needs a mounted Caddyfile that
-trusts the outer proxy (see [docker.md](./docker.md)).
+trusts the outer proxy and names the visitor in both headers (see
+[docker.md](./docker.md)).
 
 **Sessions do not survive a restart.** The server saves under its
 working directory; start it from the same place, and check that

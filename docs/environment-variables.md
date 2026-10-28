@@ -204,7 +204,7 @@ TRUST_PROXY=172.18.0.2 bun src/js/server/main.js
 
 A trusted proxy must write the header itself, over whatever the visitor sent; the nginx, Apache, and Caddy examples in [webserver-configuration.md](./webserver-configuration.md) do. When both headers arrive and name different addresses, one was forged, so the request counts as the proxy's own. Headers from anyone else are ignored, or a guesser could forge a fresh address for every try.
 
-Only the proxy that connects to the server is consulted. With the Docker image behind another proxy, the image's Caddy is that proxy and names the outer one, so mount a Caddyfile that trusts the outer proxy and sends `{client_ip}` (see [docker.md](./docker.md)).
+Only the proxy that connects to the server is consulted. With the Docker image behind another proxy, the image's Caddy is that proxy and names the outer one, so mount a Caddyfile that trusts the outer proxy and sends `{client_ip}` in both headers (see [docker.md](./docker.md)).
 
 ### BRIDGE
 
