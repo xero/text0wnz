@@ -123,6 +123,30 @@ describe('File Module', () => {
 	});
 
 	describe('Load Module', () => {
+		describe('fontForFile', () => {
+			it('lets a SAUCE font record outrank the scene default and an archive hint', () => {
+				expect(Load.fontForFile('release.nfo', 'IBM VGA', undefined)).toBe('CP437 8x16');
+				expect(Load.fontForFile('file_id.diz', 'IBM VGA', 'Topaz+ 1200')).toBe('CP437 8x16');
+			});
+
+			it('falls back to Topaz-437 for an NFO or DIZ without a font in its SAUCE', () => {
+				expect(Load.fontForFile('release.nfo', undefined, undefined)).toBe('Topaz-437 8x16');
+				expect(Load.fontForFile('FILE_ID.DIZ', '', undefined)).toBe('Topaz-437 8x16');
+				expect(Load.fontForFile('release.nfo', 'No Such Font', undefined)).toBe('Topaz-437 8x16');
+			});
+
+			it('lets an archive hint beat the scene default but not SAUCE', () => {
+				expect(Load.fontForFile('file_id.diz', undefined, 'Topaz+ 1200')).toBe('Topaz+ 1200');
+				expect(Load.fontForFile('art.ans', undefined, 'Topaz+ 1200')).toBe('Topaz+ 1200');
+			});
+
+			it('keeps the current font for plain files and leaves XB fonts alone', () => {
+				expect(Load.fontForFile('art.ans', undefined, undefined)).toBeNull();
+				expect(Load.fontForFile('art.ans', 'No Such Font', undefined)).toBeNull();
+				expect(Load.fontForFile('art.xb', 'IBM VGA', 'Topaz+ 1200')).toBeNull();
+			});
+		});
+
 		describe('Font Mapping Functions', () => {
 			it('should convert SAUCE font names to app font names', () => {
 				expect(Load.sauceToAppFont('IBM VGA')).toBe('CP437 8x16');

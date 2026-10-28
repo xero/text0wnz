@@ -103,6 +103,10 @@ byte-exact golden tests before anything else moved.
 
 ### Fixed
 
+- **SAUCE fonts win on NFO and DIZ files.** A scene file opened in
+  Topaz-437 even when its SAUCE record named a font; the default now
+  applies only to files whose SAUCE names none, and an archive
+  browser's font hint still beats that default.
 - **File Open lists every format it reads.** The picker's filter
   omitted TundraDraw, durdraw, and native `.0wnz` files, so the system
   dialog greyed them out while drag and drop opened them. The save

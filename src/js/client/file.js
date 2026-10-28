@@ -507,6 +507,36 @@ const loadModule = () => {
 		return text;
 	};
 
+	/**
+	 * The font an opened file should switch to, or null to keep the
+	 * current one. The author's SAUCE record outranks everything. Most
+	 * scene NFOs and DIZs carry no font in their SAUCE and were drawn in
+	 * Topaz-437, so they fall back to it; an archive browser's hint beats
+	 * that fallback (an amiga diz wants Topaz, not Topaz-437). XB files
+	 * carry their own font and ignore both.
+	 * @param {string} fileName
+	 * @param {string | undefined} sauceFontName
+	 * @param {string | undefined} hint
+	 */
+	const fontForFile = (fileName, sauceFontName, hint) => {
+		const lower = fileName.toLowerCase();
+		const ext = lower.split('.').pop();
+		if (ext === 'xb' || ext === 'xbin') {
+			return null;
+		}
+		const fromSauce = sauceToAppFont(sauceFontName?.trim());
+		if (fromSauce) {
+			return fromSauce;
+		}
+		if (hint) {
+			return hint;
+		}
+		if (lower.endsWith('.nfo') || lower.endsWith('.diz')) {
+			return magicNumbers.NFO_FONT;
+		}
+		return null;
+	};
+
 	const sauceToAppFont = sauceFontName => {
 		if (!sauceFontName) {
 			return null;
@@ -1176,6 +1206,7 @@ const loadModule = () => {
 	return {
 		file: file,
 		sauceToAppFont: sauceToAppFont,
+		fontForFile,
 		appToSauceFont: appToSauceFont,
 		resetSauceFlags: resetSauceFlags,
 	};
