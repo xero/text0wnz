@@ -257,8 +257,9 @@ const openHandler = (file, opts = {}) => {
 				viewport.scrollLeft = viewport.scrollTop = 0;
 			};
 
-			const closeModal = () => {
-				// a superseded open must not yank the winner's modal
+			const settleModal = () => {
+				// a superseded open must not yank the winner's modal, or
+				// speak over it
 				if (seq !== openSeq) {
 					return;
 				}
@@ -267,6 +268,11 @@ const openHandler = (file, opts = {}) => {
 				// loading modal after every file load
 				if (State.modal.isOpen() && State.modal.current() === 'loading') {
 					State.modal.close();
+				}
+				// a salvaged archive entry says what it lost once its art
+				// is on screen
+				if (opts.notice) {
+					State.modal.notice(escapeHtml(opts.notice));
 				}
 			};
 			// a stale open's font must never land on the winning doc
@@ -280,12 +286,12 @@ const openHandler = (file, opts = {}) => {
 					undefined,
 					fontWanted,
 				);
-				closeModal();
+				settleModal();
 				return; // setFont runs applyData
 			}
 			applyData();
 			palettePicker?.updatePalette();
-			closeModal();
+			settleModal();
 		},
 		{ ...opts, onError },
 	);
