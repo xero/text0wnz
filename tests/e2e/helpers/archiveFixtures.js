@@ -4,9 +4,11 @@
  */
 import { crc32, deflateRawSync, gzipSync } from 'node:zlib';
 
-/** the smallest zip the reader opens: one deflated entry */
-export const zipOf = (name, data) => {
-	const body = deflateRawSync(data);
+/**
+ * The smallest zip the reader opens: one deflated entry. `body` stands
+ * in a hand-built stream while the CRC and size still describe data.
+ */
+export const zipOf = (name, data, body = deflateRawSync(data)) => {
 	const file = Buffer.from(name);
 	const crc = crc32(data);
 	const local = Buffer.alloc(30);

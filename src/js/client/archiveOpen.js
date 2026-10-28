@@ -16,10 +16,10 @@ import {
 	isArchiveName,
 } from './browserKit.js';
 import {
-	extractLhaEntry,
-	extractZipEntry,
 	readLhaEntries,
 	readZipEntries,
+	salvageLhaEntry,
+	salvageZipEntry,
 } from '../core/index';
 
 const isArchiveFile = file => isArchiveName(file.name);
@@ -45,16 +45,17 @@ const createArchiveOpener = ({ openFile }) => {
 
 	const openEntry = async (bytes, entry, isZip) => {
 		try {
-			const data = isZip
-				? await extractZipEntry(bytes, entry)
-				: extractLhaEntry(bytes, entry);
+			// a damaged entry opens as far as it decodes, with a note
+			const { bytes: data, damage } = isZip
+				? await salvageZipEntry(bytes, entry)
+				: salvageLhaEntry(bytes, entry);
 			if (State.modal.current() === 'archive') {
 				State.modal.close();
 			}
-			openFile(
-				new File([data], baseName(entry.name)),
-				isZip ? {} : amigaImportHints(data),
-			);
+			openFile(new File([data], baseName(entry.name)), {
+				...(isZip ? {} : amigaImportHints(data)),
+				...(damage ? { notice: damage } : {}),
+			});
 		} catch (error) {
 			say(`could not open ${baseName(entry.name)}: ${error.message}`, true);
 			if (State.modal.current() !== 'archive') {

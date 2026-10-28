@@ -126,6 +126,42 @@ export const crc32 = (bytes: Uint8Array): number => {
 	return (crc ^ 0xffffffff) >>> 0;
 };
 
+/** An archive entry opened in spite of damage, and what to tell the artist. */
+export interface Salvaged {
+	bytes: Uint8Array;
+	/** null when the content is whole and its checksum agrees */
+	damage: string | null;
+}
+
+/**
+ * The verdict on a damaged entry: whole with a good checksum is clean
+ * (junk after the stream, or an engine bug, never touched the
+ * content), whole with a bad one opens with a warning, a partial one
+ * opens as far as it decoded, and nothing at all is a refusal.
+ */
+export const salvaged = (
+	name: string,
+	out: Uint8Array,
+	size: number,
+	checksumOk: boolean,
+): Salvaged => {
+	const base = name.split('/').pop() || name;
+	if (out.length === size && checksumOk) {
+		return { bytes: out, damage: null };
+	}
+	if (out.length === 0) {
+		throw new CodecError(`${base} is damaged beyond recovery`);
+	}
+	const count = (n: number): string => n.toLocaleString('en-US');
+	return {
+		bytes: out,
+		damage:
+			out.length === size
+				? `${base} failed its checksum and may show damage`
+				: `${base} is damaged: showing the first ${count(out.length)} of ${count(size)} bytes`,
+	};
+};
+
 /** UTF-8 bytes for one codepoint (v2 unicodeToArray port). */
 export const utf8Encode = (codepoint: number): number[] => {
 	if (codepoint < 0x80) {

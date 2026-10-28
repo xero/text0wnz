@@ -985,7 +985,17 @@ const loadModule = () => {
 		enforceMaxBytes();
 	};
 
-	const file = (file, callback, opts = {}) => {
+	const file = (file, onLoad, opts = {}) => {
+		// a damaged archive entry's note speaks once the load, loading
+		// modal and all, has finished
+		const callback = opts.notice
+			? async (...args) => {
+				await onLoad(...args);
+				State.modal?.error?.(
+					opts.notice.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c]),
+				);
+			}
+			: onLoad;
 		const reader = new FileReader();
 		// a corrupt file must surface instead of silently eating the
 		// callback: the caller holds load-state that would wedge

@@ -8,7 +8,9 @@ import {
 	extractZipEntry,
 	findZipEntry,
 	readZipEntries,
+	salvageZipEntry,
 } from '../../src/js/core/codecs/zip.js';
+import { CodecError } from '../../src/js/core/codecs/util.js';
 import { buildZip } from '../corpus/zipFixture.js';
 
 describe('zip reader', () => {
@@ -114,6 +116,87 @@ describe('zip reader', () => {
 				{ name: '', rawName: raw('I', 0xe0, '.TXT'), data: one, store: true },
 			]);
 			expect(findZipEntry(readZipEntries(zip), 'Iю.TXT')).toBeNull();
+		});
+	});
+
+	describe('salvage', () => {
+		const ascii = (text: string): Uint8Array =>
+			Uint8Array.from(text, c => c.charCodeAt(0));
+		// a stored deflate block: header byte, LEN, NLEN, then the bytes
+		const stored = (final: boolean, text: string): number[] => [
+			final ? 1 : 0,
+			text.length & 0xff,
+			text.length >> 8,
+			~text.length & 0xff,
+			(~text.length >> 8) & 0xff,
+			...ascii(text),
+		];
+		const only = async (file: {
+			name: string;
+			data: Uint8Array;
+			packed?: Uint8Array;
+		}) => {
+			const zip = await buildZip([file]);
+			return { zip, entry: readZipEntries(zip)[0] };
+		};
+
+		it('opens a clean entry without a note', async () => {
+			const data = ascii('clean piece '.repeat(40));
+			const { zip, entry } = await only({ name: 'OK.ANS', data });
+			const piece = await salvageZipEntry(zip, entry);
+			expect(piece.damage).toBeNull();
+			expect([...piece.bytes]).toEqual([...data]);
+		});
+
+		it('keeps what decoded before the stream breaks', async () => {
+			// a good stored block, then the reserved block type
+			const { zip, entry } = await only({
+				name: 'ROT.ANS',
+				data: ascii('GOOD PART, then the rot'),
+				packed: Uint8Array.from([...stored(false, 'GOOD PART'), 0xff, 0xff]),
+			});
+			await expect(extractZipEntry(zip, entry)).rejects.toThrow(CodecError);
+			const piece = await salvageZipEntry(zip, entry);
+			expect(String.fromCharCode(...piece.bytes)).toBe('GOOD PART');
+			expect(piece.damage).toBe(
+				'ROT.ANS is damaged: showing the first 9 of 23 bytes',
+			);
+		});
+
+		it('opens junk after a whole stream as clean', async () => {
+			const { zip, entry } = await only({
+				name: 'JUNK.ANS',
+				data: ascii('WHOLE'),
+				packed: Uint8Array.from([...stored(true, 'WHOLE'), 9, 9, 9]),
+			});
+			await expect(extractZipEntry(zip, entry)).rejects.toThrow(CodecError);
+			const piece = await salvageZipEntry(zip, entry);
+			expect(piece.damage).toBeNull();
+			expect(String.fromCharCode(...piece.bytes)).toBe('WHOLE');
+		});
+
+		it('warns when the content is whole but its checksum disagrees', async () => {
+			const { zip, entry } = await only({
+				name: 'CRC.ANS',
+				data: ascii('ABCD'),
+				packed: Uint8Array.from(stored(true, 'ABCE')),
+			});
+			const piece = await salvageZipEntry(zip, entry);
+			expect(String.fromCharCode(...piece.bytes)).toBe('ABCE');
+			expect(piece.damage).toBe(
+				'CRC.ANS failed its checksum and may show damage',
+			);
+		});
+
+		it('refuses when nothing decodes at all', async () => {
+			const { zip, entry } = await only({
+				name: 'GONE.ANS',
+				data: ascii('lost'),
+				packed: Uint8Array.of(0xff),
+			});
+			await expect(salvageZipEntry(zip, entry)).rejects.toThrow(
+				/beyond recovery/,
+			);
 		});
 	});
 });

@@ -25,9 +25,9 @@ import {
 	isOpenableName,
 } from './browserKit.js';
 import {
-	extractZipEntry,
 	findZipEntry,
 	readZipEntries,
+	salvageZipEntry,
 } from '../core/index';
 
 const API = 'https://api.16colo.rs/v1';
@@ -581,13 +581,14 @@ const createSixteenColors = ({ openFile, onExit }) => {
 			if (!entry) {
 				throw new Error(`${file.name} is not in ${zipName}`);
 			}
-			const bytes = await extractZipEntry(zip, entry);
+			// a damaged piece opens as far as it decodes, with a note
+			const { bytes, damage } = await salvageZipEntry(zip, entry);
 			if (!op.current()) {
 				return;
 			}
 			say(null);
 			State.modal.close();
-			openFile(new File([bytes], file.name));
+			openFile(new File([bytes], file.name), damage ? { notice: damage } : {});
 		} catch (error) {
 			if (op.current()) {
 				say(`could not open: ${error.message}`, true);

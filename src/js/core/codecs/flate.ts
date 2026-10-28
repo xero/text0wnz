@@ -257,7 +257,8 @@ const inflateAt = (
 	start: number,
 	maxBytes: number,
 	sizeHint: number,
-): { out: Uint8Array; end: number } => {
+	salvage = false,
+): { out: Uint8Array; end: number; damage: string | null } => {
 	const end = src.length * 8;
 	let pos = start * 8;
 	let out: Uint8Array = new Uint8Array(
@@ -268,109 +269,119 @@ const inflateAt = (
 	);
 	let o = 0;
 	let final = 0;
-	while (!final) {
-		if (pos + 3 > end) {
-			throw truncated();
-		}
-		final = bits9(src, pos, 1);
-		const type = bits9(src, pos + 1, 3);
-		pos += 3;
-		if (type === 0) {
-			let at = (pos + 7) >> 3;
-			if (at + 4 > src.length) {
+	try {
+		while (!final) {
+			if (pos + 3 > end) {
 				throw truncated();
 			}
-			const len = src[at] | (src[at + 1] << 8);
-			if (len !== (~(src[at + 2] | (src[at + 3] << 8)) & 0xffff)) {
-				throw new CodecError('deflate stored block length is corrupt');
-			}
-			at += 4;
-			if (at + len > src.length) {
-				throw truncated();
-			}
-			if (o + len > out.length) {
-				out = grow(out, o, o + len, maxBytes);
-			}
-			out.set(src.subarray(at, at + len), o);
-			o += len;
-			pos = (at + len) * 8;
-			continue;
-		}
-		let lit: Table;
-		let dist: Table;
-		if (type === 1) {
-			({ lit, dist } = fixedTables());
-		} else if (type === 2) {
-			({ lit, dist, pos } = readDynamic(src, pos, end));
-		} else {
-			throw new CodecError('deflate block type 3 is reserved');
-		}
-		const lmap = lit.map;
-		const lmask = lit.mask;
-		const dmap = dist.map;
-		const dmask = dist.mask;
-		for (;;) {
-			const entry = lmap[bits17(src, pos) & lmask];
-			if (!entry) {
-				throw new CodecError('deflate literal/length code is invalid');
-			}
-			pos += entry & 15;
-			const sym = entry >> 4;
-			if (sym < 256) {
-				if (pos > end) {
+			final = bits9(src, pos, 1);
+			const type = bits9(src, pos + 1, 3);
+			pos += 3;
+			if (type === 0) {
+				let at = (pos + 7) >> 3;
+				if (at + 4 > src.length) {
 					throw truncated();
 				}
-				if (o === out.length) {
-					out = grow(out, o, o + 1, maxBytes);
+				const len = src[at] | (src[at + 1] << 8);
+				if (len !== (~(src[at + 2] | (src[at + 3] << 8)) & 0xffff)) {
+					throw new CodecError('deflate stored block length is corrupt');
 				}
-				out[o++] = sym;
+				at += 4;
+				if (at + len > src.length) {
+					throw truncated();
+				}
+				if (o + len > out.length) {
+					out = grow(out, o, o + len, maxBytes);
+				}
+				out.set(src.subarray(at, at + len), o);
+				o += len;
+				pos = (at + len) * 8;
 				continue;
 			}
-			if (sym === 256) {
+			let lit: Table;
+			let dist: Table;
+			if (type === 1) {
+				({ lit, dist } = fixedTables());
+			} else if (type === 2) {
+				({ lit, dist, pos } = readDynamic(src, pos, end));
+			} else {
+				throw new CodecError('deflate block type 3 is reserved');
+			}
+			const lmap = lit.map;
+			const lmask = lit.mask;
+			const dmap = dist.map;
+			const dmask = dist.mask;
+			for (;;) {
+				const entry = lmap[bits17(src, pos) & lmask];
+				if (!entry) {
+					throw new CodecError('deflate literal/length code is invalid');
+				}
+				pos += entry & 15;
+				const sym = entry >> 4;
+				if (sym < 256) {
+					if (pos > end) {
+						throw truncated();
+					}
+					if (o === out.length) {
+						out = grow(out, o, o + 1, maxBytes);
+					}
+					out[o++] = sym;
+					continue;
+				}
+				if (sym === 256) {
+					if (pos > end) {
+						throw truncated();
+					}
+					break;
+				}
+				const li = sym - 257;
+				if (li > 28) {
+					throw new CodecError('deflate literal/length code is invalid');
+				}
+				let length = LEN_BASE[li];
+				if (LEN_EXTRA[li]) {
+					length += bits9(src, pos, (1 << LEN_EXTRA[li]) - 1);
+					pos += LEN_EXTRA[li];
+				}
+				const dentry = dmap[bits17(src, pos) & dmask];
+				const dsym = dentry >> 4;
+				if (!dentry || dsym > 29) {
+					throw new CodecError('deflate distance code is invalid');
+				}
+				pos += dentry & 15;
+				let distance = DIST_BASE[dsym];
+				if (DIST_EXTRA[dsym]) {
+					distance += bits17(src, pos) & ((1 << DIST_EXTRA[dsym]) - 1);
+					pos += DIST_EXTRA[dsym];
+				}
 				if (pos > end) {
 					throw truncated();
 				}
-				break;
-			}
-			const li = sym - 257;
-			if (li > 28) {
-				throw new CodecError('deflate literal/length code is invalid');
-			}
-			let length = LEN_BASE[li];
-			if (LEN_EXTRA[li]) {
-				length += bits9(src, pos, (1 << LEN_EXTRA[li]) - 1);
-				pos += LEN_EXTRA[li];
-			}
-			const dentry = dmap[bits17(src, pos) & dmask];
-			const dsym = dentry >> 4;
-			if (!dentry || dsym > 29) {
-				throw new CodecError('deflate distance code is invalid');
-			}
-			pos += dentry & 15;
-			let distance = DIST_BASE[dsym];
-			if (DIST_EXTRA[dsym]) {
-				distance += bits17(src, pos) & ((1 << DIST_EXTRA[dsym]) - 1);
-				pos += DIST_EXTRA[dsym];
-			}
-			if (pos > end) {
-				throw truncated();
-			}
-			if (distance > o) {
-				throw new CodecError('deflate distance reaches before the output');
-			}
-			if (o + length > out.length) {
-				out = grow(out, o, o + length, maxBytes);
-			}
-			// bytewise on purpose: an overlapping copy is how deflate
-			// spells a run
-			for (let from = o - distance, stop = o + length; o < stop; ) {
-				out[o++] = out[from++];
+				if (distance > o) {
+					throw new CodecError('deflate distance reaches before the output');
+				}
+				if (o + length > out.length) {
+					out = grow(out, o, o + length, maxBytes);
+				}
+				// bytewise on purpose: an overlapping copy is how deflate
+				// spells a run
+				for (let from = o - distance, stop = o + length; o < stop; ) {
+					out[o++] = out[from++];
+				}
 			}
 		}
+	} catch (error) {
+		// salvage keeps what decoded before the fault; strict callers
+		// hear about it
+		if (!salvage || !(error instanceof CodecError)) {
+			throw error;
+		}
+		return { out: out.slice(0, o), end: src.length, damage: error.message };
 	}
 	return {
 		out: o === out.length ? out : out.slice(0, o),
 		end: (pos + 7) >> 3,
+		damage: null,
 	};
 };
 
@@ -394,6 +405,25 @@ export const inflateRawSync = (
 		throw trailing('deflate stream');
 	}
 	return out;
+};
+
+/**
+ * Inflate for damaged archives: whatever decoded before the first
+ * fault, and the fault. Bytes after the final block are no fault here;
+ * the archive's own checksum decides whether the content is whole.
+ */
+export const inflateRawSalvage = (
+	bytes: Uint8Array,
+	maxBytes: number,
+): { bytes: Uint8Array; damage: string | null } => {
+	const { out, damage } = inflateAt(
+		bytes,
+		0,
+		maxBytes,
+		Math.min(maxBytes, bytes.length * MAX_RATIO),
+		true,
+	);
+	return { bytes: out, damage };
 };
 
 // -------------------------------------------------------------------- gzip

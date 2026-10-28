@@ -51,12 +51,14 @@ const crc32 = (bytes: Uint8Array): number => {
 /** build a real little zip with the given entries */
 export const buildZip = async (
 	// rawName writes the name bytes as-is without the UTF-8 flag, the way
-	// DOS and amiga packers did
+	// DOS and amiga packers did; packed stands in a hand-built deflate
+	// stream, while the CRC and size still describe data
 	files: Array<{
 		name: string;
 		data: Uint8Array;
 		store?: boolean;
 		rawName?: Uint8Array;
+		packed?: Uint8Array;
 	}>,
 ): Promise<Uint8Array> => {
 	const chunks: number[] = [];
@@ -69,7 +71,8 @@ export const buildZip = async (
 		const nameBytes = file.rawName ?? new TextEncoder().encode(file.name);
 		const flags = file.rawName ? 0 : 0x800;
 		const method = file.store ? 0 : 8;
-		const packed = file.store ? file.data : await deflateRaw(file.data);
+		const packed =
+			file.packed ?? (file.store ? file.data : await deflateRaw(file.data));
 		const offset = chunks.length;
 		push32(chunks, 0x04034b50);
 		push16(chunks, 20); // version needed

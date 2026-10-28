@@ -8,7 +8,7 @@
  * loud instead of rendering garbage.
  */
 
-import { CodecError } from './util.js';
+import { CodecError, Salvaged, salvaged } from './util.js';
 
 /**
  * Per-entry extraction cap, mirroring the zip reader: scene pieces are
@@ -333,7 +333,11 @@ const readLiteralLengths = (br: BitReader, temp: Huffman): Huffman => {
 	return buildHuffman(lens);
 };
 
-const decodeLh5 = (bytes: Uint8Array, entry: LhaEntry): Uint8Array => {
+const decodeLh5 = (
+	bytes: Uint8Array,
+	entry: LhaEntry,
+	salvage = false,
+): Uint8Array => {
 	const br = new BitReader(
 		bytes,
 		entry.dataOffset,
@@ -344,34 +348,42 @@ const decodeLh5 = (bytes: Uint8Array, entry: LhaEntry): Uint8Array => {
 	let block = 0;
 	let literals: Huffman | null = null;
 	let positions: Huffman | null = null;
-	while (o < out.length) {
-		if (block === 0) {
-			block = br.read(16);
+	try {
+		while (o < out.length) {
 			if (block === 0) {
-				throw new CodecError(`lha stream torn in ${entry.name}`);
+				block = br.read(16);
+				if (block === 0) {
+					throw new CodecError(`lha stream torn in ${entry.name}`);
+				}
+				const temp = readLengths(br, NT, 5, 3);
+				literals = readLiteralLengths(br, temp);
+				positions = readLengths(br, NP, 4, -1);
 			}
-			const temp = readLengths(br, NT, 5, 3);
-			literals = readLiteralLengths(br, temp);
-			positions = readLengths(br, NP, 4, -1);
+			block--;
+			const c = decodeSym(br, literals as Huffman);
+			if (c < 256) {
+				out[o++] = c;
+			} else {
+				const length = c - 256 + THRESHOLD;
+				let p = decodeSym(br, positions as Huffman);
+				if (p !== 0) {
+					p = (1 << (p - 1)) + br.read(p - 1);
+				}
+				let from = o - p - 1;
+				if (from < 0) {
+					throw new CodecError(`lha stream torn in ${entry.name}`);
+				}
+				for (let k = 0; k < length && o < out.length; k++) {
+					out[o++] = out[from++];
+				}
+			}
 		}
-		block--;
-		const c = decodeSym(br, literals as Huffman);
-		if (c < 256) {
-			out[o++] = c;
-		} else {
-			const length = c - 256 + THRESHOLD;
-			let p = decodeSym(br, positions as Huffman);
-			if (p !== 0) {
-				p = (1 << (p - 1)) + br.read(p - 1);
-			}
-			let from = o - p - 1;
-			if (from < 0) {
-				throw new CodecError(`lha stream torn in ${entry.name}`);
-			}
-			for (let k = 0; k < length && o < out.length; k++) {
-				out[o++] = out[from++];
-			}
+	} catch (error) {
+		// salvage keeps what decoded before the tear
+		if (salvage && error instanceof CodecError) {
+			return out.slice(0, o);
 		}
+		throw error;
 	}
 	return out;
 };
@@ -409,4 +421,33 @@ export const extractLhaEntry = (
 		throw new CodecError(`lha entry ${entry.name} is corrupt (crc mismatch)`);
 	}
 	return out;
+};
+
+/**
+ * Open an entry in spite of damage, for the arena browser: torn lh5
+ * streams open as far as they decode, and a CRC-16 mismatch opens with
+ * a warning. A truncated archive still refuses, since the bit reader
+ * would pad the gap with invented bytes.
+ */
+export const salvageLhaEntry = (
+	bytes: Uint8Array,
+	entry: LhaEntry,
+): Salvaged => {
+	try {
+		return { bytes: extractLhaEntry(bytes, entry), damage: null };
+	} catch (error) {
+		if (
+			entry.size > MAX_LHA_ENTRY_BYTES ||
+			entry.compressedSize > MAX_LHA_ENTRY_BYTES ||
+			entry.dataOffset + entry.compressedSize > bytes.length ||
+			(entry.method !== '-lh0-' && entry.method !== '-lh5-')
+		) {
+			throw error;
+		}
+	}
+	const out =
+		entry.method === '-lh0-'
+			? bytes.slice(entry.dataOffset, entry.dataOffset + entry.compressedSize)
+			: decodeLh5(bytes, entry, true);
+	return salvaged(entry.name, out, entry.size, crc16(out) === entry.crc);
 };
