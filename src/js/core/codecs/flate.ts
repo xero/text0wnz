@@ -43,8 +43,13 @@ const CL_ORDER = Uint8Array.from([
 
 const MAX_BITS = 15;
 
-/** deflate's ceiling: a 258-byte match can cost as little as 2 bits */
-const MAX_RATIO = 1032;
+/**
+ * Output buffers start at no more than this many times the input:
+ * enough for envelope and durdraw JSON in one allocation, while a
+ * forged ISIZE or entry size buys no more than that before the stream
+ * has to earn the rest by actually decoding.
+ */
+const PRESIZE_RATIO = 64;
 
 /**
  * Canonical codes from code lengths, bit-reversed: Huffman codes pack
@@ -398,7 +403,7 @@ export const inflateRawSync = (
 		maxBytes,
 		// a finite cap (the zip entry size) is the exact output size
 		Number.isFinite(maxBytes)
-			? Math.min(maxBytes, bytes.length * MAX_RATIO)
+			? Math.min(maxBytes, bytes.length * PRESIZE_RATIO)
 			: 0,
 	);
 	if (end !== bytes.length) {
@@ -420,7 +425,7 @@ export const inflateRawSalvage = (
 		bytes,
 		0,
 		maxBytes,
-		Math.min(maxBytes, bytes.length * MAX_RATIO),
+		Math.min(maxBytes, bytes.length * PRESIZE_RATIO),
 		true,
 	);
 	return { bytes: out, damage };
@@ -482,7 +487,7 @@ export const gunzipSync = (
 	const hint = Math.min(
 		maxBytes,
 		readLE32(bytes, bytes.length - 4),
-		bytes.length * MAX_RATIO,
+		bytes.length * PRESIZE_RATIO,
 	);
 	const { out, end } = inflateAt(bytes, body, maxBytes, hint);
 	if (end + GZIP_TRAILER_SIZE > bytes.length) {
@@ -747,8 +752,13 @@ export const gzip = async (bytes: Uint8Array): Promise<Uint8Array> => {
 			const out = await pumpThrough(bytes, stream);
 			// Safari 16.4 shipped a CompressionStream that cut large output
 			// short without an error, so native bytes ship only once they
-			// decode back to the input
-			if (sameBytes(gunzipSync(out, bytes.length), bytes)) {
+			// decode back to the input; a native decode keeps that cheap,
+			// and a cut-short stream cannot pass it
+			const check = nativeStream(globalThis.DecompressionStream, 'gzip');
+			const back = check
+				? await pumpThrough(out, check, bytes.length)
+				: gunzipSync(out, bytes.length);
+			if (sameBytes(back, bytes)) {
 				return out;
 			}
 		} catch {
