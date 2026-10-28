@@ -41,7 +41,7 @@ When you opt into collaboration mode, the server processes the following data to
 - **CHAT_HISTORY**: Recent chat messages (handle, group, text, and timestamp), kept so new joiners see the conversation.
 - **CANVAS_DATA**: The shared raw drawing data for the collaborative session.
 - **FONT_NAME**, **PALETTE_COLORS**, **ICE_COLORS**, **LETTER_SPACING**, **XBIN_FONT_DATA**: Editor font and configuration settings shared for consistent rendering.
-- **CONNECTION_ADDRESS**, **USER_AGENT**: Read when your connection opens. The server keeps a salted hash of your address in memory, only to slow password guessing, and keeps nothing of your user agent but whether it names vanilla Moebius, which reads palettes differently. Neither is logged or written to disk, and the salt dies with the server process.
+- **CONNECTION_ADDRESS**, **USER_AGENT**: Read when your connection opens. The server keeps a salted hash of your address in memory, only for the password gate (to slow guessing, and to let you back in after a drop), and keeps nothing of your user agent but whether it names vanilla Moebius, which reads palettes differently. Neither is logged or written to disk, and the salt dies with the server process.
 
 **Data Handling Details:**
 
