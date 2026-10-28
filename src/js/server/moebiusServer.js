@@ -57,6 +57,7 @@ export const roomNameFromPath = (pathname, defaultRoom) => {
  * @param {string[]} [config.trustProxy] proxies beyond loopback whose X-Real-IP or X-Forwarded-For names the client
  * @param {number} [config.maxColumns] resize wall override (0/absent = room default)
  * @param {number} [config.maxRows] resize wall override (0/absent = room default)
+ * @param {number} [config.maxGuesses] room guess budget override (0/absent = gate default)
  * @param {string} [config.staticDir] serve the built PWA from here ('' = ws-only)
  * @param {{mode: string, target: string, port: number, allow: string[], maxConnections: number}} [config.bridge]
  * @param {(room: ReturnType<typeof createRoom>) => void} [config.onRoomCreate]
@@ -108,7 +109,7 @@ export const createMoebiusServer = config => {
 			if (authGates.size >= AUTH_GATE_LIMIT) {
 				return null; // fail closed: a flood gets no fresh tries
 			}
-			gate = createAuthGate();
+			gate = createAuthGate({ budget: config.maxGuesses || undefined });
 			authGates.set(name, gate);
 		}
 		return gate;
@@ -128,6 +129,7 @@ export const createMoebiusServer = config => {
 				password: config.roomPasswords?.[name] ?? config.pass ?? '',
 				maxColumns: config.maxColumns || undefined,
 				maxRows: config.maxRows || undefined,
+				maxGuesses: config.maxGuesses || undefined,
 				log,
 			});
 			rooms.set(name, room);

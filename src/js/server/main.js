@@ -92,6 +92,7 @@ const server = createMoebiusServer({
 	trustProxy: config.trustProxy,
 	maxColumns: config.maxColumns,
 	maxRows: config.maxRows,
+	maxGuesses: config.maxGuesses,
 	staticDir: config.staticDir,
 	debug: config.debug,
 	bridge,

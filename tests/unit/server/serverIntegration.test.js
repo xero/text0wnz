@@ -92,11 +92,11 @@ const nextFrame = (ws, wantType, timeoutMs = 5000) =>
  * headers: it speaks as a loopback proxy forwarding `realIp`, sends one
  * CONNECTED, and resolves the server's first frame.
  */
-const connectForwarded = (room, data, realIp) =>
+const connectForwarded = (room, data, realIp, toPort = port) =>
 	new Promise((resolve, reject) => {
 		const req = http.request({
 			host: '127.0.0.1',
-			port,
+			port: toPort,
 			path: `/${room}`,
 			headers: {
 				'connection': 'Upgrade',
@@ -367,6 +367,33 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 		// ...not the room: an artist at another address walks in
 		const artist = await connectForwarded('gatekeys', { nick: 'a', pass: PASS }, '198.51.100.8:40001');
 		expect(artist.type).toBe(A.CONNECTED);
+	});
+
+	it('ROOM_MAX_GUESSES sets the budget the pre-room gate spends', { timeout: 15000 }, async () => {
+		const cwd = mkdtempSync(path.join(tmpdir(), 't0wnz-guess-'));
+		const guessPort = 20000 + Math.floor(Math.random() * 20000);
+		const guessChild = spawn(
+			'bun',
+			[path.join(repoRoot, 'src/js/server/main.js'), String(guessPort), '--pass', PASS],
+			{
+				cwd,
+				stdio: ['ignore', 'pipe', 'pipe'],
+				env: { ...process.env, ROOM_MAX_GUESSES: '2' },
+			},
+		);
+		try {
+			await awaitListening(guessChild, `http://127.0.0.1:${guessPort}/healthz`, res => res.ok, 'guess server');
+			for (const ip of ['198.51.100.1', '198.51.100.2']) {
+				const reply = await connectForwarded('budget', { nick: 'g', pass: 'wrong' }, ip, guessPort);
+				expect(reply.type).toBe(A.REFUSED);
+			}
+			// one wrong guess each from two addresses spent the room's two
+			const late = await connectForwarded('budget', { nick: 'a', pass: PASS }, '198.51.100.3', guessPort);
+			expect(late.type).toBe(A.REFUSED);
+		} finally {
+			guessChild.kill('SIGKILL');
+			rmSync(cwd, { recursive: true, force: true });
+		}
 	});
 
 	it('an empty password refuses without counting toward the gate', async () => {

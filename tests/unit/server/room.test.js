@@ -897,6 +897,15 @@ describe('review-pass regressions', () => {
 		}
 	});
 
+	it('ROOM_MAX_GUESSES sets the room budget every address shares', () => {
+		const room = createRoom({ password: 'pw', maxGuesses: 2 });
+		const from = who => ({ ...fakeClient(), who });
+		expect(room.connect(from('one'), { nick: 'a', pass: 'nope' })).toBe(false);
+		expect(room.connect(from('two'), { nick: 'b', pass: 'nope' })).toBe(false);
+		// two wrong guesses spent it: the room refuses even the right one
+		expect(room.connect(from('three'), { nick: 'c', pass: 'pw' })).toBe(false);
+	});
+
 	it('loadState keeps a dark 8-bit object palette exact', () => {
 		// what this server writes: {r,g,b} objects, 8-bit. All under 64
 		// here, which the wire heuristic would have brightened fourfold

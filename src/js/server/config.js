@@ -72,6 +72,9 @@ const parseArgs = () => {
 		// 0 = use room.js ROOM_DEFAULTS (1000x10000)
 		maxColumns: parseCapEnv(process.env.ROOM_MAX_COLUMNS),
 		maxRows: parseCapEnv(process.env.ROOM_MAX_ROWS),
+		// wrong passwords a room takes a minute from every address
+		// together; 0 = the auth gate's default (20)
+		maxGuesses: parseCapEnv(process.env.ROOM_MAX_GUESSES),
 		// serve the built PWA from this dir (single binary and the
 		// distroless image); '' = ws-only, a proxy serves static
 		staticDir: process.env.STATIC_DIR ?? '',

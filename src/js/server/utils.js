@@ -42,6 +42,8 @@ Environment:
   ROOM_MAX_COLUMNS      Canvas resize width wall (default 1000; raise or lower)
   ROOM_MAX_ROWS         Canvas resize height wall (default 10000; raise or lower)
                         Walls gate resizes only; restored docs keep their size
+  ROOM_MAX_GUESSES      Wrong passwords a room takes a minute, every address
+                        together (default 20)
   BRIDGE                off (default) | local | port | allow: relay browsers on
                         this host to plaintext desktop servers; every open,
                         close, and refusal is logged with the requester

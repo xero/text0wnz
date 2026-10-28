@@ -145,6 +145,7 @@ The container implements a robust startup sequence:
 | `TRUST_PROXY`      | Proxies beyond loopback whose `X-Real-IP` names the client                    | none (loopback only)  |
 | `ROOM_MAX_COLUMNS` | Canvas resize wall, columns                                                   | `1000`                |
 | `ROOM_MAX_ROWS`    | Canvas resize wall, rows                                                      | `10000`               |
+| `ROOM_MAX_GUESSES` | Wrong passwords a room takes a minute, every address together                 | `20`                  |
 
 The startup script hands its whole environment to the server, so every server variable in [environment-variables.md](./environment-variables.md) works here; the table lists the ones most deployments set.
 

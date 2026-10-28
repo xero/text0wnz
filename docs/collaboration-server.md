@@ -116,6 +116,8 @@ server reads:
 
 - `ROOM_PASS` and `ROOM_PASSWORDS` for passwords (the second is JSON, `{"room":"pw"}`).
 - `ALLOWED_ORIGINS` for the upgrade allowlist.
+- `ROOM_MAX_GUESSES` for the wrong passwords a room takes a minute from every address together (default 20).
+- `TRUST_PROXY` for proxies beyond loopback whose `X-Real-IP` names the client.
 - `ROOM_MAX_COLUMNS` and `ROOM_MAX_ROWS` for the canvas resize walls (default 1000 by 10000; restored documents keep their size). Lowering them binds every client; raising them reaches only desktop clients, since the teXt0wnz editor refuses a resize past 1000 by 10000 on its own side.
 - `STATIC_DIR` for the built PWA, the same as `--static`.
 - `BRIDGE`, `BRIDGE_TARGET`, `BRIDGE_PORT`, `BRIDGE_ALLOW`, and `BRIDGE_MAX` for the bridge; a bad combination stops the boot with a sentence.
@@ -175,14 +177,14 @@ password applies to spectators too. This is a deliberate difference
 from upstream Moebius, where a nickless connection bypasses the password
 and may draw.
 
-Wrong passwords back off per client: two tries stay free (humans
-typo), then the refusal window doubles up to 30 seconds for that
-client's address, so one guesser cannot hold a room shut against
-everyone else. Each room also takes at most 20 wrong guesses a minute
-from all addresses together, so many addresses still guess slowly. A
-blank password never counts; it is the shape of the editor's silent
-server probe, and counting it would lock a public room against its own
-password after a few page views.
+Wrong passwords back off per client: two tries stay free (humans typo),
+then the refusal window doubles up to 30 seconds for that client's
+address, so one guesser cannot hold a room shut against everyone else.
+Each room also takes at most 20 wrong guesses a minute from all
+addresses together (`ROOM_MAX_GUESSES`), so many addresses still guess
+slowly. A blank password never counts; it is the shape of the editor's
+silent server probe, and counting it would lock a public room against
+its own password after a few page views.
 
 The gate never holds an address. It keys on a hash under a salt the
 process mints at start, with IPv6 cut to its /64 (one subscriber holds
@@ -257,7 +259,7 @@ the newest one on disk.
 | Operation log     | 10,000 operations or 8 MB per room, the timelapse substrate; older operations fold into a baseline                                                                                       |
 | Chat history      | 128 lines                                                                                                                                                                                |
 | SAUCE fields      | Title 35, author 20, group 20, comments 4096, font name 100 characters                                                                                                                   |
-| Auth gate         | 4096 room names with a pending backoff, fresh names refused while it is full; per room, 20 wrong guesses a minute across all addresses                                                   |
+| Auth gate         | 4096 room names with a pending backoff, fresh names refused while it is full; per room, 20 wrong guesses a minute across all addresses (`ROOM_MAX_GUESSES`)                              |
 
 Malformed frames are dropped with a log line, never a crash, which the
 upstream servers do not survive. Frames before `CONNECTED` are dropped.

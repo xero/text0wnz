@@ -86,6 +86,18 @@ describe('createAuthGate', () => {
 		expect(gate.open('fresh', 60_000 / AUTH_ROOM_BUDGET)).toBe(true);
 	});
 
+	it('an operator budget replaces the default, refill rate and all', () => {
+		const gate = createAuthGate({ budget: 3 });
+		for (let i = 0; i < 3; i++) {
+			gate.fail(`bot${i}`, 0);
+		}
+		expect(gate.open('fresh', 0)).toBe(false);
+		expect(gate.open('fresh', 19_999)).toBe(false);
+		expect(gate.open('fresh', 20_000)).toBe(true);
+		expect(gate.idle(60_000)).toBe(false); // the bots' keys linger
+		expect(gate.idle(200_000)).toBe(true);
+	});
+
 	it('a full gate sheds keys gone quiet instead of refusing newcomers', () => {
 		const gate = createAuthGate();
 		// the budget admits a failure every 60 / budget seconds, so a

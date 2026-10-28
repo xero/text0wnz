@@ -34,6 +34,7 @@ describe('Config Module - parseArgs', () => {
 			roomPasswords: {},
 			maxColumns: 0,
 			maxRows: 0,
+			maxGuesses: 0,
 			staticDir: '',
 			trustProxy: [],
 		});
@@ -127,6 +128,7 @@ describe('Config Module - parseArgs', () => {
 			roomPasswords: {},
 			maxColumns: 0,
 			maxRows: 0,
+			maxGuesses: 0,
 			staticDir: '',
 			trustProxy: [],
 		});
@@ -156,6 +158,22 @@ describe('Config Module - parseArgs', () => {
 			const config = parseArgs();
 			expect(config.maxColumns).toBe(0);
 			expect(config.maxRows).toBe(0);
+		});
+	});
+
+	describe('ROOM_MAX_GUESSES', () => {
+		afterEach(() => {
+			delete process.env.ROOM_MAX_GUESSES;
+		});
+
+		it('takes a positive whole number; anything else keeps the default', () => {
+			process.argv = ['node', 'server.js'];
+			process.env.ROOM_MAX_GUESSES = '60';
+			expect(parseArgs().maxGuesses).toBe(60);
+			for (const junk of ['lots', '0', '-3', '']) {
+				process.env.ROOM_MAX_GUESSES = junk;
+				expect(parseArgs().maxGuesses).toBe(0);
+			}
 		});
 	});
 
