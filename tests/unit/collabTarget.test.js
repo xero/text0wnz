@@ -72,6 +72,17 @@ describe('parseTarget', () => {
 		});
 	});
 
+	it('collapses doubled slashes so one spelling means one room', () => {
+		expect(parseTarget('jam.example//lounge').path).toBe('/lounge');
+		expect(parseTarget('jam.example/lounge//').path).toBe('/lounge');
+		expect(parseTarget('ws://jam.example:1337//').path).toBe('');
+	});
+
+	it('rejects a typed :0 instead of reading it as a default', () => {
+		expect(parseTarget('jam.example:0')).toBeNull();
+		expect(parseTarget('wss://jam.example:0')).toBeNull();
+	});
+
 	it('rejects blanks, junk, and non-strings', () => {
 		expect(parseTarget('')).toBeNull();
 		expect(parseTarget('   ')).toBeNull();

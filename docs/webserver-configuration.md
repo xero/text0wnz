@@ -110,7 +110,7 @@ server {
     }
 
     # The bridge: browsers on this https page reach plaintext desktop
-    # servers through it (BRIDGE=port on the server enables it). No
+    # servers through it (the BRIDGE env on the server enables it). No
     # trailing slash: the path and query must arrive intact
     location /bridge {
         proxy_http_version 1.1;
@@ -145,7 +145,7 @@ sudo systemctl reload nginx
 - `proxy_pass` must match your collaboration server port
 - The trailing slash in `http://localhost:1337/` strips the `/server` prefix before the request reaches the server; the server maps both `/` and `/server` to the default room, so either form works
 - Rooms are path-based: `/server/roomname` reaches a named room through this same location, so no rule per room is needed
-- The `/bridge` location is what lets browsers on your https page join plaintext Moebius servers; it does nothing until the server runs with `BRIDGE=port` (see [Environment Variables](./environment-variables.md))
+- The `/bridge` location is what lets browsers on your https page join plaintext Moebius servers; it does nothing until the server runs with `BRIDGE` set to `port`, `allow`, or `local` (see [Environment Variables](./environment-variables.md))
 - WebSocket upgrade headers are essential
 - Long timeout (86400 = 24 hours) for persistent connections
 

@@ -24,6 +24,7 @@ export default [
 			ecmaVersion: 2022,
 			sourceType: 'module',
 			globals: {
+				AbortSignal: 'readonly',
 				// Unrecognized browser environment / APIs
 				AbortController: 'readonly',
 				Blob: 'readonly',

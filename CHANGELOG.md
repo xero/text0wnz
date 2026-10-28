@@ -31,7 +31,9 @@ byte-exact golden tests before anything else moved.
   own dialog does, remembers recent servers, your handle, and your
   group, and reports a dead or refused dial in the form instead of
   hanging. From an https page a plaintext Moebius server routes
-  through the host's bridge when `BRIDGE=port` is set.
+  through the host's bridge once the operator turns it on
+  (`BRIDGE=port` reaches any public server; `allow` and `local` pin
+  the destinations).
 - **Rooms through one proxy rule.** `/server/<room>` reaches a named
   room, so a deployment that already forwards `/server*` hosts every
   room without a rule each.

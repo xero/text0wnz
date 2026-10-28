@@ -30,7 +30,7 @@ const spawned = [];
 
 const bootFixture = (port, pass) =>
 	new Promise((resolve, reject) => {
-		const child = spawn('node', [fixture, String(port), pass ?? ''], { stdio: ['ignore', 'pipe', 'pipe']});
+		const child = spawn('node', [fixture, String(port), pass ?? ''], { stdio: ['ignore', 'pipe', 'inherit']});
 		// tracked from the spawn: a boot that times out, or a sibling that
 		// fails inside Promise.all, must still be killed in afterAll
 		spawned.push(child);

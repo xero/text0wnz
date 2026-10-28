@@ -439,7 +439,7 @@ Enable real-time multi-user editing with the built-in server, or join someone el
 
 **Joining a server:**
 
-Click the `local` button in the sauce panel and type the server as `host:port/room`, the way Moebius's own dialog reads it. Vanilla Moebius servers are plaintext, so from an https page the editor goes through the host's bridge when `BRIDGE=port` is set. See [docs/collab-protocol-migration](docs/collab-protocol-migration.md).
+Click the `local` button in the sauce panel and type the server as `host:port/room`, the way Moebius's own dialog reads it. Vanilla Moebius servers are plaintext, so from an https page the editor goes through the host's bridge once the operator turns it on (`BRIDGE=port` reaches any public server; `allow` and `local` pin the destinations). See [docs/collab-protocol-migration](docs/collab-protocol-migration.md).
 
 **Starting the server:**
 

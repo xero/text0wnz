@@ -12,6 +12,36 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
+/**
+ * Polls `url` until `ready(res)` holds, racing the child's own exit: a
+ * taken port fails at once with the server's words instead of a 15
+ * second poll against whatever squats there.
+ */
+const awaitListening = async (child, url, ready, label) => {
+	let exit = null;
+	let stderr = '';
+	child.stderr?.on('data', chunk => (stderr += chunk));
+	child.once('exit', code => (exit = code ?? 'signal'));
+	const deadline = Date.now() + 15000;
+	for (;;) {
+		if (exit !== null) {
+			throw new Error(`${label} exited ${exit}: ${stderr.trim()}`);
+		}
+		try {
+			const res = await fetch(url, { signal: AbortSignal.timeout(1000) });
+			if (ready(res)) {
+				return;
+			}
+		} catch {
+			// not up yet
+		}
+		if (Date.now() > deadline) {
+			throw new Error(`${label} did not come up`);
+		}
+		await new Promise(r => setTimeout(r, 150));
+	}
+};
+
 const repoRoot = path.resolve(import.meta.dirname, '../..');
 const hasBun = (() => {
 	try {
@@ -37,21 +67,7 @@ test.beforeAll(async () => {
 		[path.join(repoRoot, 'src/js/server/main.js'), String(port)],
 		{ cwd: scratch, stdio: ['ignore', 'pipe', 'pipe']},
 	);
-	const deadline = Date.now() + 15000;
-	for (;;) {
-		try {
-			const res = await fetch(`http://127.0.0.1:${port}/`);
-			if (res.status === 426) {
-				break;
-			}
-		} catch {
-			// not up yet
-		}
-		if (Date.now() > deadline) {
-			throw new Error('collab server did not come up');
-		}
-		await new Promise(r => setTimeout(r, 150));
-	}
+	await awaitListening(child, `http://127.0.0.1:${port}/`, res => res.status === 426, 'collab server');
 });
 
 test.afterAll(() => {
@@ -275,21 +291,7 @@ test.describe('collab round trip against a live server', () => {
 			},
 		);
 		try {
-			const deadline = Date.now() + 15000;
-			for (;;) {
-				try {
-					const res = await fetch(`http://127.0.0.1:${wallPort}/healthz`);
-					if (res.ok) {
-						break;
-					}
-				} catch {
-					// not up yet
-				}
-				if (Date.now() > deadline) {
-					throw new Error('walled server did not come up');
-				}
-				await new Promise(r => setTimeout(r, 150));
-			}
+			await awaitListening(walled, `http://127.0.0.1:${wallPort}/healthz`, res => res.ok, 'walled server');
 			const context = await browser.newContext();
 			const page = await context.newPage();
 			await page.addInitScript(() => {
