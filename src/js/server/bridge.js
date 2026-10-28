@@ -121,6 +121,11 @@ export const addressKind = ip => {
  */
 export const isPrivateAddress = ip => addressKind(ip) !== 'public';
 
+/** an IPv4 answer first when the name has one: a host with no v6 route
+ * (many containers) cannot dial an AAAA the resolver listed first
+ * @param {string[]} addresses */
+const preferV4 = addresses => addresses.find(a => isIP(a) === 4) ?? addresses[0];
+
 /**
  * Pure vet of already-resolved addresses (unit-tested without DNS):
  * ALL addresses must be public or the target is refused, so a name
@@ -136,7 +141,7 @@ export const vetResolvedAddresses = addresses => {
 			return { ok: false, reason: `private address ${address}` };
 		}
 	}
-	return { ok: true, address: addresses[0] };
+	return { ok: true, address: preferV4(addresses) };
 };
 
 /**
@@ -149,7 +154,9 @@ export const vetResolvedAddresses = addresses => {
  * @param {{host?: string | null, port?: string | number | null, room?: string | null}} requested
  * @param {(host: string) => Promise<string[]>} [resolveHost]
  * @param {number} [lookupTimeoutMs] a stalled resolver must not pin a slot
- * @returns {Promise<{ok: true, url: string} | {ok: false, reason: string}>}
+ * @returns {Promise<{ok: true, url: string, hostHeader?: string} | {ok: false, reason: string}>}
+ *   `hostHeader` names the host the caller asked for: the dial goes to
+ *   the checked address, and a name-routed upstream still sees the name
  */
 export const resolveBridgeTarget = async (
 	config,
@@ -204,7 +211,11 @@ export const resolveBridgeTarget = async (
 		const dialHost = vet.address.includes(':')
 			? `[${vet.address}]`
 			: vet.address;
-		return { ok: true, url: `ws://${dialHost}:${port}/${room}` };
+		return {
+			ok: true,
+			url: `ws://${dialHost}:${port}/${room}`,
+			...(isIP(host) ? {} : { hostHeader: `${host}:${port}` }),
+		};
 	}
 	if (mode === 'allow') {
 		const entry = `${host}:${asked ?? ''}`;
@@ -236,10 +247,13 @@ export const resolveBridgeTarget = async (
 			return { ok: false, reason: `${host} resolved ${kind}, pinned ${pinned}` };
 		}
 		// dial the checked address: a rebind between check and dial is moot
-		const dialHost = addresses[0].includes(':')
-			? `[${addresses[0]}]`
-			: addresses[0];
-		return { ok: true, url: `ws://${dialHost}:${asked}/${room}` };
+		const address = preferV4(addresses);
+		const dialHost = address.includes(':') ? `[${address}]` : address;
+		return {
+			ok: true,
+			url: `ws://${dialHost}:${asked}/${room}`,
+			hostHeader: `${host}:${asked}`,
+		};
 	}
 	return { ok: false, reason: `unknown bridge mode ${mode}` };
 };
@@ -357,7 +371,7 @@ export const BRIDGE_TICK_MS = 1000;
  * @param {object} browserWs the server-side socket (close, send, getBufferedAmount)
  * @param {string} targetUrl
  * @param {(line: string) => void} [log]
- * @param {{idleMs?: number, backpressureLimit?: number, stallMs?: number}} [options]
+ * @param {{idleMs?: number, backpressureLimit?: number, stallMs?: number, hostHeader?: string}} [options]
  */
 export const createBridgePipe = (browserWs, targetUrl, log = () => {}, options = {}) => {
 	const idleMs = options.idleMs ?? BRIDGE_IDLE_MS;
@@ -455,7 +469,11 @@ export const createBridgePipe = (browserWs, targetUrl, log = () => {}, options =
 	const ticker = setInterval(tick, Math.min(BRIDGE_TICK_MS, idleMs));
 
 	try {
-		upstream = new WebSocket(targetUrl);
+		// Bun's client takes a Host override: the dial goes to the checked
+		// address while a name-routed upstream still sees the name asked
+		upstream = options.hostHeader
+			? new WebSocket(targetUrl, { headers: { Host: options.hostHeader } })
+			: new WebSocket(targetUrl);
 	} catch (error) {
 		log(`bridge dial failed: ${String(error)}`);
 		closeBoth();

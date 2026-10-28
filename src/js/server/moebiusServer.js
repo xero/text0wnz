@@ -185,7 +185,7 @@ export const createMoebiusServer = config => {
 			if (ws.data.kind === 'bridge') {
 				bridgeCount++;
 				audit(`bridge open ${ws.data.requester} -> ${ws.data.targetUrl}`);
-				ws.data.pipe = createBridgePipe(ws, ws.data.targetUrl, log);
+				ws.data.pipe = createBridgePipe(ws, ws.data.targetUrl, log, { hostHeader: ws.data.hostHeader });
 				// the heartbeat reaps a dead browser side like any socket
 				sockets.add(ws);
 				return;
@@ -465,7 +465,15 @@ export const createMoebiusServer = config => {
 				return new Response('bridge refused', { status: 403 });
 			}
 			if (
-				server.upgrade(req, { data: { kind: 'bridge', targetUrl: vet.url, requester, alive: true } })
+				server.upgrade(req, {
+					data: {
+						kind: 'bridge',
+						targetUrl: vet.url,
+						hostHeader: vet.hostHeader,
+						requester,
+						alive: true,
+					},
+				})
 			) {
 				return undefined;
 			}

@@ -125,10 +125,12 @@ describe('resolveBridgeTarget', () => {
 			{ host: 'tiles.example', port: '8000', room: 'lounge' },
 			resolver,
 		);
-		// the dial uses the RESOLVED ip (rebinding moot)
+		// the dial uses the RESOLVED ip (rebinding moot), and the name rides
+		// along as Host for a name-routed upstream
 		expect(result).toEqual({
 			ok: true,
 			url: 'ws://93.184.216.34:8000/lounge',
+			hostHeader: 'tiles.example:8000',
 		});
 		// no port named means the pinned one
 		const unnamed = await resolveBridgeTarget(
@@ -136,7 +138,19 @@ describe('resolveBridgeTarget', () => {
 			{ host: 'tiles.example', port: null, room: '' },
 			resolver,
 		);
-		expect(unnamed).toEqual({ ok: true, url: 'ws://93.184.216.34:8000/' });
+		expect(unnamed).toEqual({
+			ok: true,
+			url: 'ws://93.184.216.34:8000/',
+			hostHeader: 'tiles.example:8000',
+		});
+		// a v4 answer first, where the name has one: many containers have
+		// no v6 route
+		const dual = await resolveBridgeTarget(
+			{ ...base, mode: 'port', port: 8000 },
+			{ host: 'tiles.example', port: '8000', room: '' },
+			async () => ['2606:2800:220:1::1', '93.184.216.34'],
+		);
+		expect(dual.url).toBe('ws://93.184.216.34:8000/');
 		// a port it will not dial is refused, never silently rewritten
 		const other = await resolveBridgeTarget(
 			{ ...base, mode: 'port', port: 8000 },
@@ -256,7 +270,11 @@ describe('resolveBridgeTarget', () => {
 		const ask = host =>
 			resolveBridgeTarget(config, { host, port: host === 'tiles.example' ? '9999' : '8000', room: 'art' }, resolver);
 		// the checked address is the one dialed
-		expect(await ask('tiles.example')).toEqual({ ok: true, url: 'ws://203.0.113.7:9999/art' });
+		expect(await ask('tiles.example')).toEqual({
+			ok: true,
+			url: 'ws://203.0.113.7:9999/art',
+			hostHeader: 'tiles.example:9999',
+		});
 		// a public name whose record turns inward is refused...
 		answer = ['10.0.0.9'];
 		expect(await ask('tiles.example')).toEqual({
@@ -265,7 +283,11 @@ describe('resolveBridgeTarget', () => {
 		});
 		// ...while a name that was private from the start (a compose
 		// service) keeps working
-		expect(await ask('moebius')).toEqual({ ok: true, url: 'ws://10.0.0.9:8000/art' });
+		expect(await ask('moebius')).toEqual({
+			ok: true,
+			url: 'ws://10.0.0.9:8000/art',
+			hostHeader: 'moebius:8000',
+		});
 		answer = ['203.0.113.8'];
 		expect((await ask('moebius')).ok).toBe(false);
 		// half and half is never consent to either
@@ -409,8 +431,9 @@ describe('bridge hardening (security review)', () => {
 
 describe('bridge pipe bounds (security review)', () => {
 	class FakeUpstream {
-		constructor(url) {
+		constructor(url, options) {
 			this.url = url;
+			this.options = options;
 			this.readyState = 0;
 			this.sent = [];
 			this.pings = [];
@@ -464,6 +487,19 @@ describe('bridge pipe bounds (security review)', () => {
 		up.emit('open');
 		return { pipe, up };
 	};
+
+	it('dials the checked address under the name the caller asked for', () => {
+		vi.stubGlobal('WebSocket', FakeUpstream);
+		try {
+			createBridgePipe(browser(), 'ws://203.0.113.7:9999/art', () => {}, { hostHeader: 'tiles.example:9999' });
+			expect(FakeUpstream.last.options).toEqual({ headers: { Host: 'tiles.example:9999' } });
+			// an address the caller typed has no name to send
+			createBridgePipe(browser(), 'ws://192.168.1.50:8000/art');
+			expect(FakeUpstream.last.options).toBeUndefined();
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
 
 	it('queues before connect and relays after', () => {
 		vi.stubGlobal('WebSocket', FakeUpstream);
