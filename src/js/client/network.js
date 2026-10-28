@@ -225,10 +225,11 @@ const createWorkerHandler = inputHandle => {
 		) {
 			return;
 		}
-		if (block.code > 0xff) {
-			// icy-style raw codepoint on the vanilla wire: join and resync
-			// intern these, so the live view must too or the two diverge
-			// until the next sync
+		if (block.code > 0xff || block.fg > 15 || block.bg > 15) {
+			// icy-style raw codepoints and moebiusXBIN's colors past the
+			// classic 16 ride the vanilla wire too: join and resync intern
+			// these, so the live view must too or the two diverge until the
+			// next sync (the u16 word below holds four bits a color)
 			State.textArtCanvas.drawRemoteExtCells([{ x: x, y: y, ...blockToExtCell(block) }]);
 			return;
 		}
