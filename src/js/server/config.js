@@ -40,6 +40,14 @@ const parseAllowedOrigins = raw => {
 	return list.length > 0 ? list : undefined;
 };
 
+/** comma-separated proxy addresses whose forwarding headers name the
+ * client (loopback is always trusted); anything else stays unheard */
+const parseTrustProxy = raw =>
+	(raw ?? '')
+		.split(',')
+		.map(s => s.trim().replace(/^::ffff:/i, ''))
+		.filter(s => s !== '');
+
 const parseArgs = () => {
 	const args = process.argv.slice(2);
 	const config = {
@@ -67,6 +75,9 @@ const parseArgs = () => {
 		// serve the built PWA from this dir (single binary and the
 		// distroless image); '' = ws-only, a proxy serves static
 		staticDir: process.env.STATIC_DIR ?? '',
+		// proxies beyond loopback allowed to name the client address the
+		// auth backoff keys on
+		trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
 	};
 
 	for (let i = 0; i < args.length; i++) {

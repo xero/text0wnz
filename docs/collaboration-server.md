@@ -175,15 +175,25 @@ password applies to spectators too. This is a deliberate difference
 from upstream Moebius, where a nickless connection bypasses the password
 and may draw.
 
-Wrong passwords back off: two tries stay free (humans typo), then the
-refusal window doubles up to 30 seconds, per room name. A blank password
-never counts; it is the shape of the editor's silent server probe, and
-counting it would lock a public room against its own password after a
-few page views. The gate is keyed by room name, not by address; the
-server reads no addresses outside the bridge. Before a room exists the
-same backoff lives in a gate bounded at 4096 room names; when it is
-full, fresh names are refused with `auth cooldown` until stale entries
-age out, so hostile name churn cannot grow it.
+Wrong passwords back off per client: two tries stay free (humans
+typo), then the refusal window doubles up to 30 seconds for that
+client's address, so one guesser cannot hold a room shut against
+everyone else. Each room also takes at most 20 wrong guesses a minute
+from all addresses together, so many addresses still guess slowly. A
+blank password never counts; it is the shape of the editor's silent
+server probe, and counting it would lock a public room against its own
+password after a few page views.
+
+The gate never holds an address. It keys on a hash under a salt the
+process mints at start, with IPv6 cut to its /64 (one subscriber holds
+the whole block), and none of it is logged or written down. Behind a
+reverse proxy the client's address comes from `X-Real-IP`, or else the
+last `X-Forwarded-For` hop, believed only from loopback and from the
+addresses in `TRUST_PROXY`; the Docker image's Caddy and the nginx
+examples set it. Before a room exists the same backoff lives in a gate
+bounded at 4096 room names; when it is full, fresh names are refused
+with `auth cooldown` until stale entries age out, so hostile name churn
+cannot grow it.
 
 Handles are kept to 100 characters, chat lines to 140, and a room holds
 the last 128 chat lines for late joiners. SAUCE fields are clamped at
@@ -247,7 +257,7 @@ the newest one on disk.
 | Operation log     | 10,000 operations or 8 MB per room, the timelapse substrate; older operations fold into a baseline                                                                                       |
 | Chat history      | 128 lines                                                                                                                                                                                |
 | SAUCE fields      | Title 35, author 20, group 20, comments 4096, font name 100 characters                                                                                                                   |
-| Auth gate         | 4096 room names with a pending backoff; fresh names are refused while it is full                                                                                                         |
+| Auth gate         | 4096 room names with a pending backoff, fresh names refused while it is full; per room, 20 wrong guesses a minute across all addresses                                                   |
 
 Malformed frames are dropped with a log line, never a crash, which the
 upstream servers do not survive. Frames before `CONNECTED` are dropped.
@@ -450,8 +460,10 @@ proxy forwarded without `Upgrade` and `Connection`. In `--static` mode
 the same request gets the file server's 404 instead.
 
 **Refused with the right password.** Check `ROOM_PASSWORDS` for a
-per-room entry that overrides `--pass`, and remember the per-room backoff
-after repeated wrong tries.
+per-room entry that overrides `--pass`, and remember the backoff after
+repeated wrong tries from your address. Behind a proxy on another host,
+list it in `TRUST_PROXY`, or every visitor shares the proxy's address
+and one guesser's backoff refuses them all.
 
 **Sessions do not survive a restart.** The server saves under its
 working directory; start it from the same place, and check that

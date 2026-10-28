@@ -880,6 +880,23 @@ describe('review-pass regressions', () => {
 		}
 	});
 
+	it('a guesser cools down alone; another client still gets in', () => {
+		vi.useFakeTimers();
+		try {
+			vi.setSystemTime(1_000_000);
+			const room = createRoom({ password: 'pw' });
+			const from = who => ({ ...fakeClient(), who });
+			for (let i = 0; i < 3; i++) {
+				expect(room.connect(from('guesser'), { nick: 'g', pass: 'nope' })).toBe(false);
+			}
+			expect(room.connect(from('guesser'), { nick: 'g', pass: 'pw' })).toBe(false);
+			// keyed by room alone, the guesser held everyone out
+			expect(room.connect(from('artist'), { nick: 'a', pass: 'pw' })).toBe(true);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it('loadState keeps a dark 8-bit object palette exact', () => {
 		// what this server writes: {r,g,b} objects, 8-bit. All under 64
 		// here, which the wire heuristic would have brightened fourfold

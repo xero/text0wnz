@@ -35,6 +35,7 @@ describe('Config Module - parseArgs', () => {
 			maxColumns: 0,
 			maxRows: 0,
 			staticDir: '',
+			trustProxy: [],
 		});
 	});
 
@@ -127,6 +128,7 @@ describe('Config Module - parseArgs', () => {
 			maxColumns: 0,
 			maxRows: 0,
 			staticDir: '',
+			trustProxy: [],
 		});
 	});
 
@@ -154,6 +156,18 @@ describe('Config Module - parseArgs', () => {
 			const config = parseArgs();
 			expect(config.maxColumns).toBe(0);
 			expect(config.maxRows).toBe(0);
+		});
+	});
+
+	describe('TRUST_PROXY', () => {
+		afterEach(() => {
+			delete process.env.TRUST_PROXY;
+		});
+
+		it('lists proxy addresses, trimmed and unmapped', () => {
+			process.argv = ['node', 'server.js'];
+			process.env.TRUST_PROXY = ' 172.18.0.2 , ::ffff:10.0.0.5,, ';
+			expect(parseArgs().trustProxy).toEqual(['172.18.0.2', '10.0.0.5']);
 		});
 	});
 

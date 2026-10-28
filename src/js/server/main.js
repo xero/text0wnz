@@ -89,6 +89,7 @@ const server = createMoebiusServer({
 	pass: config.pass,
 	roomPasswords: config.roomPasswords,
 	allowedOrigins: config.allowedOrigins,
+	trustProxy: config.trustProxy,
 	maxColumns: config.maxColumns,
 	maxRows: config.maxRows,
 	staticDir: config.staticDir,

@@ -36,6 +36,9 @@ Environment:
   ROOM_PASSWORDS        Per-room passwords as JSON: {"room":"pw"}
   ALLOWED_ORIGINS       Same as --allowed-origins (desktop clients send
                         no Origin and always pass)
+  TRUST_PROXY           Comma-separated proxy addresses whose X-Real-IP or
+                        X-Forwarded-For names the client (loopback is
+                        always trusted)
   ROOM_MAX_COLUMNS      Canvas resize width wall (default 1000; raise or lower)
   ROOM_MAX_ROWS         Canvas resize height wall (default 10000; raise or lower)
                         Walls gate resizes only; restored docs keep their size

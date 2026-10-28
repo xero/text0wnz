@@ -12,6 +12,7 @@ import { spawn, execSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import http from 'node:http';
+import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { MoebiusAction as A } from '../../../src/js/core/index';
 
@@ -84,6 +85,58 @@ const nextFrame = (ws, wantType, timeoutMs = 5000) =>
 			clearTimeout(timer);
 			reject(new Error('socket error'));
 		});
+	});
+
+/**
+ * A raw websocket client, because the global WebSocket cannot set
+ * headers: it speaks as a loopback proxy forwarding `realIp`, sends one
+ * CONNECTED, and resolves the server's first frame.
+ */
+const connectForwarded = (room, data, realIp) =>
+	new Promise((resolve, reject) => {
+		const req = http.request({
+			host: '127.0.0.1',
+			port,
+			path: `/${room}`,
+			headers: {
+				'connection': 'Upgrade',
+				'upgrade': 'websocket',
+				'sec-websocket-version': '13',
+				'sec-websocket-key': randomBytes(16).toString('base64'),
+				'x-real-ip': realIp,
+			},
+		});
+		req.on('error', reject);
+		req.on('upgrade', (_res, socket) => {
+			const payload = Buffer.from(JSON.stringify({ type: 0, data }));
+			const mask = randomBytes(4);
+			// client frames are masked; these stay under 126 bytes
+			socket.write(
+				Buffer.concat([
+					Buffer.from([0x81, 0x80 | payload.length]),
+					mask,
+					payload.map((byte, i) => byte ^ mask[i % 4]),
+				]),
+			);
+			let buffered = Buffer.alloc(0);
+			socket.on('data', chunk => {
+				buffered = Buffer.concat([buffered, chunk]);
+				let length = buffered[1] & 0x7f;
+				let at = 2;
+				if (length === 126) {
+					length = buffered.readUInt16BE(2);
+					at = 4;
+				} else if (length === 127) {
+					length = Number(buffered.readBigUInt64BE(2));
+					at = 10;
+				}
+				if (buffered.length >= at + length) {
+					socket.destroy();
+					resolve(JSON.parse(buffered.subarray(at, at + length).toString()));
+				}
+			});
+		});
+		req.end();
 	});
 
 const connectClient = async (room, data) => {
@@ -302,6 +355,19 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 			}
 		},
 	);
+
+	it('behind a loopback proxy, each forwarded client keeps its own backoff', async () => {
+		// a guesser's failures cool down the guesser's address...
+		for (let i = 0; i < 4; i++) {
+			const reply = await connectForwarded('gatekeys', { nick: 'g', pass: 'wrong' }, '198.51.100.7');
+			expect(reply.type).toBe(A.REFUSED);
+		}
+		const blocked = await connectForwarded('gatekeys', { nick: 'g', pass: PASS }, '198.51.100.7');
+		expect(blocked.type).toBe(A.REFUSED);
+		// ...not the room: an artist at another address walks in
+		const artist = await connectForwarded('gatekeys', { nick: 'a', pass: PASS }, '198.51.100.8:40001');
+		expect(artist.type).toBe(A.CONNECTED);
+	});
 
 	it('an empty password refuses without counting toward the gate', async () => {
 		// the client's silent probe (nickless, no password) lands on a

@@ -1,0 +1,107 @@
+import { describe, it, expect } from 'vitest';
+import {
+	AUTH_GATE_KEYS,
+	AUTH_ROOM_BUDGET,
+	addressKey,
+	clientAddress,
+	createAuthGate,
+} from '../../../src/js/server/authGate.js';
+
+const headers = map => ({ get: name => map[name] ?? null });
+
+describe('clientAddress', () => {
+	it('a direct peer is its own address, whatever it claims', () => {
+		const claims = headers({ 'x-real-ip': '6.6.6.6', 'x-forwarded-for': '7.7.7.7' });
+		expect(clientAddress('203.0.113.9', claims)).toBe('203.0.113.9');
+		expect(clientAddress('::ffff:203.0.113.9', claims)).toBe('203.0.113.9');
+	});
+
+	it('a loopback proxy names the client, port and all', () => {
+		// the Docker image's Caddy sends {remote}, which keeps the port
+		expect(clientAddress('127.0.0.1', headers({ 'x-real-ip': '198.51.100.7:51234' }))).toBe('198.51.100.7');
+		expect(clientAddress('::1', headers({ 'x-real-ip': '[2001:db8::7]:443' }))).toBe('2001:db8::7');
+		// no X-Real-IP: the hop the proxy appended last
+		expect(clientAddress('127.0.0.1', headers({ 'x-forwarded-for': '6.6.6.6, 198.51.100.7' }))).toBe('198.51.100.7');
+	});
+
+	it('TRUST_PROXY extends the trust; garbage falls back to the peer', () => {
+		const claim = headers({ 'x-real-ip': '198.51.100.7' });
+		expect(clientAddress('172.18.0.2', claim)).toBe('172.18.0.2');
+		expect(clientAddress('172.18.0.2', claim, ['172.18.0.2'])).toBe('198.51.100.7');
+		expect(clientAddress('127.0.0.1', headers({ 'x-real-ip': 'not an address' }))).toBe('127.0.0.1');
+	});
+});
+
+describe('addressKey', () => {
+	it('never carries the address', () => {
+		const key = addressKey('198.51.100.7');
+		expect(key).not.toContain('198');
+		expect(key).toBe(addressKey('198.51.100.7'));
+		expect(key).not.toBe(addressKey('198.51.100.8'));
+	});
+
+	it('one /64 is one key, however its addresses are spelled', () => {
+		// a subscriber holds the whole /64: per-address keys would hand
+		// them endless fresh backoffs
+		const key = addressKey('2001:db8:1:2::1');
+		expect(addressKey('2001:db8:1:2:ffff:ffff:ffff:ffff')).toBe(key);
+		expect(addressKey('2001:0DB8:0001:0002:0:0:0:9')).toBe(key);
+		expect(addressKey('2001:db8:1:3::1')).not.toBe(key);
+		expect(addressKey('::ffff:198.51.100.7')).toBe(addressKey('198.51.100.7'));
+	});
+});
+
+describe('createAuthGate', () => {
+	it('one guesser cools down alone; the room stays open to others', () => {
+		const gate = createAuthGate();
+		const t = 1_000_000;
+		for (let i = 0; i < 3; i++) {
+			expect(gate.open('guesser', t)).toBe(true);
+			gate.fail('guesser', t);
+		}
+		// the third failure opened a window for the guesser only
+		expect(gate.open('guesser', t)).toBe(false);
+		expect(gate.open('artist', t)).toBe(true);
+		expect(gate.open('guesser', t + 500)).toBe(true);
+	});
+
+	it('the right password starts a key over', () => {
+		const gate = createAuthGate();
+		for (let i = 0; i < 3; i++) {
+			gate.fail('k', 0);
+		}
+		expect(gate.open('k', 0)).toBe(false);
+		gate.pass('k');
+		expect(gate.open('k', 0)).toBe(true);
+	});
+
+	it('many addresses together spend one room budget', () => {
+		const gate = createAuthGate();
+		for (let i = 0; i < AUTH_ROOM_BUDGET; i++) {
+			expect(gate.open(`bot${i}`, 0)).toBe(true);
+			gate.fail(`bot${i}`, 0);
+		}
+		expect(gate.open('fresh', 0)).toBe(false);
+		// one guess back every 60 / budget seconds
+		expect(gate.open('fresh', 60_000 / AUTH_ROOM_BUDGET)).toBe(true);
+	});
+
+	it('a full gate sheds keys gone quiet instead of refusing newcomers', () => {
+		const gate = createAuthGate();
+		// the budget admits a failure every 60 / budget seconds, so a
+		// full map is mostly keys that went quiet long ago
+		const step = 60_000 / AUTH_ROOM_BUDGET;
+		for (let i = 0; i < AUTH_GATE_KEYS; i++) {
+			gate.fail(`k${i}`, i * step);
+		}
+		expect(gate.open('late', AUTH_GATE_KEYS * step)).toBe(true);
+	});
+
+	it('goes idle once nothing is left to remember', () => {
+		const gate = createAuthGate();
+		expect(gate.idle(0)).toBe(true);
+		gate.fail('k', 0);
+		expect(gate.idle(1000)).toBe(false);
+		expect(gate.idle(120_000)).toBe(true);
+	});
+});

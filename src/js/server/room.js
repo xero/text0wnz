@@ -60,7 +60,8 @@ import {
 	sanitizeExtDraw,
 	sanitizeExtPalette,
 } from '../core/index';
-import { authCooldownMs, sanitize } from './utils.js';
+import { sanitize } from './utils.js';
+import { createAuthGate } from './authGate.js';
 
 export const ROOM_DEFAULTS = Object.freeze({
 	columns: 80,
@@ -127,6 +128,8 @@ const normalizeJoinPalette = palette => {
  * @property {(type: number, data: object) => void} send
  * @property {6 | 8} [paletteDepth] the join palette depth a caps-less
  *   client reads, when the socket layer could tell (vanilla Moebius 6)
+ * @property {string} [who] the auth gate key for the client's address
+ *   (a salted hash, never the address); absent keys share one backoff
  */
 
 /**
@@ -466,10 +469,9 @@ export const createRoom = (options = {}) => {
 	};
 
 	// wire-speed brute force: repeated failures open an exponential
-	// cooldown window during which every attempt refuses instantly
-	// (the first couple of tries stay free: humans typo)
-	let authFailures = 0;
-	let authCooldownUntil = 0;
+	// cooldown window during which that client's attempts refuse
+	// instantly (the first couple of tries stay free: humans typo)
+	const authGate = createAuthGate();
 
 	/**
 	 * @param {RoomClient} client
@@ -488,19 +490,19 @@ export const createRoom = (options = {}) => {
 				log(`${nick ?? 'spectator'} refused (no password)`);
 				return false;
 			}
-			if (Date.now() < authCooldownUntil) {
+			const who = client.who ?? '';
+			if (!authGate.open(who)) {
 				client.send(MoebiusAction.REFUSED, {});
 				log('refused (auth cooldown)');
 				return false;
 			}
 			if (pass !== password) {
-				authFailures++;
-				authCooldownUntil = Date.now() + authCooldownMs(authFailures);
+				authGate.fail(who);
 				client.send(MoebiusAction.REFUSED, {});
 				log(`${nick ?? 'spectator'} refused (bad password)`);
 				return false;
 			}
-			authFailures = 0;
+			authGate.pass(who);
 		}
 		const isSpectator = nick === undefined;
 		if (isSpectator && !spectators.enabled) {

@@ -142,6 +142,7 @@ The container implements a robust startup sequence:
 | `BRIDGE_ALLOW`     | Comma-separated `host:port` list for `allow` mode                             | none                  |
 | `BRIDGE_MAX`       | Concurrent bridged connections                                                | `16`                  |
 | `ALLOWED_ORIGINS`  | Comma-separated Origin allowlist for websocket upgrades                       | none (open)           |
+| `TRUST_PROXY`      | Proxies beyond loopback whose `X-Real-IP` names the client                    | none (loopback only)  |
 | `ROOM_MAX_COLUMNS` | Canvas resize wall, columns                                                   | `1000`                |
 | `ROOM_MAX_ROWS`    | Canvas resize wall, rows                                                      | `10000`               |
 
