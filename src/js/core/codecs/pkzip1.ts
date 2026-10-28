@@ -83,7 +83,8 @@ const FREE = 0xffff;
  * Shrink: LZW whose codes grow from 9 to 13 bits on request (escape,
  * then 1) and whose leaves can be freed for reuse (escape, then 2).
  * New entries take the lowest free code, so after a partial clear the
- * table refills its holes before it grows.
+ * table refills its holes before it grows; a full table simply stops
+ * adding until the next clear.
  */
 export const unshrink = (
 	data: Uint8Array,
@@ -138,9 +139,16 @@ export const unshrink = (
 			}
 			const current = code;
 			let top = stack.length;
-			// a code not yet in the table is the one about to be made:
-			// the previous string plus its own first byte
+			// the next code the table will make: the only one a stream may
+			// name before it exists (the KwKwK case)
+			let next = lastFree + 1;
+			while (next < SHRINK_CODES && parent[next] !== FREE) {
+				next++;
+			}
 			if (code > ESCAPE && parent[code] === FREE) {
+				if (code !== next) {
+					throw new CodecError('shrink code is not in the table');
+				}
 				stack[--top] = first;
 				code = old;
 			}
@@ -159,16 +167,12 @@ export const unshrink = (
 			for (let k = top; k < stack.length && o < size; k++) {
 				out[o++] = stack[k];
 			}
-			let free = lastFree + 1;
-			while (free < SHRINK_CODES && parent[free] !== FREE) {
-				free++;
+			// a full table stops growing until the next partial clear
+			if (next < SHRINK_CODES) {
+				lastFree = next;
+				suffix[next] = first;
+				parent[next] = old;
 			}
-			if (free >= SHRINK_CODES) {
-				throw new CodecError('shrink table overflows');
-			}
-			lastFree = free;
-			suffix[free] = first;
-			parent[free] = old;
 			old = current;
 		}
 	} catch (error) {
