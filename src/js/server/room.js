@@ -26,6 +26,8 @@
  * - every mutation lands in a bounded op log (timelapse substrate).
  * - live SAUCE reaches caps-less members with author and group
  *   swapped, because both upstream clients swap them back on receive.
+ * - a client the socket layer knows as vanilla Moebius gets its join
+ *   palette at 6 bits; everyone else gets the 8 this server writes.
  *
  * Extension suite (core/protocol/extensions.ts): every ext mutation
  * down-converts to the nearest vanilla frame for caps-less members so
@@ -46,6 +48,7 @@ import {
 	expandExtCells,
 	extCellEquals,
 	extCellToBlock,
+	compress8to6,
 	fitComments,
 	paletteWordsFromJoin,
 	sanitizeExtDraw,
@@ -91,6 +94,17 @@ const rgb8FromWords = words =>
 		b: w & 0xff,
 	}));
 
+/** the same entries at 6 bits, for vanilla Moebius: it expands every
+ * join component from 6 bits, where moebiusXBIN and our own client
+ * read 8 (the stock 16 survive either way, a custom palette does not)
+ * @param {import('../core/index').MoebiusPaletteEntry[]} palette 8-bit */
+const sixBitPalette = palette =>
+	Array.from(paletteWordsFromJoin(palette, 8), w => ({
+		r: compress8to6((w >> 16) & 0xff),
+		g: compress8to6((w >> 8) & 0xff),
+		b: compress8to6(w & 0xff),
+	}));
+
 /** sidecars from the 6-bit writer hold number[][] join palettes,
  * which the ancestor resolves to black, so restores renormalize. The
  * shape names the depth (arrays 6-bit, objects this server's 8-bit)
@@ -112,6 +126,8 @@ const normalizeJoinPalette = palette => {
 /**
  * @typedef {object} RoomClient
  * @property {(type: number, data: object) => void} send
+ * @property {6 | 8} [paletteDepth] the join palette depth a caps-less
+ *   client reads, when the socket layer could tell (vanilla Moebius 6)
  */
 
 /**
@@ -399,14 +415,16 @@ export const createRoom = (options = {}) => {
 			status: u.status,
 		}));
 
-	const toJoinDoc = () => ({
+	/** @param {6 | 8} [paletteDepth] */
+	const toJoinDoc = (paletteDepth = 8) => ({
 		columns: doc.columns,
 		rows: doc.rows,
 		title: doc.title,
 		author: doc.author,
 		group: doc.group,
 		comments: doc.comments,
-		palette: doc.palette,
+		palette:
+			paletteDepth === 6 && doc.palette ? sixBitPalette(doc.palette) : doc.palette,
 		font_bytes: doc.font_bytes,
 		font_name: doc.font_name,
 		ice_colors: doc.ice_colors,
@@ -485,14 +503,15 @@ export const createRoom = (options = {}) => {
 			caps,
 			lastSyncAt: 0,
 		};
+		const depth = !hasExt(user) && client.paletteDepth === 6 ? 6 : 8;
 		// reply shapes verbatim from Moebius server.js, the CONNECTED
 		// case; caps ride along only for caps-aware clients (vanilla must
 		// see exactly vanilla)
 		const reply = isSpectator
-			? { id, doc: toJoinDoc() }
+			? { id, doc: toJoinDoc(depth) }
 			: {
 					id,
-					doc: toJoinDoc(),
+					doc: toJoinDoc(depth),
 					users: usersList(),
 					chat_history: chatHistory,
 					status: MoebiusStatus.ACTIVE,
@@ -515,7 +534,10 @@ export const createRoom = (options = {}) => {
 			group: user.group,
 			status: user.status,
 		});
-		log(`${nick ?? 'spectator'} joined ${name} as #${id}`);
+		// the depth rides the log so a field check can see the guess
+		log(
+			`${nick ?? 'spectator'} joined ${name} as #${id}${depth === 6 ? ' (6-bit palette)' : ''}`,
+		);
 		return true;
 	};
 
