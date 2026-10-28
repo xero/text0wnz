@@ -404,6 +404,10 @@ const onReturn = (el, target) => {
 	onEnter(el, () => target.click());
 };
 
+/** text bound for innerHTML (the modal's error line takes markup) */
+export const escapeHtml = text =>
+	text.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c]);
+
 const onClick = (el, func) => {
 	const handler = e => {
 		if (el.tagName === 'A' || el.tagName === 'BUTTON') {

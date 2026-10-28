@@ -1,7 +1,7 @@
 import { encode as encodePng } from 'fast-png';
 import State from './state.js';
 import magicNumbers from './magicNumbers.js';
-import { $, enforceMaxBytes } from './ui.js';
+import { $, enforceMaxBytes, escapeHtml } from './ui.js';
 import {
 	CodecError,
 	decodeAns,
@@ -985,15 +985,18 @@ const loadModule = () => {
 		enforceMaxBytes();
 	};
 
+	// the newest load owns the screen: a superseded one keeps its note
+	let latestLoad = 0;
 	const file = (file, onLoad, opts = {}) => {
+		const load = ++latestLoad;
 		// a damaged archive entry's note speaks once the load, loading
 		// modal and all, has finished
 		const callback = opts.notice
 			? async (...args) => {
 				await onLoad(...args);
-				State.modal?.error?.(
-					opts.notice.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c]),
-				);
+				if (load === latestLoad) {
+					State.modal?.error?.(escapeHtml(opts.notice));
+				}
 			}
 			: onLoad;
 		const reader = new FileReader();

@@ -37,6 +37,8 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('../../src/js/client/state.js', () => ({ default: mocks.state }));
 vi.mock('../../src/js/client/ui.js', () => ({
+	escapeHtml: text =>
+		text.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c]),
 	$: id => mocks.ui[id] || { value: '' },
 	enforceMaxBytes: () => {},
 }));
@@ -207,21 +209,58 @@ describe('doc-native file formats', () => {
 		}
 	});
 
+	it('a superseded open keeps its damage note to itself', async () => {
+		const notes = [];
+		mocks.state.modal = { error: message => notes.push(message) };
+		try {
+			const bytes = await encodeEnvelope(createDocV3({ columns: 3, rows: 1 }));
+			let finishFirst;
+			const firstLoaded = new Promise(resolve => {
+				Load.file(
+					new File([bytes], 'rot.0wnz'),
+					// the first open is still loading when the second starts
+					() => new Promise(done => {
+						finishFirst = () => {
+							done();
+							resolve();
+						};
+					}),
+					{ notice: 'ROT.ANS is damaged' },
+				);
+			});
+			await new Promise(resolve => setTimeout(resolve, 20));
+			await new Promise(resolve => {
+				Load.file(new File([bytes], 'fresh.0wnz'), () => resolve());
+			});
+			finishFirst();
+			await firstLoaded;
+			await new Promise(resolve => setTimeout(resolve, 0));
+			expect(notes).toEqual([]);
+		} finally {
+			delete mocks.state.modal;
+		}
+	});
+
 	it('a failing .0wnz or .dur save tells the artist', async () => {
 		// the menu drops the save promise, so an uncaught throw here
 		// used to vanish without a word
+		const getDoc = mocks.state.textArtCanvas.getDoc;
 		mocks.state.textArtCanvas.getDoc = () => {
 			throw new Error('doc gone');
 		};
 		const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
 		const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
-		await expect(Save.ownz()).resolves.toBeUndefined();
-		await expect(Save.dur()).resolves.toBeUndefined();
-		const messages = alert.mock.calls.map(([message]) => message);
-		expect(messages[0]).toMatch(/^\.0wnz save failed: /);
-		expect(messages[1]).toBe('durdraw export failed: doc gone');
-		alert.mockRestore();
-		quiet.mockRestore();
+		try {
+			await expect(Save.ownz()).resolves.toBeUndefined();
+			await expect(Save.dur()).resolves.toBeUndefined();
+			const messages = alert.mock.calls.map(([message]) => message);
+			expect(messages[0]).toMatch(/^\.0wnz save failed: /);
+			expect(messages[1]).toBe('durdraw export failed: doc gone');
+		} finally {
+			alert.mockRestore();
+			quiet.mockRestore();
+			mocks.state.textArtCanvas.getDoc = getDoc;
+		}
 	});
 
 	it('exposes tnd and ownz on the Save surface', () => {

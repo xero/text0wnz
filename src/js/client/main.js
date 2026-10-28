@@ -26,6 +26,7 @@ import { createSelectionBar } from './selectionBar.js';
 import { fitGlyphs, armPixelRatioWatch } from './glyphScale.js';
 import { FontCache } from './fontCache.js';
 import {
+	escapeHtml,
 	$,
 	$$,
 	$$$,
@@ -207,12 +208,8 @@ const openHandler = (file, opts = {}) => {
 			// or it cannot be retried at all
 			openFile.value = '';
 			// the message lands in innerHTML, so the filename gets escaped
-			const safeName = file.name.replace(
-				/[<>&]/g,
-				c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c],
-			);
 			State.modal.error(
-				`Could not open <kbd>${safeName}</kbd>.<br/>The file may be corrupt or mislabeled.`,
+				`Could not open <kbd>${escapeHtml(file.name)}</kbd>.<br/>The file may be corrupt or mislabeled.`,
 			);
 		}
 	};
