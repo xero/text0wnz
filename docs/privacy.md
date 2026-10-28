@@ -45,12 +45,26 @@ When you opt into collaboration mode, the server processes the following data to
 **Data Handling Details:**
 
 - The server saves each session to disk so rooms survive restarts, and keeps periodic backups. Saved sessions include the canvas content, recent chat history, and session metadata (title, author, and group); they remain on the server until its operator deletes them.
-- By default, no IP addresses or other persistent identifiers are logged.
+- By default, no IP addresses or other persistent identifiers are logged. The one exception is the collaboration bridge, which an operator has to turn on; see below.
 - You have full control over what information is shared; your chat handle defaults to anonymous, and chat notifications are handled on your device and default to off.
 
+**The Collaboration Bridge:**
+
+The [`BRIDGE`](security.md#the-collaboration-bridge) setting allows a server to relay your browser's connection to a plaintext Moebius server located elsewhere on the internet, enabling an editor served over HTTPS to join it. This setting is disabled by default and must be explicitly enabled by the operator.
+
+When enabled, the relay initiates connections from the server's own address, making the operator responsible for any misuse. To ensure accountability, the server logs each time it opens, closes, or refuses a bridged connection. Each log entry includes:
+
+- The originating address of your connection (and any address reported by a reverse proxy).
+- The target server you requested to reach.
+- The timestamp of the event.
+
+This log entry is the only instance where the stock server records an address. It does not contain any information about the room, artwork, or chat content. These logs are sent to the server's standard output, and their retention period is determined by the operator's own logging configuration.
+
+The bridge is active on [teXt.0w.nz](https://text.0w.nz). Connecting from teXt.0w.nz to a server specified in the Connect form will be logged as described above. However, simply joining the teXt.0w.nz session itself is not logged.
+
 **Important Notice:**
-While the default server does not log IP addresses or other persistent identifiers, we cannot control the policies and or modifications of other system administrators running our free software.
-Whenever connecting to a collaboration server not operated by us, **assume your IP address and other information may be logged**. Please review the privacy policy of any third-party server you connect to.
+While the default server does not log IP addresses or other persistent identifiers (the bridge, once an operator enables it, is the documented exception above), we cannot control the policies and or modifications of other system administrators running our free software.
+Whenever connecting to a collaboration server not operated by us, **assume your IP address and other information may be logged**. Please review the privacy policy of any third-party server you connect to. The same holds for any server you reach through a bridge: the bridge host logs the connection, and the destination server sees the bridge host's address in place of yours.
 
 ## User Control
 

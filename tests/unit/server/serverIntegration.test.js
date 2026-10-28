@@ -597,6 +597,62 @@ describe.skipIf(!canRun)('bridge over real sockets', () => {
 	});
 
 	it(
+		'the stock server (bridge off) records no address for a bridge poke',
+		{ timeout: 30000 },
+		async () => {
+			// docs/privacy.md: by default no IP addresses are logged; the
+			// bridge's audit trail exists only once an operator turns it on
+			const cwd = mkdtempSync(path.join(tmpdir(), 't0wnz-quiet-'));
+			const quietPort = 20000 + Math.floor(Math.random() * 20000);
+			let logged = '';
+			const child = spawn(
+				'bun',
+				[path.join(repoRoot, 'src/js/server/main.js'), String(quietPort)],
+				{ cwd, stdio: ['ignore', 'pipe', 'pipe']},
+			);
+			child.stdout.on('data', chunk => (logged += chunk));
+			child.stderr.on('data', chunk => (logged += chunk));
+			try {
+				const deadline = Date.now() + 15000;
+				for (;;) {
+					try {
+						const res = await fetch(`http://127.0.0.1:${quietPort}/healthz`);
+						if (res.ok) {
+							break;
+						}
+					} catch {
+						// not up yet
+					}
+					if (Date.now() > deadline) {
+						throw new Error('quiet server did not come up');
+					}
+					await new Promise(r => setTimeout(r, 150));
+				}
+				const refused = await new Promise((resolve, reject) => {
+					const req = http.request(
+						{
+							host: '127.0.0.1',
+							port: quietPort,
+							path: '/bridge?host=localhost&port=8000',
+							headers: { connection: 'Upgrade', upgrade: 'websocket' },
+						},
+						res => resolve(res.statusCode),
+					);
+					req.on('error', reject);
+					req.end();
+				});
+				expect(refused).toBe(403);
+				await new Promise(r => setTimeout(r, 200));
+				expect(logged).not.toMatch(/bridge/);
+				expect(logged).not.toMatch(/127\.0\.0\.1/);
+			} finally {
+				child.kill('SIGKILL');
+				rmSync(cwd, { recursive: true, force: true });
+			}
+		},
+	);
+
+	it(
 		'port mode never echoes what the host resolver knows',
 		{ timeout: 30000 },
 		async () => {
