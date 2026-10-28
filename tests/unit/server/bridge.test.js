@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { vi } from 'vitest';
 import {
+	addressKind,
 	isPrivateAddress,
 	vetResolvedAddresses,
 	resolveBridgeTarget,
@@ -15,6 +16,32 @@ import {
 	createBridgePipe,
 	BRIDGE_DEFAULTS,
 } from '../../../src/js/server/bridge.js';
+
+describe('addressKind', () => {
+	it('names each kind of address a pin can hold', () => {
+		for (const [ip, kind] of [
+			['8.8.8.8', 'public'],
+			['2606:4700::1111', 'public'],
+			['10.1.2.3', 'private'],
+			['172.20.0.1', 'private'],
+			['192.168.1.9', 'private'],
+			['100.100.100.100', 'private'],
+			['fd12::1', 'private'],
+			['127.0.0.1', 'loopback'],
+			['::1', 'loopback'],
+			['::ffff:127.0.0.1', 'loopback'],
+			['169.254.169.254', 'link-local'],
+			['fe80::1', 'link-local'],
+			['0.0.0.0', 'reserved'],
+			['224.0.0.1', 'reserved'],
+			['2002:7f00:1::1', 'reserved'],
+			['::7f00:1', 'reserved'],
+			['not-an-ip', 'reserved'],
+		]) {
+			expect(addressKind(ip), ip).toBe(kind);
+		}
+	});
+});
 
 describe('isPrivateAddress', () => {
 	it('denies every private, loopback, link-local, and CGNAT range', () => {
@@ -202,6 +229,22 @@ describe('resolveBridgeTarget', () => {
 		).toBe(false);
 	});
 
+	it('a private pin never stretches to loopback or the metadata address', async () => {
+		const config = { ...base, mode: 'allow', allow: ['moebius:8000']};
+		let answer = ['172.18.0.5'];
+		const ask = () =>
+			resolveBridgeTarget(config, { host: 'moebius', port: '8000', room: 'art' }, async () => answer);
+		expect((await ask()).ok).toBe(true);
+		// a compose service may move within private ranges...
+		answer = ['10.0.0.7'];
+		expect((await ask()).ok).toBe(true);
+		// ...but not to another kind of inward address
+		answer = ['169.254.169.254'];
+		expect(await ask()).toEqual({ ok: false, reason: 'moebius resolved link-local, pinned private' });
+		answer = ['127.0.0.1'];
+		expect(await ask()).toEqual({ ok: false, reason: 'moebius resolved loopback, pinned private' });
+	});
+
 	it('allow mode dials a listed name where it resolves, and pins its class', async () => {
 		const config = {
 			...base,
@@ -229,7 +272,7 @@ describe('resolveBridgeTarget', () => {
 		answer = ['203.0.113.8', '127.0.0.1'];
 		expect(await ask('split.example')).toEqual({
 			ok: false,
-			reason: 'split.example resolves both public and private',
+			reason: 'split.example resolves to public and loopback addresses',
 		});
 		answer = [];
 		expect(await ask('split.example')).toEqual({ ok: false, reason: 'unresolvable host' });
