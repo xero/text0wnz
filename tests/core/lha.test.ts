@@ -173,6 +173,19 @@ describe('lha salvage', () => {
 		expect(piece.damage).toMatch(/failed its checksum/);
 	});
 
+	it('stops where the data stops instead of decoding padding', () => {
+		const { bytes, entry } = lh5();
+		const clean = extractLhaEntry(bytes, entry);
+		const short = { ...entry, compressedSize: entry.compressedSize >> 1 };
+		expect(() => extractLhaEntry(bytes, short)).toThrow(CodecError);
+		const piece = salvageLhaEntry(bytes, short);
+		expect(piece.damage).toMatch(/damaged: showing the first/);
+		expect(piece.bytes.length).toBeLessThan(entry.size);
+		expect([...piece.bytes]).toEqual([
+			...clean.subarray(0, piece.bytes.length),
+		]);
+	});
+
 	it('opens a rotten stream as far as it decodes, with a note', () => {
 		const { bytes, entry } = lh5();
 		const rotten = bytes.slice();
