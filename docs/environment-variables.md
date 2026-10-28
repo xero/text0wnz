@@ -164,6 +164,16 @@ ROOM_PASSWORDS='{"room":"pw"}' bun server
 
 **Purpose:** Canvas resize walls. The walls gate resizes only; restored documents keep their size. Lowering them binds every client. Raising them above the defaults reaches only Moebius, moebiusXBIN, and icy_draw clients: the teXt0wnz editor refuses to apply a resize past 1000 by 10000 on its own side, so a raised wall splits a mixed room.
 
+### ROOM_MAX_GUESSES
+
+**Default:** `20`
+
+**Purpose:** Wrong passwords a room takes in a minute from every address together, on top of each address's own backoff. The budget refills one guess every 60 / N seconds. While it is spent, the room refuses everyone, the right password included, so too low a number lets a few addresses hold a room shut. Raise it for a big jam where many people might mistype at once; lower it to slow a guesser spread across many addresses. Anything but a positive whole number keeps the default.
+
+```bash
+ROOM_MAX_GUESSES=60 ROOM_PASS=hunter2 bun server
+```
+
 ### STATIC_DIR
 
 **Default:** none (WebSocket-only; a proxy serves static files)
