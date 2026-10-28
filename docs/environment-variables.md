@@ -196,13 +196,15 @@ Desktop clients (Moebius, icy_draw) send no Origin header and always pass; the a
 
 **Default:** none (loopback only)
 
-**Purpose:** Comma-separated addresses of reverse proxies whose `X-Real-IP` (or last `X-Forwarded-For` hop) names the client. The password backoff keys on the client's address, so a proxy's own address would make every visitor share one backoff. Loopback is always trusted, which covers the Docker image's Caddy and any proxy on the same host. List a proxy that runs elsewhere, such as another container:
+**Purpose:** Comma-separated addresses of reverse proxies whose `X-Real-IP` or last `X-Forwarded-For` hop names the client. The password backoff keys on the client's address, so a proxy's own address would make every visitor share one backoff. Loopback is always trusted, which covers the Docker image's Caddy and any proxy on the same host. List a proxy that connects from another address, such as another container or a Docker bridge gateway, by its exact address; ranges do not match:
 
 ```bash
 TRUST_PROXY=172.18.0.2 bun src/js/server/main.js
 ```
 
-Headers from anyone else are ignored, or a guesser could forge a fresh address for every try.
+A trusted proxy must write the header itself, over whatever the visitor sent; the nginx, Apache, and Caddy examples in [webserver-configuration.md](./webserver-configuration.md) do. When both headers arrive and name different addresses, one was forged, so the request counts as the proxy's own. Headers from anyone else are ignored, or a guesser could forge a fresh address for every try.
+
+Only the proxy that connects to the server is consulted. With the Docker image behind another proxy, the image's Caddy is that proxy and names the outer one, so mount a Caddyfile that trusts the outer proxy and sends `{client_ip}` (see [docker.md](./docker.md)).
 
 ### BRIDGE
 

@@ -189,10 +189,12 @@ its own password after a few page views.
 The gate never holds an address. It keys on a hash under a salt the
 process mints at start, with IPv6 cut to its /64 (one subscriber holds
 the whole block), and none of it is logged or written down. Behind a
-reverse proxy the client's address comes from `X-Real-IP`, or else the
-last `X-Forwarded-For` hop, believed only from loopback and from the
-addresses in `TRUST_PROXY`; the Docker image's Caddy and the nginx
-examples set it. Before a room exists the same backoff lives in a gate
+reverse proxy the address comes from `X-Real-IP` or the last
+`X-Forwarded-For` hop, believed only from loopback and from the exact
+addresses in `TRUST_PROXY`. The proxy must write the header itself:
+when both headers arrive and disagree, one was forged, and the request
+counts as the proxy's own. The Docker image's Caddy and the examples in
+[webserver-configuration.md](./webserver-configuration.md) set it. Before a room exists the same backoff lives in a gate
 bounded at 4096 room names; when it is full, fresh names are refused
 with `auth cooldown` until stale entries age out, so hostile name churn
 cannot grow it.
@@ -463,9 +465,11 @@ the same request gets the file server's 404 instead.
 
 **Refused with the right password.** Check `ROOM_PASSWORDS` for a
 per-room entry that overrides `--pass`, and remember the backoff after
-repeated wrong tries from your address. Behind a proxy on another host,
-list it in `TRUST_PROXY`, or every visitor shares the proxy's address
-and one guesser's backoff refuses them all.
+repeated wrong tries from your address. Behind a proxy that reaches the
+server from another address, list that exact address in `TRUST_PROXY`,
+or every visitor shares it and one guesser's backoff refuses them all.
+The Docker image behind another proxy needs a mounted Caddyfile that
+trusts the outer proxy (see [docker.md](./docker.md)).
 
 **Sessions do not survive a restart.** The server saves under its
 working directory; start it from the same place, and check that

@@ -180,7 +180,9 @@ docker run \
     xerostyle/text0wnz:latest
 ```
 
-Your file replaces the generated one entirely, so it has to do everything that one does: serve `/app/dist`, reverse proxy `/server*` and `/bridge*` to `127.0.0.1:1337` (the backend's `PORT`) with the path intact, and listen on port 80, which the container health check probes. The generated file inside [`bootup`](https://github.com/xero/text0wnz/blob/main/bootup) is the template to start from. `DOMAIN`, `NODE_ENV`, and the TLS settings shape only the generated file and have no effect on a mounted one. Mount it read-only; the script never writes to it, and a stray edit cannot reach your source.
+Your file replaces the generated one entirely, so it has to do everything that one does: serve `/app/dist`, reverse proxy `/server*` and `/bridge*` to `127.0.0.1:1337` (the backend's `PORT`) with the path intact and `header_up X-Real-IP {remote_host}` (the password backoff keys on it), and listen on port 80, which the container health check probes. The generated file inside [`bootup`](https://github.com/xero/text0wnz/blob/main/bootup) is the template to start from. `DOMAIN`, `NODE_ENV`, and the TLS settings shape only the generated file and have no effect on a mounted one. Mount it read-only; the script never writes to it, and a stray edit cannot reach your source.
+
+Behind another proxy, the image's Caddy sees only that proxy, so every visitor would share its address in the backoff. List the outer proxy in a `trusted_proxies` block and send `header_up X-Real-IP {client_ip}` instead, which names the visitor the outer proxy reported.
 
 ## Health Monitoring
 

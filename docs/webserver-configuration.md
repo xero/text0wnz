@@ -49,7 +49,7 @@ Terminate TLS in the process with `--ssl --ssl-dir <dir>` (expects `letsencrypt-
 
 ### Deployment Knobs
 
-The server reads deployment settings from the environment, including `STATIC_DIR` plus `ROOM_MAX_COLUMNS` and `ROOM_MAX_ROWS` to cap collaborative canvas resizes. See [Environment Variables](./environment-variables.md) for the full reference, run the server with `--help` for the flag list, and see [Collaboration Server](./collaboration-server.md) for the flag table, rooms, passwords, persistence, and the bridge.
+The server reads deployment settings from the environment, including `STATIC_DIR`, `ROOM_MAX_COLUMNS` and `ROOM_MAX_ROWS` to cap collaborative canvas resizes, `ROOM_MAX_GUESSES` for a room's password guess budget, and `TRUST_PROXY` for a proxy that reaches the server from another address. See [Environment Variables](./environment-variables.md) for the full reference, run the server with `--help` for the flag list, and see [Collaboration Server](./collaboration-server.md) for the flag table, rooms, passwords, persistence, and the bridge.
 
 ## Nginx Configuration
 
@@ -147,7 +147,7 @@ sudo systemctl reload nginx
 - Rooms are path-based: `/server/roomname` reaches a named room through this same location, so no rule per room is needed
 - The `/bridge` location is what lets browsers on your https page join plaintext Moebius servers; it does nothing until the server runs with `BRIDGE` set to `port`, `allow`, or `local` (see [Environment Variables](./environment-variables.md))
 - WebSocket upgrade headers are essential
-- `X-Real-IP` lets the password backoff tell visitors apart; the server believes it from loopback, so a proxy on another host must be listed in `TRUST_PROXY` (see [Environment Variables](./environment-variables.md))
+- `X-Real-IP` and `X-Forwarded-For` let the password backoff tell visitors apart. The server believes them from loopback and from `TRUST_PROXY` (see [Environment Variables](./environment-variables.md)), and counts a request as the proxy's own when the two disagree, so set both here as shown
 - Long timeout (86400 = 24 hours) for persistent connections
 
 **Try Files:**
@@ -452,6 +452,9 @@ Alternative setup using Apache:
     # WebSocket proxy for collaboration
     ProxyPreserveHost On
     ProxyRequests Off
+    # Written here, X-Real-IP cannot come from the visitor: the
+    # password backoff keys on it
+    RequestHeader set X-Real-IP "expr=%{REMOTE_ADDR}"
 
     RewriteEngine On
     RewriteCond %{HTTP:Upgrade} =websocket [NC]
@@ -520,11 +523,17 @@ text.0w.nz {
     # Caddy runs try_files before handle, so the SPA rewrite lives
     # inside the catch-all handle below; at site level it would send
     # these paths to index.html before the proxy ever saw them
+    # Written here, X-Real-IP cannot come from the visitor: the
+    # password backoff keys on it
     handle /server* {
-        reverse_proxy localhost:1337
+        reverse_proxy localhost:1337 {
+            header_up X-Real-IP {remote_host}
+        }
     }
     handle /bridge* {
-        reverse_proxy localhost:1337
+        reverse_proxy localhost:1337 {
+            header_up X-Real-IP {remote_host}
+        }
     }
 
     # Everything else: SPA routing and the file server
