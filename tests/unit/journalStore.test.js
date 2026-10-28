@@ -143,6 +143,22 @@ describe('journal store', () => {
 			expect(workers).toEqual([]);
 		});
 
+		it('gives up on an OPFS probe that never answers', async () => {
+			vi.useFakeTimers();
+			try {
+				vi.stubGlobal('Worker', FakeWorker);
+				storage(() => new Promise(() => {}));
+				const store = createJournalStore();
+				const writing = store.rewrite(Uint8Array.of(7));
+				await vi.advanceTimersByTimeAsync(3000);
+				await writing;
+				expect([...(await store.open())]).toEqual([7]);
+				expect(workers).toEqual([]);
+			} finally {
+				vi.useRealTimers();
+			}
+		});
+
 		it('takes OPFS when it answers', async () => {
 			vi.stubGlobal('Worker', FakeWorker);
 			storage(() => Promise.resolve({}));

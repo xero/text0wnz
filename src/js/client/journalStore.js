@@ -204,6 +204,29 @@ export const createMemoryBackend = () => {
 	};
 };
 
+// every journal call waits on the pick, so a probe that never answers
+// must give up like a dead worker does, not wedge the restore
+const OPFS_PROBE_MS = 3000;
+
+/** @returns {Promise<unknown>} */
+const probeOpfs = () =>
+	new Promise((resolve, reject) => {
+		const timer = setTimeout(
+			() => reject(new Error('OPFS probe timed out')),
+			OPFS_PROBE_MS,
+		);
+		navigator.storage.getDirectory().then(
+			dir => {
+				clearTimeout(timer);
+				resolve(dir);
+			},
+			error => {
+				clearTimeout(timer);
+				reject(error);
+			},
+		);
+	});
+
 /**
  * OPFS can exist and still refuse: WebKit's ephemeral sessions (Safari
  * private windows, Playwright) reject getDirectory while IndexedDB
@@ -218,7 +241,7 @@ const pickBackend = async () => {
 			typeof navigator.storage.getDirectory === 'function' &&
 			typeof Worker !== 'undefined'
 		) {
-			await navigator.storage.getDirectory();
+			await probeOpfs();
 			return createOpfsBackend();
 		}
 	} catch {
