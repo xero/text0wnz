@@ -186,61 +186,6 @@ describe('doc-native file formats', () => {
 		expect(back.doc.getCell(0, 0, 0).fg).toBe(rgbColor(9, 8, 7));
 	});
 
-	it('a damaged archive entry speaks after its load completes', async () => {
-		const events = [];
-		mocks.state.modal = { error: message => events.push(`notice: ${message}`) };
-		try {
-			const doc = createDocV3({ columns: 3, rows: 1 });
-			const bytes = await encodeEnvelope(doc);
-			await new Promise(resolve => {
-				Load.file(
-					new File([bytes], 'piece.0wnz'),
-					async () => {
-						events.push('loaded');
-						resolve();
-					},
-					{ notice: 'PIECE<1>.ANS is damaged' },
-				);
-			});
-			await new Promise(resolve => setTimeout(resolve, 0));
-			expect(events).toEqual(['loaded', 'notice: PIECE&lt;1&gt;.ANS is damaged']);
-		} finally {
-			delete mocks.state.modal;
-		}
-	});
-
-	it('a superseded open keeps its damage note to itself', async () => {
-		const notes = [];
-		mocks.state.modal = { error: message => notes.push(message) };
-		try {
-			const bytes = await encodeEnvelope(createDocV3({ columns: 3, rows: 1 }));
-			let finishFirst;
-			const firstLoaded = new Promise(resolve => {
-				Load.file(
-					new File([bytes], 'rot.0wnz'),
-					// the first open is still loading when the second starts
-					() => new Promise(done => {
-						finishFirst = () => {
-							done();
-							resolve();
-						};
-					}),
-					{ notice: 'ROT.ANS is damaged' },
-				);
-			});
-			await new Promise(resolve => setTimeout(resolve, 20));
-			await new Promise(resolve => {
-				Load.file(new File([bytes], 'fresh.0wnz'), () => resolve());
-			});
-			finishFirst();
-			await firstLoaded;
-			await new Promise(resolve => setTimeout(resolve, 0));
-			expect(notes).toEqual([]);
-		} finally {
-			delete mocks.state.modal;
-		}
-	});
-
 	it('a failing .0wnz or .dur save tells the artist', async () => {
 		// the menu drops the save promise, so an uncaught throw here
 		// used to vanish without a word
