@@ -366,6 +366,10 @@ bun www    # or npm run www
 | `lint:check/fix`   | Lint checking/fixing                 |
 | `format:check/fix` | Formatting check/fix                 |
 | `test:unit`        | Run unit tests (Vitest)              |
+| `test:dom`         | Run DOM/component tests (Vitest)     |
+| `fonts:bake`       | Bake the packed Unicode font pages   |
+| `perf:baseline`    | Capture renderer perf baselines      |
+| `perf:spike`       | Capture scroll spike numbers         |
 | `test:e2e`         | Run end to end tests (Playwright)    |
 | `test:install`     | Install playwright browsers          |
 | `types:check`      | TypeScript type checking             |
@@ -398,22 +402,29 @@ dist/
 ├── sitemap.xml                   # SEO Site map
 ├── humans.txt                    # Credits
 ├── favicon.ico                   # Application icon
-├── ansi/                         # ANSI art tutorials (ANS files, PNG previews)
+├── ansi/                         # ANSI art tutorials (.ans files; their PNG previews land in ui/img/)
 └── ui/                           # UI assets
     ├── stylez-[hash].css         # Minified CSS
     ├── icons-[hash].svg          # Icon sprite
     ├── topazplus_1200.woff2      # Interface font (Amiga style)
     ├── fonts/                    # Bitmap fonts (PNG format)
+    │   └── u/                    # Packed Unicode glyph pages
     ├── img/                      # PWA Images and app icons
     └── js/                       # JavaScript bundles
         ├── editor-[hash].js      # Main application entry point
+        ├── core-[hash].js        # Client core group (magicNumbers, state, storage, ui)
         ├── core-[hash].js        # 0wnzlib document model and codecs
         ├── canvas-[hash].js      # Rendering (WebGL2, 2D fallback, lazy fonts)
         ├── tools-[hash].js       # Drawing tools
         ├── fileops-[hash].js     # File operations
         ├── network-[hash].js     # Collaboration
         ├── palette-[hash].js     # Color palette
-        └── profiler-[hash].js    # Lazy measurement rigs (?profile, ?test, ?spike)
+        ├── asciiBrush-[hash].js  # Ascii brush (lazy)
+        ├── zoom-[hash].js        # Zoom controller (lazy)
+        ├── profiler-[hash].js    # Profiling harness (lazy, ?profile)
+        ├── scrollSpike-[hash].js # Scroll measurement rig (lazy, ?spike)
+        ├── testBridge-[hash].js  # Test bridge (lazy, ?test)
+        └── rolldown-runtime-[hash].js # Bundler runtime
 ```
 
 **Code Standards & Style**

@@ -204,6 +204,11 @@ so run it from the same place every time:
 | `sessions/backups/<room>-<stamp>.0wnz` | A timestamped copy taken on each save whose content changed (sha1-deduplicated)                             |
 | `sessions/<room>.bin`                  | A legacy v2 session file, read while no `.0wnz` or sidecar exists; removed only when the room empties blank |
 
+To restore a backup, stop the server, copy the file from
+`sessions/backups/` over `sessions/<room>.0wnz`, and delete
+`sessions/<room>.state.json`. The sidecar is preferred on load when it
+exists, so a restored envelope alone has no effect.
+
 Saves happen on the autosave interval for rooms that changed, when a
 room empties, and on `SIGINT` and `SIGTERM`, so `docker stop` loses
 nothing. Each write lands in a temporary file, is fsynced, and is

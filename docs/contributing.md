@@ -22,6 +22,7 @@
 ## Did you write a new feature?
 
 - Rad! Please [lint, format](building-and-developing.md#code-quality-scripts), and [test](testing.md) your code before submitting a [pull request](https://github.com/xero/text0wnz/pulls).
+- Follow the house rules in [AGENTS.md](https://github.com/xero/text0wnz/blob/main/AGENTS.md): comments explain why, never what, and nothing in code, docs, commit messages, or UI copy uses an em dash or an en dash.
 
 # Do you have question about the code or using the app?
 

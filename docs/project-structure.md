@@ -99,14 +99,19 @@ export default Module;
 
 ```
 text0wnz/
+├── .dockerignore           # Paths kept out of the Docker build context
 ├── .env                    # Environment variables (non-secret build defaults)
 ├── .git/                   # Git repository
 ├── .gitattributes          # Git attributes configuration
 ├── .github/                # GitHub Actions workflows and configs
 ├── .gitignore              # Git ignore patterns
+├── .oxlintrc.json          # oxlint rules for the TypeScript sources
 ├── .prettierignore         # Prettier ignore patterns
 ├── .prettierrc             # Prettier configuration
+├── AGENTS.md               # House rules for agents and humans (comments, punctuation)
 ├── assets/                 # Build inputs (hex fonts, Unicode data)
+│   ├── hexfonts/           # sha256-pinned unscii and Unifont sources, OFL text, README
+│   └── ucd/                # Unicode Blocks and EastAsianWidth tables, README
 ├── banner                  # ASCII art banner script (displayed on commands)
 ├── bootup                  # Docker container startup script
 ├── bun.lock                # Bun lockfile
@@ -126,7 +131,11 @@ text0wnz/
 ├── src/                    # Source code
 ├── tailwind.config.js      # Tailwind CSS configuration
 ├── tests/                  # Test files
-├── tools/                  # Build and codegen scripts
+├── tools/                  # Build and codegen scripts (run under bun)
+│   ├── bakeHexFonts.js     # Packs assets/hexfonts/ into src/fonts/u/ block pages
+│   ├── compileBinaries.js  # bun --compile server binary matrix into build/bin/
+│   ├── genEawRanges.js     # Regenerates an East Asian Width range table from assets/ucd/
+│   └── genUnicodeBlocks.js # Regenerates src/js/core/blocksData.ts from assets/ucd/
 ├── tsconfig.json           # TypeScript configuration
 ├── vite.config.js          # Vite build configuration
 ├── vite.singlefile.config.js # Single-file build configuration
@@ -160,21 +169,27 @@ src/js/client/
 ├── archiveOpen.js         # Native zip and lha open path with picker modal
 ├── artpacks.js            # Browse Artpacks landing fronting both site browsers
 ├── asciiArena.js          # asciiarena.se in-app browser
+├── asciiBrush.js          # Applies the ascii stamp engine to the document (brush, line, shapes)
+├── autoScroller.js        # Compo-style autoscroll playback of the artwork
 ├── browserKit.js          # Shared widgets for the archive browsers
 ├── canvas.js              # 2D chunk renderer (fallback, ?renderer=2d)
 ├── charsetPicker.js       # Unicode charset picker modal
 ├── collabTarget.js        # Collab server address grammar and transport choice
 ├── collabWorker.js        # Collaboration transport worker (Moebius frames)
 ├── colorPanel.js          # Extended color panel (xterm-256, RGB picker)
-├── compression.js         # Data compression (RLE) for storage
 ├── file.js                # File I/O operations (ANSI, BIN, XBIN, PNG)
+├── fkeys.js               # F-key character set bar in the keyboard tool settings
+├── flyouts.js             # Rail flyouts anchored beside their opener button
 ├── font.js                # Font loading and rendering
 ├── fontCache.js           # Font caching system
 ├── frames.js              # Animation frames timeline panel
 ├── freehandTools.js       # Drawing tools implementation
+├── gestureGuard.js        # Off-canvas touch guard: pinches drive editor zoom, page zoom suppressed
 ├── gestures.js            # Touch gesture recognizer
 ├── glRenderer.js          # WebGL2 renderer (default)
+├── glyphScale.js          # Pixel-exact sizing for glyph preview canvases
 ├── hexFontPages.js        # Runtime Unicode glyph source
+├── historyLabels.js       # Client-side labels for the undo history
 ├── journalStore.js        # OPFS autosave journal store
 ├── journalWorker.js       # OPFS journal worker
 ├── keyboard.js            # Keyboard mode and shortcuts
@@ -184,17 +199,20 @@ src/js/client/
 ├── minimap.js             # Whole-document minimap
 ├── network.js             # Collab session, Connect form, and chat
 ├── palette.js             # Color palette management
+├── panels.js              # Panel layout registry: drag, shade, dock, reset, persisted layout
 ├── plugins.js             # ES-module plugin surface
 ├── pointer.js             # Pointer Events input normalizer
 ├── profiler.js            # In-app profiling harness (lazy, ?profile)
 ├── recentList.js          # Bounded recent list in localStorage
 ├── referenceImage.js      # Reference-image tracing overlay
 ├── scrollSpike.js         # Scroll measurement rig (lazy, ?spike)
+├── selectionBar.js        # Floating action bar over an active selection
 ├── sixteenColors.js       # 16colo.rs in-app browser
 ├── state.js               # Global application state
 ├── storage.js             # IndexedDB persistence
 ├── testBridge.js          # Playwright test bridge (lazy, ?test)
 ├── toolbar.js             # Toolbar management
+├── toolSettings.js        # Unified tool settings panel; sections swap with the tool
 ├── ui.js                  # User interface components
 └── zoom.js                # Zoom controller
 src/service.js             # Service worker (separate from client bundle)
@@ -238,12 +256,20 @@ Located at `src/service.js` (root level, separate from client modules)
 - The editor's default renderer
 - Falls back to the 2D chunk renderer where WebGL2 is unavailable
 
-**compression.js** - Data Compression
+**asciiBrush.js** - Ascii Line Brush
 
-- Run-length encoding (RLE)
-- Canvas data compression for storage
-- Decompression for restoration
-- Exports: `Compression` object
+- Applies the core ascii stamp engine (`src/js/core/asciiStamp.ts`) to the document
+- Additive contact merges, background preservation, and tip and root junction voicing
+- Shared by the freehand brush and the line and shape tools
+- `commit()` writes to the canvas; `preview()` runs the same pipeline and captures the writes for a ghost
+- Exports: `createAsciiBrushController()`, `createAsciiStrokePainter()`
+
+**autoScroller.js** - Autoscroll Playback
+
+- Glides the viewport to the bottom of the artwork, holds, glides back, and repeats a set count or forever
+- Speed in rows per second, so playback reads the same at any zoom or font size
+- A manual scroll anywhere pauses playback in place
+- Scroll speed persists; mode, count, and transport state are session-only
 
 **file.js** - File Operations
 
@@ -357,11 +383,11 @@ Located at `src/service.js` (root level, separate from client modules)
 
 **storage.js** - Persistence Layer
 
-- IndexedDB operations
-- Canvas data storage
-- Editor settings storage
-- Auto-save with debouncing
-- Restore on startup
+- One shared IndexedDB connection (database `text0wnz`, version 4) with the `canvasData`, `fontData`, `undoHistory`, and `refImage` stores
+- Canvas snapshots (`Uint16Array` plus columns and rows) stored directly, no transform on the way in or out
+- Embedded XBin font bytes and the reference image (raw bytes plus MIME type, never a Blob)
+- Editor settings in `localStorage` under `text0wnz-settings`
+- Imports nothing; `state.js` decides when to save and restore
 - Exports: `Storage` object
 
 **toolbar.js** - Toolbar System
@@ -382,6 +408,61 @@ Located at `src/service.js` (root level, separate from client modules)
 - Shading panel
 - Status bar
 - Exports: UI component functions
+
+**panels.js** - Panel Layout
+
+- One data object says where every movable panel lives; one `layout()` applies it
+- Drag, shade, close, focus, dock, and reset all mutate the data and call `layout()`; the DOM is never the source of truth
+- Persists under one versioned key with a tolerant merge, so new modules never reset a saved layout
+- Below a width threshold the layout becomes the phone shell
+- Exports: `createPanelManager()`, `isPhone()`, `promoteRowLead()`
+
+**flyouts.js** - Rail Flyouts
+
+- Fixed panels that anchor beside their opener and only show and hide, never reparent
+- First click on a group opens its flyout without switching tools; the same button or an outside press closes it
+- Arrow keys walk the items; Escape closes and hands focus back to the opener
+
+**selectionBar.js** - Selection Action Bar
+
+- Adopts the selection toolbar element so every button id and handler rides along
+- Centers above the selection rect, flips below when there is no headroom, clamps to the canvas area
+- Follows the selection, viewport scroll, zoom, and window resizes
+- Exports: `createSelectionBar()`
+
+**toolSettings.js** - Tool Settings Panel
+
+- One panel whose sections swap with the selected tool
+- A tool with settings calls `show(section)` from its enable; a tool without settings calls `hide()`
+- Single owner of the persisted settings values (`toolSettings` key); placement belongs to `panels.js`
+- Exports: `createToolSettings()`
+
+**fkeys.js** - F-Key Character Bar
+
+- Twelve one-tap glyph slots riding the active charset page, with pager buttons
+- Pages follow the durdraw model: `{label, chars}`, where 0-255 draws the classic font and negative values address the hex fonts and the doc glyph table
+- Lives in the keyboard section of the tool settings panel
+- Exports: `createFKeys()`
+
+**glyphScale.js** - Glyph Preview Sizing
+
+- Keeps preview canvases at the base glyph size and gives them a CSS size that is a whole multiple of device pixels
+- Shares one 1x font for all previews so zoom never scales or crops them
+- Exports: `fitGlyphCanvas()`, `fitGlyphs()`, `get1xFont()`, `armPixelRatioWatch()`
+
+**historyLabels.js** - Undo History Labels
+
+- Mirrors the core patch arena stroke by stroke: one label row per commit, truncated with the redo tail
+- Tools register a better name than their rail id just before they draw; everything else labels from the active tool
+- Consecutive typing within 2.5 seconds displays as one step
+- Exports: `createHistoryLabels()`
+
+**gestureGuard.js** - Global Gesture Guard
+
+- Owns every touch that starts outside the canvas; the canvas recognizer keeps its own
+- Off-canvas pinches drive the editor zoom through the same `onTextCanvasPinch*` events `zoom.js` consumes
+- Suppresses Safari's page zoom so an off-target pinch or double tap cannot skew the layout
+- Exports: `createGestureGuard()`
 
 **collabWorker.js** - Collaboration Transport Worker
 
@@ -410,15 +491,29 @@ src/js/core/
 ├── mapping.ts             # Pointer-to-cell mapping
 ├── paste.ts               # Paste handling
 ├── patchArena.ts          # Patch buffer
-├── width.ts               # Character width handling
+├── asciiStamp.ts          # Ascii line stamp engine (freehand path to line art glyphs)
+├── circleStamp.ts         # Circle stamp for the ruled shape tools
+├── width.ts               # Character width policy (Intl.Segmenter based)
 ├── charsets.ts            # Charset tables
 ├── cp437.ts               # CP437 mapping
 ├── hexfont.ts             # Hex font parsing
 ├── formatBudget.ts        # Format budget tables
-├── blocksData.ts          # Block character data
-├── eawData.ts             # East Asian width data
-├── codecs/                # File format codecs (SAUCE, BIN, XBIN, ANSI, Tundra, durdraw, .0wnz envelope, zip, lha)
-└── protocol/              # Collab protocol (Moebius dialect, extension suite, timelapse)
+├── blocksData.ts          # Unicode block names and ranges (generated by tools/genUnicodeBlocks.js)
+├── codecs/                # File format codecs
+│   ├── ans.ts             # ANSI (.ans, .utf8.ans)
+│   ├── bin.ts             # BinaryText (.bin)
+│   ├── dur.ts             # durdraw
+│   ├── envelope.ts        # Native .0wnz envelope
+│   ├── lha.ts             # LHA/LZH archives
+│   ├── sauce.ts           # SAUCE records
+│   ├── tundra.ts          # TundraDraw
+│   ├── util.ts            # Shared byte helpers and CodecError
+│   ├── xbin.ts            # XBin (.xb)
+│   └── zip.ts             # Zip archives
+└── protocol/              # Collab protocol
+    ├── moebius.ts         # Moebius dialect codec
+    ├── extensions.ts      # Extension suite for caps-aware clients
+    └── timelapse.ts       # Timelapse frames
 ```
 
 ### Server Modules
@@ -494,6 +589,7 @@ src/js/server/
 
 ```
 docs/
+├── 0wnz-format.md                 # Native .0wnz envelope specification
 ├── README.md                      # Documentation index
 ├── architecture.md                # System architecture
 ├── browser-compatibility-analysis-guide.md # Browser compatibility guide
@@ -501,7 +597,7 @@ docs/
 ├── cicd.md                        # CI/CD pipeline
 ├── code_of_conduct.md             # Code of conduct
 ├── collab-protocol-migration.md   # Collaboration protocol migration
-├── collaboration-server.md        # Server documentation (historical)
+├── collaboration-server.md        # Running the collaboration server
 ├── contributing.md                # Contribution guide
 ├── docker.md                      # Docker guide
 ├── environment-variables.md       # Environment variable reference
@@ -542,18 +638,21 @@ tests/
 │   ├── archiveOpen.test.js       # Native archive open tests
 │   ├── artpacks.test.js          # Browse Artpacks landing tests
 │   ├── asciiArena.test.js        # asciiarena.se browser tests
+│   ├── asciiBrush.test.js        # Ascii brush controller and stroke painter tests
+│   ├── autoScroller.test.js      # Autoscroll state machine tests
 │   ├── canvas.test.js            # Canvas module tests
 │   ├── canvasJournal.test.js     # Canvas autosave journal tests
 │   ├── collabTarget.test.js      # Server address grammar tests
 │   ├── collabWorker.test.js      # Collaboration worker tests
-│   ├── compression.test.js       # Compression tests
-│   ├── engineParity.test.js      # Engine parity tests
+│   ├── engineParity.test.js      # Scripted-stroke identity gate (live canvas, frozen v2, v3 core)
 │   ├── file.test.js              # File I/O tests
 │   ├── fileAdvanced.test.js      # File I/O - Advanced operations tests
 │   ├── fileDocNative.test.js     # Native document format tests
+│   ├── fileError.test.js         # Corrupt file error surfacing tests
 │   ├── fileFormats.test.js       # File I/O - Formats and Parsing tests
 │   ├── fileLatin1.test.js        # Latin-1 txt fallback tests
 │   ├── fileLoad.test.js          # File I/O - Load and Save tests
+│   ├── fileSauceFlags.test.js    # SAUCE flag round-trip tests
 │   ├── fileUtf8.test.js          # UTF-8 file handling tests
 │   ├── font.test.js              # Font system tests
 │   ├── fontCache.test.js         # Font cache tests
@@ -561,10 +660,14 @@ tests/
 │   ├── freehandAdvanced.test.js  # Drawing tools - Advanced tools
 │   ├── freehandPanels.test.js    # Drawing tools - Panels and Cursors
 │   ├── freehandShapes.test.js    # Drawing tools - Shapes and Fill
+│   ├── freehandShapeState.test.js # Shape drag state lifecycle tests
 │   ├── freehandTools.test.js     # Drawing tools tests
 │   ├── freehandToolsExtended.test.js # Drawing tools - Extended coverage
+│   ├── gestureGuard.test.js      # Global gesture guard ownership tests
 │   ├── gestures.test.js          # Touch gesture tests
+│   ├── glyphScale.test.js        # Glyph preview sizing tests
 │   ├── hexFontPages.test.js      # Unicode glyph source tests
+│   ├── historyLabels.test.js     # Undo history label tests
 │   ├── journalStore.test.js      # Journal store tests
 │   ├── journalWorker.test.js     # Journal worker tests
 │   ├── keyboard.test.js          # Keyboard tests
@@ -574,7 +677,9 @@ tests/
 │   ├── main.test.js              # Main module tests
 │   ├── messageGuard.test.js      # postMessage guard tests
 │   ├── minimap.test.js           # Minimap tests
+│   ├── moveMode.test.js          # Selection move mode abort contract tests
 │   ├── network.test.js           # Network tests
+│   ├── openAccept.test.js        # File Open picker accept list tests
 │   ├── palette.test.js           # Palette tests
 │   ├── plugins.test.js           # Plugin surface tests
 │   ├── pointer.test.js           # Pointer input tests
@@ -585,6 +690,7 @@ tests/
 │   │   ├── bridge.test.js        # Bridge tests
 │   │   ├── config.test.js        # Config tests
 │   │   ├── persistence.test.js   # Persistence tests
+│   │   ├── persistenceAtomic.test.js # Atomic write durability tests
 │   │   ├── room.test.js          # Room protocol tests
 │   │   ├── roomPath.test.js      # Path to room mapping tests
 │   │   ├── serverIntegration.test.js # Server integration tests
@@ -594,10 +700,12 @@ tests/
 │   ├── state.test.js             # State management tests
 │   ├── storage.test.js           # Storage tests
 │   ├── toolbar.test.js           # Toolbar tests
+│   ├── toolSettings.test.js      # Tool settings panel controller tests
 │   ├── ui.test.js                # UI tests
 │   ├── uiBasic.test.js           # UI - Basic utilities tests
 │   ├── uiComponents.test.js      # UI - Components tests
 │   ├── uiControls.test.js        # UI - Controls and controllers tests
+│   ├── uiMock.js                 # Shared ui.js mock for the freehand suites
 │   ├── uiModals.test.js          # UI - Advanced utilities tests
 │   ├── utils.test.js             # Client utils tests
 │   ├── xbinCompression.test.js   # XBIN compression tests
@@ -605,26 +713,56 @@ tests/
 │   ├── zoom.test.js              # Zoom tests
 │   └── zoomController.test.js    # Zoom controller tests
 ├── core/                         # Vitest tests for the shared TS core
-│   ├── moebius.test.ts           # Moebius protocol codec tests
-│   ├── extensions.test.ts        # Protocol extension suite tests
-│   ├── envelope.test.ts          # .0wnz envelope codec tests
-│   ├── codecs.test.ts            # File format codec tests
-│   └── ...                       # doc, editor, journal, mapping, and more
+│   ├── ansCompliance.test.ts     # ANSI escape compliance
+│   ├── asciiStamp.test.ts        # Ascii stamp engine goldens
+│   ├── cellops.test.ts           # Cell operations
+│   ├── charsets.test.ts          # Charset tables
+│   ├── circleStamp.test.ts       # Circle stamp
+│   ├── codecs.test.ts            # File format codecs
+│   ├── convert.test.ts           # Doc representation conversions
+│   ├── cp437.test.ts             # CP437 mapping
+│   ├── doc.test.ts               # Document model
+│   ├── dur.test.ts               # durdraw codec
+│   ├── editorFrames.test.ts      # Editor frame operations
+│   ├── envelope.test.ts          # .0wnz envelope codec
+│   ├── extensions.test.ts        # Protocol extension suite
+│   ├── formatBudget.test.ts      # Format budget tables
+│   ├── hexfont.test.ts           # Hex font parsing
+│   ├── journal.test.ts           # Autosave journal format
+│   ├── lha.test.ts               # LHA decoder
+│   ├── loadDoc.test.ts           # Document loading
+│   ├── mapping.test.ts           # Pointer-to-cell mapping
+│   ├── migrate.test.ts           # Legacy data migration
+│   ├── mirrorParity.test.ts      # u16 mirror path independence
+│   ├── moebius.test.ts           # Moebius protocol codec
+│   ├── paste.test.ts             # Paste handling
+│   ├── patchArena.test.ts        # Patch buffer
+│   ├── securityCaps.test.ts      # Security caps
+│   ├── timelapse.test.ts         # Timelapse protocol
+│   ├── tundra.test.ts            # TundraDraw codec
+│   ├── width.test.ts             # Character width policy
+│   └── zip.test.ts               # Zip codec
 ├── dom/                          # Testing Library DOM tests
 │   ├── README.md                 # DOM test documentation
 │   ├── canvas.test.js            # Canvas DOM tests
+│   ├── chatEnter.test.js         # Chat input Enter and IME handling tests
 │   ├── fontPreview.test.js       # Font preview tests
 │   ├── fullscreen.test.js        # Fullscreen tests
 │   ├── keyboard.test.js          # Keyboard DOM tests
 │   ├── menu.test.js              # Menu tests
 │   ├── modal.test.js             # Modal tests
 │   ├── palette.test.js           # Palette DOM tests
-│   ├── toggleButton.test.js      # Toggle button tests
+│   ├── panels.test.js            # Panel manager tests
+│   ├── segmentedControl.test.js  # Segmented control (radiogroup) tests
 │   ├── toolbar.test.js           # Toolbar DOM tests
 │   └── toolPreview.test.js       # Tool preview tests
 ├── e2e/                          # Playwright E2E tests
 │   ├── README.md                 # E2E test documentation
 │   ├── helpers/                  # Shared E2E helpers
+│   │   ├── editorHelpers.js      # Editor readiness, focus, tool, and scroll helpers
+│   │   └── openFile.js           # File opening helpers
+│   ├── asciiBrush.spec.js        # Ascii brush and brush modes for line and shape tools
+│   ├── autoscroll.spec.js        # Minimap autoscroll playback
 │   ├── canvas.spec.js            # Canvas E2E tests
 │   ├── clipboard.spec.js         # Clipboard tests
 │   ├── collaboration.spec.js     # Chat window tests (skip without a live session)
@@ -637,21 +775,39 @@ tests/
 │   ├── keyboard.spec.js          # Keyboard E2E tests
 │   ├── mapping.spec.js           # Pointer-to-cell mapping tests
 │   ├── palette.spec.js           # Palette E2E tests
+│   ├── panels.spec.js            # Panel docking and phone layout
 │   ├── pwaManifest.spec.js       # PWA manifest tests
+│   ├── refimage.spec.js          # Reference image overlay
+│   ├── toolSettings.spec.js      # Tool settings panel
 │   ├── tools.spec.js             # Tools E2E tests
 │   ├── ui.spec.js                # UI E2E tests
+│   ├── uiprefs.spec.js           # UI preferences (theme and view toggles)
 │   └── undoRedo.spec.js          # Undo/redo tests
 ├── golden/                       # Playwright pixel-golden tests
+│   ├── golden.spec.js            # Screenshot matrix and real-art shots
+│   ├── testcard.js               # Deterministic BIN and XBin test cards
+│   └── golden.spec.js-snapshots/ # 26 CI-generated goldens (*-golden-linux.png)
 ├── gl/                           # Playwright WebGL renderer tests
+│   ├── contextLoss.spec.js       # Context loss and restore gate
+│   └── renderer.spec.js          # WebGL2 availability under SwiftShader
 ├── perf/                         # Performance capture scripts
+│   ├── captureBaseline.js        # Drives ?profile and writes tests/baselines/p0-perf.json
+│   └── captureScrollSpike.js     # Drives ?spike and writes tests/baselines/p1-scroll-spike.json
 ├── interop/                      # Cross-editor protocol interop tests
 │   ├── moebius.test.js           # Against the vendored vanilla Moebius 1.0.29 server
 │   ├── moebiusxbin.test.js       # Against the vendored moebiusXBIN 2.2.0 server
 │   └── fixtures/                 # The vendored servers, their shims, and launchers
-├── corpus/                       # Round-trip generators
-├── parity/                       # v2 reference engine for parity tests
-├── baselines/                    # Performance baselines (JSON)
-├── fixtures/                     # Shared fixtures
+├── corpus/                       # Round-trip corpus
+│   ├── roundtrip.test.js         # Vitest harness: committed artwork and synthetic fixtures
+│   ├── generators.js             # Seeded synthetic fixture generators
+│   ├── generators.d.ts           # Types for the generators
+│   ├── lhaFixture.ts             # LHA archive fixtures
+│   └── zipFixture.ts             # Zip archive fixtures
+├── parity/                       # Frozen v2 engine for parity tests
+│   └── v2ReferenceEngine.js      # Verbatim v2 doc-mutation subset, read by engineParity.test.js
+├── baselines/                    # Performance baselines (JSON: p0-perf, p1-gl-perf, p1-scroll-spike, per device)
+├── fixtures/                     # Corpus tiers and automation rules
+│   └── README.md
 └── results/                      # Test results (gitignored)
     ├── coverage/                 # Unit test coverage
     ├── e2e/                      # E2E artifacts
@@ -669,7 +825,6 @@ tests/
 - Asset handling
 - Code splitting strategy
 - Plugin configuration (PWA, sitemap, static copy, HTML minifier)
-- Development server settings
 
 **vite.singlefile.config.js** - Single-File Build Configuration
 
@@ -688,10 +843,9 @@ tests/
 
 **tailwind.config.js** - Tailwind CSS Configuration
 
-- Content scanning paths
-- Dark mode configuration
-- Theme customization
-- Plugin configuration
+- Content scanning paths (`src/index.html`, `src/css/style.css`)
+- Class-based dark mode
+- Nothing else; Tailwind v4 runs through `@tailwindcss/postcss`
 
 **eslint.config.js** - ESLint Configuration
 
@@ -699,6 +853,12 @@ tests/
 - HTML linting
 - Stylistic rules
 - File patterns
+
+**.oxlintrc.json** - oxlint Configuration
+
+- Correctness rules for the TypeScript sources (`src` and `tests`); `bun lint:check` denies warnings
+- Ignores `*.js`, `*.mjs`, and `tests/parity/`, which ESLint owns
+- Exists because typescript-eslint cannot load TypeScript 7's compiler; `tsc` still owns the types
 
 **.prettierrc** - Prettier Configuration
 
@@ -709,9 +869,20 @@ tests/
 	"useTabs": true,
 	"semi": true,
 	"singleQuote": true,
+	"quoteProps": "consistent",
 	"trailingComma": "all",
+	"bracketSpacing": true,
+	"bracketSameLine": false,
 	"arrowParens": "avoid",
-	"endOfLine": "lf"
+	"endOfLine": "lf",
+	"overrides": [
+		{
+			"files": "*.html",
+			"options": {
+				"printWidth": 400
+			}
+		}
+	]
 }
 ```
 
@@ -762,10 +933,14 @@ tests/
 
 **.github/ci.Dockerfile** - CI Container
 
-- Based on Playwright image
+- Based on the Playwright image (`mcr.microsoft.com/playwright:v1.64.0-jammy`)
 - Pre-installed browsers
 - Bun runtime
-- Development tools
+- ESLint and Prettier
+
+**.dockerignore** - Docker Build Context
+
+- Keeps `.git`, `node_modules`, `dist`, `tests/results`, session data, `.claude`, and `.env*.local` out of the image build context
 
 ### Git
 
@@ -774,7 +949,7 @@ tests/
 - `node_modules/`
 - `dist/`
 - `tests/results/`
-- `sessions/*.bin` and `sessions/*.json`
+- `sessions/*.bin`, `sessions/*.json`, `sessions/*.0wnz`, and `sessions/backups/`
 - `src/fonts/u/` (generated font pages)
 - `build/bin/` and `dist-singlefile/`
 - OS and editor noise
@@ -805,12 +980,12 @@ tests/
 ```
 .github/
 ├── ci.Dockerfile              # CI container image
-├── CODE_OF_CONDUCT.md         # Code of conduct
-├── CONTRIBUTING.md            # Contribution guide
+├── CODE_OF_CONDUCT.md         # Symlink to ../docs/code_of_conduct.md
+├── CONTRIBUTING.md            # Symlink to ../docs/contributing.md
 ├── copilot-instructions.md    # Copilot setup instructions
 ├── dependabot.yml             # Dependabot configuration
 ├── FUNDING.yml                # Funding/sponsorship info
-├── SECURITY.md                # Security policy
+├── SECURITY.md                # Symlink to ../docs/security.md
 └── workflows/                 # GitHub Actions workflows
     ├── build.yml              # Build verification
     ├── ci-docker-build.yml    # CI image builder
@@ -829,7 +1004,7 @@ tests/
 ```
 
 > [!NOTE]
-> See [CI/CD Pipeline](cicd.md) for detailed workflow documentation.
+> The three policy files are symlinks, so `docs/` is the single source of truth; edit the files there. See [CI/CD Pipeline](./cicd.md) for detailed workflow documentation.
 
 ## Build Output
 
@@ -850,20 +1025,26 @@ dist/                          # Generated by `bun bake`
     ├── icons-[hash].svg       # Icon sprite (hashed)
     ├── topazplus_1200.woff2   # UI font
     ├── fonts/                 # Bitmap fonts (PNG)
+    │   └── u/                 # Packed Unicode glyph pages plus manifest.json
     ├── img/                   # Images and icons
     └── js/                    # JavaScript bundles (hashed)
         ├── editor-[hash].js   # Main entry
-        ├── core-[hash].js     # Core modules
+        ├── core-[hash].js     # Client core group (magicNumbers, state, storage, ui)
+        ├── core-[hash].js     # 0wnzlib TypeScript core (doc model, codecs, protocol)
         ├── canvas-[hash].js   # Canvas system
         ├── tools-[hash].js    # Drawing tools
         ├── fileops-[hash].js  # File operations
         ├── network-[hash].js  # Collaboration
         ├── palette-[hash].js  # Color palette
+        ├── asciiBrush-[hash].js # Ascii brush (lazy)
+        ├── zoom-[hash].js     # Zoom controller (lazy)
         ├── profiler-[hash].js # Profiling harness (lazy)
         ├── scrollSpike-[hash].js # Scroll measurement rig (lazy)
         ├── testBridge-[hash].js  # Test bridge (lazy)
         └── rolldown-runtime-[hash].js # Bundler runtime
 ```
+
+Two chunks share the `core-` prefix: the Vite `core` group from `vite.config.js` holds the listed client modules, and the shared TypeScript core under `src/js/core/` lands in its own chunk named after that directory.
 
 ## Related Documentation
 

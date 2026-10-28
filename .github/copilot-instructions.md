@@ -13,11 +13,13 @@ This document defines how autonomous workflow agents must work on the text0wnz r
 
 ## Required docs (always check these first)
 
-- docs/architecture.md — system architecture, module responsibilities, event patterns, network protocol, build outputs.
-- docs/building-and-developing.md — build system, Bun/Vite commands, environment variables, scripts, build output layout, and troubleshooting.
-- docs/testing.md — Vitest/Playwright configs, test organization, mocking rules, and E2E guidance.
-- docs/editor-client.md — client-side module responsibilities and API surface (Key Modules).
-- docs/examples/ — sample artwork and example files to use as fixtures for tests.
+- docs/architecture.md: system architecture, module responsibilities, event patterns, network protocol, build outputs.
+- docs/building-and-developing.md: build system, Bun/Vite commands, environment variables, scripts, build output layout, and troubleshooting.
+- docs/testing.md: Vitest/Playwright configs, test organization, mocking rules, and E2E guidance.
+- docs/project-structure.md: every client, core, and server module with its purpose and exports.
+- docs/manual.md: what the editor does from the user's side, for intended behavior.
+- docs/examples/: sample artwork and example files to use as fixtures for tests.
+- AGENTS.md (repo root): comment and punctuation rules that apply to code, docs, commit messages, and UI copy.
 
 ## What to do before any work
 
@@ -34,14 +36,14 @@ This document defines how autonomous workflow agents must work on the text0wnz r
 - bun server
   - Starts the backend collaboration server. Use this when changes affect server-side behavior or collaborative features.
 - bun fix
-  - Runs Prettier (CSS, Markdown) and then ESLint auto-fix (JavaScript, HTML). MUST be run before building or committing. Resolve any ESLint warnings/errors that remain after running it (do not ignore lint failures unless you explicitly explain why and update project config via PR).
+  - Runs Prettier (CSS, Markdown, TypeScript), then ESLint auto-fix (JavaScript, HTML), then oxlint auto-fix (TypeScript correctness rules). MUST be run before building or committing. Resolve any ESLint warnings/errors that remain after running it (do not ignore lint failures unless you explicitly explain why and update project config via PR).
 
 ## Behavioral patterns and code conventions (must follow)
 
 - **Always use camelCase**. see docs /project-structure.md > Naming Conventions)
 - Use Bun tooling and scripts defined in docs/building-and-developing.md for builds, runs, and scripts.
 - Follow the project's established design patterns:
-  - Revealing module pattern for modules.
+  - Factory functions and plain named exports for modules; `palette.js` and `toolbar.js` keep the revealing module pattern, so match whichever the module you touch uses.
   - Observer/event-driven architecture for canvas interactions (custom events such as onTextCanvasDown/onTextCanvasDrag/onTextCanvasUp).
   - Tool controller pattern with enable/disable methods and event listener registration/unregistration for each tool.
   - Command pattern for undo/redo operations (startUndo/endUndo).
@@ -54,22 +56,25 @@ This document defines how autonomous workflow agents must work on the text0wnz r
 
 ## Task categories
 
-1) Features and enhancements
-- Read architecture.md + editor-client.md to identify module boundaries and API surface.
+1. Features and enhancements
+
+- Read architecture.md + project-structure.md to identify module boundaries and API surface.
 - Implement code in the module that owns the functionality (follow module responsibilities from docs).
 - Add unit tests that cover new behavior (see testing.md test structure). Use docs/examples/ as fixtures where applicable.
 - Run `bun fix`, then `bun test:unit`. Ensure tests pass locally.
 - Build the production bundle (`bun bake`) and validate with `bun www` where the change affects rendering or build outputs.
 - Open a PR: create a feature branch, include a clear description, list the docs consulted, list test changes and CI considerations. Ensure CI passes.
 
-2) Bug fixes
+2. Bug fixes
+
 - Reproduce the bug using docs/examples/ if applicable; write a minimal test reproducing the bug (unit or e2e).
-- Consult architecture.md or editor-client.md to understand intended behavior before changing code.
+- Consult architecture.md or manual.md to understand intended behavior before changing code.
 - Implement fix, add tests, run `bun fix`, run unit tests, run `bun bake` and validate if necessary.
 - If the bug affects collaboration or server behavior, run the backend (`bun server`) and test multi-client behavior.
 - Create a PR with regression tests included.
 
-3) Unit tests (Vitest)
+3. Unit tests (Vitest)
+
 - Follow tests/ directory organization described in docs/testing.md.
 - Use jsdom environment and existing setup files (tests/canvasShim.js, tests/setupTests.js).
 - When mocking constructors, use `function` or `class` syntax (Vitest v4+ requirement).
@@ -77,17 +82,20 @@ This document defines how autonomous workflow agents must work on the text0wnz r
 - Keep unit tests focused and small. Add fixtures from docs/examples/ where relevant.
 - Run `bun test:unit` locally; ensure coverage goals for the touched modules are reasonable.
 
-4) DOM / component tests (Testing Library)
+4. DOM / component tests (Testing Library)
+
 - Use Testing Library within Vitest per docs/testing.md.
 - Prefer behavior-focused assertions; avoid coupling tests to implementation details.
 
-5) End-to-end tests (Playwright)
+5. End-to-end tests (Playwright)
+
 - Before running e2e tests, build the app with `bun bake`.
 - If running locally for the first time or in a fresh environment, run `bun test:install` to install browsers.
 - Use `bun test:e2e` to run E2E suites. If the change affects server-backed collaboration flows, run `bun server` and configure Playwright baseURL accordingly.
 - Use examples in docs/examples/ as test data; tests should be deterministic and resilient to timing issues (use explicit waits as needed).
 
-6) CI/CD and PR requirements
+6. CI/CD and PR requirements
+
 - Every change that modifies behavior must include unit tests (and E2E when behavior touches UI/collaboration).
 - Always run `bun fix` before commit. Resolve any linting issues.
 - Ensure `bun bake` succeeds in CI and that the built output includes expected assets (dist/ui/js chunks, ui/stylez, fonts).
@@ -99,12 +107,14 @@ This document defines how autonomous workflow agents must work on the text0wnz r
   - Build instructions to reproduce locally (commands above)
   - Any migration steps or environment variable changes
 
-7) Documentation and examples
+7. Documentation and examples
+
 - When changing behavior, update docs/ accordingly. Prefer updating or adding a docs file in docs/ rather than README edits only.
 - Add example files to docs/examples/ for new file-format or data shape support.
 - If docs are updated in a way that changes agent workflows (build/test commands, patterns), update this copilot-instructions.md file as part of the same change.
 
-8) Refactoring
+8. Refactoring
+
 - Preserve public module boundaries unless you update all callers and add tests.
 - Large refactors require incremental commits and tests at each stage to keep CI green.
 - When changing event names or network message protocol, ensure backward compatibility or provide a migration plan; include tests exercising both old and new behaviors if necessary.
@@ -117,6 +127,7 @@ This document defines how autonomous workflow agents must work on the text0wnz r
 - When in doubt about API or protocol semantics, consult docs/ first, then open a small clarifying PR or an issue if the docs are incomplete.
 
 ## Autonomy checklist (run for every automated task)
+
 - [ ] I read the relevant docs/ pages for this change.
 - [ ] I used docs/examples/ for any format or rendering tests needed.
 - [ ] I ran `bun fix` and resolved any lint errors/warnings.
@@ -125,12 +136,13 @@ This document defines how autonomous workflow agents must work on the text0wnz r
 - [ ] If applicable, I ran E2E tests after `bun test:install` and `bun bake`.
 - [ ] If applicable, I updated any relevant files in docs/ with my changes.
 
-### Appendix — quick references:
+### Appendix: quick references
+
 - Install deps: `bun install`
 - Build production: `bun bake`
 - Serve built app (static): `bun www`
 - Start collaboration server: `bun server`
-- Lint & format: `bun fix` (runs Prettier on CSS and Markdown, then ESLint on JavaScript and HTML, both with auto-fix enforcing the project style. you _MUST_ run both so use the alias command)
+- Lint & format: `bun fix` (runs Prettier on CSS, Markdown, and TypeScript, then ESLint on JavaScript and HTML, then oxlint on TypeScript, all with auto-fix enforcing the project style. you _MUST_ run all three so use the alias command)
 - Unit tests: `bun test:unit`
 - E2E tests: `bun test:e2e`
 - Install Playwright browsers: `bun test:install`

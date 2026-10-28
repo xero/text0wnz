@@ -60,8 +60,9 @@ bun server
 - ES module bundling with code splitting
 - Automatic code splitting into logical chunks (core, canvas, tools, fileops, network, palette)
 - Asset optimization with cache-busting hashes
-- Development server with hot module replacement
 - Production minification with Terser
+
+There is no dev server script. The workflow is build, then serve `dist/` with `bun www`.
 
 **Build output structure:**
 
@@ -76,27 +77,32 @@ dist/
 ├── robots.txt              # Search engine directives
 ├── sitemap.xml             # Site map
 ├── humans.txt              # Humans.txt file
-├── LICENSE.txt             # License
 ├── favicon.ico             # Favicon
 └── ui/
     ├── stylez-[hash].css   # Minified CSS with cache-busting hash
     ├── icons-[hash].svg    # SVG icon sprite (hashed)
     ├── topazplus_1200.woff2  # Font file (UI font)
     ├── fonts/              # Bitmap font assets (PNG format)
+    │   └── u/              # Packed Unicode glyph pages plus manifest.json
     ├── img/                # Images and icons
     └── js/                 # Code-split JavaScript bundles
-        ├── editor-[hash].js      # Main application entry
-        ├── core-[hash].js        # Core modules (state, storage, compression, UI)
+        ├── editor-[hash].js      # Main application entry (most app code)
+        ├── core-[hash].js        # Client core group (magicNumbers, state, storage, ui)
+        ├── core-[hash].js        # 0wnzlib TypeScript core (doc model, codecs, protocol)
         ├── canvas-[hash].js      # Canvas rendering, fonts, lazy loading, font cache
         ├── tools-[hash].js       # Drawing tools, keyboard, toolbar
         ├── fileops-[hash].js     # File I/O operations
         ├── network-[hash].js     # Collaboration/WebSocket
         ├── palette-[hash].js     # Color palette management
+        ├── asciiBrush-[hash].js  # Ascii brush (lazy)
+        ├── zoom-[hash].js        # Zoom controller (lazy)
         ├── profiler-[hash].js    # Profiling harness (lazy, ?profile)
         ├── scrollSpike-[hash].js # Scroll measurement rig (lazy, ?spike)
         ├── testBridge-[hash].js  # Test bridge (lazy, ?test)
         └── rolldown-runtime-[hash].js # Bundler runtime shared by chunks
 ```
+
+Two chunks share the `core-` prefix: the Vite `core` group and the shared TypeScript core under `src/js/core/`, which the bundler names after its directory. A local build emits no `dist/LICENSE.txt`; CI adds it (see [vite-plugin-static-copy](#vite-plugin-static-copy)).
 
 ### Vite Plugins
 
@@ -153,10 +159,12 @@ Minifies `dist/index.html` during production builds.
 
 Copies static assets to the build directory:
 
-- `LICENSE.txt` and `humans.txt`
+- `humans.txt`
 - `favicon.ico`
 - Bitmap font files (`src/fonts/` → `dist/ui/fonts/`)
 - Tutorial artwork (`src/ansi/` → `dist/ansi/`)
+
+The plugin also lists a `LICENSE.txt` target, but targets resolve against the Vite root (`src/`), where no such file exists, so a local `bun bake` emits no license file. In CI, `build.yml` appends the repo and site URLs to the root `LICENSE.txt` and copies it into `dist/` after the build.
 
 #### vite-plugin-sitemap
 
@@ -270,6 +278,7 @@ npm run fix
 
 - Runs Prettier on CSS, Markdown, and TypeScript
 - Runs ESLint with auto-fix on HTML and JavaScript
+- Runs oxlint with auto-fix over the TypeScript in `src` and `tests` (warnings denied)
 
 **`bun lint:check`** - Check for linting issues
 
@@ -279,7 +288,7 @@ bun lint:check
 npm run lint:check
 ```
 
-- Checks code with ESLint
+- Checks JavaScript and HTML with ESLint, then TypeScript with oxlint (`--deny-warnings`)
 - Reports issues without fixing
 - Exits with error if issues found
 
@@ -291,7 +300,7 @@ bun lint:fix
 npm run lint:fix
 ```
 
-- Runs ESLint with auto-fix
+- Runs ESLint with auto-fix, then oxlint with auto-fix
 - Fixes code style and syntax issues
 
 **`bun format:check`** - Check code formatting
@@ -337,7 +346,7 @@ bun test:unit
 npm run test:unit
 ```
 
-- Runs Vitest unit tests
+- Runs every Vitest suite: `tests/unit`, `tests/core`, `tests/dom`, `tests/corpus`, and `tests/interop`
 - Generates coverage report
 
 > [!NOTE]
@@ -362,7 +371,8 @@ npm run test:e2e
 ```
 
 - Runs Playwright E2E tests
-- Tests in Chrome, Firefox, WebKit
+- Tests in Chrome, Firefox, and WebKit, plus the Chromium `golden`, `golden-gl`, and `chromium-gl` projects
+- Golden pixel assertions run only in CI; locally the flows run and the screenshots are skipped
 
 > [!NOTE]
 > See [testing.md](testing.md) for details
@@ -377,6 +387,29 @@ npm run test:install
 
 - Installs Playwright browsers
 - Required before first E2E test run
+
+### Performance Scripts
+
+**`bun perf:baseline`** - Capture renderer baselines
+
+```bash
+bun bake
+bun perf:baseline
+```
+
+- Drives the in-app profiling harness (`?profile`) in headless Chromium against the production build
+- Writes `tests/baselines/p0-perf.json` (the 2D chunk renderer); `PERF_QUERY='?profile&renderer=gl' PERF_OUT=tests/baselines/p1-gl-perf.json` captures the GL renderer
+- Numbers are machine-dependent snapshots with a hardware descriptor, evidence for before and after comparisons, not a CI gate
+
+**`bun perf:spike`** - Capture scroll spike numbers
+
+```bash
+bun bake
+bun perf:spike
+```
+
+- Drives the in-app scroll spike (`?spike`) and writes `tests/baselines/p1-scroll-spike.json`
+- Device captures (iPad, Android) are manual: open `/?profile` or `/?spike` on the device and run the harness there
 
 ## Environment Variables
 
@@ -462,10 +495,13 @@ bun fix
 # Verify everything passes
 bun lint:check
 bun format:check
+bun types:check
 
 # Run tests
 bun test:unit
 ```
+
+The house rules in [AGENTS.md](https://github.com/xero/text0wnz/blob/main/AGENTS.md) apply to code comments, docs, commit messages, and UI copy alike: comments explain why, never what, and nothing uses an em dash or an en dash.
 
 ## Linting and Formatting
 
@@ -548,7 +584,6 @@ src/
     │   ├── toolbar.js
     │   ├── state.js
     │   ├── storage.js       # IndexedDB storage system
-    │   ├── compression.js   # RLE compression utilities
     │   ├── font.js
     │   ├── lazyFont.js      # Lazy glyph generation
     │   ├── fontCache.js     # Font caching system
@@ -708,11 +743,7 @@ For debugging, create a development build with source maps:
 NODE_ENV=development bun bake
 ```
 
-This enables:
-
-- Source maps for debugging
-- Readable output (not minified)
-- Development warnings
+This adds source maps (`sourcemap` in `vite.config.js` keys off `NODE_ENV`). Everything else stays as in a release build: `bake` always passes `--mode production`, and `minify: 'terser'` is unconditional, so the output is still minified. Read the original code through the source maps.
 
 ### Browser DevTools
 
@@ -762,9 +793,8 @@ This logs:
 
 **Storage Optimization:**
 
-- IndexedDB for large binary canvas data (efficient storage of Uint16Array)
+- IndexedDB for large binary canvas data (the `Uint16Array` snapshot is stored as is, no encoding step)
 - localStorage for small configuration settings
-- RLE compression for canvas data reduces storage size
 - Auto-save on canvas changes without blocking the UI
 
 **Asset Optimization:**

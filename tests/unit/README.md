@@ -42,15 +42,6 @@ The unit tests validate individual modules and functions in isolation, ensuring 
   - Error handling
   - Font dimension validation
 
-- **freehand_tools.test.js** - Drawing tools tests
-  - Halfblock/block drawing
-  - Character brush
-  - Shading brush
-  - Line tool
-  - Square tool
-  - Circle tool
-  - Fill tool
-  - Tool state management
 
 - **keyboard.test.js** - Keyboard input and shortcuts tests
   - Keyboard mode toggle
@@ -109,23 +100,10 @@ The unit tests validate individual modules and functions in isolation, ensuring 
   - Data manipulation
   - Format conversions
 
-- **worker.test.js** - Web Worker tests
-  - Worker message handling
-  - Data processing algorithms
-  - Block deduplication logic
-  - Message processing
 
-- **xbin-persistence.test.js** - XBin format persistence tests
-  - Embedded font handling
-  - Palette persistence
-  - File roundtrip testing
 
 ### Client Subdirectories
 
-- **client/worker.test.js** - Additional worker module tests
-  - Message protocol validation
-  - Binary data handling
-  - Connection management
 
 ### Server Modules
 
@@ -134,49 +112,15 @@ The unit tests validate individual modules and functions in isolation, ensuring 
   - Default values
   - Validation
 
-- **server/fileio.test.js** - Server file operations tests
-  - SAUCE record creation and parsing algorithms
-  - Binary data conversion algorithms (Uint16 ↔ Uint8)
-  - File format validation and signature detection
-  - Canvas dimension extraction from SAUCE
-  - Data type conversions and metadata parsing
-  - Edge cases (empty files, invalid SAUCE, large dimensions)
-  - Date formatting and flag bit operations
-  - Path traversal security validation
 
-- **server/main.test.js** - Server main module tests
-  - Module structure validation
-  - Configuration integration
-  - Component exports
-  - Dependency integration
 
-- **server/server.test.js** - Express server tests
-  - Server initialization
-  - Route handling
-  - Middleware setup
-  - SSL configuration
 
-- **server/text0wnz.test.js** - Collaboration engine tests
-  - Session management and file path validation
-  - User tracking (join, nick, disconnect)
-  - Canvas state synchronization and resizing
-  - Message broadcasting and formatting
-  - Chat message limiting algorithms
-  - Draw command processing
-  - Setting changes (font, ice colors, letter spacing)
-  - Start message generation
-  - WebSocket client state handling
 
 - **server/utils.test.js** - Server utility tests
   - Helper functions
   - Data validation
   - Format conversions
 
-- **server/websockets.test.js** - WebSocket handler tests
-  - Connection handling
-  - Message routing
-  - Session cleanup
-  - Error handling
 
 ## Running the Tests
 
@@ -244,7 +188,6 @@ Current coverage status (as of latest run):
 ### Coverage by Module
 
 **High Coverage (≥80%)**:
-- `compression.js`: 100%
 - `magicNumbers.js`: 100%
 - `lazyFont.js`: 100%
 - `config.js` (server): 100%

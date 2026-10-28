@@ -38,7 +38,6 @@ What's new: see the [changelog](https://github.com/xero/text0wnz/blob/main/CHANG
   - Color management and palettes
   - File operations and formats
   - Canvas operations
-  - Client-side architecture
 
 - **[Architecture](architecture.md)** - System architecture and design
   - High-level overview and application modes
@@ -48,20 +47,20 @@ What's new: see the [changelog](https://github.com/xero/text0wnz/blob/main/CHANG
   - Storage and persistence strategies
   - Design patterns and performance optimizations
 
-- **[Collaboration Server](collaboration-server.md)** - Backend real-time collaboration server
-  - Server architecture and features
-  - Installation and setup
-  - Command-line options
-  - WebSocket protocol
-  - Session management
-  - Process management (systemd, forever)
-  - SSL configuration
-
-- **[Collab Protocol Migration](collab-protocol-migration.md)** - Moving to the Moebius-native collaboration protocol
+- **[Collaboration Server](collaboration-server.md)** - Running the real-time collaboration server
+  - Quick start and command-line options
+  - Rooms, passwords, and spectators
+  - Persistence, backups, and rollback
+  - Limits and hardening
+  - Desktop clients and the bridge
+  - Process management (systemd, forever) and SSL
+  - Troubleshooting
+- **[Collab Protocol Migration](collab-protocol-migration.md)** - The Moebius-native collaboration protocol
   - What changed and who is affected
   - Migrating a server
   - Compatibility notes for mixed sessions
-
+  - The teXt0wnz extension suite (caps, action ids 23 to 28, seq and acks)
+  - The Connect form and the bridge from the client's side
 - **[Tutorials](tutorials.md)** - Classic ANSI drawing tutorials
   - library of 20+ hand-collected ANSI tutorials spanning decades of the scene.
   - Each showcases unique techniques, styles, and the vision of a talented artist.
@@ -128,7 +127,7 @@ What's new: see the [changelog](https://github.com/xero/text0wnz/blob/main/CHANG
   - Git tools and hooks
   - Code quality tools
   - Performance tools (Lighthouse CI, bundle analyzer)
-  - Deployment tools (serve, PM2, Docker)
+  - Deployment tools (PM2)
   - Monitoring tools (Uptime Kuma, Netdata)
   - Security tools (npm audit, Snyk, Dependabot)
   - Debugging tools
@@ -137,7 +136,8 @@ What's new: see the [changelog](https://github.com/xero/text0wnz/blob/main/CHANG
 
 - **[SAUCE Format](sauce-format.md)** - SAUCE metadata format specification
 - **[XBin Format](xb-format.md)** - XBin file format specification
-- **[LHA Format](lha-format.md)** - Amiga archive support and decoder notes
+- **[0wnz Format](0wnz-format.md)** - The native `.0wnz` envelope specification
+- **[Archive Support](lha-format.md)** - Zip and amiga archive support and decoder notes
 
 ### Policies
 
@@ -153,7 +153,7 @@ What's new: see the [changelog](https://github.com/xero/text0wnz/blob/main/CHANG
 - **[Examples](https://github.com/xero/text0wnz/tree/main/docs/examples)** - Sample artwork to view and edit
   - ANSI artwork by [xero](https://16colo.rs/artist/xero) (alias: x0^67^aMi5H^iMP!)
   - XBin artwork by [hellbeard](https://16colo.rs/artist/hellbeard) (alias: xz^dS^iMPuRe!)
-- **[Browser Compatibility Analysis](browser-compatibility-analysis-guide.md)** - Guide for GitHub Copilot Agents to analyze the codebase and generate browser support statistics from raw caniuse.com data sets.
+- **[Browser Compatibility Analysis](browser-compatibility-analysis-guide.md)** - Guide to analyzing the codebase and generating browser support statistics from raw caniuse.com data sets.
 
 ## Contributing
 
