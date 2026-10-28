@@ -208,15 +208,25 @@ export const createMemoryBackend = () => {
 // must give up like a dead worker does, not wedge the restore
 const OPFS_PROBE_MS = 10000;
 
-// set once OPFS has held this profile's journal: the next boot looks
-// for it there, so a slow or failed probe must not move it
-const OPFS_HOME = 'text0wnz-journal-opfs';
+// where this profile's journal lives, 'opfs' or 'idb', set by the first
+// backend that holds it: the next boot looks for it there, so neither a
+// slow probe nor a fast one may move it
+const JOURNAL_HOME = 'text0wnz-journal-home';
 
-const opfsIsHome = () => {
+const journalHome = () => {
 	try {
-		return localStorage.getItem(OPFS_HOME) === '1';
+		return localStorage.getItem(JOURNAL_HOME);
 	} catch {
-		return false;
+		return null;
+	}
+};
+
+/** @param {'opfs' | 'idb'} home */
+const settleHome = home => {
+	try {
+		localStorage.setItem(JOURNAL_HOME, home);
+	} catch {
+		// the flag only steadies the next boot's choice
 	}
 };
 
@@ -242,14 +252,24 @@ const probeOpfs = () =>
 /**
  * OPFS can exist and still refuse: WebKit's ephemeral sessions (Safari
  * private windows, Playwright) reject getDirectory while IndexedDB
- * works, so the probe decides, not the method's presence. A profile
- * whose journal already lives in OPFS stays there through a slow or
- * failed probe: demoting would fork the journal into IndexedDB, where
- * the next boot never looks, and the worker's own deadlines degrade a
- * truly dead OPFS.
+ * works, so the probe decides, not the method's presence. Once a
+ * backend holds this profile's journal it stays the home: a journal in
+ * OPFS rides out a slow or failed probe (the worker's own deadlines
+ * degrade a truly dead OPFS), and one in IndexedDB, left there by a
+ * first probe that ran out of time, is not abandoned when a later
+ * probe answers. Either move would fork the journal where the next
+ * boot never looks.
  * @returns {Promise<JournalBackend>}
  */
 const pickBackend = async () => {
+	const home = journalHome();
+	try {
+		if (home === 'idb' && typeof indexedDB !== 'undefined') {
+			return createIdbBackend();
+		}
+	} catch {
+		// fall through
+	}
 	try {
 		if (
 			typeof navigator !== 'undefined' &&
@@ -260,15 +280,11 @@ const pickBackend = async () => {
 			try {
 				await probeOpfs();
 			} catch (error) {
-				if (!opfsIsHome()) {
+				if (home !== 'opfs') {
 					throw error;
 				}
 			}
-			try {
-				localStorage.setItem(OPFS_HOME, '1');
-			} catch {
-				// the flag only steadies the next boot's choice
-			}
+			settleHome('opfs');
 			return createOpfsBackend();
 		}
 	} catch {
@@ -276,7 +292,9 @@ const pickBackend = async () => {
 	}
 	try {
 		if (typeof indexedDB !== 'undefined') {
-			return createIdbBackend();
+			const backend = createIdbBackend();
+			settleHome('idb');
+			return backend;
 		}
 	} catch {
 		// fall through

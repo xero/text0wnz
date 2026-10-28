@@ -129,7 +129,7 @@ describe('journal store', () => {
 		afterEach(() => {
 			vi.unstubAllGlobals();
 			delete navigator.storage;
-			localStorage.removeItem('text0wnz-journal-opfs');
+			localStorage.removeItem('text0wnz-journal-home');
 			workers.length = 0;
 		});
 
@@ -168,19 +168,78 @@ describe('journal store', () => {
 			expect([...(await store.open())]).toEqual([4, 5]);
 			expect(workers).toHaveLength(1);
 			expect(workers[0].ops).toEqual(['rewrite', 'read']);
-			expect(localStorage.getItem('text0wnz-journal-opfs')).toBe('1');
+			expect(localStorage.getItem('text0wnz-journal-home')).toBe('opfs');
 		});
 
 		it('keeps a journal that lives in OPFS there through a failed probe', async () => {
 			// one bad boot must not fork the journal into IndexedDB, where
 			// the next boot would never look
-			localStorage.setItem('text0wnz-journal-opfs', '1');
+			localStorage.setItem('text0wnz-journal-home', 'opfs');
 			vi.stubGlobal('Worker', FakeWorker);
 			storage(() =>
 				Promise.reject(Object.assign(new Error('transient'), { name: 'UnknownError' })));
 			const store = createJournalStore();
 			await store.rewrite(Uint8Array.of(8));
 			expect(workers).toHaveLength(1);
+		});
+
+		/** just enough IndexedDB for the journal's one store, shared by every
+		 * boot that opens it, like the real database */
+		const fakeIndexedDb = () => {
+			const records = [];
+			let created = false;
+			const request = run => {
+				const req = {};
+				Promise.resolve().then(() => {
+					req.result = run();
+					req.onsuccess?.();
+				});
+				return req;
+			};
+			const store = {
+				getAll: () => request(() => records.slice()),
+				add: value => request(() => records.push(value)),
+				clear: () => request(() => (records.length = 0)),
+			};
+			const db = {
+				objectStoreNames: { contains: () => created },
+				createObjectStore: () => (created = true),
+				transaction: () => ({ objectStore: () => store }),
+				close: () => {},
+			};
+			return {
+				open: () => {
+					const req = { result: db };
+					Promise.resolve().then(() => {
+						req.onupgradeneeded?.();
+						req.onsuccess?.();
+					});
+					return req;
+				},
+			};
+		};
+
+		it('keeps a journal left in IndexedDB there once OPFS answers', async () => {
+			vi.stubGlobal('Worker', FakeWorker);
+			vi.stubGlobal('indexedDB', fakeIndexedDb());
+			// the first boot's probe runs out of time: the journal lands in
+			// IndexedDB and the profile remembers that
+			vi.useFakeTimers();
+			try {
+				storage(() => new Promise(() => {}));
+				const first = createJournalStore();
+				const writing = first.rewrite(Uint8Array.of(9, 9));
+				await vi.advanceTimersByTimeAsync(10000);
+				await writing;
+			} finally {
+				vi.useRealTimers();
+			}
+			expect(localStorage.getItem('text0wnz-journal-home')).toBe('idb');
+			// the next boot's probe answers at once, and must not abandon it
+			storage(() => Promise.resolve({}));
+			const second = createJournalStore();
+			expect([...(await second.open())]).toEqual([9, 9]);
+			expect(workers).toEqual([]);
 		});
 	});
 });
