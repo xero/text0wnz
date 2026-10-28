@@ -114,7 +114,7 @@ const connect = options => {
 	try {
 		ws = new WebSocket(route.url);
 	} catch (error) {
-		toPage({ cmd: 'error', error: String(error) });
+		toPage({ cmd: 'error', error: String(error), bridged: route.bridged });
 		return;
 	}
 	socket = ws;
@@ -174,8 +174,11 @@ const connect = options => {
 		toPage({ cmd: 'closed', wasConnected, bridged });
 	});
 	ws.addEventListener('error', () => {
+		// browsers fire error before close on every failed handshake,
+		// so this is the message the page ends a dial on: it must carry
+		// the route, or the bridged wording never shows
 		if (socket === ws) {
-			toPage({ cmd: 'error', error: 'websocket error' });
+			toPage({ cmd: 'error', error: 'websocket error', bridged });
 		}
 	});
 };

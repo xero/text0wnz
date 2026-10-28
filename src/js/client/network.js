@@ -748,9 +748,10 @@ const createWorkerHandler = inputHandle => {
 			case 'error':
 				console.warn('[Network] worker error:', data.error);
 				if (attempt && !connected) {
-					// a socket the browser refuses to construct posts an
-					// error and never a close; the dial still has to end
-					failJoin(false);
+					// browsers post error first on a failed handshake (and a
+					// socket they refuse to construct posts nothing else), so
+					// the dial ends here, with the route the worker named
+					failJoin(data.bridged === true);
 				}
 				break;
 		}
