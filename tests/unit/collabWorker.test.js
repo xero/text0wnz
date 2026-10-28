@@ -155,7 +155,14 @@ describe('collab worker', () => {
 			expect(ws.url).toBe(
 				'wss://text.0w.nz/bridge?host=jam.example&port=8000&room=lounge',
 			);
-			// a dead bridged dial tells the page which leg to blame
+			// a dead bridged dial tells the page which leg to blame, on
+			// the error browsers fire first and on the close that follows
+			ws.emit('error');
+			expect(pageMessages().at(-1)).toEqual({
+				cmd: 'error',
+				error: 'websocket error',
+				bridged: true,
+			});
 			ws.close();
 			expect(pageMessages().at(-1)).toEqual({
 				cmd: 'closed',

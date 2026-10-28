@@ -451,6 +451,20 @@ describe('Network Module', () => {
 			createWorkerHandler(mockInputHandle);
 			elementFor('connectServer').value = 'jam.example';
 			clickOn('connectJoin');
+			// browsers fire error before close: the error message is the
+			// one that ends the dial, so it must carry the route
+			await listenerOf()({ data: { cmd: 'error', error: 'websocket error', bridged: true } });
+			expect(elementFor('connectStatus').textContent).toMatch(/bridge/);
+			// the close that follows must not report a second time
+			State.modal.open.mockClear();
+			await listenerOf()({ data: { cmd: 'closed', wasConnected: false, bridged: true } });
+			expect(State.modal.open).not.toHaveBeenCalled();
+		});
+
+		it('a clean close before the handshake still reads the route', async () => {
+			createWorkerHandler(mockInputHandle);
+			elementFor('connectServer').value = 'jam.example';
+			clickOn('connectJoin');
 			await listenerOf()({ data: { cmd: 'closed', wasConnected: false, bridged: true } });
 			expect(elementFor('connectStatus').textContent).toMatch(/bridge/);
 		});
