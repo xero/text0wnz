@@ -47,11 +47,12 @@ const isLoopback = address =>
 
 /**
  * The address a request speaks for: the socket's peer, unless that peer
- * is a proxy this server trusts, whose X-Real-IP (or else last
- * X-Forwarded-For hop) names the client. Loopback is always trusted,
- * the Docker image's own Caddy among it; TRUST_PROXY adds proxies on
- * other hosts. Anyone else's headers are ignored: believing them would
- * let a guesser mint a fresh backoff per forged address.
+ * is a proxy this server trusts, whose X-Real-IP or last
+ * X-Forwarded-For hop names the client. Loopback is always trusted,
+ * the Docker image's own Caddy among it; TRUST_PROXY adds proxies that
+ * reach the server from elsewhere. Anyone else's headers are ignored:
+ * believing them would let a guesser mint a fresh backoff per forged
+ * address.
  * @param {string} peer the socket's address
  * @param {{get(name: string): string | null}} headers
  * @param {string[]} [trusted] TRUST_PROXY addresses
@@ -63,12 +64,18 @@ export const clientAddress = (peer, headers, trusted = []) => {
 	}
 	// Caddy's {remote} placeholder carries the port
 	const real = stripPort((headers.get('x-real-ip') ?? '').trim());
-	if (isIP(real)) {
-		return unmapped(real);
-	}
 	const hops = (headers.get('x-forwarded-for') ?? '').split(',');
 	const last = stripPort((hops.at(-1) ?? '').trim());
-	return isIP(last) ? unmapped(last) : from;
+	const named = [real, last].filter(address => isIP(address)).map(unmapped);
+	// proxies differ in which header they overwrite: Caddy and Apache
+	// append the true hop to X-Forwarded-For but pass a visitor's own
+	// X-Real-IP through, and an nginx that sets only X-Real-IP passes a
+	// forged X-Forwarded-For along. Two names that disagree mean one is
+	// forged, so the request counts as the proxy's own
+	if (named.length === 2 && named[0] !== named[1]) {
+		return from;
+	}
+	return named[0] ?? from;
 };
 
 /** a v6 address expanded down to its first four groups, the /64 */

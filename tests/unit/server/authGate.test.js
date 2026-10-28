@@ -24,6 +24,22 @@ describe('clientAddress', () => {
 		expect(clientAddress('127.0.0.1', headers({ 'x-forwarded-for': '6.6.6.6, 198.51.100.7' }))).toBe('198.51.100.7');
 	});
 
+	it('two forwarded names that disagree count as the proxy itself', () => {
+		// Caddy and Apache pass a visitor's X-Real-IP through but append
+		// the true hop to X-Forwarded-For
+		expect(
+			clientAddress('127.0.0.1', headers({ 'x-real-ip': '6.6.6.6', 'x-forwarded-for': '198.51.100.7' })),
+		).toBe('127.0.0.1');
+		// an nginx setting only X-Real-IP passes a forged X-Forwarded-For on
+		expect(
+			clientAddress('127.0.0.1', headers({ 'x-real-ip': '198.51.100.7', 'x-forwarded-for': '6.6.6.6' })),
+		).toBe('127.0.0.1');
+		// both set by the proxy agree, the Docker image's Caddy included
+		expect(
+			clientAddress('127.0.0.1', headers({ 'x-real-ip': '198.51.100.7:40001', 'x-forwarded-for': '6.6.6.6, 198.51.100.7' })),
+		).toBe('198.51.100.7');
+	});
+
 	it('TRUST_PROXY extends the trust; garbage falls back to the peer', () => {
 		const claim = headers({ 'x-real-ip': '198.51.100.7' });
 		expect(clientAddress('172.18.0.2', claim)).toBe('172.18.0.2');
