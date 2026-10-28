@@ -132,12 +132,6 @@ docker run -e DOMAIN=text.example.com text0wnz:latest
 - SSL certificate generation
 - WebSocket endpoint configuration
 
-### SESSION_KEY
-
-**Default:** generated at boot (Docker only)
-
-**Purpose:** The Docker startup script generates and exports this value when it is not provided. The collaboration server does not read it; room access control uses `ROOM_PASS` and `ROOM_PASSWORDS` instead.
-
 ### ROOM_PASS
 
 **Default:** none
