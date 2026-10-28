@@ -57,6 +57,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		console.warn('[Canvas] journal read failed:', error);
 		return null;
 	});
+	setTimeout(() => {
+		bootJournal = null;
+	}, magicNumbers.JOURNAL_BOOT_SNAPSHOT_MS);
 	let keyframeTimer = null;
 	// The first keyframe of a session supersedes whatever the journal
 	// held before (a previous session, a torn tail): strokes may only
@@ -1940,16 +1943,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		};
 	};
 
-	/** The journal as it stands now. */
-	const loadJournalSnapshot = async () => {
-		try {
-			return await snapshotOf(await journal.open());
-		} catch (error) {
-			console.warn('[Canvas] journal restore failed:', error);
-			return null;
-		}
-	};
-
 	/**
 	 * Restore source for state.js: the journal exactly as the previous
 	 * session left it, whatever this session has written since. Taken
@@ -2068,7 +2061,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		getOnionSkin: () => onionSkin,
 		getBaudOffsets: getBaudOffsets,
 		setBaudReveal: setBaudReveal,
-		loadJournalSnapshot: loadJournalSnapshot,
 		loadBootSnapshot: loadBootSnapshot,
 		setMirrorMode: setMirrorMode,
 		getMirrorMode: getMirrorMode,

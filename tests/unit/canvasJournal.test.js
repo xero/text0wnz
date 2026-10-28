@@ -1,10 +1,21 @@
 /**
  * Autosave journal wiring through the live canvas: strokes append on
- * commit, doc-level ops write debounced keyframes, loadJournalSnapshot
+ * commit, doc-level ops write debounced keyframes, loadBootSnapshot
  * restores, and collab sessions never journal. Runs on the real
- * journalStore (jsdom auto-picks the in-memory backend).
+ * journalStore over one shared in-memory backend per test, so a second
+ * canvas is the next boot of the first.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
+
+const shared = vi.hoisted(() => ({ backend: null }));
+vi.mock('../../src/js/client/journalStore.js', async importOriginal => {
+	const real = await importOriginal();
+	return {
+		...real,
+		createJournalStore: options =>
+			real.createJournalStore({ ...options, backend: shared.backend }),
+	};
+});
 
 const stateMock = vi.hoisted(() => ({
 	font: {
@@ -77,6 +88,7 @@ vi.mock('../../src/js/client/palette.js', () => ({
 }));
 
 import { createTextArtCanvas } from '../../src/js/client/canvas.js';
+import { createMemoryBackend } from '../../src/js/client/journalStore.js';
 import { v3ToU16Lossy } from '../../src/js/core/index';
 import magicNumbers from '../../src/js/client/magicNumbers.js';
 
@@ -97,10 +109,17 @@ const settle = () =>
 	new Promise(resolve =>
 		setTimeout(resolve, magicNumbers.JOURNAL_KEYFRAME_DEBOUNCE_MS + 150));
 
+/** the next boot over the same storage, and what its restore finds */
+const reload = async () => (await makeCanvas()).loadBootSnapshot();
+
+beforeEach(() => {
+	shared.backend = createMemoryBackend();
+});
+
 describe('canvas autosave journal wiring', () => {
 	it('journals strokes + session keyframe and restores the drawing', async () => {
 		const canvas = await makeCanvas();
-		expect(await canvas.loadJournalSnapshot()).toBeNull();
+		expect(await canvas.loadBootSnapshot()).toBeNull();
 
 		canvas.startUndo();
 		canvas.draw(cb => {
@@ -117,7 +136,7 @@ describe('canvas autosave journal wiring', () => {
 		canvas.startUndo();
 		await new Promise(resolve => setTimeout(resolve, 50)); // append chain
 
-		const snapshot = await canvas.loadJournalSnapshot();
+		const snapshot = await reload();
 		expect(snapshot).not.toBeNull();
 		expect(snapshot.doc.getColumns()).toBe(80);
 		expect(snapshot.doc.getRows()).toBe(25);
@@ -126,18 +145,21 @@ describe('canvas autosave journal wiring', () => {
 		);
 	});
 
-	it('restores what boot found, whatever the session writes first', async () => {
-		// the restore runs after boot work that keyframes (its own
-		// setIceColors does), so it must see the journal as the last
-		// session left it: empty here, not this session's keyframe
-		const canvas = await makeCanvas();
-		canvas.setIceColors(true);
-		canvas.startUndo();
-		canvas.draw(cb => cb(219, 14, 1, 3, 2));
-		canvas.startUndo();
+	it('a reload restores the last session, not its own boot keyframe', async () => {
+		const first = await makeCanvas();
+		first.startUndo();
+		first.draw(cb => cb(219, 14, 1, 3, 2));
+		first.startUndo();
 		await settle();
-		expect(await canvas.loadJournalSnapshot()).not.toBeNull();
-		expect(await canvas.loadBootSnapshot()).toBeNull();
+		// the next boot keyframes its blank doc before the restore reads,
+		// the way the restore's own setIceColors does
+		const second = await makeCanvas();
+		second.setIceColors(true);
+		await settle();
+		const snapshot = await second.loadBootSnapshot();
+		expect(v3ToU16Lossy(snapshot.doc).imageData[2 * 80 + 3]).toBe(
+			(219 << 8) | (1 << 4) | 14,
+		);
 	});
 
 	it('undo rewrites the keyframe so replay matches the rewound doc', async () => {
@@ -149,7 +171,7 @@ describe('canvas autosave journal wiring', () => {
 		canvas.undo();
 		await settle();
 
-		const snapshot = await canvas.loadJournalSnapshot();
+		const snapshot = await reload();
 		const u16 = v3ToU16Lossy(snapshot.doc);
 		expect(Array.from(u16.imageData)).toEqual(
 			Array.from(canvas.getImageData()),
@@ -164,7 +186,7 @@ describe('canvas autosave journal wiring', () => {
 			canvas.startUndo();
 			canvas.draw(cb => cb(219, 14, 1, 3, 2));
 			await settle();
-			expect(await canvas.loadJournalSnapshot()).toBeNull();
+			expect(await reload()).toBeNull();
 		} finally {
 			stateMock.network = null;
 		}
@@ -177,7 +199,7 @@ describe('canvas autosave journal wiring', () => {
 		canvas.draw(cb => cb(219, 7, 9, 1, 1)); // bright bg, legal under ice
 		await settle();
 
-		const snapshot = await canvas.loadJournalSnapshot();
+		const snapshot = await reload();
 		expect(snapshot.doc.getIceColors()).toBe(true);
 		expect(v3ToU16Lossy(snapshot.doc).imageData[1 * 80 + 1]).toBe(
 			(219 << 8) | (9 << 4) | 7,
@@ -194,7 +216,7 @@ describe('canvas autosave journal wiring', () => {
 		canvas.startUndo();
 		await settle();
 
-		const snapshot = await canvas.loadJournalSnapshot();
+		const snapshot = await reload();
 		expect(snapshot).not.toBeNull();
 		expect(snapshot.doc.frames.length).toBe(2);
 	});
@@ -209,7 +231,7 @@ describe('canvas autosave journal wiring', () => {
 		canvas.startUndo();
 		await settle();
 
-		const snapshot = await canvas.loadJournalSnapshot();
+		const snapshot = await reload();
 		expect(snapshot.doc.getColumns()).toBe(40);
 		expect(v3ToU16Lossy(snapshot.doc).imageData[19 * 40 + 39]).toBe(
 			(219 << 8) | (1 << 4) | 14,

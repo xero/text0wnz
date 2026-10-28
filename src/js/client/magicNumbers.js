@@ -48,6 +48,10 @@ const RESIZE_WARN_CELLS = 300000;
 // (core/patchArena.ts, DEFAULT_UNDO_BYTE_CAP)
 // Trailing debounce for autosave journal keyframe rewrites
 const JOURNAL_KEYFRAME_DEBOUNCE_MS = 500;
+// The restore takes the previous session's journal within moments of
+// boot or never (no saved settings, a launch file); past this the
+// bytes are only held memory
+const JOURNAL_BOOT_SNAPSHOT_MS = 60000;
 // Touch gesture tuning, dialed in on real devices. Hold =
 // single-finger stroke disambiguation delay; slop = max travel for a
 // tap; window = both-fingers-lift deadline for undo/redo taps; palm
@@ -99,6 +103,7 @@ export default {
 	MAX_ROWS,
 	RESIZE_WARN_CELLS,
 	JOURNAL_KEYFRAME_DEBOUNCE_MS,
+	JOURNAL_BOOT_SNAPSHOT_MS,
 	GESTURE_TAP_WINDOW_MS,
 	GESTURE_SLOP_PX,
 	GESTURE_STROKE_HOLD_MS,
