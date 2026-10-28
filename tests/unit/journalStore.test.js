@@ -129,6 +129,7 @@ describe('journal store', () => {
 		afterEach(() => {
 			vi.unstubAllGlobals();
 			delete navigator.storage;
+			localStorage.removeItem('text0wnz-journal-opfs');
 			workers.length = 0;
 		});
 
@@ -150,7 +151,7 @@ describe('journal store', () => {
 				storage(() => new Promise(() => {}));
 				const store = createJournalStore();
 				const writing = store.rewrite(Uint8Array.of(7));
-				await vi.advanceTimersByTimeAsync(3000);
+				await vi.advanceTimersByTimeAsync(10000);
 				await writing;
 				expect([...(await store.open())]).toEqual([7]);
 				expect(workers).toEqual([]);
@@ -167,6 +168,19 @@ describe('journal store', () => {
 			expect([...(await store.open())]).toEqual([4, 5]);
 			expect(workers).toHaveLength(1);
 			expect(workers[0].ops).toEqual(['rewrite', 'read']);
+			expect(localStorage.getItem('text0wnz-journal-opfs')).toBe('1');
+		});
+
+		it('keeps a journal that lives in OPFS there through a failed probe', async () => {
+			// one bad boot must not fork the journal into IndexedDB, where
+			// the next boot would never look
+			localStorage.setItem('text0wnz-journal-opfs', '1');
+			vi.stubGlobal('Worker', FakeWorker);
+			storage(() =>
+				Promise.reject(Object.assign(new Error('transient'), { name: 'UnknownError' })));
+			const store = createJournalStore();
+			await store.rewrite(Uint8Array.of(8));
+			expect(workers).toHaveLength(1);
 		});
 	});
 });

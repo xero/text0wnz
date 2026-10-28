@@ -206,7 +206,19 @@ export const createMemoryBackend = () => {
 
 // every journal call waits on the pick, so a probe that never answers
 // must give up like a dead worker does, not wedge the restore
-const OPFS_PROBE_MS = 3000;
+const OPFS_PROBE_MS = 10000;
+
+// set once OPFS has held this profile's journal: the next boot looks
+// for it there, so a slow or failed probe must not move it
+const OPFS_HOME = 'text0wnz-journal-opfs';
+
+const opfsIsHome = () => {
+	try {
+		return localStorage.getItem(OPFS_HOME) === '1';
+	} catch {
+		return false;
+	}
+};
 
 /** @returns {Promise<unknown>} */
 const probeOpfs = () =>
@@ -230,7 +242,11 @@ const probeOpfs = () =>
 /**
  * OPFS can exist and still refuse: WebKit's ephemeral sessions (Safari
  * private windows, Playwright) reject getDirectory while IndexedDB
- * works, so the probe decides, not the method's presence.
+ * works, so the probe decides, not the method's presence. A profile
+ * whose journal already lives in OPFS stays there through a slow or
+ * failed probe: demoting would fork the journal into IndexedDB, where
+ * the next boot never looks, and the worker's own deadlines degrade a
+ * truly dead OPFS.
  * @returns {Promise<JournalBackend>}
  */
 const pickBackend = async () => {
@@ -241,7 +257,18 @@ const pickBackend = async () => {
 			typeof navigator.storage.getDirectory === 'function' &&
 			typeof Worker !== 'undefined'
 		) {
-			await probeOpfs();
+			try {
+				await probeOpfs();
+			} catch (error) {
+				if (!opfsIsHome()) {
+					throw error;
+				}
+			}
+			try {
+				localStorage.setItem(OPFS_HOME, '1');
+			} catch {
+				// the flag only steadies the next boot's choice
+			}
 			return createOpfsBackend();
 		}
 	} catch {
