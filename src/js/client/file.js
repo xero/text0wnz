@@ -1210,6 +1210,7 @@ const saveModule = () => {
 									'.xb',
 									'.diz',
 									'.tnd',
+									'.dur',
 									'.0wnz',
 								],
 								'text/plain': ['.txt'],
