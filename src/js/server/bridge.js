@@ -20,8 +20,9 @@
  *                 informed consent and dial as given.
  *
  * Always on, whatever the mode: a connection cap (BRIDGE_MAX), a
- * backpressure bound in both directions, an idle reaper, a dial
- * timeout, a lookup timeout, the frame-size limit (the browser side
+ * delivery bound in both directions (a side that stops taking
+ * delivery, or leaves more than two maximum frames unconfirmed,
+ * closes the pipe), an idle reaper, a dial timeout, a lookup timeout, the frame-size limit (the browser side
  * rides Bun's maxPayloadLength), and an audit line per open, close,
  * and refusal carrying the requester's address, since `port` mode is
  * by design a relay from this host's IP to any public server on one
@@ -261,24 +262,33 @@ export const bridgeConfigFromEnv = (env = process.env) => ({
  */
 export const BRIDGE_QUEUE_LIMIT_BYTES = 256 * 1024;
 export const BRIDGE_CONNECT_TIMEOUT_MS = 10000;
-// unsent bytes a slow side may pile up before the pipe closes: a
-// fast sender into a stalled reader used to buffer without bound, and
-// sixteen of those shared the process with every collab room
-export const BRIDGE_BACKPRESSURE_LIMIT_BYTES = 16 * 1024 * 1024;
+// the memory one pipe may hold for a side that is not taking delivery:
+// two maximum frames, so a single full-size Moebius paste never trips
+// it on its own. Bun's client socket reports no buffered amount (its
+// getter reads 0 with 50 MB unflushed), so delivery toward the server
+// is confirmed by pings: a pong proves every byte sent before it has
+// left this process. Toward the browser the server socket does report,
+// and progress between ticks is what counts, never one sample, since a
+// large frame to a healthy browser sits buffered for a moment
+export const BRIDGE_BACKPRESSURE_LIMIT_BYTES = 64 * 1024 * 1024;
+// how long a side may make no delivery progress with bytes pending
+// before it counts as stalled
+export const BRIDGE_STALL_MS = 15000;
 // a quiet pipe is a held slot: half an hour of silence both ways is a
 // dead jam, not a watcher
 export const BRIDGE_IDLE_MS = 30 * 60 * 1000;
+export const BRIDGE_TICK_MS = 1000;
 
 /**
  * @param {object} browserWs the server-side socket (close, send, getBufferedAmount)
  * @param {string} targetUrl
  * @param {(line: string) => void} [log]
- * @param {{idleMs?: number, backpressureLimit?: number}} [options]
+ * @param {{idleMs?: number, backpressureLimit?: number, stallMs?: number}} [options]
  */
 export const createBridgePipe = (browserWs, targetUrl, log = () => {}, options = {}) => {
 	const idleMs = options.idleMs ?? BRIDGE_IDLE_MS;
-	const backpressureLimit =
-		options.backpressureLimit ?? BRIDGE_BACKPRESSURE_LIMIT_BYTES;
+	const limit = options.backpressureLimit ?? BRIDGE_BACKPRESSURE_LIMIT_BYTES;
+	const stallMs = options.stallMs ?? BRIDGE_STALL_MS;
 	/** @type {(string | Uint8Array)[]} */
 	const queue = [];
 	let queuedBytes = 0;
@@ -286,12 +296,21 @@ export const createBridgePipe = (browserWs, targetUrl, log = () => {}, options =
 	let closed = false;
 	let lastActivity = Date.now();
 	let connectTimer;
-	const idleTimer = setInterval(() => {
-		if (Date.now() - lastActivity >= idleMs) {
-			log('bridge idle');
-			closeBoth();
-		}
-	}, Math.min(idleMs, 60_000));
+	// toward the server: bytes handed to the socket since a pong last
+	// confirmed delivery, and the ping in flight that will confirm them
+	let unconfirmed = 0;
+	/** @type {{seq: number, at: number, bytes: number} | null} */
+	let ping = null;
+	let pingSeq = 0;
+	// toward the browser: delivered = sent minus still buffered; a side
+	// that is draining moves it, a stalled one does not
+	let sentToBrowser = 0;
+	let lastDelivered = 0;
+	let browserStuckSince = 0;
+
+	/** @param {string | Uint8Array} frame */
+	const size = frame =>
+		(typeof frame === 'string' ? frame.length : frame.byteLength);
 
 	const closeBoth = () => {
 		if (closed) {
@@ -299,7 +318,7 @@ export const createBridgePipe = (browserWs, targetUrl, log = () => {}, options =
 		}
 		closed = true;
 		clearTimeout(connectTimer);
-		clearInterval(idleTimer);
+		clearInterval(ticker);
 		queue.length = 0;
 		queuedBytes = 0;
 		try {
@@ -314,9 +333,52 @@ export const createBridgePipe = (browserWs, targetUrl, log = () => {}, options =
 		}
 	};
 
-	/** @param {number | undefined} buffered */
-	const overLimit = buffered =>
-		typeof buffered === 'number' && buffered > backpressureLimit;
+	const tick = () => {
+		const now = Date.now();
+		if (now - lastActivity >= idleMs) {
+			log('bridge idle');
+			closeBoth();
+			return;
+		}
+		if (!upstream || upstream.readyState !== 1) {
+			return;
+		}
+		if (ping) {
+			if (now - ping.at > stallMs) {
+				log('bridge server side stalled');
+				closeBoth();
+				return;
+			}
+		} else if (unconfirmed > 0) {
+			ping = { seq: ++pingSeq, at: now, bytes: unconfirmed };
+			try {
+				upstream.ping(String(ping.seq));
+			} catch {
+				closeBoth();
+				return;
+			}
+		}
+		const buffered = browserWs.getBufferedAmount?.() ?? 0;
+		if (buffered > limit) {
+			log('bridge browser side over limit');
+			closeBoth();
+			return;
+		}
+		const delivered = sentToBrowser - buffered;
+		if (buffered > 0 && delivered <= lastDelivered) {
+			if (!browserStuckSince) {
+				browserStuckSince = now;
+			} else if (now - browserStuckSince > stallMs) {
+				log('bridge browser side stalled');
+				closeBoth();
+				return;
+			}
+		} else {
+			browserStuckSince = 0;
+		}
+		lastDelivered = delivered;
+	};
+	const ticker = setInterval(tick, Math.min(BRIDGE_TICK_MS, idleMs));
 
 	try {
 		upstream = new WebSocket(targetUrl);
@@ -337,22 +399,27 @@ export const createBridgePipe = (browserWs, targetUrl, log = () => {}, options =
 		clearTimeout(connectTimer);
 		for (const frame of queue) {
 			upstream.send(frame);
+			unconfirmed += size(frame);
 		}
 		queue.length = 0;
 		queuedBytes = 0;
 	});
+	upstream.addEventListener('pong', event => {
+		// the far side read past our ping, so everything sent before it
+		// has left this process
+		if (ping && String(event.data) === String(ping.seq)) {
+			unconfirmed -= ping.bytes;
+			ping = null;
+		}
+	});
 	upstream.addEventListener('message', event => {
 		lastActivity = Date.now();
+		const frame =
+			typeof event.data === 'string' ? event.data : new Uint8Array(event.data);
+		sentToBrowser += size(frame);
 		try {
-			browserWs.send(
-				typeof event.data === 'string' ? event.data : new Uint8Array(event.data),
-			);
+			browserWs.send(frame);
 		} catch {
-			closeBoth();
-			return;
-		}
-		if (overLimit(browserWs.getBufferedAmount?.())) {
-			log('bridge backpressure toward the browser');
 			closeBoth();
 		}
 	});
@@ -368,13 +435,14 @@ export const createBridgePipe = (browserWs, targetUrl, log = () => {}, options =
 			lastActivity = Date.now();
 			if (upstream.readyState === 1) {
 				upstream.send(frame);
-				if (overLimit(upstream.bufferedAmount)) {
-					log('bridge backpressure toward the server');
+				unconfirmed += size(frame);
+				if (unconfirmed > limit) {
+					log('bridge server side over limit');
 					closeBoth();
 				}
 			} else if (upstream.readyState === 0) {
 				// bounded pre-connect buffer
-				queuedBytes += typeof frame === 'string' ? frame.length : frame.byteLength;
+				queuedBytes += size(frame);
 				if (queuedBytes > BRIDGE_QUEUE_LIMIT_BYTES) {
 					log('bridge queue overflow');
 					closeBoth();

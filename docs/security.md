@@ -83,7 +83,7 @@ The server can relay a browser's socket to a plaintext Moebius server (the `BRID
 
 - **The destination is scoped by mode, never by the client alone.** `local` dials one fixed target. `port` lets the client name a host but pins the port, resolves the name, refuses private, loopback, link-local, multicast, reserved, and cloud metadata addresses, and dials the resolved address, so DNS rebinding gains nothing. `allow` admits only a listed set of `host:port` pairs.
 - **Every request is logged with the requester's address while the bridge is on.** See the [Privacy Policy](https://github.com/xero/text0wnz/wiki/privacy). Refusals reach the caller as a bare `403` with no reason, so the endpoint cannot be used to read the host's DNS.
-- **Every pipe is bounded.** A connection cap, a backpressure limit in both directions, an idle reaper, and timeouts on the dial and the lookup.
+- **Every pipe is bounded.** A connection cap, a delivery bound in both directions (a side that stops taking delivery, or leaves more than two maximum frames unconfirmed, closes the pipe), an idle reaper, and timeouts on the dial and the lookup.
 - **The Origin allowlist gates the bridge** exactly as it gates room upgrades.
 - **Traffic past the bridge is plaintext to the destination**, passwords included, because that is what Moebius servers speak. The bridge changes who the destination sees (the bridge host), not what it sees.
 
