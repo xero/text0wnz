@@ -147,6 +147,7 @@ sudo systemctl reload nginx
 - Rooms are path-based: `/server/roomname` reaches a named room through this same location, so no rule per room is needed
 - The `/bridge` location is what lets browsers on your https page join plaintext Moebius servers; it does nothing until the server runs with `BRIDGE` set to `port`, `allow`, or `local` (see [Environment Variables](./environment-variables.md))
 - WebSocket upgrade headers are essential
+- `X-Real-IP` lets the password backoff tell visitors apart; the server believes it from loopback, so a proxy on another host must be listed in `TRUST_PROXY` (see [Environment Variables](./environment-variables.md))
 - Long timeout (86400 = 24 hours) for persistent connections
 
 **Try Files:**

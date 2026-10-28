@@ -182,6 +182,18 @@ ALLOWED_ORIGINS="https://text.0w.nz,https://staging.0w.nz" bun src/js/server/mai
 
 Desktop clients (Moebius, icy_draw) send no Origin header and always pass; the allowlist gates browsers only.
 
+### TRUST_PROXY
+
+**Default:** none (loopback only)
+
+**Purpose:** Comma-separated addresses of reverse proxies whose `X-Real-IP` (or last `X-Forwarded-For` hop) names the client. The password backoff keys on the client's address, so a proxy's own address would make every visitor share one backoff. Loopback is always trusted, which covers the Docker image's Caddy and any proxy on the same host. List a proxy that runs elsewhere, such as another container:
+
+```bash
+TRUST_PROXY=172.18.0.2 bun src/js/server/main.js
+```
+
+Headers from anyone else are ignored, or a guesser could forge a fresh address for every try.
+
 ### BRIDGE
 
 Companions: `BRIDGE_TARGET`, `BRIDGE_PORT`, `BRIDGE_ALLOW`, `BRIDGE_MAX`.
