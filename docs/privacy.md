@@ -14,7 +14,7 @@ This application uses your device’s browser storage to save the following info
 - **AUTOSAVE_JOURNAL**: A rolling journal of your recent edits, used for crash recovery (origin private file system).
 - **FONT_NAME**, **PALETTE_COLORS**, **ICE_COLORS**, **LETTER_SPACING**, **SCALE_FACTOR**: Editor font and configuration settings to ensure a consistent experience (localStorage).
 - **FAVORITES**: Font favorites, recent colors, custom character sets, and plugin URLs (localStorage).
-- **HANDLE**, **SEND_NOTIFICATION**: Your chat handle and notification preference for collaboration mode (localStorage).
+- **HANDLE**, **GROUP**, **SEND_NOTIFICATION**, **RECENT_SERVERS**: Your chat handle, group, notification preference, and the last eight collaboration servers you typed into the Connect form (localStorage). Passwords are never stored.
 - **APP_CACHE**: The application’s own files, cached for offline use (service worker cache).
 
 No personal data is collected or stored unless you voluntarily include it in your artwork’s "[sauce](sauce-format.md)" metadata. All data remains on your device and is never unknowingly transferred; only files you explicitly choose to save or export leave your device.

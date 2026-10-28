@@ -49,7 +49,7 @@ Terminate TLS in the process with `--ssl --ssl-dir <dir>` (expects `letsencrypt-
 
 ### Deployment Knobs
 
-The server reads deployment settings from the environment, including `STATIC_DIR` plus `ROOM_MAX_COLUMNS` and `ROOM_MAX_ROWS` to cap collaborative canvas resizes. See [Environment Variables](environment-variables.md) for the full reference, run the server with `--help` for the flag list, and see [Collab Protocol Migration](collab-protocol-migration.md) for the current protocol and its flags.
+The server reads deployment settings from the environment, including `STATIC_DIR` plus `ROOM_MAX_COLUMNS` and `ROOM_MAX_ROWS` to cap collaborative canvas resizes. See [Environment Variables](./environment-variables.md) for the full reference, run the server with `--help` for the flag list, and see [Collaboration Server](./collaboration-server.md) for the flag table, rooms, passwords, persistence, and the bridge.
 
 ## Nginx Configuration
 
@@ -350,6 +350,24 @@ server {
         proxy_redirect off;
     }
 
+    # The bridge: browsers on this https page reach plaintext desktop
+    # servers through it (BRIDGE on the server enables it). No
+    # trailing slash: the path and query must arrive intact
+    location /bridge {
+        limit_req zone=text0wnz burst=20 nodelay;
+        proxy_pass http://localhost:1337;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_connect_timeout 7d;
+        proxy_send_timeout 7d;
+        proxy_read_timeout 7d;
+        proxy_buffering off;
+        proxy_redirect off;
+    }
+
     # Deny access to hidden files
     location ~ /\. {
         deny all;
@@ -442,6 +460,14 @@ Alternative setup using Apache:
 
     ProxyPass /server http://localhost:1337/
     ProxyPassReverse /server http://localhost:1337/
+
+    # The bridge: browsers on this https page reach plaintext desktop
+    # servers through it (BRIDGE on the server enables it). The path
+    # and query string must arrive intact, so no prefix is stripped
+    RewriteCond %{HTTP:Upgrade} =websocket [NC]
+    RewriteRule ^/bridge$ ws://localhost:1337/bridge [P,L]
+    ProxyPass /bridge http://localhost:1337/bridge
+    ProxyPassReverse /bridge http://localhost:1337/bridge
 
     # Compression
     <IfModule mod_deflate.c>
@@ -696,9 +722,9 @@ curl http://localhost/nginx_status
 
 ## See Also
 
-- [Collab Protocol Migration](collab-protocol-migration.md) - Current server protocol and flags
-- [Collaboration Server](collaboration-server.md) - The retired Express server, kept for historical reference
-- [Environment Variables](environment-variables.md) - Build and runtime knobs
-- [Docker](docker.md) - Container deployment
-- [Building and Developing](building-and-developing.md) - Build process
-- [Testing](testing.md) - Testing setup
+- [Collaboration Server](./collaboration-server.md) - Running the server: options, rooms, persistence, the bridge, and troubleshooting
+- [Collab Protocol Migration](./collab-protocol-migration.md) - The wire protocol, the teXt0wnz extensions, and the Connect form
+- [Environment Variables](./environment-variables.md) - Build and runtime knobs
+- [Docker](./docker.md) - Container deployment
+- [Building and Developing](./building-and-developing.md) - Build process
+- [Testing](./testing.md) - Testing setup

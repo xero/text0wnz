@@ -76,6 +76,8 @@ A second image definition, `Dockerfile.distroless`, compiles the server into a s
 docker buildx build -f Dockerfile.distroless --platform linux/amd64,linux/arm64 -t text0wnz:distroless .
 ```
 
+CI builds and publishes only the Caddy image (`Dockerfile`); the registries carry no distroless tag, so build this one yourself. It sets `PORT=1337` and `STATIC_DIR=/app/dist`, exposes `1337`, declares `/app/sessions` as a volume, and runs the binary's own `healthcheck` probe as its health check. Arguments after the image name reach the server as CLI flags (the default is the port, `1337`), so `docker run text0wnz:distroless 1337 --pass hunter2` works. It speaks plain `ws://` and http unless you pass `--ssl`, so put TLS in front of it or inside it.
+
 ## Running
 
 ### Development Mode:
@@ -127,19 +129,24 @@ The container implements a robust startup sequence:
 
 ## Environment Variables
 
-| Variable         | Description                                                                   | Default                   |
-| ---------------- | ----------------------------------------------------------------------------- | ------------------------- |
-| `DOMAIN`         | Domain name for the application                                               | `localhost`               |
-| `PORT`           | _Internal_ port for the WebSocket server                                      | `1337`                    |
-| `NODE_ENV`       | Node environment setting                                                      | `production`              |
-| `ROOM_PASS`      | Password for collaboration rooms (gates spectators too)                       | none                      |
-| `ROOM_PASSWORDS` | Per-room passwords as JSON: `{"room":"pw"}`                                   | none                      |
-| `SESSION_KEY`    | Generated at boot if unset; not read by the current server                    | random, generated at boot |
-| `BRIDGE`         | Bridge mode for plaintext desktop servers: `off`, `local`, `port`, or `allow` | `off`                     |
-| `BRIDGE_PORT`    | The one port `port` mode dials                                                | `8000`                    |
-| `BRIDGE_TARGET`  | The fixed target `local` mode dials                                           | `ws://127.0.0.1:8000`     |
-| `BRIDGE_ALLOW`   | Comma-separated `host:port` list for `allow` mode                             | none                      |
-| `BRIDGE_MAX`     | Concurrent bridged connections                                                | `16`                      |
+| Variable           | Description                                                                   | Default                   |
+| ------------------ | ----------------------------------------------------------------------------- | ------------------------- |
+| `DOMAIN`           | Domain name for the application                                               | `localhost`               |
+| `PORT`             | _Internal_ port for the WebSocket server                                      | `1337`                    |
+| `NODE_ENV`         | Node environment setting                                                      | `production`              |
+| `ROOM_PASS`        | Password for collaboration rooms (gates spectators too)                       | none                      |
+| `ROOM_PASSWORDS`   | Per-room passwords as JSON: `{"room":"pw"}`                                   | none                      |
+| `SESSION_KEY`      | Generated at boot if unset; not read by the current server                    | random, generated at boot |
+| `BRIDGE`           | Bridge mode for plaintext desktop servers: `off`, `local`, `port`, or `allow` | `off`                     |
+| `BRIDGE_PORT`      | The one port `port` mode dials                                                | `8000`                    |
+| `BRIDGE_TARGET`    | The fixed target `local` mode dials                                           | `ws://127.0.0.1:8000`     |
+| `BRIDGE_ALLOW`     | Comma-separated `host:port` list for `allow` mode                             | none                      |
+| `BRIDGE_MAX`       | Concurrent bridged connections                                                | `16`                      |
+| `ALLOWED_ORIGINS`  | Comma-separated Origin allowlist for websocket upgrades                       | none (open)               |
+| `ROOM_MAX_COLUMNS` | Canvas resize wall, columns                                                   | `1000`                    |
+| `ROOM_MAX_ROWS`    | Canvas resize wall, rows                                                      | `10000`                   |
+
+The startup script hands its whole environment to the server, so every server variable in [environment-variables.md](./environment-variables.md) works here; the table lists the ones most deployments set.
 
 Both images forward `/bridge*` to the server, so setting `BRIDGE=port` is all an https deployment needs for its visitors to reach plaintext Moebius servers. Enabling it turns the host into a relay from its own address and switches on an audit line per bridged connection; read the [bridge section of the environment variables guide](./environment-variables.md#bridge) first.
 
@@ -172,11 +179,11 @@ docker run \
     xerostyle/text0wnz:latest
 ```
 
-Your file replaces the generated one entirely, so it has to do everything that one does: serve `/app/dist`, reverse proxy `/server*` and `/bridge*` to `127.0.0.1:1337` (the backend's `PORT`) with the path intact, and keep `/healthz` reachable for the health check. The generated file inside [`bootup`](https://github.com/xero/text0wnz/blob/main/bootup) is the template to start from. `DOMAIN`, `NODE_ENV`, and the TLS settings shape only the generated file and have no effect on a mounted one. Mount it read-only; the script never writes to it, and a stray edit cannot reach your source.
+Your file replaces the generated one entirely, so it has to do everything that one does: serve `/app/dist`, reverse proxy `/server*` and `/bridge*` to `127.0.0.1:1337` (the backend's `PORT`) with the path intact, and listen on port 80, which the container health check probes. The generated file inside [`bootup`](https://github.com/xero/text0wnz/blob/main/bootup) is the template to start from. `DOMAIN`, `NODE_ENV`, and the TLS settings shape only the generated file and have no effect on a mounted one. Mount it read-only; the script never writes to it, and a stray edit cannot reach your source.
 
 ## Health Monitoring
 
-The container's built-in health check probes TCP port 80. A /healthz endpoint also returns status information for orchestration systems.
+The Caddy image's built-in health check probes TCP port 80 with `nc`. The `/healthz` that Caddy serves on ports 80 and 443 is a static stub the boot script writes, `{"status":"ok","version":"1.0.0"}`, because Caddy proxies only `/server*` and `/bridge*`; the server's own `/healthz`, which answers `{"ok":true,"rooms":N,"uptime":S}`, listens on the internal `PORT` only. The distroless image has no Caddy, so its `/healthz` is the server's, and its health check is the binary probing that endpoint.
 
 ---
 

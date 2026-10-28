@@ -71,7 +71,7 @@ When using the optional collaboration server, the application implements multipl
 
 **JSON Protection**: Server frames are decoded inside try-catch blocks. Malformed frames are dropped without crashing the application.
 
-**Silent Connection Check**: The application performs a non-intrusive server availability check before prompting users, preventing error dialogs when collaboration is unavailable.
+**Silent Connection Check**: The application performs a non-intrusive server availability check before prompting users, preventing error dialogs when collaboration is unavailable. The check dials direct only. A target that would need the host's bridge gets no probe and no launch invitation, so the Connect form is the one path that opens a bridged connection, and nothing dials out on a visitor's behalf before they ask.
 
 ### Server-Side Security
 
@@ -82,8 +82,8 @@ For server-side hardening, see the [Limits and Hardening section](https://github
 The server can relay a browser's socket to a plaintext Moebius server (the `BRIDGE` setting, off by default). The relay dials from the server's own address, so the server treats it as the most exposed thing it does:
 
 - **The destination is scoped by mode, never by the client alone.** `local` dials one fixed target. `port` lets the client name a host but pins the port, resolves the name, refuses private, loopback, link-local, multicast, reserved, and cloud metadata addresses, and dials the resolved address, so DNS rebinding gains nothing. `allow` admits only a listed set of `host:port` pairs and dials each by name as listed, so a private entry is the operator's informed consent and a listed name is trusted to keep resolving where it does today.
-- **Every request is logged with the requester's address while the bridge is on.** See the [Privacy Policy](https://github.com/xero/text0wnz/wiki/privacy). Refusals reach the caller as a bare `403` with no reason, so the endpoint cannot be used to read the host's DNS.
-- **Every pipe is bounded.** A connection cap, a delivery bound in both directions (a side that stops taking delivery, or leaves more than two maximum frames unconfirmed, closes the pipe), an idle reaper, and timeouts on the dial and the lookup.
+- **Every request is logged with the requester's address while the bridge is on.** See the [Privacy Policy](https://github.com/xero/text0wnz/wiki/privacy). Refusals reach the caller as a bare `403` with no reason (a full bridge answers `503`, and a request with no websocket handshake gets `426` before anything resolves), so the endpoint cannot be used to read the host's DNS.
+- **Every pipe is bounded.** A connection cap, a delivery bound in both directions (a side that stops taking delivery, or leaves more than two maximum frames, 64 MB, unconfirmed, closes the pipe), an idle reaper, and timeouts on the dial and the lookup.
 - **The Origin allowlist gates the bridge** exactly as it gates room upgrades.
 - **Traffic past the bridge is plaintext to the destination**, passwords included, because that is what Moebius servers speak. The bridge changes who the destination sees (the bridge host), not what it sees.
 
