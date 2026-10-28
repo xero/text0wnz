@@ -6,7 +6,7 @@
 > - [Top Bar](#top-bar)
 >   - [Editor Menus](#-editor-menus)
 >     - [File Menu](#file-menu)
->     - [16colo.rs Browser](#16colors-browser)
+>     - [16colo.rs Browser](#16colors)
 >     - [Plugins](#plugins)
 >     - [Updating the Editor](#updating-the-editor)
 >     - [Edit Menu](#edit-menu)

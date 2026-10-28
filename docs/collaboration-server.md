@@ -194,14 +194,15 @@ rooms can restore them.
 
 ## Limits and Hardening
 
-| Limit             | Value                                                                                              |
-| ----------------- | -------------------------------------------------------------------------------------------------- |
-| Frame size        | 32 MB (vanilla `PASTE_AS_SELECTION` frames run tens of MB)                                         |
-| Idle sockets      | Reaped after 120 seconds; a 30 second heartbeat ping keeps quiet spectators alive                  |
-| Sockets per room  | 64, handshake pending or not                                                                       |
-| Rooms per process | 64                                                                                                 |
-| Operation log     | 10,000 operations or 8 MB per room, the timelapse substrate; older operations fold into a baseline |
-| Chat history      | 128 lines                                                                                          |
+| Limit             | Value                                                                                                                                                                                    |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frame size        | 32 MB (vanilla `PASTE_AS_SELECTION` frames run tens of MB)                                                                                                                               |
+| Idle sockets      | Reaped after 120 seconds; a 30 second heartbeat ping keeps quiet spectators alive                                                                                                        |
+| Sockets per room  | 64, handshake pending or not                                                                                                                                                             |
+| Rooms per process | 64                                                                                                                                                                                       |
+| Bridged pipes     | `BRIDGE_MAX` at once (default 16); a pipe closes after 30 minutes without a frame either way, 15 seconds without delivery progress, or 64 MB unconfirmed (see [The Bridge](#the-bridge)) |
+| Operation log     | 10,000 operations or 8 MB per room, the timelapse substrate; older operations fold into a baseline                                                                                       |
+| Chat history      | 128 lines                                                                                                                                                                                |
 
 Malformed frames are dropped with a log line, never a crash, which the
 upstream servers do not survive. Frames before `CONNECTED` are dropped.

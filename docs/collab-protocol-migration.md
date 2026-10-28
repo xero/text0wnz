@@ -91,7 +91,8 @@ content, and no header can allow it. You have two ways through:
   own machine, the page dials the server directly.
 - **Let the host bridge.** From an https page the editor routes a
   plaintext target through the page's own host at `/bridge`, a byte pipe
-  the operator enables with `BRIDGE=port` (default off) and whose
+  the operator enables with `BRIDGE` (`port`, `allow`, or `local`;
+  default off) and whose
   reverse proxy forwards `/bridge` to the server (the Docker image and
   the examples in
   [webserver-configuration.md](./webserver-configuration.md) do). See

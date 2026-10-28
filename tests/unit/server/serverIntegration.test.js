@@ -29,6 +29,36 @@ const hasBun = (() => {
 
 const canRun = hasBun && typeof WebSocket === 'function';
 
+/**
+ * Polls `url` until `ready(res)` holds, racing the child's own exit: a
+ * taken port fails at once with the server's words instead of a 15
+ * second poll against whatever squats there.
+ */
+const awaitListening = async (child, url, ready, label) => {
+	let exit = null;
+	let stderr = '';
+	child.stderr?.on('data', chunk => (stderr += chunk));
+	child.once('exit', code => (exit = code ?? 'signal'));
+	const deadline = Date.now() + 15000;
+	for (;;) {
+		if (exit !== null) {
+			throw new Error(`${label} exited ${exit}: ${stderr.trim()}`);
+		}
+		try {
+			const res = await fetch(url, { signal: AbortSignal.timeout(1000) });
+			if (ready(res)) {
+				return;
+			}
+		} catch {
+			// not up yet
+		}
+		if (Date.now() > deadline) {
+			throw new Error(`${label} did not come up`);
+		}
+		await new Promise(r => setTimeout(r, 150));
+	}
+};
+
 let child = null;
 let scratch = null;
 let port = 0;
@@ -80,21 +110,7 @@ beforeAll(async () => {
 		{ cwd: scratch, stdio: ['ignore', 'pipe', 'pipe']},
 	);
 	// readiness: poll the http endpoint for the 426
-	const deadline = Date.now() + 15000;
-	for (;;) {
-		try {
-			const res = await fetch(`http://127.0.0.1:${port}/`);
-			if (res.status === 426) {
-				break;
-			}
-		} catch {
-			// not up yet
-		}
-		if (Date.now() > deadline) {
-			throw new Error('server did not come up');
-		}
-		await new Promise(r => setTimeout(r, 150));
-	}
+	await awaitListening(child, `http://127.0.0.1:${port}/`, res => res.status === 426, 'server');
 }, 20000);
 
 afterAll(() => {
@@ -132,21 +148,7 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 			},
 		);
 		try {
-			const deadline = Date.now() + 15000;
-			for (;;) {
-				try {
-					const res = await fetch(`http://127.0.0.1:${staticPort}/healthz`);
-					if (res.ok) {
-						break;
-					}
-				} catch {
-					// not up yet
-				}
-				if (Date.now() > deadline) {
-					throw new Error('static server did not come up');
-				}
-				await new Promise(r => setTimeout(r, 150));
-			}
+			await awaitListening(staticChild, `http://127.0.0.1:${staticPort}/healthz`, res => res.ok, 'static server');
 			const page = await fetch(`http://127.0.0.1:${staticPort}/`);
 			expect(page.status).toBe(200);
 			expect(await page.text()).toContain('t0wnz');
@@ -335,21 +337,7 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 				{ cwd, stdio: ['ignore', 'pipe', 'pipe']},
 			);
 			try {
-				const deadline = Date.now() + 15000;
-				for (;;) {
-					try {
-						const res = await fetch(`http://127.0.0.1:${casePort}/healthz`);
-						if (res.ok) {
-							break;
-						}
-					} catch {
-						// not up yet
-					}
-					if (Date.now() > deadline) {
-						throw new Error('case server did not come up');
-					}
-					await new Promise(r => setTimeout(r, 150));
-				}
+				await awaitListening(caseChild, `http://127.0.0.1:${casePort}/healthz`, res => res.ok, 'case server');
 				const ws = new WebSocket(`ws://127.0.0.1:${casePort}/`);
 				await new Promise((resolve, reject) => {
 					ws.addEventListener('open', resolve, { once: true });
@@ -417,23 +405,7 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 				},
 			);
 			try {
-				const deadline = Date.now() + 15000;
-				for (;;) {
-					try {
-						const res = await fetch(
-							`http://127.0.0.1:${originPort}/healthz`,
-						);
-						if (res.ok) {
-							break;
-						}
-					} catch {
-						// not up yet
-					}
-					if (Date.now() > deadline) {
-						throw new Error('origin server did not come up');
-					}
-					await new Promise(r => setTimeout(r, 150));
-				}
+				await awaitListening(originChild, `http://127.0.0.1:${originPort}/healthz`, res => res.ok, 'origin server');
 				// raw requests: fetch strips the forbidden upgrade headers.
 				// No sec-websocket-key, so a PASSING origin falls through
 				// the failed upgrade to the 426, which is the point: the
@@ -500,23 +472,8 @@ describe.skipIf(!canRun)('bridge over real sockets', () => {
 				},
 			},
 		);
-		const deadline = Date.now() + 15000;
-		for (const checkPort of [targetPort, frontPort]) {
-			for (;;) {
-				try {
-					const res = await fetch(`http://127.0.0.1:${checkPort}/`);
-					if (res.status === 426) {
-						break;
-					}
-				} catch {
-					// not up yet
-				}
-				if (Date.now() > deadline) {
-					throw new Error('bridge servers did not come up');
-				}
-				await new Promise(r => setTimeout(r, 150));
-			}
-		}
+		await awaitListening(target, `http://127.0.0.1:${targetPort}/`, res => res.status === 426, 'bridge target');
+		await awaitListening(front, `http://127.0.0.1:${frontPort}/`, res => res.status === 426, 'bridge front');
 	}, 25000);
 
 	afterAll(() => {
@@ -575,6 +532,8 @@ describe.skipIf(!canRun)('bridge over real sockets', () => {
 		// no upgrade, no resolution: the bridge is a socket or nothing
 		const res = await fetch(`http://127.0.0.1:${port}/bridge?host=a.example`);
 		expect(res.status).toBe(426);
+		// RFC 7231 asks a 426 to name the protocol it wants
+		expect(res.headers.get('upgrade')).toBe('websocket');
 		const refused = await new Promise((resolve, reject) => {
 			const req = http.request(
 				{
@@ -613,21 +572,7 @@ describe.skipIf(!canRun)('bridge over real sockets', () => {
 			child.stdout.on('data', chunk => (logged += chunk));
 			child.stderr.on('data', chunk => (logged += chunk));
 			try {
-				const deadline = Date.now() + 15000;
-				for (;;) {
-					try {
-						const res = await fetch(`http://127.0.0.1:${quietPort}/healthz`);
-						if (res.ok) {
-							break;
-						}
-					} catch {
-						// not up yet
-					}
-					if (Date.now() > deadline) {
-						throw new Error('quiet server did not come up');
-					}
-					await new Promise(r => setTimeout(r, 150));
-				}
+				await awaitListening(child, `http://127.0.0.1:${quietPort}/healthz`, res => res.ok, 'quiet server');
 				const refused = await new Promise((resolve, reject) => {
 					const req = http.request(
 						{
@@ -670,21 +615,7 @@ describe.skipIf(!canRun)('bridge over real sockets', () => {
 			);
 			child.stdout.on('data', chunk => (logged += chunk));
 			try {
-				const deadline = Date.now() + 15000;
-				for (;;) {
-					try {
-						const res = await fetch(`http://127.0.0.1:${oraclePort}/healthz`);
-						if (res.ok) {
-							break;
-						}
-					} catch {
-						// not up yet
-					}
-					if (Date.now() > deadline) {
-						throw new Error('oracle server did not come up');
-					}
-					await new Promise(r => setTimeout(r, 150));
-				}
+				await awaitListening(child, `http://127.0.0.1:${oraclePort}/healthz`, res => res.ok, 'oracle server');
 				const refused = await new Promise((resolve, reject) => {
 					const req = http.request(
 						{

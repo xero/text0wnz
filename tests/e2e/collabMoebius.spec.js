@@ -24,7 +24,7 @@ test.beforeAll(async ({ browserName }) => {
 	}
 	port = 41000 + Math.floor(Math.random() * 10000);
 	await new Promise((resolve, reject) => {
-		const proc = spawn('node', [fixture, String(port), ''], { stdio: ['ignore', 'pipe', 'pipe']});
+		const proc = spawn('node', [fixture, String(port), ''], { stdio: ['ignore', 'pipe', 'inherit']});
 		// held from the spawn, not the resolve: a boot that times out
 		// must still be killed, or it keeps its port for the whole job
 		child = proc;

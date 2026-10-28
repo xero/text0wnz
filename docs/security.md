@@ -75,13 +75,13 @@ When using the optional collaboration server, the application implements multipl
 
 ### Server-Side Security
 
-For server-side security best practices, see the [Collaboration Server Security section](https://github.com/xero/text0wnz/wiki/collaboration-server#security-best-practices).
+For server-side hardening, see the [Limits and Hardening section](https://github.com/xero/text0wnz/wiki/collaboration-server#limits-and-hardening) of the server guide.
 
 ### The Collaboration Bridge
 
 The server can relay a browser's socket to a plaintext Moebius server (the `BRIDGE` setting, off by default). The relay dials from the server's own address, so the server treats it as the most exposed thing it does:
 
-- **The destination is scoped by mode, never by the client alone.** `local` dials one fixed target. `port` lets the client name a host but pins the port, resolves the name, refuses private, loopback, link-local, multicast, reserved, and cloud metadata addresses, and dials the resolved address, so DNS rebinding gains nothing. `allow` admits only a listed set of `host:port` pairs.
+- **The destination is scoped by mode, never by the client alone.** `local` dials one fixed target. `port` lets the client name a host but pins the port, resolves the name, refuses private, loopback, link-local, multicast, reserved, and cloud metadata addresses, and dials the resolved address, so DNS rebinding gains nothing. `allow` admits only a listed set of `host:port` pairs and dials each by name as listed, so a private entry is the operator's informed consent and a listed name is trusted to keep resolving where it does today.
 - **Every request is logged with the requester's address while the bridge is on.** See the [Privacy Policy](https://github.com/xero/text0wnz/wiki/privacy). Refusals reach the caller as a bare `403` with no reason, so the endpoint cannot be used to read the host's DNS.
 - **Every pipe is bounded.** A connection cap, a delivery bound in both directions (a side that stops taking delivery, or leaves more than two maximum frames unconfirmed, closes the pipe), an idle reaper, and timeouts on the dial and the lookup.
 - **The Origin allowlist gates the bridge** exactly as it gates room upgrades.
@@ -97,7 +97,7 @@ A public host in `port` mode is a relay from its own address to any public webso
 - **URL Injection**: Prevented by same-origin URL construction and the ws/wss scheme restriction [CWE-918]
 - **Malformed Frame Injection**: Prevented by try-catch frame decoding; bad frames drop silently [CWE-20]
 - **Chat Injection**: Prevented by server-side sanitization of handles, groups, and messages [CWE-20][CWE-117]
-- **Server-Side Request Forgery via the bridge**: Prevented by mode-scoped destinations, resolve-then-vet address denial, dial-by-resolved-address, and reason-free refusals [CWE-918]
+- **Server-Side Request Forgery via the bridge**: Prevented by mode-scoped destinations, resolve-then-vet address denial and dial-by-resolved-address in `port` mode, operator-listed targets in `allow` mode, and reason-free refusals [CWE-918]
 - **Relay abuse via the bridge**: Reduced by the Origin allowlist, connection and buffer bounds, and per-connection logging of the requester; a public `port`-mode host remains a relay by design [CWE-441]
 
 **User Responsibility:**

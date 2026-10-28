@@ -951,11 +951,12 @@ const initializeAppComponents = async () => {
 		window.open(
 			'https://github.com/xero/teXt0wnz/blob/main/docs/privacy.md',
 			'_blank',
+			'noopener',
 		);
 	});
 
 	onClick($('help'), _ => {
-		window.open('https://github.com/xero/text0wnz/wiki/manual', '_blank');
+		window.open('https://github.com/xero/text0wnz/wiki/manual', '_blank', 'noopener');
 	});
 
 	onClick($('tutorials'), _ => {

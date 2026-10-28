@@ -66,7 +66,11 @@ export const roomNameFromPath = (pathname, defaultRoom) => {
  */
 export const createMoebiusServer = config => {
 	const log = config.log ?? (config.debug ? console.log : () => {});
-	const audit = config.audit ?? (line => console.log(`[Server] ${line}`));
+	// bridge opens, closes, and refusals print with or without --debug:
+	// a relay from this host's address must leave a trail, and the
+	// privacy policy promises each entry carries its own time
+	const audit =
+		config.audit ?? (line => console.log(`[Server] ${new Date().toISOString()} ${line}`));
 	// the default room rides persistence paths like any other; a name
 	// that skips the room-name grammar could escape ./sessions
 	const requestedDefault = config.sessionName ?? 'joint';
@@ -360,6 +364,13 @@ export const createMoebiusServer = config => {
 	};
 
 	/** @param {Request} req @param {import('bun').Server} server */
+	// RFC 7231 wants every 426 to name the protocol it is asking for
+	const upgradeRequired = () =>
+		new Response('upgrade required', {
+			status: 426,
+			headers: { upgrade: 'websocket', connection: 'upgrade' },
+		});
+
 	const fetchHandler = async (req, server) => {
 		const url = new URL(req.url);
 		if (url.pathname === '/healthz') {
@@ -387,7 +398,7 @@ export const createMoebiusServer = config => {
 			// a plain GET never resolves anything: the bridge is an
 			// upgrade or nothing, or a curl loop reads the host's resolver
 			if (!wantsUpgrade) {
-				return new Response('upgrade required', { status: 426 });
+				return upgradeRequired();
 			}
 			if (bridgeConfig.mode === 'off') {
 				// the privacy policy promises the stock server records no
@@ -399,7 +410,7 @@ export const createMoebiusServer = config => {
 				// a handshake that cannot complete must not reach the
 				// resolver either: it would answer 426 or 403 by whether
 				// the name is private, with no audit line to show for it
-				return new Response('upgrade required', { status: 426 });
+				return upgradeRequired();
 			}
 			// the policy promises each entry names the server asked for,
 			// refusals included; raw params, sanitized, bounded
@@ -451,7 +462,7 @@ export const createMoebiusServer = config => {
 			) {
 				return undefined;
 			}
-			return new Response('upgrade required', { status: 426 });
+			return upgradeRequired();
 		}
 		// plain HTTP serves the PWA in static mode; websocket upgrades
 		// (and ws-only deployments) take the room path below
@@ -469,10 +480,7 @@ export const createMoebiusServer = config => {
 		}
 		// the static app is served by Caddy/nginx; plain HTTP here means
 		// a misconfigured proxy
-		return new Response('upgrade required', {
-			status: 426,
-			headers: { upgrade: 'websocket', connection: 'upgrade' },
-		});
+		return upgradeRequired();
 	};
 
 	const main = Bun.serve({

@@ -321,7 +321,7 @@ export const createBridgePipe = (browserWs, targetUrl, log = () => {}, options =
 	let upstream = null;
 	let closed = false;
 	let lastActivity = Date.now();
-	let connectTimer;
+	let connectTimer = null;
 	// toward the server: bytes handed to the socket since a pong last
 	// confirmed delivery, and the ping in flight that will confirm them
 	let unconfirmed = 0;

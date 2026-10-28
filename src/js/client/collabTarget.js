@@ -51,6 +51,11 @@ export const parseTarget = input => {
 	const authority = text.replace(/^wss?:\/\//i, '').split('/')[0];
 	const typed = authority.match(/:(\d{1,5})$/);
 	const specified = typed ? Number(typed[1]) : 0;
+	// 0 is the "nothing typed" sentinel below, so a typed :0 must not
+	// masquerade as a default; no server listens there anyway
+	if (typed && specified === 0) {
+		return null;
+	}
 	let protocol = /** @type {'ws:' | 'wss:'} */ (
 		url.protocol === 'wss:' ? 'wss:' : 'ws:'
 	);
@@ -61,7 +66,10 @@ export const parseTarget = input => {
 	if (!explicit && port === 443) {
 		protocol = 'wss:';
 	}
-	const path = url.pathname === '/' ? '' : url.pathname.replace(/\/+$/, '');
+	// a doubled slash joins the room through the bridge (which strips
+	// slashes) but not direct against Moebius (which matches the path
+	// verbatim), so one spelling has to mean one room everywhere
+	const path = url.pathname.replace(/\/{2,}/g, '/').replace(/\/+$/, '');
 	return { protocol, host: url.hostname, port, path };
 };
 

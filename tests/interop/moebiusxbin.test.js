@@ -35,7 +35,7 @@ const spawned = [];
 const bootFixture = (port, pass, env = {}) =>
 	new Promise((resolve, reject) => {
 		const child = spawn('node', [fixture, String(port), pass ?? ''], {
-			stdio: ['ignore', 'pipe', 'pipe'],
+			stdio: ['ignore', 'pipe', 'inherit'],
 			env: { ...process.env, ...env },
 		});
 		// tracked from the spawn: a boot that times out, or a sibling that

@@ -199,7 +199,7 @@ Companions: `BRIDGE_TARGET`, `BRIDGE_PORT`, `BRIDGE_ALLOW`, `BRIDGE_MAX`.
 - `off` - every bridge request is refused (default)
 - `local` - only the preconfigured `BRIDGE_TARGET` is dialed
 - `port` - caller-chosen host pinned to `BRIDGE_PORT`; private addresses are denied
-- `allow` - only targets on the `BRIDGE_ALLOW` list (comma-separated `host:port`)
+- `allow` - only targets on the `BRIDGE_ALLOW` list (comma-separated `host:port`), dialed by name exactly as listed with no private-address check; list only hosts whose DNS you trust
 
 The editor uses the bridge on its own. A page served over https that is asked to join a plaintext server dials `wss://<this host>/bridge?host=...&port=...&room=...` instead, since the browser blocks the direct socket as mixed content. With `BRIDGE=off` the dial fails and the Connect form tells the visitor the site may not allow it (the browser cannot tell a refusal from a dead host). The `port` mode fits a public editor host best: visitors pick the server, the port stays pinned, and private addresses are refused. Behind a reverse proxy, `/bridge` must be forwarded to the server like `/server` is; the Docker image and the examples in [webserver-configuration.md](./webserver-configuration.md) already do.
 
