@@ -1,9 +1,10 @@
 /**
  * Minimal ZIP reader for the 16colo.rs and aSCIIaRENA browsers and
  * native opens: enough to open one piece out of a scene pack.
- * Central-directory driven, store (0) and deflate (8) only, inflated
- * through flate.ts; no dependency, no zip64, no encryption (scene
- * packs are small flat archives; anything else throws a CodecError).
+ * Central-directory driven: store (0), deflate (8) through flate.ts,
+ * and the PKZIP 1.x shrink (1) and implode (6) older packs carry; no
+ * dependency, no zip64, no encryption (scene packs are small flat
+ * archives; anything else throws a CodecError).
  */
 
 import { cp437ToUnicode } from '../cp437.js';
@@ -15,6 +16,7 @@ import {
 	salvaged,
 } from './util.js';
 import { inflateRaw, inflateRawSalvage } from './flate.js';
+import { explode, unshrink } from './pkzip1.js';
 
 const EOCD_SIG = 0x06054b50;
 const CENTRAL_SIG = 0x02014b50;
@@ -34,6 +36,8 @@ export interface ZipEntry {
 	compressedSize: number;
 	size: number;
 	headerOffset: number;
+	/** general purpose flags; implode reads its window and trees here */
+	flags: number;
 	/** general purpose flag bit 0: contents are ciphertext */
 	encrypted: boolean;
 	/** central directory CRC-32, verified after extraction */
@@ -135,6 +139,7 @@ export const readZipEntries = (
 			compressedSize,
 			size,
 			headerOffset: headerOffset + displacement,
+			flags,
 			encrypted: (flags & 0x01) !== 0,
 			crc32: crc,
 		});
@@ -166,7 +171,7 @@ const locate = (
 			`zip entry ${entry.name} exceeds ${MAX_ZIP_ENTRY_BYTES} bytes`,
 		);
 	}
-	if (entry.method !== 0 && entry.method !== 8) {
+	if (![0, 1, 6, 8].includes(entry.method)) {
 		throw new CodecError(
 			`zip method ${entry.method} unsupported for ${entry.name}`,
 		);
@@ -205,6 +210,12 @@ export const extractZipEntry = async (
 	if (entry.method === 0) {
 		return verified(data.slice());
 	}
+	if (entry.method === 1) {
+		return verified(unshrink(data, entry.size).out);
+	}
+	if (entry.method === 6) {
+		return verified(explode(data, entry.size, entry.flags).out);
+	}
 	const inflated = await inflateRaw(data, entry.size);
 	if (inflated.length !== entry.size) {
 		throw new CodecError(
@@ -237,7 +248,11 @@ export const salvageZipEntry = async (
 	const out =
 		entry.method === 0
 			? data.slice()
-			: inflateRawSalvage(data, entry.size).bytes;
+			: entry.method === 1
+				? unshrink(data, entry.size, true).out
+				: entry.method === 6
+					? explode(data, entry.size, entry.flags, true).out
+					: inflateRawSalvage(data, entry.size).bytes;
 	return salvaged(entry.name, out, entry.size, crc32(out) === entry.crc32);
 };
 
