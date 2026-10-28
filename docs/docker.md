@@ -162,7 +162,7 @@ docker run \
 
 ### Custom Caddy Configuration
 
-For advanced Caddy configurations, you can mount a custom Caddyfile:
+The image ships no Caddyfile; the boot script writes one from the environment at start. Mount your own at the same path and the script leaves it alone, validates it, and runs Caddy on it:
 
 ```sh
 docker run \
@@ -171,6 +171,8 @@ docker run \
     -p 80:80 -p 443:443 \
     xerostyle/text0wnz:latest
 ```
+
+Your file replaces the generated one entirely, so it has to do everything that one does: serve `/app/dist`, reverse proxy `/server*` and `/bridge*` to `127.0.0.1:1337` (the backend's `PORT`) with the path intact, and keep `/healthz` reachable for the health check. The generated file inside [`bootup`](https://github.com/xero/text0wnz/blob/main/bootup) is the template to start from. `DOMAIN`, `NODE_ENV`, and the TLS settings shape only the generated file and have no effect on a mounted one. Mount it read-only; the script never writes to it, and a stray edit cannot reach your source.
 
 ## Health Monitoring
 

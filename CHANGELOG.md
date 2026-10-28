@@ -103,6 +103,15 @@ byte-exact golden tests before anything else moved.
 
 ### Fixed
 
+- **File Open lists every format it reads.** The picker's filter
+  omitted TundraDraw, durdraw, and native `.0wnz` files, so the system
+  dialog greyed them out while drag and drop opened them. The save
+  dialog's type list gains `.dur`.
+- **A mounted Caddyfile survives the boot.** The Docker image's boot
+  script wrote its generated Caddyfile over the documented mount point,
+  so a read-only mount ended the boot and a writable one was
+  overwritten. A Caddyfile present at boot is now kept, validated, and
+  run as is.
 - **Passworded rooms stay joinable.** The silent server probe counted
   as a failed login, so a `--pass` room drifted into a cooldown that
   refused the right password. Blank passwords no longer count, and a

@@ -47,8 +47,15 @@ if [ $RETRY -eq $MAX_RETRIES ]; then
 fi
 echo "[$(date)] WebSocket server is ready to accept connections"
 
-# Generate appropriate Caddyfile based on environment
-if [ "$NODE_ENV" = "production" ]; then
+# The image ships no Caddyfile, so one present at boot was mounted by
+# the operator: it is theirs to keep, and writing over a read-only
+# mount would end the boot here under set -e
+if [ -s /etc/caddy/Caddyfile ]; then
+	echo "[$(date)] Custom Caddyfile mounted, using it as is"
+	caddy validate --config /etc/caddy/Caddyfile
+	CADDY_GENERATED=
+elif [ "$NODE_ENV" = "production" ]; then
+	CADDY_GENERATED=1
 	echo "[$(date)] Configuring Caddy in production mode"
 	cat > /etc/caddy/Caddyfile << EOF
 {
@@ -106,6 +113,7 @@ $DOMAIN {
 }
 EOF
 else
+	CADDY_GENERATED=1
 	echo "[$(date)] Configuring Caddy in development mode"
 	cat > /etc/caddy/Caddyfile << EOF
 {
@@ -171,7 +179,9 @@ echo '{"status":"ok","version":"1.0.0"}' > /app/dist/healthz/index.json
 
 # Start Caddy
 echo "[$(date)] Starting Caddy web server"
-caddy fmt --overwrite /etc/caddy/Caddyfile
+if [ -n "$CADDY_GENERATED" ]; then
+	caddy fmt --overwrite /etc/caddy/Caddyfile
+fi
 caddy run --config /etc/caddy/Caddyfile &
 CADDY_PID=$!
 
