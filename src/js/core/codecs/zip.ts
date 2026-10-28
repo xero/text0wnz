@@ -8,7 +8,7 @@
  * archives; anything else throws a CodecError).
  */
 
-import { CodecError, inflateRaw } from './util.js';
+import { CodecError, crc32, inflateRaw } from './util.js';
 
 const EOCD_SIG = 0x06054b50;
 const CENTRAL_SIG = 0x02014b50;
@@ -33,20 +33,6 @@ export interface ZipEntry {
 	/** central directory CRC-32, verified after extraction */
 	crc32: number;
 }
-
-// standard table-less CRC-32 (reflected, poly 0xEDB88320), the same
-// check lha.ts runs as CRC-16: bit-rotted packs fail loud instead of
-// opening as mojibake
-const crc32Of = (bytes: Uint8Array): number => {
-	let crc = 0xffffffff;
-	for (let i = 0; i < bytes.length; i++) {
-		crc ^= bytes[i];
-		for (let b = 0; b < 8; b++) {
-			crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
-		}
-	}
-	return (crc ^ 0xffffffff) >>> 0;
-};
 
 const decodeName = (bytes: Uint8Array, flags: number): string =>
 	// bit 11 = UTF-8 name; everything else in old packs is cp437-ish,
@@ -99,7 +85,7 @@ export const readZipEntries = (bytes: Uint8Array): ZipEntry[] => {
 		}
 		const flags = view.getUint16(offset + 8, true);
 		const method = view.getUint16(offset + 10, true);
-		const crc32 = view.getUint32(offset + 16, true);
+		const checksum = view.getUint32(offset + 16, true);
 		const compressedSize = view.getUint32(offset + 20, true);
 		const size = view.getUint32(offset + 24, true);
 		const nameLength = view.getUint16(offset + 28, true);
@@ -123,7 +109,7 @@ export const readZipEntries = (bytes: Uint8Array): ZipEntry[] => {
 			size,
 			headerOffset: headerOffset + displacement,
 			encrypted: (flags & 0x01) !== 0,
-			crc32,
+			crc32: checksum,
 		});
 		offset += 46 + nameLength + extraLength + commentLength;
 	}
@@ -163,8 +149,9 @@ export const extractZipEntry = async (
 		throw new CodecError(`zip data truncated for ${entry.name}`);
 	}
 	const data = bytes.subarray(start, end);
+	// bit-rotted packs fail loud instead of opening as mojibake
 	const verified = (out: Uint8Array): Uint8Array => {
-		if (crc32Of(out) !== entry.crc32) {
+		if (crc32(out) !== entry.crc32) {
 			throw new CodecError(`zip entry ${entry.name} failed its CRC-32`);
 		}
 		return out;
