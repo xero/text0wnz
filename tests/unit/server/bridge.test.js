@@ -236,7 +236,7 @@ describe('v6 encoding bypasses (review pass)', () => {
 });
 
 describe('bridge hardening (security review)', () => {
-	const base = { mode: 'off', target: '', port: 8000, allow: []};
+	const base = { mode: 'off', target: '', port: 8000, allow: [], maxConnections: 16 };
 
 	it('refuses a port that is not plain digits, in every mode', async () => {
 		const resolver = async () => ['93.184.216.34'];
@@ -271,11 +271,35 @@ describe('bridge hardening (security review)', () => {
 		expect(result).toEqual({ ok: false, reason: 'unresolvable host' });
 	});
 
-	it('reads BRIDGE_MAX', () => {
+	it('reads the numeric knobs as digits or nothing', () => {
 		expect(bridgeConfigFromEnv({ BRIDGE_MAX: '4' }).maxConnections).toBe(4);
-		expect(bridgeConfigFromEnv({ BRIDGE_MAX: 'lots' }).maxConnections).toBe(
+		expect(bridgeConfigFromEnv({ BRIDGE_MAX: '' }).maxConnections).toBe(
 			BRIDGE_DEFAULTS.maxConnections,
 		);
+		// anything Number() would quietly accept is NaN here, so the
+		// validator can refuse it by name instead of pinning a surprise
+		for (const raw of ['lots', '-1', '0x1f90', '8000.5', '+8000']) {
+			expect(bridgeConfigFromEnv({ BRIDGE_PORT: raw }).port, raw).toBeNaN();
+		}
+		expect(bridgeConfigFromEnv({ BRIDGE: '' }).mode).toBe('off');
+		expect(bridgeConfigFromEnv({ BRIDGE_TARGET: '' }).target).toBe(
+			BRIDGE_DEFAULTS.target,
+		);
+	});
+
+	it('refuses out-of-range knobs at boot', () => {
+		const app = { port: 1337, plainPort: 0 };
+		for (const port of [NaN, 0, 70000]) {
+			expect(() =>
+				validateBridgeConfig({ ...base, mode: 'port', port }, app)).toThrow(/BRIDGE_PORT must be a port number/);
+		}
+		for (const maxConnections of [NaN, 0]) {
+			expect(() =>
+				validateBridgeConfig({ ...base, maxConnections }, app)).toThrow(/BRIDGE_MAX/);
+		}
+		// off mode does not care about the pinned port
+		expect(() =>
+			validateBridgeConfig({ ...base, port: NaN, maxConnections: 16 }, app)).not.toThrow();
 	});
 
 	it('validates the env at boot', () => {

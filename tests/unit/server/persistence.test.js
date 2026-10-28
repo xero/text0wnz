@@ -287,4 +287,22 @@ describe('room persistence', () => {
 		again.loadState(viaEnvelope);
 		expect(expandExtCells(again.extState().cells, 2)[1]).toEqual(cell);
 	});
+
+	it('keeps a dark 8-bit palette exact through the envelope leg', async () => {
+		// every component under 64, which the wire heuristic would expand
+		// if the envelope writer guessed instead of naming the depth
+		const room = createRoom({ name: 'dusk', columns: 1, rows: 1 });
+		room.loadState({
+			columns: 1,
+			rows: 1,
+			data: [{ code: 32, fg: 7, bg: 0 }],
+			palette: Array.from({ length: 16 }, (_, i) => ({ r: i, g: 8, b: 32 })),
+		});
+		await saveRoom(room, dir);
+		rmSync(path.join(dir, 'dusk.state.json'));
+		const viaEnvelope = await loadRoomDoc(dir, 'dusk');
+		const again = createRoom({ name: 'dusk', columns: 1, rows: 1 });
+		again.loadState(viaEnvelope);
+		expect(again.toJoinDoc().palette[3]).toEqual({ r: 3, g: 8, b: 32 });
+	});
 });

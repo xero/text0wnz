@@ -691,7 +691,12 @@ describe.skipIf(!canRun)('bridge over real sockets', () => {
 							host: '127.0.0.1',
 							port: oraclePort,
 							path: '/bridge?host=localhost&port=8000',
-							headers: { connection: 'Upgrade', upgrade: 'websocket' },
+							headers: {
+								'connection': 'Upgrade',
+								'upgrade': 'websocket',
+								'sec-websocket-key': 'dGhlIHNhbXBsZSBub25jZQ==',
+								'sec-websocket-version': '13',
+							},
 						},
 						res => {
 							let body = '';
@@ -707,10 +712,29 @@ describe.skipIf(!canRun)('bridge over real sockets', () => {
 				expect(refused.status).toBe(403);
 				expect(refused.body).toBe('bridge refused');
 				await new Promise(r => setTimeout(r, 200));
-				// the operator's log carries the reason and the requester
+				// the operator's log carries the requester, the ask, and
+				// the reason
 				expect(logged).toMatch(
-					/bridge refused 127\.0\.0\.1: private address/,
+					/bridge refused 127\.0\.0\.1 asking localhost:8000\/: private address/,
 				);
+				// a handshake with no key never reaches the resolver and
+				// leaves no line: the 426 says nothing about the name
+				const keyless = await new Promise((resolve, reject) => {
+					const req = http.request(
+						{
+							host: '127.0.0.1',
+							port: oraclePort,
+							path: '/bridge?host=localhost&port=8000',
+							headers: { connection: 'Upgrade', upgrade: 'websocket' },
+						},
+						res => resolve(res.statusCode),
+					);
+					req.on('error', reject);
+					req.end();
+				});
+				expect(keyless).toBe(426);
+				await new Promise(r => setTimeout(r, 200));
+				expect(logged.match(/bridge refused/g)).toHaveLength(1);
 			} finally {
 				child.kill('SIGKILL');
 				rmSync(cwd, { recursive: true, force: true });

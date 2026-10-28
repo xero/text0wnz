@@ -223,10 +223,25 @@ export const validateBridgeConfig = (config, app) => {
 	if (!['off', 'local', 'port', 'allow'].includes(config.mode)) {
 		throw new Error(`BRIDGE=${config.mode} is not off, local, port, or allow`);
 	}
-	if (config.mode === 'port' && [app.port, app.plainPort].includes(config.port)) {
-		throw new Error(
-			`BRIDGE_PORT=${config.port} is one of this server's own listeners`,
-		);
+	if (
+		!Number.isInteger(config.maxConnections) ||
+		config.maxConnections < 1
+	) {
+		throw new Error('BRIDGE_MAX must be a whole number of connections, 1 or more');
+	}
+	if (config.mode === 'port') {
+		if (
+			!Number.isInteger(config.port) ||
+			config.port < 1 ||
+			config.port > 65535
+		) {
+			throw new Error('BRIDGE_PORT must be a port number, 1 to 65535');
+		}
+		if ([app.port, app.plainPort].includes(config.port)) {
+			throw new Error(
+				`BRIDGE_PORT=${config.port} is one of this server's own listeners`,
+			);
+		}
 	}
 	if (config.mode === 'local') {
 		let target;
@@ -246,15 +261,26 @@ export const validateBridgeConfig = (config, app) => {
 
 /** parse BRIDGE* env into bridge config */
 export const bridgeConfigFromEnv = (env = process.env) => ({
-	mode: (env.BRIDGE ?? BRIDGE_DEFAULTS.mode).toLowerCase(),
-	target: env.BRIDGE_TARGET ?? BRIDGE_DEFAULTS.target,
-	port: Number(env.BRIDGE_PORT) || BRIDGE_DEFAULTS.port,
+	// a blank value is the stock setting, not a mode of its own
+	mode: (env.BRIDGE || BRIDGE_DEFAULTS.mode).toLowerCase(),
+	target: env.BRIDGE_TARGET || BRIDGE_DEFAULTS.target,
+	port: numberFromEnv(env.BRIDGE_PORT, BRIDGE_DEFAULTS.port),
 	allow: (env.BRIDGE_ALLOW ?? '')
 		.split(',')
 		.map(s => s.trim())
 		.filter(Boolean),
-	maxConnections: Number(env.BRIDGE_MAX) || BRIDGE_DEFAULTS.maxConnections,
+	maxConnections: numberFromEnv(env.BRIDGE_MAX, BRIDGE_DEFAULTS.maxConnections),
 });
+
+/** digits or nothing: Number() would read hex, signs, and fractions
+ * as a port, and validateBridgeConfig then has no raw value to name
+ * @param {string | undefined} raw @param {number} fallback */
+const numberFromEnv = (raw, fallback) => {
+	if (raw === undefined || raw.trim() === '') {
+		return fallback;
+	}
+	return (/^\d{1,9}$/).test(raw.trim()) ? Number(raw.trim()) : NaN;
+};
 
 /**
  * Runtime piping state for one bridged browser socket. The upstream

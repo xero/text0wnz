@@ -37,7 +37,9 @@ export const roomNameFromPath = (pathname, defaultRoom) => {
 	const trimmed = pathname
 		.replace(/^\/+|\/+$/g, '')
 		.replace(/^server(\/+|$)/i, '');
-	if (trimmed === '') {
+	// what is left after the prefix may be the word again
+	// (/server/server): still the default, never a room of that name
+	if (trimmed === '' || (/^server$/i).test(trimmed)) {
 		return defaultRoom;
 	}
 	return ROOM_NAME_RE.test(trimmed) ? trimmed.toLowerCase() : null;
@@ -393,6 +395,19 @@ export const createMoebiusServer = config => {
 				// neither reads nor writes one
 				return new Response('bridge refused', { status: 403 });
 			}
+			if (!req.headers.get('sec-websocket-key')) {
+				// a handshake that cannot complete must not reach the
+				// resolver either: it would answer 426 or 403 by whether
+				// the name is private, with no audit line to show for it
+				return new Response('upgrade required', { status: 426 });
+			}
+			// the policy promises each entry names the server asked for,
+			// refusals included; raw params, sanitized, bounded
+			const asked = sanitize(
+				`${url.searchParams.get('host') ?? ''}:${url.searchParams.get('port') ?? ''}/${url.searchParams.get('room') ?? ''}`,
+				120,
+				false,
+			);
 			// who asked: the socket's address, and the proxy's claim of
 			// the real one when there is a proxy (the audit line carries
 			// both; trust is the operator's call). Logged only while the
@@ -413,7 +428,7 @@ export const createMoebiusServer = config => {
 				bridgeCount + bridgePending >=
 				(bridgeConfig.maxConnections ?? 16)
 			) {
-				audit(`bridge busy, refused ${requester}`);
+				audit(`bridge busy, refused ${requester} asking ${asked}`);
 				return new Response('bridge busy', { status: 503 });
 			}
 			bridgePending++;
@@ -426,7 +441,9 @@ export const createMoebiusServer = config => {
 			if (!vet.ok) {
 				// the reason names resolved addresses: log only, or the
 				// bridge doubles as a resolver for the host's own DNS
-				audit(`bridge refused ${requester}: ${sanitize(vet.reason, 200, false)}`);
+				audit(
+					`bridge refused ${requester} asking ${asked}: ${sanitize(vet.reason, 200, false)}`,
+				);
 				return new Response('bridge refused', { status: 403 });
 			}
 			if (

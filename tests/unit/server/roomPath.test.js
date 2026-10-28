@@ -20,6 +20,9 @@ describe('roomNameFromPath', () => {
 		expect(roomNameFromPath('/lounge', 'joint')).toBe('lounge');
 		expect(roomNameFromPath('/server/lounge', 'joint')).toBe('lounge');
 		expect(roomNameFromPath('/server/Lounge/', 'joint')).toBe('lounge');
+		// the word itself is never a room name, however it is spelled
+		expect(roomNameFromPath('/server/server', 'joint')).toBe('joint');
+		expect(roomNameFromPath('/server/SERVER/', 'joint')).toBe('joint');
 	});
 
 	it('refuses anything outside the grammar', () => {
