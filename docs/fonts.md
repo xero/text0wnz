@@ -4,29 +4,30 @@
 >
 > - [Favorites](#favorites)
 > - [Unicode Characters](#unicode-characters)
+> - [SAUCE Font Names](#sauce-font-names)
 >
 > ## [Modern Fonts](#modern-fonts)
 >
-> - [XBin](#XBIN)
-> - [Commodore 64](#Commodore-64)
+> - [Modern](#modern)
+> - [Commodore 64](#commodore-64)
 >
 > ## [Classic Fonts](#classic-fonts)
 >
-> - [Amiga](#Amiga)
-> - [IBM PC](#IBM-PC)
-> - [Arabic](#Arabic)
-> - [Baltic Rim](#Baltic-Rim)
-> - [Cyrillic](#Cyrillic)
-> - [French Canadian](#French-Canadian)
-> - [Greek](#Greek)
-> - [Hebrew](#Hebrew)
-> - [Icelandic](#Icelandic)
-> - [Latin-1 Western European](#Latin-1-Western-European)
-> - [Latin-2 Central European](#Latin-2-Central-European)
-> - [Latin-3 Multilingual](#Latin-3-Multilingual)
-> - [Nordic](#Nordic)
-> - [Portuguese](#Portuguese)
-> - [Turkish](#Turkish)
+> - [Amiga](#amiga)
+> - [IBM PC](#ibm-pc)
+> - [Arabic](#arabic)
+> - [Baltic Rim](#baltic-rim)
+> - [Cyrillic](#cyrillic)
+> - [French Canadian](#french-canadian)
+> - [Greek](#greek)
+> - [Hebrew](#hebrew)
+> - [Icelandic](#icelandic)
+> - [Latin-1 Western European](#latin-1-western-european)
+> - [Latin-2 Central European](#latin-2-central-european)
+> - [Latin-3 Multilingual](#latin-3-multilingual)
+> - [Nordic](#nordic)
+> - [Portuguese](#portuguese)
+> - [Turkish](#turkish)
 
 # The Font Picker
 
@@ -38,19 +39,56 @@ Star the fonts you use most to pin them. The star button next to the font name t
 
 ## Unicode Characters
 
-Every bitmap font below covers a single 256-character set. For everything else, the editor renders Unicode glyphs from two bundled hex fonts: [unscii-16](http://viznut.fi/unscii/) by viznut and [GNU Unifont](https://unifoundry.com/unifont/). unscii-16 was drawn for textmode art, so it takes priority; Unifont fills in the rest. Glyph data loads on demand in small per-block chunks, so a plain CP437 piece never fetches any of it.
+Every bitmap font below covers a single 256-character set. For everything else, the editor renders Unicode glyphs from two bundled hex fonts: [unscii-16](http://viznut.fi/unscii/) 2.1 by viznut (Public Domain) and [GNU Unifont](https://unifoundry.com/unifont/) 18.0.01 (SIL Open Font License 1.1). unscii-16 was drawn for textmode art, so it takes priority; Unifont fills in the rest. The cell grid is single width, so a glyph wider than 8 pixels (CJK, some Unifont symbols) is substituted rather than squeezed. Glyph data loads on demand in small per-block chunks, so a plain CP437 piece never fetches any of it. The blocks are baked from the vendored sources with `bun run fonts:bake`; `assets/hexfonts/README.md` records their provenance.
 
 Open **Character Sets** from the edit menu to browse them:
 
 - Search Unicode blocks by name and preview the glyphs the hex fonts cover.
 - Click a glyph to insert it at the cursor.
-- Import charset tables (durdraw `.ini` or teXt0wnz `.json`). Imported pages ride the F-key bar and cycle with `ctrl+[` and `ctrl+]`.
+- Import charset tables (durdraw `.ini` or teXt0wnz `.json`). A page holds 12 characters. The `.ini` form is a `[Character Set]` section with `name:` followed by `[block N]` sections with `f1:` through `f12:`; the `.json` form is `{ "name": "...", "pages": [["░", "▒", ...], ...] }`. The format is sniffed from the content, not the extension. Characters CP437 can express draw from the active font; the rest render through the hex fonts. Imported pages ride the F-key bar and cycle with `ctrl+[` and `ctrl+]`.
 
 See the [Editor Manual](manual.md) for more on character sets and the F-key bar.
 
+## SAUCE Font Names
+
+Saving as `.ans`, `.utf8.ans`, `.bin`, or `.tnd` writes the current font into the SAUCE FontName field, and opening a file with a recognised name switches to that font. XBin files carry the font itself and write no name. The table lists what each font writes and the other spellings the reader accepts.
+
+| Font                                        | Writes                                                          | Also recognised on open                        |
+| :------------------------------------------ | :-------------------------------------------------------------- | :--------------------------------------------- |
+| CP437 8x16                                  | `IBM VGA`                                                       | `IBM VGA 437`                                  |
+| CP437 8x8                                   | `IBM VGA50`                                                     | `IBM VGA50 437`, `IBM EGA43`, `IBM EGA43 437`  |
+| CP437 8x19                                  | `IBM VGA25G`                                                    | `IBM VGA25G 437`                               |
+| CP437 8x14                                  | `IBM EGA`                                                       | `IBM EGA 437`                                  |
+| CP850 8x16, 8x8, 8x19, 8x14                 | `IBM VGA 850`, `IBM VGA50 850`, `IBM VGA25G 850`, `IBM EGA 850` | `IBM EGA43 850` (opens 8x8)                    |
+| CP852 8x16, 8x8, 8x19, 8x14                 | `IBM VGA 852`, `IBM VGA50 852`, `IBM VGA25G 852`, `IBM EGA 852` | `IBM EGA43 852` (opens 8x8)                    |
+| Topaz 500, Topaz+ 500                       | `Amiga Topaz 1`, `Amiga Topaz 1+`                               | -                                              |
+| Topaz 1200, Topaz+ 1200                     | `Amiga Topaz 2`, `Amiga Topaz 2+`                               | -                                              |
+| MicroKnight, MicroKnight+                   | `Amiga MicroKnight`, `Amiga MicroKnight+`                       | -                                              |
+| P0t-NOoDLE (8x16)                           | `Amiga P0T-NOoDLE`                                              | -                                              |
+| mO'sOul                                     | `Amiga mOsOul`                                                  | -                                              |
+| C64 PETSCII shifted, unshifted              | `C64 PETSCII shifted`, `C64 PETSCII unshifted`                  | -                                              |
+| Topaz 437                                   | `Topaz-437`                                                     | `TOPAZ_437`, `Topaz_437`, `Topaz 437`          |
+| Human Fossil                                | `NewSchool_hf`                                                  | `Human Fossil`                                 |
+| DSS8, Hack, Line, Song_Logo, Zoids (8x16)   | `DSS8_2x`, `Hack_2x`, `Line_2x`, `Song_Logo_2x`, `Zoids_2x`     | -                                              |
+| DSS8, Hack, Line, Song_Logo (8x8)           | `DSS8`, `Hack`, `Line`, `Song_Logo`                             | -                                              |
+| Teletext (8x18), Teletext (8x9)             | `Teletext_2x`, `Teletext`                                       | -                                              |
+| p0t-noodle (8x20)                           | `p0t-noodle_2x`                                                 | -                                              |
+| FM-TOWNS (8x16)                             | `FM-TOWNS_2x`                                                   | -                                              |
+| FM-TOWNS (8x8)                              | `FM-TOWNS`                                                      | `FM-TOWNSx` only; `FM-TOWNS` is not recognised |
+| Zoids (8x8)                                 | `Zoids`                                                         | `Zoids 8x8` only; `Zoids` is not recognised    |
+| Every other Modern font, and C64-DiskMaster | its own name (`BLOODY`, `Calce`, `NIMBUS`, ...)                 | -                                              |
+| XBIN (embedded)                             | `XBIN`                                                          | -                                              |
+
+**Other code pages.** CP737, CP775, CP851, CP853, CP855, CP857, CP860, CP861, CP862, CP863, CP864, CP865, CP866, and CP869 have no SAUCE name in the editor. They save as plain `IBM VGA`, which reopens as CP437 8x16, and the spec's `IBM VGA 866` style names for them are not recognised on open. Pick the code page by hand after opening.
+
+**Unrecognised names.** A name the reader does not know leaves the current font in place. On `.nfo` and `.diz` files opened outside an archive, the Topaz 437 default is applied before any SAUCE name is read.
+
+> [!NOTE]
+> Two names do not round-trip. `Zoids 8x8` saves as `Zoids` but the reader expects `Zoids 8x8`, and `FM-TOWNS 8x8` saves as `FM-TOWNS` but the reader expects `FM-TOWNSx`. A file saved in either font reopens without a font switch; select the font again.
+
 # Modern Fonts
 
-## XBin
+## Modern
 
 ### Topaz 437 (8x16)
 

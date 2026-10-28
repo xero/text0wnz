@@ -1,4 +1,4 @@
-# SAUCE – Standard Architecture for Universal Comment Extensions
+# SAUCE: Standard Architecture for Universal Comment Extensions
 
 > Written by Olivier "Tasmaniac" Reubens / ACiD
 > No rights reserved, No patent pending
@@ -13,7 +13,7 @@ The Standard Architecture for Universal Comment Extensions or SAUCE as it is mor
 
 In the early 1990s there was a growing popularity in ANSI artwork. The ANSI art groups regularly released the works of their members over a certain period. Some of the bigger groups also included specialised viewers in each `artpack`. One of the problems with these artpacks was a lack of standardized way to provide meta data to the art, such as the title of the artwork, the author, the group, ... Some of the specialised viewers provided such information for a specific artpack either by encoding it as part of the executable, or by having some sort of database or list. However every viewer did it their own way. This meant you either had to use the viewer included with the artpack, or had to make do without the extra info. SAUCE was created to address that need. So if you wanted to, you could use your prefered viewer to view the art in a certain artpack, or even store the art files you liked in a separate folder while retaining the meta data.
 
-The goal was simple, but the way to get there certainly was not. Logistically, we wanted as many art groups as possible to support it. Technically, we wanted a system that was easy to implement and – if at all possible – manage to provide this meta data while still being compatible with all the existing software such as ANSI viewers, and Bulletin Board Software.
+The goal was simple, but the way to get there certainly was not. Logistically, we wanted as many art groups as possible to support it. Technically, we wanted a system that was easy to implement and, if at all possible, manage to provide this meta data while still being compatible with all the existing software such as ANSI viewers, and Bulletin Board Software.
 
 ## The SAUCE Legacy
 
@@ -22,7 +22,7 @@ SAUCE was created in 1994 and it continues to be in use today as a de facto stan
 The `born from DOS` nature explains some of the limits of SAUCE. The Title, Author and Group fields are so short because part of the original design idea was that the DOS filename, title and author needed to fit on a single line in text mode while still leaving some space so you could create a decent UI to select the files in the ANSI viewers. Limitations were also designed around what video cards could do in text mode.
 The specialised viewers in the various ANSI artpacks also explain why it was possible to add SAUCE to some files even though the file format really does not like it when you just add a load of extra bytes at the end. The SAUCE-aware viewer could account for the SAUCE and still render the file properly, even if the applications used to edit those files regarded the file as corrupt. In such an event, it was easy enough to remove the SAUCE.
 
-SAUCE is not a perfect solution, but at the time – and with a bit of friendly pressure from the right folks – it managed to fulfill what it was designed to do.
+SAUCE is not a perfect solution, but at the time, and with a bit of friendly pressure from the right folks, it managed to fulfill what it was designed to do.
 
 ## SAUCE applied to a file
 
@@ -128,7 +128,7 @@ A SAUCE comment block is an optional, variable sized structure that holds up to 
    - Do not assume that a viewer will display this in a particular font or even if the font is fixed width or not.
    - Prior to revision 5, the SAUCE specifications specified `ASCII characters` which implies code page 437. There are ANSI files out there however where the artist assumed an ANSI according to his native code page and also has SAUCE assumed as such.
 4. An unsigned binary value of 1 byte (0 to 255), 2 bytes (0 to 65535) or 4 bytes (0 to 4294967295) stored in intel [little-endian](http://en.wikipedia.org/wiki/Little_endian#Little-endian) format.
-   - Note that the FileSize field prior to revision 5 was listed as signed. This was an artefact of Turbo Pascal – a dominant programming language in the early 1990s – supporting a signed integer of 4 bytes but not having an unsigned integer of 4 bytes. Since a file size can never be negative, it is safe to assume unsigned.
+   - Note that the FileSize field prior to revision 5 was listed as signed. This was an artefact of Turbo Pascal, a dominant programming language in the early 1990s, supporting a signed integer of 4 bytes but not having an unsigned integer of 4 bytes. Since a file size can never be negative, it is safe to assume unsigned.
    - SAUCE prior to revision 5 only allowed SAUCE on files up to 2Gb in size, which back then was hardly a problem since hard disks were typically smaller.
 5. A C-style zero terminated string of characters encoded according to code page 437 (IBM PC / OEM ASCII). The part of the string not used should be filled with binary zero. Prior to revision 00.5 this field was a filler and was expected to be set to all binary zero, the different approach compared to the other Character fields serves as extra backwards compatibility.
 6. If you read a SAUCE record with a version number your software does not support, do not try to interpret the rest of the SAUCE record according to the 00 version spec.
@@ -309,7 +309,7 @@ Prior to revision 00.5, this field was a filler, so this field will be empty for
 | Font name [1]         | Font size | Resolution [2] | Aspect ratio [3] |                  | Vertical stretch [6] | Description                                                                                                                                                                                                                         |
 | Display [4]           | Pixel [5] |
 | IBM VGA               | 9×16 [7]  | 720×400        | 4:3              | 20:27 (1:1.35)   | 35%                  | Standard hardware font on VGA cards for 80×25 text mode (code page 437)                                                                                                                                                             |
-|                       | 8×16      | 640×400        | 4:3              | 6:5 (1:1.2)      | 20%                  | Modified stats when using an 8 pixel wide version of "IBM VGA" or code page variant.                                                                                                                                                |
+|                       | 8×16      | 640×400        | 4:3              | 5:6 (1:1.2)      | 20%                  | Modified stats when using an 8 pixel wide version of "IBM VGA" or code page variant.                                                                                                                                                |
 | IBM VGA50             | 9×8 [7]   | 720×400        | 4:3              | 20:27 (1:1.35)   | 35%                  | Standard hardware font on VGA cards for condensed 80×50 text mode (code page 437)                                                                                                                                                   |
 |                       | 8×8       | 640×400        | 4:3              | 5:6 (1:1.2)      | 20%                  | Modified stats when using an 8 pixel wide version of "IBM VGA50" or code page variant.                                                                                                                                              |
 | IBM VGA25G            | 8×19      | 640×480        | 4:3              | 1:1              | 0%                   | Custom font for emulating 80×25 in VGA graphics mode 12 (640×480 16 color) (code page 437).                                                                                                                                         |
@@ -423,5 +423,43 @@ Prior to revision 00.5, this field was a filler, so this field will be empty for
 | 00.2             | July 13, 1996     | Added support for:<br><br>- Character/Html<br>- Bitmap/PNG (replacing Bitmap/SBM)<br>- Vector/3DS (replacing Vector/SVI)<br>- Audio/XM<br>- Audio/HSC<br>- XBin<br>- Archive/_various formats_<br>- Executable                                                                             |
 | 00.3             | July 29, 1996     | Character/Avatar extended to use TInfo1 and TInfo2. <br>Added support for Audio/IT                                                                                                                                                                                                         |
 | 00.4             | May 31, 1997      | Technical cleanup                                                                                                                                                                                                                                                                          |
-| 00.5             | November 12, 2013 | Complete rewrite of the spec – this document. <br><br>- Filler is now used as a type dependant string.<br>- Flags for ANSI files and similar has been changed to include letter-spacing selection, as well as aspect ratio selection.<br>- ANSI files and similar can now specifiy a font. |
+| 00.5             | November 12, 2013 | Complete rewrite of the spec (this document). <br><br>- Filler is now used as a type dependant string.<br>- Flags for ANSI files and similar has been changed to include letter-spacing selection, as well as aspect ratio selection.<br>- ANSI files and similar can now specifiy a font. |
 | 00.6             | October 27, 2025  | Converted to markdown, fixed math multiplication typos                                                                                                                                                                                                                                     |
+| 00.7             | October 28, 2026  | Fixed the 8×16 pixel aspect ratio typo, removed dashes, added the teXt0wnz implementation notes                                                                                                                                                                                            |
+
+---
+
+## teXt0wnz Implementation Notes
+
+The spec above is normative for the editor's codec in `src/js/core/codecs/sauce.ts`. These notes record the choices the spec leaves open and the places where the reader is lenient.
+
+### Writing
+
+**Record.** Every record is version `00`. Title, Author, and Group are written as CP437 bytes, cut to 35, 20, and 20 bytes, and space padded; a character CP437 cannot express becomes `?`. The Date is the local date at save time.
+
+**Comments.** Comment text splits on newlines, then into 64-byte lines, with leading and trailing spaces trimmed from each line. Blank lines are dropped and the block caps at 255 lines.
+
+**FileSize.** Always the exact payload length.
+
+**ANSiFlags and FontName.** ANSi, ANSiMation, UTF-8 ANSI, and TundraDraw records carry the flags byte and a FontName. The B bit follows the document's iCE colors setting; the UTF-8 "ice" export also sets it when it brightened blink cells. The LS bits write the explicit `01` (8px) or `10` (9px) value of the current letter spacing, except that a file opened with LS `00` keeps `00` on resave until you toggle letter spacing. The AR bits carried from an opened file are written back as they were; a new document writes `00`. FontName comes from the current font through the table in [SAUCE Font Names](./fonts.md#sauce-font-names).
+
+**BinaryText.** `.bin` saves write DataType 5 with FileType holding width / 2 and no TInfo fields. The exporter refuses an odd width and any width above 510 columns, because the FileType byte cannot hold them.
+
+**XBin.** `.xb` saves write DataType 6 with TInfo1 and TInfo2 only. Flags and TInfoS stay zero, as the table requires.
+
+**No record.** Plain text (`.txt`) exports end in a lone EOF byte and carry no SAUCE. The `.0wnz` and `.dur` containers store title and author in their JSON instead; see [teXt0wnz Doc Format](./0wnz-format.md#metadata-and-fonts).
+
+> [!NOTE]
+> The FileType table lists Flags `0` and TInfoS `0` for TundraDraw. The editor writes a full ANSiFlags byte and a FontName on `.tnd` records, with the B bit always set because TundraDraw has no blink, and reads the LS bits back on open. The record stays the standard 128 bytes, so readers that follow the table are unaffected.
+
+### Reading
+
+**Dimensions.** A TInfo1 of 0, or a BinaryText FileType of 0, means unspecified: ANSI defaults to 80 columns and BIN to 160. Row counts come from the data, never from TInfo2.
+
+**Payload length.** FileSize is trusted when it is non-zero and smaller than the file. Otherwise the payload ends where the COMNT block starts, or where the record starts when there are no comments, less the EOF byte before it.
+
+**Text fields.** Trailing spaces and NUL bytes are both trimmed from every string field, since writers in the wild mix the two paddings.
+
+**Flags.** The B bit sets iCE colors. LS `10` switches to 9px and `01` to 8px; `00` and `11` leave the editor's setting alone. The AR bits are kept for the next save and otherwise ignored.
+
+**FontName.** A recognised name switches the font; see [SAUCE Font Names](./fonts.md#sauce-font-names). An unrecognised name leaves the current font in place.

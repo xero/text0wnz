@@ -324,3 +324,23 @@ In a worst-case situation where you would have to use No compression on the enti
   - **XBIN Compressed**: `[11,6]Aa`
 
 # -THE-END-
+
+---
+
+## teXt0wnz Implementation Notes
+
+The spec above is normative for the editor's codec in `src/js/core/codecs/xbin.ts`. These notes record where the reader is lenient and what the writer always does.
+
+**Fontsize.** The reader treats a Fontsize of 0 as 16, the VGA default, and reads 33 through 255 as written: the value sizes the font block, so clamping it would misplace everything after it. The writer accepts heights 1 through 255 and refuses anything else, since the header byte cannot hold them. The 16Kb maximum quoted above assumes 32 rows; a 512-glyph font at 255 rows is 130,560 bytes.
+
+**512-glyph fonts.** With the 512Chars flag set, the foreground intensity bit (attribute bit 3) selects glyphs 256 through 511 instead of a bright color, and the cell's foreground is the low three bits. The editor keeps the upper page in its glyph table as private-use codepoints, `U+E000` plus the upper glyph index, so a UTF-8 export of such a piece stays valid Unicode. Saving reverses the mapping, so a 512-glyph file round-trips byte for byte. The writer sets the flag whenever the embedded font holds 512 × Fontsize bytes.
+
+**Palette.** Every save embeds the 48-byte palette and sets the Palette flag, even when the colors are the VGA defaults.
+
+**Compression.** The writer compresses row by row as described above and keeps the result only when it is smaller than the raw image; otherwise the image is stored raw with the Compress flag clear. The XBin export dialog has a toggle that skips compression entirely.
+
+**NonBlink.** The flag follows the document's iCE colors setting on save and sets it on open.
+
+**SAUCE.** Saves append a record with DataType 6 (XBin), TInfo1 and TInfo2 holding width and height, and Flags and TInfoS zero. See [SAUCE Format](./sauce-format.md#text0wnz-implementation-notes).
+
+**Limits.** A header whose Width × Height exceeds 10,000,000 cells is refused before any allocation. Both `.xb` and `.xbin` open; saves use `.xb`.

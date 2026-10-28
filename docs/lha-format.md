@@ -1,10 +1,13 @@
-# LHA Archive Support
+# Archive Support
 
 > [!NOTE]
-> How the editor reads `.lha` and `.lzh` archives: which header levels
-> and compression methods the built-in decoder supports, how the
-> formats are laid out, and how the implementation was verified. The
-> reader lives in `src/js/core/codecs/lha.ts`.
+> How the editor reads archives in the browser. Most of this page
+> covers `.lha` and `.lzh`: which header levels and compression
+> methods the built-in decoder supports, how the formats are laid
+> out, and how the implementation was verified. The reader lives in
+> `src/js/core/codecs/lha.ts`. The shorter
+> [Zip Archives](#zip-archives) section covers the `.zip` reader in
+> `src/js/core/codecs/zip.ts`.
 
 ---
 
@@ -16,6 +19,7 @@
 > - [The lh5 Stream](#the-lh5-stream)
 > - [Integrity](#integrity)
 > - [Verification](#verification)
+> - [Zip Archives](#zip-archives)
 > - [References](#references)
 
 ## Why LHA
@@ -47,12 +51,17 @@ hosts:
 | `-lh1-`, `-lh4-`, `-lh6-`, `-lh7-`, `-lz4-`, `-lzs-` | no; extraction throws a clear error |
 | Multi-volume archives                                | no                                  |
 
-Every other method name parses in the header walk, so a mixed archive
-still lists completely; only extracting an unsupported entry fails.
+Any other method of the `-lXX-` shape (`-lh1-`, `-lh7-`, `-lzs-`, and
+the rest) parses in the header walk, so a mixed archive still lists
+completely; only extracting an unsupported entry fails. A header with
+a method outside that shape, such as PMarc's `-pm0-` and `-pm2-`,
+stops the listing with a torn-header error. Such entries are rare in
+amiga collys.
 
 Filenames decode as byte-exact ISO-8859-1, which keeps amiga latin-1
-names like `c«w-LIG.txt` intact. Backslashes from DOS-made archives
-normalize to `/`.
+names like `c«w-LIG.txt` intact. Backslashes in filenames from
+DOS-made archives normalize to `/`; a level 2 directory prefix only
+has its `0xFF` separators converted.
 
 ## Header Levels
 
@@ -157,8 +166,45 @@ Unit tests in `tests/core/lha.test.ts` cover each header level with
 hand-crafted stored archives, the lh5 path with a real 1.6KB colly
 embedded as a fixture, and the failure modes.
 
+## Zip Archives
+
+The PC scene shipped packs as `.zip`, so the 16colo.rs browser, the
+aSCIIaRENA browser, and native opens all need to read them. They share
+one minimal reader in `src/js/core/codecs/zip.ts` that walks the
+central directory and extracts one entry at a time.
+
+| Capability                                        | Supported                                                         |
+| :------------------------------------------------ | :---------------------------------------------------------------- |
+| Store (method 0)                                  | yes                                                               |
+| Deflate (method 8)                                | yes                                                               |
+| Other methods (deflate64, bzip2, LZMA, and so on) | no; extraction throws a clear error                               |
+| Encrypted entries                                 | no; refused before extraction                                     |
+| Zip64                                             | no; saturated count, size, or offset fields are refused           |
+| Archive comment                                   | skipped, up to the 64KB the format allows                         |
+| Prepended data (SFX stubs)                        | yes; offsets are corrected from where the directory actually sits |
+
+- **Names.** An entry flagged UTF-8 (general purpose bit 11) decodes
+  as UTF-8; everything else decodes as latin1, which keeps CP437-era
+  names matchable. Backslashes normalize to `/`. Lookup by name tries
+  an exact match, then a basename match, so a piece nested in a folder
+  still resolves.
+- **Integrity.** Every extraction is checked against the central
+  directory's CRC-32, and an inflated entry must match its declared
+  size. An entry declaring more than 32MB in either direction is
+  refused before inflation, and inflation aborts the moment the output
+  passes the declared size, so a lying header cannot balloon memory.
+- **Opening.** A zip handed to File → Open, drag-and-drop, or a PWA
+  file launch lists the entries the editor can open; a lone entry opens
+  straight away, several raise a picker. Zip entries keep the editor's
+  CP437 defaults, where amiga archives open as latin-1 in Topaz+ 1200.
+
+Unit tests in `tests/core/zip.test.ts` cover store and deflate
+extraction, basename matching inside nested packs, torn directories
+and truncated data, and declared and lying decompression bombs.
+
 ## References
 
 - [LHA file format overview](http://justsolve.archiveteam.org/wiki/LHA) - Just Solve the File Format Problem wiki
 - [lhasa](https://fragglet.github.io/lhasa/) - Simon Howard's free LHA tool and library, with format notes
 - [LHa for UNIX](https://github.com/jca02266/lha) - the canonical open implementation of the lh5 coder
+- [APPNOTE.TXT](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) - PKWARE's .ZIP file format specification
