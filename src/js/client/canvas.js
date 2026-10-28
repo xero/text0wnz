@@ -1361,7 +1361,13 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			// continuous zoom (pinch, wheel) relayouts every frame on GL;
 			// flashing the settings modal per frame would be unusable
 			const interactive = isInteractiveZoom();
-			if (!interactive) {
+			// the veil is a courtesy: it must not cover a modal someone is
+			// reading (a damaged file's note, an update prompt), since its
+			// close takes down whatever it covered
+			const veil =
+				!interactive &&
+				(!State.modal.isOpen() || State.modal.current() === 'loading');
+			if (veil) {
 				State.modal.loading('Updating editor with new settings...');
 			}
 			stopBlinkTimer();
@@ -1373,7 +1379,13 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			await new Promise(resolve => {
 				redrawEntireImage(null, () => {
 					updateTimer();
-					if (!interactive && !State.loadingFromStorage) {
+					// and it closes only itself: a modal opened mid-relayout
+					// stays up
+					if (
+						veil &&
+						!State.loadingFromStorage &&
+						State.modal.current() === 'loading'
+					) {
 						State.modal.close();
 					}
 					resolve();

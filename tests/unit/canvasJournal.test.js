@@ -30,7 +30,12 @@ const stateMock = vi.hoisted(() => ({
 		getForegroundColor: () => 7,
 		getBackgroundColor: () => 0,
 	},
-	modal: { loading: () => {}, close: () => {} },
+	modal: {
+		loading: () => {},
+		close: () => {},
+		isOpen: () => false,
+		current: () => false,
+	},
 	loadingFromStorage: false,
 	saveToLocalStorage: () => {},
 	saveUndoHistory: () => {},

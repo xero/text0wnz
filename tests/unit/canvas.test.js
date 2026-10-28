@@ -21,6 +21,8 @@ vi.mock('../../src/js/client/state.js', () => ({
 		modal: {
 			loading: vi.fn(),
 			close: vi.fn(),
+			isOpen: vi.fn(() => false),
+			current: vi.fn(() => false),
 		},
 		loadingFromStorage: false,
 	},
@@ -224,6 +226,68 @@ describe('Canvas Module', () => {
 				new CustomEvent('onLetterSpacingChange', { detail: false }),
 			);
 			expect(canvas.getDoc().getLetterSpacing()).toBe(false);
+		});
+	});
+
+	describe('the relayout veil', () => {
+		// a modal stand-in that keeps the controller's one-screen state
+		const screen = async start => {
+			const State = (await import('../../src/js/client/state.js')).default;
+			let current = start;
+			State.modal.isOpen.mockImplementation(() => current !== false);
+			State.modal.current.mockImplementation(() => current);
+			State.modal.loading.mockImplementation(() => (current = 'loading'));
+			State.modal.close.mockImplementation(() => (current = false));
+			return {
+				State,
+				now: () => current,
+				reset: () => {
+					State.modal.isOpen.mockImplementation(() => false);
+					State.modal.current.mockImplementation(() => false);
+					State.modal.loading.mockImplementation(() => {});
+					State.modal.close.mockImplementation(() => {});
+				},
+			};
+		};
+		const relayout = () =>
+			new Promise(resolve => {
+				// the layout event lands before the redraw; two frames
+				// later the small-canvas redraw has finished
+				document.addEventListener(
+					'onCanvasLayoutChange',
+					() => requestAnimationFrame(() => requestAnimationFrame(resolve)),
+					{ once: true },
+				);
+				document.dispatchEvent(
+					new CustomEvent('onLetterSpacingChange', { detail: true }),
+				);
+			});
+
+		it('covers an idle editor, then lifts itself', async () => {
+			const modal = await screen(false);
+			try {
+				canvas = createTextArtCanvas(mockContainer, mockCallback);
+				await relayout();
+				expect(modal.State.modal.loading).toHaveBeenCalled();
+				expect(modal.State.modal.close).toHaveBeenCalled();
+				expect(modal.now()).toBe(false);
+			} finally {
+				modal.reset();
+			}
+		});
+
+		it('leaves a modal someone is reading alone', async () => {
+			// a damaged file's note lands while its palette relays out
+			const modal = await screen('notice');
+			try {
+				canvas = createTextArtCanvas(mockContainer, mockCallback);
+				await relayout();
+				expect(modal.State.modal.loading).not.toHaveBeenCalled();
+				expect(modal.State.modal.close).not.toHaveBeenCalled();
+				expect(modal.now()).toBe('notice');
+			} finally {
+				modal.reset();
+			}
 		});
 	});
 
