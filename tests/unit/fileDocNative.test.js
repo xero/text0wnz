@@ -184,6 +184,23 @@ describe('doc-native file formats', () => {
 		expect(back.doc.getCell(0, 0, 0).fg).toBe(rgbColor(9, 8, 7));
 	});
 
+	it('a failing .0wnz or .dur save tells the artist', async () => {
+		// the menu drops the save promise, so an uncaught throw here
+		// used to vanish without a word
+		mocks.state.textArtCanvas.getDoc = () => {
+			throw new Error('doc gone');
+		};
+		const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+		const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+		await expect(Save.ownz()).resolves.toBeUndefined();
+		await expect(Save.dur()).resolves.toBeUndefined();
+		const messages = alert.mock.calls.map(([message]) => message);
+		expect(messages[0]).toMatch(/^\.0wnz save failed: /);
+		expect(messages[1]).toBe('durdraw export failed: doc gone');
+		alert.mockRestore();
+		quiet.mockRestore();
+	});
+
 	it('exposes tnd and ownz on the Save surface', () => {
 		expect(typeof Save.tnd).toBe('function');
 		expect(typeof Save.ownz).toBe('function');
