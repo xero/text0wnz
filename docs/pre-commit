@@ -1,5 +1,5 @@
 #!/bin/sh
-# cp .git/hooks/pre-commit && chmod +x
+# cp docs/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
 printf "%s\n%s\n\n" "running pre commit hooks" "use --no-verify to skip"
 
 # formatting & linting

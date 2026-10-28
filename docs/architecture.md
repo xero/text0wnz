@@ -217,13 +217,12 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 - Color conflict resolution
 - Custom palettes (XBIN)
 
-**Storage** (`storage.js`, `compression.js`)
+**Storage** (`storage.js`)
 
-- IndexedDB for canvas persistence
-- Optimized binary compression
-- Automatic save/restore
-- Editor settings persistence
-- Run-length encoding for efficiency
+- IndexedDB for canvas persistence: the snapshot (`Uint16Array` plus columns and rows) is stored directly
+- One shared database connection; stores for canvas data, embedded XBin font bytes, undo history, and the reference image
+- Automatic save/restore driven by `state.js`
+- Editor settings in `localStorage`
 
 **Network** (`network.js`, `collabWorker.js`)
 
@@ -471,22 +470,24 @@ When a drawing occurs:
 
 ```
 ┌─────────────┐
-│   Canvas    │ (change detected)
-│   Changes   │
+│ Undo Group  │ (stroke commit, frame add or remove, view setting change)
+│   Closes    │
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
-│  Compress   │ (RLE compression)
-│    Data     │
+│  Snapshot   │ (State.saveToLocalStorage: imageData, columns, rows)
+│    Doc      │
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
-│   Save to   │ (with debouncing)
+│   Save to   │ (skipped for a default document or a live collab session)
 │  IndexedDB  │
 └─────────────┘
 ```
+
+The OPFS journal records the same commits independently (see Storage and Persistence). Undo history is written separately, only on idle, `visibilitychange`, and `pagehide`.
 
 ## Module Structure
 
@@ -511,7 +512,6 @@ src/
 │   ├── lazyFont.js        # Lazy font loading
 │   ├── fontCache.js       # Font caching
 │   ├── storage.js         # IndexedDB persistence
-│   ├── compression.js     # Data compression
 │   ├── magicNumbers.js    # Constants and magic values
 │   └── ...                # See project-structure.md for the full list
 ├── js/core/               # Shared pure-TS doc model, codecs, and protocol
@@ -533,36 +533,62 @@ src/js/server/
 
 ### Dependency Graph (Client)
 
+Static imports of the main modules. Most of them also import the shared TypeScript core (`src/js/core/`), omitted here; the ten panel, brush, and chrome modules `main.js` wires are listed in [Project Structure](./project-structure.md#client-modules).
+
 ```
 main.js
   ├── state.js
+  │   ├── storage.js        (imports nothing)
+  │   └── magicNumbers.js
   ├── canvas.js
+  │   ├── glRenderer.js
   │   ├── font.js
-  │   ├── lazyFont.js
-  │   └── fontCache.js
+  │   │   ├── lazyFont.js
+  │   │   └── fontCache.js
+  │   ├── hexFontPages.js
+  │   ├── journalStore.js
+  │   ├── palette.js
+  │   ├── pointer.js
+  │   ├── zoom.js
+  │   ├── ui.js
+  │   └── state.js
   ├── ui.js
+  │   ├── font.js
+  │   ├── zoom.js
   │   └── state.js
   ├── toolbar.js
+  │   ├── ui.js
+  │   └── state.js
   ├── palette.js
+  │   ├── ui.js
+  │   └── state.js
   ├── keyboard.js
-  │   ├── state.js
-  │   └── canvas.js
+  │   ├── fkeys.js
+  │   ├── toolbar.js
+  │   ├── ui.js
+  │   └── state.js
   ├── freehandTools.js
-  │   ├── state.js
-  │   ├── canvas.js
-  │   └── toolbar.js
+  │   ├── asciiBrush.js
+  │   ├── glyphScale.js
+  │   ├── toolbar.js
+  │   ├── ui.js
+  │   └── state.js
   ├── file.js
-  │   ├── state.js
-  │   └── canvas.js
+  │   ├── ui.js
+  │   └── state.js
   ├── network.js
+  │   ├── collabTarget.js
+  │   ├── file.js
+  │   ├── messageGuard.js
+  │   ├── palette.js
+  │   ├── recentList.js
+  │   ├── ui.js
   │   ├── state.js
-  │   ├── canvas.js
-  │   └── collabWorker.js (module web worker)
-  ├── storage.js
-  │   ├── state.js
-  │   └── compression.js
+  │   └── collabWorker.js   (module web worker, created at runtime)
   └── magicNumbers.js
 ```
+
+`canvas.js` is the renderer host, not a dependency of the tools: `keyboard.js`, `freehandTools.js`, `file.js`, and `network.js` reach the document through `State.textArtCanvas`.
 
 ## Build System
 
@@ -602,20 +628,25 @@ dist/
 ├── collabWorker-[hash].js        # Collaboration worker
 ├── journalWorker-[hash].js       # OPFS journal worker
 ├── ui/js/
-│   ├── editor-[hash].js      # Entry point (~20 KB)
-│   ├── core-[hash].js        # Core modules (~80 KB)
-│   ├── canvas-[hash].js      # Canvas system (~60 KB)
-│   ├── tools-[hash].js       # Drawing tools (~100 KB)
-│   ├── fileops-[hash].js     # File operations (~40 KB)
-│   ├── network-[hash].js     # Collaboration (~30 KB)
-│   ├── palette-[hash].js     # Palette (~15 KB)
+│   ├── editor-[hash].js      # Entry point, holds most app code (~150 KB)
+│   ├── core-[hash].js        # Client core group: magicNumbers, state, storage, ui (~33 KB)
+│   ├── core-[hash].js        # 0wnzlib TypeScript core: doc model, codecs, protocol (~79 KB)
+│   ├── canvas-[hash].js      # Canvas system (~26 KB)
+│   ├── tools-[hash].js       # Drawing tools (~51 KB)
+│   ├── fileops-[hash].js     # File operations (~18 KB)
+│   ├── network-[hash].js     # Collaboration (~14 KB)
+│   ├── palette-[hash].js     # Palette (~6 KB)
+│   ├── asciiBrush-[hash].js  # Ascii brush, lazy (~4 KB)
+│   ├── zoom-[hash].js        # Zoom controller, lazy (~3 KB)
 │   ├── rolldown-runtime-[hash].js # Bundler runtime (<1 KB)
-│   └── ...                   # Lazy chunks (profiler, scrollSpike, testBridge)
+│   └── ...                   # Opt-in rigs (profiler, scrollSpike, testBridge)
 └── ui/
-    ├── stylez-[hash].css     # Styles (~30 KB compressed)
-    ├── fonts/                # Bitmap fonts (~2 MB)
-    └── img/                  # Images (~500 KB)
+    ├── stylez-[hash].css     # Styles (~90 KB minified)
+    ├── fonts/                # Bitmap fonts and packed Unicode pages (~7.4 MB)
+    └── img/                  # Images (~1.7 MB)
 ```
+
+Sizes are from a `bun bake` at the time of writing and drift with every change. Two chunks share the `core-` prefix: the Vite `core` group and the shared TypeScript core under `src/js/core/`, which Rolldown names after its directory.
 
 ### Asset Optimization
 
@@ -658,13 +689,17 @@ dist/
    - Key: `currentUndoHistory`
    - Value: none on the current version; the byte-budgeted undo arena does not serialize, so the store stays empty and the undo stack starts fresh each session
 
-Lightweight editor settings live in `localStorage` (`text0wnz-settings`).
+4. **`refImage`**
+   - Key: `currentRef`
+   - Value: the reference image as raw bytes plus MIME type (`{buffer, type}`), never a Blob or File, which Safari drops in a structured clone
 
-**Compression:**
+The database is at version 4; `storage.js` opens one shared connection and reopens it when a newer tab upgrades the schema. Lightweight editor settings live in `localStorage` (`text0wnz-settings`).
 
-- Run-length encoding (RLE)
-- Stores only changed regions
-- Typical compression: 90%+ for most artwork
+**Snapshot Format:**
+
+- The canvas snapshot goes into `canvasData` as is: `{imageData: Uint16Array, columns, rows}`
+- No encoding or compression step on either side; IndexedDB stores the typed array natively
+- `state.js` skips the save for a default document and while a collaboration session is connected
 
 **Auto-Save Strategy:**
 
@@ -725,7 +760,7 @@ A versioned JSON envelope, gzipped through the runtime-native CompressionStream.
 
 ### Module Pattern
 
-All modules use the revealing module pattern:
+Some modules use the revealing module pattern (`palette.js` and `toolbar.js` among the client modules). The TypeScript core uses plain named exports with `index.ts` re-exporting everything, and most client modules export factory functions (`createTextArtCanvas()`, `createLazyFont()`, `createPanelManager()`) or plain objects (`State`, `Storage`). The pattern, where it appears:
 
 ```javascript
 const Module = (() => {
@@ -1189,21 +1224,26 @@ worker.postMessage({ cmd: 'connect', nick, group, pass, caps });
 
 ### Storage Optimization
 
-**Compression:**
-Run-length encoding reduces storage size:
+**Direct typed-array storage:**
+The canvas snapshot is written to IndexedDB as the live `Uint16Array`, with no serialization on save or parse on restore:
 
 ```javascript
-// Before: [1,1,1,1,1,2,2,2,3,3]
-// After:  [[1,5],[2,3],[3,2]]
-// Savings: 60% typical
+// storage.js
+store.put({ imageData, columns, rows }, 'currentCanvas');
 ```
 
-**Debouncing:**
-Avoid excessive saves:
+**Save gating:**
+Saves run when an undo group closes, a frame is added or removed, or a view setting changes, and skip when there is nothing worth keeping:
 
 ```javascript
-const debouncedSave = debounce(saveToIndexedDB, 500);
+// state.js
+if (!hasNonDefaultZoom && (this.isDefaultState() || network?.isConnected?.())) {
+	return;
+}
 ```
+
+**Deferred heavy writes:**
+Undo history is the large write, so `main.js` schedules it through `requestIdleCallback` and on `visibilitychange` and `pagehide` rather than on every stroke.
 
 ## Related Documentation
 

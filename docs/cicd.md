@@ -184,7 +184,7 @@ File patterns live in the `config` block of `package.json`:
 1. Checkout code with full history
 2. Setup Bun
 3. Install dependencies
-4. Run `bun test:unit` (Vitest with coverage; the suite covers unit and DOM tests, and excludes the Playwright directories)
+4. Run `bun test:unit` (Vitest with coverage; the suite covers `tests/unit`, `tests/core`, `tests/dom`, `tests/corpus`, and `tests/interop`, and excludes the Playwright directories)
 5. Inject dark theme CSS into coverage report
 6. Upload coverage artifact
 7. Add artifact download instructions to the run summary
@@ -232,8 +232,10 @@ test-suite.yml fans the suite out across 4 parallel shards:
 
 ```yaml
 image: ghcr.io/xero/text0wnz/ci:latest
-options: --user root
+options: --user root --ipc=host --shm-size=2gb
 ```
+
+`--ipc=host` lifts Docker's default 64 MB `/dev/shm`, which six parallel browser workers exhaust. Chromium dodges that with `--disable-dev-shm-usage`, but Firefox has no such flag and stalls silently when shared memory runs dry (the chronic Firefox flake). `--shm-size=2gb` is the fallback if the ipc setting ever changes.
 
 [ci docker image](https://github.com/xero/text0wnz/pkgs/container/text0wnz%2Fci)
 
@@ -246,11 +248,12 @@ options: --user root
 
 1. Checkout code
 2. Install dependencies with Bun
-3. Set localhost domain in `.env`
-4. Build application with `bun bake`
-5. Derive the artifact name from the shard
-6. Run `bun test:e2e --shard={shard}`
-7. Upload blob report
+3. Sync Playwright browsers with `bun x playwright install` (the image bakes browsers for the Playwright version it was built with; a bumped `@playwright/test` needs its own builds, and the step is a fast no-op when the image already matches)
+4. Set localhost domain in `.env`
+5. Build application with `bun bake`
+6. Derive the artifact name from the shard
+7. Run `bun test:e2e --shard={shard}`
+8. Upload blob report
 
 **Environment:**
 
@@ -309,7 +312,7 @@ options: --user root
 
 **Steps:**
 
-1. Checkout code, install dependencies, set localhost domain in `.env`, and build
+1. Checkout code, install dependencies, sync Playwright browsers with `bun x playwright install` (goldens must capture with the exact Playwright build the suite runs), set localhost domain in `.env`, and build
 2. Run `bun test:e2e --project=golden --update-snapshots`
 3. Run `bun test:e2e --project=golden-gl -g "unicode-mixed" --update-snapshots` for the GL-only unicode golden
 4. Upload the regenerated baselines
@@ -320,7 +323,7 @@ options: --user root
 - Path: `tests/golden/golden.spec.js-snapshots`
 - Retention: 7 days
 
-**Updating baselines:** download the artifact, review the images, drop them into `tests/golden/golden.spec.js-snapshots/`, and commit. See the [Testing Guide](testing.md) for how the golden suite asserts against these baselines.
+**Updating baselines:** download the artifact, review the images, drop them into `tests/golden/golden.spec.js-snapshots/`, and commit. See the [Testing Guide](./testing.md#golden-screenshot-suite) for how the golden suite asserts against these baselines.
 
 ### 8. deploy.yml
 
@@ -493,16 +496,16 @@ Standalone server binaries are not part of the release. `bun binaries` (`tools/c
 
 ```dockerfile
 FROM oven/bun:debian AS bun
-FROM mcr.microsoft.com/playwright:v1.59.1-jammy
+FROM mcr.microsoft.com/playwright:v1.64.0-jammy
 ```
 
-The Bun binary is copied out of the first stage into the pinned Playwright image.
+The Bun binary is copied out of the first stage into the pinned Playwright image. The image pin and the global `playwright@1.64.0` install match `@playwright/test` in `package.json`; bump all three together.
 
 **Includes:**
 
 - Bun runtime
 - Playwright with all browsers (Chrome, Firefox, WebKit)
-- ESLint and Prettier
+- ESLint and Prettier (unused by `lint.yml`, which runs on `ubuntu-latest` with `setup-bun` and the project's own dependencies)
 
 **Steps:**
 
@@ -710,7 +713,7 @@ cache-to: type=gha,mode=max
 Bun's native caching handles `node_modules` efficiently.
 
 **CI Container:**
-The prebuilt `ghcr.io/xero/text0wnz/ci` image ships Bun, all Playwright browsers, and the lint toolchain, so E2E jobs skip browser installation entirely.
+The prebuilt `ghcr.io/xero/text0wnz/ci` image ships Bun and all Playwright browsers. The e2e and golden-update jobs still run `bun x playwright install` as a sync step, which downloads nothing while the image matches `@playwright/test` and only fetches new browser builds after a Playwright bump. The lint job does not use the image.
 
 ### Conditional Execution
 

@@ -1,6 +1,6 @@
 # Testing
 
-teXt0wnz uses a comprehensive three-part testing strategy: unit tests with Vitest, DOM/component tests with Testing Library, and end-to-end tests with Playwright.
+teXt0wnz uses a comprehensive three-part testing strategy: unit tests with Vitest, DOM/component tests with Testing Library, and end-to-end tests with Playwright. Vitest also runs the shared core suites, the round-trip corpus, and the upstream interop tests; Playwright also runs the golden screenshot suite and the WebGL rail.
 
 > [!IMPORTANT]
 > view the latest [unit coverage report](https://xero.github.io/text0wnz/tests/)
@@ -58,16 +58,29 @@ tests/
 │   ├── tools.spec.js
 │   └── ...
 ├── golden/                        # Playwright pixel-golden tests
+│   ├── golden.spec.js             # screenshot matrix and real-art shots
+│   ├── testcard.js                # deterministic BIN and XBin test cards
+│   └── golden.spec.js-snapshots/  # 26 CI-generated goldens
 ├── gl/                            # Playwright WebGL renderer tests
-├── perf/                          # Performance capture scripts
+│   ├── contextLoss.spec.js        # context loss and restore gate
+│   └── renderer.spec.js           # WebGL2 under SwiftShader
+├── perf/                          # Performance capture scripts (node, not a test suite)
+│   ├── captureBaseline.js         # bun perf:baseline
+│   └── captureScrollSpike.js      # bun perf:spike
 ├── interop/                       # Cross-editor protocol interop tests
 │   ├── moebius.test.js            # vendored vanilla Moebius 1.0.29
 │   ├── moebiusxbin.test.js        # vendored moebiusXBIN 2.2.0
 │   └── fixtures/                  # the servers, shims, and launchers
-├── corpus/                        # Round-trip generators
-├── parity/                        # v2 reference engine for parity tests
-├── baselines/                     # Performance baselines (JSON)
-├── fixtures/                      # Shared fixtures
+├── corpus/                        # Round-trip corpus
+│   ├── roundtrip.test.js          # committed artwork and synthetic fixtures
+│   ├── generators.js              # seeded fixture generators
+│   ├── lhaFixture.ts              # LHA archive fixtures
+│   └── zipFixture.ts              # Zip archive fixtures
+├── parity/                        # Frozen v2 engine for parity tests
+│   └── v2ReferenceEngine.js
+├── baselines/                     # Performance baselines (JSON, per renderer and device)
+├── fixtures/                      # Corpus tiers and automation rules
+│   └── README.md
 ├── results/                       # Test results (gitignored)
 │   ├── coverage/                  # Coverage reports
 │   ├── e2e/                       # E2E artifacts
@@ -169,13 +182,15 @@ npx vitest server
 npx vitest --ui
 ```
 
+### What `bun test:unit` Runs
+
+`vitest run` picks up every `*.test.js` and `*.test.ts` file outside the excludes in `vitest.config.js`. At the time of writing that is 75 files in `tests/unit` (server tests under `server/`), 29 in `tests/core`, 12 in `tests/dom`, 2 in `tests/interop`, and 1 in `tests/corpus`. `bunx vitest list --filesOnly` prints the live list. The Playwright directories (`e2e`, `golden`, `gl`) and the `perf` scripts are excluded.
+
 ### Test Coverage
 
 **Current status:**
 
-- Overall: ~45% statement coverage
-- Client modules: 45% average
-- Server modules: 51% average
+The published [coverage report](https://xero.github.io/text0wnz/tests/) is the source of truth; `unit.yml` regenerates it on every push to `main`. Locally, `bun test:unit` writes the same report to `tests/results/coverage/`.
 
 **Coverage goals:**
 
@@ -471,6 +486,19 @@ const debug = msg => {
 - Data validation
 - Format conversions
 
+**server/persistenceAtomic.test.js** - Atomic writes
+
+- The temp file syncs to disk before the rename makes it the real one, so a power loss cannot keep the rename and drop the data
+
+#### Core Modules
+
+`tests/core/` holds 29 TypeScript suites for the shared core under `src/js/core/`. They run in the same Vitest process as the client tests (`tsconfig.json` includes `tests/**/*.ts`) and import the modules directly. Grouped by area:
+
+- **Document model and editing:** `doc`, `editorFrames`, `cellops`, `convert`, `patchArena`, `paste`, `mapping`, `migrate`, `loadDoc`, `mirrorParity`, `journal`
+- **Codecs:** `codecs` (SAUCE, BIN, XBin, ANSI), `ansCompliance`, `dur`, `tundra`, `envelope`, `zip`, `lha`, `formatBudget`
+- **Protocol:** `moebius`, `extensions`, `timelapse`, `securityCaps`
+- **Text and glyphs:** `cp437`, `charsets`, `width`, `hexfont`, `asciiStamp`, `circleStamp`
+
 ### Writing Unit Tests
 
 > [!IMPORTANT]
@@ -622,6 +650,22 @@ FIXTURE_FONT_BYTES=1 node tests/interop/fixtures/moebiusxbin/start.js 8001
 The Chrome-only `tests/e2e/collabMoebius.spec.js` joins the vanilla
 fixture through the editor's Connect form and draws both ways.
 
+## Corpus (Round-Trip)
+
+`tests/corpus/roundtrip.test.js` runs under `bun test:unit` and pins the codecs in three tiers:
+
+- **Tier A, committed artwork.** Every piece in `src/ansi/` must decode, re-encode, and decode again to the identical cell grid, and the encoder must be a fixed point (`encode(decode(encode))` is byte-identical).
+- **Tier B, synthetic fixtures.** `generators.js` builds seeded, deterministic fixtures for the edge cases wild files cannot guarantee: odd SAUCE records, ice color ANSI, 132-column and large documents, XBin RLE with all four run types, 512-glyph XBin fonts, and UTF-8 multibyte rows. No binary blobs live in the repo. `lhaFixture.ts` and `zipFixture.ts` build archive fixtures for the core and client archive tests.
+- **Tier C, bulk conformance.** Not run here. It targets the owner's pinned mirror of the sixteencolors archive and is manual only; `tests/fixtures/README.md` holds the pin, the fetch mechanics, and the rules (never hit `api.16colo.rs` or `asciiarena.se` from automation).
+
+Known codec defects are pinned with `it.fails` and a comment. When a fix lands, the test flips to red; promote it to a plain `it()`.
+
+## Parity (Frozen v2 Engine)
+
+`tests/parity/v2ReferenceEngine.js` is the doc-mutation subset of the v2 `canvas.js`, extracted verbatim minus rendering, collab, and font concerns: the u16 image buffer, draw entry points, half-block painting, mirror tables, the bright-background optimize pass, chunked undo and redo, areas, and network `quickDraw`. It preserves v2 quirks on purpose, including the swapped half-block constant names, and must not be improved.
+
+`tests/unit/engineParity.test.js` runs one seeded op script against the live canvas, this frozen reference, and the v3 editor core, and requires the full u16 image to match word for word after every op. The reference keeps the gate meaningful now that `canvas.js` runs on the v3 core. oxlint ignores the directory (`.oxlintrc.json`).
+
 ## Testing Library (DOM/Component Testing)
 
 ### Setup
@@ -632,7 +676,10 @@ Testing Library is integrated with Vitest for DOM manipulation testing.
 
 ```javascript
 import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
 ```
+
+`tests/canvasShim.js` runs first and stubs `HTMLCanvasElement.prototype.getContext` with a cached 2D context, skipping files that run without a DOM.
 
 ### DOM Testing Patterns
 
@@ -907,6 +954,49 @@ npx playwright show-report tests/results/playwright-report
 - Selection transformations (flip horizontal/vertical with [ and ])
 - Selection move mode (M key)
 
+**undoRedo.spec.js** - Advanced undo/redo operations
+
+- Undo group boundaries across tools, read back cell by cell
+
+**clipboard.spec.js** - Advanced clipboard operations
+
+- Copy, cut, and paste flows beyond the keybind smoke tests
+
+**collaboration.spec.js** - Collaboration and chat features
+
+- Chat window, collaboration mode detection, and network features; skipped without a live session
+
+**collabMoebius.spec.js** - Vanilla Moebius interop (Chrome only)
+
+- Joins the vendored Moebius 1.0.29 server by typing an address into the Connect form
+- Draws both ways against a raw peer on the same joint
+- Pins the local/chat button handoff and the dead-dial report
+
+**asciiBrush.spec.js** - Ascii brush
+
+- Browser wiring of the old skool stamp engine: pointer path in, revised cells out, one undo group per stroke, backgrounds preserved
+- Brush modes on the line and shape tools
+
+**autoscroll.spec.js** - Minimap autoscroll
+
+- Playback transport and speed through the live viewport, including the manual-scroll escape
+
+**panels.spec.js** - Panel docking
+
+- Top and bottom docks, bar rows and columns, the pull-out threshold, the frames default home, the docking menu, and the phone layout
+
+**toolSettings.spec.js** - Tool settings window
+
+- The context law (each settings tool shows its own section, the rest hide the window), the reopen rule, drag and position persistence, stack focus, and controls driving real ink
+
+**refimage.spec.js** - Reference image
+
+- The tracing overlay through the view toggle, loaded from a real decodable PNG
+
+**uiprefs.spec.js** - UI preferences
+
+- Dark mode and view toggles and their persistence
+
 ### E2E Test Helpers
 
 The E2E test suite includes reusable helper modules in `tests/e2e/helpers/`:
@@ -941,6 +1031,18 @@ test('loads file and scrolls', async ({ page }) => {
 });
 ```
 
+### Golden Screenshot Suite
+
+`tests/golden/golden.spec.js` is the pixel-regression harness for the renderer. The matrix is fixture (CP437 test card, ice test card, 512-glyph XBin with a custom palette) by font (CP437 8x16, Topaz 1200 8x16) by zoom (1, 2) by letter spacing (8px, 9px), minus the nonsense combinations, plus real artwork from `docs/examples/ansi/x0-defcon25.ans` at three scroll positions and a Unicode test card. `testcard.js` builds the cards deterministically as BIN and XBin so every CP437 glyph is expressible: the plain card keeps every background at 7 or below so nothing blinks, and the ice card uses bright backgrounds with the SAUCE ice flag set.
+
+Two Playwright projects run the same spec. `golden` renders through the 2D chunk renderer (`?renderer=2d`). `golden-gl` renders through the WebGL2 renderer (`?renderer=gl`) and, through its `snapshotPathTemplate`, asserts against the same 26 PNGs in `tests/golden/golden.spec.js-snapshots/` with threshold 0, so the GL renderer must reproduce the 2D output at integer zoom. Two groups run only on `golden-gl`: the 512-glyph XBin shots, because the chunk fallback shows the lossy `?` mirror by design, and the Unicode shots, because Unicode cells render on the GL path only.
+
+Goldens are valid only from the CI container (Linux, SwiftShader, device scale factor 1). Outside CI, `ignoreSnapshots` in `playwright.config.js` runs the flows and skips the pixel assertions. In CI, a shot whose golden has not been seeded yet skips instead of failing. To regenerate, run the `golden-update` workflow, review the uploaded `golden-snapshots` artifact, drop the files into the snapshots directory, and commit. Never generate goldens on a workstation; see [CI/CD Pipeline](./cicd.md#7-golden-updateyml).
+
+### WebGL Rail
+
+`tests/gl/` runs under the `chromium-gl` project with the same SwiftShader flags the goldens use. `renderer.spec.js` proves the CI container exposes a working WebGL2 context: a `WebGL 2.0` version string, a texture ceiling of at least 4096px for the glyph atlas pages, and the SwiftShader renderer name in CI, so GL regressions never have to be untangled from CI plumbing. `contextLoss.spec.js` opens `/?test&renderer=gl`, forces a context loss and restore through `WEBGL_lose_context`, and asserts the renderer comes back drawing real pixels.
+
 ### Writing E2E Tests
 
 **Test structure:**
@@ -974,6 +1076,16 @@ test.describe('Feature Name', () => {
 5. Error handling - gracefully handle missing elements
 6. Clean up - use beforeEach and afterEach
 7. Meaningful assertions - test user-visible behavior
+
+## Performance Captures
+
+`tests/perf/` holds two node scripts, not test suites; `vitest.config.js` excludes the directory and Playwright does not match it. Both drive the production build in headless Chromium through the `playwright` library and need `bun bake` first.
+
+**`bun perf:baseline`** (`captureBaseline.js`) opens the in-app profiling harness (`src/js/client/profiler.js`, `?profile`) and writes `tests/baselines/p0-perf.json`, the 2D chunk renderer baseline. `PERF_QUERY='?profile&renderer=gl' PERF_OUT=tests/baselines/p1-gl-perf.json` captures the GL renderer, and `PERF_PRESET` picks the document size (default `80x3000`).
+
+**`bun perf:spike`** (`captureScrollSpike.js`) opens the scroll spike rig (`src/js/client/scrollSpike.js`, `?spike`), sweeps slack and tolerance parameters, and writes `tests/baselines/p1-scroll-spike.json`.
+
+Every baseline records a host descriptor (CPU, cores, memory, user agent). The numbers are machine-dependent evidence for before and after comparisons and parameter choices, not a CI gate. The per-device files (`-android`, `-ipad`, `-desktop-chrome`, `-desktop-safari`) come from manual runs: open `/?profile` or `/?spike` on the device and press run.
 
 ## Continuous Integration
 
@@ -1023,7 +1135,7 @@ Tests run automatically on:
 - Check mock file paths
 - Verify mock implementation
 - **Constructor mocks must use `function` keyword or `class`, not arrow functions**
-- Add `/* eslint-disable prefer-arrow-callback */` at the top of test files
+- Disable `prefer-arrow-callback` with `// eslint-disable-next-line` on the constructor mock only, never for the whole file
 
 **"is not a constructor" errors:**
 

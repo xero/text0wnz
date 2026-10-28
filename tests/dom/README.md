@@ -2,7 +2,7 @@
 
 This directory contains DOM/component-level tests for the teXt0wnz editor using [@testing-library/dom](https://testing-library.com/docs/dom-testing-library/intro/), [@testing-library/user-event](https://testing-library.com/docs/user-event/intro/), and [@testing-library/jest-dom](https://github.com/testing-library/jest-dom).
 
-> [!INFO]
+> [!NOTE]
 > View the latest [report](https://xero.github.io/text0wnz/tests/)
 
 ---
@@ -343,12 +343,14 @@ DOM tests should focus on:
 
 Current suites (vitest reports the live counts):
 - canvas.test.js
+- chatEnter.test.js
 - fontPreview.test.js
 - fullscreen.test.js
 - keyboard.test.js
 - menu.test.js
 - modal.test.js
 - palette.test.js
+- panels.test.js
 - segmentedControl.test.js
 - toolbar.test.js
 - toolPreview.test.js
