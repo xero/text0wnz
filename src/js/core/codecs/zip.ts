@@ -7,8 +7,14 @@
  */
 
 import { cp437ToUnicode } from '../cp437.js';
-import { CodecError, bytesToString, crc32 } from './util.js';
-import { inflateRaw } from './flate.js';
+import {
+	CodecError,
+	Salvaged,
+	bytesToString,
+	crc32,
+	salvaged,
+} from './util.js';
+import { inflateRaw, inflateRawSalvage } from './flate.js';
 
 const EOCD_SIG = 0x06054b50;
 const CENTRAL_SIG = 0x02014b50;
@@ -137,10 +143,15 @@ export const readZipEntries = (
 	return entries;
 };
 
-export const extractZipEntry = async (
+/**
+ * An entry's compressed bytes. `short` marks an archive that ends
+ * before the entry does; the strict reader refuses it, salvage reads
+ * what is there.
+ */
+const locate = (
 	bytes: Uint8Array,
 	entry: ZipEntry,
-): Promise<Uint8Array> => {
+): { data: Uint8Array; short: boolean } => {
 	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 	if (entry.encrypted) {
 		// otherwise stored entries return ciphertext as content and
@@ -155,6 +166,11 @@ export const extractZipEntry = async (
 			`zip entry ${entry.name} exceeds ${MAX_ZIP_ENTRY_BYTES} bytes`,
 		);
 	}
+	if (entry.method !== 0 && entry.method !== 8) {
+		throw new CodecError(
+			`zip method ${entry.method} unsupported for ${entry.name}`,
+		);
+	}
 	const at = entry.headerOffset;
 	if (at + 30 > bytes.length || view.getUint32(at, true) !== LOCAL_SIG) {
 		throw new CodecError(`zip local header missing for ${entry.name}`);
@@ -164,10 +180,20 @@ export const extractZipEntry = async (
 	const extraLength = view.getUint16(at + 28, true);
 	const start = at + 30 + nameLength + extraLength;
 	const end = start + entry.compressedSize;
-	if (end > bytes.length) {
+	return {
+		data: bytes.subarray(start, Math.min(end, bytes.length)),
+		short: end > bytes.length,
+	};
+};
+
+export const extractZipEntry = async (
+	bytes: Uint8Array,
+	entry: ZipEntry,
+): Promise<Uint8Array> => {
+	const { data, short } = locate(bytes, entry);
+	if (short) {
 		throw new CodecError(`zip data truncated for ${entry.name}`);
 	}
-	const data = bytes.subarray(start, end);
 	// the same check lha.ts runs as CRC-16: bit-rotted packs fail loud
 	// instead of opening as mojibake
 	const verified = (out: Uint8Array): Uint8Array => {
@@ -179,11 +205,6 @@ export const extractZipEntry = async (
 	if (entry.method === 0) {
 		return verified(data.slice());
 	}
-	if (entry.method !== 8) {
-		throw new CodecError(
-			`zip method ${entry.method} unsupported for ${entry.name}`,
-		);
-	}
 	const inflated = await inflateRaw(data, entry.size);
 	if (inflated.length !== entry.size) {
 		throw new CodecError(
@@ -191,6 +212,33 @@ export const extractZipEntry = async (
 		);
 	}
 	return verified(inflated);
+};
+
+/**
+ * Open an entry in spite of damage, for the archive browsers: decades
+ * of copying have left bit rot in scene packs. The strict path answers
+ * first; when it refuses, the plain inflater decodes as far as the
+ * stream allows and the checksum decides how much to trust it.
+ * Encryption, oversize entries, and a missing local header still
+ * refuse, since there is nothing honest to show.
+ */
+export const salvageZipEntry = async (
+	bytes: Uint8Array,
+	entry: ZipEntry,
+): Promise<Salvaged> => {
+	const { data, short } = locate(bytes, entry);
+	if (!short) {
+		try {
+			return { bytes: await extractZipEntry(bytes, entry), damage: null };
+		} catch {
+			// the slow road below says what is wrong
+		}
+	}
+	const out =
+		entry.method === 0
+			? data.slice()
+			: inflateRawSalvage(data, entry.size).bytes;
+	return salvaged(entry.name, out, entry.size, crc32(out) === entry.crc32);
 };
 
 // every non-ASCII character becomes one wildcard slot
