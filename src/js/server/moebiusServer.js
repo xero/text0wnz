@@ -233,8 +233,8 @@ export const createMoebiusServer = config => {
 					};
 					if (offered === '') {
 						// the probe's shape (every page load sends one), not a
-						// guess: counting it walked public rooms into a 30s
-						// cooldown that refused the RIGHT password
+						// guess: it must never count toward the cooldown, or page
+						// views alone lock a room against its own password
 						refuse('no password');
 						return;
 					}

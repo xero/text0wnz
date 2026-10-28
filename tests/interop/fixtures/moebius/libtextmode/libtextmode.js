@@ -2,8 +2,7 @@
  * Minimal libtextmode shim for the vendored vanilla Moebius server
  * fixture: exactly the four functions server.js calls, with compress,
  * uncompress, and resize_canvas transcribed VERBATIM from upstream
- * (libtextmode.js / textmode.js; resize_canvas minus its electron
- * window probe, which is dead in node). read_file returns a fresh
+ * (libtextmode.js / textmode.js). read_file returns a fresh
  * 80x25 document shaped like upstream's blank .ans: the `ega` palette
  * of sixteen {r, g, b} objects in 6-bit components (palette.js:1-18),
  * no font_bytes (upstream compress never ships them). write_file is a

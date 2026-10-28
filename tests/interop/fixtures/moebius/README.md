@@ -12,8 +12,7 @@
   Apache-2.0.
 - `libtextmode/libtextmode.js` is a minimal shim: `compress`,
   `uncompress`, and `resize_canvas` transcribed verbatim from
-  upstream (`resize_canvas` minus its electron window probe, dead in
-  node); `read_file` returns a fresh 80x25 document carrying
+  upstream; `read_file` returns a fresh 80x25 document carrying
   upstream's `ega` palette as sixteen `{r, g, b}` objects in 6-bit
   components, exactly the join doc shape the real server sends;
   `write_file` is a no-op.

@@ -157,7 +157,7 @@ export const resolveBridgeTarget = async (
 		return { ok: false, reason: 'bad room' };
 	}
 	// a port is digits or nothing: anything else is refused before it
-	// can reach a log line or a dial (log injection rode a raw echo)
+	// can reach a log line or a dial (a raw echo is a log injection)
 	const askedRaw =
 		requested.port === null || requested.port === undefined
 			? ''
@@ -198,8 +198,8 @@ export const resolveBridgeTarget = async (
 
 export const BRIDGE_LOOKUP_TIMEOUT_MS = 3000;
 
-/** a resolver that never answers used to hold a pending slot for as
- * long as the OS cared to wait; past the bound it reads as unresolvable
+/** a resolver that never answers must not hold a pending slot for as
+ * long as the OS cares to wait; past the bound it reads as unresolvable
  * @param {(host: string) => Promise<string[]>} resolveHost
  * @param {string} host @param {number} timeoutMs */
 const boundedLookup = (resolveHost, host, timeoutMs) => {

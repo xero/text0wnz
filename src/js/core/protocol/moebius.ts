@@ -267,10 +267,9 @@ export const compress8to6 = (v: number): number => (v >> 2) & 0x3f;
  * Moebius sends 6-bit {r,g,b} objects (palette.js `ega`), moebiusXBIN
  * sends 8-bit ones (palette_4bit, raw). Old sidecars add 6-bit
  * arrays. The receiving side auto-detects like icy_draw: any
- * component above 63 means the palette is already 8-bit. Treating
- * objects as 8-bit by contract rendered every vanilla server's
- * palette at a quarter of its brightness. The heuristic is for wire
- * shapes whose depth only the sender knew; a caller reading a
+ * component above 63 means the palette is already 8-bit. Shape says
+ * nothing about depth: vanilla's objects are 6-bit. The heuristic is
+ * for wire shapes whose depth only the sender knew; a caller reading a
  * palette it wrote itself (our server, its sidecars) passes the
  * depth, since a dark 8-bit palette would otherwise read as 6-bit
  * and come back four times brighter.

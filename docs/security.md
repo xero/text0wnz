@@ -59,7 +59,7 @@ When using the optional collaboration server, the application implements multipl
 
 **Server Selection**: With no server named, the client dials its own origin: `wss:` on HTTPS pages and `ws:` otherwise, the page's own host, and the `/server` path. The Connect form accepts a server as `host[:port][/room]` or as a full `ws://` or `wss://` URL, and nothing else; any other scheme is rejected before a socket is opened. A `?server=` query parameter prefills the same form.
 
-**Mixed Content and the Bridge**: A page served over HTTPS cannot open a plaintext `ws://` socket; the browser enforces that, not the editor. For a plaintext target, the client dials its own host's `/bridge` endpoint over `wss:` and lets the server relay. The target travels as a query string the server validates; the server never dials anything the client did not name, and a host with the bridge off refuses, which the form reports.
+**Mixed Content and the Bridge**: A page served over HTTPS cannot open a plaintext `ws://` socket; the browser enforces that, not the editor. For a plaintext target, the client dials its own host's `/bridge` endpoint over `wss:` and lets the server relay. The target travels as a query string the server validates. In `port` and `allow` modes the server never dials anything the client did not name; in `local` mode it dials only its one configured target, whatever the client asked for. A host with the bridge off refuses, which the form reports.
 
 **URL Validation**: WebSocket construction runs inside try-catch blocks. Malformed URLs are caught and reported as errors without crashing the worker.
 
