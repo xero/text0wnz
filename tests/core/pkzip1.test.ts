@@ -130,6 +130,22 @@ describe('explode', () => {
 		expect([...explode(stream, 5, 0).out]).toEqual([0, 0, 0, 0, 65]);
 	});
 
+	it('takes an empty entry with no trees, as strict and salvage alike', async () => {
+		expect(explode(new Uint8Array(0), 0, 0x06).out.length).toBe(0);
+		// an empty FILE_ID.DIZ stored as method 6 with no data at all
+		const zip = await buildZip([
+			{
+				name: 'FILE_ID.DIZ',
+				data: new Uint8Array(0),
+				packed: new Uint8Array(0),
+				method: 6,
+			},
+		]);
+		const [entry] = readZipEntries(zip);
+		expect((await extractZipEntry(zip, entry)).length).toBe(0);
+		expect((await salvageZipEntry(zip, entry)).damage).toBeNull();
+	});
+
 	it('refuses a tree that does not cover its symbols', () => {
 		expect(() => explode(Uint8Array.of(0, 0x00), 10, 0)).toThrow(
 			/short of symbols/,

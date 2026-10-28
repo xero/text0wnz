@@ -280,6 +280,10 @@ export const explode = (
 	const out = new Uint8Array(size);
 	let o = 0;
 	try {
+		// an empty entry may carry no trees at all, and needs none
+		if (size === 0) {
+			return { out, damage: null };
+		}
 		const bigWindow = (flags & 0x02) !== 0;
 		const literalTree = (flags & 0x04) !== 0;
 		let at = 0;
