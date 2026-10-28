@@ -16,8 +16,12 @@
  *                 equivalents are denied), and the connection dials
  *                 the vetted IP, which also defeats DNS rebinding.
  * - BRIDGE=allow  only targets on the explicit BRIDGE_ALLOW list
- *                 (comma-separated host:port); private entries are
- *                 informed consent and dial as given.
+ *                 (comma-separated host:port). A listed address is
+ *                 informed consent, private or not, and dials as given.
+ *                 A listed name dials the address it resolves to, and
+ *                 its first answer pins it public or private: a name
+ *                 that later flips class (a hijacked record, a rebind
+ *                 aimed inward) is refused.
  *
  * Always on, whatever the mode: a connection cap (BRIDGE_MAX), a
  * delivery bound in both directions (a side that stops taking
@@ -125,7 +129,8 @@ export const vetResolvedAddresses = addresses => {
  * Decide the upstream url for a bridge request. Pure except for DNS
  * in `port` mode (injectable for tests).
  *
- * @param {{mode: string, target: string, port: number, allow: string[]}} config
+ * @param {{mode: string, target: string, port: number, allow: string[], pins?: Map<string, string>}} config
+ *   `pins` holds the class each allow-mode name first resolved to
  * @param {{host?: string | null, port?: string | number | null, room?: string | null}} requested
  * @param {(host: string) => Promise<string[]>} [resolveHost]
  * @param {number} [lookupTimeoutMs] a stalled resolver must not pin a slot
@@ -191,7 +196,34 @@ export const resolveBridgeTarget = async (
 		if (asked === null || !config.allow.includes(entry)) {
 			return { ok: false, reason: `${entry} not on the allow list` };
 		}
-		return { ok: true, url: `ws://${host}:${asked}/${room}` };
+		if (isIP(host)) {
+			return { ok: true, url: `ws://${host}:${asked}/${room}` };
+		}
+		const addresses = await boundedLookup(resolveHost, host, lookupTimeoutMs);
+		if (addresses.length === 0) {
+			return { ok: false, reason: 'unresolvable host' };
+		}
+		const inward = addresses.filter(isPrivateAddress).length;
+		if (inward !== 0 && inward !== addresses.length) {
+			return { ok: false, reason: `${host} resolves both public and private` };
+		}
+		// the operator listed a name, not a network: the class of its
+		// first answer is the consent, and the config object carries the
+		// pins for the life of the process
+		const kind = inward ? 'private' : 'public';
+		const pins = (config.pins ??= new Map());
+		const name = host.toLowerCase();
+		const pinned = pins.get(name);
+		if (pinned === undefined) {
+			pins.set(name, kind);
+		} else if (pinned !== kind) {
+			return { ok: false, reason: `${host} resolved ${kind}, pinned ${pinned}` };
+		}
+		// dial the checked address: a rebind between check and dial is moot
+		const dialHost = addresses[0].includes(':')
+			? `[${addresses[0]}]`
+			: addresses[0];
+		return { ok: true, url: `ws://${dialHost}:${asked}/${room}` };
 	}
 	return { ok: false, reason: `unknown bridge mode ${mode}` };
 };

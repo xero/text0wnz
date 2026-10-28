@@ -201,6 +201,39 @@ describe('resolveBridgeTarget', () => {
 				.ok,
 		).toBe(false);
 	});
+
+	it('allow mode dials a listed name where it resolves, and pins its class', async () => {
+		const config = {
+			...base,
+			mode: 'allow',
+			allow: ['tiles.example:9999', 'moebius:8000', 'split.example:8000'],
+		};
+		let answer = ['203.0.113.7'];
+		const resolver = async () => answer;
+		const ask = host =>
+			resolveBridgeTarget(config, { host, port: host === 'tiles.example' ? '9999' : '8000', room: 'art' }, resolver);
+		// the checked address is the one dialed
+		expect(await ask('tiles.example')).toEqual({ ok: true, url: 'ws://203.0.113.7:9999/art' });
+		// a public name whose record turns inward is refused...
+		answer = ['10.0.0.9'];
+		expect(await ask('tiles.example')).toEqual({
+			ok: false,
+			reason: 'tiles.example resolved private, pinned public',
+		});
+		// ...while a name that was private from the start (a compose
+		// service) keeps working
+		expect(await ask('moebius')).toEqual({ ok: true, url: 'ws://10.0.0.9:8000/art' });
+		answer = ['203.0.113.8'];
+		expect((await ask('moebius')).ok).toBe(false);
+		// half and half is never consent to either
+		answer = ['203.0.113.8', '127.0.0.1'];
+		expect(await ask('split.example')).toEqual({
+			ok: false,
+			reason: 'split.example resolves both public and private',
+		});
+		answer = [];
+		expect(await ask('split.example')).toEqual({ ok: false, reason: 'unresolvable host' });
+	});
 });
 
 describe('bridgeConfigFromEnv', () => {
