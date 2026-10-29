@@ -1,8 +1,6 @@
 // @vitest-environment node
 /**
- * Bridge lockdowns: private-range denial (DNS
- * rebinding included), port pinning, the fixed-target `local` mode,
- * and the explicit allow list. All pure: DNS is injected.
+ * Bridge lockdowns. All pure: DNS is injected.
  */
 import { describe, it, expect } from 'vitest';
 import { vi } from 'vitest';
@@ -35,7 +33,6 @@ describe('isPrivateAddress', () => {
 			'fd12:3456::1',
 			'::ffff:10.0.0.1', // v4-mapped v6
 			'::ffff:127.0.0.1',
-			// the review's gaps: never dial these either
 			'255.255.255.255',
 			'224.0.0.1', // multicast
 			'240.0.0.1', // reserved

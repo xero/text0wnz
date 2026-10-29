@@ -1,8 +1,7 @@
 /**
- * Pointer normalizer: one pipeline for mouse/pen/touch keeping v2's
- * onTextCanvasDown/Drag/Up/Move contract (detail extended with
- * modifiers, pressure, pointerType). Touch rides the gesture
- * recognizer; pen gets palm rejection; capture ends are first-class.
+ * Pointer normalizer: one pipeline for mouse/pen/touch that keeps v2's
+ * onTextCanvasDown/Drag/Up/Move contract, with detail extended by
+ * modifiers, pressure, and pointerType.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {

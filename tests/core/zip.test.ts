@@ -1,6 +1,5 @@
 /**
- * Minimal ZIP reader: store + deflate entries, basename lookup,
- * and hardened failure modes. Fixtures are built in-test with the same
+ * Minimal ZIP reader. Fixtures are built in-test with the same
  * CompressionStream the extractor inverts.
  */
 import { describe, it, expect } from 'vitest';

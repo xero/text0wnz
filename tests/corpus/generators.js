@@ -34,10 +34,7 @@ export const concatBytes = chunks => {
 	return out;
 };
 
-/**
- * Build a 128-byte SAUCE record (plus optional COMNT block) byte-for-byte.
- * Field layout per docs/sauce-format.md.
- */
+/** 128-byte SAUCE record plus optional COMNT block, per SAUCE §Layout. */
 export const makeSauce = ({
 	title = '',
 	author = '',
@@ -93,9 +90,8 @@ export const makeSauce = ({
  * Classic CP437 ANSI stream: SGR color runs + printable chars. Full-width
  * rows wrap implicitly (like the app's own exporter); pass lineBreaks: true
  * to emit partial rows terminated by CRLF instead, exercising the CR/LF
- * paths and trailing blanks. Cells are deterministic from the seed. Returns
- * bytes WITHOUT SAUCE unless a sauce option is passed (then EOF byte 0x1a +
- * record are appended).
+ * paths and trailing blanks. Returns bytes WITHOUT SAUCE unless a sauce
+ * option is passed (then EOF byte 0x1a + record are appended).
  */
 export const makeAnsi = ({
 	columns = 80,
@@ -172,7 +168,7 @@ export const makeUtf8Ansi = ({ columns = 40, rows = 10, seed = 7 } = {}) => {
 	return new Uint8Array(out);
 };
 
-/** Raw BIN image (char/attribute byte pairs), optional SAUCE for width. */
+/** Raw BIN image (char/attribute pairs); SAUCE §FileType holds width/2. */
 export const makeBin = ({ columns = 160, rows = 25, seed = 3, sauce = null } = {}) => {
 	const rand = lcg(seed);
 	const bytes = new Uint8Array(columns * rows * 2);
@@ -216,9 +212,10 @@ export const makeXBinFont = (glyphCount = 256, fontHeight = 16, seed = 9) => {
 };
 
 /**
- * XBin image data as RLE bytes exercising ALL FOUR run types:
- * none (0), char (1), attribute (2), both (3). Returns {cells, rle} where
- * cells is the expected Uint16Array ((char << 8) | attribute).
+ * XBin image data as RLE bytes exercising ALL FOUR XBin §XBIN Compression
+ * run types: none (0), char (1), attribute (2), both (3). Returns
+ * {cells, rle} where cells is the expected Uint16Array
+ * ((char << 8) | attribute).
  */
 export const makeXBinRleRuns = columns => {
 	const cells = [];

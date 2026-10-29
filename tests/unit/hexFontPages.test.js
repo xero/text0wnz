@@ -1,7 +1,5 @@
-// Unicode glyph page manager: lazy manifest/block fetches, the
-// sync-tri-state glyphBits contract the GL repaint path relies on, and
-// slot picking for import/paste. Blocks are built with the SAME core
-// packer the bake tool uses, so these bytes match production assets.
+// blocks are built with the SAME core packer the bake tool uses, so
+// these bytes match production assets
 import { describe, it, expect, vi } from 'vitest';
 import { createHexFontPages } from '../../src/js/client/hexFontPages.js';
 import { packBlock } from '../../src/js/core/hexfont.js';

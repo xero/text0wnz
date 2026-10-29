@@ -1,12 +1,8 @@
 /**
- * The F-key character set bar: twelve one-tap glyph slots riding the
- * active charset page, with pager buttons and the charset button that
- * names the page. Lives in the keyboard section of the tool settings
- * module; keyboard.js enables it with the keyboard tool.
- *
- * Pages follow the durdraw model: {label, chars} where 0-255 draws the
- * classic font and negative is ~codepoint through the hex fonts and
- * the doc glyph table.
+ * F-key character set bar; keyboard.js enables it with the keyboard
+ * tool. Pages follow the durdraw model: {label, chars} where 0-255
+ * draws the classic font and negative is ~codepoint through the hex
+ * fonts and the doc glyph table.
  */
 import State from './state.js';
 import { $ } from './ui.js';
@@ -14,7 +10,8 @@ import { fitGlyphCanvas, get1xFont } from './glyphScale.js';
 import { pageFromString, pagesForRange } from '../core/charsets.js';
 
 const createFKeys = () => {
-	// Stolen "savagely" from Moebius, who stole it "mercilessly" from PabloDraw, thanks Curtis! lol
+	// Stolen "savagely" from Moebius, who stole it "mercilessly" from
+	// PabloDraw, thanks Curtis! lol
 	const predefinedSets = [
 		[218, 191, 192, 217, 196, 179, 195, 180, 193, 194, 32, 32],
 		[201, 187, 200, 188, 205, 186, 204, 185, 202, 203, 32, 32],
@@ -34,7 +31,7 @@ const createFKeys = () => {
 		[47, 92, 40, 41, 123, 125, 91, 93, 96, 39, 32, 32],
 	];
 
-	// Generate additional sets to cover all 256 characters
+	// page the codes the predefined sets miss, so all 256 are reachable
 	const generateCharSets = () => {
 		const charSets = [...predefinedSets];
 		const usedChars = new Set();
@@ -53,7 +50,7 @@ const createFKeys = () => {
 		}
 		if (currentSet.length > 0) {
 			while (currentSet.length < 12) {
-				currentSet.push(32); // Pad with spaces
+				currentSet.push(32);
 			}
 			charSets.push(currentSet);
 		}
@@ -84,7 +81,7 @@ const createFKeys = () => {
 	let customPages = loadCustomPages();
 	const buildSets = () => [...classicPages, ...unicodePages, ...customPages];
 	let fkeySets = buildSets();
-	let currentSetIndex = 5; // Default to set 5 (blocks, half-blocks, etc.)
+	let currentSetIndex = 5; // zero-based: the shades and blocks page
 
 	// warm the hex blocks for the active page so previews and inserts
 	// are ready; browsing must NOT intern into the doc glyph table
@@ -104,7 +101,6 @@ const createFKeys = () => {
 		}
 	};
 
-	/** paint one ~codepoint token onto an fkey canvas */
 	const drawUnicodeToken = (ctx, width, height, codepoint) => {
 		const bits = State.textArtCanvas
 			? State.textArtCanvas.unicodeGlyphBits(codepoint, width, height)
@@ -128,7 +124,6 @@ const createFKeys = () => {
 		}
 	};
 
-	/** insert any token at the cursor (resolves unicode first) */
 	const insertToken = token => {
 		const commit = charCode => {
 			State.textArtCanvas.startUndo();
@@ -266,12 +261,10 @@ const createFKeys = () => {
 			e.preventDefault();
 			insertToken(fkeySets[currentSetIndex].chars[fKeyMatch[1] - 1]);
 		}
-		// 'Ctrl+[' - previous character set
 		else if (e.ctrlKey && !e.altKey && !e.metaKey && e.code === 'BracketLeft') {
 			e.preventDefault();
 			previousCharacterSet();
 		}
-		// 'Ctrl+]' - next character set
 		else if (
 			e.ctrlKey &&
 			!e.altKey &&
@@ -298,7 +291,6 @@ const createFKeys = () => {
 	document.addEventListener('onFontChange', updateFKeyDisplays);
 	// hex blocks land async; re-render any pending unicode slots
 	document.addEventListener('onHexBlocksLoaded', updateFKeyDisplays);
-	// the charset picker persisted new custom pages
 	document.addEventListener('onCustomCharsetsChange', () => {
 		customPages = loadCustomPages();
 		fkeySets = buildSets();
@@ -308,7 +300,7 @@ const createFKeys = () => {
 		updateFKeyDisplays();
 	});
 
-	/** jump straight to a page by index (the charset picker's hook) */
+	/** the charset picker's hook */
 	const showSet = index => {
 		if (index >= 0 && index < fkeySets.length) {
 			currentSetIndex = index;

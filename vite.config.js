@@ -14,13 +14,14 @@ export default ({ mode }) => {
 	const domain = process.env.VITE_DOMAIN || 'https://text.0w.nz';
 	const uiDir = ((process.env.VITE_UI_DIR || 'ui').replace(/^\/|\/?$/g, '')) + '/';
 
-	// source sizes for the build logs (rolldown gives each plugin hook a fresh `this`)
+	// source sizes for the build logs (rolldown gives each plugin hook a
+	// fresh `this`)
 	let originalCssSize = 0;
 	let originalHtmlSize = 0;
 
 	return defineConfig({
 		root: './src',
-		base: './', // output relative urls
+		base: './',
 		// page-context caches (fontCache) key their generation on this so
 		// a deploy invalidates them; the SW precache versions separately
 		define: {
@@ -29,8 +30,8 @@ export default ({ mode }) => {
 		build: {
 			emptyOutDir: true,
 			outDir: '../dist',
-			assetsDir: '', // place all assets relatively to the root of `outDir`
-			assetsInlineLimit: 0, // prevent inlined assets
+			assetsDir: '',
+			assetsInlineLimit: 0,
 			target: 'es2022',
 			minify: 'terser',
 			terserOptions: {
@@ -44,7 +45,6 @@ export default ({ mode }) => {
 					index: path.resolve('./src', 'index.html'),
 				},
 				output: {
-					// hash core file names for cache busting
 					entryFileNames: `${uiDir}js/editor-[hash].js`,
 					chunkFileNames: `${uiDir}js/[name]-[hash].js`,
 					assetFileNames: assetInfo => {
@@ -65,10 +65,12 @@ export default ({ mode }) => {
 					},
 					// progressively load features
 					codeSplitting: {
-						// core & canvas import each other, keep each chunk to only its listed modules
+						// core & canvas import each other, so each chunk keeps to
+						// only its listed modules
 						includeDependenciesRecursively: false,
 						groups: [
-							// also holds vite's dynamic import helper, otherwise it lands in the entry chunk & tools imports the editor back
+							// also holds vite's dynamic import helper, otherwise it
+							// lands in the entry chunk & tools imports the editor back
 							{ name: 'core', test: /[\\/]src[\\/]js[\\/]client[\\/](magicNumbers|state|storage|compression|ui)\.js$|vite[\\/]preload-helper/ },
 							{ name: 'canvas', test: /[\\/]src[\\/]js[\\/]client[\\/](canvas|font|lazyFont|fontCache)\.js$/ },
 							{ name: 'tools', test: /[\\/]src[\\/]js[\\/]client[\\/](freehandTools|keyboard|toolbar)\.js$/ },
@@ -107,8 +109,8 @@ export default ({ mode }) => {
 				}
 			},
 			{
-				// the favicon hrefs hardcode ./ui/; a custom VITE_UI_DIR used
-				// to break every icon link while the assets moved with it
+				// the favicon hrefs hardcode ./ui/, so without this a custom
+				// VITE_UI_DIR breaks every icon link while the assets move with it
 				name: 'ui-dir-hrefs',
 				transformIndexHtml: html =>
 					uiDir === 'ui/' ? html : html.replaceAll('"./ui/', `"./${uiDir}`),
@@ -165,7 +167,6 @@ export default ({ mode }) => {
 			Sitemap({
 				hostname: domain,
 				changefreq: 'monthly',
-				// block all these gross bots and scrapers
 				generateRobotsTxt: true,
 				robots: [
 					{ userAgent: 'Ai2Bot-Dolma', disallow: '/' },
@@ -273,7 +274,6 @@ export default ({ mode }) => {
 					background_color: '#000',
 					theme_color: '#000',
 					display_override: ['window-controls-overlay'], // removes window chrome
-					// Web Share Target API
 					share_target: {
 						action: '/open',
 						method: 'POST',
@@ -359,7 +359,6 @@ export default ({ mode }) => {
 						type: 'image/png',
 						purpose: 'any',
 					}],
-					// PWA install previews
 					screenshots: [{
 						src: `${uiDir}img/screenshot-desktop.png`,
 						sizes: '3024x1964',
@@ -402,9 +401,8 @@ export default ({ mode }) => {
 				injectManifest: {
 					globPatterns: [
 						'**/*.{js,css,html,woff2}',
-						// derived from VITE_UI_DIR like every emitted path: a
-						// custom ui dir used to silently drop these from the
-						// precache
+						// derived from VITE_UI_DIR like every emitted path, or a
+						// custom ui dir silently drops these from the precache
 						`${uiDir}*.svg`,
 						'favicon.ico',
 						`${uiDir}img/favicon.ico`,

@@ -3,7 +3,7 @@
  * (readCell -> packWord, surfaced through getAreaU16) and the full
  * rebuild (v3ToU16Lossy) have to agree word for word, and the plane
  * native area ops must round trip content the u16 model cannot hold.
- * The two collision cases that broke this: a steady bright classic bg
+ * The two collision cases that threaten this: a steady bright classic bg
  * without ice, and raw RGB words 0-15 (tundra near-black fades).
  */
 import { describe, it, expect } from 'vitest';

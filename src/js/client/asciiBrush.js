@@ -14,10 +14,9 @@ import {
 /**
  * Applies engine stamp output to the document: additive contact
  * merges, bg preservation, and tip/root junction voicing. Shared by
- * the freehand brush and the line tool, whose straight strokes earn
- * the same joins. commit() writes to the canvas; preview() runs the
- * identical pipeline and captures the writes instead, so a ghost can
- * be pixel-faithful to what a commit would produce.
+ * the freehand brush and the ruled shape tools, whose strokes earn the
+ * same joins. preview() runs the identical pipeline as commit() but
+ * captures the writes, so a ghost is pixel-faithful to its commit.
  */
 const createAsciiStrokePainter = () => {
 	// what each touched cell held BEFORE this stroke: additive contact
@@ -393,8 +392,8 @@ const createAsciiBrushController = () => {
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
-		// a mid-drag switch plus Escape return used to feed engine.move()
-		// into the abandoned stroke with no fresh undo group
+		// a mid-drag switch plus Escape return would otherwise feed
+		// engine.move() into the abandoned stroke with no fresh undo group
 		stroking = false;
 		nav.classList.remove('enabled');
 	};

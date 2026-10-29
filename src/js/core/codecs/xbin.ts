@@ -1,9 +1,8 @@
 /**
- * XBin codec (docs/xb-format.md is normative): header, optional 48-byte
- * 6-bit palette, optional font (256 or 512 glyphs x fontHeight bytes,
- * 8px wide), raw or RLE cell data. Ports the v2 loader/saver semantics
- * byte-for-byte; saves set the 512-glyph flag (bit 4), write the
- * unscaled font height, and RLE only when it is actually smaller.
+ * XBin codec (docs/xb-format.md is normative). Ports the v2
+ * loader/saver; saves set the 512-glyph flag (bit 4) for 512-glyph
+ * fonts, write the unscaled font height, and RLE only when it is
+ * actually smaller.
  */
 
 import { DocV3, expand6to8, rgbColor } from '../doc.js';
@@ -176,14 +175,14 @@ export const decodeXBin = (bytes: Uint8Array): XBinDecodeResult => {
 	const columns = (bytes[6] << 8) + bytes[5];
 	const rows = (bytes[8] << 8) + bytes[7];
 	if (columns * rows > MAX_DOC_CELLS) {
-		// header-sized allocation: a crafted 65535x65535 died in the
-		// allocator before this gate existed
+		// gate before the header-sized allocation: a crafted 65535x65535
+		// would die in the allocator
 		throw new CodecError(`XBin ${columns}x${rows} exceeds the cell ceiling`);
 	}
-	// the spec allows 1-32; moebiusXBIN defaults a zero to 16 and a raw
-	// read made a Fontsize-0 file show different art in the two editors.
-	// 33-255 reads raw like PabloDraw: the height sizes the font block,
-	// so a clamp here would misread everything after it
+	// XBin §Header allows 1-32; moebiusXBIN defaults a zero to 16, so a
+	// raw read would show a Fontsize-0 file differently in the two
+	// editors. 33-255 reads raw like PabloDraw: the height sizes the
+	// font block, so a clamp here would misread everything after it
 	const fontHeight = bytes[9] === 0 ? 16 : bytes[9];
 	const flags = bytes[10];
 	const paletteFlag = (flags & 0x01) === 1;
@@ -304,8 +303,8 @@ export const encodeXBin = (
 	const fontBytes = options.fontBytes ?? null;
 	const fontHeight = options.fontHeight ?? 16;
 	if (!Number.isInteger(fontHeight) || fontHeight < 1 || fontHeight > 255) {
-		// the header byte wraps silently past 255 (300 wrote 44); 33-255
-		// stays writable so raw-read decodes can round-trip
+		// the header byte wraps silently past 255 (300 would write 44);
+		// 33-255 stays writable so raw-read decodes can round-trip
 		throw new CodecError(`XBin font height ${fontHeight} out of range 1-255`);
 	}
 	const compress = options.compress ?? true;

@@ -18,13 +18,14 @@ const mockState = {
 		clearXBData: vi.fn(),
 		redrawEntireImage: vi.fn(),
 		getImage: vi.fn(() => ({ toDataURL: vi.fn(() => canvasDataURL) })),
-		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)), // Mock 6-bit palette data
+		// 6-bit palette data
+		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)),
 	},
 	font: {
 		getWidth: vi.fn(() => 8),
 		getHeight: vi.fn(() => 16),
 		getLetterSpacing: vi.fn(() => false),
-		getData: vi.fn(() => null), // No font data by default
+		getData: vi.fn(() => null),
 	},
 };
 
@@ -48,7 +49,6 @@ vi.mock('../../src/js/client/palette.js', () => ({
 		if (charCode < 128) {
 			return [charCode];
 		}
-		// Mock UTF-8 encoding for extended characters
 		if (charCode < 0x800) {
 			return [0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f)];
 		}
@@ -189,7 +189,7 @@ describe('File Module - Formats and Parsing', () => {
 				height & 0xff,
 				height >> 8, // Height (little-endian)
 				16, // Font height
-				flags, // Flags
+				flags,
 			]);
 
 			expect(header[0]).toBe(88); // 'X'
@@ -386,7 +386,6 @@ describe('File Module - Formats and Parsing', () => {
 		it('should handle SAUCE data processing logic', () => {
 			const testWidth = 80;
 
-			// This tests the internal getSauce logic
 			expect(typeof testWidth).toBe('number');
 			expect(testWidth).toBe(80);
 		});

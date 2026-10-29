@@ -1,9 +1,6 @@
 /**
- * SAUCE flags round trip through the live Load/Save surface: the AR
- * bits and an LS no-preference survive an untouched resave, an artist
- * touch writes the explicit bit, and File New forgets the stash. Runs
- * under real jsdom so the file.js onLetterSpacingChange listener is
- * live, unlike the corpus harness whose document stub drops it.
+ * Runs under real jsdom so the file.js onLetterSpacingChange listener
+ * is live, unlike the corpus harness whose document stub drops it.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 

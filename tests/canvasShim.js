@@ -67,7 +67,6 @@ beforeAll(() => {
 				createLinearGradient: () => ({ addColorStop: () => {} }),
 				createRadialGradient: () => ({ addColorStop: () => {} }),
 				createPattern: () => ({}),
-				// Properties
 				fillStyle: '',
 				strokeStyle: '',
 				lineWidth: 1,

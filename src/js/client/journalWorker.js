@@ -4,9 +4,8 @@
  * (No @ts-check: FileSystemSyncAccessHandle and the worker-scoped
  * postMessage overloads are not in the repo's TS lib set; the JSDoc
  * below is documentation, not checked types.)
- * The main thread talks to it through journalStore.js's tiny RPC:
- * every message is `{ id, op, bytes? }` and every reply is
- * `{ id, ok, bytes?, error? }`.
+ * journalStore.js's RPC: every message is `{ id, op, bytes? }` and
+ * every reply is `{ id, ok, bytes?, error? }`.
  *
  * Crash safety: two generation files (journal.a / journal.b) plus a
  * one-byte meta file naming the active one. Appends go to the active

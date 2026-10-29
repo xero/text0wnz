@@ -1,8 +1,7 @@
 /**
- * Shared plumbing for the in-app archive browsers (16colo.rs,
- * asciiarena.se): status line, cached JSON fetches, list widgets, and
- * the back trail. Everything takes its elements and class names as
- * arguments so each browser keeps its own DOM and styling.
+ * Shared plumbing for the archive browsers (16colo.rs, asciiarena.se).
+ * Everything takes its elements and class names as arguments so each
+ * browser keeps its own DOM and styling.
  */
 
 /** status line updater bound to one element */
@@ -35,7 +34,6 @@ const button = (label, onClick, className = '') => {
 	return el;
 };
 
-/** a list button whose count or detail rides a dim kbd tag */
 const countButton = (label, count, onClick, className = '') => {
 	const el = button(label, onClick, className);
 	const kbd = document.createElement('kbd');
@@ -113,11 +111,11 @@ const createRenderGate = () => {
 
 // one explicit open in flight per browser, with no UI locking: a
 // repeat click on the target already loading is ignored, a click on
-// a DIFFERENT target supersedes the old open, aborting any fetch
-// tied to the guard's signal (shared downloads like the 16c zip
-// cache deliberately ride on unsignalled; currency checks cancel
-// those opens instead). Last click wins; completion order can
-// invert click order when a big archive races a small file
+// a DIFFERENT target supersedes the old open, aborting any fetch tied
+// to the guard's signal. Shared downloads (the 16c zip cache) run
+// unsignalled on purpose; currency checks cancel those opens instead.
+// Last click wins even when a big archive racing a small file inverts
+// completion order
 const createOpenGuard = () => {
 	let currentKey = null;
 	let controller = null;

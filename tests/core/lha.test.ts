@@ -1,8 +1,7 @@
 /**
- * LHA reader: header walking across levels 0/1/2 with hand-crafted
- * stored archives, the lh5 huffman path against a real amiga colly,
- * and the failure modes (crc mismatch, truncation, unsupported
- * methods, size bombs) that must throw instead of handing back junk.
+ * LHA reader against hand-crafted stored archives for header levels
+ * 0/1/2 and a real amiga colly for lh5. Failure modes must throw
+ * instead of handing back junk.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -65,7 +64,8 @@ describe('lha header walking', () => {
 	it('parses a level 2 header sized to a multiple of 256', () => {
 		const data = new TextEncoder().encode('after the big header');
 		// headerSize = 32 + name + dir; 8 + 216 lands exactly on 256,
-		// putting a zero byte where the terminator check looks
+		// putting a zero byte where the LHA §Header Levels terminator
+		// check looks
 		const dir = 'd'.repeat(215) + '/';
 		const bytes = buildLha(
 			lha0Entry('first.txt', data),

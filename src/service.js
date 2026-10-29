@@ -23,7 +23,8 @@ self.addEventListener('message', event => {
 	if (!trustedMessage(event)) {
 		return;
 	}
-	// activates the waiting worker when the user accepts the update modal
+	// the page picks the moment: an accepted update, or no live session
+	// whose lazy-loaded assets activation could evict
 	if (event.data.type === 'SKIP_WAITING') {
 		self.skipWaiting();
 	}
@@ -32,10 +33,10 @@ self.addEventListener('message', event => {
 	}
 });
 
-// the legacy worker precached index.html with revision:null (immutable
-// to workbox), leaving stale HTML referencing deleted hashed assets.
-// Detect that install (or its runtime caches) and take over immediately
-// so activation can repair it.
+// the legacy worker precaches index.html with revision:null (immutable
+// to workbox), so its installs serve stale HTML referencing deleted
+// hashed assets. Detecting one (or its runtime caches) lets install
+// take over immediately and activation repair it.
 const detectLegacy = async () => {
 	const names = await caches.keys();
 	if (names.some(name => LEGACY_CACHES.includes(name))) {

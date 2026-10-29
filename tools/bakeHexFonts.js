@@ -1,8 +1,8 @@
 /**
- * Build-time .hex preprocessing: packs the vendored font
- * sources in assets/hexfonts/ into per-256-codepoint-block binaries
- * under src/fonts/u/ plus a manifest, using the same core module the
- * runtime reads blocks with. Runs under bun (it imports TypeScript):
+ * Build-time .hex preprocessing: packs the vendored font sources in
+ * assets/hexfonts/ into per-256-codepoint-block binaries under
+ * src/fonts/u/ plus a manifest, using the same core module the runtime
+ * reads blocks with. Runs under bun (it imports TypeScript):
  *
  *   bun tools/bakeHexFonts.js
  *

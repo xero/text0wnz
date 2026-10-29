@@ -87,7 +87,6 @@ test.describe('Editor Keybinds', () => {
 			const errors = await page.locator('.error').count();
 			expect(errors).toBe(0);
 
-			// the ICE button may sit in a hidden toolbar; pin attachment only
 			const iceButton = page.locator('#navICE');
 			await expect(iceButton).toBeAttached();
 		});
@@ -259,7 +258,6 @@ test.describe('Editor Keybinds', () => {
 			await page.keyboard.press('k');
 			await page.waitForTimeout(300);
 
-			// F1 inserts the light shade block ░
 			await page.keyboard.press('F1');
 			await page.waitForTimeout(200);
 
@@ -271,7 +269,6 @@ test.describe('Editor Keybinds', () => {
 			await page.keyboard.press('k');
 			await page.waitForTimeout(300);
 
-			// F2 inserts the medium shade block ▒
 			await page.keyboard.press('F2');
 			await page.waitForTimeout(200);
 
@@ -283,7 +280,6 @@ test.describe('Editor Keybinds', () => {
 			await page.keyboard.press('k');
 			await page.waitForTimeout(300);
 
-			// F3 inserts the dark shade block ▓
 			await page.keyboard.press('F3');
 			await page.waitForTimeout(200);
 
@@ -295,7 +291,6 @@ test.describe('Editor Keybinds', () => {
 			await page.keyboard.press('k');
 			await page.waitForTimeout(300);
 
-			// F4 inserts the full block █
 			await page.keyboard.press('F4');
 			await page.waitForTimeout(200);
 

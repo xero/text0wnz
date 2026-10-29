@@ -4,7 +4,6 @@ vi.mock('../../src/js/client/state.js', () => ({ default: {} }));
 
 vi.mock('../../src/js/client/toolbar.js', () => ({ default: {} }));
 
-// We'll test pure utility functions from ui.js
 describe('UI Utilities', () => {
 	describe('createCanvas', () => {
 		beforeEach(() => {
@@ -57,7 +56,7 @@ describe('UI Utilities', () => {
 
 	describe('UTF-8 byte counting utility', () => {
 		it('should count ASCII characters correctly', () => {
-			// Test the TextEncoder functionality directly since getUtf8Bytes is internal
+			// getUtf8Bytes is internal, so this pins TextEncoder directly
 			const encoder = new TextEncoder();
 
 			expect(encoder.encode('hello').length).toBe(5);
@@ -85,7 +84,8 @@ describe('UI Utilities', () => {
 
 	describe('DOM selector utilities', () => {
 		beforeEach(() => {
-			// Mock document for DOM selectors with proper bind support
+			// ui.js binds the document's selector methods at import, so the
+			// stubs need .bind
 			vi.stubGlobal('document', {
 				getElementById: vi.fn(id => ({ id })),
 				querySelector: vi.fn(selector => ({ selector })),
@@ -114,7 +114,6 @@ describe('UI Utilities', () => {
 			const encoder = new TextEncoder();
 
 			expect(encoder.encode('').length).toBe(0);
-			// TextEncoder in Node.js actually converts null/undefined to strings
 			expect(encoder.encode(String(null)).length).toBe(4); // "null"
 			expect(encoder.encode(String(undefined)).length).toBe(9); // "undefined"
 		});
@@ -122,7 +121,7 @@ describe('UI Utilities', () => {
 		it('should handle very long strings', () => {
 			const encoder = new TextEncoder();
 
-			// Test with a string longer than SAUCE_MAX_BYTES (16320)
+			// longer than SAUCE_MAX_BYTES (16320)
 			const longString = 'a'.repeat(20000);
 			const bytes = encoder.encode(longString);
 			expect(bytes.length).toBe(20000);

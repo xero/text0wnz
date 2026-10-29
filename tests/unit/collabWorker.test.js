@@ -1,9 +1,3 @@
-/**
- * Collab transport worker: the Moebius-native handshake, the scoped
- * one-shot probe, id stamping on every outbound frame,
- * frame forwarding, and clean close/refusal paths, driven through a
- * stubbed WebSocket.
- */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
 const sockets = [];

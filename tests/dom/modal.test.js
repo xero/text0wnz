@@ -20,7 +20,7 @@ describe('Modal DOM Tests', () => {
 		modal.id = 'mainModal';
 		modal.className = 'modal';
 
-		// Mock dialog methods for jsdom
+		// jsdom's dialog has no showModal or close
 		modal.showModal = vi.fn(() => {
 			modal.open = true;
 		});
@@ -31,7 +31,7 @@ describe('Modal DOM Tests', () => {
 
 		document.body.appendChild(modal);
 
-		// Create ALL modal sections that the controller expects
+		// the controller expects every section to exist
 		const sections = [
 			'aboutModal',
 			'resizeModal',
@@ -50,7 +50,7 @@ describe('Modal DOM Tests', () => {
 			'loadingModal',
 			'warningModal',
 			'tutorialsModal',
-			'errorModal', // For error tests
+			'errorModal',
 		];
 
 		sections.forEach(id => {
@@ -130,7 +130,7 @@ describe('Modal DOM Tests', () => {
 
 			modalController.close();
 
-			// Wait for closing animation
+			// close waits out the closing animation
 			await waitFor(
 				() => {
 					expect(modal.open).toBe(false);
@@ -362,7 +362,6 @@ describe('Modal DOM Tests', () => {
 			modalController.open('about');
 			modalController.close();
 
-			// Open another modal before close completes
 			modalController.open('resize');
 
 			expect(modal.open).toBe(true);
@@ -476,7 +475,6 @@ describe('Modal DOM Tests', () => {
 			modalController.open('about');
 			modalController.onClose(cleanupFn);
 
-			// Simulate backdrop click
 			await user.click(modal);
 
 			await waitFor(
@@ -533,7 +531,7 @@ describe('Modal DOM Tests', () => {
 
 			modalController.close();
 
-			// Wait a bit more to ensure no additional calls
+			// give a stray second call time to land
 			await new Promise(resolve => setTimeout(resolve, 100));
 
 			expect(cleanupFn).toHaveBeenCalledTimes(1);
@@ -578,7 +576,6 @@ describe('Modal DOM Tests', () => {
 			modalController.open('update');
 			expect(visible('updateModal')).toBe(true);
 			expect(visible('choiceModal')).toBe(false);
-			// declining the update restores the interrupted invitation
 			modalController.close();
 			expect(visible('choiceModal')).toBe(true);
 			expect(modal.open).toBe(true);
@@ -601,7 +598,6 @@ describe('Modal DOM Tests', () => {
 			expect(modal.open).toBe(false);
 			modalController.open('choice');
 			expect(visible('choiceModal')).toBe(true);
-			// and dismissing the choice closes for real, no resurrection
 			modalController.close();
 			fireEvent.transitionEnd(modal);
 			expect(modal.open).toBe(false);
@@ -612,7 +608,6 @@ describe('Modal DOM Tests', () => {
 			modalController.open('update');
 			const cancel = new Event('cancel', { cancelable: true });
 			modal.dispatchEvent(cancel);
-			// the native slam is suppressed; our close ran the handback
 			expect(cancel.defaultPrevented).toBe(true);
 			expect(visible('choiceModal')).toBe(true);
 			expect(modal.open).toBe(true);
@@ -620,12 +615,11 @@ describe('Modal DOM Tests', () => {
 
 		it('an update landing in the choice closing window stays an update only', () => {
 			modalController.open('choice');
-			// the user answers the invitation; its close is still easing out
+			// answered, but its close is still easing out
 			modalController.close();
 			modalController.open('update');
 			modalController.close();
 			fireEvent.transitionEnd(modal);
-			// the answered invitation stays answered
 			expect(visible('choiceModal')).toBe(false);
 			expect(modal.open).toBe(false);
 		});
@@ -633,11 +627,10 @@ describe('Modal DOM Tests', () => {
 		it('a screen outside the pair clears a stranded deferral', () => {
 			modalController.open('update');
 			modalController.open('choice');
-			// the boot handoff dies when something else takes the stage
 			modalController.error('probe socket dropped');
 			modalController.close();
 			fireEvent.transitionEnd(modal);
-			// a menu-opened update much later closes plainly, no resurrection
+			// a later menu-opened update must not resurrect the choice
 			modalController.open('update');
 			modalController.close();
 			fireEvent.transitionEnd(modal);

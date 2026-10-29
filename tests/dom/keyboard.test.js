@@ -108,7 +108,7 @@ describe('Keyboard Shortcuts DOM Tests', () => {
 				}
 			});
 
-			// Use fireEvent for more control over modifier keys
+			// fireEvent for direct control over the modifier flags
 			fireEvent.keyDown(document, { key: 's', ctrlKey: true });
 			expect(handlers.ctrl).toHaveBeenCalled();
 

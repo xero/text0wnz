@@ -167,3 +167,37 @@ byte-exact golden tests before anything else moved.
 - **iOS background scroll.** With Safari's toolbar expanded, dragging
   the background could scroll the page and bare a black bar above the
   editor. The root is now scroll-locked.
+- **SAUCE text saves as CP437.** Saves wrote title, author, group, and
+  comments as UTF-8, so the é in `café` became `C3 A9` where SAUCE
+  readers expect `82`. Those fields save as CP437 now, with `?` for
+  anything CP437 lacks.
+- **UTF-8 files keep `◙`, `♪`, and `→`.** The UTF-8 reader for
+  `.utf8.ans` and `.txt` files mapped each character to its CP437 byte
+  before acting on it, so glyphs that share a byte with a control code
+  behaved like one; `◙` broke the line, and `♪` and `→` vanished. They
+  open as cells now.
+- **512-glyph XBins show their upper page.** In 512-glyph mode the
+  foreground intensity bit selects glyphs 256-511, but the editor drew
+  those cells as their lower-page glyph in a bright color, and saving
+  dropped the upper half of the font. The WebGL renderer now draws both
+  pages from the file's font, and an XBin save with that font loaded
+  keeps all 512 glyphs. The no-WebGL2 fallback and vanilla Moebius
+  peers show `?` in upper-page cells.
+- **`ctrl+u` picks up colors.** Keyboard mode's color pickup listened
+  for keypress, which browsers never fire for ctrl combos, so the
+  shortcut never ran. It listens on keydown now.
+- **Collab resizes keep rows in place.** The v2 server copied a room's
+  cells by linear offset when the canvas changed width, so anyone who
+  joined after a resize, and the session file it saved, got scrambled
+  rows. The server now resizes row by row.
+- **The bridge dials only public addresses.** `BRIDGE=port` treated
+  multicast, broadcast, reserved, IETF protocol assignment, and
+  benchmarking addresses, the Azure wireserver, and 6to4 as public and
+  dialed them on request. It now refuses them along with the private
+  ranges.
+- **Forged canvas sizes stop at a ceiling.** An XBin header or a collab
+  server's join document could claim a 65535x65535 canvas, and the
+  editor tried to allocate it. XBin and TundraDraw opens and collab
+  joins refuse anything past 10 million cells, and durdraw and `.0wnz`
+  opens stop decompressing at 256 MB. A refused open reports that the
+  file could not be opened; a refused join stays local.

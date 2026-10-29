@@ -1,11 +1,3 @@
-/**
- * Server entry: Moebius-native superset server on Bun.serve.
- * Loads persisted room docs (native .0wnz, or legacy v2 .bin as the
- * migration), autosaves dirty rooms on the configured interval with
- * hourly sha1-deduped backups, and saves on SIGINT AND SIGTERM
- * (docker stop sends SIGTERM).
- */
-
 import path from 'node:path';
 import { readFileSync, existsSync } from 'node:fs';
 import { parseArgs } from './config.js';
@@ -53,9 +45,8 @@ const restoreRoomState = room =>
 
 const config = parseArgs();
 const sessionsDir = path.resolve('./sessions');
-// boot hygiene before any room exists: crash temp leftovers go, and
-// mixed-case session files from pre-lowercase servers rename so the
-// normalized rooms can actually restore them
+// before any room exists, so every restore reads the swept,
+// lowercased directory
 await sweepTempFiles(sessionsDir);
 await migrateSessionCase(sessionsDir);
 const lastBackupHashes = new Map();
@@ -71,9 +62,6 @@ if (config.ssl) {
 	}
 }
 
-// a bad bridge env stops the boot with a sentence: a bridge aimed at
-// the app's own listener or its own /bridge path is never what the
-// operator meant
 const bridge = bridgeConfigFromEnv();
 try {
 	validateBridgeConfig(bridge, { port: config.port, plainPort: config.plainPort });
@@ -138,6 +126,7 @@ const shutdown = async signal => {
 	process.exit(0);
 };
 process.on('SIGINT', () => shutdown('SIGINT'));
+// docker stop sends SIGTERM
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 callout(

@@ -1,8 +1,6 @@
 /**
- * Doc-native file formats through the Load/Save surface: .tnd and .dur
- * and .0wnz open with a DocV3 payload (the 7th callback arg) plus a
- * lossy u16 projection for legacy bookkeeping; .tnd and .0wnz save
- * straight from the live doc.
+ * Doc-native formats open with a DocV3 payload (the 7th callback arg)
+ * plus a lossy u16 projection for legacy bookkeeping.
  */
 import { describe, it, expect, vi } from 'vitest';
 

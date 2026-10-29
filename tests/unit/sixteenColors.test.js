@@ -1,7 +1,6 @@
 /**
- * 16colo.rs in-app browser: tabbed navigation (years, crews, artists,
- * pack search) against a MOCKED api (no network ever leaves the test),
- * and the open path through a real in-memory pack zip from the mirror.
+ * The 16colo.rs api is MOCKED (no network ever leaves the test); the
+ * open path runs through a real in-memory pack zip.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createSixteenColors } from '../../src/js/client/sixteenColors.js';

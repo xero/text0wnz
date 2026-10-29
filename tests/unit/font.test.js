@@ -10,7 +10,8 @@ const imgDataCap = 256;
 
 vi.mock('../../src/js/client/fontCache.js', () => ({
 	FontCache: {
-		getFont: vi.fn(() => Promise.resolve(null)), // Returns null by default (direct loading)
+		// a miss: the image loads directly
+		getFont: vi.fn(() => Promise.resolve(null)),
 		preloadCommonFonts: vi.fn(),
 		clearCache: vi.fn(),
 		memoryCache: new Map(),
@@ -30,7 +31,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 			clearRect: vi.fn(),
 			fillRect: vi.fn(),
 			createImageData: vi.fn((width, height) => ({
-				data: new Uint8ClampedArray(Math.min(width * height * 4, imgDataCap)), // Limit size
+				data: new Uint8ClampedArray(Math.min(width * height * 4, imgDataCap)),
 				width: width,
 				height: height,
 			})),
@@ -44,7 +45,6 @@ describe('Font Module - Basic Tests', () => {
 	let mockPalette;
 
 	beforeEach(() => {
-		// Clear any large objects from previous tests
 		if (global.gc) {
 			global.gc();
 		}
@@ -410,14 +410,14 @@ describe('Font Module - Basic Tests', () => {
 			const toggleLetterSpacing = newValue => {
 				if (newValue !== letterSpacing) {
 					letterSpacing = newValue;
-					return true; // Changed
+					return true;
 				}
-				return false; // No change
+				return false;
 			};
 
 			expect(toggleLetterSpacing(true)).toBe(true);
 			expect(letterSpacing).toBe(true);
-			expect(toggleLetterSpacing(true)).toBe(false); // Same value, no change
+			expect(toggleLetterSpacing(true)).toBe(false);
 			expect(toggleLetterSpacing(false)).toBe(true);
 			expect(letterSpacing).toBe(false);
 		});

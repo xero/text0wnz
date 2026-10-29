@@ -2,9 +2,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
-/**
- * XBIN font data round-trips through localStorage.
- */
 describe('XBIN Font Data Persistence', () => {
 	let mockCanvas;
 	let xbinFileBytes;
@@ -66,7 +63,6 @@ describe('XBIN Font Data Persistence', () => {
 	});
 
 	it('should extract XBIN font data correctly', () => {
-		// Parse XBIN file structure
 		const fontHeight = xbinFileBytes[9];
 		const flags = xbinFileBytes[10];
 		const paletteFlag = (flags & 0x01) === 1;
@@ -74,12 +70,10 @@ describe('XBIN Font Data Persistence', () => {
 
 		let dataIndex = 11;
 
-		// Skip palette if present
 		if (paletteFlag) {
 			dataIndex += 48;
 		}
 
-		// Extract font data
 		if (fontFlag) {
 			const fontDataSize = 256 * fontHeight;
 			const fontData = xbinFileBytes.slice(dataIndex, dataIndex + fontDataSize);
@@ -101,7 +95,6 @@ describe('XBIN Font Data Persistence', () => {
 			testFontData.bytes[i] = i % 256;
 		}
 
-		// Simulate serialization
 		const serialized = {
 			bytes: Array.from(testFontData.bytes),
 			width: testFontData.width,
@@ -121,7 +114,6 @@ describe('XBIN Font Data Persistence', () => {
 			height: 16,
 		};
 
-		// Simulate deserialization
 		const deserialized = {
 			bytes: new Uint8Array(serialized.bytes),
 			width: serialized.width,
@@ -183,7 +175,6 @@ describe('XBIN Font Data Persistence', () => {
 
 		mockCanvas.getXBFontData.mockReturnValue(testFontData);
 
-		// Simulate serializeState logic
 		const serialized = {};
 		const xbFontData = mockCanvas.getXBFontData();
 		if (xbFontData && xbFontData.bytes) {
@@ -203,7 +194,6 @@ describe('XBIN Font Data Persistence', () => {
 	it('should NOT include XBIN font data when not available', () => {
 		mockCanvas.getXBFontData.mockReturnValue(null);
 
-		// Simulate serializeState logic
 		const serialized = {};
 		const xbFontData = mockCanvas.getXBFontData();
 		if (xbFontData && xbFontData.bytes) {
@@ -227,7 +217,6 @@ describe('XBIN Font Data Persistence', () => {
 			},
 		};
 
-		// Simulate restoration logic
 		if (savedState.xbinFontData) {
 			const fontBytes = new Uint8Array(savedState.xbinFontData.bytes);
 			mockCanvas.setXBFontData(

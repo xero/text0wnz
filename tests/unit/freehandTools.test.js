@@ -346,7 +346,7 @@ describe('Freehand Tools', () => {
 			const drag = capture('onTextCanvasDrag');
 			down({ detail: { x: 5, y: 5, halfBlockY: 10 } });
 			expect(State.textArtCanvas.draw).toHaveBeenCalledTimes(1);
-			// same cell, other half row: judged as the same point now
+			// same cell, other half row: the same point
 			drag({ detail: { x: 5, y: 5, halfBlockY: 11 } });
 			expect(State.textArtCanvas.draw).toHaveBeenCalledTimes(1);
 			controller.disable();
@@ -356,8 +356,8 @@ describe('Freehand Tools', () => {
 			const controller = createShadingController(mockPanel, false);
 			controller.enable();
 			const drag = capture('onTextCanvasDrag');
-			// drawMode is undefined here; this used to throw on
-			// drawMode.foreground or paint with a stale mode
+			// drawMode is undefined here: it must neither throw on
+			// drawMode.foreground nor paint with a stale mode
 			expect(() => drag({ detail: { x: 3, y: 3, halfBlockY: 6 } })).not.toThrow();
 			expect(State.textArtCanvas.draw).not.toHaveBeenCalled();
 			controller.disable();
@@ -408,7 +408,7 @@ describe('Freehand Tools', () => {
 			const panel = await createShadingPanel();
 
 			expect(() => {
-				panel.select(177); // Light shade character
+				panel.select(177); // Medium shade
 			}).not.toThrow();
 		});
 	});
@@ -763,7 +763,6 @@ describe('Freehand Tools', () => {
 				mockCharacterElement,
 			);
 
-			// Mock non-blocky character - need to import State and modify mock
 			const State = (await import('../../src/js/client/state.js')).default;
 			State.textArtCanvas.getHalfBlock.mockReturnValue({
 				isBlocky: false,
@@ -799,7 +798,7 @@ describe('Freehand Tools', () => {
 			});
 
 			State.textArtCanvas.getBlock.mockReturnValue({
-				charCode: 177, // Light shade
+				charCode: 177, // Medium shade
 				foregroundColor: 7,
 				backgroundColor: 0,
 			});

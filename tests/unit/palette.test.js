@@ -42,9 +42,9 @@ describe('Palette Utilities', () => {
 		});
 
 		it('should handle edge cases', () => {
-			expect(getUnicode(0)).toBe(0x00a0); // Character code 0 maps to non-breaking space
-			expect(getUnicode(255)).toBe(0x00a0); // Character code 255 also maps to non-breaking space
-			expect(getUnicode(256)).toBe(256); // beyond extended ASCII returns original
+			expect(getUnicode(0)).toBe(0x00a0); // non-breaking space
+			expect(getUnicode(255)).toBe(0x00a0); // non-breaking space
+			expect(getUnicode(256)).toBe(256);
 		});
 
 		it('should handle extended ASCII range correctly', () => {
@@ -62,22 +62,22 @@ describe('Palette Utilities', () => {
 		});
 
 		it('should convert multi-byte Unicode characters correctly', () => {
-			// Unicode heart symbol (♥) - U+2665
-			const heartUTF8 = getUTF8(3); // charCode 3 maps to ♥
-			expect(heartUTF8).toHaveLength(3); // Should be 3-byte UTF-8
-			expect(heartUTF8[0]).toBe(226); // First byte
-			expect(heartUTF8[1]).toBe(153); // Second byte
-			expect(heartUTF8[2]).toBe(165); // Third byte
+			// ♥ U+2665 encodes as E2 99 A5
+			const heartUTF8 = getUTF8(3);
+			expect(heartUTF8).toHaveLength(3);
+			expect(heartUTF8[0]).toBe(226);
+			expect(heartUTF8[1]).toBe(153);
+			expect(heartUTF8[2]).toBe(165);
 		});
 
 		it('should handle extended ASCII characters', () => {
 			const result = getUTF8(128); // Ç
-			expect(result).toHaveLength(2); // Should be 2-byte UTF-8
+			expect(result).toHaveLength(2);
 		});
 
 		it('should handle box drawing characters', () => {
 			const result = getUTF8(176); // Light shade
-			expect(result).toHaveLength(3); // Should be 3-byte UTF-8 for Unicode
+			expect(result).toHaveLength(3);
 		});
 	});
 
@@ -109,7 +109,7 @@ describe('Palette Utilities', () => {
 			expect(black[2]).toBe(0); // B
 			expect(black[3]).toBe(255); // A
 
-			// Test red color (63 << 2 | 63 >> 4 = 252 | 3 = 255)
+			// 63 << 2 | 63 >> 4 = 252 | 3 = 255
 			const red = mockPalette.getRGBAColor(1);
 			expect(red[0]).toBe(255); // R
 			expect(red[1]).toBe(0); // G
@@ -172,7 +172,7 @@ describe('Palette Utilities', () => {
 				const color = palette.getRGBAColor(i);
 				expect(color).toBeInstanceOf(Uint8Array);
 				expect(color).toHaveLength(4);
-				expect(color[3]).toBe(255); // Alpha should be 255
+				expect(color[3]).toBe(255);
 			}
 		});
 
@@ -424,10 +424,8 @@ describe('Palette Utilities', () => {
 					const keyCode = e.keyCode || e.which;
 					if (keyCode >= 48 && keyCode <= 55 && e.ctrlKey === true) {
 						e.preventDefault();
-						// This represents the logic that would be in the actual handler
 						const num = keyCode - 48;
 						if (num === 3) {
-							// Simulate cycling to high color
 							expect(num + 8).toBe(11);
 						}
 					}
@@ -454,7 +452,6 @@ describe('Palette Utilities', () => {
 						e.preventDefault();
 						const num = keyCode - 48;
 						if (num === 5) {
-							// Simulate cycling to high color
 							expect(num + 8).toBe(13);
 						}
 					}
@@ -481,31 +478,27 @@ describe('Palette Utilities', () => {
 
 						switch (e.code) {
 							case 'ArrowUp': {
-								// Previous foreground color
-								const foreground = 7; // Mock current foreground
+								const foreground = 7;
 								const newForeground = foreground === 0 ? 15 : foreground - 1;
-								expect(newForeground).toBe(6); // 7 - 1
+								expect(newForeground).toBe(6);
 								break;
 							}
 							case 'ArrowDown': {
-								// Next foreground color
-								const fg = 7; // Mock current foreground
+								const fg = 7;
 								const nextFg = fg === 15 ? 0 : fg + 1;
-								expect(nextFg).toBe(8); // 7 + 1
+								expect(nextFg).toBe(8);
 								break;
 							}
 							case 'ArrowLeft': {
-								// Previous background color
-								const background = 8; // Mock current background
+								const background = 8;
 								const newBg = background === 0 ? 15 : background - 1;
-								expect(newBg).toBe(7); // 8 - 1
+								expect(newBg).toBe(7);
 								break;
 							}
 							case 'ArrowRight': {
-								// Next background color
-								const bg = 8; // Mock current background
+								const bg = 8;
 								const nextBg = bg === 15 ? 0 : bg + 1;
-								expect(nextBg).toBe(9); // 8 + 1
+								expect(nextBg).toBe(9);
 								break;
 							}
 						}
@@ -524,22 +517,18 @@ describe('Palette Utilities', () => {
 
 		it('should handle color wrap-around at boundaries', () => {
 			expect(() => {
-				// Test minimum boundary wrap-around (0 -> 15)
 				const colorAtMin = 0;
 				const wrappedMin = colorAtMin === 0 ? 15 : colorAtMin - 1;
 				expect(wrappedMin).toBe(15);
 
-				// Test maximum boundary wrap-around (15 -> 0)
 				const colorAtMax = 15;
 				const wrappedMax = colorAtMax === 15 ? 0 : colorAtMax + 1;
 				expect(wrappedMax).toBe(0);
 
-				// Test normal increment
 				const normalColor = 7;
 				const incremented = normalColor === 15 ? 0 : normalColor + 1;
 				expect(incremented).toBe(8);
 
-				// Test normal decrement
 				const decremented = normalColor === 0 ? 15 : normalColor - 1;
 				expect(decremented).toBe(6);
 			}).not.toThrow();
@@ -618,11 +607,10 @@ describe('Palette Utilities', () => {
 			];
 
 			nonMatchingEvents.forEach(event => {
-				// Don't crash on missing code property
+				// the handler reads e.code, which these events lack
 				try {
 					keyHandler(event);
 				} catch (e) {
-					// Ignore errors for invalid events
 					void e;
 				}
 			});

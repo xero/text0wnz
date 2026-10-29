@@ -68,9 +68,9 @@ const loadImageAndGetImageData = url => {
 };
 
 // char 0 is the scene's empty cell and must render as one; some
-// classic PNG atlases ink glyph 0 (Topaz-437 does), which made every
-// deleted cell stamp a visible mark. XB-embedded fonts keep theirs:
-// a custom font's glyph 0 is the author's call.
+// classic PNG atlases ink glyph 0 (Topaz-437 does), so every deleted
+// cell would stamp a visible mark. XB-embedded fonts keep theirs: a
+// custom font's glyph 0 is the author's call
 const clearGlyphZero = fontData => {
 	fontData.data.fill(0, 0, (fontData.width * fontData.height) / 8);
 	return fontData;
@@ -84,7 +84,7 @@ const createFontHandle = (fontData, palette, letterSpacing, scaleFactor) => {
 	let currentScaleFactor = scaleFactor;
 
 	const createLazyFontInstance = () => {
-		// Cancel the outgoing instance's idle pregeneration drain, or rapid
+		// cancel the outgoing instance's idle pregeneration drain, or rapid
 		// zoom/font changes stack stale drains filling orphaned caches
 		if (lazyFont) {
 			lazyFont.dispose();
@@ -115,7 +115,7 @@ const createFontHandle = (fontData, palette, letterSpacing, scaleFactor) => {
 		getLetterSpacing: () => letterSpacing,
 		// a reassigned State.palette never reaches the closure on its own:
 		// rebind then rebuild; in-place edits of the SAME object use
-		// redraw(). Callers own the onPaletteChange dispatch.
+		// redraw(). Callers own the onPaletteChange dispatch
 		setPalette: newPalette => {
 			if (newPalette && newPalette !== palette) {
 				palette = newPalette;
@@ -132,8 +132,7 @@ const createFontHandle = (fontData, palette, letterSpacing, scaleFactor) => {
 			}
 		},
 		getScaleFactor: () => currentScaleFactor,
-		// createLazyFontInstance ran above, so lazyFont is never null and
-		// delegation needs no guard
+		// lazyFont is set at construction, so delegation needs no guard
 		draw: (charCode, foreground, background, ctx, x, y) =>
 			lazyFont.draw(charCode, foreground, background, ctx, x, y),
 		drawWithAlpha: (charCode, foreground, ctx, x, y) =>

@@ -7,12 +7,11 @@ import magicNumbers from './magicNumbers.js';
 import { LOWER_HALF, UPPER_HALF } from '../core/cellops.js';
 
 /**
- * Creates a lazy font loader that generates glyphs on demand
- * @param {Object} fontData - Font data with width, height, and bitmap data
- * @param {Object} palette - Palette object with getRGBAColor method
- * @param {boolean} letterSpacing - Whether to use letter spacing
- * @param {number} scaleFactor - Scale factor for zoom (0.5x - 4x, default 1)
- * @returns {Object} Lazy font object with methods for drawing and glyph access
+ * @param {Object} fontData - width, height, and 1bpp bitmap data
+ * @param {Object} palette - anything with getRGBAColor
+ * @param {boolean} letterSpacing
+ * @param {number} scaleFactor - zoom, 0.5x - 4x
+ * @returns {Object}
  */
 export const createLazyFont = (
 	fontData,
@@ -20,12 +19,11 @@ export const createLazyFont = (
 	letterSpacing = false,
 	scaleFactor = 1,
 ) => {
-	// Cache for generated glyphs, FIFO-capped to bound memory
+	// glyphCache is FIFO-capped to bound memory
 	const MAX_GLYPH_CACHE_ENTRIES = 4096;
 	const glyphCache = new Map();
 	const alphaGlyphCache = new Map();
 
-	// Pre-generate bitmap data once
 	const bits = new Uint8Array(fontData.width * fontData.height * 256);
 	for (
 		let i = 0, k = 0;
@@ -46,19 +44,17 @@ export const createLazyFont = (
 		? scaledWidth + Math.floor(1 * scaleFactor)
 		: scaledWidth;
 
-	// Canvas for glyph generation at ORIGINAL size
 	const canvas = createCanvas(glyphWidth, fontData.height);
 	const ctx = canvas.getContext('2d');
 
 	/**
-	 * Build a glyph's pixels at original size, including the ninth column
-	 * when letter spacing is on. VGA rule: column nine is background color,
-	 * except chars 0xC0-0xDF duplicate column eight.
-	 * @param {CanvasRenderingContext2D} targetCtx - Context used to allocate ImageData
+	 * VGA ninth column (letter spacing on): background color, except
+	 * chars 0xC0-0xDF duplicate column eight.
+	 * @param {CanvasRenderingContext2D} targetCtx - allocates the ImageData
 	 * @param {number} charCode - Character code (0-255)
 	 * @param {number} foreground - Foreground color (0-15)
 	 * @param {number} background - Background color (0-15)
-	 * @returns {ImageData} Glyph image data at original size
+	 * @returns {ImageData} at original size
 	 */
 	const buildGlyphImageData = (targetCtx, charCode, foreground, background) => {
 		const imageData = targetCtx.createImageData(glyphWidth, fontData.height);
@@ -91,17 +87,15 @@ export const createLazyFont = (
 	};
 
 	/**
-	 * Generate a single glyph on demand with scaling
 	 * @param {number} charCode - Character code (0-255)
 	 * @param {number} foreground - Foreground color (0-15)
 	 * @param {number} background - Background color (0-15)
-	 * @returns {ImageData} Generated glyph image data at scaled size
+	 * @returns {ImageData} at scaled size
 	 */
 	const getGlyph = (charCode, foreground, background) => {
 		const key = `${charCode}-${foreground}-${background}-${scaleFactor}`;
 
 		if (!glyphCache.has(key)) {
-			// Evict the oldest entry once the cache is full
 			if (glyphCache.size >= MAX_GLYPH_CACHE_ENTRIES) {
 				glyphCache.delete(glyphCache.keys().next().value);
 			}
@@ -111,7 +105,6 @@ export const createLazyFont = (
 					buildGlyphImageData(ctx, charCode, foreground, background),
 				);
 			} else {
-				// Scaling needed - generate at original size, then scale
 				const tempCanvas = createCanvas(glyphWidth, fontData.height);
 				const tempCtx = tempCanvas.getContext('2d');
 				tempCtx.putImageData(
@@ -120,7 +113,6 @@ export const createLazyFont = (
 					0,
 				);
 
-				// Scale using nearest-neighbor
 				const scaledCanvas = createCanvas(scaledGlyphWidth, scaledHeight);
 				const scaledCtx = scaledCanvas.getContext('2d');
 				scaledCtx.imageSmoothingEnabled = false;
@@ -150,10 +142,10 @@ export const createLazyFont = (
 	};
 
 	/**
-	 * Generate an alpha glyph (transparent background) with scaling
-	 * @param {number} charCode - Character code
+	 * Glyph on a transparent background
+	 * @param {number} charCode
 	 * @param {number} foreground - Foreground color (0-15)
-	 * @returns {HTMLCanvasElement} Canvas with alpha glyph at scaled size
+	 * @returns {HTMLCanvasElement} at scaled size
 	 */
 	const getAlphaGlyph = (charCode, foreground) => {
 		const key = `${charCode}-${foreground}-${scaleFactor}`;
@@ -199,19 +191,18 @@ export const createLazyFont = (
 	};
 
 	/**
-	 * Pre-generate common glyphs (space + block chars) in idle slices.
-	 * Slices are ONE glyph each (~2ms worst case): a monolithic pass
-	 * costs ~2.4s of iPad main thread, and even 16-glyph slices
-	 * overshoot the idle budget enough to jank slow scrolling.
-	 * On-demand generation covers anything drawn before the drain
-	 * finishes.
+	 * Common glyphs pregenerate in idle slices of ONE glyph each (~2ms
+	 * worst case): a monolithic pass costs ~2.4s of iPad main thread,
+	 * and even 16-glyph slices overshoot the idle budget enough to jank
+	 * slow scrolling. On-demand generation covers anything drawn before
+	 * the drain finishes.
 	 */
 	const idle = globalThis.requestIdleCallback || (fn => setTimeout(fn, 0));
-	// Set by dispose(): font.js replaces the lazy font on every zoom, spacing,
-	// font, and palette change, and a replaced instance's drain must stop, or
-	// stale drains stack and fill orphaned caches. The setTimeout fallback
-	// (Safari has no requestIdleCallback) has no budget gate, so stacked
-	// drains there are real main-thread work, not just wasted idle time.
+	// set by dispose(): font.js replaces the lazy font on every zoom,
+	// spacing, font, and palette change, and stale drains would stack and
+	// fill orphaned caches. The setTimeout fallback (Safari has no
+	// requestIdleCallback) has no budget gate, so stacked drains there
+	// cost real main-thread work, not just idle time
 	let disposed = false;
 	const preGenerateCommonGlyphs = () => {
 		const commonChars = [
@@ -245,8 +236,8 @@ export const createLazyFont = (
 			if (disposed) {
 				return;
 			}
-			// With a real IdleDeadline, pack glyphs into the granted budget;
-			// in the setTimeout fallback, a fixed small batch per tick
+			// the setTimeout fallback passes no IdleDeadline, so it runs a
+			// fixed batch per tick instead of filling the granted budget
 			let fallbackBudget = 16;
 			do {
 				slices.shift()();
@@ -264,8 +255,8 @@ export const createLazyFont = (
 		idle(drain);
 	};
 
-	// Pre-generate common glyphs when the thread next idles: keeping this off
-	// the critical path makes font/zoom changes hundreds of ms cheaper
+	// idle, not inline: off the critical path, font/zoom changes are
+	// hundreds of ms cheaper
 	preGenerateCommonGlyphs();
 
 	return {
@@ -285,13 +276,12 @@ export const createLazyFont = (
 		getAlphaCacheSize: () => alphaGlyphCache.size,
 
 		/**
-		 * Draw a character at specified position (scaling handled internally)
-		 * @param {number} charCode - Character code
-		 * @param {number} foreground - Foreground color
-		 * @param {number} background - Background color
-		 * @param {CanvasRenderingContext2D} drawCtx - Canvas context to draw on
-		 * @param {number} x - X coordinate in character grid
-		 * @param {number} y - Y coordinate in character grid
+		 * @param {number} charCode
+		 * @param {number} foreground
+		 * @param {number} background
+		 * @param {CanvasRenderingContext2D} drawCtx
+		 * @param {number} x - in cells, not pixels
+		 * @param {number} y - in cells, not pixels
 		 */
 		draw: (charCode, foreground, background, drawCtx, x, y) => {
 			const glyph = getGlyph(charCode, foreground, background);
@@ -308,12 +298,11 @@ export const createLazyFont = (
 		},
 
 		/**
-		 * Draw a character with alpha transparency (scaling handled internally)
-		 * @param {number} charCode - Character code
-		 * @param {number} foreground - Foreground color
-		 * @param {CanvasRenderingContext2D} drawCtx - Canvas context to draw on
-		 * @param {number} x - X coordinate in character grid
-		 * @param {number} y - Y coordinate in character grid
+		 * @param {number} charCode
+		 * @param {number} foreground
+		 * @param {CanvasRenderingContext2D} drawCtx
+		 * @param {number} x - in cells, not pixels
+		 * @param {number} y - in cells, not pixels
 		 */
 		drawWithAlpha: (charCode, foreground, drawCtx, x, y) => {
 			const canvasToUse = getAlphaGlyph(charCode, foreground);

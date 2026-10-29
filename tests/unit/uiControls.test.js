@@ -81,7 +81,7 @@ describe('UI Controls and Controllers', () => {
 	describe('websocketUI', () => {
 		// the stylesheet gates .includedForWebsocket and
 		// .excludedForWebsocket on this one attribute; inline display
-		// writes are gone (they lost to the sauce panel's id rule)
+		// writes lose to the sauce panel's id rule
 		it('marks the document collab-on when show is true', () => {
 			websocketUI(true);
 			expect(document.documentElement.dataset.collab).toBe('on');

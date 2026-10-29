@@ -1,41 +1,34 @@
 // @ts-check
 /**
- * Collab room: Moebius-native semantics with the
- * superset policies layered on. Transport-free: callers hand in
- * client objects with a send(type, data) and we never touch sockets,
- * so the whole protocol surface unit-tests without a network.
+ * Collab room: Moebius-native semantics with the superset policies
+ * layered on. Transport-free (a client is anything with
+ * send(type, data)), so the protocol unit-tests without a network.
  *
- * Vanilla semantics transcribed from moebiusXBIN app/server.js:
- * - CONNECTED first; reply carries {id, doc} (spectators) or
- *   {id, doc, users, chat_history, status}; JOIN broadcast to
- *   registered users.
- * - DRAW bounds-checks, mutates, broadcasts to everyone INCLUDING
- *   spectators and EXCLUDING the sender (clients apply locally).
+ * Vanilla semantics follow moebiusXBIN server.js, Joint.message():
+ * - the CONNECTED reply is {id, doc} for spectators, else
+ *   {id, doc, users, chat_history, status}; JOIN goes to registered
+ *   users only.
+ * - DRAW reaches everyone INCLUDING spectators and EXCLUDING the
+ *   sender (clients apply locally).
  * - SAUCE/ICE_COLORS/USE_9PX_FONT/CHANGE_FONT/SET_CANVAS_SIZE persist
- *   and broadcast including spectators; SET_CANVAS_SIZE relays the
- *   sender's data verbatim, which keeps the id vanilla Moebius clients
- *   crash without.
+ *   and broadcast including spectators.
  * - CURSOR/SELECTION/OPERATION/17-20/22 ride the default relay to
  *   registered users and are NEVER persisted; late joiners see stale
- *   palette/flips exactly like upstream (do-not-diverge rule).
+ *   palette/flips exactly like upstream.
  * - SET_BG is swallowed (upstream comments it out).
  *
- * Our deltas (owner decisions):
- * - a room password applies to EVERYONE, including nickless
- *   spectators (upstream lets nickless connections bypass it).
- * - spectators default to read-only drawing but MAY chat, and
- *   they receive chat (upstream excludes them from the chat tier).
- * - resize is row-aware (a linear copy scrambles late joiners).
- * - malformed frames are dropped with a log line, never a crash.
+ * Deliberate deltas from upstream:
+ * - the room password gates EVERYONE (upstream lets nickless
+ *   connections bypass it).
+ * - spectators cannot draw by default but MAY chat, and they receive
+ *   chat (upstream excludes them from the chat tier).
+ * - malformed frames drop with a log line, never a crash.
  * - every mutation lands in a bounded op log (timelapse substrate).
  *
- * Extension suite v1 (ids 23-27, cap "t0wnz-ext-1"):
- * caps-aware clients get full-fidelity cells (unicode + v3 color
- * words), a seq on every mutation plus EXT_ACK for their own, and
- * EXT_SYNC wholesale recovery. Every ext mutation is down-converted to
- * the nearest vanilla frame for caps-less members, so mixed rooms stay
- * coherent; ext payloads are stored on blocks only where the vanilla
- * projection loses information.
+ * Extension suite (core/protocol/extensions.ts): every ext mutation
+ * down-converts to the nearest vanilla frame for caps-less members so
+ * mixed rooms stay coherent, and blocks carry an ext payload only
+ * where the vanilla projection loses information.
  */
 
 import {
@@ -66,13 +59,12 @@ export const ROOM_DEFAULTS = Object.freeze({
 	maxColumns: 1000,
 	maxRows: 10000,
 	opLogLimit: 10000,
-	// count alone let 10000 batches of 4096 cells hold ~40M objects;
-	// one EXT_TIMELAPSE stringified the lot
+	// count alone lets 10000 batches of 4096 cells hold ~40M objects,
+	// and one EXT_TIMELAPSE stringifies the lot
 	opLogByteLimit: 8 * 1024 * 1024,
 	fontName: 'CP437 8x16',
 });
 
-/** capability names our server advertises to caps-aware clients */
 /** @type {readonly string[]} */
 export const SERVER_CAPS = Object.freeze([EXT_SUITE_CAP]);
 
@@ -87,11 +79,11 @@ const rgb8FromWords = words =>
 		b: w & 0xff,
 	}));
 
-/** old sidecars hold 6-bit number[][] join palettes; the ancestor
- * resolves that shape to black, so restores renormalize. The shape
- * names the depth here (arrays are the old 6-bit writer, objects
- * are this server's 8-bit one), so the wire heuristic never guesses
- * at a file we wrote: a dark 8-bit palette would come back brighter
+/** sidecars from the 6-bit writer hold number[][] join palettes,
+ * which the ancestor resolves to black, so restores renormalize. The
+ * shape names the depth (arrays 6-bit, objects this server's 8-bit)
+ * so the wire heuristic never guesses at a file we wrote: a dark
+ * 8-bit palette would come back brighter
  * @param {*} palette the sidecar's join.palette, shape untrusted */
 const normalizeJoinPalette = palette => {
 	if (!Array.isArray(palette) || palette.length === 0) {
@@ -106,8 +98,7 @@ const normalizeJoinPalette = palette => {
 };
 
 /**
- * @typedef {object} RoomClient anything with a send; the server layer
- *   wraps sockets, tests pass plain objects
+ * @typedef {object} RoomClient
  * @property {(type: number, data: object) => void} send
  */
 
@@ -118,8 +109,8 @@ const normalizeJoinPalette = palette => {
  * @param {{enabled?: boolean, canChat?: boolean, canDraw?: boolean}} [options.spectators]
  * @param {number} [options.columns]
  * @param {number} [options.rows]
- * @param {number} [options.maxColumns] resize wall (env knob; either direction)
- * @param {number} [options.maxRows] resize wall (env knob; either direction)
+ * @param {number} [options.maxColumns] resize wall
+ * @param {number} [options.maxRows] resize wall
  * @param {number} [options.opLogLimit]
  * @param {number} [options.syncCooldownMs] per-user EXT_SYNC/TIMELAPSE rate limit
  * @param {(line: string) => void} [options.log]
@@ -138,8 +129,8 @@ export const createRoom = (options = {}) => {
 	const syncCooldownMs = options.syncCooldownMs ?? 1000;
 	const log = options.log ?? (() => {});
 
-	// the live document, wire-shaped (block cells); persistence converts
-	// through the shared codecs at the file boundary
+	// wire-shaped (block cells); persistence converts at the file
+	// boundary
 	const doc = {
 		columns: options.columns ?? ROOM_DEFAULTS.columns,
 		rows: options.rows ?? ROOM_DEFAULTS.rows,
@@ -184,14 +175,12 @@ export const createRoom = (options = {}) => {
 	// monotonic mutation counter: saves clear dirty ONLY if nothing
 	// mutated while the write was in flight
 	let dirtySeq = 0;
-	// the extension suite's op counter: every accepted doc mutation gets
-	// the next seq; caps clients receive it on broadcasts and acks, and
-	// a gap on their side means a missed op (=> they request EXT_SYNC)
+	// ext suite op counter: a gap on the client side is a missed op,
+	// and the client answers it with EXT_SYNC
 	let seq = 0;
 
-	// timelapse baseline: the doc state BEFORE the oldest logged op.
-	// Evicted ops are absorbed so baseline + log always replays to the
-	// live doc, however long the session runs.
+	// timelapse baseline: the doc BEFORE the oldest logged op. Evicted
+	// ops are absorbed so baseline + log always replays to the live doc
 	/** @type {{columns: number, rows: number, cells: import('../core/index').ExtCell[]}} */
 	const baseline = { columns: 0, rows: 0, cells: []};
 	const resetBaseline = () => {
@@ -298,8 +287,7 @@ export const createRoom = (options = {}) => {
 			try {
 				client.send(type, data);
 			} catch {
-				// a dead socket must never break the fanout; close() will
-				// reap it
+				// a dead socket must not break the fanout; close() reaps it
 			}
 		}
 	};
@@ -307,17 +295,15 @@ export const createRoom = (options = {}) => {
 	/** @param {{caps: string[] | null}} user */
 	const hasExt = user => user.caps?.includes(EXT_SUITE_CAP) === true;
 
-	/** resolve words for down-converting quantization */
 	const paletteWords = () =>
 		doc.ext_palette
 			? Uint32Array.from(doc.ext_palette)
 			: paletteWordsFromJoin(doc.palette, 8);
 
 	/**
-	 * Mutation fanout: caps members get the native frame with seq,
-	 * vanilla members get the down-converted frame(s) (null = nothing
-	 * expressible), and a caps sender gets EXT_ACK so its seq stream
-	 * stays contiguous under exclude-sender echo semantics.
+	 * vanilla is the down-converted frame(s), null when nothing is
+	 * expressible. A caps sender gets EXT_ACK so its seq stream stays
+	 * contiguous under exclude-sender echo semantics.
 	 * @param {RoomClient} sender
 	 * @param {{caps: string[] | null}} senderUser
 	 * @param {number} opSeq
@@ -351,14 +337,14 @@ export const createRoom = (options = {}) => {
 			try {
 				sender.send(T0wnzAction.EXT_ACK, { seq: opSeq });
 			} catch {
-				// ditto
+				// dead socket; close() reaps it
 			}
 		}
 	};
 
 	/**
-	 * A silently dropped mutation from a caps client would leak its
-	 * pendingOps counter forever AND leave its apply-locally state
+	 * A silently dropped mutation from a caps client would strand an
+	 * entry in its pendingSends queue AND leave its apply-locally state
 	 * diverged with no seq gap to notice. Refusals ack with the current
 	 * seq and a refused flag: the client books the op off and resyncs.
 	 * @param {RoomClient} client @param {{caps: string[] | null}} user
@@ -373,7 +359,6 @@ export const createRoom = (options = {}) => {
 		}
 	};
 
-	/** the full-fidelity doc snapshot a caps client adopts wholesale */
 	const syncPayload = () => ({
 		seq,
 		columns: doc.columns,
@@ -428,7 +413,8 @@ export const createRoom = (options = {}) => {
 	});
 
 	/**
-	 * row-aware resize; a linear copy scrambles late joiners
+	 * row-aware like Moebius libtextmode.js, resize_canvas(); a linear
+	 * copy scrambles late joiners
 	 * @param {number} columns @param {number} rows
 	 */
 	const resizeDoc = (columns, rows) => {
@@ -445,9 +431,8 @@ export const createRoom = (options = {}) => {
 		doc.data = next;
 	};
 
-	// wire-speed brute force: repeated failures open an exponential
-	// cooldown window during which every attempt refuses instantly
-	// (the first couple of tries stay free: humans typo)
+	// repeated failures open an exponential cooldown during which every
+	// attempt refuses instantly, or passwords brute-force at wire speed
 	let authFailures = 0;
 	let authCooldownUntil = 0;
 
@@ -462,8 +447,8 @@ export const createRoom = (options = {}) => {
 		// the password gates EVERYONE, spectators included
 		if (password !== '') {
 			if (pass === '') {
-				// the probe's shape, never a guess: it must not open the
-				// cooldown (the pre-room gate applies the same rule)
+				// the client probe's shape, never a guess: it must not open
+				// the cooldown (the pre-room gate applies the same rule)
 				client.send(MoebiusAction.REFUSED, {});
 				log(`${nick ?? 'spectator'} refused (no password)`);
 				return false;
@@ -503,8 +488,9 @@ export const createRoom = (options = {}) => {
 			caps,
 			lastSyncAt: 0,
 		};
-		// upstream reply shapes, verbatim; caps ride along only for
-		// caps-aware clients (vanilla must see exactly vanilla)
+		// reply shapes verbatim from Moebius server.js, the CONNECTED
+		// case; caps ride along only for caps-aware clients (vanilla must
+		// see exactly vanilla)
 		const reply = isSpectator
 			? { id, doc: toJoinDoc() }
 			: {
@@ -520,9 +506,9 @@ export const createRoom = (options = {}) => {
 		members.set(client, user);
 		client.send(MoebiusAction.CONNECTED, reply);
 		if (hasExt(user)) {
-			// the vanilla doc in the reply is the quantized view; caps
-			// clients adopt the full-fidelity snapshot that follows it
-			// (and it counts against the sync rate limit)
+			// the reply's doc is the quantized vanilla view; caps clients
+			// adopt the snapshot that follows, which counts against the
+			// sync rate limit
 			user.lastSyncAt = Date.now();
 			client.send(T0wnzAction.EXT_SYNC, syncPayload());
 		}
@@ -543,7 +529,7 @@ export const createRoom = (options = {}) => {
 	const message = (client, frame) => {
 		const user = members.get(client);
 		if (!user) {
-			return; // frames before CONNECTED are dropped
+			return;
 		}
 		const { type, data } = frame;
 		switch (type) {
@@ -601,8 +587,8 @@ export const createRoom = (options = {}) => {
 				if (user.role === 'viewer' && !spectators.canChat) {
 					return;
 				}
-				// a nickless spectator could broadcast ANY nick the frame
-				// claimed; viewers speak as themselves, editors may rename
+				// viewers speak as themselves, or a nickless spectator could
+				// broadcast ANY nick the frame claims; editors may rename
 				const nick =
 					user.role === 'editor' && typeof data.nick === 'string'
 						? sanitize(data.nick, ROOM_DEFAULTS.nickLimit, false)
@@ -611,7 +597,8 @@ export const createRoom = (options = {}) => {
 				if (text === '') {
 					return;
 				}
-				// nick/group renames piggyback on chat, like upstream
+				// nick/group renames piggyback on chat, as in Moebius
+				// server.js, the CHAT case
 				if (user.role === 'editor' && nick !== '') {
 					user.nick = nick;
 				}
@@ -629,12 +616,11 @@ export const createRoom = (options = {}) => {
 					chatHistory.shift();
 				}
 				dirty = true;
-				// without the seq bump a chat landing mid-save was marked
-				// clean by that save's token and lost when the room emptied
+				// without the seq bump a chat landing mid-save is marked
+				// clean by that save's token and lost when the room empties
 				dirtySeq++;
-				// spectators chat and HEAR chat on our server. Explicit
-				// shape: relaying junk fields would let a client smuggle a
-				// fake `seq` into caps peers' streams
+				// explicit shape: relaying junk fields would let a client
+				// smuggle a fake `seq` into caps peers' streams
 				broadcast(
 					client,
 					type,
@@ -751,15 +737,12 @@ export const createRoom = (options = {}) => {
 				}
 				// NO throttle, deliberately: a dropped resize diverges the
 				// sender's apply-locally state and the vanilla dialect has no
-				// content resync. Vanilla peers live with that, exactly as
-				// upstream; caps clients detect divergence through the seq
-				// stream and recover via EXT_SYNC.
+				// content resync (only caps clients recover, via EXT_SYNC)
 				resizeDoc(columns, rows);
 				const payload = { columns, rows, id: user.id };
 				const opSeq = pushOp(type, payload);
 				// rebuilt shape with the SERVER-known id: vanilla clients
-				// crash without an id, and relayed client ids
-				// are forgeable
+				// crash without an id, and relayed client ids are forgeable
 				fanoutMutation(
 					client,
 					user,
@@ -786,9 +769,7 @@ export const createRoom = (options = {}) => {
 				const { x, y } = draw;
 				const ext = { u: draw.u, a: draw.a, fg: draw.fg, bg: draw.bg };
 				const block = extCellToBlock(ext, doc.ice_colors, paletteWords());
-				// store the ext payload only when the vanilla block loses
-				// information (a caps client drawing a plain classic cell
-				// costs nothing extra)
+				// ext payload only where the vanilla block loses information
 				doc.data[y * doc.columns + x] = extCellEquals(
 					blockToExtCell(block),
 					ext,
@@ -890,13 +871,12 @@ export const createRoom = (options = {}) => {
 					return;
 				}
 				doc.ext_palette = palette;
-				// bridge the classic 16 into the vanilla join palette so late
-				// vanilla joiners see them; in-session vanilla peers keep a
-				// stale palette (upstream's own CHANGE_PALETTE precedent).
-				// Padded to EXACTLY 16: a short join palette is an
-				// out-of-contract shape vanilla clients index into blindly.
-				// 8-bit {r,g,b} objects, the ancestor's own join shape: it
-				// resolves 6-bit arrays to black
+				// late vanilla joiners see the classic 16 through the join
+				// palette; in-session vanilla peers keep a stale one
+				// (upstream's own CHANGE_PALETTE precedent). EXACTLY 16, as
+				// 8-bit {r,g,b} objects: vanilla clients index a short
+				// palette blindly, and the ancestor resolves 6-bit arrays to
+				// black
 				doc.palette = bridgeToVanillaPalette(palette);
 				reprojectExtBlocks();
 				const payload = { palette, id: user.id };
@@ -974,9 +954,8 @@ export const createRoom = (options = {}) => {
 					}
 					return;
 				}
-				// upstream's blind relay: registered users only, never
-				// persisted (CURSOR/SELECTION/OPERATION/17-20/22). Late
-				// joiners see stale palette/flips exactly like upstream.
+				// Moebius server.js, the default case: a blind relay to
+				// registered users, never persisted
 				if (user.role === 'viewer') {
 					return;
 				}
@@ -1059,7 +1038,6 @@ export const createRoom = (options = {}) => {
 			// the restored doc is the new timelapse starting point
 			resetBaseline();
 		},
-		/** full-fidelity state for persistence (RLE runs + ext palette) */
 		extState: () => ({
 			cells: compressExtCells(doc.data.map(blockToExtCell)),
 			palette: doc.ext_palette ?? null,
@@ -1075,10 +1053,8 @@ export const createRoom = (options = {}) => {
 			dirty,
 		}),
 		chatHistory: () => [...chatHistory],
-		/** nothing a session file should keep: no art (vanilla or ext
-		 * rider), no chat, no sauce text, no palette or font setup.
-		 * ice/9px/dims stay out: a blank canvas renders the same under
-		 * them and counting one-click toggles would make nearly every
+		/** ignores ice/9px/dims: a blank canvas renders the same under
+		 * them, and counting one-click toggles would make nearly every
 		 * dirty room undeletable */
 		isBlank: () =>
 			chatHistory.length === 0 &&

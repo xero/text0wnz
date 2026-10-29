@@ -22,7 +22,7 @@ const mockState = {
 		getIceColors: vi.fn(() => false),
 		getCurrentFontName: vi.fn(() => 'CP437 8x16'),
 		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)),
-		// the save path reads the doc now; derive it from the u16 mocks
+		// the save path reads the doc; derive it from the u16 mocks
 		getDoc: vi.fn(() =>
 			u16ToV3({
 				imageData: mockState.textArtCanvas.getImageData(),

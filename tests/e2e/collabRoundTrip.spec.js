@@ -1,9 +1,7 @@
 /**
- * Live collab round trip: two real pages join a spawned bun server
- * (never a shared or public one) through the consent modal, draw in
- * both directions, and verify convergence plus no-self-echo. Chromium
- * project only: one engine exercises the full stack, the transport
- * logic is unit-tested engine-neutrally.
+ * Real pages against a spawned bun server, never a shared or public
+ * one. Chromium project only: one engine exercises the full stack, the
+ * transport logic is unit-tested engine-neutrally.
  */
 import { test, expect } from '@playwright/test';
 import { clickTool } from './helpers/editorHelpers.js';
@@ -13,9 +11,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 /**
- * Polls `url` until `ready(res)` holds, racing the child's own exit: a
- * taken port fails at once with the server's words instead of a 15
- * second poll against whatever squats there.
+ * Races the child's own exit: a taken port fails at once with the
+ * server's words instead of a 15 second poll against whatever squats
+ * there.
  */
 const awaitListening = async (child, url, ready, label) => {
 	let exit = null;
@@ -89,7 +87,6 @@ const joinPage = async (browser, nick) => {
 		timeout: 10000,
 	});
 	await page.waitForFunction(() => Boolean(window.__t0wnz), null, { timeout: 10000 });
-	// the probe finds the server and opens the consent choice
 	await page.waitForSelector('#joinCollaboration', {
 		state: 'visible',
 		timeout: 10000,
@@ -144,17 +141,15 @@ test.describe('collab round trip against a live server', () => {
 		const a = await joinPage(browser, 'artist-a');
 		const b = await joinPage(browser, 'artist-b');
 
-		// A draws; the cell lands locally at once (apply-locally-on-send)
+		// apply-locally-on-send: the cell lands at once, no poll
 		await drawAt(a.page, 5, 5);
 		const drawnA = await charAt(a.page, 5, 5);
 		expect(drawnA).not.toBe(0);
 
-		// ...and reaches B through the server
 		await expect
 			.poll(() => charAt(b.page, 5, 5), { timeout: 10000 })
 			.toBe(drawnA);
 
-		// B draws back; A converges
 		await drawAt(b.page, 10, 3);
 		const drawnB = await charAt(b.page, 10, 3);
 		expect(drawnB).not.toBe(0);
@@ -162,10 +157,9 @@ test.describe('collab round trip against a live server', () => {
 			.poll(() => charAt(a.page, 10, 3), { timeout: 10000 })
 			.toBe(drawnB);
 
-		// no self-echo corruption: A's original cell is still intact
+		// no self-echo corruption
 		expect(await charAt(a.page, 5, 5)).toBe(drawnA);
 
-		// chat crosses with the sender's local render on both ends
 		await a.page.evaluate(() => {
 			window.__t0wnz.State.network.sendChat('hello from a');
 		});
@@ -217,14 +211,13 @@ test.describe('collab round trip against a live server', () => {
 		const a = await joinPage(browser, 'uni-a');
 		const b = await joinPage(browser, 'uni-b');
 
-		// both sides negotiated the suite
 		expect(
 			await a.page.evaluate(() =>
 				window.__t0wnz.State.network.extCollab()),
 		).toBe(true);
 
-		// A draws a heavy black heart suit in truecolor orange through the
-		// editor core (the same path the tools use)
+		// HEAVY BLACK HEART in truecolor orange, through the editor core
+		// (the same path the tools use)
 		await a.page.evaluate(async () => {
 			const { State } = window.__t0wnz;
 			const resolved = await State.textArtCanvas.resolveUnicode([0x2764]);
@@ -248,8 +241,7 @@ test.describe('collab round trip against a live server', () => {
 			.toBe(0x2764);
 		expect((await cellOnB()).fg).toBe(0xff8800);
 
-		// a late vanilla-fidelity check: the late joiner adopts via
-		// EXT_SYNC and sees the identical cell
+		// the late joiner adopts via EXT_SYNC and sees the identical cell
 		const late = await joinPage(browser, 'uni-late');
 		const cellOnLate = () =>
 			late.page.evaluate(() => {

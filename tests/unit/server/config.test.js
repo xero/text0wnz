@@ -8,7 +8,7 @@ describe('Config Module - parseArgs', () => {
 
 	beforeEach(() => {
 		originalArgv = process.argv;
-		// Mock console.log and process.exit to avoid side effects
+		// --help would exit the runner and --debug would log
 		consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 		processExitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {});
 	});
@@ -71,7 +71,7 @@ describe('Config Module - parseArgs', () => {
 		process.argv = ['node', 'server.js', '--save-interval', '60'];
 		const config = parseArgs();
 
-		expect(config.saveInterval).toBe(60 * 60 * 1000); // 60 minutes in milliseconds
+		expect(config.saveInterval).toBe(60 * 60 * 1000); // 60 minutes
 	});
 
 	it('should parse session name correctly', () => {
@@ -85,21 +85,21 @@ describe('Config Module - parseArgs', () => {
 		process.argv = ['node', 'server.js', 'invalid-port'];
 		const config = parseArgs();
 
-		expect(config.port).toBe(1337); // Should remain default
+		expect(config.port).toBe(1337);
 	});
 
 	it('should ignore port numbers out of range', () => {
 		process.argv = ['node', 'server.js', '99999'];
 		const config = parseArgs();
 
-		expect(config.port).toBe(1337); // Should remain default
+		expect(config.port).toBe(1337);
 	});
 
 	it('should ignore negative save interval', () => {
 		process.argv = ['node', 'server.js', '--save-interval', '-10'];
 		const config = parseArgs();
 
-		expect(config.saveInterval).toBe(30 * 60 * 1000); // Should remain default
+		expect(config.saveInterval).toBe(30 * 60 * 1000);
 	});
 
 	it('should handle multiple flags correctly', () => {
@@ -200,7 +200,7 @@ describe('Config Module - parseArgs', () => {
 		process.argv = ['node', 'server.js', '--ssl-dir', '--debug'];
 		const config = parseArgs();
 
-		expect(config.sslDir).toBe('/etc/ssl/private'); // Should remain default
-		expect(config.debug).toBe(true); // Should be set
+		expect(config.sslDir).toBe('/etc/ssl/private');
+		expect(config.debug).toBe(true);
 	});
 });

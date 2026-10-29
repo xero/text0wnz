@@ -156,19 +156,16 @@ describe('Canvas and Position Info DOM Tests', () => {
 			const charWidth = 8;
 			const charHeight = 16;
 
-			// Top-left corner
 			let charX = Math.floor(0 / charWidth);
 			let charY = Math.floor(0 / charHeight);
 			positionController.update(charX, charY);
 			expect(readout()).toBe('1, 1');
 
-			// Middle of canvas
 			charX = Math.floor(320 / charWidth);
 			charY = Math.floor(200 / charHeight);
 			positionController.update(charX, charY);
 			expect(readout()).toBe('41, 13');
 
-			// Near bottom-right
 			charX = Math.floor(632 / charWidth);
 			charY = Math.floor(384 / charHeight);
 			positionController.update(charX, charY);

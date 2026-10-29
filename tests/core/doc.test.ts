@@ -170,7 +170,6 @@ describe('docV3', () => {
 		expect(doc.getColumns()).toBe(6);
 		expect(doc.getRows()).toBe(2);
 		expect(glyphIdOf(doc.getCell(1, 0, 0).glyph)).toBe(2);
-		// New territory is blank
 		expect(doc.getCell(0, 5, 1).glyph).toBe(0);
 		expect(doc.getCell(0, 5, 1).fg).toBe(paletteColor(0));
 	});

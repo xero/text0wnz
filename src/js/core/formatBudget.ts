@@ -1,13 +1,12 @@
 /**
  * Format-budget linter: before a doc leaves through a lossy format,
- * say exactly what that format cannot hold. The export
- * UI shows the counts and lets the artist decide; nothing here blocks
- * anything. Only the native .0wnz envelope holds everything: utf8
- * still substitutes lookalikes for the four control positions its
- * writer cannot emit, and plain .txt drops color by definition (but
- * keeps real unicode codepoints), so neither counts those. utf8's one
- * other loss, blink over an extended background under its default ice
- * presentation, is flagged as utf8-ext-blink.
+ * say exactly what that format cannot hold. Advisory only: nothing
+ * here blocks an export. Only the native .0wnz envelope holds
+ * everything: utf8 still substitutes lookalikes for the four control
+ * positions its writer cannot emit, and plain .txt drops color by
+ * definition (but keeps real unicode codepoints), so neither counts
+ * those. utf8's one other loss, blink over an extended background
+ * under its default ice presentation, is flagged as utf8-ext-blink.
  */
 
 import {
@@ -47,7 +46,7 @@ export interface BudgetIssue {
 		/** utf8's ice presentation cannot brighten an extended bg; blink drops */
 		| 'utf8-ext-blink';
 	count: number;
-	/** first offending cell, for a future jump-to-cell affordance */
+	/** first offending cell */
 	firstIndex: number;
 }
 
@@ -76,7 +75,7 @@ export const lintDocForFormat = (
 	// ownz alone is fully lossless
 	const lossless = format === 'ownz' || format === 'utf8';
 	// the plain-text writer emits real codepoints, so unicode cells are
-	// NOT lost there (flagging them was a false positive on every export)
+	// NOT lost there
 	const checkUnicode = !lossless && format !== 'txt';
 	const checkColors = !lossless && format !== 'txt' && format !== 'tnd';
 	const counts = new Map<BudgetIssue['kind'], BudgetIssue>();
@@ -89,7 +88,7 @@ export const lintDocForFormat = (
 		}
 	};
 	// every frame: ansimation and movie exports degrade later frames
-	// exactly like frame 0, and only frames[0] used to be read
+	// exactly like frame 0
 	for (const frame of format === 'ownz' ? [] : doc.frames) {
 		for (let i = 0; i < frame.glyph.length; i++) {
 			const glyphId = glyphIdOf(frame.glyph[i]);
@@ -126,8 +125,7 @@ export const lintDocForFormat = (
 			}
 			const blinkAttr = (frame.glyph[i] & (ATTR_BLINK << 16)) !== 0;
 			// encodeUtf8's default ice presentation cannot brighten an
-			// extended background, so the attr silently drops there; the one
-			// exception to utf8 losslessness besides the control lookalikes
+			// extended background, so the attr silently drops there
 			if (
 				format === 'utf8' &&
 				blinkAttr &&
@@ -160,8 +158,7 @@ export const lintDocForFormat = (
 					paletteIndexOf(frame.bg[i]) > 7
 				) {
 					// without ice the bright bg nibble MEANS blink, so the u16
-					// projection folds a steady bright bg to its dim neighbor;
-					// the artist can turn on ice colors instead of losing it
+					// projection folds a steady bright bg to its dim neighbor
 					hit('bright-bg-folds', i);
 				}
 			}

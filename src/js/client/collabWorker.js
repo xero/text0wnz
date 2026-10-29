@@ -1,25 +1,23 @@
 // @ts-check
 /**
- * Collab transport worker: owns the websocket and speaks
- * Moebius-native frames through the shared core codec. A MODULE worker
- * bundled by vite (like journalWorker.js), which is what lets it
- * import the codec.
+ * Collab transport worker: owns the websocket and speaks Moebius
+ * frames through the shared core codec. A MODULE worker bundled by
+ * vite (like journalWorker.js), which is what lets it import the codec.
  *
- * Client-first handshake: we send CONNECTED {nick, group, pass, caps};
- * the server replies CONNECTED {id, doc, ...} or REFUSED. The silent
- * probe (scoped to the same-origin default server) sends a nickless
- * CONNECTED: ANY reply proves a server exists, then the probe socket
- * closes immediately. Nothing joins and no remote state reaches the
- * page until the user consents.
+ * Client-first handshake (Moebius server.js, the CONNECTED case of
+ * Joint.message()): we send CONNECTED {nick, group, pass, caps}; the
+ * server replies CONNECTED {id, doc, ...} or REFUSED. Nothing joins
+ * and no remote state reaches the page until the user consents.
  *
  * Page RPC (trustedMessage-guarded both ways):
- *   page -> worker: {cmd:'init'} | {cmd:'probe'} |
- *     {cmd:'connect', nick, group, pass, caps} | {cmd:'send', type, data} |
- *     {cmd:'draw', cells:[{x,y,block}]} | {cmd:'disconnect'}
+ *   page -> worker: {cmd:'init'} | {cmd:'probe', url} |
+ *     {cmd:'connect', nick, group, pass, caps, url} |
+ *     {cmd:'send', type, data} | {cmd:'draw', cells:[{x,y,block}]} |
+ *     {cmd:'disconnect'}
  *   worker -> page: {cmd:'initialized'} | {cmd:'probeResult', found} |
  *     {cmd:'connected', id, data} | {cmd:'refused'} |
- *     {cmd:'frame', type, data} | {cmd:'closed', wasConnected} |
- *     {cmd:'error', error}
+ *     {cmd:'frame', type, data} | {cmd:'closed', wasConnected, bridged} |
+ *     {cmd:'error', error, bridged}
  *
  * Every outbound frame is stamped with our id: vanilla Moebius clients
  * crash on SET_CANVAS_SIZE broadcasts without it.
@@ -41,8 +39,8 @@ let bridged = false;
 const DIAL_TIMEOUT_MS = 15000;
 
 /**
- * Same-origin default server, or the page's explicit target (remote
- * dial and the e2e round trip pass one) routed for THIS origin.
+ * Same-origin default server, or the page's explicit target routed
+ * for THIS origin.
  * @param {unknown} explicit
  */
 const serverUrl = explicit => resolveTransport(self.location, explicit);
@@ -146,7 +144,7 @@ const connect = options => {
 		try {
 			frame = decodeFrame(event.data);
 		} catch {
-			return; // malformed frames drop silently
+			return;
 		}
 		if (!connected) {
 			if (frame.type === MoebiusAction.CONNECTED) {
