@@ -1461,8 +1461,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	/**
-	 * Plane-native load for tnd/dur/envelope docs (content the u16 path
-	 * cannot carry). The mirror becomes the lossy projection - the chunk
+	 * Plane-native load for every file open, which keeps content the u16
+	 * path cannot carry. The mirror becomes the lossy projection - the chunk
 	 * fallback, collab packets, and the tools' classic16 reads quantize -
 	 * while the GL renderer shows the planes faithfully.
 	 */
@@ -1601,6 +1601,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const undo = () => {
+		// a floating move lands before undo takes it back, or the next
+		// step stamps the block beside the restored origin
+		if (State.selectionTool?.isMoveMode?.()) {
+			State.selectionTool.toggleMoveMode();
+		}
 		if (editor.undo()) {
 			State.historyLabels?.undone();
 			processDirtyRegions();
@@ -1612,6 +1617,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const redo = () => {
 		if (editor.redo()) {
+			// only a move that has not stepped yet can meet a redo, and
+			// its block copy predates it
+			if (State.selectionTool?.isMoveMode?.()) {
+				State.selectionTool.toggleMoveMode();
+			}
 			State.historyLabels?.redone();
 			processDirtyRegions();
 			sendDrawHistory();

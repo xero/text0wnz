@@ -102,13 +102,40 @@ describe('Font Module - Basic Tests', () => {
 			).rejects.toThrow('Failed to load XB font data');
 		});
 
-		it('should reject with missing palette', async () => {
-			const fontBytes = new Uint8Array(256);
-			fontBytes.fill(0x01);
-
+		it('rejects font bytes shorter than 256 glyphs of the cell height', async () => {
 			await expect(
-				loadFontFromXBData(fontBytes, 8, 16, false, null),
-			).rejects.toThrow();
+				loadFontFromXBData(new Uint8Array(4 * 256 - 1), 8, 4, false, mockPalette),
+			).rejects.toThrow('Failed to load XB font data');
+		});
+
+		it('loads 8x4 font bytes into a 1024 byte glyph table', async () => {
+			const bytes = new Uint8Array(4 * 256).fill(0x81);
+			const handle = await loadFontFromXBData(bytes, 8, 4, false, mockPalette);
+			expect(handle.getWidth()).toBe(8);
+			expect(handle.getHeight()).toBe(4);
+			expect(handle.getData().data).toEqual(bytes);
+		});
+
+		it('setLetterSpacing adds the ninth column and announces only real changes', async () => {
+			const handle = await loadFontFromXBData(
+				new Uint8Array(4 * 256),
+				8,
+				4,
+				false,
+				mockPalette,
+			);
+			const seen = vi.fn();
+			document.addEventListener('onLetterSpacingChange', seen);
+			handle.setLetterSpacing(true);
+			handle.setLetterSpacing(true);
+			expect(handle.getWidth()).toBe(9);
+			expect(handle.getLetterSpacing()).toBe(true);
+			expect(seen).toHaveBeenCalledTimes(1);
+			handle.setLetterSpacing(false);
+			document.removeEventListener('onLetterSpacingChange', seen);
+			expect(handle.getWidth()).toBe(8);
+			expect(seen).toHaveBeenCalledTimes(2);
+			expect(seen.mock.calls.map(([e]) => e.detail)).toEqual([true, false]);
 		});
 	});
 
@@ -338,19 +365,6 @@ describe('Font Module - Basic Tests', () => {
 		});
 	});
 
-	describe('XB Font Data Parsing - Additional Coverage', () => {
-		it('should validate XB font data size requirements', () => {
-			const validateXBFontSize = (bytes, _width, height) => {
-				const expectedSize = height * 256;
-				return bytes.length >= expectedSize;
-			};
-
-			expect(validateXBFontSize(new Uint8Array(4096), 8, 16)).toBe(true);
-			expect(validateXBFontSize(new Uint8Array(256), 8, 16)).toBe(false);
-			expect(validateXBFontSize(new Uint8Array(8192), 8, 32)).toBe(true);
-		});
-	});
-
 	describe('Font Image Loading - Additional Coverage', () => {
 		it('should handle font loading with different letter spacing settings', async () => {
 			const mockImage = {
@@ -377,128 +391,6 @@ describe('Font Module - Basic Tests', () => {
 			await new Promise(resolve => setTimeout(resolve, 0));
 
 			expect(mockImage.src).toBe('/ui/fonts/AnotherFont.png');
-		});
-
-		it('should provide correct font dimensions based on letter spacing', async () => {
-			const testDimensions = (width, letterSpacing) => {
-				return {
-					effectiveWidth: letterSpacing ? width + 1 : width,
-					originalWidth: width,
-				};
-			};
-
-			expect(testDimensions(8, false).effectiveWidth).toBe(8);
-			expect(testDimensions(8, true).effectiveWidth).toBe(9);
-			expect(testDimensions(16, true).effectiveWidth).toBe(17);
-		});
-
-		it('should handle font data retrieval', () => {
-			const mockFontData = {
-				width: 8,
-				height: 16,
-				data: new Uint8Array(256 * 16),
-			};
-
-			expect(mockFontData.width).toBe(8);
-			expect(mockFontData.height).toBe(16);
-			expect(mockFontData.data.length).toBe(4096);
-		});
-
-		it('should handle letter spacing changes', () => {
-			let letterSpacing = false;
-
-			const toggleLetterSpacing = newValue => {
-				if (newValue !== letterSpacing) {
-					letterSpacing = newValue;
-					return true;
-				}
-				return false;
-			};
-
-			expect(toggleLetterSpacing(true)).toBe(true);
-			expect(letterSpacing).toBe(true);
-			expect(toggleLetterSpacing(true)).toBe(false);
-			expect(toggleLetterSpacing(false)).toBe(true);
-			expect(letterSpacing).toBe(false);
-		});
-	});
-
-	describe('Font Drawing Operations', () => {
-		it('should validate character code ranges for drawing', () => {
-			const isValidCharCode = code => {
-				return code >= 0 && code <= 255;
-			};
-
-			expect(isValidCharCode(0)).toBe(true);
-			expect(isValidCharCode(65)).toBe(true); // 'A'
-			expect(isValidCharCode(255)).toBe(true);
-			expect(isValidCharCode(-1)).toBe(false);
-			expect(isValidCharCode(256)).toBe(false);
-		});
-
-		it('should validate color values for drawing', () => {
-			const isValidColor = color => {
-				return color >= 0 && color <= 15;
-			};
-
-			expect(isValidColor(0)).toBe(true);
-			expect(isValidColor(7)).toBe(true);
-			expect(isValidColor(15)).toBe(true);
-			expect(isValidColor(-1)).toBe(false);
-			expect(isValidColor(16)).toBe(false);
-		});
-
-		it('should handle coordinate positioning for character drawing', () => {
-			const calculatePosition = (x, y, charWidth, charHeight) => {
-				return {
-					pixelX: x * charWidth,
-					pixelY: y * charHeight,
-				};
-			};
-
-			expect(calculatePosition(0, 0, 8, 16)).toEqual({ pixelX: 0, pixelY: 0 });
-			expect(calculatePosition(10, 5, 8, 16)).toEqual({
-				pixelX: 80,
-				pixelY: 80,
-			});
-			expect(calculatePosition(79, 24, 8, 16)).toEqual({
-				pixelX: 632,
-				pixelY: 384,
-			});
-		});
-	});
-
-	describe('Font State Management', () => {
-		it('should handle font initialization state', () => {
-			let fontInitialized = false;
-			let lazyFontCreated = false;
-
-			const initializeFont = () => {
-				fontInitialized = true;
-				lazyFontCreated = true;
-			};
-
-			expect(fontInitialized).toBe(false);
-			expect(lazyFontCreated).toBe(false);
-
-			initializeFont();
-
-			expect(fontInitialized).toBe(true);
-			expect(lazyFontCreated).toBe(true);
-		});
-
-		it('should handle font redraw operations', () => {
-			let redrawCount = 0;
-
-			const triggerRedraw = () => {
-				redrawCount++;
-			};
-
-			expect(redrawCount).toBe(0);
-			triggerRedraw();
-			expect(redrawCount).toBe(1);
-			triggerRedraw();
-			expect(redrawCount).toBe(2);
 		});
 	});
 });

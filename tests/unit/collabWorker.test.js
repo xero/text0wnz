@@ -233,7 +233,7 @@ describe('collab worker', () => {
 	});
 });
 
-describe('stale socket (review pass)', () => {
+describe('stale socket', () => {
 	it('an old socket closing never clobbers a newer connection', () => {
 		toWorker({ cmd: 'connect', nick: 'first' });
 		const oldWs = sockets.at(-1);

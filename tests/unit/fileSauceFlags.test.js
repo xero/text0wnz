@@ -86,6 +86,34 @@ const saved = async () => {
 	return parseSauce(savedBytes);
 };
 
+describe('SAUCE text lifecycle', () => {
+	it('CP437 text survives an open and resave byte for byte', async () => {
+		const original = makeAnsi({
+			columns: 80,
+			rows: 5,
+			seed: 2,
+			sauce: {
+				tinfo1: 80,
+				tinfo2: 5,
+				title: 'caf\x82 \x9c5',
+				author: '\x8eL',
+				group: 'gr\x81n',
+				comments: ['na\x8bve r\x82sum\x82'],
+			},
+		});
+		await openAndWire('cafe.ans', original);
+		await saved();
+		// SAUCE §Layout: COMNT, one 64-byte line, then the record, whose
+		// Title, Author, and Group run from byte 7 to 82
+		const trailer = bytes => bytes.subarray(bytes.length - 128 - 69);
+		const text = bytes => [
+			...trailer(bytes).subarray(0, 69),
+			...trailer(bytes).subarray(69 + 7, 69 + 82),
+		];
+		expect(text(savedBytes)).toEqual(text(original));
+	});
+});
+
 describe('SAUCE flags lifecycle', () => {
 	it('LS no preference survives an untouched resave', async () => {
 		await openAndWire(
@@ -151,6 +179,22 @@ describe('SAUCE flags lifecycle', () => {
 		mocks.state.font.getLetterSpacing.mockReturnValue(true);
 		const record = await saved();
 		// a null stash disables no-preference: the toggle writes explicit
+		expect((record.flags >> 1) & 0x03).toBe(2);
+	});
+
+	it('an unknown SAUCE version resaves like a SAUCE-less open', async () => {
+		// SAUCE §Layout note 6: the record states no flags, so its zero
+		// LS bits cannot pin the resave to no preference
+		const bytes = makeAnsi({
+			columns: 80,
+			rows: 5,
+			seed: 2,
+			sauce: { tinfo1: 80, tinfo2: 5, flags: 0 },
+		});
+		bytes.fill(0x20, bytes.length - 123, bytes.length - 121);
+		await openAndWire('old.ans', bytes);
+		mocks.state.font.getLetterSpacing.mockReturnValue(true);
+		const record = await saved();
 		expect((record.flags >> 1) & 0x03).toBe(2);
 	});
 

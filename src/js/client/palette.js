@@ -537,6 +537,23 @@ const createPalettePicker = canvas => {
 	};
 
 	/**
+	 * @param {number} px
+	 * @param {number} py
+	 */
+	const swatchAt = (px, py) => {
+		// fractions of the rendered rect, not the backing store: the
+		// phone palette flyout scales the canvas with CSS
+		const rect = canvas.getBoundingClientRect();
+		return {
+			x: Math.floor(((px - rect.left) / rect.width) * 2),
+			y: Math.min(
+				7,
+				Math.max(0, Math.floor(((py - rect.top) / rect.height) * 8)),
+			),
+		};
+	};
+
+	/**
 	 * A touchend fires with touches already empty, so the lifted
 	 * finger's coords live on changedTouches
 	 * @param {*} e TouchEvent or MouseEvent
@@ -547,18 +564,9 @@ const createPalettePicker = canvas => {
 		if (isTouch && !touch) {
 			return;
 		}
-		const rect = canvas.getBoundingClientRect();
-		const coords = isTouch
-			? { x: touch.pageX, y: touch.pageY }
-			: { x: e.clientX, y: e.clientY };
-
-		// fractions of the rendered rect, not the backing store: the
-		// phone palette flyout scales the canvas with CSS
-		const x = Math.floor(((coords.x - rect.left) / rect.width) * 2);
-		const y = Math.min(
-			7,
-			Math.max(0, Math.floor(((coords.y - rect.top) / rect.height) * 8)),
-		);
+		const { x, y } = isTouch
+			? swatchAt(touch.pageX, touch.pageY)
+			: swatchAt(e.clientX, e.clientY);
 
 		const currentTime = new Date().getTime();
 		const lastTime = isTouch ? lastTouchTime : lastMouseTime;
@@ -588,6 +596,15 @@ const createPalettePicker = canvas => {
 
 	/** @param {MouseEvent} e */
 	const mouseEnd = e => {
+		// right click (or the Mac ctrl click) picks the background, as in
+		// Moebius palette.js, update_swatches(); it stays out of the
+		// double click timing, or a quick fg then bg pick would open
+		// the color editor
+		if (e.button === 2 || e.ctrlKey) {
+			const { x, y } = swatchAt(e.clientX, e.clientY);
+			State.palette?.setBackgroundColor(y + (x === 0 ? 0 : 8));
+			return;
+		}
 		processEvent(e, false);
 	};
 

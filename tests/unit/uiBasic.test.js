@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import State from '../../src/js/client/state.js';
 import {
 	$,
 	$$,
@@ -36,8 +35,6 @@ vi.mock('../../src/js/client/state.js', () => ({
 		menus: { close: vi.fn() },
 	},
 }));
-
-void State;
 
 describe('UI Basic Utilities', () => {
 	beforeEach(() => {

@@ -77,6 +77,7 @@ dist/
 ├── robots.txt              # Search engine directives
 ├── sitemap.xml             # Site map
 ├── humans.txt              # Humans.txt file
+├── LICENSE.txt             # MIT license, copied from the repo root
 ├── favicon.ico             # Favicon
 └── ui/
     ├── stylez-[hash].css   # Minified CSS with cache-busting hash
@@ -102,7 +103,7 @@ dist/
         └── rolldown-runtime-[hash].js # Bundler runtime shared by chunks
 ```
 
-Two chunks share the `core-` prefix: the Vite `core` group and the shared TypeScript core under `src/js/core/`, which the bundler names after its directory. A local build emits no `dist/LICENSE.txt`; CI adds it (see [vite-plugin-static-copy](#vite-plugin-static-copy)).
+Two chunks share the `core-` prefix: the Vite `core` group and the shared TypeScript core under `src/js/core/`, which the bundler names after its directory. A local build copies the root `LICENSE.txt` into `dist/`, and CI copies it again with the repo and site URLs appended (see [vite-plugin-static-copy](#vite-plugin-static-copy)).
 
 ### Vite Plugins
 
@@ -141,6 +142,7 @@ Generates Progressive Web App files:
 **Share Target Handler:**
 
 - Receives files via POST to `/open`
+- Accepts only a POST whose `Origin` is the app's own (see [Security](security.md#share-target))
 - Caches files temporarily in `text0wnz-shared-files` cache
 - Main app retrieves and deletes cached files after opening
 - Stale file cleanup on service worker activation
@@ -164,7 +166,7 @@ Copies static assets to the build directory:
 - Bitmap font files (`src/fonts/` → `dist/ui/fonts/`)
 - Tutorial artwork (`src/ansi/` → `dist/ansi/`)
 
-The plugin also lists a `LICENSE.txt` target, but targets resolve against the Vite root (`src/`), where no such file exists, so a local `bun bake` emits no license file. In CI, `build.yml` appends the repo and site URLs to the root `LICENSE.txt` and copies it into `dist/` after the build.
+Static-copy targets resolve against the Vite root (`src/`), so the root `LICENSE.txt` cannot be one. The `log-static-copy` plugin copies it into `dist/` once the bundle is written, and its build log lists every file that landed. In CI, `build.yml` appends the repo and site URLs to the root `LICENSE.txt` and copies it into `dist/` after the build.
 
 #### vite-plugin-sitemap
 

@@ -380,7 +380,7 @@ The color system anchors on the classic 16-color ANSI palette, with optional iCE
 
 - 16-color ANSI palette (8 standard + 8 bright colors)
 - Real-time color preview
-- Click a swatch to set the foreground color
+- Click a swatch to set the foreground color, right-click it (or `ctrl` click) for the background
 - Double click a swatch to edit that palette entry with the system color picker
 - `ctrl` + `0`-`7` sets the foreground, `alt` + `0`-`7` the background; press the same key again for the bright variant
 - `ctrl` + `up`/`down` cycles the foreground color, `ctrl` + `left`/`right` the background
@@ -1211,7 +1211,7 @@ These single keys work in every tool except Keyboard Mode and the Selection Tool
 - **click & drag:** Draw/Shape or select region
 - **shift click:** Straight line from the last point (Colorize brush only)
 - **alt click:** Sample colors (any tool)
-- **right click:** Set the background color in the xterm 256 flyout; on the 16-color strip a right click sets the foreground like a left click, and on the canvas the browser context menu is suppressed
+- **right click:** Set the background color from the 16-color strip or the xterm 256 flyout; on the canvas the browser context menu is suppressed
 
 ## Related Documentation
 

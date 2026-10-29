@@ -35,9 +35,7 @@ in-memory fixtures for the edge cases wild files can't guarantee:
 - wide BIN files
 
 Every generator is seeded, so each run produces identical bytes and no binary
-blobs live in the repo. Known v2 codec defects are pinned with `it.fails` and
-a comment; when a fix lands the test flips red and should be promoted to a
-plain `it()`.
+blobs live in the repo.
 
 ---
 
@@ -46,11 +44,11 @@ plain `it()`.
 Broad coverage against real scene packs comes from the owner's mirror of the
 sixteencolors archive, pinned to an immutable commit:
 
-| What | Value |
-|---|---|
-| Repo | [`xero/sixteencolors-archive`](https://github.com/xero/sixteencolors-archive) (fork of `sixteencolors/sixteencolors-archive`) |
-| Pinned commit | `3ed700074f98dfb9a52b34e769d0162b6dfe6010` (branch `master`, committed 2024-10-08) |
-| Layout | `<year>/<packname>.zip`, 1990 onward, ~5.3GB total |
+| What          | Value                                                                                                                         |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Repo          | [`xero/sixteencolors-archive`](https://github.com/xero/sixteencolors-archive) (fork of `sixteencolors/sixteencolors-archive`) |
+| Pinned commit | `3ed700074f98dfb9a52b34e769d0162b6dfe6010` (branch `master`, committed 2024-10-08)                                            |
+| Layout        | `<year>/<packname>.zip`, 1990 onward, ~5.3GB total                                                                            |
 
 The SHA pin makes the corpus immutable; bump it deliberately when the owner
 syncs newer packs into the mirror.
@@ -92,6 +90,6 @@ touched.
 **Pack manifest.** Packs chosen for conformance runs get recorded here with
 the reason. The list starts empty; fill it when the job is first enabled.
 
-| Pack path | Why chosen |
-|---|---|
-| - | tallest-known file (ACiD-Trip-scale) goes here when picked |
+| Pack path | Why chosen                                                 |
+| --------- | ---------------------------------------------------------- |
+| -         | tallest-known file (ACiD-Trip-scale) goes here when picked |

@@ -68,7 +68,8 @@ vi.mock('../../src/js/client/palette.js', () => ({
 	getUnicodeReverseMap: new Map(),
 }));
 
-// Reference decoder matching the loader's uncompress() run types
+// independent reader for the four XBin §XBIN Compression run types,
+// so the writer is never graded by its own codec's reader
 const uncompress = (bytes, dataIndex, dataEnd, columns, rows) => {
 	const data = new Uint16Array(columns * rows);
 	let i, value, count, j, k, char, attribute;

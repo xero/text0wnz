@@ -76,6 +76,24 @@ describe('UI Controls and Controllers', () => {
 
 			expect(sauceComments.value).toBe(originalValue);
 		});
+
+		it('counts and truncates by UTF-8 bytes, not characters', () => {
+			const sauceComments = document.createElement('textarea');
+			sauceComments.id = 'sauceComments';
+			const sauceBytes = document.createElement('input');
+			sauceBytes.id = 'sauceBytes';
+			document.body.appendChild(sauceComments);
+			document.body.appendChild(sauceBytes);
+
+			sauceComments.value = 'Hello 世界! 🌍';
+			enforceMaxBytes();
+			expect(sauceBytes.value).toBe('18/16320 bytes');
+
+			sauceComments.value = 'é'.repeat(9000);
+			enforceMaxBytes();
+			expect(sauceComments.value).toBe('é'.repeat(8160));
+			expect(sauceBytes.value).toBe('16320/16320 bytes');
+		});
 	});
 
 	describe('websocketUI', () => {

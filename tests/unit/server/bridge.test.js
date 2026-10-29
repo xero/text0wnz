@@ -215,7 +215,7 @@ describe('bridgeConfigFromEnv', () => {
 	});
 });
 
-describe('v6 encoding bypasses (review pass)', () => {
+describe('v6 encoding bypasses', () => {
 	it('denies hex v4-mapped, v4-compatible, and NAT64 encodings', () => {
 		for (const ip of [
 			'::ffff:7f00:1', // hex v4-mapped loopback
@@ -232,7 +232,7 @@ describe('v6 encoding bypasses (review pass)', () => {
 	});
 });
 
-describe('bridge hardening (security review)', () => {
+describe('bridge hardening', () => {
 	const base = { mode: 'off', target: '', port: 8000, allow: [], maxConnections: 16 };
 
 	it('refuses a port that is not plain digits, in every mode', async () => {
@@ -328,7 +328,7 @@ describe('bridge hardening (security review)', () => {
 	});
 });
 
-describe('bridge pipe bounds (security review)', () => {
+describe('bridge pipe bounds', () => {
 	class FakeUpstream {
 		constructor(url) {
 			this.url = url;

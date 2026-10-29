@@ -39,8 +39,11 @@ export const DEFAULT_BIN_COLUMNS = 160;
 
 export const decodeBin = (bytes: Uint8Array): DecodeResult => {
 	const sauce = parseSauce(bytes);
+	// FileType 1 reads as unset like PabloDraw (Binary.cs, GetWidth):
+	// wild BINs stamp it as the ANSi file type. TInfo1 never counts,
+	// since generic SAUCE adders stamp 80 on 160-column BINs
 	const columns =
-		sauce && sauce.dataType === 5 && sauce.fileType > 0
+		sauce && sauce.dataType === 5 && sauce.fileType > 1
 			? sauce.fileType * 2
 			: DEFAULT_BIN_COLUMNS;
 	// payloadSize already subtracts the COMNT block and EOF when the
@@ -48,8 +51,9 @@ export const decodeBin = (bytes: Uint8Array): DecodeResult => {
 	// SAUCE trailer as extra canvas rows
 	const payloadSize = sauce ? sauce.payloadSize : bytes.length;
 	// a trailing partial row pads instead of flooring away: PabloDraw
-	// and moebiusXBIN both keep it
-	const rows = Math.max(1, Math.ceil(payloadSize / columns / 2));
+	// and moebiusXBIN both keep it. Whole cells only: a lone odd byte
+	// is no cell and must not open a blank row
+	const rows = Math.max(1, Math.ceil(Math.floor(payloadSize / 2) / columns));
 	if (columns * rows > MAX_DOC_CELLS) {
 		throw new CodecError(`BIN ${columns}x${rows} exceeds the cell ceiling`);
 	}

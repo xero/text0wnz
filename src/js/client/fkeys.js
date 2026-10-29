@@ -8,6 +8,7 @@ import State from './state.js';
 import { $ } from './ui.js';
 import { fitGlyphCanvas, get1xFont } from './glyphScale.js';
 import { pageFromString, pagesForRange } from '../core/charsets.js';
+import { PASTE_SUBSTITUTE } from '../core/paste.js';
 
 const createFKeys = () => {
 	// Stolen "savagely" from Moebius, who stole it "mercilessly" from
@@ -144,7 +145,7 @@ const createFKeys = () => {
 		}
 		State.textArtCanvas
 			.resolveUnicode([~token])
-			.then(resolved => commit(resolved.get(~token) ?? 63));
+			.then(resolved => commit(resolved.get(~token) ?? PASTE_SUBSTITUTE));
 	};
 
 	const updateCharsetButton = page => {

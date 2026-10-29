@@ -47,9 +47,8 @@ describe('Magic Numbers Constants', () => {
 			expect(magicNumbers.DARK_BLOCK).toBe(178);
 		});
 
-		it('should export special block characters', () => {
+		it('should export the middle block character', () => {
 			expect(magicNumbers.MIDDLE_BLOCK).toBe(254);
-			expect(magicNumbers.MIDDLE_DOT).toBe(249);
 		});
 
 		it('should have valid character codes', () => {
@@ -58,7 +57,6 @@ describe('Magic Numbers Constants', () => {
 				magicNumbers.MEDIUM_BLOCK,
 				magicNumbers.DARK_BLOCK,
 				magicNumbers.MIDDLE_BLOCK,
-				magicNumbers.MIDDLE_DOT,
 			];
 
 			blockChars.forEach(charCode => {
@@ -209,9 +207,11 @@ describe('Magic Numbers Constants', () => {
 		});
 
 		it('should have immutable exports', () => {
+			expect(Object.isFrozen(magicNumbers)).toBe(true);
 			expect(() => {
 				magicNumbers.DEFAULT_FONT = 'NewFont';
-			}).not.toThrow();
+			}).toThrow(TypeError);
+			expect(magicNumbers.DEFAULT_FONT).toBe('CP437 8x16');
 		});
 	});
 

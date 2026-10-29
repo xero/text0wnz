@@ -296,6 +296,46 @@ describe('Freehand Tools - Shapes and Fill', () => {
 				expect.any(Function),
 			);
 		});
+
+		it('floods the connected run of the seed color and stops at others', async () => {
+			const State = (await import('../../src/js/client/state.js')).default;
+			const c = State.textArtCanvas;
+			// half-block colors on a 4x1 canvas, one row per half
+			const hb = [
+				[1, 1, 3, 1],
+				[1, 3, 3, 1],
+			];
+			c.getColumns.mockReturnValue(4);
+			c.getRows.mockReturnValue(1);
+			c.getHalfBlock.mockImplementation((x, y) => ({
+				isBlocky: true,
+				halfBlockY: y % 2,
+				upperBlockColor: hb[y - (y % 2)][x],
+				lowerBlockColor: hb[y - (y % 2) + 1][x],
+				textY: y >> 1,
+			}));
+			c.drawHalfBlock.mockImplementation(cb =>
+				cb((color, x, y) => {
+					hb[y][x] = color;
+				}));
+			try {
+				createFillController().enable();
+				const fill = mockDocument.addEventListener.mock.calls
+					.filter(call => call[0] === 'onTextCanvasDown')
+					.at(-1)[1];
+				fill({ detail: { x: 4, halfBlockY: 0 } });
+				expect(c.startUndo).not.toHaveBeenCalled();
+				fill({ detail: { x: 0, halfBlockY: 0 } });
+				expect(c.startUndo).toHaveBeenCalledTimes(1);
+				expect(hb).toEqual([
+					[7, 7, 3, 1],
+					[7, 3, 3, 1],
+				]);
+			} finally {
+				[c.getColumns, c.getRows, c.getHalfBlock, c.drawHalfBlock].forEach(m =>
+					m.mockReset());
+			}
+		});
 	});
 
 	describe('createLineController', () => {

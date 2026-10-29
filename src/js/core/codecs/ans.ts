@@ -130,9 +130,14 @@ const decodeUtf8At = (
 	return fail('invalid UTF-8 byte sequence');
 };
 
-/** Growable screen buffer, v2 ScreenData port (cells as u16 words). */
+/**
+ * Growable screen buffer, v2 ScreenData port (cells as u16 words).
+ * Capacity starts empty and grows on the first write: decodeAns builds
+ * this and the v3 screen but renders into one, and at a 65535-column
+ * SAUCE width the idle one would cost tens of megabytes up front.
+ */
 const createScreen = (width: number) => {
-	let cells = new Uint16Array(width * 100);
+	let cells = new Uint16Array(0);
 	let maxY = 0;
 	const extend = (y: number) => {
 		// hostile newline spam dies at the gate, not in the allocator;
@@ -153,7 +158,7 @@ const createScreen = (width: number) => {
 	};
 	return {
 		reset: () => {
-			cells = new Uint16Array(width * 100);
+			cells = new Uint16Array(0);
 			maxY = 0;
 		},
 		set: (x: number, y: number, charCode: number, fg: number, bg: number) => {
@@ -167,14 +172,19 @@ const createScreen = (width: number) => {
 			}
 		},
 		height: () => maxY + 1,
-		data: () => cells.slice(0, width * (maxY + 1)),
+		data: () => {
+			const out = new Uint16Array(width * (maxY + 1));
+			out.set(cells.subarray(0, out.length));
+			return out;
+		},
 	};
 };
 
 /**
  * Growable v3-plane screen for the UTF-8 reader. Mirrors createScreen's
- * geometry quirks exactly (NaN cursor writes no-op, maxY tracks height)
- * but stores full glyph words and tag-bit color words.
+ * geometry quirks exactly (NaN cursor writes no-op, maxY tracks height,
+ * empty until the first write) but stores full glyph words and tag-bit
+ * color words.
  */
 const createV3Screen = (width: number) => {
 	const BLANK = paletteColor(0);
@@ -183,7 +193,7 @@ const createV3Screen = (width: number) => {
 		fg: new Uint32Array(cells).fill(BLANK),
 		bg: new Uint32Array(cells).fill(BLANK),
 	});
-	let planes = alloc(width * 100);
+	let planes = alloc(0);
 	let maxY = 0;
 	const extend = (y: number) => {
 		// same gate as createScreen: hostile growth dies loud, legal
@@ -203,7 +213,7 @@ const createV3Screen = (width: number) => {
 	};
 	return {
 		reset: () => {
-			planes = alloc(width * 100);
+			planes = alloc(0);
 			maxY = 0;
 		},
 		set: (x: number, y: number, glyph: number, fg: number, bg: number) => {
@@ -220,12 +230,11 @@ const createV3Screen = (width: number) => {
 		},
 		height: () => maxY + 1,
 		planes: () => {
-			const cells = width * (maxY + 1);
-			return {
-				glyph: planes.glyph.slice(0, cells),
-				fg: planes.fg.slice(0, cells),
-				bg: planes.bg.slice(0, cells),
-			};
+			const out = alloc(width * (maxY + 1));
+			out.glyph.set(planes.glyph.subarray(0, out.glyph.length));
+			out.fg.set(planes.fg.subarray(0, out.fg.length));
+			out.bg.set(planes.bg.subarray(0, out.bg.length));
+			return out;
 		},
 	};
 };
@@ -241,11 +250,12 @@ export const decodeAns = (
 	const isUTF8 = options.utf8 ?? false;
 	const sauce = parseSauce(bytes);
 	// v2 getSauce is format-agnostic: a BinaryText record even on an .ans
-	// derives width from FileType; zero means unspecified either way
+	// derives width from FileType; 0 and 1 mean unspecified like
+	// decodeBin's, and a zero TInfo1 too
 	let columns = DEFAULT_ANSI_COLUMNS;
 	if (sauce) {
 		if (sauce.dataType === 5) {
-			if (sauce.fileType > 0) {
+			if (sauce.fileType > 1) {
 				columns = sauce.fileType * 2;
 			}
 		} else if (sauce.tInfo1 > 0) {
@@ -305,10 +315,12 @@ export const decodeAns = (
 	let bgBright = false;
 	let fgExt: number | null = null;
 	let bgExt: number | null = null;
-	// one LF immediately after an auto-wrap is swallowed (UTF-8 only):
-	// real terminals defer the wrap, so full-width rows + LF (the v2
-	// writer's output and encodeUtf8's) mean ONE row, not two
+	// the first LF after an auto-wrap is swallowed (UTF-8 only): real
+	// terminals defer the wrap, so full-width rows + LF (the v2 writer's
+	// output and encodeUtf8's) mean ONE row, not two. ESC[s keeps the
+	// pending wrap with the cursor, so ESC[u brings it back
 	let wrappedPending = false;
+	let savedWrap = false;
 
 	const resetAttributes = () => {
 		foreground = DEFAULT_FOREGROUND;
@@ -333,10 +345,15 @@ export const decodeAns = (
 	};
 	const setPos = (newX: number, newY: number) => {
 		x = Math.min(columns, Math.max(1, newX));
-		// 25 is the bottom of the scroll window (newLine agrees): at 26,
-		// ESC[26;..H escapes it and a later ESC[1B snaps the cursor up
-		// over painted rows. PabloDraw clamps to the canvas rect.
-		y = Math.min(25, Math.max(1, newY));
+		// a row past the 25-row window scrolls it, as newLine does, and
+		// lands where moebiusXBIN (ansi.js, Screen.move) puts it: a clamp
+		// at 25 overwrites the row above, and a cursor left at 26 lets a
+		// later ESC[1B snap up over painted rows
+		y = Math.max(1, newY);
+		if (y > 25) {
+			topOfScreen += y - 25;
+			y = 25;
+		}
 	};
 	const getValues = (missing = 1): number[] =>
 		escapeCode
@@ -494,19 +511,23 @@ export const decodeAns = (
 			escapeCode += String.fromCharCode(code);
 			if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
 				escaped = false;
+				const final = escapeCode.charAt(escapeCode.length - 1);
 				// an empty SGR param means 0, the ECMA-48 §8.3.117 default
 				// (ESC[m resets; PabloDraw, moebiusXBIN, and ANSI.SYS agree);
 				// cursor moves default 1
-				const values = getValues(
-					escapeCode.charAt(escapeCode.length - 1) === 'm' ? 0 : 1,
-				);
+				const values = getValues(final === 'm' ? 0 : 1);
 				if (escapeCode.charAt(0) === '[') {
-					// every CSI except SGR moves or edits, ending a deferred
-					// wrap; SGR between a wrap and its LF must not
-					if (escapeCode.charAt(escapeCode.length - 1) !== 'm') {
+					// only a cursor move ends a deferred wrap. durdraw
+					// (durdraw_ansiparse.py, parse_ansi_escape_codes) wraps
+					// at the next glyph, so SGR, PabloDraw t, ESC[s, EL, and
+					// mode sets between a full row and its LF leave one row.
+					// PabloDraw (Ansi.load.cs, AnsiLoader.ReadChar) and
+					// moebiusXBIN (ansi.js, Screen.put) wrap at the glyph and
+					// never defer, like the CP437 read
+					if ('ABCDHf'.includes(final) || (final === 'J' && values[0] === 2)) {
 						wrappedPending = false;
 					}
-					switch (escapeCode.charAt(escapeCode.length - 1)) {
+					switch (final) {
 						case 'A':
 							y = Math.max(1, y - values[0]);
 							break;
@@ -602,7 +623,7 @@ export const decodeAns = (
 							// ?7 autowrap (moebiusXBIN ignores both)
 							if (escapeCode.charAt(1) === '?') {
 								const mode = parseInt(escapeCode.slice(2), 10);
-								const enable = escapeCode.charAt(escapeCode.length - 1) === 'h';
+								const enable = final === 'h';
 								if (mode === 33) {
 									iceColors = enable;
 								} else if (mode === 7) {
@@ -636,10 +657,12 @@ export const decodeAns = (
 						case 's':
 							savedX = x;
 							savedY = y;
+							savedWrap = wrappedPending;
 							break;
 						case 'u':
 							x = savedX;
 							y = savedY;
+							wrappedPending = savedWrap;
 							break;
 					}
 				}

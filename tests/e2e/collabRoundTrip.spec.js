@@ -211,10 +211,12 @@ test.describe('collab round trip against a live server', () => {
 		const a = await joinPage(browser, 'uni-a');
 		const b = await joinPage(browser, 'uni-b');
 
-		expect(
-			await a.page.evaluate(() =>
-				window.__t0wnz.State.network.extCollab()),
-		).toBe(true);
+		for (const side of [a, b]) {
+			expect(
+				await side.page.evaluate(() =>
+					window.__t0wnz.State.network.extCollab()),
+			).toBe(true);
+		}
 
 		// HEAVY BLACK HEART in truecolor orange, through the editor core
 		// (the same path the tools use)

@@ -32,9 +32,9 @@ The E2E tests validate the application's functionality in a real browser environ
   - Fill tool
 
 - **clipboard.spec.js** - Clipboard operations tests
-  - Copy/paste operations
-  - Cut operations
-  - System clipboard integration
+  - Copy, cut, and paste through the selection tool
+  - Colors and truecolor cells through the clipboard
+  - Paste at the keyboard cursor
 
 - **undoRedo.spec.js** - Undo/redo functionality tests
   - Undo operations
@@ -51,7 +51,7 @@ The E2E tests validate the application's functionality in a real browser environ
   - Color palette visibility
   - Foreground/background color selection
   - ICE colors toggle
-  - Keyboard shortcuts for colors (F, B keys)
+  - Keyboard shortcuts for colors (Ctrl and Alt digits, Q, D)
   - Sample tool (Alt key color picker)
   - Character palette selection
 
@@ -68,17 +68,28 @@ The E2E tests validate the application's functionality in a real browser environ
 
 - **keyboard.spec.js** - Keyboard shortcuts and keyboard mode tests
   - Undo/redo shortcuts (Ctrl+Z, Ctrl+Y)
-  - Tool selection shortcuts (F, C, B, L, S, K keys)
+  - Tool selection shortcuts (F, B, K keys), and letters typing in keyboard mode
   - Keyboard mode entry/exit
   - Arrow key navigation
   - Function key (F1-F12) shortcuts
   - Copy/paste/cut shortcuts (Ctrl+C, Ctrl+V, Ctrl+X)
-  - Delete and Escape keys
+  - Ctrl+Backspace and Escape keys
   - Text input in keyboard mode
   - Home, End, PageUp, PageDown navigation
   - Enter and Backspace keys
 
 - **ui.spec.js** - User interface elements and interactions tests
+  - Main UI element visibility
+  - Responsive layout
+  - Position information display
+  - Toolbar with drawing tools
+  - File operations menu
+  - Canvas settings controls
+  - Font selection interface
+  - Tool highlighting
+  - Modal dialogs
+  - Help and information panels
+
 - **asciiBrush.spec.js** - Ascii brush strokes in line and square modes
 - **autoscroll.spec.js** - Minimap autoscroll stepping and escape
 - **collabMoebius.spec.js** - Joins the vendored vanilla Moebius fixture through the Connect form (Chromium only)
@@ -92,27 +103,19 @@ The E2E tests validate the application's functionality in a real browser environ
 - **refimage.spec.js** - Reference image loading, drag, and persistence
 - **toolSettings.spec.js** - The unified tool settings window
 - **uiprefs.spec.js** - UI preferences and their persistence
-  - Main UI element visibility
-  - Responsive layout
-  - Position information display
-  - Toolbar with drawing tools
-  - File operations menu
-  - Canvas settings controls
-  - Font selection interface
-  - Tool highlighting
-  - Modal dialogs
-  - Help and information panels
 
 ## Running the Tests
 
 ### Prerequisites
 
 1. Build the application:
+
 ```bash
 bun bake
 ```
 
 2. Install Playwright browsers (first time only):
+
 ```bash
 bun test:install
 ```
@@ -169,15 +172,16 @@ The test configuration is in `playwright.config.js` at the root of the project:
 - **Test timeout**: 30 seconds
 - **Retries**: 1 (on failure)
 - **Screenshots**: On failure
-- **Videos**: On failure
-- **Web server**: `bunx serve dist -l 8060`
+- **Traces**: On the first retry
+- **Web server**: `bun www`, which serves `dist/` on port 8060
 
 ## Test Results
 
 Test results are saved to:
+
 - **HTML Report**: `tests/results/playwright-report/`
 - **JSON Results**: `tests/results/e2e/results.json`
-- **Videos/Screenshots**: `tests/results/e2e/`
+- **Screenshots and traces**: `tests/results/e2e/`
 
 To view the HTML report after running tests:
 
@@ -195,63 +199,72 @@ When adding new E2E tests:
    import { test, expect } from '@playwright/test';
    ```
 3. Use `test.describe()` to group related tests
-4. Use `test.beforeEach()` for common setup (navigate to page, wait for load)
+4. Use `test.beforeEach()` for common setup (open `/?test`, then
+   `await bridgeReady(page)`)
 5. Write tests using Playwright's API for user interactions
-6. Use flexible selectors that work even if IDs change
-7. Add appropriate waits (`waitForTimeout`, `waitForSelector`)
+6. Read cells back through the `window.__t0wnz` bridge, which exists
+   only on `/?test` (see `helpers/editorHelpers.js`). A test that only
+   counts `.error` elements passes whether or not the action happened
+7. Wait on a condition, never on the clock. `bridgeReady` waits for
+   the wired editor and the bridge, `clickTool` waits for a lazy tool
+   to light, and web-first assertions such as `toHaveClass()` and
+   `expect.poll()` retry until the state arrives
 8. Assert expected behaviors with `expect()`
 
 ### Example Test
 
 ```javascript
 import { test, expect } from '@playwright/test';
+import { bridgeReady, readRegion } from './helpers/editorHelpers.js';
 
 test.describe('My Feature', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('#canvas-container', { timeout: 10000 });
-    await page.waitForTimeout(1000);
-  });
+	test.beforeEach(async ({ page }) => {
+		await page.goto('/?test');
+		await bridgeReady(page);
+	});
 
-  test('should do something', async ({ page }) => {
-    const element = page.locator('#my-element');
-    await element.click();
-    await page.waitForTimeout(300);
+	test('types into the canvas', async ({ page }) => {
+		// keyboard mode is the boot tool, its cursor parked at 0,0
+		await page.keyboard.type('abc');
 
-    await expect(element).toBeVisible();
-  });
+		await expect.poll(() => readRegion(page, 0, 0, 2, 0)).toEqual(['abc']);
+	});
 });
 ```
 
 ## Best Practices
 
 1. **Wait for elements**: Always wait for elements to be visible/ready before interacting
-2. **Use timeouts**: Add small delays after interactions to allow the UI to update
+2. **Wait on state, not time**: Poll the bridge or use a web-first assertion. A fixed `waitForTimeout` passes on a fast machine and flakes on a slow one, so keep it for timing the app itself measures, such as the palette's double-tap window
 3. **Flexible selectors**: Use multiple selector strategies (ID, class, text, data attributes)
 4. **Test isolation**: Each test should be independent and not rely on previous tests
-5. **Error handling**: Tests should gracefully handle missing optional elements
+5. **Fail loudly**: Assert that an element exists instead of skipping the check when it is missing. An `isVisible()` guard turns a broken feature into a pass
 6. **Clean up**: Use `beforeEach` and `afterEach` for setup and teardown
 7. **Meaningful assertions**: Test actual user-visible behavior, not implementation details
 
 ## Troubleshooting
 
 ### Tests fail with "page.goto: net::ERR_CONNECTION_REFUSED"
-- Ensure the application is built: `npm run bake`
+
+- Ensure the application is built: `bun bake`
 - The web server should start automatically from the config
 - Check that port 8060 is available
 
 ### Browsers not installed
+
 - Run: `bun test:install`
 - Or with dependencies: `bunx playwright install --with-deps`
 
 ### Tests timeout
+
 - Increase timeout in `playwright.config.js`
-- Add longer waits in specific tests
+- Check that the page was opened with `/?test`, or `bridgeReady` waits for a bridge that never loads
 - Check if the application is loading slowly
 
 ### Tests are flaky
-- Add explicit waits (`waitForTimeout`, `waitForSelector`)
-- Use `waitForLoadState('networkidle')` for complex pages
+
+- Replace fixed waits with a condition: `expect.poll()` over a bridge read, a web-first assertion, or `page.waitForFunction()`
+- Switch tools through `clickTool`, so a stroke never lands before a lazy tool loads
 - Increase retry count in config
 
 ## Additional Resources

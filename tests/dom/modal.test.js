@@ -320,20 +320,6 @@ describe('Modal DOM Tests', () => {
 				{ timeout: 1000 },
 			);
 		});
-
-		it('should focus first focusable element when modal opens', async () => {
-			const aboutSection = modal.querySelector('#aboutModal');
-			const input = document.createElement('input');
-			input.type = 'text';
-			input.id = 'modalInput';
-			aboutSection.appendChild(input);
-
-			modalController.open('about');
-
-			// focus management belongs to the implementation; focus manually
-			input.focus();
-			expect(document.activeElement).toBe(input);
-		});
 	});
 
 	describe('Modal State Management', () => {

@@ -921,21 +921,14 @@ describe('UI Utilities', () => {
 	});
 
 	describe('createGrid', () => {
-		it('should be a function that creates grid controller', async () => {
+		it('starts hidden without a saved preference', async () => {
 			const { createGrid } = await import('../../src/js/client/ui.js');
-
-			expect(typeof createGrid).toBe('function');
-
 			const container = document.createElement('div');
 			document.body.appendChild(container);
 
-			expect(() => {
-				try {
-					createGrid(container);
-				} catch {
-					// only callability is pinned here
-				}
-			}).not.toThrow();
+			const grid = createGrid(container);
+			expect(grid.isShown()).toBe(false);
+			expect(container.classList.contains('enabled')).toBe(false);
 		});
 
 		it('restores a saved preference at creation', async () => {

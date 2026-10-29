@@ -25,24 +25,3 @@ export async function openFile(page, filePath) {
 		{ timeout: 15000 },
 	);
 }
-
-export async function openFileViaDragDrop(_page, _filePath) {
-	throw new Error('Not implemented - use openFile() instead');
-}
-
-export async function openFileViaURL(page, fileURL) {
-	const loaded = await page.evaluate(url => {
-		if (window.Load && window.Load.loadFileFromUrl) {
-			window.Load.loadFileFromUrl(url);
-			return true;
-		}
-		return false;
-	}, fileURL);
-
-	if (!loaded) {
-		throw new Error('Load API not available on window object');
-	}
-
-	// TODO: Replace timeout with specific loading complete indicator
-	await page.waitForTimeout(2000);
-}

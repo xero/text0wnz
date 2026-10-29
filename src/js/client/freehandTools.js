@@ -1796,7 +1796,9 @@ const createSampleTool = async (
 	characterBrush,
 	characterElement,
 ) => {
-	const sample = async (x, halfBlockY) => {
+	// keepTool: an Alt sample is a modifier on the active tool, so only
+	// a sample tool click steps back to the previous tool
+	const sample = async (x, halfBlockY, keepTool = false) => {
 		let block = State.textArtCanvas.getHalfBlock(x, halfBlockY);
 		if (block.isBlocky) {
 			if (block.halfBlockY === 0) {
@@ -1804,7 +1806,9 @@ const createSampleTool = async (
 			} else {
 				State.palette.setForegroundColor(block.lowerBlockColor);
 			}
-			Toolbar.returnToPreviousTool();
+			if (!keepTool) {
+				Toolbar.returnToPreviousTool();
+			}
 		} else {
 			block = State.textArtCanvas.getBlock(block.x, Math.floor(block.y / 2));
 			State.palette.setForegroundColor(block.foregroundColor);

@@ -1,5 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { clickTool } from './helpers/editorHelpers.js';
+import {
+	bridgeReady,
+	clickTool,
+	drag,
+	parkToolSettings,
+	readBlock,
+} from './helpers/editorHelpers.js';
 import {
 	concatBytes,
 	makeAnsi,
@@ -9,146 +15,114 @@ import {
 
 test.describe('File Operations', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
+		await page.goto('/?test');
+		await bridgeReady(page);
 	});
 
-	test('should have file menu or file buttons', async ({ page }) => {
-		const newButton = page.locator('#new, button:has-text("New")');
-		const openButton = page.locator(
-			'#open, #openFile, button:has-text("Open")',
-		);
-		const saveButton = page.locator('#save, button:has-text("Save")');
+	test('the file menu lists New, Open, and the save formats', async ({ page }) => {
+		await page.locator('#fileMenu button').click();
+		await expect(page.locator('#new')).toBeVisible();
+		await expect(page.locator('#open')).toBeVisible();
 
-		const newCount = await newButton.count();
-		const openCount = await openButton.count();
-		const saveCount = await saveButton.count();
-
-		expect(newCount + openCount + saveCount).toBeGreaterThan(0);
+		// the save items sit inside the collapsed "Save as" group
+		await page.locator('#fileList summary', { hasText: 'Save as' }).click();
+		for (const id of [
+			'saveAnsi',
+			'saveBin',
+			'saveXbin',
+			'saveTundra',
+			'saveDur',
+			'saveOwnz',
+		]) {
+			await expect(page.locator(`#${id}`)).toBeVisible();
+		}
 	});
+
+	const docFlags = page =>
+		page.evaluate(() => {
+			const { State } = window.__t0wnz;
+			return [
+				State.textArtCanvas.getIceColors(),
+				State.font.getLetterSpacing(),
+			];
+		});
+
+	const newDocument = async page => {
+		await page.locator('#navICE').click();
+		await page.locator('#nav9pt').click();
+		await expect(page.locator('#navICE')).toHaveClass(/enabled/);
+		await expect(page.locator('#nav9pt')).toHaveClass(/enabled/);
+
+		await page.locator('#fileMenu button').click();
+		await page.locator('#new').click();
+		await page.locator('#warningYes').click();
+	};
 
 	test('should create new document', async ({ page }) => {
-		const fileMenuButton = page.locator('#fileMenu button');
-		await fileMenuButton.click();
-		await page.waitForTimeout(200);
+		await page.evaluate(() => window.__t0wnz.State.textArtCanvas.resize(100, 30));
+		await expect(page.locator('#resolutionLabel')).toHaveText('100x30');
+		await newDocument(page);
 
-		const newButton = page.locator('#new');
-
-		await newButton.click();
-		await page.waitForTimeout(500);
-
-		const warningYes = page.locator('#warningYes');
-		if (await warningYes.isVisible()) {
-			await warningYes.click();
-		}
-		await page.waitForTimeout(500);
+		await expect(page.locator('#resolutionLabel')).toHaveText('80x25');
+		await expect.poll(() => docFlags(page)).toEqual([false, false]);
 	});
 
-	test('should open file dialog', async ({ page }) => {
-		const fileMenuButton = page.locator('#fileMenu button');
-		await fileMenuButton.click();
-		await page.waitForTimeout(200);
+	test('a new document turns the iCE and 9pt chips off', async ({ page }) => {
+		await newDocument(page);
+		await expect.poll(() => docFlags(page)).toEqual([false, false]);
+		await expect(page.locator('#navICE')).not.toHaveClass(/enabled/);
+		await expect(page.locator('#nav9pt')).not.toHaveClass(/enabled/);
 
-		// target the visible menu item, not the hidden file input
-		const openButton = page.locator('#open');
-
-		if ((await openButton.count()) > 0) {
-			// the upload itself is untestable here; pin the menu item
-			await expect(openButton.first()).toBeVisible();
-		}
+		// one click turns each back on: a stale chip would need two
+		await page.locator('#navICE').click();
+		await page.locator('#nav9pt').click();
+		await expect.poll(() => docFlags(page)).toEqual([true, true]);
 	});
 
-	test('should have save options', async ({ page }) => {
-		const fileMenuButton = page.locator('#fileMenu button');
-		await fileMenuButton.click();
-		await page.waitForTimeout(200);
+	test('Open hands the chosen file to the loader', async ({ page }) => {
+		await page.locator('#fileMenu button').click();
+		const [chooser] = await Promise.all([
+			page.waitForEvent('filechooser'),
+			page.locator('#open').click(),
+		]);
+		await chooser.setFiles({
+			name: 'hi.ans',
+			mimeType: 'application/octet-stream',
+			buffer: Buffer.from('HI'),
+		});
 
-		const saveAsAnsi = page.locator(
-			'#saveAnsi, #saveAsAnsi, button:has-text("ANSi")',
-		);
-		const saveAsBin = page.locator(
-			'#saveBin, #saveAsBin, button:has-text("Binary")',
-		);
-		const saveAsXbin = page.locator(
-			'#saveXbin, #saveAsXbin, button:has-text("XBin")',
-		);
-		const saveAsPng = page.locator(
-			'#savePng, #saveAsPng, button:has-text("PNG")',
-		);
-
-		const ansiCount = await saveAsAnsi.count();
-		const binCount = await saveAsBin.count();
-		const xbinCount = await saveAsXbin.count();
-		const pngCount = await saveAsPng.count();
-
-		const totalSaveOptions = ansiCount + binCount + xbinCount + pngCount;
-		expect(totalSaveOptions).toBeGreaterThan(0);
-	});
-
-	test('should have SAUCE metadata fields', async ({ page }) => {
-		const sauceTitle = page.locator('#sauceTitle, #title');
-		const sauceAuthor = page.locator('#sauceAuthor, #author');
-		const sauceGroup = page.locator('#sauceGroup, #group');
-
-		const titleCount = await sauceTitle.count();
-		const authorCount = await sauceAuthor.count();
-		const groupCount = await sauceGroup.count();
-
-		expect(titleCount + authorCount + groupCount).toBeGreaterThan(0);
+		await expect.poll(async () => (await readBlock(page, 1, 0)).charCode).toBe(73);
+		expect((await readBlock(page, 0, 0)).charCode).toBe(72);
 	});
 
 	test('should fill SAUCE metadata', async ({ page }) => {
-		const sauceTitle = page.locator('#sauceTitle');
-		const sauceAuthor = page.locator('#sauceAuthor');
-		const sauceGroup = page.locator('#sauceGroup');
+		await page.locator('#navSauce').click();
+		await page.locator('#sauceTitle').fill('Test Artwork');
+		await page.locator('#sauceAuthor').fill('Test Author');
+		await page.locator('#sauceGroup').fill('Test Group');
+		await page.locator('#sauceDone').click();
 
-		if (await sauceTitle.isVisible()) {
-			await sauceTitle.fill('Test Artwork');
-		}
-		if (await sauceAuthor.isVisible()) {
-			await sauceAuthor.fill('Test Author');
-		}
-		if (await sauceGroup.isVisible()) {
-			await sauceGroup.fill('Test Group');
-		}
-
-		await page.waitForTimeout(300);
+		await expect(page.locator('#sauceInfoTitle')).toHaveText('Test Artwork');
+		await expect(page.locator('#sauceInfoByline')).toHaveText(
+			'Test Author / Test Group',
+		);
 	});
 });
 
 test.describe('Canvas Operations', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
+		await parkToolSettings(page);
+		await page.goto('/?test');
+		await bridgeReady(page);
 	});
 
 	test('should resize canvas', async ({ page }) => {
-		const resizeButton = page.locator('#navRes, button:has-text("Resize")');
+		await page.locator('#resolution').click();
+		await page.locator('#columnsInput').fill('100');
+		await page.locator('#rowsInput').fill('40');
+		await page.locator('#resizeApply').click();
 
-		if ((await resizeButton.count()) > 0) {
-			await resizeButton.first().click();
-			await page.waitForTimeout(300);
-
-			const columnsInput = page.locator(
-				'#columnsInput, #width, input[name="columns"]',
-			);
-			const rowsInput = page.locator('#rowsInput, #height, input[name="rows"]');
-
-			if ((await columnsInput.count()) > 0 && (await rowsInput.count()) > 0) {
-				await columnsInput.first().fill('100');
-				await rowsInput.first().fill('40');
-
-				const confirmButton = page.locator(
-					'button:has-text("Resize"), button:has-text("OK"), button:has-text("Apply")',
-				);
-				if ((await confirmButton.count()) > 0) {
-					await confirmButton.first().click();
-					await page.waitForTimeout(500);
-				}
-			}
-		}
+		await expect(page.locator('#resolutionLabel')).toHaveText('100x40');
 	});
 
 	test('should toggle ICE colors', async ({ page }) => {
@@ -213,61 +187,29 @@ test.describe('Canvas Operations', () => {
 		await expect(spacingToggle).toHaveClass(/enabled/);
 	});
 
-	test('should have font selection', async ({ page }) => {
-		const fontSelector = page.locator(
-			'#fonts, #fontSelect, select[name="font"]',
-		);
-		const fontButton = page.locator('#fontToolbar, button:has-text("Font")');
-
-		const selectorCount = await fontSelector.count();
-		const buttonCount = await fontButton.count();
-
-		expect(selectorCount + buttonCount).toBeGreaterThan(0);
-	});
-
 	test('should change font', async ({ page }) => {
-		const fontsButton = page.locator('#changeFont');
+		const current = page.locator('#currentFontDisplay');
+		await expect(current).toHaveText('CP437 8x16');
 
-		if (await fontsButton.isVisible()) {
-			await fontsButton.click();
-			await page.waitForTimeout(500);
+		await page.locator('#changeFont').click();
+		await page.locator('#font-topaz-437-8x16').click();
+		await page.locator('#fontsApply').click();
 
-			const fontOptions = page.locator('.fontOption, [data-font]');
-			const count = await fontOptions.count();
-
-			if (count > 0) {
-				await fontOptions.nth(1).click();
-				await page.waitForTimeout(500);
-			}
-		}
+		await expect(current).toHaveText('Topaz-437 8x16');
 	});
 
 	test('should clear canvas', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-		const box = await canvas.boundingBox();
+		const ink = async () =>
+			![0, 32].includes((await readBlock(page, 8, 5)).charCode);
+		await clickTool(page, 'halfblock');
+		await drag(page, [5, 5], [12, 5]);
+		expect(await ink()).toBe(true);
 
-		if (box) {
-			await page.locator('#brushes').click();
-			await page.waitForTimeout(200);
-			await clickTool(page, 'halfblock');
-			await page.mouse.move(box.x + 50, box.y + 50);
-			await page.mouse.down();
-			await page.mouse.move(box.x + 100, box.y + 100);
-			await page.mouse.up();
-			await page.waitForTimeout(300);
-		}
-
-		const fileMenuButton = page.locator('#fileMenu button');
-		await fileMenuButton.click();
-		await page.waitForTimeout(200);
-
+		await page.locator('#fileMenu button').click();
 		await page.locator('#new').click();
-		await page.waitForTimeout(500);
-		const warningYes = page.locator('#warningYes');
-		if (await warningYes.isVisible()) {
-			await warningYes.click();
-		}
-		await page.waitForTimeout(500);
+		await page.locator('#warningYes').click();
+
+		await expect.poll(ink).toBe(false);
 	});
 });
 
@@ -297,28 +239,5 @@ test.describe('Export Operations', () => {
 		await page.locator('#exportCancel').click();
 		await page.waitForTimeout(200);
 		await expect(modal).not.toBeVisible();
-	});
-
-	test('should have export options available', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-		const box = await canvas.boundingBox();
-
-		if (box) {
-			await page.locator('#brushes').click();
-			await page.waitForTimeout(200);
-			await clickTool(page, 'halfblock');
-			await page.mouse.move(box.x + 50, box.y + 50);
-			await page.mouse.down();
-			await page.mouse.move(box.x + 100, box.y + 100);
-			await page.mouse.up();
-			await page.waitForTimeout(300);
-		}
-
-		const saveOptions = page.locator(
-			'#saveAnsi, #saveBin, #saveXbin, #savePng, [id^="save"]',
-		);
-		const count = await saveOptions.count();
-
-		expect(count).toBeGreaterThan(0);
 	});
 });

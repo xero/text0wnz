@@ -218,13 +218,13 @@ const openHandler = (file, opts = {}) => {
 	Load.file(
 		file,
 		async (
-			columns,
-			rows,
-			imageData,
-			iceColors,
+			_columns,
+			_rows,
+			_imageData,
+			_iceColors,
 			letterSpacing,
 			fontName,
-			docNative,
+			doc,
 		) => {
 			if (seq !== openSeq) {
 				return;
@@ -245,24 +245,14 @@ const openHandler = (file, opts = {}) => {
 				if (seq !== openSeq) {
 					return;
 				}
-				if (docNative) {
-					// tnd/dur/0wnz: plane-native load keeps truecolor and
-					// frames; legacy consumers read the lossy u16 mirror
-					if (typeof letterSpacing === 'boolean') {
-						// setDocData has no spacing seam; an explicit SAUCE
-						// flag lands on the font like the u16 path's
-						State.font.setLetterSpacing(letterSpacing);
-					}
-					State.textArtCanvas.setDocData(docNative);
-				} else {
-					State.textArtCanvas.setImageData(
-						columns,
-						rows,
-						imageData,
-						iceColors,
-						letterSpacing,
-					);
+				// every format lands plane native, which keeps truecolor
+				// and frames; legacy consumers read the lossy u16 mirror.
+				// setDocData has no spacing seam, so an explicit SAUCE flag
+				// lands on the font first
+				if (typeof letterSpacing === 'boolean') {
+					State.font.setLetterSpacing(letterSpacing);
 				}
+				State.textArtCanvas.setDocData(doc);
 				// the reset event fires only on REAL loads: onOpenedFile
 				// also rides buffer swaps (row ops, collab resyncs) which
 				// must never re-home the cursor, selection, or minimap
@@ -1195,11 +1185,17 @@ const initializeAppComponents = async () => {
 		nav9pt.sync(State.font.getLetterSpacing, State.font.setLetterSpacing);
 		navICE.update();
 	};
-	['onPaletteChange', 'onFontChange', 'onXBFontLoaded', 'onOpenedFile'].forEach(
-		e => {
-			document.addEventListener(e, updateFontDisplay);
-		},
-	);
+	// New resets iCE and 9pt after its font change fires, so the chips
+	// resync on onNewDocument too
+	[
+		'onPaletteChange',
+		'onFontChange',
+		'onXBFontLoaded',
+		'onOpenedFile',
+		'onNewDocument',
+	].forEach(e => {
+		document.addEventListener(e, updateFontDisplay);
+	});
 	const syncFavStar = () => {
 		$('fontFavToggle').innerHTML = fontSelect.isFavorite()
 			? '&#9733;'
@@ -1429,26 +1425,44 @@ const initializeAppComponents = async () => {
 		},
 	);
 
-	Toolbar.addLazy($('sample'), async () => {
-		const { createSampleTool } = await import('./freehandTools.js');
-		await ensureBrushesLoaded();
+	// Alt samples under every tool, so the sampler loads on the first
+	// Alt click as well as on the first #sample click
+	let samplerLoading = null;
+	const ensureSampler = () => {
+		samplerLoading ??= (async () => {
+			const { createSampleTool } = await import('./freehandTools.js');
+			await ensureBrushesLoaded();
+			return createSampleTool(
+				shadeBrush,
+				$('shadingBrush'),
+				characterBrush,
+				$('characterBrush'),
+			);
+		})().catch(error => {
+			samplerLoading = null;
+			throw error;
+		});
+		return samplerLoading;
+	};
+	State.sampleTool = {
+		sample: (x, halfBlockY) =>
+			ensureSampler()
+				.then(sampler => sampler.sample(x, halfBlockY, true))
+				.catch(error => console.error('[App] could not sample:', error)),
+	};
 
-		State.sampleTool = await createSampleTool(
-			shadeBrush,
-			$('shadingBrush'),
-			characterBrush,
-			$('characterBrush'),
-		);
+	Toolbar.addLazy($('sample'), async () => {
+		const sampler = await ensureSampler();
 		const focusSample = () => {
 			if (State.textArtCanvas.getMirrorMode()) {
 				State.textArtCanvas.setMirrorMode(false);
 				mirrorToggle.update();
 			}
-			State.sampleTool.enable();
+			sampler.enable();
 		};
 		return {
 			onFocus: focusSample,
-			onBlur: State.sampleTool.disable,
+			onBlur: sampler.disable,
 			enable: focusSample,
 		};
 	});

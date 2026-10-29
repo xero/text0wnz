@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
 import {
+	bridgeReady,
 	waitForEditorReady,
 	focusCanvas,
 	getViewportScrollPosition,
+	readRegion,
 } from './helpers/editorHelpers.js';
 import { openFile } from './helpers/openFile.js';
 import path from 'path';
@@ -15,8 +17,9 @@ test.use({ screenshot: 'on' });
 
 test.describe('File Open and Scrolling', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
+		await page.goto('/?test');
 		await waitForEditorReady(page);
+		await bridgeReady(page);
 	});
 
 	test('opens example ANSI file via file open', async ({ page }) => {
@@ -27,17 +30,16 @@ test.describe('File Open and Scrolling', () => {
 
 		await openFile(page, exampleFilePath);
 
-		// TODO: replace with a specific indicator for load completion
-		await page.waitForTimeout(1500);
-
 		const canvasContainer = page.locator('#canvasContainer');
 		await expect(canvasContainer).toBeVisible();
 
-		// TODO: assert on loaded content once the editor exposes it; for
-		// now pin that at least one canvas exists
-		const canvases = page.locator('#canvasContainer canvas');
-		const canvasCount = await canvases.count();
-		expect(canvasCount).toBeGreaterThan(0);
+		// the file's SAUCE record names it, and its second row opens
+		// with a greeting
+		await expect(page.locator('#sauceInfoTitle')).toHaveText('defcon26');
+		await expect(page.locator('#resolutionLabel')).toHaveText('80x132');
+		await expect
+			.poll(() => readRegion(page, 3, 1, 30, 1))
+			.toEqual(['this one goes out to all the']);
 
 		const positionInfo = page.locator('#positionInfo');
 		await expect(positionInfo).toBeVisible();

@@ -175,7 +175,7 @@ describe('join doc RLE', () => {
 });
 
 describe('palettes', () => {
-	it('expands 6-bit with top-bit replication (palette.js:308)', () => {
+	it('expands 6-bit with top-bit replication, like moebiusXBIN palette.js, convert_6_to_8bits()', () => {
 		expect(expand6to8(0)).toBe(0);
 		expect(expand6to8(63)).toBe(255);
 		expect(expand6to8(0x2a)).toBe((0x2a << 2) | ((0x2a & 0x30) >> 4));
@@ -388,7 +388,7 @@ describe('v3 doc to join doc', () => {
 	});
 });
 
-describe('hostile RLE (review pass)', () => {
+describe('hostile RLE', () => {
 	it('rejects oversized runs BEFORE allocating', () => {
 		const started = performance.now();
 		expect(() =>

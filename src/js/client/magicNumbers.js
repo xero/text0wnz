@@ -16,7 +16,6 @@ const LIGHT_BLOCK = 176; // ░
 const MEDIUM_BLOCK = 177; // ▒
 const DARK_BLOCK = 178; // ▓
 const MIDDLE_BLOCK = 254; // ■
-const MIDDLE_DOT = 249; // ∙
 const CHAR_BELL = 7; // (BEL)
 const CHAR_NULL = 0; // (NUL)
 const CHAR_SPACE = 32; // ( )
@@ -58,7 +57,7 @@ const PEN_PALM_GRACE_MS = 500;
 // iOS Safari refuses canvases above ~16.7 megapixels
 const MAX_CANVAS_AREA = 16777216;
 
-export default {
+export default Object.freeze({
 	DEFAULT_FONT,
 	DEFAULT_FONT_WIDTH,
 	DEFAULT_FONT_HEIGHT,
@@ -71,7 +70,6 @@ export default {
 	MEDIUM_BLOCK,
 	DARK_BLOCK,
 	MIDDLE_BLOCK,
-	MIDDLE_DOT,
 	CHAR_BELL,
 	CHAR_NULL,
 	CHAR_NBSP,
@@ -103,4 +101,4 @@ export default {
 	GESTURE_STROKE_HOLD_MS,
 	PEN_PALM_GRACE_MS,
 	MAX_CANVAS_AREA,
-};
+});
