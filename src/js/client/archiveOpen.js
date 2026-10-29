@@ -1,9 +1,7 @@
 /**
- * Native archive opens: File > Open, drag-drop, and PWA file launches
- * can hand the editor a zip or an amiga lha/lzh colly. A lone openable
- * entry opens straight away; several raise the picker modal. Amiga
- * archives open the way the arena browser opens them, latin-1 bytes in
- * Topaz, while zip entries keep the editor's cp437 defaults.
+ * lha/lzh is the amiga packer, so those entries open the way the arena
+ * browser opens them, latin-1 bytes in Topaz, while zip entries keep
+ * the editor's cp437 defaults.
  */
 import State from './state.js';
 import { $ } from './ui.js';
@@ -33,8 +31,6 @@ const createArchiveOpener = ({ openFile }) => {
 	}
 	const say = makeSay(status);
 
-	// errors land in the picker modal itself: the editor has no
-	// free-standing error dialog
 	const fail = message => {
 		list.textContent = '';
 		say(message, true);

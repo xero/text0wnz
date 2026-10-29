@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Toolbar from '../../src/js/client/toolbar.js';
 
-// Mock State module
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		menus: { close: vi.fn() },
@@ -181,11 +180,10 @@ describe('Toolbar', () => {
 			const tool2 = Toolbar.add(button2, onFocus2, onBlur2);
 
 			tool1.enable();
-			vi.clearAllMocks(); // Clear the calls from initial enable
+			vi.clearAllMocks();
 
-			// Enable second tool (makes first tool the "previous" tool)
 			tool2.enable();
-			vi.clearAllMocks(); // Clear the calls from switching
+			vi.clearAllMocks();
 
 			Toolbar.returnToPreviousTool();
 
@@ -463,7 +461,7 @@ describe('Toolbar', () => {
 
 		it('should maintain correct state with empty tool IDs', () => {
 			const button = document.createElement('div');
-			button.id = ''; // Empty ID
+			button.id = '';
 			const onFocus = vi.fn();
 
 			const tool = Toolbar.add(button, onFocus, vi.fn());
@@ -487,7 +485,6 @@ describe('Toolbar', () => {
 
 			tool1.enable();
 
-			// Enable second tool (makes first tool the "previous" tool)
 			tool2.enable();
 			vi.clearAllMocks();
 

@@ -314,7 +314,6 @@ describe('selection move mode', () => {
 		State.selectionCursor.hide();
 		tool.disable();
 		tool.enable();
-		// the rect comes back at the moved content, move mode stays off
 		expect(State.selectionCursor.getSelection()).toEqual({
 			x: 20,
 			y: 7,

@@ -1,10 +1,8 @@
 /**
- * Golden screenshot suite: the pixel-regression harness for the
- * renderer. Matrix: fixture (CP437 bin / ice bin / 512-glyph
- * XBin with custom palette) x font (CP437, Topaz 1200) x zoom (1, 2) x
- * letter spacing (8px, 9px), minus nonsense combos. Plus real artwork
- * (docs/examples, the author's own pieces): dense shading/color coverage and
- * a real ANSI escape-code parse that no synthetic testcard reaches.
+ * Golden screenshot suite: the renderer's pixel-regression harness. The
+ * real artwork (docs/examples, the author's own pieces) adds dense
+ * shading/color coverage and a real ANSI escape-code parse that no
+ * synthetic testcard reaches.
  *
  * Goldens are generated ONLY in the CI container (linux, dpr 1); local runs
  * on other machines execute the flows but skip pixel assertions

@@ -3,7 +3,6 @@ import { loadFontFromXBData } from './font.js';
 import { getZoomController } from './zoom.js';
 import { mirrorCharCode } from '../core/index';
 
-// Utilities for DOM manipulation
 const D = document,
 			$ = D.getElementById.bind(D),
 			$$ = D.querySelector.bind(D),
@@ -77,9 +76,8 @@ const armFullscreenIcon = button => {
 			document.fullscreenElement ||
 			document.webkitFullscreenElement ||
 			document.webkitCurrentFullScreenElement;
-		// iconHref: the bake hashes the sprite, a literal path dies in
-		// prod. remountUse replaces the node (the iPadOS swap fix), so
-		// the chip's use is re-queried every sync, never captured
+		// remountUse replaces the node (the iPadOS swap fix), so the
+		// chip's use is re-queried every sync, never captured
 		remountUse(
 			button.querySelector('use'),
 			iconHref(active ? 'contract' : 'expand'),
@@ -90,7 +88,6 @@ const armFullscreenIcon = button => {
 	sync();
 };
 
-// Modal
 const createModalController = modal => {
 	const modals = [
 		$('aboutModal'),
@@ -182,7 +179,6 @@ const createModalController = modal => {
 		current = name;
 		const section = name + 'Modal';
 		if ($(section)) {
-			// cancel current close event
 			if (closingTimeout || transitionHandler) {
 				cancelPendingClose();
 				classList(modal, 'closing', false);
@@ -205,7 +201,6 @@ const createModalController = modal => {
 				});
 			}
 		} else {
-			// the template was Ruby-spelled (#{}) and printed literally;
 			// never recurse when the error modal ITSELF is the unknown
 			console.error(`Unknown modal: ${section}`);
 			if (name !== 'error') {
@@ -256,14 +251,13 @@ const createModalController = modal => {
 				modal.close();
 				current = false;
 			};
-			// Close as soon as the dialog transition ends; the timeout is a
-			// fallback for environments without transitions
 			transitionHandler = e => {
 				if (e.target === modal) {
 					finishClose();
 				}
 			};
 			modal.addEventListener('transitionend', transitionHandler);
+			// fallback for environments without transitions
 			closingTimeout = setTimeout(finishClose, 700);
 		}
 	};
@@ -309,7 +303,6 @@ const createModalController = modal => {
 	};
 };
 
-// Toggles
 const createSettingToggle = (el, getter, setter) => {
 	let currentSetting;
 	let g = getter;
@@ -363,9 +356,8 @@ const IME_COMMIT_WINDOW_MS = 40;
    a muted keydown keeps its default, and a real action key then still
    arrives through beforeinput. Cancelled keydowns never reach
    beforeinput, so the paths cannot double-fire. In a textarea a line
-   break is content, never submission, so only the keydown path (the
-   old desktop behavior) acts there and soft keyboards keep their
-   newline. */
+   break is content, never submission, so only the keydown path acts
+   there and soft keyboards keep their newline. */
 const onEnter = (el, fn) => {
 	let composedAt = 0;
 	el.addEventListener('compositionend', () => {
@@ -423,10 +415,6 @@ const onFileChange = (el, func) => {
 	});
 };
 
-/**
- * The sidebar cursor panel: col/row readout sized for 5-digit rows, a
- * jump-to-row field behind the row number, and a scrubbable depth bar.
- */
 const createPositionInfo = el => {
 	const row = document.createElement('div');
 	row.className = 'cursorReadout';
@@ -453,7 +441,6 @@ const createPositionInfo = el => {
 	el.append(row, depth);
 
 	const viewport = $('viewport');
-	// the phone top strip carries a compact copy of the readout
 	const stripPos = $('topStripPos');
 	const rowCount = () => State.textArtCanvas?.getRows?.() ?? 0;
 
@@ -594,18 +581,16 @@ const createPositionInfo = el => {
 };
 
 const viewportTap = view => {
-	// Menu close, plus the margin gesture: a quick 2-finger tap on the
-	// viewport OUTSIDE the canvas still undoes. On the canvas itself the
-	// gesture recognizer owns taps; filtering by target keeps both
-	// layers from seeing the same tap (a double undo).
+	// on the canvas the gesture recognizer owns taps; this layer takes
+	// only margin taps, so both never undo the same tap
 	const maxTapDuration = 300;
 	let touchStartTime = 0;
 	let eligible = false;
 
 	view.addEventListener('touchstart', event => {
 		State.flyouts?.close();
-		// judge EVERY touch, not just the one that fired this event: one
-		// finger on the canvas and one off used to undo here AND in the
+		// judge EVERY touch, not just the one that fired this event, or
+		// one finger on the canvas and one off undoes here AND in the
 		// canvas gesture recognizer
 		const anyOnCanvas = [...event.touches].some(
 			touch =>
@@ -641,9 +626,9 @@ const viewportTap = view => {
 };
 
 /**
- * True when the keydown target is a text-entry surface (chat, SAUCE
- * fields, shape-toolbar selects): document-level shortcut handlers
- * must stay inert there or typing fires app actions underneath.
+ * Document-level shortcut handlers must stay inert on text-entry
+ * surfaces (chat, SAUCE fields, shape-toolbar selects), or typing
+ * fires app actions underneath.
  * @param {EventTarget | null} t
  */
 const isTextEntry = t => {
@@ -668,16 +653,13 @@ const undoAndRedo = e => {
 		!e.altKey &&
 		e.code === 'KeyZ'
 	) {
-		// Ctrl/Cmd+Z - Undo
+		// the shift check keeps Ctrl+Shift+Z, a redo, from undoing
 		e.preventDefault();
 		State.textArtCanvas.undo();
 	} else if (
 		(e.ctrlKey && !e.shiftKey && e.code === 'KeyY') ||
 		((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyZ')
 	) {
-		// Ctrl+Y, Ctrl+Shift+Z, or Cmd+Shift+Z - Redo (the old ctrl
-		// branch never looked at shift, so Ctrl+Shift+Z walked history
-		// backwards)
 		e.preventDefault();
 		State.textArtCanvas.redo();
 	}
@@ -700,7 +682,6 @@ const createPaintShortcuts = keyPair => {
 		if (!ignored) {
 			if (!e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
 				if (e.key >= '0' && e.key <= '7') {
-					// Number keys 0-7 for color shortcuts
 					const color = parseInt(e.key, 10);
 					const currentColor = State.palette.getForegroundColor();
 					if (currentColor === color) {
@@ -709,7 +690,6 @@ const createPaintShortcuts = keyPair => {
 						State.palette.setForegroundColor(color);
 					}
 				} else {
-					// Use the actual key character for lookup
 					if (keyPair[e.key] !== undefined) {
 						if (isConnected(e)) {
 							e.preventDefault();
@@ -724,7 +704,6 @@ const createPaintShortcuts = keyPair => {
 	const keyDownWithCtrl = e => {
 		if (!ignored) {
 			if (e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
-				// Use the actual key character for lookup
 				if (keyPair[e.key] !== undefined) {
 					if (isConnected(e)) {
 						e.preventDefault();
@@ -805,11 +784,9 @@ const iconSvg = name => {
 };
 
 /**
- * An n-way radio row in the toggle button's visual family. Options are
- * {value, label, glyph?, icon?}; a glyph renders as a small vocabulary
- * preview above the label, an icon as a sprite from icons.svg. set()
- * moves the selection without firing onChange, so controllers can
- * restore persisted values silently.
+ * Options are {value, label, glyph?, icon?}. set() moves the selection
+ * without firing onChange, so controllers can restore persisted values
+ * silently.
  */
 const createSegmentedControl = (id, options, onChange) => {
 	const group = document.createElement('DIV');
@@ -977,7 +954,6 @@ const createGrid = el => {
 	};
 
 	const resize = () => {
-		// Only rebuild while the grid is shown; it is created lazily on toggle
 		if (canvases.length > 0) {
 			destroyGrid();
 		}
@@ -1015,7 +991,6 @@ const createGrid = el => {
 		}
 	};
 
-	// the preference survives reloads, like the minimap's
 	let stored = null;
 	try {
 		stored = localStorage.getItem('gridVisible');
@@ -1316,7 +1291,6 @@ const createFontSelect = (el, lbl, img, btn) => {
 			image.src = `${State.fontDir}${fontName}.png`;
 		}
 	}
-	// Listeners
 	listbox.addEventListener('keydown', e => {
 		const options = getOptions();
 		if (e.key === 'ArrowDown' && focusedIdx < options.length - 1) {
@@ -1346,8 +1320,6 @@ const createFontSelect = (el, lbl, img, btn) => {
 	listbox.addEventListener('blur', () =>
 		getOptions().forEach(opt => opt.classList.remove('focused')));
 
-	// font browser favorites: starred fonts pin to a Favorites group
-	// at the top of the listbox, kept in localStorage
 	const FAVORITES_KEY = 'fontFavorites';
 	const favorites = () => {
 		try {
@@ -1419,7 +1391,6 @@ const createFontSelect = (el, lbl, img, btn) => {
 	};
 	const isFavorite = () => favorites().includes(getValue());
 
-	// Init
 	let focusedIdx = getOptions().findIndex(
 		opt => opt.getAttribute('aria-selected') === 'true',
 	);
@@ -1440,8 +1411,7 @@ const createFontSelect = (el, lbl, img, btn) => {
 };
 
 /**
- * The sidebar zoom panel: minus and plus buttons around the current
- * scale, routed through the zoom controller so pinch, wheel, keys, and
+ * Routed through the zoom controller so pinch, wheel, keys, and
  * buttons all share the same clamped stepping and focal anchoring.
  */
 const createZoomControl = () => {
@@ -1505,9 +1475,8 @@ const createZoomControl = () => {
 
 const websocketUI = show => {
 	// one attribute, the stylesheet does the rest: inline display
-	// writes could never both hide and reveal elements whose own rules
-	// set display (the chat button is a flex column in the sauce
-	// panel), so the local state leaked
+	// writes cannot both hide and reveal elements whose own rules set
+	// display (the chat button is a flex column in the sauce panel)
 	D.documentElement.dataset.collab = show ? 'on' : 'off';
 };
 

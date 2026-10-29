@@ -130,8 +130,8 @@ const Toolbar = (() => {
 		closeMenu();
 	};
 
-	// a getter with no side effects: the old closeMenu() here let the
-	// history label fallback close the History flyout as it opened
+	// no side effects: a closeMenu() here would let the history label
+	// fallback close the History flyout as it opens
 	const getCurrentTool = () => {
 		return currentButton ? currentButton.id : null;
 	};
@@ -140,13 +140,12 @@ const Toolbar = (() => {
 		State.flyouts?.close();
 	};
 
-	// Escape walks outward: an open flyout first, then the phone
-	// drawer, then an active selection, then back to the previous tool
+	// Escape walks outward, innermost layer first
 	document.addEventListener('keydown', e => {
 		if (e.code === 'Escape') {
 			// a native dialog owns Escape while it is open: preventDefault
-			// here blocked its close and then dismissed selections or
-			// switched tools underneath it
+			// here would block its close and then dismiss selections or
+			// switch tools underneath it
 			if (State.modal?.isOpen?.()) {
 				return;
 			}

@@ -10,11 +10,10 @@
 import State from './state.js';
 import { createLazyFont } from './lazyFont.js';
 
-// previews are chrome, not canvas: panels and fkey tiles draw through
-// a shared 1x font so zoom can never scale or crop them, and the
-// backing store stays at base glyph size. One cached instance serves
-// every preview; building per call would stack orphaned pregeneration
-// drains and rerasterize every glyph. Null until a font loads
+// previews are chrome, not canvas: a shared 1x font means zoom can
+// never scale or crop them. One cached instance serves every preview;
+// building per call would stack orphaned pregeneration drains and
+// rerasterize every glyph
 let oneXFont = null;
 let oneXKey = null;
 
@@ -79,10 +78,9 @@ const fitGlyphCanvas = canvas => {
 
 const fitGlyphs = (root = document) => {
 	for (const canvas of root.querySelectorAll('canvas.gc')) {
-		// hidden sections re-fit when they reveal (every reveal lays out
-		// again); measuring them on each layout is pure waste. Markup
-		// visibility (.hide, [hidden]), not geometry: the layoutless
-		// test DOM reports zero rects for everything
+		// hidden sections re-fit when they reveal, so measuring them is
+		// waste. Markup visibility, not geometry: the layoutless test DOM
+		// reports zero rects for everything
 		if (canvas.closest?.('.hide, [hidden]')) {
 			continue;
 		}

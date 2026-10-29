@@ -1,8 +1,3 @@
-/**
- * journalStore orchestration over the injectable memory backend: the
- * open -> append -> compact -> rewrite lifecycle, write serialization,
- * and end-to-end replay through the core journal format.
- */
 import { describe, it, expect } from 'vitest';
 import {
 	createJournalStore,

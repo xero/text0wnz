@@ -37,15 +37,10 @@ const writeLocal = (key, value) => {
 	try {
 		localStorage.setItem(key, value);
 	} catch {
-		// the preference simply does not persist this session
+		// the preference does not persist this session
 	}
 };
 
-/**
- * Remote collaborator cursors (native CURSOR/SELECTION frames): one
- * positioned box per peer id, placed through the same scaled font
- * metrics everything else uses.
- */
 const createRemoteCursors = () => {
 	/** @type {Map<number, HTMLElement>} */
 	const cursors = new Map();
@@ -140,9 +135,8 @@ const createWorkerHandler = inputHandle => {
 	let group = readLocal('group') ?? '';
 	let connected = false;
 	let collaborationMode = false;
-	// explicit server url (?server=ws://...): remote dial on explicit
-	// user intent; same-origin default otherwise. A blank value (an
-	// unset variable in a scripted launcher) counts as absent
+	// ?server=ws://... is explicit user intent to dial remote. A blank
+	// value (an unset variable in a scripted launcher) counts as absent
 	const explicitServer =
 		new URLSearchParams(window.location.search).get('server') || undefined;
 	// depth, not a boolean: nested remote-apply helpers (font change
@@ -152,10 +146,8 @@ const createWorkerHandler = inputHandle => {
 	/** id -> nick, for rename detection (renames ride CHAT upstream) */
 	const peerNicks = new Map();
 	// extension suite state (t0wnz-ext-1): negotiated caps, the seq
-	// stream position, and our own mutations still awaiting an ack
-	// (kept as payloads, not a count: a resync adopts a snapshot cut
-	// BEFORE these ops, and the server never echoes them back to us,
-	// so they replay locally after the adoption or the work vanishes)
+	// stream position, and our unacked mutations, kept as payloads,
+	// not a count, because applyExtSync replays them
 	/** @type {string[]} */
 	let serverCaps = [];
 	let lastSeq = -1;
@@ -188,7 +180,8 @@ const createWorkerHandler = inputHandle => {
 		peerNicks.clear();
 		websocketUI(false);
 		if (hadSession && wasConnected) {
-			// a silent drop leaves local autosave paused forever; tell the user
+			// local autosave resumes with connected cleared, but the user
+			// must still hear that the session dropped
 			alert(
 				'You were disconnected from the server, try refreshing the page to try again.',
 			);
@@ -260,8 +253,8 @@ const createWorkerHandler = inputHandle => {
 	const onFontChange = async fontName => {
 		// no applyDepth hold: nothing echoes a font apply back out (all
 		// settings sends ride direct user clicks), and holding the depth
-		// across this await starved every mutation send for the whole
-		// font load
+		// across this await would starve every mutation send for the
+		// whole font load
 		await State.textArtCanvas.setFont(fontName, () => {
 			lblFont.textContent = fontName;
 			selFont.value = fontName;
@@ -294,9 +287,8 @@ const createWorkerHandler = inputHandle => {
 	let timelapseWaiter = null;
 
 	/**
-	 * Fetch the room's baseline + op log (EXT_TIMELAPSE); resolves null
-	 * on vanilla sessions or a 10s server silence. The caller (file.js)
-	 * replays it into an exportable animation.
+	 * The room's baseline + op log (EXT_TIMELAPSE); resolves null on
+	 * vanilla sessions or a 10s server silence.
 	 * @returns {Promise<object | null>}
 	 */
 	const requestTimelapse = () =>
@@ -343,7 +335,7 @@ const createWorkerHandler = inputHandle => {
 		}, 1000);
 		// retry insurance: the server rate-limits sync replies, so a
 		// request landing inside ITS window vanishes silently; keep
-		// re-asking (gently) until a sync actually applies
+		// re-asking until a sync applies
 		clearTimeout(syncRetryTimer);
 		syncRetryTimer = setTimeout(() => {
 			syncQueued = false;
@@ -357,11 +349,10 @@ const createWorkerHandler = inputHandle => {
 	};
 
 	/**
-	 * Track the mutation seq stream. ONLY server-stamped mutation types
-	 * consult this: a fake seq smuggled through a blind-relayed frame
-	 * (CURSOR) would wedge every caps peer. Returns false for a stale
-	 * frame the caller must skip; a gap schedules recovery but still
-	 * applies the frame.
+	 * ONLY server-stamped mutation types consult the seq stream: a fake
+	 * seq smuggled through a blind-relayed frame (CURSOR) would wedge
+	 * every caps peer. noteSeq returns false for a stale frame the
+	 * caller must skip; a gap schedules recovery, yet the frame applies.
 	 */
 	const SEQ_TYPES = new Set([
 		MoebiusAction.DRAW,
@@ -415,8 +406,8 @@ const createWorkerHandler = inputHandle => {
 			]);
 		}
 		State.palette = createPalette(triples);
-		// rebind before the dispatch; onCriticalChange repaints from the
-		// handle, and a bare redraw() rebuilt in the OLD colors
+		// rebind before the dispatch: onCriticalChange repaints from the
+		// handle, so a stale handle repaints in the OLD colors
 		State.font?.setPalette?.(State.palette);
 		document.dispatchEvent(
 			new CustomEvent('onPaletteChange', {
@@ -568,7 +559,6 @@ const createWorkerHandler = inputHandle => {
 			await applyExtSync(data);
 			return;
 		}
-		// only server-stamped mutation types consult the seq stream
 		if (SEQ_TYPES.has(type) && !noteSeq(data)) {
 			return;
 		}
@@ -639,7 +629,6 @@ const createWorkerHandler = inputHandle => {
 				}
 				break;
 			case MoebiusAction.SAUCE: {
-				// remote SAUCE edits land in the modal + title
 				applyDepth++;
 				try {
 					if (typeof data.title === 'string') {
@@ -708,13 +697,11 @@ const createWorkerHandler = inputHandle => {
 				break;
 			case 'refused': {
 				if (!attempt) {
-					break; // ditto: no attempt, no prompt
+					break; // the dial already ended: nobody to prompt
 				}
 				const { url, spelling } = attempt;
 				attempt = null;
 				if (spelling !== null) {
-					// the typed path keeps its form: back to it with the
-					// reason and the password field ready for another go
 					stayLocal();
 					openConnectModal(
 						'The server refused the connection. Check the password.',
@@ -722,8 +709,7 @@ const createWorkerHandler = inputHandle => {
 					inPass.focus();
 					break;
 				}
-				// the same-origin invitation gets one prompt and retry,
-				// then stays local
+				// one prompt per attempt, so a wrong password cannot loop
 				if (!passwordTried) {
 					passwordTried = true;
 					const pass = window.prompt(
@@ -774,8 +760,8 @@ const createWorkerHandler = inputHandle => {
 
 	/**
 	 * Chat and cursor frames are never echoes of a remote apply, so the
-	 * applyDepth gate must not swallow them: a line typed while a sync
-	 * or font load applies used to echo locally and never broadcast.
+	 * applyDepth gate must not swallow them, or a line typed during a
+	 * sync or font load echoes locally and never broadcasts.
 	 * @param {number} type @param {object} data @returns {boolean} sent
 	 */
 	const sendLive = (type, data) => {
@@ -794,11 +780,11 @@ const createWorkerHandler = inputHandle => {
 	};
 
 	/**
-	 * cells arrive from canvas.js as {x, y, block:{code, fg, bg}, ext}
-	 * (apply-locally-on-send: the server excludes the sender, so no echo
-	 * comes back). Ext sessions send one full-fidelity batch per flush;
-	 * vanilla sessions get per-cell DRAWs with the ext payload stripped
-	 * (upstream servers relay unknown fields verbatim).
+	 * cells arrive from canvas.js as {x, y, block:{code, fg, bg}, ext},
+	 * already applied locally: the server excludes the sender, so no
+	 * echo comes back. Vanilla DRAWs strip ext because Moebius relays
+	 * unknown fields verbatim (server.js, the DRAW case of
+	 * Joint.message()).
 	 */
 	const draw = cells => {
 		if (!collaborationMode || !connected || !Array.isArray(cells)) {
@@ -856,10 +842,7 @@ const createWorkerHandler = inputHandle => {
 		State.modal.open('choice');
 	};
 
-	/**
-	 * CONNECTED arrived: adopt the session doc and populate chat. This
-	 * runs only after the user consented (joinCollaboration connects).
-	 */
+	/** CONNECTED reply: runs only after consent (joinCollaboration dials) */
 	const adoptSession = async data => {
 		connected = true;
 		collaborationMode = true;
@@ -995,12 +978,6 @@ const createWorkerHandler = inputHandle => {
 		connectStatus.classList.toggle('hide', text === '');
 	};
 
-	/**
-	 * The manual path: any server, any room, Moebius included. The
-	 * address prefills from the query string, the last one used, or
-	 * the same-origin server the probe found, and a half-typed one is
-	 * never clobbered.
-	 */
 	const openConnectModal = (status = '') => {
 		const recent = recentServers.load();
 		listRecent.innerHTML = '';
@@ -1049,7 +1026,8 @@ const createWorkerHandler = inputHandle => {
 		if (handle !== newHandle) {
 			handle = newHandle;
 			writeLocal('handle', handle);
-			// moebius has no NICK frame: renames ride the next CHAT
+			// Moebius has no NICK frame: renames ride the next CHAT
+			// (server.js, the CHAT case of Joint.message())
 		}
 	};
 
@@ -1063,8 +1041,6 @@ const createWorkerHandler = inputHandle => {
 
 	const isConnected = () => connected;
 
-	// own-cursor sends, throttled ~100ms trailing; peers render the
-	// native CURSOR frames
 	let cursorTimer = 0;
 	let cursorPending = null;
 	document.addEventListener('onTextCursorMove', e => {
@@ -1094,7 +1070,7 @@ const createWorkerHandler = inputHandle => {
 	if (State.worker) {
 		try {
 			State.worker.addEventListener('message', onMessage);
-			// 'init' MUST be the worker's first message
+			// the 'initialized' reply is what starts the probe
 			State.worker.postMessage({ cmd: 'init' });
 		} catch (error) {
 			console.error(
@@ -1194,9 +1170,8 @@ const createChatController = (
 				newNotification(text);
 			}
 		} else {
-			// chat was the one event class with NO popup path; joins and
-			// quits had one. Popup only while the chat window is closed,
-			// matching the button dot
+			// popup only while the chat window is closed, matching the
+			// button dot
 			if (showNotification && !enabled) {
 				newNotification(`${handle}: ${text}`);
 			}
@@ -1274,8 +1249,8 @@ const createChatController = (
 		}
 	};
 	close.addEventListener('click', toggle);
-	// the title bar X reads as close where the inner door does not; it
-	// only shows while the window does, so toggle always means close
+	// the title bar X only shows while the window does, so toggle
+	// always means close there
 	$('chatModClose')?.addEventListener('click', toggle);
 
 	const isEnabled = () => {
@@ -1311,8 +1286,7 @@ const createChatController = (
 			const msg = `${handle} has quit`;
 			winUsers.removeChild(userList[sessionID].div);
 			delete userList[sessionID];
-			// newNotification itself gates on the pref now, the same as
-			// joins and renames; quit was the only one that checked
+			// newNotification gates on the pref itself
 			addConversation(handle, msg, true, true);
 		}
 	};

@@ -107,7 +107,6 @@ test.describe('Canvas Interaction', () => {
 	});
 
 	test('should allow tool switching', async ({ page }) => {
-		// sidebar tool buttons toggle their toolbars
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(200);
 

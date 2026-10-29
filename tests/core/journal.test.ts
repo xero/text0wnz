@@ -42,7 +42,6 @@ describe('journal format', () => {
 		});
 		const journal = [await createJournal(doc, { meta: { title: 'wip' } })];
 
-		// Live edits recorded through the arena's commit hook
 		const strokes: CommittedStroke[] = [];
 		const arena = createPatchArena({ onCommit: s => strokes.push(s) });
 		arena.beginStroke({ frame: 0, userId: 'xero' });

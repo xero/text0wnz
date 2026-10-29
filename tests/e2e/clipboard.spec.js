@@ -65,7 +65,6 @@ test.describe('Advanced Clipboard Operations', () => {
 	test('should handle copy with background color', async ({ page }) => {
 		const canvas = page.locator('#canvasContainer canvas').first();
 
-		// b switches color input to background mode
 		await page.keyboard.press('b');
 		await page.waitForTimeout(200);
 
@@ -80,7 +79,6 @@ test.describe('Advanced Clipboard Operations', () => {
 			}
 		}
 
-		// Switch back to foreground
 		await page.keyboard.press('f');
 		await page.waitForTimeout(200);
 
@@ -123,7 +121,6 @@ test.describe('Advanced Clipboard Operations', () => {
 	test('should copy and paste text with attributes', async ({ page }) => {
 		const canvas = page.locator('#canvasContainer canvas').first();
 
-		// Enter keyboard mode and type text
 		await page.keyboard.press('k');
 		await page.waitForTimeout(300);
 
@@ -191,7 +188,6 @@ test.describe('Advanced Clipboard Operations', () => {
 				await page.waitForTimeout(200);
 			}
 
-			// the second copy replaces the clipboard
 			await selectionTool.click();
 			await page.waitForTimeout(300);
 
@@ -205,7 +201,6 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.keyboard.press('Control+c');
 			await page.waitForTimeout(300);
 
-			// paste must yield the second pattern
 			await page.keyboard.press('Control+v');
 			await page.waitForTimeout(300);
 		}
@@ -377,7 +372,6 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.waitForTimeout(300);
 		}
 
-		// f switches color input back to foreground mode
 		await page.keyboard.press('f');
 		await page.waitForTimeout(200);
 
@@ -403,7 +397,6 @@ test.describe('Advanced Clipboard Operations', () => {
 			await page.waitForTimeout(200);
 		}
 
-		// formatting must survive the copy/paste
 		const selectionTool = page.locator('#select');
 		if (await selectionTool.isVisible()) {
 			await selectionTool.click();

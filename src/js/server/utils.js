@@ -1,4 +1,5 @@
-/** room name grammar shared by the ws router and persistence */
+/** room names become session file names: this grammar keeps them
+ * inside ./sessions */
 const ROOM_NAME_RE = /^[a-z0-9_-]{1,32}$/i;
 
 /** shared wire-auth backoff: two tries stay free (humans typo),
@@ -51,8 +52,6 @@ const callout = msg => {
 	);
 };
 
-// Strips Unicode control characters and newlines,
-// limits length, and optionally adds quotes
 const sanitize = (input, limit = 100, quote = true) => {
 	if (input === null || input === undefined) {
 		return '';

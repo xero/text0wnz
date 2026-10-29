@@ -911,7 +911,7 @@ describe('Network Module', () => {
 		});
 
 		it('treats a corrupted notifications value as off, never throws', () => {
-			// the old JSON.parse path threw on garbage and killed the boot
+			// a throw on garbage here kills the boot
 			global.localStorage.getItem.mockReturnValue('{broken');
 
 			createChatController(

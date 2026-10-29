@@ -1,8 +1,3 @@
-/**
- * Frames timeline panel: strip rendering, navigation, structure ops,
- * playback stepping with per-frame delays, onion toggle, and the
- * collab lockout.
- */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createFramesPanel } from '../../src/js/client/frames.js';
 import State from '../../src/js/client/state.js';

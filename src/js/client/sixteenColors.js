@@ -1,14 +1,12 @@
 /**
- * 16colo.rs in-app browser: tabs for years, crews, artists, and pack
- * search, drilling into packs and pieces with thumbnails and opening
- * straight into the editor. Metadata and thumbnails come from
- * api.16colo.rs and the gallery (the API is CORS-open; thumbs ride
- * plain <img> tags). FILE BYTES come from the owner's GitHub archive
- * mirror (xero/sixteencolors-archive): the gallery host serves no CORS
- * headers for raw files, while raw.githubusercontent.com does; the
- * pack zip fetches once, caches, and single pieces inflate client-side
- * through the core zip reader. Politeness: every request is
- * user-driven and cached; NOTHING here runs in CI.
+ * 16colo.rs browser. Metadata and thumbnails come from api.16colo.rs
+ * and the gallery (the API is CORS-open; thumbs ride plain <img>
+ * tags). FILE BYTES come from the owner's GitHub archive mirror
+ * (xero/sixteencolors-archive): the gallery host serves no CORS
+ * headers for raw files, while raw.githubusercontent.com does. The
+ * pack zip fetches once and caches; pieces inflate client-side.
+ * Politeness: every request is user-driven and cached; NOTHING here
+ * runs in CI.
  */
 import State from './state.js';
 import { $ } from './ui.js';
@@ -61,9 +59,6 @@ const createSixteenColors = ({ openFile, onExit }) => {
 	/** @type {{view: string, year?: number, pack?: object, name?: string}} */
 	let where = { view: 'years' };
 
-	// ------------------------------------------------- tabs and history
-
-	// backing out of the root view returns to the artpacks landing
 	const { visit, swap, back, reset, rerun } = createTrail(
 		btnBack,
 		onExit ?? (() => State.modal.open('artpacks')),
@@ -106,8 +101,6 @@ const createSixteenColors = ({ openFile, onExit }) => {
 		}
 	};
 
-	// ----------------------------------------------------------- utils
-
 	const say = makeSay(status);
 
 	const fetchPage = (key, url) => fetchCached(cache.pages, key, url);
@@ -120,7 +113,6 @@ const createSixteenColors = ({ openFile, onExit }) => {
 		list.scrollTop = 0;
 	};
 
-	/** one pack's metadata and openable files, fetched once */
 	const loadPack = async name => {
 		if (!cache.packs.has(name)) {
 			const data = await fetchJson(`${API}/pack/${encodeURIComponent(name)}`);
@@ -141,8 +133,6 @@ const createSixteenColors = ({ openFile, onExit }) => {
 		}
 		return cache.packs.get(name);
 	};
-
-	// ------------------------------------------------------------ cards
 
 	// every pack preview rides the gallery's normalized diz name; a pack
 	// without one 404s and the black frame alone holds the cell
@@ -209,8 +199,6 @@ const createSixteenColors = ({ openFile, onExit }) => {
 			shortest.height += ratio * COL_WIDTH + CAPTION_PX;
 		}
 	};
-
-	// ------------------------------------------------------------ views
 
 	const showYears = async () => {
 		const ticket = gate.enter();
@@ -508,8 +496,6 @@ const createSixteenColors = ({ openFile, onExit }) => {
 			));
 	};
 
-	// ------------------------------------------------------------ open
-
 	/** open from views that only know the pack's name */
 	const openVia = async (packName, file) => {
 		say(`loading ${packName}...`);
@@ -523,11 +509,9 @@ const createSixteenColors = ({ openFile, onExit }) => {
 		openPiece({ name: packName, year: info.year, archive: info.archive }, file);
 	};
 
-	// the LAST clicked piece wins: a repeat click on the loading piece
-	// is a no-op, a different piece supersedes it. The zip download
-	// itself is never aborted: cache.zips holds the PROMISE, so
-	// sibling pieces and superseded clicks share one transfer and a
-	// multi-MB pack never downloads twice
+	// the zip download itself is never aborted: cache.zips holds the
+	// PROMISE, so sibling pieces and superseded clicks share one
+	// transfer and a multi-MB pack never downloads twice
 	const openGuard = createOpenGuard();
 
 	const fetchZip = (year, zipName) => {
@@ -544,8 +528,8 @@ const createSixteenColors = ({ openFile, onExit }) => {
 				return new Uint8Array(await response.arrayBuffer());
 			})().catch(error => {
 				// a failed download must not cache, and must evict only
-				// ITSELF: the cap may have dropped it already and a retry
-				// recached the same name with a healthy transfer
+				// ITSELF: the cap may have dropped it already, and a retry
+				// may have recached the name with a healthy transfer
 				if (cache.zips.get(zipName) === download) {
 					cache.zips.delete(zipName);
 				}
@@ -597,8 +581,6 @@ const createSixteenColors = ({ openFile, onExit }) => {
 		}
 	};
 
-	// ------------------------------------------------------------ wire
-
 	// column count depends on the modal's width: refit an open masonry
 	// view when the window changes shape
 	let refit = 0;
@@ -631,8 +613,8 @@ const createSixteenColors = ({ openFile, onExit }) => {
 		}
 	});
 
-	// the view DOM survives modal closes, so reopening mid-session
-	// resumes wherever the artist left off; only the first show seeds
+	// the view DOM survives modal closes, so only the first show seeds
+	// a view; later shows resume wherever the artist left off
 	let started = false;
 	const show = () => {
 		State.modal.open('sixteen');

@@ -1,8 +1,7 @@
 /**
- * Ascii line stamp engine: turns a freehand cell path into classic
- * ascii line art glyphs (BRUSH.md old skool style). Pure and renderer free
- * so goldens can pin every slope class without a browser, and so the
- * same engine carries into v3 unchanged.
+ * Ascii line stamp engine: turns a freehand cell path into old skool
+ * ascii line art glyphs. Pure and renderer free so goldens can pin
+ * every slope class without a browser.
  *
  * Shape of the problem: pointer samples arrive sparsely; Bresenham
  * fills the gaps; each path cell then needs a glyph chosen by the
@@ -14,8 +13,8 @@
  * Emission is incremental but revisable: a cell may be emitted again
  * with a better glyph once more of the stroke is known (steep column
  * steps, shallow runs growing under the pointer). Downstream writes
- * are last wins inside one undo group, which the editor already
- * supports, so live drawing stays fully live with no preview phase.
+ * are last wins inside one undo group, so live drawing needs no
+ * preview phase.
  */
 
 export interface StampOut {
@@ -109,8 +108,6 @@ const RANK = new Map<number, number>([
 /** Long shallow runs band by position: low to high for rising rows. */
 const LONG_RAMP_RISING = [UNDERSCORE, PERIOD, DASH, DQUOTE];
 
-// ------------------------------------------------- additive merging
-
 /**
  * Ink weight for cross stroke contact: a touch never carves a heavier
  * mark, and equal weights densify instead of replacing.
@@ -161,12 +158,10 @@ const PROMOTE: Record<number, number> = {
 };
 
 /**
- * Junction vocabulary for pass-through crossings (BRUSH.md, Rowan
- * Crawford): a line crossing another line voices the shared cell with
- * a glyph that points along both, instead of the heavier mark simply
- * punching through. Bars crossing horizontals read as plus, diagonals
- * crossing horizontals as percent, diagonals crossing bars or each
- * other as X. Junction glyphs are sticky: repeat contact keeps them.
+ * Junction vocabulary for pass-through crossings (Rowan Crawford): a
+ * line crossing another line voices the shared cell with a glyph that
+ * points along both, instead of the heavier mark simply punching
+ * through. Junction glyphs are sticky: repeat contact keeps them.
  */
 const HORIZ_INK = [DASH, UNDERSCORE, EQUALS, DQUOTE, TILDE];
 
@@ -289,14 +284,14 @@ export interface TipInfo {
 }
 
 /**
- * Terminal joins (BRUSH.md intersections): a stroke ENDING against an
- * existing line wants a glyph whose bar continues the line and whose
- * leg continues the stroke, Rowan's "7" fix. Rising tips hang their
- * leg below the bar (7 leaning right, r leaning left, T dead
- * vertical); falling tips point the leg up and hook toward where the
- * line continues (L right, J left, + both ways). A tip running
- * parallel to the ink it touched is a graze, not a join; the additive
- * merge already handles it. Returns 0 when no junction applies.
+ * Terminal joins: a stroke ENDING against an existing line wants a
+ * glyph whose bar continues the line and whose leg continues the
+ * stroke, Rowan's "7" fix. Rising tips hang their leg below the bar
+ * (7 leaning right, r leaning left, T dead vertical); falling tips
+ * point the leg up and hook toward where the line continues (L right,
+ * J left, + both ways). A tip running parallel to the ink it touched
+ * is a graze, not a join; the additive merge already handles it.
+ * Returns 0 when no junction applies.
  */
 export const junctionForTip = (
 	tip: TipInfo,
@@ -365,7 +360,7 @@ interface Cell {
 }
 
 export interface AsciiStampEngine {
-	/** Start a stroke at a pointer sample. subY: 0 upper half, 1 lower. */
+	/** subY: 0 upper half of the cell, 1 lower */
 	begin: (x: number, y: number, subY: number) => StampOut[];
 	/** Next pointer sample; interpolates from the previous one. */
 	move: (x: number, y: number, subY: number) => StampOut[];
@@ -648,7 +643,6 @@ export const createAsciiStampEngine = (
 		run = null;
 	};
 
-	/** Glyph choice for one path cell under a known slope class. */
 	const emitCell = (
 		out: StampOut[],
 		c: Cell,
@@ -726,15 +720,13 @@ export const createAsciiStampEngine = (
 	const isStem = (cls: SlopeClass): boolean =>
 		cls === 'vertical' || cls === 'steep' || cls === 'diag';
 
-	// ------------------------------------------------- nu skool ribbon mode
-
 	/**
 	 * Width above 1 trades the old skool glyph vocabulary for the nu skool
 	 * ribbon: every skeleton cell widens into a horizontal span of fill
-	 * with one chisel glyph per side, the corpus anatomy (lead, $ fill,
-	 * trail; thickness scales fill only, never the edges). A row can
-	 * hold several spans, so a loop's two sides stay two strokes until
-	 * the ribbons genuinely touch, where fill rank unions them solid.
+	 * with one chisel glyph per side, the reference art anatomy (lead,
+	 * $ fill, trail; thickness scales fill only, never the edges). A row
+	 * can hold several spans, so a loop's two sides stay two strokes
+	 * until the ribbons genuinely touch, where fill rank unions them solid.
 	 */
 	interface Span {
 		min: number;
@@ -755,15 +747,15 @@ export const createAsciiStampEngine = (
 			// with P; falling strokes mirror through Y and b
 			return fall ? [EDGE_Y, EDGE_B] : [EDGE_D, EDGE_P];
 		}
-		// verticals in the corpus run mostly bare; flat bars read as
-		// solid fill too, their dress is a later refinement
+		// verticals in the reference art run mostly bare; flat bars start
+		// as solid fill and restampSpan dresses their stepping ends
 		return [FILL, FILL];
 	};
 
 	/**
 	 * SAUNA entry taper: a stroke never opens at full weight; the cap
 	 * frozen at each span's birth ramps 1, 3, 5... over the first row
-	 * advances like the corpus tendril ladders.
+	 * advances like the reference art's tendril ladders.
 	 */
 	const entryCap = () => Math.min(width, 1 + rowSteps * 2);
 
@@ -786,7 +778,7 @@ export const createAsciiStampEngine = (
 		// a long flat row dresses only the ends that step to another
 		// row, with the colon density bridge; the stroke's tips stay
 		// bare fill, and a bowl or cap row, whose two ends connect the
-		// same way, stays solid like the corpus
+		// same way, stays solid like the reference art
 		let dressLeft = false;
 		let dressRight = false;
 		if (s.cls === 'horizontal') {
@@ -806,7 +798,7 @@ export const createAsciiStampEngine = (
 		for (let x = lo; x <= hi; x++) {
 			emit(out, x, y, x === lo ? left : x === hi ? right : FILL);
 		}
-		// corpus row AA: sloped rows wear pebbles just outside the
+		// reference art row AA: sloped rows wear pebbles just outside the
 		// chisels (,d$$$P' rising, `Y$$$b. falling); rank one keeps them
 		// deferential, any neighboring row's fill overwrites them
 		if (
@@ -933,7 +925,6 @@ export const createAsciiStampEngine = (
 		pending = { c, prev };
 	};
 
-	/** Route a resolved cell to the active style. */
 	const resolveCell = (
 		out: StampOut[],
 		c: Cell,
@@ -947,10 +938,7 @@ export const createAsciiStampEngine = (
 		emitCell(out, c, prev, cls);
 	};
 
-	/**
-	 * Resolve whatever is still uninked at stroke end. A stroke that
-	 * never moved has no class and keeps its tap mark.
-	 */
+	/** A stroke that never moved has no class and keeps its tap mark. */
 	const drain = (out: StampOut[]) => {
 		if (pending && activeClass !== null) {
 			resolveCell(out, pending.c, pending.prev, activeClass);
@@ -984,7 +972,6 @@ export const createAsciiStampEngine = (
 		}
 	};
 
-	/** advance the consumed path to target, Bresenham filling the gap */
 	const walkTo = (out: StampOut[], target: Cell) => {
 		// pointer layers floor their cells, but this is public core api:
 		// a fractional or non finite target can never equal the integer
@@ -1017,13 +1004,12 @@ export const createAsciiStampEngine = (
 	};
 
 	/**
-	 * Fast writing delivers pointer samples many cells apart; straight
-	 * chords between them turn curves into kinked segments, which is
-	 * why slow deliberate strokes rendered better than normal writing
-	 * speed. Each segment is therefore drawn one sample late as a
-	 * Catmull Rom arc through its neighbors; one pointer event of lag
-	 * is imperceptible and buys the chord the curvature the hand
-	 * actually made. Dense samples degrade to the straight walk.
+	 * Fast writing delivers pointer samples many cells apart, and
+	 * straight chords between them turn curves into kinked segments.
+	 * Each segment is therefore drawn one sample late as a Catmull Rom
+	 * arc through its neighbors; one pointer event of lag is
+	 * imperceptible and buys the chord the curvature the hand actually
+	 * made. Dense samples degrade to the straight walk.
 	 */
 	const drawSmoothed = (out: StampOut[], s: Cell[]) => {
 		const n = s.length;
@@ -1146,8 +1132,8 @@ export const createAsciiStampEngine = (
 			}
 			// nu skool exit: a two cell sputter ramp past the tapered tip,
 			// middle weight first then the light pebble, so the tip's own
-			// AA plus the ramp reads like the corpus endings (,:' rising,
-			// backtick ;, falling), never a lone quote in the void
+			// AA plus the ramp reads like the reference art endings (,:'
+			// rising, backtick ;, falling), never a lone quote in the void
 			if (swoop && width > 1 && last && trail.length >= 2) {
 				const d = windowDelta();
 				if (d.y !== 0) {

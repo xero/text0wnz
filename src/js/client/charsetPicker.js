@@ -1,13 +1,7 @@
 /**
- * Charset picker modal: search every Unicode
- * block by name, preview the glyphs the bundled hex fonts cover,
- * click to insert at the cursor, and import charset tables (durdraw
- * .ini or teXt0wnz .json) that then ride the F-key bar via the
- * onCustomCharsetsChange event.
- *
- * Big CJK-class blocks render in slices of GRID_LIMIT glyphs with a
- * more... row; coverage comes from hexFontPages.previewBits, which
- * never interns, so browsing pollutes no doc glyph table.
+ * Big CJK-class blocks render in slices of GRID_LIMIT glyphs; coverage
+ * comes from hexFontPages.previewBits, which never interns, so browsing
+ * pollutes no doc glyph table.
  */
 import State from './state.js';
 import { $ } from './ui.js';

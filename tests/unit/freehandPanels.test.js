@@ -334,7 +334,7 @@ describe('Freehand Tools - Panels and Cursors', () => {
 			const panel = await createShadingPanel();
 
 			expect(() => {
-				panel.select(177); // Light shade character
+				panel.select(177); // Medium shade
 			}).not.toThrow();
 		});
 	});

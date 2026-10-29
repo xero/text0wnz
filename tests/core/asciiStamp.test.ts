@@ -6,9 +6,8 @@ import {
 } from '../../src/js/core/asciiStamp.js';
 
 /**
- * Golden harness: run a stroke through the engine, render the stamped
- * cells as text, and compare against inline ascii art. Last write to a
- * cell wins, mirroring the editor's behavior inside one undo group.
+ * Golden harness against inline ascii art. Last write to a cell wins,
+ * mirroring the editor inside one undo group.
  */
 const stroke = (
 	points: Array<[number, number, number?]>,
@@ -65,7 +64,6 @@ describe('ascii stamp engine, old skool style', () => {
 	});
 
 	it('stamps 45 degree rising as slashes', () => {
-		// drawn bottom left to top right
 		expect(
 			stroke([
 				[0, 4],
@@ -84,8 +82,8 @@ describe('ascii stamp engine, old skool style', () => {
 	});
 
 	it('breaks steep column steps with pebble pairs', () => {
-		// BRUSH.md line 1 vocabulary; Bresenham phases the steps a row
-		// later than the hand drawn ideal, which reads identically
+		// Bresenham phases the steps a row later than the hand drawn
+		// ideal, which reads identically
 		expect(
 			stroke([
 				[2, 0],
@@ -95,7 +93,6 @@ describe('ascii stamp engine, old skool style', () => {
 	});
 
 	it('stamps shallow two per row as comma quote pairs', () => {
-		// BRUSH.md line 3
 		expect(
 			stroke([
 				[0, 4],
@@ -105,8 +102,8 @@ describe('ascii stamp engine, old skool style', () => {
 	});
 
 	it('stamps shallow rows in one pebble voice despite length jitter', () => {
-		// BRUSH.md line 4 vocabulary; Bresenham deals rows of 2 to 4
-		// cells for this slope and the rhythm keeps them all pebble runs
+		// Bresenham deals rows of 2 to 4 cells for this slope and the
+		// rhythm keeps them all pebble runs
 		expect(
 			stroke([
 				[0, 4],
@@ -120,7 +117,7 @@ describe('ascii stamp engine, old skool style', () => {
 	});
 
 	it('bands long shallow rows through the underscore ramp', () => {
-		// BRUSH.md line 5 vocabulary across Bresenham's 6/12/6 row deal
+		// Bresenham deals this slope rows of 6, 12, and 6 cells
 		expect(
 			stroke([
 				[0, 2],
@@ -197,8 +194,8 @@ describe('ascii stamp engine, old skool style', () => {
 	});
 
 	it('sweeps a quarter arc without doubles or orphan debris', () => {
-		// flat start steepening to vertical, the cursive upstroke that
-		// shook out doubled columns and lone dashes from the first cut
+		// flat start steepening to vertical: the cursive upstroke that
+		// invites doubled columns and lone dashes
 		const pts: Array<[number, number]> = [];
 		for (let t = 0; t <= 90; t += 2) {
 			const rad = (t * Math.PI) / 180;
@@ -260,9 +257,9 @@ describe('ascii stamp engine, old skool style', () => {
 	});
 
 	it('smooths sparse fast samples into connected waves', () => {
-		// two sine humps at normal writing speed sampling; chords used
-		// to kink the curves and cut the valleys, the spline restores
-		// them, and both valleys must read as connected bowls
+		// two sine humps at normal writing speed sampling: chords kink the
+		// curves and cut the valleys, so the spline must keep both valleys
+		// reading as connected bowls
 		const pts: Array<[number, number]> = [];
 		for (let x = 0; x <= 60; x += 3) {
 			pts.push([x, 6 + Math.round(5 * Math.sin((x / 60) * Math.PI * 3))]);
@@ -628,8 +625,8 @@ describe('ascii stamp engine, input hardening and stroke isolation', () => {
 	};
 
 	it('returns promptly for fractional and non finite coordinates', () => {
-		// a fractional or NaN target can never equal the integer walk:
-		// bresenham once spun forever on exactly these inputs
+		// a fractional or NaN target never equals the integer walk, so an
+		// unguarded bresenham spins forever on exactly these inputs
 		const e = createAsciiStampEngine();
 		e.begin(0, 0, 1);
 		e.move(5.5, 3, 1);
@@ -647,8 +644,8 @@ describe('ascii stamp engine, input hardening and stroke isolation', () => {
 	});
 
 	it('keeps strokes independent on a reused engine', () => {
-		// lastFall once leaked between strokes: one falling diagonal
-		// mirrored the flat ramp banding of every later L stroke
+		// a lastFall leaking between strokes lets one falling diagonal
+		// mirror the flat ramp banding of every later L stroke
 		const L: Array<[number, number]> = [
 			[0, 0],
 			[0, 2],

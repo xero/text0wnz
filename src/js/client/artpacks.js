@@ -1,10 +1,3 @@
-/**
- * Artpack browser landing: one File menu entry fronts both artpack
- * sites; each card hands off to that site's own browser modal. The
- * landing remembers which site the artist was last inside, so the
- * menu reopens straight into it mid-session; backing out of a site's
- * root view clears that memory and lands here again.
- */
 import State from './state.js';
 import { $ } from './ui.js';
 

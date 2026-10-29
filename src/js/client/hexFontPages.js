@@ -1,9 +1,9 @@
 /**
  * Runtime unicode glyph source: lazily fetches the packed
  * per-256-codepoint blocks that tools/bakeHexFonts.js bakes into
- * ui/fonts/u/, and rasterizes glyphs to the active classic font's cell
- * metrics for the renderer's unicode atlas pages (xterm.js
- * model). Blocks and the manifest load on demand only - a classic doc
+ * src/fonts/u/, and rasterizes glyphs to the active classic font's
+ * cell metrics for the renderer's unicode atlas pages (xterm.js
+ * model). Blocks and the manifest load on demand only: a classic doc
  * never touches the network for any of this.
  *
  * glyphBits() is synchronous because it sits on the repaint path. Its
@@ -55,7 +55,7 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 	const blocks = new Map();
 	/** blockKey -> in-flight promise */
 	const pending = new Map();
-	/** `${slot}:${cp}:${w}x${h}` -> Uint8Array */
+	/** `${fontKey}:${codepoint}:${w}x${h}` -> Uint8Array */
 	const scaledCache = new Map();
 
 	const loadManifest = () => {
@@ -78,7 +78,6 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 		return manifestPromise;
 	};
 
-	/** true when the font's manifest entry lists the codepoint's block */
 	const fontHasBlock = (fontKey, codepoint) => {
 		const entry = manifest?.fonts?.[fontKey];
 		return entry
@@ -141,10 +140,10 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 	const xbUpperBits = (codepoint, fontW, fontH) => {
 		if (!embedded) {
 			// UNDEFINED, not null: null is a definitive miss the renderer
-			// caches forever, and a paint racing setXBFontData would pin
-			// substitute boxes on whichever cells it reached first (the
-			// xb512 goldens caught this as cross-run pixel lottery).
-			// Pending stays uncached; the onXBFontLoaded repaint resolves.
+			// caches forever, so a paint racing setXBFontData would pin
+			// substitute boxes on whichever cells it reached first (a
+			// cross-run pixel lottery in the xb512 goldens). Pending stays
+			// uncached; the onXBFontLoaded repaint resolves it
 			return undefined;
 		}
 		const index = codepoint - XB_UPPER_BASE + 256;
@@ -236,11 +235,6 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 		return null;
 	};
 
-	/**
-	 * Choose the font slot for a codepoint at import/paste/picker time:
-	 * unscii-16 when it has the glyph (and it is narrow), else Unifont,
-	 * else null (substitute). Await-safe; loads what it needs.
-	 */
 	const pickSlot = async codepoint => {
 		await loadManifest();
 		if (!manifest) {
@@ -261,9 +255,8 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 	};
 
 	/**
-	 * Preview bits across ALL hex fonts (unscii first), without any
-	 * glyph-table interning: the charset picker and F-key bar render
-	 * from this. Same tri-state contract as glyphBits.
+	 * Bits across ALL hex fonts (unscii first) with no glyph-table
+	 * interning, for previews. Same tri-state contract as glyphBits.
 	 */
 	const previewBits = (codepoint, fontW, fontH) => {
 		let waiting = false;
@@ -280,9 +273,8 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 	};
 
 	/**
-	 * Fire the fetches for every block a doc's glyph table touches
-	 * (dedupe is free: loadBlock and the caches already collapse
-	 * repeats). Used on doc load so scrolling and exports meet loaded
+	 * No dedupe here: loadBlock and the caches already collapse
+	 * repeats. Runs on doc load so scrolling and exports meet loaded
 	 * glyphs instead of substitutes.
 	 */
 	const preload = async defs => {

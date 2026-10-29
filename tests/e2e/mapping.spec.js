@@ -1,11 +1,9 @@
 /**
- * Mapping fuzz gate: clicking the computed center of
- * a cell must paint exactly that cell, across zooms (fractional
- * included) and scroll offsets, on every engine this suite runs on
- * (Chrome, Firefox, WebKit projects all match e2e/**). The centers
- * come from the same formula family as core/mapping.ts, measured
- * against the live DOM rect and font metrics, so this is the
- * end-to-end round trip of the one shared mapping.
+ * Runs on every engine (Chrome, Firefox, WebKit projects all match
+ * e2e/**). The centers come from the same formula family as
+ * core/mapping.ts, measured against the live DOM rect and font
+ * metrics, so this is the end-to-end round trip of the one shared
+ * mapping.
  */
 import { test, expect } from '@playwright/test';
 import { clickTool } from './helpers/editorHelpers.js';

@@ -9,7 +9,6 @@ const mockIndexedDB = () => {
 				onsuccess: null,
 				onerror: null,
 			};
-			// Immediately trigger success
 			setTimeout(() => {
 				if (request.onsuccess) {
 					request.onsuccess({ target: request });
@@ -23,7 +22,6 @@ const mockIndexedDB = () => {
 				onsuccess: null,
 				onerror: null,
 			};
-			// Immediately trigger success
 			setTimeout(() => {
 				if (request.onsuccess) {
 					request.onsuccess({ target: request });
@@ -61,7 +59,6 @@ const mockIndexedDB = () => {
 
 	global.indexedDB = {
 		open: vi.fn(() => {
-			// Simulate successful opening immediately
 			setTimeout(() => {
 				if (mockRequest.onsuccess) {
 					mockRequest.onsuccess({ target: mockRequest });
@@ -146,9 +143,8 @@ describe('Storage Utilities', () => {
 			await Storage.saveFontData('A', [1]);
 			await Storage.loadFontData('A');
 			await Storage.saveUndoHistory([]);
-			// the old per-call dbPromise opened one connection per op
-			// (three here) and never closed any; the shared handle opens
-			// at most once (zero when an earlier test already owns it)
+			// the shared handle opens at most once (zero when an earlier test
+			// already owns it); a per-call open leaks one connection per op
 			expect(
 				global.indexedDB.open.mock.calls.length,
 			).toBeLessThanOrEqual(1);
@@ -206,14 +202,12 @@ describe('Storage Utilities', () => {
 
 			// IndexedDB is unavailable in jsdom; the call must fail gracefully
 			const result = await Storage.saveCanvasData(canvasData);
-			// Result could be true or false depending on environment
 			expect(typeof result).toBe('boolean');
 		});
 
 		it('should handle loadCanvasData without crashing', async () => {
 			// IndexedDB is unavailable in jsdom; the call must fail gracefully
 			const result = await Storage.loadCanvasData();
-			// Result could be null or an object depending on environment
 			expect(result === null || typeof result === 'object').toBe(true);
 		});
 

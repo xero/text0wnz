@@ -1,10 +1,7 @@
 /**
- * The floating action bar over an active selection, replacing the old
- * header selection toolbar. It adopts the existing toolbar element so
- * every button id and handler rides along, centers above the selection
- * rect, flips below it when there is no headroom, clamps to the canvas
- * area, and follows the selection, viewport scroll, zoom (through the
- * canvas resizing), and window resizes. Keys keep working without it.
+ * Floating action bar over an active selection. It adopts the existing
+ * toolbar element so every button id and handler rides along; keys
+ * keep working without it.
  */
 import State from './state.js';
 import Toolbar from './toolbar.js';
@@ -51,7 +48,6 @@ const createSelectionBar = () => {
 		);
 		let y = sel.top - height - BAR_GAP_PX;
 		if (y < vp.top + EDGE_PAD_PX) {
-			// no headroom: sit below the selection instead, still clamped
 			y = Math.min(sel.bottom + BAR_GAP_PX, vp.bottom - height - EDGE_PAD_PX);
 		}
 		bar.style.left = `${Math.round(x)}px`;
@@ -74,7 +70,7 @@ const createSelectionBar = () => {
 		});
 	};
 
-	/** Escape's second stop: clear an active selection */
+	/** a stop in the toolbar's Escape chain: false when nothing to dismiss */
 	const dismiss = () => {
 		if (!active()) {
 			return false;
@@ -97,8 +93,7 @@ const createSelectionBar = () => {
 	}
 	deselect?.addEventListener('click', dismiss);
 
-	// the paste button swaps the bar for its submenu face; an action
-	// there (or back) returns to the main face, re-centered either way
+	// the faces differ in width, so a swap must re-center the bar
 	const setPasteMode = openState => {
 		bar?.classList.toggle('pasteOpen', openState);
 		sync();

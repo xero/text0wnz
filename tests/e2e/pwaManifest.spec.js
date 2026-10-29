@@ -1,11 +1,11 @@
 /**
- * Precache manifest pins. index.html keeps its filename across builds,
- * so workbox only re-fetches it when its manifest entry carries a real
- * content revision; a revision:null entry wedges returning browsers on
- * old HTML whose hashed assets are gone. Beware: manifest options under
- * the generateSW-only `workbox` key are silently ignored in
- * injectManifest mode. The assertions read the built worker, so they
- * run after bake like every other e2e gate.
+ * index.html keeps its filename across builds, so workbox only
+ * re-fetches it when its manifest entry carries a real content
+ * revision; a revision:null entry wedges returning browsers on old
+ * HTML whose hashed assets are gone. Manifest options under the
+ * generateSW-only `workbox` key are silently ignored in injectManifest
+ * mode. The assertions read the built worker, so they run after bake
+ * like every other e2e gate.
  */
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
@@ -24,7 +24,7 @@ test('index.html precaches with a real content revision', () => {
 });
 
 test('legacy janitor and recovery machinery ship in the worker', () => {
-	// the v2-era runtime caches (html-cache above all) served stale HTML
+	// the v2-era runtime caches (html-cache above all) serve stale HTML
 	// forever; the worker must keep deleting them on activate, and the
 	// recovery flag cache marks the wedged-generation takeover path
 	for (const name of [

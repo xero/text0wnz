@@ -23,11 +23,11 @@ import {
 	v3ToU16Lossy,
 } from '../core/index';
 
-// SAUCE flags round trip: the AR bits and an LS "no preference" from
-// an opened file survive a resave verbatim; v2 rewrote author intent
-// with a forced AR 10 and LS 01 on every save. An LS the artist
-// touches after open writes the explicit bit instead. Module scope:
-// the Load side stashes, the Save side reads.
+// SAUCE §ANSiFlags round trip (sauceMetaWithFont): the AR bits and an
+// LS "no preference" from an opened file survive a resave verbatim,
+// never a forced AR 10 / LS 01 that rewrites author intent. An LS the
+// artist touches after open writes the explicit bit instead. Module
+// scope: the Load side stashes, the Save side reads.
 let openedSauceFlags = null;
 let lsTouchedSinceOpen = false;
 // optional chain: test harnesses stub document with createElement only
@@ -35,11 +35,11 @@ document.addEventListener?.('onLetterSpacingChange', () => {
 	lsTouchedSinceOpen = true;
 });
 
-// SAUCE LS bits (flags >> 1): 10 forces 9px, 01 forces 8px, 00 or a
-// missing record states no preference, so opens leave the session
-// toggle alone (the appliers act on booleans only). Every loader maps
-// flags through here; hand-collapsed bits would resurrect the forced
-// toggle this exists to end
+// SAUCE §ANSiFlags, LS bits (flags >> 1): 10 forces 9px, 01 forces
+// 8px, 00 or a missing record states no preference, so opens leave
+// the session toggle alone (the appliers act on booleans only). Every
+// loader maps flags through here; hand-collapsed bits force the toggle
+// on files that state no preference
 const lsFromSauceFlags = flags => {
 	const bits = ((flags ?? 0) >> 1) & 0x03;
 	if (bits === 2) {
@@ -277,8 +277,7 @@ const loadModule = () => {
 		}
 	}
 
-	// the utf8 pipeline is core decodeAns/encodeUtf8; this legacy parser
-	// only ever reads CP437 bytes (its one caller passed literal false)
+	// CP437 bytes only: utf8 opens go through core decodeAns
 	const loadAnsi = bytes => {
 		let escaped,
 				escapeCode,
@@ -430,16 +429,16 @@ const loadModule = () => {
 				}
 			} else {
 				switch (code) {
-					case 10: // Lone linefeed (LF).
+					case 10: // LF
 						newLine();
 						break;
-					case 13: // Carriage Return, and Linefeed (CRLF)
+					case 13: // CR: a newline only as CRLF, a lone CR drops
 						if (file.peek() === 0x0a) {
 							file.read(1);
 							newLine();
 						}
 						break;
-					case 26: // Ignore eof characters until the actual end-of-file, or sauce record
+					case 26: // SUB skipped: the real end is the file size or SAUCE
 						break;
 					default:
 						if (code === 27 && file.peek() === 0x5b) {
@@ -501,7 +500,7 @@ const loadModule = () => {
 			const charCode = bytes[offset + i];
 			if (charCode === 0) {
 				break;
-			} // Stop at null terminator
+			}
 			text += String.fromCharCode(charCode);
 		}
 		return text;
@@ -554,7 +553,6 @@ const loadModule = () => {
 			case 'IBM EGA43':
 				return 'CP437 8x8';
 
-			// Code page variants
 			case 'IBM VGA 437':
 				return 'CP437 8x16';
 			case 'IBM VGA50 437':
@@ -588,7 +586,6 @@ const loadModule = () => {
 			case 'IBM EGA43 852':
 				return 'CP852 8x8';
 
-			// Amiga fonts
 			case 'Amiga Topaz 1':
 				return 'Topaz 500 8x16';
 			case 'Amiga Topaz 1+':
@@ -606,13 +603,11 @@ const loadModule = () => {
 			case 'Amiga mOsOul':
 				return 'mO\'sOul 8x16';
 
-			// C64 fonts
 			case 'C64 PETSCII unshifted':
 				return 'C64 PETSCII unshifted 8x8';
 			case 'C64 PETSCII shifted':
 				return 'C64 PETSCII shifted 8x8';
 
-			// Modern XBIN fonts
 			case 'TOPAZ_437':
 			case 'Topaz-437':
 			case 'Topaz_437':
@@ -724,7 +719,6 @@ const loadModule = () => {
 			case 'CP852 8x14':
 				return 'IBM EGA 852';
 
-			// Amiga fonts
 			case 'Topaz 500 8x16':
 				return 'Amiga Topaz 1';
 			case 'Topaz+ 500 8x16':
@@ -742,13 +736,11 @@ const loadModule = () => {
 			case 'mO\'sOul 8x16':
 				return 'Amiga mOsOul';
 
-			// C64 fonts
 			case 'C64 PETSCII unshifted 8x8':
 				return 'C64 PETSCII unshifted';
 			case 'C64 PETSCII shifted 8x8':
 				return 'C64 PETSCII shifted';
 
-			// Modern XBIN fonts
 			case 'Topaz-437 8x16':
 				return 'Topaz-437';
 			case 'Human Fossil 8x16':
@@ -850,10 +842,8 @@ const loadModule = () => {
 			);
 		};
 
-		// the old content-derived column/row scan was dead work: the
-		// default always clobbered its columns, and every caller derives
-		// rows itself (the ANSI parser from the stream, BIN from payload
-		// size)
+		// no content scan: every caller derives rows itself (the ANSI
+		// parser from the stream, BIN from payload size)
 		if (defaultColumnValue) {
 			columns = defaultColumnValue;
 		}
@@ -874,8 +864,8 @@ const loadModule = () => {
 						rows = fileSize / columns / 2;
 					}
 				} else {
-					// TInfo of 0 means "unspecified" in wild files: keep the
-					// caller's default instead of a 0-column document
+					// SAUCE §FileType, TInfo1/TInfo2: 0 means not provided, so
+					// keep the caller's default over a 0-column document
 					const tinfo1 = readLE16(sauce, 96);
 					const tinfo2 = readLE16(sauce, 98);
 					if (tinfo1 > 0) {
@@ -889,8 +879,9 @@ const loadModule = () => {
 
 				comments = '';
 				if (commentsCount > 0) {
-					const commentBlockSize = 5 + commentsCount * 64; // "COMNT" + comment lines
-					const totalSauceSize = commentBlockSize + 128; // Comment block + SAUCE record
+					// SAUCE §Layout: "COMNT" plus 64-byte lines, then the record
+					const commentBlockSize = 5 + commentsCount * 64;
+					const totalSauceSize = commentBlockSize + 128;
 
 					if (bytes.length >= totalSauceSize) {
 						const commentBlockStart = bytes.length - totalSauceSize;
@@ -951,11 +942,10 @@ const loadModule = () => {
 
 	const loadBin = bytes => {
 		const sauce = getSauce(bytes, 160);
-		// A binary payload has no newlines, so getSauce's content-derived
-		// row count is meaningless for BIN. Rows always derive from the
-		// payload size and the selected width: SAUCE FileType when set,
-		// else the 160-column default (FileType 0 means "unspecified",
-		// like a zero TInfo).
+		// rows always derive from payload size and width: the FileType
+		// width when set (SAUCE §FileType: BinaryText stores width / 2
+		// there), else the 160-column default; FileType 0 reads as
+		// unspecified, like a zero TInfo
 		const payloadSize = sauce.fileSize > 0 ? sauce.fileSize : bytes.length;
 		sauce.rows = Math.floor(payloadSize / sauce.columns / 2);
 		const data = convertUInt8ToUint16(bytes, 0, sauce.columns * sauce.rows * 2);
@@ -1018,8 +1008,8 @@ const loadModule = () => {
 			switch (file.name.split('.').pop().toLowerCase()) {
 				case 'xb':
 				case 'xbin': {
-					// core decoder: the doc rides the plane-native callback slot
-					// like tnd/dur/0wnz, and 512-glyph fonts keep their bytes
+					// the doc rides the plane-native callback slot, and
+					// 512-glyph fonts keep their bytes
 					const result = decodeXBin(data);
 					updateSauceModal(result.meta, result.sauce?.flags ?? null);
 					State.textArtCanvas.clearXBData(async () => {
@@ -1044,7 +1034,7 @@ const loadModule = () => {
 							u16.rows,
 							u16.imageData,
 							u16.iceColors,
-							undefined, // XBin SAUCE defines no LS bits
+							undefined, // SAUCE §FileType: XBin flags are 0, no LS
 							undefined,
 							result.doc,
 						);
@@ -1052,11 +1042,11 @@ const loadModule = () => {
 					break;
 				}
 				case 'bin':
-					// Clear any previous XB data to avoid palette persistence
+					// clears any previous XB palette so it does not persist
 					State.textArtCanvas.clearXBData(() => {
 						imageData = loadBin(data);
-						// BIN SAUCE is real (BinaryText defines the flags), so
-						// it joins the modal and the round-trip stash like ans
+						// SAUCE §FileType: BinaryText flags are ANSiFlags, so
+						// BIN joins the modal and the round-trip stash like ans
 						updateSauceModal(imageData, imageData.sauceFlags ?? null);
 						callback(
 							imageData.columns,
@@ -1072,8 +1062,9 @@ const loadModule = () => {
 					// u16 projection feeds legacy consumers
 					State.textArtCanvas.clearXBData(() => {
 						const result = decodeTundra(data);
-						// TundraDraw files carry real ANSiFlags, so the stash
-						// round-trips them like an .ans open would
+						// SAUCE §FileType gives TundraDraw Flags 0, but the .tnd
+						// writer stores ANSiFlags, so the stash round-trips them
+						// like an .ans open would
 						updateSauceModal(
 							{
 								title: result.meta.title,
@@ -1096,8 +1087,6 @@ const loadModule = () => {
 					});
 					break;
 				case 'dur':
-					// durdraw v7/v8 movie: frames import with the doc; frame 0
-					// displays
 					State.textArtCanvas.clearXBData(guarded(async () => {
 						const result = await decodeDur(data);
 						updateSauceModal({
@@ -1117,7 +1106,6 @@ const loadModule = () => {
 					}));
 					break;
 				case '0wnz':
-					// native t0wnz-doc envelope
 					State.textArtCanvas.clearXBData(guarded(async () => {
 						const result = await decodeEnvelope(data);
 						if (result.fontBytes) {
@@ -1160,10 +1148,8 @@ const loadModule = () => {
 						// rule) skip the UTF-8 reader outright
 						if (checkUTF8(file.name.toLowerCase()) && !opts.preferBytes) {
 							try {
-								// UTF-8 opens go through the core reader, which
-								// builds v3 planes natively (glyph table, extended
-								// colors, LF after wrap); the doc rides the
-								// plane-native callback slot like tnd/dur/0wnz
+								// the core reader builds v3 planes natively (glyph
+								// table, extended colors, LF after wrap)
 								const result = decodeAns(data, { utf8: true });
 								updateSauceModal(result.meta, result.sauce?.flags ?? null);
 								const u16 = v3ToU16Lossy(result.doc);
@@ -1278,18 +1264,16 @@ const saveModule = () => {
 			}
 		} catch (error) {
 			if (error.name === 'AbortError') {
-				// Silently ignore user cancel
+				// user cancelled the picker
 			} else {
 				throw error;
 			}
 		}
 	};
 
-	// Format-budget linter + compression toggle: lossy saves confirm
-	// through the export modal when the doc holds anything the target
-	// format cannot; XBin always shows it, because the RLE checkbox
-	// lives there. Falls through silently when the modal infrastructure
-	// is absent (unit tests, headless embeds).
+	// XBin always shows the export modal, because the RLE checkbox
+	// lives there; with no modal infrastructure (unit tests, headless
+	// embeds) every save proceeds silently
 	const confirmExport = (format, label, { compressToggle = false } = {}) =>
 		new Promise(resolve => {
 			const modal = State.modal;
@@ -1339,8 +1323,8 @@ const saveModule = () => {
 		if (!(await confirmExport('ans', 'ANSi')).proceed) {
 			return;
 		}
-		// the core writer: lossy per the modal's warnings, and 24-bit
-		// plane colors ride PabloDraw t sequences over the SGR base
+		// lossy per the modal's warnings; 24-bit plane colors ride
+		// PabloDraw t sequences over the SGR base
 		const bytes = encodeAns(State.textArtCanvas.getDoc(), {
 			lossy: true,
 			frameIndex: State.textArtCanvas.getCurrentFrame?.() ?? 0,
@@ -1349,13 +1333,10 @@ const saveModule = () => {
 		await saveFile(bytes, undefined, State.title + '.ans');
 	};
 
-	// UTF-8 and plain-text exports go through the core v3 writer: one
-	// cell per column, LF endings, unicode glyphs ride the doc glyph
-	// table, ice-vs-blink per the artist's choice
 	const utf8 = async () => {
 		// the default ice presentation drops blink over extended
 		// backgrounds; the lint names it, the artist decides.
-		// utf8Blink stays unwired: its writer keeps the attr
+		// utf8Blink skips the confirm: its writer keeps the attr
 		if (!(await confirmExport('utf8', 'UTF-8 ANSi')).proceed) {
 			return;
 		}
@@ -1391,7 +1372,8 @@ const saveModule = () => {
 			await saveFile(bytes, undefined, State.title + '.bin');
 		} catch (error) {
 			if (error instanceof CodecError) {
-				// odd column counts used to no-op silently after the confirm
+				// a refused shape (odd or >510 width, the cell ceiling) must
+				// not fail silently after the confirm
 				alert(`BIN export failed: ${error.message}`);
 				return;
 			}
@@ -1414,7 +1396,7 @@ const saveModule = () => {
 	};
 
 	const writeXb = async (compress = true) => {
-		// Prefer the original embedded XB font bytes (full 512-glyph
+		// prefer the original embedded XB font bytes (full 512-glyph
 		// fonts survive); the live font object only holds the 256
 		// renderable glyphs
 		const embeddedFont =
@@ -1426,7 +1408,7 @@ const saveModule = () => {
 			(embeddedFont && embeddedFont.bytes) ||
 			(liveFontData && liveFontData.data) ||
 			null;
-		// Header wants the UNSCALED glyph height; getHeight() is zoom-scaled
+		// header wants the UNSCALED glyph height; getHeight() is zoom-scaled
 		const fontHeight =
 			(embeddedFont && embeddedFont.height) ||
 			(liveFontData && liveFontData.height) ||
@@ -1492,14 +1474,13 @@ const saveModule = () => {
 	};
 
 	const tnd = async () => {
-		// the linter fronts the throw cases (unicode glyphs, blink) plus
-		// the silent chars-1-6 blanking, so the artist decides first
+		// the linter fronts what encodeTundra degrades (unicode glyphs
+		// voice '?', blink drops, chars 1-6 blank): the artist decides first
 		if (!(await confirmExport('tnd', 'TundraDraw')).proceed) {
 			return;
 		}
-		// encodeTundra appends its own SAUCE and degrades what tundra
-		// cannot hold (the lint fronted it); anything left throwing is a
-		// real failure the artist must see, not a console whisper
+		// anything still throwing is a real failure the artist must see,
+		// not a console whisper
 		try {
 			const bytes = encodeTundra(State.textArtCanvas.getDoc(), { meta: sauceMeta() });
 			await saveFile(bytes, undefined, State.title + '.tnd');
@@ -1509,8 +1490,6 @@ const saveModule = () => {
 		}
 	};
 
-	// Animation exports: classic ansimation (clear + home-per-frame,
-	// baud is the clock) and the durdraw v8 movie (256-color, utf-8)
 	const ansimation = async () => {
 		if (!(await confirmExport('ans', 'ANSimation')).proceed) {
 			return;
@@ -1524,8 +1503,6 @@ const saveModule = () => {
 		await saveFile(bytes, undefined, State.title + '.dur');
 	};
 
-	// Timelapse: baseline + op log from the server, replayed into a
-	// capped multi-frame movie, the shareable session artifact
 	const timelapse = async () => {
 		if (State.network?.extCollab?.() !== true) {
 			alert(
@@ -1569,7 +1546,7 @@ const saveModule = () => {
 		const width = State.textArtCanvas.getColumns() * fontWidth;
 		const height = State.textArtCanvas.getRows() * fontHeight;
 		if (width * height > magicNumbers.MAX_CANVAS_AREA) {
-			// Tall documents exceed the iOS Safari canvas area cap, so encode
+			// tall documents exceed the iOS Safari canvas area cap, so encode
 			// from chunk strips without compositing one full-size canvas
 			const image = State.textArtCanvas.getImageRGBA();
 			await saveFile(

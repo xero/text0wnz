@@ -14,8 +14,7 @@
  * Round-trip guarantee (pinned by fuzz tests): mapping the CENTER of
  * any cell or half-block returns that cell identically. Corner points
  * sit on the floor() boundary where IEEE subtraction may land a hair
- * under the true value, so centers are the stable probe everywhere
- * (the e2e fuzz clicks centers for the same reason). snapOrigin()
+ * under the true value, so centers are the stable probe. snapOrigin()
  * quantizes a fractional bounding-rect origin to device pixels, which
  * is where dpr enters; the cell math itself is dpr-free CSS pixels.
  */

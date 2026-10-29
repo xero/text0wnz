@@ -1,10 +1,9 @@
 /**
  * Autosave journal format: an append-only byte log the OPFS worker
- * writes incrementally via createSyncAccessHandle (with an
- * IndexedDB blob fallback for Safari 15.0-15.1). This module is the
- * pure format layer: record framing, stroke serialization, replay, and
- * the compaction policy. File IO lives in the client store; everything
- * here runs anywhere.
+ * writes incrementally via createSyncAccessHandle (with an IndexedDB
+ * record log fallback for Safari 15.0-15.1). This module is the pure
+ * format layer; file IO lives in the client store
+ * (src/js/client/journalStore.js).
  *
  * Layout: 'T0WJ' magic + u8 version, then records of
  * `[u32 LE payloadLen][u8 type][payload][u32 LE crc32(type+payload)]`.
@@ -16,8 +15,8 @@
  * Replay starts at the LAST valid keyframe and applies the stroke
  * records after it. A torn tail (crash mid-append) parses as an invalid
  * frame: replay stops there and reports it, never throws. Compaction
- * rewrites the file as header + one fresh keyframe; the store swaps
- * files at keyframes/idle so the journal never grows unbounded.
+ * rewrites the file as header + one fresh keyframe so the journal
+ * never grows unbounded.
  */
 
 import { DocV3 } from './doc.js';
@@ -53,8 +52,6 @@ export const shouldCompact = (
 	state.bytesSinceKeyframe >= (limits.bytes ?? DEFAULT_COMPACT_BYTES) ||
 	state.strokesSinceKeyframe >= (limits.strokes ?? DEFAULT_COMPACT_STROKES);
 
-// ------------------------------------------------------------------- crc32
-
 const CRC_TABLE = (() => {
 	const table = new Uint32Array(256);
 	for (let n = 0; n < 256; n++) {
@@ -74,8 +71,6 @@ export const crc32 = (bytes: Uint8Array): number => {
 	}
 	return (crc ^ 0xffffffff) >>> 0;
 };
-
-// ---------------------------------------------------------------- framing
 
 const frameRecord = (type: number, payload: Uint8Array): Uint8Array => {
 	const out = new Uint8Array(FRAME_OVERHEAD + payload.length);
@@ -154,8 +149,6 @@ export const scanJournal = (bytes: Uint8Array): JournalScan => {
 		tornTail: at < bytes.length,
 	};
 };
-
-// ---------------------------------------------------------------- strokes
 
 const PLANE_IDS: ReadonlyArray<PlaneName> = ['glyph', 'fg', 'bg'];
 
@@ -250,8 +243,6 @@ export const decodeStrokePayload = (payload: Uint8Array): DecodedStroke => {
 	return { meta: { frame, userId }, patches };
 };
 
-// ------------------------------------------------------------ public API
-
 /** Header + one keyframe: a fresh journal (also the compacted form). */
 export const createJournal = async (
 	doc: DocV3,
@@ -262,8 +253,8 @@ export const createJournal = async (
 		header[i] = JOURNAL_MAGIC.charCodeAt(i);
 	}
 	header[4] = JOURNAL_VERSION;
-	// the same record a doc-level mutation appends; inlining it here
-	// once let the two drift apart
+	// the same record a doc-level mutation appends, so the two cannot
+	// drift apart
 	return concatBytes([header, await encodeKeyframeRecord(doc, options)]);
 };
 

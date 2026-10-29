@@ -260,7 +260,6 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 				mockCharacterElement,
 			);
 
-			// Mock non-blocky character - need to import State and modify mock
 			const State = (await import('../../src/js/client/state.js')).default;
 			State.textArtCanvas.getHalfBlock.mockReturnValue({
 				isBlocky: false,
@@ -296,7 +295,7 @@ describe('Freehand Tools - Advanced Tools and Algorithms', () => {
 			});
 
 			State.textArtCanvas.getBlock.mockReturnValue({
-				charCode: 177, // Light shade
+				charCode: 177, // Medium shade
 				foregroundColor: 7,
 				backgroundColor: 0,
 			});

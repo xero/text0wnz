@@ -1,16 +1,12 @@
 /**
- * Extended color panel: the xterm-256 grid, an RGB picker, and recent
- * swatches. The classic 16-swatch strip stays the anchor; click sets
- * the foreground, right-click the background.
- *
  * Values flow as tag-bit palette words (paletteColor(16..255)) or raw
  * RGB words through State.palette.set*Color and the editor's extended
  * cell path; RGB words below 16 bump to 16 so a near-black can never
  * collide with a classic index (editor.ts documents the convention).
  *
  * Collab lockout: the vanilla wire quantizes extended colors, so an
- * apply-locally sender would diverge from its peers; while connected
- * the panel is inert and says why.
+ * apply-locally sender would diverge from its peers; in a vanilla
+ * session the panel is inert and says why.
  */
 import State from './state.js';
 import { $ } from './ui.js';
@@ -100,7 +96,6 @@ const createColorPanel = () => {
 				swatch(cube, 16 + red * 36 + (r % 6) * 6 + (c % 6));
 			}
 		}
-		// the grey ramp runs continuously over two rows of 12
 		const greys = document.createElement('div');
 		greys.className = 'greys';
 		for (let index = 232; index < 256; index++) {

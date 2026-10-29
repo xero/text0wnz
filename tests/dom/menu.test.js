@@ -3,9 +3,8 @@ import '@testing-library/jest-dom';
 import { createFlyoutManager } from '../../src/js/client/flyouts.js';
 
 /**
- * The flyout manager carries every rail popover, the tabbed File/Edit
- * menu included: toggle semantics, outside-press close, Escape with
- * focus return, and arrow-key walking.
+ * The tabbed File/Edit menu is a flyout like every rail popover, so
+ * the flyout manager carries its behavior.
  */
 
 const fixture = () => {
@@ -39,7 +38,7 @@ const fixture = () => {
 		</div>`;
 };
 
-// happy-dom lacks PointerEvent; the manager only reads target
+// the manager only reads target, so a MouseEvent stands in
 const press = el =>
 	el.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
 
@@ -115,10 +114,8 @@ describe('flyout manager', () => {
 		const opener = document.getElementById('fileMenu');
 		fly.toggle('menu', menu, opener);
 		expect(opener.classList.contains('flyOpen')).toBe(true);
-		// an outside press closes and unlights
 		press(document.getElementById('elsewhere'));
 		expect(opener.classList.contains('flyOpen')).toBe(false);
-		// switching flyouts moves the mark to the new opener
 		fly.toggle('menu', menu, opener);
 		const brushes = document.getElementById('brushes');
 		fly.toggle('brushes', document.getElementById('brushToolbar'), brushes);
@@ -142,12 +139,10 @@ describe('flyout manager', () => {
 			document.dispatchEvent(
 				new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }),
 			);
-		// closed: the summary is next and the child never takes focus
 		walk();
 		expect(document.activeElement.tagName).toBe('SUMMARY');
 		walk();
 		expect(document.activeElement).toBe(document.getElementById('help'));
-		// open: the child joins the walk after its summary
 		document.querySelector('.menuGroup').open = true;
 		document.querySelector('.menuGroup summary').focus();
 		walk();
@@ -168,7 +163,6 @@ describe('flyout manager', () => {
 		expect(document.activeElement).toBe(
 			document.getElementById('menuTabEdit'),
 		);
-		// shift-tab walks back, never out the top
 		tab(true);
 		expect(document.activeElement).toBe(
 			document.getElementById('menuTabFile'),

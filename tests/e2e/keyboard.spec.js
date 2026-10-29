@@ -13,7 +13,6 @@ test.describe('Keyboard Shortcuts', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			// Click brushes to show brush toolbar, then select halfblock
 			await page.locator('#brushes').click();
 			await page.waitForTimeout(200);
 			await clickTool(page, 'halfblock');
@@ -33,7 +32,6 @@ test.describe('Keyboard Shortcuts', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			// Click brushes to show brush toolbar, then select halfblock
 			await page.locator('#brushes').click();
 			await page.waitForTimeout(200);
 			await clickTool(page, 'halfblock');
@@ -143,7 +141,6 @@ test.describe('Keyboard Shortcuts', () => {
 		await page.keyboard.press('k');
 		await page.waitForTimeout(300);
 
-		// F-keys insert characters when in keyboard mode
 		const fKeys = [
 			'F1',
 			'F2',
@@ -175,14 +172,12 @@ test.describe('Keyboard Shortcuts', () => {
 		await page.keyboard.press('k');
 		await page.waitForTimeout(300);
 
-		// Cycle to next character set
 		await page.keyboard.press('Control+BracketRight');
 		await page.waitForTimeout(200);
 
 		await page.keyboard.press('F1');
 		await page.waitForTimeout(200);
 
-		// Cycle to previous character set
 		await page.keyboard.press('Control+BracketLeft');
 		await page.waitForTimeout(200);
 

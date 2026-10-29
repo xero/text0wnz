@@ -136,7 +136,6 @@ describe('Utils Module', () => {
 			callout(longMsg);
 
 			const call = consoleLogSpy.mock.calls[0][0];
-			// The message should be truncated to 100 chars (not counting the box chars)
 			expect(call).toContain('a'.repeat(100));
 			expect(call).not.toContain('a'.repeat(150));
 		});

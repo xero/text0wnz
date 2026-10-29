@@ -1,6 +1,5 @@
 /**
- * Room persistence through the shared codecs: native .0wnz round trip,
- * the legacy v2 .bin migration path, and sha1-deduped hourly backups.
+ * Room persistence through the shared codecs.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
@@ -188,7 +187,6 @@ describe('room persistence', () => {
 		});
 		expect(room.isBlank()).toBe(true);
 		await removeRoomFiles(dir, 'foo');
-		// at HEAD the .bin survived and re-restored the erased art
 		expect(await loadRoomDoc(dir, 'foo')).toBeNull();
 	});
 

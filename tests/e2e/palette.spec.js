@@ -62,11 +62,9 @@ test.describe('Color Palette', () => {
 	});
 
 	test('should support keyboard shortcuts for colors', async ({ page }) => {
-		// Press F key for foreground
 		await page.keyboard.press('f');
 		await page.waitForTimeout(200);
 
-		// Press B key for background
 		await page.keyboard.press('b');
 		await page.waitForTimeout(200);
 
@@ -108,7 +106,6 @@ test.describe('Sample Tool (Color Picker)', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			// Click brushes to show brush toolbar, then select halfblock
 			await page.locator('#brushes').click();
 			await page.waitForTimeout(200);
 			await clickTool(page, 'halfblock');
@@ -118,7 +115,6 @@ test.describe('Sample Tool (Color Picker)', () => {
 			await page.mouse.up();
 			await page.waitForTimeout(300);
 
-			// Use Alt key to sample
 			await page.keyboard.down('Alt');
 			await page.mouse.move(box.x + 60, box.y + 60);
 			await page.mouse.click(box.x + 60, box.y + 60);
@@ -139,7 +135,7 @@ test.describe('Character Palette', () => {
 		await page.locator('#brushes').click();
 		await clickTool(page, 'characterBrush');
 
-		// the 256 glyph picker rides the settings window now
+		// the 256 glyph picker rides the settings window
 		await expect(page.locator('#toolSettings')).toBeVisible();
 		await expect(page.locator('#toolSettingsTitle')).toHaveText(
 			'Character Brush',

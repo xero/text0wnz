@@ -16,17 +16,13 @@
  * loudly because a silently skipped glyph becomes an invisible
  * character in someone's artwork months later.
  *
- * Packed block layout (BLOCK_FORMAT_VERSION, pinned by tests):
+ * Packed block layout (BLOCK_FORMAT_VERSION, which the baked
+ * manifest records):
  *   bytes  0-31  presence bitmap, LSB-first: codepoint (base + i) is
  *                present iff (data[i >> 3] >> (i & 7)) & 1
  *   bytes 32-63  width bitmap, same indexing; a set bit means the
  *                glyph is 16px wide (32 bytes), clear means 8px (16)
  *   bytes 64+    glyph bitmaps in ascending codepoint order
- *
- * uns2uni.tr (unscii's legacy-mosaic table) is a tr(1) argument pair
- * concatenated into one line: the first half of the code points are
- * the unscii PUA sources, the second half the Unicode 13+ targets at
- * the same index. parseUns2Uni() splits it accordingly.
  */
 
 export const HEX_CELL_WIDTH = 8;
@@ -219,8 +215,10 @@ export const buildBlocks = (glyphs: HexGlyph[]): Map<number, Uint8Array> => {
 };
 
 /**
- * Parse uns2uni.tr: one line, first half unscii PUA sources, second
- * half same-index Unicode targets. Returns source -> target.
+ * uns2uni.tr (unscii's legacy-mosaic table) is a tr(1) argument pair
+ * concatenated into one line: the first half of the code points are
+ * the unscii PUA sources, the second half the Unicode 13+ targets at
+ * the same index. Returns source -> target.
  */
 export const parseUns2Uni = (text: string): Map<number, number> => {
 	const codepoints: number[] = [];

@@ -213,10 +213,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	});
 	const iceColorsNow = () => doc.getIceColors();
 
-	// ---- frames: onion-skin compose + current-frame mirror ----------
-	// Onion skin is a DATA-level ghost, GL-only (the chunk fallback's u16
-	// mirror always reflects the real frame): blank cells of the current
-	// frame show the previous frame dimmed to 35%, blink stripped.
+	// onion skin is a DATA-level ghost, GL-only: the chunk fallback's
+	// u16 mirror always reflects the real frame
 	let onionSkin = false;
 	/** @type {{glyph: Uint32Array, fg: Uint32Array, bg: Uint32Array} | null} */
 	let onionPlanes = null;
@@ -276,8 +274,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	// Baud preview: reveal the current frame in encoded-byte order at a
-	// chosen line rate; another data-level compose, GL-only.
+	// baud preview: another data-level compose, GL-only
 	/** @type {{glyph: Uint32Array, fg: Uint32Array, bg: Uint32Array} | null} */
 	let baudPlanes = null;
 	let baudReveal = -1;
@@ -339,7 +336,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		redrawEntireImage();
 	};
 
-	/** re-mirror + repaint + tell the UI; fired by editor navigation */
 	const handleFrameChange = frameIndex => {
 		imageData = v3ToU16Lossy(doc, frameIndex).imageData;
 		if (onionSkin) {
@@ -366,10 +362,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				},
 				canvasChunks = new Map();
 
-	// GL is the default renderer. All paint paths delegate to it when
-	// active; the doc model is shared. ?renderer=2d forces the legacy
-	// chunk renderer below, which is also the automatic fallback
-	// wherever webgl2 is unavailable.
+	// paint paths delegate to GL when active over the shared doc model;
+	// the chunk renderer below is the ?renderer=2d and no-webgl2 fallback
 	let glRenderer = null;
 	// unicode glyph pages: created on the first glyph id >= 256, so
 	// classic docs never fetch the manifest or any block
@@ -397,10 +391,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			glRenderer = createGLRenderer(canvasContainer, {
 				getColumns: () => columns,
 				getRows: () => rows,
-				// GL renders the v3 planes directly (tag-bit colors, attr
-				// blink); the u16 mirror stays for the chunk fallback +
-				// collab. Frames: the current frame renders; onion mode
-				// substitutes the composed ghost planes (GL-only)
 				getPlanes: () => {
 					if (baudReveal >= 0 && baudPlanes) {
 						return baudPlanes;
@@ -488,7 +478,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return;
 		}
 
-		// Throttle with RAF for smooth rendering
 		if (!dirtyRegionScheduled) {
 			dirtyRegionScheduled = true;
 			requestAnimationFrame(() => {
@@ -513,7 +502,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const chunkIndex = Math.floor(y / chunkSize);
 		const chunk = canvasChunks.get(chunkIndex);
 		if (!chunk || !activeChunks.has(chunkIndex)) {
-			// Chunk not visible, skip rendering but mark as dirty if it exists
 			if (chunk) {
 				chunk.rendered = false;
 			}
@@ -524,12 +512,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const redrawEntireImage = (onProgress, onComplete) => {
 		if (glRenderer) {
-			// Coverage repaints are sub-frame; progressive pacing collapses
-			// to one paint with the same completion contract
 			glRenderer.redraw(onProgress, onComplete);
 			return;
 		}
-		// For small canvases, direct render is fine
 		if (rows * columns < 5000) {
 			drawRegion(0, 0, columns, rows);
 			if (onComplete) {
@@ -542,11 +527,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		let batchSize;
 
 		if (totalCells < 10000) {
-			batchSize = 10; // Small: 10 rows per frame
+			batchSize = 10;
 		} else if (totalCells < 50000) {
-			batchSize = 5; // Medium: 5 rows per frame
+			batchSize = 5;
 		} else {
-			batchSize = 3; // Large: 3 rows per frame
+			batchSize = 3;
 		}
 		progressiveRedraw(0, batchSize, rows, onProgress, onComplete);
 	};
@@ -573,7 +558,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				const frameTime = performance.now() - frameStart;
 				let nextBatchSize = batchSize;
 
-				// Adjust batch size to maintain snappy fps
 				if (frameTime < 10) {
 					nextBatchSize = Math.min(batchSize * 2, 25);
 				} else if (frameTime > 16) {
@@ -600,7 +584,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return regions;
 		}
 
-		const gridCellSize = 10; // 10x10 cells
+		const gridCellSize = 10;
 		const gridWidth = Math.ceil(columns / gridCellSize);
 		const gridHeight = Math.ceil(rows / gridCellSize);
 		const grid = Array(gridHeight)
@@ -683,7 +667,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	let blinkStop = false;
 
 	const blink = () => {
-		// Only blink active (visible) chunks
 		blinkOn = !blinkOn;
 
 		activeChunks.forEach(chunkIndex => {
@@ -721,10 +704,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	// each update chains ONE starter onto the prior loop's promise, so
 	// at most one loop ever runs; the generation token lets stops and
-	// rapid restarts cancel queued starters instead of stacking waiters
-	// (the old lifetime-held mutex grew one starved waiter per open,
-	// font change, resize, and zoom, and a bare stop handed the lock to
-	// a stale waiter that restarted blink mid-relayout)
+	// rapid restarts cancel queued starters, so waiters never pile up
+	// per open/font/resize/zoom and a stale one never restarts blink
+	// mid-relayout
 	let blinkGen = 0;
 	let blinkLoopTail = Promise.resolve();
 
@@ -846,7 +828,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const canvasWidth = fontWidth * columns;
 		const canvasHeight = fontHeight * chunkHeight;
 
-		// Create main canvas with a background color to avoid flash
+		// black backing avoids a flash before the chunk paints
 		const canvas = createCanvas(canvasWidth, canvasHeight);
 		canvas.style.position = 'absolute';
 		canvas.style.top = chunkStartRow * fontHeight + 'px';
@@ -1007,8 +989,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const handleScroll = () => {
 		if (scrollScheduled) {
 			// only a scroll landing DURING the pass earns a trailing one;
-			// setting the flag unconditionally made the tail call re-arm
-			// itself and the loop ran every frame until the page closed
+			// flagging unconditionally would let the tail call re-arm
+			// itself every frame until the page closes
 			pendingScrollUpdate = true;
 			return;
 		}
@@ -1020,7 +1002,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 			scrollScheduled = false;
 
-			// If more scroll events came in, schedule another update
 			if (pendingScrollUpdate) {
 				pendingScrollUpdate = false;
 				handleScroll();
@@ -1049,7 +1030,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			);
 			return;
 		}
-		// Remove existing listeners to avoid duplicates
 		viewportElement.removeEventListener('scroll', handleScroll);
 		window.removeEventListener('resize', handleResize);
 		viewportElement.addEventListener('scroll', handleScroll, { passive: true });
@@ -1062,7 +1042,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return;
 		}
 		if (glRenderer) {
-			// Geometry/font/palette changed: atlas + layout rebuild, sub-frame
 			redrawing = true;
 			glRenderer.rebuild();
 			redrawing = false;
@@ -1108,14 +1087,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			endChunk + visibleChunkCount * 4,
 		);
 
-		// Create and render visible chunks + pre-rendered buffer below
 		for (
 			let chunkIndex = startChunk;
 			chunkIndex <= preRenderEndChunk;
 			chunkIndex++
 		) {
 			const chunk = getOrCreateCanvasChunk(chunkIndex);
-			// Only attach visible chunks to DOM
 			if (chunkIndex <= endChunk) {
 				canvasContainer.appendChild(chunk.canvas);
 				activeChunks.add(chunkIndex);
@@ -1309,7 +1286,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			updateTimer();
 			redrawEntireImage();
 			// the autosave listens for this; without it an ice toggle on
-			// an otherwise untouched doc reverted on reload
+			// an otherwise untouched doc would revert on reload
 			document.dispatchEvent(
 				new CustomEvent('onIceColorsChange', { detail: newIceColors }),
 			);
@@ -1385,7 +1362,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const wasBlinkOn = blinkOn;
 		blinkOn = false;
 
-		// Ensure all chunks exist and are rendered for export
 		const totalChunks = Math.ceil(rows / chunkSize);
 
 		for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
@@ -1395,8 +1371,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			}
 			// ALWAYS re-render under the pinned phase: an already-rendered
 			// chunk still wears whatever phase the 500ms tick last painted,
-			// so about half of all exports dropped their blink glyphs (the
-			// live view self-heals on the next tick)
+			// so about half of all exports would drop their blink glyphs
+			// (the live view self-heals on the next tick)
 			renderChunk(chunk);
 			chunk.rendered = true;
 			const yPosition = chunkIndex * chunkSize * fontHeight;
@@ -1465,12 +1441,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		doc.setLetterSpacing(State.font ? State.font.getLetterSpacing() : false);
 		columns = newColumnValue;
 		rows = newRowValue;
-		// Adopt the caller's array as the mirror
 		imageData = newImageData;
 		if (typeof newLetterSpacing === 'boolean') {
-			// the SAUCE 9px flag gets its own parameter: it used to ride
-			// the onProgress slot, where a truthy flag was CALLED as a
-			// function mid-redraw and aborted the open
+			// SAUCE §ANSiFlags, LS bits (true = 9px). Its own parameter,
+			// never the onProgress slot: a truthy flag there would be
+			// CALLED as a function mid-redraw and abort the open
 			State.font.setLetterSpacing(newLetterSpacing);
 		}
 		scheduleJournalKeyframe(true);
@@ -1534,16 +1509,16 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		return rows;
 	};
 
-	// --- document mutations live in the v3 editor core -------------------
-	// (cell algebra: src/js/core/cellops.ts; stroke/undo: core/editor.ts;
-	// identity vs the frozen v2 reference pinned by engineParity.test.js)
+	// document mutations live in the v3 editor core (cell algebra:
+	// core/cellops.ts; stroke/undo: core/editor.ts), pinned against the
+	// frozen v2 reference by engineParity.test.js
 
 	const clear = () => {
 		State.title = '';
 		editor.clear(); // blank planes, history gone, ice back to default
 		imageData = new Uint16Array(columns * rows);
 		scheduleJournalKeyframe(true);
-		updateTimer(); // Restart blink timer if needed
+		updateTimer();
 		redrawEntireImage();
 	};
 
@@ -1691,10 +1666,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		sendDrawHistory();
 	};
 
-	// ---- frames API (timeline UI drives these) ----------------------
-	// Collab sessions are single-frame by policy: no frame op exists in
+	// collab sessions are single-frame by policy: no frame op exists in
 	// the protocol, so navigation and structure changes refuse while
-	// connected (the timeline UI says why).
+	// connected
 	const framesLocked = () => State.network?.isConnected?.() === true;
 
 	const setCurrentFrame = index => {
@@ -1845,7 +1819,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			);
 			return;
 		}
-		// Convert XB palette (6-bit RGB values)
+		// XB palette channels are 6-bit
 		const rgb6BitPalette = [];
 		for (let i = 0; i < 16; i++) {
 			const offset = i * 3;
@@ -1894,12 +1868,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return null;
 		}
 
-		// Convert current palette to XB format (6-bit RGB values)
+		// XB palette channels are 6-bit
 		const paletteBytes = new Uint8Array(48);
 		for (let i = 0; i < 16; i++) {
 			const rgba = State.palette.getRGBAColor(i);
 			const offset = i * 3;
-			// Convert and clamp 8-bit to 6-bit RGB values
 			paletteBytes[offset] = Math.min(rgba[0] >> 2, 63);
 			paletteBytes[offset + 1] = Math.min(rgba[1] >> 2, 63);
 			paletteBytes[offset + 2] = Math.min(rgba[2] >> 2, 63);
@@ -1910,18 +1883,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const getXBFontData = () => xbFontData;
 
 	/**
-	 * Undo persists in the OPFS journal only. Legacy IndexedDB autosaves
-	 * restore their content; their undo stacks are deliberately dropped
-	 * (see core/migrate.ts).
-	 */
-	/**
-	 * Restore source for state.js: replay the autosave journal and hand
-	 * back the NATIVE doc for setDocData. Projecting through v3ToU16
-	 * here flattened animations to frame 0 and dropped truecolor and
-	 * unicode, and the restore's own keyframe trigger then rewrote the
-	 * journal with the flattened doc, destroying the autosave. Returns
-	 * null when the journal is empty or unreadable (then the legacy
-	 * IndexedDB snapshot is the fallback).
+	 * Restore source for state.js: hands back the NATIVE doc for
+	 * setDocData, never a v3ToU16 projection, which flattens animations
+	 * to frame 0 and drops truecolor and unicode; the restore's own
+	 * keyframe would then rewrite the journal with the flattened doc,
+	 * destroying the autosave. null when the journal is empty or
+	 * unreadable (the legacy IndexedDB snapshot is the fallback).
 	 */
 	const loadJournalSnapshot = async () => {
 		try {
@@ -1941,6 +1908,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
+	/**
+	 * Undo persists in the OPFS journal only. Legacy IndexedDB autosaves
+	 * restore their content; their undo stacks are deliberately dropped
+	 * (see core/migrate.ts).
+	 */
 	const getUndoHistory = () => null;
 
 	const setUndoHistory = _history => {};
@@ -1960,11 +1932,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	 */
 	const resolveUnicode = async codepoints => {
 		const resolved = new Map();
-		// collab lockout (visible in the charset UI): the vanilla Moebius
-		// dialect cannot carry unicode cells, and an apply-locally sender
-		// would silently diverge from every peer. The t0wnz extension
-		// suite (ids 23+) lifts it: when the server negotiated the suite,
-		// unicode cells travel natively and nothing substitutes.
+		// collab lockout: the vanilla Moebius dialect cannot carry
+		// unicode cells, and an apply-locally sender would silently
+		// diverge from every peer. The t0wnz extension suite (ids 23+)
+		// lifts it: once negotiated, unicode cells travel natively and
+		// nothing substitutes
 		const locked =
 			State.network?.isConnected?.() === true &&
 			State.network?.extCollab?.() !== true;
@@ -2061,7 +2033,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		},
 		// one EXPLICIT test seam for the chunk renderer's dirty-region
 		// internals: nothing in production reaches them from outside, and
-		// scattering them across the public surface read as API
+		// scattered across the public surface they would read as API
 		_chunkTestSeam: {
 			drawRegion,
 			enqueueDirtyRegion,

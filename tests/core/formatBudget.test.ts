@@ -16,7 +16,6 @@ import {
 
 const makeDoc = () => {
 	const doc = createDocV3({ columns: 8, rows: 2 });
-	// classic cell
 	doc.setCell(0, 0, 0, {
 		glyph: glyphWord(65, 0),
 		fg: paletteColor(7),
@@ -83,8 +82,8 @@ describe('lintDocForFormat', () => {
 		expect(kinds['unicode-glyph'].count).toBe(1);
 		expect(kinds['unicode-glyph'].firstIndex).toBe(1);
 		expect(kinds['color-beyond-16'].count).toBe(2);
-		// the plain-text writer emits REAL codepoints: flagging unicode
-		// cells there was a false positive on every such export
+		// the plain-text writer emits REAL codepoints, so flagging unicode
+		// cells there is a false positive on every such export
 		const txt = lintDocForFormat(doc, 'txt');
 		expect(txt.ok).toBe(true);
 	});

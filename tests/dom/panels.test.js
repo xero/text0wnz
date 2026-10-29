@@ -7,11 +7,6 @@ import {
 
 vi.mock('../../src/js/client/state.js', () => ({ default: {} }));
 
-/**
- * The module registry: layout() placement from data, persistence with
- * the tolerant merge, the legacy position migration, and the row lead
- * promotion rule the phase 3 docks will render.
- */
 const moduleMarkup = key => `
 	<section class="mod" data-m="${key}" aria-label="${key}">
 		<header class="modHeader">
@@ -500,11 +495,9 @@ describe('panel manager', () => {
 			manager.dockTo('tool', 'top');
 			manager.togglePin();
 			expect(manager.isPinned()).toBe(true);
-			// square wanders off somewhere else
 			manager.reopen('tool', 'square');
 			manager.dockTo('tool', 0);
 			expect(el('tool')).toHaveClass('fl');
-			// line comes back pinned to the top bar
 			manager.reopen('tool', 'line');
 			expect(el('tool')).toHaveClass('tb');
 			expect(dockRows('dockTop')).toEqual([['tool']]);
@@ -515,7 +508,6 @@ describe('panel manager', () => {
 			manager.layout();
 			manager.reopen('tool', 'square');
 			manager.togglePin();
-			// follow semantics: the dock verb rewrites square's pin
 			manager.dockTo('tool', 'bot');
 			manager.reopen('tool', 'line');
 			manager.dockTo('tool', 0);
@@ -570,7 +562,7 @@ describe('panel manager', () => {
 			manager.reopen('tool', 'circle');
 			expect(el('tool')).toHaveClass('fl');
 			expect(el('tool').style.getPropertyValue('--mx')).toBe('40px');
-			// the garbage dk pin fell out entirely
+			// the garbage dk pin drops out entirely
 			manager.layout();
 			expect(storedPins().square).toBeUndefined();
 			expect(storedPins().circle.w).toBeUndefined();
@@ -665,7 +657,6 @@ describe('panel manager', () => {
 				expect(document.getElementById('panelPinLabel').textContent).toBe(
 					'Unpin this tool',
 				);
-				// another module's menu keeps the verb hidden
 				el('canvas').dispatchEvent(
 					Object.assign(new Event('contextmenu', { bubbles: true }), {
 						clientX: 20,
@@ -728,10 +719,9 @@ describe('panel manager', () => {
 					expect.anything(),
 					expect.objectContaining({ at: { x: 30, y: 10 } }),
 				);
-				// wide keeps every verb on the table
 				expect(document.getElementById('panelDockSide').hidden).toBe(false);
 				expect(document.getElementById('panelFloat').hidden).toBe(false);
-				// the hold stood the armed drag down: a late move must not
+				// the hold stands the armed drag down: a late move must not
 				// lift the panel into a drag
 				document.getElementById('bodyContainer').dispatchEvent(
 					pev('pointermove', { buttons: 1, clientX: 70, clientY: 60 }),
@@ -950,7 +940,6 @@ describe('panel manager', () => {
 			expect(el('map')).not.toHaveClass('shaded');
 			media.matches = false;
 			manager.layout();
-			// tool floats shaded, map docks shaded: the flags held
 			expect(el('tool')).toHaveClass('shaded');
 			expect(el('map')).toHaveClass('shaded');
 		});
@@ -979,10 +968,7 @@ describe('panel manager', () => {
 			const manager = phoneManager();
 			manager.layout();
 			manager.reopen('tool', 'line');
-			// the sheet stays a sheet; wide truth is untouched by the
-			// phone switch
 			expect(el('tool')).toHaveClass('sheet');
-			// landing wide re-asserts the armed pin
 			media.matches = false;
 			const flip = media.addEventListener.mock.calls.find(
 				([name]) => name === 'change',
@@ -1145,7 +1131,6 @@ describe('panel manager', () => {
 					vi.advanceTimersByTime(500);
 					header.dispatchEvent(new Event('click', { bubbles: true }));
 					expect(el('canvas')).not.toHaveClass('shaded');
-					// the next plain tap shades as always
 					header.dispatchEvent(new Event('click', { bubbles: true }));
 					expect(el('canvas')).toHaveClass('shaded');
 				} finally {

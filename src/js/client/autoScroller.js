@@ -1,11 +1,8 @@
 /**
- * Compo-style autoscroll: glides the viewport to the bottom of the
- * artwork, holds a beat, glides back up to the top, holds again, and
- * repeats the round trip a set number of times or forever. Speed is
- * rows per second so playback reads the same at any zoom or font
- * size. A manual scroll anywhere (wheel, minimap scrub, keyboard)
- * pauses playback in place, the PabloDraw escape hatch. Scroll speed
- * persists; mode, count, and transport state are session-only.
+ * Compo-style autoscroll round trips. Speed is rows per second so
+ * playback reads the same at any zoom or font size. A manual scroll
+ * anywhere pauses playback in place, the PabloDraw escape hatch. Only
+ * the speed persists; mode, count, and transport are session-only.
  */
 import State from './state.js';
 import { $, createSegmentedControl, iconHref, remountUse } from './ui.js';
@@ -41,8 +38,8 @@ const SPEED_KEY = 'autoscrollSpeed';
 const SPEED_DEFAULT = 7;
 const SPEED_MIN = 1;
 const SPEED_MAX = 25;
-// slider tick to rows per second: the old ceiling of ten sits one
-// tick above the middle default, so the top third is new headroom
+// slider tick (1-9) to rows per second; tick 5, the markup default,
+// must stay SPEED_DEFAULT
 const SPEED_ROWS = [1, 2, 3, 5, 7, 10, 14, 19, 25];
 const SPEED_TICKS = SPEED_ROWS.length;
 const COUNT_MIN = 1;
@@ -50,9 +47,8 @@ const COUNT_MAX = 5;
 
 /**
  * The playback state machine, DOM-free except for the injected
- * viewport. deps: {viewport, raf, caf, onState} where viewport() is a
- * getter and onState fires on every play/pause flip so the transport
- * button can mirror self-pauses (escape, finished runs).
+ * viewport getter. onState fires on every play/pause flip so the
+ * transport button can mirror self-pauses (escape, finished runs).
  */
 const createScrollEngine = deps => {
 	const viewport = deps.viewport;
@@ -257,7 +253,6 @@ const createScrollEngine = deps => {
 	};
 };
 
-/** Wires the minimap's autoscroll menu; null without its markup. */
 const createAutoScroller = () => {
 	const toggle = $('minimapMenuToggle');
 	const menu = $('minimapMenu');
@@ -278,9 +273,6 @@ const createAutoScroller = () => {
 	// handlers (the divider strip's shade) can no longer tell the press
 	// came from a button
 	const swapUse = (button, name) => {
-		// deferred a microtask: replacing the node inside the click
-		// dispatch detaches e.target mid-bubble and ancestors misread
-		// the press
 		Promise.resolve().then(() => {
 			const old = button.querySelector('use');
 			if (old) {
@@ -300,8 +292,8 @@ const createAutoScroller = () => {
 		},
 	});
 
-	// menu expand/collapse: the loop glyph becomes the close X, and the
-	// panel's flex column crops the map from the bottom on its own
+	// no map resize here: the panel's flex column crops it from the
+	// bottom on its own
 	const setOpen = open => {
 		menu.classList.toggle('open', open);
 		toggle.setAttribute('aria-expanded', String(open));

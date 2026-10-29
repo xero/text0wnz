@@ -9,7 +9,7 @@ import { migrateV2Autosave } from '../../src/js/core/migrate.js';
 import { v3ToU16 } from '../../src/js/core/convert.js';
 import { createJournal, replayJournal } from '../../src/js/core/journal.js';
 
-/** v2 cell word: charCode:8 | fg:4 | bg:4 (big-endian u16 layout). */
+/** v2 cell word, high bits first: charCode:8 | bg:4 | fg:4. */
 const v2Cell = (charCode: number, fg: number, bg: number): number =>
 	(charCode << 8) | (fg & 0x0f) | ((bg & 0x0f) << 4);
 

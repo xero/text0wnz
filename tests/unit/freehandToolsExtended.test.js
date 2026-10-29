@@ -262,7 +262,7 @@ describe('Freehand Tools - Extended Coverage', () => {
 
 	describe('Draw Functions Coverage', () => {
 		it('should handle line drawing algorithm', () => {
-			// Test Bresenham line drawing logic
+			// Bresenham
 			const drawLine = (x0, y0, x1, y1) => {
 				const points = [];
 				const dx = Math.abs(x1 - x0);
@@ -327,7 +327,7 @@ describe('Freehand Tools - Extended Coverage', () => {
 		});
 
 		it('should handle circle drawing algorithm', () => {
-			// Test midpoint circle algorithm logic
+			// midpoint circle
 			const drawCircle = (cx, cy, radius) => {
 				const points = [];
 				let x = 0;
@@ -359,9 +359,8 @@ describe('Freehand Tools - Extended Coverage', () => {
 
 			const circle = drawCircle(10, 10, 5);
 			expect(circle.length).toBeGreaterThan(0);
-			// Points should be symmetric around center
-			expect(circle).toContainEqual({ x: 10, y: 15 }); // top
-			expect(circle).toContainEqual({ x: 10, y: 5 }); // bottom
+			expect(circle).toContainEqual({ x: 10, y: 15 }); // bottom
+			expect(circle).toContainEqual({ x: 10, y: 5 }); // top
 		});
 	});
 
@@ -419,7 +418,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 
 	describe('Fill and Paint Operations', () => {
 		it('should handle paintAttribute logic', () => {
-			// Test attribute painting (color only, no character change)
 			const paintAttribute = (data, index, fg, bg) => {
 				const charCode = data[index] >> 8;
 				const newBlock = (charCode << 8) | ((bg & 0xf) << 4) | (fg & 0xf);
@@ -480,7 +478,6 @@ describe('Freehand Tools - Extended Coverage', () => {
 				const rxSq = rx * rx;
 				const rySq = ry * ry;
 
-				// Region 1
 				for (let x = -rx; x <= rx; x++) {
 					const y = Math.round(Math.sqrt(rySq * (1 - (x * x) / rxSq)));
 					points.push({ x: cx + x, y: cy + y });

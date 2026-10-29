@@ -13,10 +13,10 @@ type Stamp = (
 ) => Array<{ x: number; y: number; charCode: number }>;
 
 /**
- * Golden harness: render the stamped cells as text and compare against
- * inline ascii art, like the stamp engine goldens. Grammar details are
- * owner tuned by feel, so a golden moving is fine when the change is
- * the intended look; symmetry and safety are the hard contracts.
+ * Golden harness against inline ascii art, like the stamp engine
+ * goldens. Grammar details are owner tuned by feel, so a golden moving
+ * is fine when the change is the intended look; symmetry and safety are
+ * the hard contracts.
  */
 const renderWith = (
 	stamp: Stamp,
@@ -84,7 +84,6 @@ const renderBox = (w: number, h: number): string => {
 	return lines.join('\n');
 };
 
-/** Mirror pair check shared by both dialect property tests. */
 const expectMirrored = (
 	stamp: Stamp,
 	pairs: Map<number, number>,
@@ -106,8 +105,8 @@ const expectMirrored = (
 				twin,
 				`missing mirror of ${x},${y} at rx ${rx} rhb ${rhb}`,
 			).toBeDefined();
-			// one way maps (old skool backtick to apostrophe) pass in either
-			// direction; standing glyphs hold their own ground
+			// one way maps pass in either direction; standing glyphs hold
+			// their own ground
 			const flipped = pairs.get(c) ?? c;
 			const ok =
 				twin === flipped ||
@@ -436,7 +435,7 @@ describe('old skool circle stamp, proposal sizes (field tuned)', () => {
 	});
 
 	it('leaves the quote family for dash caps when wide', () => {
-		// owner pick: quotes read as a slab past their widest drawn cap
+		// quotes read as a slab past their widest drawn cap
 		expect(renderBox(30, 5)).toBe(
 			[
 				'  _.' + '-'.repeat(22) + '._',
@@ -627,8 +626,8 @@ describe('nu skool filled circle stamp', () => {
 
 describe('circle stamps, input hardening and drag intent', () => {
 	it('sanitizes non finite sizes instead of walking forever', () => {
-		// Infinity extents once ran the row loops unbounded and NaN
-		// widths leaked NaN coordinate cells
+		// unsanitized, Infinity extents run the row loops unbounded and
+		// NaN widths leak NaN coordinate cells
 		expect(nuskoolCircleCells(100, 100, 10, Infinity)).toBeDefined();
 		expect(nuskoolCircleFilledCells(100, 100, Infinity, 10)).toBeDefined();
 		expect(oldskoolCircleCells(100, 100, NaN, 10)).toBeDefined();
@@ -639,7 +638,7 @@ describe('circle stamps, input hardening and drag intent', () => {
 	});
 
 	it('keeps templates for taps but not for slivers', () => {
-		// a drag long in one dimension asked for a lens or a bar; the
+		// a drag long in one dimension asks for a lens or a bar; the
 		// grown template only answers drags small in both
 		expect(renderWith(nuskoolCircleCells, 100, 80, 0, 0)).toBe(
 			[' ,gPRg,', "dP'  `Yb", 'Yb    dP', ' "8gg8"'].join('\n'),

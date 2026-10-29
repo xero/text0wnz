@@ -17,7 +17,7 @@ import {
 
 const COLUMNS = 80;
 
-/** Rows of cells -> BIN bytes. Each cell is [charCode, attribute]. */
+/** each cell is [charCode, attribute] */
 const cellsToBin = rows => {
 	const bytes = new Uint8Array(rows.length * COLUMNS * 2);
 	rows.forEach((row, y) => {
@@ -32,7 +32,7 @@ const cellsToBin = rows => {
 
 const attr = (fg, bg) => ((bg & 15) << 4) | (fg & 15);
 
-/** All 256 glyphs over 4 rows, fg cycling 1-15, bg held <= 7. */
+/** all 256 glyphs over 4 rows, bg held <= maxBg */
 const glyphRows = maxBg => {
 	const rows = [];
 	for (let chunk = 0; chunk < 4; chunk++) {
@@ -104,15 +104,10 @@ export const testcardIceBin = () => {
 
 /**
  * 512-glyph XBin test card with a custom palette and a procedural font.
- * What it gates TODAY: loading a 512-glyph XB through the real codec
- * (flag bit 4, 512*fontHeight font bytes, custom palette) and rendering
- * the lower page. It cannot exercise upper-page RENDERING, because the
- * u16 doc model holds 8 bits of charCode, so no cell can address glyphs
- * 256-511 anywhere in the editor until the v3 doc model + glyph table.
- * The upper-page bitmaps are the bitwise inverse of their lower-page
- * counterparts, so the moment upper-page addressing exists, any paging
- * bug flips pixels and the goldens catch it. Ice flag set, bright
- * backgrounds used.
+ * Gates loading through the real codec (flag bit 4, 512*fontHeight font
+ * bytes, custom palette) and, on GL, upper-page rendering: upper-page
+ * bitmaps are the bitwise inverse of their lower-page counterparts, so
+ * any paging bug flips pixels and the goldens catch it.
  */
 export const testcard512Xb = () => {
 	const fontHeight = 16;
@@ -136,9 +131,8 @@ export const testcard512Xb = () => {
 	const rows = 8;
 	const cells = new Uint16Array(COLUMNS * rows);
 	for (let i = 0; i < cells.length; i++) {
-		// Walk the glyph space with varied colors incl. bright backgrounds;
-		// the & 0xff below is the doc model's own ceiling (see the doc
-		// comment above), so rendered cells repeat the lower page
+		// a cell holds only the low 8 glyph bits; in 512-glyph mode fg
+		// 8-15 selects the upper page instead of a bright color
 		const glyph = i % glyphCount;
 		const fg = 1 + (i % 15);
 		const bg = (i >> 2) % 16;
@@ -158,13 +152,7 @@ export const testcard512Xb = () => {
 	});
 };
 
-/**
- * UTF-8 ANSI testcard: mixed-charset content for the GL unicode
- * golden - classic CP437 glyphs, hex-font unicode (sextants, wedges,
- * rounded corners, braille), extended SGR colors (256 + truecolor),
- * and deliberately-unrenderable cells (a wide CJK char and an emoji)
- * that must show the substitute box. Deterministic by construction.
- */
+/** mixed-charset UTF-8 ANSI testcard for the GL unicode golden */
 export const testcardUtf8 = () => {
 	const esc = text => `\u001b[${text}`;
 	const lines = [

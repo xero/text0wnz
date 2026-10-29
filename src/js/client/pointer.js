@@ -11,12 +11,9 @@
  * lostpointercapture are first-class ends, so nothing wedges when the
  * browser steals a gesture.
  *
- * Touch routes through the gesture recognizer (strokes vs taps vs
- * pinch); mouse and pen bypass it. Palm rejection: touch is ignored
- * while a pen is down and for a grace period after it lifts, and a pen
- * landing mid-touch-gesture cancels the touch. Pinch updates leave as
- * onTextCanvasPinchStart/Move/End document events for the zoom
- * controller.
+ * Touch routes through the gesture recognizer; mouse and pen bypass
+ * it. Pinch updates leave as onTextCanvasPinchStart/Move/End document
+ * events for the zoom controller.
  */
 
 import { createGestureRecognizer } from './gestures.js';
@@ -69,7 +66,6 @@ export const createPointerInput = (container, handlers, options = {}) => {
 		}
 	};
 
-	// ---- mouse + pen stroke state -----------------------------------
 	/** @type {number | null} */
 	let strokePointer = null;
 	// pen pointers tracked by id, never a counter: every end path
@@ -89,7 +85,6 @@ export const createPointerInput = (container, handlers, options = {}) => {
 		}
 	};
 
-	// ---- touch state -------------------------------------------------
 	/** @type {Set<number>} */
 	const touchIds = new Set();
 	let touchMods = { ctrlKey: false, altKey: false, pressure: 0 };
@@ -156,7 +151,6 @@ export const createPointerInput = (container, handlers, options = {}) => {
 		touchIds.clear();
 	};
 
-	// ---- listeners ----------------------------------------------------
 	/** @param {PointerEvent} e */
 	const onPointerDown = e => {
 		if (e.pointerType === 'touch') {
@@ -189,7 +183,7 @@ export const createPointerInput = (container, handlers, options = {}) => {
 		// clamped for the same reason as touch stroke starts above
 		const cell = handlers.map(e.clientX, e.clientY, true);
 		if (!cell) {
-			return; // degenerate font metrics mid-swap: skip the event
+			return; // degenerate font metrics mid-swap
 		}
 		strokePointer = e.pointerId;
 		capture(e.pointerId);
@@ -218,9 +212,9 @@ export const createPointerInput = (container, handlers, options = {}) => {
 		}
 		e.preventDefault();
 		const stroking = strokePointer === e.pointerId;
-		// everything clamps now: captured strokes because moves arrive
-		// from outside the canvas, and free hover because the subpixel
-		// edge band hands out of range cells to preview consumers
+		// everything clamps: captured strokes because moves arrive from
+		// outside the canvas, and free hover because the subpixel edge
+		// band hands out of range cells to preview consumers
 		const hover = handlers.map(e.clientX, e.clientY, true);
 		if (!hover) {
 			return;
@@ -231,7 +225,6 @@ export const createPointerInput = (container, handlers, options = {}) => {
 			halfBlockY: hover.halfBlockY,
 		});
 		if (stroking && (e.buttons & 3) !== 0) {
-			// hover was mapped with clamp while stroking; reuse it
 			dispatch('onTextCanvasDrag', {
 				x: hover.x,
 				y: hover.y,

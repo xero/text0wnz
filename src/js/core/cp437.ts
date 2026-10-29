@@ -2,9 +2,9 @@
  * CP437 <-> Unicode mapping.
  *
  * Sparse map of the non-identity codepoints; everything absent maps to
- * itself (printable ASCII and NUL). Data mirrors the client table in
- * palette.js verbatim; tests/core/cp437.test.ts asserts the two never
- * drift until the client migrates to this module.
+ * itself (printable ASCII; NUL maps to NBSP). Data mirrors the client
+ * table in palette.js verbatim; tests/core/cp437.test.ts asserts the
+ * two never drift until the client migrates to this module.
  */
 const nonIdentity: ReadonlyArray<readonly [number, number]> = [
 	[1, 0x263a],
@@ -172,27 +172,25 @@ const nonIdentity: ReadonlyArray<readonly [number, number]> = [
 
 const toUnicode = new Map<number, number>(nonIdentity);
 // LAST entry wins, matching v2's getUnicodeReverseMap (it set 0..255
-// in order). The one duplicate codepoint is NBSP (U+00A0), claimed by
-// both NUL and 255: the reverse MUST give 255, or an NBSP decodes to
-// char 0 and the cell looks blank while holding NUL.
+// in order). NBSP (U+00A0) is the one duplicate, claimed by NUL and
+// 255, so [0] sits ahead of [255]: the reverse MUST give 255, or an
+// NBSP decodes to char 0 and the cell looks blank while holding NUL.
 const fromUnicode = new Map<number, number>();
 for (const [byte, codepoint] of nonIdentity) {
 	fromUnicode.set(codepoint, byte);
 }
 
-/** Unicode codepoint for a CP437 byte (identity where unmapped). */
 export const cp437ToUnicode = (byte: number): number =>
 	toUnicode.get(byte & 0xff) ?? byte & 0xff;
 
 /**
  * Strict reverse lookup: only explicitly mapped codepoints, no identity
- * fallback. The lenient UTF-8 reader needs this exact v2 semantic
- * (unmapped codepoints <= 255 pass through as raw bytes there).
+ * fallback, so printable ASCII returns undefined and every caller
+ * supplies its own fallback.
  */
 export const unicodeToCp437Strict = (codepoint: number): number | undefined =>
 	fromUnicode.get(codepoint);
 
-/** CP437 byte for a unicode codepoint, or undefined when outside CP437. */
 export const unicodeToCp437 = (codepoint: number): number | undefined => {
 	const mapped = fromUnicode.get(codepoint);
 	if (mapped !== undefined) {

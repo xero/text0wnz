@@ -8,8 +8,8 @@
  *
  * Numbers are machine-dependent snapshots recorded WITH a hardware
  * descriptor; they are evidence for before/after comparisons, not a CI gate.
- * On-device (iPad/Android) runs are owner handoffs: open <app>/?profile on
- * the device and press "run all".
+ * On-device (iPad/Android) runs are manual: open <app>/?profile on the
+ * device and press "run all".
  */
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -20,9 +20,9 @@ import { chromium } from 'playwright';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const distDir = path.join(repoRoot, 'dist');
-// The default output is p0-perf.json, the legacy chunk-renderer baseline,
-// so the default query pins renderer=2d now that GL is the default.
-// PERF_QUERY/PERF_OUT make the same harness capture other renderers, e.g.
+// p0-perf.json is the legacy chunk-renderer baseline, so the default
+// query pins renderer=2d (GL is the app default). PERF_QUERY/PERF_OUT
+// capture other renderers, e.g.
 //   PERF_QUERY='?profile&renderer=gl' PERF_OUT=tests/baselines/p1-gl-perf.json
 const outFile = path.join(
 	repoRoot,

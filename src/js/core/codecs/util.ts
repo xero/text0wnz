@@ -21,10 +21,9 @@ export const bytesToString = (
 };
 
 /**
- * String field with trailing whitespace AND NUL padding trimmed. SAUCE
- * pads character fields with spaces but TInfoS is zero-filled, and wild
- * writers mix both; v2's \s-only trim leaves NULs behind (its font-name
- * lookups tolerate that downstream, ours should not).
+ * Trims trailing whitespace AND NUL padding: SAUCE §Layout pads
+ * Character fields with spaces but zero-fills TInfoS, and wild writers
+ * mix both, so a \s-only trim (v2's) leaves NULs in font names.
  */
 export const stringField = (
 	bytes: Uint8Array,
@@ -105,7 +104,6 @@ export const concatBytes = (parts: ReadonlyArray<Uint8Array>): Uint8Array => {
 	return out;
 };
 
-/** UTF-8 bytes for one codepoint (v2 unicodeToArray port). */
 export const utf8Encode = (codepoint: number): number[] => {
 	if (codepoint < 0x80) {
 		return [codepoint];
@@ -126,9 +124,8 @@ export const utf8Encode = (codepoint: number): number[] => {
 	];
 };
 
-// ------------------------------------------------------------------ base64
-// Zero-dep base64 over Uint8Array: atob/btoa are DOM-ish and Buffer is
-// node-only; the envelope codec needs both directions everywhere.
+// zero-dep base64: atob/btoa are DOM-ish and Buffer is node-only, and
+// the envelope codec needs both directions in every host
 
 const B64_ALPHABET =
 	'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -173,9 +170,9 @@ export const base64ToBytes = (text: string): Uint8Array => {
 	return out;
 };
 
-// gzip/gunzip through the runtime-native CompressionStream. Built on
-// bare ReadableStream (no Blob/Response: jsdom's Blob lacks .stream()
-// and the fewer globals the codec touches, the more hosts it runs in).
+// (de)compression rides bare streams, no Blob/Response: jsdom's Blob
+// lacks .stream(), and the fewer globals the codec touches, the more
+// hosts it runs in
 
 const pumpThrough = async (
 	bytes: Uint8Array,
@@ -224,8 +221,8 @@ export const gzip = (bytes: Uint8Array): Promise<Uint8Array> =>
 
 /**
  * Default gunzip ceiling: comfortably above the largest legal doc
- * (10M cells x 12 plane bytes) and far below what a 50KB gzip bomb
- * used to buffer. The zip path always capped; this one did not.
+ * (10M cells x 12 plane bytes), so only a decompression bomb reaches
+ * it.
  */
 export const MAX_GUNZIP_BYTES = 256 * 1024 * 1024;
 

@@ -1,7 +1,5 @@
 /**
  * Timelapse replay: baseline + op log -> capped multi-frame doc.
- * The final frame always equals the end state, resizes replay
- * row-aware at final dims, and hostile ops drop silently.
  */
 import { describe, it, expect } from 'vitest';
 import { paletteColor } from '../../src/js/core/doc.js';
@@ -123,8 +121,8 @@ describe('timelapseToDoc', () => {
 
 	// the doc must be big enough that the budget (not maxFrames or the
 	// op count) decides the stride, but no bigger: frame planes scale
-	// with cells x frames, and a 4M-cell variant of this test blew the
-	// 5s default on slow CI shards. The timeout stays as insurance
+	// with cells x frames, and a 4M-cell variant blows the 5s default on
+	// slow CI shards. The timeout is insurance
 	it(
 		'bounds frames x cells by the animation budget',
 		{ timeout: 30_000 },

@@ -1,9 +1,8 @@
 /**
- * Touch gestures end to end: 2-finger tap undo, 3-finger tap
- * redo, pinch zoom, and the zoom shortcut pins. Multi-touch needs CDP
- * Input.dispatchTouchEvent, so the gesture tests run on the Chrome
- * project only; the recognizer's logic is engine-neutral and unit
- * tested, and the mapping spec covers all three engines.
+ * Multi-touch needs CDP Input.dispatchTouchEvent, so the gesture tests
+ * run on the Chrome project only; the recognizer's logic is
+ * engine-neutral and unit tested, and the mapping spec covers all
+ * three engines.
  */
 import { test, expect } from '@playwright/test';
 import { clickTool } from './helpers/editorHelpers.js';
@@ -72,7 +71,6 @@ test.describe('touch gestures and zoom shortcuts', () => {
 		await touch(cdp, 'touchEnd', []);
 		await page.waitForTimeout(300);
 
-		// the stroke is undone and the tap itself painted nothing
 		expect(await readChar(page, 4, 4)).toBe(0);
 		expect(await readChar(page, 10, 10)).toBe(0);
 		expect(await readChar(page, 14, 10)).toBe(0);

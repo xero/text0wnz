@@ -76,8 +76,8 @@ const mockState = {
 		setXBPaletteData: vi.fn(),
 		setXBFontData: vi.fn(() => true),
 		setFont: vi.fn((name, cb) => cb && cb()),
-		// the save paths read the doc now; derive it from the wired u16
-		// mocks at call time so wireDoc keeps working untouched
+		// the save paths read the doc; derive it from the wired u16 mocks
+		// at call time so wireDoc keeps working untouched
 		getDoc: vi.fn(() =>
 			u16ToV3({
 				imageData: mockState.textArtCanvas.getImageData(),
@@ -105,8 +105,8 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	enforceMaxBytes: vi.fn(),
 }));
 
-// NOTE: palette.js is NOT mocked; the UTF-8 round-trips exercise the real
-// CP437 <-> unicode maps.
+// palette.js is NOT mocked, so the UTF-8 round-trips exercise the real
+// CP437 <-> unicode maps
 
 let Load;
 let Save;
@@ -168,8 +168,8 @@ const decode = (name, bytes) =>
 			() => reject(new Error(`decode timed out for ${name}`)),
 			10000,
 		);
-		// XB palette/font land through canvas calls now that the client
-		// rides core decodeXBin; capture them off the mocks
+		// XB palette/font land through canvas calls (the client rides core
+		// decodeXBin); capture them off the mocks
 		mockState.textArtCanvas.setXBPaletteData.mockClear();
 		mockState.textArtCanvas.setXBFontData.mockClear();
 		Load.file(file, (columns, rows, data, iceColors, letterSpacing, fontName) => {
@@ -293,7 +293,6 @@ describe('corpus tier (b): synthetic ANSI', () => {
 		});
 		const d1 = await decode('ice.ans', bytes);
 		expect(d1.iceColors).toBe(true);
-		// The generator produced at least one bright background cell
 		const hasBrightBg = Array.from(d1.data).some(cell => ((cell >> 4) & 15) > 7);
 		expect(hasBrightBg).toBe(true);
 		wireDoc(d1);
@@ -317,7 +316,7 @@ describe('corpus tier (b): synthetic ANSI', () => {
 	});
 
 	// 160k cells through encode and decode twice: comfortably fast
-	// locally, but slow CI shards have blown the 5s default
+	// locally, but slow CI shards blow the 5s default
 	it('large documents round-trip (80x2000)', { timeout: 30_000 }, async () => {
 		const bytes = makeAnsi({ columns: 80, rows: 2000, seed: 13 });
 		const d1 = await decode('tall.ans', bytes);
@@ -340,7 +339,7 @@ describe('corpus tier (b): weird SAUCE records', () => {
 				author: 'author name',
 				group: 'group name',
 				comments,
-				// ice (bit 0) + 9px letter spacing (bits 1-2 = 10)
+				// SAUCE §ANSiFlags: ice (B, bit 0) + 9px (LS bits 1-2 = 10)
 				flags: 0b00010101,
 				fontName: 'IBM VGA',
 				tinfo1: 80,
@@ -375,7 +374,8 @@ describe('corpus tier (b): weird SAUCE records', () => {
 				sauce: { tinfo1: 80, tinfo2: 5, flags: 0 },
 			}),
 		);
-		// bits 00 state no preference: the toggle stays the artist's
+		// SAUCE §ANSiFlags, LS bits 00: no preference, so the toggle
+		// stays the artist's
 		expect(noPref.letterSpacing).toBeUndefined();
 		const eightPx = await decode(
 			'8px.ans',
@@ -438,8 +438,9 @@ describe('corpus tier (b): weird SAUCE records', () => {
 		expect(d1.fontName).toBe('');
 	});
 
-	// Trusting TInfo1 = 0 verbatim yields a 0-column doc; the loader
-	// must keep content-derived dims instead
+	// SAUCE §FileType: TInfo1 = 0 means no width was provided, and
+	// trusting it verbatim yields a 0-column doc; the loader must keep
+	// content-derived dims instead
 	it('SAUCE with zero tinfo falls back to content-derived dimensions', async () => {
 		const body = makeAnsi({ columns: 80, rows: 5, seed: 2 });
 		const bytes = concatBytes([
@@ -471,8 +472,8 @@ describe('corpus tier (b): BIN', () => {
 	});
 
 	it('a BIN open replaces the previous file stashed flags', async () => {
-		// the review's exact repro: A.ans carries AR bits, then a
-		// SAUCE-less BIN opens; its save must not inherit A's flags
+		// A.ans carries AR bits, then a SAUCE-less BIN opens; its save
+		// must not inherit A's flags
 		await decode(
 			'a.ans',
 			makeAnsi({
@@ -552,7 +553,8 @@ describe('corpus tier (b): BIN', () => {
 
 describe('corpus tier (b): XBin', () => {
 	it('XBin opens leave the spacing toggle alone', async () => {
-		// XBin SAUCE defines no LS bits (DataType 6, no TFlags)
+		// SAUCE §FileType gives XBin (DataType 6) no TFlags, so no LS
+		// bits
 		const d1 = await decode('plain.xb', makeXBin({ sauce: {} }));
 		expect(d1.letterSpacing).toBeUndefined();
 	});
@@ -626,8 +628,8 @@ describe('corpus tier (b): XBin', () => {
 		expect(d2.fontData.bytes).toEqual(font);
 	});
 
-	// Save.xb must set the 512-glyph flag (header bit 4); without it
-	// readers parse 256 glyphs and misalign the image
+	// Save.xb must set XBin §Flags 512Chars (bit 4); without it readers
+	// parse 256 glyphs and misalign the image
 	it('512-glyph XBin font round-trips through save', async () => {
 		const columns = 40;
 		const rows = 20;
@@ -725,12 +727,11 @@ const coreDecode = (name, bytes) => {
 	return coreDecodeAns(bytes, { utf8: n.endsWith('.utf8.ans') || n.endsWith('.txt') });
 };
 
-/** Decode through both engines; assert doc identity; return both. */
 const expectCoreParity = async (name, bytes) => {
 	const v2 = await decode(name, bytes);
 	const result = coreDecode(name, bytes);
 	// lossy: a 512-glyph XBin's upper page lives as non-identity glyph
-	// defs now, and the strict projection throws on those by contract
+	// defs, and the strict projection throws on those by contract
 	const u16 = v3ToU16Lossy(result.doc);
 	expect(u16.columns, `${name}: core columns`).toBe(v2.columns);
 	expect(u16.rows, `${name}: core rows`).toBe(v2.rows);
@@ -750,8 +751,6 @@ describe('core codec parity: ANSI', () => {
 			const bytes = new Uint8Array(readFileSync(path.join(ansiDir, name)));
 			const { result } = await expectCoreParity(name, bytes);
 
-			// Core encode, then BOTH decoders must agree on the result and
-			// reproduce the original cells
 			const encoded = coreEncodeAns(result.doc, { meta: result.meta });
 			const { result: reResult } = await expectCoreParity(
 				'core-roundtrip.ans',
@@ -762,7 +761,6 @@ describe('core codec parity: ANSI', () => {
 				`${name}: cells after core encode`,
 			).toEqual(v3ToU16(result.doc).imageData);
 
-			// Core encoder is a fixed point
 			const encodedAgain = coreEncodeAns(reResult.doc, { meta: reResult.meta });
 			expect(encodedAgain, `${name}: core encoder fixed point`).toEqual(
 				encoded,

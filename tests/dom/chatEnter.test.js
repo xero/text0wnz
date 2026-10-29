@@ -144,7 +144,6 @@ describe('onEnter', () => {
 		expect(areaFired).not.toHaveBeenCalled();
 		expect(brk.defaultPrevented).toBe(false);
 
-		// the old desktop commit stays
 		area.dispatchEvent(
 			new KeyboardEvent('keydown', {
 				key: 'Enter',

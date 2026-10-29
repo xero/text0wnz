@@ -1,14 +1,12 @@
 /**
- * asciiarena.se in-app browser: tabs for latest releases, artists,
- * crews, and instant whole-archive search, opening amiga ascii collys
- * straight into the editor. Everything rides the site's public JSON
- * api and its /collections raw files, both CORS-open, so no proxy or
- * mirror is involved. Search runs client-side over the one-shot
+ * asciiarena.se in-app browser. Everything rides the site's public
+ * JSON api and its /collections raw files, both CORS-open, so no proxy
+ * or mirror is involved. Search runs client-side over the one-shot
  * uhcsearch index instead of paging the api per keystroke. Decoding
  * mirrors the site's own rule: scene art full of high bytes is
- * glyph-indexed latin-1 even when it happens to validate as UTF-8,
- * and renders in the same Topaz the site uses. Politeness: every
- * request is user-driven and cached; NOTHING here runs in CI.
+ * glyph-indexed latin-1 even when it happens to validate as UTF-8.
+ * Politeness: every request is user-driven and cached; NOTHING here
+ * runs in CI.
  */
 import State from './state.js';
 import { $ } from './ui.js';
@@ -54,15 +52,12 @@ const createAsciiArena = ({ openFile, onExit }) => {
 
 	const cache = {
 		pages: new Map(), // list endpoints: cache key -> response json
-		index: null, // uhcsearch rows, fetched once per session
+		index: null, // uhcsearch rows promise, fetched once per session
 		dizzes: new Map(), // filename -> preview text (null caches a miss)
 		// ensureViewable adds viewableFor/viewable: index rows identity
 		// and the artist/crew tallies derived from them
 	};
 
-	// ------------------------------------------------- tabs and history
-
-	// backing out of the root view returns to the artpacks landing
 	const { visit, swap, back, reset } = createTrail(
 		btnBack,
 		onExit ?? (() => State.modal.open('artpacks')),
@@ -104,8 +99,6 @@ const createAsciiArena = ({ openFile, onExit }) => {
 			reset(() => showSearch(q));
 		}
 	};
-
-	// ----------------------------------------------------------- utils
 
 	const say = makeSay(status);
 
@@ -158,8 +151,6 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		// eslint-disable-next-line no-control-regex
 		return text.replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, '').trimEnd();
 	};
-
-	// ------------------------------------------------------------ cards
 
 	// previews fetch lazily as cards scroll into view: a crew page can
 	// hold a hundred collys and most are never looked at
@@ -252,8 +243,6 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		cdate: null,
 	});
 
-	// ------------------------------------------------------------ index
-
 	const parseIndex = text =>
 		text
 			.split('\n')
@@ -325,8 +314,6 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		}
 		return cache.viewable;
 	};
-
-	// ------------------------------------------------------------ views
 
 	const showLatest = async page => {
 		const ticket = gate.enter();
@@ -595,8 +582,6 @@ const createAsciiArena = ({ openFile, onExit }) => {
 		}
 	};
 
-	// ------------------------------------------------------------ open
-
 	const openBytes = (bytes, name) => {
 		say(null);
 		State.modal.close();
@@ -678,8 +663,6 @@ const createAsciiArena = ({ openFile, onExit }) => {
 			op.done();
 		}
 	};
-
-	// ------------------------------------------------------------ wire
 
 	btnBack?.addEventListener('click', back);
 	$('arenaClose')?.addEventListener('click', () => State.modal.close());

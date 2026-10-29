@@ -247,7 +247,6 @@ test.describe('Canvas Operations', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			// Click brushes to show brush toolbar, then select halfblock
 			await page.locator('#brushes').click();
 			await page.waitForTimeout(200);
 			await clickTool(page, 'halfblock');
@@ -258,7 +257,6 @@ test.describe('Canvas Operations', () => {
 			await page.waitForTimeout(300);
 		}
 
-		// Clear with new document - handle warning modal
 		const fileMenuButton = page.locator('#fileMenu button');
 		await fileMenuButton.click();
 		await page.waitForTimeout(200);
@@ -281,8 +279,8 @@ test.describe('Export Operations', () => {
 	});
 
 	test('Save XBin routes through the export modal', async ({ page }) => {
-		// the menu click used to arrive as xb's compress argument and
-		// skip the modal entirely, forcing RLE on
+		// the menu click must not land as xb's compress argument: that
+		// skips the modal entirely and forces RLE on
 		await page.locator('#fileMenu button').click();
 		await page.waitForTimeout(200);
 		// the save items sit inside the collapsed "Save as" group
@@ -306,7 +304,6 @@ test.describe('Export Operations', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			// Click brushes to show brush toolbar, then select halfblock
 			await page.locator('#brushes').click();
 			await page.waitForTimeout(200);
 			await clickTool(page, 'halfblock');

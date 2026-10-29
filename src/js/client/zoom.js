@@ -1,40 +1,30 @@
 // @ts-check
 /**
- * Zoom controller: every zoom input lands on one
- * setZoom with an optional focal point, and the renderer's own zoom
- * (the scaled font metrics everything reads) stays the single source
- * of truth via State.font.setScaleFactor.
+ * Zoom controller: every zoom input lands on one setZoom with an
+ * optional focal point, and State.font.setScaleFactor stays the single
+ * source of truth (the scaled font metrics everything reads).
  *
- * Inputs wired here:
- * - pinch: the normalizer's onTextCanvasPinch* document events. The
- *   centroid pans the viewport (which also gives touch users 2-finger
- *   scrolling back, since touch-action: none took the native scroller
- *   away on the canvas) and the spread zooms at the centroid. On the
- *   GL renderer zoom applies continuously at rAF cadence; the legacy
- *   chunk renderer repaints too slowly for that, so it pans live and
- *   commits the zoom once at pinch end.
- * - ctrl/cmd + wheel: trackpad pinch and mouse-wheel zoom at the
- *   cursor, continuous on GL, debounced commit on the chunk renderer.
- * - the slider and ctrl/cmd +=/- route through zoomIn/zoomOut
- *   (ui.js keeps its direct fallback when no controller exists, which
- *   is also what its unit tests exercise).
+ * Pinch pans the viewport by its centroid as well as zooming, because
+ * touch-action: none takes the native two-finger scroller away on the
+ * canvas. GL zooms continuously at rAF cadence; the legacy chunk
+ * renderer repaints too slowly for that, so it pans live and commits
+ * the zoom once at pinch end (wheel bursts debounce instead).
  *
- * Focal anchoring: scaled cell sizes are floor-quantized, so the
- * ratio uses the REAL before/after metrics, and the scroll correction
- * applies after the canvas relayouts (onCanvasLayoutChange from
- * canvas.js) by re-reading the fresh bounding rect: scrolling by the
- * difference between where the anchored point landed and where the
- * focal point was puts it back under the pointer exactly.
+ * Focal anchoring: scaled cell sizes are floor-quantized, so the ratio
+ * uses the REAL before/after metrics, and the scroll correction waits
+ * for the relayout (onCanvasLayoutChange) and re-reads the fresh
+ * bounding rect, which puts the focal point back under the pointer
+ * exactly.
  *
- * During interactive zoom (pinch or a wheel burst) isInteractiveZoom()
- * is true and canvas.js skips the "updating settings" modal; the state
- * save happens once at gesture end.
+ * isInteractiveZoom() holds for a whole pinch or wheel burst so
+ * canvas.js skips the "updating settings" modal; state saves once at
+ * gesture end.
  */
 
 import State from './state.js';
 
 // the bounds export as the clamp's test seam; the tuning constants
-// below are module-internal and were never imported anywhere
+// stay module-internal
 export const ZOOM_MIN = 0.5;
 export const ZOOM_MAX = 4;
 const ZOOM_STEP = 0.5;
@@ -210,7 +200,6 @@ export const createZoomController = viewport => {
 		setZoom(Math.ceil(getZoom() * 2) / 2 - ZOOM_STEP, viewportCenter());
 	const zoomReset = () => setZoom(1, viewportCenter());
 
-	// ---- pinch ---------------------------------------------------------
 	document.addEventListener(
 		'onTextCanvasPinchStart',
 		() => {
@@ -258,7 +247,7 @@ export const createZoomController = viewport => {
 		{ signal },
 	);
 
-	// ---- ctrl/cmd + wheel (trackpad pinch arrives this way) ------------
+	// trackpad pinch arrives as ctrl+wheel
 	let wheelTarget = 0; // 0 = no burst in flight
 
 	viewport.addEventListener(

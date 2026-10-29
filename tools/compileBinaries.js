@@ -1,16 +1,13 @@
 /**
- * bun --compile binary matrix: cross-compiles the
- * collab/static server for every supported target and prints MEASURED
- * sizes (the docs quote no figure on purpose; this script is the
- * source of truth). Output lands in build/bin/ (gitignored). Runs
- * under bun:
+ * bun --compile binary matrix: cross-compiles the collab/static server
+ * for every supported target and prints MEASURED sizes (the docs quote
+ * no figure on purpose; this script is the source of truth). Output
+ * lands in build/bin/ (gitignored). Runs under bun:
  *
  *   bun tools/compileBinaries.js            # all targets
  *   bun tools/compileBinaries.js host       # just the host target
  *
- * The binary serves ws collab + bridge + /healthz, and the whole PWA
- * when started with --static dist (or STATIC_DIR). Pin the bun version
- * in CI when this joins a release workflow.
+ * Pin the bun version in CI when this joins a release workflow.
  */
 /* global Bun */
 

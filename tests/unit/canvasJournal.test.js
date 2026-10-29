@@ -1,8 +1,6 @@
 /**
- * Autosave journal wiring through the live canvas: strokes append on
- * commit, doc-level ops write debounced keyframes, loadJournalSnapshot
- * restores, and collab sessions never journal. Runs on the real
- * journalStore (jsdom auto-picks the in-memory backend).
+ * Runs on the real journalStore: jsdom auto-picks the in-memory
+ * backend.
  */
 import { describe, it, expect, vi } from 'vitest';
 

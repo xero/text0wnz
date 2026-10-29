@@ -5,9 +5,9 @@
 import State from './state.js';
 import magicNumbers from './magicNumbers.js';
 
-// the cache name carries the build stamp: cached atlases used to be
-// served forever outside every SW cache route, so a deploy that fixed
-// an existing font never reached returning users
+// the build stamp in the name retires stale atlases: this cache sits
+// outside every SW cache route, so a deploy that fixes an existing
+// font would otherwise never reach returning users
 const FONT_CACHE_NAME = `text0wnz-fonts-${
 	typeof __BUILD_STAMP__ === 'undefined' ? 'dev' : __BUILD_STAMP__
 }`;
@@ -97,7 +97,6 @@ export const FontCache = {
 			return new globalThis.Response(this.memoryCache.get(fontName));
 		}
 
-		// Not in cache, fetch and store
 		try {
 			const response = await globalThis.fetch(fontUrl);
 

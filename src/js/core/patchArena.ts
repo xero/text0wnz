@@ -2,8 +2,8 @@
  * Per-stroke patch arena: each stroke is a set of
  * `(index, before, after)` triples per touched plane plus metadata
  * `{userId, frame}`. Strokes live in a byte-capped ring; the same
- * op-patch encoding is the substrate for the OPFS journal and the
- * frame delta path, so triples freeze into flat Uint32Arrays on commit.
+ * op-patch encoding is the substrate for the OPFS journal, so triples
+ * freeze into flat Uint32Arrays on commit.
  *
  * Collab rule: undo is local per-user inverse-op stacks and remote ops
  * never enter it, so userId is metadata, not a filter here; each
@@ -105,7 +105,7 @@ export const createPatchArena = (
 ): PatchArena => {
 	const byteCap = options.byteCap ?? DEFAULT_UNDO_BYTE_CAP;
 	const strokes: Stroke[] = [];
-	// Index of the last APPLIED stroke; strokes above it are the redo tail
+	// index of the last APPLIED stroke; strokes above it are the redo tail
 	let cursor = -1;
 	let bytes = 0;
 
@@ -187,7 +187,7 @@ export const createPatchArena = (
 			if (strokeBytes === 0) {
 				return false;
 			}
-			// A new stroke invalidates the redo tail
+			// a new stroke invalidates the redo tail
 			strokes.splice(cursor + 1).forEach(dropped => {
 				bytes -= dropped.bytes;
 			});

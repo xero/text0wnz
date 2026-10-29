@@ -1,15 +1,14 @@
 /**
- * Circle stamp for the ruled shape tools (owner reference art:
- * circles.txt). Nu skool circles are a double mirror: one quadrant's
- * grammar flipped and rotated into the other three, so symmetry comes
- * by construction instead of hoping two engine strokes agree. The left
- * half is voiced from per row boundary spans; the right half mirrors
- * glyphwise. Old skool circles instead follow the owner's scaling law
- * and compose from fixed profile tables (see the old skool section).
- * The smallest nu skool sizes stop reading as curves row by row, so
- * they come from whole templates drawn by the owner (the R flourish is
- * deliberate and has no good left side mirror, so templates never
- * mirror).
+ * Circle stamp for the ruled shape tools, voicing owner reference art
+ * (pinned as goldens in tests/core/circleStamp.test.ts). Nu skool
+ * circles are a double mirror: one quadrant's grammar flipped and
+ * rotated into the other three, so symmetry comes by construction
+ * instead of hoping two engine strokes agree. Old skool circles
+ * instead follow the owner's scaling law and compose from fixed
+ * profile tables (profileRows). The smallest nu skool sizes stop
+ * reading as curves row by row, so they come from whole templates
+ * drawn by the owner (the R flourish is deliberate and has no good
+ * left side mirror, so templates never mirror).
  */
 
 export interface CircleCell {
@@ -80,9 +79,9 @@ const putRun = (cells: CircleCell[], x: number, y: number, run: string) => {
  * Shared geometry: per row leftmost rim columns from the half block
  * center nearest the equator, cap rows measured just inside the apex
  * so their width covers the gap to the first stepping row, clamped
- * monotone toward the equator so rounding never zigzags. The walk
- * classifies each row (cap, step, corner, bar), voices the left half,
- * mirrors it, and lands the caps last as full rows.
+ * monotone toward the equator so rounding never zigzags. Caps land
+ * after the mirror as full rows the voice builds whole (capRow keeps
+ * the top shoulders standing, which the glyph mirror would flip).
  */
 const walkCircle = (
 	cx: number,
@@ -187,9 +186,7 @@ const walkCircle = (
 			putRun(rcells, 2 * cx - anchor - rrun.length + 1, y, rrun);
 		}
 	}
-	// right half mirrors glyphwise across the center column unless the
-	// voice spoke it directly; runs that reach the axis stop there so
-	// no unmirrored ink leaks past it
+	// each half stops at the axis so no unmirrored ink leaks past it
 	const left = cells.filter(c => c.x <= cx);
 	const out: CircleCell[] = left.slice();
 	if (R) {
@@ -213,8 +210,6 @@ const walkCircle = (
 	putRun(out, xb[rows - 1], yBot, voice.capBottomRow(cx - xb[rows - 1] + 1));
 	return out;
 };
-
-// ------------------------------------------------------ nu skool voice
 
 const NUSKOOL_MIRROR = mirrorMap([
 	['d', 'b'],
@@ -360,8 +355,6 @@ const NUSKOOL_VOICE: CircleVoice = {
 	capBottomRow: h => capRow(capBottomHalf(h), false),
 };
 
-// ------------------------------------------------------- fill voice
-
 const FILL = 36; // $
 
 const fillInk = (n: number): string => '$'.repeat(Math.max(0, n));
@@ -459,9 +452,9 @@ const TINY_FILL = [
 ];
 
 /**
- * Pour $ into every unwritten cell between each row's walls. Fill
- * spans come from the stamped rim itself, not the ellipse equation:
- * asymmetric walls can never strand a gap between geometry and ink.
+ * Fill spans come from the stamped rim itself, not the ellipse
+ * equation, so asymmetric walls can never strand a gap between
+ * geometry and ink.
  */
 const floodRows = (cells: CircleCell[]): CircleCell[] => {
 	const rows = new Map<number, Set<number>>();
@@ -490,18 +483,16 @@ const floodRows = (cells: CircleCell[]): CircleCell[] => {
 	return out;
 };
 
-// ---------------------------------------------- old skool profiles
-
 /**
- * Old skool circles speak the owner's scaling law (circles.txt): the
- * corner anatomy never changes with size. Height stretches only the
- * wall rows and width only the dash and underscore cap fills; copying
- * any other row flattens the curve into facets. Rows compose
- * directly, a left run at its inset plus a right run anchored off the
- * box's right edge, so both width parities land exactly and no glyph
- * mirror is needed. Tiers shed as the box shrinks: the full corner
- * needs thirteen columns, the quote cap eight, the apostrophe cap
- * seven, then paren walls carry the rest.
+ * Old skool circles speak the owner's scaling law: the corner anatomy
+ * never changes with size. Height stretches only the wall rows and
+ * width only the dash and underscore cap fills; copying any other row
+ * flattens the curve into facets. Rows compose directly, a left run
+ * at its inset plus a right run anchored off the box's right edge, so
+ * both width parities land exactly and no glyph mirror is needed.
+ * Tiers shed as the box shrinks: the full corner needs thirteen
+ * columns, the quote cap eight, the apostrophe cap seven, then paren
+ * walls carry the rest.
  */
 
 type ProfileRun = [number, string];
@@ -520,10 +511,10 @@ const sideRuns = (
 ];
 
 /**
- * Full corner (golden and both good scalings): cap tails over one
- * shoulder pair over one diagonal. The bottom hangs one column
- * heavier than the top in every owner reference: its diagonal rides
- * the wall column and its cap anchors a column wider.
+ * Full corner: cap tails over one shoulder pair over one diagonal.
+ * The bottom hangs one column heavier than the top in every owner
+ * reference: its diagonal rides the wall column and its cap anchors a
+ * column wider.
  */
 const fullRows = (w: number, h: number): ProfileRun[][] => {
 	const rows: ProfileRun[][] = [];
@@ -572,15 +563,13 @@ const quoteRows = (w: number, h: number): ProfileRun[][] => {
 };
 
 /**
- * Four rows have no walls at all (the 4x8 ref); an apostrophe pair
- * sits the even axis, a lone apostrophe the odd one, and dashes carry
- * the stretch so the pair never widens.
+ * Four rows have no walls at all (the 4x8 ref). The cap interior
+ * splits in thirds, dash flank / core band / dash flank: the owner's
+ * tiny ref and wide pill both obey it. A short core keeps period
+ * pebbles; a run becomes an underscore floor so the whisker reads
+ * exaggerated, never dotted.
  */
 const flatRows = (w: number): ProfileRun[][] => {
-	// the cap interior splits in thirds, dash flank / core band / dash
-	// flank: the owner's tiny ref and wide pill both obey it. A short
-	// core keeps the period pebble pair; a run becomes an underscore
-	// floor so the whisker reads exaggerated, never dotted
 	const interior = w - 4;
 	const flank = dashes(Math.floor(interior / 3));
 	const core = interior - 2 * flank.length;
@@ -621,8 +610,6 @@ const profileRows = (w: number, h: number): ProfileRun[][] => {
 	}
 	return w >= 8 ? quoteRows(w, h) : parenRows(w, h);
 };
-
-// ---------------------------------------------------------- exports
 
 /**
  * min/max and round pass non finite values through, and an Infinity

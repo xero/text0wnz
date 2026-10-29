@@ -1,13 +1,9 @@
 /**
- * Reference-image overlay: a translucent image floated over
- * the art for tracing. Local file only (object URL, never uploaded),
- * opacity and width sliders, pointer-events none so every tool draws
- * straight through it. Width AND position are fractions of the canvas
- * width and reapply on zoom/resize so the trace stays put. Drag mode
- * unlocks the overlay for pointer moves. Once an image is loaded the
- * whole setup survives a reload: the blob rides IndexedDB (too big
- * for localStorage), the sliders ride a localStorage JSON blob, and
- * a new document voids both.
+ * Tracing overlay. Local file only (object URL, never uploaded), and
+ * pointer-events none so every tool draws straight through it. Once an
+ * image is loaded the setup survives a reload: the blob rides
+ * IndexedDB (too big for localStorage), the sliders a localStorage
+ * JSON blob, and a new document voids both.
  */
 import { $ } from './ui.js';
 import { Storage } from './storage.js';
@@ -275,7 +271,6 @@ const createReferenceImage = (deps = {}) => {
 	// an img ghost-drags natively and that steals the pointer capture
 	overlay.addEventListener('dragstart', e => e.preventDefault());
 
-	// the toolbar button wires through createSettingToggle in main.js;
 	// the panel manager derives the module's visibility from this flag,
 	// so callers follow a setOpen with a layout
 	let open = false;

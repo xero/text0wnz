@@ -1,8 +1,8 @@
 /**
  * BIN (raw binary text) codec. Headerless char/attr pairs at a known
- * width: SAUCE BinaryText FileType (width/2) when set, the 160-column
- * default otherwise. Rows always derive from payload size and width;
- * binary data has no newlines to count.
+ * width: the SAUCE §FileType BinaryText width/2 when set, the
+ * 160-column default otherwise. Rows always derive from payload size
+ * and width; binary data has no newlines to count.
  */
 
 import { DocV3 } from '../doc.js';
@@ -21,11 +21,11 @@ export interface DocMeta {
 	author?: string;
 	group?: string;
 	comments?: string;
-	/** SAUCE font name (TInfoS), raw. */
+	/** SAUCE §FontName (TInfoS), raw. */
 	fontName?: string;
-	/** Raw SAUCE AR bits carried from an opened file (round trip). */
+	/** Raw SAUCE §ANSiFlags AR bits from an opened file (round trip). */
 	aspect?: number;
-	/** Raw SAUCE LS bits; 0 keeps an opened file's "no preference". */
+	/** Raw SAUCE §ANSiFlags LS bits; 0 round-trips "no preference". */
 	letterSpacingMode?: number;
 }
 
@@ -44,7 +44,7 @@ export const decodeBin = (bytes: Uint8Array): DecodeResult => {
 			? sauce.fileType * 2
 			: DEFAULT_BIN_COLUMNS;
 	// payloadSize already subtracts the COMNT block and EOF when the
-	// record's fileSize is 0; the old whole-length fallback decoded the
+	// record's fileSize is 0; a whole-length fallback would decode the
 	// SAUCE trailer as extra canvas rows
 	const payloadSize = sauce ? sauce.payloadSize : bytes.length;
 	// a trailing partial row pads instead of flooring away: PabloDraw
@@ -103,8 +103,8 @@ export const encodeBin = (
 		throw new CodecError(`BIN needs an even column count, got ${columns}`);
 	}
 	if (columns > 510) {
-		// the SAUCE FileType byte holds width/2; wider silently wrapped
-		// mod 256 and reloaded scrambled
+		// SAUCE §FileType: the BinaryText FileType byte holds width/2, so
+		// wider would silently wrap mod 256 and reload scrambled
 		throw new CodecError(`BIN caps at 510 columns, got ${columns}`);
 	}
 	const payload = u16CellsToBytes(imageData);

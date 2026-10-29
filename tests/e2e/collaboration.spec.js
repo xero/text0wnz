@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+// the chat button hides while local; without a live session these
+// bodies would pass on nothing, so they skip out loud
 test.describe('Collaboration and Chat Features', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
@@ -11,15 +13,13 @@ test.describe('Collaboration and Chat Features', () => {
 		const chatButton = page.locator('#chatButton');
 		const count = await chatButton.count();
 
-		// the chat button only shows with websockets enabled; pin DOM presence
+		// the chat button only shows with websockets enabled
 		expect(count).toBeGreaterThanOrEqual(0);
 	});
 
 	test('should open chat window', async ({ page }) => {
 		const chatButton = page.locator('#chatButton');
 
-		// the button hides while local (correctly, since this PR); without
-		// a live session the body would pass on nothing, so skip out loud
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
@@ -43,15 +43,12 @@ test.describe('Collaboration and Chat Features', () => {
 	test('should close chat window', async ({ page }) => {
 		const chatButton = page.locator('#chatButton');
 
-		// the button hides while local (correctly, since this PR); without
-		// a live session the body would pass on nothing, so skip out loud
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
 			await page.waitForTimeout(500);
 			await expect(page.locator('#chatWindow')).toBeVisible();
 
-			// the chat button toggles the window; the title bar X does too
 			await chatButton.click();
 			await page.waitForTimeout(500);
 			await expect(page.locator('#chatWindow')).toBeHidden();
@@ -61,8 +58,6 @@ test.describe('Collaboration and Chat Features', () => {
 	test('should have chat input field', async ({ page }) => {
 		const chatButton = page.locator('#chatButton');
 
-		// the button hides while local (correctly, since this PR); without
-		// a live session the body would pass on nothing, so skip out loud
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
@@ -82,8 +77,6 @@ test.describe('Collaboration and Chat Features', () => {
 	test('should have user handle input', async ({ page }) => {
 		const chatButton = page.locator('#chatButton');
 
-		// the button hides while local (correctly, since this PR); without
-		// a live session the body would pass on nothing, so skip out loud
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
@@ -103,8 +96,6 @@ test.describe('Collaboration and Chat Features', () => {
 	test('should allow setting user handle', async ({ page }) => {
 		const chatButton = page.locator('#chatButton');
 
-		// the button hides while local (correctly, since this PR); without
-		// a live session the body would pass on nothing, so skip out loud
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
@@ -124,8 +115,6 @@ test.describe('Collaboration and Chat Features', () => {
 	test('should display message window', async ({ page }) => {
 		const chatButton = page.locator('#chatButton');
 
-		// the button hides while local (correctly, since this PR); without
-		// a live session the body would pass on nothing, so skip out loud
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
@@ -145,8 +134,6 @@ test.describe('Collaboration and Chat Features', () => {
 	test('should have notification toggle', async ({ page }) => {
 		const chatButton = page.locator('#chatButton');
 
-		// the button hides while local (correctly, since this PR); without
-		// a live session the body would pass on nothing, so skip out loud
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
@@ -166,8 +153,6 @@ test.describe('Collaboration and Chat Features', () => {
 	test('should display user list', async ({ page }) => {
 		const chatButton = page.locator('#chatButton');
 
-		// the button hides while local (correctly, since this PR); without
-		// a live session the body would pass on nothing, so skip out loud
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
@@ -185,8 +170,6 @@ test.describe('Collaboration and Chat Features', () => {
 	test('should type message in chat input', async ({ page }) => {
 		const chatButton = page.locator('#chatButton');
 
-		// the button hides while local (correctly, since this PR); without
-		// a live session the body would pass on nothing, so skip out loud
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
@@ -206,8 +189,6 @@ test.describe('Collaboration and Chat Features', () => {
 	test('should clear message input after sending', async ({ page }) => {
 		const chatButton = page.locator('#chatButton');
 
-		// the button hides while local (correctly, since this PR); without
-		// a live session the body would pass on nothing, so skip out loud
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
@@ -272,7 +253,7 @@ test.describe('Network Features', () => {
 	});
 
 	test('should attempt server connection', async ({ page }) => {
-		// Wait for potential connection attempt
+		// give a connection attempt time to fire
 		await page.waitForTimeout(2000);
 
 		const canvas = page.locator('#canvasContainer');
@@ -301,8 +282,6 @@ test.describe('Chat Window Drag Functionality', () => {
 	test('should have draggable cursor on chat header', async ({ page }) => {
 		const chatButton = page.locator('#chatButton');
 
-		// the button hides while local (correctly, since this PR); without
-		// a live session the body would pass on nothing, so skip out loud
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
@@ -326,8 +305,6 @@ test.describe('Chat Window Drag Functionality', () => {
 	test('should allow dragging chat window by header', async ({ page }) => {
 		const chatButton = page.locator('#chatButton');
 
-		// the button hides while local (correctly, since this PR); without
-		// a live session the body would pass on nothing, so skip out loud
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
@@ -361,8 +338,6 @@ test.describe('Chat Window Drag Functionality', () => {
 	test('should not select text when dragging', async ({ page }) => {
 		const chatButton = page.locator('#chatButton');
 
-		// the button hides while local (correctly, since this PR); without
-		// a live session the body would pass on nothing, so skip out loud
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();

@@ -1,39 +1,20 @@
 /**
- * teXt0wnz collab extension suite v1 (cap "t0wnz-ext-1"):
- * action ids above the frozen Moebius dialect. Extension frames flow
- * ONLY between caps-aware peers; the server down-converts every
- * mutation for vanilla clients and spectators, so a mixed room stays
- * coherent (vanilla sees the nearest cp437/16-color cell, never a
- * crash, never an unknown shape). Transport-free like moebius.ts: the
- * browser worker, the Bun server, and the tests share this file.
+ * teXt0wnz collab extension suite v1 (cap "t0wnz-ext-1"): action ids
+ * above the frozen Moebius dialect; wire shapes are specified in
+ * docs/collab-protocol-migration.md. Extension frames flow ONLY
+ * between caps-aware peers; the server down-converts every mutation
+ * for vanilla clients and spectators, so a mixed room stays coherent
+ * (vanilla sees the nearest cp437/16-color cell, never a crash, never
+ * an unknown shape). Transport-free like moebius.ts: the browser
+ * worker, the Bun server, and the tests share this file.
  *
- * Wire shapes (JSON data fields; client->server frames carry data.id
- * per the vanilla convention):
- * - EXT_DRAW 23       {x, y, u, a, fg, bg, id}: one full-fidelity
- *   cell. u = unicode codepoint, a = glyph attr byte (bit 0 blink,
- *   bit 1 reserved), fg/bg = v3 color words (bit 31 set = palette
- *   index, clear = 0x00RRGGBB).
- * - EXT_DRAW_BATCH 24 {cells: [{x,y,u,a,fg,bg}...], id}: one op, one
- *   seq, length-capped at EXT_BATCH_LIMIT. Vanilla peers receive it
- *   as per-cell DRAW frames.
- * - EXT_SYNC 25       client->server {} requests a sync; the server
- *   replies {seq, columns, rows, cells, palette} where cells is
- *   ExtRun[] ([u, a, fg, bg, count] with count >= 1, NOT the vanilla
- *   repeat+1 quirk) and palette is <=256 0x00RRGGBB words. The client
- *   replaces its doc wholesale.
- * - EXT_PALETTE 26    {palette: number[], id}: full-palette swap,
- *   <=256 0x00RRGGBB words. The first 16 entries also update the
- *   vanilla join palette (late vanilla joiners see them; in-session
- *   vanilla peers keep a stale palette, upstream's own precedent).
- * - EXT_ACK 27        server->sender {seq} for every accepted
- *   mutation from a caps client. With exclude-sender echo semantics
- *   the sender never sees its own broadcasts, so acks keep its seq
- *   stream contiguous; any gap means a missed op => request EXT_SYNC.
- *
- * seq is a per-room monotonic counter over accepted doc mutations.
- * Caps clients receive it on every mutation broadcast (an extra field
- * vanilla never sees); contiguity is the divergence detector that the
- * vanilla dialect lacks.
+ * - EXT_PALETTE's first 16 entries also update the vanilla join
+ *   palette (late vanilla joiners see them; in-session vanilla peers
+ *   keep a stale palette, upstream's own precedent).
+ * - seq contiguity is the divergence detector the vanilla dialect
+ *   lacks. The server excludes the sender from its own broadcasts, so
+ *   EXT_ACK keeps the sender's seq stream contiguous; any gap means a
+ *   missed op => request EXT_SYNC.
  */
 
 import {
@@ -60,10 +41,8 @@ export const T0wnzAction = Object.freeze({
 	EXT_PALETTE: 26,
 	EXT_ACK: 27,
 	/**
-	 * client->server {} requests; server->client {columns, rows, cells,
-	 * ops, palette}: the baseline snapshot (absorbing ops the bounded
-	 * log evicted) plus the op log, the timelapse substrate. The client
-	 * replays it into an animation.
+	 * reply: the baseline snapshot (absorbing ops the bounded log
+	 * evicted) plus the op log
 	 */
 	EXT_TIMELAPSE: 28,
 });
@@ -90,7 +69,7 @@ export interface ExtDraw extends ExtCell {
 	y: number;
 }
 
-/** [u, a, fg, bg, count] with count >= 1 */
+/** [u, a, fg, bg, count] with count >= 1, NOT the vanilla repeat+1 quirk */
 export type ExtRun = [number, number, number, number, number];
 
 export const isValidCodepoint = (u: unknown): u is number =>
@@ -221,8 +200,6 @@ export const blockToExtCell = (
 	};
 };
 
-// --------------------------------------------------------- sync RLE
-
 export const compressExtCells = (cells: ExtCell[]): ExtRun[] => {
 	const runs: ExtRun[] = [];
 	for (const cell of cells) {
@@ -277,8 +254,6 @@ export const expandExtCells = (
 
 export const extCellEquals = (a: ExtCell, b: ExtCell): boolean =>
 	a.u === b.u && a.a === b.a && a.fg === b.fg && a.bg === b.bg;
-
-// --------------------------------------------------------- doc bridge
 
 /**
  * Write full-fidelity cells into a v3 doc frame (persistence: the

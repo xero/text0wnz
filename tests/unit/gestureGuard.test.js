@@ -1,9 +1,5 @@
-// Pins the global gesture guard's ownership split: a two-finger pinch
-// that starts OUTSIDE the canvas container dispatches the same
-// onTextCanvasPinch* events zoom.js consumes, while touches starting
-// on the canvas are left entirely to the canvas recognizer. One guard
-// instance for the whole file: its document listeners are permanent,
-// like in the app.
+// one guard instance for the whole file: its document listeners are
+// permanent, like in the app
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createGestureGuard } from '../../src/js/client/gestureGuard.js';
 import { GESTURE_DEFAULTS } from '../../src/js/client/gestures.js';

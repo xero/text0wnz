@@ -53,7 +53,7 @@ import {
 	createPalettePreview,
 	createPalettePicker,
 } from './palette.js';
-// Only import keyboard tools statically (default mode)
+// keyboard tools load statically (the boot mode); the rest lazy-load
 import {
 	createCursor,
 	createSelectionCursor,
@@ -174,9 +174,8 @@ const openHandler = (file, opts = {}) => {
 		openFile.value = '';
 		return;
 	}
-	// archives unpack client-side; multi-entry ones raise a picker.
-	// created on first use: a PWA launch can deliver a file before the
-	// idle-time init tier builds the opener
+	// created on first use: a PWA launch can deliver an archive before
+	// the idle-time init tier builds the opener
 	if (isArchiveFile(file)) {
 		archiveOpener ??= createArchiveOpener({ openFile: openHandler });
 		archiveOpener?.open(file);
@@ -272,7 +271,7 @@ const openHandler = (file, opts = {}) => {
 				dispatchingOwnOpen = false;
 				// tier-3 init assigns this; a share-target open on a slow
 				// device lands first and must not abort the UI resets
-				palettePicker?.updatePalette(); // ANSi
+				palettePicker?.updatePalette();
 				openFile.value = '';
 				viewport.scrollLeft = viewport.scrollTop = 0;
 			};
@@ -282,9 +281,9 @@ const openHandler = (file, opts = {}) => {
 				if (seq !== openSeq) {
 					return;
 				}
-				// current is the controller's accessor, not a field: the
-				// old reference compare never matched and left the
-				// loading modal up after every file load
+				// current is the controller's accessor, not a field: a
+				// bare reference compare never matches and strands the
+				// loading modal after every file load
 				if (State.modal.isOpen() && State.modal.current() === 'loading') {
 					State.modal.close();
 				}
@@ -304,7 +303,7 @@ const openHandler = (file, opts = {}) => {
 				return; // setFont runs applyData
 			}
 			applyData();
-			palettePicker?.updatePalette(); // XB
+			palettePicker?.updatePalette();
 			closeModal();
 		},
 		{ ...opts, onError },
@@ -359,7 +358,7 @@ const handleFileShare = async () => {
 	}
 };
 
-// Debounce to avoid saving too frequently during drawing
+// every keypress and stroke end calls this; one write per pause
 const save = () => {
 	if (saveTimeout) {
 		clearTimeout(saveTimeout);
@@ -551,7 +550,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		State.startInitialization();
 		$$$$();
 
-		// Tier 1: Core UI and Canvas (most critical)
+		// Tier 1: core UI and canvas
 		State.modal = createModalController($('modal'));
 		State.palette = createDefaultPalette();
 		// before the canvas: the arena's first commit must find the table
@@ -564,10 +563,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 			$('delete'),
 		);
 		State.textArtCanvas = createTextArtCanvas(canvasContainer, () => {
-			// drop the loading state as soon as the canvas is minimally ready
 			bodyContainer.classList.remove('loading');
 
-			// Tier 2: use setTimeout to allow UI to respond
+			// Tier 2: a macrotask later, so the UI can respond first
 			setTimeout(() => {
 				State.positionInfo = createPositionInfo($('positionInfo'));
 				State.selectionCursor = createSelectionCursor(canvasContainer);
@@ -575,7 +573,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				State.selectionTool = createSelectionTool();
 
 				// zoom controller first (pinch/wheel/focal anchoring), then
-				// the slider UI that routes through it
+				// the button UI that routes through it
 				const viewportElement = $('viewport');
 				if (viewportElement) {
 					createZoomController(viewportElement);
@@ -624,7 +622,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				document.addEventListener('onPanelLayout', () => fitGlyphs());
 				armPixelRatioWatch(() => fitGlyphs());
 
-				// Tier 3: Secondary tools - defer with requestIdleCallback
+				// Tier 3: secondary tools, at idle
 				const initSecondaryTools = () => {
 					State.toolPreview = createToolPreview($('toolPreview'));
 					State.title = 'Untitled';
@@ -644,7 +642,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 						],
 						async _deps => {
 							await initializeAppComponents();
-							// Signal that every control is wired up (used by e2e tests)
+							// the e2e tests' cue that every control is wired up
 							bodyContainer.dataset.ready = 'true';
 							// Opt-in instrumentation, never part of the normal boot path
 							const toolParams = new URLSearchParams(window.location.search);
@@ -694,7 +692,6 @@ const initializeAppComponents = async () => {
 			reofferUpdate();
 		});
 	}
-	// iOS quirks
 	if (isIOS) {
 		openFile.setAttribute('accept', '*/*');
 		// track state to offset traffic lights
@@ -722,8 +719,8 @@ const initializeAppComponents = async () => {
 	onClick($('menuTabEdit'), () => showMenuTab('edit'));
 	onClick($('fileMenu'), () => {
 		showMenuTab('file');
-		// the collapsible groups greet every open folded, so the menu
-		// starts short no matter how the last visit left them
+		// groups fold on every open so the menu starts short no matter
+		// how the last visit left them
 		$('mainMenu')
 			.querySelectorAll('details[open]')
 			.forEach(group => {
@@ -732,7 +729,6 @@ const initializeAppComponents = async () => {
 		const opts = { flush: true };
 		State.flyouts.toggle('menu', $('mainMenu'), $('fileMenu'), opts);
 	});
-	// an item press acts through its own handler and shuts the menu
 	$('mainMenu').addEventListener('click', e => {
 		if (e.target.closest('.menuItem')) {
 			State.flyouts.close();
@@ -766,9 +762,6 @@ const initializeAppComponents = async () => {
 	onClick($('open'), () => {
 		openFile.click();
 	});
-	// both artpack site browsers open straight into the editor; one
-	// landing modal fronts them from a single File menu entry and
-	// remembers which site the artist was last inside
 	// exitToLanding closes over artpacks before its const below exists;
 	// safe because createTrail only calls it from user-driven back()
 	const exitToLanding = () => artpacks?.showLanding();
@@ -783,14 +776,11 @@ const initializeAppComponents = async () => {
 	const artpacks = createArtpacksLanding({ sixteen, arena });
 	onClick($('browseArtpacks'), () => artpacks?.show());
 
-	// native zip and lha opens route through the same unpack path
 	archiveOpener ??= createArchiveOpener({ openFile: openHandler });
 
-	// ES-module plugin surface (durdraw lineage)
 	const pluginManager = createPluginManager();
 	onClick($('pluginsMenu'), () => pluginManager?.show());
 
-	// reference-image overlay for tracing
 	referenceImage = createReferenceImage({
 		// the async restore reopens the panel; the nav button must light
 		// up with it or the menu reads as off while the overlay shows
@@ -828,7 +818,6 @@ const initializeAppComponents = async () => {
 	onClick($('copy'), State.pasteTool.copy);
 	onClick($('paste'), State.pasteTool.paste);
 	onClick($('systemPaste'), State.pasteTool.systemPaste);
-	// the bar's paste submenu mirrors the Edit menu's variants
 	onClick($('pasteTransparent'), State.pasteTool.pasteTransparent);
 	onClick($('pasteUnder'), State.pasteTool.pasteUnder);
 	onClick($('delete'), State.pasteTool.deleteSelection);
@@ -842,18 +831,14 @@ const initializeAppComponents = async () => {
 	onClick($('navUndo'), State.textArtCanvas.undo);
 	onClick($('navRedo'), State.textArtCanvas.redo);
 
-	// charset picker (durdraw lineage); the keyboard section's charset
-	// button opens the same dialog as the File menu item
 	const charsetPicker = createCharsetPicker();
 	onClick($('charsetPicker'), charsetPicker.show);
 	onClick($('charsetButton'), charsetPicker.show);
 
-	// extended colors: the strip's 256/RGB expansion panel
 	createColorPanel();
 
-	// frames timeline + playback + onion skin; the toolbar buttons ride
-	// createSettingToggle so the 'enabled' highlight persists across
-	// toolbar view switches, like the grid button
+	// a toggle, not a Toolbar tool: its 'enabled' highlight must survive
+	// tool switches, like the grid button's
 	framesPanel = createFramesPanel();
 	if (framesPanel) {
 		createSettingToggle($('navFrames'), framesPanel.isOpen, open => {
@@ -897,7 +882,6 @@ const initializeAppComponents = async () => {
 		);
 	}
 
-	// minimap (GL-only)
 	minimap = createMinimap();
 	if (minimap) {
 		createSettingToggle($('navMinimap'), minimap.isVisible, visible =>
@@ -907,7 +891,6 @@ const initializeAppComponents = async () => {
 		createAutoScroller();
 	}
 
-	// Credz
 	onClick($('about'), _ => {
 		State.modal.open('about');
 	});
@@ -944,8 +927,8 @@ const initializeAppComponents = async () => {
 		});
 	});
 
-	// once, outside the open handler: every open used to stack another
-	// cancel listener and discard its remover
+	// bound once, outside the open handler, or every open would stack
+	// another cancel listener with no remover
 	onClick($('tutorialsCancel'), _ => {
 		State.modal.close();
 	});
@@ -1035,7 +1018,7 @@ const initializeAppComponents = async () => {
 		q: swapColors,
 		k: $('keyboard'),
 		// f lands on the block brush itself: the group button only opens
-		// a flyout now and never picks a tool
+		// a flyout and never picks a tool
 		f: $('halfblock'),
 		b: $('characterBrush'),
 		n: $('fill'),
@@ -1076,12 +1059,10 @@ const initializeAppComponents = async () => {
 			State.selectionTool.disable();
 		},
 	);
-	// the floating action bar follows the selection rect itself
 	State.selectionBar = createSelectionBar();
 
 	onClick($('undo'), State.textArtCanvas.undo);
 	onClick($('redo'), State.textArtCanvas.redo);
-	// the phone top strip carries its own pair
 	onClick($('stripUndo'), State.textArtCanvas.undo);
 	onClick($('stripRedo'), State.textArtCanvas.redo);
 	onClick($('resolution'), () => {
@@ -1120,7 +1101,6 @@ const initializeAppComponents = async () => {
 	onReturn(columnsInput, resizeApply);
 	onReturn(rowsInput, resizeApply);
 
-	// Edit action menu items
 	onClick($('insertRow'), keyboard.insertRow);
 	onClick($('deleteRow'), keyboard.deleteRow);
 	onClick($('insertColumn'), keyboard.insertColumn);
@@ -1133,8 +1113,6 @@ const initializeAppComponents = async () => {
 	onClick($('eraseColumnEnd'), keyboard.eraseToEndOfColumn);
 	onClick(menuFullscreen, toggleFullscreen);
 	onClick(navFullscreen, toggleFullscreen);
-	// the glyph tracks the BROWSER's state (F11, Esc, OS gestures),
-	// independent of which button toggled it
 	armFullscreenIcon(navFullscreen);
 
 	onClick($('defaultColor'), () => {
@@ -1253,9 +1231,8 @@ const initializeAppComponents = async () => {
 	const grid = createGrid($('grid'));
 	createSettingToggle($('navGrid'), grid.isShown, grid.show);
 
-	// everything past the default keyboard mode lazy-loads on first click
-	// the group buttons are not tools: the first click opens the group's
-	// flyout without switching, and the same click closes it again
+	// group buttons are not tools: they toggle their flyout and never
+	// switch the active tool
 	onClick($('brushes'), () =>
 		State.flyouts.toggle('brushes', $('brushToolbar'), $('brushes')));
 	onClick($('shapes'), () =>
@@ -1302,7 +1279,7 @@ const initializeAppComponents = async () => {
 		};
 	});
 
-	// Track loaded brush tools for modal focus events
+	// hoisted: the sample tool shares both brush controllers
 	let shadeBrush = null;
 	let characterBrush = null;
 
@@ -1503,7 +1480,6 @@ const initializeAppComponents = async () => {
 
 	viewportTap(viewport);
 
-	// Initialize chat before creating network handler
 	State.chat = createChatController(
 		$('chatButton'),
 		$('messageWindow'),
@@ -1548,7 +1524,7 @@ const initializeAppComponents = async () => {
 		try {
 			localStorage.setItem('darkMode', String(dark));
 		} catch {
-			// storage blocked: the preference just does not persist
+			// storage blocked: the preference does not persist
 		}
 	};
 	onClick(navDarkmode, darkToggle);

@@ -37,7 +37,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 	},
 }));
 
-void State; // Used in mocked tests
+void State;
 
 describe('UI Basic Utilities', () => {
 	beforeEach(() => {

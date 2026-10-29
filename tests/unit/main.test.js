@@ -128,7 +128,7 @@ vi.stubGlobal('document', {
 	getElementById: vi.fn(id => {
 		const mockElement = createMockElement();
 		if (id === 'open-file') {
-			return { ...mockElement, files: [{ name: 'test.ans' }]}; // Use plain object instead of File constructor
+			return { ...mockElement, files: [{ name: 'test.ans' }]};
 		}
 		if (id === 'columns-input' || id === 'rows-input') {
 			return { ...mockElement, value: '80' };
@@ -218,7 +218,7 @@ vi.mock('../../src/js/client/font.js', () => ({
 
 vi.mock('../../src/js/client/canvas.js', () => ({
 	createTextArtCanvas: vi.fn((container, callback) => {
-		// Execute callback immediately to simulate successful creation
+		// simulate a successful creation
 		if (callback) {
 			callback();
 		}
@@ -349,7 +349,7 @@ describe('Main Application Module', () => {
 
 			const newButtonCall = onClick.mock.calls.find(
 				call => call[0] && call[0].id === 'new',
-			); // This is a mock, so we check the mock element
+			);
 
 			if (newButtonCall) {
 				const newButtonHandler = newButtonCall[1];
@@ -375,7 +375,6 @@ describe('Main Application Module', () => {
 				const newButtonHandler = newButtonCall[1];
 				newButtonHandler();
 
-				// Canvas should not be cleared if user cancels
 				expect(mockState.textArtCanvas.clear).not.toHaveBeenCalled();
 			}
 		});
@@ -498,7 +497,7 @@ describe('Main Application Module', () => {
 				const calls = onClick.mock.calls;
 				calls.forEach(call => {
 					if (typeof call[1] === 'function') {
-						call[1](); // Execute handlers
+						call[1]();
 					}
 				});
 			}).not.toThrow();

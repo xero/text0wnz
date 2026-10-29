@@ -1,14 +1,10 @@
 /**
- * Bun.serve websocket layer: path rooms, hardened frame intake,
- * ws-level heartbeat (the protocol has none), and
- * the dual-listener story: the main listener sits behind Caddy (wss
- * for browsers) and an optional plaintext listener on another port
- * serves desktop clients (Moebius, icy_draw) directly, which solves
- * hosting-side mixed content without TLS in-process.
- *
- * Protocol semantics live in room.js; this file only routes.
- * (No @ts-check: Bun's types are not in the repo's TS lib set, same
- * reasoning as journalWorker.js.)
+ * Bun.serve websocket layer; protocol semantics live in room.js.
+ * Desktop clients (Moebius, icy_draw) dial plaintext ws:// only, so
+ * an optional second listener serves them directly while the main one
+ * sits behind Caddy (wss for browsers), and neither needs TLS
+ * in-process.
+ * (No @ts-check: Bun's types are not in the repo's TS lib set.)
  */
 /* global Bun */
 
@@ -19,9 +15,10 @@ import { resolveBridgeTarget, createBridgePipe } from './bridge.js';
 import { ROOM_NAME_RE, authCooldownMs, sanitize } from './utils.js';
 
 export const SERVER_LIMITS = Object.freeze({
-	// vanilla PASTE_AS_SELECTION frames run tens of MB (the ancestor's
-	// ws default is 100MiB); 1MB closed real clients mid-session. The
-	// room's byte-bounded op log holds memory regardless.
+	// vanilla PASTE_AS_SELECTION frames run tens of MB (Moebius
+	// server.js, Joint.start(), leaves ws at its 100MiB default); a
+	// 1MB cap closes real clients mid-session. The room's byte-bounded
+	// op log holds memory regardless
 	maxPayloadBytes: 32 * 1024 * 1024,
 	idleTimeoutSeconds: 120,
 	heartbeatMs: 30000,
@@ -127,9 +124,9 @@ export const createMoebiusServer = config => {
 				log,
 			});
 			rooms.set(name, room);
-			// lazy restore hook: the host loads any persisted doc for this
-			// room. Connects WAIT on it: a client racing the async load
-			// used to adopt the blank boot doc with no resync ever coming
+			// connects WAIT on the host's restore: a client racing the
+			// async load would adopt the blank boot doc with no resync
+			// ever coming
 			roomReady.set(
 				room,
 				Promise.resolve(config.onRoomCreate?.(room)).catch(() => undefined),
@@ -138,10 +135,7 @@ export const createMoebiusServer = config => {
 		return room;
 	};
 
-	/**
-	 * per-socket state rides Bun's ws.data
-	 * @param {import('bun').ServerWebSocket<any>} ws
-	 */
+	/** @param {import('bun').ServerWebSocket<any>} ws */
 	const clientFor = ws => {
 		if (!ws.data.client) {
 			ws.data.client = {
@@ -216,7 +210,7 @@ export const createMoebiusServer = config => {
 			}
 			const client = clientFor(ws);
 			if (!ws.data.connected) {
-				// first frame must be CONNECTED (type 0); anything else drops
+				// first frame must be CONNECTED (type 0)
 				if (frame.type !== 0) {
 					return;
 				}
@@ -242,7 +236,7 @@ export const createMoebiusServer = config => {
 						refuse('no password');
 						return;
 					}
-					// stateless refusal here let passwords brute-force at
+					// a stateless refusal here lets passwords brute-force at
 					// wire speed; the gate shares room.connect's backoff
 					const gate = authGateFor(ws.data.roomName);
 					const now = Date.now();
@@ -316,9 +310,9 @@ export const createMoebiusServer = config => {
 					}
 				};
 				if (room.isDirty() && config.onRoomEmpty) {
-					// a FAILED save must keep the room resident (disk-full
-					// silently destroyed unsaved art while the server looked
-					// healthy); the next empty or interval save retries
+					// a FAILED save keeps the room resident, or on a full disk
+					// the GC silently destroys unsaved art while the server
+					// looks healthy; the next empty or interval save retries
 					Promise.resolve(config.onRoomEmpty(room)).then(finish, error => {
 						log(`save failed for ${room.name}; kept resident: ${error}`);
 					});
@@ -363,14 +357,14 @@ export const createMoebiusServer = config => {
 		return new Response('not found', { status: 404 });
 	};
 
-	/** @param {Request} req @param {import('bun').Server} server */
-	// RFC 7231 wants every 426 to name the protocol it is asking for
+	// RFC 7231 §6.5.15: every 426 names the protocol it asks for
 	const upgradeRequired = () =>
 		new Response('upgrade required', {
 			status: 426,
 			headers: { upgrade: 'websocket', connection: 'upgrade' },
 		});
 
+	/** @param {Request} req @param {import('bun').Server} server */
 	const fetchHandler = async (req, server) => {
 		const url = new URL(req.url);
 		if (url.pathname === '/healthz') {
@@ -383,10 +377,10 @@ export const createMoebiusServer = config => {
 		}
 		const wantsUpgrade =
 			req.headers.get('upgrade')?.toLowerCase() === 'websocket';
-		// configured allowlist: browser pages carry an Origin, desktop
-		// clients send none (always allowed). Without the knob the
-		// behavior stays open, matching the ancestor. Checked ahead of
-		// the bridge: a foreign page must not dial out through it either
+		// browser pages carry an Origin, desktop clients send none
+		// (always allowed); unset stays open like the ancestor. Checked
+		// ahead of the bridge: a foreign page must not dial out through
+		// it either
 		if (wantsUpgrade && Array.isArray(config.allowedOrigins)) {
 			const origin = req.headers.get('origin');
 			if (origin && !config.allowedOrigins.includes(origin)) {
@@ -419,10 +413,9 @@ export const createMoebiusServer = config => {
 				120,
 				false,
 			);
-			// who asked: the socket's address, and the proxy's claim of
-			// the real one when there is a proxy (the audit line carries
-			// both; trust is the operator's call). Logged only while the
-			// bridge is on: enabling the relay is the operator opting into
+			// the socket's address plus the proxy's claim of the real one
+			// (trust is the operator's call). Logged only while the bridge
+			// is on: enabling the relay is the operator opting into
 			// address logging for this one feature, and the policy says so
 			const claimed = req.headers.get('x-real-ip');
 			// dual-stack listeners report v4 callers as ::ffff:a.b.c.d
@@ -464,8 +457,6 @@ export const createMoebiusServer = config => {
 			}
 			return upgradeRequired();
 		}
-		// plain HTTP serves the PWA in static mode; websocket upgrades
-		// (and ws-only deployments) take the room path below
 		if (!wantsUpgrade && staticRoot) {
 			return serveStatic(url.pathname);
 		}
@@ -498,8 +489,8 @@ export const createMoebiusServer = config => {
 				})
 			: null;
 
-	// the Moebius dialect has no heartbeat: ws-level pings
-	// keep quiet-but-alive clients (pure spectators) clear of the idle
+	// the Moebius dialect has no heartbeat: ws-level pings keep
+	// quiet-but-alive clients (pure spectators) clear of the idle
 	// reaper, and a missed pong since the last sweep marks a ghost
 	const heartbeat = setInterval(() => {
 		for (const ws of sockets) {

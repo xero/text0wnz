@@ -1,8 +1,6 @@
 /**
- * Editor current-frame semantics: writes route to the selected frame,
- * strokes remember their frame, undo/redo navigate back to the frame
- * they touch, and frame removal drops the undo history (stroke frame
- * indexes go stale when frames shift).
+ * Editor current-frame semantics. Frame removal drops the undo history
+ * because stroke frame indexes go stale when frames shift.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createDocV3, type DocV3 } from '../../src/js/core/doc.js';
@@ -71,7 +69,7 @@ describe('undo across frames', () => {
 		editor.setCurrentFrame(1);
 		drawA(editor, 3, 1); // stroke in frame 1
 		editor.setCurrentFrame(0);
-		editor.undo(); // jumps to frame 1, erases
+		editor.undo();
 		expect(editor.getCurrentFrame()).toBe(1);
 		editor.setCurrentFrame(0);
 		expect(editor.redo()).toBe(true);
@@ -92,7 +90,7 @@ describe('frame removal and clear', () => {
 		expect(doc.frames.length).toBe(2);
 		expect(editor.getCurrentFrame()).toBe(1);
 		expect(onFrameChange).toHaveBeenCalledWith(1);
-		expect(editor.undo()).toBe(false); // history dropped
+		expect(editor.undo()).toBe(false);
 	});
 
 	it('removing an earlier frame keeps the view on the same content', () => {

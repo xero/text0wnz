@@ -1,7 +1,6 @@
 /**
- * ANSI and SAUCE spec compliance, 2026-10 audit: the places our
- * reader and writer diverged from PabloDraw, moebiusXBIN, and the
- * written specs. Each case names the reference behavior it pins.
+ * ANSI and SAUCE spec compliance against PabloDraw, moebiusXBIN, and
+ * the written specs. Each case names the reference behavior it pins.
  */
 import { describe, it, expect } from 'vitest';
 import { decodeAns, encodeAns } from '../../src/js/core/codecs/ans.js';
@@ -22,9 +21,8 @@ const cellAt = (doc: ReturnType<typeof createDocV3>, x: number, y: number) =>
 
 describe('SGR empty parameters', () => {
 	it('ESC[m resets attributes like every reference', () => {
-		// bold white A, then ESC[m, then B: v2 read the empty param as 1
-		// (bold on) so B stayed bright; ANSI.SYS, PabloDraw, and
-		// moebiusXBIN all reset to plain gray
+		// an empty param read as 1 (bold on) leaves B bright; ANSI.SYS,
+		// PabloDraw, and moebiusXBIN all reset to plain gray
 		const { doc } = decodeAns(bytes('\x1b[1;37mA\x1b[mB'));
 		const a = cellAt(doc, 0, 0);
 		const b = cellAt(doc, 1, 0);
@@ -100,7 +98,7 @@ describe('PabloDraw 24-bit t sequences', () => {
 		expect(text).toContain('\x1b[1;250;90;90t');
 		const back = decodeAns(encoded);
 		expect(cellAt(back.doc, 0, 0).fg).toBe(rgbColor(250, 90, 90));
-		// the following classic cell got an explicit SGR, not stale RGB
+		// the following classic cell gets an explicit SGR, not stale RGB
 		expect(isPaletteColor(cellAt(back.doc, 1, 0).fg)).toBe(true);
 	});
 });
@@ -136,8 +134,9 @@ describe('EL erase and the RGB overlay', () => {
 
 describe('UTF-8 control-byte lookalikes', () => {
 	it('glyphs living on cp437 control bytes stay cells', () => {
-		// U+25D9 is cp437 0x0A: the old reverse-mapped dispatch turned it
-		// into a line feed, corrupting moebiusXBIN's own UTF-8 exports
+		// U+25D9 is cp437 0x0A: dispatching on the reverse-mapped byte
+		// turns it into a line feed and corrupts moebiusXBIN's own UTF-8
+		// exports
 		const encoder = new TextEncoder();
 		const { doc } = decodeAns(encoder.encode('◙♪→'), {
 			utf8: true,
@@ -165,7 +164,8 @@ describe('SAUCE writer compliance', () => {
 
 	it('writes text fields as CP437 bytes', () => {
 		const record = buildSauce({ ...base, title: 'café' });
-		// cp437 0x82 is e-acute; the old UTF-8 encoding wrote C3 A9
+		// SAUCE §Layout: Character fields are CP437, so e-acute is 0x82,
+		// never UTF-8's C3 A9
 		expect(record[7 + 3]).toBe(0x82);
 	});
 

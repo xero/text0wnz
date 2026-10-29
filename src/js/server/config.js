@@ -45,7 +45,7 @@ const parseArgs = () => {
 	const config = {
 		ssl: false,
 		sslDir: '/etc/ssl/private',
-		saveInterval: 30 * 60 * 1000, // 30 minutes in milliseconds
+		saveInterval: 30 * 60 * 1000,
 		sessionName: 'joint',
 		debug: false,
 		port: 1337,
@@ -55,13 +55,10 @@ const parseArgs = () => {
 		// room password applied to every room without a specific entry;
 		// it gates spectators too
 		pass: process.env.ROOM_PASS ?? '',
-		/** per-room passwords from ROOM_PASSWORDS='{"name":"pw"}' */
 		roomPasswords: parseRoomPasswords(process.env.ROOM_PASSWORDS),
-		/** ws upgrade Origin allowlist; unset keeps upgrades open */
 		allowedOrigins: parseAllowedOrigins(process.env.ALLOWED_ORIGINS),
-		// env knobs: per-deployment canvas resize wall, in EITHER
-		// direction (jam hosts raise it, cautious hosts lower it);
-		// 0 = use room.js ROOM_DEFAULTS (1000x10000)
+		// resize walls, raisable as well as lowerable per deployment;
+		// 0 = room.js ROOM_DEFAULTS (1000x10000)
 		maxColumns: parseCapEnv(process.env.ROOM_MAX_COLUMNS),
 		maxRows: parseCapEnv(process.env.ROOM_MAX_ROWS),
 		// serve the built PWA from this dir (single binary and the
@@ -115,8 +112,8 @@ const parseArgs = () => {
 					config.pass = nextArg;
 					i++;
 				} else {
-					// silence here booted an UNPROTECTED server the operator
-					// believed was passworded
+					// silence here would boot an UNPROTECTED server the
+					// operator believes is passworded
 					console.warn(
 						'[Server] --pass given without a value; running UNPROTECTED',
 					);

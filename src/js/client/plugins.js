@@ -1,47 +1,28 @@
 /**
- * ES-module plugin surface (durdraw lineage): a plugin is
- * one ES module whose default export is { name, description?, run }.
- * run(api) receives a small stable surface over the current frame and
- * may be async. Writes buffer and apply as ONE undoable stroke when
- * run resolves; reads always see the document as it was when the
- * plugin started (documented contract, keeps the batch atomic).
+ * ES-module plugins (durdraw lineage): the default export is
+ * { name, description?, run } and run(api) may be async. Writes buffer
+ * and apply as ONE undoable stroke when run resolves; reads always see
+ * the document as it was when the plugin started (documented contract,
+ * keeps the batch atomic).
  *
- * Loading is explicit user action only (a local .js file imported
- * through a blob: URL, or a typed URL), and the modal says plainly
- * that a plugin runs with full page access, like durdraw's warning.
- * Nothing loads automatically, nothing persists except the list of
- * URLs the user chose to keep.
- *
- * Example plugin:
- *   export default {
- *     name: 'invert',
- *     run(api) {
- *       for (let y = 0; y < api.rows; y++) {
- *         for (let x = 0; x < api.columns; x++) {
- *           const cell = api.get(x, y);
- *           api.put(x, y, cell.code, cell.bg & 15, cell.fg & 15);
- *         }
- *       }
- *     },
- *   };
+ * A plugin runs with full page access, so loading is explicit user
+ * action only (a local .js file through a blob: URL, or a typed URL)
+ * and the modal says so, like durdraw's warning. Nothing loads
+ * automatically; only the URLs of loaded plugins persist.
  */
 import State from './state.js';
 import { $ } from './ui.js';
 
 const STORAGE_KEY = 'pluginUrls';
 
-/**
- * The stable surface a plugin's run() receives. Reads come from a
- * frozen snapshot; puts buffer and flush as one undoable batch.
- * @param {object} canvas State.textArtCanvas
- */
+/** @param {object} canvas State.textArtCanvas */
 const createPluginApi = canvas => {
 	const columns = canvas.getColumns();
 	const rows = canvas.getRows();
-	// one EAGER u16 snapshot at run start: the old lazy per-cell memo
-	// captured whatever stood at first read, so a local or collab edit
-	// landing mid-run leaked into "start-of-run" state. The plugin API
-	// is u16-shaped anyway (put masks to CP437 + classic colors)
+	// one EAGER u16 snapshot at run start: a lazy per-cell memo would
+	// capture whatever stood at first read, leaking a local or collab
+	// edit landing mid-run into "start-of-run" state. get() is
+	// u16-shaped anyway (CP437 codes, classic colors)
 	const snapshot = Uint16Array.from(
 		canvas.getImageData?.() ?? new Uint16Array(columns * rows),
 	);
@@ -78,8 +59,8 @@ const createPluginApi = canvas => {
 			};
 		},
 		/**
-		 * Buffer one cell write; glyph ids 0-255 are CP437, colors are
-		 * classic 0-15 or full v3 color words. Flushes as one undo step.
+		 * glyph ids 0-255 are CP437, colors are classic 0-15 or full v3
+		 * color words
 		 */
 		put: (x, y, code, fg, bg) => {
 			if (inBounds(x, y) && Number.isInteger(code)) {
@@ -163,7 +144,7 @@ const createPluginManager = () => {
 			row.className = 'pluginRow';
 			const label = document.createElement('span');
 			label.textContent = plugin.description
-				? `${plugin.name} — ${plugin.description}`
+				? `${plugin.name}: ${plugin.description}`
 				: plugin.name;
 			const runButton = document.createElement('button');
 			runButton.textContent = 'run';

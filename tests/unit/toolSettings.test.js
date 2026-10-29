@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 /**
- * The unified settings module controller: section exclusivity, the
- * reopen rule through the panel manager, and single-owner persistence.
- * Placement, shading, and the close chrome belong to panels.js now.
+ * Placement, shading, and the close chrome belong to panels.js, not
+ * this controller.
  */
 const mocks = vi.hoisted(() => ({
 	reopen: vi.fn(),

@@ -1,17 +1,15 @@
 // @ts-check
 /**
- * Autosave journal store: the client side of the OPFS
- * journal. Picks a backend at open time:
+ * Autosave journal store. Backend, picked at open time:
  * - OPFS sync-access handles in a worker (journalWorker.js) wherever
  *   `navigator.storage.getDirectory` exists (Safari 15.2+, Chromium,
  *   Firefox 111+),
  * - an IndexedDB record log otherwise (Safari 15.0-15.1),
  * - an in-memory log as the last resort (private windows that refuse
- *   both; autosave then simply does not survive the tab).
+ *   both; autosave then does not survive the tab).
  *
  * The store owns append/compaction bookkeeping; the journal FORMAT
- * (records, replay, torn tails) lives in core/journal.ts. Backends are
- * injectable for tests.
+ * (records, replay, torn tails) lives in core/journal.ts.
  */
 
 import { shouldCompact } from '../core/index';
@@ -29,8 +27,6 @@ import { trustedMessage } from './messageGuard.js';
 
 const IDB_NAME = 'text0wnz-journal';
 const IDB_STORE = 'records';
-
-// --------------------------------------------------------- OPFS backend
 
 /** @returns {JournalBackend} */
 const createOpfsBackend = () => {
@@ -62,7 +58,7 @@ const createOpfsBackend = () => {
 	const call = (op, bytes) =>
 		new Promise((resolve, reject) => {
 			const id = nextId++;
-			// A dead worker must degrade (legacy restore, warn-and-continue
+			// a dead worker must degrade (legacy restore, warn-and-continue
 			// writes), never wedge callers awaiting a reply forever
 			const deadline = setTimeout(() => {
 				if (pending.delete(id)) {
@@ -80,7 +76,7 @@ const createOpfsBackend = () => {
 				},
 			});
 			if (bytes) {
-				// Copy so the caller keeps its view; the buffer transfers
+				// copy so the caller keeps its view; the buffer transfers
 				const copy = new Uint8Array(bytes);
 				worker.postMessage({ id, op, bytes: copy }, [copy.buffer]);
 			} else {
@@ -99,8 +95,6 @@ const createOpfsBackend = () => {
 		},
 	};
 };
-
-// ---------------------------------------------------- IndexedDB backend
 
 /** @returns {Promise<IDBDatabase>} */
 const openIdb = () =>
@@ -171,8 +165,6 @@ const createIdbBackend = () => {
 		close: async () => {},
 	};
 };
-
-// ------------------------------------------------------- memory backend
 
 /** @returns {JournalBackend} */
 export const createMemoryBackend = () => {
@@ -255,7 +247,7 @@ export const createJournalStore = (options = {}) => {
 		/** Raw journal bytes as persisted (may be empty). */
 		open: () => enqueue(() => backend.read()),
 		/**
-		 * Append one stroke record. Resolves true when compaction is due.
+		 * Resolves true when compaction is due.
 		 * @param {Uint8Array} bytes
 		 */
 		appendStroke: bytes =>
@@ -268,17 +260,12 @@ export const createJournalStore = (options = {}) => {
 					options.compactLimits,
 				);
 			}),
-		/**
-		 * Replace the whole journal (fresh keyframe / compaction).
-		 * @param {Uint8Array} bytes
-		 */
+		/** @param {Uint8Array} bytes whole journal: keyframe or compaction */
 		rewrite: bytes =>
 			enqueue(async () => {
 				await backend.rewrite(bytes);
 				bytesSinceKeyframe = 0;
 				strokesSinceKeyframe = 0;
 			}),
-		// wipe/stats/close and backendKind had no production callers;
-		// the backend contract keeps wipe/close for the worker protocol
 	};
 };

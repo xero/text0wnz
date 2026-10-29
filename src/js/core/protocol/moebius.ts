@@ -1,24 +1,26 @@
 /**
- * Moebius wire protocol codec: the de facto collab
- * dialect, frozen since ≤2021. Frames are JSON `{type, data}`; the
- * enum below is transcribed from moebiusXBIN `app/document/doc.js:7`
- * (the superset of upstream's server enum, which stops at SET_BG and
+ * Moebius wire protocol codec: the de facto collab dialect, frozen
+ * since ≤2021. Frames are JSON `{type, data}`; the enum below is
+ * transcribed from moebiusXBIN `app/document/doc.js:7`, a superset of
+ * the `action` enum in Moebius server.js (which stops at SET_BG and
  * lacks CHANGE_PALETTE). Pure functions only: no sockets, no DOM, so
  * the browser worker, the Bun server, and the interop tests all share
  * one implementation.
  *
  * Quirks preserved on purpose (bug-compat is the spec):
  * - join-doc RLE runs are `[value, repeat]` with count = repeat + 1,
- *   three independent streams for code/fg/bg (libtextmode.js compress).
- * - palettes carry 6-bit components; expansion replicates the top two
- *   bits ((v << 2) | ((v & 0x30) >> 4), palette.js:308). Receivers
- *   auto-detect 8-bit palettes the way icy_draw does: any component
- *   above 63 means the whole palette is already 8-bit.
+ *   three independent streams for code/fg/bg (Moebius libtextmode.js,
+ *   compress()).
+ * - vanilla palettes carry 6-bit components expanded by top-two-bit
+ *   replication (palette.js:308); moebiusXBIN sends 8-bit, so depth is
+ *   auto-detected (paletteToRGB8).
  * - `font_bytes` arrives as Node Buffer JSON ({type:'Buffer',
- *   data:[...]}) from the moebiusXBIN fork; receivers choke on it
- *   unless revived defensively.
- * - every client->server frame carries `data.id`; SET_CANVAS_SIZE
- *   broadcasts without it crash vanilla Moebius clients.
+ *   data:[...]}) from the moebiusXBIN fork (moebiusXBIN
+ *   libtextmode.js, compress()); receivers choke on it unless revived
+ *   defensively.
+ * - every client->server frame carries `data.id`: Moebius server.js
+ *   indexes data_store by it (the CHAT and STATUS handlers), and
+ *   SET_CANVAS_SIZE broadcasts without it crash vanilla clients.
  * - icy_draw's Block.code is a u32 unicode codepoint; vanilla Moebius
  *   uses bytes 0-255. The doc conversion accepts both.
  */
@@ -83,9 +85,10 @@ export const encodeFrame = (
 ): string => JSON.stringify({ type, data });
 
 /**
- * Hardened decode: upstream servers crash on malformed frames;
- * ours must not. Throws ProtocolError with a reason the
- * caller can log and drop.
+ * Hardened decode: upstream servers crash on malformed frames
+ * (Moebius server.js, connection(): an unguarded JSON.parse); ours
+ * must not. Throws ProtocolError with a reason the caller can log and
+ * drop.
  */
 export const decodeFrame = (raw: unknown): MoebiusFrame => {
 	let parsed: unknown = raw;
@@ -111,8 +114,6 @@ export const decodeFrame = (raw: unknown): MoebiusFrame => {
 			: {};
 	return { type: frame.type as number, data };
 };
-
-// --------------------------------------------------------- join doc RLE
 
 export interface MoebiusBlock {
 	code: number;
@@ -157,7 +158,7 @@ export interface MoebiusJoinDoc {
 	data?: MoebiusBlock[];
 }
 
-/** libtextmode compress(), transcribed run-for-run */
+/** Moebius libtextmode.js compress(), transcribed run-for-run */
 export const compressBlocks = (
 	blocks: MoebiusBlock[],
 ): MoebiusCompressedData => {
@@ -197,8 +198,7 @@ export const compressBlocks = (
 	return out;
 };
 
-// absolute decode ceiling when the caller gives no expected length:
-// the shared doc cap (doc.ts MAX_DOC_CELLS)
+// decode ceiling when the caller gives no expected length
 const MAX_RLE_CELLS = MAX_DOC_CELLS;
 
 const expandRuns = (
@@ -229,7 +229,7 @@ const expandRuns = (
 	return out;
 };
 
-/** libtextmode uncompress(); hardened against torn streams */
+/** Moebius libtextmode.js uncompress(), hardened against torn streams */
 export const uncompressBlocks = (
 	compressed: MoebiusCompressedData,
 	expectedLength?: number,
@@ -255,8 +255,6 @@ export const uncompressBlocks = (
 	return blocks;
 };
 
-// --------------------------------------------------------- palettes
-
 // expansion reuses core/doc.ts expand6to8: identical math to
 // palette.js convert_6_to_8bits (top-two-bit replication, 63 -> 255)
 
@@ -265,14 +263,11 @@ export const compress8to6 = (v: number): number => (v >> 2) & 0x3f;
 /**
  * Join-doc palettes come in two depths under ONE shape: vanilla
  * Moebius sends 6-bit {r,g,b} objects (palette.js `ega`), moebiusXBIN
- * sends 8-bit ones (palette_4bit, raw). Old sidecars add 6-bit
- * arrays. The receiving side auto-detects like icy_draw: any
- * component above 63 means the palette is already 8-bit. Shape says
- * nothing about depth: vanilla's objects are 6-bit. The heuristic is
- * for wire shapes whose depth only the sender knew; a caller reading a
- * palette it wrote itself (our server, its sidecars) passes the
- * depth, since a dark 8-bit palette would otherwise read as 6-bit
- * and come back four times brighter.
+ * sends 8-bit ones (palette_4bit, raw). Without a depth, auto-detect
+ * like icy_draw: any component above 63 means the palette is already
+ * 8-bit. A caller reading a palette it wrote itself (our server, its
+ * sidecars) passes the depth, since a dark 8-bit palette would
+ * otherwise read as 6-bit and come back four times brighter.
  */
 export const paletteToRGB8 = (
 	palette: MoebiusPaletteEntry[],
@@ -299,12 +294,10 @@ export const paletteToRGB8 = (
 export const paletteTo6Bit = (rgb8: [number, number, number][]): number[][] =>
 	rgb8.map(([r, g, b]) => [compress8to6(r), compress8to6(g), compress8to6(b)]);
 
-// --------------------------------------------------------- font bytes
-
 /**
  * moebiusXBIN serializes custom font bytes as Node Buffer JSON.
- * Revive every shape defensively; null means "no
- * usable font bytes", never a throw.
+ * Revive every shape defensively; null means "no usable font bytes",
+ * never a throw.
  */
 export const reviveFontBytes = (value: unknown): Uint8Array | null => {
 	if (value instanceof Uint8Array) {
@@ -321,8 +314,6 @@ export const reviveFontBytes = (value: unknown): Uint8Array | null => {
 	}
 	return null;
 };
-
-// --------------------------------------------------------- doc bridge
 
 export interface JoinDocResult {
 	doc: DocV3;
@@ -412,7 +403,7 @@ export const joinDocToDoc = (
 
 /**
  * v3 doc -> join doc for vanilla consumers: quantized to 16 colors
- * through the same lossy projection the u16 mirror used. No palette
+ * through the same lossy projection as the u16 mirror. No palette
  * rides along; receivers fall back to the classic defaults.
  */
 export const docToJoinDoc = (
