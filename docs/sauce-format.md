@@ -441,7 +441,7 @@ The spec above is normative for the editor's codec in `src/js/core/codecs/sauce.
 
 **FileSize.** Always the exact payload length.
 
-**ANSiFlags and FontName.** ANSi, ANSiMation, UTF-8 ANSI, and TundraDraw records carry the flags byte and a FontName. The B bit follows the document's iCE colors setting; the UTF-8 "ice" export also sets it when it brightened blink cells. The LS bits write the explicit `01` (8px) or `10` (9px) value of the current letter spacing, except that a file opened with LS `00` keeps `00` on resave until you toggle letter spacing. The AR bits carried from an opened file are written back as they were; a new document writes `00`. FontName comes from the current font through the table in [SAUCE Font Names](./fonts.md#sauce-font-names).
+**ANSiFlags and FontName.** ANSi, ANSiMation, UTF-8 ANSI, BinaryText, and TundraDraw records carry the flags byte and a FontName. The B bit follows the document's iCE colors setting; the UTF-8 "ice" export also sets it when it brightened blink cells. The LS bits write the explicit `01` (8px) or `10` (9px) value of the current letter spacing, except that a file opened with LS `00` keeps `00` on resave until you toggle letter spacing. The AR bits carried from an opened file are written back as they were; a new document writes `00`. FontName comes from the current font through the table in [SAUCE Font Names](./fonts.md#sauce-font-names).
 
 **BinaryText.** `.bin` saves write DataType 5 with FileType holding width / 2 and no TInfo fields. The exporter refuses an odd width and any width above 510 columns, because the FileType byte cannot hold them.
 
@@ -454,11 +454,13 @@ The spec above is normative for the editor's codec in `src/js/core/codecs/sauce.
 
 ### Reading
 
-**Dimensions.** A TInfo1 of 0, or a BinaryText FileType of 0, means unspecified: ANSI defaults to 80 columns and BIN to 160. Row counts come from the data, never from TInfo2.
+**Dimensions.** A TInfo1 of 0, or a BinaryText FileType of 0 or 1, means unspecified: ANSI defaults to 80 columns and BIN to 160. FileType 1 follows PabloDraw, because BIN files in the wild carry the ANSi FileType there, and a two column BIN is never real art. A `.bin` takes its width only from a BinaryText FileType, never from TInfo1, since generic SAUCE tools stamp `80x25` Character records on 160 column BIN files. Row counts come from the data, never from TInfo2. A BIN payload that ends partway through a row pads that row out, and the reader drops a lone odd byte at the end.
 
 **Payload length.** FileSize is trusted when it is non-zero and smaller than the file. Otherwise the payload ends where the COMNT block starts, or where the record starts when there are no comments, less the EOF byte before it.
 
-**Text fields.** Trailing spaces and NUL bytes are both trimmed from every string field, since writers in the wild mix the two paddings.
+**Version.** A record whose Version is not `00` only marks where the payload ends, as note 6 under [SAUCE Layout](#sauce-layout) asks. Writers from before the standard leave stale file bytes in TFlags and TInfoS, so the editor reads none of its other fields.
+
+**Text fields.** Title, Author, Group, comment lines, and FontName decode as CP437, so a resave writes the same bytes back. Each field ends at its first NUL, since some writers terminate there and leave garbage behind, and the reader trims trailing spaces, tabs, and line breaks.
 
 **Flags.** The B bit sets iCE colors. LS `10` switches to 9px and `01` to 8px; `00` and `11` leave the editor's setting alone. The AR bits are kept for the next save and otherwise ignored.
 

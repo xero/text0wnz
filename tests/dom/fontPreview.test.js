@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, waitFor, fireEvent } from '@testing-library/dom';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { screen, waitFor } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { createFontSelect } from '../../src/js/client/ui.js';
@@ -21,6 +21,25 @@ describe('Font Preview DOM Tests', () => {
 	let fontPreviewInfo;
 	let fontSelectButton;
 	let fontController;
+
+	// jsdom never loads images, so tests that need a preview to land
+	// fire load and error themselves
+	const stubImages = () => {
+		const images = [];
+		vi.stubGlobal(
+			'Image',
+			class {
+				constructor() {
+					images.push(this);
+				}
+			},
+		);
+		return images;
+	};
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
 
 	beforeEach(() => {
 		document.body.innerHTML = '';
@@ -85,34 +104,32 @@ describe('Font Preview DOM Tests', () => {
 	});
 
 	describe('Font Preview Image Updates', () => {
-		it('should display font preview image element', () => {
-			expect(fontPreviewImage).toBeInTheDocument();
-			expect(fontPreviewImage).toHaveAttribute('alt', 'Font Preview');
-		});
-
-		it('should have initial font preview image src', () => {
-			// URL may be encoded, so check for the encoded or unencoded version
-			expect(
-				fontPreviewImage.src.includes('CP437 8x16.png') ||
-				fontPreviewImage.src.includes('CP437%208x16.png'),
-			).toBe(true);
-		});
-
-		it('should update preview info when font value is retrieved', () => {
-			const currentFont = fontController.getValue();
-			expect(currentFont).toBe('CP437 8x16');
+		it('should preview the selected font as soon as the list is built', () => {
+			fontPreviewInfo.textContent = '';
+			const images = stubImages();
+			createFontSelect(
+				fontSelect,
+				fontPreviewInfo,
+				fontPreviewImage,
+				fontSelectButton,
+			);
+			const preview = images.at(-1);
+			expect(preview.src).toBe('/ui/fonts/CP437 8x16.png');
+			preview.onload();
+			expect(fontPreviewInfo.textContent).toBe('CP437 8x16');
 		});
 
 		it('should change font preview on font selection', async () => {
-			const amigaFont = screen.getByText('Amiga Topaz');
-
-			await user.click(amigaFont);
-
-			await waitFor(() => {
-				expect(amigaFont.getAttribute('aria-selected')).toBe('true');
-			});
-
-			expect(fontController.getValue()).toBe('Amiga Topaz');
+			const images = stubImages();
+			await user.click(screen.getByText('Amiga Topaz'));
+			// the old preview stays up until the new image loads
+			expect(fontPreviewImage.getAttribute('src')).toBe(
+				'/ui/fonts/CP437 8x16.png',
+			);
+			images.at(-1).onload();
+			expect(fontPreviewImage.getAttribute('src')).toBe(
+				'/ui/fonts/Amiga Topaz.png',
+			);
 		});
 	});
 
@@ -177,30 +194,30 @@ describe('Font Preview DOM Tests', () => {
 			});
 		});
 
-		it('should select font with Enter key', async () => {
+		it('should apply the highlighted font with Enter', async () => {
+			const apply = vi.fn();
+			fontSelectButton.addEventListener('click', apply);
 			fontSelect.focus();
 
 			await user.keyboard('{ArrowDown}');
+			expect(apply).not.toHaveBeenCalled();
 
 			await user.keyboard('{Enter}');
-
-			await waitFor(() => {
-				const secondOption = fontSelect.children[1];
-				expect(secondOption.getAttribute('aria-selected')).toBe('true');
-			});
+			expect(apply).toHaveBeenCalledTimes(1);
+			expect(fontController.getValue()).toBe('CP437 8x8');
 		});
 
-		it('should select font with Space key', async () => {
+		it('should apply the highlighted font with Space', async () => {
+			const apply = vi.fn();
+			fontSelectButton.addEventListener('click', apply);
 			fontSelect.focus();
 
 			await user.keyboard('{ArrowDown}{ArrowDown}');
+			expect(apply).not.toHaveBeenCalled();
 
 			await user.keyboard(' ');
-
-			await waitFor(() => {
-				const thirdOption = fontSelect.children[2];
-				expect(thirdOption.getAttribute('aria-selected')).toBe('true');
-			});
+			expect(apply).toHaveBeenCalledTimes(1);
+			expect(fontController.getValue()).toBe('Amiga Topaz');
 		});
 	});
 
@@ -236,8 +253,18 @@ describe('Font Preview DOM Tests', () => {
 			});
 		});
 
-		it('should be keyboard accessible', () => {
-			expect(fontSelect).toHaveAttribute('tabindex', '0');
+		it('should highlight the selected font only while the list has focus', async () => {
+			const highlighted = () =>
+				[...fontSelect.children].filter(opt =>
+					opt.classList.contains('focused'));
+			fontSelect.focus();
+			await user.keyboard('{ArrowDown}');
+
+			await user.tab();
+			expect(highlighted()).toEqual([]);
+
+			await user.tab({ shift: true });
+			expect(highlighted()).toEqual([fontSelect.children[1]]);
 		});
 
 		it('should call scrollIntoView on selection', async () => {
@@ -250,17 +277,24 @@ describe('Font Preview DOM Tests', () => {
 	});
 
 	describe('Font Preview Info Display', () => {
-		it('should display current font name in preview info', () => {
+		it('should update preview info when font changes', async () => {
+			const images = stubImages();
+			await user.click(screen.getByText('IBM VGA'));
+			const preview = images.at(-1);
+			expect(preview.src).toBe('/ui/fonts/IBM VGA.png');
 			expect(fontPreviewInfo.textContent).toBe('CP437 8x16');
+			preview.onload();
+			expect(fontPreviewInfo.textContent).toBe('IBM VGA');
+			expect(fontPreviewImage.getAttribute('src')).toBe('/ui/fonts/IBM VGA.png');
 		});
 
-		it('should update preview info when font changes', async () => {
-			const ibmFont = screen.getByText('IBM VGA');
-
-			await user.click(ibmFont);
-
-			// preview info text is the implementation's job; assert selection only
-			expect(fontController.getValue()).toBe('IBM VGA');
+		it('should mark a missing font in preview info', async () => {
+			const images = stubImages();
+			await user.click(screen.getByText('Amiga Topaz'));
+			const preview = images.at(-1);
+			preview.onerror();
+			expect(fontPreviewInfo.textContent).toBe('Amiga Topaz (not found)');
+			expect(preview.src).toBe('/ui/fonts/missing.png');
 		});
 	});
 
@@ -296,28 +330,6 @@ describe('Font Preview DOM Tests', () => {
 			const result = fontController.setValue('NonExistent Font');
 
 			expect(result).toBe(false);
-		});
-	});
-
-	describe('Font Touch Interactions', () => {
-		it('should handle touch events on font options', () => {
-			const touchHandler = vi.fn();
-			const secondOption = fontSelect.children[1];
-			secondOption.addEventListener('click', touchHandler);
-
-			fireEvent.click(secondOption);
-
-			expect(touchHandler).toHaveBeenCalled();
-		});
-
-		it('should update selection on touch', async () => {
-			const thirdOption = fontSelect.children[2];
-
-			fireEvent.click(thirdOption);
-
-			await waitFor(() => {
-				expect(thirdOption.getAttribute('aria-selected')).toBe('true');
-			});
 		});
 	});
 });

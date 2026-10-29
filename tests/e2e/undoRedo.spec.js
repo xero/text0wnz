@@ -1,82 +1,66 @@
 import { test, expect } from '@playwright/test';
 import {
 	bridgeReady,
+	clickHistoryAction,
 	clickTool,
 	drag,
 	parkToolSettings,
 	readBlock,
+	readRegion,
+	tap,
 } from './helpers/editorHelpers.js';
+
+const inked = async (page, x, y) =>
+	![0, 32].includes((await readBlock(page, x, y)).charCode);
+
+const halfblockTaps = async (page, cells) => {
+	await clickTool(page, 'halfblock');
+	for (const [x, y] of cells) {
+		await tap(page, x, y);
+	}
+};
 
 test.describe('Advanced Undo/Redo Operations', () => {
 	test.beforeEach(async ({ page }) => {
-		// the ?test bridge lets the shape tests read cells back across
-		// the undo/redo cycle
+		// the ?test bridge lets every test read cells back across the
+		// undo/redo cycle
 		await parkToolSettings(page);
 		await page.goto('/?test');
 		await bridgeReady(page);
 	});
 
 	test('should undo and redo multiple drawing operations', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(300);
-
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			await canvas.click({ position: { x: 50, y: 50 } });
-			await page.waitForTimeout(200);
-
-			await canvas.click({ position: { x: 100, y: 50 } });
-			await page.waitForTimeout(200);
-
-			await canvas.click({ position: { x: 150, y: 50 } });
-			await page.waitForTimeout(200);
-		}
+		await halfblockTaps(page, [[5, 5], [10, 5], [15, 5]]);
+		expect(await inked(page, 15, 5)).toBe(true);
 
 		await page.keyboard.press('Control+z');
-		await page.waitForTimeout(200);
+		expect(await inked(page, 15, 5)).toBe(false);
+		expect(await inked(page, 10, 5)).toBe(true);
 		await page.keyboard.press('Control+z');
-		await page.waitForTimeout(200);
 		await page.keyboard.press('Control+z');
-		await page.waitForTimeout(200);
+		expect(await inked(page, 5, 5)).toBe(false);
 
 		await page.keyboard.press('Control+y');
-		await page.waitForTimeout(200);
+		expect(await inked(page, 5, 5)).toBe(true);
+		expect(await inked(page, 10, 5)).toBe(false);
 		await page.keyboard.press('Control+y');
-		await page.waitForTimeout(200);
 		await page.keyboard.press('Control+y');
-		await page.waitForTimeout(200);
+		expect(await inked(page, 10, 5)).toBe(true);
+		expect(await inked(page, 15, 5)).toBe(true);
 	});
 
 	test('should handle undo after tool switching', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(300);
-
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			await canvas.click({ position: { x: 50, y: 50 } });
-			await page.waitForTimeout(200);
-		}
-
+		await halfblockTaps(page, [[5, 5]]);
 		await clickTool(page, 'characterBrush');
-		await page.waitForTimeout(300);
-
-		if (bbox) {
-			await canvas.click({ position: { x: 100, y: 50 } });
-			await page.waitForTimeout(200);
-		}
+		await tap(page, 10, 5);
+		expect(await inked(page, 10, 5)).toBe(true);
 
 		await page.keyboard.press('Control+z');
-		await page.waitForTimeout(200);
+		expect(await inked(page, 10, 5)).toBe(false);
+		expect(await inked(page, 5, 5)).toBe(true);
+
 		await page.keyboard.press('Control+z');
-		await page.waitForTimeout(200);
+		expect(await inked(page, 5, 5)).toBe(false);
 	});
 
 	test('should handle undo/redo with line tool', async ({ page }) => {
@@ -110,213 +94,111 @@ test.describe('Advanced Undo/Redo Operations', () => {
 	});
 
 	test('should handle undo after fill operation', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
+		await halfblockTaps(page, [[5, 5]]);
+		const blank = await readBlock(page, 40, 12);
 
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(300);
-
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			await canvas.click({ position: { x: 50, y: 50 } });
-			await page.waitForTimeout(200);
-		}
-
-		// fill lives in the brush submenu
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		const fillTool = page.locator('#fill');
-		if (await fillTool.isVisible()) {
-			await fillTool.click();
-			await page.waitForTimeout(300);
-
-			if (bbox) {
-				await canvas.click({ position: { x: 100, y: 100 } });
-				await page.waitForTimeout(500);
-			}
-
-			await page.keyboard.press('Control+z');
-			await page.waitForTimeout(200);
-
-			await page.keyboard.press('Control+y');
-			await page.waitForTimeout(200);
-		}
-	});
-
-	test('should maintain undo stack after canvas resize', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(300);
-
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			await canvas.click({ position: { x: 50, y: 50 } });
-			await page.waitForTimeout(200);
-		}
-
-		const settingsButton = page
-			.locator('button:has-text("Settings"), button[aria-label*="Settings"]')
-			.first();
-		if (await settingsButton.isVisible()) {
-			await settingsButton.click();
-			await page.waitForTimeout(300);
-
-			// a resize may clear the undo stack; just verify undo still works
-			await page.keyboard.press('Escape');
-			await page.waitForTimeout(200);
-		}
+		await clickTool(page, 'fill');
+		await tap(page, 40, 12);
+		const filled = await readBlock(page, 40, 12);
+		expect(filled).not.toEqual(blank);
 
 		await page.keyboard.press('Control+z');
-		await page.waitForTimeout(200);
+		expect(await readBlock(page, 40, 12)).toEqual(blank);
+		expect(await inked(page, 5, 5)).toBe(true);
+
+		await page.keyboard.press('Control+y');
+		expect(await readBlock(page, 40, 12)).toEqual(filled);
+	});
+
+	test('should start a fresh undo history after canvas resize', async ({ page }) => {
+		await halfblockTaps(page, [[5, 5]]);
+
+		await page.locator('#resolution').click();
+		await page.locator('#columnsInput').fill('100');
+		await page.locator('#rowsInput').fill('30');
+		await page.locator('#resizeApply').click();
+		await expect(page.locator('#resolutionLabel')).toHaveText('100x30');
+
+		// editor.ts resize() clears the history arena. The first undo
+		// proves the keys reach the editor, so the second one finding
+		// nothing is the cleared history, not a swallowed key
+		await halfblockTaps(page, [[90, 28]]);
+		expect(await inked(page, 90, 28)).toBe(true);
+		await page.keyboard.press('Control+z');
+		expect(await inked(page, 90, 28)).toBe(false);
+		await page.keyboard.press('Control+z');
+		expect(await inked(page, 5, 5)).toBe(true);
 	});
 
 	test('should handle rapid undo/redo operations', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(300);
-
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			for (let i = 0; i < 5; i++) {
-				await canvas.click({ position: { x: 50 + i * 20, y: 50 } });
-				await page.waitForTimeout(100);
-			}
-		}
+		const cells = [[5, 5], [8, 5], [11, 5], [14, 5], [17, 5]];
+		await halfblockTaps(page, cells);
 
 		for (let i = 0; i < 5; i++) {
 			await page.keyboard.press('Control+z');
-			await page.waitForTimeout(50);
+		}
+		for (const [x, y] of cells) {
+			expect(await inked(page, x, y)).toBe(false);
 		}
 
 		for (let i = 0; i < 5; i++) {
 			await page.keyboard.press('Control+y');
-			await page.waitForTimeout(50);
+		}
+		for (const [x, y] of cells) {
+			expect(await inked(page, x, y)).toBe(true);
 		}
 	});
 
 	test('should clear redo stack when new operation is performed', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
+		await halfblockTaps(page, [[5, 5], [10, 5]]);
+		await page.keyboard.press('Control+z');
+		expect(await inked(page, 10, 5)).toBe(false);
 
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(300);
-
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			await canvas.click({ position: { x: 50, y: 50 } });
-			await page.waitForTimeout(200);
-
-			await canvas.click({ position: { x: 100, y: 50 } });
-			await page.waitForTimeout(200);
-
-			await page.keyboard.press('Control+z');
-			await page.waitForTimeout(200);
-
-			await canvas.click({ position: { x: 150, y: 50 } });
-			await page.waitForTimeout(200);
-
-			await page.keyboard.press('Control+y');
-			await page.waitForTimeout(200);
-		}
+		await tap(page, 15, 5);
+		await page.keyboard.press('Control+y');
+		expect(await inked(page, 10, 5)).toBe(false);
+		expect(await inked(page, 15, 5)).toBe(true);
 	});
 
 	test('should handle undo/redo with selection tool', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
+		await halfblockTaps(page, [[5, 5], [6, 5], [7, 5]]);
+		const source = await readBlock(page, 6, 5);
 
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(300);
-
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			await canvas.click({ position: { x: 50, y: 50 } });
-			await page.waitForTimeout(100);
-			await canvas.click({ position: { x: 60, y: 50 } });
-			await page.waitForTimeout(100);
-			await canvas.click({ position: { x: 70, y: 50 } });
-			await page.waitForTimeout(200);
-		}
-
-		const selectionTool = page.locator('#select');
-		if (await selectionTool.isVisible()) {
-			await selectionTool.click();
-			await page.waitForTimeout(300);
-
-			if (bbox) {
-				await canvas.click({ position: { x: 40, y: 40 } });
-				await page.waitForTimeout(100);
-				await canvas.click({ position: { x: 80, y: 60 } });
-				await page.waitForTimeout(300);
-
-				await page.keyboard.press('Control+c');
-				await page.waitForTimeout(200);
-				await page.keyboard.press('Control+v');
-				await page.waitForTimeout(200);
-			}
-		}
+		await page.locator('#selection').click();
+		await drag(page, [5, 5], [7, 5]);
+		await page.keyboard.press('Control+c');
+		await tap(page, 20, 10);
+		await page.keyboard.press('Control+v');
+		expect(await readBlock(page, 21, 10)).toEqual(source);
 
 		await page.keyboard.press('Control+z');
-		await page.waitForTimeout(200);
+		expect(await inked(page, 21, 10)).toBe(false);
+		expect(await inked(page, 6, 5)).toBe(true);
 
 		await page.keyboard.press('Control+y');
-		await page.waitForTimeout(200);
+		expect(await readBlock(page, 21, 10)).toEqual(source);
 	});
 
 	test('should handle undo with keyboard mode text input', async ({ page }) => {
-		await page.keyboard.press('k');
-		await page.waitForTimeout(300);
-
+		// keyboard mode is the boot tool, its cursor parked at 0,0
 		await page.keyboard.type('Hello');
-		await page.waitForTimeout(300);
+		await expect.poll(() => readRegion(page, 0, 0, 4, 0)).toEqual(['Hello']);
 
-		await page.keyboard.press('Escape');
-		await page.waitForTimeout(300);
-
+		// every typed glyph is its own undo step
 		await page.keyboard.press('Control+z');
-		await page.waitForTimeout(200);
+		expect(await readRegion(page, 0, 0, 4, 0)).toEqual(['Hell ']);
 
 		await page.keyboard.press('Control+y');
-		await page.waitForTimeout(200);
+		expect(await readRegion(page, 0, 0, 4, 0)).toEqual(['Hello']);
 	});
 
-	test('should handle undo menu buttons if available', async ({ page }) => {
-		const undoButton = page.locator(
-			'button:has-text("Undo"), button[aria-label*="Undo"], button[title*="Undo"]',
-		);
-		const redoButton = page.locator(
-			'button:has-text("Redo"), button[aria-label*="Redo"], button[title*="Redo"]',
-		);
+	test('should undo and redo from the history buttons', async ({ page }) => {
+		await halfblockTaps(page, [[5, 5]]);
 
-		const canvas = page.locator('#canvasContainer canvas').first();
+		await clickHistoryAction(page, 'undo');
+		expect(await inked(page, 5, 5)).toBe(false);
 
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(300);
-
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			await canvas.click({ position: { x: 50, y: 50 } });
-			await page.waitForTimeout(200);
-		}
-
-		if (await undoButton.isVisible()) {
-			await undoButton.click();
-			await page.waitForTimeout(200);
-
-			if (await redoButton.isVisible()) {
-				await redoButton.click();
-				await page.waitForTimeout(200);
-			}
-		}
+		await clickHistoryAction(page, 'redo');
+		expect(await inked(page, 5, 5)).toBe(true);
 	});
 });

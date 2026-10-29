@@ -278,7 +278,7 @@ describe('ice toggle with extended colors', () => {
 	});
 });
 
-describe('loadDoc with short-palette sources (golden regression)', () => {
+describe('loadDoc with short-palette sources', () => {
 	it('keeps high palette-index words live instead of freezing to black', () => {
 		// exactly what the UTF-8 reader produces: paletteColor(n >= 16)
 		// words on a doc whose own palette has only 16 entries. Freezing

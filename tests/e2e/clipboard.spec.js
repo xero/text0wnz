@@ -1,418 +1,152 @@
-import { test } from '@playwright/test';
-import { clickTool } from './helpers/editorHelpers.js';
+import { test, expect } from '@playwright/test';
+import {
+	bridgeReady,
+	drag,
+	parkToolSettings,
+	readBlock,
+	readRegion,
+	tap,
+	writeText,
+} from './helpers/editorHelpers.js';
 
-test.describe('Advanced Clipboard Operations', () => {
+const select = async (page, from, to) => {
+	await page.locator('#selection').click();
+	await drag(page, from, to);
+};
+
+// paste lands at the top left of whatever selection is live, so a tap
+// picks the target cell. Targets sit below the last selection: the
+// selection bar floats just above it and would swallow the tap
+const pasteAt = async (page, x, y) => {
+	await tap(page, x, y);
+	await page.keyboard.press('Control+v');
+};
+
+test.describe('Clipboard', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
+		await parkToolSettings(page);
+		await page.goto('/?test');
+		await bridgeReady(page);
 	});
 
-	test('should copy and paste with color formatting', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
+	test('copies a selection and pastes it at the next one', async ({ page }) => {
+		await writeText(page, 10, 5, 'ABC');
+		await select(page, [10, 5], [12, 5]);
+		await page.keyboard.press('Control+c');
+		await pasteAt(page, 20, 8);
 
-		const colorPalette = page.locator('#fgPalette, .colorPalette');
-		if (await colorPalette.isVisible()) {
-			const colorSwatch = colorPalette
-				.locator('.colorSwatch, [data-color]')
-				.first();
-			if (await colorSwatch.isVisible()) {
-				await colorSwatch.click();
-				await page.waitForTimeout(200);
-			}
-		}
-
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(300);
-
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			await canvas.click({ position: { x: 50, y: 50 } });
-			await page.waitForTimeout(100);
-			await canvas.click({ position: { x: 60, y: 50 } });
-			await page.waitForTimeout(100);
-			await canvas.click({ position: { x: 70, y: 50 } });
-			await page.waitForTimeout(200);
-		}
-
-		const selectionTool = page.locator('#select');
-		if (await selectionTool.isVisible()) {
-			await selectionTool.click();
-			await page.waitForTimeout(300);
-
-			if (bbox) {
-				await canvas.click({ position: { x: 40, y: 40 } });
-				await page.waitForTimeout(100);
-				await canvas.click({ position: { x: 80, y: 60 } });
-				await page.waitForTimeout(300);
-			}
-
-			await page.keyboard.press('Control+c');
-			await page.waitForTimeout(300);
-
-			if (bbox) {
-				await canvas.click({ position: { x: 150, y: 100 } });
-				await page.waitForTimeout(100);
-			}
-
-			await page.keyboard.press('Control+v');
-			await page.waitForTimeout(300);
-		}
+		expect(await readRegion(page, 20, 8, 22, 8)).toEqual(['ABC']);
+		expect(await readRegion(page, 10, 5, 12, 5)).toEqual(['ABC']);
 	});
 
-	test('should handle copy with background color', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
+	test('pastes foreground colors with the glyphs', async ({ page }) => {
+		await writeText(page, 10, 5, 'AB', 12, 0);
+		await select(page, [10, 5], [11, 5]);
+		await page.keyboard.press('Control+c');
+		await pasteAt(page, 20, 8);
 
-		await page.keyboard.press('b');
-		await page.waitForTimeout(200);
-
-		const colorPalette = page.locator('#bgPalette, .colorPalette');
-		if (await colorPalette.isVisible()) {
-			const colorSwatch = colorPalette
-				.locator('.colorSwatch, [data-color]')
-				.nth(2);
-			if (await colorSwatch.isVisible()) {
-				await colorSwatch.click();
-				await page.waitForTimeout(200);
-			}
-		}
-
-		await page.keyboard.press('f');
-		await page.waitForTimeout(200);
-
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		await clickTool(page, 'characterBrush');
-		await page.waitForTimeout(300);
-
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			await canvas.click({ position: { x: 50, y: 50 } });
-			await page.waitForTimeout(200);
-		}
-
-		const selectionTool = page.locator('#select');
-		if (await selectionTool.isVisible()) {
-			await selectionTool.click();
-			await page.waitForTimeout(300);
-
-			if (bbox) {
-				await canvas.click({ position: { x: 40, y: 40 } });
-				await page.waitForTimeout(100);
-				await canvas.click({ position: { x: 70, y: 70 } });
-				await page.waitForTimeout(300);
-			}
-
-			await page.keyboard.press('Control+c');
-			await page.waitForTimeout(300);
-
-			if (bbox) {
-				await canvas.click({ position: { x: 120, y: 50 } });
-				await page.waitForTimeout(100);
-			}
-
-			await page.keyboard.press('Control+v');
-			await page.waitForTimeout(300);
-		}
+		expect(await readBlock(page, 20, 8)).toEqual({ charCode: 65, fg: 12, bg: 0 });
+		expect(await readBlock(page, 21, 8)).toEqual({ charCode: 66, fg: 12, bg: 0 });
 	});
 
-	test('should copy and paste text with attributes', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
+	test('pastes background colors with the glyphs', async ({ page }) => {
+		await writeText(page, 10, 5, 'A', 7, 4);
+		await select(page, [10, 5], [10, 5]);
+		await page.keyboard.press('Control+c');
+		await pasteAt(page, 20, 8);
 
-		await page.keyboard.press('k');
-		await page.waitForTimeout(300);
+		expect(await readBlock(page, 20, 8)).toEqual({ charCode: 65, fg: 7, bg: 4 });
+	});
 
+	test('copies text typed in keyboard mode', async ({ page }) => {
+		// keyboard mode is the boot tool, its cursor parked at 0,0
+		await tap(page, 4, 3);
 		await page.keyboard.type('Test');
-		await page.waitForTimeout(300);
+		await expect.poll(() => readRegion(page, 4, 3, 7, 3)).toEqual(['Test']);
 
-		await page.keyboard.press('Escape');
-		await page.waitForTimeout(300);
+		await select(page, [4, 3], [7, 3]);
+		await page.keyboard.press('Control+c');
+		await pasteAt(page, 30, 10);
 
-		const selectionTool = page.locator('#select');
-		if (await selectionTool.isVisible()) {
-			await selectionTool.click();
-			await page.waitForTimeout(300);
+		expect(await readRegion(page, 30, 10, 33, 10)).toEqual(['Test']);
+	});
 
-			const bbox = await canvas.boundingBox();
-			if (bbox) {
-				await canvas.click({ position: { x: 10, y: 10 } });
-				await page.waitForTimeout(100);
-				await canvas.click({ position: { x: 80, y: 30 } });
-				await page.waitForTimeout(300);
-			}
+	test('the latest copy replaces the clipboard', async ({ page }) => {
+		await writeText(page, 10, 5, 'ABC');
+		await writeText(page, 10, 7, 'XYZ');
+		await select(page, [10, 5], [12, 5]);
+		await page.keyboard.press('Control+c');
+		await drag(page, [10, 7], [12, 7]);
+		await page.keyboard.press('Control+c');
+		await pasteAt(page, 20, 9);
 
-			await page.keyboard.press('Control+c');
-			await page.waitForTimeout(300);
+		expect(await readRegion(page, 20, 9, 22, 9)).toEqual(['XYZ']);
+	});
 
-			await page.keyboard.press('Control+v');
-			await page.waitForTimeout(300);
+	test('cut clears the source and pastes elsewhere', async ({ page }) => {
+		await writeText(page, 10, 5, 'ABC');
+		await select(page, [10, 5], [12, 5]);
+		await page.keyboard.press('Control+x');
+
+		expect(await readRegion(page, 10, 5, 12, 5)).toEqual(['   ']);
+
+		await pasteAt(page, 20, 8);
+		expect(await readRegion(page, 20, 8, 22, 8)).toEqual(['ABC']);
+	});
+
+	test('one copy pastes at several positions', async ({ page }) => {
+		await writeText(page, 10, 5, 'ABC');
+		await select(page, [10, 5], [12, 5]);
+		await page.keyboard.press('Control+c');
+
+		for (const [x, y] of [[40, 12], [5, 16], [60, 20]]) {
+			await pasteAt(page, x, y);
+			expect(await readRegion(page, x, y, x + 2, y)).toEqual(['ABC']);
 		}
 	});
 
-	test('should handle multiple copy operations', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
+	test('pastes at the keyboard cursor', async ({ page }) => {
+		await writeText(page, 10, 5, 'ABC');
+		await select(page, [10, 5], [12, 5]);
+		await page.keyboard.press('Control+c');
 
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(300);
-
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			await canvas.click({ position: { x: 50, y: 50 } });
-			await page.waitForTimeout(100);
-		}
-
-		const selectionTool = page.locator('#select');
-		if (await selectionTool.isVisible()) {
-			await selectionTool.click();
-			await page.waitForTimeout(300);
-
-			if (bbox) {
-				await canvas.click({ position: { x: 40, y: 40 } });
-				await page.waitForTimeout(100);
-				await canvas.click({ position: { x: 70, y: 70 } });
-				await page.waitForTimeout(300);
-			}
-
-			await page.keyboard.press('Control+c');
-			await page.waitForTimeout(300);
-
-			await clickTool(page, 'characterBrush');
-			await page.waitForTimeout(300);
-
-			if (bbox) {
-				await canvas.click({ position: { x: 100, y: 50 } });
-				await page.waitForTimeout(200);
-			}
-
-			await selectionTool.click();
-			await page.waitForTimeout(300);
-
-			if (bbox) {
-				await canvas.click({ position: { x: 90, y: 40 } });
-				await page.waitForTimeout(100);
-				await canvas.click({ position: { x: 120, y: 70 } });
-				await page.waitForTimeout(300);
-			}
-
-			await page.keyboard.press('Control+c');
-			await page.waitForTimeout(300);
-
-			await page.keyboard.press('Control+v');
-			await page.waitForTimeout(300);
-		}
-	});
-
-	test('should handle cut operation', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(300);
-
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			await canvas.click({ position: { x: 50, y: 50 } });
-			await page.waitForTimeout(100);
-			await canvas.click({ position: { x: 60, y: 50 } });
-			await page.waitForTimeout(200);
-		}
-
-		const selectionTool = page.locator('#select');
-		if (await selectionTool.isVisible()) {
-			await selectionTool.click();
-			await page.waitForTimeout(300);
-
-			if (bbox) {
-				await canvas.click({ position: { x: 40, y: 40 } });
-				await page.waitForTimeout(100);
-				await canvas.click({ position: { x: 80, y: 70 } });
-				await page.waitForTimeout(300);
-			}
-
-			await page.keyboard.press('Control+x');
-			await page.waitForTimeout(300);
-
-			if (bbox) {
-				await canvas.click({ position: { x: 150, y: 100 } });
-				await page.waitForTimeout(100);
-			}
-
-			await page.keyboard.press('Control+v');
-			await page.waitForTimeout(300);
-		}
-	});
-
-	test('should paste selection at cursor position', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(300);
-
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			for (let x = 0; x < 3; x++) {
-				for (let y = 0; y < 3; y++) {
-					await canvas.click({ position: { x: 50 + x * 10, y: 50 + y * 10 } });
-					await page.waitForTimeout(50);
-				}
-			}
-			await page.waitForTimeout(200);
-		}
-
-		const selectionTool = page.locator('#select');
-		if (await selectionTool.isVisible()) {
-			await selectionTool.click();
-			await page.waitForTimeout(300);
-
-			if (bbox) {
-				await canvas.click({ position: { x: 40, y: 40 } });
-				await page.waitForTimeout(100);
-				await canvas.click({ position: { x: 85, y: 85 } });
-				await page.waitForTimeout(300);
-			}
-
-			await page.keyboard.press('Control+c');
-			await page.waitForTimeout(300);
-
-			const positions = [
-				{ x: 150, y: 50 },
-				{ x: 100, y: 150 },
-				{ x: 200, y: 100 },
-			];
-
-			for (const pos of positions) {
-				if (bbox) {
-					await canvas.click({ position: pos });
-					await page.waitForTimeout(100);
-					await page.keyboard.press('Control+v');
-					await page.waitForTimeout(200);
-				}
-			}
-		}
-	});
-
-	test('should handle empty clipboard paste gracefully', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-
+		await page.locator('#keyboard').click();
+		await tap(page, 25, 6);
 		await page.keyboard.press('Control+v');
-		await page.waitForTimeout(300);
 
-		// drawing after the empty paste proves the canvas still works
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(300);
-
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			await canvas.click({ position: { x: 50, y: 50 } });
-			await page.waitForTimeout(200);
-		}
+		expect(await readRegion(page, 25, 6, 27, 6)).toEqual(['ABC']);
 	});
 
-	test('should copy large selection', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
+	test('a paste with an empty clipboard changes nothing', async ({ page }) => {
+		await writeText(page, 10, 5, 'X');
+		await page.locator('#selection').click();
+		await tap(page, 10, 5);
+		await expect(page.locator('#paste')).toHaveClass(/disabled/);
+		await page.keyboard.press('Control+v');
 
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(300);
-
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			for (let x = 0; x < 5; x++) {
-				for (let y = 0; y < 5; y++) {
-					await canvas.click({ position: { x: 50 + x * 12, y: 50 + y * 12 } });
-					await page.waitForTimeout(30);
-				}
-			}
-			await page.waitForTimeout(200);
-		}
-
-		const selectionTool = page.locator('#select');
-		if (await selectionTool.isVisible()) {
-			await selectionTool.click();
-			await page.waitForTimeout(300);
-
-			if (bbox) {
-				await canvas.click({ position: { x: 40, y: 40 } });
-				await page.waitForTimeout(100);
-				await canvas.click({ position: { x: 120, y: 120 } });
-				await page.waitForTimeout(300);
-			}
-
-			await page.keyboard.press('Control+c');
-			await page.waitForTimeout(500);
-
-			if (bbox) {
-				await canvas.click({ position: { x: 150, y: 150 } });
-				await page.waitForTimeout(100);
-			}
-
-			await page.keyboard.press('Control+v');
-			await page.waitForTimeout(500);
-		}
+		expect(await readRegion(page, 9, 5, 11, 5)).toEqual([' X ']);
 	});
 
-	test('should maintain selection formatting during clipboard operations', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-
-		const iceColorsToggle = page.locator(
-			'button:has-text("ICE Colors"), input[type="checkbox"][name*="ice"], #iceColorsToggle',
-		);
-		if (await iceColorsToggle.isVisible()) {
-			await iceColorsToggle.click();
-			await page.waitForTimeout(300);
+	test('copies a multi row selection', async ({ page }) => {
+		const rows = ['ABCDE', 'FGHIJ', 'KLMNO', 'PQRST', 'UVWXY'];
+		for (const [i, row] of rows.entries()) {
+			await writeText(page, 10, 5 + i, row);
 		}
+		await select(page, [10, 5], [14, 9]);
+		await page.keyboard.press('Control+c');
+		await pasteAt(page, 40, 12);
 
-		await page.keyboard.press('f');
-		await page.waitForTimeout(200);
+		expect(await readRegion(page, 40, 12, 44, 16)).toEqual(rows);
+	});
 
-		const colorPalette = page.locator('.colorPalette, #fgPalette');
-		if (await colorPalette.isVisible()) {
-			const brightColor = colorPalette
-				.locator('.colorSwatch, [data-color]')
-				.nth(10);
-			if (await brightColor.isVisible()) {
-				await brightColor.click();
-				await page.waitForTimeout(200);
-			}
-		}
+	test('pastes truecolor cells without quantizing them', async ({ page }) => {
+		// the clipboard holds plane-native cells; a round trip through the
+		// 16 color buffer would snap the RGB word to a palette index
+		await writeText(page, 10, 5, 'A', 0xff8800, 0);
+		await select(page, [10, 5], [10, 5]);
+		await page.keyboard.press('Control+c');
+		await pasteAt(page, 20, 8);
 
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		await clickTool(page, 'characterBrush');
-		await page.waitForTimeout(300);
-
-		const bbox = await canvas.boundingBox();
-		if (bbox) {
-			await canvas.click({ position: { x: 50, y: 50 } });
-			await page.waitForTimeout(200);
-		}
-
-		const selectionTool = page.locator('#select');
-		if (await selectionTool.isVisible()) {
-			await selectionTool.click();
-			await page.waitForTimeout(300);
-
-			if (bbox) {
-				await canvas.click({ position: { x: 40, y: 40 } });
-				await page.waitForTimeout(100);
-				await canvas.click({ position: { x: 70, y: 70 } });
-				await page.waitForTimeout(300);
-			}
-
-			await page.keyboard.press('Control+c');
-			await page.waitForTimeout(300);
-			await page.keyboard.press('Control+v');
-			await page.waitForTimeout(300);
-		}
+		expect((await readBlock(page, 20, 8)).fg).toBe(0xff8800);
 	});
 });

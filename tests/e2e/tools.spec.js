@@ -16,37 +16,26 @@ test.describe('Drawing Tools', () => {
 		await bridgeReady(page);
 	});
 
-	test('should activate halfblock drawing tool', async ({ page }) => {
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
+	// a lit button alone can hide a stroke that never reached the tool,
+	// so each brush must also leave ink under its drag
+	for (const [id, name, inks] of [
+		['halfblock', 'halfblock drawing', [219, 220, 223]],
+		['characterBrush', 'character brush', null],
+		['shadingBrush', 'shading brush', [176, 177, 178, 219]],
+	]) {
+		test(`should activate ${name} tool`, async ({ page }) => {
+			await page.locator('#brushes').click();
+			await clickTool(page, id);
+			await expect(page.locator(`#${id}`)).toHaveClass(/toolbarDisplayed/);
 
-		const halfblockTool = page.locator('#halfblock');
-		await halfblockTool.click();
-
-		const classList = await halfblockTool.getAttribute('class');
-		expect(classList).toBeTruthy();
-	});
-
-	test('should activate character brush tool', async ({ page }) => {
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-
-		const characterBrushTool = page.locator('#characterBrush');
-		await characterBrushTool.click();
-		await page.waitForTimeout(300);
-
-		const classList = await characterBrushTool.getAttribute('class');
-		expect(classList).toBeTruthy();
-	});
-
-	test('should activate shading brush tool', async ({ page }) => {
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-
-		const shadingBrushTool = page.locator('#shadingBrush');
-		await shadingBrushTool.click();
-		await page.waitForTimeout(300);
-	});
+			await drag(page, [10, 5], [20, 5]);
+			const { charCode } = await readBlock(page, 15, 5);
+			expect([0, 32]).not.toContain(charCode);
+			if (inks) {
+				expect(inks).toContain(charCode);
+			}
+		});
+	}
 
 	test('should activate line tool', async ({ page }) => {
 		await page.locator('#shapes').click();
@@ -96,20 +85,14 @@ test.describe('Drawing Tools', () => {
 	});
 
 	test('should activate selection tool', async ({ page }) => {
-		const selectionTool = page.locator('#selection');
-		await selectionTool.click();
-		await page.waitForTimeout(300);
+		await clickTool(page, 'selection');
+		await expect(page.locator('#selection')).toHaveClass(/toolbarDisplayed/);
 
-		const canvas = page.locator('#canvasContainer canvas').first();
-		const box = await canvas.boundingBox();
-
-		if (box) {
-			await page.mouse.move(box.x + 50, box.y + 50);
-			await page.mouse.down();
-			await page.mouse.move(box.x + 100, box.y + 100);
-			await page.mouse.up();
-			await page.waitForTimeout(300);
-		}
+		await drag(page, [5, 4], [12, 9]);
+		expect(
+			await page.evaluate(() =>
+				window.__t0wnz.State.selectionCursor.getSelection()),
+		).toEqual({ x: 5, y: 4, width: 8, height: 6 });
 	});
 
 	test('should activate fill tool', async ({ page }) => {

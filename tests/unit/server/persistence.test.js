@@ -87,7 +87,7 @@ describe('room persistence', () => {
 		expect(existsSync(stateFile(dir, 'race'))).toBe(false);
 	});
 
-	it('restores a pre-sweep sidecar whose join palette is 6-bit arrays, then self-heals it', async () => {
+	it('restores a sidecar join palette of 6-bit arrays as 8-bit {r,g,b} and saves it back in that shape', async () => {
 		const palette = Array.from({ length: 16 }, () => [0, 0, 0]);
 		palette[1] = [4, 12, 32];
 		const join = {

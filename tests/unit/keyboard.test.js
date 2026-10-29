@@ -9,8 +9,10 @@ import {
 import { createFKeys } from '../../src/js/client/fkeys.js';
 import State from '../../src/js/client/state.js';
 
-vi.mock('../../src/js/client/state.js', () => ({
-	default: {
+// every test gets fresh State mocks: tests rewire them in place, so a
+// shared object leaks one test's canvas size or draw hook into the next
+const { stockState } = vi.hoisted(() => ({
+	stockState: () => ({
 		font: {
 			getWidth: vi.fn(() => 8),
 			getHeight: vi.fn(() => 16),
@@ -77,8 +79,10 @@ vi.mock('../../src/js/client/state.js', () => ({
 			clear: vi.fn(),
 			drawHalfBlock: vi.fn(),
 		},
-	},
+	}),
 }));
+
+vi.mock('../../src/js/client/state.js', () => ({ default: stockState() }));
 
 vi.mock('../../src/js/client/toolbar.js', () => ({
 	default: {
@@ -88,6 +92,7 @@ vi.mock('../../src/js/client/toolbar.js', () => ({
 }));
 
 vi.mock('../../src/js/client/ui.js', () => ({
+	isTextEntry: vi.fn(() => false),
 	$: vi.fn(id => {
 		const element = document.createElement('canvas');
 		element.id = id;
@@ -145,14 +150,27 @@ vi.mock('../../src/js/client/ui.js', () => ({
 }));
 
 describe('Keyboard Utilities', () => {
+	let listeners;
+
 	beforeEach(() => {
 		document.body.innerHTML = '';
 		vi.clearAllMocks();
+		Object.assign(State, stockState());
 		global.requestAnimationFrame = vi.fn(cb => setTimeout(cb, 16));
 		global.cancelAnimationFrame = vi.fn(id => clearTimeout(id));
+		// the paste tool and the cursors hook the shared document for good,
+		// and a failing test never reaches its disable(): drop every
+		// listener a test adds before the next one runs
+		listeners = [];
+		const add = document.addEventListener;
+		vi.spyOn(document, 'addEventListener').mockImplementation((...args) => {
+			listeners.push(args);
+			add.apply(document, args);
+		});
 	});
 
 	afterEach(() => {
+		listeners.forEach(args => document.removeEventListener(...args));
 		document.body.innerHTML = '';
 		vi.restoreAllMocks();
 	});
@@ -189,6 +207,7 @@ describe('Keyboard Utilities', () => {
 			const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
 			const controller = createFKeys();
 			controller.enable();
+			controller.disable();
 
 			expect(addEventListenerSpy).toHaveBeenCalledWith(
 				'keydown',
@@ -207,8 +226,28 @@ describe('Keyboard Utilities', () => {
 			);
 		});
 
-		it('should initialize with predefined character sets', () => {
-			expect(() => createFKeys()).not.toThrow();
+		it('pages all 256 CP437 codes onto 12 key classic sets', () => {
+			const classic = createFKeys()
+				.getSets()
+				.filter(page => page.label.startsWith('CP437'));
+			expect(classic.every(page => page.chars.length === 12)).toBe(true);
+			expect(new Set(classic.flatMap(page => page.chars)).size).toBe(256);
+			expect(classic[0].chars.slice(0, 4)).toEqual([218, 191, 192, 217]);
+		});
+
+		it('F1-F12 type from the shades and blocks page, never with Ctrl', () => {
+			const typed = [];
+			State.textArtCanvas.draw.mockImplementation(writer =>
+				writer(code => typed.push(code)));
+			const controller = createFKeys();
+			controller.enable();
+			['F1', 'F4', 'F12'].forEach(code =>
+				document.dispatchEvent(new KeyboardEvent('keydown', { code })));
+			document.dispatchEvent(
+				new KeyboardEvent('keydown', { code: 'F2', ctrlKey: true }),
+			);
+			controller.disable();
+			expect(typed).toEqual([176, 219, 32]);
 		});
 
 		it('should add palette and font change listeners', () => {
@@ -263,6 +302,19 @@ describe('Keyboard Utilities', () => {
 			expect(cursor.getY()).toBe(0);
 		});
 
+		it('move clamps to the canvas and sets the caret a pixel up-left of the cell', () => {
+			const container = document.createElement('div');
+			const cursor = createCursor(container);
+			const caret = container.firstChild;
+
+			cursor.move(-5, -5);
+			expect([cursor.getX(), cursor.getY()]).toEqual([0, 0]);
+			cursor.move(100, 100);
+			expect([cursor.getX(), cursor.getY()]).toEqual([79, 24]);
+			cursor.move(10, 5);
+			expect([caret.style.left, caret.style.top]).toEqual(['79px', '79px']);
+		});
+
 		it('re-homes to the origin when a new document loads', () => {
 			const container = document.createElement('div');
 			const cursor = createCursor(container);
@@ -314,6 +366,23 @@ describe('Keyboard Utilities', () => {
 			const selectionCursor = createSelectionCursor(container);
 
 			expect(typeof selectionCursor.isVisible).toBe('function');
+		});
+
+		it('reads a reversed drag back as a top-left rect clipped to the canvas', () => {
+			const container = document.createElement('div');
+			const selectionCursor = createSelectionCursor(container);
+
+			selectionCursor.setStart(10, 8);
+			selectionCursor.setEnd(5, 3);
+			expect(selectionCursor.getSelection()).toEqual({
+				x: 5,
+				y: 3,
+				width: 6,
+				height: 6,
+			});
+			selectionCursor.setStart(78, 0);
+			selectionCursor.setEnd(85, 0);
+			expect(selectionCursor.getSelection().width).toBe(2);
 		});
 
 		it('remembers the last selection across a hide', () => {
@@ -385,27 +454,13 @@ describe('Keyboard Utilities', () => {
 			expect(controller).toHaveProperty('eraseColumn');
 		});
 
-		describe('fixed-canvas row and column shifts', () => {
+		describe('fixed-canvas row and column edits', () => {
 			// a 3x3 virtual grid: pristine cells read a per-coord code so
 			// shift mappings are provable; writes land back in the grid
 			// the way drawBlocks applies them (immediately)
 			const codeAt = (x, y) => 100 + y * 10 + x;
 			let grid;
 
-			afterEach(() => {
-				// the module-level State mock outlives this describe:
-				// hand later tests back the stock implementations
-				State.textArtCanvas.getColumns.mockReturnValue(80);
-				State.textArtCanvas.getRows.mockReturnValue(25);
-				State.textArtCanvas.getBlock.mockReturnValue({
-					charCode: 32,
-					foregroundColor: 7,
-					backgroundColor: 0,
-				});
-				State.textArtCanvas.draw.mockImplementation(() => {});
-				State.cursor.getX.mockReturnValue(0);
-				State.cursor.getY.mockReturnValue(0);
-			});
 			const wireGrid = (cursorX, cursorY) => {
 				grid = new Map();
 				const cellAt = (x, y) =>
@@ -466,6 +521,28 @@ describe('Keyboard Utilities', () => {
 				expect(cellAt(2, 1).charCode).toBe(32); // last col blanks
 			});
 
+			it('the erase ops blank from the cursor to each edge', () => {
+				const ops = {
+					eraseRow: ['0,1', '1,1', '2,1'],
+					eraseToStartOfRow: ['0,1', '1,1'],
+					eraseToEndOfRow: ['1,1', '2,1'],
+					eraseColumn: ['1,0', '1,1', '1,2'],
+					eraseToStartOfColumn: ['1,0', '1,1'],
+					eraseToEndOfColumn: ['1,1', '1,2'],
+				};
+				for (const [op, cells] of Object.entries(ops)) {
+					wireGrid(1, 1);
+					createKeyboardController()[op]();
+					expect([...grid.keys()].sort(), op).toEqual(cells);
+					grid.forEach(cell =>
+						expect(cell).toEqual({
+							charCode: 32,
+							foregroundColor: 7,
+							backgroundColor: 0,
+						}));
+				}
+			});
+
 			it('suspends mirror mode around the shift and restores it', () => {
 				wireGrid(0, 0);
 				State.textArtCanvas.getMirrorMode.mockReturnValue(true);
@@ -478,8 +555,6 @@ describe('Keyboard Utilities', () => {
 		it('should enable keyboard controller', () => {
 			const controller = createKeyboardController();
 			expect(() => controller.enable()).not.toThrow();
-			// detach the document listener so later tests see only their own
-			controller.disable();
 		});
 
 		it('should disable keyboard controller', () => {
@@ -489,7 +564,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('switching away without a live selection leaves the cursor alone', () => {
-			vi.clearAllMocks();
 			State.selectionCursor.isVisible = vi.fn(() => false);
 			const controller = createKeyboardController();
 			controller.enable();
@@ -498,7 +572,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('parks the cursor at a live selection without scrolling', () => {
-			vi.clearAllMocks();
 			State.selectionCursor.isVisible = vi.fn(() => true);
 			State.selectionCursor.getPos = vi.fn(() => ({ x: 7, y: 9 }));
 			const controller = createKeyboardController();
@@ -508,7 +581,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('draws CP437 21 exactly once per § keypress', async () => {
-			vi.clearAllMocks();
 			const drawn = [];
 			State.textArtCanvas.draw = vi.fn(callback =>
 				callback((code, fg, bg, x, y) => drawn.push({ code, x, y })));
@@ -523,7 +595,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('interns typed non-CP437 glyphs instead of aliasing ids', async () => {
-			vi.clearAllMocks();
 			const drawn = [];
 			State.textArtCanvas.draw = vi.fn(callback =>
 				callback(code => drawn.push(code)));
@@ -545,7 +616,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('picks up colors on Ctrl+U through keydown', () => {
-			vi.clearAllMocks();
 			State.textArtCanvas.getBlock = vi.fn(() => ({
 				charCode: 65,
 				foregroundColor: 12,
@@ -563,7 +633,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('Tab draws the tab glyph while the canvas scope holds focus', async () => {
-			vi.clearAllMocks();
 			const drawn = [];
 			State.textArtCanvas.draw = vi.fn(callback =>
 				callback(code => drawn.push(code)));
@@ -582,7 +651,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('Tab types from inside the canvas container too', async () => {
-			vi.clearAllMocks();
 			const drawn = [];
 			State.textArtCanvas.draw = vi.fn(callback =>
 				callback(code => drawn.push(code)));
@@ -607,7 +675,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('Tab from a focused control walks instead of typing', async () => {
-			vi.clearAllMocks();
 			const drawn = [];
 			State.textArtCanvas.draw = vi.fn(callback =>
 				callback(code => drawn.push(code)));
@@ -630,7 +697,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('Enter on a focused control activates it instead of newlining', async () => {
-			vi.clearAllMocks();
 			const button = document.createElement('button');
 			document.body.appendChild(button);
 			button.focus();
@@ -651,7 +717,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('Enter still newlines while the canvas scope holds focus', async () => {
-			vi.clearAllMocks();
 			const controller = createKeyboardController();
 			controller.enable();
 			const e = new KeyboardEvent('keypress', {
@@ -666,7 +731,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('shift Tab always walks, so the keyboard can leave the canvas', async () => {
-			vi.clearAllMocks();
 			const drawn = [];
 			State.textArtCanvas.draw = vi.fn(callback =>
 				callback(code => drawn.push(code)));
@@ -685,7 +749,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('keeps keystroke order when ascii follows in flight unicode', async () => {
-			vi.clearAllMocks();
 			const drawn = [];
 			let cx = 0;
 			State.cursor.getX = vi.fn(() => cx);
@@ -716,12 +779,9 @@ describe('Keyboard Utilities', () => {
 				{ code: 300, x: 0 },
 				{ code: 65, x: 1 },
 			]);
-			State.cursor.getX = vi.fn(() => 0);
-			State.cursor.right = vi.fn();
 		});
 
 		it('keeps the typing queue alive after a rejected resolve', async () => {
-			vi.clearAllMocks();
 			const drawn = [];
 			State.textArtCanvas.draw = vi.fn(callback =>
 				callback(code => drawn.push(code)));
@@ -743,7 +803,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('queues Enter behind a pending unicode glyph', async () => {
-			vi.clearAllMocks();
 			const log = [];
 			State.cursor.newLine = vi.fn(() => log.push('nl'));
 			State.textArtCanvas.draw = vi.fn(callback =>
@@ -766,7 +825,6 @@ describe('Keyboard Utilities', () => {
 			await new Promise(resolve => setTimeout(resolve, 0));
 			controller.disable();
 			expect(log).toEqual([300, 'nl']);
-			State.cursor.newLine = vi.fn();
 		});
 	});
 
@@ -862,113 +920,6 @@ describe('Keyboard Utilities', () => {
 		});
 	});
 
-	describe('Function Key Character Sets', () => {
-		it('should handle predefined character sets', () => {
-			// predefined sets from Moebius/PabloDraw
-			const predefinedSets = [
-				[218, 191, 192, 217, 196, 179, 195, 180, 193, 194, 32, 32],
-				[201, 187, 200, 188, 205, 186, 204, 185, 202, 203, 32, 32],
-				[213, 184, 212, 190, 205, 179, 198, 181, 207, 209, 32, 32],
-				[214, 183, 211, 189, 196, 186, 199, 182, 208, 210, 32, 32],
-				[197, 206, 216, 215, 232, 232, 155, 156, 153, 239, 32, 32],
-				[176, 177, 178, 219, 223, 220, 221, 222, 254, 250, 32, 32],
-			];
-
-			expect(predefinedSets).toHaveLength(6);
-			predefinedSets.forEach(set => {
-				expect(set).toHaveLength(12);
-				set.forEach(char => {
-					expect(char).toBeGreaterThanOrEqual(0);
-					expect(char).toBeLessThanOrEqual(255);
-				});
-			});
-		});
-
-		it('should generate additional character sets for full coverage', () => {
-			const allChars = new Set();
-			for (let i = 0; i < 256; i++) {
-				allChars.add(i);
-			}
-			expect(allChars.size).toBe(256);
-		});
-	});
-
-	describe('Cursor Movement Logic', () => {
-		it('should handle coordinate bounds checking', () => {
-			const clampToCanvas = (x, y, maxX, maxY) => {
-				return {
-					x: Math.min(Math.max(x, 0), maxX),
-					y: Math.min(Math.max(y, 0), maxY),
-				};
-			};
-
-			expect(clampToCanvas(-5, -5, 79, 24)).toEqual({ x: 0, y: 0 });
-			expect(clampToCanvas(100, 100, 79, 24)).toEqual({ x: 79, y: 24 });
-			expect(clampToCanvas(40, 12, 79, 24)).toEqual({ x: 40, y: 12 });
-		});
-
-		it('should handle cursor position calculations', () => {
-			const calculatePosition = (x, y, fontWidth, fontHeight) => {
-				return {
-					left: x * fontWidth - 1,
-					top: y * fontHeight - 1,
-				};
-			};
-
-			expect(calculatePosition(0, 0, 8, 16)).toEqual({ left: -1, top: -1 });
-			expect(calculatePosition(10, 5, 8, 16)).toEqual({ left: 79, top: 79 });
-		});
-	});
-
-	describe('Selection Management', () => {
-		it('should handle selection coordinate normalization', () => {
-			const normalizeSelection = (startX, startY, endX, endY) => {
-				return {
-					startX: Math.min(startX, endX),
-					startY: Math.min(startY, endY),
-					endX: Math.max(startX, endX),
-					endY: Math.max(startY, endY),
-				};
-			};
-
-			expect(normalizeSelection(10, 8, 5, 3)).toEqual({
-				startX: 5,
-				startY: 3,
-				endX: 10,
-				endY: 8,
-			});
-
-			expect(normalizeSelection(5, 3, 10, 8)).toEqual({
-				startX: 5,
-				startY: 3,
-				endX: 10,
-				endY: 8,
-			});
-		});
-	});
-
-	describe('Clipboard Operations', () => {
-		it('should handle clipboard text processing', () => {
-			const processClipboardText = text => {
-				return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-			};
-
-			const testText = 'Line 1\r\nLine 2\rLine 3\nLine 4';
-			const processed = processClipboardText(testText);
-
-			expect(processed).toEqual(['Line 1', 'Line 2', 'Line 3', 'Line 4']);
-		});
-
-		it('should handle text to character conversion', () => {
-			const textToChars = text => {
-				return Array.from(text).map(char => char.charCodeAt(0));
-			};
-
-			expect(textToChars('ABC')).toEqual([65, 66, 67]);
-			expect(textToChars('123')).toEqual([49, 50, 51]);
-		});
-	});
-
 	describe('paste modes', () => {
 		const makeTool = () => {
 			const item = () => document.createElement('div');
@@ -977,7 +928,6 @@ describe('Keyboard Utilities', () => {
 		let drawn;
 
 		beforeEach(() => {
-			vi.clearAllMocks();
 			drawn = [];
 			State.selectionCursor.isVisible = vi.fn(() => true);
 			State.cursor.isVisible = vi.fn(() => false);
@@ -993,6 +943,33 @@ describe('Keyboard Utilities', () => {
 			State.textArtCanvas.draw = vi.fn(callback => {
 				callback((code, fg, bg, x, y) => drawn.push({ code, fg, bg, x, y }));
 			});
+		});
+
+		it('cut copies the rect, then blanks it to the background', () => {
+			State.palette.getBackgroundColor.mockReturnValueOnce(4);
+			const { getAreaCells, deleteArea } = State.textArtCanvas;
+			const tool = makeTool();
+			tool.setSelection(3, 2, 2, 1);
+			tool.cut();
+			expect(getAreaCells).toHaveBeenCalledWith(3, 2, 2, 1);
+			expect(deleteArea).toHaveBeenCalledWith(3, 2, 2, 1, 4);
+			expect(getAreaCells.mock.invocationCallOrder[0]).toBeLessThan(
+				deleteArea.mock.invocationCallOrder[0],
+			);
+		});
+
+		it('paste lands the copied cells at the current selection', () => {
+			const tool = makeTool();
+			tool.setSelection(0, 0, 2, 1);
+			tool.copy();
+			tool.setSelection(5, 6, 1, 1);
+			tool.paste();
+			expect(State.textArtCanvas.startUndo).toHaveBeenCalledTimes(1);
+			expect(State.textArtCanvas.setAreaCells).toHaveBeenCalledWith(
+				State.textArtCanvas.getAreaCells.mock.results[0].value,
+				5,
+				6,
+			);
 		});
 
 		it('pasteTransparent skips clipboard blanks', () => {

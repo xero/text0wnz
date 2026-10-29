@@ -123,7 +123,7 @@ Each block opens with a 16-bit symbol count, then three code tables:
    after the third entry. This small table exists only to compress
    the next one.
 2. **Literal table.** 510 symbols: 256 literals plus match lengths
-   3-258. Its code lengths decode through the temp table, where
+   3-256. Its code lengths decode through the temp table, where
    symbols 0-2 encode zero runs.
 3. **Position table.** 14 symbols for the window's 13 distance bit
    lengths. Same 3-bit encoding as the temp table, without the skip.

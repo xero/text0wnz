@@ -1,8 +1,8 @@
 /* eslint-disable prefer-arrow-callback */
 /**
  * Invalid UTF-8 in a .txt means raw scene bytes (amiga latin-1
- * collys), which must land in the glyph-indexed byte loader instead of
- * throwing.
+ * collys), which must land in the CP437 read, every byte a glyph
+ * index, instead of throwing.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createDocV3 } from '../../src/js/core/doc.js';
@@ -69,12 +69,11 @@ describe('latin-1 txt fallback', () => {
 		vi.resetModules();
 	});
 
-	it('falls back to the byte loader when a .txt is not UTF-8', () => {
+	it('falls back to the CP437 read when a .txt is not UTF-8', () => {
 		// lone high bytes: typical amiga latin-1, invalid as UTF-8
 		const bytes = [...new TextEncoder().encode('hi '), 0xab, 0xcd, 0xef];
 		const [columns, , data] = loadTxt(bytes);
 		expect(columns).toBe(80);
-		// the byte loader keeps raw bytes as glyph indices
 		expect(data[3] >> 8).toBe(0xab);
 		expect(data[4] >> 8).toBe(0xcd);
 	});

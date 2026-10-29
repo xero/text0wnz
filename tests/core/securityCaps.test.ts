@@ -72,7 +72,7 @@ describe('decoder cell ceilings', () => {
 		return file;
 	};
 
-	it('decodes tall wide ANSIs the allocation gate refused', () => {
+	it('decodes tall wide ANSIs under the cell ceiling', () => {
 		// 65535 x 101 = 6.6M content cells, well under the 10M ceiling
 		const file = tallWide(101);
 		const classic = decodeAns(file);

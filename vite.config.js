@@ -3,7 +3,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 import { VitePWA } from 'vite-plugin-pwa';
 import Sitemap from 'vite-plugin-sitemap';
 import htmlMinifierTerser from "vite-plugin-html-minifier-terser";
-import { existsSync, statSync, readdirSync, readFileSync } from 'node:fs';
+import { copyFileSync, existsSync, statSync, readdirSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 
@@ -14,10 +14,19 @@ export default ({ mode }) => {
 	const domain = process.env.VITE_DOMAIN || 'https://text.0w.nz';
 	const uiDir = ((process.env.VITE_UI_DIR || 'ui').replace(/^\/|\/?$/g, '')) + '/';
 
-	// source sizes for the build logs (rolldown gives each plugin hook a
-	// fresh `this`)
+	// source sizes and the out dir for the build hooks live here:
+	// rolldown gives each plugin hook a fresh `this`
 	let originalCssSize = 0;
 	let originalHtmlSize = 0;
+	let outDir;
+
+	const staticTargets = [
+		{ src: 'humans.txt', dest: '.' },
+		// v4 keeps the src path in dest by default, flatten single files
+		{ src: 'img/manifest/favicon.ico', dest: '.', rename: { stripBase: true } },
+		{ src: 'fonts', dest: uiDir },
+		{ src: 'ansi', dest: '.' },
+	];
 
 	return defineConfig({
 		root: './src',
@@ -71,7 +80,7 @@ export default ({ mode }) => {
 						groups: [
 							// also holds vite's dynamic import helper, otherwise it
 							// lands in the entry chunk & tools imports the editor back
-							{ name: 'core', test: /[\\/]src[\\/]js[\\/]client[\\/](magicNumbers|state|storage|compression|ui)\.js$|vite[\\/]preload-helper/ },
+							{ name: 'core', test: /[\\/]src[\\/]js[\\/]client[\\/](magicNumbers|state|storage|ui)\.js$|vite[\\/]preload-helper/ },
 							{ name: 'canvas', test: /[\\/]src[\\/]js[\\/]client[\\/](canvas|font|lazyFont|fontCache)\.js$/ },
 							{ name: 'tools', test: /[\\/]src[\\/]js[\\/]client[\\/](freehandTools|keyboard|toolbar)\.js$/ },
 							{ name: 'fileops', test: /[\\/]src[\\/]js[\\/]client[\\/]file\.js$/ },
@@ -144,24 +153,29 @@ export default ({ mode }) => {
 					}
 				}
 			},
-			viteStaticCopy({
-				silent: true,
-				targets: [
-					{ src: 'LICENSE.txt', dest: '.' },
-					{ src: 'humans.txt', dest: '.' },
-					// v4 keeps the src path in dest by default, flatten single files
-					{ src: 'img/manifest/favicon.ico', dest: '.', rename: { stripBase: true } },
-					{ src: 'fonts', dest: uiDir },
-					{ src: 'ansi', dest: '.'},
-				],
-			}),
+			viteStaticCopy({ silent: true, targets: staticTargets }),
 			{
 				name: 'log-static-copy',
 				apply: 'build',
-				originalSize: 0,
+				configResolved(config) {
+					outDir = path.resolve(config.root, config.build.outDir);
+				},
+				// static copy srcs resolve against the vite root (src/), and a
+				// '../' src either lands outside dist or copies onto itself
+				writeBundle() {
+					copyFileSync(path.resolve('LICENSE.txt'), path.join(outDir, 'LICENSE.txt'));
+				},
 				closeBundle() {
-					console.log(`\x1b[36m[vite-static-copy] \x1b[0mMoving 5 files recursively`);
-					console.log(`../dist/\x1b[32mLICENSE.txt\n\x1b[0m../dist/\x1b[32mhumans.txt\n\x1b[0m../dist/\x1b[32mfavicon.ico\n\x1b[0m../dist/${uiDir}\x1b[32mfonts\x1b[0m/\x1b[33m*\x1b[0m\n`);
+					// the copy runs silent, so log what landed, not what was asked
+					const landed = [{ src: 'LICENSE.txt', dest: '.' }, ...staticTargets]
+						.map(({ src, dest }) => path.join(dest, path.basename(src)))
+						.filter(file => existsSync(path.join(outDir, file)));
+					console.log(`\x1b[36m[vite-static-copy] \x1b[0mMoving ${landed.length} files recursively`);
+					for (const file of landed) {
+						const tree = statSync(path.join(outDir, file)).isDirectory();
+						console.log(`../dist/${path.dirname(file) === '.' ? '' : `${path.dirname(file)}/`}\x1b[32m${path.basename(file)}\x1b[0m${tree ? '/\x1b[33m*\x1b[0m' : ''}`);
+					}
+					console.log('');
 				}
 			},
 			Sitemap({

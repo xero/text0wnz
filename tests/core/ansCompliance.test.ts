@@ -43,13 +43,24 @@ describe('HVP', () => {
 	});
 });
 
-describe('cursor clamp', () => {
-	it('ESC[26;1H cannot escape the 25-row scroll window', () => {
-		// paint at the clamped bottom, then one CUU must land on row 24
-		// (the cursor sits one column right of the X it just painted)
-		const { doc } = decodeAns(bytes('\x1b[26;1HX\x1b[1AY'));
-		expect(cellAt(doc, 0, 24).glyph & 0xffff).toBe(88);
-		expect(cellAt(doc, 1, 23).glyph & 0xffff).toBe(89);
+describe('CUP past the scroll window', () => {
+	it('ESC[26;1H scrolls the 25-row window and keeps row 25', () => {
+		// CUP-per-line art (TO-DIN.ICE) lands row 26 below row 25 like
+		// moebiusXBIN, not on top of it
+		const { doc } = decodeAns(bytes('\x1b[24;1HA\x1b[25;1HB\x1b[26;1HC'));
+		expect(cellAt(doc, 0, 23).glyph & 0xffff).toBe(65);
+		expect(cellAt(doc, 0, 24).glyph & 0xffff).toBe(66);
+		expect(cellAt(doc, 0, 25).glyph & 0xffff).toBe(67);
+		expect(doc.getRows()).toBe(26);
+	});
+
+	it('the cursor stays inside the window after the scroll', () => {
+		// CUD cannot snap up over painted rows, and CUU moves within
+		// the scrolled window (the cursor sits one column right of X)
+		const { doc } = decodeAns(bytes('\x1b[26;1HX\x1b[1BY\x1b[1AZ'));
+		expect(cellAt(doc, 0, 25).glyph & 0xffff).toBe(88);
+		expect(cellAt(doc, 1, 25).glyph & 0xffff).toBe(89);
+		expect(cellAt(doc, 2, 24).glyph & 0xffff).toBe(90);
 	});
 });
 
@@ -129,6 +140,57 @@ describe('EL erase and the RGB overlay', () => {
 		expect(cellAt(oneK.doc, 0, 0).glyph).toBe(0);
 		expect(cellAt(oneK.doc, 1, 0).glyph).toBe(0);
 		expect(cellAt(oneK.doc, 1, 0).bg).toBe(paletteColor(0));
+	});
+});
+
+describe('UTF-8 deferred wrap', () => {
+	// a 4-column SAUCE width, so ABCD fills row 1 and wraps
+	const open = (between: string, before = '') => {
+		const body = new TextEncoder().encode(`${before}ABCD${between}\nE`);
+		const sauce = buildSauce({
+			dataType: 1,
+			fileType: 1,
+			fileSize: body.length,
+			columns: 4,
+			rows: 2,
+		});
+		const file = new Uint8Array(body.length + 1 + sauce.length);
+		file.set(body, 0);
+		file[body.length] = 0x1a;
+		file.set(sauce, body.length + 1);
+		return decodeAns(file, { utf8: true }).doc;
+	};
+
+	it.each([
+		['nothing', ''],
+		['SGR', '\x1b[31m'],
+		['PabloDraw t', '\x1b[1;255;0;0t'],
+		['ESC[s', '\x1b[s'],
+		['ESC[?33h', '\x1b[?33h'],
+		['ESC[?7h', '\x1b[?7h'],
+		['ESC[?7l', '\x1b[?7l'],
+		['EL', '\x1b[K'],
+		['ESC[s ESC[u', '\x1b[s\x1b[u'],
+	])('%s between a full row and its LF leaves one row', (_label, between) => {
+		// durdraw wraps at the next glyph, so none of these ends the
+		// pending wrap
+		const doc = open(between);
+		expect(doc.getRows()).toBe(2);
+		expect(cellAt(doc, 0, 1).glyph & 0xffff).toBe(69);
+	});
+
+	it('a cursor move between a full row and its LF ends the wrap', () => {
+		const doc = open('\x1b[C');
+		expect(doc.getRows()).toBe(3);
+		expect(cellAt(doc, 0, 2).glyph & 0xffff).toBe(69);
+	});
+
+	it('ESC[u restores the wrap state ESC[s saved with the cursor', () => {
+		// saved before the wrap: the restore leaves nothing pending, so
+		// the LF moves down instead of E overwriting A
+		const doc = open('\x1b[u', '\x1b[s');
+		expect(cellAt(doc, 0, 0).glyph & 0xffff).toBe(65);
+		expect(cellAt(doc, 0, 1).glyph & 0xffff).toBe(69);
 	});
 });
 

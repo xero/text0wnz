@@ -124,11 +124,11 @@ self.addEventListener('fetch', event => {
 
 async function handleShareTarget(request) {
 	try {
-		// the OS share sheet and our own origin arrive as same-origin or
-		// none; a hostile page's cross-site POST must not force bytes
-		// into every open editor tab
-		const fetchSite = request.headers.get('sec-fetch-site');
-		if (fetchSite === 'cross-site') {
+		// Sec-Fetch-Site never reaches a worker (fetch adds it after handle
+		// fetch), but Chromium sets Origin on a POST navigation first. The
+		// share sheet posts as the app itself; a hostile page posts its own
+		// origin or "null" and must not force bytes into every open tab
+		if (request.headers.get('origin') !== self.location.origin) {
 			return Response.redirect('/', 303);
 		}
 		const formData = await request.formData();

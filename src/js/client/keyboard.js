@@ -1463,8 +1463,10 @@ const createSelectionTool = () => {
 	let isDragging = false;
 	let dragStartX = 0;
 	let dragStartY = 0;
-	let originalPosition = null; // when move mode started
 	let underlyingData = null; // under the moving blocks
+	// every step of one move joins a single stroke, so undo takes the
+	// whole move back at once
+	let moveStroke = false;
 	let selectionStartX = 0;
 	let selectionStartY = 0;
 	let selectionEndX = 0;
@@ -1690,7 +1692,10 @@ const createSelectionTool = () => {
 		if (newX === selection.x && newY === selection.y) {
 			return;
 		}
-		State.textArtCanvas.startUndo();
+		if (!moveStroke) {
+			State.textArtCanvas.startUndo();
+			moveStroke = true;
+		}
 		if (!selectionData) {
 			selectionData = State.textArtCanvas.getAreaCells(
 				selection.x,
@@ -1739,65 +1744,24 @@ const createSelectionTool = () => {
 					selection.width,
 					selection.height,
 				);
-				originalPosition = {
-					x: selection.x,
-					y: selection.y,
-					width: selection.width,
-					height: selection.height,
-				};
-				// a move empties the old position as the selection drags away
+				// a move empties the old position as the selection drags
+				// away, blank on black whatever the current background, as
+				// Moebius doc.js, TextModeDoc.erase() and PabloDraw
+				// Block/Paste.cs, Paste.Do() leave it
 				underlyingData = createEmptyArea(selection.width, selection.height);
 			}
 		} else {
-			const currentSelection = State.selectionCursor.getSelection();
-			if (
-				originalPosition &&
-				currentSelection &&
-				(currentSelection.x !== originalPosition.x ||
-				  currentSelection.y !== originalPosition.y)
-			) {
-				const xOverlap =
-					originalPosition.x < currentSelection.x + currentSelection.width &&
-					originalPosition.x + originalPosition.width > currentSelection.x;
-				const yOverlap =
-					originalPosition.y < currentSelection.y + currentSelection.height &&
-					originalPosition.y + originalPosition.height > currentSelection.y;
-				const hasOverlap = xOverlap && yOverlap;
-
-				State.textArtCanvas.startUndo();
-				if (hasOverlap) {
-					const emptyData = createEmptyArea(
-						originalPosition.width,
-						originalPosition.height,
-					);
-					// the original position now holds part of the moved selection
-					const currentAtOriginal = State.textArtCanvas.getAreaCells(
-						originalPosition.x,
-						originalPosition.y,
-						originalPosition.width,
-						originalPosition.height,
-					);
-					setAreaSelective(
-						emptyData,
-						currentAtOriginal,
-						originalPosition.x,
-						originalPosition.y,
-					);
-				} else {
-					State.textArtCanvas.deleteArea(
-						originalPosition.x,
-						originalPosition.y,
-						originalPosition.width,
-						originalPosition.height,
-						State.palette.getBackgroundColor(),
-					);
-				}
+			// the first step already emptied the origin, so finishing
+			// writes nothing; committing here hands the journal and the
+			// history flyout the finished move
+			if (moveStroke) {
+				State.textArtCanvas.endUndo();
 			}
 			moveButton.classList.remove('enabled');
 			State.selectionCursor.getElement().classList.remove('moveMode');
 			selectionData = null;
-			originalPosition = null;
 			underlyingData = null;
+			moveStroke = false;
 		}
 	};
 	const isMoveMode = () => moveMode;
@@ -1958,7 +1922,7 @@ const createSelectionTool = () => {
 
 		const fontHeight = State.font.getHeight();
 		const fontWidth = State.font.getWidth();
-		const bufferRows = 5; // matches SCROLL_BUFFER_ROWS
+		const bufferRows = SCROLL_BUFFER_ROWS;
 
 		const selectionPixelY = selection.y * fontHeight;
 		const selectionPixelX = selection.x * fontWidth;
@@ -2211,8 +2175,8 @@ const createSelectionTool = () => {
 			moveButton.classList.remove('enabled');
 			State.selectionCursor.getElement().classList.remove('moveMode');
 			selectionData = null;
-			originalPosition = null;
 			underlyingData = null;
+			moveStroke = false;
 		}
 		flipHButton.removeEventListener('click', flipHorizontal);
 		flipVButton.removeEventListener('click', flipVertical);
@@ -2226,8 +2190,8 @@ const createSelectionTool = () => {
 
 	// a new document invalidates every piece of cross-file tool state:
 	// stale move-mode data would stamp the OLD file's cells into the
-	// new one on the next drag, and a stale originalPosition would
-	// deleteArea freshly loaded art on the next toggle
+	// new one on the next drag, and a stale stroke flag would fold the
+	// next move into whatever stroke is open
 	document.addEventListener('onNewDocument', () => {
 		if (moveMode) {
 			moveMode = false;
@@ -2235,8 +2199,8 @@ const createSelectionTool = () => {
 			State.selectionCursor.getElement().classList.remove('moveMode');
 		}
 		selectionData = null;
-		originalPosition = null;
 		underlyingData = null;
+		moveStroke = false;
 		isDragging = false;
 		pendingInitialAction = null;
 		selectionStartX = 0;

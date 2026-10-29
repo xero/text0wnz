@@ -357,46 +357,6 @@ describe('Palette Utilities', () => {
 			expect(() => touchEnd({ preventDefault: () => {}, touches: []})).not.toThrow();
 		});
 
-		it('should handle mouse events for color selection', () => {
-			createPalettePicker(mockCanvas);
-
-			const mouseHandlerCall = mockCanvas.addEventListener.mock.calls.find(
-				call => call[0] === 'mouseup',
-			);
-			expect(mouseHandlerCall).toBeDefined();
-			expect(typeof mouseHandlerCall[1]).toBe('function');
-		});
-
-		it('should handle digit key combinations for color selection', () => {
-			createPalettePicker(mockCanvas);
-
-			const keyHandlerCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'keydown',
-			);
-			expect(keyHandlerCall).toBeDefined();
-			expect(typeof keyHandlerCall[1]).toBe('function');
-		});
-
-		it('should handle color cycling when same color is selected', () => {
-			createPalettePicker(mockCanvas);
-
-			const keyHandlerCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'keydown',
-			);
-			expect(keyHandlerCall).toBeDefined();
-			expect(typeof keyHandlerCall[1]).toBe('function');
-		});
-
-		it('should handle arrow key navigation with wrap-around', () => {
-			createPalettePicker(mockCanvas);
-
-			const keyHandlerCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'keydown',
-			);
-			expect(keyHandlerCall).toBeDefined();
-			expect(typeof keyHandlerCall[1]).toBe('function');
-		});
-
 		it('should prevent context menu on canvas', () => {
 			const mockMenuCanvas = {
 				...mockCanvas,
@@ -418,205 +378,154 @@ describe('Palette Utilities', () => {
 			expect(contextMenuEvent.preventDefault).toHaveBeenCalled();
 		});
 
-		it('should handle color cycling when same color is selected with Ctrl+digit', () => {
-			expect(() => {
-				const keyHandler = e => {
-					const keyCode = e.keyCode || e.which;
-					if (keyCode >= 48 && keyCode <= 55 && e.ctrlKey === true) {
-						e.preventDefault();
-						const num = keyCode - 48;
-						if (num === 3) {
-							expect(num + 8).toBe(11);
-						}
-					}
-				};
-
-				const ctrlDigitEvent = {
-					keyCode: 51, // '3'
-					which: 51,
-					ctrlKey: true,
-					altKey: false,
-					preventDefault: vi.fn(),
-				};
-
-				keyHandler(ctrlDigitEvent);
-				expect(ctrlDigitEvent.preventDefault).toHaveBeenCalled();
-			}).not.toThrow();
-		});
-
-		it('should handle color cycling when same color is selected with Alt+digit', () => {
-			expect(() => {
-				const keyHandler = e => {
-					const keyCode = e.keyCode || e.which;
-					if (keyCode >= 48 && keyCode <= 55 && e.altKey === true) {
-						e.preventDefault();
-						const num = keyCode - 48;
-						if (num === 5) {
-							expect(num + 8).toBe(13);
-						}
-					}
-				};
-
-				const altDigitEvent = {
-					keyCode: 53, // '5'
-					which: 53,
-					ctrlKey: false,
-					altKey: true,
-					preventDefault: vi.fn(),
-				};
-
-				keyHandler(altDigitEvent);
-				expect(altDigitEvent.preventDefault).toHaveBeenCalled();
-			}).not.toThrow();
-		});
-
-		it('should handle Ctrl+Arrow key navigation for color selection', () => {
-			expect(() => {
-				const keyHandler = e => {
-					if (e.code.startsWith('Arrow') && e.ctrlKey === true) {
-						e.preventDefault();
-
-						switch (e.code) {
-							case 'ArrowUp': {
-								const foreground = 7;
-								const newForeground = foreground === 0 ? 15 : foreground - 1;
-								expect(newForeground).toBe(6);
-								break;
-							}
-							case 'ArrowDown': {
-								const fg = 7;
-								const nextFg = fg === 15 ? 0 : fg + 1;
-								expect(nextFg).toBe(8);
-								break;
-							}
-							case 'ArrowLeft': {
-								const background = 8;
-								const newBg = background === 0 ? 15 : background - 1;
-								expect(newBg).toBe(7);
-								break;
-							}
-							case 'ArrowRight': {
-								const bg = 8;
-								const nextBg = bg === 15 ? 0 : bg + 1;
-								expect(nextBg).toBe(9);
-								break;
-							}
-						}
-					}
-				};
-
-				['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].forEach(code => {
-					keyHandler({
-						code: code,
-						ctrlKey: true,
-						preventDefault: vi.fn(),
-					});
-				});
-			}).not.toThrow();
-		});
-
-		it('should handle color wrap-around at boundaries', () => {
-			expect(() => {
-				const colorAtMin = 0;
-				const wrappedMin = colorAtMin === 0 ? 15 : colorAtMin - 1;
-				expect(wrappedMin).toBe(15);
-
-				const colorAtMax = 15;
-				const wrappedMax = colorAtMax === 15 ? 0 : colorAtMax + 1;
-				expect(wrappedMax).toBe(0);
-
-				const normalColor = 7;
-				const incremented = normalColor === 15 ? 0 : normalColor + 1;
-				expect(incremented).toBe(8);
-
-				const decremented = normalColor === 0 ? 15 : normalColor - 1;
-				expect(decremented).toBe(6);
-			}).not.toThrow();
-		});
-
-		it('should handle mouse events with modifier keys for background color selection', () => {
-			expect(() => {
-				const calculateColor = (
-					clientX,
-					clientY,
-					canvasWidth,
-					canvasHeight,
-					_modifierKeys,
-				) => {
-					const x = Math.floor(clientX / (canvasWidth / 2));
-					const y = Math.floor(clientY / (canvasHeight / 8));
-					const colorIndex = y + (x === 0 ? 0 : 8);
-
-					if (
-						clientX === 50 &&
-						clientY === 40 &&
-						canvasWidth === 200 &&
-						canvasHeight === 160
-					) {
-						// x = floor(50 / 100) = 0, y = floor(40 / 20) = 2
-						// colorIndex = 2 + 0 = 2
-						expect(colorIndex).toBe(2);
-					}
-
-					if (
-						clientX === 150 &&
-						clientY === 60 &&
-						canvasWidth === 200 &&
-						canvasHeight === 160
-					) {
-						// x = floor(150 / 100) = 1, y = floor(60 / 20) = 3
-						// colorIndex = 3 + 8 = 11
-						expect(colorIndex).toBe(11);
-					}
-
-					return colorIndex;
-				};
-
-				calculateColor(50, 40, 200, 160, { altKey: true });
-				calculateColor(150, 60, 200, 160, { ctrlKey: true });
-			}).not.toThrow();
-		});
-
-		it('should ignore non-matching key events', () => {
-			const mockState = {
-				palette: {
-					getForegroundColor: vi.fn(() => 7),
-					getBackgroundColor: vi.fn(() => 0),
-					setForegroundColor: vi.fn(),
-					setBackgroundColor: vi.fn(),
-				},
-			};
-
-			global.State = mockState;
-
-			createPalettePicker(mockCanvas);
-
-			const keyHandlerCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'keydown',
-			);
-			const keyHandler = keyHandlerCall[1];
-
-			mockState.palette.setForegroundColor.mockClear();
-			mockState.palette.setBackgroundColor.mockClear();
-
-			const nonMatchingEvents = [
-				{ keyCode: 65, ctrlKey: true }, // Ctrl+A
-				{ keyCode: 56, ctrlKey: true }, // Ctrl+8 (out of range)
-				{ keyCode: 32, ctrlKey: true }, // Ctrl+Space (using keyCode instead of code)
-				{ keyCode: 38, ctrlKey: false }, // Arrow without Ctrl (using keyCode)
-			];
-
-			nonMatchingEvents.forEach(event => {
-				// the handler reads e.code, which these events lack
-				try {
-					keyHandler(event);
-				} catch (e) {
-					void e;
-				}
+		describe('picker input', () => {
+			let palette;
+			const handler = type =>
+				global.document.addEventListener.mock.calls.find(c => c[0] === type)[1];
+			const key = (code, mods = {}) => ({
+				code: code,
+				ctrlKey: false,
+				altKey: false,
+				metaKey: false,
+				preventDefault: vi.fn(),
+				...mods,
 			});
 
-			expect(mockState.palette.setForegroundColor).not.toHaveBeenCalled();
-			expect(mockState.palette.setBackgroundColor).not.toHaveBeenCalled();
+			beforeEach(async () => {
+				palette = (await import('../../src/js/client/state.js')).default.palette;
+				palette.setForegroundColor.mockClear();
+				palette.setBackgroundColor.mockClear();
+				createPalettePicker(mockCanvas);
+			});
+
+			it('Ctrl+digit picks the foreground, and again picks its bright twin', () => {
+				const e = key('Digit3', { ctrlKey: true });
+				handler('keydown')(e);
+				expect(e.preventDefault).toHaveBeenCalled();
+				expect(palette.setForegroundColor).toHaveBeenLastCalledWith(3);
+				palette.getForegroundColor.mockReturnValueOnce(3);
+				handler('keydown')(key('Digit3', { ctrlKey: true }));
+				expect(palette.setForegroundColor).toHaveBeenLastCalledWith(11);
+				expect(palette.setBackgroundColor).not.toHaveBeenCalled();
+			});
+
+			it('Alt+digit picks the background, and again picks its bright twin', () => {
+				handler('keydown')(key('Digit5', { altKey: true }));
+				expect(palette.setBackgroundColor).toHaveBeenLastCalledWith(5);
+				palette.getBackgroundColor.mockReturnValueOnce(5);
+				handler('keydown')(key('Digit5', { altKey: true }));
+				expect(palette.setBackgroundColor).toHaveBeenLastCalledWith(13);
+				expect(palette.setForegroundColor).not.toHaveBeenCalled();
+			});
+
+			it('Ctrl+Arrow steps foreground on up/down and background on left/right', () => {
+				handler('keydown')(key('ArrowUp', { ctrlKey: true }));
+				expect(palette.setForegroundColor).toHaveBeenLastCalledWith(6);
+				handler('keydown')(key('ArrowDown', { ctrlKey: true }));
+				expect(palette.setForegroundColor).toHaveBeenLastCalledWith(8);
+				handler('keydown')(key('ArrowRight', { ctrlKey: true }));
+				expect(palette.setBackgroundColor).toHaveBeenLastCalledWith(1);
+				palette.getBackgroundColor.mockReturnValueOnce(8);
+				handler('keydown')(key('ArrowLeft', { ctrlKey: true }));
+				expect(palette.setBackgroundColor).toHaveBeenLastCalledWith(7);
+			});
+
+			it('Ctrl+Arrow wraps between 0 and 15', () => {
+				palette.getForegroundColor.mockReturnValueOnce(0);
+				handler('keydown')(key('ArrowUp', { ctrlKey: true }));
+				expect(palette.setForegroundColor).toHaveBeenLastCalledWith(15);
+				palette.getForegroundColor.mockReturnValueOnce(15);
+				handler('keydown')(key('ArrowDown', { ctrlKey: true }));
+				expect(palette.setForegroundColor).toHaveBeenLastCalledWith(0);
+				handler('keydown')(key('ArrowLeft', { ctrlKey: true }));
+				expect(palette.setBackgroundColor).toHaveBeenLastCalledWith(15);
+				palette.getBackgroundColor.mockReturnValueOnce(15);
+				handler('keydown')(key('ArrowRight', { ctrlKey: true }));
+				expect(palette.setBackgroundColor).toHaveBeenLastCalledWith(0);
+			});
+
+			it('ignores digits past 7, unmodified keys, and other Ctrl combos', () => {
+				const events = [
+					key('Digit8', { ctrlKey: true }),
+					key('Digit9', { altKey: true }),
+					key('Digit3'),
+					key('ArrowUp'),
+					key('KeyA', { ctrlKey: true }),
+					key('Space', { ctrlKey: true }),
+				];
+				events.forEach(e => handler('keydown')(e));
+				expect(palette.setForegroundColor).not.toHaveBeenCalled();
+				expect(palette.setBackgroundColor).not.toHaveBeenCalled();
+				events.forEach(e => expect(e.preventDefault).not.toHaveBeenCalled());
+			});
+
+			it('mouseup picks the foreground under the pointer, low colors on the left', () => {
+				mockCanvas.getBoundingClientRect.mockReturnValue({
+					left: 0,
+					top: 0,
+					width: 200,
+					height: 160,
+				});
+				const mouseup = mockCanvas.addEventListener.mock.calls.find(
+					c => c[0] === 'mouseup',
+				)[1];
+				mouseup({ clientX: 50, clientY: 40, button: 0, altKey: true });
+				expect(palette.setForegroundColor).toHaveBeenLastCalledWith(2);
+				mouseup({ clientX: 150, clientY: 60, button: 0, shiftKey: true });
+				expect(palette.setForegroundColor).toHaveBeenLastCalledWith(11);
+				expect(palette.setBackgroundColor).not.toHaveBeenCalled();
+			});
+
+			it('right click and ctrl click pick the background, left click the foreground', () => {
+				mockCanvas.getBoundingClientRect.mockReturnValue({
+					left: 0,
+					top: 0,
+					width: 200,
+					height: 160,
+				});
+				const mouseup = mockCanvas.addEventListener.mock.calls.find(
+					c => c[0] === 'mouseup',
+				)[1];
+				mouseup({ clientX: 150, clientY: 100, button: 2 });
+				expect(palette.setBackgroundColor).toHaveBeenLastCalledWith(13);
+				mouseup({ clientX: 50, clientY: 20, button: 0, ctrlKey: true });
+				expect(palette.setBackgroundColor).toHaveBeenLastCalledWith(1);
+				expect(palette.setForegroundColor).not.toHaveBeenCalled();
+			});
+
+			it('a left pick right after a right click picks instead of opening the editor', () => {
+				// ui.js bound $ to the jsdom document before the stub
+				vi.unstubAllGlobals();
+				const jsdom = document;
+				vi.stubGlobal('document', { addEventListener: vi.fn() });
+				const editor = jsdom.createElement('input');
+				editor.id = 'customColor';
+				editor.click = vi.fn();
+				jsdom.body.append(editor);
+				palette.getRGBColor = vi.fn(() => '#000000');
+				try {
+					mockCanvas.getBoundingClientRect.mockReturnValue({
+						left: 0,
+						top: 0,
+						width: 200,
+						height: 160,
+					});
+					createPalettePicker(mockCanvas);
+					const mouseup = mockCanvas.addEventListener.mock.calls.findLast(
+						c => c[0] === 'mouseup',
+					)[1];
+					mouseup({ clientX: 150, clientY: 100, button: 2 });
+					mouseup({ clientX: 50, clientY: 60, button: 0 });
+					expect(editor.click).not.toHaveBeenCalled();
+					expect(palette.setForegroundColor).toHaveBeenLastCalledWith(3);
+					// a second left pick inside the threshold still edits
+					mouseup({ clientX: 50, clientY: 60, button: 0 });
+					expect(editor.click).toHaveBeenCalled();
+				} finally {
+					editor.remove();
+					delete palette.getRGBColor;
+				}
+			});
 		});
 	});
 });

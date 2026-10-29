@@ -280,12 +280,13 @@ class StateManager {
 			const scaleFactor = this.state.font?.getScaleFactor() ?? 1;
 			const hasNonDefaultZoom = scaleFactor !== 1;
 
-			// the network slot is optional: a collab worker that failed to
+			// a live session's canvas never reaches the local autosave,
+			// zoomed or not; a zoom alone is worth saving on a blank doc.
+			// The network slot is optional: a collab worker that failed to
 			// construct must not cost every autosave of the session
 			if (
-				!hasNonDefaultZoom &&
-				(this.isDefaultState() ||
-				  stateManager.state.network?.isConnected?.() === true)
+				stateManager.state.network?.isConnected?.() === true ||
+				(!hasNonDefaultZoom && this.isDefaultState())
 			) {
 				return;
 			}

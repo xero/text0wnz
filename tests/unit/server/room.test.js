@@ -800,7 +800,7 @@ describe('convergence fuzz', () => {
 	});
 });
 
-describe('review-pass regressions', () => {
+describe('room invariants', () => {
 	it('repeated bad passwords open a cooldown that refuses even the right one', () => {
 		vi.useFakeTimers();
 		try {

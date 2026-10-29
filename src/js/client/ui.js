@@ -702,6 +702,11 @@ const createPaintShortcuts = keyPair => {
 	};
 
 	const keyDownWithCtrl = e => {
+		if (isTextEntry(e.target)) {
+			// a field keeps its own Ctrl keys: Ctrl+A selects all, never
+			// the attribute brush
+			return;
+		}
 		if (!ignored) {
 			if (e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
 				if (keyPair[e.key] !== undefined) {
@@ -1228,12 +1233,11 @@ const createFontSelect = (el, lbl, img, btn) => {
 		return true;
 	}
 	function setFocus() {
-		const w8 = setTimeout(() => {
+		setTimeout(() => {
 			listbox.focus();
 			const options = getOptions();
 			const idx = options.findIndex(opt => opt.dataset.value === getValue());
 			options[idx].scrollIntoView({ block: 'nearest' });
-			clearTimeout(w8);
 		}, 100);
 	}
 	function updateSelection(idx) {

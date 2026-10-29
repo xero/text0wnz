@@ -177,10 +177,11 @@ export const overlayHalfBlock = (
 /**
  * v2 optimizeBlocks per-cell pass: rewrite bright-background (bg >= 8)
  * blocky cells into equivalent dim-background forms so they stay legal
- * without ice colors, plus moebiusXBIN's black-foreground
- * normalization (black ink cannot be told from background, so those
- * cells canonicalize to the form every other editor writes). Returns
- * the replacement or null to keep the cell.
+ * without ice colors, plus the black-foreground normalization from
+ * moebiusXBIN doc.js, TextModeDoc.optimize_block() (black ink cannot be
+ * told from background, so those cells canonicalize to the form every
+ * other editor writes). Returns the replacement or null to keep the
+ * cell.
  */
 export const optimizeCell = (cell: EditCell): EditCell | null => {
 	const { charCode, fg, bg } = cell;

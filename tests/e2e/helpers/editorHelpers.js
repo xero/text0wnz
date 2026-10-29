@@ -1,3 +1,5 @@
+import { expect } from '@playwright/test';
+
 /**
  * main.js sets data-ready on #bodyContainer once every control is wired
  */
@@ -49,6 +51,9 @@ export async function clickTool(page, id) {
 	} else {
 		await page.locator(`#${id}`).click();
 	}
+	// most tools load lazily: a stroke sent before the button lights
+	// lands on whatever tool was active before
+	await expect(page.locator(`#${id}`)).toHaveClass(/toolbarDisplayed/);
 }
 
 /**
@@ -151,6 +156,42 @@ export async function readRegion(page, x0, y0, x1, y1) {
 }
 
 /**
+ * Seeds art through the editor core as one undo stroke, so a spec
+ * sets up cells without leaning on a tool it does not test
+ */
+export async function writeText(page, x, y, text, fg = 7, bg = 0) {
+	await page.evaluate(
+		([cx, cy, t, f, b]) => {
+			const c = window.__t0wnz.State.textArtCanvas;
+			c.startUndo();
+			c.draw(cb => {
+				[...t].forEach((ch, i) => cb(ch.charCodeAt(0), f, b, cx + i, cy));
+			}, false);
+		},
+		[x, y, text, fg, bg],
+	);
+}
+
+export async function tap(page, x, y) {
+	const c = await cellCenter(page, x, y);
+	await page.mouse.click(c.clientX, c.clientY);
+}
+
+export async function cursorAt(page) {
+	return page.evaluate(() => {
+		const c = window.__t0wnz.State.cursor;
+		return { x: c.getX(), y: c.getY() };
+	});
+}
+
+export async function readColors(page) {
+	return page.evaluate(() => {
+		const p = window.__t0wnz.State.palette;
+		return { fg: p.getForegroundColor(), bg: p.getBackgroundColor() };
+	});
+}
+
+/**
  * Tool settings seam: specs change modes and knobs only through
  * these, so a settings UI redesign edits the bodies here and never
  * touches a spec
@@ -204,25 +245,6 @@ export async function focusCanvas(page) {
 	await page.waitForTimeout(200);
 }
 
-/**
- * TODO: Adjust based on actual DOM structure or window API if available
- */
-export async function getCanvasText(page) {
-	const textFromAPI = await page.evaluate(() => {
-		if (window.State && window.State.textArtCanvas) {
-			return window.State.textArtCanvas.toString();
-		}
-		return null;
-	});
-
-	if (textFromAPI) {
-		return textFromAPI;
-	}
-
-	// placeholder until the editor exposes canvas data
-	return '';
-}
-
 export async function getViewportScrollPosition(page) {
 	return await page.evaluate(() => {
 		const viewport = document.getElementById('viewport');
@@ -233,23 +255,5 @@ export async function getViewportScrollPosition(page) {
 			};
 		}
 		return { scrollTop: 0, scrollLeft: 0 };
-	});
-}
-
-export async function getPositionInfo(page) {
-	const positionInfo = page.locator('#positionInfo');
-	return await positionInfo.textContent() || '';
-}
-
-/**
- * TODO: Adjust based on actual DOM structure for active tool indication
- */
-export async function getActiveTool(page) {
-	return await page.evaluate(() => {
-		const activeTool = document.querySelector('aside > div.active, aside > div[class*="active"]');
-		if (activeTool && activeTool.id) {
-			return activeTool.id;
-		}
-		return null;
 	});
 }

@@ -4,7 +4,7 @@
  * open and every reader leniency.
  */
 
-import { unicodeToCp437 } from '../cp437.js';
+import { cp437ToUnicode, unicodeToCp437 } from '../cp437.js';
 import {
 	readLE16,
 	readLE32,
@@ -13,6 +13,32 @@ import {
 	writeLE32,
 	writeText,
 } from './util.js';
+
+/**
+ * SAUCE §Layout Character and ZString text: CP437 up to the first NUL,
+ * since some writers terminate there and leave garbage behind (note 3).
+ * The trim runs on bytes, before the map: CP437 0xA0 is á, and a
+ * Unicode whitespace trim would eat it. Decoding through the map is
+ * what lets buildSauce write the same bytes back.
+ */
+const textField = (bytes: Uint8Array, offset: number, size: number): string => {
+	let end = offset;
+	while (end < offset + size && bytes[end] !== 0) {
+		end++;
+	}
+	while (
+		end > offset &&
+		(bytes[end - 1] === 0x20 ||
+			(bytes[end - 1] >= 0x09 && bytes[end - 1] <= 0x0d))
+	) {
+		end--;
+	}
+	let text = '';
+	for (let i = offset; i < end; i++) {
+		text += String.fromCodePoint(cp437ToUnicode(bytes[i]));
+	}
+	return text;
+};
 
 export interface SauceRecord {
 	version: string;
@@ -52,9 +78,9 @@ export const parseSauce = (bytes: Uint8Array): SauceRecord | null => {
 	}
 	const record: SauceRecord = {
 		version: stringField(bytes, at + 5, 2),
-		title: stringField(bytes, at + 7, 35),
-		author: stringField(bytes, at + 42, 20),
-		group: stringField(bytes, at + 62, 20),
+		title: textField(bytes, at + 7, 35),
+		author: textField(bytes, at + 42, 20),
+		group: textField(bytes, at + 62, 20),
 		date: stringField(bytes, at + 82, 8),
 		fileSize: readLE32(bytes, at + 90),
 		dataType: bytes[at + 94],
@@ -64,7 +90,7 @@ export const parseSauce = (bytes: Uint8Array): SauceRecord | null => {
 		tInfo3: readLE16(bytes, at + 100),
 		tInfo4: readLE16(bytes, at + 102),
 		flags: bytes[at + 105],
-		fontName: stringField(bytes, at + 106, 22),
+		fontName: textField(bytes, at + 106, 22),
 		comments: [],
 		iceColors: (bytes[at + 105] & 0x01) === 1,
 		letterSpacing: ((bytes[at + 105] >> 1) & 0x03) === 2,
@@ -76,7 +102,7 @@ export const parseSauce = (bytes: Uint8Array): SauceRecord | null => {
 		const blockStart = bytes.length - 128 - commentsCount * 64 - 5;
 		if (blockStart >= 0 && stringField(bytes, blockStart, 5) === 'COMNT') {
 			for (let i = 0; i < commentsCount; i++) {
-				record.comments.push(stringField(bytes, blockStart + 5 + i * 64, 64));
+				record.comments.push(textField(bytes, blockStart + 5 + i * 64, 64));
 			}
 			payloadEnd = blockStart;
 		}
@@ -88,6 +114,30 @@ export const parseSauce = (bytes: Uint8Array): SauceRecord | null => {
 		record.fileSize > 0 && record.fileSize < bytes.length
 			? record.fileSize
 			: payloadEnd;
+	if (record.version !== '00') {
+		// SAUCE §Layout note 6: an unknown version is not the 00 layout.
+		// Pre-standard writers leave TFlags and TInfoS as stale file
+		// bytes that would force ice and spacing, so the record only
+		// fences the payload
+		return {
+			...record,
+			title: '',
+			author: '',
+			group: '',
+			date: '',
+			dataType: 0,
+			fileType: 0,
+			tInfo1: 0,
+			tInfo2: 0,
+			tInfo3: 0,
+			tInfo4: 0,
+			flags: 0,
+			fontName: '',
+			comments: [],
+			iceColors: false,
+			letterSpacing: false,
+		};
+	}
 	return record;
 };
 

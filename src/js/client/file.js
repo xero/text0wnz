@@ -5,6 +5,7 @@ import { $, enforceMaxBytes } from './ui.js';
 import {
 	CodecError,
 	decodeAns,
+	decodeBin,
 	decodeDur,
 	decodeEnvelope,
 	decodeTundra,
@@ -51,6 +52,10 @@ const lsFromSauceFlags = flags => {
 	return undefined;
 };
 
+// SAUCE §Layout note 6: a record of unknown version states no flags,
+// so its file resaves like one without SAUCE
+const flagsToStash = sauce => (sauce?.version === '00' ? sauce.flags : null);
+
 // File New and other whole-doc replacements owe nothing to the last
 // opened file's SAUCE flags
 const resetSauceFlags = () => {
@@ -59,453 +64,6 @@ const resetSauceFlags = () => {
 };
 
 const loadModule = () => {
-	class File {
-		constructor(bytes) {
-			let pos, commentCount;
-
-			const SAUCE_ID = new Uint8Array([0x53, 0x41, 0x55, 0x43, 0x45]);
-			const COMNT_ID = new Uint8Array([0x43, 0x4f, 0x4d, 0x4e, 0x54]);
-
-			this.get = () => {
-				if (pos >= bytes.length) {
-					throw new Error('Requested byte offset out of bounds.');
-				}
-				pos += 1;
-				return bytes[pos - 1];
-			};
-
-			this.get16 = () => {
-				const v = this.get();
-				return v + (this.get() << 8);
-			};
-
-			this.get32 = () => {
-				let v;
-				v = this.get();
-				v += this.get() << 8;
-				v += this.get() << 16;
-				return v + (this.get() << 24);
-			};
-
-			this.getC = () => {
-				return String.fromCharCode(this.get());
-			};
-
-			this.getS = num => {
-				let string;
-				string = '';
-				while (num > 0) {
-					string += this.getC();
-					num -= 1;
-				}
-				return string.replace(/\s+$/, '');
-			};
-
-			this.lookahead = match => {
-				let i;
-				for (i = 0; i < match.length; i += 1) {
-					if (pos + i === bytes.length || bytes[pos + i] !== match[i]) {
-						break;
-					}
-				}
-				return i === match.length;
-			};
-
-			this.read = num => {
-				const t = pos;
-
-				num = num || this.size - pos;
-				while ((pos += 1) < this.size) {
-					num -= 1;
-					if (num === 0) {
-						break;
-					}
-				}
-				return bytes.subarray(t, pos);
-			};
-
-			this.seek = newPos => {
-				pos = newPos;
-			};
-
-			this.peek = num => {
-				num = num || 0;
-				return bytes[pos + num];
-			};
-
-			this.getPos = () => {
-				return pos;
-			};
-
-			this.eof = () => {
-				return pos === this.size;
-			};
-
-			pos = bytes.length - 128;
-
-			if (this.lookahead(SAUCE_ID)) {
-				this.sauce = {};
-				this.getS(5);
-				this.sauce.version = this.getS(2);
-				this.sauce.title = this.getS(35);
-				this.sauce.author = this.getS(20);
-				this.sauce.group = this.getS(20);
-				this.sauce.date = this.getS(8);
-				this.sauce.fileSize = this.get32();
-				this.sauce.dataType = this.get();
-				this.sauce.fileType = this.get();
-				this.sauce.tInfo1 = this.get16();
-				this.sauce.tInfo2 = this.get16();
-				this.sauce.tInfo3 = this.get16();
-				this.sauce.tInfo4 = this.get16();
-
-				this.sauce.comments = [];
-				commentCount = this.get();
-				this.sauce.flags = this.get();
-				if (commentCount > 0) {
-					pos = bytes.length - 128 - commentCount * 64 - 5;
-
-					if (this.lookahead(COMNT_ID)) {
-						this.getS(5);
-
-						while (commentCount > 0) {
-							this.sauce.comments.push(this.getS(64));
-							commentCount -= 1;
-						}
-					}
-				}
-			}
-
-			pos = 0;
-			if (this.sauce) {
-				if (this.sauce.fileSize > 0 && this.sauce.fileSize < bytes.length) {
-					this.size = this.sauce.fileSize;
-				} else {
-					this.size = bytes.length - 128;
-				}
-			} else {
-				this.size = bytes.length;
-			}
-		}
-	}
-
-	class ScreenData {
-		constructor(width) {
-			let imageData, maxY, pos;
-
-			const binColor = ansiColor => {
-				switch (ansiColor) {
-					case 4:
-						return 1;
-					case 6:
-						return 3;
-					case 1:
-						return 4;
-					case 3:
-						return 6;
-					case 12:
-						return 9;
-					case 14:
-						return 11;
-					case 9:
-						return 12;
-					case 11:
-						return 14;
-					default:
-						return ansiColor;
-				}
-			};
-
-			this.reset = () => {
-				imageData = new Uint8Array(width * 100 * 3);
-				maxY = 0;
-				pos = 0;
-			};
-
-			this.reset();
-
-			this.raw = bytes => {
-				let i, j;
-				maxY = Math.ceil(bytes.length / 2 / width);
-				imageData = new Uint8Array(width * maxY * 3);
-				for (i = 0, j = 0; j < bytes.length; i += 3, j += 2) {
-					imageData[i] = bytes[j];
-					imageData[i + 1] = bytes[j + 1] & 15;
-					imageData[i + 2] = bytes[j + 1] >> 4;
-				}
-			};
-
-			const extendImageData = y => {
-				const newImageData = new Uint8Array(
-					width * (y + 100) * 3 + imageData.length,
-				);
-				newImageData.set(imageData, 0);
-				imageData = newImageData;
-			};
-
-			this.set = (x, y, charCode, fg, bg) => {
-				pos = (y * width + x) * 3;
-				if (pos >= imageData.length) {
-					extendImageData(y);
-				}
-				imageData[pos] = charCode;
-				imageData[pos + 1] = binColor(fg);
-				imageData[pos + 2] = binColor(bg);
-				if (y > maxY) {
-					maxY = y;
-				}
-			};
-
-			this.getData = () => {
-				return imageData.subarray(0, width * (maxY + 1) * 3);
-			};
-
-			this.getHeight = () => {
-				return maxY + 1;
-			};
-
-			this.rowLength = width * 3;
-
-			this.stripBlinking = () => {
-				let i;
-				for (i = 2; i < imageData.length; i += 3) {
-					if (imageData[i] >= 8) {
-						imageData[i] -= 8;
-					}
-				}
-			};
-		}
-	}
-
-	// CP437 bytes only: utf8 opens go through core decodeAns
-	const loadAnsi = bytes => {
-		let escaped,
-				escapeCode,
-				j,
-				code,
-				values,
-				topOfScreen,
-				x,
-				y,
-				savedX,
-				savedY,
-				foreground,
-				background,
-				bold,
-				blink,
-				inverse;
-
-		const sauceData = getSauce(bytes, 80);
-		x = 1;
-		y = 1;
-		topOfScreen = 0;
-		escapeCode = '';
-		escaped = false;
-		const columns = sauceData.columns;
-		const imageData = new ScreenData(columns);
-		const file = new File(bytes);
-
-		const resetAttributes = () => {
-			foreground = magicNumbers.DEFAULT_FOREGROUND;
-			background = magicNumbers.DEFAULT_BACKGROUND;
-			bold = false;
-			blink = false;
-			inverse = false;
-		};
-		resetAttributes();
-
-		const newLine = () => {
-			x = 1;
-			if (y === 26 - 1) {
-				topOfScreen += 1;
-			} else {
-				y += 1;
-			}
-		};
-
-		const setPos = (newX, newY) => {
-			x = Math.min(columns, Math.max(1, newX));
-			y = Math.min(26, Math.max(1, newY));
-		};
-
-		const getValues = () => {
-			return escapeCode
-				.slice(1, -1)
-				.split(';')
-				.map(value => {
-					const parsedValue = parseInt(value, 10);
-					return isNaN(parsedValue) ? 1 : parsedValue;
-				});
-		};
-
-		while (!file.eof()) {
-			code = file.get();
-
-			if (escaped) {
-				escapeCode += String.fromCharCode(code);
-				if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
-					escaped = false;
-					values = getValues();
-					if (escapeCode.charAt(0) === '[') {
-						switch (escapeCode.charAt(escapeCode.length - 1)) {
-							case 'A':
-								y = Math.max(1, y - values[0]);
-								break;
-							case 'B':
-								y = Math.min(26 - 1, y + values[0]);
-								break;
-							case 'C':
-								if (x === columns) {
-									newLine();
-								}
-								x = Math.min(columns, x + values[0]);
-								break;
-							case 'D':
-								x = Math.max(1, x - values[0]);
-								break;
-							case 'H':
-								if (values.length === 1) {
-									setPos(1, values[0]);
-								} else {
-									setPos(values[1], values[0]);
-								}
-								break;
-							case 'J':
-								if (values[0] === 2) {
-									x = 1;
-									y = 1;
-									imageData.reset();
-								}
-								break;
-							case 'K':
-								for (j = x - 1; j < columns; j += 1) {
-									imageData.set(j, y - 1 + topOfScreen, 0, 0);
-								}
-								break;
-							case 'm':
-								for (j = 0; j < values.length; j += 1) {
-									if (values[j] >= 30 && values[j] <= 37) {
-										foreground = values[j] - 30;
-									} else if (values[j] >= 40 && values[j] <= 47) {
-										background = values[j] - 40;
-									} else {
-										switch (values[j]) {
-											case 0:
-												resetAttributes();
-												break;
-											case 1:
-												bold = true;
-												break;
-											case 5:
-												blink = true;
-												break;
-											case 7:
-												inverse = true;
-												break;
-											case 22:
-												bold = false;
-												break;
-											case 25:
-												blink = false;
-												break;
-											case 27:
-												inverse = false;
-												break;
-										}
-									}
-								}
-								break;
-							case 's':
-								savedX = x;
-								savedY = y;
-								break;
-							case 'u':
-								x = savedX;
-								y = savedY;
-								break;
-						}
-					}
-					escapeCode = '';
-				}
-			} else {
-				switch (code) {
-					case 10: // LF
-						newLine();
-						break;
-					case 13: // CR: a newline only as CRLF, a lone CR drops
-						if (file.peek() === 0x0a) {
-							file.read(1);
-							newLine();
-						}
-						break;
-					case 26: // SUB skipped: the real end is the file size or SAUCE
-						break;
-					default:
-						if (code === 27 && file.peek() === 0x5b) {
-							escaped = true;
-						} else {
-							if (!inverse) {
-								imageData.set(
-									x - 1,
-									y - 1 + topOfScreen,
-									code,
-									bold ? foreground + 8 : foreground,
-									blink ? background + 8 : background,
-								);
-							} else {
-								imageData.set(
-									x - 1,
-									y - 1 + topOfScreen,
-									code,
-									bold ? background + 8 : background,
-									blink ? foreground + 8 : foreground,
-								);
-							}
-							x += 1;
-							if (x === columns + 1) {
-								newLine();
-							}
-						}
-				}
-			}
-		}
-
-		return {
-			width: columns,
-			height: imageData.getHeight(),
-			data: imageData.getData(),
-			noblink: sauceData.iceColors,
-			title: sauceData.title,
-			author: sauceData.author,
-			group: sauceData.group,
-			comments: sauceData.comments,
-			fontName: sauceData.fontName,
-			letterSpacing: sauceData.letterSpacing,
-			sauceFlags: sauceData.sauceFlags,
-		};
-	};
-
-	const convertData = data => {
-		const output = new Uint16Array(data.length / 3);
-		for (let i = 0, j = 0; i < data.length; i += 1, j += 3) {
-			output[i] = (data[j] << 8) + (data[j + 2] << 4) + data[j + 1];
-		}
-		return output;
-	};
-
-	const bytesToString = (bytes, offset, size) => {
-		let text = '',
-				i;
-		for (i = 0; i < size; i++) {
-			const charCode = bytes[offset + i];
-			if (charCode === 0) {
-				break;
-			}
-			text += String.fromCharCode(charCode);
-		}
-		return text;
-	};
-
 	/**
 	 * The font an opened file should switch to, or null to keep the
 	 * current one. The author's SAUCE record outranks everything. Most
@@ -815,161 +373,13 @@ const loadModule = () => {
 		}
 	};
 
-	const getSauce = (bytes, defaultColumnValue) => {
-		let sauce;
-		let fileSize;
-		let dataType;
-		let flags;
-		let comments;
-		let columns = 0;
-		let rows = 0;
-		let commentsCount = 0;
-
-		const removeTrailingWhitespace = text => {
-			return text.replace(/\s+$/, '');
-		};
-
-		const readLE16 = (data, offset) => {
-			return data[offset] | (data[offset + 1] << 8);
-		};
-
-		const readLE32 = (data, offset) => {
-			return (
-				data[offset] |
-				(data[offset + 1] << 8) |
-				(data[offset + 2] << 16) |
-				(data[offset + 3] << 24)
-			);
-		};
-
-		// no content scan: every caller derives rows itself (the ANSI
-		// parser from the stream, BIN from payload size)
-		if (defaultColumnValue) {
-			columns = defaultColumnValue;
-		}
-
-		if (bytes.length >= 128) {
-			sauce = bytes.slice(-128);
-			if (
-				bytesToString(sauce, 0, 5) === 'SAUCE' &&
-				bytesToString(sauce, 5, 2) === '00'
-			) {
-				fileSize = readLE32(sauce, 90);
-				dataType = sauce[94];
-				commentsCount = sauce[104];
-
-				if (dataType === 5) {
-					if (sauce[95] > 0) {
-						columns = sauce[95] * 2;
-						rows = fileSize / columns / 2;
-					}
-				} else {
-					// SAUCE §FileType, TInfo1/TInfo2: 0 means not provided, so
-					// keep the caller's default over a 0-column document
-					const tinfo1 = readLE16(sauce, 96);
-					const tinfo2 = readLE16(sauce, 98);
-					if (tinfo1 > 0) {
-						columns = tinfo1;
-					}
-					if (tinfo2 > 0) {
-						rows = tinfo2;
-					}
-				}
-				flags = sauce[105];
-
-				comments = '';
-				if (commentsCount > 0) {
-					// SAUCE §Layout: "COMNT" plus 64-byte lines, then the record
-					const commentBlockSize = 5 + commentsCount * 64;
-					const totalSauceSize = commentBlockSize + 128;
-
-					if (bytes.length >= totalSauceSize) {
-						const commentBlockStart = bytes.length - totalSauceSize;
-						const commentId = bytesToString(bytes, commentBlockStart, 5);
-
-						if (commentId === 'COMNT') {
-							const commentLines = [];
-							for (let i = 0; i < commentsCount; i++) {
-								const lineOffset = commentBlockStart + 5 + i * 64;
-								const line = removeTrailingWhitespace(
-									bytesToString(bytes, lineOffset, 64),
-								);
-								commentLines.push(line);
-							}
-							comments = commentLines.join('\n');
-						}
-					}
-				}
-
-				return {
-					title: removeTrailingWhitespace(bytesToString(sauce, 7, 35)),
-					author: removeTrailingWhitespace(bytesToString(sauce, 42, 20)),
-					group: removeTrailingWhitespace(bytesToString(sauce, 62, 20)),
-					fileSize: fileSize,
-					columns: columns,
-					rows: rows,
-					iceColors: (flags & 0x01) === 1,
-					letterSpacing: lsFromSauceFlags(flags),
-					fontName: removeTrailingWhitespace(bytesToString(sauce, 106, 22)),
-					comments: comments,
-					sauceFlags: flags,
-				};
-			}
-		}
-		return {
-			title: '',
-			author: '',
-			group: '',
-			fileSize: bytes.length,
-			columns: columns,
-			rows: rows,
-			iceColors: false,
-			letterSpacing: undefined,
-			fontName: '',
-			comments: '',
-			sauceFlags: null,
-		};
-	};
-
-	const convertUInt8ToUint16 = (uint8Array, start, size) => {
-		let i, j;
-		const uint16Array = new Uint16Array(size / 2);
-		for (i = 0, j = 0; i < size; i += 2, j += 1) {
-			uint16Array[j] = (uint8Array[start + i] << 8) + uint8Array[start + i + 1];
-		}
-		return uint16Array;
-	};
-
-	const loadBin = bytes => {
-		const sauce = getSauce(bytes, 160);
-		// rows always derive from payload size and width: the FileType
-		// width when set (SAUCE §FileType: BinaryText stores width / 2
-		// there), else the 160-column default; FileType 0 reads as
-		// unspecified, like a zero TInfo
-		const payloadSize = sauce.fileSize > 0 ? sauce.fileSize : bytes.length;
-		sauce.rows = Math.floor(payloadSize / sauce.columns / 2);
-		const data = convertUInt8ToUint16(bytes, 0, sauce.columns * sauce.rows * 2);
-		return {
-			columns: sauce.columns,
-			rows: sauce.rows,
-			data: data,
-			iceColors: sauce.iceColors,
-			letterSpacing: sauce.letterSpacing,
-			title: sauce.title,
-			author: sauce.author,
-			group: sauce.group,
-			comments: sauce.comments,
-			sauceFlags: sauce.sauceFlags,
-		};
-	};
-
 	const checkUTF8 = file => file.endsWith('.utf8.ans') || file.endsWith('.txt');
 
-	const updateSauceModal = (imageData, sauceFlags = null) => {
-		$('sauceTitle').value = imageData.title || '';
-		$('sauceGroup').value = imageData.group || '';
-		$('sauceAuthor').value = imageData.author || '';
-		$('sauceComments').value = imageData.comments || '';
+	const updateSauceModal = (meta, sauceFlags = null) => {
+		$('sauceTitle').value = meta.title || '';
+		$('sauceGroup').value = meta.group || '';
+		$('sauceAuthor').value = meta.author || '';
+		$('sauceComments').value = meta.comments || '';
 		openedSauceFlags = sauceFlags;
 		lsTouchedSinceOpen = false;
 		enforceMaxBytes();
@@ -1003,15 +413,30 @@ const loadModule = () => {
 			}
 		});
 		reader.addEventListener('error', () => fail(reader.error));
+		// ANSI and BIN land alike: the doc rides the plane-native slot
+		// so PabloDraw t colors reach the canvas, and the lossy u16 view
+		// feeds legacy consumers
+		const openSauced = result => {
+			updateSauceModal(result.meta, flagsToStash(result.sauce));
+			const u16 = v3ToU16Lossy(result.doc);
+			callback(
+				u16.columns,
+				u16.rows,
+				u16.imageData,
+				u16.iceColors,
+				lsFromSauceFlags(result.sauce?.flags),
+				result.meta.fontName?.trim() || undefined,
+				result.doc,
+			);
+		};
 		const parse = data => {
-			let imageData;
 			switch (file.name.split('.').pop().toLowerCase()) {
 				case 'xb':
 				case 'xbin': {
 					// the doc rides the plane-native callback slot, and
 					// 512-glyph fonts keep their bytes
 					const result = decodeXBin(data);
-					updateSauceModal(result.meta, result.sauce?.flags ?? null);
+					updateSauceModal(result.meta, flagsToStash(result.sauce));
 					State.textArtCanvas.clearXBData(async () => {
 						if (result.palette6) {
 							State.textArtCanvas.setXBPaletteData(result.palette6);
@@ -1042,20 +467,11 @@ const loadModule = () => {
 					break;
 				}
 				case 'bin':
-					// clears any previous XB palette so it does not persist
-					State.textArtCanvas.clearXBData(() => {
-						imageData = loadBin(data);
-						// SAUCE §FileType: BinaryText flags are ANSiFlags, so
-						// BIN joins the modal and the round-trip stash like ans
-						updateSauceModal(imageData, imageData.sauceFlags ?? null);
-						callback(
-							imageData.columns,
-							imageData.rows,
-							imageData.data,
-							imageData.iceColors,
-							imageData.letterSpacing,
-						);
-					});
+					// clears any previous XB palette so it does not persist.
+					// SAUCE §FileType: BinaryText carries ANSiFlags and a
+					// FontName, so BIN joins the modal, the round-trip stash,
+					// and font selection like ans
+					State.textArtCanvas.clearXBData(() => openSauced(decodeBin(data)));
 					break;
 				case 'tnd':
 					// TundraDraw: 24-bit colors ride the v3 planes; the lossy
@@ -1072,7 +488,7 @@ const loadModule = () => {
 								author: result.meta.author,
 								comments: result.meta.comments,
 							},
-							result.sauce?.flags ?? null,
+							flagsToStash(result.sauce),
 						);
 						const u16 = v3ToU16Lossy(result.doc);
 						callback(
@@ -1143,6 +559,7 @@ const loadModule = () => {
 				case 'txt':
 				default:
 					State.textArtCanvas.clearXBData(() => {
+						let result;
 						// callers that know the bytes are scene art (the
 						// asciiarena browser mirrors the site's own decode
 						// rule) skip the UTF-8 reader outright
@@ -1150,38 +567,17 @@ const loadModule = () => {
 							try {
 								// the core reader builds v3 planes natively (glyph
 								// table, extended colors, LF after wrap)
-								const result = decodeAns(data, { utf8: true });
-								updateSauceModal(result.meta, result.sauce?.flags ?? null);
-								const u16 = v3ToU16Lossy(result.doc);
-								callback(
-									u16.columns,
-									u16.rows,
-									u16.imageData,
-									u16.iceColors,
-									lsFromSauceFlags(result.sauce?.flags),
-									result.meta.fontName?.trim() || undefined,
-									result.doc,
-								);
-								return;
+								result = decodeAns(data, { utf8: true });
 							} catch (error) {
 								// invalid UTF-8 means raw scene bytes (amiga
 								// latin-1 txt), not a broken file: fall through
-								// to the byte loader instead of dying
+								// to the CP437 read, where every byte is a glyph
 								if (!(error instanceof CodecError)) {
 									throw error;
 								}
 							}
 						}
-						imageData = loadAnsi(data);
-						updateSauceModal(imageData, imageData.sauceFlags ?? null);
-						callback(
-							imageData.width,
-							imageData.height,
-							convertData(imageData.data),
-							imageData.noblink,
-							imageData.letterSpacing,
-							imageData.fontName,
-						);
+						openSauced(result ?? decodeAns(data));
 					});
 					break;
 			}

@@ -9,12 +9,12 @@ test.describe('Collaboration and Chat Features', () => {
 		await page.waitForTimeout(1000);
 	});
 
-	test('should have chat button available', async ({ page }) => {
+	test('should hide the chat button outside a collab session', async ({ page }) => {
 		const chatButton = page.locator('#chatButton');
-		const count = await chatButton.count();
 
 		// the chat button only shows with websockets enabled
-		expect(count).toBeGreaterThanOrEqual(0);
+		await expect(chatButton).toBeAttached();
+		await expect(chatButton).toBeHidden();
 	});
 
 	test('should open chat window', async ({ page }) => {

@@ -183,7 +183,7 @@ const createWorkerHandler = inputHandle => {
 			// local autosave resumes with connected cleared, but the user
 			// must still hear that the session dropped
 			alert(
-				'You were disconnected from the server, try refreshing the page to try again.',
+				'Disconnected from the server. You are working locally again, and autosave is back on.',
 			);
 		}
 	};
