@@ -1,7 +1,6 @@
 /**
- * ANSI and SAUCE spec compliance, 2026-10 audit: the places our
- * reader and writer diverged from PabloDraw, moebiusXBIN, and the
- * written specs. Each case names the reference behavior it pins.
+ * ANSI and SAUCE spec compliance against PabloDraw, moebiusXBIN, and
+ * the written specs. Each case names the reference behavior it pins.
  */
 import { describe, it, expect } from 'vitest';
 import { decodeAns, encodeAns } from '../../src/js/core/codecs/ans.js';
@@ -22,9 +21,8 @@ const cellAt = (doc: ReturnType<typeof createDocV3>, x: number, y: number) =>
 
 describe('SGR empty parameters', () => {
 	it('ESC[m resets attributes like every reference', () => {
-		// bold white A, then ESC[m, then B: v2 read the empty param as 1
-		// (bold on) so B stayed bright; ANSI.SYS, PabloDraw, and
-		// moebiusXBIN all reset to plain gray
+		// an empty param read as 1 (bold on) leaves B bright; ANSI.SYS,
+		// PabloDraw, and moebiusXBIN all reset to plain gray
 		const { doc } = decodeAns(bytes('\x1b[1;37mA\x1b[mB'));
 		const a = cellAt(doc, 0, 0);
 		const b = cellAt(doc, 1, 0);
@@ -45,13 +43,24 @@ describe('HVP', () => {
 	});
 });
 
-describe('cursor clamp', () => {
-	it('ESC[26;1H cannot escape the 25-row scroll window', () => {
-		// paint at the clamped bottom, then one CUU must land on row 24
-		// (the cursor sits one column right of the X it just painted)
-		const { doc } = decodeAns(bytes('\x1b[26;1HX\x1b[1AY'));
-		expect(cellAt(doc, 0, 24).glyph & 0xffff).toBe(88);
-		expect(cellAt(doc, 1, 23).glyph & 0xffff).toBe(89);
+describe('CUP past the scroll window', () => {
+	it('ESC[26;1H scrolls the 25-row window and keeps row 25', () => {
+		// CUP-per-line art (TO-DIN.ICE) lands row 26 below row 25 like
+		// moebiusXBIN, not on top of it
+		const { doc } = decodeAns(bytes('\x1b[24;1HA\x1b[25;1HB\x1b[26;1HC'));
+		expect(cellAt(doc, 0, 23).glyph & 0xffff).toBe(65);
+		expect(cellAt(doc, 0, 24).glyph & 0xffff).toBe(66);
+		expect(cellAt(doc, 0, 25).glyph & 0xffff).toBe(67);
+		expect(doc.getRows()).toBe(26);
+	});
+
+	it('the cursor stays inside the window after the scroll', () => {
+		// CUD cannot snap up over painted rows, and CUU moves within
+		// the scrolled window (the cursor sits one column right of X)
+		const { doc } = decodeAns(bytes('\x1b[26;1HX\x1b[1BY\x1b[1AZ'));
+		expect(cellAt(doc, 0, 25).glyph & 0xffff).toBe(88);
+		expect(cellAt(doc, 1, 25).glyph & 0xffff).toBe(89);
+		expect(cellAt(doc, 2, 24).glyph & 0xffff).toBe(90);
 	});
 });
 
@@ -100,7 +109,7 @@ describe('PabloDraw 24-bit t sequences', () => {
 		expect(text).toContain('\x1b[1;250;90;90t');
 		const back = decodeAns(encoded);
 		expect(cellAt(back.doc, 0, 0).fg).toBe(rgbColor(250, 90, 90));
-		// the following classic cell got an explicit SGR, not stale RGB
+		// the following classic cell gets an explicit SGR, not stale RGB
 		expect(isPaletteColor(cellAt(back.doc, 1, 0).fg)).toBe(true);
 	});
 });
@@ -134,10 +143,62 @@ describe('EL erase and the RGB overlay', () => {
 	});
 });
 
+describe('UTF-8 deferred wrap', () => {
+	// a 4-column SAUCE width, so ABCD fills row 1 and wraps
+	const open = (between: string, before = '') => {
+		const body = new TextEncoder().encode(`${before}ABCD${between}\nE`);
+		const sauce = buildSauce({
+			dataType: 1,
+			fileType: 1,
+			fileSize: body.length,
+			columns: 4,
+			rows: 2,
+		});
+		const file = new Uint8Array(body.length + 1 + sauce.length);
+		file.set(body, 0);
+		file[body.length] = 0x1a;
+		file.set(sauce, body.length + 1);
+		return decodeAns(file, { utf8: true }).doc;
+	};
+
+	it.each([
+		['nothing', ''],
+		['SGR', '\x1b[31m'],
+		['PabloDraw t', '\x1b[1;255;0;0t'],
+		['ESC[s', '\x1b[s'],
+		['ESC[?33h', '\x1b[?33h'],
+		['ESC[?7h', '\x1b[?7h'],
+		['ESC[?7l', '\x1b[?7l'],
+		['EL', '\x1b[K'],
+		['ESC[s ESC[u', '\x1b[s\x1b[u'],
+	])('%s between a full row and its LF leaves one row', (_label, between) => {
+		// durdraw wraps at the next glyph, so none of these ends the
+		// pending wrap
+		const doc = open(between);
+		expect(doc.getRows()).toBe(2);
+		expect(cellAt(doc, 0, 1).glyph & 0xffff).toBe(69);
+	});
+
+	it('a cursor move between a full row and its LF ends the wrap', () => {
+		const doc = open('\x1b[C');
+		expect(doc.getRows()).toBe(3);
+		expect(cellAt(doc, 0, 2).glyph & 0xffff).toBe(69);
+	});
+
+	it('ESC[u restores the wrap state ESC[s saved with the cursor', () => {
+		// saved before the wrap: the restore leaves nothing pending, so
+		// the LF moves down instead of E overwriting A
+		const doc = open('\x1b[u', '\x1b[s');
+		expect(cellAt(doc, 0, 0).glyph & 0xffff).toBe(65);
+		expect(cellAt(doc, 0, 1).glyph & 0xffff).toBe(69);
+	});
+});
+
 describe('UTF-8 control-byte lookalikes', () => {
 	it('glyphs living on cp437 control bytes stay cells', () => {
-		// U+25D9 is cp437 0x0A: the old reverse-mapped dispatch turned it
-		// into a line feed, corrupting moebiusXBIN's own UTF-8 exports
+		// U+25D9 is cp437 0x0A: dispatching on the reverse-mapped byte
+		// turns it into a line feed and corrupts moebiusXBIN's own UTF-8
+		// exports
 		const encoder = new TextEncoder();
 		const { doc } = decodeAns(encoder.encode('◙♪→'), {
 			utf8: true,
@@ -165,7 +226,8 @@ describe('SAUCE writer compliance', () => {
 
 	it('writes text fields as CP437 bytes', () => {
 		const record = buildSauce({ ...base, title: 'café' });
-		// cp437 0x82 is e-acute; the old UTF-8 encoding wrote C3 A9
+		// SAUCE §Layout: Character fields are CP437, so e-acute is 0x82,
+		// never UTF-8's C3 A9
 		expect(record[7 + 3]).toBe(0x82);
 	});
 

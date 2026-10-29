@@ -5,6 +5,7 @@ import { $, enforceMaxBytes } from './ui.js';
 import {
 	CodecError,
 	decodeAns,
+	decodeBin,
 	decodeDur,
 	decodeEnvelope,
 	decodeTundra,
@@ -23,11 +24,11 @@ import {
 	v3ToU16Lossy,
 } from '../core/index';
 
-// SAUCE flags round trip: the AR bits and an LS "no preference" from
-// an opened file survive a resave verbatim; v2 rewrote author intent
-// with a forced AR 10 and LS 01 on every save. An LS the artist
-// touches after open writes the explicit bit instead. Module scope:
-// the Load side stashes, the Save side reads.
+// SAUCE §ANSiFlags round trip (sauceMetaWithFont): the AR bits and an
+// LS "no preference" from an opened file survive a resave verbatim,
+// never a forced AR 10 / LS 01 that rewrites author intent. An LS the
+// artist touches after open writes the explicit bit instead. Module
+// scope: the Load side stashes, the Save side reads.
 let openedSauceFlags = null;
 let lsTouchedSinceOpen = false;
 // optional chain: test harnesses stub document with createElement only
@@ -35,11 +36,11 @@ document.addEventListener?.('onLetterSpacingChange', () => {
 	lsTouchedSinceOpen = true;
 });
 
-// SAUCE LS bits (flags >> 1): 10 forces 9px, 01 forces 8px, 00 or a
-// missing record states no preference, so opens leave the session
-// toggle alone (the appliers act on booleans only). Every loader maps
-// flags through here; hand-collapsed bits would resurrect the forced
-// toggle this exists to end
+// SAUCE §ANSiFlags, LS bits (flags >> 1): 10 forces 9px, 01 forces
+// 8px, 00 or a missing record states no preference, so opens leave
+// the session toggle alone (the appliers act on booleans only). Every
+// loader maps flags through here; hand-collapsed bits force the toggle
+// on files that state no preference
 const lsFromSauceFlags = flags => {
 	const bits = ((flags ?? 0) >> 1) & 0x03;
 	if (bits === 2) {
@@ -51,6 +52,10 @@ const lsFromSauceFlags = flags => {
 	return undefined;
 };
 
+// SAUCE §Layout note 6: a record of unknown version states no flags,
+// so its file resaves like one without SAUCE
+const flagsToStash = sauce => (sauce?.version === '00' ? sauce.flags : null);
+
 // File New and other whole-doc replacements owe nothing to the last
 // opened file's SAUCE flags
 const resetSauceFlags = () => {
@@ -59,454 +64,6 @@ const resetSauceFlags = () => {
 };
 
 const loadModule = () => {
-	class File {
-		constructor(bytes) {
-			let pos, commentCount;
-
-			const SAUCE_ID = new Uint8Array([0x53, 0x41, 0x55, 0x43, 0x45]);
-			const COMNT_ID = new Uint8Array([0x43, 0x4f, 0x4d, 0x4e, 0x54]);
-
-			this.get = () => {
-				if (pos >= bytes.length) {
-					throw new Error('Requested byte offset out of bounds.');
-				}
-				pos += 1;
-				return bytes[pos - 1];
-			};
-
-			this.get16 = () => {
-				const v = this.get();
-				return v + (this.get() << 8);
-			};
-
-			this.get32 = () => {
-				let v;
-				v = this.get();
-				v += this.get() << 8;
-				v += this.get() << 16;
-				return v + (this.get() << 24);
-			};
-
-			this.getC = () => {
-				return String.fromCharCode(this.get());
-			};
-
-			this.getS = num => {
-				let string;
-				string = '';
-				while (num > 0) {
-					string += this.getC();
-					num -= 1;
-				}
-				return string.replace(/\s+$/, '');
-			};
-
-			this.lookahead = match => {
-				let i;
-				for (i = 0; i < match.length; i += 1) {
-					if (pos + i === bytes.length || bytes[pos + i] !== match[i]) {
-						break;
-					}
-				}
-				return i === match.length;
-			};
-
-			this.read = num => {
-				const t = pos;
-
-				num = num || this.size - pos;
-				while ((pos += 1) < this.size) {
-					num -= 1;
-					if (num === 0) {
-						break;
-					}
-				}
-				return bytes.subarray(t, pos);
-			};
-
-			this.seek = newPos => {
-				pos = newPos;
-			};
-
-			this.peek = num => {
-				num = num || 0;
-				return bytes[pos + num];
-			};
-
-			this.getPos = () => {
-				return pos;
-			};
-
-			this.eof = () => {
-				return pos === this.size;
-			};
-
-			pos = bytes.length - 128;
-
-			if (this.lookahead(SAUCE_ID)) {
-				this.sauce = {};
-				this.getS(5);
-				this.sauce.version = this.getS(2);
-				this.sauce.title = this.getS(35);
-				this.sauce.author = this.getS(20);
-				this.sauce.group = this.getS(20);
-				this.sauce.date = this.getS(8);
-				this.sauce.fileSize = this.get32();
-				this.sauce.dataType = this.get();
-				this.sauce.fileType = this.get();
-				this.sauce.tInfo1 = this.get16();
-				this.sauce.tInfo2 = this.get16();
-				this.sauce.tInfo3 = this.get16();
-				this.sauce.tInfo4 = this.get16();
-
-				this.sauce.comments = [];
-				commentCount = this.get();
-				this.sauce.flags = this.get();
-				if (commentCount > 0) {
-					pos = bytes.length - 128 - commentCount * 64 - 5;
-
-					if (this.lookahead(COMNT_ID)) {
-						this.getS(5);
-
-						while (commentCount > 0) {
-							this.sauce.comments.push(this.getS(64));
-							commentCount -= 1;
-						}
-					}
-				}
-			}
-
-			pos = 0;
-			if (this.sauce) {
-				if (this.sauce.fileSize > 0 && this.sauce.fileSize < bytes.length) {
-					this.size = this.sauce.fileSize;
-				} else {
-					this.size = bytes.length - 128;
-				}
-			} else {
-				this.size = bytes.length;
-			}
-		}
-	}
-
-	class ScreenData {
-		constructor(width) {
-			let imageData, maxY, pos;
-
-			const binColor = ansiColor => {
-				switch (ansiColor) {
-					case 4:
-						return 1;
-					case 6:
-						return 3;
-					case 1:
-						return 4;
-					case 3:
-						return 6;
-					case 12:
-						return 9;
-					case 14:
-						return 11;
-					case 9:
-						return 12;
-					case 11:
-						return 14;
-					default:
-						return ansiColor;
-				}
-			};
-
-			this.reset = () => {
-				imageData = new Uint8Array(width * 100 * 3);
-				maxY = 0;
-				pos = 0;
-			};
-
-			this.reset();
-
-			this.raw = bytes => {
-				let i, j;
-				maxY = Math.ceil(bytes.length / 2 / width);
-				imageData = new Uint8Array(width * maxY * 3);
-				for (i = 0, j = 0; j < bytes.length; i += 3, j += 2) {
-					imageData[i] = bytes[j];
-					imageData[i + 1] = bytes[j + 1] & 15;
-					imageData[i + 2] = bytes[j + 1] >> 4;
-				}
-			};
-
-			const extendImageData = y => {
-				const newImageData = new Uint8Array(
-					width * (y + 100) * 3 + imageData.length,
-				);
-				newImageData.set(imageData, 0);
-				imageData = newImageData;
-			};
-
-			this.set = (x, y, charCode, fg, bg) => {
-				pos = (y * width + x) * 3;
-				if (pos >= imageData.length) {
-					extendImageData(y);
-				}
-				imageData[pos] = charCode;
-				imageData[pos + 1] = binColor(fg);
-				imageData[pos + 2] = binColor(bg);
-				if (y > maxY) {
-					maxY = y;
-				}
-			};
-
-			this.getData = () => {
-				return imageData.subarray(0, width * (maxY + 1) * 3);
-			};
-
-			this.getHeight = () => {
-				return maxY + 1;
-			};
-
-			this.rowLength = width * 3;
-
-			this.stripBlinking = () => {
-				let i;
-				for (i = 2; i < imageData.length; i += 3) {
-					if (imageData[i] >= 8) {
-						imageData[i] -= 8;
-					}
-				}
-			};
-		}
-	}
-
-	// the utf8 pipeline is core decodeAns/encodeUtf8; this legacy parser
-	// only ever reads CP437 bytes (its one caller passed literal false)
-	const loadAnsi = bytes => {
-		let escaped,
-				escapeCode,
-				j,
-				code,
-				values,
-				topOfScreen,
-				x,
-				y,
-				savedX,
-				savedY,
-				foreground,
-				background,
-				bold,
-				blink,
-				inverse;
-
-		const sauceData = getSauce(bytes, 80);
-		x = 1;
-		y = 1;
-		topOfScreen = 0;
-		escapeCode = '';
-		escaped = false;
-		const columns = sauceData.columns;
-		const imageData = new ScreenData(columns);
-		const file = new File(bytes);
-
-		const resetAttributes = () => {
-			foreground = magicNumbers.DEFAULT_FOREGROUND;
-			background = magicNumbers.DEFAULT_BACKGROUND;
-			bold = false;
-			blink = false;
-			inverse = false;
-		};
-		resetAttributes();
-
-		const newLine = () => {
-			x = 1;
-			if (y === 26 - 1) {
-				topOfScreen += 1;
-			} else {
-				y += 1;
-			}
-		};
-
-		const setPos = (newX, newY) => {
-			x = Math.min(columns, Math.max(1, newX));
-			y = Math.min(26, Math.max(1, newY));
-		};
-
-		const getValues = () => {
-			return escapeCode
-				.slice(1, -1)
-				.split(';')
-				.map(value => {
-					const parsedValue = parseInt(value, 10);
-					return isNaN(parsedValue) ? 1 : parsedValue;
-				});
-		};
-
-		while (!file.eof()) {
-			code = file.get();
-
-			if (escaped) {
-				escapeCode += String.fromCharCode(code);
-				if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
-					escaped = false;
-					values = getValues();
-					if (escapeCode.charAt(0) === '[') {
-						switch (escapeCode.charAt(escapeCode.length - 1)) {
-							case 'A':
-								y = Math.max(1, y - values[0]);
-								break;
-							case 'B':
-								y = Math.min(26 - 1, y + values[0]);
-								break;
-							case 'C':
-								if (x === columns) {
-									newLine();
-								}
-								x = Math.min(columns, x + values[0]);
-								break;
-							case 'D':
-								x = Math.max(1, x - values[0]);
-								break;
-							case 'H':
-								if (values.length === 1) {
-									setPos(1, values[0]);
-								} else {
-									setPos(values[1], values[0]);
-								}
-								break;
-							case 'J':
-								if (values[0] === 2) {
-									x = 1;
-									y = 1;
-									imageData.reset();
-								}
-								break;
-							case 'K':
-								for (j = x - 1; j < columns; j += 1) {
-									imageData.set(j, y - 1 + topOfScreen, 0, 0);
-								}
-								break;
-							case 'm':
-								for (j = 0; j < values.length; j += 1) {
-									if (values[j] >= 30 && values[j] <= 37) {
-										foreground = values[j] - 30;
-									} else if (values[j] >= 40 && values[j] <= 47) {
-										background = values[j] - 40;
-									} else {
-										switch (values[j]) {
-											case 0:
-												resetAttributes();
-												break;
-											case 1:
-												bold = true;
-												break;
-											case 5:
-												blink = true;
-												break;
-											case 7:
-												inverse = true;
-												break;
-											case 22:
-												bold = false;
-												break;
-											case 25:
-												blink = false;
-												break;
-											case 27:
-												inverse = false;
-												break;
-										}
-									}
-								}
-								break;
-							case 's':
-								savedX = x;
-								savedY = y;
-								break;
-							case 'u':
-								x = savedX;
-								y = savedY;
-								break;
-						}
-					}
-					escapeCode = '';
-				}
-			} else {
-				switch (code) {
-					case 10: // Lone linefeed (LF).
-						newLine();
-						break;
-					case 13: // Carriage Return, and Linefeed (CRLF)
-						if (file.peek() === 0x0a) {
-							file.read(1);
-							newLine();
-						}
-						break;
-					case 26: // Ignore eof characters until the actual end-of-file, or sauce record
-						break;
-					default:
-						if (code === 27 && file.peek() === 0x5b) {
-							escaped = true;
-						} else {
-							if (!inverse) {
-								imageData.set(
-									x - 1,
-									y - 1 + topOfScreen,
-									code,
-									bold ? foreground + 8 : foreground,
-									blink ? background + 8 : background,
-								);
-							} else {
-								imageData.set(
-									x - 1,
-									y - 1 + topOfScreen,
-									code,
-									bold ? background + 8 : background,
-									blink ? foreground + 8 : foreground,
-								);
-							}
-							x += 1;
-							if (x === columns + 1) {
-								newLine();
-							}
-						}
-				}
-			}
-		}
-
-		return {
-			width: columns,
-			height: imageData.getHeight(),
-			data: imageData.getData(),
-			noblink: sauceData.iceColors,
-			title: sauceData.title,
-			author: sauceData.author,
-			group: sauceData.group,
-			comments: sauceData.comments,
-			fontName: sauceData.fontName,
-			letterSpacing: sauceData.letterSpacing,
-			sauceFlags: sauceData.sauceFlags,
-		};
-	};
-
-	const convertData = data => {
-		const output = new Uint16Array(data.length / 3);
-		for (let i = 0, j = 0; i < data.length; i += 1, j += 3) {
-			output[i] = (data[j] << 8) + (data[j + 2] << 4) + data[j + 1];
-		}
-		return output;
-	};
-
-	const bytesToString = (bytes, offset, size) => {
-		let text = '',
-				i;
-		for (i = 0; i < size; i++) {
-			const charCode = bytes[offset + i];
-			if (charCode === 0) {
-				break;
-			} // Stop at null terminator
-			text += String.fromCharCode(charCode);
-		}
-		return text;
-	};
-
 	/**
 	 * The font an opened file should switch to, or null to keep the
 	 * current one. The author's SAUCE record outranks everything. Most
@@ -554,7 +111,6 @@ const loadModule = () => {
 			case 'IBM EGA43':
 				return 'CP437 8x8';
 
-			// Code page variants
 			case 'IBM VGA 437':
 				return 'CP437 8x16';
 			case 'IBM VGA50 437':
@@ -588,7 +144,6 @@ const loadModule = () => {
 			case 'IBM EGA43 852':
 				return 'CP852 8x8';
 
-			// Amiga fonts
 			case 'Amiga Topaz 1':
 				return 'Topaz 500 8x16';
 			case 'Amiga Topaz 1+':
@@ -606,13 +161,11 @@ const loadModule = () => {
 			case 'Amiga mOsOul':
 				return 'mO\'sOul 8x16';
 
-			// C64 fonts
 			case 'C64 PETSCII unshifted':
 				return 'C64 PETSCII unshifted 8x8';
 			case 'C64 PETSCII shifted':
 				return 'C64 PETSCII shifted 8x8';
 
-			// Modern XBIN fonts
 			case 'TOPAZ_437':
 			case 'Topaz-437':
 			case 'Topaz_437':
@@ -724,7 +277,6 @@ const loadModule = () => {
 			case 'CP852 8x14':
 				return 'IBM EGA 852';
 
-			// Amiga fonts
 			case 'Topaz 500 8x16':
 				return 'Amiga Topaz 1';
 			case 'Topaz+ 500 8x16':
@@ -742,13 +294,11 @@ const loadModule = () => {
 			case 'mO\'sOul 8x16':
 				return 'Amiga mOsOul';
 
-			// C64 fonts
 			case 'C64 PETSCII unshifted 8x8':
 				return 'C64 PETSCII unshifted';
 			case 'C64 PETSCII shifted 8x8':
 				return 'C64 PETSCII shifted';
 
-			// Modern XBIN fonts
 			case 'Topaz-437 8x16':
 				return 'Topaz-437';
 			case 'Human Fossil 8x16':
@@ -823,163 +373,13 @@ const loadModule = () => {
 		}
 	};
 
-	const getSauce = (bytes, defaultColumnValue) => {
-		let sauce;
-		let fileSize;
-		let dataType;
-		let flags;
-		let comments;
-		let columns = 0;
-		let rows = 0;
-		let commentsCount = 0;
-
-		const removeTrailingWhitespace = text => {
-			return text.replace(/\s+$/, '');
-		};
-
-		const readLE16 = (data, offset) => {
-			return data[offset] | (data[offset + 1] << 8);
-		};
-
-		const readLE32 = (data, offset) => {
-			return (
-				data[offset] |
-				(data[offset + 1] << 8) |
-				(data[offset + 2] << 16) |
-				(data[offset + 3] << 24)
-			);
-		};
-
-		// the old content-derived column/row scan was dead work: the
-		// default always clobbered its columns, and every caller derives
-		// rows itself (the ANSI parser from the stream, BIN from payload
-		// size)
-		if (defaultColumnValue) {
-			columns = defaultColumnValue;
-		}
-
-		if (bytes.length >= 128) {
-			sauce = bytes.slice(-128);
-			if (
-				bytesToString(sauce, 0, 5) === 'SAUCE' &&
-				bytesToString(sauce, 5, 2) === '00'
-			) {
-				fileSize = readLE32(sauce, 90);
-				dataType = sauce[94];
-				commentsCount = sauce[104];
-
-				if (dataType === 5) {
-					if (sauce[95] > 0) {
-						columns = sauce[95] * 2;
-						rows = fileSize / columns / 2;
-					}
-				} else {
-					// TInfo of 0 means "unspecified" in wild files: keep the
-					// caller's default instead of a 0-column document
-					const tinfo1 = readLE16(sauce, 96);
-					const tinfo2 = readLE16(sauce, 98);
-					if (tinfo1 > 0) {
-						columns = tinfo1;
-					}
-					if (tinfo2 > 0) {
-						rows = tinfo2;
-					}
-				}
-				flags = sauce[105];
-
-				comments = '';
-				if (commentsCount > 0) {
-					const commentBlockSize = 5 + commentsCount * 64; // "COMNT" + comment lines
-					const totalSauceSize = commentBlockSize + 128; // Comment block + SAUCE record
-
-					if (bytes.length >= totalSauceSize) {
-						const commentBlockStart = bytes.length - totalSauceSize;
-						const commentId = bytesToString(bytes, commentBlockStart, 5);
-
-						if (commentId === 'COMNT') {
-							const commentLines = [];
-							for (let i = 0; i < commentsCount; i++) {
-								const lineOffset = commentBlockStart + 5 + i * 64;
-								const line = removeTrailingWhitespace(
-									bytesToString(bytes, lineOffset, 64),
-								);
-								commentLines.push(line);
-							}
-							comments = commentLines.join('\n');
-						}
-					}
-				}
-
-				return {
-					title: removeTrailingWhitespace(bytesToString(sauce, 7, 35)),
-					author: removeTrailingWhitespace(bytesToString(sauce, 42, 20)),
-					group: removeTrailingWhitespace(bytesToString(sauce, 62, 20)),
-					fileSize: fileSize,
-					columns: columns,
-					rows: rows,
-					iceColors: (flags & 0x01) === 1,
-					letterSpacing: lsFromSauceFlags(flags),
-					fontName: removeTrailingWhitespace(bytesToString(sauce, 106, 22)),
-					comments: comments,
-					sauceFlags: flags,
-				};
-			}
-		}
-		return {
-			title: '',
-			author: '',
-			group: '',
-			fileSize: bytes.length,
-			columns: columns,
-			rows: rows,
-			iceColors: false,
-			letterSpacing: undefined,
-			fontName: '',
-			comments: '',
-			sauceFlags: null,
-		};
-	};
-
-	const convertUInt8ToUint16 = (uint8Array, start, size) => {
-		let i, j;
-		const uint16Array = new Uint16Array(size / 2);
-		for (i = 0, j = 0; i < size; i += 2, j += 1) {
-			uint16Array[j] = (uint8Array[start + i] << 8) + uint8Array[start + i + 1];
-		}
-		return uint16Array;
-	};
-
-	const loadBin = bytes => {
-		const sauce = getSauce(bytes, 160);
-		// A binary payload has no newlines, so getSauce's content-derived
-		// row count is meaningless for BIN. Rows always derive from the
-		// payload size and the selected width: SAUCE FileType when set,
-		// else the 160-column default (FileType 0 means "unspecified",
-		// like a zero TInfo).
-		const payloadSize = sauce.fileSize > 0 ? sauce.fileSize : bytes.length;
-		sauce.rows = Math.floor(payloadSize / sauce.columns / 2);
-		const data = convertUInt8ToUint16(bytes, 0, sauce.columns * sauce.rows * 2);
-		return {
-			columns: sauce.columns,
-			rows: sauce.rows,
-			data: data,
-			iceColors: sauce.iceColors,
-			letterSpacing: sauce.letterSpacing,
-			title: sauce.title,
-			author: sauce.author,
-			group: sauce.group,
-			comments: sauce.comments,
-			sauceFlags: sauce.sauceFlags,
-		};
-	};
-
 	const checkUTF8 = file => file.endsWith('.utf8.ans') || file.endsWith('.txt');
 
-	const updateSauceModal = (imageData, sauceFlags = null) => {
-		$('sauceTitle').value = imageData.title || '';
-		$('sauceGroup').value = imageData.group || '';
-		$('sauceAuthor').value = imageData.author || '';
-		$('sauceComments').value = imageData.comments || '';
+	const updateSauceModal = (meta, sauceFlags = null) => {
+		$('sauceTitle').value = meta.title || '';
+		$('sauceGroup').value = meta.group || '';
+		$('sauceAuthor').value = meta.author || '';
+		$('sauceComments').value = meta.comments || '';
 		openedSauceFlags = sauceFlags;
 		lsTouchedSinceOpen = false;
 		enforceMaxBytes();
@@ -1013,15 +413,30 @@ const loadModule = () => {
 			}
 		});
 		reader.addEventListener('error', () => fail(reader.error));
+		// ANSI and BIN land alike: the doc rides the plane-native slot
+		// so PabloDraw t colors reach the canvas, and the lossy u16 view
+		// feeds legacy consumers
+		const openSauced = result => {
+			updateSauceModal(result.meta, flagsToStash(result.sauce));
+			const u16 = v3ToU16Lossy(result.doc);
+			callback(
+				u16.columns,
+				u16.rows,
+				u16.imageData,
+				u16.iceColors,
+				lsFromSauceFlags(result.sauce?.flags),
+				result.meta.fontName?.trim() || undefined,
+				result.doc,
+			);
+		};
 		const parse = data => {
-			let imageData;
 			switch (file.name.split('.').pop().toLowerCase()) {
 				case 'xb':
 				case 'xbin': {
-					// core decoder: the doc rides the plane-native callback slot
-					// like tnd/dur/0wnz, and 512-glyph fonts keep their bytes
+					// the doc rides the plane-native callback slot, and
+					// 512-glyph fonts keep their bytes
 					const result = decodeXBin(data);
-					updateSauceModal(result.meta, result.sauce?.flags ?? null);
+					updateSauceModal(result.meta, flagsToStash(result.sauce));
 					State.textArtCanvas.clearXBData(async () => {
 						if (result.palette6) {
 							State.textArtCanvas.setXBPaletteData(result.palette6);
@@ -1044,7 +459,7 @@ const loadModule = () => {
 							u16.rows,
 							u16.imageData,
 							u16.iceColors,
-							undefined, // XBin SAUCE defines no LS bits
+							undefined, // SAUCE §FileType: XBin flags are 0, no LS
 							undefined,
 							result.doc,
 						);
@@ -1052,28 +467,20 @@ const loadModule = () => {
 					break;
 				}
 				case 'bin':
-					// Clear any previous XB data to avoid palette persistence
-					State.textArtCanvas.clearXBData(() => {
-						imageData = loadBin(data);
-						// BIN SAUCE is real (BinaryText defines the flags), so
-						// it joins the modal and the round-trip stash like ans
-						updateSauceModal(imageData, imageData.sauceFlags ?? null);
-						callback(
-							imageData.columns,
-							imageData.rows,
-							imageData.data,
-							imageData.iceColors,
-							imageData.letterSpacing,
-						);
-					});
+					// clears any previous XB palette so it does not persist.
+					// SAUCE §FileType: BinaryText carries ANSiFlags and a
+					// FontName, so BIN joins the modal, the round-trip stash,
+					// and font selection like ans
+					State.textArtCanvas.clearXBData(() => openSauced(decodeBin(data)));
 					break;
 				case 'tnd':
 					// TundraDraw: 24-bit colors ride the v3 planes; the lossy
 					// u16 projection feeds legacy consumers
 					State.textArtCanvas.clearXBData(() => {
 						const result = decodeTundra(data);
-						// TundraDraw files carry real ANSiFlags, so the stash
-						// round-trips them like an .ans open would
+						// SAUCE §FileType gives TundraDraw Flags 0, but the .tnd
+						// writer stores ANSiFlags, so the stash round-trips them
+						// like an .ans open would
 						updateSauceModal(
 							{
 								title: result.meta.title,
@@ -1081,7 +488,7 @@ const loadModule = () => {
 								author: result.meta.author,
 								comments: result.meta.comments,
 							},
-							result.sauce?.flags ?? null,
+							flagsToStash(result.sauce),
 						);
 						const u16 = v3ToU16Lossy(result.doc);
 						callback(
@@ -1096,8 +503,6 @@ const loadModule = () => {
 					});
 					break;
 				case 'dur':
-					// durdraw v7/v8 movie: frames import with the doc; frame 0
-					// displays
 					State.textArtCanvas.clearXBData(guarded(async () => {
 						const result = await decodeDur(data);
 						updateSauceModal({
@@ -1117,7 +522,6 @@ const loadModule = () => {
 					}));
 					break;
 				case '0wnz':
-					// native t0wnz-doc envelope
 					State.textArtCanvas.clearXBData(guarded(async () => {
 						const result = await decodeEnvelope(data);
 						if (result.fontBytes) {
@@ -1155,47 +559,25 @@ const loadModule = () => {
 				case 'txt':
 				default:
 					State.textArtCanvas.clearXBData(() => {
+						let result;
 						// callers that know the bytes are scene art (the
 						// asciiarena browser mirrors the site's own decode
 						// rule) skip the UTF-8 reader outright
 						if (checkUTF8(file.name.toLowerCase()) && !opts.preferBytes) {
 							try {
-								// UTF-8 opens go through the core reader, which
-								// builds v3 planes natively (glyph table, extended
-								// colors, LF after wrap); the doc rides the
-								// plane-native callback slot like tnd/dur/0wnz
-								const result = decodeAns(data, { utf8: true });
-								updateSauceModal(result.meta, result.sauce?.flags ?? null);
-								const u16 = v3ToU16Lossy(result.doc);
-								callback(
-									u16.columns,
-									u16.rows,
-									u16.imageData,
-									u16.iceColors,
-									lsFromSauceFlags(result.sauce?.flags),
-									result.meta.fontName?.trim() || undefined,
-									result.doc,
-								);
-								return;
+								// the core reader builds v3 planes natively (glyph
+								// table, extended colors, LF after wrap)
+								result = decodeAns(data, { utf8: true });
 							} catch (error) {
 								// invalid UTF-8 means raw scene bytes (amiga
 								// latin-1 txt), not a broken file: fall through
-								// to the byte loader instead of dying
+								// to the CP437 read, where every byte is a glyph
 								if (!(error instanceof CodecError)) {
 									throw error;
 								}
 							}
 						}
-						imageData = loadAnsi(data);
-						updateSauceModal(imageData, imageData.sauceFlags ?? null);
-						callback(
-							imageData.width,
-							imageData.height,
-							convertData(imageData.data),
-							imageData.noblink,
-							imageData.letterSpacing,
-							imageData.fontName,
-						);
+						openSauced(result ?? decodeAns(data));
 					});
 					break;
 			}
@@ -1278,18 +660,16 @@ const saveModule = () => {
 			}
 		} catch (error) {
 			if (error.name === 'AbortError') {
-				// Silently ignore user cancel
+				// user cancelled the picker
 			} else {
 				throw error;
 			}
 		}
 	};
 
-	// Format-budget linter + compression toggle: lossy saves confirm
-	// through the export modal when the doc holds anything the target
-	// format cannot; XBin always shows it, because the RLE checkbox
-	// lives there. Falls through silently when the modal infrastructure
-	// is absent (unit tests, headless embeds).
+	// XBin always shows the export modal, because the RLE checkbox
+	// lives there; with no modal infrastructure (unit tests, headless
+	// embeds) every save proceeds silently
 	const confirmExport = (format, label, { compressToggle = false } = {}) =>
 		new Promise(resolve => {
 			const modal = State.modal;
@@ -1339,8 +719,8 @@ const saveModule = () => {
 		if (!(await confirmExport('ans', 'ANSi')).proceed) {
 			return;
 		}
-		// the core writer: lossy per the modal's warnings, and 24-bit
-		// plane colors ride PabloDraw t sequences over the SGR base
+		// lossy per the modal's warnings; 24-bit plane colors ride
+		// PabloDraw t sequences over the SGR base
 		const bytes = encodeAns(State.textArtCanvas.getDoc(), {
 			lossy: true,
 			frameIndex: State.textArtCanvas.getCurrentFrame?.() ?? 0,
@@ -1349,13 +729,10 @@ const saveModule = () => {
 		await saveFile(bytes, undefined, State.title + '.ans');
 	};
 
-	// UTF-8 and plain-text exports go through the core v3 writer: one
-	// cell per column, LF endings, unicode glyphs ride the doc glyph
-	// table, ice-vs-blink per the artist's choice
 	const utf8 = async () => {
 		// the default ice presentation drops blink over extended
 		// backgrounds; the lint names it, the artist decides.
-		// utf8Blink stays unwired: its writer keeps the attr
+		// utf8Blink skips the confirm: its writer keeps the attr
 		if (!(await confirmExport('utf8', 'UTF-8 ANSi')).proceed) {
 			return;
 		}
@@ -1391,7 +768,8 @@ const saveModule = () => {
 			await saveFile(bytes, undefined, State.title + '.bin');
 		} catch (error) {
 			if (error instanceof CodecError) {
-				// odd column counts used to no-op silently after the confirm
+				// a refused shape (odd or >510 width, the cell ceiling) must
+				// not fail silently after the confirm
 				alert(`BIN export failed: ${error.message}`);
 				return;
 			}
@@ -1414,7 +792,7 @@ const saveModule = () => {
 	};
 
 	const writeXb = async (compress = true) => {
-		// Prefer the original embedded XB font bytes (full 512-glyph
+		// prefer the original embedded XB font bytes (full 512-glyph
 		// fonts survive); the live font object only holds the 256
 		// renderable glyphs
 		const embeddedFont =
@@ -1426,7 +804,7 @@ const saveModule = () => {
 			(embeddedFont && embeddedFont.bytes) ||
 			(liveFontData && liveFontData.data) ||
 			null;
-		// Header wants the UNSCALED glyph height; getHeight() is zoom-scaled
+		// header wants the UNSCALED glyph height; getHeight() is zoom-scaled
 		const fontHeight =
 			(embeddedFont && embeddedFont.height) ||
 			(liveFontData && liveFontData.height) ||
@@ -1492,14 +870,13 @@ const saveModule = () => {
 	};
 
 	const tnd = async () => {
-		// the linter fronts the throw cases (unicode glyphs, blink) plus
-		// the silent chars-1-6 blanking, so the artist decides first
+		// the linter fronts what encodeTundra degrades (unicode glyphs
+		// voice '?', blink drops, chars 1-6 blank): the artist decides first
 		if (!(await confirmExport('tnd', 'TundraDraw')).proceed) {
 			return;
 		}
-		// encodeTundra appends its own SAUCE and degrades what tundra
-		// cannot hold (the lint fronted it); anything left throwing is a
-		// real failure the artist must see, not a console whisper
+		// anything still throwing is a real failure the artist must see,
+		// not a console whisper
 		try {
 			const bytes = encodeTundra(State.textArtCanvas.getDoc(), { meta: sauceMeta() });
 			await saveFile(bytes, undefined, State.title + '.tnd');
@@ -1509,8 +886,6 @@ const saveModule = () => {
 		}
 	};
 
-	// Animation exports: classic ansimation (clear + home-per-frame,
-	// baud is the clock) and the durdraw v8 movie (256-color, utf-8)
 	const ansimation = async () => {
 		if (!(await confirmExport('ans', 'ANSimation')).proceed) {
 			return;
@@ -1524,8 +899,6 @@ const saveModule = () => {
 		await saveFile(bytes, undefined, State.title + '.dur');
 	};
 
-	// Timelapse: baseline + op log from the server, replayed into a
-	// capped multi-frame movie, the shareable session artifact
 	const timelapse = async () => {
 		if (State.network?.extCollab?.() !== true) {
 			alert(
@@ -1569,7 +942,7 @@ const saveModule = () => {
 		const width = State.textArtCanvas.getColumns() * fontWidth;
 		const height = State.textArtCanvas.getRows() * fontHeight;
 		if (width * height > magicNumbers.MAX_CANVAS_AREA) {
-			// Tall documents exceed the iOS Safari canvas area cap, so encode
+			// tall documents exceed the iOS Safari canvas area cap, so encode
 			// from chunk strips without compositing one full-size canvas
 			const image = State.textArtCanvas.getImageRGBA();
 			await saveFile(

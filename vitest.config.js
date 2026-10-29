@@ -24,7 +24,7 @@ export default defineConfig({
 			'./tests/setupTests.js',
 		],
 		globals: true,
-		isolate: true, // Ensure clean state between tests
+		isolate: true,
 		maxWorkers: 1, // Single thread to avoid memory multiplication
 		exclude: ignore,
 		coverage: {

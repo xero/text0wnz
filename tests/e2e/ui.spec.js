@@ -1,8 +1,14 @@
 import { test, expect } from '@playwright/test';
 import {
+	bridgeReady,
+	cellCenter,
 	clickHistoryAction,
 	clickTool,
 	clickViewToggle,
+	drag,
+	parkToolSettings,
+	readRegion,
+	tap,
 } from './helpers/editorHelpers.js';
 
 test.describe('UI Elements', () => {
@@ -31,15 +37,6 @@ test.describe('UI Elements', () => {
 		await expect(page.locator('#canvasContainer')).toBeVisible();
 	});
 
-	test('should display position information', async ({ page }) => {
-		const positionInfo = page.locator('#positionInfo, .positionInfo');
-		const count = await positionInfo.count();
-
-		if (count > 0) {
-			await expect(positionInfo.first()).toBeVisible();
-		}
-	});
-
 	test('should display toolbar with tools', async ({ page }) => {
 		const tools = [
 			'#halfblock',
@@ -62,57 +59,31 @@ test.describe('UI Elements', () => {
 		expect(visibleTools).toBeGreaterThan(0);
 	});
 
-	test('should have file operations menu', async ({ page }) => {
-		const fileMenu = page.locator('#fileMenu, .fileMenu, #file');
-		const fileButtons = page.locator('#new, #open, #save');
-
-		const menuCount = await fileMenu.count();
-		const buttonsCount = await fileButtons.count();
-
-		expect(menuCount + buttonsCount).toBeGreaterThan(0);
-	});
-
 	test('should display canvas settings controls', async ({ page }) => {
-		const iceToggle = page.locator('#navICE, [data-testid="iceColors"]');
-		const iceCount = await iceToggle.count();
-
-		const spacingToggle = page.locator('#nav9pt, #nav9pt');
-		const spacingCount = await spacingToggle.count();
-
-		expect(iceCount + spacingCount).toBeGreaterThan(0);
-	});
-
-	test('should have font selection interface', async ({ page }) => {
-		const fontButton = page.locator('#fonts, button:has-text("Font")');
-		const fontSelect = page.locator('#fontSelect, select[name="font"]');
-
-		const buttonCount = await fontButton.count();
-		const selectCount = await fontSelect.count();
-
-		expect(buttonCount + selectCount).toBeGreaterThan(0);
+		await expect(page.locator('#navICE')).toBeVisible();
+		await expect(page.locator('#nav9pt')).toBeVisible();
 	});
 });
 
 test.describe('Toolbar Interactions', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
+		await parkToolSettings(page);
+		await page.goto('/?test');
+		await bridgeReady(page);
 	});
 
 	test('should highlight selected tool', async ({ page }) => {
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
+		await expect(page.locator('#keyboard')).toHaveClass(/toolbarDisplayed/);
+		await clickTool(page, 'halfblock');
 
-		const freehandTool = page.locator('#halfblock');
-		await freehandTool.click();
-		await page.waitForTimeout(200);
-
-		const classList = await freehandTool.getAttribute('class');
-		expect(classList).toBeTruthy();
+		await expect(page.locator('#halfblock')).toHaveClass(/toolbarDisplayed/);
+		await expect(page.locator('#keyboard')).not.toHaveClass(/toolbarDisplayed/);
 	});
 
-	test('should switch between tools', async ({ page }) => {
+	test('every toolbar control runs without a page error', async ({ page }) => {
+		const errors = [];
+		page.on('pageerror', error => errors.push(error.message));
+
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
 
@@ -158,7 +129,7 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#copy').click();
 		await page.waitForTimeout(200);
 
-		// paste actions live behind the bar's submenu face now
+		// paste actions live behind the bar's submenu face
 		await page.locator('#pasteMenu').click();
 		await page.locator('#paste').click();
 		await page.waitForTimeout(200);
@@ -196,62 +167,41 @@ test.describe('Toolbar Interactions', () => {
 		await clickViewToggle(page, 'navDarkmode');
 		await page.waitForTimeout(500);
 
-		const errors = await page.locator('.error, .errorMessage').count();
-		expect(errors).toBe(0);
+		expect(errors).toEqual([]);
 	});
 
-	test('should toggle toolbars or panels', async ({ page }) => {
-		// the fonts rail button opens the fonts dialog now
-		const fontsButton = page.locator('#changeFont');
-		const clipboardToolbar = page.locator('#clipboard');
+	test('should open and close the fonts dialog and the history flyout', async ({ page }) => {
+		const fontsModal = page.locator('#fontsModal');
+		await page.locator('#changeFont').click();
+		await expect(fontsModal).toBeVisible();
+		await page.locator('#fontsCancel').click();
+		await expect(fontsModal).toBeHidden();
 
-		if (await fontsButton.isVisible()) {
-			await fontsButton.click();
-			await page.waitForTimeout(300);
-			await expect(page.locator('#fontsModal')).toBeVisible();
-
-			await page.locator('#fontsCancel').click();
-			await page.waitForTimeout(300);
-		}
-
-		if (await clipboardToolbar.isVisible()) {
-			await clipboardToolbar.click();
-			await page.waitForTimeout(300);
-		}
+		const undo = page.locator('#undo');
+		await expect(undo).toBeHidden();
+		await page.locator('#clipboard').click();
+		await expect(undo).toBeVisible();
+		await page.locator('#clipboard').click();
+		await expect(undo).toBeHidden();
 	});
 
 	test('should show clipboard operations when selection is active', async ({ page }) => {
-		await page.locator('#selection').click();
-		await page.waitForTimeout(200);
-
-		const canvas = page.locator('#canvasContainer canvas').first();
-		const box = await canvas.boundingBox();
-
-		if (box) {
-			await page.mouse.move(box.x + 50, box.y + 50);
-			await page.mouse.down();
-			await page.mouse.move(box.x + 100, box.y + 100);
-			await page.mouse.up();
-			await page.waitForTimeout(300);
-
-			const copyButton = page.locator('#copy');
-			const cutButton = page.locator('#cut');
-			const pasteButton = page.locator('#paste');
-
-			const copyCount = await copyButton.count();
-			const cutCount = await cutButton.count();
-			const pasteCount = await pasteButton.count();
-
-			expect(copyCount + cutCount + pasteCount).toBeGreaterThan(0);
+		const bar = page.locator('#selectionToolbar');
+		await clickTool(page, 'selection');
+		await drag(page, [5, 5], [9, 7]);
+		await expect(bar).toBeVisible();
+		await expect(page.locator('#selectionSize')).toHaveText('5x3');
+		for (const id of ['cut', 'copy', 'delete']) {
+			await expect(page.locator(`#${id}`)).not.toHaveClass(/disabled/);
 		}
 	});
 });
 
 test.describe('Canvas Display', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
+		await parkToolSettings(page);
+		await page.goto('/?test');
+		await bridgeReady(page);
 	});
 
 	test('should render canvas layers', async ({ page }) => {
@@ -261,100 +211,71 @@ test.describe('Canvas Display', () => {
 		expect(count).toBeGreaterThan(0);
 	});
 
-	test('should display cursor or pointer', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-		const box = await canvas.boundingBox();
+	test('should display the keyboard cursor over the clicked cell', async ({ page }) => {
+		// keyboard mode is the boot tool
+		await tap(page, 10, 5);
+		const cursor = page.locator('#canvasContainer canvas.cursor').first();
+		await expect(cursor).toBeVisible();
 
-		if (box) {
-			await page.mouse.move(box.x + 100, box.y + 100);
-			await page.waitForTimeout(300);
-
-			const cursor = page.locator('.cursor, #cursor');
-			const count = await cursor.count();
-
-			if (count > 0) {
-				await expect(cursor.first()).toBeVisible();
-			}
-		}
+		const box = await cursor.boundingBox();
+		const cell = await cellCenter(page, 10, 5);
+		expect(cell.clientX).toBeGreaterThan(box.x);
+		expect(cell.clientX).toBeLessThan(box.x + box.width);
+		expect(cell.clientY).toBeGreaterThan(box.y);
+		expect(cell.clientY).toBeLessThan(box.y + box.height);
 	});
 
 	test('should update canvas on window resize', async ({ page }) => {
 		const canvas = page.locator('#canvasContainer');
 		await expect(canvas).toBeVisible();
+		const viewportWidth = () =>
+			page.locator('#viewport').evaluate(el => el.clientWidth);
+		const wide = await viewportWidth();
 
 		await page.setViewportSize({ width: 1024, height: 768 });
-		await page.waitForTimeout(500);
-
+		await expect.poll(viewportWidth).toBeLessThan(wide);
 		await expect(canvas).toBeVisible();
 
 		await page.setViewportSize({ width: 1280, height: 720 });
-		await page.waitForTimeout(500);
+		await expect.poll(viewportWidth).toBe(wide);
 	});
 
 	test('should handle scroll if canvas is large', async ({ page }) => {
-		const resizeButton = page.locator('#navRes');
-		if (await resizeButton.isVisible()) {
-			await resizeButton.click();
-			await page.waitForTimeout(300);
+		const overflow = () =>
+			page.locator('#viewport').evaluate(el => ({
+				x: el.scrollWidth > el.clientWidth,
+				y: el.scrollHeight > el.clientHeight,
+			}));
+		expect(await overflow()).toEqual({ x: false, y: false });
 
-			const columnsInput = page.locator('#columnsInput, input[name="columns"]');
-			const rowsInput = page.locator('#rowsInput, input[name="rows"]');
+		await page.locator('#resolution').click();
+		await page.locator('#columnsInput').fill('200');
+		await page.locator('#rowsInput').fill('100');
+		await page.locator('#resizeApply').click();
+		await expect(page.locator('#resolutionLabel')).toHaveText('200x100');
 
-			if ((await columnsInput.count()) > 0) {
-				await columnsInput.first().fill('200');
-				await rowsInput.first().fill('100');
-
-				const confirmButton = page.locator('button:has-text("Resize")');
-				if ((await confirmButton.count()) > 0) {
-					await confirmButton.first().click();
-					await page.waitForTimeout(500);
-
-					const canvasContainer = page.locator('#canvasContainer');
-					const box = await canvasContainer.boundingBox();
-					expect(box).toBeTruthy();
-				}
-			}
-		}
+		await expect.poll(overflow).toEqual({ x: true, y: true });
 	});
 });
 
 test.describe('Modal Dialogs', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
-	});
-
-	test('should show confirmation dialog for new document', async ({ page }) => {
-		const fileMenuButton = page.locator('#fileMenu button');
-		await fileMenuButton.click();
-		await page.waitForTimeout(200);
-
-		const newButton = page.locator('#new');
-		await newButton.click();
-		await page.waitForTimeout(500);
-
-		const warningModal = page.locator('#warningModal');
-		if (await warningModal.isVisible()) {
-			const warningYes = page.locator('#warningYes');
-			await expect(warningYes).toBeVisible();
-		}
+		await page.goto('/?test');
+		await bridgeReady(page);
 	});
 
 	test('should handle dialog cancellation', async ({ page }) => {
-		const fileMenuButton = page.locator('#fileMenu button');
-		await fileMenuButton.click();
-		await page.waitForTimeout(200);
+		// keyboard mode is the boot tool, its cursor parked at 0,0
+		await page.keyboard.type('abc');
+		await expect.poll(() => readRegion(page, 0, 0, 2, 0)).toEqual(['abc']);
 
-		const newButton = page.locator('#new');
-		await newButton.click();
-		await page.waitForTimeout(500);
+		await page.locator('#fileMenu button').click();
+		await page.locator('#new').click();
+		await expect(page.locator('#warningModal')).toBeVisible();
+		await page.locator('#warningNo').click();
 
-		const warningNo = page.locator('#warningNo');
-		if (await warningNo.isVisible()) {
-			await warningNo.click();
-			await page.waitForTimeout(500);
-		}
+		await expect(page.locator('#warningModal')).toBeHidden();
+		expect(await readRegion(page, 0, 0, 2, 0)).toEqual(['abc']);
 	});
 });
 
@@ -365,36 +286,20 @@ test.describe('Help and Information', () => {
 		await page.waitForTimeout(1000);
 	});
 
-	test('should have help or info button', async ({ page }) => {
-		// Help is inside the file menu
-		const fileMenuButton = page.locator('#fileMenu button');
-		await fileMenuButton.click();
-		await page.waitForTimeout(200);
+	test('Help opens the manual in a new tab', async ({ page }) => {
+		// a new tab, so reading the manual cannot end a live session
+		await page.evaluate(() => {
+			window.open = (...args) => {
+				window.__opened = args;
+			};
+		});
+		await page.locator('#fileMenu button').click();
+		await page.locator('#help').click();
 
-		const helpButton = page.locator(
-			'#help, #info, button:has-text("Help"), button:has-text("?")',
-		);
-		const count = await helpButton.count();
-
-		if (count > 0) {
-			await expect(helpButton.first()).toBeVisible();
-		}
-	});
-
-	test('should display keyboard shortcuts reference if available', async ({ page }) => {
-		const shortcutsButton = page.locator(
-			'#shortcuts, button:has-text("Shortcuts"), button:has-text("Keys")',
-		);
-		const count = await shortcutsButton.count();
-
-		if (count > 0) {
-			await shortcutsButton.first().click();
-			await page.waitForTimeout(500);
-
-			const shortcutsPanel = page.locator('.shortcutsPanel, #shortcutsPanel');
-			if ((await shortcutsPanel.count()) > 0) {
-				await expect(shortcutsPanel.first()).toBeVisible();
-			}
-		}
+		expect(await page.evaluate(() => window.__opened)).toEqual([
+			'https://github.com/xero/text0wnz/wiki/manual',
+			'_blank',
+			'noopener',
+		]);
 	});
 });

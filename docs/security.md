@@ -47,6 +47,16 @@ We **do not** use cookies, tracking technologies, or similar mechanisms.
 
 For more information, see our [Privacy Policy](https://github.com/xero/text0wnz/wiki/privacy)
 
+## Share Target
+
+The installed app takes files from the OS share sheet as a POST to `/open`. The service worker caches the file and hands it to every open editor tab, which opens it in place of the current canvas. Any web page can submit a form to that address, so the worker accepts only a POST it can trace back to the app:
+
+- **The worker checks `Origin`, not `Sec-Fetch-Site`.** Browsers attach `Sec-Fetch-Site` after the service worker has handled a request, so the worker never sees it. Chromium sets `Origin` on a POST navigation before the worker runs.
+- **Only the app's own origin passes.** Chrome 156 and later attribute a share sheet POST to the app, so it carries the app's origin. A form on another site carries that site's origin, or `null` when the page hides it. The worker turns away both, and any POST with no `Origin` at all, by redirecting to the editor without touching the open tabs.
+- **Older browsers cannot share into the PWA.** Chrome releases before 156, like any browser whose share code does not attribute the POST to the app, send it as `Origin: null`, which the worker cannot tell apart from a hostile page hiding its origin. A browser that never shows the worker an `Origin` is turned away too. Those shares open the editor without the file; File → Open still works.
+
+This prevents cross-site request forgery into open tabs [CWE-352].
+
 ## WebSocket Security (Collaboration Mode)
 
 When using the optional collaboration server, the application implements multiple security measures:

@@ -19,7 +19,9 @@ DOM tests validate user interface behavior at the component level, bridging the 
 ## Test Coverage
 
 ### Toolbar Tests (`toolbar.test.js`)
+
 Tests for the toolbar component and tool management:
+
 - Toolbar button rendering and accessibility
 - Tool activation and switching via clicks
 - Visual state management (toolbar-displayed class)
@@ -29,7 +31,9 @@ Tests for the toolbar component and tool management:
 - Edge cases (rapid clicking, empty IDs, dynamic buttons)
 
 ### Palette Tests (`palette.test.js`)
+
 Tests for color palette and color selection:
+
 - Color palette creation and rendering
 - Foreground/background color selection
 - Color swatches with accessibility
@@ -41,7 +45,9 @@ Tests for color palette and color selection:
 - Edge cases (invalid indices, rapid changes)
 
 ### Modal Tests (`modal.test.js`)
+
 Tests for modal dialog functionality:
+
 - Modal dialog rendering and sections
 - Opening and closing modals
 - Close button interactions
@@ -53,7 +59,9 @@ Tests for modal dialog functionality:
 - Edge cases (rapid open/close, non-existent modals)
 
 ### Segmented Control Tests (`segmentedControl.test.js`)
+
 Tests for the radiogroup segmented controls in the tool settings window:
+
 - Rendering (buttons, glyph previews, labels, data-value hooks)
 - Selection by click and the single onChange per change
 - Silent programmatic set() vs user select()
@@ -62,22 +70,19 @@ Tests for the radiogroup segmented controls in the tool settings window:
 - Disabled state (dimmed, out of tab order, inert to input)
 
 ### Keyboard Tests (`keyboard.test.js`)
-Tests for keyboard shortcuts and navigation:
-- Keyboard shortcut triggering (Ctrl+Key combinations)
-- Multiple modifier keys (Ctrl, Alt, Shift)
-- Function keys (F1, F2, etc.)
-- Arrow key navigation
-- Tab navigation and focus management
-- Home/End key support
-- Shortcut visual indicators (kbd elements, tooltips)
-- Text input typing and editing
-- Accessibility (Enter/Space activation, aria-keyshortcuts)
-- Preventing default browser behavior
-- Global vs local shortcuts
-- Edge cases (special characters, rapid keys, non-character keys)
+
+Tests for the document-level shortcut handlers and text-entry focus:
+
+- Paint shortcuts pick tools from the page and stay out of inputs, textareas, and selects
+- Ctrl paint shortcuts stay out of text entries, so Ctrl+A in a field selects all
+- Ctrl+C, Ctrl+V, and Ctrl+Backspace copy, paste, and delete the selection
+- Clipboard keys in a text entry leave the canvas alone
+- Selection keys flip and toggle move mode from the page only
 
 ### Menu Tests (`menu.test.js`) ⬆ NEW
+
 Tests for menu system (file-menu, edit-menu):
+
 - Menu opening and closing on click
 - Menu blur events and focus management
 - Menu item rendering and display
@@ -88,7 +93,9 @@ Tests for menu system (file-menu, edit-menu):
 - Menu button ARIA attributes
 
 ### Canvas and Cursor Tests (`canvas.test.js`) ⬆ NEW
+
 Tests for canvas interaction and cursor positioning:
+
 - Position info display and updates
 - 1-indexed coordinate display (0-based internally)
 - Canvas container element and focusability
@@ -100,20 +107,25 @@ Tests for canvas interaction and cursor positioning:
 - Coordinate calculations for different character sizes
 
 ### Font Preview Tests (`fontPreview.test.js`) ⬆ NEW
+
 Tests for font selection modal and preview:
-- Font preview image display and updates
-- Font selection via click, touch, and keyboard
+
+- Preview of the selected font as soon as the list is built
+- Preview image and info swap only once the new font loads
+- Missing fonts marked in the preview info
+- Font selection via click and keyboard
 - Font listbox with ARIA attributes
 - Arrow key navigation (Up, Down, Home, End)
-- Enter and Space key selection
+- Enter and Space apply the highlighted font
+- Highlight shown only while the list has focus
 - Font controller API (getValue, setValue, focus)
 - Font option accessibility (role="option", aria-selected)
 - scrollIntoView on selection
-- Preview info text updates
-- Touch event handling
 
 ### Fullscreen Tests (`fullscreen.test.js`) ⬆ NEW
+
 Tests for fullscreen mode toggle:
+
 - Fullscreen button rendering and display
 - Toggle between fullscreen states
 - Fullscreen API detection (fullscreenEnabled)
@@ -128,21 +140,25 @@ Tests for fullscreen mode toggle:
 ## Running the Tests
 
 ### Run all DOM tests
+
 ```bash
 npx vitest --dir tests/dom
 ```
 
 ### Run specific test file
+
 ```bash
 npx vitest tests/dom/toolbar.test.js
 ```
 
 ### Run tests in watch mode
+
 ```bash
 npx vitest --dir tests/dom --watch
 ```
 
 ### Run with coverage
+
 ```bash
 npx vitest --dir tests/dom --coverage
 ```
@@ -151,49 +167,32 @@ npx vitest --dir tests/dom --coverage
 
 ### Test Structure
 
-DOM tests follow this general pattern:
+DOM tests drive the shipped module's own listeners. A handler written inside the test only proves that jsdom dispatches events.
 
 ```javascript
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
+import { createPaintShortcuts } from '../../src/js/client/ui.js';
 
-describe('Component DOM Tests', () => {
-  let user;
+describe('Paint shortcuts', () => {
+	let user;
 
-  beforeEach(() => {
-    // Clear DOM
-    document.body.innerHTML = '';
-    // Create userEvent instance
-    user = userEvent.setup();
-    // Clear mocks
-    vi.clearAllMocks();
-  });
+	beforeEach(() => {
+		document.body.innerHTML = '';
+		user = userEvent.setup();
+		vi.clearAllMocks();
+	});
 
-  it('should render component', () => {
-    // Render component
-    const element = document.createElement('button');
-    element.textContent = 'Click me';
-    document.body.appendChild(element);
+	it('clicks the bound tool on its shortcut key', async () => {
+		const brush = document.createElement('button');
+		const onClick = vi.fn();
+		brush.addEventListener('click', onClick);
+		createPaintShortcuts({ f: brush });
 
-    // Assert with Testing Library
-    expect(screen.getByText('Click me')).toBeInTheDocument();
-  });
+		await user.keyboard('f');
 
-  it('should handle user interaction', async () => {
-    const onClick = vi.fn();
-    const button = document.createElement('button');
-    button.textContent = 'Click me';
-    button.addEventListener('click', onClick);
-    document.body.appendChild(button);
-
-    // Simulate user action
-    await user.click(screen.getByText('Click me'));
-
-    // Assert callback was called
-    expect(onClick).toHaveBeenCalled();
-  });
+		expect(onClick).toHaveBeenCalledTimes(1);
+	});
 });
 ```
 
@@ -265,6 +264,7 @@ Unit Tests (Vitest)             \
 ### When to Write DOM Tests
 
 Write DOM tests when:
+
 - Testing component rendering
 - Validating user interactions (clicks, typing, navigation)
 - Checking visual feedback (classes, styles, content)
@@ -275,6 +275,7 @@ Write DOM tests when:
 ### When NOT to Write DOM Tests
 
 Avoid DOM tests for:
+
 - Pure logic (use unit tests)
 - Full user workflows (use E2E tests)
 - Server-side functionality (use unit tests)
@@ -283,27 +284,31 @@ Avoid DOM tests for:
 ## Debugging Tests
 
 ### Run single test
+
 ```bash
 npx vitest tests/dom/toolbar.test.js -t "should activate a tool button on click"
 ```
 
 ### Debug with console.log
+
 ```javascript
-import { screen, debug } from '@testing-library/dom';
+import { screen } from '@testing-library/dom';
 
 // Print DOM tree
-debug();
+screen.debug();
 
 // Print specific element
-debug(screen.getByRole('button'));
+screen.debug(screen.getByRole('button'));
 ```
 
 ### Use Vitest UI
+
 ```bash
 npx vitest --ui
 ```
 
 ### Enable verbose output
+
 ```bash
 npx vitest --dir tests/dom --reporter=verbose
 ```
@@ -327,12 +332,13 @@ When adding new DOM tests:
 4. Test for accessibility
 5. Include edge cases
 6. Run tests and ensure they pass
-7. Format and lint: `npm run fix`
+7. Format and lint: `bun fix`
 8. Update this README if adding new test categories
 
 ## Coverage Goals
 
 DOM tests should focus on:
+
 - UI rendering and content
 - User interactions (click, type, navigate)
 - Visual state changes (CSS classes, visibility)
@@ -342,6 +348,7 @@ DOM tests should focus on:
 - Dynamic content updates
 
 Current suites (vitest reports the live counts):
+
 - canvas.test.js
 - chatEnter.test.js
 - fontPreview.test.js

@@ -1,10 +1,11 @@
 /**
- * Moebius wire codec: the enum is pinned value-for-value against
- * moebiusXBIN doc.js:7, the RLE against libtextmode.js
- * compress/uncompress (count = repeat + 1), the palette expansion
- * against palette.js:308, and each protocol trap gets a pin:
- * Buffer-JSON font bytes, 6-vs-8-bit palette auto-detect, hardened
- * frame parsing (upstream servers crash on malformed frames; we drop).
+ * Moebius wire codec, pinned against moebiusXBIN: the enum
+ * value-for-value against doc.js, actions; the RLE against
+ * libtextmode.js, compress() and uncompress() (count = repeat + 1);
+ * the palette expansion against libtextmode/palette.js,
+ * convert_6_to_8bits(). Each protocol trap gets a pin: Buffer-JSON
+ * font bytes, 6-vs-8-bit palette auto-detect, hardened frame parsing
+ * (upstream servers crash on malformed frames; we drop).
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -174,7 +175,7 @@ describe('join doc RLE', () => {
 });
 
 describe('palettes', () => {
-	it('expands 6-bit with top-bit replication (palette.js:308)', () => {
+	it('expands 6-bit with top-bit replication, like moebiusXBIN palette.js, convert_6_to_8bits()', () => {
 		expect(expand6to8(0)).toBe(0);
 		expect(expand6to8(63)).toBe(255);
 		expect(expand6to8(0x2a)).toBe((0x2a << 2) | ((0x2a & 0x30) >> 4));
@@ -216,8 +217,8 @@ describe('palettes', () => {
 	});
 
 	it('expands vanilla Moebius 6-bit {r,g,b} object palettes', () => {
-		// palette.js `ega` on the wire: objects, 6-bit; the vanilla
-		// server fixture pins the same end to end
+		// Moebius palette.js, ega on the wire: objects, 6-bit; the
+		// vanilla server fixture pins the same end to end
 		const vanilla = [
 			{ r: 0, g: 0, b: 0 },
 			{ r: 0, g: 0, b: 42 },
@@ -387,7 +388,7 @@ describe('v3 doc to join doc', () => {
 	});
 });
 
-describe('hostile RLE (review pass)', () => {
+describe('hostile RLE', () => {
 	it('rejects oversized runs BEFORE allocating', () => {
 		const started = performance.now();
 		expect(() =>

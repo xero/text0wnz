@@ -1,9 +1,7 @@
 /**
- * Pen pressure: the shading
- * brush picks its shade from pen pressure quartiles; mouse and touch
- * keep the classic darken/lighten cycle. Also pins the attribute
- * brush's shift-line path, which needs the modifiers the normalizer
- * delivers in detail.
+ * Pen pressure and the shading brush; also pins the attribute brush's
+ * shift-line path, which needs the modifiers the normalizer delivers
+ * in detail.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {

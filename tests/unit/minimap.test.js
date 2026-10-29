@@ -1,7 +1,6 @@
 /**
- * Minimap panel: toggle lifecycle and the no-markup guard. The
- * pixel render itself is exercised in the browser (jsdom has no 2D
- * context); render() must no-op gracefully there.
+ * The pixel render is exercised in the browser (jsdom has no 2D
+ * context); here render() must no-op gracefully.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createMinimap } from '../../src/js/client/minimap.js';
@@ -64,7 +63,7 @@ describe('minimap', () => {
 	it('starts VISIBLE by default and remembers the toggle', () => {
 		vi.useFakeTimers();
 		const minimap = createMinimap();
-		// owner call: on by default; the panel manager renders the flag
+		// the panel manager renders the flag
 		expect(minimap.isVisible()).toBe(true);
 		// the refresh tick must not throw without a 2D context
 		expect(() => vi.advanceTimersByTime(1100)).not.toThrow();

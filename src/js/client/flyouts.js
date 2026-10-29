@@ -1,10 +1,7 @@
 /**
  * Rail flyouts: panels that anchor beside their opener at z 200. Each
  * flyout is a fixed element that only shows and hides, never reparents,
- * so ids, listeners, and WebKit sprite content all survive. The first
- * click on a group opens its flyout without switching tools, the same
- * button or any outside press closes it, arrows walk the items, and
- * Escape closes and hands focus back to the opener.
+ * so ids, listeners, and WebKit sprite content all survive.
  */
 
 import { isPhone } from './panels.js';
@@ -52,7 +49,6 @@ const createFlyoutManager = () => {
 
 	const place = (el, from, opts, anchorRect) => {
 		if (opts.at) {
-			// context menus land at the pointer, clamped on screen
 			el.style.left = `${Math.round(
 				Math.min(
 					Math.max(opts.at.x, 8),
@@ -70,7 +66,7 @@ const createFlyoutManager = () => {
 		const r = anchorRect ?? from.getBoundingClientRect();
 		if (isPhone() && from.closest?.('aside')) {
 			// the rail rides the bottom edge on phones, so its flyouts
-			// open upward, centered over the opener and clamped on screen
+			// open upward
 			const width = el.offsetWidth;
 			el.style.left = `${Math.round(
 				Math.min(
@@ -82,8 +78,6 @@ const createFlyoutManager = () => {
 			return;
 		}
 		if (opts.flush) {
-			// the File/Edit menu sits flush with the app's top edge and
-			// the rail's right edge, no gap
 			el.style.left = `${Math.round(r.right)}px`;
 			el.style.top = '0px';
 			return;
@@ -157,9 +151,9 @@ const createFlyoutManager = () => {
 		if (!open) {
 			return;
 		}
-		// a dialog on top owns the keyboard: the trap used to
-		// preventDefault Tab and aim focus at the inert flyout underneath,
-		// stranding keyboard users inside the modal
+		// a dialog on top owns the keyboard: trapping Tab here would aim
+		// focus at the inert flyout underneath and strand keyboard users
+		// inside the modal
 		if (State.modal?.isOpen?.()) {
 			return;
 		}

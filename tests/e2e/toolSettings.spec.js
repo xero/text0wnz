@@ -1,9 +1,3 @@
-/**
- * The unified tool settings window: the context law (each settings
- * tool shows its own section, the rest hide the window), the reopen
- * rule, drag and position persistence, stack focus, and the controls
- * driving real ink.
- */
 import { test, expect } from '@playwright/test';
 import {
 	bridgeReady,
@@ -17,7 +11,7 @@ import {
 } from './helpers/editorHelpers.js';
 
 const openLine = async page => {
-	// the shapes group opens a flyout now; picking the tool is explicit
+	// the shapes group opens a flyout; picking the tool is explicit
 	await clickTool(page, 'line');
 	await expect(page.locator('#line')).toHaveClass(/toolbarDisplayed/);
 };
@@ -34,7 +28,6 @@ test.describe('tool settings window', () => {
 		await expect(panel).toBeVisible();
 		await expect(page.locator('#tsKeyboard')).toBeVisible();
 
-		// the shapes group lands on the line tool
 		await openLine(page);
 		await expect(panel).toBeVisible();
 		await expect(page.locator('#tsLine')).toBeVisible();
@@ -127,7 +120,7 @@ test.describe('tool settings window', () => {
 	});
 
 	test('pressing the window lifts it above the frames panel', async ({ page }) => {
-		// open the frames panel first (its toggle lives in the view bar)
+		// the frames toggle lives in the View flyout
 		await page.locator('#navView').click();
 		await clickViewToggle(page, 'navFrames');
 		const frames = page.locator('#framesPanel');
@@ -138,7 +131,6 @@ test.describe('tool settings window', () => {
 		const fbox = await frames.boundingBox();
 		const pbox = await panel.boundingBox();
 
-		// drag the window onto the frames panel
 		await page.mouse.move(pbox.x + 100, pbox.y + 8);
 		await page.mouse.down();
 		await page.mouse.move(fbox.x + 120, fbox.y - 8, { steps: 8 });

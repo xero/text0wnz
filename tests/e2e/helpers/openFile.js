@@ -1,9 +1,5 @@
 import path from 'path';
 
-/**
- * Open a file using the editor's file input element
- * Uses Playwright's file chooser API to simulate file selection
- */
 export async function openFile(page, filePath) {
 	const absolutePath = path.resolve(filePath);
 
@@ -16,9 +12,9 @@ export async function openFile(page, filePath) {
 	// update, position info change, or loading modal gone)
 	await page.waitForTimeout(2000);
 
-	// The "updating editor" loading modal can outlast the timeout on slower
-	// machines, and it covers the viewport. Only wait on the loading modal, other
-	// modals depend on server, storage, or session state
+	// the loading modal can outlast the timeout on slower machines, and
+	// it covers the viewport. Wait on it alone: other modals depend on
+	// server, storage, or session state
 	await page.waitForFunction(
 		() => {
 			const modal = document.getElementById('modal');
@@ -28,33 +24,4 @@ export async function openFile(page, filePath) {
 		null,
 		{ timeout: 15000 },
 	);
-}
-
-/**
- * Alternative method: Open file via drag and drop
- * TODO: This is a placeholder - implement if needed
- */
-export async function openFileViaDragDrop(_page, _filePath) {
-	throw new Error('Not implemented - use openFile() instead');
-}
-
-/**
- * Alternative method: Open file via URL if editor supports it
- * This attempts to use a window API if available
- */
-export async function openFileViaURL(page, fileURL) {
-	const loaded = await page.evaluate(url => {
-		if (window.Load && window.Load.loadFileFromUrl) {
-			window.Load.loadFileFromUrl(url);
-			return true;
-		}
-		return false;
-	}, fileURL);
-
-	if (!loaded) {
-		throw new Error('Load API not available on window object');
-	}
-
-	// TODO: Replace timeout with specific loading complete indicator
-	await page.waitForTimeout(2000);
 }

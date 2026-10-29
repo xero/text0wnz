@@ -1,8 +1,7 @@
 /**
- * GL renderer context-loss gate. Forces a WebGL context loss + restore
- * through the WEBGL_lose_context extension and asserts the renderer comes
- * back rendering actual pixels. Runs in the chromium-gl project
- * (SwiftShader in CI).
+ * GL renderer context-loss gate: after a forced loss and restore the
+ * renderer must draw real pixels again, not just report a live context.
+ * Runs in the chromium-gl project (SwiftShader in CI).
  */
 import { test, expect } from '@playwright/test';
 import { waitForEditorReady } from '../e2e/helpers/editorHelpers.js';

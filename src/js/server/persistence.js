@@ -1,12 +1,7 @@
 /**
- * Room persistence through the shared codecs: the live
- * wire-shaped room doc converts through joinDocToDoc and saves as the
- * native .0wnz envelope. Legacy v2 session files (<room>.bin,
- * BinaryText + SAUCE) migrate on first load through the core BIN
- * codec. Hourly backups are sha1-deduped:
- * a timestamped copy lands only when the content hash changed.
- * (No @ts-check: node builtin types are not in the repo's TS lib set,
- * same reasoning as journalWorker.js.)
+ * Room persistence through the shared codecs; legacy v2 session files
+ * (<room>.bin, BinaryText + SAUCE) migrate on first load.
+ * (No @ts-check: node builtin types are not in the repo's TS lib set.)
  */
 
 import { createHash } from 'node:crypto';
@@ -24,9 +19,9 @@ import path from 'node:path';
 import { ROOM_NAME_RE } from './utils.js';
 
 /**
- * Crash-safe replace: write a sibling temp file, then rename over the
- * target (atomic on POSIX). A crash mid-write used to tear the
- * envelope or the sidecar in place.
+ * Temp sibling, then rename over the target (atomic on POSIX): a
+ * crash mid-write would otherwise tear the envelope or sidecar in
+ * place.
  * @param {string} file @param {Uint8Array | string} data
  */
 const writeFileAtomic = async (file, data) => {
@@ -58,9 +53,9 @@ export const sweepTempFiles = async dir => {
 	}
 };
 
-/** pre-lowercase servers wrote session files under mixed-case room
- * names; those files are unreachable now, so boot renames them
- * (lowercase twin present = ambiguous, leave both, warn) */
+/** session files under mixed-case room names (written before room
+ * names lowercased) are unreachable, so boot renames them; with a
+ * lowercase twin present it is ambiguous, so both stay and it warns */
 export const migrateSessionCase = async dir => {
 	let entries;
 	try {
@@ -83,14 +78,14 @@ export const migrateSessionCase = async dir => {
 			continue;
 		}
 		await rename(path.join(dir, entry), path.join(dir, lower));
-		// two mixed-case twins lowering to one name: the second keeps
+		// two mixed-case twins lowering to one name: the second stays
 		names.add(lower);
 	}
 };
 
 /**
- * One save at a time per room: the interval timer, onRoomEmpty, and
- * shutdown used to interleave truncating writes to the same files.
+ * One save at a time per room, or the interval timer, onRoomEmpty, and
+ * shutdown interleave writes to the same files.
  * @type {Map<string, Promise<unknown>>}
  */
 const saveQueues = new Map();
@@ -190,8 +185,8 @@ export const stateFile = (dir, roomName) =>
 const legacyFile = (dir, roomName) => path.join(dir, `${roomName}.bin`);
 
 /**
- * Hourly sha1-deduped backup: copies the saved envelope aside when the
- * hash changed since the last backup.
+ * Copies the saved envelope aside only when its sha1 changed since the
+ * last backup.
  * @param {string} dir
  * @param {string} roomName
  * @param {Uint8Array} bytes the just-saved envelope
@@ -207,18 +202,16 @@ export const backupRoom = async (dir, roomName, bytes, lastHashes) => {
 	const stamp = new Date().toISOString().replace(/[:]/g, '-');
 	const file = path.join(backupDir, `${roomName}-${stamp}.0wnz`);
 	await copyFile(roomFile(dir, roomName), file);
-	// the hash records only a backup that EXISTS: a transient copy
-	// failure used to skip this content forever
+	// the hash records only a backup that EXISTS, or a transient copy
+	// failure skips this content forever
 	lastHashes.set(roomName, sha1);
 	return file;
 };
 
 /**
- * A throwaway room (blank art, no chat) leaves nothing behind,
- * the legacy .bin included, or erasing a migrated room's art
- * silently resurrected it on the next join. Serialized behind the
- * room's save queue: racing an in-flight save re-created the files
- * this exists to delete.
+ * The legacy .bin goes too, or erasing a migrated room's art silently
+ * resurrects it on the next join. Serialized behind the room's save
+ * queue: racing an in-flight save would re-create these files.
  * @param {string} dir @param {string} roomName
  */
 export const removeRoomFiles = (dir, roomName) =>
@@ -229,8 +222,8 @@ export const removeRoomFiles = (dir, roomName) =>
 	});
 
 /**
- * Load a room doc: native envelope first, then the legacy v2 .bin
- * (BinaryText + SAUCE, big-endian u16 words), which is the migration.
+ * Sidecar, then the native envelope, then the legacy v2 .bin (the
+ * migration).
  * @param {string} dir
  * @param {string} roomName
  * @returns {Promise<import('../core/index').MoebiusJoinDoc | null>}
@@ -266,8 +259,6 @@ export const loadRoomDoc = async (dir, roomName) => {
 	}
 	const legacy = legacyFile(dir, roomName);
 	if (existsSync(legacy)) {
-		// legacy v2 .bin is BinaryText + SAUCE; the core codec decodes it
-		// to a v3 doc, and docToJoinDoc projects to wire blocks
 		const decoded = decodeBin(await readFile(legacy));
 		return withData(docToJoinDoc(decoded.doc, decoded.meta ?? {}));
 	}

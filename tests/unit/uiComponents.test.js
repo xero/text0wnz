@@ -34,7 +34,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 }));
 
 describe('UI Components', () => {
-	// Helper to create events that work in both Node and browser environments
+	// works in both Node and browser environments
 	const createEvent = (type, props = {}) => {
 		const event = document.createEvent('Event');
 		event.initEvent(type, true, true);
@@ -185,7 +185,6 @@ describe('UI Components', () => {
 
 			createPaintShortcuts(keyPair);
 
-			// Clear the mock to ensure we track only this call
 			State.palette.setForegroundColor.mockClear();
 
 			const keyEvent = new KeyboardEvent('keydown', {
@@ -249,8 +248,8 @@ describe('UI Components', () => {
 		});
 	});
 
-	// Note: createGrid and createToolPreview rendering output is covered by
-	// E2E tests; the unit tests below only assert their lazy allocation.
+	// E2E covers createGrid and createToolPreview rendering output; these
+	// only pin lazy allocation
 
 	describe('createGrid', () => {
 		it('should defer grid canvas creation until toggled on', () => {

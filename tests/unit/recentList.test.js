@@ -1,8 +1,3 @@
-/**
- * The shared bounded recent list: tolerant reads, deduped
- * front-loaded writes, trimmed to the limit, storage failures
- * swallowed.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createRecentList } from '../../src/js/client/recentList.js';
 

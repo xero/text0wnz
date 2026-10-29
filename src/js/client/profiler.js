@@ -1,12 +1,8 @@
 /**
- * In-app profiling harness. Loaded ONLY when the page is opened
- * with ?profile (see main.js). Runs scripted scroll / keystroke / zoom /
- * repaint scenarios against the live renderer and reports fps, latencies,
- * and canvas memory, so the same numbers can be captured on desktop CI
- * (Playwright, tests/perf/captureBaseline.js) and on real devices by hand.
- *
- * While the overlay is open, autosave is disabled so profiling docs never
- * clobber the artist's autosaved work; reloading restores the last autosave.
+ * Profiling harness, loaded ONLY with ?profile. Scripted scenarios run
+ * against the live renderer so the same numbers can be captured on
+ * desktop Chromium (Playwright, tests/perf/captureBaseline.js) and on
+ * real devices by hand.
  */
 import State from './state.js';
 
@@ -73,7 +69,7 @@ const round = (value, places = 1) => {
 
 const installProfiler = () => {
 	// Kill persistence for the whole session: profiling docs must never
-	// overwrite the artist's autosave
+	// overwrite the artist's autosave, which a reload restores
 	State.saveToLocalStorage = () => Promise.resolve(false);
 	State.saveUndoHistory = () => Promise.resolve(false);
 
@@ -100,7 +96,6 @@ const installProfiler = () => {
 			});
 		});
 
-	// rAF-driven scroll ramp; returns frame statistics
 	const scrollRun = async (pxPerFrame, maxMs) => {
 		viewport.scrollTop = 0;
 		await doubleRaf();
@@ -276,7 +271,6 @@ const installProfiler = () => {
 		return results;
 	};
 
-	// --- overlay UI (dependency-free, inline styles) ---
 	const panel = document.createElement('div');
 	panel.id = 'profilerPanel';
 	panel.style.cssText = [

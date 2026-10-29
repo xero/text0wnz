@@ -1,10 +1,7 @@
 /**
- * The native container: a versioned JSON envelope gzipped through the
- * runtime-native CompressionStream, saved as `.0wnz` (the codec itself
- * is extension-agnostic). It holds everything the classic formats
- * cannot:
- * unicode glyph tables, raw-RGB colors, frames with delays, doc mode,
- * and metadata. UTF-8 ANSI remains the interchange format; a binary
+ * The native container: versioned gzipped JSON saved as `.0wnz` (the
+ * codec itself is extension-agnostic), holding everything the classic
+ * formats cannot. UTF-8 ANSI remains the interchange format; a binary
  * container may supersede this later without breaking readers (the
  * format field is the seam).
  *
@@ -52,8 +49,7 @@ interface EnvelopeJson {
 	palette: number[];
 	/** 'cp437' marks the identity table; otherwise [fontSlot, codepoint][]. */
 	glyphTable: 'cp437' | Array<[number, number]>;
-	/** East Asian Width table version the doc was authored under. */
-	/** old envelopes carry this provenance stamp; nothing reads it */
+	/** old East Asian Width provenance stamp; nothing reads it */
 	widthTable?: string;
 	frames: EnvelopeFrame[];
 	meta?: DocMeta;

@@ -1,9 +1,9 @@
 /**
- * Pure cell-level editing algebra (half blocks, mirror, shading,
- * bright-background normalization), kept parity-equivalent with v2.
- * Everything here is integer math over `{charCode, fg, bg}` cells in
- * classic16 terms (palette indices 0-15, bg 8-15 = ice-bright or blink
- * per the doc flag); the editor layer owns the plane-word encoding.
+ * Pure cell-level editing algebra, kept parity-equivalent with v2
+ * (tests/parity/v2ReferenceEngine.js). Everything here is integer
+ * math over `{charCode, fg, bg}` cells in classic16 terms (palette
+ * indices 0-15, bg 8-15 = ice-bright or blink per the doc flag); the
+ * editor layer owns the plane-word encoding.
  */
 
 export const FULL_BLOCK = 219; // █
@@ -16,7 +16,6 @@ export const SHADE_LIGHT = 176; // ░
 export const SHADE_MEDIUM = 177; // ▒
 export const SHADE_DARK = 178; // ▓
 
-/** A cell in classic16 editing terms. */
 export interface EditCell {
 	charCode: number;
 	fg: number;
@@ -24,8 +23,6 @@ export interface EditCell {
 	/** blink attr riding a non classic bg; classic bgs fold it into 8-15 */
 	blink?: boolean;
 }
-
-// ---------------------------------------------------------------- mirror
 
 /** Mirror column for x, or -1 for the center column of an odd canvas. */
 export const mirrorX = (columns: number, x: number): number => {
@@ -70,8 +67,6 @@ const MIRROR_CHARS = new Map<number, number>([
 
 export const mirrorCharCode = (charCode: number): number =>
 	MIRROR_CHARS.get(charCode) ?? charCode;
-
-// ---------------------------------------------------------- half blocks
 
 export interface HalfBlockInfo {
 	isBlocky: boolean;
@@ -179,15 +174,14 @@ export const overlayHalfBlock = (
 	return { charCode: paintedGlyph, fg: foreground, bg: fg };
 };
 
-// ------------------------------------------------------------- optimize
-
 /**
  * v2 optimizeBlocks per-cell pass: rewrite bright-background (bg >= 8)
  * blocky cells into equivalent dim-background forms so they stay legal
- * without ice colors, plus moebiusXBIN's black-foreground
- * normalization (black ink cannot be told from background, so those
- * cells canonicalize to the form every other editor writes). Returns
- * the replacement or null to keep the cell.
+ * without ice colors, plus the black-foreground normalization from
+ * moebiusXBIN doc.js, TextModeDoc.optimize_block() (black ink cannot be
+ * told from background, so those cells canonicalize to the form every
+ * other editor writes). Returns the replacement or null to keep the
+ * cell.
  */
 export const optimizeCell = (cell: EditCell): EditCell | null => {
 	const { charCode, fg, bg } = cell;
@@ -228,12 +222,10 @@ export const optimizeCell = (cell: EditCell): EditCell | null => {
 	}
 };
 
-// -------------------------------------------------------------- shading
-
 /**
  * Shading brush cycle (freehandTools.js calculateShadingCharacter):
- * darken walks space -> ░ -> ▒ -> ▓ -> █; reduce walks back down to
- * space. Full blocks compare the cell's fg against the active color.
+ * space -> ░ -> ▒ -> ▓ -> █. A full block in a color other than the
+ * active one is not on this ramp, so either direction restarts at ░.
  */
 export const shadeCycle = (
 	charCode: number,

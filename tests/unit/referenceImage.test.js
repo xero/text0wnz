@@ -1,9 +1,7 @@
 /**
  * Reference-image overlay: visibility rides the canvasOverlay
- * 'enabled' class; a 'hide' toggle alone leaves the overlay
- * display:none and nothing ever appears. Drag mode, persistence,
- * and the reset triggers ride a fake storage so no IndexedDB is
- * needed here.
+ * 'enabled' class, since a 'hide' toggle alone leaves the overlay
+ * display:none. A fake storage stands in for IndexedDB.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createReferenceImage } from '../../src/js/client/referenceImage.js';

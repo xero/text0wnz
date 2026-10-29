@@ -1,8 +1,7 @@
 /**
- * Scroll spike: a THROWAWAY implementation of the slack-buffer scroll
- * pattern, loaded only when the page is opened with ?spike (see
- * main.js). It measures the pattern in isolation from the real GL
- * renderer, on desktop Chromium via Playwright
+ * A THROWAWAY implementation of the slack-buffer scroll pattern, loaded
+ * only with ?spike. It measures the pattern in isolation from the real
+ * GL renderer, on desktop Chromium via Playwright
  * (tests/perf/captureScrollSpike.js) and on real devices by hand.
  *
  * The pattern (production precedent: Perfetto VirtualCanvas): keep a NATIVE
@@ -10,12 +9,11 @@
  * canvas absolutely INSIDE the scrolled content, sized to the viewport plus
  * slack screens of overdraw. The compositor moves the canvas in perfect
  * sync with momentum/rubber-band for free; the scroll handler only acts
- * when the viewport nears the drawn edge, re-anchoring the canvas and
- * repainting coverage in one instanced draw.
+ * when the viewport nears the drawn edge.
  *
- * Renders the EXISTING u16 doc model (charCode<<8 | bg<<4 | fg) with the
- * current font and palette. Blink is drawn at a fixed phase (bg dimmed,
- * glyph visible); animation is out of scope for a scroll measurement.
+ * Renders the u16 doc model (charCode<<8 | bg<<4 | fg). Blink is drawn
+ * at a fixed phase (bg dimmed, glyph visible); animation is out of
+ * scope for a scroll measurement.
  */
 import State from './state.js';
 
@@ -126,7 +124,6 @@ void main() {
 const installScrollSpike = () => {
 	const dpr = window.devicePixelRatio || 1;
 
-	// --- doc sources ---------------------------------------------------
 	const snapshotEditorDoc = () => ({
 		name: 'editor doc',
 		columns: State.textArtCanvas.getColumns(),
@@ -156,7 +153,6 @@ const installScrollSpike = () => {
 		};
 	};
 
-	// --- spike state ---------------------------------------------------
 	// Default to a synthetic stress doc: snapshotting the editor at install
 	// time races the doc restore (catches the default 80x25), and a doc that
 	// fits the viewport cannot exercise scrolling at all. 'editor doc' in
@@ -188,7 +184,6 @@ const installScrollSpike = () => {
 	const advanceCss = fontData.width + letterSpacing;
 	const cellHCss = fontData.height;
 
-	// --- DOM -----------------------------------------------------------
 	const overlay = document.createElement('div');
 	overlay.id = 'scrollSpikeOverlay';
 	overlay.style.cssText =
@@ -208,7 +203,6 @@ const installScrollSpike = () => {
 
 	document.body.appendChild(overlay);
 
-	// --- WebGL2 setup ----------------------------------------------------
 	const gl = canvas.getContext('webgl2', {
 		alpha: false,
 		antialias: false,
@@ -335,7 +329,6 @@ const installScrollSpike = () => {
 	gl.uniform1f(uniforms.u_spacing, letterSpacing);
 	gl.clearColor(0, 0, 0, 1);
 
-	// --- slack-buffer geometry -----------------------------------------
 	let anchorRow = 0; // first doc row drawn into the canvas
 	let canvasRows = 0; // rows of coverage the canvas holds
 	let coverageRows = 0; // rows actually drawn this anchor (doc may end)
@@ -428,7 +421,6 @@ const installScrollSpike = () => {
 	window.addEventListener('resize', rebuild);
 	rebuild();
 
-	// --- scripted measurement -------------------------------------------
 	const scrollRun = async (pxPerFrame, maxMs) => {
 		scroller.scrollTop = 0;
 		await doubleRaf();
@@ -507,7 +499,6 @@ const installScrollSpike = () => {
 		return results;
 	};
 
-	// --- HUD -------------------------------------------------------------
 	const hud = document.createElement('div');
 	hud.style.cssText = [
 		'position:fixed',

@@ -1,10 +1,6 @@
 /**
  * trustedMessage: the shared postMessage receiver guard (CodeQL
- * js/missing-origin-check). Same-origin and origin-less (dedicated
- * worker) messages with object payloads pass; foreign origins and
- * non-object payloads are dropped. websocket.js carries an inline
- * copy of this logic; its behavior is pinned by the same cases here
- * via direct import of the worker script in journalWorker.test.js.
+ * js/missing-origin-check).
  */
 import { describe, it, expect } from 'vitest';
 import { trustedMessage } from '../../src/js/client/messageGuard.js';

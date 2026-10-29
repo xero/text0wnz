@@ -163,9 +163,10 @@ const createCursor = canvasContainer => {
 
 	// scrolling away from the cursor strands it: the next arrow key
 	// snaps the view back to wherever it was left. Once a user scroll
-	// settles with the cursor fully off screen, re-home it to the top
-	// left visible cell, WITHOUT follow (following would tug the view
-	// back by the edge buffer and fight the scroll that just happened)
+	// settles with the cursor fully off screen, re-home it to the
+	// visibleCellFrame home cell, WITHOUT follow (following would tug
+	// the view back by the edge buffer and fight the scroll that just
+	// happened)
 	let settleTimer = 0;
 	const onViewportScroll = () => {
 		clearTimeout(settleTimer);
@@ -191,8 +192,8 @@ const createCursor = canvasContainer => {
 	// metric/buffer refreshes arrive from PERMANENT listeners: while
 	// the cursor is hidden (another tool active, or a live shift
 	// selection) they must only reposition the box, never end the
-	// selection, send cursor frames, or scroll the viewport; a zoom or
-	// collab resync used to do all three through move()
+	// selection, send cursor frames, or scroll the viewport, all of
+	// which move() does
 	const reclamp = () => {
 		x = Math.min(Math.max(x, 0), State.textArtCanvas.getColumns() - 1);
 		y = Math.min(Math.max(y, 0), State.textArtCanvas.getRows() - 1);
@@ -311,12 +312,10 @@ const createCursor = canvasContainer => {
 				}
 			} else if (e.metaKey && !e.shiftKey) {
 				switch (e.code) {
-					// Cmd/Meta + Left arrow
 					case 'ArrowLeft':
 						e.preventDefault();
 						startOfCurrentRow();
 						break;
-					// Cmd/Meta + Right arrow
 					case 'ArrowRight':
 						e.preventDefault();
 						endOfCurrentRow();
@@ -325,14 +324,14 @@ const createCursor = canvasContainer => {
 						break;
 				}
 			} else if (e.shiftKey && !e.metaKey) {
-				// Shift + arrow keys trigger selection - switch to selection tool
 				switch (e.code) {
 					case 'ArrowLeft':
 					case 'ArrowUp':
 					case 'ArrowRight':
 					case 'ArrowDown':
 						e.preventDefault();
-						// Set pending action so selection tool can apply it immediately
+						// set before the switch: the selection tool's enable
+						// consumes it
 						State.selectionTool.setPendingAction(e.code);
 						State.cursor.startSelection();
 						Toolbar.switchTool('selection');
@@ -360,7 +359,6 @@ const createCursor = canvasContainer => {
 		return visible;
 	};
 
-	// init
 	canvas.classList.add('cursor');
 	hide();
 	canvasContainer.insertBefore(canvas, canvasContainer.firstChild);
@@ -402,7 +400,6 @@ const createSelectionCursor = element => {
 	let sx, sy, dx, dy, x, y, width, height;
 	let visible = false;
 	let everSelected = false;
-	// Marching ants animation state
 	let dashOffset = 0;
 	let animationId = null;
 	const dashPattern = [4, 4]; // dash, gap length
@@ -525,8 +522,7 @@ const createSelectionCursor = element => {
 	cursor.style.display = 'none';
 	element.appendChild(cursor);
 
-	// an open selection must track metric changes or it drifts off its
-	// cells
+	// an open selection must track metric changes or it drifts off its cells
 	const refreshMetrics = () => {
 		if (visible) {
 			processCoords();
@@ -597,8 +593,8 @@ const createKeyboardController = () => {
 	// pablodraw lineage): content moves, the canvas never resizes.
 	// Each op is ONE undoable stroke of plane-native cell writes, so
 	// undo works, collab broadcasts it like any draw, animations keep
-	// their other frames, and truecolor/unicode cells survive (the old
-	// buffer rebuild rode the lossy u16 mirror and wiped history).
+	// their other frames, and truecolor/unicode cells survive (a
+	// buffer rebuild would ride the lossy u16 mirror and wipe history).
 	// Mirror mode suspends around the shift or every write would
 	// double against its reflection.
 	const shiftCells = writer => {
@@ -811,8 +807,8 @@ const createKeyboardController = () => {
 	// not canvas input: its keypress default must survive so the
 	// browser clicks the focused button, or the tab stops the focus
 	// walk reaches would not be operable. Text entries never get here
-	// (they ride the ignored flag), and the canvas scope keeps Enter
-	// as the newline it always was
+	// (they ride the ignored flag), and inside the canvas scope Enter
+	// stays a newline
 	const activationTarget = () => {
 		const active = document.activeElement;
 		if (
@@ -856,9 +852,8 @@ const createKeyboardController = () => {
 					}
 				}
 			} else if (e.ctrlKey && !e.altKey && !e.metaKey && e.code === 'KeyU') {
-				// Ctrl+U color pickup lives here because keypress never
-				// fires for ctrl combos in modern browsers; the old keypress
-				// branch was dead
+				// keydown, not keypress: keypress never fires for ctrl
+				// combos in modern browsers
 				e.preventDefault();
 				const block = State.textArtCanvas.getBlock(
 					State.cursor.getX(),
@@ -868,27 +863,22 @@ const createKeyboardController = () => {
 				State.palette.setBackgroundColor(block.backgroundColor);
 			} else if (e.altKey && !e.ctrlKey && !e.metaKey) {
 				switch (e.code) {
-					// Alt+Up Arrow - Insert Row
 					case 'ArrowUp':
 						e.preventDefault();
 						insertRow();
 						break;
-					// Alt+Down Arrow - Delete Row
 					case 'ArrowDown':
 						e.preventDefault();
 						deleteRow();
 						break;
-					// Alt+Right Arrow - Insert Column
 					case 'ArrowRight':
 						e.preventDefault();
 						insertColumn();
 						break;
-					// Alt+Left Arrow - Delete Column
 					case 'ArrowLeft':
 						e.preventDefault();
 						deleteColumn();
 						break;
-					// Alt+E - Erase Row (or Alt+Shift+E for Erase Column)
 					case 'KeyE':
 						e.preventDefault();
 						if (e.shiftKey) {
@@ -897,22 +887,18 @@ const createKeyboardController = () => {
 							eraseRow();
 						}
 						break;
-					// Alt+Home - Erase to Start of Row
 					case 'Home':
 						e.preventDefault();
 						eraseToStartOfRow();
 						break;
-					// Alt+End - Erase to End of Row
 					case 'End':
 						e.preventDefault();
 						eraseToEndOfRow();
 						break;
-					// Alt+Page Up - Erase to Start of Column
 					case 'PageUp':
 						e.preventDefault();
 						eraseToStartOfColumn();
 						break;
-					// Alt+Page Down - Erase to End of Column
 					case 'PageDown':
 						e.preventDefault();
 						eraseToEndOfColumn();
@@ -1056,11 +1042,8 @@ const createKeyboardController = () => {
 	]);
 
 	/**
-	 * Map a Unicode code point to its CP437 code, or pass it through
-	 * unchanged.
-	 *
-	 * @param {number} keyCode - The Unicode code point to convert.
-	 * @returns {number} The mapped code page value or the original code point.
+	 * @param {number} keyCode unicode code point
+	 * @returns {number} its CP437 code, or keyCode unchanged
 	 */
 	const convertUnicode = keyCode => unicodeMapping.get(keyCode) ?? keyCode;
 
@@ -1078,23 +1061,22 @@ const createKeyboardController = () => {
 	};
 
 	const drawTyped = key => {
-		// astral chars are two UTF-16 units; charCodeAt(0) was a lone
-		// surrogate half
+		// astral chars are two UTF-16 units; charCodeAt(0) would be a
+		// lone surrogate half
 		const codepoint = key.codePointAt(0);
 		const mapped = convertUnicode(codepoint);
 		if (codepoint < 0x80 || mapped !== codepoint) {
-			// ASCII, or a codepoint the CP437 table speaks natively; it
-			// still rides the queue because a sync draw here overtook
-			// unicode awaiting resolveUnicode and transposed mixed typing;
-			// an idle queue runs this on the same task's microtask queue,
+			// ASCII or native CP437 still rides the queue: a sync draw would
+			// overtake unicode awaiting resolveUnicode and transpose mixed
+			// typing. An idle queue runs it in this task's microtasks,
 			// before paint
 			enqueueTyped(() => draw(mapped));
 			return;
 		}
 		// outside CP437: intern through the doc glyph table like paste
-		// and the F-keys; writing the raw codepoint as a glyph id aliased
+		// and the F-keys; the raw codepoint as a glyph id would alias
 		// interned glyphs (256+ collides with the interning sequence) and
-		// degraded to '?' on the wire and in exports
+		// degrade to '?' on the wire and in exports
 		enqueueTyped(async () => {
 			const resolved = await State.textArtCanvas.resolveUnicode(
 				new Set([codepoint]),
@@ -1114,12 +1096,12 @@ const createKeyboardController = () => {
 						return;
 					}
 					e.preventDefault();
-					// queued: a sync newline ahead of a pending glyph dropped
-					// the glyph onto the next row
+					// queued: a sync newline ahead of a pending glyph would
+					// drop the glyph onto the next row
 					enqueueTyped(() => State.cursor.newLine());
 				} else if (e.key === 'Backspace') {
 					e.preventDefault();
-					// the edge guard moves inside the link: it must judge the
+					// the edge guard runs inside the link: it must judge the
 					// cursor the preceding link left behind
 					enqueueTyped(() => {
 						if (State.cursor.getX() > 0) {
@@ -1135,13 +1117,11 @@ const createKeyboardController = () => {
 	let selectionStartY = 0;
 	const textCanvasDown = e => {
 		State.cursor.move(e.detail.x, e.detail.y);
-		// Store start position but don't create selection yet
 		selectionStartX = e.detail.x;
 		selectionStartY = e.detail.y;
 	};
 
 	const textCanvasDrag = e => {
-		// Only switch to selection if we've dragged to a different cell
 		if (e.detail.x !== selectionStartX || e.detail.y !== selectionStartY) {
 			State.cursor.hide();
 			Toolbar.switchTool('selection');
@@ -1158,9 +1138,10 @@ const createKeyboardController = () => {
 		State.cursor.enable();
 		fkeys.enable();
 		State.positionInfo.update(State.cursor.getX(), State.cursor.getY());
-		// the selection tool parks the cursor at a real selection when it
-		// disables; inheriting getPos here read stale or default (0,0)
-		// coords on EVERY entry and yanked the view to them
+		// no getPos inherit here: every tool switch runs this
+		// controller's disable, which already parks the cursor at a live
+		// selection, and getPos hands stale or default (0,0) coords that
+		// would yank the view on EVERY entry
 		enabled = true;
 	};
 
@@ -1215,9 +1196,8 @@ const createKeyboardController = () => {
 	};
 };
 
-// a cell is "blank" for transparency purposes, an empty glyph on
-// black: char 0 and space must agree here or blanks leak through one
-// path and stamp through another (paste modes and move mode share it)
+// paste modes and move mode share one blank rule (an empty glyph on
+// black), or blanks leak through one path and stamp through another
 const isBlankCell = (charCode, background) =>
 	(charCode === 0 || charCode === 32 || charCode === 255) &&
 	background === 0;
@@ -1295,7 +1275,6 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 	 * PabloDraw-style paste modes:
 	 * - 'transparent': blank cells in the CLIPBOARD don't overwrite
 	 * - 'under': cells land only where the TARGET is blank
-	 * One undoable batch either way.
 	 */
 	const pasteSpecial = mode => {
 		if (
@@ -1369,10 +1348,8 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 						);
 						return;
 					}
-					// Tokenize grapheme clusters FIRST (core/paste.ts): unicode
-					// blanks become spaces, zero-width chars vanish, box/shade
-					// chars hit their real CP437 codes, and codepoints outside
-					// CP437 resolve through the doc glyph table below.
+					// core/paste.ts owns the token rules; negative tokens are
+					// ~codepoint and resolve through the doc glyph table
 					const { tokens, unmapped } = tokenizePasteText(text);
 					const resolved =
 						unmapped.size > 0
@@ -1401,7 +1378,6 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 							if (currentY >= drawRows) {
 								break;
 							}
-							// past the right edge: drop chars until the next newline
 							if (currentX >= drawColumns) {
 								continue;
 							}
@@ -1422,23 +1398,23 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 
 	const keyDown = e => {
 		if (isTextEntry(e.target)) {
-			// this handler is PERMANENT: Cmd+V in the SAUCE title field
-			// used to stamp the buffer onto the canvas, and Ctrl+Backspace
-			// in chat deleted the selection
+			// this handler is PERMANENT: without the bail, Cmd+V in the
+			// SAUCE title field stamps the buffer onto the canvas and
+			// Ctrl+Backspace in chat deletes the selection
 			return;
 		}
 		if (enabled) {
 			if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
 				switch (e.code) {
-					case 'KeyX': // Ctrl/Cmd+X - Cut
+					case 'KeyX':
 						e.preventDefault();
 						cut();
 						break;
-					case 'KeyC': // Ctrl/Cmd+C - Copy
+					case 'KeyC':
 						e.preventDefault();
 						copy();
 						break;
-					case 'KeyV': // Ctrl/Cmd+V - Paste
+					case 'KeyV':
 						e.preventDefault();
 						paste();
 						break;
@@ -1446,7 +1422,6 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 						break;
 				}
 			}
-			// System paste with Ctrl+Shift+V
 			if (
 				(e.ctrlKey || e.metaKey) &&
 				e.shiftKey &&
@@ -1458,7 +1433,6 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 			}
 		}
 		if ((e.ctrlKey || e.metaKey) && e.code === 'Backspace') {
-			// Ctrl/Cmd+Backspace - Delete selection
 			e.preventDefault();
 			deleteSelection();
 		}
@@ -1489,14 +1463,15 @@ const createSelectionTool = () => {
 	let isDragging = false;
 	let dragStartX = 0;
 	let dragStartY = 0;
-	let originalPosition = null; // Original position when move mode started
-	let underlyingData = null; // Content currently underneath the moving blocks
-	// Selection expansion state
+	let underlyingData = null; // under the moving blocks
+	// every step of one move joins a single stroke, so undo takes the
+	// whole move back at once
+	let moveStroke = false;
 	let selectionStartX = 0;
 	let selectionStartY = 0;
 	let selectionEndX = 0;
 	let selectionEndY = 0;
-	// Pending initial action when switching from keyboard mode
+	// keyboard mode's shift+arrow, replayed on enable
 	let pendingInitialAction = null;
 
 	const canvasDown = e => {
@@ -1535,7 +1510,7 @@ const createSelectionTool = () => {
 		if (moveMode && isDragging) {
 			isDragging = false;
 		} else {
-			// Sync selection expansion state after mouse selection
+			// the next keyboard expansion grows the rect the mouse drew
 			const selection = State.selectionCursor.getSelection();
 			if (selection) {
 				selectionStartX = selection.x;
@@ -1599,7 +1574,7 @@ const createSelectionTool = () => {
 					const sourceBlock = blocks[x];
 					const targetX = selection.x + (selection.width - 1 - x);
 					let charCode = sourceBlock.charCode;
-					// Transform left/right half blocks
+					// a mirrored half block swaps sides
 					switch (charCode) {
 						case 221: // LEFT_HALF_BLOCK
 							charCode = 222; // RIGHT_HALF_BLOCK
@@ -1641,7 +1616,7 @@ const createSelectionTool = () => {
 					const sourceBlock = blocks[y];
 					const targetY = selection.y + (selection.height - 1 - y);
 					let charCode = sourceBlock.charCode;
-					// Transform upper/lower half blocks
+					// a flipped half block swaps top and bottom
 					switch (charCode) {
 						case 223: // UPPER_HALF_BLOCK
 							charCode = 220; // LOWER_HALF_BLOCK
@@ -1689,10 +1664,10 @@ const createSelectionTool = () => {
 							draw(t.charCode, t.fg, t.bg, x + px, y + py);
 						}
 					}
-					// else: leave existing canvas pixel alone
+					// else: leave the existing canvas cell alone
 				}
 			}
-		}, false); // batch the whole operation for consistent commit/undo
+		}, false);
 	};
 
 	const moveSelection = (deltaX, deltaY) => {
@@ -1717,7 +1692,10 @@ const createSelectionTool = () => {
 		if (newX === selection.x && newY === selection.y) {
 			return;
 		}
-		State.textArtCanvas.startUndo();
+		if (!moveStroke) {
+			State.textArtCanvas.startUndo();
+			moveStroke = true;
+		}
 		if (!selectionData) {
 			selectionData = State.textArtCanvas.getAreaCells(
 				selection.x,
@@ -1726,18 +1704,15 @@ const createSelectionTool = () => {
 				selection.height,
 			);
 		}
-		// Restore what was underneath the current position (if any)
 		if (underlyingData) {
 			State.textArtCanvas.setAreaCells(underlyingData, selection.x, selection.y);
 		}
-		// Store what's underneath the new position
 		underlyingData = State.textArtCanvas.getAreaCells(
 			newX,
 			newY,
 			selection.width,
 			selection.height,
 		);
-		// Apply the selection at the new position, but only non-blank characters
 		setAreaSelective(selectionData, underlyingData, newX, newY);
 		State.selectionCursor.setStart(newX, newY);
 		State.selectionCursor.setEnd(
@@ -1747,7 +1722,6 @@ const createSelectionTool = () => {
 	};
 
 	const createEmptyArea = (width, height) => ({
-		// char code 0, foreground 0, background 0
 		cells: Array.from({ length: width * height }, () => ({
 			charCode: 0,
 			fg: 0,
@@ -1770,73 +1744,28 @@ const createSelectionTool = () => {
 					selection.width,
 					selection.height,
 				);
-				originalPosition = {
-					x: selection.x,
-					y: selection.y,
-					width: selection.width,
-					height: selection.height,
-				};
-				// a move empties the old position as the selection drags away
+				// a move empties the old position as the selection drags
+				// away, blank on black whatever the current background, as
+				// Moebius doc.js, TextModeDoc.erase() and PabloDraw
+				// Block/Paste.cs, Paste.Do() leave it
 				underlyingData = createEmptyArea(selection.width, selection.height);
 			}
 		} else {
-			// finalize: clear the original position if the selection moved
-			const currentSelection = State.selectionCursor.getSelection();
-			if (
-				originalPosition &&
-				currentSelection &&
-				(currentSelection.x !== originalPosition.x ||
-				  currentSelection.y !== originalPosition.y)
-			) {
-				const xOverlap =
-					originalPosition.x < currentSelection.x + currentSelection.width &&
-					originalPosition.x + originalPosition.width > currentSelection.x;
-				const yOverlap =
-					originalPosition.y < currentSelection.y + currentSelection.height &&
-					originalPosition.y + originalPosition.height > currentSelection.y;
-				const hasOverlap = xOverlap && yOverlap;
-
-				State.textArtCanvas.startUndo();
-				if (hasOverlap) {
-					// If there's overlap, selectively clear only the non-overlapping parts
-					const emptyData = createEmptyArea(
-						originalPosition.width,
-						originalPosition.height,
-					);
-					// the original position now holds part of the moved selection
-					const currentAtOriginal = State.textArtCanvas.getAreaCells(
-						originalPosition.x,
-						originalPosition.y,
-						originalPosition.width,
-						originalPosition.height,
-					);
-					// Apply empty data, but preserve anything from the current selection
-					setAreaSelective(
-						emptyData,
-						currentAtOriginal,
-						originalPosition.x,
-						originalPosition.y,
-					);
-				} else {
-					State.textArtCanvas.deleteArea(
-						originalPosition.x,
-						originalPosition.y,
-						originalPosition.width,
-						originalPosition.height,
-						State.palette.getBackgroundColor(),
-					);
-				}
+			// the first step already emptied the origin, so finishing
+			// writes nothing; committing here hands the journal and the
+			// history flyout the finished move
+			if (moveStroke) {
+				State.textArtCanvas.endUndo();
 			}
 			moveButton.classList.remove('enabled');
 			State.selectionCursor.getElement().classList.remove('moveMode');
 			selectionData = null;
-			originalPosition = null;
 			underlyingData = null;
+			moveStroke = false;
 		}
 	};
 	const isMoveMode = () => moveMode;
 
-	// Selection expansion methods - delegated from cursor
 	const startSelectionExpansion = () => {
 		if (!State.selectionCursor.isVisible()) {
 			selectionStartX = State.cursor.getX();
@@ -1847,8 +1776,8 @@ const createSelectionTool = () => {
 			State.selectionCursor.setEnd(selectionEndX, selectionEndY);
 			State.cursor.hide();
 		}
-		// If selection already exists, keep using the current anchor (selectionStartX/Y)
-		// and end (selectionEndX/Y) coordinates. Don't reinitialize from bounds.
+		// an existing selection keeps its anchor and end: rebuilding them
+		// from the bounds would lose which corner the expansion grows from
 	};
 
 	const moveSelectionLeft = () => {
@@ -1962,7 +1891,6 @@ const createSelectionTool = () => {
 	const shiftToStartOfRow = () => {
 		startSelectionExpansion();
 		selectionEndX = 0;
-		// Ensure coordinates are ordered (start <= end)
 		if (selectionStartX > selectionEndX) {
 			[selectionStartX, selectionEndX] = [selectionEndX, selectionStartX];
 		}
@@ -1974,7 +1902,6 @@ const createSelectionTool = () => {
 	const shiftToEndOfRow = () => {
 		startSelectionExpansion();
 		selectionEndX = State.textArtCanvas.getColumns() - 1;
-		// Ensure coordinates are ordered (start <= end)
 		if (selectionStartX > selectionEndX) {
 			[selectionStartX, selectionEndX] = [selectionEndX, selectionStartX];
 		}
@@ -1995,7 +1922,7 @@ const createSelectionTool = () => {
 
 		const fontHeight = State.font.getHeight();
 		const fontWidth = State.font.getWidth();
-		const bufferRows = 5; // Same buffer as cursor
+		const bufferRows = SCROLL_BUFFER_ROWS;
 
 		const selectionPixelY = selection.y * fontHeight;
 		const selectionPixelX = selection.x * fontWidth;
@@ -2049,7 +1976,7 @@ const createSelectionTool = () => {
 			let newStartY = selectionStartY + delta;
 			let newEndY = selectionEndY + delta;
 
-			// Clamp to canvas bounds while preserving selection height
+			// clamp both ends together so the selection keeps its height
 			if (newEndY > maxY) {
 				newEndY = maxY;
 				newStartY = Math.max(0, maxY - selectionHeight + 1);
@@ -2068,36 +1995,29 @@ const createSelectionTool = () => {
 
 	const keyDown = e => {
 		if (isTextEntry(e.target)) {
-			// typing in chat used to toggle move mode, flip the selected
-			// art on [ and ], and switch tools on Enter
+			// without the bail, typing in chat toggles move mode, flips
+			// the selected art, and switches tools
 			return;
 		}
-		// These keys work with or without modifiers
 		if (e.code === 'Enter') {
-			// Enter - exit selection and use default cursor behavior
 			e.preventDefault();
 			Toolbar.switchTool('keyboard');
 			State.cursor.newLine();
 		} else if (e.code === 'End') {
-			// End key - expand selection to end of current row
 			e.preventDefault();
 			shiftToEndOfRow();
 		} else if (e.code === 'Home') {
-			// Home key - expand selection to start of current row
 			e.preventDefault();
 			shiftToStartOfRow();
 		}
 		if (!e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
 			if (e.key === '[') {
-				// '[' key - flip horizontal
 				e.preventDefault();
 				flipHorizontal();
 			} else if (e.key === ']') {
-				// ']' key - flip vertical
 				e.preventDefault();
 				flipVertical();
 			} else if (e.key === 'M' || e.key === 'm') {
-				// 'M' key - toggle move mode
 				e.preventDefault();
 				toggleMoveMode();
 			} else if (e.code === 'PageUp') {
@@ -2107,7 +2027,6 @@ const createSelectionTool = () => {
 				e.preventDefault();
 				pageScroll('down');
 			} else if (moveMode && State.selectionCursor.getSelection()) {
-				// Arrow key shift selection contents in move mode
 				if (e.code === 'ArrowLeft') {
 					e.preventDefault();
 					moveSelection(-1, 0);
@@ -2123,7 +2042,6 @@ const createSelectionTool = () => {
 				}
 			} else {
 				switch (e.code) {
-					// arrow keys move selection area
 					case 'ArrowLeft':
 						e.preventDefault();
 						moveSelectionLeft();
@@ -2145,7 +2063,6 @@ const createSelectionTool = () => {
 				}
 			}
 		} else if (e.shiftKey && !e.metaKey) {
-			// Arrows + Shift key combinations expand selection
 			switch (e.code) {
 				case 'ArrowLeft':
 					e.preventDefault();
@@ -2203,8 +2120,6 @@ const createSelectionTool = () => {
 			}
 		}
 
-		// If there's already a selection visible (switched from keyboard mode),
-		// initialize our selection expansion state
 		if (State.selectionCursor.isVisible()) {
 			const selection = State.selectionCursor.getSelection();
 			if (selection) {
@@ -2217,7 +2132,6 @@ const createSelectionTool = () => {
 			startSelectionExpansion();
 		}
 
-		// Execute pending initial action if one was set from keyboard mode
 		if (pendingInitialAction) {
 			const action = pendingInitialAction;
 			pendingInitialAction = null;
@@ -2261,8 +2175,8 @@ const createSelectionTool = () => {
 			moveButton.classList.remove('enabled');
 			State.selectionCursor.getElement().classList.remove('moveMode');
 			selectionData = null;
-			originalPosition = null;
 			underlyingData = null;
+			moveStroke = false;
 		}
 		flipHButton.removeEventListener('click', flipHorizontal);
 		flipVButton.removeEventListener('click', flipVertical);
@@ -2276,8 +2190,8 @@ const createSelectionTool = () => {
 
 	// a new document invalidates every piece of cross-file tool state:
 	// stale move-mode data would stamp the OLD file's cells into the
-	// new one on the next drag, and a stale originalPosition would
-	// deleteArea freshly loaded art on the next toggle
+	// new one on the next drag, and a stale stroke flag would fold the
+	// next move into whatever stroke is open
 	document.addEventListener('onNewDocument', () => {
 		if (moveMode) {
 			moveMode = false;
@@ -2285,8 +2199,8 @@ const createSelectionTool = () => {
 			State.selectionCursor.getElement().classList.remove('moveMode');
 		}
 		selectionData = null;
-		originalPosition = null;
 		underlyingData = null;
+		moveStroke = false;
 		isDragging = false;
 		pendingInitialAction = null;
 		selectionStartX = 0;

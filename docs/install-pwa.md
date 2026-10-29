@@ -53,7 +53,7 @@ Updating keeps your local data. Font favorites, recent colors, and editor settin
 
 **Android:**
 
-- Share sheet integration
+- Share sheet integration (Chrome 156 or later)
 - Share files from Files app directly to teXt0wnz
 
 **iOS/iPadOS:**
@@ -194,6 +194,9 @@ This document provides step-by-step instructions for installing a Progressive We
 3. Tap "Share"
 4. Select "teXt0wnz" from share sheet
 5. File opens in the app
+
+> [!NOTE]
+> Sharing needs Chrome 156 or later. Older versions send the file without saying it came from the app, and teXt0wnz turns away any upload it cannot trace back to itself, so the editor opens without the file. Update Chrome, or open the file from File → Open. See [Security](./security.md#share-target) for why.
 
 ### iOS: Manual File Opening
 

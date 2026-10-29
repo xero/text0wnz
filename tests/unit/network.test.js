@@ -599,6 +599,32 @@ describe('Network Module', () => {
 			expect(State.font.setPalette).toHaveBeenCalledWith(State.palette);
 		});
 
+		it('a dropped session says the editor is local again with autosave on', async () => {
+			const handler = createWorkerHandler(mockInputHandle);
+			const messageListener = mockWorker.addEventListener.mock.calls.find(
+				call => call[0] === 'message',
+			)[1];
+			handler.joinCollaboration();
+			const blank = { code: 32, fg: 7, bg: 0 };
+			await messageListener({
+				data: {
+					cmd: 'connected',
+					data: {
+						caps: [],
+						doc: { columns: 2, rows: 1, data: [blank, blank]},
+						users: [],
+						chat_history: [],
+					},
+				},
+			});
+			global.alert.mockClear();
+			await messageListener({ data: { cmd: 'closed', wasConnected: true } });
+			expect(handler.isConnected()).toBe(false);
+			expect(global.alert).toHaveBeenCalledWith(
+				'Disconnected from the server. You are working locally again, and autosave is back on.',
+			);
+		});
+
 		it('EXT_PALETTE rebinds the live font handle', async () => {
 			const handler = createWorkerHandler(mockInputHandle);
 			const messageListener = mockWorker.addEventListener.mock.calls.find(
@@ -911,7 +937,7 @@ describe('Network Module', () => {
 		});
 
 		it('treats a corrupted notifications value as off, never throws', () => {
-			// the old JSON.parse path threw on garbage and killed the boot
+			// a throw on garbage here kills the boot
 			global.localStorage.getItem.mockReturnValue('{broken');
 
 			createChatController(

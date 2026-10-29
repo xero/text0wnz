@@ -1,8 +1,7 @@
 /**
- * Doc-native file formats through the Load/Save surface: .tnd and .dur
- * and .0wnz open with a DocV3 payload (the 7th callback arg) plus a
- * lossy u16 projection for legacy bookkeeping; .tnd and .0wnz save
- * straight from the live doc.
+ * Every open hands main.js a DocV3 payload (the 7th callback arg) plus
+ * a lossy u16 projection for legacy bookkeeping; these formats carry
+ * what the u16 view cannot.
  */
 import { describe, it, expect, vi } from 'vitest';
 
@@ -89,6 +88,17 @@ describe('doc-native file formats', () => {
 		// the u16 view quantizes the RGB fg to bright red
 		expect(u16[1] & 15).toBe(12);
 		expect(mocks.ui.sauceTitle.value).toBe('tnd fixture');
+	});
+
+	it('.ans opens with PabloDraw 24-bit colors on the planes', async () => {
+		const bytes = new TextEncoder().encode(
+			'\x1b[1;255;64;32t\x1b[0;8;16;24tA',
+		);
+		const [, , u16, , , , docNative] = await openFile('truecolor.ans', bytes);
+		const cell = docNative.getCell(0, 0, 0);
+		expect(cell.fg).toBe(rgbColor(255, 64, 32));
+		expect(cell.bg).toBe(rgbColor(8, 16, 24));
+		expect(u16[0] >> 8).toBe(65);
 	});
 
 	it('.dur opens with frames riding the doc', async () => {

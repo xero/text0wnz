@@ -1,18 +1,19 @@
+import { expect } from '@playwright/test';
+
 /**
- * Wait for the editor to be ready: the canvas container exists and main.js
- * has wired up every control (it sets data-ready on #bodyContainer)
+ * main.js sets data-ready on #bodyContainer once every control is wired
  */
 export async function waitForEditorReady(page, timeout = 10000) {
 	await page.waitForSelector('#canvasContainer', { timeout });
-	// Controls clicked before this point are silently ignored
+	// controls clicked before this point are silently ignored
 	await page.waitForSelector('#bodyContainer[data-ready]', { state: 'attached', timeout });
-	// Allow time for remaining async work (fonts, rendering, etc.)
+	// remaining async work (fonts, rendering) settles after data-ready
 	await page.waitForTimeout(1000);
 }
 
 /**
- * Wait for the test bridge: window.__t0wnz only exists when the page
- * was opened with /?test (main.js gates the import)
+ * window.__t0wnz only exists when the page was opened with /?test
+ * (main.js gates the import)
  */
 export async function bridgeReady(page, timeout = 10000) {
 	await page.waitForSelector('#canvasContainer', { timeout });
@@ -21,11 +22,11 @@ export async function bridgeReady(page, timeout = 10000) {
 }
 
 /**
- * Activate a tool. Group members live in rail flyouts now, so the
- * group opens first when its item is hidden. Tools with an icon stack
- * are clicked through it, never the button center: those buttons embed
- * a native mode select there, and a chromium click on a native select
- * arms a stale pointerup that ends the next canvas stroke early.
+ * Group members live in rail flyouts, so the group opens first when
+ * its item is hidden. Tools with an icon stack are clicked through it,
+ * never the button center: those buttons embed a native mode select
+ * there, and a chromium click on a native select arms a stale
+ * pointerup that ends the next canvas stroke early.
  */
 const TOOL_GROUPS = {
 	halfblock: 'brushes',
@@ -50,11 +51,14 @@ export async function clickTool(page, id) {
 	} else {
 		await page.locator(`#${id}`).click();
 	}
+	// most tools load lazily: a stroke sent before the button lights
+	// lands on whatever tool was active before
+	await expect(page.locator(`#${id}`)).toHaveClass(/toolbarDisplayed/);
 }
 
 /**
- * Undo and redo buttons live in the history flyout; open it when the
- * button is hidden. The flyout stays open across presses.
+ * Undo and redo live in the history flyout, which stays open across
+ * presses.
  */
 export async function clickHistoryAction(page, id) {
 	if (!(await page.locator(`#${id}`).isVisible())) {
@@ -74,9 +78,6 @@ export async function clickViewToggle(page, id) {
 	await page.locator(`#${id}`).click();
 }
 
-/**
- * Open the tabbed File/Edit menu on the given tab.
- */
 export async function openMenu(page, tab = 'file') {
 	if (!(await page.locator('#mainMenu').isVisible())) {
 		await page.locator('#fileMenu').click();
@@ -86,9 +87,6 @@ export async function openMenu(page, tab = 'file') {
 		.click();
 }
 
-/**
- * Client coordinates of a canvas cell, for synthetic pointer input
- */
 export async function cellCenter(page, x, y) {
 	return page.evaluate(
 		([cx, cy]) => {
@@ -107,9 +105,6 @@ export async function cellCenter(page, x, y) {
 	);
 }
 
-/**
- * Read one canvas cell through the test bridge
- */
 export async function readBlock(page, x, y) {
 	return page.evaluate(
 		([cx, cy]) => {
@@ -139,8 +134,7 @@ export async function parkToolSettings(page) {
 }
 
 /**
- * Read a rectangular region as one string per row in a single page
- * evaluation; charCode 0 reads as space
+ * One page evaluation for the whole region, not a round trip per cell
  */
 export async function readRegion(page, x0, y0, x1, y1) {
 	return page.evaluate(
@@ -159,6 +153,42 @@ export async function readRegion(page, x0, y0, x1, y1) {
 		},
 		[x0, y0, x1, y1],
 	);
+}
+
+/**
+ * Seeds art through the editor core as one undo stroke, so a spec
+ * sets up cells without leaning on a tool it does not test
+ */
+export async function writeText(page, x, y, text, fg = 7, bg = 0) {
+	await page.evaluate(
+		([cx, cy, t, f, b]) => {
+			const c = window.__t0wnz.State.textArtCanvas;
+			c.startUndo();
+			c.draw(cb => {
+				[...t].forEach((ch, i) => cb(ch.charCodeAt(0), f, b, cx + i, cy));
+			}, false);
+		},
+		[x, y, text, fg, bg],
+	);
+}
+
+export async function tap(page, x, y) {
+	const c = await cellCenter(page, x, y);
+	await page.mouse.click(c.clientX, c.clientY);
+}
+
+export async function cursorAt(page) {
+	return page.evaluate(() => {
+		const c = window.__t0wnz.State.cursor;
+		return { x: c.getX(), y: c.getY() };
+	});
+}
+
+export async function readColors(page) {
+	return page.evaluate(() => {
+		const p = window.__t0wnz.State.palette;
+		return { fg: p.getForegroundColor(), bg: p.getBackgroundColor() };
+	});
 }
 
 /**
@@ -197,9 +227,6 @@ export async function setAttribSize(page, size) {
 	}, String(size));
 }
 
-/**
- * Drag a stroke between two cells with interpolated pointer moves
- */
 export async function drag(page, from, to, steps = 12) {
 	const a = await cellCenter(page, from[0], from[1]);
 	const b = await cellCenter(page, to[0], to[1]);
@@ -209,42 +236,15 @@ export async function drag(page, from, to, steps = 12) {
 	await page.mouse.up();
 }
 
-/**
- * Focus the canvas element for keyboard input
- * TODO: Replace timeout with focus state validation
- */
 export async function focusCanvas(page) {
-	// Click on viewport instead of canvas to avoid toolPreview overlay
-	// interference, below the tool settings float that boots at (58,54)
+	// the viewport, not the canvas, so the toolPreview overlay cannot
+	// intercept; below the tool settings float that boots at (58,54)
 	const viewport = page.locator('#viewport');
 	await viewport.click({ position: { x: 100, y: 340 } });
 	// TODO: Wait for specific focus state or activeElement change
 	await page.waitForTimeout(200);
 }
 
-/**
- * Get canvas text content by reading from the DOM
- * TODO: Adjust based on actual DOM structure or window API if available
- */
-export async function getCanvasText(page) {
-	const textFromAPI = await page.evaluate(() => {
-		if (window.State && window.State.textArtCanvas) {
-			return window.State.textArtCanvas.toString();
-		}
-		return null;
-	});
-
-	if (textFromAPI) {
-		return textFromAPI;
-	}
-
-	// placeholder until the editor exposes canvas data
-	return '';
-}
-
-/**
- * Get the current viewport scroll position
- */
 export async function getViewportScrollPosition(page) {
 	return await page.evaluate(() => {
 		const viewport = document.getElementById('viewport');
@@ -255,27 +255,5 @@ export async function getViewportScrollPosition(page) {
 			};
 		}
 		return { scrollTop: 0, scrollLeft: 0 };
-	});
-}
-
-/**
- * Get the position info text displayed in the editor
- */
-export async function getPositionInfo(page) {
-	const positionInfo = page.locator('#positionInfo');
-	return await positionInfo.textContent() || '';
-}
-
-/**
- * Check if a specific tool is active by checking for active class or similar
- * TODO: Adjust based on actual DOM structure for active tool indication
- */
-export async function getActiveTool(page) {
-	return await page.evaluate(() => {
-		const activeTool = document.querySelector('aside > div.active, aside > div[class*="active"]');
-		if (activeTool && activeTool.id) {
-			return activeTool.id;
-		}
-		return null;
 	});
 }

@@ -1,11 +1,9 @@
 /**
- * Frames timeline: the animation panel. Frame strip,
- * add/duplicate/delete, per-frame delay, live-fps playback, onion
- * skin. Pure UI over the canvas frames API.
+ * Pure UI over the canvas frames API.
  *
- * Collab sessions are single-frame by policy (no frame op exists in
- * the protocol): the controls disable with a visible note while
- * connected, matching the charset/color lockouts.
+ * Collab sessions are single-frame by policy: no frame op exists in
+ * the protocol, extension suite included, so unlike the charset and
+ * color lockouts this one holds in every connected session.
  */
 import State from './state.js';
 import { $ } from './ui.js';
@@ -141,7 +139,6 @@ const createFramesPanel = () => {
 		inputDelay.placeholder = String(c.getGlobalDelayMs());
 		inputFps.value = String(Math.round(1000 / c.getGlobalDelayMs()));
 		btnOnion.classList.toggle('active', c.getOnionSkin() === true);
-		// numbered strip: click to jump, current highlighted
 		strip.textContent = '';
 		for (let i = 0; i < count; i++) {
 			const cell = document.createElement('button');
@@ -199,8 +196,8 @@ const createFramesPanel = () => {
 		}
 	});
 	btnPlay.addEventListener('click', () => {
-		// the play/stop button stops EVERY animation mode (a running
-		// baud reveal included) before it would ever start playback
+		// a running baud reveal counts as playing: stop it rather than
+		// start frame playback over it
 		if (playing || baudActive) {
 			stop();
 		} else {
@@ -236,11 +233,8 @@ const createFramesPanel = () => {
 		refresh();
 	});
 
-	// the toolbar button wires through createSettingToggle in main.js
-	// (the house pattern: the 'enabled' highlight persists across
-	// toolbar view switches, like the grid button); the panel manager
-	// derives the module's visibility from this flag, so callers follow
-	// a setOpen with a layout
+	// the panel manager derives the module's visibility from this flag,
+	// so callers follow a setOpen with a layout
 	let open = false;
 	const isOpen = () => open;
 	const setOpen = value => {

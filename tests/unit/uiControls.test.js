@@ -76,12 +76,30 @@ describe('UI Controls and Controllers', () => {
 
 			expect(sauceComments.value).toBe(originalValue);
 		});
+
+		it('counts and truncates by UTF-8 bytes, not characters', () => {
+			const sauceComments = document.createElement('textarea');
+			sauceComments.id = 'sauceComments';
+			const sauceBytes = document.createElement('input');
+			sauceBytes.id = 'sauceBytes';
+			document.body.appendChild(sauceComments);
+			document.body.appendChild(sauceBytes);
+
+			sauceComments.value = 'Hello 世界! 🌍';
+			enforceMaxBytes();
+			expect(sauceBytes.value).toBe('18/16320 bytes');
+
+			sauceComments.value = 'é'.repeat(9000);
+			enforceMaxBytes();
+			expect(sauceComments.value).toBe('é'.repeat(8160));
+			expect(sauceBytes.value).toBe('16320/16320 bytes');
+		});
 	});
 
 	describe('websocketUI', () => {
 		// the stylesheet gates .includedForWebsocket and
 		// .excludedForWebsocket on this one attribute; inline display
-		// writes are gone (they lost to the sauce panel's id rule)
+		// writes lose to the sauce panel's id rule
 		it('marks the document collab-on when show is true', () => {
 			websocketUI(true);
 			expect(document.documentElement.dataset.collab).toBe('on');

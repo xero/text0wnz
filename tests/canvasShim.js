@@ -1,4 +1,4 @@
-import { beforeAll, afterEach } from 'vitest';
+import { beforeAll } from 'vitest';
 
 // Cache contexts to reduce memory allocation
 const contextCache = new WeakMap();
@@ -67,7 +67,6 @@ beforeAll(() => {
 				createLinearGradient: () => ({ addColorStop: () => {} }),
 				createRadialGradient: () => ({ addColorStop: () => {} }),
 				createPattern: () => ({}),
-				// Properties
 				fillStyle: '',
 				strokeStyle: '',
 				lineWidth: 1,
@@ -101,9 +100,4 @@ beforeAll(() => {
 	HTMLCanvasElement.prototype.toBlob = function (callback) {
 		callback(new Blob());
 	};
-});
-
-afterEach(() => {
-	// No explicit cleanup: the WeakMap drops contexts with their canvases,
-	// and tests clear document.body.innerHTML.
 });

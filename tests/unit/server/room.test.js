@@ -1,12 +1,7 @@
 /**
- * Room protocol semantics: vanilla Moebius behavior
- * transcribed from upstream plus our policy deltas, driven through
- * fake clients so the whole surface tests without sockets. Policy
- * pins: the password gates spectators, spectators cannot draw but
- * CAN chat and hear chat, SET_CANVAS_SIZE relays the sender's id,
- * the do-not-diverge rule (default relay never
- * persisted), and the row-aware resize (v2 moves cells by linear
- * offset, scrambling rows).
+ * Room protocol semantics: vanilla Moebius behavior transcribed from
+ * upstream plus our policy deltas, driven through fake clients so the
+ * whole surface tests without sockets.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createRoom, SERVER_CAPS, ROOM_DEFAULTS } from '../../../src/js/server/room.js';
@@ -50,7 +45,8 @@ describe('connect', () => {
 		const reply = editor.last();
 		expect(reply.type).toBe(A.CONNECTED);
 		expect(reply.data.id).toBe(0);
-		// upstream computes the users list BEFORE adding the joiner
+		// Moebius server.js, the CONNECTED case, lists users BEFORE
+		// adding the joiner
 		expect(reply.data.users).toEqual([]);
 		expect(reply.data.chat_history).toEqual([]);
 		expect(reply.data.doc.compressed_data).toBeDefined();
@@ -132,7 +128,6 @@ describe('draw', () => {
 			data: { x: 99, y: 0, block, id: 0 },
 		});
 		expect(peer.ofType(A.DRAW)).toHaveLength(1);
-		// the doc mutated: a fresh join sees the cell
 		const late = joinEditor(room, 'late');
 		const doc = late.ofType(A.CONNECTED)[0].data.doc;
 		const blocks = uncompressBlocks(doc.compressed_data, 8);
@@ -286,7 +281,7 @@ describe('relay tier and misc', () => {
 		expect(b.ofType(A.CHANGE_PALETTE)).toHaveLength(1);
 		expect(spectator.ofType(A.CURSOR)).toHaveLength(0);
 		expect(spectator.ofType(A.CHANGE_PALETTE)).toHaveLength(0);
-		expect(room.stats().opLogLength).toBe(0); // never persisted
+		expect(room.stats().opLogLength).toBe(0);
 	});
 
 	it('SET_BG is swallowed like upstream', () => {
@@ -378,7 +373,6 @@ describe('extension suite v1 (t0wnz-ext-1)', () => {
 		const down = vanilla.ofType(A.DRAW)[0];
 		expect(down.data.block.code).toBe(63); // '?' substitute
 		expect(down.data.block.fg).toBeLessThan(16);
-		// the sender's ack carries the same seq
 		expect(sender.ofType(T0wnzAction.EXT_ACK)[0].data.seq).toBe(1);
 		// late joiners: vanilla sees the projection, caps sees the truth
 		const lateVan = joinEditor(room, 'late');
@@ -400,7 +394,6 @@ describe('extension suite v1 (t0wnz-ext-1)', () => {
 		});
 		expect(caps.ofType(A.DRAW)[0].data.seq).toBe(1);
 		expect(vanB.ofType(A.DRAW)[0].data.seq).toBeUndefined();
-		// vanilla senders get no ack
 		expect(vanA.ofType(T0wnzAction.EXT_ACK)).toHaveLength(0);
 	});
 
@@ -539,7 +532,7 @@ describe('extension suite v1 (t0wnz-ext-1)', () => {
 	});
 
 	it('EXT_TIMELAPSE replays to the live doc even after op-log eviction', () => {
-		// tiny log: draws 3-6 evict 1-2 into the baseline
+		// tiny log: draws 3-6 evict 1-4 into the baseline
 		const room = createRoom({
 			columns: 4,
 			rows: 1,
@@ -723,8 +716,8 @@ describe('convergence fuzz', () => {
 		const rand = mulberry32(0xc0117ab);
 		const room = createRoom({ columns: 20, rows: 10 });
 
-		// each client keeps a local replica: own ops apply locally at
-		// send (apply-locally-on-send), received DRAW/RESIZE apply too
+		// each client keeps a local replica: own ops apply at send
+		// (apply-locally-on-send) and received DRAW/RESIZE apply too
 		const makeReplica = () => ({
 			columns: 20,
 			rows: 10,
@@ -807,7 +800,7 @@ describe('convergence fuzz', () => {
 	});
 });
 
-describe('review-pass regressions', () => {
+describe('room invariants', () => {
 	it('repeated bad passwords open a cooldown that refuses even the right one', () => {
 		vi.useFakeTimers();
 		try {
@@ -834,8 +827,8 @@ describe('review-pass regressions', () => {
 
 	it('loadState keeps a dark 8-bit object palette exact', () => {
 		// what this server writes: {r,g,b} objects, 8-bit. All under 64
-		// here, which the wire heuristic would have brightened fourfold
-		// on every restart
+		// here, which the wire heuristic would brighten fourfold on
+		// every restart
 		const room = createRoom();
 		const dark = Array.from({ length: 16 }, (_, i) => ({
 			r: i,

@@ -25,13 +25,11 @@ The unit tests validate individual modules and functions in isolation, ensuring 
   - XBin font/palette handling
 
 - **file.test.js** - File loading and saving tests
-  - ANSi file format handling
-  - Binary (.bin) file support
-  - XBin format support
-  - SAUCE metadata parsing
-  - File export operations
-  - PNG image generation
-  - Font name conversions
+  - Error handling
+  - FileReader wiring for ANSI, BIN, XBin, and UTF-8 opens
+  - SAUCE record processing
+  - ANSI parsing engine
+  - UTF-8 processing
 
 - **font.test.js** - Font loading and rendering tests
   - Font loading from images
@@ -44,18 +42,16 @@ The unit tests validate individual modules and functions in isolation, ensuring 
 
 
 - **keyboard.test.js** - Keyboard input and shortcuts tests
-  - Keyboard mode toggle
-  - Text input handling
-  - Arrow key navigation
-  - Shortcut key handling
-  - Cursor movement
-  - Special key handling
+  - F-key character sets and F1-F12 typing
+  - Cursor clamping and selection rects
+  - Row and column inserts, deletes, and erases
+  - Typed glyph order, Tab, and Enter
+  - Cut, copy, and the paste modes
 
-- **main.test.js** - Application initialization tests
-  - Module initialization
-  - Event listener setup
-  - State management
-  - Integration tests
+- **main.test.js** - Application boot tests
+  - The DOMContentLoaded handler
+  - Tier 1 controllers, font preload, and the init alerts
+  - Tier 2 and tier 3 scheduling
 
 - **network.test.js** - Network and collaboration tests
   - WebSocket connection
@@ -96,9 +92,8 @@ The unit tests validate individual modules and functions in isolation, ensuring 
   - Component interactions
 
 - **utils.test.js** - Utility function tests
-  - Helper functions
-  - Data manipulation
-  - Format conversions
+  - Canvas creation
+  - DOM selector shorthands
 
 
 

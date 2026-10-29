@@ -150,7 +150,6 @@ describe('editor.loadDoc', () => {
 		expect(doc.getCell(0, 0, 0).fg).toBe(paletteColor(12));
 		expect(doc.getCell(0, 1, 0).fg).toBe(paletteColor(196));
 		expect(doc.getCell(0, 1, 0).bg).toBe(paletteColor(3));
-		// ...and the source's 256-entry palette is adopted wholesale
 		expect(doc.palette.length).toBe(256);
 		expect(doc.palette[196]).toBe(rgbColor(255, 0, 0));
 		// the snowman re-registers in THIS doc's glyph table
@@ -170,7 +169,7 @@ describe('editor.loadDoc', () => {
 		editor.drawBlocks(cb => cb(88, 7, 0, 0, 0));
 		editor.loadDoc(source);
 		expect(v3ToU16(doc)).toEqual(v3ToU16(source));
-		expect(editor.undo()).toBe(false); // history gone
+		expect(editor.undo()).toBe(false);
 	});
 });
 
@@ -279,7 +278,7 @@ describe('ice toggle with extended colors', () => {
 	});
 });
 
-describe('loadDoc with short-palette sources (golden regression)', () => {
+describe('loadDoc with short-palette sources', () => {
 	it('keeps high palette-index words live instead of freezing to black', () => {
 		// exactly what the UTF-8 reader produces: paletteColor(n >= 16)
 		// words on a doc whose own palette has only 16 entries. Freezing

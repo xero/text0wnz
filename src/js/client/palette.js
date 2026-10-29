@@ -1,5 +1,4 @@
 // @ts-check
-/* Color related methods */
 import State from './state.js';
 import { $ } from './ui.js';
 import { xterm256RGB } from '../core/codecs/dur.js';
@@ -201,22 +200,21 @@ const getUnicodeReverseMap = (() => {
 
 /** @param {{r: number, g: number, b: number, a: number}} rgba @returns {number[]} */
 const rgbaToXbin = ({ r, g, b, a }) => [
-	// Ensure the values don't exceed 63
 	Math.min(r >> 2, 63),
 	Math.min(g >> 2, 63),
 	Math.min(b >> 2, 63),
-	a, // Alpha remains unchanged
+	a,
 ];
 
 /** @param {number[]} xbin 6-bit [r, g, b, a] @returns {number[]} */
 const xbinToRgba = ([r, g, b, a]) => [
-	// the canonical expansion lives in ONE place (doc.ts); the old
-	// round(v/63*255) inline twin differed by one LSB on ten of 64
-	// values, so a load, autosave, reload cycle shifted colors
+	// the canonical expansion lives in ONE place (doc.ts): an inline
+	// round(v/63*255) differs by one LSB on ten of 64 values, so a
+	// load, autosave, reload cycle would shift colors
 	expand6to8(r),
 	expand6to8(g),
 	expand6to8(b),
-	a, // Alpha remains unchanged
+	a,
 ];
 
 /** @param {string} hex @returns {{r: number, g: number, b: number, a: number}} */
@@ -348,9 +346,8 @@ const createPalette = RGB6Bit => {
 	const getPalette = () => RGBAColors;
 
 	return {
-		// conversion helpers stay module-internal (the module exports
-		// getUTF8/getUnicode for the writers); only hexToXbin is read
-		// off an instance (the custom color input)
+		// conversion helpers stay off the instance; only hexToXbin is
+		// read off one (the custom color input)
 		hexToXbin: hexToXbin,
 		getPalette: getPalette,
 		getRGBColor: getRGBColor,
@@ -421,7 +418,7 @@ const createPalettePreview = canvas => {
 const createPalettePicker = canvas => {
 	/** @type {ImageData[]} */
 	const imageData = [];
-	const doubleTapThreshold = 300; // Time in ms to detect double-tap/click
+	const doubleTapThreshold = 300; // ms
 	let lastTouchTime = 0;
 	let lastMouseTime = 0;
 	/** @type {HTMLInputElement|null} */
@@ -461,7 +458,6 @@ const createPalettePicker = canvas => {
 		if (!palette) {
 			return;
 		}
-		// Handle digit keys (0-7) with ctrl or alt modifiers
 		if (
 			e.code.startsWith('Digit') &&
 			['0', '1', '2', '3', '4', '5', '6', '7'].includes(e.code.slice(-1))
@@ -484,27 +480,26 @@ const createPalettePicker = canvas => {
 					palette.setBackgroundColor(num);
 				}
 			}
-			// ctrl + arrows
 		} else if (e.code.startsWith('Arrow') && e.ctrlKey) {
 			e.preventDefault();
 			let color;
 			switch (e.code) {
-				case 'ArrowLeft': // Ctrl+Left - Previous background color
+				case 'ArrowLeft':
 					color = palette.getBackgroundColor();
 					color = color === 0 ? 15 : color - 1;
 					palette.setBackgroundColor(color);
 					break;
-				case 'ArrowUp': // Ctrl+Up - Previous foreground color
+				case 'ArrowUp':
 					color = palette.getForegroundColor();
 					color = color === 0 ? 15 : color - 1;
 					palette.setForegroundColor(color);
 					break;
-				case 'ArrowRight': // Ctrl+Right - Next background color
+				case 'ArrowRight':
 					color = palette.getBackgroundColor();
 					color = color === 15 ? 0 : color + 1;
 					palette.setBackgroundColor(color);
 					break;
-				case 'ArrowDown': // Ctrl+Down - Next foreground color
+				case 'ArrowDown':
 					color = palette.getForegroundColor();
 					color = color === 15 ? 0 : color + 1;
 					palette.setForegroundColor(color);
@@ -542,8 +537,25 @@ const createPalettePicker = canvas => {
 	};
 
 	/**
-	 * Shared tap/click handler; a touchend fires with touches already
-	 * empty, so the lifted finger's coords live on changedTouches
+	 * @param {number} px
+	 * @param {number} py
+	 */
+	const swatchAt = (px, py) => {
+		// fractions of the rendered rect, not the backing store: the
+		// phone palette flyout scales the canvas with CSS
+		const rect = canvas.getBoundingClientRect();
+		return {
+			x: Math.floor(((px - rect.left) / rect.width) * 2),
+			y: Math.min(
+				7,
+				Math.max(0, Math.floor(((py - rect.top) / rect.height) * 8)),
+			),
+		};
+	};
+
+	/**
+	 * A touchend fires with touches already empty, so the lifted
+	 * finger's coords live on changedTouches
 	 * @param {*} e TouchEvent or MouseEvent
 	 * @param {boolean} isTouch
 	 */
@@ -552,18 +564,9 @@ const createPalettePicker = canvas => {
 		if (isTouch && !touch) {
 			return;
 		}
-		const rect = canvas.getBoundingClientRect();
-		const coords = isTouch
-			? { x: touch.pageX, y: touch.pageY }
-			: { x: e.clientX, y: e.clientY };
-
-		// fractions of the rendered rect, not the backing store: the
-		// phone palette flyout scales the canvas with CSS
-		const x = Math.floor(((coords.x - rect.left) / rect.width) * 2);
-		const y = Math.min(
-			7,
-			Math.max(0, Math.floor(((coords.y - rect.top) / rect.height) * 8)),
-		);
+		const { x, y } = isTouch
+			? swatchAt(touch.pageX, touch.pageY)
+			: swatchAt(e.clientX, e.clientY);
 
 		const currentTime = new Date().getTime();
 		const lastTime = isTouch ? lastTouchTime : lastMouseTime;
@@ -593,6 +596,15 @@ const createPalettePicker = canvas => {
 
 	/** @param {MouseEvent} e */
 	const mouseEnd = e => {
+		// right click (or the Mac ctrl click) picks the background, as in
+		// Moebius palette.js, update_swatches(); it stays out of the
+		// double click timing, or a quick fg then bg pick would open
+		// the color editor
+		if (e.button === 2 || e.ctrlKey) {
+			const { x, y } = swatchAt(e.clientX, e.clientY);
+			State.palette?.setBackgroundColor(y + (x === 0 ? 0 : 8));
+			return;
+		}
 		processEvent(e, false);
 	};
 

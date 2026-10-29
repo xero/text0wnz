@@ -16,43 +16,28 @@ test.describe('Drawing Tools', () => {
 		await bridgeReady(page);
 	});
 
-	test('should activate halfblock drawing tool', async ({ page }) => {
-		// Click on brushes sidebar button to show brush toolbar
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
+	// a lit button alone can hide a stroke that never reached the tool,
+	// so each brush must also leave ink under its drag
+	for (const [id, name, inks] of [
+		['halfblock', 'halfblock drawing', [219, 220, 223]],
+		['characterBrush', 'character brush', null],
+		['shadingBrush', 'shading brush', [176, 177, 178, 219]],
+	]) {
+		test(`should activate ${name} tool`, async ({ page }) => {
+			await page.locator('#brushes').click();
+			await clickTool(page, id);
+			await expect(page.locator(`#${id}`)).toHaveClass(/toolbarDisplayed/);
 
-		const halfblockTool = page.locator('#halfblock');
-		await halfblockTool.click();
-
-		const classList = await halfblockTool.getAttribute('class');
-		expect(classList).toBeTruthy();
-	});
-
-	test('should activate character brush tool', async ({ page }) => {
-		// Click on brushes sidebar button to show brush toolbar
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-
-		const characterBrushTool = page.locator('#characterBrush');
-		await characterBrushTool.click();
-		await page.waitForTimeout(300);
-
-		const classList = await characterBrushTool.getAttribute('class');
-		expect(classList).toBeTruthy();
-	});
-
-	test('should activate shading brush tool', async ({ page }) => {
-		// Click on brushes sidebar button to show brush toolbar
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-
-		const shadingBrushTool = page.locator('#shadingBrush');
-		await shadingBrushTool.click();
-		await page.waitForTimeout(300);
-	});
+			await drag(page, [10, 5], [20, 5]);
+			const { charCode } = await readBlock(page, 15, 5);
+			expect([0, 32]).not.toContain(charCode);
+			if (inks) {
+				expect(inks).toContain(charCode);
+			}
+		});
+	}
 
 	test('should activate line tool', async ({ page }) => {
-		// Click on shapes sidebar button to show shapes toolbar
 		await page.locator('#shapes').click();
 		await clickTool(page, 'line');
 		await expect(page.locator('#line')).toHaveClass(/toolbarDisplayed/);
@@ -64,7 +49,6 @@ test.describe('Drawing Tools', () => {
 	});
 
 	test('should activate square tool', async ({ page }) => {
-		// Click on shapes sidebar button to show shapes toolbar
 		await page.locator('#shapes').click();
 		await clickTool(page, 'square');
 		await expect(page.locator('#square')).toHaveClass(/toolbarDisplayed/);
@@ -78,7 +62,6 @@ test.describe('Drawing Tools', () => {
 	});
 
 	test('should activate circle tool', async ({ page }) => {
-		// Click on shapes sidebar button to show shapes toolbar
 		await page.locator('#shapes').click();
 		await clickTool(page, 'circle');
 		await expect(page.locator('#circle')).toHaveClass(/toolbarDisplayed/);
@@ -102,24 +85,18 @@ test.describe('Drawing Tools', () => {
 	});
 
 	test('should activate selection tool', async ({ page }) => {
-		const selectionTool = page.locator('#selection');
-		await selectionTool.click();
-		await page.waitForTimeout(300);
+		await clickTool(page, 'selection');
+		await expect(page.locator('#selection')).toHaveClass(/toolbarDisplayed/);
 
-		const canvas = page.locator('#canvasContainer canvas').first();
-		const box = await canvas.boundingBox();
-
-		if (box) {
-			await page.mouse.move(box.x + 50, box.y + 50);
-			await page.mouse.down();
-			await page.mouse.move(box.x + 100, box.y + 100);
-			await page.mouse.up();
-			await page.waitForTimeout(300);
-		}
+		await drag(page, [5, 4], [12, 9]);
+		expect(
+			await page.evaluate(() =>
+				window.__t0wnz.State.selectionCursor.getSelection()),
+		).toEqual({ x: 5, y: 4, width: 8, height: 6 });
 	});
 
 	test('should activate fill tool', async ({ page }) => {
-		// fill lives in the brush submenu now
+		// fill lives in the brush submenu
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
 		const fillTool = page.locator('#fill');
@@ -129,21 +106,18 @@ test.describe('Drawing Tools', () => {
 	});
 
 	test('should draw with multiple tools in sequence', async ({ page }) => {
-		// Click brushes to show brush toolbar, then select halfblock
 		await page.locator('#brushes').click();
 		await clickTool(page, 'halfblock');
 		await expect(page.locator('#halfblock')).toHaveClass(/toolbarDisplayed/);
 		await drag(page, [5, 5], [10, 8]);
 		expect([0, 32]).not.toContain((await readBlock(page, 5, 5)).charCode);
 
-		// Click shapes to show shapes toolbar, then select line
 		await page.locator('#shapes').click();
 		await clickTool(page, 'line');
 		await expect(page.locator('#line')).toHaveClass(/toolbarDisplayed/);
 		await drag(page, [15, 10], [25, 10]);
 		expect([0, 32]).not.toContain((await readBlock(page, 20, 10)).charCode);
 
-		// Square is also in shapes toolbar
 		await clickTool(page, 'square');
 		await expect(page.locator('#square')).toHaveClass(/toolbarDisplayed/);
 		await drag(page, [30, 3], [38, 9]);
@@ -157,7 +131,6 @@ test.describe('Drawing Tools', () => {
 		await page.locator('#mirror').click();
 		await expect(page.locator('#mirror')).toHaveClass(/enabled/);
 
-		// picking the sampler drops mirror
 		await page.locator('#sample').click();
 		await expect(page.locator('#sample')).toHaveClass(/toolbarDisplayed/);
 		await expect(page.locator('#mirror')).not.toHaveClass(/enabled/);
@@ -182,7 +155,6 @@ test.describe('Tool Features', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			// Click brushes to show brush toolbar, then select halfblock
 			await page.locator('#brushes').click();
 			await page.waitForTimeout(200);
 			await clickTool(page, 'halfblock');
@@ -204,7 +176,6 @@ test.describe('Tool Features', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			// Click brushes to show brush toolbar, then select halfblock
 			await page.locator('#brushes').click();
 			await page.waitForTimeout(200);
 			await clickTool(page, 'halfblock');
@@ -231,7 +202,6 @@ test.describe('Tool Features', () => {
 		const box = await canvas.boundingBox();
 
 		if (box) {
-			// Click brushes to show the brush toolbar
 			await page.locator('#brushes').click();
 			await page.waitForTimeout(200);
 			await clickTool(page, 'halfblock');

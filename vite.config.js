@@ -3,7 +3,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 import { VitePWA } from 'vite-plugin-pwa';
 import Sitemap from 'vite-plugin-sitemap';
 import htmlMinifierTerser from "vite-plugin-html-minifier-terser";
-import { existsSync, statSync, readdirSync, readFileSync } from 'node:fs';
+import { copyFileSync, existsSync, statSync, readdirSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 
@@ -14,13 +14,23 @@ export default ({ mode }) => {
 	const domain = process.env.VITE_DOMAIN || 'https://text.0w.nz';
 	const uiDir = ((process.env.VITE_UI_DIR || 'ui').replace(/^\/|\/?$/g, '')) + '/';
 
-	// source sizes for the build logs (rolldown gives each plugin hook a fresh `this`)
+	// source sizes and the out dir for the build hooks live here:
+	// rolldown gives each plugin hook a fresh `this`
 	let originalCssSize = 0;
 	let originalHtmlSize = 0;
+	let outDir;
+
+	const staticTargets = [
+		{ src: 'humans.txt', dest: '.' },
+		// v4 keeps the src path in dest by default, flatten single files
+		{ src: 'img/manifest/favicon.ico', dest: '.', rename: { stripBase: true } },
+		{ src: 'fonts', dest: uiDir },
+		{ src: 'ansi', dest: '.' },
+	];
 
 	return defineConfig({
 		root: './src',
-		base: './', // output relative urls
+		base: './',
 		// page-context caches (fontCache) key their generation on this so
 		// a deploy invalidates them; the SW precache versions separately
 		define: {
@@ -29,8 +39,8 @@ export default ({ mode }) => {
 		build: {
 			emptyOutDir: true,
 			outDir: '../dist',
-			assetsDir: '', // place all assets relatively to the root of `outDir`
-			assetsInlineLimit: 0, // prevent inlined assets
+			assetsDir: '',
+			assetsInlineLimit: 0,
 			target: 'es2022',
 			minify: 'terser',
 			terserOptions: {
@@ -44,7 +54,6 @@ export default ({ mode }) => {
 					index: path.resolve('./src', 'index.html'),
 				},
 				output: {
-					// hash core file names for cache busting
 					entryFileNames: `${uiDir}js/editor-[hash].js`,
 					chunkFileNames: `${uiDir}js/[name]-[hash].js`,
 					assetFileNames: assetInfo => {
@@ -65,11 +74,13 @@ export default ({ mode }) => {
 					},
 					// progressively load features
 					codeSplitting: {
-						// core & canvas import each other, keep each chunk to only its listed modules
+						// core & canvas import each other, so each chunk keeps to
+						// only its listed modules
 						includeDependenciesRecursively: false,
 						groups: [
-							// also holds vite's dynamic import helper, otherwise it lands in the entry chunk & tools imports the editor back
-							{ name: 'core', test: /[\\/]src[\\/]js[\\/]client[\\/](magicNumbers|state|storage|compression|ui)\.js$|vite[\\/]preload-helper/ },
+							// also holds vite's dynamic import helper, otherwise it
+							// lands in the entry chunk & tools imports the editor back
+							{ name: 'core', test: /[\\/]src[\\/]js[\\/]client[\\/](magicNumbers|state|storage|ui)\.js$|vite[\\/]preload-helper/ },
 							{ name: 'canvas', test: /[\\/]src[\\/]js[\\/]client[\\/](canvas|font|lazyFont|fontCache)\.js$/ },
 							{ name: 'tools', test: /[\\/]src[\\/]js[\\/]client[\\/](freehandTools|keyboard|toolbar)\.js$/ },
 							{ name: 'fileops', test: /[\\/]src[\\/]js[\\/]client[\\/]file\.js$/ },
@@ -107,8 +118,8 @@ export default ({ mode }) => {
 				}
 			},
 			{
-				// the favicon hrefs hardcode ./ui/; a custom VITE_UI_DIR used
-				// to break every icon link while the assets moved with it
+				// the favicon hrefs hardcode ./ui/, so without this a custom
+				// VITE_UI_DIR breaks every icon link while the assets move with it
 				name: 'ui-dir-hrefs',
 				transformIndexHtml: html =>
 					uiDir === 'ui/' ? html : html.replaceAll('"./ui/', `"./${uiDir}`),
@@ -142,30 +153,34 @@ export default ({ mode }) => {
 					}
 				}
 			},
-			viteStaticCopy({
-				silent: true,
-				targets: [
-					{ src: 'LICENSE.txt', dest: '.' },
-					{ src: 'humans.txt', dest: '.' },
-					// v4 keeps the src path in dest by default, flatten single files
-					{ src: 'img/manifest/favicon.ico', dest: '.', rename: { stripBase: true } },
-					{ src: 'fonts', dest: uiDir },
-					{ src: 'ansi', dest: '.'},
-				],
-			}),
+			viteStaticCopy({ silent: true, targets: staticTargets }),
 			{
 				name: 'log-static-copy',
 				apply: 'build',
-				originalSize: 0,
+				configResolved(config) {
+					outDir = path.resolve(config.root, config.build.outDir);
+				},
+				// static copy srcs resolve against the vite root (src/), and a
+				// '../' src either lands outside dist or copies onto itself
+				writeBundle() {
+					copyFileSync(path.resolve('LICENSE.txt'), path.join(outDir, 'LICENSE.txt'));
+				},
 				closeBundle() {
-					console.log(`\x1b[36m[vite-static-copy] \x1b[0mMoving 5 files recursively`);
-					console.log(`../dist/\x1b[32mLICENSE.txt\n\x1b[0m../dist/\x1b[32mhumans.txt\n\x1b[0m../dist/\x1b[32mfavicon.ico\n\x1b[0m../dist/${uiDir}\x1b[32mfonts\x1b[0m/\x1b[33m*\x1b[0m\n`);
+					// the copy runs silent, so log what landed, not what was asked
+					const landed = [{ src: 'LICENSE.txt', dest: '.' }, ...staticTargets]
+						.map(({ src, dest }) => path.join(dest, path.basename(src)))
+						.filter(file => existsSync(path.join(outDir, file)));
+					console.log(`\x1b[36m[vite-static-copy] \x1b[0mMoving ${landed.length} files recursively`);
+					for (const file of landed) {
+						const tree = statSync(path.join(outDir, file)).isDirectory();
+						console.log(`../dist/${path.dirname(file) === '.' ? '' : `${path.dirname(file)}/`}\x1b[32m${path.basename(file)}\x1b[0m${tree ? '/\x1b[33m*\x1b[0m' : ''}`);
+					}
+					console.log('');
 				}
 			},
 			Sitemap({
 				hostname: domain,
 				changefreq: 'monthly',
-				// block all these gross bots and scrapers
 				generateRobotsTxt: true,
 				robots: [
 					{ userAgent: 'Ai2Bot-Dolma', disallow: '/' },
@@ -273,7 +288,6 @@ export default ({ mode }) => {
 					background_color: '#000',
 					theme_color: '#000',
 					display_override: ['window-controls-overlay'], // removes window chrome
-					// Web Share Target API
 					share_target: {
 						action: '/open',
 						method: 'POST',
@@ -359,7 +373,6 @@ export default ({ mode }) => {
 						type: 'image/png',
 						purpose: 'any',
 					}],
-					// PWA install previews
 					screenshots: [{
 						src: `${uiDir}img/screenshot-desktop.png`,
 						sizes: '3024x1964',
@@ -402,9 +415,8 @@ export default ({ mode }) => {
 				injectManifest: {
 					globPatterns: [
 						'**/*.{js,css,html,woff2}',
-						// derived from VITE_UI_DIR like every emitted path: a
-						// custom ui dir used to silently drop these from the
-						// precache
+						// derived from VITE_UI_DIR like every emitted path, or a
+						// custom ui dir silently drops these from the precache
 						`${uiDir}*.svg`,
 						'favicon.ico',
 						`${uiDir}img/favicon.ico`,

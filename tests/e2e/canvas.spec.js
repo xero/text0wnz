@@ -1,10 +1,20 @@
 import { test, expect } from '@playwright/test';
-import { waitForEditorReady } from './helpers/editorHelpers.js';
+import {
+	bridgeReady,
+	clickTool,
+	drag,
+	parkToolSettings,
+	readBlock,
+	readRegion,
+	tap,
+	waitForEditorReady,
+} from './helpers/editorHelpers.js';
 
 test.describe('Basic Canvas Functionality', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
+		await page.goto('/?test');
 		await waitForEditorReady(page);
+		await bridgeReady(page);
 	});
 
 	test('should load the application successfully', async ({ page }) => {
@@ -20,10 +30,8 @@ test.describe('Basic Canvas Functionality', () => {
 	});
 
 	test('should have default canvas size', async ({ page }) => {
-		await page.waitForTimeout(1000);
-
-		const canvasContainer = page.locator('#canvasContainer');
-		await expect(canvasContainer).toBeVisible();
+		await expect(page.locator('#canvasContainer')).toBeVisible();
+		await expect(page.locator('#resolutionLabel')).toHaveText('80x25');
 	});
 
 	test('should display position info', async ({ page }) => {
@@ -58,80 +66,73 @@ test.describe('Basic Canvas Functionality', () => {
 		const confirmButton = page.locator('#resizeApply');
 		await confirmButton.click();
 
-		await page.waitForTimeout(1000);
+		await expect(page.locator('#resolutionLabel')).toHaveText('100x30');
+		expect(
+			await page.evaluate(() => {
+				const c = window.__t0wnz.State.textArtCanvas;
+				return [c.getColumns(), c.getRows()];
+			}),
+		).toEqual([100, 30]);
 	});
 
 	test('should clear canvas on new document', async ({ page }) => {
-		const fileMenuButton = page.locator('#fileMenu button');
-		await fileMenuButton.click();
-		await page.waitForTimeout(200);
+		// keyboard mode is the boot tool, its cursor parked at 0,0
+		await page.keyboard.type('abc');
+		await expect.poll(() => readRegion(page, 0, 0, 2, 0)).toEqual(['abc']);
 
-		const newButton = page.locator('#new');
-		await newButton.click();
+		await page.locator('#fileMenu button').click();
+		await page.locator('#new').click();
+		await page.locator('#warningYes').click();
 
-		await page.waitForTimeout(500);
-		const warningYes = page.locator('#warningYes');
-		if (await warningYes.isVisible()) {
-			await warningYes.click();
-		}
-		await page.waitForTimeout(500);
+		await expect.poll(() => readRegion(page, 0, 0, 2, 0)).toEqual(['   ']);
 	});
 });
 
 test.describe('Canvas Interaction', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
+		await parkToolSettings(page);
+		await page.goto('/?test');
+		await bridgeReady(page);
 	});
 
 	test('should support mouse drawing on canvas', async ({ page }) => {
-		// #halfblock is only clickable once the brushes toolbar is open
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
+		await clickTool(page, 'halfblock');
+		await drag(page, [10, 5], [16, 8]);
 
-		const halfblockTool = page.locator('#halfblock');
-		await halfblockTool.click();
-
-		const canvas = page.locator('#canvasContainer canvas').first();
-		const box = await canvas.boundingBox();
-
-		if (box) {
-			await page.mouse.move(box.x + 100, box.y + 100);
-			await page.mouse.down();
-			await page.mouse.move(box.x + 150, box.y + 150);
-			await page.mouse.up();
-
-			await page.waitForTimeout(500);
+		for (const [x, y] of [[10, 5], [16, 8]]) {
+			expect([0, 32]).not.toContain((await readBlock(page, x, y)).charCode);
 		}
 	});
 
 	test('should allow tool switching', async ({ page }) => {
-		// sidebar tool buttons toggle their toolbars
+		// the group buttons open flyouts and leave the active tool alone
 		await page.locator('#brushes').click();
-		await page.waitForTimeout(200);
+		await expect(page.locator('#brushToolbar')).toBeVisible();
+		await expect(page.locator('#keyboard')).toHaveClass(/toolbarDisplayed/);
 
-		await page.locator('#keyboard').click();
-		await page.waitForTimeout(200);
+		await clickTool(page, 'halfblock');
+		await expect(page.locator('#keyboard')).not.toHaveClass(/toolbarDisplayed/);
 
 		await page.locator('#shapes').click();
-		await page.waitForTimeout(200);
+		await expect(page.locator('#shapesToolbar')).toBeVisible();
+		await expect(page.locator('#halfblock')).toHaveClass(/toolbarDisplayed/);
 
-		const errorMessages = await page.locator('.error').count();
-		expect(errorMessages).toBe(0);
+		await page.locator('#keyboard').click();
+		await expect(page.locator('#keyboard')).toHaveClass(/toolbarDisplayed/);
+		await expect(page.locator('#halfblock')).not.toHaveClass(/toolbarDisplayed/);
 	});
 
-	test('should update position info on mouse move', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-		const box = await canvas.boundingBox();
+	test('position info follows the cursor and a drawing stroke', async ({ page }) => {
+		const readout = async () => {
+			const row = page.locator('#positionInfo .cursorReadout');
+			return [await row.locator('b').textContent(), await row.locator('button').textContent()];
+		};
+		// keyboard mode is the boot tool: a click moves its cursor
+		await tap(page, 20, 7);
+		await expect.poll(readout).toEqual(['21', '8']);
 
-		if (box) {
-			await page.mouse.move(box.x + 100, box.y + 100);
-			await page.waitForTimeout(300);
-
-			const positionInfo = page.locator('#positionInfo');
-			const text = await positionInfo.textContent();
-			expect(text).toBeTruthy();
-		}
+		await clickTool(page, 'halfblock');
+		await drag(page, [30, 10], [34, 12]);
+		await expect.poll(readout).toEqual(['35', '13']);
 	});
 });

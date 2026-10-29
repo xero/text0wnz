@@ -41,7 +41,6 @@ describe('FontCache Module', () => {
 		mockFetch = vi.fn();
 		globalThis.fetch = mockFetch;
 
-		// Clear console methods to reduce noise
 		vi.spyOn(console, 'log').mockImplementation(() => {});
 		vi.spyOn(console, 'warn').mockImplementation(() => {});
 		vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -97,7 +96,6 @@ describe('FontCache Module', () => {
 
 			FontCache.preloadCommonFonts();
 
-			// Wait for async operations
 			await new Promise(resolve => setTimeout(resolve, 10));
 
 			expect(mockFetch).toHaveBeenCalledWith('/ui/fonts/CP437 8x16.png');
@@ -114,7 +112,6 @@ describe('FontCache Module', () => {
 
 			FontCache.preloadCommonFonts();
 
-			// Wait for async operations
 			await new Promise(resolve => setTimeout(resolve, 10));
 
 			expect(console.warn).toHaveBeenCalled();

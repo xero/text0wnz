@@ -13,9 +13,8 @@
  * Tier (c), bulk conformance against the sixteencolors archive mirror, is
  * NOT run here; see tests/fixtures/README.md.
  *
- * These tests pin v2 behavior as the regression baseline for the v3 codec
- * package. A known v2 defect is marked it.fails with a comment; when a fix
- * lands, the test flips to red and gets promoted to a plain it().
+ * Every open and save runs the shipped path: Load.file and Save.* over
+ * the core codecs.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -76,8 +75,8 @@ const mockState = {
 		setXBPaletteData: vi.fn(),
 		setXBFontData: vi.fn(() => true),
 		setFont: vi.fn((name, cb) => cb && cb()),
-		// the save paths read the doc now; derive it from the wired u16
-		// mocks at call time so wireDoc keeps working untouched
+		// the save paths read the doc; derive it from the wired u16 mocks
+		// at call time so wireDoc keeps working untouched
 		getDoc: vi.fn(() =>
 			u16ToV3({
 				imageData: mockState.textArtCanvas.getImageData(),
@@ -105,8 +104,8 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	enforceMaxBytes: vi.fn(),
 }));
 
-// NOTE: palette.js is NOT mocked; the UTF-8 round-trips exercise the real
-// CP437 <-> unicode maps.
+// palette.js is NOT mocked, so the UTF-8 round-trips exercise the real
+// CP437 <-> unicode maps
 
 let Load;
 let Save;
@@ -157,9 +156,9 @@ afterEach(() => {
 });
 
 /**
- * Decode bytes through Load.file. Returns the doc the editor would build:
- * {columns, rows, data, iceColors, letterSpacing, fontName} plus, for XBin,
- * {paletteData, fontData}.
+ * Decode bytes through Load.file. Returns what the editor receives:
+ * {columns, rows, data, iceColors, letterSpacing, fontName, doc} plus,
+ * for XBin, {paletteData, fontData}.
  */
 const decode = (name, bytes) =>
 	new Promise((resolve, reject) => {
@@ -168,11 +167,11 @@ const decode = (name, bytes) =>
 			() => reject(new Error(`decode timed out for ${name}`)),
 			10000,
 		);
-		// XB palette/font land through canvas calls now that the client
-		// rides core decodeXBin; capture them off the mocks
+		// XB palette/font land through canvas calls (the client rides core
+		// decodeXBin); capture them off the mocks
 		mockState.textArtCanvas.setXBPaletteData.mockClear();
 		mockState.textArtCanvas.setXBFontData.mockClear();
-		Load.file(file, (columns, rows, data, iceColors, letterSpacing, fontName) => {
+		Load.file(file, (columns, rows, data, iceColors, letterSpacing, fontName, doc) => {
 			clearTimeout(timer);
 			const pal = mockState.textArtCanvas.setXBPaletteData.mock.calls.at(-1);
 			const font = mockState.textArtCanvas.setXBFontData.mock.calls.at(-1);
@@ -183,6 +182,7 @@ const decode = (name, bytes) =>
 				iceColors,
 				letterSpacing,
 				fontName: fontName ?? (font ? 'XBIN' : undefined),
+				doc,
 				paletteData: pal ? pal[0] : null,
 				fontData: font
 					? { bytes: font[0], width: font[1], height: font[2] }
@@ -293,7 +293,6 @@ describe('corpus tier (b): synthetic ANSI', () => {
 		});
 		const d1 = await decode('ice.ans', bytes);
 		expect(d1.iceColors).toBe(true);
-		// The generator produced at least one bright background cell
 		const hasBrightBg = Array.from(d1.data).some(cell => ((cell >> 4) & 15) > 7);
 		expect(hasBrightBg).toBe(true);
 		wireDoc(d1);
@@ -317,7 +316,7 @@ describe('corpus tier (b): synthetic ANSI', () => {
 	});
 
 	// 160k cells through encode and decode twice: comfortably fast
-	// locally, but slow CI shards have blown the 5s default
+	// locally, but slow CI shards blow the 5s default
 	it('large documents round-trip (80x2000)', { timeout: 30_000 }, async () => {
 		const bytes = makeAnsi({ columns: 80, rows: 2000, seed: 13 });
 		const d1 = await decode('tall.ans', bytes);
@@ -340,8 +339,8 @@ describe('corpus tier (b): weird SAUCE records', () => {
 				author: 'author name',
 				group: 'group name',
 				comments,
-				// ice (bit 0) + 9px letter spacing (bits 1-2 = 10)
-				flags: 0b00010101,
+				// SAUCE §ANSiFlags: ice (B, bit 0) + 9px (LS bits 1-2 = 10)
+				flags: 0b00000101,
 				fontName: 'IBM VGA',
 				tinfo1: 80,
 				tinfo2: 10,
@@ -375,7 +374,8 @@ describe('corpus tier (b): weird SAUCE records', () => {
 				sauce: { tinfo1: 80, tinfo2: 5, flags: 0 },
 			}),
 		);
-		// bits 00 state no preference: the toggle stays the artist's
+		// SAUCE §ANSiFlags, LS bits 00: no preference, so the toggle
+		// stays the artist's
 		expect(noPref.letterSpacing).toBeUndefined();
 		const eightPx = await decode(
 			'8px.ans',
@@ -435,11 +435,12 @@ describe('corpus tier (b): weird SAUCE records', () => {
 		]);
 		const d1 = await decode('nosig.ans', bytes);
 		expect(d1.iceColors).toBe(false);
-		expect(d1.fontName).toBe('');
+		expect(d1.fontName).toBeUndefined();
 	});
 
-	// Trusting TInfo1 = 0 verbatim yields a 0-column doc; the loader
-	// must keep content-derived dims instead
+	// SAUCE §FileType: TInfo1 = 0 means no width was provided, and
+	// trusting it verbatim yields a 0-column doc; the loader must keep
+	// content-derived dims instead
 	it('SAUCE with zero tinfo falls back to content-derived dimensions', async () => {
 		const body = makeAnsi({ columns: 80, rows: 5, seed: 2 });
 		const bytes = concatBytes([
@@ -471,8 +472,8 @@ describe('corpus tier (b): BIN', () => {
 	});
 
 	it('a BIN open replaces the previous file stashed flags', async () => {
-		// the review's exact repro: A.ans carries AR bits, then a
-		// SAUCE-less BIN opens; its save must not inherit A's flags
+		// A.ans carries AR bits, then a SAUCE-less BIN opens; its save
+		// must not inherit A's flags
 		await decode(
 			'a.ans',
 			makeAnsi({
@@ -552,7 +553,8 @@ describe('corpus tier (b): BIN', () => {
 
 describe('corpus tier (b): XBin', () => {
 	it('XBin opens leave the spacing toggle alone', async () => {
-		// XBin SAUCE defines no LS bits (DataType 6, no TFlags)
+		// SAUCE §FileType gives XBin (DataType 6) no TFlags, so no LS
+		// bits
 		const d1 = await decode('plain.xb', makeXBin({ sauce: {} }));
 		expect(d1.letterSpacing).toBeUndefined();
 	});
@@ -626,8 +628,8 @@ describe('corpus tier (b): XBin', () => {
 		expect(d2.fontData.bytes).toEqual(font);
 	});
 
-	// Save.xb must set the 512-glyph flag (header bit 4); without it
-	// readers parse 256 glyphs and misalign the image
+	// Save.xb must set XBin §Flags 512Chars (bit 4); without it readers
+	// parse 256 glyphs and misalign the image
 	it('512-glyph XBin font round-trips through save', async () => {
 		const columns = 40;
 		const rows = 20;
@@ -698,7 +700,7 @@ describe('corpus tier (b): UTF-8 ANSI', () => {
 		const bytes = makeAnsi({ columns: 80, rows: 25, seed: 55 });
 		const d1 = await decode('cp437.ans', bytes);
 		const core1 = coreDecodeAns(bytes);
-		// core and v2 agree on the source doc
+		// the open hands over the core decode
 		expect(v3ToU16(core1.doc).imageData).toEqual(d1.data);
 		const e1 = coreEncodeUtf8(core1.doc);
 		const d2 = coreDecodeAns(e1, { utf8: true });
@@ -708,10 +710,9 @@ describe('corpus tier (b): UTF-8 ANSI', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Core codec parity (0wnzlib): the same bytes through the v2 loader
-// and the core codecs must produce identical docs, and core-encoded bytes
-// must decode identically through BOTH decoders. ANSI/CP437 is the critical
-// surface, so every committed artwork file runs through it.
+// Open path contract: Load.file hands main.js the core decoder's doc and
+// its lossy u16 view untouched, so what the core reads is what the
+// editor shows. Core-encoded bytes must reopen identically.
 // ---------------------------------------------------------------------------
 
 const coreDecode = (name, bytes) => {
@@ -722,38 +723,36 @@ const coreDecode = (name, bytes) => {
 	if (n.endsWith('.bin')) {
 		return coreDecodeBin(bytes);
 	}
-	return coreDecodeAns(bytes, { utf8: n.endsWith('.utf8.ans') || n.endsWith('.txt') });
+	return coreDecodeAns(bytes, { utf8: n.endsWith('.utf8.ans') });
 };
 
-/** Decode through both engines; assert doc identity; return both. */
-const expectCoreParity = async (name, bytes) => {
-	const v2 = await decode(name, bytes);
+const expectOpenMatchesCore = async (name, bytes) => {
+	const opened = await decode(name, bytes);
 	const result = coreDecode(name, bytes);
 	// lossy: a 512-glyph XBin's upper page lives as non-identity glyph
-	// defs now, and the strict projection throws on those by contract
+	// defs, and the strict projection throws on those by contract
 	const u16 = v3ToU16Lossy(result.doc);
-	expect(u16.columns, `${name}: core columns`).toBe(v2.columns);
-	expect(u16.rows, `${name}: core rows`).toBe(v2.rows);
-	expect(u16.imageData, `${name}: core cells`).toEqual(v2.data);
-	expect(!!u16.iceColors, `${name}: core iceColors`).toBe(!!v2.iceColors);
-	expect(
-		!!u16.letterSpacing,
-		`${name}: core letterSpacing`,
-	).toBe(!!v2.letterSpacing);
-	return { v2, result };
+	expect(opened.columns, `${name}: columns`).toBe(u16.columns);
+	expect(opened.rows, `${name}: rows`).toBe(u16.rows);
+	expect(opened.data, `${name}: u16 cells`).toEqual(u16.imageData);
+	expect(!!opened.iceColors, `${name}: iceColors`).toBe(!!u16.iceColors);
+	const [got] = opened.doc.frames;
+	const [want] = result.doc.frames;
+	expect(got.glyph, `${name}: glyph plane`).toEqual(want.glyph);
+	expect(got.fg, `${name}: fg plane`).toEqual(want.fg);
+	expect(got.bg, `${name}: bg plane`).toEqual(want.bg);
+	return { opened, result };
 };
 
-describe('core codec parity: ANSI', () => {
+describe('open path contract: ANSI', () => {
 	it.each(tierAFiles)(
-		'%s: core decoder matches v2 and core-encoded bytes satisfy both',
+		'%s: opens as the core decodes it and core-encoded bytes reopen identically',
 		async name => {
 			const bytes = new Uint8Array(readFileSync(path.join(ansiDir, name)));
-			const { result } = await expectCoreParity(name, bytes);
+			const { result } = await expectOpenMatchesCore(name, bytes);
 
-			// Core encode, then BOTH decoders must agree on the result and
-			// reproduce the original cells
 			const encoded = coreEncodeAns(result.doc, { meta: result.meta });
-			const { result: reResult } = await expectCoreParity(
+			const { result: reResult } = await expectOpenMatchesCore(
 				'core-roundtrip.ans',
 				encoded,
 			);
@@ -762,7 +761,6 @@ describe('core codec parity: ANSI', () => {
 				`${name}: cells after core encode`,
 			).toEqual(v3ToU16(result.doc).imageData);
 
-			// Core encoder is a fixed point
 			const encodedAgain = coreEncodeAns(reResult.doc, { meta: reResult.meta });
 			expect(encodedAgain, `${name}: core encoder fixed point`).toEqual(
 				encoded,
@@ -770,7 +768,8 @@ describe('core codec parity: ANSI', () => {
 		},
 	);
 
-	it('synthetic ANSI fixtures decode identically through both engines', async () => {
+	it('synthetic ANSI fixtures open as the core decodes them', async () => {
+		const zeroBody = makeAnsi({ columns: 80, rows: 5, seed: 2 });
 		const fixtures = [
 			['full-width.ans', makeAnsi({ columns: 80, rows: 50, seed: 42 })],
 			[
@@ -809,29 +808,35 @@ describe('core codec parity: ANSI', () => {
 					textToBytes('x'.repeat(200)),
 				]),
 			],
+			[
+				'zerotinfo.ans',
+				concatBytes([
+					zeroBody,
+					new Uint8Array([0x1a]),
+					makeSauce({ fileSize: zeroBody.length, tinfo1: 0, tinfo2: 0 }),
+				]),
+			],
+			[
+				'nosize-comments.ans',
+				concatBytes([
+					zeroBody,
+					new Uint8Array([0x1a]),
+					makeSauce({ fileSize: 0, comments: ['kept out of the art']}),
+				]),
+			],
+			// PabloDraw t colors exist only on the planes
+			['truecolor.ans', textToBytes('\x1b[1;250;90;90t\x1b[0;8;16;24tAB')],
+			// valid UTF-8 opens through the UTF-8 reader
+			['fixture.utf8.ans', makeUtf8Ansi({ columns: 40, rows: 10, seed: 7 })],
 		];
-		const zeroBody = makeAnsi({ columns: 80, rows: 5, seed: 2 });
-		fixtures.push([
-			'zerotinfo.ans',
-			concatBytes([
-				zeroBody,
-				new Uint8Array([0x1a]),
-				makeSauce({ fileSize: zeroBody.length, tinfo1: 0, tinfo2: 0 }),
-			]),
-		]);
 		for (const [name, bytes] of fixtures) {
-			await expectCoreParity(name, bytes);
+			await expectOpenMatchesCore(name, bytes);
 		}
-	});
-
-	it('lenient UTF-8 decode matches v2', async () => {
-		const bytes = makeUtf8Ansi({ columns: 40, rows: 10, seed: 7 });
-		await expectCoreParity('fixture.utf8.ans', bytes);
 	});
 });
 
-describe('core codec parity: BIN', () => {
-	it('BIN fixtures decode identically and core encode satisfies both', async () => {
+describe('open path contract: BIN', () => {
+	it('BIN fixtures open as the core decodes them and core-encoded bytes reopen identically', async () => {
 		const fixtures = [
 			[
 				'sauced.bin',
@@ -843,11 +848,13 @@ describe('core codec parity: BIN', () => {
 			],
 			['plain.bin', makeBin({ columns: 160, rows: 30, seed: 24 })],
 			['wide.bin', makeBin({ columns: 320, rows: 100, seed: 22, sauce: {} })],
+			// a trailing partial row pads
+			['partial.bin', makeBin({ columns: 160, rows: 3, seed: 25 }).subarray(0, 650)],
 		];
 		for (const [name, bytes] of fixtures) {
-			const { result } = await expectCoreParity(name, bytes);
+			const { result } = await expectOpenMatchesCore(name, bytes);
 			const encoded = coreEncodeBin(result.doc, { meta: result.meta });
-			const { result: reResult } = await expectCoreParity(
+			const { result: reResult } = await expectOpenMatchesCore(
 				'core-roundtrip.bin',
 				encoded,
 			);
@@ -859,8 +866,8 @@ describe('core codec parity: BIN', () => {
 	});
 });
 
-describe('core codec parity: XBin', () => {
-	it('XBin fixtures decode identically including font and palette', async () => {
+describe('open path contract: XBin', () => {
+	it('XBin fixtures open with the core font and palette', async () => {
 		const rle = makeXBinRleRuns(16);
 		const fixtures = [
 			[
@@ -897,18 +904,18 @@ describe('core codec parity: XBin', () => {
 			],
 		];
 		for (const [name, bytes] of fixtures) {
-			const { v2, result } = await expectCoreParity(name, bytes);
-			if (v2.paletteData) {
-				expect(result.palette6, `${name}: palette bytes`).toEqual(
-					v2.paletteData,
+			const { opened, result } = await expectOpenMatchesCore(name, bytes);
+			if (result.palette6) {
+				expect(opened.paletteData, `${name}: palette bytes`).toEqual(
+					result.palette6,
 				);
 			}
-			if (v2.fontData && v2.fontData.bytes) {
-				expect(result.fontBytes, `${name}: font bytes`).toEqual(
-					v2.fontData.bytes,
+			if (result.fontBytes) {
+				expect(opened.fontData.bytes, `${name}: font bytes`).toEqual(
+					result.fontBytes,
 				);
-				expect(result.fontHeight, `${name}: font height`).toBe(
-					v2.fontData.height,
+				expect(opened.fontData.height, `${name}: font height`).toBe(
+					result.fontHeight,
 				);
 			}
 			const encoded = coreEncodeXBin(result.doc, {
@@ -917,7 +924,7 @@ describe('core codec parity: XBin', () => {
 				fontHeight: result.fontHeight,
 				meta: result.meta,
 			});
-			const { result: reResult } = await expectCoreParity(
+			const { result: reResult } = await expectOpenMatchesCore(
 				'core-roundtrip.xb',
 				encoded,
 			);

@@ -3,9 +3,9 @@
  * inverse of core/codecs/zip.ts, kept test-side on purpose (the editor
  * never writes zips).
  */
-// the one deflate COMPRESSOR in the tree: production only inflates,
-// so the fixture builder owns this helper (writer/reader pump, since
-// jsdom's Blob has no stream())
+// the one raw deflate COMPRESSOR in the tree: production only
+// inflates raw streams, so the fixture builder owns this helper
+// (writer/reader pump, since jsdom's Blob has no stream())
 const deflateRaw = async (bytes: Uint8Array): Promise<Uint8Array> => {
 	const cs = new CompressionStream('deflate-raw');
 	const writer = cs.writable.getWriter();
@@ -48,7 +48,6 @@ const crc32 = (bytes: Uint8Array): number => {
 	return (c ^ 0xffffffff) >>> 0;
 };
 
-/** build a real little zip with the given entries */
 export const buildZip = async (
 	files: Array<{ name: string; data: Uint8Array; store?: boolean }>,
 ): Promise<Uint8Array> => {

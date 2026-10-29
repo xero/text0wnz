@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createTextArtCanvas } from '../../src/js/client/canvas.js';
 
-// Set up module mocks first - before importing canvas.js
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		font: {
@@ -91,7 +90,6 @@ describe('Canvas Module', () => {
 	let canvas;
 
 	beforeEach(() => {
-		// Clear any large objects from previous tests
 		if (global.gc) {
 			global.gc();
 		}
@@ -103,7 +101,7 @@ describe('Canvas Module', () => {
 			appendChild: vi.fn(),
 			removeChild: vi.fn(),
 			addEventListener: vi.fn(),
-			children: [], // Add children array for DOM operations
+			children: [],
 		};
 		mockCallback = vi.fn();
 	});
@@ -167,7 +165,7 @@ describe('Canvas Module', () => {
 			await vi.advanceTimersByTimeAsync(600);
 			State.font.draw.mockClear();
 			await vi.advanceTimersByTimeAsync(2000);
-			// a starved waiter used to grab the released mutex here and
+			// a starved waiter must not grab the released mutex here and
 			// restart blink mid-relayout
 			expect(blinkDraws()).toBe(0);
 		});
@@ -284,7 +282,7 @@ describe('Canvas Module', () => {
 			expect(() => canvas.redo()).not.toThrow();
 		});
 
-		it('no longer persists undo history (moved to the OPFS journal)', () => {
+		it('leaves undo persistence to the OPFS journal', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
 			// the OPFS journal owns stroke persistence: getUndoHistory reports
@@ -438,137 +436,67 @@ describe('Canvas Module', () => {
 		});
 	});
 
-	describe('Canvas Utility Functions', () => {
-		it('should mirror horizontal line drawing characters correctly', () => {
-			const getMirrorCharCode = charCode => {
-				switch (charCode) {
-					case 221: // LEFT_HALF_BLOCK
-						return 222; // RIGHT_HALF_BLOCK
-					case 222: // RIGHT_HALF_BLOCK
-						return 221; // LEFT_HALF_BLOCK
-					default:
-						return charCode;
-				}
-			};
+	describe('cell reads and chunk paints', () => {
+		let State;
 
-			expect(getMirrorCharCode(221)).toBe(222);
-			expect(getMirrorCharCode(222)).toBe(221);
-			expect(getMirrorCharCode(65)).toBe(65); // Normal character unchanged
+		beforeEach(async () => {
+			State = (await import('../../src/js/client/state.js')).default;
 		});
 
-		it('should calculate array indices from coordinates correctly', () => {
-			const columns = 80;
-			const getArrayIndex = (x, y) => y * columns + x;
+		const loaded = async (rows, data) => {
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			await vi.waitFor(() => expect(mockCallback).toHaveBeenCalled());
+			canvas.setImageData(80, rows, data, false, undefined);
+			State.font.draw.mockClear();
+			return canvas;
+		};
 
-			expect(getArrayIndex(0, 0)).toBe(0);
-			expect(getArrayIndex(79, 0)).toBe(79);
-			expect(getArrayIndex(0, 1)).toBe(80);
-			expect(getArrayIndex(79, 24)).toBe(79 + 24 * 80); // Last position in 80x25 grid
+		it('getBlock unpacks the word at y * columns + x', async () => {
+			const data = new Uint16Array(80 * 25);
+			data[80 + 3] = (65 << 8) | (4 << 4) | 7;
+			await loaded(25, data);
+			expect(canvas.getBlock(3, 1)).toMatchObject({
+				charCode: 65,
+				foregroundColor: 7,
+				backgroundColor: 4,
+			});
+			expect(canvas.getBlock(4, 1).charCode).toBe(0);
 		});
 
-		it('should validate coordinate bounds', () => {
-			const columns = 80;
-			const rows = 25;
-
-			const isValidCoordinate = (x, y) => {
-				return x >= 0 && x < columns && y >= 0 && y < rows;
-			};
-
-			expect(isValidCoordinate(0, 0)).toBe(true);
-			expect(isValidCoordinate(79, 24)).toBe(true);
-			expect(isValidCoordinate(-1, 0)).toBe(false);
-			expect(isValidCoordinate(80, 0)).toBe(false);
-			expect(isValidCoordinate(0, 25)).toBe(false);
+		it('getBlock reads off-canvas coordinates as a blank cell', async () => {
+			await loaded(25, new Uint16Array(80 * 25).fill((65 << 8) | 7));
+			// (80, 0) and (-1, 1) index real cells if the read wraps
+			expect(canvas.getBlock(80, 0).charCode).toBe(0);
+			expect(canvas.getBlock(-1, 1).charCode).toBe(0);
+			expect(canvas.getBlock(0, 25).charCode).toBe(0);
 		});
 
-		it('should encode character data correctly', () => {
-			const encodeCharBlock = (charCode, foreground, background) => {
-				return (charCode << 8) | (background << 4) | foreground;
-			};
-
-			const charCode = 65; // 'A'
-			const foreground = 7; // White
-			const background = 0; // Black
-
-			const encoded = encodeCharBlock(charCode, foreground, background);
-			expect(encoded).toBe((65 << 8) | (0 << 4) | 7); // 16647
+		it('drawRegion paints only the on-canvas part of a region', async () => {
+			await loaded(25, new Uint16Array(80 * 25));
+			canvas._chunkTestSeam.drawRegion(-5, -5, 20, 20);
+			expect(State.font.draw).toHaveBeenCalledTimes(15 * 15);
+			State.font.draw.mockClear();
+			canvas._chunkTestSeam.drawRegion(75, 20, 10, 10);
+			expect(State.font.draw).toHaveBeenCalledTimes(5 * 5);
 		});
 
-		it('should decode character data correctly', () => {
-			const decodeCharBlock = data => {
-				return {
-					charCode: data >> 8,
-					background: (data >> 4) & 15,
-					foreground: data & 15,
-				};
-			};
-
-			const encoded = (65 << 8) | (4 << 4) | 7; // 'A', red background, white foreground
-			const decoded = decodeCharBlock(encoded);
-
-			expect(decoded.charCode).toBe(65);
-			expect(decoded.background).toBe(4);
-			expect(decoded.foreground).toBe(7);
+		it('a cell paints at its row within its 25 row chunk', async () => {
+			await loaded(50, new Uint16Array(80 * 50));
+			canvas._chunkTestSeam.drawRegion(3, 30, 1, 1);
+			expect(State.font.draw).toHaveBeenCalledTimes(1);
+			expect(State.font.draw.mock.calls[0].slice(4)).toEqual([3, 5]);
 		});
 
-		it('should handle blink attribute correctly', () => {
-			// Test blink attribute detection (background color >= 8)
-			const hasBlinkAttribute = background => background >= 8;
-
-			expect(hasBlinkAttribute(0)).toBe(false);
-			expect(hasBlinkAttribute(7)).toBe(false);
-			expect(hasBlinkAttribute(8)).toBe(true);
-			expect(hasBlinkAttribute(15)).toBe(true);
-		});
-
-		it('should convert blink colors correctly', () => {
-			const normalizeBlinkColor = background => {
-				return background >= 8 ? background - 8 : background;
-			};
-
-			expect(normalizeBlinkColor(8)).toBe(0);
-			expect(normalizeBlinkColor(15)).toBe(7);
-			expect(normalizeBlinkColor(4)).toBe(4); // No change for non-blink colors
-		});
-
-		it('should calculate region bounds correctly', () => {
-			const clipRegion = (x, y, width, height, canvasWidth, canvasHeight) => {
-				const clippedX = Math.max(0, Math.min(x, canvasWidth - 1));
-				const clippedY = Math.max(0, Math.min(y, canvasHeight - 1));
-				const clippedWidth = Math.min(width, canvasWidth - clippedX);
-				const clippedHeight = Math.min(height, canvasHeight - clippedY);
-
-				return {
-					x: clippedX,
-					y: clippedY,
-					width: Math.max(0, clippedWidth),
-					height: Math.max(0, clippedHeight),
-				};
-			};
-
-			const result = clipRegion(-5, -5, 20, 20, 80, 25);
-			expect(result.x).toBe(0);
-			expect(result.y).toBe(0);
-			expect(result.width).toBe(20); // width remains 20 since 0 + 20 < 80
-			expect(result.height).toBe(20); // height remains 20 since 0 + 20 < 25
-		});
-
-		it('should calculate canvas context indices correctly', () => {
-			// Test context calculation for large canvases (multiple 25-row contexts)
-			const getContextIndex = y => Math.floor(y / 25);
-			const getContextY = y => y % 25;
-
-			expect(getContextIndex(0)).toBe(0);
-			expect(getContextIndex(24)).toBe(0);
-			expect(getContextIndex(25)).toBe(1);
-			expect(getContextIndex(49)).toBe(1);
-			expect(getContextIndex(50)).toBe(2);
-
-			expect(getContextY(0)).toBe(0);
-			expect(getContextY(24)).toBe(24);
-			expect(getContextY(25)).toBe(0);
-			expect(getContextY(49)).toBe(24);
-			expect(getContextY(50)).toBe(0);
+		it('a blink background paints 8 lower unless ice colors are on', async () => {
+			const data = new Uint16Array(80 * 25);
+			data[0] = (65 << 8) | (12 << 4) | 7;
+			await loaded(25, data);
+			canvas._chunkTestSeam.drawRegion(0, 0, 1, 1);
+			expect(State.font.draw.mock.calls[0][2]).toBe(4);
+			canvas.setIceColors(true);
+			State.font.draw.mockClear();
+			canvas._chunkTestSeam.drawRegion(0, 0, 1, 1);
+			expect(State.font.draw.mock.calls[0].slice(0, 3)).toEqual([65, 7, 12]);
 		});
 	});
 
@@ -723,15 +651,23 @@ describe('Canvas Module', () => {
 			expect(xbData).toBeNull();
 		});
 
-		it('should support setting XB font data', () => {
+		it('setXBFontData hands the bytes back until clearXBData drops them', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+			const bytes = new Uint8Array(4096).fill(0x55);
 
-			expect(typeof canvas.setXBFontData).toBe('function');
+			expect(canvas.setXBFontData(bytes, 8, 16)).toBe(true);
+			expect(canvas.getXBFontData()).toEqual({ bytes, width: 8, height: 16 });
+			canvas.clearXBData();
+			expect(canvas.getXBFontData()).toBeNull();
+		});
 
-			const mockFontData = new Uint8Array(4096);
-			expect(() => {
-				canvas.setXBFontData(mockFontData, 8, 16);
-			}).not.toThrow();
+		it('setXBFontData refuses empty bytes and keeps no font', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+			const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+			expect(canvas.setXBFontData(new Uint8Array(0), 8, 16)).toBe(false);
+			expect(canvas.getXBFontData()).toBeNull();
+			error.mockRestore();
 		});
 	});
 
@@ -771,7 +707,6 @@ describe('Canvas Module', () => {
 			const State = (await import('../../src/js/client/state.js')).default;
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			// Wait for the initial font load and canvas creation to finish
 			await vi.waitFor(() => expect(mockCallback).toHaveBeenCalled());
 
 			const fontDraw = State.font.draw;

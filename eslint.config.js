@@ -5,7 +5,7 @@ import parser from '@html-eslint/parser';
 
 export default [
 	{
-		// generated test reports (playwright trace viewer, coverage html)
+		// generated test reports (playwright trace viewer, coverage html);
 		// interop fixtures are VERBATIM upstream code (their style, not ours)
 		ignores: ['tests/results/**', 'tests/interop/fixtures/**'],
 	},
@@ -24,8 +24,8 @@ export default [
 			ecmaVersion: 2022,
 			sourceType: 'module',
 			globals: {
-				AbortSignal: 'readonly',
 				// Unrecognized browser environment / APIs
+				AbortSignal: 'readonly',
 				AbortController: 'readonly',
 				Blob: 'readonly',
 				CustomEvent: 'readonly',
@@ -58,12 +58,10 @@ export default [
 				console: 'readonly',
 				crypto: 'readonly',
 				document: 'readonly',
-				existsSync: 'readonly',
 				fetch: 'readonly',
 				indexedDB: 'readonly',
 				localStorage: 'readonly',
 				location: 'readonly',
-				mkdirSync: 'readonly',
 				navigator: 'readonly',
 				performance: 'readonly',
 				process: 'readonly',
@@ -285,7 +283,6 @@ export default [
 		}
 	},
 	{
-		// Skip linting entirely for dist files
 		files: ['dist/**/*.*'],
 		rules: {
 			'no-console': 'off',

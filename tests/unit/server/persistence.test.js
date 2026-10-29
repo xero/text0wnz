@@ -1,6 +1,5 @@
 /**
- * Room persistence through the shared codecs: native .0wnz round trip,
- * the legacy v2 .bin migration path, and sha1-deduped hourly backups.
+ * Room persistence through the shared codecs.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
@@ -88,7 +87,7 @@ describe('room persistence', () => {
 		expect(existsSync(stateFile(dir, 'race'))).toBe(false);
 	});
 
-	it('restores a pre-sweep sidecar whose join palette is 6-bit arrays, then self-heals it', async () => {
+	it('restores a sidecar join palette of 6-bit arrays as 8-bit {r,g,b} and saves it back in that shape', async () => {
 		const palette = Array.from({ length: 16 }, () => [0, 0, 0]);
 		palette[1] = [4, 12, 32];
 		const join = {
@@ -188,7 +187,6 @@ describe('room persistence', () => {
 		});
 		expect(room.isBlank()).toBe(true);
 		await removeRoomFiles(dir, 'foo');
-		// at HEAD the .bin survived and re-restored the erased art
 		expect(await loadRoomDoc(dir, 'foo')).toBeNull();
 	});
 

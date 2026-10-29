@@ -1,9 +1,19 @@
-/* eslint-disable prefer-arrow-callback */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import {
+	describe,
+	it,
+	expect,
+	beforeAll,
+	beforeEach,
+	afterEach,
+	vi,
+} from 'vitest';
+import { createTextArtCanvas } from '../../src/js/client/canvas.js';
 
 const mockState = {
 	startInitialization: vi.fn(),
-	waitFor: vi.fn((deps, callback) => callback()),
+	// records only: running the tier 3 callback boots every lazy tool,
+	// far past what these mocks can stand in for
+	waitFor: vi.fn(),
 	title: { value: 'untitled' },
 	fontDir: 'ui/fonts/',
 	textArtCanvas: {
@@ -42,12 +52,6 @@ const mockState = {
 		systemPaste: vi.fn(),
 		deleteSelection: vi.fn(),
 	},
-	network: {
-		sendResize: vi.fn(),
-		sendIceColorsChange: vi.fn(),
-		sendLetterSpacingChange: vi.fn(),
-		sendFontChange: vi.fn(),
-	},
 };
 
 const createMockElement = (overrides = {}) => ({
@@ -73,10 +77,6 @@ const createMockElement = (overrides = {}) => ({
 const mockCreateFunctions = {
 	createPasteTool: vi.fn(() => mockState.pasteTool),
 	createPositionInfo: vi.fn(() => ({ update: vi.fn() })),
-	createTextArtCanvas: vi.fn((container, callback) => {
-		callback && callback();
-		return mockState.textArtCanvas;
-	}),
 	createSelectionCursor: vi.fn(() => ({
 		hide: vi.fn(),
 		setStart: vi.fn(),
@@ -128,7 +128,7 @@ vi.stubGlobal('document', {
 	getElementById: vi.fn(id => {
 		const mockElement = createMockElement();
 		if (id === 'open-file') {
-			return { ...mockElement, files: [{ name: 'test.ans' }]}; // Use plain object instead of File constructor
+			return { ...mockElement, files: [{ name: 'test.ans' }]};
 		}
 		if (id === 'columns-input' || id === 'rows-input') {
 			return { ...mockElement, value: '80' };
@@ -143,13 +143,7 @@ vi.stubGlobal('document', {
 	createElement: vi.fn(() => createMockElement()),
 });
 
-global.confirm = vi.fn(() => true);
 global.alert = vi.fn();
-global.Image = vi.fn(() => ({
-	onload: null,
-	onerror: null,
-	src: '',
-}));
 
 vi.mock('../../src/js/client/state.js', () => ({ default: mockState }));
 vi.mock('../../src/js/client/ui.js', () => ({
@@ -218,7 +212,7 @@ vi.mock('../../src/js/client/font.js', () => ({
 
 vi.mock('../../src/js/client/canvas.js', () => ({
 	createTextArtCanvas: vi.fn((container, callback) => {
-		// Execute callback immediately to simulate successful creation
+		// simulate a successful creation
 		if (callback) {
 			callback();
 		}
@@ -249,631 +243,127 @@ vi.mock('../../src/js/client/fontCache.js', () => ({
 }));
 
 describe('Main Application Module', () => {
+	let ready;
+	let domReady;
+
+	beforeAll(async () => {
+		await import('../../src/js/client/main.js');
+		// the module evaluates once per file, so its registrations have
+		// to be captured before beforeEach clears the mock's call log
+		ready = global.document.addEventListener.mock.calls.filter(
+			call => call[0] === 'DOMContentLoaded',
+		);
+		domReady = ready[0]?.[1];
+	});
+
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockState.startInitialization.mockClear();
-		global.document.addEventListener.mockClear();
+		// every boot arms tier 2 and 3 timers: fake ones die with their
+		// test instead of firing into a later test's assertions
+		vi.useFakeTimers();
 	});
 
 	afterEach(() => {
-		vi.restoreAllMocks();
+		vi.useRealTimers();
+		delete global.requestIdleCallback;
 	});
 
-	describe('Module Structure', () => {
-		it('should import without throwing errors', async () => {
-			expect(async () => {
-				await import('../../src/js/client/main.js');
-			}).not.toThrow();
-		});
-
-		it('should handle CSS import without errors', async () => {
-			expect(async () => {
-				await import('../../src/js/client/main.js');
-			}).not.toThrow();
-		});
+	it('registers one DOMContentLoaded handler on import', () => {
+		expect(ready).toHaveLength(1);
+		expect(typeof domReady).toBe('function');
 	});
 
-	describe('Application Initialization', () => {
-		it('should initialize State when DOMContentLoaded fires', async () => {
-			await import('../../src/js/client/main.js');
+	describe('tier 1 boot', () => {
+		it('starts State, preloads fonts, and builds the core controllers', async () => {
+			const { FontCache } = await import('../../src/js/client/fontCache.js');
+			await domReady();
 
-			const domReadyCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'DOMContentLoaded',
+			expect(mockState.startInitialization).toHaveBeenCalledTimes(1);
+			expect(FontCache.preloadCommonFonts).toHaveBeenCalledTimes(1);
+			expect(mockState.modal).toBe(
+				mockCreateFunctions.createModalController.mock.results[0].value,
 			);
-
-			expect(domReadyCall).toBeDefined();
-
-			const domReadyHandler = domReadyCall[1];
-			await domReadyHandler();
-
-			expect(mockState.startInitialization).toHaveBeenCalled();
+			expect(mockState.textArtCanvas).toBe(
+				vi.mocked(createTextArtCanvas).mock.results[0].value,
+			);
+			expect(global.alert).not.toHaveBeenCalled();
 		});
 
-		it('should handle initialization errors gracefully', async () => {
-			mockState.startInitialization.mockImplementation(() => {
+		it('drops the loading class once the canvas reports ready', async () => {
+			const body = createMockElement();
+			const $ = global.document.getElementById;
+			const lookup = $.getMockImplementation();
+			$.mockImplementation(id => (id === 'bodyContainer' ? body : lookup(id)));
+			try {
+				await domReady();
+			} finally {
+				$.mockImplementation(lookup);
+			}
+			expect(body.classList.remove).toHaveBeenCalledWith('loading');
+		});
+
+		it('turns a startup throw into the init alert', async () => {
+			mockState.startInitialization.mockImplementationOnce(() => {
 				throw new Error('Initialization failed');
 			});
-
-			await import('../../src/js/client/main.js');
-
-			const domReadyCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'DOMContentLoaded',
+			await expect(domReady()).resolves.toBeUndefined();
+			expect(global.alert).toHaveBeenCalledWith(
+				'Failed to initialize the application. Please refresh the page.',
 			);
-
-			if (domReadyCall) {
-				const domReadyHandler = domReadyCall[1];
-
-				expect(async () => {
-					await domReadyHandler();
-				}).not.toThrow();
-
-				expect(global.alert).toHaveBeenCalledWith(
-					'Failed to initialize the application. Please refresh the page.',
-				);
-			}
 		});
 
-		it('should wait for dependencies before initializing components', async () => {
-			await import('../../src/js/client/main.js');
-
-			const domReadyCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'DOMContentLoaded',
-			);
-
-			if (domReadyCall) {
-				const domReadyHandler = domReadyCall[1];
-				await domReadyHandler();
-
-				expect(mockState.waitFor).toHaveBeenCalledWith(
-					[
-						'palette',
-						'textArtCanvas',
-						'font',
-						'cursor',
-						'selectionCursor',
-						'positionInfo',
-						'toolPreview',
-						'pasteTool',
-					],
-					expect.any(Function),
-				);
-			}
-		});
-	});
-
-	describe('UI Event Handlers', () => {
-		it('should handle new button click with confirmation', async () => {
-			const { onClick } = await import('../../src/js/client/ui.js');
-
-			await import('../../src/js/client/main.js');
-
-			const newButtonCall = onClick.mock.calls.find(
-				call => call[0] && call[0].id === 'new',
-			); // This is a mock, so we check the mock element
-
-			if (newButtonCall) {
-				const newButtonHandler = newButtonCall[1];
-				newButtonHandler();
-
-				expect(global.confirm).toHaveBeenCalledWith(
-					'All changes will be lost. Are you sure?',
-				);
-			}
-		});
-
-		it('should handle new button click cancellation', async () => {
-			global.confirm.mockReturnValue(false);
-			const { onClick } = await import('../../src/js/client/ui.js');
-
-			await import('../../src/js/client/main.js');
-
-			const newButtonCall = onClick.mock.calls.find(
-				call => call[0] && typeof call[1] === 'function',
-			);
-
-			if (newButtonCall) {
-				const newButtonHandler = newButtonCall[1];
-				newButtonHandler();
-
-				// Canvas should not be cleared if user cancels
-				expect(mockState.textArtCanvas.clear).not.toHaveBeenCalled();
-			}
-		});
-
-		it('should handle font selection and preview updates', async () => {
-			const { onSelectChange } = await import('../../src/js/client/ui.js');
-
-			await import('../../src/js/client/main.js');
-
-			expect(onSelectChange).toBeDefined();
-			expect(typeof onSelectChange).toBe('function');
-		});
-
-		it('should handle resize operations with valid input', async () => {
-			const { onClick } = await import('../../src/js/client/ui.js');
-
-			await import('../../src/js/client/main.js');
-
-			const resizeApplyCall = onClick.mock.calls.find(
-				call => call[0] && typeof call[1] === 'function',
-			);
-
-			if (resizeApplyCall) {
-				const resizeHandler = resizeApplyCall[1];
-
-				global.document.getElementById.mockImplementation(id => {
-					if (id === 'columns-input') {
-						return { value: '100' };
-					}
-					if (id === 'rows-input') {
-						return { value: '30' };
-					}
-					return createMockElement();
-				});
-
-				resizeHandler();
-
-				expect(mockState.textArtCanvas.resize).toHaveBeenCalledWith(100, 30);
-			}
-		});
-
-		it('should handle invalid resize input gracefully', async () => {
-			const { onClick } = await import('../../src/js/client/ui.js');
-
-			await import('../../src/js/client/main.js');
-
-			const resizeApplyCall = onClick.mock.calls.find(
-				call => call[0] && typeof call[1] === 'function',
-			);
-
-			if (resizeApplyCall) {
-				const resizeHandler = resizeApplyCall[1];
-
-				global.document.getElementById.mockImplementation(id => {
-					if (id === 'columns-input') {
-						return { value: 'invalid' };
-					}
-					if (id === 'rows-input') {
-						return { value: 'invalid' };
-					}
-					return createMockElement();
-				});
-
-				expect(() => {
-					resizeHandler();
-				}).not.toThrow();
-
-				expect(mockState.textArtCanvas.resize).not.toHaveBeenCalledWith(
-					NaN,
-					NaN,
-				);
-			}
-		});
-	});
-
-	describe('Network Integration', () => {
-		it('should broadcast changes in collaboration mode', async () => {
-			mockState.network = {
-				sendResize: vi.fn(),
-				sendIceColorsChange: vi.fn(),
-				sendLetterSpacingChange: vi.fn(),
-				sendFontChange: vi.fn(),
-			};
-
-			const { onClick } = await import('../../src/js/client/ui.js');
-
-			await import('../../src/js/client/main.js');
-
-			const resizeCall = onClick.mock.calls.find(
-				call => call[0] && typeof call[1] === 'function',
-			);
-
-			if (resizeCall) {
-				const resizeHandler = resizeCall[1];
-
-				global.document.getElementById.mockImplementation(id => {
-					if (id === 'columns-input') {
-						return { value: '90' };
-					}
-					if (id === 'rows-input') {
-						return { value: '40' };
-					}
-					return createMockElement();
-				});
-
-				resizeHandler();
-
-				expect(mockState.network.sendResize).toHaveBeenCalledWith(90, 40);
-			}
-		});
-
-		it('should handle network unavailability gracefully', async () => {
-			mockState.network = null;
-
-			const { onClick } = await import('../../src/js/client/ui.js');
-
-			await import('../../src/js/client/main.js');
-
-			expect(() => {
-				const calls = onClick.mock.calls;
-				calls.forEach(call => {
-					if (typeof call[1] === 'function') {
-						call[1](); // Execute handlers
-					}
-				});
-			}).not.toThrow();
-		});
-	});
-
-	describe('Font Management', () => {
-		it('should handle font preview for regular PNG fonts', async () => {
-			await import('../../src/js/client/main.js');
-
-			const mockImg = {
-				onload: null,
-				onerror: null,
-				src: '',
-				width: 128,
-				height: 256,
-			};
-			global.Image.mockImplementation(function () {
-				return mockImg;
-			});
-
-			mockImg.onload && mockImg.onload();
-
-			expect(mockImg.src).toBeDefined();
-		});
-
-		it('should handle font preview errors gracefully', async () => {
-			await import('../../src/js/client/main.js');
-
-			const mockImg = {
-				onload: null,
-				onerror: null,
-				src: '',
-			};
-			global.Image.mockImplementation(function () {
-				return mockImg;
-			});
-
-			expect(() => {
-				mockImg.onerror && mockImg.onerror();
-			}).not.toThrow();
-		});
-
-		it('should handle XBIN font preview differently', async () => {
-			await import('../../src/js/client/main.js');
-
-			expect(mockState.textArtCanvas.getCurrentFontName).toBeDefined();
-		});
-	});
-
-	describe('Dependencies and Imports', () => {
-		it('should successfully import all required modules', async () => {
-			expect(async () => {
-				const module = await import('../../src/js/client/main.js');
-				expect(module).toBeDefined();
-			}).not.toThrow();
-		});
-
-		it('should have proper module structure', async () => {
-			// main.js is mostly side effects; importing it is the test
-			const module = await import('../../src/js/client/main.js');
-			expect(module).toBeDefined();
-		});
-	});
-
-	describe('Component Initialization', () => {
-		it('should initialize all required components in correct order', async () => {
-			await import('../../src/js/client/main.js');
-
-			const domReadyCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'DOMContentLoaded',
-			);
-
-			if (domReadyCall) {
-				const domReadyHandler = domReadyCall[1];
-				await domReadyHandler();
-
-				expect(mockState.startInitialization).toHaveBeenCalled();
-				expect(mockCreateFunctions.createTextArtCanvas).toHaveBeenCalled();
-				expect(mockState.waitFor).toHaveBeenCalled();
-			}
-		});
-
-		it('should create drawing tools', async () => {
-			await import('../../src/js/client/main.js');
-
-			expect(mockCreateFunctions.createDefaultPalette).toBeDefined();
-		});
-
-		it('should set up event handlers', async () => {
-			const { onClick, onSelectChange, onFileChange } = await import(
-				'../../src/js/client/ui.js'
-			);
-
-			await import('../../src/js/client/main.js');
-
-			expect(onClick).toBeDefined();
-			expect(onSelectChange).toBeDefined();
-			expect(onFileChange).toBeDefined();
-		});
-
-		it('should configure canvas settings', async () => {
-			await import('../../src/js/client/main.js');
-
-			const domReadyCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'DOMContentLoaded',
-			);
-
-			if (domReadyCall) {
-				const domReadyHandler = domReadyCall[1];
-				await domReadyHandler();
-
-				expect(mockState.textArtCanvas).toBeDefined();
-			}
-		});
-
-		it('should handle font configuration', async () => {
-			await import('../../src/js/client/main.js');
-
-			expect(mockState.font.setLetterSpacing).toBeDefined();
-			expect(mockState.font.getLetterSpacing).toBeDefined();
-		});
-
-		it('should handle ICE colors configuration', async () => {
-			await import('../../src/js/client/main.js');
-
-			expect(mockState.textArtCanvas.setIceColors).toBeDefined();
-			expect(mockState.textArtCanvas.getIceColors).toBeDefined();
-		});
-	});
-
-	describe('File Operations Integration', () => {
-		it('should handle file loading workflow', async () => {
-			const { Load } = await import('../../src/js/client/file.js');
-
-			await import('../../src/js/client/main.js');
-
-			expect(Load.file).toBeDefined();
-		});
-
-		it('should handle SAUCE information', async () => {
-			await import('../../src/js/client/main.js');
-
-			expect(global.document.getElementById).toBeDefined();
-		});
-
-		it('should handle font file operations', async () => {
-			const { Load } = await import('../../src/js/client/file.js');
-
-			await import('../../src/js/client/main.js');
-
-			expect(Load.sauceToAppFont).toBeDefined();
-		});
-	});
-
-	describe('Error Recovery', () => {
-		it('should handle component creation failures gracefully', async () => {
-			mockCreateFunctions.createTextArtCanvas.mockImplementation(() => {
+		it('turns a canvas creation throw into the init alert', async () => {
+			vi.mocked(createTextArtCanvas).mockImplementationOnce(() => {
 				throw new Error('Canvas creation failed');
 			});
-
-			await import('../../src/js/client/main.js');
-
-			const domReadyCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'DOMContentLoaded',
+			await expect(domReady()).resolves.toBeUndefined();
+			expect(global.alert).toHaveBeenCalledWith(
+				'Failed to initialize the application. Please refresh the page.',
 			);
-
-			if (domReadyCall) {
-				const domReadyHandler = domReadyCall[1];
-
-				expect(async () => {
-					await domReadyHandler();
-				}).not.toThrow();
-
-				expect(global.alert).toHaveBeenCalledWith(
-					'Failed to initialize the application. Please refresh the page.',
-				);
-			}
-		});
-
-		it('should handle missing DOM elements gracefully', async () => {
-			global.document.getElementById.mockReturnValue(null);
-
-			await import('../../src/js/client/main.js');
-
-			const domReadyCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'DOMContentLoaded',
-			);
-
-			if (domReadyCall) {
-				const domReadyHandler = domReadyCall[1];
-
-				expect(async () => {
-					await domReadyHandler();
-				}).not.toThrow();
-			}
 		});
 	});
 
-	describe('State Management Integration', () => {
-		it('should properly integrate with state system', async () => {
-			await import('../../src/js/client/main.js');
+	describe('tiers 2 and 3', () => {
+		const tier3Deps = [
+			'palette',
+			'textArtCanvas',
+			'font',
+			'modal',
+			'cursor',
+			'selectionCursor',
+			'selectionTool',
+			'positionInfo',
+			'toolPreview',
+			'pasteTool',
+		];
 
-			const domReadyCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'DOMContentLoaded',
-			);
-
-			if (domReadyCall) {
-				const domReadyHandler = domReadyCall[1];
-				await domReadyHandler();
-
-				expect(mockState.waitFor).toHaveBeenCalledWith(
-					expect.arrayContaining([
-						'palette',
-						'textArtCanvas',
-						'font',
-						'cursor',
-						'selectionCursor',
-						'positionInfo',
-						'toolPreview',
-						'pasteTool',
-					]),
-					expect.any(Function),
-				);
-			}
+		it('builds tier 2 a macrotask after the canvas is ready', async () => {
+			await domReady();
+			expect(mockCreateFunctions.createPositionInfo).not.toHaveBeenCalled();
+			await vi.advanceTimersByTimeAsync(0);
+			expect(mockCreateFunctions.createPositionInfo).toHaveBeenCalledTimes(1);
 		});
 
-		it('should set up state properties correctly', async () => {
-			await import('../../src/js/client/main.js');
-
-			const domReadyCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'DOMContentLoaded',
+		it('waits on the tier 3 dependencies from requestIdleCallback', async () => {
+			global.requestIdleCallback = vi.fn(cb => cb());
+			await domReady();
+			await vi.advanceTimersByTimeAsync(0);
+			expect(global.requestIdleCallback).toHaveBeenCalledTimes(1);
+			expect(mockState.waitFor).toHaveBeenCalledWith(
+				tier3Deps,
+				expect.any(Function),
 			);
-
-			if (domReadyCall) {
-				const domReadyHandler = domReadyCall[1];
-				await domReadyHandler();
-
-				expect(mockState.title).toBeDefined();
-			}
-		});
-	});
-
-	describe('Save Functionality', () => {
-		it('should initialize save timeout variable', async () => {
-			await import('../../src/js/client/main.js');
-
-			expect(true).toBe(true);
-		});
-	});
-
-	describe('Initialization Tiers', () => {
-		it('should initialize core UI components first', async () => {
-			await import('../../src/js/client/main.js');
-
-			const domReadyCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'DOMContentLoaded',
-			);
-
-			if (domReadyCall) {
-				const domReadyHandler = domReadyCall[1];
-				await domReadyHandler();
-
-				expect(mockCreateFunctions.createModalController).toHaveBeenCalled();
-				expect(mockCreateFunctions.createDefaultPalette).toHaveBeenCalled();
-				expect(mockCreateFunctions.createPasteTool).toHaveBeenCalled();
-				expect(mockCreateFunctions.createTextArtCanvas).toHaveBeenCalled();
-			}
 		});
 
-		it('should initialize secondary tools after core', async () => {
-			await import('../../src/js/client/main.js');
-
-			const domReadyCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'DOMContentLoaded',
+		it('falls back to a 100ms timeout without requestIdleCallback', async () => {
+			await domReady();
+			await vi.advanceTimersByTimeAsync(99);
+			expect(mockState.waitFor).not.toHaveBeenCalled();
+			await vi.advanceTimersByTimeAsync(1);
+			expect(mockState.waitFor).toHaveBeenCalledWith(
+				tier3Deps,
+				expect.any(Function),
 			);
-
-			if (domReadyCall) {
-				const domReadyHandler = domReadyCall[1];
-				await domReadyHandler();
-
-				expect(mockCreateFunctions.createPositionInfo).toHaveBeenCalled();
-				expect(mockCreateFunctions.createSelectionCursor).toHaveBeenCalled();
-				expect(mockCreateFunctions.createCursor).toHaveBeenCalled();
-			}
-		});
-
-		it('should remove loading class after canvas ready', async () => {
-			const mockBodyContainer = createMockElement();
-			global.document.getElementById.mockImplementation(id => {
-				if (id === 'body-container') {
-					return mockBodyContainer;
-				}
-				return createMockElement();
-			});
-
-			await import('../../src/js/client/main.js');
-
-			const domReadyCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'DOMContentLoaded',
-			);
-
-			if (domReadyCall) {
-				const domReadyHandler = domReadyCall[1];
-				await domReadyHandler();
-
-				expect(mockBodyContainer.classList.remove).toHaveBeenCalledWith(
-					'loading',
-				);
-			}
-		});
-	});
-
-	describe('Font Preloading', () => {
-		it('should preload common fonts during initialization', async () => {
-			const mockFontCache = { preloadCommonFonts: vi.fn() };
-
-			vi.doMock('../../src/js/client/fontCache.js', () => ({ FontCache: mockFontCache }));
-
-			await import('../../src/js/client/main.js');
-
-			const domReadyCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'DOMContentLoaded',
-			);
-
-			if (domReadyCall) {
-				const domReadyHandler = domReadyCall[1];
-				await domReadyHandler();
-
-				expect(mockFontCache.preloadCommonFonts).toHaveBeenCalled();
-			}
-		});
-	});
-
-	describe('Idle Callback Handling', () => {
-		it('should use requestIdleCallback when available', async () => {
-			global.requestIdleCallback = vi.fn(callback => {
-				callback();
-				return 1;
-			});
-
-			await import('../../src/js/client/main.js');
-
-			const domReadyCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'DOMContentLoaded',
-			);
-
-			if (domReadyCall) {
-				const domReadyHandler = domReadyCall[1];
-				await domReadyHandler();
-
-				expect(global.requestIdleCallback).toHaveBeenCalled();
-			}
-
-			delete global.requestIdleCallback;
-		});
-
-		it('should fallback to setTimeout when requestIdleCallback not available', async () => {
-			vi.useFakeTimers();
-			delete global.requestIdleCallback;
-
-			await import('../../src/js/client/main.js');
-
-			const domReadyCall = global.document.addEventListener.mock.calls.find(
-				call => call[0] === 'DOMContentLoaded',
-			);
-
-			if (domReadyCall) {
-				const domReadyHandler = domReadyCall[1];
-				await domReadyHandler();
-
-				expect(setTimeout).toHaveBeenCalled();
-			}
-
-			vi.useRealTimers();
 		});
 	});
 });

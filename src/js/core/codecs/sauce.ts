@@ -1,11 +1,10 @@
 /**
- * SAUCE record parse/build (docs/sauce-format.md is normative; semantics
- * ported byte-for-byte from the v2 client in file.js, including its
- * leniencies: TInfo 0 and BinaryText FileType 0 read as "unspecified",
- * trailing whitespace trims, comment chunks of 64).
+ * SAUCE record parse/build. docs/sauce-format.md is normative; its
+ * teXt0wnz Implementation Notes record every choice the spec leaves
+ * open and every reader leniency.
  */
 
-import { unicodeToCp437 } from '../cp437.js';
+import { cp437ToUnicode, unicodeToCp437 } from '../cp437.js';
 import {
 	readLE16,
 	readLE32,
@@ -14,6 +13,32 @@ import {
 	writeLE32,
 	writeText,
 } from './util.js';
+
+/**
+ * SAUCE §Layout Character and ZString text: CP437 up to the first NUL,
+ * since some writers terminate there and leave garbage behind (note 3).
+ * The trim runs on bytes, before the map: CP437 0xA0 is á, and a
+ * Unicode whitespace trim would eat it. Decoding through the map is
+ * what lets buildSauce write the same bytes back.
+ */
+const textField = (bytes: Uint8Array, offset: number, size: number): string => {
+	let end = offset;
+	while (end < offset + size && bytes[end] !== 0) {
+		end++;
+	}
+	while (
+		end > offset &&
+		(bytes[end - 1] === 0x20 ||
+			(bytes[end - 1] >= 0x09 && bytes[end - 1] <= 0x0d))
+	) {
+		end--;
+	}
+	let text = '';
+	for (let i = offset; i < end; i++) {
+		text += String.fromCodePoint(cp437ToUnicode(bytes[i]));
+	}
+	return text;
+};
 
 export interface SauceRecord {
 	version: string;
@@ -29,7 +54,7 @@ export interface SauceRecord {
 	tInfo3: number;
 	tInfo4: number;
 	flags: number;
-	/** TInfoS field: SAUCE font name (raw; app mapping stays client-side). */
+	/** SAUCE §FontName (TInfoS), raw; the app mapping stays client-side. */
 	fontName: string;
 	comments: string[];
 	iceColors: boolean;
@@ -37,9 +62,8 @@ export interface SauceRecord {
 	/**
 	 * Payload length the record implies: fileSize when sane, else
 	 * everything before the COMNT block (when present) and the EOF
-	 * byte, like PabloDraw. v2 kept the comment block in the fallback,
-	 * which decoded comment text as art rows; 2026-10 audit retired
-	 * that quirk.
+	 * byte, like PabloDraw; keeping the block would decode comment
+	 * text as art rows.
 	 */
 	payloadSize: number;
 }
@@ -54,9 +78,9 @@ export const parseSauce = (bytes: Uint8Array): SauceRecord | null => {
 	}
 	const record: SauceRecord = {
 		version: stringField(bytes, at + 5, 2),
-		title: stringField(bytes, at + 7, 35),
-		author: stringField(bytes, at + 42, 20),
-		group: stringField(bytes, at + 62, 20),
+		title: textField(bytes, at + 7, 35),
+		author: textField(bytes, at + 42, 20),
+		group: textField(bytes, at + 62, 20),
 		date: stringField(bytes, at + 82, 8),
 		fileSize: readLE32(bytes, at + 90),
 		dataType: bytes[at + 94],
@@ -66,7 +90,7 @@ export const parseSauce = (bytes: Uint8Array): SauceRecord | null => {
 		tInfo3: readLE16(bytes, at + 100),
 		tInfo4: readLE16(bytes, at + 102),
 		flags: bytes[at + 105],
-		fontName: stringField(bytes, at + 106, 22),
+		fontName: textField(bytes, at + 106, 22),
 		comments: [],
 		iceColors: (bytes[at + 105] & 0x01) === 1,
 		letterSpacing: ((bytes[at + 105] >> 1) & 0x03) === 2,
@@ -78,7 +102,7 @@ export const parseSauce = (bytes: Uint8Array): SauceRecord | null => {
 		const blockStart = bytes.length - 128 - commentsCount * 64 - 5;
 		if (blockStart >= 0 && stringField(bytes, blockStart, 5) === 'COMNT') {
 			for (let i = 0; i < commentsCount; i++) {
-				record.comments.push(stringField(bytes, blockStart + 5 + i * 64, 64));
+				record.comments.push(textField(bytes, blockStart + 5 + i * 64, 64));
 			}
 			payloadEnd = blockStart;
 		}
@@ -90,6 +114,30 @@ export const parseSauce = (bytes: Uint8Array): SauceRecord | null => {
 		record.fileSize > 0 && record.fileSize < bytes.length
 			? record.fileSize
 			: payloadEnd;
+	if (record.version !== '00') {
+		// SAUCE §Layout note 6: an unknown version is not the 00 layout.
+		// Pre-standard writers leave TFlags and TInfoS as stale file
+		// bytes that would force ice and spacing, so the record only
+		// fences the payload
+		return {
+			...record,
+			title: '',
+			author: '',
+			group: '',
+			date: '',
+			dataType: 0,
+			fileType: 0,
+			tInfo1: 0,
+			tInfo2: 0,
+			tInfo3: 0,
+			tInfo4: 0,
+			flags: 0,
+			fontName: '',
+			comments: [],
+			iceColors: false,
+			letterSpacing: false,
+		};
+	}
 	return record;
 };
 
@@ -102,24 +150,24 @@ export interface BuildSauceOptions {
 	title?: string;
 	author?: string;
 	group?: string;
-	/** Newline-separated comment text, chunked to 64 like the v2 modal. */
+	/** Newline-separated; lines chunk into 64-byte comment lines. */
 	comments?: string;
 	iceColors?: boolean;
 	letterSpacing?: boolean;
-	/** SAUCE font name (TInfoS); written only with flags. */
+	/** SAUCE §FontName (TInfoS); written only with the flags byte. */
 	fontName?: string;
-	/** XBin passes false: no flags byte, no font name (v2 createSauce). */
+	/** XBin passes false: SAUCE §FileType gives XBin no Flags or TInfoS. */
 	flagsAndTInfo?: boolean;
 	/**
-	 * Raw AR bits ((flags >> 3) & 3) carried from an opened file so a
-	 * resave round-trips the author's intent verbatim; new docs write
-	 * 0 (no preference) like moebiusXBIN. v2 forced 10 on every save.
+	 * Raw SAUCE §ANSiFlags AR bits ((flags >> 3) & 3) carried from an
+	 * opened file so a resave round-trips the author's intent verbatim;
+	 * new docs write 0 (no preference) like moebiusXBIN.
 	 */
 	aspect?: number;
 	/**
-	 * Raw LS bits; 0 means "no preference" and survives a resave when
-	 * the artist never touched letter spacing. Defaults to the explicit
-	 * 1/2 encoding of the letterSpacing boolean.
+	 * Raw SAUCE §ANSiFlags LS bits; 0 means "no preference" and survives
+	 * a resave when the artist never touched letter spacing. Defaults to
+	 * the explicit 1/2 encoding of the letterSpacing boolean.
 	 */
 	letterSpacingMode?: number;
 	/** Defaults to now; injectable for byte-stable tests. */
@@ -144,9 +192,8 @@ export const buildSauce = (options: BuildSauceOptions): Uint8Array => {
 		flagsAndTInfo = true,
 	} = options;
 
-	// the spec defines every SAUCE text field as CP437 bytes; writing
-	// UTF-8 here mangled non-ASCII metadata on our own save/reopen and
-	// for every other reader
+	// SAUCE §Layout: Character fields are CP437 bytes; UTF-8 here would
+	// mangle non-ASCII metadata for every reader, our own reopen too
 	const cp437Bytes = (text: string): number[] => {
 		const out: number[] = [];
 		for (const ch of text) {
@@ -155,12 +202,9 @@ export const buildSauce = (options: BuildSauceOptions): Uint8Array => {
 		return out;
 	};
 
-	// Chunk comment lines into 64 BYTE slots (CP437 is one byte per
-	// char, so chunking the encoded bytes keeps slots aligned for every
-	// reader; v2 chunked UTF-16 chars and wrote UTF-8 bytes, shifting
-	// every slot after a non-ASCII char). The count byte caps at 255
-	// like moebius-web: past it, v2 wrapped mod 256 and orphaned the
-	// whole block.
+	// chunk the encoded bytes, not UTF-16 chars, so every 64-byte slot
+	// stays aligned for every reader. The count byte caps at 255 (SAUCE
+	// §Layout) like moebius-web; wrapping mod 256 orphans the block
 	const commentLines = comments.trim() ? comments.trim().split('\n') : [];
 	const commentBytes: number[] = [];
 	let commentsCount = 0;
@@ -206,7 +250,7 @@ export const buildSauce = (options: BuildSauceOptions): Uint8Array => {
 	record[94] = dataType;
 
 	if (dataType === 5) {
-		// BinaryText: FileType holds width/2, no TInfo dims
+		// SAUCE §FileType, BinaryText: FileType holds width/2, no TInfo dims
 		record[95] = (columns / 2) & 0xff;
 	} else {
 		record[95] = fileType;

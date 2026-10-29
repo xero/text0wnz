@@ -1,49 +1,61 @@
 import { test, expect } from '@playwright/test';
-import { clickTool, waitForEditorReady } from './helpers/editorHelpers.js';
+import {
+	bridgeReady,
+	clickTool,
+	cursorAt,
+	drag,
+	parkToolSettings,
+	readBlock,
+	readRegion,
+	tap,
+	writeText,
+} from './helpers/editorHelpers.js';
+
+const inked = async (page, x, y) =>
+	![0, 32].includes((await readBlock(page, x, y)).charCode);
 
 test.describe('Editor Keybinds', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
-		await waitForEditorReady(page);
+		await parkToolSettings(page);
+		await page.goto('/?test');
+		await bridgeReady(page);
 	});
 
+	// keyboard mode is the boot tool and turns paint shortcuts off, so
+	// every letter test leaves typing mode first or it only types
 	test.describe('Tool Selection', () => {
 		test('activates keyboard mode with K key', async ({ page }) => {
+			await clickTool(page, 'halfblock');
+			await expect(page.locator('#tsKeyboard')).toBeHidden();
 			await page.keyboard.press('k');
-			await page.waitForTimeout(300);
 
-			// keyboard mode shows its section in the tool settings module
+			await expect(page.locator('#keyboard')).toHaveClass(/toolbarDisplayed/);
 			await expect(page.locator('#tsKeyboard')).toBeVisible();
 		});
 
-		test('activates freehand/halfblock tool with F key', async ({ page }) => {
+		test('activates the halfblock brush with F key', async ({ page }) => {
+			await clickTool(page, 'characterBrush');
 			await page.keyboard.press('f');
-			await page.waitForTimeout(300);
 
-			const errors = await page.locator('.error').count();
-			expect(errors).toBe(0);
-
-			// TODO: check that the halfblock tool is active
+			await expect(page.locator('#halfblock')).toHaveClass(/toolbarDisplayed/);
+			await expect(page.locator('#characterBrush')).not.toHaveClass(
+				/toolbarDisplayed/,
+			);
 		});
 
 		test('activates character brush with B key', async ({ page }) => {
+			await clickTool(page, 'halfblock');
 			await page.keyboard.press('b');
-			await page.waitForTimeout(300);
 
-			const errors = await page.locator('.error').count();
-			expect(errors).toBe(0);
+			await expect(page.locator('#characterBrush')).toHaveClass(
+				/toolbarDisplayed/,
+			);
+			await expect(page.locator('#halfblock')).not.toHaveClass(/toolbarDisplayed/);
 		});
 
 		test('activates fill tool with N key', async ({ page }) => {
-			// paint shortcuts are letters, so they only fire outside
-			// keyboard typing mode: leave typing mode first
 			await clickTool(page, 'halfblock');
-			await page.waitForTimeout(300);
 			await page.keyboard.press('n');
-			await page.waitForTimeout(300);
-
-			const errors = await page.locator('.error').count();
-			expect(errors).toBe(0);
 
 			// activating a tool closes the flyout; reopen it to see the
 			// lit item
@@ -54,325 +66,186 @@ test.describe('Editor Keybinds', () => {
 		});
 
 		test('activates attribute brush with A key', async ({ page }) => {
+			await clickTool(page, 'halfblock');
 			await page.keyboard.press('a');
-			await page.waitForTimeout(300);
 
-			const errors = await page.locator('.error').count();
-			expect(errors).toBe(0);
+			await expect(page.locator('#attrib')).toHaveClass(/toolbarDisplayed/);
 		});
 
 		test('toggles mirror mode with M key', async ({ page }) => {
-			await page.keyboard.press('m');
-			await page.waitForTimeout(300);
-
-			const errors = await page.locator('.error').count();
-			expect(errors).toBe(0);
-
+			await clickTool(page, 'halfblock');
 			const mirror = page.locator('#mirror');
-			await expect(mirror).toBeVisible();
+			await expect(mirror).not.toHaveClass(/enabled/);
+
+			await page.keyboard.press('m');
+			await expect(mirror).toHaveClass(/enabled/);
+			await page.keyboard.press('m');
+			await expect(mirror).not.toHaveClass(/enabled/);
 		});
 
 		test('toggles grid with G key', async ({ page }) => {
-			await page.keyboard.press('g');
-			await page.waitForTimeout(300);
+			await clickTool(page, 'halfblock');
+			const grid = page.locator('#navGrid');
+			await expect(grid).not.toHaveClass(/enabled/);
 
-			const grid = page.locator('#grid');
-			await expect(grid).toBeAttached();
+			await page.keyboard.press('g');
+			await expect(grid).toHaveClass(/enabled/);
+			await page.keyboard.press('g');
+			await expect(grid).not.toHaveClass(/enabled/);
 		});
 
 		test('toggles ICE colors with I key', async ({ page }) => {
+			await clickTool(page, 'halfblock');
+			const ice = page.locator('#navICE');
+			await expect(ice).not.toHaveClass(/enabled/);
+
 			await page.keyboard.press('i');
-			await page.waitForTimeout(300);
-
-			const errors = await page.locator('.error').count();
-			expect(errors).toBe(0);
-
-			// the ICE button may sit in a hidden toolbar; pin attachment only
-			const iceButton = page.locator('#navICE');
-			await expect(iceButton).toBeAttached();
+			await expect(ice).toHaveClass(/enabled/);
+			await page.keyboard.press('i');
+			await expect(ice).not.toHaveClass(/enabled/);
 		});
 	});
 
 	test.describe('Navigation in Keyboard Mode', () => {
 		test('arrow keys move cursor', async ({ page }) => {
-			await page.keyboard.press('k');
-			await page.waitForTimeout(300);
-
-			const initialPosition = await page.locator('#positionInfo').textContent();
+			const start = await cursorAt(page);
 
 			await page.keyboard.press('ArrowRight');
-			await page.waitForTimeout(200);
-
-			const afterRight = await page.locator('#positionInfo').textContent();
-
-			expect(afterRight).not.toBe(initialPosition);
+			expect(await cursorAt(page)).toEqual({ x: start.x + 1, y: start.y });
 
 			await page.keyboard.press('ArrowDown');
-			await page.waitForTimeout(200);
-
-			const afterDown = await page.locator('#positionInfo').textContent();
-			expect(afterDown).not.toBe(afterRight);
+			expect(await cursorAt(page)).toEqual({ x: start.x + 1, y: start.y + 1 });
 		});
 
 		test('Home key moves to start of row', async ({ page }) => {
-			await page.keyboard.press('k');
-			await page.waitForTimeout(300);
-
-			await page.keyboard.press('ArrowRight');
-			await page.keyboard.press('ArrowRight');
-			await page.keyboard.press('ArrowRight');
-			await page.waitForTimeout(200);
-
+			await tap(page, 10, 4);
 			await page.keyboard.press('Home');
-			await page.waitForTimeout(200);
 
-			const position = await page.locator('#positionInfo').textContent();
-			// TODO: assert the column once the display format is pinned
-			expect(position).toBeDefined();
+			expect(await cursorAt(page)).toEqual({ x: 0, y: 4 });
 		});
 
 		test('End key moves to end of row', async ({ page }) => {
-			await page.keyboard.press('k');
-			await page.waitForTimeout(300);
-
+			await tap(page, 10, 4);
 			await page.keyboard.press('End');
-			await page.waitForTimeout(200);
 
-			const position = await page.locator('#positionInfo').textContent();
-			expect(position).toBeDefined();
+			expect(await cursorAt(page)).toEqual({ x: 79, y: 4 });
 		});
 
 		test('PageUp and PageDown move cursor by screen height', async ({ page }) => {
-			await page.keyboard.press('k');
-			await page.waitForTimeout(300);
-
-			const initialPosition = await page.locator('#positionInfo').textContent();
+			// taller than the viewport, or PageDown clamps at the last row
+			// before it travels a full screen
+			const screen = await page.evaluate(() => {
+				const s = window.__t0wnz.State;
+				s.textArtCanvas.resize(80, 200);
+				return Math.floor(
+					document.getElementById('viewport').clientHeight /
+					s.font.getHeight(),
+				);
+			});
+			expect(screen).toBeGreaterThan(1);
+			await tap(page, 10, 4);
 
 			await page.keyboard.press('PageDown');
-			await page.waitForTimeout(300);
-
-			const afterPageDown = await page.locator('#positionInfo').textContent();
-			expect(afterPageDown).not.toBe(initialPosition);
+			expect(await cursorAt(page)).toEqual({ x: 10, y: 4 + screen });
 
 			await page.keyboard.press('PageUp');
-			await page.waitForTimeout(300);
-
-			const afterPageUp = await page.locator('#positionInfo').textContent();
-			expect(afterPageUp).not.toBe(afterPageDown);
+			expect(await cursorAt(page)).toEqual({ x: 10, y: 4 });
 		});
 	});
 
 	test.describe('File & Canvas Operations', () => {
 		test('Ctrl+Z undoes action', async ({ page }) => {
-			const canvas = page.locator('#canvasContainer canvas').first();
-			const box = await canvas.boundingBox();
+			await clickTool(page, 'halfblock');
+			await tap(page, 5, 5);
+			expect(await inked(page, 5, 5)).toBe(true);
 
-			if (box) {
-				await page.keyboard.press('f');
-				await page.waitForTimeout(200);
-
-				await page.mouse.click(box.x + 50, box.y + 50);
-				await page.waitForTimeout(300);
-
-				await page.keyboard.press('Control+z');
-				await page.waitForTimeout(300);
-
-				const errors = await page.locator('.error').count();
-				expect(errors).toBe(0);
-			}
+			await page.keyboard.press('Control+z');
+			expect(await inked(page, 5, 5)).toBe(false);
 		});
 
 		test('Ctrl+Y redoes action', async ({ page }) => {
-			const canvas = page.locator('#canvasContainer canvas').first();
-			const box = await canvas.boundingBox();
+			await clickTool(page, 'halfblock');
+			await tap(page, 5, 5);
+			await page.keyboard.press('Control+z');
+			expect(await inked(page, 5, 5)).toBe(false);
 
-			if (box) {
-				await page.keyboard.press('f');
-				await page.waitForTimeout(200);
-
-				await page.mouse.click(box.x + 50, box.y + 50);
-				await page.waitForTimeout(300);
-
-				await page.keyboard.press('Control+z');
-				await page.waitForTimeout(300);
-
-				await page.keyboard.press('Control+y');
-				await page.waitForTimeout(300);
-
-				const errors = await page.locator('.error').count();
-				expect(errors).toBe(0);
-			}
+			await page.keyboard.press('Control+y');
+			expect(await inked(page, 5, 5)).toBe(true);
 		});
 	});
 
 	test.describe('Copy/Paste Operations', () => {
 		test('Ctrl+C copies selection', async ({ page }) => {
-			await page.keyboard.press('s');
-			await page.waitForTimeout(300);
+			await writeText(page, 10, 5, 'ABC');
+			await expect(page.locator('#paste')).toHaveClass(/disabled/);
 
-			const canvas = page.locator('#canvasContainer canvas').first();
-			const box = await canvas.boundingBox();
+			// no tool click: a keyboard mode drag hands over to selection
+			await drag(page, [10, 5], [12, 5]);
+			await expect(page.locator('#selection')).toHaveClass(/toolbarDisplayed/);
+			await page.keyboard.press('Control+c');
 
-			if (box) {
-				await page.mouse.move(box.x + 20, box.y + 20);
-				await page.mouse.down();
-				await page.mouse.move(box.x + 100, box.y + 50);
-				await page.mouse.up();
-				await page.waitForTimeout(300);
-
-				await page.keyboard.press('Control+c');
-				await page.waitForTimeout(300);
-
-				const errors = await page.locator('.error').count();
-				expect(errors).toBe(0);
-			}
+			await expect(page.locator('#paste')).not.toHaveClass(/disabled/);
 		});
 
 		test('Ctrl+V pastes selection', async ({ page }) => {
-			await page.keyboard.press('s');
-			await page.waitForTimeout(300);
+			await writeText(page, 10, 5, 'ABC');
+			await page.locator('#selection').click();
+			await drag(page, [10, 5], [12, 5]);
+			await page.keyboard.press('Control+c');
+			await tap(page, 30, 10);
+			await page.keyboard.press('Control+v');
 
-			const canvas = page.locator('#canvasContainer canvas').first();
-			const box = await canvas.boundingBox();
-
-			if (box) {
-				await page.mouse.move(box.x + 20, box.y + 20);
-				await page.mouse.down();
-				await page.mouse.move(box.x + 80, box.y + 40);
-				await page.mouse.up();
-				await page.waitForTimeout(300);
-
-				await page.keyboard.press('Control+c');
-				await page.waitForTimeout(300);
-
-				await page.keyboard.press('Control+v');
-				await page.waitForTimeout(300);
-
-				const errors = await page.locator('.error').count();
-				expect(errors).toBe(0);
-			}
+			expect(await readRegion(page, 30, 10, 32, 10)).toEqual(['ABC']);
 		});
 	});
 
 	test.describe('Function Keys', () => {
-		test('F1 inserts character in keyboard mode', async ({ page }) => {
-			await page.keyboard.press('k');
-			await page.waitForTimeout(300);
+		// the boot page is the shades and blocks set
+		const firstFour = [176, 177, 178, 219];
+		for (const [i, code] of firstFour.entries()) {
+			test(`F${i + 1} inserts character in keyboard mode`, async ({ page }) => {
+				const at = await cursorAt(page);
+				await page.keyboard.press(`F${i + 1}`);
 
-			// F1 inserts the light shade block ░
-			await page.keyboard.press('F1');
-			await page.waitForTimeout(200);
-
-			const errors = await page.locator('.error').count();
-			expect(errors).toBe(0);
-		});
-
-		test('F2 inserts character in keyboard mode', async ({ page }) => {
-			await page.keyboard.press('k');
-			await page.waitForTimeout(300);
-
-			// F2 inserts the medium shade block ▒
-			await page.keyboard.press('F2');
-			await page.waitForTimeout(200);
-
-			const errors = await page.locator('.error').count();
-			expect(errors).toBe(0);
-		});
-
-		test('F3 inserts character in keyboard mode', async ({ page }) => {
-			await page.keyboard.press('k');
-			await page.waitForTimeout(300);
-
-			// F3 inserts the dark shade block ▓
-			await page.keyboard.press('F3');
-			await page.waitForTimeout(200);
-
-			const errors = await page.locator('.error').count();
-			expect(errors).toBe(0);
-		});
-
-		test('F4 inserts character in keyboard mode', async ({ page }) => {
-			await page.keyboard.press('k');
-			await page.waitForTimeout(300);
-
-			// F4 inserts the full block █
-			await page.keyboard.press('F4');
-			await page.waitForTimeout(200);
-
-			const errors = await page.locator('.error').count();
-			expect(errors).toBe(0);
-		});
+				expect((await readBlock(page, at.x, at.y)).charCode).toBe(code);
+				expect(await cursorAt(page)).toEqual({ x: at.x + 1, y: at.y });
+			});
+		}
 	});
 
 	test.describe('Selection Operations', () => {
 		test('[ flips selection horizontally', async ({ page }) => {
-			await page.keyboard.press('s');
-			await page.waitForTimeout(300);
+			await writeText(page, 10, 5, 'ABC');
+			await page.locator('#selection').click();
+			await drag(page, [10, 5], [12, 5]);
+			await page.keyboard.press('[');
 
-			const canvas = page.locator('#canvasContainer canvas').first();
-			const box = await canvas.boundingBox();
-
-			if (box) {
-				await page.mouse.move(box.x + 30, box.y + 30);
-				await page.mouse.down();
-				await page.mouse.move(box.x + 90, box.y + 60);
-				await page.mouse.up();
-				await page.waitForTimeout(300);
-
-				await page.keyboard.press('[');
-				await page.waitForTimeout(300);
-
-				const errors = await page.locator('.error').count();
-				expect(errors).toBe(0);
-			}
+			expect(await readRegion(page, 10, 5, 12, 5)).toEqual(['CBA']);
 		});
 
 		test('] flips selection vertically', async ({ page }) => {
-			await page.keyboard.press('s');
-			await page.waitForTimeout(300);
+			await writeText(page, 10, 5, 'A');
+			await writeText(page, 10, 6, 'B');
+			await page.locator('#selection').click();
+			await drag(page, [10, 5], [10, 6]);
+			await page.keyboard.press(']');
 
-			const canvas = page.locator('#canvasContainer canvas').first();
-			const box = await canvas.boundingBox();
-
-			if (box) {
-				await page.mouse.move(box.x + 30, box.y + 30);
-				await page.mouse.down();
-				await page.mouse.move(box.x + 90, box.y + 60);
-				await page.mouse.up();
-				await page.waitForTimeout(300);
-
-				await page.keyboard.press(']');
-				await page.waitForTimeout(300);
-
-				const errors = await page.locator('.error').count();
-				expect(errors).toBe(0);
-			}
+			expect(await readRegion(page, 10, 5, 10, 6)).toEqual(['B', 'A']);
 		});
 
 		test('M toggles move mode for selection', async ({ page }) => {
-			await page.keyboard.press('s');
-			await page.waitForTimeout(300);
+			await writeText(page, 10, 5, 'AB');
+			await page.locator('#selection').click();
+			await drag(page, [10, 5], [11, 5]);
+			const move = page.locator('#moveBlocks');
 
-			const canvas = page.locator('#canvasContainer canvas').first();
-			const box = await canvas.boundingBox();
+			await page.keyboard.press('m');
+			await expect(move).toHaveClass(/enabled/);
+			await page.keyboard.press('ArrowRight');
+			expect(await readRegion(page, 10, 5, 12, 5)).toEqual([' AB']);
 
-			if (box) {
-				await page.mouse.move(box.x + 30, box.y + 30);
-				await page.mouse.down();
-				await page.mouse.move(box.x + 90, box.y + 60);
-				await page.mouse.up();
-				await page.waitForTimeout(300);
-
-				await page.keyboard.press('m');
-				await page.waitForTimeout(300);
-
-				// TODO: verify the move-mode indicator in the UI
-				const errors = await page.locator('.error').count();
-				expect(errors).toBe(0);
-
-				await page.keyboard.press('m');
-				await page.waitForTimeout(300);
-			}
+			await page.keyboard.press('m');
+			await expect(move).not.toHaveClass(/enabled/);
 		});
 	});
 });

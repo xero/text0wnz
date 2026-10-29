@@ -66,9 +66,10 @@ export const parseTarget = input => {
 	if (!explicit && port === 443) {
 		protocol = 'wss:';
 	}
-	// a doubled slash joins the room through the bridge (which strips
-	// slashes) but not direct against Moebius (which matches the path
-	// verbatim), so one spelling has to mean one room everywhere
+	// a doubled slash joins the room through the bridge (targetRoom
+	// strips leading slashes) but not direct against Moebius (server.js,
+	// the "upgrade" handler, looks the path up uncollapsed), so one
+	// spelling has to mean one room everywhere
 	const path = url.pathname.replace(/\/{2,}/g, '/').replace(/\/+$/, '');
 	return { protocol, host: url.hostname, port, path };
 };
@@ -78,8 +79,7 @@ export const targetToUrl = target =>
 	`${target.protocol}//${target.host}:${target.port}${target.path || '/'}`;
 
 /**
- * The shortest spelling that parses back to the same target: what the
- * recent-servers list stores and the address field shows.
+ * The shortest spelling that parses back to the same target.
  * @param {CollabTarget} target
  */
 export const formatTarget = target => {
@@ -117,8 +117,8 @@ export const defaultServerUrl = location => {
  * cannot open plaintext websockets (mixed content, no header can
  * allow it), and every Moebius server is plaintext, so an https page
  * reaches one through its own host's bridge, a byte pipe the host
- * enables with BRIDGE=port (default off). Everything else dials
- * direct. No url at all means the same-origin default.
+ * enables with BRIDGE (default off). Everything else dials direct.
+ * No url at all means the same-origin default.
  * @param {{protocol: string, hostname: string, host: string, port: string}} location
  * @param {unknown} explicit the dial url the page chose, if any
  * @returns {{url: string, bridged: boolean}}

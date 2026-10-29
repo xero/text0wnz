@@ -22,7 +22,7 @@ const mockState = {
 		getIceColors: vi.fn(() => false),
 		getCurrentFontName: vi.fn(() => 'CP437 8x16'),
 		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)),
-		// the save path reads the doc now; derive it from the u16 mocks
+		// the save path reads the doc; derive it from the u16 mocks
 		getDoc: vi.fn(() =>
 			u16ToV3({
 				imageData: mockState.textArtCanvas.getImageData(),
@@ -68,7 +68,8 @@ vi.mock('../../src/js/client/palette.js', () => ({
 	getUnicodeReverseMap: new Map(),
 }));
 
-// Reference decoder matching the loader's uncompress() run types
+// independent reader for the four XBin §XBIN Compression run types,
+// so the writer is never graded by its own codec's reader
 const uncompress = (bytes, dataIndex, dataEnd, columns, rows) => {
 	const data = new Uint16Array(columns * rows);
 	let i, value, count, j, k, char, attribute;

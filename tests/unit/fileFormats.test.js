@@ -18,13 +18,14 @@ const mockState = {
 		clearXBData: vi.fn(),
 		redrawEntireImage: vi.fn(),
 		getImage: vi.fn(() => ({ toDataURL: vi.fn(() => canvasDataURL) })),
-		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)), // Mock 6-bit palette data
+		// 6-bit palette data
+		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)),
 	},
 	font: {
 		getWidth: vi.fn(() => 8),
 		getHeight: vi.fn(() => 16),
 		getLetterSpacing: vi.fn(() => false),
-		getData: vi.fn(() => null), // No font data by default
+		getData: vi.fn(() => null),
 	},
 };
 
@@ -48,7 +49,6 @@ vi.mock('../../src/js/client/palette.js', () => ({
 		if (charCode < 128) {
 			return [charCode];
 		}
-		// Mock UTF-8 encoding for extended characters
 		if (charCode < 0x800) {
 			return [0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f)];
 		}
@@ -121,108 +121,6 @@ describe('File Module - Formats and Parsing', () => {
 		vi.resetModules();
 	});
 
-	describe('Data Type Conversions', () => {
-		it('should convert 16-bit values correctly', () => {
-			const lowByte = 0x34;
-			const highByte = 0x12;
-			const result = lowByte + (highByte << 8);
-			expect(result).toBe(0x1234);
-		});
-
-		it('should convert 32-bit values correctly', () => {
-			const byte1 = 0x78;
-			const byte2 = 0x56;
-			const byte3 = 0x34;
-			const byte4 = 0x12;
-			const result = byte1 + (byte2 << 8) + (byte3 << 16) + (byte4 << 24);
-			expect(result).toBe(0x12345678);
-		});
-
-		it('should handle ANSI to BIN color conversion', () => {
-			const ansiToBin = ansiColor => {
-				switch (ansiColor) {
-					case 4:
-						return 1;
-					case 6:
-						return 3;
-					case 1:
-						return 4;
-					case 3:
-						return 6;
-					case 12:
-						return 9;
-					case 14:
-						return 11;
-					case 9:
-						return 12;
-					case 11:
-						return 14;
-					default:
-						return ansiColor;
-				}
-			};
-
-			expect(ansiToBin(4)).toBe(1);
-			expect(ansiToBin(6)).toBe(3);
-			expect(ansiToBin(1)).toBe(4);
-			expect(ansiToBin(3)).toBe(6);
-			expect(ansiToBin(0)).toBe(0);
-			expect(ansiToBin(7)).toBe(7);
-		});
-	});
-
-	describe('Binary Data Handling', () => {
-		it('should create correct XBIN headers', () => {
-			const width = 80;
-			const height = 25;
-			const iceColors = false;
-			const flags = iceColors ? 8 : 0;
-
-			const header = new Uint8Array([
-				88,
-				66,
-				73,
-				78,
-				26, // "XBIN" + EOF marker
-				width & 0xff,
-				width >> 8, // Width (little-endian)
-				height & 0xff,
-				height >> 8, // Height (little-endian)
-				16, // Font height
-				flags, // Flags
-			]);
-
-			expect(header[0]).toBe(88); // 'X'
-			expect(header[1]).toBe(66); // 'B'
-			expect(header[2]).toBe(73); // 'I'
-			expect(header[3]).toBe(78); // 'N'
-			expect(header[4]).toBe(26); // EOF marker
-		});
-
-		it('should handle data URL to bytes conversion', () => {
-			const testDataUrl = 'data:image/png;base64,SGVsbG8=';
-
-			const base64Index = testDataUrl.indexOf(';base64,') + 8;
-			const base64Part = testDataUrl.slice(base64Index);
-			expect(base64Part).toBe('SGVsbG8=');
-		});
-
-		it('should handle uint16 to uint8 array conversion', () => {
-			const uint16Array = new Uint16Array([0x1234, 0x5678]);
-			const uint8Array = new Uint8Array(uint16Array.length * 2);
-
-			for (let i = 0, j = 0; i < uint16Array.length; i++, j += 2) {
-				uint8Array[j] = uint16Array[i] >> 8;
-				uint8Array[j + 1] = uint16Array[i] & 255;
-			}
-
-			expect(uint8Array[0]).toBe(0x12);
-			expect(uint8Array[1]).toBe(0x34);
-			expect(uint8Array[2]).toBe(0x56);
-			expect(uint8Array[3]).toBe(0x78);
-		});
-	});
-
 	describe('Error Handling', () => {
 		it('should handle file reading errors gracefully', () => {
 			const mockFile = { name: 'test.ans', size: 100 };
@@ -252,7 +150,7 @@ describe('File Module - Formats and Parsing', () => {
 		});
 	});
 
-	describe('File Class Internal Logic', () => {
+	describe('FileReader wiring', () => {
 		it('should test ANSI file loading with actual FileReader simulation', () => {
 			const mockFile = { name: 'test.ans', size: 100 };
 			const callback = vi.fn();
@@ -382,14 +280,6 @@ describe('File Module - Formats and Parsing', () => {
 				);
 			});
 		});
-
-		it('should handle SAUCE data processing logic', () => {
-			const testWidth = 80;
-
-			// This tests the internal getSauce logic
-			expect(typeof testWidth).toBe('number');
-			expect(testWidth).toBe(80);
-		});
 	});
 
 	describe('ANSI Parsing Engine', () => {
@@ -414,26 +304,6 @@ describe('File Module - Formats and Parsing', () => {
 				expect.any(Function),
 			);
 		});
-
-		it('should test control character mapping logic', () => {
-			const controlCodes = [10, 13, 26, 27];
-			const mappedCodes = controlCodes.map(code => {
-				switch (code) {
-					case 10:
-						return 9;
-					case 13:
-						return 14;
-					case 26:
-						return 16;
-					case 27:
-						return 17;
-					default:
-						return code;
-				}
-			});
-
-			expect(mappedCodes).toEqual([9, 14, 16, 17]);
-		});
 	});
 
 	describe('UTF-8 Processing', () => {
@@ -457,33 +327,6 @@ describe('File Module - Formats and Parsing', () => {
 				'load',
 				expect.any(Function),
 			);
-		});
-
-		it('should test UTF-8 decoding logic', () => {
-			const utf8Sequences = [
-				{ bytes: [0x41], expected: 0x41 }, // ASCII 'A'
-				{ bytes: [0xc3, 0xa9], expected: 0xe9 }, // é
-				{ bytes: [0xe2, 0x82, 0xac], expected: 0x20ac }, // €
-			];
-
-			utf8Sequences.forEach(seq => {
-				let charCode = seq.bytes[0];
-				if ((charCode & 0x80) === 0) {
-					// 1-byte sequence
-					expect(charCode).toBe(seq.expected);
-				} else if ((charCode & 0xe0) === 0xc0 && seq.bytes.length >= 2) {
-					// 2-byte sequence
-					charCode = ((charCode & 0x1f) << 6) | (seq.bytes[1] & 0x3f);
-					expect(charCode).toBe(seq.expected);
-				} else if ((charCode & 0xf0) === 0xe0 && seq.bytes.length >= 3) {
-					// 3-byte sequence
-					charCode =
-						((charCode & 0x0f) << 12) |
-						((seq.bytes[1] & 0x3f) << 6) |
-						(seq.bytes[2] & 0x3f);
-					expect(charCode).toBe(seq.expected);
-				}
-			});
 		});
 	});
 });

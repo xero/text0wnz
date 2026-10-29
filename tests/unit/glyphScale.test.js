@@ -7,8 +7,8 @@ import {
 
 /**
  * Pixel-exact preview sizing: the CSS size must always land on a whole
- * device-pixel multiple of the glyph's base size, for every ratio the
- * spec calls out (1x, 1.25x, 1.5x, 2x).
+ * device-pixel multiple of the glyph's base size, at the common display
+ * ratios (1x, 1.25x, 1.5x, 2x).
  */
 
 const stubEnvironment = (gw, dpr) => {

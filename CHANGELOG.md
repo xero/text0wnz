@@ -70,7 +70,7 @@ byte-exact golden tests before anything else moved.
   site's own rendering. Zip and `.lha`/`.lzh` collys unpack in the
   browser through a new LHA codec (lh0 and lh5, CRC-checked, verified
   against all 4,190 entries in the arena's archives). Amiga `.txt`
-  files that are not UTF-8 now fall back to the byte loader everywhere
+  files that are not UTF-8 now fall back to the CP437 reader everywhere
   instead of failing to open.
 - **Native archive opens.** File open, drag-and-drop, and PWA file
   launches accept `.zip`, `.lha`, and `.lzh` directly: one openable
@@ -100,6 +100,9 @@ byte-exact golden tests before anything else moved.
   hosts classic and v3 clients in the same room.
 - **Updates.** The update prompt keeps your localStorage (favorites,
   recent colors, settings) instead of clearing it.
+- **Right-click picks the background.** A right click on the 16-color
+  strip set the foreground like a left click. It sets the background
+  now, as in PabloDraw and Moebius, and so does a `ctrl` click.
 
 ### Fixed
 
@@ -167,3 +170,105 @@ byte-exact golden tests before anything else moved.
 - **iOS background scroll.** With Safari's toolbar expanded, dragging
   the background could scroll the page and bare a black bar above the
   editor. The root is now scroll-locked.
+- **SAUCE text is CP437 both ways.** Saves wrote title, author, group,
+  and comments as UTF-8, so the é in `café` became `C3 A9` where SAUCE
+  readers expect `82`. Opens read those fields as latin-1, so a CP437
+  `é` came back as an invisible control character and the next save
+  wrote `?`. Both directions use CP437 now, with `?` for anything CP437
+  lacks, and an open then save keeps the fields byte for byte. A field
+  ends at its first NUL, and a record with an unknown version no longer
+  turns on ice colors or letter spacing from stale bytes.
+- **UTF-8 files keep `◙`, `♪`, and `→`.** The UTF-8 reader for
+  `.utf8.ans` and `.txt` files mapped each character to its CP437 byte
+  before acting on it, so glyphs that share a byte with a control code
+  behaved like one; `◙` broke the line, and `♪` and `→` vanished. They
+  open as cells now.
+- **512-glyph XBins show their upper page.** In 512-glyph mode the
+  foreground intensity bit selects glyphs 256-511, but the editor drew
+  those cells as their lower-page glyph in a bright color, and saving
+  dropped the upper half of the font. The WebGL renderer now draws both
+  pages from the file's font, and an XBin save with that font loaded
+  keeps all 512 glyphs. The no-WebGL2 fallback and vanilla Moebius
+  peers show `?` in upper-page cells.
+- **`ctrl+u` picks up colors.** Keyboard mode's color pickup listened
+  for keypress, which browsers never fire for ctrl combos, so the
+  shortcut never ran. It listens on keydown now.
+- **Collab resizes keep rows in place.** The v2 server copied a room's
+  cells by linear offset when the canvas changed width, so anyone who
+  joined after a resize, and the session file it saved, got scrambled
+  rows. The server now resizes row by row.
+- **The bridge dials only public addresses.** `BRIDGE=port` treated
+  multicast, broadcast, reserved, IETF protocol assignment, and
+  benchmarking addresses, the Azure wireserver, and 6to4 as public and
+  dialed them on request. It now refuses them along with the private
+  ranges.
+- **Forged canvas sizes stop at a ceiling.** An XBin header, a SAUCE
+  record, or a collab server's join document could claim a 65535x65535
+  canvas, and the editor tried to allocate it. ANSI, BIN, XBin, and
+  TundraDraw opens and collab joins refuse anything past 10 million
+  cells, a BIN's SAUCE FileSize no longer sizes a buffer past the file
+  itself, and durdraw and `.0wnz` opens stop decompressing at 256 MB. A
+  refused open reports that the file could not be opened; a refused
+  join stays local.
+- **Every ANSI open uses the shared decoder.** File Open read `.ans`,
+  `.diz`, `.nfo`, and non-UTF-8 `.txt` files through an older parser,
+  so `ESC[m` turned bold on instead of resetting, and HVP, `ESC[?33h`
+  ice colors, `ESC[?7l`, and PabloDraw 24-bit colors went unread. Every
+  open now goes through the shared decoder, and PabloDraw truecolor art
+  opens in its own colors.
+- **ANSI art keeps every row.** A cursor jump below row 25 landed on row
+  25 and painted over it, which lost a full row of art in files like
+  `TO-DIN.ICE` that place every line by cursor position. The jump now
+  scrolls the 25-row screen, as moebiusXBIN does.
+- **SAUCE comments stay out of the art.** With a SAUCE FileSize of 0, an
+  ANSI drew its comment block as text below the art, and a BIN could
+  turn its SAUCE record into a row of cells.
+- **BIN files open at their real width.** BIN files whose SAUCE carries
+  FileType 1 or a generic 80x25 ANSI record opened 2 or 80 columns wide,
+  scrambled; that is 49 of the 315 BIN files in the sixteencolors
+  archive. They open at 160 columns now, like PabloDraw. A trailing
+  partial row pads out instead of vanishing, and a BIN's SAUCE font
+  switches the font like an ANSI's does.
+- **UTF-8 rows stay one row.** In `.utf8.ans` and `.txt` files, a
+  PabloDraw color, `ESC[s`, an erase, or a mode set between a
+  full-width row and its line feed added a blank row.
+- **A finished move is one undo step.** Every arrow press or dragged
+  cell in move mode was its own undo step, and turning move mode off
+  added one more. One undo now takes the whole move back.
+- **Move mode leaves its origin blank.** Ending a move clear of its
+  origin repainted the vacated cells with the current background
+  color. They are now blank on black whatever color you have picked,
+  the same as an overlapping move, Moebius, and PabloDraw.
+- **Undo and redo during a move stay put.** Pressing undo while a block
+  was still floating took the move back, and the next arrow stamped a
+  second copy of the block beside the original; a redo before the first
+  step stamped a stale copy over the redone cells. Both now drop the
+  block first.
+- **Alt sampling works from the first click.** Alt-click picked up
+  nothing until the sample tool had been opened once. It samples right
+  away now, and a half block sample keeps you on the tool you were
+  drawing with.
+- **New resets the iCE and 9pt chips.** A new document turned iCE colors
+  and 9px letters off but left both chips lit, so the next click on
+  either did nothing.
+- **Ctrl shortcuts leave text fields alone.** The `ctrl` tool shortcuts
+  fired from fields outside modals and chat, so `ctrl+a` in the frames
+  panel's delay box picked the attribute brush instead of selecting the
+  text. Fields keep their own `ctrl` keys now.
+- **The chat button lights up.** Its enabled and active states never
+  turned it indigo, because the sauce panel's own button rule outranked
+  them. Only the purple notification ever showed.
+- **The disconnect alert tells the truth.** A dropped session told you
+  to refresh the page. The editor is already working locally with
+  autosave back on, and the alert now says so.
+- **Collab sessions stay out of your autosave.** Zoomed in during a
+  session, every edit saved the session's canvas over your own local
+  autosave.
+- **Other sites cannot push files into open tabs.** The share target
+  took a POST from any site, and every open editor tab replaced its
+  canvas with the posted file. The service worker now accepts only a
+  POST that carries the app's own origin, which the OS share sheet
+  sends from Chrome 156 on; older Chrome versions can no longer share
+  into the installed app.
+- **Local builds ship the license.** A local `bun bake` left
+  `LICENSE.txt` out of `dist`, though the build log listed it.

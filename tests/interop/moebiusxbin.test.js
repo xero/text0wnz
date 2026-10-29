@@ -1,13 +1,9 @@
 // @vitest-environment node
 /**
- * Interop against the PINNED upstream server: our codec and
- * client semantics versus the vendored moebiusXBIN v2.2.0 server
- * running under node. Pins the handshake, join-doc decode through
- * joinDocToDoc, no-self-echo DRAW fanout, the registered-only blind
- * relay (CHANGE_PALETTE included), SET_CANVAS_SIZE round trip, and the
- * upstream spectator quirks our own server deliberately diverges from
- * (password bypass). Everything spawns locally; never a shared
- * server.
+ * Our codec and client semantics against the PINNED upstream
+ * moebiusXBIN v2.2.0 server, vendored and run under node, including the
+ * upstream spectator quirk our own server deliberately diverges from.
+ * Everything spawns locally; never a shared server.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn } from 'node:child_process';
@@ -29,7 +25,6 @@ let plainPort = 0;
 let gatedPort = 0;
 let fontedPort = 0;
 
-/** every child ever spawned, resolved or not */
 const spawned = [];
 
 const bootFixture = (port, pass, env = {}) =>
@@ -187,7 +182,6 @@ describe('upstream moebiusXBIN server interop', () => {
 		await settle();
 		expect(artistTypes).not.toContain(A.DRAW);
 
-		// late joiner sees the mutated doc
 		const late = await connect(plainPort, { nick: 'late', pass: '' });
 		const lateDoc = joinDocToDoc(late.reply.data.doc);
 		expect(lateDoc.doc.getCell(0, 3, 2).glyph & 0xffff).toBe(219);

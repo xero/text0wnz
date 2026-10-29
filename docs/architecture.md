@@ -175,6 +175,7 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 
 **File Operations** (`file.js`)
 
+- Every open decodes through the shared core codecs in `src/js/core/codecs/`
 - ANSI format (.ans, .utf8.ans)
 - Binary format (.bin)
 - XBIN format (.xb)
@@ -600,12 +601,12 @@ main.js
 codeSplitting: {
     includeDependenciesRecursively: false,
     groups: [
-        { name: 'core',    test: /(magicNumbers|state|storage|compression|ui)\.js$/ },
-        { name: 'canvas',  test: /(canvas|font|lazyFont|fontCache)\.js$/ },
-        { name: 'tools',   test: /(freehandTools|keyboard|toolbar)\.js$/ },
-        { name: 'fileops', test: /file\.js$/ },
-        { name: 'network', test: /network\.js$/ },
-        { name: 'palette', test: /palette\.js$/ },
+        { name: 'core', test: /[\\/]src[\\/]js[\\/]client[\\/](magicNumbers|state|storage|ui)\.js$|vite[\\/]preload-helper/ },
+        { name: 'canvas', test: /[\\/]src[\\/]js[\\/]client[\\/](canvas|font|lazyFont|fontCache)\.js$/ },
+        { name: 'tools', test: /[\\/]src[\\/]js[\\/]client[\\/](freehandTools|keyboard|toolbar)\.js$/ },
+        { name: 'fileops', test: /[\\/]src[\\/]js[\\/]client[\\/]file\.js$/ },
+        { name: 'network', test: /[\\/]src[\\/]js[\\/]client[\\/]network\.js$/ },
+        { name: 'palette', test: /[\\/]src[\\/]js[\\/]client[\\/]palette\.js$/ },
     ],
 }
 ```

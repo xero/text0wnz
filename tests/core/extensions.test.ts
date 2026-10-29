@@ -1,9 +1,7 @@
 /**
- * t0wnz extension suite v1: wire validation, the sync RLE, and the
- * down-conversion that keeps vanilla peers coherent in
- * mixed rooms. Down-convert semantics are pinned against
- * v3ToU16Lossy's blink/ice fold; the two projections must never
- * drift apart.
+ * t0wnz extension suite v1. The down-conversion keeps vanilla peers
+ * coherent in mixed rooms and is pinned against v3ToU16Lossy's
+ * blink/ice fold; the two projections must never drift apart.
  */
 import { describe, it, expect } from 'vitest';
 import {
