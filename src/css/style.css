@@ -28,9 +28,9 @@
 	--dark-purp: #6e2aa5;
 	--indigo: #6366f1;
 	--cyber: #00bad7;
-	/* the darkmode toggle's easings (open props lineage): these were
-	   never declared, so its transitions computed to initial and the
-	   sun and beams snapped instead of easing */
+	/* the darkmode toggle's easings (open props lineage): without them
+	   its transitions compute to initial and the sun and beams snap
+	   instead of easing */
 	--ease: cubic-bezier(0.25, 0, 0.3, 1);
 	--ease-out: cubic-bezier(0, 0, 0, 1);
 	--ease-elastic-1: cubic-bezier(0.5, 1.25, 0.75, 1.25);
@@ -118,7 +118,7 @@
 @utility dialog-style {
 	@apply bg-menu border-8 border-iron border-double;
 }
-/* <--//-----------------------i-----------------------------------[globalz] */
+/* <--//-----------------------------------------------------------[globalz] */
 @layer base {
 	* {
 		font-family: var(--font-family);
@@ -194,7 +194,7 @@
 		@apply w-full h-full m-0 bg-black fixed overflow-hidden overscroll-none left-0 top-0 right-0 bottom-0;
 		/* a fixed box with top-0 bottom-0 sizes to the LAYOUT viewport,
 		   which iOS keeps at toolbar-collapsed height while Safari's
-		   chrome shows: 35px of layout hid under the toolbar. dvh tracks
+		   chrome shows: 35px of layout hides under the toolbar. dvh tracks
 		   the url bar but NOT the fullscreen title bar, so main.js feeds
 		   the real window height from visualViewport into the var; height
 		   wins over bottom in the over-constrained box */
@@ -228,9 +228,8 @@
 		}
 	}
 
-	/* app shell: rail | center (bar, top dock, canvas, bottom dock) |
-	   grip | sidebar. The bar row is transitional chrome that later
-	   phases empty and remove */
+	/* app shell: rail | center (top dock, canvas, bottom dock) | grip |
+	   sidebar */
 	#bodyContainer {
 		@apply w-full h-full overflow-hidden;
 		display: grid;
@@ -320,7 +319,7 @@
 	}
 
 	/* collab status and chat ride the sauce panel as square buttons
-	   beside the title, per the panel spec */
+	   beside the title */
 	#saucePanel .modContent {
 		@apply flex-row items-center;
 
@@ -349,9 +348,6 @@
 		}
 	}
 
-	/* state colors only: the legacy float/font/padding could never
-	   apply (the button is a flex item, outspecified by the rail rule),
-	   and the chatIcon text-swap elements were never created */
 	#chatButton {
 		&.enabled,
 		&.active {
@@ -372,8 +368,6 @@
 			article {
 				@apply flex-shrink-0 w-full;
 			}
-			/* the old global header rules carried this strip's height and
-			   icon fill; the module era styles it on its own */
 			header {
 				@apply w-full flex-row items-center pl-2 pr-0 place-content-between bg-header select-none flex;
 				h2 {
@@ -568,8 +562,8 @@
 		}
 	}
 
-	/* the sidebar's top divider strip carries the PWA window drag region
-	   the old header gave up; its buttons stay interactive */
+	/* the sidebar's top divider strip carries the PWA window drag
+	   region; its buttons stay interactive */
 	#sidebar > .mod:first-of-type .modHeader {
 		app-region: drag;
 		-webkit-app-region: drag;
@@ -593,7 +587,7 @@
 		grid-template-columns: 48px minmax(0, 1fr) 14px 236px;
 	}
 
-	/* <--//-----------------------------------------------------------[modules] */
+	/* <--//---------------------------------------------------------[modules] */
 	.mod {
 		@apply flex flex-col bg-menu relative;
 		min-height: 0;
@@ -1111,7 +1105,7 @@
 		display: none;
 	}
 
-	/* <--//-------------------------------------------------------------[phone] */
+	/* <--//-----------------------------------------------------------[phone] */
 	/* below 720px: a 42px top strip whose title opens the sidebar as a
 	   drawer, the minimap as a strip beside the canvas, the rail as a
 	   bottom dock, and no top dock. Saved docks, floats, and the
@@ -1293,7 +1287,6 @@
 				fill: var(--cyber);
 				stroke: #000;
 			}
-			/* a napping verb dims its icon with its label */
 			&.disabled svg {
 				fill: var(--color-editor);
 			}
@@ -1555,7 +1548,6 @@
 	#navDarkmode > kbd {
 		width: max-content;
 	}
-	/* every submenu stacks the icon over its label */
 	.toolButton {
 		@apply text-white flex flex-col text-sm px-[5px] mx-0.5;
 
@@ -1734,7 +1726,7 @@
 			flex: none;
 		}
 		/* collapsible groups keep the first view short; children wear a
-		   disk icon where the demo left a bare indent */
+		   disk icon instead of an indent */
 		.menuGroup {
 			summary {
 				@apply flex items-center cursor-pointer text-sm text-fg;
@@ -1819,9 +1811,8 @@
 			height: auto;
 		}
 		svg {
-			/* the header carried the icon fill; rows own it now. The
-			   sprite paths inherit this, elements with their own fill
-			   (the sunAndMoon mask) keep theirs */
+			/* the sprite paths inherit this; elements with their own
+			   fill (the sunAndMoon mask) keep theirs */
 			fill: var(--color-fg);
 			width: 22px;
 			height: 22px;
@@ -1833,7 +1824,6 @@
 			font-size: 14px;
 			margin: 0;
 		}
-		/* the right-aligned hotkey chip, demo style */
 		.hotkey {
 			@apply text-fg bg-editor not-italic;
 			flex: none;
@@ -1924,7 +1914,7 @@
 			background-color: inherit;
 		}
 	}
-	/* <--//-------------------------------------------------------------[modal] */
+	/* <--//-----------------------------------------------------------[modal] */
 	dialog {
 		@apply fixed top-1/2 left-1/2 z-50 opacity-0 w-fit h-fit dialog-style;
 		-webkit-transform: translateX(-50%) translateY(-50%);
@@ -2140,8 +2130,8 @@
 		#connectStatus {
 			@apply block w-full max-w-none bg-editor text-red-400 text-center text-lg pt-0 pb-5;
 		}
-		/* phones: the two-up rows outgrew the viewport and half of each
-		   row hid behind a horizontal scroll; stack label over input,
+		/* phones: two-up rows outgrow the viewport and hide half of each
+		   row behind a horizontal scroll, so stack label over input in
 		   one column, inside the screen */
 		@media (max-width: 720px) {
 			@apply max-w-[calc(100vw-1rem)];
@@ -3482,11 +3472,6 @@
 		@apply fixed top-[60px] left-[40px] h-0 w-0;
 	}
 
-	/* close chrome for the floated color and frames windows; the brush
-	   windows keep their own higher-specificity copy above. The X rides
-	   up into the border drag strip (absolute offsets anchor to the
-	   padding box, which sits below the thick top border) */
-
 	@keyframes blink {
 		50% {
 			border: 1px solid var(--silver);
@@ -3513,17 +3498,16 @@
 		}
 	}
 
-	/* the collab state rides <html data-collab>: a bare class rule lost
-	   to the sauce panel's id rule, so the chat button showed (and
-	   opened) while local. The gate needs !important for the same
-	   reason */
+	/* the collab state rides <html data-collab>: a bare class rule
+	   would lose to the sauce panel's id rule and leave the chat button
+	   showing (and opening) while local. The gate needs !important for
+	   the same reason */
 	html[data-collab='on'] .excludedForWebsocket,
 	html:not([data-collab='on']) .includedForWebsocket {
 		display: none !important;
 	}
 
-	/* .button and .hover matched nothing; the rest is the deliberate
-	   belt-and-braces pointer roll-up */
+	/* a deliberate belt-and-braces pointer roll-up */
 	aside svg,
 	button,
 	.toolButton,
@@ -3546,7 +3530,6 @@
 		@apply hidden! pointer-events-none!;
 	}
 
-	/*  darkmode toggle */
 	.sunAndMoon {
 		> :is(.moon, .sun, .sunBeams) {
 			@apply origin-center;

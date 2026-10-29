@@ -516,7 +516,7 @@ describe('Keyboard Utilities', () => {
 			controller.enable();
 			document.dispatchEvent(new KeyboardEvent('keypress', { key: '§' }));
 			controller.disable();
-			// typed input rides the queue now: flush the microtask hop
+			// typed input rides the queue: flush the microtask hop
 			await new Promise(resolve => setTimeout(resolve, 0));
 			expect(drawn).toEqual([{ code: 21, x: 0, y: 0 }]);
 			expect(State.textArtCanvas.startUndo).toHaveBeenCalledTimes(1);
@@ -539,8 +539,8 @@ describe('Keyboard Utilities', () => {
 			expect(State.textArtCanvas.resolveUnicode).toHaveBeenCalledWith(
 				new Set([0x2603]),
 			);
-			// the raw codepoint as a glyph id aliased interned glyphs and
-			// quantized to '?' everywhere downstream
+			// a raw codepoint as the glyph id aliases interned glyphs and
+			// quantizes to '?' everywhere downstream
 			expect(drawn).toEqual([300]);
 		});
 
@@ -553,8 +553,7 @@ describe('Keyboard Utilities', () => {
 			}));
 			const controller = createKeyboardController();
 			controller.enable();
-			// keypress never fires for ctrl combos in modern browsers, so
-			// the old keypress branch was dead
+			// keypress never fires for ctrl combos in modern browsers
 			document.dispatchEvent(
 				new KeyboardEvent('keydown', { code: 'KeyU', ctrlKey: true }),
 			);
@@ -865,7 +864,7 @@ describe('Keyboard Utilities', () => {
 
 	describe('Function Key Character Sets', () => {
 		it('should handle predefined character sets', () => {
-			// Test predefined character sets from Moebius/PabloDraw
+			// predefined sets from Moebius/PabloDraw
 			const predefinedSets = [
 				[218, 191, 192, 217, 196, 179, 195, 180, 193, 194, 32, 32],
 				[201, 187, 200, 188, 205, 186, 204, 185, 202, 203, 32, 32],

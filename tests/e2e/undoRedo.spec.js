@@ -123,7 +123,7 @@ test.describe('Advanced Undo/Redo Operations', () => {
 			await page.waitForTimeout(200);
 		}
 
-		// fill lives in the brush submenu now
+		// fill lives in the brush submenu
 		await page.locator('#brushes').click();
 		await page.waitForTimeout(300);
 		const fillTool = page.locator('#fill');
@@ -220,11 +220,9 @@ test.describe('Advanced Undo/Redo Operations', () => {
 			await page.keyboard.press('Control+z');
 			await page.waitForTimeout(200);
 
-			// a new operation clears the redo stack
 			await canvas.click({ position: { x: 150, y: 50 } });
 			await page.waitForTimeout(200);
 
-			// redo now has nothing to apply
 			await page.keyboard.press('Control+y');
 			await page.waitForTimeout(200);
 		}

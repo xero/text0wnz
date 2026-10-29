@@ -1,10 +1,8 @@
 /**
- * journalWorker message handler guard: the flagged CodeQL surface
- * (js/missing-origin-check). OPFS sync-access handles do not exist in
- * jsdom, so these tests stub `self` to capture the handler and prove
- * the guard drops untrusted or malformed messages silently while
- * same-context messages still reach the op table (and get a reply,
- * here an error reply because init cannot find OPFS).
+ * journalWorker's message guard (CodeQL js/missing-origin-check).
+ * jsdom has no OPFS sync-access handles, so `self` is stubbed to
+ * capture the handler, and a same-context message gets an error reply
+ * because init cannot find OPFS.
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 

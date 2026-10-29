@@ -18,14 +18,15 @@ const mockState = {
 		clearXBData: vi.fn(),
 		redrawEntireImage: vi.fn(),
 		getImage: vi.fn(() => ({ toDataURL: vi.fn(() => canvasDataURL) })),
-		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)), // Mock 6-bit palette data
+		// 6-bit palette data
+		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)),
 		getCurrentFrame: vi.fn(() => 0),
 	},
 	font: {
 		getWidth: vi.fn(() => 8),
 		getHeight: vi.fn(() => 16),
 		getLetterSpacing: vi.fn(() => false),
-		getData: vi.fn(() => null), // No font data by default
+		getData: vi.fn(() => null),
 	},
 };
 
@@ -49,7 +50,6 @@ vi.mock('../../src/js/client/palette.js', () => ({
 		if (charCode < 128) {
 			return [charCode];
 		}
-		// Mock UTF-8 encoding for extended characters
 		if (charCode < 0x800) {
 			return [0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f)];
 		}
@@ -167,7 +167,6 @@ describe('File Module - Advanced Operations', () => {
 			mockState.textArtCanvas.getColumns.mockReturnValue(80);
 			mockState.textArtCanvas.getRows.mockReturnValue(25);
 
-			// Create image data with high color values (ICE colors)
 			const iceImageData = new Uint16Array(80 * 25);
 			for (let i = 0; i < iceImageData.length; i++) {
 				iceImageData[i] = (65 << 8) | 0xff; // A with bright colors
@@ -180,7 +179,6 @@ describe('File Module - Advanced Operations', () => {
 		});
 
 		it('should test BIN file generation with proper width validation', async () => {
-			// Test with even width (should succeed)
 			mockState.textArtCanvas.getColumns.mockReturnValue(80);
 			mockState.textArtCanvas.getRows.mockReturnValue(25);
 			mockState.textArtCanvas.getDoc.mockReturnValue(
@@ -199,7 +197,6 @@ describe('File Module - Advanced Operations', () => {
 
 			global.Blob.mockClear();
 
-			// Test with odd width (should not create file)
 			mockState.textArtCanvas.getColumns.mockReturnValue(81);
 			mockState.textArtCanvas.getDoc.mockReturnValue(
 				createDocV3({ columns: 81, rows: 25 }),
@@ -460,7 +457,6 @@ describe('File Module - Advanced Operations', () => {
 			const colors = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
 			colors.forEach(color => {
-				// Test foreground color codes (30-37, 90-97)
 				let ansiCode;
 				if (color < 8) {
 					ansiCode = 30 + color;

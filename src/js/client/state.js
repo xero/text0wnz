@@ -1,6 +1,6 @@
 /**
- * Global application state: centralizes shared state with a pub/sub
- * eventing system so components see consistent state without races.
+ * Global application state. waitFor() queues callbacks until their
+ * dependencies are set, so the init tiers can land in any order.
  */
 
 import { Storage } from './storage.js';
@@ -14,7 +14,6 @@ const EditorState = {
 	fontWidth: null,
 	fontHeight: null,
 
-	// Core components
 	textArtCanvas: null,
 	palette: null,
 	font: null,
@@ -22,7 +21,6 @@ const EditorState = {
 	selectionCursor: null,
 	selectionTool: null,
 
-	// UI components
 	modal: null,
 	positionInfo: null,
 	toolPreview: null,
@@ -30,18 +28,14 @@ const EditorState = {
 	chat: null,
 	sampleTool: null,
 
-	// Network/collaboration
 	network: null,
 	worker: null,
 
-	// Application metadata
 	title: null,
 
-	// Initialization state
 	initialized: false,
 	initializing: false,
 
-	// Dependencies ready flags
 	dependenciesReady: {
 		palette: false,
 		textArtCanvas: false,
@@ -59,28 +53,24 @@ const EditorState = {
 const dependencyWaitQueue = new Map();
 
 
-/**
- * Global State Management System
- */
 class StateManager {
 	constructor() {
 		this.state = EditorState;
 		this.waitQueue = dependencyWaitQueue;
 		this.loadingFromStorage = false;
 
-		// Environment var or defaults
 		this.urlPrefix = import.meta.env.BASE_URL || '';
 		// vite.config normalizes VITE_UI_DIR the same way before naming
 		// the emitted dirs; the runtime must derive the identical path
 		// or every font fetch 404s on slashless env forms
 		const dirSlash = dir => dir.replace(/^\/|\/?$/g, '') + '/';
 		// parenthesized: `a + b || c` concatenates "undefined" into the
-		// path (truthy), so the fallbacks could never fire
+		// path (truthy), so the fallbacks would never fire
 		this.uiDir = this.urlPrefix + dirSlash(import.meta.env.VITE_UI_DIR || 'ui');
 		this.fontDir =
 			this.uiDir + dirSlash(import.meta.env.VITE_FONT_DIR || 'fonts');
 
-		// Bind methods to ensure `this` is preserved when passed as callbacks
+		// bound: State re-exports these as bare function references
 		this.set = this.set.bind(this);
 		this.get = this.get.bind(this);
 		this.waitFor = this.waitFor.bind(this);
@@ -96,9 +86,6 @@ class StateManager {
 		this.isDefaultState = this.isDefaultState.bind(this);
 	}
 
-	/**
-	 * Set a state property and settle any dependency waits on it
-	 */
 	set(key, value) {
 		this.state[key] = value;
 
@@ -113,16 +100,11 @@ class StateManager {
 		return this;
 	}
 
-	/**
-	 * Get a state property
-	 */
 	get(key) {
 		return this.state[key];
 	}
 
-	/**
-	 * Wait for dependencies to be available before executing callback
-	 */
+	/** run callback now if every dependency is set, else once they all are */
 	waitFor(dependencies, callback) {
 		const deps = Array.isArray(dependencies) ? dependencies : [dependencies];
 
@@ -156,9 +138,6 @@ class StateManager {
 		return this;
 	}
 
-	/**
-	 * Check if waiting dependencies are satisfied
-	 */
 	checkDependencyQueue(_key) {
 		const toRemove = [];
 
@@ -186,9 +165,6 @@ class StateManager {
 		toRemove.forEach(waitId => this.waitQueue.delete(waitId));
 	}
 
-	/**
-	 * Check if core initialization is complete
-	 */
 	checkInitializationComplete() {
 		const coreReady = [
 			'palette',
@@ -209,9 +185,6 @@ class StateManager {
 		}
 	}
 
-	/**
-	 * Mark initialization as started
-	 */
 	startInitialization() {
 		if (this.state.initializing || this.state.initialized) {
 			console.warn('[State] Initialization already in progress or complete');
@@ -221,9 +194,7 @@ class StateManager {
 		this.state.initializing = true;
 	}
 
-	/**
-	 * Check if current state is all defaults (blank canvas with default settings)
-	 */
+	/** a blank canvas on default settings: nothing worth autosaving */
 	isDefaultState() {
 		try {
 			if (this.state.textArtCanvas) {
@@ -300,21 +271,17 @@ class StateManager {
 			return true;
 		} catch (error) {
 			console.error('[State] Error checking default state:', error);
-			return false; // If there's an error, assume it's not default to be safe
+			return false; // unknown counts as non-default so the autosave runs
 		}
 	}
 
-	/**
-	 * Save non-default state to localStorage
-	 */
 	async saveToLocalStorage() {
 		try {
 			const scaleFactor = this.state.font?.getScaleFactor() ?? 1;
 			const hasNonDefaultZoom = scaleFactor !== 1;
 
-			// Skip saving if state is default (unless zoom changed) or connected
-			// to network. The network slot is optional: a collab worker that
-			// failed to construct must not cost every autosave of the session.
+			// the network slot is optional: a collab worker that failed to
+			// construct must not cost every autosave of the session
 			if (
 				!hasNonDefaultZoom &&
 				(this.isDefaultState() ||
@@ -323,9 +290,7 @@ class StateManager {
 				return;
 			}
 
-			// Split data between localStorage and IndexedDB
-
-			// 1. Save heavy data to IndexedDB
+			// heavy data goes to IndexedDB, light settings to localStorage
 			if (
 				this.state.textArtCanvas &&
 				typeof this.state.textArtCanvas.getImageData === 'function'
@@ -351,7 +316,6 @@ class StateManager {
 				}
 			}
 
-			// 2. Save lightweight settings to localStorage
 			const settings = {
 				fontName: this.state.textArtCanvas?.getCurrentFontName(),
 				iceColors: this.state.textArtCanvas?.getIceColors(),
@@ -373,10 +337,7 @@ class StateManager {
 		}
 	}
 
-	/**
-	 * Persist undo history to IndexedDB
-	 * Heavy write; call on idle, visibilitychange, or pagehide only
-	 */
+	/** heavy IndexedDB write: call on idle, visibilitychange, or pagehide only */
 	async saveUndoHistory() {
 		try {
 			if (
@@ -395,18 +356,11 @@ class StateManager {
 		}
 	}
 
-	/**
-	 * Clear all state from localStorage
-	 */
 	clearLocalStorage() {
 		Storage.clearAll();
 	}
 
-	/**
-	 * Restore state from localStorage after components are initialized,
-	 * dispatching events so the UI updates. Reads compressed,
-	 * uncompressed, and legacy storage formats.
-	 */
+	/** restore the autosave once every component exists */
 	async restoreStateFromLocalStorage() {
 		const settings = Storage.loadSettings();
 		if (!settings) {
@@ -427,7 +381,8 @@ class StateManager {
 
 		try {
 			if (settings) {
-				// Temporarily enable ice colors to prevent blink timer
+				// ice colors stay on until the font lands, so no blink timer
+				// starts mid-restore
 				const originalIceColors = settings.iceColors;
 				if (this.state.textArtCanvas) {
 					this.state.textArtCanvas.setIceColors(true);
@@ -437,7 +392,6 @@ class StateManager {
 					this.state.font.setLetterSpacing(settings.letterSpacing);
 				}
 
-				// Store scale factor to pass to setFont later
 				const savedScaleFactor = settings.scaleFactor ?? 1;
 
 				if (settings.paletteColors && this.state.palette) {
@@ -463,13 +417,13 @@ class StateManager {
 						);
 					}
 
-					// Load canvas data: the OPFS autosave journal is the source
-					// of truth and restores plane-native (frames, truecolor,
-					// and unicode survive; the u16 projection flattened all
-					// three and the restore's keyframe then destroyed them in
-					// the journal too). The legacy IndexedDB snapshot is the
-					// fallback, migrated through core/migrate so restoring it
-					// re-seeds the journal via setDocData's keyframe trigger.
+					// the OPFS autosave journal is the source of truth and
+					// restores plane-native: a u16 restore would flatten
+					// frames, truecolor, and unicode, and its keyframe would
+					// then destroy them in the journal too. The legacy
+					// IndexedDB snapshot is the fallback, migrated through
+					// core/migrate so restoring it re-seeds the journal via
+					// setDocData's keyframe trigger.
 					setTimeout(async () => {
 						const journalData =
 							await this.state.textArtCanvas?.loadJournalSnapshot?.();
@@ -496,13 +450,11 @@ class StateManager {
 							this.state.textArtCanvas.setUndoHistory(undoHistory);
 						}
 
-						// Finally, set font
 						setTimeout(() => {
 							if (settings?.fontName && this.state.textArtCanvas) {
 								this.state.textArtCanvas.setFont(
 									settings.fontName,
 									() => {
-										// NOW restore the actual ice colors setting
 										if (this.state.textArtCanvas) {
 											this.state.textArtCanvas.setIceColors(originalIceColors);
 										}
@@ -536,7 +488,6 @@ class StateManager {
 const stateManager = new StateManager();
 
 const State = {
-	// Direct property access for better performance and no circular references
 	get textArtCanvas() {
 		return stateManager.state.textArtCanvas;
 	},
@@ -639,7 +590,6 @@ const State = {
 			document.title = `${value} [teXt0wnz]`;
 		}
 	},
-	// URLs
 	get urlPrefix() {
 		return stateManager.urlPrefix;
 	},
@@ -653,17 +603,14 @@ const State = {
 		return stateManager.loadingFromStorage;
 	},
 
-	// Utility methods
 	waitFor: stateManager.waitFor,
 	startInitialization: stateManager.startInitialization,
 
-	// LocalStorage sync methods
 	saveToLocalStorage: stateManager.saveToLocalStorage,
 	saveUndoHistory: stateManager.saveUndoHistory,
 	restoreStateFromLocalStorage: stateManager.restoreStateFromLocalStorage,
 	clearLocalStorage: stateManager.clearLocalStorage,
 
-	// Raw state access (for advanced use cases)
 	_manager: stateManager,
 	_state: stateManager.state,
 };

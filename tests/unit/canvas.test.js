@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createTextArtCanvas } from '../../src/js/client/canvas.js';
 
-// Set up module mocks first - before importing canvas.js
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		font: {
@@ -91,7 +90,6 @@ describe('Canvas Module', () => {
 	let canvas;
 
 	beforeEach(() => {
-		// Clear any large objects from previous tests
 		if (global.gc) {
 			global.gc();
 		}
@@ -103,7 +101,7 @@ describe('Canvas Module', () => {
 			appendChild: vi.fn(),
 			removeChild: vi.fn(),
 			addEventListener: vi.fn(),
-			children: [], // Add children array for DOM operations
+			children: [],
 		};
 		mockCallback = vi.fn();
 	});
@@ -167,7 +165,7 @@ describe('Canvas Module', () => {
 			await vi.advanceTimersByTimeAsync(600);
 			State.font.draw.mockClear();
 			await vi.advanceTimersByTimeAsync(2000);
-			// a starved waiter used to grab the released mutex here and
+			// a starved waiter must not grab the released mutex here and
 			// restart blink mid-relayout
 			expect(blinkDraws()).toBe(0);
 		});
@@ -453,7 +451,7 @@ describe('Canvas Module', () => {
 
 			expect(getMirrorCharCode(221)).toBe(222);
 			expect(getMirrorCharCode(222)).toBe(221);
-			expect(getMirrorCharCode(65)).toBe(65); // Normal character unchanged
+			expect(getMirrorCharCode(65)).toBe(65);
 		});
 
 		it('should calculate array indices from coordinates correctly', () => {
@@ -463,7 +461,7 @@ describe('Canvas Module', () => {
 			expect(getArrayIndex(0, 0)).toBe(0);
 			expect(getArrayIndex(79, 0)).toBe(79);
 			expect(getArrayIndex(0, 1)).toBe(80);
-			expect(getArrayIndex(79, 24)).toBe(79 + 24 * 80); // Last position in 80x25 grid
+			expect(getArrayIndex(79, 24)).toBe(79 + 24 * 80);
 		});
 
 		it('should validate coordinate bounds', () => {
@@ -491,7 +489,7 @@ describe('Canvas Module', () => {
 			const background = 0; // Black
 
 			const encoded = encodeCharBlock(charCode, foreground, background);
-			expect(encoded).toBe((65 << 8) | (0 << 4) | 7); // 16647
+			expect(encoded).toBe((65 << 8) | (0 << 4) | 7);
 		});
 
 		it('should decode character data correctly', () => {
@@ -512,7 +510,6 @@ describe('Canvas Module', () => {
 		});
 
 		it('should handle blink attribute correctly', () => {
-			// Test blink attribute detection (background color >= 8)
 			const hasBlinkAttribute = background => background >= 8;
 
 			expect(hasBlinkAttribute(0)).toBe(false);
@@ -528,7 +525,7 @@ describe('Canvas Module', () => {
 
 			expect(normalizeBlinkColor(8)).toBe(0);
 			expect(normalizeBlinkColor(15)).toBe(7);
-			expect(normalizeBlinkColor(4)).toBe(4); // No change for non-blink colors
+			expect(normalizeBlinkColor(4)).toBe(4);
 		});
 
 		it('should calculate region bounds correctly', () => {
@@ -549,12 +546,11 @@ describe('Canvas Module', () => {
 			const result = clipRegion(-5, -5, 20, 20, 80, 25);
 			expect(result.x).toBe(0);
 			expect(result.y).toBe(0);
-			expect(result.width).toBe(20); // width remains 20 since 0 + 20 < 80
-			expect(result.height).toBe(20); // height remains 20 since 0 + 20 < 25
+			expect(result.width).toBe(20);
+			expect(result.height).toBe(20);
 		});
 
 		it('should calculate canvas context indices correctly', () => {
-			// Test context calculation for large canvases (multiple 25-row contexts)
 			const getContextIndex = y => Math.floor(y / 25);
 			const getContextY = y => y % 25;
 
@@ -771,7 +767,6 @@ describe('Canvas Module', () => {
 			const State = (await import('../../src/js/client/state.js')).default;
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			// Wait for the initial font load and canvas creation to finish
 			await vi.waitFor(() => expect(mockCallback).toHaveBeenCalled());
 
 			const fontDraw = State.font.draw;

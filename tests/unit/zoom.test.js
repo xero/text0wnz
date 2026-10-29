@@ -9,7 +9,6 @@ describe('Zoom Functionality', () => {
 		beforeEach(() => {
 			mockPalette = {
 				getRGBAColor: vi.fn(colorIndex => {
-					// Return different colors for foreground/background
 					const colors = new Uint8ClampedArray(4);
 					colors[0] = colorIndex * 16; // R
 					colors[1] = colorIndex * 16; // G
@@ -19,7 +18,6 @@ describe('Zoom Functionality', () => {
 				}),
 			};
 
-			// Create minimal font data (8x16 font)
 			fontData = {
 				width: 8,
 				height: 16,
@@ -67,7 +65,6 @@ describe('Zoom Functionality', () => {
 		it('should scale dimensions with letter spacing', () => {
 			const lazyFont = createLazyFont(fontData, mockPalette, true, 2);
 
-			// With letter spacing: (width * scale) + (1 * scale)
 			expect(lazyFont.getWidth()).toBe(18); // (8 * 2) + (1 * 2)
 			expect(lazyFont.getHeight()).toBe(32); // 16 * 2
 		});
@@ -87,7 +84,7 @@ describe('Zoom Functionality', () => {
 			const glyph1 = lazyFont.getGlyph(65, 15, 0);
 			const glyph2 = lazyFont.getGlyph(65, 15, 0);
 
-			expect(glyph1).toBe(glyph2); // Same object reference (cached)
+			expect(glyph1).toBe(glyph2);
 		});
 	});
 
@@ -171,8 +168,7 @@ describe('Zoom Functionality', () => {
 
 	describe('Font loading with scaleFactor', () => {
 		it('should pass scaleFactor to font loader functions', async () => {
-			// font loading itself is covered in font.test.js; this just checks
-			// the structure exists
+			// font.test.js covers loading itself; this pins only the exports
 			const { loadFontFromImage, loadFontFromXBData } = await import(
 				'../../src/js/client/font.js'
 			);

@@ -1,9 +1,8 @@
 /* eslint-disable prefer-arrow-callback */
 /**
- * The byte fallback for .txt opens: invalid UTF-8 means raw scene
- * bytes (amiga latin-1 collys), which must land in the glyph-indexed
- * byte loader instead of throwing, and callers that already know the
- * bytes are scene art can skip the UTF-8 reader with preferBytes.
+ * Invalid UTF-8 in a .txt means raw scene bytes (amiga latin-1
+ * collys), which must land in the glyph-indexed byte loader instead of
+ * throwing.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createDocV3 } from '../../src/js/core/doc.js';

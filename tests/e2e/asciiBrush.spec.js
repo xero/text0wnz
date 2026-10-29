@@ -1,9 +1,7 @@
 /**
- * Ascii brush e2e: the old skool stamp engine drives the controller, so
- * strokes resolve to classic ascii line glyphs by slope, fully live.
- * Glyph choice itself is pinned by the core goldens; these tests pin
- * the browser wiring: pointer path in, revised cells out, one undo
- * group per stroke, backgrounds preserved.
+ * Glyph choice is pinned by the core goldens; these tests pin the
+ * browser wiring: pointer path in, revised cells out, one undo group
+ * per stroke, backgrounds preserved.
  */
 import { test, expect } from '@playwright/test';
 import {
@@ -219,8 +217,8 @@ test.describe('shape tool brush modes', () => {
 		await setSquareMode(page, 'oldskool');
 		await drag(page, [5, 5], [20, 12]);
 		// period shoulders, backtick and quote feet, dash edges top and
-		// bottom (per half voicing densified stacked boxes to equals),
-		// bar sides
+		// bottom (an underscore bottom would merge with a stacked box's
+		// top dash into equals), bar sides
 		expect((await readBlock(page, 5, 5)).charCode).toBe(PERIOD);
 		expect((await readBlock(page, 20, 5)).charCode).toBe(PERIOD);
 		expect((await readBlock(page, 5, 12)).charCode).toBe(96);
@@ -255,7 +253,7 @@ test.describe('shape tool brush modes', () => {
 	test('a block circle survives a sub cell drag', async ({ page }) => {
 		await clickTool(page, 'circle');
 		await setCircleMode(page, 'block');
-		// zero radii once spun the ellipse walk forever and froze the
+		// zero radii can spin the ellipse walk forever and freeze the
 		// page; the degenerate drag must land ink and return
 		await drag(page, [40, 16], [40, 16]);
 		expect([220, 223]).toContain((await readBlock(page, 40, 16)).charCode);
@@ -264,7 +262,7 @@ test.describe('shape tool brush modes', () => {
 	test('old skool circle fills its drag box with the golden anatomy', async ({ page }) => {
 		await clickTool(page, 'circle');
 		await setCircleMode(page, 'oldskool');
-		// a 16 x 8 box drag stamps the owner's golden circle box true
+		// a 16 x 8 box drag stamps the golden circle box true
 		await drag(page, [36, 16], [51, 23]);
 		expect((await readBlock(page, 36, 19)).charCode).toBe(VBAR);
 		expect((await readBlock(page, 51, 19)).charCode).toBe(VBAR);
@@ -335,7 +333,7 @@ test.describe('shape tool brush modes', () => {
 		await drag(page, [15, 3], [25, 14]);
 		// the second box's bars cross the first box's edges: plus at
 		// every crossing, and the bar cells between its own corner and
-		// the crossing survive (a root snap-back once ate them)
+		// the crossing survive the root snap-back
 		for (const x of [15, 25]) {
 			expect((await readBlock(page, x, 6)).charCode).toBe(43);
 			expect((await readBlock(page, x, 10)).charCode).toBe(43);
@@ -362,7 +360,7 @@ test.describe('shape tool brush modes', () => {
 	test('three row and three column boxes rule true edges', async ({ page }) => {
 		await clickTool(page, 'square');
 		await setSquareMode(page, 'oldskool');
-		// one cell paths once stamped the engine's lone tap apostrophe
+		// one cell paths must not stamp the engine's lone tap apostrophe
 		await drag(page, [10, 2], [20, 4]);
 		expect((await readBlock(page, 10, 3)).charCode).toBe(124);
 		expect((await readBlock(page, 20, 3)).charCode).toBe(124);
@@ -393,7 +391,7 @@ test.describe('shape tool brush modes', () => {
 		await setSquareMode(page, 'oldskool');
 		await drag(page, [10, 4], [20, 9]);
 		// the second box's bottom edge crosses the first box's bar one
-		// row under its corner cap; the junction sweep once ate the cap
+		// row under its corner cap, which the junction sweep must spare
 		await drag(page, [14, 2], [24, 5]);
 		expect((await readBlock(page, 20, 5)).charCode).toBe(43);
 		expect((await readBlock(page, 20, 4)).charCode).toBe(PERIOD);

@@ -1,36 +1,23 @@
 /**
- * Collab bridge: a pure byte pipe from a browser's
- * wss connection to a plaintext ws desktop server (Moebius, icy_draw),
- * frames relayed verbatim both ways. The bridge dials from the
- * SERVER's network position, so the lockdown is the feature:
+ * Collab bridge: a byte pipe from a browser's wss connection to a
+ * plaintext ws desktop server (Moebius, icy_draw), frames relayed
+ * verbatim. It dials from the SERVER's network position, so the
+ * lockdown is the feature:
  *
- * - BRIDGE=off    (default) every bridge request is refused.
- * - BRIDGE=local  only the preconfigured BRIDGE_TARGET is dialed
- *                 (default ws://127.0.0.1:8000); the request cannot
- *                 steer the destination at all: zero SSRF surface.
- * - BRIDGE=port   the host is caller-chosen but the port is pinned to
- *                 BRIDGE_PORT (default 8000, never the app port), the
- *                 host resolves BEFORE connecting, every resolved
- *                 address must be public (loopback, RFC1918, CGNAT,
- *                 link-local incl. 169.254.169.254, and the v6
- *                 equivalents are denied), and the connection dials
- *                 the vetted IP, which also defeats DNS rebinding.
- * - BRIDGE=allow  only targets on the explicit BRIDGE_ALLOW list
- *                 (comma-separated host:port); private entries are
- *                 informed consent and dial as given.
+ * - local: the request cannot steer the destination at all (zero
+ *   SSRF surface).
+ * - port: the port is pinned (never the app port), the host resolves
+ *   BEFORE connecting, every resolved address must be public, and the
+ *   dial goes to the vetted IP, which also defeats DNS rebinding.
+ * - allow: private entries on the list are informed consent and dial
+ *   as given.
  *
- * Always on, whatever the mode: a connection cap (BRIDGE_MAX), a
- * delivery bound in both directions (a side that stops taking
- * delivery, or leaves more than two maximum frames unconfirmed,
- * closes the pipe), an idle reaper, a dial timeout, a lookup timeout, the frame-size limit (the browser side
- * rides Bun's maxPayloadLength), and an audit line per open, close,
- * and refusal carrying the requester's address, since `port` mode is
- * by design a relay from this host's IP to any public server on one
- * port and an abuse report has to be answerable. Refusals reach the
- * caller as a bare 403: the reason (which names resolved addresses)
- * is for the log only, or the bridge doubles as a DNS oracle. The
- * protocol is plaintext past the bridge, passwords included; the docs
- * say so.
+ * Every open, close, and refusal leaves an audit line with the
+ * requester's address: `port` mode is by design a relay from this
+ * host's IP to any public server on one port, so an abuse report has
+ * to be answerable. Refusals reach the caller as a bare 403: the
+ * reason names resolved addresses, so echoing it would make the bridge
+ * a DNS oracle.
  *
  * (No @ts-check: Bun/node types are not in the repo's TS lib set.)
  */
@@ -45,11 +32,8 @@ export const BRIDGE_DEFAULTS = Object.freeze({
 	maxConnections: 16,
 });
 
-/**
- * Private, loopback, link-local, CGNAT, and unspecified addresses, v4
- * and v6 (including v4-mapped v6): everything the `port` mode denies.
- * @param {string} ip
- */
+/** everything `port` mode denies, not only the private ranges
+ * @param {string} ip */
 export const isPrivateAddress = ip => {
 	let addr = ip.toLowerCase();
 	if (addr.startsWith('::ffff:')) {
@@ -104,9 +88,8 @@ export const isPrivateAddress = ip => {
 };
 
 /**
- * Pure vet of already-resolved addresses (unit-tested without DNS):
- * ALL addresses must be public or the target is refused, so a name
- * that round-robins one public and one private record cannot slip by.
+ * ALL addresses must be public, so a name that round-robins one public
+ * and one private record cannot slip by. Pure, so tests need no DNS.
  * @param {string[]} addresses
  */
 export const vetResolvedAddresses = addresses => {
@@ -122,9 +105,7 @@ export const vetResolvedAddresses = addresses => {
 };
 
 /**
- * Decide the upstream url for a bridge request. Pure except for DNS
- * in `port` mode (injectable for tests).
- *
+ * Pure except for DNS in `port` mode (injectable for tests).
  * @param {{mode: string, target: string, port: number, allow: string[]}} config
  * @param {{host?: string | null, port?: string | number | null, room?: string | null}} requested
  * @param {(host: string) => Promise<string[]>} [resolveHost]
@@ -213,9 +194,9 @@ const boundedLookup = (resolveHost, host, timeoutMs) => {
 };
 
 /**
- * Boot-time sanity for the parsed env: a misconfiguration here is the
- * operator's, and it should stop the server with a sentence, not run
- * a bridge that dials the app itself or chains into its own /bridge.
+ * A misconfiguration here is the operator's: stop the boot with a
+ * sentence, never run a bridge that dials the app itself or chains
+ * into its own /bridge.
  * @param {{mode: string, target: string, port: number, allow: string[]}} config
  * @param {{port: number, plainPort?: number}} app the listeners
  */
@@ -259,7 +240,6 @@ export const validateBridgeConfig = (config, app) => {
 	}
 };
 
-/** parse BRIDGE* env into bridge config */
 export const bridgeConfigFromEnv = (env = process.env) => ({
 	// a blank value is the stock setting, not a mode of its own
 	mode: (env.BRIDGE || BRIDGE_DEFAULTS.mode).toLowerCase(),
@@ -273,7 +253,7 @@ export const bridgeConfigFromEnv = (env = process.env) => ({
 });
 
 /** digits or nothing: Number() would read hex, signs, and fractions
- * as a port, and validateBridgeConfig then has no raw value to name
+ * as a valid knob; NaN makes validateBridgeConfig refuse it by name
  * @param {string | undefined} raw @param {number} fallback */
 const numberFromEnv = (raw, fallback) => {
 	if (raw === undefined || raw.trim() === '') {
@@ -282,10 +262,6 @@ const numberFromEnv = (raw, fallback) => {
 	return (/^\d{1,9}$/).test(raw.trim()) ? Number(raw.trim()) : NaN;
 };
 
-/**
- * Runtime piping state for one bridged browser socket. The upstream
- * dial happens on open; browser frames queue until it connects.
- */
 export const BRIDGE_QUEUE_LIMIT_BYTES = 256 * 1024;
 export const BRIDGE_CONNECT_TIMEOUT_MS = 10000;
 // the memory one pipe may hold for a side that is not taking delivery:

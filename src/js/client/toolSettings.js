@@ -1,11 +1,10 @@
 /**
- * The unified tool settings module: one panel whose sections swap with
- * the selected tool. A tool with settings calls show(section) from its
- * enable, unconditionally, so selecting a tool always reopens an
- * X-closed panel; a tool without settings calls hide(). Placement
- * (dock, float, shade, close) belongs to the panel manager; this stays
- * the single owner of the persisted settings values, so lazily created
- * controllers can never clobber each other's keys.
+ * One panel whose sections swap with the selected tool. A tool with
+ * settings calls show(section) from its enable, unconditionally, so
+ * selecting a tool always reopens an X-closed panel; a tool without
+ * settings calls hide(). Placement belongs to the panel manager; this
+ * stays the single owner of the persisted settings values, so lazily
+ * created controllers can never clobber each other's keys.
  */
 import State from './state.js';
 import { $ } from './ui.js';
@@ -28,7 +27,7 @@ const createToolSettings = () => {
 	let current = null;
 
 	// a bar has no title strip, so each section carries the tool name
-	// itself; the keyboard bar alone goes nameless per the spec
+	// itself; the keyboard bar alone goes nameless
 	Object.entries(sections).forEach(([name, s]) => {
 		if (name === 'keyboard' || !s.el) {
 			return;
@@ -87,7 +86,6 @@ const createToolSettings = () => {
 		// grip, so the panel flags that section for the CSS
 		panel?.classList.toggle('charMap', section === 'character');
 		current = section;
-		// reopen clears an X-close, re-lays out, and flashes the panel;
 		// the section rides along as the tool identity pins key on
 		State.panels?.reopen('tool', section);
 	};

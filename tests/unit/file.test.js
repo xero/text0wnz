@@ -18,14 +18,15 @@ const mockState = {
 		clearXBData: vi.fn(),
 		redrawEntireImage: vi.fn(),
 		getImage: vi.fn(() => ({ toDataURL: vi.fn(() => canvasDataURL) })),
-		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)), // Mock 6-bit palette data
+		// 6-bit palette data
+		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)),
 		getCurrentFrame: vi.fn(() => 0),
 	},
 	font: {
 		getWidth: vi.fn(() => 8),
 		getHeight: vi.fn(() => 16),
 		getLetterSpacing: vi.fn(() => false),
-		getData: vi.fn(() => null), // No font data by default
+		getData: vi.fn(() => null),
 	},
 };
 
@@ -49,7 +50,6 @@ vi.mock('../../src/js/client/palette.js', () => ({
 		if (charCode < 128) {
 			return [charCode];
 		}
-		// Mock UTF-8 encoding for extended characters
 		if (charCode < 0x800) {
 			return [0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f)];
 		}
@@ -155,12 +155,10 @@ describe('File Module', () => {
 				expect(Load.sauceToAppFont('IBM EGA')).toBe('CP437 8x14');
 				expect(Load.sauceToAppFont('IBM EGA43')).toBe('CP437 8x8');
 
-				// Code page variants
 				expect(Load.sauceToAppFont('IBM VGA 437')).toBe('CP437 8x16');
 				expect(Load.sauceToAppFont('IBM VGA 850')).toBe('CP850 8x16');
 				expect(Load.sauceToAppFont('IBM VGA 852')).toBe('CP852 8x16');
 
-				// Amiga fonts
 				expect(Load.sauceToAppFont('Amiga Topaz 1')).toBe('Topaz 500 8x16');
 				expect(Load.sauceToAppFont('Amiga Topaz 1+')).toBe('Topaz+ 500 8x16');
 				expect(Load.sauceToAppFont('Amiga MicroKnight')).toBe(
@@ -168,7 +166,6 @@ describe('File Module', () => {
 				);
 				expect(Load.sauceToAppFont('Amiga P0T-NOoDLE')).toBe('P0t-NOoDLE 8x16');
 
-				// C64 fonts
 				expect(Load.sauceToAppFont('C64 PETSCII unshifted')).toBe(
 					'C64 PETSCII unshifted 8x8',
 				);
@@ -179,7 +176,6 @@ describe('File Module', () => {
 				// XBIN embedded font
 				expect(Load.sauceToAppFont('XBIN')).toBe('XBIN');
 
-				// Unknown font
 				expect(Load.sauceToAppFont('Unknown Font')).toBe(null);
 				expect(Load.sauceToAppFont(null)).toBe(null);
 				expect(Load.sauceToAppFont(undefined)).toBe(null);
@@ -191,11 +187,9 @@ describe('File Module', () => {
 				expect(Load.appToSauceFont('CP437 8x19')).toBe('IBM VGA25G');
 				expect(Load.appToSauceFont('CP437 8x14')).toBe('IBM EGA');
 
-				// Code page variants
 				expect(Load.appToSauceFont('CP850 8x16')).toBe('IBM VGA 850');
 				expect(Load.appToSauceFont('CP852 8x16')).toBe('IBM VGA 852');
 
-				// Amiga fonts
 				expect(Load.appToSauceFont('Topaz 500 8x16')).toBe('Amiga Topaz 1');
 				expect(Load.appToSauceFont('Topaz+ 500 8x16')).toBe('Amiga Topaz 1+');
 				expect(Load.appToSauceFont('MicroKnight 8x16')).toBe(
@@ -204,7 +198,6 @@ describe('File Module', () => {
 				expect(Load.appToSauceFont('P0t-NOoDLE 8x16')).toBe('Amiga P0T-NOoDLE');
 				expect(Load.appToSauceFont('mO\'sOul 8x16')).toBe('Amiga mOsOul');
 
-				// C64 fonts
 				expect(Load.appToSauceFont('C64 PETSCII unshifted 8x8')).toBe(
 					'C64 PETSCII unshifted',
 				);
@@ -215,7 +208,6 @@ describe('File Module', () => {
 				// XBIN embedded font
 				expect(Load.appToSauceFont('XBIN')).toBe('XBIN');
 
-				// Default case
 				expect(Load.appToSauceFont('Unknown Font')).toBe('IBM VGA');
 				expect(Load.appToSauceFont(null)).toBe('IBM VGA');
 				expect(Load.appToSauceFont(undefined)).toBe('IBM VGA');
@@ -354,7 +346,7 @@ describe('File Module', () => {
 
 		describe('Binary Save Format', () => {
 			it('should save BIN files when width is even', async () => {
-				mockState.textArtCanvas.getColumns.mockReturnValue(80); // Even width
+				mockState.textArtCanvas.getColumns.mockReturnValue(80);
 				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
 
 				await Save.bin();
@@ -364,7 +356,7 @@ describe('File Module', () => {
 			});
 
 			it('should not save BIN files when width is odd', async () => {
-				mockState.textArtCanvas.getColumns.mockReturnValue(81); // Odd width
+				mockState.textArtCanvas.getColumns.mockReturnValue(81);
 				mockState.textArtCanvas.getDoc.mockReturnValue(
 					createDocV3({ columns: 81, rows: 25 }),
 				);
@@ -574,7 +566,7 @@ describe('File Module', () => {
 				height & 0xff,
 				height >> 8, // Height (little-endian)
 				16, // Font height
-				flags, // Flags
+				flags,
 			]);
 
 			expect(header[0]).toBe(88); // 'X'
@@ -771,7 +763,6 @@ describe('File Module', () => {
 		it('should handle SAUCE data processing logic', () => {
 			const testWidth = 80;
 
-			// This tests the internal getSauce logic
 			expect(typeof testWidth).toBe('number');
 			expect(testWidth).toBe(80);
 		});
@@ -917,7 +908,6 @@ describe('File Module', () => {
 			mockState.textArtCanvas.getColumns.mockReturnValue(80);
 			mockState.textArtCanvas.getRows.mockReturnValue(25);
 
-			// Create image data with high color values (ICE colors)
 			const iceImageData = new Uint16Array(80 * 25);
 			for (let i = 0; i < iceImageData.length; i++) {
 				iceImageData[i] = (65 << 8) | 0xff; // A with bright colors
@@ -930,7 +920,6 @@ describe('File Module', () => {
 		});
 
 		it('should test BIN file generation with proper width validation', async () => {
-			// Test with even width (should succeed)
 			mockState.textArtCanvas.getColumns.mockReturnValue(80);
 			mockState.textArtCanvas.getRows.mockReturnValue(25);
 			mockState.textArtCanvas.getDoc.mockReturnValue(
@@ -949,7 +938,6 @@ describe('File Module', () => {
 
 			global.Blob.mockClear();
 
-			// Test with odd width (should not create file)
 			mockState.textArtCanvas.getColumns.mockReturnValue(81);
 			mockState.textArtCanvas.getDoc.mockReturnValue(
 				createDocV3({ columns: 81, rows: 25 }),
@@ -1210,7 +1198,6 @@ describe('File Module', () => {
 			const colors = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
 			colors.forEach(color => {
-				// Test foreground color codes (30-37, 90-97)
 				let ansiCode;
 				if (color < 8) {
 					ansiCode = 30 + color;

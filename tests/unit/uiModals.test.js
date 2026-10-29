@@ -25,7 +25,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 	},
 }));
 
-void websocketUI; // Used in tests
+void websocketUI;
 
 describe('UI Advanced Utilities', () => {
 	beforeEach(() => {
@@ -40,7 +40,6 @@ describe('UI Advanced Utilities', () => {
 
 	describe('Additional DOM Utilities', () => {
 		it('should provide $$$ function for querySelectorAll', async () => {
-			// Need to import $$$ separately
 			const { $$$ } = await import('../../src/js/client/ui.js');
 
 			const div1 = document.createElement('div');
@@ -64,12 +63,11 @@ describe('UI Advanced Utilities', () => {
 			const container = document.createElement('div');
 			document.body.appendChild(container);
 
-			// The function will fail during rendering but we're just verifying the structure
 			expect(() => {
 				try {
 					createGrid(container);
 				} catch {
-					// Expected to fail due to mocking limitations, but we verified it's callable
+					// only callability is pinned here
 				}
 			}).not.toThrow();
 		});
@@ -312,7 +310,7 @@ describe('UI Advanced Utilities', () => {
 	describe('websocketUI', () => {
 		// the stylesheet gates .includedForWebsocket and
 		// .excludedForWebsocket on one document attribute; inline
-		// display writes lost to the sauce panel's id rule
+		// display writes lose to the sauce panel's id rule
 		it('flips the document attribute both ways', async () => {
 			const { websocketUI } = await import('../../src/js/client/ui.js');
 

@@ -1,9 +1,11 @@
 /**
- * The v3 editing engine core: v2 canvas.js's document mutations (draw
- * entry points, half-block painting, mirror mode, bright-bg optimize,
- * areas, undo groups) reproduced verbatim over the three-plane doc and
- * the patch arena. Pure TS: rendering, collab packets, and persistence
- * stay in the client, wired through the onWrite observer.
+ * The v3 editing engine core: v2's document mutations (draw entry
+ * points, half-block painting, mirror mode, bright-bg optimize, areas,
+ * undo groups) reproduced verbatim over the three-plane doc and the
+ * patch arena, pinned word-for-word against
+ * tests/parity/v2ReferenceEngine.js. Pure TS: rendering, collab
+ * packets, and persistence stay in the client, wired through the
+ * onWrite observer.
  *
  * Scope: classic16 editing (palette indices 0-15, CP437 glyphs). Cells
  * holding raw-RGB colors or unicode glyphs (tnd/dur/envelope loads)
@@ -64,8 +66,7 @@ export interface EditorCoreOptions {
 	onWrite?: (write: EditorWrite) => void;
 	/**
 	 * Fires when the edited frame changes: explicit navigation, or an
-	 * undo/redo landing on a stroke recorded in another frame. The
-	 * client re-mirrors and repaints wholesale on this.
+	 * undo/redo landing on a stroke recorded in another frame.
 	 */
 	onFrameChange?: (frameIndex: number) => void;
 }
@@ -201,8 +202,6 @@ export const createEditorCore = (
 
 	const columns = () => doc.getColumns();
 
-	// ------------------------------------------------------- cell access
-
 	/**
 	 * Cell view for the tools. Colors are classic 0-15 indexes when the
 	 * plane word is one AND the u16 cell model can express it; anything
@@ -213,16 +212,13 @@ export const createEditorCore = (
 	 * a steady bright classic bg without ice has no u16 nibble (bright
 	 * means blink there), so it stays a word and quantizes exactly like
 	 * the v3ToU16Lossy rebuild, keeping the mirror path-independent.
-	 * ATTR_BLINK on an extended bg rides the optional blink flag, so
-	 * packWord blinks the quantized nibble exactly like the
-	 * v3ToU16Lossy rebuild and planeWords stores the attr back on
-	 * write; the flag exists only for non classic bgs (classic bgs
-	 * fold blink into indexes 8-15 as always).
+	 * The blink flag exists only for non-classic bgs (classic bgs fold
+	 * blink into indexes 8-15).
 	 */
 	const readCell = (index: number): EditCell => {
 		const frame = doc.frames[currentFrame];
-		// out of range reads return a blank cell instead of undefined
-		// plane words; wrapped positive indexes are the callers' guard
+		// blank instead of undefined plane words; wrapped in-range
+		// indexes are the callers' guard
 		if (!Number.isInteger(index) || index < 0 || index >= frame.glyph.length) {
 			return { charCode: 0, fg: 0, bg: 0 };
 		}
@@ -302,8 +298,6 @@ export const createEditorCore = (
 		};
 	};
 
-	// --------------------------------------------------- stroke plumbing
-
 	let strokeOpen = false;
 	// the frame every read/write/draw targets; strokes record it, and
 	// undo/redo navigate back to the frame they touch
@@ -361,8 +355,6 @@ export const createEditorCore = (
 		emit(index, packWord(cell), undoable);
 	};
 
-	// -------------------------------------------------------- operations
-
 	const optimizeBlocks = (blocks: Array<[number, number, number]>) => {
 		for (const [index] of blocks) {
 			const replacement = optimizeCell(readCell(index));
@@ -377,10 +369,9 @@ export const createEditorCore = (
 		const cols = columns();
 		const rowCount = doc.getRows();
 		callback((charCode, foreground, background, x, y) => {
-			// defense in depth (wrap audit): a fractional or out of range
-			// cell would wrap through the index to another row, or no-op
-			// past the planes while still recording undo and echoing to
-			// collab; tools clamp, but no future tool's math may corrupt
+			// tools clamp, but a fractional or out of range cell would wrap
+			// through the index to another row, or no-op past the planes
+			// while still recording undo and echoing to collab
 			if (!cellInRange(x, y, cols, rowCount)) {
 				return;
 			}
@@ -458,8 +449,7 @@ export const createEditorCore = (
 		const attrs = attrsOf(frame.glyph[i]);
 		// the blink<->bright fold is CLASSIC16 semantics only: extended
 		// backgrounds (raw RGB, palette indexes above 15) pass through the
-		// ice toggle untouched, keeping their blink attr as-is (the attr
-		// bit exists everywhere; ice folding is 16-color-only)
+		// ice toggle untouched, keeping their blink attr as-is
 		const classicBg =
 			isPaletteColor(frame.bg[i]) && paletteIndexOf(frame.bg[i]) <= 15;
 		if (!classicBg) {
@@ -611,9 +601,8 @@ export const createEditorCore = (
 			}
 		},
 		quickDrawExt: cells => {
-			// remote full-fidelity cells (collab extension suite): raw plane
-			// words, no undo, no history; like quickDrawU16, the mirror
-			// stays consistent through the same packWord projection
+			// like quickDrawU16, the mirror stays consistent through the
+			// same packWord projection
 			const frame = doc.frames[currentFrame];
 			for (const { index, glyph, fg, bg } of cells) {
 				if (
@@ -646,7 +635,7 @@ export const createEditorCore = (
 				switchFrame(meta.frame);
 			}
 			for (const index of touched) {
-				// Strokes recorded before an ice toggle restore words in the
+				// strokes recorded before an ice toggle restore words in the
 				// old blink fold; re-express them like v2's flag semantics
 				refoldIndex(doc.frames[currentFrame], index, doc.getIceColors());
 				emit(index, packWord(readCell(index)), true);
@@ -674,7 +663,7 @@ export const createEditorCore = (
 		getCurrentFrame: () => currentFrame,
 		/** navigation, never undoable; false = index out of range */
 		setCurrentFrame: index => switchFrame(index),
-		/** append a frame (blank or copied); undo history survives */
+		/** undo history survives */
 		addFrame: addOptions => {
 			flushStroke();
 			return doc.addFrame(addOptions);
@@ -779,7 +768,6 @@ export const createEditorCore = (
 		clear: () => {
 			flushStroke();
 			arena.clear();
-			// New-document semantics: back to a single blank frame
 			currentFrame = 0;
 			while (doc.frames.length > 1) {
 				doc.removeFrame(doc.frames.length - 1);

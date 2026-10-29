@@ -1,6 +1,6 @@
 /**
  * ANSI (.ans/.diz/.nfo/.txt) codec, CP437 and the lenient UTF-8 reader.
- * Faithful port of the v2 loadAnsi/encodeANSi pair, quirks preserved on
+ * Port of the v2 loadAnsi/encodeANSi pair; these v2 quirks stay on
  * purpose (they define compatibility):
  * - 25-row virtual screen: y caps at 25 and the screen scrolls
  *   (topOfScreen), cursor-up/down clamp inside the window.
@@ -8,19 +8,14 @@
  * - Cursor-forward at the right edge wraps first (v2 'C' behavior).
  * - EL ('K') clears with attribute 0 from the cursor to EOL.
  *
- * The UTF-8 read builds v3 planes natively: codepoints hit the strict
- * CP437 reverse map first and intern into the doc glyph table
- * otherwise, extended SGR (90-97/100-107, 38/48;5;n, 38/48;2;r;g;b)
- * lands as tag-bit color words, and one LF immediately after an
- * auto-wrap is swallowed (real terminals defer the wrap, so full-width
- * rows plus LF mean one row, not two). Everything the v2 reader
- * accepted still decodes (old-file leniency).
+ * The UTF-8 read builds v3 planes natively: codepoints hit the CP437
+ * reverse map first and intern into the doc glyph table otherwise, and
+ * extended SGR (90-97/100-107, 38/48;5;n, 38/48;2;r;g;b) lands as
+ * tag-bit color words. Everything the v2 reader accepted still decodes
+ * (old-file leniency).
  *
- * encodeUtf8 is the v3 UTF-8 writer: one cell per column, LF endings,
- * SGR per color tier, ice-vs-blink per the artist's toggle (ice
- * default), SAUCE appended with the artist's meta verbatim (nothing
- * auto-added). encodeAns keeps the byte-compatible v2 CP437/plain-text
- * paths.
+ * encodeAns keeps the byte-compatible v2 CP437/plain-text paths;
+ * encodeUtf8 is the v3 UTF-8 writer.
  */
 
 import {
@@ -142,7 +137,7 @@ const createScreen = (width: number) => {
 	const extend = (y: number) => {
 		// hostile newline spam dies at the gate, not in the allocator;
 		// gate on content cells: the amortized allocation overshoots by
-		// up to double and refused legal tall files
+		// up to double and would refuse legal tall files
 		if (width * (y + 1) > MAX_DOC_CELLS) {
 			throw new CodecError('ANSI content exceeds the cell ceiling');
 		}
@@ -259,7 +254,7 @@ export const decodeAns = (
 	}
 	const size = sauce ? sauce.payloadSize : bytes.length;
 	// ESC[?33h/l can override the SAUCE flag mid-stream (Pablo honors
-	// it; SAUCE-less ice ANSIs rendered blink here before)
+	// it), so SAUCE-less ice ANSIs do not render as blink
 	let iceColors = sauce?.iceColors ?? false;
 	// ESC[?7l pins the cursor at the right edge instead of wrapping
 	let autowrap = true;
@@ -304,8 +299,8 @@ export const decodeAns = (
 	let bold = false;
 	let blink = false;
 	let inverse = false;
-	// UTF-8 extensions (never parsed in CP437 mode, which stays v2-exact):
-	// 90-97/100-107 bright flags and 38/48 extended color words
+	// UTF-8 only (the CP437 SGR set stays v2's): 90-97/100-107 bright
+	// flags and 38/48 extended color words
 	let fgBright = false;
 	let bgBright = false;
 	let fgExt: number | null = null;
@@ -338,9 +333,9 @@ export const decodeAns = (
 	};
 	const setPos = (newX: number, newY: number) => {
 		x = Math.min(columns, Math.max(1, newX));
-		// 25 is the bottom of the scroll window (newLine agrees); v2's 26
-		// let ESC[26;..H escape it and a later ESC[1B snapped the cursor
-		// up over painted rows. PabloDraw clamps to the canvas rect.
+		// 25 is the bottom of the scroll window (newLine agrees): at 26,
+		// ESC[26;..H escapes it and a later ESC[1B snaps the cursor up
+		// over painted rows. PabloDraw clamps to the canvas rect.
 		y = Math.min(25, Math.max(1, newY));
 	};
 	const getValues = (missing = 1): number[] =>
@@ -488,10 +483,10 @@ export const decodeAns = (
 			bytesConsumed = decoded.bytesConsumed;
 			codepoint = decoded.charCode;
 			// dispatch value for the state machine (controls are ASCII);
-			// the cell write below uses the real codepoint instead. The
-			// old strict reverse map here turned printable glyphs that
-			// LIVE on cp437 control bytes (U+25D9 is 0x0A) into controls,
-			// so moebiusXBIN's own UTF-8 exports corrupted on open
+			// the cell write below uses the real codepoint. No reverse
+			// map here: printable glyphs that LIVE on cp437 control bytes
+			// (U+25D9 is 0x0A) would turn into controls and corrupt
+			// moebiusXBIN's own UTF-8 exports on open
 			code = decoded.charCode <= 0x7f ? decoded.charCode : 63;
 		}
 
@@ -499,8 +494,9 @@ export const decodeAns = (
 			escapeCode += String.fromCharCode(code);
 			if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
 				escaped = false;
-				// an empty SGR param means 0 (ESC[m resets; PabloDraw,
-				// moebiusXBIN, and ANSI.SYS agree); cursor moves default 1
+				// an empty SGR param means 0, the ECMA-48 §8.3.117 default
+				// (ESC[m resets; PabloDraw, moebiusXBIN, and ANSI.SYS agree);
+				// cursor moves default 1
 				const values = getValues(
 					escapeCode.charAt(escapeCode.length - 1) === 'm' ? 0 : 1,
 				);
@@ -527,8 +523,8 @@ export const decodeAns = (
 							x = Math.max(1, x - values[0]);
 							break;
 						case 'H':
-						// HVP: ANSI.SYS and both references alias it to CUP;
-						// v2 dropped it on the floor
+						// HVP: ANSI.SYS, PabloDraw, and moebiusXBIN all alias
+						// it to CUP
 						case 'f':
 							if (values.length === 1) {
 								setPos(1, values[0]);
@@ -994,9 +990,7 @@ export const encodeAns = (
 /**
  * Classic ansimation: clear once, then every frame homes the cursor
  * and repaints full-width; playback speed is the medium's (baud rate),
- * exactly like the scene's .ans animations. CP437 via the lossy
- * projection per frame; SAUCE marks Character/ANSiMation (dataType 1,
- * fileType 2).
+ * exactly like the scene's .ans animations.
  */
 export const encodeAnsimation = (
 	doc: DocV3,
@@ -1011,7 +1005,7 @@ export const encodeAnsimation = (
 	const meta = options.meta ?? {};
 	const sauce = buildSauce({
 		dataType: 1,
-		fileType: 2, // ANSiMation
+		fileType: 2, // SAUCE §FileType, Character/ANSiMation
 		fileSize: payload.length,
 		columns: doc.getColumns(),
 		rows: doc.getRows(),
@@ -1072,7 +1066,6 @@ export const encodeUtf8 = (
 			output.push(ch.charCodeAt(0));
 		}
 	};
-	/** emit ESC[...m from numeric params */
 	const pushSgr = (params: number[][]) => {
 		output.push(27, 91);
 		params.forEach((param, index) => {

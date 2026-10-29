@@ -1,9 +1,4 @@
 // @vitest-environment node
-/**
- * Path to room: the default at '/' and '/server', named rooms bare
- * or behind the '/server/' proxy prefix, lowercase always, and
- * nothing outside the grammar.
- */
 import { describe, it, expect } from 'vitest';
 import { roomNameFromPath } from '../../../src/js/server/moebiusServer.js';
 

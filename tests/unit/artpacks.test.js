@@ -1,8 +1,3 @@
-/**
- * Artpack browser landing: the single File menu entry opens a picker
- * whose two cards hand off to the 16colo.rs and asciiarena.se
- * browsers, swapping modal sections in place.
- */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createArtpacksLanding } from '../../src/js/client/artpacks.js';
 import State from '../../src/js/client/state.js';

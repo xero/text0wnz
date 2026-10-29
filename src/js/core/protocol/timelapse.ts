@@ -1,11 +1,9 @@
 /**
- * Timelapse replay: the server's EXT_TIMELAPSE payload
- * (baseline snapshot + bounded op log) becomes a multi-frame doc the
- * client exports as an animation. The replay walks the mutating ops
- * (draws, batches, resizes) over the baseline grid and snapshots at a
- * stride chosen so the movie stays under maxFrames; the final state is
- * always the last frame. Resizes mid-log are handled row-aware and the
- * doc is built at the FINAL dimensions (earlier snapshots crop or pad).
+ * Timelapse replay: the server's EXT_TIMELAPSE payload (baseline
+ * snapshot + bounded op log) becomes a multi-frame doc, snapshotting
+ * at a stride that keeps the movie under maxFrames. Resizes mid-log
+ * are handled row-aware and the doc is built at the FINAL dimensions
+ * (earlier snapshots crop or pad).
  */
 
 import {

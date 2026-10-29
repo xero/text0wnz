@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import State from '../../src/js/client/state.js';
 
 // test-local isolation for the shared singleton: production never
-// resets state (the deleted reset() had no callers outside this file)
+// resets state
 const resetState = () => {
 	Object.assign(State._manager.state, {
 		textArtCanvas: null,
@@ -283,7 +283,6 @@ describe('State Management System', () => {
 		});
 
 		it('should not initialize if not started', () => {
-			// Set all dependencies without starting initialization
 			State.palette = { test: 'palette' };
 			State.textArtCanvas = { test: 'canvas' };
 			State.font = { test: 'font' };
@@ -321,7 +320,6 @@ describe('State Management System', () => {
 		});
 
 		it('should handle initialization completion checks when not initializing', () => {
-			// Set all dependencies without starting initialization
 			State.palette = { test: 'palette' };
 			State.textArtCanvas = { test: 'canvas' };
 			State.font = { test: 'font' };
@@ -331,7 +329,6 @@ describe('State Management System', () => {
 			State.toolPreview = { test: 'toolPreview' };
 			State.pasteTool = { test: 'pasteTool' };
 
-			// Should not initialize since initializing flag is false
 			expect(State._state.initialized).toBe(false);
 		});
 	});
@@ -354,8 +351,6 @@ describe('State Management System', () => {
 		});
 
 		it('should have all expected utility methods', () => {
-			// the pub/sub surface (on/off/emit/reset/safely/status) is gone:
-			// nothing in production ever subscribed
 			const expectedMethods = ['waitFor', 'startInitialization'];
 
 			expectedMethods.forEach(method => {
@@ -364,7 +359,6 @@ describe('State Management System', () => {
 		});
 
 		it('should properly bind StateManager methods', () => {
-			// Test that methods maintain proper context when destructured
 			const { set, get } = State._manager;
 
 			set('title', 'Bound Test');

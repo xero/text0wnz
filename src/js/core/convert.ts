@@ -77,7 +77,7 @@ export const u16ToV3 = (source: U16Doc): DocV3 => {
 /**
  * Strict inverse: throws ConvertError on any cell the u16 model cannot
  * express (non-CP437-identity glyph, raw-RGB or out-of-range palette
- * color, blink in an ice doc). The format-budget linter builds on these
+ * color, blink in an ice doc). The format-budget linter mirrors these
  * checks.
  */
 export const v3ToU16 = (doc: DocV3, frameIndex = 0): U16Doc => {
@@ -187,7 +187,7 @@ export const quantizeColorWord = (
 
 /**
  * Lossy projection for docs the u16 model cannot express: the chunk
- * fallback renderer, the collab protocol (still u16), and the tools'
+ * fallback renderer, the vanilla collab wire (u16), and the tools'
  * classic16 view all read this after a tnd/dur/envelope import. Raw-RGB
  * and high palette colors quantize to the nearest default-palette entry
  * (foregrounds over 16, backgrounds over the blink-legal range), and

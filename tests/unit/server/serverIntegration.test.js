@@ -1,11 +1,9 @@
 // @vitest-environment node
 /**
- * Real-socket integration: spawns the bun server on an ephemeral port
- * in a scratch cwd and talks actual websockets through the global
- * WebSocket client (node >= 22). Pins the Bun.serve layer: upgrade
- * routing, 426 for plain HTTP, path rooms isolation, password refusal,
- * caps reply, and the no-self-echo draw fanout end to end.
- * Never points at a shared server: everything local.
+ * Real-socket integration for the Bun.serve layer: spawns the bun
+ * server on an ephemeral port in a scratch cwd and talks actual
+ * websockets through the global WebSocket client (node >= 22). Never
+ * points at a shared server: everything local.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn, execSync } from 'node:child_process';
@@ -30,9 +28,9 @@ const hasBun = (() => {
 const canRun = hasBun && typeof WebSocket === 'function';
 
 /**
- * Polls `url` until `ready(res)` holds, racing the child's own exit: a
- * taken port fails at once with the server's words instead of a 15
- * second poll against whatever squats there.
+ * Races the child's own exit: a taken port fails at once with the
+ * server's words instead of a 15 second poll against whatever squats
+ * there.
  */
 const awaitListening = async (child, url, ready, label) => {
 	let exit = null;
@@ -109,7 +107,6 @@ beforeAll(async () => {
 		[path.join(repoRoot, 'src/js/server/main.js'), String(port), '--pass', PASS],
 		{ cwd: scratch, stdio: ['ignore', 'pipe', 'pipe']},
 	);
-	// readiness: poll the http endpoint for the 426
 	await awaitListening(child, `http://127.0.0.1:${port}/`, res => res.status === 426, 'server');
 }, 20000);
 
@@ -532,7 +529,7 @@ describe.skipIf(!canRun)('bridge over real sockets', () => {
 		// no upgrade, no resolution: the bridge is a socket or nothing
 		const res = await fetch(`http://127.0.0.1:${port}/bridge?host=a.example`);
 		expect(res.status).toBe(426);
-		// RFC 7231 asks a 426 to name the protocol it wants
+		// RFC 7231 §6.5.15: a 426 names the protocol it wants
 		expect(res.headers.get('upgrade')).toBe('websocket');
 		const refused = await new Promise((resolve, reject) => {
 			const req = http.request(

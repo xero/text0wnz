@@ -7,8 +7,9 @@
  *
  * Versions: 8 is current; 7 differs only in key names (sizeX/sizeY vs
  * columns/lines) and a transposed colorMap (pair for contents[y][x]
- * lives at colorMap[x][y]). Versions below 7 are pickled Python, not
- * JSON, and are rejected. Color formats "16" and "256" only.
+ * lives at colorMap[x][y]). Versions below 7 are rejected: 5 and 6 are
+ * JSON too, but their legacy palette semantics do not translate. Color
+ * formats "16" and "256" only.
  *
  * Color semantics (durdraw order is the BIN/VGA attribute order, NOT
  * xterm SGR order):
@@ -112,8 +113,7 @@ export const decodeDur = async (
 	}
 	const version = movie.formatVersion ?? 0;
 	if (version < DUR_MIN_VERSION) {
-		// v5/6 are JSON too (legacy palette semantics this reader does
-		// not translate); the old message blamed the container format
+		// the JSON parses fine; only the legacy palette is untranslatable
 		throw new CodecError(
 			`durdraw format version ${version} uses the legacy palette (v7+ only)`,
 		);
@@ -211,8 +211,6 @@ export const decodeDur = async (
 	};
 };
 
-// ------------------------------------------------------------- encoder
-
 /**
  * v3 doc -> durdraw v8 movie (256-color mode always, the richer of
  * the two supported formats). Index color words 0-255 pass
@@ -271,8 +269,8 @@ export const encodeDur = async (
 		}
 		return {
 			// durdraw subscripts frame['delay'] unguarded and always writes
-			// the key itself; omitting it made every static .dur we wrote
-			// fail to load there. Zero is durdraw's own "no delay" value.
+			// the key itself, so a missing key fails the load there. Zero
+			// is durdraw's own "no delay" value.
 			delay:
 				frame.delayMs !== undefined && frame.delayMs > 0
 					? frame.delayMs / 1000

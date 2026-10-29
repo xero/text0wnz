@@ -31,14 +31,13 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	enforceMaxBytes: vi.fn(),
 }));
 
-// Note: palette.js is NOT mocked; these tests exercise the real
+// palette.js is NOT mocked: these tests exercise the real
 // getUTF8/getUnicodeReverseMap implementations
 
 describe('UTF-8 ANSI Import and Export', () => {
 	let Load, Save, getUTF8;
 	let savedBytes;
 
-	// Load a byte stream through the UTF-8 ANSI import path
 	const loadUtf8 = bytes => {
 		const reader = {
 			result: new Uint8Array(bytes).buffer,
@@ -98,7 +97,7 @@ describe('UTF-8 ANSI Import and Export', () => {
 
 	describe('UTF-8 import', () => {
 		it('should round-trip CP437 block characters through UTF-8', () => {
-			const chars = [176, 177, 178, 219, 223, 220, 221, 222]; // ░▒▓█▄▀▌▐
+			const chars = [176, 177, 178, 219, 223, 220, 221, 222]; // ░▒▓█▀▄▌▐
 			const bytes = [];
 			chars.forEach(charCode => {
 				bytes.push(...getUTF8(charCode));
@@ -148,8 +147,6 @@ describe('UTF-8 ANSI Import and Export', () => {
 	});
 
 	describe('UTF-8 export', () => {
-		// Decode a saved UTF-8 ANSI byte stream into lines of cells,
-		// skipping escape sequences
 		const decodeLines = bytes => {
 			const escape = String.fromCharCode(27);
 			const text = Buffer.from(bytes).toString('utf8');

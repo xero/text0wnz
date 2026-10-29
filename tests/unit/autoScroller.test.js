@@ -1,8 +1,6 @@
 /**
- * Autoscroll engine: the state machine runs on injected clock, rAF,
- * and viewport, so every phase (glide, bottom hold, snap home, counted
- * runs, loop, the manual-scroll escape) is stepped deterministically.
- * Menu wiring is exercised against real markup at the bottom.
+ * The engine runs on an injected clock, rAF, and viewport, so every
+ * phase steps deterministically.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {

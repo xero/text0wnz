@@ -7,17 +7,13 @@
  * a Worker object only relays its own worker, and a service worker
  * registration is same-origin with its page. The guard pins that
  * invariant anyway, dropping any message that claims a foreign origin
- * or carries a non-object payload before handler logic runs.
- *
- * websocket.js carries an inline copy: it is a classic worker copied
- * verbatim to dist with no module graph to import from. Keep the two
- * in sync.
+ * or carries a non-object payload before handler logic runs. The
+ * workers are vite-bundled modules, so they import this one copy.
  */
 
 /**
- * True when the message comes from our own origin (or an origin-less
- * same-context channel like a dedicated worker) and carries an object
- * payload. Callers still validate the fields they use.
+ * An origin-less channel (a dedicated worker) passes. Callers still
+ * validate the fields they use.
  *
  * @param {MessageEvent} event
  * @returns {boolean}

@@ -1,13 +1,10 @@
 // @vitest-environment node
 /**
- * Interop against the PINNED vanilla Moebius server (1.0.29, the one
- * the scene runs): our codec and client semantics versus the vendored
- * blocktronics/moebius server under node. Pins the handshake, the
- * 6-bit object palette the join doc carries, DRAW fanout without self
- * echo, the registered-only blind relay, SET_CANVAS_SIZE and SAUCE
- * round trips, the path-keyed joint, and the upstream quirks our own
- * server deliberately diverges from (nickless password bypass,
- * nickless drawing). Everything spawns locally; never a shared server.
+ * Our codec and client semantics against the PINNED vanilla Moebius
+ * server (1.0.29, the one the scene runs), vendored from
+ * blocktronics/moebius and run under node, including the upstream
+ * quirks our own server deliberately diverges from. Everything spawns
+ * locally; never a shared server.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn } from 'node:child_process';
@@ -25,7 +22,6 @@ const PASS = 'gatekeeper';
 let plainPort = 0;
 let gatedPort = 0;
 
-/** every child ever spawned, resolved or not */
 const spawned = [];
 
 const bootFixture = (port, pass) =>

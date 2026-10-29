@@ -137,7 +137,7 @@ export const decodeTundra = (bytes: Uint8Array): DecodeResult => {
 	const rows = Math.max(1, Math.min(finalY, MAX_TUNDRA_ROWS - 1) + 1);
 	if (columns * rows > MAX_DOC_CELLS) {
 		// SAUCE TInfo1 and the cursor row are both u16: a crafted pair
-		// implied a 4.3B cell allocation
+		// implies a 4.3B cell allocation
 		throw new CodecError(`TUNDRA ${columns}x${rows} exceeds the cell ceiling`);
 	}
 	const doc = createDocV3({
@@ -200,7 +200,7 @@ export const encodeTundra = (
 			// degrade as the export modal promises: tundra speaks
 			// truecolor natively, so an index the doc palette cannot
 			// resolve voices the canonical xterm value instead of
-			// refusing the whole export after confirmation
+			// refusing a confirmed export
 			return xterm256RGB(slot);
 		}
 		return doc.palette[slot];
@@ -236,8 +236,8 @@ export const encodeTundra = (
 			// the format lint warned about these and the export modal
 			// promised degradation, so deliver it: non-CP437 glyphs voice
 			// '?' like every 16-color writer, and the blink attr drops
-			// (tundra's ice colors are always on). Throwing here aborted
-			// confirmed exports with nothing saved.
+			// (tundra's ice colors are always on). Throwing here would
+			// abort a confirmed export with nothing saved.
 			const encodeChar =
 				char > 255 ||
 				!def ||
@@ -284,7 +284,7 @@ export const encodeTundra = (
 	const meta = options.meta ?? {};
 	const sauce = buildSauce({
 		dataType: 1,
-		fileType: 8, // SAUCE Character/TundraDraw
+		fileType: 8, // SAUCE §FileType, Character/TundraDraw
 		fileSize: payload.length,
 		columns,
 		rows: Math.min(rows, 0xffff),

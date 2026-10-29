@@ -1,7 +1,7 @@
 /**
- * Untrusted-size gates from the 2026-10 audit: every decoder and
- * protocol path that allocates from attacker-controlled numbers dies
- * at a ceiling instead of in the allocator.
+ * Untrusted-size gates: every decoder and protocol path that allocates
+ * from attacker-controlled numbers dies at a ceiling instead of in the
+ * allocator.
  */
 import { describe, it, expect } from 'vitest';
 import { gzip, gunzip, CodecError } from '../../src/js/core/codecs/util.js';
@@ -51,7 +51,7 @@ describe('decoder cell ceilings', () => {
 	});
 
 	// one glyph + LF per row at SAUCE-declared 65535 columns: wide
-	// enough that the old allocation gate refused legal content
+	// enough that gating the amortized allocation refuses legal content
 	const tallWide = (rows: number) => {
 		const payload = new Uint8Array(rows * 2);
 		for (let i = 0; i < rows; i++) {

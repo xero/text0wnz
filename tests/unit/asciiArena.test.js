@@ -1,9 +1,5 @@
 /**
- * asciiarena.se in-app browser: tabbed navigation (latest, artists,
- * crews, instant index search) against a MOCKED api (no network ever
- * leaves the test), the encoding hints that mirror the site's own
- * decode rule, and the archive colly paths through the core zip and
- * lha readers.
+ * The api is MOCKED throughout: no network ever leaves the test.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createAsciiArena } from '../../src/js/client/asciiArena.js';
@@ -122,7 +118,7 @@ describe('asciiarena browser', () => {
 		expect(State.modal.open).toHaveBeenCalledWith('artpacks');
 		const cards = [...document.querySelectorAll('#arenaList .arenaColly')];
 		expect(cards).toHaveLength(2);
-		// captions carry the title; the sub line drops the 0000 year
+		// the sub line drops the 0000 year
 		expect(cards[0].querySelector('span').textContent).toBe('Wheel of Fortune');
 		expect(cards[0].querySelector('.arenaSub').textContent).toBe('ZoMbiE / 1994');
 		expect(cards[1].querySelector('.arenaSub').textContent).toBe('FuZioN');
@@ -239,7 +235,7 @@ describe('asciiarena browser', () => {
 		await settle(() => opened.length === 1);
 		expect(opened).toHaveLength(1);
 		expect(opened[0].file.name).toBe('fzn-tinf.txt');
-		// the supersede really aborted the first fetch's signal: the
+		// the supersede must abort the first fetch's signal: the
 		// plumbing from guard to fetch options is load-bearing
 		const zmbCall = fetchMock.mock.calls.find(c =>
 			c[0].endsWith('/collections/zmb-wof1/zmb-wof1.txt'));

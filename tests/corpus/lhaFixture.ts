@@ -36,7 +36,6 @@ const baseFields = (method: string, csize: number, osize: number): number[] => [
 	...le32(0),
 ];
 
-/** one stored entry with a level 0 header */
 export const lha0Entry = (
 	name: string,
 	data: Uint8Array,
@@ -58,7 +57,7 @@ export const lha0Entry = (
 export const lha1Entry = (name: string, data: Uint8Array): number[] => {
 	const nameBytes = latin1Bytes(name);
 	// ext block: type + 2 body bytes + next size; level 1 counts it
-	// inside the size field at offset 7
+	// inside the size field at offset 7 (LHA §Level 0 and 1)
 	const ext = [0x3f, 0x68, 0x69, ...le16(0)];
 	const body = [
 		...baseFields('-lh0-', data.length + ext.length, data.length),
@@ -80,7 +79,7 @@ export const lha2Entry = (
 	data: Uint8Array,
 ): number[] => {
 	const nameBytes = latin1Bytes(name);
-	// dir segments separate on 0xff in the wire format
+	// LHA §Level 2: dir segments separate on 0xff
 	const dirBytes = latin1Bytes(dir.replaceAll('/', 'ÿ'));
 	const nameExt = [0x01, ...nameBytes, ...le16(dirBytes.length + 3)];
 	const dirExt = [0x02, ...dirBytes, ...le16(0)];
@@ -99,6 +98,6 @@ export const lha2Entry = (
 	];
 };
 
-/** join entry blocks into an archive with its zero terminator */
+/** the trailing 0 ends the header chain (LHA §Header Levels) */
 export const buildLha = (...entries: number[][]): Uint8Array =>
 	Uint8Array.from([...entries.flat(), 0]);

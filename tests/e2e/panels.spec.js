@@ -1,8 +1,6 @@
 /**
- * Panel docking: the top and bottom docks, bar rows and columns, the
- * pull-out threshold, and the frames default home. The sidebar moves
- * are covered by toolSettings.spec and the dom suite; this exercises
- * the dock geometry end to end.
+ * The sidebar moves are covered by toolSettings.spec and the dom
+ * suite; this exercises the dock geometry end to end.
  */
 import { test, expect } from '@playwright/test';
 import {
@@ -93,7 +91,6 @@ test.describe('panel docking', () => {
 		await expect(frames).toBeVisible();
 		await expect(frames).toHaveClass(/tb/);
 		expect(await page.locator('#dockBottom .drow #framesPanel').count()).toBe(1);
-		// the bottom dock sits below the canvas area
 		const dock = await page.locator('#dockBottom').boundingBox();
 		const vp = await page.locator('#viewport').boundingBox();
 		expect(dock.y).toBeGreaterThanOrEqual(vp.y + vp.height);
@@ -145,7 +142,6 @@ test.describe('panel docking menu', () => {
 		keys = await page.$$eval('#sidebar > .mod', els =>
 			els.map(m => m.dataset.m));
 		expect(keys[2]).toBe('sauce');
-		// Escape shuts the menu and hands focus back to the strip
 		await page.keyboard.press('Escape');
 		await expect(page.locator('#panelMenu')).toBeHidden();
 		await expect(page.locator('#saucePanel .modShade')).toBeFocused();
@@ -167,7 +163,6 @@ test.describe('phone layout', () => {
 	test('the phone shell routes every module to its phone home', async ({ page }) => {
 		await expect(page.locator('#bodyContainer')).toHaveClass(/phone/);
 		await expect(page.locator('#topStrip')).toBeVisible();
-		// the rail rides the bottom edge, below the canvas
 		const rail = await page.locator('#bodyContainer > aside').boundingBox();
 		const vp = await page.locator('#viewport').boundingBox();
 		expect(rail.y).toBeGreaterThanOrEqual(vp.y + vp.height);
@@ -176,7 +171,6 @@ test.describe('phone layout', () => {
 		await expect(sheet).toHaveClass(/sheet/);
 		await expect(sheet).toBeVisible();
 		await expect(page.locator('#toolSettings .fkeyRow')).toBeVisible();
-		// the minimap docks as the strip beside the canvas
 		const map = page.locator('#minimapPanel');
 		await expect(map).toHaveClass(/st/);
 		expect(await page.locator('#mapStrip #minimapPanel').count()).toBe(1);
@@ -201,7 +195,6 @@ test.describe('phone layout', () => {
 		await page.locator('#palettePreview').click();
 		const flyout = page.locator('#paletteFlyout');
 		await expect(flyout).toBeVisible();
-		// the flyout opens upward from the bottom rail
 		const fly = await flyout.boundingBox();
 		const rail = await page.locator('#bodyContainer > aside').boundingBox();
 		expect(fly.y + fly.height).toBeLessThanOrEqual(rail.y + 1);
@@ -242,7 +235,6 @@ test.describe('phone layout', () => {
 		await expect(page.locator('#bodyContainer')).toHaveClass(/phone/);
 		await page.setViewportSize({ width: 1280, height: 720 });
 		await expect(page.locator('#bodyContainer')).not.toHaveClass(/phone/);
-		// the defaults return: sidebar modules docked, tool floating
 		await expect(page.locator('#saucePanel')).toHaveClass(/dk/);
 		expect(await page.locator('#sidebar #saucePanel').count()).toBe(1);
 		await expect(page.locator('#toolSettings')).toHaveClass(/fl/);

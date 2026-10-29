@@ -236,7 +236,7 @@ describe('xbin codec', () => {
 		expect(d2.font512).toBe(true);
 		expect(d2.fontBytes).toEqual(font);
 		expect(d2.palette6).toEqual(palette);
-		// lossy: the upper page is non-identity glyph defs by design now
+		// lossy: the upper page is non-identity glyph defs by design
 		expect(v3ToU16Lossy(d2.doc).imageData).toEqual(
 			v3ToU16Lossy(d1.doc).imageData,
 		);
@@ -244,7 +244,8 @@ describe('xbin codec', () => {
 	});
 
 	it('compression engages only when it wins', () => {
-		// Highly regular data compresses; the encoder sets flag bit 2
+		// uniform cells compress; XBin §Flags, Compress is bit 2 of header
+		// byte 10
 		const uniform = decodeBin(makeBin({ columns: 160, rows: 4, seed: 2 }));
 		uniform.doc.frames[0].glyph.fill(0x20);
 		uniform.doc.frames[0].fg.fill(uniform.doc.getCell(0, 0, 0).fg);
@@ -259,8 +260,9 @@ describe('xbin codec', () => {
 	});
 
 	it('reads oversize font heights raw like PabloDraw and round-trips them', () => {
-		// the height sizes the font block: a clamp would misread the
-		// image offset; 33-255 stays raw by deliberate disposition
+		// the height sizes the font block, so a clamp would misread the
+		// image offset; 33-255, past XBin §Font's 32 max, stays raw on
+		// purpose
 		const font = makeXBinFont(256, 200);
 		const bytes = makeXBin({
 			columns: 4,
@@ -273,7 +275,7 @@ describe('xbin codec', () => {
 		const d1 = decodeXBin(bytes);
 		expect(d1.fontHeight).toBe(200);
 		expect(d1.fontBytes?.length).toBe(256 * 200);
-		// image offset math held through the big font block
+		// image offset math holds through the big font block
 		expect(d1.doc.getCell(0, 0, 0).glyph & 0xffff).toBe(65);
 		const encoded = encodeXBin(d1.doc, {
 			fontBytes: d1.fontBytes,
@@ -295,7 +297,7 @@ describe('xbin codec', () => {
 			}),
 		);
 		const font = makeXBinFont(256, 16);
-		// 300 used to wrap the header byte to 44 and corrupt every reader
+		// 300 would wrap the header byte to 44 and corrupt every reader
 		expect(() =>
 			encodeXBin(d.doc, { fontBytes: font, fontHeight: 300 }),
 		).toThrow(/font height/);
@@ -367,10 +369,9 @@ describe('ans codec', () => {
 
 	it('v2-style full-width-plus-LF files no longer double their rows', () => {
 		// Fixture mimics the v2 writer: full-width UTF-8 rows each followed
-		// by ESC[0m + LF, no SAUCE. Glyphs must land on the original grid
-		// with no doubled blank rows. Colors cannot fully survive: the v2
-		// encoder reset the stream per row but not its diff trackers,
-		// lossiness baked into old files.
+		// by ESC[0m + LF, no SAUCE. Only glyphs compare: the v2 encoder
+		// resets the stream per row but not its diff trackers, so old
+		// files carry baked-in color loss.
 		const d1 = decodeAns(makeAnsi({ columns: 80, rows: 25, seed: 55 }));
 		const legacy = encodeAns(d1.doc, { utf8: true });
 		const d2 = decodeAns(legacy, { utf8: true });
@@ -422,7 +423,6 @@ describe('ans codec', () => {
 		const { doc } = decodeAns(bytes, { utf8: true });
 		expect(doc.frames[0].fg[0]).toBe(paletteColor(196));
 		expect(doc.frames[0].bg[0]).toBe(paletteColor(232));
-		// ...and they round-trip losslessly through the writer
 		const again = decodeAns(encodeUtf8(doc), { utf8: true });
 		expect(again.doc.frames[0].fg[0]).toBe(paletteColor(196));
 		expect(again.doc.frames[0].bg[0]).toBe(paletteColor(232));

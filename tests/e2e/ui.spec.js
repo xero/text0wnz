@@ -158,7 +158,7 @@ test.describe('Toolbar Interactions', () => {
 		await page.locator('#copy').click();
 		await page.waitForTimeout(200);
 
-		// paste actions live behind the bar's submenu face now
+		// paste actions live behind the bar's submenu face
 		await page.locator('#pasteMenu').click();
 		await page.locator('#paste').click();
 		await page.waitForTimeout(200);
@@ -201,7 +201,6 @@ test.describe('Toolbar Interactions', () => {
 	});
 
 	test('should toggle toolbars or panels', async ({ page }) => {
-		// the fonts rail button opens the fonts dialog now
 		const fontsButton = page.locator('#changeFont');
 		const clipboardToolbar = page.locator('#clipboard');
 

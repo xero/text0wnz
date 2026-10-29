@@ -1,13 +1,13 @@
 // @ts-check
 /**
- * Global gesture guard. The canvas owns gestures that start on it
- * (pointer.js feeds its own recognizer, and a second finger there
- * must keep cancelling strokes), so this guard owns every touch that
- * starts anywhere else: pinches on the chrome drive the EDITOR zoom
- * through the same onTextCanvasPinch* events zoom.js already
- * consumes, and Safari's own page zoom is suppressed so an off-target
- * pinch or double tap can no longer skew the layout. Ownership is
- * disjoint by start target, so a pinch never fires both paths.
+ * The canvas owns gestures that start on it (pointer.js feeds its own
+ * recognizer, and a second finger there must keep cancelling
+ * strokes), so this guard owns every touch that starts anywhere else:
+ * pinches on the chrome drive the EDITOR zoom through the same
+ * onTextCanvasPinch* events zoom.js consumes, and Safari's page zoom
+ * is suppressed so an off-target pinch cannot skew the layout.
+ * Ownership is disjoint by start target, so a pinch never fires both
+ * paths.
  */
 import { createGestureRecognizer } from './gestures.js';
 

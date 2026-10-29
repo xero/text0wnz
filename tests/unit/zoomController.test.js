@@ -1,7 +1,6 @@
 /**
- * Zoom controller: one setZoom with focal anchoring behind pinch,
- * ctrl/cmd+wheel, slider, and keyboard steps. GL zooms continuously at
- * rAF cadence; the chunk renderer commits once at gesture end.
+ * GL zooms continuously at rAF cadence; the chunk renderer commits
+ * once at gesture end.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
