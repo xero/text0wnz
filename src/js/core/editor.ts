@@ -44,7 +44,12 @@ import {
 	overlayHalfBlock,
 } from './cellops.js';
 import { cellInRange } from './mapping.js';
-import { PatchArena, createPatchArena } from './patchArena.js';
+import {
+	PatchArena,
+	PlaneWrite,
+	StrokeMeta,
+	createPatchArena,
+} from './patchArena.js';
 
 /** One applied cell write, in both v3 and u16 terms. */
 export interface EditorWrite {
@@ -188,8 +193,17 @@ export interface EditorCore {
 	 * doc object identity is preserved for the renderer bridges.
 	 */
 	loadDoc: (source: DocV3) => void;
-	/** v2 resize semantics: overlap copy, history cleared. */
-	resize: (columns: number, rows: number) => void;
+	/**
+	 * Overlap copy across every frame, as one undo step. A peer's resize
+	 * passes `undoable: false` and clears history instead: remote ops
+	 * never enter the local undo stack, and strokes recorded at the old
+	 * geometry would land at the wrong cells.
+	 */
+	resize: (
+		columns: number,
+		rows: number,
+		options?: { undoable?: boolean },
+	) => void;
 	clear: () => void;
 }
 
@@ -481,6 +495,39 @@ export const createEditorCore = (
 		}
 	};
 
+	const historyStep = (
+		step: (onWrite: PlaneWrite) => StrokeMeta | null,
+	): boolean => {
+		flushStroke();
+		const [cols, rowCount] = [columns(), doc.getRows()];
+		const touched = new Map<number, Set<number>>();
+		const meta = step((_plane, index, _word, frame) => {
+			const set = touched.get(frame) ?? new Set<number>();
+			touched.set(frame, set.add(index));
+		});
+		if (!meta) {
+			return false;
+		}
+		// a stroke from another frame pulls the view there first, so the
+		// refold, the mirror, and the repaint all see that frame; a resize
+		// spans every frame and leaves the view where it is
+		const resized = columns() !== cols || doc.getRows() !== rowCount;
+		if (!resized && meta.frame !== currentFrame) {
+			switchFrame(meta.frame);
+		}
+		for (const [frame, indexes] of touched) {
+			for (const index of indexes) {
+				// words recorded before an ice toggle restore in the old
+				// blink fold; re-express them like v2's flag semantics
+				refoldIndex(doc.frames[frame], index, doc.getIceColors());
+				if (frame === currentFrame) {
+					emit(index, packWord(readCell(index)), true);
+				}
+			}
+		}
+		return true;
+	};
+
 	return {
 		doc,
 		arena,
@@ -625,41 +672,11 @@ export const createEditorCore = (
 		endUndo: () => {
 			flushStroke();
 		},
-		undo: () => {
-			flushStroke();
-			const touched = new Set<number>();
-			const meta = arena.undo(doc, (_plane, index) => touched.add(index));
-			// a stroke from another frame pulls the view there first, so
-			// the refold, the mirror, and the repaint all see that frame
-			if (meta && meta.frame !== currentFrame) {
-				switchFrame(meta.frame);
-			}
-			for (const index of touched) {
-				// strokes recorded before an ice toggle restore words in the
-				// old blink fold; re-express them like v2's flag semantics
-				refoldIndex(doc.frames[currentFrame], index, doc.getIceColors());
-				emit(index, packWord(readCell(index)), true);
-			}
-			return meta !== null;
-		},
-		redo: () => {
-			// v2 redo is a FULL no-op on an empty redo buffer: the pending
-			// stroke keeps accumulating (undo flushes it, redo does not)
-			if (!arena.stats().canRedo) {
-				return false;
-			}
-			flushStroke();
-			const touched = new Set<number>();
-			const meta = arena.redo(doc, (_plane, index) => touched.add(index));
-			if (meta && meta.frame !== currentFrame) {
-				switchFrame(meta.frame);
-			}
-			for (const index of touched) {
-				refoldIndex(doc.frames[currentFrame], index, doc.getIceColors());
-				emit(index, packWord(readCell(index)), true);
-			}
-			return meta !== null;
-		},
+		undo: () => historyStep(onWrite => arena.undo(doc, onWrite)),
+		// v2 redo is a FULL no-op on an empty redo buffer: the pending
+		// stroke keeps accumulating (undo flushes it, redo does not)
+		redo: () =>
+			arena.stats().canRedo && historyStep(onWrite => arena.redo(doc, onWrite)),
 		getCurrentFrame: () => currentFrame,
 		/** navigation, never undoable; false = index out of range */
 		setCurrentFrame: index => switchFrame(index),
@@ -670,8 +687,8 @@ export const createEditorCore = (
 		},
 		/**
 		 * remove a frame; later frames shift down, leaving recorded
-		 * stroke frame indexes stale, so the undo history drops (as on
-		 * resize) and the view lands on the nearest surviving frame
+		 * stroke frame indexes stale, so the undo history drops and the
+		 * view lands on the nearest surviving frame
 		 */
 		removeFrame: index => {
 			flushStroke();
@@ -754,15 +771,23 @@ export const createEditorCore = (
 				frame.bg[i] = paletteColor(blink ? bgNibble & 7 : bgNibble);
 			}
 		},
-		resize: (newColumns, newRows) => {
+		resize: (newColumns, newRows, { undoable = true } = {}) => {
 			if (
 				(newColumns !== columns() || newRows !== doc.getRows()) &&
 				newColumns > 0 &&
 				newRows > 0
 			) {
+				// the open stroke commits first, at the geometry it was
+				// drawn at
 				flushStroke();
-				arena.clear();
-				doc.resize(newColumns, newRows);
+				if (undoable) {
+					arena.commitResize(doc, newColumns, newRows, {
+						frame: currentFrame,
+					});
+				} else {
+					arena.clear();
+					doc.resize(newColumns, newRows);
+				}
 			}
 		},
 		clear: () => {

@@ -1734,6 +1734,7 @@ const createSelectionTool = () => {
 	const toggleMoveMode = () => {
 		moveMode = !moveMode;
 		if (moveMode) {
+			startSelectionExpansion();
 			moveButton.classList.add('enabled');
 			State.selectionCursor.getElement().classList.add('moveMode');
 			const selection = State.selectionCursor.getSelection();
@@ -1766,6 +1767,9 @@ const createSelectionTool = () => {
 	};
 	const isMoveMode = () => moveMode;
 
+	// the tool opens bare, so a fresh pick never floats the bar over a
+	// cell nobody chose; the first key that needs a rect starts one at
+	// the keyboard cursor
 	const startSelectionExpansion = () => {
 		if (!State.selectionCursor.isVisible()) {
 			selectionStartX = State.cursor.getX();
@@ -1781,10 +1785,8 @@ const createSelectionTool = () => {
 	};
 
 	const moveSelectionLeft = () => {
+		startSelectionExpansion();
 		const selection = State.selectionCursor.getSelection();
-		if (!selection) {
-			return;
-		}
 		const newX = Math.max(0, selection.x - 1);
 		const newY = selection.y;
 		selectionStartX = newX;
@@ -1797,10 +1799,8 @@ const createSelectionTool = () => {
 	};
 
 	const moveSelectionRight = () => {
+		startSelectionExpansion();
 		const selection = State.selectionCursor.getSelection();
-		if (!selection) {
-			return;
-		}
 		const newX = Math.min(
 			State.textArtCanvas.getColumns() - selection.width,
 			selection.x + 1,
@@ -1816,10 +1816,8 @@ const createSelectionTool = () => {
 	};
 
 	const moveSelectionUp = () => {
+		startSelectionExpansion();
 		const selection = State.selectionCursor.getSelection();
-		if (!selection) {
-			return;
-		}
 		const newX = selection.x;
 		const newY = Math.max(0, selection.y - 1);
 		selectionStartX = newX;
@@ -1832,10 +1830,8 @@ const createSelectionTool = () => {
 	};
 
 	const moveSelectionDown = () => {
+		startSelectionExpansion();
 		const selection = State.selectionCursor.getSelection();
-		if (!selection) {
-			return;
-		}
 		const newX = selection.x;
 		const newY = Math.min(
 			State.textArtCanvas.getRows() - selection.height,
@@ -2087,7 +2083,6 @@ const createSelectionTool = () => {
 	};
 
 	const enable = () => {
-		State.selectionCursor.show();
 		// the bar belongs to this tool alone: keyboard mode keeps its
 		// shift-arrow selections bare, or the bar would squat over the
 		// canvas and swallow the next click
@@ -2128,8 +2123,6 @@ const createSelectionTool = () => {
 				selectionEndX = selection.x + selection.width - 1;
 				selectionEndY = selection.y + selection.height - 1;
 			}
-		} else {
-			startSelectionExpansion();
 		}
 
 		if (pendingInitialAction) {

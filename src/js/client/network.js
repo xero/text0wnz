@@ -1,5 +1,5 @@
 import State from './state.js';
-import { $, onEnter, websocketUI } from './ui.js';
+import { $, enforceMaxBytes, onEnter, websocketUI } from './ui.js';
 import { createDefaultPalette, createPalette } from './palette.js';
 import { trustedMessage } from './messageGuard.js';
 import {
@@ -246,7 +246,10 @@ const createWorkerHandler = inputHandle => {
 			return;
 		}
 		applyDepth++; // prevents re-broadcasting received settings
-		State.textArtCanvas.resize(columns, rows);
+		// remote ops never enter the local undo history, and a peer's
+		// resize leaves every recorded cell index at the wrong geometry,
+		// so it clears the history instead of becoming a step
+		State.textArtCanvas.resize(columns, rows, { undoable: false });
 		applyDepth = Math.max(0, applyDepth - 1);
 	};
 
@@ -647,6 +650,11 @@ const createWorkerHandler = inputHandle => {
 						if (field && typeof data[key] === 'string') {
 							field.value = data[key];
 						}
+					}
+					if (typeof data.comments === 'string') {
+						// a peer's text arrives without an input event, so the
+						// byte counter would show the old size until a keystroke
+						enforceMaxBytes();
 					}
 				} finally {
 					applyDepth = Math.max(0, applyDepth - 1);

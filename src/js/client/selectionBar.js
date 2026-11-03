@@ -75,6 +75,11 @@ const createSelectionBar = () => {
 		if (!active()) {
 			return false;
 		}
+		// a move left floating under a hidden rect stamps its stale block
+		// wherever the next arrow starts a fresh rect, so it lands first
+		if (State.selectionTool?.isMoveMode?.()) {
+			State.selectionTool.toggleMoveMode();
+		}
 		State.selectionCursor.hide();
 		sync();
 		return true;

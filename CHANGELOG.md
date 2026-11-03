@@ -48,6 +48,20 @@ byte-exact golden tests before anything else moved.
   default.
 - **Reference image.** Load an image over the canvas with opacity and
   width controls for tracing.
+- **ASCII brush.** Draw freehand ascii line art. The brush reads the
+  slope under your hand and picks its glyphs live, revising them as the
+  stroke grows, so curves land the way the scene types them. Width 1
+  draws the old skool thin line vocabulary; widths 2-9 draw a nu skool
+  `$` ribbon in the Abstrakt dialect with a tapered entry and tip. A
+  stroke that ends on a line voices a joiner, and each stroke is one
+  undo step.
+- **Old skool and nu skool shapes.** The line, square, and circle tools
+  gain Old Skool and Nu Skool modes beside Block. Old skool squares
+  wear the canon box idioms, and old skool circles follow the scene
+  scaling law, keeping their corner anatomy at any size while height
+  stretches the walls and width stretches the caps. Nu skool shapes
+  rule a `$` rim in the Abstrakt chisel dialect, and corners that land
+  on existing lines voice junction glyphs.
 - **Paste modes.** Paste-under fills only blank cells; transparent
   paste skips the blanks in your clipboard.
 - **Plugins.** Load an ES module from a URL or file; it reads the
@@ -91,6 +105,12 @@ byte-exact golden tests before anything else moved.
 - **Renderer.** WebGL replaces the 2D canvas chunks.
 - **Undo.** A byte-budgeted patch arena (64 MB) replaces cell-count
   caps, so huge joints stop eating your history.
+- **Resize is one undo step.** A canvas resize undoes like any edit,
+  across every frame. Undo brings back the old size and every cell the
+  resize cut off, redo cuts again, and strokes on either side still
+  undo where you drew them. In v2 every resize erased the undo
+  history. Opening a file, New, deleting a frame, and a collaborator's
+  resize still start a fresh history.
 - **Row and column ops.** Insert and delete row/column are classic
   fixed-canvas shifts in the Moebius and PabloDraw tradition: content
   moves, the canvas keeps its size, and the whole shift is one undo
@@ -100,9 +120,24 @@ byte-exact golden tests before anything else moved.
   hosts classic and v3 clients in the same room.
 - **Updates.** The update prompt keeps your localStorage (favorites,
   recent colors, settings) instead of clearing it.
-- **Right-click picks the background.** A right click on the 16-color
-  strip set the foreground like a left click. It sets the background
-  now, as in PabloDraw and Moebius, and so does a `ctrl` click.
+- **Right-click and `ctrl` click pick the background.** A right click
+  on the 16-color strip set the foreground like a left click. It sets
+  the background now, as in PabloDraw and Moebius, and so does a
+  `ctrl` click, on every color swatch (the strip, the xterm 256 grid,
+  the recent colors, and the shading brush's gradient picker) and on
+  every OS. A middle click picks nothing.
+- **A touch hold picks the background.** Hold a finger on any color
+  swatch for half a second to set the background color, on Android and
+  iOS alike; a tap still sets the foreground. In v2 a hold on the
+  16-color strip picked the foreground, and a quick tap after it opened
+  the color editor. A touch that slides into a scroll, meets a second
+  finger, or is cancelled picks nothing, where the strip used to pick
+  the foreground under the lifted finger.
+- **The selection tool opens empty.** Picking the tool selected the
+  cell under the keyboard cursor, as v2 did, so the selection bar
+  floated over a cell nobody chose. The tool opens with nothing
+  selected now; the first arrow key or `m` starts a selection at the
+  keyboard cursor.
 
 ### Fixed
 
@@ -183,6 +218,10 @@ byte-exact golden tests before anything else moved.
   before acting on it, so glyphs that share a byte with a control code
   behaved like one; `◙` broke the line, and `♪` and `→` vanished. They
   open as cells now.
+- **XBin saves are readable at any zoom.** The header took its font
+  height from the zoomed glyph size, so an XBin saved at 2x declared
+  32-pixel glyphs over 16-pixel font data and every reader misparsed
+  the file. The header carries the font's own height now.
 - **512-glyph XBins show their upper page.** In 512-glyph mode the
   foreground intensity bit selects glyphs 256-511, but the editor drew
   those cells as their lower-page glyph in a bright color, and saving
@@ -228,7 +267,28 @@ byte-exact golden tests before anything else moved.
   scrambled; that is 49 of the 315 BIN files in the sixteencolors
   archive. They open at 160 columns now, like PabloDraw. A trailing
   partial row pads out instead of vanishing, and a BIN's SAUCE font
-  switches the font like an ANSI's does.
+  switches the font like an ANSI's does. Since FileType 1 means 160, a
+  2-column canvas no longer saves as BIN; the save says why and stops,
+  as it does for odd widths and widths over 510.
+- **BIN opens load their own SAUCE.** Opening a `.bin` left the
+  previous file's title, author, group, and comments in the SAUCE
+  panel, and the next save wrote them into the BIN. The panel fills
+  from the BIN's record now, or clears when it has none.
+- **SAUCE comments keep their layout.** A save trimmed each comment
+  line and dropped blank ones, so an indented line lost its indent and
+  a spaced-out comment block closed up. Blank lines and leading spaces
+  survive an open and resave byte for byte now, as in PabloDraw.
+- **The comment counter counts what the file holds.** It counted UTF-8
+  bytes, so an accented letter cost two and a blank line cost one,
+  while the file spends one byte per character and a full 64-byte line
+  per line. Text past the 255th line vanished at save without a word.
+  The counter measures those lines now and stops taking text when they
+  run out.
+- **`shift+enter` types a new line in SAUCE comments.** `enter` and
+  `shift+enter` both saved and closed the Sauce Editor, so a comment
+  with more than one line could only be pasted in. `shift+enter`
+  starts a new line in the Comments box now, and `enter` still saves
+  from any field.
 - **UTF-8 rows stay one row.** In `.utf8.ans` and `.txt` files, a
   PabloDraw color, `ESC[s`, an erase, or a mode set between a
   full-width row and its line feed added a blank row.
@@ -263,7 +323,10 @@ byte-exact golden tests before anything else moved.
   autosave back on, and the alert now says so.
 - **Collab sessions stay out of your autosave.** Zoomed in during a
   session, every edit saved the session's canvas over your own local
-  autosave.
+  autosave. A session saves only your zoom now, the moment you change
+  it, and leaves your own document's font, colors, and spacing alone.
+- **A zoom back to 1x sticks.** On a blank canvas, zooming back to 1x
+  saved nothing, so the last zoom came back on reload.
 - **Other sites cannot push files into open tabs.** The share target
   took a POST from any site, and every open editor tab replaced its
   canvas with the posted file. The service worker now accepts only a

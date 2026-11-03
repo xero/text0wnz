@@ -292,7 +292,7 @@ The **Sauce** module at the top of the sidebar shows the current title and bylin
 **Fields:**
 
 - **Title** holds 35 characters, **Author** and **Group** 20 each
-- **Comments** shows a live byte counter out of 16320; lines wrap into 64-byte slots, 255 slots at most
+- **Comments** shows a live byte counter out of 16320. Each line fills one or more 64-byte slots, 255 at most, so a blank or short line still costs 64 bytes, and the box stops taking text once the slots run out. Blank lines and leading spaces save as written. Press `shift enter` for a new line, since `enter` in any field saves
 - **Save** writes the record and **Cancel** discards your edits
 
 Text fields save as CP437 bytes, the way the spec defines them, so characters outside CP437 land as `?`. The `.0wnz` and `.dur` formats carry the title and author in their own JSON instead of a SAUCE record.
@@ -380,8 +380,8 @@ The color system anchors on the classic 16-color ANSI palette, with optional iCE
 
 - 16-color ANSI palette (8 standard + 8 bright colors)
 - Real-time color preview
-- Click a swatch to set the foreground color, right-click it (or `ctrl` click) for the background
-- Double click a swatch to edit that palette entry with the system color picker
+- Click a swatch to set the foreground color, and `ctrl` click or right-click it for the background. On a touch screen, tap a swatch for the foreground and hold a finger on it for half a second for the background. Every color swatch works this way on every OS
+- Double click or double tap a swatch to edit that palette entry with the system color picker
 - `ctrl` + `0`-`7` sets the foreground, `alt` + `0`-`7` the background; press the same key again for the bright variant
 - `ctrl` + `up`/`down` cycles the foreground color, `ctrl` + `left`/`right` the background
 
@@ -401,9 +401,9 @@ The `++` button under the palette strip opens the extended color panel, one clic
 
 **Features:**
 
-- **xterm 256 grid** - Click a swatch for the foreground, right-click for the background
+- **xterm 256 grid** - Click a swatch for the foreground; `ctrl` click, right-click, or hold a finger on it for the background
 - **RGB** - Pick any truecolor value with the hex color input, then apply it with the `fg` or `bg` buttons
-- **Recent** - Your last ten extended picks, remembered between sessions
+- **Recent** - Your last ten extended picks, remembered between sessions. Its swatches pick like the grid's
 - The panel is a flyout beside the `++` button. Press `++` again, click anywhere outside it, or press `escape` to close it
 
 Formats that cannot hold extended colors list what will be quantized or dropped at export time.
@@ -538,6 +538,7 @@ Draw with shading blocks (`░▒▓`). 'Reduce mode' when holding Shift. Ideal 
 - Reduce mode with Shift key
 - A pressure-sensitive pen picks its shade from pressure directly; press lighter or harder to shade
 - The gradient picker follows the active foreground color
+- Click a block in the gradient picker to pick its shade and foreground color, and `ctrl` click, right-click, or hold a finger on it to set only the background color
 
 ### ASCII Brush
 
@@ -753,6 +754,7 @@ Full undo/redo support for all drawing operations.
 - Works with all tools and operations
 - The History flyout lists every step with a label and its age; click a step to jump there, backwards or forwards. Consecutive typing within 2.5 seconds groups as one step
 - On phones the top strip carries undo and redo buttons
+- A canvas resize is one undo step that brings back the old size and every cell the resize cut off. Opening a file, starting a new document, deleting a frame, or a collaborator's resize starts a fresh history
 - Your artwork survives reloads through the autosave journal; the undo stack itself starts fresh each session
 
 **Supported Operations:**
@@ -1009,6 +1011,7 @@ The editor treats mouse, pen, and touch as first-class input.
 - **One finger** draws with the active tool; a tap paints one cell
 - **Two-finger tap** undoes (it also works on the viewport margins around the canvas)
 - **Three-finger tap** redoes
+- **Hold** a finger on any color swatch for half a second to set the background color; a tap sets the foreground, and a touch that slides or scrolls picks nothing
 - **Two-finger pinch** zooms at the pinch center; dragging both fingers pans the canvas
 
 **Pen:**
@@ -1211,7 +1214,8 @@ These single keys work in every tool except Keyboard Mode and the Selection Tool
 - **click & drag:** Draw/Shape or select region
 - **shift click:** Straight line from the last point (Colorize brush only)
 - **alt click:** Sample colors (any tool)
-- **right click:** Set the background color from the 16-color strip or the xterm 256 flyout; on the canvas the browser context menu is suppressed
+- **right click:** Set the background color from any color swatch (the 16-color strip, the xterm 256 grid, the recent colors, or the shading gradient picker); on the canvas the browser context menu is suppressed
+- **ctrl click:** Set the background color from any color swatch, exactly like a right click, on every OS
 
 ## Related Documentation
 

@@ -77,22 +77,42 @@ describe('UI Controls and Controllers', () => {
 			expect(sauceComments.value).toBe(originalValue);
 		});
 
-		it('counts and truncates by UTF-8 bytes, not characters', () => {
-			const sauceComments = document.createElement('textarea');
-			sauceComments.id = 'sauceComments';
-			const sauceBytes = document.createElement('input');
-			sauceBytes.id = 'sauceBytes';
-			document.body.appendChild(sauceComments);
-			document.body.appendChild(sauceBytes);
+		describe('counts what the COMNT block writes', () => {
+			let sauceComments, sauceBytes;
+			const count = value => {
+				sauceComments.value = value;
+				enforceMaxBytes();
+				return sauceBytes.value;
+			};
+			beforeEach(() => {
+				sauceComments = document.createElement('textarea');
+				sauceComments.id = 'sauceComments';
+				sauceBytes = document.createElement('input');
+				sauceBytes.id = 'sauceBytes';
+				document.body.append(sauceComments, sauceBytes);
+			});
 
-			sauceComments.value = 'Hello 世界! 🌍';
-			enforceMaxBytes();
-			expect(sauceBytes.value).toBe('18/16320 bytes');
+			it('charges one byte per character in 64-byte slots', () => {
+				expect(count('')).toBe('0/16320 bytes');
+				expect(count('Hello 世界! 🌍')).toBe('64/16320 bytes');
+				expect(count('x'.repeat(65))).toBe('128/16320 bytes');
+				expect(count('é'.repeat(16400))).toBe('16320/16320 bytes');
+				expect(sauceComments.value).toBe('é'.repeat(16320));
+			});
 
-			sauceComments.value = 'é'.repeat(9000);
-			enforceMaxBytes();
-			expect(sauceComments.value).toBe('é'.repeat(8160));
-			expect(sauceBytes.value).toBe('16320/16320 bytes');
+			it('charges a blank or short line a full slot', () => {
+				expect(count('a\n\nb')).toBe('192/16320 bytes');
+				expect(count('\n'.repeat(300))).toBe('16320/16320 bytes');
+				expect(sauceComments.value).toBe('\n'.repeat(254));
+			});
+
+			it('cuts the line that crosses the last slot and drops the rest', () => {
+				const blanks = '\n'.repeat(254);
+				expect(count(`${blanks}${'x'.repeat(100)}\nlost`)).toBe(
+					'16320/16320 bytes',
+				);
+				expect(sauceComments.value).toBe(`${blanks}${'x'.repeat(64)}`);
+			});
 		});
 	});
 

@@ -10,11 +10,12 @@ import {
 
 // the picker is one canvas: dark colors 0-7 run down the left column,
 // their bright twins down the right
-const pickColor = async (page, index, button = 'left') => {
+const pickColor = async (page, index, button = 'left', modifiers = []) => {
 	const picker = page.locator('#palettePicker');
 	const box = await picker.boundingBox();
 	await picker.click({
 		button,
+		modifiers,
 		position: {
 			x: (box.width / 4) * (index > 7 ? 3 : 1),
 			y: (box.height / 8) * ((index % 8) + 0.5),
@@ -62,6 +63,34 @@ test.describe('Color Palette', () => {
 		await expect(page.locator('#customColor')).toHaveClass(/hide/);
 	});
 
+	test('should change background color on ctrl click', async ({ page }) => {
+		await pickColor(page, 9, 'left', ['Control']);
+		expect(await readColors(page)).toEqual({ fg: 7, bg: 9 });
+		await expect(page.locator('#customColor')).toHaveClass(/hide/);
+	});
+
+	test('should pick the same way from the xterm 256 grid and the recent row', async ({ page }) => {
+		// extended picks are tag-bit palette words (doc.ts paletteColor)
+		const xterm = index => (0x80000000 | index) >>> 0;
+		const swatch = index =>
+			page.locator(`#colorGrid .colorSwatch[title^="${index} "]`);
+		await page.locator('#paletteMore').click();
+
+		await swatch(16).click();
+		expect(await readColors(page)).toEqual({ fg: xterm(16), bg: 0 });
+		await swatch(17).click({ modifiers: ['Control']});
+		expect(await readColors(page)).toEqual({ fg: xterm(16), bg: xterm(17) });
+		await swatch(18).click({ button: 'right' });
+		expect(await readColors(page)).toEqual({ fg: xterm(16), bg: xterm(18) });
+
+		// one entry per press: a doubled pick would spill onto a neighbor
+		const recent = page.locator('#colorRecent .colorSwatch');
+		await expect(recent).toHaveCount(3);
+		await recent.nth(2).click({ modifiers: ['Control']});
+		expect(await readColors(page)).toEqual({ fg: xterm(16), bg: xterm(16) });
+		await expect(recent).toHaveCount(3);
+	});
+
 	test('should have ICE colors toggle', async ({ page }) => {
 		// the iCE chip lives in the sidebar canvas panel, always visible
 		const iceToggle = page.locator('#navICE');
@@ -105,6 +134,95 @@ test.describe('Color Palette', () => {
 			await pickColor(page, index);
 			expect((await readColors(page)).fg).toBe(index);
 		}
+	});
+});
+
+// a held finger needs CDP Input.dispatchTouchEvent, so the touch hold
+// tests run on the Chrome project only; the unit tests cover the
+// timer, the slop, and the native contextmenu race on every surface
+test.describe('Color Palette touch hold', () => {
+	test.beforeEach(async ({ page, browserName }) => {
+		test.skip(browserName !== 'chromium', 'CDP touch is Chromium-only');
+		await page.goto('/?test');
+		await bridgeReady(page);
+	});
+
+	// the palette announces every set, so the log counts a stray pick
+	// that repeats a color, which a color readout cannot see
+	const logPicks = page =>
+		page.evaluate(() => {
+			window.__picks = [];
+			const log = ground => e => window.__picks.push([ground, e.detail]);
+			document.addEventListener('onForegroundChange', log('fg'));
+			document.addEventListener('onBackgroundChange', log('bg'));
+		});
+	const picks = page => page.evaluate(() => window.__picks);
+
+	// a hold keeps the finger down until the app's own timer has made
+	// the pick, so the wait follows the app instead of a clock
+	const press = async (page, { x, y }, until) => {
+		const cdp = await page.context().newCDPSession(page);
+		await cdp.send('Input.dispatchTouchEvent', {
+			type: 'touchStart',
+			touchPoints: [{ x, y, id: 1 }],
+		});
+		if (until) {
+			await expect.poll(() => picks(page)).toEqual(until);
+		}
+		await cdp.send('Input.dispatchTouchEvent', {
+			type: 'touchEnd',
+			touchPoints: [],
+		});
+		await cdp.detach();
+	};
+
+	const center = async locator => {
+		const box = await locator.boundingBox();
+		return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+	};
+
+	const stripPoint = async (page, index) => {
+		const box = await page.locator('#palettePicker').boundingBox();
+		return {
+			x: box.x + (box.width / 4) * (index > 7 ? 3 : 1),
+			y: box.y + (box.height / 8) * ((index % 8) + 0.5),
+		};
+	};
+
+	test('a hold on the 16-color strip picks the background once, and a tap right after it picks the foreground', async ({ page }) => {
+		const [five, twelve] = [
+			await stripPoint(page, 5),
+			await stripPoint(page, 12),
+		];
+		await logPicks(page);
+		await press(page, five, [['bg', 5]]);
+		// the hold's lift is not half of a double tap
+		await press(page, twelve);
+		await expect
+			.poll(() => picks(page))
+			.toEqual([
+				['bg', 5],
+				['fg', 12],
+			]);
+		await expect(page.locator('#customColor')).toHaveClass(/hide/);
+	});
+
+	test('a hold on the xterm 256 grid picks the background once, and a tap the foreground', async ({ page }) => {
+		const xterm = index => (0x80000000 | index) >>> 0;
+		const swatch = index =>
+			page.locator(`#colorGrid .colorSwatch[title^="${index} "]`);
+		await page.locator('#paletteMore').click();
+		await logPicks(page);
+
+		await press(page, await center(swatch(17)), [['bg', xterm(17)]]);
+		await press(page, await center(swatch(16)));
+		await expect
+			.poll(() => picks(page))
+			.toEqual([
+				['bg', xterm(17)],
+				['fg', xterm(16)],
+			]);
+		await expect(page.locator('#colorRecent .colorSwatch')).toHaveCount(2);
 	});
 });
 

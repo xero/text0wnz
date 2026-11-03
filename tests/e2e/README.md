@@ -207,8 +207,11 @@ When adding new E2E tests:
    counts `.error` elements passes whether or not the action happened
 7. Wait on a condition, never on the clock. `bridgeReady` waits for
    the wired editor and the bridge, `clickTool` waits for a lazy tool
-   to light, and web-first assertions such as `toHaveClass()` and
-   `expect.poll()` retry until the state arrives
+   to light, `openFile` waits for the doc to land, and web-first
+   assertions such as `toHaveClass()` and `expect.poll()` retry until
+   the state arrives. `nextFrames` covers UI placed a frame late,
+   `scrollSettled` covers the row snap after a scroll, and
+   `layoutSettled` covers panel drops and sheet snaps
 8. Assert expected behaviors with `expect()`
 
 ### Example Test

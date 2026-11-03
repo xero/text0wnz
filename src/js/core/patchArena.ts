@@ -5,12 +5,16 @@
  * op-patch encoding is the substrate for the OPFS journal, so triples
  * freeze into flat Uint32Arrays on commit.
  *
+ * A canvas resize is a step in the same ring, because recorded cell
+ * indexes are only valid at the geometry they were drawn at: undo
+ * walks back through the resize before it reaches older strokes.
+ *
  * Collab rule: undo is local per-user inverse-op stacks and remote ops
  * never enter it, so userId is metadata, not a filter here; each
  * client owns one arena of its own strokes.
  */
 
-import { DocV3 } from './doc.js';
+import { DocV3, paletteColor } from './doc.js';
 
 export type PlaneName = 'glyph' | 'fg' | 'bg';
 
@@ -22,13 +26,36 @@ export interface StrokeMeta {
 }
 
 /**
- * A frozen, committed stroke. The arena never mutates it after commit;
- * treat it as read-only (the journal serializes it without copying).
+ * A resize as one undo step, across every frame. Only the cells a
+ * resize drops need keeping: the overlap survives both ways and the
+ * rest refills blank. Each direction re-captures what it drops, so a
+ * redo also brings back what the undo cut off (a frame added since,
+ * a peer's draw).
+ */
+export interface ResizeStep {
+	from: readonly [columns: number, rows: number];
+	to: readonly [columns: number, rows: number];
+	/**
+	 * Per frame, flat [index, glyph, fg, bg] x n of the non-blank cells
+	 * the last move dropped, indexed in the geometry they fell off.
+	 */
+	dropped: Uint32Array[];
+}
+
+/**
+ * A frozen, committed stroke. The arena never mutates its patches after
+ * commit; treat it as read-only (the journal serializes it without
+ * copying).
  */
 export interface CommittedStroke {
 	meta: StrokeMeta;
 	/** Flat triples: [index, before, after] x n, per touched plane. */
 	patches: Partial<Record<PlaneName, Uint32Array>>;
+	/**
+	 * Set on a resize step, whose patches are empty. The journal has no
+	 * stroke record for it: a resize journals as a fresh keyframe.
+	 */
+	resize?: ResizeStep;
 }
 
 interface Stroke extends CommittedStroke {
@@ -47,6 +74,7 @@ export type PlaneWrite = (
 	plane: PlaneName,
 	index: number,
 	word: number,
+	frame: number,
 ) => void;
 
 export interface PatchArena {
@@ -63,6 +91,16 @@ export interface PatchArena {
 	) => void;
 	/** Commit the open stroke; empty strokes vanish. Drops the redo tail. */
 	endStroke: () => boolean;
+	/**
+	 * Resize every frame of `doc` and commit that as one step, keeping
+	 * the cells it drops. Drops the redo tail like a stroke.
+	 */
+	commitResize: (
+		doc: DocV3,
+		columns: number,
+		rows: number,
+		meta: StrokeMeta,
+	) => void;
 	undo: (doc: DocV3, onWrite?: PlaneWrite) => StrokeMeta | null;
 	redo: (doc: DocV3, onWrite?: PlaneWrite) => StrokeMeta | null;
 	/**
@@ -87,8 +125,9 @@ export const DEFAULT_UNDO_BYTE_CAP = 64 * 1024 * 1024;
 export interface PatchArenaOptions {
 	byteCap?: number;
 	/**
-	 * Fires once per committed (non-empty) stroke, after the ring
-	 * bookkeeping: the OPFS journal's append hook.
+	 * Fires once per committed (non-empty) stroke or resize step, after
+	 * the ring bookkeeping: the OPFS journal's append hook and the
+	 * history label table's.
 	 */
 	onCommit?: (stroke: CommittedStroke) => void;
 	/**
@@ -98,7 +137,73 @@ export interface PatchArenaOptions {
 	 * bump the journal format.
 	 */
 	onEvict?: () => void;
+	/**
+	 * Fires when clear() drops the whole history, so the label table
+	 * cannot keep rows for steps that no longer exist.
+	 */
+	onClear?: () => void;
 }
+
+const BLANK = paletteColor(0);
+
+/**
+ * Resize every frame, returning the non-blank cells that fall off, per
+ * frame. Counted first so a huge drop allocates once, exactly.
+ */
+const resizeDropping = (
+	doc: DocV3,
+	[columns, rows]: readonly [number, number],
+): Uint32Array[] => {
+	const oldColumns = doc.getColumns();
+	const oldRows = doc.getRows();
+	const dropped = doc.frames.map(f => {
+		const each = (fn: (i: number) => void) => {
+			for (let y = 0; y < oldRows; y++) {
+				for (let x = y < rows ? columns : 0; x < oldColumns; x++) {
+					const i = y * oldColumns + x;
+					if (f.glyph[i] !== 0 || f.fg[i] !== BLANK || f.bg[i] !== BLANK) {
+						fn(i);
+					}
+				}
+			}
+		};
+		let n = 0;
+		each(() => n++);
+		const out = new Uint32Array(n * 4);
+		let at = 0;
+		each(i => {
+			out[at++] = i;
+			out[at++] = f.glyph[i];
+			out[at++] = f.fg[i];
+			out[at++] = f.bg[i];
+		});
+		return out;
+	});
+	doc.resize(columns, rows);
+	return dropped;
+};
+
+const restoreDropped = (
+	doc: DocV3,
+	dropped: Uint32Array[],
+	onWrite?: PlaneWrite,
+) => {
+	// frames only ever grow while a step lives: removing one clears
+	// the history
+	dropped.forEach((cells, frame) => {
+		const f = doc.frames[frame];
+		for (let i = 0; i < cells.length; i += 4) {
+			const index = cells[i];
+			PLANES.forEach((plane, p) => {
+				f[plane][index] = cells[i + 1 + p];
+				onWrite?.(plane, index, cells[i + 1 + p], frame);
+			});
+		}
+	});
+};
+
+const droppedBytes = (dropped: Uint32Array[]): number =>
+	dropped.reduce((sum, cells) => sum + cells.byteLength, 0);
 
 export const createPatchArena = (
 	options: PatchArenaOptions = {},
@@ -133,6 +238,64 @@ export const createPatchArena = (
 			bytes -= evicted.bytes;
 			cursor--;
 			options.onEvict?.();
+		}
+	};
+
+	const assertClosed = () => {
+		if (openMeta) {
+			throw new Error('[core/patchArena] stroke still open');
+		}
+	};
+
+	const dropRedo = () => {
+		strokes.splice(cursor + 1).forEach(dropped => {
+			bytes -= dropped.bytes;
+		});
+	};
+
+	const commit = (stroke: Stroke) => {
+		// a new step invalidates the redo tail
+		dropRedo();
+		strokes.push(stroke);
+		cursor = strokes.length - 1;
+		bytes += stroke.bytes;
+		evictToCap();
+		const { meta, patches, resize } = stroke;
+		options.onCommit?.(resize ? { meta, patches, resize } : { meta, patches });
+	};
+
+	/** Move a resize step to one end, restoring what the last move dropped. */
+	const moveResize = (
+		doc: DocV3,
+		stroke: Stroke,
+		size: readonly [number, number],
+		onWrite?: PlaneWrite,
+	) => {
+		const step = stroke.resize as ResizeStep;
+		const restore = step.dropped;
+		step.dropped = resizeDropping(doc, size);
+		restoreDropped(doc, restore, onWrite);
+		const next = droppedBytes(step.dropped);
+		bytes += next - stroke.bytes;
+		stroke.bytes = next;
+	};
+
+	const applyPatches = (
+		doc: DocV3,
+		stroke: Stroke,
+		slot: 1 | 2,
+		onWrite?: PlaneWrite,
+	) => {
+		for (const plane of PLANES) {
+			const flat = stroke.patches[plane];
+			if (!flat) {
+				continue;
+			}
+			const target = planeOf(doc, stroke.meta.frame, plane);
+			for (let i = 0; i < flat.length; i += 3) {
+				target[flat[i]] = flat[i + slot];
+				onWrite?.(plane, flat[i], flat[i + slot], stroke.meta.frame);
+			}
 		}
 	};
 
@@ -187,66 +350,50 @@ export const createPatchArena = (
 			if (strokeBytes === 0) {
 				return false;
 			}
-			// a new stroke invalidates the redo tail
-			strokes.splice(cursor + 1).forEach(dropped => {
-				bytes -= dropped.bytes;
-			});
-			strokes.push({ meta, patches, bytes: strokeBytes });
-			cursor = strokes.length - 1;
-			bytes += strokeBytes;
-			evictToCap();
-			options.onCommit?.({ meta, patches });
+			commit({ meta, patches, bytes: strokeBytes });
 			return true;
 		},
+		commitResize: (doc, columns, rows, meta) => {
+			assertClosed();
+			const from = [doc.getColumns(), doc.getRows()] as const;
+			const to = [columns, rows] as const;
+			const dropped = resizeDropping(doc, to);
+			commit({
+				meta: { ...meta },
+				patches: {},
+				resize: { from, to, dropped },
+				bytes: droppedBytes(dropped),
+			});
+		},
 		undo: (doc, onWrite) => {
-			if (openMeta) {
-				throw new Error('[core/patchArena] stroke still open');
-			}
+			assertClosed();
 			if (cursor < 0) {
 				return null;
 			}
 			const stroke = strokes[cursor];
-			for (const plane of PLANES) {
-				const flat = stroke.patches[plane];
-				if (!flat) {
-					continue;
-				}
-				const target = planeOf(doc, stroke.meta.frame, plane);
-				for (let i = 0; i < flat.length; i += 3) {
-					target[flat[i]] = flat[i + 1];
-					onWrite?.(plane, flat[i], flat[i + 1]);
-				}
+			if (stroke.resize) {
+				moveResize(doc, stroke, stroke.resize.from, onWrite);
+			} else {
+				applyPatches(doc, stroke, 1, onWrite);
 			}
 			cursor--;
 			return { ...stroke.meta };
 		},
 		redo: (doc, onWrite) => {
-			if (openMeta) {
-				throw new Error('[core/patchArena] stroke still open');
-			}
+			assertClosed();
 			if (cursor >= strokes.length - 1) {
 				return null;
 			}
 			const stroke = strokes[cursor + 1];
-			for (const plane of PLANES) {
-				const flat = stroke.patches[plane];
-				if (!flat) {
-					continue;
-				}
-				const target = planeOf(doc, stroke.meta.frame, plane);
-				for (let i = 0; i < flat.length; i += 3) {
-					target[flat[i]] = flat[i + 2];
-					onWrite?.(plane, flat[i], flat[i + 2]);
-				}
+			if (stroke.resize) {
+				moveResize(doc, stroke, stroke.resize.to, onWrite);
+			} else {
+				applyPatches(doc, stroke, 2, onWrite);
 			}
 			cursor++;
 			return { ...stroke.meta };
 		},
-		dropRedo: () => {
-			strokes.splice(cursor + 1).forEach(dropped => {
-				bytes -= dropped.bytes;
-			});
-		},
+		dropRedo,
 		stats: () => ({
 			strokes: strokes.length,
 			bytes,
@@ -259,6 +406,7 @@ export const createPatchArena = (
 			bytes = 0;
 			openMeta = null;
 			openPatches = null;
+			options.onClear?.();
 		},
 	};
 };

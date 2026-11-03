@@ -22,6 +22,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 			close: vi.fn(),
 		},
 		loadingFromStorage: false,
+		saveToLocalStorage: vi.fn(),
 	},
 }));
 
@@ -757,6 +758,107 @@ describe('Canvas Module', () => {
 
 			expect(typeof canvas.getBlock).toBe('function');
 			expect(typeof canvas.getHalfBlock).toBe('function');
+		});
+	});
+
+	describe('resize history', () => {
+		let State;
+		const word = (65 << 8) | (4 << 4) | 7;
+
+		beforeEach(async () => {
+			State = (await import('../../src/js/client/state.js')).default;
+		});
+
+		afterEach(() => {
+			delete State.network;
+			delete State.historyLabels;
+		});
+
+		// an 80x25 doc with one cell a shrink to 40x20 cuts off
+		const loaded = async () => {
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			await vi.waitFor(() => expect(mockCallback).toHaveBeenCalled());
+			const data = new Uint16Array(80 * 25);
+			data[20 * 80 + 70] = word;
+			canvas.setImageData(80, 25, data, false, undefined);
+			return canvas;
+		};
+
+		it('undo restores the size and the cells a resize cut off', async () => {
+			await loaded();
+			const sizes = [];
+			const onSize = e => sizes.push(e.detail);
+			document.addEventListener('onTextCanvasSizeChange', onSize);
+			try {
+				canvas.resize(40, 20);
+				canvas.undo();
+				expect([canvas.getColumns(), canvas.getRows()]).toEqual([80, 25]);
+				expect(canvas.getBlock(70, 20).charCode).toBe(65);
+				// the u16 mirror follows the geometry back
+				expect(canvas.getImageData().length).toBe(80 * 25);
+				expect(canvas.getImageData()[20 * 80 + 70]).toBe(word);
+
+				canvas.redo();
+				expect([canvas.getColumns(), canvas.getRows()]).toEqual([40, 20]);
+				expect(canvas.getImageData().length).toBe(40 * 20);
+			} finally {
+				document.removeEventListener('onTextCanvasSizeChange', onSize);
+			}
+			expect(sizes).toEqual([
+				{ columns: 40, rows: 20 },
+				{ columns: 80, rows: 25 },
+				{ columns: 40, rows: 20 },
+			]);
+		});
+
+		it('a session undo sends the size change before the restored cells', async () => {
+			await loaded();
+			canvas.resize(40, 20);
+			State.network = {
+				isConnected: () => true,
+				sendResize: vi.fn(),
+				draw: vi.fn(),
+			};
+			canvas.undo();
+			expect(State.network.sendResize).toHaveBeenCalledWith(80, 25);
+			const draw = State.network.draw;
+			expect(draw).toHaveBeenCalledTimes(1);
+			expect(draw.mock.calls[0][0]).toEqual([expect.objectContaining({ x: 70, y: 20, block: { code: 65, fg: 7, bg: 4 } })]);
+			expect(State.network.sendResize.mock.invocationCallOrder[0]).toBeLessThan(
+				draw.mock.invocationCallOrder[0],
+			);
+
+			canvas.redo();
+			expect(State.network.sendResize).toHaveBeenLastCalledWith(40, 20);
+		});
+
+		it('a stroke undo sends no resize', async () => {
+			await loaded();
+			State.network = { sendResize: vi.fn(), draw: vi.fn() };
+			canvas.startUndo();
+			canvas.draw(cb => cb(66, 7, 0, 1, 1));
+			canvas.undo();
+			expect(State.network.sendResize).not.toHaveBeenCalled();
+		});
+
+		it('a peer resize clears the history', async () => {
+			await loaded();
+			canvas.resize(40, 20, { undoable: false });
+			canvas.undo();
+			expect([canvas.getColumns(), canvas.getRows()]).toEqual([40, 20]);
+		});
+
+		it('the history flyout names the step and drops rows with the history', async () => {
+			State.historyLabels = {
+				committed: vi.fn(),
+				cleared: vi.fn(),
+				undone: vi.fn(),
+				redone: vi.fn(),
+			};
+			await loaded();
+			expect(State.historyLabels.cleared).toHaveBeenCalled();
+			canvas.resize(100, 30);
+			expect(State.historyLabels.committed).toHaveBeenCalledWith('Resize 100x30');
 		});
 	});
 });

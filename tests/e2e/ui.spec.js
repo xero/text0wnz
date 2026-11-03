@@ -6,16 +6,19 @@ import {
 	clickTool,
 	clickViewToggle,
 	drag,
+	nextFrames,
 	parkToolSettings,
 	readRegion,
+	readSelection,
 	tap,
+	waitForEditorReady,
+	writeText,
 } from './helpers/editorHelpers.js';
 
 test.describe('UI Elements', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
+		await waitForEditorReady(page);
 	});
 
 	test('should display main UI elements', async ({ page }) => {
@@ -83,89 +86,69 @@ test.describe('Toolbar Interactions', () => {
 	test('every toolbar control runs without a page error', async ({ page }) => {
 		const errors = [];
 		page.on('pageerror', error => errors.push(error.message));
+		const region = () => readRegion(page, 5, 5, 6, 6);
 
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
+		for (const id of ['halfblock', 'characterBrush', 'shadingBrush', 'line', 'circle', 'square']) {
+			await clickTool(page, id);
+		}
 
-		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(200);
-
-		await clickTool(page, 'characterBrush');
-		await page.waitForTimeout(200);
-
-		await clickTool(page, 'shadingBrush');
-		await page.waitForTimeout(200);
-
-		await page.locator('#shapes').click();
-		await page.waitForTimeout(300);
-
-		await clickTool(page, 'line');
-		await page.waitForTimeout(200);
-
-		await clickTool(page, 'circle');
-		await page.waitForTimeout(200);
-
-		await clickTool(page, 'square');
-		await page.waitForTimeout(200);
-
-		await page.locator('#selection').click();
-		await page.waitForTimeout(300);
+		await writeText(page, 5, 5, 'AB');
+		await writeText(page, 5, 6, 'CD');
+		await clickTool(page, 'selection');
+		await drag(page, [5, 5], [6, 6]);
+		const bar = page.locator('#selectionToolbar');
+		await expect(bar).toBeVisible();
 
 		await page.locator('#flipHorizontal').click();
-		await page.waitForTimeout(200);
-
+		expect(await region()).toEqual(['BA', 'DC']);
 		await page.locator('#flipVertical').click();
-		await page.waitForTimeout(200);
+		expect(await region()).toEqual(['DC', 'BA']);
 
-		await page.locator('#moveBlocks').click();
-		await page.waitForTimeout(200);
-
-		await page.locator('#cut').click();
-		await page.waitForTimeout(200);
-
-		await page.locator('#delete').click();
-		await page.waitForTimeout(200);
+		const move = page.locator('#moveBlocks');
+		await move.click();
+		await expect(move).toHaveClass(/enabled/);
+		await move.click();
+		await expect(move).not.toHaveClass(/enabled/);
 
 		await page.locator('#copy').click();
-		await page.waitForTimeout(200);
-
+		await expect(page.locator('#paste')).not.toHaveClass(/disabled/);
+		await page.locator('#cut').click();
+		expect(await region()).toEqual(['  ', '  ']);
 		// paste actions live behind the bar's submenu face
 		await page.locator('#pasteMenu').click();
 		await page.locator('#paste').click();
-		await page.waitForTimeout(200);
-
+		expect(await region()).toEqual(['DC', 'BA']);
+		await expect(bar).not.toHaveClass(/pasteOpen/);
+		await page.locator('#delete').click();
+		expect(await region()).toEqual(['  ', '  ']);
 		await page.locator('#pasteMenu').click();
 		await page.locator('#systemPaste').click();
-		await page.waitForTimeout(200);
-
-		await page.locator('#clipboard').click();
-		await page.waitForTimeout(300);
+		await expect(bar).not.toHaveClass(/pasteOpen/);
 
 		await clickHistoryAction(page, 'undo');
-		await page.waitForTimeout(200);
-
+		await expect.poll(region).toEqual(['DC', 'BA']);
 		await clickHistoryAction(page, 'redo');
-		await page.waitForTimeout(200);
+		await expect.poll(region).toEqual(['  ', '  ']);
 
-		await page.locator('#navICE').click();
-		await page.waitForTimeout(200);
-
-		await page.locator('#nav9pt').click();
-		await page.waitForTimeout(200);
+		for (const id of ['navICE', 'nav9pt']) {
+			await page.locator(`#${id}`).click();
+			await expect(page.locator(`#${id}`)).toHaveClass(/enabled/);
+		}
 
 		await page.locator('#changeFont').click();
-		await page.waitForTimeout(200);
+		await expect(page.locator('#fontsModal')).toBeVisible();
 		await page.locator('#fontsCancel').click();
-		await page.waitForTimeout(800);
+		await expect(page.locator('#fontsModal')).toBeHidden();
 
-		await page.locator('#navView').click();
-		await page.waitForTimeout(300);
-
-		await page.locator('#navGrid').evaluate(el => el.click());
-		await page.waitForTimeout(300);
-
+		const lit = () =>
+			page.evaluate(() => [
+				document.getElementById('navGrid').classList.contains('enabled'),
+				document.documentElement.classList.contains('dark'),
+			]);
+		const [grid, dark] = await lit();
+		await clickViewToggle(page, 'navGrid');
 		await clickViewToggle(page, 'navDarkmode');
-		await page.waitForTimeout(500);
+		expect(await lit()).toEqual([!grid, !dark]);
 
 		expect(errors).toEqual([]);
 	});
@@ -188,12 +171,29 @@ test.describe('Toolbar Interactions', () => {
 	test('should show clipboard operations when selection is active', async ({ page }) => {
 		const bar = page.locator('#selectionToolbar');
 		await clickTool(page, 'selection');
+		// a fresh pick has no rect for the bar to act on
+		await nextFrames(page);
+		await expect(bar).toBeHidden();
+		expect(await readSelection(page)).toEqual({ live: null, last: null });
+
 		await drag(page, [5, 5], [9, 7]);
 		await expect(bar).toBeVisible();
 		await expect(page.locator('#selectionSize')).toHaveText('5x3');
 		for (const id of ['cut', 'copy', 'delete']) {
 			await expect(page.locator(`#${id}`)).not.toHaveClass(/disabled/);
 		}
+	});
+
+	test('the first arrow on a fresh selection tool starts at the keyboard cursor', async ({ page }) => {
+		// keyboard mode is the boot tool: a tap parks its cursor
+		await tap(page, 10, 5);
+		await clickTool(page, 'selection');
+		await page.keyboard.press('ArrowRight');
+		expect((await readSelection(page)).live).toEqual({ x: 11, y: 5, width: 1, height: 1 });
+
+		await page.keyboard.press('Shift+ArrowDown');
+		expect((await readSelection(page)).live).toEqual({ x: 11, y: 5, width: 1, height: 2 });
+		await expect(page.locator('#selectionSize')).toHaveText('1x2');
 	});
 });
 
@@ -282,8 +282,7 @@ test.describe('Modal Dialogs', () => {
 test.describe('Help and Information', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
+		await waitForEditorReady(page);
 	});
 
 	test('Help opens the manual in a new tab', async ({ page }) => {

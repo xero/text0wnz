@@ -5,13 +5,31 @@ import {
 	drag,
 	parkToolSettings,
 	readBlock,
+	waitForEditorReady,
 } from './helpers/editorHelpers.js';
+import { openFile } from './helpers/openFile.js';
 import {
 	concatBytes,
 	makeAnsi,
 	makeSauce,
 	makeUtf8Ansi,
 } from '../corpus/generators.js';
+
+const docFlags = page =>
+	page.evaluate(() => {
+		const { State } = window.__t0wnz;
+		return [
+			State.textArtCanvas.getIceColors(),
+			State.font.getLetterSpacing(),
+		];
+	});
+
+const openBytes = (page, name, bytes) =>
+	openFile(page, {
+		name,
+		mimeType: 'application/octet-stream',
+		buffer: Buffer.from(bytes),
+	});
 
 test.describe('File Operations', () => {
 	test.beforeEach(async ({ page }) => {
@@ -37,15 +55,6 @@ test.describe('File Operations', () => {
 			await expect(page.locator(`#${id}`)).toBeVisible();
 		}
 	});
-
-	const docFlags = page =>
-		page.evaluate(() => {
-			const { State } = window.__t0wnz;
-			return [
-				State.textArtCanvas.getIceColors(),
-				State.font.getLetterSpacing(),
-			];
-		});
 
 	const newDocument = async page => {
 		await page.locator('#navICE').click();
@@ -131,12 +140,12 @@ test.describe('Canvas Operations', () => {
 		await expect(iceToggle).toBeVisible();
 
 		await iceToggle.click();
-		await page.waitForTimeout(300);
 		await expect(iceToggle).toHaveClass(/enabled/);
+		await expect.poll(async () => (await docFlags(page))[0]).toBe(true);
 
 		await iceToggle.click();
-		await page.waitForTimeout(300);
 		await expect(iceToggle).not.toHaveClass(/enabled/);
+		await expect.poll(async () => (await docFlags(page))[0]).toBe(false);
 	});
 
 	test('should toggle 9px font spacing', async ({ page }) => {
@@ -145,27 +154,23 @@ test.describe('Canvas Operations', () => {
 		await expect(spacingToggle).toBeVisible();
 
 		await spacingToggle.click();
-		await page.waitForTimeout(300);
 		await expect(spacingToggle).toHaveClass(/enabled/);
+		await expect.poll(async () => (await docFlags(page))[1]).toBe(true);
 
 		await spacingToggle.click();
-		await page.waitForTimeout(300);
 		await expect(spacingToggle).not.toHaveClass(/enabled/);
+		await expect.poll(async () => (await docFlags(page))[1]).toBe(false);
 	});
 
 	test('opening a SAUCE-less file keeps the 9px toggle', async ({ page }) => {
 		const spacingToggle = page.locator('#nav9pt');
 		await spacingToggle.click();
-		await page.waitForTimeout(300);
 		await expect(spacingToggle).toHaveClass(/enabled/);
 		// no SAUCE record states no preference: the artist's toggle holds
-		await page.locator('#openFile').setInputFiles({
-			name: 'plain.ans',
-			mimeType: 'application/octet-stream',
-			buffer: Buffer.from(makeAnsi({ columns: 10, rows: 2 })),
-		});
-		await page.waitForTimeout(1000);
+		await openBytes(page, 'plain.ans', makeAnsi({ columns: 10, rows: 2 }));
+		await expect(page).toHaveTitle(/^plain/);
 		await expect(spacingToggle).toHaveClass(/enabled/);
+		expect((await docFlags(page))[1]).toBe(true);
 	});
 
 	test('a 9px SAUCE flag applies on a utf8 open', async ({ page }) => {
@@ -178,13 +183,9 @@ test.describe('Canvas Operations', () => {
 		const spacingToggle = page.locator('#nav9pt');
 		await expect(spacingToggle).not.toHaveClass(/enabled/);
 		// the docNative open path applies the explicit flag end to end
-		await page.locator('#openFile').setInputFiles({
-			name: 'art.utf8.ans',
-			mimeType: 'application/octet-stream',
-			buffer: Buffer.from(bytes),
-		});
-		await page.waitForTimeout(1000);
+		await openBytes(page, 'art.utf8.ans', bytes);
 		await expect(spacingToggle).toHaveClass(/enabled/);
+		expect((await docFlags(page))[1]).toBe(true);
 	});
 
 	test('should change font', async ({ page }) => {
@@ -216,28 +217,23 @@ test.describe('Canvas Operations', () => {
 test.describe('Export Operations', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
+		await waitForEditorReady(page);
 	});
 
 	test('Save XBin routes through the export modal', async ({ page }) => {
 		// the menu click must not land as xb's compress argument: that
 		// skips the modal entirely and forces RLE on
 		await page.locator('#fileMenu button').click();
-		await page.waitForTimeout(200);
 		// the save items sit inside the collapsed "Save as" group
 		await page
 			.locator('#fileList summary', { hasText: 'Save as' })
 			.click();
-		await page.waitForTimeout(200);
 		await page.locator('#saveXbin').click();
-		await page.waitForTimeout(300);
 		const modal = page.locator('#exportModal');
 		await expect(modal).toBeVisible();
 		await expect(page.locator('#exportFormatLabel')).toHaveText('XBin');
 		await expect(page.locator('#exportCompress')).toBeVisible();
 		await page.locator('#exportCancel').click();
-		await page.waitForTimeout(200);
 		await expect(modal).not.toBeVisible();
 	});
 });

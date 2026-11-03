@@ -141,6 +141,29 @@ export const parseSauce = (bytes: Uint8Array): SauceRecord | null => {
 	return record;
 };
 
+/**
+ * Comment text cut to the 255 COMNT slots the count byte can hold
+ * (SAUCE §Layout), and the slots it fills. The cap matches moebius-web,
+ * since a count that wraps mod 256 orphans the block. Each code point
+ * writes one CP437 byte and each line takes at least one 64-byte slot,
+ * so the Sauce Editor counter and buildSauce agree on what a save keeps.
+ */
+export const fitComments = (text: string): [string, number] => {
+	const kept: string[] = [];
+	let slots = 0;
+	for (const line of text ? text.split('\n') : []) {
+		const room = 255 - slots;
+		if (!room) {
+			break;
+		}
+		const chars = [...line];
+		const need = Math.max(1, Math.ceil(chars.length / 64));
+		kept.push(need > room ? chars.slice(0, room * 64).join('') : line);
+		slots += Math.min(need, room);
+	}
+	return [kept.join('\n'), slots];
+};
+
 export interface BuildSauceOptions {
 	dataType: number;
 	fileType?: number;
@@ -202,33 +225,19 @@ export const buildSauce = (options: BuildSauceOptions): Uint8Array => {
 		return out;
 	};
 
-	// chunk the encoded bytes, not UTF-16 chars, so every 64-byte slot
-	// stays aligned for every reader. The count byte caps at 255 (SAUCE
-	// §Layout) like moebius-web; wrapping mod 256 orphans the block
-	const commentLines = comments.trim() ? comments.trim().split('\n') : [];
+	// PabloDraw SauceInfo.cs, SauceComment.Save: a blank line writes a
+	// slot of spaces and leading spaces stay; the reader trims only the
+	// trailing padding, so indented and spaced out comments survive a
+	// resave. Chunk the encoded bytes, not UTF-16 chars, so every 64-byte
+	// slot stays aligned for every reader
+	const [fitted, commentsCount] = fitComments(comments);
 	const commentBytes: number[] = [];
-	let commentsCount = 0;
-	for (const line of commentLines) {
+	for (const line of commentsCount ? fitted.split('\n') : []) {
 		const lineBytes = cp437Bytes(line);
-		let pos = 0;
-		while (pos < lineBytes.length && commentsCount < 255) {
-			let chunk = lineBytes.slice(pos, pos + 64);
-			// trim byte-space padding the way v2 trimmed chunk strings
-			while (chunk.length > 0 && chunk[0] === 0x20) {
-				chunk = chunk.slice(1);
-			}
-			while (chunk.length > 0 && chunk[chunk.length - 1] === 0x20) {
-				chunk = chunk.slice(0, -1);
-			}
-			if (chunk.length === 0) {
-				break;
-			}
-			commentsCount++;
-			while (chunk.length < 64) {
-				chunk.push(0x20);
-			}
-			commentBytes.push(...chunk);
-			pos += 64;
+		for (let pos = 0; pos === 0 || pos < lineBytes.length; pos += 64) {
+			commentBytes.push(
+				...Array.from({ length: 64 }, (_, i) => lineBytes[pos + i] ?? 0x20),
+			);
 		}
 	}
 

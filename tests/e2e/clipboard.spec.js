@@ -142,11 +142,59 @@ test.describe('Clipboard', () => {
 	test('pastes truecolor cells without quantizing them', async ({ page }) => {
 		// the clipboard holds plane-native cells; a round trip through the
 		// 16 color buffer would snap the RGB word to a palette index
-		await writeText(page, 10, 5, 'A', 0xff8800, 0);
+		await writeText(page, 10, 5, 'A', 0xff8800, 0x0044cc);
 		await select(page, [10, 5], [10, 5]);
 		await page.keyboard.press('Control+c');
 		await pasteAt(page, 20, 8);
 
-		expect((await readBlock(page, 20, 8)).fg).toBe(0xff8800);
+		expect(await readBlock(page, 20, 8)).toEqual({
+			charCode: 65,
+			fg: 0xff8800,
+			bg: 0x0044cc,
+		});
+	});
+
+	test('pastes unicode glyphs without folding them to ?', async ({ page }) => {
+		// zhe has no CP437 twin, so the u16 area would store '?'
+		const zhe = 0x0436;
+		const id = await page.evaluate(async cp => {
+			const c = window.__t0wnz.State.textArtCanvas;
+			const glyph = (await c.resolveUnicode([cp])).get(cp);
+			c.startUndo();
+			c.draw(cb => cb(glyph, 7, 0, 10, 5), false);
+			return glyph;
+		}, zhe);
+		expect(id).toBeGreaterThan(0xff);
+
+		await select(page, [10, 5], [10, 5]);
+		await page.keyboard.press('Control+c');
+		await pasteAt(page, 20, 8);
+
+		const pasted = await readBlock(page, 20, 8);
+		expect(pasted.charCode).toBe(id);
+		expect(
+			await page.evaluate(
+				g => window.__t0wnz.State.textArtCanvas.getDoc().glyphTable.get(g)?.codepoint,
+				pasted.charCode,
+			),
+		).toBe(zhe);
+	});
+
+	test('cut and delete blank the rect to the background color', async ({ page }) => {
+		await writeText(page, 10, 5, 'ABC', 7, 1);
+		await writeText(page, 10, 7, 'XYZ', 7, 1);
+		await page.evaluate(() => window.__t0wnz.State.palette.setBackgroundColor(4));
+		const blank = { charCode: 0, fg: 0, bg: 4 };
+
+		await select(page, [10, 5], [12, 5]);
+		await page.keyboard.press('Control+x');
+		await drag(page, [10, 7], [12, 7]);
+		await page.locator('#delete').click();
+
+		for (const y of [5, 7]) {
+			for (let x = 10; x <= 12; x++) {
+				expect(await readBlock(page, x, y), `${x},${y}`).toEqual(blank);
+			}
+		}
 	});
 });

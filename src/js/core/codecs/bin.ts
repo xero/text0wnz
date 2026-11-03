@@ -106,6 +106,13 @@ export const encodeBin = (
 	if (columns % 2 !== 0) {
 		throw new CodecError(`BIN needs an even column count, got ${columns}`);
 	}
+	if (columns === 2) {
+		// SAUCE §FileType: 2 columns write FileType 1, which decodeBin
+		// reads as unset, so the file would reopen at 160 columns
+		throw new CodecError(
+			'BIN needs at least 4 columns, because a 2-column BIN reopens at the 160-column default',
+		);
+	}
 	if (columns > 510) {
 		// SAUCE §FileType: the BinaryText FileType byte holds width/2, so
 		// wider would silently wrap mod 256 and reload scrambled

@@ -4,7 +4,8 @@
  * collab path), so this table mirrors the arena stroke by stroke: one
  * row per commit, truncated with the redo tail, evicted with the ring.
  * Edit actions (delete, paste, flips) pend() a name just before they
- * draw; everything else labels from the active tool.
+ * draw; a canvas resize names itself at commit; everything else labels
+ * from the active tool.
  *
  * Typing groups at display level only: consecutive Type rows within
  * 2.5 seconds render as one step whose jump undoes them all.
@@ -74,9 +75,15 @@ const createHistoryLabels = () => {
 		pending = null;
 	};
 
-	const committed = () => {
+	/**
+	 * A named commit (a resize step) never opened a stroke, so it leaves
+	 * the snapshot and pend alone for the stroke that did.
+	 */
+	const committed = label => {
 		rows.splice(cursor);
-		if (snapshot) {
+		if (label) {
+			rows.push({ label, time: Date.now() });
+		} else if (snapshot) {
 			rows.push(snapshot);
 			snapshot = null;
 			// pending stays: it belongs to the NEXT stroke, pended before
@@ -103,6 +110,14 @@ const createHistoryLabels = () => {
 	const redoCleared = () => {
 		if (rows.length > cursor) {
 			rows.splice(cursor);
+			notify();
+		}
+	};
+
+	const cleared = () => {
+		if (rows.length) {
+			rows.length = 0;
+			cursor = 0;
 			notify();
 		}
 	};
@@ -200,6 +215,7 @@ const createHistoryLabels = () => {
 		undone,
 		redone,
 		redoCleared,
+		cleared,
 		evicted,
 		steps,
 		jump,

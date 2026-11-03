@@ -6,6 +6,7 @@ import { test, expect } from '@playwright/test';
 import {
 	bridgeReady,
 	clickViewToggle,
+	layoutSettled,
 } from './helpers/editorHelpers.js';
 
 const dragPanel = async (page, from, to) => {
@@ -13,7 +14,7 @@ const dragPanel = async (page, from, to) => {
 	await page.mouse.down();
 	await page.mouse.move(to.x, to.y, { steps: 12 });
 	await page.mouse.up();
-	await page.waitForTimeout(250);
+	await layoutSettled(page);
 };
 
 const headerPoint = async (page, selector) => {

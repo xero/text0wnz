@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 import {
 	bridgeReady,
-	waitForEditorReady,
 	focusCanvas,
 	getViewportScrollPosition,
+	scrollSettled,
 	readRegion,
 } from './helpers/editorHelpers.js';
 import { openFile } from './helpers/openFile.js';
@@ -18,7 +18,6 @@ test.use({ screenshot: 'on' });
 test.describe('File Open and Scrolling', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/?test');
-		await waitForEditorReady(page);
 		await bridgeReady(page);
 	});
 
@@ -52,14 +51,14 @@ test.describe('File Open and Scrolling', () => {
 			'../../docs/examples/ansi/x0-defcon25.ans',
 		);
 		await openFile(page, exampleFilePath);
-		await page.waitForTimeout(1500);
 
 		await focusCanvas(page);
+		await scrollSettled(page);
 
 		const initialScroll = await getViewportScrollPosition(page);
 
 		await page.keyboard.press('PageDown');
-		await page.waitForTimeout(500);
+		await scrollSettled(page);
 
 		const afterPageDown = await getViewportScrollPosition(page);
 
@@ -67,7 +66,7 @@ test.describe('File Open and Scrolling', () => {
 		expect(afterPageDown.scrollTop).toBeGreaterThan(initialScroll.scrollTop);
 
 		await page.keyboard.press('PageUp');
-		await page.waitForTimeout(500);
+		await scrollSettled(page);
 
 		const afterPageUp = await getViewportScrollPosition(page);
 
@@ -81,7 +80,7 @@ test.describe('File Open and Scrolling', () => {
 			'../../docs/examples/ansi/x0-defcon25.ans',
 		);
 		await openFile(page, exampleFilePath);
-		await page.waitForTimeout(1500);
+		await scrollSettled(page);
 
 		const viewport = page.locator('#viewport');
 		const box = await viewport.boundingBox();
@@ -104,14 +103,14 @@ test.describe('File Open and Scrolling', () => {
 		expect(target).toBe('viewport');
 		await page.mouse.move(wheelX, wheelY);
 		await page.mouse.wheel(0, 300);
-		await page.waitForTimeout(500);
+		await scrollSettled(page);
 
 		const afterScrollDown = await getViewportScrollPosition(page);
 
 		expect(afterScrollDown.scrollTop).toBeGreaterThan(initialScroll.scrollTop);
 
 		await page.mouse.wheel(0, -300);
-		await page.waitForTimeout(500);
+		await scrollSettled(page);
 
 		const afterScrollUp = await getViewportScrollPosition(page);
 

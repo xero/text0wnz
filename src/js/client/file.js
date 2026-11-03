@@ -768,8 +768,8 @@ const saveModule = () => {
 			await saveFile(bytes, undefined, State.title + '.bin');
 		} catch (error) {
 			if (error instanceof CodecError) {
-				// a refused shape (odd or >510 width, the cell ceiling) must
-				// not fail silently after the confirm
+				// a refused shape (an odd, 2, or >510 width, the cell
+				// ceiling) must not fail silently after the confirm
 				alert(`BIN export failed: ${error.message}`);
 				return;
 			}
@@ -844,7 +844,9 @@ const saveModule = () => {
 		title: $('sauceTitle').value,
 		group: $('sauceGroup').value,
 		author: $('sauceAuthor').value,
-		comments: $('sauceComments').value.trim() || undefined,
+		// no trim: blank and indented lines are text that buildSauce
+		// writes back (PabloDraw SauceInfo.cs, SauceComment.Save)
+		comments: $('sauceComments').value || undefined,
 	});
 
 	const sauceMetaWithFont = () => {

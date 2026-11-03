@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { buildSauce, parseSauce } from '../../src/js/core/codecs/sauce.js';
+import {
+	buildSauce,
+	fitComments,
+	parseSauce,
+} from '../../src/js/core/codecs/sauce.js';
 import { decodeBin, encodeBin } from '../../src/js/core/codecs/bin.js';
+import { CodecError } from '../../src/js/core/codecs/util.js';
 import {
 	compressXBin,
 	decodeXBin,
@@ -162,6 +167,124 @@ describe('sauce codec', () => {
 		expect(record?.comments).toEqual(['kept']);
 	});
 
+	it('round-trips indented and blank comment lines byte for byte', () => {
+		// PabloDraw SauceInfo.cs, SauceComment.Save keeps both
+		const lines = ['  indented', '', 'third'];
+		const original = makeBin({
+			columns: 160,
+			rows: 2,
+			sauce: { comments: lines },
+		});
+		const decoded = decodeBin(original);
+		expect(decoded.sauce?.comments).toEqual(lines);
+		expect(decoded.meta.comments).toBe('  indented\n\nthird');
+		const encoded = encodeBin(decoded.doc, {
+			meta: decoded.meta,
+			date: FIXED_DATE,
+		});
+		const comnt = (bytes: Uint8Array) =>
+			Array.from(
+				bytes.subarray(bytes.length - 128 - 5 - 3 * 64, bytes.length - 128),
+			);
+		expect(comnt(encoded)).toEqual(comnt(original));
+		expect(encoded[encoded.length - 128 + 104]).toBe(3);
+	});
+
+	const commentLines = (comments: string) =>
+		parseSauce(
+			buildSauce({ dataType: 1, fileSize: 0, columns: 80, rows: 25, comments }),
+		)?.comments;
+
+	it('writes a blank line for whitespace only and for a trailing newline', () => {
+		expect(commentLines('   ')).toEqual(['']);
+		expect(commentLines('one\n')).toEqual(['one', '']);
+		expect(commentLines('\n\n')).toEqual(['', '', '']);
+	});
+
+	it('writes no COMNT block for empty comment text', () => {
+		expect(
+			buildSauce({
+				dataType: 1,
+				fileSize: 0,
+				columns: 80,
+				rows: 25,
+				comments: '',
+			}),
+		).toHaveLength(128);
+	});
+
+	it('chunks a long line at 64 bytes and keeps a chunk of only spaces', () => {
+		const long = `${'x'.repeat(64)}  ${'y'.repeat(3)}`;
+		expect(commentLines(long)).toEqual(['x'.repeat(64), '  yyy']);
+		expect(commentLines(`${'x'.repeat(64)}   `)).toEqual(['x'.repeat(64), '']);
+	});
+
+	it('caps blank comment lines at 255 like any other', () => {
+		expect(commentLines('\n'.repeat(300))).toHaveLength(255);
+	});
+
+	it('round-trips a comment block that ends in a blank line', () => {
+		const original = makeBin({
+			columns: 160,
+			rows: 2,
+			sauce: { comments: ['one', ''] },
+		});
+		const decoded = decodeBin(original);
+		expect(decoded.meta.comments).toBe('one\n');
+		const encoded = encodeBin(decoded.doc, {
+			meta: decoded.meta,
+			date: FIXED_DATE,
+		});
+		const comnt = (bytes: Uint8Array) => bytes.slice(-128 - 5 - 2 * 64, -128);
+		expect(comnt(encoded)).toEqual(comnt(original));
+		expect(encoded[encoded.length - 128 + 104]).toBe(2);
+	});
+
+	it('counts slots by CP437 byte, not UTF-16 unit', () => {
+		expect(commentLines('é'.repeat(70))).toEqual([
+			'é'.repeat(64),
+			'é'.repeat(6),
+		]);
+		expect(commentLines('🌍'.repeat(64))).toEqual(['?'.repeat(64)]);
+		expect(fitComments('🌍'.repeat(65))).toEqual(['🌍'.repeat(65), 2]);
+	});
+
+	it('fills exactly 255 slots and cuts the line that crosses the last', () => {
+		const lines = (n: number) => Array(n).fill('a').join('\n');
+		expect(commentLines(lines(255))).toHaveLength(255);
+		expect(commentLines(lines(256))).toEqual(Array(255).fill('a'));
+		const crossing = `${'\n'.repeat(254)}${'x'.repeat(128)}\nlost`;
+		const kept = `${'\n'.repeat(254)}${'x'.repeat(64)}`;
+		expect(fitComments(crossing)).toEqual([kept, 255]);
+		expect(commentLines(crossing)?.slice(-1)).toEqual(['x'.repeat(64)]);
+	});
+
+	it('fits comments to the slots buildSauce writes', () => {
+		for (const text of [
+			'',
+			'a',
+			'\n',
+			'   ',
+			'x'.repeat(64),
+			'x'.repeat(65),
+			'\n'.repeat(300),
+			'x'.repeat(20000),
+			`${'\n'.repeat(254)}${'x'.repeat(100)}`,
+		]) {
+			const [fitted, slots] = fitComments(text);
+			const sauce = buildSauce({
+				dataType: 1,
+				fileSize: 0,
+				columns: 80,
+				rows: 25,
+				comments: text,
+			});
+			expect(sauce[sauce.length - 128 + 104]).toBe(slots);
+			expect(sauce.length).toBe(slots ? 5 + slots * 64 + 128 : 128);
+			expect(fitComments(fitted)).toEqual([fitted, slots]);
+		}
+	});
+
 	it('reads only the payload fence from an unknown version', () => {
 		// SAUCE §Layout note 6; pre-standard writers leave stale file
 		// bytes where TFlags and TInfoS sit
@@ -227,6 +350,19 @@ describe('bin codec', () => {
 		const d1 = decodeBin(makeBin({ columns: 160, rows: 2, seed: 1 }));
 		d1.doc.resize(159, 2);
 		expect(() => encodeBin(d1.doc)).toThrow(/even column/);
+	});
+
+	it('refuses 2 columns, whose FileType 1 reopens at 160', () => {
+		const d1 = decodeBin(makeBin({ columns: 160, rows: 2, seed: 1 }));
+		d1.doc.resize(2, 2);
+		expect(() => encodeBin(d1.doc)).toThrow(CodecError);
+		expect(() => encodeBin(d1.doc)).toThrow(/at least 4 columns/);
+	});
+
+	it('keeps 4 columns, the narrowest width that reopens as saved', () => {
+		const d1 = decodeBin(makeBin({ columns: 160, rows: 2, seed: 1 }));
+		d1.doc.resize(4, 2);
+		expect(decodeBin(encodeBin(d1.doc)).doc.getColumns()).toBe(4);
 	});
 
 	it('pads a trailing partial row instead of throwing', () => {

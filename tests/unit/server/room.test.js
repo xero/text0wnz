@@ -10,7 +10,9 @@ import {
 	MoebiusStatus,
 	T0wnzAction,
 	EXT_SUITE_CAP,
+	buildSauce,
 	expandExtCells,
+	fitComments,
 	timelapseToDoc,
 	uncompressBlocks,
 } from '../../../src/js/core/index';
@@ -650,6 +652,38 @@ describe('hostile input hardening', () => {
 		expect(frame.data.id).toBe(0); // the server-known id
 		// the smuggled seq is REPLACED by the server's stamp, not relayed
 		expect(frame.data.seq).toBe(1);
+	});
+
+	it('keeps exactly the SAUCE comment lines a local save keeps', () => {
+		const lines = (n, line) => Array(n).fill(line).join('\n');
+		const save = comments =>
+			buildSauce({
+				dataType: 1,
+				fileSize: 0,
+				columns: 80,
+				rows: 25,
+				comments,
+				date: new Date(0),
+			});
+		const room = createRoom();
+		const sender = joinEditor(room, 'a');
+		const peer = joinEditor(room, 'b');
+		for (const comments of [
+			// 4097 lines, past the 255 a save keeps
+			'\n'.repeat(4096),
+			// 255 full lines, past 4096 characters, all of which fit
+			lines(255, 'x'.repeat(64)),
+			// the longest text 255 slots hold, then a line too many
+			`${lines(255, '🌍'.repeat(64))}\nlost`,
+			'  indented\n\nthird',
+		]) {
+			room.message(sender, { type: A.SAUCE, data: { comments } });
+			const kept = peer.ofType(A.SAUCE).at(-1).data.comments;
+			expect(kept).toBe(fitComments(comments)[0]);
+			expect(save(kept)).toEqual(save(comments));
+		}
+		room.message(sender, { type: A.SAUCE, data: { title: 't' } });
+		expect(room.toJoinDoc().comments).toBe('  indented\n\nthird');
 	});
 
 	it('CHAT never relays smuggled fields to peers', () => {

@@ -6,6 +6,7 @@ import {
 	createDefaultPalette,
 	createPalettePreview,
 	createPalettePicker,
+	picksBackground,
 } from '../../src/js/client/palette.js';
 
 vi.mock('../../src/js/client/state.js', () => ({
@@ -255,6 +256,17 @@ describe('Palette Utilities', () => {
 		});
 	});
 
+	describe('picksBackground', () => {
+		it('right click and ctrl click pick the background on every OS, a left click the foreground', () => {
+			expect(picksBackground({ button: 0 })).toBe(false);
+			expect(picksBackground({ button: 0, ctrlKey: true })).toBe(true);
+			expect(picksBackground({ button: 2 })).toBe(true);
+			expect(picksBackground({ button: 2, ctrlKey: true })).toBe(true);
+			expect(picksBackground({ button: 0, metaKey: true })).toBe(false);
+			expect(picksBackground({ button: 1 })).toBeUndefined();
+		});
+	});
+
 	describe('createPalettePicker', () => {
 		let mockCanvas, mockCtx;
 
@@ -493,6 +505,41 @@ describe('Palette Utilities', () => {
 				expect(palette.setForegroundColor).not.toHaveBeenCalled();
 			});
 
+			it('a middle click picks nothing and cmd click picks the foreground', () => {
+				mockCanvas.getBoundingClientRect.mockReturnValue({
+					left: 0,
+					top: 0,
+					width: 200,
+					height: 160,
+				});
+				const mouseup = mockCanvas.addEventListener.mock.calls.find(
+					c => c[0] === 'mouseup',
+				)[1];
+				mouseup({ clientX: 50, clientY: 20, button: 1 });
+				expect(palette.setForegroundColor).not.toHaveBeenCalled();
+				mouseup({ clientX: 50, clientY: 20, button: 0, metaKey: true });
+				expect(palette.setForegroundColor).toHaveBeenLastCalledWith(1);
+				expect(palette.setBackgroundColor).not.toHaveBeenCalled();
+			});
+
+			it('a macOS ctrl click picks the background once, through mouseup alone', () => {
+				mockCanvas.getBoundingClientRect.mockReturnValue({
+					left: 0,
+					top: 0,
+					width: 200,
+					height: 160,
+				});
+				const on = type =>
+					mockCanvas.addEventListener.mock.calls.find(c => c[0] === type)[1];
+				const at = { clientX: 150, clientY: 100, button: 0, ctrlKey: true };
+				const menu = { ...at, preventDefault: vi.fn() };
+				on('contextmenu')(menu);
+				on('mouseup')(at);
+				expect(menu.preventDefault).toHaveBeenCalled();
+				expect(palette.setBackgroundColor.mock.calls).toEqual([[13]]);
+				expect(palette.setForegroundColor).not.toHaveBeenCalled();
+			});
+
 			it('a left pick right after a right click picks instead of opening the editor', () => {
 				// ui.js bound $ to the jsdom document before the stub
 				vi.unstubAllGlobals();
@@ -518,6 +565,10 @@ describe('Palette Utilities', () => {
 					mouseup({ clientX: 50, clientY: 60, button: 0 });
 					expect(editor.click).not.toHaveBeenCalled();
 					expect(palette.setForegroundColor).toHaveBeenLastCalledWith(3);
+					// a ctrl pick inside the threshold is a background pick too
+					mouseup({ clientX: 150, clientY: 20, button: 0, ctrlKey: true });
+					expect(editor.click).not.toHaveBeenCalled();
+					expect(palette.setBackgroundColor).toHaveBeenLastCalledWith(9);
 					// a second left pick inside the threshold still edits
 					mouseup({ clientX: 50, clientY: 60, button: 0 });
 					expect(editor.click).toHaveBeenCalled();
@@ -525,6 +576,162 @@ describe('Palette Utilities', () => {
 					editor.remove();
 					delete palette.getRGBColor;
 				}
+			});
+		});
+
+		describe('touch hold', () => {
+			let palette, editor;
+			// the hold's lift and second-finger listeners sit on the
+			// stubbed document, the rest on the canvas
+			const on = (target, type) => e =>
+				target.addEventListener.mock.calls
+					.filter(c => c[0] === type)
+					.forEach(c => c[1](e));
+			const strip = type => on(mockCanvas, type);
+			const doc = type => on(global.document, type);
+			// a 200x160 strip: (150, 100) is color 13, (50, 20) color 1
+			const down = (clientX = 150, clientY = 100, props = {}) =>
+				strip('pointerdown')({
+					pointerType: 'touch',
+					isPrimary: true,
+					pointerId: 1,
+					clientX,
+					clientY,
+					...props,
+				});
+			const lift = (pageX = 150, pageY = 100, type = 'touchend') => {
+				doc('pointerup')({ pointerId: 1 });
+				strip(type)({
+					preventDefault: vi.fn(),
+					touches: [],
+					changedTouches: [{ pageX, pageY }],
+				});
+			};
+			const tap = (x, y) => {
+				down(x, y);
+				lift(x, y);
+			};
+			const menu = () => {
+				const e = { preventDefault: vi.fn() };
+				strip('contextmenu')(e);
+				return e;
+			};
+			const fgCalls = () => palette.setForegroundColor.mock.calls;
+			const bgCalls = () => palette.setBackgroundColor.mock.calls;
+
+			beforeEach(async () => {
+				vi.useFakeTimers();
+				// ui.js bound $ to the jsdom document before the stub
+				vi.unstubAllGlobals();
+				const jsdom = document;
+				vi.stubGlobal('document', { addEventListener: vi.fn() });
+				editor = jsdom.createElement('input');
+				editor.id = 'customColor';
+				editor.click = vi.fn();
+				jsdom.body.append(editor);
+				palette = (await import('../../src/js/client/state.js')).default
+					.palette;
+				palette.getRGBColor = vi.fn(() => '#000000');
+				palette.setForegroundColor.mockClear();
+				palette.setBackgroundColor.mockClear();
+				mockCanvas.getBoundingClientRect.mockReturnValue({
+					left: 0,
+					top: 0,
+					width: 200,
+					height: 160,
+				});
+				createPalettePicker(mockCanvas);
+			});
+
+			afterEach(() => {
+				vi.useRealTimers();
+				editor.remove();
+				delete palette.getRGBColor;
+			});
+
+			it('a hold picks the background under the finger once, and its lift picks nothing', () => {
+				down();
+				vi.advanceTimersByTime(499);
+				expect(bgCalls()).toEqual([]);
+				vi.advanceTimersByTime(1);
+				expect(bgCalls()).toEqual([[13]]);
+				lift();
+				expect(fgCalls()).toEqual([]);
+				// a long press that ends in touchcancel is a lift too
+				down(50, 20);
+				vi.advanceTimersByTime(500);
+				lift(50, 20, 'touchcancel');
+				expect(bgCalls()).toEqual([[13], [1]]);
+				expect(fgCalls()).toEqual([]);
+			});
+
+			it('a tap picks the foreground, and a wobble inside the slop is still a tap', () => {
+				tap(150, 100);
+				vi.advanceTimersByTime(1000);
+				down(50, 20);
+				strip('pointermove')({ pointerId: 1, clientX: 50, clientY: 28 });
+				lift(50, 28);
+				vi.advanceTimersByTime(1000);
+				expect(fgCalls()).toEqual([[13], [1]]);
+				expect(bgCalls()).toEqual([]);
+			});
+
+			it('the native long-press contextmenu picks nothing more, whether it trails the timer or beats it', () => {
+				down();
+				vi.advanceTimersByTime(500);
+				expect(menu().preventDefault).toHaveBeenCalled();
+				lift();
+				down(50, 20);
+				vi.advanceTimersByTime(400);
+				menu();
+				expect(bgCalls()).toEqual([[13], [1]]);
+				vi.advanceTimersByTime(200);
+				lift(50, 20);
+				expect(bgCalls()).toEqual([[13], [1]]);
+				expect(fgCalls()).toEqual([]);
+			});
+
+			it('a press that wanders, meets a second finger, or is cancelled picks nothing, even at its lift', () => {
+				const second = {
+					pointerType: 'touch',
+					isPrimary: false,
+					pointerId: 2,
+				};
+				down();
+				strip('pointermove')({ pointerId: 1, clientX: 150, clientY: 120 });
+				vi.advanceTimersByTime(600);
+				lift(150, 120);
+				down();
+				doc('pointerdown')(second);
+				vi.advanceTimersByTime(600);
+				lift();
+				// a pinch that only lands its second finger on the strip
+				down(50, 20, second);
+				lift(50, 20);
+				// a scroll cancels the pointer, yet its touchend still comes
+				down();
+				doc('pointercancel')({ pointerId: 1 });
+				vi.advanceTimersByTime(600);
+				lift(150, 140);
+				expect(bgCalls()).toEqual([]);
+				expect(fgCalls()).toEqual([]);
+			});
+
+			it('a hold then a quick tap picks instead of opening the editor', () => {
+				down();
+				vi.advanceTimersByTime(500);
+				lift();
+				tap(50, 60);
+				expect(editor.click).not.toHaveBeenCalled();
+				expect(fgCalls()).toEqual([[3]]);
+				expect(bgCalls()).toEqual([[13]]);
+			});
+
+			it('a double tap still opens the color editor', () => {
+				tap(50, 60);
+				tap(50, 60);
+				expect(editor.click).toHaveBeenCalled();
+				expect(bgCalls()).toEqual([]);
 			});
 		});
 	});

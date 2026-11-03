@@ -5,6 +5,10 @@ import {
 	drag,
 	parkToolSettings,
 	readBlock,
+	readRegion,
+	readSelection,
+	tap,
+	writeText,
 } from './helpers/editorHelpers.js';
 
 test.describe('Drawing Tools', () => {
@@ -89,20 +93,13 @@ test.describe('Drawing Tools', () => {
 		await expect(page.locator('#selection')).toHaveClass(/toolbarDisplayed/);
 
 		await drag(page, [5, 4], [12, 9]);
-		expect(
-			await page.evaluate(() =>
-				window.__t0wnz.State.selectionCursor.getSelection()),
-		).toEqual({ x: 5, y: 4, width: 8, height: 6 });
+		expect((await readSelection(page)).live).toEqual({ x: 5, y: 4, width: 8, height: 6 });
 	});
 
 	test('should activate fill tool', async ({ page }) => {
 		// fill lives in the brush submenu
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-		const fillTool = page.locator('#fill');
-		await fillTool.click();
-		await page.waitForTimeout(300);
-		await expect(fillTool).toHaveClass(/toolbarDisplayed/);
+		await clickTool(page, 'fill');
+		await expect(page.locator('#fill')).toHaveClass(/toolbarDisplayed/);
 	});
 
 	test('should draw with multiple tools in sequence', async ({ page }) => {
@@ -145,91 +142,44 @@ test.describe('Drawing Tools', () => {
 
 test.describe('Tool Features', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
+		await parkToolSettings(page);
+		await page.goto('/?test');
+		await bridgeReady(page);
 	});
 
+	const inked = async (page, x, y) =>
+		![0, 32].includes((await readBlock(page, x, y)).charCode);
+
 	test('should support undo operation', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-		const box = await canvas.boundingBox();
+		await clickTool(page, 'halfblock');
+		await drag(page, [5, 5], [10, 8]);
+		expect(await inked(page, 5, 5)).toBe(true);
 
-		if (box) {
-			await page.locator('#brushes').click();
-			await page.waitForTimeout(200);
-			await clickTool(page, 'halfblock');
-			await page.mouse.move(box.x + 50, box.y + 50);
-			await page.mouse.down();
-			await page.mouse.move(box.x + 100, box.y + 100);
-			await page.mouse.up();
-			await page.waitForTimeout(500);
-
-			await page.keyboard.down('Control');
-			await page.keyboard.press('z');
-			await page.keyboard.up('Control');
-			await page.waitForTimeout(500);
-		}
+		await page.keyboard.press('Control+z');
+		await expect.poll(() => inked(page, 5, 5)).toBe(false);
 	});
 
 	test('should support redo operation', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-		const box = await canvas.boundingBox();
+		await clickTool(page, 'halfblock');
+		await drag(page, [5, 5], [10, 8]);
+		await page.keyboard.press('Control+z');
+		await expect.poll(() => inked(page, 5, 5)).toBe(false);
 
-		if (box) {
-			await page.locator('#brushes').click();
-			await page.waitForTimeout(200);
-			await clickTool(page, 'halfblock');
-			await page.mouse.move(box.x + 50, box.y + 50);
-			await page.mouse.down();
-			await page.mouse.move(box.x + 100, box.y + 100);
-			await page.mouse.up();
-			await page.waitForTimeout(300);
-
-			await page.keyboard.down('Control');
-			await page.keyboard.press('z');
-			await page.keyboard.up('Control');
-			await page.waitForTimeout(300);
-
-			await page.keyboard.down('Control');
-			await page.keyboard.press('y');
-			await page.keyboard.up('Control');
-			await page.waitForTimeout(300);
-		}
+		await page.keyboard.press('Control+y');
+		await expect.poll(() => inked(page, 5, 5)).toBe(true);
 	});
 
 	test('should support copy and paste with selection tool', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer canvas').first();
-		const box = await canvas.boundingBox();
+		await writeText(page, 5, 5, 'AB');
+		await clickTool(page, 'selection');
+		await drag(page, [5, 5], [6, 5]);
+		await page.locator('#copy').click();
+		await expect(page.locator('#paste')).not.toHaveClass(/disabled/);
 
-		if (box) {
-			await page.locator('#brushes').click();
-			await page.waitForTimeout(200);
-			await clickTool(page, 'halfblock');
-			await page.mouse.move(box.x + 50, box.y + 50);
-			await page.mouse.down();
-			await page.mouse.move(box.x + 70, box.y + 70);
-			await page.mouse.up();
-			await page.waitForTimeout(300);
-
-			await page.locator('#selection').click();
-			await page.mouse.move(box.x + 40, box.y + 40);
-			await page.mouse.down();
-			await page.mouse.move(box.x + 80, box.y + 80);
-			await page.mouse.up();
-			await page.waitForTimeout(300);
-
-			const copyButton = page.locator('#copy');
-			if (await copyButton.isVisible()) {
-				await copyButton.click();
-				await page.waitForTimeout(300);
-
-				await page.locator('#pasteMenu').click();
-				const pasteButton = page.locator('#paste');
-				if (await pasteButton.isVisible()) {
-					await pasteButton.click();
-					await page.waitForTimeout(300);
-				}
-			}
-		}
+		// a click starts a one cell selection: paste lands at its corner
+		await tap(page, 20, 10);
+		await page.locator('#pasteMenu').click();
+		await page.locator('#paste').click();
+		expect(await readRegion(page, 20, 10, 21, 10)).toEqual(['AB']);
 	});
 });

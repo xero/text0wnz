@@ -268,6 +268,16 @@ export const Storage = {
 		}
 	},
 
+	/**
+	 * saveSettings replaces the whole record; this keeps every stored
+	 * field the patch does not name
+	 * @param {object} patch
+	 * @returns {boolean}
+	 */
+	mergeSettings(patch) {
+		return Storage.saveSettings({ ...Storage.loadSettings(), ...patch });
+	},
+
 	async clearAll() {
 		localStorage.removeItem('text0wnz-settings');
 		localStorage.removeItem('refImage');

@@ -737,7 +737,9 @@ const initializeAppComponents = async () => {
 			palettePreview.updatePreview();
 			await State.textArtCanvas.setFont('CP437 8x16', () => {
 				State.font.setLetterSpacing(false);
-				State.textArtCanvas.resize(80, 25);
+				// clear() drops the history next, so a resize step would
+				// capture every cut cell only to throw it away
+				State.textArtCanvas.resize(80, 25, { undoable: false });
 				State.textArtCanvas.clear();
 				State.textArtCanvas.setIceColors(false);
 				// New is a real load: ride the same reset event as the
@@ -1002,7 +1004,7 @@ const initializeAppComponents = async () => {
 	onReturn(sauceTitle, sauceDone);
 	onReturn(sauceGroup, sauceDone);
 	onReturn(sauceAuthor, sauceDone);
-	onReturn(sauceComments, sauceDone);
+	onReturn(sauceComments, sauceDone, { shiftBreaks: true });
 	const paintShortcuts = createPaintShortcuts({
 		d: $('defaultColor'),
 		q: swapColors,

@@ -4,7 +4,7 @@
  * transport logic is unit-tested engine-neutrally.
  */
 import { test, expect } from '@playwright/test';
-import { clickTool } from './helpers/editorHelpers.js';
+import { clickTool, loadSettled } from './helpers/editorHelpers.js';
 import { spawn, execSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -75,6 +75,13 @@ test.afterAll(() => {
 	}
 });
 
+// adoption swaps in the session doc after the socket connects, and
+// titles the page as its last step before the loading modal closes
+const sessionAdopted = async page => {
+	await expect(page).toHaveTitle(/^collab mode/);
+	await loadSettled(page);
+};
+
 const joinPage = async (browser, nick) => {
 	const context = await browser.newContext();
 	const page = await context.newPage();
@@ -97,15 +104,12 @@ const joinPage = async (browser, nick) => {
 		null,
 		{ timeout: 10000 },
 	);
-	await page.waitForTimeout(400);
+	await sessionAdopted(page);
 	return { context, page };
 };
 
 const drawAt = async (page, cx, cy) => {
-	await page.locator('#brushes').click();
-	await page.waitForTimeout(200);
 	await clickTool(page, 'halfblock');
-	await page.waitForTimeout(200);
 	const point = await page.evaluate(
 		([x, y]) => {
 			const s = window.__t0wnz.State;
@@ -120,7 +124,6 @@ const drawAt = async (page, cx, cy) => {
 		[cx, cy],
 	);
 	await page.mouse.click(point.x, point.y);
-	await page.waitForTimeout(300);
 };
 
 const charAt = (page, x, y) =>
@@ -189,7 +192,6 @@ test.describe('collab round trip against a live server', () => {
 		await drawAt(a.page, 7, 7);
 		const drawn = await charAt(a.page, 7, 7);
 		expect(drawn).not.toBe(0);
-		await a.page.waitForTimeout(300);
 
 		const late = await joinPage(browser, 'late');
 		await expect
@@ -302,7 +304,7 @@ test.describe('collab round trip against a live server', () => {
 				null,
 				{ timeout: 10000 },
 			);
-			await page.waitForTimeout(400);
+			await sessionAdopted(page);
 			// resize past the SERVER wall but inside the client wall: the
 			// client applies locally, the server refuses with an ack, and
 			// sync recovery restores truth. The local-apply read must happen
