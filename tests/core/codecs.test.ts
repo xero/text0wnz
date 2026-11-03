@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
 	buildSauce,
+	commentText,
 	fitComments,
 	parseSauce,
 } from '../../src/js/core/codecs/sauce.js';
+import { decodeTundra, encodeTundra } from '../../src/js/core/codecs/tundra.js';
 import { decodeBin, encodeBin } from '../../src/js/core/codecs/bin.js';
 import { CodecError } from '../../src/js/core/codecs/util.js';
 import {
@@ -238,6 +240,45 @@ describe('sauce codec', () => {
 		const comnt = (bytes: Uint8Array) => bytes.slice(-128 - 5 - 2 * 64, -128);
 		expect(comnt(encoded)).toEqual(comnt(original));
 		expect(encoded[encoded.length - 128 + 104]).toBe(2);
+	});
+
+	it('round-trips a comment block of one blank line', () => {
+		const original = makeBin({
+			columns: 160,
+			rows: 2,
+			sauce: { comments: [''] },
+		});
+		const decoded = decodeBin(original);
+		expect(decoded.meta.comments).toBe(' ');
+		const encoded = encodeBin(decoded.doc, {
+			meta: decoded.meta,
+			date: FIXED_DATE,
+		});
+		const comnt = (bytes: Uint8Array) => bytes.slice(-128 - 5 - 64, -128);
+		expect(comnt(encoded)).toEqual(comnt(original));
+		expect(encoded[encoded.length - 128 + 104]).toBe(1);
+	});
+
+	it('reads one blank comment line as a space in every SAUCE codec', () => {
+		const doc = createDocV3({ columns: 80, rows: 1 });
+		const meta = { title: '', author: '', group: '', comments: ' ' };
+		for (const [encode, decode] of [
+			[encodeAns, decodeAns],
+			[encodeBin, decodeBin],
+			[encodeXBin, decodeXBin],
+			[encodeTundra, decodeTundra],
+		] as const) {
+			const bytes = encode(doc, { meta, date: FIXED_DATE });
+			expect(readSauce(bytes)?.comments).toEqual(['']);
+			expect(decode(bytes).meta?.comments).toBe(' ');
+		}
+	});
+
+	it('reads no block as empty text and any other block as its joined lines', () => {
+		expect(commentText([])).toBe('');
+		expect(commentText(['', ''])).toBe('\n');
+		expect(commentText(['', 'a'])).toBe('\na');
+		expect(commentText(['  a', ''])).toBe('  a\n');
 	});
 
 	it('counts slots by CP437 byte, not UTF-16 unit', () => {

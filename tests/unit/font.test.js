@@ -5,6 +5,8 @@ import {
 	loadFontFromImage,
 	clearGlyphZero,
 } from '../../src/js/client/font.js';
+import State from '../../src/js/client/state.js';
+import { createCanvas } from '../../src/js/client/ui.js';
 
 const imgDataCap = 256;
 
@@ -171,6 +173,43 @@ describe('Font Module - Basic Tests', () => {
 				'error',
 				expect.any(Function),
 			);
+		});
+
+		it('a parse leaves the glyph size in State to the font that goes live', async () => {
+			State.fontWidth = 9;
+			State.fontHeight = 14;
+			try {
+				const xb = await loadFontFromXBData(
+					new Uint8Array(4 * 256),
+					8,
+					4,
+					false,
+					mockPalette,
+				);
+				xb.dispose();
+				// 8x4 glyphs fit the mocked image data cap
+				const atlas = { width: 128, height: 64 };
+				vi.mocked(createCanvas).mockReturnValueOnce({
+					...atlas,
+					getContext: () => ({
+						drawImage: vi.fn(),
+						getImageData: () => ({
+							...atlas,
+							data: new Uint8ClampedArray(atlas.width * atlas.height * 4),
+						}),
+					}),
+				});
+				const loading = loadFontFromImage('TestFont', false, mockPalette);
+				await new Promise(resolve => setTimeout(resolve, 0));
+				mockImage.addEventListener.mock.calls.find(c => c[0] === 'load')[1]();
+				const handle = await loading;
+				handle.dispose();
+				expect(handle.getData().height).toBe(4);
+				expect([State.fontWidth, State.fontHeight]).toEqual([9, 14]);
+			} finally {
+				State.fontWidth = null;
+				State.fontHeight = null;
+			}
 		});
 
 		it('should handle image load error', async () => {

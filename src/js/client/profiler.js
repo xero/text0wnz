@@ -71,7 +71,7 @@ const installProfiler = () => {
 	// Kill persistence for the whole session: profiling docs must never
 	// overwrite the artist's autosave, which a reload restores
 	State.saveToLocalStorage = () => Promise.resolve(false);
-	State.saveUndoHistory = () => Promise.resolve(false);
+	State.textArtCanvas.stopJournal();
 
 	const viewport = document.getElementById('viewport');
 

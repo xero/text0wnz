@@ -7,6 +7,7 @@ import {
 	createSelectionTool,
 } from '../../src/js/client/keyboard.js';
 import { createFKeys } from '../../src/js/client/fkeys.js';
+import { isTextEntry } from '../../src/js/client/ui.js';
 import State from '../../src/js/client/state.js';
 
 // every test gets fresh State mocks: tests rewire them in place, so a
@@ -956,6 +957,156 @@ describe('Keyboard Utilities', () => {
 					height: 1,
 				});
 				tool.toggleMoveMode();
+			});
+		});
+
+		describe('rect keys on a bare pick act on the keyboard cursor cell', () => {
+			const cell = { x: 10, y: 5, width: 1, height: 1 };
+			const press = (init, target = document.body) =>
+				target.dispatchEvent(
+					new KeyboardEvent('keydown', { bubbles: true, ...init }),
+				);
+			const fillBuffer = () => {
+				State.pasteTool.setSelection(0, 0, 1, 1);
+				State.pasteTool.copy();
+				State.pasteTool.disable();
+				State.textArtCanvas.getAreaCells.mockClear();
+			};
+			let tool;
+			let drawn;
+			beforeEach(() => {
+				const item = () => document.createElement('div');
+				// boot order: the paste tool's permanent listener registers
+				// long before the selection tool's
+				State.pasteTool = createPasteTool(item(), item(), item(), item());
+				State.selectionCursor = createSelectionCursor(document.createElement('div'));
+				State.cursor.getX.mockReturnValue(10);
+				State.cursor.getY.mockReturnValue(5);
+				drawn = [];
+				State.textArtCanvas.draw = vi.fn(callback =>
+					callback((code, _fg, _bg, x, y) => drawn.push({ code, x, y })));
+				tool = createSelectionTool();
+				tool.enable();
+			});
+			afterEach(() => tool.disable());
+
+			it('ctrl c copies it', () => {
+				press({ code: 'KeyC', ctrlKey: true });
+				expect(State.selectionCursor.getSelection()).toEqual(cell);
+				expect(State.textArtCanvas.getAreaCells).toHaveBeenCalledOnce();
+				expect(State.textArtCanvas.getAreaCells).toHaveBeenCalledWith(10, 5, 1, 1);
+				expect(State.pasteTool.hasBuffer()).toBe(true);
+			});
+
+			it('ctrl x cuts it in one undo step', () => {
+				press({ code: 'KeyX', metaKey: true });
+				expect(State.textArtCanvas.getAreaCells).toHaveBeenCalledWith(10, 5, 1, 1);
+				expect(State.textArtCanvas.deleteArea).toHaveBeenCalledOnce();
+				expect(State.textArtCanvas.deleteArea).toHaveBeenCalledWith(10, 5, 1, 1, 0);
+				expect(State.textArtCanvas.startUndo).toHaveBeenCalledOnce();
+			});
+
+			it('ctrl v pastes the buffer there once', () => {
+				fillBuffer();
+				press({ code: 'KeyV', ctrlKey: true });
+				expect(State.selectionCursor.getSelection()).toEqual(cell);
+				expect(State.textArtCanvas.setAreaCells).toHaveBeenCalledOnce();
+				expect(State.textArtCanvas.setAreaCells).toHaveBeenCalledWith(
+					expect.anything(),
+					10,
+					5,
+				);
+				expect(State.textArtCanvas.startUndo).toHaveBeenCalledOnce();
+			});
+
+			it('ctrl shift v pastes the system clipboard there', async () => {
+				const readText = vi.fn(() => Promise.resolve('Z'));
+				Object.defineProperty(navigator, 'clipboard', {
+					value: { readText },
+					configurable: true,
+				});
+				try {
+					press({ code: 'KeyV', ctrlKey: true, shiftKey: true });
+					await new Promise(resolve => setTimeout(resolve, 0));
+					expect(readText).toHaveBeenCalledOnce();
+					expect(drawn).toEqual([{ code: 90, x: 10, y: 5 }]);
+					expect(State.textArtCanvas.startUndo).toHaveBeenCalledOnce();
+				} finally {
+					delete navigator.clipboard;
+				}
+			});
+
+			it('ctrl backspace deletes it in one undo step', () => {
+				press({ code: 'Backspace', ctrlKey: true });
+				expect(State.textArtCanvas.deleteArea).toHaveBeenCalledOnce();
+				expect(State.textArtCanvas.deleteArea).toHaveBeenCalledWith(10, 5, 1, 1, 0);
+				expect(State.textArtCanvas.startUndo).toHaveBeenCalledOnce();
+			});
+
+			it('[ and ] flip it', () => {
+				press({ key: '[' });
+				expect(State.selectionCursor.getSelection()).toEqual(cell);
+				expect(drawn).toEqual([{ code: 32, x: 10, y: 5 }]);
+				State.selectionCursor.hide();
+				press({ key: ']' });
+				expect(drawn).toEqual([
+					{ code: 32, x: 10, y: 5 },
+					{ code: 32, x: 10, y: 5 },
+				]);
+				expect(State.textArtCanvas.startUndo).toHaveBeenCalledTimes(2);
+			});
+
+			it('ctrl v with an empty buffer leaves the tool bare', () => {
+				press({ code: 'KeyV', ctrlKey: true });
+				expect(State.selectionCursor.isVisible()).toBe(false);
+				expect(State.textArtCanvas.setAreaCells).not.toHaveBeenCalled();
+			});
+
+			it('combos the paste tool ignores leave the tool bare', () => {
+				fillBuffer();
+				press({ code: 'KeyV', ctrlKey: true, altKey: true });
+				press({ code: 'KeyC', ctrlKey: true, shiftKey: true });
+				press({ code: 'KeyX', ctrlKey: true, altKey: true });
+				press({ code: 'KeyC' });
+				press({ key: '[', altKey: true });
+				expect(State.selectionCursor.isVisible()).toBe(false);
+				expect(State.textArtCanvas.getAreaCells).not.toHaveBeenCalled();
+				expect(State.textArtCanvas.startUndo).not.toHaveBeenCalled();
+			});
+
+			it('keys typed into a field or a dialog leave the tool bare', () => {
+				const input = document.createElement('input');
+				document.body.appendChild(input);
+				isTextEntry.mockImplementation(t => t === input);
+				try {
+					press({ code: 'KeyC', ctrlKey: true }, input);
+					press({ key: '[' }, input);
+				} finally {
+					isTextEntry.mockImplementation(() => false);
+				}
+				expect(State.selectionCursor.isVisible()).toBe(false);
+
+				State.modal = { isOpen: () => true };
+				try {
+					press({ code: 'KeyC', ctrlKey: true });
+				} finally {
+					delete State.modal;
+				}
+				expect(State.selectionCursor.isVisible()).toBe(false);
+				expect(State.textArtCanvas.getAreaCells).not.toHaveBeenCalled();
+			});
+
+			it('a live rect keeps its geometry', () => {
+				State.selectionCursor.setStart(2, 3);
+				State.selectionCursor.setEnd(4, 3);
+				press({ code: 'KeyC', ctrlKey: true });
+				expect(State.textArtCanvas.getAreaCells).toHaveBeenCalledWith(2, 3, 3, 1);
+			});
+
+			it('leaving the tool takes the seed with it', () => {
+				tool.disable();
+				press({ code: 'KeyC', ctrlKey: true });
+				expect(State.selectionCursor.isVisible()).toBe(false);
 			});
 		});
 	});

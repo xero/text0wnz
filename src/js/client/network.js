@@ -13,6 +13,7 @@ import {
 	joinDocToDoc,
 	sanitizeExtCell,
 	sanitizeExtPalette,
+	unicodeToCp437Strict,
 } from '../core/index';
 import { Load } from './file.js';
 import magicNumbers from './magicNumbers.js';
@@ -40,6 +41,8 @@ const writeLocal = (key, value) => {
 		// the preference does not persist this session
 	}
 };
+
+const GLYPH_WAIT_MS = 10000;
 
 const createRemoteCursors = () => {
 	/** @type {Map<number, HTMLElement>} */
@@ -103,8 +106,6 @@ const createWorkerHandler = inputHandle => {
 	const btnJoin = $('joinCollaboration');
 	const btnLocal = $('stayLocal');
 	const choiceServer = $('choiceServer');
-	const lblFont = $('currentFontDisplay');
-	const selFont = $('fontSelect');
 	const btn9pt = $('nav9pt');
 	const btnIce = $('navICE');
 	const btnNet = $('networkButton');
@@ -139,8 +140,8 @@ const createWorkerHandler = inputHandle => {
 	// value (an unset variable in a scripted launcher) counts as absent
 	const explicitServer =
 		new URLSearchParams(window.location.search).get('server') || undefined;
-	// depth, not a boolean: nested remote-apply helpers (font change
-	// inside a sync inside adoption) each balance their own ++/--
+	// a depth, not a boolean, so a muted apply nested inside another
+	// cannot unmute the outer one
 	let applyDepth = 0;
 	const remoteCursors = createRemoteCursors();
 	/** id -> nick, for rename detection (renames ride CHAT upstream) */
@@ -153,6 +154,10 @@ const createWorkerHandler = inputHandle => {
 	let lastSeq = -1;
 	/** @type {{type: number, data: object}[]} */
 	const pendingSends = [];
+	// vanilla servers send no acks, so pendingSends stays empty there,
+	// but a font pick of ours that leaves after a peer's font arrived
+	// still reached the server after it, in either dialect
+	let fontSends = 0;
 	let syncCooldown = 0;
 	let syncQueued = false;
 	let syncRetryTimer = 0;
@@ -166,13 +171,77 @@ const createWorkerHandler = inputHandle => {
 	let sameOriginFound = false;
 	const extActive = () => serverCaps.includes(EXT_SUITE_CAP);
 
+	/**
+	 * Runs a remote apply with mutation sends dropped, so no listener it
+	 * fires can echo the change back out. Synchronous work only: a hold
+	 * across an await also drops every change the user makes meanwhile,
+	 * and peers never hear of it.
+	 * @template T @param {() => T} fn @returns {T}
+	 */
+	const muted = fn => {
+		applyDepth++;
+		try {
+			return fn();
+		} finally {
+			applyDepth--;
+		}
+	};
+
+	// the server sends every socket its frames in the order it applied
+	// them, so a peer write that reaches us while our draw of the same
+	// cell is unacked came first in the room, and ours holds the cell
+	// there. Counted per cell, since several unacked draws can cover one
+	/** @type {Map<string, number>} */
+	const pendingCells = new Map();
+	const cellKey = (x, y) => `${x},${y}`;
+	/** @param {{type: number, data: any} | undefined} op @param {number} step */
+	const cover = (op, step) => {
+		if (op?.type !== T0wnzAction.EXT_DRAW_BATCH) {
+			return;
+		}
+		for (const { x, y } of op.data.cells) {
+			const key = cellKey(x, y);
+			const count = (pendingCells.get(key) ?? 0) + step;
+			if (count > 0) {
+				pendingCells.set(key, count);
+			} else {
+				pendingCells.delete(key);
+			}
+		}
+	};
+	const unmasked = cells =>
+		(pendingCells.size === 0
+			? cells
+			: cells.filter(cell => !pendingCells.has(cellKey(cell?.x, cell?.y))));
+	/** @param {{type: number}[]} ops @param {number} type */
+	const holds = (ops, type) => ops.some(op => op.type === type);
+	const dropPending = () => {
+		pendingSends.length = 0;
+		pendingCells.clear();
+	};
+
+	// the ops we send while an adoption awaits: its replay of older ops
+	// lands over them locally, so they replay again after those. A
+	// replay that sent would queue itself without end, so replays never
+	// send
+	/** @type {{type: number, data: object}[] | null} */
+	let adopting = null;
+	/** @param {{type: number, data: object}} op */
+	const track = op => {
+		if (extActive()) {
+			pendingSends.push(op);
+			cover(op, 1);
+		}
+		adopting?.push(op);
+	};
+
 	const onDisconnected = wasConnected => {
 		const hadSession = connected && collaborationMode;
 		connected = false;
 		collaborationMode = false;
 		serverCaps = [];
 		lastSeq = -1;
-		pendingSends.length = 0;
+		dropPending();
 		syncQueued = false;
 		clearTimeout(syncRetryTimer);
 		syncRetryTimer = 0;
@@ -188,7 +257,7 @@ const createWorkerHandler = inputHandle => {
 		}
 	};
 
-	const onRemoteDraw = data => {
+	const onRemoteDraw = async data => {
 		const columns = State.textArtCanvas.getColumns();
 		const rows = State.textArtCanvas.getRows();
 		const { x, y, block } = data;
@@ -211,7 +280,7 @@ const createWorkerHandler = inputHandle => {
 			// icy-style raw codepoint on the vanilla wire: join and resync
 			// intern these, so the live view must too or the two diverge
 			// until the next sync
-			State.textArtCanvas.drawRemoteExtCells([{ x: x, y: y, ...blockToExtCell(block) }]);
+			await drawExt([{ x: x, y: y, ...blockToExtCell(block) }]);
 			return;
 		}
 		const word =
@@ -245,46 +314,32 @@ const createWorkerHandler = inputHandle => {
 		) {
 			return;
 		}
-		applyDepth++; // prevents re-broadcasting received settings
 		// remote ops never enter the local undo history, and a peer's
 		// resize leaves every recorded cell index at the wrong geometry,
 		// so it clears the history instead of becoming a step
-		State.textArtCanvas.resize(columns, rows, { undoable: false });
-		applyDepth = Math.max(0, applyDepth - 1);
+		muted(() => State.textArtCanvas.resize(columns, rows, { undoable: false }));
 	};
 
-	const onFontChange = async fontName => {
-		// no applyDepth hold: nothing echoes a font apply back out (all
-		// settings sends ride direct user clicks), and holding the depth
-		// across this await would starve every mutation send for the
-		// whole font load
-		await State.textArtCanvas.setFont(fontName, () => {
-			lblFont.textContent = fontName;
-			selFont.value = fontName;
+	/** @param {string} fontName @param {() => boolean} wanted */
+	const onFontChange = async (fontName, wanted) => {
+		// not muted: nothing echoes a font apply back out (all settings
+		// sends ride direct user clicks), and a hold cannot span this
+		// await. No callback: main.js labels the font that went live on
+		// onFontChange, which after a fallback is not the one asked for
+		await State.textArtCanvas.setFont(fontName, undefined, undefined, wanted);
+	};
+
+	const onIceColorsChange = iceColors =>
+		muted(() => {
+			State.textArtCanvas.setIceColors(iceColors);
+			btnIce.classList.toggle('enabled', iceColors);
 		});
-	};
 
-	const onIceColorsChange = iceColors => {
-		applyDepth++; // prevents re-broadcasting received settings
-		State.textArtCanvas.setIceColors(iceColors);
-		if (iceColors) {
-			btnIce.classList.add('enabled');
-		} else {
-			btnIce.classList.remove('enabled');
-		}
-		applyDepth = Math.max(0, applyDepth - 1);
-	};
-
-	const onLetterSpacingChange = letterSpacing => {
-		applyDepth++; // prevents re-broadcasting received settings
-		State.font.setLetterSpacing(letterSpacing);
-		if (letterSpacing) {
-			btn9pt.classList.add('enabled');
-		} else {
-			btn9pt.classList.remove('enabled');
-		}
-		applyDepth = Math.max(0, applyDepth - 1);
-	};
+	const onLetterSpacingChange = letterSpacing =>
+		muted(() => {
+			State.font.setLetterSpacing(letterSpacing);
+			btn9pt.classList.toggle('enabled', letterSpacing);
+		});
 
 	/** @type {((payload: object) => void) | null} */
 	let timelapseWaiter = null;
@@ -368,6 +423,17 @@ const createWorkerHandler = inputHandle => {
 		T0wnzAction.EXT_DRAW_BATCH,
 		T0wnzAction.EXT_PALETTE,
 	]);
+	// a peer setting that reaches us while our op of the same kind is
+	// unacked came first in the room, where ours replaced it. A peer
+	// resize keeps its resync instead: masking it would keep cells the
+	// room lost to its crop
+	const SETTING_TYPES = new Set([
+		MoebiusAction.SAUCE,
+		MoebiusAction.ICE_COLORS,
+		MoebiusAction.USE_9PX_FONT,
+		MoebiusAction.CHANGE_FONT,
+		T0wnzAction.EXT_PALETTE,
+	]);
 	const noteSeq = data => {
 		const seq = data?.seq;
 		if (!Number.isInteger(seq) || !extActive()) {
@@ -426,8 +492,7 @@ const createWorkerHandler = inputHandle => {
 		if (!palette) {
 			return;
 		}
-		applyDepth++;
-		try {
+		muted(() => {
 			const doc = State.textArtCanvas.getDoc();
 			const words = new Uint32Array(Math.max(doc.palette.length, palette.length));
 			words.set(doc.palette.subarray(0, Math.min(doc.palette.length, words.length)));
@@ -437,9 +502,40 @@ const createWorkerHandler = inputHandle => {
 			doc.palette = words;
 			adoptClassic16(palette);
 			State.textArtCanvas.redrawEntireImage();
-		} finally {
-			applyDepth = Math.max(0, applyDepth - 1);
+		});
+	};
+
+	/** true once the promise settles, false when the wait runs out first */
+	const settlesWithin = (promise, ms) =>
+		new Promise(resolve => {
+			const timer = setTimeout(resolve, ms, false);
+			const done = () => {
+				clearTimeout(timer);
+				resolve(true);
+			};
+			promise.then(done, done);
+		});
+
+	// glyph fetches carry no timeout, and every later frame waits on
+	// this one, so past the wait the cells drop and a resync brings them
+	// back. The glyphs resolve first because a draw that outlived the
+	// wait would land late over newer frames. Vanilla sessions never
+	// fetch: the lockout substitutes instead
+	const drawExt = async cells => {
+		const unseen = new Set();
+		for (const cell of cells) {
+			if (unicodeToCp437Strict(cell.u) === undefined) {
+				unseen.add(cell.u);
+			}
 		}
+		if (
+			unseen.size > 0 &&
+			!(await settlesWithin(State.textArtCanvas.resolveUnicode(unseen), GLYPH_WAIT_MS))
+		) {
+			requestSync();
+			return;
+		}
+		await State.textArtCanvas.drawRemoteExtCells(cells);
 	};
 
 	const onRemoteExtDraw = async cells => {
@@ -457,15 +553,18 @@ const createWorkerHandler = inputHandle => {
 			}
 		}
 		if (valid.length > 0) {
-			await State.textArtCanvas.drawRemoteExtCells(valid);
+			await drawExt(valid);
 		}
 	};
 
 	/**
 	 * Replay one of our own in-flight mutations onto a freshly adopted
-	 * snapshot, through the same handlers remote frames use. SAUCE is
-	 * deliberately absent: its fields are local UI state the user still
-	 * sees, and the server applies the op regardless.
+	 * snapshot, through the same handlers remote frames use. None of them
+	 * sends, so a replay never goes back out or re-queues the op. SAUCE
+	 * is deliberately absent: its fields are local UI state the user
+	 * still sees, and the server applies the op regardless. So is the
+	 * font: a snapshot's font, like a peer's, yields to ours, so the
+	 * installed font already is our newest.
 	 * @param {number} type @param {any} data
 	 */
 	const applyOwnOp = async (type, data) => {
@@ -481,13 +580,6 @@ const createWorkerHandler = inputHandle => {
 			case MoebiusAction.SET_CANVAS_SIZE:
 				onResize(data.columns, data.rows);
 				return;
-			case MoebiusAction.CHANGE_FONT:
-				if (typeof data.font_name === 'string') {
-					await onFontChange(
-						Load.sauceToAppFont(data.font_name) ?? data.font_name,
-					);
-				}
-				return;
 			case MoebiusAction.ICE_COLORS:
 				onIceColorsChange(data.value === true);
 				return;
@@ -501,45 +593,59 @@ const createWorkerHandler = inputHandle => {
 
 	/** adopt the full-fidelity doc (join follow-up or requested resync) */
 	const applyExtSync = async payload => {
-		applyDepth++;
+		// ops sent after the sync request are not in the snapshot and the
+		// server excludes the sender from echo, so without the replay our
+		// own strokes vanish with no seq gap to recover them. An op acked
+		// before the snapshot is in it, and every later ack waits behind
+		// this adoption, so the unacked list is exactly what it lacks
+		const ops = pendingSends.slice();
 		try {
-			const result = extSyncToDoc(payload);
-			State.textArtCanvas.setDocData(result.doc);
-			// seq and sync state settle BEFORE any awaited tail: a frame
-			// landing during the font load must not get judged against
-			// the pre-sync seq and trigger a spurious resync round trip
+			const result = muted(() => {
+				const synced = extSyncToDoc(payload);
+				State.textArtCanvas.setDocData(synced.doc);
+				return synced;
+			});
+			adopting = ops;
 			if (Number.isInteger(payload.seq)) {
 				lastSeq = payload.seq;
 			}
 			syncQueued = false;
 			clearTimeout(syncRetryTimer);
 			syncRetryTimer = 0;
+			// the snapshot predates every op in the list, so each of its
+			// settings yields to an op of ours of that kind, the user's
+			// own changes during the font load included
 			if (result.fontName) {
 				await onFontChange(
 					Load.sauceToAppFont(result.fontName) ?? result.fontName,
+					() => !holds(ops, MoebiusAction.CHANGE_FONT),
 				);
 			}
-			State.font.setLetterSpacing(result.use9px);
-			btn9pt.classList.toggle('enabled', result.use9px);
-			btnIce.classList.toggle('enabled', result.doc.getIceColors());
-			if (Array.isArray(payload.palette)) {
-				const palette = sanitizeExtPalette(payload.palette);
-				if (palette) {
-					adoptClassic16(palette);
+			muted(() => {
+				if (!holds(ops, MoebiusAction.USE_9PX_FONT)) {
+					State.font.setLetterSpacing(result.use9px);
+					btn9pt.classList.toggle('enabled', result.use9px);
 				}
-			}
-			// ops sent after the sync request are not in the snapshot and
-			// the server excludes the sender from echo, so without this
-			// replay our own strokes vanish with no seq gap to recover
-			// them; set-cell ops are idempotent, so replaying one the
-			// snapshot already holds is harmless
-			for (const op of pendingSends.slice()) {
+				if (!holds(ops, MoebiusAction.ICE_COLORS)) {
+					btnIce.classList.toggle('enabled', result.doc.getIceColors());
+				}
+				if (Array.isArray(payload.palette)) {
+					const palette = sanitizeExtPalette(payload.palette);
+					if (palette) {
+						adoptClassic16(palette);
+					}
+				}
+			});
+			// set-cell ops are idempotent, so replaying one the snapshot
+			// already holds is harmless; for-of also reaches the ops
+			// appended while an earlier one awaits
+			for (const op of ops) {
 				await applyOwnOp(op.type, op.data);
 			}
 		} catch (error) {
 			console.warn('[Network] dropped malformed EXT_SYNC:', error);
 		} finally {
-			applyDepth = Math.max(0, applyDepth - 1);
+			adopting = null;
 		}
 	};
 
@@ -550,7 +656,7 @@ const createWorkerHandler = inputHandle => {
 		// stale, so recovery would never apply)
 		if (type === T0wnzAction.EXT_ACK) {
 			noteSeqAdvance(data);
-			pendingSends.shift();
+			cover(pendingSends.shift(), -1);
 			if (data?.refused === true) {
 				// the server dropped an op this client already applied
 				// locally; nothing else reconciles that
@@ -565,16 +671,21 @@ const createWorkerHandler = inputHandle => {
 		if (SEQ_TYPES.has(type) && !noteSeq(data)) {
 			return;
 		}
+		if (SETTING_TYPES.has(type) && holds(pendingSends, type)) {
+			return;
+		}
 		switch (type) {
 			case MoebiusAction.DRAW:
-				onRemoteDraw(data);
+				if (!pendingCells.has(cellKey(data.x, data.y))) {
+					await onRemoteDraw(data);
+				}
 				break;
 			case T0wnzAction.EXT_DRAW:
-				await onRemoteExtDraw([data]);
+				await onRemoteExtDraw(unmasked([data]));
 				break;
 			case T0wnzAction.EXT_DRAW_BATCH:
 				if (Array.isArray(data.cells)) {
-					await onRemoteExtDraw(data.cells);
+					await onRemoteExtDraw(unmasked(data.cells));
 				}
 				break;
 			case T0wnzAction.EXT_PALETTE:
@@ -615,10 +726,13 @@ const createWorkerHandler = inputHandle => {
 				break;
 			case MoebiusAction.CHANGE_FONT:
 				// Moebius speaks SAUCE font names ('IBM VGA'); map to app
-				// names, fall through raw for unknowns
+				// names, fall through raw for unknowns. A pick of ours that
+				// goes out before this one installs lands after it in the room
 				if (typeof data.font_name === 'string') {
+					const sends = fontSends;
 					await onFontChange(
 						Load.sauceToAppFont(data.font_name) ?? data.font_name,
+						() => fontSends === sends,
 					);
 				}
 				break;
@@ -631,9 +745,8 @@ const createWorkerHandler = inputHandle => {
 					requestSync();
 				}
 				break;
-			case MoebiusAction.SAUCE: {
-				applyDepth++;
-				try {
+			case MoebiusAction.SAUCE:
+				muted(() => {
 					if (typeof data.title === 'string') {
 						State.title = data.title;
 						const field = document.getElementById('sauceTitle');
@@ -656,13 +769,10 @@ const createWorkerHandler = inputHandle => {
 						// byte counter would show the old size until a keystroke
 						enforceMaxBytes();
 					}
-				} finally {
-					applyDepth = Math.max(0, applyDepth - 1);
-				}
+				});
 				// the sidebar sauce block mirrors these fields
 				document.dispatchEvent(new CustomEvent('onSauceChange'));
 				break;
-			}
 			default:
 				// STATUS, operations 17-20/22: nothing to render yet
 				break;
@@ -767,9 +877,8 @@ const createWorkerHandler = inputHandle => {
 	};
 
 	/**
-	 * Chat and cursor frames are never echoes of a remote apply, so the
-	 * applyDepth gate must not swallow them, or a line typed during a
-	 * sync or font load echoes locally and never broadcasts.
+	 * Chat and cursor frames are never echoes of a remote apply, so they
+	 * skip the applyDepth gate.
 	 * @param {number} type @param {object} data @returns {boolean} sent
 	 */
 	const sendLive = (type, data) => {
@@ -782,9 +891,11 @@ const createWorkerHandler = inputHandle => {
 
 	/** a doc mutation of ours: the ext ack bookkeeping rides the send */
 	const sendMutation = (type, data) => {
-		if (sendFrame(type, data) && extActive()) {
-			pendingSends.push({ type, data });
+		const sent = sendFrame(type, data);
+		if (sent) {
+			track({ type, data });
 		}
+		return sent;
 	};
 
 	/**
@@ -807,7 +918,7 @@ const createWorkerHandler = inputHandle => {
 			}
 			for (let i = 0; i < extCells.length; i += EXT_BATCH_LIMIT) {
 				const data = { cells: extCells.slice(i, i + EXT_BATCH_LIMIT) };
-				pendingSends.push({ type: T0wnzAction.EXT_DRAW_BATCH, data });
+				track({ type: T0wnzAction.EXT_DRAW_BATCH, data });
 				State.worker.postMessage({
 					cmd: 'send',
 					type: T0wnzAction.EXT_DRAW_BATCH,
@@ -828,9 +939,12 @@ const createWorkerHandler = inputHandle => {
 	const sendResize = (columns, rows) =>
 		sendMutation(MoebiusAction.SET_CANVAS_SIZE, { columns, rows });
 
-	const sendFontChange = fontName =>
+	const sendFontChange = fontName => {
 		// peers (Moebius included) expect SAUCE font names
-		sendMutation(MoebiusAction.CHANGE_FONT, { font_name: Load.appToSauceFont(fontName) ?? fontName });
+		if (sendMutation(MoebiusAction.CHANGE_FONT, { font_name: Load.appToSauceFont(fontName) ?? fontName })) {
+			fontSends++;
+		}
+	};
 
 	const sendIceColorsChange = iceColors =>
 		sendMutation(MoebiusAction.ICE_COLORS, { value: iceColors });
@@ -861,39 +975,53 @@ const createWorkerHandler = inputHandle => {
 			// list; a typo must not become tomorrow's prefill
 			recentServers.remember(spelling);
 		}
-		applyDepth++;
 		serverCaps = Array.isArray(data.data.caps)
 			? data.data.caps.filter(cap => typeof cap === 'string')
 			: [];
 		lastSeq = -1;
-		pendingSends.length = 0;
+		dropPending();
+		/** @type {{type: number, data: object}[]} */
+		const ops = [];
 		try {
 			State.modal.loading(
 				'Updating editor with data from the collab session...',
 			);
-			State.palette = createDefaultPalette();
-			// the join replaces the palette; without the rebind the later
-			// setLetterSpacing rebuild runs against the stale handle ref
-			State.font?.setPalette?.(State.palette);
-			document.dispatchEvent(
-				new CustomEvent('onPaletteChange', {
-					detail: State.palette,
-					bubbles: true,
-					cancelable: false,
-				}),
-			);
-			// a caps reply is our own server, whose join palette is 8-bit
-			// by construction; everyone else's depth only the wire can tell
-			const result = joinDocToDoc(data.data.doc, { paletteDepth: extActive() ? 8 : undefined });
-			State.textArtCanvas.setDocData(result.doc);
+			const result = muted(() => {
+				State.palette = createDefaultPalette();
+				// the join replaces the palette; without the rebind the later
+				// setLetterSpacing rebuild runs against the stale handle ref
+				State.font?.setPalette?.(State.palette);
+				document.dispatchEvent(
+					new CustomEvent('onPaletteChange', {
+						detail: State.palette,
+						bubbles: true,
+						cancelable: false,
+					}),
+				);
+				// a caps reply is our own server, whose join palette is 8-bit
+				// by construction; everyone else's depth only the wire can tell
+				const joined = joinDocToDoc(data.data.doc, { paletteDepth: extActive() ? 8 : undefined });
+				State.textArtCanvas.setDocData(joined.doc);
+				return joined;
+			});
+			adopting = ops;
+			// a change the user makes during the font load outranks the
+			// join doc's setting of that kind
 			if (result.fontName) {
-				await onFontChange(Load.sauceToAppFont(result.fontName) ?? result.fontName);
+				await onFontChange(
+					Load.sauceToAppFont(result.fontName) ?? result.fontName,
+					() => !holds(ops, MoebiusAction.CHANGE_FONT),
+				);
 			}
-			// joining IS a new document; resyncs later in the session go
-			// through setDocData too and must NOT re-home anything, so
-			// the reset event fires only here
-			document.dispatchEvent(new CustomEvent('onNewDocument'));
-			State.font.setLetterSpacing(result.use9px);
+			muted(() => {
+				// joining IS a new document; resyncs later in the session go
+				// through setDocData too and must NOT re-home anything, so
+				// the reset event fires only here
+				document.dispatchEvent(new CustomEvent('onNewDocument'));
+				if (!holds(ops, MoebiusAction.USE_9PX_FONT)) {
+					State.font.setLetterSpacing(result.use9px);
+				}
+			});
 			if (Array.isArray(data.data.users)) {
 				for (const user of data.data.users) {
 					const nick = typeof user.nick === 'string' ? user.nick : 'guest';
@@ -912,11 +1040,14 @@ const createWorkerHandler = inputHandle => {
 			}
 			websocketUI(true);
 			State.title = 'collab mode';
+			for (const op of ops) {
+				await applyOwnOp(op.type, op.data);
+			}
 		} catch (error) {
 			console.error('[Network] failed to adopt session doc:', error);
 			stayLocal();
 		} finally {
-			applyDepth = Math.max(0, applyDepth - 1);
+			adopting = null;
 			State.modal.close();
 		}
 	};
@@ -1075,9 +1206,19 @@ const createWorkerHandler = inputHandle => {
 		);
 	});
 
+	// messages apply one at a time, in the order the server sent them:
+	// a handler that awaits a font load or a glyph fetch would otherwise
+	// let a later frame land first. A throw is logged so the next one
+	// still runs
+	let inbox = Promise.resolve();
+	const receive = msg =>
+		(inbox = inbox
+			.then(() => onMessage(msg))
+			.catch(error => console.error('[Network] message failed:', error)));
+
 	if (State.worker) {
 		try {
-			State.worker.addEventListener('message', onMessage);
+			State.worker.addEventListener('message', receive);
 			// the 'initialized' reply is what starts the probe
 			State.worker.postMessage({ cmd: 'init' });
 		} catch (error) {

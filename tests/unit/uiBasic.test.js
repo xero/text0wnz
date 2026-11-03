@@ -85,7 +85,6 @@ describe('UI Basic Utilities', () => {
 
 			const toggle = createSettingToggle(mockDiv, getter, setter);
 
-			expect(toggle).toHaveProperty('sync');
 			expect(toggle).toHaveProperty('update');
 			expect(getter).toHaveBeenCalled();
 		});
@@ -129,21 +128,14 @@ describe('UI Basic Utilities', () => {
 			expect(setter).toHaveBeenCalledWith(true);
 		});
 
-		it('should sync with new getter and setter', () => {
+		it('update re-reads the getter', () => {
 			const mockDiv = document.createElement('div');
-			const testValue = false;
-			const getter = vi.fn(() => testValue);
-			const setter = vi.fn();
+			let value = false;
+			const toggle = createSettingToggle(mockDiv, () => value, vi.fn());
 
-			const toggle = createSettingToggle(mockDiv, getter, setter);
+			value = true;
+			toggle.update();
 
-			const newValue = true;
-			const newGetter = vi.fn(() => newValue);
-			const newSetter = vi.fn();
-
-			toggle.sync(newGetter, newSetter);
-
-			expect(newGetter).toHaveBeenCalled();
 			expect(mockDiv.classList.contains('enabled')).toBe(true);
 		});
 	});

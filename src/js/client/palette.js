@@ -441,9 +441,54 @@ const createSwatchBinder = () => {
 	// the native long-press contextmenu that trails a hold, during it
 	// or after the lift, belongs to the same press
 	let held = false;
+	// iPadOS sends the click of a quick second tap, finger or Pencil, to
+	// where the first tap landed: another swatch, or off the swatches
+	// altogether, where it and the dblclick after it can shade a panel.
+	// The swatch the second tap pressed owns that click
+	/** @type {{el: HTMLElement, pick: (bg?: boolean) => void} | null} */
+	let press = null;
+	let redirected = false;
+	document.addEventListener(
+		'pointerdown',
+		() => {
+			press = null;
+			redirected = false;
+		},
+		true,
+	);
+	document.addEventListener(
+		'click',
+		e => {
+			if (!press || e.detail < 2 || press.el.contains(/** @type {Node} */ (e.target))) {
+				return;
+			}
+			e.preventDefault();
+			e.stopPropagation();
+			redirected = true;
+			if (!picked) {
+				picked = true;
+				press.pick(picksBackground(e));
+			}
+		},
+		true,
+	);
+	document.addEventListener(
+		'dblclick',
+		e => {
+			if (redirected) {
+				redirected = false;
+				e.preventDefault();
+				e.stopPropagation();
+			}
+		},
+		true,
+	);
 	return (el, pick) => {
 		el.addEventListener('pointerdown', e => {
 			picked = held = false;
+			if ((e.pointerType === 'touch' || e.pointerType === 'pen') && e.isPrimary) {
+				press = { el, pick };
+			}
 			hold.arm(e, () => {
 				picked = held = true;
 				pick(true);
@@ -481,6 +526,10 @@ const createPalettePicker = canvas => {
 	const doubleTapThreshold = 300; // ms
 	let lastTouchTime = 0;
 	let lastMouseTime = 0;
+	// a double tap needs both taps on one color, or two quick picks of
+	// two colors open the editor for the second instead of picking it
+	let lastTouchIndex = -1;
+	let lastMouseIndex = -1;
 	const hold = createTouchHold();
 	// a press that held, wandered, met a second finger, or was
 	// cancelled lifts as neither a tap nor half of a double tap
@@ -575,20 +624,21 @@ const createPalettePicker = canvas => {
 	};
 
 	/**
-	 * @param {number} x
-	 * @param {number} y
+	 * @param {number} colorIndex
 	 * @param {boolean} isDoubleClick
-	 * @param {boolean} _isTouch
 	 */
-	const handleInteraction = (x, y, isDoubleClick, _isTouch) => {
+	const handleInteraction = (colorIndex, isDoubleClick) => {
 		const palette = State.palette;
 		if (!palette) {
 			return;
 		}
-		const colorIndex = y + (x === 0 ? 0 : 8);
 		if (isDoubleClick) {
 			if (cc !== null) {
 				cc.classList.remove('hide');
+				// Chrome for Android opens no picker for an input without a
+				// layout box, and the box would wait for the next frame unless
+				// a layout read builds it now
+				cc.getBoundingClientRect();
 				cc.value = palette.getRGBColor(colorIndex);
 				cc.click();
 				colorEdited = colorIndex;
@@ -603,18 +653,20 @@ const createPalettePicker = canvas => {
 	/**
 	 * @param {number} px
 	 * @param {number} py
+	 * @returns {number} the strip color index under the point
 	 */
 	const swatchAt = (px, py) => {
 		// fractions of the rendered rect, not the backing store: the
 		// phone palette flyout scales the canvas with CSS
 		const rect = canvas.getBoundingClientRect();
-		return {
-			x: Math.floor(((px - rect.left) / rect.width) * 2),
-			y: Math.min(
-				7,
-				Math.max(0, Math.floor(((py - rect.top) / rect.height) * 8)),
-			),
-		};
+		// a finger can slide a few pixels off the strip before it lifts
+		// and still pick, so a point past an edge takes the nearest swatch
+		const column = Math.floor(((px - rect.left) / rect.width) * 2);
+		const row = Math.min(
+			7,
+			Math.max(0, Math.floor(((py - rect.top) / rect.height) * 8)),
+		);
+		return row + (column <= 0 ? 0 : 8);
 	};
 
 	/**
@@ -622,8 +674,7 @@ const createPalettePicker = canvas => {
 	 * @param {number} py
 	 */
 	const pickBackground = (px, py) => {
-		const { x, y } = swatchAt(px, py);
-		State.palette?.setBackgroundColor(y + (x === 0 ? 0 : 8));
+		State.palette?.setBackgroundColor(swatchAt(px, py));
 	};
 
 	/**
@@ -637,23 +688,25 @@ const createPalettePicker = canvas => {
 		if (isTouch && !touch) {
 			return;
 		}
-		const { x, y } = isTouch
+		const index = isTouch
 			? swatchAt(touch.pageX, touch.pageY)
 			: swatchAt(e.clientX, e.clientY);
 
 		const currentTime = new Date().getTime();
 		const lastTime = isTouch ? lastTouchTime : lastMouseTime;
+		const lastIndex = isTouch ? lastTouchIndex : lastMouseIndex;
 
-		if (currentTime - lastTime < doubleTapThreshold) {
-			handleInteraction(x, y, true, isTouch);
-		} else {
-			handleInteraction(x, y, false, isTouch);
-		}
+		handleInteraction(
+			index,
+			currentTime - lastTime < doubleTapThreshold && index === lastIndex,
+		);
 
 		if (isTouch) {
 			lastTouchTime = currentTime;
+			lastTouchIndex = index;
 		} else {
 			lastMouseTime = currentTime;
+			lastMouseIndex = index;
 		}
 	};
 
@@ -669,6 +722,11 @@ const createPalettePicker = canvas => {
 
 	/** @param {MouseEvent} e */
 	const mouseEnd = e => {
+		// a desktop pen sends no touch events to cancel, so its mouseup
+		// follows a hold that already picked
+		if (spent) {
+			return;
+		}
 		const bg = picksBackground(e);
 		// a background pick stays out of the double click timing, or a
 		// quick fg then bg pick would open the color editor

@@ -132,6 +132,9 @@ const createFontHandle = (fontData, palette, letterSpacing, scaleFactor) => {
 			}
 		},
 		getScaleFactor: () => currentScaleFactor,
+		// a font that never goes live (a timed-out or disowned load, a
+		// preview) stops pregenerating glyphs nobody will draw
+		dispose: () => lazyFont.dispose(),
 		// lazyFont is set at construction, so delegation needs no guard
 		draw: (charCode, foreground, background, ctx, x, y) =>
 			lazyFont.draw(charCode, foreground, background, ctx, x, y),
@@ -173,8 +176,6 @@ const loadFontFromXBData = (
 				);
 				return null;
 			}
-			State.fontWidth = fontWidth;
-			State.fontHeight = fontHeight;
 			const internalDataSize = (fontWidth * fontHeight * 256) / 8;
 			const data = new Uint8Array(internalDataSize);
 			for (let i = 0; i < internalDataSize && i < fontBytes.length; i++) {
@@ -223,8 +224,6 @@ const loadFontFromImage = (
 				fontHeight >= 1 &&
 				fontHeight <= 32
 			) {
-				State.fontWidth = fontWidth;
-				State.fontHeight = fontHeight;
 				const data = new Uint8Array((fontWidth * fontHeight * 256) / 8);
 				let k = 0;
 

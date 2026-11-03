@@ -1202,6 +1202,28 @@ const isBlankCell = (charCode, background) =>
 	(charCode === 0 || charCode === 32 || charCode === 255) &&
 	background === 0;
 
+// the paste tool and the selection tool's seed share one reading;
+// otherwise a combo the paste tool ignores, like ctrl alt v, still
+// starts a rect
+const clipboardKey = e => {
+	if (!(e.ctrlKey || e.metaKey)) {
+		return null;
+	}
+	if (e.code === 'Backspace') {
+		return 'delete';
+	}
+	if (e.altKey) {
+		return null;
+	}
+	if (e.code === 'KeyV') {
+		return e.shiftKey ? 'systemPaste' : 'paste';
+	}
+	if (e.shiftKey) {
+		return null;
+	}
+	return e.code === 'KeyX' ? 'cut' : e.code === 'KeyC' ? 'copy' : null;
+};
+
 const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 	let buffer;
 	let x = 0;
@@ -1396,6 +1418,8 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 			});
 	};
 
+	const actions = { cut, copy, paste, systemPaste, delete: deleteSelection };
+
 	const keyDown = e => {
 		if (isTextEntry(e.target)) {
 			// this handler is PERMANENT: without the bail, Cmd+V in the
@@ -1403,38 +1427,10 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 			// Ctrl+Backspace in chat deletes the selection
 			return;
 		}
-		if (enabled) {
-			if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
-				switch (e.code) {
-					case 'KeyX':
-						e.preventDefault();
-						cut();
-						break;
-					case 'KeyC':
-						e.preventDefault();
-						copy();
-						break;
-					case 'KeyV':
-						e.preventDefault();
-						paste();
-						break;
-					default:
-						break;
-				}
-			}
-			if (
-				(e.ctrlKey || e.metaKey) &&
-				e.shiftKey &&
-				!e.altKey &&
-				e.code === 'KeyV'
-			) {
-				e.preventDefault();
-				systemPaste();
-			}
-		}
-		if ((e.ctrlKey || e.metaKey) && e.code === 'Backspace') {
+		const action = clipboardKey(e);
+		if (action && (enabled || action === 'delete')) {
 			e.preventDefault();
-			deleteSelection();
+			actions[action]();
 		}
 	};
 	document.addEventListener('keydown', keyDown);
@@ -1449,6 +1445,7 @@ const createPasteTool = (cutItem, copyItem, pasteItem, deleteItem) => {
 		systemPaste: systemPaste,
 		deleteSelection: deleteSelection,
 		disable: disable,
+		hasBuffer: () => buffer !== undefined,
 	};
 };
 
@@ -1784,6 +1781,33 @@ const createSelectionTool = () => {
 		// from the bounds would lose which corner the expansion grows from
 	};
 
+	// the clipboard keys and flips need a rect too. The seed listens in
+	// the capture phase, ahead of the paste tool's bubble listener
+	// whatever order the two registered in; otherwise that listener
+	// checks enabled before the rect exists and the key does nothing
+	const seedForAction = e => {
+		// in a dialog, a seed would arm the paste tool, which cancels the
+		// dialog's own copy and overwrites the editor buffer
+		if (isTextEntry(e.target) || State.modal?.isOpen?.()) {
+			return;
+		}
+		const action = clipboardKey(e);
+		const flip =
+			!e.ctrlKey &&
+			!e.altKey &&
+			!e.shiftKey &&
+			!e.metaKey &&
+			(e.key === '[' || e.key === ']');
+		// an empty buffer pastes nothing, so a rect would only float the
+		// bar over a cell nobody chose
+		if (
+			flip ||
+			(action && (action !== 'paste' || State.pasteTool.hasBuffer()))
+		) {
+			startSelectionExpansion();
+		}
+	};
+
 	const moveSelectionLeft = () => {
 		startSelectionExpansion();
 		const selection = State.selectionCursor.getSelection();
@@ -2090,6 +2114,7 @@ const createSelectionTool = () => {
 		document.addEventListener('onTextCanvasDown', canvasDown);
 		document.addEventListener('onTextCanvasDrag', canvasDrag);
 		document.addEventListener('onTextCanvasUp', canvasUp);
+		document.addEventListener('keydown', seedForAction, true);
 		document.addEventListener('keydown', keyDown);
 		viewport?.addEventListener('scroll', onViewportScroll, { passive: true });
 		flipHButton.addEventListener('click', flipHorizontal);
@@ -2156,6 +2181,7 @@ const createSelectionTool = () => {
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
 		document.removeEventListener('keydown', keyDown);
+		document.removeEventListener('keydown', seedForAction, true);
 		viewport?.removeEventListener('scroll', onViewportScroll);
 		clearTimeout(settleTimer);
 

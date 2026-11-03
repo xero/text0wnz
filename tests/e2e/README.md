@@ -91,6 +91,7 @@ The E2E tests validate the application's functionality in a real browser environ
   - Help and information panels
 
 - **asciiBrush.spec.js** - Ascii brush strokes in line and square modes
+- **autosave.spec.js** - The autosave journal across reloads: draws, iCE colors, a resize, a new frame, a selection still floating in move mode, and the last edit before a reload come back (skipped where the browser refuses both OPFS and IndexedDB), and the idle commit never splits a held drag or a paused selection move
 - **autoscroll.spec.js** - Minimap autoscroll stepping and escape
 - **collabMoebius.spec.js** - Joins the vendored vanilla Moebius fixture through the Connect form (Chromium only)
 - **collabRoundTrip.spec.js** - Two browsers drawing through the bun server

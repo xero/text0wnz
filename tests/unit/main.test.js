@@ -120,11 +120,12 @@ const mockCreateFunctions = {
 		eraseToStartOfColumn: vi.fn(),
 		eraseToEndOfColumn: vi.fn(),
 	})),
-	createSettingToggle: vi.fn(() => ({
-		update: vi.fn(),
-		sync: vi.fn(),
-	})),
+	createSettingToggle: vi.fn(() => ({ update: vi.fn() })),
 	createZoomControl: vi.fn(() => createMockElement()),
+	createFontSelect: vi.fn(() => ({
+		setValue: vi.fn(),
+		isFavorite: vi.fn(() => false),
+	})),
 };
 
 // the stub below hides jsdom, which the SAUCE dialog tests still need
@@ -161,6 +162,8 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	createCanvas: vi.fn(() => createMockElement()),
 	...mockCreateFunctions,
 	onClick: vi.fn(),
+	armFullscreenIcon: vi.fn(),
+	toggleFullscreen: vi.fn(),
 	onReturn: vi.fn(),
 	onFileChange: vi.fn(),
 	onSelectChange: vi.fn(),
@@ -623,6 +626,79 @@ describe('Main Application Module', () => {
 				expect.objectContaining({ comments: 'greets' }),
 			);
 			expect(mockState.modal.close).toHaveBeenCalled();
+		});
+	});
+
+	describe('9pt chip', () => {
+		const halt = new Error('halt after the font display is wired');
+
+		// boots past the font display wiring with a real toggle on a jsdom
+		// chip and returns the onFontChange listener main.js registered
+		const bootToFontDisplay = async () => {
+			const { onClick, createSettingToggle } = await import('../../src/js/client/ui.js');
+			const stub = global.document;
+			vi.stubGlobal('document', jsdom);
+			const real = await vi.importActual('../../src/js/client/ui.js');
+			vi.stubGlobal('document', stub);
+			const chip = jsdom.createElement('div');
+			const changeFont = createMockElement();
+			const els = { nav9pt: chip, changeFont };
+			const $ = global.document.getElementById;
+			const lookup = $.getMockImplementation();
+			$.mockImplementation(id => els[id] ?? lookup(id));
+			vi.mocked(createSettingToggle).mockImplementation((el, get, set) =>
+				el === chip
+					? real.createSettingToggle(el, get, set)
+					: { update: vi.fn() });
+			vi.mocked(onClick).mockImplementation(el => {
+				if (el === changeFont) {
+					throw halt;
+				}
+			});
+			let boot;
+			mockState.waitFor.mockImplementationOnce((_deps, ready) => {
+				boot = ready().then(() => null, error => error);
+			});
+			try {
+				await domReady();
+				await vi.advanceTimersByTimeAsync(100);
+				expect(await boot).toBe(halt);
+			} finally {
+				$.mockImplementation(lookup);
+				vi.mocked(onClick).mockReset();
+				vi.mocked(createSettingToggle).mockReset();
+			}
+			const fontChange = global.document.addEventListener.mock.calls.findLast(
+				([type]) => type === 'onFontChange',
+			)[1];
+			return { chip, fontChange };
+		};
+
+		const font = mockState.font;
+
+		beforeEach(() => {
+			mockState.network = { sendLetterSpacingChange: vi.fn() };
+		});
+
+		afterEach(() => {
+			delete mockState.network;
+			mockState.font = font;
+		});
+
+		it('a click after a font change still sends the spacing to the session', async () => {
+			const { chip, fontChange } = await bootToFontDisplay();
+			mockState.font = { ...font, setLetterSpacing: vi.fn(), getLetterSpacing: vi.fn(() => false) };
+			fontChange();
+			chip.dispatchEvent(new jsdom.defaultView.Event('click'));
+			expect(mockState.font.setLetterSpacing).toHaveBeenCalledWith(true);
+			expect(mockState.network.sendLetterSpacingChange).toHaveBeenCalledWith(true);
+		});
+
+		it('reads the spacing from the font that replaced the old one', async () => {
+			const { chip, fontChange } = await bootToFontDisplay();
+			mockState.font = { ...font, getLetterSpacing: vi.fn(() => true) };
+			fontChange();
+			expect(chip.classList.contains('enabled')).toBe(true);
 		});
 	});
 });

@@ -221,7 +221,7 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 **Storage** (`storage.js`)
 
 - IndexedDB for canvas persistence: the snapshot (`Uint16Array` plus columns and rows) is stored directly
-- One shared database connection; stores for canvas data, embedded XBin font bytes, undo history, and the reference image
+- One shared database connection; stores for canvas data, embedded XBin font bytes, and the reference image, plus one that keeps only what a v2 install left
 - Automatic save/restore driven by `state.js`
 - Editor settings in `localStorage`
 
@@ -688,7 +688,7 @@ Sizes are from a `bun bake` at the time of writing and drift with every change. 
 
 3. **`undoHistory`**
    - Key: `currentUndoHistory`
-   - Value: none on the current version; the byte-budgeted undo arena does not serialize, so the store stays empty and the undo stack starts fresh each session
+   - Value: a v2 install's undo history, which nothing reads or writes; `clearAll` empties it. The byte-budgeted undo arena does not serialize, so the undo stack starts fresh each session
 
 4. **`refImage`**
    - Key: `currentRef`
@@ -704,7 +704,9 @@ The database is at version 4; `storage.js` opens one shared connection and reope
 
 **Auto-Save Strategy:**
 
-The OPFS autosave journal (`journalStore.js`, with `journalWorker.js` owning the file) is the source of truth for restoring work in progress. The IndexedDB snapshot is the fallback; restoring it re-seeds the journal.
+The OPFS autosave journal (`journalStore.js`, with `journalWorker.js` owning the file) is the source of truth for restoring work in progress. The IndexedDB snapshot is the fallback; restoring it re-seeds the journal. Keyframes wait while the restore runs, so none overwrites the journal before the restore reads it.
+
+The store probes for its backend once. Where `navigator.storage.getDirectory()` rejects, as in Firefox private windows and Playwright's WebKit, the journal keeps an IndexedDB record log instead, and where IndexedDB refuses too, a memory log that dies with the tab. An OPFS call that fails after the probe never falls back. A second tab, for example, cannot take the lock on the journal file, and an IndexedDB log there may hold an older episode's journal, which would restore worse than the snapshot does.
 
 ### Service Worker Cache (Cache API)
 
@@ -804,7 +806,7 @@ document.addEventListener('onTextCanvasChange', handler);
 
 Undo lives in the patch arena (`core/patchArena.ts`), a byte-capped ring the editor core (`core/editor.ts`) writes through. Every step is either a stroke or a canvas resize:
 
-- **Stroke.** One undo group. It records `(index, before, after)` triples for each plane it touched, keyed by cell index, plus the frame it was drawn in. `startUndo()` closes the previous group, and the open group commits lazily at the next flush point.
+- **Stroke.** One undo group. It records `(index, before, after)` triples for each plane it touched, keyed by cell index, plus the frame it was drawn in. `startUndo()` closes the previous group. The open group commits at the next flush point, once editing idles for 300ms, or when the page hides, so the autosave journal holds the last edit. A held press or a floating selection move keeps its group open across pauses, and reaches the journal as a keyframe at each pause or page hide instead. The doc already holds the open group's writes, and the stroke record that commits later carries every touched cell's final value, so it replays over that keyframe to the same doc. That keyframe gzips before it reaches the store, so a reload can unload the page first. A plain stroke's append skips the gzip, and on OPFS it usually lands.
 - **Resize.** One step across every frame. It keeps only the non-blank cells the resize cut off, indexed at the geometry they fell from. Undo resizes back and restores them. Redo resizes again and restores whatever the undo cut off in turn, such as a frame added since or a peer's draw.
 
 ```javascript
@@ -819,7 +821,7 @@ Opening a file, New, deleting a frame, and a collaborator's resize clear the his
 
 Undo is local to each user. Remote ops never enter the arena, so a peer's resize clears your history rather than becoming your step. When you undo or redo your own resize in a session, `canvas.js` sends the size change before the restored cells. Both ride the same worker channel and socket in order, and the server applies and fans out mutations in sequence order, so every peer resizes first and then receives cells inside its new bounds.
 
-The OPFS journal never stores a resize as a stroke record. A resize, and an undo or redo of one, writes a fresh keyframe, and no stroke appends until that keyframe lands, so a reload never replays a stroke against the wrong geometry. The arena itself stays in memory. A reload restores the content and starts an empty history.
+The OPFS journal never stores a resize as a stroke record. A resize, and an undo or redo of one, writes a fresh keyframe. A stroke drawn after it appends behind that keyframe, and if the keyframe fails to write, the journal drops strokes until a fresh one lands, so a reload never replays a stroke against the wrong geometry. The arena itself stays in memory. A reload restores the content and starts an empty history.
 
 ### Strategy Pattern
 
@@ -1246,7 +1248,7 @@ if (!hasNonDefaultZoom && (this.isDefaultState() || network?.isConnected?.())) {
 ```
 
 **Undo stays in memory:**
-The patch arena does not serialize. `main.js` calls `State.saveUndoHistory` once editing goes idle and on `visibilitychange` and `pagehide`, but `canvas.js` `getUndoHistory` returns null, so nothing is written and the `undoHistory` store stays empty.
+The patch arena does not serialize, and nothing saves or restores it. A reload restores the content from the OPFS journal and starts an empty history.
 
 ## Related Documentation
 

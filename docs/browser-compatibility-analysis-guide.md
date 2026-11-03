@@ -227,11 +227,11 @@ if ('serviceWorker' in navigator) { ... }
 // localStorage (via State.js)
 State.saveToLocalStorage()
 
-// requestIdleCallback, with a synchronous fallback
+// requestIdleCallback, with a timer fallback
 if ('requestIdleCallback' in window) {
-	requestIdleCallback(() => State.saveUndoHistory());
+	requestIdleCallback(initSecondaryTools);
 } else {
-	State.saveUndoHistory();
+	setTimeout(initSecondaryTools, 100);
 }
 ```
 
@@ -304,7 +304,7 @@ if (featureSupport <= targetChrome) {
 	"requestidlecallback": {
 		"safari": "NOT_SUPPORTED",
 		"status": "✅ FULLY_SUPPORTED",
-		"notes": "Has a synchronous fallback in code"
+		"notes": "Has a timer fallback in code"
 	}
 }
 ```
@@ -545,9 +545,9 @@ Let's walk through analyzing `requestIdleCallback`:
 ```javascript
 // src/js/client/main.js
 if ('requestIdleCallback' in window) {
-	requestIdleCallback(() => State.saveUndoHistory());
+	requestIdleCallback(initSecondaryTools);
 } else {
-	State.saveUndoHistory();
+	setTimeout(initSecondaryTools, 100);
 }
 ```
 
@@ -585,7 +585,7 @@ curl -L https://raw.githubusercontent.com/Fyrd/caniuse/main/features-json/reques
 ```javascript
 // Code has fallback!
 } else {
-	State.saveUndoHistory();
+	setTimeout(initSecondaryTools, 100);
 }
 ```
 
@@ -600,7 +600,7 @@ curl -L https://raw.githubusercontent.com/Fyrd/caniuse/main/features-json/reques
 		"iphone": "NOT_SUPPORTED",
 		"ipad": "NOT_SUPPORTED",
 		"status": "✅ FULLY_SUPPORTED",
-		"notes": "Safari/iOS not supported, but a synchronous fallback is implemented"
+		"notes": "Safari/iOS not supported, but a timer fallback is implemented"
 	}
 }
 ```

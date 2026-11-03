@@ -126,18 +126,21 @@ byte-exact golden tests before anything else moved.
   `ctrl` click, on every color swatch (the strip, the xterm 256 grid,
   the recent colors, and the shading brush's gradient picker) and on
   every OS. A middle click picks nothing.
-- **A touch hold picks the background.** Hold a finger on any color
-  swatch for half a second to set the background color, on Android and
-  iOS alike; a tap still sets the foreground. In v2 a hold on the
-  16-color strip picked the foreground, and a quick tap after it opened
-  the color editor. A touch that slides into a scroll, meets a second
-  finger, or is cancelled picks nothing, where the strip used to pick
-  the foreground under the lifted finger.
+- **A touch or pen hold picks the background.** Hold a finger or a pen
+  on any color swatch for half a second to set the background color, on
+  Android and iOS alike; a tap still sets the foreground. An Apple
+  Pencil, which cannot right-click, picks the background this way too.
+  In v2 a hold on the 16-color strip picked the foreground, and a quick
+  tap after it opened the color editor. A press that slides into a
+  scroll, meets a second finger, or is cancelled picks nothing, where
+  the strip used to pick the foreground at the lift.
 - **The selection tool opens empty.** Picking the tool selected the
   cell under the keyboard cursor, as v2 did, so the selection bar
   floated over a cell nobody chose. The tool opens with nothing
-  selected now; the first arrow key or `m` starts a selection at the
-  keyboard cursor.
+  selected now. The first key that acts on a selection selects that
+  cell and then acts, so the arrows, `m`, `ctrl+x`, `ctrl+c`, `ctrl+v`,
+  `ctrl+shift+v`, `ctrl+backspace`, `[`, and `]` still reach it right
+  after the pick.
 
 ### Fixed
 
@@ -232,10 +235,47 @@ byte-exact golden tests before anything else moved.
 - **`ctrl+u` picks up colors.** Keyboard mode's color pickup listened
   for keypress, which browsers never fire for ctrl combos, so the
   shortcut never ran. It listens on keydown now.
+- **Quick picks of two strip colors pick both.** Two taps or clicks on
+  different colors of the 16-color strip within 300 ms counted as a
+  double click, so the second opened the color editor instead of
+  picking its color. Only two quick picks of the same color open the
+  editor now.
+- **The first double tap opens the color editor on Android.** In
+  Chrome for Android, the first double tap on a strip color after a
+  page load opened no color picker, because the picker's input had
+  not been laid out yet when the editor clicked it. It opens on the
+  first try now.
 - **Collab resizes keep rows in place.** The v2 server copied a room's
   cells by linear offset when the canvas changed width, so anyone who
   joined after a resize, and the session file it saved, got scrambled
   rows. The server now resizes row by row.
+- **Collab changes made during a font load reach the room.** A resize,
+  a font change, or an iCE colors or 9px toggle made while the session
+  loaded a font never left your editor. Peers kept the old size and
+  dropped every cell you drew outside it, and nothing brought the
+  canvases back in line.
+- **Font changes land in the order you make them.** When two font
+  loads overlapped, such as two font picks applied back to back or a
+  collaborator's font change arriving while another font loaded, the
+  slower load won, so the editor could settle on an older font than the
+  one you or the room last chose. A font change that takes more than 10
+  seconds to load, not counting time the tab spends in the background,
+  now falls back to the default font instead of holding up the changes
+  behind it.
+- **A 9px toggle during a font load sticks.** Toggling 9px letters, or a
+  collaborator's toggle arriving, while a font was still loading changed
+  the font about to be replaced, so the new font arrived with the old
+  spacing. The new font now takes the spacing in effect when it lands.
+- **Previewing the embedded font resizes nothing.** Highlighting XBIN
+  in the font picker read the embedded font's glyph size into the
+  editor, so closing the picker without applying it left the F-key
+  glyphs and the brush panels sized for a font that never went live.
+  The glyph size changes only when the font does now.
+- **The font label names the font in use after a collab fallback.**
+  When a collaborator's font failed to load, or was XBIN with no
+  embedded font, the editor fell back to the default font but the
+  label kept the collaborator's font name. It names the default font
+  now.
 - **The bridge dials only public addresses.** `BRIDGE=port` treated
   multicast, broadcast, reserved, IETF protocol assignment, and
   benchmarking addresses, the Azure wireserver, and 6to4 as public and
@@ -311,6 +351,9 @@ byte-exact golden tests before anything else moved.
 - **New resets the iCE and 9pt chips.** A new document turned iCE colors
   and 9px letters off but left both chips lit, so the next click on
   either did nothing.
+- **The 9pt chip reaches the session.** In a collab session the chip
+  switched your letter spacing without telling anyone, so peers kept
+  the old spacing.
 - **Ctrl shortcuts leave text fields alone.** The `ctrl` tool shortcuts
   fired from fields outside modals and chat, so `ctrl+a` in the frames
   panel's delay box picked the attribute brush instead of selecting the

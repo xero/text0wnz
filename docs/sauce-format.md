@@ -460,7 +460,7 @@ The spec above is normative for the editor's codec in `src/js/core/codecs/sauce.
 
 **Version.** A record whose Version is not `00` only marks where the payload ends, as note 6 under [SAUCE Layout](#sauce-layout) asks. Writers from before the standard leave stale file bytes in TFlags and TInfoS, so the editor reads none of its other fields.
 
-**Text fields.** Title, Author, Group, comment lines, and FontName decode as CP437, so a resave writes the same bytes back. Each field ends at its first NUL, since some writers terminate there and leave garbage behind, and the reader trims trailing spaces, tabs, and line breaks. Leading spaces and blank comment lines are kept.
+**Text fields.** Title, Author, Group, comment lines, and FontName decode as CP437, so a resave writes the same bytes back. Each field ends at its first NUL, since some writers terminate there and leave garbage behind, and the reader trims trailing spaces, tabs, and line breaks. Leading spaces and blank comment lines are kept, and a block of one blank line opens as a single space, since empty comment text means no block.
 
 **Flags.** The B bit sets iCE colors. LS `10` switches to 9px and `01` to 8px; `00` and `11` leave the editor's setting alone. The AR bits are kept for the next save and otherwise ignored.
 

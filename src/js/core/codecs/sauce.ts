@@ -164,6 +164,14 @@ export const fitComments = (text: string): [string, number] => {
 	return [kept.join('\n'), slots];
 };
 
+/**
+ * Sauce Editor text for a COMNT block. A block of one blank line reads
+ * as a single space, since an empty join means no block and a resave
+ * would drop it; fitComments counts the space as that one slot.
+ */
+export const commentText = (comments: string[]): string =>
+	comments.join('\n') || (comments.length ? ' ' : '');
+
 export interface BuildSauceOptions {
 	dataType: number;
 	fileType?: number;

@@ -1,10 +1,11 @@
 // @ts-check
 /**
- * A timed touch hold: iOS never synthesizes contextmenu for a touch
- * hold, and Android's native one arrives wrapped in selection chrome,
- * so a hold gets its own timer; mice, pens and trackpads keep the real
- * contextmenu. Wandering past the slop is a drag or a scroll, and a
- * second finger is a pinch, never a hold
+ * A timed hold for fingers and pens: iPadOS never synthesizes
+ * contextmenu for a finger or Pencil hold, and a Pencil has no other
+ * way to right-click, while Android's native one arrives wrapped in
+ * selection chrome, so a hold gets its own timer; mice and trackpads
+ * keep the real contextmenu. Wandering past the slop is a drag or a
+ * scroll, and a second finger is a pinch, never a hold
  */
 const LONG_PRESS_MS = 500;
 const LONG_PRESS_SLOP_PX = 8;
@@ -25,17 +26,29 @@ const createTouchHold = () => {
 		disarm();
 		cancel?.();
 	};
-	// lifts land on the document even when pointer capture retargets
-	// them away from the armed element; a hold must never survive its
-	// own finger
-	/** @param {() => void} end */
-	const lift = end => /** @param {PointerEvent} e */ e => {
-		if (hold && e.pointerId === hold.pointerId) {
-			end();
+	/** @param {PointerEvent} e */
+	const move = e => {
+		if (
+			hold &&
+			Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > LONG_PRESS_SLOP_PX
+		) {
+			drop();
 		}
 	};
-	document.addEventListener('pointerup', lift(disarm), true);
-	document.addEventListener('pointercancel', lift(drop), true);
+	// the press's own events land on the document wherever they go:
+	// pointer capture retargets a lift away from the armed element, and
+	// a desktop pen has no implicit capture, so its moves stop reaching
+	// the element once it slides off. A hold must never outlive its own
+	// lift or wander
+	/** @param {(e: PointerEvent) => void} end */
+	const own = end => /** @param {PointerEvent} e */ e => {
+		if (hold && e.pointerId === hold.pointerId) {
+			end(e);
+		}
+	};
+	document.addEventListener('pointerup', own(disarm), true);
+	document.addEventListener('pointercancel', own(drop), true);
+	document.addEventListener('pointermove', own(move), true);
 	document.addEventListener(
 		'pointerdown',
 		e => {
@@ -48,13 +61,13 @@ const createTouchHold = () => {
 
 	return {
 		/**
-		 * Arms on a primary touch press and ignores any other
+		 * Arms on a primary touch or pen press and ignores any other
 		 * @param {PointerEvent} e
 		 * @param {() => void} fire
 		 * @param {() => void} [cancel] runs when the press is dropped
 		 */
 		arm: (e, fire, cancel) => {
-			if (e.pointerType !== 'touch' || !e.isPrimary) {
+			if ((e.pointerType !== 'touch' && e.pointerType !== 'pen') || !e.isPrimary) {
 				return;
 			}
 			disarm();
@@ -72,15 +85,7 @@ const createTouchHold = () => {
 				timer: setTimeout(run, LONG_PRESS_MS),
 			};
 		},
-		/** @param {PointerEvent} e */
-		move: e => {
-			if (
-				hold &&
-				Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > LONG_PRESS_SLOP_PX
-			) {
-				drop();
-			}
-		},
+		move,
 		// a native long-press contextmenu can beat the timer, and the
 		// press still fires once
 		flush: () => {

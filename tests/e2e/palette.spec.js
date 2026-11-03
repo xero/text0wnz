@@ -57,9 +57,10 @@ test.describe('Color Palette', () => {
 		expect(await readColors(page)).toEqual({ fg: 7, bg: 5 });
 		expect(await page.evaluate(() => window.__menuSuppressed)).toBe(true);
 
-		// a left pick right after it is a pick, not a double click
-		await pickColor(page, 12);
-		expect(await readColors(page)).toEqual({ fg: 12, bg: 5 });
+		// a left pick of the same color right after it is a pick, not a
+		// double click
+		await pickColor(page, 5);
+		expect(await readColors(page)).toEqual({ fg: 5, bg: 5 });
 		await expect(page.locator('#customColor')).toHaveClass(/hide/);
 	});
 
@@ -127,22 +128,25 @@ test.describe('Color Palette', () => {
 	});
 
 	test('should allow color selection from multiple positions', async ({ page }) => {
+		// quick picks of different colors are picks: only two quick picks
+		// of one color read as a double click and open the color editor
 		for (const index of [0, 3, 7, 12]) {
-			// two picks inside 300ms read as a double click, which opens
-			// the color editor instead of picking
-			await page.waitForTimeout(350);
 			await pickColor(page, index);
 			expect((await readColors(page)).fg).toBe(index);
 		}
+		await expect(page.locator('#customColor')).toHaveClass(/hide/);
 	});
 });
 
-// a held finger needs CDP Input.dispatchTouchEvent, so the touch hold
-// tests run on the Chrome project only; the unit tests cover the
-// timer, the slop, and the native contextmenu race on every surface
-test.describe('Color Palette touch hold', () => {
+// a held finger or pen needs CDP, so the hold tests run on the Chrome
+// project only. Input.dispatchMouseEvent with a pen pointerType is a
+// desktop pen: pen pointer events, then mouse events, and no touch
+// events. Neither call can send an Apple Pencil, which adds stylus
+// touch events. The unit tests cover the timer, the slop, and the
+// native contextmenu race on every surface
+test.describe('Color Palette touch and pen hold', () => {
 	test.beforeEach(async ({ page, browserName }) => {
-		test.skip(browserName !== 'chromium', 'CDP touch is Chromium-only');
+		test.skip(browserName !== 'chromium', 'CDP input is Chromium-only');
 		await page.goto('/?test');
 		await bridgeReady(page);
 	});
@@ -176,6 +180,26 @@ test.describe('Color Palette touch hold', () => {
 		await cdp.detach();
 	};
 
+	const penPress = async (page, { x, y }, until) => {
+		const cdp = await page.context().newCDPSession(page);
+		const pen = { x, y, button: 'left', clickCount: 1, pointerType: 'pen' };
+		await cdp.send('Input.dispatchMouseEvent', {
+			...pen,
+			type: 'mousePressed',
+			buttons: 1,
+			force: 0.5,
+		});
+		if (until) {
+			await expect.poll(() => picks(page)).toEqual(until);
+		}
+		await cdp.send('Input.dispatchMouseEvent', {
+			...pen,
+			type: 'mouseReleased',
+			buttons: 0,
+		});
+		await cdp.detach();
+	};
+
 	const center = async locator => {
 		const box = await locator.boundingBox();
 		return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
@@ -190,19 +214,17 @@ test.describe('Color Palette touch hold', () => {
 	};
 
 	test('a hold on the 16-color strip picks the background once, and a tap right after it picks the foreground', async ({ page }) => {
-		const [five, twelve] = [
-			await stripPoint(page, 5),
-			await stripPoint(page, 12),
-		];
+		const five = await stripPoint(page, 5);
 		await logPicks(page);
 		await press(page, five, [['bg', 5]]);
-		// the hold's lift is not half of a double tap
-		await press(page, twelve);
+		// the hold's lift is not half of a double tap, so a tap on the same
+		// color picks instead of opening the editor
+		await press(page, five);
 		await expect
 			.poll(() => picks(page))
 			.toEqual([
 				['bg', 5],
-				['fg', 12],
+				['fg', 5],
 			]);
 		await expect(page.locator('#customColor')).toHaveClass(/hide/);
 	});
@@ -216,6 +238,40 @@ test.describe('Color Palette touch hold', () => {
 
 		await press(page, await center(swatch(17)), [['bg', xterm(17)]]);
 		await press(page, await center(swatch(16)));
+		await expect
+			.poll(() => picks(page))
+			.toEqual([
+				['bg', xterm(17)],
+				['fg', xterm(16)],
+			]);
+		await expect(page.locator('#colorRecent .colorSwatch')).toHaveCount(2);
+	});
+
+	test('a desktop pen hold on the 16-color strip picks the background once, and a pen tap right after it picks the foreground', async ({ page }) => {
+		const five = await stripPoint(page, 5);
+		await logPicks(page);
+		await penPress(page, five, [['bg', 5]]);
+		// the hold's mouseup picks nothing and is not half of a double
+		// click, so a tap on the same color picks
+		await penPress(page, five);
+		await expect
+			.poll(() => picks(page))
+			.toEqual([
+				['bg', 5],
+				['fg', 5],
+			]);
+		await expect(page.locator('#customColor')).toHaveClass(/hide/);
+	});
+
+	test('a desktop pen hold on the xterm 256 grid picks the background once, and a pen tap the foreground', async ({ page }) => {
+		const xterm = index => (0x80000000 | index) >>> 0;
+		const swatch = index =>
+			page.locator(`#colorGrid .colorSwatch[title^="${index} "]`);
+		await page.locator('#paletteMore').click();
+		await logPicks(page);
+
+		await penPress(page, await center(swatch(17)), [['bg', xterm(17)]]);
+		await penPress(page, await center(swatch(16)));
 		await expect
 			.poll(() => picks(page))
 			.toEqual([

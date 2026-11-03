@@ -18,7 +18,6 @@ vi.mock('../../src/js/client/storage.js', async importOriginal => {
 			mergeSettings: vi.fn(real.mergeSettings),
 			loadFontData: vi.fn(() => Promise.resolve(null)),
 			loadCanvasData: vi.fn(() => Promise.resolve(null)),
-			loadUndoHistory: vi.fn(() => Promise.resolve(null)),
 		},
 	};
 });
@@ -156,6 +155,77 @@ describe('local autosave gate', () => {
 		await vi.waitFor(() => expect(State.loadingFromStorage).toBe(false));
 		expect(setFont).toHaveBeenCalledWith('Topaz 8x16', expect.any(Function), 3);
 		expect(setIceColors).toHaveBeenLastCalledWith(false);
+	});
+
+	describe('a restore that throws', () => {
+		const restoreThrowing = async canvas => {
+			localStorage.setItem(KEY, JSON.stringify(LOCAL));
+			const close = vi.fn();
+			const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+			const textArtCanvas = {
+				setIceColors: vi.fn(),
+				setFont: vi.fn(),
+				stopJournal: vi.fn(),
+				loadJournalSnapshot: () => Promise.resolve({ doc: {} }),
+				setDocData: vi.fn(),
+				...canvas,
+			};
+			Object.assign(State._manager.state, {
+				font: { setScaleFactor: vi.fn(), setLetterSpacing: vi.fn() },
+				modal: { loading: vi.fn(), close, current: () => 'loading' },
+				palette: null,
+				network: null,
+				textArtCanvas,
+			});
+			try {
+				await State.restoreStateFromLocalStorage();
+				expect(State.loadingFromStorage).toBe(true);
+				await vi.waitFor(() => expect(State.loadingFromStorage).toBe(false));
+			} finally {
+				error.mockRestore();
+			}
+			expect(close).toHaveBeenCalled();
+			expect(textArtCanvas.setIceColors).toHaveBeenLastCalledWith(false);
+			return textArtCanvas;
+		};
+
+		const boom = () => {
+			throw new Error('boom');
+		};
+
+		it('before the saved doc lands, stops the journal so the art survives', async () => {
+			const canvas = await restoreThrowing({ setDocData: boom });
+			expect(canvas.stopJournal).toHaveBeenCalled();
+		});
+
+		it('after the saved doc lands, keeps journaling', async () => {
+			const canvas = await restoreThrowing({ setFont: boom });
+			expect(canvas.stopJournal).not.toHaveBeenCalled();
+		});
+
+		it('from the font callback, still lets go of the loading flag', async () => {
+			let calls = 0;
+			await restoreThrowing({
+				// canvas.js setFont reruns a callback that throws through its
+				// fallback, then swallows the throw
+				setFont: (_name, done) => {
+					try {
+						done();
+					} catch {
+						try {
+							done();
+						} catch {
+							// swallowed, as setFont does
+						}
+					}
+				},
+				setIceColors: vi.fn(() => {
+					if (++calls > 1) {
+						throw new Error('boom');
+					}
+				}),
+			});
+		});
 	});
 
 	it('a zoom on a blank local canvas still saves', async () => {

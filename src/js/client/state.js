@@ -79,7 +79,6 @@ class StateManager {
 			this.checkInitializationComplete.bind(this);
 		this.startInitialization = this.startInitialization.bind(this);
 		this.saveToLocalStorage = this.saveToLocalStorage.bind(this);
-		this.saveUndoHistory = this.saveUndoHistory.bind(this);
 		this.restoreStateFromLocalStorage =
 			this.restoreStateFromLocalStorage.bind(this);
 		this.clearLocalStorage = this.clearLocalStorage.bind(this);
@@ -344,25 +343,6 @@ class StateManager {
 		}
 	}
 
-	/** heavy IndexedDB write: call on idle, visibilitychange, or pagehide only */
-	async saveUndoHistory() {
-		try {
-			if (
-				!this.state.textArtCanvas ||
-				typeof this.state.textArtCanvas.getUndoHistory !== 'function' ||
-				this.state.network?.isConnected?.()
-			) {
-				return;
-			}
-			const undoHistory = this.state.textArtCanvas.getUndoHistory();
-			if (undoHistory) {
-				await Storage.saveUndoHistory(undoHistory);
-			}
-		} catch (error) {
-			console.error('[State] Failed to save undo history:', error);
-		}
-	}
-
 	clearLocalStorage() {
 		Storage.clearAll();
 	}
@@ -390,6 +370,28 @@ class StateManager {
 				stateManager.state.modal.current() === 'loading'
 			) {
 				stateManager.state.modal.close();
+			}
+		};
+		// set once the canvas holds the saved doc; before that, a keyframe
+		// would write the blank canvas over the art the next reload needs
+		let adopted = false;
+		const fail = error => {
+			console.error('[State] Error restoring state from localStorage:', error);
+			this.loadingFromStorage = false;
+			closeModal();
+			if (!adopted) {
+				this.state.textArtCanvas?.stopJournal?.();
+			}
+			this.state.textArtCanvas?.setIceColors?.(settings.iceColors);
+		};
+		// the timer bodies run outside the try below; a throw there would
+		// leave the flag set, and the journal holds every keyframe while
+		// it is, so autosave would stop for the session
+		const guard = fn => async () => {
+			try {
+				await fn();
+			} catch (error) {
+				fail(error);
 			}
 		};
 
@@ -420,7 +422,7 @@ class StateManager {
 					);
 				}
 
-				setTimeout(async () => {
+				setTimeout(guard(async () => {
 					const xbFontData = await Storage.loadFontData('XBIN');
 
 					if (xbFontData && this.state.textArtCanvas) {
@@ -438,7 +440,7 @@ class StateManager {
 					// IndexedDB snapshot is the fallback, migrated through
 					// core/migrate so restoring it re-seeds the journal via
 					// setDocData's keyframe trigger.
-					setTimeout(async () => {
+					setTimeout(guard(async () => {
 						const journalData =
 							await this.state.textArtCanvas?.loadJournalSnapshot?.();
 
@@ -454,26 +456,20 @@ class StateManager {
 								this.state.textArtCanvas.setDocData(migrated.doc);
 							}
 						}
+						adopted = true;
 
-						const undoHistory = await Storage.loadUndoHistory();
-						if (
-							undoHistory &&
-							this.state.textArtCanvas &&
-							typeof this.state.textArtCanvas.setUndoHistory === 'function'
-						) {
-							this.state.textArtCanvas.setUndoHistory(undoHistory);
-						}
-
-						setTimeout(() => {
+						setTimeout(guard(() => {
 							if (settings?.fontName && this.state.textArtCanvas) {
 								this.state.textArtCanvas.setFont(
 									settings.fontName,
 									() => {
+										// setFont reruns a callback that throws, so the flag
+										// clears before anything here can
+										this.loadingFromStorage = false;
+										closeModal();
 										if (this.state.textArtCanvas) {
 											this.state.textArtCanvas.setIceColors(originalIceColors);
 										}
-										this.loadingFromStorage = false;
-										closeModal();
 										document.dispatchEvent(
 											new CustomEvent('onStateRestorationComplete'),
 										);
@@ -481,20 +477,18 @@ class StateManager {
 									savedScaleFactor,
 								);
 							} else {
+								this.loadingFromStorage = false;
+								closeModal();
 								if (this.state.textArtCanvas) {
 									this.state.textArtCanvas.setIceColors(originalIceColors);
 								}
-								this.loadingFromStorage = false;
-								closeModal();
 							}
-						}, 0);
-					}, 0);
-				}, 0);
+						}), 0);
+					}), 0);
+				}), 0);
 			}
 		} catch (error) {
-			console.error('[State] Error restoring state from localStorage:', error);
-			this.loadingFromStorage = false;
-			closeModal();
+			fail(error);
 		}
 	}
 }
@@ -621,7 +615,6 @@ const State = {
 	startInitialization: stateManager.startInitialization,
 
 	saveToLocalStorage: stateManager.saveToLocalStorage,
-	saveUndoHistory: stateManager.saveUndoHistory,
 	restoreStateFromLocalStorage: stateManager.restoreStateFromLocalStorage,
 	clearLocalStorage: stateManager.clearLocalStorage,
 

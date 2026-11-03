@@ -64,6 +64,8 @@ vi.mock('../../src/js/client/font.js', () => ({
 			drawWithAlpha: vi.fn(),
 			getWidth: vi.fn(() => 8),
 			getHeight: vi.fn(() => 16),
+			getData: vi.fn(() => ({ width: 8, height: 16 })),
+			dispose: vi.fn(),
 			setLetterSpacing: vi.fn(),
 			getLetterSpacing: vi.fn(() => false),
 		});
@@ -74,6 +76,8 @@ vi.mock('../../src/js/client/font.js', () => ({
 			drawWithAlpha: vi.fn(),
 			getWidth: vi.fn(() => 8),
 			getHeight: vi.fn(() => 16),
+			getData: vi.fn(() => ({ width: 8, height: 16 })),
+			dispose: vi.fn(),
 			setLetterSpacing: vi.fn(),
 			getLetterSpacing: vi.fn(() => false),
 		});
@@ -281,24 +285,6 @@ describe('Canvas Module', () => {
 			canvas.startUndo();
 			expect(() => canvas.undo()).not.toThrow();
 			expect(() => canvas.redo()).not.toThrow();
-		});
-
-		it('leaves undo persistence to the OPFS journal', () => {
-			canvas = createTextArtCanvas(mockContainer, mockCallback);
-
-			// the OPFS journal owns stroke persistence: getUndoHistory reports
-			// nothing to save and setUndoHistory tolerates old v2 autosaves
-			expect(typeof canvas.getUndoHistory).toBe('function');
-			expect(typeof canvas.setUndoHistory).toBe('function');
-			expect(canvas.getUndoHistory()).toBeNull();
-
-			const v2Shape = {
-				currentUndo: [[0, 1234, 0, 0]],
-				undoBuffer: [[[1, 5678, 1, 0]]],
-				redoBuffer: [],
-			};
-			expect(() => canvas.setUndoHistory(v2Shape)).not.toThrow();
-			expect(canvas.getUndoHistory()).toBeNull();
 		});
 
 		it('should handle mirror mode operations', () => {
