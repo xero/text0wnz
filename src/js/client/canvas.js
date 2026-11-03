@@ -49,25 +49,34 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	// doc-level changes and undo/redo write a fresh keyframe.
 	// Collab sessions never journal; the server owns that doc.
 	const journal = createJournalStore();
+	// the ?profile rig stops the journal for its session, or a reload
+	// restores its synthetic docs over the art
+	let journaling = true;
+	const journals = () => journaling && !State.network?.isConnected?.();
 	let keyframeTimer = null;
-	// The first keyframe of a session supersedes whatever the journal
-	// held before (a previous session, a torn tail): strokes may only
-	// replay on top of a keyframe written by THIS session.
-	let sessionKeyframeWritten = false;
 	// Epoch accounting keeps the journal tail honest: every committed
 	// stroke and doc-level change bumps docEpoch; docOpEpoch remembers
-	// the last doc-level change; keyframeEpoch is what the last
-	// COMPLETED rewrite captured. A stroke may only append while
-	// keyframeEpoch >= docOpEpoch, or a crash would replay it against
-	// a baseline missing the resize/ice/frame change it was drawn on.
+	// the last doc-level change; snapshotEpoch is what the newest
+	// keyframe queued in the store captured. A stroke may only append
+	// while snapshotEpoch >= docOpEpoch, or a crash would replay it
+	// against a baseline missing the resize/ice/frame change it was
+	// drawn on. The store appends only onto an unbroken tail behind a
+	// keyframe this session wrote, so a failed write drops the strokes
+	// queued behind it.
 	let docEpoch = 0;
 	let docOpEpoch = 0;
-	let keyframeEpoch = 0;
+	let snapshotEpoch = 0;
 	let keyframeRunning = false;
 	let keyframeQueued = false;
 
 	const writeKeyframe = async () => {
-		if (State.network?.isConnected?.()) {
+		if (!journals()) {
+			return;
+		}
+		if (State.loadingFromStorage) {
+			// the autosave restore has yet to read the journal this
+			// keyframe would overwrite, or to load the doc it reads
+			queueKeyframe(false);
 			return;
 		}
 		if (keyframeRunning) {
@@ -75,26 +84,26 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return;
 		}
 		keyframeRunning = true;
-		// strokes landing during the serialize/gzip await bump docEpoch
-		// past this capture; the finally block takes another keyframe so
-		// the rewrite can never clobber an append it did not contain
-		const epoch = docEpoch;
 		try {
-			await journal.rewrite(
-				await createJournal(
+			// createJournal reads the doc before its first await, and the
+			// rewrite takes its store slot in the same tick, so a stroke
+			// committed during the gzip appends behind this keyframe, where
+			// the rewrite cannot clobber it
+			const written = journal.rewrite(
+				createJournal(
 					doc,
 					xbFontData
 						? { fontBytes: xbFontData.bytes, fontHeight: xbFontData.height }
 						: {},
 				),
 			);
-			sessionKeyframeWritten = true;
-			keyframeEpoch = epoch;
+			snapshotEpoch = docEpoch;
+			await written;
 		} catch (error) {
 			console.warn('[Canvas] journal keyframe failed:', error);
 		} finally {
 			keyframeRunning = false;
-			if (keyframeQueued || docEpoch !== epoch) {
+			if (keyframeQueued) {
 				keyframeQueued = false;
 				queueKeyframe(true);
 			}
@@ -119,8 +128,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		);
 	};
 
-	// doc-level change (resize, ice, frames, loads, fonts): the tail
-	// goes stale until a fresh keyframe completes. Rare one-shot ops
+	// doc-level change (resize, ice, frames, loads, fonts): no stroke
+	// appends until a fresh keyframe captures it. Rare one-shot ops
 	// pass immediate; spammable ones (undo/redo, delay slider) debounce.
 	const scheduleJournalKeyframe = (immediate = false) => {
 		docEpoch += 1;
@@ -138,31 +147,30 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			);
 			// a resize journals as the keyframe its geometry change
 			// schedules, never as a stroke record
-			if (stroke.resize || State.network?.isConnected?.()) {
+			if (stroke.resize || !journals()) {
 				return;
 			}
 			docEpoch += 1;
-			if (keyframeEpoch < docOpEpoch) {
-				// a doc-level change has no completed keyframe yet; an
-				// appended stroke would replay against that stale baseline,
-				// so the keyframe captures this stroke instead
+			if (snapshotEpoch < docOpEpoch) {
+				// no keyframe in the store queue holds the last doc-level
+				// change; an appended stroke would replay against that stale
+				// baseline, so the keyframe captures this stroke instead
 				queueKeyframe(true);
 				return;
 			}
-			if (!sessionKeyframeWritten) {
-				// a rewrite is already pending or due; it captures this
-				// stroke's effect, so appending too stays consistent
-				queueKeyframe(false);
-			}
 			journal
 				.appendStroke(encodeStrokeRecord(stroke))
-				.then(compactionDue => {
-					if (compactionDue) {
+				.then(keyframeDue => {
+					if (keyframeDue) {
 						queueKeyframe(false);
 					}
 				})
-				.catch(error =>
-					console.warn('[Canvas] journal append failed:', error));
+				.catch(error => {
+					console.warn('[Canvas] journal append failed:', error);
+					// the store drops strokes until a keyframe lands, and only
+					// a keyframe can hold this one now
+					queueKeyframe(false);
+				});
 		},
 	});
 
@@ -1125,122 +1133,130 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	// stillWanted lets a racing caller disown the swap after the async
-	// font load: a superseded file open must not restyle the document
-	// that beat it
-	const setFont = async (fontName, callback, scaleFactor, stillWanted) => {
+	// a load that never settles would hold every later font change, and
+	// every collab frame waiting on one, behind it in the queue. The boot
+	// load waits it out instead: nothing queues behind it yet, and past
+	// the wait the editor would start with no font at all. Only visible
+	// time counts: iOS freezes a background tab's fetch along with its
+	// timers, and a wait that ran on while hidden would expire on return
+	// before the thawed fetch could finish
+	const FONT_LOAD_TIMEOUT_MS = 10000;
+	const bounded = load => {
+		if (!State.font) {
+			return load;
+		}
+		let fail;
+		const waited = new Promise((_, reject) => {
+			fail = reject;
+		});
+		let timer = 0;
+		let left = FONT_LOAD_TIMEOUT_MS;
+		let armedAt = 0;
+		let armed = false;
+		const expire = () => {
+			// the load runs on past the wait, and the font it may still
+			// build is one nobody installs
+			load.then(
+				font => font.dispose(),
+				() => {},
+			);
+			fail(new Error('font load timed out'));
+		};
+		const onVisibility = () => {
+			if (document.hidden && armed) {
+				armed = false;
+				clearTimeout(timer);
+				left -= Date.now() - armedAt;
+			} else if (!document.hidden && !armed) {
+				armed = true;
+				armedAt = Date.now();
+				timer = setTimeout(expire, left);
+			}
+		};
+		onVisibility();
+		document.addEventListener('visibilitychange', onVisibility);
+		return Promise.race([load, waited]).finally(() => {
+			clearTimeout(timer);
+			document.removeEventListener('visibilitychange', onVisibility);
+		});
+	};
+	let fontQueue = Promise.resolve();
+
+	// stillWanted lets a racing caller disown the swap: a superseded file
+	// open must not restyle the document that beat it
+	const swapFont = async (fontName, callback, scaleFactor, stillWanted) => {
+		if (stillWanted && !stillWanted()) {
+			return;
+		}
+		const effectiveScaleFactor =
+			scaleFactor ?? State.font?.getScaleFactor?.() ?? 1;
+		const loadImage = (name, spacing) =>
+			bounded(
+				loadFontFromImage(name, spacing, State.palette, effectiveScaleFactor),
+			);
+		const install = (font, name, carrySpacing) => {
+			if (stillWanted && !stillWanted()) {
+				font.dispose();
+				return;
+			}
+			// the spacing and palette as they stand at install, not as the
+			// load began, or a 9px toggle or palette swap made during it
+			// is lost. The new handle goes live first so spacing
+			// listeners relayout against it
+			const spacing = State.font ? State.font.getLetterSpacing() : false;
+			font.setPalette?.(State.palette);
+			State.font = font;
+			// set here, not as a load parses, so a load that times out
+			// or a font picker preview never resizes the brush chips and
+			// glyph previews away from the live font
+			const glyphs = font.getData();
+			State.fontWidth = glyphs.width;
+			State.fontHeight = glyphs.height;
+			currentFontName = name;
+			if (carrySpacing && spacing !== font.getLetterSpacing()) {
+				font.setLetterSpacing(spacing);
+			}
+			createCanvases();
+			updateTimer();
+			redrawEntireImage();
+			document.dispatchEvent(
+				new CustomEvent('onFontChange', { detail: name }),
+			);
+			if (callback) {
+				callback();
+			}
+		};
 		try {
-			const effectiveScaleFactor =
-				scaleFactor ?? State.font?.getScaleFactor?.() ?? 1;
-
 			if (fontName === 'XBIN' && xbFontData) {
-				const font = await loadFontFromXBData(
-					xbFontData.bytes,
-					xbFontData.width,
-					xbFontData.height,
-					xbFontData.letterSpacing,
-					State.palette,
-					effectiveScaleFactor,
+				const font = await bounded(
+					loadFontFromXBData(
+						xbFontData.bytes,
+						xbFontData.width,
+						xbFontData.height,
+						xbFontData.letterSpacing,
+						State.palette,
+						effectiveScaleFactor,
+					),
 				);
-				if (stillWanted && !stillWanted()) {
-					return;
-				}
-				State.font = font;
-				currentFontName = fontName;
-
-				createCanvases();
-				updateTimer();
-				redrawEntireImage();
-				document.dispatchEvent(
-					new CustomEvent('onFontChange', { detail: fontName }),
-				);
-
-				if (callback) {
-					callback();
-				}
-			} else if (fontName === 'XBIN' && !xbFontData) {
+				install(font, fontName, false);
+			} else if (fontName === 'XBIN') {
 				console.warn(
 					`[Canvas] XBIN selected but no embedded font data available, falling back to: ${magicNumbers.DEFAULT_FONT}`,
 				);
-
-				const fallbackFont = magicNumbers.DEFAULT_FONT;
-				const font = await loadFontFromImage(
-					fallbackFont,
-					false,
-					State.palette,
-					effectiveScaleFactor,
-				);
-				if (stillWanted && !stillWanted()) {
-					return;
-				}
-				State.font = font;
-				currentFontName = fallbackFont;
-
-				createCanvases();
-				updateTimer();
-				redrawEntireImage();
-				document.dispatchEvent(
-					new CustomEvent('onFontChange', { detail: fallbackFont }),
-				);
-
-				if (callback) {
-					callback();
-				}
+				const font = await loadImage(magicNumbers.DEFAULT_FONT, false);
+				install(font, magicNumbers.DEFAULT_FONT, false);
 			} else {
-				const spacing = State.font ? State.font.getLetterSpacing() : false;
-				const font = await loadFontFromImage(
+				const font = await loadImage(
 					fontName,
-					spacing,
-					State.palette,
-					effectiveScaleFactor,
+					State.font ? State.font.getLetterSpacing() : false,
 				);
-				if (stillWanted && !stillWanted()) {
-					return;
-				}
-				State.font = font;
-				currentFontName = fontName;
-
-				createCanvases();
-				updateTimer();
-				redrawEntireImage();
-				document.dispatchEvent(
-					new CustomEvent('onFontChange', { detail: fontName }),
-				);
-
-				if (callback) {
-					callback();
-				}
+				install(font, fontName, true);
 			}
 		} catch (error) {
 			console.error('[Canvas] Failed to load font:', error);
-
-			const effectiveScaleFactor =
-				scaleFactor ?? State.font?.getScaleFactor?.() ?? 1;
-
-			const fallbackFont = magicNumbers.DEFAULT_FONT;
 			try {
-				const font = await loadFontFromImage(
-					fallbackFont,
-					false,
-					State.palette,
-					effectiveScaleFactor,
-				);
-				if (stillWanted && !stillWanted()) {
-					return;
-				}
-				State.font = font;
-				currentFontName = fallbackFont;
-
-				createCanvases();
-				updateTimer();
-				redrawEntireImage();
-				document.dispatchEvent(
-					new CustomEvent('onFontChange', { detail: fallbackFont }),
-				);
-
-				if (callback) {
-					callback();
-				}
+				const font = await loadImage(magicNumbers.DEFAULT_FONT, false);
+				install(font, magicNumbers.DEFAULT_FONT, false);
 			} catch (fallbackError) {
 				console.error('[Canvas] Failed to load fallback font:', fallbackError);
 				// the previous font is still live, so the caller's flow
@@ -1251,6 +1267,16 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				}
 			}
 		}
+	};
+
+	// loads install in call order, so the last call wins and a slow load
+	// never lands over a newer font. Callbacks run unawaited: one that
+	// waited on a later setFont would deadlock the queue
+	const setFont = (fontName, callback, scaleFactor, stillWanted) => {
+		const run = fontQueue.then(() =>
+			swapFont(fontName, callback, scaleFactor, stillWanted));
+		fontQueue = run.catch(() => {});
+		return run;
 	};
 
 	// everything sized by the doc follows a geometry change: a resize,
@@ -1668,22 +1694,74 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		editor.endUndo();
 	};
 
+	// the restore prefers the journal over the u16 snapshot main.js
+	// saves 300ms after an edit, so the last edit reaches the journal on
+	// that same idle or a reload drops it
+	let idleCommit = null;
+	let pressed = false;
+	document.addEventListener('onTextCanvasDown', () => {
+		pressed = true;
+	});
+	document.addEventListener('onTextCanvasUp', () => {
+		pressed = false;
+	});
+	// a held press and a floating selection move each build one undo
+	// step across pauses, and a commit before they end would split it.
+	// A keyframe journals the open step instead: the doc holds its
+	// writes, and the stroke record it commits later carries every
+	// touched cell's final value, so replaying that over the keyframe
+	// lands the same doc
+	const stepOpen = () => pressed || State.selectionTool?.isMoveMode?.();
+	// one keyframe per burst of writes, not one per re-poll
+	const commitWhenIdle = (keyframed = false) => {
+		clearTimeout(idleCommit);
+		idleCommit = setTimeout(() => {
+			if (!stepOpen()) {
+				endUndo();
+				return;
+			}
+			if (!keyframed) {
+				writeKeyframe();
+			}
+			commitWhenIdle(true);
+		}, 300);
+	};
+	// a page leaving inside the idle window journals its last edit
+	// before it goes; hidden is the last event a mobile tab is sure to
+	// get, and a hidden tab throttles the idle timer
+	const commitOnLeave = () => {
+		if (stepOpen()) {
+			writeKeyframe();
+		} else {
+			endUndo();
+		}
+	};
+	window.addEventListener('pagehide', commitOnLeave);
+	document.addEventListener('visibilitychange', () => {
+		if (document.hidden) {
+			commitOnLeave();
+		}
+	});
+
 	const drawEntryPoint = (callback, optimise) => {
 		editor.drawBlocks(callback, optimise);
 		processDirtyRegions();
 		sendDrawHistory();
+		commitWhenIdle();
 	};
 
 	const drawHalfBlockEntryPoint = callback => {
 		editor.drawHalfBlocks(callback);
 		processDirtyRegions();
 		sendDrawHistory();
+		commitWhenIdle();
 	};
 
 	const deleteArea = (x, y, width, height, background) => {
 		editor.deleteArea(x, y, width, height, background);
 		processDirtyRegions();
 		sendDrawHistory();
+		commitWhenIdle();
 	};
 
 	// plane-native area ops: selection move and the clipboard rearrange
@@ -1697,6 +1775,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		editor.setAreaCells(area, x, y);
 		processDirtyRegions();
 		sendDrawHistory();
+		commitWhenIdle();
 	};
 
 	// collab sessions are single-frame by policy: no frame op exists in
@@ -1941,16 +2020,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	/**
-	 * The arena does not serialize, and the OPFS journal keeps content,
-	 * not the undo stack. Legacy IndexedDB autosaves restore their
-	 * content; their undo stacks are deliberately dropped (see
-	 * core/migrate.ts).
-	 */
-	const getUndoHistory = () => null;
-
-	const setUndoHistory = _history => {};
-
 	setFont(currentFontName, _ => {
 		callback();
 	});
@@ -2024,8 +2093,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		endUndo: endUndo,
 		undo: undo,
 		redo: redo,
-		getUndoHistory: getUndoHistory,
-		setUndoHistory: setUndoHistory,
+		stopJournal: () => {
+			journaling = false;
+		},
 		deleteArea: deleteArea,
 		getAreaCells: getAreaCells,
 		setAreaCells: setAreaCells,

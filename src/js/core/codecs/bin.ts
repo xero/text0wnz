@@ -8,7 +8,7 @@
 import { DocV3 } from '../doc.js';
 import { u16ToV3, v3ToU16Lossy } from '../convert.js';
 import { MAX_DOC_CELLS } from '../doc.js';
-import { SauceRecord, buildSauce, parseSauce } from './sauce.js';
+import { SauceRecord, buildSauce, commentText, parseSauce } from './sauce.js';
 import {
 	CodecError,
 	bytesToU16Cells,
@@ -77,7 +77,7 @@ export const decodeBin = (bytes: Uint8Array): DecodeResult => {
 					title: sauce.title,
 					author: sauce.author,
 					group: sauce.group,
-					comments: sauce.comments.join('\n'),
+					comments: commentText(sauce.comments),
 					fontName: sauce.fontName,
 				}
 			: {},

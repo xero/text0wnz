@@ -20,6 +20,12 @@ export const SERVER_LIMITS = Object.freeze({
 	// 1MB cap closes real clients mid-session. The room's byte-bounded
 	// op log holds memory regardless
 	maxPayloadBytes: 32 * 1024 * 1024,
+	// past this backlog Bun drops a send silently, and a client that
+	// misses an ack or a relay holds its unacked ops, and the cells
+	// they mask, for the rest of the session, so it is closed instead;
+	// above maxPayloadBytes, or one legal frame to a client with any
+	// backlog would close it
+	backpressureBytes: 64 * 1024 * 1024,
 	idleTimeoutSeconds: 120,
 	heartbeatMs: 30000,
 	maxClientsPerRoom: 64,
@@ -164,6 +170,8 @@ export const createMoebiusServer = config => {
 
 	const websocket = {
 		maxPayloadLength: SERVER_LIMITS.maxPayloadBytes,
+		backpressureLimit: SERVER_LIMITS.backpressureBytes,
+		closeOnBackpressureLimit: true,
 		idleTimeout: SERVER_LIMITS.idleTimeoutSeconds,
 		/** @param {import('bun').ServerWebSocket<any>} ws */
 		open: ws => {

@@ -47,12 +47,17 @@ describe('createTouchHold', () => {
 		expect(fired).toHaveBeenCalledTimes(1);
 	});
 
-	it('a mouse, a pen, or a secondary touch never arms', () => {
+	it('a mouse or a secondary touch never arms', () => {
 		down({ pointerType: 'mouse' });
-		down({ pointerType: 'pen' });
 		down({ isPrimary: false });
 		vi.advanceTimersByTime(LONG_PRESS_MS * 2);
 		expect(fired).not.toHaveBeenCalled();
+	});
+
+	it('a still primary pen holds like a finger', () => {
+		down({ pointerType: 'pen' });
+		vi.advanceTimersByTime(LONG_PRESS_MS);
+		expect(fired).toHaveBeenCalledTimes(1);
 	});
 
 	it('a wobble inside the slop still holds, a wander past it cancels', () => {
@@ -66,6 +71,27 @@ describe('createTouchHold', () => {
 		);
 		vi.advanceTimersByTime(LONG_PRESS_MS);
 		expect(fired).toHaveBeenCalledTimes(1);
+	});
+
+	it('a pen that slides off the armed element still cancels past the slop', () => {
+		const other = document.getElementById('other');
+		down({ pointerType: 'pen' });
+		other.dispatchEvent(
+			pev('pointermove', { pointerType: 'pen', clientX: 10 + LONG_PRESS_SLOP_PX }),
+		);
+		other.dispatchEvent(pev('pointermove', { pointerId: 2, clientX: 99 }));
+		vi.advanceTimersByTime(LONG_PRESS_MS);
+		expect(fired).toHaveBeenCalledTimes(1);
+		down({ pointerType: 'pen' });
+		other.dispatchEvent(
+			pev('pointermove', {
+				pointerType: 'pen',
+				clientX: 10 + LONG_PRESS_SLOP_PX + 1,
+			}),
+		);
+		vi.advanceTimersByTime(LONG_PRESS_MS);
+		expect(fired).toHaveBeenCalledTimes(1);
+		expect(cancel).toHaveBeenCalledTimes(1);
 	});
 
 	it('the finger lifting or cancelling disarms, wherever the event lands', () => {

@@ -305,11 +305,9 @@ const createModalController = modal => {
 
 const createSettingToggle = (el, getter, setter) => {
 	let currentSetting;
-	let g = getter;
-	let s = setter;
 
 	const update = () => {
-		currentSetting = g();
+		currentSetting = getter();
 		if (currentSetting) {
 			el.classList.add('enabled');
 		} else {
@@ -317,26 +315,17 @@ const createSettingToggle = (el, getter, setter) => {
 		}
 	};
 
-	const sync = (getter, setter) => {
-		g = getter;
-		s = setter;
-		update();
-	};
-
 	const changeSetting = e => {
 		e.preventDefault();
 		currentSetting = !currentSetting;
-		s(currentSetting);
+		setter(currentSetting);
 		update();
 	};
 
 	el.addEventListener('click', changeSetting);
 	update();
 
-	return {
-		sync: sync,
-		update: update,
-	};
+	return { update: update };
 };
 
 // an Enter keydown this close after compositionend is the IME's
@@ -1270,6 +1259,7 @@ const createFontSelect = (el, lbl, img, btn) => {
 						xbfont.draw(charCode, foreground, background, previewCtx, x, y);
 					}
 				}
+				xbfont.dispose();
 				previewInfo.textContent =
 					'XBIN: embedded ' + xbFontData.width + 'x' + xbFontData.height;
 				previewImage.src = previewCanvas.toDataURL();

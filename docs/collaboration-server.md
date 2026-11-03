@@ -242,6 +242,7 @@ the newest one on disk.
 | Limit             | Value                                                                                                                                                                                    |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Frame size        | 32 MB (vanilla `PASTE_AS_SELECTION` frames run tens of MB)                                                                                                                               |
+| Send backlog      | 64 MB per socket; a client that falls further behind is closed, since a dropped frame would leave it out of step with the room                                                           |
 | Idle sockets      | Reaped after 120 seconds; a 30 second heartbeat ping keeps quiet spectators alive                                                                                                        |
 | Sockets per room  | 64, handshake pending or not                                                                                                                                                             |
 | Rooms per process | 64                                                                                                                                                                                       |

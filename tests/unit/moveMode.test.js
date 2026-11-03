@@ -199,6 +199,8 @@ const stubFont = () =>
 		drawWithAlpha: () => {},
 		getWidth: () => 8,
 		getHeight: () => 16,
+		getData: () => ({ width: 8, height: 16 }),
+		dispose: () => {},
 		setLetterSpacing: () => {},
 		getLetterSpacing: () => false,
 	});

@@ -136,10 +136,10 @@ File operations allowing you to create, open, and save artwork in multiple file 
 
 **Auto Save/Restore:**
 
-- Every committed stroke appends to an autosave journal in your browser's private origin storage (OPFS)
+- Every stroke appends to an autosave journal in your browser's private origin storage (OPFS) as soon as you pause
 - Larger changes like resizes, file opens, and undo/redo write fresh journal keyframes
 - After a crash, a closed tab, or a reload, the journal replays and your session restores where you left off
-- Browsers without OPFS keep the same journal as an IndexedDB record log; private windows that block both lose autosave for that tab only
+- Browsers that lack OPFS or refuse it, as Firefox private windows do, keep the same journal as an IndexedDB record log; private windows that block both lose autosave for that tab only
 - Lightweight settings (theme, zoom, favorites, recent colors) persist in local storage
 - Collaboration sessions never journal; the server owns that document
 
@@ -317,7 +317,7 @@ Every sidebar module (Sauce, Canvas, Cursor, Zoom, Reference Image, Minimap, Fra
 **Moving panels:**
 
 - Drag a title strip to move the panel. Drop it on the sidebar to dock it there, near the top or bottom edge of the canvas to dock it in the top or bottom bar, or anywhere else to float it. Dragging within a dock reorders it
-- Right-click a title strip, press `shift F10` on it, or hold a finger on it for half a second to open the panel menu: **Dock Right**, **Dock Top**, **Dock Bottom**, **Float**, **Move Up**, and **Move Down**
+- Right-click a title strip, press `shift F10` on it, or hold a finger or a pen on it for half a second to open the panel menu: **Dock Right**, **Dock Top**, **Dock Bottom**, **Float**, **Move Up**, and **Move Down**
 - The **Shade** button at the right end of a title strip folds the panel to its strip. Clicking a docked strip, or double-clicking a floating one, shades it too
 - In the top and bottom bars, dropping a panel beside another puts the two side by side on screens 768 px and wider
 - The grip on the sidebar's edge hides the whole sidebar and brings it back
@@ -380,7 +380,7 @@ The color system anchors on the classic 16-color ANSI palette, with optional iCE
 
 - 16-color ANSI palette (8 standard + 8 bright colors)
 - Real-time color preview
-- Click a swatch to set the foreground color, and `ctrl` click or right-click it for the background. On a touch screen, tap a swatch for the foreground and hold a finger on it for half a second for the background. Every color swatch works this way on every OS
+- Click a swatch to set the foreground color, and `ctrl` click or right-click it for the background. On a touch screen, tap a swatch for the foreground and hold a finger or a pen on it for half a second for the background. Every color swatch works this way on every OS
 - Double click or double tap a swatch to edit that palette entry with the system color picker
 - `ctrl` + `0`-`7` sets the foreground, `alt` + `0`-`7` the background; press the same key again for the bright variant
 - `ctrl` + `up`/`down` cycles the foreground color, `ctrl` + `left`/`right` the background
@@ -401,7 +401,7 @@ The `++` button under the palette strip opens the extended color panel, one clic
 
 **Features:**
 
-- **xterm 256 grid** - Click a swatch for the foreground; `ctrl` click, right-click, or hold a finger on it for the background
+- **xterm 256 grid** - Click a swatch for the foreground; `ctrl` click, right-click, or hold a finger or a pen on it for the background
 - **RGB** - Pick any truecolor value with the hex color input, then apply it with the `fg` or `bg` buttons
 - **Recent** - Your last ten extended picks, remembered between sessions. Its swatches pick like the grid's
 - The panel is a flyout beside the `++` button. Press `++` again, click anywhere outside it, or press `escape` to close it
@@ -538,7 +538,7 @@ Draw with shading blocks (`░▒▓`). 'Reduce mode' when holding Shift. Ideal 
 - Reduce mode with Shift key
 - A pressure-sensitive pen picks its shade from pressure directly; press lighter or harder to shade
 - The gradient picker follows the active foreground color
-- Click a block in the gradient picker to pick its shade and foreground color, and `ctrl` click, right-click, or hold a finger on it to set only the background color
+- Click a block in the gradient picker to pick its shade and foreground color, and `ctrl` click, right-click, or hold a finger or a pen on it to set only the background color
 
 ### ASCII Brush
 
@@ -659,6 +659,8 @@ Select rectangular canvas areas for manipulation, copying, or transformation. A 
 
 > [!NOTE]
 > A single click selects one cell; drag to grow the selection. Press `escape` or **Deselect** to clear it.
+>
+> Picking the tool brings back your last selection. With none to bring back, it opens with nothing selected. While nothing is selected, a shortcut below that acts on a selection first selects the cell under the keyboard cursor, so `ctrl v` right after you pick the tool pastes where you were typing.
 
 **Action Bar:**
 
@@ -1011,7 +1013,7 @@ The editor treats mouse, pen, and touch as first-class input.
 - **One finger** draws with the active tool; a tap paints one cell
 - **Two-finger tap** undoes (it also works on the viewport margins around the canvas)
 - **Three-finger tap** redoes
-- **Hold** a finger on any color swatch for half a second to set the background color; a tap sets the foreground, and a touch that slides or scrolls picks nothing
+- **Hold** a finger or a pen on any color swatch for half a second to set the background color; a tap sets the foreground, and a press that slides into a scroll picks nothing
 - **Two-finger pinch** zooms at the pinch center; dragging both fingers pans the canvas
 
 **Pen:**

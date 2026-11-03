@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { paletteColor } from '../../src/js/core/doc.js';
+import { paletteColor, rgbColor } from '../../src/js/core/doc.js';
 import State from '../../src/js/client/state.js';
 import { createColorPanel } from '../../src/js/client/colorPanel.js';
+import { createSwatchBinder } from '../../src/js/client/palette.js';
 
 vi.mock('../../src/js/client/ui.js', () => ({ $: id => document.getElementById(id) }));
 
@@ -226,6 +227,114 @@ describe('color panel swatches under touch', () => {
 		vi.advanceTimersByTime(600);
 		expect(bgCalls()).toEqual([]);
 		expect(fgCalls()).toEqual([]);
+	});
+
+	it('a quick second tap picks the swatch it landed on, though iPadOS sends its click to the first one', () => {
+		const [a, b] = grid();
+		fire(a, 'pointerdown', finger);
+		fire(a, 'pointerup', finger);
+		fire(a, 'click');
+		fire(b, 'pointerdown', finger);
+		fire(b, 'pointerup', finger);
+		fire(a, 'click', { detail: 2 });
+		fire(a, 'dblclick', { detail: 2 });
+		expect(fgCalls()).toEqual([[first], [paletteColor(17)]]);
+		expect(bgCalls()).toEqual([]);
+	});
+
+	it('a quick second tap whose click lands off the swatches still picks, and the panel never sees its dblclick', () => {
+		const [a, b] = grid();
+		const panel = document.getElementById('colorPanel');
+		const seen = vi.fn();
+		panel.addEventListener('click', seen);
+		panel.addEventListener('dblclick', seen);
+		fire(a, 'pointerdown', { ...finger, pointerType: 'pen' });
+		fire(a, 'pointerup', { ...finger, pointerType: 'pen' });
+		fire(a, 'click');
+		seen.mockClear();
+		fire(b, 'pointerdown', { ...finger, pointerType: 'pen' });
+		fire(b, 'pointerup', { ...finger, pointerType: 'pen' });
+		fire(panel, 'click', { detail: 2 });
+		fire(panel, 'dblclick', { detail: 2 });
+		expect(fgCalls()).toEqual([[first], [paletteColor(17)]]);
+		expect(seen).not.toHaveBeenCalled();
+	});
+
+	it('the double-tap click that trails a hold picks nothing, wherever it lands', () => {
+		const [a, b] = grid();
+		fire(a, 'pointerdown', finger);
+		vi.advanceTimersByTime(500);
+		fire(a, 'pointerup', finger);
+		fire(b, 'click', { detail: 2 });
+		fire(a, 'click', { detail: 2 });
+		expect(bgCalls()).toEqual([[first]]);
+		expect(fgCalls()).toEqual([]);
+	});
+
+	it('a mouse double click after a tap picks where each click lands, and a press dragged off its swatch picks nothing', () => {
+		const [a, b] = grid();
+		fire(a, 'pointerdown', finger);
+		fire(a, 'pointerup', finger);
+		fire(a, 'click');
+		fire(a, 'pointerdown', { pointerType: 'mouse' });
+		fire(a, 'click');
+		fire(b, 'pointerdown', { pointerType: 'mouse' });
+		fire(b, 'click', { detail: 2 });
+		// the click of a press released over another swatch lands on
+		// their common parent
+		fire(b, 'pointerdown', { pointerType: 'mouse' });
+		fire(b.parentElement, 'click', { detail: 3 });
+		expect(fgCalls()).toEqual([[first], [first], [paletteColor(17)]]);
+	});
+
+	it('a keyboard or assistive click after a tap reaches the control it targets', () => {
+		const [a] = grid();
+		fire(a, 'pointerdown', finger);
+		fire(a, 'pointerup', finger);
+		fire(a, 'click');
+		fire(document.getElementById('colorRGBfg'), 'click', { detail: 0 });
+		fire(document.getElementById('colorRGBbg'), 'click', { detail: 1 });
+		expect(fgCalls()).toEqual([[first], [rgbColor(255, 0, 255)]]);
+		expect(bgCalls()).toEqual([[rgbColor(255, 0, 255)]]);
+	});
+
+	it('a triple tap leaves the next double click on the panel alone', () => {
+		const [a, b] = grid();
+		const panel = document.getElementById('colorPanel');
+		const seen = vi.fn();
+		panel.addEventListener('dblclick', seen);
+		fire(a, 'pointerdown', finger);
+		fire(a, 'click');
+		fire(b, 'pointerdown', finger);
+		fire(panel, 'click', { detail: 2 });
+		fire(panel, 'dblclick', { detail: 2 });
+		// a third click carries no dblclick of its own
+		fire(b, 'pointerdown', finger);
+		fire(panel, 'click', { detail: 3 });
+		fire(panel, 'pointerdown', { pointerType: 'mouse' });
+		fire(panel, 'click');
+		fire(panel, 'pointerdown', { pointerType: 'mouse' });
+		fire(panel, 'click', { detail: 2 });
+		fire(panel, 'dblclick', { detail: 2 });
+		expect(fgCalls()).toEqual([[first], [paletteColor(17)], [paletteColor(17)]]);
+		expect(seen).toHaveBeenCalledTimes(1);
+	});
+
+	it('a second binder on the page claims the click of its own quick second tap', () => {
+		const [a] = grid();
+		const chip = document.createElement('button');
+		const chipPick = vi.fn();
+		document.body.append(chip);
+		createSwatchBinder()(chip, chipPick);
+		fire(a, 'pointerdown', finger);
+		fire(a, 'click');
+		fire(chip, 'pointerdown', finger);
+		fire(a, 'click', { detail: 2 });
+		expect(chipPick.mock.calls).toEqual([[false]]);
+		fire(a, 'pointerdown', finger);
+		fire(chip, 'click', { detail: 2 });
+		expect(fgCalls()).toEqual([[first], [first]]);
+		expect(chipPick).toHaveBeenCalledTimes(1);
 	});
 
 	it('a hold on the recent row picks once though the row rebuilds under the finger', () => {

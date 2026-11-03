@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
 import {
 	bridgeReady,
+	clickTool,
 	drag,
 	parkToolSettings,
 	readBlock,
 	readRegion,
+	readSelection,
 	tap,
 	writeText,
 } from './helpers/editorHelpers.js';
@@ -196,5 +198,48 @@ test.describe('Clipboard', () => {
 				expect(await readBlock(page, x, y), `${x},${y}`).toEqual(blank);
 			}
 		}
+	});
+
+	test.describe('on a fresh selection tool', () => {
+		// keyboard mode is the boot tool: a tap parks its cursor, and the
+		// selection tool opens with nothing selected
+		const pick = async (page, x, y) => {
+			await tap(page, x, y);
+			await clickTool(page, 'selection');
+			expect((await readSelection(page)).live).toBe(null);
+		};
+
+		test('ctrl c and ctrl v act at the keyboard cursor', async ({ page }) => {
+			await writeText(page, 10, 5, 'Q');
+			await pick(page, 10, 5);
+			await page.keyboard.press('Control+c');
+			expect((await readSelection(page)).live).toEqual({ x: 10, y: 5, width: 1, height: 1 });
+
+			await page.keyboard.press('ArrowDown');
+			await page.keyboard.press('Control+v');
+			expect(await readRegion(page, 10, 5, 10, 6)).toEqual(['Q', 'Q']);
+
+			// a paste that ran twice would leave its first copy behind
+			await page.keyboard.press('Control+z');
+			await expect.poll(() => readRegion(page, 10, 5, 10, 6)).toEqual(['Q', ' ']);
+		});
+
+		test('ctrl backspace deletes the keyboard cursor cell', async ({ page }) => {
+			await writeText(page, 10, 5, 'ABC');
+			await pick(page, 11, 5);
+			await page.keyboard.press('Control+Backspace');
+			expect(await readRegion(page, 10, 5, 12, 5)).toEqual(['A C']);
+
+			await page.keyboard.press('Control+z');
+			await expect.poll(() => readRegion(page, 10, 5, 12, 5)).toEqual(['ABC']);
+		});
+
+		test('ctrl v with nothing copied leaves the tool bare', async ({ page }) => {
+			await writeText(page, 10, 5, 'Q');
+			await pick(page, 10, 5);
+			await page.keyboard.press('Control+v');
+			expect((await readSelection(page)).live).toBe(null);
+			expect(await readRegion(page, 10, 5, 10, 5)).toEqual(['Q']);
+		});
 	});
 });

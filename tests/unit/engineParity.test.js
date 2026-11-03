@@ -25,7 +25,6 @@ vi.mock('../../src/js/client/state.js', () => ({
 		modal: { loading: vi.fn(), close: vi.fn() },
 		loadingFromStorage: false,
 		saveToLocalStorage: vi.fn(),
-		saveUndoHistory: vi.fn(),
 	},
 }));
 
@@ -66,6 +65,8 @@ vi.mock('../../src/js/client/font.js', () => ({
 			drawWithAlpha: vi.fn(),
 			getWidth: vi.fn(() => 8),
 			getHeight: vi.fn(() => 16),
+			getData: vi.fn(() => ({ width: 8, height: 16 })),
+			dispose: vi.fn(),
 			setLetterSpacing: vi.fn(),
 			getLetterSpacing: vi.fn(() => false),
 		})),

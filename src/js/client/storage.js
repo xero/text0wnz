@@ -18,6 +18,8 @@ const openDb = () => {
 				db.createObjectStore('fontData');
 			}
 
+			// nothing writes undoHistory; it keeps what a v2 install left
+			// until clearAll empties it
 			if (!db.objectStoreNames.contains('undoHistory')) {
 				db.createObjectStore('undoHistory');
 			}
@@ -141,43 +143,6 @@ export const Storage = {
 			});
 		} catch (error) {
 			console.error('[Storage] Error loading font data:', error);
-			return null;
-		}
-	},
-
-	/** @param {unknown} undoHistory */
-	async saveUndoHistory(undoHistory) {
-		try {
-			const db = await dbPromise();
-			const tx = db.transaction('undoHistory', 'readwrite');
-			const store = tx.objectStore('undoHistory');
-
-			await /** @type {Promise<void>} */(new Promise((resolve, reject) => {
-				const request = store.put(undoHistory, 'currentUndoHistory');
-				request.onsuccess = () => resolve();
-				request.onerror = () => reject(request.error);
-			}));
-
-			return true;
-		} catch (error) {
-			console.error('[Storage] Error saving undo history:', error);
-			return false;
-		}
-	},
-
-	async loadUndoHistory() {
-		try {
-			const db = await dbPromise();
-			const tx = db.transaction('undoHistory', 'readonly');
-			const store = tx.objectStore('undoHistory');
-
-			return await new Promise((resolve, reject) => {
-				const request = store.get('currentUndoHistory');
-				request.onsuccess = () => resolve(request.result);
-				request.onerror = () => reject(request.error);
-			});
-		} catch (error) {
-			console.error('[Storage] Error loading undo history:', error);
 			return null;
 		}
 	},

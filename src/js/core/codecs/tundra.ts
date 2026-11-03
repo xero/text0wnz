@@ -34,7 +34,7 @@ import {
 import { cp437ToUnicode } from '../cp437.js';
 import { DecodeResult, DocMeta } from './bin.js';
 import { xterm256RGB } from './dur.js';
-import { buildSauce, parseSauce } from './sauce.js';
+import { buildSauce, commentText, parseSauce } from './sauce.js';
 import { CodecError, bytesToString, concatBytes } from './util.js';
 
 export const TUNDRA_ID = 'TUNDRA24';
@@ -163,7 +163,7 @@ export const decodeTundra = (bytes: Uint8Array): DecodeResult => {
 					title: sauce.title,
 					author: sauce.author,
 					group: sauce.group,
-					comments: sauce.comments.join('\n'),
+					comments: commentText(sauce.comments),
 					fontName: sauce.fontName,
 				}
 			: {},

@@ -7,6 +7,8 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn, execSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
+import net from 'node:net';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import http from 'node:http';
@@ -95,6 +97,62 @@ const connectClient = async (room, data) => {
 	const reply = await replyPromise;
 	return { ws, reply };
 };
+
+// a client frame must be masked (RFC 6455 5.3); short frames only
+const maskedTextFrame = text => {
+	const payload = Buffer.from(text);
+	const mask = randomBytes(4);
+	const head =
+		payload.length < 126
+			? Buffer.from([0x81, 0x80 | payload.length])
+			: Buffer.from([0x81, 0x80 | 126, payload.length >> 8, payload.length & 0xff]);
+	return Buffer.concat([head, mask, payload.map((b, i) => b ^ mask[i % 4])]);
+};
+
+/**
+ * A member that joins over a raw socket and then stops reading, which
+ * the global WebSocket client never does: past the kernel buffers,
+ * every frame the room sends it piles up in the server's backlog.
+ */
+const connectStalled = (room, data) =>
+	new Promise((resolve, reject) => {
+		const socket = net.connect(port, '127.0.0.1');
+		let head = Buffer.alloc(0);
+		let upgraded = false;
+		socket.on('error', reject);
+		socket.once('connect', () => {
+			socket.write(
+				[
+					`GET /${room} HTTP/1.1`,
+					`Host: 127.0.0.1:${port}`,
+					'Upgrade: websocket',
+					'Connection: Upgrade',
+					`Sec-WebSocket-Key: ${randomBytes(16).toString('base64')}`,
+					'Sec-WebSocket-Version: 13',
+					'',
+					'',
+				].join('\r\n'),
+			);
+		});
+		socket.on('data', chunk => {
+			if (upgraded) {
+				// the CONNECTED reply: joined, so stop reading for good
+				socket.pause();
+				resolve(socket);
+				return;
+			}
+			head = Buffer.concat([head, chunk]);
+			if (head.indexOf('\r\n\r\n') === -1) {
+				return;
+			}
+			if (!head.toString().startsWith('HTTP/1.1 101')) {
+				reject(new Error(`upgrade refused: ${head.toString().split('\r\n')[0]}`));
+				return;
+			}
+			upgraded = true;
+			socket.write(maskedTextFrame(JSON.stringify({ type: A.CONNECTED, data })));
+		});
+	});
 
 beforeAll(async () => {
 	if (!canRun) {
@@ -316,6 +374,32 @@ describe.skipIf(!canRun)('bun server over real sockets', () => {
 		expect(reply.type).toBe(A.CONNECTED);
 		ws.close();
 	});
+
+	it(
+		'a member that stops reading is closed once its backlog passes the limit',
+		{ timeout: 30000 },
+		async () => {
+			const stalled = await connectStalled('backlog', { nick: 'slow', pass: PASS });
+			const { ws } = await connectClient('backlog', { nick: 'fast', pass: PASS });
+			try {
+				// well inside the heartbeat, which needs 30 s or more to drop
+				// a silent socket, so only the backlog close can end it here
+				const left = nextFrame(ws, A.LEAVE, 15000);
+				// the blind relay passes OPERATION to every member unstored;
+				// five 20 MB frames clear the 64 MB backlog and any kernel
+				// buffering
+				const filler = 'x'.repeat(20 * 1024 * 1024);
+				for (let i = 0; i < 5; i++) {
+					send(ws, A.OPERATION, { filler });
+				}
+				await left;
+				expect(ws.readyState).toBe(WebSocket.OPEN);
+			} finally {
+				ws.close();
+				stalled.destroy();
+			}
+		},
+	);
 
 	it(
 		'a mixed case --session-name lands clients in one room and lowercase files',

@@ -561,16 +561,18 @@ describe('Palette Utilities', () => {
 					const mouseup = mockCanvas.addEventListener.mock.calls.findLast(
 						c => c[0] === 'mouseup',
 					)[1];
+					// every pick lands on color 13, so only the timing guard
+					// keeps the editor shut
 					mouseup({ clientX: 150, clientY: 100, button: 2 });
-					mouseup({ clientX: 50, clientY: 60, button: 0 });
+					mouseup({ clientX: 150, clientY: 100, button: 0 });
 					expect(editor.click).not.toHaveBeenCalled();
-					expect(palette.setForegroundColor).toHaveBeenLastCalledWith(3);
+					expect(palette.setForegroundColor.mock.calls).toEqual([[13]]);
 					// a ctrl pick inside the threshold is a background pick too
-					mouseup({ clientX: 150, clientY: 20, button: 0, ctrlKey: true });
+					mouseup({ clientX: 150, clientY: 100, button: 0, ctrlKey: true });
 					expect(editor.click).not.toHaveBeenCalled();
-					expect(palette.setBackgroundColor).toHaveBeenLastCalledWith(9);
+					expect(palette.setBackgroundColor.mock.calls).toEqual([[13], [13]]);
 					// a second left pick inside the threshold still edits
-					mouseup({ clientX: 50, clientY: 60, button: 0 });
+					mouseup({ clientX: 150, clientY: 100, button: 0 });
 					expect(editor.click).toHaveBeenCalled();
 				} finally {
 					editor.remove();
@@ -649,6 +651,20 @@ describe('Palette Utilities', () => {
 				delete palette.getRGBColor;
 			});
 
+			it('a lift just past an edge of the strip picks the nearest color', () => {
+				// no pointermove, standing in for a slide inside the hold's
+				// slop, which still picks like a tap
+				down(3, 20);
+				lift(-3, 20);
+				down(197, 20);
+				lift(203, 20);
+				down(50, 157);
+				lift(50, 163);
+				expect(fgCalls()).toEqual([[1], [9], [7]]);
+				expect(bgCalls()).toEqual([]);
+				expect(editor.click).not.toHaveBeenCalled();
+			});
+
 			it('a hold picks the background under the finger once, and its lift picks nothing', () => {
 				down();
 				vi.advanceTimersByTime(499);
@@ -717,14 +733,43 @@ describe('Palette Utilities', () => {
 				expect(fgCalls()).toEqual([]);
 			});
 
-			it('a hold then a quick tap picks instead of opening the editor', () => {
+			it('a hold then a quick tap on the same color picks instead of opening the editor', () => {
 				down();
 				vi.advanceTimersByTime(500);
 				lift();
-				tap(50, 60);
+				tap(150, 100);
 				expect(editor.click).not.toHaveBeenCalled();
-				expect(fgCalls()).toEqual([[3]]);
+				expect(fgCalls()).toEqual([[13]]);
 				expect(bgCalls()).toEqual([[13]]);
+			});
+
+			it('a pen hold picks the background once, whether it lifts through touchend or a mouseup', () => {
+				down(150, 100, { pointerType: 'pen' });
+				vi.advanceTimersByTime(500);
+				lift();
+				// a desktop pen lifts with no touch events at all
+				down(50, 20, { pointerType: 'pen' });
+				vi.advanceTimersByTime(500);
+				doc('pointerup')({ pointerId: 1 });
+				strip('mouseup')({ button: 0, clientX: 50, clientY: 20 });
+				expect(bgCalls()).toEqual([[13], [1]]);
+				expect(fgCalls()).toEqual([]);
+			});
+
+			it('a pen tap and a mouse click after a pen hold still pick the foreground', () => {
+				down(50, 20, { pointerType: 'pen' });
+				vi.advanceTimersByTime(500);
+				doc('pointerup')({ pointerId: 1 });
+				strip('mouseup')({ button: 0, clientX: 50, clientY: 20 });
+				vi.advanceTimersByTime(1000);
+				down(150, 100, { pointerType: 'pen' });
+				doc('pointerup')({ pointerId: 1 });
+				strip('mouseup')({ button: 0, clientX: 150, clientY: 100 });
+				vi.advanceTimersByTime(1000);
+				down(50, 20, { pointerType: 'mouse' });
+				strip('mouseup')({ button: 0, clientX: 50, clientY: 20 });
+				expect(fgCalls()).toEqual([[13], [1]]);
+				expect(bgCalls()).toEqual([[1]]);
 			});
 
 			it('a double tap still opens the color editor', () => {
@@ -732,6 +777,32 @@ describe('Palette Utilities', () => {
 				tap(50, 60);
 				expect(editor.click).toHaveBeenCalled();
 				expect(bgCalls()).toEqual([]);
+			});
+
+			it('quick picks of two colors pick both, by touch or mouse, and only one color twice edits', () => {
+				tap(50, 20);
+				tap(150, 20);
+				expect(editor.click).not.toHaveBeenCalled();
+				tap(150, 20);
+				expect(editor.click).toHaveBeenCalledTimes(1);
+				strip('mouseup')({ button: 0, clientX: 50, clientY: 60 });
+				strip('mouseup')({ button: 0, clientX: 150, clientY: 60 });
+				expect(editor.click).toHaveBeenCalledTimes(1);
+				expect(fgCalls()).toEqual([[1], [9], [3], [11]]);
+			});
+
+			it('the editor input is laid out after it is unhidden and before it is clicked', () => {
+				// Chrome for Android opens no picker for an input with no layout box
+				const order = [];
+				editor.classList.add('hide');
+				editor.getBoundingClientRect = vi.fn(() => {
+					order.push(editor.classList.contains('hide') ? 'hidden layout' : 'layout');
+					return {};
+				});
+				editor.click = vi.fn(() => order.push('click'));
+				tap(50, 60);
+				tap(50, 60);
+				expect(order).toEqual(['layout', 'click']);
 			});
 		});
 	});

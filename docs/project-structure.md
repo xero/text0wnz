@@ -377,12 +377,11 @@ Located at `src/service.js` (root level, separate from client modules)
 - Color selection
 - Font and palette state
 - Canvas instance
-- Undo/redo history
 - Exports: `State` object
 
 **storage.js** - Persistence Layer
 
-- One shared IndexedDB connection (database `text0wnz`, version 4) with the `canvasData`, `fontData`, `undoHistory`, and `refImage` stores
+- One shared IndexedDB connection (database `text0wnz`, version 4) with the `canvasData`, `fontData`, and `refImage` stores, plus an `undoHistory` store that only keeps what a v2 install left
 - Canvas snapshots (`Uint16Array` plus columns and rows) stored directly, no transform on the way in or out
 - Embedded XBin font bytes and the reference image (raw bytes plus MIME type, never a Blob)
 - Editor settings in `localStorage` under `text0wnz-settings`

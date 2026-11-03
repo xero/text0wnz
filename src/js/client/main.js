@@ -357,23 +357,6 @@ const save = () => {
 		State.saveToLocalStorage();
 		saveTimeout = null;
 	}, 300);
-	saveUndoOnIdle();
-};
-
-// Undo history is heavy; persist it only once editing goes idle
-let undoSaveTimeout = null;
-const saveUndoOnIdle = () => {
-	if (undoSaveTimeout) {
-		clearTimeout(undoSaveTimeout);
-	}
-	undoSaveTimeout = setTimeout(() => {
-		undoSaveTimeout = null;
-		if ('requestIdleCallback' in window) {
-			requestIdleCallback(() => State.saveUndoHistory());
-		} else {
-			State.saveUndoHistory();
-		}
-	}, 3000);
 };
 
 const fetchTutorial = async url => {
@@ -1164,9 +1147,10 @@ const initializeAppComponents = async () => {
 		},
 	);
 
+	// a font change replaces State.font, so the getter looks it up per call
 	const nav9pt = createSettingToggle(
 		$('nav9pt'),
-		State.font.getLetterSpacing,
+		() => State.font.getLetterSpacing(),
 		newLetterSpacing => {
 			State.font.setLetterSpacing(newLetterSpacing);
 			State.network?.sendLetterSpacingChange?.(newLetterSpacing);
@@ -1184,7 +1168,7 @@ const initializeAppComponents = async () => {
 		const currentFont = State.textArtCanvas.getCurrentFontName();
 		fontDisplay.textContent = currentFont;
 		fontSelect.setValue(currentFont);
-		nav9pt.sync(State.font.getLetterSpacing, State.font.setLetterSpacing);
+		nav9pt.update();
 		navICE.update();
 	};
 	// New resets iCE and 9pt after its font change fires, so the chips
@@ -1557,16 +1541,6 @@ const initializeAppComponents = async () => {
 	document.addEventListener('onLetterSpacingChange', save);
 	document.addEventListener('onIceColorsChange', save);
 	document.addEventListener('onOpenedFile', save);
-
-	// the idle undo save may not have fired before the page goes away
-	document.addEventListener('visibilitychange', () => {
-		if (document.hidden) {
-			State.saveUndoHistory();
-		}
-	});
-	window.addEventListener('pagehide', () => {
-		State.saveUndoHistory();
-	});
 
 	if (pendingFile) {
 		openHandler(pendingFile);

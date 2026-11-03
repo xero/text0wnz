@@ -96,6 +96,21 @@ test.describe('Drawing Tools', () => {
 		expect((await readSelection(page)).live).toEqual({ x: 5, y: 4, width: 8, height: 6 });
 	});
 
+	// a one cell flip only shows on a half block, which swaps sides
+	for (const [key, from, to] of [['[', 221, 222], [']', 223, 220]]) {
+		test(`${key} on a fresh selection tool flips the keyboard cursor cell`, async ({ page }) => {
+			await writeText(page, 10, 5, String.fromCharCode(from));
+			// keyboard mode is the boot tool: a tap parks its cursor
+			await tap(page, 10, 5);
+			await clickTool(page, 'selection');
+			expect((await readSelection(page)).live).toBe(null);
+
+			await page.keyboard.press(key);
+			expect((await readBlock(page, 10, 5)).charCode).toBe(to);
+			expect((await readSelection(page)).live).toEqual({ x: 10, y: 5, width: 1, height: 1 });
+		});
+	}
+
 	test('should activate fill tool', async ({ page }) => {
 		// fill lives in the brush submenu
 		await clickTool(page, 'fill');

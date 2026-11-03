@@ -34,7 +34,7 @@ import {
 } from '../doc.js';
 import { u16ToV3, v3ToU16, v3ToU16Lossy } from '../convert.js';
 import { cp437ToUnicode, unicodeToCp437 } from '../cp437.js';
-import { buildSauce, parseSauce } from './sauce.js';
+import { buildSauce, commentText, parseSauce } from './sauce.js';
 import { CodecError, concatBytes, utf8Encode } from './util.js';
 import { DecodeResult, DocMeta } from './bin.js';
 
@@ -781,7 +781,7 @@ export const decodeAns = (
 					title: sauce.title,
 					author: sauce.author,
 					group: sauce.group,
-					comments: sauce.comments.join('\n'),
+					comments: commentText(sauce.comments),
 					fontName: sauce.fontName,
 				}
 			: {},

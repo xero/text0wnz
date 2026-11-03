@@ -16,7 +16,7 @@ import {
 	glyphWord,
 	paletteColor,
 } from '../doc.js';
-import { SauceRecord, buildSauce, parseSauce } from './sauce.js';
+import { SauceRecord, buildSauce, commentText, parseSauce } from './sauce.js';
 import {
 	CodecError,
 	bytesToString,
@@ -251,7 +251,7 @@ export const decodeXBin = (bytes: Uint8Array): XBinDecodeResult => {
 					title: sauce.title,
 					author: sauce.author,
 					group: sauce.group,
-					comments: sauce.comments.join('\n'),
+					comments: commentText(sauce.comments),
 					fontName: 'XBIN',
 				}
 			: { fontName: 'XBIN' },
