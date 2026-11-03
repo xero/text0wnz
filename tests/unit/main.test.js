@@ -8,12 +8,16 @@ import {
 	vi,
 } from 'vitest';
 import { createTextArtCanvas } from '../../src/js/client/canvas.js';
+import magicNumbers from '../../src/js/client/magicNumbers.js';
 
 const mockState = {
 	startInitialization: vi.fn(),
 	// records only: running the tier 3 callback boots every lazy tool,
 	// far past what these mocks can stand in for
 	waitFor: vi.fn(),
+	// never settles: the update re-offer it chains wants a service worker
+	restoreStateFromLocalStorage: vi.fn(() => new Promise(() => {})),
+	clearLocalStorage: vi.fn(),
 	title: { value: 'untitled' },
 	fontDir: 'ui/fonts/',
 	textArtCanvas: {
@@ -123,6 +127,10 @@ const mockCreateFunctions = {
 	createZoomControl: vi.fn(() => createMockElement()),
 };
 
+// the stub below hides jsdom, which the SAUCE dialog tests still need
+// for a real textarea
+const jsdom = document;
+
 // Set up global document BEFORE any imports
 vi.stubGlobal('document', {
 	getElementById: vi.fn(id => {
@@ -144,6 +152,7 @@ vi.stubGlobal('document', {
 });
 
 global.alert = vi.fn();
+global.confirm = vi.fn();
 
 vi.mock('../../src/js/client/state.js', () => ({ default: mockState }));
 vi.mock('../../src/js/client/ui.js', () => ({
@@ -165,7 +174,35 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	createGrid: vi.fn(() => ({ isShown: vi.fn(() => false), show: vi.fn() })),
 	menuHover: vi.fn(),
 	enforceMaxBytes: vi.fn(),
+	createResolutionController: vi.fn(),
+	createDragDropController: vi.fn(),
 }));
+// the UI modules initializeAppComponents wires up before the resize
+// dialog; each stands in with just enough surface for the boot
+vi.mock('../../src/js/client/palette.js', async importOriginal => ({
+	...(await importOriginal()),
+	createPalettePreview: mockCreateFunctions.createPalettePreview,
+	createPalettePicker: mockCreateFunctions.createPalettePicker,
+}));
+vi.mock('../../src/js/client/keyboard.js', async importOriginal => ({
+	...(await importOriginal()),
+	createKeyboardController: mockCreateFunctions.createKeyboardController,
+}));
+vi.mock('../../src/js/client/sixteenColors.js', () => ({ createSixteenColors: vi.fn(() => ({})) }));
+vi.mock('../../src/js/client/asciiArena.js', () => ({ createAsciiArena: vi.fn(() => ({})) }));
+vi.mock('../../src/js/client/artpacks.js', () => ({ createArtpacksLanding: vi.fn(() => ({})) }));
+vi.mock('../../src/js/client/archiveOpen.js', () => ({
+	createArchiveOpener: vi.fn(() => ({})),
+	isArchiveFile: vi.fn(() => false),
+}));
+vi.mock('../../src/js/client/plugins.js', () => ({ createPluginManager: vi.fn(() => ({})) }));
+vi.mock('../../src/js/client/referenceImage.js', () => ({ createReferenceImage: vi.fn(() => null) }));
+vi.mock('../../src/js/client/charsetPicker.js', () => ({ createCharsetPicker: vi.fn(() => ({ show: vi.fn() })) }));
+vi.mock('../../src/js/client/colorPanel.js', () => ({ createColorPanel: vi.fn() }));
+vi.mock('../../src/js/client/frames.js', () => ({ createFramesPanel: vi.fn(() => null) }));
+vi.mock('../../src/js/client/minimap.js', () => ({ createMinimap: vi.fn(() => null) }));
+vi.mock('../../src/js/client/toolSettings.js', () => ({ createToolSettings: vi.fn(() => ({ show: vi.fn(), hide: vi.fn() })) }));
+vi.mock('../../src/js/client/selectionBar.js', () => ({ createSelectionBar: vi.fn(() => ({})) }));
 vi.mock('../../src/js/client/toolbar.js', () => ({
 	default: {
 		add: vi.fn(() => ({ enable: vi.fn() })),
@@ -177,6 +214,7 @@ vi.mock('../../src/js/client/file.js', () => ({
 	Load: {
 		file: vi.fn(),
 		sauceToAppFont: vi.fn(),
+		resetSauceFlags: vi.fn(),
 	},
 	Save: {
 		ans: vi.fn(),
@@ -364,6 +402,227 @@ describe('Main Application Module', () => {
 				tier3Deps,
 				expect.any(Function),
 			);
+		});
+	});
+
+	describe('canvas size', () => {
+		// initializeAppComponents wires far more than these mocks stand in
+		// for, so the boot halts on purpose right after the resize dialog
+		// is wired; any earlier failure rejects with a different error
+		const halt = new Error('halt after the resize dialog');
+
+		const bootToResizeDialog = async () => {
+			// imported late: the ui.js mock factory reads test-file consts
+			const { onClick, onReturn } = await import('../../src/js/client/ui.js');
+			const els = {
+				warningYes: createMockElement(),
+				resizeApply: createMockElement(),
+				columnsInput: createMockElement(),
+				rowsInput: createMockElement(),
+			};
+			const $ = global.document.getElementById;
+			const lookup = $.getMockImplementation();
+			$.mockImplementation(id => els[id] ?? lookup(id));
+			vi.mocked(onReturn).mockImplementation(el => {
+				if (el === els.rowsInput) {
+					throw halt;
+				}
+			});
+			let boot;
+			mockState.waitFor.mockImplementationOnce((_deps, ready) => {
+				boot = ready().then(() => null, error => error);
+			});
+			try {
+				await domReady();
+				await vi.advanceTimersByTimeAsync(100);
+				expect(await boot).toBe(halt);
+			} finally {
+				$.mockImplementation(lookup);
+				vi.mocked(onReturn).mockReset();
+			}
+			const handler = el =>
+				vi.mocked(onClick).mock.calls.find(([target]) => target === el)[1];
+			const apply = handler(els.resizeApply);
+			return {
+				resize: (columns, rows) => {
+					els.columnsInput.value = String(columns);
+					els.rowsInput.value = String(rows);
+					apply();
+				},
+				confirmNew: handler(els.warningYes),
+			};
+		};
+
+		beforeEach(() => {
+			mockState.network = { sendResize: vi.fn() };
+		});
+
+		afterEach(() => {
+			delete mockState.network;
+		});
+
+		it('resizes the canvas and sends the new size to the session', async () => {
+			const { resize: apply } = await bootToResizeDialog();
+			apply(100, 30);
+			expect(mockState.textArtCanvas.resize).toHaveBeenCalledWith(100, 30);
+			expect(mockState.network.sendResize).toHaveBeenCalledWith(100, 30);
+			expect(mockState.modal.close).toHaveBeenCalled();
+			expect(global.alert).not.toHaveBeenCalled();
+			expect(global.confirm).not.toHaveBeenCalled();
+		});
+
+		it('New returns to 80x25 without recording an undo step', async () => {
+			const { confirmNew } = await bootToResizeDialog();
+			Object.assign(mockState.textArtCanvas, {
+				clearXBData: vi.fn(callback => callback()),
+				setFont: vi.fn((_name, callback) => callback()),
+			});
+			await confirmNew();
+			// clear() wipes the history right after, so a step would only
+			// capture every cut cell for nothing
+			expect(mockState.textArtCanvas.resize).toHaveBeenCalledWith(80, 25, { undoable: false });
+			expect(mockState.textArtCanvas.clear).toHaveBeenCalled();
+		});
+
+		it('alerts and keeps the size past the column or row limit', async () => {
+			const { resize: apply } = await bootToResizeDialog();
+			const { MAX_COLUMNS, MAX_ROWS } = magicNumbers;
+			apply(MAX_COLUMNS + 1, 25);
+			apply(80, MAX_ROWS + 1);
+			expect(global.alert).toHaveBeenCalledTimes(2);
+			expect(global.alert).toHaveBeenCalledWith(
+				`Canvas too large. Maximum size is ${MAX_COLUMNS} columns by ${MAX_ROWS} rows.`,
+			);
+			expect(mockState.textArtCanvas.resize).not.toHaveBeenCalled();
+			expect(mockState.network.sendResize).not.toHaveBeenCalled();
+		});
+
+		it('asks before a canvas past the large canvas warning', async () => {
+			const { resize: apply } = await bootToResizeDialog();
+			const columns = magicNumbers.MAX_COLUMNS;
+			const rows = magicNumbers.RESIZE_WARN_CELLS / columns;
+			// exactly at the threshold resizes without asking
+			apply(columns, rows);
+			expect(global.confirm).not.toHaveBeenCalled();
+			expect(mockState.textArtCanvas.resize).toHaveBeenCalledWith(columns, rows);
+
+			global.confirm.mockReturnValueOnce(false);
+			apply(columns, rows + 1);
+			expect(global.confirm).toHaveBeenCalledWith(
+				expect.stringContaining(`A ${columns}x${rows + 1} canvas is very large`),
+			);
+			expect(mockState.textArtCanvas.resize).toHaveBeenCalledTimes(1);
+			expect(mockState.network.sendResize).toHaveBeenCalledTimes(1);
+
+			global.confirm.mockReturnValueOnce(true);
+			apply(columns, rows + 1);
+			expect(mockState.textArtCanvas.resize).toHaveBeenLastCalledWith(
+				columns,
+				rows + 1,
+			);
+			expect(mockState.network.sendResize).toHaveBeenLastCalledWith(
+				columns,
+				rows + 1,
+			);
+		});
+	});
+
+	describe('SAUCE dialog', () => {
+		const halt = new Error('halt after the SAUCE dialog');
+
+		// the real onReturn takes the Comments binding main.js made, on a
+		// jsdom textarea, with Done standing in for the button
+		const bootToSauceDialog = async () => {
+			const { onClick, onReturn } = await import('../../src/js/client/ui.js');
+			// ui.js binds its query helpers to the document at load
+			const stub = global.document;
+			vi.stubGlobal('document', jsdom);
+			const real = await vi.importActual('../../src/js/client/ui.js');
+			vi.stubGlobal('document', stub);
+			const comments = jsdom.createElement('textarea');
+			const els = { sauceComments: comments, sauceDone: createMockElement() };
+			const $ = global.document.getElementById;
+			const lookup = $.getMockImplementation();
+			$.mockImplementation(id => els[id] ?? lookup(id));
+			let binding;
+			vi.mocked(onReturn).mockImplementation((...args) => {
+				if (args[0] === comments) {
+					binding = args;
+					throw halt;
+				}
+			});
+			let boot;
+			mockState.waitFor.mockImplementationOnce((_deps, ready) => {
+				boot = ready().then(() => null, error => error);
+			});
+			try {
+				await domReady();
+				await vi.advanceTimersByTimeAsync(100);
+				expect(await boot).toBe(halt);
+			} finally {
+				$.mockImplementation(lookup);
+				vi.mocked(onReturn).mockReset();
+			}
+			const done = vi.mocked(onClick).mock.calls.find(
+				([target]) => target === els.sauceDone,
+			)[1];
+			els.sauceDone.click = () => done();
+			real.onReturn(...binding);
+			comments.value = 'greets';
+			comments.setSelectionRange(6, 6);
+			return comments;
+		};
+
+		// jsdom runs no default actions: a keydown nobody cancels goes on
+		// to beforeinput and then the textarea's own line break, as in a
+		// browser
+		const pressEnter = (el, init) => {
+			const down = new window.KeyboardEvent('keydown', {
+				key: 'Enter',
+				cancelable: true,
+				...init,
+			});
+			el.dispatchEvent(down);
+			if (!down.defaultPrevented) {
+				const before = new window.InputEvent('beforeinput', {
+					inputType: 'insertLineBreak',
+					cancelable: true,
+				});
+				el.dispatchEvent(before);
+				if (!before.defaultPrevented) {
+					el.setRangeText('\n', el.selectionStart, el.selectionEnd, 'end');
+					el.dispatchEvent(new window.Event('input'));
+				}
+			}
+			return down;
+		};
+
+		beforeEach(() => {
+			mockState.network = { sendSauce: vi.fn() };
+		});
+
+		afterEach(() => {
+			delete mockState.network;
+		});
+
+		it('Shift+Enter in Comments types a line break and keeps the dialog open', async () => {
+			const { enforceMaxBytes } = await import('../../src/js/client/ui.js');
+			const comments = await bootToSauceDialog();
+			pressEnter(comments, { shiftKey: true });
+			expect(comments.value).toBe('greets\n');
+			expect(enforceMaxBytes).toHaveBeenCalled();
+			expect(mockState.network.sendSauce).not.toHaveBeenCalled();
+			expect(mockState.modal.close).not.toHaveBeenCalled();
+		});
+
+		it('plain Enter in Comments saves and closes', async () => {
+			const comments = await bootToSauceDialog();
+			pressEnter(comments);
+			expect(comments.value).toBe('greets');
+			expect(mockState.network.sendSauce).toHaveBeenCalledWith(
+				expect.objectContaining({ comments: 'greets' }),
+			);
+			expect(mockState.modal.close).toHaveBeenCalled();
 		});
 	});
 });

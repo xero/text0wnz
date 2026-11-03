@@ -31,6 +31,7 @@ import {
 	createDocV3,
 	encodeBin,
 	expandExtCells,
+	fitComments,
 	glyphWord,
 	paletteColor,
 } from '../../../src/js/core/index';
@@ -128,6 +129,26 @@ describe('room persistence', () => {
 		expect(rewritten.join.palette[1]).toEqual({ r: 16, g: 48, b: 130 });
 	});
 
+	it('restores sidecar comments cut to the lines a local save keeps', async () => {
+		// 4096 characters pass a 4096-character clamp but hold 4091 lines
+		const comments = `top${'\n'.repeat(4090)}end`;
+		const join = {
+			columns: 1,
+			rows: 1,
+			data: [{ code: 32, fg: 7, bg: 0 }],
+			comments,
+		};
+		writeFileSync(stateFile(dir, 'long'), JSON.stringify({ join, chat: []}));
+		const room = createRoom({ name: 'long', columns: 1, rows: 1 });
+		room.loadState(await loadRoomDoc(dir, 'long'));
+		const fitted = fitComments(comments)[0];
+		expect(fitted.split('\n')).toHaveLength(255);
+		expect(room.toJoinDoc().comments).toBe(fitted);
+		await saveRoom(room, dir);
+		const rewritten = JSON.parse(readFileSync(stateFile(dir, 'long'), 'utf8'));
+		expect(rewritten.join.comments).toBe(fitted);
+	});
+
 	it('migrateSessionCase renames mixed-case session files to lowercase', async () => {
 		writeFileSync(path.join(dir, 'MiXed.0wnz'), 'a');
 		writeFileSync(path.join(dir, 'MiXed.state.json'), 'b');
@@ -169,7 +190,7 @@ describe('room persistence', () => {
 	});
 
 	it('blank-room GC removes the legacy .bin so erased art stays erased', async () => {
-		const doc = createDocV3({ columns: 2, rows: 1 });
+		const doc = createDocV3({ columns: 4, rows: 1 });
 		doc.setCell(0, 0, 0, {
 			glyph: glyphWord(65, 0),
 			fg: paletteColor(7),

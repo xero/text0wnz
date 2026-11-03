@@ -90,10 +90,7 @@ const bootPage = async page => {
 };
 
 const drawAt = async (page, cx, cy) => {
-	await page.locator('#brushes').click();
-	await page.waitForTimeout(200);
 	await clickTool(page, 'halfblock');
-	await page.waitForTimeout(200);
 	const point = await page.evaluate(
 		([x, y]) => {
 			const s = window.__t0wnz.State;
@@ -108,7 +105,6 @@ const drawAt = async (page, cx, cy) => {
 		[cx, cy],
 	);
 	await page.mouse.click(point.x, point.y);
-	await page.waitForTimeout(300);
 };
 
 const charAt = (page, x, y) =>
@@ -137,7 +133,6 @@ test.describe('joining a vanilla Moebius server by address', () => {
 			null,
 			{ timeout: 10000 },
 		);
-		await page.waitForTimeout(400);
 		await expect(page.locator('#chatButton')).toBeVisible();
 		await expect(page.locator('#networkButton')).toBeHidden();
 		// the vanilla 6-bit palette arrived at full brightness: entry 9

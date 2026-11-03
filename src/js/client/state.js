@@ -280,14 +280,20 @@ class StateManager {
 			const scaleFactor = this.state.font?.getScaleFactor() ?? 1;
 			const hasNonDefaultZoom = scaleFactor !== 1;
 
-			// a live session's canvas never reaches the local autosave,
-			// zoomed or not; a zoom alone is worth saving on a blank doc.
-			// The network slot is optional: a collab worker that failed to
-			// construct must not cost every autosave of the session
+			// a live session's canvas, font, and settings describe the
+			// session doc and never reach the local autosave; the zoom is
+			// the viewer's own, so it alone merges into the stored record.
+			// A blank doc back at 1x has only that zoom to say, or the
+			// last stored zoom returns on reload. The network slot is
+			// optional: a collab worker that failed to construct must not
+			// cost every autosave of the session
 			if (
 				stateManager.state.network?.isConnected?.() === true ||
 				(!hasNonDefaultZoom && this.isDefaultState())
 			) {
+				if ((Storage.loadSettings()?.scaleFactor ?? 1) !== scaleFactor) {
+					Storage.mergeSettings({ scaleFactor });
+				}
 				return;
 			}
 
@@ -365,6 +371,13 @@ class StateManager {
 	async restoreStateFromLocalStorage() {
 		const settings = Storage.loadSettings();
 		if (!settings) {
+			return;
+		}
+		// a session zoom saved over an empty store: there is no local doc
+		// to reload, and the full restore below applies the zoom only
+		// through a stored font name
+		if (Object.keys(settings).every(key => key === 'scaleFactor')) {
+			this.state.font?.setScaleFactor?.(settings.scaleFactor);
 			return;
 		}
 

@@ -5,9 +5,10 @@ import {
 	createWorkerHandler,
 	createChatController,
 } from '../../src/js/client/network.js';
-import { $, onEnter } from '../../src/js/client/ui.js';
+import { $, enforceMaxBytes, onEnter } from '../../src/js/client/ui.js';
 import {
 	EXT_SUITE_CAP,
+	MoebiusAction,
 	T0wnzAction,
 	compressExtCells,
 } from '../../src/js/core/index.js';
@@ -93,6 +94,7 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	hideOverlay: vi.fn(),
 	websocketUI: vi.fn(),
 	onEnter: vi.fn(),
+	enforceMaxBytes: vi.fn(),
 }));
 
 vi.mock('../../src/js/client/palette.js', () => ({
@@ -694,7 +696,63 @@ describe('Network Module', () => {
 				},
 			});
 			expect(State.textArtCanvas.setDocData).toHaveBeenCalled();
-			expect(State.textArtCanvas.resize).toHaveBeenCalledWith(100, 30);
+			expect(State.textArtCanvas.resize).toHaveBeenCalledWith(100, 30, { undoable: false });
+		});
+
+		it('a peer resize applies outside the local undo history', async () => {
+			const handler = createWorkerHandler(mockInputHandle);
+			const messageListener = mockWorker.addEventListener.mock.calls.find(
+				call => call[0] === 'message',
+			)[1];
+			handler.joinCollaboration();
+			const blank = { code: 32, fg: 7, bg: 0 };
+			await messageListener({
+				data: {
+					cmd: 'connected',
+					data: {
+						caps: [],
+						doc: { columns: 2, rows: 1, data: [blank, blank]},
+						users: [],
+						chat_history: [],
+					},
+				},
+			});
+			State.textArtCanvas.resize.mockClear();
+			await messageListener({
+				data: {
+					cmd: 'frame',
+					type: MoebiusAction.SET_CANVAS_SIZE,
+					data: { columns: 100, rows: 30, id: 2 },
+				},
+			});
+			expect(State.textArtCanvas.resize).toHaveBeenCalledWith(100, 30, { undoable: false });
+		});
+
+		it('a peer SAUCE update refreshes the comment byte counter', async () => {
+			const handler = createWorkerHandler(mockInputHandle);
+			const messageListener = mockWorker.addEventListener.mock.calls.find(
+				call => call[0] === 'message',
+			)[1];
+			handler.joinCollaboration();
+			const blank = { code: 32, fg: 7, bg: 0 };
+			await messageListener({
+				data: {
+					cmd: 'connected',
+					data: {
+						caps: [],
+						doc: { columns: 2, rows: 1, data: [blank, blank]},
+						users: [],
+						chat_history: [],
+					},
+				},
+			});
+			const sauce = (data, id = 2) =>
+				messageListener({ data: { cmd: 'frame', type: MoebiusAction.SAUCE, data: { ...data, id } } });
+			vi.mocked(enforceMaxBytes).mockClear();
+			await sauce({ title: 'only a title' });
+			expect(enforceMaxBytes).not.toHaveBeenCalled();
+			await sauce({ title: '', author: '', group: '', comments: 'x'.repeat(200) });
+			expect(enforceMaxBytes).toHaveBeenCalledTimes(1);
 		});
 
 		it('should handle canvas settings when not in collaboration mode', () => {

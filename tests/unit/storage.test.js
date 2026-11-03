@@ -136,6 +136,25 @@ describe('Storage Utilities', () => {
 			expect(consoleSpy).toHaveBeenCalled();
 			consoleSpy.mockRestore();
 		});
+
+		it('mergeSettings writes the patch over the stored fields only', () => {
+			const settings = {
+				fontName: 'Topaz 8x16',
+				iceColors: true,
+				letterSpacing: true,
+				scaleFactor: 1,
+				paletteColors: [[0, 0, 42, 255]],
+			};
+			localStorage.setItem('text0wnz-settings', JSON.stringify(settings));
+
+			expect(Storage.mergeSettings({ scaleFactor: 2.5 })).toBe(true);
+			expect(Storage.loadSettings()).toEqual({ ...settings, scaleFactor: 2.5 });
+		});
+
+		it('mergeSettings over an empty store writes the patch alone', () => {
+			Storage.mergeSettings({ scaleFactor: 2 });
+			expect(Storage.loadSettings()).toEqual({ scaleFactor: 2 });
+		});
 	});
 
 	describe('IndexedDB Operations', () => {

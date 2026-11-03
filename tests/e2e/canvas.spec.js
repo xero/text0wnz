@@ -7,20 +7,16 @@ import {
 	readBlock,
 	readRegion,
 	tap,
-	waitForEditorReady,
 } from './helpers/editorHelpers.js';
 
 test.describe('Basic Canvas Functionality', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/?test');
-		await waitForEditorReady(page);
 		await bridgeReady(page);
 	});
 
 	test('should load the application successfully', async ({ page }) => {
 		await expect(page.locator('#canvasContainer')).toBeVisible();
-
-		await page.waitForTimeout(500);
 
 		const sidebar = page.locator('#bodyContainer aside');
 		await expect(sidebar).toBeVisible();

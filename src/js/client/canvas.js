@@ -131,9 +131,14 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		// the label table mirrors the ring so the History flyout can
 		// name and jump to any step
 		onEvict: () => State.historyLabels?.evicted(),
+		onClear: () => State.historyLabels?.cleared(),
 		onCommit: stroke => {
-			State.historyLabels?.committed();
-			if (State.network?.isConnected?.()) {
+			State.historyLabels?.committed(
+				stroke.resize && `Resize ${stroke.resize.to.join('x')}`,
+			);
+			// a resize journals as the keyframe its geometry change
+			// schedules, never as a stroke record
+			if (stroke.resize || State.network?.isConnected?.()) {
 				return;
 			}
 			docEpoch += 1;
@@ -1248,29 +1253,39 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	const resize = (newColumnValue, newRowValue) => {
+	// everything sized by the doc follows a geometry change: a resize,
+	// or an undo or redo of one
+	const adoptDocSize = () => {
+		columns = doc.getColumns();
+		rows = doc.getRows();
+		// LOSSY projection, current frame: the strict one throws on
+		// unicode glyphs and RGB words, and the mirror is lossy by
+		// contract
+		imageData = v3ToU16Lossy(doc, editor.getCurrentFrame()).imageData;
+		if (onionSkin) {
+			rebuildOnionPlanes();
+		}
+		scheduleJournalKeyframe(true);
+		createCanvases();
+		updateTimer();
+		redrawEntireImage();
+		document.dispatchEvent(
+			new CustomEvent('onTextCanvasSizeChange', { detail: { columns: columns, rows: rows } }),
+		);
+	};
+
+	/**
+	 * A local resize is one undo step. A peer's resize passes
+	 * `{ undoable: false }`, which clears the history instead.
+	 */
+	const resize = (newColumnValue, newRowValue, { undoable = true } = {}) => {
 		if (
 			(newColumnValue !== columns || newRowValue !== rows) &&
 			newColumnValue > 0 &&
 			newRowValue > 0
 		) {
-			editor.resize(newColumnValue, newRowValue);
-			columns = newColumnValue;
-			rows = newRowValue;
-			// LOSSY projection, current frame: the strict one throws on
-			// unicode glyphs and RGB words, and the mirror is lossy by
-			// contract
-			imageData = v3ToU16Lossy(doc, editor.getCurrentFrame()).imageData;
-			if (onionSkin) {
-				rebuildOnionPlanes();
-			}
-			scheduleJournalKeyframe(true);
-			createCanvases();
-			updateTimer();
-			redrawEntireImage();
-			document.dispatchEvent(
-				new CustomEvent('onTextCanvasSizeChange', { detail: { columns: columns, rows: rows } }),
-			);
+			editor.resize(newColumnValue, newRowValue, { undoable });
+			adoptDocSize();
 		}
 	};
 
@@ -1600,6 +1615,20 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		drawHistory = [];
 	};
 
+	const afterHistoryStep = () => {
+		if (doc.getColumns() !== columns || doc.getRows() !== rows) {
+			// peers resize before the restored cells arrive, or they drop
+			// them as out of bounds
+			State.network?.sendResize?.(doc.getColumns(), doc.getRows());
+			adoptDocSize();
+		} else {
+			scheduleJournalKeyframe();
+		}
+		processDirtyRegions();
+		sendDrawHistory();
+		State.saveToLocalStorage();
+	};
+
 	const undo = () => {
 		// a floating move lands before undo takes it back, or the next
 		// step stamps the block beside the restored origin
@@ -1608,10 +1637,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 		if (editor.undo()) {
 			State.historyLabels?.undone();
-			processDirtyRegions();
-			sendDrawHistory();
-			scheduleJournalKeyframe();
-			State.saveToLocalStorage();
+			afterHistoryStep();
 		}
 	};
 
@@ -1623,10 +1649,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				State.selectionTool.toggleMoveMode();
 			}
 			State.historyLabels?.redone();
-			processDirtyRegions();
-			sendDrawHistory();
-			scheduleJournalKeyframe();
-			State.saveToLocalStorage();
+			afterHistoryStep();
 		}
 	};
 
@@ -1919,9 +1942,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	/**
-	 * Undo persists in the OPFS journal only. Legacy IndexedDB autosaves
-	 * restore their content; their undo stacks are deliberately dropped
-	 * (see core/migrate.ts).
+	 * The arena does not serialize, and the OPFS journal keeps content,
+	 * not the undo stack. Legacy IndexedDB autosaves restore their
+	 * content; their undo stacks are deliberately dropped (see
+	 * core/migrate.ts).
 	 */
 	const getUndoHistory = () => null;
 

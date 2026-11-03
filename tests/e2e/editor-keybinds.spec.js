@@ -247,5 +247,26 @@ test.describe('Editor Keybinds', () => {
 			await page.keyboard.press('m');
 			await expect(move).not.toHaveClass(/enabled/);
 		});
+
+		for (const key of ['ArrowRight', 'Shift+ArrowRight']) {
+			test(`escape mid-move lands the block, so ${key} stamps no copy`, async ({ page }) => {
+				await writeText(page, 2, 2, 'QRSTU');
+				await writeText(page, 20, 10, 'AB');
+				// park the keyboard cursor on art a fresh rect would start on
+				await tap(page, 2, 2);
+				await page.locator('#selection').click();
+				await drag(page, [20, 10], [21, 10]);
+				await page.keyboard.press('m');
+				await page.keyboard.press('ArrowRight');
+				await page.keyboard.press('Escape');
+				await expect(page.locator('#moveBlocks')).not.toHaveClass(/enabled/);
+
+				await page.keyboard.press(key);
+				await page.keyboard.press('ArrowRight');
+				await page.keyboard.press('ArrowRight');
+				expect(await readRegion(page, 0, 2, 8, 2)).toEqual(['  QRSTU  ']);
+				expect(await readRegion(page, 19, 10, 23, 10)).toEqual(['  AB ']);
+			});
+		}
 	});
 });

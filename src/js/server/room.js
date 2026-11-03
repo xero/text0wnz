@@ -44,6 +44,7 @@ import {
 	expandExtCells,
 	extCellEquals,
 	extCellToBlock,
+	fitComments,
 	paletteWordsFromJoin,
 	sanitizeExtDraw,
 	sanitizeExtPalette,
@@ -69,6 +70,15 @@ export const ROOM_DEFAULTS = Object.freeze({
 export const SERVER_CAPS = Object.freeze([EXT_SUITE_CAP]);
 
 const blankBlock = () => ({ code: 32, fg: 7, bg: 0 });
+
+/** fitComments keeps the 255 COMNT slots a local save writes; the
+ * slice spares it a walk of a 32MB frame and cuts nothing it would
+ * keep (255 lines of 64 surrogate pairs and a newline)
+ * @param {unknown} text @param {string} fallback */
+const roomComments = (text, fallback) =>
+	typeof text === 'string'
+		? fitComments(text.slice(0, 255 * (64 * 2 + 1)))[0]
+		: fallback;
 
 /** 0x00RRGGBB words -> the 16 {r,g,b} entries vanilla joiners expect
  * @param {number[] | Uint32Array} words */
@@ -649,7 +659,7 @@ export const createRoom = (options = {}) => {
 				doc.title = field(data.title, doc.title, 35);
 				doc.author = field(data.author, doc.author, 20);
 				doc.group = field(data.group, doc.group, 20);
-				doc.comments = field(data.comments, doc.comments, 64 * 64);
+				doc.comments = roomComments(data.comments, doc.comments);
 				const payload = {
 					title: doc.title,
 					author: doc.author,
@@ -995,7 +1005,9 @@ export const createRoom = (options = {}) => {
 				doc.title = saved.title ?? '';
 				doc.author = saved.author ?? '';
 				doc.group = saved.group ?? '';
-				doc.comments = saved.comments ?? '';
+				// a sidecar can hold more lines than a save writes, so it
+				// passes the same clamp as a live edit
+				doc.comments = roomComments(saved.comments, '');
 				doc.palette = normalizeJoinPalette(saved.palette);
 				doc.font_bytes = saved.font_bytes;
 				doc.font_name = saved.font_name ?? doc.font_name;

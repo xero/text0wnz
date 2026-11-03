@@ -7,6 +7,7 @@ import {
 	parkToolSettings,
 	readBlock,
 	readRegion,
+	setFill,
 	tap,
 } from './helpers/editorHelpers.js';
 
@@ -82,15 +83,19 @@ test.describe('Advanced Undo/Redo Operations', () => {
 		await page.locator('#shapes').click();
 		await clickTool(page, 'square');
 		await expect(page.locator('#square')).toHaveClass(/toolbarDisplayed/);
+		await setFill(page, 'square', true);
 
+		// an outline leaves the middle blank, so ink there is the fill
 		await drag(page, [10, 8], [20, 14]);
-		expect([0, 32]).not.toContain((await readBlock(page, 10, 8)).charCode);
+		expect(await inked(page, 10, 8)).toBe(true);
+		expect(await inked(page, 15, 11)).toBe(true);
 
 		await page.keyboard.press('Control+z');
-		expect([0, 32]).toContain((await readBlock(page, 10, 8)).charCode);
+		expect(await inked(page, 10, 8)).toBe(false);
+		expect(await inked(page, 15, 11)).toBe(false);
 
 		await page.keyboard.press('Control+y');
-		expect([0, 32]).not.toContain((await readBlock(page, 10, 8)).charCode);
+		expect(await inked(page, 15, 11)).toBe(true);
 	});
 
 	test('should handle undo after fill operation', async ({ page }) => {
@@ -110,24 +115,43 @@ test.describe('Advanced Undo/Redo Operations', () => {
 		expect(await readBlock(page, 40, 12)).toEqual(filled);
 	});
 
-	test('should start a fresh undo history after canvas resize', async ({ page }) => {
-		await halfblockTaps(page, [[5, 5]]);
+	test('should undo and redo a canvas resize as one step', async ({ page }) => {
+		// (70, 20) falls off the 60x15 canvas
+		await halfblockTaps(page, [[5, 5], [70, 20]]);
 
 		await page.locator('#resolution').click();
-		await page.locator('#columnsInput').fill('100');
-		await page.locator('#rowsInput').fill('30');
+		await page.locator('#columnsInput').fill('60');
+		await page.locator('#rowsInput').fill('15');
 		await page.locator('#resizeApply').click();
-		await expect(page.locator('#resolutionLabel')).toHaveText('100x30');
+		const label = page.locator('#resolutionLabel');
+		await expect(label).toHaveText('60x15');
+		// the dialog fades out after the resize lands, and a tap in that
+		// window hits the dialog instead of the canvas
+		await expect(page.locator('#modal')).toBeHidden();
 
-		// editor.ts resize() clears the history arena. The first undo
-		// proves the keys reach the editor, so the second one finding
-		// nothing is the cleared history, not a swallowed key
-		await halfblockTaps(page, [[90, 28]]);
-		expect(await inked(page, 90, 28)).toBe(true);
+		// a stroke after the resize also proves the keys reach the
+		// editor once the dialog closes
+		await tap(page, 50, 10);
+		expect(await inked(page, 50, 10)).toBe(true);
 		await page.keyboard.press('Control+z');
-		expect(await inked(page, 90, 28)).toBe(false);
+		expect(await inked(page, 50, 10)).toBe(false);
+
 		await page.keyboard.press('Control+z');
+		await expect(label).toHaveText('80x25');
+		expect(await inked(page, 70, 20)).toBe(true);
 		expect(await inked(page, 5, 5)).toBe(true);
+
+		// strokes from before the resize still undo at their own cells
+		await page.keyboard.press('Control+z');
+		expect(await inked(page, 70, 20)).toBe(false);
+		expect(await inked(page, 5, 5)).toBe(true);
+
+		await page.keyboard.press('Control+y');
+		expect(await inked(page, 70, 20)).toBe(true);
+		await page.keyboard.press('Control+y');
+		await expect(label).toHaveText('60x15');
+		await page.keyboard.press('Control+y');
+		expect(await inked(page, 50, 10)).toBe(true);
 	});
 
 	test('should handle rapid undo/redo operations', async ({ page }) => {

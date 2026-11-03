@@ -199,4 +199,62 @@ describe('canvas autosave journal wiring', () => {
 			(219 << 8) | (1 << 4) | 14,
 		);
 	});
+
+	it('an undo or redo of a resize alone journals the size it lands on', async () => {
+		const canvas = await makeCanvas();
+		const cut = (219 << 8) | (1 << 4) | 14;
+		canvas.startUndo();
+		canvas.draw(cb => cb(219, 14, 1, 70, 22));
+		canvas.startUndo();
+		canvas.resize(40, 20);
+		await settle();
+		const reload = async () => {
+			const { doc } = await canvas.loadJournalSnapshot();
+			return {
+				size: [doc.getColumns(), doc.getRows()],
+				u16: v3ToU16Lossy(doc).imageData,
+			};
+		};
+
+		canvas.undo();
+		await settle();
+		let journaled = await reload();
+		expect(journaled.size).toEqual([80, 25]);
+		expect(journaled.u16[22 * 80 + 70]).toBe(cut);
+
+		canvas.redo();
+		await settle();
+		journaled = await reload();
+		expect(journaled.size).toEqual([40, 20]);
+		expect(Array.from(journaled.u16)).toEqual(Array.from(canvas.getImageData()));
+	});
+
+	it('undoing a resize restores its geometry and cut cells on reload', async () => {
+		const canvas = await makeCanvas();
+		canvas.startUndo();
+		canvas.draw(cb => cb(219, 14, 1, 70, 22));
+		canvas.startUndo();
+		await settle();
+		canvas.resize(40, 20);
+		await settle();
+		// a stroke appended at 40x20, then undone along with the resize
+		canvas.draw(cb => cb(177, 7, 0, 39, 19));
+		canvas.startUndo();
+		await new Promise(resolve => setTimeout(resolve, 50));
+		canvas.undo();
+		canvas.undo();
+		// no settle: this 80x25 stroke lands inside the keyframe window,
+		// where appending it would replay against the 40x20 journal
+		canvas.draw(cb => cb(88, 12, 0, 5, 24));
+		canvas.startUndo();
+		await settle();
+
+		const snapshot = await canvas.loadJournalSnapshot();
+		expect([snapshot.doc.getColumns(), snapshot.doc.getRows()]).toEqual([80, 25]);
+		const u16 = v3ToU16Lossy(snapshot.doc).imageData;
+		expect(Array.from(u16)).toEqual(Array.from(canvas.getImageData()));
+		expect(u16[22 * 80 + 70]).toBe((219 << 8) | (1 << 4) | 14);
+		expect(u16[24 * 80 + 5]).toBe((88 << 8) | 12);
+		expect(u16[19 * 80 + 39]).toBe(0);
+	});
 });

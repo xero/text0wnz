@@ -197,6 +197,96 @@ describe('UI Utilities', () => {
 
 				expect(targetDiv.click).not.toHaveBeenCalled();
 			});
+
+			it('activates on Shift+Enter in a field without shiftBreaks', () => {
+				const input = document.createElement('input');
+				const done = document.createElement('button');
+				done.click = vi.fn();
+				onReturn(input, done);
+				input.dispatchEvent(
+					new window.KeyboardEvent('keydown', {
+						key: 'Enter',
+						shiftKey: true,
+						cancelable: true,
+					}),
+				);
+				expect(done.click).toHaveBeenCalledTimes(1);
+			});
+
+			describe('with shiftBreaks on the Comments textarea', () => {
+				const keydown = init =>
+					new window.KeyboardEvent('keydown', {
+						key: 'Enter',
+						cancelable: true,
+						...init,
+					});
+
+				// jsdom runs no default actions: a keydown nobody cancels goes
+				// on to beforeinput and then the textarea's own line break, as
+				// in a browser
+				const pressEnter = (el, init) => {
+					const down = keydown(init);
+					el.dispatchEvent(down);
+					if (!down.defaultPrevented) {
+						const before = new window.InputEvent('beforeinput', {
+							inputType: 'insertLineBreak',
+							cancelable: true,
+						});
+						el.dispatchEvent(before);
+						if (!before.defaultPrevented) {
+							el.setRangeText('\n', el.selectionStart, el.selectionEnd, 'end');
+							el.dispatchEvent(new window.Event('input'));
+						}
+					}
+					return down;
+				};
+
+				const setup = () => {
+					document.body.innerHTML =
+						'<textarea id="sauceComments"></textarea><input id="sauceBytes">';
+					const comments = $('sauceComments');
+					const done = document.createElement('button');
+					done.click = vi.fn();
+					comments.addEventListener('input', enforceMaxBytes);
+					onReturn(comments, done, { shiftBreaks: true });
+					comments.value = 'greets';
+					comments.setSelectionRange(6, 6);
+					return { comments, done };
+				};
+
+				it('types a line break on Shift+Enter and the counter follows', () => {
+					const { comments, done } = setup();
+					const down = pressEnter(comments, { shiftKey: true });
+					expect(down.defaultPrevented).toBe(false);
+					expect(done.click).not.toHaveBeenCalled();
+					expect(comments.value).toBe('greets\n');
+					expect($('sauceBytes').value).toBe('128/16320 bytes');
+				});
+
+				it('activates on plain Enter and types nothing', () => {
+					const { comments, done } = setup();
+					expect(pressEnter(comments).defaultPrevented).toBe(true);
+					expect(done.click).toHaveBeenCalledTimes(1);
+					expect(comments.value).toBe('greets');
+				});
+
+				it('leaves an Enter that commits an IME composition to the IME', () => {
+					const { comments, done } = setup();
+					for (const init of [
+						{ isComposing: true },
+						{ shiftKey: true, isComposing: true },
+						{ keyCode: 229 },
+					]) {
+						const down = keydown(init);
+						comments.dispatchEvent(down);
+						expect(down.defaultPrevented).toBe(false);
+					}
+					// WebKit: compositionend, then a bare keydown in the same cycle
+					comments.dispatchEvent(new window.CompositionEvent('compositionend'));
+					comments.dispatchEvent(keydown());
+					expect(done.click).not.toHaveBeenCalled();
+				});
+			});
 		});
 
 		describe('onClick', () => {

@@ -135,7 +135,9 @@ const wrapV3 = () => {
 
 const buildEngines = async () => {
 	const live = await makeV2();
-	live.resize(COLUMNS, ROWS);
+	// setup, not an edit: the other engines start at this size with no
+	// history, so a resize step here would add one undo the rest lack
+	live.resize(COLUMNS, ROWS, { undoable: false });
 	live.name = 'v2-live';
 	// the canvas area ops are plane native (selection fidelity); the
 	// parity script speaks u16, and on classic content the EditCell

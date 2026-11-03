@@ -112,6 +112,44 @@ describe('SAUCE text lifecycle', () => {
 		];
 		expect(text(savedBytes)).toEqual(text(original));
 	});
+
+	it('indented and blank comment lines survive an open and resave', async () => {
+		// PabloDraw SauceInfo.cs, SauceComment.Save keeps both
+		const original = makeAnsi({
+			columns: 80,
+			rows: 5,
+			seed: 2,
+			sauce: { tinfo1: 80, tinfo2: 5, comments: ['  indented', '', 'third']},
+		});
+		await openAndWire('spaced.ans', original);
+		expect(mocks.ui.sauceComments.value).toBe('  indented\n\nthird');
+		const record = await saved();
+		expect(record.comments).toEqual(['  indented', '', 'third']);
+		const comnt = bytes =>
+			Array.from(bytes.subarray(bytes.length - 128 - 5 - 3 * 64, bytes.length - 128));
+		expect(comnt(savedBytes)).toEqual(comnt(original));
+	});
+});
+
+describe('BIN width refusal', () => {
+	it('alerts why a 2-column BIN cannot save', async () => {
+		const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+		const doc = u16ToV3({
+			imageData: new Uint16Array(4),
+			columns: 2,
+			rows: 2,
+			iceColors: false,
+			letterSpacing: false,
+		});
+		mocks.state.textArtCanvas.getDoc = () => doc;
+		await Save.bin();
+		await new Promise(r => setTimeout(r, 0));
+		expect(alert).toHaveBeenCalledWith(
+			expect.stringMatching(/^BIN export failed: .*2-column BIN reopens/),
+		);
+		expect(savedBytes).toBeNull();
+		alert.mockRestore();
+	});
 });
 
 describe('SAUCE flags lifecycle', () => {

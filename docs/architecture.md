@@ -126,7 +126,7 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 - Canvas dimensions and configuration
 - Current tool and color selection
 - Font and palette management
-- Undo/redo history
+- Local autosave of the canvas and settings, kept out of live sessions
 
 **Canvas Rendering** (`glRenderer.js`, `canvas.js`)
 
@@ -488,7 +488,7 @@ When a drawing occurs:
 └─────────────┘
 ```
 
-The OPFS journal records the same commits independently (see Storage and Persistence). Undo history is written separately, only on idle, `visibilitychange`, and `pagehide`.
+The OPFS journal records the same commits independently (see Storage and Persistence). The undo history itself never leaves memory, so a reload restores your work with an empty history.
 
 ## Module Structure
 
@@ -800,24 +800,26 @@ document.dispatchEvent(
 document.addEventListener('onTextCanvasChange', handler);
 ```
 
-### Command Pattern
+### Undo History
 
-Undo/redo system:
+Undo lives in the patch arena (`core/patchArena.ts`), a byte-capped ring the editor core (`core/editor.ts`) writes through. Every step is either a stroke or a canvas resize:
+
+- **Stroke.** One undo group. It records `(index, before, after)` triples for each plane it touched, keyed by cell index, plus the frame it was drawn in. `startUndo()` closes the previous group, and the open group commits lazily at the next flush point.
+- **Resize.** One step across every frame. It keeps only the non-blank cells the resize cut off, indexed at the geometry they fell from. Undo resizes back and restores them. Redo resizes again and restores whatever the undo cut off in turn, such as a frame added since or a peer's draw.
 
 ```javascript
-const command = {
-	execute: () => {
-		/* apply change */
-	},
-	undo: () => {
-		/* revert change */
-	},
-};
-
-State.textArtCanvas.startUndo(); // Push to undo stack
-// ... make changes ...
-State.textArtCanvas.endUndo(); // Finalize undo entry
+State.textArtCanvas.startUndo(); // close the previous group
+// ... draw ...
+State.textArtCanvas.endUndo(); // commit the open group now
 ```
+
+A stroke's cell indexes only hold at its own geometry, so strokes and resizes share one ring. Undo always walks back through a resize before it reaches the strokes drawn under the older size. A resize step counts toward the byte cap like a stroke, and eviction drops the oldest steps first, so every stroke left in the ring sits at a geometry undo can still reach.
+
+Opening a file, New, deleting a frame, and a collaborator's resize clear the history instead of becoming steps. Each one replaces the document or moves the cell indexes and frame numbers that recorded steps point at. Adding a frame keeps the history, because a new frame lands after every frame a step already recorded.
+
+Undo is local to each user. Remote ops never enter the arena, so a peer's resize clears your history rather than becoming your step. When you undo or redo your own resize in a session, `canvas.js` sends the size change before the restored cells. Both ride the same worker channel and socket in order, and the server applies and fans out mutations in sequence order, so every peer resizes first and then receives cells inside its new bounds.
+
+The OPFS journal never stores a resize as a stroke record. A resize, and an undo or redo of one, writes a fresh keyframe, and no stroke appends until that keyframe lands, so a reload never replays a stroke against the wrong geometry. The arena itself stays in memory. A reload restores the content and starts an empty history.
 
 ### Strategy Pattern
 
@@ -1243,8 +1245,8 @@ if (!hasNonDefaultZoom && (this.isDefaultState() || network?.isConnected?.())) {
 }
 ```
 
-**Deferred heavy writes:**
-Undo history is the large write, so `main.js` schedules it through `requestIdleCallback` and on `visibilitychange` and `pagehide` rather than on every stroke.
+**Undo stays in memory:**
+The patch arena does not serialize. `main.js` calls `State.saveUndoHistory` once editing goes idle and on `visibilitychange` and `pagehide`, but `canvas.js` `getUndoHistory` returns null, so nothing is written and the `undoHistory` store stays empty.
 
 ## Related Documentation
 

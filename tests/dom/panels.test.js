@@ -776,6 +776,27 @@ describe('panel manager', () => {
 				vi.useRealTimers();
 			}
 		});
+
+		it('a second finger anywhere is a pinch, so the hold opens no menu', () => {
+			vi.useFakeTimers();
+			try {
+				const manager = registerAll(createPanelManager());
+				manager.layout();
+				const header = el('canvas').querySelector('.modHeader');
+				touchDown(header);
+				document.getElementById('bodyContainer').dispatchEvent(
+					pev('pointerdown', {
+						pointerId: 8,
+						pointerType: 'touch',
+						isPrimary: false,
+					}),
+				);
+				vi.advanceTimersByTime(600);
+				expect(State.flyouts.show).not.toHaveBeenCalled();
+			} finally {
+				vi.useRealTimers();
+			}
+		});
 	});
 
 	describe('phone layout', () => {

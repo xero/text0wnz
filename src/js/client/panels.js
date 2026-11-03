@@ -7,6 +7,7 @@
  */
 import State from './state.js';
 import { $, remountUses } from './ui.js';
+import { createTouchHold } from './touchHold.js';
 
 const LAYOUT_KEY = 'panelLayout';
 const LAYOUT_VERSION = 2;
@@ -51,10 +52,6 @@ const SHEET_TOP_GAP_PX = 46;
 // a first control row taller than this (the character map) peeks at a
 // usable slice instead of swallowing the screen
 const SHEET_PEEK_ROW_MAX_PX = 140;
-// a touch hold on a header this long opens the panel menu; wandering
-// past the slop is a drag or a scroll, never a hold
-const LONG_PRESS_MS = 500;
-const LONG_PRESS_SLOP_PX = 8;
 
 // presses on controls never start a drag; the header overrides, but
 // its own buttons keep their click behavior
@@ -1047,73 +1044,35 @@ const createPanelManager = () => {
 		State.flyouts.show('panelMenu', menuEl, from, at ? { at } : {});
 	};
 
-	// a touch hold on the header opens the same menu: iOS never
-	// synthesizes contextmenu for a touch hold, and Android's native
-	// one arrives wrapped in selection chrome, so the hold gets its
-	// own timer; mice, pens and trackpads keep the real contextmenu
 	const armLongPress = (key, reg) => {
 		const head = reg.header;
 		if (!head) {
 			return;
 		}
-		let hold = null;
+		const hold = createTouchHold();
 		let swallowClick = false;
-		const disarm = () => {
-			if (hold) {
-				clearTimeout(hold.timer);
-				hold = null;
-			}
-		};
 		head.addEventListener('pointerdown', e => {
 			swallowClick = false;
-			if (e.pointerType !== 'touch' || !e.isPrimary) {
-				return;
-			}
 			if (e.target.closest('button') || !menuAllowed(key)) {
 				return;
 			}
-			disarm();
-			const { clientX: x, clientY: y, pointerId } = e;
-			hold = {
-				x,
-				y,
-				pointerId,
-				timer: setTimeout(() => {
-					hold = null;
-					// a wide drag past its threshold captured the pointer, so
-					// the slop guard here went blind; the hold must never
-					// shoot a live drag down, and an armed-only drag just
-					// stands aside for the menu
-					if (drag?.started) {
-						return;
-					}
-					swallowClick = true;
-					cancelDrag();
-					if (!State.flyouts?.isOpen?.('panelMenu')) {
-						openPanelMenu(key, reg.shade || reg.el, { x, y });
-					}
-				}, LONG_PRESS_MS),
-			};
+			const { clientX: x, clientY: y } = e;
+			hold.arm(e, () => {
+				// a wide drag past its threshold captured the pointer, so
+				// the slop guard here went blind; the hold must never
+				// shoot a live drag down, and an armed-only drag just
+				// stands aside for the menu
+				if (drag?.started) {
+					return;
+				}
+				swallowClick = true;
+				cancelDrag();
+				if (!State.flyouts?.isOpen?.('panelMenu')) {
+					openPanelMenu(key, reg.shade || reg.el, { x, y });
+				}
+			});
 		});
-		head.addEventListener('pointermove', e => {
-			if (
-				hold &&
-				Math.hypot(e.clientX - hold.x, e.clientY - hold.y) >
-				LONG_PRESS_SLOP_PX
-			) {
-				disarm();
-			}
-		});
-		// lifts land on the document even when a drag's pointer capture
-		// retargets them away from the header; a hold must never survive
-		// its own finger
-		const disarmOnLift = e => {
-			if (hold && e.pointerId === hold.pointerId) {
-				disarm();
-			}
-		};
-		document.addEventListener('pointerup', disarmOnLift, true);
-		document.addEventListener('pointercancel', disarmOnLift, true);
+		head.addEventListener('pointermove', hold.move);
 		// the finger lift after a hold still clicks, which would shade
 		// the strip; capture wins for child targets, and registering
 		// before the shade listener wins when the header is the target

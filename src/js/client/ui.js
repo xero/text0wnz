@@ -1,7 +1,7 @@
 import State from './state.js';
 import { loadFontFromXBData } from './font.js';
 import { getZoomController } from './zoom.js';
-import { mirrorCharCode } from '../core/index';
+import { fitComments, mirrorCharCode } from '../core/index';
 
 const D = document,
 			$ = D.getElementById.bind(D),
@@ -357,8 +357,10 @@ const IME_COMMIT_WINDOW_MS = 40;
    arrives through beforeinput. Cancelled keydowns never reach
    beforeinput, so the paths cannot double-fire. In a textarea a line
    break is content, never submission, so only the keydown path acts
-   there and soft keyboards keep their newline. */
-const onEnter = (el, fn) => {
+   there and soft keyboards keep their newline. shiftBreaks leaves
+   Shift+Enter its native line break, or a multi-line field could only
+   be filled by paste. */
+const onEnter = (el, fn, { shiftBreaks = false } = {}) => {
 	let composedAt = 0;
 	el.addEventListener('compositionend', () => {
 		composedAt = Date.now();
@@ -368,6 +370,7 @@ const onEnter = (el, fn) => {
 			e.altKey ||
 			e.ctrlKey ||
 			e.metaKey ||
+			(shiftBreaks && e.shiftKey) ||
 			e.key !== 'Enter' ||
 			e.isComposing ||
 			e.keyCode === 229 ||
@@ -392,8 +395,8 @@ const onEnter = (el, fn) => {
 	});
 };
 
-const onReturn = (el, target) => {
-	onEnter(el, () => target.click());
+const onReturn = (el, target, options) => {
+	onEnter(el, () => target.click(), options);
 };
 
 const onClick = (el, func) => {
@@ -1139,23 +1142,15 @@ const createToolPreview = el => {
 	};
 };
 
-const getUtf8Bytes = str => {
-	return new TextEncoder().encode(str).length;
-};
-
+// counts the slots buildSauce writes, so text past the last one is cut
+// here instead of dropping silently at save
 const enforceMaxBytes = () => {
-	const SAUCE_MAX_BYTES = 16320;
 	const sauceComments = $('sauceComments');
-	let val = sauceComments.value;
-	let bytes = getUtf8Bytes(val);
-	while (bytes > SAUCE_MAX_BYTES) {
-		val = val.slice(0, -1);
-		bytes = getUtf8Bytes(val);
-	}
+	const [val, slots] = fitComments(sauceComments.value);
 	if (val !== sauceComments.value) {
 		sauceComments.value = val;
 	}
-	$('sauceBytes').value = `${bytes}/${SAUCE_MAX_BYTES} bytes`;
+	$('sauceBytes').value = `${slots * 64}/16320 bytes`;
 };
 
 const createResolutionController = (lbl, txtC, txtR) => {

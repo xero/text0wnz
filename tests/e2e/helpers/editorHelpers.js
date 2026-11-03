@@ -1,14 +1,87 @@
 import { expect } from '@playwright/test';
 
 /**
+ * The loading modal covers the viewport while a file or the autosave
+ * loads. Waits on it alone: other modals depend on server, storage, or
+ * session state
+ */
+export async function loadSettled(page, timeout = 15000) {
+	await page.waitForFunction(
+		() => {
+			const modal = document.getElementById('modal');
+			const loading = document.getElementById('loadingModal');
+			return !modal?.open || loading?.classList.contains('hide');
+		},
+		null,
+		{ timeout },
+	);
+}
+
+/**
  * main.js sets data-ready on #bodyContainer once every control is wired
  */
 export async function waitForEditorReady(page, timeout = 10000) {
 	await page.waitForSelector('#canvasContainer', { timeout });
 	// controls clicked before this point are silently ignored
 	await page.waitForSelector('#bodyContainer[data-ready]', { state: 'attached', timeout });
-	// remaining async work (fonts, rendering) settles after data-ready
-	await page.waitForTimeout(1000);
+	// the autosave restore opens the loading modal before data-ready
+	// lands and holds it until the saved doc is back
+	await loadSettled(page, timeout);
+}
+
+/**
+ * Resolves n animation frames later. UI that places itself on the
+ * next frame (the selection bar) has landed after two, so an absence
+ * check cannot pass before the element arrives; a longer run is the
+ * window for a check that per-frame motion has stopped
+ */
+export async function nextFrames(page, n = 2) {
+	await page.evaluate(
+		count =>
+			new Promise(resolve => {
+				const step = left => (left ? requestAnimationFrame(() => step(left - 1)) : resolve());
+				step(count);
+			}),
+		n,
+	);
+}
+
+/**
+ * main.js nudges the viewport onto a row boundary 150ms after the last
+ * scroll event, so a scroll has settled once the viewport stays quiet
+ * past that timer; a position read any sooner can still jump
+ */
+export async function scrollSettled(page) {
+	await page.evaluate(
+		() =>
+			new Promise(resolve => {
+				const vp = document.getElementById('viewport');
+				let timer = 0;
+				const arm = () => {
+					clearTimeout(timer);
+					timer = setTimeout(() => {
+						vp.removeEventListener('scroll', arm);
+						resolve();
+					}, 250);
+				};
+				vp.addEventListener('scroll', arm, { passive: true });
+				arm();
+			}),
+	);
+}
+
+/**
+ * Boxes are final once a drop's relayout has rendered and no CSS
+ * transition (the sheet snaps glide) still runs
+ */
+export async function layoutSettled(page) {
+	await nextFrames(page);
+	await page.waitForFunction(
+		() =>
+			!document
+				.getAnimations()
+				.some(a => a instanceof window.CSSTransition && a.playState === 'running'),
+	);
 }
 
 /**
@@ -177,6 +250,13 @@ export async function tap(page, x, y) {
 	await page.mouse.click(c.clientX, c.clientY);
 }
 
+export async function readSelection(page) {
+	return page.evaluate(() => {
+		const c = window.__t0wnz.State.selectionCursor;
+		return { live: c.getSelection(), last: c.getLastSelection() };
+	});
+}
+
 export async function cursorAt(page) {
 	return page.evaluate(() => {
 		const c = window.__t0wnz.State.cursor;
@@ -241,8 +321,12 @@ export async function focusCanvas(page) {
 	// intercept; below the tool settings float that boots at (58,54)
 	const viewport = page.locator('#viewport');
 	await viewport.click({ position: { x: 100, y: 340 } });
-	// TODO: Wait for specific focus state or activeElement change
-	await page.waitForTimeout(200);
+	// keys typed into a field never reach the editor
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				Boolean(document.activeElement?.closest('input, textarea, select, [contenteditable]'))))
+		.toBe(false);
 }
 
 export async function getViewportScrollPosition(page) {

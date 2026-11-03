@@ -6,7 +6,11 @@
  * mapping.
  */
 import { test, expect } from '@playwright/test';
-import { clickTool } from './helpers/editorHelpers.js';
+import {
+	bridgeReady,
+	clickTool,
+	scrollSettled,
+} from './helpers/editorHelpers.js';
 
 const ZOOMS = [0.5, 1, 1.5, 2, 3];
 
@@ -42,15 +46,6 @@ const CELLS = {
 // the true CP437 values: 223 = upper half filled, 220 = lower half
 const EXPECT_CHAR = { top: 223, bottom: 220 };
 
-const bridgeReady = async page => {
-	await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-	await page.waitForSelector('#bodyContainer[data-ready]', {
-		state: 'attached',
-		timeout: 10000,
-	});
-	await page.waitForFunction(() => Boolean(window.__t0wnz), null, { timeout: 10000 });
-};
-
 const setZoom = async (page, zoom) => {
 	await page.evaluate(z => {
 		window.__t0wnz.State.font.setScaleFactor(z);
@@ -75,7 +70,7 @@ const setZoom = async (page, zoom) => {
 		null,
 		{ timeout: 10000 },
 	);
-	await page.waitForTimeout(400);
+	await scrollSettled(page);
 };
 
 const cellProbe = async (page, x, y, half) =>
@@ -117,10 +112,7 @@ test.describe('pointer-to-cell mapping identity', () => {
 		await page.goto('/?test');
 		await bridgeReady(page);
 		// half-block brush: a click paints one half cell
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
 		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(300);
 	});
 
 	for (const zoom of ZOOMS) {
@@ -133,7 +125,6 @@ test.describe('pointer-to-cell mapping identity', () => {
 					continue;
 				}
 				await page.mouse.click(probe.clientX, probe.clientY);
-				await page.waitForTimeout(150);
 				const block = await readBlock(page, x, y);
 				expect
 					.soft(block.charCode, `cell ${x},${y} ${half} at ${zoom}x`)
@@ -149,7 +140,7 @@ test.describe('pointer-to-cell mapping identity', () => {
 		await page.evaluate(() => {
 			document.getElementById('viewport').scrollTop = 160;
 		});
-		await page.waitForTimeout(300);
+		await scrollSettled(page);
 		// a row that is only visible scrolled; the fresh rect carries the
 		// scroll offset so the same probe math must still land
 		const x = 5;
@@ -157,7 +148,6 @@ test.describe('pointer-to-cell mapping identity', () => {
 		const probe = await cellProbe(page, x, y, 'top');
 		expect(probe.visible).toBe(true);
 		await page.mouse.click(probe.clientX, probe.clientY);
-		await page.waitForTimeout(150);
 		const block = await readBlock(page, x, y);
 		expect(block.charCode).toBe(223);
 	});

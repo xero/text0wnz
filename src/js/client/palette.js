@@ -3,6 +3,7 @@ import State from './state.js';
 import { $ } from './ui.js';
 import { xterm256RGB } from '../core/codecs/dur.js';
 import { expand6to8 } from '../core/doc.js';
+import { createTouchHold } from './touchHold.js';
 
 /** @type {Map<number, number>} */
 const charCodeToUnicode = new Map([
@@ -414,6 +415,65 @@ const createPalettePreview = canvas => {
 	};
 };
 
+/**
+ * Which color a swatch press picks, by the same buttons as Moebius
+ * palette.js, update_swatches(). The ctrl test reads the mouse event
+ * because Windows and Linux deliver a ctrl click as a plain left
+ * click, which no contextmenu listener ever sees
+ * @param {MouseEvent} e
+ * @returns {boolean|undefined} true for the background, false for the
+ * foreground, undefined for a button that picks neither
+ */
+const picksBackground = e =>
+	(e.button === 2 || e.ctrlKey ? true : e.button === 0 ? false : undefined);
+
+/**
+ * Binds swatches that pick on click, contextmenu, and a touch hold so
+ * each press picks once. A binder's swatches share one guard: some
+ * engines still send a click after a macOS ctrl click's contextmenu or
+ * a hold, and by then a pick that rebuilt its row has slid another
+ * swatch under the pointer
+ * @returns {(el: HTMLElement, pick: (bg?: boolean) => void) => void}
+ */
+const createSwatchBinder = () => {
+	const hold = createTouchHold();
+	let picked = false;
+	// the native long-press contextmenu that trails a hold, during it
+	// or after the lift, belongs to the same press
+	let held = false;
+	return (el, pick) => {
+		el.addEventListener('pointerdown', e => {
+			picked = held = false;
+			hold.arm(e, () => {
+				picked = held = true;
+				pick(true);
+			});
+		});
+		el.addEventListener('pointermove', hold.move);
+		el.addEventListener('click', e => {
+			// a keyboard click (detail 0) has no pointerdown to clear the
+			// guard, so a menu key's pick would otherwise swallow it
+			if (!picked || !e.detail) {
+				pick(picksBackground(e));
+			}
+		});
+		el.addEventListener('contextmenu', e => {
+			// stopped as well, or a module's panel menu opens over the pick
+			e.preventDefault();
+			e.stopPropagation();
+			// a native long press that beats the timer picks through the
+			// hold, so held marks the press's one pick either way
+			hold.flush();
+			if (held) {
+				held = false;
+			} else {
+				picked = true;
+				pick(true);
+			}
+		});
+	};
+};
+
 /** @param {HTMLCanvasElement} canvas */
 const createPalettePicker = canvas => {
 	/** @type {ImageData[]} */
@@ -421,6 +481,10 @@ const createPalettePicker = canvas => {
 	const doubleTapThreshold = 300; // ms
 	let lastTouchTime = 0;
 	let lastMouseTime = 0;
+	const hold = createTouchHold();
+	// a press that held, wandered, met a second finger, or was
+	// cancelled lifts as neither a tap nor half of a double tap
+	let spent = false;
 	/** @type {HTMLInputElement|null} */
 	let cc = null;
 	let colorEdited = 0;
@@ -554,6 +618,15 @@ const createPalettePicker = canvas => {
 	};
 
 	/**
+	 * @param {number} px
+	 * @param {number} py
+	 */
+	const pickBackground = (px, py) => {
+		const { x, y } = swatchAt(px, py);
+		State.palette?.setBackgroundColor(y + (x === 0 ? 0 : 8));
+	};
+
+	/**
 	 * A touchend fires with touches already empty, so the lifted
 	 * finger's coords live on changedTouches
 	 * @param {*} e TouchEvent or MouseEvent
@@ -589,23 +662,21 @@ const createPalettePicker = canvas => {
 		// without this the browser follows up with a synthetic mouseup
 		// and mouseEnd processes the same tap a second time
 		e.preventDefault();
-		if (e.touches.length === 0) {
+		if (e.touches.length === 0 && !spent) {
 			processEvent(e, true);
 		}
 	};
 
 	/** @param {MouseEvent} e */
 	const mouseEnd = e => {
-		// right click (or the Mac ctrl click) picks the background, as in
-		// Moebius palette.js, update_swatches(); it stays out of the
-		// double click timing, or a quick fg then bg pick would open
-		// the color editor
-		if (e.button === 2 || e.ctrlKey) {
-			const { x, y } = swatchAt(e.clientX, e.clientY);
-			State.palette?.setBackgroundColor(y + (x === 0 ? 0 : 8));
-			return;
+		const bg = picksBackground(e);
+		// a background pick stays out of the double click timing, or a
+		// quick fg then bg pick would open the color editor
+		if (bg) {
+			pickBackground(e.clientX, e.clientY);
+		} else if (bg === false) {
+			processEvent(e, false);
 		}
-		processEvent(e, false);
 	};
 
 	/** @param {number[]} a @param {number[]} b */
@@ -641,12 +712,27 @@ const createPalettePicker = canvas => {
 		cc.addEventListener('change', colorChange);
 		cc.addEventListener('blur', colorChange);
 	}
+	canvas.addEventListener('pointerdown', e => {
+		spent = !e.isPrimary;
+		hold.arm(
+			e,
+			() => {
+				spent = true;
+				pickBackground(e.clientX, e.clientY);
+			},
+			() => {
+				spent = true;
+			},
+		);
+	});
+	canvas.addEventListener('pointermove', hold.move);
 	canvas.addEventListener('touchend', touchEnd);
 	canvas.addEventListener('touchcancel', touchEnd);
 	canvas.addEventListener('mouseup', mouseEnd);
 	updatePalette();
 	canvas.addEventListener('contextmenu', e => {
 		e.preventDefault();
+		hold.flush();
 	});
 	document.addEventListener('keydown', keydown);
 	document.addEventListener('onPaletteChange', updatePalette);
@@ -659,6 +745,8 @@ export {
 	createDefaultPalette,
 	createPalettePreview,
 	createPalettePicker,
+	createSwatchBinder,
+	picksBackground,
 	getUTF8,
 	getUnicode,
 	getUnicodeReverseMap,

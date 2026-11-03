@@ -13,6 +13,7 @@ import {
 	shadeCycle,
 } from '../core/index';
 import { createAsciiStrokePainter } from './asciiBrush.js';
+import { createSwatchBinder } from './palette.js';
 
 const createHalfBlockController = () => {
 	let prev = {};
@@ -328,6 +329,7 @@ const createShadingPanel = async () => {
 		highlight();
 	};
 
+	const bindChip = createSwatchBinder();
 	for (let i = 0; i < 64; i++) {
 		const btn = document.createElement('BUTTON');
 		btn.type = 'button';
@@ -339,7 +341,11 @@ const createShadingPanel = async () => {
 		const canvas = createCanvas(State.fontWidth, State.fontHeight);
 		canvas.className = 'gc';
 		btn.appendChild(canvas);
-		btn.addEventListener('click', () => {
+		bindChip(btn, bg => {
+			if (bg) {
+				State.palette.setBackgroundColor(i % 16);
+				return;
+			}
 			band = i >> 4;
 			State.palette.setForegroundColor(i % 16);
 			highlight();

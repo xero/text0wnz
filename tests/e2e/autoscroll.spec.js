@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
 import {
-	waitForEditorReady,
 	getViewportScrollPosition,
+	nextFrames,
+	scrollSettled,
+	waitForEditorReady,
 } from './helpers/editorHelpers.js';
 import { openFile } from './helpers/openFile.js';
 import path from 'path';
@@ -16,9 +18,11 @@ const TALL_FILE = path.join(
 );
 
 test.describe('Minimap autoscroll', () => {
+	let scrollTop;
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
 		await waitForEditorReady(page);
+		scrollTop = async () => (await getViewportScrollPosition(page)).scrollTop;
 	});
 
 	test('menu expands from the loop glyph and closes from the X', async ({ page }) => {
@@ -43,9 +47,7 @@ test.describe('Minimap autoscroll', () => {
 		const transport = page.locator('#autoscrollToggle');
 		await transport.click();
 		await expect(transport).toHaveAttribute('aria-label', 'Pause');
-		await page.waitForTimeout(1200);
-		const scrolled = await getViewportScrollPosition(page);
-		expect(scrolled.scrollTop).toBeGreaterThan(0);
+		await expect.poll(scrollTop).toBeGreaterThan(0);
 	});
 
 	test('a manual scroll escapes playback in place', async ({ page }) => {
@@ -53,17 +55,15 @@ test.describe('Minimap autoscroll', () => {
 		await page.locator('#minimapMenuToggle').click();
 		const transport = page.locator('#autoscrollToggle');
 		await transport.click();
-		await page.waitForTimeout(600);
+		await expect.poll(scrollTop).toBeGreaterThan(0);
 		await page.locator('#viewport').hover();
 		await page.mouse.wheel(0, 300);
 		await expect(transport).toHaveAttribute('aria-label', 'Play');
-		// the app's row settle snap nudges a stopped viewport once; let
-		// it land before pinning the position
-		await page.waitForTimeout(400);
-		const after = await getViewportScrollPosition(page);
-		await page.waitForTimeout(600);
-		const later = await getViewportScrollPosition(page);
-		expect(later.scrollTop).toBe(after.scrollTop);
+		await scrollSettled(page);
+		const after = await scrollTop();
+		// playback steps once a frame, so a still run of frames is a stop
+		await nextFrames(page, 30);
+		expect(await scrollTop()).toBe(after);
 	});
 
 	test('pause freezes and play resumes from the same spot', async ({ page }) => {
@@ -71,20 +71,15 @@ test.describe('Minimap autoscroll', () => {
 		await page.locator('#minimapMenuToggle').click();
 		const transport = page.locator('#autoscrollToggle');
 		await transport.click();
-		await page.waitForTimeout(800);
+		await expect.poll(scrollTop).toBeGreaterThan(0);
 		await transport.click();
 		await expect(transport).toHaveAttribute('aria-label', 'Play');
-		// let the row settle snap land before pinning the position
-		await page.waitForTimeout(400);
-		const frozen = await getViewportScrollPosition(page);
-		expect(frozen.scrollTop).toBeGreaterThan(0);
-		await page.waitForTimeout(500);
-		const still = await getViewportScrollPosition(page);
-		expect(still.scrollTop).toBe(frozen.scrollTop);
+		await scrollSettled(page);
+		const frozen = await scrollTop();
+		await nextFrames(page, 30);
+		expect(await scrollTop()).toBe(frozen);
 		await transport.click();
-		await page.waitForTimeout(600);
-		const resumed = await getViewportScrollPosition(page);
-		expect(resumed.scrollTop).toBeGreaterThan(frozen.scrollTop);
+		await expect.poll(scrollTop).toBeGreaterThan(frozen);
 	});
 
 	test('loop mode dims and disables the count row', async ({ page }) => {

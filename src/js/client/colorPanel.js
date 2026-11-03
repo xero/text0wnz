@@ -13,6 +13,7 @@ import { $ } from './ui.js';
 import { xterm256RGB } from '../core/codecs/dur.js';
 import { paletteColor, rgbColor } from '../core/doc.js';
 import { createRecentList } from './recentList.js';
+import { createSwatchBinder } from './palette.js';
 
 const RECENT_LIMIT = 10;
 const RECENT_KEY = 'recentColors';
@@ -62,16 +63,16 @@ const createColorPanel = () => {
 		saveRecent(value);
 	};
 
+	// one binder for the grid and the recent row, since a pick rebuilds
+	// the row under the pointer
+	const bindSwatch = createSwatchBinder();
+
 	const makeSwatch = (value, title) => {
 		const swatch = document.createElement('div');
 		swatch.className = 'colorSwatch';
 		swatch.style.backgroundColor = cssColor(value);
 		swatch.title = title;
-		swatch.addEventListener('click', () => apply(value, false));
-		swatch.addEventListener('contextmenu', event => {
-			event.preventDefault();
-			apply(value, true);
-		});
+		bindSwatch(swatch, bg => apply(value, bg));
 		return swatch;
 	};
 

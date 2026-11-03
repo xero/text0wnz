@@ -5,16 +5,7 @@
  * three engines.
  */
 import { test, expect } from '@playwright/test';
-import { clickTool } from './helpers/editorHelpers.js';
-
-const bridgeReady = async page => {
-	await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-	await page.waitForSelector('#bodyContainer[data-ready]', {
-		state: 'attached',
-		timeout: 10000,
-	});
-	await page.waitForFunction(() => Boolean(window.__t0wnz), null, { timeout: 10000 });
-};
+import { bridgeReady, clickTool } from './helpers/editorHelpers.js';
 
 const canvasPoint = async (page, x, y) =>
 	page.evaluate(
@@ -48,17 +39,13 @@ test.describe('touch gestures and zoom shortcuts', () => {
 		test.skip(browserName !== 'chromium', 'CDP multi-touch is Chromium-only');
 		await page.goto('/?test');
 		await bridgeReady(page);
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
 		await clickTool(page, 'halfblock');
-		await page.waitForTimeout(300);
 	});
 
 	test('2-finger tap undoes the last stroke without painting', async ({ page }) => {
 		const cdp = await page.context().newCDPSession(page);
 		const p = await canvasPoint(page, 4, 4);
 		await page.mouse.click(p.x, p.y);
-		await page.waitForTimeout(200);
 		expect(await readChar(page, 4, 4)).not.toBe(0);
 
 		const a = await canvasPoint(page, 10, 10);
@@ -67,11 +54,9 @@ test.describe('touch gestures and zoom shortcuts', () => {
 			{ x: a.x, y: a.y, id: 1 },
 			{ x: b.x, y: b.y, id: 2 },
 		]);
-		await page.waitForTimeout(60);
 		await touch(cdp, 'touchEnd', []);
-		await page.waitForTimeout(300);
 
-		expect(await readChar(page, 4, 4)).toBe(0);
+		await expect.poll(() => readChar(page, 4, 4)).toBe(0);
 		expect(await readChar(page, 10, 10)).toBe(0);
 		expect(await readChar(page, 14, 10)).toBe(0);
 	});
@@ -80,12 +65,10 @@ test.describe('touch gestures and zoom shortcuts', () => {
 		const cdp = await page.context().newCDPSession(page);
 		const p = await canvasPoint(page, 6, 6);
 		await page.mouse.click(p.x, p.y);
-		await page.waitForTimeout(200);
 		const drawn = await readChar(page, 6, 6);
 		expect(drawn).not.toBe(0);
 		await page.keyboard.press('Control+z');
-		await page.waitForTimeout(200);
-		expect(await readChar(page, 6, 6)).toBe(0);
+		await expect.poll(() => readChar(page, 6, 6)).toBe(0);
 
 		const pts = [
 			await canvasPoint(page, 20, 10),
@@ -97,10 +80,8 @@ test.describe('touch gestures and zoom shortcuts', () => {
 			'touchStart',
 			pts.map((pt, i) => ({ x: pt.x, y: pt.y, id: i + 1 })),
 		);
-		await page.waitForTimeout(60);
 		await touch(cdp, 'touchEnd', []);
-		await page.waitForTimeout(300);
-		expect(await readChar(page, 6, 6)).toBe(drawn);
+		await expect.poll(() => readChar(page, 6, 6)).toBe(drawn);
 	});
 
 	test('pinch zooms around the centroid', async ({ page }) => {
@@ -117,33 +98,28 @@ test.describe('touch gestures and zoom shortcuts', () => {
 				{ x: c.x - spread, y: c.y, id: 1 },
 				{ x: c.x + spread, y: c.y, id: 2 },
 			]);
-			await page.waitForTimeout(40);
 		}
 		await touch(cdp, 'touchEnd', []);
-		await page.waitForTimeout(500);
-		const scale = await getScale(page);
-		expect(scale).toBeGreaterThan(1.5);
-		expect(scale).toBeLessThanOrEqual(4);
+		await expect.poll(() => getScale(page)).toBeGreaterThan(1.5);
+		expect(await getScale(page)).toBeLessThanOrEqual(4);
 	});
 
 	test('ctrl +/- zooms; ctrl+0 picks a color, not zoom', async ({ page }) => {
 		expect(await getScale(page)).toBe(1);
 		await page.keyboard.press('Control+=');
-		await page.waitForTimeout(400);
-		expect(await getScale(page)).toBe(1.5);
+		await expect.poll(() => getScale(page)).toBe(1.5);
 		await page.keyboard.press('Control+-');
-		await page.waitForTimeout(400);
-		expect(await getScale(page)).toBe(1);
+		await expect.poll(() => getScale(page)).toBe(1);
 		// ctrl+digit owns color selection everywhere; zoom must not move
 		await page.keyboard.press('Control+=');
-		await page.waitForTimeout(400);
+		await expect.poll(() => getScale(page)).toBe(1.5);
 		await page.keyboard.press('Control+0');
-		await page.waitForTimeout(400);
+		await expect
+			.poll(() =>
+				page.evaluate(() =>
+					window.__t0wnz.State.palette.getForegroundColor()))
+			.toBe(0);
 		expect(await getScale(page)).toBe(1.5);
-		expect(
-			await page.evaluate(() =>
-				window.__t0wnz.State.palette.getForegroundColor()),
-		).toBe(0);
 	});
 
 	test('the root is scroll-locked', async ({ page }) => {

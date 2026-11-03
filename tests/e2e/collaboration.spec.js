@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { waitForEditorReady } from './helpers/editorHelpers.js';
 
 // the chat button hides while local; without a live session these
 // bodies would pass on nothing, so they skip out loud
 test.describe('Collaboration and Chat Features', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
+		await waitForEditorReady(page);
 	});
 
 	test('should hide the chat button outside a collab session', async ({ page }) => {
@@ -23,7 +23,7 @@ test.describe('Collaboration and Chat Features', () => {
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
-			await page.waitForTimeout(500);
+			await expect(page.locator('#chatWindow')).toBeVisible();
 
 			const chatWindow = page.locator('#chatWindow, #chatRoom');
 			const windowCount = await chatWindow.count();
@@ -46,11 +46,9 @@ test.describe('Collaboration and Chat Features', () => {
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
-			await page.waitForTimeout(500);
 			await expect(page.locator('#chatWindow')).toBeVisible();
 
 			await chatButton.click();
-			await page.waitForTimeout(500);
 			await expect(page.locator('#chatWindow')).toBeHidden();
 		}
 	});
@@ -61,7 +59,7 @@ test.describe('Collaboration and Chat Features', () => {
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
-			await page.waitForTimeout(500);
+			await expect(page.locator('#chatWindow')).toBeVisible();
 
 			const messageInput = page.locator(
 				'#messageInput, input[name="message"], textarea[name="message"]',
@@ -80,7 +78,7 @@ test.describe('Collaboration and Chat Features', () => {
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
-			await page.waitForTimeout(500);
+			await expect(page.locator('#chatWindow')).toBeVisible();
 
 			const handleInput = page.locator(
 				'#handleInput, input[name="handle"], input[name="username"]',
@@ -99,12 +97,11 @@ test.describe('Collaboration and Chat Features', () => {
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
-			await page.waitForTimeout(500);
+			await expect(page.locator('#chatWindow')).toBeVisible();
 
 			const handleInput = page.locator('#handleInput');
 			if (await handleInput.isVisible()) {
 				await handleInput.fill('TestUser');
-				await page.waitForTimeout(300);
 
 				const value = await handleInput.inputValue();
 				expect(value).toBe('TestUser');
@@ -118,7 +115,7 @@ test.describe('Collaboration and Chat Features', () => {
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
-			await page.waitForTimeout(500);
+			await expect(page.locator('#chatWindow')).toBeVisible();
 
 			const messageWindow = page.locator(
 				'#messageWindow, .messageWindow, .chatMessages',
@@ -137,7 +134,7 @@ test.describe('Collaboration and Chat Features', () => {
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
-			await page.waitForTimeout(500);
+			await expect(page.locator('#chatWindow')).toBeVisible();
 
 			const notificationToggle = page.locator(
 				'#notificationCheckbox, input[name="notifications"]',
@@ -156,7 +153,7 @@ test.describe('Collaboration and Chat Features', () => {
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
-			await page.waitForTimeout(500);
+			await expect(page.locator('#chatWindow')).toBeVisible();
 
 			const userList = page.locator('#userList, .userList');
 			const listCount = await userList.count();
@@ -173,12 +170,11 @@ test.describe('Collaboration and Chat Features', () => {
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
-			await page.waitForTimeout(500);
+			await expect(page.locator('#chatWindow')).toBeVisible();
 
 			const messageInput = page.locator('#messageInput');
 			if (await messageInput.isVisible()) {
 				await messageInput.fill('Hello, this is a test message!');
-				await page.waitForTimeout(300);
 
 				const value = await messageInput.inputValue();
 				expect(value).toBe('Hello, this is a test message!');
@@ -192,91 +188,62 @@ test.describe('Collaboration and Chat Features', () => {
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
-			await page.waitForTimeout(500);
+			await expect(page.locator('#chatWindow')).toBeVisible();
 
 			const messageInput = page.locator('#messageInput');
 			if (await messageInput.isVisible()) {
 				await messageInput.fill('Test message');
-				await page.waitForTimeout(200);
-
+				// the skip above guarantees a live session, the one place a
+				// sent message clears the input
 				await messageInput.press('Enter');
-				await page.waitForTimeout(500);
-
-				// the input only clears when connected to a server, so no assertion
+				await expect(messageInput).toHaveValue('');
 			}
 		}
 	});
 });
 
+// every boot probes the same-origin default for a collab server; the
+// static e2e server answers no websocket, and the worker's reply is
+// the moment the page settles on staying local
 test.describe('Collaboration Mode Detection', () => {
 	test.beforeEach(async ({ page }) => {
+		await page.addInitScript(() => {
+			const Native = window.Worker;
+			window.Worker = class extends Native {
+				constructor(...args) {
+					super(...args);
+					this.addEventListener('message', e => {
+						if (e.data?.cmd === 'probeResult') {
+							window.__probe = e.data;
+						}
+					});
+				}
+			};
+		});
+	});
+
+	test('the boot probe finds no server and the editor stays local', async ({ page }) => {
+		const errors = [];
+		page.on('pageerror', error => errors.push(error.message));
 		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
-	});
+		await waitForEditorReady(page);
 
-	test('should detect local mode (no server)', async ({ page }) => {
-		const canvas = page.locator('#canvasContainer');
-		await expect(canvas).toBeVisible();
-
-		await page.locator('#brushes').click();
-		await page.waitForTimeout(300);
-
-		const halfblockTool = page.locator('#halfblock');
-		await halfblockTool.click();
-		await page.waitForTimeout(200);
-
-		const errors = await page.locator('.error').count();
-		expect(errors).toBe(0);
-	});
-
-	test('should handle missing server gracefully', async ({ page }) => {
-		await page.waitForTimeout(2000);
-
-		const pageErrors = [];
-		page.on('pageerror', error => pageErrors.push(error));
-
-		await page.waitForTimeout(1000);
-
-		const criticalErrors = pageErrors.filter(
-			err => err.message.includes('undefined') || err.message.includes('null'),
-		);
-		expect(criticalErrors.length).toBe(0);
-	});
-});
-
-test.describe('Network Features', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
-	});
-
-	test('should attempt server connection', async ({ page }) => {
-		// give a connection attempt time to fire
-		await page.waitForTimeout(2000);
-
-		const canvas = page.locator('#canvasContainer');
-		await expect(canvas).toBeVisible();
-	});
-
-	test('should show connection status if available', async ({ page }) => {
-		const connectionStatus = page.locator(
-			'.connectionStatus, #connectionStatus, .onlineIndicator',
-		);
-		const statusCount = await connectionStatus.count();
-
-		if (statusCount > 0) {
-			await expect(connectionStatus.first()).toBeVisible();
-		}
+		await page.waitForFunction(() => window.__probe);
+		expect(await page.evaluate(() => window.__probe)).toEqual({
+			cmd: 'probeResult',
+			found: false,
+		});
+		// no invitation to join, and no session chrome
+		expect(await page.evaluate(() => document.getElementById('modal').open)).toBe(false);
+		await expect(page.locator('#chatButton')).toBeHidden();
+		expect(errors).toEqual([]);
 	});
 });
 
 test.describe('Chat Window Drag Functionality', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await page.waitForSelector('#canvasContainer', { timeout: 10000 });
-		await page.waitForTimeout(1000);
+		await waitForEditorReady(page);
 	});
 
 	test('should have draggable cursor on chat header', async ({ page }) => {
@@ -285,7 +252,7 @@ test.describe('Chat Window Drag Functionality', () => {
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
-			await page.waitForTimeout(500);
+			await expect(page.locator('#chatWindow')).toBeVisible();
 
 			// the chat window is a floating module: its title strip is the
 			// drag handle and wears the move cursor
@@ -308,7 +275,7 @@ test.describe('Chat Window Drag Functionality', () => {
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
-			await page.waitForTimeout(500);
+			await expect(page.locator('#chatWindow')).toBeVisible();
 
 			const chatWindow = page.locator('#chatWindow');
 			const chatHeader = page.locator('#chatWindow .modHeader');
@@ -324,12 +291,14 @@ test.describe('Chat Window Drag Functionality', () => {
 					const to = { x: headerBox.x + 160, y: headerBox.y + 58 };
 					await page.mouse.move(to.x, to.y, { steps: 8 });
 					await page.mouse.up();
-					await page.waitForTimeout(300);
 
 					// the module registry moves the window, never a transform
-					const after = await chatWindow.boundingBox();
-					expect(Math.round(after.x - before.x)).toBe(100);
-					expect(Math.round(after.y - before.y)).toBe(50);
+					await expect
+						.poll(async () => {
+							const after = await chatWindow.boundingBox();
+							return [Math.round(after.x - before.x), Math.round(after.y - before.y)];
+						})
+						.toEqual([100, 50]);
 				}
 			}
 		}
@@ -341,7 +310,7 @@ test.describe('Chat Window Drag Functionality', () => {
 		test.skip(!(await chatButton.isVisible()), 'chat needs a live collab session');
 		if (await chatButton.isVisible()) {
 			await chatButton.click();
-			await page.waitForTimeout(500);
+			await expect(page.locator('#chatWindow')).toBeVisible();
 
 			const chatHeader = page.locator('#chatWindow .modHeader');
 			const headerCount = await chatHeader.count();

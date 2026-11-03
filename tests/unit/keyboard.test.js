@@ -918,6 +918,46 @@ describe('Keyboard Utilities', () => {
 			expect(() => tool.enable()).not.toThrow();
 			expect(() => tool.disable()).not.toThrow();
 		});
+
+		describe('a fresh pick', () => {
+			let tool;
+			beforeEach(() => {
+				State.selectionCursor = createSelectionCursor(document.createElement('div'));
+				State.cursor.getX.mockReturnValue(10);
+				State.cursor.getY.mockReturnValue(5);
+				tool = createSelectionTool();
+				tool.enable();
+			});
+			afterEach(() => tool.disable());
+
+			it('opens without a rect or a restore memory', () => {
+				expect(State.selectionCursor.isVisible()).toBe(false);
+				expect(State.selectionCursor.getLastSelection()).toBe(null);
+				expect(State.selectionCursor.getElement().style.display).toBe('none');
+			});
+
+			it('starts a rect at the keyboard cursor on the first arrow', () => {
+				document.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowRight' }));
+				expect(State.selectionCursor.getSelection()).toEqual({
+					x: 11,
+					y: 5,
+					width: 1,
+					height: 1,
+				});
+			});
+
+			it('starts a rect at the keyboard cursor when move mode turns on', () => {
+				tool.toggleMoveMode();
+				expect(tool.isMoveMode()).toBe(true);
+				expect(State.selectionCursor.getSelection()).toEqual({
+					x: 10,
+					y: 5,
+					width: 1,
+					height: 1,
+				});
+				tool.toggleMoveMode();
+			});
+		});
 	});
 
 	describe('paste modes', () => {
