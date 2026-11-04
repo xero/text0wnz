@@ -736,10 +736,18 @@ export const createEditorCore = (
 				const target = doc.frames[f];
 				target.delayMs = src.delayMs;
 				for (let i = 0; i < src.glyph.length; i++) {
-					const def = source.glyphTable.get(glyphIdOf(src.glyph[i]));
-					const id = def
-						? doc.glyphTable.idFor(def.fontSlot, def.codepoint)
-						: 0;
+					const sourceId = glyphIdOf(src.glyph[i]);
+					const def = source.glyphTable.get(sourceId);
+					const same = doc.glyphTable.get(sourceId);
+					// CP437 0 and 255 both map to NBSP, so a codepoint lookup
+					// alone turns every 255 into the empty NUL cell; an id
+					// that already names the same glyph here stays
+					const id = !def
+						? 0
+						: same?.fontSlot === def.fontSlot &&
+							  same.codepoint === def.codepoint
+							? sourceId
+							: doc.glyphTable.idFor(def.fontSlot, def.codepoint);
 					target.glyph[i] = glyphWord(id, attrsOf(src.glyph[i]));
 					target.fg[i] = src.fg[i];
 					target.bg[i] = src.bg[i];
