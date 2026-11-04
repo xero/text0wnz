@@ -747,6 +747,9 @@ const expectOpenMatchesCore = async (name, bytes) => {
 describe('open path contract: ANSI', () => {
 	it.each(tierAFiles)(
 		'%s: opens as the core decodes it and core-encoded bytes reopen identically',
+		// two full opens of a long tutorial take about 1 s locally and up
+		// to 6 s on CI's runners, past the 5 s default
+		{ timeout: 30_000 },
 		async name => {
 			const bytes = new Uint8Array(readFileSync(path.join(ansiDir, name)));
 			const { result } = await expectOpenMatchesCore(name, bytes);
