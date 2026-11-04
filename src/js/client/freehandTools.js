@@ -282,7 +282,6 @@ const createShadingController = (panel, charMode) => {
 		select: panel.select,
 		ignore: panel.ignore,
 		unignore: panel.unignore,
-		redrawGlyphs: panel.redrawGlyphs,
 	};
 };
 
@@ -1874,7 +1873,7 @@ const createAttributeBrushController = () => {
 
 		const fontWidth = State.font.getWidth();
 		const fontHeight = State.font.getHeight();
-		const size = Math.sqrt(brushSize);
+		const size = brushSize;
 
 		const offsetCells = Math.floor(size / 2);
 		const startX = x - offsetCells;
@@ -1937,7 +1936,7 @@ const createAttributeBrushController = () => {
 	};
 
 	const paintArea = (centerX, centerY, altKey) => {
-		const size = Math.sqrt(brushSize);
+		const size = brushSize;
 		const offsetCells = Math.floor(size / 2);
 		const startX = centerX - offsetCells;
 		const startY = centerY - offsetCells;
@@ -2038,19 +2037,12 @@ const createAttributeBrushController = () => {
 	};
 
 	const setBrushSize = size => {
-		const sqrtSize = Math.sqrt(size);
-		if (sqrtSize === Math.floor(sqrtSize)) {
-			brushSize = size;
-			if (lastPreviewX >= 0 && lastPreviewY >= 0) {
-				updatePreviewCursor(lastPreviewX, lastPreviewY);
-			}
+		brushSize = size;
+		if (lastPreviewX >= 0 && lastPreviewY >= 0) {
+			updatePreviewCursor(lastPreviewX, lastPreviewY);
 		}
 	};
 
-	const getBrushSize = () => brushSize;
-
-	// the slider speaks 1-16; the brush itself wants the squared cell
-	// count its validator expects
 	const sizeSlider = document.createElement('INPUT');
 	sizeSlider.type = 'range';
 	sizeSlider.id = 'attribSize';
@@ -2060,7 +2052,7 @@ const createAttributeBrushController = () => {
 	const applySize = n => {
 		sizeSlider.value = String(n);
 		sizeReadout.innerText = String(n);
-		setBrushSize(n * n);
+		setBrushSize(n);
 	};
 	sizeSlider.addEventListener('input', () => {
 		const n = parseInt(sizeSlider.value, 10) || 1;
@@ -2102,7 +2094,6 @@ const createAttributeBrushController = () => {
 		enable: enable,
 		disable: disable,
 		setBrushSize: setBrushSize,
-		getBrushSize: getBrushSize,
 	};
 };
 

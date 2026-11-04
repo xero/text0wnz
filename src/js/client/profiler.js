@@ -91,7 +91,7 @@ const installProfiler = () => {
 	const setupDoc = (columns, rows) =>
 		new Promise(resolve => {
 			const data = buildDoc(columns, rows);
-			State.textArtCanvas.setImageData(columns, rows, data, false, undefined, null, () => {
+			State.textArtCanvas.setImageData(columns, rows, data, false, () => {
 				resolve();
 			});
 		});
@@ -202,7 +202,7 @@ const installProfiler = () => {
 		// baselines compare (tens of ms vs tens of seconds).
 		const t0 = performance.now();
 		await new Promise(resolve => {
-			State.textArtCanvas.redrawEntireImage(null, () => resolve());
+			State.textArtCanvas.redrawEntireImage(() => resolve());
 		});
 		return { fullRepaintMs: round(performance.now() - t0) };
 	};
@@ -252,9 +252,7 @@ const installProfiler = () => {
 			capturedAt: new Date().toISOString(),
 			// Report the renderer actually in use, not the URL's request:
 			// GL is the default and falls back to the chunk renderer
-			renderer: State.textArtCanvas.getRendererId
-				? State.textArtCanvas.getRendererId()
-				: 'unknown',
+			renderer: State.textArtCanvas.getRendererId(),
 			machine: machineDescriptor(),
 			docSize: preset,
 			// Headline metrics (the committed baseline shape)

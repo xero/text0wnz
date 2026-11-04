@@ -78,6 +78,11 @@ The E2E tests validate the application's functionality in a real browser environ
   - Home, End, PageUp, PageDown navigation
   - Enter and Backspace keys
 
+- **keyboardEnter.spec.js** - Enter in keyboard mode
+  - Enter and NumpadEnter on the focused File button open the menu and leave the cursor
+  - Enter after a mouse click on a button still starts a new line
+  - Enter waits for a typed unicode glyph to land before the newline
+
 - **ui.spec.js** - User interface elements and interactions tests
   - Main UI element visibility
   - Responsive layout
@@ -94,10 +99,12 @@ The E2E tests validate the application's functionality in a real browser environ
 - **autosave.spec.js** - The autosave journal across reloads: draws, iCE colors, a resize, a new frame, a selection still floating in move mode, and the last edit before a reload come back (skipped where the browser refuses both OPFS and IndexedDB), and the idle commit never splits a held drag or a paused selection move
 - **autoscroll.spec.js** - Minimap autoscroll stepping and escape
 - **collabMoebius.spec.js** - Joins the vendored vanilla Moebius fixture through the Connect form (Chromium only)
-- **collabRoundTrip.spec.js** - Two browsers drawing through the bun server
+- **collabRoundTrip.spec.js** - Two browsers drawing through the bun server, and a late joiner keeping the room's SAUCE
+- **darkMode.spec.js** - The dark mode toggle's hover, and the OS theme when storage is blocked
 - **editor-file-open-and-scroll.spec.js** - Opening a file and scrolling the canvas
 - **editor-keybinds.spec.js** - Editor key bindings end to end
 - **gestures.spec.js** - Touch and pointer gestures
+- **lazyTools.spec.js** - Freehand tools fetch on first use, never at boot
 - **mapping.spec.js** - Character and color mapping tools
 - **panels.spec.js** - Panel docking, shading, pinning, and the phone shell
 - **pwaManifest.spec.js** - PWA manifest and service worker registration

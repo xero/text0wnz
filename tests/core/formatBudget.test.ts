@@ -32,7 +32,7 @@ describe('lintDocForFormat', () => {
 		}
 	});
 
-	it('utf8 and ownz hold unicode and truecolor without issues', () => {
+	it('utf8 holds unicode and truecolor without issues', () => {
 		const doc = makeDoc();
 		const han = doc.glyphTable.idFor(FONT_SLOT_UNSCII, 0x4e2d);
 		doc.setCell(0, 1, 0, {
@@ -41,7 +41,6 @@ describe('lintDocForFormat', () => {
 			bg: paletteColor(0),
 		});
 		expect(lintDocForFormat(doc, 'utf8').ok).toBe(true);
-		expect(lintDocForFormat(doc, 'ownz').ok).toBe(true);
 	});
 
 	it('flags the control positions the character writers substitute', () => {
@@ -57,8 +56,6 @@ describe('lintDocForFormat', () => {
 				report.issues.some(issue => issue.kind === 'control-lookalike'),
 			).toBe(true);
 		}
-		// ownz emits them verbatim
-		expect(lintDocForFormat(doc, 'ownz').ok).toBe(true);
 	});
 
 	it('counts unicode glyphs and extended colors for classic formats', () => {
@@ -264,7 +261,6 @@ describe('utf8-ext-blink', () => {
 		expect(report.ok).toBe(false);
 		const issue = report.issues.find(i => i.kind === 'utf8-ext-blink');
 		expect(issue?.count).toBe(1);
-		expect(lintDocForFormat(doc, 'ownz').ok).toBe(true);
 	});
 
 	it('stays quiet for 16c backgrounds and steady cells', () => {

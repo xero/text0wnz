@@ -14,8 +14,8 @@
  * tag-bit color words. Everything the v2 reader accepted still decodes
  * (old-file leniency).
  *
- * encodeAns keeps the byte-compatible v2 CP437/plain-text paths;
- * encodeUtf8 is the v3 UTF-8 writer.
+ * encodeAns is the byte-compatible v2 CP437 writer; encodeUtf8 writes
+ * UTF-8 and plain text.
  */
 
 import {
@@ -32,7 +32,7 @@ import {
 	paletteIndexOf,
 	rgbColor,
 } from '../doc.js';
-import { u16ToV3, v3ToU16, v3ToU16Lossy } from '../convert.js';
+import { u16ToV3, v3ToU16Lossy } from '../convert.js';
 import { cp437ToUnicode, unicodeToCp437 } from '../cp437.js';
 import { buildSauce, commentText, parseSauce } from './sauce.js';
 import { CodecError, concatBytes, utf8Encode } from './util.js';
@@ -790,15 +790,8 @@ export const decodeAns = (
 };
 
 export interface EncodeAnsOptions {
-	utf8?: boolean;
-	/** UTF-8 only: emit SGR 5 blink codes (v2 default true). */
-	blinkers?: boolean;
-	/** Plain-text export: no escape codes at all. */
-	stripEscapeCodes?: boolean;
 	/** Which doc frame to encode (ansimation reuses the body per frame). */
 	frameIndex?: number;
-	/** Quantize via the lossy projection instead of the strict one. */
-	lossy?: boolean;
 	/** Body only: no EOF byte, no SAUCE (ansimation assembles its own). */
 	bodyOnly?: boolean;
 	meta?: DocMeta;
@@ -806,34 +799,26 @@ export interface EncodeAnsOptions {
 }
 
 /**
- * v2 encodeANSi port from a v3 doc. CP437 output gets SAUCE appended
- * after a 0x1a; UTF-8/plain output gets none (v2 behavior; encodeUtf8
- * is the UTF-8 writer that carries SAUCE).
+ * v2 encodeANSi port from a v3 doc: CP437 bytes, then SAUCE after a
+ * 0x1a. Cells the 16-color model cannot hold go through the lossy
+ * projection, which the export modal's lint names first.
  */
 export const encodeAns = (
 	doc: DocV3,
 	options: EncodeAnsOptions = {},
 ): Uint8Array => {
-	const useUTF8 = options.utf8 ?? false;
-	const blinkers = options.blinkers ?? true;
-	const stripEscapeCodes = options.stripEscapeCodes ?? false;
-	const { imageData, columns, rows, iceColors } = (
-		options.lossy ? v3ToU16Lossy : v3ToU16
-	)(doc, options.frameIndex ?? 0);
+	const frameIndex = options.frameIndex ?? 0;
+	const { imageData, columns, rows, iceColors } = v3ToU16Lossy(doc, frameIndex);
 
-	const output: number[] = stripEscapeCodes ? [] : [27, 91, 48, 109];
+	const output: number[] = [27, 91, 48, 109];
 	let currentForeground = DEFAULT_FOREGROUND;
 	let currentBackground = DEFAULT_BACKGROUND;
 	let currentBold = false;
 	let currentBlink = false;
 	// 24-bit channels ride PabloDraw t sequences (ESC[1;r;g;bt fg,
 	// ESC[0;r;g;bt bg) over the quantized SGR base, so t-aware readers
-	// keep the truecolor and everyone else degrades to the 16c view.
-	// Only the lossy projection can reach cells with RGB plane words
-	// (the strict one throws), and classic CP437 output alone carries
-	// them (the UTF-8 writer already speaks 38;2).
-	const planeFrame = doc.frames[options.frameIndex ?? 0];
-	const emitRgb = !useUTF8 && !stripEscapeCodes && planeFrame !== undefined;
+	// keep the truecolor and everyone else degrades to the 16c view
+	const planeFrame = doc.frames[frameIndex];
 	let currentRgbFg: number | null = null;
 	let currentRgbBg: number | null = null;
 	const tSequence = (channel: number, word: number): number[] => {
@@ -892,52 +877,48 @@ export const encodeAns = (
 			}
 
 			const cellIndex = row * columns + col;
-			const rawFg = emitRgb ? planeFrame.fg[cellIndex] >>> 0 : 0;
-			const rawBg = emitRgb ? planeFrame.bg[cellIndex] >>> 0 : 0;
-			const fgIsRgb = emitRgb && !isPaletteColor(rawFg);
-			const bgIsRgb = emitRgb && !isPaletteColor(rawBg);
-			if (!stripEscapeCodes) {
-				if ((lineBold && !bold) || (lineBlink && !blink)) {
-					attribs.push([48]); // 0: reset
-					lineForeground = DEFAULT_FOREGROUND;
-					lineBackground = DEFAULT_BACKGROUND;
-					lineBold = false;
-					lineBlink = false;
-					lineRgbFg = null;
-					lineRgbBg = null;
-				}
-				if (bold && !lineBold) {
-					attribs.push([49]); // 1: bold
-					lineBold = true;
-				}
-				if (blink && !lineBlink) {
-					if (!useUTF8 || blinkers) {
-						attribs.push([53]); // 5: blink
-					}
-					lineBlink = true;
-				}
-				if (foreground !== lineForeground) {
-					attribs.push([51, 48 + ansiColor(foreground)]);
-					lineForeground = foreground;
-				} else if (lineRgbFg !== null && !fgIsRgb) {
-					// leaving a 24-bit channel needs an explicit SGR even
-					// when the quantized value matches the line state, or
-					// t-aware readers keep painting RGB
-					attribs.push([51, 48 + ansiColor(foreground)]);
-				}
-				if (background !== lineBackground) {
-					attribs.push([52, 48 + ansiColor(background)]);
-					lineBackground = background;
-				} else if (lineRgbBg !== null && !bgIsRgb) {
-					attribs.push([52, 48 + ansiColor(background)]);
-				}
-				if (attribs.length) {
-					lineOutput.push(27, 91);
-					attribs.forEach((attrib, index) => {
-						lineOutput = lineOutput.concat(attrib);
-						lineOutput.push(index === attribs.length - 1 ? 109 : 59);
-					});
-				}
+			const rawFg = planeFrame.fg[cellIndex] >>> 0;
+			const rawBg = planeFrame.bg[cellIndex] >>> 0;
+			const fgIsRgb = !isPaletteColor(rawFg);
+			const bgIsRgb = !isPaletteColor(rawBg);
+			if ((lineBold && !bold) || (lineBlink && !blink)) {
+				attribs.push([48]); // 0: reset
+				lineForeground = DEFAULT_FOREGROUND;
+				lineBackground = DEFAULT_BACKGROUND;
+				lineBold = false;
+				lineBlink = false;
+				lineRgbFg = null;
+				lineRgbBg = null;
+			}
+			if (bold && !lineBold) {
+				attribs.push([49]); // 1: bold
+				lineBold = true;
+			}
+			if (blink && !lineBlink) {
+				attribs.push([53]); // 5: blink
+				lineBlink = true;
+			}
+			if (foreground !== lineForeground) {
+				attribs.push([51, 48 + ansiColor(foreground)]);
+				lineForeground = foreground;
+			} else if (lineRgbFg !== null && !fgIsRgb) {
+				// leaving a 24-bit channel needs an explicit SGR even
+				// when the quantized value matches the line state, or
+				// t-aware readers keep painting RGB
+				attribs.push([51, 48 + ansiColor(foreground)]);
+			}
+			if (background !== lineBackground) {
+				attribs.push([52, 48 + ansiColor(background)]);
+				lineBackground = background;
+			} else if (lineRgbBg !== null && !bgIsRgb) {
+				attribs.push([52, 48 + ansiColor(background)]);
+			}
+			if (attribs.length) {
+				lineOutput.push(27, 91);
+				attribs.forEach((attrib, index) => {
+					lineOutput = lineOutput.concat(attrib);
+					lineOutput.push(index === attribs.length - 1 ? 109 : 59);
+				});
 			}
 
 			if (fgIsRgb && rawFg !== lineRgbFg) {
@@ -953,19 +934,9 @@ export const encodeAns = (
 				lineRgbBg = null;
 			}
 
-			if (useUTF8) {
-				lineOutput.push(...utf8Encode(cp437ToUnicode(charCode)));
-			} else {
-				lineOutput.push(charCode);
-			}
+			lineOutput.push(charCode);
 		}
 
-		if (useUTF8) {
-			if (!stripEscapeCodes) {
-				lineOutput.push(27, 91, 48, 109);
-			}
-			lineOutput.push(10);
-		}
 		for (const byte of lineOutput) {
 			output.push(byte);
 		}
@@ -977,17 +948,11 @@ export const encodeAns = (
 		currentRgbBg = lineRgbBg;
 	}
 
-	if (!stripEscapeCodes) {
-		output.push(27, 91, 48, 109);
-	}
+	output.push(27, 91, 48, 109);
 
 	const payload = new Uint8Array(output);
 	if (options.bodyOnly) {
 		return payload;
-	}
-	if (useUTF8 || stripEscapeCodes) {
-		// v2 appends a lone 0x1a ('' sauce) on UTF-8 saves; preserved
-		return useUTF8 ? concatBytes([payload, Uint8Array.of(0x1a)]) : payload;
 	}
 	const meta = options.meta ?? {};
 	const sauce = buildSauce({
@@ -1022,7 +987,7 @@ export const encodeAnsimation = (
 	const parts: Uint8Array[] = [Uint8Array.of(27, 91, 50, 74)]; // ESC[2J
 	for (let f = 0; f < doc.frames.length; f++) {
 		parts.push(Uint8Array.of(27, 91, 72)); // ESC[H
-		parts.push(encodeAns(doc, { frameIndex: f, lossy: true, bodyOnly: true }));
+		parts.push(encodeAns(doc, { frameIndex: f, bodyOnly: true }));
 	}
 	const payload = concatBytes(parts);
 	const meta = options.meta ?? {};

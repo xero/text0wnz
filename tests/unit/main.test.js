@@ -11,7 +11,6 @@ import { createTextArtCanvas } from '../../src/js/client/canvas.js';
 import magicNumbers from '../../src/js/client/magicNumbers.js';
 
 const mockState = {
-	startInitialization: vi.fn(),
 	// records only: running the tier 3 callback boots every lazy tool,
 	// far past what these mocks can stand in for
 	waitFor: vi.fn(),
@@ -315,11 +314,10 @@ describe('Main Application Module', () => {
 	});
 
 	describe('tier 1 boot', () => {
-		it('starts State, preloads fonts, and builds the core controllers', async () => {
+		it('preloads fonts and builds the core controllers', async () => {
 			const { FontCache } = await import('../../src/js/client/fontCache.js');
 			await domReady();
 
-			expect(mockState.startInitialization).toHaveBeenCalledTimes(1);
 			expect(FontCache.preloadCommonFonts).toHaveBeenCalledTimes(1);
 			expect(mockState.modal).toBe(
 				mockCreateFunctions.createModalController.mock.results[0].value,
@@ -344,7 +342,7 @@ describe('Main Application Module', () => {
 		});
 
 		it('turns a startup throw into the init alert', async () => {
-			mockState.startInitialization.mockImplementationOnce(() => {
+			mockCreateFunctions.createModalController.mockImplementationOnce(() => {
 				throw new Error('Initialization failed');
 			});
 			await expect(domReady()).resolves.toBeUndefined();

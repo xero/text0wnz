@@ -119,13 +119,13 @@ export const resolveBridgeTarget = async (
 		(await lookup(host, { all: true })).map(r => r.address),
 	lookupTimeoutMs = BRIDGE_LOOKUP_TIMEOUT_MS,
 ) => {
-	const mode = config.mode ?? 'off';
+	const mode = config.mode;
 	if (mode === 'off') {
 		return { ok: false, reason: 'bridge disabled' };
 	}
 	if (mode === 'local') {
 		// fixed target; the request cannot steer anything
-		return { ok: true, url: config.target || BRIDGE_DEFAULTS.target };
+		return { ok: true, url: config.target };
 	}
 	const host = typeof requested.host === 'string' ? requested.host.trim() : '';
 	if (!(/^[a-z0-9.-]{1,253}$/i).test(host)) {
@@ -148,7 +148,7 @@ export const resolveBridgeTarget = async (
 	}
 	const asked = askedRaw === '' ? null : Number(askedRaw);
 	if (mode === 'port') {
-		const port = config.port || BRIDGE_DEFAULTS.port;
+		const { port } = config;
 		if (asked !== null && asked !== port) {
 			// dialing a port the caller never asked for only sends them a
 			// wrong-sounding failure
@@ -174,6 +174,8 @@ export const resolveBridgeTarget = async (
 		}
 		return { ok: true, url: `ws://${host}:${asked}/${room}` };
 	}
+	// validateBridgeConfig refuses any other mode at boot; the gate
+	// still fails closed
 	return { ok: false, reason: `unknown bridge mode ${mode}` };
 };
 

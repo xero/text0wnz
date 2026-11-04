@@ -82,7 +82,9 @@ export default ({ mode }) => {
 							// lands in the entry chunk & tools imports the editor back
 							{ name: 'core', test: /[\\/]src[\\/]js[\\/]client[\\/](magicNumbers|state|storage|ui)\.js$|vite[\\/]preload-helper/ },
 							{ name: 'canvas', test: /[\\/]src[\\/]js[\\/]client[\\/](canvas|font|lazyFont|fontCache)\.js$/ },
-							{ name: 'tools', test: /[\\/]src[\\/]js[\\/]client[\\/](freehandTools|keyboard|toolbar)\.js$/ },
+							// eager modules only: a dynamically imported one grouped
+							// here rides the boot preload and its lazy load is moot
+							{ name: 'tools', test: /[\\/]src[\\/]js[\\/]client[\\/](keyboard|toolbar)\.js$/ },
 							{ name: 'fileops', test: /[\\/]src[\\/]js[\\/]client[\\/]file\.js$/ },
 							{ name: 'network', test: /[\\/]src[\\/]js[\\/]client[\\/]network\.js$/ },
 							{ name: 'palette', test: /[\\/]src[\\/]js[\\/]client[\\/]palette\.js$/ },

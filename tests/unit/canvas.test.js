@@ -141,7 +141,7 @@ describe('Canvas Module', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 			const data = new Uint16Array(80 * 25);
 			data[0] = (65 << 8) | (8 << 4) | 7;
-			canvas.setImageData(80, 25, data, false, undefined);
+			canvas.setImageData(80, 25, data, false);
 			canvas._blinkTestSeam.stopBlinkTimer();
 			await vi.advanceTimersByTimeAsync(600);
 			State.font.draw.mockClear();
@@ -202,21 +202,7 @@ describe('Canvas Module', () => {
 		});
 	});
 
-	describe('letter spacing seams', () => {
-		it('setImageData applies a boolean letter spacing', async () => {
-			canvas = createTextArtCanvas(mockContainer, mockCallback);
-			const State = (await import('../../src/js/client/state.js')).default;
-			canvas.setImageData(2, 2, new Uint16Array(4), false, true);
-			expect(State.font.setLetterSpacing).toHaveBeenCalledWith(true);
-		});
-
-		it('setImageData with undefined letter spacing leaves the toggle alone', async () => {
-			canvas = createTextArtCanvas(mockContainer, mockCallback);
-			const State = (await import('../../src/js/client/state.js')).default;
-			canvas.setImageData(2, 2, new Uint16Array(4), false, undefined);
-			expect(State.font.setLetterSpacing).not.toHaveBeenCalled();
-		});
-
+	describe('letter spacing', () => {
 		it('the doc mirrors letter spacing changes', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 			document.dispatchEvent(
@@ -373,13 +359,6 @@ describe('Canvas Module', () => {
 			expect(Array.isArray(coalesced)).toBe(true);
 		});
 
-		it('should handle patch buffer operations', () => {
-			canvas = createTextArtCanvas(mockContainer, mockCallback);
-
-			expect(canvas._chunkTestSeam.patchBufferAndEnqueueDirty).toBeDefined();
-			expect(typeof canvas._chunkTestSeam.patchBufferAndEnqueueDirty).toBe('function');
-		});
-
 		it('should handle image data operations', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
@@ -433,7 +412,7 @@ describe('Canvas Module', () => {
 		const loaded = async (rows, data) => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 			await vi.waitFor(() => expect(mockCallback).toHaveBeenCalled());
-			canvas.setImageData(80, rows, data, false, undefined);
+			canvas.setImageData(80, rows, data, false);
 			State.font.draw.mockClear();
 			return canvas;
 		};
@@ -583,7 +562,7 @@ describe('Canvas Module', () => {
 
 			const newImageData = new Uint16Array(80 * 25);
 			expect(() => {
-				canvas.setImageData(80, 25, newImageData, false, false);
+				canvas.setImageData(80, 25, newImageData, false);
 			}).not.toThrow();
 		});
 	});
@@ -669,12 +648,6 @@ describe('Canvas Module', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
 
 			expect(typeof canvas._chunkTestSeam.coalesceRegions).toBe('function');
-		});
-
-		it('should support patch buffer and enqueue dirty', () => {
-			const canvas = createTextArtCanvas(mockContainer, mockCallback);
-
-			expect(typeof canvas._chunkTestSeam.patchBufferAndEnqueueDirty).toBe('function');
 		});
 	});
 
@@ -802,7 +775,7 @@ describe('Canvas Module', () => {
 			await vi.waitFor(() => expect(mockCallback).toHaveBeenCalled());
 			const data = new Uint16Array(80 * 25);
 			data[20 * 80 + 70] = word;
-			canvas.setImageData(80, 25, data, false, undefined);
+			canvas.setImageData(80, 25, data, false);
 			return canvas;
 		};
 

@@ -91,16 +91,15 @@ dist/
         ├── core-[hash].js        # Client core group (magicNumbers, state, storage, ui)
         ├── core-[hash].js        # 0wnzlib TypeScript core (doc model, codecs, protocol)
         ├── canvas-[hash].js      # Canvas rendering, fonts, lazy loading, font cache
-        ├── tools-[hash].js       # Drawing tools, keyboard, toolbar
+        ├── tools-[hash].js       # Keyboard mode and toolbar
         ├── fileops-[hash].js     # File I/O operations
         ├── network-[hash].js     # Collaboration/WebSocket
         ├── palette-[hash].js     # Color palette management
-        ├── asciiBrush-[hash].js  # Ascii brush (lazy)
-        ├── zoom-[hash].js        # Zoom controller (lazy)
+        ├── asciiBrush-[hash].js  # Freehand tools and the ascii brush (lazy)
+        ├── zoom-[hash].js        # Zoom controller
         ├── profiler-[hash].js    # Profiling harness (lazy, ?profile)
         ├── scrollSpike-[hash].js # Scroll measurement rig (lazy, ?spike)
-        ├── testBridge-[hash].js  # Test bridge (lazy, ?test)
-        └── rolldown-runtime-[hash].js # Bundler runtime shared by chunks
+        └── testBridge-[hash].js  # Test bridge (lazy, ?test)
 ```
 
 Two chunks share the `core-` prefix: the Vite `core` group and the shared TypeScript core under `src/js/core/`, which the bundler names after its directory. A local build copies the root `LICENSE.txt` into `dist/`, and CI copies it again with the repo and site URLs appended (see [vite-plugin-static-copy](#vite-plugin-static-copy)).

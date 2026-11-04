@@ -13,7 +13,6 @@ import {
 	JOURNAL_VERSION,
 	RECORD_STROKE,
 	createJournal,
-	crc32,
 	decodeStrokePayload,
 	encodeKeyframeRecord,
 	encodeStrokeRecord,
@@ -21,14 +20,17 @@ import {
 	scanJournal,
 	shouldCompact,
 } from '../../src/js/core/journal.js';
-import { CodecError, concatBytes } from '../../src/js/core/codecs/util.js';
+import {
+	CodecError,
+	concatBytes,
+	crc32,
+} from '../../src/js/core/codecs/util.js';
 
 const strokeOf = (
 	frame: number,
 	writes: Array<[number, number, number]>,
-	userId?: string | number,
 ): CommittedStroke => ({
-	meta: { frame, userId },
+	meta: { frame },
 	patches: { glyph: Uint32Array.from(writes.flat()) },
 });
 
@@ -44,7 +46,7 @@ describe('journal format', () => {
 
 		const strokes: CommittedStroke[] = [];
 		const arena = createPatchArena({ onCommit: s => strokes.push(s) });
-		arena.beginStroke({ frame: 0, userId: 'xero' });
+		arena.beginStroke({ frame: 0 });
 		const f = doc.frames[0];
 		arena.record('glyph', 3, f.glyph[3], glyphWord(65, 0));
 		f.glyph[3] = glyphWord(65, 0);
@@ -136,23 +138,32 @@ describe('journal format', () => {
 		expect(replay.doc.getCell(0, 1, 0).glyph).toBe(glyphWord(67, 0));
 	});
 
-	it('round-trips stroke metadata (string, number, none)', () => {
-		const cases: Array<string | number | undefined> = ['xero', 42, undefined];
-		for (const userId of cases) {
-			const record = encodeStrokeRecord(strokeOf(5, [[7, 1, 2]], userId));
-			const scan = scanJournal(
-				concatBytes([
-					Uint8Array.from([0x54, 0x30, 0x57, 0x4a, JOURNAL_VERSION]),
-					record,
-				]),
-			);
-			expect(scan.records).toHaveLength(1);
-			expect(scan.records[0].type).toBe(RECORD_STROKE);
-			const stroke = decodeStrokePayload(scan.records[0].payload);
-			expect(stroke.meta.frame).toBe(5);
-			expect(stroke.meta.userId).toBe(userId);
-			expect(stroke.patches.glyph).toEqual(Uint32Array.from([7, 1, 2]));
-		}
+	it('round-trips stroke metadata', () => {
+		const record = encodeStrokeRecord(strokeOf(5, [[7, 1, 2]]));
+		const scan = scanJournal(
+			concatBytes([
+				Uint8Array.from([0x54, 0x30, 0x57, 0x4a, JOURNAL_VERSION]),
+				record,
+			]),
+		);
+		expect(scan.records).toHaveLength(1);
+		expect(scan.records[0].type).toBe(RECORD_STROKE);
+		const stroke = decodeStrokePayload(scan.records[0].payload);
+		expect(stroke.meta).toEqual({ frame: 5 });
+		expect(stroke.patches.glyph).toEqual(Uint32Array.from([7, 1, 2]));
+	});
+
+	it('skips a filled user slot in a stroke payload', () => {
+		const stroke = decodeStrokePayload(
+			concatBytes([
+				Uint8Array.of(5, 0, 0, 0), // frame
+				Uint8Array.of(1, 4, 0x78, 0x65, 0x72, 0x6f), // flag, length, 'xero'
+				Uint8Array.of(1, 0, 1, 0, 0, 0), // one glyph plane, one triple
+				Uint8Array.of(7, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0),
+			]),
+		);
+		expect(stroke.meta).toEqual({ frame: 5 });
+		expect(stroke.patches.glyph).toEqual(Uint32Array.from([7, 1, 2]));
 	});
 
 	it('rejects bad magic, future versions, and keyframeless journals', async () => {

@@ -16,7 +16,8 @@
  * blink at render time via the ice flag. v3 bakes the interpretation
  * into the planes (attr bit 0 + dim bg) per the u16<->v3 round-trip law,
  * so writes fold by the doc's current flag and setIceColors REWRITES the
- * planes. toU16() output stays word-identical with v2 across toggles.
+ * planes. The u16 projection stays word-identical with v2 across
+ * toggles.
  */
 
 import {
@@ -33,7 +34,7 @@ import {
 	paletteIndexOf,
 	RGB_EDIT_TAG,
 } from './doc.js';
-import { U16Doc, quantizeColorWord, v3ToU16, v3ToU16Lossy } from './convert.js';
+import { U16Doc, quantizeColorWord, v3ToU16Lossy } from './convert.js';
 import { unicodeToCp437Strict } from './cp437.js';
 import {
 	EditCell,
@@ -130,14 +131,9 @@ export interface EditorCore {
 		width: number,
 		height: number,
 	) => { data: Uint16Array; width: number; height: number };
-	setAreaU16: (
-		area: { data: Uint16Array; width: number; height: number },
-		x: number,
-		y: number,
-	) => void;
 	/**
-	 * Plane-native area ops for selection move and the clipboard: the
-	 * u16 twins quantize truecolor and degrade unicode to '?', so
+	 * Plane-native area ops for selection move and the clipboard:
+	 * getAreaU16 quantizes truecolor and degrades unicode to '?', so
 	 * anything that rearranges existing art must ride these.
 	 */
 	getAreaCells: (
@@ -176,7 +172,6 @@ export interface EditorCore {
 	getMirrorX: (x: number) => number;
 	/** Rewrites the planes to the new blink interpretation. */
 	setIceColors: (ice: boolean) => void;
-	toU16: () => U16Doc;
 	/** Quantized projection for the fallback renderer/collab mirror. */
 	toU16Lossy: () => U16Doc;
 	/** v2 setImageData: replace content wholesale, clearing history. */
@@ -579,18 +574,6 @@ export const createEditorCore = (
 			}
 			return { data, width, height };
 		},
-		setAreaU16: (area, x, y) => {
-			const maxWidth = Math.min(area.width, columns() - x);
-			const maxHeight = Math.min(area.height, doc.getRows() - y);
-			drawBlocks(draw => {
-				for (let py = 0; py < maxHeight; py++) {
-					for (let px = 0; px < maxWidth; px++) {
-						const attrib = area.data[py * area.width + px];
-						draw(attrib >> 8, attrib & 15, (attrib >> 4) & 15, x + px, y + py);
-					}
-				}
-			});
-		},
 		getAreaCells: (x, y, width, height) => {
 			const cells: EditCell[] = new Array(width * height);
 			const cols = columns();
@@ -608,9 +591,9 @@ export const createEditorCore = (
 		setAreaCells: (area, x, y) => {
 			const maxWidth = Math.min(area.width, columns() - x);
 			const maxHeight = Math.min(area.height, doc.getRows() - y);
-			// through drawBlocks like the u16 twin: mirror mode and the
-			// wrap guard live there, and extended color words pass through
-			// writeCell untouched
+			// through drawBlocks: mirror mode and the wrap guard live
+			// there, and extended color words pass through writeCell
+			// untouched
 			drawBlocks(draw => {
 				for (let py = 0; py < maxHeight; py++) {
 					for (let px = 0; px < maxWidth; px++) {
@@ -711,7 +694,6 @@ export const createEditorCore = (
 				refoldPlanes(ice);
 			}
 		},
-		toU16: () => v3ToU16(doc),
 		toU16Lossy: () => v3ToU16Lossy(doc),
 		loadDoc: source => {
 			flushStroke();

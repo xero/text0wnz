@@ -52,8 +52,6 @@ writeFileSync(
 // assets/ucd/Blocks-${UCD_VERSION}.txt.gz. DO NOT EDIT BY HAND.
 // [first codepoint, last codepoint, block name] per Unicode block.
 
-export const BLOCKS_VERSION = '${UCD_VERSION}';
-
 // prettier-ignore
 export const UNICODE_BLOCKS: ReadonlyArray<readonly [number, number, string]> = [
 ${rows.join('\n')}

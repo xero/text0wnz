@@ -126,12 +126,11 @@ const createAsciiStrokePainter = () => {
 	// glyph; at 1x zoom the pen rarely stops on the exact cell, so the
 	// probe forgives a near miss by one cell on either side. meta is
 	// the approach: the tip's own for endings, the negated departure
-	// for a stroke that STARTED against the line. allowBack enables
-	// snap-back for both ends: one step behind in meta terms is the
-	// crossed cell, which for the root is the stroke's second cell, so
-	// a touch down that overshot through a line by one leaves no
-	// whisker either
-	const tipJunction = (cell, meta, allowBack, fg, draw, columns, rows) => {
+	// for a stroke that STARTED against the line. Snap-back serves both
+	// ends: one step behind in meta terms is the crossed cell, which for
+	// the root is the stroke's second cell, so a touch down that
+	// overshot through a line by one leaves no whisker either
+	const tipJunction = (cell, meta, fg, draw, columns, rows) => {
 		const { dx, dy } = meta;
 		// junction writes register like any other stroke write: a later
 		// cell revisiting one must merge against the real canvas content
@@ -174,15 +173,13 @@ const createAsciiStrokePainter = () => {
 		// step behind the tip becomes the join and the whisker cell is
 		// restored to what it held before the stroke. two or more cells
 		// past stays a deliberate crossing
-		if (allowBack) {
-			const held = strokeOriginals.get((cell.y - dy) * 65536 + (cell.x - dx));
-			if (held !== undefined && joinAt(cell.x - dx, cell.y - dy)) {
-				const tip = strokeOriginals.get(cell.y * 65536 + cell.x);
-				if (tip !== undefined) {
-					draw(tip.charCode, tip.fg, tip.bg, cell.x, cell.y);
-				}
-				return true;
+		const held = strokeOriginals.get((cell.y - dy) * 65536 + (cell.x - dx));
+		if (held !== undefined && joinAt(cell.x - dx, cell.y - dy)) {
+			const tip = strokeOriginals.get(cell.y * 65536 + cell.x);
+			if (tip !== undefined) {
+				draw(tip.charCode, tip.fg, tip.bg, cell.x, cell.y);
 			}
+			return true;
 		}
 		// stopped one short: join where the path would have continued
 		if (joinAt(cell.x + dx, cell.y + dy)) {
@@ -232,7 +229,7 @@ const createAsciiStrokePainter = () => {
 		for (const cell of cells) {
 			if (
 				cell.tip &&
-				tipJunction(cell, cell.tip, true, fg, draw, columns, rows)
+				tipJunction(cell, cell.tip, fg, draw, columns, rows)
 			) {
 				continue;
 			}
@@ -241,7 +238,6 @@ const createAsciiStrokePainter = () => {
 				tipJunction(
 					cell,
 					{ dx: -cell.root.dx, dy: -cell.root.dy, cls: cell.root.cls },
-					true,
 					fg,
 					draw,
 					columns,

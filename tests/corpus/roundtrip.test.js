@@ -104,9 +104,6 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	enforceMaxBytes: vi.fn(),
 }));
 
-// palette.js is NOT mocked, so the UTF-8 round-trips exercise the real
-// CP437 <-> unicode maps
-
 let Load;
 let Save;
 let savedBytes;
@@ -171,8 +168,9 @@ const decode = (name, bytes) =>
 		// decodeXBin); capture them off the mocks
 		mockState.textArtCanvas.setXBPaletteData.mockClear();
 		mockState.textArtCanvas.setXBFontData.mockClear();
-		Load.file(file, (columns, rows, data, iceColors, letterSpacing, fontName, doc) => {
+		Load.file(file, (letterSpacing, fontName, doc) => {
 			clearTimeout(timer);
+			const { columns, rows, imageData: data, iceColors } = v3ToU16Lossy(doc);
 			const pal = mockState.textArtCanvas.setXBPaletteData.mock.calls.at(-1);
 			const font = mockState.textArtCanvas.setXBFontData.mock.calls.at(-1);
 			resolve({

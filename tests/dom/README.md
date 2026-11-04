@@ -78,6 +78,7 @@ Tests for the document-level shortcut handlers and text-entry focus:
 - Ctrl+C, Ctrl+V, and Ctrl+Backspace copy, paste, and delete the selection
 - Clipboard keys in a text entry leave the canvas alone
 - Selection keys flip and toggle move mode from the page only
+- Enter clicks a focused button instead of starting a new line, and starts one from the page
 
 ### Menu Tests (`menu.test.js`) ⬆ NEW
 

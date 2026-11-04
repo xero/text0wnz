@@ -43,9 +43,6 @@
 	--iron: #666;
 	--midnight: #000;
 	--icon-size: 46px;
-	--icon-size-sm: 36px;
-	--palette-width: 200px;
-	--palette-height: 53px;
 	--font-family:
 		TopazPlus, ui-monospace, Consolas, SFMono-Regular, Menlo, Monaco,
 		'Liberation Mono', 'Courier New', monospace;
@@ -60,7 +57,6 @@
 	--color-purp: var(--light-purp);
 	--color-indigo: var(--indigo);
 	--color-cyber: var(--cyber);
-	--color-cyan: var(--cyan);
 	--color-subtitle: var(--subtitle);
 	--color-chat: var(--chat);
 	--color-fg: var(--light-fg);
@@ -110,10 +106,6 @@
 /* <--//-------------------------------------------------------------[utilz] */
 @utility pxl8 {
 	image-rendering: pixelated;
-}
-@utility icon-size {
-	width: var(--icon-size);
-	height: var(--icon-size);
 }
 @utility dialog-style {
 	@apply bg-menu border-8 border-iron border-double;
@@ -247,9 +239,6 @@
 	.loading * {
 		@apply cursor-wait!;
 	}
-	h1 {
-		@apply text-3xl text-cyan;
-	}
 	h2,
 	section h2 {
 		@apply text-2xl text-cyan;
@@ -364,20 +353,13 @@
 
 			header,
 			section,
-			nav,
-			article {
+			nav {
 				@apply flex-shrink-0 w-full;
 			}
 			header {
 				@apply w-full flex-row items-center pl-2 pr-0 place-content-between bg-header select-none flex;
 				h2 {
 					@apply text-cyan text-2xl mt-1 flex flex-grow select-none;
-				}
-				button {
-					@apply p-0 pb-0.5;
-					svg {
-						@apply text-fg;
-					}
 				}
 				#closeChat {
 					@apply text-fg flex flex-grow-0 cursor-pointer m-auto px-1.5;
@@ -1618,7 +1600,7 @@
 			/* hover is mouse only: touch screens glue :hover to the last
 			   tap, which paints the selected tool hl black over its indigo */
 			@media (hover: hover) {
-				&:not(.toolbarDisplayed):not(.enabled):not(.enabledParent):hover {
+				&:not(.toolbarDisplayed):not(.enabled):hover {
 					@apply bg-hl;
 				}
 			}
@@ -1653,11 +1635,8 @@
 		pointer-events: none;
 	}
 
-	aside > div {
-		&.enabledParent,
-		&.enabled {
-			@apply bg-indigo;
-		}
+	aside > div.enabled {
+		@apply bg-indigo;
 	}
 
 	/* the open menu lights its rail button like an active tool, on the
@@ -1982,8 +1961,7 @@
 			p,
 			h2,
 			nav,
-			article,
-			blockquote {
+			article {
 				@apply flex flex-row w-full h-auto p-1;
 			}
 			nav {
@@ -2029,12 +2007,10 @@
 	#tutorialsModal,
 	#fontsModal {
 		@apply flex flex-col w-fit h-fit min-h-0;
-		h1,
 		h2,
 		p,
 		nav,
-		article,
-		blockquote {
+		article {
 			@apply flex flex-row w-full h-auto p-1;
 		}
 		p {
@@ -2054,7 +2030,6 @@
 		label {
 			@apply text-fg;
 		}
-		h1,
 		h2 {
 			@apply text-cyan text-2xl;
 		}
@@ -2075,18 +2050,9 @@
 		}
 		header {
 			@apply w-full flex-row pl-2 my-2.5 place-content-between;
-			button {
-				@apply p-0 pb-0.5;
-				svg {
-					@apply text-fg;
-				}
-			}
 		}
 		section {
 			@apply flex min-h-0 flex-col;
-			button {
-				@apply bg-midnight w-3/4 text-left justify-start mb-2 mx-auto p-1.5 pl-8;
-			}
 		}
 		article {
 			@apply flex min-h-0 flex-row w-full bg-editor justify-center py-6;
@@ -2095,8 +2061,7 @@
 			}
 			input[type='text'],
 			input[type='number'],
-			input[type='password'],
-			textarea {
+			input[type='password'] {
 				@apply px-3 py-1 h-fit mr-2 my-2 bg-midnight text-fg;
 			}
 		}
@@ -2838,8 +2803,7 @@
 		}
 		/* label hierarchy: tool names ride .barTitle, panel titles the
 		   strip; setting labels stay quiet grey */
-		label,
-		.settingLabel {
+		label {
 			@apply text-subtitle text-xs;
 		}
 		output {
@@ -3345,12 +3309,6 @@
 	#aboutModal {
 		header {
 			@apply h-fit flex-col bg-editor;
-			h1 {
-				@apply ml-2;
-			}
-			h4 {
-				@apply text-chat ml-3;
-			}
 		}
 		p {
 			@apply pb-2 mb-2;
@@ -3446,11 +3404,6 @@
 					i {
 						@apply italic;
 					}
-					@media (hover: hover) {
-						button:hover {
-							@apply bg-purp;
-						}
-					}
 				}
 			}
 			h2 {
@@ -3543,12 +3496,12 @@
 		}
 		@media (hover: hover) and (pointer: fine) {
 			> :is(.moon, .sun) {
-				.darkmode:is(:hover, :focus-visible) > & {
+				#navDarkmode:is(:hover, :focus-visible) & {
 					@apply fill-icon-hover;
 				}
 			}
 			> .sunBeams {
-				.darkmode:is(:hover, :focus-visible) & {
+				#navDarkmode:is(:hover, :focus-visible) & {
 					@apply stroke-icon-hover;
 				}
 			}

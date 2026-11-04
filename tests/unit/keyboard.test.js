@@ -440,6 +440,32 @@ describe('Keyboard Utilities', () => {
 	});
 
 	describe('createKeyboardController', () => {
+		// the browser rule the handlers share the document under: an
+		// uncancelled keydown is followed by a keypress only for a key
+		// that yields a character or Enter, and never with ctrl or alt
+		const press = (target, init) => {
+			const opts = { cancelable: true, bubbles: true, ...init };
+			const down = new KeyboardEvent('keydown', opts);
+			target.dispatchEvent(down);
+			const charKey = [...init.key].length === 1 || init.key === 'Enter';
+			if (down.defaultPrevented || !charKey || init.ctrlKey || init.altKey) {
+				return { down, keypress: null };
+			}
+			const keypress = new KeyboardEvent('keypress', opts);
+			target.dispatchEvent(keypress);
+			return { down, keypress };
+		};
+
+		// the real cursor, so its own keydown handler shares the document
+		// with the controller's the way it does in the app
+		const liveCursor = (x, y) => {
+			State.cursor = createCursor(document.createElement('div'));
+			State.cursor.move(x, y);
+			return State.cursor;
+		};
+
+		const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
 		it('should create keyboard controller with required methods', () => {
 			const controller = createKeyboardController();
 
@@ -697,38 +723,157 @@ describe('Keyboard Utilities', () => {
 			expect(e.defaultPrevented).toBe(false);
 		});
 
-		it('Enter on a focused control activates it instead of newlining', async () => {
-			const button = document.createElement('button');
-			document.body.appendChild(button);
-			button.focus();
+		it.each(['Enter', 'NumpadEnter'])(
+			'%s on a focused control activates it instead of newlining',
+			async code => {
+				const cursor = liveCursor(2, 3);
+				const button = document.createElement('button');
+				document.body.appendChild(button);
+				button.focus();
+				const controller = createKeyboardController();
+				controller.enable();
+				const { keypress } = press(button, { key: 'Enter', code });
+				await settle();
+				controller.disable();
+				// an uncancelled keypress is what the browser turns into
+				// the button's click
+				expect(keypress?.defaultPrevented).toBe(false);
+				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+			},
+		);
+
+		// a click focuses the button between the press and the release
+		const clickFocus = element => {
+			element.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+			element.focus();
+			element.dispatchEvent(new Event('pointerup', { bubbles: true }));
+		};
+
+		it.each(['Enter', 'NumpadEnter'])(
+			'%s on a control a pointer press focused newlines',
+			async code => {
+				const cursor = liveCursor(2, 3);
+				const button = document.createElement('button');
+				document.body.appendChild(button);
+				const controller = createKeyboardController();
+				controller.enable();
+				clickFocus(button);
+				const { down } = press(button, { key: 'Enter', code });
+				await settle();
+				controller.disable();
+				button.remove();
+				expect(down.defaultPrevented).toBe(true);
+				expect([cursor.getX(), cursor.getY()]).toEqual([0, 4]);
+			},
+		);
+
+		it('Enter activates a control the keyboard reaches after a click elsewhere', async () => {
+			const cursor = liveCursor(2, 3);
+			const clicked = document.createElement('button');
+			const tabbed = document.createElement('button');
+			document.body.append(clicked, tabbed);
 			const controller = createKeyboardController();
 			controller.enable();
-			const e = new KeyboardEvent('keypress', {
-				key: 'Enter',
-				cancelable: true,
-				bubbles: true,
-			});
-			button.dispatchEvent(e);
+			clickFocus(clicked);
+			tabbed.focus();
+			const { keypress } = press(tabbed, { key: 'Enter', code: 'Enter' });
+			await settle();
 			controller.disable();
-			button.remove();
-			await new Promise(resolve => setTimeout(resolve, 0));
-			// the default survives so the browser clicks the button
-			expect(e.defaultPrevented).toBe(false);
-			expect(State.cursor.newLine).not.toHaveBeenCalled();
+			clicked.remove();
+			tabbed.remove();
+			expect(keypress?.defaultPrevented).toBe(false);
+			expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
 		});
 
-		it('Enter still newlines while the canvas scope holds focus', async () => {
+		it.each(['Enter', 'NumpadEnter'])(
+			'%s newlines while the canvas scope holds focus',
+			async code => {
+				const cursor = liveCursor(2, 3);
+				const controller = createKeyboardController();
+				controller.enable();
+				const { down } = press(document.body, { key: 'Enter', code });
+				await settle();
+				controller.disable();
+				expect(down.defaultPrevented).toBe(true);
+				expect([cursor.getX(), cursor.getY()]).toEqual([0, 4]);
+			},
+		);
+
+		// the container is a tab stop, so it matches the activation
+		// selector; only the canvas scope check keeps Enter a newline
+		it('Enter newlines from the focused canvas container', async () => {
+			const cursor = liveCursor(2, 3);
+			const cc = document.createElement('div');
+			cc.id = 'canvasContainer';
+			cc.tabIndex = 0;
+			document.body.appendChild(cc);
+			cc.focus();
 			const controller = createKeyboardController();
 			controller.enable();
-			const e = new KeyboardEvent('keypress', {
-				key: 'Enter',
-				cancelable: true,
-			});
-			document.dispatchEvent(e);
+			const { down } = press(cc, { key: 'Enter', code: 'Enter' });
+			await settle();
 			controller.disable();
-			await new Promise(resolve => setTimeout(resolve, 0));
-			expect(e.defaultPrevented).toBe(true);
-			expect(State.cursor.newLine).toHaveBeenCalledTimes(1);
+			expect(down.defaultPrevented).toBe(true);
+			expect([cursor.getX(), cursor.getY()]).toEqual([0, 4]);
+		});
+
+		it('Shift+Enter newlines too', async () => {
+			const cursor = liveCursor(2, 3);
+			const controller = createKeyboardController();
+			controller.enable();
+			press(document.body, { key: 'Enter', code: 'Enter', shiftKey: true });
+			await settle();
+			controller.disable();
+			expect([cursor.getX(), cursor.getY()]).toEqual([0, 4]);
+		});
+
+		it.each(['ctrlKey', 'altKey', 'metaKey'])(
+			'Enter with %s leaves the cursor and the default alone',
+			async modifier => {
+				const cursor = liveCursor(2, 3);
+				const controller = createKeyboardController();
+				controller.enable();
+				const { down } = press(document.body, {
+					key: 'Enter',
+					code: 'Enter',
+					[modifier]: true,
+				});
+				await settle();
+				controller.disable();
+				expect(down.defaultPrevented).toBe(false);
+				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+			},
+		);
+
+		it('Enter and Backspace keep their defaults while a dialog holds the keyboard', async () => {
+			const cursor = liveCursor(2, 3);
+			const controller = createKeyboardController();
+			controller.enable();
+			controller.ignore();
+			const enter = press(document.body, { key: 'Enter', code: 'Enter' });
+			const back = press(document.body, { key: 'Backspace', code: 'Backspace' });
+			await settle();
+			controller.disable();
+			expect(enter.down.defaultPrevented).toBe(false);
+			expect(enter.keypress?.defaultPrevented).toBe(false);
+			expect(back.down.defaultPrevented).toBe(false);
+			expect(State.textArtCanvas.draw).not.toHaveBeenCalled();
+			expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+		});
+
+		it('Backspace at the start of a row erases nothing', async () => {
+			const cursor = liveCursor(0, 3);
+			const controller = createKeyboardController();
+			controller.enable();
+			const { down } = press(document.body, {
+				key: 'Backspace',
+				code: 'Backspace',
+			});
+			await settle();
+			controller.disable();
+			expect(down.defaultPrevented).toBe(true);
+			expect(State.textArtCanvas.draw).not.toHaveBeenCalled();
+			expect([cursor.getX(), cursor.getY()]).toEqual([0, 3]);
 		});
 
 		it('shift Tab always walks, so the keyboard can leave the canvas', async () => {
@@ -803,29 +948,54 @@ describe('Keyboard Utilities', () => {
 			expect(errSpy).toHaveBeenCalledTimes(1);
 		});
 
-		it('queues Enter behind a pending unicode glyph', async () => {
-			const log = [];
-			State.cursor.newLine = vi.fn(() => log.push('nl'));
-			State.textArtCanvas.draw = vi.fn(callback =>
-				callback(code => log.push(code)));
+		describe('Enter and Backspace behind a pending unicode glyph', () => {
+			let drawn;
 			let release;
-			State.textArtCanvas.resolveUnicode = vi.fn(
-				() =>
-					new Promise(resolve => {
-						release = resolve;
-					}),
-			);
-			const controller = createKeyboardController();
-			controller.enable();
-			document.dispatchEvent(new KeyboardEvent('keypress', { key: '☃' }));
-			document.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter' }));
-			// the newline must wait behind the pending resolve
-			await new Promise(resolve => setTimeout(resolve, 0));
-			expect(log).toEqual([]);
-			release(new Map([[0x2603, 300]]));
-			await new Promise(resolve => setTimeout(resolve, 0));
-			controller.disable();
-			expect(log).toEqual([300, 'nl']);
+
+			beforeEach(() => {
+				drawn = [];
+				State.textArtCanvas.draw = vi.fn(callback =>
+					callback((code, fg, bg, x, y) => drawn.push({ code, x, y })));
+				State.textArtCanvas.resolveUnicode = vi.fn(
+					() =>
+						new Promise(resolve => {
+							release = resolve;
+						}),
+				);
+			});
+
+			it('Enter waits for the glyph to land', async () => {
+				const cursor = liveCursor(2, 3);
+				const controller = createKeyboardController();
+				controller.enable();
+				press(document.body, { key: '❤', code: 'Digit3' });
+				press(document.body, { key: 'Enter', code: 'Enter' });
+				await settle();
+				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+				release(new Map([[0x2764, 300]]));
+				await settle();
+				controller.disable();
+				expect(drawn).toEqual([{ code: 300, x: 2, y: 3 }]);
+				expect([cursor.getX(), cursor.getY()]).toEqual([0, 4]);
+			});
+
+			it('Backspace erases the glyph it waited for', async () => {
+				const cursor = liveCursor(2, 3);
+				const controller = createKeyboardController();
+				controller.enable();
+				press(document.body, { key: '❤', code: 'Digit3' });
+				press(document.body, { key: 'Backspace', code: 'Backspace' });
+				await settle();
+				expect(drawn).toEqual([]);
+				release(new Map([[0x2764, 300]]));
+				await settle();
+				controller.disable();
+				expect(drawn).toEqual([
+					{ code: 300, x: 2, y: 3 },
+					{ code: 0, x: 2, y: 3 },
+				]);
+				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+			});
 		});
 	});
 

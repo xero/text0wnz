@@ -75,20 +75,21 @@ test.afterAll(() => {
 	}
 });
 
-// adoption swaps in the session doc after the socket connects, and
-// titles the page as its last step before the loading modal closes
-const sessionAdopted = async page => {
-	await expect(page).toHaveTitle(/^collab mode/);
+// adoption swaps in the session doc after the socket connects and
+// titles the page by the room's SAUCE ('collab mode' while the room
+// has none) before the loading modal closes
+const sessionAdopted = async (page, title = /^collab mode/) => {
+	await expect(page).toHaveTitle(title);
 	await loadSettled(page);
 };
 
-const joinPage = async (browser, nick) => {
+const joinPage = async (browser, nick, { room = 'e2eroom', title } = {}) => {
 	const context = await browser.newContext();
 	const page = await context.newPage();
 	await page.addInitScript(n => {
 		window.localStorage.setItem('handle', n);
 	}, nick);
-	await page.goto(`/?test&server=ws://127.0.0.1:${port}/e2eroom`);
+	await page.goto(`/?test&server=ws://127.0.0.1:${port}/${room}`);
 	await page.waitForSelector('#bodyContainer[data-ready]', {
 		state: 'attached',
 		timeout: 10000,
@@ -104,7 +105,7 @@ const joinPage = async (browser, nick) => {
 		null,
 		{ timeout: 10000 },
 	);
-	await sessionAdopted(page);
+	await sessionAdopted(page, title);
 	return { context, page };
 };
 
@@ -199,6 +200,59 @@ test.describe('collab round trip against a live server', () => {
 			.toBe(drawn);
 
 		await a.context.close();
+		await late.context.close();
+	});
+
+	test('a late joiner adopts the room SAUCE, and its Done keeps it', async ({
+		browser,
+		browserName,
+	}) => {
+		test.skip(browserName !== 'chromium', 'one engine runs the full stack');
+		test.skip(!hasBun, 'bun is required to spawn the server');
+		test.slow();
+
+		// a room of its own: a titled e2eroom would retitle every later
+		// joiner in this worker
+		const room = 'sauceroom';
+		const titled = /^room title/;
+		const a = await joinPage(browser, 'sauce-a', { room });
+		const b = await joinPage(browser, 'sauce-b', { room });
+		await a.page.locator('#navSauce').click();
+		await a.page.locator('#sauceTitle').fill('room title');
+		await a.page.locator('#sauceAuthor').fill('room author');
+		await a.page.locator('#sauceDone').click();
+		// b hears it only after the server applied it
+		await expect(b.page.locator('#sauceTitle')).toHaveValue('room title', { timeout: 10000 });
+		await expect(b.page).toHaveTitle(titled);
+
+		const late = await joinPage(browser, 'sauce-late', { room, title: titled });
+		await expect(late.page.locator('#sauceTitle')).toHaveValue('room title');
+		await expect(late.page.locator('#sauceAuthor')).toHaveValue('room author');
+		await expect(late.page.locator('#sauceInfoTitle')).toHaveText('room title');
+
+		// a Done with nothing edited sends what the editor holds
+		await late.page.locator('#navSauce').click();
+		await late.page.locator('#sauceDone').click();
+		// the server relays the late joiner's frames in order, so the
+		// chat lands on a after its SAUCE did
+		await late.page.evaluate(() => {
+			window.__t0wnz.State.network.sendChat('sauce done');
+		});
+		await expect
+			.poll(
+				() =>
+					a.page.evaluate(
+						() => document.getElementById('messageWindow')?.textContent ?? '',
+					),
+				{ timeout: 10000 },
+			)
+			.toContain('sauce done');
+		await expect(a.page.locator('#sauceTitle')).toHaveValue('room title');
+		await expect(a.page.locator('#sauceAuthor')).toHaveValue('room author');
+		await expect(a.page).toHaveTitle(titled);
+
+		await a.context.close();
+		await b.context.close();
 		await late.context.close();
 	});
 

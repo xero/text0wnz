@@ -603,7 +603,7 @@ codeSplitting: {
     groups: [
         { name: 'core', test: /[\\/]src[\\/]js[\\/]client[\\/](magicNumbers|state|storage|ui)\.js$|vite[\\/]preload-helper/ },
         { name: 'canvas', test: /[\\/]src[\\/]js[\\/]client[\\/](canvas|font|lazyFont|fontCache)\.js$/ },
-        { name: 'tools', test: /[\\/]src[\\/]js[\\/]client[\\/](freehandTools|keyboard|toolbar)\.js$/ },
+        { name: 'tools', test: /[\\/]src[\\/]js[\\/]client[\\/](keyboard|toolbar)\.js$/ },
         { name: 'fileops', test: /[\\/]src[\\/]js[\\/]client[\\/]file\.js$/ },
         { name: 'network', test: /[\\/]src[\\/]js[\\/]client[\\/]network\.js$/ },
         { name: 'palette', test: /[\\/]src[\\/]js[\\/]client[\\/]palette\.js$/ },
@@ -881,10 +881,7 @@ Monitor scroll position to determine which chunks are visible:
 ```javascript
 const viewportState = {
 	scrollTop: 0,
-	scrollLeft: 0,
 	containerHeight: 0,
-	visibleStartRow: 0,
-	visibleEndRow: 0,
 };
 
 function calculateVisibleChunks() {
@@ -1020,12 +1017,11 @@ viewportElement.addEventListener('scroll', handleScroll, { passive: true });
 let dirtyRegionScheduled = false;
 
 function processDirtyRegions() {
-	if (dirtyRegions.length === 0 || processingDirtyRegions) return;
+	if (dirtyRegions.length === 0) return;
 
 	if (!dirtyRegionScheduled) {
 		dirtyRegionScheduled = true;
 		requestAnimationFrame(() => {
-			processingDirtyRegions = true;
 			const coalescedRegions = coalesceRegions(dirtyRegions);
 			dirtyRegions = [];
 
@@ -1033,7 +1029,6 @@ function processDirtyRegions() {
 				drawRegion(region.x, region.y, region.w, region.h);
 			});
 
-			processingDirtyRegions = false;
 			dirtyRegionScheduled = false;
 		});
 	}
@@ -1052,7 +1047,7 @@ function processDirtyRegions() {
 For large canvases, render in batches across multiple frames:
 
 ```javascript
-function redrawEntireImage(onProgress, onComplete) {
+function redrawEntireImage(onComplete) {
 	const totalCells = rows * columns;
 
 	// Dynamic batch sizing
@@ -1068,8 +1063,6 @@ function redrawEntireImage(onProgress, onComplete) {
 	function renderBatch(startRow) {
 		const endRow = Math.min(startRow + batchSize, rows);
 		drawRegion(0, startRow, columns, endRow - startRow);
-
-		if (onProgress) onProgress(endRow / rows);
 
 		if (endRow < rows) {
 			requestAnimationFrame(() => renderBatch(endRow));

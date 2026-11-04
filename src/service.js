@@ -142,9 +142,6 @@ async function handleShareTarget(request) {
 					headers: {
 						'Content-Type': file.type || 'application/octet-stream',
 						'X-Filename': file.name || 'untitled.txt',
-						'X-File-Size': file.size.toString(),
-						'X-Shared-At': Date.now().toString(),
-						'X-Source': 'share-target',
 					},
 				}),
 			);
@@ -153,7 +150,6 @@ async function handleShareTarget(request) {
 				client.postMessage({
 					type: 'SHARED_FILE_READY',
 					filename: file.name,
-					size: file.size,
 				});
 			});
 		}

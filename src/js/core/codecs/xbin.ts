@@ -374,7 +374,6 @@ export const encodeXBin = (
 		author: meta.author,
 		group: meta.group,
 		comments: meta.comments,
-		flagsAndTInfo: false,
 		date: options.date,
 	});
 	return concatBytes([payload, Uint8Array.of(0x1a), sauce]);

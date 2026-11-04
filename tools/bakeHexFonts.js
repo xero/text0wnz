@@ -18,14 +18,7 @@ import { gunzipSync } from 'node:zlib';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-	BLOCK_FORMAT_VERSION,
-	HEX_CELL_HEIGHT,
-	HEX_CELL_WIDTH,
-	buildBlocks,
-	parseHexFont,
-	parseUns2Uni,
-} from '../src/js/core/hexfont.js';
+import { buildBlocks, parseHexFont } from '../src/js/core/hexfont.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceDir = path.join(root, 'assets', 'hexfonts');
@@ -42,29 +35,6 @@ const SOURCES = {
 		file: 'unscii-16.hex',
 		sha256: '2642c8b748fa81f24d76772d70c55faa720d98fadfec8133daf89136c5c8bfb1',
 		gzip: false,
-	},
-	uns2uni: {
-		file: 'uns2uni.tr',
-		sha256: '1633f65893ae2b2a2cd511f1ca9af9091da1aa2b5c39f848b97ebb1b4da3bd9c',
-		gzip: false,
-	},
-};
-
-/** credits surface in the app; keep in sync with the sources */
-const FONT_META = {
-	unscii16: {
-		label: 'unscii-16',
-		version: '2.1',
-		author: 'viznut (Ville-Matias Heikkilä)',
-		license: 'Public Domain',
-		homepage: 'http://viznut.fi/unscii/',
-	},
-	unifont: {
-		label: 'GNU Unifont',
-		version: '18.0.01',
-		author: 'Roman Czyborra, Paul Hardy, and contributors',
-		license: 'SIL Open Font License 1.1',
-		homepage: 'https://unifoundry.com/unifont/',
 	},
 };
 
@@ -97,26 +67,15 @@ const bakeFont = (key, text) => {
 	console.log(
 		`[hexfonts] ${key}: ${glyphs.length} glyphs, ${blocks.size} blocks, ${(bytes / 1024).toFixed(0)}kb`,
 	);
-	return { glyphs: glyphs.length, blockIds, bytes };
+	return blockIds;
 };
 
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
 
-const manifest = {
-	formatVersion: BLOCK_FORMAT_VERSION,
-	cell: { width: HEX_CELL_WIDTH, height: HEX_CELL_HEIGHT },
-	fonts: {},
-	uns2uni: [...parseUns2Uni(readSource('uns2uni'))],
-};
-
+const manifest = { fonts: {} };
 for (const key of ['unscii16', 'unifont']) {
-	const baked = bakeFont(key, readSource(key));
-	manifest.fonts[key] = {
-		...FONT_META[key],
-		glyphs: baked.glyphs,
-		blocks: baked.blockIds,
-	};
+	manifest.fonts[key] = { blocks: bakeFont(key, readSource(key)) };
 }
 
 writeFileSync(

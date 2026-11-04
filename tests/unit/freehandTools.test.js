@@ -64,7 +64,6 @@ describe('Freehand Tools', () => {
 				select: vi.fn(),
 				ignore: vi.fn(),
 				unignore: vi.fn(),
-				redrawGlyphs: vi.fn(),
 			};
 		});
 

@@ -44,23 +44,6 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	enforceMaxBytes: vi.fn(),
 }));
 
-vi.mock('../../src/js/client/palette.js', () => ({
-	getUTF8: vi.fn(charCode => {
-		if (charCode < 128) {
-			return [charCode];
-		}
-		if (charCode < 0x800) {
-			return [0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f)];
-		}
-		return [
-			0xe0 | (charCode >> 12),
-			0x80 | ((charCode >> 6) & 0x3f),
-			0x80 | (charCode & 0x3f),
-		];
-	}),
-	getUnicode: vi.fn(),
-}));
-
 const mockDocument = {
 	createElement: vi.fn(() => ({
 		href: '',

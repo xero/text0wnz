@@ -1223,13 +1223,6 @@ const createPanelManager = () => {
 		});
 	};
 
-	const setVisible = (key, fn) => {
-		const reg = registry.get(key);
-		if (reg && typeof fn === 'function') {
-			reg.visible = fn;
-		}
-	};
-
 	container.addEventListener(
 		'pointerdown',
 		e => {
@@ -1841,10 +1834,8 @@ const createPanelManager = () => {
 
 	return {
 		register,
-		setVisible,
 		layout,
 		focus,
-		flash,
 		reopen,
 		close,
 		reset,
@@ -1854,9 +1845,7 @@ const createPanelManager = () => {
 		togglePin,
 		isPinned,
 		setFloatWidth,
-		isDocked: key => MOD[key]?.dk === 'side',
 		isCollapsed: () => collapsed,
-		isNarrow,
 		closeDrawer,
 	};
 };

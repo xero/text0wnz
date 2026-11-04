@@ -32,7 +32,6 @@ describe('Zoom Functionality', () => {
 		it('should create a lazy font with default scaleFactor of 1', () => {
 			const lazyFont = createLazyFont(fontData, mockPalette);
 
-			expect(lazyFont.getScaleFactor()).toBe(1);
 			expect(lazyFont.getWidth()).toBe(8);
 			expect(lazyFont.getHeight()).toBe(16);
 		});
@@ -40,7 +39,6 @@ describe('Zoom Functionality', () => {
 		it('should create a lazy font with custom scaleFactor', () => {
 			const lazyFont = createLazyFont(fontData, mockPalette, false, 2);
 
-			expect(lazyFont.getScaleFactor()).toBe(2);
 			expect(lazyFont.getWidth()).toBe(16); // 8 * 2
 			expect(lazyFont.getHeight()).toBe(32); // 16 * 2
 		});
@@ -149,20 +147,26 @@ describe('Zoom Functionality', () => {
 			expect(document.getElementById('zoomValue').textContent).toBe('1.5x');
 		});
 
-		it('should step the scale through the font fallback on click', async () => {
-			// no zoom controller registers in unit tests, so the button
-			// routes through the font scale fallback
+		it('should step the scale through the zoom controller on click', async () => {
 			const State = (await import('../../src/js/client/state.js')).default;
+			const { createZoomController } = await import('../../src/js/client/zoom.js');
 			const { createZoomControl } = await import('../../src/js/client/ui.js');
-			createZoomControl();
+			const viewport = document.createElement('div');
+			document.body.append(viewport);
+			const zoom = createZoomController(viewport);
+			try {
+				createZoomControl();
 
-			document.getElementById('zoomIn').click();
-			expect(State.font.setScaleFactor).toHaveBeenCalledWith(1.5);
-			expect(document.getElementById('zoomValue').textContent).toBe('1.5x');
+				document.getElementById('zoomIn').click();
+				expect(State.font.setScaleFactor).toHaveBeenCalledWith(1.5);
+				expect(document.getElementById('zoomValue').textContent).toBe('1.5x');
 
-			document.getElementById('zoomOut').click();
-			expect(State.font.setScaleFactor).toHaveBeenCalledWith(1);
-			expect(document.getElementById('zoomValue').textContent).toBe('1x');
+				document.getElementById('zoomOut').click();
+				expect(State.font.setScaleFactor).toHaveBeenCalledWith(1);
+				expect(document.getElementById('zoomValue').textContent).toBe('1x');
+			} finally {
+				zoom.dispose();
+			}
 		});
 	});
 

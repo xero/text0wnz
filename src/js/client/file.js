@@ -21,7 +21,6 @@ import {
 	encodeAns,
 	encodeBin,
 	encodeXBin,
-	v3ToU16Lossy,
 } from '../core/index';
 
 // SAUCE §ANSiFlags round trip (sauceMetaWithFont): the AR bits and an
@@ -244,11 +243,9 @@ const loadModule = () => {
 		}
 	};
 
+	// null for a font the SAUCE table lacks: saves default it, collab
+	// sends the app name instead
 	const appToSauceFont = appFontName => {
-		if (!appFontName) {
-			return 'IBM VGA';
-		}
-
 		switch (appFontName) {
 			case 'CP437 8x16':
 				return 'IBM VGA';
@@ -369,7 +366,7 @@ const loadModule = () => {
 				return 'XBIN';
 
 			default:
-				return 'IBM VGA';
+				return null;
 		}
 	};
 
@@ -413,17 +410,9 @@ const loadModule = () => {
 			}
 		});
 		reader.addEventListener('error', () => fail(reader.error));
-		// ANSI and BIN land alike: the doc rides the plane-native slot
-		// so PabloDraw t colors reach the canvas, and the lossy u16 view
-		// feeds legacy consumers
 		const openSauced = result => {
 			updateSauceModal(result.meta, flagsToStash(result.sauce));
-			const u16 = v3ToU16Lossy(result.doc);
 			callback(
-				u16.columns,
-				u16.rows,
-				u16.imageData,
-				u16.iceColors,
 				lsFromSauceFlags(result.sauce?.flags),
 				result.meta.fontName?.trim() || undefined,
 				result.doc,
@@ -433,7 +422,6 @@ const loadModule = () => {
 			switch (file.name.split('.').pop().toLowerCase()) {
 				case 'xb':
 				case 'xbin': {
-					// the doc rides the plane-native callback slot, and
 					// 512-glyph fonts keep their bytes
 					const result = decodeXBin(data);
 					updateSauceModal(result.meta, flagsToStash(result.sauce));
@@ -453,16 +441,8 @@ const loadModule = () => {
 							}
 						}
 						document.dispatchEvent(new CustomEvent('onXBFontLoaded'));
-						const u16 = v3ToU16Lossy(result.doc);
-						callback(
-							u16.columns,
-							u16.rows,
-							u16.imageData,
-							u16.iceColors,
-							undefined, // SAUCE §FileType: XBin flags are 0, no LS
-							undefined,
-							result.doc,
-						);
+						// SAUCE §FileType: XBin flags are 0, no LS
+						callback(undefined, undefined, result.doc);
 					});
 					break;
 				}
@@ -474,8 +454,6 @@ const loadModule = () => {
 					State.textArtCanvas.clearXBData(() => openSauced(decodeBin(data)));
 					break;
 				case 'tnd':
-					// TundraDraw: 24-bit colors ride the v3 planes; the lossy
-					// u16 projection feeds legacy consumers
 					State.textArtCanvas.clearXBData(() => {
 						const result = decodeTundra(data);
 						// SAUCE §FileType gives TundraDraw Flags 0, but the .tnd
@@ -490,12 +468,7 @@ const loadModule = () => {
 							},
 							flagsToStash(result.sauce),
 						);
-						const u16 = v3ToU16Lossy(result.doc);
 						callback(
-							u16.columns,
-							u16.rows,
-							u16.imageData,
-							u16.iceColors,
 							lsFromSauceFlags(result.sauce?.flags),
 							undefined,
 							result.doc,
@@ -509,16 +482,8 @@ const loadModule = () => {
 							title: result.meta.title,
 							author: result.meta.author,
 						});
-						const u16 = v3ToU16Lossy(result.doc);
-						callback(
-							u16.columns,
-							u16.rows,
-							u16.imageData,
-							u16.iceColors,
-							undefined, // durdraw has no spacing concept
-							undefined,
-							result.doc,
-						);
+						// durdraw has no spacing concept
+						callback(undefined, undefined, result.doc);
 					}));
 					break;
 				case '0wnz':
@@ -541,13 +506,8 @@ const loadModule = () => {
 							author: result.meta.author,
 							comments: result.meta.comments,
 						});
-						const u16 = v3ToU16Lossy(result.doc);
 						callback(
-							u16.columns,
-							u16.rows,
-							u16.imageData,
-							u16.iceColors,
-							u16.letterSpacing,
+							result.doc.getLetterSpacing(),
 							undefined,
 							result.doc,
 						);
@@ -597,18 +557,7 @@ const loadModule = () => {
 const Load = loadModule();
 
 const saveModule = () => {
-	const saveFile = async (bytes, sauce, filename) => {
-		let outputBytes;
-		if (sauce !== undefined) {
-			outputBytes = new Uint8Array(bytes.length + 1 + sauce.length);
-			outputBytes.set(bytes, 0);
-			outputBytes[bytes.length] = 0x1a; // EOF marker / separator
-			outputBytes.set(sauce, bytes.length + 1);
-		} else {
-			outputBytes = new Uint8Array(bytes.length);
-			outputBytes.set(bytes, 0);
-		}
-
+	const saveFile = async (bytes, filename) => {
 		try {
 			if ('showSaveFilePicker' in window) {
 				const handle = await window.showSaveFilePicker({
@@ -633,7 +582,7 @@ const saveModule = () => {
 					],
 				});
 				const writable = await handle.createWritable();
-				await writable.write(outputBytes);
+				await writable.write(bytes);
 				await writable.close();
 			} else {
 				const isSafari =
@@ -641,8 +590,8 @@ const saveModule = () => {
 					navigator.userAgent.indexOf('Safari') !== -1;
 				if (isSafari) {
 					let base64String = '';
-					for (let i = 0; i < outputBytes.length; i += 1) {
-						base64String += String.fromCharCode(outputBytes[i]);
+					for (let i = 0; i < bytes.length; i += 1) {
+						base64String += String.fromCharCode(bytes[i]);
 					}
 					const downloadLink = document.createElement('a');
 					downloadLink.href =
@@ -651,7 +600,7 @@ const saveModule = () => {
 					downloadLink.click();
 				} else {
 					const downloadLink = document.createElement('a');
-					const blob = new Blob([outputBytes], { type: 'application/octet-stream' });
+					const blob = new Blob([bytes], { type: 'application/octet-stream' });
 					downloadLink.href = URL.createObjectURL(blob);
 					downloadLink.download = filename;
 					downloadLink.click();
@@ -719,14 +668,12 @@ const saveModule = () => {
 		if (!(await confirmExport('ans', 'ANSi')).proceed) {
 			return;
 		}
-		// lossy per the modal's warnings; 24-bit plane colors ride
-		// PabloDraw t sequences over the SGR base
+		// 24-bit plane colors ride PabloDraw t sequences over the SGR base
 		const bytes = encodeAns(State.textArtCanvas.getDoc(), {
-			lossy: true,
 			frameIndex: State.textArtCanvas.getCurrentFrame?.() ?? 0,
 			meta: sauceMetaWithFont(),
 		});
-		await saveFile(bytes, undefined, State.title + '.ans');
+		await saveFile(bytes, State.title + '.ans');
 	};
 
 	const utf8 = async () => {
@@ -737,7 +684,7 @@ const saveModule = () => {
 			return;
 		}
 		const bytes = encodeUtf8(State.textArtCanvas.getDoc(), { meta: sauceMeta() });
-		await saveFile(bytes, undefined, State.title + '.utf8.ans');
+		await saveFile(bytes, State.title + '.utf8.ans');
 	};
 
 	const utf8Blink = async () => {
@@ -745,7 +692,7 @@ const saveModule = () => {
 			blinkMode: 'blink',
 			meta: sauceMeta(),
 		});
-		await saveFile(bytes, undefined, State.title + '.utf8.ans');
+		await saveFile(bytes, State.title + '.utf8.ans');
 	};
 
 	const plainText = async () => {
@@ -753,7 +700,7 @@ const saveModule = () => {
 			return;
 		}
 		const bytes = encodeUtf8(State.textArtCanvas.getDoc(), { plain: true });
-		await saveFile(bytes, undefined, State.title + '.txt');
+		await saveFile(bytes, State.title + '.txt');
 	};
 
 	const bin = async () => {
@@ -765,7 +712,7 @@ const saveModule = () => {
 				meta: sauceMetaWithFont(),
 				frameIndex: State.textArtCanvas.getCurrentFrame?.() ?? 0,
 			});
-			await saveFile(bytes, undefined, State.title + '.bin');
+			await saveFile(bytes, State.title + '.bin');
 		} catch (error) {
 			if (error instanceof CodecError) {
 				// a refused shape (an odd, 2, or >510 width, the cell
@@ -777,21 +724,14 @@ const saveModule = () => {
 		}
 	};
 
-	const xb = async compress => {
-		// programmatic escape hatch: only a real boolean skips the
-		// export modal, because ui.js onClick hands menu clicks the
-		// click event as the first argument
-		if (typeof compress === 'boolean') {
-			await writeXb(compress);
-			return;
-		}
+	const xb = async () => {
 		const choice = await confirmExport('xbin', 'XBin', { compressToggle: true });
 		if (choice.proceed) {
 			await writeXb(choice.compress);
 		}
 	};
 
-	const writeXb = async (compress = true) => {
+	const writeXb = async compress => {
 		// prefer the original embedded XB font bytes (full 512-glyph
 		// fonts survive); the live font object only holds the 256
 		// renderable glyphs
@@ -818,7 +758,7 @@ const saveModule = () => {
 				frameIndex: State.textArtCanvas.getCurrentFrame?.() ?? 0,
 				meta: sauceMeta(),
 			});
-			await saveFile(bytes, undefined, State.title + '.xb');
+			await saveFile(bytes, State.title + '.xb');
 		} catch (error) {
 			if (error instanceof CodecError) {
 				// the zoom-scaled getHeight fallback can hand the encoder a
@@ -857,8 +797,8 @@ const saveModule = () => {
 		return {
 			...sauceMeta(),
 			fontName:
-				Load.appToSauceFont(State.textArtCanvas.getCurrentFontName()) ||
-				undefined,
+				Load.appToSauceFont(State.textArtCanvas.getCurrentFontName()) ??
+				'IBM VGA',
 			aspect:
 				openedSauceFlags !== null ? (openedSauceFlags >> 3) & 0x03 : 0,
 			// the doc's spacing can predate the artist's toggle, so the
@@ -881,7 +821,7 @@ const saveModule = () => {
 		// not a console whisper
 		try {
 			const bytes = encodeTundra(State.textArtCanvas.getDoc(), { meta: sauceMeta() });
-			await saveFile(bytes, undefined, State.title + '.tnd');
+			await saveFile(bytes, State.title + '.tnd');
 		} catch (error) {
 			console.error('[Save] tundra:', error);
 			alert(`Tundra export failed: ${error.message}`);
@@ -893,12 +833,12 @@ const saveModule = () => {
 			return;
 		}
 		const bytes = encodeAnsimation(State.textArtCanvas.getDoc(), { meta: sauceMeta() });
-		await saveFile(bytes, undefined, State.title + '.ans');
+		await saveFile(bytes, State.title + '.ans');
 	};
 
 	const dur = async () => {
 		const bytes = await encodeDur(State.textArtCanvas.getDoc(), sauceMeta());
-		await saveFile(bytes, undefined, State.title + '.dur');
+		await saveFile(bytes, State.title + '.dur');
 	};
 
 	const timelapse = async () => {
@@ -916,11 +856,7 @@ const saveModule = () => {
 		try {
 			const { doc } = timelapseToDoc(payload);
 			const bytes = await encodeDur(doc, sauceMeta());
-			await saveFile(
-				bytes,
-				undefined,
-				(State.title || 'session') + '.timelapse.dur',
-			);
+			await saveFile(bytes, (State.title || 'session') + '.timelapse.dur');
 		} catch (error) {
 			console.error('[Save] timelapse:', error);
 			alert('Timelapse replay failed.');
@@ -934,7 +870,7 @@ const saveModule = () => {
 			fontBytes: xbData ? xbData.bytes : null,
 			fontHeight: xbData ? xbData.height : undefined,
 		});
-		await saveFile(bytes, undefined, State.title + '.0wnz');
+		await saveFile(bytes, State.title + '.0wnz');
 	};
 
 	const png = async () => {
@@ -954,13 +890,11 @@ const saveModule = () => {
 					data: image.data,
 					channels: 4,
 				}),
-				undefined,
 				fname + '.png',
 			);
 		} else {
 			await saveFile(
 				dataUrlToBytes(State.textArtCanvas.getImage().toDataURL()),
-				undefined,
 				fname + '.png',
 			);
 		}

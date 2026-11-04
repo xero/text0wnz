@@ -102,7 +102,7 @@ describe('collab worker', () => {
 		});
 		ws.emit('message', { data: JSON.stringify({ type: 0, data: { id: 7, doc: { columns: 2 } } }) });
 		const connectedMsg = pageMessages().find(m => m.cmd === 'connected');
-		expect(connectedMsg.id).toBe(7);
+		expect(connectedMsg.data.id).toBe(7);
 
 		toWorker({ cmd: 'send', type: 16, data: { columns: 5, rows: 3 } });
 		expect(ws.sent.at(-1)).toEqual({

@@ -83,7 +83,6 @@ export const tokenizePasteText = (text: string): PasteTokens => {
 			continue;
 		}
 		if (
-			codepoint === 9 ||
 			codepoint < 32 ||
 			codepoint === 127 ||
 			// C1 controls have no glyph and flatten like C0 (NEL already

@@ -246,9 +246,8 @@ export const loadRoomDoc = async (dir, roomName) => {
 	}
 	const native = roomFile(dir, roomName);
 	if (existsSync(native)) {
-		const decoded = await decodeEnvelope(await readFile(native));
-		const doc = decoded.doc ?? decoded;
-		const join = withData(docToJoinDoc(doc, decoded.meta ?? {}));
+		const { doc, meta } = await decodeEnvelope(await readFile(native));
+		const join = withData(docToJoinDoc(doc, meta));
 		// the envelope holds full fidelity; ride the ext view alongside
 		// the vanilla projection so room.loadState restores both
 		join.ext = {
@@ -260,7 +259,7 @@ export const loadRoomDoc = async (dir, roomName) => {
 	const legacy = legacyFile(dir, roomName);
 	if (existsSync(legacy)) {
 		const decoded = decodeBin(await readFile(legacy));
-		return withData(docToJoinDoc(decoded.doc, decoded.meta ?? {}));
+		return withData(docToJoinDoc(decoded.doc, decoded.meta));
 	}
 	return null;
 };

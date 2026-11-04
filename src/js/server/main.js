@@ -25,7 +25,7 @@ import {
 	sweepTempFiles,
 } from './persistence.js';
 
-const sessionsDirEarly = path.resolve('./sessions');
+const sessionsDir = path.resolve('./sessions');
 
 /** lazy per-room restore: EVERY room loads its persisted doc on
  * creation, not just the default; otherwise a named room boots blank
@@ -33,7 +33,7 @@ const sessionsDirEarly = path.resolve('./sessions');
 const restoreRoomState = room =>
 	// the RETURNED promise gates connects server-side, so no client can
 	// adopt the blank boot doc (or draw over the saved one) mid-load
-	loadRoomDoc(sessionsDirEarly, room.name)
+	loadRoomDoc(sessionsDir, room.name)
 		.then(saved => {
 			if (saved && !room.isDirty()) {
 				room.loadState(saved);
@@ -44,7 +44,6 @@ const restoreRoomState = room =>
 			console.error(`[Server] restore failed for ${room.name}:`, error));
 
 const config = parseArgs();
-const sessionsDir = path.resolve('./sessions');
 // before any room exists, so every restore reads the swept,
 // lowercased directory
 await sweepTempFiles(sessionsDir);
@@ -80,7 +79,6 @@ const server = createMoebiusServer({
 	maxColumns: config.maxColumns,
 	maxRows: config.maxRows,
 	staticDir: config.staticDir,
-	debug: config.debug,
 	bridge,
 	tls,
 	log: config.debug ? console.log : () => {},

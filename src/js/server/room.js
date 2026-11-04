@@ -20,8 +20,8 @@
  * Deliberate deltas from upstream:
  * - the room password gates EVERYONE (upstream lets nickless
  *   connections bypass it).
- * - spectators cannot draw by default but MAY chat, and they receive
- *   chat (upstream excludes them from the chat tier).
+ * - spectators cannot draw but MAY chat, and they receive chat
+ *   (upstream excludes them from the chat tier).
  * - malformed frames drop with a log line, never a crash.
  * - every mutation lands in a bounded op log (timelapse substrate).
  *
@@ -116,7 +116,6 @@ const normalizeJoinPalette = palette => {
  * @param {object} [options]
  * @param {string} [options.name]
  * @param {string} [options.password]
- * @param {{enabled?: boolean, canChat?: boolean, canDraw?: boolean}} [options.spectators]
  * @param {number} [options.columns]
  * @param {number} [options.rows]
  * @param {number} [options.maxColumns] resize wall
@@ -128,11 +127,6 @@ const normalizeJoinPalette = palette => {
 export const createRoom = (options = {}) => {
 	const name = options.name ?? 'joint';
 	const password = options.password ?? '';
-	const spectators = {
-		enabled: options.spectators?.enabled ?? true,
-		canChat: options.spectators?.canChat ?? true,
-		canDraw: options.spectators?.canDraw ?? false,
-	};
 	const maxColumns = options.maxColumns ?? ROOM_DEFAULTS.maxColumns;
 	const maxRows = options.maxRows ?? ROOM_DEFAULTS.maxRows;
 	const opLogLimit = options.opLogLimit ?? ROOM_DEFAULTS.opLogLimit;
@@ -319,14 +313,10 @@ export const createRoom = (options = {}) => {
 	 * @param {number} opSeq
 	 * @param {{type: number, data: object}} native
 	 * @param {{type: number, data: object} | {type: number, data: object}[] | null} vanilla
-	 * @param {{spectators?: boolean}} [tier]
 	 */
-	const fanoutMutation = (sender, senderUser, opSeq, native, vanilla, tier = {}) => {
+	const fanoutMutation = (sender, senderUser, opSeq, native, vanilla) => {
 		for (const [client, user] of members) {
 			if (client === sender) {
-				continue;
-			}
-			if (user.role === 'viewer' && !tier.spectators) {
 				continue;
 			}
 			try {
@@ -452,7 +442,7 @@ export const createRoom = (options = {}) => {
 	 * @returns {boolean} connected
 	 */
 	const connect = (client, data) => {
-		const nick = typeof data.nick === 'string' ? sanitize(data.nick, ROOM_DEFAULTS.nickLimit, false) : undefined;
+		const nick = typeof data.nick === 'string' ? sanitize(data.nick, ROOM_DEFAULTS.nickLimit) : undefined;
 		const pass = typeof data.pass === 'string' ? data.pass : '';
 		// the password gates EVERYONE, spectators included
 		if (password !== '') {
@@ -478,11 +468,6 @@ export const createRoom = (options = {}) => {
 			authFailures = 0;
 		}
 		const isSpectator = nick === undefined;
-		if (isSpectator && !spectators.enabled) {
-			client.send(MoebiusAction.REFUSED, {});
-			log('spectator refused (disabled)');
-			return false;
-		}
 		const caps = Array.isArray(data.caps)
 			? data.caps.filter(c => typeof c === 'string')
 			: null;
@@ -490,7 +475,7 @@ export const createRoom = (options = {}) => {
 		const user = {
 			id,
 			nick,
-			group: typeof data.group === 'string' ? sanitize(data.group, ROOM_DEFAULTS.nickLimit, false) : '',
+			group: typeof data.group === 'string' ? sanitize(data.group, ROOM_DEFAULTS.nickLimit) : '',
 			status: isSpectator ? MoebiusStatus.WEB : MoebiusStatus.ACTIVE,
 			role: /** @type {'viewer' | 'editor'} */ (
 				isSpectator ? 'viewer' : 'editor'
@@ -544,7 +529,7 @@ export const createRoom = (options = {}) => {
 		const { type, data } = frame;
 		switch (type) {
 			case MoebiusAction.DRAW: {
-				if (user.role === 'viewer' && !spectators.canDraw) {
+				if (user.role === 'viewer') {
 					return;
 				}
 				const { x, y, block } = data;
@@ -589,21 +574,17 @@ export const createRoom = (options = {}) => {
 					opSeq,
 					{ type, data: payload },
 					{ type, data: payload },
-					{ spectators: true },
 				);
 				return;
 			}
 			case MoebiusAction.CHAT: {
-				if (user.role === 'viewer' && !spectators.canChat) {
-					return;
-				}
 				// viewers speak as themselves, or a nickless spectator could
 				// broadcast ANY nick the frame claims; editors may rename
 				const nick =
 					user.role === 'editor' && typeof data.nick === 'string'
-						? sanitize(data.nick, ROOM_DEFAULTS.nickLimit, false)
+						? sanitize(data.nick, ROOM_DEFAULTS.nickLimit)
 						: (user.nick ?? 'spectator');
-				const text = typeof data.text === 'string' ? sanitize(data.text, ROOM_DEFAULTS.chatTextLimit, false) : '';
+				const text = typeof data.text === 'string' ? sanitize(data.text, ROOM_DEFAULTS.chatTextLimit) : '';
 				if (text === '') {
 					return;
 				}
@@ -613,7 +594,7 @@ export const createRoom = (options = {}) => {
 					user.nick = nick;
 				}
 				if (typeof data.group === 'string') {
-					user.group = sanitize(data.group, ROOM_DEFAULTS.nickLimit, false);
+					user.group = sanitize(data.group, ROOM_DEFAULTS.nickLimit);
 				}
 				chatHistory.push({
 					id: user.id,
@@ -673,7 +654,6 @@ export const createRoom = (options = {}) => {
 					pushOp(type, payload),
 					{ type, data: payload },
 					{ type, data: payload },
-					{ spectators: true },
 				);
 				return;
 			}
@@ -691,7 +671,6 @@ export const createRoom = (options = {}) => {
 					pushOp(type, payload),
 					{ type, data: payload },
 					{ type, data: payload },
-					{ spectators: true },
 				);
 				return;
 			}
@@ -707,7 +686,6 @@ export const createRoom = (options = {}) => {
 					pushOp(type, payload),
 					{ type, data: payload },
 					{ type, data: payload },
-					{ spectators: true },
 				);
 				return;
 			}
@@ -725,7 +703,6 @@ export const createRoom = (options = {}) => {
 					pushOp(type, payload),
 					{ type, data: payload },
 					{ type, data: payload },
-					{ spectators: true },
 				);
 				return;
 			}
@@ -759,7 +736,6 @@ export const createRoom = (options = {}) => {
 					opSeq,
 					{ type, data: payload },
 					{ type, data: payload },
-					{ spectators: true },
 				);
 				log(`canvas resized ${columns}x${rows}`);
 				return;
@@ -768,7 +744,7 @@ export const createRoom = (options = {}) => {
 				if (!hasExt(user)) {
 					return;
 				}
-				if (user.role === 'viewer' && !spectators.canDraw) {
+				if (user.role === 'viewer') {
 					return;
 				}
 				const draw = sanitizeExtDraw(data, doc.columns, doc.rows);
@@ -796,7 +772,6 @@ export const createRoom = (options = {}) => {
 						type: MoebiusAction.DRAW,
 						data: { x, y, block, id: user.id },
 					},
-					{ spectators: true },
 				);
 				return;
 			}
@@ -804,7 +779,7 @@ export const createRoom = (options = {}) => {
 				if (!hasExt(user)) {
 					return;
 				}
-				if (user.role === 'viewer' && !spectators.canDraw) {
+				if (user.role === 'viewer') {
 					return;
 				}
 				if (
@@ -849,7 +824,6 @@ export const createRoom = (options = {}) => {
 					pushOp(type, payload),
 					{ type, data: payload },
 					vanillaFrames,
-					{ spectators: true },
 				);
 				return;
 			}
@@ -896,7 +870,6 @@ export const createRoom = (options = {}) => {
 					pushOp(type, payload),
 					{ type, data: payload },
 					null,
-					{ spectators: true },
 				);
 				return;
 			}
@@ -1085,9 +1058,9 @@ export const createRoom = (options = {}) => {
 			),
 		/** capture before a save begins; pass back to markClean */
 		dirtyToken: () => dirtySeq,
-		/** @param {number} [token] clears dirty only if nothing mutated since */
+		/** @param {number} token clears dirty only if nothing mutated since */
 		markClean: token => {
-			if (token === undefined || token === dirtySeq) {
+			if (token === dirtySeq) {
 				dirty = false;
 			}
 		},

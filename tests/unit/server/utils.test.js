@@ -40,61 +40,51 @@ describe('Utils Module', () => {
 	});
 
 	describe('sanitize', () => {
-		it('should sanitize normal strings with quotes', () => {
-			const result = sanitize('Hello World', 100, true);
-			expect(result).toBe('\'Hello World\'');
-		});
-
-		it('should sanitize strings without quotes when quote is false', () => {
-			const result = sanitize('Hello World', 100, false);
+		it('should pass plain strings through unchanged', () => {
+			const result = sanitize('Hello World', 100);
 			expect(result).toBe('Hello World');
 		});
 
 		it('should handle null input', () => {
-			const result = sanitize(null, 100, true);
+			const result = sanitize(null, 100);
 			expect(result).toBe('');
 		});
 
 		it('should handle undefined input', () => {
-			const result = sanitize(undefined, 100, true);
+			const result = sanitize(undefined, 100);
 			expect(result).toBe('');
 		});
 
 		it('should trim whitespace', () => {
-			const result = sanitize('  Hello World  ', 100, false);
+			const result = sanitize('  Hello World  ', 100);
 			expect(result).toBe('Hello World');
 		});
 
 		it('should remove newlines', () => {
-			const result = sanitize('Hello\nWorld\r\nTest', 100, false);
+			const result = sanitize('Hello\nWorld\r\nTest', 100);
 			expect(result).toBe('HelloWorldTest');
 		});
 
 		it('should remove Unicode control characters', () => {
-			const result = sanitize('Hello\x00World\x1F', 100, false);
+			const result = sanitize('Hello\x00World\x1F', 100);
 			expect(result).toBe('HelloWorld');
 		});
 
 		it('should limit string length', () => {
 			const longString = 'a'.repeat(200);
-			const result = sanitize(longString, 50, false);
+			const result = sanitize(longString, 50);
 			expect(result).toBe('a'.repeat(50));
 		});
 
 		it('should convert non-string inputs to string', () => {
-			const result = sanitize(12345, 100, false);
+			const result = sanitize(12345, 100);
 			expect(result).toBe('12345');
 		});
 
 		it('should use default limit of 100 when not specified', () => {
 			const longString = 'a'.repeat(200);
 			const result = sanitize(longString);
-			expect(result.length).toBe(102); // 100 chars + 2 quotes
-		});
-
-		it('should use default quote=true when not specified', () => {
-			const result = sanitize('test');
-			expect(result).toBe('\'test\'');
+			expect(result).toBe('a'.repeat(100));
 		});
 	});
 

@@ -54,7 +54,7 @@ test('gl renderer survives context loss and restore', async ({ page }) => {
 		// Repaint synchronously, then sample the backbuffer before the
 		// compositor can discard it (preserveDrawingBuffer is false)
 		await new Promise(resolve =>
-			State.textArtCanvas.redrawEntireImage(null, resolve));
+			State.textArtCanvas.redrawEntireImage(resolve));
 		const probe = document.createElement('canvas');
 		probe.width = canvas.width;
 		probe.height = Math.min(canvas.height, 64);

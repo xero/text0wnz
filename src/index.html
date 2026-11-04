@@ -18,18 +18,21 @@
 		<meta property="og:image" content="https://raw.githubusercontent.com/wiki/xero/text0wnz/img/preview.png"/>
 		<script>
 			// paint the saved theme before first render or every boot
-			// flashes light at night mode users; main.js syncs the chrome
-			try {
-				const dark = localStorage.getItem('darkMode');
+			// flashes light at night mode users; main.js syncs the chrome.
+			// A block, so the binding stays off the page's global scope
+			{
+				let dark = null;
+				try {
+					dark = localStorage.getItem('darkMode');
+				} catch {
+					// storage blocked: no saved choice, so the OS preference decides
+				}
 				if (
 					dark === 'true' ||
-					(dark === null &&
-						matchMedia('(prefers-color-scheme: dark)').matches)
+					(dark === null && matchMedia('(prefers-color-scheme: dark)').matches)
 				) {
 					document.documentElement.classList.add('dark');
 				}
-			} catch (e) {
-				// storage blocked: the OS preference check in main.js wins
 			}
 		</script>
 		<script type="module" src="js/client/main.js"></script>

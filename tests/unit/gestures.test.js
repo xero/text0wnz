@@ -219,21 +219,6 @@ describe('gesture recognizer', () => {
 		expect(update.scale).toBeGreaterThan(1);
 	});
 
-	it('external reset mid-stroke and mid-pinch emits the end events', () => {
-		const a = harness();
-		a.rec.down(1, 50, 50);
-		a.rec.move(1, 80, 50); // stroke via slop
-		a.rec.reset();
-		expect(a.cb.onStrokeEnd).toHaveBeenCalledTimes(1);
-
-		const b = harness();
-		b.rec.down(1, 100, 100);
-		b.rec.down(2, 200, 100);
-		b.rec.move(1, 60, 100); // pinch
-		b.rec.reset();
-		expect(b.cb.onPinchEnd).toHaveBeenCalledTimes(1);
-	});
-
 	it('stats exposes the machine for debugging', () => {
 		const { rec } = harness();
 		expect(rec.stats()).toEqual({

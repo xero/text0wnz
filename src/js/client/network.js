@@ -341,6 +341,40 @@ const createWorkerHandler = inputHandle => {
 			btn9pt.classList.toggle('enabled', letterSpacing);
 		});
 
+	// the room's SAUCE title names the page on every member, and an
+	// untitled room still reads as a session rather than a bare suffix
+	const sessionTitle = title => title || 'collab mode';
+
+	/** the room's SAUCE fields: a peer's edit, or a join or resync doc's */
+	const applySauce = meta => {
+		muted(() => {
+			if (typeof meta.title === 'string') {
+				State.title = sessionTitle(meta.title);
+				const field = document.getElementById('sauceTitle');
+				if (field) {
+					field.value = meta.title;
+				}
+			}
+			for (const [key, id] of [
+				['author', 'sauceAuthor'],
+				['group', 'sauceGroup'],
+				['comments', 'sauceComments'],
+			]) {
+				const field = document.getElementById(id);
+				if (field && typeof meta[key] === 'string') {
+					field.value = meta[key];
+				}
+			}
+			if (typeof meta.comments === 'string') {
+				// the text arrives without an input event, so the byte
+				// counter would show the old size until a keystroke
+				enforceMaxBytes();
+			}
+		});
+		// the sidebar sauce block mirrors these fields
+		document.dispatchEvent(new CustomEvent('onSauceChange'));
+	};
+
 	/** @type {((payload: object) => void) | null} */
 	let timelapseWaiter = null;
 
@@ -636,6 +670,9 @@ const createWorkerHandler = inputHandle => {
 					}
 				}
 			});
+			if (!holds(ops, MoebiusAction.SAUCE)) {
+				applySauce(result);
+			}
 			// set-cell ops are idempotent, so replaying one the snapshot
 			// already holds is harmless; for-of also reaches the ops
 			// appended while an earlier one awaits
@@ -746,32 +783,7 @@ const createWorkerHandler = inputHandle => {
 				}
 				break;
 			case MoebiusAction.SAUCE:
-				muted(() => {
-					if (typeof data.title === 'string') {
-						State.title = data.title;
-						const field = document.getElementById('sauceTitle');
-						if (field) {
-							field.value = data.title;
-						}
-					}
-					for (const [key, id] of [
-						['author', 'sauceAuthor'],
-						['group', 'sauceGroup'],
-						['comments', 'sauceComments'],
-					]) {
-						const field = document.getElementById(id);
-						if (field && typeof data[key] === 'string') {
-							field.value = data[key];
-						}
-					}
-					if (typeof data.comments === 'string') {
-						// a peer's text arrives without an input event, so the
-						// byte counter would show the old size until a keystroke
-						enforceMaxBytes();
-					}
-				});
-				// the sidebar sauce block mirrors these fields
-				document.dispatchEvent(new CustomEvent('onSauceChange'));
+				applySauce(data);
 				break;
 			default:
 				// STATUS, operations 17-20/22: nothing to render yet
@@ -933,14 +945,13 @@ const createWorkerHandler = inputHandle => {
 		});
 	};
 
-	// no Moebius equivalent; a no-op keeps call sites inert
-	const sendCanvasSettings = _settings => {};
-
 	const sendResize = (columns, rows) =>
 		sendMutation(MoebiusAction.SET_CANVAS_SIZE, { columns, rows });
 
 	const sendFontChange = fontName => {
-		// peers (Moebius included) expect SAUCE font names
+		// peers (Moebius included) expect SAUCE font names; a font the
+		// SAUCE table lacks goes out under its app name, which the
+		// receive side passes through raw
 		if (sendMutation(MoebiusAction.CHANGE_FONT, { font_name: Load.appToSauceFont(fontName) ?? fontName })) {
 			fontSends++;
 		}
@@ -949,13 +960,19 @@ const createWorkerHandler = inputHandle => {
 	const sendIceColorsChange = iceColors =>
 		sendMutation(MoebiusAction.ICE_COLORS, { value: iceColors });
 
-	const sendSauce = meta =>
-		sendMutation(MoebiusAction.SAUCE, {
+	const sendSauce = meta => {
+		const sent = sendMutation(MoebiusAction.SAUCE, {
 			title: meta.title ?? '',
 			author: meta.author ?? '',
 			group: meta.group ?? '',
 			comments: meta.comments ?? '',
 		});
+		// peers title their pages by the room's rule, and so does ours
+		if (sent) {
+			State.title = sessionTitle(meta.title);
+		}
+		return sent;
+	};
 
 	const sendLetterSpacingChange = letterSpacing =>
 		sendMutation(MoebiusAction.USE_9PX_FONT, { value: letterSpacing });
@@ -1022,6 +1039,9 @@ const createWorkerHandler = inputHandle => {
 					State.font.setLetterSpacing(result.use9px);
 				}
 			});
+			if (!holds(ops, MoebiusAction.SAUCE)) {
+				applySauce(result);
+			}
 			if (Array.isArray(data.data.users)) {
 				for (const user of data.data.users) {
 					const nick = typeof user.nick === 'string' ? user.nick : 'guest';
@@ -1039,7 +1059,6 @@ const createWorkerHandler = inputHandle => {
 				}
 			}
 			websocketUI(true);
-			State.title = 'collab mode';
 			for (const op of ops) {
 				await applyOwnOp(op.type, op.data);
 			}
@@ -1216,18 +1235,9 @@ const createWorkerHandler = inputHandle => {
 			.then(() => onMessage(msg))
 			.catch(error => console.error('[Network] message failed:', error)));
 
-	if (State.worker) {
-		try {
-			State.worker.addEventListener('message', receive);
-			// the 'initialized' reply is what starts the probe
-			State.worker.postMessage({ cmd: 'init' });
-		} catch (error) {
-			console.error(
-				'[Network] Failed to add message event listener to worker:',
-				error,
-			);
-		}
-	}
+	State.worker.addEventListener('message', receive);
+	// the 'initialized' reply is what starts the probe
+	State.worker.postMessage({ cmd: 'init' });
 
 	// wrapped: the click event must never become the password argument
 	btnJoin.addEventListener('click', () => joinCollaboration());
@@ -1245,7 +1255,6 @@ const createWorkerHandler = inputHandle => {
 		requestTimelapse: requestTimelapse,
 		joinCollaboration: joinCollaboration,
 		stayLocal: stayLocal,
-		sendCanvasSettings: sendCanvasSettings,
 		sendResize: sendResize,
 		sendFontChange: sendFontChange,
 		sendIceColorsChange: sendIceColorsChange,

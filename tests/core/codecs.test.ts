@@ -100,7 +100,6 @@ describe('sauce codec', () => {
 				rows: 25,
 				iceColors: true,
 				fontName: 'IBM VGA',
-				flagsAndTInfo: false,
 				date: FIXED_DATE,
 			}),
 		);
@@ -659,17 +658,18 @@ describe('ans codec', () => {
 	});
 
 	it('full-width UTF-8 rows plus LF read as one row each', () => {
-		// Fixture mimics the v2 writer: full-width UTF-8 rows each followed
-		// by ESC[0m + LF, no SAUCE. Only glyphs compare: the v2 encoder
-		// resets the stream per row but not its diff trackers, so old
-		// files carry baked-in color loss.
-		const d1 = decodeAns(makeAnsi({ columns: 80, rows: 25, seed: 55 }));
-		const legacy = encodeAns(d1.doc, { utf8: true });
-		const d2 = decodeAns(legacy, { utf8: true });
-		expect(d2.doc.getRows()).toBe(d1.doc.getRows());
-		const chars = (u16: Uint16Array) => Array.from(u16, word => word >> 8);
-		expect(chars(v3ToU16(d2.doc).imageData)).toEqual(
-			chars(v3ToU16(d1.doc).imageData),
+		// the v2 UTF-8 writer's shape: full-width rows, each closed by
+		// ESC[0m + LF, no SAUCE
+		const shades = ['░', '▒', '▓'];
+		const text = shades
+			.map((shade, y) => `\u001b[0;3${y + 1}m${shade.repeat(80)}\u001b[0m\n`)
+			.join('');
+		const { doc } = decodeAns(new TextEncoder().encode(`\u001b[0m${text}`), {
+			utf8: true,
+		});
+		expect(doc.getRows()).toBe(3);
+		expect(Array.from(v3ToU16(doc).imageData, word => word >> 8)).toEqual(
+			[176, 177, 178].flatMap(code => Array(80).fill(code)),
 		);
 	});
 
@@ -734,7 +734,7 @@ describe('ans codec', () => {
 
 	it('plain-text export strips escape codes', () => {
 		const d1 = decodeAns(makeAnsi({ columns: 20, rows: 3, seed: 5 }));
-		const text = encodeAns(d1.doc, { utf8: true, stripEscapeCodes: true });
+		const text = encodeUtf8(d1.doc, { plain: true });
 		expect(Array.from(text)).not.toContain(27);
 	});
 

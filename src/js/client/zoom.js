@@ -198,7 +198,6 @@ export const createZoomController = viewport => {
 		setZoom(Math.floor(getZoom() * 2) / 2 + ZOOM_STEP, viewportCenter());
 	const zoomOut = () =>
 		setZoom(Math.ceil(getZoom() * 2) / 2 - ZOOM_STEP, viewportCenter());
-	const zoomReset = () => setZoom(1, viewportCenter());
 
 	document.addEventListener(
 		'onTextCanvasPinchStart',
@@ -303,8 +302,6 @@ export const createZoomController = viewport => {
 		setZoom,
 		zoomIn,
 		zoomOut,
-		zoomReset,
-		getZoom,
 		isInteractive: () => interactive,
 		dispose: () => {
 			aborter.abort();

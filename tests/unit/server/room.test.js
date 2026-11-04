@@ -97,13 +97,6 @@ describe('connect', () => {
 		expect(room.connect(ok, { nick: 'x', pass: 'pw' })).toBe(true);
 	});
 
-	it('spectators can be disabled entirely', () => {
-		const room = createRoom({ spectators: { enabled: false } });
-		const spectator = fakeClient();
-		expect(room.connect(spectator, {})).toBe(false);
-		expect(spectator.last().type).toBe(A.REFUSED);
-	});
-
 	it('broadcasts JOIN to registered users', () => {
 		const room = createRoom();
 		const first = joinEditor(room, 'a');

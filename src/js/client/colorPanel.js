@@ -147,14 +147,6 @@ const createColorPanel = () => {
 			}
 		});
 	}
-
-	return {
-		hide: () => {
-			if (State.flyouts?.isOpen('colors')) {
-				State.flyouts.close();
-			}
-		},
-	};
 };
 
 export { createColorPanel };

@@ -15,7 +15,6 @@ vi.mock('../../src/js/client/fontCache.js', () => ({
 		// a miss: the image loads directly
 		getFont: vi.fn(() => Promise.resolve(null)),
 		preloadCommonFonts: vi.fn(),
-		clearCache: vi.fn(),
 		memoryCache: new Map(),
 	},
 }));

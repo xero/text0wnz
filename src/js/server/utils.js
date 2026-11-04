@@ -48,26 +48,20 @@ Examples:
 
 const callout = msg => {
 	console.log(
-		`╓─────  ${sanitize(msg, 100, false)}\n╙───────────────────────────────── ─ ─`,
+		`╓─────  ${sanitize(msg, 100)}\n╙───────────────────────────────── ─ ─`,
 	);
 };
 
-const sanitize = (input, limit = 100, quote = true) => {
+const sanitize = (input, limit = 100) => {
 	if (input === null || input === undefined) {
 		return '';
 	}
-	const str = [
-		...String(input)
-			.trim()
-			.replace(/\p{C}/gu, '')
-			.replace(/[\n\r]/g, ''),
-	]
+	return [...String(input).trim().replace(/\p{C}/gu, '')]
 		// code points, not UTF-16 units: a substring cut at the limit
 		// could split a surrogate pair, re-creating the lone surrogate
 		// the control strip just removed
 		.slice(0, limit)
 		.join('');
-	return quote ? `'${str}'` : str;
 };
 
 export {

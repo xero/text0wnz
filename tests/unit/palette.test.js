@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-	getUnicode,
-	getUTF8,
 	createPalette,
 	createDefaultPalette,
 	createPalettePreview,
@@ -22,66 +20,6 @@ vi.mock('../../src/js/client/state.js', () => ({
 }));
 
 describe('Palette Utilities', () => {
-	describe('getUnicode', () => {
-		it('should return correct Unicode values for ASCII control characters', () => {
-			expect(getUnicode(1)).toBe(0x263a); // ☺
-			expect(getUnicode(2)).toBe(0x263b); // ☻
-			expect(getUnicode(3)).toBe(0x2665); // ♥
-			expect(getUnicode(4)).toBe(0x2666); // ♦
-		});
-
-		it('should return correct Unicode values for extended ASCII', () => {
-			expect(getUnicode(127)).toBe(0x2302); // ⌂
-			expect(getUnicode(128)).toBe(0x00c7); // Ç
-			expect(getUnicode(255)).toBe(0x00a0); // non-breaking space
-		});
-
-		it('should return original char code for standard ASCII characters', () => {
-			expect(getUnicode(65)).toBe(65); // A
-			expect(getUnicode(48)).toBe(48); // 0
-			expect(getUnicode(32)).toBe(32); // space
-		});
-
-		it('should handle edge cases', () => {
-			expect(getUnicode(0)).toBe(0x00a0); // non-breaking space
-			expect(getUnicode(255)).toBe(0x00a0); // non-breaking space
-			expect(getUnicode(256)).toBe(256);
-		});
-
-		it('should handle extended ASCII range correctly', () => {
-			expect(getUnicode(176)).toBe(0x2591); // Light shade
-			expect(getUnicode(177)).toBe(0x2592); // Medium shade
-			expect(getUnicode(178)).toBe(0x2593); // Dark shade
-			expect(getUnicode(219)).toBe(0x2588); // Full block
-		});
-	});
-
-	describe('getUTF8', () => {
-		it('should convert single-byte characters correctly', () => {
-			expect(getUTF8(65)).toEqual([65]); // A
-			expect(getUTF8(32)).toEqual([32]); // space
-		});
-
-		it('should convert multi-byte Unicode characters correctly', () => {
-			// ♥ U+2665 encodes as E2 99 A5
-			const heartUTF8 = getUTF8(3);
-			expect(heartUTF8).toHaveLength(3);
-			expect(heartUTF8[0]).toBe(226);
-			expect(heartUTF8[1]).toBe(153);
-			expect(heartUTF8[2]).toBe(165);
-		});
-
-		it('should handle extended ASCII characters', () => {
-			const result = getUTF8(128); // Ç
-			expect(result).toHaveLength(2);
-		});
-
-		it('should handle box drawing characters', () => {
-			const result = getUTF8(176); // Light shade
-			expect(result).toHaveLength(3);
-		});
-	});
-
 	describe('createPalette', () => {
 		let mockPalette;
 
@@ -210,7 +148,6 @@ describe('Palette Utilities', () => {
 			mockCtx = {
 				clearRect: vi.fn(),
 				fillRect: vi.fn(),
-				createImageData: vi.fn(() => ({ data: new Uint8ClampedArray(100) })),
 			};
 
 			mockCanvas = {
@@ -226,8 +163,6 @@ describe('Palette Utilities', () => {
 			const preview = createPalettePreview(mockCanvas);
 
 			expect(preview).toHaveProperty('updatePreview');
-			expect(preview).toHaveProperty('setForegroundColor');
-			expect(preview).toHaveProperty('setBackgroundColor');
 			expect(typeof preview.updatePreview).toBe('function');
 		});
 

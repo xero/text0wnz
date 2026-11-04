@@ -49,8 +49,6 @@ interface EnvelopeJson {
 	palette: number[];
 	/** 'cp437' marks the identity table; otherwise [fontSlot, codepoint][]. */
 	glyphTable: 'cp437' | Array<[number, number]>;
-	/** old East Asian Width provenance stamp; nothing reads it */
-	widthTable?: string;
 	frames: EnvelopeFrame[];
 	meta?: DocMeta;
 	/** Embedded XB font, when the doc carries one. */

@@ -8,9 +8,6 @@ import { migrateV2Autosave } from '../core/index';
 import magicNumbers from './magicNumbers.js';
 
 const EditorState = {
-	urlPrefix: null,
-	uiDir: null,
-	fontDir: null,
 	fontWidth: null,
 	fontHeight: null,
 
@@ -25,29 +22,11 @@ const EditorState = {
 	positionInfo: null,
 	toolPreview: null,
 	pasteTool: null,
-	chat: null,
-	sampleTool: null,
 
 	network: null,
 	worker: null,
 
 	title: null,
-
-	initialized: false,
-	initializing: false,
-
-	dependenciesReady: {
-		palette: false,
-		textArtCanvas: false,
-		font: false,
-		modal: false,
-		cursor: false,
-		selectionCursor: false,
-		selectionTool: false,
-		positionInfo: false,
-		toolPreview: false,
-		pasteTool: false,
-	},
 };
 
 const dependencyWaitQueue = new Map();
@@ -59,48 +38,30 @@ class StateManager {
 		this.waitQueue = dependencyWaitQueue;
 		this.loadingFromStorage = false;
 
-		this.urlPrefix = import.meta.env.BASE_URL || '';
 		// vite.config normalizes VITE_UI_DIR the same way before naming
 		// the emitted dirs; the runtime must derive the identical path
 		// or every font fetch 404s on slashless env forms
 		const dirSlash = dir => dir.replace(/^\/|\/?$/g, '') + '/';
 		// parenthesized: `a + b || c` concatenates "undefined" into the
 		// path (truthy), so the fallbacks would never fire
-		this.uiDir = this.urlPrefix + dirSlash(import.meta.env.VITE_UI_DIR || 'ui');
+		this.uiDir =
+			(import.meta.env.BASE_URL || '') +
+			dirSlash(import.meta.env.VITE_UI_DIR || 'ui');
 		this.fontDir =
 			this.uiDir + dirSlash(import.meta.env.VITE_FONT_DIR || 'fonts');
 
 		// bound: State re-exports these as bare function references
-		this.set = this.set.bind(this);
-		this.get = this.get.bind(this);
 		this.waitFor = this.waitFor.bind(this);
-		this.checkDependencyQueue = this.checkDependencyQueue.bind(this);
-		this.checkInitializationComplete =
-			this.checkInitializationComplete.bind(this);
-		this.startInitialization = this.startInitialization.bind(this);
 		this.saveToLocalStorage = this.saveToLocalStorage.bind(this);
 		this.restoreStateFromLocalStorage =
 			this.restoreStateFromLocalStorage.bind(this);
 		this.clearLocalStorage = this.clearLocalStorage.bind(this);
-		this.isDefaultState = this.isDefaultState.bind(this);
 	}
 
 	set(key, value) {
 		this.state[key] = value;
-
-		if (
-			Object.prototype.hasOwnProperty.call(this.state.dependenciesReady, key)
-		) {
-			this.state.dependenciesReady[key] = value !== null && value !== undefined;
-		}
-
-		this.checkDependencyQueue(key);
-		this.checkInitializationComplete();
+		this.checkDependencyQueue();
 		return this;
-	}
-
-	get(key) {
-		return this.state[key];
 	}
 
 	/** run callback now if every dependency is set, else once they all are */
@@ -137,7 +98,7 @@ class StateManager {
 		return this;
 	}
 
-	checkDependencyQueue(_key) {
+	checkDependencyQueue() {
 		const toRemove = [];
 
 		this.waitQueue.forEach((waiter, waitId) => {
@@ -162,35 +123,6 @@ class StateManager {
 		});
 
 		toRemove.forEach(waitId => this.waitQueue.delete(waitId));
-	}
-
-	checkInitializationComplete() {
-		const coreReady = [
-			'palette',
-			'textArtCanvas',
-			'font',
-			'modal',
-			'cursor',
-			'selectionCursor',
-			'selectionTool',
-			'positionInfo',
-			'toolPreview',
-			'pasteTool',
-		].every(key => this.state.dependenciesReady[key]);
-
-		if (coreReady && !this.state.initialized && this.state.initializing) {
-			this.state.initialized = true;
-			this.state.initializing = false;
-		}
-	}
-
-	startInitialization() {
-		if (this.state.initializing || this.state.initialized) {
-			console.warn('[State] Initialization already in progress or complete');
-			return;
-		}
-
-		this.state.initializing = true;
 	}
 
 	/** a blank canvas on default settings: nothing worth autosaving */
@@ -396,97 +328,94 @@ class StateManager {
 		};
 
 		try {
-			if (settings) {
-				// ice colors stay on until the font lands, so no blink timer
-				// starts mid-restore
-				const originalIceColors = settings.iceColors;
-				if (this.state.textArtCanvas) {
-					this.state.textArtCanvas.setIceColors(true);
-				}
+			// ice colors stay on until the font lands, so no blink timer
+			// starts mid-restore
+			const originalIceColors = settings.iceColors;
+			if (this.state.textArtCanvas) {
+				this.state.textArtCanvas.setIceColors(true);
+			}
 
-				if (settings.letterSpacing !== undefined && this.state.font) {
-					this.state.font.setLetterSpacing(settings.letterSpacing);
-				}
+			if (settings.letterSpacing !== undefined && this.state.font) {
+				this.state.font.setLetterSpacing(settings.letterSpacing);
+			}
 
-				const savedScaleFactor = settings.scaleFactor ?? 1;
+			const savedScaleFactor = settings.scaleFactor ?? 1;
 
-				if (settings.paletteColors && this.state.palette) {
-					settings.paletteColors.forEach((color, index) => {
-						this.state.palette.setRGBAColor(index, color);
-					});
-					this.state.palette.setForegroundColor(
-						magicNumbers.DEFAULT_FOREGROUND,
+			if (settings.paletteColors && this.state.palette) {
+				settings.paletteColors.forEach((color, index) => {
+					this.state.palette.setRGBAColor(index, color);
+				});
+				this.state.palette.setForegroundColor(
+					magicNumbers.DEFAULT_FOREGROUND,
+				);
+				this.state.palette.setBackgroundColor(
+					magicNumbers.DEFAULT_BACKGROUND,
+				);
+			}
+
+			setTimeout(guard(async () => {
+				const xbFontData = await Storage.loadFontData('XBIN');
+
+				if (xbFontData && this.state.textArtCanvas) {
+					this.state.textArtCanvas.setXBFontData(
+						xbFontData.bytes,
+						xbFontData.width,
+						xbFontData.height,
 					);
-					this.state.palette.setBackgroundColor(
-						magicNumbers.DEFAULT_BACKGROUND,
-					);
 				}
 
+				// the OPFS autosave journal is the source of truth and
+				// restores plane-native: a u16 restore would flatten
+				// frames, truecolor, and unicode, and its keyframe would
+				// then destroy them in the journal too. The legacy
+				// IndexedDB snapshot is the fallback, migrated through
+				// core/migrate so restoring it re-seeds the journal via
+				// setDocData's keyframe trigger.
 				setTimeout(guard(async () => {
-					const xbFontData = await Storage.loadFontData('XBIN');
+					const journalData =
+						await this.state.textArtCanvas?.loadJournalSnapshot?.();
 
-					if (xbFontData && this.state.textArtCanvas) {
-						this.state.textArtCanvas.setXBFontData(
-							xbFontData.bytes,
-							xbFontData.width,
-							xbFontData.height,
-						);
+					if (journalData?.doc && this.state.textArtCanvas) {
+						this.state.textArtCanvas.setDocData(journalData.doc);
+					} else if (this.state.textArtCanvas) {
+						const migrated = migrateV2Autosave({
+							canvasData: await Storage.loadCanvasData(),
+							settings: settings,
+						});
+						if (migrated) {
+							this.state.textArtCanvas.setDocData(migrated.doc);
+						}
 					}
+					adopted = true;
 
-					// the OPFS autosave journal is the source of truth and
-					// restores plane-native: a u16 restore would flatten
-					// frames, truecolor, and unicode, and its keyframe would
-					// then destroy them in the journal too. The legacy
-					// IndexedDB snapshot is the fallback, migrated through
-					// core/migrate so restoring it re-seeds the journal via
-					// setDocData's keyframe trigger.
-					setTimeout(guard(async () => {
-						const journalData =
-							await this.state.textArtCanvas?.loadJournalSnapshot?.();
-
-						if (journalData?.doc && this.state.textArtCanvas) {
-							this.state.textArtCanvas.setDocData(journalData.doc);
-						} else if (this.state.textArtCanvas) {
-							const migrated = migrateV2Autosave({
-								canvasData: await Storage.loadCanvasData(),
-								settings: settings,
-								xbFont: xbFontData,
-							});
-							if (migrated) {
-								this.state.textArtCanvas.setDocData(migrated.doc);
+					setTimeout(guard(() => {
+						if (settings?.fontName && this.state.textArtCanvas) {
+							this.state.textArtCanvas.setFont(
+								settings.fontName,
+								() => {
+									// setFont reruns a callback that throws, so the flag
+									// clears before anything here can
+									this.loadingFromStorage = false;
+									closeModal();
+									if (this.state.textArtCanvas) {
+										this.state.textArtCanvas.setIceColors(originalIceColors);
+									}
+									document.dispatchEvent(
+										new CustomEvent('onStateRestorationComplete'),
+									);
+								},
+								savedScaleFactor,
+							);
+						} else {
+							this.loadingFromStorage = false;
+							closeModal();
+							if (this.state.textArtCanvas) {
+								this.state.textArtCanvas.setIceColors(originalIceColors);
 							}
 						}
-						adopted = true;
-
-						setTimeout(guard(() => {
-							if (settings?.fontName && this.state.textArtCanvas) {
-								this.state.textArtCanvas.setFont(
-									settings.fontName,
-									() => {
-										// setFont reruns a callback that throws, so the flag
-										// clears before anything here can
-										this.loadingFromStorage = false;
-										closeModal();
-										if (this.state.textArtCanvas) {
-											this.state.textArtCanvas.setIceColors(originalIceColors);
-										}
-										document.dispatchEvent(
-											new CustomEvent('onStateRestorationComplete'),
-										);
-									},
-									savedScaleFactor,
-								);
-							} else {
-								this.loadingFromStorage = false;
-								closeModal();
-								if (this.state.textArtCanvas) {
-									this.state.textArtCanvas.setIceColors(originalIceColors);
-								}
-							}
-						}), 0);
 					}), 0);
 				}), 0);
-			}
+			}), 0);
 		} catch (error) {
 			fail(error);
 		}
@@ -598,9 +527,6 @@ const State = {
 			document.title = `${value} [teXt0wnz]`;
 		}
 	},
-	get urlPrefix() {
-		return stateManager.urlPrefix;
-	},
 	get uiDir() {
 		return stateManager.uiDir;
 	},
@@ -612,7 +538,6 @@ const State = {
 	},
 
 	waitFor: stateManager.waitFor,
-	startInitialization: stateManager.startInitialization,
 
 	saveToLocalStorage: stateManager.saveToLocalStorage,
 	restoreStateFromLocalStorage: stateManager.restoreStateFromLocalStorage,
