@@ -16,8 +16,7 @@
  * loudly because a silently skipped glyph becomes an invisible
  * character in someone's artwork months later.
  *
- * Packed block layout (BLOCK_FORMAT_VERSION, which the baked
- * manifest records):
+ * Packed block layout (BLOCK_FORMAT_VERSION):
  *   bytes  0-31  presence bitmap, LSB-first: codepoint (base + i) is
  *                present iff (data[i >> 3] >> (i & 7)) & 1
  *   bytes 32-63  width bitmap, same indexing; a set bit means the
@@ -212,28 +211,4 @@ export const buildBlocks = (glyphs: HexGlyph[]): Map<number, Uint8Array> => {
 		}
 	}
 	return packed;
-};
-
-/**
- * uns2uni.tr (unscii's legacy-mosaic table) is a tr(1) argument pair
- * concatenated into one line: the first half of the code points are
- * the unscii PUA sources, the second half the Unicode 13+ targets at
- * the same index. Returns source -> target.
- */
-export const parseUns2Uni = (text: string): Map<number, number> => {
-	const codepoints: number[] = [];
-	for (const char of text.replace(/\s/g, '')) {
-		codepoints.push(char.codePointAt(0) ?? 0);
-	}
-	if (codepoints.length === 0 || codepoints.length % 2 !== 0) {
-		throw new HexFontError(
-			`uns2uni table has ${codepoints.length} code points, want an even count`,
-		);
-	}
-	const half = codepoints.length / 2;
-	const map = new Map<number, number>();
-	for (let i = 0; i < half; i++) {
-		map.set(codepoints[i], codepoints[half + i]);
-	}
-	return map;
 };

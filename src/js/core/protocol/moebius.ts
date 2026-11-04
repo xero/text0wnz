@@ -291,9 +291,6 @@ export const paletteToRGB8 = (
 	});
 };
 
-export const paletteTo6Bit = (rgb8: [number, number, number][]): number[][] =>
-	rgb8.map(([r, g, b]) => [compress8to6(r), compress8to6(g), compress8to6(b)]);
-
 /**
  * moebiusXBIN serializes custom font bytes as Node Buffer JSON.
  * Revive every shape defensively; null means "no usable font bytes",

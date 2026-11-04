@@ -129,10 +129,9 @@ void main() {
 /**
  * @param {HTMLElement} canvasContainer - the sized, scrolled content element
  * @param {Object} host - doc accessors from the text art canvas closure:
- *   { getColumns, getRows, getPlanes, getIceColors }, plus optional
- *   getDocPlanes (exports), getPalette (entries 16-255), and
- *   getGlyphDef + getHexPages for the unicode glyph pages (absent
- *   means ids >= 256 render the substitute box)
+ *   { getColumns, getRows, getPlanes, getIceColors, getDocPlanes,
+ *   getPalette, getGlyphDef, getHexPages }. getDocPlanes feeds exports,
+ *   getPalette entries 16-255, and the last two the unicode glyph pages
  * @returns {Object|null} renderer, or null when WebGL2 is unavailable
  */
 const createGLRenderer = (canvasContainer, host) => {
@@ -417,10 +416,9 @@ const createGLRenderer = (canvasContainer, host) => {
 		if (known !== undefined) {
 			return known;
 		}
-		const def = host.getGlyphDef ? host.getGlyphDef(glyphId) : undefined;
-		const pages = def && host.getHexPages ? host.getHexPages() : null;
-		const bits = pages
-			? pages.glyphBits(def.fontSlot, def.codepoint, fontW, fontH)
+		const def = host.getGlyphDef(glyphId);
+		const bits = def
+			? host.getHexPages().glyphBits(def.fontSlot, def.codepoint, fontW, fontH)
 			: null;
 		if (bits === undefined) {
 			return 0;
@@ -436,15 +434,9 @@ const createGLRenderer = (canvasContainer, host) => {
 		return slot;
 	};
 
-	// repaint-path remap: ids 0-255 pass through, higher ids become
-	// 256 + slot with the attr byte preserved
-	const mapGlyphWord = word => {
-		const glyphId = word & 0xffff;
-		if (glyphId < 256) {
-			return word;
-		}
-		return ((word & 0xffff0000) | (256 + slotForGlyphId(glyphId))) >>> 0;
-	};
+	// repaint-path remap for ids >= 256: 256 + slot, attr byte preserved
+	const mapGlyphWord = word =>
+		((word & 0xffff0000) | (256 + slotForGlyphId(word & 0xffff))) >>> 0;
 
 	let paletteTexture = null;
 	const uploadPalette = () => {
@@ -460,7 +452,7 @@ const createGLRenderer = (canvasContainer, host) => {
 			const rgba = State.palette.getRGBAColor(i);
 			pixels.set([rgba[0], rgba[1], rgba[2], 255], i * 4);
 		}
-		const docPalette = host.getPalette ? host.getPalette() : null;
+		const docPalette = host.getPalette();
 		for (let i = 16; i < 256; i++) {
 			const word =
 				docPalette && i < docPalette.length
@@ -653,11 +645,8 @@ const createGLRenderer = (canvasContainer, host) => {
 
 	// the renderer's redrawEntireImage: coverage repaint is sub-frame, so
 	// "progressive" collapses to one paint + the same completion contract
-	const redraw = (onProgress, onComplete) => {
+	const redraw = onComplete => {
 		repaint();
-		if (onProgress) {
-			onProgress(100);
-		}
 		if (onComplete) {
 			requestAnimationFrame(onComplete);
 		}
@@ -665,16 +654,12 @@ const createGLRenderer = (canvasContainer, host) => {
 	};
 
 	// cell-level invalidations: anything inside coverage repaints it whole
-	// (one instanced draw, ~0.05ms)
-	const drawRegion = (x, y, w, h) => {
+	// (one instanced draw, ~0.05ms), so only the rows matter
+	const drawRegion = (y, h) => {
 		if (y + h <= anchorRow || y >= anchorRow + coverageRows) {
 			return;
 		}
 		repaint();
-	};
-
-	const drawCell = (x, y) => {
-		drawRegion(x, y, 1, 1);
 	};
 
 	const updateBlink = () => {
@@ -693,9 +678,6 @@ const createGLRenderer = (canvasContainer, host) => {
 		}
 	};
 
-	const exportPlanes = () =>
-		(host.getDocPlanes ?? host.getPlanes)();
-
 	/**
 	 * CPU rasterizer for exports: identical semantics to the 2D glyph blits
 	 * (nearest-neighbor at any scale, ninth-column rule, blink drawn in its
@@ -704,7 +686,7 @@ const createGLRenderer = (canvasContainer, host) => {
 	const getImageRGBA = () => {
 		const columns = host.getColumns();
 		const rows = host.getRows();
-		const { glyph, fg: fgPlane, bg: bgPlane } = exportPlanes();
+		const { glyph, fg: fgPlane, bg: bgPlane } = host.getDocPlanes();
 		const width = cellW * columns;
 		const height = cellH * rows;
 		const data = new Uint8ClampedArray(width * height * 4);
@@ -712,7 +694,7 @@ const createGLRenderer = (canvasContainer, host) => {
 		for (let i = 0; i < 16; i++) {
 			colors.push(State.palette.getRGBAColor(i));
 		}
-		const docPalette = host.getPalette ? host.getPalette() : null;
+		const docPalette = host.getPalette();
 		for (let i = 16; i < 256; i++) {
 			const word =
 				docPalette && i < docPalette.length ? docPalette[i] : xterm256RGB(i);
@@ -731,10 +713,9 @@ const createGLRenderer = (canvasContainer, host) => {
 			if (slot !== undefined && slot > 0) {
 				return slotBits[slot];
 			}
-			const def = host.getGlyphDef ? host.getGlyphDef(glyphId) : undefined;
-			const pages = def && host.getHexPages ? host.getHexPages() : null;
-			const bits = pages
-				? pages.glyphBits(def.fontSlot, def.codepoint, fontW, fontH)
+			const def = host.getGlyphDef(glyphId);
+			const bits = def
+				? host.getHexPages().glyphBits(def.fontSlot, def.codepoint, fontW, fontH)
 				: null;
 			return bits || substituteBits();
 		};
@@ -811,11 +792,9 @@ const createGLRenderer = (canvasContainer, host) => {
 		rebuild,
 		redraw,
 		drawRegion,
-		drawCell,
 		updateBlink,
 		getImage,
 		getImageRGBA,
-		canvas,
 	};
 };
 

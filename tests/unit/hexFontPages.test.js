@@ -29,7 +29,7 @@ const makeFetch = ({ fonts, blocks, failBlocks = []}) => {
 		if (url.endsWith('/manifest.json')) {
 			return {
 				ok: true,
-				json: async () => ({ formatVersion: 1, fonts }),
+				json: async () => ({ fonts }),
 			};
 		}
 		const match = (/\/([a-z0-9]+)\/([0-9a-f]+)\.bin$/).exec(url);

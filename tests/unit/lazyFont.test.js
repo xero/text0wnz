@@ -59,10 +59,6 @@ describe('Lazy Font Module', () => {
 	});
 
 	afterEach(() => {
-		// Clean up lazy font cache explicitly to free memory
-		if (lazyFontInstance && typeof lazyFontInstance.clearCache === 'function') {
-			lazyFontInstance.clearCache();
-		}
 		lazyFontInstance = null;
 
 		if (fontData && fontData.data) {
@@ -81,7 +77,6 @@ describe('Lazy Font Module', () => {
 			lazyFontInstance = createLazyFont(fontData, mockPalette, false);
 
 			expect(lazyFontInstance).toBeDefined();
-			expect(lazyFontInstance.getData).toBeDefined();
 			expect(lazyFontInstance.getWidth).toBeDefined();
 			expect(lazyFontInstance.getHeight).toBeDefined();
 			expect(lazyFontInstance.draw).toBeDefined();
@@ -93,12 +88,6 @@ describe('Lazy Font Module', () => {
 
 			expect(lazyFontInstance.getWidth()).toBe(8);
 			expect(lazyFontInstance.getHeight()).toBe(16);
-		});
-
-		it('should return font data', () => {
-			lazyFontInstance = createLazyFont(fontData, mockPalette, false);
-
-			expect(lazyFontInstance.getData()).toEqual(fontData);
 		});
 
 		it('should pre-generate common glyphs', async () => {

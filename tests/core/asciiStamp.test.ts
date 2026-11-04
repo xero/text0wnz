@@ -298,7 +298,6 @@ describe('ascii stamp engine, old skool style', () => {
 	it('keeps the old skool vocabulary at width one after a width round trip', () => {
 		const engine = createAsciiStampEngine({ width: 5 });
 		engine.setWidth(1);
-		expect(engine.getWidth()).toBe(1);
 		const grid = new Map<string, number>();
 		engine.begin(3, 0, 1).forEach(c => grid.set(`${c.x},${c.y}`, c.charCode));
 		engine.move(3, 4, 1).forEach(c => grid.set(`${c.x},${c.y}`, c.charCode));

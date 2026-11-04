@@ -151,7 +151,7 @@ const connect = options => {
 				clearTimeout(dialTimer);
 				connected = true;
 				myId = typeof frame.data.id === 'number' ? frame.data.id : -1;
-				toPage({ cmd: 'connected', id: myId, data: frame.data });
+				toPage({ cmd: 'connected', data: frame.data });
 			} else if (frame.type === MoebiusAction.REFUSED) {
 				toPage({ cmd: 'refused' });
 				closeSocket();

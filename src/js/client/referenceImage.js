@@ -289,10 +289,8 @@ const createReferenceImage = (deps = {}) => {
 	restore();
 
 	return {
-		clear: reset,
 		load,
 		isVisible: () => overlay.classList.contains('enabled'),
-		applyStyle,
 		isOpen,
 		setOpen,
 	};

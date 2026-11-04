@@ -120,16 +120,4 @@ export const FontCache = {
 
 		return null;
 	},
-
-	async clearCache() {
-		if (this._hasCacheAPI()) {
-			try {
-				await globalThis.caches.delete(FONT_CACHE_NAME);
-			} catch (error) {
-				console.error('[FontCache] Error clearing cache:', error);
-			}
-		} else {
-			this.memoryCache.clear();
-		}
-	},
 };

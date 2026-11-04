@@ -45,23 +45,6 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	enforceMaxBytes: vi.fn(),
 }));
 
-vi.mock('../../src/js/client/palette.js', () => ({
-	getUTF8: vi.fn(charCode => {
-		if (charCode < 128) {
-			return [charCode];
-		}
-		if (charCode < 0x800) {
-			return [0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f)];
-		}
-		return [
-			0xe0 | (charCode >> 12),
-			0x80 | ((charCode >> 6) & 0x3f),
-			0x80 | (charCode & 0x3f),
-		];
-	}),
-	getUnicode: vi.fn(),
-}));
-
 const mockDocument = {
 	createElement: vi.fn(() => ({
 		href: '',
@@ -184,9 +167,10 @@ describe('File Module - Load and Save Operations', () => {
 				// XBIN embedded font
 				expect(Load.appToSauceFont('XBIN')).toBe('XBIN');
 
-				expect(Load.appToSauceFont('Unknown Font')).toBe('IBM VGA');
-				expect(Load.appToSauceFont(null)).toBe('IBM VGA');
-				expect(Load.appToSauceFont(undefined)).toBe('IBM VGA');
+				expect(Load.appToSauceFont('Unknown Font')).toBe(null);
+				expect(Load.appToSauceFont('CP866 8x16')).toBe(null);
+				expect(Load.appToSauceFont(null)).toBe(null);
+				expect(Load.appToSauceFont(undefined)).toBe(null);
 			});
 		});
 
@@ -491,6 +475,29 @@ describe('File Module - Load and Save Operations', () => {
 				await Save.ans();
 
 				expect(global.Blob).toHaveBeenCalled();
+			});
+
+			// SAUCE §TInfoS: FontName, 22 NUL-padded bytes at record offset 106
+			const savedFontName = () => {
+				const bytes = global.Blob.mock.calls[0][0][0];
+				const field = bytes.subarray(bytes.length - 128 + 106, bytes.length - 128 + 128);
+				return String.fromCharCode(...field).replace(/\0+$/, '');
+			};
+
+			it('writes the SAUCE name of a font in the table', async () => {
+				mockState.textArtCanvas.getCurrentFontName.mockReturnValue('CP850 8x16');
+
+				await Save.ans();
+
+				expect(savedFontName()).toBe('IBM VGA 850');
+			});
+
+			it('writes IBM VGA for a font the SAUCE table lacks', async () => {
+				mockState.textArtCanvas.getCurrentFontName.mockReturnValue('CP866 8x16');
+
+				await Save.ans();
+
+				expect(savedFontName()).toBe('IBM VGA');
 			});
 		});
 	});

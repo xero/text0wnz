@@ -8,6 +8,7 @@
 
 import {
 	DEFAULT_FRAME_CELL_BUDGET,
+	MAX_DOC_CELLS,
 	createDocV3,
 	glyphWord,
 	type DocV3,
@@ -36,8 +37,6 @@ interface Grid {
 	cells: ExtCell[];
 }
 
-const MAX_CELLS = 10_000_000;
-
 const MUTATING = new Set<number>([
 	MoebiusAction.DRAW,
 	MoebiusAction.SET_CANVAS_SIZE,
@@ -52,7 +51,7 @@ const validDims = (columns: unknown, rows: unknown): boolean =>
 	Number.isInteger(rows) &&
 	(columns as number) > 0 &&
 	(rows as number) > 0 &&
-	(columns as number) * (rows as number) <= MAX_CELLS;
+	(columns as number) * (rows as number) <= MAX_DOC_CELLS;
 
 export const timelapseToDoc = (
 	payload: Record<string, unknown>,
@@ -166,7 +165,6 @@ export const timelapseToDoc = (
 							code: block.code as number,
 							fg: block.fg as number,
 							bg: block.bg as number,
-							ext: sanitizeExtCell(block.ext) ?? undefined,
 						}),
 					);
 				}

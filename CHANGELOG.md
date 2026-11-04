@@ -276,6 +276,15 @@ byte-exact golden tests before anything else moved.
   embedded font, the editor fell back to the default font but the
   label kept the collaborator's font name. It names the default font
   now.
+- **Enter presses the focused button.** In keyboard mode, Enter on a
+  button reached with Tab moved the canvas cursor down a row instead of
+  pressing the button. Enter starts a new line only while the canvas
+  has focus.
+- **The dark mode toggle lights up on hover.** Its sun, moon, and beams
+  stayed dim under the pointer while every other rail icon lit up.
+- **Drawing tools load when you first pick one.** The freehand tools
+  came down with the editor at boot, so every page load paid for them
+  even when you never drew with them.
 - **The bridge dials only public addresses.** `BRIDGE=port` treated
   multicast, broadcast, reserved, IETF protocol assignment, and
   benchmarking addresses, the Azure wireserver, and 6to4 as public and

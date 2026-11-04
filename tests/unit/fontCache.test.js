@@ -217,36 +217,6 @@ describe('FontCache Module', () => {
 		});
 	});
 
-	describe('clearCache', () => {
-		it('should clear Cache API', async () => {
-			await FontCache.clearCache();
-
-			expect(globalThis.caches.delete).toHaveBeenCalledWith('text0wnz-fonts-dev');
-		});
-
-		it('should handle Cache API delete errors', async () => {
-			globalThis.caches.delete.mockRejectedValue(new Error('Delete error'));
-
-			await FontCache.clearCache();
-
-			expect(console.error).toHaveBeenCalled();
-		});
-
-		it('should clear memory cache when Cache API is not available', async () => {
-			const tempCaches = globalThis.caches;
-			delete globalThis.caches;
-
-			FontCache.memoryCache.set('TestFont', new Blob(['data']));
-			expect(FontCache.memoryCache.size).toBe(1);
-
-			await FontCache.clearCache();
-
-			expect(FontCache.memoryCache.size).toBe(0);
-
-			globalThis.caches = tempCaches;
-		});
-	});
-
 	describe('Edge Cases', () => {
 		it('should handle concurrent preload calls', async () => {
 			mockCache.match.mockResolvedValue(null);

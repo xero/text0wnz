@@ -20,7 +20,6 @@ import {
 	expand6to8,
 	compress8to6,
 	paletteToRGB8,
-	paletteTo6Bit,
 	reviveFontBytes,
 	joinDocToDoc,
 	docToJoinDoc,
@@ -247,10 +246,6 @@ describe('palettes', () => {
 		expect(joinDocToDoc(join, { paletteDepth: 8 }).doc.palette[0]).toBe(
 			(16 << 16) | (8 << 8) | 32,
 		);
-	});
-
-	it('emits 6-bit components for vanilla consumers', () => {
-		expect(paletteTo6Bit([[255, 0, 170]])).toEqual([[63, 0, 42]]);
 	});
 });
 

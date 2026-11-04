@@ -368,7 +368,6 @@ export interface AsciiStampEngine {
 	end: () => StampOut[];
 	/** Stroke width in cells; 1 is the old skool style, more is nu skool. */
 	setWidth: (width: number) => void;
-	getWidth: () => number;
 }
 
 export interface AsciiStampOptions {
@@ -1207,6 +1206,5 @@ export const createAsciiStampEngine = (
 		setWidth: w => {
 			width = clampWidth(w);
 		},
-		getWidth: () => width,
 	};
 };

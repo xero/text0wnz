@@ -301,15 +301,6 @@ export const createPointerInput = (container, handlers, options = {}) => {
 	container.addEventListener('contextmenu', onContextMenu);
 
 	return {
-		dispose: () => {
-			container.removeEventListener('pointerdown', onPointerDown);
-			container.removeEventListener('pointermove', onPointerMove);
-			container.removeEventListener('pointerup', onPointerUp);
-			container.removeEventListener('pointercancel', onPointerCancel);
-			container.removeEventListener('lostpointercapture', onLostCapture);
-			container.removeEventListener('contextmenu', onContextMenu);
-			recognizer.reset();
-		},
 		stats: () => ({
 			strokePointer,
 			penDown: penIds.size,

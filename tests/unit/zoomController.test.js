@@ -93,8 +93,6 @@ describe('zoom controller', () => {
 		mocks.setScale(1.37);
 		zoom.zoomOut();
 		expect(mocks.state.font.setScaleFactor).toHaveBeenLastCalledWith(1);
-		zoom.zoomReset();
-		expect(mocks.state.font.setScaleFactor).toHaveBeenLastCalledWith(1);
 	});
 
 	it('binds no keyboard shortcuts of its own: ui.js owns ctrl +/-', () => {

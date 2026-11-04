@@ -10,6 +10,7 @@ import {
 	makeSauce,
 	textToBytes,
 } from '../corpus/generators.js';
+import { v3ToU16Lossy } from '../../src/js/core/index.js';
 
 const ui = vi.hoisted(() => new Map());
 
@@ -26,13 +27,17 @@ vi.mock('../../src/js/client/ui.js', () => ({
 
 import { Load } from '../../src/js/client/file.js';
 
-/** resolves with the open callback's arguments */
+/** resolves with the open callback's arguments and the doc's u16 cells */
 const open = (name, bytes, opts = {}) =>
 	new Promise((resolve, reject) => {
-		Load.file(new File([bytes], name), (...args) => resolve(args), {
-			...opts,
-			onError: reject,
-		});
+		Load.file(
+			new File([bytes], name),
+			(letterSpacing, fontName, doc) => {
+				const { columns, rows, imageData, iceColors } = v3ToU16Lossy(doc);
+				resolve({ columns, rows, cells: imageData, iceColors, letterSpacing, fontName });
+			},
+			{ ...opts, onError: reject },
+		);
 	});
 
 const withSauce = (body, sauce) =>
@@ -71,13 +76,13 @@ describe('fontForFile', () => {
 describe('ANSI opens', () => {
 	it('resets attributes on ESC[m after bold', async () => {
 		// ECMA-48 §8.3.117: an empty SGR parameter is 0, not bold
-		const [, , cells] = await open('reset.ans', textToBytes('\x1b[1;31mA\x1b[mB'));
+		const { cells } = await open('reset.ans', textToBytes('\x1b[1;31mA\x1b[mB'));
 		expect(cells[0] & 0xff).toBe(0x0c);
 		expect(cells[1] & 0xff).toBe(0x07);
 	});
 
 	it('lands SGR colors in BIN color order', async () => {
-		const [, , cells] = await open(
+		const { cells } = await open(
 			'order.ans',
 			textToBytes('\x1b[31mR\x1b[34mB\x1b[36mC\x1b[33mY'),
 		);
@@ -85,7 +90,7 @@ describe('ANSI opens', () => {
 	});
 
 	it('keeps COMNT text out of the art when SAUCE FileSize is 0', async () => {
-		const [columns, rows, cells] = await open(
+		const { columns, rows, cells } = await open(
 			'nosize.ans',
 			withSauce(textToBytes('HELLO'), {
 				fileSize: 0,
@@ -117,7 +122,7 @@ describe('ANSI opens', () => {
 	});
 
 	it('stops a SAUCE field at its NUL terminator', async () => {
-		const [, , , , , fontName] = await open(
+		const { fontName } = await open(
 			'nul.ans',
 			withSauce(textToBytes('HI'), {
 				fileSize: 2,
@@ -130,7 +135,7 @@ describe('ANSI opens', () => {
 	});
 
 	it('hands an NFO SAUCE font to font selection', async () => {
-		const [, , , , , fontName] = await open(
+		const { fontName } = await open(
 			'release.nfo',
 			withSauce(textToBytes('HI'), { fileSize: 2, fontName: 'Amiga Topaz 2+' }),
 		);
@@ -149,7 +154,7 @@ describe('ANSI opens', () => {
 		});
 		record[5] = 0x20;
 		record[6] = 0x20;
-		const [columns, rows, , iceColors, letterSpacing, fontName] = await open(
+		const { columns, rows, iceColors, letterSpacing, fontName } = await open(
 			'old.ans',
 			concatBytes([textToBytes('HI'), Uint8Array.of(0x1a), record]),
 		);
@@ -168,7 +173,7 @@ describe('BIN opens', () => {
 	const binSauce = sauce => ({ datatype: 5, filetype: 80, ...sauce });
 
 	it('pads a trailing partial row', async () => {
-		const [columns, rows, cells] = await open(
+		const { columns, rows, cells } = await open(
 			'partial.bin',
 			withSauce(new Uint8Array(650).fill(0x41), binSauce({ fileSize: 650 })),
 		);
@@ -179,7 +184,7 @@ describe('BIN opens', () => {
 	});
 
 	it('keeps the SAUCE trailer out of the cells when FileSize is 0', async () => {
-		const [, rows, cells] = await open(
+		const { rows, cells } = await open(
 			'nosize.bin',
 			withSauce(
 				new Uint8Array(640).fill(0x42),
@@ -193,7 +198,7 @@ describe('BIN opens', () => {
 
 	it('reads a FileType 1 record as the 160-column default', async () => {
 		// wild BINs stamp the ANSi FileType; width 2 is never real art
-		const [columns, rows] = await open(
+		const { columns, rows } = await open(
 			'stamped.bin',
 			withSauce(new Uint8Array(960), binSauce({ filetype: 1, tinfo1: 80, fileSize: 960 })),
 		);
@@ -202,7 +207,7 @@ describe('BIN opens', () => {
 
 	it('ignores the TInfo1 width of a Character record', async () => {
 		// generic SAUCE adders stamp 80x25 on 160-column BINs
-		const [columns, rows] = await open(
+		const { columns, rows } = await open(
 			'charrec.bin',
 			withSauce(new Uint8Array(640), {
 				datatype: 1,
@@ -215,7 +220,7 @@ describe('BIN opens', () => {
 	});
 
 	it('hands its SAUCE font, flags, and text to the open', async () => {
-		const [, , , iceColors, letterSpacing, fontName] = await open(
+		const { iceColors, letterSpacing, fontName } = await open(
 			'font.bin',
 			withSauce(
 				new Uint8Array(320),

@@ -187,8 +187,6 @@ export interface BuildSauceOptions {
 	letterSpacing?: boolean;
 	/** SAUCE §FontName (TInfoS); written only with the flags byte. */
 	fontName?: string;
-	/** XBin passes false: SAUCE §FileType gives XBin no Flags or TInfoS. */
-	flagsAndTInfo?: boolean;
 	/**
 	 * Raw SAUCE §ANSiFlags AR bits ((flags >> 3) & 3) carried from an
 	 * opened file so a resave round-trips the author's intent verbatim;
@@ -220,7 +218,6 @@ export const buildSauce = (options: BuildSauceOptions): Uint8Array => {
 		iceColors = false,
 		letterSpacing = false,
 		fontName = '',
-		flagsAndTInfo = true,
 	} = options;
 
 	// SAUCE §Layout: Character fields are CP437 bytes; UTF-8 here would
@@ -277,7 +274,8 @@ export const buildSauce = (options: BuildSauceOptions): Uint8Array => {
 
 	record[104] = commentsCount;
 
-	if (dataType !== 6 && flagsAndTInfo) {
+	// SAUCE §FileType gives XBin no Flags or TInfoS
+	if (dataType !== 6) {
 		let flags = (options.aspect ?? 0) << 3;
 		if (iceColors) {
 			flags |= 1;

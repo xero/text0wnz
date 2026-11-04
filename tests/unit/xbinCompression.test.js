@@ -62,12 +62,6 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	enforceMaxBytes: vi.fn(),
 }));
 
-vi.mock('../../src/js/client/palette.js', () => ({
-	getUTF8: vi.fn(charCode => [charCode]),
-	getUnicode: vi.fn(),
-	getUnicodeReverseMap: new Map(),
-}));
-
 // independent reader for the four XBin §XBIN Compression run types,
 // so the writer is never graded by its own codec's reader
 const uncompress = (bytes, dataIndex, dataEnd, columns, rows) => {
@@ -104,6 +98,31 @@ const uncompress = (bytes, dataIndex, dataEnd, columns, rows) => {
 		}
 	}
 	return data;
+};
+
+const confirmClick = () => {
+	const stub = uiStubs.get('exportConfirm');
+	const handler = stub.addEventListener.mock.calls.find(
+		call => call[0] === 'click',
+	)[1];
+	handler();
+};
+
+// the export modal's RLE checkbox is the only way to an uncompressed
+// save; the compression tests otherwise run without a modal, so this
+// one installs it for the call alone
+const saveXbUnchecked = async Save => {
+	uiStubs.clear();
+	uiStubs.set('exportCompress', { checked: false });
+	mockState.modal = { open: vi.fn(), close: vi.fn(), onClose: vi.fn() };
+	try {
+		const pending = Save.xb();
+		confirmClick();
+		await pending;
+	} finally {
+		delete mockState.modal;
+		uiStubs.clear();
+	}
 };
 
 describe('XBin Save Compression', () => {
@@ -221,7 +240,7 @@ describe('XBin Save Compression', () => {
 		const imageData = buildTestImage(80, 25);
 		mockState.textArtCanvas.getImageData.mockReturnValue(imageData);
 
-		await Save.xb(false);
+		await saveXbUnchecked(Save);
 
 		const { flags, dataIndex, dataEnd } = parseSavedXBin();
 		expect((flags >> 2) & 0x01).toBe(0); // Compression flag clear
@@ -318,33 +337,14 @@ describe('export modal routing', () => {
 		vi.resetModules();
 	});
 
-	const confirmClick = () => {
-		const stub = uiStubs.get('exportConfirm');
-		const handler = stub.addEventListener.mock.calls.find(
-			call => call[0] === 'click',
-		)[1];
-		handler();
-	};
-
-	it('a click event argument opens the export modal instead of forcing compression', async () => {
-		const pending = Save.xb({ type: 'click' });
-		// the menu click reaches the modal, not the programmatic hatch
+	it('an XBin save waits on the export modal and follows its RLE checkbox', async () => {
+		const pending = Save.xb();
 		expect(mockState.modal.open).toHaveBeenCalledWith('export');
 		expect(savedBytes).toBeNull();
 		confirmClick();
 		await pending;
 		expect(savedBytes).not.toBeNull();
 		// the modal's checkbox stub is checked, so compression is on
-		expect((savedBytes[10] >> 2) & 0x01).toBe(1);
-	});
-
-	it('boolean arguments still skip the modal in both polarities', async () => {
-		await Save.xb(false);
-		expect(mockState.modal.open).not.toHaveBeenCalled();
-		expect((savedBytes[10] >> 2) & 0x01).toBe(0);
-		savedBytes = null;
-		await Save.xb(true);
-		expect(mockState.modal.open).not.toHaveBeenCalled();
 		expect((savedBytes[10] >> 2) & 0x01).toBe(1);
 	});
 

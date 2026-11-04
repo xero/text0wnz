@@ -104,7 +104,7 @@ describe('PabloDraw 24-bit t sequences', () => {
 			fg: paletteColor(7),
 			bg: paletteColor(0),
 		});
-		const encoded = encodeAns(doc, { lossy: true });
+		const encoded = encodeAns(doc);
 		const text = String.fromCharCode(...encoded);
 		expect(text).toContain('\x1b[1;250;90;90t');
 		const back = decodeAns(encoded);

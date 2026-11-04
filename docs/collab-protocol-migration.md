@@ -64,9 +64,8 @@ both sides together.
   path-based (`wss://host/roomname`; `/` and `/server` reach the
   default room, so existing Caddy and nginx proxy configs keep
   working).
-- Spectators default to read-only drawing with chat allowed. Set
-  per-room passwords with the `ROOM_PASSWORDS` environment variable
-  (JSON, `{"room":"pw"}`).
+- Spectators can chat but not draw. Set per-room passwords with the
+  `ROOM_PASSWORDS` environment variable (JSON, `{"room":"pw"}`).
 - The server saves on SIGTERM now as well as SIGINT, so `docker stop`
   no longer loses unsaved work.
 

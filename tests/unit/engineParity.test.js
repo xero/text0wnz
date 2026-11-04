@@ -79,7 +79,11 @@ vi.mock('../../src/js/client/palette.js', () => ({
 }));
 
 import { createTextArtCanvas } from '../../src/js/client/canvas.js';
-import { createDocV3, createEditorCore } from '../../src/js/core/index';
+import {
+	createDocV3,
+	createEditorCore,
+	v3ToU16,
+} from '../../src/js/core/index';
 import { createV2ReferenceEngine } from '../parity/v2ReferenceEngine.js';
 
 const COLUMNS = 40;
@@ -110,6 +114,17 @@ const makeV2 = () =>
 		const canvas = createTextArtCanvas(container, () => resolve(canvas));
 	});
 
+/** u16 area to the EditCell area the plane-native setAreaCells takes */
+const cellArea = area => ({
+	cells: Array.from(area.data, word => ({
+		charCode: word >> 8,
+		fg: word & 15,
+		bg: (word >> 4) & 15,
+	})),
+	width: area.width,
+	height: area.height,
+});
+
 /** Adapt the v3 core to the common v2-shaped surface. */
 const wrapV3 = () => {
 	const doc = createDocV3({ columns: COLUMNS, rows: ROWS });
@@ -120,7 +135,7 @@ const wrapV3 = () => {
 		drawHalfBlock: v3.drawHalfBlocks,
 		deleteArea: v3.deleteArea,
 		getArea: v3.getAreaU16,
-		setArea: v3.setAreaU16,
+		setArea: (area, x, y) => v3.setAreaCells(cellArea(area), x, y),
 		quickDraw: v3.quickDrawU16,
 		startUndo: v3.startUndo,
 		undo: v3.undo,
@@ -130,7 +145,7 @@ const wrapV3 = () => {
 		getIceColors: () => doc.getIceColors(),
 		getBlock: v3.getBlock,
 		getHalfBlock: v3.getHalfBlockAt,
-		getImageData: () => v3.toU16().imageData,
+		getImageData: () => v3ToU16(doc).imageData,
 	};
 };
 
@@ -152,20 +167,7 @@ const buildEngines = async () => {
 		}
 		return { data, width: w, height: h };
 	};
-	live.setArea = (area, x, y) =>
-		live.setAreaCells(
-			{
-				cells: Array.from(area.data, word => ({
-					charCode: word >> 8,
-					fg: word & 15,
-					bg: (word >> 4) & 15,
-				})),
-				width: area.width,
-				height: area.height,
-			},
-			x,
-			y,
-		);
+	live.setArea = (area, x, y) => live.setAreaCells(cellArea(area), x, y);
 	const reference = createV2ReferenceEngine(COLUMNS, ROWS);
 	reference.name = 'v2-reference';
 	return [live, reference, wrapV3()];

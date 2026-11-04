@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event';
 import State from '../../src/js/client/state.js';
 import { createPaintShortcuts } from '../../src/js/client/ui.js';
 import {
+	createCursor,
+	createKeyboardController,
 	createPasteTool,
 	createSelectionTool,
 } from '../../src/js/client/keyboard.js';
@@ -179,5 +181,44 @@ describe('Keyboard shortcuts and focus', () => {
 		expect(State.textArtCanvas.startUndo).toHaveBeenCalledTimes(1);
 		expect(tool.isMoveMode()).toBe(true);
 		tool.disable();
+	});
+
+	describe('Enter with the keyboard tool', () => {
+		let controller;
+
+		beforeEach(() => {
+			addById('div', 'viewport');
+			Object.assign(State, {
+				font: { getWidth: () => 8, getHeight: () => 16 },
+				positionInfo: { update: vi.fn() },
+				pasteTool: { setSelection: vi.fn(), disable: vi.fn() },
+			});
+			State.textArtCanvas.getColumns = () => 80;
+			State.textArtCanvas.getRows = () => 25;
+			State.selectionCursor.isVisible = vi.fn(() => false);
+			State.cursor = createCursor(document.createElement('div'));
+			State.cursor.move(2, 3);
+			controller = createKeyboardController();
+			controller.enable();
+		});
+
+		afterEach(() => controller.disable());
+
+		it('clicks a focused button and leaves the cursor', async () => {
+			const button = document.createElement('button');
+			const onClick = vi.fn();
+			button.addEventListener('click', onClick);
+			document.body.appendChild(button);
+			button.focus();
+			await user.keyboard('{Enter}');
+			expect(onClick).toHaveBeenCalledTimes(1);
+			expect([State.cursor.getX(), State.cursor.getY()]).toEqual([2, 3]);
+		});
+
+		it('newlines the canvas from the page', async () => {
+			await user.keyboard('{Enter}');
+			await new Promise(resolve => setTimeout(resolve, 0));
+			expect([State.cursor.getX(), State.cursor.getY()]).toEqual([0, 4]);
+		});
 	});
 });

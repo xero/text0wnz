@@ -151,7 +151,7 @@ const applyView = async (page, { font, zoom, nine, ice }) => {
 		}
 		// Settle with a full synchronous-progressive repaint
 		await new Promise(resolve =>
-			State.textArtCanvas.redrawEntireImage(null, resolve));
+			State.textArtCanvas.redrawEntireImage(resolve));
 	}, { font, zoom, nine, ice });
 	// One more frame for the compositor
 	await page.waitForTimeout(100);
@@ -215,7 +215,7 @@ test.describe('golden real artwork screenshots', () => {
 			await page.evaluate(async () => {
 				const { State } = window.__t0wnz;
 				await new Promise(resolve =>
-					State.textArtCanvas.redrawEntireImage(null, resolve));
+					State.textArtCanvas.redrawEntireImage(resolve));
 			});
 			await page.waitForTimeout(100);
 			// Clip to the art visible inside the scroller (client area, so
@@ -274,7 +274,7 @@ test.describe('golden unicode screenshots', () => {
 			await page.evaluate(async () => {
 				const { State } = window.__t0wnz;
 				await new Promise(resolve =>
-					State.textArtCanvas.redrawEntireImage(null, resolve));
+					State.textArtCanvas.redrawEntireImage(resolve));
 			});
 			await page.waitForTimeout(100);
 			await expect(page.locator('#canvasContainer')).toHaveScreenshot(name, {

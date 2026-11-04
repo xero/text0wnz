@@ -52,31 +52,29 @@ export const roomNameFromPath = (pathname, defaultRoom) => {
  * @param {object} config
  * @param {number} config.port
  * @param {number} [config.plainPort]
- * @param {string} [config.sessionName]
- * @param {string} [config.pass]
+ * @param {string} config.sessionName
+ * @param {string} config.pass
  * @param {Record<string, string>} [config.roomPasswords]
  * @param {string[]} [config.allowedOrigins] upgrade Origin allowlist; empty Origin (desktop clients) always allowed
  * @param {number} [config.maxColumns] resize wall override (0/absent = room default)
  * @param {number} [config.maxRows] resize wall override (0/absent = room default)
  * @param {string} [config.staticDir] serve the built PWA from here ('' = ws-only)
- * @param {{mode: string, target: string, port: number, allow: string[], maxConnections: number}} [config.bridge]
- * @param {(room: ReturnType<typeof createRoom>) => void} [config.onRoomCreate]
- * @param {(room: ReturnType<typeof createRoom>) => void | Promise<void>} [config.onRoomEmpty]
- * @param {boolean} [config.debug]
+ * @param {{mode: string, target: string, port: number, allow: string[], maxConnections: number}} config.bridge
+ * @param {(room: ReturnType<typeof createRoom>) => void | Promise<void>} config.onRoomCreate
+ * @param {(room: ReturnType<typeof createRoom>) => void | Promise<void>} config.onRoomEmpty
  * @param {{cert: string, key: string} | undefined} [config.tls]
- * @param {(line: string) => void} [config.log] debug chatter
- * @param {(line: string) => void} [config.audit] always-on lines an operator answers abuse reports with
+ * @param {(line: string) => void} config.log debug chatter
  */
 export const createMoebiusServer = config => {
-	const log = config.log ?? (config.debug ? console.log : () => {});
+	const log = config.log;
 	// bridge opens, closes, and refusals print with or without --debug:
 	// a relay from this host's address must leave a trail, and the
 	// privacy policy promises each entry carries its own time
-	const audit =
-		config.audit ?? (line => console.log(`[Server] ${new Date().toISOString()} ${line}`));
+	const audit = line =>
+		console.log(`[Server] ${new Date().toISOString()} ${line}`);
 	// the default room rides persistence paths like any other; a name
 	// that skips the room-name grammar could escape ./sessions
-	const requestedDefault = config.sessionName ?? 'joint';
+	const requestedDefault = config.sessionName;
 	if (!ROOM_NAME_RE.test(requestedDefault)) {
 		throw new Error(
 			`session name '${requestedDefault}' must match ${ROOM_NAME_RE}`,
@@ -124,7 +122,7 @@ export const createMoebiusServer = config => {
 			}
 			room = createRoom({
 				name,
-				password: config.roomPasswords?.[name] ?? config.pass ?? '',
+				password: config.roomPasswords?.[name] ?? config.pass,
 				maxColumns: config.maxColumns || undefined,
 				maxRows: config.maxRows || undefined,
 				log,
@@ -135,7 +133,7 @@ export const createMoebiusServer = config => {
 			// ever coming
 			roomReady.set(
 				room,
-				Promise.resolve(config.onRoomCreate?.(room)).catch(() => undefined),
+				Promise.resolve(config.onRoomCreate(room)).catch(() => undefined),
 			);
 		}
 		return room;
@@ -155,7 +153,7 @@ export const createMoebiusServer = config => {
 
 	/** @type {Set<import('bun').ServerWebSocket<any>>} */
 	const sockets = new Set();
-	const bridgeConfig = config.bridge ?? { mode: 'off' };
+	const bridgeConfig = config.bridge;
 	let bridgeCount = 0;
 	let bridgePending = 0;
 
@@ -175,7 +173,6 @@ export const createMoebiusServer = config => {
 		idleTimeout: SERVER_LIMITS.idleTimeoutSeconds,
 		/** @param {import('bun').ServerWebSocket<any>} ws */
 		open: ws => {
-			ws.data.alive = true;
 			if (ws.data.kind === 'bridge') {
 				bridgeCount++;
 				audit(`bridge open ${ws.data.requester} -> ${ws.data.targetUrl}`);
@@ -225,7 +222,7 @@ export const createMoebiusServer = config => {
 				// the configured password gates room CREATION too: the
 				// room only comes alive for a caller who already passed
 				const expected =
-					config.roomPasswords?.[ws.data.roomName] ?? config.pass ?? '';
+					config.roomPasswords?.[ws.data.roomName] ?? config.pass;
 				const offered =
 					typeof frame.data?.pass === 'string' ? frame.data.pass : '';
 				if (expected !== '' && !ws.data.room) {
@@ -317,17 +314,16 @@ export const createMoebiusServer = config => {
 						rooms.delete(room.name);
 					}
 				};
-				if (room.isDirty() && config.onRoomEmpty) {
+				if (room.isDirty()) {
 					// a FAILED save keeps the room resident, or on a full disk
 					// the GC silently destroys unsaved art while the server
 					// looks healthy; the next empty or interval save retries
 					Promise.resolve(config.onRoomEmpty(room)).then(finish, error => {
 						log(`save failed for ${room.name}; kept resident: ${error}`);
 					});
-				} else if (!room.isDirty()) {
+				} else {
 					finish();
 				}
-				// dirty room without a persistence hook: keep it resident
 			}
 		},
 		/** @param {import('bun').ServerWebSocket<any>} ws */
@@ -419,7 +415,6 @@ export const createMoebiusServer = config => {
 			const asked = sanitize(
 				`${url.searchParams.get('host') ?? ''}:${url.searchParams.get('port') ?? ''}/${url.searchParams.get('room') ?? ''}`,
 				120,
-				false,
 			);
 			// the socket's address plus the proxy's claim of the real one
 			// (trust is the operator's call). Logged only while the bridge
@@ -431,15 +426,11 @@ export const createMoebiusServer = config => {
 				sanitize(
 					(server.requestIP(req)?.address ?? '?').replace(/^::ffff:/i, ''),
 					64,
-					false,
 				) +
-				(claimed ? ` (x-real-ip ${sanitize(claimed, 64, false)})` : '');
+				(claimed ? ` (x-real-ip ${sanitize(claimed, 64)})` : '');
 			// reserve BEFORE the async DNS await: parallel requests in
 			// flight must not all pass the cap check
-			if (
-				bridgeCount + bridgePending >=
-				(bridgeConfig.maxConnections ?? 16)
-			) {
+			if (bridgeCount + bridgePending >= bridgeConfig.maxConnections) {
 				audit(`bridge busy, refused ${requester} asking ${asked}`);
 				return new Response('bridge busy', { status: 503 });
 			}
@@ -454,7 +445,7 @@ export const createMoebiusServer = config => {
 				// the reason names resolved addresses: log only, or the
 				// bridge doubles as a resolver for the host's own DNS
 				audit(
-					`bridge refused ${requester} asking ${asked}: ${sanitize(vet.reason, 200, false)}`,
+					`bridge refused ${requester} asking ${asked}: ${sanitize(vet.reason, 200)}`,
 				);
 				return new Response('bridge refused', { status: 403 });
 			}

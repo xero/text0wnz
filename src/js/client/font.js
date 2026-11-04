@@ -190,13 +190,7 @@ const loadFontFromXBData = (
 		};
 
 		const fontData = parseXBFontData(fontBytes, fontWidth, fontHeight);
-		if (
-			!fontData ||
-			!fontData.width ||
-			fontData.width <= 0 ||
-			!fontData.height ||
-			fontData.height <= 0
-		) {
+		if (!fontData) {
 			console.error('[Font] Invalid XB font data:', fontData);
 			reject(new Error('Failed to load XB font data'));
 			return;

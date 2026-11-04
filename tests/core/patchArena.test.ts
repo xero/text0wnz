@@ -22,7 +22,7 @@ describe('patch arena', () => {
 		const arena = createPatchArena();
 		const f = doc.frames[0];
 
-		arena.beginStroke({ frame: 0, userId: 'xero' });
+		arena.beginStroke({ frame: 0 });
 		arena.record('glyph', 5, f.glyph[5], glyphWord(219, 0));
 		f.glyph[5] = glyphWord(219, 0);
 		arena.record('fg', 5, f.fg[5], paletteColor(14));
@@ -30,7 +30,7 @@ describe('patch arena', () => {
 		expect(arena.endStroke()).toBe(true);
 
 		const meta = arena.undo(doc);
-		expect(meta).toEqual({ frame: 0, userId: 'xero' });
+		expect(meta).toEqual({ frame: 0 });
 		expect(f.glyph[5]).toBe(0);
 		expect(f.fg[5]).toBe(paletteColor(0));
 

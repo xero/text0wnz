@@ -217,15 +217,7 @@ const openHandler = (file, opts = {}) => {
 	};
 	Load.file(
 		file,
-		async (
-			_columns,
-			_rows,
-			_imageData,
-			_iceColors,
-			letterSpacing,
-			fontName,
-			doc,
-		) => {
+		async (letterSpacing, fontName, doc) => {
 			if (seq !== openSeq) {
 				return;
 			}
@@ -245,8 +237,6 @@ const openHandler = (file, opts = {}) => {
 				if (seq !== openSeq) {
 					return;
 				}
-				// every format lands plane native, which keeps truecolor
-				// and frames; legacy consumers read the lossy u16 mirror.
 				// setDocData has no spacing seam, so an explicit SAUCE flag
 				// lands on the font first
 				if (typeof letterSpacing === 'boolean') {
@@ -332,13 +322,12 @@ const handleFileShare = async () => {
 
 		if (response) {
 			const filename = response.headers.get('X-Filename') || 'untitled.txt';
-			const fileSize = response.headers.get('X-File-Size') || '0';
 			const blob = await response.blob();
 			const file = new File([blob], filename, {
 				type:
 					response.headers.get('Content-Type') || 'application/octet-stream',
 			});
-			return { file, filename, fileSize };
+			return { file, filename };
 		}
 
 		return null;
@@ -379,11 +368,7 @@ const fetchTutorial = async url => {
 		}
 		const file = new File([blob], filename, { type: 'application/octet-stream' });
 
-		if (
-			typeof openHandler === 'function' &&
-			State?.textArtCanvas &&
-			!bodyContainer?.classList.contains('loading')
-		) {
+		if (State.textArtCanvas && !bodyContainer?.classList.contains('loading')) {
 			State.modal.loading('Reloading editor from file...');
 			openHandler(file);
 		} else {
@@ -491,7 +476,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				console.log('[Share] File shared:', event.data.filename);
 				const waitForApp = () => {
 					return new Promise(resolve => {
-						if (State.textArtCanvas && openHandler) {
+						if (State.textArtCanvas) {
 							resolve();
 						} else {
 							setTimeout(() => waitForApp().then(resolve), 100);
@@ -501,9 +486,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				await waitForApp();
 				const sharedFileData = await handleFileShare();
 				if (sharedFileData) {
-					pendingFile = sharedFileData.file;
-					openHandler(pendingFile);
-					pendingFile = null;
+					openHandler(sharedFileData.file);
 					caches
 						.open(CACHE_ID)
 						.then(cache => cache.delete(CACHE_DATA))
@@ -520,7 +503,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	try {
 		FontCache.preloadCommonFonts();
 
-		State.startInitialization();
 		$$$$();
 
 		// Tier 1: core UI and canvas
@@ -1257,7 +1239,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: halfblock.enable,
 			onBlur: halfblock.disable,
-			enable: halfblock.enable,
 		};
 	});
 
@@ -1295,9 +1276,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: shadeBrush.enable,
 			onBlur: shadeBrush.disable,
-			enable: shadeBrush.enable,
-			ignore: shadeBrush.ignore,
-			unignore: shadeBrush.unignore,
 		};
 	});
 
@@ -1306,9 +1284,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: characterBrush.enable,
 			onBlur: characterBrush.disable,
-			enable: characterBrush.enable,
-			ignore: characterBrush.ignore,
-			unignore: characterBrush.unignore,
 		};
 	});
 
@@ -1318,7 +1293,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: asciiBrush.enable,
 			onBlur: asciiBrush.disable,
-			enable: asciiBrush.enable,
 		};
 	});
 
@@ -1328,7 +1302,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: fill.enable,
 			onBlur: fill.disable,
-			enable: fill.enable,
 		};
 	});
 
@@ -1340,7 +1313,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: attributeBrush.enable,
 			onBlur: attributeBrush.disable,
-			enable: attributeBrush.enable,
 		};
 	});
 
@@ -1350,7 +1322,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: line.enable,
 			onBlur: line.disable,
-			enable: line.enable,
 		};
 	});
 
@@ -1360,7 +1331,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: square.enable,
 			onBlur: square.disable,
-			enable: square.enable,
 		};
 	});
 
@@ -1370,7 +1340,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: circle.enable,
 			onBlur: circle.disable,
-			enable: circle.enable,
 		};
 	});
 
@@ -1449,7 +1418,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: focusSample,
 			onBlur: sampler.disable,
-			enable: focusSample,
 		};
 	});
 

@@ -9,6 +9,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { concatBytes, makeSauce } from '../corpus/generators.js';
+import { v3ToU16Lossy } from '../../src/js/core/index.js';
 
 const mockState = {
 	title: 'test-artwork',
@@ -175,8 +176,8 @@ describe('allocation ceilings on open', () => {
 			}),
 		);
 		expect(onError).not.toHaveBeenCalled();
-		const [columns, rows, cells] = callback.mock.calls[0];
+		const { columns, rows, imageData } = v3ToU16Lossy(callback.mock.calls[0][2]);
 		expect([columns, rows]).toEqual([160, 2]);
-		expect(cells.every(cell => cell === 0x4444)).toBe(true);
+		expect(imageData.every(cell => cell === 0x4444)).toBe(true);
 	});
 });

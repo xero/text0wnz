@@ -42,20 +42,11 @@ import { u16ToV3 } from '../../src/js/core/index';
 import { parseSauce } from '../../src/js/core/codecs/sauce.js';
 import { makeAnsi } from '../corpus/generators.js';
 
-const openFile = (name, bytes) =>
-	new Promise(resolve => {
-		Load.file(new File([bytes], name), (...args) => resolve(args));
-	});
-
-/** open bytes AND point getDoc at the decoded content for the save */
+/** open bytes AND point getDoc at the decoded doc for the save */
 const openAndWire = async (name, bytes) => {
-	const [columns, rows, data, iceColors] = await openFile(name, bytes);
-	const doc = u16ToV3({
-		imageData: data,
-		columns,
-		rows,
-		iceColors: !!iceColors,
-		letterSpacing: false,
+	const doc = await new Promise(resolve => {
+		Load.file(new File([bytes], name), (_letterSpacing, _fontName, opened) =>
+			resolve(opened));
 	});
 	mocks.state.textArtCanvas.getDoc = () => doc;
 };

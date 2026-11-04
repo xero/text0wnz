@@ -225,7 +225,6 @@ describe('Freehand Tools - Panels and Cursors', () => {
 				select: vi.fn(),
 				ignore: vi.fn(),
 				unignore: vi.fn(),
-				redrawGlyphs: vi.fn(),
 			};
 		});
 
@@ -237,7 +236,6 @@ describe('Freehand Tools - Panels and Cursors', () => {
 			expect(controller).toHaveProperty('select');
 			expect(controller).toHaveProperty('ignore');
 			expect(controller).toHaveProperty('unignore');
-			expect(controller).toHaveProperty('redrawGlyphs');
 		});
 
 		it('should proxy panel methods correctly', () => {
@@ -251,9 +249,6 @@ describe('Freehand Tools - Panels and Cursors', () => {
 
 			controller.unignore();
 			expect(mockPanel.unignore).toHaveBeenCalled();
-
-			controller.redrawGlyphs();
-			expect(mockPanel.redrawGlyphs).toHaveBeenCalled();
 		});
 
 		it('should handle enable/disable with event listeners', () => {

@@ -27,7 +27,13 @@ import {
 	decodeEnvelope,
 	encodeEnvelope,
 } from './codecs/envelope.js';
-import { CodecError, concatBytes, readLE32, writeLE32 } from './codecs/util.js';
+import {
+	CodecError,
+	concatBytes,
+	crc32,
+	readLE32,
+	writeLE32,
+} from './codecs/util.js';
 
 export const JOURNAL_MAGIC = 'T0WJ';
 export const JOURNAL_VERSION = 1;
@@ -51,26 +57,6 @@ export const shouldCompact = (
 ): boolean =>
 	state.bytesSinceKeyframe >= (limits.bytes ?? DEFAULT_COMPACT_BYTES) ||
 	state.strokesSinceKeyframe >= (limits.strokes ?? DEFAULT_COMPACT_STROKES);
-
-const CRC_TABLE = (() => {
-	const table = new Uint32Array(256);
-	for (let n = 0; n < 256; n++) {
-		let c = n;
-		for (let k = 0; k < 8; k++) {
-			c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-		}
-		table[n] = c >>> 0;
-	}
-	return table;
-})();
-
-export const crc32 = (bytes: Uint8Array): number => {
-	let crc = 0xffffffff;
-	for (let i = 0; i < bytes.length; i++) {
-		crc = CRC_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
-	}
-	return (crc ^ 0xffffffff) >>> 0;
-};
 
 const frameRecord = (type: number, payload: Uint8Array): Uint8Array => {
 	const out = new Uint8Array(FRAME_OVERHEAD + payload.length);
@@ -152,39 +138,25 @@ export const scanJournal = (bytes: Uint8Array): JournalScan => {
 
 const PLANE_IDS: ReadonlyArray<PlaneName> = ['glyph', 'fg', 'bg'];
 
+// stroke payload: u32 frame, a reserved user slot (u8 flag, u8 length,
+// then that many bytes when the flag is set), u8 plane count, planes.
+// The slot stays in the layout so the format version holds; strokes
+// write it empty.
 const encodeStrokePayload = (stroke: CommittedStroke): Uint8Array => {
-	const userId = stroke.meta.userId;
-	// userId flag: 0 none, 1 utf-8 string, 2 number (as decimal text)
-	let userFlag = 0;
-	let userBytes = new Uint8Array(0);
-	if (typeof userId === 'string') {
-		userFlag = 1;
-		userBytes = new TextEncoder().encode(userId);
-	} else if (typeof userId === 'number') {
-		userFlag = 2;
-		userBytes = new TextEncoder().encode(String(userId));
-	}
-	if (userBytes.length > 0xff) {
-		throw new CodecError('stroke userId longer than 255 bytes');
-	}
 	const planes = PLANE_IDS.map((plane, id) => ({
 		id,
 		flat: stroke.patches[plane],
 	})).filter((entry): entry is { id: number; flat: Uint32Array } =>
 		Boolean(entry.flat && entry.flat.length),
 	);
-	let size = 4 + 1 + 1 + userBytes.length + 1;
+	let size = 4 + 1 + 1 + 1;
 	for (const { flat } of planes) {
 		size += 1 + 4 + flat.length * 4;
 	}
 	const out = new Uint8Array(size);
 	let at = 0;
 	writeLE32(out, at, stroke.meta.frame);
-	at += 4;
-	out[at++] = userFlag;
-	out[at++] = userBytes.length;
-	out.set(userBytes, at);
-	at += userBytes.length;
+	at += 4 + 2; // empty user slot
 	out[at++] = planes.length;
 	for (const { id, flat } of planes) {
 		out[at++] = id;
@@ -212,12 +184,7 @@ export const decodeStrokePayload = (payload: Uint8Array): DecodedStroke => {
 	at += 4;
 	const userFlag = payload[at++];
 	const userLength = payload[at++];
-	let userId: string | number | undefined;
 	if (userFlag !== 0) {
-		const text = new TextDecoder().decode(
-			payload.subarray(at, at + userLength),
-		);
-		userId = userFlag === 2 ? Number(text) : text;
 		at += userLength;
 	}
 	const planeCount = payload[at++];
@@ -240,7 +207,7 @@ export const decodeStrokePayload = (payload: Uint8Array): DecodedStroke => {
 		}
 		patches[plane] = flat;
 	}
-	return { meta: { frame, userId }, patches };
+	return { meta: { frame }, patches };
 };
 
 /** Header + one keyframe: a fresh journal (also the compacted form). */

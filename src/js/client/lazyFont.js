@@ -260,7 +260,6 @@ export const createLazyFont = (
 	preGenerateCommonGlyphs();
 
 	return {
-		getData: () => fontData,
 		// Stop the idle pregeneration drain; the caches stay valid for any
 		// caller still holding the instance
 		dispose: () => {
@@ -269,7 +268,6 @@ export const createLazyFont = (
 		getWidth: () =>
 			letterSpacing ? scaledWidth + Math.floor(1 * scaleFactor) : scaledWidth,
 		getHeight: () => scaledHeight,
-		getScaleFactor: () => scaleFactor,
 		getGlyph: getGlyph,
 		getAlphaGlyph: getAlphaGlyph,
 		getCacheSize: () => glyphCache.size,

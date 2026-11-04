@@ -2,9 +2,7 @@
  * CP437 <-> Unicode mapping.
  *
  * Sparse map of the non-identity codepoints; everything absent maps to
- * itself (printable ASCII; NUL maps to NBSP). Data mirrors the client
- * table in palette.js verbatim; tests/core/cp437.test.ts asserts the
- * two never drift until the client migrates to this module.
+ * itself (printable ASCII; NUL maps to NBSP).
  */
 const nonIdentity: ReadonlyArray<readonly [number, number]> = [
 	[1, 0x263a],

@@ -1,6 +1,7 @@
 /* eslint-disable prefer-arrow-callback */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createDocV3 } from '../../src/js/core/doc.js';
+import { cp437ToUnicode, v3ToU16Lossy } from '../../src/js/core/index.js';
 
 const makeMockDoc = () => createDocV3({ columns: 80, rows: 25 });
 
@@ -31,11 +32,11 @@ vi.mock('../../src/js/client/ui.js', () => ({
 	enforceMaxBytes: vi.fn(),
 }));
 
-// palette.js is NOT mocked: these tests exercise the real
-// getUTF8/getUnicodeReverseMap implementations
+const utf8Of = charCode =>
+	Array.from(new TextEncoder().encode(String.fromCodePoint(cp437ToUnicode(charCode))));
 
 describe('UTF-8 ANSI Import and Export', () => {
-	let Load, Save, getUTF8;
+	let Load, Save;
 	let savedBytes;
 
 	const loadUtf8 = bytes => {
@@ -52,7 +53,7 @@ describe('UTF-8 ANSI Import and Export', () => {
 		const onLoad = reader.addEventListener.mock.calls[0][1];
 		onLoad({});
 		expect(callback).toHaveBeenCalled();
-		return callback.mock.calls[0];
+		return v3ToU16Lossy(callback.mock.calls[0][2]);
 	};
 
 	beforeEach(async () => {
@@ -86,8 +87,6 @@ describe('UTF-8 ANSI Import and Export', () => {
 		const fileModule = await import('../../src/js/client/file.js');
 		Load = fileModule.Load;
 		Save = fileModule.Save;
-		const paletteModule = await import('../../src/js/client/palette.js');
-		getUTF8 = paletteModule.getUTF8;
 	});
 
 	afterEach(() => {
@@ -100,12 +99,12 @@ describe('UTF-8 ANSI Import and Export', () => {
 			const chars = [176, 177, 178, 219, 223, 220, 221, 222]; // ░▒▓█▀▄▌▐
 			const bytes = [];
 			chars.forEach(charCode => {
-				bytes.push(...getUTF8(charCode));
+				bytes.push(...utf8Of(charCode));
 			});
 
-			const [width, , data] = loadUtf8(bytes);
+			const { columns, imageData: data } = loadUtf8(bytes);
 
-			expect(width).toBe(80);
+			expect(columns).toBe(80);
 			chars.forEach((charCode, i) => {
 				expect(data[i] >> 8).toBe(charCode);
 				expect(data[i] & 15).toBe(7); // Default foreground
@@ -125,10 +124,10 @@ describe('UTF-8 ANSI Import and Export', () => {
 			}
 			const bytes = [];
 			chars.forEach(charCode => {
-				bytes.push(...getUTF8(charCode));
+				bytes.push(...utf8Of(charCode));
 			});
 
-			const [, , data] = loadUtf8(bytes);
+			const { imageData: data } = loadUtf8(bytes);
 
 			chars.forEach((charCode, i) => {
 				const index = Math.floor(i / 80) * 80 + (i % 80);
@@ -140,7 +139,7 @@ describe('UTF-8 ANSI Import and Export', () => {
 			// U+1F600 (emoji) has no CP437 equivalent
 			const bytes = [0xf0, 0x9f, 0x98, 0x80];
 
-			const [, , data] = loadUtf8(bytes);
+			const { imageData: data } = loadUtf8(bytes);
 
 			expect(data[0] >> 8).toBe(63); // '?'
 		});

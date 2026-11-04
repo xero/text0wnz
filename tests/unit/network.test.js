@@ -210,7 +210,6 @@ describe('Network Module', () => {
 			expect(handler).toHaveProperty('isConnected');
 			expect(handler).toHaveProperty('joinCollaboration');
 			expect(handler).toHaveProperty('stayLocal');
-			expect(handler).toHaveProperty('sendCanvasSettings');
 			expect(handler).toHaveProperty('sendResize');
 			expect(handler).toHaveProperty('sendFontChange');
 			expect(handler).toHaveProperty('sendIceColorsChange');
@@ -1004,6 +1003,7 @@ describe('Network Module', () => {
 				const handler = createWorkerHandler(mockInputHandle);
 				await join(handler);
 				State.font.setLetterSpacing.mockClear();
+				vi.mocked(enforceMaxBytes).mockClear();
 				handler.sendIceColorsChange(true);
 				handler.sendLetterSpacingChange(true);
 				handler.sendSauce({ title: 'ours' });
@@ -1253,21 +1253,151 @@ describe('Network Module', () => {
 			});
 		});
 
-		it('should handle canvas settings when not in collaboration mode', () => {
+		describe('room SAUCE', () => {
+			const ids = ['sauceTitle', 'sauceAuthor', 'sauceGroup', 'sauceComments'];
+			const room = {
+				title: 'room title',
+				author: 'room author',
+				group: 'room group',
+				comments: 'room comments',
+			};
+			const ours = {
+				title: 'our title',
+				author: 'our author',
+				group: 'our group',
+				comments: 'our comments',
+			};
+			let fields;
+			let lookup;
+			// what main.js reads back out of the Sauce Editor on Done
+			const editor = () => ({
+				title: fields.sauceTitle.value,
+				author: fields.sauceAuthor.value,
+				group: fields.sauceGroup.value,
+				comments: fields.sauceComments.value,
+			});
+			const typeInEditor = meta => {
+				fields.sauceTitle.value = meta.title;
+				fields.sauceAuthor.value = meta.author;
+				fields.sauceGroup.value = meta.group;
+				fields.sauceComments.value = meta.comments;
+			};
+			const sauceEvents = () =>
+				document.dispatchEvent.mock.calls.filter(
+					([event]) => event?.type === 'onSauceChange',
+				).length;
+
+			beforeEach(() => {
+				fields = Object.fromEntries(ids.map(id => [id, { value: `local ${id}` }]));
+				lookup = document.getElementById.getMockImplementation();
+				document.getElementById.mockImplementation(id => fields[id] ?? lookup(id));
+				State.title = 'Untitled';
+			});
+
+			afterEach(() => {
+				document.getElementById.mockImplementation(lookup);
+				resetCanvasMocks();
+			});
+
+			it('a late joiner adopts the room SAUCE, and a Done sends it back unchanged', async () => {
+				const handler = createWorkerHandler(mockInputHandle);
+				await join(handler, { caps: [], doc: room });
+				expect(editor()).toEqual(room);
+				expect(State.title).toBe('room title');
+				expect(sauceEvents()).toBe(1);
+				expect(enforceMaxBytes).toHaveBeenCalled();
+				mockWorker.postMessage.mockClear();
+				handler.sendSauce(editor());
+				expect(sent()).toEqual([{ type: MoebiusAction.SAUCE, data: room }]);
+			});
+
+			it('an untitled room clears the local SAUCE and titles the page collab mode', async () => {
+				const handler = createWorkerHandler(mockInputHandle);
+				await join(handler, { caps: []});
+				expect(editor()).toEqual({ title: '', author: '', group: '', comments: '' });
+				expect(State.title).toBe('collab mode');
+			});
+
+			it('a resync adopts the room SAUCE', async () => {
+				const handler = createWorkerHandler(mockInputHandle);
+				await join(handler);
+				typeInEditor(ours);
+				await sync(room);
+				expect(editor()).toEqual(room);
+				expect(State.title).toBe('room title');
+				expect(sauceEvents()).toBe(2);
+			});
+
+			it('a resync SAUCE yields to an unacked SAUCE op of ours', async () => {
+				const handler = createWorkerHandler(mockInputHandle);
+				await join(handler);
+				typeInEditor(ours);
+				State.title = ours.title;
+				handler.sendSauce(editor());
+				await sync(room);
+				expect(editor()).toEqual(ours);
+				expect(State.title).toBe('our title');
+			});
+
+			it('a join SAUCE yields to a SAUCE op of ours sent while the font loads', async () => {
+				const handler = createWorkerHandler(mockInputHandle);
+				const font = holdFontLoad();
+				const joining = join(handler, { caps: [], doc: { ...room, font_name: 'IBM VGA' } });
+				await font.loading;
+				typeInEditor(ours);
+				State.title = ours.title;
+				handler.sendSauce(editor());
+				font.finish();
+				await joining;
+				expect(editor()).toEqual(ours);
+				expect(State.title).toBe('our title');
+			});
+
+			it('a cleared room title names the page collab mode on every member', async () => {
+				const handler = createWorkerHandler(mockInputHandle);
+				await join(handler, { caps: [], doc: room });
+				await frame(MoebiusAction.SAUCE, { ...room, title: '', id: 2 });
+				expect(fields.sauceTitle.value).toBe('');
+				expect(State.title).toBe('collab mode');
+				// main.js titles the page from the field before it sends
+				State.title = '';
+				handler.sendSauce({ ...room, title: '' });
+				expect(State.title).toBe('collab mode');
+			});
+		});
+
+		describe('font names on the wire', () => {
+			afterEach(resetCanvasMocks);
+
+			it('a font outside the SAUCE table reaches a peer as the same font', async () => {
+				const handler = createWorkerHandler(mockInputHandle);
+				await join(handler, { caps: []});
+				mockWorker.postMessage.mockClear();
+				handler.sendFontChange('CP437 8x8');
+				handler.sendFontChange('CP866 8x16');
+				const names = sent().map(msg => msg.data.font_name);
+				expect(names).toEqual(['IBM VGA50', 'CP866 8x16']);
+				State.textArtCanvas.setFont.mockClear();
+				for (const name of names) {
+					await frame(MoebiusAction.CHANGE_FONT, { font_name: name, id: 2 });
+				}
+				expect(State.textArtCanvas.setFont.mock.calls.map(call => call[0])).toEqual([
+					'CP437 8x8',
+					'CP866 8x16',
+				]);
+			});
+		});
+
+		it('sends no setting changes outside a collaboration session', () => {
 			const handler = createWorkerHandler(mockInputHandle);
 
-			handler.sendCanvasSettings({ columns: 80, rows: 25 });
 			handler.sendResize(80, 25);
 			handler.sendFontChange('CP437 8x8');
 			handler.sendIceColorsChange(true);
 			handler.sendLetterSpacingChange(false);
+			handler.sendSauce({ title: 'local' });
 
-			expect(mockWorker.postMessage).not.toHaveBeenCalledWith(
-				expect.objectContaining({ cmd: 'canvasSettings' }),
-			);
-			expect(mockWorker.postMessage).not.toHaveBeenCalledWith(
-				expect.objectContaining({ cmd: 'resize' }),
-			);
+			expect(sent()).toEqual([]);
 		});
 	});
 

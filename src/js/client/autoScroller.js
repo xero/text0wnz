@@ -240,7 +240,6 @@ const createScrollEngine = deps => {
 			mode = value;
 			runsLeft = count;
 		},
-		getMode: () => mode,
 		setCount: value => {
 			count = Math.max(COUNT_MIN, Math.min(COUNT_MAX, value));
 			runsLeft = count;

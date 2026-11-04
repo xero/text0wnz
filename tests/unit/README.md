@@ -55,7 +55,7 @@ Each entry names the module under test and the behavior the file pins.
 - **fileSauceFlags.test.js:** SAUCE comments and flags survive an open and resave, and a BIN save explains why it refuses a 2-column width.
 - **fileUtf8.test.js:** UTF-8 ANSI imports round-trip CP437 glyphs and substitute the rest, and exports emit one cell per column.
 - **font.test.js:** `font.js` glyph zero blanking, XB font data loading, letter spacing, image font loading, palette rebinding, and parses that leave the glyph size to the install.
-- **fontCache.test.js:** `fontCache.js` preload, fetch, and clear through the Cache API and its in-memory fallback.
+- **fontCache.test.js:** `fontCache.js` preload and fetch through the Cache API and its in-memory fallback.
 - **frames.test.js:** `frames.js` frame strip navigation, timing inputs, playback, baud preview, onion skin, and the collab lockout.
 - **freehandAdvanced.test.js:** `freehandTools.js` sample tool, line, square, and half-block controllers, and panel state.
 - **freehandPanels.test.js:** `freehandTools.js` half-block and shading controllers, shading panel chip picks by mouse and touch, and the character brush panel.
@@ -76,17 +76,17 @@ Each entry names the module under test and the behavior the file pins.
 - **messageGuard.test.js:** `messageGuard.js` trusts origin-less and same-origin messages and rejects the rest.
 - **minimap.test.js:** `minimap.js` visibility toggle, sizing, and tap versus drag handling for mouse and touch.
 - **moveMode.test.js:** Selection move mode against a live canvas, covering aborts, restores, transparent blanks, and undo and redo of a move.
-- **network.test.js:** `network.js` worker handler (probe, join, connect form, refusals, dropped sessions, EXT_SYNC replay, peer resizes, sends during a font load, server order: peer writes that beat our ack, serialized frames, adoption replay, the glyph wait, a peer's text drawing with no glyph fetch, vanilla peer font order, the font label after a peer font) and the chat controller.
+- **network.test.js:** `network.js` worker handler (probe, join, connect form, refusals, dropped sessions, EXT_SYNC replay, peer resizes, sends during a font load, server order: peer writes that beat our ack, serialized frames, adoption replay, the glyph wait, a peer's text drawing with no glyph fetch, vanilla peer font order, the font label after a peer font, the room's SAUCE on join and resync, font names on the wire) and the chat controller.
 - **openAccept.test.js:** The File Open picker in `src/index.html` accepts every format the manual lists.
-- **palette.test.js:** `palette.js` CP437 to Unicode tables, palette creation and events, the preview, picker input by keyboard, mouse, and touch or pen hold, and which quick picks open the color editor.
+- **palette.test.js:** `palette.js` palette creation and events, the preview, picker input by keyboard, mouse, and touch or pen hold, and which quick picks open the color editor.
 - **plugins.test.js:** `plugins.js` plugin API batching, plugin validation, and the plugin manager.
-- **pointer.test.js:** `pointer.js` mouse, pen, and touch normalization, pressure, palm rejection, pinch events, and disposal.
+- **pointer.test.js:** `pointer.js` mouse, pen, and touch normalization, pressure, palm rejection, and pinch events.
 - **pressure.test.js:** Pen pressure picks the shading brush shade, and Shift+down draws an attribute brush line.
 - **recentList.test.js:** `recentList.js` reads, dedupes, filters, and trims the recent list.
 - **referenceImage.test.js:** `referenceImage.js` overlay drag mode, persistence races, and reset.
 - **service.test.js:** `src/service.js` SKIP_WAITING messages, wedged-generation recovery, the share target, and runtime cache routes.
 - **sixteenColors.test.js:** `sixteenColors.js` year, pack, artist, crew, and search browsing, opens through the mirror zip, and API failures.
-- **state.test.js:** `state.js` get and set, dependency waits, the init lifecycle, and UI and font path derivation from the env.
+- **state.test.js:** `state.js` get and set, dependency waits, and UI and font path derivation from the env.
 - **stateAutosave.test.js:** The local autosave gate keeps a live session's canvas out of local storage while the viewer's own zoom still saves, and a restore that throws lets go of the loading flag without losing the saved journal.
 - **storage.test.js:** `storage.js` settings and merges in localStorage, the shared IndexedDB connection, and its store methods.
 - **toolbar.test.js:** `toolbar.js` tool registration, switching, previous tool return, and lazy tool loads.
@@ -99,7 +99,7 @@ Each entry names the module under test and the behavior the file pins.
 - **uiModals.test.js:** `ui.js` `$$$`, tool preview, font select, modal double close and backdrop, and `websocketUI`.
 - **utils.test.js:** `ui.js` `createCanvas` and the `$` and `$$` selector shorthands.
 - **xbinCompression.test.js:** XBin save compression round trips and export modal routing in `file.js`.
-- **zoom.test.js:** `lazyFont.js` scale factors, the `ui.js` sidebar zoom control, and scale handoff to the font loaders.
+- **zoom.test.js:** `lazyFont.js` scale factors, the `ui.js` sidebar zoom control through the zoom controller, and scale handoff to the font loaders.
 - **zoomController.test.js:** `zoom.js` clamping, half-step snapping, pinch, Ctrl+wheel, and focal anchoring.
 
 ### Server Modules
@@ -179,7 +179,7 @@ bunx vitest tests/unit/server/config.test.js
 
 Coverage is on by default. `vitest.config.js` collects V8 coverage with the `text` and `html` reporters and writes the HTML report to `tests/results/coverage/`. `bun test:unit` measures every Vitest suite at once, so the report covers the core and DOM suites as well as this folder. The report breaks each module down by statements, branches, functions, and lines. No coverage threshold gates CI.
 
-As of 2026-11-04, `bunx vitest run tests/unit` runs 1,266 tests in 76 files. One persistence test skips on macOS, since it needs a case-sensitive filesystem.
+As of 2026-11-04, `bunx vitest run tests/unit` runs 1,240 tests in 76 files. One persistence test skips on macOS, since it needs a case-sensitive filesystem.
 
 ### Coverage Reports
 

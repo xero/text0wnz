@@ -67,7 +67,6 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 	 * @property {number} startY
 	 * @property {number} lastX
 	 * @property {number} lastY
-	 * @property {boolean} cancelled
 	 */
 
 	/** @type {Map<number, TrackedPointer>} */
@@ -139,19 +138,6 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 		tapEligible = true;
 	};
 
-	// external reset (dispose paths): an in-flight stroke or pinch must
-	// end observably, or consumers (the zoom controller's interactive
-	// flag, tools awaiting Up) wedge
-	const reset = () => {
-		if (state === 'stroke') {
-			callbacks.onStrokeEnd?.();
-		}
-		if (pinching) {
-			callbacks.onPinchEnd?.();
-		}
-		clearAll();
-	};
-
 	/** @param {GesturePoint} pt */
 	const beginStroke = pt => {
 		state = 'stroke';
@@ -177,7 +163,6 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 			startY: clientY,
 			lastX: clientX,
 			lastY: clientY,
-			cancelled: false,
 		});
 		maxCount = Math.max(maxCount, pointers.size);
 		if (state === 'idle') {
@@ -327,6 +312,5 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 			pinching,
 			maxTravel,
 		}),
-		reset,
 	};
 };

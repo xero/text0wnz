@@ -1,7 +1,7 @@
 /**
  * Per-stroke patch arena: each stroke is a set of
  * `(index, before, after)` triples per touched plane plus metadata
- * `{userId, frame}`. Strokes live in a byte-capped ring; the same
+ * `{frame}`. Strokes live in a byte-capped ring; the same
  * op-patch encoding is the substrate for the OPFS journal, so triples
  * freeze into flat Uint32Arrays on commit.
  *
@@ -9,8 +9,7 @@
  * indexes are only valid at the geometry they were drawn at: undo
  * walks back through the resize before it reaches older strokes.
  *
- * Collab rule: undo is local per-user inverse-op stacks and remote ops
- * never enter it, so userId is metadata, not a filter here; each
+ * Collab rule: undo is local and remote ops never enter it, so each
  * client owns one arena of its own strokes.
  */
 
@@ -22,7 +21,6 @@ const PLANES: ReadonlyArray<PlaneName> = ['glyph', 'fg', 'bg'];
 
 export interface StrokeMeta {
 	frame: number;
-	userId?: string | number;
 }
 
 /**

@@ -7,9 +7,9 @@
  * (`text0wnz-settings` = {fontName, iceColors, letterSpacing,
  * scaleFactor, paletteColors: 6-bit [r,g,b,a][]}).
  *
- * This module is the pure transform: v2 shapes in, a v3 doc (plus the
- * client-side leftovers the doc does not model) out. The v2 stores
- * are left untouched.
+ * This module is the pure transform of the pieces the doc models (the
+ * canvas snapshot plus its ice, spacing, and palette settings) into a
+ * v3 doc. The v2 stores are left untouched.
  *
  * v2 undo history (`undoHistory.currentUndoHistory`) is deliberately
  * NOT migrated: its chunk format encodes v2 engine internals, and
@@ -30,17 +30,9 @@ export interface V2CanvasData {
 	rows: number;
 }
 
-export interface V2XBFont {
-	bytes: Uint8Array | ArrayLike<number>;
-	width: number;
-	height: number;
-}
-
 export interface V2Settings {
-	fontName?: string;
 	iceColors?: boolean;
 	letterSpacing?: boolean;
-	scaleFactor?: number;
 	/** 6-bit [r, g, b, alpha] per entry, alpha ignored. */
 	paletteColors?: ReadonlyArray<ReadonlyArray<number>>;
 }
@@ -48,17 +40,10 @@ export interface V2Settings {
 export interface V2AutosaveSnapshot {
 	canvasData?: V2CanvasData | null;
 	settings?: V2Settings | null;
-	xbFont?: V2XBFont | null;
 }
 
 export interface MigratedAutosave {
 	doc: DocV3;
-	/** XB font planes for the envelope keyframe, when v2 carried one. */
-	fontBytes: Uint8Array | null;
-	fontHeight: number | null;
-	/** Client-side leftovers the doc does not model. */
-	fontName: string | null;
-	scaleFactor: number;
 }
 
 /**
@@ -107,22 +92,5 @@ export const migrateV2Autosave = (
 			}
 		});
 	}
-
-	let fontBytes: Uint8Array | null = null;
-	let fontHeight: number | null = null;
-	const xbFont = snapshot.xbFont;
-	if (xbFont && xbFont.bytes && xbFont.height > 0) {
-		fontBytes =
-			xbFont.bytes instanceof Uint8Array
-				? xbFont.bytes
-				: Uint8Array.from(xbFont.bytes);
-		fontHeight = xbFont.height;
-	}
-	return {
-		doc,
-		fontBytes,
-		fontHeight,
-		fontName: settings.fontName ?? null,
-		scaleFactor: settings.scaleFactor ?? 1,
-	};
+	return { doc };
 };

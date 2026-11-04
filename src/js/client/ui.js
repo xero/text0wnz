@@ -660,11 +660,6 @@ const undoAndRedo = e => {
 const createPaintShortcuts = keyPair => {
 	let ignored = false;
 
-	const isConnected = e =>
-		!State.network ||
-		!State.network.isConnected() ||
-		!keyPair[e.key].classList.contains('excludedForWebsocket');
-
 	const keyDown = e => {
 		if (isTextEntry(e.target)) {
 			// the shape toolbars put selects inside tool buttons: typing
@@ -681,13 +676,9 @@ const createPaintShortcuts = keyPair => {
 					} else {
 						State.palette.setForegroundColor(color);
 					}
-				} else {
-					if (keyPair[e.key] !== undefined) {
-						if (isConnected(e)) {
-							e.preventDefault();
-							keyPair[e.key].click();
-						}
-					}
+				} else if (keyPair[e.key] !== undefined) {
+					e.preventDefault();
+					keyPair[e.key].click();
 				}
 			}
 		}
@@ -700,13 +691,15 @@ const createPaintShortcuts = keyPair => {
 			return;
 		}
 		if (!ignored) {
-			if (e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
-				if (keyPair[e.key] !== undefined) {
-					if (isConnected(e)) {
-						e.preventDefault();
-						keyPair[e.key].click();
-					}
-				}
+			if (
+				e.ctrlKey &&
+				!e.altKey &&
+				!e.shiftKey &&
+				!e.metaKey &&
+				keyPair[e.key] !== undefined
+			) {
+				e.preventDefault();
+				keyPair[e.key].click();
 			}
 		}
 	};
@@ -1244,7 +1237,7 @@ const createFontSelect = (el, lbl, img, btn) => {
 					xbFontData.bytes,
 					xbFontData.width,
 					xbFontData.height,
-					xbFontData.letterSpacing,
+					false,
 					State.palette,
 				);
 				const previewCanvas = createCanvas(
@@ -1420,23 +1413,15 @@ const createZoomControl = () => {
 		display.textContent = format(current());
 	};
 
+	// the controller saves every stepped change itself
 	const nudge = direction => {
 		const zoom = getZoomController();
-		if (zoom) {
-			if (direction > 0) {
-				zoom.zoomIn();
-			} else {
-				zoom.zoomOut();
-			}
-		} else if (State.font?.setScaleFactor) {
-			State.font.setScaleFactor(
-				Math.min(4, Math.max(0.5, current() + direction * 0.5)),
-			);
+		if (direction > 0) {
+			zoom?.zoomIn();
+		} else {
+			zoom?.zoomOut();
 		}
 		refresh();
-		if (State.saveToLocalStorage) {
-			State.saveToLocalStorage();
-		}
 	};
 
 	zoomOut.addEventListener('click', () => nudge(-1));

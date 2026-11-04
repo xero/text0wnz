@@ -56,8 +56,7 @@ const createSixteenColors = ({ openFile, onExit }) => {
 		packs: new Map(), // pack name -> {year, archive, files}
 		zips: new Map(), // archive name -> Promise<Uint8Array>, shared
 	};
-	/** @type {{view: string, year?: number, pack?: object, name?: string}} */
-	let where = { view: 'years' };
+	let activeView = 'years';
 
 	const { visit, swap, back, reset, rerun } = createTrail(
 		btnBack,
@@ -202,7 +201,7 @@ const createSixteenColors = ({ openFile, onExit }) => {
 
 	const showYears = async () => {
 		const ticket = gate.enter();
-		where = { view: 'years' };
+		activeView = 'years';
 		crumb.textContent = 'years';
 		clearList('years');
 		say('loading years...');
@@ -232,7 +231,7 @@ const createSixteenColors = ({ openFile, onExit }) => {
 
 	const showPacks = async (year, page) => {
 		const ticket = gate.enter();
-		where = { view: 'packs', year };
+		activeView = 'packs';
 		crumb.textContent = String(year);
 		clearList('packs');
 		say(`loading ${year}...`);
@@ -263,7 +262,7 @@ const createSixteenColors = ({ openFile, onExit }) => {
 
 	const showPackSearch = async (query, page) => {
 		const ticket = gate.enter();
-		where = { view: 'packsearch', name: query };
+		activeView = 'packsearch';
 		crumb.textContent = query ? `search / ${query}` : 'all packs';
 		clearList('packsearch');
 		say('searching packs...');
@@ -295,7 +294,7 @@ const createSixteenColors = ({ openFile, onExit }) => {
 
 	const showArtists = async (filter, page) => {
 		const ticket = gate.enter();
-		where = { view: 'artists', name: filter };
+		activeView = 'artists';
 		crumb.textContent = filter ? `artists / ${filter}` : 'artists';
 		clearList('artists');
 		say('loading artists...');
@@ -341,7 +340,7 @@ const createSixteenColors = ({ openFile, onExit }) => {
 
 	const showArtistWorks = async name => {
 		const ticket = gate.enter();
-		where = { view: 'artistworks', name };
+		activeView = 'artistworks';
 		crumb.textContent = `artist / ${name}`;
 		clearList('artistworks');
 		say(`loading ${name}...`);
@@ -393,7 +392,7 @@ const createSixteenColors = ({ openFile, onExit }) => {
 
 	const showCrews = async (filter, page) => {
 		const ticket = gate.enter();
-		where = { view: 'crews', name: filter };
+		activeView = 'crews';
 		crumb.textContent = filter ? `crews / ${filter}` : 'crews';
 		clearList('crews');
 		say('loading crews...');
@@ -439,7 +438,7 @@ const createSixteenColors = ({ openFile, onExit }) => {
 
 	const showCrewPacks = async tag => {
 		const ticket = gate.enter();
-		where = { view: 'crewpacks', name: tag };
+		activeView = 'crewpacks';
 		crumb.textContent = `crew / ${tag}`;
 		clearList('crewpacks');
 		say(`loading ${tag}...`);
@@ -470,7 +469,7 @@ const createSixteenColors = ({ openFile, onExit }) => {
 
 	const showFiles = async pack => {
 		const ticket = gate.enter();
-		where = { view: 'files', pack };
+		activeView = 'files';
 		crumb.textContent = pack.name;
 		clearList('files');
 		say(`loading ${pack.name}...`);
@@ -587,7 +586,7 @@ const createSixteenColors = ({ openFile, onExit }) => {
 	window.addEventListener('resize', () => {
 		clearTimeout(refit);
 		refit = setTimeout(() => {
-			if (where.view === 'files' || where.view === 'artistworks') {
+			if (activeView === 'files' || activeView === 'artistworks') {
 				rerun();
 			}
 		}, 150);
@@ -626,14 +625,10 @@ const createSixteenColors = ({ openFile, onExit }) => {
 
 	return {
 		show,
-		showYears,
 		showPacks,
 		showFiles,
 		showArtists,
-		showArtistWorks,
 		showCrews,
-		showCrewPacks,
-		showPackSearch,
 		setTab,
 	};
 };

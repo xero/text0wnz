@@ -6,6 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createDocV3 } from '../../src/js/core/doc.js';
+import { v3ToU16Lossy } from '../../src/js/core/index.js';
 
 const makeMockDoc = () => createDocV3({ columns: 80, rows: 25 });
 
@@ -54,7 +55,7 @@ describe('latin-1 txt fallback', () => {
 		const onLoad = reader.addEventListener.mock.calls[0][1];
 		onLoad({});
 		expect(callback).toHaveBeenCalled();
-		return callback.mock.calls[0];
+		return v3ToU16Lossy(callback.mock.calls[0][2]);
 	};
 
 	beforeEach(async () => {
@@ -72,7 +73,7 @@ describe('latin-1 txt fallback', () => {
 	it('falls back to the CP437 read when a .txt is not UTF-8', () => {
 		// lone high bytes: typical amiga latin-1, invalid as UTF-8
 		const bytes = [...new TextEncoder().encode('hi '), 0xab, 0xcd, 0xef];
-		const [columns, , data] = loadTxt(bytes);
+		const { columns, imageData: data } = loadTxt(bytes);
 		expect(columns).toBe(80);
 		expect(data[3] >> 8).toBe(0xab);
 		expect(data[4] >> 8).toBe(0xcd);
@@ -81,15 +82,16 @@ describe('latin-1 txt fallback', () => {
 	it('skips the UTF-8 reader outright when preferBytes is set', () => {
 		// valid UTF-8 for é, but the caller says these are scene bytes
 		const bytes = [0xc3, 0xa9];
-		const [, , data] = loadTxt(bytes, { preferBytes: true });
+		const { imageData: data } = loadTxt(bytes, { preferBytes: true });
 		expect(data[0] >> 8).toBe(0xc3);
 		expect(data[1] >> 8).toBe(0xa9);
 	});
 
 	it('still reads valid UTF-8 .txt through the core reader', () => {
 		const bytes = [...new TextEncoder().encode('é')];
-		const result = loadTxt(bytes);
-		// the UTF-8 path hands back a plane-native doc in the last slot
-		expect(result[6]).toBeTruthy();
+		const { imageData: data } = loadTxt(bytes);
+		// one glyph, CP437 130, not the two scene bytes 0xc3 0xa9
+		expect(data[0] >> 8).toBe(0x82);
+		expect(data[1] >> 8).toBe(0);
 	});
 });

@@ -23,9 +23,7 @@ const createPluginApi = canvas => {
 	// capture whatever stood at first read, leaking a local or collab
 	// edit landing mid-run into "start-of-run" state. get() is
 	// u16-shaped anyway (CP437 codes, classic colors)
-	const snapshot = Uint16Array.from(
-		canvas.getImageData?.() ?? new Uint16Array(columns * rows),
-	);
+	const snapshot = Uint16Array.from(canvas.getImageData());
 	const keyOf = (x, y) => y * columns + x;
 	const inBounds = (x, y) =>
 		Number.isInteger(x) &&
@@ -106,7 +104,7 @@ const createPluginManager = () => {
 	if (!list) {
 		return null;
 	}
-	/** @type {Array<{name: string, description: string, run: Function, origin: string}>} */
+	/** @type {Array<{name: string, description: string, run: Function}>} */
 	const plugins = [];
 
 	const say = text => {
@@ -170,13 +168,12 @@ const createPluginManager = () => {
 		}
 	};
 
-	const register = (plugin, origin) => {
+	const register = plugin => {
 		plugins.push({
 			name: plugin.name,
 			description:
 				typeof plugin.description === 'string' ? plugin.description : '',
 			run: plugin.run,
-			origin,
 		});
 		say(null);
 		render();
@@ -199,7 +196,7 @@ const createPluginManager = () => {
 		say(`loading ${url}...`);
 		try {
 			const module = await import(/* @vite-ignore */ url);
-			register(validatePlugin(module), url);
+			register(validatePlugin(module));
 			if (url.startsWith('http')) {
 				rememberUrl(url);
 			}
@@ -214,7 +211,7 @@ const createPluginManager = () => {
 		);
 		try {
 			const module = await import(/* @vite-ignore */ url);
-			register(validatePlugin(module), file.name);
+			register(validatePlugin(module));
 		} catch (error) {
 			say(`load failed: ${error.message}`);
 		} finally {
@@ -245,7 +242,7 @@ const createPluginManager = () => {
 		render();
 	};
 
-	return { show, loadFromUrl, loadFromFile, runPlugin, createPluginApi };
+	return { show, runPlugin };
 };
 
 export { createPluginManager, createPluginApi, validatePlugin };

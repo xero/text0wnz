@@ -28,7 +28,7 @@ describe('journal store', () => {
 		const arena = createPatchArena({ onCommit: s => strokes.push(s) });
 		await store.rewrite(await createJournal(doc, { meta: { title: 'wip' } }));
 
-		arena.beginStroke({ frame: 0, userId: 'xero' });
+		arena.beginStroke({ frame: 0 });
 		arena.record('glyph', 4, doc.frames[0].glyph[4], glyphWord(219, 0));
 		doc.frames[0].glyph[4] = glyphWord(219, 0);
 		arena.record('fg', 4, doc.frames[0].fg[4], paletteColor(14));
@@ -123,7 +123,7 @@ describe('journal store', () => {
 		const gate = new Promise(resolve => (release = resolve));
 		const snapshot = createJournal(doc);
 		const compacted = store.rewrite(gate.then(() => snapshot));
-		arena.beginStroke({ frame: 0, userId: 'xero' });
+		arena.beginStroke({ frame: 0 });
 		arena.record('glyph', 4, doc.frames[0].glyph[4], glyphWord(219, 0));
 		doc.frames[0].glyph[4] = glyphWord(219, 0);
 		arena.endStroke();

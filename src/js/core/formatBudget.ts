@@ -19,14 +19,7 @@ import {
 import { cp437ToUnicode } from './cp437.js';
 import { paletteIndexOf } from './doc.js';
 
-export type ExportFormat =
-	| 'ans'
-	| 'bin'
-	| 'xbin'
-	| 'tnd'
-	| 'utf8'
-	| 'txt'
-	| 'ownz';
+export type ExportFormat = 'ans' | 'bin' | 'xbin' | 'tnd' | 'utf8' | 'txt';
 
 export interface BudgetIssue {
 	kind: /** glyph outside CP437: becomes '?' in this format */
@@ -71,13 +64,12 @@ export const lintDocForFormat = (
 ): BudgetReport => {
 	const table = doc.glyphTable;
 	// utf8 holds everything EXCEPT the four control positions its writer
-	// substitutes and blink over extended backgrounds (flagged below);
-	// ownz alone is fully lossless
-	const lossless = format === 'ownz' || format === 'utf8';
+	// substitutes and blink over extended backgrounds (flagged below)
+	const utf8 = format === 'utf8';
 	// the plain-text writer emits real codepoints, so unicode cells are
 	// NOT lost there
-	const checkUnicode = !lossless && format !== 'txt';
-	const checkColors = !lossless && format !== 'txt' && format !== 'tnd';
+	const checkUnicode = !utf8 && format !== 'txt';
+	const checkColors = !utf8 && format !== 'txt' && format !== 'tnd';
 	const counts = new Map<BudgetIssue['kind'], BudgetIssue>();
 	const hit = (kind: BudgetIssue['kind'], index: number) => {
 		const existing = counts.get(kind);
@@ -89,7 +81,7 @@ export const lintDocForFormat = (
 	};
 	// every frame: ansimation and movie exports degrade later frames
 	// exactly like frame 0
-	for (const frame of format === 'ownz' ? [] : doc.frames) {
+	for (const frame of doc.frames) {
 		for (let i = 0; i < frame.glyph.length; i++) {
 			const glyphId = glyphIdOf(frame.glyph[i]);
 			const def = table.get(glyphId);
@@ -127,13 +119,13 @@ export const lintDocForFormat = (
 			// encodeUtf8's default ice presentation cannot brighten an
 			// extended background, so the attr silently drops there
 			if (
-				format === 'utf8' &&
+				utf8 &&
 				blinkAttr &&
 				(!isPaletteColor(frame.bg[i]) || paletteIndexOf(frame.bg[i]) > 15)
 			) {
 				hit('utf8-ext-blink', i);
 			}
-			if (lossless) {
+			if (utf8) {
 				continue;
 			}
 			if (format === 'tnd' && blinkAttr) {

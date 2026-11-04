@@ -2,8 +2,6 @@
 // assets/ucd/Blocks-18.0.0.txt.gz. DO NOT EDIT BY HAND.
 // [first codepoint, last codepoint, block name] per Unicode block.
 
-export const BLOCKS_VERSION = '18.0.0';
-
 // prettier-ignore
 export const UNICODE_BLOCKS: ReadonlyArray<readonly [number, number, string]> = [
 	[0x0000, 0x007f, "Basic Latin"],

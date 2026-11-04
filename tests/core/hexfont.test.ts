@@ -5,7 +5,6 @@ import {
 	buildBlocks,
 	packBlock,
 	parseHexFont,
-	parseUns2Uni,
 	readBlock,
 	type HexGlyph,
 } from '../../src/js/core/hexfont.js';
@@ -153,24 +152,5 @@ describe('buildBlocks', () => {
 		const blocks = buildBlocks(glyphs);
 		expect([...blocks.keys()]).toEqual([0x0, 0x4e, 0x1fb]);
 		expect(readBlock(0x1fb, blocks.get(0x1fb)!).has(0x1fb00)).toBe(true);
-	});
-});
-
-describe('parseUns2Uni', () => {
-	it('splits the single line into source/target halves', () => {
-		// two mappings: E852 -> 1FBC4, E853 -> 1FBF0 (synthetic second pair)
-		const table = String.fromCodePoint(0xe852, 0xe853, 0x1fbc4, 0x1fbf0);
-		const map = parseUns2Uni(table);
-		expect(map.get(0xe852)).toBe(0x1fbc4);
-		expect(map.get(0xe853)).toBe(0x1fbf0);
-	});
-
-	it('ignores whitespace and throws on odd counts', () => {
-		const table = `${String.fromCodePoint(0xe852)}\n${String.fromCodePoint(0x1fbc4)}\n`;
-		expect(parseUns2Uni(table).get(0xe852)).toBe(0x1fbc4);
-		expect(() => parseUns2Uni(String.fromCodePoint(0xe852))).toThrow(
-			HexFontError,
-		);
-		expect(() => parseUns2Uni('')).toThrow(HexFontError);
 	});
 });

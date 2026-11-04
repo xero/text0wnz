@@ -28,14 +28,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	let columns = 80,
 			rows = 25,
 			imageData = new Uint16Array(columns * rows),
-			canvases,
-			redrawing = false,
-			ctxs,
 			blinkOn = false,
 			drawHistory = [],
 			currentFontName = magicNumbers.DEFAULT_FONT,
 			dirtyRegions = [],
-			processingDirtyRegions = false,
 			xbFontData = null,
 			dirtyRegionScheduled = false,
 			activeChunks = new Set();
@@ -363,14 +359,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const chunkSize = 25,
-				viewportState = {
-					scrollTop: 0,
-					scrollLeft: 0,
-					containerHeight: 0,
-					containerWidth: 0,
-					visibleStartRow: 0,
-					visibleEndRow: 0,
-				},
+				viewportState = { scrollTop: 0, containerHeight: 0 },
 				canvasChunks = new Map();
 
 	// paint paths delegate to GL when active over the shared doc model;
@@ -472,7 +461,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 
 		if (glRenderer) {
-			glRenderer.drawRegion(x, y, w, h);
+			glRenderer.drawRegion(y, h);
 			return;
 		}
 
@@ -485,31 +474,25 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const processDirtyRegions = () => {
-		if (processingDirtyRegions || dirtyRegions.length === 0) {
+		if (dirtyRegions.length === 0) {
 			return;
 		}
 
 		if (!dirtyRegionScheduled) {
 			dirtyRegionScheduled = true;
 			requestAnimationFrame(() => {
-				processingDirtyRegions = true;
 				const coalescedRegions = coalesceRegions(dirtyRegions);
 				dirtyRegions = [];
 				for (let i = 0; i < coalescedRegions.length; i++) {
 					const region = coalescedRegions[i];
 					drawRegion(region.x, region.y, region.w, region.h);
 				}
-				processingDirtyRegions = false;
 				dirtyRegionScheduled = false;
 			});
 		}
 	};
 
 	const redrawGlyph = (index, x, y) => {
-		if (glRenderer) {
-			glRenderer.drawCell(x, y);
-			return;
-		}
 		const chunkIndex = Math.floor(y / chunkSize);
 		const chunk = canvasChunks.get(chunkIndex);
 		if (!chunk || !activeChunks.has(chunkIndex)) {
@@ -521,9 +504,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		redrawGlyphInChunk(index, x, y, chunk);
 	};
 
-	const redrawEntireImage = (onProgress, onComplete) => {
+	const redrawEntireImage = onComplete => {
 		if (glRenderer) {
-			glRenderer.redraw(onProgress, onComplete);
+			glRenderer.redraw(onComplete);
 			return;
 		}
 		if (rows * columns < 5000) {
@@ -544,27 +527,16 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		} else {
 			batchSize = 3;
 		}
-		progressiveRedraw(0, batchSize, rows, onProgress, onComplete);
+		progressiveRedraw(0, batchSize, rows, onComplete);
 	};
 
-	const progressiveRedraw = (
-		startRow,
-		batchSize,
-		totalRows,
-		onProgress,
-		onComplete,
-	) => {
+	const progressiveRedraw = (startRow, batchSize, totalRows, onComplete) => {
 		const frameStart = performance.now();
-		const endRow = Math.min(startRow + batchSize, totalRows || rows);
+		const endRow = Math.min(startRow + batchSize, totalRows);
 
 		drawRegion(0, startRow, columns, endRow - startRow);
 
-		if (onProgress) {
-			const progress = (endRow / (totalRows || rows)) * 100;
-			onProgress(progress);
-		}
-
-		if (endRow < (totalRows || rows)) {
+		if (endRow < totalRows) {
 			requestAnimationFrame(() => {
 				const frameTime = performance.now() - frameStart;
 				let nextBatchSize = batchSize;
@@ -574,13 +546,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				} else if (frameTime > 16) {
 					nextBatchSize = Math.max(Math.floor(batchSize / 2), 1);
 				}
-				progressiveRedraw(
-					endRow,
-					nextBatchSize,
-					totalRows,
-					onProgress,
-					onComplete,
-				);
+				progressiveRedraw(endRow, nextBatchSize, totalRows, onComplete);
 			});
 		} else {
 			if (onComplete) {
@@ -762,13 +728,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const viewportElement = document.getElementById('viewport');
 		if (!viewportElement) {
 			console.warn('[Canvas] #viewport not found, rendering all chunks');
-			return {
-				startChunk: 0,
-				endChunk: totalChunks - 1,
-				totalChunks,
-				visibleStartRow: 0,
-				visibleEndRow: rows,
-			};
+			return { startChunk: 0, endChunk: totalChunks - 1 };
 		}
 
 		const viewportHeight = viewportElement.clientHeight || window.innerHeight;
@@ -789,13 +749,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			Math.floor(bufferedBottom / (chunkSize * fontHeight)),
 		);
 
-		return {
-			startChunk,
-			endChunk,
-			totalChunks,
-			visibleStartRow: Math.floor(viewportTop / fontHeight),
-			visibleEndRow: Math.ceil(viewportBottom / fontHeight),
-		};
+		return { startChunk, endChunk };
 	};
 
 	const updateViewportState = () => {
@@ -806,21 +760,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 
 		viewportState.scrollTop = viewportElement.scrollTop;
-		viewportState.scrollLeft = viewportElement.scrollLeft;
 		viewportState.containerHeight = viewportElement.clientHeight;
-		viewportState.containerWidth = viewportElement.clientWidth;
-
-		const fontHeight =
-			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
-		viewportState.visibleStartRow = Math.floor(
-			viewportState.scrollTop / fontHeight,
-		);
-		viewportState.visibleEndRow = Math.min(
-			rows,
-			Math.ceil(
-				(viewportState.scrollTop + viewportState.containerHeight) / fontHeight,
-			),
-		);
 	};
 
 	const getOrCreateCanvasChunk = chunkIndex => {
@@ -850,7 +790,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			canvas: canvas,
 			ctx: canvas.getContext('2d'),
 			rendered: false,
-			chunkIndex: chunkIndex,
 			startRow: chunkStartRow,
 			endRow: chunkEndRow,
 			blinkCells: new Set(),
@@ -860,38 +799,27 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		return chunk;
 	};
 
-	/** async batches the initial render via RAF */
-	const renderChunk = (chunk, async = false) => {
+	const renderChunk = chunk => {
 		if (!chunk) {
 			return;
 		}
+		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
+		const fontHeight =
+			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+		const { startRow, endRow, ctx } = chunk;
+		const chunkHeight = (endRow - startRow) * fontHeight;
+		const canvasWidth = fontWidth * columns;
 
-		const doRender = () => {
-			const fontWidth =
-				State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
-			const fontHeight =
-				State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
-			const { startRow, endRow, ctx } = chunk;
-			const chunkHeight = (endRow - startRow) * fontHeight;
-			const canvasWidth = fontWidth * columns;
+		ctx.clearRect(0, 0, canvasWidth, chunkHeight);
+		chunk.blinkCells.clear();
 
-			ctx.clearRect(0, 0, canvasWidth, chunkHeight);
-			chunk.blinkCells.clear();
-
-			for (let y = startRow; y < endRow; y++) {
-				for (let x = 0; x < columns; x++) {
-					const index = y * columns + x;
-					redrawGlyphInChunk(index, x, y, chunk);
-				}
+		for (let y = startRow; y < endRow; y++) {
+			for (let x = 0; x < columns; x++) {
+				const index = y * columns + x;
+				redrawGlyphInChunk(index, x, y, chunk);
 			}
-			chunk.rendered = true;
-		};
-
-		if (async) {
-			requestAnimationFrame(doRender);
-		} else {
-			doRender();
 		}
+		chunk.rendered = true;
 	};
 
 	const redrawGlyphInChunk = (index, x, y, chunk) => {
@@ -919,20 +847,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			} else {
 				State.font.draw(charCode, foreground, background, chunk.ctx, x, localY);
 				chunk.blinkCells.delete(index);
-			}
-		}
-	};
-
-	const updateLegacyArrays = () => {
-		canvases = [];
-		ctxs = [];
-
-		const totalChunks = Math.ceil(rows / chunkSize);
-		for (let i = 0; i < totalChunks; i++) {
-			const chunk = canvasChunks.get(i);
-			if (chunk) {
-				canvases.push(chunk.canvas);
-				ctxs.push(chunk.ctx);
 			}
 		}
 	};
@@ -990,7 +904,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			}
 		}
 		activeChunks = newActiveChunks;
-		updateLegacyArrays();
 	};
 
 	// trailing throttle: a scroll during the RAF pass schedules one more
@@ -1053,13 +966,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return;
 		}
 		if (glRenderer) {
-			redrawing = true;
 			glRenderer.rebuild();
-			redrawing = false;
 			updateTimer();
 			return;
 		}
-		redrawing = true;
 
 		canvasChunks.forEach(chunk => {
 			if (chunk.canvas && chunk.canvas.parentNode) {
@@ -1069,9 +979,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 		canvasChunks.clear();
 		activeChunks.clear();
-
-		canvases = [];
-		ctxs = [];
 
 		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
 		const fontHeight =
@@ -1112,9 +1019,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				renderChunk(chunk);
 			}
 		}
-		updateLegacyArrays();
 		initViewportListeners();
-		redrawing = false;
 		stopBlinkTimer();
 		updateTimer();
 	};
@@ -1231,7 +1136,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 						xbFontData.bytes,
 						xbFontData.width,
 						xbFontData.height,
-						xbFontData.letterSpacing,
+						false, // SAUCE §FileType: XBin flags are 0, no LS
 						State.palette,
 						effectiveScaleFactor,
 					),
@@ -1347,20 +1252,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		// collapse every same-task trigger (e.g. letter spacing + zoom
 		// set back to back) into ONE relayout at the final metrics
 		await Promise.resolve();
-		const waitForRedrawing = () =>
-			new Promise(resolve => {
-				// Fast path: don't pay a 50ms poll tick when already idle
-				if (!redrawing) {
-					resolve();
-					return;
-				}
-				const intervalId = setInterval(() => {
-					if (!redrawing) {
-						clearInterval(intervalId);
-						resolve();
-					}
-				}, 50);
-			});
 		do {
 			criticalDirty = false;
 			// continuous zoom (pinch, wheel) relayouts every frame on GL;
@@ -1370,13 +1261,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				State.modal.loading('Updating editor with new settings...');
 			}
 			stopBlinkTimer();
-			await waitForRedrawing();
 			createCanvases();
 			// the zoom controller corrects scroll for focal anchoring once
 			// the container has its new size
 			document.dispatchEvent(new CustomEvent('onCanvasLayoutChange', {}));
 			await new Promise(resolve => {
-				redrawEntireImage(null, () => {
+				redrawEntireImage(() => {
 					updateTimer();
 					if (!interactive && !State.loadingFromStorage) {
 						State.modal.close();
@@ -1413,7 +1303,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			// so about half of all exports would drop their blink glyphs
 			// (the live view self-heals on the next tick)
 			renderChunk(chunk);
-			chunk.rendered = true;
 			const yPosition = chunkIndex * chunkSize * fontHeight;
 			ctx.drawImage(chunk.canvas, 0, yPosition);
 		}
@@ -1447,7 +1336,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			// same pinned-phase re-render as getImage: a rendered chunk
 			// wears the tick's last phase otherwise
 			renderChunk(chunk);
-			chunk.rendered = true;
 			const chunkData = chunk.ctx.getImageData(
 				0,
 				0,
@@ -1470,8 +1358,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		newRowValue,
 		newImageData,
 		newIceColors,
-		newLetterSpacing,
-		onProgress,
 		onComplete,
 	) => {
 		editor.loadU16(newImageData, newColumnValue, newRowValue, newIceColors);
@@ -1481,17 +1367,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		columns = newColumnValue;
 		rows = newRowValue;
 		imageData = newImageData;
-		if (typeof newLetterSpacing === 'boolean') {
-			// SAUCE §ANSiFlags, LS bits (true = 9px). Its own parameter,
-			// never the onProgress slot: a truthy flag there would be
-			// CALLED as a function mid-redraw and abort the open
-			State.font.setLetterSpacing(newLetterSpacing);
-		}
 		scheduleJournalKeyframe(true);
 		createCanvases();
 		updateTimer();
 
-		redrawEntireImage(onProgress, () => {
+		redrawEntireImage(() => {
 			document.dispatchEvent(new CustomEvent('onOpenedFile'));
 			if (onComplete) {
 				onComplete();
@@ -1524,7 +1404,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		if (onionSkin) {
 			rebuildOnionPlanes();
 		}
-		redrawEntireImage(null, () => {
+		redrawEntireImage(() => {
 			document.dispatchEvent(new CustomEvent('onOpenedFile'));
 			// the frame count may have changed (.dur / envelope imports)
 			document.dispatchEvent(
@@ -1569,22 +1449,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const getMirrorMode = () => {
 		return editor.getMirrorMode();
-	};
-
-	/**
-	 * Single-cell write shim kept only for the exported surface. Writes
-	 * without joining an undo group, mirroring none.
-	 */
-	const patchBufferAndEnqueueDirty = (
-		index,
-		charCode,
-		foreground,
-		background,
-		x,
-		y,
-		_addToUndo = true,
-	) => {
-		editor.quickDrawU16([[index, ((charCode & 0xff) << 8) | ((background & 15) << 4) | (foreground & 15), x, y]]);
 	};
 
 	const getBlock = (x, y) => editor.getBlock(x, y);
@@ -2141,7 +2005,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			enqueueDirtyRegion,
 			enqueueDirtyCell,
 			processDirtyRegions,
-			patchBufferAndEnqueueDirty,
 			coalesceRegions,
 		},
 	};

@@ -271,10 +271,6 @@ const createCursor = canvasContainer => {
 		if (!e.ctrlKey && !e.altKey) {
 			if (!e.shiftKey && !e.metaKey) {
 				switch (e.code) {
-					case 'Enter':
-						e.preventDefault();
-						newLine();
-						break;
 					case 'End':
 						e.preventDefault();
 						endOfCurrentRow();
@@ -803,10 +799,31 @@ const createKeyboardController = () => {
 		}
 	};
 
-	// Enter on a real control outside the canvas scope is activation,
-	// not canvas input: its keypress default must survive so the
-	// browser clicks the focused button, or the tab stops the focus
-	// walk reaches would not be operable. Text entries never get here
+	// Chrome and Firefox focus a button a pointer clicks, and Chrome
+	// turns :focus-visible on at the next keydown, so only the press
+	// itself marks a control the keyboard never reached. Registered for
+	// the controller's lifetime: the click that turns keyboard mode on
+	// focuses its own button before enable runs
+	let pressing = false;
+	let pointerFocused = null;
+	const pressEnd = () => {
+		pressing = false;
+	};
+	document.addEventListener('pointerdown', () => {
+		pressing = true;
+	}, true);
+	document.addEventListener('pointerup', pressEnd, true);
+	document.addEventListener('pointercancel', pressEnd, true);
+	document.addEventListener('focusin', e => {
+		pointerFocused = pressing ? e.target : null;
+	}, true);
+
+	// Enter on a control the keyboard reached outside the canvas scope
+	// is activation, not canvas input: its keydown must go uncancelled,
+	// since a cancelled keydown gets no keypress and the keypress
+	// default is what clicks the focused button; otherwise the tab stops
+	// the focus walk reaches are not operable. A clicked button keeps
+	// Enter a newline, as it always was. Text entries never get here
 	// (they ride the ignored flag), and inside the canvas scope Enter
 	// stays a newline
 	const activationTarget = () => {
@@ -815,6 +832,7 @@ const createKeyboardController = () => {
 			!active ||
 			active === document.body ||
 			active === document.documentElement ||
+			active === pointerFocused ||
 			active.closest?.('#canvasContainer')
 		) {
 			return false;
@@ -845,11 +863,23 @@ const createKeyboardController = () => {
 						e.preventDefault();
 						draw(9); // Tab character code
 					}
+				} else if (e.key === 'Enter') {
+					// keydown for Enter and Backspace alike (Backspace never
+					// gets a keypress), and both ride the typing queue, or a
+					// newline or erase lands ahead of a glyph still resolving
+					if (!activationTarget()) {
+						e.preventDefault();
+						enqueueTyped(() => State.cursor.newLine());
+					}
 				} else if (e.code === 'Backspace') {
 					e.preventDefault();
-					if (State.cursor.getX() > 0) {
-						deleteText();
-					}
+					// the edge guard runs inside the link: it must judge the
+					// cursor the preceding link left behind
+					enqueueTyped(() => {
+						if (State.cursor.getX() > 0) {
+							deleteText();
+						}
+					});
 				}
 			} else if (e.ctrlKey && !e.altKey && !e.metaKey && e.code === 'KeyU') {
 				// keydown, not keypress: keypress never fires for ctrl
@@ -1091,23 +1121,6 @@ const createKeyboardController = () => {
 				if (e.key.length <= 2 && [...e.key].length === 1) {
 					e.preventDefault();
 					drawTyped(e.key);
-				} else if (e.key === 'Enter') {
-					if (activationTarget()) {
-						return;
-					}
-					e.preventDefault();
-					// queued: a sync newline ahead of a pending glyph would
-					// drop the glyph onto the next row
-					enqueueTyped(() => State.cursor.newLine());
-				} else if (e.key === 'Backspace') {
-					e.preventDefault();
-					// the edge guard runs inside the link: it must judge the
-					// cursor the preceding link left behind
-					enqueueTyped(() => {
-						if (State.cursor.getX() > 0) {
-							deleteText();
-						}
-					});
 				}
 			}
 		}

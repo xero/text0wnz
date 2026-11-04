@@ -1,7 +1,6 @@
 /**
- * Every open hands main.js a DocV3 payload (the 7th callback arg) plus
- * a lossy u16 projection for legacy bookkeeping; these formats carry
- * what the u16 view cannot.
+ * Every open hands main.js a plane-native DocV3; these formats carry
+ * what its lossy u16 projection cannot.
  */
 import { describe, it, expect, vi } from 'vitest';
 
@@ -51,11 +50,14 @@ import {
 	gzip,
 	paletteColor,
 	rgbColor,
+	v3ToU16Lossy,
 } from '../../src/js/core/index';
 
+/** resolves with the opened doc and its u16 projection */
 const openFile = (name, bytes) =>
 	new Promise(resolve => {
-		Load.file(new File([bytes], name), (...args) => resolve(args));
+		Load.file(new File([bytes], name), (_letterSpacing, _fontName, doc) =>
+			resolve({ doc, ...v3ToU16Lossy(doc) }));
 	});
 
 describe('doc-native file formats', () => {
@@ -76,7 +78,7 @@ describe('doc-native file formats', () => {
 		});
 		const bytes = encodeTundra(doc, { meta: { title: 'tnd fixture' } });
 
-		const [columns, rows, u16, ice, , , docNative] = await openFile(
+		const { columns, rows, imageData: u16, iceColors: ice, doc: docNative } = await openFile(
 			'art.tnd',
 			bytes,
 		);
@@ -94,7 +96,7 @@ describe('doc-native file formats', () => {
 		const bytes = new TextEncoder().encode(
 			'\x1b[1;255;64;32t\x1b[0;8;16;24tA',
 		);
-		const [, , u16, , , , docNative] = await openFile('truecolor.ans', bytes);
+		const { imageData: u16, doc: docNative } = await openFile('truecolor.ans', bytes);
 		const cell = docNative.getCell(0, 0, 0);
 		expect(cell.fg).toBe(rgbColor(255, 64, 32));
 		expect(cell.bg).toBe(rgbColor(8, 16, 24));
@@ -144,7 +146,7 @@ describe('doc-native file formats', () => {
 		const bytes = await gzip(
 			new TextEncoder().encode(JSON.stringify(movie)),
 		);
-		const [columns, , u16, , , , docNative] = await openFile(
+		const { columns, imageData: u16, doc: docNative } = await openFile(
 			'anim.dur',
 			bytes,
 		);
@@ -166,7 +168,7 @@ describe('doc-native file formats', () => {
 		// capture what Save.ownz would write (no picker in jsdom: it
 		// falls to the download path; intercept via encode round-trip)
 		const bytes = await encodeEnvelope(doc, { meta: { title: 'native' } });
-		const [columns, rows, , , , , docNative] = await openFile(
+		const { columns, rows, doc: docNative } = await openFile(
 			'art.0wnz',
 			bytes,
 		);
