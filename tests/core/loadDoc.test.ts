@@ -8,6 +8,7 @@ import {
 import { v3ToU16, v3ToU16Lossy } from '../../src/js/core/convert.js';
 import { createEditorCore } from '../../src/js/core/editor.js';
 import { decodeAns } from '../../src/js/core/codecs/ans.js';
+import { decodeBin } from '../../src/js/core/codecs/bin.js';
 import { decodeDur } from '../../src/js/core/codecs/dur.js';
 import { decodeTundra } from '../../src/js/core/codecs/tundra.js';
 import { gzip } from '../../src/js/core/codecs/util.js';
@@ -159,6 +160,18 @@ describe('editor.loadDoc', () => {
 			codepoint: 0x2603,
 		});
 		expect(doc.getIceColors()).toBe(true);
+	});
+
+	it('keeps CP437 0 and 255 apart, though both map to NBSP', () => {
+		// BIN and ANSI opens reach the canvas through loadDoc, and a
+		// font like Topaz draws 255 as a visible glyph
+		const source = decodeBin(
+			new Uint8Array([0, 0x07, 255, 0x17, 32, 0x07, 255, 0x07]),
+		).doc;
+		const doc = createDocV3({ columns: 80, rows: 25 });
+		createEditorCore(doc).loadDoc(source);
+		const chars = Array.from(v3ToU16(doc).imageData.slice(0, 4), w => w >> 8);
+		expect(chars).toEqual([0, 255, 32, 255]);
 	});
 
 	it('round-trips a classic doc losslessly and clears history', () => {
