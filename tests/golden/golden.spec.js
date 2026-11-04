@@ -162,7 +162,8 @@ const seedSkip = (testInfo, name) =>
 	// the flow but skips the pixel assertion instead of failing. The
 	// golden-gl project's snapshotPathTemplate pins the same -golden
 	// suffix as the 2D project, so one name covers both (the GL-only
-	// unicode goldens are seeded by the workflow's golden-gl step)
+	// unicode and 512-glyph XBin goldens are seeded by the workflow's
+	// golden-gl step)
 	test.skip(
 		!!process.env.CI &&
 		testInfo.config.updateSnapshots === 'missing' &&

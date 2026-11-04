@@ -42,8 +42,9 @@ jobs:
         env:
           HOME: /root
           PLAYWRIGHT_TEST_BASE_URL: http://localhost:8060
-      - name: regenerate GL-only goldens (unicode)
-        run: CI=actions bun test:e2e --project=golden-gl -g "unicode-mixed" --update-snapshots
+      # the 2D project skips these, so only this step can seed them
+      - name: regenerate GL-only goldens (unicode, 512-glyph XBin)
+        run: CI=actions bun test:e2e --project=golden-gl -g "unicode-mixed|xb512" --update-snapshots
         env:
           HOME: /root
           PLAYWRIGHT_TEST_BASE_URL: http://localhost:8060
