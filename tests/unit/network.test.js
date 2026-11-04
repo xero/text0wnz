@@ -1153,6 +1153,20 @@ describe('Network Module', () => {
 				expect(State.textArtCanvas.setIceColors).toHaveBeenCalledWith(true);
 			});
 
+			it('a peer\'s text, NUL, and 255 draw without a glyph fetch', async () => {
+				const handler = createWorkerHandler(mockInputHandle);
+				await join(handler);
+				emulateDraws();
+				await frame(T0wnzAction.EXT_DRAW_BATCH, {
+					cells: [cell(0, 0, 65), cell(1, 0, 0)],
+					seq: 6,
+					id: 2,
+				});
+				await frame(T0wnzAction.EXT_DRAW, { ...cell(0, 0, 0xa0), seq: 7, id: 2 });
+				expect(State.textArtCanvas.resolveUnicode).not.toHaveBeenCalled();
+				expect(drawn).toEqual([[[0, 0, 65], [1, 0, 0]], [[0, 0, 0xa0]]]);
+			});
+
 			it('the join finishes before the resync behind it applies', async () => {
 				const handler = createWorkerHandler(mockInputHandle);
 				const font = holdFontLoad();

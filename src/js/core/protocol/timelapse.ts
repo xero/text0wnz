@@ -16,6 +16,7 @@ import { MoebiusAction, ProtocolError } from './moebius.js';
 import {
 	blockToExtCell,
 	expandExtCells,
+	extCodepointToGlyphId,
 	sanitizeExtCell,
 	sanitizeExtPalette,
 	T0wnzAction,
@@ -250,14 +251,11 @@ export const timelapseToDoc = (
 		for (let y = 0; y < copyRows; y++) {
 			for (let x = 0; x < copyCols; x++) {
 				const cell = snapshot.cells[y * snapshot.columns + x];
-				let glyphId: number;
-				try {
-					glyphId = doc.glyphTable.idFor(0, cell.u);
-				} catch {
-					glyphId = 63; // '?'
-				}
 				const j = y * finalColumns + x;
-				target.glyph[j] = glyphWord(glyphId, cell.a);
+				target.glyph[j] = glyphWord(
+					extCodepointToGlyphId(doc.glyphTable, cell.u),
+					cell.a,
+				);
 				target.fg[j] = cell.fg >>> 0;
 				target.bg[j] = cell.bg >>> 0;
 			}
