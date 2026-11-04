@@ -38,7 +38,7 @@ Each entry names the module under test and the behavior the file pins.
 - **asciiArena.test.js:** `asciiArena.js` colly browsing, search, artist and crew views, zip and LHA opens through the core reader, lazy DIZ previews, and stale fetch races.
 - **asciiBrush.test.js:** `asciiBrush.js` stroke to ASCII glyph resolution, terminal joins against drawn lines, and a preview that matches the commit.
 - **autoScroller.test.js:** `autoScroller.js` scroll engine timing on an injected clock (glides, holds, round trips, dropped frames) and the autoscroll menu.
-- **canvas.test.js:** `canvas.js` blink loops, letter spacing, cell reads, chunk paints, dirty regions, area and image data, XBin font and palette rebinding, and resize history.
+- **canvas.test.js:** `canvas.js` blink loops, letter spacing, cell reads, chunk paints, dirty regions, area and image data, XBin font and palette rebinding, resize history, and collab cells (NUL and 255 kept apart, a peer's text in the session font).
 - **canvasFont.test.js:** `setFont` installs loads in call order, runs every callback, falls back past a stalled load without counting hidden time, carries a 9px toggle and a palette swap made during the load onto the new font, disposes a load that lands past its wait or that its caller disowned, and takes the glyph size only from the font that goes live.
 - **canvasJournal.test.js:** The canvas autosave journal restores strokes, undo, ice colors, animation frames, and resizes, stays off during collab sessions and after the profiler stops it, survives the keyframe encode window, the reload restore gate, and a failed append, and lands the last stroke once editing idles or the page hides without splitting a held press or a selection move, which reach the journal as one keyframe per pause or at once on a page hide.
 - **collabTarget.test.js:** `collabTarget.js` server address parsing, dial and display forms, the default server URL, and direct versus bridged transport.
@@ -76,7 +76,7 @@ Each entry names the module under test and the behavior the file pins.
 - **messageGuard.test.js:** `messageGuard.js` trusts origin-less and same-origin messages and rejects the rest.
 - **minimap.test.js:** `minimap.js` visibility toggle, sizing, and tap versus drag handling for mouse and touch.
 - **moveMode.test.js:** Selection move mode against a live canvas, covering aborts, restores, transparent blanks, and undo and redo of a move.
-- **network.test.js:** `network.js` worker handler (probe, join, connect form, refusals, dropped sessions, EXT_SYNC replay, peer resizes, sends during a font load, server order: peer writes that beat our ack, serialized frames, adoption replay, the glyph wait, vanilla peer font order, the font label after a peer font) and the chat controller.
+- **network.test.js:** `network.js` worker handler (probe, join, connect form, refusals, dropped sessions, EXT_SYNC replay, peer resizes, sends during a font load, server order: peer writes that beat our ack, serialized frames, adoption replay, the glyph wait, a peer's text drawing with no glyph fetch, vanilla peer font order, the font label after a peer font) and the chat controller.
 - **openAccept.test.js:** The File Open picker in `src/index.html` accepts every format the manual lists.
 - **palette.test.js:** `palette.js` CP437 to Unicode tables, palette creation and events, the preview, picker input by keyboard, mouse, and touch or pen hold, and which quick picks open the color editor.
 - **plugins.test.js:** `plugins.js` plugin API batching, plugin validation, and the plugin manager.
@@ -179,7 +179,7 @@ bunx vitest tests/unit/server/config.test.js
 
 Coverage is on by default. `vitest.config.js` collects V8 coverage with the `text` and `html` reporters and writes the HTML report to `tests/results/coverage/`. `bun test:unit` measures every Vitest suite at once, so the report covers the core and DOM suites as well as this folder. The report breaks each module down by statements, branches, functions, and lines. No coverage threshold gates CI.
 
-As of 2026-11-03, `bunx vitest run tests/unit` runs 1,263 tests in 76 files. One persistence test skips on macOS, since it needs a case-sensitive filesystem.
+As of 2026-11-04, `bunx vitest run tests/unit` runs 1,266 tests in 76 files. One persistence test skips on macOS, since it needs a case-sensitive filesystem.
 
 ### Coverage Reports
 

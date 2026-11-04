@@ -237,6 +237,7 @@ test.describe('collab round trip against a live server', () => {
 				const glyphId = doc.frames[0].glyph[index] & 0xffff;
 				return {
 					codepoint: doc.glyphTable.get(glyphId)?.codepoint ?? null,
+					fontSlot: doc.glyphTable.get(glyphId)?.fontSlot ?? null,
 					fg: doc.frames[0].fg[index] >>> 0,
 				};
 			});
@@ -254,6 +255,7 @@ test.describe('collab round trip against a live server', () => {
 				const glyphId = doc.frames[0].glyph[index] & 0xffff;
 				return {
 					codepoint: doc.glyphTable.get(glyphId)?.codepoint ?? null,
+					fontSlot: doc.glyphTable.get(glyphId)?.fontSlot ?? null,
 					fg: doc.frames[0].fg[index] >>> 0,
 				};
 			});
@@ -261,6 +263,46 @@ test.describe('collab round trip against a live server', () => {
 			.poll(async () => (await cellOnLate()).codepoint, { timeout: 10000 })
 			.toBe(0x2764);
 		expect((await cellOnLate()).fg).toBe(0xff8800);
+		// the classic slot has no unicode font, so a heart filed there
+		// draws as the substitute box
+		expect((await cellOnLate()).fontSlot).toBe((await cellOnB()).fontSlot);
+
+		await a.context.close();
+		await b.context.close();
+		await late.context.close();
+	});
+
+	test('text, NUL, and 255 keep their glyphs for a live peer and a late joiner', async ({
+		browser,
+		browserName,
+	}) => {
+		test.skip(browserName !== 'chromium', 'one engine runs the full stack');
+		test.skip(!hasBun, 'bun is required to spawn the server');
+		test.slow();
+
+		const a = await joinPage(browser, 'text-a');
+		const b = await joinPage(browser, 'text-b');
+		// a blue background makes every cell a change, the NUL included
+		await a.page.evaluate(() => {
+			window.__t0wnz.State.textArtCanvas.draw(cb => {
+				[65, 0, 255, 32].forEach((code, i) => cb(code, 7, 1, 12 + i, 9));
+			}, false);
+		});
+		const glyphs = page =>
+			page.evaluate(() => {
+				const doc = window.__t0wnz.State.textArtCanvas.getDoc();
+				return [12, 13, 14, 15].map(
+					x => doc.frames[0].glyph[9 * doc.getColumns() + x] & 0xffff,
+				);
+			});
+		await expect
+			.poll(() => glyphs(b.page), { timeout: 10000 })
+			.toEqual([65, 0, 255, 32]);
+
+		const late = await joinPage(browser, 'text-late');
+		await expect
+			.poll(() => glyphs(late.page), { timeout: 10000 })
+			.toEqual([65, 0, 255, 32]);
 
 		await a.context.close();
 		await b.context.close();

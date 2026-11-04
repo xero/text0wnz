@@ -747,6 +747,42 @@ describe('Canvas Module', () => {
 		});
 	});
 
+	describe('collab cells', () => {
+		let State;
+
+		beforeEach(async () => {
+			State = (await import('../../src/js/client/state.js')).default;
+		});
+
+		afterEach(() => {
+			delete State.network;
+		});
+
+		it('a NUL leaves as U+0000 and a 255 as NBSP', () => {
+			const draw = vi.fn();
+			State.network = { draw, isConnected: () => true, extCollab: () => true };
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			canvas.draw(cb => {
+				cb(0, 7, 1, 0, 0);
+				cb(255, 7, 1, 1, 0);
+				cb(65, 7, 1, 2, 0);
+			}, false);
+			const sent = draw.mock.calls.flatMap(([cells]) => cells.map(cell => cell.ext.u));
+			expect(sent).toEqual([0, 0xa0, 0x41]);
+		});
+
+		it('a peer\'s text, NUL, and 255 land on the classic font', async () => {
+			State.network = { isConnected: () => true, extCollab: () => true };
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			await canvas.drawRemoteExtCells(
+				[0x41, 0, 0xa0, 0x20].map((u, x) => ({ x, y: 0, u, a: 0, fg: 7, bg: 1 })),
+			);
+			const glyphs = canvas.getDoc().frames[0].glyph;
+			const ids = Array.from(glyphs.subarray(0, 4), word => word & 0xffff);
+			expect(ids).toEqual([0x41, 0, 255, 0x20]);
+		});
+	});
+
 	describe('resize history', () => {
 		let State;
 		const word = (65 << 8) | (4 << 4) | 7;

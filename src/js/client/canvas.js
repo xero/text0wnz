@@ -7,16 +7,16 @@ import { createHexFontPages } from './hexFontPages.js';
 import {
 	cellFromPoint,
 	clampCell,
-	cp437ToUnicode,
 	createDocV3,
 	createEditorCore,
 	createJournal,
 	createPatchArena,
 	encodeStrokeRecord,
+	extCodepointToCp437,
+	glyphToExtCodepoint,
 	replayJournal,
 	paletteColor,
 	snapOrigin,
-	unicodeToCp437Strict,
 	v3ToU16Lossy,
 } from '../core/index';
 import { createJournalStore } from './journalStore.js';
@@ -199,9 +199,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 						bg: (word >> 4) & 15,
 					},
 					ext: {
-						u:
-							doc.glyphTable.get(glyphId)?.codepoint ??
-							cp437ToUnicode(glyphId & 0xff),
+						u: glyphToExtCodepoint(doc.glyphTable, glyphId),
 						a: (glyphValue >>> 16) & 0xff,
 						fg: frame.fg[index] >>> 0,
 						bg: frame.bg[index] >>> 0,
@@ -1849,7 +1847,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const drawRemoteExtCells = async cells => {
 		const unresolved = new Set();
 		for (const cell of cells) {
-			if (unicodeToCp437Strict(cell.u) === undefined) {
+			if (extCodepointToCp437(cell.u) === undefined) {
 				unresolved.add(cell.u);
 			}
 		}
@@ -1871,7 +1869,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			) {
 				continue;
 			}
-			const byte = unicodeToCp437Strict(cell.u);
+			const byte = extCodepointToCp437(cell.u);
 			const glyphId = byte !== undefined ? byte : (resolved.get(cell.u) ?? 63);
 			writes.push({
 				index: cell.y * columns + cell.x,

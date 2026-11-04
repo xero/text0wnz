@@ -9,11 +9,11 @@ import {
 	T0wnzAction,
 	blockToExtCell,
 	compress8to6,
+	extCodepointToCp437,
 	extSyncToDoc,
 	joinDocToDoc,
 	sanitizeExtCell,
 	sanitizeExtPalette,
-	unicodeToCp437Strict,
 } from '../core/index';
 import { Load } from './file.js';
 import magicNumbers from './magicNumbers.js';
@@ -524,7 +524,7 @@ const createWorkerHandler = inputHandle => {
 	const drawExt = async cells => {
 		const unseen = new Set();
 		for (const cell of cells) {
-			if (unicodeToCp437Strict(cell.u) === undefined) {
+			if (extCodepointToCp437(cell.u) === undefined) {
 				unseen.add(cell.u);
 			}
 		}

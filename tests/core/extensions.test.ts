@@ -10,8 +10,10 @@ import {
 	T0wnzAction,
 	blockToExtCell,
 	compressExtCells,
+	docToExtCells,
 	expandExtCells,
 	extCellToBlock,
+	extSyncToDoc,
 	normalizeColorWord,
 	paletteWordsFromJoin,
 	sanitizeExtCell,
@@ -21,7 +23,9 @@ import {
 	MOEBIUS_EXTENSION_BASE,
 } from '../../src/js/core/index.js';
 import {
+	FONT_SLOT_UNSCII,
 	createDefaultPaletteRGB,
+	createDocV3,
 	paletteColor,
 } from '../../src/js/core/doc.js';
 
@@ -205,5 +209,40 @@ describe('palettes', () => {
 		expect(sanitizeExtPalette(new Array(257).fill(0))).toBeNull();
 		expect(sanitizeExtPalette([1, 'x'])).toBeNull();
 		expect(sanitizeExtPalette('vga')).toBeNull();
+	});
+});
+
+describe('glyphs on the wire', () => {
+	it('a vanilla NUL and 255 cross as two codepoints and come back apart', () => {
+		const nul = blockToExtCell({ code: 0, fg: 7, bg: 0 });
+		const top = blockToExtCell({ code: 255, fg: 7, bg: 0 });
+		expect([nul.u, top.u]).toEqual([0, 0xa0]);
+		expect(extCellToBlock(nul, false, defaults).code).toBe(0);
+		expect(extCellToBlock(top, false, defaults).code).toBe(255);
+	});
+
+	it('a sync keeps NUL, 255, and text on the classic font and unicode drawable', () => {
+		const doc = createDocV3({ columns: 6, rows: 1, mode: 'free' });
+		const heart = doc.glyphTable.idFor(FONT_SLOT_UNSCII, 0x2764);
+		[0, 255, 65, 32, 176, heart].forEach((id, i) => {
+			doc.frames[0].glyph[i] = id;
+		});
+		const cells = docToExtCells(doc);
+		expect(cells.map(cell => cell.u)).toEqual([
+			0, 0xa0, 0x41, 0x20, 0x2591, 0x2764,
+		]);
+		const { doc: synced } = extSyncToDoc({
+			columns: 6,
+			rows: 1,
+			cells: compressExtCells(cells),
+		});
+		const ids = Array.from(synced.frames[0].glyph, word => word & 0xffff);
+		expect(ids.slice(0, 5)).toEqual([0, 255, 65, 32, 176]);
+		// the classic slot has no unicode font, so a heart there draws
+		// as the substitute box
+		expect(synced.glyphTable.get(ids[5])).toEqual({
+			fontSlot: FONT_SLOT_UNSCII,
+			codepoint: 0x2764,
+		});
 	});
 });
