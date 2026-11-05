@@ -256,6 +256,50 @@ test.describe('collab round trip against a live server', () => {
 		await late.context.close();
 	});
 
+	test('a peer SAUCE waits while the Sauce Editor is open, and Cancel lands it over the typing', async ({
+		browser,
+		browserName,
+	}) => {
+		test.skip(browserName !== 'chromium', 'one engine runs the full stack');
+		test.skip(!hasBun, 'bun is required to spawn the server');
+		test.slow();
+
+		const room = 'draftroom';
+		const a = await joinPage(browser, 'draft-a', { room });
+		const b = await joinPage(browser, 'draft-b', { room });
+		await b.page.locator('#navSauce').click();
+		await b.page.locator('#sauceAuthor').fill('half typed');
+		await a.page.locator('#navSauce').click();
+		await a.page.locator('#sauceTitle').fill('peer title');
+		await a.page.locator('#sauceDone').click();
+		// the server relays a's frames in order, so b has the SAUCE once
+		// the chat behind it shows
+		await a.page.evaluate(() => {
+			window.__t0wnz.State.network.sendChat('sauce sent');
+		});
+		await expect
+			.poll(
+				() =>
+					b.page.evaluate(
+						() => document.getElementById('messageWindow')?.textContent ?? '',
+					),
+				{ timeout: 10000 },
+			)
+			.toContain('sauce sent');
+		await expect(b.page.locator('#sauceAuthor')).toHaveValue('half typed');
+		await expect(b.page.locator('#sauceTitle')).toHaveValue('');
+		await expect(b.page).toHaveTitle(/^collab mode/);
+
+		await b.page.locator('#sauceModal button.close').click();
+		await expect(b.page.locator('#sauceTitle')).toHaveValue('peer title');
+		await expect(b.page.locator('#sauceAuthor')).toHaveValue('');
+		await expect(b.page).toHaveTitle(/^peer title/);
+		await expect(b.page.locator('#sauceInfoTitle')).toHaveText('peer title');
+
+		await a.context.close();
+		await b.context.close();
+	});
+
 	test('unicode and truecolor cells converge natively (extension suite)', async ({
 		browser,
 		browserName,

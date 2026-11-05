@@ -275,8 +275,17 @@ class StateManager {
 		}
 	}
 
+	/**
+	 * The journal lives outside Storage, in OPFS or its own IndexedDB
+	 * database, and the restore prefers it, so a clear that left it would
+	 * bring the cleared doc back with the next settings save.
+	 * @returns {Promise<unknown>}
+	 */
 	clearLocalStorage() {
-		Storage.clearAll();
+		return Promise.allSettled([
+			Storage.clearAll(),
+			this.state.textArtCanvas?.wipeJournal?.(),
+		]);
 	}
 
 	/** restore the autosave once every component exists */

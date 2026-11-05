@@ -8,6 +8,7 @@ import {
 	readBlock,
 	readColors,
 	readRegion,
+	readSelection,
 	tap,
 	writeText,
 } from './helpers/editorHelpers.js';
@@ -213,6 +214,19 @@ test.describe('Keyboard Shortcuts', () => {
 
 		await page.keyboard.press('Escape');
 		await expect(page.locator('#keyboard')).toHaveClass(/toolbarDisplayed/);
+	});
+
+	test('a deselect parks the keyboard cursor at the rect and forgets the rect', async ({ page }) => {
+		await selectRow(page, 10, 12, 5);
+		await page.keyboard.press('Escape');
+		expect(await readSelection(page)).toEqual({ live: null, last: null });
+
+		await page.keyboard.press('Escape');
+		await expect(page.locator('#keyboard')).toHaveClass(/toolbarDisplayed/);
+		expect(await cursorAt(page)).toEqual({ x: 10, y: 5 });
+
+		await page.locator('#selection').click();
+		expect(await readSelection(page)).toEqual({ live: null, last: null });
 	});
 });
 

@@ -20,6 +20,7 @@ import {
 	v3ToU16Lossy,
 } from '../core/index';
 import { createJournalStore } from './journalStore.js';
+import { settlesWithin } from './visibleWait.js';
 import { createPointerInput } from './pointer.js';
 import { isInteractiveZoom } from './zoom.js';
 import magicNumbers from './magicNumbers.js';
@@ -127,10 +128,41 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	// doc-level change (resize, ice, frames, loads, fonts): no stroke
 	// appends until a fresh keyframe captures it. Rare one-shot ops
 	// pass immediate; spammable ones (undo/redo, delay slider) debounce.
-	const scheduleJournalKeyframe = (immediate = false) => {
+	const markDocOp = () => {
 		docEpoch += 1;
 		docOpEpoch = docEpoch;
+	};
+	const scheduleJournalKeyframe = (immediate = false) => {
+		markDocOp();
 		queueKeyframe(immediate);
+	};
+	// an append queued before a wipe lands ahead of it and is wiped, and
+	// a keyframe it asks for would write the cleared doc back
+	let wipes = 0;
+	// `keyframe` journals the stroke instead when no keyframe in the
+	// store queue holds the last doc-level change: an appended stroke
+	// would replay against that stale baseline
+	const journalStroke = (stroke, keyframe) => {
+		if (snapshotEpoch < docOpEpoch) {
+			keyframe();
+			return;
+		}
+		const wiped = wipes;
+		journal
+			.appendStroke(encodeStrokeRecord(stroke))
+			.then(keyframeDue => {
+				if (keyframeDue && wiped === wipes) {
+					queueKeyframe(false);
+				}
+			})
+			.catch(error => {
+				console.warn('[Canvas] journal append failed:', error);
+				// the store drops strokes until a keyframe lands, and only
+				// a keyframe can hold this one now
+				if (wiped === wipes) {
+					queueKeyframe(false);
+				}
+			});
 	};
 	const arena = createPatchArena({
 		// the label table mirrors the ring so the History flyout can
@@ -147,26 +179,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				return;
 			}
 			docEpoch += 1;
-			if (snapshotEpoch < docOpEpoch) {
-				// no keyframe in the store queue holds the last doc-level
-				// change; an appended stroke would replay against that stale
-				// baseline, so the keyframe captures this stroke instead
-				queueKeyframe(true);
-				return;
-			}
-			journal
-				.appendStroke(encodeStrokeRecord(stroke))
-				.then(keyframeDue => {
-					if (keyframeDue) {
-						queueKeyframe(false);
-					}
-				})
-				.catch(error => {
-					console.warn('[Canvas] journal append failed:', error);
-					// the store drops strokes until a keyframe lands, and only
-					// a keyframe can hold this one now
-					queueKeyframe(false);
-				});
+			journalStroke(stroke, () => queueKeyframe(true));
 		},
 	});
 
@@ -480,14 +493,20 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 		if (!dirtyRegionScheduled) {
 			dirtyRegionScheduled = true;
+			// a paint that throws must not leave the flag set, or every
+			// later dirty paint drops; the scroll and resize passes below
+			// follow the same rule
 			requestAnimationFrame(() => {
-				const coalescedRegions = coalesceRegions(dirtyRegions);
-				dirtyRegions = [];
-				for (let i = 0; i < coalescedRegions.length; i++) {
-					const region = coalescedRegions[i];
-					drawRegion(region.x, region.y, region.w, region.h);
+				try {
+					const coalescedRegions = coalesceRegions(dirtyRegions);
+					dirtyRegions = [];
+					for (let i = 0; i < coalescedRegions.length; i++) {
+						const region = coalescedRegions[i];
+						drawRegion(region.x, region.y, region.w, region.h);
+					}
+				} finally {
+					dirtyRegionScheduled = false;
 				}
-				dirtyRegionScheduled = false;
 			});
 		}
 	};
@@ -763,6 +782,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		viewportState.containerHeight = viewportElement.clientHeight;
 	};
 
+	let contextRefused = false;
 	const getOrCreateCanvasChunk = chunkIndex => {
 		if (canvasChunks.has(chunkIndex)) {
 			return canvasChunks.get(chunkIndex);
@@ -781,6 +801,17 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 		// black backing avoids a flash before the chunk paints
 		const canvas = createCanvas(canvasWidth, canvasHeight);
+		const ctx = canvas.getContext('2d');
+		if (!ctx) {
+			// iOS Safari refuses a context past its canvas memory budget. A
+			// chunk cached without one throws from every later paint; left
+			// uncached, the next pass asks again once eviction frees memory
+			if (!contextRefused) {
+				contextRefused = true;
+				console.warn('[Canvas] the browser refused a 2D context for a chunk');
+			}
+			return null;
+		}
 		canvas.style.position = 'absolute';
 		canvas.style.top = chunkStartRow * fontHeight + 'px';
 		canvas.style.left = '0px';
@@ -788,7 +819,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 		const chunk = {
 			canvas: canvas,
-			ctx: canvas.getContext('2d'),
+			ctx: ctx,
 			rendered: false,
 			startRow: chunkStartRow,
 			endRow: chunkEndRow,
@@ -891,11 +922,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		});
 
 		for (let chunkIndex = startChunk; chunkIndex <= endChunk; chunkIndex++) {
-			newActiveChunks.add(chunkIndex);
-			let chunk = canvasChunks.get(chunkIndex);
+			const chunk = getOrCreateCanvasChunk(chunkIndex);
 			if (!chunk) {
-				chunk = getOrCreateCanvasChunk(chunkIndex);
+				continue;
 			}
+			newActiveChunks.add(chunkIndex);
 			if (!chunk.canvas.parentNode) {
 				canvasContainer.appendChild(chunk.canvas);
 			}
@@ -921,10 +952,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 		scrollScheduled = true;
 		requestAnimationFrame(() => {
-			updateViewportState();
-			renderVisibleChunks();
-
-			scrollScheduled = false;
+			try {
+				updateViewportState();
+				renderVisibleChunks();
+			} finally {
+				scrollScheduled = false;
+			}
 
 			if (pendingScrollUpdate) {
 				pendingScrollUpdate = false;
@@ -940,9 +973,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 		resizeScheduled = true;
 		requestAnimationFrame(() => {
-			updateViewportState();
-			renderVisibleChunks();
-			resizeScheduled = false;
+			try {
+				updateViewportState();
+				renderVisibleChunks();
+			} finally {
+				resizeScheduled = false;
+			}
 		});
 	};
 
@@ -1011,6 +1047,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			chunkIndex++
 		) {
 			const chunk = getOrCreateCanvasChunk(chunkIndex);
+			if (!chunk) {
+				continue;
+			}
 			if (chunkIndex <= endChunk) {
 				canvasContainer.appendChild(chunk.canvas);
 				activeChunks.add(chunkIndex);
@@ -1039,49 +1078,19 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	// a load that never settles would hold every later font change, and
 	// every collab frame waiting on one, behind it in the queue. The boot
 	// load waits it out instead: nothing queues behind it yet, and past
-	// the wait the editor would start with no font at all. Only visible
-	// time counts: iOS freezes a background tab's fetch along with its
-	// timers, and a wait that ran on while hidden would expire on return
-	// before the thawed fetch could finish
+	// the wait the editor would start with no font at all
 	const FONT_LOAD_TIMEOUT_MS = 10000;
-	const bounded = load => {
-		if (!State.font) {
+	const bounded = async load => {
+		if (!State.font || (await settlesWithin(load, FONT_LOAD_TIMEOUT_MS))) {
 			return load;
 		}
-		let fail;
-		const waited = new Promise((_, reject) => {
-			fail = reject;
-		});
-		let timer = 0;
-		let left = FONT_LOAD_TIMEOUT_MS;
-		let armedAt = 0;
-		let armed = false;
-		const expire = () => {
-			// the load runs on past the wait, and the font it may still
-			// build is one nobody installs
-			load.then(
-				font => font.dispose(),
-				() => {},
-			);
-			fail(new Error('font load timed out'));
-		};
-		const onVisibility = () => {
-			if (document.hidden && armed) {
-				armed = false;
-				clearTimeout(timer);
-				left -= Date.now() - armedAt;
-			} else if (!document.hidden && !armed) {
-				armed = true;
-				armedAt = Date.now();
-				timer = setTimeout(expire, left);
-			}
-		};
-		onVisibility();
-		document.addEventListener('visibilitychange', onVisibility);
-		return Promise.race([load, waited]).finally(() => {
-			clearTimeout(timer);
-			document.removeEventListener('visibilitychange', onVisibility);
-		});
+		// the load runs on past the wait, and the font it may still build
+		// is one nobody installs
+		load.then(
+			font => font.dispose(),
+			() => {},
+		);
+		throw new Error('font load timed out');
 	};
 	let fontQueue = Promise.resolve();
 
@@ -1249,33 +1258,43 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return;
 		}
 		criticalRunning = true;
-		// collapse every same-task trigger (e.g. letter spacing + zoom
-		// set back to back) into ONE relayout at the final metrics
-		await Promise.resolve();
-		do {
-			criticalDirty = false;
-			// continuous zoom (pinch, wheel) relayouts every frame on GL;
-			// flashing the settings modal per frame would be unusable
-			const interactive = isInteractiveZoom();
-			if (!interactive) {
-				State.modal.loading('Updating editor with new settings...');
+		let veiled = false;
+		try {
+			// collapse every same-task trigger (e.g. letter spacing + zoom
+			// set back to back) into ONE relayout at the final metrics
+			await Promise.resolve();
+			do {
+				criticalDirty = false;
+				// continuous zoom (pinch, wheel) relayouts every frame on GL;
+				// flashing the settings modal per frame would be unusable. A
+				// peer's change relayouts too, and the veil must not replace
+				// a modal the user has open, nor close one another flow opened
+				if (!veiled && !isInteractiveZoom() && !State.modal.current?.()) {
+					State.modal.loading('Updating editor with new settings...');
+					veiled = true;
+				}
+				stopBlinkTimer();
+				createCanvases();
+				// the zoom controller corrects scroll for focal anchoring once
+				// the container has its new size
+				document.dispatchEvent(new CustomEvent('onCanvasLayoutChange', {}));
+				await new Promise(resolve => redrawEntireImage(resolve));
+			} while (criticalDirty);
+		} catch (error) {
+			// no retry: a throw that repeats would loop, and the next
+			// settings change relayouts afresh
+			console.error('[Canvas] relayout failed:', error);
+		} finally {
+			criticalRunning = false;
+			updateTimer();
+			if (
+				veiled &&
+				!State.loadingFromStorage &&
+				State.modal.current?.() === 'loading'
+			) {
+				State.modal.close();
 			}
-			stopBlinkTimer();
-			createCanvases();
-			// the zoom controller corrects scroll for focal anchoring once
-			// the container has its new size
-			document.dispatchEvent(new CustomEvent('onCanvasLayoutChange', {}));
-			await new Promise(resolve => {
-				redrawEntireImage(() => {
-					updateTimer();
-					if (!interactive && !State.loadingFromStorage) {
-						State.modal.close();
-					}
-					resolve();
-				});
-			});
-		} while (criticalDirty);
-		criticalRunning = false;
+		}
 	};
 
 	const getImage = () => {
@@ -1433,7 +1452,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	// frozen v2 reference by engineParity.test.js
 
 	const clear = () => {
-		State.title = '';
+		State.title = 'Untitled';
 		editor.clear(); // blank planes, history gone, ice back to default
 		imageData = new Uint16Array(columns * rows);
 		scheduleJournalKeyframe(true);
@@ -1569,33 +1588,58 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	});
 	// a held press and a floating selection move each build one undo
 	// step across pauses, and a commit before they end would split it.
-	// A keyframe journals the open step instead: the doc holds its
-	// writes, and the stroke record it commits later carries every
-	// touched cell's final value, so replaying that over the keyframe
-	// lands the same doc
+	// A provisional record journals the open step instead: its writes so
+	// far, frozen as a commit would freeze them, with the stroke left
+	// open. Replay applies after values in order, and the record the
+	// commit appends later carries every touched cell's final value, so
+	// it lands over the provisionals. It encodes in the same task, where
+	// a keyframe's gzip would let an unloading page go first
 	const stepOpen = () => pressed || State.selectionTool?.isMoveMode?.();
-	// one keyframe per burst of writes, not one per re-poll
-	const commitWhenIdle = (keyframed = false) => {
+	// one record per burst of writes, not one per re-poll or hide
+	let stepJournaled = false;
+	const journalOpenStep = () => {
+		if (stepJournaled || !journals()) {
+			return;
+		}
+		const stroke = arena.peekStroke();
+		if (stroke) {
+			stepJournaled = true;
+			// no timer: a hidden tab throttles them, and an unload outruns
+			// them
+			journalStroke(stroke, writeKeyframe);
+		}
+	};
+	const pollIdle = () => {
 		clearTimeout(idleCommit);
 		idleCommit = setTimeout(() => {
 			if (!stepOpen()) {
 				endUndo();
 				return;
 			}
-			if (!keyframed) {
-				writeKeyframe();
-			}
-			commitWhenIdle(true);
+			journalOpenStep();
+			pollIdle();
 		}, 300);
+	};
+	// every write path calls this, so the open step journals again only
+	// once it has changed
+	const commitWhenIdle = () => {
+		stepJournaled = false;
+		pollIdle();
 	};
 	// a page leaving inside the idle window journals its last edit
 	// before it goes; hidden is the last event a mobile tab is sure to
-	// get, and a hidden tab throttles the idle timer
+	// get, and a hidden tab throttles the idle timer and the keyframe
+	// debounce alike, so a keyframe still waiting writes on the spot
 	const commitOnLeave = () => {
 		if (stepOpen()) {
-			writeKeyframe();
+			journalOpenStep();
 		} else {
 			endUndo();
+		}
+		if (keyframeTimer !== null) {
+			clearTimeout(keyframeTimer);
+			keyframeTimer = null;
+			writeKeyframe();
 		}
 	};
 	window.addEventListener('pagehide', commitOnLeave);
@@ -1820,7 +1864,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const clearXBData = callback => {
 		xbFontData = null;
 		ensureHexPages().setEmbeddedFont(null, 0);
-		scheduleJournalKeyframe(true);
+		// every caller clears or loads the doc next, and that keyframe
+		// holds this change; one taken here would put the old art back
+		// into a journal New just wiped
+		markDocOp();
 		State.palette = createDefaultPalette();
 		// rebind BEFORE the dispatch so listeners repaint with glyphs in
 		// the restored palette, not the XB one the handle had pinned
@@ -1955,8 +2002,39 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		endUndo: endUndo,
 		undo: undo,
 		redo: redo,
+		// closing lets another tab take the OPFS lock
 		stopJournal: () => {
 			journaling = false;
+			return journal.close();
+		},
+		wipeJournal: () => {
+			// an open stroke commits ahead of the wipe, or its commit would
+			// write the cleared doc back after it, as a keyframe still
+			// waiting would
+			endUndo();
+			clearTimeout(keyframeTimer);
+			keyframeTimer = null;
+			keyframeQueued = false;
+			wipes += 1;
+			if (journaling) {
+				return journal.wipe();
+			}
+			// a stopped journal's store stays closed, but a clear after a
+			// failed restore is the reset's whole point; a store opened for
+			// the wipe alone takes the backend once the old one lets go
+			return journal.close().then(() => {
+				const store = createJournalStore();
+				return store.wipe().finally(() => store.close());
+			});
+		},
+		// collab draws never journal, so leaving a session would otherwise
+		// keep the pre-session doc as the autosave. A step still open holds
+		// the words it wrote before a peer drew over them, and its record
+		// would replay those over this keyframe; committing it here leaves
+		// the keyframe the last word on them
+		journalKeyframe: () => {
+			endUndo();
+			scheduleJournalKeyframe(true);
 		},
 		deleteArea: deleteArea,
 		getAreaCells: getAreaCells,

@@ -249,6 +249,50 @@ describe('journal store', () => {
 		expect(replay.strokesApplied).toBe(1);
 	});
 
+	it('a wipe empties the journal behind earlier calls, and strokes wait for the next keyframe', async () => {
+		const store = createJournalStore({ backend: createMemoryBackend() });
+		const doc = createDocV3({ columns: 2, rows: 1 });
+		await store.rewrite(createJournal(doc));
+		expect(await store.appendStroke(glyphRecord)).toBe(false);
+
+		const ahead = store.rewrite(createJournal(doc));
+		await store.wipe();
+		await ahead;
+		expect(await store.open()).toHaveLength(0);
+		// dropped, and nothing queued will hold it
+		expect(await store.appendStroke(glyphRecord)).toBe(true);
+		expect(await store.open()).toHaveLength(0);
+
+		await store.rewrite(createJournal(doc));
+		expect(await store.appendStroke(glyphRecord)).toBe(false);
+		expect((await replayJournal(await store.open())).strokesApplied).toBe(1);
+	});
+
+	it('a closed store refuses later calls without reaching the backend', async () => {
+		const memory = createMemoryBackend();
+		const calls = [];
+		const backend = Object.fromEntries(
+			Object.entries(memory).map(([op, fn]) => [
+				op,
+				bytes => {
+					calls.push(op);
+					return fn(bytes);
+				},
+			]),
+		);
+		const store = createJournalStore({ backend });
+		const written = store.rewrite(createJournal(createDocV3({ columns: 2, rows: 1 })));
+		const closed = store.close();
+		expect(store.close()).toBe(closed);
+		await expect(store.open()).rejects.toThrow(/closed/);
+		await expect(store.appendStroke(glyphRecord)).rejects.toThrow(/closed/);
+		await expect(store.rewrite(Uint8Array.of(1))).rejects.toThrow(/closed/);
+		await expect(store.wipe()).rejects.toThrow(/closed/);
+		await written;
+		await closed;
+		expect(calls).toEqual(['rewrite', 'close']);
+	});
+
 	it('rethrows a snapshot that rejects behind a slow write through its rewrite alone', async () => {
 		let finishRead;
 		const store = createJournalStore({
@@ -377,6 +421,45 @@ describe('journal backend probe', () => {
 		expect((await replayJournal(await store.open())).strokesApplied).toBe(1);
 		expect(workers).toHaveLength(0);
 		expect(await createJournalStore().open()).toHaveLength(0);
+	});
+
+	it('time the page spends hidden does not count toward a worker call deadline', async () => {
+		vi.useFakeTimers();
+		let hidden = false;
+		const visibility = vi.spyOn(document, 'hidden', 'get').mockImplementation(() => hidden);
+		const turn = value => {
+			hidden = value;
+			document.dispatchEvent(new Event('visibilitychange'));
+		};
+		// a worker frozen with its tab never answers
+		vi.stubGlobal(
+			'Worker',
+			class {
+				postMessage() {}
+
+				terminate() {}
+			},
+		);
+		vi.stubGlobal('navigator', { storage: { getDirectory: () => Promise.resolve({}) } });
+		try {
+			let outcome = 'pending';
+			createJournalStore()
+				.open()
+				.catch(error => {
+					outcome = error.message;
+				});
+			await vi.advanceTimersByTimeAsync(4000);
+			turn(true);
+			await vi.advanceTimersByTimeAsync(60000);
+			turn(false);
+			await vi.advanceTimersByTimeAsync(5900);
+			expect(outcome).toBe('pending');
+			await vi.advanceTimersByTimeAsync(100);
+			expect(outcome).toBe('journal worker timed out on read');
+		} finally {
+			visibility.mockRestore();
+			vi.useRealTimers();
+		}
 	});
 
 	it('stays on OPFS when its calls fail after the probe, leaving an older IndexedDB journal unread', async () => {

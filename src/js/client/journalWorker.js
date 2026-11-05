@@ -139,7 +139,14 @@ self.onmessage = async event => {
 	const { id, op, bytes } = event.data;
 	try {
 		if (!ready) {
-			ready = init();
+			// a reload can beat its predecessor's handles to the lock, and a
+			// second tab holds them until it closes; the next call retries,
+			// and a handle left open here would refuse the retry its lock
+			ready = init().catch(error => {
+				ready = null;
+				ops.close();
+				throw error;
+			});
 		}
 		await ready;
 		const fn = ops[op];

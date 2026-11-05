@@ -61,9 +61,13 @@ import {
 	createKeyboardController,
 	createPasteTool,
 } from './keyboard.js';
+import { settlesWithin } from './visibleWait.js';
 
 const CACHE_ID = 'text0wnz-shared-files';
 const CACHE_DATA = '/shared-file-data';
+// the recovery reset reloads after this even when storage never
+// answers: a hung IndexedDB open is one of the wedges it exists for
+const RESET_WAIT_MS = 3000;
 
 let htmlDoc;
 let bodyContainer;
@@ -428,6 +432,29 @@ const handleIOS = () => {
 	navFullscreen.classList.toggle('disabled', isWindowed);
 };
 
+// the update question waits while another modal shows, since replacing
+// one acts as its Cancel (the Sauce Editor drops its typing). The collab
+// invitation is the exception: the controller hands it back once the
+// question is answered. A poll, not a close hook, because one modal can
+// follow another before the question gets its turn
+let updateOffer = 0;
+const offerUpdate = () => {
+	clearTimeout(updateOffer);
+	updateOffer = 0;
+	if (!swRegistration?.waiting || !navigator.serviceWorker?.controller) {
+		return;
+	}
+	const showing = State.modal.current();
+	if (showing === 'update') {
+		return;
+	}
+	if (showing && showing !== 'choice') {
+		updateOffer = setTimeout(offerUpdate, 1000);
+		return;
+	}
+	State.modal.open('update');
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
 	if ('serviceWorker' in navigator) {
 		navigator.serviceWorker.register('service.js').then(reg => {
@@ -436,7 +463,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				// a new worker is already waiting: ask instead of activating
 				// under a live session (activation evicts the old assets this
 				// page may still lazy-load)
-				State.modal.open('update');
+				offerUpdate();
 			} else if (reg.waiting) {
 				reg.waiting.postMessage({ type: 'SKIP_WAITING' });
 			}
@@ -444,9 +471,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				const installingWorker = reg.installing;
 				installingWorker.onstatechange = () => {
 					if (installingWorker.state === 'installed') {
-						if (navigator.serviceWorker.controller) {
-							State.modal.open('update');
-						}
+						offerUpdate();
 					}
 				};
 			};
@@ -628,24 +653,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 const initializeAppComponents = async () => {
-	// a pending launch file wins over the autosave restore
-	if (!pendingFile) {
-		State.restoreStateFromLocalStorage().then(() => {
-			// the restore's loading modal clobbers a pending update prompt,
-			// and one cancel would then pin the old worker's stale chunks
-			// through every future reload: re-offer once the modal is free
-			const reofferUpdate = () => {
-				if (!swRegistration?.waiting || !navigator.serviceWorker.controller) {
-					return;
-				}
-				if (State.modal.current()) {
-					setTimeout(reofferUpdate, 1000);
-					return;
-				}
-				State.modal.open('update');
-			};
-			reofferUpdate();
-		});
+	// a launch or shared file wins over the autosave restore, whose doc
+	// and font land whenever its reads finish, over any file opened first
+	const shared =
+		!pendingFile &&
+		new URLSearchParams(window.location.search).get('source') === 'share'
+			? await handleFileShare()
+			: null;
+	if (!pendingFile && !shared) {
+		// the restore's loading modal clobbers a pending update prompt,
+		// and one cancel would then pin the old worker's stale chunks
+		// through every future reload: offer it again after
+		State.restoreStateFromLocalStorage().then(offerUpdate);
 	}
 	if (isIOS) {
 		openFile.setAttribute('accept', '*/*');
@@ -693,6 +712,9 @@ const initializeAppComponents = async () => {
 		State.modal.open('warning');
 	});
 	onClick($('warningYes'), async () => {
+		// the veil replaces the warning, so a second Yes cannot start a
+		// second New while the first one loads its font
+		State.modal.loading();
 		bodyContainer.classList.add('loading');
 		State.clearLocalStorage();
 		Load.resetSauceFlags();
@@ -905,17 +927,22 @@ const initializeAppComponents = async () => {
 			return;
 		}
 		// no update pending (modal opened from the menu): scorched-earth
-		// refresh as a manual recovery tool
-		State.clearLocalStorage();
-		if ('caches' in window) {
-			window.caches.keys().then(keys => {
-				Promise.all(keys.map(key => window.caches.delete(key))).then(() => {
-					window.location.reload();
-				});
-			});
-		} else {
-			window.location.reload();
-		}
+		// refresh as a manual recovery tool. The journal's close queues
+		// behind its wipe, so nothing writes the art back before the reload
+		const dropCaches = async () => {
+			if ('caches' in window) {
+				const keys = await window.caches.keys();
+				await Promise.all(keys.map(key => window.caches.delete(key)));
+			}
+		};
+		settlesWithin(
+			Promise.allSettled([
+				State.clearLocalStorage(),
+				State.textArtCanvas.stopJournal(),
+				dropCaches(),
+			]),
+			RESET_WAIT_MS,
+		).then(() => window.location.reload());
 	});
 	onReturn(reload, reload);
 
@@ -924,11 +951,6 @@ const initializeAppComponents = async () => {
 
 	onFileChange(openFile, openHandler);
 	createDragDropController(openHandler, $('dragdrop'));
-
-	onClick(navSauce, () => {
-		State.flyouts.close();
-		State.modal.open('sauce');
-	});
 
 	// the sidebar sauce block mirrors the modal fields, which stay the
 	// single source of truth (file.js and network.js write them directly)
@@ -952,14 +974,47 @@ const initializeAppComponents = async () => {
 	});
 	updateSauceDisplay();
 
+	// the editor is a draft: room SAUCE waits while it shows, Done keeps
+	// it, and any other close puts back what it opened with. A document
+	// that opens under it brings its own SAUCE, which a close then keeps
+	let sauceDraft = null;
+	const sauceFields = () => [
+		sauceTitle.value,
+		sauceAuthor.value,
+		sauceGroup.value,
+		Load.commentsOf(sauceComments),
+	];
+	document.addEventListener('onNewDocument', () => {
+		if (sauceDraft) {
+			sauceDraft = sauceFields();
+		}
+	});
+	onClick(navSauce, () => {
+		State.flyouts.close();
+		State.modal.open('sauce');
+		sauceDraft = sauceFields();
+		State.network?.holdSauce?.();
+		State.modal.onClose(() => {
+			if (sauceDraft) {
+				[sauceTitle.value, sauceAuthor.value, sauceGroup.value] = sauceDraft;
+				Load.fillComments(sauceComments, sauceDraft[3]);
+				enforceMaxBytes();
+				updateSauceDisplay();
+				sauceDraft = null;
+			}
+			State.network?.releaseSauce?.();
+		});
+	});
+
 	onClick(sauceDone, () => {
+		sauceDraft = null;
 		State.title = sauceTitle.value;
 		// collab peers hear SAUCE edits (type 12 persists server-side)
 		State.network?.sendSauce?.({
 			title: sauceTitle.value,
 			author: sauceAuthor.value,
 			group: sauceGroup.value,
-			comments: sauceComments.value,
+			comments: Load.commentsOf(sauceComments),
 		});
 		State.modal.close();
 		updateSauceDisplay();
@@ -1516,19 +1571,14 @@ const initializeAppComponents = async () => {
 		return; // a launch file preempts share-target handling
 	}
 
-	const urlParams = new URLSearchParams(window.location.search);
-	const source = urlParams.get('source');
-	if (source === 'share') {
-		const sharedFileData = await handleFileShare();
-		if (sharedFileData) {
-			console.log(`[Share] Opening shared file: ${sharedFileData.filename}`);
-			openHandler(sharedFileData.file);
-			caches
-				.open(CACHE_ID)
-				.then(cache => cache.delete(CACHE_DATA))
-				.catch(error =>
-					console.error('[Error] Failed to cleanup shared file cache:', error));
-		}
+	if (shared) {
+		console.log(`[Share] Opening shared file: ${shared.filename}`);
+		openHandler(shared.file);
+		caches
+			.open(CACHE_ID)
+			.then(cache => cache.delete(CACHE_DATA))
+			.catch(error =>
+				console.error('[Error] Failed to cleanup shared file cache:', error));
 	}
 };
 

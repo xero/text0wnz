@@ -65,7 +65,7 @@ Tests for the radiogroup segmented controls in the tool settings window:
 - Rendering (buttons, glyph previews, labels, data-value hooks)
 - Selection by click and the single onChange per change
 - Silent programmatic set() vs user select()
-- Keyboard navigation (arrow keys, wrap, roving tabindex)
+- Keyboard navigation (arrow keys, wrap, roving tabindex, arrows another handler cancelled)
 - ARIA attributes (radiogroup, radio, aria-checked, aria-disabled)
 - Disabled state (dimmed, out of tab order, inert to input)
 
@@ -79,6 +79,15 @@ Tests for the document-level shortcut handlers and text-entry focus:
 - Clipboard keys in a text entry leave the canvas alone
 - Selection keys flip and toggle move mode from the page only
 - Enter clicks a focused button instead of starting a new line, and starts one from the page
+- Enter presses a focused button with the selection tool
+- Number fields keep their digits, Backspace, Enter, and arrows in keyboard mode
+- Space presses a button the keyboard reached and types on the canvas after a click or a touch tap
+- Arrows step a segmented control the keyboard reached, and arrows on a clicked one move the canvas cursor and leave the control
+- Letters and arrows after clicking a range slider go to the canvas
+- Space and arrows after a canvas press go to the canvas
+- A clicked button keeps leaving Space and arrows to the canvas after a dialog, Escape, or a window switch hands focus back, until Tab reaches it
+- A press a context menu or a window switch ends leaves the next focus to the keyboard
+- Clipboard keys on a clicked checkbox in a dialog leave the canvas alone
 
 ### Menu Tests (`menu.test.js`) ⬆ NEW
 

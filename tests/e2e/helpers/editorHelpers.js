@@ -49,24 +49,36 @@ export async function nextFrames(page, n = 2) {
 /**
  * main.js nudges the viewport onto a row boundary 150ms after the last
  * scroll event, so a scroll has settled once the viewport stays quiet
- * past that timer; a position read any sooner can still jump
+ * past that timer; a position read any sooner can still jump. The limit
+ * fails a viewport that never stops (playback left running) with its
+ * own message instead of the test timeout's
  */
-export async function scrollSettled(page) {
+export async function scrollSettled(page, { quiet = 250, limit = 5000 } = {}) {
 	await page.evaluate(
-		() =>
-			new Promise(resolve => {
+		({ quiet, limit }) =>
+			new Promise((resolve, reject) => {
 				const vp = document.getElementById('viewport');
 				let timer = 0;
+				const end = () => {
+					clearTimeout(timer);
+					clearTimeout(deadline);
+					vp.removeEventListener('scroll', arm);
+				};
 				const arm = () => {
 					clearTimeout(timer);
 					timer = setTimeout(() => {
-						vp.removeEventListener('scroll', arm);
+						end();
 						resolve();
-					}, 250);
+					}, quiet);
 				};
+				const deadline = setTimeout(() => {
+					end();
+					reject(new Error(`#viewport still scrolling after ${limit} ms (scrollTop ${vp.scrollTop})`));
+				}, limit);
 				vp.addEventListener('scroll', arm, { passive: true });
 				arm();
 			}),
+		{ quiet, limit },
 	);
 }
 

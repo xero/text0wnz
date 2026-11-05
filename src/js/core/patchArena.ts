@@ -21,6 +21,12 @@ const PLANES: ReadonlyArray<PlaneName> = ['glyph', 'fg', 'bg'];
 
 export interface StrokeMeta {
 	frame: number;
+	/**
+	 * The ice flag the step's words were recorded under: they restore
+	 * verbatim under the same flag and need a refold under the other.
+	 * The journal never writes it.
+	 */
+	ice?: boolean;
 }
 
 /**
@@ -38,6 +44,8 @@ export interface ResizeStep {
 	 * the last move dropped, indexed in the geometry they fell off.
 	 */
 	dropped: Uint32Array[];
+	/** The ice flag at the capture of `dropped`. */
+	ice: boolean;
 }
 
 /**
@@ -90,6 +98,12 @@ export interface PatchArena {
 	/** Commit the open stroke; empty strokes vanish. Drops the redo tail. */
 	endStroke: () => boolean;
 	/**
+	 * The open stroke frozen as endStroke would commit it, left open so
+	 * the journal can hold a step still being built. Null when no
+	 * stroke is open or it holds no writes.
+	 */
+	peekStroke: () => CommittedStroke | null;
+	/**
 	 * Resize every frame of `doc` and commit that as one step, keeping
 	 * the cells it drops. Drops the redo tail like a stroke.
 	 */
@@ -99,6 +113,10 @@ export interface PatchArena {
 		rows: number,
 		meta: StrokeMeta,
 	) => void;
+	/**
+	 * For a resize, the returned meta's `ice` is the flag of the capture
+	 * the move restored.
+	 */
 	undo: (doc: DocV3, onWrite?: PlaneWrite) => StrokeMeta | null;
 	redo: (doc: DocV3, onWrite?: PlaneWrite) => StrokeMeta | null;
 	/**
@@ -112,11 +130,11 @@ export interface PatchArena {
 
 /**
  * Default ring cap. One v3 cell write is at most 3 planes x 12B of
- * triple = 36B, so 64MB holds a single undoable op of ~1.9M cells with
- * full plane coverage, roughly 18x the largest real collab piece
- * (80x1295). Strokes evict oldest-first past the cap; an op bigger
- * than the whole ring is itself un-undoable (accepted: a full 10M-cell
- * op would need ~360MB of triples, unreasonable on mobile).
+ * triple = 36B, so 64MB holds ~1.9M cells of full plane coverage,
+ * roughly 18x the largest real collab piece (80x1295). Steps evict
+ * oldest-first past the cap, but never the step at the undo cursor:
+ * an op bigger than the whole ring stays undoable, holding the ring
+ * over the cap until the next step evicts it.
  */
 export const DEFAULT_UNDO_BYTE_CAP = 64 * 1024 * 1024;
 
@@ -203,6 +221,29 @@ const restoreDropped = (
 const droppedBytes = (dropped: Uint32Array[]): number =>
 	dropped.reduce((sum, cells) => sum + cells.byteLength, 0);
 
+type OpenPatches = Map<PlaneName, Map<number, [number, number]>>;
+
+const freeze = (open: OpenPatches) => {
+	const patches: Partial<Record<PlaneName, Uint32Array>> = {};
+	let bytes = 0;
+	for (const plane of PLANES) {
+		const planeMap = open.get(plane);
+		if (!planeMap || planeMap.size === 0) {
+			continue;
+		}
+		const flat = new Uint32Array(planeMap.size * 3);
+		let at = 0;
+		for (const [index, [before, after]] of planeMap) {
+			flat[at++] = index;
+			flat[at++] = before;
+			flat[at++] = after;
+		}
+		patches[plane] = flat;
+		bytes += flat.byteLength;
+	}
+	return { patches, bytes };
+};
+
 export const createPatchArena = (
 	options: PatchArenaOptions = {},
 ): PatchArena => {
@@ -213,7 +254,7 @@ export const createPatchArena = (
 	let bytes = 0;
 
 	let openMeta: StrokeMeta | null = null;
-	let openPatches: Map<PlaneName, Map<number, [number, number]>> | null = null;
+	let openPatches: OpenPatches | null = null;
 
 	const planeOf = (
 		doc: DocV3,
@@ -262,20 +303,26 @@ export const createPatchArena = (
 		options.onCommit?.(resize ? { meta, patches, resize } : { meta, patches });
 	};
 
-	/** Move a resize step to one end, restoring what the last move dropped. */
+	/**
+	 * Move a resize step to one end, restoring what the last move
+	 * dropped. Returns the ice flag the restored cells were captured
+	 * under.
+	 */
 	const moveResize = (
 		doc: DocV3,
 		stroke: Stroke,
 		size: readonly [number, number],
 		onWrite?: PlaneWrite,
-	) => {
+	): boolean => {
 		const step = stroke.resize as ResizeStep;
-		const restore = step.dropped;
+		const { dropped: restore, ice } = step;
 		step.dropped = resizeDropping(doc, size);
+		step.ice = doc.getIceColors();
 		restoreDropped(doc, restore, onWrite);
 		const next = droppedBytes(step.dropped);
 		bytes += next - stroke.bytes;
 		stroke.bytes = next;
+		return ice;
 	};
 
 	const applyPatches = (
@@ -295,6 +342,21 @@ export const createPatchArena = (
 				onWrite?.(plane, flat[i], flat[i + slot], stroke.meta.frame);
 			}
 		}
+	};
+
+	const applyStep = (
+		doc: DocV3,
+		stroke: Stroke,
+		redo: boolean,
+		onWrite?: PlaneWrite,
+	): StrokeMeta => {
+		const { meta, resize } = stroke;
+		if (!resize) {
+			applyPatches(doc, stroke, redo ? 2 : 1, onWrite);
+			return { ...meta };
+		}
+		const size = redo ? resize.to : resize.from;
+		return { ...meta, ice: moveResize(doc, stroke, size, onWrite) };
 	};
 
 	return {
@@ -326,23 +388,7 @@ export const createPatchArena = (
 				throw new Error('[core/patchArena] no open stroke');
 			}
 			const meta = openMeta;
-			const patches: Partial<Record<PlaneName, Uint32Array>> = {};
-			let strokeBytes = 0;
-			for (const plane of PLANES) {
-				const planeMap = openPatches.get(plane);
-				if (!planeMap || planeMap.size === 0) {
-					continue;
-				}
-				const flat = new Uint32Array(planeMap.size * 3);
-				let at = 0;
-				for (const [index, [before, after]] of planeMap) {
-					flat[at++] = index;
-					flat[at++] = before;
-					flat[at++] = after;
-				}
-				patches[plane] = flat;
-				strokeBytes += flat.byteLength;
-			}
+			const { patches, bytes: strokeBytes } = freeze(openPatches);
 			openMeta = null;
 			openPatches = null;
 			if (strokeBytes === 0) {
@@ -351,45 +397,48 @@ export const createPatchArena = (
 			commit({ meta, patches, bytes: strokeBytes });
 			return true;
 		},
+		peekStroke: () => {
+			if (!openMeta || !openPatches) {
+				return null;
+			}
+			const { patches, bytes: strokeBytes } = freeze(openPatches);
+			return strokeBytes ? { meta: { ...openMeta }, patches } : null;
+		},
 		commitResize: (doc, columns, rows, meta) => {
 			assertClosed();
 			const from = [doc.getColumns(), doc.getRows()] as const;
 			const to = [columns, rows] as const;
+			const ice = doc.getIceColors();
 			const dropped = resizeDropping(doc, to);
 			commit({
 				meta: { ...meta },
 				patches: {},
-				resize: { from, to, dropped },
+				resize: { from, to, dropped, ice },
 				bytes: droppedBytes(dropped),
 			});
 		},
+		// a resize move re-captures what it drops, which can outgrow the
+		// cap; eviction waits for the cursor to move so it never takes the
+		// step the undo or redo lands on
 		undo: (doc, onWrite) => {
 			assertClosed();
 			if (cursor < 0) {
 				return null;
 			}
-			const stroke = strokes[cursor];
-			if (stroke.resize) {
-				moveResize(doc, stroke, stroke.resize.from, onWrite);
-			} else {
-				applyPatches(doc, stroke, 1, onWrite);
-			}
+			const meta = applyStep(doc, strokes[cursor], false, onWrite);
 			cursor--;
-			return { ...stroke.meta };
+			evictToCap();
+			return meta;
 		},
 		redo: (doc, onWrite) => {
 			assertClosed();
 			if (cursor >= strokes.length - 1) {
 				return null;
 			}
-			const stroke = strokes[cursor + 1];
-			if (stroke.resize) {
-				moveResize(doc, stroke, stroke.resize.to, onWrite);
-			} else {
-				applyPatches(doc, stroke, 2, onWrite);
-			}
+			const meta = applyStep(doc, strokes[cursor + 1], true, onWrite);
 			cursor++;
-			return { ...stroke.meta };
+			evictToCap();
+			return meta;
 		},
 		dropRedo,
 		stats: () => ({

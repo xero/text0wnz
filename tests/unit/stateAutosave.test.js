@@ -4,6 +4,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import State from '../../src/js/client/state.js';
 import { Storage } from '../../src/js/client/storage.js';
+import {
+	createJournalStore,
+	createMemoryBackend,
+} from '../../src/js/client/journalStore.js';
+import {
+	createDocV3,
+	createJournal,
+	glyphWord,
+	replayJournal,
+} from '../../src/js/core/index';
 
 // settings run for real on jsdom localStorage, so the tests read the
 // stored record itself; the IndexedDB writes stay spies
@@ -18,6 +28,7 @@ vi.mock('../../src/js/client/storage.js', async importOriginal => {
 			mergeSettings: vi.fn(real.mergeSettings),
 			loadFontData: vi.fn(() => Promise.resolve(null)),
 			loadCanvasData: vi.fn(() => Promise.resolve(null)),
+			clearAll: real.clearAll,
 		},
 	};
 });
@@ -226,6 +237,58 @@ describe('local autosave gate', () => {
 				}),
 			});
 		});
+	});
+
+	it('a clear takes the journal too, so a later settings save restores no cleared art', async () => {
+		const journal = createJournalStore({ backend: createMemoryBackend() });
+		const art = createDocV3({ columns: 80, rows: 25 });
+		art.frames[0].glyph[0] = glyphWord(65, 0);
+		await journal.rewrite(createJournal(art));
+		localStorage.setItem(KEY, JSON.stringify(LOCAL));
+		const blank = new Uint16Array(80 * 25);
+		const textArtCanvas = {
+			getImageData: () => blank,
+			getColumns: () => 80,
+			getRows: () => 25,
+			getCurrentFontName: () => 'Topaz 8x16',
+			getIceColors: () => false,
+			getXBFontData: () => null,
+			setIceColors: vi.fn(),
+			setFont: vi.fn((_name, done) => done()),
+			wipeJournal: () => journal.wipe(),
+			loadJournalSnapshot: async () => {
+				const bytes = await journal.open();
+				return bytes.length > 0 ? { doc: (await replayJournal(bytes)).doc } : null;
+			},
+			setDocData: vi.fn(),
+		};
+		Object.assign(State._manager.state, {
+			textArtCanvas,
+			font: {
+				getScaleFactor: () => 1,
+				getLetterSpacing: () => false,
+				setLetterSpacing: vi.fn(),
+			},
+			palette: null,
+			network: null,
+			modal: { loading: vi.fn(), close: vi.fn(), current: () => null },
+		});
+		// jsdom has no IndexedDB for the text0wnz stores
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		try {
+			await State.clearLocalStorage();
+		} finally {
+			error.mockRestore();
+		}
+		expect(localStorage.getItem(KEY)).toBeNull();
+
+		// the next session's font pick saves settings over a blank canvas,
+		// and the session after that restores
+		await State.saveToLocalStorage();
+		await State.restoreStateFromLocalStorage();
+		await vi.waitFor(() => expect(State.loadingFromStorage).toBe(false));
+		expect(textArtCanvas.setFont).toHaveBeenCalledWith('Topaz 8x16', expect.any(Function), 1);
+		expect(textArtCanvas.setDocData).not.toHaveBeenCalled();
 	});
 
 	it('a zoom on a blank local canvas still saves', async () => {

@@ -38,9 +38,10 @@ Each entry names the module under test and the behavior the file pins.
 - **asciiArena.test.js:** `asciiArena.js` colly browsing, search, artist and crew views, zip and LHA opens through the core reader, lazy DIZ previews, and stale fetch races.
 - **asciiBrush.test.js:** `asciiBrush.js` stroke to ASCII glyph resolution, terminal joins against drawn lines, and a preview that matches the commit.
 - **autoScroller.test.js:** `autoScroller.js` scroll engine timing on an injected clock (glides, holds, round trips, dropped frames) and the autoscroll menu.
-- **canvas.test.js:** `canvas.js` blink loops, letter spacing, cell reads, chunk paints, dirty regions, area and image data, XBin font and palette rebinding, resize history, and collab cells (NUL and 255 kept apart, a peer's text in the session font).
+- **canvas.test.js:** `canvas.js` blink loops, letter spacing, cell reads, chunk paints, dirty regions, area and image data, XBin font and palette rebinding, resize history, collab cells (NUL and 255 kept apart, a peer's text in the session font), relayouts and paint passes that recover from a throw or a refused 2D context, and a relayout that leaves a modal it did not open alone.
 - **canvasFont.test.js:** `setFont` installs loads in call order, runs every callback, falls back past a stalled load without counting hidden time, carries a 9px toggle and a palette swap made during the load onto the new font, disposes a load that lands past its wait or that its caller disowned, and takes the glyph size only from the font that goes live.
-- **canvasJournal.test.js:** The canvas autosave journal restores strokes, undo, ice colors, animation frames, and resizes, stays off during collab sessions and after the profiler stops it, survives the keyframe encode window, the reload restore gate, and a failed append, and lands the last stroke once editing idles or the page hides without splitting a held press or a selection move, which reach the journal as one keyframe per pause or at once on a page hide.
+- **canvasJournal.test.js:** The canvas autosave journal restores strokes, undo, ice colors, animation frames, and resizes, stays off during collab sessions and after the profiler stops it, survives the keyframe encode window, the reload restore gate, and a failed append, and lands the last stroke once editing idles or the page hides without splitting a held press or a selection move, which reach the journal as provisional stroke records at each pause or page hide. It also covers the wipe on a clear, even after a stop, the close on a stop, the keyframe on leaving a session, and a hide that writes a waiting keyframe.
+- **charsetPicker.test.js:** `charsetPicker.js` picks insert the CP437 byte for any character CP437 has and a codepoint token for the rest.
 - **collabTarget.test.js:** `collabTarget.js` server address parsing, dial and display forms, the default server URL, and direct versus bridged transport.
 - **collabWorker.test.js:** `collabWorker.js` probe, handshake, direct and bridged dials, dial timeouts, refusals, malformed frames, and stale sockets.
 - **colorPanel.test.js:** `colorPanel.js` swatch picks by click, Ctrl click, right click, the macOS Ctrl click, and touch or pen hold, including the recent row and the iPadOS double-tap click that lands on the first tap's swatch.
@@ -52,7 +53,7 @@ Each entry names the module under test and the behavior the file pins.
 - **fileFormats.test.js:** `file.js` load error handling, FileReader wiring for ANSI, BIN, XBin, and UTF-8 opens, SAUCE extension detection, and parser setup.
 - **fileLatin1.test.js:** A `.txt` that is not UTF-8 falls back to the CP437 reader.
 - **fileLoad.test.js:** `file.js` SAUCE font name mapping, load setup per extension, and every save format (ANSI, UTF-8, plain text, BIN, XBin, PNG) with its SAUCE record and flags.
-- **fileSauceFlags.test.js:** SAUCE comments and flags survive an open and resave, and a BIN save explains why it refuses a 2-column width.
+- **fileSauceFlags.test.js:** SAUCE comments and flags survive an open and resave, a comment block of one blank line opens empty and keeps its line until edited, and a BIN save explains why it refuses a 2-column width.
 - **fileUtf8.test.js:** UTF-8 ANSI imports round-trip CP437 glyphs and substitute the rest, and exports emit one cell per column.
 - **font.test.js:** `font.js` glyph zero blanking, XB font data loading, letter spacing, image font loading, palette rebinding, and parses that leave the glyph size to the install.
 - **fontCache.test.js:** `fontCache.js` preload and fetch through the Cache API and its in-memory fallback.
@@ -65,18 +66,18 @@ Each entry names the module under test and the behavior the file pins.
 - **gestureGuard.test.js:** `gestureGuard.js` routes chrome pinches to the canvas, ignores mice and canvas touches, and blocks Safari page zoom.
 - **gestures.test.js:** `gestures.js` touch holds, slop breakouts, two- and three-finger taps for undo and redo, pinch pans, and cancels.
 - **glyphScale.test.js:** `glyphScale.js` fits glyph canvases to whole device pixels and re-arms its watch on each pixel ratio change.
-- **hexFontPages.test.js:** `hexFontPages.js` lazy hex font block loads, glyph scaling, Unscii then Unifont slot fallback, failed block handling, and preload.
+- **hexFontPages.test.js:** `hexFontPages.js` lazy hex font block loads, glyph scaling, Unscii then Unifont slot fallback, failed blocks the repaint path never refetches, even after a retry fails, a 30 s retry cooldown, a later pick or preload that retries, and preload.
 - **historyLabels.test.js:** `historyLabels.js` labels history rows from the pend placed before each stroke.
-- **journalStore.test.js:** `journalStore.js` keyframe and stroke persistence, replay, compaction, serialized writes, the per-session baseline, the drops after a failed rewrite or a torn append, and the backend probe that falls back to IndexedDB or memory only where OPFS refuses.
-- **journalWorker.test.js:** `journalWorker.js` drops foreign-origin and malformed messages and answers same-context ones.
-- **keyboard.test.js:** `keyboard.js` and `fkeys.js` F-key sets, cursor and selection rects, row and column edits, typed glyph order, Tab and Enter, cut, copy, the paste modes, and the selection keys that seed a cell on a bare pick.
+- **journalStore.test.js:** `journalStore.js` keyframe and stroke persistence, replay, compaction, serialized writes, the per-session baseline, the drops after a failed rewrite or a torn append, a closed store that rejects every call, and the backend probe that falls back to IndexedDB or memory only where OPFS refuses.
+- **journalWorker.test.js:** `journalWorker.js` setup, which retries after a failure and lets go of the handles it opened, and the message guard that drops foreign-origin and malformed messages and answers same-context ones.
+- **keyboard.test.js:** `keyboard.js` and `fkeys.js` F-key sets, cursor and selection rects, row and column edits, typed glyph order, the 10 second glyph wait, CP437 parity with paste, Tab and Enter, cut, copy, the paste modes, and the selection keys that seed a cell on a bare pick. It also covers the keys a focused control keeps in keyboard mode and the selection tool: Enter, Space, and the arrows on a control the keyboard reached, a range slider's Home, End, PageUp, and PageDown, every key in a text field, and dialog keys left to the dialog.
 - **lazyFont.test.js:** `lazyFont.js` on-demand glyphs, cache bounds, 9px letter spacing glyphs, and idle pre-generation that stops on dispose.
 - **magicNumbers.test.js:** `magicNumbers.js` constant values and the relationships between them.
-- **main.test.js:** `main.js` boot tiers, font preload, init alerts, the canvas size dialog, the SAUCE dialog, and the 9pt chip after a font change.
+- **main.test.js:** `main.js` boot tiers, font preload, init alerts, the canvas size dialog, New's loading veil, the SAUCE dialog (Enter keys, the draft that Cancel puts back, a document that opens under the editor, a kept blank comment line), the share target against the autosave restore, including a failed lookup, the update prompt waiting out open modals, the recovery reset's bounded wait, and the 9pt chip after a font change.
 - **messageGuard.test.js:** `messageGuard.js` trusts origin-less and same-origin messages and rejects the rest.
 - **minimap.test.js:** `minimap.js` visibility toggle, sizing, and tap versus drag handling for mouse and touch.
-- **moveMode.test.js:** Selection move mode against a live canvas, covering aborts, restores, transparent blanks, and undo and redo of a move.
-- **network.test.js:** `network.js` worker handler (probe, join, connect form, refusals, dropped sessions, EXT_SYNC replay, peer resizes, sends during a font load, server order: peer writes that beat our ack, serialized frames, adoption replay, the glyph wait, a peer's text drawing with no glyph fetch, vanilla peer font order, the font label after a peer font, the room's SAUCE on join and resync, font names on the wire) and the chat controller.
+- **moveMode.test.js:** Selection move mode against a live canvas, covering aborts, restores, transparent blanks, flips mid-move, and undo and redo of a move.
+- **network.test.js:** `network.js` worker handler (probe, join, connect form, refusals, dropped sessions, EXT_SYNC replay, peer resizes, sends during a font load, server order: peer writes that beat our ack, serialized frames, adoption replay, the glyph wait and its hidden time, the timelapse request's hidden time, a peer's text drawing with no glyph fetch, vanilla peer font order, the font label after a peer font, the room's SAUCE on join and resync, held while the Sauce Editor is open, a comment of one blank line, leaving a session, font names on the wire) and the chat controller.
 - **openAccept.test.js:** The File Open picker in `src/index.html` accepts every format the manual lists.
 - **palette.test.js:** `palette.js` palette creation and events, the preview, picker input by keyboard, mouse, and touch or pen hold, and which quick picks open the color editor.
 - **plugins.test.js:** `plugins.js` plugin API batching, plugin validation, and the plugin manager.
@@ -84,20 +85,22 @@ Each entry names the module under test and the behavior the file pins.
 - **pressure.test.js:** Pen pressure picks the shading brush shade, and Shift+down draws an attribute brush line.
 - **recentList.test.js:** `recentList.js` reads, dedupes, filters, and trims the recent list.
 - **referenceImage.test.js:** `referenceImage.js` overlay drag mode, persistence races, and reset.
+- **selectionBar.test.js:** `selectionBar.js` deselect parks the keyboard cursor at the rect and forgets the rect.
 - **service.test.js:** `src/service.js` SKIP_WAITING messages, wedged-generation recovery, the share target, and runtime cache routes.
 - **sixteenColors.test.js:** `sixteenColors.js` year, pack, artist, crew, and search browsing, opens through the mirror zip, and API failures.
 - **state.test.js:** `state.js` get and set, dependency waits, and UI and font path derivation from the env.
-- **stateAutosave.test.js:** The local autosave gate keeps a live session's canvas out of local storage while the viewer's own zoom still saves, and a restore that throws lets go of the loading flag without losing the saved journal.
+- **stateAutosave.test.js:** The local autosave gate keeps a live session's canvas out of local storage while the viewer's own zoom still saves, a restore that throws lets go of the loading flag without losing the saved journal, and a clear wipes the journal.
 - **storage.test.js:** `storage.js` settings and merges in localStorage, the shared IndexedDB connection, and its store methods.
 - **toolbar.test.js:** `toolbar.js` tool registration, switching, previous tool return, and lazy tool loads.
 - **toolSettings.test.js:** `toolSettings.js` section show and hide rules and settings that survive corrupt or throwing storage.
 - **touchHold.test.js:** `touchHold.js` long-press detection for fingers and pens, covering hold time, slop on and off the element, second fingers, re-arms, and flush.
 - **ui.test.js:** `ui.js` DOM helpers, setting toggles, Enter and Shift+Enter, modals, undo and redo keys, COMNT byte limits, fullscreen, viewport taps, paint shortcuts, drag and drop, grid, tool preview, and font select.
 - **uiBasic.test.js:** `ui.js` DOM helpers, setting toggles, event helpers, position info, modals, and undo and redo keys, with Ctrl+Shift+Z and focused text fields.
-- **uiComponents.test.js:** `ui.js` viewport two-finger taps, paint shortcuts, the grid, tool preview chunks, the resolution readout, and drag and drop.
-- **uiControls.test.js:** `ui.js` COMNT byte counting, `websocketUI`, the fullscreen toggle and icon, and the modal controller.
+- **uiComponents.test.js:** `ui.js` viewport two-finger taps, paint shortcuts, the grid, tool preview chunks, the resolution readout, segmented control arrows with modified ones left to the canvas, and drag and drop.
+- **uiControls.test.js:** `ui.js` COMNT byte counting, a kept blank line included, `websocketUI`, the fullscreen toggle and icon, and the modal controller.
 - **uiModals.test.js:** `ui.js` `$$$`, tool preview, font select, modal double close and backdrop, and `websocketUI`.
 - **utils.test.js:** `ui.js` `createCanvas` and the `$` and `$$` selector shorthands.
+- **visibleWait.test.js:** `visibleWait.js` waits that count only visible time: hidden stretches, arming while hidden, cancel before and after it fires, a stretch that outlasts the wait, and `settlesWithin` on settle, rejection, and expiry.
 - **xbinCompression.test.js:** XBin save compression round trips and export modal routing in `file.js`.
 - **zoom.test.js:** `lazyFont.js` scale factors, the `ui.js` sidebar zoom control through the zoom controller, and scale handoff to the font loaders.
 - **zoomController.test.js:** `zoom.js` clamping, half-step snapping, pinch, Ctrl+wheel, and focal anchoring.
@@ -179,7 +182,7 @@ bunx vitest tests/unit/server/config.test.js
 
 Coverage is on by default. `vitest.config.js` collects V8 coverage with the `text` and `html` reporters and writes the HTML report to `tests/results/coverage/`. `bun test:unit` measures every Vitest suite at once, so the report covers the core and DOM suites as well as this folder. The report breaks each module down by statements, branches, functions, and lines. No coverage threshold gates CI.
 
-As of 2026-11-04, `bunx vitest run tests/unit` runs 1,240 tests in 76 files. One persistence test skips on macOS, since it needs a case-sensitive filesystem.
+As of 2026-11-04, `bunx vitest run tests/unit` runs 1,367 tests in 79 files. One persistence test skips on macOS, since it needs a case-sensitive filesystem.
 
 ### Coverage Reports
 

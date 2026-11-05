@@ -80,7 +80,15 @@ const createSelectionBar = () => {
 		if (State.selectionTool?.isMoveMode?.()) {
 			State.selectionTool.toggleMoveMode();
 		}
-		State.selectionCursor.hide();
+		// the keyboard cursor parks where the rect was, as a tool switch
+		// parks it, so the next seed and keyboard mode pick up there
+		// instead of wherever typing last left it. The move ends the
+		// selection and shows the caret this tool keeps hidden
+		const { x, y } = State.selectionCursor.getPos();
+		State.cursor.move(x, y, false);
+		State.cursor.hide();
+		// otherwise the tool's restore memory brings back what was cleared
+		State.selectionCursor.forget();
 		sync();
 		return true;
 	};

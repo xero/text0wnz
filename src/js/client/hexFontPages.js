@@ -36,6 +36,10 @@ const SLOT_KEYS = new Map([
 // LRU and the repaint after it refills only what is actually visible
 const SCALED_CACHE_LIMIT = 8192;
 
+// how long a failed block answers as failed before a pick or a preload
+// asks again; wall time, since a frozen tab asks nothing meanwhile
+const BLOCK_RETRY_COOLDOWN_MS = 30000;
+
 /**
  * @param {Object} options
  * @param {string} options.baseUrl - block dir (State.fontDir + 'u')
@@ -53,6 +57,8 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 	let manifestPromise = null;
 	/** blockKey -> BlockReader, or null when the fetch failed */
 	const blocks = new Map();
+	/** blockKey -> Date.now() of its last failed fetch */
+	const failedAt = new Map();
 	/** blockKey -> in-flight promise */
 	const pending = new Map();
 	/** `${fontKey}:${codepoint}:${w}x${h}` -> Uint8Array */
@@ -85,9 +91,18 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 			: false;
 	};
 
-	const loadBlock = (fontKey, blockId) => {
+	// a failed block reads as a miss on the repaint path, which must not
+	// retry-storm the server for a 404. An awaited request (a pick, a
+	// doc's preload) asks again past the cooldown, so a dropped fetch
+	// does not substitute for the rest of the session, and a block that
+	// keeps failing stalls a peer's glyph frames once per cooldown
+	// instead of once per frame
+	const cooling = blockKey =>
+		Date.now() - failedAt.get(blockKey) < BLOCK_RETRY_COOLDOWN_MS;
+	const loadBlock = (fontKey, blockId, retry = false) => {
 		const blockKey = `${fontKey}/${blockId.toString(16)}`;
-		if (blocks.has(blockKey)) {
+		const known = blocks.get(blockKey);
+		if (known || (known === null && (!retry || cooling(blockKey)))) {
 			return Promise.resolve();
 		}
 		const inFlight = pending.get(blockKey);
@@ -103,9 +118,8 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 				const bytes = new Uint8Array(await response.arrayBuffer());
 				blocks.set(blockKey, readBlock(blockId, bytes));
 			} catch (error) {
-				// a failed block stays failed for the session; repaints must
-				// not retry-storm the server for a 404
 				blocks.set(blockKey, null);
+				failedAt.set(blockKey, Date.now());
 				console.warn(`[hexFontPages] block ${blockKey} failed:`, error);
 			}
 			pending.delete(blockKey);
@@ -177,7 +191,9 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 		}
 		const blockId = codepoint >> 8;
 		const blockKey = `${fontKey}/${blockId.toString(16)}`;
-		if (!blocks.has(blockKey)) {
+		// a retry in flight is still loading: a miss reported mid-retry
+		// would stick in the renderer's cache after the block lands
+		if (!blocks.has(blockKey) || pending.has(blockKey)) {
 			loadBlock(fontKey, blockId);
 			return undefined;
 		}
@@ -245,7 +261,7 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 				continue;
 			}
 			const blockId = codepoint >> 8;
-			await loadBlock(fontKey, blockId);
+			await loadBlock(fontKey, blockId, true);
 			const reader = blocks.get(`${fontKey}/${blockId.toString(16)}`);
 			if (reader?.has(codepoint) && !reader.isWide(codepoint)) {
 				return slot;
@@ -286,7 +302,7 @@ const createHexFontPages = ({ baseUrl, fetchFn, onBlocksLoaded }) => {
 		for (const def of defs) {
 			const fontKey = SLOT_KEYS.get(def.fontSlot);
 			if (fontKey && fontHasBlock(fontKey, def.codepoint)) {
-				loads.push(loadBlock(fontKey, def.codepoint >> 8));
+				loads.push(loadBlock(fontKey, def.codepoint >> 8, true));
 			}
 		}
 		await Promise.all(loads);

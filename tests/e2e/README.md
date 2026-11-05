@@ -77,11 +77,22 @@ The E2E tests validate the application's functionality in a real browser environ
   - Text input in keyboard mode
   - Home, End, PageUp, PageDown navigation
   - Enter and Backspace keys
+  - A deselect parks the keyboard cursor at the rect and forgets the rect
 
-- **keyboardEnter.spec.js** - Enter in keyboard mode
+- **keyboardEnter.spec.js** - Enter in keyboard mode and the selection tool
   - Enter and NumpadEnter on the focused File button open the menu and leave the cursor
   - Enter after a mouse click on a button still starts a new line
   - Enter waits for a typed unicode glyph to land before the newline
+  - Enter and NumpadEnter on a focused button with the selection tool press it, and from the canvas return to keyboard mode
+
+- **keyboardFocus.spec.js** - Focused controls in keyboard mode and the selection tool
+  - Space and the arrows on a keyboard-reached button belong to it
+  - After a click they stay canvas keys, and Space presses nothing
+  - A keyboard-reached segmented control steps on arrows
+  - Frames panel fields keep every key
+  - A clicked slider leaves letters and arrows to the canvas, and a keyboard-reached one steps and jumps on Home and End
+  - Space and arrows go to the canvas after the character set picker closes
+  - With the selection tool, a keyboard-reached control keeps its arrows, a clicked one leaves them to the rect, and Space after a click presses nothing
 
 - **ui.spec.js** - User interface elements and interactions tests
   - Main UI element visibility
@@ -96,10 +107,10 @@ The E2E tests validate the application's functionality in a real browser environ
   - Help and information panels
 
 - **asciiBrush.spec.js** - Ascii brush strokes in line and square modes
-- **autosave.spec.js** - The autosave journal across reloads: draws, iCE colors, a resize, a new frame, a selection still floating in move mode, and the last edit before a reload come back (skipped where the browser refuses both OPFS and IndexedDB), and the idle commit never splits a held drag or a paused selection move
+- **autosave.spec.js** - The autosave journal across reloads: draws, iCE colors, a resize, a new frame, a selection still floating in move mode, and the last edit before a reload come back (skipped where the browser refuses both OPFS and IndexedDB), and the idle commit never splits a held drag or a paused selection move. A floating move stepped just before a reload keeps that step (best effort, skipped on WebKit), and Update Editor with no update waiting clears the art for good
 - **autoscroll.spec.js** - Minimap autoscroll stepping and escape
 - **collabMoebius.spec.js** - Joins the vendored vanilla Moebius fixture through the Connect form (Chromium only)
-- **collabRoundTrip.spec.js** - Two browsers drawing through the bun server, and a late joiner keeping the room's SAUCE
+- **collabRoundTrip.spec.js** - Two browsers drawing through the bun server, a late joiner keeping the room's SAUCE, and a peer SAUCE that waits while the Sauce Editor is open
 - **darkMode.spec.js** - The dark mode toggle's hover, and the OS theme when storage is blocked
 - **editor-file-open-and-scroll.spec.js** - Opening a file and scrolling the canvas
 - **editor-keybinds.spec.js** - Editor key bindings end to end
@@ -218,7 +229,7 @@ When adding new E2E tests:
    to light, `openFile` waits for the doc to land, and web-first
    assertions such as `toHaveClass()` and `expect.poll()` retry until
    the state arrives. `nextFrames` covers UI placed a frame late,
-   `scrollSettled` covers the row snap after a scroll, and
+   `scrollSettled` covers the row snap after a scroll and fails after 5 s of scrolling, and
    `layoutSettled` covers panel drops and sheet snaps
 8. Assert expected behaviors with `expect()`
 

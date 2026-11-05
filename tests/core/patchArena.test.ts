@@ -150,6 +150,49 @@ describe('patch arena', () => {
 		arena.endStroke();
 	});
 
+	it('peekStroke is null with no stroke open or no writes in it', () => {
+		const arena = createPatchArena();
+		expect(arena.peekStroke()).toBeNull();
+		arena.beginStroke({ frame: 0 });
+		expect(arena.peekStroke()).toBeNull();
+		arena.endStroke();
+		expect(arena.peekStroke()).toBeNull();
+	});
+
+	it('peekStroke freezes the open stroke as a commit would and leaves it open', () => {
+		const doc = createDocV3({ columns: 4, rows: 1 });
+		const onCommit = vi.fn();
+		const arena = createPatchArena({ onCommit });
+		const f = doc.frames[0];
+		arena.beginStroke({ frame: 0 });
+		write(doc, arena, 0, 0, 1);
+		write(doc, arena, 0, 0, 2);
+		arena.record('bg', 1, f.bg[1], paletteColor(4));
+		f.bg[1] = paletteColor(4);
+		const peek = arena.peekStroke();
+		expect(peek).toEqual({
+			meta: { frame: 0 },
+			patches: {
+				glyph: Uint32Array.of(0, 0, glyphWord(2, 0)),
+				bg: Uint32Array.of(1, paletteColor(0), paletteColor(4)),
+			},
+		});
+		expect(onCommit).not.toHaveBeenCalled();
+		expect(arena.stats()).toMatchObject({ strokes: 0, canUndo: false });
+		// the stroke keeps building: a peek is a snapshot, and the commit
+		// carries the same triples plus the writes made since
+		write(doc, arena, 0, 0, 3);
+		write(doc, arena, 0, 2, 5);
+		expect(peek?.patches.glyph).toEqual(Uint32Array.of(0, 0, glyphWord(2, 0)));
+		const again = arena.peekStroke();
+		expect(arena.endStroke()).toBe(true);
+		expect(onCommit).toHaveBeenCalledWith(again);
+		expect(again?.patches.glyph).toEqual(
+			Uint32Array.of(0, 0, glyphWord(3, 0), 2, 0, glyphWord(5, 0)),
+		);
+		expect(arena.stats()).toMatchObject({ strokes: 1, bytes: 36 });
+	});
+
 	it('clear empties the ring and tells the label table', () => {
 		const doc = createDocV3({ columns: 2, rows: 1 });
 		const onClear = vi.fn();
@@ -188,7 +231,7 @@ describe('resize steps', () => {
 		// dropped cells cost nothing
 		expect(arena.stats().bytes).toBe(32);
 
-		expect(arena.undo(doc)).toEqual({ frame: 0 });
+		expect(arena.undo(doc)).toEqual({ frame: 0, ice: false });
 		expect([doc.getColumns(), doc.getRows()]).toEqual([4, 2]);
 		expect(doc.getCell(0, 3, 0).glyph).toBe(glyphWord(65, 0));
 		expect(doc.getCell(0, 0, 1).bg).toBe(paletteColor(4));
@@ -234,7 +277,12 @@ describe('resize steps', () => {
 		expect(onCommit).toHaveBeenLastCalledWith({
 			meta: { frame: 0 },
 			patches: {},
-			resize: { from: [2, 1], to: [3, 1], dropped: [new Uint32Array(0)] },
+			resize: {
+				from: [2, 1],
+				to: [3, 1],
+				dropped: [new Uint32Array(0)],
+				ice: false,
+			},
 		});
 	});
 
@@ -250,5 +298,73 @@ describe('resize steps', () => {
 		arena.undo(doc);
 		expect(doc.frames[0].glyph[3]).toBe(glyphWord(9, 0));
 		expect(arena.undo(doc)).toBeNull();
+	});
+
+	it('evict when a redo re-captures past the cap', () => {
+		const doc = createDocV3({ columns: 4, rows: 1 });
+		const arena = createPatchArena({ byteCap: 40 });
+		// art outside history in the column the shrink drops
+		doc.setCell(0, 3, 0, {
+			glyph: glyphWord(66, 0),
+			fg: paletteColor(7),
+			bg: paletteColor(0),
+		});
+		arena.beginStroke({ frame: 0 });
+		write(doc, arena, 0, 0, 9);
+		arena.endStroke();
+		arena.commitResize(doc, 3, 1, { frame: 0 });
+		expect(arena.stats()).toMatchObject({ strokes: 2, bytes: 28 });
+		arena.undo(doc);
+		// a frame copy of the restored cell doubles what the redo drops
+		doc.addFrame({ copyFrom: 0 });
+		arena.redo(doc);
+		expect(arena.stats()).toMatchObject({ strokes: 1, bytes: 32 });
+		arena.undo(doc);
+		expect(arena.undo(doc)).toBeNull();
+		expect(doc.frames[0].glyph[0]).toBe(glyphWord(9, 0));
+	});
+
+	it('evict when an undo re-captures past the cap, keeping the step it lands on', () => {
+		const doc = createDocV3({ columns: 3, rows: 1 });
+		const arena = createPatchArena({ byteCap: 40 });
+		for (const index of [0, 1]) {
+			arena.beginStroke({ frame: 0 });
+			write(doc, arena, 0, index, index + 1);
+			arena.endStroke();
+		}
+		arena.commitResize(doc, 4, 1, { frame: 0 });
+		// a peer's draw in the grown column, then a frame copy of it
+		doc.setCell(0, 3, 0, {
+			glyph: glyphWord(66, 0),
+			fg: paletteColor(7),
+			bg: paletteColor(0),
+		});
+		doc.addFrame({ copyFrom: 0 });
+		arena.undo(doc);
+		// the cap stays soft: the second stroke sits at the cursor
+		expect(arena.stats()).toMatchObject({
+			strokes: 2,
+			bytes: 44,
+			canRedo: true,
+		});
+		arena.undo(doc);
+		expect(arena.undo(doc)).toBeNull();
+		expect(doc.frames[0].glyph[0]).toBe(glyphWord(1, 0));
+		expect(doc.frames[0].glyph[1]).toBe(0);
+		arena.redo(doc);
+		arena.redo(doc);
+		expect([doc.getColumns(), doc.getRows()]).toEqual([4, 1]);
+		expect(doc.frames[1].glyph[3]).toBe(glyphWord(66, 0));
+	});
+
+	it('name the ice flag of each capture they restore', () => {
+		const doc = createDocV3({ columns: 2, rows: 1 });
+		const arena = createPatchArena();
+		arena.commitResize(doc, 1, 1, { frame: 0 });
+		doc.setIceColors(true);
+		expect(arena.undo(doc)).toEqual({ frame: 0, ice: false });
+		doc.setIceColors(false);
+		expect(arena.redo(doc)).toEqual({ frame: 0, ice: true });
+		expect(arena.undo(doc)).toEqual({ frame: 0, ice: false });
 	});
 });

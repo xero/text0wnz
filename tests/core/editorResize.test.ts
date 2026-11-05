@@ -19,6 +19,7 @@ import {
 	type EditorWrite,
 } from '../../src/js/core/editor.js';
 import { createPatchArena } from '../../src/js/core/patchArena.js';
+import { decodeAns } from '../../src/js/core/codecs/ans.js';
 
 const makeEditor = (columns = 4, rows = 3) => {
 	const doc = createDocV3({ columns, rows });
@@ -252,6 +253,28 @@ describe('resize as an undo step', () => {
 		const cell = doc.getCell(0, 3, 2);
 		expect(attrsOf(cell.glyph) & ATTR_BLINK).toBe(0);
 		expect(cell.bg).toBe(paletteColor(9));
+	});
+
+	it('a cut cell holding a steady bright bg without ice comes back word for word', () => {
+		// a SAUCE-less UTF-8 ANSI paints SGR 101 as a steady bright bg
+		// with ice off, a fold no edit under that flag writes
+		const { doc: source } = decodeAns(
+			new TextEncoder().encode('\x1b[79C\x1b[101mA\x1b[0m'),
+			{ utf8: true },
+		);
+		const { doc, editor } = makeEditor();
+		editor.loadDoc(source);
+		const f = doc.frames[0];
+		const wordsAt79 = () => [f.glyph[79], f.fg[79], f.bg[79]];
+		const loaded = wordsAt79();
+		expect(loaded[0]).toBe(glyphWord(65, 0));
+		expect(loaded[2]).toBe(paletteColor(12));
+		editor.resize(40, doc.getRows());
+		editor.undo();
+		expect(wordsAt79()).toEqual(loaded);
+		editor.redo();
+		editor.undo();
+		expect(wordsAt79()).toEqual(loaded);
 	});
 
 	it('commits the open stroke before resizing', () => {

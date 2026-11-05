@@ -62,6 +62,24 @@ const resetSauceFlags = () => {
 	lsTouchedSinceOpen = false;
 };
 
+// core commentText reads a COMNT block of one blank line as ' ', since
+// an empty box means no block. The box shows it empty and keeps the
+// line until an edit, as PabloDraw does (SauceInfoDialog.cs builds
+// Comments only on TextChanged); ui.js enforceMaxBytes counts it.
+// Optional calls: test harnesses stub the box as a plain object
+const BLANK_LINE = 'data-blank-line';
+const dropBlankLine = e => e.currentTarget.removeAttribute(BLANK_LINE);
+const fillComments = (box, text) => {
+	const blank = text === ' ';
+	box.value = blank ? '' : text;
+	box.toggleAttribute?.(BLANK_LINE, blank);
+	if (blank) {
+		box.addEventListener?.('input', dropBlankLine, { once: true });
+	}
+};
+const commentsOf = box =>
+	box.value || (box.hasAttribute?.(BLANK_LINE) ? ' ' : '');
+
 const loadModule = () => {
 	/**
 	 * The font an opened file should switch to, or null to keep the
@@ -376,7 +394,7 @@ const loadModule = () => {
 		$('sauceTitle').value = meta.title || '';
 		$('sauceGroup').value = meta.group || '';
 		$('sauceAuthor').value = meta.author || '';
-		$('sauceComments').value = meta.comments || '';
+		fillComments($('sauceComments'), meta.comments || '');
 		openedSauceFlags = sauceFlags;
 		lsTouchedSinceOpen = false;
 		enforceMaxBytes();
@@ -551,6 +569,8 @@ const loadModule = () => {
 		fontForFile,
 		appToSauceFont: appToSauceFont,
 		resetSauceFlags: resetSauceFlags,
+		fillComments,
+		commentsOf,
 	};
 };
 
@@ -786,7 +806,7 @@ const saveModule = () => {
 		author: $('sauceAuthor').value,
 		// no trim: blank and indented lines are text that buildSauce
 		// writes back (PabloDraw SauceInfo.cs, SauceComment.Save)
-		comments: $('sauceComments').value || undefined,
+		comments: commentsOf($('sauceComments')) || undefined,
 	});
 
 	const sauceMetaWithFont = () => {

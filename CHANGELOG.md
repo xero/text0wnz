@@ -276,15 +276,57 @@ byte-exact golden tests before anything else moved.
   embedded font, the editor fell back to the default font but the
   label kept the collaborator's font name. It names the default font
   now.
-- **Enter presses the focused button.** In keyboard mode, Enter on a
-  button reached with Tab moved the canvas cursor down a row instead of
-  pressing the button. Enter starts a new line only while the canvas
-  has focus.
+- **Enter presses the focused button.** In keyboard mode and with the
+  selection tool, Enter on a button reached with Tab moved the canvas
+  cursor or left the selection tool instead of pressing the button, and
+  NumpadEnter did nothing with the selection tool. Enter starts a new
+  line only while the canvas has focus, and NumpadEnter leaves the
+  selection tool the way Enter does.
+- **Space after a click types only a space.** In keyboard mode, a
+  space typed after clicking a button pressed that button again, so
+  typing `a b` right after clicking an F-key inserted its character a
+  second time. Space types on the canvas and leaves a clicked button
+  alone.
+- **Typing CP437's symbols gives CP437.** Typing ☺, ♥, •, ¶, or another
+  of CP437's symbols 1-31 drew a different character; ☺ came out as
+  `:`. They type as their CP437 glyph now, the same as a paste or an
+  F-key.
+- **A flip during a move sticks.** Pressing `[` or `]` while moving a
+  selection flipped the block, but the next arrow put it back the way
+  it was. The flip travels with the block now, and the whole move stays
+  one undo step.
+- **Keys in a dialog stay in the dialog.** With the selection tool
+  active, Enter, the arrows, `[`, `]`, and `m` pressed in an open dialog
+  switched to keyboard mode, moved or flipped the selection, or started
+  a move underneath the dialog. The dialog keeps its keys.
 - **The dark mode toggle lights up on hover.** Its sun, moon, and beams
   stayed dim under the pointer while every other rail icon lit up.
 - **Drawing tools load when you first pick one.** The freehand tools
   came down with the editor at boot, so every page load paid for them
   even when you never drew with them.
+- **The canvas recovers when the browser refuses a drawing surface.**
+  On the 2D renderer, a canvas chunk the browser gave no 2D context, as
+  iOS Safari does past its canvas memory limit, stopped scrolling,
+  window resizes, and edit repaints until a reload. A refused chunk is
+  skipped and retried on the next pass now.
+- **New names the document Untitled.** File > New left the title blank,
+  so the tab read ` [teXt0wnz]` and saves suggested dotfiles such as
+  `.ans`.
+- **A shared file is not replaced by the autosave.** Sharing a file to
+  the installed app also ran the autosave restore, and whichever
+  finished last won, so the restored art or its font could land over
+  the shared file. A shared file skips the restore, as a launched file
+  does.
+- **The Sauce Editor's Cancel discards your edits.** Cancel, the
+  backdrop, and Escape kept what you typed, and the next save wrote it.
+  Closing the editor without Save puts back what it opened with.
+- **A collaborator's settings change keeps your dialog open.** A peer's
+  9px or palette change closed whatever dialog you had open, so a
+  half-typed Sauce Editor or resize never went out.
+- **Leaving a collab session drops the session title.** After a
+  session ended, the page stayed titled `collab mode` and the next save
+  offered `collab mode.ans`. Leaving an untitled room titles the page
+  `Untitled`, and a titled room keeps the title of the SAUCE you keep.
 - **The bridge dials only public addresses.** `BRIDGE=port` treated
   multicast, broadcast, reserved, IETF protocol assignment, and
   benchmarking addresses, the Azure wireserver, and 6to4 as public and

@@ -833,7 +833,11 @@ const createSegmentedControl = (id, options, onChange) => {
 	});
 
 	group.addEventListener('keydown', e => {
-		if (!enabled) {
+		// keyboard mode and the selection tool cancel the arrows a
+		// pointer-focused segment leaves to them, and a modified arrow is
+		// canvas or browser input on any control (cmd arrow walks the
+		// cursor to a row end)
+		if (!enabled || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) {
 			return;
 		}
 		let step = 0;
@@ -1132,7 +1136,9 @@ const enforceMaxBytes = () => {
 	if (val !== sauceComments.value) {
 		sauceComments.value = val;
 	}
-	$('sauceBytes').value = `${slots * 64}/16320 bytes`;
+	// an empty box can keep a blank line (file.js fillComments)
+	const kept = slots || (sauceComments.hasAttribute('data-blank-line') ? 1 : 0);
+	$('sauceBytes').value = `${kept * 64}/16320 bytes`;
 };
 
 const createResolutionController = (lbl, txtC, txtR) => {

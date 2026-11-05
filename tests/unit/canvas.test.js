@@ -1,5 +1,20 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createTextArtCanvas } from '../../src/js/client/canvas.js';
+import { createCanvas } from '../../src/js/client/ui.js';
+
+const tick = (ms = 0) => new Promise(resolve => setTimeout(resolve, ms));
+
+// a throw in a frame callback reaches the window; a listener of the
+// test's own keeps vitest from failing the run over the one it expects
+const catchWindowErrors = () => {
+	const errors = [];
+	const onError = event => {
+		errors.push(event.error);
+		event.preventDefault();
+	};
+	window.addEventListener('error', onError);
+	return { errors, stop: () => window.removeEventListener('error', onError) };
+};
 
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
@@ -25,6 +40,18 @@ vi.mock('../../src/js/client/state.js', () => ({
 		saveToLocalStorage: vi.fn(),
 	},
 }));
+
+// jsdom has no WebGL2, so every canvas falls back to the chunk renderer
+// unless a test hands the next one a renderer of its own
+const gl = vi.hoisted(() => ({ next: null }));
+
+vi.mock('../../src/js/client/glRenderer.js', async importOriginal => {
+	const actual = await importOriginal();
+	return {
+		...actual,
+		createGLRenderer: (...args) => gl.next ?? actual.createGLRenderer(...args),
+	};
+});
 
 vi.mock('../../src/js/client/ui.js', () => ({
 	$: vi.fn(_id => ({
@@ -453,6 +480,72 @@ describe('Canvas Module', () => {
 			expect(State.font.draw.mock.calls[0].slice(4)).toEqual([3, 5]);
 		});
 
+		it('a dirty paint that throws leaves later dirty paints running', async () => {
+			await loaded(25, new Uint16Array(80 * 25));
+			const caught = catchWindowErrors();
+			State.font.draw.mockImplementation(code => {
+				if (code === 66 && caught.errors.length === 0) {
+					throw new Error('boom');
+				}
+			});
+			try {
+				canvas.draw(cb => cb(66, 7, 0, 1, 1), false);
+				await tick(50);
+				expect(caught.errors).toEqual([expect.objectContaining({ message: 'boom' })]);
+				canvas.draw(cb => cb(67, 7, 0, 2, 2), false);
+				await tick(50);
+				expect(State.font.draw.mock.calls.some(call => call[0] === 67)).toBe(true);
+			} finally {
+				caught.stop();
+				State.font.draw.mockImplementation(() => {});
+			}
+		});
+
+		it('a chunk refused a 2D context paints on a later pass instead of throwing', async () => {
+			await loaded(25, new Uint16Array(80 * 25));
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			vi.mocked(createCanvas).mockImplementationOnce(() => ({
+				style: {},
+				getContext: () => null,
+			}));
+			const data = new Uint16Array(80 * 25).fill((65 << 8) | 7);
+			canvas.setImageData(80, 25, data, false);
+			expect(warn).toHaveBeenCalledWith(
+				'[Canvas] the browser refused a 2D context for a chunk',
+			);
+			const paints = () =>
+				State.font.draw.mock.calls.filter(call => call[0] === 65).length;
+			expect(paints()).toBe(0);
+			canvas.setImageData(80, 25, data, false);
+			expect(paints()).toBeGreaterThanOrEqual(80 * 25);
+		});
+
+		it.each([
+			['scroll', viewport => viewport],
+			['resize', () => window],
+		])('a %s pass that throws leaves later ones painting', async (type, target) => {
+			const viewport = document.createElement('div');
+			viewport.id = 'viewport';
+			document.body.appendChild(viewport);
+			const caught = catchWindowErrors();
+			try {
+				await loaded(25, new Uint16Array(80 * 25));
+				mockContainer.appendChild.mockImplementationOnce(() => {
+					throw new Error('boom');
+				});
+				target(viewport).dispatchEvent(new Event(type));
+				await tick(50);
+				expect(caught.errors).toEqual([expect.objectContaining({ message: 'boom' })]);
+				mockContainer.appendChild.mockClear();
+				target(viewport).dispatchEvent(new Event(type));
+				await tick(50);
+				expect(mockContainer.appendChild).toHaveBeenCalled();
+			} finally {
+				caught.stop();
+				viewport.remove();
+			}
+		});
+
 		it('a blink background paints 8 lower unless ice colors are on', async () => {
 			const data = new Uint16Array(80 * 25);
 			data[0] = (65 << 8) | (12 << 4) | 7;
@@ -463,6 +556,138 @@ describe('Canvas Module', () => {
 			State.font.draw.mockClear();
 			canvas._chunkTestSeam.drawRegion(0, 0, 1, 1);
 			expect(State.font.draw.mock.calls[0].slice(0, 3)).toEqual([65, 7, 12]);
+		});
+	});
+
+	describe('relayouts', () => {
+		let State;
+		let modal;
+
+		beforeEach(async () => {
+			State = (await import('../../src/js/client/state.js')).default;
+			modal = State.modal;
+		});
+
+		afterEach(() => {
+			State.modal = modal;
+		});
+
+		const booted = async () => {
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			await vi.waitFor(() => expect(mockCallback).toHaveBeenCalled());
+			mockContainer.appendChild.mockClear();
+		};
+
+		// one modal stack, shared by every canvas this file has built
+		const modalShowing = open => {
+			State.modal = {
+				current: () => open,
+				loading: vi.fn(() => {
+					open = 'loading';
+				}),
+				close: vi.fn(() => {
+					open = false;
+				}),
+			};
+			return State.modal;
+		};
+
+		const relayout = async () => {
+			document.dispatchEvent(new CustomEvent('onPaletteChange'));
+			await tick(50);
+		};
+
+		it('veils the editor while it runs and lifts the veil once it lands', async () => {
+			await booted();
+			const shown = modalShowing(false);
+			await relayout();
+			expect(mockContainer.appendChild).toHaveBeenCalled();
+			expect(shown.loading).toHaveBeenCalledWith('Updating editor with new settings...');
+			expect(shown.current()).toBe(false);
+		});
+
+		it('leaves a modal the user has open alone', async () => {
+			await booted();
+			const shown = modalShowing('sauce');
+			await relayout();
+			expect(mockContainer.appendChild).toHaveBeenCalled();
+			expect(shown.loading).not.toHaveBeenCalled();
+			expect(shown.close).not.toHaveBeenCalled();
+		});
+
+		it('leaves a loading modal another flow opened for that flow to close', async () => {
+			await booted();
+			const shown = modalShowing('loading');
+			await relayout();
+			expect(mockContainer.appendChild).toHaveBeenCalled();
+			expect(shown.close).not.toHaveBeenCalled();
+		});
+
+		it('one that throws lifts its veil and leaves the next one free to run', async () => {
+			await booted();
+			const shown = modalShowing(false);
+			const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+			const font = State.font;
+			const { getWidth } = font;
+			font.getWidth = () => {
+				throw new Error('boom');
+			};
+			try {
+				await relayout();
+			} finally {
+				font.getWidth = getWidth;
+			}
+			expect(error).toHaveBeenCalledWith(
+				'[Canvas] relayout failed:',
+				expect.objectContaining({ message: 'boom' }),
+			);
+			expect(shown.current()).toBe(false);
+			shown.loading.mockClear();
+			await relayout();
+			expect(shown.loading).toHaveBeenCalled();
+			expect(shown.current()).toBe(false);
+			expect(mockContainer.appendChild).toHaveBeenCalled();
+		});
+
+		it('one whose GL rebuild throws restarts the blink it stopped', async () => {
+			const renderer = {
+				rebuild: vi.fn(),
+				redraw: vi.fn(done => done?.()),
+				drawRegion: vi.fn(),
+				updateBlink: vi.fn(),
+			};
+			gl.next = renderer;
+			try {
+				await booted();
+			} finally {
+				gl.next = null;
+			}
+			modalShowing(false);
+			const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+			renderer.rebuild.mockImplementationOnce(() => {
+				throw new Error('boom');
+			});
+			renderer.updateBlink.mockClear();
+			try {
+				await relayout();
+				expect(error).toHaveBeenCalledWith(
+					'[Canvas] relayout failed:',
+					expect.objectContaining({ message: 'boom' }),
+				);
+				expect(renderer.updateBlink).toHaveBeenCalled();
+			} finally {
+				error.mockRestore();
+			}
+		});
+	});
+
+	describe('clear', () => {
+		it('names the blank doc Untitled', async () => {
+			const State = (await import('../../src/js/client/state.js')).default;
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			State.title = 'art';
+			canvas.clear();
+			expect(State.title).toBe('Untitled');
 		});
 	});
 

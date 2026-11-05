@@ -248,12 +248,26 @@ test.describe('Editor Keybinds', () => {
 			await expect(move).not.toHaveClass(/enabled/);
 		});
 
+		test('a flip mid-move travels with the block in one undo step', async ({ page }) => {
+			await writeText(page, 10, 5, 'AB');
+			await page.locator('#selection').click();
+			await drag(page, [10, 5], [11, 5]);
+			await page.keyboard.press('m');
+			await page.keyboard.press('ArrowRight');
+			await page.keyboard.press('[');
+			await page.keyboard.press('ArrowRight');
+			await page.keyboard.press('m');
+			expect(await readRegion(page, 10, 5, 13, 5)).toEqual(['  BA']);
+
+			await page.keyboard.press('Control+z');
+			expect(await readRegion(page, 10, 5, 13, 5)).toEqual(['AB  ']);
+		});
+
+		// the deselect parks the keyboard cursor on the landed block, so
+		// the fresh rect starts on art a stale float would stamp over
 		for (const key of ['ArrowRight', 'Shift+ArrowRight']) {
 			test(`escape mid-move lands the block, so ${key} stamps no copy`, async ({ page }) => {
-				await writeText(page, 2, 2, 'QRSTU');
 				await writeText(page, 20, 10, 'AB');
-				// park the keyboard cursor on art a fresh rect would start on
-				await tap(page, 2, 2);
 				await page.locator('#selection').click();
 				await drag(page, [20, 10], [21, 10]);
 				await page.keyboard.press('m');
@@ -264,8 +278,7 @@ test.describe('Editor Keybinds', () => {
 				await page.keyboard.press(key);
 				await page.keyboard.press('ArrowRight');
 				await page.keyboard.press('ArrowRight');
-				expect(await readRegion(page, 0, 2, 8, 2)).toEqual(['  QRSTU  ']);
-				expect(await readRegion(page, 19, 10, 23, 10)).toEqual(['  AB ']);
+				expect(await readRegion(page, 19, 10, 25, 10)).toEqual(['  AB   ']);
 			});
 		}
 	});
